@@ -1,0 +1,281 @@
+{
+  "date": "2026-10-19",
+  "target": "Mole native 1.16.0 (324)",
+  "scope": "menu bar static implementation comparison",
+  "evidence": {
+    "mole": "dist/mole-study/product-findings.md section 9; packaged string references L626-650, L687-691, L922-929",
+    "thermo": [
+      "Sources/ThermoApp/Monitor.swift: TitleMetric",
+      "Sources/ThermoApp/main.swift: updateTitle",
+      "Sources/ThermoApp/Views.swift: SettingsView",
+      "Sources/thermo/SettingsCommand.swift: all"
+    ]
+  },
+  "limitations": [
+    "Mole packaged strings establish configuration vocabulary; current visual behavior still requires native runtime acceptance.",
+    "This is a source audit, not an installed Thermo acceptance result."
+  ],
+  "parityAchieved": false,
+  "baselineSource": "4fc650e",
+  "source": "2ff2c36 plus reviewed uncommitted integration",
+  "baselineModes": [
+    "cpu",
+    "hottest",
+    "fan",
+    "cpuAndFan",
+    "power",
+    "iconOnly"
+  ],
+  "sourceGapsAddressed": [
+    "independent primary and secondary metric selection",
+    "optional second metric",
+    "stacked and horizontal layout",
+    "live network throughput metric",
+    "icon/data/both presentation",
+    "left/right click action preference"
+  ],
+  "implementation": {
+    "host": "mac190",
+    "runId": "a85785dc-6990-4d66-88ca-5643d46d164f",
+    "workerBase": "0b97f976f312f247a0be814a279ff346bc4199ac",
+    "workerTree": "4f8a698964bb707ece73ea74c85fa71fa3de7ace",
+    "reviewedActualDiff": true,
+    "newWorkerTests": 19,
+    "controllerFreshnessTestsAdded": 2,
+    "legacyControllerFixesPreserved": true,
+    "standaloneTest": "Cancelled while placing; integrated source tested instead",
+    "fullRegressionRun": "a146cc4d-e3d5-405e-94c2-c504bf3c1bd6",
+    "latestTargetedRun": "a9ca5f3b-16b3-4b26-a6be-4ef1fbaac9bb",
+    "results": {
+      "runId": "ee92f080-08c8-47e9-bc9b-cabefac59c74",
+      "inputCommit": "73349611321e358b974377b06369f2fe3b7a98b4",
+      "inputTree": "a575daccb19cb0d3429b4075d129d196c6f10b75",
+      "inputHead": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+      "status": "done",
+      "exitCode": 0,
+      "targetResults": [
+        {
+          "target": "ThermoKitTests.xctest",
+          "status": "passed",
+          "tests": 212,
+          "failures": 0
+        },
+        {
+          "target": "ThermoHelperTests.xctest",
+          "status": "passed",
+          "tests": 30,
+          "failures": 0
+        },
+        {
+          "target": "ThermoCLITests.xctest",
+          "status": "passed",
+          "tests": 115,
+          "failures": 0
+        },
+        {
+          "target": "ThermoAppTests.xctest",
+          "status": "passed",
+          "tests": 328,
+          "failures": 0
+        },
+        {
+          "target": "CleanKitTests.xctest",
+          "status": "passed",
+          "tests": 771,
+          "failures": 0
+        },
+        {
+          "target": "AgentDoctorTests.xctest",
+          "status": "passed",
+          "tests": 323,
+          "failures": 0
+        },
+        {
+          "target": "AgentCoreTests.xctest",
+          "status": "passed",
+          "tests": 63,
+          "failures": 0
+        }
+      ],
+      "totalTests": 1842,
+      "artifactHashesVerified": true,
+      "currentSourceFilesComparedWithRunningTestWorkspace": 594,
+      "sourceManifestSHA256": "5ec1fa41d00c66736ad952162778081bdab4bf3de763d7dfc8943a8810eb4b8f",
+      "artifacts": [
+        {
+          "name": "test.log",
+          "sha256": "a7549ca9e41e9508386a1f27d22293a29fa856333606a5448ca9aaaab6030d3e",
+          "bytes": 561587
+        },
+        {
+          "name": "environment.txt",
+          "sha256": "e2a3223355383c5d20c128753600acdfd0dbf197ab637ba2496320fbcea4b2ba",
+          "bytes": 440
+        },
+        {
+          "name": "exit-code.txt",
+          "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+          "bytes": 2
+        }
+      ]
+    },
+    "firstResults": [
+      {
+        "runId": "a146cc4d-e3d5-405e-94c2-c504bf3c1bd6",
+        "status": "failed",
+        "inputCommit": "fb410b0d5d41b34d511f70c8fec35eef910815ba",
+        "inputTree": "917df5a4979967823794e51d860cc3d3a5563466",
+        "exitCode": 1,
+        "targetResults": [
+          {
+            "target": "ThermoKitTests.xctest",
+            "status": "passed",
+            "tests": 212,
+            "failures": 0
+          },
+          {
+            "target": "ThermoHelperTests.xctest",
+            "status": "passed",
+            "tests": 30,
+            "failures": 0
+          },
+          {
+            "target": "ThermoCLITests.xctest",
+            "status": "passed",
+            "tests": 115,
+            "failures": 0
+          },
+          {
+            "target": "ThermoAppTests.xctest",
+            "status": "failed",
+            "tests": 326,
+            "failures": 1
+          },
+          {
+            "target": "CleanKitTests.xctest",
+            "status": "passed",
+            "tests": 770,
+            "failures": 0
+          },
+          {
+            "target": "AgentDoctorTests.xctest",
+            "status": "passed",
+            "tests": 323,
+            "failures": 0
+          },
+          {
+            "target": "AgentCoreTests.xctest",
+            "status": "passed",
+            "tests": 63,
+            "failures": 0
+          }
+        ],
+        "artifactHashesVerified": true,
+        "failures": [
+          "/Users/leo/.local/state/session-flow/jobs/a146cc4d-e3d5-405e-94c2-c504bf3c1bd6-test/work/Tests/ThermoAppTests/MenuLiveSamplerTests.swift:26: error: -[ThermoAppTests.MenuLiveSamplerTests testCPUShowsBusyShareAndRejectsResetOrWrap] : XCTAssertEqual failed: (\"Optional(100.0)\") is not equal to (\"Optional(75.0)\")"
+        ],
+        "totalTests": 1839,
+        "totalFailures": 1
+      },
+      {
+        "runId": "a9ca5f3b-16b3-4b26-a6be-4ef1fbaac9bb",
+        "status": "failed",
+        "inputCommit": "6d1dc7eefb5cd3002ef24d2e28c7f845355acbd8",
+        "inputTree": "d12c65512b42acbdc2e1ef3979777adcad36cbb3",
+        "exitCode": 1,
+        "targetResults": [
+          {
+            "target": "ThermoKitTests.xctest",
+            "status": "passed",
+            "tests": 5,
+            "failures": 0
+          },
+          {
+            "target": "ThermoHelperTests.xctest",
+            "status": "passed",
+            "tests": 0,
+            "failures": 0
+          },
+          {
+            "target": "ThermoCLITests.xctest",
+            "status": "passed",
+            "tests": 3,
+            "failures": 0
+          },
+          {
+            "target": "ThermoAppTests.xctest",
+            "status": "failed",
+            "tests": 18,
+            "failures": 1
+          },
+          {
+            "target": "CleanKitTests.xctest",
+            "status": "passed",
+            "tests": 0,
+            "failures": 0
+          },
+          {
+            "target": "AgentDoctorTests.xctest",
+            "status": "passed",
+            "tests": 0,
+            "failures": 0
+          },
+          {
+            "target": "AgentCoreTests.xctest",
+            "status": "passed",
+            "tests": 0,
+            "failures": 0
+          }
+        ],
+        "artifactHashesVerified": true,
+        "failures": [
+          "/Users/leo/.local/state/session-flow/jobs/a9ca5f3b-16b3-4b26-a6be-4ef1fbaac9bb-test/work/Tests/ThermoAppTests/MenuLiveSamplerTests.swift:26: error: -[ThermoAppTests.MenuLiveSamplerTests testCPUShowsBusyShareAndRejectsResetOrWrap] : XCTAssertEqual failed: (\"Optional(100.0)\") is not equal to (\"Optional(75.0)\")"
+        ],
+        "totalTests": 26,
+        "totalFailures": 1
+      }
+    ],
+    "latestFullRegressionRun": "ee92f080-08c8-47e9-bc9b-cabefac59c74",
+    "universalBuild": "2ef6daa9-af33-4558-a0cb-96cb4a2e2944 cancelled while placing before compilation, because test fixture changed",
+    "supersededPendingFullRun": "2fdf6e31-aa69-4a5b-94fa-2b959ae303ed: cancelled while placing; Xcode symlink coverage added before any compilation"
+  },
+  "remaining": [
+    "VoiceOver speech acceptance",
+    "Actual hidden-notch and multiple physical displays",
+    "Live wake and interface transitions",
+    "Mole native configuration/runtime comparison"
+  ],
+  "nativeStackedVisualAccepted": true,
+  "nativeStackedVisualResult": "User confirmed clear, complete rows in revision 2; left/right panel/console actions both confirmed.",
+  "pendingRendererFix": {
+    "source": "MenuStackImage.swift; CoreText glyph bounds, separate row regions, fixed image height, template tint",
+    "tests": "MenuStackImageTests: actual raster top/bottom separation, edge clipping and long values",
+    "runId": "ca6daffd-e6aa-404b-9a9e-ab00f83da4a7",
+    "status": "1844 full regression tests passed, universal candidate and user two-row visual acceptance passed",
+    "regressionCoverage": "Earlier 1842-pass snapshot does not cover this renderer change",
+    "focusedInputCommit": "c9ab8fe4c02b0798d94b7e039bfd8e452539f634",
+    "focusedInputTree": "3eb9520e445e212e4c1c0f67e226e78997255c92",
+    "artifactHashesVerified": true,
+    "fullRegressionRun": "a98a2578-eeee-4013-b0b3-28897397e1a8",
+    "universalBuildRun": "c9235921-7468-4a08-916a-f9a6de94fb19",
+    "latestInputCommit": "f94a7b95da5b3e3679483c857583e9ca3799fce4",
+    "latestInputTree": "43f1f41573f9bcd41a1c0348686127cd975e82cd",
+    "testAndBuildInputIdentical": true
+  },
+  "discoveryRequestedByUser": true,
+  "pendingDiscovery": {
+    "visibleEntry": "Menu bar... text button in the menu panel footer",
+    "dynamicClickHint": true,
+    "visibilityWarningRefresh": true,
+    "testRun": "d81f81c1-98a3-4f33-bf9c-5d9a70cbdcf0",
+    "buildRun": "5df1467b-f2bb-4498-96d7-88987f451d20",
+    "inputCommit": "9a2b9d938ad8f8d8353e17603da57c16a18f6397",
+    "inputTree": "1a00f0fde54dc44355f99699a867c5ef96c850da",
+    "status": "Accepted in installed R8 by actual native popup screenshot and clicks: app menu, Command+Shift+P, both-console fallback, dynamic hint and footer settings entry",
+    "sourceFilesVerified": 596,
+    "archiveSHA256": "87553e418bf5248cae51ded0401e2005d88080460688e81e05bb719971773074",
+    "installedInput": "8e5019de1772ae5895ca4bc66b465a71c4bb12ea"
+  },
+  "nativePanelFooterAccepted": true,
+  "nativePanelSettingsEntryAccepted": true
+}

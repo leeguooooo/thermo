@@ -1,0 +1,251 @@
+{
+  "date": "2026-10-19",
+  "scope": "Owned temporary fixtures; baseline before BuildCacheEvidence production changes",
+  "runId": "4610280e-10b7-4f2e-bb6e-84405b409e63",
+  "host": "mac190",
+  "machine": "leos-MacBook-Pro.local",
+  "inputCommit": "f1691989a2907f809bce00506abe8a78d9f5c4f6",
+  "inputTree": "42624418378014c12840489fd7945ea68211e2ac",
+  "inputHead": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+  "toolchain": "Darwin leos-MacBook-Pro.local 27.0.0 Darwin Kernel Version 27.0.0: Tue Aug 11 22:02:53 PDT 2026; root:xnu-13432.1.9~3/RELEASE_ARM64_T8132 arm64\nApple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0\n/Applications/Xcode-27.0.app/Contents/Developer\n/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk\n27.0\nf1691989a2907f809bce00506abe8a78d9f5c4f6\n",
+  "baseline": {
+    "compiled": true,
+    "tests": 5,
+    "failedTestCases": 4,
+    "assertionFailures": 22,
+    "validCachePositiveControlPassed": true,
+    "exitCode": 1,
+    "reproduced": [
+      "Invalid cache tags promoted generic output to permanent cleanup",
+      "Directories, symlinks and FIFO cache tags accepted",
+      "Revoked declaration did not prevent cleanup",
+      "Legacy generic output remained irreversible"
+    ]
+  },
+  "artifactHashesVerified": true,
+  "artifacts": [
+    {
+      "name": "test.log",
+      "sha256": "9725edb48a7af76a2c46da3d0dce90cc0371d8166b4c5411c89af9af6210d2eb",
+      "bytes": 65124
+    },
+    {
+      "name": "environment.txt",
+      "sha256": "c851c54b961d18ead4c1514bddc32622ed3d3a1e251c666f470eea4d6aa025c3",
+      "bytes": 440
+    },
+    {
+      "name": "exit-code.txt",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    }
+  ],
+  "fixedResult": {
+    "runId": "6a1d9434-ddac-4786-8d4d-0d1d534df442",
+    "inputCommit": "182ceb7b62acbac41f71a83ac1126cea50658657",
+    "inputTree": "53d86b68d59e759d7888643065ef5c431ac744ef",
+    "inputHead": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+    "status": "done",
+    "exitCode": 0,
+    "targetResults": [
+      {
+        "target": "ThermoKitTests.xctest",
+        "status": "passed",
+        "tests": 207,
+        "failures": 0
+      },
+      {
+        "target": "ThermoHelperTests.xctest",
+        "status": "passed",
+        "tests": 30,
+        "failures": 0
+      },
+      {
+        "target": "ThermoCLITests.xctest",
+        "status": "passed",
+        "tests": 112,
+        "failures": 0
+      },
+      {
+        "target": "ThermoAppTests.xctest",
+        "status": "passed",
+        "tests": 315,
+        "failures": 0
+      },
+      {
+        "target": "CleanKitTests.xctest",
+        "status": "passed",
+        "tests": 770,
+        "failures": 0
+      },
+      {
+        "target": "AgentDoctorTests.xctest",
+        "status": "passed",
+        "tests": 323,
+        "failures": 0
+      },
+      {
+        "target": "AgentCoreTests.xctest",
+        "status": "passed",
+        "tests": 63,
+        "failures": 0
+      }
+    ],
+    "totalTests": 1820,
+    "buildCacheEvidenceTests": {
+      "tests": 7,
+      "failures": 0
+    },
+    "artifactHashesVerified": true,
+    "artifacts": [
+      {
+        "name": "test.log",
+        "sha256": "36687607d7296b305386ac6bcbffdd6609952613a4440ae85fe6194a70f3cb4b",
+        "bytes": 555422
+      },
+      {
+        "name": "environment.txt",
+        "sha256": "b863774a08c27dbe5483d4cb2c36ea5fd0ce1eb9a08db03dfd72e68b05200fe6",
+        "bytes": 440
+      },
+      {
+        "name": "exit-code.txt",
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "bytes": 2
+      }
+    ]
+  },
+  "limitations": [
+    "No real user cache or project data removed",
+    "Not evidence for installed app or hardware acceptance"
+  ],
+  "firstFixedRun": {
+    "runId": "812e786e-9a24-403d-8306-61057739475f",
+    "inputCommit": "b9e1d0ba9bd1bf0b3c7d4d16c63c4f0748403980",
+    "inputTree": "eedf1105f84b3775a0b5578e0d0945d79825f511",
+    "compiled": true,
+    "tests": 7,
+    "failures": 1,
+    "remainingFailure": "Revoked output was retained; assertion expected a path key while item-wide refusal records the item id. Corrected to assert exact reason on item id.",
+    "artifactHashesVerified": true,
+    "artifacts": [
+      {
+        "name": "test.log",
+        "sha256": "734aab1c21a17d3bc738d42de0e3d3667148dd499679d6d388052511fb992415",
+        "bytes": 59254
+      },
+      {
+        "name": "environment.txt",
+        "sha256": "6566869619b8e694a4cb54890da469d9d65ba82f58bb3bdc0e839b5623a85567",
+        "bytes": 440
+      },
+      {
+        "name": "exit-code.txt",
+        "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+        "bytes": 2
+      }
+    ]
+  },
+  "additionalXcodeCoverage": {
+    "testsAdded": 1,
+    "cases": [
+      "All three Xcode evidence paths: real directory accepted",
+      "Checked root is a symlink: rejected",
+      "Intermediate alias: rejected",
+      "Evidence leaf is a symlink: rejected",
+      "Evidence leaf is a regular file: rejected"
+    ],
+    "implementation": "Descriptor walk with O_NOFOLLOW | O_DIRECTORY on root and every path component",
+    "runId": "ee92f080-08c8-47e9-bc9b-cabefac59c74",
+    "result": {
+      "testsInCacheSuite": 8,
+      "failures": 0,
+      "allNonHardwareTests": 1842,
+      "exitCode": 0
+    }
+  },
+  "latestIntegratedResult": {
+    "runId": "ee92f080-08c8-47e9-bc9b-cabefac59c74",
+    "inputCommit": "73349611321e358b974377b06369f2fe3b7a98b4",
+    "inputTree": "a575daccb19cb0d3429b4075d129d196c6f10b75",
+    "inputHead": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+    "status": "done",
+    "exitCode": 0,
+    "targetResults": [
+      {
+        "target": "ThermoKitTests.xctest",
+        "status": "passed",
+        "tests": 212,
+        "failures": 0
+      },
+      {
+        "target": "ThermoHelperTests.xctest",
+        "status": "passed",
+        "tests": 30,
+        "failures": 0
+      },
+      {
+        "target": "ThermoCLITests.xctest",
+        "status": "passed",
+        "tests": 115,
+        "failures": 0
+      },
+      {
+        "target": "ThermoAppTests.xctest",
+        "status": "passed",
+        "tests": 328,
+        "failures": 0
+      },
+      {
+        "target": "CleanKitTests.xctest",
+        "status": "passed",
+        "tests": 771,
+        "failures": 0
+      },
+      {
+        "target": "AgentDoctorTests.xctest",
+        "status": "passed",
+        "tests": 323,
+        "failures": 0
+      },
+      {
+        "target": "AgentCoreTests.xctest",
+        "status": "passed",
+        "tests": 63,
+        "failures": 0
+      }
+    ],
+    "totalTests": 1842,
+    "artifactHashesVerified": true,
+    "currentSourceFilesComparedWithRunningTestWorkspace": 594,
+    "sourceManifestSHA256": "5ec1fa41d00c66736ad952162778081bdab4bf3de763d7dfc8943a8810eb4b8f",
+    "artifacts": [
+      {
+        "name": "test.log",
+        "sha256": "a7549ca9e41e9508386a1f27d22293a29fa856333606a5448ca9aaaab6030d3e",
+        "bytes": 561587
+      },
+      {
+        "name": "environment.txt",
+        "sha256": "e2a3223355383c5d20c128753600acdfd0dbf197ab637ba2496320fbcea4b2ba",
+        "bytes": 440
+      },
+      {
+        "name": "exit-code.txt",
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+        "bytes": 2
+      }
+    ]
+  },
+  "nativeSignedCLIAcceptance": {
+    "report": "docs/measurements/mac190-r11-build-cache-roundtrip-2026-10-20.json",
+    "candidateRevision": 11,
+    "sourceInputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+    "binarySHA256": "889020d7b40918982ddf133abb23561e3740b39b17cd56046cdfeb9052758ad9",
+    "sourceManifestFiles": 600,
+    "fixtureCasesOnly": true,
+    "rootLinkPositiveControlAdded": true,
+    "proofLossBeforeIrreversibleApplyRefused": true,
+    "trashRestoreBytesAndIdentitiesVerified": true
+  }
+}

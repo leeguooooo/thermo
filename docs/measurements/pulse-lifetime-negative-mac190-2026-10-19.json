@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-19",
+  "runId": "a0cda3f0-0207-47ed-964f-ee4a1ae4eade",
+  "host": "mac190",
+  "inputCommit": "e50066e08e6c3e5a850b2d1cd8c9764a6eb20a3a",
+  "inputTree": "136f8140b49af45d05be8fe4329aa790dec7b0be",
+  "commandExitCode": 0,
+  "negativeControl": {
+    "testExitCode": 1,
+    "expectedCasesFailed": {
+      "testFinishingAfterLastReleaseCannotPublish": true,
+      "testReopeningRejectsPreviousReadAndPublishesTheNewSession": true
+    },
+    "buildCompleted": true,
+    "passed": true
+  },
+  "mutation": {
+    "scope": "owned disposable source snapshot only",
+    "change": "bypass post-read session-token check",
+    "originalSHA256": "7760d7a476958c965705d2674203fbe1876474ef8fbe906e476c4c0f827dd841",
+    "mutatedSHA256": "bd058981ab10ed174aed04a3020d1b51d95284da60aee0e843adee69428cb5fb"
+  },
+  "currentSourceMatchesUnmutatedOriginal": true,
+  "artifactHashesVerified": true,
+  "artifactFiles": [
+    {
+      "path": "/Users/leo/.local/state/session-flow/runs/a0cda3f0-0207-47ed-964f-ee4a1ae4eade/test/artifacts/.remote-qa/test-exit-code.txt",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2
+    },
+    {
+      "path": "/Users/leo/.local/state/session-flow/runs/a0cda3f0-0207-47ed-964f-ee4a1ae4eade/test/artifacts/.remote-qa/test.log",
+      "sha256": "9af3f3b49f3265528215f913f674fd4107b2715462cc9ac6c2cda6ef2e73cba4",
+      "bytes": 418318
+    },
+    {
+      "path": "/Users/leo/.local/state/session-flow/runs/a0cda3f0-0207-47ed-964f-ee4a1ae4eade/test/artifacts/.remote-qa/negative-control.json",
+      "sha256": "dd4c5faf8637c619f4476de85239e6489dc06c2a71b8e3411b3e4748b1aeb02a",
+      "bytes": 225
+    },
+    {
+      "path": "/Users/leo/.local/state/session-flow/runs/a0cda3f0-0207-47ed-964f-ee4a1ae4eade/test/artifacts/.remote-qa/mutation.json",
+      "sha256": "dba491911cad689bc8eccc3bfde771259de20fa6644d5c6749a343da8208220f",
+      "bytes": 281
+    }
+  ],
+  "interpretation": "Both lifecycle cases reject stale publication when the production post-read token guard is deliberately bypassed in a disposable snapshot. The normal guard remains in development source; its full 1809-test run passed.",
+  "sourceVerificationScope": "Historical pre-main-integration snapshot; not evidence for the later 0b97f97 integration or 1.1.39."
+}

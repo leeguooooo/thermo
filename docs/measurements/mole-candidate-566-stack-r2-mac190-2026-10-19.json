@@ -1,0 +1,211 @@
+{
+  "date": "2026-10-19",
+  "version": "1.1.39",
+  "build": "566",
+  "reviewRevision": 2,
+  "sourceCommit": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+  "sourceState": "dirty",
+  "validatedInputCommit": "f94a7b95da5b3e3679483c857583e9ca3799fce4",
+  "validatedInputTree": "43f1f41573f9bcd41a1c0348686127cd975e82cd",
+  "sourceFilesVerified": 596,
+  "nonHardwareTests": 1844,
+  "nonHardwareFailures": 0,
+  "testAndBuildInputIdentical": true,
+  "remoteBuildRun": "c9235921-7468-4a08-916a-f9a6de94fb19",
+  "testRun": "a98a2578-eeee-4013-b0b3-28897397e1a8",
+  "packageVerification": {
+    "source": "2ff2c36",
+    "version": "1.1.39",
+    "build": "566",
+    "installed": false,
+    "published": false,
+    "sourceCommit": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+    "remoteBuildInput": "f94a7b95da5b3e3679483c857583e9ca3799fce4",
+    "reviewRevision": 2,
+    "metadataVerified": true,
+    "developerIDTeam": "6ZPXG4KVVS",
+    "architectures": {
+      "Contents/MacOS/Thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo-helper": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "minimumOS": {
+      "Contents/MacOS/Thermo": [
+        "13.0",
+        "13.0"
+      ],
+      "Contents/Helpers/thermo": [
+        "13.0",
+        "13.0"
+      ],
+      "Contents/Helpers/thermo-helper": [
+        "13.0",
+        "13.0"
+      ]
+    },
+    "appleEventsEntitlement": true,
+    "cli": {
+      "arm64": {
+        "versionPass": true,
+        "dryRuns": [
+          {
+            "changesMade": false,
+            "forcesCharging": false,
+            "holdsConnection": true,
+            "minimumHelperProtocol": 8,
+            "pauseAtPercent": 80,
+            "policy": "limit80",
+            "resumeBelowPercent": 75
+          },
+          {
+            "changesMade": false,
+            "forcesCharging": false,
+            "fullChargeEndConditions": [
+              "reported100Percent",
+              "externalPowerDisconnected",
+              "powerStateUnavailable",
+              "supportChanged"
+            ],
+            "holdsConnection": true,
+            "minimumHelperProtocol": 8,
+            "policy": "chargeToFull"
+          }
+        ],
+        "readOnlyProbePass": true,
+        "helperStatus": {
+          "installationSource": "legacy",
+          "installed": "true",
+          "running": "false",
+          "version": ""
+        },
+        "physicalIntelAccepted": false
+      },
+      "x86_64": {
+        "versionPass": true,
+        "dryRuns": [
+          {
+            "changesMade": false,
+            "forcesCharging": false,
+            "holdsConnection": true,
+            "minimumHelperProtocol": 8,
+            "pauseAtPercent": 80,
+            "policy": "limit80",
+            "resumeBelowPercent": 75
+          },
+          {
+            "changesMade": false,
+            "forcesCharging": false,
+            "fullChargeEndConditions": [
+              "reported100Percent",
+              "externalPowerDisconnected",
+              "powerStateUnavailable",
+              "supportChanged"
+            ],
+            "holdsConnection": true,
+            "minimumHelperProtocol": 8,
+            "policy": "chargeToFull"
+          }
+        ],
+        "readOnlyProbePass": true,
+        "helperStatus": {
+          "installationSource": "legacy",
+          "installed": "true",
+          "running": "false",
+          "version": ""
+        },
+        "physicalIntelAccepted": false
+      }
+    }
+  },
+  "archive": {
+    "version": "1.1.39",
+    "build": "566",
+    "source": "2ff2c36",
+    "archiveSHA256": "aecdc8fec8195af3cc9eee7b80e9944e1768f5ff9e6c9e58cd63f5adc74b7272",
+    "regularFiles": 95,
+    "links": 8,
+    "manifestMatch": true,
+    "signatureVerified": true,
+    "notarized": false,
+    "published": false
+  },
+  "installed": false,
+  "notarized": false,
+  "published": false,
+  "nativeReview": {
+    "candidatePID": 13610,
+    "restartedPID": 91958,
+    "ranFromCandidateDirectory": true,
+    "crossProcessSettingsReflectedInNativeSettings": true,
+    "physicalUserObservation": {
+      "stackedTwoLines": "clear and complete",
+      "leftClick": "panel",
+      "rightClick": "main console",
+      "bothClickActionsConfirmed": true
+    },
+    "ordinaryAwake": {
+      "both20Seconds": {
+        "activeRequests": 2,
+        "types": [
+          "PreventUserIdleSystemSleep",
+          "PreventUserIdleDisplaySleep"
+        ],
+        "expiredToIdle": true,
+        "postExpiryKernelRequests": 0,
+        "expiryReasonVisibleInPanel": true
+      },
+      "tasks30Seconds": {
+        "activeRequests": 1,
+        "type": "PreventUserIdleSystemSleep",
+        "sameRequestContinuedAfterPanelClose": true,
+        "stoppedByNativePanel": true,
+        "stopJournalTime": "2026-10-19T10:56:34Z",
+        "originalDeadline": "2026-10-19T10:56:36Z",
+        "stopRecordedBeforeDeadline": true,
+        "postStopObservedKernelRequests": 0
+      },
+      "display60Seconds": {
+        "activeRequests": 1,
+        "type": "PreventUserIdleDisplaySleep",
+        "quitReleasedBeforeDeadline": true,
+        "secondsBeforeDeadline": 25.821715
+      },
+      "restart": {
+        "requested": false,
+        "requests": 0,
+        "sessionNotRestored": true
+      },
+      "GUIStartButton": "not yet exercised; starts used public App CLI, stop used native GUI",
+      "physicalLowBatteryAndACTransitions": "not exercised"
+    }
+  },
+  "evidenceHashes": {
+    "idle-awake-timed-start.json": "5f09eacebb9c90282dec021d40acc42d13720c0e08b2a66383c43c3201c856e6",
+    "idle-awake-after-panel-close.json": "714c03f2f507ae9fc6f0af1625cd658cdd3bfa4804105412687e5be483a04d0b",
+    "idle-awake-tasks-start.json": "73e15db96901b5b1394804a6ef52e19b85e39295576cfab26aab6de9cd5e14fa",
+    "idle-awake-tasks-panel-closed.json": "e528eb0935175414f3a7f71b97356e4b1f51eee21d6d98428c49e82d59d064d3",
+    "idle-awake-tasks-native-stop.json": "c3891312dd78b288e72dea0be96072d9f9629415b5bdd0d04e24ce5ceab72395",
+    "idle-awake-tasks-stop-journal.json": "2cd6d23460c6387d4df9ae6def83dc20eb0a3cdf0c5e2d1626df784b7b925a02",
+    "idle-awake-display-before-quit.json": "05745df2e27b5b76b870c2fa92a9de75811a681de0208829923a341a985cce42",
+    "idle-awake-display-after-quit.json": "80677ab23f8a8f9af1c10029bb04e7a2e840f7a707169374797c1f84f1ef0292",
+    "idle-awake-after-restart.json": "7faeeb1312fc26ee7b01c5de7a43ce7f2e7c9ae517797b8e71931793ae47bf18",
+    "package-verification.json": "6a4cedcd13e1f8621d166c3814735c3436c5f60e9f63792850d2ce15d4324ebb",
+    "archive-verification.json": "6d1f6235f8963e03aaaa547aef5e58c5c4c88184d60def6311cd75c3c9176e52",
+    "source-freeze.json": "f202edf34bb44996f5adb749665f29ad11bc03d6e03916418164fcaa2c3cb704",
+    "native-settings-r2-requests.json": "b0856956d6cebb6fac2de8203589fe0b51b113c9dbdc12db444f295e13d1c200"
+  },
+  "limitations": [
+    "Prior ordinary offscreen memory-page first-read timeout remains unresolved; no claim that the renderer fixed it.",
+    "Current source adds menu-panel discovery after this validated snapshot; new full test and build pending.",
+    "Existing helper remains 8/1.1.37, with candidate UI reporting it outdated."
+  ]
+}

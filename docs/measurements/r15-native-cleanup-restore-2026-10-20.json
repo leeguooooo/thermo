@@ -1,0 +1,91 @@
+{
+  "checkedAt": "2026-10-19T20:34:51.231236+00:00",
+  "status": "Current installed R15 native cleanup plan and History restore, partial conflict protection and recovery accepted on owned fixtures",
+  "version": "1.1.40 (611.15)",
+  "installedInput": "b5a2a2ba62071297fa0367e17924864fca23af13",
+  "cliSHA256": "10cdd0f80530a4443e83f02a82ca8d912bed94329e94a1fc704bf45ea048c249",
+  "executionHost": "Controlled local M3 GUI target; no compilation in this acceptance",
+  "fixtureRoot": "/Users/leo/.local/state/thermo-qa/r15-restore-4ee54d41b6",
+  "plan": {
+    "planID": "3F6A76E5-CCD4-4483-9788-EDB8EC708099",
+    "batchID": "88760A18-188A-4765-8302-C32772095030",
+    "selectedPath": "/Users/leo/.local/state/thermo-qa/r15-restore-4ee54d41b6/OwnedPlanR15-4ee54d41b6/.build",
+    "projectRootDiscoveryDisabled": true,
+    "CACHEDIRTagEvidenceVerified": true,
+    "dryRunNoMove": true,
+    "onlyOwnedPathApplied": true,
+    "nativeHistoryEntryAXReadable": true,
+    "nativeRestoreCommitted": true,
+    "notice": "已放回 1/1 项。",
+    "bytesAndFileAndDirectoryIdentitiesMatch": true,
+    "consumedPlanReplayRefused": true,
+    "estimatedPermanentlyDeletedBytes": 0
+  },
+  "twoItemBatch": {
+    "batchID": "F63EDCA5-CE17-4FBB-9BF5-813E0207E6A9",
+    "paths": [
+      "/Users/leo/.local/state/thermo-qa/r15-restore-4ee54d41b6/OwnedManualA-4ee54d41b6/cache",
+      "/Users/leo/.local/state/thermo-qa/r15-restore-4ee54d41b6/OwnedManualB-4ee54d41b6/cache"
+    ],
+    "bothMovedThroughProduct": true,
+    "originalLocationConflictCreatedByFixtureProcedure": true,
+    "newerConflictKeptAt": "/Users/leo/.local/state/thermo-qa/r15-restore-4ee54d41b6/kept-owned-newer-conflict",
+    "partialReviewShowsConflict": true,
+    "firstNativeResult": "已放回 1/2 项，原路径已有新内容已保留",
+    "AExactAfterFirstRestore": true,
+    "newerBConflictExactAfterFirstRestore": true,
+    "oldBExactInTrashAfterFirstRestore": true,
+    "partialOutcomeJournalPreserved": true,
+    "conflictMovedAsideManuallyForFreshReview": true,
+    "freshReviewShowsAAlreadyRestoredAndBAvailable": true,
+    "secondNativeResult": "已放回 1/1 项，另有 1 项已在原处",
+    "allBytesAndFileAndDirectoryIdentitiesMatch": true,
+    "newerConflictStillPreserved": true,
+    "repeatCLIRestoreStatuses": [
+      "alreadyRestored",
+      "alreadyRestored"
+    ],
+    "repeatGUIReviewBothAlreadyAtOriginalLocation": true,
+    "repeatGUIRestoreDisabled": true,
+    "cancelReturnsToHistory": true,
+    "journalOutcomes": [
+      "succeeded",
+      "partial"
+    ]
+  },
+  "evidenceRoot": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/r15-native-cleanup-2026-10-20",
+  "artifactSHA256": {
+    "manual-trash.json": "01a4f153fa363c0c3bde5f667c7f3e1d8aa1e9197968164d69c64c42713af036",
+    "fixture.json": "1df41bf791d241b9f6aaf9f35b18927309ee8120ea3fdd342187518b5a868a09",
+    "plan-apply-preview.json": "b798397ee2dc7fcee1ec73f48e7d94c2b23df7e842b4d14e49952ea89c76ac3c",
+    "manual-repeat-restore.json": "768dd673b07f51d38678331122faebbad6ec0883df4d3ae9fcfb2574a2041606",
+    "plan.json": "0aaf76ee0d0b3c06045209ad3f870af17b22e0905a40ad12160ee283dc8b1f02",
+    "plan-apply.json": "5e563961fbf53ab5f6e6d7cf20d984b4f16cc80f17d39a00e135caef7ad8eb5c",
+    "after-filesystem.json": "cedc72e950df21b162fee2f0b189f640f0b89fad131cc9a05e6b2897ba86b249",
+    "manual-conflict-preview.json": "25fb4eb2f378bed488122fd65ddb7ec4ea9c705d23d4c1475096c1d58c2107d5",
+    "manual-trash-preview.json": "af423038e782ec9609a076041d37d23e949bd0765bc21bbdd94ff06ffb6664b6",
+    "plan-restore-preview.json": "0f8bcb4f1e13940c5ce4ad0756aeafa46f46111bdeac5fe686a52ff1f5364655",
+    "manual-restore-preview.json": "5d29cf25c947c6e5345dc625859b994f5c9f4387f7934f8be98eef1f4a76b3f4",
+    "after-partial-preview.json": "5c11156c8f4aa8c1d824e75ed760548cebbbe7aed6ce27deee612e0fbe038c9a",
+    "partial-operation-record.json": "3813acb7340f8a51c310061e2e3725b587857dc4e2384f9c4cd59903335ed420",
+    "consumed-plan-replay.json": "f1bbb4b424ea1c6b6b00b7f28d816f478e37662b78ebf1a09abd6de1f4a45a81",
+    "prepare.py": "6472a3f2280e87ba43d6c9b837d0d813d600db9aff6c97a6189329e1e7c8c9ad",
+    "manual-operation-records.json": "6db870274e55a6b06b431a7d62af54eee54e16f92892a41dbd31ba378a2c7646"
+  },
+  "currentAppResponsive": true,
+  "fixtureDataAndConflictRetained": true,
+  "existingJournalRecordsDirectlyEditedOrDeleted": false,
+  "publicProductCommandsCreatedNormalQAOperationRecords": true,
+  "permanentDeletionRequested": false,
+  "physicalReclaimedBytesClaimed": false,
+  "productSourceChangedForThisAcceptance": false,
+  "notarized": false,
+  "published": false,
+  "sourceMergedIntoMain": false,
+  "limitations": [
+    "Only new owned cache fixtures, not arbitrary user data or other volumes",
+    "Conflict resolution consisted of moving the owned conflicting directory aside, not automatic product conflict repair",
+    "No full VoiceOver or keyboard-navigation acceptance",
+    "No charging-control write or physical power-state acceptance"
+  ]
+}

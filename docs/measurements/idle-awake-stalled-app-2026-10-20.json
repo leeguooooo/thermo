@@ -1,0 +1,101 @@
+{
+  "checkedAt": "2026-10-19T20:17:36.865089+00:00",
+  "installedVersion": "1.1.40 (611.15) R15",
+  "installedInput": "b5a2a2ba62071297fa0367e17924864fca23af13",
+  "driverSourceSHA256": "3a2c81ef3a5fffd2f1e3e3725dc3989b25c230f70d7817ad048765c81dac5982",
+  "productDriverSourceMatchesNativeTest": true,
+  "mac190NativeController": {
+    "run": "e5f6df48-5d0a-4342-b4eb-60e5575f4ec3",
+    "inputCommit": "e945d76f3d6fcb8cefe5327269baf25bba483df2",
+    "initialBothModeSeconds": 2,
+    "renewedTasksModeSeconds": 15,
+    "initialExpiryObservedUpperSecondsAfterRequestedEnd": 1.0273679494857788,
+    "renewedExpiryObservedUpperSecondsAfterRequestedEnd": 1.3281030654907227,
+    "requestedDeadlinePreservedByRenewal": true,
+    "remainingOwnedActiveRequests": 0,
+    "rawReport": "/Users/leo/.local/state/session-flow/runs/e5f6df48-5d0a-4342-b4eb-60e5575f4ec3/native/artifacts/.remote-qa/native.json",
+    "rawReportSHA256": "0fa3c2091cb0a806089572a7cfcb019434e29add638f53a58789925d4ed1420a"
+  },
+  "macM3InstalledAppStall": {
+    "target": {
+      "pid": 32589,
+      "uid": 501,
+      "startsec": 1792438824,
+      "startusec": 766111,
+      "executable": "/Applications/Thermo.app/Contents/MacOS/Thermo"
+    },
+    "sessionSeconds": 5,
+    "pauseSent": true,
+    "observationsWhileStopped": 147,
+    "RPCDeadlineBracketWidthSeconds": 0.037854666661587544,
+    "initialLeaseTimeoutSeconds": [
+      6,
+      6
+    ],
+    "fullTypesObservedAfterLatestPossibleRequestedEnd": true,
+    "allRequestsGoneBeforeAppResume": true,
+    "conservativeExpiryIntervalRelativeToRequestedEndSeconds": [
+      0.9651526250090683,
+      1.0879142916674027
+    ],
+    "firstAbsenceUpperSecondsAfterEarliestPossibleRequestedEnd": 1.0879142916674027,
+    "independentResumeAfterPauseSeconds": 9.975135791668436,
+    "coordinatorResumeFallbackUsed": false,
+    "extraProductStopUsed": false,
+    "afterResumeStatus": {
+      "lastEndReason": "expired",
+      "observedAt": "2026-10-19T20:11:36Z",
+      "phase": "idle",
+      "powerSource": "external",
+      "requestCount": "0",
+      "requested": "false",
+      "requiresHelper": "false"
+    },
+    "finalActiveOwnedRequests": 0,
+    "fanPolicyUnchanged": true,
+    "helperAndPlistUnchanged": true,
+    "observedSleepClockGapSeconds": 1.249863998964429e-07,
+    "rawReport": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/idle-awake-stall-r15-v2-2026-10-20/app-stall.json",
+    "rawReportSHA256": "12dc4db8840ad07a894899d5b85463894ab61205560ebe1896104e53904198fc"
+  },
+  "recoveryBackstop": {
+    "coordinatorKilledWithSIGKILL": true,
+    "ownedSleepFixtureResumedIndependently": true,
+    "wrongMicrosecondBirthIdentityRejectedWithoutSignal": true,
+    "libprocStructureBytes": 136,
+    "sharedMachineClockConfirmedAcrossProcesses": true,
+    "selfTest": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/idle-awake-stall-r15-v2-2026-10-20/recovery-self-test.json"
+  },
+  "preservedUnsuccessfulAttempts": [
+    {
+      "run": "16079d86-c39c-4d31-8f1c-2961ab69bc7c",
+      "scope": "QA linker setup failed before native runner; default Swift Build module path differed",
+      "nativeRequestsCreated": false,
+      "result": "dist/remote-190/idle-awake-kernel-expiry-first-result.json"
+    },
+    {
+      "report": "dist/idle-awake-stall-r15-2026-10-20/app-stall.json",
+      "scope": "Real five-second product session started; Python adapter assumed level 1, native level was 255; failed before SIGSTOP",
+      "AppPaused": false,
+      "noRequestsPresentBeforeCorrectedAttempt": true,
+      "retainedOriginalReport": true
+    }
+  ],
+  "verificationChanges": {
+    "nativeScriptSchemaVersion": 2,
+    "requestedDeadlineAndKernelExpirySeparated": true,
+    "failureSampleTraceKeptInNativeLog": true,
+    "nativeConstantInterpretsActiveState": true,
+    "noPython39CrossProcessMonotonicComparison": true,
+    "productSourceChanged": false
+  },
+  "limitations": [
+    "One five-second Both-mode stall case on the installed M3 App, not every duration or timing phase",
+    "mac190 tests use a standalone controller, not GUI acceptance",
+    "Observation bounds include query and scheduler latency; no universal OS release-latency guarantee",
+    "No whole-machine sleep, physical unplug/replug, low-battery or sleep/wake acceptance",
+    "App post-resume status reads can refresh controller state; kernel disappearance was observed independently before resuming",
+    "Public product QA sessions may create normal operation-journal records; no manual journal modification",
+    "Charging writes remain unapproved and were not performed"
+  ]
+}

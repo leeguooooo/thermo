@@ -1,0 +1,25 @@
+{
+  "sourceWorktree": "/Users/leo/github.com/thermo-mole-integration-af047a7e",
+  "sourceBase": "b536e6cb229d16798a3e21ef9e9afd623e648c3d",
+  "frozenOwnedTree": "37aee6231d056734a90864f0f69e8d5f68fa97dc",
+  "newWorktree": "/Users/leo/github.com/thermo-mole-integration-a869019",
+  "newBase": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+  "applyExitCode": 0,
+  "sourceCommitted": false,
+  "ownedChangedFiles": 104,
+  "upstreamChangedFiles": 20,
+  "overlap": [
+    "Sources/ThermoL10n/ZhHans.swift",
+    "Sources/thermo/Args.swift",
+    "Sources/thermo/CommandHelp.swift"
+  ],
+  "ownedNonoverlapIdentical": true,
+  "upstreamNonoverlapIdentical": true,
+  "upstreamTranslationsPreserved": 2870,
+  "mergedTranslationKeys": 2930,
+  "mergeConflicts": 0,
+  "committed": false,
+  "tested": true,
+  "testRun": "996c65d9-dff7-4cc5-843b-8ad6ae189b61",
+  "testedInput": "85a9a39e3a68b59e0b6b0ea0e0d033ddead176c9"
+}

@@ -103,6 +103,9 @@ public struct CleanItem: Codable, Identifiable, Sendable, Equatable {
     /// A build rebuilds it exactly (`node_modules`, `.build`, `target`): reviewed before removal,
     /// because rebuilding costs time, but deleted rather than trashed, which would free nothing.
     public var regenerable: Bool? = nil
+    /// Content-based cache eligibility is rechecked before irreversible cleanup.
+    /// Missing in older reports; generic output without it remains recoverable.
+    public var buildCacheEvidence: [String: BuildCacheEvidence]? = nil
     /// For commands whose effect is not known beforehand (`pnpm store prune`): folders measured before
     /// and after, so the result reports a removed-size estimate rather than the scanned upper bound.
     public var measure: [String]?

@@ -42,8 +42,7 @@ enum Projects {
 
     /// A cache by its own declaration (CACHEDIR.TAG: Cargo, SwiftPM, …) or Xcode derived data.
     static func isEvidentCache(_ p: String) -> Bool {
-        FS.exists(p + "/CACHEDIR.TAG") || FS.isDirectory(p + "/Build/Intermediates.noindex")
-            || FS.isDirectory(p + "/ModuleCache.noindex") || FS.isDirectory(p + "/CompilationCache.noindex")
+        BuildCacheEvidence.capture(p) != nil
     }
 
     /// Folders never descended into while looking for projects.
@@ -125,25 +124,30 @@ enum Projects {
             let p = dir + "/" + a
             let s = ctx.options.exactSizes ? FS.size(p) : FS.discoverySize(p)
             guard s.bytes > 1_000_000 else { return nil }
+            let evidence = evident ? BuildCacheEvidence.capture(p) : nil
             let stale = activity.map { $0 < ctx.staleBefore } ?? true
             var note = activity.map { d in
                 source.map { tr("last used %1$@ (%2$@)", AgeFormat.string(d, now: ctx.now), $0) } ?? tr("last changed %1$@", AgeFormat.string(d, now: ctx.now))
             }
             if !stale { note = [note, tr("in use; it will have to rebuild")].compactMap { $0 }.joined(separator: tr("; ")) }
-            let blocked = ctx.agentDirs.contains {
+            let agentRunning = ctx.agentDirs.contains {
                 $0 == dir || $0.hasPrefix(dir + "/") ||
                     (dir.hasPrefix($0 + "/") && ProjectSignals.isRepoRoot($0, containing: dir))
             }
-                ? tr("an agent is running in it") : nil
+            let blocked: String?
+            if evident && evidence == nil { blocked = tr("Build cache evidence changed; scan and review again.") }
+            else if agentRunning { blocked = tr("an agent is running in it") }
+            else { blocked = nil }
             var item = CleanItem(
                 id: "project/" + id(p, ctx: ctx), category: .projects,
                 title: "\((dir as NSString).lastPathComponent) · \(a)",
                 detail: FS.tilde(dir, home: ctx.home) + " · \(kind)",
                 // Generic output folders can hold things worth keeping (a rendered video in `out`, a
                 // release binary in `dist`): never in the one-click safe set, always to the Trash.
-                safety: stale && (evident || !generic.contains(a)) ? .safe : .review,
+                safety: stale && (evidence != nil || !generic.contains(a)) ? .safe : .review,
                 bytes: s.bytes, files: s.files, lastUsed: activity, paths: [p], note: note, blocked: blocked, group: dir)
-            item.regenerable = evident || !generic.contains(a)
+            item.regenerable = evidence != nil || !generic.contains(a)
+            item.buildCacheEvidence = evidence.map { [p: $0] }
             item.estimatedSize = !ctx.options.exactSizes; item.sizeIncomplete = s.incomplete
             return item
         case let .worktree(wt, repo):
@@ -178,8 +182,13 @@ enum Projects {
         if ctx.options.categories.contains(.projects) {
             for n in evidentNames where set.contains(n) && FS.isDirectory(dir + "/" + n) {
                 if isEvidentCache(dir + "/" + n) { evident.append(n); continue }
+                for suffix in ["ModuleCache.noindex", "CompilationCache.noindex", "Build/Intermediates.noindex"] {
+                    let part = n + "/" + suffix
+                    if isEvidentCache(dir + "/" + part) { evident.append(part) }
+                }
                 for c in FS.entries(dir + "/" + n) ?? [] where c.isDir && isEvidentCache(dir + "/" + n + "/" + c.name) {
-                    evident.append(n + "/" + c.name)
+                    let part = n + "/" + c.name
+                    if !evident.contains(part) { evident.append(part) }
                 }
             }
         }

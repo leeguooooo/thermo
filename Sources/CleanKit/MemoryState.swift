@@ -119,10 +119,18 @@ public final class ProgramMemoryHistory: @unchecked Sendable {
 
     public func append(_ r: ProgramMemoryRecord, now: Date = Date()) {
         lock.lock(); defer { lock.unlock() }
-        var kept = readLocked().filter { now.timeIntervalSince($0.t) <= PulseHistory.keep }
-        kept.append(r)
+        // Validate one record at a time. Keeping the whole decoded identity history,
+        // then encoding it again, causes a large temporary allocation every five minutes.
+        // Retain ranges into the input instead of copying every valid encoded line.
+        let existing = (try? Data(contentsOf: url)) ?? Data()
+        let kept: [(time: Date, range: Range<Data.Index>)] = existing.split(separator: 0x0A).compactMap { line in
+            guard let record = try? PulseHistory.decoder.decode(ProgramMemoryRecord.self, from: Data(line)),
+                  now.timeIntervalSince(record.t) <= PulseHistory.keep else { return nil }
+            return (record.t, line.startIndex..<line.endIndex)
+        }.sorted { $0.time < $1.time }
         var data = Data()
-        for k in kept { if let l = try? PulseHistory.encoder.encode(k) { data.append(l); data.append(0x0A) } }
+        for entry in kept { data.append(existing[entry.range]); data.append(0x0A) }
+        if let line = try? PulseHistory.encoder.encode(r) { data.append(line); data.append(0x0A) }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? data.write(to: url, options: .atomic)
     }
@@ -169,6 +177,8 @@ public enum MemorySuspects {
     /// Age/size alone never generates a suspect. The legacy longRunning case remains decodable.
     public static func find(programs: [MachinePulse.Hog], history: [ProgramMemoryRecord], now: Date = Date()) -> [MemorySuspect] {
         var out: [MemorySuspect] = []
+        // Every program traverses the same timeline; sort it once, outside the per-program loop.
+        let newestFirst = history.sorted { $0.t > $1.t }
         for h in programs {
             guard h.memoryMetric == nil || h.memoryMetric == .footprint else { continue }
             // Only the uninterrupted tail with the same PID/start/executable set is comparable.
@@ -176,7 +186,7 @@ public enum MemorySuspects {
             let current = h.processIdentities?.sorted { $0.pid < $1.pid }
             var comparable: [ProgramMemoryRecord] = []
             if let current, !current.isEmpty, current.count == h.pids.count {
-                for r in history.sorted(by: { $0.t > $1.t }) where r.t <= now {
+                for r in newestFirst where r.t <= now {
                     guard r.identities?[h.id] == current, r.programs[h.id] != nil else { break }
                     comparable.append(r)
                 }

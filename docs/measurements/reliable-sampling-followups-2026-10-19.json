@@ -1,0 +1,190 @@
+{
+  "status": "1846 tests and universal build passed; lifecycle acceptance failed; not installed",
+  "inputCommit": "9886bf7c089962138e132607c0e4b7843891c8a0",
+  "testsRun": "001f9967-2122-4a95-a564-5321474f62b1",
+  "universalRun": "d8fb965c-4681-4315-9e25-e50b39e15756",
+  "changes": [
+    "Preserve fan sampling provenance for panel, overview and fan inspector",
+    "Publish live memory inventory before blocking historical I/O, retain single worker and discard obsolete sessions",
+    "Sort memory suspect timeline once rather than once per program"
+  ],
+  "initialCompileFailure": {
+    "run": "0f564b7e-11fe-45f5-b798-37e181b7dc84",
+    "error": "Views.swift:399 cannot find fans in scope",
+    "artifactHashesVerified": true,
+    "corrected": true
+  },
+  "cancelledKnownBadRun": "6c8a5cdc-606b-4a87-99f0-60bfba491e84",
+  "remaining": [
+    "Fresh R4 candidate lifecycle run must test the earlier ordinary first-memory-refresh timeout",
+    "Menu footer physical acceptance remains pending",
+    "Sampler discovery treats unreadable FNum as zero; separate failure/absence provenance review needed",
+    "MemoryPage delayed resample callbacks can call sample after stop; add active-session guard in next batch",
+    "ComputeModel does not immediately request a fresh sample when an obsolete in-flight reading drains after reopening; review cancellation and restart"
+  ],
+  "installedCandidateRemains": "R3 / input 9a2b9d93",
+  "fullRegression": {
+    "status": "passed",
+    "targets": [
+      {
+        "target": "ThermoKitTests.xctest",
+        "tests": 212,
+        "failures": 0
+      },
+      {
+        "target": "ThermoHelperTests.xctest",
+        "tests": 30,
+        "failures": 0
+      },
+      {
+        "target": "ThermoCLITests.xctest",
+        "tests": 115,
+        "failures": 0
+      },
+      {
+        "target": "ThermoAppTests.xctest",
+        "tests": 332,
+        "failures": 0
+      },
+      {
+        "target": "CleanKitTests.xctest",
+        "tests": 771,
+        "failures": 0
+      },
+      {
+        "target": "AgentDoctorTests.xctest",
+        "tests": 323,
+        "failures": 0
+      },
+      {
+        "target": "AgentCoreTests.xctest",
+        "tests": 63,
+        "failures": 0
+      }
+    ],
+    "tests": 1846,
+    "failures": 0,
+    "allArtifactHashesVerified": true,
+    "inputCommit": "9886bf7c089962138e132607c0e4b7843891c8a0",
+    "inputTree": "2d3aa3bed88202ed8dcba37b8716a3a151ec1390"
+  },
+  "candidate": {
+    "directory": "dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190",
+    "reviewRevision": 4,
+    "sourceFilesVerified": 597,
+    "allRemoteProductHashesVerified": true,
+    "dSYMUUIDPairsVerified": 3,
+    "signatureVerified": true,
+    "archive": {
+      "version": "1.1.39",
+      "build": "566",
+      "source": "2ff2c36",
+      "archiveSHA256": "96f22fbed9dc7eff37de75fa336a4476d44263cf9b9deb127781b18bd26f36d3",
+      "regularFiles": 95,
+      "links": 8,
+      "manifestMatch": true,
+      "signatureVerified": true,
+      "notarized": false,
+      "published": false
+    },
+    "installed": false
+  },
+  "lifecycle": {
+    "runs": [
+      {
+        "name": "baseline-first",
+        "exitCode": 0,
+        "functionalChecksPassed": true,
+        "samples": 23,
+        "foregroundActivity": false
+      },
+      {
+        "name": "foreground-control",
+        "exitCode": 2,
+        "functionalChecksPassed": false,
+        "samples": 23,
+        "foregroundActivity": true
+      },
+      {
+        "name": "baseline-after",
+        "exitCode": 2,
+        "functionalChecksPassed": false,
+        "samples": 23,
+        "foregroundActivity": false
+      }
+    ],
+    "allPassed": false,
+    "scope": "offscreen AppKit; 2 cycles, open 4 seconds, idle 2 seconds; uncontrolled external load; no installed/native acceptance",
+    "knownFailures": [
+      "Activity control: second memory and CPU opens stale; second CPU physical work not drained by closed/idle observation",
+      "Second ordinary run: first overview/memory/CPU opens stale; first CPU work not drained by closed/idle observation; some overview transitions stale"
+    ]
+  },
+  "diagnostic": {
+    "acceptanceRun": false,
+    "functionalChecksPassed": false,
+    "failedFreshChecks": [
+      {
+        "cycle": 2,
+        "page": "cpu"
+      }
+    ],
+    "captures": {
+      "pid": 95503,
+      "exitCode": 2,
+      "acceptanceRun": false,
+      "samplingMayPerturbTiming": true,
+      "captures": [
+        {
+          "phase": "memory-opening",
+          "exitCode": 0,
+          "path": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/memory-opening.sample.txt",
+          "exists": true
+        },
+        {
+          "phase": "cpu-opening",
+          "exitCode": 0,
+          "path": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/cpu-opening.sample.txt",
+          "exists": true
+        }
+      ]
+    },
+    "symbolication": [
+      {
+        "file": "dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/cpu-opening.sample.txt",
+        "addresses": 20,
+        "dSYM": "dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/products/symbols/Thermo-app.dSYM/Contents/Resources/DWARF/ThermoApp",
+        "output": "dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/cpu-opening.sample.symbolicated.txt"
+      },
+      {
+        "file": "dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/memory-opening.sample.txt",
+        "addresses": 28,
+        "dSYM": "dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/products/symbols/Thermo-app.dSYM/Contents/Resources/DWARF/ThermoApp",
+        "output": "dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/memory-opening.sample.symbolicated.txt"
+      }
+    ],
+    "observations": [
+      "Memory-opening sample shows main thread in NSView layoutSubtreeIfNeeded from lifecycle driver",
+      "First CPU-opening sample mostly shows an idle main run loop; no Compute worker stack captured",
+      "The diagnostic fresh-data failure occurred on second CPU opening, outside the first-CPU sampling window"
+    ],
+    "rootCauseEstablished": false
+  },
+  "evidenceSHA256": {
+    "cpu-opening.sample.txt": "3ab3170618af01b3f4ec5b09403d2ee2e2c2a00602f4659facb1b4980dfe83af",
+    "lifecycle-baseline-after.log": "a829671370d2effdfc55fa7be0b5bab5f1e7a397a157a8a47c3e9e55eea9d77b",
+    "memory-opening.sample.txt": "02cce915c393f6a3d219b1cc82e3d6cc17419d3e63487fef9f332b6bf338e0ae",
+    "lifecycle-summary.json": "a9b028b7304f307e4504e47fb0d37f3b50a361bea5c9e785523ae6bb8801ed19",
+    "lifecycle-diagnostic.json": "24e828fe27ea9e47663e6b5ac65028fe88ae6a5471b600cc2ac092c2499d80eb",
+    "lifecycle-baseline-first.log": "a296796504ad7ef6f2f5306bf8fda9b5e0ec408127df58df3d3e5f68e892c55d",
+    "lifecycle-foreground-control.log": "d1b0354735565048a03d83393acc70faa70241d6007b8237d5d56dfc1e26442c",
+    "lifecycle-baseline-after.json": "8dc44afbee0e4ada64b14ecfc2579ab14c2b90d297e3e50d0dae50dea2a024c0",
+    "lifecycle-diagnostic.log": "ff50059f4eac6ae4d46df25885b38164a42211cdd7ac1ad8db5ab2359f8c6c39",
+    "lifecycle-foreground-control.json": "13b68ada9b1eeede72dfba014a0c34be0f8b8f75ed9accf68dafa70941efc87f",
+    "lifecycle-baseline-first.json": "148d9035b6d12b1aed31e57320a461084578b6f55376b74f32ee98dc9c7b5004"
+  },
+  "backupPreparedOnly": {
+    "r3BackupVerified": true,
+    "r4ReplacementPerformed": false
+  }
+}

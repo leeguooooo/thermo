@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-20",
+  "status": "Installed R11 native stale restore review rejected replacement Trash entry, then fresh review restored original after controlled fixture arrangement",
+  "candidateRevision": 11,
+  "sourceInputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+  "machine": "Mac15,3 M3 macOS26.6.2",
+  "batchID": "31A57F3D-A2A8-4F66-863D-2922B3844CAE",
+  "fixtureRoot": "/Users/leo/.local/state/thermo-qa/gui-r11-changed-ca25b275",
+  "onlyOwnedTestData": true,
+  "nativeAcceptance": {
+    "originalReviewPreparedBeforeSubstitution": true,
+    "replacementNotRestored": true,
+    "bothVersionsPreservedAfterRefusal": true,
+    "zeroOfOneVisibleWithChangedObjectReason": true,
+    "failedOperationRecordPersisted": true,
+    "freshReviewAndRestoreAfterOriginalReturned": true,
+    "finalOneOfOneVisible": true,
+    "originalFileAndDirectoryInodeDeviceAndSHA256Match": true,
+    "replacementRetainedAndSHA256Matches": true,
+    "failedAndSucceededAttemptsRemainInJournal": true
+  },
+  "evidence": {
+    "preparation": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/gui-changed-trash-preparation.json",
+    "substitution": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/gui-changed-trash-substitution.json",
+    "refusalPostcondition": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/gui-changed-trash-rejection-postcondition.json",
+    "fixtureArrangement": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/gui-changed-trash-original-returned.json",
+    "recoveryPostcondition": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/gui-changed-trash-recovery-postcondition.json",
+    "UI": "CUA screenshots and fresh restore-sheet accessibility states in this conversation"
+  },
+  "limitations": [
+    "Own synthetic fixture only; no real user Trash data selected",
+    "Original was returned to its recorded Trash location through explicit QA fixture renames; this is not a product automatic-repair feature",
+    "No simultaneous final-syscall race or full VoiceOver acceptance",
+    "History-page AX extraction remains unresolved; visible UI and restore-sheet AX were observed separately",
+    "Mole parity remains incomplete"
+  ]
+}

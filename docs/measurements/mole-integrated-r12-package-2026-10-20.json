@@ -1,0 +1,498 @@
+{
+  "date": "2026-10-20",
+  "status": "Signed integrated R12 package, native/Rosetta inventory and offscreen lifecycle accepted; not installed/notarized/published",
+  "candidate": {
+    "source": "b536e6cb229d16798a3e21ef9e9afd623e648c3d",
+    "workingTree": "dirty",
+    "version": "1.1.40",
+    "build": "606",
+    "reviewRevision": 12,
+    "testRun": "e027eadc-f4a0-40df-a0a8-4a11743c82ca",
+    "remoteBuildRun": "199f87e1-8efd-4f1d-b16d-0d0c39211b20",
+    "inputCommit": "27ec7877c870d035611a2b56507a3aa47a191e81",
+    "inputTree": "b7cc1c7d42e5c2554005ebf04e19df1b9c7a2976",
+    "sourceFilesVerified": 605,
+    "sourceManifestSHA256": "d4f788b237bbe61d38e34693c0c7c096dfac33014a0cc70b028b1d9b01ff4eff",
+    "fullRegressionStatus": "passed",
+    "installed": false,
+    "published": false,
+    "nonHardwareTests": 1904,
+    "nonHardwareFailures": 0,
+    "testAndBuildInputIdentical": true
+  },
+  "package": {
+    "source": "b536e6c",
+    "version": "1.1.40",
+    "build": "606",
+    "installed": false,
+    "published": false,
+    "sourceCommit": "b536e6cb229d16798a3e21ef9e9afd623e648c3d",
+    "remoteBuildInput": "27ec7877c870d035611a2b56507a3aa47a191e81",
+    "reviewRevision": 12,
+    "metadataVerified": true,
+    "developerIDTeam": "6ZPXG4KVVS",
+    "architectures": {
+      "Contents/MacOS/Thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo-helper": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "minimumOS": {
+      "Contents/MacOS/Thermo": [
+        "13.0",
+        "13.0"
+      ],
+      "Contents/Helpers/thermo": [
+        "13.0",
+        "13.0"
+      ],
+      "Contents/Helpers/thermo-helper": [
+        "13.0",
+        "13.0"
+      ]
+    },
+    "appleEventsEntitlement": true,
+    "cli": {
+      "arm64": {
+        "versionPass": true,
+        "dryRuns": [
+          {
+            "changesMade": false,
+            "forcesCharging": false,
+            "holdsConnection": true,
+            "minimumHelperProtocol": 8,
+            "pauseAtPercent": 80,
+            "policy": "limit80",
+            "resumeBelowPercent": 75
+          },
+          {
+            "changesMade": false,
+            "forcesCharging": false,
+            "fullChargeEndConditions": [
+              "reported100Percent",
+              "externalPowerDisconnected",
+              "powerStateUnavailable",
+              "supportChanged"
+            ],
+            "holdsConnection": true,
+            "minimumHelperProtocol": 8,
+            "policy": "chargeToFull"
+          }
+        ],
+        "readOnlyProbePass": true,
+        "helperStatus": {
+          "installationSource": "legacy",
+          "installed": "true",
+          "running": "true",
+          "version": "8/1.1.40"
+        },
+        "physicalIntelAccepted": false
+      },
+      "x86_64": {
+        "versionPass": true,
+        "dryRuns": [
+          {
+            "changesMade": false,
+            "forcesCharging": false,
+            "holdsConnection": true,
+            "minimumHelperProtocol": 8,
+            "pauseAtPercent": 80,
+            "policy": "limit80",
+            "resumeBelowPercent": 75
+          },
+          {
+            "changesMade": false,
+            "forcesCharging": false,
+            "fullChargeEndConditions": [
+              "reported100Percent",
+              "externalPowerDisconnected",
+              "powerStateUnavailable",
+              "supportChanged"
+            ],
+            "holdsConnection": true,
+            "minimumHelperProtocol": 8,
+            "policy": "chargeToFull"
+          }
+        ],
+        "readOnlyProbePass": true,
+        "helperStatus": {
+          "installationSource": "legacy",
+          "installed": "true",
+          "running": "true",
+          "version": "8/1.1.40"
+        },
+        "physicalIntelAccepted": false
+      }
+    }
+  },
+  "archive": {
+    "version": "1.1.40",
+    "build": "606",
+    "source": "b536e6c",
+    "archiveSHA256": "e8cbc4b952a9bf6788c4d821e0c9836c0a6b3674565145fb5f525e824104399b",
+    "regularFiles": 95,
+    "links": 8,
+    "manifestMatch": true,
+    "signatureVerified": true,
+    "notarized": false,
+    "published": false
+  },
+  "commandInventory": {
+    "arm64": {
+      "schemaVersion": 1,
+      "commandCount": 109,
+      "commands": [
+        "activity",
+        "agents",
+        "agents compare",
+        "agents context",
+        "agents disable",
+        "agents fix",
+        "agents inspect",
+        "agents inspect-all",
+        "agents list",
+        "agents run",
+        "agents show",
+        "agents uninstall",
+        "agents usage",
+        "app-control",
+        "app-control awdl",
+        "app-control helper",
+        "app-control login",
+        "app-control updates",
+        "apps",
+        "apps leftovers",
+        "apps startup",
+        "apps startup disable",
+        "apps startup enable",
+        "apps uninstall",
+        "apps updates",
+        "apps updates apply",
+        "apps updates check",
+        "apps updates install",
+        "apps updates recovery",
+        "apps updates sources",
+        "awake",
+        "awdl",
+        "battery",
+        "bench",
+        "capabilities",
+        "charge",
+        "charge full",
+        "charge limit80",
+        "charge recover",
+        "charge status",
+        "claude-reset batches",
+        "claude-reset list",
+        "claude-reset restore",
+        "claude-reset run",
+        "clean",
+        "clean apply",
+        "clean empty-trash",
+        "clean log",
+        "clean overview",
+        "clean plan",
+        "clean repair-worktrees",
+        "clean restore",
+        "clean run",
+        "clean whitelist",
+        "fan auto",
+        "fan curve",
+        "fan set",
+        "fan status",
+        "fans",
+        "get",
+        "helper install",
+        "helper status",
+        "helper uninstall",
+        "history",
+        "integration",
+        "keep-awake",
+        "list",
+        "memory",
+        "permissions",
+        "power",
+        "privacy cookies",
+        "privacy dns",
+        "privacy environment",
+        "privacy location",
+        "privacy lookup",
+        "privacy profiles",
+        "privacy restore-browser",
+        "privacy timezone",
+        "privacy webrtc",
+        "pulse",
+        "pulse chrome",
+        "pulse chrome close",
+        "pulse explain",
+        "pulse history",
+        "pulse inspect",
+        "pulse quit",
+        "pulse restart",
+        "screen",
+        "settings",
+        "space",
+        "space archive",
+        "space dupes",
+        "space dupes remove",
+        "space large",
+        "space trash",
+        "tabs archive",
+        "tabs auto",
+        "tabs group",
+        "tabs groups",
+        "tabs list",
+        "tabs organize",
+        "tabs organized",
+        "tabs restore",
+        "tabs rule",
+        "tabs saved",
+        "tabs show",
+        "tabs undo-organize",
+        "temps",
+        "watch"
+      ],
+      "mcpExecutionEntries": [
+        {
+          "command": "agents inspect-all",
+          "execution": "mcp",
+          "structuredFormats": [
+            "json"
+          ],
+          "supportsDryRun": true,
+          "usage": "agents inspect-all [--agent AGENT] [--encoding ENCODING] [--timeout SEC] [--budget SEC] [--dry-run] [--json] [--root PROJECT]"
+        },
+        {
+          "command": "agents inspect",
+          "execution": "mcp",
+          "structuredFormats": [
+            "json"
+          ],
+          "supportsDryRun": false,
+          "usage": "agents inspect NAME [--encoding ENCODING] [--agent AGENT] [--timeout SEC] [--json] [--root PROJECT]"
+        }
+      ],
+      "keepAwakeHelp": "thermo keep-awake [status|start|stop] [--mode display_or_tasks_or_both] [--seconds SEC] [--duration manual] [--dry-run] [--yes] [--json]\n  execution: app\n\n--dry-run never applies changes. Unsupported flags are rejected.\nApp commands require a running compatible Thermo.app. No request is automatically retried.\nExit 0: completed; 2: invalid/refused; 3: partial or unconfirmed result; 1: execution error.\n",
+      "scope": "Inventory and help only; not real configured MCP server invocation, performance or hardware writes"
+    },
+    "x86_64": {
+      "schemaVersion": 1,
+      "commandCount": 109,
+      "commands": [
+        "activity",
+        "agents",
+        "agents compare",
+        "agents context",
+        "agents disable",
+        "agents fix",
+        "agents inspect",
+        "agents inspect-all",
+        "agents list",
+        "agents run",
+        "agents show",
+        "agents uninstall",
+        "agents usage",
+        "app-control",
+        "app-control awdl",
+        "app-control helper",
+        "app-control login",
+        "app-control updates",
+        "apps",
+        "apps leftovers",
+        "apps startup",
+        "apps startup disable",
+        "apps startup enable",
+        "apps uninstall",
+        "apps updates",
+        "apps updates apply",
+        "apps updates check",
+        "apps updates install",
+        "apps updates recovery",
+        "apps updates sources",
+        "awake",
+        "awdl",
+        "battery",
+        "bench",
+        "capabilities",
+        "charge",
+        "charge full",
+        "charge limit80",
+        "charge recover",
+        "charge status",
+        "claude-reset batches",
+        "claude-reset list",
+        "claude-reset restore",
+        "claude-reset run",
+        "clean",
+        "clean apply",
+        "clean empty-trash",
+        "clean log",
+        "clean overview",
+        "clean plan",
+        "clean repair-worktrees",
+        "clean restore",
+        "clean run",
+        "clean whitelist",
+        "fan auto",
+        "fan curve",
+        "fan set",
+        "fan status",
+        "fans",
+        "get",
+        "helper install",
+        "helper status",
+        "helper uninstall",
+        "history",
+        "integration",
+        "keep-awake",
+        "list",
+        "memory",
+        "permissions",
+        "power",
+        "privacy cookies",
+        "privacy dns",
+        "privacy environment",
+        "privacy location",
+        "privacy lookup",
+        "privacy profiles",
+        "privacy restore-browser",
+        "privacy timezone",
+        "privacy webrtc",
+        "pulse",
+        "pulse chrome",
+        "pulse chrome close",
+        "pulse explain",
+        "pulse history",
+        "pulse inspect",
+        "pulse quit",
+        "pulse restart",
+        "screen",
+        "settings",
+        "space",
+        "space archive",
+        "space dupes",
+        "space dupes remove",
+        "space large",
+        "space trash",
+        "tabs archive",
+        "tabs auto",
+        "tabs group",
+        "tabs groups",
+        "tabs list",
+        "tabs organize",
+        "tabs organized",
+        "tabs restore",
+        "tabs rule",
+        "tabs saved",
+        "tabs show",
+        "tabs undo-organize",
+        "temps",
+        "watch"
+      ],
+      "mcpExecutionEntries": [
+        {
+          "command": "agents inspect-all",
+          "execution": "mcp",
+          "structuredFormats": [
+            "json"
+          ],
+          "supportsDryRun": true,
+          "usage": "agents inspect-all [--agent AGENT] [--encoding ENCODING] [--timeout SEC] [--budget SEC] [--dry-run] [--json] [--root PROJECT]"
+        },
+        {
+          "command": "agents inspect",
+          "execution": "mcp",
+          "structuredFormats": [
+            "json"
+          ],
+          "supportsDryRun": false,
+          "usage": "agents inspect NAME [--encoding ENCODING] [--agent AGENT] [--timeout SEC] [--json] [--root PROJECT]"
+        }
+      ],
+      "keepAwakeHelp": "thermo keep-awake [status|start|stop] [--mode display_or_tasks_or_both] [--seconds SEC] [--duration manual] [--dry-run] [--yes] [--json]\n  execution: app\n\n--dry-run never applies changes. Unsupported flags are rejected.\nApp commands require a running compatible Thermo.app. No request is automatically retried.\nExit 0: completed; 2: invalid/refused; 3: partial or unconfirmed result; 1: execution error.\n",
+      "scope": "Inventory and help only; not real configured MCP server invocation, performance or hardware writes"
+    }
+  },
+  "initialCommandProbeCorrection": {
+    "initialProbe": "Expected agents mcp as a command prefix; assertion failed",
+    "actualContract": "agents inspect and agents inspect-all carry execution=mcp",
+    "productCodeChanged": false,
+    "initialAssertionNotClassifiedAsProductDefect": true
+  },
+  "lifecycle": {
+    "functionalChecksPassed": true,
+    "samples": 23,
+    "transitionChecks": {
+      "cycle-1-hidden": true,
+      "cycle-1-leave-overview": true,
+      "cycle-1-return-overview": true,
+      "cycle-1-visible-again": true,
+      "cycle-2-hidden": true,
+      "cycle-2-leave-overview": true,
+      "cycle-2-return-overview": true,
+      "cycle-2-visible-again": true
+    },
+    "foregroundActivityHeld": false,
+    "memoryGrowthAssessed": false,
+    "helperInteractionDisabled": true,
+    "menuBarRecorderDisabled": true,
+    "mode": "offscreen AppKit with explicit watched visibility; helper interaction and menu-bar recorder disabled",
+    "evidence": "/Users/leo/github.com/thermo-mole-integration-af047a7e/dist/mole-review-1.1.40-606-main-integration-r12-mac190/lifecycle-ordinary.json"
+  },
+  "postQAVerification": {
+    "packagedManifestEntries": 103,
+    "packagedManifestStillMatchesAfterQA": true,
+    "signatureVerifiedAfterQA": true,
+    "installedInputStillR11": "af87d82c523d80faf819e9b773175cf792293b13",
+    "installedAppUnchangedByThisQA": true,
+    "lifecycleReport": {
+      "buildConfiguration": "release",
+      "foregroundActivityHeld": false,
+      "functionalChecksPassed": true,
+      "memoryGrowthAssessed": false,
+      "mode": "offscreen AppKit with explicit watched visibility; helper interaction and menu-bar recorder disabled",
+      "options": {
+        "cycles": 2,
+        "foregroundActivity": false,
+        "idleSeconds": 2,
+        "openSeconds": 4,
+        "output": "/Users/leo/github.com/thermo-mole-integration-af047a7e/dist/mole-review-1.1.40-606-main-integration-r12-mac190/lifecycle-ordinary.json"
+      },
+      "pid": 52902,
+      "schemaVersion": 2,
+      "started": "2026-10-19T17:55:29Z",
+      "transitionChecks": {
+        "cycle-1-hidden": true,
+        "cycle-1-leave-overview": true,
+        "cycle-1-return-overview": true,
+        "cycle-1-visible-again": true,
+        "cycle-2-hidden": true,
+        "cycle-2-leave-overview": true,
+        "cycle-2-return-overview": true,
+        "cycle-2-visible-again": true
+      }
+    },
+    "lifecycleSampleCount": 23
+  },
+  "mainState": {
+    "head": "b536e6cb229d16798a3e21ef9e9afd623e648c3d",
+    "cleanAtObservation": true,
+    "modifiedByThisTask": false
+  },
+  "limitations": [
+    "Review source is dirty and uncommitted on isolated integration worktree; public clean-source release verification is not claimed",
+    "MCP inventory/help checks are definitions, not configured server invocation or performance acceptance",
+    "No integrated R12 visible GUI, physical charging, AWDL, sleep/lid or hardware-control acceptance",
+    "Offscreen lifecycle checks do not assess long-term memory growth",
+    "Installed R11 remains unchanged; source not merged to main; no notarization or publication",
+    "Mole parity remains incomplete"
+  ]
+}
