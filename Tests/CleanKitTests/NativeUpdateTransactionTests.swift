@@ -160,6 +160,51 @@ final class NativeUpdateTransactionTests: XCTestCase {
         XCTAssertEqual(build(original), "100")
     }
 
+    func testOriginalResourceChangeDuringFinalProcessCheckRefusesSwap() throws {
+        let prepared = try prepared()
+        let changed = Data("concurrent original resource edit".utf8)
+        var checks = 0, wrote = false, swapped = false
+        let result = NativeUpdateTransaction.commit(prepared, home: home, processes: {
+            checks += 1
+            if checks == 2 {
+                do {
+                    try changed.write(to: URL(fileURLWithPath: self.original + "/Contents/Resources/data"))
+                    wrote = true
+                } catch { XCTFail("Could not arrange owned concurrent edit: \(error)") }
+            }
+            return ProcessTable(entries: [])
+        }, afterSwap: { swapped = true })
+        XCTAssertTrue(wrote)
+        XCTAssertFalse(swapped, "An app changed after review must not be displaced")
+        XCTAssertEqual(result.outcome, "failed")
+        XCTAssertNil(result.receipt, "Refusal before swap must not create a misleading recovery record")
+        XCTAssertEqual(build(original), "100")
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: original + "/Contents/Resources/data")), changed)
+    }
+
+    func testIncomingResourceChangeDuringFinalProcessCheckRefusesSwap() throws {
+        let prepared = try prepared()
+        let originalSeal = try NativeBundleValidation.treeSeal(original)
+        var checks = 0, wrote = false, swapped = false
+        let result = NativeUpdateTransaction.commit(prepared, home: home, processes: {
+            checks += 1
+            if checks == 2 {
+                do {
+                    let parent = (self.original as NSString).deletingLastPathComponent
+                    let leaf = try XCTUnwrap(FileManager.default.contentsOfDirectory(atPath: parent).first { $0.hasPrefix(".thermo-update-") })
+                    try Data("concurrent incoming resource edit".utf8).write(to: URL(fileURLWithPath: parent + "/" + leaf + "/previous.app/Contents/Resources/data"))
+                    wrote = true
+                } catch { XCTFail("Could not arrange owned incoming edit: \(error)") }
+            }
+            return ProcessTable(entries: [])
+        }, afterSwap: { swapped = true })
+        XCTAssertTrue(wrote)
+        XCTAssertFalse(swapped, "Changed incoming content must not become the active app, even temporarily")
+        XCTAssertEqual(result.outcome, "failed")
+        XCTAssertNil(result.receipt)
+        XCTAssertEqual(try NativeBundleValidation.treeSeal(original), originalSeal)
+    }
+
     func testConcurrentReplacementIsNeverOverwrittenByRollback() throws {
         let prepared = try prepared()
         let result = NativeUpdateTransaction.commit(prepared, home: home, processes: { ProcessTable(entries: []) }, afterSwap: {
@@ -190,6 +235,53 @@ final class NativeUpdateTransactionTests: XCTestCase {
         let result = NativeUpdateTransaction.commit(prepared, home: home, processes: { ProcessTable(entries: []) }, afterSwap: { XCTFail("must not swap") })
         XCTAssertEqual(result.outcome, "failed")
         XCTAssertEqual(build(original), "100")
+    }
+
+    func testRecoveryDoesNotConfirmAModifiedPreservedNewerApp() throws {
+        let installed = NativeUpdateTransaction.commit(try prepared(), home: home, processes: { .init(entries: []) }, afterSwap: {})
+        let receipt = try XCTUnwrap(installed.receipt)
+        XCTAssertEqual(installed.outcome, "succeeded")
+        let changed = Data("concurrent newer-copy resource edit".utf8)
+        let result = NativeUpdateTransaction.recover(receipt.id, home: home, review: receipt, processes: { .init(entries: []) }, afterSwap: {
+            try changed.write(to: URL(fileURLWithPath: receipt.backup + "/Contents/Resources/data"))
+        })
+        XCTAssertEqual(result.outcome, "unconfirmed", "Restoring the old target alone does not prove the newer copy is preserved")
+        XCTAssertEqual(result.receipt?.phase, "unconfirmed")
+        XCTAssertEqual(build(original), "100")
+        XCTAssertNoThrow(try NativeBundleValidation.facts(original))
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: receipt.backup + "/Contents/Resources/data")), changed)
+    }
+
+    func testRecoveryDoesNotConfirmAReplacedPreservedNewerApp() throws {
+        let installed = NativeUpdateTransaction.commit(try prepared(), home: home, processes: { .init(entries: []) }, afterSwap: {})
+        let receipt = try XCTUnwrap(installed.receipt)
+        let moved = receipt.backup + ".concurrent"
+        let result = NativeUpdateTransaction.recover(receipt.id, home: home, review: receipt, processes: { .init(entries: []) }, afterSwap: {
+            try FileManager.default.moveItem(atPath: receipt.backup, toPath: moved)
+            try self.makeApp(receipt.backup, version: "3.0", build: "300")
+        })
+        XCTAssertEqual(result.outcome, "unconfirmed")
+        XCTAssertEqual(result.receipt?.phase, "unconfirmed")
+        XCTAssertEqual(build(original), "100")
+        XCTAssertEqual(build(receipt.backup), "300", "Concurrent replacement must be retained")
+        XCTAssertEqual(build(moved), "200", "The moved newer copy must be retained")
+    }
+
+    func testRecoveryDoesNotConfirmAReplacedTargetParent() throws {
+        let installed = NativeUpdateTransaction.commit(try prepared(), home: home, processes: { .init(entries: []) }, afterSwap: {})
+        let receipt = try XCTUnwrap(installed.receipt)
+        let parent = (original as NSString).deletingLastPathComponent
+        let moved = parent + ".concurrent"
+        let result = NativeUpdateTransaction.recover(receipt.id, home: home, review: receipt, processes: { .init(entries: []) }, afterSwap: {
+            try FileManager.default.moveItem(atPath: parent, toPath: moved)
+            try FileManager.default.createDirectory(atPath: parent, withIntermediateDirectories: true)
+            try FileManager.default.copyItem(atPath: moved + "/Fixture.app", toPath: self.original)
+        })
+        XCTAssertEqual(result.outcome, "unconfirmed")
+        XCTAssertEqual(result.receipt?.phase, "unconfirmed")
+        XCTAssertEqual(build(original), "100")
+        XCTAssertEqual(build(moved + "/Fixture.app"), "100")
+        XCTAssertEqual(build(moved + "/.thermo-update-" + receipt.id + "/previous.app"), "200")
     }
 
     func testRecoveryRefusesAnAppChangedAfterInstallation() throws {

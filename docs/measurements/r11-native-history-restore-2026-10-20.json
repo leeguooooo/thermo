@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-20",
+  "checkedAt": "2026-10-19T16:29:54.882532+00:00",
+  "status": "Installed R11 native operation-history Trash restore accepted on controlled M3; history-body AX reader limitation remains unresolved",
+  "candidateRevision": 11,
+  "sourceInputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+  "model": "Mac15,3",
+  "os": "26.6.2",
+  "CLI_SHA256": "889020d7b40918982ddf133abb23561e3740b39b17cd56046cdfeb9052758ad9",
+  "fixture": {
+    "root": "/Users/leo/.local/state/thermo-qa/gui-r11-0edec4c8",
+    "selectedPath": "/Users/leo/.local/state/thermo-qa/gui-r11-0edec4c8/gui-qa-0edec4c8/.build",
+    "subject": "gui-qa-0edec4c8 · .build",
+    "batchID": "55ACDC55-BC43-4EB3-B721-933964FB2C32",
+    "onlyOwnedTestData": true,
+    "normalProductJournalContainsRealScopedQAOperations": true,
+    "QAProcedureDidNotDirectlyEditOrDeleteExistingJournalRecords": true
+  },
+  "evidence": {
+    "preparation": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/gui-history-fixture-preparation.json",
+    "postcondition": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/gui-history-restore-postcondition.json",
+    "visibleUI": "CUA screenshots and fresh accessibility snapshots in this conversation; no separate PNG file was persisted"
+  },
+  "nativeAcceptance": {
+    "realCleanupRecordVisible": true,
+    "restoreEntryVisibleInRecord": true,
+    "restoreSheetSelectedPathMatchesFixture": true,
+    "nativeRestoreButtonClicked": true,
+    "successNotice": "已放回 1/1 项。",
+    "restoreOperationJournalSucceeded": true,
+    "fileBytesAndIdentitiesMatch": true,
+    "directoryIdentityMatches": true,
+    "repeatReviewAlreadyAtOriginalLocationVisible": true,
+    "repeatRestoreButtonDisabled": true,
+    "cancelReturnsToHistory": true
+  },
+  "accessibilityObservation": {
+    "historyBodyVisibleInScreenshot": true,
+    "historyBodyAbsentFromCUAAXTree": true,
+    "repeatedFullTreeRequestsDidNotExposeRows": true,
+    "tabAndScrollProbeDidNotExposeRows": true,
+    "nativeRestoreSheetAXPathAndButtonsAvailable": true,
+    "attribution": "Unresolved: tool traversal, framework exposure or App; no VoiceOver acceptance claimed",
+    "productCodeChangedBasedOnlyOnThisObservation": false,
+    "followupDiagnostic": "docs/measurements/history-ax-diagnostic-2026-10-20.json",
+    "followupConclusion": "Inconclusive: even hidden baseline lacked AX content; Apple Inspector yielded no verifiable target result. Product attribution and VoiceOver acceptance remain unproven."
+  },
+  "chargingTest": {
+    "approvalStillPending": true,
+    "SMCWriteTestStarted": false
+  },
+  "limitations": [
+    "Only this controlled fixture and normal-history restore path accepted; other feature-specific undo routes remain separate",
+    "No real user data chosen, no successful permanent deletion and no user-history record deletion",
+    "CUA screenshot visibility is distinct from complete keyboard/VoiceOver support",
+    "Mole parity remains incomplete"
+  ],
+  "additionalChangedTrashEntryAcceptance": "docs/measurements/r11-native-history-stale-restore-2026-10-20.json"
+}

@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-19T21:05:24.827238+00:00",
+  "ownedHistoricalProducts": [
+    {
+      "source": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.38-554-4fc650e-mac190/products",
+      "remotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-4449641ac3d0/products",
+      "receipt": "dist/remote-190/retained-mole-review-1.1.38-554-4fc650e-mac190-on-190.json",
+      "receiptSHA256": "84c73adba27528b4683c5ebe18fbc3d1ad034fb4c2b8e036f3fa92fd6cce066f",
+      "remoteSignatureVerified": true,
+      "ZIPAndEvidenceStillLocal": true
+    },
+    {
+      "source": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-2ff2c36-mac190/products",
+      "remotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-8bf32a498cc7/products",
+      "receipt": "dist/remote-190/retained-mole-review-1.1.39-566-2ff2c36-mac190-on-190.json",
+      "receiptSHA256": "455f1f0f9eeeb7eddf9a86515dafd5e58569c11c7b1d0ae672914ce11079d99f",
+      "remoteSignatureVerified": true,
+      "ZIPAndEvidenceStillLocal": true
+    },
+    {
+      "source": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/products",
+      "remotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-352d06c3421e/products",
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-566-fan-control-state-r11-mac190-on-190.json",
+      "receiptSHA256": "f304c0410766c1767b3a4d4b8980d994efe00cc35a3643648355766432d83b2b",
+      "remoteSignatureVerified": true,
+      "ZIPAndEvidenceStillLocal": true
+    },
+    {
+      "source": "/Users/leo/github.com/thermo-mole-integration-af047a7e/dist/mole-review-1.1.40-606-main-integration-r12-mac190/products",
+      "remotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-2a9a88564ca5/products",
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-606-main-integration-r12-mac190-on-190.json",
+      "receiptSHA256": "a62248c6ab4390616ff83d600babfc828cb6df2092e8f97762586db73a709f9c",
+      "remoteSignatureVerified": true,
+      "ZIPAndEvidenceStillLocal": true
+    }
+  ],
+  "currentAppAndExistingRollbackFoldersUntouched": true,
+  "observedAvailableBytes": 1744752640,
+  "notAReclaimedByteClaim": true
+}

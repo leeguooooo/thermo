@@ -296,6 +296,17 @@ public enum NativeUpdateTransaction {
             guard copied.seal == prepared.replacement.seal, parent.matches(), NativeAppUpdates.unchanged(prepared.source),
                   let originalID = parent.entry(target), let newID = parent.entry(incoming) else { throw failure("The app or prepared update changed after review") }
             if let why = targetRefusal(prepared.source.app.path, home: home, processes: processes()) { throw failure(why) }
+            // Copying and the process inventory can take time. Metadata identity does
+            // not cover resource edits below Contents; recheck both sealed trees after
+            // that work, before creating a recovery record or displacing the target.
+            guard parent.matches(), parent.entry(target) == originalID, parent.entry(incoming) == newID,
+                  NativeAppUpdates.unchanged(prepared.source),
+                  try NativeBundleValidation.treeSeal(prepared.source.app.path) == prepared.original.seal,
+                  try NativeBundleValidation.treeSeal(absolute) == copied.seal,
+                  parent.matches(), parent.entry(target) == originalID, parent.entry(incoming) == newID,
+                  NativeAppUpdates.unchanged(prepared.source) else {
+                throw failure("The app or prepared update changed after review")
+            }
             var record = NativeUpdateReceipt(id: operationID, target: prepared.source.app.path, backup: absolute, phase: "prepared",
                 original: prepared.original, replacement: copied, originalID: originalID, replacementID: newID)
             try save(record, home: home); receipt = record
@@ -383,7 +394,8 @@ public enum NativeUpdateTransaction {
         recover(id, home: home, review: review, processes: { ProcessTable.current(.init(cpu: false)) })
     }
 
-    static func recover(_ id: String, home: String, review: NativeUpdateReceipt? = nil, processes: () -> ProcessTable) -> NativeInstallResult {
+    static func recover(_ id: String, home: String, review: NativeUpdateReceipt? = nil, processes: () -> ProcessTable,
+                        afterSwap: () throws -> Void = {}) -> NativeInstallResult {
         var result = NativeInstallResult(outcome: "failed", message: "The previous app was not restored")
         defer {
             OperationJournal.record(OperationRecord(feature: "apps", action: "nativeRestore", subject: result.receipt?.target,
@@ -424,7 +436,18 @@ public enum NativeUpdateTransaction {
             record.phase = "restoring"; try save(record, home: home)
             try parent.swap(backup, name)
             do {
-                guard parent.entry(name) == record.originalID, try NativeBundleValidation.facts(record.target).seal == record.original.seal else { throw failure("Recovery verification failed") }
+                try afterSwap()
+                // A restored target alone does not prove that the newer app was
+                // preserved. Check both trees and their pinned directory identities
+                // before confirming recovery; leave concurrent changes intact.
+                guard parent.matches(),
+                      parent.entry(name) == record.originalID,
+                      parent.entry(backup) == record.replacementID,
+                      try NativeBundleValidation.facts(record.target).seal == record.original.seal,
+                      try NativeBundleValidation.facts(record.backup).seal == record.replacement.seal,
+                      parent.matches(),
+                      parent.entry(name) == record.originalID,
+                      parent.entry(backup) == record.replacementID else { throw failure("Recovery verification failed") }
                 record.phase = "restored"; try save(record, home: home)
                 result.outcome = "succeeded"; result.message = "The previous app was restored and verified; the newer copy was preserved"
             } catch {

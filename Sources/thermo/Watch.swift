@@ -27,11 +27,15 @@ struct Watch {
         var n = 0
         let csv = app.args.has("csv")
         let json = app.args.has("json") || !csv
+        var csvFanIDs: [Int]?
         while interrupted == 0 {
             let s = sm.sample()
             if csv {
-                if n == 0 { print(Export.csvStreamHeader(s)) }
-                print(Export.csvStreamRow(s))
+                if n == 0 {
+                    csvFanIDs = Export.streamFanIDs(s)
+                    print(Export.csvStreamHeader(s, fanIDs: csvFanIDs))
+                }
+                print(Export.csvStreamRow(s, fanIDs: csvFanIDs))
             } else if json {
                 print(Export.json(app.filtered(s), pretty: false))
             }

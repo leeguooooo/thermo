@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-19T21:20:59.549290+00:00",
+  "problem": "Content seals were checked before copying and the final process inventory; shallow metadata was checked between those operations, but neither content nor path identity was revalidated after the last inventory.",
+  "baselineRun": "b3997ee9-c4f7-42dd-b479-4f262046cba0",
+  "baselineOutcome": {
+    "twoBehaviorTestsFailed": true,
+    "compilerFailure": false,
+    "originalChanged": "swap occurred; new build active; result unconfirmed; original edit preserved in backup",
+    "incomingChanged": "swap occurred before verification and rollback"
+  },
+  "change": "Revalidate both original and copied content seals, shallow source identity, and pinned parent/entry identity after the final process inventory and before creating a receipt.",
+  "newProductionTestHooksAdded": false,
+  "testsUse": "Existing process-provider interleaving on owned signed app/ZIP fixtures; real filesystem and code-signature pipeline",
+  "sourceSHA256": {
+    "Sources/CleanKit/NativeUpdateTransaction.swift": "64ae4faaad69a32d3e828b35855bac4ed401481e63a6bc9ecc6cb665185a6b49",
+    "Tests/CleanKitTests/NativeUpdateTransactionTests.swift": "501ab946a63bb43778382d508ba613e886ff2f73b8eaaf0eb3ab14c7576f3162"
+  },
+  "installedAppStill": "R16 / 1.1.40 (611.16)",
+  "status": "1933 non-hardware tests passed; universal, signed package and R17 installation verified",
+  "limitations": [
+    "Does not eliminate all mutation windows between final content checks and the atomic rename",
+    "Deterministic owned-fixture interleavings, not a real vendor updater competition test",
+    "Extra tree reads occur during installation, not during background monitoring"
+  ],
+  "sourceCommitted": false,
+  "overallParityEstablished": false,
+  "validationRun": "230ec8c6-2e9d-4cad-82a3-f3fdda603ba7",
+  "validationInput": "ee6ecb751bdc00d0d090bde506001303a17e13b7",
+  "driverObservationFailure": {
+    "localENOSPC": true,
+    "sameRunResumed": true,
+    "remoteBothExitCodeZeroVerifiedBeforeResume": true,
+    "remoteCommandsNotResubmitted": true,
+    "run": "230ec8c6-2e9d-4cad-82a3-f3fdda603ba7",
+    "resumeLog": "dist/remote-190/r17-resume.log"
+  },
+  "installedEvidence": "native-update-late-change-r17-installed-2026-10-20.json"
+}

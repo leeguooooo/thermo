@@ -1,0 +1,65 @@
+{
+  "checkedAt": "2026-10-19T23:12:41.091919+00:00",
+  "fixture": {
+    "root": "/Users/leo/.local/state/thermo-qa/r20-outcome-57bc2b055227",
+    "fixtureHome": "/Users/leo/.local/state/thermo-qa/r20-outcome-57bc2b055227/Home",
+    "bundle": "/Users/leo/.local/state/thermo-qa/r20-outcome-57bc2b055227/Home/Applications/OwnedOutcomeR20.app",
+    "asset": "/Users/leo/.local/state/thermo-qa/r20-outcome-57bc2b055227/Home/Applications/OwnedOutcomeR20.app/Contents/Resources/Nested/asset",
+    "bundleID": "com.example.owned-outcome-r20-d6f7c703"
+  },
+  "GUI": {
+    "build": "611.20",
+    "nothingMovedHeaderAndFailureDetailsVisible": true,
+    "genericMovedZeroHeaderGone": true,
+    "refusalPreservedOwnedChangedApp": true,
+    "freshSuccessStillShowsMovedBytes": true,
+    "GUIRestore": "1/1",
+    "allBytesModesAndFileDirectoryIdentitiesPreserved": true,
+    "manifestEntries": 8,
+    "repeatPreviewAlreadyRestored": true,
+    "trashBatch": "AC0BC7A6-D797-481B-BDBF-F58497714DFB",
+    "realInstalledAppsRemoved": false,
+    "trashEmptied": false
+  },
+  "nativeCLIBefore": {
+    "build": "611.19",
+    "cliExit": 3,
+    "nothingMovedHeadline": false,
+    "genericMovedZeroHeadline": true,
+    "bundleAndChangedResourcePreserved": true,
+    "transcriptSHA256": "c0a0f3f164d30b5e26500f42f3ff7b5deb98dfeab9ac7baa8abaf71d840bd59e",
+    "scope": "Actual CLI PTY review on owned app; resource changed while waiting, no move executed."
+  },
+  "nativeCLIAfter": {
+    "build": "611.20",
+    "cliExit": 3,
+    "nothingMovedHeadline": true,
+    "genericMovedZeroHeadline": false,
+    "bundleAndChangedResourcePreserved": true,
+    "transcriptSHA256": "0ce20a49d0f04b292f3347325942c8d0287d15f7b89629099c6fb57edb2a4861",
+    "scope": "Actual CLI PTY review on owned app; resource changed while waiting, no move executed."
+  },
+  "nativeCLIFreshSuccess": {
+    "successTitleStillReportsMove": true,
+    "freshReviewRemovalPassed": true,
+    "restorePassed": true,
+    "restoredBytesModesAndIdentitiesMatch": true,
+    "trashBatch": "794923BD-2544-4CAD-9C56-D15AB22B21EF"
+  },
+  "privatePID": 51211,
+  "privateProcessExited": true,
+  "normalPID": 78644,
+  "normalAppRestored": true,
+  "sourceChangedByAcceptance": false,
+  "overallParityEstablished": false,
+  "evidenceSHA256": {
+    "fixture.json": "fc292c42ab689290e811c47a97331ee5e60f135020e5ac8a057b3301bb8a9d74",
+    "gui-process.log": "ad6fee52c1e37aac19809207c6df02cf3ad70f195e6e8773fc543df2246d1365",
+    "changed-resource.json": "42be4667a41de0873678e9acf94b2071b8b0acb74ae4a15b17a358a3073ce801",
+    "preflight-plan.json": "8c7bb56c3edfde6a8376f5e85009e75de0bd7225c11e007d5b7e09b34589fc6a",
+    "repeat-restore-preview.json": "bf55ef67145f86e7122e3baba5d73805b1a817267c3fd79c829a000243b285f9",
+    "before-trash-manifest.json": "27f56edf2eaadaf723bed706dff85cef430b4d957110264f893a58bff4d047f1",
+    "verification.json": "7d572fd824e337c127d7dd3591b83e230df09d8ccc9447bde5ef49bb65dec6c6",
+    "gui-process.json": "04792ce06337d274226954518de50dde6160eba80578488a9b26e5bb60c548a9"
+  }
+}

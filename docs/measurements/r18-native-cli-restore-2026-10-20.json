@@ -1,0 +1,59 @@
+{
+  "installedBuild": "611.18",
+  "stalePromptShowedTargetAndBackup": true,
+  "staleConfirmationExit": 2,
+  "changedReceiptPreservedOnRefusal": true,
+  "allCopiesPreservedOnRefusal": true,
+  "freshReviewRestoredOther": true,
+  "targetUnchanged": true,
+  "oldAndNewCopiesExchangedWithExactFileIdentities": true,
+  "signaturesVerified": true,
+  "repeatIdempotent": true,
+  "networkUsed": false,
+  "realInstalledAppsChanged": false,
+  "fixture": {
+    "root": "/Users/leo/.local/state/thermo-qa/.thermo-native-review-6186BE2A-A5E9-41DB-9271-20013CA825C0",
+    "fixtureHome": "/Users/leo/.local/state/thermo-qa/.thermo-native-review-6186BE2A-A5E9-41DB-9271-20013CA825C0/Home",
+    "tool": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/r18-native-restore-2026-10-20/native-restore-fixture",
+    "state": {
+      "backup": "/Users/leo/.local/state/thermo-qa/.thermo-native-review-6186BE2A-A5E9-41DB-9271-20013CA825C0/Home/Applications/.thermo-update-292DC9FF-C8AD-466F-9422-21DBFEB5883F/previous.app",
+      "id": "292DC9FF-C8AD-466F-9422-21DBFEB5883F",
+      "other": "/Users/leo/.local/state/thermo-qa/.thermo-native-review-6186BE2A-A5E9-41DB-9271-20013CA825C0/Home/Applications/Other.app",
+      "recordFile": "/Users/leo/.local/state/thermo-qa/.thermo-native-review-6186BE2A-A5E9-41DB-9271-20013CA825C0/Home/Library/Application Support/Thermo/app-updates/292DC9FF-C8AD-466F-9422-21DBFEB5883F.json",
+      "target": "/Users/leo/.local/state/thermo-qa/.thermo-native-review-6186BE2A-A5E9-41DB-9271-20013CA825C0/Home/Applications/Fixture.app"
+    },
+    "remoteRun": "64d72676-3826-4bd3-a6b4-e9098375f20e",
+    "toolSHA256": "10cde8844791f305ec0575b1d49d958292970486bdf0aa1b39218f08e48dfd01"
+  },
+  "hashes": {
+    "292DC9FF-C8AD-466F-9422-21DBFEB5883F.json": "ac4e7dee5f295e7ad463e1dcb03b898d8bf86e709af55c7482c20f2ff7b73c3b",
+    "stale-confirmation.log": "b5c094b40c9a48c6d9f7cec839f1af3126a9d68aeaf5c9dcffd31c6ba1f8ec23",
+    "fresh-restore.json": "eb2554e3e74baa87a4f06b0108b23de55e9e12528ccd7d29e85c2be463f2f9d9",
+    "repeat-restore.json": "9f9b752cc0b5b3d19462bb4502416179729c8f8d9b5e041c654c72195b4117db"
+  },
+  "statusAfter": {
+    "backupBuild": "200",
+    "otherBuild": "100",
+    "phase": "restored",
+    "recordTarget": "/Users/leo/.local/state/thermo-qa/.thermo-native-review-6186BE2A-A5E9-41DB-9271-20013CA825C0/Home/Applications/Other.app",
+    "targetBuild": "200"
+  },
+  "checkedAt": "2026-10-19T22:04:01.060217+00:00",
+  "scope": "Actual installed R18 CLI PTY review and recovery using private signed fixtures. No vendor network or installed GUI recovery acceptance.",
+  "qaDriverInterruption": {
+    "cause": "PTY EOF drain loop did not stop on empty read",
+    "ownedDriverInterrupted": true,
+    "beforeRetryAllThreeBuildsAndSignaturesVerifiedUnchanged": true,
+    "onlyOwnedReceiptRetargetingReset": true,
+    "correctedRunPassed": true
+  },
+  "sourceManifestMatchedInstalledR18": true,
+  "evidenceHashes": {
+    "verify-cli.py": "ab31fbf2bdf3a8758eef804a951bed96d8893ad7489fdc147feb4adbe8cb2111",
+    "setup.log": "3a34bdd5b994d02332b178a9da1b287a524aa382baae62d3b96f901b282e9b0a",
+    "status-after.json": "31ae13cf7d753f3d9d6074dfeeea75ea744297c59b2537d78d98b3ea50c98539",
+    "verification.json": "9c00619f29e269dc4bd6f48ca8a9f6bc3918e87c9f5a0ec666a7b07099fa956b"
+  },
+  "fixtureToolInputCommit": "e911a484668aad2540a96a9ad6cf6ff2d8941391",
+  "fixtureToolSourceFilesVerifiedAgainstInstalledBuild": 611
+}

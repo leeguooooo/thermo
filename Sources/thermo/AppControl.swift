@@ -13,6 +13,20 @@ struct AppControlCommand {
         let sub = rest.first ?? "status"
         var action: String, values: [String:String] = [:], mutates = false
         switch command {
+        case "keep-awake":
+            guard rest.count <= 1, ["status", "start", "stop"].contains(sub) else { throw CLIError("Run thermo keep-awake --help.") }
+            action = "keep-awake." + sub; mutates = sub != "status"
+            if sub == "start" {
+                guard let mode = IdleAwakeMode(rawValue: args.options["mode"] ?? "both") else { throw CLIError("--mode must be display, tasks or both") }
+                values["mode"] = mode.rawValue
+                if let duration = args.options["duration"] {
+                    guard duration == "manual", args.options["seconds"] == nil else { throw CLIError("Use --duration manual or --seconds, not both") }
+                    values["duration"] = "manual"
+                } else {
+                    guard let seconds = Int(args.options["seconds"] ?? "3600"), (1...604800).contains(seconds) else { throw CLIError("--seconds must be 1…604800") }
+                    values["seconds"] = String(seconds)
+                }
+            }
         case "screen":
             guard rest.count <= 1, ["status","start","stop","duration","shortcut","clear-shortcut"].contains(sub) else { throw CLIError("Run thermo screen --help.") }
             action = "screen." + sub; mutates = sub != "status"
@@ -47,14 +61,17 @@ struct AppControlCommand {
                 }
             }
         }
-        let scoped = Set(["duration","key-code","modifiers","key-label","seconds"])
+        let scoped = Set(["duration","key-code","modifiers","key-label","seconds","mode"])
         let unexpected = Set(args.options.keys).intersection(scoped).subtracting(values.keys)
         guard unexpected.isEmpty else { throw CLIError("Options do not apply to this operation: " + unexpected.sorted().joined(separator:", ")) }
         return Operation(action: action, arguments: values, mutates: mutates)
     }
     func run(command: String, rest: [String]) throws {
         let operation = try Self.operation(command: command, rest: rest, args: app.args)
-        if operation.mutates && !app.args.has("dry-run") { try app.approveAction("Apply \(operation.action) through Thermo.app? Permission, helper and update actions may display macOS or App dialogs.") }
+        if operation.mutates && !app.args.has("dry-run") {
+            let prompt = command == "keep-awake" ? "Apply idle-awake \(rest.first ?? "status") through Thermo.app? The session ends when its duration expires or Thermo quits." : "Apply \(operation.action) through Thermo.app? Permission, helper and update actions may display macOS or App dialogs."
+            try app.approveAction(prompt)
+        }
         let request = AppControlRequest(action: operation.action, arguments: operation.arguments, dryRun: app.args.has("dry-run"))
         let serverTrust: LocalControlPeerTrust?
         if let team = CodeSignature.teamIdentifier() {

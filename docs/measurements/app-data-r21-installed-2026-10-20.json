@@ -1,0 +1,59 @@
+{
+  "checkedAt": "2026-10-19T23:54:04.496678+00:00",
+  "candidate": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.21-data-review-r21-mac190",
+  "sourceFreeze": {
+    "source": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+    "workingTree": "dirty",
+    "version": "1.1.40",
+    "build": "611.21",
+    "baseCommitCount": "611",
+    "reviewRevision": 21,
+    "privateReviewBuildOverride": true,
+    "testRun": "192ec345-1ac1-41e8-8345-e3d020f863aa",
+    "remoteBuildRun": "2ff31744-f66d-4467-8225-97d7b7ea3ef8",
+    "inputCommit": "14b17e026ce20bc7fe747a3936ed41f6b4ef7507",
+    "inputTree": "13bf443ead4cd427bc73b8eab01ca6eb272a3d84",
+    "testInputCommit": "14b17e026ce20bc7fe747a3936ed41f6b4ef7507",
+    "sourceFilesVerified": 613,
+    "sourceManifestSHA256": "0282b87f1f18c895f26d93a387a653d9e1a9e82d86efaf9450499b33e7a705b7",
+    "fullRegressionStatus": "passed",
+    "nonHardwareTests": 1949,
+    "nonHardwareFailures": 0,
+    "testAndBuildInputIdentical": true,
+    "testAndBuildSourceFilesIdentical": true,
+    "testCounts": {
+      "ThermoKitTests.xctest": 218,
+      "ThermoHelperTests.xctest": 30,
+      "ThermoCLITests.xctest": 125,
+      "ThermoAppTests.xctest": 346,
+      "CleanKitTests.xctest": 798,
+      "AgentDoctorTests.xctest": 362,
+      "AgentCoreTests.xctest": 70
+    },
+    "installed": true,
+    "published": false
+  },
+  "installedPID": "12883",
+  "upgradeObservation": {
+    "samples": 26,
+    "consecutiveRecoveredChecks": 6,
+    "passed": true
+  },
+  "nativeAcceptance": "r21-native-associated-data-2026-10-20.json",
+  "newStandaloneOffscreenLifecycleRun": false,
+  "symbolsRetainedOn190": true,
+  "sourceCommitted": false,
+  "sourceMergedIntoMain": false,
+  "notarized": false,
+  "published": false,
+  "overallParityEstablished": false,
+  "evidenceSHA256": {
+    "source-freeze.json": "a7487b6cbbcf952b4bbdc09b4c450adf0bed2c8ffc6bcb2a6fbaaf23ad25bfaf",
+    "package-verification.json": "95199dde0a85f30d77bf94ed4c9aaa62508378001c64c26660602ee67aa964d4",
+    "archive-verification.json": "68e0b22e7103837d8f15bfad2897c4352703c8bba407b86972ce9152161d1bd3",
+    "installed-verification.json": "1c80e717d66d6b73184ce8916365b575368536ba531d6fe301885994d5b596e7",
+    "upgrade-observations.json": "1ddb8436b8feedd7148bb41ab02d53b84e7dcf5b6d284926a1db6c8ce2c489e7",
+    "local-installation.json": "dd38465177acaa83d41f37babff539a14f7fe2de4361aa5a72693ee9268367d5",
+    "symbols-retained-on-mac190.json": "6afa206f60f5994888bfe46d03a71d0f856e32bc7713b6366024fdba4540b004"
+  }
+}

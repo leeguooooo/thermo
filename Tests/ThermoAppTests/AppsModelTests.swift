@@ -11,6 +11,67 @@ final class AppsModelTests: XCTestCase {
         var count: Int { lock.lock(); defer { lock.unlock() }; return calls }
     }
 
+    private final class ConfirmedOrphans: @unchecked Sendable {
+        let lock = NSLock()
+        private var items: [OrphanData] = []
+        func set(_ value: [OrphanData]) { lock.lock(); items = value; lock.unlock() }
+        var paths: [String] { lock.lock(); defer { lock.unlock() }; return items.flatMap { $0.items.map(\.path) } }
+    }
+
+    @MainActor func testPreparedOrphanConfirmationKeepsValuesAfterRawListRefresh() async throws {
+        let reads = OrphanCalls(), captured = ConfirmedOrphans()
+        let first = OrphanData(bundleID: "com.example.same", items: [.init(path: "/fixture/original", bytes: 1)])
+        let replacement = OrphanData(bundleID: first.bundleID, items: [.init(path: "/fixture/replacement", bytes: 2)])
+        let ready = expectation(description: "prepared confirmation"), refreshed = expectation(description: "new raw list"), removed = expectation(description: "confirmed values")
+        let model = AppsModel(readOrphans: { _ in
+            if reads.next() == 1 { return [first] }
+            refreshed.fulfill(); return [replacement]
+        }, prepareOrphanData: { data, _ in data }, removeOrphanData: { data in
+            captured.set(data); removed.fulfill(); return []
+        })
+        let observation = model.$orphanReview.sink { if $0 != nil { ready.fulfill() } }
+        defer { observation.cancel() }
+        model.scanOrphans()
+        for _ in 0..<100 where model.scanningOrphans { try await Task.sleep(nanoseconds: 10_000_000) }
+        model.selectedOrphans = [first.id]
+        model.reviewPickedOrphans()
+        await fulfillment(of: [ready], timeout: 2)
+        let confirmation = try XCTUnwrap(model.orphanReview)
+        model.scanOrphans(); await fulfillment(of: [refreshed], timeout: 2)
+        for _ in 0..<100 where model.scanningOrphans { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(model.pickedOrphans.first?.items.first?.path, "/fixture/replacement")
+        XCTAssertEqual(model.orphanReview?.items.first?.items.first?.path, "/fixture/original")
+        model.removeOrphans(confirmation.items)
+        await fulfillment(of: [removed], timeout: 2)
+        XCTAssertEqual(captured.paths, ["/fixture/original"])
+    }
+
+    @MainActor func testRetiredOrphanPreparationStaysSingleFlightAndCannotPublishOldSheet() async throws {
+        let prepares = OrphanCalls(), reads = OrphanCalls()
+        let began = expectation(description: "physical preparation"), refreshed = expectation(description: "queued scan")
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let data = OrphanData(bundleID: "com.example.fixture", items: [.init(path: "/fixture", bytes: 1)])
+        let model = AppsModel(readOrphans: { _ in
+            if reads.next() == 2 { refreshed.fulfill() }
+            return [data]
+        }, prepareOrphanData: { picked, _ in
+            _ = prepares.next(); began.fulfill(); _ = release.wait(timeout: .now() + 5); return picked
+        })
+        model.scanOrphans()
+        for _ in 0..<100 where model.scanningOrphans { try await Task.sleep(nanoseconds: 10_000_000) }
+        model.selectedOrphans = [data.id]; model.reviewPickedOrphans()
+        await fulfillment(of: [began], timeout: 2)
+        model.retire()
+        for _ in 0..<100 { model.reviewPickedOrphans(); model.scanOrphans() }
+        XCTAssertTrue(model.reviewingOrphans)
+        XCTAssertEqual(prepares.count, 1); XCTAssertEqual(reads.count, 1)
+        release.signal(); await fulfillment(of: [refreshed], timeout: 2)
+        for _ in 0..<100 where model.scanningOrphans { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertFalse(model.reviewingOrphans); XCTAssertNil(model.orphanReview)
+        XCTAssertEqual(prepares.count, 1); XCTAssertEqual(reads.count, 2)
+    }
+
     @MainActor func testPartialOrphanScanRetainsKnownRowsButRequiresNewReviewUntilACompleteResult() async throws {
         let calls = OrphanCalls()
         let data = OrphanData(bundleID: "com.example.known", items: [AppLeftover(path: "/fixture", bytes: 1)])
@@ -70,8 +131,8 @@ final class AppsModelTests: XCTestCase {
         model.scanOrphans()
         for _ in 0..<100 where model.scanningOrphans { try await Task.sleep(nanoseconds: 10_000_000) }
         model.selectedOrphans = [data.id]
-        model.removeOrphans(); await fulfillment(of: [began], timeout: 2)
-        model.retire(); model.removeOrphans(); model.scanOrphans(); model.load()
+        model.removeOrphans([data]); await fulfillment(of: [began], timeout: 2)
+        model.retire(); model.removeOrphans([data]); model.scanOrphans(); model.load()
         XCTAssertTrue(model.working); XCTAssertEqual(reads.count, 1); XCTAssertEqual(writes.count, 1)
         let previous = AppModels.shared.apps; AppModels.shared.apps = model
         defer { AppModels.shared.apps = previous }

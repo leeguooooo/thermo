@@ -1,0 +1,176 @@
+{
+  "date": "2026-10-19",
+  "sourceFreeze": {
+    "source": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+    "workingTree": "dirty",
+    "version": "1.1.39",
+    "build": "566",
+    "reviewRevision": 3,
+    "testRun": "d81f81c1-98a3-4f33-bf9c-5d9a70cbdcf0",
+    "remoteBuildRun": "5df1467b-f2bb-4498-96d7-88987f451d20",
+    "inputCommit": "9a2b9d938ad8f8d8353e17603da57c16a18f6397",
+    "inputTree": "1a00f0fde54dc44355f99699a867c5ef96c850da",
+    "sourceFilesVerified": 596,
+    "sourceManifestSHA256": "82d617e959dc482bcaf677a78d4bea4cbed044e1dfa2e4e50e043b4c6b119b6f",
+    "testAndBuildInputIdentical": true,
+    "nonHardwareTests": 1844,
+    "nonHardwareFailures": 0,
+    "installed": false,
+    "published": false
+  },
+  "package": {
+    "developerIDVerified": true,
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "archiveSHA256": "87553e418bf5248cae51ded0401e2005d88080460688e81e05bb719971773074",
+    "archiveManifestVerified": true,
+    "dSYMUUIDPairsVerified": 3
+  },
+  "localInstallation": {
+    "version": "1.1.39",
+    "build": "566",
+    "source": "2ff2c36",
+    "atomicSwap": true,
+    "installedManifestVerified": true,
+    "previousAppVerifiedAndRetained": true,
+    "stagingPathRetired": true,
+    "privateDisplacedCopy": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-discovery-r3-mac190/displaced-543.app",
+    "reviewRevision": 3,
+    "remoteBuildInput": "9a2b9d938ad8f8d8353e17603da57c16a18f6397",
+    "launched": false,
+    "notarized": false,
+    "published": false
+  },
+  "canonicalRuntime": {
+    "path": "/Applications/Thermo.app/Contents/MacOS/Thermo",
+    "pid": 79417,
+    "remoteBuildInput": "9a2b9d938ad8f8d8353e17603da57c16a18f6397",
+    "readBack": {
+      "app-control status": {
+        "id": "1DFF5AF6-9305-4A81-A2DA-1DEB5D4B076E",
+        "schema": 1,
+        "succeeded": true,
+        "values": {
+          "appVersion": "1.1.39 (566)",
+          "busy": "false",
+          "controlProtocol": "1",
+          "keepAwakePhase": "idle",
+          "keepAwakeRequested": "false",
+          "screenActive": "false"
+        }
+      },
+      "app-control helper status": {
+        "id": "E61BACFE-54F5-4BF6-B6E2-3B0B19B97FC3",
+        "schema": 1,
+        "succeeded": true,
+        "values": {
+          "busy": "false",
+          "state": "running",
+          "version": "8/1.1.39"
+        }
+      },
+      "fan status": {
+        "controlState": {
+          "observations": {
+            "0": {
+              "checkedAt": "2026-10-19T11:32:25Z",
+              "mode": "manual",
+              "target": 6617
+            }
+          },
+          "observationsSupported": true,
+          "policies": {
+            "0": {
+              "fixed": {
+                "rpm": 6617
+              }
+            }
+          },
+          "suspended": false
+        },
+        "fans": [
+          {
+            "id": 0,
+            "manual": true,
+            "max": 6800,
+            "min": 2317,
+            "name": "Fan",
+            "rpm": 6637.7802734375,
+            "target": 6617
+          }
+        ],
+        "policies": {
+          "0": {
+            "fixed": {
+              "rpm": 6617
+            }
+          }
+        },
+        "policiesAvailable": true
+      }
+    }
+  },
+  "upgrade": {
+    "passed": true,
+    "allObservedJobsPresent": true,
+    "consecutiveRecoveredChecks": 6,
+    "helperAutoUpgradedDuringOrdinaryStartup": true,
+    "helperVersionFromApp": "8/1.1.39",
+    "helperSHA256MatchesCandidate": true,
+    "helperSHA256": "f5428799749d2f1dc7a95c76e00f3f52023a0e8e5584a5ddc20996d8b62f06f1",
+    "fanPolicyPreservedRPM": 6617,
+    "manualHelperInstallationCommandIssued": false,
+    "standaloneHelperStatusOccasionallyUnavailable": true
+  },
+  "discoverability": {
+    "changes": [
+      "Menu panel displays current left and right click actions",
+      "Menu bar... text button opens Settings",
+      "Menu visibility warning refreshes with actual visibility"
+    ],
+    "enAndZhPreviewFit": true,
+    "previewSize": [
+      744,
+      1316
+    ],
+    "nativeFooterAndEntryAcceptance": "pending user physical check",
+    "priorR2UserAcceptance": {
+      "twoRowsClearAndComplete": true,
+      "leftPanelRightConsole": true
+    }
+  },
+  "limitations": [
+    "No notarization or public release",
+    "Working source remains uncommitted",
+    "Earlier ordinary memory first-refresh timeout remains unresolved",
+    "Startup unknown fan label incorrectly displays No fans before sample; separate follow-up",
+    "Physical power transitions remain unverified"
+  ],
+  "nativeGUIKeepAwakeStartStop": {
+    "date": "2026-10-19",
+    "candidate": "installed R3 1.1.39 (566)",
+    "remoteBuildInput": "9a2b9d938ad8f8d8353e17603da57c16a18f6397",
+    "pid": 79417,
+    "uiStart": true,
+    "uiStop": true,
+    "mode": "both",
+    "uiDurationSeconds": 900,
+    "activeKernelRequests": [
+      "pid 79417(Thermo): [0x0000a20700018e71] 00:00:01 PreventUserIdleSystemSleep named: \"Thermo keep-awake 40D9705B-FEE9-4424-B7C3-7C9332126706 tasks\"",
+      "pid 79417(Thermo): [0x0000a20700058e72] 00:00:01 PreventUserIdleDisplaySleep named: \"Thermo keep-awake 40D9705B-FEE9-4424-B7C3-7C9332126706 display\""
+    ],
+    "finalPhase": "idle",
+    "finalRequestCount": 0,
+    "finalKernelOwnedRequests": [],
+    "fallbackCleanupUsed": false,
+    "physicalPowerTransitionsTested": false,
+    "screenOrLidPolicyChanged": false,
+    "evidenceFiles": {
+      "native-gui-start-active.json": "24b9bcf21b98161c8f96ab552f1e210394879fb43daece46d732bcd92d558b05",
+      "native-gui-start-stopped.json": "85143a7d46ff3523a88deffb8ac6ae5c028bf382dfcdb3e79be6333582e9f182",
+      "native-gui-start-watch.json": "7ebeecdf13a7658ba7dbce65438f9a4bf2289601fe5eb5825d0fa51433099e17"
+    }
+  }
+}

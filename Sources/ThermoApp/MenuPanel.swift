@@ -13,6 +13,20 @@ final class PanelModel: ObservableObject {
     static let shared = PanelModel()
     static let length = 60
 
+    struct Reading {
+        var cpu: Double? = nil
+        var gpu: Double? = nil
+        var memory: SystemStats.Memory? = nil
+        var disk: SystemStats.Disk? = nil
+        var download: Double? = nil
+        var upload: Double? = nil
+        var batteryMinutes: Int? = nil
+    }
+    @Published private(set) var currentCPU: Double?
+    @Published private(set) var currentGPU: Double?
+    @Published private(set) var currentDownload: Double?
+    @Published private(set) var memoryStats: SystemStats.Memory?
+    @Published private(set) var diskStats: SystemStats.Disk?
     @Published private(set) var cpu: [Double] = []
     @Published private(set) var gpu: [Double] = []
     @Published private(set) var memory: [Double] = []
@@ -25,70 +39,67 @@ final class PanelModel: ObservableObject {
     let memoryTotal = ProcessInfo.processInfo.physicalMemory
 
     private var timer: Timer?
-    private var ticks: [UInt32]?
-    private var net: (Date, UInt64, UInt64)?
+    private let liveSampler = MenuLiveSampler()
     private var holding = false
+    private let readSample: (@MainActor () -> Reading)?
+    private let holdPulse: @MainActor () -> Void
+    private let releasePulse: @MainActor () -> Void
 
-    /// Every 2 s while the panel is open; every 6 s otherwise (a few cheap kernel reads), so the
-    /// curves already have a history when it opens.
+    init(readSample: (@MainActor () -> Reading)? = nil,
+         holdPulse: @escaping @MainActor () -> Void = { SystemPulse.shared.hold() },
+         releasePulse: @escaping @MainActor () -> Void = { SystemPulse.shared.release() }) {
+        self.readSample = readSample; self.holdPulse = holdPulse; self.releasePulse = releasePulse
+    }
+    var samplingActive: Bool { timer != nil }
+
+    /// Hidden panels do not retain periodic CPU, memory, GPU or network reads.
     private var interval: TimeInterval = 0
 
     func setActive(_ on: Bool) {
-        let wanted: TimeInterval = on ? 2 : 6
-        if on, !holding { SystemPulse.shared.hold(); holding = true }
-        if !on, holding { SystemPulse.shared.release(); holding = false }
+        let wanted: TimeInterval = on ? 2 : 0
+        if on, !holding { holdPulse(); holding = true }
+        if !on, holding { releasePulse(); holding = false }
         guard wanted != interval else { return }
         interval = wanted
         timer?.invalidate()
-        if on { sample() }
-        timer = Timer.scheduledTimer(withTimeInterval: wanted, repeats: true) { _ in MainActor.assumeIsolated { PanelModel.shared.sample() } }
+        timer = nil
+        resetBaselines()
+        guard on else { return }
+        sample()
+        timer = Timer.scheduledTimer(withTimeInterval: wanted, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.sample() } }
     }
 
     func sample() {
-        if let now = QuickLoad.cpuTicks() {
-            if let before = ticks, let p = QuickLoad.cpuPercent(now, since: before) { push(&cpu, p) }
-            ticks = now
+        guard interval > 0 else { return }
+        let reading: Reading
+        if let readSample {
+            reading = readSample()
+        } else {
+            let live = liveSampler.sample(metrics: [.cpuUsage, .download, .upload])
+            reading = Reading(cpu: live.cpu, gpu: QuickLoad.gpuPercent(), memory: SystemStats.memory(),
+                              disk: SystemStats.disk(), download: live.download, upload: live.upload,
+                              batteryMinutes: Self.batteryMinutes())
         }
-        if let g = QuickLoad.gpuPercent() { push(&gpu, g) }
-        if let m = SystemStats.memory() { push(&memory, Double(m.usedBytes) / Double(max(1, m.totalBytes)) * 100) }
-        if let (rx, tx) = Self.networkBytes() {
-            let now = Date()
-            if let (then, rx0, tx0) = net, now > then {
-                let dt = now.timeIntervalSince(then)
-                // Counters can wrap or reset (interface restart); skip that step rather than show a spike.
-                if rx >= rx0 { push(&download, Double(rx - rx0) / dt) }
-                upload = tx >= tx0 ? Double(tx - tx0) / dt : upload
-            }
-            net = (now, rx, tx)
-        }
-        batteryMinutesLeft = Self.batteryMinutes()
+        func finite(_ value: Double?) -> Double? { value.flatMap { $0.isFinite ? $0 : nil } }
+        currentCPU = finite(reading.cpu); currentGPU = finite(reading.gpu)
+        currentDownload = finite(reading.download); upload = finite(reading.upload)
+        memoryStats = reading.memory; diskStats = reading.disk; batteryMinutesLeft = reading.batteryMinutes
+        if let p = currentCPU { push(&cpu, p) }
+        if let g = currentGPU { push(&gpu, g) }
+        if let m = memoryStats { push(&memory, Double(m.usedBytes) / Double(max(1, m.totalBytes)) * 100) }
+        if let d = currentDownload { push(&download, d) }
+    }
+
+    func resetBaselines() {
+        liveSampler.reset()
+        currentCPU = nil; currentGPU = nil; currentDownload = nil; upload = nil
+        memoryStats = nil; diskStats = nil; batteryMinutesLeft = nil
     }
 
     private func push(_ series: inout [Double], _ value: Double) {
         guard value.isFinite else { return }
         series.append(value)
         if series.count > Self.length { series.removeFirst(series.count - Self.length) }
-    }
-
-    /// Bytes in and out over physical interfaces (Wi-Fi, Ethernet), leaving out loopback, VPN
-    /// tunnels and AirDrop links so traffic is not counted twice.
-    static func networkBytes() -> (UInt64, UInt64)? {
-        var list: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&list) == 0, let first = list else { return nil }
-        defer { freeifaddrs(list) }
-        var rx: UInt64 = 0, tx: UInt64 = 0
-        var cursor: UnsafeMutablePointer<ifaddrs>? = first
-        while let entry = cursor {
-            defer { cursor = entry.pointee.ifa_next }
-            guard let address = entry.pointee.ifa_addr, address.pointee.sa_family == UInt8(AF_LINK),
-                  let data = entry.pointee.ifa_data else { continue }
-            let flags = Int32(entry.pointee.ifa_flags)
-            let name = String(cString: entry.pointee.ifa_name)
-            guard flags & IFF_UP != 0, flags & IFF_LOOPBACK == 0, name.hasPrefix("en") else { continue }
-            let stats = data.assumingMemoryBound(to: if_data.self).pointee
-            rx += UInt64(stats.ifi_ibytes); tx += UInt64(stats.ifi_obytes)
-        }
-        return (rx, tx)
     }
 
     /// macOS's own estimate while on battery; nil while charging or still estimating.

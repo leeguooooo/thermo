@@ -1,0 +1,65 @@
+{
+  "checkedAt": "2026-10-19T23:34:23.064938+00:00",
+  "problem": "Associated-data review captured root metadata but missed changes to nested files after review and during execution.",
+  "baseline": {
+    "run": "8c19f44a-62ae-4ed2-a905-076fe2499e6b",
+    "inputCommit": "05514d7a546a9d4cc1a5b8a54c516713cf3a103a",
+    "tests": 3,
+    "assertionFailures": 8,
+    "unexpectedFailures": 0,
+    "compilerFailure": false,
+    "initialAndFinalProcessInterleavingsReachedMoveExecutor": true,
+    "laterChangedOwnedDirectoryActuallyMovedThenRestoredInPartialFixture": true,
+    "logSHA256": "917d5ee0a06222de0d2f73715975cf54f209802583eddeb1a797ae4fa740c199"
+  },
+  "change": "Capture metadata trees only for selected associated directories during review. Validate before any move and again after each final process inventory. Preserve directories changed mid-batch; existing Trash batches still restore earlier moves.",
+  "reviewBudgets": {
+    "selectedDirectoryEntriesTotal": 250000,
+    "selectedDirectoriesCooperativeSecondsTotal": 10,
+    "depthPerTree": 128,
+    "passesPerCapture": 2,
+    "payloadContentsRead": false,
+    "linksFollowed": false,
+    "newTreeWalksTouchInventoryOrUnselectedPersonalPaths": false
+  },
+  "compatibility": {
+    "legacyDirectoryPlansRequireReview": true,
+    "legacyIndividualFilePlansKeepRootMetadataProtection": true,
+    "appKeptInDataOnlyMode": true,
+    "whitelistAndOwnershipChecksRetained": true
+  },
+  "validation": {
+    "run": "192ec345-1ac1-41e8-8345-e3d020f863aa",
+    "inputCommit": "14b17e026ce20bc7fe747a3936ed41f6b4ef7507",
+    "tests": 1949,
+    "failures": 0,
+    "sourceFilesVerified": 613,
+    "logSHA256": "ceb7c3f207d9ed3f95f25bfe87df980d8b876da332a76344fddbdef79a3b8f1d"
+  },
+  "universalRun": "2ff31744-f66d-4467-8225-97d7b7ea3ef8",
+  "status": "1949 tests, universal build, signed package/ZIP, R21 installation and owned native CLI/GUI stale review, partial and full restore accepted",
+  "publicNativePreflight": {
+    "ownedAppDataOnlyPlanEligible": true,
+    "selectedRoots": "own Cache and Logs only",
+    "ownershipIssues": [],
+    "evidence": "dist/r21-data-native-preflight-2026-10-20/r20-preflight.stdout"
+  },
+  "sourceSHA256": {
+    "Sources/CleanKit/Apps.swift": "c7ab223857f642f96cf529f7627ca19a155bcffb611b4aaf5c6670a4c273842e",
+    "Sources/CleanKit/AppRemovalTreeIdentity.swift": "0f0ea09930eb8ebfceedbb5e612b30b59feffa6d2fa51c1d9e485d512331226f",
+    "Sources/ThermoL10n/ZhHans.swift": "ee0cf5fda85ffc6a39d62478a3164abca7b3039718323f0f2094956ce49135f5",
+    "Tests/CleanKitTests/AppDataRemovalTests.swift": "0484515d31e3f8852bf740a816d35e9d92359494d513c8d68772d21f04cd7acc"
+  },
+  "limits": [
+    "Metadata/ctime review is not a payload or signature seal and does not provide an atomic transaction against all writers.",
+    "A blocking filesystem syscall cannot be interrupted by the cooperative deadline.",
+    "Directory changes can leave earlier confirmed moves in Trash; partial results and restore remain necessary.",
+    "Orphan-data removal is a separate entry point and has not received this recursive review yet.",
+    "Installed owned CLI/GUI accepted; actual vendor activity, orphan-data entry point and remaining whole-product gates unverified."
+  ],
+  "sourceCommitted": false,
+  "overallParityEstablished": false,
+  "installedBuild": "611.21",
+  "installedEvidence": "app-data-r21-installed-2026-10-20.json",
+  "nativeEvidence": "r21-native-associated-data-2026-10-20.json"
+}

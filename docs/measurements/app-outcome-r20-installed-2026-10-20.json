@@ -1,0 +1,62 @@
+{
+  "checkedAt": "2026-10-19T23:12:41.091919+00:00",
+  "candidate": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.20-uninstall-outcome-r20-mac190",
+  "sourceFreeze": {
+    "source": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+    "workingTree": "dirty",
+    "version": "1.1.40",
+    "build": "611.20",
+    "baseCommitCount": "611",
+    "reviewRevision": 20,
+    "privateReviewBuildOverride": true,
+    "testRun": "4d609c2e-c217-4f0a-bbd9-75327d29b217",
+    "remoteBuildRun": "4d609c2e-c217-4f0a-bbd9-75327d29b217",
+    "inputCommit": "d457aada212ac5d4ac9078a8e9abb662b21c809c",
+    "inputTree": "8253065b8fb0eb831e9f6b9ffeeb14f980fd7e75",
+    "sourceFilesVerified": 613,
+    "sourceManifestSHA256": "775251bb2d7205bb8851bddb2e422cae65fb234e5cd4bdc6504584a52944bce8",
+    "fullRegressionStatus": "passed",
+    "nonHardwareTests": 1943,
+    "nonHardwareFailures": 0,
+    "testAndBuildInputIdentical": true,
+    "testCounts": {
+      "ThermoKitTests.xctest": 218,
+      "ThermoHelperTests.xctest": 30,
+      "ThermoCLITests.xctest": 125,
+      "ThermoAppTests.xctest": 346,
+      "CleanKitTests.xctest": 792,
+      "AgentDoctorTests.xctest": 362,
+      "AgentCoreTests.xctest": 70
+    },
+    "installed": true,
+    "published": false
+  },
+  "upgradeObservation": {
+    "samples": 25,
+    "consecutiveRecoveredChecks": 6,
+    "passed": true
+  },
+  "installedPID": "78644",
+  "nativeAcceptance": "r20-native-removal-outcome-2026-10-20.json",
+  "newOffscreenLifecycleRun": false,
+  "sourceScopeEvidence": "source-scope-comparison.json",
+  "initialAssemblyFailure": "ENOSPC while copying dSYM; log retained; no compiler/test resubmission",
+  "retryAssembly": "private QA symbol hardlinks verified then raw extraction retired; signed product symbols single-linked before verified retention on mac190",
+  "symbolsRetention": "symbols-retained-on-mac190.json",
+  "sourceCommitted": false,
+  "sourceMergedIntoMain": false,
+  "notarized": false,
+  "published": false,
+  "overallParityEstablished": false,
+  "evidenceSHA256": {
+    "source-freeze.json": "38e371869195492dbea2a4dca76bcdc777bb5c511c9334313ba0f2f649e742dd",
+    "package-verification.json": "1a1fcc6b5e5cee2dee5fd1593a85d68a1baf279471274685c16c3896061afe9f",
+    "archive-verification.json": "d3b45fc55be762449a58d2306ed4ffea05d31fa29542b6b7d03b4590a71c5156",
+    "installed-verification.json": "a3a3fa45e62a1ed475a119ece8cc27b30fad8016209c23c804bb179bac3710fa",
+    "upgrade-observations.json": "551cd0123981b0ca7033afe4403e8d23aa2ca10df9c28ada9ea3fe64162c3ae6",
+    "local-installation.json": "1aa3a91a86dbc67a393d6d0d243a1ffd419b0f45c40c339b68145a475085c3c8",
+    "source-scope-comparison.json": "e618bf640e22e44fc828eba2c5891a0495bd9f14179ee5ffcc7ea92fd73638dd",
+    "symbols-retained-on-mac190.json": "22af260d501e88fb1d7cadbf5ba679be4c7f514b45aa07357f1624032379e22d",
+    "package-first-enospc.log": "e4b5aa604dd556bfd9008b649b10d77643d3b9ebfe39ee9836baa36aaf71c9e7"
+  }
+}

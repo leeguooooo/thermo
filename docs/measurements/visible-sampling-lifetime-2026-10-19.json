@@ -1,0 +1,317 @@
+{
+  "status": "1849 tests, negative control, universal package and 69 lifecycle observations passed; installed R5 and native CPU/memory checked",
+  "sourceHead": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+  "workingTree": "dirty",
+  "inputCommit": "aa7443710e4b5fff49cec7897a01cba4558f37ce",
+  "inputTree": "09d191135da5848e99a9b9f3cb51e2b25aed0474",
+  "focusedTests": {
+    "run": "7b3335da-eb1e-4aab-9bb8-ece42573268c",
+    "tests": 14,
+    "failures": 0,
+    "artifactHashesVerified": true
+  },
+  "negativeControlRun": "69499b55-7935-458a-989a-89895baa0676",
+  "fullTestsRun": "2f798ca0-24e3-44a5-9a81-3fa370d6a5da",
+  "universalBuildRun": "be1c3570-104f-44d1-a8a4-46bf15e52c56",
+  "changes": [
+    "CPU worker skips queued cancelled sessions and cooperatively cancels process scans; reset applies on first new physical read",
+    "CPU old-session completion requests fresh data immediately after reopening, without overlapping workers",
+    "Memory delayed action callbacks cannot sample a stopped page",
+    "Visible CPU, memory and overview readers use interactive priority; periodic work remains gated by page lifetime"
+  ],
+  "evidenceBoundaries": [
+    "Prior R4 1846-test result does not cover these changes",
+    "R4 lifecycle failed; no new candidate lifecycle result yet",
+    "Installed version remains R3; no root helper or hardware policy changes in this batch",
+    "Cancellation cannot interrupt an already-blocking kernel call"
+  ],
+  "remaining": [
+    "Menu footer physical acceptance remains pending",
+    "Physical low-battery and power transitions remain unverified",
+    "Review FNum read-failure provenance",
+    "Other Mole parity matrix items remain incomplete"
+  ],
+  "lastObservationAt": "2026-10-19T12:29:49.520162+00:00",
+  "lastObservedJobs": {
+    "69499b55-7935-458a-989a-89895baa0676-test": {
+      "status": "done",
+      "exitCode": 0,
+      "inputCommit": "aa7443710e4b5fff49cec7897a01cba4558f37ce",
+      "inputTree": "09d191135da5848e99a9b9f3cb51e2b25aed0474",
+      "machine": "leos-MacBook-Pro.local",
+      "finishedAt": 1792411784781
+    },
+    "2f798ca0-24e3-44a5-9a81-3fa370d6a5da-test": {
+      "status": "done",
+      "exitCode": 0,
+      "inputCommit": "aa7443710e4b5fff49cec7897a01cba4558f37ce",
+      "inputTree": "09d191135da5848e99a9b9f3cb51e2b25aed0474",
+      "machine": "leos-MacBook-Pro.local",
+      "finishedAt": 1792412382291
+    },
+    "be1c3570-104f-44d1-a8a4-46bf15e52c56-test": {
+      "status": "done",
+      "exitCode": 0,
+      "inputCommit": "aa7443710e4b5fff49cec7897a01cba4558f37ce",
+      "inputTree": "09d191135da5848e99a9b9f3cb51e2b25aed0474",
+      "machine": "leos-MacBook-Pro.local",
+      "finishedAt": 1792411932675
+    }
+  },
+  "negativeControl": {
+    "passed": true,
+    "expectedTestFailed": true,
+    "swiftExitCode": 1,
+    "compilerFailure": false,
+    "artifactHashesVerified": true
+  },
+  "lifecycle": {
+    "allPassed": true,
+    "samples": 69,
+    "runs": [
+      {
+        "name": "baseline-first",
+        "sha256": "497fcd459a5955bc3314d2ac0508bfb01276562dcaf2a0534705bac3563bd96b",
+        "samples": 23,
+        "transitionsPassed": 8,
+        "foregroundActivity": false
+      },
+      {
+        "name": "foreground-control",
+        "sha256": "c9261e3bf2421ec747d6d6edcb8e48f7b038dd1274e4a6313c156d0fe0d2cca9",
+        "samples": 23,
+        "transitionsPassed": 8,
+        "foregroundActivity": true
+      },
+      {
+        "name": "baseline-after",
+        "sha256": "cca2d547a635e6a68fc3a7956b538688af83cd6549445a854ae56d58d90179f0",
+        "samples": 23,
+        "transitionsPassed": 8,
+        "foregroundActivity": false
+      }
+    ],
+    "parameters": {
+      "cycles": 2,
+      "openSeconds": 4,
+      "idleSeconds": 2
+    },
+    "scope": "offscreen AppKit, uncontrolled external load, ordinary/control/ordinary; not installed UI or memory steady-state proof"
+  },
+  "package": {
+    "reviewRevision": 5,
+    "inputCommit": "aa7443710e4b5fff49cec7897a01cba4558f37ce",
+    "sourceFilesVerified": 598,
+    "dSYMUUIDPairsVerified": 3,
+    "archive": {
+      "version": "1.1.39",
+      "build": "566",
+      "source": "2ff2c36",
+      "archiveSHA256": "77381b77d47a1717acbb1cdf4fb11408b25302acd621f36cad2405e409727280",
+      "regularFiles": 95,
+      "links": 8,
+      "manifestMatch": true,
+      "signatureVerified": true,
+      "notarized": false,
+      "published": false
+    },
+    "signatureVerified": true,
+    "installed": true
+  },
+  "fullRegression": {
+    "status": "passed",
+    "tests": 1849,
+    "failures": 0,
+    "targets": [
+      {
+        "target": "ThermoKitTests.xctest",
+        "tests": 212,
+        "failures": 0
+      },
+      {
+        "target": "ThermoHelperTests.xctest",
+        "tests": 30,
+        "failures": 0
+      },
+      {
+        "target": "ThermoCLITests.xctest",
+        "tests": 115,
+        "failures": 0
+      },
+      {
+        "target": "ThermoAppTests.xctest",
+        "tests": 334,
+        "failures": 0
+      },
+      {
+        "target": "CleanKitTests.xctest",
+        "tests": 772,
+        "failures": 0
+      },
+      {
+        "target": "AgentDoctorTests.xctest",
+        "tests": 323,
+        "failures": 0
+      },
+      {
+        "target": "AgentCoreTests.xctest",
+        "tests": 63,
+        "failures": 0
+      }
+    ],
+    "artifactHashesVerified": true,
+    "testAndBuildInputIdentical": true
+  },
+  "pageSnapshots": {
+    "scope": "offscreen page snapshots, not latency acceptance",
+    "pages": [
+      {
+        "page": "cpu",
+        "exitCode": 0,
+        "elapsedSeconds": 20.259630916000003,
+        "artifactExists": true
+      },
+      {
+        "page": "memory",
+        "exitCode": 0,
+        "elapsedSeconds": 21.323513541999997,
+        "artifactExists": true
+      }
+    ]
+  },
+  "installedRuntime": {
+    "path": "/Applications/Thermo.app",
+    "pid": 49941,
+    "remoteBuildInput": "aa7443710e4b5fff49cec7897a01cba4558f37ce",
+    "installedManifestMatchesCandidate": true,
+    "signatureVerifiedAfterLaunch": true,
+    "rootHelperVersion": "8/1.1.39",
+    "rootHelperSHA256": "f5428799749d2f1dc7a95c76e00f3f52023a0e8e5584a5ddc20996d8b62f06f1",
+    "compatibleBaselineHelperRetained": true,
+    "rootHelperMatchesCandidate": false,
+    "upgradeObservation": {
+      "passed": true,
+      "samples": 17,
+      "consecutiveRecoveredChecks": 6,
+      "allObservedJobsPresent": true
+    },
+    "firstWatch": {
+      "passed": false,
+      "reason": "Observation deadline ended before R5 was installed/launched; no R5 input observed",
+      "samples": 113,
+      "allObservedJobsPresent": true
+    },
+    "nativeMemory": {
+      "firstObservationMs": 2454,
+      "breakdownAndProgramsPresent": true,
+      "observedUsedGiB": 13.1,
+      "latencyBoundProven": false
+    },
+    "nativeCPU": {
+      "firstObservationMs": 1144,
+      "firstObservation": "waiting for two samples, unknown values preserved",
+      "numericObservationMs": 6132,
+      "observedWholeMachinePercent": 95.6,
+      "programValuesPresent": true,
+      "latencyBoundProven": false
+    },
+    "controlsAfter": {
+      "app-control status": {
+        "id": "F23ACB55-2943-4393-A901-B24226BB190E",
+        "schema": 1,
+        "succeeded": true,
+        "values": {
+          "appVersion": "1.1.39 (566)",
+          "busy": "false",
+          "controlProtocol": "1",
+          "keepAwakePhase": "idle",
+          "keepAwakeRequested": "false",
+          "screenActive": "false"
+        }
+      },
+      "app-control helper status": {
+        "id": "54D191DC-F402-4C17-8D11-5E22BB1297B4",
+        "schema": 1,
+        "succeeded": true,
+        "values": {
+          "busy": "false",
+          "state": "running",
+          "version": "8/1.1.39"
+        }
+      },
+      "keep-awake status": {
+        "id": "D3DCD939-E928-40FF-8945-877483FD4927",
+        "schema": 1,
+        "succeeded": true,
+        "values": {
+          "observedAt": "2026-10-19T12:28:39Z",
+          "phase": "idle",
+          "powerSource": "external",
+          "requestCount": "0",
+          "requested": "false",
+          "requiresHelper": "false"
+        }
+      },
+      "fan status": {
+        "controlState": {
+          "observations": {
+            "0": {
+              "checkedAt": "2026-10-19T12:28:39Z",
+              "mode": "manual",
+              "target": 6617
+            }
+          },
+          "observationsSupported": true,
+          "policies": {
+            "0": {
+              "fixed": {
+                "rpm": 6617
+              }
+            }
+          },
+          "suspended": false
+        },
+        "fans": [
+          {
+            "id": 0,
+            "manual": true,
+            "max": 6800,
+            "min": 2317,
+            "name": "Fan",
+            "rpm": 6580.029296875,
+            "target": 6617
+          }
+        ],
+        "policies": {
+          "0": {
+            "fixed": {
+              "rpm": 6617
+            }
+          }
+        },
+        "policiesAvailable": true
+      },
+      "awdl status": {
+        "interface": {
+          "index": 15,
+          "up": true
+        },
+        "interfaceQueryComplete": true,
+        "ownedByCaller": false,
+        "phase": "idle"
+      },
+      "charge status": {
+        "externalPower": true,
+        "gate": "allowed",
+        "ownedByCaller": false,
+        "ownership": "none",
+        "percent": 100,
+        "phase": "off",
+        "policy": "off",
+        "support": "smc"
+      }
+    },
+    "notarized": false,
+    "published": false
+  }
+}

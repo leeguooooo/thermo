@@ -51,6 +51,7 @@ final class Controller {
     init(queue: DispatchQueue,removalGuard: HelperRemovalGuard) throws {
         self.queue=queue;self.removalGuard=removalGuard
         sampler = try Sampler(scope: .essential, useCache: false)
+        guard sampler.discovery.fansKnown else { throw FanControlError.helper("Fan discovery is unavailable; retry after SMC communication recovers.") }
         sampler.parts = [.temperatures, .fans]
         sampler.fanLimitRefresh = 10
         writer = FanWriter(smc: sampler.smc, discovery: sampler.discovery)

@@ -9,7 +9,10 @@ import ThermoKit
     static let shared = AppControlHost()
     private let defaults: UserDefaults
     private let screen: CleanScreenModel
-    init(defaults: UserDefaults = .standard, screen: CleanScreenModel? = nil) { self.defaults = defaults; self.screen = screen ?? .shared }
+    private let idleAwake: IdleAwakeModel
+    init(defaults: UserDefaults = .standard, screen: CleanScreenModel? = nil, idleAwake: IdleAwakeModel? = nil) {
+        self.defaults = defaults; self.screen = screen ?? .shared; self.idleAwake = idleAwake ?? .shared
+    }
     private var server: AppControlServer?
     private let integration = AgentAccess()
     private var seen = Set<UUID>()
@@ -33,11 +36,23 @@ import ThermoKit
         guard seen.count < 100_000 else { return result([:], "Control request limit reached; restart Thermo when idle.") }
         seen.insert(request.id)
         let action = request.action
-        let reads = ["status","screen.status","login.status","updates.status","helper.status","permissions.status","integration.status","awdl.status"]
-        let writes = ["screen.start","screen.stop","screen.duration","screen.shortcut","screen.clear-shortcut","login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","awdl.on","awdl.off"]
+        let reads = ["status","screen.status","login.status","updates.status","helper.status","permissions.status","integration.status","awdl.status","keep-awake.status"]
+        let writes = ["screen.start","screen.stop","screen.duration","screen.shortcut","screen.clear-shortcut","login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","awdl.on","awdl.off","keep-awake.start","keep-awake.stop"]
         guard reads.contains(action) || writes.contains(action) else { return result([:], "Unsupported App control operation.") }
-        guard request.arguments.keys.allSatisfy({ action == "awdl.on" ? $0 == "seconds" : ["screen.start","screen.duration"].contains(action) ? $0 == "duration" : action == "screen.shortcut" ? ["key-code","modifiers","key-label"].contains($0) : false }) else { return result([:], "Unexpected operation arguments.") }
+        guard request.arguments.keys.allSatisfy({ action == "keep-awake.start" ? ["mode","seconds","duration"].contains($0) : action == "awdl.on" ? $0 == "seconds" : ["screen.start","screen.duration"].contains(action) ? $0 == "duration" : action == "screen.shortcut" ? ["key-code","modifiers","key-label"].contains($0) : false }) else { return result([:], "Unexpected operation arguments.") }
         let screen = self.screen
+        var idleMode: IdleAwakeMode?
+        var idleSeconds: Double?
+        if action == "keep-awake.start" {
+            guard let raw = request.arguments["mode"], let mode = IdleAwakeMode(rawValue: raw) else { return result([:], "An explicit display, tasks or both mode is required.") }
+            idleMode = mode
+            if let duration = request.arguments["duration"] {
+                guard duration == "manual", request.arguments["seconds"] == nil else { return result([:], "Use a timed duration or manual, not both.") }
+            } else {
+                guard let raw = request.arguments["seconds"], let seconds = Int(raw), (1...604800).contains(seconds) else { return result([:], "An explicit duration of 1…604800 seconds or manual is required.") }
+                idleSeconds = Double(seconds)
+            }
+        }
         var duration: CleanScreenDuration?
         var binding: CleanScreenKeyBinding?
         if action == "screen.start" || action == "screen.duration" {
@@ -54,6 +69,9 @@ import ThermoKit
             guard let seconds = Int(request.arguments["seconds"] ?? "300"), (60...3600).contains(seconds) else { return result([:], "AWDL duration must be 60…3600 seconds.") }
         }
         if request.dryRun {
+            if action.hasPrefix("keep-awake.") {
+                return result(["action":action,"dryRun":"true","changesMade":"false","requiresRunningApp":"true","requiresHelper":"false"])
+            }
             screen.refreshPermission()
             return result(["action":action,"dryRun":"true","changesMade":"false","accessibility":String(screen.hasAccessibility),"requiresRunningApp":"true"])
         }
@@ -63,6 +81,14 @@ import ThermoKit
         }
         defer { if writes.contains(action) { mutating = false } }
         switch action {
+        case "keep-awake.start", "keep-awake.stop", "keep-awake.status":
+            if action == "keep-awake.start", let idleMode { idleAwake.start(mode: idleMode, seconds: idleSeconds) }
+            if action == "keep-awake.stop" { idleAwake.stop() }
+            let values = idleAwake.controlValues()
+            if action == "keep-awake.start", let issue = idleAwake.issue { return result(values, issue) }
+            if action == "keep-awake.start", values["phase"] != "active" { return result(values, values["issue"] ?? "Idle awake did not become active. Query status before another action.") }
+            if values["phase"] == "ending" { return result(values, values["issue"] ?? "Idle-awake state is unconfirmed.") }
+            return result(values)
         case "awdl.on", "awdl.off", "awdl.status":
             let network = AWDLModel.shared
             guard !network.busy else { return result([:], "An AWDL operation is already in progress.") }
@@ -150,7 +176,14 @@ import ThermoKit
             try? await Task.sleep(nanoseconds: 100_000_000)
             return result(["accessibility":String(screen.hasAccessibility),"notifications":String(describing:notifications.state)])
         default:
-            return result(["appVersion":AppInfo.version,"controlProtocol":"1","busy":String(mutating),"screenActive":String(screen.active)])
+            let awake = idleAwake.inspect()
+            return result(["appVersion":AppInfo.version,"controlProtocol":"1","busy":String(mutating),"screenActive":String(screen.active),
+                           "keepAwakeRequested":String(awake.requested),"keepAwakePhase":awake.phase.rawValue,
+                           "windowVisible":String(AppModels.shared.monitor.windowOpen),
+                           "menuPanelOpen":String(AppModels.shared.monitor.popoverOpen),
+                           "menuPanelSampling":String(PanelModel.shared.samplingActive),
+                           "pulseSampling":String(SystemPulse.shared.samplingActive),
+                           "pulseHolders":String(SystemPulse.shared.holderCount)])
         }
     }
     private func screenState() -> [String:String] {

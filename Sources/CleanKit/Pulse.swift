@@ -117,19 +117,22 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     public var swapTotalMB: Int = 0
     public var hogs: [Hog]
     public var sampled: Date
-    /// Free space on the startup disk. Nearly full, swap cannot grow and every write waits, which
-    /// shows up as a huge load with no busy program.
+    /// Raw free space on the startup disk. Capacity alone does not measure I/O stalls.
     public var diskFreeBytes: Int64? = nil
-    /// Free space plus what macOS can purge on demand (local snapshots, evictable iCloud copies):
-    /// the disk is only the bottleneck when even this is nearly gone.
+    /// OS-reported capacity for important usage, including estimated reclaimable space.
     public var diskAvailableBytes: Int64? = nil
 
-    /// Below this the disk is the bottleneck; below `diskLowBytes` it is worth a word.
+    /// Capacity-warning thresholds, not proof of failed writes or a performance cause.
     public static let diskCriticalBytes: Int64 = 2_000_000_000
     public static let diskLowBytes: Int64 = 5_000_000_000
-    var diskCritical: Bool { (diskAvailableBytes ?? diskFreeBytes ?? .max) < Self.diskCriticalBytes }
+    var effectiveDiskAvailableBytes: Int64? {
+        if let available = diskAvailableBytes, available >= 0 { return available }
+        if let free = diskFreeBytes, free >= 0 { return free }
+        return nil
+    }
+    var diskCritical: Bool { effectiveDiskAvailableBytes.map { $0 < Self.diskCriticalBytes } ?? false }
 
-    /// Load per core: 1 means every core has work, 2 means twice as much work as cores.
+    /// One-minute load divided by active logical processors; this is not CPU utilization.
     public var busy: Double { load1 / Double(max(1, cores)) }
 
     public var verdict: Verdict {
@@ -144,12 +147,14 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     public var verdictText: String {
         let load = String(Int(load1.rounded())), n = String(cores)
         switch verdict {
-        case .hot: return tr("Your Mac is too hot and is slowing itself down")
-        case .disk: return tr("The disk is almost full: %1$@ left", Self.bytes(diskFreeBytes ?? 0))
-        case .overloaded: return tr("Your Mac is overloaded: load %1$@ on %2$@ cores", load, n)
-        case .memory: return tr("Memory is running out")
-        case .busy: return tr("Your Mac is busy: load %1$@ on %2$@ cores", load, n)
-        case .ok: return tr("No CPU, memory or thermal bottleneck is detected in this reading")
+        case .hot: return tr("macOS reports high thermal pressure")
+        case .disk:
+            return effectiveDiskAvailableBytes.map { tr("Disk space available is low: %1$@", Self.bytes($0)) }
+                ?? tr("Disk space reading is unavailable")
+        case .overloaded: return tr("High one-minute system load: %1$@ on %2$@ logical CPUs", load, n)
+        case .memory: return tr(memory == .critical ? "macOS reports critical memory pressure" : "macOS reports elevated memory pressure")
+        case .busy: return tr("One-minute system load: %1$@ on %2$@ logical CPUs", load, n)
+        case .ok: return tr("No warning in the available CPU, memory and thermal readings")
         }
     }
 
@@ -163,14 +168,14 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     public var nextStep: NextStep? {
         if diskCritical, thermal != .serious, thermal != .critical {
             return NextStep(kind: "freeDisk", program: nil,
-                            text: tr("Free disk space first (Thermo → Disk, or thermo clean); quitting programs will not help while the disk is full."))
+                            text: tr("Review disk usage (Thermo → Disk, or thermo clean), then check actual available space, memory pressure and workload again."))
         }
         if thermal == .serious || thermal == .critical || busy >= 2 {
             return NextStep(kind: "pauseWork", program: hogs.max(by: { $0.cpu < $1.cpu })?.name,
                             text: tr("Pause work you can postpone, then check CPU load and thermal pressure again."))
         }
         if memory.isHigh {
-            let target = hogs.filter { $0.quittable && $0.memoryKB >= 512 * 1024 }.max { $0.memoryKB < $1.memoryKB }
+            let target = hogs.filter { $0.quittable && $0.memoryMetric != .unavailable && $0.memoryKB >= 512 * 1024 }.max { $0.memoryKB < $1.memoryKB }
             if let target, ChromeInspector.isBrowser(target.name) {
                 return NextStep(kind: "inspectBrowser", program: target.name,
                                 text: tr("Check %1$@'s pages first; close unused heavy pages before considering a full restart.", target.name))
@@ -189,44 +194,53 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         return nil
     }
 
-    /// Who or what is behind it, when that can be said.
+    /// Observed context for the warning; one snapshot does not establish a causal diagnosis.
     public var culpritText: String? {
-        if diskCritical {
-            return tr("With only %1$@ free, macOS cannot grow swap or write caches, so programs stall waiting on the disk; that is what the load measures.",
-                      Self.bytes(diskFreeBytes ?? 0))
+        if diskCritical, let available = effectiveDiskAvailableBytes {
+            return tr("macOS reports %1$@ of available disk space. This may limit writes or swap growth; remaining capacity alone does not explain current load.",
+                      Self.bytes(available))
         }
-        // Name a program only when it explains a real share of the load: one core out of a load of
-        // 100 is not "the reason".
-        if let top = hogs.first, top.cpu >= 50, top.cpu / 100 >= load1 * 0.25 {
-            return tr("Mostly %1$@, using %2$@ cores", top.name, String(format: "%.1f", top.cpu / 100))
+        if thermal == .serious || thermal == .critical {
+            return tr("macOS reports high thermal pressure. This sample does not measure CPU throttling or identify a heat source.")
         }
-        // High load without a busy program: processes are waiting, usually on memory or the disk.
-        if memory.isHigh || (busy >= 1 && swapUsedMB >= 4096), let big = hogs.max(by: { $0.memoryKB < $1.memoryKB }) {
-            if swapUsedMB >= 4096 {
-                // Say it plainly: memory lives on the disk now, and everything waits for the disk.
-                return tr("%1$@ of memory has been moved to the disk, memory pressure may be contributing to slow responses. %2$@ uses the most (%3$@).",
-                          Self.gb(swapUsedMB * 1024), big.name, Self.gb(big.memoryKB))
+        if memory.isHigh {
+            let swap = MemoryFormat.string(mebibytes: swapUsedMB)
+            if let big = hogs.filter({ $0.memoryMetric != .unavailable && $0.memoryKB > 0 }).max(by: { $0.memoryKB < $1.memoryKB }) {
+                return tr("macOS reports high memory pressure; %1$@ of swap is in use. %2$@ has the largest reported memory use in this sample (%3$@).",
+                          swap, big.name, MemoryFormat.string(kibibytes: big.memoryKB))
             }
-            return tr("Memory is tight: %1$@ of swap in use, so programs wait on the disk; %2$@ uses the most memory (%3$@)",
-                      MemoryFormat.string(mebibytes: swapUsedMB), big.name,
-                      MemoryFormat.string(kibibytes: big.memoryKB))
+            return tr("macOS reports high memory pressure; %1$@ of swap is in use.", swap)
+        }
+        // The list can be ordered by memory. Report the highest observed CPU use,
+        // rather than calling the first row the cause of a one-minute load average.
+        if let top = hogs.filter({ $0.cpu.isFinite && $0.cpu >= 0 }).max(by: { $0.cpu < $1.cpu }),
+           top.cpu >= 50 {
+            return tr("Current sample: %1$@ uses about %2$@ logical CPUs.", top.name, String(format: "%.1f", top.cpu / 100))
+        }
+        if busy >= 1 && swapUsedMB >= 4096 {
+            if memory == .normal {
+                return tr("macOS reports normal memory pressure; %1$@ of swap is in use. Swap size alone does not establish current swap activity or the cause of high load.",
+                          MemoryFormat.string(mebibytes: swapUsedMB))
+            }
+            return tr("Memory pressure is unavailable; %1$@ of swap is in use. Swap size alone does not establish current swap activity or the cause of high load.",
+                      MemoryFormat.string(mebibytes: swapUsedMB))
         }
         if busy >= 1 { return tr("Load is high, but no single program stands out.") }
         return nil
     }
 
-    /// A disk getting full, said before it becomes the bottleneck.
+    /// Capacity warning using the same OS-reported metric as the headline and threshold.
     public var diskText: String? {
-        guard let free = diskFreeBytes, free < Self.diskLowBytes, !diskCritical else { return nil }
-        return tr("Only %1$@ of disk space is left; when it runs out, swap cannot grow and everything slows down.", Self.bytes(free))
+        guard let available = effectiveDiskAvailableBytes, available < Self.diskLowBytes, !diskCritical else { return nil }
+        return tr("macOS reports %1$@ of available disk space. Review disk usage before it fills up.", Self.bytes(available))
     }
 
     static func bytes(_ b: Int64) -> String { ByteCountFormatter.string(fromByteCount: b, countStyle: .file) }
 
-    /// Swap files fill the disk too; say so once they are big.
+    /// Report configured swap capacity without promising reclaim timing or inferring I/O.
     public var swapDiskText: String? {
         guard swapTotalMB >= 8192 else { return nil }
-        return tr("Swap files take %1$@ of disk space; macOS gives it back once memory frees up.", Self.gb(swapTotalMB * 1024))
+        return tr("Reported swap capacity: %1$@. Capacity is not a measure of current swap activity.", Self.gb(swapTotalMB * 1024))
     }
 
     static func gb(_ kb: Int) -> String { MemoryFormat.string(kibibytes: kb) }

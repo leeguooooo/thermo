@@ -170,9 +170,11 @@ struct HistoryPage: View {
                     VStack(alignment: .leading, spacing: 6) {
                         SectionHeader(title: day)
                         InspectorPanel {
-                            ForEach(Array(records.enumerated()), id: \.element.id) { index, record in
-                                if index > 0 { InspectorDivider() }
-                                row(record)
+                            LazyVStack(alignment: .leading, spacing: 0) {
+                                ForEach(Array(records.enumerated()), id: \.element.id) { index, record in
+                                    if index > 0 { InspectorDivider() }
+                                    row(record)
+                                }
                             }
                         }
                     }

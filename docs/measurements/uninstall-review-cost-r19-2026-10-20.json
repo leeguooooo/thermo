@@ -1,0 +1,82 @@
+{
+  "fixture": "/Users/leo/.local/state/thermo-qa/r18-space-9218f2833c98/review-cost/Home/Applications/MetadataCost.app",
+  "bundleEntries": 10106,
+  "resourceFiles": 10000,
+  "binarySHA256": {
+    "r18": "a5b5a8531c844b72bd6b594e08027ae501f062148546bdbc9ae2b93bf7d00a08",
+    "r19": "060bd473bcbdcfd0d5d4a06ca4cf32d6f7277eef5b686d2e27c03b65da612f9b"
+  },
+  "measurements": [
+    {
+      "index": 0,
+      "build": "r18",
+      "wallSeconds": 0.3726830829400569,
+      "childCPUSeconds": 0.26618,
+      "treeIdentityPresent": false
+    },
+    {
+      "index": 1,
+      "build": "r19",
+      "wallSeconds": 0.7127929999260232,
+      "childCPUSeconds": 0.350249,
+      "treeIdentityPresent": true
+    },
+    {
+      "index": 2,
+      "build": "r19",
+      "wallSeconds": 0.3331350829685107,
+      "childCPUSeconds": 0.32863299999999995,
+      "treeIdentityPresent": true
+    },
+    {
+      "index": 3,
+      "build": "r18",
+      "wallSeconds": 0.2339059580117464,
+      "childCPUSeconds": 0.2301859999999999,
+      "treeIdentityPresent": false
+    },
+    {
+      "index": 4,
+      "build": "r18",
+      "wallSeconds": 0.2414283329853788,
+      "childCPUSeconds": 0.23671299999999984,
+      "treeIdentityPresent": false
+    },
+    {
+      "index": 5,
+      "build": "r19",
+      "wallSeconds": 0.3239037919556722,
+      "childCPUSeconds": 0.320639,
+      "treeIdentityPresent": true
+    }
+  ],
+  "summary": {
+    "r18": {
+      "wallMedianSeconds": 0.2414283329853788,
+      "childCPUMedianSeconds": 0.23671299999999984
+    },
+    "r19": {
+      "wallMedianSeconds": 0.3331350829685107,
+      "childCPUMedianSeconds": 0.32863299999999995
+    }
+  },
+  "allSixReadOnlyPlansPassed": true,
+  "bundleBytesAndMetadataUnchanged": true,
+  "fingerprint": "f075aff392f965189700b9c610399d1cf53990a7bd1da98f4f4ef8fd925d40ee",
+  "limits": [
+    "Whole CLI preparation including discovery and child tools; not exclusive tree-walk time.",
+    "Synthetic bundle on mac190; filesystem caches not cold and other workloads continue.",
+    "Three fresh CLI processes per version in alternating order; not installed GUI latency."
+  ],
+  "runID": "60bad659-55d7-4913-b48d-02ae6a209437",
+  "artifactSHA256": "833d567626c65eb4df44bd79c91a3443a080200f76a1fcab61123b265d0e9aa8",
+  "allArtifactHashesVerified": true,
+  "initialFixtureFailure": {
+    "run": "5680a650-52b8-4e4e-a131-36ae7482e1e6",
+    "systemFileFlagsCopyDenied": true,
+    "noMeasurementReached": true,
+    "failedFixtureRetained": true,
+    "correctedToCopyFileContentsAndSetExecutableMode": true
+  },
+  "overallParityEstablished": false
+}

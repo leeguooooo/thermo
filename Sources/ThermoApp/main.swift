@@ -7,11 +7,14 @@ import ThermoKit
 import ThermoL10n
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotificationCenterDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotificationCenterDelegate, NSMenuItemValidation {
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private var monitor: Monitor { AppModels.shared.monitor }
     private var lastTitle: String?
+    private var menuFreshnessTimer: Timer?
+    private var menuPreferences = MenuBarPreferences()
+    private var menuValidAfter = Date.distantPast
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply { AppExitGuard.reply() }
 
@@ -34,13 +37,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             button.imagePosition = .imageLeading
             button.action = #selector(toggle)
             button.target = self
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
 
         popover.behavior = .transient
         popover.animates = false
         popover.delegate = self
         popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor))
-        // The panel's curves keep a slow history while it is closed.
+        IdleAwakeModel.shared.onStateChange = { [weak self] in
+            guard let self else { return }
+            self.updateTitle(self.monitor.latest)
+        }
+        // Hidden panel curves do not keep resource readers running.
         PanelModel.shared.setActive(false)
 
         applyDockPreference()
@@ -54,6 +62,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         }
 
         monitor.onUpdate = { [weak self] s in self?.updateTitle(s) }
+        monitor.onMenuUpdate = { [weak self] in
+            guard let self else { return }
+            self.updateTitle(self.monitor.latest)
+        }
+        NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
+                                               object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.updatePanelHeightLimit() }
+        }
+        menuPreferences = MenuBarPreferences.read()
+        updateTitle(nil)
+        // Expire stale readings even if the sampling queue is delayed or unavailable.
+        menuFreshnessTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let hidden = self.statusItemHidden()
+                if self.monitor.iconHidden != hidden { self.monitor.iconHidden = hidden }
+                self.updateTitle(self.monitor.latest)
+            }
+        }
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.menuValidAfter = Date()
+                self?.monitor.resetMenuBaselines()
+                self?.monitor.reschedule()
+                PanelModel.shared.resetBaselines()
+            }
+        }
         // `open Thermo.app --args --install-helper`: start helper registration right away (setup/QA).
         if CommandLine.arguments.contains("--install-helper") { monitor.installHelper() }
         // `thermo settings KEY VALUE` writes the same defaults from another process.
@@ -64,14 +99,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             MainActor.assumeIsolated {
                 self?.monitor.reschedule()
                 self?.applyDockPreference()
-                if let s = self?.monitor.latest { self?.updateTitle(s) }
+                self?.applyMenuPreferences()
             }
             NotificationCenter.default.post(name: UserDefaults.didChangeNotification, object: nil)
         }
         NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
             Settings.normalize()
             MainActor.assumeIsolated {
-                if let s = self?.monitor.latest { self?.updateTitle(s) }
+                self?.applyMenuPreferences()
                 self?.applyDockPreference()
             }
         }
@@ -113,6 +148,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         main.addItem(appItem)
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: tr("Open Console"), action: #selector(openFromMenu), keyEquivalent: "o").target = self
+        let panelItem = appMenu.addItem(withTitle: tr("Open Menu Panel"), action: #selector(openPanelFromMenu), keyEquivalent: "p")
+        panelItem.target = self
+        panelItem.keyEquivalentModifierMask = [.command, .shift]
         appMenu.addItem(withTitle: tr("Save and close background tabs"), action: #selector(archiveTabsFromMenu), keyEquivalent: "s").target = self
         appMenu.items.last?.keyEquivalentModifierMask = [.command, .shift]
         appMenu.addItem(.separator())
@@ -126,6 +164,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     @objc fileprivate func archiveTabsFromMenu() { TabQuickAction.request() }
 
     @objc fileprivate func openFromMenu() { MainWindow.show() }
+
+    private var panelNavigationAllowed: Bool {
+        NSApp.modalWindow == nil && MainWindow.window?.attachedSheet == nil &&
+            (!popover.isShown || popover.contentViewController?.view.window?.attachedSheet == nil)
+    }
+    @objc fileprivate func openPanelFromMenu() {
+        guard panelNavigationAllowed else { return }
+        showPanel()
+    }
+    func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        item.action != #selector(openPanelFromMenu) || panelNavigationAllowed
+    }
+
+    private func updatePanelHeightLimit() {
+        let iconWindow = statusItem?.button?.window
+        let iconScreen = iconWindow?.screen ?? NSScreen.screens.first { screen in
+            iconWindow.map { screen.frame.intersects($0.frame) } ?? false
+        }
+        let screen = statusItemHidden() ? NSScreen.main : (iconScreen ?? NSScreen.main)
+        // Reserve the popover arrow, padding and the always-visible action area.
+        monitor.panelBodyHeightLimit = max(120, (screen?.visibleFrame.height ?? 800) - 220)
+    }
 
     /// True when the status item sits in the notch gap or off every screen.
     private func statusItemHidden() -> Bool {
@@ -145,9 +205,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     /// icon cannot be seen.
     private func showPanel() {
         NSApp.activate(ignoringOtherApps: true)
-        guard !popover.isShown else { return }
+        updatePanelHeightLimit()
+        let hidden = statusItemHidden()
+        monitor.iconHidden = hidden
+        if popover.isShown {
+            popover.contentViewController?.view.window?.makeKeyAndOrderFront(nil)
+            return
+        }
         monitor.popoverOpen = true
-        if let button = statusItem.button, !statusItemHidden() {
+        PanelModel.shared.setActive(true)
+        if let button = statusItem.button, !hidden {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         } else {
             let anchor = panelAnchor()
@@ -178,42 +245,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 
     @objc private func toggle() {
+        let p = MenuBarPreferences.read()
+        let action = NSApp.currentEvent?.type == .rightMouseUp ? p.right : p.left
+        if action == .console { MainWindow.show(); return }
         if popover.isShown { popover.performClose(nil) } else { showPanel() }
     }
 
-    func popoverDidClose(_ notification: Notification) { monitor.popoverOpen = false }
+    func closeMenuPanel() {
+        if popover.isShown { popover.performClose(nil) }
+    }
 
-    private func updateTitle(_ s: Snapshot) {
+    func popoverDidClose(_ notification: Notification) {
+        monitor.popoverOpen = false
+        PanelModel.shared.setActive(false)
+    }
+
+    private func applyMenuPreferences() {
+        let next = MenuBarPreferences.read()
+        if next != menuPreferences {
+            menuPreferences = next
+            menuValidAfter = Date()
+            monitor.resetMenuBaselines()
+            monitor.reschedule()
+        }
+        updateTitle(monitor.latest)
+    }
+
+    private func updateTitle(_ s: Snapshot?) {
         guard let button = statusItem.button else { return }
         let d = UserDefaults.standard
-        let metric = TitleMetric(rawValue: d.string(forKey: Settings.titleMetric) ?? "") ?? .cpu
-        let f = d.bool(forKey: Settings.fahrenheit)
-        func t(_ c: Double?) -> String {
-            guard let c else { return "—" }
-            return f ? String(format: "%.0f°", c * 9 / 5 + 32) : String(format: "%.0f°", c)
-        }
-        func rpm(_ r: Double) -> String { r >= 1000 ? String(format: "%.1fk", r / 1000) : String(Int(r)) }
-        let fanRPM = s.fans.compactMap(\.rpm).max()
-
-        let text: String
-        switch metric {
-        case .cpu: text = t(s.cpu ?? s.maximumKnownTemperature)
-        case .hottest: text = t(s.maximumKnownTemperature)
-        case .fan: text = FanControlPresentation.speedSummary(s.fans) ?? t(s.maximumKnownTemperature)
-        case .cpuAndFan: text = t(s.cpu ?? s.maximumKnownTemperature) + (fanRPM.map { " · " + (s.fans.contains { $0.rpm == nil } ? "≥ " : "") + rpm($0) } ?? (s.fans.isEmpty ? "" : " · " + tr("unknown")))
-        case .power: text = s.systemPower.map { String(format: "%.0f W", $0) } ?? t(s.maximumKnownTemperature)
-        case .iconOnly: text = ""
-        }
         // Redrawing the status item costs ~2 ms; skip it when nothing visible changed.
-        let title = text.isEmpty ? "" : " " + text
-        if title != lastTitle {
-            lastTitle = title
-            button.attributedTitle = NSAttributedString(string: title, attributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium),
-            ])
+        let awake = IdleAwakeModel.shared.state
+        let marker = awake.phase == .active ? "☕︎" : awake.phase == .ending ? "☕︎?" : awake.requested ? "☕︎⏸" : ""
+        let display = MenuDisplay.make(preferences: MenuBarPreferences.read(), snapshot: s,
+                                       live: monitor.menuLive, fahrenheit: d.bool(forKey: Settings.fahrenheit), marker: marker,
+                                       sensorReadStarted: monitor.menuLive.sampled, validAfter: menuValidAfter)
+        let title = display.text.isEmpty ? "" : " " + display.text
+        // The first update can precede status-button layout. Do not render a
+        // miniature first frame from its temporarily zero bounds.
+        let imageHeight = min(20, max(16, button.bounds.height > 0 ? button.bounds.height - 4 : 20))
+        let cacheKey = "\(display.stacked):\(display.showIcon):\(imageHeight):\(title)"
+        if cacheKey != lastTitle {
+            lastTitle = cacheKey
+            if display.stacked {
+                button.attributedTitle = NSAttributedString(string: "")
+                button.imageScaling = .scaleNone
+                button.image = MenuStackImage.make(text: display.text, showIcon: display.showIcon, height: imageHeight)
+            } else {
+                button.imageScaling = .scaleProportionallyDown
+                button.image = display.showIcon ? NSImage(systemSymbolName: "thermometer.medium", accessibilityDescription: "Thermo") : nil
+                button.image?.isTemplate = true
+                button.attributedTitle = NSAttributedString(string: title, attributes: [
+                    .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium),
+                ])
+            }
         }
-        let tip = String(format: "CPU %@ · GPU %@", t(s.cpu), t(s.gpu))
-        if button.toolTip != tip { button.toolTip = tip }
+        button.cell?.wraps = false
+        button.cell?.usesSingleLineMode = true
+        button.setAccessibilityLabel(display.tooltip)
+        if button.toolTip != display.tooltip { button.toolTip = display.tooltip }
     }
 }
 
@@ -258,6 +348,7 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
     // The app menu belongs to the delegate; preserve its targets while relabeling it.
     for item in main.items.first?.submenu?.items ?? [] {
         if item.action == #selector(AppDelegate.openFromMenu) { item.title = tr("Open Console") }
+        if item.action == #selector(AppDelegate.openPanelFromMenu) { item.title = tr("Open Menu Panel") }
         if item.action == #selector(NSApplication.hide(_:)) { item.title = tr("Hide Thermo") }
         if item.action == #selector(NSApplication.terminate(_:)) { item.title = tr("Quit Thermo") }
     }
@@ -281,7 +372,11 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
     let pages: [(String, String, MainPage)] = [
         (tr("Overview"), "1", .overview), (tr("Sensors"), "2", .sensors), (tr("Fans"), "3", .fans),
         (tr("Browser pages"), "4", .browser("Google Chrome")), (tr("Disk Cleanup"), "5", .disk(.home)),
-        (tr("AI Agent Diagnostics"), "6", .agents(.home)), (tr("Settings"), ",", .settings),
+        (tr("AI Agent Diagnostics"), "6", .agents(.home)),
+        (tr("Software"), "7", .apps(.installed)), (tr("Memory usage"), "8", .memory),
+        (tr("CPU usage"), "9", .compute(false)), (tr("GPU usage"), "0", .compute(true)),
+        (tr("Space Lens"), "", .space(.browse)), (tr("Claude cleanup"), "", .claudeCleanup),
+        (tr("Settings"), ",", .settings),
     ]
     for (title, key, page) in pages {
         let item = viewMenu.addItem(withTitle: title, action: #selector(PageMenuTarget.open(_:)), keyEquivalent: key)

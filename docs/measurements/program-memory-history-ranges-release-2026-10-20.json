@@ -1,0 +1,196 @@
+{
+  "checkedAt": "2026-10-19T18:33:49.069194+00:00",
+  "runId": "39b11db1-27ce-47f5-b931-f4e5fd4e7cc2",
+  "inputCommit": "6f1f76f5a87e628c395a5ebe48b8db44589029a5",
+  "sourceSHA256": {
+    "Sources/CleanKit/MemoryState.swift": "8d3257dc507fc2b10454502a7fb06ed5a654d073f585c39963217b0acddbe07d",
+    "Tests/CleanKitTests/ProgramMemoryHistoryTests.swift": "1dce33815546e4e14b4a6930052dc4fccd03d9ef301ec2062e81bce4c0c3d394",
+    "scripts/qa/ProgramMemoryHistoryBenchmarkTests.swift": "c68568934e04d3b9ab41b97c205810aee64c72ab5778b01d7ba788d32ad591d8"
+  },
+  "change": "Store ranges into the existing encoded history rather than a Data copy for every retained line; complete validation and chronological ordering remain.",
+  "baseline": "Original decode-all and encode-all algorithm",
+  "intermediate": "Prior copied-line implementation",
+  "configuration": "Release, jobs=1, three alternating independent-process runs per algorithm",
+  "measurementStatus": "completed",
+  "installedAppChanged": false,
+  "mainWorkspaceChanged": false,
+  "sourceCommitted": false,
+  "limitations": [
+    "Input, newline slices and output still allocate memory; no constant-memory claim",
+    "No cross-process locking or hard file-size limit added",
+    "Whole-App and Mole baseline parity not measured",
+    "Synthetic 10.1MB fixture; three ordered independent-process runs per variant, not randomized",
+    "RSS is lifetime process high water, not isolated function allocation or footprint",
+    "Readback validation occurs after capturing RSS; framework and fixture initialization still contribute",
+    "No installed-App or whole-machine energy comparison"
+  ],
+  "probes": [
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.32959800000000006,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "baseline",
+      "peakRSSBytesAfter": 63193088,
+      "peakRSSBytesBefore": 37191680,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.33173245831858367,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/39b11db1-27ce-47f5-b931-f4e5fd4e7cc2/test/artifacts/.remote-qa/probe-1-baseline.log",
+      "sha256": "31a7273185799266522749949b3e55014f2db298a4f2361da5c9c31637df2b9f"
+    },
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.18146199999999998,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "copied-lines",
+      "peakRSSBytesAfter": 63864832,
+      "peakRSSBytesBefore": 37191680,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.18337158334907144,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/39b11db1-27ce-47f5-b931-f4e5fd4e7cc2/test/artifacts/.remote-qa/probe-1-copied-lines.log",
+      "sha256": "7d1415cfc95a6e78083fff7bb404fc571d7470d265dfa2145d12d3912f9ccd58"
+    },
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.17363599999999998,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "optimized",
+      "peakRSSBytesAfter": 49725440,
+      "peakRSSBytesBefore": 37191680,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.17540470836684108,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/39b11db1-27ce-47f5-b931-f4e5fd4e7cc2/test/artifacts/.remote-qa/probe-1-optimized.log",
+      "sha256": "d7435de5c9095ea4c5f82d8e2a6ee816413ab94950773ac2b9e3c7368bfa2c79"
+    },
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.32675600000000005,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "baseline",
+      "peakRSSBytesAfter": 63193088,
+      "peakRSSBytesBefore": 37191680,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.32852070836815983,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/39b11db1-27ce-47f5-b931-f4e5fd4e7cc2/test/artifacts/.remote-qa/probe-2-baseline.log",
+      "sha256": "8e3798b691cbf599a5dae814ac1ff24752719e032b9b436b91af9be39d7437c2"
+    },
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.177895,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "copied-lines",
+      "peakRSSBytesAfter": 63864832,
+      "peakRSSBytesBefore": 37191680,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.18003220832906663,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/39b11db1-27ce-47f5-b931-f4e5fd4e7cc2/test/artifacts/.remote-qa/probe-2-copied-lines.log",
+      "sha256": "591c23b0e843945386373a30fa978c3a5be100741b5311a193ca0ddb69bc5f18"
+    },
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.17392100000000002,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "optimized",
+      "peakRSSBytesAfter": 49725440,
+      "peakRSSBytesBefore": 37191680,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.17676370835397393,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/39b11db1-27ce-47f5-b931-f4e5fd4e7cc2/test/artifacts/.remote-qa/probe-2-optimized.log",
+      "sha256": "ea1bc9df1e5b6af8f8b18ba975cf7a85d898af270bfbcf90540da2e058b59503"
+    },
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.328048,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "baseline",
+      "peakRSSBytesAfter": 63193088,
+      "peakRSSBytesBefore": 37191680,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.3306282500270754,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/39b11db1-27ce-47f5-b931-f4e5fd4e7cc2/test/artifacts/.remote-qa/probe-3-baseline.log",
+      "sha256": "12d94f4613f994f1727c173e18d68e99d7adbfc27d2c786f6ada7fba6b10557f"
+    },
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.181799,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "copied-lines",
+      "peakRSSBytesAfter": 63864832,
+      "peakRSSBytesBefore": 37191680,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.18354283331427723,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/39b11db1-27ce-47f5-b931-f4e5fd4e7cc2/test/artifacts/.remote-qa/probe-3-copied-lines.log",
+      "sha256": "753e052c80d03afebc40ffddcefcb981c40bb15731f73d0fb4fa602d75cfda75"
+    },
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.174766,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "optimized",
+      "peakRSSBytesAfter": 49725440,
+      "peakRSSBytesBefore": 37191680,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.1763769999379292,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/39b11db1-27ce-47f5-b931-f4e5fd4e7cc2/test/artifacts/.remote-qa/probe-3-optimized.log",
+      "sha256": "34bcc2ff7554ae9e890ea0bbc9a77d50517ff553f726f22cc8f3615975b5f89f"
+    }
+  ],
+  "median": {
+    "baseline": {
+      "wallSeconds": 0.3306282500270754,
+      "cpuSeconds": 0.328048,
+      "peakRSSBytesBefore": 37191680,
+      "peakRSSBytesAfter": 63193088
+    },
+    "copied-lines": {
+      "wallSeconds": 0.18337158334907144,
+      "cpuSeconds": 0.18146199999999998,
+      "peakRSSBytesBefore": 37191680,
+      "peakRSSBytesAfter": 63864832
+    },
+    "optimized": {
+      "wallSeconds": 0.1763769999379292,
+      "cpuSeconds": 0.17392100000000002,
+      "peakRSSBytesBefore": 37191680,
+      "peakRSSBytesAfter": 49725440
+    }
+  },
+  "artifactHashesAndSourceSnapshotVerified": true,
+  "regression": {
+    "tests": 775,
+    "skipped": 1,
+    "failures": 0,
+    "artifact": "/Users/leo/.local/state/session-flow/runs/39b11db1-27ce-47f5-b931-f4e5fd4e7cc2/test/artifacts/.remote-qa/clean-kit-regression.log"
+  },
+  "optimizedToBaselineRatio": {
+    "wallSeconds": 0.5334601623529918,
+    "cpuSeconds": 0.5301693654587134,
+    "peakRSSBytesAfter": 0.7868809955924293
+  }
+}

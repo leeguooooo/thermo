@@ -1,0 +1,46 @@
+{
+  "targetVersion": "Mole native 1.16.0 (324)",
+  "targetDMGSHA256Verified": "7153b8ed37b615560cb02d903da03f4d3e23d361c40ad43da239f563ffeab98a",
+  "targetEvidence": {
+    "productFindings": "main dist/mole-study/product-findings.md section 8",
+    "binaryStringsLines": [
+      972,
+      975,
+      976,
+      65547,
+      66403,
+      66404
+    ],
+    "types": [
+      "KeepAwakeController",
+      "KeepAwakeBehavior",
+      "KeepAwakeDuration"
+    ],
+    "assertionNames": [
+      "PreventUserIdleDisplaySleep",
+      "PreventUserIdleSystemSleep"
+    ],
+    "runtimeModeAcceptanceStillNeeded": true
+  },
+  "thermoInstalledVersion": "1.1.36 (534)",
+  "thermoSourceSnapshot": "3892e70",
+  "thermoCapabilityInventoryCount": 108,
+  "currentAwakeCommand": "awake [status|on|off] [--no-heat-guard] [--dry-run] [--yes] [--json]",
+  "currentAwakeMeaning": "Root-helper lid-closed awake only",
+  "generalIdleAssertionCreationFoundInSources": false,
+  "confirmedFunctionalGap": [
+    "Display/tasks/both idle-awake modes",
+    "Duration and automatic expiry of idle-awake",
+    "Low-battery pause and power-return resumption for idle-awake"
+  ],
+  "existingLidAwakeModeMustBePreserved": true,
+  "newPowerSessionStarted": false,
+  "sourceFilesSHA256": {
+    "Sources/thermo/Awake.swift": "79e47f648d3e1fccf6ad22f158d3e850984433b73c9d2bb7ddc73d0cbd920ed5",
+    "Sources/ThermoApp/LidAwakeView.swift": "c56e57f3cffbf4c7da83424f877b0fd21bda5733b0621dfad30ba77e3c2c6e7a",
+    "Sources/ThermoKit/LidAwake.swift": "d391f93b3d91930d22afb72168b5c68171646f845cf3abb47b132defda5a765c",
+    "Sources/ThermoApp/Monitor.swift": "4c44548278f194c5b4bb68c2ac1a8d1613491ebb7e54cce7c98b83c9ec3c4242"
+  },
+  "mainPowerSourcesAlsoCheckedAt": "177124a",
+  "installedAcceptanceNow": "1.1.37 (543)"
+}
