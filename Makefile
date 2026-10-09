@@ -3,15 +3,21 @@ PREFIX ?= /usr/local
 SIGN_ID ?= Developer ID Application: LI GUO (6ZPXG4KVVS)
 NOTARY_PROFILE ?= thermo
 NOTARY_KEYCHAIN ?= $(HOME)/Library/Keychains/login.keychain-db
+# Where releases/appcast.xml will be served from; empty = build without auto-update.
+APPCAST_URL ?=
 
-.PHONY: build release debug test bench install uninstall clean
+.PHONY: build release icon debug test bench install uninstall clean
 
 build:
 	scripts/build.sh
 
 # Developer ID signed + notarized + stapled.
 release:
-	SIGN_ID="$(SIGN_ID)" NOTARY_PROFILE="$(NOTARY_PROFILE)" NOTARY_KEYCHAIN="$(NOTARY_KEYCHAIN)" scripts/build.sh
+	SIGN_ID="$(SIGN_ID)" NOTARY_PROFILE="$(NOTARY_PROFILE)" NOTARY_KEYCHAIN="$(NOTARY_KEYCHAIN)" \
+	APPCAST_URL="$(APPCAST_URL)" scripts/build.sh
+
+icon:
+	swift scripts/make-icon.swift Resources
 
 debug:
 	swift build

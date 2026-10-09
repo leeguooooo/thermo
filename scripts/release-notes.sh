@@ -7,6 +7,6 @@ echo "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>body{font:13px -
 awk -v v="## $VERSION" '
     $0 == v { on = 1; next }
     /^## / && on { exit }
-    on && /^- / { sub(/^- /, ""); gsub(/&/, "\\&amp;"); gsub(/</, "\\&lt;"); gsub(/`[^`]*`/, "<code>&</code>"); gsub(/<code>`|`<\/code>/, ""); print "<li>" $0 "</li>" }
+    on && /^- / { sub(/^- /, ""); gsub(/&/, "\\&amp;"); gsub(/</, "\\&lt;"); while (match($0, /`[^`]*`/)) $0 = substr($0, 1, RSTART - 1) "<code>" substr($0, RSTART + 1, RLENGTH - 2) "</code>" substr($0, RSTART + RLENGTH); print "<li>" $0 "</li>" }
 ' CHANGELOG.md
 echo "</ul></body></html>"

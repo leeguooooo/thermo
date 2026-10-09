@@ -48,6 +48,16 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 - **helper 只接受同一 Team ID 签名的客户端**（运行时从自身签名读取 Team ID，无需配置）。ad-hoc 构建只校验标识符 `dev.thermo.cli` / `dev.thermo.app`，任何本地程序都能伪造——但最坏结果也只是风扇转速被设到 min–max 范围内，超温保护仍然有效。
 - **App 通过 `SMAppService.daemon` 注册 helper**，用户在「系统设置 → 通用 → 登录项」中批准；ad-hoc 构建则弹管理员密码框安装到 `/Library/PrivilegedHelperTools`。
 
+## 发布
+
+见 [RELEASING.md](RELEASING.md)：`make release APPCAST_URL=…` 产出已公证的 DMG、zip 和 Sparkle appcast。
+
+## 卸载
+
+1. Thermo → 设置 → Fan helper → Uninstall（或 `thermo helper uninstall`），风扇恢复自动。
+2. 删除 `/Applications/Thermo.app`、`/usr/local/bin/thermo*`。
+3. 可选：`rm -rf ~/Library/Caches/dev.thermo && defaults delete dev.thermo.app`。
+
 ## CLI
 
 | 命令 | 说明 |
