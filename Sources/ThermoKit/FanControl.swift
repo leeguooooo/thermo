@@ -118,10 +118,18 @@ public final class FanWriter {
     let smc: SMC
     let discovery: Discovery
     private var unlocked = false
+    /// F<i>Md value seen before we touched anything; restored by setAuto (3 on Apple Silicon, 0 on Intel).
+    private var originalMode: [Int: Double] = [:]
 
     public init(smc: SMC, discovery: Discovery) {
         self.smc = smc
         self.discovery = discovery
+        for f in discovery.fans where f.hasModeKey {
+            if let m = try? smc.double(f.modeKey) {
+                // A leftover manual mode (e.g. after a crash) is not worth restoring.
+                originalMode[f.index] = m == 1 ? 0 : m
+            }
+        }
     }
 
     func fan(_ id: Int) throws -> FanDescriptor {
@@ -159,7 +167,7 @@ public final class FanWriter {
     public func setAuto(_ id: Int) throws {
         let f = try fan(id)
         if f.hasModeKey {
-            try smc.write(f.modeKey, value: 0)
+            try smc.write(f.modeKey, value: originalMode[id] ?? 0)
         } else if discovery.fanForceKey {
             let bits = Int(try smc.double("FS! "))
             try smc.write("FS! ", value: Double(bits & ~(1 << id)))

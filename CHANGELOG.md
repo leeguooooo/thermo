@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1
+
+- Apple Silicon: fans under system control are no longer shown as "manual", and returning a fan to Auto restores the system's own fan mode.
+- Battery temperature and health on recent macOS versions.
+- Lower background CPU use on Apple Silicon.
+- Sensors that share a name are now listed separately.
+
 ## 1.0.0
 
 - Menu bar app showing CPU/GPU temperature, fan speed or system power, with a 10-minute history chart.

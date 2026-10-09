@@ -58,6 +58,11 @@ public struct FanReading: Codable, Hashable, Sendable, Identifiable {
 }
 
 public struct BatteryInfo: Codable, Hashable, Sendable {
+    func with(temperature t: Double?) -> BatteryInfo {
+        BatteryInfo(percent: percent, temperature: t, voltage: voltage, amperage: amperage, cycleCount: cycleCount,
+                    health: health, charging: charging, externalPower: externalPower)
+    }
+
     public let percent: Double?
     public let temperature: Double?
     public let voltage: Double?

@@ -6,13 +6,15 @@
 2. 在 `CHANGELOG.md` 顶部加 `## <版本>` 段落（`- ` 开头的条目会成为 Sparkle 更新说明）。
 3. 提交，然后：
    ```sh
-   make release APPCAST_URL=https://<你的域名>/thermo/appcast.xml
+   make release      # universal + 签名 + 公证 + DMG + appcast（APPCAST_URL 默认 thermo-updates.pages.dev）
+   make publish      # 上传 releases/ 到 Cloudflare Pages 项目 thermo-updates
    ```
    产物：
    - `dist/Thermo-<ver>.dmg` —— 官网下载用（已签名、公证、装订）
    - `dist/Thermo-<ver>.zip` —— 备用
    - `dist/thermo-cli-<ver>.zip` —— 单独的命令行工具
-   - `releases/` —— **整个目录上传**到 `APPCAST_URL` 所在目录（appcast.xml、所有历史 DMG、更新说明 HTML）
+   - `releases/` —— appcast.xml、所有历史 DMG、更新说明；`make publish` 整个上传（另生成下载页 `/`、`/download` 跳最新版）
+   - DMG 设了 immutable 缓存：**同一版本号不要重发**，有改动就升版本。
 4. 打 tag：`git tag v<ver> && git push --tags`。
 5. 装一份旧版本，「设置 → Check for Updates…」验证能升级到新版本。
 
@@ -26,6 +28,10 @@
 | 公证凭据 profile `thermo`（API Key `D2CNSWHAAG`，Developer 权限） | 登录钥匙串；私钥 `~/.private_keys/AuthKey_D2CNSWHAAG.p8` |
 | Sparkle EdDSA 私钥（account `dev.thermo`） | 登录钥匙串。**丢失后已发出的版本将无法再收到更新**，务必备份：`.build/artifacts/sparkle/Sparkle/bin/generate_keys --account dev.thermo -x sparkle-private-key.txt`，存到密码库后删除文件 |
 | Sparkle 公钥 | `Resources/Info.plist` 的 `SUPublicEDKey` |
+| Cloudflare token（仅 Pages 编辑，仅 Leeguooooo 账号） | `~/.private_keys/cf-thermo-pages.token`，`scripts/publish.sh` 读取 |
+| 以上全部的加密备份 | iCloud `郭立的备份/thermo-signing/thermo-signing-2026-10-09.dmg`，口令在钥匙串 `thermo-signing-backup` |
+
+完整的凭据说明和恢复步骤记在 personal-memory `tools/thermo-release.md`。
 
 换机器：导入 .p12、`xcrun notarytool store-credentials thermo …`（见 README）、`generate_keys --account dev.thermo -f <备份文件>`。
 

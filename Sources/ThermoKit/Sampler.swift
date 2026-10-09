@@ -120,19 +120,30 @@ public final class Sampler {
             }
         }
 
-        if let hid, !hidBuffer.isEmpty, parts.contains(.temperatures) {
+        // IOHID reads cost ~1 ms per service; SMC already covers CPU/GPU, so skip them in .essential.
+        if let hid, !hidBuffer.isEmpty, parts.contains(.temperatures), scope != .essential {
             let n = hidBuffer.withUnsafeMutableBufferPointer { smc_hid_read(hid, $0.baseAddress, Int32($0.count)) }
+            var seen: [String: Int] = [:]
             for i in 0..<Int(n) {
                 let name = withUnsafeBytes(of: hidBuffer[i].name) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
-                temps.append(Reading(key: "hid:\(name)", name: name, group: Catalog.hidGroup(name),
+                // Several services share a product name ("gas gauge battery"); keep keys unique.
+                let count = (seen[name] ?? 0) + 1
+                seen[name] = count
+                let label = count > 1 ? "\(name) \(count)" : name
+                temps.append(Reading(key: "hid:\(label)", name: label, group: Catalog.hidGroup(name),
                                      value: hidBuffer[i].celsius, known: true))
             }
         }
 
         let fans = parts.contains(.fans) ? readFans() : []
 
-        return Snapshot(temperatures: temps, fans: fans, power: power, voltages: volts, currents: amps,
-                        battery: parts.contains(.battery) ? Battery.read() : nil)
+        var battery = parts.contains(.battery) ? Battery.read() : nil
+        if let b = battery, b.temperature == nil {
+            // Recent macOS no longer publishes the battery temperature in IORegistry; use the SMC sensor.
+            let t = temps.first { $0.key == "TB0T" }?.value ?? (try? smc.double("TB0T"))
+            battery = b.with(temperature: t)
+        }
+        return Snapshot(temperatures: temps, fans: fans, power: power, voltages: volts, currents: amps, battery: battery)
     }
 
     public func invalidateFanLimits() { fanLimitsRead = .distantPast }
@@ -149,7 +160,8 @@ public final class Sampler {
         return discovery.fans.compactMap { f -> FanReading? in
             guard let rpm = try? smc.double(f.actualKey) else { return nil }
             let mode = f.hasModeKey ? (try? smc.double(f.modeKey)) : nil
-            let manual = (mode.map { $0 != 0 } ?? false) || ((forceBits ?? 0) & (1 << f.index)) != 0
+            // F<i>Md: 1 = forced/manual. Apple Silicon reports 3 for system control and 0 when idle.
+            let manual = mode == 1 || ((forceBits ?? 0) & (1 << f.index)) != 0
             let lim = fanLimits[f.index] ?? (0, 0)
             return FanReading(id: f.index, name: f.name, rpm: Swift.max(0, rpm), min: lim.min, max: lim.max,
                               target: manual ? try? smc.double(f.targetKey) : nil, manual: manual)

@@ -29,6 +29,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor, updates: updates))
 
         monitor.onUpdate = { [weak self] s in self?.updateTitle(s) }
+        // `open Thermo.app --args --install-helper`: start helper registration right away (setup/QA).
+        if CommandLine.arguments.contains("--install-helper") { monitor.installHelper() }
         NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
             if let s = self?.monitor.latest { self?.updateTitle(s) }
         }

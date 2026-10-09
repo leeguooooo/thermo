@@ -15,7 +15,9 @@ public enum Battery {
     }
 
     static func parse(_ d: [String: Any]) -> BatteryInfo {
-        func int(_ k: String) -> Int? { (d[k] as? NSNumber)?.intValue }
+        // Newer macOS (Apple Silicon) moves capacities into the BatteryData sub-dictionary.
+        let nested = d["BatteryData"] as? [String: Any] ?? [:]
+        func int(_ k: String) -> Int? { ((d[k] ?? nested[k]) as? NSNumber)?.intValue }
         func bool(_ k: String) -> Bool { (d[k] as? NSNumber)?.boolValue ?? false }
 
         // CurrentCapacity/MaxCapacity are percentages on modern macOS; raw values are mAh.
@@ -24,9 +26,9 @@ public enum Battery {
             percent = Double(cur) / Double(max) * 100
         }
         var health: Double?
-        if let raw = int("AppleRawMaxCapacity") ?? int("NominalChargeCapacity"),
+        if let raw = int("AppleRawMaxCapacity") ?? int("NominalChargeCapacity") ?? int("FullChargeCapacity"),
            let design = int("DesignCapacity"), design > 0 {
-            health = Double(raw) / Double(design)
+            health = min(1, Double(raw) / Double(design))   // fresh batteries can exceed design
         }
         // Amperage is a signed 64-bit value that some releases expose as unsigned.
         var amps: Double?

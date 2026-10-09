@@ -246,6 +246,21 @@ final class BatteryTests: XCTestCase {
     }
 }
 
+final class BatteryNestedTests: XCTestCase {
+    /// macOS 27 on Apple Silicon: capacities only inside BatteryData, no Temperature key.
+    func testNestedBatteryData() {
+        let b = Battery.parse([
+            "CurrentCapacity": 79, "MaxCapacity": 100, "Voltage": 12365, "CycleCount": 62,
+            "ExternalConnected": true,
+            "BatteryData": ["DesignCapacity": 6249, "NominalChargeCapacity": 6390, "FullChargeCapacity": 6238],
+        ])
+        XCTAssertEqual(b.percent, 79)
+        XCTAssertEqual(b.health, 1, "capped at 100 % when nominal exceeds design")
+        XCTAssertNil(b.temperature)
+        XCTAssertEqual(b.with(temperature: 26.6).temperature, 26.6)
+    }
+}
+
 /// Exercises the real SMC; skipped when unavailable (CI VMs).
 final class HardwareTests: XCTestCase {
     func testLiveSample() throws {
