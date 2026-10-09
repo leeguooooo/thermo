@@ -259,7 +259,9 @@ struct App {
                 print(Export.json(["installed": installed ? "true" : "false", "running": v != nil ? "true" : "false", "version": v ?? ""]))
                 return
             }
-            print("installed: " + (installed ? style.green("yes") : style.yellow("no")))
+            // Thermo.app registers the helper via SMAppService (no files in /Library); only the legacy install is visible on disk.
+            print("installed: " + (installed ? style.green("yes (/Library/PrivilegedHelperTools)")
+                                   : v != nil ? style.green("yes (Thermo.app background item)") : style.yellow("no")))
             let current = v == HelperConstants.version
             print("running:   " + (v == nil ? style.yellow("no") : current ? style.green("yes (\(v!))")
                                    : style.yellow("yes, outdated (\(v!); this thermo is \(HelperConstants.version)) — run: thermo helper install")))
