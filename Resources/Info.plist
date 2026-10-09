@@ -6,12 +6,17 @@
     <key>CFBundleName</key><string>Thermo</string>
     <key>CFBundleDisplayName</key><string>Thermo</string>
     <key>CFBundleExecutable</key><string>Thermo</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>__VERSION__</string>
-    <key>CFBundleVersion</key><string>__VERSION__</string>
+    <key>CFBundleVersion</key><string>__BUILD__</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>LSUIElement</key><true/>
+    <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
     <key>NSHighResolutionCapable</key><true/>
-    <key>NSHumanReadableCopyright</key><string>© 2026 thermo</string>
+    <key>NSHumanReadableCopyright</key><string>© 2026 LI GUO. All rights reserved.</string>
+    <key>SUPublicEDKey</key><string>uJ2iyiNpULXGsm30LkjBH8ZYlIA4UyGUvPAvxvh2Osw=</string>
+    <key>SUEnableAutomaticChecks</key><true/>
+    <key>SUFeedURL</key><string>__APPCAST_URL__</string>
 </dict>
 </plist>

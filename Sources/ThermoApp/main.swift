@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private var monitor: Monitor!
+    private let updates = Updates()
     private var lastTitle: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -25,7 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.behavior = .transient
         popover.animates = false
         popover.delegate = self
-        popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor))
+        popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor, updates: updates))
 
         monitor.onUpdate = { [weak self] s in self?.updateTitle(s) }
         NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
@@ -88,10 +89,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     Settings.register()
     renderingPreview = true
     let monitor = Monitor()
+    let updates = Updates()
     monitor.popoverOpen = true
     DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
         for tab in Tab.allCases {
-            let view = PopoverView(monitor: monitor, tab: tab).background(Color(nsColor: .windowBackgroundColor))
+            let view = PopoverView(monitor: monitor, updates: updates, tab: tab).background(Color(nsColor: .windowBackgroundColor))
             let r = ImageRenderer(content: view)
             r.scale = 2
             guard let img = r.cgImage else { continue }

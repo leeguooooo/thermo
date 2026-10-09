@@ -38,6 +38,7 @@ enum Tab: String, CaseIterable, Identifiable {
 
 struct PopoverView: View {
     @ObservedObject var monitor: Monitor
+    var updates: Updates
     @State var tab: Tab = .overview
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
 
@@ -55,7 +56,7 @@ struct PopoverView: View {
                 case .overview: OverviewView(monitor: monitor)
                 case .sensors: SensorsView(monitor: monitor)
                 case .fans: FansView(monitor: monitor)
-                case .settings: SettingsView(monitor: monitor)
+                case .settings: SettingsView(monitor: monitor, updates: updates)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -264,9 +265,9 @@ struct FansView: View {
                 }
                 ForEach(s.fans) { f in
                     FanControlCard(fan: f, policy: monitor.policies[f.id] ?? .auto,
-                                   enabled: monitor.helperState == .running) { monitor.setPolicy($0, fan: f.id) }
+                                   enabled: [.running, .outdated].contains(monitor.helperState)) { monitor.setPolicy($0, fan: f.id) }
                 }
-                if s.fans.count > 1 && monitor.helperState == .running {
+                if s.fans.count > 1 && [.running, .outdated].contains(monitor.helperState) {
                     Button("All fans to Auto") { monitor.setPolicy(.auto, fan: -1) }
                 }
             }
@@ -294,6 +295,12 @@ struct FansView: View {
                 Button("Open Settings") { monitor.openLoginItemsSettings() }
             }
             .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in monitor.refreshHelper() }
+        case .outdated:
+            HStack {
+                Text("The fan helper is from an older version.").font(.callout)
+                Spacer()
+                Button("Update…") { monitor.installHelper() }
+            }
         case .notRunning:
             HStack {
                 Text("Helper installed but not responding.").font(.callout)
@@ -408,6 +415,7 @@ struct FanChart: View {
 
 struct SettingsView: View {
     @ObservedObject var monitor: Monitor
+    @ObservedObject var updates: Updates
     @AppStorage(Settings.titleMetric) private var titleMetric = TitleMetric.cpu.rawValue
     @AppStorage(Settings.interval) private var interval = 2.0
     @AppStorage(Settings.alertsEnabled) private var alertsEnabled = false
@@ -435,12 +443,17 @@ struct SettingsView: View {
             HStack {
                 Text("Fan helper: " + helperText).foregroundStyle(.secondary)
                 Spacer()
-                if [.running, .notRunning, .needsApproval].contains(monitor.helperState) {
+                if [.running, .notRunning, .needsApproval, .outdated].contains(monitor.helperState) {
                     Button("Uninstall") { monitor.uninstallHelper() }
                 }
             }
+            if updates.enabled {
+                Toggle("Check for updates automatically", isOn: Binding(get: { updates.automaticallyChecks },
+                                                                       set: { updates.automaticallyChecks = $0 }))
+                Button("Check for Updates…") { updates.checkForUpdates() }
+            }
             HStack {
-                Text("thermo 1.0.0").font(.caption).foregroundStyle(.tertiary)
+                Text("Thermo \(AppInfo.version)").font(.caption).foregroundStyle(.tertiary)
                 Spacer()
                 Button("Quit Thermo") { NSApp.terminate(nil) }
             }
@@ -453,6 +466,7 @@ struct SettingsView: View {
         case .notRunning: return "not responding"
         case .notInstalled: return "not installed"
         case .needsApproval: return "waiting for approval"
+        case .outdated: return "outdated"
         case .unknown: return "…"
         }
     }

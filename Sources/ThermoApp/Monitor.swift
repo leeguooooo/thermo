@@ -19,7 +19,7 @@ enum TitleMetric: String, CaseIterable, Identifiable {
 }
 
 enum HelperState: Equatable {
-    case unknown, notInstalled, needsApproval, notRunning, running
+    case unknown, notInstalled, needsApproval, notRunning, outdated, running
 }
 
 struct HistoryPoint: Identifiable {
@@ -187,9 +187,9 @@ final class Monitor: ObservableObject {
         }
         Task { @MainActor in
             do {
-                _ = try await helper.version()
+                let v = try await helper.version()
                 policies = try await helper.policies()
-                helperState = .running
+                helperState = v == HelperConstants.version ? .running : .outdated
             } catch {
                 helperState = .notRunning
             }

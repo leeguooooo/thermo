@@ -10,6 +10,9 @@ let package = Package(
         .executable(name: "ThermoApp", targets: ["ThermoApp"]),
         .library(name: "ThermoKit", targets: ["ThermoKit"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.6"),
+    ],
     targets: [
         .target(
             name: "CSMC",
@@ -20,7 +23,7 @@ let package = Package(
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
             name: "ThermoApp",
-            dependencies: ["ThermoKit"],
+            dependencies: ["ThermoKit", .product(name: "Sparkle", package: "Sparkle")],
             linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts")]
         ),
         .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC"]),

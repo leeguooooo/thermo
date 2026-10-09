@@ -1,7 +1,7 @@
 import Foundation
 import ThermoKit
 
-let thermoVersion = "1.0.0"
+let thermoVersion = ThermoVersion.string
 
 let usage = """
 thermo \(thermoVersion) — temperatures, fans and power for macOS
@@ -260,7 +260,9 @@ struct App {
                 return
             }
             print("installed: " + (installed ? style.green("yes") : style.yellow("no")))
-            print("running:   " + (v != nil ? style.green("yes (protocol \(v!))") : style.yellow("no")))
+            let current = v == HelperConstants.version
+            print("running:   " + (v == nil ? style.yellow("no") : current ? style.green("yes (\(v!))")
+                                   : style.yellow("yes, outdated (\(v!); this thermo is \(HelperConstants.version)) — run: thermo helper install")))
             print("signed by: " + (CodeSignature.teamIdentifier().map { "team \($0)" } ?? style.yellow("ad-hoc (helper accepts any client with the right identifier)")))
         default:
             throw CLIError("usage: thermo helper install|uninstall|status")

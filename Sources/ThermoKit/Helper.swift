@@ -6,7 +6,9 @@ public enum HelperConstants {
     public static let machService = "dev.thermo.helper"
     public static let installedBinary = "/Library/PrivilegedHelperTools/dev.thermo.helper"
     public static let launchdPlist = "/Library/LaunchDaemons/dev.thermo.helper.plist"
-    public static let version = "1"
+    public static let protocolVersion = "1"
+    /// Reported by the helper: "<protocol>/<app version>".
+    public static var version: String { "\(protocolVersion)/\(ThermoVersion.string)" }
     /// Plist bundled at Contents/Library/LaunchDaemons for SMAppService registration.
     public static let bundledPlistName = "dev.thermo.helper.plist"
 
