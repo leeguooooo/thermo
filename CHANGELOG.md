@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+- Thermo now lives at app.leeguoo.com/thermo — downloads and updates come from there.
+- After an update, the fan helper restarts itself on the new version (fans briefly return to automatic control).
+- Product screenshots render the panel tabs correctly.
+
 ## 1.0.1
 
 - Apple Silicon: fans under system control are no longer shown as "manual", and returning a fan to Auto restores the system's own fan mode.

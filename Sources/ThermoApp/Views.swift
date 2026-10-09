@@ -45,11 +45,24 @@ struct PopoverView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
-            Picker("", selection: $tab) {
-                ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
+            if renderingPreview {
+                // ImageRenderer cannot draw the AppKit segmented control; draw a look-alike.
+                HStack(spacing: 2) {
+                    ForEach(Tab.allCases) { t in
+                        Text(t.rawValue).font(.callout).frame(maxWidth: .infinity).padding(.vertical, 4)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(t == tab ? Color(nsColor: .controlBackgroundColor) : .clear)
+                                .shadow(color: .black.opacity(t == tab ? 0.15 : 0), radius: 1, y: 0.5))
+                    }
+                }
+                .padding(2)
+                .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary))
+            } else {
+                Picker("", selection: $tab) {
+                    ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
 
             Group {
                 switch tab {

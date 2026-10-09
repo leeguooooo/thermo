@@ -5,7 +5,7 @@ NOTARY_PROFILE ?= thermo
 NOTARY_KEYCHAIN ?= $(HOME)/Library/Keychains/login.keychain-db
 # Where releases/appcast.xml will be served from; empty = build without auto-update.
 ARCHS ?= arm64 x86_64
-APPCAST_URL ?= https://thermo-updates.pages.dev/appcast.xml
+APPCAST_URL ?= https://app.leeguoo.com/thermo/appcast.xml
 
 .PHONY: build release publish icon debug test bench install uninstall clean
 

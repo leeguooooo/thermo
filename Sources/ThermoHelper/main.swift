@@ -160,6 +160,24 @@ for sig in [SIGTERM, SIGINT, SIGHUP] {
     signalSources.append(src)
 }
 
+// When the app is updated (Sparkle replaces the bundle, or `thermo helper install` overwrites the
+// binary), exit so launchd restarts us from the new executable. Fans go back to auto on the way out,
+// like any other helper stop.
+var binaryWatch: DispatchSourceFileSystemObject?
+if let path = Bundle.main.executablePath ?? CommandLine.arguments.first {
+    let fd = open(path, O_EVTONLY)
+    if fd >= 0 {
+        let src = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: [.delete, .rename, .write], queue: .main)
+        src.setEventHandler {
+            controller.shutdown(reason: "executable replaced (update)")
+            exit(0)
+        }
+        src.setCancelHandler { close(fd) }
+        src.resume()
+        binaryWatch = src
+    }
+}
+
 let delegate = ListenerDelegate(Service(controller))
 let listener = NSXPCListener(machServiceName: HelperConstants.machService)
 listener.delegate = delegate

@@ -6,14 +6,14 @@
 2. 在 `CHANGELOG.md` 顶部加 `## <版本>` 段落（`- ` 开头的条目会成为 Sparkle 更新说明）。
 3. 提交，然后：
    ```sh
-   make release      # universal + 签名 + 公证 + DMG + appcast（APPCAST_URL 默认 thermo-updates.pages.dev）
-   make publish      # 上传 releases/ 到 Cloudflare Pages 项目 thermo-updates
+   make release      # universal + 签名 + 公证 + DMG + appcast（APPCAST_URL 默认 app.leeguoo.com/thermo/appcast.xml）
+   make publish      # 上传 releases/ 到 Pages 项目 thermo-updates；对外地址是 app.leeguoo.com/thermo/*（应用中心仓库 leeguooooo/app 的 server/routes/thermo 转发）
    ```
    产物：
    - `dist/Thermo-<ver>.dmg` —— 官网下载用（已签名、公证、装订）
    - `dist/Thermo-<ver>.zip` —— 备用
    - `dist/thermo-cli-<ver>.zip` —— 单独的命令行工具
-   - `releases/` —— appcast.xml、所有历史 DMG、更新说明；`make publish` 整个上传（另生成下载页 `/`、`/download` 跳最新版）
+   - `releases/` —— appcast.xml、所有历史 DMG、更新说明；`make publish` 整个上传（`/download` 跳最新版；产品页在应用中心 `pages/thermo.vue`）
    - DMG 设了 immutable 缓存：**同一版本号不要重发**，有改动就升版本。
 4. 打 tag：`git tag v<ver> && git push --tags`。
 5. 装一份旧版本，「设置 → Check for Updates…」验证能升级到新版本。

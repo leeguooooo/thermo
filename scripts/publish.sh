@@ -1,5 +1,6 @@
 #!/bin/sh
-# Publishes releases/ (appcast.xml, DMGs, release notes) to Cloudflare Pages.
+# Publishes releases/ (appcast.xml, DMGs, release notes) to the Cloudflare Pages project behind
+# app.leeguoo.com/thermo/ (relayed by the App Center, repo leeguooooo/app).
 # Static files only — no Workers, KV or databases.
 #
 #   scripts/publish.sh
@@ -20,8 +21,10 @@ R=releases
 [ -f "$R/appcast.xml" ] || { echo "no $R/appcast.xml — run: make release" >&2; exit 1; }
 [ -f "$R/Thermo-$VERSION.dmg" ] || { echo "no $R/Thermo-$VERSION.dmg" >&2; exit 1; }
 
-# Stable download link + cache rules
-printf '/download /Thermo-%s.dmg 302\n/ /index.html 200\n' "$VERSION" > "$R/_redirects"
+# Public addresses live on app.leeguoo.com/thermo/ (the App Center relays to this project).
+# Here: newest-DMG redirect, cache rules, and the bare host sends people to the product page.
+printf '/download /Thermo-%s.dmg 302\n/ https://app.leeguoo.com/thermo 301\n' "$VERSION" > "$R/_redirects"
+rm -f "$R/index.html"
 cat > "$R/_headers" <<'H'
 /appcast.xml
   Cache-Control: no-cache
@@ -30,24 +33,5 @@ cat > "$R/_headers" <<'H'
   Cache-Control: public, max-age=31536000, immutable
 H
 
-cat > "$R/index.html" <<HTML
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Thermo</title>
-<style>
-:root{color-scheme:light dark;--bg:#f5f5f7;--fg:#1d1d1f;--muted:#6e6e73;--accent:#ff6a2b}
-@media (prefers-color-scheme:dark){:root{--bg:#111318;--fg:#f5f5f7;--muted:#a1a1a6}}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;display:grid;place-items:center;min-height:100vh}
-main{max-width:560px;padding:32px 16px;text-align:center}
-h1{font-size:40px;margin:.2em 0}p{color:var(--muted)}
-a.btn{display:inline-block;margin-top:16px;padding:12px 28px;border-radius:999px;background:var(--accent);color:#fff;text-decoration:none;font-weight:600}
-small{display:block;margin-top:12px;color:var(--muted)}
-</style></head><body><main>
-<h1>Thermo</h1>
-<p>Temperatures, fans and power for your Mac — in the menu bar and the terminal. Fan curves with a 95&nbsp;°C safety net.</p>
-<a class="btn" href="/download">Download Thermo $VERSION</a>
-<small>macOS 13 or later · Intel &amp; Apple Silicon · signed and notarized</small>
-</main></body></html>
-HTML
-
 WA_PASSTHROUGH=1 wrangler pages deploy "$R" --project-name "$PROJECT" --branch main --commit-dirty=true
-echo "published: https://$PROJECT.pages.dev/appcast.xml"
+echo "published: https://app.leeguoo.com/thermo/appcast.xml (origin https://$PROJECT.pages.dev)"
