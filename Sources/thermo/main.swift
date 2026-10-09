@@ -261,6 +261,7 @@ struct App {
             }
             print("installed: " + (installed ? style.green("yes") : style.yellow("no")))
             print("running:   " + (v != nil ? style.green("yes (protocol \(v!))") : style.yellow("no")))
+            print("signed by: " + (CodeSignature.teamIdentifier().map { "team \($0)" } ?? style.yellow("ad-hoc (helper accepts any client with the right identifier)")))
         default:
             throw CLIError("usage: thermo helper install|uninstall|status")
         }

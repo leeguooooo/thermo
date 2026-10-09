@@ -14,6 +14,8 @@ set -eu
 cd "$(dirname "$0")/.."
 SIGN_ID="${SIGN_ID:--}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
+# Some setups only find the profile when the keychain is named explicitly.
+NOTARY_KEYCHAIN="${NOTARY_KEYCHAIN:-}"
 ARCHS="${ARCHS:-}"
 VERSION="$(sed -n 's/^let thermoVersion = "\(.*\)"/\1/p' Sources/thermo/main.swift)"
 DIST=dist
@@ -52,13 +54,13 @@ if [ -n "$NOTARY_PROFILE" ]; then
     [ "$SIGN_ID" != "-" ] || { echo "NOTARY_PROFILE needs SIGN_ID (Developer ID)" >&2; exit 1; }
     ZIP="$DIST/Thermo-$VERSION.zip"
     ditto -c -k --keepParent "$APP" "$ZIP"
-    xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARY_PROFILE" --wait
+    xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARY_PROFILE" ${NOTARY_KEYCHAIN:+--keychain "$NOTARY_KEYCHAIN"} --wait
     xcrun stapler staple "$APP"
     rm "$ZIP" && ditto -c -k --keepParent "$APP" "$ZIP"   # re-zip with the stapled ticket
     # Standalone CLI: notarize as a zip (tickets cannot be stapled to bare Mach-O files).
     CLI_ZIP="$DIST/thermo-cli-$VERSION.zip"
     ditto -c -k "$DIST/thermo" "$CLI_ZIP"
-    xcrun notarytool submit "$CLI_ZIP" --keychain-profile "$NOTARY_PROFILE" --wait
+    xcrun notarytool submit "$CLI_ZIP" --keychain-profile "$NOTARY_PROFILE" ${NOTARY_KEYCHAIN:+--keychain "$NOTARY_KEYCHAIN"} --wait
     spctl -a -vv "$APP"
 fi
 

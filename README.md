@@ -25,16 +25,25 @@ make install    # CLI 装到 /usr/local/bin，App 拷到 /Applications
 
 ### 正式签名与公证（Apple 开发者账号）
 
-```sh
-# 一次性：导入 "Developer ID Application" 证书到钥匙串，然后保存公证凭据
-xcrun notarytool store-credentials thermo --apple-id you@example.com --team-id TEAMID
+本机已配置好（团队 6ZPXG4KVVS）：
 
-SIGN_ID="Developer ID Application: Your Name (TEAMID)" NOTARY_PROFILE=thermo scripts/build.sh
+```sh
+make release
+# 等价于：
+SIGN_ID="Developer ID Application: LI GUO (6ZPXG4KVVS)" NOTARY_PROFILE=thermo \
+NOTARY_KEYCHAIN=$HOME/Library/Keychains/login.keychain-db scripts/build.sh
 # 产物：dist/Thermo.app（已 staple）、dist/Thermo-<ver>.zip、dist/thermo-cli-<ver>.zip
 # 通用二进制：再加 ARCHS="arm64 x86_64"
 ```
 
-用 Developer ID 签名后：
+新机器上的一次性准备：从钥匙串导入 Developer ID Application 证书（.p12），再保存公证凭据：
+
+```sh
+xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
+  --issuer <App Store Connect Issuer ID> --keychain ~/Library/Keychains/login.keychain-db
+```
+
+`thermo helper status` 会显示当前二进制的签名团队。用 Developer ID 签名后：
 
 - **helper 只接受同一 Team ID 签名的客户端**（运行时从自身签名读取 Team ID，无需配置）。ad-hoc 构建只校验标识符 `dev.thermo.cli` / `dev.thermo.app`，任何本地程序都能伪造——但最坏结果也只是风扇转速被设到 min–max 范围内，超温保护仍然有效。
 - **App 通过 `SMAppService.daemon` 注册 helper**，用户在「系统设置 → 通用 → 登录项」中批准；ad-hoc 构建则弹管理员密码框安装到 `/Library/PrivilegedHelperTools`。
