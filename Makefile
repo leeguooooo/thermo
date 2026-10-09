@@ -4,9 +4,10 @@ SIGN_ID ?= Developer ID Application: LI GUO (6ZPXG4KVVS)
 NOTARY_PROFILE ?= thermo
 NOTARY_KEYCHAIN ?= $(HOME)/Library/Keychains/login.keychain-db
 # Where releases/appcast.xml will be served from; empty = build without auto-update.
-APPCAST_URL ?=
+ARCHS ?= arm64 x86_64
+APPCAST_URL ?= https://thermo-updates.pages.dev/appcast.xml
 
-.PHONY: build release icon debug test bench install uninstall clean
+.PHONY: build release publish icon debug test bench install uninstall clean
 
 build:
 	scripts/build.sh
@@ -14,7 +15,11 @@ build:
 # Developer ID signed + notarized + stapled.
 release:
 	SIGN_ID="$(SIGN_ID)" NOTARY_PROFILE="$(NOTARY_PROFILE)" NOTARY_KEYCHAIN="$(NOTARY_KEYCHAIN)" \
-	APPCAST_URL="$(APPCAST_URL)" scripts/build.sh
+	APPCAST_URL="$(APPCAST_URL)" ARCHS="$(ARCHS)" scripts/build.sh
+
+# Upload releases/ to Cloudflare Pages (static only).
+publish:
+	scripts/publish.sh
 
 icon:
 	swift scripts/make-icon.swift Resources
