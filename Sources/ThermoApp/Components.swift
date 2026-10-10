@@ -157,3 +157,252 @@ struct ConfirmSheet: View {
         .frame(width: 480)
     }
 }
+
+// MARK: - CleanMyMac-style surfaces (shared by the Agents and Disk windows)
+
+extension AgentStyle {
+    /// One color per area, used for its icon tile and accents.
+    static func tint(_ area: Area) -> Color {
+        switch area {
+        case .hooks: return .purple
+        case .mcp: return .blue
+        case .plugins: return .orange
+        case .skills: return .teal
+        case .statusline: return .indigo
+        case .launchd: return .pink
+        case .processes: return .green
+        }
+    }
+
+    /// What the area is, in a sentence a non-developer can follow.
+    static func explanation(_ area: Area) -> String {
+        switch area {
+        case .hooks: return tr("Commands your AI agents run automatically before or after each step.")
+        case .mcp: return tr("Tools your AI agents connect to, such as browsers, databases and design apps.")
+        case .plugins: return tr("Add-ons installed into Claude Code that bring skills, hooks and tools.")
+        case .skills: return tr("Instructions your agents can load when a task needs them.")
+        case .statusline: return tr("The line at the bottom of Claude Code that shows usage and status.")
+        case .launchd: return tr("Programs macOS starts in the background for your tools.")
+        case .processes: return tr("Helper programs your agents start; leftovers keep using memory.")
+        }
+    }
+}
+
+/// The whole window's backdrop: a deep violet-to-blue gradient with soft light, like CleanMyMac.
+struct GradientSidebarBackground: View {
+    var body: some View { WindowBackdrop(glow: false) }
+}
+
+struct WindowBackdrop: View {
+    /// A soft light behind the hero.
+    var glow = true
+    var tint: Color = Color(red: 0.42, green: 0.36, blue: 1.0)
+
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [Color(red: 0.16, green: 0.10, blue: 0.30), Color(red: 0.07, green: 0.10, blue: 0.24),
+                                    Color(red: 0.04, green: 0.13, blue: 0.22)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            if glow {
+                RadialGradient(colors: [tint.opacity(0.35), .clear], center: UnitPoint(x: 0.5, y: 0.22), startRadius: 10, endRadius: 420)
+                    .blendMode(.screen)
+            }
+        }
+        .ignoresSafeArea()
+    }
+}
+
+/// A translucent "glass" panel: what cards and rows sit on.
+struct GlassPanel: ViewModifier {
+    var radius: CGFloat = 16
+    var highlighted = false
+
+    func body(content: Content) -> some View {
+        content
+            // Drawn, not a system material: the same frosted look on any backdrop and in snapshots.
+            .background(RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .fill(LinearGradient(colors: [.white.opacity(highlighted ? 0.16 : 0.11), .white.opacity(highlighted ? 0.08 : 0.045)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing)))
+            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .strokeBorder(LinearGradient(colors: [.white.opacity(highlighted ? 0.35 : 0.18), .white.opacity(0.03)],
+                                             startPoint: .top, endPoint: .bottom), lineWidth: 1))
+            .shadow(color: .black.opacity(0.25), radius: 14, y: 8)
+    }
+}
+
+extension View {
+    func glass(radius: CGFloat = 16, highlighted: Bool = false) -> some View { modifier(GlassPanel(radius: radius, highlighted: highlighted)) }
+}
+
+/// A rounded tile with a glossy gradient and a white symbol, like an app icon.
+struct IconTile: View {
+    let symbol: String
+    let color: Color
+    var size: CGFloat = 44
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                .fill(LinearGradient(colors: [color.opacity(1.0), color.opacity(0.55)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                .fill(LinearGradient(colors: [.white.opacity(0.35), .clear], startPoint: .top, endPoint: .center))
+            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous).strokeBorder(.white.opacity(0.25), lineWidth: 0.8)
+            Image(systemName: symbol).font(.system(size: size * 0.44, weight: .semibold)).foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.25), radius: 1, y: 1)
+        }
+        .frame(width: size, height: size)
+        .shadow(color: color.opacity(0.45), radius: size * 0.18, y: size * 0.08)
+    }
+}
+
+/// Presses in slightly and springs back.
+struct PressableStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
+    }
+}
+
+/// The big round call to action ("Fix 9", "Check Again"), glowing.
+struct BigRoundButton: View {
+    let title: String
+    var color: Color = Color(red: 0.25, green: 0.55, blue: 1.0)
+    var busy = false
+    let action: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Circle().fill(color.opacity(0.18)).frame(width: 150, height: 150).blur(radius: hover ? 6 : 10)
+                Circle().fill(LinearGradient(colors: [color.opacity(1), color.opacity(0.65)], startPoint: .top, endPoint: .bottom))
+                    .frame(width: 118, height: 118)
+                Circle().fill(LinearGradient(colors: [.white.opacity(0.45), .clear], startPoint: .top, endPoint: .center))
+                    .frame(width: 118, height: 118)
+                Circle().strokeBorder(.white.opacity(0.4), lineWidth: 1.5).frame(width: 118, height: 118)
+                if busy {
+                    ProgressView().controlSize(.large).tint(.white)
+                } else {
+                    Text(title).font(.system(size: 18, weight: .bold, design: .rounded)).foregroundStyle(.white)
+                        .multilineTextAlignment(.center).frame(width: 100)
+                }
+            }
+            .shadow(color: color.opacity(hover ? 0.7 : 0.45), radius: hover ? 26 : 18, y: 8)
+            .scaleEffect(hover ? 1.03 : 1)
+            .animation(.easeOut(duration: 0.18), value: hover)
+        }
+        .buttonStyle(PressableStyle())
+        .onHover { hover = $0 }
+        .disabled(busy)
+    }
+}
+
+/// A slim gradient pill for secondary actions on dark glass.
+struct PillButtonStyle: ButtonStyle {
+    var prominent = false
+    var color: Color = Color(red: 0.25, green: 0.55, blue: 1.0)
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14).padding(.vertical, 7)
+            .background(Capsule().fill(prominent ? AnyShapeStyle(LinearGradient(colors: [color, color.opacity(0.7)], startPoint: .top, endPoint: .bottom))
+                                                 : AnyShapeStyle(Color.white.opacity(0.12))))
+            .overlay(Capsule().strokeBorder(.white.opacity(prominent ? 0.35 : 0.15)))
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
+    }
+}
+
+/// The landing hero: a glowing orb in rings; the outer ring turns into progress while working.
+struct HeroStatus: View {
+    let symbol: String
+    let color: Color
+    let title: String
+    let subtitle: String
+    /// 0…1 while scanning or fixing; nil when idle.
+    var progress: Double? = nil
+    var spinning = false
+    @State private var pulse = false
+
+    var body: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                // Animate only this halo: a repeatForever started with withAnimation in onAppear would also
+                // animate the first layout of the whole window, and everything would drift forever.
+                Circle().fill(color.opacity(0.10)).frame(width: 190, height: 190).scaleEffect(pulse ? 1.06 : 0.96)
+                    .animation(.easeInOut(duration: 2.4).repeatForever(), value: pulse)
+                Circle().stroke(color.opacity(0.25), lineWidth: 1).frame(width: 162, height: 162)
+                if let progress {
+                    Circle().trim(from: 0, to: max(0.02, progress))
+                        .stroke(AngularGradient(colors: [color.opacity(0.2), color, .white], center: .center),
+                                style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .rotationEffect(.degrees(-90)).frame(width: 162, height: 162)
+                        .animation(.easeInOut(duration: 0.4), value: progress)
+                } else if spinning {
+                    Circle().trim(from: 0, to: 0.28)
+                        .stroke(AngularGradient(colors: [color.opacity(0), color, .white], center: .center),
+                                style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .frame(width: 162, height: 162)
+                        .rotationEffect(.degrees(pulse ? 360 : 0))
+                        .animation(.linear(duration: 1.2).repeatForever(autoreverses: false), value: pulse)
+                }
+                Circle().fill(LinearGradient(colors: [color, color.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 118, height: 118)
+                    .shadow(color: color.opacity(0.6), radius: 24)
+                Circle().fill(LinearGradient(colors: [.white.opacity(0.45), .clear], startPoint: .top, endPoint: .center))
+                    .frame(width: 118, height: 118)
+                Image(systemName: symbol).font(.system(size: 50, weight: .bold)).foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+            }
+            .onAppear { DispatchQueue.main.async { pulse = true } }
+            Text(title).font(.system(size: 30, weight: .bold, design: .rounded)).foregroundStyle(.white)
+                .multilineTextAlignment(.center).contentTransition(.numericText())
+            Text(subtitle).font(.system(size: 15)).foregroundStyle(.white.opacity(0.65)).multilineTextAlignment(.center)
+                .frame(maxWidth: 460).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// A glass card for one category on the landing page.
+struct CategoryCard: View {
+    let symbol: String
+    let color: Color
+    let title: String
+    let status: String
+    let statusColor: Color
+    /// The big figure on the card ("4"); nil shows a check.
+    var count: Int? = nil
+    let action: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top) {
+                    IconTile(symbol: symbol, color: color, size: 42)
+                    Spacer()
+                    if let count, count > 0 {
+                        Text("\(count)").font(.system(size: 30, weight: .bold, design: .rounded)).foregroundStyle(statusColor)
+                    } else {
+                        Image(systemName: "checkmark.circle.fill").font(.system(size: 20)).foregroundStyle(.green.opacity(0.85))
+                    }
+                }
+                Spacer(minLength: 0)
+                Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
+                Text(status).font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
+            .padding(16)
+            .glass(highlighted: hover)
+            .scaleEffect(hover ? 1.02 : 1)
+            .animation(.easeOut(duration: 0.15), value: hover)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle())
+        .onHover { hover = $0 }
+    }
+}

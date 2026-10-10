@@ -16,6 +16,18 @@ final class AgentScanner: ObservableObject {
     /// Result of the last action, shown on the item it ran on.
     @Published var lastResult: LastResult?
     @Published var running: Action.ID?
+    /// A batch of fixes in progress ("Fixing 3 of 9: …") and, afterwards, what it achieved.
+    @Published var batch: Batch?
+
+    struct Batch {
+        var total: Int
+        var done = 0
+        var failed = 0
+        var current = ""
+        var finished = false
+        var before = 0
+        var after = 0
+    }
 
     struct LastResult {
         var item: AgentItem.ID
@@ -51,6 +63,34 @@ final class AgentScanner: ObservableObject {
     }
 
     var problems: [AgentItem] { report?.items.filter(\.isProblem) ?? [] }
+
+    /// The safe automatic fix of every problem item: what "Fix all" runs.
+    var bulkFixes: [(AgentItem, Action)] {
+        problems.compactMap { item in item.actions.first { $0.kind == .fix && $0.bulk }.map { (item, $0) } }
+    }
+
+    /// Runs fixes one after another, reporting progress, then rescans and records how many problems are left.
+    func performAll(_ plans: [(AgentItem, Action)]) {
+        guard batch?.finished != false, running == nil, !plans.isEmpty else { return }
+        batch = Batch(total: plans.count, before: problems.count)
+        Task.detached(priority: .userInitiated) {
+            let env = DoctorEnvironment()
+            var failed = 0
+            for (i, (item, action)) in plans.enumerated() {
+                await MainActor.run { self.batch?.current = item.name; self.batch?.done = i }
+                if !ActionRunner.perform(action, env: env).ok { failed += 1 }
+            }
+            let r = AgentDoctor.run()
+            let failures = failed
+            await MainActor.run {
+                self.report = r
+                self.batch?.done = plans.count
+                self.batch?.failed = failures
+                self.batch?.after = r.items.filter(\.isProblem).count
+                self.batch?.finished = true
+            }
+        }
+    }
 }
 
 extension AgentItem {
@@ -135,7 +175,7 @@ struct AgentsView: View {
                 ForEach(problems) { item in
                     Button {
                         scanner.selection = item.id
-                        AgentsWindow.show(scanner, entry: .problems)
+                        AgentsWindow.show(scanner, entry: .area(item.area))
                     } label: {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             StatusIcon(item: item)
@@ -161,315 +201,68 @@ struct AgentsView: View {
     }
 }
 
-// MARK: - Diagnostics window
-
-enum SidebarEntry: Hashable {
-    case problems
-    case area(Area)
-}
-
-/// Sidebar of areas, list of items, and the selected item's problems and actions.
-struct DiagnosticsView: View {
-    @ObservedObject var scanner: AgentScanner
-    @Binding var sidebar: SidebarEntry?
-    @State private var search = ""
-
-    var body: some View {
-        NavigationSplitView {
-            List(selection: $sidebar) {
-                Section {
-                    row(.problems, title: tr("All Problems"), icon: "exclamationmark.triangle", count: scanner.problems.count, bad: true)
-                }
-                Section(tr("Checks")) {
-                    ForEach(Area.allCases, id: \.self) { area in
-                        let items = scanner.report?.items.filter { $0.area == area } ?? []
-                        let bad = items.filter(\.isProblem).count
-                        row(.area(area), title: AgentStyle.title(area), icon: AgentStyle.icon(area),
-                            count: bad > 0 ? bad : items.count, bad: bad > 0)
-                    }
-                }
-            }
-            .navigationSplitViewColumnWidth(min: 190, ideal: 210)
-        } content: {
-            ItemList(scanner: scanner, entry: sidebar ?? .problems, search: search)
-                .navigationSplitViewColumnWidth(min: 280, ideal: 340)
-        } detail: {
-            if let id = scanner.selection, let item = scanner.report?.items.first(where: { $0.id == id }) {
-                ItemDetail(scanner: scanner, item: item)
-            } else {
-                VStack(spacing: 8) {
-                    Image(systemName: "stethoscope").font(.largeTitle).foregroundStyle(.tertiary)
-                    Text(tr("Select an item to see what's wrong and how to fix it.")).foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-        .searchable(text: $search, placement: .sidebar, prompt: Text(tr("Search")))
-        .toolbar {
-            ToolbarItem(placement: .status) {
-                if scanner.scanning {
-                    ProgressView().controlSize(.small)
-                } else if let r = scanner.report {
-                    Text(r.headline).font(.callout)
-                        .foregroundStyle(r.count(.error) > 0 ? Color.red : r.count(.warning) > 0 ? Color.orange : Color.green)
-                }
-            }
-            ToolbarItem {
-                Button { scanner.scan() } label: { Label(tr("Rescan"), systemImage: "arrow.clockwise") }
-                    .disabled(scanner.scanning).help(tr("Rescan"))
-            }
-        }
-        .onAppear { scanner.scan(ifOlderThan: 60) }
-    }
-
-    func row(_ entry: SidebarEntry, title: String, icon: String, count: Int, bad: Bool) -> some View {
-        Label {
-            HStack {
-                Text(title)
-                Spacer()
-                if count > 0 {
-                    Text("\(count)").font(.caption.monospacedDigit().weight(bad ? .semibold : .regular))
-                        .foregroundStyle(bad ? Color.white : Color.secondary)
-                        .padding(.horizontal, 6).padding(.vertical, 1)
-                        .background(Capsule().fill(bad ? Color.orange : Color.clear))
-                }
-            }
-        } icon: {
-            Image(systemName: icon)
-        }
-        .tag(entry)
-    }
-}
-
-struct ItemList: View {
-    @ObservedObject var scanner: AgentScanner
-    let entry: SidebarEntry
-    let search: String
-
-    var items: [AgentItem] {
-        guard let r = scanner.report else { return [] }
-        var list: [AgentItem]
-        switch entry {
-        case .problems: list = r.items.filter(\.isProblem)
-        case let .area(a): list = r.items.filter { $0.area == a }
-        }
-        if !search.isEmpty {
-            list = list.filter { $0.name.localizedCaseInsensitiveContains(search) || $0.detail.localizedCaseInsensitiveContains(search)
-                || $0.agent.localizedCaseInsensitiveContains(search) }
-        }
-        return list
-    }
-
-    var body: some View {
-        let items = self.items
-        Group {
-            if scanner.report == nil {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if items.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "checkmark.seal").font(.largeTitle).foregroundStyle(.green)
-                    Text(search.isEmpty ? tr("Nothing wrong here.") : tr("No matches.")).foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                List(selection: $scanner.selection) {
-                    if case .problems = entry {
-                        ForEach(Area.allCases, id: \.self) { area in
-                            let group = items.filter { $0.area == area }
-                            if !group.isEmpty {
-                                Section(AgentStyle.title(area)) { ForEach(group) { ItemRow(item: $0).tag($0.id) } }
-                            }
-                        }
-                    } else {
-                        let attention = items.filter { $0.severity != nil && $0.enabled }
-                        let rest = items.filter { $0.severity == nil || !$0.enabled }
-                        if !attention.isEmpty {
-                            Section(tr("Needs attention")) { ForEach(attention) { ItemRow(item: $0).tag($0.id) } }
-                        }
-                        if !rest.isEmpty {
-                            Section(tr("OK")) { ForEach(rest) { ItemRow(item: $0).tag($0.id) } }
-                        }
-                    }
-                }
-            }
-        }
-        .navigationTitle(title)
-    }
-
-    var title: String {
-        switch entry {
-        case .problems: return tr("All Problems")
-        case let .area(a): return AgentStyle.title(a)
-        }
-    }
-}
-
-struct ItemRow: View {
-    let item: AgentItem
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            StatusIcon(item: item)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(item.name).lineLimit(1).truncationMode(.middle)
-                        .foregroundStyle(item.enabled ? .primary : .secondary)
-                    if item.agent != "system" { AgentTag(agent: item.agent) }
-                    if !item.enabled { Text(tr("off")).font(.caption2).foregroundStyle(.tertiary) }
-                }
-                Text(item.detail).font(.caption.monospaced()).foregroundStyle(.secondary)
-                    .lineLimit(1).truncationMode(.middle)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
-struct ItemDetail: View {
-    @ObservedObject var scanner: AgentScanner
-    let item: AgentItem
-    @State private var confirming: Action?
-
-    var findings: [Finding] { scanner.report?.findings(for: item) ?? [] }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                header
-                GroupBox {
-                    Text(item.detail).font(.callout.monospaced()).textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                if !findings.isEmpty { problems }
-                if let last = scanner.lastResult, last.item == item.id { result(last.action, last.result) }
-                if !item.actions.isEmpty { actions }
-                if let src = item.source { source(src) }
-            }
-            .padding(20)
-            .frame(maxWidth: 640, alignment: .leading)
-        }
-        .sheet(item: $confirming) { action in
-            ConfirmAction(action: action, item: item) {
-                confirming = nil
-                scanner.perform(action, on: item)
-            } cancel: {
-                confirming = nil
-            }
-        }
-    }
-
-    var header: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Image(systemName: AgentStyle.icon(item.area)).font(.title).foregroundStyle(.secondary).frame(width: 34)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(item.name).font(.title2.weight(.semibold)).textSelection(.enabled)
-                HStack(spacing: 6) {
-                    StatusIcon(item: item)
-                    Text(item.enabled ? AgentStyle.label(item.severity) : tr("Off")).font(.callout).foregroundStyle(.secondary)
-                    if item.agent != "system" { AgentTag(agent: item.agent) }
-                    Text(AgentStyle.title(item.area)).font(.callout).foregroundStyle(.tertiary)
-                }
-            }
-        }
-    }
-
-    var problems: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(tr("Problems")).font(.headline)
-            ForEach(Array(findings.enumerated()), id: \.offset) { _, f in
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Image(systemName: AgentStyle.symbol(f.severity)).foregroundStyle(AgentStyle.color(f.severity))
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(f.message).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
-                        if let fix = f.fix {
-                            Text(tr("Suggestion: %1$@", fix)).font(.callout).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    var actions: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(tr("Actions")).font(.headline)
-            HStack(spacing: 8) {
-                ForEach(item.actions) { a in
-                    Button(role: a.kind == .uninstall ? .destructive : nil) { confirming = a } label: {
-                        HStack(spacing: 4) {
-                            if scanner.running == a.id { ProgressView().controlSize(.small) }
-                            Text(a.title)
-                        }
-                    }
-                    .modifier(ActionButtonStyle(prominent: a.kind == .fix && a.bulk))  // "think first" actions get a plain button
-                    .disabled(scanner.running != nil)
-                }
-            }
-            Text(tr("You'll see exactly what will run before anything changes. Config files are backed up first; files go to the Trash."))
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    func result(_ title: String, _ r: ActionResult) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label(r.ok ? tr("%1$@: done", title) : tr("%1$@: failed", title),
-                  systemImage: r.ok ? "checkmark.circle.fill" : "xmark.octagon.fill")
-                .foregroundStyle(r.ok ? .green : .red).font(.callout.weight(.medium))
-            ForEach(r.log, id: \.self) { Text($0).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled) }
-            if let b = r.backups.first {
-                Button(tr("Show backup")) { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: b)]) }
-                    .buttonStyle(.link).font(.caption)
-            }
-        }
-        .padding(10).frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 8).fill((r.ok ? Color.green : Color.red).opacity(0.08)))
-    }
-
-    func source(_ src: String) -> some View {
-        let path = (src as NSString).expandingTildeInPath
-        return HStack {
-            Text(tr("Source")).font(.caption).foregroundStyle(.secondary)
-            Text(src).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
-            Spacer()
-            if FileManager.default.fileExists(atPath: path) {
-                Button(tr("Reveal in Finder")) { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) }
-                    .buttonStyle(.link).font(.caption)
-            }
-        }
-    }
-}
-
 /// The diagnostics window, sharing the popover's scan.
 @MainActor
 enum AgentsWindow {
-    private static var window: NSWindow?
+    private(set) static var window: NSWindow?
     private static let state = WindowState()
 
     final class WindowState: ObservableObject {
-        @Published var entry: SidebarEntry? = .problems
+        @Published var entry: SidebarEntry? = .home
     }
 
     static func show(_ scanner: AgentScanner, entry: SidebarEntry? = nil) {
         if let entry { state.entry = entry }
         if window == nil {
-            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1040, height: 660),
-                             styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1040, height: 680),
+                             styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
             w.isReleasedWhenClosed = false
+            // The gradient sidebar runs up under the title bar, like CleanMyMac.
+            w.titlebarAppearsTransparent = true
+            w.titleVisibility = .hidden
             // Content first, and let SwiftUI set only the minimum: otherwise the hosting controller shrinks
             // the window to its minimum and the autosaved frame remembers that.
-            let host = NSHostingController(rootView: Host(scanner: scanner, state: state).frame(minWidth: 860, minHeight: 520))
+            let host = NSHostingController(rootView: Host(scanner: scanner, state: state)
+                .frame(minWidth: 900, maxWidth: .infinity, minHeight: 600, maxHeight: .infinity))
             host.sizingOptions = [.minSize]
             w.contentViewController = host
-            if !w.setFrameUsingName("AgentDiagnostics") || w.frame.width < 860 {
-                w.setContentSize(NSSize(width: 1040, height: 660))
+            if !w.setFrameUsingName("AgentDiagnostics2") || w.frame.width < 960 || w.frame.height < 640 {
+                w.setContentSize(NSSize(width: 1080, height: 720))
                 w.center()
             }
-            w.setFrameAutosaveName("AgentDiagnostics")
+            w.setFrameAutosaveName("AgentDiagnostics2")
+            // Verification screenshots (`--offscreen`) must never appear on the user's screen. macOS pulls
+            // titled windows back on screen, so this one is borderless and parked far outside every display.
+            if CommandLine.arguments.contains("--offscreen") {
+                w.styleMask = [.borderless]
+                w.setFrame(NSRect(x: -6000, y: -6000, width: 1080, height: 720), display: true)
+            }
             window = w
         }
         window?.title = tr("AI Agent Diagnostics")
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
+        if CommandLine.arguments.contains("--offscreen") {
+            window?.orderBack(nil)
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+            window?.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    /// Verification: waits for the scan, lets animations settle, writes the window's content as a PNG, quits.
+    static func snapshotWhenReady(_ scanner: AgentScanner, to path: String) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            guard scanner.report != nil, !scanner.scanning else { return snapshotWhenReady(scanner, to: path) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                if let view = window?.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                    view.cacheDisplay(in: view.bounds, to: rep)
+                    do { try rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path)) }
+                    catch { FileHandle.standardError.write("snapshot: \(error)\n".data(using: .utf8)!) }
+                } else {
+                    FileHandle.standardError.write("snapshot: no window content (window \(String(describing: window)))\n".data(using: .utf8)!)
+                }
+                exit(0)
+            }
+        }
     }
 
     struct Host: View {

@@ -235,13 +235,24 @@ if CommandLine.arguments.contains("--disk") {
 }
 /// `Thermo --agents`: just the AI agent diagnostics window — no menu bar item, no fan helper; quits when closed.
 if CommandLine.arguments.contains("--agents") {
-    app.setActivationPolicy(.regular)
+    // `--offscreen` (verification screenshots): no Dock icon, no window on the user's screen.
+    app.setActivationPolicy(CommandLine.arguments.contains("--offscreen") ? .accessory : .regular)
     MainActor.assumeIsolated {
         let scanner = AgentScanner()
         scanner.scan()
-        AgentsWindow.show(scanner)
+        // `--agents mcp` opens one area directly.
+        let args = CommandLine.arguments
+        let area = args.firstIndex(of: "--agents").flatMap { $0 + 1 < args.count ? Area(rawValue: args[$0 + 1]) : nil }
+        AgentsWindow.show(scanner, entry: area.map { .area($0) } ?? .home)
+        // `--snapshot PATH` (with --offscreen): once the check is done, draw the window into a PNG and quit.
+        if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count {
+            AgentsWindow.snapshotWhenReady(scanner, to: args[i + 1])
+        }
     }
-    NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { _ in exit(0) }
+    // Quit when the diagnostics window closes; not when a menu or sheet window inside it does.
+    NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { n in
+        MainActor.assumeIsolated { if let w = n.object as? NSWindow, w === AgentsWindow.window { exit(0) } }
+    }
     app.run()
 }
 let delegate = AppDelegate()

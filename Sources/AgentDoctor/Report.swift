@@ -115,13 +115,13 @@ public enum Redact {
 
     static let patterns: [(NSRegularExpression, String)] = [
         // --token X, --api-key=X
-        (try! NSRegularExpression(pattern: "(--?[A-Za-z0-9_-]*(?:token|secret|password|key|auth)[A-Za-z0-9_-]*(?:=|\\s+))([^\\s'\"]{4})[^\\s'\"]*",
+        (try! NSRegularExpression(pattern: "(--?[A-Za-z0-9_-]*(?:token|secret|password|key|auth)[A-Za-z0-9_-]*(?:=|\\s+))([^\\s'\"]{4})[A-Za-z0-9_.+/=•-]*",
                                   options: [.caseInsensitive]), "$1$2••••"),
         // FOO_TOKEN=X, "api_key": "X"
-        (try! NSRegularExpression(pattern: "([A-Za-z0-9_]*(?:TOKEN|SECRET|PASSWORD|API_?KEY|AUTH)[A-Za-z0-9_]*[\"']?\\s*[=:]\\s*[\"']?)([^\\s'\"$]{4})[^\\s'\",;)\\]]*",
+        (try! NSRegularExpression(pattern: "([A-Za-z0-9_]*(?:TOKEN|SECRET|PASSWORD|API_?KEY|AUTH)[A-Za-z0-9_]*[\"']?\\s*[=:]\\s*[\"']?)([^\\s'\"$]{4})[A-Za-z0-9_.+/=•-]*",
                                   options: [.caseInsensitive]), "$1$2••••"),
         // Bearer X
-        (try! NSRegularExpression(pattern: "(Bearer\\s+)([^\\s'\"]{4})[^\\s'\"]*", options: []), "$1$2••••"),
+        (try! NSRegularExpression(pattern: "(Bearer\\s+)([^\\s'\"]{4})[A-Za-z0-9_.+/=•-]*", options: []), "$1$2••••"),
         // Well-known key shapes anywhere.
         (try! NSRegularExpression(pattern: "\\b(sk-[A-Za-z0-9_-]{2}|ghp_|gho_|github_pat_|xox[abpr]-|AKIA|AIza)[A-Za-z0-9_-]{8,}", options: []), "$1••••"),
     ]

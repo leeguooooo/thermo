@@ -30,6 +30,12 @@ final class RedactTests: XCTestCase {
         XCTAssertTrue(s.contains("--token cgu-••••"))
     }
 
+    func testRedactionStopsAtTheSecret() {
+        XCTAssertEqual(Redact.text("（环境变量 DISCORD_TOKEN=MTUxMzc4MTE3NDE1）；命令行参数还能被看到"),
+                       "（环境变量 DISCORD_TOKEN=MTUx••••）；命令行参数还能被看到")
+        XCTAssertEqual(Redact.text("--token abcdefgh。下一句"), "--token abcd••••。下一句")
+    }
+
     func testRedactionKeepsPunctuation() {
         XCTAssertEqual(Redact.text("(env API_TOKEN=abcd••••); next"), "(env API_TOKEN=abcd••••); next")
     }
