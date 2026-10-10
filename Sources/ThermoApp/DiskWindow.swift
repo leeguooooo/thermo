@@ -3,40 +3,91 @@ import CleanKit
 import SwiftUI
 import ThermoL10n
 
-/// The place to actually clean: a resizable window with categories, a sortable list grouped by
-/// project, details for the selected item (paths, sessions, why it is safe) and the Clean button.
+/// The place to actually clean, in the same look as AI Agent Diagnostics: a gradient window with a
+/// sidebar, a Smart Scan home (how much can go, one button for the safe part, a card per category),
+/// a page per category with expandable glass rows, and "Where the space is".
 /// The popover's Disk tab only summarises and opens this.
 enum DiskWindow {
-    private static var window: NSWindow?
+    private(set) static var window: NSWindow?
+    static let state = State()
 
-    static func show(_ model: DiskModel) {
+    final class State: ObservableObject {
+        @Published var page: DiskPage = .home
+    }
+
+    static var offscreen: Bool { CommandLine.arguments.contains("--offscreen") }
+
+    static func show(_ model: DiskModel, page: DiskPage? = nil) {
+        if let page { state.page = page }
         if window == nil {
-            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1060, height: 680),
-                             styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1080, height: 720),
+                             styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
+                             backing: .buffered, defer: false)
             w.isReleasedWhenClosed = false
-            let host = NSHostingController(rootView: Host(model: model).frame(minWidth: 880, minHeight: 540))
-            // Let the window keep the size we give it (and the user drags to); only the minimum comes from SwiftUI.
+            w.titlebarAppearsTransparent = true
+            w.titleVisibility = .hidden
+            // Content first, SwiftUI sets only the minimum; autosave last (it would record the shrunken size).
+            let host = NSHostingController(rootView: Host(model: model, state: state)
+                .frame(minWidth: 900, maxWidth: .infinity, minHeight: 600, maxHeight: .infinity))
             host.sizingOptions = [.minSize]
             w.contentViewController = host
-            // The hosting controller shrinks the window to its minimum; give it room, then place it.
-            if !w.setFrameUsingName("DiskCleanup") {
-                w.setContentSize(NSSize(width: 1060, height: 680))
+            if !w.setFrameUsingName("DiskCleanup2") || w.frame.width < 960 || w.frame.height < 640 {
+                w.setContentSize(NSSize(width: 1080, height: 720))
                 w.center()
             }
-            // Only now: autosaving earlier would record the shrunken size the content was first laid out at.
-            w.setFrameAutosaveName("DiskCleanup")
+            w.setFrameAutosaveName("DiskCleanup2")
+            // Verification screenshots never appear on the user's screen.
+            if offscreen {
+                w.styleMask = [.borderless]
+                w.setFrame(NSRect(x: -6000, y: -6000, width: 1080, height: 720), display: true)
+            }
             window = w
         }
         window?.title = tr("Disk Cleanup")
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
-        if model.report == nil && !model.scanning { model.scan() }
+        if offscreen {
+            window?.orderBack(nil)
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+            window?.makeKeyAndOrderFront(nil)
+        }
+        if model.report == nil && !model.scanning && !model.loadSaved() { model.scan() }
+    }
+
+    /// Verification: waits for the scan, lets animations settle, writes the window as a PNG, quits.
+    static func snapshotWhenReady(_ model: DiskModel, to path: String) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            guard model.report != nil, !model.scanning else { return snapshotWhenReady(model, to: path) }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                if let view = window?.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                    view.cacheDisplay(in: view.bounds, to: rep)
+                    try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
+                }
+                exit(0)
+            }
+        }
     }
 
     struct Host: View {
         @ObservedObject var model: DiskModel
+        @ObservedObject var state: State
         @AppStorage(L10n.defaultsKey) private var language = "system"
-        var body: some View { DiskCleanupView(model: model).id(language) }
+        var body: some View { DiskCleanupView(model: model, page: $state.page).id(language) }
+    }
+}
+
+enum DiskPage: Hashable {
+    case home, overview
+    case category(CleanCategory)
+
+    /// `--page` values for `Thermo --disk`: home, overview, or a category id (ai-sessions, projects…).
+    init?(argument: String) {
+        switch argument {
+        case "home": self = .home
+        case "overview": self = .overview
+        default:
+            guard let c = CleanCategory(rawValue: argument) else { return nil }
+            self = .category(c)
+        }
     }
 }
 
@@ -62,96 +113,79 @@ extension DiskModel {
         return parts.joined(separator: " ")
     }
 
-    func selectSafe() { selected = Set((report?.items ?? []).filter { $0.cleanable && $0.safety == .safe }.map(\.id)) }
+    var safeItems: [CleanItem] { (report?.items ?? []).filter { $0.cleanable && $0.safety == .safe } }
+    var safeBytes: Int64 { safeItems.reduce(0) { $0 + $1.bytes } }
+
+    func selectSafe() { selected = Set(safeItems.map(\.id)) }
+}
+
+enum DiskStyle {
+    static func icon(_ c: CleanCategory) -> String {
+        switch c {
+        case .aiSessions: return "bubble.left.and.text.bubble.right.fill"
+        case .aiModels: return "cpu.fill"
+        case .aiCaches: return "sparkles"
+        case .devCaches: return "hammer.fill"
+        case .xcode: return "swift"
+        case .projects: return "folder.fill"
+        case .browsers: return "globe"
+        case .system: return "gearshape.fill"
+        }
+    }
+
+    static func tint(_ c: CleanCategory) -> Color {
+        switch c {
+        case .aiSessions: return Color(red: 0.62, green: 0.42, blue: 1.0)
+        case .aiModels: return Color(red: 0.95, green: 0.42, blue: 0.75)
+        case .aiCaches: return Color(red: 0.45, green: 0.5, blue: 1.0)
+        case .devCaches: return Color(red: 1.0, green: 0.62, blue: 0.25)
+        case .xcode: return Color(red: 0.25, green: 0.62, blue: 1.0)
+        case .projects: return Color(red: 0.3, green: 0.8, blue: 0.6)
+        case .browsers: return Color(red: 0.25, green: 0.78, blue: 0.9)
+        case .system: return Color(red: 0.6, green: 0.65, blue: 0.75)
+        }
+    }
+
+    static func safety(_ s: Safety, info: Bool) -> (String, Color) {
+        if info { return (tr("info"), .cyan) }
+        switch s {
+        case .safe: return (tr("safe"), .green)
+        case .review: return (tr("review"), .orange)
+        case .risky: return (tr("risky"), .red)
+        }
+    }
 }
 
 struct DiskCleanupView: View {
     @ObservedObject var model: DiskModel
-    @State private var sidebar: CleanCategory? = .aiSessions
-    /// "Where is my space": shown instead of a category's items.
-    @State private var showOverview = false
-    @State private var focus: String?
-    @State private var search = ""
-    @State private var sort: Sort = .size
+    @Binding var page: DiskPage
     @State private var confirming = false
-
-    enum Sort: String, CaseIterable, Identifiable {
-        case size, lastUsed, name
-        var id: String { rawValue }
-        var label: String { self == .size ? tr("Size") : self == .lastUsed ? tr("Last used") : tr("Name") }
-    }
 
     var items: [CleanItem] { model.report?.items ?? [] }
 
     var body: some View {
-        NavigationSplitView {
-            List(selection: $sidebar) {
-                Section {
-                    // Not a category, so not part of the selection: a tap switches the middle column.
-                    Label(tr("Where the space is"), systemImage: "chart.pie")
-                        .padding(.vertical, 2).padding(.horizontal, 4)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(RoundedRectangle(cornerRadius: 5).fill(showOverview ? Color.accentColor.opacity(0.18) : .clear))
-                        .contentShape(Rectangle())
-                        .onTapGesture { showOverview = true; sidebar = nil }
-                }
-                Section {
-                    ForEach(CleanCategory.allCases, id: \.self) { c in
-                        let inCat = items.filter { $0.category == c }
-                        if !inCat.isEmpty || model.scanning {
-                            HStack {
-                                Label(c.title, systemImage: Self.icon(c))
-                                Spacer()
-                                Text(ByteFormat.string(model.report?.bytes(in: c) ?? 0)).monospacedDigit().foregroundStyle(.secondary)
-                            }
-                            .tag(c)
-                        }
-                    }
-                } header: {
-                    Text(model.report.map { tr("%1$@ reclaimable", ByteFormat.string($0.totalBytes)) } ?? tr("Disk Cleanup"))
-                }
-            }
-            .navigationSplitViewColumnWidth(min: 220, ideal: 240)
-        } content: {
-            Group {
-                if showOverview {
-                    DiskOverviewView()
-                } else {
-                    VStack(spacing: 0) {
-                        statusBar
-                        itemList
-                        Divider()
-                        footer
+        ZStack {
+            WindowBackdrop(glow: page == .home, tint: Color(red: 0.36, green: 0.42, blue: 1.0))
+            HStack(spacing: 0) {
+                sidebar.frame(width: 236).background(Color.black.opacity(0.22))
+                Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1)
+                ZStack {
+                    switch page {
+                    case .home:
+                        DiskHome(model: model, open: { page = .category($0) }, clean: startClean).transition(.opacity)
+                    case .overview:
+                        DiskOverviewView().transition(.opacity)
+                    case let .category(c):
+                        DiskCategoryPage(model: model, category: c, clean: startClean).id(c)
+                            .transition(.opacity.combined(with: .move(edge: .trailing)))
                     }
                 }
-            }
-            .navigationSplitViewColumnWidth(min: 420, ideal: 520)
-        } detail: {
-            if showOverview {
-                Text(tr("The big places on this disk. What in them can go is listed under the categories on the left."))
-                    .foregroundStyle(.secondary).multilineTextAlignment(.center).padding()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let id = focus, let item = items.first(where: { $0.id == id }) {
-                DiskItemDetail(model: model, item: item)
-            } else {
-                Text(tr("Select an item to see what it holds and why it can go."))
-                    .foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .onChange(of: sidebar) { c in if c != nil { showOverview = false } }
-        .searchable(text: $search, placement: .toolbar, prompt: Text(tr("Search")))
-        .toolbar {
-            ToolbarItemGroup {
-                Picker(tr("Sort"), selection: $sort) { ForEach(Sort.allCases) { Text($0.label).tag($0) } }.pickerStyle(.menu)
-                Picker("", selection: $model.scope) { ForEach(DiskModel.Scope.allCases) { Text($0.label).tag($0) } }
-                    .pickerStyle(.segmented).disabled(model.scanning)
-                if model.scanning {
-                    Button(tr("Stop")) { model.stop() }.disabled(model.stopping)
-                } else {
-                    Button { model.scan() } label: { Label(tr("Scan again"), systemImage: "arrow.clockwise") }
-                }
-            }
-        }
+        .ignoresSafeArea()
+        .environment(\.colorScheme, .dark)
+        .animation(.easeInOut(duration: 0.25), value: page)
         .sheet(isPresented: $confirming) {
             ConfirmSheet(title: tr("Clean %1$@?", ByteFormat.string(model.selectedBytes)), summary: model.confirmSummary,
                          destructive: model.selectedItems.contains { $0.safety == .safe }, heading: tr("What will be removed"),
@@ -162,96 +196,231 @@ struct DiskCleanupView: View {
         }
     }
 
-    @ViewBuilder var statusBar: some View {
-        if model.scanning || model.cleaning || model.stale || model.lastResult != nil {
+    func startClean() { if !model.selectedItems.isEmpty { confirming = true } }
+
+    var sidebar: some View {
+        VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 8) {
-                if model.scanning || model.cleaning { ProgressView().controlSize(.small) }
-                Text(model.cleaning ? tr("Cleaning %1$@ of %2$@: %3$@", String(model.cleaningDone + 1), String(model.cleaningTotal), model.cleaningStep)
-                     : model.scanning ? tr("scanning… %1$@", model.progress)
-                     : model.stale ? tr("Scope changed — scan again to update the list.") : (model.lastResult ?? ""))
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                Spacer()
+                Image(systemName: "internaldrive.fill").foregroundStyle(.white.opacity(0.8))
+                Text(tr("Disk Cleanup")).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white.opacity(0.85))
             }
-            .padding(.horizontal, 12).padding(.vertical, 6)
-            .background(.bar)
+            .padding(.horizontal, 16).padding(.top, 44).padding(.bottom, 18)
+            row(.home, title: tr("Smart Scan"), symbol: "sparkles", color: .pink,
+                trailing: model.report.map { ByteFormat.string($0.totalBytes) })
+            row(.overview, title: tr("Where the space is"), symbol: "chart.pie.fill", color: .teal, trailing: nil)
+            Text(tr("Categories").uppercased()).font(.system(size: 10, weight: .semibold)).tracking(0.8)
+                .foregroundStyle(.white.opacity(0.4)).padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 6)
+            ForEach(CleanCategory.allCases, id: \.self) { c in
+                let bytes = model.report?.bytes(in: c) ?? 0
+                if bytes > 0 || items.contains(where: { $0.category == c }) {
+                    row(.category(c), title: c.title, symbol: DiskStyle.icon(c), color: DiskStyle.tint(c),
+                        trailing: ByteFormat.string(bytes))
+                }
+            }
+            Spacer()
+            HStack(spacing: 6) {
+                Circle().fill(model.scanning ? Color.yellow : Color.green).frame(width: 6, height: 6)
+                Text(model.scanning ? tr("Scanning…") : model.report.map { tr("scanned %1$@", AgeFormat.string($0.started)) } ?? tr("Not scanned yet"))
+            }
+            .font(.system(size: 11)).foregroundStyle(.white.opacity(0.45)).padding(16)
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    func row(_ target: DiskPage, title: String, symbol: String, color: Color, trailing: String?) -> some View {
+        let on = page == target
+        return Button { page = target } label: {
+            HStack(spacing: 10) {
+                IconTile(symbol: symbol, color: color, size: 22)
+                Text(title).font(.system(size: 13)).foregroundStyle(.white.opacity(on ? 1 : 0.8)).lineLimit(1)
+                Spacer()
+                if let trailing { Text(trailing).font(.system(size: 11).monospacedDigit()).foregroundStyle(.white.opacity(0.5)) }
+            }
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(on ? 0.12 : 0)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle())
+        .padding(.horizontal, 8)
+    }
+}
+
+// MARK: - Home
+
+struct DiskHome: View {
+    @ObservedObject var model: DiskModel
+    let open: (CleanCategory) -> Void
+    let clean: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 26) {
+                hero.padding(.top, 54)
+                if let r = model.report, !r.items.isEmpty {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {
+                        ForEach(CleanCategory.allCases, id: \.self) { c in
+                            let inCat = r.items.filter { $0.category == c && $0.cleanable }
+                            if !inCat.isEmpty {
+                                CategoryCard(symbol: DiskStyle.icon(c), color: DiskStyle.tint(c), title: c.title,
+                                             status: ByteFormat.string(r.bytes(in: c)), statusColor: .white.opacity(0.7),
+                                             count: inCat.count) { open(c) }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 28)
+                }
+                if let res = model.lastResult {
+                    Text(res).font(.callout).foregroundStyle(.white.opacity(0.7)).onTapGesture { model.openLog() }
+                }
+                if let days = model.report?.claudeCleanupDays {
+                    Text(tr("Claude Code deletes its own sessions after %1$@ days (cleanupPeriodDays).", String(days)))
+                        .font(.caption).foregroundStyle(.white.opacity(0.4))
+                }
+            }
+            .padding(.bottom, 30)
+            .frame(maxWidth: .infinity)
         }
     }
 
-    /// Items of the chosen category, filtered and sorted; build output is grouped by project.
-    var shown: [CleanItem] {
-        var list = items.filter { $0.category == sidebar }
+    @ViewBuilder var hero: some View {
+        if model.cleaning {
+            HeroStatus(symbol: "trash.fill", color: .orange, title: tr("Cleaning…"),
+                       subtitle: model.cleaningStep,
+                       progress: Double(model.cleaningDone) / Double(max(1, model.cleaningTotal)))
+        } else if model.scanning {
+            VStack(spacing: 18) {
+                HeroStatus(symbol: "magnifyingglass", color: Color(red: 0.4, green: 0.5, blue: 1.0),
+                           title: model.report.map { tr("%1$@ found so far", ByteFormat.string($0.totalBytes)) } ?? tr("Looking for space you can free…"),
+                           subtitle: model.progress, spinning: true)
+                Button(tr("Stop")) { model.stop() }.buttonStyle(PillButtonStyle()).disabled(model.stopping)
+            }
+        } else if let r = model.report {
+            VStack(spacing: 18) {
+                HeroStatus(symbol: r.totalBytes > 0 ? "internaldrive.fill" : "checkmark", color: r.totalBytes > 0 ? .pink : .green,
+                           title: r.totalBytes > 0 ? tr("%1$@ can be freed", ByteFormat.string(r.totalBytes)) : tr("Nothing to clean."),
+                           subtitle: tr("%1$@ is safe to remove now (caches, build output); the rest is yours to review.", ByteFormat.string(model.safeBytes)))
+                HStack(spacing: 20) {
+                    BigRoundButton(title: tr("Clean"), color: .pink, busy: model.cleaning) {
+                        model.selectSafe()
+                        clean()
+                    }
+                    .disabled(model.safeItems.isEmpty)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Button(tr("Scan again")) { model.scan() }.buttonStyle(PillButtonStyle())
+                        Picker("", selection: $model.scope) { ForEach(DiskModel.Scope.allCases) { Text($0.label).tag($0) } }
+                            .pickerStyle(.segmented).labelsHidden().frame(width: 170)
+                    }
+                }
+            }
+        } else {
+            VStack(spacing: 18) {
+                HeroStatus(symbol: "internaldrive.fill", color: Color(red: 0.4, green: 0.5, blue: 1.0),
+                           title: tr("Find space you can free"),
+                           subtitle: tr("Old AI sessions, model downloads, agent leftovers, build output and caches. Nothing is removed until you choose."))
+                BigRoundButton(title: tr("Scan"), color: Color(red: 0.35, green: 0.5, blue: 1.0)) { model.scan() }
+            }
+        }
+    }
+}
+
+// MARK: - Category page
+
+struct DiskCategoryPage: View {
+    @ObservedObject var model: DiskModel
+    let category: CleanCategory
+    let clean: () -> Void
+    @State private var search = ""
+    @State private var open: Set<String> = []
+
+    var items: [CleanItem] {
+        var list = (model.report?.items ?? []).filter { $0.category == category }
         if !search.isEmpty {
             let q = search.lowercased()
             list = list.filter { ($0.title + " " + $0.detail + " " + ($0.note ?? "")).lowercased().contains(q) }
         }
-        switch sort {
-        case .size: list.sort { $0.bytes > $1.bytes }
-        case .lastUsed: list.sort { ($0.lastUsed ?? .distantFuture) < ($1.lastUsed ?? .distantFuture) }
-        case .name: list.sort { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
-        }
-        return list
+        return list.sorted { $0.bytes > $1.bytes }
     }
 
-    var itemList: some View {
-        let list = shown
-        let groups = Dictionary(grouping: list, by: { $0.group ?? "" })
-        let grouped = sidebar == .projects && groups.count > 1
-        return List(selection: $focus) {
-            if list.isEmpty {
-                Text(model.scanning ? tr("Looking…") : tr("Nothing here.")).foregroundStyle(.secondary)
-            } else if grouped {
-                // One section per project folder: its build outputs together, newest use shown once.
-                ForEach(groupOrder(groups), id: \.self) { g in
-                    let rows = groups[g] ?? []
-                    Section {
-                        ForEach(rows) { row($0).tag($0.id) }
-                    } header: {
-                        HStack {
-                            Text(FSPath.tilde(g)).font(.callout.weight(.semibold))
-                            if let used = rows.compactMap(\.lastUsed).max() {
-                                Text(tr("last used %1$@", AgeFormat.string(used))).font(.caption).foregroundStyle(.secondary)
+    var body: some View {
+        VStack(spacing: 0) {
+            header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 10) {
+                    let list = items
+                    let groups = Dictionary(grouping: list, by: { $0.group ?? "" })
+                    if category == .projects && groups.count > 1 {
+                        // One block per project folder: its build outputs together, last use shown once.
+                        ForEach(groups.keys.sorted { (groups[$0] ?? []).reduce(0) { $0 + $1.bytes } > (groups[$1] ?? []).reduce(0) { $0 + $1.bytes } }, id: \.self) { g in
+                            let rows = groups[g] ?? []
+                            HStack {
+                                Text(FSPath.tilde(g)).font(.callout.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                                if let used = rows.compactMap(\.lastUsed).max() {
+                                    Text(tr("last used %1$@", AgeFormat.string(used))).font(.caption).foregroundStyle(.white.opacity(0.5))
+                                }
+                                Spacer()
+                                Text(ByteFormat.string(rows.reduce(0) { $0 + $1.bytes })).monospacedDigit().foregroundStyle(.white.opacity(0.7))
                             }
-                            Spacer()
-                            Text(ByteFormat.string(rows.reduce(0) { $0 + $1.bytes })).monospacedDigit()
+                            .padding(.top, 8)
+                            ForEach(rows) { card($0) }
                         }
+                    } else {
+                        ForEach(list) { card($0) }
+                    }
+                    if list.isEmpty {
+                        Text(model.scanning ? tr("Looking…") : tr("Nothing here.")).foregroundStyle(.white.opacity(0.5)).padding(.top, 30)
                     }
                 }
-            } else {
-                ForEach(list) { row($0).tag($0.id) }
+                .padding(.horizontal, 28).padding(.bottom, 20)
             }
+            footer
         }
     }
 
-    func groupOrder(_ groups: [String: [CleanItem]]) -> [String] {
-        groups.keys.sorted { a, b in
-            switch sort {
-            case .size: return (groups[a] ?? []).reduce(0) { $0 + $1.bytes } > (groups[b] ?? []).reduce(0) { $0 + $1.bytes }
-            case .lastUsed: return ((groups[a] ?? []).compactMap(\.lastUsed).max() ?? .distantFuture) < ((groups[b] ?? []).compactMap(\.lastUsed).max() ?? .distantFuture)
-            case .name: return a.localizedStandardCompare(b) == .orderedAscending
-            }
-        }
-    }
-
-    func row(_ i: CleanItem) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: model.selected.contains(i.id) ? "checkmark.square.fill" : "square")
-                .foregroundStyle(i.cleanable ? (model.selected.contains(i.id) ? Color.accentColor : .secondary) : Color.secondary.opacity(0.4))
-                .onTapGesture { if i.cleanable { model.toggle(i) } }
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(i.title).lineLimit(1)
-                    SafetyTag(safety: i.safety, info: i.paths.isEmpty)
-                }
-                Text(i.blocked ?? i.detail).font(.caption).foregroundStyle(i.blocked != nil ? Color.orange : .secondary).lineLimit(1)
+    var header: some View {
+        let selected = model.selectedItems.filter { $0.category == category }
+        return HStack(spacing: 14) {
+            IconTile(symbol: DiskStyle.icon(category), color: DiskStyle.tint(category), size: 44)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(category.title).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                Text(tr("%1$@ · %2$@ selected", ByteFormat.string(model.report?.bytes(in: category) ?? 0),
+                        ByteFormat.string(selected.reduce(0) { $0 + $1.bytes })))
+                    .font(.callout).foregroundStyle(.white.opacity(0.6))
             }
             Spacer()
-            if let used = i.lastUsed {
-                Text(AgeFormat.string(used)).font(.caption).foregroundStyle(.secondary).frame(width: 80, alignment: .trailing)
-            }
-            Text(ByteFormat.string(model.selectedItems.first { $0.id == i.id }?.bytes ?? i.bytes))
-                .monospacedDigit().frame(width: 80, alignment: .trailing)
+            TextField(tr("Search"), text: $search).textFieldStyle(.roundedBorder).frame(width: 180)
         }
-        .padding(.vertical, 2)
+    }
+
+    func card(_ i: CleanItem) -> some View {
+        let ticked = model.selected.contains(i.id)
+        let expanded = open.contains(i.id)
+        let (tag, tagColor) = DiskStyle.safety(i.safety, info: i.paths.isEmpty)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Image(systemName: ticked ? "checkmark.circle.fill" : "circle").font(.title3)
+                    .foregroundStyle(i.cleanable ? (ticked ? Color.pink : .white.opacity(0.5)) : .white.opacity(0.2))
+                    .onTapGesture { if i.cleanable { model.toggle(i) } }
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(i.title).font(.system(size: 14, weight: .medium)).foregroundStyle(.white).lineLimit(1)
+                        Text(tag).font(.system(size: 10, weight: .semibold)).foregroundStyle(tagColor)
+                            .padding(.horizontal, 6).padding(.vertical, 1).background(Capsule().fill(tagColor.opacity(0.18)))
+                    }
+                    Text(i.blocked ?? [i.detail, i.lastUsed.map { AgeFormat.string($0) }].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
+                        .font(.caption).foregroundStyle(i.blocked != nil ? Color.orange : .white.opacity(0.55)).lineLimit(1).truncationMode(.middle)
+                }
+                Spacer()
+                Text(ByteFormat.string(model.selectedItems.first { $0.id == i.id }?.bytes ?? i.bytes))
+                    .font(.system(size: 15, weight: .semibold).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.4))
+                    .rotationEffect(.degrees(expanded ? 90 : 0))
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { if expanded { open.remove(i.id) } else { open.insert(i.id) } }
+            if expanded { DiskItemDetail(model: model, item: i) }
+        }
+        .padding(14)
+        .glass(radius: 14, highlighted: ticked)
         .contextMenu {
             Button(tr("Show in Finder")) { model.reveal(i) }.disabled(i.paths.isEmpty)
             Button(tr("Copy ID")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(i.id, forType: .string) }
@@ -259,29 +428,22 @@ struct DiskCleanupView: View {
     }
 
     var footer: some View {
-        HStack {
-            Button(tr("None")) { model.selected = [] }.disabled(model.selected.isEmpty)
-            Button(tr("Safe")) { model.selectSafe() }
+        HStack(spacing: 10) {
+            Button(tr("Safe")) {
+                let ids = (model.report?.items ?? []).filter { $0.category == category && $0.cleanable && $0.safety == .safe }.map(\.id)
+                model.selected.formUnion(ids)
+            }.buttonStyle(PillButtonStyle())
+            Button(tr("None")) {
+                model.selected.subtract((model.report?.items ?? []).filter { $0.category == category }.map(\.id))
+            }.buttonStyle(PillButtonStyle())
             Spacer()
-            Text(trCount(model.selectedItems.count, "%1$@ item selected", "%1$@ items selected")).foregroundStyle(.secondary)
-            Button(tr("Clean %1$@", ByteFormat.string(model.selectedBytes))) { confirming = true }
-                .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
+            Text(trCount(model.selectedItems.count, "%1$@ item selected", "%1$@ items selected")).foregroundStyle(.white.opacity(0.6))
+            Button(tr("Clean %1$@", ByteFormat.string(model.selectedBytes)), action: clean)
+                .buttonStyle(PillButtonStyle(prominent: true, color: .pink))
                 .disabled(model.selectedItems.isEmpty || model.cleaning || model.scanning)
         }
-        .padding(10)
-    }
-
-    static func icon(_ c: CleanCategory) -> String {
-        switch c {
-        case .aiSessions: return "bubble.left.and.text.bubble.right"
-        case .aiModels: return "cpu"
-        case .aiCaches: return "sparkles"
-        case .devCaches: return "hammer"
-        case .xcode: return "swift"
-        case .projects: return "folder"
-        case .browsers: return "globe"
-        case .system: return "gearshape"
-        }
+        .padding(.horizontal, 28).padding(.vertical, 14)
+        .background(Color.black.opacity(0.18))
     }
 }
 
@@ -292,68 +454,61 @@ enum FSPath {
     }
 }
 
-/// Right column: everything about one item.
+/// Inside an expanded card: why it can go, and every session or path.
 struct DiskItemDetail: View {
     @ObservedObject var model: DiskModel
     let item: CleanItem
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(item.title).font(.title3.weight(.semibold)).textSelection(.enabled)
-                    SafetyTag(safety: item.safety, info: item.paths.isEmpty)
+        VStack(alignment: .leading, spacing: 8) {
+            if let n = item.note { Text(n).font(.callout).foregroundStyle(.white.opacity(0.75)).fixedSize(horizontal: false, vertical: true) }
+            if let h = item.hint { Text(tr("Run: %1$@", h)).font(.callout.monospaced()).foregroundStyle(.white.opacity(0.8)).textSelection(.enabled) }
+            Text(safetyText).font(.caption).foregroundStyle(.white.opacity(0.5)).fixedSize(horizontal: false, vertical: true)
+            if let parts = item.parts, parts.count > 1 {
+                HStack {
+                    Text(trCount(parts.count, "%1$@ session", "%1$@ sessions")).font(.callout.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
                     Spacer()
-                    Text(ByteFormat.string(item.bytes)).font(.title3.monospacedDigit())
+                    Button(tr("All")) { model.excluded[item.id] = nil; if !model.selected.contains(item.id) { model.toggle(item) } }
+                        .buttonStyle(PillButtonStyle())
+                    Button(tr("None")) { model.selected.remove(item.id); model.excluded[item.id] = nil }.buttonStyle(PillButtonStyle())
                 }
-                Text(item.detail).foregroundStyle(.secondary).textSelection(.enabled)
-                if let b = item.blocked { Label(b, systemImage: "hand.raised").foregroundStyle(.orange) }
-                if let n = item.note { Text(n).fixedSize(horizontal: false, vertical: true) }
-                if let h = item.hint { Text(tr("Run: %1$@", h)).font(.callout.monospaced()).textSelection(.enabled) }
-                Text(safetyText).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-
-                if let parts = item.parts, parts.count > 1 {
-                    HStack {
-                        Text(trCount(parts.count, "%1$@ session", "%1$@ sessions")).font(.headline)
-                        Spacer()
-                        Button(tr("All")) { model.excluded[item.id] = nil; if !model.selected.contains(item.id) { model.toggle(item) } }
-                        Button(tr("None")) { model.selected.remove(item.id); model.excluded[item.id] = nil }
-                    }
+                // Long lists (a project with 1 600 sessions) stay scrollable inside the card.
+                ScrollView {
                     LazyVStack(alignment: .leading, spacing: 4) {
                         ForEach(parts) { p in
                             let on = model.isTicked(p, of: item)
                             HStack(spacing: 8) {
-                                Image(systemName: on ? "checkmark.square.fill" : "square")
-                                    .foregroundStyle(on ? Color.accentColor : .secondary)
+                                Image(systemName: on ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(on ? Color.pink : .white.opacity(0.45))
                                     .onTapGesture { model.toggle(p, of: item) }
-                                Text(p.title).lineLimit(1)
+                                Text(p.title).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
                                 Spacer()
-                                if let d = p.lastUsed { Text(AgeFormat.string(d)).font(.caption).foregroundStyle(.secondary) }
-                                Text(ByteFormat.string(p.bytes)).font(.callout.monospacedDigit()).frame(width: 70, alignment: .trailing)
+                                if let d = p.lastUsed { Text(AgeFormat.string(d)).font(.caption).foregroundStyle(.white.opacity(0.45)) }
+                                Text(ByteFormat.string(p.bytes)).font(.callout.monospacedDigit()).foregroundStyle(.white.opacity(0.7))
+                                    .frame(width: 70, alignment: .trailing)
                             }
-                            .contextMenu {
-                                Button(tr("Show in Finder")) {
-                                    NSWorkspace.shared.activateFileViewerSelecting(p.paths.prefix(20).map { URL(fileURLWithPath: $0) })
-                                }
-                            }
+                            .font(.callout)
                         }
                     }
-                } else if !item.paths.isEmpty {
-                    Text(trCount(item.paths.count, "%1$@ path", "%1$@ paths")).font(.headline)
-                    ForEach(item.paths.prefix(200), id: \.self) { p in
-                        HStack {
-                            Text(FSPath.tilde(p)).font(.caption.monospaced()).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
-                            Spacer()
-                            Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) } label: {
-                                Image(systemName: "magnifyingglass")
-                            }.buttonStyle(.borderless).help(tr("Show in Finder"))
-                        }
+                }
+                .frame(maxHeight: 260)
+            } else if !item.paths.isEmpty {
+                ForEach(item.paths.prefix(12), id: \.self) { p in
+                    HStack {
+                        Text(FSPath.tilde(p)).font(.caption.monospaced()).foregroundStyle(.white.opacity(0.65))
+                            .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
+                        Spacer()
+                        Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) } label: {
+                            Image(systemName: "magnifyingglass")
+                        }.buttonStyle(.borderless).foregroundStyle(.white.opacity(0.6)).help(tr("Show in Finder"))
                     }
-                    if item.paths.count > 200 { Text(tr("… and %1$@ more", String(item.paths.count - 200))).font(.caption).foregroundStyle(.secondary) }
+                }
+                if item.paths.count > 12 {
+                    Text(tr("… and %1$@ more", String(item.paths.count - 12))).font(.caption).foregroundStyle(.white.opacity(0.45))
                 }
             }
-            .padding(16)
         }
+        .padding(.leading, 34)
     }
 
     var safetyText: String {

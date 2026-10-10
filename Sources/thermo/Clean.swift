@@ -234,7 +234,8 @@ struct CleanCommand {
     /// The saved report when it is under 15 minutes old, made with the same age limit, and covers
     /// what `selectors` ask for; the picked items come back without paths that are gone.
     func reusableReport(for selectors: [String]) throws -> (report: ScanReport, picked: [CleanItem])? {
-        guard let r = ScanReportCache.load(maxAge: 15 * 60), r.olderThanDays == (try options()).olderThanDays else { return nil }
+        guard let r = ScanReportCache.load(maxAge: 15 * 60), r.olderThanDays == (try options()).olderThanDays,
+              r.language == L10n.current.rawValue else { return nil }
         let covered = Set(r.categories ?? [])
         for s in selectors.map({ $0.lowercased() }) {
             let needs: Set<CleanCategory> = ["all", "safe"].contains(s) ? Set(CleanCategory.allCases)

@@ -132,6 +132,8 @@ public struct ScanReport: Codable, Sendable {
     /// What the scan covered, so a saved report is only reused for selections it can answer.
     public var categories: [CleanCategory]?
     public var olderThanDays: Int?
+    /// Titles and notes are written in this language at scan time ("en", "zh-Hans").
+    public var language: String?
 
     public init(items: [CleanItem], denied: [String], started: Date, duration: TimeInterval, claudeCleanupDays: Int? = nil,
                 cancelled: Bool = false) {
@@ -141,7 +143,7 @@ public struct ScanReport: Codable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays
+        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays, language
     }
 
     public init(from decoder: Decoder) throws {
@@ -154,6 +156,7 @@ public struct ScanReport: Codable, Sendable {
         cancelled = try c.decodeIfPresent(Bool.self, forKey: .cancelled) ?? false
         categories = try c.decodeIfPresent([CleanCategory].self, forKey: .categories)
         olderThanDays = try c.decodeIfPresent(Int.self, forKey: .olderThanDays)
+        language = try c.decodeIfPresent(String.self, forKey: .language)
     }
 
     public var totalBytes: Int64 { items.filter(\.cleanable).reduce(0) { $0 + $1.bytes } }

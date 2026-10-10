@@ -226,11 +226,24 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
 }
 /// `Thermo --disk`: just the Disk Cleanup window — no menu bar item, no fan helper; quits when closed.
 if CommandLine.arguments.contains("--disk") {
-    app.setActivationPolicy(.regular)
+    let args = CommandLine.arguments
+    // `--offscreen` (verification screenshots): no Dock icon, no window on the user's screen.
+    app.setActivationPolicy(args.contains("--offscreen") ? .accessory : .regular)
     let disk = MainActor.assumeIsolated { DiskModel() }
+    // `--page home|overview|<category>`, `--all` scans everything instead of just AI.
+    let page = args.firstIndex(of: "--page").flatMap { $0 + 1 < args.count ? DiskPage(argument: args[$0 + 1]) : nil }
+    if args.contains("--all") { MainActor.assumeIsolated { disk.scope = .all } }
     // After launch finishes, or the app cannot come to the front.
-    DispatchQueue.main.async { MainActor.assumeIsolated { DiskWindow.show(disk) } }
-    NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { _ in exit(0) }
+    DispatchQueue.main.async {
+        MainActor.assumeIsolated {
+            DiskWindow.show(disk, page: page)
+            if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count { DiskWindow.snapshotWhenReady(disk, to: args[i + 1]) }
+        }
+    }
+    // Only this window closing ends the app (not sheets, menus or alerts).
+    NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { n in
+        if (n.object as? NSWindow) === DiskWindow.window { exit(0) }
+    }
     app.run()
 }
 /// `Thermo --agents`: just the AI agent diagnostics window — no menu bar item, no fan helper; quits when closed.

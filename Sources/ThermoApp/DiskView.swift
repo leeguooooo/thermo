@@ -53,6 +53,20 @@ final class DiskModel: ObservableObject {
         items.sorted { (order[$0.category]!, -$0.bytes, $0.id) < (order[$1.category]!, -$1.bytes, $1.id) }
     }
 
+    /// Shows the last finished scan (CLI or app) when it is under an hour old and covers the
+    /// current scope, so the window opens with results instead of minutes of scanning.
+    @discardableResult
+    func loadSaved() -> Bool {
+        // The CLI scans in English; a report in another language would show the wrong titles here.
+        guard report == nil, !scanning, let r = ScanReportCache.load(maxAge: 3600),
+              r.language == L10n.current.rawValue else { return false }
+        let wanted = scope == .ai ? Set(CleanCategory.allCases.filter(\.isAI)) : Set(CleanCategory.allCases)
+        guard wanted.isSubset(of: Set(r.categories ?? [])) else { return false }
+        report = r
+        selected = Set(r.items.filter { $0.cleanable && $0.safety == .safe }.map(\.id))
+        return true
+    }
+
     func scan() {
         guard !scanning else { return }
         Monitor.requestNotificationPermission()
