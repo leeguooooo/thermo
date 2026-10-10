@@ -40,6 +40,7 @@ extension Severity {
 
 extension DoctorReport {
     public var headline: String {
+        if !hasResults { return tr("no agent items found") }
         let e = count(.error), w = count(.warning)
         if e + w == 0 { return tr("no problems found") }
         let errors = e == 1 ? tr("1 error") : tr("%1$@ errors", String(e))

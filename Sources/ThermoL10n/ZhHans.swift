@@ -2,6 +2,11 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "No items to check": "暂无可检查项目",
+    "Notes available": "有检查说明",
+    "no agent items found": "未找到可检查的 AI agent 项目",
+    "No agent items found": "未找到可检查的 AI agent 项目",
+    "Nothing to inspect yet. Configure your AI agent, then check again.": "目前没有可检查的项目。配置好 AI agent 后，可以重新检查。",
     "Installed in %1$@, but disabled. Enable the plugin before using it.": "已安装到 %1$@，但尚未启用，请先在插件设置中启用。",
     "The command finished, but installation in %1$@ could not be confirmed. Check its plugin settings.": "命令已结束，但未能确认 %1$@ 中的安装状态，请检查插件设置。",
     "The command finished. Checking installation…": "命令已结束，正在确认安装状态…",

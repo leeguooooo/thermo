@@ -61,7 +61,7 @@ struct AgentsCommand {
         }
 
         let hidden = report.count(.info)
-        let summary = report.count(.error) > 0 ? style.red(report.headline) : report.count(.warning) > 0 ? style.yellow(report.headline) : style.green(report.headline)
+        let summary = !report.hasResults ? style.dim(report.headline) : report.count(.error) > 0 ? style.red(report.headline) : report.count(.warning) > 0 ? style.yellow(report.headline) : style.green(report.headline)
         lines.append(summary + (all || hidden == 0 ? "" : style.dim("  (+\(hidden) notes; --all to show)")))
         out(lines)
         if report.count(.error) > 0 { exit(1) }

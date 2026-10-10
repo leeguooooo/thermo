@@ -356,11 +356,11 @@ struct MainSidebar: View {
                     }
 
                     header(tr("AI Agent Diagnostics"))
-                    row(.agents(.home), tr("Smart Check"), "stethoscope", .purple, trailing: nil, badge: agents.problems.count)
+                    row(.agents(.home), tr("Smart Check"), "stethoscope", .purple, trailing: nil, badge: agents.report?.problemCount ?? 0)
                     if page.isAgents {
                         ForEach(Area.allCases, id: \.self) { a in
                             row(.agents(.area(a)), AgentStyle.title(a), AgentStyle.icon(a), AgentStyle.tint(a), trailing: nil,
-                                badge: agents.report?.items.filter { $0.area == a && $0.isProblem }.count ?? 0, indent: true)
+                                badge: agents.report?.problemCount(in: a) ?? 0, indent: true)
                         }
                     }
                 }

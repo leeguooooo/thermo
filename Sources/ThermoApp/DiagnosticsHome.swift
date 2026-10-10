@@ -41,7 +41,7 @@ struct DiagnosticsHome: View {
     }
 
     @ViewBuilder var hero: some View {
-        let problems = scanner.problems.count
+        let problems = scanner.report?.problemCount ?? 0
         let fixable = scanner.bulkFixes.count
         if let b = scanner.batch, !b.finished {
             HeroStatus(symbol: b.verifying ? "stethoscope" : "wrench.and.screwdriver.fill", color: .blue,
@@ -52,6 +52,13 @@ struct DiagnosticsHome: View {
             HeroStatus(symbol: "stethoscope", color: Color(red: 0.45, green: 0.4, blue: 1.0), title: tr("Checking your AI agents…"),
                        subtitle: tr("Claude Code, Codex, Cursor and Gemini: hooks, tools, plugins, skills and what runs in the background."),
                        spinning: true)
+        } else if scanner.report?.hasResults == false {
+            VStack(spacing: 26) {
+                HeroStatus(symbol: "magnifyingglass", color: .purple, title: tr("No agent items found"),
+                           subtitle: tr("Nothing to inspect yet. Configure your AI agent, then check again."),
+                           spinning: scanner.scanning)
+                BigRoundButton(title: tr("Check Again"), color: .purple, busy: scanner.scanning) { scanner.scan() }
+            }
         } else if problems == 0 {
             VStack(spacing: 26) {
                 HeroStatus(symbol: "checkmark", color: .green, title: tr("Everything looks good"),
@@ -81,12 +88,16 @@ struct DiagnosticsHome: View {
             ForEach(Area.allCases, id: \.self) { a in
                 let items = r.items.filter { $0.area == a }
                 let bad = items.filter(\.isProblem)
+                let problems = r.problemCount(in: a)
+                let general = r.general(a)
+                let empty = items.isEmpty && general.isEmpty
+                let worst = (bad.compactMap(\.severity) + general.map(\.severity)).min()
                 let fixable = bad.filter { i in i.actions.contains { $0.kind == .fix && $0.bulk } }.count
                 CategoryCard(symbol: AgentStyle.icon(a), color: AgentStyle.tint(a), title: AgentStyle.title(a),
-                             status: bad.isEmpty ? tr("%1$@ checked, all fine", String(items.count))
+                             status: empty ? tr("No items to check") : problems == 0 && items.isEmpty ? tr("Notes available") : problems == 0 ? tr("%1$@ checked, all fine", String(items.count))
                                  : fixable > 0 ? tr("%1$@ fixable in one click", String(fixable)) : tr("needs your decision"),
-                             statusColor: bad.isEmpty ? .green : AgentStyle.color(bad.compactMap(\.severity).min()),
-                             count: bad.count) { open(a) }
+                             statusColor: empty || (problems == 0 && items.isEmpty) ? .secondary : problems == 0 ? .green : AgentStyle.color(worst),
+                             count: problems) { open(a) }
             }
         }
     }
@@ -110,19 +121,33 @@ struct AreaPage: View {
     var body: some View {
         let problems = items.filter(\.isProblem)
         let rest = items.filter { !$0.isProblem }
+        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        let notes = (scanner.report?.general(area) ?? []).filter {
+            query.isEmpty || [$0.subject, $0.message, $0.fix ?? "", $0.source ?? "", $0.agent].joined(separator: " ").localizedCaseInsensitiveContains(query)
+        }
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header(problems)
                 if !scanner.history.isEmpty { AgentActivity(scanner: scanner) }
-                if problems.isEmpty {
+                if problems.isEmpty && !notes.contains(where: { $0.severity == .error || $0.severity == .warning }) {
                     HStack(spacing: 10) {
                         let checking = scanner.scanning && scanner.report == nil
-                        let emptySearch = items.isEmpty && !search.isEmpty
-                        Image(systemName: checking ? "hourglass" : emptySearch ? "magnifyingglass" : "checkmark.seal.fill")
-                            .font(.title2).foregroundStyle(checking || emptySearch ? Color.secondary : Color.green)
-                        Text(scanner.scanning && scanner.report == nil ? tr("Checking your AI agents…") : items.isEmpty && !search.isEmpty ? tr("No matching items") : tr("Nothing to fix here.")).font(.system(size: 15, weight: .medium)).foregroundStyle(.white.opacity(0.85))
+                        let empty = items.isEmpty
+                        Image(systemName: checking ? "hourglass" : empty ? "magnifyingglass" : "checkmark.seal.fill")
+                            .font(.title2).foregroundStyle(checking || empty ? Color.secondary : Color.green)
+                        Text(checking ? tr("Checking your AI agents…") : empty && !query.isEmpty ? tr("No matching items") : empty ? tr("No items to check") : tr("Nothing to fix here.")).font(.system(size: 15, weight: .medium)).foregroundStyle(.white.opacity(0.85))
                     }
                     .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass()
+                }
+                ForEach(Array(notes.enumerated()), id: \.offset) { _, finding in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(finding.subject, systemImage: finding.severity == .error ? "xmark.octagon" : finding.severity == .warning ? "exclamationmark.triangle" : "info.circle")
+                            .font(.headline).foregroundStyle(AgentStyle.color(finding.severity))
+                        Text(finding.message).textSelection(.enabled)
+                        if let fix = finding.fix { Text(fix).font(.callout).foregroundStyle(.secondary).textSelection(.enabled) }
+                        if let source = finding.source { Text(source).font(.caption).foregroundStyle(.secondary).textSelection(.enabled) }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(18).glass()
                 }
                 ForEach(problems) { ProblemCard(scanner: scanner, item: $0) }
                 if !rest.isEmpty {

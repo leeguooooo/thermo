@@ -84,12 +84,37 @@ public struct DoctorReport: Codable, Sendable {
     public var sessions: Int
     public var language: String? = nil
 
+    public var hasResults: Bool { !items.isEmpty || !findings.isEmpty || !processes.isEmpty }
+
+    /// Count each affected item once, plus problems that belong to the whole check.
+    public var problemCount: Int {
+        Self.problemCount(items: items, findings: findings)
+    }
+
+    public func problemCount(in area: Area) -> Int {
+        Self.problemCount(items: items.filter { $0.area == area }, findings: findings.filter { $0.area == area })
+    }
+
+    private static func problemCount(items: [AgentItem], findings: [Finding]) -> Int {
+        let itemIDs = Set(items.map(\.id))
+        var affected = Set(items.filter { $0.severity == .error || $0.severity == .warning }.map(\.id))
+        var general = 0
+        for finding in findings where finding.severity == .error || finding.severity == .warning {
+            if let id = finding.item, itemIDs.contains(id) { affected.insert(id) }
+            else { general += 1 }
+        }
+        return affected.count + general
+    }
+
     public func count(_ s: Severity) -> Int { findings.filter { $0.severity == s }.count }
 
     public func findings(for item: AgentItem) -> [Finding] { findings.filter { $0.item == item.id } }
 
     /// Findings not tied to one item (e.g. "5 hooks run on every tool call").
-    public func general(_ area: Area) -> [Finding] { findings.filter { $0.area == area && $0.item == nil } }
+    public func general(_ area: Area) -> [Finding] {
+        let known = Set(items.map(\.id))
+        return findings.filter { $0.area == area && ($0.item == nil || !known.contains($0.item!)) }
+    }
 }
 
 /// Diagnostic output gets pasted into issues and chats, so nothing that looks like a credential leaves this module.
