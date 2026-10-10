@@ -272,7 +272,7 @@ enum AgentsWindow {
             w.title = "AI Agent Diagnostics"
             w.isReleasedWhenClosed = false
             w.contentViewController = NSHostingController(rootView: AgentsView(scanner: scanner, inWindow: true).padding(16)
-                .frame(minWidth: 520, minHeight: 480))
+                .frame(minWidth: 520, idealWidth: 680, minHeight: 480, idealHeight: 780))
             w.center()
             window = w
         }

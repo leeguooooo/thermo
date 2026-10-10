@@ -133,6 +133,17 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     MainActor.assumeIsolated { renderPreviews(to: CommandLine.arguments[i + 1]) }
     app.run()
 }
+/// `Thermo --agents`: just the AI agent diagnostics window — no menu bar item, no fan helper; quits when closed.
+if CommandLine.arguments.contains("--agents") {
+    app.setActivationPolicy(.regular)
+    MainActor.assumeIsolated {
+        let scanner = AgentScanner()
+        scanner.scan()
+        AgentsWindow.show(scanner)
+    }
+    NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { _ in exit(0) }
+    app.run()
+}
 let delegate = AppDelegate()
 app.delegate = delegate
 app.setActivationPolicy(.accessory)
