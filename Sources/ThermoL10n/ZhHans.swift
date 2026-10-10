@@ -482,4 +482,15 @@ let zhHans: [String: String] = [
     "scanning… %1$@": "正在扫描… %1$@",
     "%1$@ of %2$@ sessions selected": "已选 %1$@ / %2$@ 个会话",
     "Cleaning %1$@ of %2$@: %3$@": "正在清理第 %1$@ / %2$@ 项：%3$@",
+    // MARK: Disk scan control
+    "stopping…": "正在停止…",
+    "Stop": "停止",
+    "Start scan": "开始扫描",
+    "Disk scan finished": "磁盘扫描完成",
+    "%1$@ reclaimable in %2$@": "%2$@，可释放 %1$@",
+    "%1$@ item": "%1$@ 项",
+    "%1$@ items": "%1$@ 项",
+    "Scan stopped — showing what was found so far.": "扫描已停止，下面是已经找到的部分。",
+    "Scope changed — scan again to update the list.": "范围已切换，重新扫描以更新列表。",
+    "Runs at low priority; you can stop it any time and get a notification when it's done.": "以低优先级运行，可随时停止，完成后会通知你。",
 ]

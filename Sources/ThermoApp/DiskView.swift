@@ -2,8 +2,10 @@ import AppKit
 import CleanKit
 import SwiftUI
 import ThermoL10n
+import UserNotifications
 
-/// Scans in the background on demand (never at launch) and removes what the user ticks.
+/// Scans only when the user starts it (low priority, stoppable at any time), notifies
+/// when a scan finishes in the background, and removes what the user ticks.
 final class DiskModel: ObservableObject {
     enum Scope: String, CaseIterable, Identifiable {
         case ai = "AI", all = "Everything"
@@ -18,7 +20,14 @@ final class DiskModel: ObservableObject {
     @Published var selected: Set<String> = []
     /// Item id → parts (sessions) the user unticked inside a selected item.
     @Published var excluded: [String: Set<String>] = [:]
-    @Published var scope: Scope = .ai
+    @Published var scope: Scope = .ai {
+        didSet { if scope != oldValue, report != nil { stale = true } }
+    }
+    /// The scope changed since the results were found; scan again to refresh.
+    @Published private(set) var stale = false
+    /// The scan in progress, so it can be stopped.
+    private var scanner: DiskScanner?
+    @Published private(set) var stopping = false
     @Published var lastResult: String?
     @Published var error: String?
     /// While cleaning: which item is being removed, and how far along we are.
@@ -26,7 +35,7 @@ final class DiskModel: ObservableObject {
     @Published private(set) var cleaningDone = 0
     @Published private(set) var cleaningTotal = 0
 
-    private let queue = DispatchQueue(label: "dev.thermo.app.disk", qos: .utility)
+    private let queue = DispatchQueue(label: "dev.thermo.app.disk", qos: .background)
 
     /// What a clean would remove: ticked items, narrowed to the parts still ticked.
     var selectedItems: [CleanItem] {
@@ -38,8 +47,6 @@ final class DiskModel: ObservableObject {
     }
     var selectedBytes: Int64 { selectedItems.reduce(0) { $0 + $1.bytes } }
 
-    func scanIfNeeded() { if report == nil && !scanning { scan() } }
-
     static let order = Dictionary(uniqueKeysWithValues: CleanCategory.allCases.enumerated().map { ($1, $0) })
 
     static func sorted(_ items: [CleanItem]) -> [CleanItem] {
@@ -48,14 +55,19 @@ final class DiskModel: ObservableObject {
 
     func scan() {
         guard !scanning else { return }
+        Monitor.requestNotificationPermission()
         scanning = true
+        stopping = false
+        stale = false
         progress = tr("starting…")
         report = nil
         selected = []
         excluded = [:]
         var options = ScanOptions()
+        options.lowPriority = true
         if scope == .ai { options.categories = Set(CleanCategory.allCases.filter(\.isAI)) }
         let scanner = DiskScanner(options: options)
+        self.scanner = scanner
         let started = Date()
         scanner.onProgress = { [weak self] step in DispatchQueue.main.async { self?.progress = step } }
         // Results show up as each step finishes; safe ones are ticked as they arrive.
@@ -75,8 +87,30 @@ final class DiskModel: ObservableObject {
                 self.selected = self.selected.intersection(r.items.map(\.id))
                     .union(r.items.filter { $0.cleanable && $0.safety == .safe }.map(\.id))
                 self.scanning = false
+                self.stopping = false
+                self.scanner = nil
+                if !r.cancelled { self.notifyFinished(r) }
             }
         }
+    }
+
+    /// Stop the running scan; whatever was found so far stays on screen.
+    func stop() {
+        guard scanning, let scanner else { return }
+        stopping = true
+        progress = tr("stopping…")
+        scanner.cancel()
+    }
+
+    /// Tell the user a scan finished, unless they are looking at it.
+    private func notifyFinished(_ r: ScanReport) {
+        let watching = NSApp.isActive && (NSApp.keyWindow?.isVisible ?? false)
+        guard !watching, r.duration > 3 else { return }
+        let content = UNMutableNotificationContent()
+        content.title = tr("Disk scan finished")
+        content.body = r.items.isEmpty ? tr("Nothing to clean.")
+            : tr("%1$@ reclaimable in %2$@", ByteFormat.string(r.totalBytes), trCount(r.items.count, "%1$@ item", "%1$@ items"))
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "thermo.disk-scan", content: content, trigger: nil))
     }
 
     func clean() {
@@ -102,7 +136,14 @@ final class DiskModel: ObservableObject {
                 self.cleaning = false
                 self.cleaningStep = ""
                 self.lastResult = text
-                self.scan()
+                // Drop what was cleaned instead of rescanning the whole disk.
+                let cleaned = Set(items.map(\.id))
+                if var r = self.report {
+                    r.items.removeAll { cleaned.contains($0.id) }
+                    self.report = r
+                }
+                self.selected.subtract(cleaned)
+                for id in cleaned { self.excluded[id] = nil }
             }
         }
     }
@@ -153,7 +194,17 @@ struct DiskView: View {
             header
             if model.scanning, model.report != nil {
                 // Results stream in; say what is still being looked at.
-                Text(tr("scanning… %1$@", model.progress)).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(tr("scanning… %1$@", model.progress)).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                    Spacer()
+                    Button(tr("Stop")) { model.stop() }.controlSize(.small).disabled(model.stopping)
+                }
+            }
+            if let r = model.report, !model.scanning, r.cancelled {
+                Text(tr("Scan stopped — showing what was found so far.")).font(.caption2).foregroundStyle(.orange)
+            }
+            if model.stale, !model.scanning {
+                Text(tr("Scope changed — scan again to update the list.")).font(.caption2).foregroundStyle(.orange)
             }
             if let r = model.report {
                 if renderingPreview { list(r) } else { ScrollView { list(r) }.frame(height: 330) }
@@ -162,15 +213,20 @@ struct DiskView: View {
                 VStack(spacing: 6) {
                     if !renderingPreview { ProgressView().controlSize(.small) }
                     Text(model.progress).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    Button(tr("Stop")) { model.stop() }.controlSize(.small).disabled(model.stopping)
                 }
                 .frame(maxWidth: .infinity, minHeight: 120)
             } else {
-                Text(tr("Finds old AI sessions, model downloads and agent leftovers, plus the usual caches. Nothing is removed until you choose."))
-                    .font(.callout).foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 120)
+                VStack(spacing: 10) {
+                    Text(tr("Finds old AI sessions, model downloads and agent leftovers, plus the usual caches. Nothing is removed until you choose."))
+                        .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    Button(tr("Start scan")) { model.scan() }.buttonStyle(.borderedProminent)
+                    Text(tr("Runs at low priority; you can stop it any time and get a notification when it's done."))
+                        .font(.caption2).foregroundStyle(.tertiary).multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, minHeight: 120)
             }
         }
-        .onAppear { model.scanIfNeeded() }
         .sheet(isPresented: $confirming) { confirmSheet }
     }
 
@@ -225,9 +281,13 @@ struct DiskView: View {
                 Picker("", selection: $model.scope) { ForEach(DiskModel.Scope.allCases) { Text($0.label).tag($0) } }
                     .pickerStyle(.segmented).labelsHidden().frame(width: 140)
                     .disabled(model.scanning || model.cleaning)
-                    .onChange(of: model.scope) { _ in model.scan() }
-                Button { model.scan() } label: { Image(systemName: "arrow.clockwise") }
-                    .buttonStyle(.borderless).disabled(model.scanning || model.cleaning).help(tr("Scan again"))
+                if model.scanning {
+                    Button { model.stop() } label: { Image(systemName: "stop.circle") }
+                        .buttonStyle(.borderless).disabled(model.stopping).help(tr("Stop"))
+                } else {
+                    Button { model.scan() } label: { Image(systemName: "arrow.clockwise") }
+                        .buttonStyle(.borderless).disabled(model.cleaning).help(tr("Scan again"))
+                }
             }
         }
     }

@@ -44,6 +44,43 @@ final class CleanKitTests: XCTestCase {
 
     // MARK: parsing & formatting
 
+    func testCancelledScanStopsAndSaysSo() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("cancel-\(UUID().uuidString)").path
+        try FileManager.default.createDirectory(atPath: home + "/Library/Caches/big", withIntermediateDirectories: true)
+        for i in 0..<50 { FileManager.default.createFile(atPath: home + "/Library/Caches/big/f\(i)", contents: Data(count: 4096)) }
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        var o = ScanOptions(); o.home = home; o.projectRoots = []
+        let scanner = DiskScanner(options: o)
+        scanner.cancel()
+        let started = Date()
+        let r = scanner.scan()
+        XCTAssertTrue(r.cancelled)
+        XCTAssertTrue(r.items.isEmpty, "no job starts once cancelled")
+        XCTAssertLessThan(Date().timeIntervalSince(started), 2)
+        XCTAssertNil(ScanCancellation.current, "the token is cleared after the scan")
+    }
+
+    func testFinishedScanIsNotCancelled() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("done-\(UUID().uuidString)").path
+        try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        var o = ScanOptions(); o.home = home; o.projectRoots = []
+        XCTAssertFalse(DiskScanner(options: o).scan().cancelled)
+    }
+
+    func testCancelledSizeWalkStopsEarly() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("walk-\(UUID().uuidString)").path
+        try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        for i in 0..<3000 { FileManager.default.createFile(atPath: dir + "/f\(i)", contents: Data(count: 1)) }
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        let token = ScanCancellation()
+        ScanCancellation.current = token
+        defer { ScanCancellation.current = nil }
+        XCTAssertEqual(FS.size(dir).files, 3000)
+        token.cancel()
+        XCTAssertLessThan(FS.size(dir).files, 3000, "a cancelled walk returns early")
+    }
+
     func testParseDays() {
         XCTAssertEqual(parseDays("30"), 30)
         XCTAssertEqual(parseDays("2w"), 14)

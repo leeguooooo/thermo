@@ -121,10 +121,26 @@ public struct ScanReport: Codable, Sendable {
     public var duration: TimeInterval
     /// Claude Code `cleanupPeriodDays` (it prunes its own sessions after this many days; default 30).
     public var claudeCleanupDays: Int?
+    /// The scan was stopped before it finished; `items` is what had been found so far.
+    public var cancelled: Bool
 
-    public init(items: [CleanItem], denied: [String], started: Date, duration: TimeInterval, claudeCleanupDays: Int? = nil) {
+    public init(items: [CleanItem], denied: [String], started: Date, duration: TimeInterval, claudeCleanupDays: Int? = nil,
+                cancelled: Bool = false) {
         self.items = items; self.denied = denied; self.started = started; self.duration = duration
         self.claudeCleanupDays = claudeCleanupDays
+        self.cancelled = cancelled
+    }
+
+    private enum CodingKeys: String, CodingKey { case items, denied, started, duration, claudeCleanupDays, cancelled }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        items = try c.decode([CleanItem].self, forKey: .items)
+        denied = try c.decode([String].self, forKey: .denied)
+        started = try c.decode(Date.self, forKey: .started)
+        duration = try c.decode(TimeInterval.self, forKey: .duration)
+        claudeCleanupDays = try c.decodeIfPresent(Int.self, forKey: .claudeCleanupDays)
+        cancelled = try c.decodeIfPresent(Bool.self, forKey: .cancelled) ?? false
     }
 
     public var totalBytes: Int64 { items.filter(\.cleanable).reduce(0) { $0 + $1.bytes } }
@@ -141,6 +157,9 @@ public struct ScanOptions: Sendable {
     public var projectRoots: [String] = ScanOptions.defaultProjectRoots
     public var categories: Set<CleanCategory> = Set(CleanCategory.allCases)
     public var home: String = NSHomeDirectory()
+    /// Background priority: macOS throttles the scan's CPU and disk I/O so it stays out
+    /// of the way (slower). The app uses this; the CLI, where someone waits, does not.
+    public var lowPriority = false
 
     public init() {}
 

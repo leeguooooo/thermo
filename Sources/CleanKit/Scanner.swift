@@ -8,10 +8,17 @@ public final class DiskScanner: @unchecked Sendable {
     /// Called from background threads with each step's findings as soon as it finishes.
     public var onItems: (([CleanItem]) -> Void)?
 
+    /// Stops the scan at the next check; what was found so far is returned.
+    public let cancellation = ScanCancellation()
+
     public init(options: ScanOptions = ScanOptions()) { self.options = options }
+
+    public func cancel() { cancellation.cancel() }
 
     public func scan() -> ScanReport {
         let started = Date()
+        ScanCancellation.current = cancellation
+        defer { ScanCancellation.current = nil }
         let processes = ProcessTable.current(.init(cpu: false))
         let live = ClaudeSessions.live(AgentHome(home: options.home))
         let ctx = ScanContext(options: options, now: started, processes: processes,
@@ -36,7 +43,8 @@ public final class DiskScanner: @unchecked Sendable {
         jobs = jobs.filter { !$0.1.isDisjoint(with: options.categories) }
 
         let timing = ProcessInfo.processInfo.environment["THERMO_CLEAN_TIMING"] != nil
-        DispatchQueue.concurrentPerform(iterations: jobs.count) { i in
+        func runJob(_ i: Int) {
+            guard !cancellation.isCancelled else { return }
             let t0 = Date()
             let found = jobs[i].2().filter { options.categories.contains($0.category) }
             if timing { FileHandle.standardError.write(String(format: "%6.2fs %@\n", Date().timeIntervalSince(t0), jobs[i].0).data(using: .utf8)!) }
@@ -46,11 +54,19 @@ public final class DiskScanner: @unchecked Sendable {
             if !found.isEmpty { onItems?(found) }
             onProgress?(jobs[i].0)
         }
+        // At most half the cores, at utility priority, so a scan never takes the Mac over
+        // (concurrentPerform used every core).
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = max(2, ProcessInfo.processInfo.activeProcessorCount / 2)
+        queue.qualityOfService = options.lowPriority ? .background : .utility
+        for i in jobs.indices { queue.addOperation { runJob(i) } }
+        queue.waitUntilAllOperationsAreFinished()
 
         let order = Dictionary(uniqueKeysWithValues: CleanCategory.allCases.enumerated().map { ($1, $0) })
         items.sort { (order[$0.category]!, -$0.bytes, $0.id) < (order[$1.category]!, -$1.bytes, $1.id) }
         return ScanReport(items: items, denied: Array(Set(denied)).sorted(), started: started,
-                          duration: Date().timeIntervalSince(started), claudeCleanupDays: claudeCleanupDays())
+                          duration: Date().timeIntervalSince(started), claudeCleanupDays: claudeCleanupDays(),
+                          cancelled: cancellation.isCancelled)
     }
 
     func evaluate(_ rule: PathRule, ctx: ScanContext, denied: (String) -> Void) -> CleanItem? {

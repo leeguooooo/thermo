@@ -56,6 +56,7 @@ public enum FS {
     }
 
     /// Sizes a path. `trackNewest` stats modification times too (slightly slower).
+    /// Stops early (partial size) when the running scan is cancelled.
     public static func size(_ path: String, trackNewest: Bool = false) -> TreeSize {
         var r = TreeSize()
         var st = stat()
@@ -77,7 +78,10 @@ public enum FS {
             defer { free(argv[0]) }
             guard let fts = fts_open(&argv, opts, nil) else { return }
             defer { fts_close(fts) }
+            var visited = 0
             while let ent = fts_read(fts) {
+                visited += 1
+                if visited & 0x3FF == 0, ScanCancellation.current?.isCancelled == true { break }
                 let info = Int32(ent.pointee.fts_info)
                 switch info {
                 case FTS_DNR, FTS_ERR, FTS_NS:
@@ -234,4 +238,30 @@ enum Shell {
     }
 
     static func quote(_ s: String) -> String { "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'" }
+}
+
+
+/// Lets a running scan be stopped. `current` is the scan in progress in this process
+/// (one at a time); the deep size walks check it every 1024 entries.
+public final class ScanCancellation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+
+    public init() {}
+
+    public var isCancelled: Bool {
+        lock.lock(); defer { lock.unlock() }
+        return cancelled
+    }
+
+    public func cancel() {
+        lock.lock(); cancelled = true; lock.unlock()
+    }
+
+    private static let currentLock = NSLock()
+    nonisolated(unsafe) private static var _current: ScanCancellation?
+    public static var current: ScanCancellation? {
+        get { currentLock.lock(); defer { currentLock.unlock() }; return _current }
+        set { currentLock.lock(); _current = newValue; currentLock.unlock() }
+    }
 }
