@@ -88,7 +88,8 @@ public enum HelperSelfUpdate {
     /// `team`. Every check runs on the root-owned staged copy that would actually run.
     public static func update(from source: String, to installed: String, team: String, current: String) -> Outcome {
         let fm = FileManager.default
-        guard let src = acceptableSource(source) else { return .unchanged }
+        // Reported (once per reason by the helper) so a slow update shows where the time went.
+        guard let src = acceptableSource(source) else { return .rejected("\(source) is not usable right now (missing, a link, or not in Applications)") }
         guard !fm.contentsEqual(atPath: src, andPath: installed) else { return .unchanged }
         let staged = installed + ".new"
         try? fm.removeItem(atPath: staged)
@@ -98,7 +99,9 @@ public enum HelperSelfUpdate {
         guard satisfies(staged, team: team) else { return .rejected("\(src) is not signed by team \(team)") }
         // No downgrades: an older signed helper could bring back a fixed bug.
         guard let v = version(of: staged) else { return .rejected("\(src) did not report a version") }
-        guard v.compare(current, options: .numeric) == .orderedDescending else { return .unchanged }
+        guard v.compare(current, options: .numeric) == .orderedDescending else {
+            return .rejected("\(src) is version \(v), not newer than \(current)")
+        }
         return rename(staged, installed) == 0 ? .updated(v) : .rejected("could not replace \(installed)")
     }
 }

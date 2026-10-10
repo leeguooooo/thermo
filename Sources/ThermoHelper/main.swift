@@ -222,6 +222,10 @@ if let i = CommandLine.arguments.firstIndex(of: "--source"), i + 1 < CommandLine
     t.schedule(deadline: .now() + 5, repeating: 30, leeway: .seconds(5))
     t.setEventHandler {
         switch HelperSelfUpdate.update(from: source, to: installed, team: team, current: ThermoVersion.string) {
+        case .unchanged where !lastRejection.isEmpty:
+            // The source became usable again (or matches); say so once, to time the next update.
+            log("self-update: \(source) is current")
+            lastRejection = ""
         case .unchanged:
             break
         case .rejected(let why):
