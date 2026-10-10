@@ -168,7 +168,7 @@ struct QuickFanSwitch: View {
                 .background(Capsule().fill(on ? Color.accentColor.opacity(0.85) : Color.secondary.opacity(0.15)))
                 .foregroundStyle(on ? Color.white : Color.primary)
         }
-        .buttonStyle(.plain).disabled(monitor.applyingPolicies)
+        .buttonStyle(.plain).disabled(monitor.helperBusy)
     }
 }
 
@@ -375,11 +375,11 @@ struct FansView: View {
                 ForEach(s.fans) { f in
                     // Always usable: without a helper, Apply queues the setting and starts setup.
                     FanControlCard(fan: f, policy: monitor.pendingPolicies[f.id] ?? monitor.policies[f.id] ?? .auto,
-                                   enabled: !monitor.applyingPolicies, pending: monitor.pendingPolicies[f.id] != nil,
+                                   enabled: !monitor.helperBusy, pending: monitor.pendingPolicies[f.id] != nil,
                                    policyAvailable: monitor.policiesAvailable, applying: monitor.applyingPolicies) { monitor.setPolicy($0, fan: f.id) }
                 }
                 if s.fans.count > 1 && [.running, .outdated].contains(monitor.helperState) {
-                    Button(tr("All fans to Auto")) { monitor.setPolicy(.auto, fan: -1) }.disabled(monitor.applyingPolicies)
+                    Button(tr("All fans to Auto")) { monitor.setPolicy(.auto, fan: -1) }.disabled(monitor.helperBusy)
                 }
             }
             FanChart(history: monitor.history)
@@ -392,6 +392,10 @@ struct FansView: View {
 
     /// Setup card: one button, one administrator password, done.
     @ViewBuilder var helperBanner: some View {
+        if monitor.uninstallingHelper {
+            setupCard(icon: "hourglass", title: tr("Uninstalling the fan helper…"),
+                      body: tr("Fan controls are paused while the helper is removed. Sensor readings remain available."), primary: nil)
+        } else {
         switch monitor.helperState {
         case .running:
             EmptyView()
@@ -411,6 +415,7 @@ struct FansView: View {
                       body: tr("Fan control uses a small helper that runs with system rights. It only sets fan speeds within the fan's own limits, and hands the fans back to macOS when the helper stops or the Mac gets too hot. macOS asks for your password once; updates need nothing more."),
                       primary: (tr("Allow…"), { monitor.beginSetup() }))
         }
+        }
     }
 
     func setupCard(icon: String, title: String, body: String, primary: (String, () -> Void)?, secondary: (String, () -> Void)? = nil) -> some View {
@@ -428,17 +433,17 @@ struct FansView: View {
             }
             if !renderingPreview {
                 HStack(spacing: 8) {
-                    if monitor.settingUp {
+                    if monitor.settingUp || monitor.uninstallingHelper {
                         ProgressView().controlSize(.small)
-                        Text(tr("Setting up…")).font(.caption).foregroundStyle(.secondary)
+                        Text(tr(monitor.uninstallingHelper ? "Uninstalling…" : "Setting up…")).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
                     if let secondary {
-                        Button(secondary.0, action: secondary.1).controlSize(.small).disabled(monitor.settingUp)
+                        Button(secondary.0, action: secondary.1).controlSize(.small).disabled(monitor.settingUp || monitor.helperBusy)
                     }
                     if let primary {
                         Button(primary.0, action: primary.1).controlSize(.small)
-                            .modifier(ActionButtonStyle(prominent: true)).disabled(monitor.settingUp)
+                            .modifier(ActionButtonStyle(prominent: true)).disabled(monitor.settingUp || monitor.helperBusy)
                     }
                 }
             }
@@ -649,7 +654,14 @@ struct SettingsView: View {
             section(tr("Fan helper")) {
                 row(tr("Fan helper: %1$@", helperText), last: true, labelControl: false) {
                     if [.running, .notRunning, .needsApproval, .outdated].contains(monitor.helperState) {
-                        Button(tr("Uninstall")) { monitor.uninstallHelper() }.disabled(monitor.applyingPolicies)
+                        HStack(spacing: 8) {
+                            if monitor.uninstallingHelper {
+                                ProgressView().controlSize(.small)
+                                Text(tr("Uninstalling…")).font(.caption)
+                            }
+                            Button(tr("Uninstall")) { monitor.uninstallHelper() }
+                                .disabled(monitor.helperBusy || monitor.settingUp)
+                        }
                     }
                 }
             }

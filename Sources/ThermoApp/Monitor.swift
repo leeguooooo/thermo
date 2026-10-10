@@ -60,6 +60,9 @@ final class Monitor: ObservableObject {
     @Published private(set) var policies: [Int: FanPolicy] = [:]
     @Published private(set) var policiesAvailable = false
     @Published private(set) var applyingPolicies = false
+    @Published private(set) var installingHelper = false
+    @Published private(set) var uninstallingHelper = false
+    var helperBusy: Bool { applyingPolicies || installingHelper || uninstallingHelper }
     private var policyRevision = 0
     private var lastHelperRefresh = Date.distantPast
     @Published var lastError: String?
@@ -115,7 +118,8 @@ final class Monitor: ObservableObject {
     private(set) var latest: Snapshot?
     private let helper = HelperClient()
 
-    init() {
+    init(startMonitoring: Bool = true) {
+        guard startMonitoring else { return }
         queue.async { [weak self] in self?.prepareSampler() }
         reschedule()
         refreshHelper()
@@ -224,7 +228,7 @@ final class Monitor: ObservableObject {
     private var refreshingHelper = false
 
     func refreshHelper() {
-        guard !refreshingHelper, !applyingPolicies else { return }
+        guard !refreshingHelper, !helperBusy else { return }
         refreshingHelper = true
         lastHelperRefresh = Date()
         let revision = policyRevision
@@ -233,7 +237,7 @@ final class Monitor: ObservableObject {
             // Whatever answers is running, however it was installed (Login Items or password).
             if let v = try? await helper.version() {
                 let active = try? await helper.policies()
-                guard revision == policyRevision, !applyingPolicies else { return }
+                guard revision == policyRevision, !helperBusy else { return }
                 policiesAvailable = active != nil
                 if let active { policies = active }
                 helperState = v == HelperConstants.version ? .running : .outdated
@@ -241,7 +245,7 @@ final class Monitor: ObservableObject {
                 finishSetup()
                 return
             }
-            guard revision == policyRevision, !applyingPolicies else { return }
+            guard revision == policyRevision, !helperBusy else { return }
             policiesAvailable = false
             if usesSMAppService {
                 switch daemon.status {
@@ -251,6 +255,7 @@ final class Monitor: ObservableObject {
                     // Registered, but launchd will not start it: background items for this app or
                     // developer are off in Login Items. Reinstalling cannot fix that; approving can.
                     let refused = await Task.detached { Self.launchdRefusesHelper() }.value
+                    guard revision == policyRevision, !helperBusy else { return }
                     helperState = refused ? .needsApproval : .notRunning
                 default:
                     helperState = HelperInstaller.isInstalled ? .notRunning : .notInstalled
@@ -265,7 +270,7 @@ final class Monitor: ObservableObject {
     /// that already answers is kept, and one already approved under Login Items is left to
     /// launchd; nobody is sent hunting through System Settings.
     func beginSetup() {
-        guard !settingUp else { return }
+        guard !settingUp, !helperBusy else { return }
         settingUp = true
         setupStarted = Date()
         Task { @MainActor in
@@ -302,6 +307,7 @@ final class Monitor: ObservableObject {
     }
 
     private func finishSetup() {
+        guard !helperBusy else { return }
         guard [.running, .outdated].contains(helperState) else { stopSetup(); return }
         stopSetup()
         let pending = pendingPolicies
@@ -312,12 +318,15 @@ final class Monitor: ObservableObject {
     /// The fallback that always works: one administrator prompt installs the helper as a
     /// classic launch daemon (used when Login Items approval is stuck or not available).
     func installHelperWithPassword() {
+        guard !helperBusy else { return }
         guard let bin = HelperInstaller.locateHelperBinary() else {
             lastError = tr("thermo-helper not found inside the app bundle")
             stopSetup()
             return
         }
         settingUp = true
+        installingHelper = true
+        policyRevision += 1
         setupStarted = setupStarted ?? Date()
         DispatchQueue.global(qos: .userInitiated).async {
             // The Login Items registration would claim the same launchd label.
@@ -326,9 +335,14 @@ final class Monitor: ObservableObject {
                 try HelperInstaller.install(from: bin)
                 // The old connection pointed at the job that was just replaced.
                 self.helper.reset()
-                DispatchQueue.main.async { self.lastError = nil; self.watchSetup() }
+                DispatchQueue.main.async {
+                    self.installingHelper = false
+                    self.lastError = nil
+                    self.watchSetup()
+                }
             } catch {
                 DispatchQueue.main.async {
+                    self.installingHelper = false
                     self.lastError = "\(error)".contains("cancelled") ? nil : "\(error)"
                     self.stopSetup()
                 }
@@ -358,8 +372,10 @@ final class Monitor: ObservableObject {
     /// SMAppService daemon, unregister + register makes launchd start the new one
     /// (the old helper returns the fans to auto on SIGTERM). Once per launch.
     private func restartOutdatedHelper() {
-        guard usesSMAppService, daemon.status == .enabled, !restartedOutdatedHelper else { return }
+        guard usesSMAppService, daemon.status == .enabled, !restartedOutdatedHelper, !helperBusy else { return }
         restartedOutdatedHelper = true
+        installingHelper = true
+        policyRevision += 1
         Task { @MainActor in
             do {
                 try await daemon.unregister()
@@ -369,12 +385,13 @@ final class Monitor: ObservableObject {
             }
             if daemon.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
             try? await Task.sleep(nanoseconds: 2_000_000_000)
+            installingHelper = false
             refreshHelper()
         }
     }
 
     func setPolicy(_ policy: FanPolicy, fan: Int) {
-        guard !applyingPolicies else { return }
+        guard !helperBusy else { return }
         do { try policy.validate() } catch { lastError = "\(error)"; return }
         guard [.running, .outdated].contains(helperState) else {
             pendingPolicies[fan] = policy
@@ -385,7 +402,7 @@ final class Monitor: ObservableObject {
     }
 
     private func applyPolicies(_ changes: [(Int, FanPolicy)]) {
-        guard !applyingPolicies else { return }
+        guard !helperBusy else { return }
         applyingPolicies = true
         policyRevision += 1
         Task { @MainActor in
@@ -407,20 +424,33 @@ final class Monitor: ObservableObject {
     func openLoginItemsSettings() { SMAppService.openSystemSettingsLoginItems() }
 
     func uninstallHelper() {
-        guard !applyingPolicies else { return }
+        uninstallHelper(operation: {
+            if self.usesSMAppService && self.daemon.status != .notRegistered {
+                try self.daemon.unregister()
+            }
+            if HelperInstaller.isInstalled { try HelperInstaller.uninstall() }
+        })
+    }
+
+    /// The injected operation keeps regression checks away from the real root helper.
+    func uninstallHelper(operation: @escaping () throws -> Void, finished: @escaping () -> Void = {}) {
+        guard !helperBusy, !settingUp else { return }
+        uninstallingHelper = true
         policyRevision += 1
         policiesAvailable = false
         stopSetup()
         pendingPolicies = [:]
         DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                if self.usesSMAppService && self.daemon.status != .notRegistered {
-                    try self.daemon.unregister()
-                }
-                if HelperInstaller.isInstalled { try HelperInstaller.uninstall() }
-                DispatchQueue.main.async { self.policies = [:]; self.refreshHelper() }
-            } catch {
-                DispatchQueue.main.async { self.lastError = "\(error)" }
+            var failure: String?
+            do { try operation() } catch { failure = "\(error)" }
+            let error = failure
+            DispatchQueue.main.async {
+                self.uninstallingHelper = false
+                self.lastError = error
+                self.helper.reset()
+                if error == nil { self.policies = [:] }
+                self.refreshHelper()
+                finished()
             }
         }
     }

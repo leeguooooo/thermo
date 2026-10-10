@@ -2,6 +2,9 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "Uninstalling…": "正在卸载…",
+    "Uninstalling the fan helper…": "正在卸载风扇 helper…",
+    "Fan controls are paused while the helper is removed. Sensor readings remain available.": "卸载期间暂停风扇控制，传感器读数仍可查看。",
     "Launch at login is waiting for macOS approval.": "登录时启动正在等待系统批准。",
     "Open Login Items settings": "打开登录项设置",
     "macOS could not find Thermo’s login item. Open the installed app and try again.": "系统未找到 Thermo 的登录项，请打开已安装的 App 后重试。",
