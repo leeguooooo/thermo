@@ -589,11 +589,11 @@ extension ConfigChecks {
             } else if let claude = env.resolve("claude") {
                 let step: Step = s.project.map { .run(tool: claude, args: ["mcp", "remove", s.name, "-s", "local"], cwd: $0) }
                     ?? .run(tool: claude, args: ["mcp", "remove", s.name, "-s", "user"], cwd: nil)
-                offer(.uninstall, tr("Remove server"), tr("Runs Claude Code's own command to remove %1$@.", s.name), [step])
+                offer(.uninstall, tr("Remove server"), tr("Runs Claude Code's own command to remove %1$@. Sessions already running keep it until they restart.", s.name), [step])
             }
         case "codex":
             if let codex = env.resolve("codex") {
-                offer(.uninstall, tr("Remove server"), tr("Runs Codex's own command to remove %1$@ from ~/.codex/config.toml.", s.name),
+                offer(.uninstall, tr("Remove server"), tr("Runs Codex's own command to remove %1$@ from ~/.codex/config.toml. Sessions already running keep it until they restart.", s.name),
                       [.run(tool: codex, args: ["mcp", "remove", s.name], cwd: nil)])
             }
         default:

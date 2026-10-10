@@ -173,7 +173,7 @@ extension ConfigChecks {
                             source: plist))
                 if job.keepAlive == .always {
                     offer(.fix, tr("Stop restart loop"),
-                          tr("Changes KeepAlive so launchd only restarts %1$@ after a crash, not after a clean exit, and reloads it. The plist is backed up first.", job.label),
+                          tr("Changes KeepAlive so launchd only restarts %1$@ after a crash, not after a clean exit, and reloads it. The plist is backed up first. If a tool such as brew services rewrites the plist later, run this again.", job.label),
                           repairKeepAlive)
                 }
             } else if failing, !running, job.keepAlive != .none {

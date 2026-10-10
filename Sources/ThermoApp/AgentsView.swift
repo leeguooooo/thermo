@@ -482,7 +482,7 @@ struct ItemDetail: View {
                             Text(a.title)
                         }
                     }
-                    .modifier(ActionButtonStyle(prominent: a.kind == .fix))
+                    .modifier(ActionButtonStyle(prominent: a.kind == .fix && a.bulk))  // "think first" actions get a plain button
                     .disabled(scanner.running != nil)
                 }
             }

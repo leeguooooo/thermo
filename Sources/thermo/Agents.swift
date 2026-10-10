@@ -8,8 +8,8 @@ struct AgentsCommand {
 
     func run(_ rest: [String]) throws {
         if rest.first == "list" || rest.first == "ls" { return try list(rest.count > 1 ? rest[1] : nil) }
-        if rest.first == "fix" { return try fix() }
-        guard rest.isEmpty else { throw CLIError("usage: thermo agents [list [AREA] | fix [--dry-run] [--yes]] [--all] [--json]") }
+        if rest.first == "fix" { return try fix(only: rest.count > 1 ? rest[1] : nil) }
+        guard rest.isEmpty else { throw CLIError("usage: thermo agents [list [AREA] | fix [NAME] [--dry-run] [--yes]] [--all] [--json]") }
         let report = AgentDoctor.run()
         if app.args.has("json") { print(Export.json(report)); return }
         let all = app.args.has("all")
@@ -97,10 +97,10 @@ struct AgentsCommand {
     }
 
     /// Applies the automatic fix of every item with an error or warning, after showing exactly what will run.
-    func fix() throws {
+    func fix(only name: String?) throws {
         let env = DoctorEnvironment()
         let report = AgentDoctor.run(env)
-        let plans = report.items.filter { $0.severity == .error || $0.severity == .warning }
+        let plans = report.items.filter { ($0.severity == .error || $0.severity == .warning) && (name == nil || $0.name == name) }
             .compactMap { item in item.actions.first { $0.kind == .fix && $0.bulk }.map { (item, $0) } }
         if plans.isEmpty { print("nothing to fix automatically" + (report.count(.error) + report.count(.warning) > 0 ? " (see thermo agents for manual fixes)" : "")); return }
         var lines = [style.bold("\(plans.count) fixes")]

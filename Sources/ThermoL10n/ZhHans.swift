@@ -151,8 +151,8 @@ let zhHans: [String: String] = [
     "Remove server": "删除服务器",
     "The project folder is gone, so this removes the entry from ~/.claude.json directly. The file is backed up first; Claude Code may rewrite it at the same moment, so close idle sessions first.":
         "项目目录已经不存在，只能直接从 ~/.claude.json 删除这一项。会先备份文件；Claude Code 可能同时在写这个文件，建议先关掉空闲会话。",
-    "Runs Claude Code's own command to remove %1$@.": "调用 Claude Code 自带的命令删除 %1$@。",
-    "Runs Codex's own command to remove %1$@ from ~/.codex/config.toml.": "调用 Codex 自带的命令，从 ~/.codex/config.toml 删除 %1$@。",
+    "Runs Claude Code's own command to remove %1$@. Sessions already running keep it until they restart.": "调用 Claude Code 自带的命令删除 %1$@。已在运行的会话要重启后才会断开它。",
+    "Runs Codex's own command to remove %1$@ from ~/.codex/config.toml. Sessions already running keep it until they restart.": "调用 Codex 自带的命令，从 ~/.codex/config.toml 删除 %1$@。已在运行的会话要重启后才会断开它。",
     "Removes %1$@ from %2$@. The file is backed up first.": "从 %2$@ 中删除 %1$@，先备份文件。",
     "Reinstall": "重新安装",
     "Installs %1$@ again with Claude Code.": "用 Claude Code 重新安装 %1$@。",
@@ -170,8 +170,8 @@ let zhHans: [String: String] = [
     "Stops %1$@ and moves its plist to the Trash; its program is already gone.": "停止 %1$@ 并把它的 plist 移到废纸篓；它要运行的程序已经不存在。",
     "Stops %1$@ and moves its plist to the Trash. The program itself is not deleted.": "停止 %1$@ 并把它的 plist 移到废纸篓，程序本身不删除。",
     "Stop restart loop": "停止反复重启",
-    "Changes KeepAlive so launchd only restarts %1$@ after a crash, not after a clean exit, and reloads it. The plist is backed up first.":
-        "修改 KeepAlive，让 launchd 只在 %1$@ 崩溃时重启、正常退出时不再拉起，然后重新加载。先备份 plist。",
+    "Changes KeepAlive so launchd only restarts %1$@ after a crash, not after a clean exit, and reloads it. The plist is backed up first. If a tool such as brew services rewrites the plist later, run this again.":
+        "修改 KeepAlive，让 launchd 只在 %1$@ 崩溃时重启、正常退出时不再拉起，然后重新加载。先备份 plist。如果之后 brew services 之类的工具重写了 plist，需要再执行一次。",
     "Changes KeepAlive so launchd only restarts %1$@ after a crash, not after a clean exit, reloads it, and clears %2$@. The plist is backed up first.":
         "修改 KeepAlive，让 launchd 只在 %1$@ 崩溃时重启、正常退出时不再拉起，重新加载，并清空 %2$@。先备份 plist。",
     "Clear log": "清空日志",
