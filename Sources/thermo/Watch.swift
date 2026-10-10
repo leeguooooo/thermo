@@ -65,10 +65,18 @@ struct Watch {
 
             // Wait for the next tick, reacting to keys immediately.
             let deadline = Date().addingTimeInterval(interval)
+            var dimensions = (terminalWidth(), terminalHeight())
             while interrupted == 0 {
                 let remaining = deadline.timeIntervalSinceNow
                 if remaining <= 0 { break }
-                guard let key = term.readKey(timeout: remaining) else { continue }
+                guard let key = term.readKey(timeout: remaining) else {
+                    let current = (terminalWidth(), terminalHeight())
+                    if current != dimensions {
+                        dimensions = current
+                        draw(s, model: sm.discovery.model, page: page, history: cpuHistory, interval: interval)
+                    }
+                    continue
+                }
                 switch key {
                 case "q", "Q", "\u{1B}": break loop
                 case "1", "2", "3": page = Int(key)! - 1
@@ -86,6 +94,8 @@ struct Watch {
     private func draw(_ s: Snapshot, model: String, page: Int, history: [Double], interval: Double) {
         let pages = ["overview", "sensors", "power"]
         let height = terminalHeight()
+        // Leave the last column empty to avoid terminals' pending-wrap behavior.
+        let columns = max(0, terminalWidth() - 1)
         let r = app.renderer
         var lines = r.header(s, model: model)
         lines.append("")
@@ -101,12 +111,19 @@ struct Watch {
             }
         }
         let tabs = pages.enumerated().map { i, p in i == page ? app.style.bold("[\(i + 1) \(p)]") : app.style.dim(" \(i + 1) \(p) ") }
-        let footer = tabs.joined(separator: " ") + app.style.dim(String(format: "   every %.1fs · q quit · ←/→ or 1-3 switch", interval))
+        let footer: String
+        if columns < 12 {
+            footer = app.style.dim("q quit")
+        } else if columns < 70 {
+            footer = app.style.dim("q quit · 1-3 pages")
+        } else {
+            footer = tabs.joined(separator: " ") + app.style.dim(String(format: "   every %.1fs · q quit · ←/→ or 1-3 switch", interval))
+        }
 
         lines = Array(lines.prefix(Self.contentRows(height: height)))
         var frame = "\u{1B}[H"
-        for l in lines { frame += l + "\u{1B}[K\n" }
-        frame += "\u{1B}[J\u{1B}[\(height);1H" + footer + "\u{1B}[K"
+        for l in lines { frame += TerminalLayout.fit(l, columns: columns) + "\u{1B}[K\r\n" }
+        frame += "\u{1B}[J\u{1B}[\(height);1H" + TerminalLayout.fit(footer, columns: columns) + "\u{1B}[K"
         print(frame, terminator: "")
         fflush(stdout)
     }
