@@ -641,7 +641,14 @@ struct SettingsView: View {
                 }
                 if alertsEnabled {
                     row(fahrenheit ? tr("Threshold: %1$@ °F", Settings.thresholdText(alertThreshold, fahrenheit: true)) : tr("Threshold: %1$@ °C", Settings.thresholdText(alertThreshold, fahrenheit: false)), last: true) {
-                        Stepper("", value: $alertThreshold, in: 60...105, step: 1)
+                        Stepper("", value: Binding(
+                            get: {
+                                let value = Settings.thresholdValue(alertThreshold)
+                                return fahrenheit ? value * 9 / 5 + 32 : value
+                            },
+                            set: { alertThreshold = Settings.thresholdValue(fahrenheit ? ($0 - 32) * 5 / 9 : $0) }
+                        ), in: fahrenheit ? 140...221 : 60...105, step: fahrenheit ? 1.8 : 1)
+                            .accessibilityValue(Text(Settings.thresholdText(alertThreshold, fahrenheit: fahrenheit)))
                     }
                 }
             }
