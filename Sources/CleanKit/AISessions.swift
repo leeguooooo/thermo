@@ -10,6 +10,8 @@ struct ScanContext {
     let agentDirs: Set<String>
     /// Claude Code sessions whose process is alive (`~/.claude/sessions/<pid>.json`).
     let liveClaudeSessions: Set<String>
+    /// When projects were last used, by agents, editors and git (filled by the project scan).
+    var signals = ProjectSignals()
     /// When those live Claude Code processes started (they keep using the plugin versions of that moment).
     var liveClaudeStarts: [Date] = []
 

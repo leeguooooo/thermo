@@ -384,6 +384,30 @@ final class CleanKitTests: XCTestCase {
         XCTAssertEqual(p.verdict, .hot, "throttling outranks load")
     }
 
+    func testProjectUseIgnoresParentFoldersButNotTheRepoRoot() throws {
+        let day: TimeInterval = 86400
+        try write("code/mono/.git/HEAD", "ref: refs/heads/main")
+        try write("code/mono/packages/web/package.json", "{}")
+        try write("code/solo/package.json", "{}")
+        let s = ProjectSignals(uses: [
+            home + "/code": .init(date: now, source: "Claude Code"),                 // a session in the parent folder
+            home + "/code/mono": .init(date: now.addingTimeInterval(-day), source: "Codex"),
+        ])
+        XCTAssertNil(s.lastUse(of: home + "/code/solo"), "a session in ~/code is not use of every project in it")
+        XCTAssertEqual(s.lastUse(of: home + "/code/mono/packages/web")?.source, "Codex", "the repository root counts")
+        XCTAssertEqual(s.lastUse(of: home + "/code/mono")?.source, "Codex")
+    }
+
+    func testGitActivityReadsTheLastReflogEntry() throws {
+        try write("r/.git/logs/HEAD", """
+        0000 1111 A <a@x> 1700000000 +0800	commit (initial): one
+        1111 2222 A <a@x> 1790000000 +0800	checkout: moving from main to x
+
+        """)
+        XCTAssertEqual(ProjectSignals.gitActivity(home + "/r").map { Int($0.timeIntervalSince1970) }, 1_790_000_000)
+        XCTAssertNil(ProjectSignals.gitActivity(home + "/nope"))
+    }
+
     func testCleanerRemovesOnlyListedPaths() throws {
         let a = try write("Library/Caches/tool/a")
         let keep = try write("Library/Caches/tool/keep")

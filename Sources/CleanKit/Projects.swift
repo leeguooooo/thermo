@@ -42,7 +42,7 @@ enum Projects {
 
     /// Something found by the walk; sized afterwards in parallel.
     enum Candidate {
-        case artifact(project: String, kind: String, name: String, activity: Date?)
+        case artifact(project: String, kind: String, name: String, activity: Date?, source: String?)
         case worktree(path: String, repo: String)
         case aider(project: String, paths: [String])
     }
@@ -50,7 +50,12 @@ enum Projects {
     static func scan(_ ctx: ScanContext) -> [CleanItem] {
         var found: [Candidate] = []
         var visited = Set<String>()
-        for root in ctx.options.projectRoots {
+        var ctx = ctx
+        ctx.signals = ProjectSignals.collect(home: ctx.home)
+        // The usual project folders, then every folder an agent or editor worked in (projects kept
+        // in odd places, like ~/test/x, only show up there). The home folder itself is never walked.
+        let roots = ctx.options.projectRoots + ctx.signals.roots(home: ctx.home)
+        for root in roots where root != ctx.home {
             walk(root, depth: 0, ctx: ctx, visited: &visited, into: &found)
         }
         if ProcessInfo.processInfo.environment["THERMO_CLEAN_TIMING"] != nil {
@@ -75,17 +80,20 @@ enum Projects {
 
     static func make(_ c: Candidate, ctx: ScanContext) -> CleanItem? {
         switch c {
-        case let .artifact(dir, kind, a, activity):
+        case let .artifact(dir, kind, a, activity, source):
             let p = dir + "/" + a
             let s = FS.size(p)
             guard s.bytes > 1_000_000 else { return nil }
             let stale = activity.map { $0 < ctx.staleBefore } ?? true
+            var note = activity.map { d in
+                source.map { tr("last used %1$@ (%2$@)", AgeFormat.string(d, now: ctx.now), $0) } ?? tr("last changed %1$@", AgeFormat.string(d, now: ctx.now))
+            }
+            if !stale { note = [note, tr("in use; it will have to rebuild")].compactMap { $0 }.joined(separator: tr("; ")) }
             return CleanItem(
                 id: "project/" + id(p, ctx: ctx), category: .projects,
                 title: "\((dir as NSString).lastPathComponent) · \(a)",
                 detail: FS.tilde(dir, home: ctx.home) + " · \(kind)", safety: stale ? .safe : .review,
-                bytes: s.bytes, files: s.files, lastUsed: activity, paths: [p],
-                note: stale ? nil : tr("project changed recently; it will rebuild"))
+                bytes: s.bytes, files: s.files, lastUsed: activity, paths: [p], note: note, group: dir)
         case let .worktree(wt, repo):
             return worktreeItem(wt, repo: repo, repoName: (repo as NSString).lastPathComponent, ctx: ctx)
         case let .aider(dir, paths):
@@ -110,7 +118,11 @@ enum Projects {
             }
         }
         if !matches.isEmpty {
-            let activity = projectActivity(dir, names: names, ignoring: Set(matches.flatMap(\.artifacts)))
+            // Last use: the latest of agent/editor sessions in it, git activity and its own files.
+            var activity = projectActivity(dir, names: names, ignoring: Set(matches.flatMap(\.artifacts)))
+            var source: String?
+            if let use = ctx.signals.lastUse(of: dir), use.date > (activity ?? .distantPast) { activity = use.date; source = use.source }
+            if let git = ProjectSignals.gitActivity(dir), git > (activity ?? .distantPast) { activity = git; source = "git" }
             for k in matches {
                 for a in k.artifacts where !claimed.contains(a) {
                     let p = dir + "/" + a
@@ -118,7 +130,7 @@ enum Projects {
                     // `build`/`bin`/`obj` are only build output when they are not tracked source folders.
                     if ["build", "bin", "obj", "Library", "deps"].contains(a), gitTracks(dir, a) { continue }
                     claimed.insert(a)
-                    out.append(.artifact(project: dir, kind: k.name, name: a, activity: activity))
+                    out.append(.artifact(project: dir, kind: k.name, name: a, activity: activity, source: source))
                 }
             }
         }

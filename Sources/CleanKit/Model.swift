@@ -82,14 +82,16 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     public var afterClean: [String]?
     /// Separately selectable pieces, newest first; together they make up `paths`.
     public var parts: [CleanPart]?
+    /// Items with the same group belong together (build output of one project folder).
+    public var group: String?
 
     public init(id: String, category: CleanCategory, title: String, detail: String = "", safety: Safety,
                 bytes: Int64 = 0, files: Int = 0, lastUsed: Date? = nil, paths: [String] = [],
                 note: String? = nil, blocked: String? = nil, hint: String? = nil, afterClean: [String]? = nil,
-                parts: [CleanPart]? = nil) {
+                parts: [CleanPart]? = nil, group: String? = nil) {
         self.id = id; self.category = category; self.title = title; self.detail = detail; self.safety = safety
         self.bytes = bytes; self.files = files; self.lastUsed = lastUsed; self.paths = paths
-        self.note = note; self.blocked = blocked; self.hint = hint; self.afterClean = afterClean; self.parts = parts
+        self.note = note; self.blocked = blocked; self.hint = hint; self.afterClean = afterClean; self.parts = parts; self.group = group
     }
 
     public var cleanable: Bool { blocked == nil && !paths.isEmpty && bytes > 0 }

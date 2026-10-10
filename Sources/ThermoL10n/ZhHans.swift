@@ -548,4 +548,8 @@ let zhHans: [String: String] = [
     "Fix…": "修复…",
     "Fan control uses a small helper that runs with system rights. It only sets fan speeds within the fan's own limits, and hands the fans back to macOS when Thermo quits or the Mac gets too hot. macOS asks for your password once; updates need nothing more.": "风扇控制需要一个以系统权限运行的小助手。它只在风扇自身范围内设置转速；Thermo 退出或电脑过热时，会把风扇交还给系统。只需输入一次密码，以后更新不用再管。",
     "Setting up…": "正在设置…",
+    // Project activity
+    "last used %1$@ (%2$@)": "上次使用：%1$@（%2$@）",
+    "last changed %1$@": "上次改动：%1$@",
+    "in use; it will have to rebuild": "还在用，删除后需要重新构建",
 ]
