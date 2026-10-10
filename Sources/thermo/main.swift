@@ -28,8 +28,13 @@ COMMANDS
   agents                     diagnose AI agents: hooks, MCP servers, plugins,
                              skills, launch agents and leaked processes
                              (Claude Code, Codex, Cursor, Gemini; read-only)
-  agents fix [NAME]          apply the automatic fixes, or one item's (shows the plan, asks first;
+  agents fix [--dry-run]     apply every safe automatic fix (shows the plan, asks first;
                              --yes to skip the question)
+  agents show NAME           one item: problems, suggestions and numbered actions
+  agents fix|uninstall|disable NAME
+                             that action on one item (--area/--agent to narrow,
+                             --all for every match)
+  agents run NAME --action N any action listed by `agents show`
   agents list [AREA]         everything checked, each marked OK or not; AREA is
                              hooks, mcp, plugins, skills, statusline, launchd
                              or processes
