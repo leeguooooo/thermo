@@ -22,7 +22,16 @@ struct AgentsCommand {
         default: throw CLIError(Self.usage)
         }
         let report = AgentDoctor.run()
-        if app.args.has("json") { print(Export.diagnosticJSON(report)); return }
+        if app.args.has("json") {
+            print(Export.diagnosticJSON(report))
+            if report.count(.error) > 0 { exit(1) }
+            return
+        }
+        if app.args.has("csv") {
+            print(Export.diagnosticCSV(items: report.items, findings: report.findings, generated: report.generated))
+            if report.count(.error) > 0 { exit(1) }
+            return
+        }
         let all = app.args.has("all")
         let inv = report.inventory
         var lines = [
@@ -81,6 +90,10 @@ struct AgentsCommand {
         let report = AgentDoctor.run()
         let items = report.items.filter { areas.contains($0.area) }
         if app.args.has("json") { print(Export.diagnosticJSON(items)); return }
+        if app.args.has("csv") {
+            print(Export.diagnosticCSV(items: items, findings: report.findings.filter { areas.contains($0.area) }, generated: report.generated))
+            return
+        }
         var lines: [String] = []
         for area in areas {
             let rows = items.filter { $0.area == area }
@@ -151,6 +164,11 @@ struct AgentsCommand {
         if app.args.has("json") {
             struct Shown: Encodable { let item: AgentItem; let findings: [Finding] }
             print(Export.diagnosticJSON(items.map { Shown(item: $0, findings: report.findings(for: $0)) }))
+            return
+        }
+        if app.args.has("csv") {
+            let ids = Set(items.map(\.id))
+            print(Export.diagnosticCSV(items: items, findings: report.findings.filter { $0.item.map(ids.contains) == true }, generated: report.generated))
             return
         }
         var lines: [String] = []

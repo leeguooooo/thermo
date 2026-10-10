@@ -101,6 +101,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 诊断页提供「停止检查」。停止期间显示进度，检查退出后保留上次完整报告；点击「重新检查」可刷新。停止按钮只作用于只读检查，已确认的修复步骤继续执行。
 
+`agents`、`agents list`、`agents show NAME` 支持 CSV。`kind=item` 为项目，`kind=finding` 为总体说明；`findings` 和 `actions` 列保留脱敏后的 JSON，`generated` 标明本次检查时间。
+
 `settings` 的全部查询、单项查询和写入结果都支持 JSON/CSV。JSON 使用设置名到字符串值的映射，CSV 使用 `key,value` 两列，例如 `thermo settings interval --json`。
 
 菜单栏、概览、温度告警和 CLI 的“最高温度”取已命名传感器中的最高有效读数，包含存储、主板等分组。风扇曲线的 `max` 和过热安全保护仍以 CPU/GPU 温度为准。

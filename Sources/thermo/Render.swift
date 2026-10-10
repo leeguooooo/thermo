@@ -130,6 +130,36 @@ struct Renderer {
 }
 
 enum Export {
+    static func diagnosticCSV(items: [AgentItem], findings: [Finding], generated: Date) -> String {
+        struct Payload: Encodable { let items: [AgentItem]; let findings: [Finding] }
+        let safe = diagnosticJSON(Payload(items: items, findings: findings))
+        guard let object = (try? JSONSerialization.jsonObject(with: Data(safe.utf8))) as? [String: Any],
+              let itemRows = object["items"] as? [[String: Any]],
+              let findingRows = object["findings"] as? [[String: Any]] else { return "" }
+        let columns = ["kind", "generated", "id", "area", "agent", "name", "enabled", "severity", "detail", "source", "fix", "findings", "actions"]
+        let timestamp = ISO8601DateFormatter().string(from: generated)
+        func text(_ row: [String: Any], _ key: String) -> String { row[key] as? String ?? "" }
+        func jsonCell(_ value: Any) -> String {
+            guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else { return "" }
+            return String(decoding: data, as: UTF8.self)
+        }
+        var rows = [columns.joined(separator: ",")]
+        let ids = Set(itemRows.map { text($0, "id") })
+        for item in itemRows {
+            let related = findingRows.filter { text($0, "item") == text(item, "id") }
+            let values = ["item", timestamp, text(item, "id"), text(item, "area"), text(item, "agent"), text(item, "name"),
+                          (item["enabled"] as? Bool).map { $0 ? "true" : "false" } ?? "", text(item, "severity"),
+                          text(item, "detail"), text(item, "source"), "", jsonCell(related), jsonCell(item["actions"] ?? [])]
+            rows.append(values.map(csvField).joined(separator: ","))
+        }
+        for finding in findingRows where !ids.contains(text(finding, "item")) {
+            rows.append(["finding", timestamp, "", text(finding, "area"), text(finding, "agent"), text(finding, "subject"), "",
+                         text(finding, "severity"), text(finding, "message"), text(finding, "source"), text(finding, "fix"), "", ""]
+                .map(csvField).joined(separator: ","))
+        }
+        return rows.joined(separator: "\n")
+    }
+
     static func settingsCSV(_ values: [(key: String, value: String)]) -> String {
         (["key,value"] + values.map { [csvField($0.key), csvField($0.value)].joined(separator: ",") }).joined(separator: "\n")
     }
