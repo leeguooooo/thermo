@@ -87,7 +87,7 @@ public final class DiskScanner: @unchecked Sendable {
         let detail = roots.count == 1 ? ctx.tilde(roots[0]) : "\(ctx.tilde(roots[0])) and \(roots.count - 1) more"
         var note = rule.note.map { tr($0) }
         if rule.scope == .staleContents {
-            note = [note, tr("only items untouched for %1$@ days", String(ctx.options.olderThanDays))].compactMap { $0 }.joined(separator: "; ")
+            note = [note, tr("only items untouched for %1$@ days", String(ctx.options.olderThanDays))].compactMap { $0 }.joined(separator: tr("; "))
         }
         return CleanItem(id: rule.id, category: rule.category, title: tr(rule.title), detail: detail, safety: rule.safety,
                          bytes: size.bytes, files: size.files, lastUsed: size.newest, paths: paths, note: note,

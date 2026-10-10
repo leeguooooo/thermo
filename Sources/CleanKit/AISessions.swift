@@ -90,7 +90,7 @@ enum AISessions {
                 title: "\(tool) · \(g.label) · " + trCount(stale.count, "%1$@ session", "%1$@ sessions"),
                 detail: detail, safety: .review, bytes: size.bytes, files: size.files,
                 lastUsed: stale.map(\.modified).max(), paths: stale.flatMap(\.paths),
-                note: notes.isEmpty ? nil : notes.joined(separator: "; ")))
+                note: notes.isEmpty ? nil : notes.joined(separator: tr("; "))))
         }
         return out
     }
@@ -265,7 +265,7 @@ enum AISessions {
         var items = items(tool: "Codex", idPrefix: "codex-sessions", groups: groups, ctx: ctx)
         for i in items.indices {
             items[i].note = [items[i].note, tr("Codex's thread list may still show removed threads")].compactMap { $0 }
-                .joined(separator: "; ")
+                .joined(separator: tr("; "))
         }
         return items
     }

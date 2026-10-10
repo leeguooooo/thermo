@@ -285,6 +285,7 @@ let zhHans: [String: String] = [
         "当前打开了 %1$@ 个 Claude 会话；关掉空闲的会话就能释放它们的服务器。支持 HTTP 的服务器可以改成共享一份。",
 
     // Disk
+    "; ": "；",
     // Categories
     "AI sessions": "AI 会话",
     "AI models": "AI 模型",
