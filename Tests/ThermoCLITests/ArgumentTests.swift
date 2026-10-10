@@ -1,7 +1,28 @@
 import XCTest
+import ThermoL10n
 @testable import thermo
 
 final class ArgumentTests: XCTestCase {
+    func testHistoryRangeIsFinitePositiveAndCappedConsistently() {
+        XCTAssertEqual(PulseCommand.hours("30m"), 0.5)
+        XCTAssertEqual(PulseCommand.hours(" 6H "), 6)
+        XCTAssertEqual(PulseCommand.hours("6"), 6)
+        XCTAssertEqual(PulseCommand.hours("2880m"), 24)
+        XCTAssertEqual(PulseCommand.hours("1e100m"), 24)
+        for invalid in ["0", "-1", "-1h", "nan", "inf", "infm", "1e999m", "1d", ""] {
+            XCTAssertNil(PulseCommand.hours(invalid), invalid)
+        }
+    }
+
+    func testUptimeFormattingCannotOverflowAnInteger() {
+        let previous = L10n.override
+        defer { L10n.override = previous }
+        L10n.override = .english
+        XCTAssertEqual(PulseCommand.duration(.nan), "—")
+        XCTAssertEqual(PulseCommand.duration(.infinity), "—")
+        XCTAssertEqual(PulseCommand.duration(90000), "1d 1h")
+        XCTAssertFalse(PulseCommand.duration(Double.greatestFiniteMagnitude).isEmpty)
+    }
     func testFanRPMRejectsNonfiniteNumericInputButKeepsExplicitMax() throws {
         XCTAssertEqual(try App.fanRPM("MAX"), .infinity)
         XCTAssertEqual(try App.fanRPM("min"), 0)

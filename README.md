@@ -105,6 +105,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 `pulse --csv` 和 `pulse history --csv` 使用 `kind,name,value,unit` 列，温度为 °C，交换内存为 MiB；风扇、进程和历史归因记录的 `value` 为脱敏后的 JSON，保留其明细。
 
+历史查询的 `--since` 接受正数小时、`h` 或 `m` 后缀，统一最多查询 24 小时；零、负数和非有限值会返回参数错误。
+
 `settings` 的全部查询、单项查询和写入结果都支持 JSON/CSV。JSON 使用设置名到字符串值的映射，CSV 使用 `key,value` 两列，例如 `thermo settings interval --json`。
 
 菜单栏、概览、温度告警和 CLI 的“最高温度”取已命名传感器中的最高有效读数，包含存储、主板等分组。风扇曲线的 `max` 和过热安全保护仍以 CPU/GPU 温度为准。

@@ -150,10 +150,12 @@ struct PulseCommand {
     }
 
     static func hours(_ s: String) -> Double? {
-        let t = s.lowercased()
-        if t.hasSuffix("h"), let v = Double(t.dropLast()), v > 0 { return min(v, 24) }
-        if t.hasSuffix("m"), let v = Double(t.dropLast()), v > 0 { return v / 60 }
-        return Double(t).map { min($0, 24) }
+        let t = s.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let number = t.hasSuffix("h") || t.hasSuffix("m") ? String(t.dropLast()) : t
+        guard let value = Double(number), value.isFinite, value > 0 else { return nil }
+        let hours = t.hasSuffix("m") ? value / 60 : value
+        guard hours > 0 else { return nil }
+        return min(hours, 24)
     }
 
     /// The one running program `target` names (a pid, an exact name, or a unique part of one).
@@ -246,8 +248,13 @@ struct PulseCommand {
     }
 
     static func duration(_ s: TimeInterval) -> String {
-        let d = Int(s / 86400), h = Int(s.truncatingRemainder(dividingBy: 86400) / 3600), m = Int(s / 60)
-        return d > 0 ? tr("%1$@d %2$@h", String(d), String(h)) : s >= 3600 ? tr("%1$@h", String(Int(s / 3600))) : tr("%1$@m", String(m))
+        guard s.isFinite else { return "—" }
+        let seconds = max(0, s)
+        func integer(_ value: Double) -> String { String(format: "%g", value.rounded(.towardZero)) }
+        if seconds >= 86400 {
+            return tr("%1$@d %2$@h", integer(seconds / 86400), integer(seconds.truncatingRemainder(dividingBy: 86400) / 3600))
+        }
+        return seconds >= 3600 ? tr("%1$@h", integer(seconds / 3600)) : tr("%1$@m", integer(seconds / 60))
     }
 
     func quit(_ targets: [String]) throws {
