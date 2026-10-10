@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Process diagnosis marks failed reads as incomplete; unknown launchd ownership no longer creates orphan classifications or stop-process fixes. Agent session names are excluded from end-process actions.
+
 - Browser and diagnostic subprocess calls have bounded time, cancellation checks and capped, continuously drained output. Cancelling diagnosis skips the second sample and the tab-list fallback.
 
 - Invalid battery registry values remain unknown instead of appearing as negative health/cycles or non-finite measurements. Charge is bounded to 0–100%; nested power state and unsigned discharge-current compatibility are retained.

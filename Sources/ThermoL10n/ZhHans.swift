@@ -2,6 +2,12 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "Process list": "进程列表",
+    "Process ownership": "进程归属",
+    "Status unavailable": "无法读取状态",
+    "Could not read running processes; this part of the check is incomplete.": "无法读取运行中的进程，这部分检查未完成。",
+    "Could not read launchd process ownership. Leftover-process fixes are unavailable until this check succeeds.": "无法读取 launchd 进程归属。检查成功前不提供残留进程修复。",
+    "not loaded or could not be read": "未加载或无法读取状态",
     "Charge": "电量",
     "Battery health": "电池健康度",
     "Cycle count": "循环次数",

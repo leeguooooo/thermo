@@ -1,4 +1,5 @@
 import Foundation
+import AgentCore
 import ThermoL10n
 
 struct ProcessRow: Equatable {
@@ -75,8 +76,13 @@ enum Processes {
 
 extension ConfigChecks {
     mutating func checkProcesses() -> (groups: [ProcessGroup], sessions: Int) {
-        guard let ps = env.run("/bin/ps", ["-axo", "pid=,ppid=,pcpu=,rss=,etime=,args="]) else { return ([], 0) }
-        let launchdPids = env.run("/bin/launchctl", ["print", "gui/\(env.uid)"]).map(Launchd.servicePids) ?? [:]
+        guard let ps = env.run("/bin/ps", ["-axo", "pid=,ppid=,pcpu=,rss=,etime=,args="]) else {
+            item(.processes, agent: "system", id: "process-list", name: tr("Process list"), detail: tr("Status unavailable"), source: nil)
+            defer { currentItem = nil }
+            add(Finding(.warning, .processes, agent: "system", subject: "process-list",
+                        tr("Could not read running processes; this part of the check is incomplete.")))
+            return ([], 0)
+        }
         let me = getpid()
         var serverCommands = Set<String>()
         for s in servers where !s.disabled {
@@ -86,17 +92,28 @@ extension ConfigChecks {
         }
         serverCommands.subtract(Processes.interpreters)
 
+        let rows = Processes.parse(ps).filter { $0.pid != me && Processes.isAgentRelated($0.args, serverCommands: serverCommands) }
+        if rows.isEmpty { return ([], 0) }
+        let launchd = env.run("/bin/launchctl", ["print", "gui/\(env.uid)"])
+        let ownershipKnown = launchd?.split(separator: "\n").contains { $0.trimmingCharacters(in: .whitespaces) == "services = {" } == true
+        let launchdPids = launchd.map(Launchd.servicePids) ?? [:]
+        if !ownershipKnown {
+            item(.processes, agent: "system", id: "process-ownership", name: tr("Process ownership"), detail: tr("Status unavailable"), source: nil)
+            add(Finding(.warning, .processes, agent: "system", subject: "process-ownership",
+                        tr("Could not read launchd process ownership. Leftover-process fixes are unavailable until this check succeeds.")))
+            currentItem = nil
+        }
+
         struct Member { var row: ProcessRow; var exe: String?; var detached: Bool; var stale: Bool }
         var groups: [String: [Member]] = [:]
         var sessions = 0
-        for row in Processes.parse(ps) where row.pid != me {
-            guard Processes.isAgentRelated(row.args, serverCommands: serverCommands) else { continue }
+        for row in rows {
             // proc_pidpath fails once the binary is deleted; argv[0] still names it.
             let argv0 = Shell.words(row.args).first
             let exe = env.executablePath(row.pid) ?? (argv0?.hasPrefix("/") == true ? argv0 : nil)
             let name = Processes.groupName(row.args, executable: exe)
             if name == "claude" { sessions += 1 }
-            let detached = row.ppid == 1 && launchdPids[row.pid] == nil && !(exe ?? "").contains(".app/Contents/MacOS/")
+            let detached = ownershipKnown && row.ppid == 1 && launchdPids[row.pid] == nil && !(exe ?? "").contains(".app/Contents/MacOS/")
             let stale = exe.map { $0.hasPrefix("/") && !env.exists($0) } ?? false
             groups[name, default: []].append(Member(row: row, exe: exe, detached: detached, stale: stale))
         }
@@ -113,7 +130,13 @@ extension ConfigChecks {
             summary.append(ProcessGroup(name: name, count: members.count, detached: detached.count, cpu: cpu, rssMB: rss,
                                         oldest: members.map(\.row.elapsed).max() ?? 0))
             // Never offer to end an agent session itself; only leftovers.
-            let killable = name != "claude"
+            let agentSession = members.contains { member in
+                let argv0 = (Shell.words(member.row.args).first ?? "") as NSString
+                let executable = (member.exe ?? "") as NSString
+                return ProcessTable.agentNames.contains(argv0.lastPathComponent.lowercased())
+                    || ProcessTable.agentNames.contains(executable.lastPathComponent.lowercased())
+            }
+            let killable = ownershipKnown && !agentSession
             func end(_ ms: [Member]) -> [Step] { ms.map { .kill(pid: $0.row.pid, args: $0.row.args) } }
 
             let stale = members.filter(\.stale)
@@ -156,11 +179,13 @@ extension ConfigChecks {
                          name, pids(attachedStale), parents),
                       end(attachedStale), destructive: true, bulk: false)
             }
-            for m in members where m.row.cpu >= 90 && name != "claude" && !name.hasPrefix("codex") {
+            for m in members where m.row.cpu >= 90 && !agentSession {
                 add(Finding(.warning, .processes, agent: "system", subject: name,
                             tr("pid %1$@ is using %2$@%% CPU — a busy loop in a helper heats the Mac and drains battery", String(m.row.pid), String(Int(m.row.cpu))),
                             fix: tr("sample %1$@ 5   # see what it is doing; end it if it is stuck", String(m.row.pid))))
-                offer(.fix, tr("End pid %1$@", String(m.row.pid)), tr("Sends SIGTERM to pid %1$@.", String(m.row.pid)), end([m]), destructive: true)
+                if killable {
+                    offer(.fix, tr("End pid %1$@", String(m.row.pid)), tr("Sends SIGTERM to pid %1$@.", String(m.row.pid)), end([m]), destructive: true)
+                }
             }
             // One stdio MCP server per session adds up.
             if members.count >= 10, name != "claude", !name.hasPrefix("codex"), members.contains(where: { Processes.isMCP($0.row.args, serverCommands: serverCommands) }) {
