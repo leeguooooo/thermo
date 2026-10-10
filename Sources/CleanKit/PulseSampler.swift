@@ -13,13 +13,15 @@ public final class PulseSampler {
     public init() {}
 
     public func sample() -> MachinePulse {
-        var usage = ProcessTable.usage()
+        // Everyone's processes, so the parent chain can pass root-owned `login` on its way to the
+        // terminal; only this user's processes become candidates.
+        var usage = ProcessTable.usage(uid: nil)
         var now = DispatchTime.now().uptimeNanoseconds
         if last == nil {
             // The first pass has nothing to compare with: measure over a short window.
             remember(usage, at: now)
             usleep(400_000)
-            usage = ProcessTable.usage()
+            usage = ProcessTable.usage(uid: nil)
             now = DispatchTime.now().uptimeNanoseconds
         }
         let previous = last!
@@ -28,7 +30,8 @@ public final class PulseSampler {
 
         let byPid = Dictionary(usage.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
         var candidates: [MachinePulse.Candidate] = []
-        for u in usage {
+        let me = getpid(), uid = getuid()
+        for u in usage where u.uid == uid && u.pid != me {  // Thermo is the observer, not a suspect
             let before = previous.cpu[u.pid] ?? u.cpuNanos  // new since the last pass: no share yet
             let cpu = u.cpuNanos >= before ? Double(u.cpuNanos - before) / window * 100 : 0
             guard cpu > 0.5 || u.footprintKB > 200_000 else { continue }
