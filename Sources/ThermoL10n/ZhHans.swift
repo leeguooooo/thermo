@@ -760,7 +760,7 @@ let zhHans: [String: String] = [
     "The rest is the GPU process (%1$@), images, video and drawing, and extensions.": "其余是 GPU 进程（%1$@）、图片、视频和绘制，以及扩展。",
     "The rest is the GPU process, images, video and drawing, and extensions.": "其余是 GPU 进程、图片、视频和绘制，以及扩展。",
     "Could not reach the browser's DevTools connection.": "连不上浏览器的 DevTools 连接。",
-    "chrome-use is installed but not connected to Chrome; run `chrome-use reconnect` and try again.": "chrome-use 已安装，但没连上 Chrome；运行 `chrome-use reconnect` 后再试。",
+    "chrome-use is not connected yet (after Chrome reopens, its extension takes a few seconds to reconnect). Try again shortly; if it stays like this, run `chrome-use reconnect`.": "chrome-use 尚未连接（重新打开 Chrome 后扩展需要几秒钟重连）。稍后再试；如果一直这样，运行 `chrome-use reconnect`。",
     "The browser's DevTools connection did not answer.": "浏览器的 DevTools 连接没有响应。",
     "To see memory per page (which one leaks), install chrome-use, which connects Thermo to your own Chrome: %1$@": "想看每个页面占多少内存（哪个在泄漏），请安装 chrome-use，它让 Thermo 连上你自己的 Chrome：%1$@",
     "To see memory per page, start %1$@ with --remote-debugging-port=9222.": "想看每个页面占多少内存，请用 --remote-debugging-port=9222 启动 %1$@。",

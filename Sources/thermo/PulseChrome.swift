@@ -91,7 +91,7 @@ extension PulseCommand {
             let windows = Dictionary(grouping: tabs, by: \.window)
             guard !tabs.isEmpty else { print(tr("%1$@ is not running.", browser)); return }
             lines.append(style.bold(tr("%1$@: %2$@ tabs in %3$@ windows", browser, String(tabs.count), String(windows.count))))
-            lines.append(style.dim("  " + windows.values.map { String($0.count) }.sorted { Int($0)! > Int($1)! }.joined(separator: " · ")))
+            if windows.count > 1 { lines.append(style.dim("  " + windows.values.map { String($0.count) }.sorted { Int($0)! > Int($1)! }.joined(separator: " · "))) }
         case .unavailable:
             lines.append(style.yellow("!") + " " + tr("Could not look inside %1$@.", browser))
         }

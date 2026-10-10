@@ -554,6 +554,9 @@ public enum ChromeInspector {
             do {
                 let first = try await sample(url) { d, t in progress(.measuring(round: 1, done: d, total: t)) }
                 var report = diagnose(first)
+                // A relay that has not reconnected yet (Chrome just reopened) lists no pages while
+                // the windows have tabs: that is not "0 pages".
+                if report.pages.isEmpty, let tabs = tabs(app: app), !tabs.isEmpty { throw Failure.unreachable }
                 if let watch, watch > 0 {
                     var left = Int(watch.rounded())
                     while left > 0 {
@@ -568,7 +571,7 @@ public enum ChromeInspector {
                 return diagnosis(report, app: app, appMemoryKB: appMemoryKB, gpuKB: gpuKB)
             } catch {
                 hint = app == "Google Chrome"
-                    ? tr("chrome-use is installed but not connected to Chrome; run `chrome-use reconnect` and try again.")
+                    ? tr("chrome-use is not connected yet (after Chrome reopens, its extension takes a few seconds to reconnect). Try again shortly; if it stays like this, run `chrome-use reconnect`.")
                     : tr("The browser's DevTools connection did not answer.")
             }
         } else if app == "Google Chrome" {
