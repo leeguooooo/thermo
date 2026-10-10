@@ -1,12 +1,10 @@
 # Changelog
 
-## Unreleased
-
-- AI agent diagnostics can now fix and uninstall: remove broken skill links, MCP servers, hooks and launch agents, stop launchd restart loops, end leftover processes, disable or uninstall plugins. Every action shows the exact steps first, backs up config files and moves files to the Trash.
-- New diagnostics window (sidebar of checks, item list, details with suggestions and actions); the popover tab is now a summary.
-- Thermo speaks Chinese: Settings → Language (System / English / 简体中文). The `thermo` command stays English unless `THERMO_LANG=zh`.
+## 1.1.0
 
 - New **Agents** tab and `thermo agents` command: diagnoses the AI coding agents on this Mac (Claude Code, Codex, Cursor, Gemini). Finds hooks and MCP servers whose programs are missing, plaintext credentials in MCP configs, plugins that are enabled but not installed, broken skill symlinks, launch agents stuck in a restart loop or pointing at deleted programs, and agent processes that leaked or still run a deleted binary. Read-only; secrets are redacted.
+- AI agent diagnostics can now fix and uninstall: remove broken skill links, MCP servers, hooks and launch agents, stop launchd restart loops, end leftover processes, disable or uninstall plugins. Every action shows the exact steps first, backs up config files and moves files to the Trash.
+- New diagnostics window (sidebar of checks, item list, details with suggestions and actions); the popover tab is now a summary.
 - Disk cleanup (`thermo clean`, Disk tab). It recognises what AI tools leave on disk:
   - Claude Code, Codex and Gemini CLI sessions, grouped by project;
   - Cline, Roo and Kilo tasks;
@@ -16,6 +14,7 @@
   - Ollama, Hugging Face and LM Studio models.
 
   It also covers developer caches, Xcode, project build output, browsers and logs. Sessions that are still running, apps that are open and anything with unsaved work are skipped. Caches are deleted; your data goes to the Trash.
+- Thermo speaks Chinese: Settings → Language (System / English / 简体中文). The `thermo` command stays English unless `THERMO_LANG=zh`.
 
 ## 1.0.4
 
