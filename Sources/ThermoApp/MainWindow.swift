@@ -145,6 +145,7 @@ enum MainWindow {
         let models: AppModels
         @AppStorage(L10n.defaultsKey) private var language = "system"
         var body: some View {
+            let _ = L10n.apply(preference: language)
             MainView(page: $state.page, monitor: models.monitor, disk: models.disk, agents: models.agents, models: models)
                 .id(language)
                 .onAppear { installStandardMenus() }

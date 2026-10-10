@@ -54,6 +54,7 @@ struct PopoverView: View {
     @AppStorage(L10n.defaultsKey) private var language = "system"
 
     var body: some View {
+        let _ = L10n.apply(preference: language)
         content.id(language)  // rebuild every string in the new language
     }
 
