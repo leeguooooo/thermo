@@ -17,29 +17,40 @@ public enum Battery {
     static func parse(_ d: [String: Any]) -> BatteryInfo {
         // Newer macOS (Apple Silicon) moves capacities into the BatteryData sub-dictionary.
         let nested = d["BatteryData"] as? [String: Any] ?? [:]
-        func int(_ k: String) -> Int? { ((d[k] ?? nested[k]) as? NSNumber)?.intValue }
-        func bool(_ k: String) -> Bool { (d[k] as? NSNumber)?.boolValue ?? false }
+        func number(_ key: String) -> NSNumber? {
+            for value in [d[key], nested[key]] {
+                if let number = value as? NSNumber, number.doubleValue.isFinite { return number }
+            }
+            return nil
+        }
+        func int(_ key: String) -> Int? {
+            guard let number = number(key), number.doubleValue >= Double(Int.min),
+                  number.doubleValue <= Double(Int.max) else { return nil }
+            return number.intValue
+        }
+        func nonnegative(_ key: String) -> Int? { int(key).flatMap { $0 >= 0 ? $0 : nil } }
+        func bool(_ key: String) -> Bool { number(key)?.boolValue ?? false }
 
         // CurrentCapacity/MaxCapacity are percentages on modern macOS; raw values are mAh.
         var percent: Double?
-        if let cur = int("CurrentCapacity"), let max = int("MaxCapacity"), max > 0 {
-            percent = Double(cur) / Double(max) * 100
+        if let cur = nonnegative("CurrentCapacity"), let max = int("MaxCapacity"), max > 0 {
+            percent = min(100, Double(cur) / Double(max) * 100)
         }
         var health: Double?
-        if let raw = int("AppleRawMaxCapacity") ?? int("NominalChargeCapacity") ?? int("FullChargeCapacity"),
+        if let raw = nonnegative("AppleRawMaxCapacity") ?? nonnegative("NominalChargeCapacity") ?? nonnegative("FullChargeCapacity"),
            let design = int("DesignCapacity"), design > 0 {
             health = min(1, Double(raw) / Double(design))   // fresh batteries can exceed design
         }
         // Amperage is a signed 64-bit value that some releases expose as unsigned.
         var amps: Double?
-        if let n = d["Amperage"] as? NSNumber { amps = Double(Int64(truncatingIfNeeded: n.int64Value)) / 1000 }
+        if let n = number("Amperage") { amps = Double(Int64(truncatingIfNeeded: n.int64Value)) / 1000 }
 
         return BatteryInfo(
             percent: percent,
-            temperature: int("Temperature").map { Double($0) / 100 },
-            voltage: int("Voltage").map { Double($0) / 1000 },
+            temperature: nonnegative("Temperature").map { Double($0) / 100 },
+            voltage: int("Voltage").flatMap { $0 > 0 ? Double($0) / 1000 : nil },
             amperage: amps,
-            cycleCount: int("CycleCount"),
+            cycleCount: nonnegative("CycleCount"),
             health: health,
             charging: bool("IsCharging"),
             externalPower: bool("ExternalConnected")

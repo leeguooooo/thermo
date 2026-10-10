@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Invalid battery registry values remain unknown instead of appearing as negative health/cycles or non-finite measurements. Charge is bounded to 0–100%; nested power state and unsigned discharge-current compatibility are retained.
+
 - CPU and memory gauges scroll to the live resource details instead of reopening the same page.
 - Sensors includes a read-only battery card for charge, health, cycles, power source, temperature, voltage and current; the Overview battery chip now leads to those details.
 

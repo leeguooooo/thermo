@@ -318,6 +318,35 @@ final class DiscoveryCacheTests: XCTestCase {
 }
 
 final class BatteryTests: XCTestCase {
+    func testInvalidRegistryValuesRemainUnknown() {
+        let battery = Battery.parse(["CurrentCapacity": -1, "MaxCapacity": 100,
+                                     "AppleRawMaxCapacity": -1, "DesignCapacity": 6000,
+                                     "Temperature": NSNumber(value: Double.nan), "Voltage": -1,
+                                     "Amperage": NSNumber(value: Double.infinity), "CycleCount": -1])
+        XCTAssertNil(battery.percent)
+        XCTAssertNil(battery.health)
+        XCTAssertNil(battery.temperature)
+        XCTAssertNil(battery.voltage)
+        XCTAssertNil(battery.amperage)
+        XCTAssertNil(battery.cycleCount)
+        XCTAssertNil(battery.power)
+    }
+
+    func testOverfullChargeIsBoundedAndZeroChargeIsPreserved() {
+        XCTAssertEqual(Battery.parse(["CurrentCapacity": 110, "MaxCapacity": 100]).percent, 100)
+        XCTAssertEqual(Battery.parse(["CurrentCapacity": 0, "MaxCapacity": 100]).percent, 0)
+        XCTAssertNil(Battery.parse(["CurrentCapacity": 50, "MaxCapacity": 0]).percent)
+    }
+
+    func testNestedPowerStateAndUnsignedDischargeAreSupported() {
+        let battery = Battery.parse(["BatteryData": ["Amperage": NSNumber(value: UInt64(bitPattern: -1500)),
+                                                      "Voltage": 12000, "ExternalConnected": true, "IsCharging": true]])
+        XCTAssertEqual(battery.amperage, -1.5)
+        XCTAssertEqual(battery.power, -18)
+        XCTAssertTrue(battery.externalPower)
+        XCTAssertTrue(battery.charging)
+    }
+
     func testParse() {
         let b = Battery.parse([
             "CurrentCapacity": 50, "MaxCapacity": 100, "AppleRawMaxCapacity": 5600, "DesignCapacity": 6900,
