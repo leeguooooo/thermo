@@ -116,6 +116,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             try? rep.representation(using: .png, properties: [:])?
                 .write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(tab.rawValue.lowercased()).png"))
         }
+        // The disk cleanup confirmation for the default (safe) selection.
+        let sheet = ImageRenderer(content: DiskView.confirmPreview(disk).background(Color(nsColor: .windowBackgroundColor)))
+        sheet.scale = 2
+        if let img = sheet.cgImage {
+            try? NSBitmapImageRep(cgImage: img).representation(using: .png, properties: [:])?
+                .write(to: URL(fileURLWithPath: dir).appendingPathComponent("disk-confirm.png"))
+        }
         exit(0)
     }
     DispatchQueue.main.asyncAfter(deadline: .now() + 4, execute: render)

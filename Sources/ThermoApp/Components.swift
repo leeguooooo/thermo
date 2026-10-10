@@ -132,3 +132,52 @@ struct ConfirmAction: View {
         .frame(width: 480)
     }
 }
+
+/// The same confirmation layout for actions that are not an AgentDoctor `Action` (e.g. disk cleanup):
+/// a title, a summary, the exact lines that will run, and a note on how it can be undone.
+struct ConfirmSheet: View {
+    let title: String
+    let summary: String
+    let destructive: Bool
+    let heading: String
+    let lines: [String]
+    let footnote: String
+    let confirmTitle: String
+    let confirm: () -> Void
+    let cancel: () -> Void
+
+    var list: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, l in
+                Text(l).font(.caption.monospaced()).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: destructive ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .font(.title2).foregroundStyle(destructive ? Color.orange : Color.accentColor)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.headline)
+                    Text(summary).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Text(heading).font(.subheadline.weight(.semibold))
+            // ImageRenderer cannot draw scroll views; previews get the plain list.
+            if renderingPreview { list } else { ScrollView { list }.frame(maxHeight: 220) }
+            Text(footnote).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Spacer()
+                Button(tr("Cancel"), action: cancel).keyboardShortcut(.cancelAction)
+                Button(role: destructive ? .destructive : nil, action: confirm) { Text(confirmTitle) }
+                    .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(20)
+        .frame(width: 480)
+    }
+}

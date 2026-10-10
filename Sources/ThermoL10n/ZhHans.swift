@@ -474,4 +474,10 @@ let zhHans: [String: String] = [
     "safe": "安全",
     "review": "需确认",
     "risky": "有风险",
+    "What will be removed": "将要删除的内容",
+    "Removed items are listed in ~/Library/Logs/Thermo/clean.log. Anything changed since the scan is skipped.": "删除的内容会记在 ~/Library/Logs/Thermo/clean.log。扫描之后有改动的会跳过。",
+    "delete": "删除",
+    "trash": "废纸篓",
+    "%1$@ path": "%1$@ 个路径",
+    "%1$@ paths": "%1$@ 个路径",
 ]

@@ -112,11 +112,29 @@ struct DiskView: View {
             }
         }
         .onAppear { model.scanIfNeeded() }
-        .alert(tr("Clean %1$@?", ByteFormat.string(model.selectedBytes)), isPresented: $confirming) {
-            Button(tr("Clean"), role: .destructive) { model.clean() }
-            Button(tr("Cancel"), role: .cancel) {}
-        } message: {
-            Text(confirmText)
+        .sheet(isPresented: $confirming) { confirmSheet }
+    }
+
+    /// The confirm sheet as shown for the current selection (also used by --render-preview).
+    static func confirmPreview(_ model: DiskModel) -> some View {
+        DiskView(model: model).confirmSheet
+    }
+
+    var confirmSheet: some View {
+        ConfirmSheet(title: tr("Clean %1$@?", ByteFormat.string(model.selectedBytes)), summary: confirmText,
+                     destructive: model.selectedItems.contains { $0.safety == .safe }, heading: tr("What will be removed"),
+                     lines: planLines,
+                     footnote: tr("Removed items are listed in ~/Library/Logs/Thermo/clean.log. Anything changed since the scan is skipped."),
+                     confirmTitle: tr("Clean"),
+                     confirm: { confirming = false; model.clean() }, cancel: { confirming = false })
+    }
+
+    /// One line per item: how it goes, its size, its name and how many paths.
+    var planLines: [String] {
+        model.selectedItems.map { i in
+            let how = i.safety == .safe ? tr("delete") : tr("trash")
+            let paths = trCount(i.paths.count, "%1$@ path", "%1$@ paths")
+            return "\(how.padding(toLength: 7, withPad: " ", startingAt: 0)) \(ByteFormat.string(i.bytes).padding(toLength: 9, withPad: " ", startingAt: 0)) \(i.title) (\(paths))"
         }
     }
 
@@ -171,6 +189,19 @@ struct DiskView: View {
         }
     }
 
+    func icon(_ c: CleanCategory) -> String {
+        switch c {
+        case .aiSessions: return "bubble.left.and.text.bubble.right"
+        case .aiModels: return "cpu"
+        case .aiCaches: return "sparkles"
+        case .devCaches: return "hammer"
+        case .xcode: return "swift"
+        case .projects: return "folder"
+        case .browsers: return "globe"
+        case .system: return "gearshape"
+        }
+    }
+
     func section(_ c: CleanCategory, _ items: [CleanItem], total: Int64) -> some View {
         let open = expanded.contains(c)
         let ticked = items.filter { model.selected.contains($0.id) }.count
@@ -180,6 +211,7 @@ struct DiskView: View {
             } label: {
                 HStack {
                     Image(systemName: open ? "chevron.down" : "chevron.right").font(.caption2).frame(width: 10)
+                    Image(systemName: icon(c)).foregroundStyle(.secondary).frame(width: 16)
                     Text(c.title).font(.callout.bold())
                     if ticked > 0 { Text(tr("%1$@ selected", String(ticked))).font(.caption2).foregroundStyle(.secondary) }
                     Spacer()
@@ -243,12 +275,14 @@ struct DiskView: View {
                 }
             } else {
                 HStack {
-                    Button(tr("None")) { model.selected = [] }.controlSize(.small).disabled(model.selected.isEmpty)
+                    Button(tr("None")) { model.selected = [] }.controlSize(.small).modifier(ActionButtonStyle(prominent: false))
+                        .disabled(model.selected.isEmpty)
                     Button(tr("Safe")) { model.selected = Set(r.items.filter { $0.cleanable && $0.safety == .safe }.map(\.id)) }
-                        .controlSize(.small)
+                        .controlSize(.small).modifier(ActionButtonStyle(prominent: false))
                     Spacer()
                     if model.cleaning { ProgressView().controlSize(.small) }
                     Button(tr("Clean %1$@", ByteFormat.string(model.selectedBytes))) { confirming = true }
+                        .modifier(ActionButtonStyle(prominent: true))
                         .keyboardShortcut(.defaultAction)
                         .disabled(model.selectedItems.isEmpty || model.cleaning || model.scanning)
                 }
@@ -263,8 +297,9 @@ struct SafetyTag: View {
     var body: some View {
         let (text, color): (String, Color) = info ? (tr("info"), .blue)
             : safety == .safe ? (tr("safe"), .green) : safety == .review ? (tr("review"), .orange) : (tr("risky"), .red)
-        Text(text).font(.system(size: 9, weight: .semibold)).foregroundStyle(color)
-            .padding(.horizontal, 4).padding(.vertical, 1)
+        // Same capsule as AgentTag, tinted by safety.
+        Text(text).font(.caption2.weight(.medium)).foregroundStyle(color)
+            .padding(.horizontal, 6).padding(.vertical, 1)
             .background(Capsule().fill(color.opacity(0.15)))
     }
 }
