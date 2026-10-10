@@ -12,6 +12,7 @@ let package = Package(
         .library(name: "AgentDoctor", targets: ["AgentDoctor"]),
         .library(name: "ThermoL10n", targets: ["ThermoL10n"]),
         .library(name: "CleanKit", targets: ["CleanKit"]),
+        .library(name: "AgentCore", targets: ["AgentCore"]),
     ],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.6"),
@@ -26,8 +27,10 @@ let package = Package(
         // UI strings and translations; the root helper never links it.
         .target(name: "ThermoL10n"),
         .target(name: "AgentDoctor", dependencies: ["ThermoL10n"]),
+        // What both agent features read: processes, live sessions, plugins, protected paths. User-level only.
+        .target(name: "AgentCore"),
         // Disk cleanup runs as the user only: the root helper must never link it.
-        .target(name: "CleanKit"),
+        .target(name: "CleanKit", dependencies: ["AgentCore"]),
         .executableTarget(name: "thermo", dependencies: ["ThermoKit", "AgentDoctor", "CleanKit"]),
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
@@ -38,6 +41,7 @@ let package = Package(
         .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC"]),
         .testTarget(name: "AgentDoctorTests", dependencies: ["AgentDoctor", "ThermoL10n"]),
         .testTarget(name: "CleanKitTests", dependencies: ["CleanKit"]),
+        .testTarget(name: "AgentCoreTests", dependencies: ["AgentCore"]),
     ],
     swiftLanguageVersions: [.v5]
 )

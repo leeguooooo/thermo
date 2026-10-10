@@ -1,0 +1,166 @@
+import Darwin
+import Foundation
+
+/// One running process, read directly from the kernel (no `ps` subprocess).
+public struct AgentProcess: Equatable, Sendable {
+    public var pid: pid_t
+    public var ppid: pid_t
+    public var uid: uid_t
+    /// Short command name (`p_comm`, at most 16 bytes).
+    public var name: String
+    /// Executable from proc_pidpath; when the binary was deleted, an absolute argv[0] instead.
+    public var executable: String?
+    /// True when proc_pidpath failed and `executable` came from argv[0].
+    public var executableFromArgv: Bool
+    /// Full argument vector (empty for other users' processes).
+    public var argv: [String]
+    public var cwd: String?
+    /// Decayed CPU average like `ps -o pcpu` (sum over threads; 100 = one core).
+    public var cpu: Double
+    public var rssKB: Int
+    public var elapsed: TimeInterval
+
+    public init(pid: pid_t, ppid: pid_t = 1, uid: uid_t = getuid(), name: String, executable: String? = nil,
+                executableFromArgv: Bool = false, argv: [String] = [], cwd: String? = nil, cpu: Double = 0,
+                rssKB: Int = 0, elapsed: TimeInterval = 0) {
+        self.pid = pid; self.ppid = ppid; self.uid = uid; self.name = name; self.executable = executable
+        self.executableFromArgv = executableFromArgv; self.argv = argv; self.cwd = cwd; self.cpu = cpu
+        self.rssKB = rssKB; self.elapsed = elapsed
+    }
+
+    /// The command line joined with spaces, as `ps -o args` prints it.
+    public var args: String { argv.isEmpty ? name : argv.joined(separator: " ") }
+}
+
+/// A snapshot of running processes. Build one by hand in tests with `init(entries:)`.
+public struct ProcessTable: Sendable {
+    public let entries: [AgentProcess]
+
+    public init(entries: [AgentProcess]) { self.entries = entries }
+
+    public struct Options: Sendable {
+        /// Only processes of this user (nil = everyone; details of others' processes are mostly unavailable).
+        public var uid: uid_t? = getuid()
+        /// Per-thread CPU usage costs one call per thread; skip it when not needed.
+        public var cpu = true
+        public init(uid: uid_t? = getuid(), cpu: Bool = true) { self.uid = uid; self.cpu = cpu }
+    }
+
+    public static func current(_ options: Options = Options()) -> ProcessTable {
+        var mib: [Int32] = options.uid.map { [CTL_KERN, KERN_PROC, KERN_PROC_UID, Int32(bitPattern: $0)] }
+            ?? [CTL_KERN, KERN_PROC, KERN_PROC_ALL]
+        var size = 0
+        guard sysctl(&mib, UInt32(mib.count), nil, &size, nil, 0) == 0 else { return ProcessTable(entries: []) }
+        size += size / 8
+        var procs = [kinfo_proc](repeating: kinfo_proc(), count: size / MemoryLayout<kinfo_proc>.stride)
+        guard sysctl(&mib, UInt32(mib.count), &procs, &size, nil, 0) == 0 else { return ProcessTable(entries: []) }
+        let count = size / MemoryLayout<kinfo_proc>.stride
+        let now = Date().timeIntervalSince1970
+        var out: [AgentProcess] = []
+        out.reserveCapacity(count)
+        for k in procs.prefix(count) {
+            let pid = k.kp_proc.p_pid
+            guard pid > 0 else { continue }
+            let name = withUnsafeBytes(of: k.kp_proc.p_comm) { raw in String(decoding: raw.prefix { $0 != 0 }, as: UTF8.self) }
+            let start = k.kp_proc.p_un.__p_starttime
+            let started = TimeInterval(start.tv_sec) + TimeInterval(start.tv_usec) / 1e6
+            let argv = arguments(pid)
+            var exe = pidPath(pid)
+            var fromArgv = false
+            if exe == nil, let first = argv.first, first.hasPrefix("/") { exe = first; fromArgv = true }
+            out.append(AgentProcess(pid: pid, ppid: k.kp_eproc.e_ppid, uid: k.kp_eproc.e_ucred.cr_uid, name: name,
+                                    executable: exe, executableFromArgv: fromArgv, argv: argv, cwd: cwd(pid),
+                                    cpu: options.cpu ? cpuUsage(pid) : 0, rssKB: residentKB(pid),
+                                    elapsed: started > 0 ? max(0, now - started) : 0))
+        }
+        return ProcessTable(entries: out)
+    }
+
+    // MARK: per-process readers (each returns nil/0 when the kernel says no)
+
+    public static func pidPath(_ pid: pid_t) -> String? {
+        var buf = [CChar](repeating: 0, count: Int(MAXPATHLEN) * 4)
+        return proc_pidpath(pid, &buf, UInt32(buf.count)) > 0 ? String(cString: buf) : nil
+    }
+
+    static func cwd(_ pid: pid_t) -> String? {
+        var vp = proc_vnodepathinfo()
+        guard proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &vp, Int32(MemoryLayout<proc_vnodepathinfo>.size)) > 0 else { return nil }
+        let s = withUnsafeBytes(of: vp.pvi_cdir.vip_path) { raw in String(decoding: raw.prefix { $0 != 0 }, as: UTF8.self) }
+        return s.isEmpty ? nil : s
+    }
+
+    static func residentKB(_ pid: pid_t) -> Int {
+        var info = proc_taskinfo()
+        guard proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &info, Int32(MemoryLayout<proc_taskinfo>.size)) > 0 else { return 0 }
+        return Int(info.pti_resident_size / 1024)
+    }
+
+    /// Sum of the scheduler's decayed per-thread usage, the figure `ps` shows as %CPU.
+    static func cpuUsage(_ pid: pid_t) -> Double {
+        var ids = [UInt64](repeating: 0, count: 512)
+        let n = proc_pidinfo(pid, PROC_PIDLISTTHREADS, 0, &ids, Int32(ids.count * MemoryLayout<UInt64>.size))
+        guard n > 0 else { return 0 }
+        var total = 0.0
+        for id in ids.prefix(Int(n) / MemoryLayout<UInt64>.size) {
+            var t = proc_threadinfo()
+            if proc_pidinfo(pid, PROC_PIDTHREADINFO, id, &t, Int32(MemoryLayout<proc_threadinfo>.size)) > 0 {
+                total += Double(t.pth_cpu_usage) / Double(TH_USAGE_SCALE) * 100
+            }
+        }
+        return total
+    }
+
+    /// argv from KERN_PROCARGS2: `argc`, the exec path, padding NULs, then argc NUL-terminated strings.
+    static func arguments(_ pid: pid_t) -> [String] {
+        var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
+        var size = 0
+        guard sysctl(&mib, 3, nil, &size, nil, 0) == 0, size > MemoryLayout<Int32>.size else { return [] }
+        var buf = [UInt8](repeating: 0, count: size)
+        guard sysctl(&mib, 3, &buf, &size, nil, 0) == 0 else { return [] }
+        let argc = buf.withUnsafeBytes { $0.load(as: Int32.self) }
+        var i = MemoryLayout<Int32>.size
+        while i < size && buf[i] != 0 { i += 1 }      // exec path
+        while i < size && buf[i] == 0 { i += 1 }      // padding
+        var args: [String] = []
+        while args.count < argc && i < size {
+            let start = i
+            while i < size && buf[i] != 0 { i += 1 }
+            args.append(String(decoding: buf[start..<i], as: UTF8.self))
+            i += 1
+        }
+        return args
+    }
+
+    // MARK: queries
+
+    /// The name of the first of `names` (process name or app bundle name) that is running.
+    public func running(_ names: [String]) -> String? {
+        for n in names {
+            let lower = n.lowercased()
+            if let e = entries.first(where: {
+                $0.name.lowercased() == lower || ($0.executable ?? "").lowercased().contains("/\(lower).app/")
+            }) {
+                return (e.executable ?? "").contains(".app/") ? n : e.name
+            }
+        }
+        return nil
+    }
+
+    /// Command names of AI coding agents.
+    public static let agentNames = ["claude", "codex", "gemini", "opencode", "aider", "amp", "cursor-agent", "qwen", "goose", "crush"]
+
+    /// Working directories of processes that look like AI coding agents.
+    public func agentDirectories() -> Set<String> {
+        var dirs = Set<String>()
+        for e in entries {
+            let n = e.name.lowercased()
+            let p = (e.executable ?? "").lowercased()
+            let first = ((e.argv.first ?? "") as NSString).lastPathComponent.lowercased()
+            let isAgent = Self.agentNames.contains(n) || Self.agentNames.contains(first)
+                || Self.agentNames.contains { p.hasSuffix("/" + $0) || p.contains("/" + $0 + "/") }
+            if isAgent, let c = e.cwd, !c.isEmpty, c != "/" { dirs.insert(c) }
+        }
+        return dirs
+    }
+}

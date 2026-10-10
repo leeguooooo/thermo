@@ -31,7 +31,8 @@ enum AITools {
                 if let v = all.first(where: { abs == $0 || abs.hasPrefix($0 + "/") }) { keep.insert(v) }
             }
             for e in ctx.processes.entries {
-                if let v = all.first(where: { e.path == $0 || e.path.hasPrefix($0 + "/") }) { keep.insert(v) }
+                guard let exe = e.executable else { continue }
+                if let v = all.first(where: { exe == $0 || exe.hasPrefix($0 + "/") }) { keep.insert(v) }
             }
             if let newest = all.max(by: { compareVersions(($0 as NSString).lastPathComponent, ($1 as NSString).lastPathComponent) }) {
                 keep.insert(newest)
@@ -57,14 +58,8 @@ enum AITools {
     static func claudePlugins(_ ctx: ScanContext) -> [CleanItem] {
         let root = ctx.path("~/.claude/plugins")
         let cache = root + "/cache"
-        guard FS.isDirectory(cache),
-              let data = FileManager.default.contents(atPath: root + "/installed_plugins.json"),
-              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let plugins = obj["plugins"] as? [String: Any] else { return [] }
-        var inUse = Set<String>()
-        for case let entries as [[String: Any]] in plugins.values {
-            for e in entries { if let p = e["installPath"] as? String { inUse.insert(URL(fileURLWithPath: p).standardizedFileURL.path) } }
-        }
+        guard FS.isDirectory(cache) else { return [] }
+        let inUse = Set(ClaudePlugins.installed(AgentHome(home: ctx.home)).map(\.installPath))
         guard !inUse.isEmpty else { return [] }
         var old: [String] = []
         for market in FS.children(cache) where FS.isDirectory(market) {

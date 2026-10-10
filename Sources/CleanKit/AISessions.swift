@@ -190,22 +190,6 @@ enum AISessions {
         return out
     }
 
-    /// Session ids and start times of running Claude Code processes.
-    static func liveClaude(home: String) -> (ids: Set<String>, starts: [Date]) {
-        var ids = Set<String>()
-        var starts: [Date] = []
-        for f in FS.children(FS.expand("~/.claude/sessions", home: home)) where f.hasSuffix(".json") {
-            guard let data = FileManager.default.contents(atPath: f),
-                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let sid = obj["sessionId"] as? String, let pid = obj["pid"] as? Int else { continue }
-            if kill(pid_t(pid), 0) == 0 || errno == EPERM {
-                ids.insert(sid)
-                if let ms = obj["startedAt"] as? Double { starts.append(Date(timeIntervalSince1970: ms / 1000)) }
-            }
-        }
-        return (ids, starts)
-    }
-
     /// `-Users-leo-src-app` → `/Users/leo/src/app` when that folder exists. The encoding is lossy
     /// (`.` and `-` also become `-`), so this is only a fallback for transcripts without a `cwd`.
     static func decodeClaudeDir(_ encoded: String) -> String? {

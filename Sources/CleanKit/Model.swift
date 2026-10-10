@@ -1,3 +1,5 @@
+// Processes, live agent sessions and the protected-path guard are shared with the agent doctor.
+@_exported import AgentCore
 import Foundation
 
 /// What a finding is, for grouping in the CLI and the app.

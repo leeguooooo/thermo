@@ -10,11 +10,12 @@ public final class DiskScanner: @unchecked Sendable {
 
     public func scan() -> ScanReport {
         let started = Date()
-        let processes = ProcessTable.current()
-        let live = AISessions.liveClaude(home: options.home)
+        let processes = ProcessTable.current(.init(cpu: false))
+        let live = ClaudeSessions.live(AgentHome(home: options.home))
         let ctx = ScanContext(options: options, now: started, processes: processes,
                               agentDirs: processes.agentDirectories(),
-                              liveClaudeSessions: live.ids, liveClaudeStarts: live.starts)
+                              liveClaudeSessions: Set(live.map(\.sessionId)),
+                              liveClaudeStarts: live.compactMap(\.startedAt))
         let lock = NSLock()
         var items: [CleanItem] = []
         var denied: [String] = []
