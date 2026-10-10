@@ -541,4 +541,11 @@ let zhHans: [String: String] = [
 
     // MARK: Pulse owners
     "started by %1$@": "由 %1$@ 启动",
+    "Updating the fan helper…": "正在更新风扇 helper…",
+    "It switches to the new version by itself in a few seconds.": "几秒内会自动切换到新版本。",
+    "The fan helper stopped": "风扇 helper 停止了",
+    "Thermo can set it up again. macOS asks for your password once.": "Thermo 可以重新设置好它，系统会请你输入一次密码。",
+    "Fix…": "修复…",
+    "Fan control uses a small helper that runs with system rights. It only sets fan speeds within the fan's own limits, and hands the fans back to macOS when Thermo quits or the Mac gets too hot. macOS asks for your password once; updates need nothing more.": "风扇控制需要一个以系统权限运行的小助手。它只在风扇自身范围内设置转速；Thermo 退出或电脑过热时，会把风扇交还给系统。只需输入一次密码，以后更新不用再管。",
+    "Setting up…": "正在设置…",
 ]

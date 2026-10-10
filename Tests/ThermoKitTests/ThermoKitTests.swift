@@ -348,3 +348,34 @@ final class HardwareTests: XCTestCase {
         }
     }
 }
+
+final class HelperSelfUpdateTests: XCTestCase {
+    func testSourceMustBeARealFileInApplications() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("selfupdate-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let file = dir.appendingPathComponent("thermo-helper").path
+        FileManager.default.createFile(atPath: file, contents: Data("x".utf8))
+        XCTAssertNil(HelperSelfUpdate.acceptableSource(file), "outside Applications")
+        let link = dir.appendingPathComponent("link").path
+        try FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: "/Applications/Thermo.app/Contents/Helpers/thermo-helper")
+        XCTAssertNil(HelperSelfUpdate.acceptableSource(link), "symlinks are refused")
+        XCTAssertNil(HelperSelfUpdate.acceptableSource("/Applications/does-not-exist"))
+    }
+
+    func testRequirementPinsTeamAndIdentifier() {
+        let r = HelperSelfUpdate.requirement(team: "6ZPXG4KVVS")
+        XCTAssertTrue(r.contains(#"identifier "dev.thermo.helper""#))
+        XCTAssertTrue(r.contains(#"certificate leaf[subject.OU] = "6ZPXG4KVVS""#))
+        XCTAssertFalse(HelperSelfUpdate.satisfies("/bin/ls", team: "6ZPXG4KVVS"), "Apple's own binaries are not ours")
+    }
+
+    func testPlistCarriesSourceForSelfUpdate() {
+        let p = HelperInstaller.plist(binary: "/Library/PrivilegedHelperTools/dev.thermo.helper",
+                                      source: "/Applications/Thermo & Co.app/Contents/Helpers/thermo-helper")
+        XCTAssertTrue(p.contains("<string>--source</string>"))
+        XCTAssertTrue(p.contains("Thermo &amp; Co.app"), "escaped for XML")
+        XCTAssertFalse(HelperInstaller.plist(binary: "/x").contains("--source"))
+    }
+}
+

@@ -36,6 +36,73 @@ public enum CodeSignature {
     }
 }
 
+/// A helper installed with the administrator password runs from a root-owned copy in
+/// /Library/PrivilegedHelperTools, so app updates would leave it behind. It keeps itself current
+/// instead: when the helper inside the app (`--source`) differs from the running copy and is
+/// signed by the same team, it is copied in, checked again, and swapped in atomically; the helper
+/// then exits and launchd starts the new one. One password, ever. Ad-hoc builds never update.
+public enum HelperSelfUpdate {
+    /// Only our own Developer ID helper may replace the running one.
+    public static func requirement(team: String) -> String {
+        #"anchor apple generic and identifier "dev.thermo.helper" and certificate leaf[subject.OU] = ""# + team + #"""#
+    }
+
+    public static func satisfies(_ path: String, team: String) -> Bool {
+        var code: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(URL(fileURLWithPath: path) as CFURL, [], &code) == errSecSuccess, let code else { return false }
+        var req: SecRequirement?
+        guard SecRequirementCreateWithString(requirement(team: team) as CFString, [], &req) == errSecSuccess, let req else { return false }
+        return SecStaticCodeCheckValidity(code, SecCSFlags(rawValue: kSecCSCheckAllArchitectures), req) == errSecSuccess
+    }
+
+    /// The app's helper may only come from an Applications folder, as a real file (no symlink).
+    public static func acceptableSource(_ path: String) -> String? {
+        var st = stat()
+        guard lstat(path, &st) == 0, (st.st_mode & S_IFMT) == S_IFREG, let real = realpath(path, nil) else { return nil }
+        defer { free(real) }
+        let r = String(cString: real)
+        let ok = r.hasPrefix("/Applications/") || r.range(of: #"^/Users/[^/]+/Applications/"#, options: .regularExpression) != nil
+        return ok && !r.contains("/AppTranslocation/") ? r : nil
+    }
+
+    /// Asks a (verified, root-owned) helper binary for its version.
+    static func version(of binary: String) -> String? {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: binary)
+        p.arguments = ["--print-version"]
+        let out = Pipe()
+        p.standardOutput = out
+        p.standardError = FileHandle.nullDevice
+        guard (try? p.run()) != nil else { return nil }
+        let deadline = Date().addingTimeInterval(5)
+        while p.isRunning && Date() < deadline { usleep(50_000) }
+        if p.isRunning { p.terminate(); return nil }
+        let v = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return p.terminationStatus == 0 && !v.isEmpty ? v : nil
+    }
+
+    public enum Outcome: Equatable { case unchanged, updated(String), rejected(String) }
+
+    /// Replaces `installed` with the app's helper when that is a strictly newer build signed by
+    /// `team`. Every check runs on the root-owned staged copy that would actually run.
+    public static func update(from source: String, to installed: String, team: String, current: String) -> Outcome {
+        let fm = FileManager.default
+        guard let src = acceptableSource(source) else { return .unchanged }
+        guard !fm.contentsEqual(atPath: src, andPath: installed) else { return .unchanged }
+        let staged = installed + ".new"
+        try? fm.removeItem(atPath: staged)
+        defer { try? fm.removeItem(atPath: staged) }
+        guard (try? fm.copyItem(atPath: src, toPath: staged)) != nil,
+              chown(staged, 0, 0) == 0, chmod(staged, 0o755) == 0 else { return .rejected("could not stage \(src)") }
+        guard satisfies(staged, team: team) else { return .rejected("\(src) is not signed by team \(team)") }
+        // No downgrades: an older signed helper could bring back a fixed bug.
+        guard let v = version(of: staged) else { return .rejected("\(src) did not report a version") }
+        guard v.compare(current, options: .numeric) == .orderedDescending else { return .unchanged }
+        return rename(staged, installed) == 0 ? .updated(v) : .rejected("could not replace \(installed)")
+    }
+}
+
 /// XPC interface exported by the root helper. Policies travel as JSON.
 @objc public protocol ThermoHelperProtocol {
     func version(reply: @escaping (String) -> Void)
@@ -162,14 +229,17 @@ public enum HelperInstaller {
         return candidates.first { FileManager.default.isExecutableFile(atPath: $0.path) }
     }
 
-    static func plist(binary: String) -> String {
-        """
+    static func plist(binary: String, source: String? = nil) -> String {
+        let args = ([binary] + (source.map { ["--source", $0] } ?? []))
+            .map { "<string>\($0.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;"))</string>" }
+            .joined()
+        return """
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
         <plist version="1.0">
         <dict>
             <key>Label</key><string>\(HelperConstants.label)</string>
-            <key>ProgramArguments</key><array><string>\(binary)</string></array>
+            <key>ProgramArguments</key><array>\(args)</array>
             <key>MachServices</key><dict><key>\(HelperConstants.machService)</key><true/></dict>
             <key>RunAtLoad</key><true/>
             <key>KeepAlive</key><true/>
@@ -183,7 +253,11 @@ public enum HelperInstaller {
 
     public static func install(from binary: URL) throws {
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("dev.thermo.helper.\(getpid()).plist")
-        try plist(binary: HelperConstants.installedBinary).write(to: tmp, atomically: true, encoding: .utf8)
+        // Keep a pointer to the app's helper so the installed copy can update itself (not from a
+        // mounted DMG or a translocated copy, which go away).
+        let src = binary.resolvingSymlinksInPath().path
+        let source = src.hasPrefix("/Volumes/") || src.contains("/AppTranslocation/") ? nil : src
+        try plist(binary: HelperConstants.installedBinary, source: source).write(to: tmp, atomically: true, encoding: .utf8)
         defer { try? FileManager.default.removeItem(at: tmp) }
 
         let bin = shellQuote(HelperConstants.installedBinary)

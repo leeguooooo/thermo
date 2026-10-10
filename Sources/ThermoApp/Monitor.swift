@@ -222,22 +222,20 @@ final class Monitor: ObservableObject {
         }
     }
 
-    /// Starts (or restarts) setup: register with Login Items and watch until the helper answers.
-    /// Ad-hoc builds cannot use Login Items and go straight to the administrator prompt.
+    /// Starts setup the way a person expects: one administrator password prompt, done. A helper
+    /// that already answers is kept, and one already approved under Login Items is left to
+    /// launchd; nobody is sent hunting through System Settings.
     func beginSetup() {
-        guard usesSMAppService else { installHelperWithPassword(); return }
         settingUp = true
         setupStarted = Date()
-        DispatchQueue.global(qos: .userInitiated).async {
-            if self.daemon.status != .enabled {
-                do { try self.daemon.register() } catch {
-                    DispatchQueue.main.async { self.lastError = tr("Helper registration: %1$@", error.localizedDescription) }
-                }
+        Task { @MainActor in
+            if (try? await helper.version()) != nil { refreshHelper(); return }
+            if usesSMAppService, daemon.status == .enabled,
+               !(await Task.detached { Self.launchdRefusesHelper() }.value) {
+                watchSetup()   // approved earlier; launchd is starting it
+                return
             }
-            DispatchQueue.main.async {
-                if self.daemon.status != .enabled || Self.launchdRefusesHelper() { SMAppService.openSystemSettingsLoginItems() }
-                self.watchSetup()
-            }
+            installHelperWithPassword()
         }
     }
 

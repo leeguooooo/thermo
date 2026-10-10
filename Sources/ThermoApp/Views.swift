@@ -322,35 +322,27 @@ struct FansView: View {
         .onAppear { monitor.refreshHelper() }
     }
 
-    /// Setup card: one button to allow the helper, a live guide while the user is in System
-    /// Settings, and the administrator-password route when Login Items approval is stuck.
+    /// Setup card: one button, one administrator password, done.
     @ViewBuilder var helperBanner: some View {
         switch monitor.helperState {
         case .running:
             EmptyView()
         case .outdated:
-            setupCard(icon: "arrow.triangle.2.circlepath", title: tr("The fan helper is from an older version"),
-                      body: tr("Thermo restarts it on the new version; this takes a moment."),
-                      primary: (tr("Update…"), { monitor.beginSetup() }))
-        case .needsApproval:
-            setupCard(icon: "lock.open", title: tr("Turn on Thermo in System Settings"),
-                      body: tr("In Login Items & Extensions, under Allow in the Background, switch on Thermo. It may be grouped under its developer, LI GUO — click ⓘ to see it. Thermo carries on by itself as soon as it is on."),
-                      primary: (tr("Open Settings"), { monitor.openLoginItemsSettings(); monitor.beginSetup() }),
-                      waiting: true)
+            setupCard(icon: "arrow.triangle.2.circlepath", title: tr("Updating the fan helper…"),
+                      body: tr("It switches to the new version by itself in a few seconds."), primary: nil)
         case .notRunning:
-            setupCard(icon: "exclamationmark.triangle", title: tr("The fan helper is not running"),
-                      body: tr("macOS did not start it. Try again, or install it with your administrator password."),
-                      primary: (tr("Try Again"), { monitor.beginSetup() }))
-        case .notInstalled, .unknown:
+            setupCard(icon: "exclamationmark.triangle", title: tr("The fan helper stopped"),
+                      body: tr("Thermo can set it up again. macOS asks for your password once."),
+                      primary: (tr("Fix…"), { monitor.beginSetup() }))
+        case .notInstalled, .unknown, .needsApproval:
             setupCard(icon: "fan", title: tr("Let Thermo control the fans"),
-                      body: tr("Fan control uses a small helper that runs in the background with system rights. It only sets fan speeds within the fan's own limits, and hands the fans back to macOS when Thermo quits or the Mac gets too hot."),
+                      body: tr("Fan control uses a small helper that runs with system rights. It only sets fan speeds within the fan's own limits, and hands the fans back to macOS when Thermo quits or the Mac gets too hot. macOS asks for your password once; updates need nothing more."),
                       primary: (tr("Allow…"), { monitor.beginSetup() }))
         }
     }
 
-    func setupCard(icon: String, title: String, body: String, primary: (String, () -> Void), waiting: Bool = false) -> some View {
-        let stuck = (monitor.setupStarted.map { Date().timeIntervalSince($0) > 8 } ?? false) || monitor.helperState == .notRunning
-        return VStack(alignment: .leading, spacing: 8) {
+    func setupCard(icon: String, title: String, body: String, primary: (String, () -> Void)?) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: icon).font(.title3).foregroundStyle(Color.accentColor).frame(width: 22)
                 VStack(alignment: .leading, spacing: 3) {
@@ -364,26 +356,20 @@ struct FansView: View {
             }
             if !renderingPreview {
                 HStack(spacing: 8) {
-                    if monitor.settingUp || waiting {
+                    if monitor.settingUp {
                         ProgressView().controlSize(.small)
-                        Text(tr("Waiting for macOS…")).font(.caption).foregroundStyle(.secondary)
+                        Text(tr("Setting up…")).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    // Login Items approval sometimes never takes; the password route always does.
-                    if monitor.usesSMAppService && (stuck || waiting) {
-                        Button(tr("Use Administrator Password")) { monitor.installHelperWithPassword() }
-                            .controlSize(.small).modifier(ActionButtonStyle(prominent: false))
+                    if let primary {
+                        Button(primary.0, action: primary.1).controlSize(.small)
+                            .modifier(ActionButtonStyle(prominent: true)).disabled(monitor.settingUp)
                     }
-                    Button(primary.0, action: primary.1).controlSize(.small).modifier(ActionButtonStyle(prominent: true))
                 }
             }
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(0.08)))
-        // Refresh the "stuck" timing while setup runs.
-        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
-            if monitor.settingUp { monitor.objectWillChange.send() }
-        }
     }
 }
 

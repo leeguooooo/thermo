@@ -15,6 +15,12 @@ func log(_ s: String) {
     FileHandle.standardError.write("\(String(cString: buf)) thermo-helper: \(s)\n".data(using: .utf8)!)
 }
 
+// Asked by a running helper deciding whether this binary is a newer build (see HelperSelfUpdate).
+if CommandLine.arguments.contains("--print-version") {
+    print(ThermoVersion.string)
+    exit(0)
+}
+
 guard getuid() == 0 else {
     log("must run as root (installed by `thermo helper install`)")
     exit(1)
@@ -193,6 +199,31 @@ if let path = Bundle.main.executablePath ?? CommandLine.arguments.first {
         src.resume()
         binaryWatch = src
     }
+}
+
+// Password installs: follow the app's own helper (see HelperSelfUpdate). Checked at start and
+// every 30 s; a swap exits, and launchd's KeepAlive starts the new binary.
+var selfUpdateTimer: DispatchSourceTimer?
+if let i = CommandLine.arguments.firstIndex(of: "--source"), i + 1 < CommandLine.arguments.count,
+   let team = CodeSignature.teamIdentifier() {
+    let source = CommandLine.arguments[i + 1]
+    let installed = CommandLine.arguments[0]
+    var lastRejection = ""
+    let t = DispatchSource.makeTimerSource(queue: .main)
+    t.schedule(deadline: .now() + 5, repeating: 30, leeway: .seconds(5))
+    t.setEventHandler {
+        switch HelperSelfUpdate.update(from: source, to: installed, team: team, current: ThermoVersion.string) {
+        case .unchanged:
+            break
+        case .rejected(let why):
+            if why != lastRejection { log("self-update skipped: \(why)"); lastRejection = why }
+        case .updated(let v):
+            controller.shutdown(reason: "updated itself to \(v) from \(source)")
+            exit(0)
+        }
+    }
+    t.resume()
+    selfUpdateTimer = t
 }
 
 let delegate = ListenerDelegate(Service(controller))
