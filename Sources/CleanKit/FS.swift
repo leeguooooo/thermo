@@ -1,17 +1,20 @@
 import Darwin
 import Foundation
 
-/// Allocated size of a file tree, like `du`: physical walk (symlinks are not followed),
-/// stays on one volume, hard links counted once.
+/// Size of a file tree: symlinks are not followed, it stays on one volume, hard links count once.
 public struct TreeSize: Sendable {
+    /// What removing it would free: each file's private (unshared) blocks. On APFS, clones and
+    /// snapshot-shared data make this smaller — sometimes far smaller — than `allocated`.
     public var bytes: Int64 = 0
+    /// Space the files take up as `du` counts it, shared blocks included.
+    public var allocated: Int64 = 0
     public var files: Int = 0
     public var newest: Date?
     public var denied = false
 
     public static func + (a: TreeSize, b: TreeSize) -> TreeSize {
         var r = a
-        r.bytes += b.bytes; r.files += b.files; r.denied = a.denied || b.denied
+        r.bytes += b.bytes; r.allocated += b.allocated; r.files += b.files; r.denied = a.denied || b.denied
         if let n = b.newest, n > (r.newest ?? .distantPast) { r.newest = n }
         return r
     }
@@ -65,11 +68,17 @@ public enum FS {
             return r
         }
         if (st.st_mode & S_IFMT) != S_IFDIR {
-            r.bytes = Int64(st.st_blocks) * 512
+            let blocks = Int64(st.st_blocks) * 512
+            let sizes = (st.st_mode & S_IFMT) == S_IFREG ? BulkWalk.fileSize(path) : nil
+            r.allocated = sizes?.allocated ?? blocks
+            r.bytes = sizes?.privateSize ?? blocks
             r.files = 1
             r.newest = Date(timeIntervalSince1970: TimeInterval(st.st_mtimespec.tv_sec))
             return r
         }
+        // Batched attributes with private sizes; fts below is the fallback for file systems
+        // without getattrlistbulk.
+        if let bulk = BulkWalk.size(path, trackNewest: trackNewest, device: st.st_dev) { return bulk }
         var seenInodes = Set<UInt64>()
         let opts = FTS_PHYSICAL | FTS_NOCHDIR | FTS_XDEV
         var newest: Int = 0
@@ -96,6 +105,7 @@ public enum FS {
                         r.files += 1
                     }
                     r.bytes += Int64(s.st_blocks) * 512
+                    r.allocated += Int64(s.st_blocks) * 512
                     if trackNewest, s.st_mtimespec.tv_sec > newest { newest = s.st_mtimespec.tv_sec }
                 }
             }

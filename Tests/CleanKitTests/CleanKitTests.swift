@@ -448,6 +448,20 @@ final class CleanKitTests: XCTestCase {
         XCTAssertTrue(FS.exists(a))
     }
 
+    func testHardLinkedFilesOnlyCountWhenEveryLinkGoes() throws {
+        // pnpm/bun style: node_modules links into a store outside it, so deleting it frees nothing.
+        let store = try write("store/pkg.js", String(repeating: "s", count: 100_000))
+        try FileManager.default.createDirectory(atPath: home + "/proj/node_modules", withIntermediateDirectories: true)
+        try FileManager.default.linkItem(atPath: store, toPath: home + "/proj/node_modules/pkg.js")
+        try write("proj/node_modules/own.js", String(repeating: "o", count: 100_000))
+        let nm = FS.size(home + "/proj/node_modules")
+        XCTAssertEqual(nm.files, 2)
+        XCTAssertGreaterThan(nm.allocated, nm.bytes, "the linked file takes space but would not be freed")
+        XCTAssertLessThan(nm.bytes, 150_000, "only own.js is reclaimable")
+        let both = FS.size(home)
+        XCTAssertGreaterThan(both.bytes, 150_000, "with the store included, every link goes")
+    }
+
     func testTreeSizeCountsHardLinksOnce() throws {
         let a = try write("t/a", String(repeating: "q", count: 100_000))
         try FileManager.default.linkItem(atPath: a, toPath: home + "/t/b")
