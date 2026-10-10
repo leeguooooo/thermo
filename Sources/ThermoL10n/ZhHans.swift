@@ -21,8 +21,7 @@ let zhHans: [String: String] = [
     "Current": "电流",
     "This Mac has no fans.": "这台 Mac 没有风扇。",
     "All fans to Auto": "全部风扇恢复自动",
-    "Safety: fans return to Auto if any CPU/GPU sensor reaches %1$@ °C, or when the helper stops.":
-        "安全保护：任一 CPU/GPU 传感器达到 %1$@ °C，或 helper 停止运行时，风扇都会恢复自动。",
+    "Safety: fans go back to Auto while the CPU/GPU stays above %1$@ °C (%2$@ °C on Apple Silicon) and your settings resume once it cools down; also whenever the helper stops.": "安全保护：CPU/GPU 温度持续高于 %1$@ °C（Apple Silicon 为 %2$@ °C）时风扇恢复自动，降温后恢复你的设置；helper 停止时也会恢复自动。",
     "Fan control needs a privileged helper.": "控制风扇需要安装特权 helper。",
     "Install…": "安装…",
     "Allow Thermo's helper in System Settings → Login Items.": "请在「系统设置 → 通用 → 登录项」中允许 Thermo 的 helper。",

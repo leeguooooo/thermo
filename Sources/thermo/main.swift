@@ -224,7 +224,7 @@ struct App {
             let rpm: Double = rest[2].lowercased() == "max" ? .infinity : (rest[2].lowercased() == "min" ? 0 : (Double(rest[2]) ?? -1))
             guard rpm >= 0 else { throw CLIError("RPM must be a number, 'min' or 'max'") }
             for id in try fanTargets(rest[1], fans: sm.fans) {
-                try client.blocking { try await $0.setPolicy(.fixed(rpm: rpm), fan: id) }
+                try client.blocking(timeout: 15) { try await $0.setPolicy(.fixed(rpm: rpm), fan: id) }
             }
             warnClamp(rpm, sm: sm)
             print("fan \(rest[1]): fixed \(rpm.isInfinite ? "max" : rpm == 0 ? "min" : "\(Int(rpm)) rpm")")
@@ -235,13 +235,13 @@ struct App {
                 .orThrow(CLIError("--sensor must be cpu, gpu or max"))
             let curve = try FanCurve(parsing: rest[2], sensor: sensor)
             for id in try fanTargets(rest[1], fans: sm.fans) {
-                try client.blocking { try await $0.setPolicy(.curve(curve), fan: id) }
+                try client.blocking(timeout: 15) { try await $0.setPolicy(.curve(curve), fan: id) }
             }
             print("fan \(rest[1]): curve \(curve.description)")
 
         case "auto":
             for id in try fanTargets(rest.count > 1 ? rest[1] : "all", fans: sm.fans) {
-                try client.blocking { try await $0.setPolicy(.auto, fan: id) }
+                try client.blocking(timeout: 15) { try await $0.setPolicy(.auto, fan: id) }
             }
             print("fan \(rest.count > 1 ? rest[1] : "all"): auto")
 

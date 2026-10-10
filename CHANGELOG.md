@@ -17,6 +17,17 @@
 
   It also covers developer caches, Xcode, project build output, browsers and logs. Sessions that are still running, apps that are open and anything with unsaved work are skipped. Caches are deleted; your data goes to the Trash.
 
+## 1.0.4
+
+- Over-temperature protection no longer throws away your fan settings: fans go back to automatic control while the Mac is too hot, and your fixed speed or curve comes back once it has cooled down.
+- Apple Silicon: the protection triggers at 110 °C instead of 95 °C. These chips normally run their cores at 100–115 °C under load, so the old limit kept switching curves off for no reason.
+- A single brief temperature spike no longer triggers the protection; it has to last a few seconds.
+
+## 1.0.3
+
+- Apple Silicon: switching a fan back to Auto works again (it left the fan at its last manual speed); if returning to Auto ever fails, every fan is reset to system control.
+- Apple Silicon: setting a fixed speed or curve no longer reports a timeout while the fan control is being unlocked.
+
 ## 1.0.2
 
 - Thermo now lives at app.leeguoo.com/thermo — downloads and updates come from there.

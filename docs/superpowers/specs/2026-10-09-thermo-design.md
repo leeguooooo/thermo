@@ -36,7 +36,7 @@ launch at login). Sampling slows when the popover is closed.
 
 - Helper owns fan policies (`auto`, `fixed rpm`, `curve`) and runs a 2 s loop while any non-auto policy is active. Clients may exit; the policy stays.
 - RPM always clamped to SMC min..max.
-- Helper reverts all fans to auto on start, on SIGTERM/SIGINT, and whenever the hottest CPU/GPU sensor ≥ 95 °C (policy is then cleared).
+- Helper reverts all fans to auto on start and on SIGTERM/SIGINT. Over-temperature (1.0.4): when the hottest CPU/GPU sensor stays at or above the ceiling for 2 ticks (Intel 95 °C, Apple Silicon 110 °C) fans go to auto and policies are suspended, resuming after 60 s below ceiling − 10 °C.
 - Writes: Apple Silicon unlocks with `Ftst=1` when present, then `F<i>Md=1`, `F<i>Tg`; Intel uses `F<i>Md` when present, otherwise the `FS! ` force bitmask. Values encoded with the key's own SMC type.
 - XPC clients must match `setCodeSigningRequirement`: when the helper is Developer ID signed it requires the same Team ID (read from its own signature at runtime) plus identifier `dev.thermo.cli`/`dev.thermo.app`; ad-hoc builds check identifiers only (weak, documented).
 - Install: Developer ID builds of the app register the bundled daemon via `SMAppService.daemon` (user approves in Login Items). Ad-hoc builds and the CLI use `osascript … with administrator privileges` to copy into `/Library/PrivilegedHelperTools` + `/Library/LaunchDaemons` and `launchctl bootstrap`.

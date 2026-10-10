@@ -3,7 +3,8 @@ import ThermoKit
 
 // Root LaunchDaemon: the only process that writes the SMC. Owns fan policies and
 // runs the control loop; returns every fan to automatic control on start, on exit,
-// and when the hottest compute sensor reaches FanPolicyEngine.safetyCeiling.
+// and while the hottest compute sensor stays above the platform's safety ceiling
+// (policies are suspended, then resume once it has cooled; see SafetyLimits).
 
 func log(_ s: String) {
     var t = time(nil)
@@ -23,7 +24,7 @@ final class Controller {
     let queue = DispatchQueue(label: "dev.thermo.helper.control")
     let sampler: Sampler
     let writer: FanWriter
-    var engine = FanPolicyEngine()
+    var engine: FanPolicyEngine
     /// Last RPM written per fan, for hysteresis and ramping.
     var written: [Int: Double] = [:]
     var timer: DispatchSourceTimer?
@@ -38,6 +39,8 @@ final class Controller {
         sampler.parts = [.temperatures, .fans]
         sampler.fanLimitRefresh = 10
         writer = FanWriter(smc: sampler.smc, discovery: sampler.discovery)
+        // Apple Silicon is the platform with the Ftst unlock key.
+        engine = FanPolicyEngine(limits: .forHardware(appleSilicon: sampler.discovery.fanTestKey))
     }
 
     func start() {
@@ -68,7 +71,10 @@ final class Controller {
             case .failsafe(let t):
                 writer.setAllAuto()
                 written.removeAll()
-                log(String(format: "FAILSAFE: %.1f °C ≥ %.0f °C; all policies cleared, fans on auto", t, FanPolicyEngine.safetyCeiling))
+                log(String(format: "FAILSAFE: %.1f °C ≥ %.0f °C; fans on auto, policies suspended until below %.0f °C for %d s",
+                           t, engine.limits.ceiling, engine.limits.resumeBelow, engine.limits.resumeTicks * Int(Self.interval)))
+            case .resume(let t):
+                log(String(format: "cooled to %.1f °C; resuming fan policies", t))
             case .auto(let fan):
                 try? writer.setAuto(fan)
                 written[fan] = nil
@@ -92,11 +98,18 @@ final class Controller {
             guard sampler.discovery.fans.contains(where: { $0.index == id }) else { throw FanControlError.noSuchFan(id) }
             engine.set(policy, for: id)
             written[id] = nil
-            if policy == .auto { try writer.setAuto(id) }
+            if policy == .auto {
+                do {
+                    try writer.setAuto(id)
+                } catch {
+                    // Never leave a fan stranded in manual mode: fall back to a full reset.
+                    log("fan \(id): auto failed (\(error)); resetting all fans")
+                    writer.setAllAuto()
+                }
+            }
             log("fan \(id): \(policy.description)")
         }
         if !engine.isActive && sampler.discovery.fanTestKey { writer.setAllAuto() }
-        tick()   // apply now rather than at the next timer fire
     }
 }
 
@@ -113,6 +126,10 @@ final class Service: NSObject, ThermoHelperProtocol {
                 if case .fixed(let r) = p, !(r >= 0) { throw FanControlError.helper("invalid rpm") }
                 try self.controller.setPolicy(p, fan: fan)
                 reply(nil)
+                // Apply right away, but after replying: on Apple Silicon the first
+                // manual write waits for the Ftst unlock (2+ s), longer than a client
+                // should block on an XPC reply.
+                self.controller.queue.async { self.controller.tick() }
             } catch {
                 reply("\(error)")
             }

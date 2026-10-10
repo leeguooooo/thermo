@@ -105,7 +105,7 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 - 只有 root helper（`dev.thermo.helper`）写 SMC；转速始终限制在 SMC 报告的 min–max 内。
 - 策略由 helper 持有，CLI/App 退出后仍然生效；helper **启动、退出（SIGTERM/SIGINT/SIGHUP）时把所有风扇恢复自动**。
-- 任一 CPU/GPU 传感器 ≥ 95 °C 时立即全部恢复自动并清除策略。
+- 超温保护：最热的 CPU/GPU 传感器连续 2 次采样（4 秒）达到阈值（Intel 95 °C，Apple Silicon 110 °C——实测 M4 在系统自己控风扇时核心常驻 103–115 °C）就全部恢复自动；策略**暂停而不清除**，降到阈值 −10 °C 以下并保持 60 秒后自动恢复。
 - 降速每 2 秒最多降 400 rpm，变化 < 50 rpm 不写入，避免风扇来回抖动。
 - 未测试：Apple Silicon 的写入路径（`Ftst` 解锁 + `F<i>Md`/`F<i>Tg`）需要在 M 系列机器上验证。
 

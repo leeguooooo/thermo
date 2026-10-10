@@ -305,7 +305,8 @@ struct FansView: View {
                 }
             }
             FanChart(history: monitor.history)
-            Text(tr("Safety: fans return to Auto if any CPU/GPU sensor reaches %1$@ °C, or when the helper stops.", String(Int(FanPolicyEngine.safetyCeiling))))
+            Text(tr("Safety: fans go back to Auto while the CPU/GPU stays above %1$@ °C (%2$@ °C on Apple Silicon) and your settings resume once it cools down; also whenever the helper stops.",
+                    String(Int(SafetyLimits.intel.ceiling)), String(Int(SafetyLimits.appleSilicon.ceiling))))
                 .font(.caption2).foregroundStyle(.secondary)
         }
         .onAppear { monitor.refreshHelper() }
