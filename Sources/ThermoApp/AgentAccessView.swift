@@ -6,7 +6,16 @@ import AgentCore
 /// Sets up thermo-use: the `thermo` CLI on PATH for AI agents, and the thermo-use skill in Claude
 /// Code and Codex (it is part of the *-use family in leeguooooo/plugins).
 final class AgentAccess: ObservableObject {
-    enum Tool: Equatable { case checking, unavailable, missing, notAdded, added }
+    enum Tool: Equatable { case checking, unavailable, missing, notAdded, disabled, added }
+    enum InstalledTool { case claude, codex }
+    private struct CodexPluginList: Decodable {
+        struct Entry: Decodable {
+            var pluginId: String
+            var installed: Bool
+            var enabled: Bool
+        }
+        var installed: [Entry]
+    }
     struct Status {
         var cliLinked: Bool
         var claude: Tool
@@ -21,6 +30,7 @@ final class AgentAccess: ObservableObject {
     @Published private(set) var busy: String?
     @Published var message: String?
     private var queuedCheck: (() -> Status)?
+    private var installationToVerify: (InstalledTool, String)?
 
     static let marketplace = "leeguooooo/plugins"
     static let plugin = "thermo-use@leeguooooo-plugins"
@@ -66,6 +76,10 @@ final class AgentAccess: ObservableObject {
                 self.cliLinked = status.cliLinked
                 self.claude = status.claude
                 self.codex = status.codex
+                if let (tool, label) = self.installationToVerify {
+                    self.message = Self.installationMessage(tool == .claude ? status.claude : status.codex, label: label)
+                    self.installationToVerify = nil
+                }
             }
         }
     }
@@ -75,8 +89,8 @@ final class AgentAccess: ObservableObject {
         let claude = Self.find("claude") == nil ? .missing : Self.claudeState(home: home)
         var codex: Tool = .missing
         if let binary = Self.find("codex") {
-            if let list = Self.run(binary, ["plugin", "list"], timeout: 15) {
-                codex = list.contains("thermo-use") && list.lowercased().contains("installed") ? .added : .notAdded
+            if let list = Self.run(binary, ["plugin", "list", "--json"], timeout: 15, captureError: false) {
+                codex = Self.codexState(json: list)
             } else { codex = .unavailable }
         }
         return Status(cliLinked: linked, claude: claude, codex: codex)
@@ -89,7 +103,26 @@ final class AgentAccess: ObservableObject {
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               root["plugins"] is [String: Any] else { return .unavailable }
         let installed = ClaudePlugins.installed(AgentHome(home: home))
-        return installed.contains { $0.id == Self.plugin && $0.scope == "user" && FileManager.default.fileExists(atPath: $0.installPath) } ? .added : .notAdded
+        guard installed.contains(where: { $0.id == Self.plugin && $0.scope == "user" && FileManager.default.fileExists(atPath: $0.installPath) }) else { return .notAdded }
+        guard let settingsData = try? Data(contentsOf: URL(fileURLWithPath: home + "/.claude/settings.json")),
+              let settings = (try? JSONSerialization.jsonObject(with: settingsData)) as? [String: Any],
+              let enabled = (settings["enabledPlugins"] as? [String: Any])?[plugin] as? Bool else { return .unavailable }
+        return enabled ? .added : .disabled
+    }
+
+    static func codexState(json: String) -> Tool {
+        guard let list = try? JSONDecoder().decode(CodexPluginList.self, from: Data(json.utf8)) else { return .unavailable }
+        guard let item = list.installed.first(where: { $0.pluginId == plugin }) else { return .notAdded }
+        guard item.installed else { return .notAdded }
+        return item.enabled ? .added : .disabled
+    }
+
+    static func installationMessage(_ state: Tool, label: String) -> String {
+        switch state {
+        case .added: return tr("Added to %1$@. New sessions can use it.", label)
+        case .disabled: return tr("Installed in %1$@, but disabled. Enable the plugin before using it.", label)
+        default: return tr("The command finished, but installation in %1$@ could not be confirmed. Check its plugin settings.", label)
+        }
     }
 
     /// `~/.local/bin/thermo` and `thermo-use` → this app's CLI. Only symlinks are replaced.
@@ -118,8 +151,12 @@ final class AgentAccess: ObservableObject {
             }
             DispatchQueue.main.async {
                 self.busy = nil
-                self.message = ok ? tr("Added to %1$@. New sessions can use it.", label)
-                                  : tr("%1$@ could not add it; copy the command below instead.", label)
+                if ok {
+                    self.installationToVerify = (tool == "claude" ? .claude : .codex, label)
+                    self.message = tr("The command finished. Checking installation…")
+                } else {
+                    self.message = tr("%1$@ could not add it; copy the command below instead.", label)
+                }
                 if !self.cliLinked { self.linkCLI() } else { self.refreshAfterChange() }
             }
         }
@@ -135,10 +172,10 @@ final class AgentAccess: ObservableObject {
     }
 
     /// Returns complete combined output only when the tool succeeds within the time limit.
-    static func run(_ bin: String, _ args: [String], timeout: TimeInterval) -> String? {
+    static func run(_ bin: String, _ args: [String], timeout: TimeInterval, captureError: Bool = true) -> String? {
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = [NSHomeDirectory() + "/.local/bin", "/opt/homebrew/bin", "/usr/local/bin", env["PATH"] ?? "/usr/bin:/bin"].joined(separator: ":")
-        let result = CommandRunner.run(bin, arguments: args, environment: env, timeout: timeout)
+        let result = CommandRunner.run(bin, arguments: args, environment: env, timeout: timeout, captureError: captureError)
         guard result.status == 0, !result.timedOut, !result.cancelled, !result.truncated else { return nil }
         return result.output
     }
@@ -186,11 +223,11 @@ struct AgentAccessSheet: View {
             step(done: access.claude == .added, title: "Claude Code",
                  detail: toolDetail(access.claude),
                  button: toolButton(access.claude, add: access.addToClaude),
-                 copy: "/plugin install \(AgentAccess.plugin)")
+                 copy: access.claude == .disabled ? nil : "/plugin install \(AgentAccess.plugin)")
             step(done: access.codex == .added, title: "Codex",
                  detail: toolDetail(access.codex),
                  button: toolButton(access.codex, add: access.addToCodex),
-                 copy: "codex plugin add \(AgentAccess.plugin)")
+                 copy: access.codex == .disabled ? nil : "codex plugin add \(AgentAccess.plugin)")
             step(done: nil, title: tr("Any other agent"), detail: tr("Run this in its terminal; the skill is SKILL.md in leeguooooo/thermo-use"), button: nil, copy: AgentAccess.curl)
             step(done: nil, title: tr("The whole *-use family"), detail: tr("Browser, mail, messages, passwords, notes … and thermo-use, in one install"),
                  button: nil, copy: "/plugin install \(AgentAccess.family)")
@@ -222,6 +259,7 @@ struct AgentAccessSheet: View {
         case .unavailable: return tr("Could not check installation. Retry before adding the plugin.")
         case .missing: return tr("Not installed on this Mac")
         case .added: return tr("thermo-use is installed")
+        case .disabled: return tr("thermo-use is installed, but disabled in the agent’s plugin settings.")
         case .notAdded: return tr("Adds the thermo-use plugin")
         }
     }

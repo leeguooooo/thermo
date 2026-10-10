@@ -2,6 +2,10 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "Installed in %1$@, but disabled. Enable the plugin before using it.": "已安装到 %1$@，但尚未启用，请先在插件设置中启用。",
+    "The command finished, but installation in %1$@ could not be confirmed. Check its plugin settings.": "命令已结束，但未能确认 %1$@ 中的安装状态，请检查插件设置。",
+    "The command finished. Checking installation…": "命令已结束，正在确认安装状态…",
+    "thermo-use is installed, but disabled in the agent’s plugin settings.": "thermo-use 已安装，但在 agent 的插件设置中被停用。",
     "Checking installation…": "正在检查安装状态…",
     "Could not check installation. Retry before adding the plugin.": "无法确认安装状态，请重试后再添加插件。",
     "No reading available": "暂无读数",
