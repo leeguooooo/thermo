@@ -55,32 +55,10 @@ struct Watch {
         loop: while interrupted == 0 {
             let s = sm.sample()
             if let c = s.hottest { cpuHistory.append(c) }
-            let width = terminalWidth(), height = terminalHeight()
+            let width = terminalWidth()
             if cpuHistory.count > width - 14 { cpuHistory.removeFirst(cpuHistory.count - max(1, width - 14)) }
 
-            let r = app.renderer
-            var lines = r.header(s, model: sm.discovery.model)
-            lines.append("")
-            switch page {
-            case 1: lines += r.temperatures(s)
-            case 2: lines += r.join([r.power(s), r.battery(s.battery)])
-            default:
-                lines += r.join([r.overview(s), r.fans(s), r.summaryPower(s), r.battery(s.battery)])
-                if cpuHistory.count > 1 {
-                    lines += ["", app.style.bold("History") + app.style.dim(" (hottest)"),
-                              "  " + app.style.sparkline(cpuHistory, lo: 30, hi: 100)
-                                  + "  " + app.style.temp(cpuHistory.last, width: 0)]
-                }
-            }
-            let tabs = pages.enumerated().map { i, p in i == page ? app.style.bold("[\(i + 1) \(p)]") : app.style.dim(" \(i + 1) \(p) ") }
-            let footer = tabs.joined(separator: " ") + app.style.dim(String(format: "   every %.1fs · q quit · ←/→ or 1-3 switch", interval))
-
-            if lines.count > height - 2 { lines = Array(lines.prefix(height - 2)) }
-            var frame = "\u{1B}[H"
-            for l in lines { frame += l + "\u{1B}[K\n" }
-            frame += "\u{1B}[J\u{1B}[\(height);1H" + footer + "\u{1B}[K"
-            print(frame, terminator: "")
-            fflush(stdout)
+            draw(s, model: sm.discovery.model, page: page, history: cpuHistory, interval: interval)
 
             n += 1
             if let count, n >= count { break }
@@ -93,14 +71,43 @@ struct Watch {
                 guard let key = term.readKey(timeout: remaining) else { continue }
                 switch key {
                 case "q", "Q", "\u{1B}": break loop
-                case "1", "2", "3": page = Int(key)! - 1; continue loop
-                case "\u{1B}[C", "l", "\t": page = (page + 1) % pages.count; continue loop
-                case "\u{1B}[D", "h": page = (page + pages.count - 1) % pages.count; continue loop
-                default: break
+                case "1", "2", "3": page = Int(key)! - 1
+                case "\u{1B}[C", "l", "\t": page = (page + 1) % pages.count
+                case "\u{1B}[D", "h": page = (page + pages.count - 1) % pages.count
+                default: continue
                 }
+                draw(s, model: sm.discovery.model, page: page, history: cpuHistory, interval: interval)
             }
         }
-        print("\u{1B}[?25h\u{1B}[?1049l", terminator: "")
+    }
+
+    static func contentRows(height: Int) -> Int { max(0, height - 2) }
+
+    private func draw(_ s: Snapshot, model: String, page: Int, history: [Double], interval: Double) {
+        let pages = ["overview", "sensors", "power"]
+        let height = terminalHeight()
+        let r = app.renderer
+        var lines = r.header(s, model: model)
+        lines.append("")
+        switch page {
+        case 1: lines += r.temperatures(s)
+        case 2: lines += r.join([r.power(s), r.battery(s.battery)])
+        default:
+            lines += r.join([r.overview(s), r.fans(s), r.summaryPower(s), r.battery(s.battery)])
+            if history.count > 1 {
+                lines += ["", app.style.bold("History") + app.style.dim(" (hottest)"),
+                          "  " + app.style.sparkline(history, lo: 30, hi: 100)
+                              + "  " + app.style.temp(history.last, width: 0)]
+            }
+        }
+        let tabs = pages.enumerated().map { i, p in i == page ? app.style.bold("[\(i + 1) \(p)]") : app.style.dim(" \(i + 1) \(p) ") }
+        let footer = tabs.joined(separator: " ") + app.style.dim(String(format: "   every %.1fs · q quit · ←/→ or 1-3 switch", interval))
+
+        lines = Array(lines.prefix(Self.contentRows(height: height)))
+        var frame = "\u{1B}[H"
+        for l in lines { frame += l + "\u{1B}[K\n" }
+        frame += "\u{1B}[J\u{1B}[\(height);1H" + footer + "\u{1B}[K"
+        print(frame, terminator: "")
         fflush(stdout)
     }
 

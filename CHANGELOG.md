@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Watch page changes redraw the current snapshot without consuming samples or resetting the interval; tiny terminals no longer produce negative row counts. Terminal restoration occurs once on exit.
+
 - CLI rejects flag assignments such as `--yes=false` and non-finite sampling intervals. Terminal polling clamps large waits and checks signals every 100 ms.
 - `thermo settings` exposes slowdown alerts and unnamed sensor readings for agent/script access.
 

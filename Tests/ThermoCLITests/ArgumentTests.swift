@@ -25,6 +25,12 @@ final class ArgumentTests: XCTestCase {
         XCTAssertEqual(RawTerminal.pollTimeout(0.01), 10)
     }
 
+    func testTinyTerminalsCannotProduceNegativeRowCounts() {
+        XCTAssertEqual(Watch.contentRows(height: 1), 0)
+        XCTAssertEqual(Watch.contentRows(height: 2), 0)
+        XCTAssertEqual(Watch.contentRows(height: 24), 22)
+    }
+
     func testAgentSettingsUseTheSameDefaultsKeysAsTheApp() throws {
         let slowdown = try XCTUnwrap(SettingsCommand.all.first { $0.key == "slowdown-alerts" })
         let unnamed = try XCTUnwrap(SettingsCommand.all.first { $0.key == "unnamed-sensors" })
