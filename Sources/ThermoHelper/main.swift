@@ -53,6 +53,14 @@ final class Controller {
         queue.sync {
             writer.setAllAuto()
             log("started; \(sampler.discovery.fans.count) fan(s), \(sampler.discovery.sensors.filter(\.essential).count) control sensors; fans set to auto")
+            // What the user chose survives restarts (updates, reboots); the next tick applies it,
+            // with the over-temperature protection as always.
+            let saved = PolicyStore.load()
+            for (fan, policy) in saved.sorted(by: { $0.key < $1.key })
+            where sampler.discovery.fans.contains(where: { $0.index == fan }) && policy != .auto {
+                engine.set(policy, for: fan)
+                log("fan \(fan): restored \(policy.description)")
+            }
         }
         let t = DispatchSource.makeTimerSource(queue: queue)
         t.schedule(deadline: .now() + Self.interval, repeating: Self.interval, leeway: .milliseconds(200))
@@ -116,6 +124,7 @@ final class Controller {
             log("fan \(id): \(policy.description)")
         }
         if !engine.isActive && sampler.discovery.fanTestKey { writer.setAllAuto() }
+        do { try PolicyStore.save(engine.policies) } catch { log("could not save policies: \(error)") }
     }
 }
 

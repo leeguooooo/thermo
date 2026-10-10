@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+
+- Your fan setting survives updates and restarts: the helper remembers it and puts it back when it starts (over-temperature protection still applies). Before, an update or reboot quietly returned the fans to automatic.
 ## 1.1.4
 
 - Disk Cleanup has the same look as AI Agent Diagnostics: a Smart Scan home that says how much can be freed with one button for the safe part, a card per category, and pages where each item opens in place to show its sessions or files. It opens with the last scan when that is recent, instead of scanning from scratch.

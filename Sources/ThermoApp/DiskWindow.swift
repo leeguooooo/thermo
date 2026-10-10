@@ -50,13 +50,15 @@ enum DiskWindow {
             NSApp.activate(ignoringOtherApps: true)
             window?.makeKeyAndOrderFront(nil)
         }
-        if model.report == nil && !model.scanning && !model.loadSaved() { model.scan() }
+        // `--no-scan` (verification): show whatever state there is, e.g. the empty start page.
+        if model.report == nil && !model.scanning && !model.loadSaved() && !CommandLine.arguments.contains("--no-scan") { model.scan() }
     }
 
     /// Verification: waits for the scan, lets animations settle, writes the window as a PNG, quits.
     static func snapshotWhenReady(_ model: DiskModel, to path: String) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            guard model.report != nil, !model.scanning else { return snapshotWhenReady(model, to: path) }
+            let ready = CommandLine.arguments.contains("--no-scan") ? !model.scanning : (model.report != nil && !model.scanning)
+            guard ready else { return snapshotWhenReady(model, to: path) }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 if let view = window?.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
                     view.cacheDisplay(in: view.bounds, to: rep)
@@ -208,8 +210,10 @@ struct DiskCleanupView: View {
             row(.home, title: tr("Smart Scan"), symbol: "sparkles", color: .pink,
                 trailing: model.report.map { ByteFormat.string($0.totalBytes) })
             row(.overview, title: tr("Where the space is"), symbol: "chart.pie.fill", color: .teal, trailing: nil)
-            Text(tr("Categories").uppercased()).font(.system(size: 10, weight: .semibold)).tracking(0.8)
-                .foregroundStyle(.white.opacity(0.4)).padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 6)
+            if !items.isEmpty {
+                Text(tr("Categories").uppercased()).font(.system(size: 10, weight: .semibold)).tracking(0.8)
+                    .foregroundStyle(.white.opacity(0.4)).padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 6)
+            }
             ForEach(CleanCategory.allCases, id: \.self) { c in
                 let bytes = model.report?.bytes(in: c) ?? 0
                 if bytes > 0 || items.contains(where: { $0.category == c }) {

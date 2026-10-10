@@ -112,6 +112,28 @@ public enum HelperSelfUpdate {
     func policies(reply: @escaping (Data) -> Void)
 }
 
+/// The helper's fan policies on disk, so a helper restart (update, reboot) keeps what the user
+/// chose. Root-owned: only the helper writes it.
+public enum PolicyStore {
+    public static let path = "/Library/Application Support/dev.thermo/fan-policies.json"
+
+    public static func save(_ policies: [Int: FanPolicy], to path: String = PolicyStore.path) throws {
+        let url = URL(fileURLWithPath: path)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true,
+                                                attributes: [.posixPermissions: 0o755])
+        let data = try PolicyCoding.encoder().encode(Dictionary(uniqueKeysWithValues: policies.map { (String($0.key), $0.value) }))
+        try data.write(to: url, options: .atomic)
+        chmod(path, 0o644)
+    }
+
+    /// Saved policies; empty when there are none or the file cannot be read.
+    public static func load(from path: String = PolicyStore.path) -> [Int: FanPolicy] {
+        guard let data = FileManager.default.contents(atPath: path),
+              let raw = try? PolicyCoding.decoder().decode([String: FanPolicy].self, from: data) else { return [:] }
+        return Dictionary(uniqueKeysWithValues: raw.compactMap { k, v in Int(k).map { ($0, v) } })
+    }
+}
+
 public enum PolicyCoding {
     public static func encoder() -> JSONEncoder {
         let e = JSONEncoder()
@@ -315,7 +337,7 @@ public enum HelperInstaller {
     public static func uninstall() throws {
         let script = [
             "/bin/launchctl bootout system/\(HelperConstants.label) 2>/dev/null",
-            "/bin/rm -f \(shellQuote(HelperConstants.launchdPlist)) \(shellQuote(HelperConstants.installedBinary))",
+            "/bin/rm -f \(shellQuote(HelperConstants.launchdPlist)) \(shellQuote(HelperConstants.installedBinary)) \(shellQuote(PolicyStore.path))",
             "true",
         ].joined(separator: "; ")
         try runPrivileged(script)

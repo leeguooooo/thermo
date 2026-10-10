@@ -379,3 +379,18 @@ final class HelperSelfUpdateTests: XCTestCase {
     }
 }
 
+final class PolicyStoreTests: XCTestCase {
+    func testPoliciesSurviveARoundTrip() throws {
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent("policies-\(UUID().uuidString)/p.json").path
+        defer { try? FileManager.default.removeItem(atPath: (path as NSString).deletingLastPathComponent) }
+        XCTAssertTrue(PolicyStore.load(from: path).isEmpty, "nothing saved yet")
+        let curve = try FanCurve(parsing: "50:min,70:3000,85:max")
+        try PolicyStore.save([0: .fixed(rpm: .infinity), 1: .curve(curve)], to: path)
+        let back = PolicyStore.load(from: path)
+        XCTAssertEqual(back[0], .fixed(rpm: .infinity), "max survives as infinity")
+        XCTAssertEqual(back[1], .curve(curve))
+        try "garbage".write(toFile: path, atomically: true, encoding: .utf8)
+        XCTAssertTrue(PolicyStore.load(from: path).isEmpty, "a broken file means no policies, never a crash")
+    }
+}
+
