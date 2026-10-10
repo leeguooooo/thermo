@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Alert settings show notification authorization separately from the alert switches, including missing permission, denied access and disabled banners. Enabling slowdown alerts requests permission, and returning from System Settings refreshes the status.
+
 - The menu-bar hottest metric and hot alerts use the same full curated temperature scope as the open window. Default background CPU sampling remains essential-only.
 - Sensors can include unnamed readings for SMC-key troubleshooting; the wider scope is released when leaving the page.
 

@@ -574,6 +574,7 @@ struct SettingsView: View {
     @AppStorage(Settings.showInDock) private var showInDock = true
     @AppStorage(PulseRecorder.alertsKey) private var slowdownAlerts = true
     @ObservedObject var updates: Updates
+    @ObservedObject private var notifications = NotificationAccess.shared
     @AppStorage(Settings.titleMetric) private var titleMetric = TitleMetric.cpu.rawValue
     @AppStorage(Settings.interval) private var interval = 2.0
     @AppStorage(Settings.alertsEnabled) private var alertsEnabled = false
@@ -607,7 +608,10 @@ struct SettingsView: View {
                 }
             }
             section(tr("Alerts")) {
-                row(tr("Warn me before my Mac gets slow")) { Toggle("", isOn: $slowdownAlerts) }
+                row(tr("Warn me before my Mac gets slow")) {
+                    Toggle("", isOn: $slowdownAlerts)
+                        .onChange(of: slowdownAlerts) { enabled in if enabled { notifications.request() } }
+                }
                 row(tr("Alert when hot"), last: !alertsEnabled) {
                     Toggle("", isOn: $alertsEnabled)
                         .onChange(of: alertsEnabled) { on in if on { Monitor.requestNotificationPermission() } }
@@ -617,6 +621,9 @@ struct SettingsView: View {
                         Stepper("", value: $alertThreshold, in: 60...105, step: 1)
                     }
                 }
+            }
+            if slowdownAlerts || alertsEnabled {
+                notificationStatus
             }
             section(tr("AI agents")) {
                 AgentAccessRow().padding(14)
@@ -644,6 +651,36 @@ struct SettingsView: View {
         }
         .toggleStyle(.switch)
         .pickerStyle(.menu)
+        .onAppear { notifications.refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in notifications.refresh() }
+    }
+
+    @ViewBuilder var notificationStatus: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            switch notifications.state {
+            case .unknown:
+                Label(tr("Checking notification permission…"), systemImage: "hourglass")
+            case .unavailable:
+                Label(tr("Notifications require an app bundle."), systemImage: "bell.slash")
+            case .notRequested:
+                Label(tr("Notification permission has not been requested."), systemImage: "bell.badge")
+                Button(tr("Allow notifications")) { notifications.request() }.disabled(notifications.requesting)
+            case .denied:
+                Label(tr("Notifications are disabled in macOS."), systemImage: "bell.slash")
+                Button(tr("Open notification settings")) { notifications.openSettings() }
+            case .bannersDisabled:
+                Label(tr("Notifications are authorized, but banners are disabled."), systemImage: "bell")
+                Button(tr("Open notification settings")) { notifications.openSettings() }
+            case .allowed:
+                Label(tr("macOS has authorized notifications."), systemImage: "checkmark.circle")
+            }
+            if let error = notifications.error {
+                Text(error).foregroundStyle(.orange).textSelection(.enabled)
+            }
+            if notifications.requesting { ProgressView().controlSize(.small) }
+        }
+        .font(.callout).foregroundStyle(.white.opacity(0.8)).frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14).glass(radius: 12)
     }
 
     func section<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {

@@ -205,8 +205,7 @@ final class Monitor: ObservableObject {
     }
 
     static func requestNotificationPermission() {
-        guard Bundle.main.bundleIdentifier != nil else { return }
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        Task { @MainActor in NotificationAccess.shared.request() }
     }
 
     // MARK: Helper / fan control

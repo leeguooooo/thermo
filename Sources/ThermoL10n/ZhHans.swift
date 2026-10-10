@@ -2,6 +2,14 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "Checking notification permission…": "正在检查通知权限…",
+    "Notifications require an app bundle.": "通知需要在打包的 App 中使用。",
+    "Notification permission has not been requested.": "尚未请求通知权限。",
+    "Allow notifications": "允许通知",
+    "Notifications are disabled in macOS.": "系统中已关闭通知。",
+    "Open notification settings": "打开通知设置",
+    "Notifications are authorized, but banners are disabled.": "通知已授权，但系统横幅已关闭。",
+    "macOS has authorized notifications.": "系统已授权通知。",
     "Include unnamed sensors": "包含未命名传感器",
     "Refresh: %1$@ s": "刷新间隔：%1$@ 秒",
     "load %1$@ / %2$@ (1 / 5 min) on %3$@ cores · memory %4$@ · swap %5$@ · thermal pressure %6$@": "负载 %1$@ / %2$@（1 / 5 分钟）· %3$@ 核 · 内存%4$@ · 交换 %5$@ · 系统热压力%6$@",
