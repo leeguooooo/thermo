@@ -89,6 +89,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 所有读取命令都支持 `--json`、`--csv`，另有 `--fahrenheit`、`--no-color`（也遵循 `NO_COLOR`）。
 
+`thermo settings slowdown-alerts on|off` 和 `thermo settings unnamed-sensors on|off` 与 App 使用同一组开关。`--yes` 等标志不接受 `=false`；需要确认时省略 `--yes`。
+
 ## 磁盘清理
 
 `thermo clean` 和 App 的 **Disk** 页。常规清理（开发缓存、Xcode、浏览器、日志、旧安装包）之外，重点放在 AI 工具留在磁盘上的东西：

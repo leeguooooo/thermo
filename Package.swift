@@ -38,6 +38,7 @@ let package = Package(
             dependencies: ["ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", .product(name: "Sparkle", package: "Sparkle")],
             linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts")]
         ),
+        .testTarget(name: "ThermoCLITests", dependencies: ["thermo"]),
         .testTarget(name: "ThermoAppTests", dependencies: ["ThermoApp", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor"]),
         .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC"]),
         .testTarget(name: "AgentDoctorTests", dependencies: ["AgentDoctor", "ThermoL10n", "AgentCore"]),

@@ -44,6 +44,7 @@ struct Args {
                 options[name] = argv[i]
                 i += 1
             } else if Args.knownFlags.contains(name) {
+                guard inline == nil else { throw CLIError("--\(name) does not take a value") }
                 flags.insert(name)
             } else {
                 throw CLIError("unknown option '\(a)' (see thermo --help)")
@@ -56,7 +57,7 @@ struct Args {
     func double(_ name: String) throws -> Double? {
         guard let v = options[name] else { return nil }
         let trimmed = v.hasSuffix("s") ? String(v.dropLast()) : v
-        guard let d = Double(trimmed), d > 0 else { throw CLIError("--\(name) expects a positive number, got '\(v)'") }
+        guard let d = Double(trimmed), d.isFinite, d > 0 else { throw CLIError("--\(name) expects a positive number, got '\(v)'") }
         return d
     }
 

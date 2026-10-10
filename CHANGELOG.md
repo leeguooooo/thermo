@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- CLI rejects flag assignments such as `--yes=false` and non-finite sampling intervals. Terminal polling clamps large waits and checks signals every 100 ms.
+- `thermo settings` exposes slowdown alerts and unnamed sensor readings for agent/script access.
+
 - Native View menu lists the main pages and their keyboard shortcuts. Language changes relabel the native menus without adding duplicates; page menu actions wait until a confirmation sheet is closed.
 
 - Disk Cleanup cache rejects cancelled reports, duplicate IDs, negative sizes and overflowing totals. Invalid saves do not replace the last valid cache.

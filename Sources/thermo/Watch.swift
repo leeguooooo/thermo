@@ -133,11 +133,18 @@ final class RawTerminal {
         if active { tcsetattr(STDIN_FILENO, TCSANOW, &original) }
     }
 
+    /// Check signals at least every 100 ms and never overflow poll's Int32 timeout.
+    static func pollTimeout(_ seconds: TimeInterval) -> Int32 {
+        guard seconds.isFinite else { return 100 }
+        return Int32(max(1, min(100, seconds * 1000)))
+    }
+
     /// Returns a key (escape sequences kept whole) or nil on timeout.
     func readKey(timeout: TimeInterval) -> String? {
-        guard active else { usleep(UInt32(min(timeout, 0.1) * 1e6)); return nil }
+        let milliseconds = Self.pollTimeout(timeout)
+        guard active else { usleep(UInt32(milliseconds) * 1000); return nil }
         var fds = pollfd(fd: STDIN_FILENO, events: Int16(POLLIN), revents: 0)
-        guard poll(&fds, 1, Int32(max(1, timeout * 1000))) > 0 else { return nil }
+        guard poll(&fds, 1, milliseconds) > 0 else { return nil }
         var buf = [UInt8](repeating: 0, count: 8)
         let n = read(STDIN_FILENO, &buf, buf.count)
         guard n > 0 else { return nil }
