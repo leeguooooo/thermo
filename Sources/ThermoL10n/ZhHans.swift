@@ -818,4 +818,9 @@ let zhHans: [String: String] = [
     "Thermo could not list %1$@'s tabs, so it did not restart it (they would be lost). Allow Thermo in System Settings → Privacy & Security → Automation.": "Thermo 读不到 %1$@ 的标签页，所以没有重启它（否则标签页会丢）。请在 系统设置 → 隐私与安全性 → 自动化 里允许 Thermo。",
     "%1$@ restarted, but its tabs could not be reopened. They are listed in %2$@.": "%1$@ 已重启，但标签页没能重新打开。它们记录在 %2$@。",
     "save its tabs, then open them again": "保存它的标签页，重启后再打开",
+    // Measuring pages only on request
+    "While measuring, Chrome briefly shows \"is being debugged\" at the top; it goes away when Thermo is done.": "测内存时 Chrome 顶部会短暂出现「正在被调试」提示，测完自动消失。",
+    "Add --watch 60 to measure memory per page and see which pages grow.": "加 --watch 60 可以测每个页面的内存，看哪些在涨。",
+    "Measure memory": "测内存",
+    "Which page leaks or uses the most memory? Measure every page twice, a minute apart.": "哪个页面在泄漏、哪个最占内存？每个页面测两次，间隔一分钟。",
 ]

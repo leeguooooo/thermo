@@ -21,10 +21,15 @@ extension PulseCommand {
         let interactive = !json && isatty(STDERR_FILENO) != 0
 
         let seconds = watch
+        // Measuring attaches to every page (Chrome shows "is being debugged" for a moment): only on request.
+        let measure = watch != nil || app.args.has("measure")
+        if measure && !json && ChromeInspector.endpoint(app: browser) != nil {
+            FileHandle.standardError.write(Data((ChromeInspector.debuggingBarNote + "\n").utf8))
+        }
         let done = DispatchSemaphore(value: 0)
         let box = Box()
         Task {
-            box.value = await ChromeInspector.diagnose(app: browser, watch: seconds, appMemoryKB: hog?.memoryKB, gpuKB: gpu) { phase in
+            box.value = await ChromeInspector.diagnose(app: browser, measure: measure, watch: seconds, appMemoryKB: hog?.memoryKB, gpuKB: gpu) { phase in
                 guard interactive else { return }
                 let line: String
                 switch phase {
@@ -91,6 +96,9 @@ extension PulseCommand {
             let windows = Dictionary(grouping: tabs, by: \.window)
             guard !tabs.isEmpty else { print(tr("%1$@ is not running.", browser)); return }
             lines.append(style.bold(tr("%1$@: %2$@ tabs in %3$@ windows", browser, String(tabs.count), String(windows.count))))
+            if d.hint == nil && ChromeInspector.endpoint(app: browser) != nil && !measure {
+                lines.append(style.dim("  " + tr("Add --watch 60 to measure memory per page and see which pages grow.")))
+            }
             if windows.count > 1 { lines.append(style.dim("  " + windows.values.map { String($0.count) }.sorted { Int($0)! > Int($1)! }.joined(separator: " · "))) }
         case .unavailable:
             lines.append(style.yellow("!") + " " + tr("Could not look inside %1$@.", browser))

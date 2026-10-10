@@ -22,13 +22,20 @@ final class ChromePagesModel: ObservableObject {
     }
 
     var running: Bool { task != nil }
+    /// Whether the running (or last) check measures pages, rather than only listing tabs.
+    @Published private(set) var measuring = false
+    /// Memory per page is possible (chrome-use or a debugging port).
+    var canMeasure: Bool { ChromeInspector.endpoint(app: app) != nil }
 
-    func start(watch: TimeInterval = 60) {
+    /// Without `measure`, only the tab list: nothing is attached. Measuring attaches to each page
+    /// (Chrome shows "is being debugged" briefly), so it starts only from the user's button.
+    func start(measure: Bool = false, watch: TimeInterval = 60) {
         task?.cancel()
         diagnosis = nil
+        measuring = measure
         let app = app, memory = appMemoryKB, gpu = gpuKB, model = self
         task = Task { [weak self] in
-            let d = await ChromeInspector.diagnose(app: app, watch: watch, appMemoryKB: memory, gpuKB: gpu) { phase in
+            let d = await ChromeInspector.diagnose(app: app, measure: measure, watch: watch, appMemoryKB: memory, gpuKB: gpu) { phase in
                 Task { @MainActor in model.phase = phase }
             }
             guard !Task.isCancelled, let self else { return }
@@ -164,6 +171,9 @@ struct ChromePagesView: View {
             Spacer()
             if model.running {
                 Button(tr("Stop")) { model.stop() }.controlSize(.small)
+            } else if model.canMeasure {
+                Button(model.diagnosis?.mode == .devtools ? tr("Measure again") : tr("Measure memory")) { model.start(measure: true) }
+                    .controlSize(.small).buttonStyle(.borderedProminent)
             } else {
                 Button(tr("Check again")) { model.start() }.controlSize(.small)
             }
@@ -171,7 +181,9 @@ struct ChromePagesView: View {
     }
 
     var summary: String {
-        guard let d = model.diagnosis else { return tr("Measuring every page twice, a minute apart, to see which ones grow.") }
+        guard let d = model.diagnosis else {
+            return model.measuring ? tr("Measuring every page twice, a minute apart, to see which ones grow.") : tr("Listing tabs…")
+        }
         switch d.mode {
         case .devtools:
             guard let r = d.report else { return "" }
@@ -199,6 +211,7 @@ struct ChromePagesView: View {
             case nil:
                 ProgressView()
             }
+            if model.measuring { Text(ChromeInspector.debuggingBarNote).font(.caption).foregroundStyle(.orange) }
             Text(tr("Thermo only reads each page's memory, title and address, never its content, and closes nothing on its own."))
                 .font(.caption).foregroundStyle(.secondary)
         }
@@ -207,6 +220,15 @@ struct ChromePagesView: View {
     @ViewBuilder
     func content(_ d: ChromeInspector.Diagnosis) -> some View {
         if let failed = model.closeFailed { note(failed, color: .red) }
+        if d.mode == .tabs && model.canMeasure && !model.measuring {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(tr("Which page leaks or uses the most memory? Measure every page twice, a minute apart.")).font(.callout)
+                Text(ChromeInspector.debuggingBarNote).font(.caption).foregroundStyle(.secondary)
+                Button(tr("Measure memory")) { model.start(measure: true) }.controlSize(.small).buttonStyle(.borderedProminent)
+            }
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(0.08)))
+        }
         if let h = d.hiddenText { note(h, color: .orange) }
         if let g = d.gap { note(g, color: .secondary) }
         if let r = d.report {

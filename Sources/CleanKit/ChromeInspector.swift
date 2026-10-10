@@ -543,14 +543,27 @@ public enum ChromeInspector {
         case listingTabs
     }
 
+    /// Said once wherever pages are measured.
+    public static var debuggingBarNote: String {
+        tr("While measuring, Chrome briefly shows \"is being debugged\" at the top; it goes away when Thermo is done.")
+    }
+
     public static let chromeUseInstall = "curl -fsSL https://raw.githubusercontent.com/leeguooooo/chrome-use/main/install.sh | sh"
 
     /// Samples (twice, `watch` seconds apart, when given), else falls back to the tab list.
-    public static func diagnose(app: String = "Google Chrome", watch: TimeInterval?, appMemoryKB: Int? = nil, gpuKB: Int? = nil,
+    /// `measure` attaches a debugger to each page, which briefly shows Chrome's "is being debugged"
+    /// bar; only when the user asked for it. Without it, just the tab list (nothing is attached).
+    public static func diagnose(app: String = "Google Chrome", measure: Bool = true, watch: TimeInterval?, appMemoryKB: Int? = nil, gpuKB: Int? = nil,
                                 home: String = NSHomeDirectory(),
                                 progress: @escaping @Sendable (Phase) -> Void = { _ in }) async -> Diagnosis {
         var hint: String?
-        if let url = endpoint(app: app, home: home) {
+        if !measure {
+            if endpoint(app: app, home: home) == nil {
+                hint = app == "Google Chrome"
+                    ? tr("To see memory per page (which one leaks), install chrome-use, which connects Thermo to your own Chrome: %1$@", chromeUseInstall)
+                    : tr("To see memory per page, start %1$@ with --remote-debugging-port=9222.", app)
+            }
+        } else if let url = endpoint(app: app, home: home) {
             do {
                 let first = try await sample(url) { d, t in progress(.measuring(round: 1, done: d, total: t)) }
                 var report = diagnose(first)
