@@ -455,10 +455,16 @@ enum AgentsWindow {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1040, height: 660),
                              styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
             w.isReleasedWhenClosed = false
+            // Content first, and let SwiftUI set only the minimum: otherwise the hosting controller shrinks
+            // the window to its minimum and the autosaved frame remembers that.
+            let host = NSHostingController(rootView: Host(scanner: scanner, state: state).frame(minWidth: 860, minHeight: 520))
+            host.sizingOptions = [.minSize]
+            w.contentViewController = host
+            if !w.setFrameUsingName("AgentDiagnostics") || w.frame.width < 860 {
+                w.setContentSize(NSSize(width: 1040, height: 660))
+                w.center()
+            }
             w.setFrameAutosaveName("AgentDiagnostics")
-            w.contentViewController = NSHostingController(rootView: Host(scanner: scanner, state: state)
-                .frame(minWidth: 860, minHeight: 520))
-            if !w.setFrameUsingName("AgentDiagnostics") { w.center() }
             window = w
         }
         window?.title = tr("AI Agent Diagnostics")

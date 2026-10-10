@@ -47,6 +47,8 @@ COMMANDS
                              Xcode, project build output, browsers (read-only)
   clean run safe|ID…         remove items (safe: delete; review: to Trash); asks first
   clean log                  what earlier cleanups removed
+  clean overview             where the used space is: the big places and their
+                             biggest folders (--json)
 
 OPTIONS
   -a, --all                  include sensors without a known name

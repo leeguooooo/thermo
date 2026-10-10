@@ -11,8 +11,30 @@ struct CleanCommand {
         switch rest.first {
         case "run": try clean(Array(rest.dropFirst()))
         case "log": showLog()
+        case "overview", "space": overview()
         default: try report(filter: rest)
         }
+    }
+
+    /// Where the used space is: the big places on this disk and the biggest folders in each.
+    func overview() {
+        let tty = isatty(STDERR_FILENO) != 0 && !args.has("json")
+        let o = SpaceOverview.measure(onProgress: tty ? { _ in FileHandle.standardError.write(".".data(using: .utf8)!) } : nil)
+        if tty { FileHandle.standardError.write("\n".data(using: .utf8)!) }
+        if args.has("json") { print(Export.json(o)); return }
+        func gb(_ b: Int64) -> String { b >= 1_000_000_000 ? String(format: "%.1f GB", Double(b) / 1e9) : String(format: "%.0f MB", Double(b) / 1e6) }
+        var lines = [style.bold("Disk") + style.dim(String(format: " · %@ used of %@ · %@ free", gb(o.used), gb(o.capacity), gb(o.free))
+                     + (o.purgeable > 1_000_000_000 ? " (+\(gb(o.purgeable)) purgeable)" : "")), ""]
+        for e in o.entries where e.bytes >= 100_000_000 {
+            lines.append(pad(gb(e.bytes), 9, right: true) + "  " + style.bold(e.title))
+            if let n = e.note { lines.append(pad("", 11) + style.dim(n)) }
+            for c in e.children.prefix(args.has("all") ? 20 : 5) where c.bytes >= 100_000_000 {
+                lines.append(pad("", 11) + pad(gb(c.bytes), 9, right: true) + "  " + c.title)
+            }
+        }
+        lines.append("")
+        lines.append(style.dim(String(format: "measured in %.0f s · what can go: thermo clean", o.duration)))
+        out(lines)
     }
 
     func options() throws -> ScanOptions {

@@ -201,6 +201,16 @@ public enum Cleaner {
                 result.failed[path] = (error as NSError).localizedDescription
             }
         }
+        // Things only their own tool may remove: report the item's size once every command succeeded.
+        if let commands = item.commands, !commands.isEmpty {
+            var ok = true
+            for argv in commands {
+                let (status, output) = Shell.exec(argv, timeout: 180)
+                let line = argv.joined(separator: " ")
+                if status == 0 { result.removed.append("ran: " + line) } else { ok = false; result.failed[line] = output.isEmpty ? "exit \(status)" : output }
+            }
+            if ok { result.bytes += item.bytes }
+        }
         if !result.removed.isEmpty, let cmds = item.afterClean {
             for c in cmds { _ = Shell.run(c, timeout: 30) }
         }
@@ -226,6 +236,24 @@ public enum Cleaner {
 // MARK: - Shell
 
 enum Shell {
+    /// Runs a program directly (no shell): exit status and combined output, or -1 on timeout.
+    static func exec(_ argv: [String], timeout: TimeInterval) -> (Int32, String) {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        p.arguments = argv
+        let pipe = Pipe()
+        p.standardOutput = pipe
+        p.standardError = pipe
+        p.standardInput = FileHandle.nullDevice
+        do { try p.run() } catch { return (-1, "\(error)") }
+        let done = DispatchSemaphore(value: 0)
+        var data = Data()
+        DispatchQueue.global().async { data = pipe.fileHandleForReading.readDataToEndOfFile(); done.signal() }
+        if done.wait(timeout: .now() + timeout) == .timedOut { p.terminate(); return (-1, "timed out") }
+        p.waitUntilExit()
+        return (p.terminationStatus, String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
     /// Runs `/bin/sh -c command`, returns stdout (nil on failure or timeout).
     @discardableResult
     static func run(_ command: String, timeout: TimeInterval = 10) -> String? {

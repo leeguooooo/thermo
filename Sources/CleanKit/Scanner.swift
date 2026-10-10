@@ -36,6 +36,8 @@ public final class DiskScanner: @unchecked Sendable {
             ("AI models", [.aiModels], { AIModels.scan(ctx) }),
             ("other caches", [.system], { [self.otherCaches(ctx)].compactMap { $0 } }),
             ("docker", [.devCaches], { [self.docker(ctx)].compactMap { $0 } }),
+            ("simulators", [.xcode], { Simulators.scan(ctx) }),
+            ("app data", [.system], { AppData.scan(ctx) }),
         ]
         for rule in Rules.paths where !rule.paths.isEmpty {
             jobs.append((rule.title, [rule.category], { [self.evaluate(rule, ctx: ctx, denied: { p in lock.lock(); denied.append(p); lock.unlock() })].compactMap { $0 } }))
@@ -140,7 +142,8 @@ public final class DiskScanner: @unchecked Sendable {
     func docker(_ ctx: ScanContext) -> CleanItem? {
         let candidates = ["~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw",
                           "~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.qcow2",
-                          "~/.orbstack/data/data.img", "~/.colima/_lima/colima/diffdisk"].map(ctx.path)
+                          "~/.orbstack/data/data.img", "~/Library/Group Containers/HUAQ24HBR6.dev.orbstack/data/data.img",
+                          "~/.colima/_lima/colima/diffdisk"].map(ctx.path)
         guard let disk = candidates.first(where: FS.exists) else { return nil }
         let s = FS.size(disk)
         guard s.bytes > 0 else { return nil }

@@ -80,6 +80,9 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     public var hint: String?
     /// Shell command to run after the paths are removed (e.g. `git worktree prune`).
     public var afterClean: [String]?
+    /// Commands (argv, no shell) that do the removal instead of deleting paths, for things a tool
+    /// must remove itself (e.g. `xcrun simctl runtime delete <id>`).
+    public var commands: [[String]]?
     /// Separately selectable pieces, newest first; together they make up `paths`.
     public var parts: [CleanPart]?
     /// Items with the same group belong together (build output of one project folder).
@@ -88,13 +91,14 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     public init(id: String, category: CleanCategory, title: String, detail: String = "", safety: Safety,
                 bytes: Int64 = 0, files: Int = 0, lastUsed: Date? = nil, paths: [String] = [],
                 note: String? = nil, blocked: String? = nil, hint: String? = nil, afterClean: [String]? = nil,
-                parts: [CleanPart]? = nil, group: String? = nil) {
+                parts: [CleanPart]? = nil, group: String? = nil, commands: [[String]]? = nil) {
         self.id = id; self.category = category; self.title = title; self.detail = detail; self.safety = safety
         self.bytes = bytes; self.files = files; self.lastUsed = lastUsed; self.paths = paths
         self.note = note; self.blocked = blocked; self.hint = hint; self.afterClean = afterClean; self.parts = parts; self.group = group
+        self.commands = commands
     }
 
-    public var cleanable: Bool { blocked == nil && !paths.isEmpty && bytes > 0 }
+    public var cleanable: Bool { blocked == nil && bytes > 0 && (!paths.isEmpty || !(commands ?? []).isEmpty) }
 
     /// The item narrowed to some of its parts (all of them when `keep` covers every part).
     public func only(_ keep: Set<String>) -> CleanItem {

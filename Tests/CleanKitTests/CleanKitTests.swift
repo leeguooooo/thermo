@@ -65,6 +65,8 @@ final class CleanKitTests: XCTestCase {
         try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(atPath: home) }
         var o = ScanOptions(); o.home = home; o.projectRoots = []
+        // Some rules use absolute paths (/private/tmp/claude-<uid>, simctl); keep to ones under the temp home.
+        o.categories = [.projects, .devCaches]
         XCTAssertFalse(DiskScanner(options: o).scan().cancelled)
     }
 
