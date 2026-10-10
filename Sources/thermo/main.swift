@@ -243,18 +243,19 @@ struct App {
             var policies: [Int: FanPolicy] = [:]
             var helperNote: String?
             do { policies = try client.blocking(timeout: 2) { try await $0.policies() } }
-            catch { helperNote = HelperInstaller.isInstalled ? "helper not responding" : "helper not installed (thermo helper install)" }
+            catch { helperNote = "helper unavailable (thermo helper status)" }
             if args.has("json") {
-                struct Status: Encodable { let fans: [FanReading]; let policies: [String: FanPolicy]; let helper: String? }
+                struct Status: Encodable { let fans: [FanReading]; let policies: [String: FanPolicy]; let helper: String?; let policiesAvailable: Bool }
                 print(Export.json(Status(fans: s.fans,
                                          policies: Dictionary(uniqueKeysWithValues: policies.map { (String($0.key), $0.value) }),
-                                         helper: helperNote)))
+                                         helper: helperNote, policiesAvailable: helperNote == nil)))
                 return
             }
+            if args.has("csv") { print(Export.fanStatusCSV(s.fans, policies: policies, helperNote: helperNote)); return }
             out(renderer.fans(s))
             print("")
             print(style.bold("Policies"))
-            for f in s.fans { print("  " + pad("\(f.id) " + f.name, 10) + (policies[f.id]?.description ?? "auto")) }
+            for f in s.fans { print("  " + pad("\(f.id) " + f.name, 10) + Renderer.policyText(policies[f.id], available: helperNote == nil)) }
             if let helperNote { print(style.dim("  " + helperNote)) }
 
         case "set":
@@ -296,6 +297,12 @@ struct App {
 
     // MARK: helper
 
+    static func helperStatusFields(legacyInstalled: Bool, version: String?) -> [String: String] {
+        ["installed": legacyInstalled || version != nil ? "true" : "false",
+         "running": version != nil ? "true" : "false", "version": version ?? "",
+         "installationSource": legacyInstalled ? "legacy" : version != nil ? "connected" : "unknown"]
+    }
+
     func helperCommand(_ rest: [String]) throws {
         switch rest.first ?? "status" {
         case "install":
@@ -312,17 +319,19 @@ struct App {
         case "status":
             let installed = HelperInstaller.isInstalled
             let v = try? HelperClient().blocking(timeout: 2) { try await $0.version() }
+            let fields = Self.helperStatusFields(legacyInstalled: installed, version: v)
             if args.has("json") {
-                print(Export.json(["installed": installed ? "true" : "false", "running": v != nil ? "true" : "false", "version": v ?? ""]))
+                print(Export.json(fields))
                 return
             }
+            if args.has("csv") { print(Export.helperStatusCSV(fields)); return }
             // Thermo.app registers the helper via SMAppService (no files in /Library); only the legacy install is visible on disk.
             print("installed: " + (installed ? style.green("yes (/Library/PrivilegedHelperTools)")
-                                   : v != nil ? style.green("yes (Thermo.app background item)") : style.yellow("no")))
+                                   : v != nil ? style.green("yes (Thermo.app background item)") : style.yellow("not detected; background registration unknown")))
             let current = v == HelperConstants.version
             print("running:   " + (v == nil ? style.yellow("no") : current ? style.green("yes (\(v!))")
                                    : style.yellow("yes, outdated (\(v!); this thermo is \(HelperConstants.version)) — run: thermo helper install")))
-            print("signed by: " + (CodeSignature.teamIdentifier().map { "team \($0)" } ?? style.yellow("ad-hoc (helper accepts any client with the right identifier)")))
+            print("client signed by: " + (CodeSignature.teamIdentifier().map { "team \($0)" } ?? style.yellow("ad-hoc (production helpers may reject this client)")))
         default:
             throw CLIError("usage: thermo helper install|uninstall|status")
         }

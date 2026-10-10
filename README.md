@@ -93,6 +93,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 `get --csv` 使用 `key,type,value,hex,error` 列。单个 key 读取失败时保留错误行，其他 key 继续读取；命令最终返回非零退出码。
 
+`fan status --csv` 输出转速、范围、手动模式和 helper 策略；`policies_available=false` 时策略为 `unknown`。`helper status` 的 JSON/CSV 包含 `installationSource`：`legacy` 表示发现旧式安装文件，`connected` 表示已连接到后台 helper，`unknown` 表示无法确认后台注册；此时 `installed=false` 只表示未检测到安装。
+
 菜单栏、概览、温度告警和 CLI 的“最高温度”取已命名传感器中的最高有效读数，包含存储、主板等分组。风扇曲线的 `max` 和过热安全保护仍以 CPU/GPU 温度为准。
 
 `thermo settings slowdown-alerts on|off` 和 `thermo settings unnamed-sensors on|off` 与 App 使用同一组开关。`--yes` 等标志不接受 `=false`；需要确认时省略 `--yes`。

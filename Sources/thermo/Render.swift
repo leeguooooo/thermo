@@ -6,6 +6,10 @@ struct Renderer {
     var style: Style
     var showAll: Bool
 
+    static func policyText(_ policy: FanPolicy?, available: Bool) -> String {
+        available ? policy?.description ?? "auto" : "unknown"
+    }
+
     private var nameWidth: Int { 26 }
 
     func header(_ s: Snapshot, model: String) -> [String] {
@@ -125,6 +129,28 @@ struct Renderer {
 }
 
 enum Export {
+    static func fanStatusCSV(_ fans: [FanReading], policies: [Int: FanPolicy], helperNote: String?) -> String {
+        let available = helperNote == nil
+        let columns = ["id", "name", "rpm", "min_rpm", "max_rpm", "target_rpm", "manual", "policy", "policies_available", "helper"]
+        func number(_ value: Double?) -> String {
+            guard let value, value.isFinite else { return "" }
+            return String(format: "%.3f", value)
+        }
+        var rows = fans.map { fan in
+            [String(fan.id), fan.name, number(fan.rpm), number(fan.min), number(fan.max), number(fan.target),
+             fan.manual ? "true" : "false", Renderer.policyText(policies[fan.id], available: available),
+             available ? "true" : "false", helperNote ?? "running"]
+        }
+        // Preserve helper status even on fanless machines.
+        if rows.isEmpty { rows = [["", "", "", "", "", "", "", "", available ? "true" : "false", helperNote ?? "running"]] }
+        return ([columns.joined(separator: ",")] + rows.map { $0.map(csvField).joined(separator: ",") }).joined(separator: "\n")
+    }
+
+    static func helperStatusCSV(_ fields: [String: String]) -> String {
+        let columns = ["installed", "running", "version", "installationSource"]
+        return columns.joined(separator: ",") + "\n" + columns.map { csvField(fields[$0] ?? "") }.joined(separator: ",")
+    }
+
     static func keyReadCSV(_ rows: [[String: String]]) -> String {
         let columns = ["key", "type", "value", "hex", "error"]
         return ([columns.joined(separator: ",")] + rows.map { row in
