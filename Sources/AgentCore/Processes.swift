@@ -92,7 +92,15 @@ public struct ProcessTable: Sendable {
         return s.isEmpty ? nil : s
     }
 
-    static func residentKB(_ pid: pid_t) -> Int {
+    /// When the process started, from its BSD info (nil when the kernel won't say).
+    public static func started(_ pid: pid_t) -> Date? {
+        var info = proc_bsdinfo()
+        guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, Int32(MemoryLayout<proc_bsdinfo>.size)) > 0,
+              info.pbi_start_tvsec > 0 else { return nil }
+        return Date(timeIntervalSince1970: TimeInterval(info.pbi_start_tvsec) + TimeInterval(info.pbi_start_tvusec) / 1e6)
+    }
+
+    public static func residentKB(_ pid: pid_t) -> Int {
         var info = proc_taskinfo()
         guard proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &info, Int32(MemoryLayout<proc_taskinfo>.size)) > 0 else { return 0 }
         return Int(info.pti_resident_size / 1024)

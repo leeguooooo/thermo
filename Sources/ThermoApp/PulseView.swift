@@ -57,6 +57,32 @@ final class SystemPulse: ObservableObject {
         }
         queue.asyncAfter(deadline: .now() + 1) { [weak self] in self?.sample() }
     }
+
+    /// The app being restarted, while it quits and comes back.
+    @Published private(set) var restarting: String?
+
+    /// Quit like ⌘Q, wait until every process of it has gone, then open it again; it restores its
+    /// own windows and tabs. Gives up (and says so) if it is still running after a minute.
+    func restart(_ hog: Hog) {
+        guard let path = hog.app,
+              let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.standardizedFileURL.path == path })
+        else { return }
+        restarting = hog.name
+        app.terminate()
+        let pids = hog.pids
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let deadline = Date().addingTimeInterval(60)
+            while Date() < deadline, pids.contains(where: { kill($0, 0) == 0 }) { usleep(250_000) }
+            let gone = !pids.contains(where: { kill($0, 0) == 0 })
+            DispatchQueue.main.async {
+                if gone {
+                    NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: path), configuration: .init()) { _, _ in }
+                }
+                self?.restarting = nil
+            }
+            self?.queue.asyncAfter(deadline: .now() + 3) { self?.sample() }
+        }
+    }
 }
 
 struct PulseCard: View {
@@ -64,6 +90,7 @@ struct PulseCard: View {
     let active: Bool
     @ObservedObject private var pulse = SystemPulse.shared
     @State private var confirming: SystemPulse.Hog?
+    @State private var restartTarget: SystemPulse.Hog?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -106,6 +133,27 @@ struct PulseCard: View {
                     .frame(width: 52, alignment: .trailing)
                 }
                 .padding(.leading, 28)
+                // A big app, split: its GPU process and heaviest pages.
+                if let parts = h.parts, !parts.isEmpty {
+                    Text(parts.map { "\(roleText($0.role)) \(memoryText($0.memoryKB))" }.joined(separator: " · "))
+                        .font(.caption2.monospacedDigit()).foregroundStyle(.secondary).lineLimit(1)
+                        .padding(.leading, 28)
+                }
+                if let a = h.advice {
+                    HStack(alignment: .top, spacing: 6) {
+                        Text(a.text).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 4)
+                        if !renderingPreview {
+                            Button(pulse.restarting == h.name ? tr("Restarting…") : tr("Restart")) { restartTarget = h }
+                                .controlSize(.small).modifier(ActionButtonStyle(prominent: true))
+                                .disabled(pulse.restarting != nil)
+                        }
+                    }
+                    .padding(.leading, 28)
+                }
+            }
+            if let note = pulse.current?.swapDiskText {
+                Text(note).font(.caption2).foregroundStyle(.secondary).padding(.leading, 28)
             }
             HStack(spacing: 10) {
                 label(tr("Temperature"), thermalText, thermalColor)
@@ -128,12 +176,33 @@ struct PulseCard: View {
                          confirmTitle: h.app != nil ? tr("Quit") : tr("End"),
                          confirm: { confirming = nil; pulse.quit(h) }, cancel: { confirming = nil })
         }
+        .sheet(item: $restartTarget) { h in
+            ConfirmSheet(title: tr("Restart %1$@?", h.name),
+                         summary: tr("It is asked to quit, the same as ⌘Q (it can save first), then opened again; it reopens its windows and tabs. Whatever it piled up in memory is freed."),
+                         destructive: false, heading: tr("What will run"),
+                         lines: [tr("quit %1$@", h.app ?? h.name), tr("open %1$@", h.app ?? h.name)],
+                         footnote: tr("If it is still running after a minute (for example asking to save), Thermo stops and does not reopen it."),
+                         confirmTitle: tr("Restart"),
+                         confirm: { restartTarget = nil; pulse.restart(h) }, cancel: { restartTarget = nil })
+        }
     }
 
     /// "~/tk.com/shop · Claude Code": the folder a command-line program runs in and who started it.
     func origin(_ h: SystemPulse.Hog) -> String? {
         let parts = [h.project, h.owner.map { tr("started by %1$@", $0) }].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    func roleText(_ role: String) -> String {
+        switch role {
+        case "GPU": return tr("GPU")
+        case "renderer": return tr("page")
+        case "extension": return tr("extension")
+        case "network": return tr("network")
+        case "utility": return tr("utility")
+        case "main": return tr("main")
+        default: return tr("helper")
+        }
     }
 
     func label(_ title: String, _ value: String, _ color: Color) -> some View {

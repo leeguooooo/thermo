@@ -41,6 +41,7 @@ COMMANDS
   pulse                      why is this Mac slow: verdict, busiest programs, load,
                              memory, thermal state, temperatures, fans (--json for agents)
   pulse quit NAME|PID         stop a program pulse lists (apps quit like ⌘Q); asks first
+  pulse restart NAME          quit an app, wait, reopen it (frees what a long-running app piled up)
   settings [KEY [VALUE]]     the app's settings: menu bar text, interval, alerts, units,
                              language, Dock icon (KEY=VALUE also works)
   clean [CATEGORY|ai]        what can be cleaned: AI sessions/models/caches, dev caches,

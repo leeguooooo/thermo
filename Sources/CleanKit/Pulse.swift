@@ -22,6 +22,35 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var project: String? = nil
         /// Who started it: the agent, terminal or editor up its parent chain ("Claude Code", "Terminal", "Cursor").
         public var owner: String? = nil
+        /// Memory actually resident in RAM; far below `memoryKB` means most of it is compressed or swapped out.
+        public var residentKB: Int? = nil
+        /// How long it has been running (its longest-lived process).
+        public var uptime: TimeInterval? = nil
+        /// Chromium/Electron: the highest renderer id, roughly how many pages it has opened since launch.
+        public var pagesOpened: Int? = nil
+        /// Its biggest processes (apps with several), largest first.
+        public var parts: [Part]? = nil
+        /// What to do about it, when there is something clear to do.
+        public var advice: Advice? = nil
+    }
+
+    /// One process of a multi-process app: the GPU process, a renderer (page), an extension …
+    public struct Part: Codable, Sendable, Equatable {
+        public var pid: Int32
+        /// main | GPU | renderer | extension | network | utility | helper
+        public var role: String
+        public var memoryKB: Int
+        public var residentKB: Int?
+        public var cpu: Double
+        public var uptime: TimeInterval?
+    }
+
+    public struct Advice: Codable, Sendable, Equatable {
+        /// "restart": quit and reopen the app; it restores its windows and frees what it piled up.
+        public var kind: String
+        public var text: String
+        /// About how much restarting would free.
+        public var freesKB: Int
     }
 
     public enum Memory: String, Codable, Sendable { case normal, warning, critical }
@@ -35,6 +64,8 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     public var thermal: Thermal
     public var memory: Memory
     public var swapUsedMB: Int
+    /// Size of the swap files on disk.
+    public var swapTotalMB: Int = 0
     public var hogs: [Hog]
     public var sampled: Date
 
@@ -68,7 +99,12 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             return tr("Mostly %1$@, using %2$@ cores", top.name, String(format: "%.1f", top.cpu / 100))
         }
         // High load without a busy program: processes are waiting, usually on memory or the disk.
-        if memory != .normal, let big = hogs.max(by: { $0.memoryKB < $1.memoryKB }) {
+        if memory != .normal || swapUsedMB >= 4096, let big = hogs.max(by: { $0.memoryKB < $1.memoryKB }) {
+            if swapUsedMB >= 4096 {
+                // Say it plainly: memory lives on the disk now, and everything waits for the disk.
+                return tr("%1$@ of memory has been moved to the disk, so programs keep waiting for it — that is why it is slow. %2$@ uses the most (%3$@).",
+                          Self.gb(swapUsedMB * 1024), big.name, Self.gb(big.memoryKB))
+            }
             return tr("Memory is tight: %1$@ of swap in use, so programs wait on the disk; %2$@ uses the most memory (%3$@)",
                       String(format: "%.1f GB", Double(swapUsedMB) / 1024), big.name,
                       String(format: "%.1f GB", Double(big.memoryKB) / 1_048_576))
@@ -76,6 +112,14 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         if busy >= 1 { return tr("No single program stands out; many are waiting on the disk") }
         return nil
     }
+
+    /// Swap files fill the disk too; say so once they are big.
+    public var swapDiskText: String? {
+        guard swapTotalMB >= 8192 else { return nil }
+        return tr("Swap files take %1$@ of disk space; macOS gives it back once memory frees up.", Self.gb(swapTotalMB * 1024))
+    }
+
+    static func gb(_ kb: Int) -> String { String(format: "%.1f GB", Double(kb) / 1_048_576) }
 
     // MARK: sampling
 
@@ -113,7 +157,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         }
         return MachinePulse(load1: avg[0], load5: avg[1], cores: ProcessInfo.processInfo.activeProcessorCount,
                             thermal: thermal, memory: memory, swapUsedMB: Int(swap.xsu_used / 1_048_576),
-                            hogs: hogs, sampled: Date())
+                            swapTotalMB: Int(swap.xsu_total / 1_048_576), hogs: hogs, sampled: Date())
     }
 
     /// Folds helper processes into their app and returns the busiest programs (plus the biggest
@@ -121,7 +165,8 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     /// `limit: nil` returns every program of this user, idle ones included (for `thermo pulse quit`).
     public static func group(_ procs: [AgentProcess], byMemory: Bool = false, me: pid_t = getpid(), limit: Int? = 4) -> [Hog] {
         group(procs.map { Candidate(pid: $0.pid, uid: $0.uid, name: $0.name, cpu: $0.cpu, memoryKB: max($0.footprintKB, $0.rssKB),
-                                    details: ProcessDetails(executable: $0.executable, argv: $0.argv, cwd: $0.cwd)) },
+                                    details: ProcessDetails(executable: $0.executable, argv: $0.argv, cwd: $0.cwd),
+                                    residentKB: $0.rssKB, uptime: $0.elapsed > 0 ? $0.elapsed : nil) },
               byMemory: byMemory, me: me, limit: limit)
     }
 
@@ -134,6 +179,8 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         var memoryKB: Int
         var details: ProcessDetails
         var owner: String? = nil
+        var residentKB: Int? = nil
+        var uptime: TimeInterval? = nil
     }
 
     static func group(_ procs: [Candidate], byMemory: Bool, me: pid_t, limit: Int? = 4) -> [Hog] {
@@ -161,7 +208,26 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             h.memoryKB += p.memoryKB
             h.pids.append(p.pid)
             h.quittable = h.quittable && quittable
+            if let r = p.residentKB { h.residentKB = (h.residentKB ?? 0) + r }
+            if let u = p.uptime, u > (h.uptime ?? 0) { h.uptime = u }
+            if let id = rendererID(p.details.argv), id > (h.pagesOpened ?? 0) { h.pagesOpened = id }
+            if app != nil {
+                var parts = h.parts ?? []
+                parts.append(Part(pid: p.pid, role: role(p.details.argv), memoryKB: p.memoryKB, residentKB: p.residentKB,
+                                  cpu: p.cpu, uptime: p.uptime))
+                h.parts = parts
+            }
             byKey[key] = h
+        }
+        for (k, var h) in byKey {
+            // Only worth listing for apps made of several processes (browsers, Electron apps).
+            // and only when they differ in kind: four copies of one small process say nothing.
+            if let parts = h.parts {
+                h.parts = parts.count >= 3 && parts.contains(where: { $0.role != "main" })
+                    ? Array(parts.sorted { $0.memoryKB > $1.memoryKB }.prefix(4)) : nil
+            }
+            h.advice = advice(for: h)
+            byKey[k] = h
         }
         guard let limit else { return byKey.values.sorted { $0.cpu > $1.cpu } }
         var top = Array(byKey.values.sorted { $0.cpu > $1.cpu }.prefix(limit).filter { $0.cpu >= 5 })
@@ -171,6 +237,43 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             }
         }
         return top
+    }
+
+    /// What a Chromium / Electron helper is, from its `--type=` flags.
+    static func role(_ argv: [String]) -> String {
+        func has(_ prefix: String) -> Bool { argv.contains { $0.hasPrefix(prefix) } }
+        if has("--type=gpu-process") { return "GPU" }
+        if has("--type=renderer") { return has("--extension-process") ? "extension" : "renderer" }
+        if has("--type=utility") { return argv.contains { $0.contains("NetworkService") } ? "network" : "utility" }
+        if has("--type=") { return "helper" }
+        return "main"
+    }
+
+    /// `--renderer-client-id=1975`: Chromium numbers every renderer it starts.
+    static func rendererID(_ argv: [String]) -> Int? {
+        argv.lazy.compactMap { a -> Int? in
+            guard a.hasPrefix("--renderer-client-id=") else { return nil }
+            return Int(a.dropFirst("--renderer-client-id=".count))
+        }.first
+    }
+
+    /// Restart an app that has run for half a day or more and holds gigabytes, most of it already
+    /// squeezed out of RAM (compressed or swapped): quitting and reopening gives that back, and the
+    /// app restores its windows. Never for agents, system processes or Thermo (not quittable).
+    static func advice(for h: Hog) -> Advice? {
+        guard h.app != nil, h.quittable, let up = h.uptime, up >= 12 * 3600, h.memoryKB >= 2 * 1_048_576 else { return nil }
+        let resident = h.residentKB ?? h.memoryKB
+        guard h.memoryKB >= resident * 2 || h.memoryKB >= 6 * 1_048_576 else { return nil }
+        let hours = String(Int(up / 3600))
+        let text: String
+        if let pages = h.pagesOpened, pages >= 100 {
+            text = tr("%1$@ has run for %2$@ hours and opened about %3$@ pages; restarting it (it reopens your windows) would free about %4$@.",
+                      h.name, hours, String(pages), gb(h.memoryKB))
+        } else {
+            text = tr("%1$@ has run for %2$@ hours; restarting it (it reopens your windows) would free about %3$@.",
+                      h.name, hours, gb(h.memoryKB))
+        }
+        return Advice(kind: "restart", text: text, freesKB: h.memoryKB)
     }
 
     static let interpreters: Set<String> = ["node", "python", "python3", "ruby", "bun", "deno", "java", "perl", "php", "uv", "npx", "tsx", "ts-node"]

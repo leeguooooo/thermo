@@ -35,8 +35,11 @@ public final class PulseSampler {
             let before = previous.cpu[u.pid] ?? u.cpuNanos  // new since the last pass: no share yet
             let cpu = u.cpuNanos >= before ? Double(u.cpuNanos - before) / window * 100 : 0
             guard cpu > 0.5 || u.footprintKB > 200_000 else { continue }
+            // Resident size and start time only for candidates: a few calls, not one per process.
             candidates.append(.init(pid: u.pid, uid: u.uid, name: u.name, cpu: cpu, memoryKB: u.footprintKB,
-                                    details: ProcessTable.details(u.pid), owner: owner(of: u, in: byPid)))
+                                    details: ProcessTable.details(u.pid), owner: owner(of: u, in: byPid),
+                                    residentKB: ProcessTable.residentKB(u.pid),
+                                    uptime: ProcessTable.started(u.pid).map { Date().timeIntervalSince($0) }))
         }
         let memory = MachinePulse.memoryLevel()
         return MachinePulse.measure(hogs: MachinePulse.group(candidates, byMemory: memory != .normal, me: getpid()))

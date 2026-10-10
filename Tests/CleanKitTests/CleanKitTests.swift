@@ -381,7 +381,7 @@ final class CleanKitTests: XCTestCase {
         XCTAssertEqual(p.culpritText, "Mostly ffmpeg, using 1.6 cores")
         p.load1 = 107; p.memory = .warning; p.swapUsedMB = 22 * 1024
         XCTAssertEqual(p.verdict, .overloaded)
-        XCTAssertTrue(p.culpritText?.hasPrefix("Memory is tight: 22.0 GB of swap") ?? false, p.culpritText ?? "")
+        XCTAssertTrue(p.culpritText?.hasPrefix("22.0 GB of memory has been moved to the disk") ?? false, p.culpritText ?? "")
         p.thermal = .serious
         XCTAssertEqual(p.verdict, .hot, "throttling outranks load")
     }
@@ -425,6 +425,45 @@ final class CleanKitTests: XCTestCase {
         stopped.items = []
         ScanReportCache.save(stopped, home: home)
         XCTAssertEqual(ScanReportCache.load(home: home, maxAge: 900, now: now)?.items.count, 1, "a stopped scan never replaces a finished one")
+    }
+
+    func testPulseSplitsBrowsersAndSuggestsARestart() {
+        let chrome = "/Applications/Google Chrome.app/Contents"
+        func p(_ pid: Int32, _ role: [String], gb: Double, hours: Double) -> MachinePulse.Candidate {
+            MachinePulse.Candidate(pid: pid, uid: getuid(), name: "Google Chrome", cpu: 10, memoryKB: Int(gb * 1_048_576),
+                                   details: ProcessDetails(executable: chrome + "/Frameworks/Helper.app/Contents/MacOS/Helper",
+                                                           argv: ["Helper"] + role, cwd: "/"),
+                                   residentKB: Int(gb * 1_048_576 / 10), uptime: hours * 3600)
+        }
+        let procs = [
+            p(1, [], gb: 0.5, hours: 31),
+            p(2, ["--type=gpu-process"], gb: 2.4, hours: 30),
+            p(3, ["--type=renderer", "--renderer-client-id=1975"], gb: 1.5, hours: 1),
+            p(4, ["--type=renderer", "--extension-process", "--renderer-client-id=12"], gb: 0.4, hours: 30),
+            p(5, ["--type=utility", "--utility-sub-type=network.mojom.NetworkService"], gb: 0.3, hours: 30),
+        ]
+        let hogs = MachinePulse.group(procs, byMemory: true, me: 99)
+        let c = hogs.first { $0.name == "Google Chrome" }!
+        XCTAssertEqual(c.parts?.map(\.role), ["GPU", "renderer", "main", "extension"], "biggest four, by kind")
+        XCTAssertEqual(c.pagesOpened, 1975)
+        XCTAssertEqual(c.uptime, 31 * 3600)
+        XCTAssertEqual(c.advice?.kind, "restart", "31 h, 5 GB, mostly out of RAM")
+        XCTAssertTrue(c.advice?.text.contains("1975") ?? false)
+
+        // Fresh, or mostly resident: nothing to suggest.
+        XCTAssertNil(MachinePulse.group(procs.map { var x = $0; x.uptime = 3600; return x }, byMemory: true, me: 99).first?.advice)
+        XCTAssertNil(MachinePulse.group(procs.map { var x = $0; x.residentKB = x.memoryKB; return x }, byMemory: true, me: 99).first?.advice)
+    }
+
+    func testPulseExplainsSwapAndItsDiskSpace() {
+        let big = MachinePulse.Hog(id: "c", name: "Google Chrome", cpu: 100, memoryKB: 19 * 1_048_576, pids: [1], app: "/Applications/Google Chrome.app", quittable: true)
+        var p = MachinePulse(load1: 66, load5: 45, cores: 8, thermal: .nominal, memory: .warning, swapUsedMB: 27 * 1024,
+                             swapTotalMB: 28 * 1024, hogs: [big], sampled: now)
+        XCTAssertTrue(p.culpritText?.hasPrefix("27.0 GB of memory has been moved to the disk") ?? false, p.culpritText ?? "")
+        XCTAssertTrue(p.culpritText?.contains("Google Chrome uses the most (19.0 GB)") ?? false)
+        XCTAssertEqual(p.swapDiskText, "Swap files take 28.0 GB of disk space; macOS gives it back once memory frees up.")
+        p.swapTotalMB = 2048
+        XCTAssertNil(p.swapDiskText, "small swap is not worth a word")
     }
 
     func testCleanerRemovesOnlyListedPaths() throws {
