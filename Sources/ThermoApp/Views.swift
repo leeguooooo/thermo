@@ -107,6 +107,8 @@ struct PopoverView: View {
         }
         .padding(14)
         .frame(width: 380)
+        // A slowdown notification was clicked: show the Overview, where the card points at the program.
+        .onReceive(NotificationCenter.default.publisher(for: PulseRecorder.showProgram)) { _ in tab = .overview }
     }
 
     var header: some View {
@@ -478,6 +480,7 @@ struct FanChart: View {
 struct SettingsView: View {
     @ObservedObject var monitor: Monitor
     @AppStorage(Settings.showInDock) private var showInDock = true
+    @AppStorage(PulseRecorder.alertsKey) private var slowdownAlerts = true
     @ObservedObject var updates: Updates
     @AppStorage(Settings.titleMetric) private var titleMetric = TitleMetric.cpu.rawValue
     @AppStorage(Settings.interval) private var interval = 2.0
@@ -509,6 +512,7 @@ struct SettingsView: View {
                 }
             }
             AgentAccessRow()
+            Toggle(tr("Warn me before my Mac gets slow"), isOn: $slowdownAlerts)
             Toggle(tr("Show in Dock"), isOn: $showInDock)
             Toggle(tr("Launch at login"), isOn: Binding(get: { monitor.launchAtLogin }, set: { monitor.launchAtLogin = $0 }))
             HStack {

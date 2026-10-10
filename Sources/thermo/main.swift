@@ -1,3 +1,4 @@
+import CleanKit
 import Foundation
 import ThermoKit
 import ThermoL10n
@@ -42,6 +43,7 @@ COMMANDS
                              memory, thermal state, temperatures, fans (--json for agents)
   pulse quit NAME|PID         stop a program pulse lists (apps quit like ⌘Q); asks first
   pulse restart NAME          quit an app, wait, reopen it (frees what a long-running app piled up)
+  pulse history [--since 6h]  who slowed the Mac down lately (recorded by Thermo.app; 1h, 6h, 24h)
   settings [KEY [VALUE]]     the app's settings: menu bar text, interval, alerts, units,
                              language, Dock icon (KEY=VALUE also works)
   clean [CATEGORY|ai]        what can be cleaned: AI sessions/models/caches, dev caches,
@@ -354,6 +356,15 @@ struct App {
         sm.scope = .essential
         let e = time(n) { _ = sm.sample() }
         lines.append(style.dim(String(format: "  background cost at 2 s interval (essential): %.2f%% of one core", e.cpu / 2000 * 100)))
+        // The slowdown history: one incremental pulse pass a minute (five on battery), plus the write.
+        let pulseSampler = PulseSampler()
+        _ = pulseSampler.sample()  // the first pass measures over a short window; steady state is what runs
+        let history = PulseHistory(url: FileManager.default.temporaryDirectory.appendingPathComponent("thermo-bench-history.jsonl"))
+        let pt = time(10) { history.append(PulseRecord(pulseSampler.sample())) }
+        try? FileManager.default.removeItem(at: history.url)
+        lines.append(row("pulse history tick", pt))
+        lines.append(style.dim(String(format: "  history cost at 60 s interval: %.3f%% of one core (300 s on battery: %.3f%%)",
+                                      pt.cpu / 60_000 * 100, pt.cpu / 300_000 * 100)))
         out(lines)
     }
 }

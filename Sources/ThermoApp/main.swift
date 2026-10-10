@@ -1,10 +1,11 @@
 import AppKit
+import UserNotifications
 import SwiftUI
 import AgentDoctor
 import ThermoKit
 import ThermoL10n
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotificationCenterDelegate {
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private var monitor: Monitor!
@@ -15,6 +16,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         Settings.register()
         monitor = Monitor()
+        // Slowdown history and alerts, in the background whether or not the panel is open.
+        PulseRecorder.shared.start()
+        if Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self }
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
@@ -57,6 +61,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             if let s = self?.monitor.latest { self?.updateTitle(s) }
             self?.applyDockPreference()
         }
+    }
+
+    /// A slowdown notification was clicked: open the panel on the Overview, pointing at the program.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                withCompletionHandler done: @escaping () -> Void) {
+        let program = response.notification.request.content.userInfo["program"] as? String
+        DispatchQueue.main.async {
+            PulseRecorder.shared.highlighted = (program?.isEmpty ?? true) ? nil : program
+            NotificationCenter.default.post(name: PulseRecorder.showProgram, object: nil)
+            self.showPanel()
+        }
+        done()
+    }
+
+    /// Show notifications even while Thermo is the active app.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                withCompletionHandler done: @escaping (UNNotificationPresentationOptions) -> Void) {
+        done([.banner, .sound])
     }
 
     /// Clicking the Dock icon (or opening Thermo.app again) shows the panel.

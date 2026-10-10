@@ -249,6 +249,33 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         return "main"
     }
 
+    /// A part's role, for people ("page" rather than "renderer").
+    public static func roleName(_ role: String) -> String {
+        switch role {
+        case "GPU": return tr("GPU")
+        case "renderer": return tr("page")
+        case "extension": return tr("extension")
+        case "network": return tr("network")
+        case "utility": return tr("utility")
+        case "main": return tr("main")
+        default: return tr("helper")
+        }
+    }
+
+    /// Memory pressure and thermal state as words.
+    public static func memoryName(_ m: Memory) -> String {
+        switch m { case .normal: return tr("normal"); case .warning: return tr("tight"); case .critical: return tr("running out") }
+    }
+
+    public static func thermalName(_ t: Thermal) -> String {
+        switch t {
+        case .nominal: return tr("normal")
+        case .fair: return tr("warm")
+        case .serious: return tr("hot, slowing down")
+        case .critical: return tr("critical, slowing down")
+        }
+    }
+
     /// `--renderer-client-id=1975`: Chromium numbers every renderer it starts.
     static func rendererID(_ argv: [String]) -> Int? {
         argv.lazy.compactMap { a -> Int? in

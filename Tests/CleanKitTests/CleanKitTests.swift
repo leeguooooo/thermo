@@ -466,6 +466,70 @@ final class CleanKitTests: XCTestCase {
         XCTAssertNil(p.swapDiskText, "small swap is not worth a word")
     }
 
+    func record(_ minutesAgo: Double, load: Double = 2, memory: MachinePulse.Memory = .normal, swapGB: Double = 1,
+                thermal: MachinePulse.Thermal = .nominal, top: [(String, Double, Double)] = []) -> PulseRecord {
+        PulseRecord(t: now.addingTimeInterval(-minutesAgo * 60), load1: load, cores: 8, memory: memory,
+                    swapUsedMB: Int(swapGB * 1024), swapTotalMB: Int(swapGB * 1024), thermal: thermal,
+                    top: top.map { .init(name: $0.0, cpu: $0.1, memoryKB: Int($0.2 * 1_048_576), project: nil, owner: nil) })
+    }
+
+    func testHistoryKeepsOnly24Hours() throws {
+        let h = PulseHistory(url: URL(fileURLWithPath: home + "/hist/pulse-history.jsonl"))
+        h.append(record(26 * 60), now: now)            // first append compacts: this one is already too old
+        h.append(record(23 * 60), now: now)
+        h.append(record(5), now: now)
+        try "not json\n".write(toFile: home + "/x", atomically: true, encoding: .utf8)
+        let handle = try FileHandle(forWritingTo: h.url); handle.seekToEndOfFile(); handle.write(Data("garbage\n".utf8)); try handle.close()
+        h.compact(now: now)
+        let all = h.records(since: .distantPast)
+        XCTAssertEqual(all.count, 2, "older than a day and unreadable lines are dropped")
+        XCTAssertEqual(h.records(since: now.addingTimeInterval(-3600)).count, 1)
+        let lines = try String(contentsOf: h.url, encoding: .utf8).split(separator: "\n")
+        XCTAssertEqual(lines.count, 2, "the file itself is cut back")
+    }
+
+    func testBlameCountsOnlyStrugglingMinutes() {
+        let recs = [
+            record(30, load: 2, top: [("idle-app", 10, 1)]),                          // not struggling (load < cores)
+            record(3, load: 20, memory: .warning, top: [("Google Chrome", 120, 19), ("ffmpeg", 190, 1)]),
+            record(2, load: 20, memory: .warning, top: [("Google Chrome", 130, 19)]),
+            record(1, load: 20, memory: .warning, top: [("Google Chrome", 140, 19)]),
+        ]
+        let b = PulseHistory.blame(recs)
+        XCTAssertEqual(b.first?.name, "Google Chrome")
+        XCTAssertEqual(b.first?.minutes, 3)
+        XCTAssertEqual(b.first?.peakCPU, 140)
+        XCTAssertNil(b.first { $0.name == "idle-app" }, "a calm Mac blames nobody")
+    }
+
+    func testAlertsFireOnceAnHourAndNeedTheFullWindow() {
+        var alerts = SlowdownAlerts()
+        let calm = MachinePulse(load1: 2, load5: 2, cores: 8, thermal: .nominal, memory: .normal, swapUsedMB: 0, hogs: [], sampled: now)
+        // CPU hog for only 5 minutes: not yet.
+        let five = (0...5).map { record(Double(5 - $0), load: 12, top: [("ffmpeg", 190, 1)]) }
+        XCTAssertTrue(alerts.evaluate(five, latest: calm, now: now).isEmpty)
+        // Ten minutes: told once.
+        let ten = (0...10).map { record(Double(10 - $0), load: 12, top: [("ffmpeg", 190, 1)]) }
+        XCTAssertEqual(alerts.evaluate(ten, latest: calm, now: now).map(\.key), ["cpu:ffmpeg"])
+        XCTAssertTrue(alerts.evaluate(ten, latest: calm, now: now.addingTimeInterval(60)).isEmpty, "cooldown")
+        let later = ten.map { var r = $0; r.t = r.t.addingTimeInterval(3700); return r }
+        XCTAssertEqual(alerts.evaluate(later, latest: calm, now: now.addingTimeInterval(3700)).map(\.key), ["cpu:ffmpeg"], "an hour later, again")
+
+        // Swap over 8 GB and growing, with the restart advice of the biggest program.
+        var a2 = SlowdownAlerts()
+        let chrome = MachinePulse.Hog(id: "c", name: "Google Chrome", cpu: 100, memoryKB: 19 * 1_048_576, pids: [1], app: "/Applications/Google Chrome.app",
+                                      quittable: true, advice: .init(kind: "restart", text: "restart Chrome", freesKB: 19 * 1_048_576))
+        let latest = MachinePulse(load1: 60, load5: 40, cores: 8, thermal: .nominal, memory: .warning, swapUsedMB: 27 * 1024, hogs: [chrome], sampled: now)
+        let swap = [record(10, swapGB: 20), record(0, swapGB: 27)]
+        let fired = a2.evaluate(swap, latest: latest, now: now)
+        XCTAssertEqual(fired.map(\.key), ["swap"])
+        XCTAssertTrue(fired[0].body.contains("restart Chrome"))
+        XCTAssertEqual(fired[0].program, "Google Chrome")
+        // Not growing: quiet.
+        var a3 = SlowdownAlerts()
+        XCTAssertTrue(a3.evaluate([record(10, swapGB: 27), record(0, swapGB: 27)], latest: latest, now: now).isEmpty)
+    }
+
     func testCleanerRemovesOnlyListedPaths() throws {
         let a = try write("Library/Caches/tool/a")
         let keep = try write("Library/Caches/tool/keep")

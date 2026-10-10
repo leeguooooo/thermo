@@ -34,6 +34,7 @@ struct PulseCommand {
     func run(_ rest: [String] = []) throws {
         if rest.first == "quit" { try quit(Array(rest.dropFirst())); return }
         if rest.first == "restart" { try restart(Array(rest.dropFirst())); return }
+        if rest.first == "history" { try history(); return }
         let style = app.style
         let pulse = MachinePulse.sample()
         let sm = try? app.sampler()
@@ -59,22 +60,23 @@ struct PulseCommand {
         let mark = pulse.verdict == .ok ? style.green("✓") : pulse.verdict == .busy ? style.yellow("!") : style.red("!")
         var lines = [mark + " " + style.bold(pulse.verdictText)]
         if let c = pulse.culpritText { lines.append("  " + c) }
-        lines.append(style.dim(String(format: "  load %.1f / %.1f (1 / 5 min) on %d cores · memory %@ · swap %d MB · thermal %@",
-                                      pulse.load1, pulse.load5, pulse.cores, pulse.memory.rawValue, pulse.swapUsedMB,
-                                      pulse.thermal.rawValue)))
+        lines.append(style.dim("  " + tr("load %1$@ / %2$@ (1 / 5 min) on %3$@ cores · memory %4$@ · swap %5$@ · temperature %6$@",
+                                         String(format: "%.1f", pulse.load1), String(format: "%.1f", pulse.load5), String(pulse.cores),
+                                         MachinePulse.memoryName(pulse.memory), Self.size(pulse.swapUsedMB * 1024),
+                                         MachinePulse.thermalName(pulse.thermal))))
         if !pulse.hogs.isEmpty {
             lines.append("")
-            lines.append(style.bold("Busiest programs"))
+            lines.append(style.bold(tr("Busiest programs")))
             for h in pulse.hogs {
                 let cpu = String(format: "%5.0f%%", h.cpu)
                 lines.append("  " + (h.cpu >= 100 ? style.red(cpu) : h.cpu >= 50 ? style.yellow(cpu) : cpu)
                              + "  " + pad(h.memoryKB >= 1_048_576 ? String(format: "%.1f GB", Double(h.memoryKB) / 1_048_576) : "\(h.memoryKB / 1024) MB", 8, right: true)
-                             + "  " + h.name + style.dim(h.pids.count > 1 ? "  (\(h.pids.count) processes)" : "  pid \(h.pids[0])")
-                             + style.dim([h.project, h.owner.map { "started by " + $0 },
-                                          h.uptime.map { "running " + Self.duration($0) }].compactMap { $0 }.map { "  · " + $0 }.joined()))
+                             + "  " + h.name + style.dim(h.pids.count > 1 ? "  " + tr("(%1$@ processes)", String(h.pids.count)) : "  pid \(h.pids[0])")
+                             + style.dim([h.project, h.owner.map { tr("started by %1$@", $0) },
+                                          h.uptime.map { tr("running %1$@", Self.duration($0)) }].compactMap { $0 }.map { "  · " + $0 }.joined()))
                 // Big apps, split: the GPU process and the heaviest pages, each with how long it has run.
                 for p in h.parts ?? [] {
-                    lines.append(style.dim("            " + pad(Self.size(p.memoryKB), 8, right: true) + "  " + p.role
+                    lines.append(style.dim("            " + pad(Self.size(p.memoryKB), 8, right: true) + "  " + MachinePulse.roleName(p.role)
                                            + (p.uptime.map { "  · " + Self.duration($0) } ?? "") + "  · pid \(p.pid)"))
                 }
                 if let a = h.advice {
@@ -86,13 +88,13 @@ struct PulseCommand {
         if let s {
             lines.append("")
             var sensors: [String] = []
-            if let t = s.hottest { sensors.append("hottest " + style.temp(t, width: 0)) }
+            if let t = s.hottest { sensors.append(tr("hottest") + " " + style.temp(t, width: 0)) }
             if let t = s.cpu { sensors.append("CPU " + style.temp(t, width: 0)) }
             if let t = s.gpu { sensors.append("GPU " + style.temp(t, width: 0)) }
             if let w = s.systemPower { sensors.append(String(format: "%.1f W", w)) }
             lines.append("  " + sensors.joined(separator: style.dim(" · ")))
             for f in s.fans {
-                lines.append("  " + f.name + "  \(Int(f.rpm)) rpm" + style.dim("  [\(Int(f.min))–\(Int(f.max))] " + (f.manual ? "manual" : "auto")))
+                lines.append("  " + f.name + "  \(Int(f.rpm)) rpm" + style.dim("  [\(Int(f.min))–\(Int(f.max))] " + (f.manual ? tr("manual") : tr("auto"))))
             }
         }
         out(lines)
@@ -102,6 +104,55 @@ struct PulseCommand {
 
     /// `thermo pulse quit NAME|PID`: the card's Quit button. Apps are asked to quit like ⌘Q;
     /// other processes get SIGTERM. System processes, AI agent sessions and Thermo are refused.
+    /// `thermo pulse history [--since 1h|6h|24h]`: who slowed the Mac down, from what Thermo.app
+    /// recorded in the background.
+    func history() throws {
+        let style = app.style
+        let spec = app.args.options["since"] ?? "6h"
+        guard let hours = Self.hours(spec) else { throw CLIError("--since expects 30m, 1h, 6h or 24h; got '\(spec)'") }
+        let since = Date().addingTimeInterval(-hours * 3600)
+        let records = PulseHistory().records(since: since)
+        let blame = PulseHistory.blame(records)
+        let struggling = records.filter { $0.load1 >= Double(max(1, $0.cores)) || $0.memory != .normal || $0.thermal == .serious || $0.thermal == .critical }
+        let peakLoad = records.map(\.load1).max() ?? 0
+        let peakSwap = records.map(\.swapUsedMB).max() ?? 0
+        if app.args.has("json") {
+            struct Out: Encodable {
+                let since: Date; let records: Int; let strugglingRecords: Int; let peakLoad: Double; let peakSwapMB: Int
+                let blame: [PulseHistory.Share]
+            }
+            print(Export.json(Out(since: since, records: records.count, strugglingRecords: struggling.count,
+                                  peakLoad: peakLoad, peakSwapMB: peakSwap, blame: blame)))
+            return
+        }
+        guard !records.isEmpty else {
+            print(style.dim(tr("No history yet. Thermo.app records it in the background once a minute; open Thermo once and leave it running.")))
+            return
+        }
+        var lines = [style.bold(tr("Last %1$@", spec)) + style.dim("  " + tr("%1$@ samples · peak load %2$@ · peak swap %3$@",
+                                                                       String(records.count), String(Int(peakLoad.rounded())), Self.size(peakSwap * 1024)))]
+        if struggling.isEmpty {
+            lines.append("  " + style.green("✓") + " " + tr("nothing slowed the Mac down"))
+        } else {
+            lines.append("  " + tr("the Mac was struggling in %1$@ of %2$@ samples", String(struggling.count), String(records.count)))
+            lines.append("")
+            lines.append(style.bold(tr("Who was behind it")) + style.dim("  " + tr("(minutes at the top while it struggled)")))
+            for s in blame.prefix(8) {
+                lines.append("  " + pad(tr("%1$@ min", String(s.minutes)), 8, right: true) + "  " + pad(s.name, 24)
+                             + style.dim(tr("peak %1$@ CPU · %2$@", String(format: "%.0f%%", s.peakCPU), Self.size(s.peakMemoryKB))
+                                         + ([s.project, s.owner.map { tr("started by %1$@", $0) }].compactMap { $0 }.map { "  · " + $0 }.joined())))
+            }
+        }
+        out(lines)
+    }
+
+    static func hours(_ s: String) -> Double? {
+        let t = s.lowercased()
+        if t.hasSuffix("h"), let v = Double(t.dropLast()), v > 0 { return min(v, 24) }
+        if t.hasSuffix("m"), let v = Double(t.dropLast()), v > 0 { return v / 60 }
+        return Double(t).map { min($0, 24) }
+    }
+
     /// The one running program `target` names (a pid, an exact name, or a unique part of one).
     func pick(_ target: String) throws -> MachinePulse.Hog {
         // Look beyond the top few: anything this user runs can be named.
@@ -173,8 +224,8 @@ struct PulseCommand {
     }
 
     static func duration(_ s: TimeInterval) -> String {
-        s >= 86400 ? String(format: "%.0fd %.0fh", (s / 86400).rounded(.down), (s.truncatingRemainder(dividingBy: 86400) / 3600).rounded(.down))
-            : s >= 3600 ? String(format: "%.0fh", (s / 3600).rounded(.down)) : String(format: "%.0fm", s / 60)
+        let d = Int(s / 86400), h = Int(s.truncatingRemainder(dividingBy: 86400) / 3600), m = Int(s / 60)
+        return d > 0 ? tr("%1$@d %2$@h", String(d), String(h)) : s >= 3600 ? tr("%1$@h", String(Int(s / 3600))) : tr("%1$@m", String(m))
     }
 
     func quit(_ targets: [String]) throws {

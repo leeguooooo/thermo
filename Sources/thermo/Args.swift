@@ -12,7 +12,8 @@ struct Args {
     var options: [String: String] = [:]
 
     static let valueOptions: Set<String> = ["interval", "count", "sensor", "format", "older-than", "root",
-                                            "area", "agent", "action"]
+                                            "area", "agent", "action",
+        "since"]  // pulse history
     static let aliases: [String: String] = [
         "i": "interval", "n": "count", "s": "sensor", "a": "all", "j": "json",
         "h": "help", "v": "version", "f": "format", "y": "yes",

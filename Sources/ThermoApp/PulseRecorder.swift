@@ -1,0 +1,139 @@
+import AppKit
+import Charts
+import CleanKit
+import SwiftUI
+import ThermoKit
+import ThermoL10n
+import UserNotifications
+
+/// Records the pulse in the background — once a minute on power, every five minutes on battery,
+/// panel open or not — so a slowdown can be looked at afterwards, and tells the user about one
+/// before they feel it. One cheap incremental pass per tick (PulseSampler).
+final class PulseRecorder: ObservableObject {
+    static let shared = PulseRecorder()
+    static let alertsKey = "slowdownAlerts"
+    /// Posted (on main) when a slowdown notification is clicked; userInfo["program"] is who to show.
+    static let showProgram = Notification.Name("dev.thermo.showPulseProgram")
+
+    let history = PulseHistory()
+    /// The last six hours, for the Overview chart (oldest first).
+    @Published private(set) var recent: [PulseRecord] = []
+    /// A program to point at in the Overview after a notification was clicked.
+    @Published var highlighted: String?
+
+    private let queue = DispatchQueue(label: "dev.thermo.app.pulse-history", qos: .utility)
+    private let sampler = PulseSampler()
+    private var alerts = SlowdownAlerts()
+    private var timer: DispatchSourceTimer?
+    private var interval: TimeInterval = 0
+    private var memory: [PulseRecord] = []
+
+    func start() {
+        queue.async {
+            self.memory = self.history.records(since: Date().addingTimeInterval(-6 * 3600))
+            let snapshot = self.memory
+            DispatchQueue.main.async { self.recent = snapshot }
+            self.reschedule()
+        }
+    }
+
+    /// Every 60 s on power, 300 s on battery.
+    private func reschedule() {
+        let onBattery = Battery.read().map { !$0.externalPower } ?? false
+        let every: TimeInterval = onBattery ? 300 : 60
+        guard every != interval else { return }
+        interval = every
+        timer?.cancel()
+        let t = DispatchSource.makeTimerSource(queue: queue)
+        t.schedule(deadline: .now() + 5, repeating: every, leeway: .seconds(5))
+        t.setEventHandler { [weak self] in self?.tick() }
+        t.resume()
+        timer = t
+    }
+
+    private func tick() {
+        let pulse = sampler.sample()
+        let record = PulseRecord(pulse)
+        history.append(record)
+        let now = Date()
+        memory.append(record)
+        memory.removeAll { now.timeIntervalSince($0.t) > 6 * 3600 }
+        let snapshot = memory
+        DispatchQueue.main.async { self.recent = snapshot }
+
+        let enabled = UserDefaults.standard.object(forKey: Self.alertsKey) as? Bool ?? true
+        let fired = alerts.evaluate(memory.filter { now.timeIntervalSince($0.t) <= 15 * 60 }, latest: pulse, now: now)
+        if enabled { for a in fired { notify(a) } }
+        reschedule()
+    }
+
+    private func notify(_ a: SlowdownAlerts.Alert) {
+        // UserNotifications throws outside an app bundle (bare dev builds).
+        guard Bundle.main.bundleIdentifier != nil else { return }
+        let content = UNMutableNotificationContent()
+        content.title = a.title
+        content.body = a.body
+        content.userInfo = ["program": a.program ?? ""]
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "thermo.slowdown.\(a.key)", content: content, trigger: nil))
+    }
+}
+
+/// The Overview's look back: load per core over the last hour or six, tap a moment to see who
+/// was on top then.
+struct PulseHistoryChart: View {
+    @ObservedObject var recorder = PulseRecorder.shared
+    @State private var hours = 1
+    @State private var picked: PulseRecord?
+
+    var records: [PulseRecord] {
+        let since = Date().addingTimeInterval(-Double(hours) * 3600)
+        return recorder.recent.filter { $0.t >= since }
+    }
+
+    var body: some View {
+        if recorder.recent.count >= 2 {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(tr("Load, last %1$@ h", String(hours))).font(.caption2).foregroundStyle(.secondary)
+                    Spacer()
+                    Picker("", selection: $hours) { Text("1h").tag(1); Text("6h").tag(6) }
+                        .pickerStyle(.segmented).labelsHidden().frame(width: 80).controlSize(.mini)
+                }
+                Chart(records, id: \.t) { r in
+                    AreaMark(x: .value("t", r.t), y: .value("load", r.load1 / Double(max(1, r.cores))))
+                        .foregroundStyle(.orange.opacity(0.25))
+                    LineMark(x: .value("t", r.t), y: .value("load", r.load1 / Double(max(1, r.cores))))
+                        .foregroundStyle(.orange)
+                    if let p = picked, p.t == r.t {
+                        RuleMark(x: .value("t", p.t)).foregroundStyle(.secondary)
+                    }
+                }
+                .chartYAxis(.hidden)
+                .chartXAxis { AxisMarks(values: .automatic(desiredCount: 3)) { _ in AxisValueLabel(format: .dateTime.hour().minute()) } }
+                .frame(height: 46)
+                .chartOverlay { proxy in
+                    GeometryReader { g in
+                        Rectangle().fill(.clear).contentShape(Rectangle())
+                            .onTapGesture { location in
+                                let x = location.x - g[proxy.plotAreaFrame].origin.x
+                                guard let date: Date = proxy.value(atX: x) else { return }
+                                picked = records.min { abs($0.t.timeIntervalSince(date)) < abs($1.t.timeIntervalSince(date)) }
+                            }
+                    }
+                }
+                if let p = picked {
+                    Text(caption(p)).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+                }
+            }
+            .padding(.leading, 28)
+        }
+    }
+
+    func caption(_ r: PulseRecord) -> String {
+        let time = r.t.formatted(date: .omitted, time: .shortened)
+        let who = r.top.map { p in
+            p.cpu >= 50 ? "\(p.name) \(Int(p.cpu))%" : "\(p.name) \(String(format: "%.1f GB", Double(p.memoryKB) / 1_048_576))"
+        }.joined(separator: " · ")
+        return tr("%1$@ · load %2$@ · %3$@", time, String(Int(r.load1.rounded())), who)
+    }
+}

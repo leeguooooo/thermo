@@ -91,6 +91,7 @@ struct PulseCard: View {
     @ObservedObject private var pulse = SystemPulse.shared
     @State private var confirming: SystemPulse.Hog?
     @State private var restartTarget: SystemPulse.Hog?
+    @ObservedObject private var recorder = PulseRecorder.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -112,7 +113,9 @@ struct PulseCard: View {
                             }
                         }
                         if let where_ = origin(h) {
-                            Text(where_).font(.caption2).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                            // The project's own folder name, never cut mid-word; the full path on hover.
+                            Text(where_).font(.caption2).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
+                                .help(h.project ?? "")
                         }
                     }
                     Spacer(minLength: 4)
@@ -133,6 +136,7 @@ struct PulseCard: View {
                     .frame(width: 52, alignment: .trailing)
                 }
                 .padding(.leading, 28)
+                .background(RoundedRectangle(cornerRadius: 6).fill(recorder.highlighted == h.name ? Color.orange.opacity(0.18) : .clear))
                 // A big app, split: its GPU process and heaviest pages.
                 if let parts = h.parts, !parts.isEmpty {
                     Text(parts.map { "\(roleText($0.role)) \(memoryText($0.memoryKB))" }.joined(separator: " · "))
@@ -155,6 +159,7 @@ struct PulseCard: View {
             if let note = pulse.current?.swapDiskText {
                 Text(note).font(.caption2).foregroundStyle(.secondary).padding(.leading, 28)
             }
+            PulseHistoryChart()
             HStack(spacing: 10) {
                 label(tr("Temperature"), thermalText, thermalColor)
                 label(tr("Memory"), memoryText, pulse.memory == .normal ? .secondary : pulse.memory == .warning ? .orange : .red)
@@ -187,23 +192,14 @@ struct PulseCard: View {
         }
     }
 
-    /// "~/tk.com/shop · Claude Code": the folder a command-line program runs in and who started it.
+    /// "shop · started by Claude Code": the folder a command-line program runs in and who started it.
     func origin(_ h: SystemPulse.Hog) -> String? {
-        let parts = [h.project, h.owner.map { tr("started by %1$@", $0) }].compactMap { $0 }
+        let folder = h.project.map { ($0 as NSString).lastPathComponent }.flatMap { $0.isEmpty || $0 == "~" ? nil : $0 }
+        let parts = [folder, h.owner.map { tr("started by %1$@", $0) }].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
-    func roleText(_ role: String) -> String {
-        switch role {
-        case "GPU": return tr("GPU")
-        case "renderer": return tr("page")
-        case "extension": return tr("extension")
-        case "network": return tr("network")
-        case "utility": return tr("utility")
-        case "main": return tr("main")
-        default: return tr("helper")
-        }
-    }
+    func roleText(_ role: String) -> String { MachinePulse.roleName(role) }
 
     func label(_ title: String, _ value: String, _ color: Color) -> some View {
         HStack(spacing: 3) {

@@ -44,6 +44,7 @@ enum Settings {
     static func register() {
         UserDefaults.standard.register(defaults: [
             showInDock: true,
+            PulseRecorder.alertsKey: true,
             interval: 2.0, titleMetric: TitleMetric.cpu.rawValue,
             alertsEnabled: false, alertThreshold: 90.0, fahrenheit: false,
         ])
