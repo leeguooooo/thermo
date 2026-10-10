@@ -130,6 +130,36 @@ struct Renderer {
 }
 
 enum Export {
+    static func pulseCSV<T: Encodable>(_ report: T) -> String {
+        guard let object = (try? JSONSerialization.jsonObject(with: Data(diagnosticJSON(report).utf8))) as? [String: Any] else { return "" }
+        let units = ["load1": "load", "load5": "load", "cores": "count", "swapUsedMB": "MiB", "swapTotalMB": "MiB",
+                     "systemPowerW": "W", "batteryPercent": "%", "records": "count", "strugglingRecords": "count",
+                     "peakLoad": "load", "peakSwapMB": "MiB"]
+        func cell(_ value: Any) -> String {
+            if let string = value as? String { return string }
+            if let number = value as? NSNumber { return number.stringValue }
+            guard let data = try? JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) else { return "" }
+            return String(decoding: data, as: UTF8.self)
+        }
+        var rows = ["kind,name,value,unit"]
+        func append(_ kind: String, _ name: String, _ value: Any, _ unit: String) {
+            rows.append([kind, name, cell(value), unit].map(csvField).joined(separator: ","))
+        }
+        for key in object.keys.sorted() {
+            guard let value = object[key] else { continue }
+            if key == "temperatures", let temperatures = value as? [String: Any] {
+                for (name, temperature) in temperatures.sorted(by: { $0.key < $1.key }) { append("temperature", name, temperature, "°C") }
+            } else if let values = value as? [Any] {
+                for (index, entry) in values.enumerated() {
+                    let name = (entry as? [String: Any])?["name"] as? String ?? String(index)
+                    append(key == "programs" ? "program" : key == "fans" ? "fan" : key, name, entry,
+                           entry is String ? "" : "JSON")
+                }
+            } else { append("system", key, value, units[key] ?? "") }
+        }
+        return rows.joined(separator: "\n")
+    }
+
     static func diagnosticCSV(items: [AgentItem], findings: [Finding], generated: Date) -> String {
         struct Payload: Encodable { let items: [AgentItem]; let findings: [Finding] }
         let safe = diagnosticJSON(Payload(items: items, findings: findings))

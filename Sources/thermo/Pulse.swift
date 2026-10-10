@@ -42,19 +42,20 @@ struct PulseCommand {
         sm?.parts = [.temperatures, .fans, .power, .battery]
         let s = sm?.sample()
 
-        if app.args.has("json") {
+        if app.args.has("json") || app.args.has("csv") {
             var temps: [String: Double] = [:]
             if let v = s?.maximumKnownTemperature { temps["hottest"] = v }
             if let v = s?.cpu { temps["cpu"] = v }
             if let v = s?.gpu { temps["gpu"] = v }
-            print(Export.json(Report(
+            let report = Report(
                 verdict: pulse.verdict.rawValue, summary: pulse.verdictText, culprit: pulse.culpritText,
                 load1: pulse.load1, load5: pulse.load5, cores: pulse.cores, thermal: pulse.thermal.rawValue,
                 memory: pulse.memory.rawValue, swapUsedMB: pulse.swapUsedMB, swapTotalMB: pulse.swapTotalMB,
                 swapNote: pulse.swapDiskText, advice: pulse.hogs.compactMap { $0.advice?.text },
                 programs: pulse.hogs, temperatures: temps,
                 fans: (s?.fans ?? []).map { .init(name: $0.name, rpm: $0.rpm, min: $0.min, max: $0.max, manual: $0.manual) },
-                systemPowerW: s?.systemPower, batteryPercent: s?.battery?.percent)))
+                systemPowerW: s?.systemPower, batteryPercent: s?.battery?.percent)
+            print(app.args.has("json") ? Export.diagnosticJSON(report) : Export.pulseCSV(report))
             return
         }
 
@@ -117,13 +118,14 @@ struct PulseCommand {
         let struggling = records.filter { $0.load1 >= Double(max(1, $0.cores)) || $0.memory != .normal || $0.thermal == .serious || $0.thermal == .critical }
         let peakLoad = records.map(\.load1).max() ?? 0
         let peakSwap = records.map(\.swapUsedMB).max() ?? 0
-        if app.args.has("json") {
+        if app.args.has("json") || app.args.has("csv") {
             struct Out: Encodable {
                 let since: Date; let records: Int; let strugglingRecords: Int; let peakLoad: Double; let peakSwapMB: Int
                 let blame: [PulseHistory.Share]
             }
-            print(Export.json(Out(since: since, records: records.count, strugglingRecords: struggling.count,
-                                  peakLoad: peakLoad, peakSwapMB: peakSwap, blame: blame)))
+            let report = Out(since: since, records: records.count, strugglingRecords: struggling.count,
+                             peakLoad: peakLoad, peakSwapMB: peakSwap, blame: blame)
+            print(app.args.has("json") ? Export.diagnosticJSON(report) : Export.pulseCSV(report))
             return
         }
         guard !records.isEmpty else {
