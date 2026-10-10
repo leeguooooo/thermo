@@ -90,7 +90,11 @@ enum AISessions {
                 title: "\(tool) · \(g.label) · " + trCount(stale.count, "%1$@ session", "%1$@ sessions"),
                 detail: detail, safety: .review, bytes: size.bytes, files: size.files,
                 lastUsed: stale.map(\.modified).max(), paths: stale.flatMap(\.paths),
-                note: notes.isEmpty ? nil : notes.joined(separator: tr("; "))))
+                note: notes.isEmpty ? nil : notes.joined(separator: tr("; ")),
+                parts: stale.sorted { $0.modified > $1.modified }.map {
+                    CleanPart(id: $0.id, title: $0.title.map { String($0.prefix(80)) } ?? ($0.id as NSString).lastPathComponent, bytes: $0.size.bytes,
+                              lastUsed: $0.modified, paths: $0.paths)
+                }))
         }
         return out
     }

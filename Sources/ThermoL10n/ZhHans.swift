@@ -480,4 +480,7 @@ let zhHans: [String: String] = [
     "trash": "废纸篓",
     "%1$@ path": "%1$@ 个路径",
     "%1$@ paths": "%1$@ 个路径",
+    "scanning… %1$@": "正在扫描… %1$@",
+    "%1$@ of %2$@ sessions selected": "已选 %1$@ / %2$@ 个会话",
+    "Cleaning %1$@ of %2$@: %3$@": "正在清理第 %1$@ / %2$@ 项：%3$@",
 ]

@@ -103,7 +103,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     agents.scan()
     // Sensors are ready after a few seconds; the agent and disk scans can take longer (up to 90 s).
     func render() {
-        if agents.scanning || disk.report == nil, Date().timeIntervalSince(started) < 90 {
+        if agents.scanning || disk.scanning || disk.report == nil, Date().timeIntervalSince(started) < 90 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: render)
             return
         }

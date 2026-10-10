@@ -44,6 +44,19 @@ public enum Safety: String, Codable, Comparable, Sendable {
     public static func < (a: Safety, b: Safety) -> Bool { a.rank < b.rank }
 }
 
+/// A piece of an item that can be kept or removed on its own (one session of a project group).
+public struct CleanPart: Codable, Identifiable, Sendable, Equatable {
+    public var id: String
+    public var title: String
+    public var bytes: Int64
+    public var lastUsed: Date?
+    public var paths: [String]
+
+    public init(id: String, title: String, bytes: Int64, lastUsed: Date?, paths: [String]) {
+        self.id = id; self.title = title; self.bytes = bytes; self.lastUsed = lastUsed; self.paths = paths
+    }
+}
+
 /// One thing that can be cleaned: a set of paths removed together.
 public struct CleanItem: Codable, Identifiable, Sendable {
     /// Stable across scans, e.g. `xcode-derived-data` or `claude-sessions/-Users-leo-src-app`.
@@ -67,16 +80,37 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     public var hint: String?
     /// Shell command to run after the paths are removed (e.g. `git worktree prune`).
     public var afterClean: [String]?
+    /// Separately selectable pieces, newest first; together they make up `paths`.
+    public var parts: [CleanPart]?
 
     public init(id: String, category: CleanCategory, title: String, detail: String = "", safety: Safety,
                 bytes: Int64 = 0, files: Int = 0, lastUsed: Date? = nil, paths: [String] = [],
-                note: String? = nil, blocked: String? = nil, hint: String? = nil, afterClean: [String]? = nil) {
+                note: String? = nil, blocked: String? = nil, hint: String? = nil, afterClean: [String]? = nil,
+                parts: [CleanPart]? = nil) {
         self.id = id; self.category = category; self.title = title; self.detail = detail; self.safety = safety
         self.bytes = bytes; self.files = files; self.lastUsed = lastUsed; self.paths = paths
-        self.note = note; self.blocked = blocked; self.hint = hint; self.afterClean = afterClean
+        self.note = note; self.blocked = blocked; self.hint = hint; self.afterClean = afterClean; self.parts = parts
     }
 
     public var cleanable: Bool { blocked == nil && !paths.isEmpty && bytes > 0 }
+
+    /// The item narrowed to some of its parts (all of them when `keep` covers every part).
+    public func only(_ keep: Set<String>) -> CleanItem {
+        guard let parts else { return self }
+        let chosen = parts.filter { keep.contains($0.id) }
+        var item = self
+        item.parts = chosen
+        item.paths = chosen.flatMap(\.paths)
+        item.bytes = chosen.reduce(0) { $0 + $1.bytes }
+        item.files = chosen.count == parts.count ? files : chosen.reduce(0) { $0 + $1.paths.count }
+        item.lastUsed = chosen.compactMap(\.lastUsed).max()
+        // Session group titles end with their count ("Codex · api · 5 sessions"); keep it truthful.
+        if chosen.count != parts.count, let r = title.range(of: " · ", options: .backwards),
+           title[r.upperBound...].contains(where: \.isNumber) {
+            item.title = title[..<r.upperBound] + trCount(chosen.count, "%1$@ session", "%1$@ sessions")
+        }
+        return item
+    }
 }
 
 public struct ScanReport: Codable, Sendable {
@@ -87,6 +121,11 @@ public struct ScanReport: Codable, Sendable {
     public var duration: TimeInterval
     /// Claude Code `cleanupPeriodDays` (it prunes its own sessions after this many days; default 30).
     public var claudeCleanupDays: Int?
+
+    public init(items: [CleanItem], denied: [String], started: Date, duration: TimeInterval, claudeCleanupDays: Int? = nil) {
+        self.items = items; self.denied = denied; self.started = started; self.duration = duration
+        self.claudeCleanupDays = claudeCleanupDays
+    }
 
     public var totalBytes: Int64 { items.filter(\.cleanable).reduce(0) { $0 + $1.bytes } }
 

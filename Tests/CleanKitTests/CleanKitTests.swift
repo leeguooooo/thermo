@@ -265,6 +265,29 @@ final class CleanKitTests: XCTestCase {
         XCTAssertEqual(r.select(["all"]).count, 2)
     }
 
+    func testSessionPartsAndNarrowing() throws {
+        let cwd = home + "/src/api"
+        try FileManager.default.createDirectory(atPath: cwd, withIntermediateDirectories: true)
+        let meta = { (id: String) in "{\"type\":\"session_meta\",\"payload\":{\"id\":\"\(id)\",\"cwd\":\"\(cwd)\"}}\n" + String(repeating: "z", count: 9000) }
+        try write(".codex/sessions/2026/01/01/rollout-a.jsonl", meta("A"), age: 100)
+        try write(".codex/sessions/2026/02/01/rollout-b.jsonl", meta("B"), age: 60)
+        try write(".codex/session_index.jsonl", "{\"id\":\"B\",\"thread_name\":\"newer one\"}\n")
+        let item = try XCTUnwrap(AISessions.codex(context()).first)
+        let parts = try XCTUnwrap(item.parts)
+        XCTAssertEqual(parts.map(\.id), ["B", "A"], "newest first")
+        XCTAssertEqual(parts[0].title, "newer one")
+        XCTAssertEqual(Set(parts.flatMap(\.paths)), Set(item.paths))
+
+        let onlyA = item.only(["A"])
+        XCTAssertEqual(onlyA.paths, [home + "/.codex/sessions/2026/01/01/rollout-a.jsonl"])
+        XCTAssertEqual(onlyA.bytes, parts[1].bytes)
+        XCTAssertTrue(onlyA.title.hasSuffix("· 1 session"), onlyA.title)
+
+        let r = ScanReport(items: [item], denied: [], started: now, duration: 0)
+        XCTAssertEqual(r.select(["\(item.id)#A"]).first?.paths, onlyA.paths)
+        XCTAssertTrue(r.select(["\(item.id)#nope"]).isEmpty)
+    }
+
     func testCleanerRemovesOnlyListedPaths() throws {
         let a = try write("Library/Caches/tool/a")
         let keep = try write("Library/Caches/tool/keep")

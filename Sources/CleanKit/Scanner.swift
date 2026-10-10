@@ -5,6 +5,8 @@ public final class DiskScanner: @unchecked Sendable {
     public var options: ScanOptions
     /// Called from background threads with a short description of the step that finished.
     public var onProgress: ((String) -> Void)?
+    /// Called from background threads with each step's findings as soon as it finishes.
+    public var onItems: (([CleanItem]) -> Void)?
 
     public init(options: ScanOptions = ScanOptions()) { self.options = options }
 
@@ -41,6 +43,7 @@ public final class DiskScanner: @unchecked Sendable {
             lock.lock()
             items += found
             lock.unlock()
+            if !found.isEmpty { onItems?(found) }
             onProgress?(jobs[i].0)
         }
 
@@ -154,6 +157,16 @@ public extension ScanReport {
         var seen = Set<String>()
         func add(_ i: CleanItem) { if seen.insert(i.id).inserted { out.append(i) } }
         for sel in selectors {
+            // `ITEM#PART[,PART…]`: just those sessions of one item.
+            if let hash = sel.firstIndex(of: "#") {
+                let id = String(sel[..<hash]).lowercased()
+                let wanted = Set(sel[sel.index(after: hash)...].split(separator: ",").map(String.init))
+                if let i = items.first(where: { $0.id.lowercased() == id }), seen.insert(i.id).inserted {
+                    let narrowed = i.only(wanted)
+                    if !(narrowed.parts ?? []).isEmpty { out.append(narrowed) }
+                }
+                continue
+            }
             let s = sel.lowercased()
             for i in items {
                 let exact = i.id.lowercased() == s

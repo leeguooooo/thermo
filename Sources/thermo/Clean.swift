@@ -105,6 +105,7 @@ struct CleanCommand {
         lines.append("")
         lines.append(style.dim("Clean:  ") + "thermo clean run safe" + style.dim("   the \(safe.count) safe items (\(ByteFormat.string(safe.reduce(0) { $0 + $1.bytes })))"))
         lines.append(style.dim("        ") + "thermo clean run ID…" + style.dim("    items by id, id prefix or category; review items go to the Trash"))
+        lines.append(style.dim("        ") + "thermo clean run ID#SESSION" + style.dim("  just some sessions of an item (see --all)"))
         out(lines)
     }
 
@@ -130,6 +131,12 @@ struct CleanCommand {
             lines.append(indent + style.dim(n.count > limit ? String(n.prefix(limit - 1)) + "…" : n))
         }
         if let h = i.hint { lines.append(indent + style.dim("run: ") + h) }
+        if args.has("all"), let parts = i.parts, parts.count > 1 {
+            for p in parts {
+                lines.append(indent + "  " + pad(ByteFormat.string(p.bytes), 8, right: true) + "  " + style.cyan("#" + p.id)
+                             + style.dim("  " + AgeFormat.string(p.lastUsed) + "  ") + String(p.title.prefix(60)))
+            }
+        }
         return lines
     }
 

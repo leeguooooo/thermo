@@ -16,32 +16,64 @@ final class DiskModel: ObservableObject {
     @Published private(set) var cleaning = false
     @Published private(set) var progress = ""
     @Published var selected: Set<String> = []
+    /// Item id → parts (sessions) the user unticked inside a selected item.
+    @Published var excluded: [String: Set<String>] = [:]
     @Published var scope: Scope = .ai
     @Published var lastResult: String?
     @Published var error: String?
+    /// While cleaning: which item is being removed, and how far along we are.
+    @Published private(set) var cleaningStep = ""
+    @Published private(set) var cleaningDone = 0
+    @Published private(set) var cleaningTotal = 0
 
     private let queue = DispatchQueue(label: "dev.thermo.app.disk", qos: .utility)
 
-    var selectedItems: [CleanItem] { report?.items.filter { selected.contains($0.id) && $0.cleanable } ?? [] }
+    /// What a clean would remove: ticked items, narrowed to the parts still ticked.
+    var selectedItems: [CleanItem] {
+        (report?.items ?? []).filter { selected.contains($0.id) && $0.cleanable }.compactMap { i in
+            guard let off = excluded[i.id], !off.isEmpty, let parts = i.parts else { return i }
+            let narrowed = i.only(Set(parts.map(\.id)).subtracting(off))
+            return narrowed.bytes > 0 ? narrowed : nil
+        }
+    }
     var selectedBytes: Int64 { selectedItems.reduce(0) { $0 + $1.bytes } }
 
     func scanIfNeeded() { if report == nil && !scanning { scan() } }
+
+    static let order = Dictionary(uniqueKeysWithValues: CleanCategory.allCases.enumerated().map { ($1, $0) })
+
+    static func sorted(_ items: [CleanItem]) -> [CleanItem] {
+        items.sorted { (order[$0.category]!, -$0.bytes, $0.id) < (order[$1.category]!, -$1.bytes, $1.id) }
+    }
 
     func scan() {
         guard !scanning else { return }
         scanning = true
         progress = tr("starting…")
+        report = nil
+        selected = []
+        excluded = [:]
         var options = ScanOptions()
         if scope == .ai { options.categories = Set(CleanCategory.allCases.filter(\.isAI)) }
         let scanner = DiskScanner(options: options)
+        let started = Date()
         scanner.onProgress = { [weak self] step in DispatchQueue.main.async { self?.progress = step } }
+        // Results show up as each step finishes; safe ones are ticked as they arrive.
+        scanner.onItems = { [weak self] found in
+            DispatchQueue.main.async {
+                guard let self, self.scanning else { return }
+                let items = Self.sorted((self.report?.items ?? []) + found)
+                self.report = ScanReport(items: items, denied: [], started: started, duration: Date().timeIntervalSince(started))
+                self.selected.formUnion(found.filter { $0.cleanable && $0.safety == .safe }.map(\.id))
+            }
+        }
         queue.async { [weak self] in
             let r = scanner.scan()
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.report = r
-                // Safe items start ticked; anything that needs a look starts unticked.
-                self.selected = Set(r.items.filter { $0.cleanable && $0.safety == .safe }.map(\.id))
+                self.selected = self.selected.intersection(r.items.map(\.id))
+                    .union(r.items.filter { $0.cleanable && $0.safety == .safe }.map(\.id))
                 self.scanning = false
             }
         }
@@ -52,9 +84,12 @@ final class DiskModel: ObservableObject {
         let scannedAt = report?.started
         guard !items.isEmpty, !cleaning else { return }
         cleaning = true
+        cleaningDone = 0
+        cleaningTotal = items.count
         queue.async { [weak self] in
             var freed: Int64 = 0, trashed: Int64 = 0, failures = 0
-            for i in items {
+            for (n, i) in items.enumerated() {
+                DispatchQueue.main.async { self?.cleaningStep = i.title; self?.cleaningDone = n }
                 let r = Cleaner.clean(i, scannedAt: scannedAt)
                 if r.trashed { trashed += r.bytes } else { freed += r.bytes }
                 failures += r.failed.count
@@ -65,15 +100,33 @@ final class DiskModel: ObservableObject {
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.cleaning = false
+                self.cleaningStep = ""
                 self.lastResult = text
-                self.report = nil
                 self.scan()
             }
         }
     }
 
     func toggle(_ item: CleanItem) {
-        if selected.contains(item.id) { selected.remove(item.id) } else { selected.insert(item.id) }
+        if selected.contains(item.id) { selected.remove(item.id) } else { selected.insert(item.id); excluded[item.id] = nil }
+    }
+
+    func isTicked(_ part: CleanPart, of item: CleanItem) -> Bool {
+        selected.contains(item.id) && !(excluded[item.id]?.contains(part.id) ?? false)
+    }
+
+    /// Ticking a session ticks its item; unticking the last one unticks the item.
+    func toggle(_ part: CleanPart, of item: CleanItem) {
+        if isTicked(part, of: item) {
+            excluded[item.id, default: []].insert(part.id)
+            if excluded[item.id]!.count >= (item.parts?.count ?? 0) { selected.remove(item.id); excluded[item.id] = nil }
+        } else if !selected.contains(item.id) {
+            // First tick inside an unticked item: only this session.
+            selected.insert(item.id)
+            excluded[item.id] = Set((item.parts ?? []).map(\.id)).subtracting([part.id])
+        } else {
+            excluded[item.id]?.remove(part.id)
+        }
     }
 
     func openFullDiskAccess() {
@@ -92,10 +145,16 @@ struct DiskView: View {
     @ObservedObject var model: DiskModel
     @State private var confirming = false
     @State private var expanded: Set<CleanCategory> = [.aiSessions]
+    /// Items whose sessions are listed.
+    @State private var openItems: Set<String> = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             header
+            if model.scanning, model.report != nil {
+                // Results stream in; say what is still being looked at.
+                Text(tr("scanning… %1$@", model.progress)).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+            }
             if let r = model.report {
                 if renderingPreview { list(r) } else { ScrollView { list(r) }.frame(height: 330) }
                 footer(r)
@@ -227,6 +286,53 @@ struct DiskView: View {
     }
 
     func row(_ i: CleanItem) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            itemRow(i)
+            if let parts = i.parts, parts.count > 1, i.cleanable {
+                let open = openItems.contains(i.id)
+                let off = model.excluded[i.id]?.count ?? 0
+                Button {
+                    if open { openItems.remove(i.id) } else { openItems.insert(i.id) }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: open ? "chevron.down" : "chevron.right").font(.system(size: 8))
+                        Text(model.selected.contains(i.id) && off > 0
+                             ? tr("%1$@ of %2$@ sessions selected", String(parts.count - off), String(parts.count))
+                             : trCount(parts.count, "%1$@ session", "%1$@ sessions"))
+                    }
+                    .font(.caption2).foregroundStyle(.secondary).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 34)
+                if open {
+                    ForEach(renderingPreview ? Array(parts.prefix(4)) : parts) { p in partRow(p, of: i) }
+                }
+            }
+        }
+    }
+
+    func partRow(_ p: CleanPart, of i: CleanItem) -> some View {
+        let on = model.isTicked(p, of: i)
+        return HStack(spacing: 6) {
+            Image(systemName: on ? "checkmark.square.fill" : "square").font(.caption)
+                .foregroundStyle(on ? Color.accentColor : .secondary)
+                .onTapGesture { model.toggle(p, of: i) }
+            Text(p.title).font(.caption).lineLimit(1).truncationMode(.tail)
+            Spacer(minLength: 4)
+            if let d = p.lastUsed { Text(AgeFormat.string(d)).font(.caption2).foregroundStyle(.tertiary) }
+            Text(ByteFormat.string(p.bytes)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                .frame(width: 60, alignment: .trailing)
+        }
+        .padding(.leading, 46)
+        .contextMenu {
+            Button(tr("Show in Finder")) {
+                NSWorkspace.shared.activateFileViewerSelecting(p.paths.prefix(20).map { URL(fileURLWithPath: $0) })
+            }
+            Button(tr("Copy ID")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString("\(i.id)#\(p.id)", forType: .string) }
+        }
+    }
+
+    func itemRow(_ i: CleanItem) -> some View {
         HStack(alignment: .top, spacing: 6) {
             Image(systemName: model.selected.contains(i.id) ? "checkmark.square.fill" : "square")
                 .foregroundStyle(i.cleanable ? (model.selected.contains(i.id) ? Color.accentColor : .secondary) : Color.secondary.opacity(0.4))
@@ -243,7 +349,8 @@ struct DiskView: View {
                 else if let n = i.note { Text(n).font(.caption2).foregroundStyle(.tertiary).lineLimit(2) }
             }
             Spacer(minLength: 4)
-            Text(ByteFormat.string(i.bytes)).font(.callout.monospacedDigit()).foregroundStyle(i.cleanable ? .primary : .secondary)
+            let shown = model.selectedItems.first { $0.id == i.id }?.bytes ?? i.bytes
+            Text(ByteFormat.string(shown)).font(.callout.monospacedDigit()).foregroundStyle(i.cleanable ? .primary : .secondary)
         }
         .padding(.leading, 12)
         .contextMenu {
@@ -280,7 +387,11 @@ struct DiskView: View {
                     Button(tr("Safe")) { model.selected = Set(r.items.filter { $0.cleanable && $0.safety == .safe }.map(\.id)) }
                         .controlSize(.small).modifier(ActionButtonStyle(prominent: false))
                     Spacer()
-                    if model.cleaning { ProgressView().controlSize(.small) }
+                    if model.cleaning {
+                        ProgressView(value: Double(model.cleaningDone), total: Double(max(1, model.cleaningTotal)))
+                            .frame(width: 50).controlSize(.small)
+                            .help(tr("Cleaning %1$@ of %2$@: %3$@", String(model.cleaningDone + 1), String(model.cleaningTotal), model.cleaningStep))
+                    }
                     Button(tr("Clean %1$@", ByteFormat.string(model.selectedBytes))) { confirming = true }
                         .modifier(ActionButtonStyle(prominent: true))
                         .keyboardShortcut(.defaultAction)
