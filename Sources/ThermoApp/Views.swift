@@ -138,7 +138,7 @@ struct OverviewView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PulseCard()
+            PulseCard(active: monitor.panelVisible)
             if let s = monitor.snapshot {
                 VStack(spacing: 6) {
                     ForEach(SensorGroup.allCases, id: \.self) { g in

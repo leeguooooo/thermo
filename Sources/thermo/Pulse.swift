@@ -60,7 +60,8 @@ struct PulseCommand {
                 let cpu = String(format: "%5.0f%%", h.cpu)
                 lines.append("  " + (h.cpu >= 100 ? style.red(cpu) : h.cpu >= 50 ? style.yellow(cpu) : cpu)
                              + "  " + pad(h.memoryKB >= 1_048_576 ? String(format: "%.1f GB", Double(h.memoryKB) / 1_048_576) : "\(h.memoryKB / 1024) MB", 8, right: true)
-                             + "  " + h.name + style.dim(h.pids.count > 1 ? "  (\(h.pids.count) processes)" : "  pid \(h.pids[0])"))
+                             + "  " + h.name + style.dim(h.pids.count > 1 ? "  (\(h.pids.count) processes)" : "  pid \(h.pids[0])")
+                             + style.dim([h.project, h.owner.map { "started by " + $0 }].compactMap { $0 }.map { "  · " + $0 }.joined()))
             }
         }
         if let s {

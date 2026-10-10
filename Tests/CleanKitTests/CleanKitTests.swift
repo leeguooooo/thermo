@@ -344,6 +344,34 @@ final class CleanKitTests: XCTestCase {
         XCTAssertFalse(hogs[2].quittable, "agent sessions are never offered")
     }
 
+    func testPulseNamesWhatAnInterpreterRuns() {
+        func name(_ argv: [String]) -> String { MachinePulse.programName(ProcessDetails(argv: argv), fallback: "node") }
+        XCTAssertEqual(name(["node", "/p/node_modules/.pnpm/vitest@1.6.0/node_modules/vitest/dist/workers/forks.js"]), "vitest")
+        XCTAssertEqual(name(["node", "--max-old-space-size=4096", "/p/node_modules/.bin/tsc", "-w"]), "tsc")
+        XCTAssertEqual(name(["node", "/p/node_modules/@vitest/runner/dist/index.js"]), "@vitest/runner")
+        XCTAssertEqual(name(["python3", "-m", "pytest", "tests"]), "pytest")
+        XCTAssertEqual(name(["/usr/bin/python3", "/srv/app/worker.py"]), "worker")
+        XCTAssertEqual(name(["ffmpeg", "-i", "a.mov"]), "ffmpeg")
+    }
+
+    func testPulseGroupsWorkersByProjectAndKeepsTheirOwner() {
+        let c = { (pid: Int32, cwd: String) in
+            MachinePulse.Candidate(pid: pid, uid: getuid(), name: "node", cpu: 30, memoryKB: 50_000,
+                                   details: ProcessDetails(executable: "/opt/homebrew/bin/node",
+                                                           argv: ["node", "/p/node_modules/vitest/vitest.mjs"], cwd: cwd),
+                                   owner: "Claude Code")
+        }
+        let hogs = MachinePulse.group([c(1, "/w/shop"), c(2, "/w/shop"), c(3, "/w/admin")], byMemory: false, me: 99)
+        XCTAssertEqual(hogs.count, 2, "one row per project")
+        let shop = hogs.first { $0.project == "/w/shop" }
+        XCTAssertEqual(shop?.pids.sorted(), [1, 2])
+        XCTAssertEqual(shop?.name, "vitest")
+        XCTAssertEqual(shop?.owner, "Claude Code")
+        XCTAssertEqual(PulseSampler.recognise(name: "2.1.296", executable: "/Users/x/.local/share/claude/versions/2.1.296"), "Claude Code")
+        XCTAssertEqual(PulseSampler.recognise(name: "Code Helper", executable: "/Applications/Visual Studio Code.app/Contents/Frameworks/Code Helper.app/Contents/MacOS/Code Helper"), "Visual Studio Code")
+        XCTAssertNil(PulseSampler.recognise(name: "zsh", executable: "/bin/zsh"))
+    }
+
     func testPulseNamesACulpritOnlyWhenItExplainsTheLoad() {
         let hog = MachinePulse.Hog(id: "a", name: "ffmpeg", cpu: 160, memoryKB: 100_000, pids: [1], app: nil, quittable: true)
         var p = MachinePulse(load1: 3, load5: 3, cores: 8, thermal: .nominal, memory: .normal, swapUsedMB: 0, hogs: [hog], sampled: now)

@@ -18,6 +18,10 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         /// False for anything Thermo never offers to stop: other users' or system processes,
         /// AI agent sessions, Thermo itself.
         public var quittable: Bool
+        /// Where a command-line program runs (its working directory, `~/…`), e.g. the project a test runner belongs to.
+        public var project: String? = nil
+        /// Who started it: the agent, terminal or editor up its parent chain ("Claude Code", "Terminal", "Cursor").
+        public var owner: String? = nil
     }
 
     public enum Memory: String, Codable, Sendable { case normal, warning, critical }
@@ -75,7 +79,22 @@ public struct MachinePulse: Codable, Sendable, Equatable {
 
     // MARK: sampling
 
+    /// One-off sample (the CLI): measures CPU over a short window. The app keeps a `PulseSampler`
+    /// so each refresh costs one cheap pass instead.
     public static func sample(processes: ProcessTable? = nil) -> MachinePulse {
+        if processes == nil { return PulseSampler().sample() }
+        return measure(hogs: group(processes!.entries, byMemory: memoryLevel() != .normal))
+    }
+
+    static func memoryLevel() -> Memory {
+        var level: Int32 = 0
+        var size = MemoryLayout<Int32>.size
+        sysctlbyname("kern.memorystatus_vm_pressure_level", &level, &size, nil, 0)
+        return level >= 4 ? .critical : level >= 2 ? .warning : .normal
+    }
+
+    /// Load, memory, swap and thermal state around a list of programs.
+    static func measure(hogs: [Hog]) -> MachinePulse {
         var avg = [Double](repeating: 0, count: 3)
         getloadavg(&avg, 3)
         var level: Int32 = 0
@@ -92,32 +111,53 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         case .critical: thermal = .critical
         default: thermal = .nominal
         }
-        let table = processes ?? ProcessTable.current(.init(cpu: true))
         return MachinePulse(load1: avg[0], load5: avg[1], cores: ProcessInfo.processInfo.activeProcessorCount,
                             thermal: thermal, memory: memory, swapUsedMB: Int(swap.xsu_used / 1_048_576),
-                            hogs: group(table.entries, byMemory: memory != .normal), sampled: Date())
+                            hogs: hogs, sampled: Date())
     }
 
     /// Folds helper processes into their app and returns the busiest programs (plus the biggest
     /// ones when memory is short).
     public static func group(_ procs: [AgentProcess], byMemory: Bool = false, me: pid_t = getpid()) -> [Hog] {
+        group(procs.map { Candidate(pid: $0.pid, uid: $0.uid, name: $0.name, cpu: $0.cpu, memoryKB: max($0.footprintKB, $0.rssKB),
+                                    details: ProcessDetails(executable: $0.executable, argv: $0.argv, cwd: $0.cwd)) },
+              byMemory: byMemory, me: me)
+    }
+
+    /// A process worth considering, with what it takes to name it.
+    struct Candidate {
+        var pid: pid_t
+        var uid: uid_t
+        var name: String
+        var cpu: Double
+        var memoryKB: Int
+        var details: ProcessDetails
+        var owner: String? = nil
+    }
+
+    static func group(_ procs: [Candidate], byMemory: Bool, me: pid_t) -> [Hog] {
         var byKey: [String: Hog] = [:]
-        for p in procs where p.cpu > 0.5 || max(p.footprintKB, p.rssKB) > 200_000 {
-            let exe = p.executable ?? ""
-            var key = "pid:\(p.pid)"
-            var name = p.argv.first.map { ($0 as NSString).lastPathComponent } ?? p.name
+        for p in procs where p.cpu > 0.5 || p.memoryKB > 200_000 {
+            let exe = p.details.executable ?? ""
+            var name = programName(p.details, fallback: p.name)
+            // Command-line programs: the same tool in the same folder is one row (e.g. 4 vitest workers).
+            var key = "cmd:\(name)|\(p.details.cwd ?? "")"
             var app: String?
+            var project: String?
             if let r = exe.range(of: ".app/") {
                 let appPath = String(exe[..<r.lowerBound]) + ".app"
                 key = appPath
                 app = appPath
                 name = ((appPath as NSString).lastPathComponent as NSString).deletingPathExtension
+            } else if let cwd = p.details.cwd, cwd != "/" {
+                project = tilde(cwd)
             }
             let agent = ProcessTable.agentNames.contains(name.lowercased()) || exe.contains("/claude/versions/")
             let quittable = p.pid != me && p.uid == getuid() && !agent && !exe.hasPrefix("/System/") && !exe.hasPrefix("/usr/")
-            var h = byKey[key] ?? Hog(id: key, name: name, cpu: 0, memoryKB: 0, pids: [], app: app, quittable: quittable)
+            var h = byKey[key] ?? Hog(id: key, name: name, cpu: 0, memoryKB: 0, pids: [], app: app, quittable: quittable,
+                                      project: project, owner: app == nil ? p.owner : nil)
             h.cpu += p.cpu
-            h.memoryKB += max(p.footprintKB, p.rssKB)
+            h.memoryKB += p.memoryKB
             h.pids.append(p.pid)
             h.quittable = h.quittable && quittable
             byKey[key] = h
@@ -129,5 +169,38 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             }
         }
         return top
+    }
+
+    static let interpreters: Set<String> = ["node", "python", "python3", "ruby", "bun", "deno", "java", "perl", "php", "uv", "npx", "tsx", "ts-node"]
+
+    /// "vitest" rather than "node": for an interpreter, the package or script it runs.
+    static func programName(_ d: ProcessDetails, fallback: String) -> String {
+        let first = d.argv.first.map { ($0 as NSString).lastPathComponent } ?? (d.executable as NSString?)?.lastPathComponent ?? fallback
+        guard interpreters.contains(first.lowercased()) || first.lowercased().hasPrefix("python") else { return first.isEmpty ? fallback : first }
+        for arg in d.argv.dropFirst() where !arg.hasPrefix("-") {
+            // …/node_modules/.pnpm/vitest@1/node_modules/vitest/dist/x.js → vitest; …/node_modules/.bin/tsc → tsc
+            let parts = arg.split(separator: "/").map(String.init)
+            if let i = parts.lastIndex(of: "node_modules"), i + 1 < parts.count {
+                let next = parts[i + 1]
+                if next == ".bin", i + 2 < parts.count { return parts[i + 2] }
+                if next.hasPrefix("@"), i + 2 < parts.count { return next + "/" + parts[i + 2] }
+                if next != ".pnpm" { return next }
+            }
+            if arg.contains("/") || arg.contains(".") {
+                let base = ((arg as NSString).lastPathComponent as NSString).deletingPathExtension
+                if !base.isEmpty, !["index", "main", "cli", "bin", "server"].contains(base) { return base }
+                // index.js and friends say little; their folder says more.
+                let dir = ((arg as NSString).deletingLastPathComponent as NSString).lastPathComponent
+                if !dir.isEmpty, dir != "dist", dir != "bin", dir != "lib" { return dir }
+            }
+            if !arg.contains("/") { return arg }  // e.g. `python -m pytest` → handled below
+        }
+        if let m = d.argv.firstIndex(of: "-m"), m + 1 < d.argv.count { return d.argv[m + 1] }
+        return first
+    }
+
+    static func tilde(_ path: String) -> String {
+        let home = NSHomeDirectory()
+        return path == home ? "~" : path.hasPrefix(home + "/") ? "~" + path.dropFirst(home.count) : path
     }
 }

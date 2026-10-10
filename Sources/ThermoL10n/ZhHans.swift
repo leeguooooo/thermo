@@ -538,4 +538,7 @@ let zhHans: [String: String] = [
     "Your fan setting is applied as soon as the helper is ready.": "helper 一就绪，你的风扇设置就会自动生效。",
     "Waiting for macOS…": "正在等待系统…",
     "Use Administrator Password": "用管理员密码安装",
+
+    // MARK: Pulse owners
+    "started by %1$@": "由 %1$@ 启动",
 ]

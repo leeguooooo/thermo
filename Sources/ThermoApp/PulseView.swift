@@ -3,7 +3,7 @@ import AppKit
 import SwiftUI
 import ThermoL10n
 
-/// Samples `MachinePulse` every 3 s while the Overview card is on screen.
+/// Samples `MachinePulse` every 3 s while the panel is open on the Overview tab; nothing runs otherwise.
 final class SystemPulse: ObservableObject {
     typealias Hog = MachinePulse.Hog
     /// One sampler for the app; the card starts and stops it as it appears and disappears.
@@ -12,6 +12,8 @@ final class SystemPulse: ObservableObject {
     @Published private(set) var current: MachinePulse?
     private let queue = DispatchQueue(label: "dev.thermo.app.pulse", qos: .utility)
     private var timer: DispatchSourceTimer?
+    /// Confined to `queue`. Kept across start/stop so reopening shows fresh numbers in one cheap pass.
+    private let sampler = PulseSampler()
 
     var sampled: Bool { current != nil }
     var hogs: [Hog] { current?.hogs ?? [] }
@@ -41,7 +43,7 @@ final class SystemPulse: ObservableObject {
     deinit { timer?.cancel() }
 
     private func sample() {
-        let p = MachinePulse.sample()
+        let p = sampler.sample()
         DispatchQueue.main.async { self.current = p }
     }
 
@@ -58,6 +60,8 @@ final class SystemPulse: ObservableObject {
 }
 
 struct PulseCard: View {
+    /// The panel is open. The popover's views outlive it being closed, so this, not onDisappear, stops sampling.
+    let active: Bool
     @ObservedObject private var pulse = SystemPulse.shared
     @State private var confirming: SystemPulse.Hog?
 
@@ -72,20 +76,34 @@ struct PulseCard: View {
                 }
             }
             ForEach(pulse.hogs) { h in
-                HStack(spacing: 6) {
-                    Text(h.name).font(.callout).lineLimit(1)
-                    Spacer()
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        HStack(spacing: 4) {
+                            Text(h.name).font(.callout).lineLimit(1)
+                            if h.pids.count > 1 && h.app == nil {
+                                Text("×\(h.pids.count)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                            }
+                        }
+                        if let where_ = origin(h) {
+                            Text(where_).font(.caption2).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                        }
+                    }
+                    Spacer(minLength: 4)
                     Text(String(format: "%.0f%%", h.cpu)).font(.callout.monospacedDigit())
                         .foregroundStyle(h.cpu >= 100 ? .red : h.cpu >= 50 ? .orange : .primary)
-                        .frame(width: 52, alignment: .trailing)
+                        .frame(width: 44, alignment: .trailing)
                     Text(memoryText(h.memoryKB)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                         .frame(width: 58, alignment: .trailing)
-                    if h.quittable && !renderingPreview {
-                        Button(h.app != nil ? tr("Quit") : tr("End")) { confirming = h }
-                            .controlSize(.small).modifier(ActionButtonStyle(prominent: false))
-                    } else {
-                        Color.clear.frame(width: 44, height: 1)
+                    // Fixed width whether or not there is a button, so the columns line up.
+                    Group {
+                        if h.quittable && !renderingPreview {
+                            Button(h.app != nil ? tr("Quit") : tr("End")) { confirming = h }
+                                .controlSize(.small).modifier(ActionButtonStyle(prominent: false))
+                        } else {
+                            Color.clear.frame(height: 1)
+                        }
                     }
+                    .frame(width: 52, alignment: .trailing)
                 }
                 .padding(.leading, 28)
             }
@@ -97,8 +115,9 @@ struct PulseCard: View {
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill((pulse.sampled ? pulse.severity : .secondary).opacity(0.08)))
-        .onAppear { pulse.start() }
-        .onDisappear { pulse.stop() }
+        .onAppear { if active { pulse.start() } }
+        .onDisappear { pulse.stop() }  // switching tabs
+        .onChange(of: active) { open in if open { pulse.start() } else { pulse.stop() } }
         .sheet(item: $confirming) { h in
             ConfirmSheet(title: h.app != nil ? tr("Quit %1$@?", h.name) : tr("End %1$@?", h.name),
                          summary: h.app != nil ? tr("The app is asked to quit, the same as ⌘Q; it can save your work first.")
@@ -109,6 +128,12 @@ struct PulseCard: View {
                          confirmTitle: h.app != nil ? tr("Quit") : tr("End"),
                          confirm: { confirming = nil; pulse.quit(h) }, cancel: { confirming = nil })
         }
+    }
+
+    /// "~/tk.com/shop · Claude Code": the folder a command-line program runs in and who started it.
+    func origin(_ h: SystemPulse.Hog) -> String? {
+        let parts = [h.project, h.owner.map { tr("started by %1$@", $0) }].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     func label(_ title: String, _ value: String, _ color: Color) -> some View {

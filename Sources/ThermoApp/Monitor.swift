@@ -64,10 +64,15 @@ final class Monitor: ObservableObject {
     /// Called on the main thread after each sample (menu bar title).
     var onUpdate: ((Snapshot) -> Void)?
 
+    /// Published copy of `popoverOpen` for views that must stop work when the panel closes: the popover's
+    /// SwiftUI views stay alive (no onDisappear) while it is closed.
+    @Published private(set) var panelVisible = false
+
     var popoverOpen = false {
         didSet {
             guard popoverOpen != oldValue else { return }
             let open = popoverOpen
+            panelVisible = open
             queue.async { self.fullSampling = open }
             if open {
                 // SwiftUI only sees data while visible; hand over what accumulated meanwhile.
