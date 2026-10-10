@@ -21,15 +21,18 @@ struct Renderer {
 
     func overview(_ s: Snapshot) -> [String] {
         var lines: [String] = []
-        let groups: [(SensorGroup, Double?)] = [
-            (.cpu, s.cpuPower), (.gpu, s.power.first { $0.key == "PCPG" || $0.key == "PG0R" }?.value),
-            (.memory, nil), (.storage, nil), (.battery, nil), (.ambient, nil),
-        ]
-        for (g, watts) in groups {
-            guard let mx = s.maxTemperature(in: g) else { continue }
-            let avg = s.averageTemperature(in: g)
+        for g in SensorGroup.allCases {
+            let items = s.temperatures.filter { $0.group == g && (showAll || $0.known) && $0.value.isFinite }
+            guard let mx = items.map(\.value).max() else { continue }
+            let watts: Double?
+            switch g {
+            case .cpu: watts = s.cpuPower
+            case .gpu: watts = s.power.first { $0.key == "PCPG" || $0.key == "PG0R" }?.value
+            default: watts = nil
+            }
             var line = "  " + pad(g.rawValue, 9) + style.temp(mx) + "  " + style.bar(mx / 100, width: 12, celsius: mx)
-            if let avg, s.temperatures.filter({ $0.group == g && $0.known }).count > 1 {
+            if items.count > 1 {
+                let avg = items.reduce(0) { $0 + $1.value } / Double(items.count)
                 line += style.dim("  avg ") + style.temp(avg, width: 6)
             } else {
                 line += String(repeating: " ", count: 12)
