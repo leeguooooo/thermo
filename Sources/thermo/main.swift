@@ -353,8 +353,10 @@ struct App {
             let b = clock()
             return ((b.wall - a.wall) / Double(n), (b.cpu - a.cpu) / Double(n))
         }
-        func row(_ label: String, _ t: (wall: Double, cpu: Double), _ note: String = "") -> String {
-            "  " + pad(label, 26) + String(format: "%9.3f ms %9.3f ms", t.wall, t.cpu) + style.dim(note)
+        var measurements: [BenchmarkReport.Measurement] = []
+        func row(_ label: String, _ t: (wall: Double, cpu: Double), _ note: String = "", samples: Int = 1, records: Int? = nil) -> String {
+            measurements.append(.init(name: label, samples: samples, wallMs: t.wall, cpuMs: t.cpu, returnedRecords: records))
+            return "  " + pad(label, 26) + String(format: "%9.3f ms %9.3f ms", t.wall, t.cpu) + style.dim(note)
         }
 
         var smc: SMC!
@@ -370,30 +372,39 @@ struct App {
             style.bold("thermo bench") + style.dim(" · \(d.model) · \(d.keyCount) SMC keys"),
             "  " + pad("", 26) + style.dim("     wall        cpu"),
             row("open SMC", open),
-            row("full key scan", scan, "  \(d.sensors.count) sensors, \(d.fans.count) fans"),
-            row("init from cache", cached),
+            row("full key scan", scan, "  \(d.sensors.count) SMC sensor keys, \(d.fans.count) fans"),
+            row("init (cache allowed)", cached),
         ]
         let n = 100
-        for (scope, label, filter) in [(SamplerScope.essential, "essential", { (s: SensorDescriptor) in s.essential }),
-                                       (.known, "known", { $0.known }), (.all, "all", { _ in true })] {
+        for (scope, label) in [(SamplerScope.essential, "essential"), (.known, "known"), (.all, "all")] {
             sm.scope = scope
-            let t = time(n) { _ = sm.sample() }
-            let keys = d.sensors.filter(filter).count + d.fans.count * 2
-            lines.append(row("sample (\(label))", t, String(format: "  %d keys, %.0f µs/key", keys, t.wall * 1000 / Double(max(1, keys)))))
+            var sample: Snapshot?
+            let t = time(n) { sample = sm.sample() }
+            let records = sample.map(BenchmarkReport.recordCount) ?? 0
+            lines.append(row("sample (\(label))", t, "  \(records) returned records", samples: n, records: records))
         }
-        lines.append(row("battery (IORegistry)", time(20) { _ = Battery.read() }))
+        lines.append(row("battery (IORegistry)", time(20) { _ = Battery.read() }, samples: 20))
         sm.scope = .essential
         let e = time(n) { _ = sm.sample() }
-        lines.append(style.dim(String(format: "  background cost at 2 s interval (essential): %.2f%% of one core", e.cpu / 2000 * 100)))
+        measurements.append(.init(name: "background sampling (essential)", samples: n, wallMs: e.wall, cpuMs: e.cpu, returnedRecords: nil))
+        lines.append(style.dim(String(format: "  estimated sampling CPU at 2 s interval (essential): %.2f%% of one core", e.cpu / 2000 * 100)))
         // The slowdown history: one incremental pulse pass a minute (five on battery), plus the write.
         let pulseSampler = PulseSampler()
         _ = pulseSampler.sample()  // the first pass measures over a short window; steady state is what runs
         let history = PulseHistory(url: FileManager.default.temporaryDirectory.appendingPathComponent("thermo-bench-\(UUID().uuidString).jsonl"))
         let pt = time(10) { history.append(PulseRecord(pulseSampler.sample())) }
         try? FileManager.default.removeItem(at: history.url)
-        lines.append(row("pulse history tick", pt))
-        lines.append(style.dim(String(format: "  history cost at 60 s interval: %.3f%% of one core (300 s on battery: %.3f%%)",
+        lines.append(row("pulse history tick", pt, samples: 10))
+        lines.append(style.dim(String(format: "  estimated history CPU at 60 s interval: %.3f%% of one core (300 s on battery: %.3f%%)",
                                       pt.cpu / 60_000 * 100, pt.cpu / 300_000 * 100)))
+        let report = BenchmarkReport(model: d.model, smcKeys: d.keyCount, smcSensors: d.sensors.count, fans: d.fans.count,
+            measurements: measurements, estimates: [
+                .init(name: "essential sampling", intervalSeconds: 2, cpuPercent: e.cpu / 2000 * 100),
+                .init(name: "pulse history", intervalSeconds: 60, cpuPercent: pt.cpu / 60_000 * 100),
+                .init(name: "pulse history (battery)", intervalSeconds: 300, cpuPercent: pt.cpu / 300_000 * 100),
+            ])
+        if args.has("json") { print(Export.json(report)); return }
+        if args.has("csv") { print(report.csv); return }
         out(lines)
     }
 }
