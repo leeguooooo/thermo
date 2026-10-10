@@ -152,6 +152,7 @@ struct App {
     func batteryCommand() throws {
         guard let b = Battery.read() else { throw CLIError("no battery found") }
         if args.has("json") { print(Export.json(b)); return }
+        if args.has("csv") { print(Export.csv(b)); return }
         out(renderer.battery(b))
     }
 

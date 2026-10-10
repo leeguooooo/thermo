@@ -89,6 +89,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 所有读取命令都支持 `--json`、`--csv`，另有 `--fahrenheit`、`--no-color`（也遵循 `NO_COLOR`）。
 
+电池 CSV 和汇总 CSV 使用 `kind,key,name,group,value` 列；电池字段的 key 标明单位，例如 `temperature_c`、`current_a`、`health_percent`。缺失读数不输出，充电和外接电源状态使用 0/1。CSV 温度始终以摄氏度输出。
+
 `thermo settings slowdown-alerts on|off` 和 `thermo settings unnamed-sensors on|off` 与 App 使用同一组开关。`--yes` 等标志不接受 `=false`；需要确认时省略 `--yes`。
 
 ## 磁盘清理

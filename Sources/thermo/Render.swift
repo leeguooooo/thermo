@@ -131,11 +131,35 @@ enum Export {
     }
 
     static func csvField(_ s: String) -> String {
-        s.contains(",") || s.contains("\"") ? "\"" + s.replacingOccurrences(of: "\"", with: "\"\"") + "\"" : s
+        s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r")
+            ? "\"" + s.replacingOccurrences(of: "\"", with: "\"\"") + "\"" : s
     }
 
     static func csvRows(_ rows: [Reading], kind: String) -> [String] {
-        rows.map { [kind, $0.key, csvField($0.name), $0.group.rawValue, String(format: "%.3f", $0.value)].joined(separator: ",") }
+        rows.map { [kind, $0.key, $0.name, $0.group.rawValue, String(format: "%.3f", $0.value)].map(csvField).joined(separator: ",") }
+    }
+
+    static func batteryRows(_ battery: BatteryInfo) -> [String] {
+        let values: [(String, String, Double?)] = [
+            ("charge_percent", "Charge (%)", battery.percent),
+            ("temperature_c", "Temperature (C)", battery.temperature),
+            ("voltage_v", "Voltage (V)", battery.voltage),
+            ("current_a", "Current (A)", battery.amperage),
+            ("power_w", "Power (W)", battery.power),
+            ("cycles", "Cycles", battery.cycleCount.map(Double.init)),
+            ("health_percent", "Health (%)", battery.health.map { $0 * 100 }),
+            ("charging", "Charging (0/1)", battery.charging ? 1 : 0),
+            ("external_power", "External power (0/1)", battery.externalPower ? 1 : 0),
+        ]
+        return values.compactMap { key, name, value in
+            guard let value, value.isFinite else { return nil }
+            return ["battery", key, name, "Battery", String(format: "%.3f", value)]
+                .map(csvField).joined(separator: ",")
+        }
+    }
+
+    static func csv(_ battery: BatteryInfo) -> String {
+        (["kind,key,name,group,value"] + batteryRows(battery)).joined(separator: "\n")
     }
 
     static func csv(_ s: Snapshot, all: Bool) -> String {
@@ -148,6 +172,7 @@ enum Export {
         lines += csvRows(s.power.filter(f), kind: "power")
         lines += csvRows(s.voltages.filter(f), kind: "voltage")
         lines += csvRows(s.currents.filter(f), kind: "current")
+        if let battery = s.battery { lines += batteryRows(battery) }
         return lines.joined(separator: "\n")
     }
 
