@@ -173,8 +173,20 @@ struct CleanCommand {
         let mode: RemovalMode = args.has("permanent") ? .permanent : args.has("trash") ? .trash : .auto
         // Project folders are the slow part; only walk them when the selection can include build output.
         let needsProjects = selectors.contains { ["all", "safe", "projects"].contains($0) || $0.hasPrefix("project") }
-        let r = try scan(needsProjects ? nil : Set(CleanCategory.allCases.filter { $0 != .projects }))
-        let picked = r.select(selectors)
+        let r: ScanReport
+        var picked: [CleanItem]
+        if !args.has("rescan"), let cached = try reusableReport(for: selectors) {
+            // A recent scan answers this selection: re-check just the chosen items instead of
+            // scanning everything again (minutes on a busy disk).
+            r = cached.report
+            picked = cached.picked
+            if !args.has("json") {
+                print(style.dim("using the scan from \(AgeFormat.string(r.started)); sizes are from then (--rescan to scan again)"))
+            }
+        } else {
+            r = try scan(needsProjects ? nil : Set(CleanCategory.allCases.filter { $0 != .projects }))
+            picked = r.select(selectors)
+        }
         guard !picked.isEmpty else {
             throw CLIError("nothing matches \(selectors.joined(separator: " ")); see thermo clean")
         }
@@ -217,6 +229,43 @@ struct CleanCommand {
         var summary = "freed \(ByteFormat.string(freed))"
         if trashed > 0 { summary += ", moved \(ByteFormat.string(trashed)) to the Trash (empty it to reclaim the space)" }
         print(style.bold(summary) + style.dim(" · log: \(FS.tilde(Cleaner.logURL.path))"))
+    }
+
+    /// The saved report when it is under 15 minutes old, made with the same age limit, and covers
+    /// what `selectors` ask for; the picked items come back without paths that are gone.
+    func reusableReport(for selectors: [String]) throws -> (report: ScanReport, picked: [CleanItem])? {
+        guard let r = ScanReportCache.load(maxAge: 15 * 60), r.olderThanDays == (try options()).olderThanDays else { return nil }
+        let covered = Set(r.categories ?? [])
+        for s in selectors.map({ $0.lowercased() }) {
+            let needs: Set<CleanCategory> = ["all", "safe"].contains(s) ? Set(CleanCategory.allCases)
+                : s == "ai" ? Set(CleanCategory.allCases.filter(\.isAI))
+                : CleanCategory(rawValue: s).map { [$0] } ?? []
+            guard needs.isSubset(of: covered) else { return nil }
+        }
+        let picked = r.select(selectors)
+        // Ids the old scan did not know about need a fresh one.
+        guard !picked.isEmpty else { return nil }
+        return (r, picked.map(refreshed))
+    }
+
+    /// The item as it is now: paths that are gone are dropped. Sizes stay as scanned — measuring
+    /// again would cost what we are avoiding, and removal re-walks each path anyway (it skips
+    /// anything changed since the scan and reports what was really freed).
+    func refreshed(_ item: CleanItem) -> CleanItem {
+        var i = item
+        let kept = item.paths.filter(FS.exists)
+        if let parts = item.parts {
+            i.parts = parts.compactMap { p in
+                var p = p
+                p.paths = p.paths.filter(FS.exists)
+                return p.paths.isEmpty ? nil : p
+            }
+            i.bytes = (i.parts ?? []).reduce(0) { $0 + $1.bytes }
+        } else if kept.count < item.paths.count, !item.paths.isEmpty {
+            i.bytes = item.bytes * Int64(kept.count) / Int64(item.paths.count)
+        }
+        i.paths = kept
+        return i
     }
 
     func showLog() {

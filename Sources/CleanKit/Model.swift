@@ -129,6 +129,9 @@ public struct ScanReport: Codable, Sendable {
     public var claudeCleanupDays: Int?
     /// The scan was stopped before it finished; `items` is what had been found so far.
     public var cancelled: Bool
+    /// What the scan covered, so a saved report is only reused for selections it can answer.
+    public var categories: [CleanCategory]?
+    public var olderThanDays: Int?
 
     public init(items: [CleanItem], denied: [String], started: Date, duration: TimeInterval, claudeCleanupDays: Int? = nil,
                 cancelled: Bool = false) {
@@ -238,3 +241,31 @@ public func parseDays(_ s: String) -> Int? {
     default: return nil
     }
 }
+
+/// The last finished scan, kept so `thermo clean run` can act on it without scanning everything
+/// again (a full scan takes minutes on a busy disk). Removal still re-checks every path.
+public enum ScanReportCache {
+    public static func url(home: String = NSHomeDirectory()) -> URL {
+        URL(fileURLWithPath: home).appendingPathComponent("Library/Caches/dev.thermo/clean-report.json")
+    }
+
+    public static func save(_ r: ScanReport, home: String = NSHomeDirectory()) {
+        guard !r.cancelled else { return }
+        let u = url(home: home)
+        try? FileManager.default.createDirectory(at: u.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let e = JSONEncoder()
+        e.dateEncodingStrategy = .iso8601
+        try? e.encode(r).write(to: u, options: .atomic)
+    }
+
+    /// The saved report when it is younger than `maxAge` seconds.
+    public static func load(home: String = NSHomeDirectory(), maxAge: TimeInterval, now: Date = Date()) -> ScanReport? {
+        guard let data = try? Data(contentsOf: url(home: home)) else { return nil }
+        let d = JSONDecoder()
+        d.dateDecodingStrategy = .iso8601
+        guard let r = try? d.decode(ScanReport.self, from: data),
+              now.timeIntervalSince(r.started) < maxAge, now >= r.started else { return nil }
+        return r
+    }
+}
+

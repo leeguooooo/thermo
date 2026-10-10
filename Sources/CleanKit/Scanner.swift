@@ -11,6 +11,9 @@ public final class DiskScanner: @unchecked Sendable {
     /// Stops the scan at the next check; what was found so far is returned.
     public let cancellation = ScanCancellation()
 
+    /// Keep the finished report for `thermo clean run` (off in tests).
+    public var saveReport = true
+
     public init(options: ScanOptions = ScanOptions()) { self.options = options }
 
     public func cancel() { cancellation.cancel() }
@@ -66,9 +69,13 @@ public final class DiskScanner: @unchecked Sendable {
 
         let order = Dictionary(uniqueKeysWithValues: CleanCategory.allCases.enumerated().map { ($1, $0) })
         items.sort { (order[$0.category]!, -$0.bytes, $0.id) < (order[$1.category]!, -$1.bytes, $1.id) }
-        return ScanReport(items: items, denied: Array(Set(denied)).sorted(), started: started,
-                          duration: Date().timeIntervalSince(started), claudeCleanupDays: claudeCleanupDays(),
-                          cancelled: cancellation.isCancelled)
+        var report = ScanReport(items: items, denied: Array(Set(denied)).sorted(), started: started,
+                                duration: Date().timeIntervalSince(started), claudeCleanupDays: claudeCleanupDays(),
+                                cancelled: cancellation.isCancelled)
+        report.categories = CleanCategory.allCases.filter { options.categories.contains($0) }
+        report.olderThanDays = options.olderThanDays
+        if saveReport { ScanReportCache.save(report, home: options.home) }
+        return report
     }
 
     func evaluate(_ rule: PathRule, ctx: ScanContext, denied: (String) -> Void) -> CleanItem? {

@@ -410,6 +410,23 @@ final class CleanKitTests: XCTestCase {
         XCTAssertNil(ProjectSignals.gitActivity(home + "/nope"))
     }
 
+    func testSavedReportIsReusedOnlyWhileFresh() {
+        var r = ScanReport(items: [CleanItem(id: "npm-cache", category: .devCaches, title: "", safety: .safe, bytes: 1, paths: ["x"])],
+                           denied: [], started: now, duration: 1)
+        r.categories = [.devCaches]
+        r.olderThanDays = 30
+        ScanReportCache.save(r, home: home)
+        let back = ScanReportCache.load(home: home, maxAge: 900, now: now.addingTimeInterval(60))
+        XCTAssertEqual(back?.items.map(\.id), ["npm-cache"])
+        XCTAssertEqual(back?.categories, [.devCaches])
+        XCTAssertNil(ScanReportCache.load(home: home, maxAge: 900, now: now.addingTimeInterval(1000)), "stale")
+        var stopped = r
+        stopped.cancelled = true
+        stopped.items = []
+        ScanReportCache.save(stopped, home: home)
+        XCTAssertEqual(ScanReportCache.load(home: home, maxAge: 900, now: now)?.items.count, 1, "a stopped scan never replaces a finished one")
+    }
+
     func testCleanerRemovesOnlyListedPaths() throws {
         let a = try write("Library/Caches/tool/a")
         let keep = try write("Library/Caches/tool/keep")
