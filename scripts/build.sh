@@ -26,6 +26,8 @@ DIST="${THERMO_DIST_DIR:-dist}"
 RELEASES=releases
 SPARKLE_BIN=.build/artifacts/sparkle/Sparkle/bin
 
+swift scripts/check-build-output.swift "$DIST"
+
 arch_flags=""
 for a in $ARCHS; do arch_flags="$arch_flags --arch $a"; done
 
@@ -34,8 +36,11 @@ swift build -c release $arch_flags
 # shellcheck disable=SC2086
 BIN="$(swift build -c release $arch_flags --show-bin-path)"
 
-rm -rf "$DIST"
 mkdir -p "$DIST"
+# Replace only our generated products; preserve unrelated files in a custom output directory.
+rm -rf "$DIST/Thermo.app"
+rm -f "$DIST/thermo" "$DIST/thermo-helper"
+rm -f "$DIST/Thermo-$VERSION.zip" "$DIST/Thermo-$VERSION.dmg" "$DIST/thermo-cli-$VERSION.zip"
 cp "$BIN/thermo" "$BIN/thermo-helper" "$DIST/"
 
 # --- App bundle -------------------------------------------------------------

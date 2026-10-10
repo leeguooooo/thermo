@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Custom build output paths are checked before compilation; repository ancestors, source directories and system/installed-app locations are refused. Packaging replaces only its known products and preserves other files in the output directory.
+
 - Packaging validates the app, standalone and embedded CLI/helper signatures, requested architecture slices and minimum OS metadata; Sparkle's requested slices are checked too.
 
 - Watch input buffers coalesced keys and fragmented escape sequences. Direction keys arriving in pieces no longer look like a bare Escape; both CSI and application-cursor arrows are accepted.
