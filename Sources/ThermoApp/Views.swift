@@ -426,6 +426,9 @@ struct FanControlCard: View {
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.5)))
         .onAppear(perform: load)
+        // The helper's policies arrive after the card appears (at launch, after a helper restart):
+        // show what is really active, or Apply would send the stale Auto the card started with.
+        .onChange(of: policy) { _ in load() }
     }
 
     func load() {
