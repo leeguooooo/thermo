@@ -21,6 +21,28 @@ final class ShellTests: XCTestCase {
 }
 
 final class RedactTests: XCTestCase {
+    func testLongQuotedCredentialIsRedactedBeforeItemDetailIsTruncated() {
+        var checks = ConfigChecks(env: DoctorEnvironment(home: FileManager.default.temporaryDirectory, path: [], run: { _, _ in nil }))
+        let secret = String(repeating: "f", count: 250)
+        checks.item(.hooks, agent: "fixture", id: "fixture", name: "Fixture",
+                    detail: "fixture --token '\(secret)'", source: nil)
+        XCTAssertFalse(checks.items[0].detail.contains(String(repeating: "f", count: 12)))
+        XCTAssertLessThanOrEqual(checks.items[0].detail.count, 200)
+    }
+    func testPathBasedActionConfirmationsHideCredentialShapes() {
+        let secret = "sk-abcdefghijklmnopqrst"
+        let path = "/fixture/" + secret
+        let steps: [Step] = [
+            .unlink(path: path), .trash(path: path), .truncate(path: path),
+            .removeJSONKey(file: path, path: ["mcpServers", secret]),
+            .keepAliveOnFailure(plist: path, label: secret), .bootout(label: secret),
+        ]
+        for step in steps { XCTAssertFalse(step.display.contains(secret)) }
+        if case .removeJSONKey(let originalFile, let originalPath) = steps[3] {
+            XCTAssertEqual(originalFile, path)
+            XCTAssertEqual(originalPath.last, secret)
+        } else { XCTFail("fixture action changed") }
+    }
     func testFindingMetadataAndQuotedOrShortArgumentsAreRedacted() {
         let secret = "sk-abcdefghijklmnopqrst"
         let finding = Finding(.warning, .mcp, agent: "fixture", subject: "server " + secret,
@@ -178,6 +200,7 @@ final class DoctorTests: XCTestCase {
         XCTAssertFalse(item.id.contains(name))
         XCTAssertFalse(item.name.contains(name))
         XCTAssertTrue(r.findings.contains { $0.item == item.id })
+        XCTAssertTrue(item.actions.allSatisfy { !$0.title.contains(name) && !$0.summary.contains(name) })
         XCTAssertTrue(item.actions.flatMap(\.steps).contains { step in
             if case .removeJSONKey(_, let path) = step { return path.last == name }
             return false

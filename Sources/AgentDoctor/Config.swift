@@ -63,7 +63,7 @@ struct ConfigChecks {
                        source: String?, enabled: Bool = true) -> String {
         let key = Redact.identifier("\(area.rawValue)|\(id)")
         if !items.contains(where: { $0.id == key }) {
-            items.append(AgentItem(id: key, area: area, agent: Redact.text(agent), name: Redact.text(name), detail: Redact.text(String(detail.prefix(200))),
+            items.append(AgentItem(id: key, area: area, agent: Redact.text(agent), name: Redact.text(name), detail: String(Redact.text(detail).prefix(200)),
                                    source: source.map(Redact.text), enabled: enabled))
         }
         currentItem = key
@@ -578,7 +578,7 @@ extension ConfigChecks {
     mutating func offer(_ kind: ActionKind, _ title: String, _ summary: String, _ steps: [Step], destructive: Bool? = nil, bulk: Bool = true) {
         guard let key = currentItem, let i = items.firstIndex(where: { $0.id == key }) else { return }
         let id = key + "|" + kind.rawValue + "|" + String(items[i].actions.count)
-        items[i].actions.append(Action(id: id, kind: kind, title: title, summary: summary, steps: steps,
+        items[i].actions.append(Action(id: id, kind: kind, title: Redact.text(title), summary: Redact.text(summary), steps: steps,
                                        destructive: destructive ?? (kind == .uninstall), bulk: bulk))
     }
 

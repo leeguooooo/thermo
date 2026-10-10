@@ -32,10 +32,14 @@ public enum Step: Codable, Equatable, Sendable {
 
     /// A shell-like line for the confirmation dialog and `--dry-run`.
     public var display: String {
+        Redact.text(displayLine)
+    }
+
+    private var displayLine: String {
         func q(_ s: String) -> String { s.contains(" ") ? "'\(s)'" : s }
         switch self {
         case let .run(tool, args, cwd):
-            return Redact.text((cwd.map { "cd \(q($0)) && " } ?? "") + ([(tool as NSString).lastPathComponent] + Redact.arguments(args)).map(q).joined(separator: " "))
+            return (cwd.map { "cd \(q($0)) && " } ?? "") + ([(tool as NSString).lastPathComponent] + Redact.arguments(args)).map(q).joined(separator: " ")
         case let .unlink(path): return "rm \(q(path))   # symlink only"
         case let .trash(path): return tr("move %1$@ to the Trash", q(path))
         case let .kill(pid, _): return "kill -TERM \(pid)"
