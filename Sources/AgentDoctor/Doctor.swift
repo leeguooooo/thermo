@@ -1,4 +1,5 @@
 import Foundation
+import ThermoL10n
 
 /// Read-only diagnosis of the AI agents on this Mac: Claude Code, Codex, Cursor and Gemini configuration
 /// (hooks, MCP servers, plugins, skills, status line), their launchd jobs and their running processes.
@@ -37,8 +38,10 @@ extension Severity {
 extension DoctorReport {
     public var headline: String {
         let e = count(.error), w = count(.warning)
-        if e + w == 0 { return "no problems found" }
-        return [e > 0 ? "\(e) error\(e == 1 ? "" : "s")" : nil, w > 0 ? "\(w) warning\(w == 1 ? "" : "s")" : nil]
-            .compactMap { $0 }.joined(separator: ", ")
+        if e + w == 0 { return tr("no problems found") }
+        let errors = e == 1 ? tr("1 error") : tr("%1$@ errors", String(e))
+        let warnings = w == 1 ? tr("1 warning") : tr("%1$@ warnings", String(w))
+        return [e > 0 ? errors : nil, w > 0 ? warnings : nil]
+            .compactMap { $0 }.joined(separator: tr(", "))
     }
 }

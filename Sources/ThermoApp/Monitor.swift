@@ -1,6 +1,7 @@
 import Foundation
 import ServiceManagement
 import ThermoKit
+import ThermoL10n
 import UserNotifications
 
 enum TitleMetric: String, CaseIterable, Identifiable {
@@ -8,12 +9,12 @@ enum TitleMetric: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .cpu: return "CPU temperature"
-        case .hottest: return "Hottest sensor"
-        case .fan: return "Fan speed"
-        case .cpuAndFan: return "CPU temperature + fan"
-        case .power: return "System power"
-        case .iconOnly: return "Icon only"
+        case .cpu: return tr("CPU temperature")
+        case .hottest: return tr("Hottest sensor")
+        case .fan: return tr("Fan speed")
+        case .cpuAndFan: return tr("CPU temperature + fan")
+        case .power: return tr("System power")
+        case .iconOnly: return tr("Icon only")
         }
     }
 }
@@ -156,9 +157,9 @@ final class Monitor: ObservableObject {
               Date().timeIntervalSince(lastAlert) > 300 else { return }
         lastAlert = Date()
         let content = UNMutableNotificationContent()
-        content.title = "Mac is running hot"
-        content.body = String(format: "Hottest sensor at %.0f °C", hot)
-            + (s.fans.first.map { String(format: ", fans at %.0f rpm", $0.rpm) } ?? "")
+        content.title = tr("Mac is running hot")
+        content.body = tr("Hottest sensor at %1$@ °C", String(format: "%.0f", hot))
+            + (s.fans.first.map { tr(", fans at %1$@ rpm", String(format: "%.0f", $0.rpm)) } ?? "")
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "thermo.hot", content: content, trigger: nil))
     }
 
@@ -218,7 +219,7 @@ final class Monitor: ObservableObject {
                     if HelperInstaller.isInstalled { try HelperInstaller.uninstall() }
                     try self.daemon.register()
                 } catch {
-                    DispatchQueue.main.async { self.lastError = "Helper registration: \(error.localizedDescription)" }
+                    DispatchQueue.main.async { self.lastError = tr("Helper registration: %1$@", error.localizedDescription) }
                 }
                 DispatchQueue.main.async {
                     if self.daemon.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
@@ -228,7 +229,7 @@ final class Monitor: ObservableObject {
             return
         }
         guard let bin = HelperInstaller.locateHelperBinary() else {
-            lastError = "thermo-helper not found inside the app bundle"
+            lastError = tr("thermo-helper not found inside the app bundle")
             return
         }
         DispatchQueue.global(qos: .userInitiated).async {
@@ -265,7 +266,7 @@ final class Monitor: ObservableObject {
             do {
                 if newValue { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             } catch {
-                lastError = "Launch at login: \(error.localizedDescription)"
+                lastError = tr("Launch at login: %1$@", error.localizedDescription)
             }
             objectWillChange.send()
         }

@@ -1,4 +1,5 @@
 import Foundation
+import ThermoL10n
 
 /// Everything the doctor reads from the machine, injectable so tests can run against a fixture home.
 public struct DoctorEnvironment {
@@ -11,6 +12,13 @@ public struct DoctorEnvironment {
     /// Executable path of a running process (proc_pidpath).
     public var executablePath: (_ pid: Int32) -> String?
     public var now: Date
+    /// Runs a tool for an action: exit status and combined output.
+    public var execute: (_ executable: String, _ args: [String], _ cwd: String?) -> (status: Int32, output: String)
+    public var trash: (URL) throws -> Void
+    public var signal: (_ pid: Int32, _ signal: Int32) -> Bool
+    /// Config files are copied here (one folder per action) before an action edits them.
+    public var backupRoot: URL
+    public var logFile: URL
 
     public init(home: URL = FileManager.default.homeDirectoryForCurrentUser,
                 uid: uid_t = getuid(),
@@ -19,6 +27,11 @@ public struct DoctorEnvironment {
                 executablePath: @escaping (Int32) -> String? = DoctorEnvironment.procPath,
                 now: Date = Date()) {
         self.home = home
+        execute = DoctorEnvironment.executeTool
+        trash = { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }
+        signal = { kill($0, $1) == 0 }
+        backupRoot = home.appendingPathComponent("Library/Application Support/Thermo/Backups")
+        logFile = home.appendingPathComponent("Library/Logs/Thermo/fix.log")
         self.uid = uid
         self.run = run
         self.executablePath = executablePath
@@ -48,6 +61,21 @@ public struct DoctorEnvironment {
         p.waitUntilExit()
         guard p.terminationStatus == 0 else { return nil }
         return String(decoding: data, as: UTF8.self)
+    }
+
+    public static func executeTool(_ executable: String, _ args: [String], _ cwd: String?) -> (status: Int32, output: String) {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: executable)
+        p.arguments = args
+        if let cwd { p.currentDirectoryURL = URL(fileURLWithPath: cwd) }
+        let pipe = Pipe()
+        p.standardOutput = pipe
+        p.standardError = pipe
+        p.standardInput = FileHandle.nullDevice
+        do { try p.run() } catch { return (-1, "\(error)") }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        return (p.terminationStatus, String(decoding: data, as: UTF8.self))
     }
 
     public static func procPath(_ pid: Int32) -> String? {

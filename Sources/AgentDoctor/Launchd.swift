@@ -1,4 +1,5 @@
 import Foundation
+import ThermoL10n
 
 struct LaunchJob {
     var label: String
@@ -135,39 +136,50 @@ extension ConfigChecks {
             let plist = env.short(job.plist)
             let printed = env.run("/bin/launchctl", ["print", "gui/\(env.uid)/\(job.label)"])
             let st = printed.map(Launchd.state)
-            let stateText = printed == nil ? "not loaded"
-                : [st?.state, st?.runs.map { "\($0) runs" }, st?.lastExit.flatMap { $0.hasPrefix("(never") ? nil : "last exit \($0)" }].compactMap { $0 }.joined(separator: " · ")
+            let stateText = printed == nil ? tr("not loaded")
+                : [st?.state, st?.runs.map { tr("%1$@ runs", String($0)) },
+                   st?.lastExit.flatMap { $0.hasPrefix("(never") ? nil : tr("last exit %1$@", $0) }].compactMap { $0 }.joined(separator: " · ")
             item(.launchd, agent: "system", id: job.label, name: job.label, detail: stateText, source: plist)
             defer { currentItem = nil }
+            let remove: [Step] = [.bootout(label: job.label), .trash(path: job.plist)]
 
             let missing = ([job.program].compactMap { $0 }.filter { $0.hasPrefix("/") }
                            + job.scriptPrograms.map { env.expand($0) }.filter { !$0.contains("$") && $0.contains("/") })
                 .first { !env.exists($0) }
             if let program = missing {
                 add(Finding(printed == nil ? .warning : .error, .launchd, agent: "system", subject: job.label,
-                            "program \(env.short(program)) no longer exists (left behind by an upgrade or uninstall?)"
-                                + (job.keepAlive == .none ? "" : "; launchd retries it forever"),
-                            fix: "launchctl bootout gui/\(env.uid)/\(job.label); rm \(plist)  — or reinstall the tool", source: plist))
+                            job.keepAlive == .none
+                                ? tr("program %1$@ no longer exists (left behind by an upgrade or uninstall?)", env.short(program))
+                                : tr("program %1$@ no longer exists (left behind by an upgrade or uninstall?); launchd retries it forever", env.short(program)),
+                            fix: tr("remove the job, or reinstall the tool it belonged to"), source: plist))
+                offer(.fix, tr("Remove job"), tr("Stops %1$@ and moves its plist to the Trash; its program is already gone.", job.label),
+                      remove, destructive: true)
                 continue
             }
 
             let runs = st?.runs ?? 0
             let failing = st?.lastExit.map { $0 != "0" && !$0.hasPrefix("(never") } ?? false
             let running = st?.state == "running"
+            let repairKeepAlive: [Step] = [.keepAliveOnFailure(plist: job.plist, label: job.label)]
             var activeLoop = false
             if !job.scheduled, job.keepAlive != .none, runs >= 25 {
                 activeLoop = true
-                let exit = st?.lastExit.map { " Last exit: \($0)." } ?? ""
                 add(Finding(running && !failing ? .warning : .error, .launchd, agent: "system", subject: job.label,
-                            "restarted \(runs) times since it was loaded — it keeps exiting and launchd keeps respawning it.\(exit)",
+                            tr("restarted %1$@ times since it was loaded — it keeps exiting and launchd keeps respawning it. Last exit: %2$@.",
+                               String(runs), st?.lastExit ?? "?"),
                             fix: job.keepAlive == .always
-                                ? "KeepAlive = true respawns even on a clean exit; use KeepAlive = { SuccessfulExit = false } and fix why it exits (see its log)"
-                                : "check its log for why it exits",
+                                ? tr("KeepAlive = true respawns even on a clean exit; use KeepAlive = { SuccessfulExit = false } and fix why it exits (see its log)")
+                                : tr("check its log for why it exits"),
                             source: plist))
+                if job.keepAlive == .always {
+                    offer(.fix, tr("Stop restart loop"),
+                          tr("Changes KeepAlive so launchd only restarts %1$@ after a crash, not after a clean exit, and reloads it. The plist is backed up first.", job.label),
+                          repairKeepAlive)
+                }
             } else if failing, !running, job.keepAlive != .none {
                 add(Finding(.warning, .launchd, agent: "system", subject: job.label,
-                            "not running; last exit \(st?.lastExit ?? "?")", fix: "see its log, then: launchctl kickstart -k gui/\(env.uid)/\(job.label)",
-                            source: plist))
+                            tr("not running; last exit %1$@", st?.lastExit ?? "?"),
+                            fix: tr("see its log, then: launchctl kickstart -k gui/%1$@/%2$@", String(env.uid), job.label), source: plist))
             }
 
             for log in job.logs {
@@ -175,26 +187,40 @@ extension ConfigChecks {
                 guard let sum = Launchd.summarize(log: path) else { continue }
                 let mb = Double(sum.size) / 1_048_576
                 let recent = env.now.timeIntervalSince(sum.modified) < 600
+                let size = String(format: "%.1f MB", mb)
                 if sum.lines >= 200, sum.topFraction >= 0.8 {
-                    let percent = Int(sum.topFraction * 100)
+                    let percent = String(Int(sum.topFraction * 100))
                     let loopy = job.keepAlive == .always && !job.scheduled
                     if activeLoop { continue }  // already reported above
+                    let when = recent ? tr("still being written") : tr("last written %1$@", Self.ago(env.now.timeIntervalSince(sum.modified)))
                     add(Finding(recent ? .warning : .info, .launchd, agent: "system", subject: job.label,
-                                "\(percent)% of its log is one repeated line: \"\(sum.topLine)\" (\(String(format: "%.1f", mb)) MB, "
-                                    + (recent ? "still being written" : "last written \(Self.ago(env.now.timeIntervalSince(sum.modified)))") + ")"
-                                    + (loopy ? ". With KeepAlive = true this is a respawn loop: each start exits and launchd starts it again" : ""),
-                                fix: (loopy ? "use KeepAlive = { SuccessfulExit = false } so a clean exit stays exited; " : "")
-                                    + "truncate with: : > \(env.short(path))",
+                                loopy
+                                    ? tr("%1$@%% of its log is one repeated line: \"%2$@\" (%3$@, %4$@). With KeepAlive = true this is a respawn loop: each start exits and launchd starts it again",
+                                         percent, sum.topLine, size, when)
+                                    : tr("%1$@%% of its log is one repeated line: \"%2$@\" (%3$@, %4$@)", percent, sum.topLine, size, when),
+                                fix: loopy ? tr("use KeepAlive = { SuccessfulExit = false } so a clean exit stays exited, then clear the log")
+                                           : tr("clear the log"),
                                 source: env.short(path)))
+                    if loopy {
+                        offer(.fix, tr("Stop restart loop"),
+                              tr("Changes KeepAlive so launchd only restarts %1$@ after a crash, not after a clean exit, reloads it, and clears %2$@. The plist is backed up first.",
+                                 job.label, env.short(path)),
+                              repairKeepAlive + [.truncate(path: path)])
+                    } else {
+                        offer(.fix, tr("Clear log"), tr("Empties %1$@ (%2$@).", env.short(path), size), [.truncate(path: path)])
+                    }
                 } else if mb >= 100 {
                     add(Finding(.warning, .launchd, agent: "system", subject: job.label,
-                                "log is \(Int(mb)) MB and never rotated", fix: ": > \(env.short(path))", source: env.short(path)))
+                                tr("log is %1$@ and never rotated", size), fix: tr("clear the log"), source: env.short(path)))
+                    offer(.fix, tr("Clear log"), tr("Empties %1$@ (%2$@).", env.short(path), size), [.truncate(path: path)])
                 }
             }
+            offer(.uninstall, tr("Remove job"), tr("Stops %1$@ and moves its plist to the Trash. The program itself is not deleted.", job.label), remove)
         }
     }
 
     static func ago(_ s: TimeInterval) -> String {
-        s < 3600 ? "\(Int(s / 60)) min ago" : s < 86400 * 2 ? "\(Int(s / 3600)) h ago" : "\(Int(s / 86400)) days ago"
+        s < 3600 ? tr("%1$@ min ago", String(Int(s / 60))) : s < 86400 * 2 ? tr("%1$@ h ago", String(Int(s / 3600)))
+            : tr("%1$@ days ago", String(Int(s / 86400)))
     }
 }

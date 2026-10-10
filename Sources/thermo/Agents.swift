@@ -8,7 +8,8 @@ struct AgentsCommand {
 
     func run(_ rest: [String]) throws {
         if rest.first == "list" || rest.first == "ls" { return try list(rest.count > 1 ? rest[1] : nil) }
-        guard rest.isEmpty else { throw CLIError("usage: thermo agents [list [AREA]] [--all] [--json]") }
+        if rest.first == "fix" { return try fix() }
+        guard rest.isEmpty else { throw CLIError("usage: thermo agents [list [AREA] | fix [--dry-run] [--yes]] [--all] [--json]") }
         let report = AgentDoctor.run()
         if app.args.has("json") { print(Export.json(report)); return }
         let all = app.args.has("all")
@@ -93,6 +94,39 @@ struct AgentsCommand {
             lines.append("")
         }
         out(lines)
+    }
+
+    /// Applies the automatic fix of every item with an error or warning, after showing exactly what will run.
+    func fix() throws {
+        let env = DoctorEnvironment()
+        let report = AgentDoctor.run(env)
+        let plans = report.items.filter { $0.severity == .error || $0.severity == .warning }
+            .compactMap { item in item.actions.first { $0.kind == .fix && $0.bulk }.map { (item, $0) } }
+        if plans.isEmpty { print("nothing to fix automatically" + (report.count(.error) + report.count(.warning) > 0 ? " (see thermo agents for manual fixes)" : "")); return }
+        var lines = [style.bold("\(plans.count) fixes")]
+        for (item, action) in plans {
+            lines.append("  " + style.bold(item.name) + style.dim("  " + action.title) + (action.destructive ? style.yellow("  (destructive)") : ""))
+            lines.append("    " + action.summary)
+            for s in action.steps { lines.append("    " + style.cyan("$ ") + s.display) }
+        }
+        out(lines)
+        if app.args.has("dry-run") { return }
+        if !app.args.has("yes") {
+            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("refusing to change anything without --yes when stdin is not a terminal") }
+            print("\nApply these \(plans.count) fixes? Config files are backed up to ~/Library/Application Support/Thermo/Backups first. [y/N] ", terminator: "")
+            fflush(stdout)
+            guard let answer = readLine(), answer.lowercased().hasPrefix("y") else { print("nothing changed"); return }
+        }
+        var failed = 0
+        for (item, action) in plans {
+            let r = ActionRunner.perform(action, env: env)
+            if !r.ok { failed += 1 }
+            print((r.ok ? style.green("✓ ") : style.red("✗ ")) + item.name)
+            for l in r.log where !r.ok { print("    " + l) }
+        }
+        let after = AgentDoctor.run()
+        print("\n" + "after: " + after.headline + style.dim("  (log: ~/Library/Logs/Thermo/fix.log)"))
+        if failed > 0 { exit(1) }
     }
 
     func title(_ c: Area) -> String {

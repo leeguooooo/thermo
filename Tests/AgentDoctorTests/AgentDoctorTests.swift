@@ -1,4 +1,5 @@
 @testable import AgentDoctor
+import ThermoL10n
 import XCTest
 
 final class ShellTests: XCTestCase {
@@ -91,6 +92,7 @@ final class DoctorTests: XCTestCase {
     let fm = FileManager.default
 
     override func setUpWithError() throws {
+        L10n.override = .english  // assertions read English messages whatever the machine's language
         home = fm.temporaryDirectory.appendingPathComponent("agentdoctor-\(UUID().uuidString)")
         try fm.createDirectory(at: home, withIntermediateDirectories: true)
     }
@@ -270,8 +272,13 @@ final class DoctorTests: XCTestCase {
                          exe: [11: b + "/node", 12: b + "/node", 13: b + "/claude-statusbar/cs-python", 14: b + "/stuck-mcp", 20: b + "/claude"])
         XCTAssertEqual(r.sessions, 1)
         let broker = find(r, .processes, "node codex/scripts/broker.mjs")
-        XCTAssertTrue(broker.contains { $0.message.contains("deleted") && $0.fix == "kill 10" })
+        XCTAssertTrue(broker.contains { $0.message.contains("deleted") })
         XCTAssertTrue(broker.contains { $0.message.contains("2 detached") })
+        // All three are detached, so one bulk-safe fix ends them, each re-checked by its command line.
+        let fix = try XCTUnwrap(r.items.first { $0.name == "node codex/scripts/broker.mjs" }?.actions.first { $0.kind == .fix })
+        XCTAssertTrue(fix.bulk)
+        XCTAssertEqual(fix.steps.compactMap { step -> Int32? in if case let .kill(pid, _) = step { return pid } else { return nil } }.sorted(), [Int32(10), 11, 12])
+        XCTAssertTrue(r.items.first { $0.name == "claude" }?.actions.isEmpty ?? false, "never offer to end a session")
         XCTAssertTrue(find(r, .processes, "cs-python").isEmpty, "launchd-owned pid is not an orphan")
         XCTAssertEqual(find(r, .processes, "stuck-mcp").first?.severity, .warning)
         XCTAssertEqual(r.findings.count, 3)

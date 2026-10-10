@@ -1,4 +1,5 @@
 import Foundation
+import ThermoL10n
 
 public enum Severity: String, Codable, Comparable, CaseIterable, Sendable {
     case error, warning, info
@@ -51,6 +52,8 @@ public struct AgentItem: Codable, Equatable, Identifiable, Sendable {
     public var enabled: Bool
     /// Worst finding about this item; nil when it looks healthy.
     public var severity: Severity?
+    /// What the user can do about it: fix, disable, uninstall. Empty when it's managed elsewhere.
+    public var actions: [Action] = []
 }
 
 public struct Inventory: Codable, Equatable, Sendable {

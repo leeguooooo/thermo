@@ -1,4 +1,5 @@
 import Foundation
+import ThermoL10n
 
 struct ProcessRow: Equatable {
     var pid: Int32
@@ -105,39 +106,67 @@ extension ConfigChecks {
             let rss = Double(members.reduce(0) { $0 + $1.row.rssKB }) / 1024
             let cpu = members.reduce(0) { $0 + $1.row.cpu }
             let detached = members.filter(\.detached)
-            item(.processes, agent: "system", id: name, name: name,
-                 detail: "\(members.count)× · \(Self.mb(Int(rss * 1024))) · \(Int(cpu))% CPU" + (detached.isEmpty ? "" : " · \(detached.count) detached"),
-                 source: nil)
+            let detail = tr("%1$@× · %2$@ · %3$@%% CPU", String(members.count), Self.mb(Int(rss * 1024)), String(Int(cpu)))
+                + (detached.isEmpty ? "" : " · " + tr("%1$@ detached", String(detached.count)))
+            item(.processes, agent: "system", id: name, name: name, detail: detail, source: nil)
             defer { currentItem = nil }
             summary.append(ProcessGroup(name: name, count: members.count, detached: detached.count, cpu: cpu, rssMB: rss,
                                         oldest: members.map(\.row.elapsed).max() ?? 0))
+            // Never offer to end an agent session itself; only leftovers.
+            let killable = name != "claude"
+            func end(_ ms: [Member]) -> [Step] { ms.map { .kill(pid: $0.row.pid, args: $0.row.args) } }
 
             let stale = members.filter(\.stale)
             if !stale.isEmpty {
                 add(Finding(.warning, .processes, agent: "system", subject: name,
-                            "\(stale.count) process\(stale.count == 1 ? "" : "es") still running a binary that was deleted or upgraded (\(env.short(stale[0].exe ?? "?"))); "
-                                + "they hold \(Self.mb(stale.reduce(0) { $0 + $1.row.rssKB })) and will never pick up fixes",
-                            fix: "kill \(stale.prefix(12).map { String($0.row.pid) }.joined(separator: " "))\(stale.count > 12 ? " …" : "")"))
+                            tr("%1$@ process(es) still running a binary that was deleted or upgraded (%2$@); they hold %3$@ and will never pick up fixes",
+                               String(stale.count), env.short(stale[0].exe ?? "?"), Self.mb(stale.reduce(0) { $0 + $1.row.rssKB })),
+                            fix: tr("end them; the agent starts a fresh copy when it needs one")))
             }
             let loose = detached.filter { !$0.stale }
+            var leaked = loose.isEmpty
             if !loose.isEmpty {
                 let oldest = loose.map(\.row.elapsed).max() ?? 0
                 let many = loose.count >= 3 || oldest > 86400
+                leaked = many
                 add(Finding(many ? .warning : .info, .processes, agent: "system", subject: name,
-                            "\(loose.count) detached process\(loose.count == 1 ? "" : "es") (parent exited; not managed by launchd), oldest started \(Self.ago(oldest)), "
-                                + "\(Self.mb(loose.reduce(0) { $0 + $1.row.rssKB })) total" + (many ? " — likely leaked by sessions that ended" : ""),
-                            fix: "kill \(loose.prefix(12).map { String($0.row.pid) }.joined(separator: " "))\(loose.count > 12 ? " …" : "")"))
+                            many ? tr("%1$@ detached process(es) (parent exited; not managed by launchd), oldest started %2$@, %3$@ total — likely leaked by sessions that ended",
+                                      String(loose.count), Self.ago(oldest), Self.mb(loose.reduce(0) { $0 + $1.row.rssKB }))
+                                 : tr("%1$@ detached process(es) (parent exited; not managed by launchd), oldest started %2$@, %3$@ total",
+                                      String(loose.count), Self.ago(oldest), Self.mb(loose.reduce(0) { $0 + $1.row.rssKB })),
+                            fix: tr("end them if no agent is using them")))
+            }
+            func pids(_ ms: [Member]) -> String {
+                ms.prefix(12).map { String($0.row.pid) }.joined(separator: ", ") + (ms.count > 12 ? ", …" : "")
+            }
+            // Leftovers whose parent is gone: nothing is using them.
+            let orphans = members.filter(\.detached)
+            if killable, !orphans.isEmpty {
+                offer(.fix, orphans.count == 1 ? tr("End leftover process") : tr("End %1$@ leftover processes", String(orphans.count)),
+                      tr("Sends SIGTERM to %1$@ (pid %2$@). The process that started them has exited; an agent that needs one again starts a fresh copy. Each pid is checked again first, so a reused pid is never hit.",
+                         name, pids(orphans)),
+                      end(orphans), destructive: !leaked)
+            }
+            // Outdated copies still attached to a live session: ending them cuts that session off from the server.
+            let attachedStale = stale.filter { !$0.detached }
+            if killable, !attachedStale.isEmpty {
+                let parents = Set(attachedStale.map { String($0.row.ppid) }).sorted().joined(separator: ", ")
+                offer(.fix, tr("End outdated copies"),
+                      tr("Sends SIGTERM to %1$@ (pid %2$@). They are still connected to running sessions (parent pid %3$@), which lose this server until you reconnect it with /mcp or restart them.",
+                         name, pids(attachedStale), parents),
+                      end(attachedStale), destructive: true, bulk: false)
             }
             for m in members where m.row.cpu >= 90 && name != "claude" && !name.hasPrefix("codex") {
                 add(Finding(.warning, .processes, agent: "system", subject: name,
-                            "pid \(m.row.pid) is using \(Int(m.row.cpu))% CPU — a busy loop in a helper heats the Mac and drains battery",
-                            fix: "sample \(m.row.pid) 5   # see what it is doing; kill \(m.row.pid) if it is stuck"))
+                            tr("pid %1$@ is using %2$@%% CPU — a busy loop in a helper heats the Mac and drains battery", String(m.row.pid), String(Int(m.row.cpu))),
+                            fix: tr("sample %1$@ 5   # see what it is doing; end it if it is stuck", String(m.row.pid))))
+                offer(.fix, tr("End pid %1$@", String(m.row.pid)), tr("Sends SIGTERM to pid %1$@.", String(m.row.pid)), end([m]), destructive: true)
             }
             // One stdio MCP server per session adds up.
             if members.count >= 10, name != "claude", !name.hasPrefix("codex"), members.contains(where: { Processes.isMCP($0.row.args, serverCommands: serverCommands) }) {
                 add(Finding(rss >= 2048 ? .warning : .info, .processes, agent: "system", subject: name,
-                            "\(members.count) copies running (each agent session starts its own), \(Self.mb(Int(rss * 1024))) total",
-                            fix: sessions > 0 ? "\(sessions) Claude sessions are open; closing idle ones frees their servers. A server that supports HTTP can be shared instead." : nil))
+                            tr("%1$@ copies running (each agent session starts its own), %2$@ total", String(members.count), Self.mb(Int(rss * 1024))),
+                            fix: sessions > 0 ? tr("%1$@ Claude sessions are open; closing idle ones frees their servers. A server that supports HTTP can be shared instead.", String(sessions)) : nil))
             }
         }
         summary.sort { $0.rssMB > $1.rssMB }

@@ -1,5 +1,6 @@
 import Foundation
 import ThermoKit
+import ThermoL10n
 
 let thermoVersion = ThermoVersion.string
 
@@ -27,6 +28,8 @@ COMMANDS
   agents                     diagnose AI agents: hooks, MCP servers, plugins,
                              skills, launch agents and leaked processes
                              (Claude Code, Codex, Cursor, Gemini; read-only)
+  agents fix [--dry-run]     apply the automatic fixes (shows the plan, asks first;
+                             --yes to skip the question)
   agents list [AREA]         everything checked, each marked OK or not; AREA is
                              hooks, mcp, plugins, skills, statusline, launchd
                              or processes
@@ -350,6 +353,8 @@ extension Optional {
 // MARK: - main
 
 setvbuf(stdout, nil, _IOFBF, 1 << 16)
+// Scripts and logs parse CLI output, so it stays English unless THERMO_LANG asks otherwise.
+if ProcessInfo.processInfo.environment["THERMO_LANG"] == nil { L10n.override = .english }
 do {
     let args = try Args(Array(CommandLine.arguments.dropFirst()))
     try App(args: args).run()

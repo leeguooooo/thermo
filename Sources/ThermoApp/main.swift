@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import AgentDoctor
 import ThermoKit
+import ThermoL10n
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem!
@@ -115,21 +116,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             try? rep.representation(using: .png, properties: [:])?
                 .write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(tab.rawValue.lowercased()).png"))
         }
-        // The report window, everything listed; only small areas expanded so the image stays renderable.
-        let full = AgentsView(scanner: agents, inWindow: true, filter: .all,
-                              open: [.mcp, .plugins, .statusline]).padding(16).frame(width: 640)
-            .background(Color(nsColor: .windowBackgroundColor))
-        let r = ImageRenderer(content: full)
-        r.scale = 2
-        if let img = r.cgImage {
-            try? NSBitmapImageRep(cgImage: img).representation(using: .png, properties: [:])?
-                .write(to: URL(fileURLWithPath: dir).appendingPathComponent("agents-report.png"))
-        }
         exit(0)
     }
     DispatchQueue.main.asyncAfter(deadline: .now() + 4, execute: render)
 }
 
+L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
 let app = NSApplication.shared
 if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < CommandLine.arguments.count {
     app.setActivationPolicy(.prohibited)

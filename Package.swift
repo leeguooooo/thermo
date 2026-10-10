@@ -31,7 +31,7 @@ let package = Package(
         .target(name: "AgentCore"),
         // Disk cleanup runs as the user only: the root helper must never link it.
         .target(name: "CleanKit", dependencies: ["AgentCore"]),
-        .executableTarget(name: "thermo", dependencies: ["ThermoKit", "AgentDoctor", "CleanKit"]),
+        .executableTarget(name: "thermo", dependencies: ["ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n"]),
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
             name: "ThermoApp",

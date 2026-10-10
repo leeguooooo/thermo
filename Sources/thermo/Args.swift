@@ -16,7 +16,7 @@ struct Args {
         "i": "interval", "n": "count", "s": "sensor", "a": "all", "j": "json",
         "h": "help", "v": "version", "f": "format", "y": "yes",
     ]
-    static let knownFlags: Set<String> = ["json", "csv", "all", "no-color", "no-cache", "help", "version", "fahrenheit", "yes", "trash", "permanent"]
+    static let knownFlags: Set<String> = ["json", "csv", "all", "no-color", "no-cache", "help", "version", "fahrenheit", "yes", "trash", "permanent", "dry-run"]
 
     init(_ argv: [String]) throws {
         var i = 0
