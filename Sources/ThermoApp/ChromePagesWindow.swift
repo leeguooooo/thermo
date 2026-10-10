@@ -9,8 +9,8 @@ import ThermoL10n
 @MainActor
 final class ChromePagesModel: ObservableObject {
     let app: String
-    let appMemoryKB: Int?
-    let gpuKB: Int?
+    var appMemoryKB: Int?
+    var gpuKB: Int?
     @Published var phase: ChromeInspector.Phase?
     @Published var diagnosis: ChromeInspector.Diagnosis?
     @Published var closing: String?
@@ -80,76 +80,29 @@ final class ChromePagesModel: ObservableObject {
     }
 }
 
-@MainActor
-enum ChromePagesWindow {
-    private(set) static var window: NSWindow?
-    static var offscreen: Bool { CommandLine.arguments.contains("--offscreen") }
-
-    static func show(_ model: ChromePagesModel, sample: Bool = true) {
-        window?.close()
-        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 680),
-                         styleMask: [.titled, .closable, .resizable, .miniaturizable],
-                         backing: .buffered, defer: false)
-        w.isReleasedWhenClosed = false
-        w.title = tr("%1$@ pages", model.app)
-        let host = NSHostingController(rootView: ChromePagesView(model: model)
-            .frame(minWidth: 520, maxWidth: .infinity, minHeight: 480, maxHeight: .infinity))
-        host.sizingOptions = [.minSize]
-        w.contentViewController = host
-        w.setContentSize(NSSize(width: 640, height: 680))
-        w.center()
-        if offscreen {
-            w.styleMask = [.borderless]
-            w.setFrame(NSRect(x: -6000, y: -6000, width: 640, height: 680), display: true)
-            w.orderBack(nil)
-        } else {
-            NSApp.activate(ignoringOtherApps: true)
-            w.makeKeyAndOrderFront(nil)
-        }
-        // Stop measuring when the window goes away.
-        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
-            MainActor.assumeIsolated { model.stop() }
-        }
-        window = w
-        if sample { model.start() }
-    }
-
-    /// Verification: once there is a result, writes the window as a PNG and quits.
-    static func snapshotWhenReady(_ model: ChromePagesModel, to path: String) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            MainActor.assumeIsolated {
-                guard model.diagnosis != nil else { return snapshotWhenReady(model, to: path) }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                    if let view = window?.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
-                        view.cacheDisplay(in: view.bounds, to: rep)
-                        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
-                    }
-                    exit(0)
-                }
-            }
-        }
-    }
-}
-
 struct ChromePagesView: View {
     @ObservedObject var model: ChromePagesModel
+    /// Inside the main window: on its gradient, rows on glass, the list loads when shown.
+    var embedded = false
     @State private var confirming: Target?
 
     struct Target: Identifiable { let url: String; let title: String; var id: String { url + "\u{0}" + title } }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header.padding(14)
-            Divider()
+            header.padding(embedded ? 32 : 14).padding(.top, embedded ? 16 : 0)
+            if !embedded { Divider() }
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if let d = model.diagnosis { content(d) } else { progress }
                 }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(embedded ? 32 : 14).padding(.top, embedded ? -16 : 0)
+                .frame(maxWidth: embedded ? 820 : .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: embedded ? .center : .leading)
             }
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(embedded ? Color.clear : Color(nsColor: .windowBackgroundColor))
+        .onAppear { if embedded && model.diagnosis == nil && !model.running { model.start() } }
         .sheet(item: $confirming) { t in
             ConfirmSheet(title: tr("Close this page?"),
                          summary: tr("The tab is closed in %1$@, like clicking its ×. Anything typed into it and not saved is lost.", model.app),
@@ -162,11 +115,19 @@ struct ChromePagesView: View {
     }
 
     var header: some View {
-        HStack(alignment: .center, spacing: 10) {
-            Image(systemName: "rectangle.stack").font(.title2).foregroundStyle(.secondary)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(tr("Which %1$@ page is the problem", model.app)).font(.headline)
-                Text(summary).font(.caption).foregroundStyle(.secondary)
+        HStack(alignment: embedded ? .bottom : .center, spacing: 10) {
+            if embedded {
+                // The main window's page title, like every other page there.
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(tr("Browser pages")).font(.system(size: 26, weight: .bold)).foregroundStyle(.white)
+                    Text(tr("Which %1$@ page is the problem", model.app) + " · " + summary).font(.callout).foregroundStyle(.white.opacity(0.6))
+                }
+            } else {
+                Image(systemName: "rectangle.stack").font(.title2).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tr("Which %1$@ page is the problem", model.app)).font(.headline)
+                    Text(summary).font(.caption).foregroundStyle(.secondary)
+                }
             }
             Spacer()
             if model.running {
@@ -306,8 +267,8 @@ struct ChromePagesView: View {
             Button(model.closing == url ? tr("Closing…") : closeTitle) { confirming = Target(url: url, title: title) }
                 .controlSize(.small).disabled(model.closing != nil)
         }
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 8).fill((warn ? Color.orange : Color.secondary).opacity(0.07)))
+        .padding(embedded ? 12 : 8)
+        .modifier(RowBackground(embedded: embedded, warn: warn))
     }
 
     func note(_ text: String, color: Color) -> some View {
@@ -315,4 +276,17 @@ struct ChromePagesView: View {
     }
 
     func mb(_ v: Double) -> String { String(format: "%.0f MB", v) }
+}
+
+/// A page row: glass in the main window, a light tint in the stand-alone window.
+private struct RowBackground: ViewModifier {
+    let embedded: Bool
+    let warn: Bool
+    func body(content: Content) -> some View {
+        if embedded {
+            content.glass(radius: 12, highlighted: warn)
+        } else {
+            content.background(RoundedRectangle(cornerRadius: 8).fill((warn ? Color.orange : Color.secondary).opacity(0.07)))
+        }
+    }
 }

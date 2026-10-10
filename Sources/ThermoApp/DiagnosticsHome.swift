@@ -9,106 +9,9 @@ enum SidebarEntry: Hashable {
     case area(Area)
 }
 
-/// CleanMyMac-style diagnostics: one deep gradient behind everything, glass panels on top, a landing
-/// page with one verdict and one big button, and per-area pages of plain-language problem cards.
-struct DiagnosticsView: View {
-    @ObservedObject var scanner: AgentScanner
-    @Binding var sidebar: SidebarEntry?
-
-    var body: some View {
-        ZStack {
-            WindowBackdrop(glow: (sidebar ?? .home) == .home, tint: heroTint)
-            HStack(spacing: 0) {
-                Sidebar(scanner: scanner, selection: $sidebar)
-                    .frame(width: 236)
-                    .background(Color.black.opacity(0.22))
-                Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1)
-                ZStack {
-                    switch sidebar ?? .home {
-                    case .home:
-                        DiagnosticsHome(scanner: scanner, open: { a in withAnimation(.easeInOut(duration: 0.25)) { sidebar = .area(a) } })
-                            .transition(.opacity)
-                    case let .area(a):
-                        AreaPage(scanner: scanner, area: a).id(a).transition(.opacity.combined(with: .move(edge: .trailing)))
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-        .ignoresSafeArea()
-        .environment(\.colorScheme, .dark)
-        .animation(.easeInOut(duration: 0.25), value: sidebar)
-        .onAppear { scanner.scan(ifOlderThan: 60) }
-        .sheet(isPresented: Binding(get: { scanner.batch?.finished == true }, set: { if !$0 { scanner.batch = nil } })) {
-            BatchResult(scanner: scanner)
-        }
-    }
-
-    var heroTint: Color {
-        guard let r = scanner.report else { return Color(red: 0.42, green: 0.36, blue: 1.0) }
-        return r.count(.error) > 0 ? .red : r.count(.warning) > 0 ? .orange : .green
-    }
-}
-
-// MARK: - Sidebar
-
-private struct Sidebar: View {
-    @ObservedObject var scanner: AgentScanner
-    @Binding var selection: SidebarEntry?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 8) {
-                Image(systemName: "stethoscope").foregroundStyle(.white.opacity(0.8))
-                Text(tr("AI Agent Diagnostics")).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white.opacity(0.85))
-            }
-            .padding(.horizontal, 16).padding(.top, 44).padding(.bottom, 18)
-            row(.home, title: tr("Smart Check"), symbol: "sparkles", color: .pink, badge: scanner.problems.count)
-            Text(tr("Checks").uppercased()).font(.system(size: 10, weight: .semibold)).tracking(0.8).foregroundStyle(.white.opacity(0.4))
-                .padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 6)
-            ForEach(Area.allCases, id: \.self) { a in
-                row(.area(a), title: AgentStyle.title(a), symbol: AgentStyle.icon(a), color: AgentStyle.tint(a),
-                    badge: scanner.report?.items.filter { $0.area == a && $0.isProblem }.count ?? 0)
-            }
-            Spacer()
-            if let r = scanner.report {
-                HStack(spacing: 6) {
-                    Circle().fill(scanner.scanning ? Color.yellow : Color.green).frame(width: 6, height: 6)
-                    Text(scanner.scanning ? tr("Checking…") : tr("%1$@ items checked", String(r.items.count)))
-                }
-                .font(.system(size: 11)).foregroundStyle(.white.opacity(0.45)).padding(16)
-            }
-        }
-        .frame(maxHeight: .infinity, alignment: .top)
-    }
-
-    func row(_ entry: SidebarEntry, title: String, symbol: String, color: Color, badge: Int) -> some View {
-        let selected = (selection ?? .home) == entry
-        return Button { selection = entry } label: {
-            HStack(spacing: 10) {
-                IconTile(symbol: symbol, color: color, size: 24)
-                Text(title).font(.system(size: 13, weight: selected ? .semibold : .regular)).foregroundStyle(.white.opacity(selected ? 1 : 0.8))
-                    .lineLimit(1)
-                Spacer()
-                if badge > 0 {
-                    Text("\(badge)").font(.system(size: 11, weight: .bold, design: .rounded)).foregroundStyle(.white)
-                        .padding(.horizontal, 7).padding(.vertical, 2)
-                        .background(Capsule().fill(LinearGradient(colors: [.orange, .red.opacity(0.8)], startPoint: .top, endPoint: .bottom)))
-                }
-            }
-            .padding(.horizontal, 10).padding(.vertical, 7)
-            .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color.white.opacity(selected ? 0.13 : 0)))
-            .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Color.white.opacity(selected ? 0.12 : 0)))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PressableStyle())
-        .padding(.horizontal, 8)
-    }
-}
-
 // MARK: - Landing page
 
-private struct DiagnosticsHome: View {
+struct DiagnosticsHome: View {
     @ObservedObject var scanner: AgentScanner
     let open: (Area) -> Void
     @State private var confirming = false
@@ -189,7 +92,7 @@ private struct DiagnosticsHome: View {
 
 // MARK: - One area
 
-private struct AreaPage: View {
+struct AreaPage: View {
     @ObservedObject var scanner: AgentScanner
     let area: Area
     @State private var showHealthy = false
@@ -414,7 +317,7 @@ private struct HealthyRow: View {
 }
 
 /// After "Fix all": what changed.
-private struct BatchResult: View {
+struct BatchResult: View {
     @ObservedObject var scanner: AgentScanner
 
     var body: some View {

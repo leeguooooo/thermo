@@ -32,30 +32,15 @@ struct Bar: View {
 
 // MARK: - Root
 
-enum Tab: String, CaseIterable, Identifiable {
-    case overview = "Overview", sensors = "Sensors", fans = "Fans", disk = "Disk", agents = "Agents", settings = "Settings"
-    var id: String { rawValue }
-    var title: String { tr(rawValue) }
-
-    /// Six tabs only fit at popover width with Settings as an icon.
-    @ViewBuilder var label: some View {
-        if self == .settings { Image(systemName: "gearshape").accessibilityLabel(title) } else { Text(title) }
-    }
-}
-
+/// The menu bar panel: the live numbers at a glance, why the Mac is slow, a quick fan switch, and
+/// the way into the main window, where everything else lives.
 struct PopoverView: View {
     @ObservedObject var monitor: Monitor
-    var updates: Updates
-    @ObservedObject var disk: DiskModel
-    @State var tab: Tab = .overview
-    @StateObject var agents = AgentScanner()
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
     @AppStorage(L10n.defaultsKey) private var language = "system"
 
     var body: some View {
-        content
-            .id(language)  // rebuild every string in the new language
-            .onChange(of: language) { _ in agents.scan() }  // diagnostics are worded at scan time
+        content.id(language)  // rebuild every string in the new language
     }
 
     var content: some View {
@@ -69,46 +54,16 @@ struct PopoverView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .onTapGesture { monitor.iconHidden = false }
             }
-            if renderingPreview {
-                // ImageRenderer cannot draw the AppKit segmented control; draw a look-alike.
-                HStack(spacing: 2) {
-                    ForEach(Tab.allCases) { t in
-                        t.label.font(.callout).frame(maxWidth: t == .settings ? 28 : .infinity).padding(.vertical, 4)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(t == tab ? Color(nsColor: .controlBackgroundColor) : .clear)
-                                .shadow(color: .black.opacity(t == tab ? 0.15 : 0), radius: 1, y: 0.5))
-                    }
-                }
-                .padding(2)
-                .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary))
-            } else {
-                Picker("", selection: $tab) {
-                    ForEach(Tab.allCases) { $0.label.tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-            }
-
-            Group {
-                switch tab {
-                case .overview: OverviewView(monitor: monitor)
-                case .sensors: SensorsView(monitor: monitor)
-                case .fans: FansView(monitor: monitor)
-                case .disk: DiskView(model: disk)
-                case .agents: AgentsView(scanner: agents)
-                case .settings: SettingsView(monitor: monitor, updates: updates)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-
+            OverviewView(monitor: monitor)
             if let err = monitor.lastError {
                 Text(err).font(.caption).foregroundStyle(.red).lineLimit(3)
                     .onTapGesture { monitor.lastError = nil }
             }
+            Divider()
+            footer
         }
         .padding(14)
         .frame(width: 380)
-        // A slowdown notification was clicked: show the Overview, where the card points at the program.
-        .onReceive(NotificationCenter.default.publisher(for: PulseRecorder.showProgram)) { _ in tab = .overview }
     }
 
     var header: some View {
@@ -129,6 +84,76 @@ struct PopoverView: View {
                 }
             }
         }
+    }
+
+    /// Into the main window: the whole app, or straight to a place in it.
+    @ViewBuilder var footer: some View {
+        if renderingPreview {
+            // ImageRenderer cannot draw AppKit buttons; a look-alike for the preview.
+            HStack(spacing: 12) {
+                Label(tr("Open Thermo"), systemImage: "macwindow").font(.callout).foregroundStyle(.white)
+                    .padding(.horizontal, 10).padding(.vertical, 4).background(Capsule().fill(Color.accentColor))
+                Spacer()
+                ForEach(["internaldrive", "stethoscope", "rectangle.stack", "gearshape", "power"], id: \.self) {
+                    Image(systemName: $0).foregroundStyle(.secondary)
+                }
+            }
+        } else {
+            liveFooter
+        }
+    }
+
+    var liveFooter: some View {
+        HStack(spacing: 6) {
+            Button { MainWindow.show(.overview) } label: {
+                Label(tr("Open Thermo"), systemImage: "macwindow")
+            }
+            .buttonStyle(.borderedProminent)
+            Spacer()
+            shortcut("internaldrive", tr("Disk Cleanup"), .disk(.home))
+            shortcut("stethoscope", tr("AI Agent Diagnostics"), .agents(.home))
+            shortcut("rectangle.stack", tr("Browser pages"), .browser("Google Chrome"))
+            shortcut("gearshape", tr("Settings"), .settings)
+            Button { NSApp.terminate(nil) } label: { Image(systemName: "power") }
+                .buttonStyle(.borderless).help(tr("Quit Thermo"))
+        }
+        .controlSize(.regular)
+    }
+
+    func shortcut(_ symbol: String, _ title: String, _ page: MainPage) -> some View {
+        Button { MainWindow.show(page) } label: { Image(systemName: symbol).frame(width: 22) }
+            .buttonStyle(.borderless).help(title)
+    }
+}
+
+/// Auto or full speed in one click; anything finer is in the main window's Fans page.
+struct QuickFanSwitch: View {
+    @ObservedObject var monitor: Monitor
+    let fan: FanReading
+
+    /// Read live from the helper's policies (never copied), so it always shows what is active.
+    var current: FanPolicy { monitor.pendingPolicies[fan.id] ?? monitor.policies[fan.id] ?? .auto }
+    var isMax: Bool { if case .fixed(let r) = current { return r.isInfinite || r >= fan.max } else { return false } }
+    var isCustom: Bool { current != .auto && !isMax }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            option(tr("Auto"), on: current == .auto) { monitor.setPolicy(.auto, fan: fan.id) }
+            option(tr("Max"), on: isMax) { monitor.setPolicy(.fixed(rpm: .infinity), fan: fan.id) }
+            if isCustom {
+                option(tr("Custom"), on: true) { MainWindow.show(.fans) }
+            }
+        }
+    }
+
+    func option(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.caption.weight(on ? .semibold : .regular))
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .background(Capsule().fill(on ? Color.accentColor.opacity(0.85) : Color.secondary.opacity(0.15)))
+                .foregroundStyle(on ? Color.white : Color.primary)
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -155,7 +180,12 @@ struct OverviewView: View {
                     }
                 }
                 Divider()
-                ForEach(s.fans) { f in FanRow(fan: f) }
+                ForEach(s.fans) { f in
+                    HStack(spacing: 8) {
+                        FanRow(fan: f)
+                        QuickFanSwitch(monitor: monitor, fan: f)
+                    }
+                }
                 if let b = s.battery { BatteryRow(battery: b, fahrenheit: fahrenheit) }
             } else {
                 ProgressView().frame(maxWidth: .infinity)
@@ -226,10 +256,12 @@ var renderingPreview = false
 
 struct SensorsView: View {
     @ObservedObject var monitor: Monitor
+    /// False inside the main window, whose page scrolls.
+    var scrolls = true
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
 
     var body: some View {
-        if renderingPreview { list } else { ScrollView { list }.frame(height: 360) }
+        if renderingPreview || !scrolls { list } else { ScrollView { list }.frame(height: 360) }
     }
 
     var list: some View {
@@ -493,48 +525,86 @@ struct SettingsView: View {
     @AppStorage(L10n.defaultsKey) private var language = "system"
 
     var body: some View {
-        Form {
-            Picker(tr("Language"), selection: $language) {
-                Text(tr("System")).tag("system")
-                ForEach(Language.allCases) { Text($0.displayName).tag($0.rawValue) }
-            }
-            .onChange(of: language) { L10n.apply(preference: $0) }
-            Picker(tr("Menu bar shows"), selection: $titleMetric) {
-                ForEach(TitleMetric.allCases) { Text($0.label).tag($0.rawValue) }
-            }
-            Picker(tr("Update every"), selection: $interval) {
-                Text("0.5 s").tag(0.5); Text("1 s").tag(1.0); Text("2 s").tag(2.0); Text("5 s").tag(5.0)
-            }
-            .onChange(of: interval) { _ in monitor.reschedule() }
-            Toggle(tr("Fahrenheit"), isOn: $fahrenheit)
-            Toggle(tr("Alert when hot"), isOn: $alertsEnabled)
-                .onChange(of: alertsEnabled) { on in if on { Monitor.requestNotificationPermission() } }
-            if alertsEnabled {
-                Stepper(value: $alertThreshold, in: 60...105, step: 1) {
-                    Text(tr("Threshold: %1$@ °C", String(Int(alertThreshold))))
+        VStack(alignment: .leading, spacing: 20) {
+            section(tr("General")) {
+                row(tr("Language")) {
+                    Picker("", selection: $language) {
+                        Text(tr("System")).tag("system")
+                        ForEach(Language.allCases) { Text($0.displayName).tag($0.rawValue) }
+                    }
+                    .onChange(of: language) { L10n.apply(preference: $0) }
+                }
+                row(tr("Menu bar shows")) {
+                    Picker("", selection: $titleMetric) { ForEach(TitleMetric.allCases) { Text($0.label).tag($0.rawValue) } }
+                }
+                row(tr("Update every")) {
+                    Picker("", selection: $interval) {
+                        Text("0.5 s").tag(0.5); Text("1 s").tag(1.0); Text("2 s").tag(2.0); Text("5 s").tag(5.0)
+                    }
+                    .onChange(of: interval) { _ in monitor.reschedule() }
+                }
+                row(tr("Fahrenheit")) { Toggle("", isOn: $fahrenheit) }
+                row(tr("Show in Dock")) { Toggle("", isOn: $showInDock) }
+                row(tr("Launch at login"), last: true) {
+                    Toggle("", isOn: Binding(get: { monitor.launchAtLogin }, set: { monitor.launchAtLogin = $0 }))
                 }
             }
-            AgentAccessRow()
-            Toggle(tr("Warn me before my Mac gets slow"), isOn: $slowdownAlerts)
-            Toggle(tr("Show in Dock"), isOn: $showInDock)
-            Toggle(tr("Launch at login"), isOn: Binding(get: { monitor.launchAtLogin }, set: { monitor.launchAtLogin = $0 }))
-            HStack {
-                Text(tr("Fan helper: %1$@", helperText)).foregroundStyle(.secondary)
-                Spacer()
-                if [.running, .notRunning, .needsApproval, .outdated].contains(monitor.helperState) {
-                    Button(tr("Uninstall")) { monitor.uninstallHelper() }
+            section(tr("Alerts")) {
+                row(tr("Warn me before my Mac gets slow")) { Toggle("", isOn: $slowdownAlerts) }
+                row(tr("Alert when hot"), last: !alertsEnabled) {
+                    Toggle("", isOn: $alertsEnabled)
+                        .onChange(of: alertsEnabled) { on in if on { Monitor.requestNotificationPermission() } }
+                }
+                if alertsEnabled {
+                    row(tr("Threshold: %1$@ °C", String(Int(alertThreshold))), last: true) {
+                        Stepper("", value: $alertThreshold, in: 60...105, step: 1)
+                    }
                 }
             }
-            if updates.enabled {
-                Toggle(tr("Check for updates automatically"), isOn: Binding(get: { updates.automaticallyChecks },
-                                                                       set: { updates.automaticallyChecks = $0 }))
-                Button(tr("Check for Updates…")) { updates.checkForUpdates() }
+            section(tr("AI agents")) {
+                AgentAccessRow().padding(14)
             }
+            section(tr("Fan helper")) {
+                row(tr("Fan helper: %1$@", helperText), last: true) {
+                    if [.running, .notRunning, .needsApproval, .outdated].contains(monitor.helperState) {
+                        Button(tr("Uninstall")) { monitor.uninstallHelper() }
+                    }
+                }
+            }
+            section(tr("About")) {
+                if updates.enabled {
+                    row(tr("Check for updates automatically")) {
+                        Toggle("", isOn: Binding(get: { updates.automaticallyChecks }, set: { updates.automaticallyChecks = $0 }))
+                    }
+                }
+                row("Thermo \(AppInfo.version)", last: true) {
+                    HStack {
+                        if updates.enabled { Button(tr("Check for Updates…")) { updates.checkForUpdates() } }
+                        Button(tr("Quit Thermo")) { NSApp.terminate(nil) }
+                    }
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .pickerStyle(.menu)
+    }
+
+    func section<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white.opacity(0.6)).padding(.leading, 4)
+            VStack(spacing: 0) { content() }.glass(radius: 14)
+        }
+    }
+
+    func row<C: View>(_ title: String, last: Bool = false, @ViewBuilder _ control: () -> C) -> some View {
+        VStack(spacing: 0) {
             HStack {
-                Text("Thermo \(AppInfo.version)").font(.caption).foregroundStyle(.tertiary)
+                Text(title).font(.system(size: 13)).foregroundStyle(.white.opacity(0.9))
                 Spacer()
-                Button(tr("Quit Thermo")) { NSApp.terminate(nil) }
+                control().labelsHidden().fixedSize()
             }
+            .padding(.horizontal, 16).padding(.vertical, 11)
+            if !last { Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1).padding(.leading, 16) }
         }
     }
 

@@ -65,24 +65,28 @@ final class Monitor: ObservableObject {
     /// Called on the main thread after each sample (menu bar title).
     var onUpdate: ((Snapshot) -> Void)?
 
-    /// Published copy of `popoverOpen` for views that must stop work when the panel closes: the popover's
+    /// Published copy of `watched` (panel or main window open) for views that must stop work when the panel closes: the popover's
     /// SwiftUI views stay alive (no onDisappear) while it is closed.
     @Published private(set) var panelVisible = false
 
-    var popoverOpen = false {
-        didSet {
-            guard popoverOpen != oldValue else { return }
-            let open = popoverOpen
-            panelVisible = open
-            queue.async { self.fullSampling = open }
-            if open {
-                // SwiftUI only sees data while visible; hand over what accumulated meanwhile.
-                history = buffer
-                if let latest { snapshot = latest }
-            }
-            reschedule()
-            if open { sampleNow() }
+    var popoverOpen = false { didSet { if popoverOpen != oldValue { visibilityChanged() } } }
+    /// The main window is on screen: it shows the same live data as the panel.
+    var windowOpen = false { didSet { if windowOpen != oldValue { visibilityChanged() } } }
+    /// Someone is looking: full sampling at the chosen rate.
+    var watched: Bool { popoverOpen || windowOpen }
+
+    private func visibilityChanged() {
+        let open = watched
+        guard open != panelVisible else { return }
+        panelVisible = open
+        queue.async { self.fullSampling = open }
+        if open {
+            // SwiftUI only sees data while visible; hand over what accumulated meanwhile.
+            history = buffer
+            if let latest { snapshot = latest }
         }
+        reschedule()
+        if open { sampleNow() }
     }
 
     static let historyWindow: TimeInterval = 600
@@ -117,7 +121,7 @@ final class Monitor: ObservableObject {
     func reschedule() {
         timer?.cancel()
         // Background: essential sensors only, at least every 2 s. Popover open: everything at the chosen rate.
-        let every = popoverOpen ? interval : max(interval, 2)
+        let every = watched ? interval : max(interval, 2)
         let t = DispatchSource.makeTimerSource(queue: queue)
         t.schedule(deadline: .now(), repeating: every, leeway: .milliseconds(Int(every * 100)))
         t.setEventHandler { [weak self] in self?.sample() }
@@ -150,7 +154,7 @@ final class Monitor: ObservableObject {
             if let first = self.buffer.firstIndex(where: { $0.time >= cutoff }), first > 0 {
                 self.buffer.removeFirst(first)
             }
-            if self.popoverOpen {
+            if self.watched {
                 self.snapshot = s
                 self.history = self.buffer
             }

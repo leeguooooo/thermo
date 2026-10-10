@@ -6,17 +6,16 @@ import CleanKit
 import ThermoKit
 import ThermoL10n
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotificationCenterDelegate {
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
-    private var monitor: Monitor!
-    private let updates = Updates()
-    private let disk = DiskModel()
+    private var monitor: Monitor { AppModels.shared.monitor }
     private var lastTitle: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Settings.register()
-        monitor = Monitor()
+        _ = AppModels.shared.updates  // Sparkle starts checking with the app
         // Slowdown history and alerts, in the background whether or not the panel is open.
         PulseRecorder.shared.start()
         if Bundle.main.bundleIdentifier != nil { UNUserNotificationCenter.current().delegate = self }
@@ -34,7 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         popover.behavior = .transient
         popover.animates = false
         popover.delegate = self
-        popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor, updates: updates, disk: disk))
+        popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor))
 
         applyDockPreference()
         installMainMenu()
@@ -65,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 
     /// A slowdown notification was clicked: open the panel on the Overview, pointing at the program.
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                 withCompletionHandler done: @escaping () -> Void) {
         let program = response.notification.request.content.userInfo["program"] as? String
         DispatchQueue.main.async {
@@ -77,14 +76,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 
     /// Show notifications even while Thermo is the active app.
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
                                 withCompletionHandler done: @escaping (UNNotificationPresentationOptions) -> Void) {
         done([.banner, .sound])
     }
 
-    /// Clicking the Dock icon (or opening Thermo.app again) shows the panel.
+    /// Clicking the Dock icon (or opening Thermo.app again) opens the main window.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        showPanel()
+        MainWindow.show()
         return false
     }
 
@@ -107,7 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         NSApp.mainMenu = main
     }
 
-    @objc private func openFromMenu() { showPanel() }
+    @objc private func openFromMenu() { MainWindow.show() }
 
     /// True when the status item sits in the notch gap or off every screen.
     private func statusItemHidden() -> Bool {
@@ -199,45 +198,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 }
 
-/// Debug aid: `Thermo --render-preview DIR` writes each popover tab as a PNG and exits.
+/// Debug aid: `Thermo --render-preview DIR` writes the menu bar panel as a PNG and exits.
+/// (The main window's pages: `Thermo --main --offscreen --page PAGE --snapshot PATH`.)
 @MainActor func renderPreviews(to dir: String) {
     Settings.register()
     renderingPreview = true
-    let monitor = Monitor()
-    let updates = Updates()
-    let disk = DiskModel()
-    disk.scan()
+    let monitor = AppModels.shared.monitor
     // ImageRenderer never fires onAppear; start the "why is it slow" sampler up front.
     SystemPulse.shared.start()
     monitor.popoverOpen = true
-    let agents = AgentScanner()
-    let started = Date()
-    agents.scan()
-    // Sensors are ready after a few seconds; the agent and disk scans can take longer (up to 90 s).
-    func render() {
-        if agents.scanning || disk.scanning || disk.report == nil, Date().timeIntervalSince(started) < 90 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: render)
-            return
-        }
-        for tab in Tab.allCases {
-            let view = PopoverView(monitor: monitor, updates: updates, disk: disk, tab: tab, agents: agents).background(Color(nsColor: .windowBackgroundColor))
-            let r = ImageRenderer(content: view)
-            r.scale = 2
-            guard let img = r.cgImage else { continue }
-            let rep = NSBitmapImageRep(cgImage: img)
-            try? rep.representation(using: .png, properties: [:])?
-                .write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(tab.rawValue.lowercased()).png"))
-        }
-        // The disk cleanup confirmation for the default (safe) selection.
-        let sheet = ImageRenderer(content: DiskView.confirmPreview(disk).background(Color(nsColor: .windowBackgroundColor)))
-        sheet.scale = 2
-        if let img = sheet.cgImage {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+        let r = ImageRenderer(content: PopoverView(monitor: monitor).background(Color(nsColor: .windowBackgroundColor)))
+        r.scale = 2
+        if let img = r.cgImage {
             try? NSBitmapImageRep(cgImage: img).representation(using: .png, properties: [:])?
-                .write(to: URL(fileURLWithPath: dir).appendingPathComponent("disk-confirm.png"))
+                .write(to: URL(fileURLWithPath: dir).appendingPathComponent("panel.png"))
         }
         exit(0)
     }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 4, execute: render)
 }
 
 L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
@@ -247,78 +225,63 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     MainActor.assumeIsolated { renderPreviews(to: CommandLine.arguments[i + 1]) }
     app.run()
 }
-/// `Thermo --disk`: just the Disk Cleanup window — no menu bar item, no fan helper; quits when closed.
-if CommandLine.arguments.contains("--disk") {
-    let args = CommandLine.arguments
-    // `--offscreen` (verification screenshots): no Dock icon, no window on the user's screen.
-    app.setActivationPolicy(args.contains("--offscreen") ? .accessory : .regular)
-    let disk = MainActor.assumeIsolated { DiskModel() }
-    // `--page home|overview|<category>`, `--all` scans everything instead of just AI.
-    let page = args.firstIndex(of: "--page").flatMap { $0 + 1 < args.count ? DiskPage(argument: args[$0 + 1]) : nil }
-    if args.contains("--all") { MainActor.assumeIsolated { disk.scope = .all } }
-    // After launch finishes, or the app cannot come to the front.
-    DispatchQueue.main.async {
-        MainActor.assumeIsolated {
-            DiskWindow.show(disk, page: page)
-            if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count { DiskWindow.snapshotWhenReady(disk, to: args[i + 1]) }
+/// `Thermo --main [--page PAGE]` (and the older `--disk [PAGE]`, `--agents [AREA]`, `--chrome-pages`):
+/// just the main window, no menu bar item; quits when closed. With `--offscreen --snapshot PATH` it
+/// draws the window into a PNG once the page has its data, and quits (verification).
+/// `--fixture BEFORE.json AFTER.json` shows two saved browser samples instead of measuring.
+@MainActor func openMainOnly(_ args: [String]) {
+    let models = AppModels.shared
+    func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
+    var page = value(after: "--page").flatMap(MainPage.init(argument:)) ?? .overview
+    if args.contains("--disk") {
+        page = .disk(value(after: "--page").flatMap(DiskPage.init(argument:)) ?? .home)
+        if args.contains("--all") { models.disk.scope = .all }
+        if !args.contains("--no-scan"), !models.disk.loadSaved() { models.disk.scan() }
+    }
+    if args.contains("--agents") {
+        page = .agents(value(after: "--agents").flatMap(Area.init(rawValue:)).map { .area($0) } ?? .home)
+        models.agents.scan()
+    }
+    if args.contains("--chrome-pages") {
+        let name = value(after: "--app") ?? "Google Chrome"
+        let hog = MachinePulse.sample().hogs.first { $0.name == name }
+        let model = models.browser(name, memoryKB: hog?.memoryKB, gpuKB: hog?.parts?.first { $0.role == "GPU" }?.memoryKB)
+        if let i = args.firstIndex(of: "--fixture"), i + 2 < args.count {
+            let read: (String) -> ChromeInspector.Snapshot? = { p in try? JSONDecoder().decode(ChromeInspector.Snapshot.self, from: Data(contentsOf: URL(fileURLWithPath: p))) }
+            if let before = read(args[i + 1]), let after = read(args[i + 2]) {
+                model.diagnosis = ChromeInspector.diagnosis(ChromeInspector.diagnose(after, before: before), app: name,
+                                                            appMemoryKB: model.appMemoryKB, gpuKB: model.gpuKB)
+            }
+        }
+        page = .browser(name)
+    }
+    MainWindow.show(page)
+    guard let path = value(after: "--snapshot") else { return }
+    let started = Date()
+    MainWindow.snapshot(to: path) {
+        // Give each page what it needs to be worth a picture, but never wait more than 90 s.
+        if Date().timeIntervalSince(started) > 90 { return true }
+        switch page {
+        case .disk: return args.contains("--no-scan") ? !models.disk.scanning : models.disk.report != nil && !models.disk.scanning
+        case .agents: return models.agents.report != nil && !models.agents.scanning
+        case let .browser(app): return models.browser(app).diagnosis != nil
+        case .overview: return models.monitor.snapshot != nil && SystemPulse.shared.sampled && Date().timeIntervalSince(started) > 4
+        default: return models.monitor.snapshot != nil
         }
     }
-    // Only this window closing ends the app (not sheets, menus or alerts).
-    NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { n in
-        if (n.object as? NSWindow) === DiskWindow.window { exit(0) }
-    }
-    app.run()
-}
-@MainActor func openChromePages(_ args: [String]) {
-    let name = args.firstIndex(of: "--app").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } ?? "Google Chrome"
-    let hog = MachinePulse.sample().hogs.first { $0.name == name }
-    let gpu = hog?.parts?.first { $0.role == "GPU" }?.memoryKB
-    let model = ChromePagesModel(app: name, appMemoryKB: hog?.memoryKB, gpuKB: gpu)
-    if let i = args.firstIndex(of: "--fixture"), i + 2 < args.count {
-        let read: (String) -> ChromeInspector.Snapshot? = { p in try? JSONDecoder().decode(ChromeInspector.Snapshot.self, from: Data(contentsOf: URL(fileURLWithPath: p))) }
-        if let before = read(args[i + 1]), let after = read(args[i + 2]) {
-            let r = ChromeInspector.diagnose(after, before: before)
-            model.diagnosis = ChromeInspector.diagnosis(r, app: name, appMemoryKB: hog?.memoryKB, gpuKB: gpu)
-        }
-    }
-    ChromePagesWindow.show(model, sample: model.diagnosis == nil)
-    if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count { ChromePagesWindow.snapshotWhenReady(model, to: args[i + 1]) }
 }
 
-/// `Thermo --chrome-pages [--app NAME]`: just the browser pages window; quits when closed.
-/// `--fixture BEFORE.json AFTER.json` shows two saved samples instead of measuring (verification).
-if CommandLine.arguments.contains("--chrome-pages") {
-    let args = CommandLine.arguments
-    app.setActivationPolicy(args.contains("--offscreen") ? .accessory : .regular)
-    DispatchQueue.main.async { MainActor.assumeIsolated { openChromePages(args) } }
-    NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { n in
-        MainActor.assumeIsolated { if let w = n.object as? NSWindow, w === ChromePagesWindow.window { exit(0) } }
-    }
-    app.run()
-}
-/// `Thermo --agents`: just the AI agent diagnostics window — no menu bar item, no fan helper; quits when closed.
-if CommandLine.arguments.contains("--agents") {
-    // `--offscreen` (verification screenshots): no Dock icon, no window on the user's screen.
+if ["--main", "--disk", "--agents", "--chrome-pages"].contains(where: CommandLine.arguments.contains) {
+    // `--offscreen`: no Dock icon, no window on the user's screen.
     app.setActivationPolicy(CommandLine.arguments.contains("--offscreen") ? .accessory : .regular)
-    MainActor.assumeIsolated {
-        let scanner = AgentScanner()
-        scanner.scan()
-        // `--agents mcp` opens one area directly.
-        let args = CommandLine.arguments
-        let area = args.firstIndex(of: "--agents").flatMap { $0 + 1 < args.count ? Area(rawValue: args[$0 + 1]) : nil }
-        AgentsWindow.show(scanner, entry: area.map { .area($0) } ?? .home)
-        // `--snapshot PATH` (with --offscreen): once the check is done, draw the window into a PNG and quit.
-        if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count {
-            AgentsWindow.snapshotWhenReady(scanner, to: args[i + 1])
-        }
-    }
-    // Quit when the diagnostics window closes; not when a menu or sheet window inside it does.
+    DispatchQueue.main.async { MainActor.assumeIsolated { openMainOnly(CommandLine.arguments) } }
+    // Only the main window closing ends the app (not sheets, menus or alerts).
     NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { n in
-        MainActor.assumeIsolated { if let w = n.object as? NSWindow, w === AgentsWindow.window { exit(0) } }
+        MainActor.assumeIsolated { if let w = n.object as? NSWindow, w === MainWindow.window { exit(0) } }
     }
     app.run()
 }
-let delegate = AppDelegate()
+let delegate = MainActor.assumeIsolated { AppDelegate() }
 app.delegate = delegate
 app.setActivationPolicy(.accessory)
 app.run()

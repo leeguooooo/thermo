@@ -406,3 +406,41 @@ struct CategoryCard: View {
         .onHover { hover = $0 }
     }
 }
+
+/// A glowing ring gauge, as on a car dashboard: the arc fills with the value and runs from green to red.
+struct RingGauge: View {
+    /// 0…1.
+    let value: Double
+    let text: String
+    var caption: String? = nil
+    var size: CGFloat = 112
+    var colors: [Color] = [.green, .yellow, .orange, .red]
+
+    var color: Color {
+        let i = min(colors.count - 1, max(0, Int((value * Double(colors.count)).rounded(.down))))
+        return colors[i]
+    }
+
+    var body: some View {
+        ZStack {
+            Circle().fill(color.opacity(0.12)).blur(radius: 18)
+            Circle().stroke(Color.white.opacity(0.08), style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
+                .rotationEffect(.degrees(135)).mask(Circle().trim(from: 0, to: 0.75).stroke(lineWidth: size * 0.1).rotationEffect(.degrees(135)))
+            Circle().trim(from: 0, to: 0.75 * min(1, max(0.015, value.isFinite ? value : 0)))
+                .stroke(AngularGradient(colors: colors, center: .center, startAngle: .degrees(0), endAngle: .degrees(270)),
+                        style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
+                .rotationEffect(.degrees(135))
+                .shadow(color: color.opacity(0.7), radius: 8)
+                .animation(.easeInOut(duration: 0.6), value: value)
+            VStack(spacing: 0) {
+                Text(text).font(.system(size: size * 0.22, weight: .bold, design: .rounded)).monospacedDigit()
+                    .foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.5)
+                if let caption {
+                    Text(caption).font(.system(size: size * 0.095, weight: .medium)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+                }
+            }
+            .padding(.horizontal, size * 0.16)
+        }
+        .frame(width: size, height: size)
+    }
+}

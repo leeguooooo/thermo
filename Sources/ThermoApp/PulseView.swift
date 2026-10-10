@@ -40,6 +40,11 @@ final class SystemPulse: ObservableObject {
 
     func stop() { timer?.cancel(); timer = nil }
 
+    /// Cards showing the pulse (panel and main window): sampling runs while at least one is visible.
+    private var holders = 0
+    func hold() { holders += 1; if holders == 1 { start() } }
+    func release() { holders = max(0, holders - 1); if holders == 0 { stop() } }
+
     deinit { timer?.cancel() }
 
     private func sample() {
@@ -109,9 +114,12 @@ final class SystemPulse: ObservableObject {
 struct PulseCard: View {
     /// The panel is open. The popover's views outlive it being closed, so this, not onDisappear, stops sampling.
     let active: Bool
+    /// On a glass panel (main window): no tinted background of its own.
+    var plain = false
     @ObservedObject private var pulse = SystemPulse.shared
     @State private var confirming: SystemPulse.Hog?
     @State private var restartTarget: SystemPulse.Hog?
+    @State private var holds = false
     @ObservedObject private var recorder = PulseRecorder.shared
 
     var body: some View {
@@ -167,8 +175,8 @@ struct PulseCard: View {
                 // A browser: which of its pages is the problem (measured only when asked).
                 if ChromeInspector.isBrowser(h.name) && !renderingPreview {
                     Button(tr("View pages")) {
-                        ChromePagesWindow.show(ChromePagesModel(app: h.name, appMemoryKB: h.memoryKB,
-                                                                gpuKB: h.parts?.first { $0.role == "GPU" }?.memoryKB))
+                        _ = AppModels.shared.browser(h.name, memoryKB: h.memoryKB, gpuKB: h.parts?.first { $0.role == "GPU" }?.memoryKB)
+                        MainWindow.show(.browser(h.name))
                     }
                     .controlSize(.small).buttonStyle(.link).font(.caption)
                     .padding(.leading, 28)
@@ -200,10 +208,10 @@ struct PulseCard: View {
             .padding(.leading, 28)
         }
         .padding(10)
-        .background(RoundedRectangle(cornerRadius: 8).fill((pulse.sampled ? pulse.severity : .secondary).opacity(0.08)))
-        .onAppear { if active { pulse.start() } }
-        .onDisappear { pulse.stop() }  // switching tabs
-        .onChange(of: active) { open in if open { pulse.start() } else { pulse.stop() } }
+        .background(RoundedRectangle(cornerRadius: 8).fill((pulse.sampled ? pulse.severity : .secondary).opacity(plain ? 0 : 0.08)))
+        .onAppear { holding(active) }
+        .onDisappear { holding(false) }  // switching pages
+        .onChange(of: active) { holding($0) }
         .sheet(item: $confirming) { h in
             ConfirmSheet(title: h.app != nil ? tr("Quit %1$@?", h.name) : tr("End %1$@?", h.name),
                          summary: h.app != nil ? tr("The app is asked to quit, the same as ⌘Q; it can save your work first.")
@@ -225,6 +233,13 @@ struct PulseCard: View {
                          confirmTitle: tr("Restart"),
                          confirm: { restartTarget = nil; pulse.restart(h) }, cancel: { restartTarget = nil })
         }
+    }
+
+    /// This card's share in keeping the sampler running (the panel and the main window each have one).
+    func holding(_ on: Bool) {
+        guard on != holds else { return }
+        holds = on
+        if on { pulse.hold() } else { pulse.release() }
     }
 
     /// "shop · started by Claude Code": the folder a command-line program runs in and who started it.
