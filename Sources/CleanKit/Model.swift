@@ -265,6 +265,11 @@ public enum ScanReportCache {
         try? e.encode(r).write(to: u, options: .atomic)
     }
 
+    /// Cleaning changes the paths in the report; the old scan must not reappear on next launch.
+    public static func invalidate(home: String = NSHomeDirectory()) {
+        try? FileManager.default.removeItem(at: url(home: home))
+    }
+
     /// The saved report when it is younger than `maxAge` seconds.
     public static func load(home: String = NSHomeDirectory(), maxAge: TimeInterval, now: Date = Date()) -> ScanReport? {
         guard let data = try? Data(contentsOf: url(home: home)) else { return nil }

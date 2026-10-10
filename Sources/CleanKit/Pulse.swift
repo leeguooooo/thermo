@@ -32,6 +32,9 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var parts: [Part]? = nil
         /// What to do about it, when there is something clear to do.
         public var advice: Advice? = nil
+        /// Captured with the reading, for rechecking before an explicit quit/end action.
+        public var processIdentities: [ProcessIdentity]? = nil
+        public var applicationIdentity: ProcessIdentity? = nil
     }
 
     /// One process of a multi-process app: the GPU process, a renderer (page), an extension …
@@ -49,7 +52,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         /// "restart": quit and reopen the app; it restores its windows and frees what it piled up.
         public var kind: String
         public var text: String
-        /// About how much restarting would free.
+        /// Current footprint: an upper bound, since the reopened app will allocate memory again.
         public var freesKB: Int
         /// What happens to its windows: restoresItself (checked), thermoReopensTabs, unknown.
         public var windows: BrowserSession.Windows? = nil
@@ -101,17 +104,17 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             return tr("Mostly %1$@, using %2$@ cores", top.name, String(format: "%.1f", top.cpu / 100))
         }
         // High load without a busy program: processes are waiting, usually on memory or the disk.
-        if memory != .normal || swapUsedMB >= 4096, let big = hogs.max(by: { $0.memoryKB < $1.memoryKB }) {
+        if memory != .normal || (busy >= 1 && swapUsedMB >= 4096), let big = hogs.max(by: { $0.memoryKB < $1.memoryKB }) {
             if swapUsedMB >= 4096 {
                 // Say it plainly: memory lives on the disk now, and everything waits for the disk.
-                return tr("%1$@ of memory has been moved to the disk, so programs keep waiting for it — that is why it is slow. %2$@ uses the most (%3$@).",
+                return tr("%1$@ of memory has been moved to the disk, memory pressure may be contributing to slow responses. %2$@ uses the most (%3$@).",
                           Self.gb(swapUsedMB * 1024), big.name, Self.gb(big.memoryKB))
             }
             return tr("Memory is tight: %1$@ of swap in use, so programs wait on the disk; %2$@ uses the most memory (%3$@)",
                       String(format: "%.1f GB", Double(swapUsedMB) / 1024), big.name,
                       String(format: "%.1f GB", Double(big.memoryKB) / 1_048_576))
         }
-        if busy >= 1 { return tr("No single program stands out; many are waiting on the disk") }
+        if busy >= 1 { return tr("Load is high, but no single program stands out.") }
         return nil
     }
 
@@ -296,10 +299,10 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         let hours = String(Int(up / 3600))
         var text: String
         if let pages = h.pagesOpened, pages >= 100 {
-            text = tr("%1$@ has run for %2$@ hours and opened about %3$@ pages; restarting it would free about %4$@.",
+            text = tr("%1$@ has run for %2$@ hours and opened about %3$@ pages; it currently uses %4$@. Restarting may release accumulated memory.",
                       h.name, hours, String(pages), gb(h.memoryKB))
         } else {
-            text = tr("%1$@ has run for %2$@ hours; restarting it would free about %3$@.", h.name, hours, gb(h.memoryKB))
+            text = tr("%1$@ has run for %2$@ hours; it currently uses %3$@. Restarting may release accumulated memory.", h.name, hours, gb(h.memoryKB))
         }
         // Only promise what was checked.
         let windows = BrowserSession.windows(for: h.name)

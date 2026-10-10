@@ -39,8 +39,13 @@
 
 - [ ] `make test` 全部通过
 - [ ] 在 Intel 和 Apple Silicon 各跑一次 `thermo`、`thermo fans`、`thermo watch`
-- [ ] 菜单栏 App：概览/传感器/风扇/设置四页正常；标题指标切换生效
-- [ ] 风扇控制：安装 helper → 设固定转速 → 曲线 → Auto；退出 App 后策略保持；`sudo launchctl kickstart -k system/dev.thermo.helper` 后风扇回到 Auto
+- [ ] 菜单栏面板与主窗口的概览、传感器、风扇、浏览器、磁盘清理、AI 诊断、设置正常；标题指标切换生效
+- [ ] ⌘1–⌘6 切页、⌘F 搜索传感器、⌘, 打开设置、⌘A 全选、⌘W 关闭窗口可用
+- [ ] 摄氏度/华氏度切换同时更新读数、温度图、提醒阈值；系统热压力与传感器温度区分显示
+- [ ] 浏览器重新检查显示进度；停止后不继续转圈；关闭页面后更新清单或提示旧测量
+- [ ] 清理确认列出路径；只清理部分会话、路径删除失败、取消扫描后，剩余内容和手动勾选保持正确
+- [ ] 诊断扫描与修复不并行，批量修复先列出命令；正常项目的搜索结果可见
+- [ ] 风扇控制：安装 helper → 设固定转速 → 曲线 → Auto；退出 App 后策略保持；`sudo launchctl kickstart -k system/dev.thermo.helper` 启动时先恢复 Auto，再恢复保存的策略；超温保护仍然有效
 - [ ] 旧版本 helper 在新 App 里显示 “outdated” 并能一键更新
 - [ ] DMG 在另一台 Mac 上下载打开无 Gatekeeper 警告
 - [ ] 自动更新：旧版本能检测并安装新版本
@@ -49,3 +54,15 @@
 
 - Apple Silicon 的风扇写入路径未在真机验证。
 - 未上架 Mac App Store：沙盒内需 `AppleSMCClient` 临时例外，且风扇控制需要 root helper，均不符合审核规范。
+
+## 本地打包验证
+
+正式发布前，可以将临时验证包输出到独立目录，保留现有 `dist/` 和历史发布文件：
+
+```sh
+THERMO_DIST_DIR=/tmp/thermo-verification-dist SIGN_ID=- NOTARY_PROFILE= APPCAST_URL= scripts/build.sh
+codesign --verify --deep --strict /tmp/thermo-verification-dist/Thermo.app
+/tmp/thermo-verification-dist/thermo --version
+```
+
+这是 ad-hoc 签名的本地验证包，没有公证、在线更新或发布步骤。生产 helper 的签名认证和跨机型验收仍需用正式构建验证。

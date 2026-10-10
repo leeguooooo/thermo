@@ -57,6 +57,10 @@ final class Monitor: ObservableObject {
     @Published private(set) var history: [HistoryPoint] = []
     @Published private(set) var helperState: HelperState = .unknown
     @Published private(set) var policies: [Int: FanPolicy] = [:]
+    @Published private(set) var policiesAvailable = false
+    @Published private(set) var applyingPolicies = false
+    private var policyRevision = 0
+    private var lastHelperRefresh = Date.distantPast
     @Published var lastError: String?
     @Published private(set) var model = ""
     /// The menu bar icon is hidden (behind the notch or pushed off by other icons).
@@ -86,7 +90,7 @@ final class Monitor: ObservableObject {
             if let latest { snapshot = latest }
         }
         reschedule()
-        if open { sampleNow() }
+        if open { sampleNow(); refreshHelper() }
     }
 
     static let historyWindow: TimeInterval = 600
@@ -103,15 +107,7 @@ final class Monitor: ObservableObject {
     private let helper = HelperClient()
 
     init() {
-        queue.async { [weak self] in
-            do {
-                let s = try Sampler(scope: .essential)
-                DispatchQueue.main.async { self?.model = s.discovery.model }
-                self?.sampler = s
-            } catch {
-                DispatchQueue.main.async { self?.lastError = "\(error)" }
-            }
-        }
+        queue.async { [weak self] in self?.prepareSampler() }
         reschedule()
         refreshHelper()
     }
@@ -129,7 +125,27 @@ final class Monitor: ObservableObject {
         timer = t
     }
 
-    func sampleNow() { queue.async { [weak self] in self?.sample() } }
+    /// Retry initialization too: a temporary SMC failure must not leave the app stuck loading.
+    func sampleNow() {
+        queue.async { [weak self] in
+            guard let self else { return }
+            if self.sampler == nil { self.prepareSampler() }
+            self.sample()
+        }
+    }
+
+    private func prepareSampler() {
+        do {
+            let s = try Sampler(scope: .essential)
+            sampler = s
+            DispatchQueue.main.async { [weak self] in
+                self?.model = s.discovery.model
+                self?.lastError = nil
+            }
+        } catch {
+            DispatchQueue.main.async { [weak self] in self?.lastError = "\(error)" }
+        }
+    }
 
     private func sample() {
         guard let sampler else { return }
@@ -157,6 +173,7 @@ final class Monitor: ObservableObject {
             if self.watched {
                 self.snapshot = s
                 self.history = self.buffer
+                if Date().timeIntervalSince(self.lastHelperRefresh) >= 10 { self.refreshHelper() }
             }
             self.onUpdate?(s)
             self.checkAlert(s)
@@ -175,7 +192,8 @@ final class Monitor: ObservableObject {
         lastAlert = Date()
         let content = UNMutableNotificationContent()
         content.title = tr("Mac is running hot")
-        content.body = tr("Hottest sensor at %1$@ °C", String(format: "%.0f", hot))
+        let fahrenheit = d.bool(forKey: Settings.fahrenheit)
+        content.body = tr(fahrenheit ? "Hottest sensor at %1$@ °F" : "Hottest sensor at %1$@ °C", String(format: "%.0f", fahrenheit ? hot * 9 / 5 + 32 : hot))
             + (s.fans.first.map { tr(", fans at %1$@ rpm", String(format: "%.0f", $0.rpm)) } ?? "")
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "thermo.hot", content: content, trigger: nil))
     }
@@ -198,17 +216,28 @@ final class Monitor: ObservableObject {
     @Published private(set) var settingUp = false
     @Published private(set) var setupStarted: Date?
     private var setupTimer: Timer?
+    private var refreshingHelper = false
 
     func refreshHelper() {
+        guard !refreshingHelper, !applyingPolicies else { return }
+        refreshingHelper = true
+        lastHelperRefresh = Date()
+        let revision = policyRevision
         Task { @MainActor in
+            defer { refreshingHelper = false }
             // Whatever answers is running, however it was installed (Login Items or password).
             if let v = try? await helper.version() {
-                policies = (try? await helper.policies()) ?? policies
+                let active = try? await helper.policies()
+                guard revision == policyRevision, !applyingPolicies else { return }
+                policiesAvailable = active != nil
+                if let active { policies = active }
                 helperState = v == HelperConstants.version ? .running : .outdated
                 if helperState == .outdated { restartOutdatedHelper() }
                 finishSetup()
                 return
             }
+            guard revision == policyRevision, !applyingPolicies else { return }
+            policiesAvailable = false
             if usesSMAppService {
                 switch daemon.status {
                 case .requiresApproval:
@@ -231,6 +260,7 @@ final class Monitor: ObservableObject {
     /// that already answers is kept, and one already approved under Login Items is left to
     /// launchd; nobody is sent hunting through System Settings.
     func beginSetup() {
+        guard !settingUp else { return }
         settingUp = true
         setupStarted = Date()
         Task { @MainActor in
@@ -250,19 +280,28 @@ final class Monitor: ObservableObject {
         setupTimer?.invalidate()
         setupTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] t in
             guard let self else { t.invalidate(); return }
-            if let start = self.setupStarted, Date().timeIntervalSince(start) > 600 { self.finishSetup(); return }
+            if let start = self.setupStarted, Date().timeIntervalSince(start) > 600 {
+                self.stopSetup()
+                self.lastError = tr("The fan helper did not respond. Your settings have not been applied. Retry setup when ready.")
+                return
+            }
             self.refreshHelper()
         }
     }
 
-    private func finishSetup() {
+    func stopSetup() {
         setupTimer?.invalidate()
         setupTimer = nil
         settingUp = false
         setupStarted = nil
+    }
+
+    private func finishSetup() {
+        guard [.running, .outdated].contains(helperState) else { stopSetup(); return }
+        stopSetup()
         let pending = pendingPolicies
         pendingPolicies = [:]
-        for (fan, policy) in pending.sorted(by: { $0.key < $1.key }) { setPolicy(policy, fan: fan) }
+        if !pending.isEmpty { applyPolicies(pending.sorted(by: { $0.key < $1.key }).map { ($0.key, $0.value) }) }
     }
 
     /// The fallback that always works: one administrator prompt installs the helper as a
@@ -270,6 +309,7 @@ final class Monitor: ObservableObject {
     func installHelperWithPassword() {
         guard let bin = HelperInstaller.locateHelperBinary() else {
             lastError = tr("thermo-helper not found inside the app bundle")
+            stopSetup()
             return
         }
         settingUp = true
@@ -285,7 +325,7 @@ final class Monitor: ObservableObject {
             } catch {
                 DispatchQueue.main.async {
                     self.lastError = "\(error)".contains("cancelled") ? nil : "\(error)"
-                    self.settingUp = self.setupTimer != nil
+                    self.stopSetup()
                 }
             }
         }
@@ -329,22 +369,30 @@ final class Monitor: ObservableObject {
     }
 
     func setPolicy(_ policy: FanPolicy, fan: Int) {
+        guard !applyingPolicies else { return }
+        do { try policy.validate() } catch { lastError = "\(error)"; return }
         guard [.running, .outdated].contains(helperState) else {
-            // Keep what the user asked for and get the helper going; it applies when ready.
             pendingPolicies[fan] = policy
             if !settingUp { beginSetup() }
             return
         }
+        applyPolicies([(fan, policy)])
+    }
+
+    private func applyPolicies(_ changes: [(Int, FanPolicy)]) {
+        guard !applyingPolicies else { return }
+        applyingPolicies = true
+        policyRevision += 1
         Task { @MainActor in
-            do {
-                try await helper.setPolicy(policy, fan: fan)
-                policies = try await helper.policies()
-                lastError = nil
-                sampleNow()
-            } catch {
-                lastError = "\(error)"
-                refreshHelper()
-            }
+            let result = await FanPolicyOperation.run(changes,
+                set: { try await self.helper.setPolicy($0, fan: $1) },
+                read: { try await self.helper.policies() })
+            if let active = result.policies { policies = active }
+            policiesAvailable = result.policies != nil
+            lastError = result.error
+            applyingPolicies = false
+            sampleNow()
+            if result.policies == nil { refreshHelper() }
         }
     }
 
@@ -354,6 +402,11 @@ final class Monitor: ObservableObject {
     func openLoginItemsSettings() { SMAppService.openSystemSettingsLoginItems() }
 
     func uninstallHelper() {
+        guard !applyingPolicies else { return }
+        policyRevision += 1
+        policiesAvailable = false
+        stopSetup()
+        pendingPolicies = [:]
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 if self.usesSMAppService && self.daemon.status != .notRegistered {

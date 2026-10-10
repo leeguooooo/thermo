@@ -60,7 +60,9 @@ public enum FS {
 
     /// Sizes a path. `trackNewest` stats modification times too (slightly slower).
     /// Stops early (partial size) when the running scan is cancelled.
-    public static func size(_ path: String, trackNewest: Bool = false) -> TreeSize {
+    public static func size(_ path: String, trackNewest: Bool = false, cancellation: ScanCancellation? = nil) -> TreeSize {
+        let cancellation = cancellation ?? ScanCancellation.current
+        if cancellation?.isCancelled == true { return TreeSize() }
         var r = TreeSize()
         var st = stat()
         guard lstat(path, &st) == 0 else {
@@ -78,7 +80,7 @@ public enum FS {
         }
         // Batched attributes with private sizes; fts below is the fallback for file systems
         // without getattrlistbulk.
-        if let bulk = BulkWalk.size(path, trackNewest: trackNewest, device: st.st_dev) { return bulk }
+        if let bulk = BulkWalk.size(path, trackNewest: trackNewest, device: st.st_dev, cancellation: cancellation) { return bulk }
         var seenInodes = Set<UInt64>()
         let opts = FTS_PHYSICAL | FTS_NOCHDIR | FTS_XDEV
         var newest: Int = 0
@@ -90,7 +92,7 @@ public enum FS {
             var visited = 0
             while let ent = fts_read(fts) {
                 visited += 1
-                if visited & 0x3FF == 0, ScanCancellation.current?.isCancelled == true { break }
+                if visited & 0x3FF == 0, cancellation?.isCancelled == true { break }
                 let info = Int32(ent.pointee.fts_info)
                 switch info {
                 case FTS_DNR, FTS_ERR, FTS_NS:
@@ -143,6 +145,8 @@ public struct CleanResult: Codable, Sendable {
     public var failed: [String: String] = [:]
     public var bytes: Int64 = 0
     public var trashed: Bool
+
+    public init(id: String, trashed: Bool) { self.id = id; self.trashed = trashed }
 }
 
 public enum RemovalMode: String, Sendable {
@@ -214,6 +218,7 @@ public enum Cleaner {
         if !result.removed.isEmpty, let cmds = item.afterClean {
             for c in cmds { _ = Shell.run(c, timeout: 30) }
         }
+        if !result.removed.isEmpty { ScanReportCache.invalidate(home: g.home) }
         log(result, item: item, to: logURL(home: g.home))
         return result
     }

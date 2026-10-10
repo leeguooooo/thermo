@@ -15,7 +15,10 @@ final class ChromePagesModel: ObservableObject {
     @Published var diagnosis: ChromeInspector.Diagnosis?
     @Published var closing: String?
     @Published var closeFailed: String?
+    @Published private(set) var resultsStale = false
     private var task: Task<Void, Never>?
+    private var generation = UUID()
+    @Published private(set) var stopped = false
 
     init(app: String, appMemoryKB: Int?, gpuKB: Int?) {
         self.app = app; self.appMemoryKB = appMemoryKB; self.gpuKB = gpuKB
@@ -30,25 +33,43 @@ final class ChromePagesModel: ObservableObject {
     /// Without `measure`, only the tab list: nothing is attached. Measuring attaches to each page
     /// (Chrome shows "is being debugged" briefly), so it starts only from the user's button.
     func start(measure: Bool = false, watch: TimeInterval = 60) {
-        task?.cancel()
-        diagnosis = nil
+        guard closing == nil else { return }
+        stop()
+        let generation = UUID()
+        self.generation = generation
+        stopped = false
+        phase = .listingTabs
         measuring = measure
         let app = app, memory = appMemoryKB, gpu = gpuKB, model = self
         task = Task { [weak self] in
             let d = await ChromeInspector.diagnose(app: app, measure: measure, watch: watch, appMemoryKB: memory, gpuKB: gpu) { phase in
-                Task { @MainActor in model.phase = phase }
+                Task { @MainActor in
+                    guard model.generation == generation, !model.stopped else { return }
+                    model.phase = phase
+                }
             }
-            guard !Task.isCancelled, let self else { return }
+            guard !Task.isCancelled, let self, self.generation == generation else { return }
+            self.generation = UUID()
             self.diagnosis = d
+            self.resultsStale = false
+            self.closeFailed = nil
             self.phase = nil
             self.task = nil
         }
     }
 
-    func stop() { task?.cancel(); task = nil; phase = nil }
+    func stop() {
+        generation = UUID()
+        task?.cancel()
+        task = nil
+        phase = nil
+        measuring = false
+        stopped = true
+    }
 
     /// Closes one tab showing this address; on success it disappears from the lists.
     func close(url: String, title: String) {
+        guard closing == nil, !running else { return }
         closing = url
         closeFailed = nil
         let app = app
@@ -60,24 +81,46 @@ final class ChromePagesModel: ObservableObject {
                     if !ok { self.closeFailed = tr("%1$@ did not close the tab. Thermo may need permission in System Settings → Privacy & Security → Automation.", app) }
                     return
                 }
-                if var r = d.report {
-                    if let i = r.pages.firstIndex(where: { $0.url == url && $0.title == title }) ?? r.pages.firstIndex(where: { $0.url == url }) {
-                        let id = r.pages[i].id
-                        r.pages.remove(at: i)
-                        r.leaking.removeAll { $0.id == id }
-                        r.largest.removeAll { $0.id == id }
-                    }
-                    d.report = r
-                }
-                if let i = d.tabs?.lastIndex(where: { $0.url == url }) { d.tabs?.remove(at: i) }
-                if let i = d.duplicates.firstIndex(where: { $0.url == url }) {
-                    d.duplicates[i].count -= 1
-                    if d.duplicates[i].count < 2 { d.duplicates.remove(at: i) }
-                }
+                self.resultsStale = d.mode == .devtools
+                d = Self.removingClosedPage(from: d, url: url, title: title)
                 self.diagnosis = d
             }
         }
     }
+    static func removingClosedPage(from diagnosis: ChromeInspector.Diagnosis, url: String, title: String) -> ChromeInspector.Diagnosis {
+        var d = diagnosis
+        if var tabs = d.tabs {
+            if let index = tabs.lastIndex(where: { $0.url == url && $0.title == title }) ?? tabs.lastIndex(where: { $0.url == url }) {
+                tabs.remove(at: index)
+            }
+            d.tabs = tabs
+            d.duplicates = ChromeInspector.duplicates(tabs)
+        }
+        if var report = d.report {
+            let matching = report.pages.filter { $0.url == url && $0.title == title }
+            let candidates = matching.isEmpty ? report.pages.filter { $0.url == url } : matching
+            // AppleScript cannot identify which DevTools target was closed when address and title repeat.
+            // Keep the measured snapshot rather than subtracting an arbitrary page's heap.
+            guard candidates.count <= 1 else { d.gap = nil; return d }
+            if let index = report.pages.lastIndex(where: { $0.url == url && $0.title == title }) ?? report.pages.lastIndex(where: { $0.url == url }) {
+                let removed = report.pages.remove(at: index)
+                report.leaking.removeAll { $0.id == removed.id }
+                report.largest = Array(report.pages.filter { $0.leak == nil }.prefix(5))
+                report.pagesHeapMB = report.pages.reduce(0) { $0 + $1.heapMB }
+                report.duplicates = report.duplicates.compactMap { duplicate in
+                    var duplicate = duplicate
+                    duplicate.count = report.pages.filter { $0.url == duplicate.url }.count
+                    return duplicate.count > 1 ? duplicate : nil
+                }
+                d.duplicates = report.duplicates
+            }
+            d.report = report
+            // The whole-browser footprint was measured before the close; do not imply it is current.
+            d.gap = nil
+        }
+        return d
+    }
+
 }
 
 struct ChromePagesView: View {
@@ -95,7 +138,8 @@ struct ChromePagesView: View {
             if !embedded { Divider() }
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    if let d = model.diagnosis { content(d) } else { progress }
+                    if model.running { progress }
+                    if let d = model.diagnosis { content(d) } else if !model.running { progress }
                 }
                 .padding(embedded ? 32 : 14).padding(.top, embedded ? -16 : 0)
                 .frame(maxWidth: embedded ? 820 : .infinity, alignment: .leading)
@@ -104,6 +148,7 @@ struct ChromePagesView: View {
         }
         .background(embedded ? Color.clear : Color(nsColor: .windowBackgroundColor))
         .onAppear { if embedded && model.diagnosis == nil && !model.running { model.start() } }
+        .onDisappear { if model.running { model.stop() } }
         .sheet(item: $confirming) { t in
             ConfirmSheet(title: tr("Close this page?"),
                          summary: tr("The tab is closed in %1$@, like clicking its ×. Anything typed into it and not saved is lost.", model.app),
@@ -135,15 +180,17 @@ struct ChromePagesView: View {
                 Button(tr("Stop")) { model.stop() }.controlSize(.small)
             } else if model.canMeasure {
                 Button(model.diagnosis?.mode == .devtools ? tr("Measure again") : tr("Measure memory")) { model.start(measure: true) }
-                    .controlSize(.small).buttonStyle(.borderedProminent)
+                    .controlSize(.small).buttonStyle(.borderedProminent).disabled(model.closing != nil)
             } else {
-                Button(tr("Check again")) { model.start() }.controlSize(.small)
+                Button(tr("Check again")) { model.start() }.controlSize(.small).disabled(model.closing != nil || model.running)
             }
         }
     }
 
     var summary: String {
+        if model.running { return model.measuring ? tr("Measuring every page twice, a minute apart, to see which ones grow.") : tr("Listing tabs…") }
         guard let d = model.diagnosis else {
+            if model.stopped { return tr("Check stopped. You can start again when ready.") }
             return model.measuring ? tr("Measuring every page twice, a minute apart, to see which ones grow.") : tr("Listing tabs…")
         }
         switch d.mode {
@@ -171,7 +218,13 @@ struct ChromePagesView: View {
                 Text(tr("Listing tabs…")).font(.callout)
                 ProgressView()
             case nil:
-                ProgressView()
+                if model.stopped {
+                    Label(tr("Check stopped. You can start again when ready."), systemImage: "pause.circle")
+                        .font(.callout).foregroundStyle(.secondary)
+                    Button(tr("Check again")) { model.start() }
+                } else {
+                    ProgressView()
+                }
             }
             if model.measuring { Text(ChromeInspector.debuggingBarNote).font(.caption).foregroundStyle(.orange) }
             Text(tr("Thermo only reads each page's memory, title and address, never its content, and closes nothing on its own."))
@@ -182,6 +235,9 @@ struct ChromePagesView: View {
     @ViewBuilder
     func content(_ d: ChromeInspector.Diagnosis) -> some View {
         if let failed = model.closeFailed { note(failed, color: .red) }
+        if model.resultsStale {
+            note(tr("Page closed. Memory figures are from the previous check; measure again to update them."), color: .orange)
+        }
         if d.mode == .tabs && model.canMeasure && !model.measuring {
             VStack(alignment: .leading, spacing: 6) {
                 Text(tr("Which page leaks or uses the most memory? Measure every page twice, a minute apart.")).font(.callout)
@@ -266,7 +322,7 @@ struct ChromePagesView: View {
             Spacer(minLength: 6)
             Text(trailing).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
             Button(model.closing == url ? tr("Closing…") : closeTitle) { confirming = Target(url: url, title: title) }
-                .controlSize(.small).disabled(model.closing != nil)
+                .controlSize(.small).disabled(model.closing != nil || model.running)
         }
         .padding(embedded ? 12 : 8)
         .modifier(RowBackground(embedded: embedded, warn: warn))

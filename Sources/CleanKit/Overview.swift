@@ -21,6 +21,10 @@ public struct SpaceOverview: Codable, Sendable {
     public var purgeable: Int64
     public var entries: [Entry]
     public var duration: TimeInterval
+    public var cancelled: Bool? = nil
+    public var measuredAt: Date? = nil
+    public var language: String? = nil
+    public var unreadable: [String]? = nil
 
     public var used: Int64 { capacity - free }
 
@@ -36,8 +40,9 @@ public struct SpaceOverview: Codable, Sendable {
     /// Measures in parallel at background priority. `onProgress` gets each finished spot's title,
     /// `onEntry` the spot itself, so a UI can show results as they come in.
     public static func measure(home: String = NSHomeDirectory(), onProgress: ((String) -> Void)? = nil,
-                               onEntry: ((Entry) -> Void)? = nil) -> SpaceOverview {
+                               onEntry: ((Entry) -> Void)? = nil, cancellation: ScanCancellation = ScanCancellation()) -> SpaceOverview {
         let started = Date()
+        let language = L10n.current.rawValue
         let url = URL(fileURLWithPath: home)
         let values = try? url.resourceValues(forKeys: [.volumeTotalCapacityKey, .volumeAvailableCapacityKey,
                                                        .volumeAvailableCapacityForImportantUsageKey])
@@ -62,31 +67,44 @@ public struct SpaceOverview: Codable, Sendable {
             Spot(id: "homebrew", title: "Homebrew", paths: ["/opt/homebrew", "/usr/local"], children: 4),
         ]
 
+        var unreadable: [String] = []
         var entries = [Entry?](repeating: nil, count: spots.count)
         let lock = NSLock()
         let queue = OperationQueue()
-        queue.maxConcurrentOperationCount = max(2, ProcessInfo.processInfo.activeProcessorCount / 2)
-        queue.qualityOfService = .utility
+        queue.maxConcurrentOperationCount = min(4, max(1, ProcessInfo.processInfo.activeProcessorCount / 2))
+        queue.qualityOfService = .background
         for (i, spot) in spots.enumerated() {
             queue.addOperation {
-                let roots = spot.paths.filter(FS.exists)
+                guard !cancellation.isCancelled else { return }
+                var denied: [String] = []
+                let roots = spot.paths.filter { path in
+                    if FS.exists(path) { return true }
+                    if FS.size(path, cancellation: cancellation).denied { denied.append(path) }
+                    return false
+                }
                 // Measure each folder one level down once; the spot's total is their sum.
                 var kids: [Entry] = []
                 var total: Int64 = 0
                 for root in roots {
+                    if cancellation.isCancelled { return }
                     let inner = spot.children > 0 && FS.isDirectory(root) && !isBundle(root) ? FS.children(root) : [root]
+                    if inner.isEmpty, FS.size(root, cancellation: cancellation).denied { denied.append(root) }
                     for c in inner {
-                        let size = FS.size(c).allocated
+                        if cancellation.isCancelled { return }
+                        let measured = FS.size(c, cancellation: cancellation)
+                        if measured.denied { denied.append(c) }
+                        let size = measured.allocated
                         total += size
                         if spot.children > 0 && size > 0 {
                             kids.append(Entry(id: c, title: FS.tilde(c, home: home), path: c, bytes: size, children: []))
                         }
                     }
                 }
+                guard !cancellation.isCancelled else { return }
                 kids.sort { $0.bytes > $1.bytes }
                 let e = Entry(id: spot.id, title: spot.title, path: roots.count == 1 ? roots[0] : nil, bytes: total,
                               children: Array(kids.prefix(spot.children)), note: spot.note)
-                lock.lock(); entries[i] = e; lock.unlock()
+                lock.lock(); entries[i] = e; unreadable.append(contentsOf: denied); lock.unlock()
                 onEntry?(e)
                 onProgress?(spot.title)
             }
@@ -94,12 +112,14 @@ public struct SpaceOverview: Codable, Sendable {
         // Simulator runtimes live on their own disk images: same disk, no folder to measure.
         var runtimes: Entry?
         queue.addOperation {
+            guard !cancellation.isCancelled else { return }
             if let json = Shell.run("xcrun simctl runtime list -j 2>/dev/null", timeout: 30),
                let list = try? JSONDecoder().decode([String: Simulators.Runtime].self, from: Data(json.utf8)) {
                 let kids = list.values.map { r in
                     Entry(id: "runtime/" + r.identifier, title: Simulators.runtimeName(r.runtimeIdentifier, version: r.version),
                           path: nil, bytes: r.sizeBytes ?? 0, children: [])
                 }.sorted { $0.bytes > $1.bytes }
+                guard !cancellation.isCancelled else { return }
                 let total = kids.reduce(Int64(0)) { $0 + $1.bytes }
                 if total > 0 {
                     lock.lock()
@@ -112,16 +132,21 @@ public struct SpaceOverview: Codable, Sendable {
         }
         queue.waitUntilAllOperationsAreFinished()
 
-        var list = entries.compactMap { $0 } + [runtimes, swap()].compactMap { $0 }
+        var list = entries.compactMap { $0 } + (cancellation.isCancelled ? [] : [runtimes, swap()].compactMap { $0 })
         let counted = list.reduce(Int64(0)) { $0 + $1.bytes }
         let used = capacity - free
-        if used > counted {
+        if !cancellation.isCancelled, used > counted {
             list.append(Entry(id: "other", title: tr("Your files, projects and tool folders, and macOS"), path: nil, bytes: used - counted,
                               children: [], note: tr("not measured one by one; thermo clean finds what in here can go")))
         }
         list.sort { $0.bytes > $1.bytes }
-        return SpaceOverview(capacity: capacity, free: free, purgeable: max(0, important - free), entries: list,
-                             duration: Date().timeIntervalSince(started))
+        var result = SpaceOverview(capacity: capacity, free: free, purgeable: max(0, important - free), entries: list,
+                                   duration: Date().timeIntervalSince(started))
+        result.cancelled = cancellation.isCancelled
+        result.measuredAt = started
+        result.language = language
+        result.unreadable = Array(Set(unreadable)).sorted()
+        return result
     }
 
     /// Swap files live in the same container: when memory runs short, they take disk space.
@@ -138,16 +163,26 @@ public struct SpaceOverview: Codable, Sendable {
         URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Caches/dev.thermo/space-overview.json")
     }
 
-    public static func cached() -> (SpaceOverview, Date)? {
-        guard let data = try? Data(contentsOf: cacheURL),
-              let o = try? JSONDecoder().decode(SpaceOverview.self, from: data),
-              let at = (try? FileManager.default.attributesOfItem(atPath: cacheURL.path))?[.modificationDate] as? Date else { return nil }
-        return (o, at)
+    public static func cached(from url: URL = cacheURL, now: Date = Date()) -> (SpaceOverview, Date)? {
+        guard let data = try? Data(contentsOf: url),
+              let overview = try? JSONDecoder().decode(SpaceOverview.self, from: data),
+              overview.cancelled != true, overview.language == L10n.current.rawValue,
+              let measuredAt = overview.measuredAt, measuredAt <= now,
+              overview.capacity > 0, overview.free >= 0, overview.free <= overview.capacity,
+              overview.purgeable >= 0, overview.duration.isFinite, overview.duration >= 0,
+              validEntries(overview.entries) else { return nil }
+        return (overview, measuredAt)
     }
 
-    public func save() {
-        try? FileManager.default.createDirectory(at: Self.cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? JSONEncoder().encode(self).write(to: Self.cacheURL, options: .atomic)
+    private static func validEntries(_ entries: [Entry]) -> Bool {
+        var ids = Set<String>()
+        return entries.allSatisfy { $0.bytes >= 0 && ids.insert($0.id).inserted && validEntries($0.children) }
+    }
+
+    public func save(to url: URL = Self.cacheURL) {
+        guard cancelled != true else { return }
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? JSONEncoder().encode(self).write(to: url, options: .atomic)
     }
 
     static func isBundle(_ path: String) -> Bool {

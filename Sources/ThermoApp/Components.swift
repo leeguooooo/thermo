@@ -123,7 +123,7 @@ struct ConfirmSheet: View {
     let cancel: () -> Void
 
     var list: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        LazyVStack(alignment: .leading, spacing: 4) {
             ForEach(Array(lines.enumerated()), id: \.offset) { _, l in
                 Text(l).font(.caption.monospaced()).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
             }
@@ -257,10 +257,11 @@ struct IconTile: View {
 
 /// Presses in slightly and springs back.
 struct PressableStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.95 : 1)
-            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.95 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
 
@@ -326,6 +327,7 @@ struct HeroStatus: View {
     var progress: Double? = nil
     var spinning = false
     @State private var pulse = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 16) {
@@ -333,7 +335,7 @@ struct HeroStatus: View {
                 // Animate only this halo: a repeatForever started with withAnimation in onAppear would also
                 // animate the first layout of the whole window, and everything would drift forever.
                 Circle().fill(color.opacity(0.10)).frame(width: 190, height: 190).scaleEffect(pulse ? 1.06 : 0.96)
-                    .animation(.easeInOut(duration: 2.4).repeatForever(), value: pulse)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 2.4).repeatForever(), value: pulse)
                 Circle().stroke(color.opacity(0.25), lineWidth: 1).frame(width: 162, height: 162)
                 if let progress {
                     Circle().trim(from: 0, to: max(0.02, progress))
@@ -347,7 +349,7 @@ struct HeroStatus: View {
                                 style: StrokeStyle(lineWidth: 6, lineCap: .round))
                         .frame(width: 162, height: 162)
                         .rotationEffect(.degrees(pulse ? 360 : 0))
-                        .animation(.linear(duration: 1.2).repeatForever(autoreverses: false), value: pulse)
+                        .animation(reduceMotion ? nil : .linear(duration: 1.2).repeatForever(autoreverses: false), value: pulse)
                 }
                 Circle().fill(LinearGradient(colors: [color, color.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(width: 118, height: 118)
@@ -417,7 +419,9 @@ struct RingGauge: View {
     var colors: [Color] = [.green, .yellow, .orange, .red]
 
     var color: Color {
-        let i = min(colors.count - 1, max(0, Int((value * Double(colors.count)).rounded(.down))))
+        guard !colors.isEmpty else { return .secondary }
+        let normalized = value.isFinite ? min(1, max(0, value)) : 0
+        let i = min(colors.count - 1, Int(normalized * Double(colors.count)))
         return colors[i]
     }
 

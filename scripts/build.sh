@@ -22,7 +22,7 @@ APPCAST_URL="${APPCAST_URL:-}"
 ARCHS="${ARCHS:-}"
 VERSION="$(sed -n 's/.*static let string = "\(.*\)"/\1/p' Sources/ThermoKit/Version.swift)"
 BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
-DIST=dist
+DIST="${THERMO_DIST_DIR:-dist}"
 RELEASES=releases
 SPARKLE_BIN=.build/artifacts/sparkle/Sparkle/bin
 

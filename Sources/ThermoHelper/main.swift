@@ -107,6 +107,7 @@ final class Controller {
     }
 
     func setPolicy(_ policy: FanPolicy, fan: Int) throws {
+        try policy.validate()
         let ids = fan == -1 ? sampler.discovery.fans.map(\.index) : [fan]
         for id in ids {
             guard sampler.discovery.fans.contains(where: { $0.index == id }) else { throw FanControlError.noSuchFan(id) }

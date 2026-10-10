@@ -10,6 +10,8 @@ final class SystemPulse: ObservableObject {
     static let shared = SystemPulse()
 
     @Published private(set) var current: MachinePulse?
+    @Published private(set) var quitProblem: String?
+    @Published private(set) var quitting: Set<String> = []
     private let queue = DispatchQueue(label: "dev.thermo.app.pulse", qos: .utility)
     private var timer: DispatchSourceTimer?
     /// Confined to `queue`. Kept across start/stop so reopening shows fresh numbers in one cheap pass.
@@ -49,18 +51,59 @@ final class SystemPulse: ObservableObject {
 
     private func sample() {
         let p = sampler.sample()
-        DispatchQueue.main.async { self.current = p }
+        DispatchQueue.main.async {
+            var pulse = p
+            for index in pulse.hogs.indices {
+                if let path = pulse.hogs[index].app,
+                   let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.standardizedFileURL.path == path }) {
+                    pulse.hogs[index].applicationIdentity = ProcessTable.identity(app.processIdentifier)
+                }
+            }
+            self.current = pulse
+        }
     }
 
     /// Apps are asked to quit (they may save or refuse); other processes get SIGTERM.
     func quit(_ hog: Hog) {
-        if let path = hog.app,
-           let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.standardizedFileURL.path == path }) {
-            app.terminate()
+        quitProblem = nil
+        guard hog.quittable, !quitting.contains(hog.id) else { return }
+        if let path = hog.app {
+            guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.standardizedFileURL.path == path }),
+                  let expected = hog.applicationIdentity,
+                  Self.canSignal(expected, current: ProcessTable.identity(app.processIdentifier)) else {
+                quitProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", hog.name)
+                return
+            }
+            if !app.terminate() { quitProblem = tr("%1$@ did not accept the quit request. Check its dialogs.", hog.name) }
         } else {
-            for pid in hog.pids where pid != getpid() { kill(pid, SIGTERM) }
+            let identities = hog.processIdentities ?? []
+            var skipped = identities.count != hog.pids.count
+            for expected in identities {
+                guard hog.pids.contains(expected.pid), Self.canSignal(expected, current: ProcessTable.identity(expected.pid)) else {
+                    skipped = true
+                    continue
+                }
+                if kill(expected.pid, SIGTERM) != 0 { skipped = true }
+            }
+            if skipped { quitProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", hog.name) }
         }
+        quitting.insert(hog.id)
         queue.asyncAfter(deadline: .now() + 1) { [weak self] in self?.sample() }
+        let identities = hog.app == nil ? hog.processIdentities ?? [] : hog.applicationIdentity.map { [$0] } ?? []
+        queue.asyncAfter(deadline: .now() + 5) { [weak self] in
+            let stillRunning = identities.contains { Self.canSignal($0, current: ProcessTable.identity($0.pid)) }
+            DispatchQueue.main.async {
+                self?.quitting.remove(hog.id)
+                if stillRunning {
+                    self?.quitProblem = tr("%1$@ is still running. Check any save dialogs before trying again.", hog.name)
+                }
+            }
+            self?.sample()
+        }
+    }
+
+    static func canSignal(_ expected: ProcessIdentity, current: ProcessIdentity?, uid: UInt32 = getuid(), me: Int32 = getpid()) -> Bool {
+        expected.pid > 1 && expected.pid != me && expected.uid == uid && expected == current
     }
 
     /// The app being restarted, while it quits and comes back.
@@ -71,9 +114,15 @@ final class SystemPulse: ObservableObject {
     /// Quit like ⌘Q, wait until every process of it has gone, then open it again; it restores its
     /// own windows and tabs. Gives up (and says so) if it is still running after a minute.
     func restart(_ hog: Hog) {
+        guard hog.quittable, restarting == nil, !quitting.contains(hog.id) else { return }
         guard let path = hog.app,
               let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.standardizedFileURL.path == path })
         else { return }
+        guard let expected = hog.applicationIdentity,
+              Self.canSignal(expected, current: ProcessTable.identity(app.processIdentifier)) else {
+            restartProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", hog.name)
+            return
+        }
         restarting = hog.name
         restartProblem = nil
         let pids = hog.pids, name = hog.name
@@ -97,18 +146,39 @@ final class SystemPulse: ObservableObject {
             let gone = !pids.contains(where: { kill($0, 0) == 0 })
             if gone {
                 let opened = DispatchSemaphore(value: 0)
-                NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: path), configuration: .init()) { _, _ in opened.signal() }
-                _ = opened.wait(timeout: .now() + 30)
-                if let saved, !BrowserSession.reopen(saved) {
+                let outcome = LaunchOutcome()
+                NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: path), configuration: .init()) { app, error in
+                    outcome.record(app != nil && error == nil)
+                    opened.signal()
+                }
+                let completed = opened.wait(timeout: .now() + 30) == .success
+                if !completed || !outcome.succeeded {
+                    DispatchQueue.main.async {
+                        self?.restartProblem = tr("Could not reopen %1$@. Open it manually.", name)
+                            + (saved == nil ? "" : " " + tr("Saved tabs are in %1$@.", BrowserSession.backupURL().path))
+                    }
+                } else if let saved, !BrowserSession.reopen(saved) {
                     DispatchQueue.main.async {
                         self?.restartProblem = tr("%1$@ restarted, but its tabs could not be reopened. They are listed in %2$@.", name, BrowserSession.backupURL().path)
                     }
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self?.restartProblem = tr("%1$@ is still running. Finish any save dialogs, then try again.", name)
                 }
             }
             DispatchQueue.main.async { self?.restarting = nil }
             self?.queue.asyncAfter(deadline: .now() + 3) { self?.sample() }
         }
     }
+}
+
+/// The workspace completion and the waiting background queue exchange one result.
+private final class LaunchOutcome: @unchecked Sendable {
+    private let lock = NSLock()
+    private var success = false
+    func record(_ success: Bool) { lock.lock(); self.success = success; lock.unlock() }
+    var succeeded: Bool { lock.lock(); defer { lock.unlock() }; return success }
 }
 
 struct PulseCard: View {
@@ -156,8 +226,9 @@ struct PulseCard: View {
                     // Fixed width whether or not there is a button, so the columns line up.
                     Group {
                         if h.quittable && !renderingPreview {
-                            Button(h.app != nil ? tr("Quit") : tr("End")) { confirming = h }
+                            Button(pulse.quitting.contains(h.id) ? tr("Stopping…") : h.app != nil ? tr("Quit") : tr("End")) { confirming = h }
                                 .controlSize(.small).modifier(ActionButtonStyle(prominent: false))
+                                .disabled(pulse.quitting.contains(h.id) || pulse.restarting == h.name)
                         } else {
                             Color.clear.frame(height: 1)
                         }
@@ -194,6 +265,9 @@ struct PulseCard: View {
                     .padding(.leading, 28)
                 }
             }
+            if let problem = pulse.quitProblem {
+                Text(problem).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true).padding(.leading, 28)
+            }
             if let problem = pulse.restartProblem {
                 Text(problem).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true).padding(.leading, 28)
             }
@@ -202,7 +276,7 @@ struct PulseCard: View {
             }
             PulseHistoryChart()
             HStack(spacing: 10) {
-                label(tr("Temperature"), thermalText, thermalColor)
+                label(tr("Thermal pressure"), thermalText, thermalColor)
                 label(tr("Memory"), memoryText, pulse.memory == .normal ? .secondary : pulse.memory == .warning ? .orange : .red)
             }
             .padding(.leading, 28)

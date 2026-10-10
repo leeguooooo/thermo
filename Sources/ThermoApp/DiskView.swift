@@ -26,6 +26,7 @@ final class DiskModel: ObservableObject {
     }
     /// The scope changed since the results were found; scan again to refresh.
     @Published private(set) var stale = false
+    @Published private(set) var resultsNeedRefresh = false
     /// The scan in progress, so it can be stopped.
     private var scanner: DiskScanner?
     @Published private(set) var stopping = false
@@ -35,6 +36,8 @@ final class DiskModel: ObservableObject {
     @Published private(set) var cleaningStep = ""
     @Published private(set) var cleaningDone = 0
     @Published private(set) var cleaningTotal = 0
+
+    init(report: ScanReport? = nil) { self.report = report }
 
     private let queue = DispatchQueue(label: "dev.thermo.app.disk", qos: .background)
 
@@ -69,11 +72,14 @@ final class DiskModel: ObservableObject {
     }
 
     func scan() {
-        guard !scanning else { return }
+        guard !scanning, !cleaning else { return }
         Monitor.requestNotificationPermission()
         scanning = true
         stopping = false
         stale = false
+        resultsNeedRefresh = false
+        error = nil
+        lastResult = nil
         progress = tr("starting…")
         report = nil
         selected = []
@@ -98,14 +104,24 @@ final class DiskModel: ObservableObject {
             let r = scanner.scan()
             DispatchQueue.main.async {
                 guard let self else { return }
-                self.report = r
-                self.selected = self.selected.intersection(r.items.map(\.id))
-                    .union(r.items.filter { $0.cleanable && $0.safety == .safe }.map(\.id))
+                self.acceptScan(r)
                 self.scanning = false
                 self.stopping = false
                 self.scanner = nil
                 if !r.cancelled { self.notifyFinished(r) }
             }
+        }
+    }
+
+    /// Preserve choices made while partial results were arriving. Only newly discovered safe items are selected.
+    func acceptScan(_ result: ScanReport) {
+        let seen = Set(report?.items.map(\.id) ?? [])
+        let newSafe = result.items.filter { !seen.contains($0.id) && $0.cleanable && $0.safety == .safe }
+        selected = selected.intersection(result.items.filter(\.cleanable).map(\.id)).union(newSafe.map(\.id))
+        report = result
+        if let categories = result.categories {
+            let expected = scope == .ai ? CleanCategory.allCases.filter(\.isAI) : CleanCategory.allCases
+            stale = Set(categories) != Set(expected)
         }
     }
 
@@ -131,30 +147,40 @@ final class DiskModel: ObservableObject {
     func clean() {
         let items = selectedItems
         let scannedAt = report?.started
-        guard !items.isEmpty, !cleaning else { return }
+        let originals = Dictionary(uniqueKeysWithValues: (report?.items ?? []).map { ($0.id, $0) })
+        guard !items.isEmpty, !cleaning, !scanning else { return }
         cleaning = true
         cleaningDone = 0
         cleaningTotal = items.count
         queue.async { [weak self] in
+            ScanReportCache.invalidate()
             var freed: Int64 = 0, trashed: Int64 = 0, failures = 0
+            var remaining: [String: CleanItem] = [:]
             for (n, i) in items.enumerated() {
                 DispatchQueue.main.async { self?.cleaningStep = i.title; self?.cleaningDone = n }
                 let r = Cleaner.clean(i, scannedAt: scannedAt)
                 if r.trashed { trashed += r.bytes } else { freed += r.bytes }
                 failures += r.failed.count
+                if let original = originals[i.id], let rest = Self.remainder(original, attempted: i, result: r) {
+                    remaining[i.id] = rest
+                }
             }
             var text = tr("freed %1$@", ByteFormat.string(freed))
             if trashed > 0 { text += tr(", %1$@ moved to the Trash", ByteFormat.string(trashed)) }
             if failures > 0 { text += " · " + trCount(failures, "%1$@ path could not be removed (see log)", "%1$@ paths could not be removed (see log)") }
+            let remainingItems = remaining
+            let hadFailures = failures > 0
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.cleaning = false
+                self.cleaningDone = self.cleaningTotal
+                self.resultsNeedRefresh = hadFailures
                 self.cleaningStep = ""
                 self.lastResult = text
                 // Drop what was cleaned instead of rescanning the whole disk.
                 let cleaned = Set(items.map(\.id))
                 if var r = self.report {
-                    r.items.removeAll { cleaned.contains($0.id) }
+                    r.items = r.items.compactMap { cleaned.contains($0.id) ? remainingItems[$0.id] : $0 }
                     self.report = r
                 }
                 self.selected.subtract(cleaned)

@@ -36,7 +36,8 @@ enum BulkWalk {
 
     /// Calls `body` for every entry of `dir` (not recursive). Returns false if it can't be read.
     @discardableResult
-    static func entries(of dir: String, _ body: (Entry) -> Void) -> Bool {
+    static func entries(of dir: String, cancellation: ScanCancellation? = nil, _ body: (Entry) -> Void) -> Bool {
+        let cancellation = cancellation ?? ScanCancellation.current
         let fd = open(dir, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)
         guard fd >= 0 else { return false }
         defer { close(fd) }
@@ -46,7 +47,7 @@ enum BulkWalk {
         defer { buf.deallocate() }
         while true {
             // Checked per batch, so a huge flat folder stops promptly too.
-            if ScanCancellation.current?.isCancelled == true { return true }
+            if cancellation?.isCancelled == true { return true }
             let n = getattrlistbulk(fd, &list, buf, bufSize, options)
             if n < 0 { return false }
             if n == 0 { return true }
@@ -86,7 +87,8 @@ enum BulkWalk {
     /// Reclaimable bytes: a hard-linked file only counts when all its links are inside the tree
     /// (pnpm and bun link node_modules to a global store, so deleting node_modules frees nothing);
     /// a large file counts only its private blocks (APFS clones share theirs).
-    static func size(_ root: String, trackNewest: Bool, device: dev_t) -> TreeSize? {
+    static func size(_ root: String, trackNewest: Bool, device: dev_t, cancellation: ScanCancellation? = nil) -> TreeSize? {
+        let cancellation = cancellation ?? ScanCancellation.current
         var r = TreeSize()
         var linked: [UInt64: (links: UInt32, seen: UInt32, bytes: Int64)] = [:]
         var stack = [root]
@@ -94,8 +96,8 @@ enum BulkWalk {
         var visited = 0
         while let dir = stack.popLast() {
             visited += 1
-            if ScanCancellation.current?.isCancelled == true { break }
-            let ok = entries(of: dir) { e in
+            if cancellation?.isCancelled == true { break }
+            let ok = entries(of: dir, cancellation: cancellation) { e in
                 if e.error != 0 {
                     if e.error == EACCES || e.error == EPERM { r.denied = true }
                     return

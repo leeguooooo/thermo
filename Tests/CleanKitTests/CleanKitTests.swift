@@ -374,6 +374,14 @@ final class CleanKitTests: XCTestCase {
         XCTAssertNil(PulseSampler.recognise(name: "zsh", executable: "/bin/zsh"))
     }
 
+    func testRetainedSwapDoesNotExplainSlownessWhenPressureAndLoadAreNormal() {
+        let hog = MachinePulse.Hog(id: "fixture", name: "Fixture", cpu: 1, memoryKB: 200_000, pids: [42], app: nil, quittable: true)
+        let pulse = MachinePulse(load1: 0.5, load5: 0.5, cores: 8, thermal: .nominal, memory: .normal,
+                                 swapUsedMB: 16 * 1024, hogs: [hog], sampled: now)
+        XCTAssertEqual(pulse.verdict, .ok)
+        XCTAssertNil(pulse.culpritText)
+    }
+
     func testPulseNamesACulpritOnlyWhenItExplainsTheLoad() {
         let hog = MachinePulse.Hog(id: "a", name: "ffmpeg", cpu: 160, memoryKB: 100_000, pids: [1], app: nil, quittable: true)
         var p = MachinePulse(load1: 3, load5: 3, cores: 8, thermal: .nominal, memory: .normal, swapUsedMB: 0, hogs: [hog], sampled: now)
@@ -590,5 +598,50 @@ final class CleanKitTests: XCTestCase {
         let s = FS.size(home + "/t")
         XCTAssertEqual(s.files, 1)
         XCTAssertLessThan(s.bytes, 200_000)
+    }
+}
+
+final class CleanReportInvalidationTests: XCTestCase {
+    func testInvalidationDropsSavedScan() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: home) }
+        let report = ScanReport(items: [], denied: [], started: Date(), duration: 1)
+        ScanReportCache.save(report, home: home.path)
+        XCTAssertNotNil(ScanReportCache.load(home: home.path, maxAge: 3600))
+        ScanReportCache.invalidate(home: home.path)
+        XCTAssertNil(ScanReportCache.load(home: home.path, maxAge: 3600))
+    }
+}
+
+final class SpaceCancellationTests: XCTestCase {
+    func testExplicitCancellationDoesNotInheritAnotherScansToken() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: home) }
+        try Data(repeating: 1, count: 8192).write(to: home.appendingPathComponent("fixture"))
+        let previous = ScanCancellation.current
+        let cancelled = ScanCancellation()
+        cancelled.cancel()
+        ScanCancellation.current = cancelled
+        defer { ScanCancellation.current = previous }
+        let independent = ScanCancellation()
+        XCTAssertGreaterThan(FS.size(home.path, cancellation: independent).allocated, 0)
+        XCTAssertEqual(FS.size(home.path, cancellation: cancelled).files, 0)
+    }
+
+    func testPreCancelledOverviewDoesNotPublishOrCachePartialResults() throws {
+        let token = ScanCancellation()
+        token.cancel()
+        var published = 0
+        let overview = SpaceOverview.measure(home: NSTemporaryDirectory(), onEntry: { _ in published += 1 }, cancellation: token)
+        XCTAssertEqual(overview.cancelled, true)
+        XCTAssertTrue(overview.entries.isEmpty)
+        XCTAssertEqual(published, 0)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let previous = Data("previous complete cache".utf8)
+        try previous.write(to: url)
+        overview.save(to: url)
+        XCTAssertEqual(try Data(contentsOf: url), previous)
     }
 }

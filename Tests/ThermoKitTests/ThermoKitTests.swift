@@ -96,6 +96,22 @@ final class CatalogTests: XCTestCase {
 }
 
 final class CurveTests: XCTestCase {
+    func testRejectsInvalidAndAmbiguousCurves() {
+        for text in ["NaN:2000", "inf:2000", "50:inf", "50:nan", "50:2000,50:3000", "50:min,", ",50:min", "50:min,,70:max"] {
+            XCTAssertThrowsError(try FanCurve(parsing: text), text)
+        }
+        XCTAssertThrowsError(try FanPolicy.fixed(rpm: .nan).validate())
+        XCTAssertThrowsError(try FanPolicy.fixed(rpm: -.infinity).validate())
+        XCTAssertNoThrow(try FanPolicy.fixed(rpm: .infinity).validate())
+        XCTAssertThrowsError(try FanPolicy.curve(FanCurve(points: [.init(.nan, 3000)])).validate())
+    }
+
+    func testDecimalCurveSurvivesEditingRoundTrip() throws {
+        let curve = try FanCurve(parsing: "50.125:min,70.75:3000.5,85.25:max", sensor: .gpu)
+        XCTAssertEqual(try FanCurve(parsing: curve.pointsText, sensor: curve.sensor), curve)
+        XCTAssertEqual(curve.rpm(at: 70.75, min: 1000, max: 6000), 3000.5)
+    }
+
     func testParse() throws {
         let c = try FanCurve(parsing: "70:3000, 50:min,85:max", sensor: .gpu)
         XCTAssertEqual(c.points.map(\.temperature), [50, 70, 85], "points are sorted")
@@ -380,6 +396,16 @@ final class HelperSelfUpdateTests: XCTestCase {
 }
 
 final class PolicyStoreTests: XCTestCase {
+    func testCorruptPoliciesAreSkippedWithoutLosingValidFans() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let policies: [String: FanPolicy] = ["0": .fixed(rpm: 3000), "00": .fixed(rpm: 4000), "1": .fixed(rpm: .nan),
+                                           "2": .curve(FanCurve(points: [.init(50, 2000), .init(50, 3000)]))]
+        try PolicyCoding.encoder().encode(policies).write(to: url)
+        XCTAssertEqual(PolicyStore.load(from: url.path), [0: .fixed(rpm: 3000)])
+        XCTAssertThrowsError(try PolicyStore.save([1: .fixed(rpm: .nan)], to: url.path))
+    }
+
     func testPoliciesSurviveARoundTrip() throws {
         let path = FileManager.default.temporaryDirectory.appendingPathComponent("policies-\(UUID().uuidString)/p.json").path
         defer { try? FileManager.default.removeItem(atPath: (path as NSString).deletingLastPathComponent) }

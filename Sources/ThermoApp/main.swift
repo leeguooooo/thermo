@@ -52,14 +52,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         DistributedNotificationCenter.default().addObserver(forName: Notification.Name("dev.thermo.settingsChanged"), object: nil, queue: .main) { [weak self] _ in
             UserDefaults.standard.synchronize()
             L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
-            self?.monitor.reschedule()
-            self?.applyDockPreference()
-            if let s = self?.monitor.latest { self?.updateTitle(s) }
+            MainActor.assumeIsolated {
+                self?.monitor.reschedule()
+                self?.applyDockPreference()
+                if let s = self?.monitor.latest { self?.updateTitle(s) }
+            }
             NotificationCenter.default.post(name: UserDefaults.didChangeNotification, object: nil)
         }
         NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            if let s = self?.monitor.latest { self?.updateTitle(s) }
-            self?.applyDockPreference()
+            MainActor.assumeIsolated {
+                if let s = self?.monitor.latest { self?.updateTitle(s) }
+                self?.applyDockPreference()
+            }
         }
     }
 
@@ -104,6 +108,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         appMenu.addItem(withTitle: tr("Quit Thermo"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         NSApp.mainMenu = main
+        installStandardMenus()
     }
 
     @objc private func openFromMenu() { MainWindow.show() }
@@ -218,6 +223,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 }
 
+/// AppKit routes text editing shortcuts through the menu even for SwiftUI text fields.
+@MainActor func installStandardMenus() {
+    let main = NSApp.mainMenu ?? NSMenu()
+    NSApp.mainMenu = main
+    guard !main.items.contains(where: { $0.identifier?.rawValue == "thermo.edit" }) else { return }
+    if main.items.isEmpty { main.addItem(NSMenuItem()) }
+    let item = NSMenuItem(title: tr("Edit"), action: nil, keyEquivalent: "")
+    item.identifier = NSUserInterfaceItemIdentifier("thermo.edit")
+    let menu = NSMenu(title: tr("Edit"))
+    menu.addItem(withTitle: tr("Undo"), action: Selector(("undo:")), keyEquivalent: "z")
+    let redo = menu.addItem(withTitle: tr("Redo"), action: Selector(("redo:")), keyEquivalent: "z")
+    redo.keyEquivalentModifierMask = [.command, .shift]
+    menu.addItem(.separator())
+    menu.addItem(withTitle: tr("Cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+    menu.addItem(withTitle: tr("Copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+    menu.addItem(withTitle: tr("Paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+    menu.addItem(withTitle: tr("Select All"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+    item.submenu = menu
+    main.addItem(item)
+    let windowItem = NSMenuItem(title: tr("Window"), action: nil, keyEquivalent: "")
+    let windowMenu = NSMenu(title: tr("Window"))
+    windowMenu.addItem(withTitle: tr("Close Window"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+    windowMenu.addItem(withTitle: tr("Minimize"), action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+    windowMenu.addItem(withTitle: tr("Zoom"), action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
+    windowItem.submenu = windowMenu
+    main.addItem(windowItem)
+    NSApp.windowsMenu = windowMenu
+}
+
 L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
 let app = NSApplication.shared
 if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < CommandLine.arguments.count {
@@ -230,6 +264,8 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
 /// draws the window into a PNG once the page has its data, and quits (verification).
 /// `--fixture BEFORE.json AFTER.json` shows two saved browser samples instead of measuring.
 @MainActor func openMainOnly(_ args: [String]) {
+    Settings.register()
+    installStandardMenus()
     let models = AppModels.shared
     func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
     var page = value(after: "--page").flatMap(MainPage.init(argument:)) ?? .overview

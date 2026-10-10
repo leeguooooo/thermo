@@ -11,12 +11,14 @@ enum SystemStats {
     static func memory() -> Memory? {
         var stats = vm_statistics64()
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
+        let host = mach_host_self()
+        defer { mach_port_deallocate(mach_task_self_, host) }
         let r = withUnsafeMutablePointer(to: &stats) {
-            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &count) }
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { host_statistics64(host, HOST_VM_INFO64, $0, &count) }
         }
         guard r == KERN_SUCCESS else { return nil }
         let page = UInt64(vm_kernel_page_size)
-        let app = UInt64(stats.internal_page_count) - UInt64(stats.purgeable_count)
+        let app = UInt64(stats.internal_page_count) - min(UInt64(stats.internal_page_count), UInt64(stats.purgeable_count))
         let used = (app + UInt64(stats.wire_count) + UInt64(stats.compressor_page_count)) * page
         return Memory(usedBytes: used, totalBytes: ProcessInfo.processInfo.physicalMemory)
     }

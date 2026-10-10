@@ -42,7 +42,11 @@ public final class PulseSampler {
                                     uptime: ProcessTable.started(u.pid).map { Date().timeIntervalSince($0) }))
         }
         let memory = MachinePulse.memoryLevel()
-        return MachinePulse.measure(hogs: MachinePulse.group(candidates, byMemory: memory != .normal, me: getpid()))
+        var pulse = MachinePulse.measure(hogs: MachinePulse.group(candidates, byMemory: memory != .normal, me: getpid()))
+        for index in pulse.hogs.indices {
+            pulse.hogs[index].processIdentities = pulse.hogs[index].pids.compactMap(ProcessTable.identity)
+        }
+        return pulse
     }
 
     private func remember(_ usage: [ProcessUsage], at: UInt64) {

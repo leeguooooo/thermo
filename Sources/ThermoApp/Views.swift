@@ -152,9 +152,9 @@ struct QuickFanSwitch: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            option(tr("Auto"), on: current == .auto) { monitor.setPolicy(.auto, fan: fan.id) }
-            option(tr("Max"), on: isMax) { monitor.setPolicy(.fixed(rpm: .infinity), fan: fan.id) }
-            if isCustom {
+            option(tr("Auto"), on: monitor.policiesAvailable && current == .auto) { monitor.setPolicy(.auto, fan: fan.id) }
+            option(tr("Max"), on: monitor.policiesAvailable && isMax) { monitor.setPolicy(.fixed(rpm: .infinity), fan: fan.id) }
+            if monitor.policiesAvailable && isCustom {
                 option(tr("Custom"), on: true) { MainWindow.show(.fans) }
             }
         }
@@ -167,7 +167,7 @@ struct QuickFanSwitch: View {
                 .background(Capsule().fill(on ? Color.accentColor.opacity(0.85) : Color.secondary.opacity(0.15)))
                 .foregroundStyle(on ? Color.white : Color.primary)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.plain).disabled(monitor.applyingPolicies)
     }
 }
 
@@ -243,20 +243,38 @@ struct BatteryRow: View {
 
 struct TemperatureChart: View {
     let history: [HistoryPoint]
+    @AppStorage(Settings.fahrenheit) private var fahrenheit = false
+
+    func temperature(_ c: Double) -> Double { fahrenheit ? c * 9 / 5 + 32 : c }
+
+    var domain: ClosedRange<Double> {
+        let values = history.flatMap { [$0.cpu, $0.gpu].compactMap { $0 } }.filter(\.isFinite)
+        let lower = min(20, (values.min() ?? 20) - 5)
+        let upper = max(105, (values.max() ?? 105) + 5)
+        return temperature(lower)...temperature(upper)
+    }
+
     var body: some View {
         Chart {
             ForEach(history) { p in
-                if let c = p.cpu {
-                    LineMark(x: .value("Time", p.time), y: .value("°C", c), series: .value("Sensor", "CPU"))
+                if let c = p.cpu, c.isFinite {
+                    LineMark(x: .value("Time", p.time), y: .value(fahrenheit ? "°F" : "°C", temperature(c)), series: .value("Sensor", "CPU"))
                         .foregroundStyle(by: .value("Sensor", "CPU"))
                 }
-                if let g = p.gpu {
-                    LineMark(x: .value("Time", p.time), y: .value("°C", g), series: .value("Sensor", "GPU"))
+                if let g = p.gpu, g.isFinite {
+                    LineMark(x: .value("Time", p.time), y: .value(fahrenheit ? "°F" : "°C", temperature(g)), series: .value("Sensor", "GPU"))
                         .foregroundStyle(by: .value("Sensor", "GPU"))
                 }
             }
         }
-        .chartYScale(domain: 20...105)
+        .chartYScale(domain: domain)
+        .chartYAxisLabel(fahrenheit ? "°F" : "°C")
+        .chartOverlay { _ in
+            if !history.contains(where: { $0.cpu?.isFinite == true || $0.gpu?.isFinite == true }) {
+                Text(tr("Waiting for temperature readings…")).font(.caption).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
         .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisGridLine(); AxisValueLabel(format: .dateTime.hour().minute()) } }
         .chartLegend(position: .top, alignment: .trailing)
         .frame(height: 110)
@@ -356,10 +374,11 @@ struct FansView: View {
                 ForEach(s.fans) { f in
                     // Always usable: without a helper, Apply queues the setting and starts setup.
                     FanControlCard(fan: f, policy: monitor.pendingPolicies[f.id] ?? monitor.policies[f.id] ?? .auto,
-                                   enabled: true) { monitor.setPolicy($0, fan: f.id) }
+                                   enabled: !monitor.applyingPolicies, pending: monitor.pendingPolicies[f.id] != nil,
+                                   policyAvailable: monitor.policiesAvailable, applying: monitor.applyingPolicies) { monitor.setPolicy($0, fan: f.id) }
                 }
                 if s.fans.count > 1 && [.running, .outdated].contains(monitor.helperState) {
-                    Button(tr("All fans to Auto")) { monitor.setPolicy(.auto, fan: -1) }
+                    Button(tr("All fans to Auto")) { monitor.setPolicy(.auto, fan: -1) }.disabled(monitor.applyingPolicies)
                 }
             }
             FanChart(history: monitor.history)
@@ -379,17 +398,21 @@ struct FansView: View {
             setupCard(icon: "arrow.triangle.2.circlepath", title: tr("Updating the fan helper…"),
                       body: tr("It switches to the new version by itself in a few seconds."), primary: nil)
         case .notRunning:
-            setupCard(icon: "exclamationmark.triangle", title: tr("The fan helper stopped"),
-                      body: tr("Thermo can set it up again. macOS asks for your password once."),
-                      primary: (tr("Fix…"), { monitor.beginSetup() }))
-        case .notInstalled, .unknown, .needsApproval:
+            setupCard(icon: "exclamationmark.triangle", title: tr("Could not connect to the fan helper"),
+                      body: tr("Check the connection again, or reinstall the helper. macOS may ask for an administrator password."),
+                      primary: (tr("Retry"), { monitor.refreshHelper() }),
+                      secondary: (tr("Reinstall…"), { monitor.beginSetup() }))
+        case .unknown:
+            setupCard(icon: "hourglass", title: tr("Checking the fan helper…"),
+                      body: tr("Reading the helper’s status. You can keep viewing sensor readings."), primary: nil)
+        case .notInstalled, .needsApproval:
             setupCard(icon: "fan", title: tr("Let Thermo control the fans"),
-                      body: tr("Fan control uses a small helper that runs with system rights. It only sets fan speeds within the fan's own limits, and hands the fans back to macOS when Thermo quits or the Mac gets too hot. macOS asks for your password once; updates need nothing more."),
+                      body: tr("Fan control uses a small helper that runs with system rights. It only sets fan speeds within the fan's own limits, and hands the fans back to macOS when the helper stops or the Mac gets too hot. macOS asks for your password once; updates need nothing more."),
                       primary: (tr("Allow…"), { monitor.beginSetup() }))
         }
     }
 
-    func setupCard(icon: String, title: String, body: String, primary: (String, () -> Void)?) -> some View {
+    func setupCard(icon: String, title: String, body: String, primary: (String, () -> Void)?, secondary: (String, () -> Void)? = nil) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: icon).font(.title3).foregroundStyle(Color.accentColor).frame(width: 22)
@@ -409,6 +432,9 @@ struct FansView: View {
                         Text(tr("Setting up…")).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
+                    if let secondary {
+                        Button(secondary.0, action: secondary.1).controlSize(.small).disabled(monitor.settingUp)
+                    }
                     if let primary {
                         Button(primary.0, action: primary.1).controlSize(.small)
                             .modifier(ActionButtonStyle(prominent: true)).disabled(monitor.settingUp)
@@ -425,6 +451,9 @@ struct FanControlCard: View {
     let fan: FanReading
     let policy: FanPolicy
     let enabled: Bool
+    var pending = false
+    var policyAvailable = true
+    var applying = false
     let apply: (FanPolicy) -> Void
 
     @State private var mode: FanMode = .auto
@@ -439,14 +468,14 @@ struct FanControlCard: View {
             FanRow(fan: fan)
             Picker(tr("Mode"), selection: $mode) { ForEach(FanMode.allCases) { Text($0.title).tag($0) } }
                 .pickerStyle(.segmented)
-                .labelsHidden()
+                .labelsHidden().accessibilityLabel(tr("Mode"))
                 .disabled(!enabled)
             switch mode {
             case .auto:
                 EmptyView()
             case .fixed:
                 HStack {
-                    Slider(value: $rpm, in: fan.min...max(fan.max, fan.min + 1), step: 100)
+                    Slider(value: $rpm, in: fan.min...max(fan.max, fan.min + 1), step: 100).accessibilityLabel(tr("Fan speed"))
                     Text(tr("%1$@ rpm", String(Int(rpm)))).monospacedDigit().frame(width: 76, alignment: .trailing)
                 }
             case .curve:
@@ -457,18 +486,23 @@ struct FanControlCard: View {
                 }
                 if preset == .custom {
                     TextField("TEMP:RPM,…", text: $customCurve).textFieldStyle(.roundedBorder).font(.callout.monospaced())
+                        .accessibilityLabel(tr("Custom fan curve"))
+                        .onChange(of: customCurve) { _ in curveError = nil }
+                    Text(tr("Curve temperatures use °C. RPM is limited to this fan’s range."))
+                        .font(.caption).foregroundStyle(.secondary)
                 } else if let c = preset.curve {
-                    Text(c.points.map { "\(Int($0.temperature))°→\($0.rpm.isInfinite ? "max" : $0.rpm == 0 ? "min" : String(Int($0.rpm)))" }.joined(separator: "  "))
+                    Text(c.points.map { "\(Int($0.temperature))°C→\($0.rpm.isInfinite ? "max" : $0.rpm == 0 ? "min" : String(Int($0.rpm)))" }.joined(separator: "  "))
                         .font(.caption.monospaced()).foregroundStyle(.secondary)
                 }
                 if let curveError { Text(curveError).font(.caption).foregroundStyle(.red) }
             }
             HStack {
-                Text(tr("Active: %1$@", policy.description)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(pending ? tr("Waiting for helper: %1$@", policyText) : policyAvailable ? tr("Active: %1$@", policyText) : tr("Active policy unavailable")).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 Spacer()
-                Button(tr("Apply")) { applyCurrent() }.disabled(!enabled)
+                Button(applying ? tr("Applying…") : tr("Apply")) { applyCurrent() }.disabled(!enabled)
             }
         }
+        .disabled(!enabled)
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.5)))
         .onAppear(perform: load)
@@ -477,16 +511,25 @@ struct FanControlCard: View {
         .onChange(of: policy) { _ in load() }
     }
 
+    var policyText: String {
+        switch policy {
+        case .auto: return tr("Auto")
+        case .fixed(let r): return r == .infinity ? tr("Max") : tr("%1$@ rpm", String(format: "%.0f", r))
+        case .curve(let curve): return tr("Curve") + " · " + curve.pointsText + " (" + curve.sensor.rawValue.uppercased() + ")"
+        }
+    }
+
     func load() {
-        rpm = fan.target ?? fan.rpm
+        curveError = nil
+        rpm = min(fan.max, max(fan.min, fan.target ?? fan.rpm))
         switch policy {
         case .auto: mode = .auto
-        case .fixed(let r): mode = .fixed; rpm = r.isInfinite ? fan.max : r
+        case .fixed(let r): mode = .fixed; rpm = r.isInfinite ? fan.max : min(fan.max, max(fan.min, r))
         case .curve(let c):
             mode = .curve
             sensor = c.sensor
             preset = CurvePreset.allCases.first { $0.curve?.points == c.points } ?? .custom
-            if preset == .custom { customCurve = c.points.map { "\(Int($0.temperature)):\($0.rpm.isInfinite ? "max" : $0.rpm == 0 ? "min" : String(Int($0.rpm)))" }.joined(separator: ",") }
+            if preset == .custom { customCurve = c.pointsText }
         }
     }
 
@@ -570,7 +613,7 @@ struct SettingsView: View {
                         .onChange(of: alertsEnabled) { on in if on { Monitor.requestNotificationPermission() } }
                 }
                 if alertsEnabled {
-                    row(tr("Threshold: %1$@ °C", String(Int(alertThreshold))), last: true) {
+                    row(fahrenheit ? tr("Threshold: %1$@ °F", String(Int((alertThreshold * 9 / 5 + 32).rounded()))) : tr("Threshold: %1$@ °C", String(Int(alertThreshold))), last: true) {
                         Stepper("", value: $alertThreshold, in: 60...105, step: 1)
                     }
                 }
@@ -579,9 +622,9 @@ struct SettingsView: View {
                 AgentAccessRow().padding(14)
             }
             section(tr("Fan helper")) {
-                row(tr("Fan helper: %1$@", helperText), last: true) {
+                row(tr("Fan helper: %1$@", helperText), last: true, labelControl: false) {
                     if [.running, .notRunning, .needsApproval, .outdated].contains(monitor.helperState) {
-                        Button(tr("Uninstall")) { monitor.uninstallHelper() }
+                        Button(tr("Uninstall")) { monitor.uninstallHelper() }.disabled(monitor.applyingPolicies)
                     }
                 }
             }
@@ -591,7 +634,7 @@ struct SettingsView: View {
                         Toggle("", isOn: Binding(get: { updates.automaticallyChecks }, set: { updates.automaticallyChecks = $0 }))
                     }
                 }
-                row("Thermo \(AppInfo.version)", last: true) {
+                row("Thermo \(AppInfo.version)", last: true, labelControl: false) {
                     HStack {
                         if updates.enabled { Button(tr("Check for Updates…")) { updates.checkForUpdates() } }
                         Button(tr("Quit Thermo")) { NSApp.terminate(nil) }
@@ -610,12 +653,16 @@ struct SettingsView: View {
         }
     }
 
-    func row<C: View>(_ title: String, last: Bool = false, @ViewBuilder _ control: () -> C) -> some View {
+    func row<C: View>(_ title: String, last: Bool = false, labelControl: Bool = true, @ViewBuilder _ control: () -> C) -> some View {
         VStack(spacing: 0) {
             HStack {
                 Text(title).font(.system(size: 13)).foregroundStyle(.white.opacity(0.9))
                 Spacer()
-                control().labelsHidden().fixedSize()
+                if labelControl {
+                    control().labelsHidden().fixedSize().accessibilityLabel(title)
+                } else {
+                    control().labelsHidden().fixedSize()
+                }
             }
             .padding(.horizontal, 16).padding(.vertical, 11)
             if !last { Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1).padding(.leading, 16) }

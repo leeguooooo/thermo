@@ -42,6 +42,26 @@ final class ActionTests: XCTestCase {
         ActionRunner.perform(Action(id: "t", kind: .fix, title: "t", summary: "", steps: steps, destructive: false), env: env)
     }
 
+    func testFailedStepIsLoggedAndItsOutputIsRedacted() throws {
+        try write(".local/bin/fixture-tool", "#!/bin/sh\nexit 1\n")
+        let executable = path(".local/bin/fixture-tool")
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable)
+        var called = false
+        var environment = env
+        environment.execute = { _, _, _ in called = true; return (1, "API_TOKEN=fixture-sensitive-value") }
+        let action = Action(id: "fixture-failure", kind: .fix, title: "Fixture", summary: "",
+                            steps: [.run(tool: executable, args: [], cwd: nil)], destructive: false)
+        let result = ActionRunner.perform(action, env: environment)
+        XCTAssertTrue(called)
+        XCTAssertFalse(result.ok)
+        XCTAssertTrue(result.log.joined().contains("API_TOKEN="))
+        XCTAssertFalse(result.log.joined().contains("fixture-sensitive-value"))
+        let log = try String(contentsOf: environment.logFile)
+        XCTAssertTrue(log.contains("fixture-failure"))
+        XCTAssertTrue(log.contains("failed:"))
+        XCTAssertFalse(log.contains("fixture-sensitive-value"))
+    }
+
     func testUnlinkRemovesLinkNotTarget() throws {
         try write(".agents/skills/x/SKILL.md", "---\ndescription: d\n---")
         try fm.createDirectory(at: home.appendingPathComponent(".claude/skills"), withIntermediateDirectories: true)

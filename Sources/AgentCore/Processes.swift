@@ -182,3 +182,26 @@ public struct ProcessTable: Sendable {
         return dirs
     }
 }
+
+/// A PID alone is not an identity: macOS reuses it after a process exits.
+public struct ProcessIdentity: Codable, Sendable, Equatable {
+    public var pid: Int32
+    public var uid: UInt32
+    public var started: Date
+    public var executable: String
+
+    public init(pid: Int32, uid: UInt32, started: Date, executable: String) {
+        self.pid = pid; self.uid = uid; self.started = started; self.executable = executable
+    }
+}
+
+extension ProcessTable {
+    public static func identity(_ pid: pid_t) -> ProcessIdentity? {
+        var info = proc_bsdinfo()
+        guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, Int32(MemoryLayout<proc_bsdinfo>.size)) > 0,
+              info.pbi_start_tvsec > 0, let executable = pidPath(pid) else { return nil }
+        let start = Date(timeIntervalSince1970: TimeInterval(info.pbi_start_tvsec) + TimeInterval(info.pbi_start_tvusec) / 1e6)
+        guard started(pid) == start else { return nil }
+        return ProcessIdentity(pid: pid, uid: info.pbi_uid, started: start, executable: executable)
+    }
+}

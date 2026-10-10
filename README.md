@@ -58,6 +58,12 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 2. 删除 `/Applications/Thermo.app`、`/usr/local/bin/thermo*`。
 3. 可选：`rm -rf ~/Library/Caches/dev.thermo && defaults delete dev.thermo.app`。
 
+## App 操作
+
+主窗口用 `⌘1`–`⌘6` 切换概览、传感器、风扇、浏览器页面、磁盘清理和 AI 诊断，`⌘,` 打开设置。传感器页用 `⌘F` 搜索名称、分组或 SMC key。
+
+概览里的 CPU 负载按每核负载显示：`1.0×` 表示平均每核有一个任务运行或等待，数值可以超过 `1.0×`。它与 CPU 使用率不同。温度图跟随摄氏度/华氏度设置，并自动扩展范围以显示高温读数。
+
 ## CLI
 
 | 命令 | 说明 |

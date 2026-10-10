@@ -22,10 +22,11 @@ enum DiskPage: Hashable {
 extension DiskModel {
     /// One line per item for the confirmation: how it goes, size, name, paths.
     var planLines: [String] {
-        selectedItems.map { i in
+        selectedItems.flatMap { i -> [String] in
             let how = i.safety == .safe ? tr("delete") : tr("trash")
             let paths = trCount(i.paths.count, "%1$@ path", "%1$@ paths")
-            return "\(how.padding(toLength: 7, withPad: " ", startingAt: 0)) \(ByteFormat.string(i.bytes).padding(toLength: 9, withPad: " ", startingAt: 0)) \(i.title) (\(paths))"
+            return ["\(how) · \(ByteFormat.string(i.bytes)) · \(i.title) (\(paths))"]
+                + i.paths.map { "    " + FSPath.tilde($0) }
         }
     }
 
@@ -108,6 +109,17 @@ struct DiskHome: View {
                     }
                     .padding(.horizontal, 28)
                 }
+                if model.report?.cancelled == true {
+                    Label(tr("Scan stopped. These are partial results."), systemImage: "pause.circle")
+                        .font(.callout).foregroundStyle(.orange)
+                }
+                if let denied = model.report?.denied, !denied.isEmpty {
+                    VStack(spacing: 8) {
+                        Text(tr("%1$@ locations could not be read. Results may be incomplete.", String(denied.count)))
+                            .font(.callout).foregroundStyle(.orange)
+                        Button(tr("Open Full Disk Access")) { model.openFullDiskAccess() }.buttonStyle(PillButtonStyle())
+                    }
+                }
                 if let res = model.lastResult {
                     Text(res).font(.callout).foregroundStyle(.white.opacity(0.7)).onTapGesture { model.openLog() }
                 }
@@ -174,8 +186,9 @@ struct DiskCategoryPage: View {
     var items: [CleanItem] {
         var list = (model.report?.items ?? []).filter { $0.category == category }
         if !search.isEmpty {
-            let q = search.lowercased()
-            list = list.filter { ($0.title + " " + $0.detail + " " + ($0.note ?? "")).lowercased().contains(q) }
+            let q = search.trimmingCharacters(in: .whitespacesAndNewlines)
+            list = list.filter { ($0.title + " " + $0.detail + " " + ($0.note ?? "") + " " + $0.paths.joined(separator: " "))
+                .localizedCaseInsensitiveContains(q) }
         }
         return list.sorted { $0.bytes > $1.bytes }
     }
@@ -206,7 +219,7 @@ struct DiskCategoryPage: View {
                         ForEach(list) { card($0) }
                     }
                     if list.isEmpty {
-                        Text(model.scanning ? tr("Looking…") : tr("Nothing here.")).foregroundStyle(.white.opacity(0.5)).padding(.top, 30)
+                        Text(model.scanning ? tr("Looking…") : !search.isEmpty ? tr("No matching items") : tr("Nothing here.")).foregroundStyle(.white.opacity(0.5)).padding(.top, 30)
                     }
                 }
                 .padding(.horizontal, 28).padding(.bottom, 20)
@@ -236,12 +249,17 @@ struct DiskCategoryPage: View {
         let (tag, tagColor) = DiskStyle.safety(i.safety, info: i.paths.isEmpty)
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
-                Image(systemName: ticked ? "checkmark.circle.fill" : "circle").font(.title3)
-                    .foregroundStyle(i.cleanable ? (ticked ? Color.pink : .white.opacity(0.5)) : .white.opacity(0.2))
-                    .onTapGesture { if i.cleanable { model.toggle(i) } }
+                Button { model.toggle(i) } label: {
+                    Image(systemName: ticked ? "checkmark.circle.fill" : "circle").font(.title3)
+                        .foregroundStyle(i.cleanable ? (ticked ? Color.pink : .white.opacity(0.5)) : .white.opacity(0.2))
+                        .frame(width: 28, height: 28).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).disabled(!i.cleanable || model.cleaning)
+                .accessibilityLabel(tr("Select %1$@", i.title))
+                .accessibilityValue(ticked ? tr("Selected") : tr("Not selected"))
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
-                        Text(i.title).font(.system(size: 14, weight: .medium)).foregroundStyle(.white).lineLimit(1)
+                        Text(i.title).font(.system(size: 14, weight: .medium)).foregroundStyle(.white).lineLimit(1).help(i.title)
                         Text(tag).font(.system(size: 10, weight: .semibold)).foregroundStyle(tagColor)
                             .padding(.horizontal, 6).padding(.vertical, 1).background(Capsule().fill(tagColor.opacity(0.18)))
                     }
@@ -251,8 +269,12 @@ struct DiskCategoryPage: View {
                 Spacer()
                 Text(ByteFormat.string(model.selectedItems.first { $0.id == i.id }?.bytes ?? i.bytes))
                     .font(.system(size: 15, weight: .semibold).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
-                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.4))
-                    .rotationEffect(.degrees(expanded ? 90 : 0))
+                Button { if expanded { open.remove(i.id) } else { open.insert(i.id) } } label: {
+                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.6))
+                        .rotationEffect(.degrees(expanded ? 90 : 0)).frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain).accessibilityLabel(tr("Details for %1$@", i.title))
+                .accessibilityValue(expanded ? tr("Expanded") : tr("Collapsed"))
             }
             .contentShape(Rectangle())
             .onTapGesture { if expanded { open.remove(i.id) } else { open.insert(i.id) } }
@@ -317,9 +339,14 @@ struct DiskItemDetail: View {
                         ForEach(parts) { p in
                             let on = model.isTicked(p, of: item)
                             HStack(spacing: 8) {
-                                Image(systemName: on ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(on ? Color.pink : .white.opacity(0.45))
-                                    .onTapGesture { model.toggle(p, of: item) }
+                                Button { model.toggle(p, of: item) } label: {
+                                    Image(systemName: on ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(on ? Color.pink : .white.opacity(0.45))
+                                        .frame(width: 24, height: 24)
+                                }
+                                .buttonStyle(.plain).disabled(model.cleaning || !item.cleanable)
+                                .accessibilityLabel(tr("Select %1$@", p.title))
+                                .accessibilityValue(on ? tr("Selected") : tr("Not selected"))
                                 Text(p.title).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
                                 Spacer()
                                 if let d = p.lastUsed { Text(AgeFormat.string(d)).font(.caption).foregroundStyle(.white.opacity(0.45)) }

@@ -1,5 +1,48 @@
 # Changelog
 
+## Unreleased
+
+- Diagnostics retains the latest 20 operation results during the app session, including failed steps and backup locations, even after an item disappears from the inventory.
+- Batch repair results list each action and its output in a scrollable sheet with a reachable Done button. A separate execution flag keeps scans and repairs mutually exclusive while views change.
+- Failed diagnostic steps are written to the action log with redacted error output.
+
+- Disk-space caches retain the original measurement time and language. Cancelled, future-dated, invalid and mismatched-language caches are rejected.
+- Disk-space measurement records unreadable locations and shows a permission notice rather than silently treating them as empty.
+
+- Disk-space measurement has a Stop action, stops when its page or window closes, keeps completed results after cancellation and does not cache partial measurements. Its cancellation token is independent of Disk Cleanup.
+- A failed helper connection is labeled as a connection failure rather than claiming the helper has stopped.
+
+- Fan policy changes run one operation at a time, show an applying state, and read back active policies even when a write fails. Pending settings for multiple fans apply in order.
+- A helper version response alone no longer makes a stale policy appear active; unavailable policies have no active quick-switch highlight. Preset fan curves explicitly label Celsius.
+
+- Offscreen screenshots do not change saved window placement; windows saved on disconnected displays reopen on screen.
+
+- Disk-space refresh keeps previous locations visible as new readings arrive; disclosure buttons work with the keyboard.
+- Label macOS thermal pressure separately from sensor temperature. Retained swap alone no longer explains a slowdown when current load and memory pressure are normal; restart advice reports current memory instead of promising a specific saving.
+
+- Quit/end and restart recheck executable path, process start time and user identity against the captured reading; exited or replaced processes are skipped with an explanation.
+- Hot notifications and alert thresholds follow the Fahrenheit setting.
+
+- Browser page closes update memory totals, biggest-page rankings and duplicate counts; new checks cannot race a pending close, and rechecks show progress while keeping the previous result.
+- App restart reports a refused quit or failed reopen; saved browser tabs are only reopened after the app launches successfully.
+- Release the Mach host port after each memory reading.
+
+- Keep unselected sessions and failed paths visible after partial cleanup; remeasure remaining data and invalidate the old scan cache.
+- Completing a disk scan preserves choices made while results were arriving; stopped scans and unreadable locations are labeled as incomplete.
+- Helper setup times out without restarting installation or applying queued settings; repeated setup and status checks are coalesced.
+
+- Reject invalid and duplicate fan-curve points, preserve decimal values when editing a saved curve, and validate policies in the privileged helper.
+- Disk Cleanup confirmation lists the paths that will be removed. Pending fan settings are labeled as waiting for the helper.
+- Keep agent scans and fixes mutually exclusive; category batch fixes now show their commands for confirmation. Search reveals healthy matches too.
+
+- Add the native Edit menu so Select All, Copy, Paste and Undo work in text fields.
+- Search sensors by name, group or SMC key with ⌘F; switch main pages with ⌘1–⌘6 and open Settings with ⌘,.
+- Temperature charts follow the Fahrenheit setting and include readings above 105°C. Empty charts explain what they are waiting for.
+- Show CPU load as load per core rather than a CPU usage percentage.
+- Browser checks show a stopped state and keep the previous result during a new check. Leaving the page or closing the window cancels checks for every browser; late progress from cancelled checks is ignored.
+- Main-window errors are visible, with retry after sensor initialization fails. Disk Cleanup reports changed scan scopes and errors, searches paths, and provides keyboard-accessible selection and detail buttons.
+- Align disk-space details with the other pages; label Settings controls for accessibility and honor Reduce Motion for page transitions and the scan halo.
+
 ## 1.1.7
 
 - One console window for everything (the "Open Console" button in the menu bar panel, or click the Dock icon): Overview with gauges for temperature, CPU load, memory and free disk space, why the Mac is slow and the temperature trend; Sensors as a card per group; Fans; Browser pages; Disk Cleanup and AI Agent Diagnostics; Settings — all in one sidebar.

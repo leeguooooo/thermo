@@ -15,6 +15,10 @@ final class AppModels {
     lazy var agents = AgentScanner()
     private var browsers: [String: ChromePagesModel] = [:]
 
+    func stopBrowserChecks() {
+        for model in browsers.values where model.running { model.stop() }
+    }
+
     /// One pages model per browser, so its last result is still there when the page is reopened.
     func browser(_ app: String, memoryKB: Int? = nil, gpuKB: Int? = nil) -> ChromePagesModel {
         let m = browsers[app] ?? ChromePagesModel(app: app, appMemoryKB: memoryKB, gpuKB: gpuKB)
@@ -36,7 +40,8 @@ enum MainPage: Hashable {
     /// agents, agents:<area>.
     init?(argument: String) {
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
-        switch parts[0] {
+        guard let command = parts.first else { return nil }
+        switch command {
         case "overview": self = .overview
         case "sensors": self = .sensors
         case "fans": self = .fans
@@ -63,6 +68,10 @@ enum MainWindow {
         @Published var page: MainPage = .overview
     }
 
+    static func usableFrame(_ frame: NSRect, screens: [NSRect]) -> Bool {
+        frame.width >= 960 && frame.height >= 640 && screens.contains { $0.intersects(frame) }
+    }
+
     static var offscreen: Bool { CommandLine.arguments.contains("--offscreen") }
 
     static func show(_ page: MainPage? = nil) {
@@ -80,15 +89,16 @@ enum MainWindow {
                 .frame(minWidth: 940, maxWidth: .infinity, minHeight: 620, maxHeight: .infinity))
             host.sizingOptions = [.minSize]
             w.contentViewController = host
-            if !w.setFrameUsingName("ThermoMain") || w.frame.width < 960 || w.frame.height < 640 {
-                w.setContentSize(NSSize(width: 1100, height: 740))
-                w.center()
-            }
-            w.setFrameAutosaveName("ThermoMain")
-            // Verification screenshots never appear on the user's screen.
+            // Snapshot windows neither read nor write the user's saved window placement.
             if offscreen {
                 w.styleMask = [.borderless]
                 w.setFrame(NSRect(x: -6000, y: -6000, width: 1100, height: 740), display: true)
+            } else {
+                if !w.setFrameUsingName("ThermoMain") || !usableFrame(w.frame, screens: NSScreen.screens.map(\.visibleFrame)) {
+                    w.setContentSize(NSSize(width: 1100, height: 740))
+                    w.center()
+                }
+                w.setFrameAutosaveName("ThermoMain")
             }
             // Live numbers only while the window can be seen.
             let center = NotificationCenter.default
@@ -98,7 +108,8 @@ enum MainWindow {
             center.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
                 MainActor.assumeIsolated {
                     models.monitor.windowOpen = false
-                    for m in [models.browser("Google Chrome")] where m.running { m.stop() }
+                    models.stopBrowserChecks()
+                    SpaceOverviewModel.shared.stop()
                 }
             }
             window = w
@@ -147,6 +158,7 @@ struct MainView: View {
     @ObservedObject var agents: AgentScanner
     let models: AppModels
     @State private var confirmingClean = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -155,13 +167,46 @@ struct MainView: View {
                 MainSidebar(page: $page, monitor: monitor, disk: disk, agents: agents)
                     .frame(width: 236).background(Color.black.opacity(0.22))
                 Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1)
-                ZStack { content }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                VStack(spacing: 0) {
+                    if let error = monitor.lastError {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                            Text(error).font(.callout).textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            if monitor.snapshot == nil {
+                                Button(tr("Retry")) { monitor.sampleNow() }.buttonStyle(.bordered)
+                            }
+                            Button { monitor.lastError = nil } label: { Image(systemName: "xmark") }
+                                .buttonStyle(.plain).help(tr("Dismiss"))
+                                .accessibilityLabel(tr("Dismiss"))
+                        }
+                        .padding(14).glass(radius: 12).padding(.horizontal, 32).padding(.top, 40)
+                    }
+                    if page.isDisk, let error = disk.error {
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .font(.callout).foregroundStyle(.orange).textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading).padding(14).glass(radius: 12)
+                            .padding(.horizontal, 32).padding(.top, 12)
+                    }
+                    if page.isDisk, disk.stale || disk.resultsNeedRefresh {
+                        HStack {
+                            Text(disk.resultsNeedRefresh ? tr("Some paths could not be removed. Scan again to refresh the remaining items.") : tr("Scan scope changed. Scan again to update these results.")).font(.callout)
+                            Spacer()
+                            Button(tr("Scan again")) { disk.scan() }.disabled(disk.scanning || disk.cleaning)
+                        }
+                        .padding(14).glass(radius: 12).padding(.horizontal, 32).padding(.top, 12)
+                    }
+                    ZStack { content }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
         .ignoresSafeArea()
         .environment(\.colorScheme, .dark)
-        .animation(.easeInOut(duration: 0.25), value: page)
-        .onChange(of: page) { p in if p.isAgents { agents.scan(ifOlderThan: 60) } }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: page)
+        .onChange(of: page) { p in
+            if p.isAgents { agents.scan(ifOlderThan: 60) }
+            if p.isDisk, disk.report == nil, !disk.scanning { disk.loadSaved() }
+        }
         .onAppear {
             if page.isAgents { agents.scan(ifOlderThan: 60) }
             if page.isDisk, disk.report == nil, !disk.scanning { disk.loadSaved() }
@@ -338,8 +383,30 @@ struct MainSidebar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressableStyle())
+        .accessibilityLabel(title)
+        .accessibilityValue(on ? tr("Selected") : "")
+        .help(title)
+        .background(shortcut(target))
         .padding(.horizontal, 8)
     }
+    @ViewBuilder func shortcut(_ target: MainPage) -> some View {
+        switch target {
+        case .overview: key("1", target)
+        case .sensors: key("2", target)
+        case .fans: key("3", target)
+        case .browser("Google Chrome"): key("4", target)
+        case .disk(.home): key("5", target)
+        case .agents(.home): key("6", target)
+        case .settings: key(",", target)
+        default: EmptyView()
+        }
+    }
+
+    func key(_ key: KeyEquivalent, _ target: MainPage) -> some View {
+        Button("") { page = target }.keyboardShortcut(key, modifiers: .command)
+            .frame(width: 0, height: 0).opacity(0).accessibilityHidden(true)
+    }
+
 }
 
 // MARK: - Overview
@@ -375,9 +442,9 @@ struct OverviewPage: View {
             card(tr("Temperature"), RingGauge(value: ((hot ?? 30) - 30) / 80, text: tempText(hot, fahrenheit: fahrenheit),
                                              caption: tr("hottest")),
                  detail: "CPU \(tempText(s?.cpu, fahrenheit: fahrenheit)) · GPU \(tempText(s?.gpu, fahrenheit: fahrenheit))") { open(.sensors) }
-            card(tr("CPU load"), RingGauge(value: (load ?? 0) / 2, text: load.map { String(format: "%.0f%%", $0 * 100) } ?? "—",
-                                          caption: pulse.current.map { tr("%1$@ cores", String($0.cores)) }),
-                 detail: pulse.current.map { tr("load %1$@", String(format: "%.1f", $0.load1)) } ?? "") { open(.overview) }
+            card(tr("CPU load"), RingGauge(value: (load ?? 0) / 2, text: load.map { String(format: "%.1f×", $0) } ?? "—",
+                                          caption: tr("load per core")),
+                 detail: pulse.current.map { tr("%1$@ cores", String($0.cores)) + " · " + tr("load %1$@", String(format: "%.1f", $0.load1)) } ?? "") { open(.overview) }
             card(tr("Memory"), RingGauge(value: mem.map { Double($0.usedBytes) / Double(max(1, $0.totalBytes)) } ?? 0,
                                         text: mem.map { String(format: "%.0f%%", Double($0.usedBytes) / Double(max(1, $0.totalBytes)) * 100) } ?? "—",
                                         caption: MachinePulse.memoryName(pulse.memory)),
@@ -443,12 +510,27 @@ struct SensorsPage: View {
     @ObservedObject var monitor: Monitor
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
 
+    @State private var search = ""
+    @FocusState private var searchFocused: Bool
+
     var body: some View {
         WindowPage(title: tr("Sensors"), subtitle: monitor.model) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField(tr("Search sensors by name or key"), text: $search)
+                    .textFieldStyle(.plain).focused($searchFocused)
+                if !search.isEmpty {
+                    Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.plain).help(tr("Clear search")).accessibilityLabel(tr("Clear search"))
+                }
+            }
+            .padding(12).glass(radius: 10)
+            .background(Button("") { searchFocused = true }.keyboardShortcut("f", modifiers: .command)
+                .frame(width: 0, height: 0).opacity(0).accessibilityHidden(true))
             if let s = monitor.snapshot {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 14, alignment: .top)], alignment: .leading, spacing: 14) {
                     ForEach(SensorGroup.allCases, id: \.self) { g in
-                        let rows = s.temperatures.filter { $0.group == g }
+                        let rows = s.temperatures.filter { $0.group == g && matches($0) }
                         if !rows.isEmpty {
                             let hot = rows.map(\.value).max()
                             card(groupName(g), symbol: symbol(g), headline: tempText(hot, fahrenheit: fahrenheit), color: heatColor(hot),
@@ -458,11 +540,22 @@ struct SensorsPage: View {
                     electrical(tr("Power"), "bolt.fill", s.power, "%.2f W")
                     electrical(tr("Voltage"), "powerplug.fill", s.voltages, "%.3f V")
                     electrical(tr("Current"), "waveform.path.ecg", s.currents, "%.3f A")
+                    if !(s.temperatures + s.power + s.voltages + s.currents).contains(where: matches) {
+                        Label(tr("No matching sensors"), systemImage: "magnifyingglass")
+                            .foregroundStyle(.secondary).padding(20).frame(maxWidth: .infinity).glass()
+                    }
                 }
             } else {
                 ProgressView().frame(maxWidth: .infinity, minHeight: 200)
             }
         }
+    }
+
+    func matches(_ reading: Reading) -> Bool {
+        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        return query.isEmpty || reading.name.localizedCaseInsensitiveContains(query)
+            || reading.key.localizedCaseInsensitiveContains(query)
+            || groupName(reading.group).localizedCaseInsensitiveContains(query)
     }
 
     func symbol(_ g: SensorGroup) -> String {
@@ -479,6 +572,7 @@ struct SensorsPage: View {
     }
 
     @ViewBuilder func electrical(_ title: String, _ symbol: String, _ rows: [Reading], _ f: String) -> some View {
+        let rows = rows.filter { matches($0) }
         if !rows.isEmpty {
             card(title, symbol: symbol, headline: nil, color: .yellow,
                  rows: rows.map { ($0.name, $0.key, String(format: f, $0.value), Color.white.opacity(0.9)) })
@@ -499,10 +593,10 @@ struct SensorsPage: View {
             VStack(spacing: 5) {
                 ForEach(Array(rows.enumerated()), id: \.offset) { _, r in
                     HStack(spacing: 8) {
-                        Text(r.0).font(.system(size: 12)).foregroundStyle(.white.opacity(0.8)).lineLimit(1)
+                        Text(r.0).font(.system(size: 12)).foregroundStyle(.white.opacity(0.8)).lineLimit(1).help(r.0)
                         Spacer(minLength: 4)
                         if !r.1.hasPrefix("hid:") {
-                            Text(r.1).font(.system(size: 10, design: .monospaced)).foregroundStyle(.white.opacity(0.3))
+                            Text(r.1).font(.system(size: 10, design: .monospaced)).foregroundStyle(.white.opacity(0.5)).textSelection(.enabled)
                         }
                         Text(r.2).font(.system(size: 12, weight: .medium).monospacedDigit()).foregroundStyle(r.3)
                             .frame(width: 64, alignment: .trailing)

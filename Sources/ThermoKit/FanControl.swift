@@ -17,7 +17,7 @@ public struct CurvePoint: Codable, Hashable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         temperature = try c.decode(Double.self, forKey: .temperature)
         let r = try c.decode(Double.self, forKey: .rpm)
-        rpm = r < 0 ? .infinity : r
+        rpm = r == -1 ? .infinity : r
     }
     public func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -38,9 +38,9 @@ public struct FanCurve: Codable, Hashable, Sendable {
     /// Parse "50:min,70:3000,85:max".
     public init(parsing text: String, sensor: CurveSensor = .cpu) throws {
         var pts: [CurvePoint] = []
-        for part in text.split(separator: ",") {
+        for part in text.split(separator: ",", omittingEmptySubsequences: false) {
             let kv = part.split(separator: ":").map { $0.trimmingCharacters(in: .whitespaces) }
-            guard kv.count == 2, let t = Double(kv[0].replacingOccurrences(of: "°", with: "").replacingOccurrences(of: "C", with: "")) else {
+            guard kv.count == 2, let t = Double(kv[0].replacingOccurrences(of: "°", with: "").replacingOccurrences(of: "C", with: "")), t.isFinite else {
                 throw FanControlError.badCurve(String(part))
             }
             let rpm: Double
@@ -48,13 +48,14 @@ public struct FanCurve: Codable, Hashable, Sendable {
             case "max": rpm = .infinity
             case "min": rpm = 0
             default:
-                guard let r = Double(kv[1]), r >= 0 else { throw FanControlError.badCurve(String(part)) }
+                guard let r = Double(kv[1]), r.isFinite, r >= 0 else { throw FanControlError.badCurve(String(part)) }
                 rpm = r
             }
             pts.append(CurvePoint(t, rpm))
         }
         guard !pts.isEmpty else { throw FanControlError.badCurve(text) }
         self.init(points: pts, sensor: sensor)
+        try validate()
     }
 
     /// Linear interpolation; flat beyond the end points. Result is clamped to [min, max].
@@ -71,11 +72,26 @@ public struct FanCurve: Codable, Hashable, Sendable {
         return resolve(last.rpm)
     }
 
-    public var description: String {
+    /// The editable representation preserves decimal values when a policy is loaded into the UI.
+    public var pointsText: String {
         points.map { p in
-            let r = p.rpm.isInfinite ? "max" : (p.rpm == 0 ? "min" : String(Int(p.rpm)))
-            return "\(Int(p.temperature)):\(r)"
-        }.joined(separator: ",") + " (\(sensor.rawValue))"
+            let r = p.rpm == .infinity ? "max" : (p.rpm == 0 ? "min" : fanNumber(p.rpm))
+            return "\(fanNumber(p.temperature)):\(r)"
+        }.joined(separator: ",")
+    }
+
+    public var description: String { pointsText + " (\(sensor.rawValue))" }
+
+    public func validate() throws {
+        guard !points.isEmpty else { throw FanControlError.badCurve("empty") }
+        var previous = -Double.infinity
+        for point in points {
+            guard point.temperature.isFinite, point.temperature > previous,
+                  point.rpm >= 0, point.rpm.isFinite || point.rpm == .infinity else {
+                throw FanControlError.badCurve(pointsText)
+            }
+            previous = point.temperature
+        }
     }
 
     public static let quiet = FanCurve(points: [.init(60, 0), .init(80, 3500), .init(92, .infinity)])
@@ -83,15 +99,29 @@ public struct FanCurve: Codable, Hashable, Sendable {
     public static let performance = FanCurve(points: [.init(40, 2500), .init(60, 4500), .init(75, .infinity)])
 }
 
+private func fanNumber(_ value: Double) -> String {
+    let text = String(value)
+    return text.hasSuffix(".0") ? String(text.dropLast(2)) : text
+}
+
 public enum FanPolicy: Codable, Hashable, Sendable {
     case auto
     case fixed(rpm: Double)
     case curve(FanCurve)
 
+    public func validate() throws {
+        switch self {
+        case .auto: break
+        case .fixed(let rpm):
+            guard rpm >= 0, rpm.isFinite || rpm == .infinity else { throw FanControlError.helper("invalid fan speed") }
+        case .curve(let curve): try curve.validate()
+        }
+    }
+
     public var description: String {
         switch self {
         case .auto: return "auto"
-        case .fixed(let r): return r.isInfinite ? "fixed max" : "fixed \(Int(r)) rpm"
+        case .fixed(let r): return r.isInfinite ? "fixed max" : "fixed \(fanNumber(r)) rpm"
         case .curve(let c): return "curve \(c.description)"
         }
     }

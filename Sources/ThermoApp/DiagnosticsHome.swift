@@ -20,6 +20,7 @@ struct DiagnosticsHome: View {
         ScrollView {
             VStack(spacing: 34) {
                 hero.padding(.top, 54)
+                if !scanner.history.isEmpty { AgentActivity(scanner: scanner) }
                 if let r = scanner.report, scanner.batch.map({ $0.finished }) ?? true { cards(r) }
             }
             .padding(.horizontal, 40).padding(.bottom, 40)
@@ -43,9 +44,10 @@ struct DiagnosticsHome: View {
         let problems = scanner.problems.count
         let fixable = scanner.bulkFixes.count
         if let b = scanner.batch, !b.finished {
-            HeroStatus(symbol: "wrench.and.screwdriver.fill", color: .blue,
-                       title: tr("Fixing %1$@ of %2$@", String(min(b.done + 1, b.total)), String(b.total)), subtitle: b.current,
-                       progress: Double(b.done) / Double(max(1, b.total)))
+            HeroStatus(symbol: b.verifying ? "stethoscope" : "wrench.and.screwdriver.fill", color: .blue,
+                       title: b.verifying ? tr("Checking repair results…") : tr("Fixing %1$@ of %2$@", String(min(b.done + 1, b.total)), String(b.total)),
+                       subtitle: b.verifying ? tr("Reading the current configuration again.") : b.current,
+                       progress: b.verifying ? nil : Double(b.done) / Double(max(1, b.total)), spinning: b.verifying)
         } else if scanner.report == nil {
             HeroStatus(symbol: "stethoscope", color: Color(red: 0.45, green: 0.4, blue: 1.0), title: tr("Checking your AI agents…"),
                        subtitle: tr("Claude Code, Codex, Cursor and Gemini: hooks, tools, plugins, skills and what runs in the background."),
@@ -66,9 +68,9 @@ struct DiagnosticsHome: View {
                                : tr("%1$@ can be fixed with one click; the others need a decision from you.", String(fixable)),
                            spinning: scanner.scanning)
                 HStack(spacing: 30) {
-                    if fixable > 0 { BigRoundButton(title: tr("Fix %1$@", String(fixable))) { confirming = true } }
+                    if fixable > 0 { BigRoundButton(title: tr("Fix %1$@", String(fixable)), busy: scanner.busy) { confirming = true } }
                     Button { scanner.scan() } label: { Label(tr("Check Again"), systemImage: "arrow.clockwise") }
-                        .buttonStyle(PillButtonStyle()).disabled(scanner.scanning)
+                        .buttonStyle(PillButtonStyle()).disabled(scanner.busy)
                 }
             }
         }
@@ -95,12 +97,14 @@ struct DiagnosticsHome: View {
 struct AreaPage: View {
     @ObservedObject var scanner: AgentScanner
     let area: Area
+    @State private var confirmingFixes: [(AgentItem, Action)]?
     @State private var showHealthy = false
     @State private var search = ""
 
     var items: [AgentItem] {
-        (scanner.report?.items ?? []).filter { $0.area == area }
-            .filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) || $0.detail.localizedCaseInsensitiveContains(search) }
+        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (scanner.report?.items ?? []).filter { $0.area == area }
+            .filter { query.isEmpty || ($0.name + " " + $0.detail + " " + ($0.source ?? "") + " " + $0.agent).localizedCaseInsensitiveContains(query) }
     }
 
     var body: some View {
@@ -109,10 +113,11 @@ struct AreaPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header(problems)
+                if !scanner.history.isEmpty { AgentActivity(scanner: scanner) }
                 if problems.isEmpty {
                     HStack(spacing: 10) {
                         Image(systemName: "checkmark.seal.fill").font(.title2).foregroundStyle(.green)
-                        Text(tr("Nothing to fix here.")).font(.system(size: 15, weight: .medium)).foregroundStyle(.white.opacity(0.85))
+                        Text(scanner.scanning && scanner.report == nil ? tr("Checking your AI agents…") : items.isEmpty && !search.isEmpty ? tr("No matching items") : tr("Nothing to fix here.")).font(.system(size: 15, weight: .medium)).foregroundStyle(.white.opacity(0.85))
                     }
                     .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass()
                 }
@@ -129,7 +134,7 @@ struct AreaPage: View {
                             .padding(16).contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        if showHealthy {
+                        if showHealthy || !search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             ForEach(rest) { i in
                                 Rectangle().fill(Color.white.opacity(0.06)).frame(height: 1)
                                 HealthyRow(scanner: scanner, item: i).padding(.horizontal, 16)
@@ -145,6 +150,16 @@ struct AreaPage: View {
             .frame(maxWidth: .infinity)
         }
         .scrollContentBackground(.hidden)
+        .sheet(isPresented: Binding(get: { confirmingFixes != nil }, set: { if !$0 { confirmingFixes = nil } })) {
+            let plans = confirmingFixes ?? []
+            ConfirmSheet(title: tr("Fix %1$@ problems?", String(plans.count)),
+                         summary: tr("Review the commands before applying these fixes."),
+                         destructive: plans.contains { $0.1.destructive }, heading: tr("What will run"),
+                         lines: plans.flatMap { item, action in [item.name + " · " + action.title] + action.steps.map(\.display) },
+                         footnote: tr("Every step is in ~/Library/Logs/Thermo/fix.log; changed config files were backed up first."),
+                         confirmTitle: tr("Fix"), confirm: { confirmingFixes = nil; scanner.performAll(plans) },
+                         cancel: { confirmingFixes = nil })
+        }
     }
 
     func header(_ problems: [AgentItem]) -> some View {
@@ -159,7 +174,7 @@ struct AreaPage: View {
             VStack(alignment: .trailing, spacing: 10) {
                 let fixes = problems.compactMap { i in i.actions.first { $0.kind == .fix && $0.bulk }.map { (i, $0) } }
                 if fixes.count > 1 {
-                    Button(tr("Fix %1$@", String(fixes.count))) { scanner.performAll(fixes) }.buttonStyle(PillButtonStyle(prominent: true))
+                    Button(tr("Fix %1$@", String(fixes.count))) { confirmingFixes = fixes }.buttonStyle(PillButtonStyle(prominent: true)).disabled(scanner.busy)
                 }
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass").foregroundStyle(.white.opacity(0.5))
@@ -267,14 +282,14 @@ private struct ProblemCard: View {
                     }
                 }
                 .buttonStyle(PillButtonStyle(prominent: p.kind == .fix && p.bulk))
-                .disabled(scanner.running != nil)
+                .disabled(scanner.busy)
             }
             if !others.isEmpty {
                 Menu {
                     ForEach(others) { a in Button(a.title, role: a.kind == .uninstall ? .destructive : nil) { confirming = a } }
                 } label: { Image(systemName: "ellipsis").foregroundStyle(.white.opacity(0.7)) }
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                    .padding(6).background(Circle().fill(Color.white.opacity(0.1)))
+                    .padding(6).background(Circle().fill(Color.white.opacity(0.1))).disabled(scanner.busy)
             }
         }
     }
@@ -306,7 +321,7 @@ private struct HealthyRow: View {
                 Menu {
                     ForEach(item.actions) { a in Button(a.title, role: a.kind == .uninstall ? .destructive : nil) { confirming = a } }
                 } label: { Image(systemName: "ellipsis").foregroundStyle(.white.opacity(0.6)) }
-                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().disabled(scanner.busy)
             }
         }
         .padding(.vertical, 10)
@@ -316,31 +331,81 @@ private struct HealthyRow: View {
     }
 }
 
-/// After "Fix all": what changed.
+/// Results remain accessible even when a repaired item disappears from the inventory.
+struct AgentActivity: View {
+    @ObservedObject var scanner: AgentScanner
+    var body: some View {
+        DisclosureGroup(tr("Recent actions (this session)")) {
+            VStack(spacing: 10) { ForEach(scanner.history) { AgentOutcomeRow(entry: $0) } }
+                .padding(.top, 10)
+        }
+        .padding(16).glass().frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct AgentOutcomeRow: View {
+    let entry: AgentScanner.LastResult
+    var body: some View {
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(entry.result.log.enumerated()), id: \.offset) { _, line in
+                    Text(line).font(.caption.monospaced()).textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                ForEach(entry.result.backups, id: \.self) { path in
+                    Text(tr("Backup: %1$@", path)).font(.caption.monospaced()).textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }.padding(.top, 8)
+        } label: {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: entry.result.ok ? "checkmark.circle.fill" : "xmark.octagon.fill")
+                    .foregroundStyle(entry.result.ok ? .green : .orange)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(entry.name).font(.callout.weight(.semibold))
+                    Text(entry.action + " · " + (entry.result.ok ? tr("Action completed") : tr("Action failed")))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text(entry.time, style: .time).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+/// After a batch: commands that completed, commands that failed, and the new report's remaining problems.
 struct BatchResult: View {
     @ObservedObject var scanner: AgentScanner
 
     var body: some View {
-        let b = scanner.batch
-        let fixed = max(0, (b?.before ?? 0) - (b?.after ?? 0))
+        let batch = scanner.batch
+        let failed = batch?.failed ?? 0
+        let remaining = batch?.after ?? 0
         ZStack {
-            WindowBackdrop(tint: (b?.failed ?? 0) == 0 ? .green : .orange)
-            VStack(spacing: 20) {
-                HeroStatus(symbol: (b?.failed ?? 0) == 0 ? "checkmark" : "exclamationmark",
-                           color: (b?.failed ?? 0) == 0 ? .green : .orange,
-                           title: fixed == 1 ? tr("1 problem fixed") : tr("%1$@ problems fixed", String(fixed)),
-                           subtitle: (b?.after ?? 0) == 0 ? tr("Nothing left to fix.")
-                               : tr("%1$@ still need a decision from you.", String(b?.after ?? 0)))
-                if let f = b?.failed, f > 0 {
-                    Text(tr("%1$@ fixes did not go through; open their category to see why.", String(f))).foregroundStyle(.orange)
+            WindowBackdrop(tint: failed == 0 && remaining == 0 ? .green : .orange)
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text(tr("Repair run finished")).font(.title2.weight(.bold))
+                        Text(tr("%1$@ actions completed, %2$@ failed", String(max(0, (batch?.done ?? 0) - failed)), String(failed)))
+                            .font(.callout)
+                        Text(remaining == 0 ? tr("Nothing left to fix.") : tr("%1$@ still need a decision from you.", String(remaining)))
+                            .font(.callout).foregroundStyle(.secondary)
+                        ForEach(batch?.results ?? []) { AgentOutcomeRow(entry: $0).padding(12).glass() }
+                        Text(tr("Every step is in ~/Library/Logs/Thermo/fix.log; changed config files were backed up first."))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }.padding(24)
                 }
-                Text(tr("Every step is in ~/Library/Logs/Thermo/fix.log; changed config files were backed up first."))
-                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
-                Button(tr("Done")) { scanner.batch = nil }.keyboardShortcut(.defaultAction).buttonStyle(PillButtonStyle(prominent: true))
+                Divider()
+                HStack {
+                    Button(tr("Open action log")) { NSWorkspace.shared.open(DoctorEnvironment().logFile) }
+                    Spacer()
+                    Button(tr("Done")) { scanner.batch = nil }.keyboardShortcut(.defaultAction)
+                        .buttonStyle(PillButtonStyle(prominent: true))
+                }.padding(16)
             }
-            .padding(36)
         }
-        .frame(width: 480, height: 470)
+        .frame(width: 560, height: 520)
         .environment(\.colorScheme, .dark)
     }
 }

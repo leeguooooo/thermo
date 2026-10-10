@@ -66,6 +66,8 @@ public struct ActionResult: Sendable {
     public var ok: Bool
     public var log: [String]
     public var backups: [String]
+
+    public init(ok: Bool, log: [String], backups: [String]) { self.ok = ok; self.log = log; self.backups = backups }
 }
 
 /// Paths an action may never edit, whatever a finding says. Deletions also go through AgentCore.Guard,
@@ -105,10 +107,12 @@ public enum ActionRunner {
         for step in action.steps {
             do {
                 try perform(step, env: env, backup: backup)
-                log.append("✓ " + step.display)
+                log.append("✓ " + Redact.text(step.display))
                 record(env, action: action, step: step)
             } catch {
-                log.append("✗ " + step.display + " — " + "\(error)")
+                let failure = Redact.text("\(error)")
+                log.append("✗ " + Redact.text(step.display) + " — " + failure)
+                record(env, action: action, step: step, failure: failure)
                 return ActionResult(ok: false, log: log, backups: backups)
             }
         }
@@ -226,8 +230,9 @@ public enum ActionRunner {
     }
 
     /// One line per step in ~/Library/Logs/Thermo/fix.log: `<ISO time> <action> <id> <what>`.
-    static func record(_ env: DoctorEnvironment, action: Action, step: Step) {
-        let line = "\(ISO8601DateFormatter().string(from: Date())) \(action.kind.rawValue) \(action.id) \(Redact.text(step.display))\n"
+    static func record(_ env: DoctorEnvironment, action: Action, step: Step, failure: String? = nil) {
+        let suffix = failure.map { " failed: " + Redact.text($0).replacingOccurrences(of: "\n", with: " ") } ?? ""
+        let line = "\(ISO8601DateFormatter().string(from: Date())) \(action.kind.rawValue) \(Redact.text(action.id)) \(Redact.text(step.display))\(suffix)\n"
         let url = env.logFile
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         if let h = try? FileHandle(forWritingTo: url) {

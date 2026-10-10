@@ -184,7 +184,7 @@ struct AgentsCommand {
     func act(on name: String, kind: ActionKind?) throws {
         let env = DoctorEnvironment()
         let report = AgentDoctor.run(env)
-        var items = try select(name, in: report)
+        let items = try select(name, in: report)
         if items.count > 1 && !app.args.has("all") {
             throw CLIError("'\(name)' matches \(items.count) items; narrow with --area/--agent, use the id, or add --all:\n  "
                            + items.map(describe).joined(separator: "\n  "))

@@ -121,6 +121,7 @@ public enum PolicyStore {
     public static let path = "/Library/Application Support/dev.thermo/fan-policies.json"
 
     public static func save(_ policies: [Int: FanPolicy], to path: String = PolicyStore.path) throws {
+        for policy in policies.values { try policy.validate() }
         let url = URL(fileURLWithPath: path)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true,
                                                 attributes: [.posixPermissions: 0o755])
@@ -133,7 +134,11 @@ public enum PolicyStore {
     public static func load(from path: String = PolicyStore.path) -> [Int: FanPolicy] {
         guard let data = FileManager.default.contents(atPath: path),
               let raw = try? PolicyCoding.decoder().decode([String: FanPolicy].self, from: data) else { return [:] }
-        return Dictionary(uniqueKeysWithValues: raw.compactMap { k, v in Int(k).map { ($0, v) } })
+        return Dictionary(uniqueKeysWithValues: raw.compactMap { key, policy -> (Int, FanPolicy)? in
+            guard let id = Int(key), id >= 0, String(id) == key,
+                  (try? policy.validate()) != nil else { return nil }
+            return (id, policy)
+        })
     }
 }
 
