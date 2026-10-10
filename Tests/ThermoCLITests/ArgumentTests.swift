@@ -2,6 +2,20 @@ import XCTest
 @testable import thermo
 
 final class ArgumentTests: XCTestCase {
+    func testFanRPMRejectsNonfiniteNumericInputButKeepsExplicitMax() throws {
+        XCTAssertEqual(try App.fanRPM("MAX"), .infinity)
+        XCTAssertEqual(try App.fanRPM("min"), 0)
+        XCTAssertEqual(try App.fanRPM("3500.5"), 3500.5)
+        for invalid in ["nan", "inf", "1e999", "-1", "invalid"] {
+            XCTAssertThrowsError(try App.fanRPM(invalid))
+        }
+    }
+
+    func testLargeFiniteRPMCanBeReportedWithoutIntegerOverflow() throws {
+        let rpm = try App.fanRPM("1e100")
+        XCTAssertEqual(App.fanRPMText(rpm), "1e+100 rpm")
+        XCTAssertEqual(App.fanRPMText(3500.5), "3500.5 rpm")
+    }
     func testBooleanFlagAssignmentsCannotAccidentallySkipConfirmation() {
         for flag in ["--yes=false", "--yes=true", "--trash=false", "--json=false"] {
             XCTAssertThrowsError(try Args([flag]), flag)

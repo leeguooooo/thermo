@@ -91,6 +91,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 电池 CSV 和汇总 CSV 使用 `kind,key,name,group,value` 列；电池字段的 key 标明单位，例如 `temperature_c`、`current_a`、`health_percent`。缺失读数不输出，充电和外接电源状态使用 0/1。CSV 温度始终以摄氏度输出。
 
+`get --csv` 使用 `key,type,value,hex,error` 列。单个 key 读取失败时保留错误行，其他 key 继续读取；命令最终返回非零退出码。
+
 菜单栏、概览、温度告警和 CLI 的“最高温度”取已命名传感器中的最高有效读数，包含存储、主板等分组。风扇曲线的 `max` 和过热安全保护仍以 CPU/GPU 温度为准。
 
 `thermo settings slowdown-alerts on|off` 和 `thermo settings unnamed-sensors on|off` 与 App 使用同一组开关。`--yes` 等标志不接受 `=false`；需要确认时省略 `--yes`。

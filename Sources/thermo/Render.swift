@@ -125,6 +125,13 @@ struct Renderer {
 }
 
 enum Export {
+    static func keyReadCSV(_ rows: [[String: String]]) -> String {
+        let columns = ["key", "type", "value", "hex", "error"]
+        return ([columns.joined(separator: ",")] + rows.map { row in
+            columns.map { csvField(row[$0] ?? "") }.joined(separator: ",")
+        }).joined(separator: "\n")
+    }
+
     static func json<T: Encodable>(_ v: T, pretty: Bool = true) -> String {
         let e = JSONEncoder()
         e.dateEncodingStrategy = .iso8601

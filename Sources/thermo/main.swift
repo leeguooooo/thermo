@@ -190,22 +190,39 @@ struct App {
             guard k.utf8.count <= 4 else { throw CLIError("'\(k)' is not a 4-character SMC key") }
             do {
                 let v = try smc.read(FourCC(k))
-                if args.has("json") {
+                if args.has("json") || args.has("csv") {
                     rows.append(["key": k, "type": v.type.description, "value": v.display, "hex": v.hex])
                 } else {
                     print(style.bold(pad(k, 6)) + style.dim(pad(v.type.description, 6)) + v.display + style.dim("  [\(v.hex)]"))
                 }
             } catch {
                 failed = true
-                if args.has("json") { rows.append(["key": k, "error": "\(error)"]) }
+                if args.has("json") || args.has("csv") { rows.append(["key": k, "error": "\(error)"]) }
                 else { FileHandle.standardError.write("thermo: \(error)\n".data(using: .utf8)!) }
             }
         }
         if args.has("json") { print(Export.json(rows)) }
+        else if args.has("csv") { print(Export.keyReadCSV(rows)) }
         if failed { exit(1) }
     }
 
     // MARK: fan
+
+    static func fanRPM(_ input: String) throws -> Double {
+        switch input.lowercased() {
+        case "max": return .infinity
+        case "min": return 0
+        default:
+            guard let rpm = Double(input), rpm.isFinite, rpm >= 0 else {
+                throw CLIError("RPM must be a finite nonnegative number, 'min' or 'max'")
+            }
+            return rpm
+        }
+    }
+
+    static func fanRPMText(_ rpm: Double) -> String {
+        rpm.isInfinite ? "max" : rpm == 0 ? "min" : String(format: "%g rpm", rpm)
+    }
 
     func fanTargets(_ spec: String?, fans: [FanDescriptor]) throws -> [Int] {
         guard let spec, spec != "all" else { return [-1] }
@@ -242,13 +259,12 @@ struct App {
 
         case "set":
             guard rest.count == 3 else { throw CLIError("usage: thermo fan set ID|all RPM|max") }
-            let rpm: Double = rest[2].lowercased() == "max" ? .infinity : (rest[2].lowercased() == "min" ? 0 : (Double(rest[2]) ?? -1))
-            guard rpm >= 0 else { throw CLIError("RPM must be a number, 'min' or 'max'") }
+            let rpm = try Self.fanRPM(rest[2])
             for id in try fanTargets(rest[1], fans: sm.fans) {
                 try client.blocking(timeout: 15) { try await $0.setPolicy(.fixed(rpm: rpm), fan: id) }
             }
             warnClamp(rpm, sm: sm)
-            print("fan \(rest[1]): fixed \(rpm.isInfinite ? "max" : rpm == 0 ? "min" : "\(Int(rpm)) rpm")")
+            print("fan \(rest[1]): fixed \(Self.fanRPMText(rpm))")
 
         case "curve":
             guard rest.count == 3 else { throw CLIError("usage: thermo fan curve ID|all 50:min,70:3000,85:max [--sensor cpu|gpu|max]") }

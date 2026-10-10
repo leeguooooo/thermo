@@ -3,6 +3,13 @@ import ThermoKit
 @testable import thermo
 
 final class ExportTests: XCTestCase {
+    func testKeyCSVHasStableColumnsAndPerKeyFailures() {
+        let csv = Export.keyReadCSV([
+            ["key": "TC0P", "type": "sp78", "value": "42.5", "hex": "2a80"],
+            ["key": "bad", "error": "fixture, failed\nretry"],
+        ])
+        XCTAssertEqual(csv, "key,type,value,hex,error\nTC0P,sp78,42.5,2a80,\nbad,,,,\"fixture, failed\nretry\"")
+    }
     func testStreamingHighestTemperatureIncludesStorage() {
         let sample = Snapshot(temperatures: [
             Reading(key: "cpu", name: "CPU", group: .cpu, value: 70),
