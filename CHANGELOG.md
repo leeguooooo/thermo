@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.1.2
 
-- `thermo pulse` (also `thermo status`): why this Mac is slow, in one command — the verdict, which program is behind it, load, memory pressure and swap, thermal state, temperatures and fans; `--json` for scripts and AI agents.
+- `thermo pulse` (also `thermo status`): why this Mac is slow, in one command — the verdict, which program is behind it, load, memory pressure and swap, thermal state, temperatures and fans; `--json` for scripts and AI agents. AI agents get it through the [thermo-use](https://github.com/leeguooooo/thermo-use) skill.
 - Memory per program now counts what Activity Monitor counts (compressed and swapped memory included), so the biggest memory users are named correctly.
 
 ## 1.1.1
