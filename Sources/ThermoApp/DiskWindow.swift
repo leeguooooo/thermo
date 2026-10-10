@@ -68,6 +68,8 @@ extension DiskModel {
 struct DiskCleanupView: View {
     @ObservedObject var model: DiskModel
     @State private var sidebar: CleanCategory? = .aiSessions
+    /// "Where is my space": shown instead of a category's items.
+    @State private var showOverview = false
     @State private var focus: String?
     @State private var search = ""
     @State private var sort: Sort = .size
@@ -84,6 +86,15 @@ struct DiskCleanupView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $sidebar) {
+                Section {
+                    // Not a category, so not part of the selection: a tap switches the middle column.
+                    Label(tr("Where the space is"), systemImage: "chart.pie")
+                        .padding(.vertical, 2).padding(.horizontal, 4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 5).fill(showOverview ? Color.accentColor.opacity(0.18) : .clear))
+                        .contentShape(Rectangle())
+                        .onTapGesture { showOverview = true; sidebar = nil }
+                }
                 Section {
                     ForEach(CleanCategory.allCases, id: \.self) { c in
                         let inCat = items.filter { $0.category == c }
@@ -102,21 +113,32 @@ struct DiskCleanupView: View {
             }
             .navigationSplitViewColumnWidth(min: 220, ideal: 240)
         } content: {
-            VStack(spacing: 0) {
-                statusBar
-                itemList
-                Divider()
-                footer
+            Group {
+                if showOverview {
+                    DiskOverviewView()
+                } else {
+                    VStack(spacing: 0) {
+                        statusBar
+                        itemList
+                        Divider()
+                        footer
+                    }
+                }
             }
             .navigationSplitViewColumnWidth(min: 420, ideal: 520)
         } detail: {
-            if let id = focus, let item = items.first(where: { $0.id == id }) {
+            if showOverview {
+                Text(tr("The big places on this disk. What in them can go is listed under the categories on the left."))
+                    .foregroundStyle(.secondary).multilineTextAlignment(.center).padding()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let id = focus, let item = items.first(where: { $0.id == id }) {
                 DiskItemDetail(model: model, item: item)
             } else {
                 Text(tr("Select an item to see what it holds and why it can go."))
                     .foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .onChange(of: sidebar) { c in if c != nil { showOverview = false } }
         .searchable(text: $search, placement: .toolbar, prompt: Text(tr("Search")))
         .toolbar {
             ToolbarItemGroup {

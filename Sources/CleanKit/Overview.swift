@@ -33,8 +33,10 @@ public struct SpaceOverview: Codable, Sendable {
         var note: String? = nil
     }
 
-    /// Measures in parallel at background priority; `onProgress` gets each finished spot's title.
-    public static func measure(home: String = NSHomeDirectory(), onProgress: ((String) -> Void)? = nil) -> SpaceOverview {
+    /// Measures in parallel at background priority. `onProgress` gets each finished spot's title,
+    /// `onEntry` the spot itself, so a UI can show results as they come in.
+    public static func measure(home: String = NSHomeDirectory(), onProgress: ((String) -> Void)? = nil,
+                               onEntry: ((Entry) -> Void)? = nil) -> SpaceOverview {
         let started = Date()
         let url = URL(fileURLWithPath: home)
         let values = try? url.resourceValues(forKeys: [.volumeTotalCapacityKey, .volumeAvailableCapacityKey,
@@ -85,6 +87,7 @@ public struct SpaceOverview: Codable, Sendable {
                 let e = Entry(id: spot.id, title: spot.title, path: roots.count == 1 ? roots[0] : nil, bytes: total,
                               children: Array(kids.prefix(spot.children)), note: spot.note)
                 lock.lock(); entries[i] = e; lock.unlock()
+                onEntry?(e)
                 onProgress?(spot.title)
             }
         }
@@ -109,7 +112,7 @@ public struct SpaceOverview: Codable, Sendable {
         }
         queue.waitUntilAllOperationsAreFinished()
 
-        var list = entries.compactMap { $0 } + [runtimes].compactMap { $0 }
+        var list = entries.compactMap { $0 } + [runtimes, swap()].compactMap { $0 }
         let counted = list.reduce(Int64(0)) { $0 + $1.bytes }
         let used = capacity - free
         if used > counted {
@@ -119,6 +122,32 @@ public struct SpaceOverview: Codable, Sendable {
         list.sort { $0.bytes > $1.bytes }
         return SpaceOverview(capacity: capacity, free: free, purgeable: max(0, important - free), entries: list,
                              duration: Date().timeIntervalSince(started))
+    }
+
+    /// Swap files live in the same container: when memory runs short, they take disk space.
+    static func swap() -> Entry? {
+        var usage = xsw_usage()
+        var size = MemoryLayout<xsw_usage>.size
+        guard sysctlbyname("vm.swapusage", &usage, &size, nil, 0) == 0, usage.xsu_total > 0 else { return nil }
+        return Entry(id: "swap", title: tr("Swap (memory moved to disk)"), path: "/System/Volumes/VM", bytes: Int64(usage.xsu_total),
+                     children: [], note: tr("grows when memory runs short and shrinks after a restart; closing idle apps and agent sessions keeps it small"))
+    }
+
+    /// The last measurement, saved so the window opens with numbers instead of a 5-minute wait.
+    public static var cacheURL: URL {
+        URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Caches/dev.thermo/space-overview.json")
+    }
+
+    public static func cached() -> (SpaceOverview, Date)? {
+        guard let data = try? Data(contentsOf: cacheURL),
+              let o = try? JSONDecoder().decode(SpaceOverview.self, from: data),
+              let at = (try? FileManager.default.attributesOfItem(atPath: cacheURL.path))?[.modificationDate] as? Date else { return nil }
+        return (o, at)
+    }
+
+    public func save() {
+        try? FileManager.default.createDirectory(at: Self.cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? JSONEncoder().encode(self).write(to: Self.cacheURL, options: .atomic)
     }
 
     static func isBundle(_ path: String) -> Bool {

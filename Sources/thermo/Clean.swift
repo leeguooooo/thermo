@@ -20,6 +20,7 @@ struct CleanCommand {
     func overview() {
         let tty = isatty(STDERR_FILENO) != 0 && !args.has("json")
         let o = SpaceOverview.measure(onProgress: tty ? { _ in FileHandle.standardError.write(".".data(using: .utf8)!) } : nil)
+        o.save()  // the app's Overview opens with these numbers
         if tty { FileHandle.standardError.write("\n".data(using: .utf8)!) }
         if args.has("json") { print(Export.json(o)); return }
         func gb(_ b: Int64) -> String { b >= 1_000_000_000 ? String(format: "%.1f GB", Double(b) / 1e9) : String(format: "%.0f MB", Double(b) / 1e6) }
