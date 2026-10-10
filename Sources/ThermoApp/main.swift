@@ -224,6 +224,15 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     MainActor.assumeIsolated { renderPreviews(to: CommandLine.arguments[i + 1]) }
     app.run()
 }
+/// `Thermo --disk`: just the Disk Cleanup window — no menu bar item, no fan helper; quits when closed.
+if CommandLine.arguments.contains("--disk") {
+    app.setActivationPolicy(.regular)
+    let disk = MainActor.assumeIsolated { DiskModel() }
+    // After launch finishes, or the app cannot come to the front.
+    DispatchQueue.main.async { MainActor.assumeIsolated { DiskWindow.show(disk) } }
+    NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { _ in exit(0) }
+    app.run()
+}
 /// `Thermo --agents`: just the AI agent diagnostics window — no menu bar item, no fan helper; quits when closed.
 if CommandLine.arguments.contains("--agents") {
     app.setActivationPolicy(.regular)

@@ -185,9 +185,6 @@ final class DiskModel: ObservableObject {
 struct DiskView: View {
     @ObservedObject var model: DiskModel
     @State private var confirming = false
-    @State private var expanded: Set<CleanCategory> = [.aiSessions]
-    /// Items whose sessions are listed.
-    @State private var openItems: Set<String> = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -207,8 +204,8 @@ struct DiskView: View {
                 Text(tr("Scope changed — scan again to update the list.")).font(.caption2).foregroundStyle(.orange)
             }
             if let r = model.report {
-                if renderingPreview { list(r) } else { ScrollView { list(r) }.frame(height: 330) }
-                footer(r)
+                // Choosing what to remove happens in the Disk Cleanup window; here, just the picture.
+                summary(r)
             } else if model.scanning {
                 VStack(spacing: 6) {
                     if !renderingPreview { ProgressView().controlSize(.small) }
@@ -220,7 +217,7 @@ struct DiskView: View {
                 VStack(spacing: 10) {
                     Text(tr("Finds old AI sessions, model downloads and agent leftovers, plus the usual caches. Nothing is removed until you choose."))
                         .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    Button(tr("Start scan")) { model.scan() }.buttonStyle(.borderedProminent)
+                    Button(tr("Open Disk Cleanup…")) { DiskWindow.show(model) }.buttonStyle(.borderedProminent)
                     Text(tr("Runs at low priority; you can stop it any time and get a notification when it's done."))
                         .font(.caption2).foregroundStyle(.tertiary).multilineTextAlignment(.center)
                 }
@@ -236,33 +233,12 @@ struct DiskView: View {
     }
 
     var confirmSheet: some View {
-        ConfirmSheet(title: tr("Clean %1$@?", ByteFormat.string(model.selectedBytes)), summary: confirmText,
+        ConfirmSheet(title: tr("Clean %1$@?", ByteFormat.string(model.selectedBytes)), summary: model.confirmSummary,
                      destructive: model.selectedItems.contains { $0.safety == .safe }, heading: tr("What will be removed"),
-                     lines: planLines,
+                     lines: model.planLines,
                      footnote: tr("Removed items are listed in ~/Library/Logs/Thermo/clean.log. Anything changed since the scan is skipped."),
                      confirmTitle: tr("Clean"),
                      confirm: { confirming = false; model.clean() }, cancel: { confirming = false })
-    }
-
-    /// One line per item: how it goes, its size, its name and how many paths.
-    var planLines: [String] {
-        model.selectedItems.map { i in
-            let how = i.safety == .safe ? tr("delete") : tr("trash")
-            let paths = trCount(i.paths.count, "%1$@ path", "%1$@ paths")
-            return "\(how.padding(toLength: 7, withPad: " ", startingAt: 0)) \(ByteFormat.string(i.bytes).padding(toLength: 9, withPad: " ", startingAt: 0)) \(i.title) (\(paths))"
-        }
-    }
-
-    var confirmText: String {
-        let items = model.selectedItems
-        let trash = items.filter { $0.safety != .safe }
-        var parts = [trCount(items.count, "%1$@ item.", "%1$@ items.")]
-        if trash.count < items.count { parts.append(tr("Caches and build output are deleted.")) }
-        if !trash.isEmpty {
-            parts.append(trCount(trash.count, "%1$@ item with your data (sessions, models, worktrees) goes to the Trash.",
-                                 "%1$@ items with your data (sessions, models, worktrees) go to the Trash."))
-        }
-        return parts.joined(separator: " ")
     }
 
     var header: some View {
@@ -292,22 +268,6 @@ struct DiskView: View {
         }
     }
 
-    func list(_ r: ScanReport) -> some View {
-        LazyVStack(alignment: .leading, spacing: 4) {
-            if r.items.isEmpty {
-                Text(tr("Nothing to clean.")).foregroundStyle(.secondary).padding(.vertical, 20)
-            }
-            ForEach(CleanCategory.allCases, id: \.self) { c in
-                let items = r.items.filter { $0.category == c }
-                if !items.isEmpty { section(c, items, total: r.bytes(in: c)) }
-            }
-            if let days = r.claudeCleanupDays {
-                Text(tr("Claude Code deletes its own sessions after %1$@ days (cleanupPeriodDays).", String(days)))
-                    .font(.caption2).foregroundStyle(.tertiary).padding(.top, 4)
-            }
-        }
-    }
-
     func icon(_ c: CleanCategory) -> String {
         switch c {
         case .aiSessions: return "bubble.left.and.text.bubble.right"
@@ -321,145 +281,42 @@ struct DiskView: View {
         }
     }
 
-    func section(_ c: CleanCategory, _ items: [CleanItem], total: Int64) -> some View {
-        let open = expanded.contains(c)
-        let ticked = items.filter { model.selected.contains($0.id) }.count
-        return VStack(alignment: .leading, spacing: 3) {
-            Button {
-                if open { expanded.remove(c) } else { expanded.insert(c) }
-            } label: {
-                HStack {
-                    Image(systemName: open ? "chevron.down" : "chevron.right").font(.caption2).frame(width: 10)
-                    Image(systemName: icon(c)).foregroundStyle(.secondary).frame(width: 16)
-                    Text(c.title).font(.callout.bold())
-                    if ticked > 0 { Text(tr("%1$@ selected", String(ticked))).font(.caption2).foregroundStyle(.secondary) }
-                    Spacer()
-                    Text(ByteFormat.string(total)).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 4)
-            // Previews are a fixed-size image; a few rows show the layout.
-            if open { ForEach(renderingPreview ? Array(items.prefix(5)) : items) { row($0) } }
-        }
-    }
-
-    func row(_ i: CleanItem) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            itemRow(i)
-            if let parts = i.parts, parts.count > 1, i.cleanable {
-                let open = openItems.contains(i.id)
-                let off = model.excluded[i.id]?.count ?? 0
-                Button {
-                    if open { openItems.remove(i.id) } else { openItems.insert(i.id) }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: open ? "chevron.down" : "chevron.right").font(.system(size: 8))
-                        Text(model.selected.contains(i.id) && off > 0
-                             ? tr("%1$@ of %2$@ sessions selected", String(parts.count - off), String(parts.count))
-                             : trCount(parts.count, "%1$@ session", "%1$@ sessions"))
+    func summary(_ r: ScanReport) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(CleanCategory.allCases, id: \.self) { c in
+                let bytes = r.bytes(in: c)
+                if bytes > 0 {
+                    HStack {
+                        Image(systemName: icon(c)).foregroundStyle(.secondary).frame(width: 18)
+                        Text(c.title)
+                        Spacer()
+                        Text(ByteFormat.string(bytes)).monospacedDigit().foregroundStyle(.secondary)
                     }
-                    .font(.caption2).foregroundStyle(.secondary).contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(.leading, 34)
-                if open {
-                    ForEach(renderingPreview ? Array(parts.prefix(4)) : parts) { p in partRow(p, of: i) }
-                }
-            }
-        }
-    }
-
-    func partRow(_ p: CleanPart, of i: CleanItem) -> some View {
-        let on = model.isTicked(p, of: i)
-        return HStack(spacing: 6) {
-            Image(systemName: on ? "checkmark.square.fill" : "square").font(.caption)
-                .foregroundStyle(on ? Color.accentColor : .secondary)
-                .onTapGesture { model.toggle(p, of: i) }
-            Text(p.title).font(.caption).lineLimit(1).truncationMode(.tail)
-            Spacer(minLength: 4)
-            if let d = p.lastUsed { Text(AgeFormat.string(d)).font(.caption2).foregroundStyle(.tertiary) }
-            Text(ByteFormat.string(p.bytes)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                .frame(width: 60, alignment: .trailing)
-        }
-        .padding(.leading, 46)
-        .contextMenu {
-            Button(tr("Show in Finder")) {
-                NSWorkspace.shared.activateFileViewerSelecting(p.paths.prefix(20).map { URL(fileURLWithPath: $0) })
-            }
-            Button(tr("Copy ID")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString("\(i.id)#\(p.id)", forType: .string) }
-        }
-    }
-
-    func itemRow(_ i: CleanItem) -> some View {
-        HStack(alignment: .top, spacing: 6) {
-            Image(systemName: model.selected.contains(i.id) ? "checkmark.square.fill" : "square")
-                .foregroundStyle(i.cleanable ? (model.selected.contains(i.id) ? Color.accentColor : .secondary) : Color.secondary.opacity(0.4))
-                .onTapGesture { if i.cleanable { model.toggle(i) } }
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 4) {
-                    Text(i.title).font(.callout).lineLimit(1).truncationMode(.middle)
-                    SafetyTag(safety: i.safety, info: i.paths.isEmpty)
-                }
-                Text([i.detail, i.lastUsed.map { AgeFormat.string($0) }].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
-                    .font(.caption2).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                if let b = i.blocked { Text(b).font(.caption2).foregroundStyle(.orange) }
-                else if let h = i.hint { Text(tr("Run: %1$@", h)).font(.caption2.monospaced()).foregroundStyle(.secondary).textSelection(.enabled) }
-                else if let n = i.note { Text(n).font(.caption2).foregroundStyle(.tertiary).lineLimit(2) }
-            }
-            Spacer(minLength: 4)
-            let shown = model.selectedItems.first { $0.id == i.id }?.bytes ?? i.bytes
-            Text(ByteFormat.string(shown)).font(.callout.monospacedDigit()).foregroundStyle(i.cleanable ? .primary : .secondary)
-        }
-        .padding(.leading, 12)
-        .contextMenu {
-            Button(tr("Show in Finder")) { model.reveal(i) }.disabled(i.paths.isEmpty)
-            Button(tr("Copy ID")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(i.id, forType: .string) }
-        }
-        .help(i.paths.prefix(5).joined(separator: "\n") + (i.paths.count > 5 ? "\n… \(i.paths.count - 5) more" : ""))
-    }
-
-    func footer(_ r: ScanReport) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if !r.denied.isEmpty {
-                HStack {
-                    Text(trCount(r.denied.count, "%1$@ location needs Full Disk Access.", "%1$@ locations need Full Disk Access."))
-                        .font(.caption).foregroundStyle(.orange)
-                    Spacer()
-                    if !renderingPreview { Button(tr("Open Settings")) { model.openFullDiskAccess() }.controlSize(.small) }
+                    .font(.callout)
                 }
             }
             if let res = model.lastResult {
                 Text(res).font(.caption).foregroundStyle(.secondary).onTapGesture { model.openLog() }
             }
-            if renderingPreview {
-                HStack {
-                    Spacer()
-                    Text(tr("Clean %1$@", ByteFormat.string(model.selectedBytes))).font(.callout).foregroundStyle(.white)
+            if let days = r.claudeCleanupDays {
+                Text(tr("Claude Code deletes its own sessions after %1$@ days (cleanupPeriodDays).", String(days)))
+                    .font(.caption2).foregroundStyle(.tertiary)
+            }
+            HStack {
+                Spacer()
+                if renderingPreview {
+                    Text(tr("Open Disk Cleanup…")).font(.callout).foregroundStyle(.white)
                         .padding(.horizontal, 10).padding(.vertical, 3)
                         .background(RoundedRectangle(cornerRadius: 5).fill(Color.accentColor))
-                }
-            } else {
-                HStack {
-                    Button(tr("None")) { model.selected = [] }.controlSize(.small).modifier(ActionButtonStyle(prominent: false))
-                        .disabled(model.selected.isEmpty)
-                    Button(tr("Safe")) { model.selected = Set(r.items.filter { $0.cleanable && $0.safety == .safe }.map(\.id)) }
-                        .controlSize(.small).modifier(ActionButtonStyle(prominent: false))
-                    Spacer()
-                    if model.cleaning {
-                        ProgressView(value: Double(model.cleaningDone), total: Double(max(1, model.cleaningTotal)))
-                            .frame(width: 50).controlSize(.small)
-                            .help(tr("Cleaning %1$@ of %2$@: %3$@", String(model.cleaningDone + 1), String(model.cleaningTotal), model.cleaningStep))
-                    }
-                    Button(tr("Clean %1$@", ByteFormat.string(model.selectedBytes))) { confirming = true }
-                        .modifier(ActionButtonStyle(prominent: true))
-                        .keyboardShortcut(.defaultAction)
-                        .disabled(model.selectedItems.isEmpty || model.cleaning || model.scanning)
+                } else {
+                    Button(tr("Open Disk Cleanup…")) { DiskWindow.show(model) }
+                        .modifier(ActionButtonStyle(prominent: true)).keyboardShortcut(.defaultAction)
                 }
             }
+            .padding(.top, 4)
         }
     }
+
 }
 
 struct SafetyTag: View {
