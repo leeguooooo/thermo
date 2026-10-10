@@ -425,17 +425,4 @@ final class Monitor: ObservableObject {
         }
     }
 
-    // MARK: Launch at login
-
-    var launchAtLogin: Bool {
-        get { SMAppService.mainApp.status == .enabled }
-        set {
-            do {
-                if newValue { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
-            } catch {
-                lastError = tr("Launch at login: %1$@", error.localizedDescription)
-            }
-            objectWillChange.send()
-        }
-    }
 }

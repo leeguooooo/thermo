@@ -2,6 +2,9 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "Launch at login is waiting for macOS approval.": "登录时启动正在等待系统批准。",
+    "Open Login Items settings": "打开登录项设置",
+    "macOS could not find Thermo’s login item. Open the installed app and try again.": "系统未找到 Thermo 的登录项，请打开已安装的 App 后重试。",
     "Process list": "进程列表",
     "Process ownership": "进程归属",
     "Status unavailable": "无法读取状态",

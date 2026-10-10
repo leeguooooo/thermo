@@ -576,6 +576,7 @@ struct SettingsView: View {
     @AppStorage(PulseRecorder.alertsKey) private var slowdownAlerts = true
     @ObservedObject var updates: Updates
     @ObservedObject private var notifications = NotificationAccess.shared
+    @ObservedObject private var loginItem = LoginItemAccess.shared
     @AppStorage(Settings.titleMetric) private var titleMetric = TitleMetric.cpu.rawValue
     @AppStorage(Settings.interval) private var interval = 2.0
     @AppStorage(Settings.alertsEnabled) private var alertsEnabled = false
@@ -605,8 +606,24 @@ struct SettingsView: View {
                 row(tr("Fahrenheit")) { Toggle("", isOn: $fahrenheit) }
                 row(tr("Show in Dock")) { Toggle("", isOn: $showInDock) }
                 row(tr("Launch at login"), last: true) {
-                    Toggle("", isOn: Binding(get: { monitor.launchAtLogin }, set: { monitor.launchAtLogin = $0 }))
+                    Toggle("", isOn: Binding(get: { loginItem.requested }, set: { loginItem.setRequested($0) }))
+                        .disabled(loginItem.state == .unknown || loginItem.state == .unavailable)
                 }
+            }
+            if loginItem.state == .needsApproval || loginItem.state == .unavailable || loginItem.error != nil {
+                VStack(alignment: .leading, spacing: 10) {
+                    if loginItem.state == .needsApproval {
+                        Label(tr("Launch at login is waiting for macOS approval."), systemImage: "hourglass")
+                        Button(tr("Open Login Items settings")) { loginItem.openSettings() }
+                    } else if loginItem.state == .unavailable {
+                        Label(tr("macOS could not find Thermo’s login item. Open the installed app and try again."), systemImage: "exclamationmark.triangle")
+                    }
+                    if let error = loginItem.error {
+                        Text(error).foregroundStyle(.orange).textSelection(.enabled)
+                    }
+                }
+                .font(.callout).foregroundStyle(.white.opacity(0.8))
+                .frame(maxWidth: .infinity, alignment: .leading).padding(14).glass(radius: 12)
             }
             section(tr("Alerts")) {
                 row(tr("Warn me before my Mac gets slow")) {
@@ -652,8 +669,10 @@ struct SettingsView: View {
         }
         .toggleStyle(.switch)
         .pickerStyle(.menu)
-        .onAppear { notifications.refresh() }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in notifications.refresh() }
+        .onAppear { notifications.refresh(); loginItem.refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            notifications.refresh(); loginItem.refresh()
+        }
     }
 
     @ViewBuilder var notificationStatus: some View {
