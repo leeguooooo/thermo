@@ -85,14 +85,14 @@ enum Projects {
                 title: "\((dir as NSString).lastPathComponent) · \(a)",
                 detail: FS.tilde(dir, home: ctx.home) + " · \(kind)", safety: stale ? .safe : .review,
                 bytes: s.bytes, files: s.files, lastUsed: activity, paths: [p],
-                note: stale ? nil : "project changed recently; it will rebuild")
+                note: stale ? nil : tr("project changed recently; it will rebuild"))
         case let .worktree(wt, repo):
             return worktreeItem(wt, repo: repo, repoName: (repo as NSString).lastPathComponent, ctx: ctx)
         case let .aider(dir, paths):
             let s = FS.size(paths)
             guard s.bytes > 100_000 else { return nil }
             return CleanItem(id: "aider/" + id(dir, ctx: ctx), category: .aiCaches,
-                             title: "Aider repo map cache · \((dir as NSString).lastPathComponent)", detail: FS.tilde(dir, home: ctx.home),
+                             title: tr("Aider repo map cache") + " · \((dir as NSString).lastPathComponent)", detail: FS.tilde(dir, home: ctx.home),
                              safety: .safe, bytes: s.bytes, files: s.files, paths: paths)
         }
     }
@@ -176,28 +176,28 @@ enum Projects {
         var detail = FS.tilde(wt, home: ctx.home)
         if !registered {
             safety = .safe
-            note = "not a git worktree any more (left behind)"
+            note = tr("not a git worktree any more (left behind)")
         } else {
             let q = Shell.quote(wt)
             let status = Shell.run("git -C \(q) status --porcelain --untracked-files=normal | head -20", timeout: 10)
             let branch = Shell.run("git -C \(q) rev-parse --abbrev-ref HEAD", timeout: 5)?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? "?"
-            detail += branch == "HEAD" ? " · detached HEAD" : " · branch \(branch)"
+            detail += " · " + (branch == "HEAD" ? tr("detached HEAD") : tr("branch %1$@", branch))
             if status == nil {
-                blocked = "git could not read this worktree"
+                blocked = tr("git could not read this worktree")
             } else if !(status ?? "").isEmpty {
                 safety = .risky
-                note = "has uncommitted changes"
+                note = tr("has uncommitted changes")
             } else {
                 // The branch itself lives in the main repository and survives `git worktree prune`.
-                note = branch == "HEAD" ? "clean, detached checkout" : "clean; branch \(branch) stays in the repository"
+                note = branch == "HEAD" ? tr("clean, detached checkout") : tr("clean; branch %1$@ stays in the repository", branch)
             }
         }
-        if ctx.agentDirs.contains(where: { $0 == wt || $0.hasPrefix(wt + "/") }) { blocked = "an agent is running in it" }
-        if (s.newest ?? ctx.now) > ctx.activeAfter, blocked == nil { blocked = "modified in the last 2 hours" }
+        if ctx.agentDirs.contains(where: { $0 == wt || $0.hasPrefix(wt + "/") }) { blocked = tr("an agent is running in it") }
+        if (s.newest ?? ctx.now) > ctx.activeAfter, blocked == nil { blocked = tr("modified in the last 2 hours") }
         guard s.bytes > 0 else { return nil }
         return CleanItem(id: "worktree/" + AISessions.slug(repoName) + "/" + AISessions.slug(name), category: .aiSessions,
-                         title: "Agent worktree · \(repoName)/\(name)", detail: detail, safety: safety,
+                         title: tr("Agent worktree") + " · \(repoName)/\(name)", detail: detail, safety: safety,
                          bytes: s.bytes, files: s.files, lastUsed: s.newest, paths: [wt], note: note, blocked: blocked,
                          afterClean: ["git -C \(Shell.quote(repo)) worktree prune"])
     }

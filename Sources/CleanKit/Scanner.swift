@@ -85,11 +85,13 @@ public final class DiskScanner: @unchecked Sendable {
         }
         guard size.bytes > 0 else { return nil }
         let detail = roots.count == 1 ? ctx.tilde(roots[0]) : "\(ctx.tilde(roots[0])) and \(roots.count - 1) more"
-        var note = rule.note
-        if rule.scope == .staleContents { note = [note, "only items untouched for \(ctx.options.olderThanDays) days"].compactMap { $0 }.joined(separator: "; ") }
-        return CleanItem(id: rule.id, category: rule.category, title: rule.title, detail: detail, safety: rule.safety,
+        var note = rule.note.map { tr($0) }
+        if rule.scope == .staleContents {
+            note = [note, tr("only items untouched for %1$@ days", String(ctx.options.olderThanDays))].compactMap { $0 }.joined(separator: "; ")
+        }
+        return CleanItem(id: rule.id, category: rule.category, title: tr(rule.title), detail: detail, safety: rule.safety,
                          bytes: size.bytes, files: size.files, lastUsed: size.newest, paths: paths, note: note,
-                         blocked: ctx.processes.running(rule.apps).map { "quit \($0) first" })
+                         blocked: ctx.processes.running(rule.apps).map { tr("quit %1$@ first", $0) })
     }
 
     /// `~/Library/Caches` folders no specific rule covers.
@@ -110,10 +112,10 @@ public final class DiskScanner: @unchecked Sendable {
             paths.append(c); size = size + s
         }
         guard size.bytes > 0 else { return nil }
-        return CleanItem(id: "other-app-caches", category: .system, title: "Other app caches",
-                         detail: "\(paths.count) folders in ~/Library/Caches", safety: .safe, bytes: size.bytes,
+        return CleanItem(id: "other-app-caches", category: .system, title: tr("Other app caches"),
+                         detail: trCount(paths.count, "%1$@ folder in ~/Library/Caches", "%1$@ folders in ~/Library/Caches"), safety: .safe, bytes: size.bytes,
                          files: size.files, lastUsed: size.newest, paths: paths,
-                         note: "apps rebuild their caches; ones used in the last hour are skipped")
+                         note: tr("apps rebuild their caches; ones used in the last hour are skipped"))
     }
 
     func docker(_ ctx: ScanContext) -> CleanItem? {
@@ -125,9 +127,9 @@ public final class DiskScanner: @unchecked Sendable {
         guard s.bytes > 0 else { return nil }
         let orb = disk.contains("orbstack"), colima = disk.contains("colima")
         return CleanItem(id: "docker-hint", category: .devCaches,
-                         title: orb ? "OrbStack disk image" : colima ? "Colima disk image" : "Docker disk image",
+                         title: tr(orb ? "OrbStack disk image" : colima ? "Colima disk image" : "Docker disk image"),
                          detail: ctx.tilde(disk), safety: .review, bytes: s.bytes, files: 1,
-                         note: "unused images, containers and build cache live inside this file",
+                         note: tr("unused images, containers and build cache live inside this file"),
                          hint: "docker system prune -a  (then docker builder prune)")
     }
 

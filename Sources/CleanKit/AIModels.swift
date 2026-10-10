@@ -12,7 +12,7 @@ enum AIModels {
         guard s.bytes > 1_000_000 else { return nil }
         let used = lastUsed ?? s.newest
         var stale = ""
-        if let used, used < ctx.staleBefore { stale = " · unused \(AgeFormat.string(used, now: ctx.now).replacingOccurrences(of: " ago", with: ""))" }
+        if let used, used < ctx.staleBefore { stale = " · " + tr("unused %1$@", AgeFormat.span(used, now: ctx.now)) }
         return CleanItem(id: id, category: .aiModels, title: title + stale, detail: detail, safety: .review,
                          bytes: s.bytes, files: s.files, lastUsed: used, paths: paths, note: note,
                          blocked: app.flatMap { ctx.processes.running([$0]) }.map { "\($0) is running" })
@@ -55,7 +55,7 @@ enum AIModels {
             let s = FS.size(Array(own))
             if let item = modelItem("ollama/\(AISessions.slug(m.name))", "Ollama · \(m.name)", detail: FS.tilde(root, home: ctx.home),
                                     paths: [m.manifest] + own.sorted(), ctx: ctx, size: s, lastUsed: FS.mtime(m.manifest),
-                                    note: shared > 0 ? "\(shared) layer\(shared == 1 ? "" : "s") shared with other models are kept" : nil) {
+                                    note: shared > 0 ? trCount(shared, "%1$@ layer shared with other models is kept", "%1$@ layers shared with other models are kept") : nil) {
                 items.append(item)
             }
         }
@@ -63,8 +63,8 @@ enum AIModels {
         let orphans = FS.children(root + "/blobs").filter { !referenced.contains($0) && (FS.mtime($0) ?? ctx.now) < ctx.activeAfter }
         if !orphans.isEmpty {
             let s = FS.size(orphans)
-            items.append(CleanItem(id: "ollama-orphan-blobs", category: .aiModels, title: "Ollama: unreferenced layers",
-                                   detail: "left by removed models or interrupted pulls", safety: .safe,
+            items.append(CleanItem(id: "ollama-orphan-blobs", category: .aiModels, title: tr("Ollama: unreferenced layers"),
+                                   detail: tr("left by removed models or interrupted pulls"), safety: .safe,
                                    bytes: s.bytes, files: s.files, paths: orphans))
         }
         return items
@@ -85,7 +85,7 @@ enum AIModels {
             let id = name.dropFirst(prefix.count).replacingOccurrences(of: "--", with: "/")
             // Snapshot folders are touched when a revision is resolved, refs when one is downloaded.
             let used = (FS.children(repo + "/snapshots") + FS.children(repo + "/refs")).compactMap(FS.mtime).max()
-            if let item = modelItem("hf/\(AISessions.slug(id))", "Hugging Face \(kind) · \(id)", detail: FS.tilde(repo, home: ctx.home),
+            if let item = modelItem("hf/\(AISessions.slug(id))", "Hugging Face \(tr(kind)) · \(id)", detail: FS.tilde(repo, home: ctx.home),
                                     paths: [repo], ctx: ctx, lastUsed: used) {
                 items.append(item)
             }

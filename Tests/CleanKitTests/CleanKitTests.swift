@@ -10,10 +10,13 @@ final class CleanKitTests: XCTestCase {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("cleankit-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         home = dir.resolvingSymlinksInPath().path
+        // Assertions read English text; the Chinese test sets its own language.
+        L10n.override = .english
     }
 
     override func tearDownWithError() throws {
         try? FileManager.default.removeItem(atPath: home)
+        L10n.override = nil
     }
 
     @discardableResult
@@ -114,6 +117,16 @@ final class CleanKitTests: XCTestCase {
         XCTAssertFalse(paths.contains { $0.contains("memory") }, "memory never selected")
         XCTAssertTrue(item.note?.contains("1 in use") ?? false)
         XCTAssertTrue(item.note?.contains("fix the login bug") ?? false)
+    }
+
+    func testSimplifiedChineseText() throws {
+        L10n.override = .simplifiedChinese
+        try write(".claude/projects/-nowhere/77777777-7777-7777-7777-777777777777.jsonl", "{\"cwd\":\"\(home)/src/gone\"}\n", age: 40)
+        let item = try XCTUnwrap(AISessions.claudeCode(context()).first)
+        XCTAssertTrue(item.title.hasSuffix("1 个会话"), item.title)
+        XCTAssertTrue(item.detail.hasSuffix("项目文件夹已删除"), item.detail)
+        XCTAssertEqual(CleanCategory.aiSessions.title, "AI 会话")
+        XCTAssertEqual(AgeFormat.string(now.addingTimeInterval(-3 * 86400), now: now), "3 天前")
     }
 
     func testClaudeSessionsOfDeletedProjectAreAllStale() throws {

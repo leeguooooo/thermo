@@ -1,5 +1,7 @@
 // Processes, live agent sessions and the protected-path guard are shared with the agent doctor.
 @_exported import AgentCore
+// User-facing text goes through tr(); the CLI pins English, the app follows the chosen language.
+@_exported import ThermoL10n
 import Foundation
 
 /// What a finding is, for grouping in the CLI and the app.
@@ -15,14 +17,14 @@ public enum CleanCategory: String, CaseIterable, Codable, Sendable {
 
     public var title: String {
         switch self {
-        case .aiSessions: return "AI sessions"
-        case .aiModels: return "AI models"
-        case .aiCaches: return "AI tool caches"
-        case .devCaches: return "Developer caches"
+        case .aiSessions: return tr("AI sessions")
+        case .aiModels: return tr("AI models")
+        case .aiCaches: return tr("AI tool caches")
+        case .devCaches: return tr("Developer caches")
         case .xcode: return "Xcode"
-        case .projects: return "Project build artifacts"
-        case .browsers: return "Browser caches"
-        case .system: return "System & apps"
+        case .projects: return tr("Project build artifacts")
+        case .browsers: return tr("Browser caches")
+        case .system: return tr("System & apps")
         }
     }
 
@@ -132,16 +134,30 @@ public enum ByteFormat {
 }
 
 public enum AgeFormat {
+    /// "5m ago", "3d ago", "2mo ago" (localized).
     public static func string(_ date: Date?, now: Date = Date()) -> String {
         guard let date else { return "" }
-        let s = now.timeIntervalSince(date)
-        if s < 3600 { return "\(max(1, Int(s / 60)))m ago" }
-        if s < 86400 { return "\(Int(s / 3600))h ago" }
-        let d = Int(s / 86400)
-        if d < 60 { return "\(d)d ago" }
-        if d < 730 { return "\(d / 30)mo ago" }
-        return "\(d / 365)y ago"
+        return tr("%1$@ ago", span(date, now: now))
     }
+
+    /// "5m", "3d", "2mo": how long ago, without "ago".
+    public static func span(_ date: Date, now: Date = Date()) -> String {
+        let s = now.timeIntervalSince(date)
+        if s < 3600 { return tr("%1$@m", String(max(1, Int(s / 60)))) }
+        if s < 86400 { return tr("%1$@h", String(Int(s / 3600))) }
+        let d = Int(s / 86400)
+        if d < 60 { return tr("%1$@d", String(d)) }
+        if d < 730 { return tr("%1$@mo", String(d / 30)) }
+        return tr("%1$@y", String(d / 365))
+    }
+}
+
+/// `tr` with English singular/plural; `%1$@` is the count, further arguments follow.
+public func trCount(_ n: Int, _ one: String, _ many: String, _ args: String...) -> String {
+    let key = n == 1 ? one : many
+    let all = [String(n)] + args
+    let format = tr(key)
+    return String(format: format, locale: nil, arguments: all.map { $0 as NSString })
 }
 
 /// Parses "30", "30d", "2w", "6m", "1y" into days.

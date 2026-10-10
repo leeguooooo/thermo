@@ -73,18 +73,21 @@ enum AISessions {
             guard !stale.isEmpty else { continue }
             let size = stale.reduce(TreeSize()) { $0 + $1.size }
             var detail = g.cwd.map(ctx.tilde) ?? g.label
-            if projectGone { detail += " · project folder deleted" }
+            if projectGone { detail += " · " + tr("project folder deleted") }
             var notes: [String] = []
             if !kept.isEmpty {
                 let keptSize = kept.reduce(Int64(0)) { $0 + $1.size.bytes }
-                notes.append("keeping \(kept.count) recent session\(kept.count == 1 ? "" : "s") (\(ByteFormat.string(keptSize)))"
-                             + (live > 0 ? ", \(live) in use" : ""))
+                notes.append(live > 0
+                    ? trCount(kept.count, "keeping %1$@ recent session (%2$@), %3$@ in use", "keeping %1$@ recent sessions (%2$@), %3$@ in use",
+                              ByteFormat.string(keptSize), String(live))
+                    : trCount(kept.count, "keeping %1$@ recent session (%2$@)", "keeping %1$@ recent sessions (%2$@)",
+                              ByteFormat.string(keptSize)))
             }
             let titles = stale.sorted { $0.modified > $1.modified }.compactMap(\.title).filter { !$0.isEmpty }
-            if let t = titles.first ?? g.titles.first { notes.append("latest: “\(t.prefix(60))”") }
+            if let t = titles.first ?? g.titles.first { notes.append(tr("latest: “%1$@”", String(t.prefix(60)))) }
             out.append(CleanItem(
                 id: "\(idPrefix)/\(slug(g.cwd.map { relative($0, ctx) } ?? g.label))", category: .aiSessions,
-                title: "\(tool) · \(g.label) · \(stale.count) session\(stale.count == 1 ? "" : "s")",
+                title: "\(tool) · \(g.label) · " + trCount(stale.count, "%1$@ session", "%1$@ sessions"),
                 detail: detail, safety: .review, bytes: size.bytes, files: size.files,
                 lastUsed: stale.map(\.modified).max(), paths: stale.flatMap(\.paths),
                 note: notes.isEmpty ? nil : notes.joined(separator: "; ")))
@@ -105,7 +108,7 @@ enum AISessions {
         guard let cwd, !cwd.isEmpty else { return fallback }
         let last = (cwd as NSString).lastPathComponent
         // Scratch directories of agents are only identifiable by their parent project.
-        if cwd.hasPrefix("/private/tmp/") || cwd.hasPrefix("/tmp/") { return "temp: " + last }
+        if cwd.hasPrefix("/private/tmp/") || cwd.hasPrefix("/tmp/") { return tr("temp: %1$@", last) }
         return last.isEmpty ? cwd : last
     }
 
@@ -161,15 +164,15 @@ enum AISessions {
         if !orphans.isEmpty {
             let s = FS.size(orphans)
             items.append(CleanItem(id: "claude-orphans", category: .aiSessions,
-                                   title: "Claude Code leftovers of deleted sessions",
-                                   detail: "file history, todos and env of sessions that no longer exist",
+                                   title: tr("Claude Code leftovers of deleted sessions"),
+                                   detail: tr("file history, todos and env of sessions that no longer exist"),
                                    safety: .safe, bytes: s.bytes, files: s.files, paths: orphans))
         }
         // Backups people make of the projects folder before upgrades.
         let backups = FS.children(root).filter { ($0 as NSString).lastPathComponent.hasPrefix("projects-backup") }
         if !backups.isEmpty {
             let s = FS.size(backups, trackNewest: true)
-            items.append(CleanItem(id: "claude-project-backups", category: .aiSessions, title: "Claude Code projects backups",
+            items.append(CleanItem(id: "claude-project-backups", category: .aiSessions, title: tr("Claude Code projects backups"),
                                    detail: backups.map { ctx.tilde($0) }.joined(separator: ", "), safety: .review,
                                    bytes: s.bytes, files: s.files, lastUsed: s.newest, paths: backups))
         }
@@ -246,7 +249,7 @@ enum AISessions {
                 let meta = codexMeta(f)
                 let key = archived ? "archived" : (meta.cwd ?? "unknown")
                 var g = byCwd[key] ?? SessionGroup(cwd: archived ? nil : meta.cwd,
-                                                   label: archived ? "archived" : label(for: meta.cwd, fallback: "unknown"))
+                                                   label: archived ? tr("archived") : label(for: meta.cwd, fallback: "unknown"))
                 g.sessions.append(SessionFile(id: meta.id ?? rel, paths: [f], size: FS.size(f), modified: m,
                                               title: meta.id.flatMap { titles[$0] }))
                 byCwd[key] = g
@@ -261,7 +264,7 @@ enum AISessions {
         }
         var items = items(tool: "Codex", idPrefix: "codex-sessions", groups: groups, ctx: ctx)
         for i in items.indices {
-            items[i].note = [items[i].note, "Codex's thread list may still show removed threads"].compactMap { $0 }
+            items[i].note = [items[i].note, tr("Codex's thread list may still show removed threads")].compactMap { $0 }
                 .joined(separator: "; ")
         }
         return items
@@ -341,7 +344,7 @@ enum AISessions {
                 }
                 items += self.items(tool: extName, idPrefix: "\(slug(extName.lowercased()))-tasks", groups: [g], ctx: ctx)
                     .map { var i = $0; i.id = "\(slug(extName.lowercased()))-tasks/\(slug(app.lowercased()))"
-                        i.title = "\(extName) tasks in \(appName) · \(i.title.components(separatedBy: " · ").last ?? "")"
+                        i.title = tr("%1$@ tasks in %2$@", extName, appName) + " · " + (i.title.components(separatedBy: " · ").last ?? "")
                         i.detail = FS.tilde(tasks, home: ctx.home); return i }
             }
         }
@@ -367,10 +370,10 @@ enum AISessions {
             let s = FS.size(dead, trackNewest: true)
             guard s.bytes > 0 else { continue }
             items.append(CleanItem(id: "\(slug(app.lowercased()))-orphan-workspaces", category: .aiSessions,
-                                   title: "\(appName) data for deleted folders · \(dead.count) workspace\(dead.count == 1 ? "" : "s")",
-                                   detail: "chat history and editor state of projects that no longer exist",
+                                   title: tr("%1$@ data for deleted folders", appName) + " · " + trCount(dead.count, "%1$@ workspace", "%1$@ workspaces"),
+                                   detail: tr("chat history and editor state of projects that no longer exist"),
                                    safety: .review, bytes: s.bytes, files: s.files, lastUsed: s.newest, paths: dead,
-                                   blocked: ctx.processes.running([appName == "VS Code" ? "Code" : app]).map { "\($0) is running" }))
+                                   blocked: ctx.processes.running([appName == "VS Code" ? "Code" : app]).map { tr("%1$@ is running", $0) }))
         }
         return items
     }
@@ -384,16 +387,16 @@ enum AISessions {
         var items: [CleanItem] = []
         let db = FS.size([root + "/opencode.db", root + "/opencode.db-wal"])
         if db.bytes > 50_000_000 {
-            items.append(CleanItem(id: "opencode-db", category: .aiSessions, title: "opencode session database",
+            items.append(CleanItem(id: "opencode-db", category: .aiSessions, title: tr("opencode session database"),
                                    detail: FS.tilde(root + "/opencode.db", home: ctx.home), safety: .review,
                                    bytes: db.bytes, files: db.files, lastUsed: FS.mtime(root + "/opencode.db"),
-                                   note: "all opencode sessions live in this database",
-                                   hint: "delete old sessions from opencode itself (/sessions)"))
+                                   note: tr("all opencode sessions live in this database"),
+                                   hint: tr("delete old sessions from opencode itself (/sessions)")))
         }
         let logs = [root + "/log", root + "/tool-output"].flatMap(FS.children).filter { (FS.mtime($0) ?? ctx.now) < ctx.activeAfter }
         let s = FS.size(logs)
         if s.bytes > 0 {
-            items.append(CleanItem(id: "opencode-logs", category: .aiCaches, title: "opencode logs & tool output",
+            items.append(CleanItem(id: "opencode-logs", category: .aiCaches, title: tr("opencode logs & tool output"),
                                    detail: FS.tilde(root, home: ctx.home), safety: .safe, bytes: s.bytes, files: s.files,
                                    paths: logs))
         }

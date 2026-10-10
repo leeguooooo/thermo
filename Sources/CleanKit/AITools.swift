@@ -41,9 +41,9 @@ enum AITools {
             guard !old.isEmpty else { continue }
             let s = FS.size(old)
             let names = old.map { ($0 as NSString).lastPathComponent }.sorted { compareVersions($0, $1) }
-            items.append(CleanItem(id: t.id, category: .aiCaches, title: "\(t.title) · \(old.count)",
+            items.append(CleanItem(id: t.id, category: .aiCaches, title: "\(tr(t.title)) · \(old.count)",
                                    detail: names.joined(separator: ", "), safety: .safe, bytes: s.bytes, files: s.files,
-                                   paths: old, note: "keeping \(keep.map { ($0 as NSString).lastPathComponent }.sorted().joined(separator: ", ")) (active, running or newest)"))
+                                   paths: old, note: tr("keeping %1$@ (active, running or newest)", keep.map { ($0 as NSString).lastPathComponent }.sorted().joined(separator: ", "))))
         }
         return items
     }
@@ -84,8 +84,8 @@ enum AITools {
         guard !old.isEmpty else { return [] }
         let s = FS.size(old)
         return [CleanItem(id: "claude-plugin-old-versions", category: .aiCaches,
-                          title: "Claude Code plugins: old versions · \(old.count)",
-                          detail: "checkouts not referenced by installed_plugins.json", safety: .safe,
+                          title: tr("Claude Code plugins: old versions") + " · \(old.count)",
+                          detail: tr("checkouts not referenced by installed_plugins.json"), safety: .safe,
                           bytes: s.bytes, files: s.files, paths: old)]
     }
 
@@ -110,9 +110,9 @@ enum AITools {
         }
         guard !old.isEmpty else { return [] }
         let s = FS.size(old)
-        return [CleanItem(id: "claude-scratchpads", category: .aiCaches, title: "Claude Code scratchpads · \(old.count) sessions",
+        return [CleanItem(id: "claude-scratchpads", category: .aiCaches, title: tr("Claude Code scratchpads") + " · " + trCount(old.count, "%1$@ session", "%1$@ sessions"),
                           detail: root, safety: .safe, bytes: s.bytes, files: s.files, lastUsed: newest, paths: old,
-                          note: "temporary files of finished sessions; idle for over a day")]
+                          note: tr("temporary files of finished sessions; idle for over a day"))]
     }
 
     /// `~/.cache/codex-runtimes/*`: interrupted downloads (`tmp*`, `*.incomplete`) are dead weight.
@@ -124,7 +124,7 @@ enum AITools {
         }
         guard !partial.isEmpty else { return [] }
         let s = FS.size(partial)
-        return [CleanItem(id: "codex-runtime-partials", category: .aiCaches, title: "Codex runtimes: interrupted downloads",
+        return [CleanItem(id: "codex-runtime-partials", category: .aiCaches, title: tr("Codex runtimes: interrupted downloads"),
                           detail: FS.tilde(root, home: ctx.home), safety: .safe, bytes: s.bytes, files: s.files, paths: partial)]
     }
 }

@@ -30,7 +30,7 @@ let package = Package(
         // What both agent features read: processes, live sessions, plugins, protected paths. User-level only.
         .target(name: "AgentCore"),
         // Disk cleanup runs as the user only: the root helper must never link it.
-        .target(name: "CleanKit", dependencies: ["AgentCore"]),
+        .target(name: "CleanKit", dependencies: ["AgentCore", "ThermoL10n"]),
         .executableTarget(name: "thermo", dependencies: ["ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n"]),
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
