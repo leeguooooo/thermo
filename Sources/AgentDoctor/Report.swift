@@ -120,10 +120,11 @@ public struct DoctorReport: Codable, Sendable {
 
 /// Diagnostic output gets pasted into issues and chats, so nothing that looks like a credential leaves this module.
 public enum Redact {
-    private static let commandCredentials = try! NSRegularExpression(pattern: "(--?[A-Za-z0-9_-]*(?:token|secret|password|key|auth)[A-Za-z0-9_-]*(?:=|\\s+))(?:(['\"])(.*?)\\2|([^\\s'\"。；，;,)&）】」』]+))", options: [.caseInsensitive])
-    private static let assignedCredentials = try! NSRegularExpression(pattern: "([A-Za-z0-9_]*(?:TOKEN|SECRET|PASSWORD|API_?KEY|AUTH)[A-Za-z0-9_]*[\"']?\\s*[=:]\\s*)(?:(['\"])(.*?)\\2|([^\\s'\"。；，;,)&）】」』]+))", options: [.caseInsensitive])
+    private static let credentialValueSyntax = #"(?:'.*?(?:'|$)|".*?(?:"|$)|[^\s'"。；，;,)&）】」』]+)"#
+    private static let commandCredentials = try! NSRegularExpression(pattern: "(?<![A-Za-z0-9_-])(?=--?[A-Za-z0-9_-]+(?:=|\\s+)" + credentialValueSyntax + ")(--?[A-Za-z0-9_-]*(?:token|secret|password|key|auth)[A-Za-z0-9_-]*(?:=|\\s+))(?:(['\"])(.*?)(?:\\2|$)|([^\\s'\"。；，;,)&）】」』]+))", options: [.caseInsensitive])
+    private static let assignedCredentials = try! NSRegularExpression(pattern: "(?<![A-Za-z0-9_])(?=[A-Za-z0-9_]+[\"']?\\s*[=:]\\s*" + credentialValueSyntax + ")([A-Za-z0-9_]*(?:TOKEN|SECRET|PASSWORD|API_?KEY|AUTH)[A-Za-z0-9_]*[\"']?\\s*[=:]\\s*)(?:(['\"])(.*?)(?:\\2|$)|([^\\s'\"。；，;,)&）】」』]+))", options: [.caseInsensitive])
     private static let bearerCredentials = try! NSRegularExpression(pattern: "\\bBearer\\s+([^\\s'\"。；，;,)&）】」』]+)", options: [.caseInsensitive])
-    private static let urlCredentials = try! NSRegularExpression(pattern: "[A-Za-z][A-Za-z0-9+.-]*://([^/@\\s]+)@")
+    private static let urlCredentials = try! NSRegularExpression(pattern: "://([^/@\\s]+)@")
     public static func identifier(_ value: String) -> String {
         guard text(value) != value else { return value }
         return "redacted-" + SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined()

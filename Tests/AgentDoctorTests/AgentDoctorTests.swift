@@ -21,6 +21,18 @@ final class ShellTests: XCTestCase {
 }
 
 final class RedactTests: XCTestCase {
+    func testLongNoncredentialLinesDoNotCauseRepeatedBacktracking() {
+        let inputs = [String(repeating: "x", count: 100_000),
+                      String(repeating: "TOKEN", count: 20_000),
+                      "--" + String(repeating: "token-", count: 16_000),
+                      String(repeating: "TOKEN", count: 20_000) + "=",
+                      "--" + String(repeating: "token-", count: 16_000) + " "]
+        let start = Date()
+        for input in inputs { XCTAssertEqual(Redact.text(input), input) }
+        XCTAssertFalse(Redact.text(String(repeating: "TOKEN", count: 20_000) + "='unterminated").contains("unterminated"))
+        XCTAssertFalse(Redact.text("--password 'unterminated").contains("unterminated"))
+        XCTAssertLessThan(Date().timeIntervalSince(start), 5)
+    }
     func testLongQuotedCredentialIsRedactedBeforeItemDetailIsTruncated() {
         var checks = ConfigChecks(env: DoctorEnvironment(home: FileManager.default.temporaryDirectory, path: [], run: { _, _ in nil }))
         let secret = String(repeating: "f", count: 250)
