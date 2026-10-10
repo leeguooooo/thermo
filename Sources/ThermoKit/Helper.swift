@@ -142,6 +142,12 @@ public final class HelperClient {
         connection.remoteObjectProxyWithErrorHandler(onError) as? ThermoHelperProtocol
     }
 
+    /// launchd holds messages for a registered service it will not start (e.g. a Login Items
+    /// registration that was never approved), so a call could otherwise wait forever.
+    private func deadline(_ seconds: TimeInterval, _ once: Once, _ fail: @escaping () -> Void) {
+        DispatchQueue.global().asyncAfter(deadline: .now() + seconds) { once.run(fail) }
+    }
+
     // MARK: async
 
     public func version() async throws -> String {
@@ -150,6 +156,7 @@ public final class HelperClient {
             guard let p = proxy({ e in once.run { cont.resume(throwing: FanControlError.helperUnavailable(e.localizedDescription)) } }) else {
                 return once.run { cont.resume(throwing: FanControlError.helperUnavailable("no proxy")) }
             }
+            deadline(3, once) { cont.resume(throwing: FanControlError.helperUnavailable("no answer within 3 s")) }
             p.version { v in once.run { cont.resume(returning: v) } }
         }
     }
@@ -161,6 +168,8 @@ public final class HelperClient {
             guard let p = proxy({ e in once.run { cont.resume(throwing: FanControlError.helperUnavailable(e.localizedDescription)) } }) else {
                 return once.run { cont.resume(throwing: FanControlError.helperUnavailable("no proxy")) }
             }
+            // Unlocking manual fan control on Apple Silicon can take ~5 s.
+            deadline(10, once) { cont.resume(throwing: FanControlError.helperUnavailable("no answer within 10 s")) }
             p.setPolicy(fan: fan, policy: data) { err in
                 once.run {
                     if let err { cont.resume(throwing: FanControlError.helper(err)) } else { cont.resume() }
@@ -175,6 +184,7 @@ public final class HelperClient {
             guard let p = proxy({ e in once.run { cont.resume(throwing: FanControlError.helperUnavailable(e.localizedDescription)) } }) else {
                 return once.run { cont.resume(throwing: FanControlError.helperUnavailable("no proxy")) }
             }
+            deadline(3, once) { cont.resume(throwing: FanControlError.helperUnavailable("no answer within 3 s")) }
             p.policies { d in once.run { cont.resume(returning: d) } }
         }
         return try PolicyCoding.decoder().decode([Int: FanPolicy].self, from: data)
