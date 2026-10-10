@@ -2,6 +2,13 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "Restart the read-only check when ready.": "准备好后可以重新开始只读检查。",
+    "No complete results were produced. Check again when ready.": "尚无完整检查结果，准备好后可以重新检查。",
+    "check stopped": "检查已停止",
+    "Check stopped": "检查已停止",
+    "Stopping check…": "正在停止检查…",
+    "Stop checking": "停止检查",
+    "Previous complete results are kept. Check again to refresh them.": "保留上次完整结果，重新检查后可刷新。",
     "Checks for a newer version of Thermo.": "检查是否有更新版本的 Thermo。",
     "An update check is temporarily unavailable.": "当前暂时无法检查更新，请稍后再试。",
     "configured timeout is %1$@; review long-running synchronous hooks": "配置的超时为 %1$@，请检查长时间运行的同步 hook",

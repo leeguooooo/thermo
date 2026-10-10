@@ -3,14 +3,14 @@ import ThermoL10n
 
 /// Read-only diagnosis of the AI agents on this Mac: Claude Code, Codex, Cursor and Gemini configuration
 /// (hooks, MCP servers, plugins, skills, status line), their launchd jobs and their running processes.
-/// Nothing is executed, started or killed; fixes are suggested as text.
+/// Only read-only system queries run; diagnosis never stops user processes or applies fixes.
 public enum AgentDoctor {
     public static func run(_ env: DoctorEnvironment = DoctorEnvironment()) -> DoctorReport {
         let language = L10n.current.rawValue
         var c = ConfigChecks(env: env)
-        c.runAll()
-        c.checkLaunchAgents()
-        let (groups, sessions) = c.checkProcesses()
+        if !env.cancelled() { c.runAll() }
+        if !env.cancelled() { c.checkLaunchAgents() }
+        let (groups, sessions): ([ProcessGroup], Int) = env.cancelled() ? ([], 0) : c.checkProcesses()
         let order = Dictionary(uniqueKeysWithValues: Area.allCases.enumerated().map { ($1, $0) })
         let findings = c.findings.enumerated().sorted { a, b in
             (a.element.severity, order[a.element.area]!, a.offset) < (b.element.severity, order[b.element.area]!, b.offset)
@@ -30,6 +30,7 @@ public enum AgentDoctor {
         }.map(\.element)
         var report = DoctorReport(generated: env.now, inventory: c.inventory, findings: findings, items: items, processes: groups, sessions: sessions)
         report.language = language
+        report.cancelled = env.cancelled() ? true : nil
         return report
     }
 }
@@ -40,6 +41,7 @@ extension Severity {
 
 extension DoctorReport {
     public var headline: String {
+        if cancelled == true { return tr("check stopped") }
         if !hasResults { return tr("no agent items found") }
         let e = count(.error), w = count(.warning)
         if e + w == 0 { return tr("no problems found") }

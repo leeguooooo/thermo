@@ -84,6 +84,7 @@ public struct DoctorReport: Codable, Sendable {
     public var processes: [ProcessGroup]
     public var sessions: Int
     public var language: String? = nil
+    public var cancelled: Bool? = nil
 
     public var hasResults: Bool { !items.isEmpty || !findings.isEmpty || !processes.isEmpty }
 

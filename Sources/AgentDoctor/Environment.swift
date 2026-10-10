@@ -13,6 +13,7 @@ public struct DoctorEnvironment {
     /// Executable path of a running process (proc_pidpath).
     public var executablePath: (_ pid: Int32) -> String?
     public var now: Date
+    public let cancelled: () -> Bool
     /// Runs a tool for an action: exit status and combined output.
     public var execute: (_ executable: String, _ args: [String], _ cwd: String?) -> (status: Int32, output: String)
     public var trash: (URL) throws -> Void
@@ -24,9 +25,9 @@ public struct DoctorEnvironment {
     public init(home: URL = FileManager.default.homeDirectoryForCurrentUser,
                 uid: uid_t = getuid(),
                 path: [String]? = nil,
-                run: @escaping (String, [String]) -> String? = DoctorEnvironment.runTool,
+                run: ((String, [String]) -> String?)? = nil,
                 executablePath: @escaping (Int32) -> String? = DoctorEnvironment.procPath,
-                now: Date = Date()) {
+                now: Date = Date(), cancelled: @escaping () -> Bool = { false }) {
         self.home = home
         execute = DoctorEnvironment.executeTool
         trash = { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }
@@ -34,7 +35,14 @@ public struct DoctorEnvironment {
         backupRoot = home.appendingPathComponent("Library/Application Support/Thermo/Backups")
         logFile = home.appendingPathComponent("Library/Logs/Thermo/fix.log")
         self.uid = uid
-        self.run = run
+        self.cancelled = cancelled
+        self.run = { executable, arguments in
+            guard !cancelled() else { return nil }
+            let output: String?
+            if let run { output = run(executable, arguments) }
+            else { output = Self.runTool(executable, arguments, cancelled: cancelled) }
+            return cancelled() ? nil : output
+        }
         self.executablePath = executablePath
         self.now = now
         if let path {
@@ -50,9 +58,9 @@ public struct DoctorEnvironment {
         }
     }
 
-    public static func runTool(_ executable: String, _ args: [String]) -> String? {
-        let result = CommandRunner.run(executable, arguments: args, timeout: 15, captureError: false)
-        guard result.status == 0, !result.timedOut, !result.truncated else { return nil }
+    public static func runTool(_ executable: String, _ args: [String], cancelled: () -> Bool = { false }) -> String? {
+        let result = CommandRunner.run(executable, arguments: args, timeout: 15, captureError: false, cancelled: cancelled)
+        guard result.status == 0, !result.timedOut, !result.cancelled, !result.truncated else { return nil }
         return result.output
     }
 

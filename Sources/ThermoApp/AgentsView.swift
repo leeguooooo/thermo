@@ -20,12 +20,19 @@ final class AgentScanner: ObservableObject {
     @Published var batch: Batch?
     @Published private(set) var batching = false
     @Published private(set) var history: [LastResult] = []
+    @Published private(set) var stopped = false
+    @Published private(set) var stopRequested = false
     private let diagnose: @Sendable () -> DoctorReport
+    private let scanDiagnosis: @Sendable (DoctorCancellation) -> DoctorReport
+    private var scanCancellation: DoctorCancellation?
     private var operationLanguage: String?
     private var needsLanguageRefresh = false
 
-    init(diagnose: @escaping @Sendable () -> DoctorReport = { AgentDoctor.run() }) {
-        self.diagnose = diagnose
+    init(diagnose: (@Sendable () -> DoctorReport)? = nil) {
+        self.diagnose = diagnose ?? { AgentDoctor.run() }
+        self.scanDiagnosis = { cancellation in
+            diagnose?() ?? AgentDoctor.run(DoctorEnvironment(cancelled: { cancellation.isCancelled }))
+        }
     }
 
     struct Batch {
@@ -52,23 +59,41 @@ final class AgentScanner: ObservableObject {
     var busy: Bool { scanning || running != nil || batching || batch?.finished == false }
 
     func scan(ifOlderThan age: TimeInterval = 0) {
+        if stopped && age > 0 { return }
         if busy {
             if let language = operationLanguage, language != L10n.current.rawValue { needsLanguageRefresh = true }
             return
         }
-        if let r = report, r.language == L10n.current.rawValue, Date().timeIntervalSince(r.generated) < age { return }
+        if !stopped, let r = report, r.language == L10n.current.rawValue, Date().timeIntervalSince(r.generated) < age { return }
+        let cancellation = DoctorCancellation()
+        scanCancellation = cancellation
         scanning = true
+        stopped = false
+        stopRequested = false
         operationLanguage = L10n.current.rawValue
         needsLanguageRefresh = false
-        let diagnose = diagnose
+        let diagnose = scanDiagnosis
         Task.detached(priority: .userInitiated) {
-            let r = diagnose()
+            let r = diagnose(cancellation)
             await MainActor.run {
-                self.acceptReport(r)
+                guard self.scanCancellation === cancellation else { return }
+                if cancellation.isCancelled || r.cancelled == true {
+                    self.stopped = true
+                    self.needsLanguageRefresh = false
+                } else { self.acceptReport(r) }
+                self.scanCancellation = nil
+                self.stopRequested = false
                 self.scanning = false
                 self.resumeLanguageRefresh()
             }
         }
+    }
+
+    func stopScan() {
+        guard scanning, let cancellation = scanCancellation else { return }
+        stopRequested = true
+        needsLanguageRefresh = false
+        cancellation.cancel()
     }
 
     func perform(_ action: Action, on item: AgentItem) {

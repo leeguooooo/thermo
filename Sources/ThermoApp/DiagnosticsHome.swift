@@ -20,6 +20,7 @@ struct DiagnosticsHome: View {
         ScrollView {
             VStack(spacing: 34) {
                 hero.padding(.top, 54)
+                DiagnosticScanControl(scanner: scanner)
                 if !scanner.history.isEmpty { AgentActivity(scanner: scanner) }
                 if let r = scanner.report, scanner.batch.map({ $0.finished }) ?? true { cards(r) }
             }
@@ -48,6 +49,9 @@ struct DiagnosticsHome: View {
                        title: b.verifying ? tr("Checking repair results…") : tr("Fixing %1$@ of %2$@", String(min(b.done + 1, b.total)), String(b.total)),
                        subtitle: b.verifying ? tr("Reading the current configuration again.") : b.current,
                        progress: b.verifying ? nil : Double(b.done) / Double(max(1, b.total)), spinning: b.verifying)
+        } else if scanner.stopped {
+            HeroStatus(symbol: "pause.circle", color: .purple, title: tr("Check stopped"),
+                       subtitle: tr("Restart the read-only check when ready."))
         } else if scanner.report == nil {
             HeroStatus(symbol: "stethoscope", color: Color(red: 0.45, green: 0.4, blue: 1.0), title: tr("Checking your AI agents…"),
                        subtitle: tr("Claude Code, Codex, Cursor and Gemini: hooks, tools, plugins, skills and what runs in the background."),
@@ -128,6 +132,7 @@ struct AreaPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header(problems)
+                DiagnosticScanControl(scanner: scanner)
                 if !scanner.history.isEmpty { AgentActivity(scanner: scanner) }
                 if problems.isEmpty && !notes.contains(where: { $0.severity == .error || $0.severity == .warning }) {
                     HStack(spacing: 10) {
@@ -135,7 +140,7 @@ struct AreaPage: View {
                         let empty = items.isEmpty
                         Image(systemName: checking ? "hourglass" : empty ? "magnifyingglass" : "checkmark.seal.fill")
                             .font(.title2).foregroundStyle(checking || empty ? Color.secondary : Color.green)
-                        Text(checking ? tr("Checking your AI agents…") : empty && !query.isEmpty ? tr("No matching items") : empty ? tr("No items to check") : tr("Nothing to fix here.")).font(.system(size: 15, weight: .medium)).foregroundStyle(.white.opacity(0.85))
+                        Text(checking ? tr(scanner.stopRequested ? "Stopping check…" : "Checking your AI agents…") : scanner.stopped && scanner.report == nil ? tr("Check stopped") : empty && !query.isEmpty ? tr("No matching items") : empty ? tr("No items to check") : tr("Nothing to fix here.")).font(.system(size: 15, weight: .medium)).foregroundStyle(.white.opacity(0.85))
                     }
                     .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass()
                 }
@@ -213,6 +218,25 @@ struct AreaPage: View {
             }
         }
         .padding(.bottom, 8)
+    }
+}
+
+struct DiagnosticScanControl: View {
+    @ObservedObject var scanner: AgentScanner
+    var body: some View {
+        if scanner.scanning {
+            HStack {
+                if scanner.stopRequested { Text(tr("Stopping check…")) }
+                Spacer()
+                Button(tr("Stop checking")) { scanner.stopScan() }.disabled(scanner.stopRequested)
+            }
+        } else if scanner.stopped {
+            HStack {
+                Text(tr(scanner.report == nil ? "No complete results were produced. Check again when ready." : "Previous complete results are kept. Check again to refresh them.")).font(.callout).foregroundStyle(.secondary)
+                Spacer()
+                Button(tr("Check Again")) { scanner.scan() }.disabled(scanner.busy)
+            }
+        }
     }
 }
 
