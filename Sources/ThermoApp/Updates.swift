@@ -4,6 +4,8 @@ import Sparkle
 /// Sparkle wrapper. Disabled when the build has no SUFeedURL (APPCAST_URL unset at build time).
 final class Updates: NSObject, ObservableObject, SPUStandardUserDriverDelegate {
     private var controller: SPUStandardUpdaterController?
+    private var availabilityObservation: NSKeyValueObservation?
+    @Published private(set) var canCheck = false
 
     static var feedURL: String? {
         guard let s = Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String,
@@ -15,6 +17,10 @@ final class Updates: NSObject, ObservableObject, SPUStandardUserDriverDelegate {
         super.init()
         if Self.feedURL != nil {
             controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: self)
+            availabilityObservation = controller?.updater.observe(\.canCheckForUpdates, options: [.initial, .new]) { [weak self] updater, _ in
+                let available = updater.canCheckForUpdates
+                DispatchQueue.main.async { self?.canCheck = available }
+            }
         }
     }
 
@@ -22,10 +28,13 @@ final class Updates: NSObject, ObservableObject, SPUStandardUserDriverDelegate {
 
     var automaticallyChecks: Bool {
         get { controller?.updater.automaticallyChecksForUpdates ?? false }
-        set { controller?.updater.automaticallyChecksForUpdates = newValue; objectWillChange.send() }
+        set { objectWillChange.send(); controller?.updater.automaticallyChecksForUpdates = newValue }
     }
 
-    func checkForUpdates() { controller?.checkForUpdates(nil) }
+    func checkForUpdates() {
+        guard controller?.updater.canCheckForUpdates == true else { return }
+        controller?.checkForUpdates(nil)
+    }
 
     // Menu bar (LSUIElement) apps should not steal focus for scheduled update alerts.
     var supportsGentleScheduledUpdateReminders: Bool { true }

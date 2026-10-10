@@ -2,6 +2,8 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "Checks for a newer version of Thermo.": "检查是否有更新版本的 Thermo。",
+    "An update check is temporarily unavailable.": "当前暂时无法检查更新，请稍后再试。",
     "configured timeout is %1$@; review long-running synchronous hooks": "配置的超时为 %1$@，请检查长时间运行的同步 hook",
     "No items to check": "暂无可检查项目",
     "Notes available": "有检查说明",

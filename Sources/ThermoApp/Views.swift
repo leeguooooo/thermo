@@ -680,7 +680,11 @@ struct SettingsView: View {
                 }
                 row("Thermo \(AppInfo.version)", last: true, labelControl: false) {
                     HStack {
-                        if updates.enabled { Button(tr("Check for Updates…")) { updates.checkForUpdates() } }
+                        if updates.enabled {
+                            Button(tr("Check for Updates…")) { updates.checkForUpdates() }
+                                .disabled(!updates.canCheck)
+                                .help(updates.canCheck ? tr("Checks for a newer version of Thermo.") : tr("An update check is temporarily unavailable."))
+                        }
                         Button(tr("Quit Thermo")) { NSApp.terminate(nil) }
                     }
                 }
