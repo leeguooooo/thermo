@@ -80,10 +80,10 @@ public struct DoctorEnvironment {
 
     func url(_ relative: String) -> URL { home.appendingPathComponent(relative) }
 
-    func exists(_ path: String) -> Bool { FileManager.default.fileExists(atPath: path) }
+    func exists(_ path: String) -> Bool { !cancelled() && FileManager.default.fileExists(atPath: path) }
 
     func json(_ url: URL) -> Any? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
+        guard !cancelled(), let data = try? Data(contentsOf: url), !cancelled() else { return nil }
         return try? JSONSerialization.jsonObject(with: data)
     }
 

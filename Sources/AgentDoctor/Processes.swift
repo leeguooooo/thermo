@@ -108,6 +108,7 @@ extension ConfigChecks {
         var groups: [String: [Member]] = [:]
         var sessions = 0
         for row in rows {
+            guard !env.cancelled() else { return ([], 0) }
             // proc_pidpath fails once the binary is deleted; argv[0] still names it.
             let argv0 = Shell.words(row.args).first
             let exe = env.executablePath(row.pid) ?? (argv0?.hasPrefix("/") == true ? argv0 : nil)
@@ -120,6 +121,7 @@ extension ConfigChecks {
 
         var summary: [ProcessGroup] = []
         for (name, members) in groups.sorted(by: { $0.value.reduce(0) { $0 + $1.row.rssKB } > $1.value.reduce(0) { $0 + $1.row.rssKB } }) {
+            guard !env.cancelled() else { return ([], 0) }
             let rss = Double(members.reduce(0) { $0 + $1.row.rssKB }) / 1024
             let cpu = members.reduce(0) { $0 + $1.row.cpu }
             let detached = members.filter(\.detached)

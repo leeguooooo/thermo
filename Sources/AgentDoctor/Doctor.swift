@@ -11,6 +11,12 @@ public enum AgentDoctor {
         if !env.cancelled() { c.runAll() }
         if !env.cancelled() { c.checkLaunchAgents() }
         let (groups, sessions): ([ProcessGroup], Int) = env.cancelled() ? ([], 0) : c.checkProcesses()
+        if env.cancelled() {
+            var stopped = DoctorReport(generated: env.now, inventory: Inventory(), findings: [], items: [], processes: [], sessions: 0)
+            stopped.language = language
+            stopped.cancelled = true
+            return stopped
+        }
         let order = Dictionary(uniqueKeysWithValues: Area.allCases.enumerated().map { ($1, $0) })
         let findings = c.findings.enumerated().sorted { a, b in
             (a.element.severity, order[a.element.area]!, a.offset) < (b.element.severity, order[b.element.area]!, b.offset)

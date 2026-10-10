@@ -131,6 +131,7 @@ extension ConfigChecks {
         let dir = env.url("Library/LaunchAgents")
         guard let files = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return }
         for f in files.sorted() where f.hasSuffix(".plist") {
+            guard !env.cancelled() else { return }
             guard let job = Launchd.job(plist: dir.appendingPathComponent(f)), !job.disabled else { continue }
             inventory.launchAgents += 1
             let plist = env.short(job.plist)
@@ -183,6 +184,7 @@ extension ConfigChecks {
             }
 
             for log in job.logs {
+                guard !env.cancelled() else { return }
                 let path = env.expand(log)
                 guard let sum = Launchd.summarize(log: path) else { continue }
                 let mb = Double(sum.size) / 1_048_576

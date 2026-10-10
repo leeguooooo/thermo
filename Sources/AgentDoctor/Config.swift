@@ -71,6 +71,7 @@ struct ConfigChecks {
     }
 
     mutating func runAll() {
+        guard !env.cancelled() else { return }
         let claudeDir = env.url(".claude")
         if env.exists(claudeDir.path) { inventory.agents.append("claude") }
         if env.exists(env.url(".codex").path) { inventory.agents.append("codex") }
@@ -79,6 +80,7 @@ struct ConfigChecks {
 
         var claudeSettings: [String: Any] = [:]
         for name in ["settings.json", "settings.local.json"] {
+            guard !env.cancelled() else { return }
             let u = claudeDir.appendingPathComponent(name)
             guard env.exists(u.path) else { continue }
             guard let s = env.json(u) as? [String: Any] else {
@@ -95,15 +97,18 @@ struct ConfigChecks {
         if let cj = env.json(claudeJSON) as? [String: Any] {
             servers += Self.jsonServers(cj["mcpServers"], agent: "claude", source: env.short(claudeJSON.path))
             for (path, p) in (cj["projects"] as? [String: Any]) ?? [:] {
+                guard !env.cancelled() else { return }
                 let ps = Self.jsonServers((p as? [String: Any])?["mcpServers"], agent: "claude", source: env.short(claudeJSON.path))
                 servers += ps.map { var s = $0; s.project = path; return s }
             }
         }
 
+        guard !env.cancelled() else { return }
         checkPlugins(enabled: claudeSettings["enabledPlugins"] as? [String: Any] ?? [:])
         currentItem = nil
 
         // Codex
+        guard !env.cancelled() else { return }
         let codexDir = env.url(".codex")
         let toml = codexDir.appendingPathComponent("config.toml")
         if let text = try? String(contentsOf: toml, encoding: .utf8) {
@@ -116,6 +121,7 @@ struct ConfigChecks {
         }
 
         // Cursor, Gemini
+        guard !env.cancelled() else { return }
         let cursor = env.url(".cursor/mcp.json")
         if let c = env.json(cursor) as? [String: Any] {
             servers += Self.jsonServers(c["mcpServers"], agent: "cursor", source: env.short(cursor.path))
@@ -126,7 +132,10 @@ struct ConfigChecks {
             checkHooks(g["hooks"], agent: "gemini", source: gemini)
         }
 
-        servers.forEach { checkServer($0) }
+        for server in servers {
+            guard !env.cancelled() else { return }
+            checkServer(server)
+        }
         inventory.mcpServers = servers.filter { !$0.disabled }.count
 
         checkSkills()
@@ -161,6 +170,7 @@ struct ConfigChecks {
         }
         inventory.hooks += hooks.count
         for (i, h) in hooks.enumerated() {
+            guard !env.cancelled() else { return }
             let name = h.event + (h.matcher.map { $0.isEmpty || $0 == "*" ? "" : " [\($0)]" } ?? "")
             item(.hooks, agent: agent, id: "\(h.source)#\(i)", name: name, detail: h.command, source: h.source)
             // Hooks shipped inside a plugin are removed by disabling the plugin, not by editing its files.
@@ -382,6 +392,7 @@ struct ConfigChecks {
         }
         var installed: [InstalledPlugin] = []
         for (id, entries) in (root["plugins"] as? [String: Any] ?? [:]).sorted(by: { $0.key < $1.key }) {
+            guard !env.cancelled() else { return }
             for e in entries as? [[String: Any]] ?? [] {
                 guard let path = e["installPath"] as? String else { continue }
                 installed.append(InstalledPlugin(id: id, installPath: path, scope: e["scope"] as? String ?? "user",
@@ -399,6 +410,7 @@ struct ConfigChecks {
         }
 
         for (id, on) in enabled.sorted(by: { $0.key < $1.key }) where (on as? Bool) == true {
+            guard !env.cancelled() else { return }
             if let i = installed.firstIndex(where: { $0.id == id }) {
                 currentItem = pluginKeys[i]
             } else {
@@ -426,6 +438,7 @@ struct ConfigChecks {
 
         var checkedRoots = Set<String>()
         for (i, p) in installed.enumerated() {
+            guard !env.cancelled() else { return }
             currentItem = pluginKeys[i]
             offerPlugin(p, enabled: isOn(p.id))
             let scopeNote = p.projectPath.map { " (project \(env.short($0)))" } ?? ""
@@ -482,8 +495,10 @@ struct ConfigChecks {
         let fm = FileManager.default
         var byName: [String: [(agent: String, real: String, origin: String, key: String)]] = [:]
         for (dir, agent, origin) in roots {
+            guard !env.cancelled() else { return }
             guard let entries = try? fm.contentsOfDirectory(atPath: dir.path) else { continue }
             for e in entries.sorted() where !e.hasPrefix(".") {
+                guard !env.cancelled() else { return }
                 let u = dir.appendingPathComponent(e)
                 let attrs = try? fm.attributesOfItem(atPath: u.path)
                 if attrs?[.type] as? FileAttributeType == .typeSymbolicLink, !fm.fileExists(atPath: u.path) {
@@ -500,7 +515,7 @@ struct ConfigChecks {
                 let skill = u.appendingPathComponent("SKILL.md")
                 guard let text = try? String(contentsOf: skill, encoding: .utf8) else {
                     // A folder of skills (e.g. a synced collection) is fine; an empty one is not.
-                    let nested = Self.containsSkill(u, depth: 3)
+                    let nested = Self.containsSkill(u, depth: 3, cancelled: env.cancelled)
                     if !nested {
                         item(.skills, agent: agent, id: u.path, name: e, detail: env.short(u.path), source: origin)
                         if agent != "plugin" { offerSkillRemoval(u) }
@@ -526,6 +541,7 @@ struct ConfigChecks {
         // The same name in two folders one agent loads: it uses one and silently ignores the other.
         // Plugin skills are namespaced (plugin:skill), so they can't collide.
         for (name, copies) in byName.sorted(by: { $0.key < $1.key }) {
+            guard !env.cancelled() else { return }
             // Claude Code reads ~/.claude/skills only; Codex also reads the shared ~/.agents/skills.
             for agent in ["claude", "codex"] {
                 let visible = copies.filter { $0.agent == agent || (agent == "codex" && $0.agent == "shared") }
@@ -538,12 +554,14 @@ struct ConfigChecks {
         }
     }
 
-    static func containsSkill(_ dir: URL, depth: Int) -> Bool {
-        guard depth > 0, let items = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return false }
-        return items.contains { item in
+    static func containsSkill(_ dir: URL, depth: Int, cancelled: () -> Bool = { false }) -> Bool {
+        guard !cancelled(), depth > 0, let items = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return false }
+        for item in items {
+            guard !cancelled() else { return false }
             let u = dir.appendingPathComponent(item)
-            return FileManager.default.fileExists(atPath: u.appendingPathComponent("SKILL.md").path) || containsSkill(u, depth: depth - 1)
+            if FileManager.default.fileExists(atPath: u.appendingPathComponent("SKILL.md").path) || containsSkill(u, depth: depth - 1, cancelled: cancelled) { return true }
         }
+        return false
     }
 
     static func frontMatter(_ text: String) -> [String: String]? {
