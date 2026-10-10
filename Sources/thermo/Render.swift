@@ -130,6 +130,9 @@ struct Renderer {
 }
 
 enum Export {
+    static func settingsCSV(_ values: [(key: String, value: String)]) -> String {
+        (["key,value"] + values.map { [csvField($0.key), csvField($0.value)].joined(separator: ",") }).joined(separator: "\n")
+    }
     static func diagnosticJSON<T: Encodable>(_ value: T) -> String {
         let raw = json(value)
         guard let safe = try? Redact.jsonExport(Data(raw.utf8)) else { return "{}" }

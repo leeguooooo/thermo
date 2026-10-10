@@ -51,13 +51,15 @@ struct SettingsCommand {
         }
         guard let d = UserDefaults(suiteName: Self.domain) else { throw CLIError("cannot open settings") }
         func current(_ s: Setting) -> Any? { d.object(forKey: s.defaultsKey) }
+        func exported(_ values: [(key: String, value: String)]) -> Bool {
+            if app.args.has("json") { print(Export.json(Dictionary(uniqueKeysWithValues: values))); return true }
+            if app.args.has("csv") { print(Export.settingsCSV(values)); return true }
+            return false
+        }
 
         switch args.count {
         case 0:
-            if app.args.has("json") {
-                print(Export.json(Dictionary(uniqueKeysWithValues: Self.all.map { ($0.key, $0.show(current($0))) })))
-                return
-            }
+            if exported(Self.all.map { ($0.key, $0.show(current($0))) }) { return }
             for s in Self.all {
                 print(pad(s.key, 12) + pad(s.show(current(s)), 10) + app.style.dim(s.help))
             }
@@ -66,14 +68,18 @@ struct SettingsCommand {
             guard let s = Self.all.first(where: { $0.key == args[0] }) else {
                 throw CLIError("unknown setting '\(args[0])'; one of " + Self.all.map(\.key).joined(separator: ", "))
             }
-            if args.count == 1 { print(s.show(current(s))); return }
+            if args.count == 1 {
+                let value = s.show(current(s))
+                if !exported([(s.key, value)]) { print(value) }
+                return
+            }
             guard let v = s.parse(args[1]) else { throw CLIError("\(s.key) expects \(s.help)") }
             d.set(v, forKey: s.defaultsKey)
             d.synchronize()
             // Tell a running Thermo to re-read its settings now.
             DistributedNotificationCenter.default().postNotificationName(
                 Notification.Name("dev.thermo.settingsChanged"), object: nil, userInfo: nil, deliverImmediately: true)
-            print("\(s.key) = \(s.show(v))")
+            if !exported([(s.key, s.show(v))]) { print("\(s.key) = \(s.show(v))") }
         default:
             throw CLIError("usage: thermo settings [KEY [VALUE]]")
         }

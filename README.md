@@ -99,6 +99,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 诊断 JSON 中的敏感参数使用占位符，敏感项目标识改为稳定的匿名 ID。通过 CLI 或界面定位项目后执行修复，内部仍使用原始参数和进程身份校验。
 
+`settings` 的全部查询、单项查询和写入结果都支持 JSON/CSV。JSON 使用设置名到字符串值的映射，CSV 使用 `key,value` 两列，例如 `thermo settings interval --json`。
+
 菜单栏、概览、温度告警和 CLI 的“最高温度”取已命名传感器中的最高有效读数，包含存储、主板等分组。风扇曲线的 `max` 和过热安全保护仍以 CPU/GPU 温度为准。
 
 `thermo settings slowdown-alerts on|off` 和 `thermo settings unnamed-sensors on|off` 与 App 使用同一组开关。`--yes` 等标志不接受 `=false`；需要确认时省略 `--yes`。

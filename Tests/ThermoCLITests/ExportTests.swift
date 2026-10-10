@@ -3,6 +3,10 @@ import ThermoKit
 @testable import thermo
 
 final class ExportTests: XCTestCase {
+    func testSettingsCSVHasStableColumnsAndEscapesValues() {
+        XCTAssertEqual(Export.settingsCSV([("interval", "2"), ("fixture", "a,b\nnext")]),
+                       "key,value\ninterval,2\nfixture,\"a,b\nnext\"")
+    }
     func testDiagnosticExportRedactsArgumentsWithoutChangingNumericOrDateFields() throws {
         struct Fixture: Encodable {
             let args = ["--token", "synthetic secret value"]
