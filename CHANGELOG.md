@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Watch input buffers coalesced keys and fragmented escape sequences. Direction keys arriving in pieces no longer look like a bare Escape; both CSI and application-cursor arrows are accepted.
+
 - Watch page changes redraw the current snapshot without consuming samples or resetting the interval; tiny terminals no longer produce negative row counts. Terminal restoration occurs once on exit.
 
 - CLI rejects flag assignments such as `--yes=false` and non-finite sampling intervals. Terminal polling clamps large waits and checks signals every 100 ms.

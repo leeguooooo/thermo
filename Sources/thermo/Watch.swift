@@ -121,6 +121,8 @@ struct Watch {
 final class RawTerminal {
     private var original = termios()
     private let active: Bool
+    private var input = TerminalInput()
+    private var escapeDeadline: Date?
 
     init() {
         active = isatty(STDIN_FILENO) != 0 && tcgetattr(STDIN_FILENO, &original) == 0
@@ -148,13 +150,25 @@ final class RawTerminal {
 
     /// Returns a key (escape sequences kept whole) or nil on timeout.
     func readKey(timeout: TimeInterval) -> String? {
-        let milliseconds = Self.pollTimeout(timeout)
+        if let key = input.next() { escapeDeadline = nil; return key }
+        if input.awaitingEscape && escapeDeadline == nil { escapeDeadline = Date().addingTimeInterval(0.1) }
+        let wait = escapeDeadline.map { min(timeout, max(0, $0.timeIntervalSinceNow)) } ?? timeout
+        let milliseconds = Self.pollTimeout(wait)
         guard active else { usleep(UInt32(milliseconds) * 1000); return nil }
         var fds = pollfd(fd: STDIN_FILENO, events: Int16(POLLIN), revents: 0)
-        guard poll(&fds, 1, milliseconds) > 0 else { return nil }
-        var buf = [UInt8](repeating: 0, count: 8)
+        guard poll(&fds, 1, milliseconds) > 0 else {
+            if let deadline = escapeDeadline, deadline <= Date() {
+                escapeDeadline = nil
+                return input.next(expireEscape: true)
+            }
+            return nil
+        }
+        var buf = [UInt8](repeating: 0, count: 64)
         let n = read(STDIN_FILENO, &buf, buf.count)
         guard n > 0 else { return nil }
-        return String(decoding: buf.prefix(n), as: UTF8.self)
+        input.append(Array(buf.prefix(n)))
+        if let key = input.next() { escapeDeadline = nil; return key }
+        if input.awaitingEscape && escapeDeadline == nil { escapeDeadline = Date().addingTimeInterval(0.1) }
+        return nil
     }
 }
