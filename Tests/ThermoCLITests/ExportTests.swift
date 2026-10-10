@@ -3,6 +3,15 @@ import ThermoKit
 @testable import thermo
 
 final class ExportTests: XCTestCase {
+    func testStreamingHighestTemperatureIncludesStorage() {
+        let sample = Snapshot(temperatures: [
+            Reading(key: "cpu", name: "CPU", group: .cpu, value: 70),
+            Reading(key: "storage", name: "Storage", group: .storage, value: 95),
+        ], fans: [], power: [], voltages: [], currents: [], battery: nil)
+        let fields = Export.csvStreamRow(sample).split(separator: ",", omittingEmptySubsequences: false)
+        XCTAssertEqual(fields[1], "70.00")
+        XCTAssertEqual(fields[3], "95.00")
+    }
     func testCSVQuotesNewlinesCarriageReturnsAndQuotes() {
         XCTAssertEqual(Export.csvField("two\nlines"), "\"two\nlines\"")
         XCTAssertEqual(Export.csvField("two\rlines"), "\"two\rlines\"")

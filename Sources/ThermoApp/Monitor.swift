@@ -227,7 +227,7 @@ final class Monitor: ObservableObject {
         let d = UserDefaults.standard
         // UserNotifications throws (and kills the app) outside an app bundle, e.g. a bare dev build.
         guard Bundle.main.bundleIdentifier != nil else { return }
-        guard d.bool(forKey: Settings.alertsEnabled), let hot = s.hottest,
+        guard d.bool(forKey: Settings.alertsEnabled), let hot = s.maximumKnownTemperature,
               hot >= Settings.thresholdValue(d.double(forKey: Settings.alertThreshold)),
               Date().timeIntervalSince(lastAlert) > 300 else { return }
         lastAlert = Date()

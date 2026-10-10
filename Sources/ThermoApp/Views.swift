@@ -83,10 +83,10 @@ struct PopoverView: View {
 
     var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(tempText(monitor.snapshot?.hottest, fahrenheit: fahrenheit))
+            Text(tempText(monitor.snapshot?.maximumKnownTemperature, fahrenheit: fahrenheit))
                 .font(.system(size: 30, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle(heatColor(monitor.snapshot?.hottest))
+                .foregroundStyle(heatColor(monitor.snapshot?.maximumKnownTemperature))
             VStack(alignment: .leading, spacing: 2) {
                 Text(tr("Hottest")).font(.caption).foregroundStyle(.secondary)
                 Text(monitor.model).font(.caption2).foregroundStyle(.tertiary)

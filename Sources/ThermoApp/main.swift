@@ -185,11 +185,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
         let text: String
         switch metric {
-        case .cpu: text = t(s.cpu ?? s.hottest)
-        case .hottest: text = t(s.hottest)
-        case .fan: text = fanRPM.map { "\(Int($0)) rpm" } ?? t(s.hottest)
-        case .cpuAndFan: text = t(s.cpu ?? s.hottest) + (fanRPM.map { " · " + rpm($0) } ?? "")
-        case .power: text = s.systemPower.map { String(format: "%.0f W", $0) } ?? t(s.hottest)
+        case .cpu: text = t(s.cpu ?? s.maximumKnownTemperature)
+        case .hottest: text = t(s.maximumKnownTemperature)
+        case .fan: text = fanRPM.map { "\(Int($0)) rpm" } ?? t(s.maximumKnownTemperature)
+        case .cpuAndFan: text = t(s.cpu ?? s.maximumKnownTemperature) + (fanRPM.map { " · " + rpm($0) } ?? "")
+        case .power: text = s.systemPower.map { String(format: "%.0f W", $0) } ?? t(s.maximumKnownTemperature)
         case .iconOnly: text = ""
         }
         // Redrawing the status item costs ~2 ms; skip it when nothing visible changed.

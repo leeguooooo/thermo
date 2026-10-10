@@ -44,7 +44,7 @@ struct PulseCommand {
 
         if app.args.has("json") {
             var temps: [String: Double] = [:]
-            if let v = s?.hottest { temps["hottest"] = v }
+            if let v = s?.maximumKnownTemperature { temps["hottest"] = v }
             if let v = s?.cpu { temps["cpu"] = v }
             if let v = s?.gpu { temps["gpu"] = v }
             print(Export.json(Report(
@@ -89,7 +89,7 @@ struct PulseCommand {
         if let s {
             lines.append("")
             var sensors: [String] = []
-            if let t = s.hottest { sensors.append(tr("hottest") + " " + style.temp(t, width: 0)) }
+            if let t = s.maximumKnownTemperature { sensors.append(tr("hottest") + " " + style.temp(t, width: 0)) }
             if let t = s.cpu { sensors.append("CPU " + style.temp(t, width: 0)) }
             if let t = s.gpu { sensors.append("GPU " + style.temp(t, width: 0)) }
             if let w = s.systemPower { sensors.append(String(format: "%.1f W", w)) }

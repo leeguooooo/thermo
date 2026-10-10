@@ -185,7 +185,7 @@ enum Export {
     static func csvStreamRow(_ s: Snapshot) -> String {
         func n(_ v: Double?, _ d: Int = 2) -> String { v.map { String(format: "%.\(d)f", $0) } ?? "" }
         let ts = ISO8601DateFormatter().string(from: s.timestamp)
-        return ([ts, n(s.cpu), n(s.gpu), n(s.hottest)] + s.fans.map { n($0.rpm, 0) } + [n(s.systemPower), n(s.cpuPower)])
+        return ([ts, n(s.cpu), n(s.gpu), n(s.maximumKnownTemperature)] + s.fans.map { n($0.rpm, 0) } + [n(s.systemPower), n(s.cpuPower)])
             .joined(separator: ",")
     }
 }

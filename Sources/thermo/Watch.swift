@@ -54,7 +54,7 @@ struct Watch {
 
         loop: while interrupted == 0 {
             let s = sm.sample()
-            if let c = s.hottest { cpuHistory.append(c) }
+            if let c = s.maximumKnownTemperature { cpuHistory.append(c) }
             let width = terminalWidth()
             if cpuHistory.count > width - 14 { cpuHistory.removeFirst(cpuHistory.count - max(1, width - 14)) }
 

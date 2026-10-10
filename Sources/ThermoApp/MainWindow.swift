@@ -243,7 +243,7 @@ struct MainView: View {
             guard let r = agents.report else { return Color(red: 0.42, green: 0.36, blue: 1.0) }
             return r.count(.error) > 0 ? .red : r.count(.warning) > 0 ? .orange : .green
         case .disk: return Color(red: 0.36, green: 0.42, blue: 1.0)
-        default: return heatColor(monitor.snapshot?.hottest).opacity(0.8)
+        default: return heatColor(monitor.snapshot?.maximumKnownTemperature).opacity(0.8)
         }
     }
 
@@ -325,7 +325,7 @@ struct MainSidebar: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 2) {
                     row(.overview, tr("Overview"), "gauge.with.dots.needle.67percent", .orange,
-                        trailing: monitor.snapshot.map { tempText($0.hottest, fahrenheit: fahrenheit) })
+                        trailing: monitor.snapshot.map { tempText($0.maximumKnownTemperature, fahrenheit: fahrenheit) })
                     row(.sensors, tr("Sensors"), "thermometer.medium", .red, trailing: nil)
                     row(.fans, tr("Fans"), "fan.fill", .blue,
                         trailing: monitor.snapshot?.fans.map(\.rpm).max().map { tr("%1$@ rpm", String(Int($0))) })
@@ -447,7 +447,7 @@ struct OverviewPage: View {
 
     func gauges(openDetails: @escaping () -> Void) -> some View {
         let s = monitor.snapshot
-        let hot = s?.hottest
+        let hot = s?.maximumKnownTemperature
         let load = pulse.current.map { $0.load1 / Double(max(1, $0.cores)) }
         let mem = SystemStats.memory()
         let disk = SystemStats.disk()

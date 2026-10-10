@@ -97,20 +97,25 @@ public struct Snapshot: Codable, Sendable {
     }
 
     public func maxTemperature(in group: SensorGroup) -> Double? {
-        temperatures.lazy.filter { $0.group == group && $0.known }.map(\.value).max()
+        temperatures.lazy.filter { $0.group == group && $0.known && $0.value.isFinite }.map(\.value).max()
     }
 
     public func averageTemperature(in group: SensorGroup) -> Double? {
-        let v = temperatures.filter { $0.group == group && $0.known }.map(\.value)
+        let v = temperatures.filter { $0.group == group && $0.known && $0.value.isFinite }.map(\.value)
         return v.isEmpty ? nil : v.reduce(0, +) / Double(v.count)
     }
 
     public var cpu: Double? { maxTemperature(in: .cpu) }
     public var gpu: Double? { maxTemperature(in: .gpu) }
 
+    /// Highest valid named reading across every sensor group, for display and alerts.
+    public var maximumKnownTemperature: Double? {
+        temperatures.lazy.filter { $0.known && $0.value.isFinite }.map(\.value).max()
+    }
+
     /// Hottest compute sensor (CPU or GPU); falls back to any known sensor.
     public var hottest: Double? {
-        [cpu, gpu].compactMap { $0 }.max() ?? temperatures.filter(\.known).map(\.value).max()
+        [cpu, gpu].compactMap { $0 }.max() ?? maximumKnownTemperature
     }
 
     public func temperature(for sensor: CurveSensor) -> Double? {
