@@ -102,34 +102,10 @@ struct ConfirmAction: View {
     let cancel: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: action.destructive ? "exclamationmark.triangle.fill" : "wrench.and.screwdriver.fill")
-                    .font(.title2).foregroundStyle(action.destructive ? Color.orange : Color.accentColor)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(tr("%1$@ — %2$@", action.title, item.name)).font(.headline)
-                    Text(action.summary).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            Text(tr("What will run")).font(.subheadline.weight(.semibold))
-            VStack(alignment: .leading, spacing: 4) {
-                ForEach(Array(action.steps.enumerated()), id: \.offset) { _, s in
-                    Text(s.display).font(.caption.monospaced()).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(10).frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
-            Text(tr("Config files are copied to ~/Library/Application Support/Thermo/Backups before they change. Each step is logged to ~/Library/Logs/Thermo/fix.log."))
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            HStack {
-                Spacer()
-                Button(tr("Cancel"), action: cancel).keyboardShortcut(.cancelAction)
-                Button(role: action.destructive ? .destructive : nil, action: confirm) { Text(action.title) }
-                    .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
-            }
-        }
-        .padding(20)
-        .frame(width: 480)
+        ConfirmSheet(title: tr("%1$@ — %2$@", action.title, item.name), summary: action.summary, destructive: action.destructive,
+                     heading: tr("What will run"), lines: action.steps.map(\.display),
+                     footnote: tr("Config files are copied to ~/Library/Application Support/Thermo/Backups before they change. Each step is logged to ~/Library/Logs/Thermo/fix.log."),
+                     confirmTitle: action.title, confirm: confirm, cancel: cancel)
     }
 }
 
