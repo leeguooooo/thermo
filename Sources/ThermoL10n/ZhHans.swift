@@ -2,6 +2,13 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "Charge": "电量",
+    "Battery health": "电池健康度",
+    "Cycle count": "循环次数",
+    "Power source": "供电来源",
+    "Power adapter": "电源适配器",
+    "On battery": "使用电池",
+    "Charging": "正在充电",
     "View": "显示",
     "Scan again to refresh results in the selected language.": "重新扫描后，将用当前语言显示结果。",
     "Checking notification permission…": "正在检查通知权限…",

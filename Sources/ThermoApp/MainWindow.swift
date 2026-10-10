@@ -423,22 +423,29 @@ struct OverviewPage: View {
     @ObservedObject var monitor: Monitor
     let open: (MainPage) -> Void
     @ObservedObject private var pulse = SystemPulse.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
 
     var body: some View {
-        WindowPage(title: tr("Overview"), subtitle: monitor.model) {
-            TimelineView(.periodic(from: .now, by: 3)) { _ in gauges }
-            chips
-            PulseCard(active: monitor.panelVisible, plain: true).padding(8).glass()
-            VStack(alignment: .leading, spacing: 8) {
-                Text(tr("Temperature, last 10 minutes")).font(.callout.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
-                TemperatureChart(history: monitor.history)
+        ScrollViewReader { proxy in
+            WindowPage(title: tr("Overview"), subtitle: monitor.model) {
+                TimelineView(.periodic(from: .now, by: 3)) { _ in
+                    gauges {
+                        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) { proxy.scrollTo("system-details", anchor: .top) }
+                    }
+                }
+                chips
+                PulseCard(active: monitor.panelVisible, plain: true).padding(8).glass().id("system-details")
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(tr("Temperature, last 10 minutes")).font(.callout.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                    TemperatureChart(history: monitor.history)
+                }
+                .padding(16).glass()
             }
-            .padding(16).glass()
         }
     }
 
-    var gauges: some View {
+    func gauges(openDetails: @escaping () -> Void) -> some View {
         let s = monitor.snapshot
         let hot = s?.hottest
         let load = pulse.current.map { $0.load1 / Double(max(1, $0.cores)) }
@@ -450,13 +457,13 @@ struct OverviewPage: View {
                  detail: "CPU \(tempText(s?.cpu, fahrenheit: fahrenheit)) · GPU \(tempText(s?.gpu, fahrenheit: fahrenheit))") { open(.sensors) }
             card(tr("CPU load"), RingGauge(value: (load ?? 0) / 2, text: load.map { String(format: "%.1f×", $0) } ?? "—",
                                           caption: tr("load per core")),
-                 detail: pulse.current.map { tr("%1$@ cores", String($0.cores)) + " · " + tr("load %1$@", String(format: "%.1f", $0.load1)) } ?? "") { open(.overview) }
+                 detail: pulse.current.map { tr("%1$@ cores", String($0.cores)) + " · " + tr("load %1$@", String(format: "%.1f", $0.load1)) } ?? "") { openDetails() }
             card(tr("Memory"), RingGauge(value: mem.map { Double($0.usedBytes) / Double(max(1, $0.totalBytes)) } ?? 0,
                                         text: mem.map { String(format: "%.0f%%", Double($0.usedBytes) / Double(max(1, $0.totalBytes)) * 100) } ?? "—",
                                         caption: MachinePulse.memoryName(pulse.memory)),
                  detail: [mem.map { tr("%1$@ of %2$@", MemoryFormat.string(bytes: $0.usedBytes), MemoryFormat.string(bytes: $0.totalBytes)) },
                           pulse.current.flatMap { $0.swapUsedMB > 0 ? tr("swap %1$@", MemoryFormat.string(mebibytes: $0.swapUsedMB)) : nil }]
-                    .compactMap { $0 }.joined(separator: "\n")) { open(.overview) }
+                    .compactMap { $0 }.joined(separator: "\n")) { openDetails() }
             card(tr("Disk"), RingGauge(value: disk.map { 1 - Double($0.freeBytes) / Double(max(1, $0.totalBytes)) } ?? 0,
                                       text: disk.map { ByteFormat.string($0.freeBytes) } ?? "—", caption: tr("free"),
                                       colors: [.cyan, .blue, .purple, .pink]),
@@ -540,6 +547,9 @@ struct SensorsPage: View {
                 Text(tr("Refresh: %1$@ s", String(format: "%g", monitor.interval))).font(.caption).foregroundStyle(.secondary)
             }
             if let s = monitor.snapshot {
+                if let battery = s.battery, BatteryDetails.matches(query: search) {
+                    BatteryDetails(battery: battery, fahrenheit: fahrenheit)
+                }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 14, alignment: .top)], alignment: .leading, spacing: 14) {
                     ForEach(SensorGroup.allCases, id: \.self) { g in
                         let rows = s.temperatures.filter { $0.group == g && matches($0) }
@@ -555,7 +565,8 @@ struct SensorsPage: View {
                     if !s.temperatures.contains(where: matches)
                         && !s.power.contains(where: { matches($0, category: tr("Power")) })
                         && !s.voltages.contains(where: { matches($0, category: tr("Voltage")) })
-                        && !s.currents.contains(where: { matches($0, category: tr("Current")) }) {
+                        && !s.currents.contains(where: { matches($0, category: tr("Current")) })
+                        && !(s.battery != nil && BatteryDetails.matches(query: search)) {
                         Label(tr("No matching sensors"), systemImage: "magnifyingglass")
                             .foregroundStyle(.secondary).padding(20).frame(maxWidth: .infinity).glass()
                     }

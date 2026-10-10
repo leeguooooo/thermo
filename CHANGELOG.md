@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- CPU and memory gauges scroll to the live resource details instead of reopening the same page.
+- Sensors includes a read-only battery card for charge, health, cycles, power source, temperature, voltage and current; the Overview battery chip now leads to those details.
+
 - Custom build output paths are checked before compilation; repository ancestors, source directories and system/installed-app locations are refused. Packaging replaces only its known products and preserves other files in the output directory.
 
 - Packaging validates the app, standalone and embedded CLI/helper signatures, requested architecture slices and minimum OS metadata; Sparkle's requested slices are checked too.
