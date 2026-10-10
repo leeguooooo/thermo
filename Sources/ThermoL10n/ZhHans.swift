@@ -2,6 +2,8 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "Checking installation…": "正在检查安装状态…",
+    "Could not check installation. Retry before adding the plugin.": "无法确认安装状态，请重试后再添加插件。",
     "No reading available": "暂无读数",
     "The bundled thermo command is missing or cannot run. Reinstall Thermo and try again.": "App 内的 thermo 命令缺失或无法运行，请重新安装 Thermo 后重试。",
     "%1$@ changed during setup; left it untouched.": "%1$@ 在设置期间发生变化，已保留该文件。",

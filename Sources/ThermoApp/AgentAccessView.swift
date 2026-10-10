@@ -6,14 +6,21 @@ import AgentCore
 /// Sets up thermo-use: the `thermo` CLI on PATH for AI agents, and the thermo-use skill in Claude
 /// Code and Codex (it is part of the *-use family in leeguooooo/plugins).
 final class AgentAccess: ObservableObject {
-    enum Tool: Equatable { case missing, notAdded, added }
+    enum Tool: Equatable { case checking, unavailable, missing, notAdded, added }
+    struct Status {
+        var cliLinked: Bool
+        var claude: Tool
+        var codex: Tool
+    }
 
     @Published private(set) var cliLinked = false
     @Published private(set) var linkProblem: String?
-    @Published private(set) var claude: Tool = .missing
-    @Published private(set) var codex: Tool = .missing
+    @Published private(set) var claude: Tool = .checking
+    @Published private(set) var codex: Tool = .checking
+    @Published private(set) var checking = false
     @Published private(set) var busy: String?
     @Published var message: String?
+    private var queuedCheck: (() -> Status)?
 
     static let marketplace = "leeguooooo/plugins"
     static let plugin = "thermo-use@leeguooooo-plugins"
@@ -30,23 +37,59 @@ final class AgentAccess: ObservableObject {
         return Bundle.main.executableURL!.deletingLastPathComponent().appendingPathComponent("thermo").path
     }
 
-    var ready: Bool { cliLinked && (claude == .added || codex == .added || (claude == .missing && codex == .missing)) }
+    var ready: Bool { !checking && busy == nil && cliLinked && (claude == .added || codex == .added || (claude == .missing && codex == .missing)) }
 
     func refresh() {
+        guard !checking, busy == nil else { return }
+        refreshAfterChange()
+    }
+
+    private func refreshAfterChange() {
+        refresh(check: { self.readStatus() })
+    }
+
+    /// Coalesce requests into one fresh follow-up check; older results never win.
+    func refresh(check: @escaping () -> Status) {
+        guard !checking, busy == nil else { queuedCheck = check; return }
+        queuedCheck = nil
+        checking = true
         DispatchQueue.global(qos: .userInitiated).async {
-            let linked = AgentCLILinks.ready(directory: self.binDir, cli: self.cli)
-            var claude: Tool = .missing
-            if Self.find("claude") != nil {
-                let installed = ClaudePlugins.installed(AgentHome(home: self.home))
-                claude = installed.contains { $0.id == Self.plugin && $0.scope == "user" && FileManager.default.fileExists(atPath: $0.installPath) } ? .added : .notAdded
+            let status = check()
+            DispatchQueue.main.async {
+                self.checking = false
+                if let queued = self.queuedCheck {
+                    self.queuedCheck = nil
+                    self.refresh(check: queued)
+                    return
+                }
+                guard self.busy == nil else { self.refreshAfterChange(); return }
+                self.cliLinked = status.cliLinked
+                self.claude = status.claude
+                self.codex = status.codex
             }
-            var codex: Tool = .missing
-            if let c = Self.find("codex") {
-                let list = Self.run(c, ["plugin", "list"], timeout: 15) ?? ""
-                codex = list.contains("thermo-use") && list.lowercased().contains("installed") ? .added : .notAdded
-            }
-            DispatchQueue.main.async { self.cliLinked = linked; self.claude = claude; self.codex = codex }
         }
+    }
+
+    private func readStatus() -> Status {
+        let linked = AgentCLILinks.ready(directory: binDir, cli: cli)
+        let claude = Self.find("claude") == nil ? .missing : Self.claudeState(home: home)
+        var codex: Tool = .missing
+        if let binary = Self.find("codex") {
+            if let list = Self.run(binary, ["plugin", "list"], timeout: 15) {
+                codex = list.contains("thermo-use") && list.lowercased().contains("installed") ? .added : .notAdded
+            } else { codex = .unavailable }
+        }
+        return Status(cliLinked: linked, claude: claude, codex: codex)
+    }
+
+    static func claudeState(home: String) -> Tool {
+        let path = home + "/.claude/plugins/installed_plugins.json"
+        guard FileManager.default.fileExists(atPath: path) else { return .notAdded }
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+              let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              root["plugins"] is [String: Any] else { return .unavailable }
+        let installed = ClaudePlugins.installed(AgentHome(home: home))
+        return installed.contains { $0.id == Self.plugin && $0.scope == "user" && FileManager.default.fileExists(atPath: $0.installPath) } ? .added : .notAdded
     }
 
     /// `~/.local/bin/thermo` and `thermo-use` → this app's CLI. Only symlinks are replaced.
@@ -57,14 +100,14 @@ final class AgentAccess: ObservableObject {
         } catch {
             linkProblem = error.localizedDescription
         }
-        refresh()
+        refreshAfterChange()
     }
 
     func addToClaude() { install(tool: "claude", label: "Claude Code", steps: [["plugin", "marketplace", "add", Self.marketplace], ["plugin", "install", Self.plugin]]) }
     func addToCodex() { install(tool: "codex", label: "Codex", steps: [["plugin", "marketplace", "add", Self.marketplace], ["plugin", "add", Self.plugin]]) }
 
     private func install(tool: String, label: String, steps: [[String]]) {
-        guard let bin = Self.find(tool) else { return }
+        guard busy == nil, let bin = Self.find(tool) else { return }
         busy = label
         DispatchQueue.global(qos: .userInitiated).async {
             // Adding a marketplace that is already there fails harmlessly; the install is what counts.
@@ -77,7 +120,7 @@ final class AgentAccess: ObservableObject {
                 self.busy = nil
                 self.message = ok ? tr("Added to %1$@. New sessions can use it.", label)
                                   : tr("%1$@ could not add it; copy the command below instead.", label)
-                if !self.cliLinked { self.linkCLI() } else { self.refresh() }
+                if !self.cliLinked { self.linkCLI() } else { self.refreshAfterChange() }
             }
         }
     }
@@ -111,7 +154,7 @@ struct AgentAccessRow: View {
             Image(systemName: "sparkles").foregroundStyle(Color.accentColor)
             VStack(alignment: .leading, spacing: 1) {
                 Text(tr("AI agents (thermo-use)"))
-                Text(access.ready ? tr("Agents can check this Mac") : tr("Let Claude Code, Codex and other agents check this Mac"))
+                Text(access.checking ? tr("Checking installation…") : access.ready ? tr("Agents can check this Mac") : tr("Let Claude Code, Codex and other agents check this Mac"))
                     .font(.caption).foregroundStyle(access.ready ? Color.green : .secondary)
             }
             Spacer()
@@ -139,14 +182,14 @@ struct AgentAccessSheet: View {
 
             step(done: access.cliLinked, title: tr("Command line"),
                  detail: access.linkProblem ?? (access.cliLinked ? tr("thermo and thermo-use are in ~/.local/bin") : tr("Puts thermo and thermo-use in ~/.local/bin, pointing at this app (they update with it)")),
-                 button: access.cliLinked ? nil : (tr("Set Up"), access.linkCLI))
+                 button: access.cliLinked ? nil : (tr("Set Up"), access.linkCLI), allowWhileChecking: true)
             step(done: access.claude == .added, title: "Claude Code",
-                 detail: access.claude == .missing ? tr("Not installed on this Mac") : access.claude == .added ? tr("thermo-use is installed") : tr("Adds the thermo-use plugin"),
-                 button: access.claude == .notAdded ? (tr("Add"), access.addToClaude) : nil,
+                 detail: toolDetail(access.claude),
+                 button: toolButton(access.claude, add: access.addToClaude),
                  copy: "/plugin install \(AgentAccess.plugin)")
             step(done: access.codex == .added, title: "Codex",
-                 detail: access.codex == .missing ? tr("Not installed on this Mac") : access.codex == .added ? tr("thermo-use is installed") : tr("Adds the thermo-use plugin"),
-                 button: access.codex == .notAdded ? (tr("Add"), access.addToCodex) : nil,
+                 detail: toolDetail(access.codex),
+                 button: toolButton(access.codex, add: access.addToCodex),
                  copy: "codex plugin add \(AgentAccess.plugin)")
             step(done: nil, title: tr("Any other agent"), detail: tr("Run this in its terminal; the skill is SKILL.md in leeguooooo/thermo-use"), button: nil, copy: AgentAccess.curl)
             step(done: nil, title: tr("The whole *-use family"), detail: tr("Browser, mail, messages, passwords, notes … and thermo-use, in one install"),
@@ -163,6 +206,7 @@ struct AgentAccessSheet: View {
             if let m = access.message { Text(m).font(.caption).foregroundStyle(.secondary) }
             HStack {
                 if let b = access.busy { ProgressView().controlSize(.small); Text(tr("Adding to %1$@…", b)).font(.caption) }
+                else if access.checking { ProgressView().controlSize(.small); Text(tr("Checking installation…")).font(.caption) }
                 Spacer()
                 Button(tr("Done"), action: close).keyboardShortcut(.defaultAction)
             }
@@ -172,7 +216,26 @@ struct AgentAccessSheet: View {
         .onAppear { access.refresh() }
     }
 
-    func step(done: Bool?, title: String, detail: String, button: (String, () -> Void)?, copy: String? = nil) -> some View {
+    private func toolDetail(_ tool: AgentAccess.Tool) -> String {
+        switch tool {
+        case .checking: return tr("Checking installation…")
+        case .unavailable: return tr("Could not check installation. Retry before adding the plugin.")
+        case .missing: return tr("Not installed on this Mac")
+        case .added: return tr("thermo-use is installed")
+        case .notAdded: return tr("Adds the thermo-use plugin")
+        }
+    }
+
+    private func toolButton(_ tool: AgentAccess.Tool, add: @escaping () -> Void) -> (String, () -> Void)? {
+        switch tool {
+        case .unavailable: return (tr("Retry"), access.refresh)
+        case .notAdded: return (tr("Add"), add)
+        default: return nil
+        }
+    }
+
+    func step(done: Bool?, title: String, detail: String, button: (String, () -> Void)?, copy: String? = nil,
+              allowWhileChecking: Bool = false) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: done == true ? "checkmark.circle.fill" : done == false ? "circle" : "arrow.right.circle")
                 .foregroundStyle(done == true ? Color.green : .secondary).frame(width: 18)
@@ -189,7 +252,7 @@ struct AgentAccessSheet: View {
                 }
             }
             Spacer()
-            if let button { Button(button.0, action: button.1).disabled(access.busy != nil) }
+            if let button { Button(button.0, action: button.1).disabled(access.busy != nil || (access.checking && !allowWhileChecking)) }
         }
     }
 }
