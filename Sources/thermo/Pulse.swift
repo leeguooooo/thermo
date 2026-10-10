@@ -61,7 +61,7 @@ struct PulseCommand {
         let mark = pulse.verdict == .ok ? style.green("✓") : pulse.verdict == .busy ? style.yellow("!") : style.red("!")
         var lines = [mark + " " + style.bold(pulse.verdictText)]
         if let c = pulse.culpritText { lines.append("  " + c) }
-        lines.append(style.dim("  " + tr("load %1$@ / %2$@ (1 / 5 min) on %3$@ cores · memory %4$@ · swap %5$@ · temperature %6$@",
+        lines.append(style.dim("  " + tr("load %1$@ / %2$@ (1 / 5 min) on %3$@ cores · memory %4$@ · swap %5$@ · thermal pressure %6$@",
                                          String(format: "%.1f", pulse.load1), String(format: "%.1f", pulse.load5), String(pulse.cores),
                                          MachinePulse.memoryName(pulse.memory), Self.size(pulse.swapUsedMB * 1024),
                                          MachinePulse.thermalName(pulse.thermal))))

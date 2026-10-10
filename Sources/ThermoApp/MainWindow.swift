@@ -450,7 +450,7 @@ struct OverviewPage: View {
                                         caption: MachinePulse.memoryName(pulse.memory)),
                  detail: [mem.map { tr("%1$@ of %2$@", MemoryFormat.string(bytes: $0.usedBytes), MemoryFormat.string(bytes: $0.totalBytes)) },
                           pulse.current.flatMap { $0.swapUsedMB > 0 ? tr("swap %1$@", MemoryFormat.string(mebibytes: $0.swapUsedMB)) : nil }]
-                    .compactMap { $0 }.joined(separator: " · ")) { open(.overview) }
+                    .compactMap { $0 }.joined(separator: "\n")) { open(.overview) }
             card(tr("Disk"), RingGauge(value: disk.map { 1 - Double($0.freeBytes) / Double(max(1, $0.totalBytes)) } ?? 0,
                                       text: disk.map { ByteFormat.string($0.freeBytes) } ?? "—", caption: tr("free"),
                                       colors: [.cyan, .blue, .purple, .pink]),
@@ -479,7 +479,7 @@ struct OverviewPage: View {
             VStack(spacing: 10) {
                 Text(title).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.7))
                 gauge
-                Text(detail).font(.system(size: 11)).foregroundStyle(.white.opacity(0.65)).lineLimit(2).minimumScaleFactor(0.9).frame(height: 28)
+                Text(detail).font(.system(size: 11)).foregroundStyle(.white.opacity(0.65)).multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.9).frame(height: 28)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16).padding(.horizontal, 10)

@@ -2,6 +2,7 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "load %1$@ / %2$@ (1 / 5 min) on %3$@ cores · memory %4$@ · swap %5$@ · thermal pressure %6$@": "负载 %1$@ / %2$@（1 / 5 分钟）· %3$@ 核 · 内存%4$@ · 交换 %5$@ · 系统热压力%6$@",
     "Checking repair results…": "正在核对修复结果…",
     "Reading the current configuration again.": "重新读取当前配置，确认剩余问题。",
     "Recent actions (this session)": "近期操作（本次运行）",
