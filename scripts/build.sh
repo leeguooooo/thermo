@@ -71,7 +71,7 @@ sign -i dev.thermo.cli    "$DIST/thermo"
 sign -i dev.thermo.helper "$DIST/thermo-helper"
 sign -i dev.thermo.cli    "$C/Helpers/thermo"
 sign -i dev.thermo.helper "$C/Helpers/thermo-helper"
-sign -i dev.thermo.app    "$APP"
+sign -i dev.thermo.app --entitlements Resources/Thermo.entitlements "$APP"
 codesign --verify --deep --strict "$APP"
 
 notarize() {

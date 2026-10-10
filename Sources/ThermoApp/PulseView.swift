@@ -143,6 +143,15 @@ struct PulseCard: View {
                         .font(.caption2.monospacedDigit()).foregroundStyle(.secondary).lineLimit(1)
                         .padding(.leading, 28)
                 }
+                // A browser: which of its pages is the problem (measured only when asked).
+                if ChromeInspector.isBrowser(h.name) && !renderingPreview {
+                    Button(tr("View pages")) {
+                        ChromePagesWindow.show(ChromePagesModel(app: h.name, appMemoryKB: h.memoryKB,
+                                                                gpuKB: h.parts?.first { $0.role == "GPU" }?.memoryKB))
+                    }
+                    .controlSize(.small).buttonStyle(.link).font(.caption)
+                    .padding(.leading, 28)
+                }
                 if let a = h.advice {
                     HStack(alignment: .top, spacing: 6) {
                         Text(a.text).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)

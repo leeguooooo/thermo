@@ -1,0 +1,296 @@
+import AppKit
+import CleanKit
+import SwiftUI
+import ThermoL10n
+
+/// "View pages" on a browser's row in the Overview: measures every page twice, a minute apart, and
+/// lists the ones that grow, the biggest, duplicate tabs, busy workers and hidden automation pages,
+/// each with what to do. Pages are only closed one at a time, after asking.
+@MainActor
+final class ChromePagesModel: ObservableObject {
+    let app: String
+    let appMemoryKB: Int?
+    let gpuKB: Int?
+    @Published var phase: ChromeInspector.Phase?
+    @Published var diagnosis: ChromeInspector.Diagnosis?
+    @Published var closing: String?
+    @Published var closeFailed: String?
+    private var task: Task<Void, Never>?
+
+    init(app: String, appMemoryKB: Int?, gpuKB: Int?) {
+        self.app = app; self.appMemoryKB = appMemoryKB; self.gpuKB = gpuKB
+    }
+
+    var running: Bool { task != nil }
+
+    func start(watch: TimeInterval = 60) {
+        task?.cancel()
+        diagnosis = nil
+        let app = app, memory = appMemoryKB, gpu = gpuKB, model = self
+        task = Task { [weak self] in
+            let d = await ChromeInspector.diagnose(app: app, watch: watch, appMemoryKB: memory, gpuKB: gpu) { phase in
+                Task { @MainActor in model.phase = phase }
+            }
+            guard !Task.isCancelled, let self else { return }
+            self.diagnosis = d
+            self.phase = nil
+            self.task = nil
+        }
+    }
+
+    func stop() { task?.cancel(); task = nil; phase = nil }
+
+    /// Closes one tab showing this address; on success it disappears from the lists.
+    func close(url: String, title: String) {
+        closing = url
+        closeFailed = nil
+        let app = app
+        Task.detached {
+            let ok = ChromeInspector.close(url: url, title: title, app: app)
+            await MainActor.run {
+                self.closing = nil
+                guard ok, var d = self.diagnosis else {
+                    if !ok { self.closeFailed = tr("%1$@ did not close the tab. Thermo may need permission in System Settings → Privacy & Security → Automation.", app) }
+                    return
+                }
+                if var r = d.report {
+                    if let i = r.pages.firstIndex(where: { $0.url == url && $0.title == title }) ?? r.pages.firstIndex(where: { $0.url == url }) {
+                        let id = r.pages[i].id
+                        r.pages.remove(at: i)
+                        r.leaking.removeAll { $0.id == id }
+                        r.largest.removeAll { $0.id == id }
+                    }
+                    d.report = r
+                }
+                if let i = d.tabs?.lastIndex(where: { $0.url == url }) { d.tabs?.remove(at: i) }
+                if let i = d.duplicates.firstIndex(where: { $0.url == url }) {
+                    d.duplicates[i].count -= 1
+                    if d.duplicates[i].count < 2 { d.duplicates.remove(at: i) }
+                }
+                self.diagnosis = d
+            }
+        }
+    }
+}
+
+@MainActor
+enum ChromePagesWindow {
+    private(set) static var window: NSWindow?
+    static var offscreen: Bool { CommandLine.arguments.contains("--offscreen") }
+
+    static func show(_ model: ChromePagesModel, sample: Bool = true) {
+        window?.close()
+        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 680),
+                         styleMask: [.titled, .closable, .resizable, .miniaturizable],
+                         backing: .buffered, defer: false)
+        w.isReleasedWhenClosed = false
+        w.title = tr("%1$@ pages", model.app)
+        let host = NSHostingController(rootView: ChromePagesView(model: model)
+            .frame(minWidth: 520, maxWidth: .infinity, minHeight: 480, maxHeight: .infinity))
+        host.sizingOptions = [.minSize]
+        w.contentViewController = host
+        w.setContentSize(NSSize(width: 640, height: 680))
+        w.center()
+        if offscreen {
+            w.styleMask = [.borderless]
+            w.setFrame(NSRect(x: -6000, y: -6000, width: 640, height: 680), display: true)
+            w.orderBack(nil)
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+            w.makeKeyAndOrderFront(nil)
+        }
+        // Stop measuring when the window goes away.
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
+            MainActor.assumeIsolated { model.stop() }
+        }
+        window = w
+        if sample { model.start() }
+    }
+
+    /// Verification: once there is a result, writes the window as a PNG and quits.
+    static func snapshotWhenReady(_ model: ChromePagesModel, to path: String) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            MainActor.assumeIsolated {
+                guard model.diagnosis != nil else { return snapshotWhenReady(model, to: path) }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    if let view = window?.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                        view.cacheDisplay(in: view.bounds, to: rep)
+                        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
+                    }
+                    exit(0)
+                }
+            }
+        }
+    }
+}
+
+struct ChromePagesView: View {
+    @ObservedObject var model: ChromePagesModel
+    @State private var confirming: Target?
+
+    struct Target: Identifiable { let url: String; let title: String; var id: String { url + "\u{0}" + title } }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header.padding(14)
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    if let d = model.diagnosis { content(d) } else { progress }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
+        .sheet(item: $confirming) { t in
+            ConfirmSheet(title: tr("Close this page?"),
+                         summary: tr("The tab is closed in %1$@, like clicking its ×. Anything typed into it and not saved is lost.", model.app),
+                         destructive: true, heading: tr("Page"),
+                         lines: [t.title.isEmpty ? t.url : t.title, t.url],
+                         footnote: tr("Thermo only reads each page's memory, title and address, never its content, and closes nothing on its own."),
+                         confirmTitle: tr("Close page"),
+                         confirm: { confirming = nil; model.close(url: t.url, title: t.title) }, cancel: { confirming = nil })
+        }
+    }
+
+    var header: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "rectangle.stack").font(.title2).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(tr("Which %1$@ page is the problem", model.app)).font(.headline)
+                Text(summary).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if model.running {
+                Button(tr("Stop")) { model.stop() }.controlSize(.small)
+            } else {
+                Button(tr("Check again")) { model.start() }.controlSize(.small)
+            }
+        }
+    }
+
+    var summary: String {
+        guard let d = model.diagnosis else { return tr("Measuring every page twice, a minute apart, to see which ones grow.") }
+        switch d.mode {
+        case .devtools:
+            guard let r = d.report else { return "" }
+            return tr("%1$@ pages, %2$@ workers · JavaScript %3$@", String(r.pages.count), String(r.workerCount), mb(r.pagesHeapMB + r.workersHeapMB))
+        case .tabs:
+            let tabs = d.tabs ?? []
+            return tr("%1$@ tabs in %2$@ windows", String(tabs.count), String(Set(tabs.map(\.window)).count))
+        case .unavailable:
+            return tr("Could not look inside %1$@.", d.app)
+        }
+    }
+
+    var progress: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            switch model.phase {
+            case .measuring(let round, let done, let total):
+                Text(tr("Measuring pages (%1$@/%2$@): %3$@ of %4$@", String(round), "2", String(done), String(total))).font(.callout)
+                ProgressView(value: Double(done), total: Double(max(total, 1)))
+            case .waiting(let left):
+                Text(tr("Waiting %1$@ s to see which pages grow…", String(left))).font(.callout)
+                ProgressView(value: 60 - Double(left), total: 60)
+            case .listingTabs:
+                Text(tr("Listing tabs…")).font(.callout)
+                ProgressView()
+            case nil:
+                ProgressView()
+            }
+            Text(tr("Thermo only reads each page's memory, title and address, never its content, and closes nothing on its own."))
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    func content(_ d: ChromeInspector.Diagnosis) -> some View {
+        if let failed = model.closeFailed { note(failed, color: .red) }
+        if let h = d.hiddenText { note(h, color: .orange) }
+        if let g = d.gap { note(g, color: .secondary) }
+        if let r = d.report {
+            if r.seconds != nil {
+                section(tr("Growing"), r.leaking.isEmpty ? tr("No page grew in %1$@ s.", String(Int((r.seconds ?? 0).rounded()))) : nil) {
+                    ForEach(r.leaking) { p in pageRow(p, warn: true) }
+                }
+            }
+            section(tr("Largest"), nil) {
+                ForEach(r.largest) { p in pageRow(p, warn: false) }
+            }
+        }
+        if !d.duplicates.isEmpty {
+            section(tr("Open more than once"), tr("Each copy uses its own memory. Close the ones you don't need.")) {
+                ForEach(d.duplicates) { x in
+                    row(title: x.title, url: x.url, trailing: "×\(x.count)", detail: nil, warn: false, closeTitle: tr("Close one"))
+                }
+            }
+        }
+        if let r = d.report, !r.workers.isEmpty {
+            section(tr("Workers"), tr("Background scripts a site keeps running; they close with the site's tabs.")) {
+                ForEach(r.workers.prefix(5)) { w in
+                    HStack {
+                        Text(tr("%1$@ runs %2$@ workers", w.site, String(w.count))).font(.callout)
+                        Spacer()
+                        if w.heapMB >= 1 { Text(mb(w.heapMB)).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
+                    }
+                }
+            }
+        }
+        if let h = d.hint {
+            VStack(alignment: .leading, spacing: 6) {
+                note(h, color: .secondary)
+                if d.mode != .devtools && d.app == "Google Chrome" {
+                    Button(tr("Copy install command")) {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(ChromeInspector.chromeUseInstall, forType: .string)
+                    }
+                    .controlSize(.small)
+                }
+            }
+        }
+    }
+
+    func section<C: View>(_ title: String, _ caption: String?, @ViewBuilder _ rows: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.subheadline.weight(.semibold))
+            if let caption { Text(caption).font(.caption).foregroundStyle(.secondary) }
+            rows()
+        }
+    }
+
+    func pageRow(_ p: ChromeInspector.Page, warn: Bool) -> some View {
+        let growth = p.growth.flatMap { g -> String? in
+            guard warn else { return nil }
+            return tr("%1$@ MB · %2$@ listeners · %3$@ nodes", String(format: "%+.1f", g.heapMB), String(format: "%+d", g.listeners), String(format: "%+d", g.nodes))
+        }
+        let detail = [growth, warn ? p.advice : tr("%1$@ nodes", String(p.nodes))].compactMap { $0 }.joined(separator: "\n")
+        return row(title: p.title, url: p.url, trailing: mb(p.heapMB), detail: detail, warn: warn, closeTitle: tr("Close this page"))
+    }
+
+    func row(title: String, url: String, trailing: String, detail: String?, warn: Bool, closeTitle: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: warn ? "exclamationmark.triangle.fill" : "doc").foregroundStyle(warn ? .orange : .secondary)
+                .frame(width: 16)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title.isEmpty ? url : title).font(.callout).lineLimit(1)
+                Text(ChromeInspector.site(url)).font(.caption2).foregroundStyle(.secondary).lineLimit(1).help(url)
+                if let detail, !detail.isEmpty {
+                    Text(detail).font(.caption).foregroundStyle(warn ? .orange : .secondary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 6)
+            Text(trailing).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+            Button(model.closing == url ? tr("Closing…") : closeTitle) { confirming = Target(url: url, title: title) }
+                .controlSize(.small).disabled(model.closing != nil)
+        }
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: 8).fill((warn ? Color.orange : Color.secondary).opacity(0.07)))
+    }
+
+    func note(_ text: String, color: Color) -> some View {
+        Text(text).font(.caption).foregroundStyle(color).fixedSize(horizontal: false, vertical: true)
+    }
+
+    func mb(_ v: Double) -> String { String(format: "%.0f MB", v) }
+}

@@ -35,6 +35,7 @@ struct PulseCommand {
         if rest.first == "quit" { try quit(Array(rest.dropFirst())); return }
         if rest.first == "restart" { try restart(Array(rest.dropFirst())); return }
         if rest.first == "history" { try history(); return }
+        if rest.first == "chrome" { try chrome(Array(rest.dropFirst())); return }
         let style = app.style
         let pulse = MachinePulse.sample()
         let sm = try? app.sampler()

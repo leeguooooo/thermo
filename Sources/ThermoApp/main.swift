@@ -2,6 +2,7 @@ import AppKit
 import UserNotifications
 import SwiftUI
 import AgentDoctor
+import CleanKit
 import ThermoKit
 import ThermoL10n
 
@@ -265,6 +266,33 @@ if CommandLine.arguments.contains("--disk") {
     // Only this window closing ends the app (not sheets, menus or alerts).
     NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { n in
         if (n.object as? NSWindow) === DiskWindow.window { exit(0) }
+    }
+    app.run()
+}
+@MainActor func openChromePages(_ args: [String]) {
+    let name = args.firstIndex(of: "--app").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } ?? "Google Chrome"
+    let hog = MachinePulse.sample().hogs.first { $0.name == name }
+    let gpu = hog?.parts?.first { $0.role == "GPU" }?.memoryKB
+    let model = ChromePagesModel(app: name, appMemoryKB: hog?.memoryKB, gpuKB: gpu)
+    if let i = args.firstIndex(of: "--fixture"), i + 2 < args.count {
+        let read: (String) -> ChromeInspector.Snapshot? = { p in try? JSONDecoder().decode(ChromeInspector.Snapshot.self, from: Data(contentsOf: URL(fileURLWithPath: p))) }
+        if let before = read(args[i + 1]), let after = read(args[i + 2]) {
+            let r = ChromeInspector.diagnose(after, before: before)
+            model.diagnosis = ChromeInspector.diagnosis(r, app: name, appMemoryKB: hog?.memoryKB, gpuKB: gpu)
+        }
+    }
+    ChromePagesWindow.show(model, sample: model.diagnosis == nil)
+    if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count { ChromePagesWindow.snapshotWhenReady(model, to: args[i + 1]) }
+}
+
+/// `Thermo --chrome-pages [--app NAME]`: just the browser pages window; quits when closed.
+/// `--fixture BEFORE.json AFTER.json` shows two saved samples instead of measuring (verification).
+if CommandLine.arguments.contains("--chrome-pages") {
+    let args = CommandLine.arguments
+    app.setActivationPolicy(args.contains("--offscreen") ? .accessory : .regular)
+    DispatchQueue.main.async { MainActor.assumeIsolated { openChromePages(args) } }
+    NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { n in
+        MainActor.assumeIsolated { if let w = n.object as? NSWindow, w === ChromePagesWindow.window { exit(0) } }
     }
     app.run()
 }

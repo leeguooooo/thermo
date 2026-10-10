@@ -14,6 +14,7 @@
     <key>LSUIElement</key><true/>
     <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
     <key>NSHighResolutionCapable</key><true/>
+    <key>NSAppleEventsUsageDescription</key><string>Thermo lists your browser tabs to find duplicates, and closes a tab only when you confirm it.</string>
     <key>NSHumanReadableCopyright</key><string>© 2026 LI GUO. All rights reserved.</string>
     <key>SUPublicEDKey</key><string>uJ2iyiNpULXGsm30LkjBH8ZYlIA4UyGUvPAvxvh2Osw=</string>
     <key>SUEnableAutomaticChecks</key><true/>

@@ -13,7 +13,8 @@ struct Args {
 
     static let valueOptions: Set<String> = ["interval", "count", "sensor", "format", "older-than", "root",
                                             "area", "agent", "action",
-        "since"]  // pulse history
+        "since",  // pulse history
+        "watch", "app", "title"]  // pulse chrome
     static let aliases: [String: String] = [
         "i": "interval", "n": "count", "s": "sensor", "a": "all", "j": "json",
         "h": "help", "v": "version", "f": "format", "y": "yes",
