@@ -3,6 +3,20 @@ import ThermoKit
 @testable import thermo
 
 final class ExportTests: XCTestCase {
+    func testDiagnosticExportRedactsArgumentsWithoutChangingNumericOrDateFields() throws {
+        struct Fixture: Encodable {
+            let args = ["--token", "synthetic secret value"]
+            let generated = Date(timeIntervalSince1970: 0)
+            let count = 3
+        }
+        let fixture = Fixture()
+        let output = Export.diagnosticJSON(fixture)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(output.utf8)) as? [String: Any])
+        XCTAssertEqual(object["args"] as? [String], ["--token", "••••"])
+        XCTAssertEqual(object["count"] as? Int, 3)
+        XCTAssertEqual(object["generated"] as? String, "1970-01-01T00:00:00Z")
+        XCTAssertEqual(fixture.args[1], "synthetic secret value")
+    }
     func testKeyCSVHasStableColumnsAndPerKeyFailures() {
         let csv = Export.keyReadCSV([
             ["key": "TC0P", "type": "sp78", "value": "42.5", "hex": "2a80"],

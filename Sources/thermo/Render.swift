@@ -1,5 +1,6 @@
 import Foundation
 import ThermoKit
+import AgentDoctor
 
 /// Text renderers. Each returns lines so `watch` can compose and trim them to the screen.
 struct Renderer {
@@ -129,6 +130,11 @@ struct Renderer {
 }
 
 enum Export {
+    static func diagnosticJSON<T: Encodable>(_ value: T) -> String {
+        let raw = json(value)
+        guard let safe = try? Redact.jsonExport(Data(raw.utf8)) else { return "{}" }
+        return String(decoding: safe, as: UTF8.self)
+    }
     static func fanStatusCSV(_ fans: [FanReading], policies: [Int: FanPolicy], helperNote: String?) -> String {
         let available = helperNote == nil
         let columns = ["id", "name", "rpm", "min_rpm", "max_rpm", "target_rpm", "manual", "policy", "policies_available", "helper"]

@@ -22,7 +22,7 @@ struct AgentsCommand {
         default: throw CLIError(Self.usage)
         }
         let report = AgentDoctor.run()
-        if app.args.has("json") { print(Export.json(report)); return }
+        if app.args.has("json") { print(Export.diagnosticJSON(report)); return }
         let all = app.args.has("all")
         let inv = report.inventory
         var lines = [
@@ -80,7 +80,7 @@ struct AgentsCommand {
         }
         let report = AgentDoctor.run()
         let items = report.items.filter { areas.contains($0.area) }
-        if app.args.has("json") { print(Export.json(items)); return }
+        if app.args.has("json") { print(Export.diagnosticJSON(items)); return }
         var lines: [String] = []
         for area in areas {
             let rows = items.filter { $0.area == area }
@@ -150,7 +150,7 @@ struct AgentsCommand {
         let items = try select(name, in: report)
         if app.args.has("json") {
             struct Shown: Encodable { let item: AgentItem; let findings: [Finding] }
-            print(Export.json(items.map { Shown(item: $0, findings: report.findings(for: $0)) }))
+            print(Export.diagnosticJSON(items.map { Shown(item: $0, findings: report.findings(for: $0)) }))
             return
         }
         var lines: [String] = []

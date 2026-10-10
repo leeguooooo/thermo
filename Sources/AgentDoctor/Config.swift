@@ -61,10 +61,10 @@ struct ConfigChecks {
     @discardableResult
     mutating func item(_ area: Area, agent: String, id: String, name: String, detail: String,
                        source: String?, enabled: Bool = true) -> String {
-        let key = "\(area.rawValue)|\(id)"
+        let key = Redact.identifier("\(area.rawValue)|\(id)")
         if !items.contains(where: { $0.id == key }) {
-            items.append(AgentItem(id: key, area: area, agent: agent, name: name, detail: Redact.text(String(detail.prefix(200))),
-                                   source: source, enabled: enabled))
+            items.append(AgentItem(id: key, area: area, agent: Redact.text(agent), name: Redact.text(name), detail: Redact.text(String(detail.prefix(200))),
+                                   source: source.map(Redact.text), enabled: enabled))
         }
         currentItem = key
         return key

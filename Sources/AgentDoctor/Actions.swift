@@ -10,7 +10,7 @@ public enum ActionKind: String, Codable, Sendable {
     case disable
 }
 
-/// One concrete, reviewable operation. Shown to the user verbatim before anything runs.
+/// One concrete operation, shown for review with credential values hidden before anything runs.
 public enum Step: Codable, Equatable, Sendable {
     /// An agent's own CLI, e.g. `claude mcp remove x -s user`; preferred over editing its files.
     case run(tool: String, args: [String], cwd: String?)
@@ -35,13 +35,13 @@ public enum Step: Codable, Equatable, Sendable {
         func q(_ s: String) -> String { s.contains(" ") ? "'\(s)'" : s }
         switch self {
         case let .run(tool, args, cwd):
-            return (cwd.map { "cd \(q($0)) && " } ?? "") + ([(tool as NSString).lastPathComponent] + args).map(q).joined(separator: " ")
+            return Redact.text((cwd.map { "cd \(q($0)) && " } ?? "") + ([(tool as NSString).lastPathComponent] + Redact.arguments(args)).map(q).joined(separator: " "))
         case let .unlink(path): return "rm \(q(path))   # symlink only"
         case let .trash(path): return tr("move %1$@ to the Trash", q(path))
-        case let .kill(pid, args): return "kill -TERM \(pid)   # \(Redact.text(String(args.prefix(60))))"
+        case let .kill(pid, _): return "kill -TERM \(pid)"
         case let .removeJSONKey(file, path): return tr("remove %1$@ from %2$@ (backed up first)", path.joined(separator: "."), q(file))
         case let .removeHook(file, event, _, _, command):
-            return tr("remove %1$@ hook \"%2$@\" from %3$@ (backed up first)", event, Redact.text(String(command.prefix(60))), q(file))
+            return tr("remove %1$@ hook \"%2$@\" from %3$@ (backed up first)", event, String(Redact.text(command).prefix(60)), Redact.text(q(file)))
         case let .keepAliveOnFailure(plist, _): return tr("set KeepAlive = { SuccessfulExit = false } in %1$@ and reload it", q(plist))
         case let .bootout(label): return "launchctl bootout gui/$UID/\(label)"
         case let .truncate(path): return ": > \(q(path))"

@@ -1,5 +1,6 @@
 import Foundation
 import ThermoL10n
+import CryptoKit
 
 public enum Severity: String, Codable, Comparable, CaseIterable, Sendable {
     case error, warning, info
@@ -30,11 +31,11 @@ public struct Finding: Codable, Equatable, Sendable {
                 _ message: String, fix: String? = nil, source: String? = nil) {
         self.severity = severity
         self.area = area
-        self.agent = agent
-        self.subject = subject
+        self.agent = Redact.text(agent)
+        self.subject = Redact.text(subject)
         self.message = Redact.text(message)
         self.fix = fix.map(Redact.text)
-        self.source = source
+        self.source = source.map(Redact.text)
     }
 }
 
@@ -119,6 +120,45 @@ public struct DoctorReport: Codable, Sendable {
 
 /// Diagnostic output gets pasted into issues and chats, so nothing that looks like a credential leaves this module.
 public enum Redact {
+    private static let commandCredentials = try! NSRegularExpression(pattern: "(--?[A-Za-z0-9_-]*(?:token|secret|password|key|auth)[A-Za-z0-9_-]*(?:=|\\s+))(?:(['\"])(.*?)\\2|([^\\s'\"。；，;,)&）】」』]+))", options: [.caseInsensitive])
+    private static let assignedCredentials = try! NSRegularExpression(pattern: "([A-Za-z0-9_]*(?:TOKEN|SECRET|PASSWORD|API_?KEY|AUTH)[A-Za-z0-9_]*[\"']?\\s*[=:]\\s*)(?:(['\"])(.*?)\\2|([^\\s'\"。；，;,)&）】」』]+))", options: [.caseInsensitive])
+    private static let bearerCredentials = try! NSRegularExpression(pattern: "\\bBearer\\s+([^\\s'\"。；，;,)&）】」』]+)", options: [.caseInsensitive])
+    private static let urlCredentials = try! NSRegularExpression(pattern: "[A-Za-z][A-Za-z0-9+.-]*://([^/@\\s]+)@")
+    public static func identifier(_ value: String) -> String {
+        guard text(value) != value else { return value }
+        return "redacted-" + SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    public static func arguments(_ values: [String]) -> [String] {
+        var expectsSecret = false
+        return values.map { value in
+            let result = expectsSecret && !value.hasPrefix("$") && !value.contains("${") ? "••••" : text(value)
+            expectsSecret = (value.hasPrefix("-") && !value.contains("=") && isSecretName(value)) || value.lowercased() == "bearer"
+            return result
+        }
+    }
+
+    /// Preserve JSON structure while sanitizing presentation values and split argument arrays.
+    public static func jsonExport(_ data: Data) throws -> Data {
+        func sanitize(_ value: Any, key: String? = nil) -> Any {
+            if let string = value as? String {
+                if let key, isSecretName(key), !string.isEmpty, !string.hasPrefix("$"), !string.contains("${") { return "••••" }
+                return key == "id" || key == "item" ? identifier(string) : text(string)
+            }
+            if let array = value as? [Any] {
+                if key == "args", let strings = array as? [String] { return arguments(strings) }
+                return array.map { sanitize($0) }
+            }
+            if let object = value as? [String: Any] {
+                return object.reduce(into: [String: Any]()) {
+                    $0[$1.key] = key == "kill" && $1.key == "args" ? "••••" : sanitize($1.value, key: $1.key)
+                }
+            }
+            return value
+        }
+        let object = try JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
+        return try JSONSerialization.data(withJSONObject: sanitize(object), options: [.fragmentsAllowed, .sortedKeys, .prettyPrinted])
+    }
     static let secretName = try! NSRegularExpression(
         pattern: "(token|secret|password|passwd|api[_-]?key|apikey|auth|credential|private[_-]?key|cookie|session)",
         options: [.caseInsensitive])
@@ -140,20 +180,32 @@ public enum Redact {
     }
 
     static let patterns: [(NSRegularExpression, String)] = [
-        // --token X, --api-key=X
-        (try! NSRegularExpression(pattern: "(--?[A-Za-z0-9_-]*(?:token|secret|password|key|auth)[A-Za-z0-9_-]*(?:=|\\s+))([^\\s'\"]{4})[A-Za-z0-9_.+/=•-]*",
-                                  options: [.caseInsensitive]), "$1$2••••"),
-        // FOO_TOKEN=X, "api_key": "X"
-        (try! NSRegularExpression(pattern: "([A-Za-z0-9_]*(?:TOKEN|SECRET|PASSWORD|API_?KEY|AUTH)[A-Za-z0-9_]*[\"']?\\s*[=:]\\s*[\"']?)([^\\s'\"$]{4})[A-Za-z0-9_.+/=•-]*",
-                                  options: [.caseInsensitive]), "$1$2••••"),
-        // Bearer X
-        (try! NSRegularExpression(pattern: "(Bearer\\s+)([^\\s'\"]{4})[A-Za-z0-9_.+/=•-]*", options: []), "$1$2••••"),
         // Well-known key shapes anywhere.
         (try! NSRegularExpression(pattern: "\\b(sk-[A-Za-z0-9_-]{2}|ghp_|gho_|github_pat_|xox[abpr]-|AKIA|AIza)[A-Za-z0-9_-]{8,}", options: []), "$1••••"),
     ]
 
     public static func text(_ s: String) -> String {
         var out = s
+        for match in commandCredentials.matches(in: out, range: NSRange(out.startIndex..., in: out)).reversed() {
+            let valueRange = match.range(at: match.range(at: 3).location == NSNotFound ? 4 : 3)
+            guard let range = Range(valueRange, in: out), let prefix = Range(match.range(at: 1), in: out) else { continue }
+            let value = String(out[range])
+            if !value.hasPrefix("$"), !value.contains("${") {
+                let replacement = out[prefix].lowercased().contains("password") ? "••••" : Self.value(value)
+                out.replaceSubrange(range, with: replacement)
+            }
+        }
+        for expression in [bearerCredentials, assignedCredentials, urlCredentials] {
+            for match in expression.matches(in: out, range: NSRange(out.startIndex..., in: out)).reversed() {
+                let capture = expression === assignedCredentials ? (match.range(at: 3).location == NSNotFound ? 4 : 3) : 1
+                guard let range = Range(match.range(at: capture), in: out) else { continue }
+                let value = String(out[range])
+                guard !value.hasPrefix("$"), !value.contains("${"), value.lowercased() != "bearer" else { continue }
+                let prefix = Range(match.range(at: 1), in: out).map { out[$0].lowercased() } ?? ""
+                let fullMask = expression === urlCredentials || (expression === assignedCredentials && prefix.contains("password"))
+                out.replaceSubrange(range, with: fullMask ? "••••" : Self.value(value))
+            }
+        }
         for (re, template) in patterns {
             out = re.stringByReplacingMatches(in: out, range: NSRange(out.startIndex..., in: out), withTemplate: template)
         }

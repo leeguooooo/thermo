@@ -21,6 +21,45 @@ final class ShellTests: XCTestCase {
 }
 
 final class RedactTests: XCTestCase {
+    func testFindingMetadataAndQuotedOrShortArgumentsAreRedacted() {
+        let secret = "sk-abcdefghijklmnopqrst"
+        let finding = Finding(.warning, .mcp, agent: "fixture", subject: "server " + secret,
+                              "fixture", source: "/fixture/" + secret)
+        XCTAssertFalse(finding.subject.contains(secret))
+        XCTAssertFalse(finding.source?.contains(secret) == true)
+        XCTAssertEqual(Redact.text("--password 'abc'"), "--password '••••'")
+        XCTAssertFalse(Redact.text("--token 'fixture token value'").contains("fixture token value"))
+        XCTAssertEqual(Redact.arguments(["--token", "fixture token value"]), ["--token", "••••"])
+        XCTAssertEqual(Redact.arguments(["--token", "${FIXTURE_TOKEN}"]), ["--token", "${FIXTURE_TOKEN}"])
+        XCTAssertEqual(Redact.text("API_TOKEN=abc"), "API_TOKEN=••••")
+        XCTAssertFalse(Redact.text("Authorization: Bearer fixture-secret-value").contains("fixture-secret-value"))
+        XCTAssertEqual(Redact.text("https://fixture:synthetic-password@example.test/path"), "https://••••@example.test/path")
+    }
+
+    func testDiagnosticJSONPreservesStructureAndInternalActionArguments() throws {
+        let args = ["--token", "fixture token value", "--name", "fixture"]
+        let step = Step.run(tool: "/fixture/tool", args: args, cwd: nil)
+        XCTAssertFalse(step.display.contains("fixture token value"))
+        let encoded = try JSONEncoder().encode(step)
+        let safe = try Redact.jsonExport(encoded)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: safe) as? [String: Any])
+        let run = try XCTUnwrap(object["run"] as? [String: Any])
+        XCTAssertEqual(run["args"] as? [String], ["--token", "••••", "--name", "fixture"])
+        XCTAssertEqual(step, .run(tool: "/fixture/tool", args: args, cwd: nil))
+        let kill = Step.kill(pid: 123, args: "fixture private process identity")
+        XCTAssertEqual(kill.display, "kill -TERM 123")
+        let killJSON = String(decoding: try Redact.jsonExport(JSONEncoder().encode(kill)), as: UTF8.self)
+        XCTAssertFalse(killJSON.contains("fixture private process identity"))
+        XCTAssertEqual(kill, .kill(pid: 123, args: "fixture private process identity"))
+    }
+
+    func testSensitiveIdentifiersAreOpaqueStableAndDistinct() {
+        let first = Redact.identifier("mcp|sk-abcdefghijklmnopqrst")
+        XCTAssertEqual(first, Redact.identifier("mcp|sk-abcdefghijklmnopqrst"))
+        XCTAssertNotEqual(first, Redact.identifier("mcp|sk-abcdefghijklmnopqrstu"))
+        XCTAssertFalse(first.contains("sk-"))
+        XCTAssertEqual(Redact.identifier("mcp|fixture"), "mcp|fixture")
+    }
     func testRedactsCommonShapes() {
         let s = Redact.text("x --token cgu-194600eeecd0b804 DISCORD_TOKEN=MTUxMzc4MTE3NDE1 Bearer abcdefghijkl sk-ant-abcdefghijklmnop")
         XCTAssertFalse(s.contains("194600eeecd0"))
@@ -128,6 +167,23 @@ final class DoctorTests: XCTestCase {
         let r = diagnose()
         XCTAssertEqual(r.findings, [])
         XCTAssertEqual(r.inventory.agents, [])
+    }
+
+    func testSensitiveItemNamesKeepFindingLinksAndExecutableRepairTargets() throws {
+        let name = "sk-abcdefghijklmnopqrst"
+        let settings: [String: Any] = ["mcpServers": [name: ["command": "/missing/fixture-command"]]]
+        try write(".cursor/mcp.json", String(decoding: JSONSerialization.data(withJSONObject: settings), as: UTF8.self))
+        let r = diagnose()
+        let item = try XCTUnwrap(r.items.first { $0.area == .mcp })
+        XCTAssertFalse(item.id.contains(name))
+        XCTAssertFalse(item.name.contains(name))
+        XCTAssertTrue(r.findings.contains { $0.item == item.id })
+        XCTAssertTrue(item.actions.flatMap(\.steps).contains { step in
+            if case .removeJSONKey(_, let path) = step { return path.last == name }
+            return false
+        })
+        let exported = String(decoding: try Redact.jsonExport(JSONEncoder().encode(r)), as: UTF8.self)
+        XCTAssertFalse(exported.contains(name))
     }
 
     func testBroadHookAdviceIncludesEmptyMatcherButExcludesAsyncAndConditionalHandlers() throws {

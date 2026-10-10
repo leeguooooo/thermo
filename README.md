@@ -97,6 +97,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 `bench --json/--csv` 导出每次操作的平均 wall/CPU 毫秒、重复次数、最后一次采样返回的记录数和 CPU 开销估算。采样测试包含温度、风扇、功率、电压、电流；估算不是整个 App 的实际 CPU 占用。SMC 传感器数量单独记录，返回记录数包含 IOHID 和风扇，也不等于 SMC 调用次数。
 
+诊断 JSON 中的敏感参数使用占位符，敏感项目标识改为稳定的匿名 ID。通过 CLI 或界面定位项目后执行修复，内部仍使用原始参数和进程身份校验。
+
 菜单栏、概览、温度告警和 CLI 的“最高温度”取已命名传感器中的最高有效读数，包含存储、主板等分组。风扇曲线的 `max` 和过热安全保护仍以 CPU/GPU 温度为准。
 
 `thermo settings slowdown-alerts on|off` 和 `thermo settings unnamed-sensors on|off` 与 App 使用同一组开关。`--yes` 等标志不接受 `=false`；需要确认时省略 `--yes`。
