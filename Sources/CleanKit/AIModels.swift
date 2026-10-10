@@ -40,9 +40,14 @@ enum AIModels {
                 }
                 let parts = rel.split(separator: "/")
                 // registry.ollama.ai/library/llama3/8b → llama3:8b; other namespaces keep their prefix.
-                let name = parts.count >= 3
-                    ? (parts[parts.count - 3] == "library" ? "" : parts[parts.count - 3] + "/") + parts[parts.count - 2] + ":" + parts[parts.count - 1]
-                    : rel
+                // Built step by step: the one-expression version mixing Substring and String
+                // timed out the type checker on slower machines (Intel, Swift 6.3).
+                var name: String = rel
+                if parts.count >= 3 {
+                    let namespace = String(parts[parts.count - 3])
+                    let prefix: String = namespace == "library" ? "" : namespace + "/"
+                    name = prefix + String(parts[parts.count - 2]) + ":" + String(parts[parts.count - 1])
+                }
                 models.append((name, f, Set(digests.map { root + "/blobs/" + $0.replacingOccurrences(of: ":", with: "-") })))
             }
         }

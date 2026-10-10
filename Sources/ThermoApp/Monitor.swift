@@ -191,9 +191,32 @@ final class Monitor: ObservableObject {
                 let v = try await helper.version()
                 policies = try await helper.policies()
                 helperState = v == HelperConstants.version ? .running : .outdated
+                if helperState == .outdated { restartOutdatedHelper() }
             } catch {
                 helperState = .notRunning
             }
+        }
+    }
+
+    private var restartedOutdatedHelper = false
+
+    /// Helpers before 1.0.2 don't restart themselves when the app is updated, so
+    /// after an update they keep running the old binary until a reboot. For the
+    /// SMAppService daemon, unregister + register makes launchd start the new one
+    /// (the old helper returns the fans to auto on SIGTERM). Once per launch.
+    private func restartOutdatedHelper() {
+        guard usesSMAppService, daemon.status == .enabled, !restartedOutdatedHelper else { return }
+        restartedOutdatedHelper = true
+        Task { @MainActor in
+            do {
+                try await daemon.unregister()
+                try daemon.register()
+            } catch {
+                lastError = "Helper update: \(error.localizedDescription)"
+            }
+            if daemon.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            refreshHelper()
         }
     }
 
