@@ -2,6 +2,7 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "configured timeout is %1$@; review long-running synchronous hooks": "配置的超时为 %1$@，请检查长时间运行的同步 hook",
     "No items to check": "暂无可检查项目",
     "Notes available": "有检查说明",
     "no agent items found": "未找到可检查的 AI agent 项目",
@@ -303,14 +304,14 @@ let zhHans: [String: String] = [
     "settings file is not valid JSON; Claude Code ignores all of it": "设置文件不是有效的 JSON，Claude Code 会忽略整个文件",
     "fix the syntax in %1$@": "修正 %1$@ 的语法",
     "hooks file is not valid JSON": "hooks 文件不是有效的 JSON",
-    "%1$@ hook commands run on every tool call (%1$@ process spawns per call), adding latency to each one":
-        "每次工具调用都要跑 %1$@ 个 hook 命令（每次启动 %1$@ 个进程），每次调用都会变慢",
+    "%1$@ synchronous command hooks have broad tool-call matchers; when enabled, they may add latency":
+        "%1$@ 个同步命令 hook 使用宽泛的工具匹配规则，启用后可能增加调用延迟",
     "narrow the matcher (e.g. \"Bash\" or \"Write|Edit\") or merge hooks that do the same thing":
         "收窄 matcher（比如 \"Bash\" 或 \"Write|Edit\"），或合并功能相同的 hook",
     "'%1$@' (not on PATH)": "「%1$@」（不在 PATH 中）",
     "hook is a no-op here: %1$@ does not exist and the command checks for it first": "这个 hook 在本机不起作用：%1$@ 不存在，命令会先检查它",
     "remove it if that tool is no longer installed": "如果那个工具已经卸载，就删掉这个 hook",
-    "hook runs %1$@, which does not exist; it fails on every %2$@": "hook 要运行的 %1$@ 不存在，每次 %2$@ 都会失败",
+    "hook references %1$@, which does not exist; it may fail when invoked for %2$@": "hook 引用的 %1$@ 不存在，在 %2$@ 触发时可能失败",
     "reinstall the tool or remove the hook": "重新安装那个工具，或删除这个 hook",
     "timeout is %1$@; a hung hook blocks the agent that long": "超时设置为 %1$@，hook 卡住时 agent 会被阻塞这么久",
     "status line runs %1$@, which does not exist; the status bar stays empty": "状态栏要运行的 %1$@ 不存在，状态栏会一直是空的",

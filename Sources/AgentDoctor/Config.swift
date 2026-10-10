@@ -22,6 +22,8 @@ struct HookCommand {
     var matcher: String?
     var command: String
     var timeout: Double?
+    var runsInBackground = false
+    var conditional = false
     /// Position in the file, so the exact entry can be removed.
     var group = 0
     var index = 0
@@ -144,6 +146,8 @@ struct ConfigChecks {
                     // Gemini CLI takes hook timeouts in milliseconds; Claude Code and Codex in seconds.
                     let timeout = (h["timeout"] as? NSNumber).map { agent == "gemini" ? $0.doubleValue / 1000 : $0.doubleValue }
                     out.append(HookCommand(agent: agent, source: source, event: event, matcher: matcher, command: cmd, timeout: timeout,
+                                           runsInBackground: (h["async"] as? Bool) == true || (h["asyncRewake"] as? Bool) == true,
+                                           conditional: h["if"] != nil,
                                            group: gi, index: hi))
                 }
             }
@@ -168,12 +172,12 @@ struct ConfigChecks {
         }
         currentItem = nil
 
-        // Every tool call waits for these to finish, one process spawn each.
-        let perTool = hooks.filter { ($0.event == "PreToolUse" || $0.event == "PostToolUse") && ($0.matcher ?? "*").isEmpty == false
-            && ["*", ".*", ""].contains($0.matcher ?? "*") }
+        // Configuration describes possible overhead, not a measured execution trace.
+        let perTool = hooks.filter { ($0.event == "PreToolUse" || $0.event == "PostToolUse")
+            && !($0.runsInBackground || $0.conditional) && ["*", ".*", ""].contains($0.matcher ?? "*") }
         if perTool.count >= 4 {
             add(Finding(.info, .hooks, agent: agent, subject: "PreToolUse/PostToolUse",
-                        tr("%1$@ hook commands run on every tool call (%1$@ process spawns per call), adding latency to each one", String(perTool.count)),
+                        tr("%1$@ synchronous command hooks have broad tool-call matchers; when enabled, they may add latency", String(perTool.count)),
                         fix: tr("narrow the matcher (e.g. \"Bash\" or \"Write|Edit\") or merge hooks that do the same thing"),
                         source: env.short(source.path)))
         }
@@ -193,13 +197,13 @@ struct ConfigChecks {
                             fix: tr("remove it if that tool is no longer installed"), source: h.source))
             } else {
                 add(Finding(.error, .hooks, agent: h.agent, subject: subject,
-                            tr("hook runs %1$@, which does not exist; it fails on every %2$@", what, h.event),
+                            tr("hook references %1$@, which does not exist; it may fail when invoked for %2$@", what, h.event),
                             fix: tr("reinstall the tool or remove the hook"), source: h.source))
             }
         }
-        if let t = h.timeout, t > 600 {
+        if let t = h.timeout, t > 600, !h.runsInBackground {
             add(Finding(.info, .hooks, agent: h.agent, subject: subject,
-                        tr("timeout is %1$@; a hung hook blocks the agent that long", Self.duration(t)),
+                        tr("configured timeout is %1$@; review long-running synchronous hooks", Self.duration(t)),
                         source: h.source))
         }
     }
@@ -560,7 +564,10 @@ struct ConfigChecks {
     }
 
     static func duration(_ s: Double) -> String {
-        s >= 3600 ? "\(Int(s / 3600)) h" : s >= 60 ? "\(Int(s / 60)) min" : "\(Int(s)) s"
+        guard s.isFinite else { return "unknown" }
+        let value = s >= 3600 ? s / 3600 : s >= 60 ? s / 60 : s
+        let unit = s >= 3600 ? "h" : s >= 60 ? "min" : "s"
+        return String(format: "%g", value.rounded(.towardZero)) + " " + unit
     }
 }
 

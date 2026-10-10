@@ -130,6 +130,38 @@ final class DoctorTests: XCTestCase {
         XCTAssertEqual(r.inventory.agents, [])
     }
 
+    func testBroadHookAdviceIncludesEmptyMatcherButExcludesAsyncAndConditionalHandlers() throws {
+        let commands: [[String: Any]] = [
+            ["command": "true", "async": true, "timeout": 86400],
+            ["command": "true", "asyncRewake": true, "timeout": 86400],
+            ["command": "true", "if": "Bash(git *)"],
+            ["command": "true", "if": "Edit(*.ts)"],
+        ]
+        let settings: [String: Any] = ["hooks": ["PreToolUse": [["matcher": "*", "hooks": commands]]]]
+        try write(".claude/settings.json", String(decoding: JSONSerialization.data(withJSONObject: settings), as: UTF8.self))
+        var r = diagnose()
+        XCTAssertFalse(r.findings.contains { $0.subject == "PreToolUse/PostToolUse" })
+        XCTAssertFalse(r.findings.contains { $0.message.contains("configured timeout") })
+        let synchronous = Array(repeating: ["command": "true"], count: 4)
+        try write(".claude/settings.json", String(decoding: JSONSerialization.data(withJSONObject:
+            ["hooks": ["PreToolUse": [["matcher": "", "hooks": synchronous]]]]), as: UTF8.self))
+        r = diagnose()
+        let advice = try XCTUnwrap(r.findings.first { $0.subject == "PreToolUse/PostToolUse" })
+        XCTAssertTrue(advice.message.contains("4 synchronous command hooks"))
+        XCTAssertTrue(advice.message.contains("may add latency"))
+        XCTAssertFalse(advice.message.contains("process spawns per call"))
+    }
+
+    func testLargeHookTimeoutCanBeReportedWithoutIntegerOverflow() throws {
+        try write(".claude/settings.json", """
+        {"hooks":{"Stop":[{"hooks":[{"command":"true","timeout":1e100}]}]}}
+        """)
+        let findings = diagnose().findings
+        XCTAssertTrue(findings.contains { $0.message.contains("configured timeout") })
+        XCTAssertEqual(ConfigChecks.duration(3661), "1 h")
+        XCTAssertEqual(ConfigChecks.duration(.infinity), "unknown")
+    }
+
     func testHooks() throws {
         try write(".claude/settings.json", """
         {"hooks": {
