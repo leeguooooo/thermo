@@ -1,3 +1,4 @@
+import AgentCore
 import Foundation
 import ThermoL10n
 
@@ -67,8 +68,9 @@ public struct ActionResult: Sendable {
     public var backups: [String]
 }
 
-/// Paths an action may never touch, whatever a finding says.
-enum Guard {
+/// Paths an action may never edit, whatever a finding says. Deletions also go through AgentCore.Guard,
+/// which disk cleanup shares.
+enum EditGuard {
     static func allowed(_ path: String, home: URL) -> Bool {
         let p = (path as NSString).standardizingPath
         let h = home.path
@@ -121,7 +123,14 @@ public enum ActionRunner {
     static func perform(_ step: Step, env: DoctorEnvironment, backup: (String) throws -> Void) throws {
         let fm = FileManager.default
         func check(_ path: String) throws {
-            guard Guard.allowed(path, home: env.home) else { throw Failure(tr("refusing to touch protected path %1$@", path)) }
+            guard EditGuard.allowed(path, home: env.home) else { throw Failure(tr("refusing to touch protected path %1$@", path)) }
+        }
+        // Anything removed or emptied must also pass the guard disk cleanup uses.
+        func checkRemoval(_ path: String) throws {
+            try check(path)
+            if let why = AgentCore.Guard(home: env.home.path).refusal(path) {
+                throw Failure(tr("refusing to remove %1$@: %2$@", path, why))
+            }
         }
         switch step {
         case let .run(tool, args, cwd):
@@ -129,13 +138,13 @@ public enum ActionRunner {
             guard r.status == 0 else { throw Failure(r.output.trimmingCharacters(in: .whitespacesAndNewlines)) }
 
         case let .unlink(path):
-            try check(path)
+            try checkRemoval(path)
             let attrs = try fm.attributesOfItem(atPath: path)
             guard attrs[.type] as? FileAttributeType == .typeSymbolicLink else { throw Failure(tr("%1$@ is not a symlink", path)) }
             try fm.removeItem(atPath: path)  // removes the link, not its target
 
         case let .trash(path):
-            try check(path)
+            try checkRemoval(path)
             try env.trash(URL(fileURLWithPath: path))
 
         case let .kill(pid, args):
@@ -188,7 +197,7 @@ public enum ActionRunner {
             guard r.status == 0 || r.status == 3 || r.output.contains("No such process") else { throw Failure(r.output) }
 
         case let .truncate(path):
-            try check(path)
+            try checkRemoval(path)
             try FileHandle(forWritingTo: URL(fileURLWithPath: path)).truncate(atOffset: 0)
         }
     }

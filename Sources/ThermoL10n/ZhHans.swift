@@ -132,6 +132,7 @@ let zhHans: [String: String] = [
     "remove %1$@ hook \"%2$@\" from %3$@ (backed up first)": "从 %3$@ 中删除 %1$@ hook「%2$@」（先备份）",
     "set KeepAlive = { SuccessfulExit = false } in %1$@ and reload it": "把 %1$@ 的 KeepAlive 改为 { SuccessfulExit = false } 并重新加载",
     "refusing to touch protected path %1$@": "拒绝修改受保护的路径 %1$@",
+    "refusing to remove %1$@: %2$@": "拒绝删除 %1$@：%2$@",
     "%1$@ is not a symlink": "%1$@ 不是符号链接",
     "pid %1$@ is now a different process; not killed": "pid %1$@ 现在是另一个进程，未结束",
     "could not signal pid %1$@": "无法向 pid %1$@ 发送信号",

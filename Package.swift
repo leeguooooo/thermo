@@ -26,7 +26,7 @@ let package = Package(
         // Userspace-only diagnostics; kept out of ThermoKit so the root helper never links it.
         // UI strings and translations; the root helper never links it.
         .target(name: "ThermoL10n"),
-        .target(name: "AgentDoctor", dependencies: ["ThermoL10n"]),
+        .target(name: "AgentDoctor", dependencies: ["ThermoL10n", "AgentCore"]),
         // What both agent features read: processes, live sessions, plugins, protected paths. User-level only.
         .target(name: "AgentCore"),
         // Disk cleanup runs as the user only: the root helper must never link it.
@@ -39,7 +39,7 @@ let package = Package(
             linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts")]
         ),
         .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC"]),
-        .testTarget(name: "AgentDoctorTests", dependencies: ["AgentDoctor", "ThermoL10n"]),
+        .testTarget(name: "AgentDoctorTests", dependencies: ["AgentDoctor", "ThermoL10n", "AgentCore"]),
         .testTarget(name: "CleanKitTests", dependencies: ["CleanKit"]),
         .testTarget(name: "AgentCoreTests", dependencies: ["AgentCore"]),
     ],
