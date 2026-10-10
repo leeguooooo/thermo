@@ -22,6 +22,8 @@ public struct Finding: Codable, Equatable, Sendable {
     public var fix: String?
     /// Where it was found (config file, plist, log); already redacted.
     public var source: String?
+    /// The `AgentItem.id` this is about; nil for findings about a whole area.
+    public var item: String?
 
     public init(_ severity: Severity, _ area: Area, agent: String, subject: String,
                 _ message: String, fix: String? = nil, source: String? = nil) {
@@ -33,6 +35,22 @@ public struct Finding: Codable, Equatable, Sendable {
         self.fix = fix.map(Redact.text)
         self.source = source
     }
+}
+
+/// One thing the doctor looked at — a hook, MCP server, plugin, skill, launch agent or process group —
+/// so a UI can list everything and mark which ones have problems.
+public struct AgentItem: Codable, Equatable, Identifiable, Sendable {
+    public var id: String
+    public var area: Area
+    public var agent: String
+    public var name: String
+    /// One line: the command, url, state or size; already redacted.
+    public var detail: String
+    public var source: String?
+    /// false for servers and plugins that are configured but turned off.
+    public var enabled: Bool
+    /// Worst finding about this item; nil when it looks healthy.
+    public var severity: Severity?
 }
 
 public struct Inventory: Codable, Equatable, Sendable {
@@ -58,10 +76,16 @@ public struct DoctorReport: Codable, Sendable {
     public var generated: Date
     public var inventory: Inventory
     public var findings: [Finding]
+    public var items: [AgentItem]
     public var processes: [ProcessGroup]
     public var sessions: Int
 
     public func count(_ s: Severity) -> Int { findings.filter { $0.severity == s }.count }
+
+    public func findings(for item: AgentItem) -> [Finding] { findings.filter { $0.item == item.id } }
+
+    /// Findings not tied to one item (e.g. "5 hooks run on every tool call").
+    public func general(_ area: Area) -> [Finding] { findings.filter { $0.area == area && $0.item == nil } }
 }
 
 /// Diagnostic output gets pasted into issues and chats, so nothing that looks like a credential leaves this module.

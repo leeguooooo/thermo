@@ -101,10 +101,14 @@ extension ConfigChecks {
         }
 
         var summary: [ProcessGroup] = []
-        for (name, members) in groups {
+        for (name, members) in groups.sorted(by: { $0.value.reduce(0) { $0 + $1.row.rssKB } > $1.value.reduce(0) { $0 + $1.row.rssKB } }) {
             let rss = Double(members.reduce(0) { $0 + $1.row.rssKB }) / 1024
             let cpu = members.reduce(0) { $0 + $1.row.cpu }
             let detached = members.filter(\.detached)
+            item(.processes, agent: "system", id: name, name: name,
+                 detail: "\(members.count)× · \(Self.mb(Int(rss * 1024))) · \(Int(cpu))% CPU" + (detached.isEmpty ? "" : " · \(detached.count) detached"),
+                 source: nil)
+            defer { currentItem = nil }
             summary.append(ProcessGroup(name: name, count: members.count, detached: detached.count, cpu: cpu, rssMB: rss,
                                         oldest: members.map(\.row.elapsed).max() ?? 0))
 

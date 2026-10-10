@@ -6,7 +6,9 @@ struct AgentsCommand {
     let app: App
     var style: Style { app.style }
 
-    func run() throws {
+    func run(_ rest: [String]) throws {
+        if rest.first == "list" || rest.first == "ls" { return try list(rest.count > 1 ? rest[1] : nil) }
+        guard rest.isEmpty else { throw CLIError("usage: thermo agents [list [AREA]] [--all] [--json]") }
         let report = AgentDoctor.run()
         if app.args.has("json") { print(Export.json(report)); return }
         let all = app.args.has("all")
@@ -51,6 +53,46 @@ struct AgentsCommand {
         lines.append(summary + (all || hidden == 0 ? "" : style.dim("  (+\(hidden) notes; --all to show)")))
         out(lines)
         if report.count(.error) > 0 { exit(1) }
+    }
+
+    /// Everything that was checked, one line each, marked ✓ healthy / · note / ! warning / ✗ error / - off.
+    func list(_ filter: String?) throws {
+        let areas: [Area]
+        if let filter {
+            guard let a = Area(rawValue: filter) else {
+                throw CLIError("unknown area '\(filter)'; areas: " + Area.allCases.map(\.rawValue).joined(separator: ", "))
+            }
+            areas = [a]
+        } else {
+            areas = Area.allCases
+        }
+        let report = AgentDoctor.run()
+        let items = report.items.filter { areas.contains($0.area) }
+        if app.args.has("json") { print(Export.json(items)); return }
+        var lines: [String] = []
+        for area in areas {
+            let rows = items.filter { $0.area == area }
+            guard !rows.isEmpty else { continue }
+            let bad = rows.filter { $0.severity == .error || $0.severity == .warning }.count
+            lines.append(style.bold(title(area)) + style.dim("  \(rows.count)") + (bad > 0 ? style.yellow("  \(bad) with problems") : style.green("  all OK")))
+            for i in rows {
+                let mark: String
+                switch (i.enabled, i.severity) {
+                case (false, _): mark = style.dim("-")
+                case (_, .error?): mark = style.red("✗")
+                case (_, .warning?): mark = style.yellow("!")
+                case (_, .info?): mark = style.dim("·")
+                case (_, nil): mark = style.green("✓")
+                }
+                let agent = i.agent == "system" ? "" : style.dim(" [\(i.agent)]")
+                lines.append("  \(mark) " + i.name + agent + "  " + style.dim(String(i.detail.prefix(90))))
+                if i.severity == .error || i.severity == .warning {
+                    for f in report.findings(for: i) where f.severity != .info { lines.append("      " + f.message) }
+                }
+            }
+            lines.append("")
+        }
+        out(lines)
     }
 
     func title(_ c: Area) -> String {

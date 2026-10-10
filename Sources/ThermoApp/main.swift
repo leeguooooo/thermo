@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import AgentDoctor
 import ThermoKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
@@ -94,9 +95,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     let updates = Updates()
     monitor.popoverOpen = true
     let agents = AgentScanner()
+    let started = Date()
     agents.scan()
-    // The agent scan runs launchctl once per launch agent; give it time to finish.
-    DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
+    func render() {
+        // The agent scan runs launchctl once per launch agent; wait for it (up to 60 s).
+        if agents.scanning, Date().timeIntervalSince(started) < 60 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: render)
+            return
+        }
         for tab in Tab.allCases {
             let view = PopoverView(monitor: monitor, updates: updates, tab: tab, agents: agents).background(Color(nsColor: .windowBackgroundColor))
             let r = ImageRenderer(content: view)
@@ -106,8 +112,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             try? rep.representation(using: .png, properties: [:])?
                 .write(to: URL(fileURLWithPath: dir).appendingPathComponent("\(tab.rawValue.lowercased()).png"))
         }
+        // The report window, everything listed; only small areas expanded so the image stays renderable.
+        let full = AgentsView(scanner: agents, inWindow: true, filter: .all,
+                              open: [.mcp, .plugins, .statusline]).padding(16).frame(width: 640)
+            .background(Color(nsColor: .windowBackgroundColor))
+        let r = ImageRenderer(content: full)
+        r.scale = 2
+        if let img = r.cgImage {
+            try? NSBitmapImageRep(cgImage: img).representation(using: .png, properties: [:])?
+                .write(to: URL(fileURLWithPath: dir).appendingPathComponent("agents-report.png"))
+        }
         exit(0)
     }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 4, execute: render)
 }
 
 let app = NSApplication.shared

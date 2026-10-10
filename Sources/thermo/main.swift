@@ -27,6 +27,9 @@ COMMANDS
   agents                     diagnose AI agents: hooks, MCP servers, plugins,
                              skills, launch agents and leaked processes
                              (Claude Code, Codex, Cursor, Gemini; read-only)
+  agents list [AREA]         everything checked, each marked OK or not; AREA is
+                             hooks, mcp, plugins, skills, statusline, launchd
+                             or processes
 
 OPTIONS
   -a, --all                  include sensors without a known name
@@ -86,7 +89,7 @@ struct App {
         case "fan": try fanCommand(rest)
         case "helper": try helperCommand(rest)
         case "bench": try benchCommand()
-        case "agents", "agent", "doctor": try AgentsCommand(app: self).run()
+        case "agents", "agent", "doctor": try AgentsCommand(app: self).run(rest)
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
         }
     }

@@ -162,6 +162,29 @@ final class DoctorTests: XCTestCase {
         XCTAssertEqual(find(r, .mcp, "p (").count, 1)
     }
 
+    func testEveryItemIsListedWithItsStatus() throws {
+        try write(".claude.json", """
+        {"mcpServers": {
+           "ok": {"command": "/bin/sh"},
+           "gone": {"command": "/nope/server"},
+           "off": {"command": "/nope/x", "disabled": true},
+           "leaky": {"command": "/bin/sh", "args": ["--token", "abcdefghijklmnop"]}
+        }}
+        """)
+        try write(".claude/settings.json", #"{"hooks": {"Stop": [{"hooks": [{"command": "true"}, {"command": "/nope/h"}]}]}}"#)
+        let r = diagnose()
+        let mcp = r.items.filter { $0.area == .mcp }
+        XCTAssertEqual(mcp.map(\.name), ["gone", "leaky", "ok", "off"], "problems first")
+        XCTAssertEqual(mcp.map(\.severity), [.error, .warning, nil, nil])
+        XCTAssertEqual(mcp.first { $0.name == "off" }?.enabled, false)
+        XCTAssertFalse(mcp.contains { $0.detail.contains("efghijklmnop") }, "details are redacted")
+        XCTAssertEqual(r.findings(for: mcp[0]).count, 1)
+        let hooks = r.items.filter { $0.area == .hooks }
+        XCTAssertEqual(hooks.map(\.severity), [.error, nil])
+        XCTAssertEqual(hooks.first?.detail, "/nope/h")
+        XCTAssertTrue(r.findings.allSatisfy { $0.item != nil })
+    }
+
     func testPlugins() throws {
         let installed = home.appendingPathComponent("plugins/a").path
         try write("plugins/a/.claude-plugin/plugin.json", "{")

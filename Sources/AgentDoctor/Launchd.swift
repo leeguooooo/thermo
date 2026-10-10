@@ -135,6 +135,10 @@ extension ConfigChecks {
             let plist = env.short(job.plist)
             let printed = env.run("/bin/launchctl", ["print", "gui/\(env.uid)/\(job.label)"])
             let st = printed.map(Launchd.state)
+            let stateText = printed == nil ? "not loaded"
+                : [st?.state, st?.runs.map { "\($0) runs" }, st?.lastExit.flatMap { $0.hasPrefix("(never") ? nil : "last exit \($0)" }].compactMap { $0 }.joined(separator: " · ")
+            item(.launchd, agent: "system", id: job.label, name: job.label, detail: stateText, source: plist)
+            defer { currentItem = nil }
 
             let missing = ([job.program].compactMap { $0 }.filter { $0.hasPrefix("/") }
                            + job.scriptPrograms.map { env.expand($0) }.filter { !$0.contains("$") && $0.contains("/") })

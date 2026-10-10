@@ -41,7 +41,28 @@ struct ConfigChecks {
 
     init(env: DoctorEnvironment) { self.env = env }
 
-    mutating func add(_ f: Finding) { findings.append(f) }
+    var items: [AgentItem] = []
+    /// Findings reported while this is set belong to that item.
+    var currentItem: String?
+
+    mutating func add(_ f: Finding) {
+        var f = f
+        if f.item == nil { f.item = currentItem }
+        findings.append(f)
+    }
+
+    /// Registers an item and makes it current; returns its id.
+    @discardableResult
+    mutating func item(_ area: Area, agent: String, id: String, name: String, detail: String,
+                       source: String?, enabled: Bool = true) -> String {
+        let key = "\(area.rawValue)|\(id)"
+        if !items.contains(where: { $0.id == key }) {
+            items.append(AgentItem(id: key, area: area, agent: agent, name: name, detail: Redact.text(String(detail.prefix(200))),
+                                   source: source, enabled: enabled))
+        }
+        currentItem = key
+        return key
+    }
 
     mutating func runAll() {
         let claudeDir = env.url(".claude")
@@ -74,6 +95,7 @@ struct ConfigChecks {
         }
 
         checkPlugins(enabled: claudeSettings["enabledPlugins"] as? [String: Any] ?? [:])
+        currentItem = nil
 
         // Codex
         let codexDir = env.url(".codex")
@@ -102,6 +124,7 @@ struct ConfigChecks {
         inventory.mcpServers = servers.filter { !$0.disabled }.count
 
         checkSkills()
+        currentItem = nil
     }
 
     // MARK: hooks
@@ -128,7 +151,12 @@ struct ConfigChecks {
             var h = h; h.vars = vars; return h
         }
         inventory.hooks += hooks.count
-        for h in hooks { check(h) }
+        for (i, h) in hooks.enumerated() {
+            let name = h.event + (h.matcher.map { $0.isEmpty || $0 == "*" ? "" : " [\($0)]" } ?? "")
+            item(.hooks, agent: agent, id: "\(h.source)#\(i)", name: name, detail: h.command, source: h.source)
+            check(h)
+        }
+        currentItem = nil
 
         // Every tool call waits for these to finish, one process spawn each.
         let perTool = hooks.filter { ($0.event == "PreToolUse" || $0.event == "PostToolUse") && ($0.matcher ?? "*").isEmpty == false
@@ -170,6 +198,8 @@ struct ConfigChecks {
 
     mutating func checkStatusLine(_ sl: [String: Any], source: URL) {
         guard let cmd = sl["command"] as? String else { return }
+        item(.statusline, agent: "claude", id: source.path, name: "statusLine", detail: cmd, source: env.short(source.path))
+        defer { currentItem = nil }
         for program in Shell.programs(cmd) {
             let p = env.expand(program)
             if !p.contains("$"), env.resolve(p) == nil {
@@ -273,8 +303,11 @@ struct ConfigChecks {
     }
 
     mutating func checkServer(_ s: MCPServer) {
-        guard !s.disabled else { return }
         let subject = s.project.map { "\(s.name) (\(env.short($0)))" } ?? s.name
+        item(.mcp, agent: s.agent, id: "\(s.agent)|\(s.source)|\(s.project ?? "")|\(s.name)", name: subject,
+             detail: s.url ?? ([s.command ?? ""] + s.args).joined(separator: " "), source: s.source, enabled: !s.disabled)
+        defer { currentItem = nil }
+        guard !s.disabled else { return }
 
         if let project = s.project, !env.exists(project) {
             add(Finding(.info, .mcp, agent: s.agent, subject: subject,
@@ -342,8 +375,18 @@ struct ConfigChecks {
         let isOn = { (id: String) in (enabled[id] as? Bool) == true }
         let installedIds = Set(installed.map(\.id))
         inventory.plugins = installedIds.filter(isOn).count
+        let pluginKeys = installed.map { p in
+            item(.plugins, agent: "claude", id: p.id + "|" + (p.projectPath ?? ""),
+                 name: p.id + (p.projectPath.map { " (\(env.short($0)))" } ?? ""),
+                 detail: env.short(p.installPath), source: env.short(manifest.path), enabled: isOn(p.id))
+        }
 
         for (id, on) in enabled.sorted(by: { $0.key < $1.key }) where (on as? Bool) == true {
+            if let i = installed.firstIndex(where: { $0.id == id }) {
+                currentItem = pluginKeys[i]
+            } else {
+                item(.plugins, agent: "claude", id: id + "|", name: id, detail: "enabled, not installed", source: "~/.claude/settings.json")
+            }
             if !installedIds.contains(id) {
                 add(Finding(.warning, .plugins, agent: "claude", subject: id,
                             "enabled in settings but not installed; its skills, hooks and MCP servers are missing",
@@ -360,7 +403,8 @@ struct ConfigChecks {
         }
 
         var checkedRoots = Set<String>()
-        for p in installed {
+        for (i, p) in installed.enumerated() {
+            currentItem = pluginKeys[i]
             let scopeNote = p.projectPath.map { " (project \(env.short($0)))" } ?? ""
             if let proj = p.projectPath, !env.exists(proj) {
                 add(Finding(.info, .plugins, agent: "claude", subject: p.id + scopeNote,
@@ -380,6 +424,7 @@ struct ConfigChecks {
             if env.exists(pj.path), env.json(pj) == nil {
                 add(Finding(.error, .plugins, agent: "claude", subject: p.id, "plugin.json is not valid JSON", source: env.short(pj.path)))
             }
+            defer { currentItem = nil }
             let hooks = pluginRoot.appendingPathComponent("hooks/hooks.json")
             if env.exists(hooks.path) {
                 if let h = env.json(hooks) as? [String: Any] {
@@ -412,7 +457,7 @@ struct ConfigChecks {
             (env.url(".codex/skills"), "codex", "~/.codex/skills"),
         ] + skillDirs
         let fm = FileManager.default
-        var byName: [String: [(agent: String, real: String, origin: String)]] = [:]
+        var byName: [String: [(agent: String, real: String, origin: String, key: String)]] = [:]
         for (dir, agent, origin) in roots {
             guard let entries = try? fm.contentsOfDirectory(atPath: dir.path) else { continue }
             for e in entries.sorted() where !e.hasPrefix(".") {
@@ -420,6 +465,7 @@ struct ConfigChecks {
                 let attrs = try? fm.attributesOfItem(atPath: u.path)
                 if attrs?[.type] as? FileAttributeType == .typeSymbolicLink, !fm.fileExists(atPath: u.path) {
                     let target = (try? fm.destinationOfSymbolicLink(atPath: u.path)) ?? "?"
+                    item(.skills, agent: agent, id: u.path, name: e, detail: "→ " + target, source: origin)
                     add(Finding(.warning, .skills, agent: agent, subject: e,
                                 "broken symlink → \(target); the skill no longer loads",
                                 fix: "rm \(env.short(u.path))", source: origin))
@@ -432,6 +478,7 @@ struct ConfigChecks {
                     // A folder of skills (e.g. a synced collection) is fine; an empty one is not.
                     let nested = Self.containsSkill(u, depth: 3)
                     if !nested {
+                        item(.skills, agent: agent, id: u.path, name: e, detail: env.short(u.path), source: origin)
                         add(Finding(.warning, .skills, agent: agent, subject: e, "directory has no SKILL.md, so it isn't a skill",
                                     fix: "add SKILL.md or remove \(env.short(u.path))", source: origin))
                     }
@@ -439,13 +486,15 @@ struct ConfigChecks {
                 }
                 inventory.skills += 1
                 let front = Self.frontMatter(text)
+                let key = item(.skills, agent: agent, id: u.path, name: front?["name"] ?? e,
+                               detail: front?["description"] ?? env.short(u.path), source: origin)
                 if front == nil || front?["description"]?.isEmpty != false {
                     add(Finding(.warning, .skills, agent: agent, subject: e,
                                 "SKILL.md has no front matter description, so agents can't tell when to use it",
                                 fix: "start SKILL.md with ---\\nname: \(e)\\ndescription: …\\n---", source: origin))
                 }
                 let name = front?["name"] ?? e
-                byName[name, default: []].append((agent, u.resolvingSymlinksInPath().path, origin))
+                byName[name, default: []].append((agent, u.resolvingSymlinksInPath().path, origin, key))
             }
         }
         // The same name in two folders one agent loads: it uses one and silently ignores the other.
@@ -455,6 +504,7 @@ struct ConfigChecks {
             for agent in ["claude", "codex"] {
                 let visible = copies.filter { $0.agent == agent || (agent == "codex" && $0.agent == "shared") }
                 guard Set(visible.map(\.real)).count > 1 else { continue }
+                currentItem = visible[0].key
                 add(Finding(.info, .skills, agent: agent, subject: name,
                             "\(visible.count) different skills share this name (\(visible.map(\.origin).joined(separator: ", "))); only one is used",
                             fix: "rename or remove the copy you don't want", source: nil))
