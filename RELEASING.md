@@ -66,3 +66,13 @@ codesign --verify --deep --strict /tmp/thermo-verification-dist/Thermo.app
 ```
 
 这是 ad-hoc 签名的本地验证包，没有公证、在线更新或发布步骤。生产 helper 的签名认证和跨机型验收仍需用正式构建验证。
+
+双架构打包检查：
+
+```sh
+THERMO_DIST_DIR=/tmp/thermo-universal-verification ARCHS="arm64 x86_64" \
+  SIGN_ID=- NOTARY_PROFILE= APPCAST_URL= scripts/build.sh
+scripts/verify-artifacts.sh /tmp/thermo-universal-verification "arm64 x86_64"
+```
+
+验证器检查 App、独立 CLI/helper、App 内嵌 CLI/helper 的签名、请求的架构切片和最低系统版本，并检查 Sparkle 的请求架构。构建成功仍需要真实 Intel 与 Apple Silicon 机器的运行验收。

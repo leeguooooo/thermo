@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Packaging validates the app, standalone and embedded CLI/helper signatures, requested architecture slices and minimum OS metadata; Sparkle's requested slices are checked too.
+
 - Watch input buffers coalesced keys and fragmented escape sequences. Direction keys arriving in pieces no longer look like a bare Escape; both CSI and application-cursor arrows are accepted.
 
 - Watch page changes redraw the current snapshot without consuming samples or resetting the interval; tiny terminals no longer produce negative row counts. Terminal restoration occurs once on exit.

@@ -72,7 +72,7 @@ sign -i dev.thermo.helper "$DIST/thermo-helper"
 sign -i dev.thermo.cli    "$C/Helpers/thermo"
 sign -i dev.thermo.helper "$C/Helpers/thermo-helper"
 sign -i dev.thermo.app --entitlements Resources/Thermo.entitlements "$APP"
-codesign --verify --deep --strict "$APP"
+scripts/verify-artifacts.sh "$DIST" "$ARCHS"
 
 notarize() {
     xcrun notarytool submit "$1" --keychain-profile "$NOTARY_PROFILE" ${NOTARY_KEYCHAIN:+--keychain "$NOTARY_KEYCHAIN"} --wait
