@@ -24,9 +24,13 @@ COMMANDS
   fan auto [ID|all]          return fans to automatic control
   helper install|uninstall|status
   bench                      measure sampling latency
+  agents                     diagnose AI agents: hooks, MCP servers, plugins,
+                             skills, launch agents and leaked processes
+                             (Claude Code, Codex, Cursor, Gemini; read-only)
 
 OPTIONS
   -a, --all                  include sensors without a known name
+                             (agents: also show notes and config sources)
   -j, --json                 JSON output (watch: one object per line)
       --csv                  CSV output (watch: one row per sample)
   -i, --interval SEC         watch interval (default 1)
@@ -82,6 +86,7 @@ struct App {
         case "fan": try fanCommand(rest)
         case "helper": try helperCommand(rest)
         case "bench": try benchCommand()
+        case "agents", "agent", "doctor": try AgentsCommand(app: self).run()
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
         }
     }

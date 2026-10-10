@@ -32,7 +32,7 @@ struct Bar: View {
 // MARK: - Root
 
 enum Tab: String, CaseIterable, Identifiable {
-    case overview = "Overview", sensors = "Sensors", fans = "Fans", settings = "Settings"
+    case overview = "Overview", sensors = "Sensors", fans = "Fans", agents = "Agents", settings = "Settings"
     var id: String { rawValue }
 }
 
@@ -40,6 +40,7 @@ struct PopoverView: View {
     @ObservedObject var monitor: Monitor
     var updates: Updates
     @State var tab: Tab = .overview
+    @StateObject var agents = AgentScanner()
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
 
     var body: some View {
@@ -69,6 +70,7 @@ struct PopoverView: View {
                 case .overview: OverviewView(monitor: monitor)
                 case .sensors: SensorsView(monitor: monitor)
                 case .fans: FansView(monitor: monitor)
+                case .agents: AgentsView(scanner: agents)
                 case .settings: SettingsView(monitor: monitor, updates: updates)
                 }
             }

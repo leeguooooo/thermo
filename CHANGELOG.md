@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- New **Agents** tab and `thermo agents` command: diagnoses the AI coding agents on this Mac (Claude Code, Codex, Cursor, Gemini). Finds hooks and MCP servers whose programs are missing, plaintext credentials in MCP configs, plugins that are enabled but not installed, broken skill symlinks, launch agents stuck in a restart loop or pointing at deleted programs, and agent processes that leaked or still run a deleted binary. Read-only; secrets are redacted.
+
 ## 1.0.2
 
 - Thermo now lives at app.leeguoo.com/thermo — downloads and updates come from there.

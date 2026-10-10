@@ -72,6 +72,7 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 | `thermo fan auto [id\|all]` / `fan status` | 恢复自动 / 查看策略 |
 | `thermo helper install\|uninstall\|status` | 管理特权 helper |
 | `thermo bench` | 采样延迟基准 |
+| `thermo agents [--all] [--json]` | AI agent 诊断：Claude Code / Codex / Cursor / Gemini 的 hooks、MCP server、插件、skills、状态栏，以及 launchd 重启风暴、泄漏/跑着已删除二进制的进程、明文凭据（只读，输出已脱敏；有 error 时退出码 1） |
 
 所有读取命令都支持 `--json`、`--csv`，另有 `--fahrenheit`、`--no-color`（也遵循 `NO_COLOR`）。
 

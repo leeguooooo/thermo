@@ -93,9 +93,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     let monitor = Monitor()
     let updates = Updates()
     monitor.popoverOpen = true
-    DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+    let agents = AgentScanner()
+    agents.scan()
+    // The agent scan runs launchctl once per launch agent; give it time to finish.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
         for tab in Tab.allCases {
-            let view = PopoverView(monitor: monitor, updates: updates, tab: tab).background(Color(nsColor: .windowBackgroundColor))
+            let view = PopoverView(monitor: monitor, updates: updates, tab: tab, agents: agents).background(Color(nsColor: .windowBackgroundColor))
             let r = ImageRenderer(content: view)
             r.scale = 2
             guard let img = r.cgImage else { continue }
