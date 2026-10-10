@@ -15,7 +15,7 @@ final class ChromeInspectorTests: XCTestCase {
         let (a, b) = samples()
         let r = ChromeInspector.diagnose(b, before: a)
         XCTAssertEqual(r.leaking[0].advice, "90 秒里加了 411 个事件监听，页面本身却没变：这是页面的泄漏。刷新一下就能释放；如果又涨回来，不用时就关掉它。")
-        XCTAssertTrue(ChromeInspector.hiddenText(135, app: "Google Chrome").contains("重启 Google Chrome 会一起清掉"))
+        XCTAssertTrue(ChromeInspector.hiddenText(r, app: "Google Chrome")!.hasPrefix("136 条 chrome-use 残留记录"))
     }
 
     func page(_ id: String, _ url: String, _ title: String, heapMB: Double?, nodes: Double = 0, listeners: Double = 0) -> T {
@@ -34,7 +34,11 @@ final class ChromeInspectorTests: XCTestCase {
             page("feed", "https://feed.example.com/", "Feed", heapMB: 20, nodes: 1000, listeners: 100),
             page("ext", "chrome://settings", "Settings", heapMB: nil),
         ]
-        before += (0..<135).map { T(targetId: "hidden\($0)", type: "page", url: "", title: "", attached: true) }
+        // Dead chrome-use relay records (attach works, evaluating says the tab is gone) …
+        before += (0..<135).map { T(targetId: "ghost\($0)", type: "page", url: "", title: "", attached: true, error: "stale sessionId", ghost: true) }
+        // … two real pages in no window, and one never checked.
+        before += (0..<2).map { T(targetId: "auto\($0)", type: "page", url: "", title: "", attached: true, heap: 30 * 1_048_576, ghost: false) }
+        before.append(T(targetId: "unchecked", type: "page", url: "", title: ""))
         before += (0..<78).map { T(targetId: "w\($0)", type: "worker", url: "https://www.tiktok.com/static/media-decoder.worker.js",
                                    title: "", heap: $0 < 10 ? 2 * 1_048_576 : nil) }
         before += (0..<3).map { T(targetId: "s\($0)", type: "service_worker", url: "https://docs.example.com/sw.js", title: "") }
@@ -72,12 +76,15 @@ final class ChromeInspectorTests: XCTestCase {
         XCTAssertEqual(r.workers.first?.count, 78)
         XCTAssertEqual(r.workers.first?.heapMB ?? 0, 20, accuracy: 0.01)
         XCTAssertEqual(r.workerCount, 81)
-        XCTAssertEqual(r.hidden, 135)
+        XCTAssertEqual(r.stale, 136, "ghosts and unchecked ones are never pages")
+        XCTAssertEqual(r.hidden, 2)
+        XCTAssertEqual(r.hiddenHeapMB, 60, accuracy: 0.01)
         XCTAssertEqual(r.unmeasured, 1)  // chrome://settings
         XCTAssertEqual(r.pages.count, 6)
         let d = ChromeInspector.diagnosis(r, app: "Google Chrome", appMemoryKB: 20 * 1_048_576, gpuKB: 2_621_440)
-        XCTAssertTrue(d.hiddenText!.hasPrefix("135 hidden pages"))
-        XCTAssertTrue(d.hiddenText!.contains("Restarting Google Chrome"))
+        XCTAssertTrue(d.hiddenText!.hasPrefix("136 stale chrome-use records (not real pages, no memory)"))
+        XCTAssertTrue(d.hiddenText!.contains("2 pages in no window"))
+        XCTAssertFalse(d.hiddenText!.contains("Restart"), "restarting the browser does not clear relay records")
         XCTAssertTrue(d.gap!.contains("of the 20.0 GB"))
         XCTAssertTrue(d.gap!.contains("GPU process (2.5 GB)"))
     }
@@ -98,7 +105,8 @@ final class ChromeInspectorTests: XCTestCase {
         XCTAssertEqual(s.rows[0].listeners, 383)
         XCTAssertEqual(s.rows[0].heap, 43_971_876)
         XCTAssertEqual(s.date.timeIntervalSince1970, 1_791_647_250.703, accuracy: 0.001)
-        XCTAssertEqual(ChromeInspector.diagnose(s).hidden, 1)
+        XCTAssertEqual(ChromeInspector.diagnose(s).stale, 1)
+        XCTAssertEqual(ChromeInspector.diagnose(s).hidden, 0)
     }
 
     func testFindsTheRelayOrADebuggingPort() throws {
@@ -126,5 +134,44 @@ final class ChromeInspectorTests: XCTestCase {
         XCTAssertEqual(ChromeInspector.duplicates(tabs), [.init(url: "https://a.com/", title: "A", count: 2)])
         XCTAssertEqual(ChromeInspector.jsString(#"he said "hi" \ ok"#), #""he said \"hi\" \\ ok""#)
         XCTAssertEqual(ChromeInspector.site("https://www.tiktok.com/x"), "tiktok.com")
+    }
+
+    // MARK: restart only promises what was checked
+
+    func writeChrome(_ home: String, restore: [String: Int?], active: [String]) throws {
+        let root = home + "/Library/Application Support/Google/Chrome"
+        for (profile, value) in restore {
+            try FileManager.default.createDirectory(atPath: root + "/" + profile, withIntermediateDirectories: true)
+            let prefs: [String: Any] = value.map { ["session": ["restore_on_startup": $0]] } ?? ["session": [String: Any]()]
+            try JSONSerialization.data(withJSONObject: prefs).write(to: URL(fileURLWithPath: root + "/" + profile + "/Preferences"))
+        }
+        try JSONSerialization.data(withJSONObject: ["profile": ["last_active_profiles": active]])
+            .write(to: URL(fileURLWithPath: root + "/Local State"))
+    }
+
+    func testRestoresOnlyWhenEveryOpenProfileContinuesWhereItLeftOff() throws {
+        let home = NSTemporaryDirectory() + "chrome-restore-\(UUID().uuidString)"
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        // Nothing to read: not checked, so no promise.
+        XCTAssertEqual(BrowserSession.windows(for: "Google Chrome", home: home), .thermoReopensTabs)
+        try writeChrome(home, restore: ["Default": nil], active: ["Default"])  // "Open the New Tab page"
+        XCTAssertEqual(BrowserSession.windows(for: "Google Chrome", home: home), .thermoReopensTabs)
+        try writeChrome(home, restore: ["Default": 1, "Profile 2": 5], active: ["Default", "Profile 2"])
+        XCTAssertFalse(BrowserSession.restoresSession("Google Chrome", home: home))
+        try writeChrome(home, restore: ["Default": 1, "Profile 2": 1], active: ["Default", "Profile 2"])
+        XCTAssertEqual(BrowserSession.windows(for: "Google Chrome", home: home), .restoresItself)
+        XCTAssertEqual(BrowserSession.windows(for: "Slack", home: home), .unknown)
+    }
+
+    func testRestartNotesAndSavedTabs() {
+        XCTAssertEqual(MachinePulse.restartNote(.unknown), "Save your work first: it may not reopen its windows.")
+        XCTAssertTrue(MachinePulse.restartNote(.thermoReopensTabs).contains("Thermo saves them"))
+        let tabs: [ChromeInspector.Tab] = [
+            .init(window: 7, index: 1, url: "https://a.com/", title: "A"), .init(window: 3, index: 1, url: "https://b.com/", title: "B"),
+            .init(window: 7, index: 2, url: "https://c.com/", title: "C"), .init(window: 3, index: 2, url: "", title: ""),
+        ]
+        XCTAssertEqual(BrowserSession.group(tabs), [["https://a.com/", "https://c.com/"], ["https://b.com/"]])
+        L10n.override = .simplifiedChinese
+        XCTAssertEqual(MachinePulse.sentences("重启它大约能腾出 19 GB。", "它会自己恢复标签页。"), "重启它大约能腾出 19 GB。它会自己恢复标签页。")
     }
 }

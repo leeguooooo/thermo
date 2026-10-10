@@ -51,6 +51,8 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var text: String
         /// About how much restarting would free.
         public var freesKB: Int
+        /// What happens to its windows: restoresItself (checked), thermoReopensTabs, unknown.
+        public var windows: BrowserSession.Windows? = nil
     }
 
     public enum Memory: String, Codable, Sendable { case normal, warning, critical }
@@ -292,15 +294,31 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         let resident = h.residentKB ?? h.memoryKB
         guard h.memoryKB >= resident * 2 || h.memoryKB >= 6 * 1_048_576 else { return nil }
         let hours = String(Int(up / 3600))
-        let text: String
+        var text: String
         if let pages = h.pagesOpened, pages >= 100 {
-            text = tr("%1$@ has run for %2$@ hours and opened about %3$@ pages; restarting it (it reopens your windows) would free about %4$@.",
+            text = tr("%1$@ has run for %2$@ hours and opened about %3$@ pages; restarting it would free about %4$@.",
                       h.name, hours, String(pages), gb(h.memoryKB))
         } else {
-            text = tr("%1$@ has run for %2$@ hours; restarting it (it reopens your windows) would free about %3$@.",
-                      h.name, hours, gb(h.memoryKB))
+            text = tr("%1$@ has run for %2$@ hours; restarting it would free about %3$@.", h.name, hours, gb(h.memoryKB))
         }
-        return Advice(kind: "restart", text: text, freesKB: h.memoryKB)
+        // Only promise what was checked.
+        let windows = BrowserSession.windows(for: h.name)
+        text = sentences(text, restartNote(windows))
+        return Advice(kind: "restart", text: text, freesKB: h.memoryKB, windows: windows)
+    }
+
+    /// Two sentences as one (no space after a Chinese full stop).
+    public static func sentences(_ a: String, _ b: String) -> String {
+        a.isEmpty ? b : a + (a.hasSuffix("。") ? "" : " ") + b
+    }
+
+    /// What restarting does to the app's windows, in plain words.
+    public static func restartNote(_ w: BrowserSession.Windows) -> String {
+        switch w {
+        case .restoresItself: return tr("It reopens your tabs itself.")
+        case .thermoReopensTabs: return tr("It is not set to reopen its tabs, so Thermo saves them and opens them again; anything typed and not sent is lost.")
+        case .unknown: return tr("Save your work first: it may not reopen its windows.")
+        }
     }
 
     static let interpreters: Set<String> = ["node", "python", "python3", "ruby", "bun", "deno", "java", "perl", "php", "uv", "npx", "tsx", "ts-node"]

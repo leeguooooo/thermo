@@ -60,6 +60,8 @@ final class SystemPulse: ObservableObject {
 
     /// The app being restarted, while it quits and comes back.
     @Published private(set) var restarting: String?
+    /// Why the last restart did not go as planned.
+    @Published var restartProblem: String?
 
     /// Quit like ⌘Q, wait until every process of it has gone, then open it again; it restores its
     /// own windows and tabs. Gives up (and says so) if it is still running after a minute.
@@ -68,18 +70,37 @@ final class SystemPulse: ObservableObject {
               let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.standardizedFileURL.path == path })
         else { return }
         restarting = hog.name
-        app.terminate()
-        let pids = hog.pids
+        restartProblem = nil
+        let pids = hog.pids, name = hog.name
+        let windows = BrowserSession.windows(for: name)
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            // A browser that would lose its tabs: save them first, or don't restart at all.
+            var saved: BrowserSession.Saved?
+            if windows == .thermoReopensTabs {
+                saved = BrowserSession.save(app: name)
+                if saved == nil {
+                    DispatchQueue.main.async {
+                        self?.restarting = nil
+                        self?.restartProblem = tr("Thermo could not list %1$@'s tabs, so it did not restart it (they would be lost). Allow Thermo in System Settings → Privacy & Security → Automation.", name)
+                    }
+                    return
+                }
+            }
+            DispatchQueue.main.sync { _ = app.terminate() }
             let deadline = Date().addingTimeInterval(60)
             while Date() < deadline, pids.contains(where: { kill($0, 0) == 0 }) { usleep(250_000) }
             let gone = !pids.contains(where: { kill($0, 0) == 0 })
-            DispatchQueue.main.async {
-                if gone {
-                    NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: path), configuration: .init()) { _, _ in }
+            if gone {
+                let opened = DispatchSemaphore(value: 0)
+                NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: path), configuration: .init()) { _, _ in opened.signal() }
+                _ = opened.wait(timeout: .now() + 30)
+                if let saved, !BrowserSession.reopen(saved) {
+                    DispatchQueue.main.async {
+                        self?.restartProblem = tr("%1$@ restarted, but its tabs could not be reopened. They are listed in %2$@.", name, BrowserSession.backupURL().path)
+                    }
                 }
-                self?.restarting = nil
             }
+            DispatchQueue.main.async { self?.restarting = nil }
             self?.queue.asyncAfter(deadline: .now() + 3) { self?.sample() }
         }
     }
@@ -165,6 +186,9 @@ struct PulseCard: View {
                     .padding(.leading, 28)
                 }
             }
+            if let problem = pulse.restartProblem {
+                Text(problem).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true).padding(.leading, 28)
+            }
             if let note = pulse.current?.swapDiskText {
                 Text(note).font(.caption2).foregroundStyle(.secondary).padding(.leading, 28)
             }
@@ -192,9 +216,11 @@ struct PulseCard: View {
         }
         .sheet(item: $restartTarget) { h in
             ConfirmSheet(title: tr("Restart %1$@?", h.name),
-                         summary: tr("It is asked to quit, the same as ⌘Q (it can save first), then opened again; it reopens its windows and tabs. Whatever it piled up in memory is freed."),
-                         destructive: false, heading: tr("What will run"),
-                         lines: [tr("quit %1$@", h.app ?? h.name), tr("open %1$@", h.app ?? h.name)],
+                         summary: MachinePulse.sentences(tr("It is asked to quit, the same as ⌘Q (it can save first), then opened again. Whatever it piled up in memory is freed."),
+                                                         MachinePulse.restartNote(BrowserSession.windows(for: h.name))),
+                         destructive: BrowserSession.windows(for: h.name) == .unknown, heading: tr("What will run"),
+                         lines: [tr("quit %1$@", h.app ?? h.name), tr("open %1$@", h.app ?? h.name)]
+                            + (BrowserSession.windows(for: h.name) == .thermoReopensTabs ? [tr("save its tabs, then open them again")] : []),
                          footnote: tr("If it is still running after a minute (for example asking to save), Thermo stops and does not reopen it."),
                          confirmTitle: tr("Restart"),
                          confirm: { restartTarget = nil; pulse.restart(h) }, cancel: { restartTarget = nil })

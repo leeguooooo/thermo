@@ -26,16 +26,21 @@ public enum ChromeInspector {
         public var listeners: Double?
         public var documents: Double?
         public var error: String?
+        /// A page with no address, checked: true when it did not answer (a dead record in a
+        /// DevTools relay, not a page), false when it is a real page in no window.
+        public var ghost: Bool?
 
         enum CodingKeys: String, CodingKey {
-            case targetId, type, url, title, attached, error
+            case targetId, type, url, title, attached, error, ghost
             case heap = "JSHeapUsedSize", nodes = "Nodes", listeners = "JSEventListeners", documents = "Documents"
         }
 
         public init(targetId: String, type: String, url: String, title: String, attached: Bool? = nil,
-                    heap: Double? = nil, nodes: Double? = nil, listeners: Double? = nil, documents: Double? = nil, error: String? = nil) {
+                    heap: Double? = nil, nodes: Double? = nil, listeners: Double? = nil, documents: Double? = nil, error: String? = nil,
+                    ghost: Bool? = nil) {
             self.targetId = targetId; self.type = type; self.url = url; self.title = title; self.attached = attached
             self.heap = heap; self.nodes = nodes; self.listeners = listeners; self.documents = documents; self.error = error
+            self.ghost = ghost
         }
     }
 
@@ -99,8 +104,13 @@ public enum ChromeInspector {
         public var duplicates: [Duplicate]
         /// Sites running many workers, most first.
         public var workers: [SiteWorkers]
-        /// Pages with no URL in no window: other automation sessions' tabs.
+        /// Real pages with no address in no window (automation tools' tabs).
         public var hidden: Int
+        /// Their JavaScript memory.
+        public var hiddenHeapMB: Double
+        /// Targets with no address that are not pages at all: dead records a DevTools relay
+        /// (chrome-use) still lists. Never counted as memory.
+        public var stale: Int
         /// Pages that refused to be measured (chrome:// pages, protected extensions).
         public var unmeasured: Int
         public var pagesHeapMB: Double
@@ -180,11 +190,14 @@ public enum ChromeInspector {
             bySite[s, default: SiteWorkers(site: s, count: 0, heapMB: 0)].count += 1
             bySite[s]!.heapMB += mb(w.heap)
         }
+        // Only an address-less page that answered is real; unchecked ones are never counted.
+        let realHidden = after.rows.filter { isHidden($0) && $0.ghost == false }
         let workers = bySite.values.filter { $0.count >= limits.workers }.sorted { ($0.count, $0.site) > ($1.count, $1.site) }
 
         return Report(sampled: after.date, seconds: seconds, pages: pages, leaking: leaking, largest: largest,
                       duplicates: duplicates, workers: workers,
-                      hidden: after.rows.filter(isHidden).count, unmeasured: unmeasured,
+                      hidden: realHidden.count, hiddenHeapMB: realHidden.reduce(0) { $0 + mb($1.heap) },
+                      stale: after.rows.filter { isHidden($0) && $0.ghost != false }.count, unmeasured: unmeasured,
                       pagesHeapMB: pages.reduce(0) { $0 + $1.heapMB }, workersHeapMB: workerRows.reduce(0) { $0 + mb($1.heap) },
                       workerCount: workerRows.count)
     }
@@ -220,10 +233,10 @@ public enum ChromeInspector {
     /// Plain words on where the rest of Chrome's memory is, so the page numbers don't look wrong.
     public static func gapText(_ r: Report, appMemoryKB: Int?, gpuKB: Int?) -> String? {
         guard let total = appMemoryKB, total > 0 else { return nil }
-        let pagesKB = Int((r.pagesHeapMB + r.workersHeapMB) * 1024)
+        let pagesKB = Int((r.pagesHeapMB + r.workersHeapMB + r.hiddenHeapMB) * 1024)
         var text = tr("Pages' JavaScript uses %1$@ of the %2$@ the browser uses.", MachinePulse.gb(pagesKB), MachinePulse.gb(total))
-        text += (text.hasSuffix("。") ? "" : " ") + (gpuKB.map { tr("The rest is the GPU process (%1$@), images, video and drawing, extensions and hidden pages.", MachinePulse.gb($0)) }
-            ?? tr("The rest is the GPU process, images, video and drawing, extensions and hidden pages."))
+        text += (text.hasSuffix("。") ? "" : " ") + (gpuKB.map { tr("The rest is the GPU process (%1$@), images, video and drawing, and extensions.", MachinePulse.gb($0)) }
+            ?? tr("The rest is the GPU process, images, video and drawing, and extensions."))
         return text
     }
 
@@ -276,8 +289,9 @@ public enum ChromeInspector {
             return Target(targetId: id, type: type, url: i["url"] as? String ?? "", title: i["title"] as? String ?? "",
                           attached: i["attached"] as? Bool)
         }
-        let measure = all.filter { !isHidden($0) && !isInternal($0.url) }
-        let skipped = all.filter { isHidden($0) || isInternal($0.url) }
+        // Address-less pages are checked too (are they pages at all?), never read.
+        let measure = all.filter { !isInternal($0.url) }
+        let skipped = all.filter { isInternal($0.url) }
         let counter = Counter()
         progress(0, measure.count)
         var rows: [Target] = skipped
@@ -301,7 +315,20 @@ public enum ChromeInspector {
     static func measureOne(_ t: Target, _ cdp: CDP) async -> Target {
         var r = t
         guard let sid = await cdp.send("Target.attachToTarget", ["targetId": t.targetId, "flatten": true])?["sessionId"] as? String else {
-            r.error = "attach refused"; return r
+            r.error = "attach refused"
+            if isHidden(t) { r.ghost = true }
+            return r
+        }
+        if isHidden(t) {
+            // A relay can keep records of tabs long closed: attaching "works", evaluating says the
+            // tab is gone. The cheapest possible question tells a ghost from a page.
+            let (_, error) = await cdp.call("Runtime.evaluate", ["expression": "1", "returnByValue": true], session: sid)
+            r.ghost = error != nil
+            if let error { r.error = error }
+            if r.ghost == true {
+                _ = await cdp.send("Target.detachFromTarget", ["sessionId": sid])
+                return r
+            }
         }
         if t.type == "page" {
             _ = await cdp.send("Performance.enable", session: sid)
@@ -362,7 +389,11 @@ public enum ChromeInspector {
                     @unknown default: break
                     }
                     if let data, let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let id = obj["id"] as? Int {
-                        self.finish(id, obj["error"] == nil ? (obj["result"] as? [String: Any] ?? [:]) : nil)
+                        if let e = obj["error"] as? [String: Any] {
+                            self.finish(id, ["__error": e["message"] as? String ?? "error"])
+                        } else {
+                            self.finish(id, obj["result"] as? [String: Any] ?? [:])
+                        }
                     }
                     self.receive()
                 case .failure:
@@ -379,6 +410,18 @@ public enum ChromeInspector {
 
         /// The command's result, or nil on an error, a timeout or a closed connection.
         func send(_ method: String, _ params: [String: Any] = [:], session: String? = nil) async -> [String: Any]? {
+            let (result, error) = await call(method, params, session: session)
+            return error == nil ? result : nil
+        }
+
+        /// The result, or the error message ("timeout" when there was no answer).
+        func call(_ method: String, _ params: [String: Any] = [:], session: String? = nil) async -> ([String: Any]?, String?) {
+            guard let r = await raw(method, params, session: session) else { return (nil, "timeout") }
+            if let e = r["__error"] as? String { return (nil, e) }
+            return (r, nil)
+        }
+
+        private func raw(_ method: String, _ params: [String: Any] = [:], session: String? = nil) async -> [String: Any]? {
             await withCheckedContinuation { (c: CheckedContinuation<[String: Any]?, Never>) in
                 lock.lock(); nextID += 1; let id = nextID; waiting[id] = c; lock.unlock()
                 var msg: [String: Any] = ["id": id, "method": method, "params": params]
@@ -544,12 +587,21 @@ public enum ChromeInspector {
     /// A DevTools report as a diagnosis (also for saved samples).
     public static func diagnosis(_ report: Report, app: String, appMemoryKB: Int?, gpuKB: Int?) -> Diagnosis {
         Diagnosis(app: app, mode: .devtools, report: report, tabs: nil, duplicates: report.duplicates,
-                  hiddenText: report.hidden > 0 ? hiddenText(report.hidden, app: app) : nil,
+                  hiddenText: hiddenText(report, app: app),
                   gap: gapText(report, appMemoryKB: appMemoryKB, gpuKB: gpuKB), hint: nil)
     }
 
-    public static func hiddenText(_ n: Int, app: String) -> String {
-        tr("%1$@ hidden pages (likely automation): they are in no window, so they cannot be closed one by one. Restarting %2$@ clears them.",
-           String(n), app)
+    /// Address-less targets in plain words: dead relay records, and real pages in no window.
+    public static func hiddenText(_ r: Report, app: String) -> String? {
+        var parts: [String] = []
+        if r.stale > 0 {
+            parts.append(tr("%1$@ stale chrome-use records (not real pages, no memory): reload or update the chrome-use extension to clear them.",
+                            String(r.stale)))
+        }
+        if r.hidden > 0 {
+            parts.append(tr("%1$@ pages in no window (likely automation tools), %2$@ of JavaScript.",
+                            String(r.hidden), String(format: "%.0f MB", r.hiddenHeapMB)))
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
 }

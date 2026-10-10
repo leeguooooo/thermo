@@ -192,9 +192,21 @@ struct PulseCommand {
             throw CLIError("\(h.name) can't be restarted from here (not an app, a system process, an AI agent session or Thermo)")
         }
         print(style.bold("About to restart \(h.name)") + style.dim("  \(Self.size(h.memoryKB))" + (h.uptime.map { " · running " + Self.duration($0) } ?? "")))
+        let windows = BrowserSession.windows(for: h.name)
         print("  quit \(path)  (like ⌘Q; it may ask to save)")
-        print("  open \(path)  (it reopens its windows)")
+        print("  open \(path)")
+        if windows == .thermoReopensTabs { print("  reopen its tabs  (saved to \(BrowserSession.backupURL().path))") }
+        print("  " + style.yellow(MachinePulse.restartNote(windows)))
         guard try confirm() else { return }
+        var saved: BrowserSession.Saved?
+        if windows == .thermoReopensTabs {
+            // Without the tab list, quitting would lose them: don't.
+            guard let s = BrowserSession.save(app: h.name) else {
+                throw CLIError("could not list \(h.name)'s tabs (allow Automation in System Settings → Privacy & Security); nothing was restarted")
+            }
+            saved = s
+            print(style.dim("  saved \(s.tabCount) tabs in \(s.windows.count) windows"))
+        }
         try quitApp(path, name: h.name)
         // Wait for every process of it to go; apps can take a while to save and close.
         let deadline = Date().addingTimeInterval(60)
@@ -208,6 +220,13 @@ struct PulseCommand {
         try p.run()
         p.waitUntilExit()
         guard p.terminationStatus == 0 else { throw CLIError("\(h.name) quit but could not be reopened; open it yourself") }
+        if let saved {
+            guard BrowserSession.reopen(saved) else {
+                throw CLIError("\(h.name) restarted but its tabs could not be reopened; they are listed in \(BrowserSession.backupURL().path)")
+            }
+            print(style.green("✓") + " restarted \(h.name) and reopened \(saved.tabCount) tabs")
+            return
+        }
         print(style.green("✓") + " restarted \(h.name)")
     }
 
