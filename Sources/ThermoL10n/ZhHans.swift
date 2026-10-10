@@ -842,4 +842,8 @@ let zhHans: [String: String] = [
     "AI agents": "AI agent",
     "Fan helper": "风扇 helper",
     "About": "关于",
+    "Storage": "存储",
+    "Ambient": "环境",
+    "Board": "主板",
+    "Other": "其他",
 ]

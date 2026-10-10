@@ -10,6 +10,20 @@ func tempText(_ c: Double?, fahrenheit: Bool) -> String {
     return fahrenheit ? String(format: "%.0f°F", c * 9 / 5 + 32) : String(format: "%.0f°C", c)
 }
 
+/// A sensor group's name for people ("存储" rather than "Storage").
+func groupName(_ g: SensorGroup) -> String {
+    switch g {
+    case .cpu: return "CPU"
+    case .gpu: return "GPU"
+    case .memory: return tr("Memory")
+    case .storage: return tr("Storage")
+    case .battery: return tr("Battery")
+    case .ambient: return tr("Ambient")
+    case .board: return tr("Board")
+    case .other: return tr("Other")
+    }
+}
+
 func heatColor(_ c: Double?) -> Color {
     guard let c else { return .secondary }
     return c >= 85 ? .red : c >= 65 ? .orange : .green
@@ -171,7 +185,7 @@ struct OverviewView: View {
                     ForEach(SensorGroup.allCases, id: \.self) { g in
                         if let t = s.maxTemperature(in: g) {
                             HStack {
-                                Text(g.rawValue).frame(width: 70, alignment: .leading)
+                                Text(groupName(g)).frame(width: 70, alignment: .leading)
                                 Bar(value: t / 100, color: heatColor(t))
                                 Text(tempText(t, fahrenheit: fahrenheit)).monospacedDigit().frame(width: 52, alignment: .trailing)
                             }
@@ -271,7 +285,7 @@ struct SensorsView: View {
                     ForEach(SensorGroup.allCases, id: \.self) { g in
                         let rows = s.temperatures.filter { $0.group == g }
                         if !rows.isEmpty {
-                            section(g.rawValue)
+                            section(groupName(g))
                             ForEach(rows) { r in
                                 row(r.name, key: r.key, value: tempText(r.value, fahrenheit: fahrenheit), color: heatColor(r.value))
                             }

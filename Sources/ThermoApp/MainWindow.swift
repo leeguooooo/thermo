@@ -203,9 +203,7 @@ struct MainView: View {
         case .overview:
             OverviewPage(monitor: monitor, open: { page = $0 }).transition(.opacity)
         case .sensors:
-            WindowPage(title: tr("Sensors"), subtitle: monitor.model) {
-                SensorsView(monitor: monitor, scrolls: false).padding(18).glass()
-            }
+            SensorsPage(monitor: monitor)
         case .fans:
             WindowPage(title: tr("Fans"), subtitle: tr("Choose how fast each fan runs. Settings stay when Thermo quits or updates.")) {
                 FansView(monitor: monitor).padding(18).glass()
@@ -435,5 +433,84 @@ struct OverviewPage: View {
             .glass(radius: 20)
         }
         .buttonStyle(PressableStyle())
+    }
+}
+
+// MARK: - Sensors
+
+/// Every sensor, a glass card per group with its hottest reading up top; power, voltage and current after.
+struct SensorsPage: View {
+    @ObservedObject var monitor: Monitor
+    @AppStorage(Settings.fahrenheit) private var fahrenheit = false
+
+    var body: some View {
+        WindowPage(title: tr("Sensors"), subtitle: monitor.model) {
+            if let s = monitor.snapshot {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 14, alignment: .top)], alignment: .leading, spacing: 14) {
+                    ForEach(SensorGroup.allCases, id: \.self) { g in
+                        let rows = s.temperatures.filter { $0.group == g }
+                        if !rows.isEmpty {
+                            let hot = rows.map(\.value).max()
+                            card(groupName(g), symbol: symbol(g), headline: tempText(hot, fahrenheit: fahrenheit), color: heatColor(hot),
+                                 rows: rows.map { ($0.name, $0.key, tempText($0.value, fahrenheit: fahrenheit), heatColor($0.value)) })
+                        }
+                    }
+                    electrical(tr("Power"), "bolt.fill", s.power, "%.2f W")
+                    electrical(tr("Voltage"), "powerplug.fill", s.voltages, "%.3f V")
+                    electrical(tr("Current"), "waveform.path.ecg", s.currents, "%.3f A")
+                }
+            } else {
+                ProgressView().frame(maxWidth: .infinity, minHeight: 200)
+            }
+        }
+    }
+
+    func symbol(_ g: SensorGroup) -> String {
+        switch g {
+        case .cpu: return "cpu"
+        case .gpu: return "cpu.fill"
+        case .memory: return "memorychip"
+        case .storage: return "internaldrive"
+        case .battery: return "battery.75"
+        case .ambient: return "wind"
+        case .board: return "rectangle.connected.to.line.below"
+        case .other: return "thermometer.medium"
+        }
+    }
+
+    @ViewBuilder func electrical(_ title: String, _ symbol: String, _ rows: [Reading], _ f: String) -> some View {
+        if !rows.isEmpty {
+            card(title, symbol: symbol, headline: nil, color: .yellow,
+                 rows: rows.map { ($0.name, $0.key, String(format: f, $0.value), Color.white.opacity(0.9)) })
+        }
+    }
+
+    func card(_ title: String, symbol: String, headline: String?, color: Color,
+              rows: [(String, String, String, Color)]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                IconTile(symbol: symbol, color: color, size: 28)
+                Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
+                Spacer()
+                if let headline {
+                    Text(headline).font(.system(size: 20, weight: .bold, design: .rounded)).monospacedDigit().foregroundStyle(color)
+                }
+            }
+            VStack(spacing: 5) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, r in
+                    HStack(spacing: 8) {
+                        Text(r.0).font(.system(size: 12)).foregroundStyle(.white.opacity(0.8)).lineLimit(1)
+                        Spacer(minLength: 4)
+                        if !r.1.hasPrefix("hid:") {
+                            Text(r.1).font(.system(size: 10, design: .monospaced)).foregroundStyle(.white.opacity(0.3))
+                        }
+                        Text(r.2).font(.system(size: 12, weight: .medium).monospacedDigit()).foregroundStyle(r.3)
+                            .frame(width: 64, alignment: .trailing)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .glass(radius: 16)
     }
 }

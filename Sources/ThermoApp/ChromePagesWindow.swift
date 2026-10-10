@@ -91,6 +91,7 @@ struct ChromePagesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header.padding(embedded ? 32 : 14).padding(.top, embedded ? 16 : 0)
+                .frame(maxWidth: embedded ? 884 : .infinity).frame(maxWidth: .infinity)
             if !embedded { Divider() }
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
