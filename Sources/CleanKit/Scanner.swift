@@ -22,6 +22,10 @@ public final class DiskScanner: @unchecked Sendable {
         let started = Date()
         ScanCancellation.current = cancellation
         defer { ScanCancellation.current = nil }
+        // Stopped before it began: skip even the setup (reading every process is slow on a busy Mac).
+        if cancellation.isCancelled {
+            return ScanReport(items: [], denied: [], started: started, duration: 0, cancelled: true)
+        }
         let processes = ProcessTable.current(.init(cpu: false))
         let live = ClaudeSessions.live(AgentHome(home: options.home))
         let ctx = ScanContext(options: options, now: started, processes: processes,
