@@ -201,9 +201,27 @@ final class Monitor: ObservableObject {
                 helperState = v == HelperConstants.version ? .running : .outdated
                 if helperState == .outdated { restartOutdatedHelper() }
             } catch {
-                helperState = .notRunning
+                // Registered but launchd will not start it: background items for this developer
+                // are switched off in Login Items. Reinstalling cannot fix that; approving can.
+                let refused = usesSMAppService ? await Task.detached { Self.launchdRefusesHelper() }.value : false
+                helperState = refused ? .needsApproval : .notRunning
             }
         }
+    }
+
+    /// `launchctl print` (no privileges needed) shows a spawn that launchd refuses as exit 78
+    /// (EX_CONFIG) — what happens when the user turned Thermo off under "Allow in the Background".
+    nonisolated static func launchdRefusesHelper() -> Bool {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/launchctl")
+        p.arguments = ["print", "system/\(HelperConstants.label)"]
+        let out = Pipe()
+        p.standardOutput = out
+        p.standardError = FileHandle.nullDevice
+        guard (try? p.run()) != nil else { return false }
+        let text = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        p.waitUntilExit()
+        return text.contains("last exit code = 78") || text.contains("job state = spawn failed")
     }
 
     private var restartedOutdatedHelper = false

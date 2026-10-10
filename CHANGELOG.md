@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- When Thermo's helper is switched off under System Settings → Login Items → Allow in the Background, the Fans tab now says so and opens that setting, instead of reporting "not responding" and offering a reinstall that cannot help.
+
 ## 1.1.2
 
 - `thermo pulse` (also `thermo status`): why this Mac is slow, in one command — the verdict, which program is behind it, load, memory pressure and swap, thermal state, temperatures and fans; `--json` for scripts and AI agents. AI agents get it through the [thermo-use](https://github.com/leeguooooo/thermo-use) skill.
