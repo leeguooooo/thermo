@@ -20,6 +20,13 @@ final class AgentScanner: ObservableObject {
     @Published var batch: Batch?
     @Published private(set) var batching = false
     @Published private(set) var history: [LastResult] = []
+    private let diagnose: @Sendable () -> DoctorReport
+    private var operationLanguage: String?
+    private var needsLanguageRefresh = false
+
+    init(diagnose: @escaping @Sendable () -> DoctorReport = { AgentDoctor.run() }) {
+        self.diagnose = diagnose
+    }
 
     struct Batch {
         var total: Int
@@ -45,14 +52,21 @@ final class AgentScanner: ObservableObject {
     var busy: Bool { scanning || running != nil || batching || batch?.finished == false }
 
     func scan(ifOlderThan age: TimeInterval = 0) {
-        if busy { return }
-        if let r = report, Date().timeIntervalSince(r.generated) < age { return }
+        if busy {
+            if let language = operationLanguage, language != L10n.current.rawValue { needsLanguageRefresh = true }
+            return
+        }
+        if let r = report, r.language == L10n.current.rawValue, Date().timeIntervalSince(r.generated) < age { return }
         scanning = true
+        operationLanguage = L10n.current.rawValue
+        needsLanguageRefresh = false
+        let diagnose = diagnose
         Task.detached(priority: .userInitiated) {
-            let r = AgentDoctor.run()
+            let r = diagnose()
             await MainActor.run {
-                self.report = r
+                self.acceptReport(r)
                 self.scanning = false
+                self.resumeLanguageRefresh()
             }
         }
     }
@@ -60,13 +74,16 @@ final class AgentScanner: ObservableObject {
     func perform(_ action: Action, on item: AgentItem) {
         guard !busy else { return }
         running = action.id
+        operationLanguage = L10n.current.rawValue
+        let diagnose = diagnose
         Task.detached(priority: .userInitiated) {
             let result = ActionRunner.perform(action, env: DoctorEnvironment())
-            let r = AgentDoctor.run()
+            let r = diagnose()
             await MainActor.run {
                 self.recordResult(item: item.id, name: item.name, action: action.title, result: result)
-                self.report = r
+                self.acceptReport(r)
                 self.running = nil
+                self.resumeLanguageRefresh()
             }
         }
     }
@@ -84,6 +101,8 @@ final class AgentScanner: ObservableObject {
                     rescan: (@Sendable () -> DoctorReport)? = nil) {
         guard !busy, !plans.isEmpty else { return }
         batching = true
+        operationLanguage = L10n.current.rawValue
+        let diagnose = diagnose
         batch = Batch(total: plans.count, before: problems.count)
         Task.detached(priority: .userInitiated) {
             let env = DoctorEnvironment()
@@ -99,18 +118,33 @@ final class AgentScanner: ObservableObject {
                 }
             }
             await MainActor.run { self.batch?.verifying = true }
-            let r = rescan?() ?? AgentDoctor.run()
+            let r = rescan?() ?? diagnose()
             let failures = failed
             await MainActor.run {
-                self.report = r
+                self.acceptReport(r)
                 self.batch?.done = plans.count
                 self.batch?.failed = failures
                 self.batch?.after = r.items.filter(\.isProblem).count
                 self.batch?.finished = true
                 self.batching = false
+                self.resumeLanguageRefresh()
             }
         }
     }
+    private func acceptReport(_ result: DoctorReport) {
+        if let language = result.language, language != L10n.current.rawValue {
+            report = nil
+            needsLanguageRefresh = true
+        } else {
+            report = result
+            needsLanguageRefresh = false
+        }
+    }
+
+    private func resumeLanguageRefresh() {
+        if needsLanguageRefresh && !busy { scan() }
+    }
+
     @discardableResult
     func recordResult(item: String, name: String, action: String, result: ActionResult) -> LastResult {
         var backupPaths = Set<String>()

@@ -82,6 +82,7 @@ public struct DoctorReport: Codable, Sendable {
     public var items: [AgentItem]
     public var processes: [ProcessGroup]
     public var sessions: Int
+    public var language: String? = nil
 
     public func count(_ s: Severity) -> Int { findings.filter { $0.severity == s }.count }
 

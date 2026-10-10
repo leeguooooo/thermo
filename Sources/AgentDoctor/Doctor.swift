@@ -6,6 +6,7 @@ import ThermoL10n
 /// Nothing is executed, started or killed; fixes are suggested as text.
 public enum AgentDoctor {
     public static func run(_ env: DoctorEnvironment = DoctorEnvironment()) -> DoctorReport {
+        let language = L10n.current.rawValue
         var c = ConfigChecks(env: env)
         c.runAll()
         c.checkLaunchAgents()
@@ -27,7 +28,9 @@ public enum AgentDoctor {
             if rank(x) != rank(y) { return rank(x) < rank(y) }
             return a.offset < b.offset
         }.map(\.element)
-        return DoctorReport(generated: env.now, inventory: c.inventory, findings: findings, items: items, processes: groups, sessions: sessions)
+        var report = DoctorReport(generated: env.now, inventory: c.inventory, findings: findings, items: items, processes: groups, sessions: sessions)
+        report.language = language
+        return report
     }
 }
 

@@ -116,7 +116,10 @@ struct AreaPage: View {
                 if !scanner.history.isEmpty { AgentActivity(scanner: scanner) }
                 if problems.isEmpty {
                     HStack(spacing: 10) {
-                        Image(systemName: "checkmark.seal.fill").font(.title2).foregroundStyle(.green)
+                        let checking = scanner.scanning && scanner.report == nil
+                        let emptySearch = items.isEmpty && !search.isEmpty
+                        Image(systemName: checking ? "hourglass" : emptySearch ? "magnifyingglass" : "checkmark.seal.fill")
+                            .font(.title2).foregroundStyle(checking || emptySearch ? Color.secondary : Color.green)
                         Text(scanner.scanning && scanner.report == nil ? tr("Checking your AI agents…") : items.isEmpty && !search.isEmpty ? tr("No matching items") : tr("Nothing to fix here.")).font(.system(size: 15, weight: .medium)).foregroundStyle(.white.opacity(0.85))
                     }
                     .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass()
