@@ -3,7 +3,8 @@ import ThermoKit
 
 // Root LaunchDaemon: the only process that writes the SMC. Owns fan policies and
 // runs the control loop; returns every fan to automatic control on start, on exit,
-// and when the hottest compute sensor reaches FanPolicyEngine.safetyCeiling.
+// and while the hottest compute sensor stays above the platform's safety ceiling
+// (policies are suspended, then resume once it has cooled; see SafetyLimits).
 
 func log(_ s: String) {
     var t = time(nil)
@@ -23,7 +24,7 @@ final class Controller {
     let queue = DispatchQueue(label: "dev.thermo.helper.control")
     let sampler: Sampler
     let writer: FanWriter
-    var engine = FanPolicyEngine()
+    var engine: FanPolicyEngine
     /// Last RPM written per fan, for hysteresis and ramping.
     var written: [Int: Double] = [:]
     var timer: DispatchSourceTimer?
@@ -38,6 +39,8 @@ final class Controller {
         sampler.parts = [.temperatures, .fans]
         sampler.fanLimitRefresh = 10
         writer = FanWriter(smc: sampler.smc, discovery: sampler.discovery)
+        // Apple Silicon is the platform with the Ftst unlock key.
+        engine = FanPolicyEngine(limits: .forHardware(appleSilicon: sampler.discovery.fanTestKey))
     }
 
     func start() {
@@ -68,7 +71,10 @@ final class Controller {
             case .failsafe(let t):
                 writer.setAllAuto()
                 written.removeAll()
-                log(String(format: "FAILSAFE: %.1f °C ≥ %.0f °C; all policies cleared, fans on auto", t, FanPolicyEngine.safetyCeiling))
+                log(String(format: "FAILSAFE: %.1f °C ≥ %.0f °C; fans on auto, policies suspended until below %.0f °C for %d s",
+                           t, engine.limits.ceiling, engine.limits.resumeBelow, engine.limits.resumeTicks * Int(Self.interval)))
+            case .resume(let t):
+                log(String(format: "cooled to %.1f °C; resuming fan policies", t))
             case .auto(let fan):
                 try? writer.setAuto(fan)
                 written[fan] = nil

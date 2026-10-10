@@ -179,12 +179,59 @@ final class PolicyEngineTests: XCTestCase {
         XCTAssertEqual(e.tick(snapshot(cpu: 50)), [.manual(fan: 0, rpm: 2000)])
     }
 
-    func testFailsafeClearsPolicies() {
-        var e = FanPolicyEngine()
+    func testASingleSpikeDoesNotTrip() {
+        var e = FanPolicyEngine(limits: .intel)
         e.set(.fixed(rpm: 1800), for: 0)
-        XCTAssertEqual(e.tick(snapshot(cpu: 95.5)), [.failsafe(temperature: 95.5)])
-        XCTAssertFalse(e.isActive)
-        XCTAssertEqual(e.tick(snapshot(cpu: 50)), [])
+        XCTAssertEqual(e.tick(snapshot(cpu: 97)), [.manual(fan: 0, rpm: 1800)], "one hot sample is not enough")
+        XCTAssertEqual(e.tick(snapshot(cpu: 80)), [.manual(fan: 0, rpm: 1800)])
+        XCTAssertEqual(e.tick(snapshot(cpu: 97)), [.manual(fan: 0, rpm: 1800)], "counter reset by the cool sample")
+        XCTAssertFalse(e.suspended)
+    }
+
+    func testSustainedHeatSuspendsAndKeepsPolicies() {
+        var e = FanPolicyEngine(limits: .intel)
+        e.set(.fixed(rpm: 1800), for: 0)
+        _ = e.tick(snapshot(cpu: 96))
+        XCTAssertEqual(e.tick(snapshot(cpu: 96.5)), [.failsafe(temperature: 96.5)])
+        XCTAssertTrue(e.suspended)
+        XCTAssertTrue(e.isActive, "policies survive the failsafe")
+        XCTAssertEqual(e.policies[0], .fixed(rpm: 1800))
+        XCTAssertEqual(e.tick(snapshot(cpu: 99)), [], "nothing is written while suspended")
+    }
+
+    func testResumesOnlyAfterStayingCool() {
+        let limits = SafetyLimits(ceiling: 95, resumeBelow: 85, resumeTicks: 3, triggerTicks: 2)
+        var e = FanPolicyEngine(limits: limits)
+        e.set(.fixed(rpm: 2000), for: 0)
+        _ = e.tick(snapshot(cpu: 96)); _ = e.tick(snapshot(cpu: 96))
+        XCTAssertTrue(e.suspended)
+        XCTAssertEqual(e.tick(snapshot(cpu: 84)), [])
+        XCTAssertEqual(e.tick(snapshot(cpu: 90)), [], "warming again restarts the cool-down")
+        XCTAssertEqual(e.tick(snapshot(cpu: 84)), [])
+        XCTAssertEqual(e.tick(snapshot(cpu: 84)), [])
+        XCTAssertEqual(e.tick(snapshot(cpu: 83)), [.resume(temperature: 83), .manual(fan: 0, rpm: 2000)])
+        XCTAssertFalse(e.suspended)
+    }
+
+    func testAppleSiliconToleratesNormalCoreTemperatures() {
+        // M4 under a heavy build, macOS in charge of the fan: cores at 103–115 °C.
+        var e = FanPolicyEngine(limits: .forHardware(appleSilicon: true))
+        e.set(.fixed(rpm: 3000), for: 0)
+        for t in [104.0, 106.5, 108.6, 105.8] {
+            XCTAssertEqual(e.tick(snapshot(cpu: t)), [.manual(fan: 0, rpm: 3000)], "\(t) °C is normal on Apple Silicon")
+        }
+        _ = e.tick(snapshot(cpu: 112))
+        XCTAssertEqual(e.tick(snapshot(cpu: 113)), [.failsafe(temperature: 113)])
+    }
+
+    func testAutoClearsSuspension() {
+        var e = FanPolicyEngine(limits: .intel)
+        e.set(.fixed(rpm: 1800), for: 0)
+        _ = e.tick(snapshot(cpu: 96)); _ = e.tick(snapshot(cpu: 96))
+        XCTAssertTrue(e.suspended)
+        e.set(.auto, for: 0)
+        XCTAssertFalse(e.suspended)
+        XCTAssertEqual(e.tick(snapshot(cpu: 99)), [])
     }
 
     func testSettingAutoRemovesPolicy() {

@@ -203,34 +203,91 @@ public final class FanWriter {
 }
 
 /// Holds per-fan policies and decides what to write on each tick. Pure logic, no I/O.
+/// Over-temperature safety limits. Measured 2026-10-10: an M4 under a heavy build,
+/// with macOS controlling its own fan, keeps P-core sensors at 103–115 °C (the chip
+/// throttles itself), so a 95 °C ceiling there fired constantly. Intel parts sit
+/// below their 100 °C Tjmax, so 95 °C stays right for them.
+public struct SafetyLimits: Equatable, Sendable {
+    /// Hottest CPU/GPU sensor at or above this, sustained, suspends every policy.
+    public var ceiling: Double
+    /// Policies resume once the hottest sensor stays below this...
+    public var resumeBelow: Double
+    /// ...for this many consecutive ticks (helper tick = 2 s).
+    public var resumeTicks: Int
+    /// Consecutive hot ticks needed to trip (a single spike is ignored).
+    public var triggerTicks: Int
+
+    public static let intel = SafetyLimits(ceiling: 95, resumeBelow: 85, resumeTicks: 30, triggerTicks: 2)
+    public static let appleSilicon = SafetyLimits(ceiling: 110, resumeBelow: 100, resumeTicks: 30, triggerTicks: 2)
+
+    public static func forHardware(appleSilicon: Bool) -> SafetyLimits { appleSilicon ? .appleSilicon : .intel }
+}
+
+/// Holds per-fan policies and decides what to write on each tick. Pure logic, no I/O.
+///
+/// When the machine runs hot under a policy, the fans go back to system control
+/// and the policies are *suspended*, not lost: they resume once it has cooled.
 public struct FanPolicyEngine: Sendable {
-    public static let safetyCeiling = 95.0
-
     public private(set) var policies: [Int: FanPolicy] = [:]
+    public let limits: SafetyLimits
+    /// Over-temperature: fans are on system control until it cools down.
+    public private(set) var suspended = false
+    private var hotTicks = 0
+    private var coolTicks = 0
 
-    public init() {}
+    public init(limits: SafetyLimits = .intel) {
+        self.limits = limits
+    }
 
     public var isActive: Bool { policies.values.contains { $0 != .auto } }
 
     public mutating func set(_ policy: FanPolicy, for fan: Int) {
         if policy == .auto { policies.removeValue(forKey: fan) } else { policies[fan] = policy }
+        if !isActive { resetSafety() }
     }
 
-    public mutating func clear() { policies.removeAll() }
+    public mutating func clear() {
+        policies.removeAll()
+        resetSafety()
+    }
+
+    private mutating func resetSafety() {
+        suspended = false
+        hotTicks = 0
+        coolTicks = 0
+    }
 
     public enum Action: Equatable {
         case manual(fan: Int, rpm: Double)
         case auto(fan: Int)
-        /// Over-temperature: everything to auto, policies cleared.
+        /// Over-temperature: every fan to system control; policies kept but suspended.
         case failsafe(temperature: Double)
+        /// Cooled down after a failsafe: policies apply again (manual actions follow).
+        case resume(temperature: Double)
     }
 
     public mutating func tick(_ s: Snapshot) -> [Action] {
         guard isActive else { return [] }
-        if let hot = s.hottest, hot >= Self.safetyCeiling {
-            clear()
+        let hot = s.hottest ?? 0
+
+        if suspended {
+            coolTicks = hot < limits.resumeBelow ? coolTicks + 1 : 0
+            guard coolTicks >= limits.resumeTicks else { return [] }
+            resetSafety()
+            return [.resume(temperature: hot)] + policyActions(s)
+        }
+
+        hotTicks = hot >= limits.ceiling ? hotTicks + 1 : 0
+        if hotTicks >= limits.triggerTicks {
+            suspended = true
+            hotTicks = 0
+            coolTicks = 0
             return [.failsafe(temperature: hot)]
         }
+        return policyActions(s)
+    }
+
+    private func policyActions(_ s: Snapshot) -> [Action] {
         var actions: [Action] = []
         for fan in s.fans {
             switch policies[fan.id] ?? .auto {
