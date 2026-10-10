@@ -269,10 +269,14 @@ public struct FanPolicyEngine: Sendable {
     public mutating func tick(_ s: Snapshot) -> [Action] {
         guard isActive else { return [] }
         let hot = s.hottest ?? 0
+        // Fans asked to run flat out cool better than system control ever would, so the
+        // failsafe leaves them alone; only policies that could under-cool are suspended.
+        let fullCooling = fullCoolingActions(s)
+        if fullCooling.count == policies.count { resetSafety(); return policyActions(s) }
 
         if suspended {
             coolTicks = hot < limits.resumeBelow ? coolTicks + 1 : 0
-            guard coolTicks >= limits.resumeTicks else { return [] }
+            guard coolTicks >= limits.resumeTicks else { return fullCooling }
             resetSafety()
             return [.resume(temperature: hot)] + policyActions(s)
         }
@@ -282,9 +286,22 @@ public struct FanPolicyEngine: Sendable {
             suspended = true
             hotTicks = 0
             coolTicks = 0
-            return [.failsafe(temperature: hot)]
+            return [.failsafe(temperature: hot)] + fullCooling
         }
         return policyActions(s)
+    }
+
+    /// A fixed speed at (or within 5 % of) the fan's maximum.
+    static func isFullCooling(_ p: FanPolicy, max: Double) -> Bool {
+        if case .fixed(let rpm) = p { return rpm.isInfinite || rpm >= max * 0.95 }
+        return false
+    }
+
+    private func fullCoolingActions(_ s: Snapshot) -> [Action] {
+        s.fans.compactMap { fan in
+            guard let p = policies[fan.id], Self.isFullCooling(p, max: fan.max) else { return nil }
+            return .manual(fan: fan.id, rpm: fan.max)
+        }
     }
 
     private func policyActions(_ s: Snapshot) -> [Action] {

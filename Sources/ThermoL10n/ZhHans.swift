@@ -523,4 +523,5 @@ let zhHans: [String: String] = [
     "Show in Dock": "在程序坞中显示",
     "Memory is tight, so macOS keeps swapping to disk; %1$@ uses the most (%2$@)": "内存紧张，系统在频繁换页；占内存最多的是 %1$@（%2$@）",
     "No single program stands out; many are waiting on the disk": "没有哪个程序特别突出，很多程序在等磁盘",
+    "Helper update: %1$@": "更新 helper：%1$@",
 ]

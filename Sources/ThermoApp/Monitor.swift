@@ -220,7 +220,7 @@ final class Monitor: ObservableObject {
                 try await daemon.unregister()
                 try daemon.register()
             } catch {
-                lastError = "Helper update: \(error.localizedDescription)"
+                lastError = tr("Helper update: %1$@", error.localizedDescription)
             }
             if daemon.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
             try? await Task.sleep(nanoseconds: 2_000_000_000)

@@ -224,6 +224,30 @@ final class PolicyEngineTests: XCTestCase {
         XCTAssertEqual(e.tick(snapshot(cpu: 113)), [.failsafe(temperature: 113)])
     }
 
+    func testMaxSpeedIsNeverSuspended() {
+        // The user's report: "max" did nothing because the failsafe handed the fan back to auto.
+        var e = FanPolicyEngine(limits: .intel)
+        e.set(.fixed(rpm: .infinity), for: 0)
+        for t in [96.0, 104.7, 110.0, 99.0] {
+            XCTAssertEqual(e.tick(snapshot(cpu: t)), [.manual(fan: 0, rpm: 5600)], "\(t) °C: max stays max")
+        }
+        XCTAssertFalse(e.suspended)
+        e.set(.fixed(rpm: 5400), for: 0)   // within 5 % of 5600 counts as full cooling
+        _ = e.tick(snapshot(cpu: 97))
+        XCTAssertEqual(e.tick(snapshot(cpu: 97)), [.manual(fan: 0, rpm: 5400)])
+    }
+
+    func testFailsafeKeepsMaxFansAndSuspendsTheRest() {
+        var e = FanPolicyEngine(limits: .intel)
+        e.set(.fixed(rpm: .infinity), for: 0)
+        e.set(.fixed(rpm: 1800), for: 1)
+        _ = e.tick(snapshot(cpu: 96))
+        XCTAssertEqual(e.tick(snapshot(cpu: 96.5)), [.failsafe(temperature: 96.5), .manual(fan: 0, rpm: 5600)],
+                       "everything to auto, then fan 0 back to max")
+        XCTAssertTrue(e.suspended)
+        XCTAssertEqual(e.tick(snapshot(cpu: 99)), [.manual(fan: 0, rpm: 5600)], "while suspended only the max fan is driven")
+    }
+
     func testAutoClearsSuspension() {
         var e = FanPolicyEngine(limits: .intel)
         e.set(.fixed(rpm: 1800), for: 0)
