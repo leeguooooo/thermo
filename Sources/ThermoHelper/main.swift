@@ -92,11 +92,18 @@ final class Controller {
             guard sampler.discovery.fans.contains(where: { $0.index == id }) else { throw FanControlError.noSuchFan(id) }
             engine.set(policy, for: id)
             written[id] = nil
-            if policy == .auto { try writer.setAuto(id) }
+            if policy == .auto {
+                do {
+                    try writer.setAuto(id)
+                } catch {
+                    // Never leave a fan stranded in manual mode: fall back to a full reset.
+                    log("fan \(id): auto failed (\(error)); resetting all fans")
+                    writer.setAllAuto()
+                }
+            }
             log("fan \(id): \(policy.description)")
         }
         if !engine.isActive && sampler.discovery.fanTestKey { writer.setAllAuto() }
-        tick()   // apply now rather than at the next timer fire
     }
 }
 
@@ -113,6 +120,10 @@ final class Service: NSObject, ThermoHelperProtocol {
                 if case .fixed(let r) = p, !(r >= 0) { throw FanControlError.helper("invalid rpm") }
                 try self.controller.setPolicy(p, fan: fan)
                 reply(nil)
+                // Apply right away, but after replying: on Apple Silicon the first
+                // manual write waits for the Ftst unlock (2+ s), longer than a client
+                // should block on an XPC reply.
+                self.controller.queue.async { self.controller.tick() }
             } catch {
                 reply("\(error)")
             }

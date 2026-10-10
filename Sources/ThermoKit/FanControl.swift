@@ -118,7 +118,9 @@ public final class FanWriter {
     let smc: SMC
     let discovery: Discovery
     private var unlocked = false
-    /// F<i>Md value seen before we touched anything; restored by setAuto (3 on Apple Silicon, 0 on Intel).
+    /// Intel: F<i>Md value seen before we touched anything, restored by setAuto.
+    /// (Apple Silicon reports 3 while thermalmonitord is in charge but refuses a
+    /// write of 3 — there auto is F<i>Md=0 followed by Ftst=0; see setAuto.)
     private var originalMode: [Int: Double] = [:]
 
     public init(smc: SMC, discovery: Discovery) {
@@ -167,7 +169,10 @@ public final class FanWriter {
     public func setAuto(_ id: Int) throws {
         let f = try fan(id)
         if f.hasModeKey {
-            try smc.write(f.modeKey, value: originalMode[id] ?? 0)
+            // Apple Silicon: 0 hands the fan back; thermalmonitord sets its own mode
+            // once Ftst is cleared (setAllAuto / the last fan going auto).
+            let mode = discovery.fanTestKey ? 0 : (originalMode[id] ?? 0)
+            try smc.write(f.modeKey, value: mode)
         } else if discovery.fanForceKey {
             let bits = Int(try smc.double("FS! "))
             try smc.write("FS! ", value: Double(bits & ~(1 << id)))
@@ -186,9 +191,11 @@ public final class FanWriter {
     /// Mode writes can be refused for a moment right after the Ftst unlock.
     private func retrying(_ body: () throws -> Void) throws {
         var last: Error?
-        for attempt in 0..<20 {
+        // Measured on an M4 Pro: the first F0Md write after Ftst=1 can be refused
+        // for a little over 2 s, so allow up to 5 s before reporting failure.
+        for attempt in 0..<50 {
             do { try body(); return } catch { last = error }
-            if !discovery.fanTestKey || attempt == 19 { break }
+            if !discovery.fanTestKey || attempt == 49 { break }
             usleep(100_000)
         }
         throw last!

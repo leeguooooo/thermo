@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3
+
+- Apple Silicon: switching a fan back to Auto works again (it left the fan at its last manual speed); if returning to Auto ever fails, every fan is reset to system control.
+- Apple Silicon: setting a fixed speed or curve no longer reports a timeout while the fan control is being unlocked.
+
 ## 1.0.2
 
 - Thermo now lives at app.leeguoo.com/thermo — downloads and updates come from there.
