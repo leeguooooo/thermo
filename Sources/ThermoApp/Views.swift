@@ -508,6 +508,7 @@ struct SettingsView: View {
                     Text(tr("Threshold: %1$@ °C", String(Int(alertThreshold))))
                 }
             }
+            AgentAccessRow()
             Toggle(tr("Show in Dock"), isOn: $showInDock)
             Toggle(tr("Launch at login"), isOn: Binding(get: { monitor.launchAtLogin }, set: { monitor.launchAtLogin = $0 }))
             HStack {

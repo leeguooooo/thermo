@@ -44,6 +44,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         monitor.onUpdate = { [weak self] s in self?.updateTitle(s) }
         // `open Thermo.app --args --install-helper`: start helper registration right away (setup/QA).
         if CommandLine.arguments.contains("--install-helper") { monitor.installHelper() }
+        // `thermo settings KEY VALUE` writes the same defaults from another process.
+        DistributedNotificationCenter.default().addObserver(forName: Notification.Name("dev.thermo.settingsChanged"), object: nil, queue: .main) { [weak self] _ in
+            UserDefaults.standard.synchronize()
+            L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
+            self?.monitor.reschedule()
+            self?.applyDockPreference()
+            if let s = self?.monitor.latest { self?.updateTitle(s) }
+            NotificationCenter.default.post(name: UserDefaults.didChangeNotification, object: nil)
+        }
         NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
             if let s = self?.monitor.latest { self?.updateTitle(s) }
             self?.applyDockPreference()

@@ -118,10 +118,11 @@ public struct MachinePulse: Codable, Sendable, Equatable {
 
     /// Folds helper processes into their app and returns the busiest programs (plus the biggest
     /// ones when memory is short).
-    public static func group(_ procs: [AgentProcess], byMemory: Bool = false, me: pid_t = getpid()) -> [Hog] {
+    /// `limit: nil` returns every program of this user, idle ones included (for `thermo pulse quit`).
+    public static func group(_ procs: [AgentProcess], byMemory: Bool = false, me: pid_t = getpid(), limit: Int? = 4) -> [Hog] {
         group(procs.map { Candidate(pid: $0.pid, uid: $0.uid, name: $0.name, cpu: $0.cpu, memoryKB: max($0.footprintKB, $0.rssKB),
                                     details: ProcessDetails(executable: $0.executable, argv: $0.argv, cwd: $0.cwd)) },
-              byMemory: byMemory, me: me)
+              byMemory: byMemory, me: me, limit: limit)
     }
 
     /// A process worth considering, with what it takes to name it.
@@ -135,9 +136,9 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         var owner: String? = nil
     }
 
-    static func group(_ procs: [Candidate], byMemory: Bool, me: pid_t) -> [Hog] {
+    static func group(_ procs: [Candidate], byMemory: Bool, me: pid_t, limit: Int? = 4) -> [Hog] {
         var byKey: [String: Hog] = [:]
-        for p in procs where p.cpu > 0.5 || p.memoryKB > 200_000 {
+        for p in procs where limit == nil || p.cpu > 0.5 || p.memoryKB > 200_000 {
             let exe = p.details.executable ?? ""
             var name = programName(p.details, fallback: p.name)
             // Command-line programs: the same tool in the same folder is one row (e.g. 4 vitest workers).
@@ -162,7 +163,8 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             h.quittable = h.quittable && quittable
             byKey[key] = h
         }
-        var top = Array(byKey.values.sorted { $0.cpu > $1.cpu }.prefix(4).filter { $0.cpu >= 5 })
+        guard let limit else { return byKey.values.sorted { $0.cpu > $1.cpu } }
+        var top = Array(byKey.values.sorted { $0.cpu > $1.cpu }.prefix(limit).filter { $0.cpu >= 5 })
         if byMemory {
             for h in byKey.values.sorted(by: { $0.memoryKB > $1.memoryKB }).prefix(2) where !top.contains(where: { $0.id == h.id }) {
                 top.append(h)

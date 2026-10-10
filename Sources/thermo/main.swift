@@ -40,6 +40,9 @@ COMMANDS
                              or processes
   pulse                      why is this Mac slow: verdict, busiest programs, load,
                              memory, thermal state, temperatures, fans (--json for agents)
+  pulse quit NAME|PID         stop a program pulse lists (apps quit like ⌘Q); asks first
+  settings [KEY [VALUE]]     the app's settings: menu bar text, interval, alerts, units,
+                             language, Dock icon (KEY=VALUE also works)
   clean [CATEGORY|ai]        what can be cleaned: AI sessions/models/caches, dev caches,
                              Xcode, project build output, browsers (read-only)
   clean run safe|ID…         remove items (safe: delete; review: to Trash); asks first
@@ -109,7 +112,8 @@ struct App {
         case "bench": try benchCommand()
         case "agents", "agent", "doctor": try AgentsCommand(app: self).run(rest)
         case "clean": try CleanCommand(app: self).run(rest)
-        case "pulse", "status": try PulseCommand(app: self).run()
+        case "pulse", "status": try PulseCommand(app: self).run(rest)
+        case "settings", "config": try SettingsCommand(app: self).run(rest)
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
         }
     }

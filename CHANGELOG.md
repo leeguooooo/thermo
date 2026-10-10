@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Settings → AI agents (thermo-use): one click puts the `thermo` command where AI agents find it and adds the thermo-use skill to Claude Code or Codex; it shows what to ask your agent. thermo-use is part of the *-use family.
+- Everything the app does is now also a command for agents and scripts: `thermo pulse quit NAME` (the Quit button on the "why is it slow" card) and `thermo settings` (menu bar text, interval, alerts, units, language, Dock icon; a running Thermo applies changes at once).
+- Projects are found through the folders your AI agents and editors worked in, and "last used" comes from those sessions and git, not just file dates — so build output of projects you stopped working on is told apart from ones you use every day.
 ## 1.1.3
 
 - Thermo itself stays out of the way: the "why is my Mac slow" card checks programs only while the panel is open, and each check is far cheaper (about 0.6% of one core with the panel open).

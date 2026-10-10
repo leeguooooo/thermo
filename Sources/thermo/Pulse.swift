@@ -26,7 +26,8 @@ struct PulseCommand {
         struct Fan: Encodable { let name: String; let rpm: Double; let min: Double; let max: Double; let manual: Bool }
     }
 
-    func run() throws {
+    func run(_ rest: [String] = []) throws {
+        if rest.first == "quit" { try quit(Array(rest.dropFirst())); return }
         let style = app.style
         let pulse = MachinePulse.sample()
         let sm = try? app.sampler()
@@ -78,4 +79,55 @@ struct PulseCommand {
         }
         out(lines)
     }
+
+    // MARK: quit
+
+    /// `thermo pulse quit NAME|PID`: the card's Quit button. Apps are asked to quit like ⌘Q;
+    /// other processes get SIGTERM. System processes, AI agent sessions and Thermo are refused.
+    func quit(_ targets: [String]) throws {
+        guard let target = targets.first else { throw CLIError("usage: thermo pulse quit NAME|PID [--yes]") }
+        let style = app.style
+        let pulse = MachinePulse.sample()
+        // Look beyond the top few: anything this user runs can be named.
+        let all = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
+        let lower = target.lowercased()
+        let matches: [MachinePulse.Hog]
+        if let pid = Int32(target) {
+            matches = all.filter { $0.pids.contains(pid) }
+        } else {
+            let exact = all.filter { $0.name.lowercased() == lower }
+            matches = exact.isEmpty ? all.filter { $0.name.lowercased().contains(lower) } : exact
+        }
+        guard !matches.isEmpty else { throw CLIError("no running program matches '\(target)'; see thermo pulse") }
+        guard matches.count == 1 else {
+            throw CLIError("'\(target)' matches several programs: " + matches.map { "\($0.name) (pid \($0.pids[0]))" }.joined(separator: ", "))
+        }
+        let h = matches[0]
+        guard h.quittable else {
+            throw CLIError("\(h.name) is not offered for quitting (system process, AI agent session or Thermo itself)")
+        }
+        _ = pulse
+        let plan = h.app.map { "quit \($0)  (like ⌘Q; it may ask to save)" }
+            ?? "kill -TERM " + h.pids.map(String.init).joined(separator: " ")
+        print(style.bold("About to stop \(h.name)") + style.dim(String(format: "  %.0f%% CPU · %d MB", h.cpu, h.memoryKB / 1024)))
+        print("  " + plan)
+        if !app.args.has("yes") {
+            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("not a terminal; add --yes to confirm") }
+            print("Proceed? [y/N] ", terminator: "")
+            fflush(stdout)
+            guard let a = readLine(), ["y", "yes"].contains(a.lowercased()) else { print("cancelled"); return }
+        }
+        if let path = h.app {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            p.arguments = ["-e", "tell application \"\(path.replacingOccurrences(of: "\"", with: "\\\""))\" to quit"]
+            try p.run()
+            p.waitUntilExit()
+            guard p.terminationStatus == 0 else { throw CLIError("\(h.name) did not quit (it may have asked to save, or refused)") }
+        } else {
+            for pid in h.pids where pid != getpid() { kill(pid, SIGTERM) }
+        }
+        print(style.green("✓") + " asked \(h.name) to stop")
+    }
 }
+
