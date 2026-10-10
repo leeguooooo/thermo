@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.7
+
+- One main window for everything (click the Dock icon or "Open Thermo"): Overview with gauges for temperature, CPU load, memory and free disk space, why the Mac is slow and the temperature trend; Sensors as a card per group; Fans; Browser pages; Disk Cleanup and AI Agent Diagnostics; Settings — all in one sidebar.
+- The menu bar panel is now a glance: the live numbers, why the Mac is slow, a one-click Auto / Max fan switch, and shortcuts into the main window.
+- Disk Cleanup scans everything by default and finds build output it missed: `dist`, `build`, `out`, `coverage` and similar folders in web and Python projects (skipped when git tracks them; offered for review, since they can hold renders or release builds).
+
 ## 1.1.6
 
 - "Why is my Mac slow" says why in plain words: how much memory has been moved to the disk and that programs are waiting on it, and which program is behind it.
