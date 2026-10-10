@@ -362,7 +362,7 @@ struct App {
         // The slowdown history: one incremental pulse pass a minute (five on battery), plus the write.
         let pulseSampler = PulseSampler()
         _ = pulseSampler.sample()  // the first pass measures over a short window; steady state is what runs
-        let history = PulseHistory(url: FileManager.default.temporaryDirectory.appendingPathComponent("thermo-bench-history.jsonl"))
+        let history = PulseHistory(url: FileManager.default.temporaryDirectory.appendingPathComponent("thermo-bench-\(UUID().uuidString).jsonl"))
         let pt = time(10) { history.append(PulseRecord(pulseSampler.sample())) }
         try? FileManager.default.removeItem(at: history.url)
         lines.append(row("pulse history tick", pt))

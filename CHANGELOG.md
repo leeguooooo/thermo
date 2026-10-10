@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The menu-bar hottest metric and hot alerts use the same full curated temperature scope as the open window. Default background CPU sampling remains essential-only.
+- Sensors can include unnamed readings for SMC-key troubleshooting; the wider scope is released when leaving the page.
+
 - Overview memory, process memory and swap use a shared MiB/GiB formatter in the app and CLI; disk cleanup retains decimal MB/GB. Overview details wrap instead of shrinking into a single line.
 
 - Diagnostics retains the latest 20 operation results during the app session, including failed steps and backup locations, even after an item disappears from the inventory.

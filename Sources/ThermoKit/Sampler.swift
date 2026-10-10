@@ -53,7 +53,7 @@ public struct SamplerParts: OptionSet, Sendable {
     public static let everything: SamplerParts = [.temperatures, .fans, .power, .electrical, .battery]
 }
 
-public enum SamplerScope: Sendable {
+public enum SamplerScope: Equatable, Sendable {
     /// A few representative sensors per group, fans and headline power. Cheapest;
     /// meant for background polling (menu bar title, curve control).
     case essential

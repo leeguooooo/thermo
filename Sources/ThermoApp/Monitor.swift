@@ -38,6 +38,7 @@ enum Settings {
     static let alertsEnabled = "alertsEnabled"
     static let alertThreshold = "alertThreshold"
     static let fahrenheit = "fahrenheit"
+    static let unnamedSensors = "unnamedSensors"
     /// Show the Dock icon (on by default: a menu bar icon alone is easy to lose, e.g. behind the notch).
     static let showInDock = "showInDock"
 
@@ -99,6 +100,14 @@ final class Monitor: ObservableObject {
     private var sampler: Sampler?
     /// Mirror of `popoverOpen`, confined to `queue`.
     private var fullSampling = false
+    private var includeUnnamed = false
+
+    func showUnnamedSensors(_ enabled: Bool) {
+        queue.async { [weak self] in
+            self?.includeUnnamed = enabled
+            self?.sample()
+        }
+    }
     private var timer: DispatchSourceTimer?
     private var lastAlert = Date.distantPast
     /// Background data, kept out of @Published so hidden SwiftUI views don't re-render.
@@ -150,16 +159,13 @@ final class Monitor: ObservableObject {
     private func sample() {
         guard let sampler else { return }
         let open = fullSampling
-        sampler.scope = open ? .known : .essential
-        if open {
-            sampler.parts = .everything
-            sampler.groups = nil
-        } else {
-            // Background: only what the menu bar title, alerts and history need.
-            let metric = TitleMetric(rawValue: UserDefaults.standard.string(forKey: Settings.titleMetric) ?? "") ?? .cpu
-            sampler.parts = metric == .power ? [.temperatures, .fans, .power] : [.temperatures, .fans]
-            sampler.groups = [.cpu, .gpu]
-        }
+        let defaults = UserDefaults.standard
+        let metric = TitleMetric(rawValue: defaults.string(forKey: Settings.titleMetric) ?? "") ?? .cpu
+        let plan = SamplingPlan.make(visible: open, includeUnnamed: includeUnnamed, metric: metric,
+                                     alerts: defaults.bool(forKey: Settings.alertsEnabled))
+        sampler.scope = plan.scope
+        sampler.parts = plan.parts
+        sampler.groups = plan.groups
         let s = sampler.sample()
         let point = HistoryPoint(time: s.timestamp, cpu: s.cpu, gpu: s.gpu, fans: s.fans.map(\.rpm), power: s.systemPower)
         DispatchQueue.main.async { [weak self] in

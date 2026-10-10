@@ -1,0 +1,41 @@
+import XCTest
+import ThermoKit
+@testable import ThermoApp
+
+final class SamplingPlanTests: XCTestCase {
+    func testSensorSearchMatchesKeysAndDisplayedElectricalCategories() {
+        let reading = Reading(key: "PC0R", name: "CPU Package Power", group: .cpu, value: 42)
+        XCTAssertTrue(SensorSearch.matches(reading, query: " pc0r "))
+        XCTAssertTrue(SensorSearch.matches(reading, query: "功率", category: "功率"))
+        XCTAssertFalse(SensorSearch.matches(reading, query: "功率"))
+        XCTAssertFalse(SensorSearch.matches(reading, query: "not a sensor", category: "功率"))
+    }
+
+    func testDefaultBackgroundCPUPlanStaysEssential() {
+        let plan = SamplingPlan.make(visible: false, includeUnnamed: true, metric: .cpu, alerts: false)
+        XCTAssertEqual(plan.scope, .essential)
+        XCTAssertEqual(plan.groups, [.cpu, .gpu])
+        XCTAssertFalse(plan.parts.contains(.power))
+    }
+
+    func testHottestAndAlertPlansCoverEveryCuratedGroupInBackground() {
+        for (metric, alerts) in [(TitleMetric.hottest, false), (.cpu, true)] {
+            let plan = SamplingPlan.make(visible: false, includeUnnamed: false, metric: metric, alerts: alerts)
+            XCTAssertEqual(plan.scope, .known)
+            XCTAssertNil(plan.groups)
+        }
+    }
+
+    func testPowerMetricKeepsItsPowerReadings() {
+        let plan = SamplingPlan.make(visible: false, includeUnnamed: false, metric: .power, alerts: true)
+        XCTAssertTrue(plan.parts.contains(.power))
+        XCTAssertEqual(plan.scope, .known)
+    }
+
+    func testUnnamedScopeIsOnlyUsedWhenVisible() {
+        let plan = SamplingPlan.make(visible: true, includeUnnamed: true, metric: .cpu, alerts: false)
+        XCTAssertEqual(plan.scope, .all)
+        XCTAssertNil(plan.groups)
+        XCTAssertEqual(plan.parts, .everything)
+    }
+}

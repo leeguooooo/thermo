@@ -510,6 +510,7 @@ struct SensorsPage: View {
     @ObservedObject var monitor: Monitor
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
 
+    @AppStorage(Settings.unnamedSensors) private var includeUnnamed = false
     @State private var search = ""
     @FocusState private var searchFocused: Bool
 
@@ -527,6 +528,11 @@ struct SensorsPage: View {
             .padding(12).glass(radius: 10)
             .background(Button("") { searchFocused = true }.keyboardShortcut("f", modifiers: .command)
                 .frame(width: 0, height: 0).opacity(0).accessibilityHidden(true))
+            HStack {
+                Toggle(tr("Include unnamed sensors"), isOn: $includeUnnamed).toggleStyle(.switch)
+                Spacer()
+                Text(tr("Refresh: %1$@ s", String(format: "%g", monitor.interval))).font(.caption).foregroundStyle(.secondary)
+            }
             if let s = monitor.snapshot {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 14, alignment: .top)], alignment: .leading, spacing: 14) {
                     ForEach(SensorGroup.allCases, id: \.self) { g in
@@ -540,7 +546,10 @@ struct SensorsPage: View {
                     electrical(tr("Power"), "bolt.fill", s.power, "%.2f W")
                     electrical(tr("Voltage"), "powerplug.fill", s.voltages, "%.3f V")
                     electrical(tr("Current"), "waveform.path.ecg", s.currents, "%.3f A")
-                    if !(s.temperatures + s.power + s.voltages + s.currents).contains(where: matches) {
+                    if !s.temperatures.contains(where: matches)
+                        && !s.power.contains(where: { matches($0, category: tr("Power")) })
+                        && !s.voltages.contains(where: { matches($0, category: tr("Voltage")) })
+                        && !s.currents.contains(where: { matches($0, category: tr("Current")) }) {
                         Label(tr("No matching sensors"), systemImage: "magnifyingglass")
                             .foregroundStyle(.secondary).padding(20).frame(maxWidth: .infinity).glass()
                     }
@@ -549,13 +558,15 @@ struct SensorsPage: View {
                 ProgressView().frame(maxWidth: .infinity, minHeight: 200)
             }
         }
+        .onAppear { monitor.showUnnamedSensors(includeUnnamed) }
+        .onChange(of: includeUnnamed) { monitor.showUnnamedSensors($0) }
+        .onDisappear { monitor.showUnnamedSensors(false) }
     }
 
-    func matches(_ reading: Reading) -> Bool {
-        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        return query.isEmpty || reading.name.localizedCaseInsensitiveContains(query)
-            || reading.key.localizedCaseInsensitiveContains(query)
-            || groupName(reading.group).localizedCaseInsensitiveContains(query)
+    func matches(_ reading: Reading) -> Bool { matches(reading, category: nil) }
+
+    func matches(_ reading: Reading, category: String?) -> Bool {
+        SensorSearch.matches(reading, query: search, category: category)
     }
 
     func symbol(_ g: SensorGroup) -> String {
@@ -572,7 +583,7 @@ struct SensorsPage: View {
     }
 
     @ViewBuilder func electrical(_ title: String, _ symbol: String, _ rows: [Reading], _ f: String) -> some View {
-        let rows = rows.filter { matches($0) }
+        let rows = rows.filter { matches($0, category: title) }
         if !rows.isEmpty {
             card(title, symbol: symbol, headline: nil, color: .yellow,
                  rows: rows.map { ($0.name, $0.key, String(format: f, $0.value), Color.white.opacity(0.9)) })
@@ -606,5 +617,16 @@ struct SensorsPage: View {
         }
         .padding(16)
         .glass(radius: 16)
+    }
+}
+
+/// Search accepts displayed category names as well as hardware names and SMC keys.
+enum SensorSearch {
+    static func matches(_ reading: Reading, query: String, category: String? = nil) -> Bool {
+        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return query.isEmpty || reading.name.localizedCaseInsensitiveContains(query)
+            || reading.key.localizedCaseInsensitiveContains(query)
+            || groupName(reading.group).localizedCaseInsensitiveContains(query)
+            || category?.localizedCaseInsensitiveContains(query) == true
     }
 }
