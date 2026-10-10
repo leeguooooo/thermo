@@ -846,4 +846,5 @@ let zhHans: [String: String] = [
     "Ambient": "环境",
     "Board": "主板",
     "Other": "其他",
+    "Open Console": "打开控制台",
 ]

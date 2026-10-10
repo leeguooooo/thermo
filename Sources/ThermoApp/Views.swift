@@ -105,7 +105,7 @@ struct PopoverView: View {
         if renderingPreview {
             // ImageRenderer cannot draw AppKit buttons; a look-alike for the preview.
             HStack(spacing: 12) {
-                Label(tr("Open Thermo"), systemImage: "macwindow").font(.callout).foregroundStyle(.white)
+                Label(tr("Open Console"), systemImage: "macwindow").font(.callout).foregroundStyle(.white)
                     .padding(.horizontal, 10).padding(.vertical, 4).background(Capsule().fill(Color.accentColor))
                 Spacer()
                 ForEach(["internaldrive", "stethoscope", "rectangle.stack", "gearshape", "power"], id: \.self) {
@@ -120,7 +120,7 @@ struct PopoverView: View {
     var liveFooter: some View {
         HStack(spacing: 6) {
             Button { MainWindow.show(.overview) } label: {
-                Label(tr("Open Thermo"), systemImage: "macwindow")
+                Label(tr("Open Console"), systemImage: "macwindow")
             }
             .buttonStyle(.borderedProminent)
             Spacer()
