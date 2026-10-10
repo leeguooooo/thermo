@@ -32,13 +32,19 @@ struct Bar: View {
 // MARK: - Root
 
 enum Tab: String, CaseIterable, Identifiable {
-    case overview = "Overview", sensors = "Sensors", fans = "Fans", agents = "Agents", settings = "Settings"
+    case overview = "Overview", sensors = "Sensors", fans = "Fans", disk = "Disk", agents = "Agents", settings = "Settings"
     var id: String { rawValue }
+
+    /// Six tabs only fit at popover width with Settings as an icon.
+    @ViewBuilder var label: some View {
+        if self == .settings { Image(systemName: "gearshape").accessibilityLabel(rawValue) } else { Text(rawValue) }
+    }
 }
 
 struct PopoverView: View {
     @ObservedObject var monitor: Monitor
     var updates: Updates
+    @ObservedObject var disk: DiskModel
     @State var tab: Tab = .overview
     @StateObject var agents = AgentScanner()
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
@@ -50,7 +56,7 @@ struct PopoverView: View {
                 // ImageRenderer cannot draw the AppKit segmented control; draw a look-alike.
                 HStack(spacing: 2) {
                     ForEach(Tab.allCases) { t in
-                        Text(t.rawValue).font(.callout).frame(maxWidth: .infinity).padding(.vertical, 4)
+                        t.label.font(.callout).frame(maxWidth: t == .settings ? 28 : .infinity).padding(.vertical, 4)
                             .background(RoundedRectangle(cornerRadius: 6).fill(t == tab ? Color(nsColor: .controlBackgroundColor) : .clear)
                                 .shadow(color: .black.opacity(t == tab ? 0.15 : 0), radius: 1, y: 0.5))
                     }
@@ -59,7 +65,7 @@ struct PopoverView: View {
                 .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary))
             } else {
                 Picker("", selection: $tab) {
-                    ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
+                    ForEach(Tab.allCases) { $0.label.tag($0) }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
@@ -70,6 +76,7 @@ struct PopoverView: View {
                 case .overview: OverviewView(monitor: monitor)
                 case .sensors: SensorsView(monitor: monitor)
                 case .fans: FansView(monitor: monitor)
+                case .disk: DiskView(model: disk)
                 case .agents: AgentsView(scanner: agents)
                 case .settings: SettingsView(monitor: monitor, updates: updates)
                 }

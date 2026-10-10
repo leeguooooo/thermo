@@ -3,6 +3,15 @@
 ## Unreleased
 
 - New **Agents** tab and `thermo agents` command: diagnoses the AI coding agents on this Mac (Claude Code, Codex, Cursor, Gemini). Finds hooks and MCP servers whose programs are missing, plaintext credentials in MCP configs, plugins that are enabled but not installed, broken skill symlinks, launch agents stuck in a restart loop or pointing at deleted programs, and agent processes that leaked or still run a deleted binary. Read-only; secrets are redacted.
+- Disk cleanup (`thermo clean`, Disk tab). It recognises what AI tools leave on disk:
+  - Claude Code, Codex and Gemini CLI sessions, grouped by project;
+  - Cline, Roo and Kilo tasks;
+  - editor chat data for projects that have been deleted;
+  - agent worktrees;
+  - old CLI and plugin versions and agent scratch folders;
+  - Ollama, Hugging Face and LM Studio models.
+
+  It also covers developer caches, Xcode, project build output, browsers and logs. Sessions that are still running, apps that are open and anything with unsaved work are skipped. Caches are deleted; your data goes to the Trash.
 
 ## 1.0.2
 

@@ -74,8 +74,31 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 | `thermo bench` | 采样延迟基准 |
 | `thermo agents list [AREA]` | 列出检查过的每一项（hooks / mcp / plugins / skills / statusline / launchd / processes），逐项标 ✓ 正常、! 警告、✗ 错误、- 已关闭；App 的 Agents 标签页和「Open Report」窗口显示同一份清单 |
 | `thermo agents [--all] [--json]` | AI agent 诊断：Claude Code / Codex / Cursor / Gemini 的 hooks、MCP server、插件、skills、状态栏，以及 launchd 重启风暴、泄漏/跑着已删除二进制的进程、明文凭据（只读，输出已脱敏；有 error 时退出码 1） |
+| `thermo clean [ai\|CATEGORY]` | 列出可清理的内容，只读不删 |
+| `thermo clean run safe\|ID…` | 清理指定项（先确认；`--yes` 跳过确认，`--trash` / `--permanent` 指定处理方式） |
+| `thermo clean log` | 历次清理删了什么 |
 
 所有读取命令都支持 `--json`、`--csv`，另有 `--fahrenheit`、`--no-color`（也遵循 `NO_COLOR`）。
+
+## 磁盘清理
+
+`thermo clean` 和 App 的 **Disk** 页。常规清理（开发缓存、Xcode、浏览器、日志、旧安装包）之外，重点放在 AI 工具留在磁盘上的东西：
+
+- **AI 会话**：Claude Code、Codex、Gemini CLI 的会话按项目归组，标签取会话里记录的 `cwd`，标题取第一条提问或 Codex 线程名；Cline / Roo / Kilo 任务；Cursor、VS Code、Windsurf 里已删除项目的聊天和工作区数据；agent 留在仓库里的 worktree。超过 `--older-than`（默认 30 天）没动过的会话，或所属项目文件夹已经删了的会话，才会被选中。
+- **AI 工具残留**：Claude Code 自动更新留下的旧版本、插件旧版本、`/private/tmp/claude-*` 里已结束会话的临时目录、已删会话的 file-history / todos、Claude 桌面版和 Cursor 等的缓存、给 agent 用的 Playwright 浏览器。
+- **模型**：Ollama 每个模型单独一项，和其他模型共用的层不删；Hugging Face 缓存按仓库列出；LM Studio、Whisper、PyTorch Hub、GPT4All、Jan 等。
+- **项目构建产物**：按标志文件识别（`package.json` → `node_modules`、`Cargo.toml` → `target`、`Package.swift` → `.build` 等），默认在 `~/Developer`、`~/code`、`~/github.com` 这类目录下找，`--root` 可以指定。
+
+安全规则：
+
+- 扫描只读。`clean run` 先列出计划，再要求确认。
+- 每项都有级别。`safe` 是会自动重建的缓存，直接删除；`review` 是会话、模型这类数据，移到废纸篓；`risky` 是有未提交改动的 worktree，`safe` / `all` 都不会选中它，必须写出完整 id。
+- 正在运行的 Claude Code 会话、2 小时内写过的会话、正在运行的 agent 所在目录、所属 App 还开着的缓存，一律跳过。
+- 删除前逐条复查路径：家目录以外的路径、`~/Documents`、`~/.ssh`、`.git`、Claude 的 `memory/` 这类位置永远不删。只移除列出的路径，不跟随符号链接。
+- 每次删除都写进 `~/Library/Logs/Thermo/clean.log`。
+- 尊重 Claude Code 自己的 `cleanupPeriodDays`，报告里会显示这个值。Codex 的线程索引存在 SQLite 里，Thermo 不改它，所以删掉会话后 Codex 列表里可能还会留着标题。
+
+清理只以当前用户身份运行，root helper 不链接 CleanKit。
 
 ## 风扇控制安全机制
 
@@ -110,6 +133,7 @@ T2 机型上每次 SMC 读取约 370 µs（经 T2 转发、串行，多线程无
 ```
 Sources/CSMC/        C：AppleSMC 用户客户端、类型编解码、key 信息缓存、IOHID 温度（Apple Silicon）
 Sources/ThermoKit/   传感器发现/命名/分组、Sampler、电池、风扇曲线与策略引擎、XPC 协议、helper 安装
+Sources/CleanKit/    磁盘清理：规则、AI 会话/模型/工具识别、项目产物、扫描与删除（不进 helper）
 Sources/thermo/      CLI
 Sources/ThermoHelper/ root helper（LaunchDaemon + XPC）
 Sources/ThermoApp/   菜单栏 App（AppKit + SwiftUI + Swift Charts）

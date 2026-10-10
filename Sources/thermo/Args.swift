@@ -11,12 +11,12 @@ struct Args {
     var flags: Set<String> = []
     var options: [String: String] = [:]
 
-    static let valueOptions: Set<String> = ["interval", "count", "sensor", "format"]
+    static let valueOptions: Set<String> = ["interval", "count", "sensor", "format", "older-than", "root"]
     static let aliases: [String: String] = [
         "i": "interval", "n": "count", "s": "sensor", "a": "all", "j": "json",
-        "h": "help", "v": "version", "f": "format",
+        "h": "help", "v": "version", "f": "format", "y": "yes",
     ]
-    static let knownFlags: Set<String> = ["json", "csv", "all", "no-color", "no-cache", "help", "version", "fahrenheit"]
+    static let knownFlags: Set<String> = ["json", "csv", "all", "no-color", "no-cache", "help", "version", "fahrenheit", "yes", "trash", "permanent"]
 
     init(_ argv: [String]) throws {
         var i = 0

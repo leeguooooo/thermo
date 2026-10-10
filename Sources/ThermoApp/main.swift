@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private let popover = NSPopover()
     private var monitor: Monitor!
     private let updates = Updates()
+    private let disk = DiskModel()
     private var lastTitle: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -27,7 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.behavior = .transient
         popover.animates = false
         popover.delegate = self
-        popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor, updates: updates))
+        popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor, updates: updates, disk: disk))
 
         monitor.onUpdate = { [weak self] s in self?.updateTitle(s) }
         // `open Thermo.app --args --install-helper`: start helper registration right away (setup/QA).
@@ -93,18 +94,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     renderingPreview = true
     let monitor = Monitor()
     let updates = Updates()
+    let disk = DiskModel()
+    disk.scan()
     monitor.popoverOpen = true
     let agents = AgentScanner()
     let started = Date()
     agents.scan()
+    // Sensors are ready after a few seconds; the agent and disk scans can take longer (up to 90 s).
     func render() {
-        // The agent scan runs launchctl once per launch agent; wait for it (up to 60 s).
-        if agents.scanning, Date().timeIntervalSince(started) < 60 {
+        if agents.scanning || disk.report == nil, Date().timeIntervalSince(started) < 90 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: render)
             return
         }
         for tab in Tab.allCases {
-            let view = PopoverView(monitor: monitor, updates: updates, tab: tab, agents: agents).background(Color(nsColor: .windowBackgroundColor))
+            let view = PopoverView(monitor: monitor, updates: updates, disk: disk, tab: tab, agents: agents).background(Color(nsColor: .windowBackgroundColor))
             let r = ImageRenderer(content: view)
             r.scale = 2
             guard let img = r.cgImage else { continue }

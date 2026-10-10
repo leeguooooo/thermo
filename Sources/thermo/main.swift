@@ -30,6 +30,10 @@ COMMANDS
   agents list [AREA]         everything checked, each marked OK or not; AREA is
                              hooks, mcp, plugins, skills, statusline, launchd
                              or processes
+  clean [CATEGORY|ai]        what can be cleaned: AI sessions/models/caches, dev caches,
+                             Xcode, project build output, browsers (read-only)
+  clean run safe|ID…         remove items (safe: delete; review: to Trash); asks first
+  clean log                  what earlier cleanups removed
 
 OPTIONS
   -a, --all                  include sensors without a known name
@@ -42,6 +46,10 @@ OPTIONS
       --fahrenheit           show °F
       --no-color             disable colors (also honours NO_COLOR)
       --no-cache             rescan SMC keys instead of using the discovery cache
+      --older-than DAYS      clean: sessions/projects idle this long are stale (default 30; 2w, 6m)
+      --root DIR[,DIR]       clean: folders searched for projects (default ~/Developer, ~/code, …)
+  -y, --yes                  clean run: do not ask for confirmation
+      --trash | --permanent  clean run: send everything to the Trash / delete everything
   -h, --help                 this help
   -v, --version              version
 """
@@ -90,6 +98,7 @@ struct App {
         case "helper": try helperCommand(rest)
         case "bench": try benchCommand()
         case "agents", "agent", "doctor": try AgentsCommand(app: self).run(rest)
+        case "clean": try CleanCommand(app: self).run(rest)
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
         }
     }
