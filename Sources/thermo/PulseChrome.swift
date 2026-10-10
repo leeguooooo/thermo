@@ -99,7 +99,11 @@ extension PulseCommand {
             if d.hint == nil && ChromeInspector.endpoint(app: browser) != nil && !measure {
                 lines.append(style.dim("  " + tr("Add --watch 60 to measure memory per page and see which pages grow.")))
             }
-            if windows.count > 1 { lines.append(style.dim("  " + windows.values.map { String($0.count) }.sorted { Int($0)! > Int($1)! }.joined(separator: " · "))) }
+            // Only worth a line when some window is crowded.
+            if windows.count > 1, windows.values.contains(where: { $0.count > 5 }) {
+                let counts = windows.values.map(\.count).sorted(by: >).map(String.init).joined(separator: " · ")
+                lines.append(style.dim("  " + tr("tabs per window: %1$@", counts)))
+            }
         case .unavailable:
             lines.append(style.yellow("!") + " " + tr("Could not look inside %1$@.", browser))
         }

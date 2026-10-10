@@ -823,4 +823,5 @@ let zhHans: [String: String] = [
     "Add --watch 60 to measure memory per page and see which pages grow.": "加 --watch 60 可以测每个页面的内存，看哪些在涨。",
     "Measure memory": "测内存",
     "Which page leaks or uses the most memory? Measure every page twice, a minute apart.": "哪个页面在泄漏、哪个最占内存？每个页面测两次，间隔一分钟。",
+    "tabs per window: %1$@": "每个窗口的标签数：%1$@",
 ]
