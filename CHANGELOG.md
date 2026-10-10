@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.1.4
 
+- AI Agent Diagnostics has a new look: one verdict ("14 problems found, 9 can be fixed with one click"), a big Fix button that runs the safe fixes with progress and a result, colorful category cards, and plain-language problem cards with the fix right next to each; technical details are one click away.
+- Disk cleanup finds more of what fills a Mac: unused Xcode simulator runtimes and simulator data (removed through Xcode's own tool), OrbStack's disk image, and chat apps' storage (Lark, WeChat, WhatsApp, Telegram, Slack…, shown with where to clear it inside the app — Thermo never deletes chat history).
+- "Where the space is": the disk's used space by place — apps, app data, caches, Xcode, temporary files, Homebrew, simulator runtimes and swap — with the biggest folders in each (`thermo clean overview`).
+- Sizes are what deleting would actually free, so copies that share space on disk (like Chrome's code-signing clones) no longer look huge.
 - Disk cleanup moved into its own window (the popover's Disk tab now just sums up and opens it): categories on the left, build output grouped by project with when each was last used, sortable and searchable, and a detail pane with every path or session and why it is safe to remove. `Thermo --disk` opens it directly.
 - Settings → AI agents (thermo-use): one click puts the `thermo` command where AI agents find it and adds the thermo-use skill to Claude Code or Codex; it shows what to ask your agent. thermo-use is part of the *-use family.
 - Everything the app does is now also a command for agents and scripts: `thermo pulse quit NAME` (the Quit button on the "why is it slow" card) and `thermo settings` (menu bar text, interval, alerts, units, language, Dock icon; a running Thermo applies changes at once).
