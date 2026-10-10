@@ -389,7 +389,7 @@ final class CleanKitTests: XCTestCase {
         XCTAssertEqual(p.culpritText, "Mostly ffmpeg, using 1.6 cores")
         p.load1 = 107; p.memory = .warning; p.swapUsedMB = 22 * 1024
         XCTAssertEqual(p.verdict, .overloaded)
-        XCTAssertTrue(p.culpritText?.hasPrefix("22.0 GB of memory has been moved to the disk") ?? false, p.culpritText ?? "")
+        XCTAssertTrue(p.culpritText?.hasPrefix("22.0 GiB of memory has been moved to the disk") ?? false, p.culpritText ?? "")
         p.thermal = .serious
         XCTAssertEqual(p.verdict, .hot, "throttling outranks load")
     }
@@ -467,9 +467,9 @@ final class CleanKitTests: XCTestCase {
         let big = MachinePulse.Hog(id: "c", name: "Google Chrome", cpu: 100, memoryKB: 19 * 1_048_576, pids: [1], app: "/Applications/Google Chrome.app", quittable: true)
         var p = MachinePulse(load1: 66, load5: 45, cores: 8, thermal: .nominal, memory: .warning, swapUsedMB: 27 * 1024,
                              swapTotalMB: 28 * 1024, hogs: [big], sampled: now)
-        XCTAssertTrue(p.culpritText?.hasPrefix("27.0 GB of memory has been moved to the disk") ?? false, p.culpritText ?? "")
-        XCTAssertTrue(p.culpritText?.contains("Google Chrome uses the most (19.0 GB)") ?? false)
-        XCTAssertEqual(p.swapDiskText, "Swap files take 28.0 GB of disk space; macOS gives it back once memory frees up.")
+        XCTAssertTrue(p.culpritText?.hasPrefix("27.0 GiB of memory has been moved to the disk") ?? false, p.culpritText ?? "")
+        XCTAssertTrue(p.culpritText?.contains("Google Chrome uses the most (19.0 GiB)") ?? false)
+        XCTAssertEqual(p.swapDiskText, "Swap files take 28.0 GiB of disk space; macOS gives it back once memory frees up.")
         p.swapTotalMB = 2048
         XCTAssertNil(p.swapDiskText, "small swap is not worth a word")
     }

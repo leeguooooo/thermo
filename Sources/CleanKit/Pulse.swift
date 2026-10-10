@@ -11,6 +11,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var name: String
         /// Percent of one core (200 = two cores busy).
         public var cpu: Double
+        /// KiB; the legacy field name is kept for JSON compatibility.
         public var memoryKB: Int
         public var pids: [Int32]
         /// The .app for GUI programs; quitting goes through the app so it can save its work.
@@ -68,6 +69,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     public var cores: Int
     public var thermal: Thermal
     public var memory: Memory
+    /// MiB; the legacy field name is kept for JSON compatibility.
     public var swapUsedMB: Int
     /// Size of the swap files on disk.
     public var swapTotalMB: Int = 0
@@ -111,8 +113,8 @@ public struct MachinePulse: Codable, Sendable, Equatable {
                           Self.gb(swapUsedMB * 1024), big.name, Self.gb(big.memoryKB))
             }
             return tr("Memory is tight: %1$@ of swap in use, so programs wait on the disk; %2$@ uses the most memory (%3$@)",
-                      String(format: "%.1f GB", Double(swapUsedMB) / 1024), big.name,
-                      String(format: "%.1f GB", Double(big.memoryKB) / 1_048_576))
+                      MemoryFormat.string(mebibytes: swapUsedMB), big.name,
+                      MemoryFormat.string(kibibytes: big.memoryKB))
         }
         if busy >= 1 { return tr("Load is high, but no single program stands out.") }
         return nil
@@ -124,7 +126,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         return tr("Swap files take %1$@ of disk space; macOS gives it back once memory frees up.", Self.gb(swapTotalMB * 1024))
     }
 
-    static func gb(_ kb: Int) -> String { String(format: "%.1f GB", Double(kb) / 1_048_576) }
+    static func gb(_ kb: Int) -> String { MemoryFormat.string(kibibytes: kb) }
 
     // MARK: sampling
 

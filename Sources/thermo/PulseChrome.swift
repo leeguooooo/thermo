@@ -48,7 +48,7 @@ extension PulseCommand {
         if json { print(Export.json(d)); return }
 
         var lines: [String] = []
-        func mb(_ v: Double) -> String { String(format: "%.0f MB", v) }
+        func mb(_ v: Double) -> String { MemoryFormat.string(mebibytes: v) }
         func short(_ p: String, _ n: Int = 60) -> String { p.count > n ? String(p.prefix(n - 1)) + "…" : p }
         func page(_ title: String, _ url: String) -> String {
             (title.isEmpty ? short(url) : short(title, 40) + style.dim("  " + ChromeInspector.site(url)))

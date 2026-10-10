@@ -85,8 +85,8 @@ final class ChromeInspectorTests: XCTestCase {
         XCTAssertTrue(d.hiddenText!.hasPrefix("136 stale chrome-use records (not real pages, no memory)"))
         XCTAssertTrue(d.hiddenText!.contains("2 pages in no window"))
         XCTAssertFalse(d.hiddenText!.contains("Restart"), "restarting the browser does not clear relay records")
-        XCTAssertTrue(d.gap!.contains("of the 20.0 GB"))
-        XCTAssertTrue(d.gap!.contains("GPU process (2.5 GB)"))
+        XCTAssertTrue(d.gap!.contains("of the 20.0 GiB"))
+        XCTAssertTrue(d.gap!.contains("GPU process (2.5 GiB)"))
     }
 
     func testOneSampleListsButDoesNotGuessLeaks() {

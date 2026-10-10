@@ -64,6 +64,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 概览里的 CPU 负载按每核负载显示：`1.0×` 表示平均每核有一个任务运行或等待，数值可以超过 `1.0×`。它与 CPU 使用率不同。温度图跟随摄氏度/华氏度设置，并自动扩展范围以显示高温读数。
 
+内存、进程占用和交换空间使用 MiB / GiB（二进制单位）；磁盘容量和清理大小使用 MB / GB（十进制单位）。JSON 保留既有数值字段：`memoryKB` 使用 KiB，`swapUsedMB`、`heapMB` 使用 MiB，数值不变。
+
 ## CLI
 
 | 命令 | 说明 |

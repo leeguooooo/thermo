@@ -332,7 +332,7 @@ struct ChromePagesView: View {
         Text(text).font(.caption).foregroundStyle(color).fixedSize(horizontal: false, vertical: true)
     }
 
-    func mb(_ v: Double) -> String { String(format: "%.0f MB", v) }
+    func mb(_ v: Double) -> String { MemoryFormat.string(mebibytes: v) }
 }
 
 /// A page row: glass in the main window, a light tint in the stand-alone window.

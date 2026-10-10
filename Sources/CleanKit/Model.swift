@@ -207,6 +207,28 @@ public enum ByteFormat {
     }
 }
 
+/// Memory counters use powers of 1024; disk sizes keep ByteFormat's decimal units.
+public enum MemoryFormat {
+    public static func string(bytes: UInt64) -> String { format(Double(bytes)) }
+    public static func string(kibibytes: Int) -> String { format(Double(max(0, kibibytes)) * 1024) }
+    public static func string(mebibytes: Int) -> String { format(Double(max(0, mebibytes)) * 1_048_576) }
+
+    public static func string(mebibytes: Double) -> String {
+        guard mebibytes.isFinite else { return "—" }
+        return format(mebibytes * 1_048_576)
+    }
+
+    private static func format(_ bytes: Double) -> String {
+        guard bytes.isFinite else { return "—" }
+        let units = ["B", "KiB", "MiB", "GiB", "TiB"]
+        let sign = bytes < 0 ? "-" : ""
+        var value = abs(bytes)
+        var index = 0
+        while value >= 1024 && index < units.count - 1 { value /= 1024; index += 1 }
+        return sign + String(format: index == 0 || value >= 100 ? "%.0f %@" : "%.1f %@", value, units[index])
+    }
+}
+
 public enum AgeFormat {
     /// "5m ago", "3d ago", "2mo ago" (localized).
     public static func string(_ date: Date?, now: Date = Date()) -> String {

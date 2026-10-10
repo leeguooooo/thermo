@@ -360,6 +360,6 @@ struct PulseCard: View {
     }
 
     func memoryText(_ kb: Int) -> String {
-        kb >= 1_000_000 ? String(format: "%.1f GB", Double(kb) / 1_048_576) : "\(kb / 1024) MB"
+        MemoryFormat.string(kibibytes: kb)
     }
 }

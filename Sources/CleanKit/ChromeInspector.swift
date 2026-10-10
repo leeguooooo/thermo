@@ -58,6 +58,7 @@ public enum ChromeInspector {
 
     public struct Growth: Codable, Sendable, Equatable {
         public var seconds: Double
+        /// MiB; the legacy field name is kept for JSON compatibility.
         public var heapMB: Double
         public var nodes: Int
         public var listeners: Int
@@ -223,7 +224,7 @@ public enum ChromeInspector {
                       String(g.listeners), secs)
         case .heap:
             return tr("Its memory grew %1$@ in %2$@ s. If it keeps growing, reload or close it.",
-                      String(format: "%.1f MB", g.heapMB), secs)
+                      MemoryFormat.string(mebibytes: g.heapMB), secs)
         case .nodes:
             return tr("It keeps adding page elements (%1$@ in %2$@ s), like an endless feed. Reload it now and then.",
                       String(g.nodes), secs)
@@ -616,7 +617,7 @@ public enum ChromeInspector {
         }
         if r.hidden > 0 {
             parts.append(tr("%1$@ pages in no window (likely automation tools), %2$@ of JavaScript.",
-                            String(r.hidden), String(format: "%.0f MB", r.hiddenHeapMB)))
+                            String(r.hidden), MemoryFormat.string(mebibytes: r.hiddenHeapMB)))
         }
         return parts.isEmpty ? nil : parts.joined(separator: " ")
     }

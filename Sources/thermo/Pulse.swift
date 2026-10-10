@@ -71,7 +71,7 @@ struct PulseCommand {
             for h in pulse.hogs {
                 let cpu = String(format: "%5.0f%%", h.cpu)
                 lines.append("  " + (h.cpu >= 100 ? style.red(cpu) : h.cpu >= 50 ? style.yellow(cpu) : cpu)
-                             + "  " + pad(h.memoryKB >= 1_048_576 ? String(format: "%.1f GB", Double(h.memoryKB) / 1_048_576) : "\(h.memoryKB / 1024) MB", 8, right: true)
+                             + "  " + pad(Self.size(h.memoryKB), 8, right: true)
                              + "  " + h.name + style.dim(h.pids.count > 1 ? "  " + tr("(%1$@ processes)", String(h.pids.count)) : "  pid \(h.pids[0])")
                              + style.dim([h.project, h.owner.map { tr("started by %1$@", $0) },
                                           h.uptime.map { tr("running %1$@", Self.duration($0)) }].compactMap { $0 }.map { "  · " + $0 }.joined()))
@@ -240,7 +240,7 @@ struct PulseCommand {
     }
 
     static func size(_ kb: Int) -> String {
-        kb >= 1_048_576 ? String(format: "%.1f GB", Double(kb) / 1_048_576) : "\(kb / 1024) MB"
+        MemoryFormat.string(kibibytes: kb)
     }
 
     static func duration(_ s: TimeInterval) -> String {
@@ -257,7 +257,7 @@ struct PulseCommand {
         }
         let plan = h.app.map { "quit \($0)  (like ⌘Q; it may ask to save)" }
             ?? "kill -TERM " + h.pids.map(String.init).joined(separator: " ")
-        print(style.bold("About to stop \(h.name)") + style.dim(String(format: "  %.0f%% CPU · %d MB", h.cpu, h.memoryKB / 1024)))
+        print(style.bold("About to stop \(h.name)") + style.dim(String(format: "  %.0f%% CPU · %@", h.cpu, Self.size(h.memoryKB))))
         print("  " + plan)
         guard try confirm() else { return }
         if let path = h.app {
