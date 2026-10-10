@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.6
+
+- "Why is my Mac slow" says why in plain words: how much memory has been moved to the disk and that programs are waiting on it, and which program is behind it.
+- Big apps are broken down: Chrome and other multi-process apps show their GPU process and heaviest pages, with how long each has run.
+- Long-running apps that hold gigabytes get a concrete suggestion ("Chrome has run 31 hours and opened about 2,000 pages; restarting frees about 19 GB") and a Restart button. Thermo checks whether the app reopens its own windows; when Chrome does not, Thermo saves the tabs first and reopens them after the restart.
+- Chrome page diagnosis (Overview → "查看页面", or `thermo pulse chrome`): which pages keep growing (memory, DOM nodes, or event listeners piling up), the biggest pages, duplicate tabs, and busy background workers, with a button to close a page. It lists tabs without touching them; measuring memory is a separate click, because Chrome briefly shows its "being debugged" bar while it measures. Needs chrome-use for the memory figures.
+- Slowdown history: Thermo notes every minute (every five on battery) what was slowing the Mac, kept for 24 hours — a chart on the Overview and `thermo pulse history`. Cost: about 0.02% of one core.
+- Slowdown alerts (Settings → "Warn me before my Mac slows down", on by default): swap growing past 8 GB, memory under pressure, one program using over 1.5 cores for 10 minutes, or thermal throttling — with who is behind it and what to do. Nothing is ever quit automatically.
+
 ## 1.1.5
 
 - Your fan setting survives updates and restarts: the helper remembers it and puts it back when it starts (over-temperature protection still applies). Before, an update or reboot quietly returned the fans to automatic.
