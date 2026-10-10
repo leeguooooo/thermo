@@ -137,7 +137,7 @@ extension ConfigChecks {
             let printed = env.run("/bin/launchctl", ["print", "gui/\(env.uid)/\(job.label)"])
             let st = printed.map(Launchd.state)
             let stateText = printed == nil ? tr("not loaded")
-                : [st?.state, st?.runs.map { tr("%1$@ runs", String($0)) },
+                : [st?.state.map(Self.stateName), st?.runs.map { tr("%1$@ runs", String($0)) },
                    st?.lastExit.flatMap { $0.hasPrefix("(never") ? nil : tr("last exit %1$@", $0) }].compactMap { $0 }.joined(separator: " · ")
             item(.launchd, agent: "system", id: job.label, name: job.label, detail: stateText, source: plist)
             defer { currentItem = nil }
@@ -216,6 +216,17 @@ extension ConfigChecks {
                 }
             }
             offer(.uninstall, tr("Remove job"), tr("Stops %1$@ and moves its plist to the Trash. The program itself is not deleted.", job.label), remove)
+        }
+    }
+
+    /// launchd's job states in words.
+    static func stateName(_ s: String) -> String {
+        switch s {
+        case "running": return tr("running")
+        case "not running": return tr("not running")
+        case "spawn scheduled": return tr("waiting to restart")
+        case "waiting": return tr("waiting")
+        default: return s
         }
     }
 
