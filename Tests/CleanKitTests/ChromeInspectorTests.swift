@@ -10,6 +10,14 @@ final class ChromeInspectorTests: XCTestCase {
     override func setUp() { L10n.override = .english }
     override func tearDown() { L10n.override = nil }
 
+    @MainActor func testCancelledDiagnosisDoesNotFallBackToBrowserScripts() async {
+        let task = Task { await ChromeInspector.diagnose(app: "Fixture Browser", measure: false, watch: nil) }
+        task.cancel()
+        let diagnosis = await task.value
+        XCTAssertEqual(diagnosis.mode, .unavailable)
+        XCTAssertEqual(diagnosis.hint, "Check stopped. You can start again when ready.")
+    }
+
     func testSaysItInChinese() {
         L10n.override = .simplifiedChinese
         let (a, b) = samples()

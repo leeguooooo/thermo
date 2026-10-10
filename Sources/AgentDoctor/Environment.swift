@@ -1,3 +1,4 @@
+import AgentCore
 import Foundation
 import ThermoL10n
 
@@ -50,32 +51,15 @@ public struct DoctorEnvironment {
     }
 
     public static func runTool(_ executable: String, _ args: [String]) -> String? {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: executable)
-        p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = FileHandle.nullDevice
-        do { try p.run() } catch { return nil }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        p.waitUntilExit()
-        guard p.terminationStatus == 0 else { return nil }
-        return String(decoding: data, as: UTF8.self)
+        let result = CommandRunner.run(executable, arguments: args, timeout: 15, captureError: false)
+        guard result.status == 0, !result.timedOut, !result.truncated else { return nil }
+        return result.output
     }
 
     public static func executeTool(_ executable: String, _ args: [String], _ cwd: String?) -> (status: Int32, output: String) {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: executable)
-        p.arguments = args
-        if let cwd { p.currentDirectoryURL = URL(fileURLWithPath: cwd) }
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        p.standardInput = FileHandle.nullDevice
-        do { try p.run() } catch { return (-1, "\(error)") }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        p.waitUntilExit()
-        return (p.terminationStatus, String(decoding: data, as: UTF8.self))
+        let result = CommandRunner.run(executable, arguments: args, directory: cwd, timeout: 120)
+        if result.timedOut { return (-1, result.output + "\ntimed out") }
+        return (result.status, result.output)
     }
 
     public static func procPath(_ pid: Int32) -> String? {

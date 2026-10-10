@@ -501,17 +501,10 @@ public enum ChromeInspector {
     }
 
     static func osascript(_ script: String) -> String? {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        p.arguments = ["-l", "JavaScript", "-e", script]
-        let out = Pipe()
-        p.standardOutput = out
-        p.standardError = Pipe()
-        guard (try? p.run()) != nil else { return nil }
-        let data = out.fileHandleForReading.readDataToEndOfFile()
-        p.waitUntilExit()
-        guard p.terminationStatus == 0 else { return nil }
-        return String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        let result = CommandRunner.run("/usr/bin/osascript", arguments: ["-l", "JavaScript", "-e", script],
+                                       timeout: 15, captureError: false, cancelled: { Task.isCancelled })
+        guard result.status == 0, !result.timedOut, !result.cancelled, !result.truncated else { return nil }
+        return result.output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // MARK: - One diagnosis, for the CLI and the app
@@ -558,6 +551,8 @@ public enum ChromeInspector {
                                 home: String = NSHomeDirectory(),
                                 progress: @escaping @Sendable (Phase) -> Void = { _ in }) async -> Diagnosis {
         var hint: String?
+        func stopped() -> Diagnosis { Diagnosis(app: app, mode: .unavailable, duplicates: [], hint: tr("Check stopped. You can start again when ready.")) }
+        if Task.isCancelled { return stopped() }
         if !measure {
             if endpoint(app: app, home: home) == nil {
                 hint = app == "Google Chrome"
@@ -579,6 +574,7 @@ public enum ChromeInspector {
                         left -= 1
                         if Task.isCancelled { break }
                     }
+                    if Task.isCancelled { return stopped() }
                     let second = try await sample(url) { d, t in progress(.measuring(round: 2, done: d, total: t)) }
                     report = diagnose(second, before: first)
                 }
@@ -593,6 +589,7 @@ public enum ChromeInspector {
         } else {
             hint = tr("To see memory per page, start %1$@ with --remote-debugging-port=9222.", app)
         }
+        if Task.isCancelled { return stopped() }
         progress(.listingTabs)
         guard let tabs = tabs(app: app) else {
             return Diagnosis(app: app, mode: .unavailable, report: nil, tabs: nil, duplicates: [], hiddenText: nil, gap: nil,
