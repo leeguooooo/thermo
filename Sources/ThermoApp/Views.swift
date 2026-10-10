@@ -61,6 +61,14 @@ struct PopoverView: View {
     var content: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
+            if monitor.iconHidden {
+                // The menu bar icon is behind the notch; say how to get it back.
+                Label(tr("The menu bar icon is hidden behind the notch. Hold ⌘ and drag other icons out of the menu bar to make room, or open Thermo from the Dock."),
+                      systemImage: "eye.slash")
+                    .font(.caption).foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .onTapGesture { monitor.iconHidden = false }
+            }
             if renderingPreview {
                 // ImageRenderer cannot draw the AppKit segmented control; draw a look-alike.
                 HStack(spacing: 2) {
@@ -130,6 +138,7 @@ struct OverviewView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            PulseCard()
             if let s = monitor.snapshot {
                 VStack(spacing: 6) {
                     ForEach(SensorGroup.allCases, id: \.self) { g in
@@ -449,6 +458,7 @@ struct FanChart: View {
 
 struct SettingsView: View {
     @ObservedObject var monitor: Monitor
+    @AppStorage(Settings.showInDock) private var showInDock = true
     @ObservedObject var updates: Updates
     @AppStorage(Settings.titleMetric) private var titleMetric = TitleMetric.cpu.rawValue
     @AppStorage(Settings.interval) private var interval = 2.0
@@ -479,6 +489,7 @@ struct SettingsView: View {
                     Text(tr("Threshold: %1$@ °C", String(Int(alertThreshold))))
                 }
             }
+            Toggle(tr("Show in Dock"), isOn: $showInDock)
             Toggle(tr("Launch at login"), isOn: Binding(get: { monitor.launchAtLogin }, set: { monitor.launchAtLogin = $0 }))
             HStack {
                 Text(tr("Fan helper: %1$@", helperText)).foregroundStyle(.secondary)

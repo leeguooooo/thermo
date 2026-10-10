@@ -38,9 +38,12 @@ enum Settings {
     static let alertsEnabled = "alertsEnabled"
     static let alertThreshold = "alertThreshold"
     static let fahrenheit = "fahrenheit"
+    /// Show the Dock icon (on by default: a menu bar icon alone is easy to lose, e.g. behind the notch).
+    static let showInDock = "showInDock"
 
     static func register() {
         UserDefaults.standard.register(defaults: [
+            showInDock: true,
             interval: 2.0, titleMetric: TitleMetric.cpu.rawValue,
             alertsEnabled: false, alertThreshold: 90.0, fahrenheit: false,
         ])
@@ -55,6 +58,8 @@ final class Monitor: ObservableObject {
     @Published private(set) var policies: [Int: FanPolicy] = [:]
     @Published var lastError: String?
     @Published private(set) var model = ""
+    /// The menu bar icon is hidden (behind the notch or pushed off by other icons).
+    @Published var iconHidden = false
 
     /// Called on the main thread after each sample (menu bar title).
     var onUpdate: ((Snapshot) -> Void)?
@@ -152,6 +157,8 @@ final class Monitor: ObservableObject {
 
     private func checkAlert(_ s: Snapshot) {
         let d = UserDefaults.standard
+        // UserNotifications throws (and kills the app) outside an app bundle, e.g. a bare dev build.
+        guard Bundle.main.bundleIdentifier != nil else { return }
         guard d.bool(forKey: Settings.alertsEnabled), let hot = s.hottest,
               hot >= d.double(forKey: Settings.alertThreshold),
               Date().timeIntervalSince(lastAlert) > 300 else { return }
@@ -164,6 +171,7 @@ final class Monitor: ObservableObject {
     }
 
     static func requestNotificationPermission() {
+        guard Bundle.main.bundleIdentifier != nil else { return }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 

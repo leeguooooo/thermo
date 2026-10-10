@@ -31,12 +31,96 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.delegate = self
         popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor, updates: updates, disk: disk))
 
+        applyDockPreference()
+        installMainMenu()
+        // macOS hides status items that do not fit next to the notch, without telling anyone.
+        // Check once the item has been laid out; if nobody can see it, open the panel ourselves.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            guard let self, self.statusItemHidden() else { return }
+            self.monitor.iconHidden = true
+            self.showPanel()
+        }
+
         monitor.onUpdate = { [weak self] s in self?.updateTitle(s) }
         // `open Thermo.app --args --install-helper`: start helper registration right away (setup/QA).
         if CommandLine.arguments.contains("--install-helper") { monitor.installHelper() }
         NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
             if let s = self?.monitor.latest { self?.updateTitle(s) }
+            self?.applyDockPreference()
         }
+    }
+
+    /// Clicking the Dock icon (or opening Thermo.app again) shows the panel.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showPanel()
+        return false
+    }
+
+    private func applyDockPreference() {
+        let policy: NSApplication.ActivationPolicy = UserDefaults.standard.bool(forKey: Settings.showInDock) ? .regular : .accessory
+        if NSApp.activationPolicy() != policy { NSApp.setActivationPolicy(policy) }
+    }
+
+    /// With a Dock icon the app also has a menu bar; keep it to the essentials.
+    private func installMainMenu() {
+        let main = NSMenu()
+        let appItem = NSMenuItem()
+        main.addItem(appItem)
+        let appMenu = NSMenu()
+        appMenu.addItem(withTitle: tr("Open Thermo"), action: #selector(openFromMenu), keyEquivalent: "o").target = self
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: tr("Hide Thermo"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: tr("Quit Thermo"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appItem.submenu = appMenu
+        NSApp.mainMenu = main
+    }
+
+    @objc private func openFromMenu() { showPanel() }
+
+    /// True when the status item sits in the notch gap or off every screen.
+    private func statusItemHidden() -> Bool {
+        guard let window = statusItem.button?.window else { return true }
+        let f = window.frame
+        guard let screen = NSScreen.screens.first(where: { $0.frame.intersects(f) }) else { return true }
+        if f.maxX <= screen.frame.minX || f.minX >= screen.frame.maxX || !window.isVisible { return true }
+        if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea {
+            // The notch is the gap between the two usable top areas.
+            let notch = (screen.frame.minX + left.maxX)...(screen.frame.minX + right.minX)
+            if notch.contains(f.midX) { return true }
+        }
+        return false
+    }
+
+    /// Shows the panel under the menu bar icon, or under the top centre of the screen when the
+    /// icon cannot be seen.
+    private func showPanel() {
+        NSApp.activate(ignoringOtherApps: true)
+        guard !popover.isShown else { return }
+        monitor.popoverOpen = true
+        if let button = statusItem.button, !statusItemHidden() {
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        } else {
+            let anchor = panelAnchor()
+            popover.show(relativeTo: anchor.contentView!.bounds, of: anchor.contentView!, preferredEdge: .minY)
+        }
+        popover.contentViewController?.view.window?.makeKey()
+    }
+
+    private var anchorWindow: NSWindow?
+
+    /// An invisible 1×1 window just below the menu bar, centred, for the popover to hang from.
+    private func panelAnchor() -> NSWindow {
+        let screen = NSScreen.main ?? NSScreen.screens[0]
+        let top = screen.visibleFrame.maxY
+        let w = anchorWindow ?? NSWindow(contentRect: .zero, styleMask: .borderless, backing: .buffered, defer: false)
+        w.setFrame(NSRect(x: screen.frame.midX, y: top - 1, width: 1, height: 1), display: false)
+        w.isOpaque = false
+        w.backgroundColor = .clear
+        w.level = .statusBar
+        w.ignoresMouseEvents = true
+        w.orderFrontRegardless()
+        anchorWindow = w
+        return w
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -44,13 +128,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     @objc private func toggle() {
-        if popover.isShown {
-            popover.performClose(nil)
-        } else if let button = statusItem.button {
-            monitor.popoverOpen = true
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
-        }
+        if popover.isShown { popover.performClose(nil) } else { showPanel() }
     }
 
     func popoverDidClose(_ notification: Notification) { monitor.popoverOpen = false }
@@ -97,6 +175,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     let updates = Updates()
     let disk = DiskModel()
     disk.scan()
+    // ImageRenderer never fires onAppear; start the "why is it slow" sampler up front.
+    SystemPulse.shared.start()
     monitor.popoverOpen = true
     let agents = AgentScanner()
     let started = Date()

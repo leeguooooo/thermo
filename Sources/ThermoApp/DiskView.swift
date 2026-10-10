@@ -105,7 +105,7 @@ final class DiskModel: ObservableObject {
     /// Tell the user a scan finished, unless they are looking at it.
     private func notifyFinished(_ r: ScanReport) {
         let watching = NSApp.isActive && (NSApp.keyWindow?.isVisible ?? false)
-        guard !watching, r.duration > 3 else { return }
+        guard !watching, r.duration > 3, Bundle.main.bundleIdentifier != nil else { return }
         let content = UNMutableNotificationContent()
         content.title = tr("Disk scan finished")
         content.body = r.items.isEmpty ? tr("Nothing to clean.")
