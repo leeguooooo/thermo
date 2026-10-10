@@ -521,7 +521,7 @@ let zhHans: [String: String] = [
     "Hide Thermo": "隐藏 Thermo",
     "The menu bar icon is hidden behind the notch. Hold ⌘ and drag other icons out of the menu bar to make room, or open Thermo from the Dock.": "菜单栏图标被刘海挡住了。按住 ⌘ 把其他图标拖出菜单栏腾出位置，或者从程序坞打开 Thermo。",
     "Show in Dock": "在程序坞中显示",
-    "Memory is tight, so macOS keeps swapping to disk; %1$@ uses the most (%2$@)": "内存紧张，系统在频繁换页；占内存最多的是 %1$@（%2$@）",
+    "Memory is tight: %1$@ of swap in use, so programs wait on the disk; %2$@ uses the most memory (%3$@)": "内存紧张：已用 %1$@ 交换空间，程序都在等磁盘；占内存最多的是 %2$@（%3$@）",
     "No single program stands out; many are waiting on the disk": "没有哪个程序特别突出，很多程序在等磁盘",
     "Helper update: %1$@": "更新 helper：%1$@",
 ]

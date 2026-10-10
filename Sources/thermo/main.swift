@@ -33,6 +33,8 @@ COMMANDS
   agents list [AREA]         everything checked, each marked OK or not; AREA is
                              hooks, mcp, plugins, skills, statusline, launchd
                              or processes
+  pulse                      why is this Mac slow: verdict, busiest programs, load,
+                             memory, thermal state, temperatures, fans (--json for agents)
   clean [CATEGORY|ai]        what can be cleaned: AI sessions/models/caches, dev caches,
                              Xcode, project build output, browsers (read-only)
   clean run safe|ID…         remove items (safe: delete; review: to Trash); asks first
@@ -102,6 +104,7 @@ struct App {
         case "bench": try benchCommand()
         case "agents", "agent", "doctor": try AgentsCommand(app: self).run(rest)
         case "clean": try CleanCommand(app: self).run(rest)
+        case "pulse", "status": try PulseCommand(app: self).run()
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
         }
     }

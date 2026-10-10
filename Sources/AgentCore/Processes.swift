@@ -18,14 +18,16 @@ public struct AgentProcess: Equatable, Sendable {
     /// Decayed CPU average like `ps -o pcpu` (sum over threads; 100 = one core).
     public var cpu: Double
     public var rssKB: Int
+    /// Memory as Activity Monitor counts it (phys_footprint: includes compressed and swapped pages).
+    public var footprintKB: Int = 0
     public var elapsed: TimeInterval
 
     public init(pid: pid_t, ppid: pid_t = 1, uid: uid_t = getuid(), name: String, executable: String? = nil,
                 executableFromArgv: Bool = false, argv: [String] = [], cwd: String? = nil, cpu: Double = 0,
-                rssKB: Int = 0, elapsed: TimeInterval = 0) {
+                rssKB: Int = 0, footprintKB: Int = 0, elapsed: TimeInterval = 0) {
         self.pid = pid; self.ppid = ppid; self.uid = uid; self.name = name; self.executable = executable
         self.executableFromArgv = executableFromArgv; self.argv = argv; self.cwd = cwd; self.cpu = cpu
-        self.rssKB = rssKB; self.elapsed = elapsed
+        self.rssKB = rssKB; self.footprintKB = footprintKB; self.elapsed = elapsed
     }
 
     /// The command line joined with spaces, as `ps -o args` prints it.
@@ -71,7 +73,7 @@ public struct ProcessTable: Sendable {
             out.append(AgentProcess(pid: pid, ppid: k.kp_eproc.e_ppid, uid: k.kp_eproc.e_ucred.cr_uid, name: name,
                                     executable: exe, executableFromArgv: fromArgv, argv: argv, cwd: cwd(pid),
                                     cpu: options.cpu ? cpuUsage(pid) : 0, rssKB: residentKB(pid),
-                                    elapsed: started > 0 ? max(0, now - started) : 0))
+                                    footprintKB: footprintKB(pid), elapsed: started > 0 ? max(0, now - started) : 0))
         }
         return ProcessTable(entries: out)
     }
@@ -94,6 +96,14 @@ public struct ProcessTable: Sendable {
         var info = proc_taskinfo()
         guard proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &info, Int32(MemoryLayout<proc_taskinfo>.size)) > 0 else { return 0 }
         return Int(info.pti_resident_size / 1024)
+    }
+
+    static func footprintKB(_ pid: pid_t) -> Int {
+        var info = rusage_info_v2()
+        let ok = withUnsafeMutablePointer(to: &info) { p in
+            p.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) { proc_pid_rusage(pid, RUSAGE_INFO_V2, $0) }
+        }
+        return ok == 0 ? Int(info.ri_phys_footprint / 1024) : 0
     }
 
     /// Sum of the scheduler's decayed per-thread usage, the figure `ps` shows as %CPU.

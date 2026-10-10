@@ -325,6 +325,37 @@ final class CleanKitTests: XCTestCase {
         XCTAssertTrue(r.select(["\(item.id)#nope"]).isEmpty)
     }
 
+    func testPulseGroupsAppsAndProtectsAgents() {
+        let procs = [
+            AgentProcess(pid: 10, name: "Google Chrome", executable: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                         cpu: 40, footprintKB: 2_000_000),
+            AgentProcess(pid: 11, name: "Google Chrome He", executable: "/Applications/Google Chrome.app/Contents/Frameworks/x.app/Contents/MacOS/Helper",
+                         cpu: 30, footprintKB: 1_000_000),
+            AgentProcess(pid: 12, name: "ffmpeg", executable: "/opt/homebrew/bin/ffmpeg", argv: ["ffmpeg", "-i", "a"], cpu: 160),
+            AgentProcess(pid: 13, name: "2.1.296", executable: "/Users/x/.local/share/claude/versions/2.1.296", argv: ["claude"], cpu: 20),
+            AgentProcess(pid: 14, name: "idle", executable: "/usr/bin/idle", cpu: 0.1),
+        ]
+        let hogs = MachinePulse.group(procs, me: 99)
+        XCTAssertEqual(hogs.map(\.name), ["ffmpeg", "Google Chrome", "claude"])
+        XCTAssertEqual(hogs[1].pids.sorted(), [10, 11], "helpers fold into the app")
+        XCTAssertEqual(hogs[1].memoryKB, 3_000_000)
+        XCTAssertEqual(hogs[1].app, "/Applications/Google Chrome.app")
+        XCTAssertTrue(hogs[0].quittable)
+        XCTAssertFalse(hogs[2].quittable, "agent sessions are never offered")
+    }
+
+    func testPulseNamesACulpritOnlyWhenItExplainsTheLoad() {
+        let hog = MachinePulse.Hog(id: "a", name: "ffmpeg", cpu: 160, memoryKB: 100_000, pids: [1], app: nil, quittable: true)
+        var p = MachinePulse(load1: 3, load5: 3, cores: 8, thermal: .nominal, memory: .normal, swapUsedMB: 0, hogs: [hog], sampled: now)
+        XCTAssertEqual(p.verdict, .ok)
+        XCTAssertEqual(p.culpritText, "Mostly ffmpeg, using 1.6 cores")
+        p.load1 = 107; p.memory = .warning; p.swapUsedMB = 22 * 1024
+        XCTAssertEqual(p.verdict, .overloaded)
+        XCTAssertTrue(p.culpritText?.hasPrefix("Memory is tight: 22.0 GB of swap") ?? false, p.culpritText ?? "")
+        p.thermal = .serious
+        XCTAssertEqual(p.verdict, .hot, "throttling outranks load")
+    }
+
     func testCleanerRemovesOnlyListedPaths() throws {
         let a = try write("Library/Caches/tool/a")
         let keep = try write("Library/Caches/tool/keep")
