@@ -13,12 +13,13 @@ enum Projects {
     static let kinds: [Kind] = [
         Kind(name: "Node", markers: ["package.json"],
              artifacts: ["node_modules", ".next", ".nuxt", ".turbo", ".parcel-cache", ".svelte-kit", ".angular", ".expo",
-                         ".vercel/output", ".output", ".wrangler"]),
+                         ".vercel/output", ".output", ".wrangler", "dist", "build", "out", "coverage", "storybook-static",
+                         ".docusaurus", ".vite", ".cache"]),
         Kind(name: "Rust", markers: ["Cargo.toml"], artifacts: ["target"]),
         Kind(name: "Swift", markers: ["Package.swift"], artifacts: [".build", ".swiftpm"]),
         Kind(name: "CocoaPods", markers: ["Podfile"], artifacts: ["Pods"]),
         Kind(name: "Python", markers: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile", "uv.lock"],
-             artifacts: [".venv", "venv", ".tox", ".nox", ".mypy_cache", ".pytest_cache", ".ruff_cache", "__pycache__"]),
+             artifacts: [".venv", "venv", ".tox", ".nox", ".mypy_cache", ".pytest_cache", ".ruff_cache", "__pycache__", "dist", "build"]),
         Kind(name: "Gradle", markers: ["build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts"],
              artifacts: ["build", ".gradle"]),
         Kind(name: "Maven", markers: ["pom.xml", "build.sbt"], artifacts: ["target"]),
@@ -39,6 +40,10 @@ enum Projects {
                                     "fixtures", "testdata", "third_party", "external"]
 
     static let maxDepth = 6
+
+    /// Output folders whose names projects also use for real files (some commit `dist`): skipped
+    /// when git tracks them, and only ever offered for review.
+    static let generic = ["dist", "build", "out", "coverage"]
 
     /// Something found by the walk; sized afterwards in parallel.
     enum Candidate {
@@ -92,7 +97,10 @@ enum Projects {
             return CleanItem(
                 id: "project/" + id(p, ctx: ctx), category: .projects,
                 title: "\((dir as NSString).lastPathComponent) · \(a)",
-                detail: FS.tilde(dir, home: ctx.home) + " · \(kind)", safety: stale ? .safe : .review,
+                detail: FS.tilde(dir, home: ctx.home) + " · \(kind)",
+                // Generic output folders can hold things worth keeping (a rendered video in `out`, a
+                // release binary in `dist`): never in the one-click safe set, always to the Trash.
+                safety: stale && !generic.contains(a) ? .safe : .review,
                 bytes: s.bytes, files: s.files, lastUsed: activity, paths: [p], note: note, group: dir)
         case let .worktree(wt, repo):
             return worktreeItem(wt, repo: repo, repoName: (repo as NSString).lastPathComponent, ctx: ctx)
@@ -128,7 +136,7 @@ enum Projects {
                     let p = dir + "/" + a
                     guard FS.isDirectory(p) else { continue }
                     // `build`/`bin`/`obj` are only build output when they are not tracked source folders.
-                    if ["build", "bin", "obj", "Library", "deps"].contains(a), gitTracks(dir, a) { continue }
+                    if (["bin", "obj", "Library", "deps"] + Self.generic).contains(a), gitTracks(dir, a) { continue }
                     claimed.insert(a)
                     out.append(.artifact(project: dir, kind: k.name, name: a, activity: activity, source: source))
                 }

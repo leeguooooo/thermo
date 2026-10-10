@@ -20,7 +20,8 @@ final class DiskModel: ObservableObject {
     @Published var selected: Set<String> = []
     /// Item id → parts (sessions) the user unticked inside a selected item.
     @Published var excluded: [String: Set<String>] = [:]
-    @Published var scope: Scope = .ai {
+    /// Everything by default: build output in every project is often the biggest win.
+    @Published var scope: Scope = .all {
         didSet { if scope != oldValue, report != nil { stale = true } }
     }
     /// The scope changed since the results were found; scan again to refresh.
