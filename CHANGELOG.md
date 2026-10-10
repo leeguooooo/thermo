@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Native View menu lists the main pages and their keyboard shortcuts. Language changes relabel the native menus without adding duplicates; page menu actions wait until a confirmation sheet is closed.
+
 - Disk Cleanup cache rejects cancelled reports, duplicate IDs, negative sizes and overflowing totals. Invalid saves do not replace the last valid cache.
 - Disk scans retain their starting language; changing the UI language preserves results and selections with a rescan notice instead of automatically repeating a long scan.
 

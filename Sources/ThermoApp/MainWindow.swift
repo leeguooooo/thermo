@@ -147,6 +147,11 @@ enum MainWindow {
         var body: some View {
             MainView(page: $state.page, monitor: models.monitor, disk: models.disk, agents: models.agents, models: models)
                 .id(language)
+                .onAppear { installStandardMenus() }
+                .onChange(of: language) { preference in
+                    L10n.apply(preference: preference)
+                    installStandardMenus()
+                }
         }
     }
 }

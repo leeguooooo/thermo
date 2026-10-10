@@ -111,7 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         installStandardMenus()
     }
 
-    @objc private func openFromMenu() { MainWindow.show() }
+    @objc fileprivate func openFromMenu() { MainWindow.show() }
 
     /// True when the status item sits in the notch gap or off every screen.
     private func statusItemHidden() -> Bool {
@@ -223,11 +223,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 }
 
+@MainActor
+private final class PageMenuTarget: NSObject, NSMenuItemValidation {
+    static let shared = PageMenuTarget()
+    @objc func open(_ item: NSMenuItem) {
+        guard MainWindow.window?.attachedSheet == nil, let page = item.representedObject as? MainPage else { return }
+        MainWindow.show(page)
+    }
+    func validateMenuItem(_ item: NSMenuItem) -> Bool { MainWindow.window?.attachedSheet == nil }
+}
+
 /// AppKit routes text editing shortcuts through the menu even for SwiftUI text fields.
 @MainActor func installStandardMenus() {
     let main = NSApp.mainMenu ?? NSMenu()
     NSApp.mainMenu = main
-    guard !main.items.contains(where: { $0.identifier?.rawValue == "thermo.edit" }) else { return }
+    for item in main.items where ["thermo.edit", "thermo.view", "thermo.window"].contains(item.identifier?.rawValue ?? "") {
+        main.removeItem(item)
+    }
+    // The app menu belongs to the delegate; preserve its targets while relabeling it.
+    for item in main.items.first?.submenu?.items ?? [] {
+        if item.action == #selector(AppDelegate.openFromMenu) { item.title = tr("Open Console") }
+        if item.action == #selector(NSApplication.hide(_:)) { item.title = tr("Hide Thermo") }
+        if item.action == #selector(NSApplication.terminate(_:)) { item.title = tr("Quit Thermo") }
+    }
     if main.items.isEmpty { main.addItem(NSMenuItem()) }
     let item = NSMenuItem(title: tr("Edit"), action: nil, keyEquivalent: "")
     item.identifier = NSUserInterfaceItemIdentifier("thermo.edit")
@@ -242,7 +260,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     menu.addItem(withTitle: tr("Select All"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
     item.submenu = menu
     main.addItem(item)
+    let viewItem = NSMenuItem(title: tr("View"), action: nil, keyEquivalent: "")
+    viewItem.identifier = NSUserInterfaceItemIdentifier("thermo.view")
+    let viewMenu = NSMenu(title: tr("View"))
+    let pages: [(String, String, MainPage)] = [
+        (tr("Overview"), "1", .overview), (tr("Sensors"), "2", .sensors), (tr("Fans"), "3", .fans),
+        (tr("Browser pages"), "4", .browser("Google Chrome")), (tr("Disk Cleanup"), "5", .disk(.home)),
+        (tr("AI Agent Diagnostics"), "6", .agents(.home)), (tr("Settings"), ",", .settings),
+    ]
+    for (title, key, page) in pages {
+        let item = viewMenu.addItem(withTitle: title, action: #selector(PageMenuTarget.open(_:)), keyEquivalent: key)
+        item.target = PageMenuTarget.shared
+        item.representedObject = page
+    }
+    viewItem.submenu = viewMenu
+    main.addItem(viewItem)
     let windowItem = NSMenuItem(title: tr("Window"), action: nil, keyEquivalent: "")
+    windowItem.identifier = NSUserInterfaceItemIdentifier("thermo.window")
     let windowMenu = NSMenu(title: tr("Window"))
     windowMenu.addItem(withTitle: tr("Close Window"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
     windowMenu.addItem(withTitle: tr("Minimize"), action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")

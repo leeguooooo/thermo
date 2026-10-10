@@ -22,6 +22,30 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(items.first { $0.keyEquivalent == "w" }?.action, #selector(NSWindow.performClose(_:)))
     }
 
+    @MainActor func testNativeNavigationMenusRelocalizeWithoutDuplicates() {
+        _ = NSApplication.shared
+        let previous = NSApp.mainMenu
+        let previousWindows = NSApp.windowsMenu
+        defer { NSApp.mainMenu = previous; NSApp.windowsMenu = previousWindows; L10n.override = nil }
+        NSApp.mainMenu = NSMenu()
+        L10n.override = .english
+        installStandardMenus()
+        let view = NSApp.mainMenu?.items.first { $0.identifier?.rawValue == "thermo.view" }
+        XCTAssertEqual(view?.title, "View")
+        let items = view?.submenu?.items ?? []
+        XCTAssertEqual(items.map(\.keyEquivalent), ["1", "2", "3", "4", "5", "6", ","])
+        XCTAssertEqual(items.first?.representedObject as? MainPage, .overview)
+        XCTAssertEqual(items.last?.representedObject as? MainPage, .settings)
+        L10n.override = .simplifiedChinese
+        installStandardMenus()
+        for id in ["thermo.edit", "thermo.view", "thermo.window"] {
+            XCTAssertEqual(NSApp.mainMenu?.items.filter { $0.identifier?.rawValue == id }.count, 1)
+        }
+        let translated = NSApp.mainMenu?.items.first { $0.identifier?.rawValue == "thermo.view" }
+        XCTAssertEqual(translated?.title, "显示")
+        XCTAssertEqual(translated?.submenu?.items.first?.title, "概览")
+    }
+
     @MainActor func testDiagnosticsCannotScanDuringBatchFix() {
         let scanner = AgentScanner()
         scanner.batch = AgentScanner.Batch(total: 2)

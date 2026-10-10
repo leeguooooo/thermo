@@ -2,6 +2,7 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "View": "显示",
     "Scan again to refresh results in the selected language.": "重新扫描后，将用当前语言显示结果。",
     "Checking notification permission…": "正在检查通知权限…",
     "Notifications require an app bundle.": "通知需要在打包的 App 中使用。",
