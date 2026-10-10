@@ -43,13 +43,43 @@ enum Settings {
     /// Show the Dock icon (on by default: a menu bar icon alone is easy to lose, e.g. behind the notch).
     static let showInDock = "showInDock"
 
-    static func register() {
-        UserDefaults.standard.register(defaults: [
+    static func intervalValue(_ value: Double) -> Double {
+        [0.5, 1, 2, 5].contains(value) ? value : 2
+    }
+
+    static func thresholdValue(_ value: Double) -> Double {
+        value.isFinite && (60...105).contains(value) ? value : 90
+    }
+
+    static func thresholdText(_ value: Double, fahrenheit: Bool) -> String {
+        let celsius = thresholdValue(value)
+        let displayed = fahrenheit ? ((celsius * 9 / 5 + 32) * 10).rounded() / 10 : celsius
+        return String(format: "%g", displayed)
+    }
+
+    static func normalize(_ defaults: UserDefaults = .standard) {
+        let numbers = [(interval, intervalValue(defaults.double(forKey: interval))),
+                       (alertThreshold, thresholdValue(defaults.double(forKey: alertThreshold)))]
+        for (key, value) in numbers where (defaults.object(forKey: key) as? NSNumber)?.doubleValue != value {
+            defaults.set(value, forKey: key)
+        }
+        if TitleMetric(rawValue: defaults.string(forKey: titleMetric) ?? "") == nil {
+            defaults.set(TitleMetric.cpu.rawValue, forKey: titleMetric)
+        }
+        let language = defaults.string(forKey: L10n.defaultsKey) ?? "system"
+        if language != "system", Language(rawValue: language) == nil {
+            defaults.set("system", forKey: L10n.defaultsKey)
+        }
+    }
+
+    static func register(_ defaults: UserDefaults = .standard) {
+        defaults.register(defaults: [
             showInDock: true,
             PulseRecorder.alertsKey: true,
             interval: 2.0, titleMetric: TitleMetric.cpu.rawValue,
             alertsEnabled: false, alertThreshold: 90.0, fahrenheit: false,
         ])
+        normalize(defaults)
     }
 }
 
@@ -126,7 +156,7 @@ final class Monitor: ObservableObject {
         refreshHelper()
     }
 
-    var interval: TimeInterval { max(0.5, UserDefaults.standard.double(forKey: Settings.interval)) }
+    var interval: TimeInterval { Settings.intervalValue(UserDefaults.standard.double(forKey: Settings.interval)) }
 
     func reschedule() {
         timer?.cancel()
@@ -198,7 +228,7 @@ final class Monitor: ObservableObject {
         // UserNotifications throws (and kills the app) outside an app bundle, e.g. a bare dev build.
         guard Bundle.main.bundleIdentifier != nil else { return }
         guard d.bool(forKey: Settings.alertsEnabled), let hot = s.hottest,
-              hot >= d.double(forKey: Settings.alertThreshold),
+              hot >= Settings.thresholdValue(d.double(forKey: Settings.alertThreshold)),
               Date().timeIntervalSince(lastAlert) > 300 else { return }
         lastAlert = Date()
         let content = UNMutableNotificationContent()

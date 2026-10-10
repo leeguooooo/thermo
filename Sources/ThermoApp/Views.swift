@@ -640,7 +640,7 @@ struct SettingsView: View {
                         .onChange(of: alertsEnabled) { on in if on { Monitor.requestNotificationPermission() } }
                 }
                 if alertsEnabled {
-                    row(fahrenheit ? tr("Threshold: %1$@ °F", String(Int((alertThreshold * 9 / 5 + 32).rounded()))) : tr("Threshold: %1$@ °C", String(Int(alertThreshold))), last: true) {
+                    row(fahrenheit ? tr("Threshold: %1$@ °F", Settings.thresholdText(alertThreshold, fahrenheit: true)) : tr("Threshold: %1$@ °C", Settings.thresholdText(alertThreshold, fahrenheit: false)), last: true) {
                         Stepper("", value: $alertThreshold, in: 60...105, step: 1)
                     }
                 }

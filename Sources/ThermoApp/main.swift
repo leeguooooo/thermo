@@ -51,6 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         // `thermo settings KEY VALUE` writes the same defaults from another process.
         DistributedNotificationCenter.default().addObserver(forName: Notification.Name("dev.thermo.settingsChanged"), object: nil, queue: .main) { [weak self] _ in
             UserDefaults.standard.synchronize()
+            Settings.normalize()
             L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
             MainActor.assumeIsolated {
                 self?.monitor.reschedule()
@@ -60,6 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             NotificationCenter.default.post(name: UserDefaults.didChangeNotification, object: nil)
         }
         NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            Settings.normalize()
             MainActor.assumeIsolated {
                 if let s = self?.monitor.latest { self?.updateTitle(s) }
                 self?.applyDockPreference()
