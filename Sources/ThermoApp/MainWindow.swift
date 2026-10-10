@@ -63,13 +63,24 @@ enum MainPage: Hashable {
 enum MainWindow {
     private(set) static var window: NSWindow?
     static let state = State()
+    static let minimumContentSize = NSSize(width: 940, height: 620)
 
     final class State: ObservableObject {
         @Published var page: MainPage = .overview
     }
 
     static func usableFrame(_ frame: NSRect, screens: [NSRect]) -> Bool {
-        frame.width >= 960 && frame.height >= 640 && screens.contains { $0.intersects(frame) }
+        guard [frame.minX, frame.minY, frame.maxX, frame.maxY, frame.width, frame.height].allSatisfy(\.isFinite),
+              frame.width >= minimumContentSize.width, frame.height >= minimumContentSize.height else { return false }
+        let desktop = screens.reduce(NSRect.null) { $0.union($1) }
+        guard frame.width <= desktop.width, frame.height <= desktop.height else { return false }
+        let titlebar = NSRect(x: frame.minX, y: frame.maxY - 28, width: frame.width, height: 28)
+        return screens.contains { screen in
+            let visible = frame.intersection(screen)
+            let dragArea = titlebar.intersection(screen)
+            return visible.width >= 320 && visible.height >= 160
+                && dragArea.width >= 200 && dragArea.height >= 20
+        }
     }
 
     static var offscreen: Bool { CommandLine.arguments.contains("--offscreen") }
@@ -86,7 +97,8 @@ enum MainWindow {
             w.titleVisibility = .hidden
             // Content first, SwiftUI sets only the minimum; autosave last (it would record the shrunken size).
             let host = NSHostingController(rootView: Host(state: state, models: models)
-                .frame(minWidth: 940, maxWidth: .infinity, minHeight: 620, maxHeight: .infinity))
+                .frame(minWidth: minimumContentSize.width, maxWidth: .infinity,
+                       minHeight: minimumContentSize.height, maxHeight: .infinity))
             host.sizingOptions = [.minSize]
             w.contentViewController = host
             // Snapshot windows neither read nor write the user's saved window placement.

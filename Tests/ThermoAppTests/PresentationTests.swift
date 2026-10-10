@@ -72,6 +72,34 @@ final class PresentationTests: XCTestCase {
         XCTAssertTrue(MainWindow.usableFrame(NSRect(x: 100, y: 100, width: 1100, height: 740), screens: [screen]))
     }
 
+    @MainActor func testMinimumWindowSizeCanBeRestored() {
+        let frame = NSRect(origin: NSPoint(x: 100, y: 100), size: MainWindow.minimumContentSize)
+        XCTAssertTrue(MainWindow.usableFrame(frame, screens: [NSRect(x: 0, y: 0, width: 1920, height: 1080)]))
+    }
+
+    @MainActor func testBarelyVisibleWindowAndHiddenTitlebarAreNotUsable() {
+        let screen = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        XCTAssertFalse(MainWindow.usableFrame(NSRect(x: -1099, y: 100, width: 1100, height: 740), screens: [screen]))
+        XCTAssertFalse(MainWindow.usableFrame(NSRect(x: 100, y: 1000, width: 1100, height: 740), screens: [screen]))
+        XCTAssertFalse(MainWindow.usableFrame(NSRect(x: 100, y: 600, width: 1100, height: 740), screens: [screen]))
+        XCTAssertTrue(MainWindow.usableFrame(NSRect(x: -100, y: 100, width: 1100, height: 740), screens: [screen]))
+    }
+
+    @MainActor func testWindowCanStayOnASecondaryDisplayAndRejectsInvalidGeometry() {
+        let screens = [NSRect(x: 0, y: 0, width: 1920, height: 1080), NSRect(x: -1920, y: 0, width: 1920, height: 1080)]
+        XCTAssertTrue(MainWindow.usableFrame(NSRect(x: -1800, y: 100, width: 1100, height: 740), screens: screens))
+        XCTAssertFalse(MainWindow.usableFrame(NSRect(x: CGFloat.infinity, y: 100, width: 1100, height: 740), screens: screens))
+    }
+
+    @MainActor func testOversizedFrameRecoversAfterLargeDisplayIsRemoved() {
+        let primary = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        let second = NSRect(x: 1920, y: 0, width: 1920, height: 1080)
+        let frame = NSRect(x: 100, y: 100, width: 2400, height: 740)
+        XCTAssertTrue(MainWindow.usableFrame(frame, screens: [primary, second]))
+        XCTAssertFalse(MainWindow.usableFrame(frame, screens: [primary]))
+        XCTAssertFalse(MainWindow.usableFrame(frame, screens: []))
+    }
+
     @MainActor func testLanguageSwitchDiscardsDiskTitlesFromPreviousLanguage() {
         L10n.override = .english
         defer { L10n.override = nil }
