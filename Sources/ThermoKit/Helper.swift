@@ -127,25 +127,55 @@ public enum PolicyCoding {
 }
 
 /// Client for the privileged helper.
-public final class HelperClient {
-    private let connection: NSXPCConnection
+public final class HelperClient: @unchecked Sendable {
+    /// Made on first use and dropped when invalidated: an invalidated connection never works
+    /// again, and it is invalidated whenever the helper's launchd job is replaced (install,
+    /// reinstall, switching from Login Items to the password install).
+    private var connection: NSXPCConnection?
+    private let lock = NSLock()
 
-    public init() {
-        connection = NSXPCConnection(machServiceName: HelperConstants.machService, options: .privileged)
-        connection.remoteObjectInterface = NSXPCInterface(with: ThermoHelperProtocol.self)
-        connection.resume()
+    public init() {}
+
+    deinit { connection?.invalidate() }
+
+    private func current() -> NSXPCConnection {
+        lock.lock(); defer { lock.unlock() }
+        if let c = connection { return c }
+        let c = NSXPCConnection(machServiceName: HelperConstants.machService, options: .privileged)
+        c.remoteObjectInterface = NSXPCInterface(with: ThermoHelperProtocol.self)
+        c.invalidationHandler = { [weak self, weak c] in self?.drop(c) }
+        // Interrupted means the helper exited (update, restart); reconnect on the next call too.
+        c.interruptionHandler = { [weak self, weak c] in self?.drop(c) }
+        c.resume()
+        connection = c
+        return c
     }
 
-    deinit { connection.invalidate() }
+    private func drop(_ c: NSXPCConnection?) {
+        lock.lock(); defer { lock.unlock() }
+        if connection === c { connection = nil }
+    }
+
+    /// Forget the connection so the next call starts fresh.
+    public func reset() {
+        lock.lock(); let c = connection; connection = nil; lock.unlock()
+        c?.invalidate()
+    }
 
     private func proxy(_ onError: @escaping (Error) -> Void) -> ThermoHelperProtocol? {
-        connection.remoteObjectProxyWithErrorHandler(onError) as? ThermoHelperProtocol
+        current().remoteObjectProxyWithErrorHandler(onError) as? ThermoHelperProtocol
     }
 
     /// launchd holds messages for a registered service it will not start (e.g. a Login Items
     /// registration that was never approved), so a call could otherwise wait forever.
     private func deadline(_ seconds: TimeInterval, _ once: Once, _ fail: @escaping () -> Void) {
-        DispatchQueue.global().asyncAfter(deadline: .now() + seconds) { once.run(fail) }
+        DispatchQueue.global().asyncAfter(deadline: .now() + seconds) { [weak self] in
+            once.run {
+                // A connection stuck on a job launchd will not start stays stuck; start over next time.
+                self?.reset()
+                fail()
+            }
+        }
     }
 
     // MARK: async

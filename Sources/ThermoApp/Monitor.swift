@@ -274,6 +274,8 @@ final class Monitor: ObservableObject {
             if self.usesSMAppService, self.daemon.status != .notRegistered { try? self.daemon.unregister() }
             do {
                 try HelperInstaller.install(from: bin)
+                // The old connection pointed at the job that was just replaced.
+                self.helper.reset()
                 DispatchQueue.main.async { self.lastError = nil; self.watchSetup() }
             } catch {
                 DispatchQueue.main.async {

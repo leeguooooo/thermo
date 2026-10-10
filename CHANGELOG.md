@@ -7,6 +7,7 @@
 - Turning on fan control takes one click and your Mac password once — no trip to System Settings. After that the helper updates itself along with Thermo (it only accepts a newer helper signed by Thermo's developer), so updates never ask again.
 - A fan setting you choose before the helper is ready (say, max) is applied as soon as it is.
 - Turning on fan control no longer hangs on "Setting up…" when an earlier System Settings (Login Items) registration is stuck; it goes straight to the password prompt.
+- After the password prompt the Fans tab picks up the new helper right away (it kept talking to the old one until Thermo was restarted).
 
 ## 1.1.2
 
