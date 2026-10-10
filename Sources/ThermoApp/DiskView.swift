@@ -49,6 +49,7 @@ final class DiskModel: ObservableObject {
             return narrowed.bytes > 0 ? narrowed : nil
         }
     }
+    var languageStale: Bool { report.map { $0.language != L10n.current.rawValue } ?? false }
     var selectedBytes: Int64 { selectedItems.reduce(0) { $0 + $1.bytes } }
 
     static let order = Dictionary(uniqueKeysWithValues: CleanCategory.allCases.enumerated().map { ($1, $0) })
@@ -90,6 +91,7 @@ final class DiskModel: ObservableObject {
         let scanner = DiskScanner(options: options)
         self.scanner = scanner
         let started = Date()
+        let language = L10n.current.rawValue
         scanner.onProgress = { [weak self] step in DispatchQueue.main.async { self?.progress = step } }
         // Results show up as each step finishes; safe ones are ticked as they arrive.
         scanner.onItems = { [weak self] found in
@@ -97,6 +99,7 @@ final class DiskModel: ObservableObject {
                 guard let self, self.scanning else { return }
                 let items = Self.sorted((self.report?.items ?? []) + found)
                 self.report = ScanReport(items: items, denied: [], started: started, duration: Date().timeIntervalSince(started))
+                self.report?.language = language
                 self.selected.formUnion(found.filter { $0.cleanable && $0.safety == .safe }.map(\.id))
             }
         }

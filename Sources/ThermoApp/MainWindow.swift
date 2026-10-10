@@ -188,9 +188,9 @@ struct MainView: View {
                             .frame(maxWidth: .infinity, alignment: .leading).padding(14).glass(radius: 12)
                             .padding(.horizontal, 32).padding(.top, 12)
                     }
-                    if page.isDisk, disk.stale || disk.resultsNeedRefresh {
+                    if page.isDisk, disk.stale || disk.resultsNeedRefresh || disk.languageStale {
                         HStack {
-                            Text(disk.resultsNeedRefresh ? tr("Some paths could not be removed. Scan again to refresh the remaining items.") : tr("Scan scope changed. Scan again to update these results.")).font(.callout)
+                            Text(disk.resultsNeedRefresh ? tr("Some paths could not be removed. Scan again to refresh the remaining items.") : disk.languageStale ? tr("Scan again to refresh results in the selected language.") : tr("Scan scope changed. Scan again to update these results.")).font(.callout)
                             Spacer()
                             Button(tr("Scan again")) { disk.scan() }.disabled(disk.scanning || disk.cleaning)
                         }

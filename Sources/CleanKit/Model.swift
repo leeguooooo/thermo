@@ -279,7 +279,7 @@ public enum ScanReportCache {
     }
 
     public static func save(_ r: ScanReport, home: String = NSHomeDirectory()) {
-        guard !r.cancelled else { return }
+        guard valid(r) else { return }
         let u = url(home: home)
         try? FileManager.default.createDirectory(at: u.deletingLastPathComponent(), withIntermediateDirectories: true)
         let e = JSONEncoder()
@@ -292,13 +292,36 @@ public enum ScanReportCache {
         try? FileManager.default.removeItem(at: url(home: home))
     }
 
+    private static func valid(_ report: ScanReport) -> Bool {
+        guard !report.cancelled, report.duration.isFinite, report.duration >= 0 else { return false }
+        var ids = Set<String>()
+        var total: Int64 = 0
+        for item in report.items {
+            guard !item.id.isEmpty, ids.insert(item.id).inserted, item.bytes >= 0, item.files >= 0 else { return false }
+            let sum = total.addingReportingOverflow(item.bytes)
+            guard !sum.overflow else { return false }
+            total = sum.partialValue
+            if let parts = item.parts {
+                var partIDs = Set<String>()
+                var bytes: Int64 = 0
+                for part in parts {
+                    guard !part.id.isEmpty, partIDs.insert(part.id).inserted, part.bytes >= 0 else { return false }
+                    let sum = bytes.addingReportingOverflow(part.bytes)
+                    guard !sum.overflow else { return false }
+                    bytes = sum.partialValue
+                }
+            }
+        }
+        return true
+    }
+
     /// The saved report when it is younger than `maxAge` seconds.
     public static func load(home: String = NSHomeDirectory(), maxAge: TimeInterval, now: Date = Date()) -> ScanReport? {
         guard let data = try? Data(contentsOf: url(home: home)) else { return nil }
         let d = JSONDecoder()
         d.dateDecodingStrategy = .iso8601
         guard let r = try? d.decode(ScanReport.self, from: data),
-              now.timeIntervalSince(r.started) < maxAge, now >= r.started else { return nil }
+              valid(r), now.timeIntervalSince(r.started) < maxAge, now >= r.started else { return nil }
         return r
     }
 }

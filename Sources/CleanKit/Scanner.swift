@@ -20,6 +20,7 @@ public final class DiskScanner: @unchecked Sendable {
 
     public func scan() -> ScanReport {
         let started = Date()
+        let language = L10n.current.rawValue
         ScanCancellation.current = cancellation
         defer { ScanCancellation.current = nil }
         // Stopped before it began: skip even the setup (reading every process is slow on a busy Mac).
@@ -78,7 +79,7 @@ public final class DiskScanner: @unchecked Sendable {
                                 cancelled: cancellation.isCancelled)
         report.categories = CleanCategory.allCases.filter { options.categories.contains($0) }
         report.olderThanDays = options.olderThanDays
-        report.language = L10n.current.rawValue
+        report.language = language
         if saveReport { ScanReportCache.save(report, home: options.home) }
         return report
     }

@@ -1,8 +1,25 @@
 import XCTest
 import CleanKit
+import ThermoL10n
 @testable import ThermoApp
 
 final class CleaningStateTests: XCTestCase {
+    func testLanguageChangePreservesReportAndSelectionsWithStaleNotice() {
+        L10n.override = .english
+        defer { L10n.override = nil }
+        var report = ScanReport(items: [.init(id: "fixture", category: .devCaches, title: "Fixture", safety: .safe, bytes: 10, paths: ["/fixture/cache"])],
+                                denied: [], started: Date(), duration: 1)
+        report.language = "en"
+        let model = DiskModel(report: report)
+        model.selected = ["fixture"]
+        XCTAssertFalse(model.languageStale)
+        L10n.override = .simplifiedChinese
+        XCTAssertTrue(model.languageStale)
+        XCTAssertEqual(model.selected, ["fixture"])
+        XCTAssertNotNil(model.report)
+        XCTAssertFalse(model.scanning)
+    }
+
     func testCompletedScanReflectsItsActualScope() {
         let model = DiskModel()
         var report = ScanReport(items: [], denied: [], started: Date(), duration: 1)

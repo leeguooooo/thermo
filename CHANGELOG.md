@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Disk Cleanup cache rejects cancelled reports, duplicate IDs, negative sizes and overflowing totals. Invalid saves do not replace the last valid cache.
+- Disk scans retain their starting language; changing the UI language preserves results and selections with a rescan notice instead of automatically repeating a long scan.
+
 - Diagnostics reports retain their generation language; a language change bypasses the age cache. Reports produced in the previous language are discarded and refreshed after any active repair finishes.
 
 - Alert settings show notification authorization separately from the alert switches, including missing permission, denied access and disabled banners. Enabling slowdown alerts requests permission, and returning from System Settings refreshes the status.
