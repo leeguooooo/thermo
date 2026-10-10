@@ -524,4 +524,18 @@ let zhHans: [String: String] = [
     "Memory is tight: %1$@ of swap in use, so programs wait on the disk; %2$@ uses the most memory (%3$@)": "内存紧张：已用 %1$@ 交换空间，程序都在等磁盘；占内存最多的是 %2$@（%3$@）",
     "No single program stands out; many are waiting on the disk": "没有哪个程序特别突出，很多程序在等磁盘",
     "Helper update: %1$@": "更新 helper：%1$@",
+    // Fan helper setup
+    "The fan helper is from an older version": "风扇 helper 是旧版本",
+    "Thermo restarts it on the new version; this takes a moment.": "Thermo 会用新版本重启它，稍等片刻。",
+    "Turn on Thermo in System Settings": "在系统设置里打开 Thermo",
+    "In Login Items & Extensions, under Allow in the Background, switch on Thermo. It may be grouped under its developer, LI GUO — click ⓘ to see it. Thermo carries on by itself as soon as it is on.": "在“登录项与扩展”的“允许在后台”里打开 Thermo。它可能归在开发者 LI GUO 名下，点 ⓘ 展开就能看到。一打开 Thermo 就会自动继续。",
+    "The fan helper is not running": "风扇 helper 没有运行",
+    "macOS did not start it. Try again, or install it with your administrator password.": "系统没有启动它。可以再试一次，或者用管理员密码安装。",
+    "Try Again": "再试一次",
+    "Let Thermo control the fans": "让 Thermo 控制风扇",
+    "Fan control uses a small helper that runs in the background with system rights. It only sets fan speeds within the fan's own limits, and hands the fans back to macOS when Thermo quits or the Mac gets too hot.": "风扇控制需要一个以系统权限在后台运行的小助手。它只在风扇自身的范围内设置转速；Thermo 退出或电脑过热时，会把风扇交还给系统。",
+    "Allow…": "允许…",
+    "Your fan setting is applied as soon as the helper is ready.": "helper 一就绪，你的风扇设置就会自动生效。",
+    "Waiting for macOS…": "正在等待系统…",
+    "Use Administrator Password": "用管理员密码安装",
 ]

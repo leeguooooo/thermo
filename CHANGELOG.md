@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- When Thermo's helper is switched off under System Settings → Login Items → Allow in the Background, the Fans tab now says so and opens that setting, instead of reporting "not responding" and offering a reinstall that cannot help.
+- Allowing fan control is one click: the Fans tab explains what the helper does, opens the right System Settings page when macOS needs your approval, watches for it, and carries on by itself the moment you switch Thermo on — instead of "not responding" and a reinstall that cannot help.
+- When macOS approval gets stuck, "Use Administrator Password" installs the helper with one password prompt.
+- A fan setting you choose before the helper is ready (say, max) is applied as soon as it is.
 
 ## 1.1.2
 

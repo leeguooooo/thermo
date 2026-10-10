@@ -306,8 +306,9 @@ struct FansView: View {
                     Text(tr("This Mac has no fans.")).foregroundStyle(.secondary)
                 }
                 ForEach(s.fans) { f in
-                    FanControlCard(fan: f, policy: monitor.policies[f.id] ?? .auto,
-                                   enabled: [.running, .outdated].contains(monitor.helperState)) { monitor.setPolicy($0, fan: f.id) }
+                    // Always usable: without a helper, Apply queues the setting and starts setup.
+                    FanControlCard(fan: f, policy: monitor.pendingPolicies[f.id] ?? monitor.policies[f.id] ?? .auto,
+                                   enabled: true) { monitor.setPolicy($0, fan: f.id) }
                 }
                 if s.fans.count > 1 && [.running, .outdated].contains(monitor.helperState) {
                     Button(tr("All fans to Auto")) { monitor.setPolicy(.auto, fan: -1) }
@@ -321,35 +322,67 @@ struct FansView: View {
         .onAppear { monitor.refreshHelper() }
     }
 
+    /// Setup card: one button to allow the helper, a live guide while the user is in System
+    /// Settings, and the administrator-password route when Login Items approval is stuck.
     @ViewBuilder var helperBanner: some View {
         switch monitor.helperState {
         case .running:
             EmptyView()
-        case .notInstalled, .unknown:
-            HStack {
-                Text(tr("Fan control needs a privileged helper.")).font(.callout)
-                Spacer()
-                Button(tr("Install…")) { monitor.installHelper() }
-            }
-        case .needsApproval:
-            HStack {
-                Text(tr("Allow Thermo's helper in System Settings → Login Items.")).font(.callout)
-                Spacer()
-                Button(tr("Open Settings")) { monitor.openLoginItemsSettings() }
-            }
-            .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in monitor.refreshHelper() }
         case .outdated:
-            HStack {
-                Text(tr("The fan helper is from an older version.")).font(.callout)
-                Spacer()
-                Button(tr("Update…")) { monitor.installHelper() }
-            }
+            setupCard(icon: "arrow.triangle.2.circlepath", title: tr("The fan helper is from an older version"),
+                      body: tr("Thermo restarts it on the new version; this takes a moment."),
+                      primary: (tr("Update…"), { monitor.beginSetup() }))
+        case .needsApproval:
+            setupCard(icon: "lock.open", title: tr("Turn on Thermo in System Settings"),
+                      body: tr("In Login Items & Extensions, under Allow in the Background, switch on Thermo. It may be grouped under its developer, LI GUO — click ⓘ to see it. Thermo carries on by itself as soon as it is on."),
+                      primary: (tr("Open Settings"), { monitor.openLoginItemsSettings(); monitor.beginSetup() }),
+                      waiting: true)
         case .notRunning:
-            HStack {
-                Text(tr("Helper installed but not responding.")).font(.callout)
-                Spacer()
-                Button(tr("Reinstall…")) { monitor.installHelper() }
+            setupCard(icon: "exclamationmark.triangle", title: tr("The fan helper is not running"),
+                      body: tr("macOS did not start it. Try again, or install it with your administrator password."),
+                      primary: (tr("Try Again"), { monitor.beginSetup() }))
+        case .notInstalled, .unknown:
+            setupCard(icon: "fan", title: tr("Let Thermo control the fans"),
+                      body: tr("Fan control uses a small helper that runs in the background with system rights. It only sets fan speeds within the fan's own limits, and hands the fans back to macOS when Thermo quits or the Mac gets too hot."),
+                      primary: (tr("Allow…"), { monitor.beginSetup() }))
+        }
+    }
+
+    func setupCard(icon: String, title: String, body: String, primary: (String, () -> Void), waiting: Bool = false) -> some View {
+        let stuck = (monitor.setupStarted.map { Date().timeIntervalSince($0) > 8 } ?? false) || monitor.helperState == .notRunning
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: icon).font(.title3).foregroundStyle(Color.accentColor).frame(width: 22)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(.callout.weight(.semibold))
+                    Text(body).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if !monitor.pendingPolicies.isEmpty {
+                        Text(tr("Your fan setting is applied as soon as the helper is ready."))
+                            .font(.caption).foregroundStyle(.orange)
+                    }
+                }
             }
+            if !renderingPreview {
+                HStack(spacing: 8) {
+                    if monitor.settingUp || waiting {
+                        ProgressView().controlSize(.small)
+                        Text(tr("Waiting for macOS…")).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    // Login Items approval sometimes never takes; the password route always does.
+                    if monitor.usesSMAppService && (stuck || waiting) {
+                        Button(tr("Use Administrator Password")) { monitor.installHelperWithPassword() }
+                            .controlSize(.small).modifier(ActionButtonStyle(prominent: false))
+                    }
+                    Button(primary.0, action: primary.1).controlSize(.small).modifier(ActionButtonStyle(prominent: true))
+                }
+            }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(0.08)))
+        // Refresh the "stuck" timing while setup runs.
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+            if monitor.settingUp { monitor.objectWillChange.send() }
         }
     }
 }

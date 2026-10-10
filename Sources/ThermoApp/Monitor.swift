@@ -182,29 +182,101 @@ final class Monitor: ObservableObject {
     let usesSMAppService = CodeSignature.teamIdentifier() != nil
     private let daemon = SMAppService.daemon(plistName: HelperConstants.bundledPlistName)
 
+    /// Fan settings chosen before the helper could take them; applied as soon as it answers.
+    @Published private(set) var pendingPolicies: [Int: FanPolicy] = [:]
+    /// Set while the user is being walked through allowing the helper.
+    @Published private(set) var settingUp = false
+    @Published private(set) var setupStarted: Date?
+    private var setupTimer: Timer?
+
     func refreshHelper() {
-        if usesSMAppService {
-            switch daemon.status {
-            case .requiresApproval: helperState = .needsApproval; return
-            case .enabled: break
-            default:
-                if !HelperInstaller.isInstalled { helperState = .notInstalled; return }
-            }
-        } else if !HelperInstaller.isInstalled {
-            helperState = .notInstalled
-            return
-        }
         Task { @MainActor in
-            do {
-                let v = try await helper.version()
-                policies = try await helper.policies()
+            // Whatever answers is running, however it was installed (Login Items or password).
+            if let v = try? await helper.version() {
+                policies = (try? await helper.policies()) ?? policies
                 helperState = v == HelperConstants.version ? .running : .outdated
                 if helperState == .outdated { restartOutdatedHelper() }
+                finishSetup()
+                return
+            }
+            if usesSMAppService {
+                switch daemon.status {
+                case .requiresApproval:
+                    helperState = .needsApproval
+                case .enabled:
+                    // Registered, but launchd will not start it: background items for this app or
+                    // developer are off in Login Items. Reinstalling cannot fix that; approving can.
+                    let refused = await Task.detached { Self.launchdRefusesHelper() }.value
+                    helperState = refused ? .needsApproval : .notRunning
+                default:
+                    helperState = HelperInstaller.isInstalled ? .notRunning : .notInstalled
+                }
+            } else {
+                helperState = HelperInstaller.isInstalled ? .notRunning : .notInstalled
+            }
+        }
+    }
+
+    /// Starts (or restarts) setup: register with Login Items and watch until the helper answers.
+    /// Ad-hoc builds cannot use Login Items and go straight to the administrator prompt.
+    func beginSetup() {
+        guard usesSMAppService else { installHelperWithPassword(); return }
+        settingUp = true
+        setupStarted = Date()
+        DispatchQueue.global(qos: .userInitiated).async {
+            if self.daemon.status != .enabled {
+                do { try self.daemon.register() } catch {
+                    DispatchQueue.main.async { self.lastError = tr("Helper registration: %1$@", error.localizedDescription) }
+                }
+            }
+            DispatchQueue.main.async {
+                if self.daemon.status != .enabled || Self.launchdRefusesHelper() { SMAppService.openSystemSettingsLoginItems() }
+                self.watchSetup()
+            }
+        }
+    }
+
+    /// Polls once a second while the user is in System Settings; stops when the helper answers
+    /// or after ten minutes.
+    private func watchSetup() {
+        setupTimer?.invalidate()
+        setupTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] t in
+            guard let self else { t.invalidate(); return }
+            if let start = self.setupStarted, Date().timeIntervalSince(start) > 600 { self.finishSetup(); return }
+            self.refreshHelper()
+        }
+    }
+
+    private func finishSetup() {
+        setupTimer?.invalidate()
+        setupTimer = nil
+        settingUp = false
+        setupStarted = nil
+        let pending = pendingPolicies
+        pendingPolicies = [:]
+        for (fan, policy) in pending.sorted(by: { $0.key < $1.key }) { setPolicy(policy, fan: fan) }
+    }
+
+    /// The fallback that always works: one administrator prompt installs the helper as a
+    /// classic launch daemon (used when Login Items approval is stuck or not available).
+    func installHelperWithPassword() {
+        guard let bin = HelperInstaller.locateHelperBinary() else {
+            lastError = tr("thermo-helper not found inside the app bundle")
+            return
+        }
+        settingUp = true
+        setupStarted = setupStarted ?? Date()
+        DispatchQueue.global(qos: .userInitiated).async {
+            // The Login Items registration would claim the same launchd label.
+            if self.usesSMAppService, self.daemon.status != .notRegistered { try? self.daemon.unregister() }
+            do {
+                try HelperInstaller.install(from: bin)
+                DispatchQueue.main.async { self.lastError = nil; self.watchSetup() }
             } catch {
-                // Registered but launchd will not start it: background items for this developer
-                // are switched off in Login Items. Reinstalling cannot fix that; approving can.
-                let refused = usesSMAppService ? await Task.detached { Self.launchdRefusesHelper() }.value : false
-                helperState = refused ? .needsApproval : .notRunning
+                DispatchQueue.main.async {
+                    self.lastError = "\(error)".contains("cancelled") ? nil : "\(error)"
+                    self.settingUp = self.setupTimer != nil
+                }
             }
         }
     }
@@ -247,6 +319,12 @@ final class Monitor: ObservableObject {
     }
 
     func setPolicy(_ policy: FanPolicy, fan: Int) {
+        guard [.running, .outdated].contains(helperState) else {
+            // Keep what the user asked for and get the helper going; it applies when ready.
+            pendingPolicies[fan] = policy
+            if !settingUp { beginSetup() }
+            return
+        }
         Task { @MainActor in
             do {
                 try await helper.setPolicy(policy, fan: fan)
@@ -260,36 +338,8 @@ final class Monitor: ObservableObject {
         }
     }
 
-    func installHelper() {
-        if usesSMAppService {
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    // A legacy (admin-prompt) install would own the same launchd label.
-                    if HelperInstaller.isInstalled { try HelperInstaller.uninstall() }
-                    try self.daemon.register()
-                } catch {
-                    DispatchQueue.main.async { self.lastError = tr("Helper registration: %1$@", error.localizedDescription) }
-                }
-                DispatchQueue.main.async {
-                    if self.daemon.status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.refreshHelper() }
-                }
-            }
-            return
-        }
-        guard let bin = HelperInstaller.locateHelperBinary() else {
-            lastError = tr("thermo-helper not found inside the app bundle")
-            return
-        }
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                try HelperInstaller.install(from: bin)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.refreshHelper() }
-            } catch {
-                DispatchQueue.main.async { self.lastError = "\(error)" }
-            }
-        }
-    }
+    /// "Install…" / "Reinstall…" / "Update…" buttons and `--install-helper`.
+    func installHelper() { beginSetup() }
 
     func openLoginItemsSettings() { SMAppService.openSystemSettingsLoginItems() }
 
