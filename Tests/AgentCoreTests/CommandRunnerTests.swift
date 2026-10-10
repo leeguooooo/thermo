@@ -2,6 +2,13 @@ import XCTest
 import AgentCore
 
 final class CommandRunnerTests: XCTestCase {
+    func testExplicitEnvironmentIsPassedWithoutChangingParent() {
+        let result = CommandRunner.run("/bin/sh", arguments: ["-c", "printf '%s' \"$THERMO_RUNNER_FIXTURE\""],
+                                       environment: ["THERMO_RUNNER_FIXTURE": "synthetic value"], timeout: 2)
+        XCTAssertEqual(result.status, 0)
+        XCTAssertEqual(result.output, "synthetic value")
+        XCTAssertNil(ProcessInfo.processInfo.environment["THERMO_RUNNER_FIXTURE"])
+    }
     func testLargeCombinedOutputIsDrainedAndBounded() {
         let script = "i=0; while [ $i -lt 2000 ]; do echo fixture-output; echo fixture-error >&2; i=$((i+1)); done"
         let result = CommandRunner.run("/bin/sh", arguments: ["-c", script], timeout: 3, outputLimit: 256)

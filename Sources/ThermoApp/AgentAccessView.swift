@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import ThermoL10n
+import AgentCore
 
 /// Sets up thermo-use: the `thermo` CLI on PATH for AI agents, and the thermo-use skill in Claude
 /// Code and Codex (it is part of the *-use family in leeguooooo/plugins).
@@ -103,27 +104,13 @@ final class AgentAccess: ObservableObject {
             .map { $0 + "/" + name }.first { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
-    /// Runs a tool, returns stdout when it exits 0 within the time limit.
+    /// Returns complete combined output only when the tool succeeds within the time limit.
     static func run(_ bin: String, _ args: [String], timeout: TimeInterval) -> String? {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: bin)
-        p.arguments = args
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = [NSHomeDirectory() + "/.local/bin", "/opt/homebrew/bin", "/usr/local/bin", env["PATH"] ?? "/usr/bin:/bin"].joined(separator: ":")
-        p.environment = env
-        let out = Pipe()
-        p.standardOutput = out
-        p.standardError = Pipe()
-        p.standardInput = FileHandle.nullDevice
-        guard (try? p.run()) != nil else { return nil }
-        var data = Data()
-        let done = DispatchSemaphore(value: 0)
-        DispatchQueue.global().async { data = out.fileHandleForReading.readDataToEndOfFile(); done.signal() }
-        let deadline = Date().addingTimeInterval(timeout)
-        while p.isRunning && Date() < deadline { usleep(100_000) }
-        if p.isRunning { p.terminate(); return nil }
-        done.wait()
-        return p.terminationStatus == 0 ? String(decoding: data, as: UTF8.self) : nil
+        let result = CommandRunner.run(bin, arguments: args, environment: env, timeout: timeout)
+        guard result.status == 0, !result.timedOut, !result.cancelled, !result.truncated else { return nil }
+        return result.output
     }
 }
 

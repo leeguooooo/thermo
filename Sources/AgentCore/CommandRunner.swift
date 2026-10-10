@@ -11,13 +11,15 @@ public enum CommandRunner {
         public var truncated = false
     }
 
-    public static func run(_ executable: String, arguments: [String], directory: String? = nil, timeout: TimeInterval = 15,
+    public static func run(_ executable: String, arguments: [String], directory: String? = nil,
+                           environment: [String: String]? = nil, timeout: TimeInterval = 15,
                            outputLimit: Int = 1_048_576, captureError: Bool = true, cancelled: () -> Bool = { false }) -> Result {
         guard timeout.isFinite, timeout > 0 else { return Result(status: -1, output: "invalid timeout", timedOut: false, cancelled: false) }
         if cancelled() { return Result(status: -1, output: "", timedOut: false, cancelled: true) }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
+        if let environment { process.environment = environment }
         if let directory { process.currentDirectoryURL = URL(fileURLWithPath: directory) }
         process.standardInput = FileHandle.nullDevice
         let pipe = Pipe()

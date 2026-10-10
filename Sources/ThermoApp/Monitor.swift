@@ -3,6 +3,7 @@ import ServiceManagement
 import ThermoKit
 import ThermoL10n
 import UserNotifications
+import AgentCore
 
 enum TitleMetric: String, CaseIterable, Identifiable {
     case cpu, hottest, fan, cpuAndFan, power, iconOnly
@@ -353,15 +354,10 @@ final class Monitor: ObservableObject {
     /// `launchctl print` (no privileges needed) shows a spawn that launchd refuses as exit 78
     /// (EX_CONFIG) — what happens when the user turned Thermo off under "Allow in the Background".
     nonisolated static func launchdRefusesHelper() -> Bool {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/bin/launchctl")
-        p.arguments = ["print", "system/\(HelperConstants.label)"]
-        let out = Pipe()
-        p.standardOutput = out
-        p.standardError = FileHandle.nullDevice
-        guard (try? p.run()) != nil else { return false }
-        let text = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-        p.waitUntilExit()
+        let result = CommandRunner.run("/bin/launchctl", arguments: ["print", "system/\(HelperConstants.label)"],
+                                       timeout: 5, captureError: false)
+        guard result.status == 0, !result.timedOut, !result.cancelled, !result.truncated else { return false }
+        let text = result.output
         return text.contains("last exit code = 78") || text.contains("job state = spawn failed")
     }
 
