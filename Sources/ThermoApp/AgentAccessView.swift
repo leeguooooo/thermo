@@ -34,14 +34,11 @@ final class AgentAccess: ObservableObject {
 
     func refresh() {
         DispatchQueue.global(qos: .userInitiated).async {
-            let fm = FileManager.default
-            let linked = ["thermo", "thermo-use"].allSatisfy {
-                (try? fm.destinationOfSymbolicLink(atPath: self.binDir + "/" + $0)) == self.cli
-            }
+            let linked = AgentCLILinks.ready(directory: self.binDir, cli: self.cli)
             var claude: Tool = .missing
             if Self.find("claude") != nil {
-                let installed = (try? String(contentsOfFile: self.home + "/.claude/plugins/installed_plugins.json", encoding: .utf8)) ?? ""
-                claude = installed.contains(Self.plugin) ? .added : .notAdded
+                let installed = ClaudePlugins.installed(AgentHome(home: self.home))
+                claude = installed.contains { $0.id == Self.plugin && $0.scope == "user" && FileManager.default.fileExists(atPath: $0.installPath) } ? .added : .notAdded
             }
             var codex: Tool = .missing
             if let c = Self.find("codex") {
@@ -54,18 +51,8 @@ final class AgentAccess: ObservableObject {
 
     /// `~/.local/bin/thermo` and `thermo-use` → this app's CLI. Only symlinks are replaced.
     func linkCLI() {
-        let fm = FileManager.default
         do {
-            try fm.createDirectory(atPath: binDir, withIntermediateDirectories: true)
-            for name in ["thermo", "thermo-use"] {
-                let p = binDir + "/" + name
-                if (try? fm.destinationOfSymbolicLink(atPath: p)) != nil { try fm.removeItem(atPath: p) }
-                else if fm.fileExists(atPath: p) {
-                    linkProblem = tr("%1$@ already exists and is not a link; remove it first", FS_tilde(p))
-                    return
-                }
-                try fm.createSymbolicLink(atPath: p, withDestinationPath: cli)
-            }
+            try AgentCLILinks.link(directory: binDir, cli: cli)
             linkProblem = nil
         } catch {
             linkProblem = error.localizedDescription
@@ -112,11 +99,6 @@ final class AgentAccess: ObservableObject {
         guard result.status == 0, !result.timedOut, !result.cancelled, !result.truncated else { return nil }
         return result.output
     }
-}
-
-private func FS_tilde(_ p: String) -> String {
-    let h = NSHomeDirectory()
-    return p.hasPrefix(h + "/") ? "~" + p.dropFirst(h.count) : p
 }
 
 /// One line in Settings: status and a button that opens the setup sheet.
