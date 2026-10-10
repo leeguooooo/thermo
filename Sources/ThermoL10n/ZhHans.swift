@@ -2,6 +2,7 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "No reading available": "暂无读数",
     "The bundled thermo command is missing or cannot run. Reinstall Thermo and try again.": "App 内的 thermo 命令缺失或无法运行，请重新安装 Thermo 后重试。",
     "%1$@ changed during setup; left it untouched.": "%1$@ 在设置期间发生变化，已保留该文件。",
     "Uninstalling…": "正在卸载…",

@@ -114,6 +114,19 @@ final class PresentationTests: XCTestCase {
         _ = RingGauge(value: 2, text: "—", colors: []).color
     }
 
+    func testMissingGaugeReadingsAreDifferentFromZero() {
+        let missing = RingGauge(value: nil, text: "—")
+        let invalid = RingGauge(value: .nan, text: "nan")
+        let zero = RingGauge(value: 0, text: "0%")
+        XCTAssertNil(missing.normalizedValue)
+        XCTAssertNil(invalid.normalizedValue)
+        XCTAssertEqual(zero.normalizedValue, 0)
+        XCTAssertEqual(missing.color, .secondary)
+        XCTAssertEqual(invalid.color, .secondary)
+        XCTAssertEqual(zero.color, .green)
+        XCTAssertEqual(invalid.displayText, "—")
+    }
+
     @MainActor func testStoppedBrowserCheckClearsBusyState() {
         let model = ChromePagesModel(app: "Fixture browser", appMemoryKB: nil, gpuKB: nil)
         model.start(measure: true)

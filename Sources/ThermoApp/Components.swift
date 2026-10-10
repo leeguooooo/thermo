@@ -412,15 +412,21 @@ struct CategoryCard: View {
 /// A glowing ring gauge, as on a car dashboard: the arc fills with the value and runs from green to red.
 struct RingGauge: View {
     /// 0…1.
-    let value: Double
+    let value: Double?
     let text: String
     var caption: String? = nil
     var size: CGFloat = 112
     var colors: [Color] = [.green, .yellow, .orange, .red]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var normalizedValue: Double? {
+        guard let value, value.isFinite else { return nil }
+        return min(1, max(0, value))
+    }
+    var displayText: String { normalizedValue == nil ? "—" : text }
 
     var color: Color {
-        guard !colors.isEmpty else { return .secondary }
-        let normalized = value.isFinite ? min(1, max(0, value)) : 0
+        guard !colors.isEmpty, let normalized = normalizedValue else { return .secondary }
         let i = min(colors.count - 1, Int(normalized * Double(colors.count)))
         return colors[i]
     }
@@ -430,14 +436,16 @@ struct RingGauge: View {
             Circle().fill(color.opacity(0.12)).blur(radius: 18)
             Circle().stroke(Color.white.opacity(0.08), style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
                 .rotationEffect(.degrees(135)).mask(Circle().trim(from: 0, to: 0.75).stroke(lineWidth: size * 0.1).rotationEffect(.degrees(135)))
-            Circle().trim(from: 0, to: 0.75 * min(1, max(0.015, value.isFinite ? value : 0)))
-                .stroke(AngularGradient(colors: colors, center: .center, startAngle: .degrees(0), endAngle: .degrees(270)),
-                        style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
-                .rotationEffect(.degrees(135))
-                .shadow(color: color.opacity(0.7), radius: 8)
-                .animation(.easeInOut(duration: 0.6), value: value)
+            if let normalized = normalizedValue, !colors.isEmpty {
+                Circle().trim(from: 0, to: 0.75 * normalized)
+                    .stroke(AngularGradient(colors: colors, center: .center, startAngle: .degrees(0), endAngle: .degrees(270)),
+                            style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
+                    .rotationEffect(.degrees(135))
+                    .shadow(color: color.opacity(0.7), radius: 8)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: value)
+            }
             VStack(spacing: 0) {
-                Text(text).font(.system(size: size * 0.22, weight: .bold, design: .rounded)).monospacedDigit()
+                Text(displayText).font(.system(size: size * 0.22, weight: .bold, design: .rounded)).monospacedDigit()
                     .foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.5)
                 if let caption {
                     Text(caption).font(.system(size: size * 0.095, weight: .medium)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
@@ -446,5 +454,8 @@ struct RingGauge: View {
             .padding(.horizontal, size * 0.16)
         }
         .frame(width: size, height: size)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(caption ?? "")
+        .accessibilityValue(normalizedValue == nil ? tr("No reading available") : text)
     }
 }

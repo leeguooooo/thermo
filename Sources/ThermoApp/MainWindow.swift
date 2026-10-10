@@ -452,19 +452,19 @@ struct OverviewPage: View {
         let mem = SystemStats.memory()
         let disk = SystemStats.disk()
         return HStack(spacing: 12) {
-            card(tr("Temperature"), RingGauge(value: ((hot ?? 30) - 30) / 80, text: tempText(hot, fahrenheit: fahrenheit),
+            card(tr("Temperature"), RingGauge(value: hot.map { ($0 - 30) / 80 }, text: tempText(hot, fahrenheit: fahrenheit),
                                              caption: tr("hottest")),
                  detail: "CPU \(tempText(s?.cpu, fahrenheit: fahrenheit)) · GPU \(tempText(s?.gpu, fahrenheit: fahrenheit))") { open(.sensors) }
-            card(tr("CPU load"), RingGauge(value: (load ?? 0) / 2, text: load.map { String(format: "%.1f×", $0) } ?? "—",
+            card(tr("CPU load"), RingGauge(value: load.map { $0 / 2 }, text: load.map { String(format: "%.1f×", $0) } ?? "—",
                                           caption: tr("load per core")),
                  detail: pulse.current.map { tr("%1$@ cores", String($0.cores)) + " · " + tr("load %1$@", String(format: "%.1f", $0.load1)) } ?? "") { openDetails() }
-            card(tr("Memory"), RingGauge(value: mem.map { Double($0.usedBytes) / Double(max(1, $0.totalBytes)) } ?? 0,
+            card(tr("Memory"), RingGauge(value: mem.map { Double($0.usedBytes) / Double(max(1, $0.totalBytes)) },
                                         text: mem.map { String(format: "%.0f%%", Double($0.usedBytes) / Double(max(1, $0.totalBytes)) * 100) } ?? "—",
                                         caption: MachinePulse.memoryName(pulse.memory)),
                  detail: [mem.map { tr("%1$@ of %2$@", MemoryFormat.string(bytes: $0.usedBytes), MemoryFormat.string(bytes: $0.totalBytes)) },
                           pulse.current.flatMap { $0.swapUsedMB > 0 ? tr("swap %1$@", MemoryFormat.string(mebibytes: $0.swapUsedMB)) : nil }]
                     .compactMap { $0 }.joined(separator: "\n")) { openDetails() }
-            card(tr("Disk"), RingGauge(value: disk.map { 1 - Double($0.freeBytes) / Double(max(1, $0.totalBytes)) } ?? 0,
+            card(tr("Disk"), RingGauge(value: disk.map { 1 - Double($0.freeBytes) / Double(max(1, $0.totalBytes)) },
                                       text: disk.map { ByteFormat.string($0.freeBytes) } ?? "—", caption: tr("free"),
                                       colors: [.cyan, .blue, .purple, .pink]),
                  detail: disk.map { tr("%1$@ in all", ByteFormat.string($0.totalBytes)) } ?? "") { open(.disk(.home)) }
