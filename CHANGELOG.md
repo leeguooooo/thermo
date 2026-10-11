@@ -4,8 +4,6 @@
 
 - Uninstall apps (Disk Cleanup → Uninstall apps, or `thermo apps`): the app and the files it keeps in your home folder go to the Trash after you see every path; running, system and protected apps (password managers, VPNs, input methods, security software) are refused. Data left by apps you already deleted is found too (`thermo apps leftovers`).
 
-## 1.1.10 — all changes
-
 - Cleanup checks each path again just before removing it: a path swapped for another file since the scan, or one a running program holds open (files or working directory), is skipped and named. Ages count when a file was moved or unpacked, not only its modification date.
 - New cleanup items: Chrome, Edge, Brave, Arc and Chromium GPU and script caches in every profile; caches of Electron apps that are not running; editors' replaced extensions (VS Code, Cursor, Windsurf); Corepack, Electron, TypeScript, Carthage and Android caches; unfinished downloads and `.ipsw` firmware in Downloads.
 - Homebrew's old versions (`brew cleanup`) and Go's module cache (`go clean -modcache`) are cleaned by the tools themselves, sized by Homebrew's own dry run.
