@@ -10,9 +10,13 @@ extension ChromeInspector {
     public struct ChromeUseReport: Decodable, Sendable {
         public struct Connection: Decodable, Sendable { public var state: String? }
         public struct Extension: Decodable, Sendable {
+            public struct Pending: Decodable, Sendable { public var blocked: Bool? }
             public var version: String?
+            public var published: String?
+            public var verdict: String?
             public var behindPublished: Bool?
             public var hint: String?
+            public var pendingUpdate: Pending?
         }
         public struct Metrics: Decodable, Sendable {
             public var JSHeapUsedSize: Double?
@@ -59,9 +63,17 @@ extension ChromeInspector {
             + [home + "/.local/bin", "/opt/homebrew/bin", "/usr/local/bin"]
         guard let path = dirs.map({ $0 + "/chrome-use" }).first(where: { FileManager.default.isExecutableFile(atPath: $0) }),
               let result = run(path, ["--version"], timeout: 10, cancelled: { Task.isCancelled }), result.status == 0,
-              let version = result.output.split(separator: " ").last.map({ String($0).trimmingCharacters(in: .whitespacesAndNewlines) }),
-              versionAtLeast(version, "1.5.186") else { return nil }
+              let version = version(fromVersionOutput: result.output), versionAtLeast(version, "1.5.186") else { return nil }
         return path
+    }
+
+    /// "1.5.186" from `chrome-use --version`, which prints more lines after "chrome-use 1.5.186".
+    static func version(fromVersionOutput out: String) -> String? {
+        for line in out.split(separator: "\n") where line.hasPrefix("chrome-use ") {
+            let v = line.dropFirst("chrome-use ".count).trimmingCharacters(in: .whitespaces)
+            if v.split(separator: ".").count >= 2, v.allSatisfy({ $0.isNumber || $0 == "." }) { return v }
+        }
+        return nil
     }
 
     static func versionAtLeast(_ v: String, _ min: String) -> Bool {
@@ -151,9 +163,18 @@ extension ChromeInspector {
     }
 
     /// The extension's own advice when it is behind (chrome-use words it).
+    /// Worded by Thermo (chrome-use's own hint is English and long), with what to click.
     static func extensionHint(_ r: ChromeUseReport) -> String? {
-        guard let e = r.extension, e.behindPublished == true || e.hint != nil else { return nil }
-        return e.hint.map { tr("chrome-use's Chrome extension needs attention: %1$@", $0) }
+        guard let e = r.extension else { return nil }
+        if e.pendingUpdate?.blocked == true {
+            return tr("chrome-use's Chrome extension has an update (%1$@) waiting until no tab is attached: click Update at chrome://extensions (Developer mode on), or restart Chrome.",
+                      e.published ?? "")
+        }
+        if e.behindPublished == true || e.verdict == "behind_published" {
+            return tr("chrome-use's Chrome extension is out of date (%1$@, latest %2$@): click Update at chrome://extensions (Developer mode on), or restart Chrome.",
+                      e.version ?? "?", e.published ?? "?")
+        }
+        return nil
     }
 
     /// The whole check through chrome-use. Nil when its answer could not be read (then the raw

@@ -236,7 +236,9 @@ final class ChromeUseDiagTests: XCTestCase {
         let d = try decode(watched)
         XCTAssertEqual(ChromeInspector.tabs(d).map(\.window), [7, 7, 9, 9])
         XCTAssertEqual(ChromeInspector.tabs(d).map(\.index), [1, 2, 1, 2])
-        XCTAssertEqual(ChromeInspector.extensionHint(d), "chrome-use's Chrome extension needs attention: update ab-connect to 0.5.35 in chrome://extensions")
+        XCTAssertEqual(ChromeInspector.extensionHint(d), "chrome-use's Chrome extension is out of date (0.5.33, latest ?): click Update at chrome://extensions (Developer mode on), or restart Chrome.")
+        let blocked = try decode(#"{"schema":1,"pages":[],"extension":{"version":"0.5.34","published":"0.5.35","verdict":"behind_published","behindPublished":true,"pendingUpdate":{"blocked":true,"message":"held back","fix":"x"}}}"#)
+        XCTAssertTrue(ChromeInspector.extensionHint(blocked)!.contains("update (0.5.35) waiting until no tab is attached"))
     }
 
     func testNotConnectedAndNewerKeysAreRead() throws {
@@ -247,6 +249,8 @@ final class ChromeUseDiagTests: XCTestCase {
     }
 
     func testVersionGate() {
+        XCTAssertEqual(ChromeInspector.version(fromVersionOutput: "chrome-use 1.5.186\nreport bugs / rough edges: https://github.com/leeguooooo/chrome-use/issues\n"), "1.5.186")
+        XCTAssertNil(ChromeInspector.version(fromVersionOutput: "something else\n"))
         XCTAssertTrue(ChromeInspector.versionAtLeast("1.5.186", "1.5.186"))
         XCTAssertTrue(ChromeInspector.versionAtLeast("1.6.0", "1.5.186"))
         XCTAssertFalse(ChromeInspector.versionAtLeast("1.5.183", "1.5.186"))

@@ -75,4 +75,14 @@ final class ArgumentTests: XCTestCase {
         XCTAssertEqual(unnamed.parse("on") as? Bool, true)
         XCTAssertNil(unnamed.parse("maybe"))
     }
+
+    func testPulseChromeFlagsParse() throws {
+        let a = try Args(["pulse", "chrome", "--measure", "--json"])
+        XCTAssertTrue(a.has("measure"))
+        XCTAssertTrue(a.has("json"))
+        let w = try Args(["pulse", "chrome", "--watch", "60", "--app", "Microsoft Edge"])
+        XCTAssertEqual(w.options["watch"], "60")
+        XCTAssertEqual(w.options["app"], "Microsoft Edge")
+        XCTAssertThrowsError(try Args(["pulse", "chrome", "--measure=1"]))
+    }
 }
