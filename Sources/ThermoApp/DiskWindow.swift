@@ -220,7 +220,28 @@ struct DiskCategoryPage: View {
                         ForEach(list) { card($0) }
                     }
                     if list.isEmpty {
-                        Text(model.scanning ? tr("Looking…") : !search.isEmpty ? tr("No matching items") : tr("Nothing here.")).foregroundStyle(.white.opacity(0.5)).padding(.top, 30)
+                        if model.scanning {
+                            Label(tr("Looking…"), systemImage: "hourglass")
+                                .foregroundStyle(.secondary).padding(.top, 30)
+                        } else if model.report == nil || model.report?.categories?.contains(category) == false {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Label(tr("Find space you can free"), systemImage: "magnifyingglass")
+                                Button(tr("Scan")) {
+                                    if !category.isAI { model.scope = .all }
+                                    model.scan()
+                                }.buttonStyle(PillButtonStyle())
+                            }
+                            .foregroundStyle(.secondary).padding(.top, 30)
+                        } else if model.report?.cancelled == true {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Label(tr("Scan stopped. These are partial results."), systemImage: "pause.circle")
+                                Button(tr("Scan again")) { model.scan() }.buttonStyle(PillButtonStyle())
+                            }
+                            .foregroundStyle(.secondary).padding(.top, 30)
+                        } else {
+                            Text(!search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? tr("No matching items") : tr("Nothing here."))
+                                .foregroundStyle(.secondary).padding(.top, 30)
+                        }
                     }
                 }
                 .padding(.horizontal, 28).padding(.bottom, 20)
@@ -306,10 +327,10 @@ struct DiskCategoryPage: View {
             Button(tr("Safe")) {
                 let ids = (model.report?.items ?? []).filter { $0.category == category && $0.cleanable && $0.safety == .safe }.map(\.id)
                 model.selected.formUnion(ids)
-            }.buttonStyle(PillButtonStyle())
+            }.buttonStyle(PillButtonStyle()).disabled(model.report == nil || model.scanning || model.cleaning)
             Button(tr("None")) {
                 model.selected.subtract((model.report?.items ?? []).filter { $0.category == category }.map(\.id))
-            }.buttonStyle(PillButtonStyle())
+            }.buttonStyle(PillButtonStyle()).disabled(model.report == nil || model.scanning || model.cleaning)
             Spacer()
             Text(trCount(model.selectedItems.count, "%1$@ item selected", "%1$@ items selected")).foregroundStyle(.white.opacity(0.6))
             Button(tr("Clean %1$@", ByteFormat.string(model.selectedBytes)), action: clean)

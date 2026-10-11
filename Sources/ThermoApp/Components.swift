@@ -317,6 +317,7 @@ struct BigRoundButton: View {
 /// A slim gradient pill for secondary actions on dark glass.
 struct PillButtonStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
     var prominent = false
     var color: Color = Color(red: 0.25, green: 0.55, blue: 1.0)
 
@@ -328,6 +329,7 @@ struct PillButtonStyle: ButtonStyle {
             .background(Capsule().fill(prominent ? AnyShapeStyle(LinearGradient(colors: [color, color.opacity(0.7)], startPoint: .top, endPoint: .bottom))
                                                  : AnyShapeStyle(Color.white.opacity(0.12))))
             .overlay(Capsule().strokeBorder(.white.opacity(prominent ? 0.35 : 0.15)))
+            .opacity(isEnabled ? 1 : 0.45)
             .scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1)
             .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
     }
