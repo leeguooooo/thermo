@@ -13,6 +13,7 @@ final class AppModels {
     lazy var updates = Updates()
     lazy var disk = DiskModel()
     lazy var agents = AgentScanner()
+    lazy var apps = AppsModel()
     private var browsers: [String: ChromePagesModel] = [:]
 
     func stopBrowserChecks() {
@@ -35,9 +36,10 @@ enum MainPage: Hashable {
     case browser(String)
     case disk(DiskPage)
     case agents(SidebarEntry)
+    case apps(AppsTab)
 
     /// `--page` values: overview, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
-    /// agents, agents:<area>.
+    /// agents, agents:<area>, apps, apps:leftovers.
     init?(argument: String) {
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
         guard let command = parts.first else { return nil }
@@ -49,12 +51,14 @@ enum MainPage: Hashable {
         case "pages": self = .browser(parts.count > 1 ? parts[1] : "Google Chrome")
         case "disk": self = .disk(parts.count > 1 ? (DiskPage(argument: parts[1]) ?? .home) : .home)
         case "agents": self = .agents(parts.count > 1 ? (Area(rawValue: parts[1]).map { .area($0) } ?? .home) : .home)
+        case "apps": self = .apps(parts.count > 1 ? (AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
         default: return nil
         }
     }
 
     var isDisk: Bool { if case .disk = self { return true } else { return false } }
     var isAgents: Bool { if case .agents = self { return true } else { return false } }
+    var appsTab: AppsTab? { if case let .apps(t) = self { return t } else { return nil } }
 }
 
 /// The main window: everything Thermo does, in the Disk Cleanup look — a sidebar of places and a
@@ -310,6 +314,8 @@ struct MainView: View {
             DiagnosticsHome(scanner: agents, open: { a in page = .agents(.area(a)) }).transition(.opacity)
         case let .agents(.area(a)):
             AreaPage(scanner: agents, area: a).id(a).transition(.opacity.combined(with: .move(edge: .trailing)))
+        case let .apps(tab):
+            AppsPage(model: models.apps, tab: Binding(get: { tab }, set: { page = .apps($0) })).transition(.opacity)
         }
     }
 }
@@ -377,6 +383,9 @@ struct MainSidebar: View {
                         }
                     }
 
+                    row(.apps(page.appsTab ?? .installed), tr("Uninstall apps"), "square.grid.2x2.fill", .indigo, trailing: nil,
+                        selected: page.appsTab != nil)
+
                     header(tr("AI Agent Diagnostics"))
                     row(.agents(.home), tr("Smart Check"), "stethoscope", .purple, trailing: nil, badge: agents.report?.problemCount ?? 0)
                     if page.isAgents {
@@ -401,8 +410,8 @@ struct MainSidebar: View {
     }
 
     func row(_ target: MainPage, _ title: String, _ symbol: String, _ color: Color, trailing: String?,
-             badge: Int = 0, indent: Bool = false) -> some View {
-        let on = page == target
+             badge: Int = 0, indent: Bool = false, selected: Bool? = nil) -> some View {
+        let on = selected ?? (page == target)
         return Button { page = target } label: {
             HStack(spacing: 10) {
                 IconTile(symbol: symbol, color: color, size: indent ? 20 : 24)

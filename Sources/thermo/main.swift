@@ -56,6 +56,12 @@ COMMANDS
   clean log                  what earlier cleanups removed
   clean overview             where the used space is: the big places and their
                              biggest folders (--json)
+  apps                       installed apps, their size and the files they keep in your home folder
+  apps uninstall NAME        move the app and its files to the Trash (lists every path, asks first;
+                             --dry-run only lists; refuses running, system and protected apps)
+  apps leftovers             data left by apps that are gone (untouched 30 days, unknown to Spotlight)
+  apps leftovers remove ID…|all
+                             move that data to the Trash; asks first
 
 OPTIONS
   -a, --all                  include sensors without a known name
@@ -123,6 +129,7 @@ struct App {
         case "bench": try benchCommand()
         case "agents", "agent", "doctor": try AgentsCommand(app: self).run(rest)
         case "clean": try CleanCommand(app: self).run(rest)
+        case "apps", "app": try AppsCommand(app: self).run(rest)
         case "pulse", "status": try PulseCommand(app: self).run(rest)
         case "settings", "config": try SettingsCommand(app: self).run(rest)
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
