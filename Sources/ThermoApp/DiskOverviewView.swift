@@ -173,6 +173,10 @@ struct DiskOverviewView: View {
                             .buttonStyle(PillButtonStyle())
                     }
                 }
+                if !model.measuring, let over = model.overview?.overcounted {
+                    Text(tr("The headings add up to %1$@ more than the disk uses: hard links (pnpm), APFS clones and files written while measuring count in each place.", ByteFormat.string(over)))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 if model.stopped {
                     Text(model.overview == nil ? tr("Measurement stopped. Only completed folders are counted; unfinished categories show a lower bound.") : tr("Measurement stopped. Unchanged categories keep previous results; updated categories count only completed folders."))
                         .font(.callout).foregroundStyle(.orange)
@@ -261,9 +265,20 @@ struct DiskOverviewView: View {
         .contentShape(Rectangle())
     }
 
+    /// A command reads as one (monospaced, selectable so it can be copied); a sentence as text.
+    func actionLine(_ action: String) -> some View {
+        let command = action.hasPrefix("xcrun ") || action.hasPrefix("brew ") || action.hasPrefix("thermo ")
+        return Text("→ " + action)
+            .font(command ? .caption.monospaced() : .caption)
+            .foregroundStyle(.orange)
+            .textSelection(.enabled)
+            .lineLimit(1).truncationMode(.middle)
+    }
+
     static func cleanupRoute(for id: String) -> (label: String, category: CleanCategory?)? {
         switch id {
         case "projects": return (tr("Scan build artifacts"), .projects)
+        case "home-tools": return (tr("Find cleanup candidates"), .aiSessions)
         case "developer", "simulator-runtimes": return (tr("Review Xcode cleanup"), .xcode)
         case "homebrew": return (tr("Scan developer caches"), .devCaches)
         case "temp": return (tr("Scan temporary files and leftovers"), .system)
@@ -296,6 +311,7 @@ struct DiskOverviewView: View {
                     .font(.caption).foregroundStyle(.orange).padding(.leading, 20)
             }
             if let n = e.note { Text(n).font(.caption).foregroundStyle(.secondary).padding(.leading, 20) }
+            if let a = e.action { actionLine(a).padding(.leading, 20) }
             if let route = Self.cleanupRoute(for: e.id) {
                 Button(route.label) { openCleanup(route.category) }
                     .buttonStyle(PillButtonStyle()).disabled(cleanupDisabled).padding(.leading, 20).padding(.vertical, 4)
@@ -305,6 +321,7 @@ struct DiskOverviewView: View {
                     HStack {
                         Text(c.title).font(.callout.monospaced()).lineLimit(1).truncationMode(.middle)
                         Spacer()
+                        if let a = c.action { actionLine(a) }
                         Text(ByteFormat.string(c.bytes)).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
                         if let p = c.path {
                             Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) } label: {

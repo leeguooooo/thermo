@@ -89,9 +89,13 @@ struct CleanCommand {
         for e in o.entries where e.bytes >= 100_000_000 {
             lines.append(pad(gb(e.bytes), 9, right: true) + "  " + style.bold(e.title) + (e.complete == false ? style.yellow(" · at least this much; category unfinished") : ""))
             if let n = e.note { lines.append(pad("", 11) + style.dim(n)) }
+            if let a = e.action { lines.append(pad("", 11) + style.yellow("→ " + a)) }
             for c in e.children.prefix(args.has("all") ? 20 : 5) where c.bytes >= 100_000_000 {
-                lines.append(pad("", 11) + pad(gb(c.bytes), 9, right: true) + "  " + c.title)
+                lines.append(pad("", 11) + pad(gb(c.bytes), 9, right: true) + "  " + c.title + (c.action.map { style.dim("  → " + $0) } ?? ""))
             }
+        }
+        if let over = o.overcounted {
+            lines.append(""); lines.append(style.dim(tr("The headings add up to %1$@ more than the disk uses: hard links (pnpm), APFS clones and files written while measuring count in each place.", gb(over))))
         }
         lines.append("")
         lines.append(style.dim(o.cancelled == true ? String(format: "stopped after %.1f s · completed folders counted; unfinished categories are lower bounds", o.duration)
