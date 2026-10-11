@@ -105,6 +105,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 `pulse --csv` 和 `pulse history --csv` 使用 `kind,name,value,unit` 列，温度为 °C，交换内存为 MiB；风扇、进程和历史归因记录的 `value` 为脱敏后的 JSON，保留其明细。
 
+`pulse chrome --json/--csv` 保留浏览器模式、提示和测量报告。无法读取浏览器时仍输出结构化结果，并返回退出码 1；CSV 的嵌套报告使用 `JSON` 单位标记。
+
 历史查询的 `--since` 接受正数小时、`h` 或 `m` 后缀，统一最多查询 24 小时；零、负数和非有限值会返回参数错误。
 
 浏览器增长比较要求两次样本属于同一 URL 和文档；跳转、重载或缺少可比旧样本时保留当前读数，注明未评估增长。旧格式没有文档导航时间时仅按 URL 比较，监听器增长提示也是排查线索。

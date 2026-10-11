@@ -18,12 +18,13 @@ extension PulseCommand {
         let hog = MachinePulse.sample().hogs.first { $0.name == browser }
         let gpu = hog?.parts?.first { $0.role == "GPU" }?.memoryKB
         let json = app.args.has("json")
-        let interactive = !json && isatty(STDERR_FILENO) != 0
+        let structured = json || app.args.has("csv")
+        let interactive = !structured && isatty(STDERR_FILENO) != 0
 
         let seconds = watch
         // Measuring attaches to every page (Chrome shows "is being debugged" for a moment): only on request.
         let measure = watch != nil || app.args.has("measure")
-        if measure && !json && ChromeInspector.endpoint(app: browser) != nil {
+        if measure && !structured && ChromeInspector.endpoint(app: browser) != nil {
             FileHandle.standardError.write(Data((ChromeInspector.debuggingBarNote + "\n").utf8))
         }
         let done = DispatchSemaphore(value: 0)
@@ -45,7 +46,11 @@ extension PulseCommand {
         done.wait()
         if interactive { FileHandle.standardError.write(Data("\r\u{1B}[K".utf8)) }
         guard let d = box.value else { return }
-        if json { print(Export.json(d)); return }
+        if structured {
+            print(json ? Export.diagnosticJSON(d) : Export.pulseCSV(d))
+            if d.mode == .unavailable { exit(1) }
+            return
+        }
 
         var lines: [String] = []
         func mb(_ v: Double) -> String { MemoryFormat.string(mebibytes: v) }
@@ -58,21 +63,22 @@ extension PulseCommand {
             guard let r = d.report else { break }
             lines.append(style.bold(tr("%1$@: %2$@ pages, %3$@ workers", browser, String(r.pages.count), String(r.workerCount)))
                          + style.dim("  " + tr("JavaScript %1$@", mb(r.pagesHeapMB + r.workersHeapMB))))
-            if let s = r.seconds {
+            if let notice = Self.browserComparisonNotice(r) { lines.append(style.yellow("  " + notice)) }
+            if let s = r.seconds, (r.comparedPages ?? r.pages.count) > 0 {
                 lines.append("")
                 if r.leaking.isEmpty {
-                    lines.append("  " + style.green("✓") + " " + tr("no page grew in %1$@ s", String(Int(s.rounded()))))
+                    lines.append("  " + style.green("✓") + " " + tr("No notable growth in %1$@ comparable pages over %2$@ s.", String(r.comparedPages ?? r.pages.count), String(Int(s.rounded()))))
                 } else {
                     lines.append(style.bold(tr("Growing")) + style.dim("  " + tr("(in %1$@ s)", String(Int(s.rounded())))))
                     for p in r.leaking {
                         let g = p.growth!
                         lines.append("  " + style.red("!") + " " + page(p.title, p.url))
-                        lines.append(style.dim(String(format: "      %@ · %+.1f MB · %+d %@ · %+d %@", mb(p.heapMB), g.heapMB,
+                        lines.append(style.dim(String(format: "      %@ · %+.1f MiB · %+d %@ · %+d %@", mb(p.heapMB), g.heapMB,
                                                       g.listeners, tr("listeners"), g.nodes, tr("nodes"))))
                         if let a = p.advice { lines.append("      " + style.yellow(a)) }
                     }
                 }
-            } else {
+            } else if r.seconds == nil && r.invalidTimestamp != true {
                 lines.append(style.dim("  " + tr("One sample only; add --watch 60 to see which pages grow.")))
             }
             if !r.largest.isEmpty {
@@ -116,6 +122,15 @@ extension PulseCommand {
         if let g = d.gap { lines.append(""); lines.append(style.dim(g)) }
         if let h = d.hint { lines.append(""); lines.append(style.dim(h)) }
         print(lines.joined(separator: "\n"))
+        if d.mode == .unavailable { exit(1) }
+    }
+
+    static func browserComparisonNotice(_ report: ChromeInspector.Report) -> String? {
+        if report.invalidTimestamp == true { return tr("Browser measurement times are invalid. Growth comparisons are unavailable; check again.") }
+        if let skipped = report.comparisonSkipped, skipped > 0 {
+            return tr("%1$@ pages had no comparable earlier sample; their growth was not evaluated.", String(skipped))
+        }
+        return nil
     }
 
     final class Box: @unchecked Sendable { var value: ChromeInspector.Diagnosis? }

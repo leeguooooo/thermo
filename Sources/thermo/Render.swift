@@ -155,7 +155,7 @@ enum Export {
                     append(key == "programs" ? "program" : key == "fans" ? "fan" : key, name, entry,
                            entry is String ? "" : "JSON")
                 }
-            } else { append("system", key, value, units[key] ?? "") }
+            } else { append("system", key, value, value is [String: Any] ? "JSON" : units[key] ?? "") }
         }
         return rows.joined(separator: "\n")
     }
