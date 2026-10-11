@@ -11,6 +11,7 @@
 #                                          enable Sparkle updates; writes releases/appcast.xml
 #                                          (upload everything in releases/ to that directory)
 #   ARCHS="arm64 x86_64" scripts/build.sh  universal binaries
+#   THERMO_BUILD_CONFIGURATION=debug …    local review using existing debug outputs
 set -eu
 
 cd "$(dirname "$0")/.."
@@ -20,6 +21,8 @@ NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 NOTARY_KEYCHAIN="${NOTARY_KEYCHAIN:-}"
 APPCAST_URL="${APPCAST_URL:-}"
 ARCHS="${ARCHS:-}"
+CONFIGURATION="${THERMO_BUILD_CONFIGURATION:-release}"
+case "$CONFIGURATION" in release|debug) ;; *) echo "invalid build configuration: $CONFIGURATION" >&2; exit 2 ;; esac
 VERSION="$(sed -n 's/.*static let string = "\(.*\)"/\1/p' Sources/ThermoKit/Version.swift)"
 BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 DIST="${THERMO_DIST_DIR:-dist}"
@@ -32,9 +35,9 @@ arch_flags=""
 for a in $ARCHS; do arch_flags="$arch_flags --arch $a"; done
 
 # shellcheck disable=SC2086
-swift build -c release $arch_flags
+swift build -c "$CONFIGURATION" $arch_flags
 # shellcheck disable=SC2086
-BIN="$(swift build -c release $arch_flags --show-bin-path)"
+BIN="$(swift build -c "$CONFIGURATION" $arch_flags --show-bin-path)"
 
 mkdir -p "$DIST"
 # Replace only our generated products; preserve unrelated files in a custom output directory.
@@ -56,7 +59,12 @@ cp Resources/AppIcon.icns "$C/Resources/"
 ditto "$BIN/Sparkle.framework" "$C/Frameworks/Sparkle.framework"
 # Not sandboxed, so Sparkle's XPC services are unnecessary.
 rm -rf "$C/Frameworks/Sparkle.framework/Versions/B/XPCServices" "$C/Frameworks/Sparkle.framework/XPCServices"
-install_name_tool -add_rpath "@executable_path/../Frameworks" "$C/MacOS/Thermo" 2>/dev/null || true
+# Never hide a failed Mach-O rewrite (for example when disk space runs out).
+xcrun vtool -show-build "$C/MacOS/Thermo" >/dev/null
+if ! otool -l "$C/MacOS/Thermo" | awk '$1 == "path" && $2 == "@executable_path/../Frameworks" { found = 1 } END { exit !found }'; then
+    install_name_tool -add_rpath "@executable_path/../Frameworks" "$C/MacOS/Thermo"
+fi
+xcrun vtool -show-build "$C/MacOS/Thermo" >/dev/null
 
 sed -e "s/__VERSION__/$VERSION/g" -e "s/__BUILD__/$BUILD/g" Resources/Info.plist > "$C/Info.plist"
 if [ -n "$APPCAST_URL" ]; then
