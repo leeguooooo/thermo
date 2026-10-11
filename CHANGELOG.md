@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.9
+
+- Disk scans show results as folders finish, support stopping and time budgets, and keep incomplete measurements clearly labeled. Scanning uses bounded concurrency and less memory.
+- Space Overview lists projects and source folders separately, with shortcuts to scan build output, Xcode files, developer caches and temporary leftovers.
+- Project cleanup recognizes build directories such as `target`, `.build`, `dist` and `node_modules`, preserves Git-tracked files and checks running agents, build tools and executables before removal.
+- Cleanup dry-run never deletes files or runs commands, even with `--yes`. Confirmation distinguishes Trash from permanent tool-managed removal; simulator cleanup uses reviewed device IDs and checks live state.
+- Cleanup reports measured disk space before and after, separately from estimated file sizes. Path protection checks symbolic-link ancestors, and cached plans keep their original scope and scan dates.
+- Browser pages support selecting several tabs and reviewing duplicate or growing pages, protect active or unknown-current tabs, and recheck memory after closing. Slowdown actions now recheck their results.
+- Native cleanup pages show progress, a Stop button and an explicit partial-results notice. Space Overview can reuse CLI measurements in the selected language without rescanning.
+
 ## 1.1.8
 
 - Browser pages read Chrome through chrome-use (1.5.186+): the tab list without attaching to pages, memory per page only when you ask (`thermo pulse chrome --measure`, or `--watch 60` to see which pages grow), pages not measured are counted, and stale chrome-use records are no longer mistaken for hidden pages. It tells you when chrome-use's Chrome extension is out of date or its update is waiting.
