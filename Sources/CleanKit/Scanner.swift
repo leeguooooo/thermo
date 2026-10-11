@@ -52,6 +52,7 @@ public final class DiskScanner: @unchecked Sendable {
             ("app data", [.system], { AppData.scan(ctx) }),
             ("tools", [.devCaches], { ToolCleanup.scan(ctx) }),
             ("electron apps", [.system], { [ToolCleanup.electronCaches(ctx)].compactMap { $0 } }),
+            ("browser updates", [.browsers], { ToolCleanup.browserOldVersions(ctx) }),
         ]
         for rule in Rules.paths where !rule.paths.isEmpty {
             jobs.append((rule.title, [rule.category], { [self.evaluate(rule, ctx: ctx, denied: { p in lock.lock(); denied.append(p); lock.unlock() })].compactMap { $0 } }))

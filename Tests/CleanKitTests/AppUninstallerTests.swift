@@ -125,6 +125,29 @@ final class AppUninstallerTests: XCTestCase {
                                "Library/LaunchAgents/com.foo.Bar.updater.plist"])
     }
 
+    func testBrowserProfileIsKeptUnlessAsked() {
+        let chrome = app("Google Chrome", "com.google.Chrome")
+        make("Applications/Google Chrome.app")
+        for rel in ["Library/Application Support/Google/Chrome", "Library/Caches/Google/Chrome",
+                    "Library/Caches/com.google.Chrome"] { make(rel) }
+        make("Library/Preferences/com.google.Chrome.plist", dir: false)
+        let processes = ProcessTable(entries: [])
+        let plan = AppUninstaller.plan(chrome, installed: [chrome], home: home, processes: processes)
+        let rel = { (p: String) in String(p.dropFirst(self.home.count + 1)) }
+        XCTAssertEqual(plan.kept?.map { rel($0.path) }, ["Library/Application Support/Google/Chrome"])
+        XCTAssertFalse(plan.paths.contains(home + "/Library/Application Support/Google/Chrome"))
+        XCTAssertTrue(plan.paths.contains(home + "/Library/Caches/Google/Chrome"))
+        let all = AppUninstaller.plan(chrome, installed: [chrome], home: home, processes: processes, includePersonal: true)
+        XCTAssertNil(all.kept)
+        XCTAssertTrue(all.paths.contains(home + "/Library/Application Support/Google/Chrome"))
+        XCTAssertGreaterThan(all.bytes, plan.bytes)
+
+        // Other apps' data folders go with them as before.
+        let foo = app("Foo", "com.foo.Foo")
+        make("Library/Application Support/com.foo.Foo")
+        XCTAssertNil(AppUninstaller.plan(foo, installed: [foo], home: home, processes: processes).kept)
+    }
+
     func testLeftoversLeaveWhatOtherInstalledAppsShare() {
         let target = app("Foo Bar", "com.foo.Bar")
         let sibling = app("Foo Baz", "com.foo.Baz")

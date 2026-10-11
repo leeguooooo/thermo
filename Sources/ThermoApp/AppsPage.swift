@@ -161,7 +161,7 @@ struct AppsPage: View {
             let p = box.plan
             ConfirmSheet(title: tr("Uninstall %1$@?", p.app.name),
                          summary: tr("%1$@ and %2$@ of its files go to the Trash: %3$@ in all.", p.app.name,
-                                     String(p.app.leftovers.count), ByteFormat.string(p.bytes)),
+                                     String(p.paths.count - 1), ByteFormat.string(p.bytes)),
                          destructive: false, heading: tr("What will be moved to the Trash"),
                          lines: lines(p),
                          footnote: tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
@@ -185,7 +185,11 @@ struct AppsPage: View {
 
     func lines(_ p: UninstallPlan) -> [String] {
         var out = [ByteFormat.string(p.app.bytes).padding(toLength: 10, withPad: " ", startingAt: 0) + p.app.path]
-        out += p.app.leftovers.map { ByteFormat.string($0.bytes).padding(toLength: 10, withPad: " ", startingAt: 0) + FSPath.tilde($0.path) }
+        out += p.app.leftovers.filter { p.paths.contains($0.path) }.map { ByteFormat.string($0.bytes).padding(toLength: 10, withPad: " ", startingAt: 0) + FSPath.tilde($0.path) }
+        if let kept = p.kept, !kept.isEmpty {
+            out.append(tr("Kept, your data (profiles, chat history, mail); remove it in the app first, or with thermo apps uninstall --with-data:"))
+            out += kept.map { ByteFormat.string($0.bytes).padding(toLength: 10, withPad: " ", startingAt: 0) + FSPath.tilde($0.path) }
+        }
         if let cask = p.app.cask { out.append(tr("Homebrew installed it: run brew uninstall --cask %1$@ afterwards so Homebrew forgets it.", cask)) }
         if !p.receipts.isEmpty { out.append(tr("Installed by a package (%1$@); files it put outside your home folder stay.", p.receipts.joined(separator: ", "))) }
         return out

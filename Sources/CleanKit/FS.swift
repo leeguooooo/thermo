@@ -343,6 +343,7 @@ public enum Cleaner {
                 return result
             }
             var ok = true
+            let measuredBefore = item.measure.map { FS.size($0) }
             for argv in commands {
                 if let why = Simulators.currentRemovalRefusal([argv], requireUnavailable: item.id == "simulator-unavailable") {
                     ok = false; result.failed[argv.joined(separator: " ")] = why
@@ -352,7 +353,9 @@ public enum Cleaner {
                 let line = argv.joined(separator: " ")
                 if status == 0 { result.removed.append("ran: " + line) } else { ok = false; result.failed[line] = output.isEmpty ? "exit \(status)" : output; break }
             }
-            if ok { result.bytes += item.bytes }
+            if ok, let before = measuredBefore, let paths = item.measure {
+                result.bytes += max(0, before.bytes - FS.size(paths).bytes)
+            } else if ok { result.bytes += item.bytes }
         }
         if !result.removed.isEmpty, let cmds = item.afterClean {
             for c in cmds { _ = Shell.run(c, timeout: 30) }

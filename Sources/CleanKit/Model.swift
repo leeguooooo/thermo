@@ -90,17 +90,20 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     public var parts: [CleanPart]?
     /// Items with the same group belong together (build output of one project folder).
     public var group: String?
+    /// For commands whose effect is not known beforehand (`pnpm store prune`): folders measured before
+    /// and after, so the result reports what was actually freed rather than `bytes` (an upper bound).
+    public var measure: [String]?
     /// `device:inode` of each path when it was scanned; a path that names another file at cleanup is skipped.
     public var identities: [String: String]?
 
     public init(id: String, category: CleanCategory, title: String, detail: String = "", safety: Safety,
                 bytes: Int64 = 0, files: Int = 0, lastUsed: Date? = nil, paths: [String] = [],
                 note: String? = nil, blocked: String? = nil, hint: String? = nil, afterClean: [String]? = nil,
-                parts: [CleanPart]? = nil, group: String? = nil, commands: [[String]]? = nil) {
+                parts: [CleanPart]? = nil, group: String? = nil, commands: [[String]]? = nil, measure: [String]? = nil) {
         self.id = id; self.category = category; self.title = title; self.detail = detail; self.safety = safety
         self.bytes = bytes; self.files = files; self.lastUsed = lastUsed; self.paths = paths
         self.note = note; self.blocked = blocked; self.hint = hint; self.afterClean = afterClean; self.parts = parts; self.group = group
-        self.commands = commands
+        self.commands = commands; self.measure = measure
     }
 
     public var cleanable: Bool { blocked == nil && bytes > 0 && (!paths.isEmpty || !(commands ?? []).isEmpty) }

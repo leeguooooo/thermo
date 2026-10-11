@@ -1159,4 +1159,11 @@ let zhHans: [String: String] = [
     "Chromium GPU & script caches": "Chromium GPU 与脚本缓存",
     "Unfinished downloads": "没下完的下载",
     "downloads a browser never finished": "浏览器没下载完的文件",
+    "Kept, your data (profiles, chat history, mail); add --with-data to move it too:": "保留你的数据（浏览器资料、聊天记录、邮件）；加 --with-data 才会一起移走：",
+    "Kept, your data (profiles, chat history, mail); remove it in the app first, or with thermo apps uninstall --with-data:": "保留你的数据（浏览器资料、聊天记录、邮件）；要删请先在应用里处理，或用 thermo apps uninstall --with-data：",
+    "pnpm packages no project uses": "pnpm 里没有项目在用的包",
+    "up to the store's size; pnpm keeps what your projects link to, and the result shows what it freed": "最多是整个 store 的大小；项目在用的包 pnpm 会保留，清理结果显示实际腾出多少",
+    "%1$@ previous version": "%1$@ 旧版本",
+    "kept until the browser restarts after an update; it deletes the old version itself": "更新后要等浏览器重启，它才会自己删掉旧版本",
+    "quit and reopen %1$@": "退出并重新打开 %1$@",
 ]

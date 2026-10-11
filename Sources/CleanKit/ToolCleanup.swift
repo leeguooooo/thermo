@@ -5,12 +5,13 @@ import Foundation
 /// Chromium caches of Electron apps).
 enum ToolCleanup {
     static func scan(_ ctx: ScanContext) -> [CleanItem] {
-        [homebrew(ctx), goModules(ctx)].compactMap { $0 } + obsoleteExtensions(ctx)
+        [homebrew(ctx), goModules(ctx), pnpmPrune(ctx)].compactMap { $0 } + obsoleteExtensions(ctx)
     }
 
     /// Absolute paths: an app opened from the Finder has no shell PATH.
     static func tool(_ name: String, ctx: ScanContext) -> String? {
-        ["/opt/homebrew/bin", "/usr/local/bin", "/usr/local/go/bin", ctx.path("~/go/bin"), ctx.path("~/.local/bin")]
+        ["/opt/homebrew/bin", "/usr/local/bin", "/usr/local/go/bin", ctx.path("~/go/bin"), ctx.path("~/.local/bin"),
+         ctx.path("~/Library/pnpm"), ctx.path("~/.local/share/pnpm")]
             .map { $0 + "/" + name }.first { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
@@ -74,6 +75,51 @@ enum ToolCleanup {
                          note: tr("downloaded modules; Go fetches them again on the next build"),
                          blocked: ctx.processes.running(["go"]).map { tr("quit %1$@ first", $0) },
                          hint: "go clean -modcache", commands: [[go, "clean", "-modcache"]])
+    }
+
+    // MARK: pnpm
+
+    /// `pnpm store prune` removes packages no project links to any more. It has no dry run, so the
+    /// store's size is the upper bound and the cleanup reports what it measured afterwards.
+    static func pnpmPrune(_ ctx: ScanContext) -> CleanItem? {
+        guard let pnpm = tool("pnpm", ctx: ctx) else { return nil }
+        let (status, output) = Shell.exec([pnpm, "store", "path"], timeout: 15)
+        guard status == 0, let store = output.split(separator: "\n").last.map(String.init), store.hasPrefix("/"),
+              FS.isDirectory(store) else { return nil }
+        let s = FS.size(store, trackNewest: true)
+        guard s.bytes > 0 else { return nil }
+        return CleanItem(id: "pnpm-store-prune", category: .devCaches, title: tr("pnpm packages no project uses"),
+                         detail: ctx.tilde(store), safety: .safe, bytes: s.bytes, files: s.files, lastUsed: s.newest,
+                         note: tr("up to the store's size; pnpm keeps what your projects link to, and the result shows what it freed"),
+                         blocked: ctx.processes.running(["pnpm"]).map { tr("quit %1$@ first", $0) },
+                         hint: "pnpm store prune", commands: [[pnpm, "store", "prune"]], measure: [store])
+    }
+
+    // MARK: Browser updates
+
+    /// Chromium browsers keep the previous version inside the app until they are restarted, then
+    /// delete it themselves. Thermo does not edit a signed app bundle; it says what a restart frees.
+    static func browserOldVersions(_ ctx: ScanContext, appsRoot: String = "/Applications") -> [CleanItem] {
+        let browsers: [(app: String, framework: String)] = [
+            ("Google Chrome", "Google Chrome Framework"), ("Microsoft Edge", "Microsoft Edge Framework"),
+            ("Brave Browser", "Brave Browser Framework"), ("Chromium", "Chromium Framework"),
+        ]
+        return browsers.compactMap { b in
+            let versions = "\(appsRoot)/\(b.app).app/Contents/Frameworks/\(b.framework).framework/Versions"
+            guard let current = try? FileManager.default.destinationOfSymbolicLink(atPath: versions + "/Current") else { return nil }
+            let old = FS.children(versions).filter {
+                let n = ($0 as NSString).lastPathComponent
+                return n != "Current" && n != (current as NSString).lastPathComponent && FS.isDirectory($0)
+            }
+            let s = FS.size(old)
+            guard s.bytes > 0 else { return nil }
+            return CleanItem(id: "browser-old-version/" + b.app, category: .browsers,
+                             title: tr("%1$@ previous version", b.app),
+                             detail: old.map { ($0 as NSString).lastPathComponent }.joined(separator: ", "),
+                             safety: .review, bytes: s.bytes, files: s.files,
+                             note: tr("kept until the browser restarts after an update; it deletes the old version itself"),
+                             hint: tr("quit and reopen %1$@", b.app))
+        }
     }
 
     // MARK: Editor extensions

@@ -48,7 +48,7 @@ struct AppsCommand {
     }
 
     func uninstall(_ names: [String]) throws {
-        guard let query = names.first, names.count == 1 else { throw CLIError("usage: thermo apps uninstall NAME [--dry-run] [--yes]") }
+        guard let query = names.first, names.count == 1 else { throw CLIError("usage: thermo apps uninstall NAME [--dry-run] [--yes] [--with-data]") }
         let installed = AppUninstaller.installed()
         let found = AppUninstaller.find(query, in: installed)
         guard !found.isEmpty else { throw CLIError(tr("no installed app matches '%1$@' (see thermo apps)", query)) }
@@ -57,7 +57,7 @@ struct AppsCommand {
                            + found.map { "  \($0.name)  \($0.bundleID ?? "")  \($0.path)" }.joined(separator: "\n"))
         }
         progress(tr("Looking for %1$@'s files…", target.name))
-        let plan = AppUninstaller.plan(target, installed: installed)
+        let plan = AppUninstaller.plan(target, installed: installed, includePersonal: args.has("with-data"))
         clearProgress()
 
         if args.has("json") && (args.has("dry-run") || plan.blocked != nil) {
@@ -68,8 +68,12 @@ struct AppsCommand {
         var lines = [style.bold(tr("Uninstall %1$@ (%2$@): move %3$@ to the Trash", target.name + (target.version.map { " " + $0 } ?? ""),
                                    target.bundleID ?? tr("no bundle ID"), ByteFormat.string(plan.bytes)))]
         lines.append("  " + pad(ByteFormat.string(plan.app.bytes), 9, right: true) + "  " + FS.tilde(plan.app.path))
-        for l in plan.app.leftovers {
+        for l in plan.app.leftovers where plan.paths.contains(l.path) {
             lines.append("  " + pad(ByteFormat.string(l.bytes), 9, right: true) + "  " + FS.tilde(l.path))
+        }
+        if let kept = plan.kept, !kept.isEmpty {
+            lines.append(style.dim(tr("Kept, your data (profiles, chat history, mail); add --with-data to move it too:")))
+            for l in kept { lines.append(style.dim("  " + pad(ByteFormat.string(l.bytes), 9, right: true) + "  " + FS.tilde(l.path))) }
         }
         if let cask = plan.app.cask {
             lines.append(style.dim(tr("Homebrew installed it: run brew uninstall --cask %1$@ afterwards so Homebrew forgets it.", cask)))

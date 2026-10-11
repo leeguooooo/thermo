@@ -31,9 +31,11 @@ public struct AppLeftover: Codable, Sendable, Equatable, Hashable {
     public var bytes: Int64
     /// Newest modification inside it.
     public var lastUsed: Date?
+    /// A browser profile, chat history or mailbox: kept unless asked for.
+    public var personal: Bool?
 
-    public init(path: String, bytes: Int64, lastUsed: Date? = nil) {
-        self.path = path; self.bytes = bytes; self.lastUsed = lastUsed
+    public init(path: String, bytes: Int64, lastUsed: Date? = nil, personal: Bool? = nil) {
+        self.path = path; self.bytes = bytes; self.lastUsed = lastUsed; self.personal = personal
     }
 }
 
@@ -56,6 +58,8 @@ public struct UninstallPlan: Codable, Sendable {
     public var blocked: String?
     /// Installer packages that put files outside the home folder; Thermo leaves those.
     public var receipts: [String] = []
+    /// Personal data left in place (profiles, chat history, mail), unless the plan includes it.
+    public var kept: [AppLeftover]?
 }
 
 public enum AppUninstaller {
@@ -273,7 +277,8 @@ public enum AppUninstaller {
             var st = stat()
             guard lstat(path, &st) == 0 else { return nil }
             let size = FS.size(path, trackNewest: true)
-            return AppLeftover(path: path, bytes: size.bytes, lastUsed: size.newest)
+            return AppLeftover(path: path, bytes: size.bytes, lastUsed: size.newest,
+                               personal: isPersonal(path, bundleID: app.bundleID, home: home) ? true : nil)
         }
     }
 
@@ -374,14 +379,38 @@ public enum AppUninstaller {
 
     // MARK: - Uninstalling
 
+    /// Apps whose own folders hold what people would not want to lose with the app: browser
+    /// profiles (bookmarks, passwords, extensions), chat history and mail.
+    static let personalDataApps = [
+        "com.google.Chrome", "com.microsoft.edgemac", "com.brave.Browser", "company.thebrowser.", "org.mozilla.firefox",
+        "com.vivaldi.Vivaldi", "com.operasoftware.Opera", "org.chromium.Chromium", "com.kagi.kagimacOS", "app.zen-browser",
+        "com.tencent.xinWeChat", "com.tencent.qq", "ru.keepcoder.Telegram", "org.telegram.desktop", "net.whatsapp.WhatsApp",
+        "desktop.WhatsApp", "com.tinyspeck.slackmacgap", "com.hnc.Discord", "com.bytedance.macos.feishu", "com.electron.lark",
+        "com.larksuite.", "org.whispersystems.signal-desktop", "jp.naver.line.mac", "com.microsoft.teams2", "us.zoom.xos",
+        "com.alibaba.DingTalkMac", "com.facebook.archon", "com.readdle.smartemail-Mac", "com.microsoft.Outlook",
+        "com.mimestream.Mimestream", "it.bloop.airmail2", "com.apple.mail",
+    ]
+
+    /// The data folders (not caches or settings) of an app in `personalDataApps`.
+    static func isPersonal(_ path: String, bundleID: String?, home: String) -> Bool {
+        guard let id = bundleID, personalDataApps.contains(where: { id == $0 || id.hasPrefix($0) }) else { return false }
+        return ["/Library/Application Support/", "/Library/Containers/", "/Library/Group Containers/"]
+            .contains { path.hasPrefix(home + $0) }
+    }
+
+    /// `includePersonal`: also move browser profiles, chat history and mail (left in place by default).
     public static func plan(_ app: InstalledApp, installed: [InstalledApp], home: String = NSHomeDirectory(),
-                            processes: ProcessTable? = nil) -> UninstallPlan {
+                            processes: ProcessTable? = nil, includePersonal: Bool = false) -> UninstallPlan {
         var app = app
         if app.leftovers.isEmpty { app.leftovers = leftovers(for: app, installed: installed, home: home) }
         if app.bytes == 0 { app.bytes = bundleSize(app.path) }
         app.protected = app.protected ?? protection(app, home: home)
-        let paths = [app.path] + app.leftovers.map(\.path)
-        var plan = UninstallPlan(app: app, paths: paths, bytes: app.totalBytes, receipts: receipts(for: app.bundleID))
+        let kept = includePersonal ? [] : app.leftovers.filter { $0.personal == true }
+        let moved = app.leftovers.filter { l in !kept.contains { $0.path == l.path } }
+        let paths = [app.path] + moved.map(\.path)
+        var plan = UninstallPlan(app: app, paths: paths, bytes: app.bytes + moved.reduce(0) { $0 + $1.bytes },
+                                 receipts: receipts(for: app.bundleID))
+        plan.kept = kept.isEmpty ? nil : kept
         plan.blocked = refusal(plan, home: home, processes: processes ?? ProcessTable.current(.init(cpu: false)))
         return plan
     }

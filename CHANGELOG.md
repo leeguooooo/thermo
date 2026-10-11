@@ -5,6 +5,8 @@
 - Cleanup checks each path again just before removing it: a path swapped for another file since the scan, or one a running program holds open (files or working directory), is skipped and named. Ages count when a file was moved or unpacked, not only its modification date.
 - New cleanup items: Chrome, Edge, Brave, Arc and Chromium GPU and script caches in every profile; caches of Electron apps that are not running; editors' replaced extensions (VS Code, Cursor, Windsurf); Corepack, Electron, TypeScript, Carthage and Android caches; unfinished downloads and `.ipsw` firmware in Downloads.
 - Homebrew's old versions (`brew cleanup`) and Go's module cache (`go clean -modcache`) are cleaned by the tools themselves, sized by Homebrew's own dry run.
+- `pnpm store prune` removes packages no project uses; the result reports the space it actually freed. Chrome, Edge and Brave's previous version, kept inside the app until a restart, is shown with how much the restart frees (Thermo does not edit signed app bundles).
+- Uninstalling a browser, chat or mail app keeps its profiles, chat history and mail unless asked for (`thermo apps uninstall NAME --with-data`); the confirmation lists what stays.
 - iOS device support keeps the two most recently used versions. A folder another rule covers (such as an app's logs inside ~/Library/Logs) is counted once.
 
 ## 1.1.9

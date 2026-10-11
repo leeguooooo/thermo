@@ -111,6 +111,7 @@ public enum Rules {
         PathRule("carthage-cache", .devCaches, "Carthage cache", ["~/Library/Caches/org.carthage.CarthageKit"], scope: .contents),
         PathRule("android-caches", .devCaches, "Android build caches", ["~/.android/cache", "~/.android/build-cache"],
                  scope: .contents, apps: ["studio"]),
+        PathRule("pnpm-store-prune", .devCaches, "pnpm packages no project uses", [], apps: ["pnpm"]),
         PathRule("go-mod-cache", .devCaches, "Go module cache", [], safety: .review, apps: ["go"],
                  note: "downloaded modules; Go fetches them again on the next build"),
         PathRule("homebrew-old-versions", .devCaches, "Homebrew old versions", [], apps: ["brew"],

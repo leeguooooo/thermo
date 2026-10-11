@@ -58,7 +58,8 @@ COMMANDS
                              biggest folders (--json)
   apps                       installed apps, their size and the files they keep in your home folder
   apps uninstall NAME        move the app and its files to the Trash (lists every path, asks first;
-                             --dry-run only lists; refuses running, system and protected apps)
+                             --dry-run only lists; refuses running, system and protected apps;
+                             browser, chat and mail data stays unless --with-data)
   apps leftovers             data left by apps that are gone (untouched 30 days, unknown to Spotlight)
   apps leftovers remove ID…|all
                              move that data to the Trash; asks first
