@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.11
+
+- AI Agent Diagnostics finds programs an agent started that keep crashing (each crash leaves a report and can show the "quit unexpectedly" dialog), with the crash reason and the newest report; it names the MCP server or hook that runs the program when only one does, otherwise the ones it could be.
+
 ## 1.1.10
 
 - Uninstall apps (Disk Cleanup → Uninstall apps, or `thermo apps`): the app and the files it keeps in your home folder go to the Trash after you see every path; running, system and protected apps (password managers, VPNs, input methods, security software) are refused. Data left by apps you already deleted is found too (`thermo apps leftovers`).

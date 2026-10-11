@@ -1166,4 +1166,8 @@ let zhHans: [String: String] = [
     "%1$@ previous version": "%1$@ 旧版本",
     "left inside the app by an update until the browser restarts; the version in use stays": "更新后留在应用里、要等浏览器重启才会删的旧版本；正在用的版本保留",
     "not an old browser version": "不是浏览器的旧版本",
+    "see the newest report: %1$@": "看最新的崩溃报告：%1$@",
+    "its program (%1$@) crashed %2$@ times in the last 7 days%3$@": "它运行的程序（%1$@）最近 7 天崩溃了 %2$@ 次%3$@",
+    "%1$@ started by %2$@ crashed %3$@ times in the last 7 days%4$@": "%2$@ 启动的 %1$@ 最近 7 天崩溃了 %3$@ 次%4$@",
+    "%1$@ started by %2$@ crashed %3$@ times in the last 7 days%4$@; it is one of: %5$@": "%2$@ 启动的 %1$@ 最近 7 天崩溃了 %3$@ 次%4$@；是下面其中一个：%5$@",
 ]
