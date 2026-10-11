@@ -66,7 +66,7 @@ extension ChromeInspector {
               let process = selected.first?.browserProcess, selected.allSatisfy({ $0.browserProcess == process }),
               process == identity(app) else { return refused() }
         let payload = selected.map { ["key": $0.selectionID, "id": $0.browserID!, "url": $0.url, "title": $0.title,
-                                      "protectActive": $0.active == false] as [String: Any] }
+                                      "protectActive": $0.active != true] as [String: Any] }
         guard let data = try? JSONSerialization.data(withJSONObject: payload) else { return refused() }
         let script = """
         const app = Application(\(jsString(app)));

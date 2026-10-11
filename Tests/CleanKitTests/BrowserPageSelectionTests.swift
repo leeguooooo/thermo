@@ -93,6 +93,11 @@ final class BrowserPageSelectionTests: XCTestCase {
         XCTAssertEqual(context.evaluateScript("JSON.stringify(closedIDs)")?.toString(), "[\"b\",\"a\"]")
         XCTAssertEqual(context.evaluateScript("JSON.stringify(entries.map(t=>t.id()))")?.toString(), "[\"keep\"]")
     }
+    func testUnknownCurrentMarkerCannotCloseTheActivePageWithoutAnExplicitCurrentSelection() throws {
+        let (result, context) = try close([tab("current", active: nil)], fixture: "activeID='current';entries=[page('current','https://example.test/','Same')];")
+        XCTAssertEqual(result.map(\.status), [.becameActive])
+        XCTAssertEqual(context.evaluateScript("JSON.stringify(closedIDs)")?.toString(), "[]")
+    }
     func testChangedMissingCurrentAndRefusedPagesRemainOpen() throws {
         let plan = [tab("changed"), tab("gone"), tab("current"), tab("refused"), tab("ok")]
         let (result, context) = try close(plan, fixture: "activeID='current';entries=[page('changed','https://new.test/','Same'),page('current','https://example.test/','Same'),page('refused','https://example.test/','Same',true),page('ok','https://example.test/','Same')];")
