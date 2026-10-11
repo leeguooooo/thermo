@@ -417,6 +417,7 @@ let zhHans: [String: String] = [
     "; ": "；",
     // Categories
     "AI sessions": "AI 会话",
+    "Agent worktrees": "Agent 工作树",
     "AI models": "AI 模型",
     "AI tool caches": "AI 工具缓存",
     "Developer caches": "开发缓存",
@@ -439,6 +440,10 @@ let zhHans: [String: String] = [
     "project folder deleted": "项目文件夹已删除",
     "latest: “%1$@”": "最近：“%1$@”",
     "temp: %1$@": "临时：%1$@",
+    "keeping %1$@ recent session, %2$@ in use": "保留最近 %1$@ 个会话，%2$@ 个正在使用",
+    "keeping %1$@ recent sessions, %2$@ in use": "保留最近 %1$@ 个会话，%2$@ 个正在使用",
+    "keeping %1$@ recent session": "保留最近 %1$@ 个会话",
+    "keeping %1$@ recent sessions": "保留最近 %1$@ 个会话",
     "keeping %1$@ recent session (%2$@), %3$@ in use": "保留最近 %1$@ 个会话（%2$@），%3$@ 个正在使用",
     "keeping %1$@ recent sessions (%2$@), %3$@ in use": "保留最近 %1$@ 个会话（%2$@），%3$@ 个正在使用",
     "keeping %1$@ recent session (%2$@)": "保留最近 %1$@ 个会话（%2$@）",

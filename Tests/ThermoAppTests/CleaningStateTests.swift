@@ -4,6 +4,15 @@ import ThermoL10n
 @testable import ThermoApp
 
 final class CleaningStateTests: XCTestCase {
+    func testCategoryScanDoesNotExpandToAllAIOrProjects() {
+        let options = DiskModel.scanOptions(scope: .all, category: .aiSessions)
+        XCTAssertEqual(options.categories, [.aiSessions])
+        XCTAssertTrue(options.lowPriority)
+        XCTAssertFalse(options.categories.contains(.agentWorktrees))
+        XCTAssertTrue(DiskModel.scanOptions(scope: .ai).categories.contains(.agentWorktrees))
+        XCTAssertEqual(DiskModel.scanOptions(scope: .all).categories, Set(CleanCategory.allCases))
+    }
+
     func testLanguageChangePreservesReportAndSelectionsWithStaleNotice() {
         L10n.override = .english
         defer { L10n.override = nil }

@@ -7,6 +7,7 @@ import Foundation
 /// What a finding is, for grouping in the CLI and the app.
 public enum CleanCategory: String, CaseIterable, Codable, Sendable {
     case aiSessions = "ai-sessions"
+    case agentWorktrees = "agent-worktrees"
     case aiModels = "ai-models"
     case aiCaches = "ai-caches"
     case devCaches = "dev-caches"
@@ -18,6 +19,7 @@ public enum CleanCategory: String, CaseIterable, Codable, Sendable {
     public var title: String {
         switch self {
         case .aiSessions: return tr("AI sessions")
+        case .agentWorktrees: return tr("Agent worktrees")
         case .aiModels: return tr("AI models")
         case .aiCaches: return tr("AI tool caches")
         case .devCaches: return tr("Developer caches")
@@ -28,7 +30,7 @@ public enum CleanCategory: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    public var isAI: Bool { [.aiSessions, .aiModels, .aiCaches].contains(self) }
+    public var isAI: Bool { [.aiSessions, .agentWorktrees, .aiModels, .aiCaches].contains(self) }
 }
 
 /// How sure we are that removing something costs the user nothing.
@@ -157,6 +159,13 @@ public struct ScanReport: Codable, Sendable {
         categories = try c.decodeIfPresent([CleanCategory].self, forKey: .categories)
         olderThanDays = try c.decodeIfPresent(Int.self, forKey: .olderThanDays)
         language = try c.decodeIfPresent(String.self, forKey: .language)
+        // Before worktrees had their own category, cached session scans included them.
+        let oldWorktrees = items.indices.filter { items[$0].category == .aiSessions && items[$0].id.hasPrefix("worktree/") }
+        for i in oldWorktrees { items[i].category = .agentWorktrees }
+        if !oldWorktrees.isEmpty, var scope = categories, !scope.contains(.agentWorktrees) {
+            scope.append(.agentWorktrees)
+            categories = scope
+        }
     }
 
     public var totalBytes: Int64 { items.filter(\.cleanable).reduce(0) { $0 + $1.bytes } }

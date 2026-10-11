@@ -114,17 +114,17 @@ enum Projects {
     }
 
     static func walk(_ dir: String, depth: Int, ctx: ScanContext, visited: inout Set<String>, into out: inout [Candidate]) {
-        guard depth <= maxDepth, visited.insert(dir).inserted else { return }
+        guard ScanCancellation.current?.isCancelled != true, depth <= maxDepth, visited.insert(dir).inserted else { return }
         guard let entries = FS.entries(dir) else { return }
         let names = entries.map(\.name)
         let set = Set(names)
         var claimed = Set<String>()
 
-        let matches = kinds.filter { k in
+        let matches = ctx.options.categories.contains(.projects) ? kinds.filter { k in
             k.markers.contains { m in
                 m.hasSuffix("*") ? names.contains { $0.hasSuffix(String(m.dropLast())) } : (m.contains("/") ? FS.exists(dir + "/" + m) : set.contains(m))
             }
-        }
+        } : []
         if !matches.isEmpty {
             // Last use: the latest of agent/editor sessions in it, git activity and its own files.
             var activity = projectActivity(dir, names: names, ignoring: Set(matches.flatMap(\.artifacts)))
@@ -142,7 +142,13 @@ enum Projects {
                 }
             }
         }
-        out += agentLeftovers(dir, names: set)
+        out += agentLeftovers(dir, names: set).filter { candidate in
+            switch candidate {
+            case .worktree: return ctx.options.categories.contains(.agentWorktrees)
+            case .aider: return ctx.options.categories.contains(.aiCaches)
+            case .artifact: return false
+            }
+        }
 
         for (n, isDir) in entries where isDir && !n.hasPrefix(".") && !skip.contains(n) && !claimed.contains(n) {
             if n.hasSuffix(".app") || n.hasSuffix(".xcodeproj") || n.hasSuffix(".xcworkspace") || n.hasSuffix(".framework") { continue }
@@ -216,7 +222,7 @@ enum Projects {
         if ctx.agentDirs.contains(where: { $0 == wt || $0.hasPrefix(wt + "/") }) { blocked = tr("an agent is running in it") }
         if (s.newest ?? ctx.now) > ctx.activeAfter, blocked == nil { blocked = tr("modified in the last 2 hours") }
         guard s.bytes > 0 else { return nil }
-        return CleanItem(id: "worktree/" + AISessions.slug(repoName) + "/" + AISessions.slug(name), category: .aiSessions,
+        return CleanItem(id: "worktree/" + AISessions.slug(repoName) + "/" + AISessions.slug(name), category: .agentWorktrees,
                          title: tr("Agent worktree") + " · \(repoName)/\(name)", detail: detail, safety: safety,
                          bytes: s.bytes, files: s.files, lastUsed: s.newest, paths: [wt], note: note, blocked: blocked,
                          afterClean: ["git -C \(Shell.quote(repo)) worktree prune"])

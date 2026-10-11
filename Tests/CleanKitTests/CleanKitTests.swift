@@ -158,6 +158,73 @@ final class CleanKitTests: XCTestCase {
         XCTAssertTrue(item.note?.contains("fix the login bug") ?? false)
     }
 
+    func testSessionScanMeasuresOnlyCleanupCandidates() throws {
+        let cwd = home + "/src/here"
+        try FileManager.default.createDirectory(atPath: cwd, withIntermediateDirectories: true)
+        let group = SessionGroup(cwd: cwd, label: "here", sessions: [
+            SessionFile(id: "old", paths: ["old.jsonl", "old-sidecar"], size: TreeSize(), modified: now.addingTimeInterval(-45 * 86400), needsSize: true),
+            SessionFile(id: "recent", paths: ["recent.jsonl"], size: TreeSize(), modified: now.addingTimeInterval(-3 * 86400), needsSize: true),
+            SessionFile(id: "live", paths: ["live.jsonl"], size: TreeSize(), modified: now.addingTimeInterval(-60 * 86400), needsSize: true),
+            SessionFile(id: "active", paths: ["active.jsonl"], size: TreeSize(), modified: now.addingTimeInterval(-3600), needsSize: true)
+        ])
+        var measured: [[String]] = []
+        let items = AISessions.items(tool: "Fixture", idPrefix: "fixture", groups: [group], ctx: context(live: ["live"])) { paths in
+            measured.append(paths)
+            var size = TreeSize(); size.bytes = 8192; size.files = 2
+            return size
+        }
+        XCTAssertEqual(measured, [["old.jsonl", "old-sidecar"]], "kept sessions must not be walked or queried for private blocks")
+        let item = try XCTUnwrap(items.first)
+        XCTAssertEqual(item.bytes, 8192)
+        XCTAssertEqual(item.files, 2)
+        XCTAssertEqual(item.paths, ["old.jsonl", "old-sidecar"])
+        XCTAssertTrue(item.note?.contains("3 recent sessions, 2 in use") == true)
+        XCTAssertFalse(item.note?.contains("0 B") == true, "unmeasured retained space must not be shown as zero")
+    }
+
+    func testSessionScanDoesNoSizingWhenAllSessionsAreKept() throws {
+        let cwd = home + "/src/here"
+        try FileManager.default.createDirectory(atPath: cwd, withIntermediateDirectories: true)
+        let group = SessionGroup(cwd: cwd, label: "here", sessions: [
+            SessionFile(id: "recent", paths: ["recent.jsonl"], size: TreeSize(), modified: now, needsSize: true)
+        ])
+        let items = AISessions.items(tool: "Fixture", idPrefix: "fixture", groups: [group], ctx: context()) { _ in
+            XCTFail("a group with no cleanup candidates must not request sizes")
+            return TreeSize()
+        }
+        XCTAssertTrue(items.isEmpty)
+    }
+
+    func testWorktreeOnlyProjectWalkSkipsBuildOutputAndAiderCaches() throws {
+        let cwd = home + "/src/here"
+        try write("src/here/package.json", "{}")
+        try write("src/here/dist/output.js")
+        try write("src/here/.aider.tags.cache/file")
+        try write("src/here/.claude/worktrees/old/file")
+        var options = context().options; options.categories = [.agentWorktrees]
+        let scoped = ScanContext(options: options, now: now, processes: ProcessTable(entries: []), agentDirs: [], liveClaudeSessions: [])
+        var visited = Set<String>(); var candidates: [Projects.Candidate] = []
+        Projects.walk(cwd, depth: 0, ctx: scoped, visited: &visited, into: &candidates)
+        XCTAssertEqual(candidates.count, 1)
+        if case let .worktree(path, repo) = try XCTUnwrap(candidates.first) {
+            XCTAssertEqual(path, cwd + "/.claude/worktrees/old")
+            XCTAssertEqual(repo, cwd)
+        } else { XCTFail("worktree scans should only offer the worktree") }
+    }
+
+    func testOldWorktreeReportsKeepTheirActionsInTheNewCategory() throws {
+        let old = CleanItem(id: "worktree/repo/checkout", category: .aiSessions, title: "Old checkout", safety: .risky,
+                            bytes: 4096, paths: ["/fixture/checkout"], afterClean: ["git worktree prune"])
+        var report = ScanReport(items: [old], denied: [], started: now, duration: 1)
+        report.categories = [.aiSessions]
+        let decoded = try JSONDecoder().decode(ScanReport.self, from: JSONEncoder().encode(report))
+        XCTAssertEqual(decoded.items.first?.category, .agentWorktrees)
+        XCTAssertEqual(decoded.items.first?.safety, .risky)
+        XCTAssertEqual(decoded.items.first?.afterClean, old.afterClean)
+        XCTAssertEqual(Set(decoded.categories ?? []), [.aiSessions, .agentWorktrees])
+        XCTAssertTrue(CleanCategory.agentWorktrees.isAI)
+    }
+
     func testSimplifiedChineseText() throws {
         L10n.override = .simplifiedChinese
         try write(".claude/projects/-nowhere/77777777-7777-7777-7777-777777777777.jsonl", "{\"cwd\":\"\(home)/src/gone\"}\n", age: 40)

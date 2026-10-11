@@ -28,9 +28,11 @@ struct ScanContext {
 struct SessionFile {
     let id: String
     let paths: [String]
-    let size: TreeSize
+    var size: TreeSize
     let modified: Date
     var title: String? = nil
+    /// Transcript sizes are read only after age and live-session checks choose cleanup candidates.
+    var needsSize = false
 }
 
 /// Sessions of one tool grouped by the project they ran in.
@@ -56,9 +58,11 @@ enum AISessions {
     // MARK: grouping → items
 
     /// Turns per-project session groups into items holding the stale sessions.
-    static func items(tool: String, idPrefix: String, groups: [SessionGroup], ctx: ScanContext) -> [CleanItem] {
+    static func items(tool: String, idPrefix: String, groups: [SessionGroup], ctx: ScanContext,
+                      measure: ([String]) -> TreeSize = { FS.size($0) }) -> [CleanItem] {
         var out: [CleanItem] = []
         for g in groups {
+            if ScanCancellation.current?.isCancelled == true { break }
             let projectGone = g.cwd.map { !FS.exists($0) } ?? false
             let agentHere = g.cwd.map { ctx.agentDirs.contains($0) } ?? false
             let newest = g.sessions.map(\.modified).max()
@@ -73,11 +77,20 @@ enum AISessions {
                 else { kept.append(s) }
             }
             guard !stale.isEmpty else { continue }
+            for i in stale.indices where stale[i].needsSize {
+                if ScanCancellation.current?.isCancelled == true { return out }
+                stale[i].size = measure(stale[i].paths)
+                stale[i].needsSize = false
+            }
             let size = stale.reduce(TreeSize()) { $0 + $1.size }
             var detail = g.cwd.map(ctx.tilde) ?? g.label
             if projectGone { detail += " · " + tr("project folder deleted") }
             var notes: [String] = []
-            if !kept.isEmpty {
+            if !kept.isEmpty, kept.contains(where: \.needsSize) {
+                notes.append(live > 0
+                    ? trCount(kept.count, "keeping %1$@ recent session, %2$@ in use", "keeping %1$@ recent sessions, %2$@ in use", String(live))
+                    : trCount(kept.count, "keeping %1$@ recent session", "keeping %1$@ recent sessions"))
+            } else if !kept.isEmpty {
                 let keptSize = kept.reduce(Int64(0)) { $0 + $1.size.bytes }
                 notes.append(live > 0
                     ? trCount(kept.count, "keeping %1$@ recent session (%2$@), %3$@ in use", "keeping %1$@ recent sessions (%2$@), %3$@ in use",
@@ -145,7 +158,7 @@ enum AISessions {
                 for side in [dir + "/" + sid, root + "/file-history/" + sid, root + "/session-env/" + sid]
                 where FS.exists(side) { paths.append(side) }
                 paths += todoBySession[sid] ?? []
-                g.sessions.append(SessionFile(id: sid, paths: paths, size: FS.size(paths), modified: m))
+                g.sessions.append(SessionFile(id: sid, paths: paths, size: TreeSize(), modified: m, needsSize: true))
                 if m > (newestFile?.1 ?? .distantPast) { newestFile = (f, m) }
             }
             guard let (file, _) = newestFile else { continue }
@@ -256,8 +269,8 @@ enum AISessions {
                 let key = archived ? "archived" : (meta.cwd ?? "unknown")
                 var g = byCwd[key] ?? SessionGroup(cwd: archived ? nil : meta.cwd,
                                                    label: archived ? tr("archived") : label(for: meta.cwd, fallback: "unknown"))
-                g.sessions.append(SessionFile(id: meta.id ?? rel, paths: [f], size: FS.size(f), modified: m,
-                                              title: meta.id.flatMap { titles[$0] }))
+                g.sessions.append(SessionFile(id: meta.id ?? rel, paths: [f], size: TreeSize(), modified: m,
+                                              title: meta.id.flatMap { titles[$0] }, needsSize: true))
                 byCwd[key] = g
             }
         }

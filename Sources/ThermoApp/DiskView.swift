@@ -61,18 +61,26 @@ final class DiskModel: ObservableObject {
     /// Shows the last finished scan (CLI or app) when it is under an hour old and covers the
     /// current scope, so the window opens with results instead of minutes of scanning.
     @discardableResult
-    func loadSaved() -> Bool {
+    func loadSaved(category: CleanCategory? = nil) -> Bool {
         // The CLI scans in English; a report in another language would show the wrong titles here.
         guard report == nil, !scanning, let r = ScanReportCache.load(maxAge: 3600),
               r.language == L10n.current.rawValue else { return false }
-        let wanted = scope == .ai ? Set(CleanCategory.allCases.filter(\.isAI)) : Set(CleanCategory.allCases)
+        let wanted = category.map { Set([$0]) } ?? (scope == .ai ? Set(CleanCategory.allCases.filter(\.isAI)) : Set(CleanCategory.allCases))
         guard wanted.isSubset(of: Set(r.categories ?? [])) else { return false }
         report = r
         selected = Set(r.items.filter { $0.cleanable && $0.safety == .safe }.map(\.id))
         return true
     }
 
-    func scan() {
+    static func scanOptions(scope: Scope, category: CleanCategory? = nil) -> ScanOptions {
+        var options = ScanOptions()
+        options.lowPriority = true
+        if let category { options.categories = [category] }
+        else if scope == .ai { options.categories = Set(CleanCategory.allCases.filter(\.isAI)) }
+        return options
+    }
+
+    func scan(category: CleanCategory? = nil) {
         guard !scanning, !cleaning else { return }
         Monitor.requestNotificationPermission()
         scanning = true
@@ -85,9 +93,7 @@ final class DiskModel: ObservableObject {
         report = nil
         selected = []
         excluded = [:]
-        var options = ScanOptions()
-        options.lowPriority = true
-        if scope == .ai { options.categories = Set(CleanCategory.allCases.filter(\.isAI)) }
+        let options = Self.scanOptions(scope: scope, category: category)
         let scanner = DiskScanner(options: options)
         self.scanner = scanner
         let started = Date()

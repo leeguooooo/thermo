@@ -38,7 +38,7 @@ public final class DiskScanner: @unchecked Sendable {
         var denied: [String] = []
 
         var jobs: [(String, Set<CleanCategory>, () -> [CleanItem])] = [
-            ("projects", [.projects, .aiSessions, .aiCaches], { Projects.scan(ctx) }),
+            ("projects", [.projects, .agentWorktrees, .aiCaches], { Projects.scan(ctx) }),
             ("AI sessions", [.aiSessions], { AISessions.scan(ctx) }),
             ("AI tools", [.aiCaches], { AITools.scan(ctx) }),
             ("AI models", [.aiModels], { AIModels.scan(ctx) }),

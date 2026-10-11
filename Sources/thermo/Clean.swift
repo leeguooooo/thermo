@@ -77,6 +77,7 @@ struct CleanCommand {
             if f == "ai" { set.formUnion(CleanCategory.allCases.filter(\.isAI)) }
             else if let c = CleanCategory(rawValue: f) { set.insert(c) }
             else if f == "sessions" { set.insert(.aiSessions) }
+            else if f == "worktrees" { set.insert(.agentWorktrees) }
             else if f == "models" { set.insert(.aiModels) }
             else {
                 throw CLIError("unknown category '\(f)'; use ai, " + CleanCategory.allCases.map(\.rawValue).joined(separator: ", "))

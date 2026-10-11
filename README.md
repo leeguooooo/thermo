@@ -121,7 +121,7 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 `thermo clean` 和 App 的 **Disk** 页。常规清理（开发缓存、Xcode、浏览器、日志、旧安装包）之外，重点放在 AI 工具留在磁盘上的东西：
 
-- **AI 会话**：Claude Code、Codex、Gemini CLI 的会话按项目归组，标签取会话里记录的 `cwd`，标题取第一条提问或 Codex 线程名；Cline / Roo / Kilo 任务；Cursor、VS Code、Windsurf 里已删除项目的聊天和工作区数据；agent 留在仓库里的 worktree。超过 `--older-than`（默认 30 天）没动过的会话，或所属项目文件夹已经删了的会话，才会被选中。
+- **AI 会话**：Claude Code、Codex、Gemini CLI 的会话按项目归组，标签取会话里记录的 `cwd`，标题取第一条提问或 Codex 线程名；Cline / Roo / Kilo 任务；Cursor、VS Code、Windsurf 里已删除项目的聊天和工作区数据。超过 `--older-than`（默认 30 天）没动过的会话，或所属项目文件夹已经删了的会话，才会被选中。
 - **AI 工具残留**：Claude Code 自动更新留下的旧版本、插件旧版本、`/private/tmp/claude-*` 里已结束会话的临时目录、已删会话的 file-history / todos、Claude 桌面版和 Cursor 等的缓存、给 agent 用的 Playwright 浏览器。
 - **模型**：Ollama 每个模型单独一项，和其他模型共用的层不删；Hugging Face 缓存按仓库列出；LM Studio、Whisper、PyTorch Hub、GPT4All、Jan 等。
 - **项目构建产物**：按标志文件识别（`package.json` → `node_modules`、`Cargo.toml` → `target`、`Package.swift` → `.build` 等），默认在 `~/Developer`、`~/code`、`~/github.com` 这类目录下找，`--root` 可以指定。
@@ -129,6 +129,7 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 安全规则：
 
 - 扫描只读。`clean run` 先列出计划，再要求确认。
+- **Agent 工作树**：`thermo clean worktrees` 单独扫描 agent 留在仓库里的 checkout；`thermo clean sessions` 只扫描会话记录，避免等待整个项目目录遍历。`thermo clean ai` 仍会包含两类。工作树的未提交改动、运行中的 agent 和近期写入检查仍会阻止误删。
 - 每项都有级别。`safe` 是会自动重建的缓存，直接删除；`review` 是会话、模型这类数据，移到废纸篓；`risky` 是有未提交改动的 worktree，`safe` / `all` 都不会选中它，必须写出完整 id。
 - 正在运行的 Claude Code 会话、2 小时内写过的会话、正在运行的 agent 所在目录、所属 App 还开着的缓存，一律跳过。
 - 删除前逐条复查路径：家目录以外的路径、`~/Documents`、`~/.ssh`、`.git`、Claude 的 `memory/` 这类位置永远不删。只移除列出的路径，不跟随符号链接。

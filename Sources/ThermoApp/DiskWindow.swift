@@ -52,6 +52,7 @@ enum DiskStyle {
     static func icon(_ c: CleanCategory) -> String {
         switch c {
         case .aiSessions: return "bubble.left.and.text.bubble.right.fill"
+        case .agentWorktrees: return "arrow.triangle.branch"
         case .aiModels: return "cpu.fill"
         case .aiCaches: return "sparkles"
         case .devCaches: return "hammer.fill"
@@ -65,6 +66,7 @@ enum DiskStyle {
     static func tint(_ c: CleanCategory) -> Color {
         switch c {
         case .aiSessions: return Color(red: 0.62, green: 0.42, blue: 1.0)
+        case .agentWorktrees: return Color(red: 0.45, green: 0.72, blue: 1.0)
         case .aiModels: return Color(red: 0.95, green: 0.42, blue: 0.75)
         case .aiCaches: return Color(red: 0.45, green: 0.5, blue: 1.0)
         case .devCaches: return Color(red: 1.0, green: 0.62, blue: 0.25)
@@ -227,15 +229,14 @@ struct DiskCategoryPage: View {
                             VStack(alignment: .leading, spacing: 12) {
                                 Label(tr("Find space you can free"), systemImage: "magnifyingglass")
                                 Button(tr("Scan")) {
-                                    if !category.isAI { model.scope = .all }
-                                    model.scan()
+                                    model.scan(category: category)
                                 }.buttonStyle(PillButtonStyle())
                             }
                             .foregroundStyle(.secondary).padding(.top, 30)
                         } else if model.report?.cancelled == true {
                             VStack(alignment: .leading, spacing: 12) {
                                 Label(tr("Scan stopped. These are partial results."), systemImage: "pause.circle")
-                                Button(tr("Scan again")) { model.scan() }.buttonStyle(PillButtonStyle())
+                                Button(tr("Scan again")) { model.scan(category: category) }.buttonStyle(PillButtonStyle())
                             }
                             .foregroundStyle(.secondary).padding(.top, 30)
                         } else {
@@ -248,6 +249,7 @@ struct DiskCategoryPage: View {
             }
             footer
         }
+        .onAppear { model.loadSaved(category: category) }
     }
 
     var header: some View {
