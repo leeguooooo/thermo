@@ -197,6 +197,7 @@ struct ChromePagesView: View {
         case .devtools:
             guard let r = d.report else { return "" }
             return tr("%1$@ pages, %2$@ workers · JavaScript %3$@", String(r.pages.count), String(r.workerCount), mb(r.pagesHeapMB + r.workersHeapMB))
+                + (r.unmeasured > 0 ? " · " + ChromeInspector.unmeasuredText(r.unmeasured) : "")
         case .tabs:
             let tabs = d.tabs ?? []
             return tr("%1$@ tabs in %2$@ windows", String(tabs.count), String(Set(tabs.map(\.window)).count))

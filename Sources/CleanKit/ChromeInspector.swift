@@ -656,6 +656,11 @@ public enum ChromeInspector {
     }
 
     /// Address-less targets in plain words: dead relay records, and real pages in no window.
+    /// Pages that were not measured: asleep (discarded), browser pages, or ones that refused.
+    public static func unmeasuredText(_ n: Int) -> String {
+        tr("%1$@ more pages were not measured (asleep, browser pages, or they refused)", String(n))
+    }
+
     public static func hiddenText(_ r: Report, app: String) -> String? {
         var parts: [String] = []
         if r.stale > 0 {

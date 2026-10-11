@@ -63,6 +63,7 @@ extension PulseCommand {
             guard let r = d.report else { break }
             lines.append(style.bold(tr("%1$@: %2$@ pages, %3$@ workers", browser, String(r.pages.count), String(r.workerCount)))
                          + style.dim("  " + tr("JavaScript %1$@", mb(r.pagesHeapMB + r.workersHeapMB))))
+            if r.unmeasured > 0 { lines.append(style.dim("  " + ChromeInspector.unmeasuredText(r.unmeasured))) }
             if let notice = Self.browserComparisonNotice(r) { lines.append(style.yellow("  " + notice)) }
             if let s = r.seconds, (r.comparedPages ?? r.pages.count) > 0 {
                 lines.append("")

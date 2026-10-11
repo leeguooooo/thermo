@@ -980,4 +980,5 @@ let zhHans: [String: String] = [
     "Every page is in use by another chrome-use session right now; try again when it is done.": "现在所有页面都被另一个 chrome-use 会话占用，等它结束后再试。",
     "chrome-use's Chrome extension has an update (%1$@) waiting until no tab is attached: click Update at chrome://extensions (Developer mode on), or restart Chrome.": "chrome-use 的 Chrome 扩展有更新（%1$@）在等待：要等没有标签页被占用才会生效。到 chrome://extensions（打开开发者模式）点「更新」，或者重启 Chrome。",
     "chrome-use's Chrome extension is out of date (%1$@, latest %2$@): click Update at chrome://extensions (Developer mode on), or restart Chrome.": "chrome-use 的 Chrome 扩展版本过旧（%1$@，最新 %2$@）：到 chrome://extensions（打开开发者模式）点「更新」，或者重启 Chrome。",
+    "%1$@ more pages were not measured (asleep, browser pages, or they refused)": "另有 %1$@ 个页面没测（已休眠、浏览器自带页面，或拒绝测量）",
 ]
