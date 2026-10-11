@@ -250,6 +250,9 @@ struct ChromePagesView: View {
         if let h = d.hiddenText { note(h, color: .orange) }
         if let g = d.gap { note(g, color: .secondary) }
         if let r = d.report {
+            if r.invalidTimestamp == true {
+                note(tr("Browser measurement times are invalid. Growth comparisons are unavailable; check again."), color: .orange)
+            }
             if r.seconds != nil {
                 section(tr("Growing"), r.leaking.isEmpty ? tr("No page grew in %1$@ s.", String(Int((r.seconds ?? 0).rounded()))) : nil) {
                     ForEach(r.leaking) { p in pageRow(p, warn: true) }

@@ -2,6 +2,8 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "Browser measurement times are invalid. Growth comparisons are unavailable; check again.": "浏览器测量时间异常，暂时无法比较增长，请重新检查。",
+    "Measurement interval must be finite and between 0 and 86400 seconds.": "测量间隔必须是 0 到 86400 秒之间的有限数值。",
     "credential stored in plain text in the config (%1$@)": "凭据以明文写在配置里（%1$@）",
     "credential stored in plain text in the config (%1$@); credential arguments may also appear in process listings": "凭据以明文写在配置里（%1$@）；凭据参数也可能出现在进程列表中",
     "Restart the read-only check when ready.": "准备好后可以重新开始只读检查。",

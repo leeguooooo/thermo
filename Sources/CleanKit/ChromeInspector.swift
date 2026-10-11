@@ -117,6 +117,7 @@ public enum ChromeInspector {
         public var pagesHeapMB: Double
         public var workersHeapMB: Double
         public var workerCount: Int
+        public var invalidTimestamp: Bool? = nil
     }
 
     /// Per-minute rates above which a page counts as growing.
@@ -134,6 +135,17 @@ public enum ChromeInspector {
     }
 
     static func mb(_ bytes: Double?) -> Double { (bytes ?? 0) / 1_048_576 }
+    static func validHeap(_ value: Double?) -> Double? {
+        value.flatMap { $0.isFinite && $0 >= 0 && $0 < Double(Int.max) ? $0 : nil }
+    }
+    static func count(_ value: Double?) -> Int? {
+        let value = value ?? 0
+        guard value.isFinite, value >= 0, value < Double(Int.max) else { return nil }
+        return Int(value)
+    }
+    static func validTimestamp(_ value: Double) -> Bool {
+        value.isFinite && value >= 0 && value <= 253_402_300_799_999 // through year 9999, in milliseconds
+    }
 
     /// Pages with no URL are not in any window (AppleScript sees far fewer tabs): automation.
     static func isHidden(_ t: Target) -> Bool { t.type == "page" && t.url.isEmpty }
@@ -152,16 +164,20 @@ public enum ChromeInspector {
     /// Compares two samples (or reads one) into what to tell the user.
     public static func diagnose(_ after: Snapshot, before: Snapshot? = nil, limits: Limits = Limits()) -> Report {
         let earlier = Dictionary((before?.rows ?? []).map { ($0.targetId, $0) }, uniquingKeysWith: { a, _ in a })
-        let seconds = before.map { after.date.timeIntervalSince($0.date) }.flatMap { $0 > 0 ? $0 : nil }
+        let validTime = validTimestamp(after.at) && (before.map { validTimestamp($0.at) } ?? true)
+        let seconds = before.flatMap { previous -> Double? in
+            let elapsed = (after.at - previous.at) / 1000
+            return validTime && elapsed.isFinite && elapsed > 0 && elapsed <= 86400 ? elapsed : nil
+        }
         var pages: [Page] = []
         var unmeasured = 0
         for t in after.rows where t.type == "page" && !isHidden(t) {
-            guard let heap = t.heap else { unmeasured += 1; continue }
+            guard let heap = validHeap(t.heap), let nodes = count(t.nodes), let listeners = count(t.listeners) else { unmeasured += 1; continue }
             var p = Page(id: t.targetId, url: t.url, title: t.title, heapMB: mb(heap),
-                         nodes: Int(t.nodes ?? 0), listeners: Int(t.listeners ?? 0))
-            if let seconds, let o = earlier[t.targetId], let oh = o.heap {
-                let g = Growth(seconds: seconds, heapMB: mb(heap - oh), nodes: Int((t.nodes ?? 0) - (o.nodes ?? 0)),
-                               listeners: Int((t.listeners ?? 0) - (o.listeners ?? 0)))
+                         nodes: nodes, listeners: listeners)
+            if let seconds, let o = earlier[t.targetId], let oh = validHeap(o.heap), let oldNodes = count(o.nodes), let oldListeners = count(o.listeners) {
+                let g = Growth(seconds: seconds, heapMB: mb(heap - oh), nodes: nodes - oldNodes,
+                               listeners: listeners - oldListeners)
                 p.growth = g
                 p.leak = leak(g, limits)
                 p.advice = p.leak.map { advice($0, g) }
@@ -189,18 +205,20 @@ public enum ChromeInspector {
         for w in workerRows {
             let s = site(w.url)
             bySite[s, default: SiteWorkers(site: s, count: 0, heapMB: 0)].count += 1
-            bySite[s]!.heapMB += mb(w.heap)
+            bySite[s]!.heapMB += mb(validHeap(w.heap))
         }
         // Only an address-less page that answered is real; unchecked ones are never counted.
         let realHidden = after.rows.filter { isHidden($0) && $0.ghost == false }
         let workers = bySite.values.filter { $0.count >= limits.workers }.sorted { ($0.count, $0.site) > ($1.count, $1.site) }
 
-        return Report(sampled: after.date, seconds: seconds, pages: pages, leaking: leaking, largest: largest,
+        var report = Report(sampled: validTimestamp(after.at) ? after.date : Date(timeIntervalSince1970: 0), seconds: seconds, pages: pages, leaking: leaking, largest: largest,
                       duplicates: duplicates, workers: workers,
-                      hidden: realHidden.count, hiddenHeapMB: realHidden.reduce(0) { $0 + mb($1.heap) },
+                      hidden: realHidden.count, hiddenHeapMB: realHidden.reduce(0) { $0 + mb(validHeap($1.heap)) },
                       stale: after.rows.filter { isHidden($0) && $0.ghost != false }.count, unmeasured: unmeasured,
-                      pagesHeapMB: pages.reduce(0) { $0 + $1.heapMB }, workersHeapMB: workerRows.reduce(0) { $0 + mb($1.heap) },
+                      pagesHeapMB: pages.reduce(0) { $0 + $1.heapMB }, workersHeapMB: workerRows.reduce(0) { $0 + mb(validHeap($1.heap)) },
                       workerCount: workerRows.count)
+        report.invalidTimestamp = validTime && (before == nil || seconds != nil) ? nil : true
+        return report
     }
 
     static func leak(_ g: Growth, _ limits: Limits) -> Leak? {
@@ -234,7 +252,9 @@ public enum ChromeInspector {
     /// Plain words on where the rest of Chrome's memory is, so the page numbers don't look wrong.
     public static func gapText(_ r: Report, appMemoryKB: Int?, gpuKB: Int?) -> String? {
         guard let total = appMemoryKB, total > 0 else { return nil }
-        let pagesKB = Int((r.pagesHeapMB + r.workersHeapMB + r.hiddenHeapMB) * 1024)
+        let combined = (r.pagesHeapMB + r.workersHeapMB + r.hiddenHeapMB) * 1024
+        guard combined.isFinite, combined >= 0, combined < Double(Int.max) else { return nil }
+        let pagesKB = Int(combined)
         var text = tr("Pages' JavaScript uses %1$@ of the %2$@ the browser uses.", MachinePulse.gb(pagesKB), MachinePulse.gb(total))
         text += (text.hasSuffix("。") ? "" : " ") + (gpuKB.map { tr("The rest is the GPU process (%1$@), images, video and drawing, and extensions.", MachinePulse.gb($0)) }
             ?? tr("The rest is the GPU process, images, video and drawing, and extensions."))
@@ -553,6 +573,9 @@ public enum ChromeInspector {
         var hint: String?
         func stopped() -> Diagnosis { Diagnosis(app: app, mode: .unavailable, duplicates: [], hint: tr("Check stopped. You can start again when ready.")) }
         if Task.isCancelled { return stopped() }
+        if let watch, !watch.isFinite || watch < 0 || watch > 86400 {
+            return Diagnosis(app: app, mode: .unavailable, duplicates: [], hint: tr("Measurement interval must be finite and between 0 and 86400 seconds."))
+        }
         if !measure {
             if endpoint(app: app, home: home) == nil {
                 hint = app == "Google Chrome"
