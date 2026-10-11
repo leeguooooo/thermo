@@ -977,4 +977,6 @@ let zhHans: [String: String] = [
     "Board": "主板",
     "Other": "其他",
     "Open Console": "打开控制台",
+    "chrome-use's Chrome extension needs attention: %1$@": "chrome-use 的 Chrome 扩展需要处理：%1$@",
+    "Every page is in use by another chrome-use session right now; try again when it is done.": "现在所有页面都被另一个 chrome-use 会话占用，等它结束后再试。",
 ]

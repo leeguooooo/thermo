@@ -183,3 +183,72 @@ final class ChromeInspectorTests: XCTestCase {
         XCTAssertEqual(MachinePulse.sentences("重启它大约能腾出 19 GB。", "它会自己恢复标签页。"), "重启它大约能腾出 19 GB。它会自己恢复标签页。")
     }
 }
+
+/// chrome-use `diag pages` (schema 1) read into Thermo's report.
+final class ChromeUseDiagTests: XCTestCase {
+    override func setUp() { L10n.override = .english }
+    override func tearDown() { L10n.override = nil }
+
+    let watched = #"""
+    {"schema":1,"command":"diag pages","success":true,"exitCode":0,"exitReason":null,"generatedAt":1791647340000,
+     "connection":{"transport":"relay","state":"connected","extensionConnected":true},
+     "extension":{"applies":true,"version":"0.5.33","behindPublished":true,"hint":"update ab-connect to 0.5.35 in chrome://extensions"},
+     "staleRelayRecords":4,
+     "pages":[
+      {"handle":"chrome-tab:1","windowId":7,"index":0,"title":"City config","url":"https://admin.example.com/#init","discarded":false,
+       "metrics":{"JSHeapUsedSize":43835408,"Nodes":578,"JSEventListeners":3411,"Documents":1},
+       "measure":{"status":"measured","via":"temporary_attach","forced":true},
+       "delta":{"seconds":90,"JSHeapUsedSize":-101284,"Nodes":0,"JSEventListeners":411},"leakClass":"listeners_growing_nodes_flat"},
+      {"handle":"chrome-tab:2","windowId":7,"index":1,"title":"Home / X","url":"https://x.com/home",
+       "metrics":{"JSHeapUsedSize":108801916,"Nodes":6701,"JSEventListeners":5264},
+       "measure":{"status":"measured"},"delta":{"seconds":90,"JSHeapUsedSize":4129104,"Nodes":100,"JSEventListeners":264},"leakClass":"heap_growing"},
+      {"handle":"chrome-tab:3","windowId":9,"index":0,"title":"Home / X","url":"https://x.com/home",
+       "metrics":{"JSHeapUsedSize":136155928,"Nodes":23485,"JSEventListeners":900},
+       "measure":{"status":"measured"},"delta":{"seconds":90,"JSHeapUsedSize":117376,"Nodes":0,"JSEventListeners":0},"leakClass":"none"},
+      {"handle":"chrome-tab:4","windowId":9,"index":1,"title":"Old tab","url":"https://old.example.com/","discarded":true,
+       "metrics":null,"measure":{"status":"skipped","reason":"discarded"}}
+     ],
+     "workers":{"source":"relay_records","total":80,"measured":10,"measuredHeap":true,
+       "sites":[{"site":"https://www.tiktok.com","count":78,"usedSize":20971520},{"site":"https://github.com","count":2,"usedSize":null}]}}
+    """#
+
+    func decode(_ s: String) throws -> ChromeInspector.ChromeUseReport {
+        try JSONDecoder().decode(ChromeInspector.ChromeUseReport.self, from: Data(s.utf8))
+    }
+
+    func testWatchedRunBecomesThermosReport() throws {
+        let r = ChromeInspector.report(try decode(watched))
+        XCTAssertEqual(r.leaking.map(\.id), ["chrome-tab:1", "chrome-tab:2"])
+        XCTAssertEqual(r.leaking.map(\.leak), [.listeners, .heap])
+        XCTAssertEqual(r.leaking[0].growth?.listeners, 411)
+        XCTAssertTrue(r.leaking[0].advice!.contains("411 event listeners in 90 s"))
+        XCTAssertEqual(r.largest.first?.id, "chrome-tab:3")
+        XCTAssertEqual(r.seconds, 90)
+        XCTAssertEqual(r.unmeasured, 1, "the discarded tab is never attached")
+        XCTAssertEqual(r.stale, 4)
+        XCTAssertEqual(r.duplicates, [.init(url: "https://x.com/home", title: "Home / X", count: 2)])
+        XCTAssertEqual(r.workers.map(\.site), ["tiktok.com"])
+        XCTAssertEqual(r.workers.first?.heapMB ?? 0, 20, accuracy: 0.01)
+        XCTAssertEqual(r.workerCount, 80)
+    }
+
+    func testListOnlyRunGivesTabsAndExtensionAdvice() throws {
+        let d = try decode(watched)
+        XCTAssertEqual(ChromeInspector.tabs(d).map(\.window), [7, 7, 9, 9])
+        XCTAssertEqual(ChromeInspector.tabs(d).map(\.index), [1, 2, 1, 2])
+        XCTAssertEqual(ChromeInspector.extensionHint(d), "chrome-use's Chrome extension needs attention: update ab-connect to 0.5.35 in chrome://extensions")
+    }
+
+    func testNotConnectedAndNewerKeysAreRead() throws {
+        let d = try decode(#"{"schema":1,"exitCode":2,"exitReason":"not_connected","pages":[],"someFutureKey":{"x":1}}"#)
+        XCTAssertEqual(d.exitCode, 2)
+        XCTAssertTrue(d.pages.isEmpty)
+        XCTAssertNil(ChromeInspector.extensionHint(d))
+    }
+
+    func testVersionGate() {
+        XCTAssertTrue(ChromeInspector.versionAtLeast("1.5.186", "1.5.186"))
+        XCTAssertTrue(ChromeInspector.versionAtLeast("1.6.0", "1.5.186"))
+        XCTAssertFalse(ChromeInspector.versionAtLeast("1.5.183", "1.5.186"))
+    }
+}

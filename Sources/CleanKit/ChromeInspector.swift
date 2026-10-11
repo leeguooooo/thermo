@@ -596,6 +596,12 @@ public enum ChromeInspector {
         if let watch, !watch.isFinite || watch < 0 || watch > 86400 {
             return Diagnosis(app: app, mode: .unavailable, duplicates: [], hint: tr("Measurement interval must be finite and between 0 and 86400 seconds."))
         }
+        // chrome-use 1.5.186+ does this itself (`diag pages`); the raw DevTools path below is for older ones.
+        if app == "Google Chrome", let tool = chromeUseDiagTool(home: home),
+           let d = await diagnoseWithChromeUse(tool, app: app, measure: measure, watch: watch, appMemoryKB: appMemoryKB, gpuKB: gpuKB,
+                                               progress: progress) {
+            return Task.isCancelled ? stopped() : d
+        }
         if !measure {
             if endpoint(app: app, home: home) == nil {
                 hint = app == "Google Chrome"
