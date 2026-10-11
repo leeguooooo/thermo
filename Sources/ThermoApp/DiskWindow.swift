@@ -52,6 +52,13 @@ extension DiskModel {
 }
 
 enum DiskStyle {
+    /// "1.2 GB" or "4 KB · 1.5 GB waiting for apps to quit": what is held back is said, not hidden.
+    static func categoryStatus(_ r: ScanReport, _ c: CleanCategory) -> String {
+        let waiting = r.blockedBytes(in: c)
+        let ready = ByteFormat.string(r.bytes(in: c))
+        return waiting > 0 ? tr("%1$@ · %2$@ held back", ready, ByteFormat.string(waiting)) : ready
+    }
+
     static func icon(_ c: CleanCategory) -> String {
         switch c {
         case .aiSessions: return "bubble.left.and.text.bubble.right.fill"
@@ -105,9 +112,11 @@ struct DiskHome: View {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {
                         ForEach(CleanCategory.allCases, id: \.self) { c in
                             let inCat = r.items.filter { $0.category == c && $0.cleanable }
-                            if !inCat.isEmpty {
+                            let waiting = r.blockedBytes(in: c)
+                            // A category whose items all wait for an app to quit still shows, with that said.
+                            if !inCat.isEmpty || waiting > 0 {
                                 CategoryCard(symbol: DiskStyle.icon(c), color: DiskStyle.tint(c), title: c.title,
-                                             status: ByteFormat.string(r.bytes(in: c)), statusColor: .white.opacity(0.7),
+                                             status: DiskStyle.categoryStatus(r, c), statusColor: .white.opacity(0.7),
                                              count: inCat.count) { open(c) }
                             }
                         }
@@ -267,7 +276,7 @@ struct DiskCategoryPage: View {
             IconTile(symbol: DiskStyle.icon(category), color: DiskStyle.tint(category), size: 44)
             VStack(alignment: .leading, spacing: 3) {
                 Text(category.title).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
-                Text(tr("%1$@ · %2$@ selected", ByteFormat.string(model.report?.bytes(in: category) ?? 0),
+                Text(tr("%1$@ · %2$@ selected", model.report.map { DiskStyle.categoryStatus($0, category) } ?? ByteFormat.string(0),
                         ByteFormat.string(selected.reduce(0) { $0 + $1.bytes })))
                     .font(.callout).foregroundStyle(.white.opacity(0.6))
             }

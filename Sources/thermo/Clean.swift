@@ -185,7 +185,9 @@ struct CleanCommand {
             let items = r.items.filter { $0.category == c }
             guard !items.isEmpty else { continue }
             lines.append("")
-            lines.append(pad(style.bold(c.title), 0) + style.dim("  " + ByteFormat.string(r.bytes(in: c))))
+            let waiting = r.blockedBytes(in: c)
+            lines.append(pad(style.bold(c.title), 0) + style.dim("  " + ByteFormat.string(r.bytes(in: c)))
+                         + (waiting > 0 ? style.yellow("  + " + tr("%1$@ held back (see skipped)", ByteFormat.string(waiting))) : ""))
             let shown = showAll ? items : Array(items.prefix(6))
             for i in shown { lines += render(i, width: width) }
             if shown.count < items.count {

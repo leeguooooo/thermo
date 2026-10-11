@@ -721,6 +721,8 @@ let zhHans: [String: String] = [
     "Your Mac is too hot and is slowing itself down": "电脑太热，系统正在自动降频",
     "Your Mac is overloaded: load %1$@ on %2$@ cores": "电脑严重超负荷：负载 %1$@（%2$@ 核）",
     "Memory is running out": "内存快不够用了",
+    "%1$@ held back (see skipped)": "另有 %1$@ 暂时清不了（见 skipped）",
+    "%1$@ · %2$@ held back": "%1$@ · %2$@ 暂时清不了",
     "Xcode predictive code completion model": "Xcode 代码补全模型",
     "Apple Intelligence models": "Apple 智能模型",
     "Apple Intelligence image models": "Apple 智能图像模型",

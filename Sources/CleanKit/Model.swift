@@ -183,6 +183,12 @@ public struct ScanReport: Codable, Sendable {
     public func bytes(in category: CleanCategory) -> Int64 {
         items.filter { $0.category == category && $0.cleanable }.reduce(0) { $0 + $1.bytes }
     }
+
+    /// Found but held back (its app is running, an agent works in it): a category heading that
+    /// shows only `bytes(in:)` reads 4 KB while 1.5 GB sits right under it.
+    public func blockedBytes(in category: CleanCategory) -> Int64 {
+        items.filter { $0.category == category && !$0.cleanable && $0.blocked != nil }.reduce(0) { $0 + $1.bytes }
+    }
 }
 
 public struct ScanOptions: Sendable {

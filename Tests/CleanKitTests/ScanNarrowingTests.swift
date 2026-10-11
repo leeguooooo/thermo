@@ -29,3 +29,15 @@ final class ScanNarrowingTests: XCTestCase {
         XCTAssertTrue(DiskScanner.step("a step added later", ruleIDs: rules, mayProduce: "anything"))
     }
 }
+
+final class HeldBackBytesTests: XCTestCase {
+    func testCategoryCountsWhatWaitsForAnAppSeparately() {
+        var chrome = CleanItem(id: "chrome-cache", category: .browsers, title: "Chrome cache", safety: .safe, bytes: 1_500_000_000, paths: ["/x"])
+        chrome.blocked = "quit Google Chrome first"
+        let small = CleanItem(id: "safari-cache", category: .browsers, title: "Safari cache", safety: .safe, bytes: 4_100, paths: ["/y"])
+        let r = ScanReport(items: [chrome, small], denied: [], started: Date(), duration: 1)
+        XCTAssertEqual(r.bytes(in: .browsers), 4_100)
+        XCTAssertEqual(r.blockedBytes(in: .browsers), 1_500_000_000)
+        XCTAssertEqual(r.blockedBytes(in: .xcode), 0)
+    }
+}
