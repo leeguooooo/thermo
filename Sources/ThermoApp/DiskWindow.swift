@@ -328,6 +328,24 @@ struct DiskCategoryPage: View {
     }
 
     var footer: some View {
+        Group {
+            if model.scanning {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text(model.progress).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                    Spacer()
+                    Button(model.stopping ? tr("stopping…") : tr("Stop")) { model.stop() }
+                        .buttonStyle(PillButtonStyle()).disabled(model.stopping)
+                }
+            } else {
+                selectionFooter
+            }
+        }
+        .padding(.horizontal, 28).padding(.vertical, 14)
+        .background(Color.black.opacity(0.18))
+    }
+
+    var selectionFooter: some View {
         HStack(spacing: 10) {
             Button(tr("Safe")) {
                 let ids = (model.report?.items ?? []).filter { $0.category == category && $0.cleanable && $0.safety == .safe }.map(\.id)
@@ -342,8 +360,6 @@ struct DiskCategoryPage: View {
                 .buttonStyle(PillButtonStyle(prominent: true, color: .pink))
                 .disabled(model.selectedItems.isEmpty || model.cleaning || model.scanning)
         }
-        .padding(.horizontal, 28).padding(.vertical, 14)
-        .background(Color.black.opacity(0.18))
     }
 }
 
