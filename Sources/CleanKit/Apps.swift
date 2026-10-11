@@ -44,6 +44,8 @@ public struct OrphanData: Codable, Identifiable, Sendable, Equatable {
     public var id: String { bundleID }
     public var bundleID: String
     public var items: [AppLeftover]
+
+    public init(bundleID: String, items: [AppLeftover]) { self.bundleID = bundleID; self.items = items }
     public var bytes: Int64 { items.reduce(0) { $0 + $1.bytes } }
     public var lastUsed: Date? { items.compactMap(\.lastUsed).max() }
 }

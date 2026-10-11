@@ -79,7 +79,7 @@ final class AppsModel: ObservableObject {
             await MainActor.run {
                 self.working = false
                 self.outcome = Self.summary([result])
-                self.load()
+                self.apps = Self.afterUninstall(self.apps, appPath: plan.app.path, removed: Set(result.removed))
             }
         }
     }
@@ -111,8 +111,31 @@ final class AppsModel: ObservableObject {
                 self.working = false
                 self.outcome = Self.summary(results)
                 self.selectedOrphans = []
-                self.scanOrphans()
+                self.orphans = Self.afterRemoval(self.orphans ?? [], removed: Set(results.flatMap(\.removed)))
             }
+        }
+    }
+
+    /// The list after an uninstall, without measuring every app again: the app leaves the list once its
+    /// bundle is gone; otherwise it stays, without the files that moved.
+    nonisolated static func afterUninstall(_ apps: [InstalledApp], appPath: String, removed: Set<String>) -> [InstalledApp] {
+        if removed.contains(appPath) || !FileManager.default.fileExists(atPath: appPath) {
+            return apps.filter { $0.path != appPath }
+        }
+        return apps.map { app in
+            guard app.path == appPath else { return app }
+            var app = app
+            app.leftovers.removeAll { removed.contains($0.path) }
+            return app
+        }
+    }
+
+    /// Leftovers after a removal, without searching again: moved folders drop out, emptied entries go.
+    nonisolated static func afterRemoval(_ orphans: [OrphanData], removed: Set<String>) -> [OrphanData] {
+        orphans.compactMap { o in
+            var o = o
+            o.items.removeAll { removed.contains($0.path) }
+            return o.items.isEmpty ? nil : o
         }
     }
 
