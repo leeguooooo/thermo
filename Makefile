@@ -7,7 +7,7 @@ NOTARY_KEYCHAIN ?= $(HOME)/Library/Keychains/login.keychain-db
 ARCHS ?= arm64 x86_64
 APPCAST_URL ?= https://app.leeguoo.com/thermo/appcast.xml
 
-.PHONY: build release publish icon debug test bench install uninstall clean
+.PHONY: build release publish icon debug test bench install uninstall clean rules-json
 
 build:
 	scripts/build.sh
@@ -43,6 +43,10 @@ install: build
 uninstall:
 	rm -f $(PREFIX)/bin/thermo $(PREFIX)/bin/thermo-helper
 	rm -rf /Applications/Thermo.app
+
+# Cleanup rules as JSON for app.leeguoo.com/mac-cleanup (copy into the app repo's shared/thermo-clean-rules.json).
+rules-json:
+	@scripts/export-clean-rules.py
 
 clean:
 	rm -rf .build dist
