@@ -319,11 +319,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         let hog = MachinePulse.sample().hogs.first { $0.name == name }
         let model = models.browser(name, memoryKB: hog?.memoryKB, gpuKB: hog?.parts?.first { $0.role == "GPU" }?.memoryKB)
         if let i = args.firstIndex(of: "--fixture"), i + 2 < args.count {
-            let read: (String) -> ChromeInspector.Snapshot? = { p in try? JSONDecoder().decode(ChromeInspector.Snapshot.self, from: Data(contentsOf: URL(fileURLWithPath: p))) }
-            if let before = read(args[i + 1]), let after = read(args[i + 2]) {
-                model.diagnosis = ChromeInspector.diagnosis(ChromeInspector.diagnose(after, before: before), app: name,
-                                                            appMemoryKB: model.appMemoryKB, gpuKB: model.gpuKB)
-            }
+            model.loadFixture(before: args[i + 1], after: args[i + 2])
         }
         page = .browser(name)
     }

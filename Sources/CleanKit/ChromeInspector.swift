@@ -484,26 +484,53 @@ public enum ChromeInspector {
         public var index: Int
         public var url: String
         public var title: String
+        /// Native browser ID, stable when tabs are reordered. Absent in old saved reports.
+        public var browserID: String? = nil
+        public var active: Bool? = nil
+        public var browserProcess: ProcessIdentity? = nil
+
+        public init(window: Int, index: Int, url: String, title: String, browserID: String? = nil,
+                    active: Bool? = nil, browserProcess: ProcessIdentity? = nil) {
+            self.window = window; self.index = index; self.url = url; self.title = title
+            self.browserID = browserID; self.active = active; self.browserProcess = browserProcess
+        }
+        public var selectionID: String { "\(browserProcess?.pid ?? 0):\(browserProcess?.started.timeIntervalSince1970 ?? 0):\(browserID ?? "window-\(window)-index-\(index)")" }
+        public var canSelect: Bool { browserID?.isEmpty == false && browserProcess != nil && !url.isEmpty }
     }
 
     /// Every tab of every window, through the browser's AppleScript dictionary (no memory numbers).
     /// Nil when the browser is not running or Thermo may not control it.
     public static func tabs(app: String = "Google Chrome") -> [Tab]? {
+        let process = browserIdentity(app: app)
         let script = """
         let app = null;
         try { app = Application(\(jsString(app))); } catch (e) {}
         if (!app || !app.running()) { '[]' } else {
-          JSON.stringify(app.windows().map(w => [w.id(), w.tabs().map(t => [t.url(), t.title()])]));
+          JSON.stringify(app.windows().map(w => {
+            let active = null; try { active = w.activeTabIndex(); } catch(e) {}
+            return [w.id(), active, w.tabs().map(t => {
+              let id = null; try { const value = t.id(); if (value !== null && typeof value !== 'undefined') id = String(value); } catch(e) {}
+              return [t.url(), t.title(), id];
+            })];
+          }));
         }
         """
-        guard let out = osascript(script), let data = out.data(using: .utf8),
-              let windows = try? JSONSerialization.jsonObject(with: data) as? [[Any]] else { return nil }
+        guard let out = osascript(script), process == browserIdentity(app: app) else { return nil }
+        return parseTabs(out, process: process)
+    }
+
+    static func parseTabs(_ out: String, process: ProcessIdentity?) -> [Tab]? {
+        guard let data = out.data(using: .utf8), let windows = try? JSONSerialization.jsonObject(with: data) as? [[Any]] else { return nil }
         var tabs: [Tab] = []
         for w in windows {
-            guard w.count == 2, let id = (w[0] as? NSNumber)?.intValue ?? (w[0] as? String).flatMap({ Int($0) }),
-                  let list = w[1] as? [[Any]] else { continue }
+            guard w.count == 3, let id = (w[0] as? NSNumber)?.intValue ?? (w[0] as? String).flatMap({ Int($0) }),
+                  let list = w[2] as? [[Any]] else { return nil }
+            let rawIndex = (w[1] as? NSNumber)?.intValue
+            let activeIndex = rawIndex.flatMap { $0 >= 1 && $0 <= list.count ? $0 : nil }
             for (i, t) in list.enumerated() {
-                tabs.append(Tab(window: id, index: i + 1, url: t.first as? String ?? "", title: t.count > 1 ? t[1] as? String ?? "" : ""))
+                tabs.append(Tab(window: id, index: i + 1, url: t.first as? String ?? "", title: t.count > 1 ? t[1] as? String ?? "" : "",
+                                browserID: t.count > 2 ? t[2] as? String : nil,
+                                active: activeIndex.map { $0 == i + 1 }, browserProcess: process))
             }
         }
         return tabs
