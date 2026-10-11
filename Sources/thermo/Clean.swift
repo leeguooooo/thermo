@@ -286,17 +286,22 @@ struct CleanCommand {
     /// The saved report when it is under 15 minutes old, made with the same age limit, and covers
     /// what `selectors` ask for; the picked items come back without paths that are gone.
     func reusableReport(for selectors: [String]) throws -> (report: ScanReport, picked: [CleanItem])? {
-        guard let r = ScanReportCache.load(maxAge: 15 * 60), r.olderThanDays == (try options()).olderThanDays,
-              r.language == L10n.current.rawValue else { return nil }
-        let covered = Set(r.categories ?? [])
-        for s in selectors.map({ $0.lowercased() }) {
-            let needs: Set<CleanCategory> = ["all", "safe"].contains(s) ? Set(CleanCategory.allCases)
-                : s == "ai" ? Set(CleanCategory.allCases.filter(\.isAI))
-                : CleanCategory(rawValue: s).map { [$0] } ?? []
-            guard needs.isSubset(of: covered) else { return nil }
+        let configured = try options()
+        let needs = selectors.reduce(into: Set<CleanCategory>()) { set, selector in
+            let s = selector.lowercased()
+            if ["all", "safe"].contains(s) { set.formUnion(CleanCategory.allCases) }
+            else if s == "ai" { set.formUnion(CleanCategory.allCases.filter(\.isAI)) }
+            else if let c = CleanCategory(rawValue: s) { set.insert(c) }
         }
+        guard let r = ScanReportCache.load(maxAge: 15 * 60, matching: { report in
+            guard report.olderThanDays == configured.olderThanDays,
+                  report.language == L10n.current.rawValue,
+                  needs.isSubset(of: Set(report.categories ?? [])),
+                  report.projectRoots == Array(Set(configured.projectRoots)).sorted(),
+                  report.discoverProjectRoots == configured.discoverProjectRoots else { return false }
+            return selectors.allSatisfy { !report.select([$0]).isEmpty }
+        }) else { return nil }
         let picked = r.select(selectors)
-        // Ids the old scan did not know about need a fresh one.
         guard !picked.isEmpty else { return nil }
         return (r, picked.map(refreshed))
     }

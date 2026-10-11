@@ -3,6 +3,7 @@
 // User-facing text goes through tr(); the CLI pins English, the app follows the chosen language.
 @_exported import ThermoL10n
 import Foundation
+import CryptoKit
 
 /// What a finding is, for grouping in the CLI and the app.
 public enum CleanCategory: String, CaseIterable, Codable, Sendable {
@@ -134,6 +135,8 @@ public struct ScanReport: Codable, Sendable {
     /// What the scan covered, so a saved report is only reused for selections it can answer.
     public var categories: [CleanCategory]?
     public var olderThanDays: Int?
+    public var projectRoots: [String]?
+    public var discoverProjectRoots: Bool?
     /// Titles and notes are written in this language at scan time ("en", "zh-Hans").
     public var language: String?
 
@@ -145,7 +148,7 @@ public struct ScanReport: Codable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays, language
+        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays, projectRoots, discoverProjectRoots, language
     }
 
     public init(from decoder: Decoder) throws {
@@ -159,6 +162,8 @@ public struct ScanReport: Codable, Sendable {
         categories = try c.decodeIfPresent([CleanCategory].self, forKey: .categories)
         olderThanDays = try c.decodeIfPresent(Int.self, forKey: .olderThanDays)
         language = try c.decodeIfPresent(String.self, forKey: .language)
+        projectRoots = try c.decodeIfPresent([String].self, forKey: .projectRoots)
+        discoverProjectRoots = try c.decodeIfPresent(Bool.self, forKey: .discoverProjectRoots)
         // Before worktrees had their own category, cached session scans included them.
         let oldWorktrees = items.indices.filter { items[$0].category == .aiSessions && items[$0].id.hasPrefix("worktree/") }
         for i in oldWorktrees { items[i].category = .agentWorktrees }
@@ -285,22 +290,60 @@ public func parseDays(_ s: String) -> Int? {
 /// The last finished scan, kept so `thermo clean run` can act on it without scanning everything
 /// again (a full scan takes minutes on a busy disk). Removal still re-checks every path.
 public enum ScanReportCache {
+    private static let lock = NSLock()
+    private static func directory(home: String) -> URL {
+        url(home: home).deletingLastPathComponent().appendingPathComponent("clean-reports", isDirectory: true)
+    }
+
+    private static func scopedURL(_ report: ScanReport, home: String) -> URL {
+        let scope: [String: Any] = [
+            "categories": report.categories?.map(\.rawValue).sorted() as Any? ?? NSNull(),
+            "age": report.olderThanDays as Any? ?? NSNull(),
+            "language": report.language as Any? ?? NSNull(),
+            "roots": report.projectRoots?.sorted() as Any? ?? NSNull(),
+            "discover": report.discoverProjectRoots as Any? ?? NSNull()
+        ]
+        let data = (try? JSONSerialization.data(withJSONObject: scope, options: .sortedKeys)) ?? Data()
+        let key = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        return directory(home: home).appendingPathComponent(key + ".json")
+    }
+
     public static func url(home: String = NSHomeDirectory()) -> URL {
         URL(fileURLWithPath: home).appendingPathComponent("Library/Caches/dev.thermo/clean-report.json")
     }
 
     public static func save(_ r: ScanReport, home: String = NSHomeDirectory()) {
         guard valid(r) else { return }
-        let u = url(home: home)
-        try? FileManager.default.createDirectory(at: u.deletingLastPathComponent(), withIntermediateDirectories: true)
+        lock.lock(); defer { lock.unlock() }
+        let folder = directory(home: home)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let e = JSONEncoder()
         e.dateEncodingStrategy = .iso8601
-        try? e.encode(r).write(to: u, options: .atomic)
+        guard let data = try? e.encode(r) else { return }
+        try? data.write(to: url(home: home), options: .atomic) // compatibility with older builds
+        let scoped = scopedURL(r, home: home)
+        if let previous = decode(scoped), previous.started > r.started { return }
+        try? data.write(to: scoped, options: .atomic)
+        // Bound disk use even when custom roots / languages / age limits vary frequently.
+        let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        let sorted = files.sorted {
+            ((try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast) >
+            ((try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast)
+        }
+        for old in sorted.dropFirst(32) { try? FileManager.default.removeItem(at: old) }
     }
 
-    /// Cleaning changes the paths in the report; the old scan must not reappear on next launch.
+    /// Cleaning invalidates every scope, so older plans cannot reappear after removal.
     public static func invalidate(home: String = NSHomeDirectory()) {
+        lock.lock(); defer { lock.unlock() }
         try? FileManager.default.removeItem(at: url(home: home))
+        try? FileManager.default.removeItem(at: directory(home: home))
+    }
+
+    private static func decode(_ url: URL) -> ScanReport? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601
+        return try? d.decode(ScanReport.self, from: data)
     }
 
     private static func valid(_ report: ScanReport) -> Bool {
@@ -326,14 +369,19 @@ public enum ScanReportCache {
         return true
     }
 
-    /// The saved report when it is younger than `maxAge` seconds.
-    public static func load(home: String = NSHomeDirectory(), maxAge: TimeInterval, now: Date = Date()) -> ScanReport? {
-        guard let data = try? Data(contentsOf: url(home: home)) else { return nil }
-        let d = JSONDecoder()
-        d.dateDecodingStrategy = .iso8601
-        guard let r = try? d.decode(ScanReport.self, from: data),
-              valid(r), now.timeIntervalSince(r.started) < maxAge, now >= r.started else { return nil }
-        return r
+    /// The newest complete report matching the caller's exact scope and freshness needs.
+    /// Reports keep their own scan dates; a fresh category never renews an older category.
+    public static func load(home: String = NSHomeDirectory(), maxAge: TimeInterval, now: Date = Date(),
+                            matching: (ScanReport) -> Bool = { _ in true }) -> ScanReport? {
+        lock.lock(); defer { lock.unlock() }
+        let saved = (try? FileManager.default.contentsOfDirectory(at: directory(home: home), includingPropertiesForKeys: nil)) ?? []
+        var best: ScanReport?
+        // Decode one report at a time; session reports can contain thousands of selectable parts.
+        for candidate in [url(home: home)] + saved.filter({ $0.pathExtension == "json" }) {
+            guard let r = decode(candidate), valid(r), now >= r.started,
+                  now.timeIntervalSince(r.started) < maxAge, matching(r) else { continue }
+            if best == nil || r.started > best!.started { best = r }
+        }
+        return best
     }
 }
-

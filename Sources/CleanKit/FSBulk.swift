@@ -27,6 +27,7 @@ enum BulkWalk {
         var isDir: Bool
         var isFile: Bool
         var modified: Int
+        var modifiedNanoseconds: Int = 0
         var fileID: UInt64
         var links: UInt32
         var allocated: Int64
@@ -70,7 +71,7 @@ enum BulkWalk {
                 let alloc = q.loadUnaligned(as: Int64.self)
                 _ = returned
                 body(Entry(name: name, isDir: type == VDIR.rawValue, isFile: type == VREG.rawValue,
-                           modified: mod.tv_sec, fileID: fileID, links: links, allocated: alloc,
+                           modified: mod.tv_sec, modifiedNanoseconds: mod.tv_nsec, fileID: fileID, links: links, allocated: alloc,
                            privateSize: alloc, error: Int32(bitPattern: error)))
                 p += len
             }

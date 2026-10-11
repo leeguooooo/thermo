@@ -63,10 +63,13 @@ final class DiskModel: ObservableObject {
     @discardableResult
     func loadSaved(category: CleanCategory? = nil) -> Bool {
         // The CLI scans in English; a report in another language would show the wrong titles here.
-        guard report == nil, !scanning, let r = ScanReportCache.load(maxAge: 3600),
-              r.language == L10n.current.rawValue else { return false }
         let wanted = category.map { Set([$0]) } ?? (scope == .ai ? Set(CleanCategory.allCases.filter(\.isAI)) : Set(CleanCategory.allCases))
-        guard wanted.isSubset(of: Set(r.categories ?? [])) else { return false }
+        let options = Self.scanOptions(scope: scope, category: category)
+        guard report == nil, !scanning, let r = ScanReportCache.load(maxAge: 3600, matching: {
+            $0.language == L10n.current.rawValue && wanted.isSubset(of: Set($0.categories ?? [])) &&
+                $0.projectRoots == Array(Set(options.projectRoots)).sorted() &&
+                $0.discoverProjectRoots == options.discoverProjectRoots && $0.olderThanDays == options.olderThanDays
+        }) else { return false }
         report = r
         selected = Set(r.items.filter { $0.cleanable && $0.safety == .safe }.map(\.id))
         return true

@@ -132,6 +132,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
   指定 `--root` 时仅扫描指定目录。Git 已跟踪的产物会保留；正在运行 agent 的项目会阻止清理。项目发现与目录统计同时进行，页面逐项显示结果。
 
   `thermo clean projects --root ~/github.com,~/tk.com --stream` 会输出逐行 JSON：`started`（磁盘剩余空间）、`items`、`progress`、`finished`（完整报告）。`thermo clean overview --stream` 同样支持逐项输出。只收到部分事件时，扫描还未完成；普通 `--json` 的完整报告格式保持不变。
+  完成的报告按分类、项目目录、保留天数和语言分别缓存，最多保留 32 个范围。再次打开分类页面或执行清理时，只复用范围一致且未过期的报告；清理后所有旧计划失效。项目活动读取会校验文件身份和修改时间，未变化的 Codex 会话无需反复打开。
+
 
 
 安全规则：

@@ -82,6 +82,8 @@ public final class DiskScanner: @unchecked Sendable {
                                 cancelled: cancellation.isCancelled)
         report.categories = CleanCategory.allCases.filter { options.categories.contains($0) }
         report.olderThanDays = options.olderThanDays
+        report.projectRoots = Array(Set(options.projectRoots)).sorted()
+        report.discoverProjectRoots = options.discoverProjectRoots
         report.language = language
         if saveReport { ScanReportCache.save(report, home: options.home) }
         return report
