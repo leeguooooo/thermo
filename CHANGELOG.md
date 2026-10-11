@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.1.13
 
+- Where the space is accounts for the whole disk: every folder in your home, Library and the system data volume falls under a heading (apps, app data, projects, tool and agent folders, Apple's downloaded models and voices by name, system-wide data), macOS's own volumes are shown as what cannot be removed, swap and the sleep image come from the VM volume, and each heading says what to do about it. What cannot be attributed (APFS metadata, local snapshots) is one named line, and hard links or clones counted twice are said instead of hidden.
+- A nearly full disk is named as the reason the Mac is slow (swap cannot grow, every write waits) instead of the busiest program; a warning appears below 5 GB.
+- Leftover code-sign clones of apps (Chrome left one per relaunch): free while they share blocks with the app, a full copy each once it updates; the one a running app uses stays.
+- The full cleanup scan takes about 35 s instead of minutes: APFS is asked for a file's reclaimable size only when the file may be a clone. Removing a chosen item no longer scans everything first, and 1,600 agent sessions go to the Trash in seconds instead of minutes.
+- Cleanup categories show what is held back by a running app next to what can go now. The `claude` command line and Claude.app's browser helper no longer count as the Claude app running, which kept its caches from ever being cleaned.
 - Memory gets its own section: where the memory is (apps, wired, compressed, cached files, free), swap on the disk, memory and swap over the last hour, six or 24, and every program by memory with its helpers and pages folded in, each with Quit, Restart or (for a browser) its pages.
 - Worth a restart: programs that keep growing and do not come down, and big apps that have run for a day or more (Xcode, 26 h, 2.4 GB). Thermo records each program's memory every five minutes to tell a leak from a program that is simply big.
 - When the disk is nearly full the Memory page says so first: swap cannot grow, which is what makes macOS say it has run out of application memory and ask you to force quit apps.
