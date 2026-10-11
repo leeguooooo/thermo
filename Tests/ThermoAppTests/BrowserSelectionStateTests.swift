@@ -32,6 +32,16 @@ final class BrowserSelectionStateTests: XCTestCase {
         while model.closing != nil, Date() < deadline { try await Task.sleep(nanoseconds: 1_000_000) }
         XCTAssertNil(model.closing)
     }
+    @MainActor func testPositionUsesBrowserWindowOrderRatherThanRecommendationSortOrder() {
+        var first = tabs()[1]; first.window = 90; first.index = 3
+        var second = tabs()[0]; second.window = 10; second.index = 1
+        let model = ChromePagesModel(app: "Fixture", appMemoryKB: nil, gpuKB: nil)
+        model.accept(.init(app: "Fixture", mode: .tabs, tabs: [first, second], duplicates: []), tabs: [first, second])
+        XCTAssertEqual(model.position(first), tr("Window %1$@ · tab %2$@", "1", "3"))
+        XCTAssertEqual(model.position(second), tr("Window %1$@ · tab %2$@", "2", "1"))
+        var unknown = first; unknown.window = 0
+        XCTAssertNil(model.position(unknown))
+    }
     @MainActor func testRecommendationSelectionDoesNotCloseOrSelectCurrentPage() {
         let tabs = tabs(); let fixture = PageActionFixture(initial: tabs, remaining: tabs)
         let model = ChromePagesModel(app: "Fixture", appMemoryKB: nil, gpuKB: nil, actions: fixture.actions)

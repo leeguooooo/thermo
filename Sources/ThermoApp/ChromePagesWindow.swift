@@ -67,6 +67,14 @@ final class ChromePagesModel: ObservableObject {
         } ?? [])
         return ChromeInspector.pageChoices(tabs: tabs, report: diagnosis?.report, stale: resultsStale)
     }
+    func position(_ tab: ChromeInspector.Tab) -> String? {
+        guard tab.window != 0, tab.index > 0 else { return nil }
+        let tabs = tabsSnapshot ?? diagnosis?.tabs ?? []
+        var windows: [Int] = []
+        for item in tabs where !windows.contains(item.window) { windows.append(item.window) }
+        guard let index = windows.firstIndex(of: tab.window) else { return nil }
+        return tr("Window %1$@ · tab %2$@", String(index + 1), String(tab.index))
+    }
     var selectedPages: [ChromeInspector.PageChoice] { pages.filter { selected.contains($0.id) && $0.tab.canSelect } }
     var recommendedPages: [ChromeInspector.PageChoice] { inventoryStale ? [] : pages.filter(\.recommended) }
     var busy: Bool { running || closing != nil }
@@ -221,10 +229,10 @@ struct ChromePagesView: View {
         .onAppear { if embedded && model.diagnosis == nil && !model.running { model.start() } }
         .onDisappear { if model.running { model.stop() } }
         .sheet(item: $confirming) { plan in
-            ConfirmSheet(title: tr("Close %1$@ selected pages?", String(plan.tabs.count)),
+            ConfirmSheet(title: trCount(plan.tabs.count, "Close %1$@ selected page?", "Close %1$@ selected pages?"),
                          summary: tr("The selected tabs close in %1$@. Unsaved input may be lost. Check that you no longer need these pages.", model.app),
                          destructive: true, heading: tr("Selected pages"),
-                         lines: plan.tabs.map { ($0.title.isEmpty ? $0.url : $0.title) + "\n" + $0.url },
+                         lines: plan.tabs.map { [model.position($0), $0.title.isEmpty ? $0.url : $0.title, $0.url].compactMap { $0 }.joined(separator: "\n") },
                          footnote: tr("Only the pages in this list are closed. Changed or newly active pages are skipped. Browser memory and system pressure are checked again after 5 seconds."),
                          confirmTitle: tr("Close and recheck"),
                          confirm: { confirming = nil; model.close(plan.tabs) }, cancel: { confirming = nil })
@@ -233,7 +241,7 @@ struct ChromePagesView: View {
 
     var selectionFooter: some View {
         HStack(spacing: 12) {
-            Text(tr("%1$@ pages selected", String(model.selectedPages.count))).font(.callout.monospacedDigit())
+            Text(trCount(model.selectedPages.count, "%1$@ page selected", "%1$@ pages selected")).font(.callout.monospacedDigit())
             Spacer()
             Button(tr("Clear selection")) { model.selected = [] }.disabled(model.busy || model.selected.isEmpty)
             Button(model.closing ?? tr("Close selected pages")) {
@@ -390,10 +398,8 @@ struct ChromePagesView: View {
             Text(tr("Choose pages to close")).font(.subheadline.weight(.semibold))
             Text(tr("Recommendations are candidates, not automatic closures. Current pages are excluded; unsaved input, pinned status and audio are not inspected."))
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            ViewThatFits(in: .horizontal) {
-                HStack { selectionTools }
-                VStack(alignment: .leading) { selectionTools }
-            }
+            HStack(spacing: 10) { selectionTools; Spacer(minLength: 0) }
+                .fixedSize(horizontal: false, vertical: true)
             TextField(tr("Search pages"), text: $search).textFieldStyle(.roundedBorder).accessibilityLabel(tr("Search pages"))
             if !model.pages.isEmpty && !model.pages.contains(where: { $0.tab.canSelect }) {
                 note(tr("Tab identities are unavailable. Check Thermo's Automation permission and refresh tabs. These rows stay read-only until individual tabs can be identified."), color: .orange)
@@ -405,8 +411,8 @@ struct ChromePagesView: View {
     @ViewBuilder var selectionTools: some View {
         Picker(tr("Pages"), selection: $onlyRecommended) {
             Text(tr("All pages")).tag(false)
-            Text(tr("Recommended candidates")).tag(true)
-        }.pickerStyle(.segmented).frame(width: 230)
+            Text(tr("Recommended")).tag(true)
+        }.pickerStyle(.segmented).labelsHidden().frame(width: 230)
         Button(tr("Select recommended (%1$@)", String(model.recommendedPages.count))) { model.selectRecommended() }
             .disabled(model.busy || model.recommendedPages.isEmpty)
     }
@@ -420,7 +426,7 @@ struct ChromePagesView: View {
             .disabled(model.busy || model.inventoryStale || !choice.tab.canSelect)
             VStack(alignment: .leading, spacing: 3) {
                 Text(choice.tab.title.isEmpty ? choice.tab.url : choice.tab.title).font(.callout).lineLimit(2)
-                Text(ChromeInspector.site(choice.tab.url)).font(.caption).foregroundStyle(.secondary).lineLimit(1).help(choice.tab.url)
+                Text([ChromeInspector.site(choice.tab.url), model.position(choice.tab)].compactMap { $0 }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).lineLimit(1).help(choice.tab.url)
                 if choice.tab.active == true { Text(tr("Current page in its window")).font(.caption2).foregroundStyle(.secondary) }
                 if let growth = choice.measured?.growth, growth.seconds.isFinite, growth.seconds > 0 {
                     Text(tr("Growth: %1$@ MiB over %2$@ s", String(format: "%+.1f", growth.heapMB), String(format: "%.0f", growth.seconds)))

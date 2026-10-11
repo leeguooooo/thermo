@@ -471,6 +471,10 @@ let zhHans: [String: String] = [
     "No unique memory reading matches this tab; identical titles and addresses cannot be paired reliably.": "此标签页没有可唯一对应的内存读数；同名同址页面无法可靠配对。",
     "Background scripts associated with a site; closing a tab may not stop all of them.": "站点关联的后台脚本；关闭标签页后，部分脚本仍可能运行。",
     "Tab identities are unavailable. Check Thermo's Automation permission and refresh tabs. These rows stay read-only until individual tabs can be identified.": "无法识别具体标签页，请检查 Thermo 的自动化权限后刷新。成功识别前，这些页面只能查看。",
+    "Window %1$@ · tab %2$@": "窗口 %1$@ · 第 %2$@ 个标签页",
+    "Recommended": "推荐候选",
+    "Close %1$@ selected page?": "关闭所选 %1$@ 个页面？",
+    "%1$@ page selected": "已选 %1$@ 页",
     "AI sessions": "AI 会话",
     "Agent worktrees": "Agent 工作树",
     "AI models": "AI 模型",
@@ -1040,5 +1044,6 @@ let zhHans: [String: String] = [
     "Every page is in use by another chrome-use session right now; try again when it is done.": "现在所有页面都被另一个 chrome-use 会话占用，等它结束后再试。",
     "chrome-use's Chrome extension has an update (%1$@) waiting until no tab is attached: click Update at chrome://extensions (Developer mode on), or restart Chrome.": "chrome-use 的 Chrome 扩展有更新（%1$@）在等待：要等没有标签页被占用才会生效。到 chrome://extensions（打开开发者模式）点「更新」，或者重启 Chrome。",
     "chrome-use's Chrome extension is out of date (%1$@, latest %2$@): click Update at chrome://extensions (Developer mode on), or restart Chrome.": "chrome-use 的 Chrome 扩展版本过旧（%1$@，最新 %2$@）：到 chrome://extensions（打开开发者模式）点「更新」，或者重启 Chrome。",
+    "%1$@ more page was not measured (asleep, a browser page, or it refused)": "另有 %1$@ 个页面没测（已休眠、浏览器自带页面，或拒绝测量）",
     "%1$@ more pages were not measured (asleep, browser pages, or they refused)": "另有 %1$@ 个页面没测（已休眠、浏览器自带页面，或拒绝测量）",
 ]
