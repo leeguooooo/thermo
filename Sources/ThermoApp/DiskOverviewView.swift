@@ -38,6 +38,15 @@ final class SpaceOverviewModel: ObservableObject {
         return entries.values.sorted { $0.bytes == $1.bytes ? $0.id < $1.id : $0.bytes > $1.bytes }
     }
 
+    func acceptEntry(_ entry: SpaceOverview.Entry) {
+        if let index = partial.firstIndex(where: { $0.id == entry.id }) {
+            let previous = partial[index]
+            guard !(previous.complete == true && entry.complete == false),
+                  (entry.measuredLocations ?? 0) >= (previous.measuredLocations ?? 0) else { return }
+            partial[index] = entry
+        } else { partial.append(entry) }
+    }
+
     func measure() {
         guard !measuring else { return }
         diskSpace = .measure()
@@ -55,7 +64,7 @@ final class SpaceOverviewModel: ObservableObject {
             let o = SpaceOverview.measure(onEntry: { e in
                 Task { @MainActor in
                     guard self.generation == generation, self.cancellation === cancellation, !cancellation.isCancelled else { return }
-                    self.partial.append(e)
+                    self.acceptEntry(e)
                 }
             }, cancellation: cancellation, lowPriority: true)
             await MainActor.run {
@@ -147,7 +156,7 @@ struct DiskOverviewView: View {
                     capacityBar(capacity: o.capacity, free: o.free, purgeable: o.purgeable)
                 }
                 if model.measuring, model.overview != nil {
-                    Text(tr("Previous results stay visible until each location is measured again."))
+                    Text(tr("Categories update as folders finish; unfinished totals are lower bounds."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 if let unreadable = model.overview?.unreadable, !unreadable.isEmpty {
@@ -159,15 +168,20 @@ struct DiskOverviewView: View {
                     }
                 }
                 if model.stopped {
-                    Text(model.overview == nil ? tr("Measurement stopped. Only locations completed before stopping are shown.") : tr("Measurement stopped. Complete previous results are kept; newly measured locations may be partial."))
+                    Text(model.overview == nil ? tr("Measurement stopped. Only completed folders are counted; unfinished categories show a lower bound.") : tr("Measurement stopped. Unchanged categories keep previous results; updated categories count only completed folders."))
                         .font(.callout).foregroundStyle(.orange)
                 }
-                if model.entries.isEmpty && !model.stopped {
-                    HStack(spacing: 8) {
-                        ProgressView().controlSize(.small)
-                        Text(tr("Measuring where your disk space is…")).foregroundStyle(.secondary)
+                if model.entries.isEmpty {
+                    if model.stopped {
+                        Text(tr("No folders finished before stopping. Measure again to continue."))
+                            .font(.callout).foregroundStyle(.secondary).padding(.top, 12)
+                    } else {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text(tr("Measuring where your disk space is…")).foregroundStyle(.secondary)
+                        }
+                        .padding(.top, 20)
                     }
-                    .padding(.top, 20)
                 } else {
                     VStack(spacing: 0) {
                         ForEach(model.entries) { e in
@@ -202,7 +216,7 @@ struct DiskOverviewView: View {
     }
 
     var subtitle: String {
-        if model.measuring { return tr("measuring… %1$@ places so far", String(model.partial.count)) }
+        if model.measuring { return tr("measuring… %1$@ places so far", String(model.partial.reduce(0) { $0 + ($1.measuredLocations ?? 1) })) }
         guard let at = model.measuredAt else { return "" }
         return tr("measured %1$@", at.formatted(date: .abbreviated, time: .shortened))
     }
@@ -232,7 +246,11 @@ struct DiskOverviewView: View {
                 .font(.caption2).foregroundStyle(.secondary).frame(width: 12)
             Text(entry.title).font(.body)
             Spacer()
-            Text(ByteFormat.string(entry.bytes)).font(.body.monospacedDigit())
+            if entry.complete == false {
+                Text(tr("at least %1$@", ByteFormat.string(entry.bytes))).font(.body.monospacedDigit()).foregroundStyle(.orange)
+            } else {
+                Text(ByteFormat.string(entry.bytes)).font(.body.monospacedDigit())
+            }
         }
         .contentShape(Rectangle())
     }
@@ -256,6 +274,10 @@ struct DiskOverviewView: View {
                     .frame(width: min(g.size.width, max(2, g.size.width * CGFloat(e.bytes) / CGFloat(total))))
             }
             .frame(height: 4).padding(.leading, 20)
+            if e.complete == false, let measured = e.measuredLocations, let total = e.totalLocations {
+                Text(tr("%1$@ of %2$@ locations measured", String(measured), String(total)))
+                    .font(.caption).foregroundStyle(.orange).padding(.leading, 20)
+            }
             if let n = e.note { Text(n).font(.caption).foregroundStyle(.secondary).padding(.leading, 20) }
             if expanded {
                 ForEach(e.children) { c in

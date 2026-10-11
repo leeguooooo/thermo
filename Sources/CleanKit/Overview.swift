@@ -13,6 +13,10 @@ public struct SpaceOverview: Codable, Sendable {
         /// The biggest folders inside, biggest first.
         public var children: [Entry]
         public var note: String?
+        /// False means bytes are a lower bound from fully measured children, not a final total.
+        public var complete: Bool? = nil
+        public var measuredLocations: Int? = nil
+        public var totalLocations: Int? = nil
     }
 
     public var capacity: Int64
@@ -37,19 +41,28 @@ public struct SpaceOverview: Codable, Sendable {
         var note: String? = nil
     }
 
+    struct MeasurementState {
+        let spot: Spot
+        let roots: [String]
+        let paths: [String]
+        var planned = true
+        var done = 0
+        var bytes: Int64 = 0
+        var kids: [Entry] = []
+        var denied: [String] = []
+        var lastEmission: UInt64 = 0
+
+        func entry() -> Entry {
+            Entry(id: spot.id, title: spot.title, path: roots.count == 1 ? roots[0] : nil,
+                  bytes: bytes, children: kids, note: spot.note, complete: planned && done == paths.count,
+                  measuredLocations: done, totalLocations: paths.count)
+        }
+    }
+
     /// Measures in parallel; the app uses lowPriority to keep background disk I/O quiet. `onProgress` gets each finished spot's title,
     /// `onEntry` the spot itself, so a UI can show results as they come in.
     public static func measure(home: String = NSHomeDirectory(), onProgress: ((String) -> Void)? = nil,
                                onEntry: ((Entry) -> Void)? = nil, cancellation: ScanCancellation = ScanCancellation(), lowPriority: Bool = false) -> SpaceOverview {
-        let started = Date()
-        let language = L10n.current.rawValue
-        let url = URL(fileURLWithPath: home)
-        let values = try? url.resourceValues(forKeys: [.volumeTotalCapacityKey, .volumeAvailableCapacityKey,
-                                                       .volumeAvailableCapacityForImportantUsageKey])
-        let capacity = Int64(values?.volumeTotalCapacity ?? 0)
-        let free = Int64(values?.volumeAvailableCapacity ?? 0)
-        let important = values?.volumeAvailableCapacityForImportantUsage ?? Int64(free)
-
         let h = { (p: String) in home + "/" + p }
         let userTemp = (NSTemporaryDirectory() as NSString).deletingLastPathComponent  // /var/folders/xx/…/ (T's parent)
         // A bounded set of places known to grow big. Walking all of home takes many minutes on a full
@@ -67,15 +80,52 @@ public struct SpaceOverview: Codable, Sendable {
             Spot(id: "homebrew", title: "Homebrew", paths: ["/opt/homebrew", "/usr/local"], children: 4),
         ]
 
-        var unreadable: [String] = []
-        var entries = [Entry?](repeating: nil, count: spots.count)
+        return measure(home: home, spots: spots, includeRuntimes: true, onProgress: onProgress,
+                       onEntry: onEntry, cancellation: cancellation, lowPriority: lowPriority)
+    }
+
+    /// Internal planner entry point lets tests exercise scheduling with a disposable tree.
+    static func measure(home: String, spots: [Spot], includeRuntimes: Bool = false,
+                        onProgress: ((String) -> Void)? = nil, onEntry: ((Entry) -> Void)? = nil,
+                        cancellation: ScanCancellation = ScanCancellation(), lowPriority: Bool = false,
+                        footprint: @escaping (String, ScanCancellation) -> DiskFootprint = { FS.footprint($0, cancellation: $1) }) -> SpaceOverview {
+        let started = Date()
+        let language = L10n.current.rawValue
+        let url = URL(fileURLWithPath: home)
+        let values = try? url.resourceValues(forKeys: [.volumeTotalCapacityKey, .volumeAvailableCapacityKey,
+                                                       .volumeAvailableCapacityForImportantUsageKey])
+        let capacity = Int64(values?.volumeTotalCapacity ?? 0)
+        let free = Int64(values?.volumeAvailableCapacity ?? 0)
+        let important = values?.volumeAvailableCapacityForImportantUsage ?? Int64(free)
+
+        // Discover only immediate children up front. All categories share one bounded queue;
+        // a huge application folder must not hold smaller siblings behind a serial category walk.
+        var states = spots.map { spot -> MeasurementState in
+            var roots: [String] = []
+            var paths: [String] = []
+            var denied: [String] = []
+            for root in spot.paths {
+                guard !cancellation.isCancelled else { break }
+                guard FS.exists(root) else {
+                    if FS.footprint(root, cancellation: cancellation).denied { denied.append(root) }
+                    continue
+                }
+                roots.append(root)
+                let children = spot.children > 0 && FS.isDirectory(root) && !isBundle(root) ? FS.children(root).sorted() : []
+                paths += children.isEmpty ? [root] : children
+            }
+            return MeasurementState(spot: spot, roots: roots, paths: paths, planned: !cancellation.isCancelled, denied: denied)
+        }
+        let plannedPaths = states.map(\.paths)
         let lock = NSLock()
+        let emissions = DispatchQueue(label: "dev.thermo.overview.results")
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = min(4, max(1, ProcessInfo.processInfo.activeProcessorCount / 2))
         queue.qualityOfService = lowPriority ? .background : .utility
+        let timing = ProcessInfo.processInfo.environment["THERMO_CLEAN_TIMING"] != nil
         // Simulator runtimes live on their own disk images: same disk, no folder to measure.
         var runtimes: Entry?
-        queue.addOperation {
+        if includeRuntimes { queue.addOperation {
             guard !cancellation.isCancelled else { return }
             let (status, json) = Shell.exec(["xcrun", "simctl", "runtime", "list", "-j"], timeout: 30, cancellation: cancellation)
             if status == 0, let list = try? JSONDecoder().decode([String: Simulators.Runtime].self, from: Data(json.utf8)) {
@@ -93,47 +143,68 @@ public struct SpaceOverview: Codable, Sendable {
                 }
             }
             onProgress?(tr("Simulator runtimes"))
+        } }
+        let order = spots.indices.sorted { priority(spots[$0].id) < priority(spots[$1].id) }
+        for i in order where states[i].planned && plannedPaths[i].isEmpty {
+            let entry = states[i].entry()
+            emissions.async { onEntry?(entry); onProgress?(entry.title) }
         }
-        for i in spots.indices.sorted(by: { priority(spots[$0].id) < priority(spots[$1].id) }) {
-            let spot = spots[i]
+        // Four workers pull jobs rather than allocating an operation for every temp file.
+        // This bounds queued memory and lets cancellation stop without draining thousands of jobs.
+        let rounds = plannedPaths.map { $0.count }.max() ?? 0
+        var nextRound = 0
+        var nextColumn = 0
+        func nextJob() -> (Int, String)? {
+            lock.lock(); defer { lock.unlock() }
+            while nextRound < rounds {
+                let round = nextRound
+                let index = order[nextColumn]
+                nextColumn += 1
+                if nextColumn == order.count { nextColumn = 0; nextRound += 1 }
+                if round < plannedPaths[index].count { return (index, plannedPaths[index][round]) }
+            }
+            return nil
+        }
+        for _ in 0..<queue.maxConcurrentOperationCount {
             queue.addOperation {
-                guard !cancellation.isCancelled else { return }
-                var denied: [String] = []
-                let roots = spot.paths.filter { path in
-                    if FS.exists(path) { return true }
-                    if FS.footprint(path, cancellation: cancellation).denied { denied.append(path) }
-                    return false
-                }
-                // Measure each folder one level down once; the spot's total is their sum.
-                var kids: [Entry] = []
-                var total: Int64 = 0
-                for root in roots {
-                    if cancellation.isCancelled { return }
-                    let inner = spot.children > 0 && FS.isDirectory(root) && !isBundle(root) ? FS.children(root) : [root]
-                    if inner.isEmpty, FS.footprint(root, cancellation: cancellation).denied { denied.append(root) }
-                    for c in inner {
-                        if cancellation.isCancelled { return }
-                        let measured = FS.footprint(c, cancellation: cancellation)
-                        if measured.denied { denied.append(c) }
-                        let size = measured.allocated
-                        total += size
-                        if spot.children > 0 && size > 0 {
-                            kids.append(Entry(id: c, title: FS.tilde(c, home: home), path: c, bytes: size, children: []))
+                while !cancellation.isCancelled, let (i, path) = nextJob() {
+                    guard !cancellation.isCancelled else { return }
+                    let began = Date()
+                    let measured = footprint(path, cancellation)
+                    guard !cancellation.isCancelled else { return }
+                    if timing, Date().timeIntervalSince(began) >= 1 {
+                        FileHandle.standardError.write(Data(String(format: "overview: %.2fs %@, %d files\n", Date().timeIntervalSince(began), path, measured.files).utf8))
+                    }
+                    lock.lock()
+                    states[i].done += 1
+                    states[i].bytes += measured.allocated
+                    if measured.denied { states[i].denied.append(path) }
+                    if states[i].spot.children > 0, measured.allocated > 0 {
+                        states[i].kids.append(Entry(id: path, title: FS.tilde(path, home: home), path: path,
+                                                   bytes: measured.allocated, children: []))
+                        states[i].kids.sort { $0.bytes > $1.bytes }
+                        states[i].kids = Array(states[i].kids.prefix(states[i].spot.children))
+                    }
+                    let now = DispatchTime.now().uptimeNanoseconds
+                    let complete = states[i].done == plannedPaths[i].count
+                    if states[i].lastEmission == 0 || complete || now - states[i].lastEmission >= 250_000_000 {
+                        states[i].lastEmission = now
+                        let entry = states[i].entry()
+                        // Serialized delivery prevents an older partial update following completion.
+                        emissions.async {
+                            onEntry?(entry)
+                            if entry.complete == true { onProgress?(entry.title) }
                         }
                     }
+                    lock.unlock()
                 }
-                guard !cancellation.isCancelled else { return }
-                kids.sort { $0.bytes > $1.bytes }
-                let e = Entry(id: spot.id, title: spot.title, path: roots.count == 1 ? roots[0] : nil, bytes: total,
-                              children: Array(kids.prefix(spot.children)), note: spot.note)
-                lock.lock(); entries[i] = e; unreadable.append(contentsOf: denied); lock.unlock()
-                onEntry?(e)
-                onProgress?(spot.title)
             }
         }
         queue.waitUntilAllOperationsAreFinished()
+        emissions.sync {}
 
-        var list = entries.compactMap { $0 } + [runtimes].compactMap { $0 } + (cancellation.isCancelled ? [] : [swap()].compactMap { $0 })
+        let unreadable = states.flatMap(\.denied)
+        var list = states.filter { $0.done > 0 || ($0.planned && $0.paths.isEmpty) }.map { $0.entry() } + [runtimes].compactMap { $0 } + (cancellation.isCancelled ? [] : [swap()].compactMap { $0 })
         let counted = list.reduce(Int64(0)) { $0 + $1.bytes }
         let used = capacity - free
         if !cancellation.isCancelled, used > counted {
@@ -205,11 +276,11 @@ public struct SpaceOverview: Codable, Sendable {
 
     private static func validEntries(_ entries: [Entry]) -> Bool {
         var ids = Set<String>()
-        return entries.allSatisfy { $0.bytes >= 0 && ids.insert($0.id).inserted && validEntries($0.children) }
+        return entries.allSatisfy { $0.complete != false && $0.bytes >= 0 && ids.insert($0.id).inserted && validEntries($0.children) }
     }
 
     public func save(to url: URL = Self.cacheURL) {
-        guard cancelled != true, Self.isCurrent(measuredAt: measuredAt, cacheURL: url) else { return }
+        guard cancelled != true, Self.validEntries(entries), Self.isCurrent(measuredAt: measuredAt, cacheURL: url) else { return }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? JSONEncoder().encode(self).write(to: url, options: .atomic)
     }

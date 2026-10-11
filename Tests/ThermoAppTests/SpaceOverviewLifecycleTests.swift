@@ -4,6 +4,21 @@ import XCTest
 
 final class SpaceOverviewLifecycleTests: XCTestCase {
     @MainActor
+    func testStreamKeepsOnlyLatestCategoryAndCannotRegressAfterCompletion() {
+        let model = SpaceOverviewModel(cached: nil, diskSpace: nil)
+        let first = SpaceOverview.Entry(id: "apps", title: "Apps", bytes: 100, children: [], complete: false,
+                                        measuredLocations: 1, totalLocations: 2)
+        let done = SpaceOverview.Entry(id: "apps", title: "Apps", bytes: 200, children: [], complete: true,
+                                       measuredLocations: 2, totalLocations: 2)
+        model.acceptEntry(first)
+        model.acceptEntry(done)
+        model.acceptEntry(first)
+        XCTAssertEqual(model.partial.count, 1)
+        XCTAssertEqual(model.partial[0].bytes, 200)
+        XCTAssertEqual(model.partial[0].complete, true)
+    }
+
+    @MainActor
     func testCapacityIsAvailableBeforeFolderMeasurementAndCleanupDropsOldBreakdown() {
         let live = DiskSpaceSnapshot(volumeID: "fixture", capacityBytes: 1000, availableBytes: 100,
                                      measuredAt: Date(timeIntervalSince1970: 200))
