@@ -121,7 +121,7 @@ public enum ChromeInspector {
 
     /// Per-minute rates above which a page counts as growing.
     public struct Limits: Sendable {
-        /// JavaScript heap growth, MB per minute (and at least `heapMinMB` in all).
+        /// JavaScript heap growth, MiB per minute (and at least `heapMinMB` in all).
         public var heapMBPerMinute: Double = 1.5
         public var heapMinMB: Double = 2
         /// Listeners added while the page barely changed: more than this many, with nodes growing by

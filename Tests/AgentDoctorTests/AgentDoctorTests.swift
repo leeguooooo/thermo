@@ -293,6 +293,25 @@ final class DoctorTests: XCTestCase {
         XCTAssertEqual(find(r, .mcp, "p (").count, 1)
     }
 
+    func testCredentialLocationDoesNotImplyEveryProcessCanReadArguments() throws {
+        try write(".claude.json", """
+        {"mcpServers":{
+          "env-fixture":{"command":"/bin/sh","env":{"API_TOKEN":"synthetic-token-value"}},
+          "header-fixture":{"type":"http","url":"https://example.test","headers":{"Authorization":"Bearer synthetic-token-value"}},
+          "args-fixture":{"command":"/bin/sh","args":["--token","synthetic-token-value"]}
+        }}
+        """)
+        let r = diagnose()
+        for name in ["env-fixture", "header-fixture"] {
+            let finding = try XCTUnwrap(find(r, .mcp, name).first { $0.severity == .warning })
+            XCTAssertFalse(finding.message.contains("process listings"))
+            XCTAssertFalse(finding.message.contains("every process"))
+        }
+        let arguments = try XCTUnwrap(find(r, .mcp, "args-fixture").first { $0.severity == .warning })
+        XCTAssertTrue(arguments.message.contains("may also appear in process listings"))
+        XCTAssertFalse(arguments.message.contains("every process"))
+    }
+
     func testEveryItemIsListedWithItsStatus() throws {
         try write(".claude.json", """
         {"mcpServers": {

@@ -2,6 +2,8 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "credential stored in plain text in the config (%1$@)": "凭据以明文写在配置里（%1$@）",
+    "credential stored in plain text in the config (%1$@); credential arguments may also appear in process listings": "凭据以明文写在配置里（%1$@）；凭据参数也可能出现在进程列表中",
     "Restart the read-only check when ready.": "准备好后可以重新开始只读检查。",
     "No complete results were produced. Check again when ready.": "尚无完整检查结果，准备好后可以重新检查。",
     "check stopped": "检查已停止",
@@ -930,7 +932,7 @@ let zhHans: [String: String] = [
     "Close one": "关掉一个",
     "Background scripts a site keeps running; they close with the site's tabs.": "网站在后台一直跑的脚本；关掉这个网站的标签页它们就会一起关。",
     "Copy install command": "复制安装命令",
-    "%1$@ MB · %2$@ listeners · %3$@ nodes": "%1$@ MB · 监听 %2$@ · 节点 %3$@",
+    "%1$@ MiB · %2$@ listeners · %3$@ nodes": "%1$@ MiB · 监听 %2$@ · 节点 %3$@",
     "Close this page": "关闭这个页面",
     "Closing…": "正在关闭…",
     "View pages": "查看页面",

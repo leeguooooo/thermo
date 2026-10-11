@@ -363,6 +363,7 @@ struct ConfigChecks {
         }
 
         var secrets: [String] = []
+        var argumentCredentials = false
         for (k, v) in s.env.sorted(by: { $0.key < $1.key }) where Redact.isSecretName(k) && Redact.isLiteralSecret(v) {
             secrets.append(tr("env %1$@", k + "=" + Redact.value(v)))
         }
@@ -371,10 +372,13 @@ struct ConfigChecks {
         }
         for (i, a) in s.args.enumerated() where i + 1 < s.args.count && a.hasPrefix("-") && Redact.isSecretName(a) && Redact.isLiteralSecret(s.args[i + 1]) {
             secrets.append(tr("argument %1$@", a))
+            argumentCredentials = true
         }
         if !secrets.isEmpty {
             add(Finding(.warning, .mcp, agent: s.agent, subject: subject,
-                        tr("credential stored in plain text in the config (%1$@); arguments are also visible to every process via ps", secrets.joined(separator: ", ")),
+                        argumentCredentials
+                            ? tr("credential stored in plain text in the config (%1$@); credential arguments may also appear in process listings", secrets.joined(separator: ", "))
+                            : tr("credential stored in plain text in the config (%1$@)", secrets.joined(separator: ", ")),
                         fix: tr("move it to the keychain or an environment variable the agent inherits, then rotate it"), source: s.source))
         }
     }

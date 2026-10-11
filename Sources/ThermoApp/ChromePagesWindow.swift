@@ -255,8 +255,10 @@ struct ChromePagesView: View {
                     ForEach(r.leaking) { p in pageRow(p, warn: true) }
                 }
             }
-            section(tr("Largest"), nil) {
-                ForEach(r.largest) { p in pageRow(p, warn: false) }
+            if !r.largest.isEmpty {
+                section(tr("Largest"), nil) {
+                    ForEach(r.largest) { p in pageRow(p, warn: false) }
+                }
             }
         }
         if !d.duplicates.isEmpty {
@@ -302,7 +304,7 @@ struct ChromePagesView: View {
     func pageRow(_ p: ChromeInspector.Page, warn: Bool) -> some View {
         let growth = p.growth.flatMap { g -> String? in
             guard warn else { return nil }
-            return tr("%1$@ MB · %2$@ listeners · %3$@ nodes", String(format: "%+.1f", g.heapMB), String(format: "%+d", g.listeners), String(format: "%+d", g.nodes))
+            return tr("%1$@ MiB · %2$@ listeners · %3$@ nodes", String(format: "%+.1f", g.heapMB), String(format: "%+d", g.listeners), String(format: "%+d", g.nodes))
         }
         let detail = [growth, warn ? p.advice : tr("%1$@ nodes", String(p.nodes))].compactMap { $0 }.joined(separator: "\n")
         return row(title: p.title, url: p.url, trailing: mb(p.heapMB), detail: detail, warn: warn, closeTitle: tr("Close this page"))
