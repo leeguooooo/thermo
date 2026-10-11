@@ -214,6 +214,11 @@ public enum Cleaner {
     /// A live check, also usable while preparing a review. A cached scan is not proof that
     /// its owning app, build tool, or executable is still idle.
     public static func refusal(_ item: CleanItem, mode: RemovalMode, processes: ProcessTable) -> String? {
+        refusal(item, mode: mode, processes: processes, locations: item.paths.map(Guard.deletionLocation))
+    }
+
+    /// `locations`: the item's paths as removal would resolve them, computed once per item.
+    static func refusal(_ item: CleanItem, mode: RemovalMode, processes: ProcessTable, locations: [String]) -> String? {
         let rule = Rules.paths.first(where: { $0.id == item.id })
         if let blocked = item.blocked {
             // Only the rule's known running-app block may be cleared by this live check.
@@ -245,9 +250,10 @@ public enum Cleaner {
                 return tr("a build tool is running in this project")
             }
         }
+        // Resolved once per item: per process it was paths × processes symlink lookups (1,600 sessions took minutes).
         if processes.entries.contains(where: { process in
             guard let exe = process.executable else { return false }
-            return item.paths.contains { let location = Guard.deletionLocation($0); return exe == location || exe.hasPrefix(location + "/") }
+            return locations.contains { exe == $0 || exe.hasPrefix($0 + "/") }
         }) { return tr("a running executable uses this location") }
         return nil
     }
@@ -275,6 +281,19 @@ public enum Cleaner {
         })
         let fm = FileManager.default
         var openFiles: OpenFiles?? = nil
+        // Rechecked as removal goes (an app may start meanwhile), but with the paths resolved once
+        // and the process list read at most once a second: per path, 1,600 sessions took 8 minutes.
+        let locations = item.paths.map(Guard.deletionLocation)
+        // The item-wide answer depends only on the process list, so it is recomputed when that is reread.
+        var processesRead = Date()
+        var itemRefusal = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false)), locations: locations)
+        func currentRefusal() -> String? {
+            if processTable == nil, Date().timeIntervalSince(processesRead) >= 1 {
+                itemRefusal = refusal(item, mode: mode, processes: ProcessTable.current(.init(cpu: false)), locations: locations)
+                processesRead = Date()
+            }
+            return itemRefusal
+        }
         for path in item.paths {
             if let why = ToolCleanup.isBrowserOldVersion(item) ? ToolCleanup.oldVersionRefusal(path) : g.refusal(path) { result.failed[path] = why; continue }
             guard FS.exists(path) else { continue }
@@ -305,7 +324,7 @@ public enum Cleaner {
                 result.failed[path] = "modified since the scan"
                 continue
             }
-            if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
+            if let why = currentRefusal() {
                 result.failed[path] = why
                 continue
             }
