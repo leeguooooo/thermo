@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## 1.1.8
+
+- Browser pages read Chrome through chrome-use (1.5.186+): the tab list without attaching to pages, memory per page only when you ask (`thermo pulse chrome --measure`, or `--watch 60` to see which pages grow), pages not measured are counted, and stale chrome-use records are no longer mistaken for hidden pages. It tells you when chrome-use's Chrome extension is out of date or its update is waiting.
+- Sensors has a battery card: charge, health, cycles, power source, temperature, voltage and current.
+- Keyboard: ⌘1–⌘6 switch pages, ⌘F searches sensors, diagnostics and disk categories, ⌘, opens Settings; the Edit menu works in text fields.
+- Disk: "Where your disk space is" can be stopped, keeps earlier results while measuring, and says which folders it could not read. Cleanup confirmation lists the paths it will remove.
+- Fans: settings apply one at a time with visible progress; invalid curve points are refused; a helper connection failure is shown as such.
+- Temperatures, charts and alerts follow the Fahrenheit setting; macOS thermal pressure is shown separately from sensor temperatures.
+- Many reliability fixes in diagnostics, browser checks, cleanup and the command line (details below).
+
+## 1.1.8 — all changes
 
 - Process diagnosis marks failed reads as incomplete; unknown launchd ownership no longer creates orphan classifications or stop-process fixes. Agent session names are excluded from end-process actions.
 
