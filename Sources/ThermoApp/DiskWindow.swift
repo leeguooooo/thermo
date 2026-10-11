@@ -202,6 +202,12 @@ struct DiskCategoryPage: View {
     var body: some View {
         VStack(spacing: 0) {
             header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
+            if model.report?.cancelled == true {
+                Label(tr("Scan stopped. These are partial results."), systemImage: "pause.circle")
+                    .font(.callout).foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 28).padding(.bottom, 10)
+            }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 10) {
                     let list = items
