@@ -117,13 +117,19 @@ if [ -n "$NOTARY_PROFILE" ]; then
     ditto -c -k "$DIST/thermo" "$CLI_ZIP"
     notarize "$CLI_ZIP"
 
+    # Public CLI mirror and GitHub Release use the same signed universal archive.
+    CLI_ARCHIVE=thermo-cli-macos-universal.tar.gz
+    tar -czf "$DIST/$CLI_ARCHIVE" -C "$DIST" thermo thermo-helper
+    (cd "$DIST" && shasum -a 256 "$CLI_ARCHIVE" > "$CLI_ARCHIVE.sha256")
+
     spctl -a -vv "$APP"
     spctl -a -vv -t open --context context:primary-signature "$DMG"
 
     # Sparkle appcast: keep every release in releases/ so the feed has history.
     if [ -n "$APPCAST_URL" ]; then
         mkdir -p "$RELEASES"
-        cp "$DMG" "$RELEASES/"
+        cp "$DMG" "$DIST/$CLI_ARCHIVE" "$DIST/$CLI_ARCHIVE.sha256" "$RELEASES/"
+        cp install.sh "$RELEASES/install.sh"
         scripts/release-notes.sh "$VERSION" > "$RELEASES/Thermo-$VERSION.html"
         "$SPARKLE_BIN/generate_appcast" --account dev.thermo \
             --download-url-prefix "${APPCAST_URL%/*}/" -o "$RELEASES/appcast.xml" "$RELEASES"
