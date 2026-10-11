@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import ThermoL10n
 
 /// "Where did my disk go?": the volume's used space split into the places that hold it, each with
@@ -71,6 +72,8 @@ public struct SpaceOverview: Codable, Sendable {
             Spot(id: "apps", title: tr("Applications"), paths: ["/Applications", h("Applications")], children: 8),
             Spot(id: "app-data", title: tr("App data (Application Support, Containers)"),
                  paths: [h("Library/Application Support"), h("Library/Containers"), h("Library/Group Containers")], children: 10),
+            Spot(id: "projects", title: tr("Projects and source folders"), paths: Self.projectRoots(home: home), children: 12,
+                 note: tr("source files and build output together; scan build artifacts to find what can be regenerated")),
             Spot(id: "caches", title: tr("Caches"), paths: [h("Library/Caches")], children: 6),
             Spot(id: "developer", title: tr("Xcode and simulators"), paths: [h("Library/Developer")], children: 5),
             Spot(id: "trash", title: tr("Trash"), paths: [h(".Trash")], children: 0),
@@ -221,15 +224,27 @@ public struct SpaceOverview: Codable, Sendable {
         return result
     }
 
+    /// The capacity bar describes the home volume; repositories on another disk cannot be
+    /// counted against it. They remain available to an explicitly rooted cleanup scan.
+    static func projectRoots(home: String) -> [String] {
+        var homeStat = stat()
+        guard stat(home, &homeStat) == 0 else { return [] }
+        return ScanOptions.defaultProjectRoots(home: home).filter { path in
+            var rootStat = stat()
+            return stat(path, &rootStat) == 0 && rootStat.st_dev == homeStat.st_dev
+        }
+    }
+
     private static func priority(_ id: String) -> Int {
         switch id {
         case "trash": return 0
         case "temp": return 1
         case "homebrew": return 2
         case "caches": return 3
-        case "developer": return 4
-        case "apps": return 5
-        default: return 6
+        case "projects": return 4
+        case "developer": return 5
+        case "apps": return 6
+        default: return 7
         }
     }
 
@@ -284,11 +299,12 @@ public struct SpaceOverview: Codable, Sendable {
         guard let language, Language(rawValue: language) != nil else { return nil }
         let headings = [
             "apps": "Applications", "app-data": "App data (Application Support, Containers)",
-            "caches": "Caches", "developer": "Xcode and simulators", "trash": "Trash", "temp": "Temporary files",
+            "projects": "Projects and source folders", "caches": "Caches", "developer": "Xcode and simulators", "trash": "Trash", "temp": "Temporary files",
             "homebrew": "Homebrew", "simulator-runtimes": "Simulator runtimes", "swap": "Swap (memory moved to disk)",
             "other": "Your files, projects and tool folders, and macOS"
         ]
         let notes = [
+            "projects": "source files and build output together; scan build artifacts to find what can be regenerated",
             "temp": "the system clears most of this itself; agents and build tools leave the rest",
             "simulator-runtimes": "separate disk images; remove unused ones with xcrun simctl runtime delete",
             "swap": "grows when memory runs short and shrinks after a restart; closing idle apps and agent sessions keeps it small",

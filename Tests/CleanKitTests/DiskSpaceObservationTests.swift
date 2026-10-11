@@ -13,6 +13,16 @@ final class DiskSpaceObservationTests: XCTestCase {
         XCTAssertNil(DiskSpaceObservation(before: snapshot(100), after: nil).availableChangeBytes)
         XCTAssertNil(DiskSpaceObservation(before: snapshot(100), after: snapshot(150, at: 99)).availableChangeBytes)
     }
+    func testLiveOrderingSurvivesWallClockAdjustment() {
+        var before = snapshot(100, at: 100)
+        var after = snapshot(150, at: 99)
+        before.uptimeNanoseconds = 100
+        after.uptimeNanoseconds = 200
+        XCTAssertEqual(DiskSpaceObservation(before: before, after: after).availableChangeBytes, 50)
+        after.uptimeNanoseconds = 50
+        XCTAssertNil(DiskSpaceObservation(before: before, after: after).availableChangeBytes)
+    }
+
     func testNoIncreaseIsNotPresentedAsFreedSpace() {
         L10n.override = .english
         defer { L10n.override = nil }

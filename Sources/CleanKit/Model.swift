@@ -195,8 +195,9 @@ public struct ScanOptions: Sendable {
 
     public init() {}
 
-    public static var defaultProjectRoots: [String] {
-        let home = NSHomeDirectory()
+    public static var defaultProjectRoots: [String] { defaultProjectRoots(home: NSHomeDirectory()) }
+
+    public static func defaultProjectRoots(home: String) -> [String] {
         let fm = FileManager.default
         let candidates = ["Developer", "Projects", "projects", "Code", "code", "src", "dev", "work", "repos", "git", "github",
                           "github.com", "gitlab.com", "Workspace", "workspace", "Sites"]
@@ -206,8 +207,16 @@ public struct ScanOptions: Sendable {
             roots += top.filter { $0.hasSuffix(".com") || $0.hasSuffix(".org") || $0.hasSuffix(".io") }
                 .map { home + "/" + $0 }
         }
+        let resolvedHome = URL(fileURLWithPath: home).resolvingSymlinksInPath().path
         var seen = Set<String>()
-        return roots.filter { seen.insert(URL(fileURLWithPath: $0).resolvingSymlinksInPath().path).inserted }
+        let distinct = roots.filter {
+            let resolved = URL(fileURLWithPath: $0).resolvingSymlinksInPath().path
+            return FS.isDirectory($0) && resolved != resolvedHome && seen.insert(resolved).inserted
+        }
+        let resolved = distinct.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }
+        return distinct.enumerated().compactMap { index, root in
+            resolved.indices.contains { $0 != index && resolved[index].hasPrefix(resolved[$0] + "/") } ? nil : root
+        }
     }
 }
 

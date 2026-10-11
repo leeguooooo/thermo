@@ -7,10 +7,12 @@ public struct DiskSpaceSnapshot: Codable, Sendable, Equatable {
     public var capacityBytes: Int64
     public var availableBytes: Int64
     public var measuredAt: Date
+    /// Monotonic ordering for live measurements; wall time can be adjusted during cleanup.
+    public var uptimeNanoseconds: UInt64?
 
-    public init(volumeID: String, capacityBytes: Int64, availableBytes: Int64, measuredAt: Date) {
+    public init(volumeID: String, capacityBytes: Int64, availableBytes: Int64, measuredAt: Date, uptimeNanoseconds: UInt64? = nil) {
         self.volumeID = volumeID; self.capacityBytes = capacityBytes
-        self.availableBytes = availableBytes; self.measuredAt = measuredAt
+        self.availableBytes = availableBytes; self.measuredAt = measuredAt; self.uptimeNanoseconds = uptimeNanoseconds
     }
 
     public static func measure(path: String = NSHomeDirectory()) -> Self? {
@@ -22,7 +24,7 @@ public struct DiskSpaceSnapshot: Codable, Sendable, Equatable {
         guard !capacity.overflow, !free.overflow, capacity.partialValue > 0,
               free.partialValue >= 0, free.partialValue <= capacity.partialValue else { return nil }
         return Self(volumeID: "\(fs.f_fsid.val.0):\(fs.f_fsid.val.1)", capacityBytes: capacity.partialValue,
-                    availableBytes: free.partialValue, measuredAt: Date())
+                    availableBytes: free.partialValue, measuredAt: Date(), uptimeNanoseconds: DispatchTime.now().uptimeNanoseconds)
     }
 }
 
@@ -35,10 +37,15 @@ public struct DiskSpaceObservation: Codable, Sendable, Equatable {
 
     public init(before: DiskSpaceSnapshot?, after: DiskSpaceSnapshot?) {
         self.before = before; self.after = after
-        if let before, let after, before.volumeID == after.volumeID, after.measuredAt >= before.measuredAt,
+        if let before, let after, before.volumeID == after.volumeID, Self.ordered(before, after),
            before.availableBytes >= 0, after.availableBytes >= 0 {
             availableChangeBytes = after.availableBytes - before.availableBytes
         } else { availableChangeBytes = nil }
+    }
+
+    private static func ordered(_ before: DiskSpaceSnapshot, _ after: DiskSpaceSnapshot) -> Bool {
+        if let first = before.uptimeNanoseconds, let second = after.uptimeNanoseconds { return second >= first }
+        return after.measuredAt >= before.measuredAt
     }
 
     public var summary: String {

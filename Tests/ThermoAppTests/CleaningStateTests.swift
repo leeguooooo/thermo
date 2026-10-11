@@ -17,6 +17,16 @@ final class CleaningStateTests: XCTestCase {
         XCTAssertFalse(model.confirmSummary.contains("goes to the Trash"))
     }
 
+    func testFreshCategoryScanDoesNotRequestAFullRescanOnItsOwnPage() {
+        let model = DiskModel()
+        var report = ScanReport(items: [], denied: [], started: Date(), duration: 1)
+        report.categories = [.projects]
+        model.acceptScan(report)
+        XCTAssertTrue(model.scopeNeedsRefresh(), "all-category page still needs broader results")
+        XCTAssertFalse(model.scopeNeedsRefresh(category: .projects))
+        XCTAssertTrue(model.scopeNeedsRefresh(category: .xcode))
+    }
+
     func testCategoryScanDoesNotExpandToAllAIOrProjects() {
         let options = DiskModel.scanOptions(scope: .all, category: .aiSessions)
         XCTAssertEqual(options.categories, [.aiSessions])

@@ -3,6 +3,14 @@ import XCTest
 @testable import ThermoApp
 
 final class SpaceOverviewLifecycleTests: XCTestCase {
+    func testOverviewCleanupRoutesScanTheRelevantCategory() {
+        XCTAssertEqual(DiskOverviewView.cleanupRoute(for: "projects")?.category, .projects)
+        XCTAssertEqual(DiskOverviewView.cleanupRoute(for: "simulator-runtimes")?.category, .xcode)
+        XCTAssertEqual(DiskOverviewView.cleanupRoute(for: "homebrew")?.category, .devCaches)
+        XCTAssertNil(DiskOverviewView.cleanupRoute(for: "apps"), "installed applications are not disposable cache")
+        XCTAssertNil(DiskOverviewView.cleanupRoute(for: "app-data"), "active application data must not be suggested as generic garbage")
+    }
+
     @MainActor
     func testStreamKeepsOnlyLatestCategoryAndCannotRegressAfterCompletion() {
         let model = SpaceOverviewModel(cached: nil, diskSpace: nil)

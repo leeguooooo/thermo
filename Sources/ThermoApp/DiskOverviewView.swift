@@ -148,6 +148,8 @@ final class SpaceOverviewModel: ObservableObject {
 /// The volume's used space, by place, with each place's biggest folders.
 struct DiskOverviewView: View {
     @ObservedObject var model = SpaceOverviewModel.shared
+    var openCleanup: (CleanCategory?) -> Void = { _ in }
+    var cleanupDisabled = false
     @State private var open: Set<String> = []
 
     var body: some View {
@@ -259,6 +261,17 @@ struct DiskOverviewView: View {
         .contentShape(Rectangle())
     }
 
+    static func cleanupRoute(for id: String) -> (label: String, category: CleanCategory?)? {
+        switch id {
+        case "projects": return (tr("Scan build artifacts"), .projects)
+        case "developer", "simulator-runtimes": return (tr("Review Xcode cleanup"), .xcode)
+        case "homebrew": return (tr("Scan developer caches"), .devCaches)
+        case "temp": return (tr("Scan temporary files and leftovers"), .system)
+        case "caches", "other": return (tr("Find cleanup candidates"), nil)
+        default: return nil
+        }
+    }
+
     func row(_ e: SpaceOverview.Entry) -> some View {
         let total = max(1, model.diskSpace.map { $0.capacityBytes - $0.availableBytes } ?? model.overview?.used ?? model.entries.reduce(0) { $0 + $1.bytes })
         let expanded = open.contains(e.id)
@@ -283,6 +296,10 @@ struct DiskOverviewView: View {
                     .font(.caption).foregroundStyle(.orange).padding(.leading, 20)
             }
             if let n = e.note { Text(n).font(.caption).foregroundStyle(.secondary).padding(.leading, 20) }
+            if let route = Self.cleanupRoute(for: e.id) {
+                Button(route.label) { openCleanup(route.category) }
+                    .buttonStyle(PillButtonStyle()).disabled(cleanupDisabled).padding(.leading, 20).padding(.vertical, 4)
+            }
             if expanded {
                 ForEach(e.children) { c in
                     HStack {

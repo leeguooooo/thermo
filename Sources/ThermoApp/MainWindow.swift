@@ -211,11 +211,11 @@ struct MainView: View {
                             .frame(maxWidth: .infinity, alignment: .leading).padding(14).glass(radius: 12)
                             .padding(.horizontal, 32).padding(.top, 12)
                     }
-                    if page.isDisk, disk.stale || disk.resultsNeedRefresh || disk.languageStale {
+                    if cleanupNoticeNeeded {
                         HStack {
                             Text(disk.resultsNeedRefresh ? tr("Some paths could not be removed. Scan again to refresh the remaining items.") : disk.languageStale ? tr("Scan again to refresh results in the selected language.") : tr("Scan scope changed. Scan again to update these results.")).font(.callout)
                             Spacer()
-                            Button(tr("Scan again")) { disk.scan() }.disabled(disk.scanning || disk.cleaning)
+                            Button(tr("Scan again")) { disk.scan(category: cleanupCategory) }.disabled(disk.scanning || disk.cleaning)
                         }
                         .padding(14).glass(radius: 12).padding(.horizontal, 32).padding(.top, 12)
                     }
@@ -264,6 +264,19 @@ struct MainView: View {
         }
     }
 
+    var cleanupCategory: CleanCategory? {
+        if case let .disk(.category(category)) = page { return category }
+        return nil
+    }
+
+    var cleanupNoticeNeeded: Bool {
+        switch page {
+        case .disk(.home), .disk(.category):
+            return disk.scopeNeedsRefresh(category: cleanupCategory) || disk.resultsNeedRefresh || disk.languageStale
+        default: return false
+        }
+    }
+
     func startClean() { if !disk.selectedItems.isEmpty { confirmingClean = true } }
 
     @ViewBuilder var content: some View {
@@ -285,7 +298,11 @@ struct MainView: View {
         case .disk(.home):
             DiskHome(model: disk, open: { page = .disk(.category($0)) }, clean: startClean).transition(.opacity)
         case .disk(.overview):
-            DiskOverviewView().transition(.opacity)
+            DiskOverviewView(openCleanup: { category in
+                SpaceOverviewModel.shared.stop()
+                if !disk.scanning && !disk.cleaning { disk.scan(category: category) }
+                page = category.map { .disk(.category($0)) } ?? .disk(.home)
+            }, cleanupDisabled: disk.scanning || disk.cleaning).transition(.opacity)
         case let .disk(.category(c)):
             DiskCategoryPage(model: disk, category: c, clean: startClean).id(c)
                 .transition(.opacity.combined(with: .move(edge: .trailing)))

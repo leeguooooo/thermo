@@ -52,6 +52,12 @@ final class DiskModel: ObservableObject {
     var languageStale: Bool { report.map { $0.language != L10n.current.rawValue } ?? false }
     var selectedBytes: Int64 { selectedItems.reduce(0) { $0 + $1.bytes } }
 
+    func scopeNeedsRefresh(category: CleanCategory? = nil) -> Bool {
+        guard !scanning, let report else { return false }
+        if let category { return !(report.categories ?? []).contains(category) }
+        return stale
+    }
+
     static let order = Dictionary(uniqueKeysWithValues: CleanCategory.allCases.enumerated().map { ($1, $0) })
 
     static func sorted(_ items: [CleanItem]) -> [CleanItem] {
