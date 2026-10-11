@@ -1,4 +1,5 @@
 import Foundation
+import AgentCore
 
 /// chrome-use 1.5.186+ answers "which page is the problem" itself (`chrome-use diag pages`, JSON
 /// schema 1): the tab list without attaching anything, and per page memory only when asked
@@ -57,8 +58,8 @@ extension ChromeInspector {
         let dirs = (env["PATH"] ?? "").split(separator: ":").map(String.init)
             + [home + "/.local/bin", "/opt/homebrew/bin", "/usr/local/bin"]
         guard let path = dirs.map({ $0 + "/chrome-use" }).first(where: { FileManager.default.isExecutableFile(atPath: $0) }),
-              let out = run(path, ["--version"], timeout: 10)?.output,
-              let version = out.split(separator: " ").last.map({ String($0).trimmingCharacters(in: .whitespacesAndNewlines) }),
+              let result = run(path, ["--version"], timeout: 10, cancelled: { Task.isCancelled }), result.status == 0,
+              let version = result.output.split(separator: " ").last.map({ String($0).trimmingCharacters(in: .whitespacesAndNewlines) }),
               versionAtLeast(version, "1.5.186") else { return nil }
         return path
     }
@@ -73,29 +74,19 @@ extension ChromeInspector {
     }
 
     /// Runs a command; nil when it could not start or ran past `timeout`.
-    static func run(_ path: String, _ args: [String], timeout: TimeInterval) -> (output: String, status: Int32)? {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: path)
-        p.arguments = args
-        let out = Pipe()
-        p.standardOutput = out
-        p.standardError = FileHandle.nullDevice
-        p.standardInput = FileHandle.nullDevice
-        guard (try? p.run()) != nil else { return nil }
-        let killer = DispatchWorkItem { if p.isRunning { p.terminate() } }
-        DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: killer)
-        let data = out.fileHandleForReading.readDataToEndOfFile()
-        p.waitUntilExit()
-        killer.cancel()
-        return (String(decoding: data, as: UTF8.self), p.terminationStatus)
+    static func run(_ path: String, _ args: [String], timeout: TimeInterval, cancelled: () -> Bool = { false }) -> (output: String, status: Int32)? {
+        let result = CommandRunner.run(path, arguments: args, timeout: timeout, captureError: false, cancelled: cancelled)
+        guard !result.timedOut, !result.cancelled, !result.truncated, result.status >= 0 else { return nil }
+        return (result.output, result.status)
     }
 
     /// One `chrome-use diag pages` run. `measure` adds `--measure --force` (each tab not held by
     /// chrome-use is attached, measured and released, never activated); `watch` samples twice.
-    static func chromeUseDiag(_ tool: String, measure: Bool, watch: TimeInterval?) -> ChromeUseReport? {
+    static func chromeUseDiag(_ tool: String, measure: Bool, watch: TimeInterval?, cancelled: () -> Bool = { false }) -> ChromeUseReport? {
+        if let watch, !watch.isFinite || watch < 0 || watch > 86400 { return nil }
         var args = ["diag", "pages", "--json", "--limit", "1000"]
         if let watch, watch > 0 { args += ["--watch", String(Int(watch.rounded())), "--force"] } else if measure { args += ["--measure", "--force"] }
-        guard let r = run(tool, args, timeout: (watch ?? 0) + 240),
+        guard let r = run(tool, args, timeout: (watch ?? 0) + 240, cancelled: cancelled),
               let report = try? JSONDecoder().decode(ChromeUseReport.self, from: Data(r.output.utf8)), report.schema == 1
         else { return nil }
         return report
@@ -111,12 +102,14 @@ extension ChromeInspector {
         let mb = 1_048_576.0
         var pages: [Page] = []
         var unmeasured = 0
+        let validTime = r.generatedAt.map(validTimestamp) ?? false
         for row in r.pages {
-            guard let m = row.metrics, let heap = m.JSHeapUsedSize else { unmeasured += 1; continue }
+            guard let m = row.metrics, let heap = validHeap(m.JSHeapUsedSize), let nodes = count(m.Nodes), let listeners = count(m.JSEventListeners) else { unmeasured += 1; continue }
             var p = Page(id: row.handle, url: row.url ?? "", title: row.title ?? "", heapMB: heap / mb,
-                         nodes: Int(m.Nodes ?? 0), listeners: Int(m.JSEventListeners ?? 0))
-            if let d = row.delta, let s = d.seconds, s > 0 {
-                let g = Growth(seconds: s, heapMB: (d.JSHeapUsedSize ?? 0) / mb, nodes: Int(d.Nodes ?? 0), listeners: Int(d.JSEventListeners ?? 0))
+                         nodes: nodes, listeners: listeners)
+            if validTime, let d = row.delta, let s = d.seconds, s.isFinite, s > 0, s <= 86400,
+               let deltaHeap = signedValue(d.JSHeapUsedSize), let deltaNodes = signedMetric(d.Nodes), let deltaListeners = signedMetric(d.JSEventListeners) {
+                let g = Growth(seconds: s, heapMB: deltaHeap / mb, nodes: deltaNodes, listeners: deltaListeners)
                 p.growth = g
                 switch row.leakClass {
                 case "listeners_growing_nodes_flat": p.leak = .listeners
@@ -132,14 +125,29 @@ extension ChromeInspector {
         let leaking = pages.filter { $0.leak != nil }
             .sorted { ($0.leak == .listeners ? 1 : 0, severity($0)) > ($1.leak == .listeners ? 1 : 0, severity($1)) }
         let seconds = pages.compactMap { $0.growth?.seconds }.max()
-        let sites = (r.workers?.sites ?? []).map { SiteWorkers(site: site($0.site), count: $0.count, heapMB: ($0.usedSize ?? 0) / mb) }
-        return Report(sampled: r.generatedAt.map { Date(timeIntervalSince1970: $0 / 1000) } ?? Date(), seconds: seconds,
+        let sites = (r.workers?.sites ?? []).map { SiteWorkers(site: site($0.site), count: max(0, $0.count), heapMB: (validHeap($0.usedSize) ?? 0) / mb) }
+        var result = Report(sampled: r.generatedAt.flatMap { validTimestamp($0) ? Date(timeIntervalSince1970: $0 / 1000) : nil } ?? Date(timeIntervalSince1970: 0), seconds: seconds,
                       pages: pages, leaking: leaking, largest: Array(pages.filter { $0.leak == nil }.prefix(5)),
                       duplicates: duplicates(tabs(r)),
                       workers: sites.filter { $0.count >= limits.workers }.sorted { ($0.count, $0.site) > ($1.count, $1.site) },
-                      hidden: 0, hiddenHeapMB: 0, stale: r.staleRelayRecords ?? 0, unmeasured: unmeasured,
+                      hidden: 0, hiddenHeapMB: 0, stale: max(0, r.staleRelayRecords ?? 0), unmeasured: unmeasured,
                       pagesHeapMB: pages.reduce(0) { $0 + $1.heapMB }, workersHeapMB: sites.reduce(0) { $0 + $1.heapMB },
-                      workerCount: r.workers?.total ?? 0)
+                      workerCount: max(0, r.workers?.total ?? 0))
+        result.invalidTimestamp = validTime ? nil : true
+        let comparison = r.pages.contains { $0.delta != nil }
+        result.comparedPages = comparison ? pages.filter { $0.growth != nil }.count : nil
+        result.comparisonSkipped = comparison ? pages.filter { $0.growth == nil }.count : nil
+        return result
+    }
+
+    static func signedMetric(_ value: Double?) -> Int? {
+        signedValue(value).map(Int.init)
+    }
+
+    static func signedValue(_ value: Double?) -> Double? {
+        let value = value ?? 0
+        guard value.isFinite, value > Double(Int.min), value < Double(Int.max) else { return nil }
+        return value
     }
 
     /// The extension's own advice when it is behind (chrome-use words it).
@@ -152,6 +160,8 @@ extension ChromeInspector {
     /// DevTools path or the AppleScript tab list takes over).
     static func diagnoseWithChromeUse(_ tool: String, app: String, measure: Bool, watch: TimeInterval?, appMemoryKB: Int?, gpuKB: Int?,
                                       progress: @escaping @Sendable (Phase) -> Void) async -> Diagnosis? {
+        if Task.isCancelled { return nil }
+        if let watch, !watch.isFinite || watch < 0 || watch > 86400 { return nil }
         let measuring = measure || (watch ?? 0) > 0
         // chrome-use reports nothing until it is done; count down the interval meanwhile.
         let ticker = Task {
@@ -164,8 +174,12 @@ extension ChromeInspector {
             }
             if !Task.isCancelled { progress(.measuring(round: 2, done: 0, total: 0)) }
         }
-        let r = await Task.detached { chromeUseDiag(tool, measure: measure, watch: watch) }.value
+        let cancellation = ScanCancellation()
+        let r = await withTaskCancellationHandler(operation: {
+            await Task.detached { chromeUseDiag(tool, measure: measure, watch: watch, cancelled: { cancellation.isCancelled }) }.value
+        }, onCancel: { cancellation.cancel() })
         ticker.cancel()
+        guard !Task.isCancelled else { return nil }
         guard let r else { return nil }
         if r.exitCode == 2 || r.exitReason == "not_connected" {
             // Not connected (Chrome just reopened, or the extension is off): say so, list tabs plainly.

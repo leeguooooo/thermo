@@ -602,6 +602,7 @@ public enum ChromeInspector {
                                                progress: progress) {
             return Task.isCancelled ? stopped() : d
         }
+        if Task.isCancelled { return stopped() }
         if !measure {
             if endpoint(app: app, home: home) == nil {
                 hint = app == "Google Chrome"
