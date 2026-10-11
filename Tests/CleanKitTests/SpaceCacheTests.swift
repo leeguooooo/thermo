@@ -52,6 +52,29 @@ final class SpaceCacheTests: XCTestCase {
         XCTAssertNil(SpaceOverview.cached(from: url, now: Date(timeIntervalSince1970: 300)))
     }
 
+    func testKnownHeadingsRelocalizeWithoutRenewingMeasurementOrChangingPaths() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: url) }
+        var overview = fixture()
+        overview.entries = [.init(id: "apps", title: "Applications", bytes: 10,
+                                  children: [.init(id: "/fixture/app", title: "User Named App", path: "/fixture/app", bytes: 10, children: [])])]
+        overview.save(to: url)
+        L10n.override = .simplifiedChinese
+        let cached = try XCTUnwrap(SpaceOverview.cached(from: url, now: Date(timeIntervalSince1970: 200), localize: true))
+        XCTAssertEqual(cached.1, Date(timeIntervalSince1970: 100))
+        XCTAssertEqual(cached.0.entries.first?.title, tr("Applications"))
+        XCTAssertEqual(cached.0.entries.first?.children.first?.title, "User Named App")
+        XCTAssertEqual(cached.0.entries.first?.children.first?.path, "/fixture/app")
+        XCTAssertEqual(cached.0.entries.first?.bytes, 10)
+    }
+
+    func testUnknownOverviewCategoryDoesNotPretendToBeTranslated() {
+        var overview = fixture()
+        overview.entries = [.init(id: "unknown", title: "Custom English Heading", bytes: 10, children: [])]
+        L10n.override = .simplifiedChinese
+        XCTAssertNil(overview.localizedForCurrentLanguage())
+    }
+
     func testCacheRejectsInvalidCapacityAndDuplicateOrNegativeEntries() throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: url) }

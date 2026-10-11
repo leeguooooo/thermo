@@ -223,9 +223,11 @@ public enum Cleaner {
         if let rule, let app = processes.running(rule.apps) {
             return tr("quit %1$@ first", app)
         }
-        if let dir = item.group, item.category == .projects {
-            let related: (String) -> Bool = { cwd in
-                cwd == dir || cwd.hasPrefix(dir + "/") ||
+        if let group = item.group, item.category == .projects {
+            let dir = URL(fileURLWithPath: group).resolvingSymlinksInPath().path
+            let related: (String) -> Bool = { rawCWD in
+                let cwd = URL(fileURLWithPath: rawCWD).resolvingSymlinksInPath().path
+                return cwd == dir || cwd.hasPrefix(dir + "/") ||
                     (dir.hasPrefix(cwd + "/") && ProjectSignals.isRepoRoot(cwd, containing: dir))
             }
             if processes.agentDirectories().contains(where: related) { return tr("an agent is running in it") }
@@ -238,7 +240,7 @@ public enum Cleaner {
         }
         if processes.entries.contains(where: { process in
             guard let exe = process.executable else { return false }
-            return item.paths.contains { exe == $0 || exe.hasPrefix($0 + "/") }
+            return item.paths.contains { let location = Guard.deletionLocation($0); return exe == location || exe.hasPrefix(location + "/") }
         }) { return tr("a running executable uses this location") }
         return nil
     }
@@ -299,6 +301,8 @@ public enum Cleaner {
                 result.failed[path] = why
                 continue
             }
+            // Resolve ancestors again after sizing: a changed parent alias must not redirect removal.
+            if let why = g.refusal(path) { result.failed[path] = why; continue }
             // Items already in the Trash can only be removed for good.
             let inTrash = path.hasPrefix(g.home + "/.Trash/")
             do {

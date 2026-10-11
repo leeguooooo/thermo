@@ -22,7 +22,7 @@ final class SpaceOverviewModel: ObservableObject {
     private var restartAfterCurrent = false
     private var generation = UUID()
 
-    init(cached: (SpaceOverview, Date)? = SpaceOverview.cached(), diskSpace: DiskSpaceSnapshot? = .measure()) {
+    init(cached: (SpaceOverview, Date)? = SpaceOverview.cached(localize: true), diskSpace: DiskSpaceSnapshot? = .measure()) {
         self.diskSpace = diskSpace
         if let (o, at) = cached { overview = o; measuredAt = at }
     }
@@ -118,8 +118,12 @@ final class SpaceOverviewModel: ObservableObject {
     /// Measures on first open, or when the saved numbers are over an hour old.
     func discardIncompatibleResults() {
         if let overview, overview.language != L10n.current.rawValue {
-            self.overview = nil
-            measuredAt = nil
+            if let localized = overview.localizedForCurrentLanguage() {
+                self.overview = localized
+            } else {
+                self.overview = nil
+                measuredAt = nil
+            }
             partial = []
             stopped = false
         }

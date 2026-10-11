@@ -132,6 +132,7 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
   指定 `--root` 时仅扫描指定目录。Git 已跟踪的产物会保留；正在运行 agent 的项目会阻止清理。项目发现与目录统计同时进行，页面逐项显示结果。
 
   `thermo clean projects --root ~/github.com,~/tk.com --stream` 会输出逐行 JSON：`started`（磁盘剩余空间）、`items`、`progress`、`finished`（完整报告）。`thermo clean overview --stream` 同样支持逐项输出。只收到部分事件时，扫描还未完成；普通 `--json` 的完整报告格式保持不变。
+  空间总览可复用 CLI 的完整缓存，并按 App 当前语言显示分类标题；切换语言只更新文字，保留原扫描日期和大小。路径保护同时核对父目录符号链接解析后的实际位置，避免缓存或项目别名指向文稿、凭据或用户目录以外的内容。
   空间总览按子目录增量更新。流式 `entry` 的 `id` 在分类内保持不变，调用方应替换该分类的旧条目；`complete`、`measuredLocations`、`totalLocations` 标明分类进度。未完成分类显示“至少”多少空间，`finished` 事件返回扫描结束时的最终状态。扫描最多四个工作线程，页面更新会合并，避免大量临时文件造成任务和界面更新堆积。
   给 agent 限时获取结果可用 `thermo clean overview --budget 10 --stream`，或 `thermo clean projects --budget 10 --json`。预算到期后在下一处取消检查停止，结果标记 `cancelled: true`，仅统计已完整测量的目录；未完成分类标注 `complete: false`，大小是下限，不替换已有完整报告。`--budget` 只用于扫描，不能用于执行清理。
   完成的报告按分类、项目目录、保留天数和语言分别缓存，最多保留 32 个范围。再次打开分类页面或执行清理时，只复用范围一致且未过期的报告；清理后所有旧计划失效。项目活动读取会校验文件身份和修改时间，未变化的 Codex 会话无需反复打开。

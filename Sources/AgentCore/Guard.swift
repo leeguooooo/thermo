@@ -11,6 +11,9 @@ public struct Guard: Sendable {
     let sealed: [String]
     /// Outside the home folder, only per-session folders below these roots may go (agent scratch space).
     let scratchRoots: [String]
+    let canonicalHome: String
+    let canonicalProtected: [String]
+    let canonicalSealed: [String]
 
     public init(home: String = NSHomeDirectory()) {
         self.home = home
@@ -32,12 +35,28 @@ public struct Guard: Sendable {
                   "Library/CloudStorage", "Library/Preferences", "Desktop", "Documents", "Pictures", "Movies", "Music",
                   ".claude/agent-memory", ".codex/memories", ".claude/.credentials.json", ".codex/auth.json"]
             .map { home + "/" + $0 }
+        canonicalHome = URL(fileURLWithPath: home).resolvingSymlinksInPath().path
+        canonicalProtected = protected.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }
+        canonicalSealed = sealed.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }
+    }
+
+    /// Resolves ancestors while preserving the final component: removing a symlink removes
+    /// the link itself, whereas a symlink in its parent redirects the actual deletion.
+    public static func deletionLocation(_ path: String) -> String {
+        let url = URL(fileURLWithPath: path).standardizedFileURL
+        guard url.path != "/" else { return "/" }
+        return url.deletingLastPathComponent().resolvingSymlinksInPath().appendingPathComponent(url.lastPathComponent).path
     }
 
     /// Returns why `path` must not be removed, or nil when it may be.
     public func refusal(_ path: String) -> String? {
-        if path.split(separator: "/").contains(where: { $0 == ".." || $0 == "." }) { return "relative path" }
+        if !path.hasPrefix("/") || path.split(separator: "/").contains(where: { $0 == ".." || $0 == "." }) { return "relative path" }
         let p = URL(fileURLWithPath: path).standardizedFileURL.path
+        if let why = refusal(p, home: home, protected: protected, sealed: sealed) { return why }
+        return refusal(Self.deletionLocation(p), home: canonicalHome, protected: canonicalProtected, sealed: canonicalSealed)
+    }
+
+    private func refusal(_ p: String, home: String, protected: [String], sealed: [String]) -> String? {
         if let root = scratchRoots.first(where: { p.hasPrefix($0 + "/") }) {
             // <root>/<project>/<session>[/…]
             return p.dropFirst(root.count + 1).split(separator: "/").count >= 2 ? nil : "agent scratch root"

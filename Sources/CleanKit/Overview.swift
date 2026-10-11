@@ -263,15 +263,45 @@ public struct SpaceOverview: Codable, Sendable {
         return measuredAt.timeIntervalSince1970 >= seconds
     }
 
-    public static func cached(from url: URL = cacheURL, now: Date = Date()) -> (SpaceOverview, Date)? {
+    public static func cached(from url: URL = cacheURL, now: Date = Date(), localize: Bool = false) -> (SpaceOverview, Date)? {
         guard let data = try? Data(contentsOf: url),
               let overview = try? JSONDecoder().decode(SpaceOverview.self, from: data),
-              overview.cancelled != true, overview.language == L10n.current.rawValue,
+              overview.cancelled != true, (overview.language == L10n.current.rawValue || localize),
               let measuredAt = overview.measuredAt, measuredAt <= now, isCurrent(measuredAt: measuredAt, cacheURL: url),
               overview.capacity > 0, overview.free >= 0, overview.free <= overview.capacity,
               overview.purgeable >= 0, overview.duration.isFinite, overview.duration >= 0,
               validEntries(overview.entries) else { return nil }
+        if overview.language != L10n.current.rawValue {
+            guard let translated = overview.localizedForCurrentLanguage() else { return nil }
+            return (translated, measuredAt)
+        }
         return (overview, measuredAt)
+    }
+
+    /// Only known overview headings and notes are presentation strings. Child paths, counts,
+    /// byte sizes and the original measurement date remain unchanged.
+    public func localizedForCurrentLanguage() -> SpaceOverview? {
+        guard let language, Language(rawValue: language) != nil else { return nil }
+        let headings = [
+            "apps": "Applications", "app-data": "App data (Application Support, Containers)",
+            "caches": "Caches", "developer": "Xcode and simulators", "trash": "Trash", "temp": "Temporary files",
+            "homebrew": "Homebrew", "simulator-runtimes": "Simulator runtimes", "swap": "Swap (memory moved to disk)",
+            "other": "Your files, projects and tool folders, and macOS"
+        ]
+        let notes = [
+            "temp": "the system clears most of this itself; agents and build tools leave the rest",
+            "simulator-runtimes": "separate disk images; remove unused ones with xcrun simctl runtime delete",
+            "swap": "grows when memory runs short and shrinks after a restart; closing idle apps and agent sessions keeps it small",
+            "other": "not measured one by one; thermo clean finds what in here can go"
+        ]
+        var copy = self
+        for index in copy.entries.indices {
+            guard let heading = headings[copy.entries[index].id] else { return nil }
+            copy.entries[index].title = tr(heading)
+            if let note = notes[copy.entries[index].id] { copy.entries[index].note = tr(note) }
+        }
+        copy.language = L10n.current.rawValue
+        return copy
     }
 
     private static func validEntries(_ entries: [Entry]) -> Bool {
