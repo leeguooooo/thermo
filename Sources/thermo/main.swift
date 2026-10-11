@@ -68,6 +68,7 @@ OPTIONS
       --no-color             disable colors (also honours NO_COLOR)
       --no-cache             rescan SMC keys instead of using the discovery cache
       --older-than DAYS      clean: sessions/projects idle this long are stale (default 30; 2w, 6m)
+      --budget SECONDS       clean: stop read-only scan after this budget; mark results incomplete
       --stream               clean: incremental JSON events, one per line (read-only)
       --root DIR[,DIR]       clean: folders searched for projects (default ~/Developer, ~/code, …)
   -y, --yes                  clean run: do not ask for confirmation

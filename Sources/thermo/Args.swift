@@ -11,7 +11,7 @@ struct Args {
     var flags: Set<String> = []
     var options: [String: String] = [:]
 
-    static let valueOptions: Set<String> = ["interval", "count", "sensor", "format", "older-than", "root",
+    static let valueOptions: Set<String> = ["interval", "count", "sensor", "format", "older-than", "root", "budget",
                                             "area", "agent", "action",
         "since",  // pulse history
         "watch", "app", "title"]  // pulse chrome

@@ -39,6 +39,9 @@ struct CleanCommand {
     }
 
     func run(_ rest: [String]) throws {
+        if args.options["budget"] != nil, ["run", "log"].contains(rest.first ?? "") {
+            throw CLIError("--budget is for read-only scans")
+        }
         if args.has("stream") {
             guard !args.has("csv"), !["run", "log"].contains(rest.first ?? "") else {
                 throw CLIError("--stream is for read-only scans and cannot be combined with --csv")
@@ -47,20 +50,35 @@ struct CleanCommand {
         switch rest.first {
         case "run": try clean(Array(rest.dropFirst()))
         case "log": showLog()
-        case "overview", "space": overview()
+        case "overview", "space": try overview()
         default: try report(filter: rest)
         }
     }
 
-    /// Where the used space is: the big places on this disk and the biggest folders in each.
-    func overview() {
+    static func budget(_ args: Args) throws -> TimeInterval? {
+        let value = try args.double("budget")
+        if let value, value > 86400 { throw CLIError("--budget must be at most 86400 seconds") }
+        return value
+    }
+
+    static func deadline(after seconds: TimeInterval?, cancellation: ScanCancellation) -> DispatchWorkItem? {
+        guard let seconds else { return nil }
+        let item = DispatchWorkItem { cancellation.cancel() }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + seconds, execute: item)
+        return item
+    }
+
+    func overview() throws {
+        let cancellation = ScanCancellation()
+        let deadline = Self.deadline(after: try Self.budget(args), cancellation: cancellation)
+        defer { deadline?.cancel() }
         let stream = args.has("stream") ? ScanStream() : nil
         stream?.start()
         let tty = isatty(STDERR_FILENO) != 0 && !args.has("json") && stream == nil
         let o = SpaceOverview.measure(onProgress: { step in
             stream?.emit(.init(event: "progress", step: step))
             if tty { FileHandle.standardError.write(Data(".".utf8)) }
-        }, onEntry: { entry in stream?.emit(.init(event: "entry", entry: entry)) })
+        }, onEntry: { entry in stream?.emit(.init(event: "entry", entry: entry)) }, cancellation: cancellation)
         if let stream { stream.emit(.init(event: "finished", overview: o)); o.save(); return }
         o.save()  // the app's Overview opens with these numbers
         if tty { FileHandle.standardError.write("\n".data(using: .utf8)!) }
@@ -76,7 +94,8 @@ struct CleanCommand {
             }
         }
         lines.append("")
-        lines.append(style.dim(String(format: "measured in %.0f s · what can go: thermo clean", o.duration)))
+        lines.append(style.dim(o.cancelled == true ? String(format: "stopped after %.1f s · completed locations only", o.duration)
+                                                    : String(format: "measured in %.0f s · what can go: thermo clean", o.duration)))
         out(lines)
     }
 
@@ -98,6 +117,8 @@ struct CleanCommand {
         var o = try options()
         if let categories { o.categories = categories }
         let scanner = DiskScanner(options: o)
+        let deadline = Self.deadline(after: try Self.budget(args), cancellation: scanner.cancellation)
+        defer { deadline?.cancel() }
         let stream = args.has("stream") ? ScanStream() : nil
         stream?.start()
         if let stream {
@@ -167,7 +188,11 @@ struct CleanCommand {
                 lines.append(style.dim("  + \(more.count) more (\(ByteFormat.string(more.reduce(0) { $0 + $1.bytes }))) · thermo clean \(c.rawValue)"))
             }
         }
-        if r.items.isEmpty { lines.append(""); lines.append(style.dim("  nothing to clean")) }
+        if r.cancelled { lines.append(style.yellow("scan stopped · completed findings only; results are incomplete")) }
+        if r.items.isEmpty {
+            lines.append("")
+            lines.append(style.dim(r.cancelled ? "  no completed findings before the scan stopped" : "  nothing to clean"))
+        }
         if let days = r.claudeCleanupDays {
             lines.append("")
             lines.append(style.dim("Claude Code deletes its own sessions after \(days) days (cleanupPeriodDays in ~/.claude/settings.json)."))

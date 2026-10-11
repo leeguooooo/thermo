@@ -241,7 +241,7 @@ enum Projects {
             note = tr("not a git worktree any more (left behind)")
         } else {
             let q = Shell.quote(wt)
-            let status = Shell.run("git -C \(q) status --porcelain --untracked-files=normal | head -20", timeout: 10)
+            let status = Shell.run("git -C \(q) status --porcelain --untracked-files=normal", timeout: 10)
             let branch = Shell.run("git -C \(q) rev-parse --abbrev-ref HEAD", timeout: 5)?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? "?"
             detail += " · " + (branch == "HEAD" ? tr("detached HEAD") : tr("branch %1$@", branch))

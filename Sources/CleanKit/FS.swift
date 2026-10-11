@@ -292,43 +292,24 @@ public enum Cleaner {
 // MARK: - Shell
 
 enum Shell {
-    /// Runs a program directly (no shell): exit status and combined output, or -1 on timeout.
-    static func exec(_ argv: [String], timeout: TimeInterval) -> (Int32, String) {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        p.arguments = argv
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        p.standardInput = FileHandle.nullDevice
-        do { try p.run() } catch { return (-1, "\(error)") }
-        let done = DispatchSemaphore(value: 0)
-        var data = Data()
-        DispatchQueue.global().async { data = pipe.fileHandleForReading.readDataToEndOfFile(); done.signal() }
-        if done.wait(timeout: .now() + timeout) == .timedOut { p.terminate(); return (-1, "timed out") }
-        p.waitUntilExit()
-        return (p.terminationStatus, String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines))
+    /// Bounded output, with timeout/cancellation limited to this command's own child.
+    static func exec(_ argv: [String], timeout: TimeInterval, cancellation: ScanCancellation? = nil) -> (Int32, String) {
+        let result = CommandRunner.run("/usr/bin/env", arguments: argv, timeout: timeout,
+                                       cancelled: { cancellation?.isCancelled == true })
+        if result.cancelled { return (-1, "cancelled") }
+        if result.timedOut { return (-1, "timed out") }
+        if result.truncated { return (-1, "command output exceeded the limit") }
+        return (result.status, result.output.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
-    /// Runs `/bin/sh -c command`, returns stdout (nil on failure or timeout).
+    /// Read-only scan commands inherit the current scan token unless explicitly supplied.
     @discardableResult
-    static func run(_ command: String, timeout: TimeInterval = 10) -> String? {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/bin/sh")
-        p.arguments = ["-c", command]
-        let out = Pipe()
-        p.standardOutput = out
-        p.standardError = FileHandle.nullDevice
-        do { try p.run() } catch { return nil }
-        let deadline = Date().addingTimeInterval(timeout)
-        var data = Data()
-        let reader = DispatchQueue(label: "dev.thermo.clean.shell")
-        let done = DispatchSemaphore(value: 0)
-        reader.async { data = out.fileHandleForReading.readDataToEndOfFile(); done.signal() }
-        while p.isRunning && Date() < deadline { usleep(20_000) }
-        if p.isRunning { p.terminate(); return nil }
-        done.wait()
-        return p.terminationStatus == 0 ? String(data: data, encoding: .utf8) : nil
+    static func run(_ command: String, timeout: TimeInterval = 10, cancellation: ScanCancellation? = nil) -> String? {
+        let token = cancellation ?? ScanCancellation.current
+        let result = CommandRunner.run("/bin/sh", arguments: ["-c", command], timeout: timeout,
+                                       captureError: false, cancelled: { token?.isCancelled == true })
+        guard result.status == 0, !result.timedOut, !result.cancelled, !result.truncated else { return nil }
+        return result.output
     }
 
     static func quote(_ s: String) -> String { "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'" }

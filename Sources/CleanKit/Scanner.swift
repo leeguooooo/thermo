@@ -70,7 +70,7 @@ public final class DiskScanner: @unchecked Sendable {
         // At most half the cores, at utility priority, so a scan never takes the Mac over
         // (concurrentPerform used every core).
         let queue = OperationQueue()
-        queue.maxConcurrentOperationCount = max(2, ProcessInfo.processInfo.activeProcessorCount / 2)
+        queue.maxConcurrentOperationCount = min(4, max(2, ProcessInfo.processInfo.activeProcessorCount / 2))
         queue.qualityOfService = options.lowPriority ? .background : .utility
         for i in jobs.indices { queue.addOperation { runJob(i) } }
         queue.waitUntilAllOperationsAreFinished()
@@ -100,6 +100,7 @@ public final class DiskScanner: @unchecked Sendable {
             return pats.contains { fnmatch($0, n, FNM_CASEFOLD) == 0 }
         }
         for root in roots {
+            guard ScanCancellation.current?.isCancelled != true else { return nil }
             switch rule.scope {
             case .whole:
                 let s = FS.size(root, trackNewest: true)
@@ -109,6 +110,7 @@ public final class DiskScanner: @unchecked Sendable {
                 if !FS.isDirectory(root) { continue }
                 if (try? FileManager.default.contentsOfDirectory(atPath: root)) == nil { denied(root); continue }
                 for c in FS.children(root) where matches(c) && (c as NSString).lastPathComponent != ".DS_Store" {
+                    guard ScanCancellation.current?.isCancelled != true else { return nil }
                     let s = FS.size(c, trackNewest: true)
                     if s.denied { denied(c) }
                     paths.append(c); size = size + s
@@ -116,13 +118,14 @@ public final class DiskScanner: @unchecked Sendable {
             case .staleContents:
                 if (try? FileManager.default.contentsOfDirectory(atPath: root)) == nil { denied(root); continue }
                 for c in FS.children(root) where matches(c) && (c as NSString).lastPathComponent != ".DS_Store" {
+                    guard ScanCancellation.current?.isCancelled != true else { return nil }
                     let s = FS.size(c, trackNewest: true)
                     guard (s.newest ?? ctx.now) < ctx.staleBefore else { continue }
                     paths.append(c); size = size + s
                 }
             }
         }
-        guard size.bytes > 0 else { return nil }
+        guard size.bytes > 0, ScanCancellation.current?.isCancelled != true else { return nil }
         let detail = roots.count == 1 ? ctx.tilde(roots[0]) : "\(ctx.tilde(roots[0])) and \(roots.count - 1) more"
         var note = rule.note.map { tr($0) }
         if rule.scope == .staleContents {
@@ -142,6 +145,7 @@ public final class DiskScanner: @unchecked Sendable {
         var paths: [String] = []
         var size = TreeSize()
         for c in FS.children(root) {
+            guard ScanCancellation.current?.isCancelled != true else { return nil }
             let n = (c as NSString).lastPathComponent
             guard !claimed.contains(c), !claimed.contains(where: { $0.hasPrefix(c + "/") }),
                   !skipPrefixes.contains(where: { n.hasPrefix($0) }), n != ".DS_Store" else { continue }

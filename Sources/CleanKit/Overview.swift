@@ -37,10 +37,10 @@ public struct SpaceOverview: Codable, Sendable {
         var note: String? = nil
     }
 
-    /// Measures in parallel at background priority. `onProgress` gets each finished spot's title,
+    /// Measures in parallel; the app uses lowPriority to keep background disk I/O quiet. `onProgress` gets each finished spot's title,
     /// `onEntry` the spot itself, so a UI can show results as they come in.
     public static func measure(home: String = NSHomeDirectory(), onProgress: ((String) -> Void)? = nil,
-                               onEntry: ((Entry) -> Void)? = nil, cancellation: ScanCancellation = ScanCancellation()) -> SpaceOverview {
+                               onEntry: ((Entry) -> Void)? = nil, cancellation: ScanCancellation = ScanCancellation(), lowPriority: Bool = false) -> SpaceOverview {
         let started = Date()
         let language = L10n.current.rawValue
         let url = URL(fileURLWithPath: home)
@@ -72,8 +72,30 @@ public struct SpaceOverview: Codable, Sendable {
         let lock = NSLock()
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = min(4, max(1, ProcessInfo.processInfo.activeProcessorCount / 2))
-        queue.qualityOfService = .background
-        for (i, spot) in spots.enumerated() {
+        queue.qualityOfService = lowPriority ? .background : .utility
+        // Simulator runtimes live on their own disk images: same disk, no folder to measure.
+        var runtimes: Entry?
+        queue.addOperation {
+            guard !cancellation.isCancelled else { return }
+            let (status, json) = Shell.exec(["xcrun", "simctl", "runtime", "list", "-j"], timeout: 30, cancellation: cancellation)
+            if status == 0, let list = try? JSONDecoder().decode([String: Simulators.Runtime].self, from: Data(json.utf8)) {
+                let kids = list.values.map { r in
+                    Entry(id: "runtime/" + r.identifier, title: Simulators.runtimeName(r.runtimeIdentifier, version: r.version),
+                          path: nil, bytes: r.sizeBytes ?? 0, children: [])
+                }.sorted { $0.bytes > $1.bytes }
+                guard !cancellation.isCancelled else { return }
+                let total = kids.reduce(Int64(0)) { $0 + $1.bytes }
+                if total > 0 {
+                    let e = Entry(id: "simulator-runtimes", title: tr("Simulator runtimes"), path: nil, bytes: total, children: kids,
+                                  note: tr("separate disk images; remove unused ones with xcrun simctl runtime delete"))
+                    lock.lock(); runtimes = e; lock.unlock()
+                    onEntry?(e)
+                }
+            }
+            onProgress?(tr("Simulator runtimes"))
+        }
+        for i in spots.indices.sorted(by: { priority(spots[$0].id) < priority(spots[$1].id) }) {
+            let spot = spots[i]
             queue.addOperation {
                 guard !cancellation.isCancelled else { return }
                 var denied: [String] = []
@@ -109,30 +131,9 @@ public struct SpaceOverview: Codable, Sendable {
                 onProgress?(spot.title)
             }
         }
-        // Simulator runtimes live on their own disk images: same disk, no folder to measure.
-        var runtimes: Entry?
-        queue.addOperation {
-            guard !cancellation.isCancelled else { return }
-            if let json = Shell.run("xcrun simctl runtime list -j 2>/dev/null", timeout: 30),
-               let list = try? JSONDecoder().decode([String: Simulators.Runtime].self, from: Data(json.utf8)) {
-                let kids = list.values.map { r in
-                    Entry(id: "runtime/" + r.identifier, title: Simulators.runtimeName(r.runtimeIdentifier, version: r.version),
-                          path: nil, bytes: r.sizeBytes ?? 0, children: [])
-                }.sorted { $0.bytes > $1.bytes }
-                guard !cancellation.isCancelled else { return }
-                let total = kids.reduce(Int64(0)) { $0 + $1.bytes }
-                if total > 0 {
-                    lock.lock()
-                    runtimes = Entry(id: "simulator-runtimes", title: tr("Simulator runtimes"), path: nil, bytes: total, children: kids,
-                                     note: tr("separate disk images; remove unused ones with xcrun simctl runtime delete"))
-                    lock.unlock()
-                }
-            }
-            onProgress?(tr("Simulator runtimes"))
-        }
         queue.waitUntilAllOperationsAreFinished()
 
-        var list = entries.compactMap { $0 } + (cancellation.isCancelled ? [] : [runtimes, swap()].compactMap { $0 })
+        var list = entries.compactMap { $0 } + [runtimes].compactMap { $0 } + (cancellation.isCancelled ? [] : [swap()].compactMap { $0 })
         let counted = list.reduce(Int64(0)) { $0 + $1.bytes }
         let used = capacity - free
         if !cancellation.isCancelled, used > counted {
@@ -147,6 +148,18 @@ public struct SpaceOverview: Codable, Sendable {
         result.language = language
         result.unreadable = Array(Set(unreadable)).sorted()
         return result
+    }
+
+    private static func priority(_ id: String) -> Int {
+        switch id {
+        case "trash": return 0
+        case "temp": return 1
+        case "homebrew": return 2
+        case "caches": return 3
+        case "developer": return 4
+        case "apps": return 5
+        default: return 6
+        }
     }
 
     /// Swap files live in the same container: when memory runs short, they take disk space.

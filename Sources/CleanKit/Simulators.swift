@@ -25,9 +25,14 @@ enum Simulators {
     }
 
     static func scan(_ ctx: ScanContext) -> [CleanItem] {
-        guard FS.exists("/Applications/Xcode.app") || FS.exists("/Library/Developer/CommandLineTools"),
-              let runtimesJSON = Shell.run("xcrun simctl runtime list -j 2>/dev/null", timeout: 30),
-              let devicesJSON = Shell.run("xcrun simctl list devices -j 2>/dev/null", timeout: 30) else { return [] }
+        guard FS.exists("/Applications/Xcode.app") || FS.exists("/Library/Developer/CommandLineTools") else { return [] }
+        let cancellation = ScanCancellation.current
+        let runtimeResult = Shell.exec(["xcrun", "simctl", "runtime", "list", "-j"], timeout: 30, cancellation: cancellation)
+        guard runtimeResult.0 == 0 else { return [] }
+        let deviceResult = Shell.exec(["xcrun", "simctl", "list", "devices", "-j"], timeout: 30, cancellation: cancellation)
+        guard deviceResult.0 == 0 else { return [] }
+        let runtimesJSON = runtimeResult.1
+        let devicesJSON = deviceResult.1
         let runtimes = (try? JSONDecoder().decode([String: Runtime].self, from: Data(runtimesJSON.utf8)))?.values.map { $0 } ?? []
         let byRuntime = (try? JSONDecoder().decode([String: [String: [Device]]].self, from: Data(devicesJSON.utf8)))?["devices"] ?? [:]
         return items(runtimes: runtimes, devices: byRuntime, ctx: ctx)

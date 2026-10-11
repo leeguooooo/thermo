@@ -57,7 +57,7 @@ final class SpaceOverviewModel: ObservableObject {
                     guard self.generation == generation, self.cancellation === cancellation, !cancellation.isCancelled else { return }
                     self.partial.append(e)
                 }
-            }, cancellation: cancellation)
+            }, cancellation: cancellation, lowPriority: true)
             await MainActor.run {
                 guard self.generation == generation else { return }
                 o.save()
