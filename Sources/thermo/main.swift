@@ -60,6 +60,10 @@ COMMANDS
   apps uninstall NAME        move the app and its files to the Trash (lists every path, asks first;
                              --dry-run only lists; refuses running, system and protected apps;
                              browser, chat and mail data stays unless --with-data)
+  space [PATH]               what takes the space in a folder, biggest first (one walk, kept an hour)
+  space large                files over 100 MB and when they were last opened (--older-than DAYS)
+  space dupes [PATH…]        identical files (default: Desktop, Documents, Downloads, media folders)
+  space trash PATH…          move picked files or folders to the Trash (lists them, asks first)
   apps leftovers             data left by apps that are gone (untouched 30 days, unknown to Spotlight)
   apps leftovers remove ID…|all
                              move that data to the Trash; asks first
@@ -131,6 +135,7 @@ struct App {
         case "agents", "agent", "doctor": try AgentsCommand(app: self).run(rest)
         case "clean": try CleanCommand(app: self).run(rest)
         case "apps", "app": try AppsCommand(app: self).run(rest)
+        case "space": try SpaceCommand(app: self).run(rest)
         case "pulse", "status": try PulseCommand(app: self).run(rest)
         case "settings", "config": try SettingsCommand(app: self).run(rest)
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")

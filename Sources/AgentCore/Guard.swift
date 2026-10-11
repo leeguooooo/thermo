@@ -6,7 +6,7 @@ import Foundation
 /// these, contains one of these, or is outside the user's home.
 public struct Guard: Sendable {
     public let home: String
-    let protected: [String]
+    public let protected: [String]
     /// Nothing inside these may go either: keys, credentials, personal files, agent memory.
     let sealed: [String]
     /// Outside the home folder, only per-session folders below these roots may go (agent scratch space).
