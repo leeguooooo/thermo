@@ -264,6 +264,7 @@ struct CleanCommand {
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print("cancelled"); return }
         }
 
+        let spaceBefore = DiskSpaceSnapshot.measure()
         var results: [CleanResult] = []
         for i in todo {
             let res = Cleaner.clean(i, mode: mode, scannedAt: r.started)
@@ -275,11 +276,13 @@ struct CleanCommand {
                 for (p, why) in res.failed.sorted(by: { $0.key < $1.key }).prefix(5) { print(style.dim("      \(FS.tilde(p)): \(why)")) }
             }
         }
+        let observation = DiskSpaceObservation(before: spaceBefore, after: DiskSpaceSnapshot.measure())
         if args.has("json") { print(Export.json(results)); return }
         let freed = results.filter { !$0.trashed }.reduce(Int64(0)) { $0 + $1.bytes }
         let trashed = results.filter(\.trashed).reduce(Int64(0)) { $0 + $1.bytes }
-        var summary = "freed \(ByteFormat.string(freed))"
+        var summary = "deleted \(ByteFormat.string(freed)) (estimated file size)"
         if trashed > 0 { summary += ", moved \(ByteFormat.string(trashed)) to the Trash (empty it to reclaim the space)" }
+        print(observation.summary)
         print(style.bold(summary) + style.dim(" · log: \(FS.tilde(Cleaner.logURL.path))"))
     }
 
@@ -308,7 +311,7 @@ struct CleanCommand {
 
     /// The item as it is now: paths that are gone are dropped. Sizes stay as scanned — measuring
     /// again would cost what we are avoiding, and removal re-walks each path anyway (it skips
-    /// anything changed since the scan and reports what was really freed).
+    /// anything changed since the scan and reports removed file estimates and live volume measurements).
     func refreshed(_ item: CleanItem) -> CleanItem {
         var i = item
         let kept = item.paths.filter(FS.exists)

@@ -161,7 +161,9 @@ public struct CleanResult: Codable, Sendable {
     public var id: String
     public var removed: [String] = []
     public var failed: [String: String] = [:]
+    /// Estimated private bytes of the removed files, not the measured volume change.
     public var bytes: Int64 = 0
+    public var spaceObservation: DiskSpaceObservation?
     public var trashed: Bool
 
     public init(id: String, trashed: Bool) { self.id = id; self.trashed = trashed }
@@ -194,6 +196,14 @@ public enum Cleaner {
     /// `scannedAt`: paths modified after this moment changed since the user saw the scan and are skipped.
     public static func clean(_ item: CleanItem, mode: RemovalMode = .auto, guard g: Guard = Guard(),
                              scannedAt: Date? = nil) -> CleanResult {
+        let before = DiskSpaceSnapshot.measure(path: g.home)
+        var result = perform(item, mode: mode, guard: g, scannedAt: scannedAt)
+        result.spaceObservation = DiskSpaceObservation(before: before, after: DiskSpaceSnapshot.measure(path: g.home))
+        log(result, item: item, to: logURL(home: g.home))
+        return result
+    }
+
+    private static func perform(_ item: CleanItem, mode: RemovalMode, guard g: Guard, scannedAt: Date?) -> CleanResult {
         let trash = mode.trashes(item.safety)
         var result = CleanResult(id: item.id, trashed: trash)
         guard item.blocked == nil else {
@@ -254,8 +264,10 @@ public enum Cleaner {
         if !result.removed.isEmpty, let cmds = item.afterClean {
             for c in cmds { _ = Shell.run(c, timeout: 30) }
         }
-        if !result.removed.isEmpty { ScanReportCache.invalidate(home: g.home) }
-        log(result, item: item, to: logURL(home: g.home))
+        if !result.removed.isEmpty {
+            ScanReportCache.invalidate(home: g.home)
+            SpaceOverview.invalidate(home: g.home)
+        }
         return result
     }
 
@@ -264,6 +276,9 @@ public enum Cleaner {
         var lines = r.removed.map { "\(f.string(from: Date())) \(r.trashed ? "trash" : "delete") \(item.id) \($0)" }
         lines += r.failed.map { "\(f.string(from: Date())) failed \(item.id) \($0.key): \($0.value)" }
         guard !lines.isEmpty else { return }
+        if let observation = r.spaceObservation, let delta = observation.availableChangeBytes {
+            lines.append("\(f.string(from: Date())) disk-change \(item.id) \(delta) bytes (includes other disk activity)")
+        }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         let data = (lines.joined(separator: "\n") + "\n").data(using: .utf8)!
         if let h = try? FileHandle(forWritingTo: url) {

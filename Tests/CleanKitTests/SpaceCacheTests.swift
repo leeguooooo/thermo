@@ -34,6 +34,24 @@ final class SpaceCacheTests: XCTestCase {
         }
     }
 
+    func testCleanupInvalidationRejectsLateResultsAndAllowsNewMeasurement() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: home) }
+        let url = home.appendingPathComponent("Library/Caches/dev.thermo/space-overview.json")
+        let old = fixture()
+        old.save(to: url)
+        SpaceOverview.invalidate(home: home.path, now: Date(timeIntervalSince1970: 200))
+        old.save(to: url)
+        XCTAssertNil(SpaceOverview.cached(from: url, now: Date(timeIntervalSince1970: 300)),
+                     "late callbacks must not resurrect a pre-cleanup measurement")
+        var fresh = fixture(); fresh.measuredAt = Date(timeIntervalSince1970: 250)
+        fresh.save(to: url)
+        XCTAssertNotNil(SpaceOverview.cached(from: url, now: Date(timeIntervalSince1970: 300)))
+        // Even an older process ignoring the marker cannot make an old file valid.
+        try JSONEncoder().encode(old).write(to: url)
+        XCTAssertNil(SpaceOverview.cached(from: url, now: Date(timeIntervalSince1970: 300)))
+    }
+
     func testCacheRejectsInvalidCapacityAndDuplicateOrNegativeEntries() throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: url) }

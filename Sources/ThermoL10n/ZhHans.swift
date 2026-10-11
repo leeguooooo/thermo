@@ -636,6 +636,13 @@ let zhHans: [String: String] = [
     // Disk tab
     "Everything": "全部",
     "starting…": "正在开始…",
+    "deleted %1$@ (estimated file size)": "已删除 %1$@（文件大小估计值）",
+    "Disk free space could not be verified": "未能验证磁盘可用空间变化",
+    "increased by %1$@": "增加 %1$@",
+    "decreased by %1$@": "减少 %1$@",
+    "no increase": "未增加",
+    "Disk free space: %1$@ → %2$@ (%3$@)": "磁盘可用空间：%1$@ → %2$@（%3$@）",
+    "Measured before and after; includes other disk activity.": "执行前后实测，包含其他程序的磁盘活动。",
     "freed %1$@": "已释放 %1$@",
     ", %1$@ moved to the Trash": "，%1$@ 已移到废纸篓",
     "%1$@ path could not be removed (see log)": "%1$@ 个路径无法删除（见日志）",

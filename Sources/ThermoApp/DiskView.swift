@@ -166,24 +166,31 @@ final class DiskModel: ObservableObject {
         cleaningTotal = items.count
         queue.async { [weak self] in
             ScanReportCache.invalidate()
+            let spaceBefore = DiskSpaceSnapshot.measure()
+            var removedAny = false
             var freed: Int64 = 0, trashed: Int64 = 0, failures = 0
             var remaining: [String: CleanItem] = [:]
             for (n, i) in items.enumerated() {
                 DispatchQueue.main.async { self?.cleaningStep = i.title; self?.cleaningDone = n }
                 let r = Cleaner.clean(i, scannedAt: scannedAt)
+                removedAny = removedAny || !r.removed.isEmpty
                 if r.trashed { trashed += r.bytes } else { freed += r.bytes }
                 failures += r.failed.count
                 if let original = originals[i.id], let rest = Self.remainder(original, attempted: i, result: r) {
                     remaining[i.id] = rest
                 }
             }
-            var text = tr("freed %1$@", ByteFormat.string(freed))
+            let observation = DiskSpaceObservation(before: spaceBefore, after: DiskSpaceSnapshot.measure())
+            var text = tr("deleted %1$@ (estimated file size)", ByteFormat.string(freed))
             if trashed > 0 { text += tr(", %1$@ moved to the Trash", ByteFormat.string(trashed)) }
             if failures > 0 { text += " · " + trCount(failures, "%1$@ path could not be removed (see log)", "%1$@ paths could not be removed (see log)") }
+            text += "\n" + observation.summary
+            let invalidateOverview = removedAny
             let remainingItems = remaining
             let hadFailures = failures > 0
             DispatchQueue.main.async {
                 guard let self else { return }
+                if invalidateOverview { SpaceOverviewModel.shared.invalidateAfterCleanup() }
                 self.cleaning = false
                 self.cleaningDone = self.cleaningTotal
                 self.resultsNeedRefresh = hadFailures

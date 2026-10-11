@@ -9,6 +9,7 @@ import ThermoL10n
 final class SpaceOverviewModel: ObservableObject {
     static let shared = SpaceOverviewModel()
 
+    @Published private(set) var diskSpace: DiskSpaceSnapshot?
     @Published private(set) var overview: SpaceOverview?
     @Published private(set) var measuredAt: Date?
     /// Places finished in the current measurement, shown before the whole thing is done.
@@ -19,8 +20,10 @@ final class SpaceOverviewModel: ObservableObject {
     private var cancellation: ScanCancellation?
     private var measurementLanguage: String?
     private var restartAfterCurrent = false
+    private var generation = UUID()
 
-    init(cached: (SpaceOverview, Date)? = SpaceOverview.cached()) {
+    init(cached: (SpaceOverview, Date)? = SpaceOverview.cached(), diskSpace: DiskSpaceSnapshot? = .measure()) {
+        self.diskSpace = diskSpace
         if let (o, at) = cached { overview = o; measuredAt = at }
     }
 
@@ -37,6 +40,9 @@ final class SpaceOverviewModel: ObservableObject {
 
     func measure() {
         guard !measuring else { return }
+        diskSpace = .measure()
+        let generation = UUID()
+        self.generation = generation
         measuring = true
         measurementLanguage = L10n.current.rawValue
         restartAfterCurrent = false
@@ -48,12 +54,13 @@ final class SpaceOverviewModel: ObservableObject {
         Task.detached(priority: .utility) {
             let o = SpaceOverview.measure(onEntry: { e in
                 Task { @MainActor in
-                    guard self.cancellation === cancellation, !cancellation.isCancelled else { return }
+                    guard self.generation == generation, self.cancellation === cancellation, !cancellation.isCancelled else { return }
                     self.partial.append(e)
                 }
             }, cancellation: cancellation)
-            o.save()
             await MainActor.run {
+                guard self.generation == generation else { return }
+                o.save()
                 let restart = self.restartAfterCurrent
                 self.restartAfterCurrent = false
                 if o.language != L10n.current.rawValue {
@@ -64,6 +71,7 @@ final class SpaceOverviewModel: ObservableObject {
                     self.stopped = true
                 } else {
                     self.overview = o
+                    self.diskSpace = .measure()
                     self.measuredAt = o.measuredAt
                 }
                 self.measuring = false
@@ -72,6 +80,23 @@ final class SpaceOverviewModel: ObservableObject {
                 if restart { self.measure() }
             }
         }
+    }
+
+    /// A cleanup invalidates cached breakdowns. Late callbacks from an old measurement
+    /// must neither restore stale folders nor write their old overview back to disk.
+    func invalidateAfterCleanup() {
+        generation = UUID()
+        cancellation?.cancel()
+        cancellation = nil
+        restartAfterCurrent = false
+        measurementLanguage = nil
+        measuring = false
+        stopping = false
+        stopped = false
+        overview = nil
+        measuredAt = nil
+        partial = []
+        diskSpace = .measure()
     }
 
     func stop() {
@@ -92,6 +117,8 @@ final class SpaceOverviewModel: ObservableObject {
     }
 
     func measureIfStale() {
+        diskSpace = .measure()
+        if overview != nil, !SpaceOverview.isCurrent(measuredAt: measuredAt) { invalidateAfterCleanup() }
         discardIncompatibleResults()
         if measuring {
             if measurementLanguage != L10n.current.rawValue {
@@ -114,7 +141,11 @@ struct DiskOverviewView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 header
-                if let o = model.overview { capacityBar(o) }
+                if let live = model.diskSpace {
+                    capacityBar(capacity: live.capacityBytes, free: live.availableBytes)
+                } else if let o = model.overview {
+                    capacityBar(capacity: o.capacity, free: o.free, purgeable: o.purgeable)
+                }
                 if model.measuring, model.overview != nil {
                     Text(tr("Previous results stay visible until each location is measured again."))
                         .font(.caption).foregroundStyle(.secondary)
@@ -176,10 +207,12 @@ struct DiskOverviewView: View {
         return tr("measured %1$@", at.formatted(date: .abbreviated, time: .shortened))
     }
 
-    func capacityBar(_ o: SpaceOverview) -> some View {
+    func capacityBar(capacity: Int64, free: Int64, purgeable: Int64 = 0) -> some View {
+        let usedBytes = max(0, capacity - free)
+        return
         VStack(alignment: .leading, spacing: 6) {
             GeometryReader { g in
-                let used = o.capacity > 0 ? min(1, max(0, CGFloat(o.used) / CGFloat(o.capacity))) : 0
+                let used = capacity > 0 ? min(1, max(0, CGFloat(usedBytes) / CGFloat(capacity))) : 0
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.15))
                     RoundedRectangle(cornerRadius: 5).fill(used > 0.95 ? Color.red : used > 0.85 ? Color.orange : Color.accentColor)
@@ -187,8 +220,8 @@ struct DiskOverviewView: View {
                 }
             }
             .frame(height: 12)
-            Text(tr("%1$@ used of %2$@ · %3$@ free", ByteFormat.string(o.used), ByteFormat.string(o.capacity), ByteFormat.string(o.free))
-                 + (o.purgeable > 1_000_000_000 ? " · " + tr("%1$@ more can be freed by macOS on demand", ByteFormat.string(o.purgeable)) : ""))
+            Text(tr("%1$@ used of %2$@ · %3$@ free", ByteFormat.string(usedBytes), ByteFormat.string(capacity), ByteFormat.string(free))
+                 + (purgeable > 1_000_000_000 ? " · " + tr("%1$@ more can be freed by macOS on demand", ByteFormat.string(purgeable)) : ""))
                 .font(.callout).foregroundStyle(.secondary)
         }
     }
@@ -205,7 +238,7 @@ struct DiskOverviewView: View {
     }
 
     func row(_ e: SpaceOverview.Entry) -> some View {
-        let total = max(1, model.overview?.used ?? model.entries.reduce(0) { $0 + $1.bytes })
+        let total = max(1, model.diskSpace.map { $0.capacityBytes - $0.availableBytes } ?? model.overview?.used ?? model.entries.reduce(0) { $0 + $1.bytes })
         let expanded = open.contains(e.id)
         return VStack(alignment: .leading, spacing: 6) {
             if e.children.isEmpty {

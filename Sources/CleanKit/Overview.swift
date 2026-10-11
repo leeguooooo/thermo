@@ -163,11 +163,27 @@ public struct SpaceOverview: Codable, Sendable {
         URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Caches/dev.thermo/space-overview.json")
     }
 
+    public static func invalidate(home: String = NSHomeDirectory(), now: Date = Date()) {
+        let url = URL(fileURLWithPath: home).appendingPathComponent("Library/Caches/dev.thermo/space-overview.json")
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? Data(String(now.timeIntervalSince1970).utf8).write(to: url.appendingPathExtension("invalidated"), options: .atomic)
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    /// Also protects against a measurement started before cleanup in another process.
+    public static func isCurrent(measuredAt: Date?, cacheURL url: URL = cacheURL) -> Bool {
+        guard let measuredAt else { return false }
+        let marker = url.appendingPathExtension("invalidated")
+        guard let data = try? Data(contentsOf: marker) else { return true }
+        guard let seconds = Double(String(decoding: data, as: UTF8.self)), seconds.isFinite else { return false }
+        return measuredAt.timeIntervalSince1970 >= seconds
+    }
+
     public static func cached(from url: URL = cacheURL, now: Date = Date()) -> (SpaceOverview, Date)? {
         guard let data = try? Data(contentsOf: url),
               let overview = try? JSONDecoder().decode(SpaceOverview.self, from: data),
               overview.cancelled != true, overview.language == L10n.current.rawValue,
-              let measuredAt = overview.measuredAt, measuredAt <= now,
+              let measuredAt = overview.measuredAt, measuredAt <= now, isCurrent(measuredAt: measuredAt, cacheURL: url),
               overview.capacity > 0, overview.free >= 0, overview.free <= overview.capacity,
               overview.purgeable >= 0, overview.duration.isFinite, overview.duration >= 0,
               validEntries(overview.entries) else { return nil }
@@ -180,7 +196,7 @@ public struct SpaceOverview: Codable, Sendable {
     }
 
     public func save(to url: URL = Self.cacheURL) {
-        guard cancelled != true else { return }
+        guard cancelled != true, Self.isCurrent(measuredAt: measuredAt, cacheURL: url) else { return }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? JSONEncoder().encode(self).write(to: url, options: .atomic)
     }
