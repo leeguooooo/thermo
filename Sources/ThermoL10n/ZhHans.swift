@@ -2,6 +2,8 @@
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
     // MARK: App
+    "%1$@ pages had no comparable earlier sample; their growth was not evaluated.": "%1$@ 个页面没有可比较的旧样本，未评估其增长。",
+    "No notable growth in %1$@ comparable pages over %2$@ s.": "%2$@ 秒内，%1$@ 个可比较页面未发现明显增长。",
     "Browser measurement times are invalid. Growth comparisons are unavailable; check again.": "浏览器测量时间异常，暂时无法比较增长，请重新检查。",
     "Measurement interval must be finite and between 0 and 86400 seconds.": "测量间隔必须是 0 到 86400 秒之间的有限数值。",
     "credential stored in plain text in the config (%1$@)": "凭据以明文写在配置里（%1$@）",
@@ -881,7 +883,7 @@ let zhHans: [String: String] = [
     "%1$@ min": "%1$@ 分钟",
     "peak %1$@ CPU · %2$@": "CPU 峰值 %1$@ · %2$@",
     // Browser pages (ChromeInspector)
-    "It added %1$@ event listeners in %2$@ s while the page itself did not change: a leak in the page. Reloading it frees them; if it comes back, close it when you are not using it.": "%2$@ 秒里加了 %1$@ 个事件监听，页面本身却没变：这是页面的泄漏。刷新一下就能释放；如果又涨回来，不用时就关掉它。",
+    "It added %1$@ event listeners in %2$@ s while the node count stayed similar. This may indicate a listener leak; reload the page and check again.": "%2$@ 秒里增加了 %1$@ 个事件监听，节点数变化不大。这可能是监听器泄漏，请刷新后重新检查。",
     "Its memory grew %1$@ in %2$@ s. If it keeps growing, reload or close it.": "%2$@ 秒里内存涨了 %1$@。如果一直涨，刷新或关掉它。",
     "It keeps adding page elements (%1$@ in %2$@ s), like an endless feed. Reload it now and then.": "它一直在加页面元素（%2$@ 秒加了 %1$@ 个），像无限滚动的信息流。时不时刷新一下。",
     "Pages' JavaScript uses %1$@ of the %2$@ the browser uses.": "浏览器一共占 %2$@，其中网页的 JavaScript 占 %1$@。",

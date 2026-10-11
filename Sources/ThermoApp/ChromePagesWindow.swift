@@ -250,11 +250,14 @@ struct ChromePagesView: View {
         if let h = d.hiddenText { note(h, color: .orange) }
         if let g = d.gap { note(g, color: .secondary) }
         if let r = d.report {
+            if r.invalidTimestamp != true, let skipped = r.comparisonSkipped, skipped > 0 {
+                note(tr("%1$@ pages had no comparable earlier sample; their growth was not evaluated.", String(skipped)), color: .orange)
+            }
             if r.invalidTimestamp == true {
                 note(tr("Browser measurement times are invalid. Growth comparisons are unavailable; check again."), color: .orange)
             }
-            if r.seconds != nil {
-                section(tr("Growing"), r.leaking.isEmpty ? tr("No page grew in %1$@ s.", String(Int((r.seconds ?? 0).rounded()))) : nil) {
+            if r.seconds != nil, (r.comparedPages ?? r.pages.count) > 0 {
+                section(tr("Growing"), r.leaking.isEmpty ? tr("No notable growth in %1$@ comparable pages over %2$@ s.", String(r.comparedPages ?? r.pages.count), String(Int((r.seconds ?? 0).rounded()))) : nil) {
                     ForEach(r.leaking) { p in pageRow(p, warn: true) }
                 }
             }

@@ -25,6 +25,7 @@ public enum ChromeInspector {
         public var nodes: Double?
         public var listeners: Double?
         public var documents: Double?
+        public var navigationStart: Double? = nil
         public var error: String?
         /// A page with no address, checked: true when it did not answer (a dead record in a
         /// DevTools relay, not a page), false when it is a real page in no window.
@@ -33,14 +34,16 @@ public enum ChromeInspector {
         enum CodingKeys: String, CodingKey {
             case targetId, type, url, title, attached, error, ghost
             case heap = "JSHeapUsedSize", nodes = "Nodes", listeners = "JSEventListeners", documents = "Documents"
+            case navigationStart = "NavigationStart"
         }
 
         public init(targetId: String, type: String, url: String, title: String, attached: Bool? = nil,
                     heap: Double? = nil, nodes: Double? = nil, listeners: Double? = nil, documents: Double? = nil, error: String? = nil,
-                    ghost: Bool? = nil) {
+                    ghost: Bool? = nil, navigationStart: Double? = nil) {
             self.targetId = targetId; self.type = type; self.url = url; self.title = title; self.attached = attached
             self.heap = heap; self.nodes = nodes; self.listeners = listeners; self.documents = documents; self.error = error
             self.ghost = ghost
+            self.navigationStart = navigationStart
         }
     }
 
@@ -118,6 +121,8 @@ public enum ChromeInspector {
         public var workersHeapMB: Double
         public var workerCount: Int
         public var invalidTimestamp: Bool? = nil
+        public var comparedPages: Int? = nil
+        public var comparisonSkipped: Int? = nil
     }
 
     /// Per-minute rates above which a page counts as growing.
@@ -171,22 +176,25 @@ public enum ChromeInspector {
         }
         var pages: [Page] = []
         var unmeasured = 0
+        var compared = 0
+        var skipped = 0
         for t in after.rows where t.type == "page" && !isHidden(t) {
             guard let heap = validHeap(t.heap), let nodes = count(t.nodes), let listeners = count(t.listeners) else { unmeasured += 1; continue }
             var p = Page(id: t.targetId, url: t.url, title: t.title, heapMB: mb(heap),
                          nodes: nodes, listeners: listeners)
-            if let seconds, let o = earlier[t.targetId], let oh = validHeap(o.heap), let oldNodes = count(o.nodes), let oldListeners = count(o.listeners) {
+            if let seconds, let o = earlier[t.targetId], sameDocument(t, o), let oh = validHeap(o.heap), let oldNodes = count(o.nodes), let oldListeners = count(o.listeners) {
+                compared += 1
                 let g = Growth(seconds: seconds, heapMB: mb(heap - oh), nodes: nodes - oldNodes,
                                listeners: listeners - oldListeners)
                 p.growth = g
                 p.leak = leak(g, limits)
                 p.advice = p.leak.map { advice($0, g) }
-            }
+            } else if before != nil { skipped += 1 }
             pages.append(p)
         }
         pages.sort { $0.heapMB > $1.heapMB }
 
-        // A listener leak is a certain bug; growth alone may still level off.
+        // Listener growth with stable node counts is a signal, not proof of a bug.
         let leaking = pages.filter { $0.leak != nil }
             .sorted { ($0.leak == .listeners ? 1 : 0, severity($0)) > ($1.leak == .listeners ? 1 : 0, severity($1)) }
         let largest = Array(pages.filter { $0.leak == nil }.prefix(5))
@@ -218,12 +226,23 @@ public enum ChromeInspector {
                       pagesHeapMB: pages.reduce(0) { $0 + $1.heapMB }, workersHeapMB: workerRows.reduce(0) { $0 + mb(validHeap($1.heap)) },
                       workerCount: workerRows.count)
         report.invalidTimestamp = validTime && (before == nil || seconds != nil) ? nil : true
+        report.comparedPages = before == nil ? nil : compared
+        report.comparisonSkipped = before == nil ? nil : skipped
         return report
+    }
+
+    static func sameDocument(_ current: Target, _ previous: Target) -> Bool {
+        guard current.type == "page", previous.type == "page", current.url == previous.url else { return false }
+        switch (current.navigationStart, previous.navigationStart) {
+        case (nil, nil): return true // older relays: only the URL is available
+        case let (current?, previous?): return current.isFinite && previous.isFinite && current >= 0 && current == previous
+        default: return false
+        }
     }
 
     static func leak(_ g: Growth, _ limits: Limits) -> Leak? {
         let perMinute = 60 / max(g.seconds, 1)
-        if g.listeners >= limits.listeners && Double(g.nodes) < Double(g.listeners) / 10 { return .listeners }
+        if g.listeners >= limits.listeners && abs(Double(g.nodes)) < Double(g.listeners) / 10 { return .listeners }
         if g.heapMB >= limits.heapMinMB && g.heapMB * perMinute >= limits.heapMBPerMinute { return .heap }
         if Double(g.nodes) * perMinute >= limits.nodesPerMinute { return .nodes }
         return nil
@@ -238,7 +257,7 @@ public enum ChromeInspector {
         let secs = String(Int(g.seconds.rounded()))
         switch leak {
         case .listeners:
-            return tr("It added %1$@ event listeners in %2$@ s while the page itself did not change: a leak in the page. Reloading it frees them; if it comes back, close it when you are not using it.",
+            return tr("It added %1$@ event listeners in %2$@ s while the node count stayed similar. This may indicate a listener leak; reload the page and check again.",
                       String(g.listeners), secs)
         case .heap:
             return tr("Its memory grew %1$@ in %2$@ s. If it keeps growing, reload or close it.",
@@ -361,6 +380,7 @@ public enum ChromeInspector {
                 case "Nodes": r.nodes = v
                 case "JSEventListeners": r.listeners = v
                 case "Documents": r.documents = v
+                case "NavigationStart": r.navigationStart = v
                 default: break
                 }
             }

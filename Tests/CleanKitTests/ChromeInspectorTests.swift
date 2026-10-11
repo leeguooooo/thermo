@@ -22,7 +22,7 @@ final class ChromeInspectorTests: XCTestCase {
         L10n.override = .simplifiedChinese
         let (a, b) = samples()
         let r = ChromeInspector.diagnose(b, before: a)
-        XCTAssertEqual(r.leaking[0].advice, "90 秒里加了 411 个事件监听，页面本身却没变：这是页面的泄漏。刷新一下就能释放；如果又涨回来，不用时就关掉它。")
+        XCTAssertEqual(r.leaking[0].advice, "90 秒里增加了 411 个事件监听，节点数变化不大。这可能是监听器泄漏，请刷新后重新检查。")
         XCTAssertTrue(ChromeInspector.hiddenText(r, app: "Google Chrome")!.hasPrefix("136 条 chrome-use 残留记录"))
     }
 
