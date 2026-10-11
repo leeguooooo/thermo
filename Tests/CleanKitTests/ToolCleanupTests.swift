@@ -18,4 +18,23 @@ final class ToolCleanupTests: XCTestCase {
         XCTAssertEqual(ToolCleanup.parseSize("12B"), 12)
         XCTAssertEqual(ToolCleanup.parseSize("junk"), 0)
     }
+
+    func testBrowserOldVersionOnlyThePreviousFolder() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("apps-\(UUID().uuidString)").path
+        let real = realpath(FileManager.default.temporaryDirectory.path, nil).map { p in defer { free(p) }; return String(cString: p) }!
+        let apps = real + "/" + (root as NSString).lastPathComponent
+        defer { try? FileManager.default.removeItem(atPath: apps) }
+        let versions = apps + "/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions"
+        for v in ["1.0", "2.0"] {
+            try FileManager.default.createDirectory(atPath: versions + "/" + v, withIntermediateDirectories: true)
+            FileManager.default.createFile(atPath: versions + "/" + v + "/lib", contents: Data(repeating: 1, count: 8192))
+        }
+        try FileManager.default.createSymbolicLink(atPath: versions + "/Current", withDestinationPath: "2.0")
+        XCTAssertEqual(ToolCleanup.oldVersions(versions), [versions + "/1.0"])
+        XCTAssertNil(ToolCleanup.oldVersionRefusal(versions + "/1.0", appsRoot: apps))
+        XCTAssertNotNil(ToolCleanup.oldVersionRefusal(versions + "/2.0", appsRoot: apps), "the version in use")
+        XCTAssertNotNil(ToolCleanup.oldVersionRefusal(versions + "/Current", appsRoot: apps))
+        XCTAssertNotNil(ToolCleanup.oldVersionRefusal(apps + "/Google Chrome.app", appsRoot: apps))
+        XCTAssertNotNil(ToolCleanup.oldVersionRefusal(versions + "/1.0", appsRoot: "/Applications"), "only the browsers' own place")
+    }
 }

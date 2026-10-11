@@ -97,29 +97,52 @@ enum ToolCleanup {
 
     // MARK: Browser updates
 
-    /// Chromium browsers keep the previous version inside the app until they are restarted, then
-    /// delete it themselves. Thermo does not edit a signed app bundle; it says what a restart frees.
+    static let oldVersionPrefix = "browser-old-version/"
+    static let browsers: [(app: String, framework: String)] = [
+        ("Google Chrome", "Google Chrome Framework"), ("Microsoft Edge", "Microsoft Edge Framework"),
+        ("Brave Browser", "Brave Browser Framework"), ("Chromium", "Chromium Framework"),
+    ]
+
+    static func isBrowserOldVersion(_ item: CleanItem) -> Bool { item.id.hasPrefix(oldVersionPrefix) }
+
+    static func versionsDir(_ b: (app: String, framework: String), appsRoot: String = "/Applications") -> String {
+        "\(appsRoot)/\(b.app).app/Contents/Frameworks/\(b.framework).framework/Versions"
+    }
+
+    /// Chromium browsers keep the previous version inside the app after an update until they restart.
+    /// Removing it leaves the app's signature valid (the framework seals only `Current`); the browser
+    /// must be closed, and only a version folder `Current` does not point to is offered.
     static func browserOldVersions(_ ctx: ScanContext, appsRoot: String = "/Applications") -> [CleanItem] {
-        let browsers: [(app: String, framework: String)] = [
-            ("Google Chrome", "Google Chrome Framework"), ("Microsoft Edge", "Microsoft Edge Framework"),
-            ("Brave Browser", "Brave Browser Framework"), ("Chromium", "Chromium Framework"),
-        ]
-        return browsers.compactMap { b in
-            let versions = "\(appsRoot)/\(b.app).app/Contents/Frameworks/\(b.framework).framework/Versions"
-            guard let current = try? FileManager.default.destinationOfSymbolicLink(atPath: versions + "/Current") else { return nil }
-            let old = FS.children(versions).filter {
-                let n = ($0 as NSString).lastPathComponent
-                return n != "Current" && n != (current as NSString).lastPathComponent && FS.isDirectory($0)
-            }
+        browsers.compactMap { b in
+            let old = oldVersions(versionsDir(b, appsRoot: appsRoot))
             let s = FS.size(old)
             guard s.bytes > 0 else { return nil }
-            return CleanItem(id: "browser-old-version/" + b.app, category: .browsers,
+            return CleanItem(id: oldVersionPrefix + b.app, category: .browsers,
                              title: tr("%1$@ previous version", b.app),
                              detail: old.map { ($0 as NSString).lastPathComponent }.joined(separator: ", "),
-                             safety: .review, bytes: s.bytes, files: s.files,
-                             note: tr("kept until the browser restarts after an update; it deletes the old version itself"),
-                             hint: tr("quit and reopen %1$@", b.app))
+                             safety: .review, bytes: s.bytes, files: s.files, paths: old,
+                             note: tr("left inside the app by an update until the browser restarts; the version in use stays"),
+                             blocked: ctx.processes.running([b.app]).map { tr("quit %1$@ first", $0) })
         }
+    }
+
+    static func oldVersions(_ versions: String) -> [String] {
+        guard let current = try? FileManager.default.destinationOfSymbolicLink(atPath: versions + "/Current") else { return [] }
+        let currentName = (current as NSString).lastPathComponent
+        return FS.children(versions).filter {
+            let n = ($0 as NSString).lastPathComponent
+            return n != "Current" && n != currentName && !n.hasPrefix(".") && FS.isDirectory($0)
+        }
+    }
+
+    /// The guard for this one place outside the home folder: a real version folder of a known
+    /// browser in /Applications, not the one in use, not a symlink.
+    static func oldVersionRefusal(_ path: String, appsRoot: String = "/Applications") -> String? {
+        let parent = (path as NSString).deletingLastPathComponent
+        guard browsers.contains(where: { versionsDir($0, appsRoot: appsRoot) == parent }),
+              realpath(parent, nil).map({ p in defer { free(p) }; return String(cString: p) == parent }) == true,
+              oldVersions(parent).contains(path) else { return tr("not an old browser version") }
+        return nil
     }
 
     // MARK: Editor extensions

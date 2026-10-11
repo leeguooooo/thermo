@@ -227,6 +227,9 @@ public enum Cleaner {
         if let rule, let app = processes.running(rule.apps) {
             return tr("quit %1$@ first", app)
         }
+        if ToolCleanup.isBrowserOldVersion(item), let app = processes.running([String(item.id.dropFirst(ToolCleanup.oldVersionPrefix.count))]) {
+            return tr("quit %1$@ first", app)
+        }
         if let group = item.group, item.category == .projects {
             let dir = URL(fileURLWithPath: group).resolvingSymlinksInPath().path
             let related: (String) -> Bool = { rawCWD in
@@ -273,7 +276,7 @@ public enum Cleaner {
         let fm = FileManager.default
         var openFiles: OpenFiles?? = nil
         for path in item.paths {
-            if let why = g.refusal(path) { result.failed[path] = why; continue }
+            if let why = ToolCleanup.isBrowserOldVersion(item) ? ToolCleanup.oldVersionRefusal(path) : g.refusal(path) { result.failed[path] = why; continue }
             guard FS.exists(path) else { continue }
             if item.category == .aiSessions {
                 let name = ((path as NSString).lastPathComponent as NSString).deletingPathExtension
@@ -307,7 +310,7 @@ public enum Cleaner {
                 continue
             }
             // Resolve ancestors again after sizing: a changed parent alias must not redirect removal.
-            if let why = g.refusal(path) { result.failed[path] = why; continue }
+            if let why = ToolCleanup.isBrowserOldVersion(item) ? ToolCleanup.oldVersionRefusal(path) : g.refusal(path) { result.failed[path] = why; continue }
             // The same file as scanned, and nothing running holds it or anything inside it open.
             if let scanned = item.identities?[path], FileIdentity.of(path) != scanned {
                 result.failed[path] = tr("replaced since the scan")
