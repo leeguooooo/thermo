@@ -110,6 +110,7 @@ struct DiagnosticsHome: View {
 // MARK: - One area
 
 struct AreaPage: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var scanner: AgentScanner
     let area: Area
     @State private var confirmingFixes: [(AgentItem, Action)]?
@@ -157,7 +158,7 @@ struct AreaPage: View {
                 ForEach(problems) { ProblemCard(scanner: scanner, item: $0) }
                 if !rest.isEmpty {
                     VStack(alignment: .leading, spacing: 0) {
-                        Button { withAnimation(.easeInOut(duration: 0.2)) { showHealthy.toggle() } } label: {
+                        Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showHealthy.toggle() } } label: {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                                 Text(tr("%1$@ more are fine", String(rest.count))).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
@@ -242,6 +243,7 @@ struct DiagnosticScanControl: View {
 
 /// One problem: what is wrong in plain words, the fix right there, the details on request.
 private struct ProblemCard: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var scanner: AgentScanner
     let item: AgentItem
     @State private var details = false
@@ -278,7 +280,7 @@ private struct ProblemCard: View {
                       systemImage: last.result.ok ? "checkmark.circle.fill" : "xmark.octagon.fill")
                     .font(.system(size: 12, weight: .medium)).foregroundStyle(last.result.ok ? .green : .red).padding(.leading, 48)
             }
-            Button { withAnimation(.easeInOut(duration: 0.2)) { details.toggle() } } label: {
+            Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { details.toggle() } } label: {
                 HStack(spacing: 4) {
                     Text(tr("Details")).font(.system(size: 12, weight: .medium))
                     Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold)).rotationEffect(.degrees(details ? 180 : 0))
@@ -316,7 +318,7 @@ private struct ProblemCard: View {
         .padding(18)
         .glass(highlighted: hover)
         .onHover { hover = $0 }
-        .animation(.easeOut(duration: 0.15), value: hover)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: hover)
         .sheet(item: $confirming) { a in
             ConfirmAction(action: a, item: item) { confirming = nil; scanner.perform(a, on: item) } cancel: { confirming = nil }
         }

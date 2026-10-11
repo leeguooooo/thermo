@@ -267,6 +267,7 @@ struct PressableStyle: ButtonStyle {
 
 /// The big round call to action ("Fix 9", "Check Again"), glowing.
 struct BigRoundButton: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let title: String
     var color: Color = Color(red: 0.25, green: 0.55, blue: 1.0)
     var busy = false
@@ -290,8 +291,8 @@ struct BigRoundButton: View {
                 }
             }
             .shadow(color: color.opacity(hover ? 0.7 : 0.45), radius: hover ? 26 : 18, y: 8)
-            .scaleEffect(hover ? 1.03 : 1)
-            .animation(.easeOut(duration: 0.18), value: hover)
+            .scaleEffect(hover && !reduceMotion ? 1.03 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: hover)
         }
         .buttonStyle(PressableStyle())
         .onHover { hover = $0 }
@@ -301,6 +302,7 @@ struct BigRoundButton: View {
 
 /// A slim gradient pill for secondary actions on dark glass.
 struct PillButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var prominent = false
     var color: Color = Color(red: 0.25, green: 0.55, blue: 1.0)
 
@@ -312,8 +314,8 @@ struct PillButtonStyle: ButtonStyle {
             .background(Capsule().fill(prominent ? AnyShapeStyle(LinearGradient(colors: [color, color.opacity(0.7)], startPoint: .top, endPoint: .bottom))
                                                  : AnyShapeStyle(Color.white.opacity(0.12))))
             .overlay(Capsule().strokeBorder(.white.opacity(prominent ? 0.35 : 0.15)))
-            .scaleEffect(configuration.isPressed ? 0.96 : 1)
-            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
 
@@ -342,7 +344,7 @@ struct HeroStatus: View {
                         .stroke(AngularGradient(colors: [color.opacity(0.2), color, .white], center: .center),
                                 style: StrokeStyle(lineWidth: 6, lineCap: .round))
                         .rotationEffect(.degrees(-90)).frame(width: 162, height: 162)
-                        .animation(.easeInOut(duration: 0.4), value: progress)
+                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: progress)
                 } else if spinning {
                     Circle().trim(from: 0, to: 0.28)
                         .stroke(AngularGradient(colors: [color.opacity(0), color, .white], center: .center),
@@ -370,6 +372,7 @@ struct HeroStatus: View {
 
 /// A glass card for one category on the landing page.
 struct CategoryCard: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let symbol: String
     let color: Color
     let title: String
@@ -400,8 +403,8 @@ struct CategoryCard: View {
             .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
             .padding(16)
             .glass(highlighted: hover)
-            .scaleEffect(hover ? 1.02 : 1)
-            .animation(.easeOut(duration: 0.15), value: hover)
+            .scaleEffect(hover && !reduceMotion ? 1.02 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: hover)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressableStyle())
