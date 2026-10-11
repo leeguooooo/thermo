@@ -116,6 +116,7 @@ struct AreaPage: View {
     @State private var confirmingFixes: [(AgentItem, Action)]?
     @State private var showHealthy = false
     @State private var search = ""
+    @FocusState private var searchFocused: Bool
 
     var items: [AgentItem] {
         let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -213,9 +214,18 @@ struct AreaPage: View {
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass").foregroundStyle(.white.opacity(0.5))
                     TextField(tr("Search"), text: $search).textFieldStyle(.plain).foregroundStyle(.white)
+                        .focused($searchFocused).accessibilityLabel(tr("Search"))
+                    if !search.isEmpty {
+                        Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }
+                            .buttonStyle(.plain).accessibilityLabel(tr("Clear search")).help(tr("Clear search"))
+                    }
                 }
                 .padding(.horizontal, 10).padding(.vertical, 6).frame(width: 170)
                 .background(Capsule().fill(Color.white.opacity(0.08)))
+                .background(Button("") {
+                    guard MainWindow.window?.attachedSheet == nil else { return }
+                    searchFocused = true
+                }.keyboardShortcut("f", modifiers: .command).frame(width: 0, height: 0).opacity(0).accessibilityHidden(true))
             }
         }
         .padding(.bottom, 8)

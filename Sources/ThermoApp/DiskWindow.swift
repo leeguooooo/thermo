@@ -181,6 +181,7 @@ struct DiskCategoryPage: View {
     let category: CleanCategory
     let clean: () -> Void
     @State private var search = ""
+    @FocusState private var searchFocused: Bool
     @State private var open: Set<String> = []
 
     var items: [CleanItem] {
@@ -239,7 +240,19 @@ struct DiskCategoryPage: View {
                     .font(.callout).foregroundStyle(.white.opacity(0.6))
             }
             Spacer()
-            TextField(tr("Search"), text: $search).textFieldStyle(.roundedBorder).frame(width: 180)
+            HStack(spacing: 6) {
+                TextField(tr("Search"), text: $search).textFieldStyle(.roundedBorder)
+                    .focused($searchFocused).accessibilityLabel(tr("Search"))
+                if !search.isEmpty {
+                    Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.plain).accessibilityLabel(tr("Clear search")).help(tr("Clear search"))
+                }
+            }
+            .frame(width: 180)
+            .background(Button("") {
+                guard MainWindow.window?.attachedSheet == nil else { return }
+                searchFocused = true
+            }.keyboardShortcut("f", modifiers: .command).frame(width: 0, height: 0).opacity(0).accessibilityHidden(true))
         }
     }
 
