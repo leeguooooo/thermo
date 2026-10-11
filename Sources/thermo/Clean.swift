@@ -113,9 +113,10 @@ struct CleanCommand {
         return o
     }
 
-    func scan(_ categories: Set<CleanCategory>? = nil) throws -> ScanReport {
+    func scan(_ categories: Set<CleanCategory>? = nil, onlyIDs: Set<String>? = nil) throws -> ScanReport {
         var o = try options()
         if let categories { o.categories = categories }
+        o.onlyIDs = onlyIDs
         let scanner = DiskScanner(options: o)
         let deadline = Self.deadline(after: try Self.budget(args), cancellation: scanner.cancellation)
         defer { deadline?.cancel() }
@@ -242,6 +243,18 @@ struct CleanCommand {
 
     // MARK: run
 
+    /// The item ids named by a selection (`ID` or `ID#SESSION`), or nil when any selector is a
+    /// group (all, safe, ai, a category) that has to be found by scanning.
+    static func itemIDs(in selectors: [String]) -> Set<String>? {
+        var ids = Set<String>()
+        for selector in selectors {
+            let s = selector.lowercased()
+            if ["all", "safe", "ai"].contains(s) || CleanCategory(rawValue: s) != nil || s.hasSuffix("*") { return nil }
+            ids.insert(String(s.split(separator: "#", maxSplits: 1).first ?? Substring(s)))
+        }
+        return ids.isEmpty ? nil : ids
+    }
+
     static func cleanupCategories(for selectors: [String]) -> Set<CleanCategory>? {
         var categories = Set<CleanCategory>()
         for selector in selectors {
@@ -277,7 +290,8 @@ struct CleanCommand {
                 print(style.dim("using the scan from \(AgeFormat.string(r.started)); sizes are from then (--rescan to scan again)"))
             }
         } else {
-            r = try scan(Self.cleanupCategories(for: selectors) ?? (needsProjects ? nil : Set(CleanCategory.allCases.filter { $0 != .projects })))
+            r = try scan(Self.cleanupCategories(for: selectors) ?? (needsProjects ? nil : Set(CleanCategory.allCases.filter { $0 != .projects })),
+                         onlyIDs: Self.itemIDs(in: selectors))
             picked = r.select(selectors)
         }
         try execute(report: r, picked: picked, mode: mode)

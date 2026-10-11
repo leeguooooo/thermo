@@ -197,6 +197,9 @@ public struct ScanOptions: Sendable {
     /// Background priority: macOS throttles the scan's CPU and disk I/O so it stays out
     /// of the way (slower). The app uses this; the CLI, where someone waits, does not.
     public var lowPriority = false
+    /// `thermo clean run ID…`: only the steps that can produce these items run (one id must not
+    /// walk every project and app folder). Nil scans everything the categories allow.
+    public var onlyIDs: Set<String>? = nil
 
     public init() {}
 

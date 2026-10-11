@@ -19,6 +19,32 @@ public final class DiskScanner: @unchecked Sendable {
 
     public func cancel() { cancellation.cancel() }
 
+    /// Whether a scan step can produce the item `id`. Unknown steps answer yes, so narrowing
+    /// never hides an item; it only skips steps that are known to make other ids.
+    static func step(_ name: String, ruleIDs: Set<String>, mayProduce id: String) -> Bool {
+        // A selector can also name a group by prefix (`codex-sessions` selects `codex-sessions/…`).
+        let has = { (prefixes: [String]) in prefixes.contains { id.hasPrefix($0) || $0 == id + "/" } }
+        switch name {
+        case "projects": return has(["project/", "worktree/", "aider/"])
+        case "AI sessions":
+            return has(["claude-sessions/", "codex-sessions/", "gemini-sessions/"]) || id.contains("-tasks")
+                || ["claude-orphans", "claude-project-backups", "opencode-db", "opencode-logs"].contains(id) || id.hasSuffix("-orphan-workspaces")
+        case "AI tools": return ["claude-plugin-old-versions", "claude-scratchpads", "codex-runtime-partials"].contains(id)
+        case "other caches": return id == "other-app-caches"
+        case "docker": return id == "docker-hint"
+        case "simulators": return id.hasPrefix("simulator")
+        case "app data": return has(["app-data/"])
+        case "tools": return ["homebrew-old-versions", "go-mod-cache", "pnpm-store-prune"].contains(id) || id.hasPrefix("editor-obsolete-extensions-")
+        case "electron apps": return id == "electron-app-caches"
+        case "browser updates": return has([ToolCleanup.oldVersionPrefix])
+        case "AI models": return !ruleIDs.contains(id) && !has(["project/", "worktree/", "aider/", "app-data/"]) && !id.hasPrefix("simulator")
+        default:
+            // Path rules: one step per rule, titled by the rule.
+            let rules = Rules.paths.filter { $0.title == name }
+            return rules.isEmpty || rules.contains { $0.id == id }
+        }
+    }
+
     public func scan() -> ScanReport {
         let started = Date()
         let language = L10n.current.rawValue
@@ -58,6 +84,10 @@ public final class DiskScanner: @unchecked Sendable {
             jobs.append((rule.title, [rule.category], { [self.evaluate(rule, ctx: ctx, denied: { p in lock.lock(); denied.append(p); lock.unlock() })].compactMap { $0 } }))
         }
         jobs = jobs.filter { !$0.1.isDisjoint(with: options.categories) }
+        if let ids = options.onlyIDs {
+            let ruleIDs = Set(Rules.paths.map(\.id))
+            jobs = jobs.filter { job in ids.contains { Self.step(job.0, ruleIDs: ruleIDs, mayProduce: $0) } }
+        }
 
         func runJob(_ i: Int) {
             guard !cancellation.isCancelled else { return }
@@ -94,7 +124,8 @@ public final class DiskScanner: @unchecked Sendable {
         report.projectRoots = Array(Set(options.projectRoots)).sorted()
         report.discoverProjectRoots = options.discoverProjectRoots
         report.language = language
-        if saveReport { ScanReportCache.save(report, home: options.home) }
+        // A scan narrowed to some ids is not a full report; a later run must not reuse it.
+        if saveReport && options.onlyIDs == nil { ScanReportCache.save(report, home: options.home) }
         return report
     }
 

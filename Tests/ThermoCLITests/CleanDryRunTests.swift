@@ -11,6 +11,13 @@ final class CleanDryRunTests: XCTestCase {
         XCTAssertNil(CleanCommand.cleanupCategories(for: ["unknown-id"]))
     }
 
+    func testItemSelectionsNarrowTheScanAndGroupsDoNot() {
+        XCTAssertEqual(CleanCommand.itemIDs(in: ["claude-scratchpads", "codex-sessions/x#a,b"]), ["claude-scratchpads", "codex-sessions/x"])
+        XCTAssertNil(CleanCommand.itemIDs(in: ["claude-scratchpads", "safe"]))
+        XCTAssertNil(CleanCommand.itemIDs(in: ["projects"]))
+        XCTAssertNil(CleanCommand.itemIDs(in: ["codex-*"]))
+    }
+
     func testCancelledPreviewWithNoFindingsIsExplicitlyIncomplete() throws {
         let report = ScanReport(items: [], denied: [], started: Date(), duration: 1, cancelled: true)
         let command = CleanCommand(app: App(args: try Args(["--dry-run", "--json"])))

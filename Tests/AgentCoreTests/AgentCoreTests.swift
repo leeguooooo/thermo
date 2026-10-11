@@ -51,6 +51,20 @@ final class AgentCoreTests: XCTestCase {
         XCTAssertEqual(t.agentDirectories(), ["/Users/x/src/app"])
     }
 
+    func testCLINamesAndBundledHelpersDoNotCountAsTheApp() {
+        let t = ProcessTable(entries: [
+            AgentProcess(pid: 20, name: "claude", executable: home + "/.local/bin/claude"),
+            AgentProcess(pid: 21, name: "chrome-native-host", executable: "/Applications/Claude.app/Contents/Helpers/chrome-native-host"),
+            AgentProcess(pid: 22, name: "go", executable: "/opt/homebrew/bin/go"),
+            AgentProcess(pid: 23, name: "Xcode"),
+        ])
+        XCTAssertNil(t.running(["Claude"]))
+        XCTAssertEqual(t.running(["go"]), "go")
+        XCTAssertEqual(t.running(["Xcode"]), "Xcode")
+        let app = ProcessTable(entries: [AgentProcess(pid: 24, name: "Claude", executable: "/Applications/Claude.app/Contents/MacOS/Claude")])
+        XCTAssertEqual(app.running(["Claude"]), "Claude")
+    }
+
     // MARK: Claude
 
     func testLiveSessionsUseAliveCheck() throws {
