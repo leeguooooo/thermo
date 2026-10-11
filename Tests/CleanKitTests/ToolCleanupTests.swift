@@ -38,3 +38,25 @@ final class ToolCleanupTests: XCTestCase {
         XCTAssertNotNil(ToolCleanup.oldVersionRefusal(versions + "/1.0", appsRoot: "/Applications"), "only the browsers' own place")
     }
 }
+
+final class CodeSignCloneTests: XCTestCase {
+    func testLeftoverClonesAreFoundAndOnlyThatShapeMayGo() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
+        defer { try? FileManager.default.removeItem(atPath: root) }
+        for c in ["a", "b"] {
+            try FileManager.default.createDirectory(atPath: root + "/com.example.App.code_sign_clone/code_sign_clone.\(c)/App.app", withIntermediateDirectories: true)
+            FileManager.default.createFile(atPath: root + "/com.example.App.code_sign_clone/code_sign_clone.\(c)/App.app/bin", contents: Data(repeating: 1, count: 8192))
+        }
+        let ctx = ScanContext(options: ScanOptions(), now: Date(), processes: ProcessTable(entries: []), agentDirs: [], liveClaudeSessions: [])
+        let item = try XCTUnwrap(ToolCleanup.codeSignClones(ctx, root: root))
+        XCTAssertEqual(item.paths.count, 2, "the app is not running, so no clone is in use")
+        XCTAssertEqual(item.id, "code-sign-clones")
+
+        let x = (NSTemporaryDirectory() as NSString).deletingLastPathComponent + "/X"
+        let g = Guard()
+        XCTAssertNil(g.refusal(x + "/com.google.Chrome.code_sign_clone/code_sign_clone.abc"))
+        XCTAssertNotNil(g.refusal(x + "/com.google.Chrome.code_sign_clone"))
+        XCTAssertNotNil(g.refusal(x + "/something/else"))
+        XCTAssertNotNil(g.refusal(x + "/com.google.Chrome.code_sign_clone/code_sign_clone.abc/Google Chrome.app"))
+    }
+}

@@ -36,6 +36,7 @@ public final class DiskScanner: @unchecked Sendable {
         case "app data": return has(["app-data/"])
         case "tools": return ["homebrew-old-versions", "go-mod-cache", "pnpm-store-prune"].contains(id) || id.hasPrefix("editor-obsolete-extensions-")
         case "electron apps": return id == "electron-app-caches"
+        case "code-sign clones": return id == "code-sign-clones"
         case "browser updates": return has([ToolCleanup.oldVersionPrefix])
         case "AI models": return !ruleIDs.contains(id) && !has(["project/", "worktree/", "aider/", "app-data/"]) && !id.hasPrefix("simulator")
         default:
@@ -78,6 +79,7 @@ public final class DiskScanner: @unchecked Sendable {
             ("app data", [.system], { AppData.scan(ctx) }),
             ("tools", [.devCaches], { ToolCleanup.scan(ctx) }),
             ("electron apps", [.system], { [ToolCleanup.electronCaches(ctx)].compactMap { $0 } }),
+            ("code-sign clones", [.system], { [ToolCleanup.codeSignClones(ctx)].compactMap { $0 } }),
             ("browser updates", [.browsers], { ToolCleanup.browserOldVersions(ctx) }),
         ]
         for rule in Rules.paths where !rule.paths.isEmpty {

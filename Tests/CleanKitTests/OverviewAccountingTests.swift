@@ -84,11 +84,12 @@ final class OverviewAccountingTests: XCTestCase {
     func testRemainderIsNamedAndCachedOverviewsRelocalize() throws {
         L10n.override = .english
         defer { L10n.override = nil }
+        // A tiny fixture on a real volume: nearly all used space is unattributed, so the remainder must appear.
         let result = SpaceOverview.measure(home: home, spots: Array(spots().prefix(2)),
                                           footprint: { _, _ in DiskFootprint(allocated: 1, files: 1, newest: nil, denied: false) })
-        if let other = result.entries.first(where: { $0.id == "other" }) {
-            XCTAssertEqual(other.title, "Not attributed to a folder")
-        }
+        let other = try XCTUnwrap(result.entries.first { $0.id == "other" })
+        XCTAssertEqual(other.title, "Not attributed to a folder")
+        XCTAssertNil(result.overcounted)
         var o = SpaceOverview(capacity: 100, free: 10, purgeable: 0, entries: SpaceOverview.volumeEntries([
             .init(name: "System", roles: ["System"], bytes: 5, device: "d1"), .init(name: "VM", roles: ["VM"], bytes: 5, device: "d2")]), duration: 1)
         o.language = "en"

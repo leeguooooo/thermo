@@ -207,4 +207,39 @@ enum ToolCleanup {
                          safety: .safe, bytes: size.bytes, files: size.files, lastUsed: size.newest, paths: paths,
                          note: tr("browser caches inside desktop apps; running apps and caches used in the last hour are skipped"))
     }
+
+    /// macOS clones an app into a per-user X folder to check its signature while it runs; Chrome
+    /// leaves one behind on every relaunch. They share blocks with the installed app, so they cost
+    /// almost nothing until the app updates; then each becomes a full copy (65 of Chrome were 90 GB).
+    /// The newest clone of a running app is kept: that is the one it runs from.
+    static func codeSignClones(_ ctx: ScanContext, root: String = (NSTemporaryDirectory() as NSString).deletingLastPathComponent + "/X") -> CleanItem? {
+        let running = Set(ctx.processes.entries.compactMap { e -> String? in
+            guard let exe = e.executable, let r = exe.range(of: ".app/Contents/") else { return nil }
+            return Bundle(path: String(exe[..<r.lowerBound]) + ".app")?.bundleIdentifier
+        })
+        var paths: [String] = []
+        var apps: [String] = []
+        var size = TreeSize()
+        var shared: Int64 = 0
+        for group in FS.children(root) where group.hasSuffix(".code_sign_clone") {
+            let bundle = String((group as NSString).lastPathComponent.dropLast(".code_sign_clone".count))
+            var clones = FS.children(group).map { path -> (String, Date) in
+                var st = stat()
+                return (path, lstat(path, &st) == 0 ? Date(timeIntervalSince1970: TimeInterval(st.st_mtimespec.tv_sec)) : .distantPast)
+            }.sorted { $0.1 > $1.1 }
+            if running.contains(bundle) { clones = Array(clones.dropFirst()) }
+            guard !clones.isEmpty else { continue }
+            for (clone, _) in clones {
+                guard ScanCancellation.current?.isCancelled != true else { return nil }
+                let s = FS.size(clone, trackNewest: true)
+                paths.append(clone); size = size + s; shared += s.allocated - s.bytes
+            }
+            apps.append(bundle)
+        }
+        guard !paths.isEmpty else { return nil }
+        return CleanItem(id: "code-sign-clones", category: .system, title: tr("Leftover app code-sign clones"),
+                         detail: trCount(paths.count, "%1$@ clone", "%1$@ clones") + " · " + apps.sorted().joined(separator: ", "),
+                         safety: .safe, bytes: size.bytes, files: size.files, lastUsed: size.newest, paths: paths,
+                         note: tr("copies macOS made to check a running app; they share space with the app now, but each becomes a full copy (%1$@ in all) when the app updates", ByteFormat.string(size.bytes + shared)))
+    }
 }

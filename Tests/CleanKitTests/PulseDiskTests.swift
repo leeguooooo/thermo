@@ -22,6 +22,14 @@ final class PulseDiskTests: XCTestCase {
         XCTAssertNil(p.diskText)
     }
 
+    func testPurgeableSpaceKeepsALowRawFreeFromBeingTheVerdict() {
+        var p = pulse(free: 1_000_000_000)
+        p.diskAvailableBytes = 40_000_000_000
+        XCTAssertNotEqual(p.verdict, .disk, "macOS purges snapshots before the disk is really full")
+        p.diskAvailableBytes = 900_000_000
+        XCTAssertEqual(p.verdict, .disk)
+    }
+
     func testHeatStillComesFirst() {
         XCTAssertEqual(pulse(free: 306_000_000, thermal: .critical).verdict, .hot)
         XCTAssertEqual(pulse(free: 306_000_000, thermal: .critical).nextStep?.kind, "pauseWork")

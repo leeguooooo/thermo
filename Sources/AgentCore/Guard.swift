@@ -11,6 +11,9 @@ public struct Guard: Sendable {
     let sealed: [String]
     /// Outside the home folder, only per-session folders below these roots may go (agent scratch space).
     let scratchRoots: [String]
+    /// The per-user X folder where macOS keeps apps' code-sign clones; only
+    /// `<X>/<bundle id>.code_sign_clone/<clone>` may go.
+    let cloneRoots: [String]
     let canonicalHome: String
     let canonicalProtected: [String]
     let canonicalSealed: [String]
@@ -19,6 +22,9 @@ public struct Guard: Sendable {
         self.home = home
         // Both spellings: resolving symlinks turns /private/tmp into /tmp.
         scratchRoots = ["/private/tmp/claude-\(getuid())", "/tmp/claude-\(getuid())"]
+        let x = (NSTemporaryDirectory() as NSString).deletingLastPathComponent + "/X"
+        let resolvedX = URL(fileURLWithPath: x).resolvingSymlinksInPath().path
+        cloneRoots = Array(Set([x, resolvedX, resolvedX.hasPrefix("/private/") ? String(resolvedX.dropFirst("/private".count)) : resolvedX]))
         let rel = [
             "", "Library", "Library/Caches", "Library/Logs", "Library/Application Support", "Library/Containers",
             "Library/Group Containers", "Library/Keychains", "Library/Preferences", "Library/Mail", "Library/Messages",
@@ -58,6 +64,10 @@ public struct Guard: Sendable {
     }
 
     private func refusal(_ p: String, home: String, protected: [String], sealed: [String]) -> String? {
+        if let root = cloneRoots.first(where: { p.hasPrefix($0 + "/") }) {
+            let parts = p.dropFirst(root.count + 1).split(separator: "/")
+            return parts.count == 2 && parts[0].hasSuffix(".code_sign_clone") ? nil : "outside your home folder"
+        }
         if let root = scratchRoots.first(where: { p.hasPrefix($0 + "/") }) {
             // <root>/<project>/<session>[/…]
             return p.dropFirst(root.count + 1).split(separator: "/").count >= 2 ? nil : "agent scratch root"

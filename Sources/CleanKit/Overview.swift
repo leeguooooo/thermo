@@ -178,7 +178,9 @@ public struct SpaceOverview: Codable, Sendable {
                     lock.lock()
                     states[i].done += 1
                     states[i].bytes += measured.allocated
-                    if measured.denied && states[i].spot.reportsDenied { states[i].denied.append(path) }
+                    // Only what the user owns can be opened by granting Full Disk Access; another
+                    // user's or root's folder (/tmp/RustDesk-service) is expected to stay closed.
+                    if measured.denied && states[i].spot.reportsDenied && Self.ownedByMe(path) { states[i].denied.append(path) }
                     if states[i].spot.children > 0, measured.allocated > 0 {
                         states[i].kids.append(Entry(id: path, title: Self.displayTitle(path, home: home), path: path,
                                                    bytes: measured.allocated, children: [], action: Self.assetAction(path)))
@@ -401,6 +403,11 @@ public struct SpaceOverview: Codable, Sendable {
             }
         }
         return out
+    }
+
+    static func ownedByMe(_ path: String) -> Bool {
+        var st = stat()
+        return lstat(path, &st) != 0 || st.st_uid == getuid()
     }
 
     static func sameFile(_ a: String, _ b: String) -> Bool {

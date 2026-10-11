@@ -78,11 +78,14 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     /// Free space on the startup disk. Nearly full, swap cannot grow and every write waits, which
     /// shows up as a huge load with no busy program.
     public var diskFreeBytes: Int64? = nil
+    /// Free space plus what macOS can purge on demand (local snapshots, evictable iCloud copies):
+    /// the disk is only the bottleneck when even this is nearly gone.
+    public var diskAvailableBytes: Int64? = nil
 
     /// Below this the disk is the bottleneck; below `diskLowBytes` it is worth a word.
     public static let diskCriticalBytes: Int64 = 2_000_000_000
     public static let diskLowBytes: Int64 = 5_000_000_000
-    var diskCritical: Bool { (diskFreeBytes ?? .max) < Self.diskCriticalBytes }
+    var diskCritical: Bool { (diskAvailableBytes ?? diskFreeBytes ?? .max) < Self.diskCriticalBytes }
 
     /// Load per core: 1 means every core has work, 2 means twice as much work as cores.
     public var busy: Double { load1 / Double(max(1, cores)) }
@@ -225,11 +228,12 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             if memory == .normal { hog.advice = nil }
             return hog
         }
-        let volume = try? URL(fileURLWithPath: NSHomeDirectory()).resourceValues(forKeys: [.volumeAvailableCapacityKey])
+        let volume = try? URL(fileURLWithPath: NSHomeDirectory()).resourceValues(forKeys: [.volumeAvailableCapacityKey, .volumeAvailableCapacityForImportantUsageKey])
         return MachinePulse(load1: avg[0], load5: avg[1], cores: ProcessInfo.processInfo.activeProcessorCount,
                             thermal: thermal, memory: memory, swapUsedMB: Int(swap.xsu_used / 1_048_576),
                             swapTotalMB: Int(swap.xsu_total / 1_048_576), hogs: relevantHogs, sampled: Date(),
-                            diskFreeBytes: volume?.volumeAvailableCapacity.map(Int64.init))
+                            diskFreeBytes: volume?.volumeAvailableCapacity.map(Int64.init),
+                            diskAvailableBytes: volume?.volumeAvailableCapacityForImportantUsage)
     }
 
     /// Folds helper processes into their app and returns the busiest programs (plus the biggest
