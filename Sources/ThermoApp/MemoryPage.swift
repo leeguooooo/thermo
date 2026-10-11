@@ -34,12 +34,17 @@ final class MemoryModel: ObservableObject {
         if Date().timeIntervalSince(dayLoaded) >= 60 { loadDay() }
         Task.detached(priority: .utility) {
             let b = MemoryBreakdown.read()
-            let all = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
+            var all = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
                 .filter { $0.memoryKB >= 50 * 1024 }.sorted { $0.memoryKB > $1.memoryKB }
+            // Captured with the reading, so End only signals the same processes (as PulseSampler does).
+            for i in all.indices where all[i].quittable && all[i].app == nil {
+                all[i].processIdentities = all[i].pids.compactMap(ProcessTable.identity)
+            }
             let history = PulseRecorder.shared.programHistory.records(since: Date().addingTimeInterval(-PulseHistory.keep))
             let suspects = MemorySuspects.find(programs: all, history: history)
+            let found = all
             await MainActor.run {
-                var list = all
+                var list = found
                 for i in list.indices {
                     if let path = list[i].app,
                        let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.standardizedFileURL.path == path }) {
