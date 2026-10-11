@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.12
 
 - Uninstalling an app or removing leftovers updates the list in place instead of measuring every app (or searching for leftovers) again.
 
