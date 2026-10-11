@@ -1,4 +1,5 @@
 import Foundation
+import AgentCore
 
 /// Build output inside project folders (the kondo / npkill idea), plus what AI agents leave in
 /// repositories: worktrees and Aider caches.
@@ -52,30 +53,39 @@ enum Projects {
         case aider(project: String, paths: [String])
     }
 
-    static func scan(_ ctx: ScanContext) -> [CleanItem] {
+    static func scan(_ ctx: ScanContext, onItem: ((CleanItem) -> Void)? = nil) -> [CleanItem] {
         var found: [Candidate] = []
         var visited = Set<String>()
         var ctx = ctx
+        let timing = ProcessInfo.processInfo.environment["THERMO_CLEAN_TIMING"] != nil
+        let began = Date()
+        if timing { FileHandle.standardError.write(Data("projects: collecting activity\n".utf8)) }
         ctx.signals = ProjectSignals.collect(home: ctx.home)
-        // The usual project folders, then every folder an agent or editor worked in (projects kept
-        // in odd places, like ~/test/x, only show up there). The home folder itself is never walked.
-        let roots = ctx.options.projectRoots + ctx.signals.roots(home: ctx.home)
-        for root in roots where root != ctx.home {
-            walk(root, depth: 0, ctx: ctx, visited: &visited, into: &found)
-        }
-        if ProcessInfo.processInfo.environment["THERMO_CLEAN_TIMING"] != nil {
-            FileHandle.standardError.write("walk: \(visited.count) dirs, \(found.count) candidates, \(String(format: "%.2f", Date().timeIntervalSince(ctx.now)))s\n".data(using: .utf8)!)
-        }
-        if !ctx.options.categories.contains(.projects) {
-            found = found.filter { if case .artifact = $0 { return false }; return true }
-        }
-        var items = [CleanItem?](repeating: nil, count: found.count)
+        if timing { FileHandle.standardError.write(Data(String(format: "projects: activity %.2fs\n", Date().timeIntervalSince(began)).utf8)) }
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 2
+        queue.qualityOfService = ctx.options.lowPriority ? .background : .utility
         let lock = NSLock()
-        DispatchQueue.concurrentPerform(iterations: found.count) { i in
-            let item = make(found[i], ctx: ctx)
-            lock.lock(); items[i] = item; lock.unlock()
+        var items: [CleanItem] = []
+        // Start measuring as projects are discovered; large roots must not delay every result.
+        func enqueue(_ candidate: Candidate) {
+            queue.addOperation {
+                guard ScanCancellation.current?.isCancelled != true else { return }
+                guard let item = make(candidate, ctx: ctx), ScanCancellation.current?.isCancelled != true else { return }
+                lock.lock(); items.append(item); lock.unlock()
+                onItem?(item)
+            }
         }
-        return items.compactMap { $0 }
+        let roots = ctx.options.projectRoots + (ctx.options.discoverProjectRoots ? ctx.signals.roots(home: ctx.home) : [])
+        for root in roots where root != ctx.home {
+            walk(root, depth: 0, ctx: ctx, visited: &visited, into: &found, onCandidate: enqueue)
+            if timing { FileHandle.standardError.write(Data(String(format: "projects: root done %.2fs, %d candidates\n", Date().timeIntervalSince(began), found.count).utf8)) }
+        }
+        if timing {
+            FileHandle.standardError.write(Data("walk: \(visited.count) dirs, \(found.count) candidates, \(String(format: "%.2f", Date().timeIntervalSince(ctx.now)))s\n".utf8))
+        }
+        queue.waitUntilAllOperationsAreFinished()
+        return items
     }
 
     static func id(_ path: String, ctx: ScanContext) -> String {
@@ -94,6 +104,11 @@ enum Projects {
                 source.map { tr("last used %1$@ (%2$@)", AgeFormat.string(d, now: ctx.now), $0) } ?? tr("last changed %1$@", AgeFormat.string(d, now: ctx.now))
             }
             if !stale { note = [note, tr("in use; it will have to rebuild")].compactMap { $0 }.joined(separator: tr("; ")) }
+            let blocked = ctx.agentDirs.contains {
+                $0 == dir || $0.hasPrefix(dir + "/") ||
+                    (dir.hasPrefix($0 + "/") && ProjectSignals.isRepoRoot($0, containing: dir))
+            }
+                ? tr("an agent is running in it") : nil
             return CleanItem(
                 id: "project/" + id(p, ctx: ctx), category: .projects,
                 title: "\((dir as NSString).lastPathComponent) · \(a)",
@@ -101,7 +116,7 @@ enum Projects {
                 // Generic output folders can hold things worth keeping (a rendered video in `out`, a
                 // release binary in `dist`): never in the one-click safe set, always to the Trash.
                 safety: stale && !generic.contains(a) ? .safe : .review,
-                bytes: s.bytes, files: s.files, lastUsed: activity, paths: [p], note: note, group: dir)
+                bytes: s.bytes, files: s.files, lastUsed: activity, paths: [p], note: note, blocked: blocked, group: dir)
         case let .worktree(wt, repo):
             return worktreeItem(wt, repo: repo, repoName: (repo as NSString).lastPathComponent, ctx: ctx)
         case let .aider(dir, paths):
@@ -113,7 +128,7 @@ enum Projects {
         }
     }
 
-    static func walk(_ dir: String, depth: Int, ctx: ScanContext, visited: inout Set<String>, into out: inout [Candidate]) {
+    static func walk(_ dir: String, depth: Int, ctx: ScanContext, visited: inout Set<String>, into out: inout [Candidate], onCandidate: ((Candidate) -> Void)? = nil) {
         guard ScanCancellation.current?.isCancelled != true, depth <= maxDepth, visited.insert(dir).inserted else { return }
         guard let entries = FS.entries(dir) else { return }
         let names = entries.map(\.name)
@@ -125,24 +140,30 @@ enum Projects {
                 m.hasSuffix("*") ? names.contains { $0.hasSuffix(String(m.dropLast())) } : (m.contains("/") ? FS.exists(dir + "/" + m) : set.contains(m))
             }
         } : []
-        if !matches.isEmpty {
+        // Most packages have no installed dependencies or build output. Do not load their
+        // Git index or activity history just to discover there is nothing to measure.
+        let existingArtifacts = Set(matches.flatMap(\.artifacts).filter { FS.isDirectory(dir + "/" + $0) })
+        if !existingArtifacts.isEmpty {
             // Last use: the latest of agent/editor sessions in it, git activity and its own files.
             var activity = projectActivity(dir, names: names, ignoring: Set(matches.flatMap(\.artifacts)))
             var source: String?
             if let use = ctx.signals.lastUse(of: dir), use.date > (activity ?? .distantPast) { activity = use.date; source = use.source }
             if let git = ProjectSignals.gitActivity(dir), git > (activity ?? .distantPast) { activity = git; source = "git" }
+            let protected = protectedArtifacts(dir, Array(existingArtifacts))
             for k in matches {
-                for a in k.artifacts where !claimed.contains(a) {
+                for a in k.artifacts where existingArtifacts.contains(a) && !claimed.contains(a) {
                     let p = dir + "/" + a
                     guard FS.isDirectory(p) else { continue }
                     // `build`/`bin`/`obj` are only build output when they are not tracked source folders.
-                    if (["bin", "obj", "Library", "deps"] + Self.generic).contains(a), gitTracks(dir, a) { continue }
+                    if protected.contains(a) { continue }
                     claimed.insert(a)
-                    out.append(.artifact(project: dir, kind: k.name, name: a, activity: activity, source: source))
+                    let candidate = Candidate.artifact(project: dir, kind: k.name, name: a, activity: activity, source: source)
+                    out.append(candidate)
+                    onCandidate?(candidate)
                 }
             }
         }
-        out += agentLeftovers(dir, names: set).filter { candidate in
+        let leftovers = agentLeftovers(dir, names: set).filter { candidate in
             switch candidate {
             case .worktree: return ctx.options.categories.contains(.agentWorktrees)
             case .aider: return ctx.options.categories.contains(.aiCaches)
@@ -150,9 +171,12 @@ enum Projects {
             }
         }
 
+        out += leftovers
+        for candidate in leftovers { onCandidate?(candidate) }
+
         for (n, isDir) in entries where isDir && !n.hasPrefix(".") && !skip.contains(n) && !claimed.contains(n) {
             if n.hasSuffix(".app") || n.hasSuffix(".xcodeproj") || n.hasSuffix(".xcworkspace") || n.hasSuffix(".framework") { continue }
-            walk(dir + "/" + n, depth: depth + 1, ctx: ctx, visited: &visited, into: &out)
+            walk(dir + "/" + n, depth: depth + 1, ctx: ctx, visited: &visited, into: &out, onCandidate: onCandidate)
         }
     }
 
@@ -171,10 +195,22 @@ enum Projects {
         return newest
     }
 
-    static func gitTracks(_ dir: String, _ sub: String) -> Bool {
-        guard FS.exists(dir + "/.git") else { return false }
-        let out = Shell.run("git -C \(Shell.quote(dir)) ls-files -- \(Shell.quote(sub)) | head -1", timeout: 5) ?? ""
-        return !out.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    /// One Git query per project, including nested packages and worktrees. On failure we
+    /// conservatively protect every candidate instead of treating unknown files as disposable.
+    static func protectedArtifacts(_ dir: String, _ names: [String]) -> Set<String> {
+        var ancestor = dir
+        var inRepository = false
+        while ancestor != "/" {
+            if FS.exists(ancestor + "/.git") { inRepository = true; break }
+            ancestor = (ancestor as NSString).deletingLastPathComponent
+        }
+        guard inRepository else { return [] }
+        let result = CommandRunner.run("/usr/bin/git", arguments: ["-C", dir, "ls-files", "-z", "--"] + names,
+                                       timeout: 5, outputLimit: 1_048_576, captureError: false,
+                                       cancelled: { ScanCancellation.current?.isCancelled == true })
+        guard result.status == 0, !result.timedOut, !result.cancelled, !result.truncated else { return Set(names) }
+        let tracked = result.output.split(separator: "\0").map(String.init)
+        return Set(names.filter { name in tracked.contains { $0 == name || $0.hasPrefix(name + "/") } })
     }
 
     // MARK: AI agent leftovers in repositories

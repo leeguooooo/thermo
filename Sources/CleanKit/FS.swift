@@ -20,6 +20,14 @@ public struct TreeSize: Sendable {
     }
 }
 
+/// Used space, not a promise of how much deletion frees (APFS clones may share blocks).
+public struct DiskFootprint: Sendable {
+    public let allocated: Int64
+    public let files: Int
+    public let newest: Date?
+    public let denied: Bool
+}
+
 public enum FS {
     static let fm = FileManager.default
 
@@ -61,6 +69,16 @@ public enum FS {
     /// Sizes a path. `trackNewest` stats modification times too (slightly slower).
     /// Stops early (partial size) when the running scan is cancelled.
     public static func size(_ path: String, trackNewest: Bool = false, cancellation: ScanCancellation? = nil) -> TreeSize {
+        measure(path, trackNewest: trackNewest, cancellation: cancellation, privateSizes: true)
+    }
+
+    /// Fast discovery: batched allocation metadata only; no expensive APFS private-block queries.
+    public static func footprint(_ path: String, cancellation: ScanCancellation? = nil) -> DiskFootprint {
+        let result = measure(path, trackNewest: false, cancellation: cancellation, privateSizes: false)
+        return DiskFootprint(allocated: result.allocated, files: result.files, newest: result.newest, denied: result.denied)
+    }
+
+    private static func measure(_ path: String, trackNewest: Bool, cancellation: ScanCancellation?, privateSizes: Bool) -> TreeSize {
         let cancellation = cancellation ?? ScanCancellation.current
         if cancellation?.isCancelled == true { return TreeSize() }
         var r = TreeSize()
@@ -71,7 +89,7 @@ public enum FS {
         }
         if (st.st_mode & S_IFMT) != S_IFDIR {
             let blocks = Int64(st.st_blocks) * 512
-            let sizes = (st.st_mode & S_IFMT) == S_IFREG ? BulkWalk.fileSize(path) : nil
+            let sizes = privateSizes && (st.st_mode & S_IFMT) == S_IFREG ? BulkWalk.fileSize(path) : nil
             r.allocated = sizes?.allocated ?? blocks
             r.bytes = sizes?.privateSize ?? blocks
             r.files = 1
@@ -80,7 +98,7 @@ public enum FS {
         }
         // Batched attributes with private sizes; fts below is the fallback for file systems
         // without getattrlistbulk.
-        if let bulk = BulkWalk.size(path, trackNewest: trackNewest, device: st.st_dev, cancellation: cancellation) { return bulk }
+        if let bulk = BulkWalk.size(path, trackNewest: trackNewest, device: st.st_dev, cancellation: cancellation, privateSizes: privateSizes) { return bulk }
         var seenInodes = Set<UInt64>()
         let opts = FTS_PHYSICAL | FTS_NOCHDIR | FTS_XDEV
         var newest: Int = 0
@@ -182,10 +200,28 @@ public enum Cleaner {
             result.failed[item.id] = item.blocked
             return result
         }
+        // A saved scan can outlive a Git add or a newly started agent. Recheck projects
+        // immediately before removing their output rather than trusting the cached decision.
+        let projectProcesses = item.category == .projects ? ProcessTable.current(.init(cpu: false)) : nil
         let fm = FileManager.default
         for path in item.paths {
             if let why = g.refusal(path) { result.failed[path] = why; continue }
             guard FS.exists(path) else { continue }
+            if item.category == .projects {
+                let dir = item.group ?? (path as NSString).deletingLastPathComponent
+                guard path.hasPrefix(dir + "/") else { result.failed[path] = "project path does not match its group"; continue }
+                let name = String(path.dropFirst(dir.count + 1))
+                if Projects.protectedArtifacts(dir, [name]).contains(name) {
+                    result.failed[path] = "Git tracks this output, or its status could not be verified"
+                    continue
+                }
+                if let processes = projectProcesses,
+                   processes.agentDirectories().contains(where: { $0 == dir || $0.hasPrefix(dir + "/") ||
+                       (dir.hasPrefix($0 + "/") && ProjectSignals.isRepoRoot($0, containing: dir)) }) {
+                    result.failed[path] = "an agent is running in it"
+                    continue
+                }
+            }
             let size = FS.size(path, trackNewest: scannedAt != nil)
             if let t = scannedAt, let n = size.newest, n > t.addingTimeInterval(1) {
                 result.failed[path] = "modified since the scan"

@@ -20,6 +20,7 @@ struct Args {
         "h": "help", "v": "version", "f": "format", "y": "yes",
     ]
     static let knownFlags: Set<String> = ["json", "csv", "all", "no-color", "no-cache", "help", "version", "fahrenheit", "yes", "trash", "permanent", "dry-run",
+        "stream", // clean: newline-delimited incremental scan results
         "rescan",  // rescan: clean run ignores the saved scan
         "measure"]  // pulse chrome: measure memory per page once
 

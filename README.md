@@ -129,6 +129,10 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 - **AI 工具残留**：Claude Code 自动更新留下的旧版本、插件旧版本、`/private/tmp/claude-*` 里已结束会话的临时目录、已删会话的 file-history / todos、Claude 桌面版和 Cursor 等的缓存、给 agent 用的 Playwright 浏览器。
 - **模型**：Ollama 每个模型单独一项，和其他模型共用的层不删；Hugging Face 缓存按仓库列出；LM Studio、Whisper、PyTorch Hub、GPT4All、Jan 等。
 - **项目构建产物**：按标志文件识别（`package.json` → `node_modules`、`Cargo.toml` → `target`、`Package.swift` → `.build` 等），默认在 `~/Developer`、`~/code`、`~/github.com` 这类目录下找，`--root` 可以指定。
+  指定 `--root` 时仅扫描指定目录。Git 已跟踪的产物会保留；正在运行 agent 的项目会阻止清理。项目发现与目录统计同时进行，页面逐项显示结果。
+
+  `thermo clean projects --root ~/github.com,~/tk.com --stream` 会输出逐行 JSON：`started`（磁盘剩余空间）、`items`、`progress`、`finished`（完整报告）。`thermo clean overview --stream` 同样支持逐项输出。只收到部分事件时，扫描还未完成；普通 `--json` 的完整报告格式保持不变。
+
 
 安全规则：
 

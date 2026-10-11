@@ -27,7 +27,10 @@ public final class DiskScanner: @unchecked Sendable {
         if cancellation.isCancelled {
             return ScanReport(items: [], denied: [], started: started, duration: 0, cancelled: true)
         }
+        let timing = ProcessInfo.processInfo.environment["THERMO_CLEAN_TIMING"] != nil
+        if timing { FileHandle.standardError.write(Data("scan: reading processes\n".utf8)) }
         let processes = ProcessTable.current(.init(cpu: false))
+        if timing { FileHandle.standardError.write(Data(String(format: "scan: processes %.2fs\n", Date().timeIntervalSince(started)).utf8)) }
         let live = ClaudeSessions.live(AgentHome(home: options.home))
         let ctx = ScanContext(options: options, now: started, processes: processes,
                               agentDirs: processes.agentDirectories(),
@@ -38,7 +41,7 @@ public final class DiskScanner: @unchecked Sendable {
         var denied: [String] = []
 
         var jobs: [(String, Set<CleanCategory>, () -> [CleanItem])] = [
-            ("projects", [.projects, .agentWorktrees, .aiCaches], { Projects.scan(ctx) }),
+            ("projects", [.projects, .agentWorktrees, .aiCaches], { Projects.scan(ctx, onItem: { self.onItems?([$0]) }) }),
             ("AI sessions", [.aiSessions], { AISessions.scan(ctx) }),
             ("AI tools", [.aiCaches], { AITools.scan(ctx) }),
             ("AI models", [.aiModels], { AIModels.scan(ctx) }),
@@ -52,16 +55,16 @@ public final class DiskScanner: @unchecked Sendable {
         }
         jobs = jobs.filter { !$0.1.isDisjoint(with: options.categories) }
 
-        let timing = ProcessInfo.processInfo.environment["THERMO_CLEAN_TIMING"] != nil
         func runJob(_ i: Int) {
             guard !cancellation.isCancelled else { return }
             let t0 = Date()
             let found = jobs[i].2().filter { options.categories.contains($0.category) }
+            guard !cancellation.isCancelled || jobs[i].0 == "projects" else { return }
             if timing { FileHandle.standardError.write(String(format: "%6.2fs %@\n", Date().timeIntervalSince(t0), jobs[i].0).data(using: .utf8)!) }
             lock.lock()
             items += found
             lock.unlock()
-            if !found.isEmpty { onItems?(found) }
+            if !found.isEmpty && jobs[i].0 != "projects" { onItems?(found) }
             onProgress?(jobs[i].0)
         }
         // At most half the cores, at utility priority, so a scan never takes the Mac over

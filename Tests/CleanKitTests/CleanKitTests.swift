@@ -335,6 +335,70 @@ final class CleanKitTests: XCTestCase {
         XCTAssertFalse(items.contains { $0.paths.contains { $0.contains("left-pad") } }, "does not descend into artifacts")
     }
 
+    func testNestedTrackedBuildOutputsAreProtected() throws {
+        try write("src/repo/packages/web/package.json", "{}")
+        try write("src/repo/packages/web/dist/release.js", "release")
+        try write("src/repo/packages/web/node_modules/vendor.js", "vendored")
+        let repo = home + "/src/repo"
+        XCTAssertEqual(Shell.exec(["git", "init", repo], timeout: 5).0, 0)
+        XCTAssertEqual(Shell.exec(["git", "-C", repo, "add", "."], timeout: 5).0, 0)
+        let protected = Projects.protectedArtifacts(repo + "/packages/web", ["dist", "node_modules", "build"])
+        XCTAssertEqual(protected, ["dist", "node_modules"])
+    }
+
+    func testUnreadableGitMetadataProtectsAllArtifacts() throws {
+        try write("src/broken/.git", "gitdir: /missing/thermo-test-git-directory")
+        XCTAssertEqual(Projects.protectedArtifacts(home + "/src/broken", ["target", ".build"]), ["target", ".build"])
+    }
+
+    func testRunningAgentBlocksProjectArtifact() throws {
+        try write("src/web/package.json", "{}", age: 90)
+        try write("src/web/node_modules/output", String(repeating: "x", count: 1_100_000), age: 90)
+        let dir = home + "/src/web"
+        let item = try XCTUnwrap(Projects.make(.artifact(project: dir, kind: "Node", name: "node_modules",
+                                                       activity: now.addingTimeInterval(-90 * 86400), source: nil),
+                                             ctx: context(agentDirs: [dir + "/src"])))
+        XCTAssertEqual(item.blocked, "an agent is running in it")
+    }
+
+    func testExplicitProjectRootsStayWithinScopeAndEmitItems() throws {
+        let big = String(repeating: "x", count: 1_100_000)
+        try write("src/web/package.json", "{}")
+        try write("src/web/node_modules/output", big)
+        let other = home + "/elsewhere/project"
+        try write("elsewhere/project/package.json", "{}")
+        try write("elsewhere/project/node_modules/output", big)
+        try write(".claude/projects/other/session.jsonl", "{\"cwd\":\"\(other)\"}\n")
+        var ctx = context()
+        var options = ctx.options
+        options.discoverProjectRoots = false
+        ctx = ScanContext(options: options, now: now, processes: ctx.processes, agentDirs: [], liveClaudeSessions: [])
+        let lock = NSLock()
+        var emitted: [String] = []
+        let items = Projects.scan(ctx, onItem: { item in
+            lock.lock(); emitted.append(item.id); lock.unlock()
+        })
+        XCTAssertFalse(items.isEmpty)
+        XCTAssertFalse(items.contains { $0.group == other })
+        XCTAssertEqual(Set(emitted), Set(items.map(\.id)))
+        options.discoverProjectRoots = true
+        let expanded = Projects.scan(ScanContext(options: options, now: now, processes: ctx.processes, agentDirs: [], liveClaudeSessions: []))
+        XCTAssertTrue(expanded.contains { $0.group == other })
+    }
+
+    func testCleaningRechecksNewlyTrackedProjectOutput() throws {
+        let dir = home + "/src/repo"
+        let path = try write("src/repo/dist/release.js", "must survive")
+        XCTAssertEqual(Shell.exec(["git", "init", dir], timeout: 5).0, 0)
+        let item = CleanItem(id: "project/test", category: .projects, title: "dist", safety: .review,
+                             bytes: 4096, paths: [dir + "/dist"], group: dir)
+        XCTAssertEqual(Shell.exec(["git", "-C", dir, "add", "."], timeout: 5).0, 0)
+        let result = Cleaner.clean(item, mode: .permanent, guard: Guard(home: home))
+        XCTAssertTrue(result.removed.isEmpty)
+        XCTAssertFalse(result.failed.isEmpty)
+        XCTAssertTrue(FS.exists(path))
+    }
+
     func testLeftoverWorktreeIsSafe() throws {
         try write("src/repo/package.json", "{}")
         try write("src/repo/.claude/worktrees/agent-1/file.txt", age: 10)

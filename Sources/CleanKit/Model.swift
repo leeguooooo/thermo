@@ -180,6 +180,8 @@ public struct ScanOptions: Sendable {
     public var olderThanDays: Int = 30
     /// Folders searched for project build artifacts and agent worktrees.
     public var projectRoots: [String] = ScanOptions.defaultProjectRoots
+    /// Include projects discovered from editor and agent history (disable for an explicit root).
+    public var discoverProjectRoots = true
     public var categories: Set<CleanCategory> = Set(CleanCategory.allCases)
     public var home: String = NSHomeDirectory()
     /// Background priority: macOS throttles the scan's CPU and disk I/O so it stays out

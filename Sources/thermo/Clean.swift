@@ -7,7 +7,43 @@ struct CleanCommand {
     var style: Style { app.style }
     var args: Args { app.args }
 
+    /// Each line is a complete JSON event; concurrent scanner callbacks never interleave writes.
+    final class ScanStream {
+        struct Event: Encodable {
+            var event: String
+            var step: String? = nil
+            var freeBytes: Int64? = nil
+            var capacityBytes: Int64? = nil
+            var items: [CleanItem]? = nil
+            var entry: SpaceOverview.Entry? = nil
+            var report: ScanReport? = nil
+            var overview: SpaceOverview? = nil
+        }
+        let lock = NSLock()
+        let write: (Data) -> Void
+        init(write: @escaping (Data) -> Void = { FileHandle.standardOutput.write($0) }) { self.write = write }
+        func emit(_ event: Event) {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = [.sortedKeys]
+            guard var data = try? encoder.encode(event) else { return }
+            data.append(10)
+            lock.lock(); defer { lock.unlock() }
+            write(data)
+        }
+        func start() {
+            let values = try? URL(fileURLWithPath: NSHomeDirectory()).resourceValues(forKeys: [.volumeAvailableCapacityKey, .volumeTotalCapacityKey])
+            emit(Event(event: "started", freeBytes: values?.volumeAvailableCapacity.map(Int64.init),
+                       capacityBytes: values?.volumeTotalCapacity.map(Int64.init)))
+        }
+    }
+
     func run(_ rest: [String]) throws {
+        if args.has("stream") {
+            guard !args.has("csv"), !["run", "log"].contains(rest.first ?? "") else {
+                throw CLIError("--stream is for read-only scans and cannot be combined with --csv")
+            }
+        }
         switch rest.first {
         case "run": try clean(Array(rest.dropFirst()))
         case "log": showLog()
@@ -18,8 +54,14 @@ struct CleanCommand {
 
     /// Where the used space is: the big places on this disk and the biggest folders in each.
     func overview() {
-        let tty = isatty(STDERR_FILENO) != 0 && !args.has("json")
-        let o = SpaceOverview.measure(onProgress: tty ? { _ in FileHandle.standardError.write(".".data(using: .utf8)!) } : nil)
+        let stream = args.has("stream") ? ScanStream() : nil
+        stream?.start()
+        let tty = isatty(STDERR_FILENO) != 0 && !args.has("json") && stream == nil
+        let o = SpaceOverview.measure(onProgress: { step in
+            stream?.emit(.init(event: "progress", step: step))
+            if tty { FileHandle.standardError.write(Data(".".utf8)) }
+        }, onEntry: { entry in stream?.emit(.init(event: "entry", entry: entry)) })
+        if let stream { stream.emit(.init(event: "finished", overview: o)); o.save(); return }
         o.save()  // the app's Overview opens with these numbers
         if tty { FileHandle.standardError.write("\n".data(using: .utf8)!) }
         if args.has("json") { print(Export.json(o)); return }
@@ -45,6 +87,7 @@ struct CleanCommand {
             o.olderThanDays = d
         }
         if let roots = args.options["root"] {
+            o.discoverProjectRoots = false
             o.projectRoots = roots.split(separator: ",").map { FS.expand(String($0)) }
                 .map { URL(fileURLWithPath: $0).standardizedFileURL.path }
         }
@@ -55,7 +98,13 @@ struct CleanCommand {
         var o = try options()
         if let categories { o.categories = categories }
         let scanner = DiskScanner(options: o)
-        let tty = isatty(STDERR_FILENO) != 0 && !args.has("json") && !args.has("csv")
+        let stream = args.has("stream") ? ScanStream() : nil
+        stream?.start()
+        if let stream {
+            scanner.onItems = { stream.emit(.init(event: "items", items: $0)) }
+            scanner.onProgress = { stream.emit(.init(event: "progress", step: $0)) }
+        }
+        let tty = isatty(STDERR_FILENO) != 0 && !args.has("json") && !args.has("csv") && stream == nil
         if tty {
             let lock = NSLock()
             var done = 0
@@ -65,6 +114,7 @@ struct CleanCommand {
             }
         }
         let r = scanner.scan()
+        stream?.emit(.init(event: "finished", report: r))
         if tty { FileHandle.standardError.write("\r\u{1B}[2K".data(using: .utf8)!) }
         return r
     }
@@ -91,6 +141,7 @@ struct CleanCommand {
     func report(filter: [String]) throws {
         let cats = try categories(for: filter)
         let r = try scan(cats)
+        if args.has("stream") { return }
         if args.has("json") { print(Export.json(r)); return }
         if args.has("csv") {
             print("id,category,safety,bytes,files,last_used,title,detail,blocked")

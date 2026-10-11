@@ -79,7 +79,7 @@ public struct SpaceOverview: Codable, Sendable {
                 var denied: [String] = []
                 let roots = spot.paths.filter { path in
                     if FS.exists(path) { return true }
-                    if FS.size(path, cancellation: cancellation).denied { denied.append(path) }
+                    if FS.footprint(path, cancellation: cancellation).denied { denied.append(path) }
                     return false
                 }
                 // Measure each folder one level down once; the spot's total is their sum.
@@ -88,10 +88,10 @@ public struct SpaceOverview: Codable, Sendable {
                 for root in roots {
                     if cancellation.isCancelled { return }
                     let inner = spot.children > 0 && FS.isDirectory(root) && !isBundle(root) ? FS.children(root) : [root]
-                    if inner.isEmpty, FS.size(root, cancellation: cancellation).denied { denied.append(root) }
+                    if inner.isEmpty, FS.footprint(root, cancellation: cancellation).denied { denied.append(root) }
                     for c in inner {
                         if cancellation.isCancelled { return }
-                        let measured = FS.size(c, cancellation: cancellation)
+                        let measured = FS.footprint(c, cancellation: cancellation)
                         if measured.denied { denied.append(c) }
                         let size = measured.allocated
                         total += size

@@ -87,7 +87,7 @@ enum BulkWalk {
     /// Reclaimable bytes: a hard-linked file only counts when all its links are inside the tree
     /// (pnpm and bun link node_modules to a global store, so deleting node_modules frees nothing);
     /// a large file counts only its private blocks (APFS clones share theirs).
-    static func size(_ root: String, trackNewest: Bool, device: dev_t, cancellation: ScanCancellation? = nil) -> TreeSize? {
+    static func size(_ root: String, trackNewest: Bool, device: dev_t, cancellation: ScanCancellation? = nil, privateSizes: Bool = true) -> TreeSize? {
         let cancellation = cancellation ?? ScanCancellation.current
         var r = TreeSize()
         var linked: [UInt64: (links: UInt32, seen: UInt32, bytes: Int64)] = [:]
@@ -118,7 +118,7 @@ enum BulkWalk {
                 }
                 r.files += 1
                 r.allocated += e.allocated
-                r.bytes += e.allocated >= privateSizeThreshold
+                r.bytes += privateSizes && e.allocated >= privateSizeThreshold
                     ? (fileSize(dir + "/" + e.name)?.privateSize ?? e.allocated) : e.allocated
                 if trackNewest, e.modified > newest { newest = e.modified }
             }
