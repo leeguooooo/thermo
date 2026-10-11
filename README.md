@@ -20,7 +20,7 @@ Fans
 CLI（正式签名双架构二进制）：
 
 ```sh
-curl -fsSL https://app.leeguoo.com/thermo/install.sh | sh
+curl -fsSL https://thermo-updates.pages.dev/install.sh | sh
 ```
 
 默认安装到 `~/.local/bin`，同时提供 `thermo-use` 别名，不会自动安装或重启 root 风扇 helper。App 请下载[正式 DMG](https://app.leeguoo.com/thermo/download)，已有 App 可通过自动更新升级。

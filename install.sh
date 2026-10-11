@@ -2,7 +2,7 @@
 # Installs the signed universal CLI and helper from the public release mirror.
 set -eu
 [ "$(uname -s)" = Darwin ] || { echo 'Thermo requires macOS 13 or newer.' >&2; exit 1; }
-THERMO_ASSET_BASE="${THERMO_RELEASE_BASE_URL:-https://app.leeguoo.com/thermo}"
+THERMO_ASSET_BASE="${THERMO_RELEASE_BASE_URL:-https://thermo-updates.pages.dev}"
 thermo_install_dir="${THERMO_INSTALL_DIR:-$HOME/.local/bin}"
 thermo_stage="$(mktemp -d)"
 trap 'rm -rf "$thermo_stage"' EXIT HUP INT TERM
