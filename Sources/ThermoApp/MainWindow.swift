@@ -37,9 +37,10 @@ enum MainPage: Hashable {
     case disk(DiskPage)
     case agents(SidebarEntry)
     case apps(AppsTab)
+    case space(SpaceTab)
 
     /// `--page` values: overview, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
-    /// agents, agents:<area>, apps, apps:leftovers.
+    /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates.
     init?(argument: String) {
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
         guard let command = parts.first else { return nil }
@@ -52,6 +53,7 @@ enum MainPage: Hashable {
         case "disk": self = .disk(parts.count > 1 ? (DiskPage(argument: parts[1]) ?? .home) : .home)
         case "agents": self = .agents(parts.count > 1 ? (Area(rawValue: parts[1]).map { .area($0) } ?? .home) : .home)
         case "apps": self = .apps(parts.count > 1 ? (AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
+        case "space": self = .space(parts.count > 1 ? (SpaceTab(rawValue: parts[1]) ?? .browse) : .browse)
         default: return nil
         }
     }
@@ -59,6 +61,7 @@ enum MainPage: Hashable {
     var isDisk: Bool { if case .disk = self { return true } else { return false } }
     var isAgents: Bool { if case .agents = self { return true } else { return false } }
     var appsTab: AppsTab? { if case let .apps(t) = self { return t } else { return nil } }
+    var spaceTab: SpaceTab? { if case let .space(t) = self { return t } else { return nil } }
 }
 
 /// The main window: everything Thermo does, in the Disk Cleanup look — a sidebar of places and a
@@ -316,6 +319,8 @@ struct MainView: View {
             AreaPage(scanner: agents, area: a).id(a).transition(.opacity.combined(with: .move(edge: .trailing)))
         case let .apps(tab):
             AppsPage(model: models.apps, tab: Binding(get: { tab }, set: { page = .apps($0) })).transition(.opacity)
+        case let .space(tab):
+            SpacePage(model: SpaceLensModel.shared, tab: Binding(get: { tab }, set: { page = .space($0) })).transition(.opacity)
         }
     }
 }
@@ -383,6 +388,8 @@ struct MainSidebar: View {
                         }
                     }
 
+                    row(.space(page.spaceTab ?? .browse), tr("Space Lens"), "square.grid.3x3.topleft.filled", .cyan, trailing: nil,
+                        selected: page.spaceTab != nil)
                     row(.apps(page.appsTab ?? .installed), tr("Uninstall apps"), "square.grid.2x2.fill", .indigo, trailing: nil,
                         selected: page.appsTab != nil)
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Space Lens (Disk Cleanup): your home folder measured once, then any folder opens at once, biggest first, with a block chart beside the list; click a block or a row to look inside. Tick files or folders from any tab into one basket; they go to the Trash after a confirmation that lists every path. macOS and tool folders, keys, iCloud, mail, photo library insides and git metadata cannot be picked, and anything a program has open is skipped.
+- Large files: everything of 100 MB or more, with when it was last opened, filtered to files not opened for 3 months or a year.
+- Duplicates: identical files of 1 MB or more in Desktop, Documents, Downloads, Movies, Music and Pictures, compared byte for byte; keep the oldest of each in one click.
+- `thermo space [PATH]`, `thermo space large`, `thermo space dupes` and `thermo space trash` do the same in the terminal.
+
 ## 1.1.12
 
 - Uninstalling an app or removing leftovers updates the list in place instead of measuring every app (or searching for leftovers) again.

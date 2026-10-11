@@ -111,20 +111,39 @@ public enum SpaceLens {
                              complete: false, duration: 0, language: L10n.current.rawValue)
         }
         let walker = Walker(root: rootPath, device: st.st_dev, cancellation: cancellation, progress: progress)
-        _ = walker.walk(rootPath, depth: 0)
+        walker.run()
         return SpaceTree(root: rootPath, scanned: started, folders: walker.folders,
                          large: walker.large.sorted { $0.bytes > $1.bytes }, unreadable: walker.unreadable.sorted(),
                          complete: !cancellation.isCancelled, duration: Date().timeIntervalSince(started),
                          language: L10n.current.rawValue)
     }
 
-    /// Folders near the top are measured in parallel (a few at a time), deeper ones on that thread.
+    /// A fixed pool of threads takes folders off one shared stack, at every depth. Listing a
+    /// folder is mostly waiting on the disk, so more threads than cores keep the SSD busy. A folder
+    /// is finished, and handed up to its parent, when its last subfolder is.
     final class Walker: @unchecked Sendable {
+        final class Node {
+            let path: String
+            let parent: Node?
+            var pending = 0
+            var kids: [SpaceEntry] = []
+            var total: Int64 = 0
+            var count = 0
+            var newest = 0
+            var other: Int64 = 0
+            var otherCount = 0
+            var ok = true
+            init(path: String, parent: Node?) { self.path = path; self.parent = parent }
+        }
+
         let root: String
         let device: dev_t
         let cancellation: ScanCancellation
         let progress: ((Progress) -> Void)?
         let lock = NSLock()
+        let queue = NSCondition()
+        var stack: [Node] = []
+        var done = false
         var folders: [String: SpaceFolder] = [:]
         var large: [LargeFile] = []
         var unreadable: [String] = []
@@ -132,23 +151,45 @@ public enum SpaceLens {
         var files = 0
         var bytes: Int64 = 0
         var lastReport = Date.distantPast
-        static let parallelDepth = 2
+        static let threads = 16
 
         init(root: String, device: dev_t, cancellation: ScanCancellation, progress: ((Progress) -> Void)?) {
             self.root = root; self.device = device; self.cancellation = cancellation; self.progress = progress
         }
 
-        func walk(_ dir: String, depth: Int) -> SpaceEntry {
-            var kids: [SpaceEntry] = []
+        func run() {
+            stack = [Node(path: root, parent: nil)]
+            let group = DispatchGroup()
+            for _ in 0..<Walker.threads {
+                let t = Thread { [self] in work(); group.leave() }
+                t.stackSize = 1 << 20
+                group.enter()
+                t.start()
+            }
+            group.wait()
+        }
+
+        private func work() {
+            while true {
+                queue.lock()
+                while stack.isEmpty && !done && !cancellation.isCancelled { queue.wait(until: Date().addingTimeInterval(0.2)) }
+                if done || cancellation.isCancelled { queue.unlock(); return }
+                let node = stack.removeLast()
+                queue.unlock()
+                list(node)
+            }
+        }
+
+        private func list(_ node: Node) {
+            let dir = node.path
             var subdirs: [String] = []
-            var total: Int64 = 0, count = 0, newest = 0
-            var other: Int64 = 0, otherCount = 0
             var fileEntries: [BulkWalk.Entry] = []
-            var bigFiles: [LargeFile] = []
-            let ok = BulkWalk.entries(of: dir, cancellation: cancellation) { e in
+            node.ok = BulkWalk.entries(of: dir, cancellation: cancellation) { e in
                 if e.error != 0 { return }
                 if e.isDir { subdirs.append(dir + "/" + e.name) } else { fileEntries.append(e) }
             }
+            var bigFiles: [LargeFile] = []
+            var own: Int64 = 0
             for e in fileEntries {
                 let path = dir + "/" + e.name
                 var size: Int64
@@ -159,60 +200,67 @@ public enum SpaceLens {
                     size = e.allocated >= BulkWalk.privateSizeThreshold ? (BulkWalk.fileSize(path)?.privateSize ?? e.allocated) : e.allocated
                 }
                 let changed = max(e.modified, e.changed)
-                newest = max(newest, changed)
-                total += size; count += 1
+                node.newest = max(node.newest, changed)
+                own += size; node.count += 1
                 if e.isFile, size >= SpaceLens.largeFile {
                     bigFiles.append(LargeFile(path: path, bytes: size, modified: Date(timeIntervalSince1970: TimeInterval(e.modified))))
                 }
                 if size >= SpaceLens.floor {
-                    kids.append(SpaceEntry(path: path, name: e.name, isDir: false, bytes: size, files: 1,
-                                           newest: Date(timeIntervalSince1970: TimeInterval(changed))))
-                } else { other += size; otherCount += 1 }
+                    node.kids.append(SpaceEntry(path: path, name: e.name, isDir: false, bytes: size, files: 1,
+                                                newest: Date(timeIntervalSince1970: TimeInterval(changed))))
+                } else { node.other += size; node.otherCount += 1 }
             }
+            node.total = own
             // Stay on this volume: mounted images and network shares are not this disk's space.
             let local = subdirs.filter { var st = stat(); return lstat($0, &st) == 0 && st.st_dev == device }
-            var results = [SpaceEntry?](repeating: nil, count: local.count)
-            if depth < Walker.parallelDepth, local.count > 1 {
-                // The caller takes part in concurrentPerform, so nesting it never waits on itself;
-                // GCD keeps the thread count to the cores.
-                let resultsLock = NSLock()
-                DispatchQueue.concurrentPerform(iterations: local.count) { i in
-                    if self.cancellation.isCancelled { return }
-                    let e = self.walk(local[i], depth: depth + 1)
-                    resultsLock.lock(); results[i] = e; resultsLock.unlock()
-                }
-            } else {
-                for (i, sub) in local.enumerated() {
-                    if cancellation.isCancelled { break }
-                    results[i] = walk(sub, depth: depth + 1)
-                }
-            }
-            for e in results.compactMap({ $0 }) {
-                total += e.bytes; count += e.files
-                if let n = e.newest { newest = max(newest, Int(n.timeIntervalSince1970)) }
-                if e.bytes >= SpaceLens.floor { kids.append(e) } else { other += e.bytes; otherCount += 1 }
-            }
-            kids.sort { $0.bytes > $1.bytes }
-            if kids.count > SpaceLens.maxChildren {
-                for k in kids[SpaceLens.maxChildren...] { other += k.bytes; otherCount += 1 }
-                kids.removeLast(kids.count - SpaceLens.maxChildren)
-            }
-            let entry = SpaceEntry(path: dir, name: (dir as NSString).lastPathComponent, isDir: true, bytes: total, files: count,
-                                   newest: newest > 0 ? Date(timeIntervalSince1970: TimeInterval(newest)) : nil)
+
             lock.lock()
-            if total >= SpaceLens.floor || dir == root {
-                folders[dir] = SpaceFolder(entry: entry, children: kids, otherBytes: other, otherCount: otherCount)
-            }
             large += bigFiles
-            if !ok { unreadable.append(dir) }
+            if !node.ok { unreadable.append(dir) }
             files += fileEntries.count
-            bytes += fileEntries.isEmpty ? 0 : total - results.compactMap { $0?.bytes }.reduce(0, +)
+            bytes += own
             let report = progress != nil && Date().timeIntervalSince(lastReport) > 0.25
             if report { lastReport = Date() }
             let snapshot = Progress(files: files, bytes: bytes, current: dir)
+            node.pending = local.count
             lock.unlock()
             if report { progress?(snapshot) }
-            return entry
+
+            if local.isEmpty { finish(node); return }
+            queue.lock()
+            stack.append(contentsOf: local.reversed().map { Node(path: $0, parent: node) })
+            queue.broadcast()
+            queue.unlock()
+        }
+
+        /// Files the folder, then adds it to its parent, finishing that too when it was the last.
+        private func finish(_ start: Node) {
+            var node: Node? = start
+            while let n = node {
+                n.kids.sort { $0.bytes > $1.bytes }
+                if n.kids.count > SpaceLens.maxChildren {
+                    for k in n.kids[SpaceLens.maxChildren...] { n.other += k.bytes; n.otherCount += 1 }
+                    n.kids.removeLast(n.kids.count - SpaceLens.maxChildren)
+                }
+                let entry = SpaceEntry(path: n.path, name: (n.path as NSString).lastPathComponent, isDir: true, bytes: n.total,
+                                       files: n.count, newest: n.newest > 0 ? Date(timeIntervalSince1970: TimeInterval(n.newest)) : nil)
+                lock.lock()
+                if n.total >= SpaceLens.floor || n.parent == nil {
+                    folders[n.path] = SpaceFolder(entry: entry, children: n.kids, otherBytes: n.other, otherCount: n.otherCount)
+                }
+                guard let p = n.parent else {
+                    lock.unlock()
+                    queue.lock(); done = true; queue.broadcast(); queue.unlock()
+                    return
+                }
+                p.total += entry.bytes; p.count += entry.files
+                if let d = entry.newest { p.newest = max(p.newest, Int(d.timeIntervalSince1970)) }
+                if entry.bytes >= SpaceLens.floor { p.kids.append(entry) } else { p.other += entry.bytes; p.otherCount += 1 }
+                p.pending -= 1
+                let last = p.pending == 0
+                lock.unlock()
+                node = last ? p : nil
+            }
         }
     }
 

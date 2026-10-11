@@ -335,6 +335,8 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         case let .browser(app): return models.browser(app).diagnosis != nil
         case .apps(.installed): return !models.apps.loading && !models.apps.apps.isEmpty
         case .apps(.leftovers): return models.apps.orphans != nil
+        case .space(.duplicates): return true
+        case .space: return SpaceLensModel.shared.tree != nil && !SpaceLensModel.shared.scanning
         case .overview: return models.monitor.snapshot != nil && SystemPulse.shared.sampled && Date().timeIntervalSince(started) > 4
         default: return models.monitor.snapshot != nil
         }
