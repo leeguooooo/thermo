@@ -313,6 +313,9 @@ struct PulseCard: View {
                 Text(feedback).font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true).padding(.leading, 28)
             }
+            if let note = pulse.current?.diskText {
+                Text(note).font(.caption).foregroundStyle(.orange).padding(.leading, 28)
+            }
             if let note = pulse.current?.swapDiskText {
                 Text(note).font(.caption2).foregroundStyle(.secondary).padding(.leading, 28)
             }

@@ -62,7 +62,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     public enum Memory: String, Codable, Sendable { case normal, warning, critical }
     public enum Thermal: String, Codable, Sendable { case nominal, fair, serious, critical }
     /// The headline, most urgent first.
-    public enum Verdict: String, Codable, Sendable { case hot, overloaded, memory, busy, ok }
+    public enum Verdict: String, Codable, Sendable { case hot, disk, overloaded, memory, busy, ok }
 
     public var load1: Double
     public var load5: Double
@@ -75,12 +75,21 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     public var swapTotalMB: Int = 0
     public var hogs: [Hog]
     public var sampled: Date
+    /// Free space on the startup disk. Nearly full, swap cannot grow and every write waits, which
+    /// shows up as a huge load with no busy program.
+    public var diskFreeBytes: Int64? = nil
+
+    /// Below this the disk is the bottleneck; below `diskLowBytes` it is worth a word.
+    public static let diskCriticalBytes: Int64 = 2_000_000_000
+    public static let diskLowBytes: Int64 = 5_000_000_000
+    var diskCritical: Bool { (diskFreeBytes ?? .max) < Self.diskCriticalBytes }
 
     /// Load per core: 1 means every core has work, 2 means twice as much work as cores.
     public var busy: Double { load1 / Double(max(1, cores)) }
 
     public var verdict: Verdict {
         if thermal == .serious || thermal == .critical { return .hot }
+        if diskCritical { return .disk }
         if busy >= 2 { return .overloaded }
         if memory != .normal { return .memory }
         if busy >= 1 { return .busy }
@@ -91,6 +100,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         let load = String(Int(load1.rounded())), n = String(cores)
         switch verdict {
         case .hot: return tr("Your Mac is too hot and is slowing itself down")
+        case .disk: return tr("The disk is almost full: %1$@ left", Self.bytes(diskFreeBytes ?? 0))
         case .overloaded: return tr("Your Mac is overloaded: load %1$@ on %2$@ cores", load, n)
         case .memory: return tr("Memory is running out")
         case .busy: return tr("Your Mac is busy: load %1$@ on %2$@ cores", load, n)
@@ -106,6 +116,10 @@ public struct MachinePulse: Codable, Sendable, Equatable {
 
     /// A next step tied to the currently observed pressure, rather than any app's age alone.
     public var nextStep: NextStep? {
+        if diskCritical, thermal != .serious, thermal != .critical {
+            return NextStep(kind: "freeDisk", program: nil,
+                            text: tr("Free disk space first (Thermo → Disk, or thermo clean); quitting programs will not help while the disk is full."))
+        }
         if thermal == .serious || thermal == .critical || busy >= 2 {
             return NextStep(kind: "pauseWork", program: hogs.max(by: { $0.cpu < $1.cpu })?.name,
                             text: tr("Pause work you can postpone, then check CPU load and thermal pressure again."))
@@ -132,6 +146,10 @@ public struct MachinePulse: Codable, Sendable, Equatable {
 
     /// Who or what is behind it, when that can be said.
     public var culpritText: String? {
+        if diskCritical {
+            return tr("With only %1$@ free, macOS cannot grow swap or write caches, so programs stall waiting on the disk; that is what the load measures.",
+                      Self.bytes(diskFreeBytes ?? 0))
+        }
         // Name a program only when it explains a real share of the load: one core out of a load of
         // 100 is not "the reason".
         if let top = hogs.first, top.cpu >= 50, top.cpu / 100 >= load1 * 0.25 {
@@ -151,6 +169,14 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         if busy >= 1 { return tr("Load is high, but no single program stands out.") }
         return nil
     }
+
+    /// A disk getting full, said before it becomes the bottleneck.
+    public var diskText: String? {
+        guard let free = diskFreeBytes, free < Self.diskLowBytes, !diskCritical else { return nil }
+        return tr("Only %1$@ of disk space is left; when it runs out, swap cannot grow and everything slows down.", Self.bytes(free))
+    }
+
+    static func bytes(_ b: Int64) -> String { ByteCountFormatter.string(fromByteCount: b, countStyle: .file) }
 
     /// Swap files fill the disk too; say so once they are big.
     public var swapDiskText: String? {
@@ -199,9 +225,11 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             if memory == .normal { hog.advice = nil }
             return hog
         }
+        let volume = try? URL(fileURLWithPath: NSHomeDirectory()).resourceValues(forKeys: [.volumeAvailableCapacityKey])
         return MachinePulse(load1: avg[0], load5: avg[1], cores: ProcessInfo.processInfo.activeProcessorCount,
                             thermal: thermal, memory: memory, swapUsedMB: Int(swap.xsu_used / 1_048_576),
-                            swapTotalMB: Int(swap.xsu_total / 1_048_576), hogs: relevantHogs, sampled: Date())
+                            swapTotalMB: Int(swap.xsu_total / 1_048_576), hogs: relevantHogs, sampled: Date(),
+                            diskFreeBytes: volume?.volumeAvailableCapacity.map(Int64.init))
     }
 
     /// Folds helper processes into their app and returns the busiest programs (plus the biggest

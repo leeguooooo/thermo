@@ -21,6 +21,9 @@ struct PulseCommand {
         let swapTotalMB: Int
         /// "Swap files take N GB of disk space …" when they are big.
         let swapNote: String?
+        /// Free space on the startup disk, and a warning once it runs low.
+        let diskFreeBytes: Int64?
+        let diskNote: String?
         /// Every program's advice in one place (e.g. "restart Chrome, frees about 19 GB").
         let advice: [String]
         let programs: [MachinePulse.Hog]
@@ -52,7 +55,7 @@ struct PulseCommand {
                 verdict: pulse.verdict.rawValue, summary: pulse.verdictText, culprit: pulse.culpritText, nextStep: pulse.nextStep,
                 load1: pulse.load1, load5: pulse.load5, cores: pulse.cores, thermal: pulse.thermal.rawValue,
                 memory: pulse.memory.rawValue, swapUsedMB: pulse.swapUsedMB, swapTotalMB: pulse.swapTotalMB,
-                swapNote: pulse.swapDiskText, advice: pulse.hogs.compactMap { $0.advice?.text },
+                swapNote: pulse.swapDiskText, diskFreeBytes: pulse.diskFreeBytes, diskNote: pulse.diskText, advice: pulse.hogs.compactMap { $0.advice?.text },
                 programs: pulse.hogs, temperatures: temps,
                 fans: (s?.fans ?? []).map { .init(name: $0.name, rpm: $0.rpm, min: $0.min, max: $0.max, manual: $0.manual) },
                 systemPowerW: s?.systemPower, batteryPercent: s?.battery?.percent)
@@ -93,6 +96,7 @@ struct PulseCommand {
                 }
             }
         }
+        if let note = pulse.diskText { lines.append(""); lines.append("  " + style.yellow(note)) }
         if let note = pulse.swapDiskText { lines.append(""); lines.append("  " + style.dim(note)) }
         if let s {
             lines.append("")
