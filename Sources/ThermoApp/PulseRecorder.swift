@@ -16,6 +16,9 @@ final class PulseRecorder: ObservableObject {
     static let showProgram = Notification.Name("dev.thermo.showPulseProgram")
 
     let history = PulseHistory()
+    /// Each program's memory every five minutes, for telling a leak from a big program.
+    let programHistory = ProgramMemoryHistory()
+    private var lastProgramRecord = Date.distantPast
     /// The last six hours, for the Overview chart (oldest first).
     @Published private(set) var recent: [PulseRecord] = []
     /// A program to point at in the Overview after a notification was clicked.
@@ -60,6 +63,11 @@ final class PulseRecorder: ObservableObject {
         memory.removeAll { now.timeIntervalSince($0.t) > 6 * 3600 }
         let snapshot = memory
         DispatchQueue.main.async { self.recent = snapshot }
+        if now.timeIntervalSince(lastProgramRecord) >= 290 {
+            lastProgramRecord = now
+            let all = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
+            programHistory.append(ProgramMemoryRecord(all, at: now), now: now)
+        }
 
         let enabled = UserDefaults.standard.object(forKey: Self.alertsKey) as? Bool ?? true
         let fired = alerts.evaluate(memory.filter { now.timeIntervalSince($0.t) <= 15 * 60 }, latest: pulse, now: now)

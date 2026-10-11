@@ -38,9 +38,10 @@ enum MainPage: Hashable {
     case agents(SidebarEntry)
     case apps(AppsTab)
     case space(SpaceTab)
+    case memory
 
     /// `--page` values: overview, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
-    /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates.
+    /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates, memory.
     init?(argument: String) {
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
         guard let command = parts.first else { return nil }
@@ -53,6 +54,7 @@ enum MainPage: Hashable {
         case "disk": self = .disk(parts.count > 1 ? (DiskPage(argument: parts[1]) ?? .home) : .home)
         case "agents": self = .agents(parts.count > 1 ? (Area(rawValue: parts[1]).map { .area($0) } ?? .home) : .home)
         case "apps": self = .apps(parts.count > 1 ? (AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
+        case "memory": self = .memory
         case "space": self = .space(parts.count > 1 ? (SpaceTab(rawValue: parts[1]) ?? .browse) : .browse)
         default: return nil
         }
@@ -319,6 +321,8 @@ struct MainView: View {
             AreaPage(scanner: agents, area: a).id(a).transition(.opacity.combined(with: .move(edge: .trailing)))
         case let .apps(tab):
             AppsPage(model: models.apps, tab: Binding(get: { tab }, set: { page = .apps($0) })).transition(.opacity)
+        case .memory:
+            MemoryPage(model: MemoryModel.shared, open: { page = $0 }).transition(.opacity)
         case let .space(tab):
             SpacePage(model: SpaceLensModel.shared, tab: Binding(get: { tab }, set: { page = .space($0) })).transition(.opacity)
         }
@@ -359,6 +363,11 @@ struct MainSidebar: View {
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
 
     var items: [CleanItem] { disk.report?.items ?? [] }
+    /// Share of memory in use; refreshed with the sidebar (the monitor ticks while the window is open).
+    var memoryTrailing: String? {
+        guard monitor.snapshot != nil, let m = SystemStats.memory() else { return nil }
+        return String(format: "%.0f%%", Double(m.usedBytes) / Double(max(1, m.totalBytes)) * 100)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -374,6 +383,9 @@ struct MainSidebar: View {
                     row(.sensors, tr("Sensors"), "thermometer.medium", .red, trailing: nil)
                     row(.fans, tr("Fans"), "fan.fill", .blue,
                         trailing: monitor.snapshot?.fans.map(\.rpm).max().map { tr("%1$@ rpm", String(Int($0))) })
+
+                    header(tr("Memory"))
+                    row(.memory, tr("Memory usage"), "memorychip.fill", .green, trailing: memoryTrailing)
                     row(.browser("Google Chrome"), tr("Browser pages"), "rectangle.stack.fill", .teal, trailing: nil)
 
                     header(tr("Disk Cleanup"))
@@ -513,7 +525,7 @@ struct OverviewPage: View {
                                         caption: MachinePulse.memoryName(pulse.memory)),
                  detail: [mem.map { tr("%1$@ of %2$@", MemoryFormat.string(bytes: $0.usedBytes), MemoryFormat.string(bytes: $0.totalBytes)) },
                           pulse.current.flatMap { $0.swapUsedMB > 0 ? tr("swap %1$@", MemoryFormat.string(mebibytes: $0.swapUsedMB)) : nil }]
-                    .compactMap { $0 }.joined(separator: "\n")) { openDetails() }
+                    .compactMap { $0 }.joined(separator: "\n")) { open(.memory) }
             card(tr("Disk"), RingGauge(value: disk.map { 1 - Double($0.freeBytes) / Double(max(1, $0.totalBytes)) },
                                       text: disk.map { ByteFormat.string($0.freeBytes) } ?? "—", caption: tr("free"),
                                       colors: [.cyan, .blue, .purple, .pink]),

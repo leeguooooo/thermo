@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Memory gets its own section: where the memory is (apps, wired, compressed, cached files, free), swap on the disk, memory and swap over the last hour, six or 24, and every program by memory with its helpers and pages folded in, each with Quit, Restart or (for a browser) its pages.
+- Worth a restart: programs that keep growing and do not come down, and big apps that have run for a day or more (Xcode, 26 h, 2.4 GB). Thermo records each program's memory every five minutes to tell a leak from a program that is simply big.
+- When the disk is nearly full the Memory page says so first: swap cannot grow, which is what makes macOS say it has run out of application memory and ask you to force quit apps.
 - Space Lens (Disk Cleanup): your home folder measured once, then any folder opens at once, biggest first, with a block chart beside the list; click a block or a row to look inside. Tick files or folders from any tab into one basket; they go to the Trash after a confirmation that lists every path. macOS and tool folders, keys, iCloud, mail, photo library insides and git metadata cannot be picked, and anything a program has open is skipped.
 - Large files: everything of 100 MB or more, with when it was last opened, filtered to files not opened for 3 months or a year.
 - Duplicates: identical files of 1 MB or more in Desktop, Documents, Downloads, Movies, Music and Pictures, compared byte for byte; keep the oldest of each in one click.
