@@ -12,6 +12,8 @@ final class SystemPulse: ObservableObject {
     @Published private(set) var current: MachinePulse?
     @Published private(set) var quitProblem: String?
     @Published private(set) var quitting: Set<String> = []
+    @Published private(set) var actionFeedback: String?
+    private var reviewID = UUID()
     private let queue = DispatchQueue(label: "dev.thermo.app.pulse", qos: .utility)
     private var timer: DispatchSourceTimer?
     /// Confined to `queue`. Kept across start/stop so reopening shows fresh numbers in one cheap pass.
@@ -63,10 +65,30 @@ final class SystemPulse: ObservableObject {
         }
     }
 
+    /// Recheck the entire process inventory; an idle reopened app can fall out of the busiest list.
+    private func review(_ hog: Hog, before: MachinePulse, action: PulseActionReview.Action) {
+        let id = UUID(); reviewID = id
+        actionFeedback = tr("Checking the effect of the action…")
+        queue.asyncAfter(deadline: .now() + 5) { [weak self] in
+            guard let self else { return }
+            let after = self.sampler.sample()
+            let all = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
+            let result = PulseActionReview(action: action, target: hog, before: before, after: after,
+                                           afterTarget: PulseActionReview.findTarget(hog, in: all), inventoryAvailable: !all.isEmpty)
+            DispatchQueue.main.async {
+                guard self.reviewID == id else { return }
+                self.actionFeedback = MachinePulse.sentences(result.summary, result.detail)
+            }
+            self.sample()
+        }
+    }
+
     /// Apps are asked to quit (they may save or refuse); other processes get SIGTERM.
     func quit(_ hog: Hog) {
         quitProblem = nil
         guard hog.quittable, !quitting.contains(hog.id) else { return }
+        let before = current
+        let baseline = current?.hogs.first { $0.id == hog.id }
         if let path = hog.app {
             guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.standardizedFileURL.path == path }),
                   let expected = hog.applicationIdentity,
@@ -87,6 +109,8 @@ final class SystemPulse: ObservableObject {
             }
             if skipped { quitProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", hog.name) }
         }
+        if let before, let baseline { review(baseline, before: before, action: .quit) }
+        else { actionFeedback = tr("The follow-up readings cannot be compared. Check again.") }
         quitting.insert(hog.id)
         queue.asyncAfter(deadline: .now() + 1) { [weak self] in self?.sample() }
         let identities = hog.app == nil ? hog.processIdentities ?? [] : hog.applicationIdentity.map { [$0] } ?? []
@@ -123,8 +147,12 @@ final class SystemPulse: ObservableObject {
             restartProblem = tr("%1$@ changed or exited since the reading. Check again before stopping it.", hog.name)
             return
         }
+        let before = current
+        let baseline = current?.hogs.first { $0.id == hog.id }
         restarting = hog.name
         restartProblem = nil
+        actionFeedback = nil
+        reviewID = UUID()
         let pids = hog.pids, name = hog.name
         let windows = BrowserSession.windows(for: name)
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -152,6 +180,12 @@ final class SystemPulse: ObservableObject {
                     opened.signal()
                 }
                 let completed = opened.wait(timeout: .now() + 30) == .success
+                if completed && outcome.succeeded {
+                    DispatchQueue.main.async {
+                        if let before, let baseline { self?.review(baseline, before: before, action: .restart) }
+                        else { self?.actionFeedback = tr("The follow-up readings cannot be compared. Check again.") }
+                    }
+                }
                 if !completed || !outcome.succeeded {
                     DispatchQueue.main.async {
                         self?.restartProblem = tr("Could not reopen %1$@. Open it manually.", name)
@@ -201,6 +235,10 @@ struct PulseCard: View {
                     Text(pulse.sampled ? pulse.verdict : tr("Checking what your Mac is busy with…")).font(.callout.weight(.semibold))
                     if let c = pulse.culprit { Text(c).font(.caption).foregroundStyle(.secondary) }
                 }
+            }
+            if let next = pulse.current?.nextStep {
+                Text(next.text).font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true).padding(.leading, 28)
             }
             ForEach(pulse.hogs) { h in
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -271,6 +309,10 @@ struct PulseCard: View {
             if let problem = pulse.restartProblem {
                 Text(problem).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true).padding(.leading, 28)
             }
+            if let feedback = pulse.actionFeedback {
+                Text(feedback).font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true).padding(.leading, 28)
+            }
             if let note = pulse.current?.swapDiskText {
                 Text(note).font(.caption2).foregroundStyle(.secondary).padding(.leading, 28)
             }
@@ -298,7 +340,7 @@ struct PulseCard: View {
         }
         .sheet(item: $restartTarget) { h in
             ConfirmSheet(title: tr("Restart %1$@?", h.name),
-                         summary: MachinePulse.sentences(tr("It is asked to quit, the same as ⌘Q (it can save first), then opened again. Whatever it piled up in memory is freed."),
+                         summary: MachinePulse.sentences(tr("It is asked to quit, the same as ⌘Q (it can save first), then opened again. Thermo then checks whether its memory use decreased."),
                                                          MachinePulse.restartNote(BrowserSession.windows(for: h.name))),
                          destructive: BrowserSession.windows(for: h.name) == .unknown, heading: tr("What will run"),
                          lines: [tr("quit %1$@", h.app ?? h.name), tr("open %1$@", h.app ?? h.name)]

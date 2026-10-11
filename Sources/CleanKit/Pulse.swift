@@ -94,8 +94,40 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         case .overloaded: return tr("Your Mac is overloaded: load %1$@ on %2$@ cores", load, n)
         case .memory: return tr("Memory is running out")
         case .busy: return tr("Your Mac is busy: load %1$@ on %2$@ cores", load, n)
-        case .ok: return tr("Nothing is slowing your Mac down right now")
+        case .ok: return tr("No CPU, memory or thermal bottleneck is detected in this reading")
         }
+    }
+
+    public struct NextStep: Codable, Sendable, Equatable {
+        public let kind: String
+        public let program: String?
+        public let text: String
+    }
+
+    /// A next step tied to the currently observed pressure, rather than any app's age alone.
+    public var nextStep: NextStep? {
+        if thermal == .serious || thermal == .critical || busy >= 2 {
+            return NextStep(kind: "pauseWork", program: hogs.max(by: { $0.cpu < $1.cpu })?.name,
+                            text: tr("Pause work you can postpone, then check CPU load and thermal pressure again."))
+        }
+        if memory != .normal {
+            let target = hogs.filter { $0.quittable && $0.memoryKB >= 512 * 1024 }.max { $0.memoryKB < $1.memoryKB }
+            if let target, ChromeInspector.isBrowser(target.name) {
+                return NextStep(kind: "inspectBrowser", program: target.name,
+                                text: tr("Check %1$@'s pages first; close unused heavy pages before considering a full restart.", target.name))
+            }
+            if let target {
+                return NextStep(kind: "reviewApp", program: target.name,
+                                text: tr("If you are not using %1$@, save its work and quit it, then check memory pressure again.", target.name))
+            }
+            return NextStep(kind: "pauseWork", program: nil,
+                            text: tr("Pause work in the apps you control, then check memory pressure again."))
+        }
+        if busy >= 1 {
+            return NextStep(kind: "pauseWork", program: nil,
+                            text: tr("Pause work you can postpone, then check CPU load and thermal pressure again."))
+        }
+        return nil
     }
 
     /// Who or what is behind it, when that can be said.
@@ -162,9 +194,14 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         case .critical: thermal = .critical
         default: thermal = .nominal
         }
+        let relevantHogs = hogs.map { hog -> Hog in
+            var hog = hog
+            if memory == .normal { hog.advice = nil }
+            return hog
+        }
         return MachinePulse(load1: avg[0], load5: avg[1], cores: ProcessInfo.processInfo.activeProcessorCount,
                             thermal: thermal, memory: memory, swapUsedMB: Int(swap.xsu_used / 1_048_576),
-                            swapTotalMB: Int(swap.xsu_total / 1_048_576), hogs: hogs, sampled: Date())
+                            swapTotalMB: Int(swap.xsu_total / 1_048_576), hogs: relevantHogs, sampled: Date())
     }
 
     /// Folds helper processes into their app and returns the busiest programs (plus the biggest

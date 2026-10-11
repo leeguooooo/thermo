@@ -103,6 +103,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 `agents`、`agents list`、`agents show NAME` 支持 CSV。`kind=item` 为项目，`kind=finding` 为总体说明；`findings` 和 `actions` 列保留脱敏后的 JSON，`generated` 标明本次检查时间。
 
+退出或重启程序后，Thermo 会等待 5 秒复查：目标是否仍在运行、内存占用是否下降、系统内存压力和温度压力是否变化。复查会包含空闲程序，避免把刚重启后 CPU 很低的 App 当成“没有重新打开”。短时占用下降不等于整机已经变快；交换内存和平均负载可能延迟变化。
+
 `pulse --csv` 和 `pulse history --csv` 使用 `kind,name,value,unit` 列，温度为 °C，交换内存为 MiB；风扇、进程和历史归因记录的 `value` 为脱敏后的 JSON，保留其明细。
 
 `pulse chrome --json/--csv` 保留浏览器模式、提示和测量报告。无法读取浏览器时仍输出结构化结果，并返回退出码 1；CSV 的嵌套报告使用 `JSON` 单位标记。
