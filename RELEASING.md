@@ -78,3 +78,12 @@ scripts/verify-artifacts.sh /tmp/thermo-universal-verification "arm64 x86_64"
 验证器检查 App、独立 CLI/helper、App 内嵌 CLI/helper 的签名、请求的架构切片和最低系统版本，并检查 Sparkle 的请求架构。构建成功仍需要真实 Intel 与 Apple Silicon 机器的运行验收。
 
 自定义输出目录在编译前校验，不能指向仓库及其父目录、源码、构建缓存、历史发布或系统目录。重新打包只替换 `Thermo.app`、`thermo`、`thermo-helper` 及同版本的 DMG / zip，保留该目录里的其他文件。
+
+窗口布局可用只读截图核对，`--snapshot-width` 只影响 `--offscreen` 模式，且不读写已保存的窗口位置：
+
+```sh
+dist/Thermo.app/Contents/MacOS/Thermo --main --offscreen --page overview \
+  --snapshot-width 800 --snapshot /tmp/thermo-overview-narrow.png
+```
+
+主窗口最小尺寸为 800×580；概览仪表在窄窗口使用两列，宽窗口使用四列。核对概览、传感器、风扇和中英文设置页的文字与控件布局。

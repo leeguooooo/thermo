@@ -63,7 +63,7 @@ enum MainPage: Hashable {
 enum MainWindow {
     private(set) static var window: NSWindow?
     static let state = State()
-    static let minimumContentSize = NSSize(width: 940, height: 620)
+    static let minimumContentSize = NSSize(width: 800, height: 580)
 
     final class State: ObservableObject {
         @Published var page: MainPage = .overview
@@ -104,7 +104,12 @@ enum MainWindow {
             // Snapshot windows neither read nor write the user's saved window placement.
             if offscreen {
                 w.styleMask = [.borderless]
-                w.setFrame(NSRect(x: -6000, y: -6000, width: 1100, height: 740), display: true)
+                let arguments = CommandLine.arguments
+                let requested = arguments.firstIndex(of: "--snapshot-width").flatMap {
+                    $0 + 1 < arguments.count ? Double(arguments[$0 + 1]) : nil
+                }
+                let width = requested.flatMap { $0.isFinite && $0 >= minimumContentSize.width && $0 <= 2200 ? $0 : nil } ?? 1100
+                w.setFrame(NSRect(x: -6000, y: -6000, width: width, height: 740), display: true)
             } else {
                 if !w.setFrameUsingName("ThermoMain") || !usableFrame(w.frame, screens: NSScreen.screens.map(\.visibleFrame)) {
                     w.setContentSize(NSSize(width: 1100, height: 740))
@@ -463,7 +468,7 @@ struct OverviewPage: View {
         let load = pulse.current.map { $0.load1 / Double(max(1, $0.cores)) }
         let mem = SystemStats.memory()
         let disk = SystemStats.disk()
-        return HStack(spacing: 12) {
+        let cards = Group {
             card(tr("Temperature"), RingGauge(value: hot.map { ($0 - 30) / 80 }, text: tempText(hot, fahrenheit: fahrenheit),
                                              caption: tr("hottest")),
                  detail: "CPU \(tempText(s?.cpu, fahrenheit: fahrenheit)) · GPU \(tempText(s?.gpu, fahrenheit: fahrenheit))") { open(.sensors) }
@@ -481,12 +486,16 @@ struct OverviewPage: View {
                                       colors: [.cyan, .blue, .purple, .pink]),
                  detail: disk.map { tr("%1$@ in all", ByteFormat.string($0.totalBytes)) } ?? "") { open(.disk(.home)) }
         }
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { cards }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) { cards }
+        }
     }
 
     /// Fans, power and battery as small chips under the gauges.
     @ViewBuilder var chips: some View {
         let s = monitor.snapshot
-        HStack(spacing: 10) {
+        let contents = Group {
             if let rpm = s?.fans.map(\.rpm).max() {
                 chip("fan.fill", .blue, tr("%1$@ rpm", String(Int(rpm))), s?.fans.contains(where: \.manual) == true ? tr("manual") : tr("auto")) { open(.fans) }
             }
@@ -495,7 +504,10 @@ struct OverviewPage: View {
                 chip(b.charging ? "battery.100.bolt" : "battery.75", p < 20 ? .red : .green, String(format: "%.0f%%", p),
                      b.health.map { tr("health %1$@%%", String(format: "%.0f", $0 * 100)) } ?? tr("Battery")) { open(.sensors) }
             }
-            Spacer()
+        }
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) { contents }
+            LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)], spacing: 10) { contents }
         }
     }
 
@@ -518,8 +530,8 @@ struct OverviewPage: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: symbol).foregroundStyle(color)
-                Text(value).font(.system(size: 14, weight: .semibold, design: .rounded)).monospacedDigit().foregroundStyle(.white)
-                Text(label).font(.system(size: 12)).foregroundStyle(.white.opacity(0.55))
+                Text(value).font(.system(size: 14, weight: .semibold, design: .rounded)).monospacedDigit().foregroundStyle(.white).lineLimit(1).fixedSize()
+                Text(label).font(.system(size: 12)).foregroundStyle(.white.opacity(0.55)).lineLimit(1).fixedSize()
             }
             .padding(.horizontal, 14).padding(.vertical, 9)
             .glass(radius: 20)
