@@ -16,8 +16,9 @@ enum BulkWalk {
             | attrgroup_t(ATTR_CMN_OBJTYPE) | attrgroup_t(ATTR_CMN_MODTIME) | attrgroup_t(ATTR_CMN_CHGTIME)
             | attrgroup_t(ATTR_CMN_FILEID)
         a.fileattr = attrgroup_t(ATTR_FILE_LINKCOUNT) | attrgroup_t(ATTR_FILE_ALLOCSIZE)
-        // Private size is costly for every file; `size` asks for it per large file instead.
-        a.forkattr = 0
+        // Private size is costly for every file; `size` asks for it per large file instead, and
+        // only when the extended flags say the file may share blocks (a clone).
+        a.forkattr = attrgroup_t(ATTR_CMNEXT_EXT_FLAGS)
         return a
     }
 
@@ -37,6 +38,12 @@ enum BulkWalk {
         var allocated: Int64
         var privateSize: Int64
         var error: Int32
+        /// EF_* flags; nil when the file system did not return them.
+        var extFlags: UInt64? = nil
+
+        /// Its blocks may be shared with another file (an APFS clone): only then can the private
+        /// size be smaller than the allocated size. Unknown counts as maybe.
+        var maySharesBlocks: Bool { extFlags.map { $0 & UInt64(EF_MAY_SHARE_BLOCKS) != 0 } ?? true }
     }
 
     /// Calls `body` for every entry of `dir` (not recursive). Returns false if it can't be read.
@@ -73,11 +80,12 @@ enum BulkWalk {
                 let fileID = q.loadUnaligned(as: UInt64.self); q += 8
                 // File attributes are packed (zero-filled) for every entry because of PACK_INVAL.
                 let links = q.loadUnaligned(as: UInt32.self); q += 4
-                let alloc = q.loadUnaligned(as: Int64.self)
-                _ = returned
+                let alloc = q.loadUnaligned(as: Int64.self); q += 8
+                let flags = q.loadUnaligned(as: UInt64.self)
+                let hasFlags = returned.forkattr & attrgroup_t(ATTR_CMNEXT_EXT_FLAGS) != 0
                 body(Entry(name: name, isDir: type == VDIR.rawValue, isFile: type == VREG.rawValue,
                            modified: mod.tv_sec, modifiedNanoseconds: mod.tv_nsec, changed: chg.tv_sec, fileID: fileID, links: links, allocated: alloc,
-                           privateSize: alloc, error: Int32(bitPattern: error)))
+                           privateSize: alloc, error: Int32(bitPattern: error), extFlags: hasFlags ? flags : nil))
                 p += len
             }
         }
@@ -125,7 +133,8 @@ enum BulkWalk {
                 }
                 r.files += 1
                 r.allocated += e.allocated
-                r.bytes += privateSizes && e.allocated >= privateSizeThreshold
+                // A file that shares no blocks frees all it allocates; asking APFS costs ~2 ms a file.
+                r.bytes += privateSizes && e.allocated >= privateSizeThreshold && e.maySharesBlocks
                     ? (fileSize(dir + "/" + e.name)?.privateSize ?? e.allocated) : e.allocated
                 if trackNewest { newest = max(newest, e.modified, changes ? e.changed : 0) }
             }
