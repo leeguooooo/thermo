@@ -35,4 +35,14 @@ final class GuardAliasTests: XCTestCase {
         try FileManager.default.createSymbolicLink(atPath: alias, withDestinationPath: home + "/Documents")
         XCTAssertNotNil(guardrail.refusal(alias + "/build"))
     }
+
+    /// Resolving symlinks turns /private/tmp into /tmp; a finished session's scratchpad must still be allowed.
+    func testClaudeScratchpadOfASessionIsAllowed() throws {
+        let session = "/private/tmp/claude-\(getuid())/-thermo-test-\(UUID().uuidString)/session"
+        try FileManager.default.createDirectory(atPath: session, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(atPath: (session as NSString).deletingLastPathComponent) }
+        XCTAssertNil(Guard(home: home).refusal(session))
+        XCTAssertNotNil(Guard(home: home).refusal("/private/tmp/claude-\(getuid())"))
+        XCTAssertNotNil(Guard(home: home).refusal("/private/tmp/other"))
+    }
 }

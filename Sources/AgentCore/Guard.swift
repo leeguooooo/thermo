@@ -17,7 +17,8 @@ public struct Guard: Sendable {
 
     public init(home: String = NSHomeDirectory()) {
         self.home = home
-        scratchRoots = ["/private/tmp/claude-\(getuid())"]
+        // Both spellings: resolving symlinks turns /private/tmp into /tmp.
+        scratchRoots = ["/private/tmp/claude-\(getuid())", "/tmp/claude-\(getuid())"]
         let rel = [
             "", "Library", "Library/Caches", "Library/Logs", "Library/Application Support", "Library/Containers",
             "Library/Group Containers", "Library/Keychains", "Library/Preferences", "Library/Mail", "Library/Messages",
