@@ -41,6 +41,10 @@ public enum FS {
         return lstat(path, &st) == 0 && (st.st_mode & S_IFMT) == S_IFDIR
     }
 
+    /// Ages count status changes (ctime) as well as content changes, so something moved, renamed or
+    /// unpacked recently is not taken for untouched. Tests that backdate files with `utimes` turn it off.
+    nonisolated(unsafe) static var countsStatusChanges = true
+
     public static func mtime(_ path: String) -> Date? {
         var st = stat()
         guard lstat(path, &st) == 0 else { return nil }
@@ -93,7 +97,7 @@ public enum FS {
             r.allocated = sizes?.allocated ?? blocks
             r.bytes = sizes?.privateSize ?? blocks
             r.files = 1
-            r.newest = Date(timeIntervalSince1970: TimeInterval(st.st_mtimespec.tv_sec))
+            r.newest = Date(timeIntervalSince1970: TimeInterval(max(st.st_mtimespec.tv_sec, countsStatusChanges ? st.st_ctimespec.tv_sec : 0)))
             return r
         }
         // Batched attributes with private sizes; fts below is the fallback for file systems
@@ -126,7 +130,7 @@ public enum FS {
                     }
                     r.bytes += Int64(s.st_blocks) * 512
                     r.allocated += Int64(s.st_blocks) * 512
-                    if trackNewest, s.st_mtimespec.tv_sec > newest { newest = s.st_mtimespec.tv_sec }
+                    if trackNewest { newest = max(newest, s.st_mtimespec.tv_sec, FS.countsStatusChanges ? s.st_ctimespec.tv_sec : 0) }
                 }
             }
         }
@@ -267,6 +271,7 @@ public enum Cleaner {
             return ids
         })
         let fm = FileManager.default
+        var openFiles: OpenFiles?? = nil
         for path in item.paths {
             if let why = g.refusal(path) { result.failed[path] = why; continue }
             guard FS.exists(path) else { continue }
@@ -303,6 +308,20 @@ public enum Cleaner {
             }
             // Resolve ancestors again after sizing: a changed parent alias must not redirect removal.
             if let why = g.refusal(path) { result.failed[path] = why; continue }
+            // The same file as scanned, and nothing running holds it or anything inside it open.
+            if let scanned = item.identities?[path], FileIdentity.of(path) != scanned {
+                result.failed[path] = tr("replaced since the scan")
+                continue
+            }
+            if openFiles == nil { openFiles = .some(OpenFiles.current()) }
+            guard let snapshot = openFiles ?? nil else {
+                result.failed[path] = tr("could not check whether a program is using it")
+                continue
+            }
+            if let holder = snapshot.holder(of: path) {
+                result.failed[path] = tr("%1$@ has files open here", holder.name)
+                continue
+            }
             // Items already in the Trash can only be removed for good.
             let inTrash = path.hasPrefix(g.home + "/.Trash/")
             do {

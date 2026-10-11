@@ -1,0 +1,141 @@
+import Foundation
+
+/// Space only a tool may give back itself (Homebrew's old versions, Go's read-only module cache),
+/// and caches found by looking rather than at a fixed place (editors' replaced extensions, the
+/// Chromium caches of Electron apps).
+enum ToolCleanup {
+    static func scan(_ ctx: ScanContext) -> [CleanItem] {
+        [homebrew(ctx), goModules(ctx)].compactMap { $0 } + obsoleteExtensions(ctx)
+    }
+
+    /// Absolute paths: an app opened from the Finder has no shell PATH.
+    static func tool(_ name: String, ctx: ScanContext) -> String? {
+        ["/opt/homebrew/bin", "/usr/local/bin", "/usr/local/go/bin", ctx.path("~/go/bin"), ctx.path("~/.local/bin")]
+            .map { $0 + "/" + name }.first { FileManager.default.isExecutableFile(atPath: $0) }
+    }
+
+    // MARK: Homebrew
+
+    static func homebrew(_ ctx: ScanContext) -> CleanItem? {
+        guard let brew = tool("brew", ctx: ctx) else { return nil }
+        let days = String(ctx.options.olderThanDays)
+        let env = ["HOMEBREW_NO_AUTO_UPDATE=1", "HOMEBREW_NO_ENV_HINTS=1", "HOMEBREW_NO_ANALYTICS=1"]
+        let (status, output) = Shell.exec(env + [brew, "cleanup", "--dry-run", "--prune=\(days)"], timeout: 60)
+        guard status == 0 else { return nil }
+        // The download cache is the Homebrew downloads rule's; count only what that leaves.
+        let cache = ctx.path("~/Library/Caches/Homebrew")
+        let found = parseBrewDryRun(output).filter { !$0.path.hasPrefix(cache + "/") && $0.path != cache }
+        let bytes = found.reduce(Int64(0)) { $0 + $1.bytes }
+        guard bytes > 0 else { return nil }
+        let names = found.map { ($0.path as NSString).deletingLastPathComponent }
+            .map { ($0 as NSString).lastPathComponent }
+        let unique = Array(NSOrderedSet(array: names)) as? [String] ?? []
+        return CleanItem(id: "homebrew-old-versions", category: .devCaches, title: tr("Homebrew old versions"),
+                         detail: unique.prefix(5).joined(separator: ", ") + (unique.count > 5 ? "…" : ""),
+                         safety: .safe, bytes: bytes, files: found.count,
+                         note: tr("older versions of installed formulae and casks; the current ones stay"),
+                         hint: "brew cleanup --prune=\(days)",
+                         commands: [env + [brew, "cleanup", "--prune=\(days)"]])
+    }
+
+    /// `Would remove: /opt/homebrew/Cellar/node/22.1.0 (2,345 files, 81.2MB)` lines.
+    static func parseBrewDryRun(_ output: String) -> [(path: String, bytes: Int64)] {
+        output.split(separator: "\n").compactMap { line -> (String, Int64)? in
+            guard line.hasPrefix("Would remove: "), let open = line.range(of: " (", options: .backwards) else { return nil }
+            let path = String(line[line.index(line.startIndex, offsetBy: 14)..<open.lowerBound])
+            let inside = line[open.upperBound...].dropLast()
+            let size = inside.split(separator: ",").last.map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
+            return (path, parseSize(size))
+        }
+    }
+
+    /// Homebrew's sizes: `81.2MB`, `512KB`, `1.5GB`, `12B` (decimal units).
+    static func parseSize(_ s: String) -> Int64 {
+        let units: [(String, Double)] = [("TB", 1e12), ("GB", 1e9), ("MB", 1e6), ("KB", 1e3), ("B", 1)]
+        for (u, f) in units where s.hasSuffix(u) {
+            guard let v = Double(s.dropLast(u.count).replacingOccurrences(of: ",", with: "")) else { return 0 }
+            return Int64(v * f)
+        }
+        return 0
+    }
+
+    // MARK: Go
+
+    /// Go keeps modules read-only, so deleting the folder fails half-way; `go clean -modcache` is the way.
+    static func goModules(_ ctx: ScanContext) -> CleanItem? {
+        guard let go = tool("go", ctx: ctx) else { return nil }
+        let (status, output) = Shell.exec([go, "env", "GOMODCACHE"], timeout: 15)
+        let dir = status == 0 && output.hasPrefix("/") ? output : ctx.path("~/go/pkg/mod")
+        guard FS.isDirectory(dir) else { return nil }
+        let s = FS.size(dir, trackNewest: true)
+        guard s.bytes > 0 else { return nil }
+        return CleanItem(id: "go-mod-cache", category: .devCaches, title: tr("Go module cache"), detail: ctx.tilde(dir),
+                         safety: .review, bytes: s.bytes, files: s.files, lastUsed: s.newest,
+                         note: tr("downloaded modules; Go fetches them again on the next build"),
+                         blocked: ctx.processes.running(["go"]).map { tr("quit %1$@ first", $0) },
+                         hint: "go clean -modcache", commands: [[go, "clean", "-modcache"]])
+    }
+
+    // MARK: Editor extensions
+
+    /// VS Code and its forks leave a replaced extension's folder behind and list it in `.obsolete`
+    /// until the next restart removes it.
+    static func obsoleteExtensions(_ ctx: ScanContext) -> [CleanItem] {
+        let editors: [(id: String, title: String, dirs: [String], apps: [String])] = [
+            ("code", "VS Code replaced extensions", ["~/.vscode/extensions", "~/.vscode-insiders/extensions"], ["Code", "Electron"]),
+            ("cursor", "Cursor replaced extensions", ["~/.cursor/extensions"], ["Cursor"]),
+            ("windsurf", "Windsurf replaced extensions", ["~/.windsurf/extensions"], ["Windsurf"]),
+        ]
+        return editors.compactMap { e in
+            var paths: [String] = []
+            for dir in e.dirs.map(ctx.path) {
+                guard let data = FileManager.default.contents(atPath: dir + "/.obsolete"),
+                      let list = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
+                for (name, flag) in list where (flag as? Bool) == true && !name.contains("/") && !name.hasPrefix(".") {
+                    let p = dir + "/" + name
+                    if FS.isDirectory(p) { paths.append(p) }
+                }
+            }
+            let s = FS.size(paths, trackNewest: true)
+            guard s.bytes > 0 else { return nil }
+            return CleanItem(id: "editor-obsolete-extensions-" + e.id, category: .devCaches, title: tr(e.title),
+                             detail: paths.map { ($0 as NSString).lastPathComponent }.sorted().prefix(4).joined(separator: ", "),
+                             safety: .safe, bytes: s.bytes, files: s.files, lastUsed: s.newest, paths: paths.sorted(),
+                             note: tr("versions the editor already replaced with newer ones"),
+                             blocked: ctx.processes.running(e.apps).map { tr("quit %1$@ first", $0) })
+        }
+    }
+
+    // MARK: Electron apps
+
+    static let chromiumCacheNames = ["Cache", "Code Cache", "GPUCache", "DawnCache", "DawnGraphiteCache", "DawnWebGPUCache"]
+
+    /// Apps built on Electron keep Chromium's caches in their Application Support folder. Folders a
+    /// rule already covers, apps that are running and caches written in the last hour are left alone.
+    static func electronCaches(_ ctx: ScanContext, claimed: Set<String>? = nil) -> CleanItem? {
+        let root = ctx.path("~/Library/Application Support")
+        let claimed = claimed ?? Set(Rules.paths.flatMap(\.paths).filter { !$0.contains("*") }.map(ctx.path))
+        var paths: [String] = []
+        var apps: [String] = []
+        var size = TreeSize()
+        for app in FS.children(root) {
+            guard ScanCancellation.current?.isCancelled != true else { return nil }
+            let name = (app as NSString).lastPathComponent
+            // Chromium's own signature: both a compiled-script and a GPU cache.
+            guard !name.hasPrefix("."), FS.isDirectory(app + "/Code Cache"), FS.isDirectory(app + "/GPUCache") else { continue }
+            if ctx.processes.running([name]) != nil { continue }
+            var found = false
+            for cache in chromiumCacheNames.map({ app + "/" + $0 }) where FS.isDirectory(cache) && !claimed.contains(cache) {
+                let s = FS.size(cache, trackNewest: true)
+                guard s.bytes > 0, !s.denied, (s.newest ?? ctx.now) < ctx.now.addingTimeInterval(-3600) else { continue }
+                paths.append(cache); size = size + s; found = true
+            }
+            if found { apps.append(name) }
+        }
+        guard size.bytes > 0 else { return nil }
+        return CleanItem(id: "electron-app-caches", category: .system, title: tr("Electron app caches"),
+                         detail: apps.sorted().prefix(5).joined(separator: ", ") + (apps.count > 5 ? "…" : ""),
+                         safety: .safe, bytes: size.bytes, files: size.files, lastUsed: size.newest, paths: paths,
+                         note: tr("browser caches inside desktop apps; running apps and caches used in the last hour are skipped"))
+    }
+}

@@ -7,6 +7,8 @@ final class CleanKitTests: XCTestCase {
     let now = Date()
 
     override func setUpWithError() throws {
+        // Fixtures are backdated with utimes, which cannot backdate ctime.
+        FS.countsStatusChanges = false
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("cleankit-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         home = dir.resolvingSymlinksInPath().path
@@ -15,6 +17,7 @@ final class CleanKitTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
+        FS.countsStatusChanges = true
         try? FileManager.default.removeItem(atPath: home)
         L10n.override = nil
     }
@@ -420,6 +423,68 @@ final class CleanKitTests: XCTestCase {
         var o = ScanOptions(); o.home = home
         let item = try XCTUnwrap(DiskScanner(options: o).evaluate(rule, ctx: context(), denied: { _ in }))
         XCTAssertEqual(item.paths, [home + "/Downloads/old.dmg"])
+    }
+
+    func testRecentlyMovedFileIsNotStale() throws {
+        FS.countsStatusChanges = true
+        try write("Downloads/unpacked.dmg", age: 60)
+        let rule = try XCTUnwrap(Rules.paths.first { $0.id == "old-installers" })
+        var o = ScanOptions(); o.home = home
+        XCTAssertNil(DiskScanner(options: o).evaluate(rule, ctx: context(), denied: { _ in }),
+                     "an old modification date on a file that just arrived is not age")
+    }
+
+    func testFolderOfAnotherRuleIsCountedOnce() throws {
+        try write("Library/Logs/JetBrains/idea.log", age: 60)
+        try write("Library/Logs/Other/app.log", age: 60)
+        let rule = try XCTUnwrap(Rules.paths.first { $0.id == "user-logs" })
+        var o = ScanOptions(); o.home = home
+        let item = try XCTUnwrap(DiskScanner(options: o).evaluate(rule, ctx: context(), denied: { _ in }))
+        XCTAssertEqual(item.paths, [home + "/Library/Logs/Other"])
+    }
+
+    func testKeepsNewestDeviceSupport() throws {
+        let base = "Library/Developer/Xcode/iOS DeviceSupport/"
+        try write(base + "16.0/a", age: 300)
+        try write(base + "17.0/a", age: 200)
+        try write(base + "18.0/a", age: 100)
+        let rule = try XCTUnwrap(Rules.paths.first { $0.id == "xcode-device-support" })
+        var o = ScanOptions(); o.home = home
+        let item = try XCTUnwrap(DiskScanner(options: o).evaluate(rule, ctx: context(), denied: { _ in }))
+        XCTAssertEqual(item.paths, [home + "/" + base + "16.0"])
+    }
+
+    func testChromeProfileCachesExpandProfiles() throws {
+        let chrome = "Library/Application Support/Google/Chrome/"
+        try write(chrome + "Default/Code Cache/js/a")
+        try write(chrome + "Profile 2/GPUCache/data_0")
+        try write(chrome + "Default/History", "keep")
+        let rule = try XCTUnwrap(Rules.paths.first { $0.id == "chrome-profile-caches" })
+        var o = ScanOptions(); o.home = home
+        let item = try XCTUnwrap(DiskScanner(options: o).evaluate(rule, ctx: context(), denied: { _ in }))
+        XCTAssertEqual(Set(item.paths), [home + "/" + chrome + "Default/Code Cache/js", home + "/" + chrome + "Profile 2/GPUCache/data_0"])
+    }
+
+    func testCleanerSkipsReplacedAndOpenPaths() throws {
+        let replaced = try write("Library/Caches/demo/replaced")
+        let held = home + "/Library/Caches/demo/held"
+        try FileManager.default.createDirectory(atPath: held, withIntermediateDirectories: true)
+        let free = try write("Library/Caches/demo/free")
+        var item = CleanItem(id: "test", category: .system, title: "", safety: .safe, bytes: 1, paths: [replaced, held, free])
+        item.identities = Dictionary(uniqueKeysWithValues: item.paths.map { ($0, FileIdentity.of($0)!) })
+        try FileManager.default.removeItem(atPath: replaced)
+        _ = try write("Library/Caches/demo/replaced")
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/sleep"); p.arguments = ["20"]
+        p.currentDirectoryURL = URL(fileURLWithPath: held)
+        try p.run()
+        defer { p.terminate() }
+        Thread.sleep(forTimeInterval: 0.2)
+        let result = Cleaner.clean(item, mode: .permanent, guard: Guard(home: home))
+        XCTAssertEqual(result.removed, [free])
+        XCTAssertNotNil(result.failed[replaced])
+        XCTAssertEqual(result.failed[held], tr("%1$@ has files open here", "sleep"))
+        XCTAssertTrue(FS.exists(replaced) && FS.exists(held))
     }
 
     func testSelection() {

@@ -1,3 +1,4 @@
+import AgentCore
 import Foundation
 
 /// Finds everything that can be cleaned. Read-only: scanning never changes the disk.
@@ -49,6 +50,8 @@ public final class DiskScanner: @unchecked Sendable {
             ("docker", [.devCaches], { [self.docker(ctx)].compactMap { $0 } }),
             ("simulators", [.xcode], { Simulators.scan(ctx) }),
             ("app data", [.system], { AppData.scan(ctx) }),
+            ("tools", [.devCaches], { ToolCleanup.scan(ctx) }),
+            ("electron apps", [.system], { [ToolCleanup.electronCaches(ctx)].compactMap { $0 } }),
         ]
         for rule in Rules.paths where !rule.paths.isEmpty {
             jobs.append((rule.title, [rule.category], { [self.evaluate(rule, ctx: ctx, denied: { p in lock.lock(); denied.append(p); lock.unlock() })].compactMap { $0 } }))
@@ -75,6 +78,11 @@ public final class DiskScanner: @unchecked Sendable {
         for i in jobs.indices { queue.addOperation { runJob(i) } }
         queue.waitUntilAllOperationsAreFinished()
 
+        for i in items.indices where !items[i].paths.isEmpty {
+            var ids: [String: String] = [:]
+            for p in items[i].paths { ids[p] = FileIdentity.of(p) }
+            items[i].identities = ids
+        }
         let order = Dictionary(uniqueKeysWithValues: CleanCategory.allCases.enumerated().map { ($1, $0) })
         items.sort { (order[$0.category]!, -$0.bytes, $0.id) < (order[$1.category]!, -$1.bytes, $1.id) }
         var report = ScanReport(items: items, denied: Array(Set(denied)).sorted(), started: started,
@@ -89,9 +97,34 @@ public final class DiskScanner: @unchecked Sendable {
         return report
     }
 
+    /// A rule path with `*` expanded to the folders it matches.
+    static func expand(_ raw: String, ctx: ScanContext) -> [String] {
+        let p = ctx.path(raw)
+        guard p.contains("*") else { return [p] }
+        var g = glob_t()
+        defer { globfree(&g) }
+        guard glob(p, 0, nil, &g) == 0 else { return [] }
+        return (0..<Int(g.gl_pathc)).compactMap { g.gl_pathv[$0].map { String(cString: $0) } }
+    }
+
+    private let claimsLock = NSLock()
+    private var claimsCache: (home: String, claims: [(path: String, rule: String)])?
+
+    /// Every location a rule names, with the rule that names it: a folder another rule covers
+    /// (`~/Library/Logs/JetBrains` inside the app logs rule) is counted and removed by that rule only.
+    func claims(_ ctx: ScanContext) -> [(path: String, rule: String)] {
+        claimsLock.lock(); defer { claimsLock.unlock() }
+        if let c = claimsCache, c.home == ctx.home { return c.claims }
+        let claims = Rules.paths.flatMap { rule in rule.paths.flatMap { Self.expand($0, ctx: ctx) }.map { (path: $0, rule: rule.id) } }
+        claimsCache = (ctx.home, claims)
+        return claims
+    }
+
     func evaluate(_ rule: PathRule, ctx: ScanContext, denied: (String) -> Void) -> CleanItem? {
-        let roots = rule.paths.map(ctx.path).filter(FS.exists)
+        let roots = rule.paths.flatMap { Self.expand($0, ctx: ctx) }.filter(FS.exists)
         guard !roots.isEmpty else { return nil }
+        let others = claims(ctx).filter { $0.rule != rule.id }.map(\.path)
+        func claimedElsewhere(_ p: String) -> Bool { others.contains { $0 == p || $0.hasPrefix(p + "/") } }
         var paths: [String] = []
         var size = TreeSize()
         func matches(_ p: String) -> Bool {
@@ -106,21 +139,22 @@ public final class DiskScanner: @unchecked Sendable {
                 let s = FS.size(root, trackNewest: true)
                 if s.denied { denied(root) }
                 paths.append(root); size = size + s
-            case .contents:
-                if !FS.isDirectory(root) { continue }
+            case .contents, .staleContents:
+                if rule.scope == .contents, !FS.isDirectory(root) { continue }
                 if (try? FileManager.default.contentsOfDirectory(atPath: root)) == nil { denied(root); continue }
-                for c in FS.children(root) where matches(c) && (c as NSString).lastPathComponent != ".DS_Store" {
+                var found: [(path: String, size: TreeSize)] = []
+                for c in FS.children(root) where matches(c) && (c as NSString).lastPathComponent != ".DS_Store" && !claimedElsewhere(c) {
                     guard ScanCancellation.current?.isCancelled != true else { return nil }
                     let s = FS.size(c, trackNewest: true)
-                    if s.denied { denied(c) }
-                    paths.append(c); size = size + s
+                    if s.denied, rule.scope == .contents { denied(c) }
+                    found.append((c, s))
                 }
-            case .staleContents:
-                if (try? FileManager.default.contentsOfDirectory(atPath: root)) == nil { denied(root); continue }
-                for c in FS.children(root) where matches(c) && (c as NSString).lastPathComponent != ".DS_Store" {
-                    guard ScanCancellation.current?.isCancelled != true else { return nil }
-                    let s = FS.size(c, trackNewest: true)
-                    guard (s.newest ?? ctx.now) < ctx.staleBefore else { continue }
+                if rule.keepNewest > 0 {
+                    found.sort { ($0.size.newest ?? .distantPast) > ($1.size.newest ?? .distantPast) }
+                    found.removeFirst(min(rule.keepNewest, found.count))
+                }
+                for (c, s) in found {
+                    if rule.scope == .staleContents, (s.newest ?? ctx.now) >= ctx.staleBefore { continue }
                     paths.append(c); size = size + s
                 }
             }
@@ -130,6 +164,9 @@ public final class DiskScanner: @unchecked Sendable {
         var note = rule.note.map { tr($0) }
         if rule.scope == .staleContents {
             note = [note, tr("only items untouched for %1$@ days", String(ctx.options.olderThanDays))].compactMap { $0 }.joined(separator: tr("; "))
+        }
+        if rule.keepNewest > 0 {
+            note = [note, tr("the %1$@ most recently used are kept", String(rule.keepNewest))].compactMap { $0 }.joined(separator: tr("; "))
         }
         return CleanItem(id: rule.id, category: rule.category, title: tr(rule.title), detail: detail, safety: rule.safety,
                          bytes: size.bytes, files: size.files, lastUsed: size.newest, paths: paths, note: note,

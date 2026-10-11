@@ -13,7 +13,8 @@ enum BulkWalk {
         var a = attrlist()
         a.bitmapcount = u_short(ATTR_BIT_MAP_COUNT)
         a.commonattr = attrgroup_t(ATTR_CMN_RETURNED_ATTRS) | attrgroup_t(ATTR_CMN_NAME) | attrgroup_t(ATTR_CMN_ERROR)
-            | attrgroup_t(ATTR_CMN_OBJTYPE) | attrgroup_t(ATTR_CMN_MODTIME) | attrgroup_t(ATTR_CMN_FILEID)
+            | attrgroup_t(ATTR_CMN_OBJTYPE) | attrgroup_t(ATTR_CMN_MODTIME) | attrgroup_t(ATTR_CMN_CHGTIME)
+            | attrgroup_t(ATTR_CMN_FILEID)
         a.fileattr = attrgroup_t(ATTR_FILE_LINKCOUNT) | attrgroup_t(ATTR_FILE_ALLOCSIZE)
         // Private size is costly for every file; `size` asks for it per large file instead.
         a.forkattr = 0
@@ -28,6 +29,9 @@ enum BulkWalk {
         var isFile: Bool
         var modified: Int
         var modifiedNanoseconds: Int = 0
+        /// Status change time: set when a file is moved, renamed, extracted or re-permissioned, so a
+        /// download unpacked today with an old mtime is not mistaken for something untouched.
+        var changed: Int = 0
         var fileID: UInt64
         var links: UInt32
         var allocated: Int64
@@ -65,13 +69,14 @@ enum BulkWalk {
                 q += MemoryLayout<attrreference_t>.size
                 let type = q.loadUnaligned(as: UInt32.self); q += 4
                 let mod = q.loadUnaligned(as: timespec.self); q += MemoryLayout<timespec>.size
+                let chg = q.loadUnaligned(as: timespec.self); q += MemoryLayout<timespec>.size
                 let fileID = q.loadUnaligned(as: UInt64.self); q += 8
                 // File attributes are packed (zero-filled) for every entry because of PACK_INVAL.
                 let links = q.loadUnaligned(as: UInt32.self); q += 4
                 let alloc = q.loadUnaligned(as: Int64.self)
                 _ = returned
                 body(Entry(name: name, isDir: type == VDIR.rawValue, isFile: type == VREG.rawValue,
-                           modified: mod.tv_sec, modifiedNanoseconds: mod.tv_nsec, fileID: fileID, links: links, allocated: alloc,
+                           modified: mod.tv_sec, modifiedNanoseconds: mod.tv_nsec, changed: chg.tv_sec, fileID: fileID, links: links, allocated: alloc,
                            privateSize: alloc, error: Int32(bitPattern: error)))
                 p += len
             }
@@ -95,6 +100,7 @@ enum BulkWalk {
         var stack = [root]
         var newest = 0
         var visited = 0
+        let changes = FS.countsStatusChanges
         while let dir = stack.popLast() {
             visited += 1
             if cancellation?.isCancelled == true { break }
@@ -121,7 +127,7 @@ enum BulkWalk {
                 r.allocated += e.allocated
                 r.bytes += privateSizes && e.allocated >= privateSizeThreshold
                     ? (fileSize(dir + "/" + e.name)?.privateSize ?? e.allocated) : e.allocated
-                if trackNewest, e.modified > newest { newest = e.modified }
+                if trackNewest { newest = max(newest, e.modified, changes ? e.changed : 0) }
             }
             if !ok {
                 let e = errno

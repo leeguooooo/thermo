@@ -90,6 +90,8 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     public var parts: [CleanPart]?
     /// Items with the same group belong together (build output of one project folder).
     public var group: String?
+    /// `device:inode` of each path when it was scanned; a path that names another file at cleanup is skipped.
+    public var identities: [String: String]?
 
     public init(id: String, category: CleanCategory, title: String, detail: String = "", safety: Safety,
                 bytes: Int64 = 0, files: Int = 0, lastUsed: Date? = nil, paths: [String] = [],
