@@ -38,6 +38,41 @@ enum Simulators {
         return items(runtimes: runtimes, devices: byRuntime, ctx: ctx)
     }
 
+    static func currentRemovalRefusal(_ commands: [[String]], requireUnavailable: Bool) -> String? {
+        guard commands.contains(where: { $0.starts(with: ["xcrun", "simctl"]) }) else { return nil }
+        let deviceResult = Shell.exec(["xcrun", "simctl", "list", "devices", "-j"], timeout: 10)
+        guard deviceResult.0 == 0,
+              let data = try? JSONDecoder().decode([String: [String: [Device]]].self, from: Data(deviceResult.1.utf8)),
+              let devices = data["devices"] else { return tr("could not verify current simulator state") }
+        var runtimes: [Runtime] = []
+        if commands.contains(where: { $0.starts(with: ["xcrun", "simctl", "runtime", "delete"]) }) {
+            let runtimeResult = Shell.exec(["xcrun", "simctl", "runtime", "list", "-j"], timeout: 10)
+            guard runtimeResult.0 == 0, let list = try? JSONDecoder().decode([String: Runtime].self, from: Data(runtimeResult.1.utf8)) else {
+                return tr("could not verify current simulator state")
+            }
+            runtimes = Array(list.values)
+        }
+        return removalRefusal(commands, runtimes: runtimes, devices: devices, requireUnavailable: requireUnavailable)
+    }
+
+    static func removalRefusal(_ commands: [[String]], runtimes: [Runtime], devices: [String: [Device]], requireUnavailable: Bool) -> String? {
+        let all = devices.values.flatMap { $0 }
+        for command in commands where command.starts(with: ["xcrun", "simctl"]) {
+            if command.count == 5, command[2] == "runtime", command[3] == "delete" {
+                guard let runtime = runtimes.first(where: { $0.identifier == command[4] }), runtime.deletable != false,
+                      let identifier = runtime.runtimeIdentifier else { return tr("could not verify current simulator state") }
+                if (devices[identifier] ?? []).contains(where: { $0.state != "Shutdown" }) {
+                    return tr("a simulator is running or its state is unknown")
+                }
+            } else if command.count == 4, ["delete", "erase"].contains(command[2]), command[3] != "unavailable" {
+                guard let device = all.first(where: { $0.udid == command[3] }) else { return tr("could not verify current simulator state") }
+                if device.state != "Shutdown" { return tr("a simulator is running or its state is unknown") }
+                if requireUnavailable && device.isAvailable != false { return tr("this simulator is available again; scan again before removing it") }
+            } else { return tr("simulator cleanup needs a fresh scan with exact device IDs") }
+        }
+        return nil
+    }
+
     static let iso: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime]
@@ -72,7 +107,7 @@ enum Simulators {
                 note: devs.isEmpty ? nil : tr("its %1$@ simulator device(s) are removed with it", String(devs.count)),
                 blocked: booted ? tr("a simulator using it is running") : nil,
                 hint: "xcrun simctl runtime delete \(r.identifier)",
-                commands: [["xcrun", "simctl", "runtime", "delete", r.identifier], ["xcrun", "simctl", "delete", "unavailable"]]))
+                commands: [["xcrun", "simctl", "runtime", "delete", r.identifier]] + devs.map { ["xcrun", "simctl", "delete", $0.udid] }))
         }
 
         let all = devices.values.flatMap { $0 }
@@ -84,8 +119,8 @@ enum Simulators {
                                  title: tr("Simulators whose runtime is gone · %1$@", String(unavailable.count)),
                                  detail: unavailable.prefix(3).map(\.name).joined(separator: ", "),
                                  safety: .safe, bytes: lost, files: unavailable.count,
-                                 hint: "xcrun simctl delete unavailable",
-                                 commands: [["xcrun", "simctl", "delete", "unavailable"]]))
+                                 hint: "thermo clean run simulator-unavailable",
+                                 commands: unavailable.map { ["xcrun", "simctl", "delete", $0.udid] }))
         }
 
         // Big devices nobody booted lately: erasing resets their data and keeps the device.

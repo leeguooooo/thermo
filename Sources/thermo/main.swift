@@ -51,7 +51,8 @@ COMMANDS
                              language, Dock icon (KEY=VALUE also works)
   clean [CATEGORY|ai]        what can be cleaned: AI sessions/models/caches, dev caches,
                              Xcode, project build output, browsers (read-only)
-  clean run safe|ID…         remove items (safe: delete; review: to Trash); asks first
+  clean run safe|ID…         remove items (safe: delete; review files: Trash); asks first
+                             --dry-run shows the plan without deleting or running commands
   clean log                  what earlier cleanups removed
   clean overview             where the used space is: the big places and their
                              biggest folders (--json)

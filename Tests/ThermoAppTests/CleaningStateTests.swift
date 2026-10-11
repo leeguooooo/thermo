@@ -4,6 +4,19 @@ import ThermoL10n
 @testable import ThermoApp
 
 final class CleaningStateTests: XCTestCase {
+    func testToolRemovalConfirmationNeverPromisesTrashRecovery() {
+        let item = CleanItem(id: "simulator/fixture", category: .xcode, title: "Fixture", safety: .review, bytes: 100,
+                             commands: [["xcrun", "simctl", "erase", "fixture-id"]])
+        let model = DiskModel(report: ScanReport(items: [item], denied: [], started: Date(), duration: 1))
+        model.selected = [item.id]
+        L10n.override = .english
+        defer { L10n.override = nil }
+        XCTAssertTrue(model.planLines.contains { $0.contains("permanent tool removal") })
+        XCTAssertTrue(model.planLines.contains { $0.contains("xcrun simctl erase fixture-id") })
+        XCTAssertTrue(model.confirmSummary.contains("removed permanently"))
+        XCTAssertFalse(model.confirmSummary.contains("goes to the Trash"))
+    }
+
     func testCategoryScanDoesNotExpandToAllAIOrProjects() {
         let options = DiskModel.scanOptions(scope: .all, category: .aiSessions)
         XCTAssertEqual(options.categories, [.aiSessions])

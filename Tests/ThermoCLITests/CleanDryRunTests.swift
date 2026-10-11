@@ -1,0 +1,54 @@
+import XCTest
+import CleanKit
+@testable import thermo
+
+final class CleanDryRunTests: XCTestCase {
+    func testCleanupScanUsesOnlyKnownSelectionCategories() {
+        XCTAssertEqual(CleanCommand.cleanupCategories(for: ["projects"]), [.projects])
+        XCTAssertEqual(CleanCommand.cleanupCategories(for: ["project/repo-target"]), [.projects])
+        XCTAssertEqual(CleanCommand.cleanupCategories(for: ["simulator-unavailable", "xcode-derived-data"]), [.xcode])
+        XCTAssertNil(CleanCommand.cleanupCategories(for: ["safe"]))
+        XCTAssertNil(CleanCommand.cleanupCategories(for: ["unknown-id"]))
+    }
+
+    func testCancelledPreviewWithNoFindingsIsExplicitlyIncomplete() throws {
+        let report = ScanReport(items: [], denied: [], started: Date(), duration: 1, cancelled: true)
+        let command = CleanCommand(app: App(args: try Args(["--dry-run", "--json"])))
+        var output = ""
+        try command.execute(report: report, picked: [], mode: .auto, write: { output = $0 })
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(output.utf8)) as? [String: Any])
+        XCTAssertEqual(json["scanCancelled"] as? Bool, true)
+        XCTAssertEqual((json["items"] as? [Any])?.count, 0)
+    }
+
+    func testDryRunWithYesNeitherDeletesNorRunsCommands() throws {
+        let root = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Caches/dev.thermo-tests/" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let file = root.appendingPathComponent("keep")
+        let sentinel = root.appendingPathComponent("command-must-not-run")
+        try Data("must survive".utf8).write(to: file)
+        let item = CleanItem(id: "fixture", category: .system, title: "Fixture", safety: .safe, bytes: 100,
+                             paths: [file.path], commands: [["/usr/bin/touch", sentinel.path]])
+        let report = ScanReport(items: [item], denied: [], started: Date(), duration: 1)
+        let command = CleanCommand(app: App(args: try Args(["clean", "run", "safe", "--dry-run", "--yes", "--json"])))
+        var output = ""
+        try command.execute(report: report, picked: [item], mode: .permanent, write: { output = $0 })
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: sentinel.path))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(output.utf8)) as? [String: Any])
+        XCTAssertEqual(json["dryRun"] as? Bool, true)
+        XCTAssertEqual((json["items"] as? [[String: Any]])?.first?["action"] as? String, "tool-removal")
+    }
+    func testTrashOnlyPreviewSkipsPermanentToolCommands() throws {
+        let item = CleanItem(id: "fixture", category: .xcode, title: "Fixture", safety: .review, bytes: 100,
+                             commands: [["/usr/bin/true"]])
+        let report = ScanReport(items: [item], denied: [], started: Date(), duration: 1)
+        let command = CleanCommand(app: App(args: try Args(["--dry-run", "--yes", "--json"])))
+        var output = ""
+        try command.execute(report: report, picked: [item], mode: .trash, write: { output = $0 })
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(output.utf8)) as? [String: Any])
+        XCTAssertEqual((json["items"] as? [Any])?.count, 0)
+        XCTAssertEqual((json["skipped"] as? [Any])?.count, 1)
+    }
+}

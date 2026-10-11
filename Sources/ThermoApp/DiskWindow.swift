@@ -23,22 +23,25 @@ extension DiskModel {
     /// One line per item for the confirmation: how it goes, size, name, paths.
     var planLines: [String] {
         selectedItems.flatMap { i -> [String] in
-            let how = i.safety == .safe ? tr("delete") : tr("trash")
+            let how = !(i.commands ?? []).isEmpty ? tr("permanent tool removal") : i.safety == .safe ? tr("delete") : tr("trash")
             let paths = trCount(i.paths.count, "%1$@ path", "%1$@ paths")
             return ["\(how) · \(ByteFormat.string(i.bytes)) · \(i.title) (\(paths))"]
                 + i.paths.map { "    " + FSPath.tilde($0) }
+                + (i.commands ?? []).map { "    " + $0.joined(separator: " ") }
         }
     }
 
     var confirmSummary: String {
         let items = selectedItems
-        let trash = items.filter { $0.safety != .safe }
+        let trash = items.filter { $0.safety != .safe && ($0.commands ?? []).isEmpty }
+        let toolItems = items.filter { !($0.commands ?? []).isEmpty }
         var parts = [trCount(items.count, "%1$@ item.", "%1$@ items.")]
-        if trash.count < items.count { parts.append(tr("Caches and build output are deleted.")) }
+        if items.contains(where: { $0.safety == .safe && !($0.paths).isEmpty }) { parts.append(tr("Caches and build output are deleted.")) }
         if !trash.isEmpty {
             parts.append(trCount(trash.count, "%1$@ item with your data (sessions, models, worktrees) goes to the Trash.",
                                  "%1$@ items with your data (sessions, models, worktrees) go to the Trash."))
         }
+        if !toolItems.isEmpty { parts.append(tr("Tool-managed items are removed permanently; they do not go to the Trash.")) }
         return parts.joined(separator: " ")
     }
 
@@ -414,6 +417,7 @@ struct DiskItemDetail: View {
     }
 
     var safetyText: String {
+        if !(item.commands ?? []).isEmpty { return tr("Tool-managed items are removed permanently; they do not go to the Trash.") }
         switch item.safety {
         case .safe: return tr("Safe: this is regenerated automatically (caches, logs, build output). It is deleted, not moved to the Trash.")
         case .review: return tr("Your data, probably no longer needed. It goes to the Trash, so you can still get it back.")

@@ -39,7 +39,7 @@ struct CleanCommand {
     }
 
     func run(_ rest: [String]) throws {
-        if args.options["budget"] != nil, ["run", "log"].contains(rest.first ?? "") {
+        if args.options["budget"] != nil, (rest.first == "log" || (rest.first == "run" && !args.has("dry-run"))) {
             throw CLIError("--budget is for read-only scans")
         }
         if args.has("stream") {
@@ -242,6 +242,22 @@ struct CleanCommand {
 
     // MARK: run
 
+    static func cleanupCategories(for selectors: [String]) -> Set<CleanCategory>? {
+        var categories = Set<CleanCategory>()
+        for selector in selectors {
+            let s = selector.lowercased()
+            if ["all", "safe"].contains(s) { return nil }
+            if s == "ai" { categories.formUnion(CleanCategory.allCases.filter(\.isAI)); continue }
+            if let category = CleanCategory(rawValue: s) { categories.insert(category); continue }
+            if s.hasPrefix("project/") { categories.insert(.projects); continue }
+            if s.hasPrefix("worktree/") { categories.insert(.agentWorktrees); continue }
+            if s.hasPrefix("simulator-") { categories.insert(.xcode); continue }
+            if let rule = Rules.paths.first(where: { $0.id == s }) { categories.insert(rule.category); continue }
+            return nil
+        }
+        return categories
+    }
+
     func clean(_ selectors: [String]) throws {
         guard !selectors.isEmpty else {
             throw CLIError("usage: thermo clean run safe|all|ai|CATEGORY|ID… [--older-than 30d] [--trash|--permanent] [--yes]")
@@ -261,23 +277,66 @@ struct CleanCommand {
                 print(style.dim("using the scan from \(AgeFormat.string(r.started)); sizes are from then (--rescan to scan again)"))
             }
         } else {
-            r = try scan(needsProjects ? nil : Set(CleanCategory.allCases.filter { $0 != .projects }))
+            r = try scan(Self.cleanupCategories(for: selectors) ?? (needsProjects ? nil : Set(CleanCategory.allCases.filter { $0 != .projects })))
             picked = r.select(selectors)
         }
+        try execute(report: r, picked: picked, mode: mode)
+    }
+
+    struct Preview: Encodable {
+        let dryRun = true
+        let scannedAt: Date
+        let scanCancelled: Bool
+        let removalMode: String
+        let items: [PreviewItem]
+        let skipped: [CleanItem]
+    }
+    struct PreviewItem: Encodable {
+        let item: CleanItem
+        let action: String
+    }
+
+    /// The reviewed execution boundary is shared by real execution and dry-run tests.
+    func execute(report r: ScanReport, picked: [CleanItem], mode: RemovalMode,
+                 write: (String) -> Void = { print($0) }) throws {
         guard !picked.isEmpty else {
-            throw CLIError("nothing matches \(selectors.joined(separator: " ")); see thermo clean")
+            if args.has("dry-run"), r.cancelled {
+                if args.has("json") {
+                    write(Export.json(Preview(scannedAt: r.started, scanCancelled: true, removalMode: mode.rawValue,
+                                              items: [], skipped: [])))
+                } else { write("dry run · scan stopped before any matching item completed; nothing was removed") }
+                return
+            }
+            throw CLIError("nothing matches; see thermo clean")
         }
-        let todo = picked.filter(\.cleanable)
-        let skipped = picked.filter { !$0.cleanable }
+        let processes = ProcessTable.current(.init(cpu: false))
+        let reviewed = picked.map { original -> CleanItem in
+            var item = original
+            item.blocked = Cleaner.refusal(item, mode: mode, processes: processes)
+            return item
+        }
+        let todo = reviewed.filter(\.cleanable)
+        let skipped = reviewed.filter { !$0.cleanable }
         let total = todo.reduce(Int64(0)) { $0 + $1.bytes }
 
         var plan = [style.bold("About to clean \(ByteFormat.string(total)) in \(todo.count) item\(todo.count == 1 ? "" : "s"):")]
         for i in todo {
-            let how = mode.trashes(i.safety) ? style.yellow("trash ") : style.red("delete")
+            let how = !(i.commands ?? []).isEmpty ? style.red("tool removal") : mode.trashes(i.safety) ? style.yellow("trash ") : style.red("delete")
             plan.append("  " + pad(ByteFormat.string(i.bytes), 8, right: true) + "  " + how + "  " + i.title + style.dim("  \(i.paths.count) path\(i.paths.count == 1 ? "" : "s")"))
         }
         for i in skipped {
             plan.append(style.dim("  skipped  \(i.title): \(i.blocked ?? (i.hint.map { "run \($0)" } ?? "nothing to remove"))"))
+        }
+        if args.has("dry-run") {
+            if args.has("json") {
+                write(Export.json(Preview(scannedAt: r.started, scanCancelled: r.cancelled, removalMode: mode.rawValue,
+                                          items: todo.map { PreviewItem(item: $0, action: !($0.commands ?? []).isEmpty ? "tool-removal" : mode.trashes($0.safety) ? "trash" : "delete") },
+                                          skipped: skipped)))
+            } else {
+                write(plan.joined(separator: "\n"))
+                write("dry run · no files removed and no cleanup commands executed")
+            }
+            return
         }
         if args.has("json") == false { out(plan) }
         guard !todo.isEmpty else { return }

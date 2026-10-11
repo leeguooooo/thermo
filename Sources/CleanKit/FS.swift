@@ -195,28 +195,86 @@ public enum Cleaner {
     /// `item.paths` is touched.
     /// `scannedAt`: paths modified after this moment changed since the user saw the scan and are skipped.
     public static func clean(_ item: CleanItem, mode: RemovalMode = .auto, guard g: Guard = Guard(),
-                             scannedAt: Date? = nil) -> CleanResult {
+                             scannedAt: Date? = nil, processTable: ProcessTable? = nil) -> CleanResult {
         let before = DiskSpaceSnapshot.measure(path: g.home)
-        var result = perform(item, mode: mode, guard: g, scannedAt: scannedAt)
+        var result = perform(item, mode: mode, guard: g, scannedAt: scannedAt, processTable: processTable)
+        if !result.removed.isEmpty {
+            ScanReportCache.invalidate(home: g.home)
+            SpaceOverview.invalidate(home: g.home)
+        }
         result.spaceObservation = DiskSpaceObservation(before: before, after: DiskSpaceSnapshot.measure(path: g.home))
         log(result, item: item, to: logURL(home: g.home))
         return result
     }
 
-    private static func perform(_ item: CleanItem, mode: RemovalMode, guard g: Guard, scannedAt: Date?) -> CleanResult {
-        let trash = mode.trashes(item.safety)
+    /// A live check, also usable while preparing a review. A cached scan is not proof that
+    /// its owning app, build tool, or executable is still idle.
+    public static func refusal(_ item: CleanItem, mode: RemovalMode, processes: ProcessTable) -> String? {
+        let rule = Rules.paths.first(where: { $0.id == item.id })
+        if let blocked = item.blocked {
+            // Only the rule's known running-app block may be cleared by this live check.
+            let appMessages = (rule?.apps ?? []).map { tr("quit %1$@ first", $0) }
+            let projectMessages = item.category == .projects ? [tr("an agent is running in it"), tr("a build tool is running in this project"), tr("a running executable uses this location")] : []
+            if !appMessages.contains(blocked) && !projectMessages.contains(blocked) { return blocked }
+        }
+        if mode == .trash, !(item.commands ?? []).isEmpty {
+            return tr("Tool-managed removal is permanent and cannot use the Trash")
+        }
+        if let rule, let app = processes.running(rule.apps) {
+            return tr("quit %1$@ first", app)
+        }
+        if let dir = item.group, item.category == .projects {
+            let related: (String) -> Bool = { cwd in
+                cwd == dir || cwd.hasPrefix(dir + "/") ||
+                    (dir.hasPrefix(cwd + "/") && ProjectSignals.isRepoRoot(cwd, containing: dir))
+            }
+            if processes.agentDirectories().contains(where: related) { return tr("an agent is running in it") }
+            let builders = ["swift", "swift-build", "swift-frontend", "cargo", "rustc", "xcodebuild", "clang", "clang++",
+                            "cmake", "ninja", "make", "gradle", "mvn", "flutter", "dart", "npm", "pnpm", "yarn",
+                            "node", "java", "python", "python3", "dotnet", "zig", "go"]
+            if processes.entries.contains(where: { builders.contains($0.name) && $0.cwd.map(related) == true }) {
+                return tr("a build tool is running in this project")
+            }
+        }
+        if processes.entries.contains(where: { process in
+            guard let exe = process.executable else { return false }
+            return item.paths.contains { exe == $0 || exe.hasPrefix($0 + "/") }
+        }) { return tr("a running executable uses this location") }
+        return nil
+    }
+
+    private static func perform(_ item: CleanItem, mode: RemovalMode, guard g: Guard, scannedAt: Date?, processTable: ProcessTable?) -> CleanResult {
+        let trash = mode.trashes(item.safety) && !item.paths.isEmpty
         var result = CleanResult(id: item.id, trashed: trash)
-        guard item.blocked == nil else {
-            result.failed[item.id] = item.blocked
+        if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
+            result.failed[item.id] = why
             return result
         }
         // A saved scan can outlive a Git add or a newly started agent. Recheck projects
         // immediately before removing their output rather than trusting the cached decision.
         let projectProcesses = item.category == .projects ? ProcessTable.current(.init(cpu: false)) : nil
+        let liveSessionIDs = item.category == .aiSessions
+            ? Set(ClaudeSessions.live(AgentHome(home: g.home)).map(\.sessionId)) : []
+        let resumeProcesses = item.category == .aiSessions ? (processTable ?? ProcessTable.current(.init(cpu: false))).entries : []
+        let resumedIDs = Set(resumeProcesses.flatMap { process -> [String] in
+            guard ProcessTable.agentNames.contains(process.name) || ProcessTable.agentNames.contains(((process.argv.first ?? "") as NSString).lastPathComponent) else { return [] }
+            var ids: [String] = []
+            for (index, argument) in process.argv.enumerated() where ["resume", "--resume", "--session"].contains(argument) {
+                if index + 1 < process.argv.count, process.argv[index + 1].count >= 8 { ids.append(process.argv[index + 1]) }
+            }
+            return ids
+        })
         let fm = FileManager.default
         for path in item.paths {
             if let why = g.refusal(path) { result.failed[path] = why; continue }
             guard FS.exists(path) else { continue }
+            if item.category == .aiSessions {
+                let name = ((path as NSString).lastPathComponent as NSString).deletingPathExtension
+                if liveSessionIDs.contains(name) || resumedIDs.contains(where: { name == $0 || name.hasSuffix("-" + $0) }) {
+                    result.failed[path] = tr("this session is running")
+                    continue
+                }
+            }
             if item.category == .projects {
                 let dir = item.group ?? (path as NSString).deletingLastPathComponent
                 guard path.hasPrefix(dir + "/") else { result.failed[path] = "project path does not match its group"; continue }
@@ -237,6 +295,10 @@ public enum Cleaner {
                 result.failed[path] = "modified since the scan"
                 continue
             }
+            if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
+                result.failed[path] = why
+                continue
+            }
             // Items already in the Trash can only be removed for good.
             let inTrash = path.hasPrefix(g.home + "/.Trash/")
             do {
@@ -253,20 +315,24 @@ public enum Cleaner {
         }
         // Things only their own tool may remove: report the item's size once every command succeeded.
         if let commands = item.commands, !commands.isEmpty {
+            if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
+                result.failed[item.id] = why
+                return result
+            }
             var ok = true
             for argv in commands {
+                if let why = Simulators.currentRemovalRefusal([argv], requireUnavailable: item.id == "simulator-unavailable") {
+                    ok = false; result.failed[argv.joined(separator: " ")] = why
+                    break
+                }
                 let (status, output) = Shell.exec(argv, timeout: 180)
                 let line = argv.joined(separator: " ")
-                if status == 0 { result.removed.append("ran: " + line) } else { ok = false; result.failed[line] = output.isEmpty ? "exit \(status)" : output }
+                if status == 0 { result.removed.append("ran: " + line) } else { ok = false; result.failed[line] = output.isEmpty ? "exit \(status)" : output; break }
             }
             if ok { result.bytes += item.bytes }
         }
         if !result.removed.isEmpty, let cmds = item.afterClean {
             for c in cmds { _ = Shell.run(c, timeout: 30) }
-        }
-        if !result.removed.isEmpty {
-            ScanReportCache.invalidate(home: g.home)
-            SpaceOverview.invalidate(home: g.home)
         }
         return result
     }

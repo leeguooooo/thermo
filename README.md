@@ -135,6 +135,7 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
   空间总览按子目录增量更新。流式 `entry` 的 `id` 在分类内保持不变，调用方应替换该分类的旧条目；`complete`、`measuredLocations`、`totalLocations` 标明分类进度。未完成分类显示“至少”多少空间，`finished` 事件返回扫描结束时的最终状态。扫描最多四个工作线程，页面更新会合并，避免大量临时文件造成任务和界面更新堆积。
   给 agent 限时获取结果可用 `thermo clean overview --budget 10 --stream`，或 `thermo clean projects --budget 10 --json`。预算到期后在下一处取消检查停止，结果标记 `cancelled: true`，仅统计已完整测量的目录；未完成分类标注 `complete: false`，大小是下限，不替换已有完整报告。`--budget` 只用于扫描，不能用于执行清理。
   完成的报告按分类、项目目录、保留天数和语言分别缓存，最多保留 32 个范围。再次打开分类页面或执行清理时，只复用范围一致且未过期的报告；清理后所有旧计划失效。项目活动读取会校验文件身份和修改时间，未变化的 Codex 会话无需反复打开。
+  `thermo clean run projects --dry-run --json` 只返回清理计划，不删除文件、不执行清理命令，即使加了 `--yes` 也如此。真实执行前会复查应用、构建进程和正在运行的可执行文件。模拟器移除会永久删除，由确认框明确说明；`--trash` 不会执行这种操作。设备 ID 固定在扫描结果里，执行前再检查当前状态；旧的 `delete unavailable` 批量命令必须重新扫描。
   清理结果分别显示已删除文件的估计大小、移入废纸篓的大小，以及磁盘可用空间的前后实测变化。JSON 结果保留原有数组格式，每项新增 `spaceObservation`（`before`、`after`、`availableChangeBytes`）；差值包含同时发生的其他磁盘活动，不能全部归因于清理。清理后旧空间总览失效，页面容量条直接读取当前可用空间，无需等待文件扫描。
 
 
