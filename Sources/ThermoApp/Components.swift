@@ -214,18 +214,32 @@ struct WindowBackdrop: View {
 
 /// A translucent "glass" panel: what cards and rows sit on.
 struct GlassPanel: ViewModifier {
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var contrast
     var radius: CGFloat = 16
     var highlighted = false
+
+    private var panelFill: AnyShapeStyle {
+        if reduceTransparency || contrast == .increased {
+            return AnyShapeStyle(Color(red: highlighted ? 0.12 : 0.08, green: highlighted ? 0.14 : 0.10, blue: highlighted ? 0.20 : 0.15))
+        }
+        return AnyShapeStyle(LinearGradient(colors: [.white.opacity(highlighted ? 0.16 : 0.11), .white.opacity(highlighted ? 0.08 : 0.045)],
+                                            startPoint: .topLeading, endPoint: .bottomTrailing))
+    }
+
+    private var panelBorder: AnyShapeStyle {
+        if contrast == .increased { return AnyShapeStyle(Color.white.opacity(0.65)) }
+        return AnyShapeStyle(LinearGradient(colors: [.white.opacity(highlighted ? 0.35 : 0.18), .white.opacity(0.03)],
+                                            startPoint: .top, endPoint: .bottom))
+    }
 
     func body(content: Content) -> some View {
         content
             // Drawn, not a system material: the same frosted look on any backdrop and in snapshots.
             .background(RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .fill(LinearGradient(colors: [.white.opacity(highlighted ? 0.16 : 0.11), .white.opacity(highlighted ? 0.08 : 0.045)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing)))
+                .fill(panelFill))
             .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .strokeBorder(LinearGradient(colors: [.white.opacity(highlighted ? 0.35 : 0.18), .white.opacity(0.03)],
-                                             startPoint: .top, endPoint: .bottom), lineWidth: 1))
+                .strokeBorder(panelBorder, lineWidth: contrast == .increased ? 2 : 1))
             .shadow(color: .black.opacity(0.25), radius: 14, y: 8)
     }
 }
