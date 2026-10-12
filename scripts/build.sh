@@ -74,6 +74,9 @@ else
 fi
 
 # --- Signing (inside-out) ---------------------------------------------------
+# Generated copies may inherit Finder/resource-fork attributes from synced folders.
+# Clear them on the generated bundle only, before signing; leave source assets untouched.
+xattr -cr "$APP"
 if [ "$SIGN_ID" = "-" ]; then TS="--timestamp=none"; else TS="--timestamp"; fi
 sign() { codesign --force --options runtime $TS -s "$SIGN_ID" "$@"; }
 SP="$C/Frameworks/Sparkle.framework/Versions/B"
