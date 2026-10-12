@@ -263,7 +263,8 @@ public final class DiskScanner: @unchecked Sendable {
 public extension ScanReport {
     /// Resolves CLI/app selectors: an item id, an id prefix (`claude-sessions` matches
     /// `claude-sessions/…`), a category (`ai-sessions`), `ai` (all AI categories), `safe` (every safe item)
-    /// or `all` (everything except risky). Exact ids may select risky items.
+    /// or `all` (everything except risky). `safe` leaves development dependencies in place;
+    /// explicit categories/ids can select them. Exact ids may select risky items.
     func select(_ selectors: [String]) -> [CleanItem] {
         var out: [CleanItem] = []
         var seen = Set<String>()
@@ -283,7 +284,7 @@ public extension ScanReport {
             for i in items {
                 let exact = i.id.lowercased() == s
                 let byPrefix = i.id.lowercased().hasPrefix(s + "/") || (s.hasSuffix("*") && i.id.lowercased().hasPrefix(String(s.dropLast())))
-                let byGroup = s == i.category.rawValue || (s == "ai" && i.category.isAI) || s == "all" || (s == "safe" && i.safety == .safe)
+                let byGroup = s == i.category.rawValue || (s == "ai" && i.category.isAI) || s == "all" || (s == "safe" && i.safety == .safe && !i.developmentDependency)
                 if exact || ((byPrefix || byGroup) && i.safety != .risky) { add(i) }
             }
         }

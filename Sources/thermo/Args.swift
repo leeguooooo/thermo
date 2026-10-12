@@ -13,6 +13,7 @@ struct Args {
 
     static let valueOptions: Set<String> = ["interval", "count", "sensor", "format", "older-than", "root", "budget",
                                             "area", "agent", "action",
+        "to", // space archive: SSH alias:/absolute/archive.tar
         "since",  // pulse history
         "watch", "app", "title"]  // pulse chrome
     static let aliases: [String: String] = [
@@ -22,6 +23,7 @@ struct Args {
     static let knownFlags: Set<String> = ["json", "csv", "all", "no-color", "no-cache", "help", "version", "fahrenheit", "yes", "trash", "permanent", "dry-run", "with-data",
         "stream", // clean: newline-delimited incremental scan results
         "rescan",  // rescan: clean run ignores the saved scan
+        "remove-local", "inactive-development",
         "measure"]  // pulse chrome: measure memory per page once
 
     init(_ argv: [String]) throws {

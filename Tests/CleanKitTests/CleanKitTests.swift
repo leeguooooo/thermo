@@ -493,7 +493,8 @@ final class CleanKitTests: XCTestCase {
             CleanItem(id: "npm-cache", category: .devCaches, title: "", safety: .safe, bytes: 1, paths: ["x"]),
             CleanItem(id: "worktree/w", category: .aiSessions, title: "", safety: .risky, bytes: 1, paths: ["x"]),
         ], denied: [], started: now, duration: 0)
-        XCTAssertEqual(r.select(["safe"]).map(\.id), ["npm-cache"])
+        XCTAssertEqual(r.select(["safe"]).map(\.id), [], "Regenerable development dependencies are preserved by automatic selection")
+        XCTAssertEqual(r.select(["npm-cache"]).map(\.id), ["npm-cache"])
         XCTAssertEqual(r.select(["claude-sessions"]).map(\.id), ["claude-sessions/a"])
         XCTAssertEqual(r.select(["ai"]).map(\.id), ["claude-sessions/a"], "risky needs exact id")
         XCTAssertEqual(r.select(["worktree/w"]).map(\.id), ["worktree/w"])

@@ -45,7 +45,7 @@ extension DiskModel {
         return parts.joined(separator: " ")
     }
 
-    var safeItems: [CleanItem] { (report?.items ?? []).filter { $0.cleanable && $0.safety == .safe } }
+    var safeItems: [CleanItem] { (report?.items ?? []).filter(\.automaticallySelected) }
     var safeBytes: Int64 { safeItems.reduce(0) { $0 + $1.bytes } }
 
     func selectSafe() { selected = Set(safeItems.map(\.id)) }
@@ -163,7 +163,7 @@ struct DiskHome: View {
             VStack(spacing: 18) {
                 HeroStatus(symbol: r.totalBytes > 0 ? "internaldrive.fill" : "checkmark", color: r.totalBytes > 0 ? .pink : .green,
                            title: r.totalBytes > 0 ? tr("%1$@ can be freed", ByteFormat.string(r.totalBytes)) : tr("Nothing to clean."),
-                           subtitle: tr("%1$@ is safe to remove now (caches, build output); the rest is yours to review.", ByteFormat.string(model.safeBytes)))
+                           subtitle: tr("%1$@ selected by default. Development dependencies are kept; other items need your review.", ByteFormat.string(model.safeBytes)))
                 HStack(spacing: 20) {
                     BigRoundButton(title: tr("Clean"), color: .pink, busy: model.cleaning) {
                         model.selectSafe()
@@ -363,7 +363,7 @@ struct DiskCategoryPage: View {
     var selectionFooter: some View {
         HStack(spacing: 10) {
             Button(tr("Safe")) {
-                let ids = (model.report?.items ?? []).filter { $0.category == category && $0.cleanable && $0.safety == .safe }.map(\.id)
+                let ids = (model.report?.items ?? []).filter { $0.category == category && $0.automaticallySelected }.map(\.id)
                 model.selected.formUnion(ids)
             }.buttonStyle(PillButtonStyle()).disabled(model.report == nil || model.scanning || model.cleaning)
             Button(tr("None")) {
@@ -393,6 +393,10 @@ struct DiskItemDetail: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let n = item.note { Text(n).font(.callout).foregroundStyle(.white.opacity(0.75)).fixedSize(horizontal: false, vertical: true) }
+            if item.developmentDependency {
+                Text(tr("Kept by default: development may need these files again. Archive them only when the environment or project is inactive."))
+                    .font(.callout).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+            }
             if let h = item.hint { Text(tr("Run: %1$@", h)).font(.callout.monospaced()).foregroundStyle(.white.opacity(0.8)).textSelection(.enabled) }
             Text(safetyText).font(.caption).foregroundStyle(.white.opacity(0.5)).fixedSize(horizontal: false, vertical: true)
             if let parts = item.parts, parts.count > 1 {

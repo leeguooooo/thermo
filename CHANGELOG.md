@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- 默认清理保留开发依赖、SDK、模拟器数据、编译缓存、AI 模型和工作树，避免清理后立刻重建或下载。具体项目仍可手动选择。
+- 新增 `thermo space archive PATH --to nas:/archive/name.tar`：通过 SSH 流式归档，保留稀疏文件、链接和元数据；接收端落盘、校验 SHA-256 与归档格式后保存恢复记录。默认保留本机原件，`--remove-local` 仅在源目录未变且未被占用时移除原件。
+- 修正 APFS 签名副本的说明，区分含共享块的目录占用、独占块估算和清理后的实际可用空间变化。
+
 ## 1.1.13
 
 - Where the space is accounts for the whole disk: every folder in your home, Library and the system data volume falls under a heading (apps, app data, projects, tool and agent folders, Apple's downloaded models and voices by name, system-wide data), macOS's own volumes are shown as what cannot be removed, swap and the sleep image come from the VM volume, and each heading says what to do about it. What cannot be attributed (APFS metadata, local snapshots) is one named line, and hard links or clones counted twice are said instead of hidden.

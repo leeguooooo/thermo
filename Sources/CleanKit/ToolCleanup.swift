@@ -210,7 +210,8 @@ enum ToolCleanup {
 
     /// macOS clones an app into a per-user X folder to check its signature while it runs; Chrome
     /// leaves one behind on every relaunch. They share blocks with the installed app, so they cost
-    /// almost nothing until the app updates; then each becomes a full copy (65 of Chrome were 90 GB).
+    /// almost nothing while those blocks remain shared. Allocated totals include sharing between
+    /// the clones themselves and are not a prediction of how much a later update will consume.
     /// The newest clone of a running app is kept: that is the one it runs from.
     static func codeSignClones(_ ctx: ScanContext, root: String = (NSTemporaryDirectory() as NSString).deletingLastPathComponent + "/X") -> CleanItem? {
         let running = Set(ctx.processes.entries.compactMap { e -> String? in
@@ -240,6 +241,6 @@ enum ToolCleanup {
         return CleanItem(id: "code-sign-clones", category: .system, title: tr("Leftover app code-sign clones"),
                          detail: trCount(paths.count, "%1$@ clone", "%1$@ clones") + " · " + apps.sorted().joined(separator: ", "),
                          safety: .safe, bytes: size.bytes, files: size.files, lastUsed: size.newest, paths: paths,
-                         note: tr("copies macOS made to check a running app; they share space with the app now, but each becomes a full copy (%1$@ in all) when the app updates", ByteFormat.string(size.bytes + shared)))
+                         note: tr("Code-sign copies share APFS blocks. Their allocated size is %1$@; the cleanup estimate counts private blocks. Neither predicts the free-space change exactly.", ByteFormat.string(size.bytes + shared)))
     }
 }

@@ -215,3 +215,30 @@ Sources/ThermoApp/   菜单栏 App（AppKit + SwiftUI + Swift Charts）
 ```
 
 调试：`Thermo.app/Contents/MacOS/Thermo --render-preview DIR` 把面板各页渲染为 PNG（AppKit 原生控件会显示为占位块）。helper 日志：`/var/log/dev.thermo.helper.log`。
+
+### 保留开发环境与 NAS 归档
+
+App 的自动勾选和 `thermo clean run safe` 默认保留开发依赖、SDK、模拟器数据、项目编译缓存、AI 模型和工作树。它们仍会显示在扫描结果里；确实不再需要时，可以按具体项目 ID 或分类选择。文件能重新生成，并不代表清理后不会影响下一次开发。
+
+需要长期腾出空间，可以把闲置目录归档到自己的 NAS。使用现有 SSH 配置中的别名，接收端需提供 `tar`、`sha256sum` 和可写目录：
+
+```sh
+# 只读预览：目录占用、逻辑大小和实际需要传输的数据分别报告。
+thermo space archive ~/Downloads/old-project --to nas:/archive/old-project.tar --dry-run --json
+
+# 默认保留本机原件。归档采用 SSH 流式传输，不需要额外的本机临时空间。
+thermo space archive ~/Downloads/old-project --to nas:/archive/old-project.tar
+
+# 完整校验后移除本机副本；非交互调用可加 --yes。
+thermo space archive ~/Downloads/old-project --to nas:/archive/old-project.tar --remove-local
+```
+
+归档保留稀疏文件的空洞、符号链接和文件元数据。500 GB 的虚拟磁盘如果只实际写入17 GB，不会按500 GB传输。接收端校验归档的 SHA-256，并用原生 `tar` 检查格式，无需远端 Python。传输失败、校验失败、源目录发生变化或被进程占用时，本机原件会保留。已有归档不会被覆盖。
+
+移除原件前会先在归档旁保存 `.manifest.json` 恢复记录。实际空间增量来自同一文件系统的前后测量，包含其他任务同期的写入和释放；目录占用、APFS独占块估算和实际增量不能混用。明确停用的开发环境需要额外指定 `--inactive-development`，不要用它迁走正在开发所需的环境。
+
+恢复时先停止对应应用，从记录中的 `restoreDirectory` 还原：
+
+```sh
+ssh nas 'cat /archive/old-project.tar' | tar -xSpf - -C ~/Downloads
+```

@@ -14,12 +14,37 @@ struct SpaceCommand {
 
     func run(_ rest: [String]) throws {
         switch rest.first {
+        case "archive": try archive(rest.dropFirst().first)
         case "large", "big": try large()
         case "dupes", "duplicates": try dupes(Array(rest.dropFirst()))
         case "trash", "rm": try trash(Array(rest.dropFirst()))
         case "browse": try browse(rest.dropFirst().first)
         default: try browse(rest.first)
         }
+    }
+
+    func archive(_ source: String?) throws {
+        guard let source, let specification = args.options["to"] else {
+            throw CLIError("usage: thermo space archive PATH --to nas:/archive/name.tar [--dry-run] [--remove-local] [--inactive-development] [--yes]")
+        }
+        let target = try SSHArchiveDestination(specification)
+        let removal = args.has("remove-local")
+        let inactive = args.has("inactive-development")
+        let plan = try VerifiedArchive.plan(source: Self.expand(source), destination: target, removeLocal: removal, allowDevelopment: inactive)
+        if args.has("dry-run") { print(args.has("json") ? Export.json(plan) : "\(plan.files) files · \(ByteFormat.string(plan.allocatedBytes)) allocated · \(ByteFormat.string(plan.payloadBytes)) archive payload · \(target.host):\(target.path)"); return }
+        if !args.has("yes") {
+            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("not a terminal; review with --dry-run, then add --yes") }
+            print("Archive \(plan.files) files to \(target.host):\(target.path)\(removal ? ", then remove verified local files" : ", keeping local files")? [y/N] ", terminator: "")
+            fflush(stdout)
+            guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print(tr("cancelled")); return }
+        }
+        var last = Date.distantPast
+        let result = try VerifiedArchive.archive(source: plan.source, destination: target, removeLocal: removal, allowDevelopment: inactive) { bytes in
+            if Date().timeIntervalSince(last) >= 1 { last = Date(); progress("Archiving \(ByteFormat.string(bytes))") }
+        }
+        clearProgress()
+        if args.has("json") { print(Export.json(result)) }
+        else { print("Verified archive: \(target.host):\(target.path)\nSHA-256: \(result.sha256)\n\(result.diskSpace.summary)") }
     }
 
     func progress(_ text: String) {

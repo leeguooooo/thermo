@@ -64,6 +64,9 @@ COMMANDS
   space large                files over 100 MB and when they were last opened (--older-than DAYS)
   space dupes [PATH…]        identical files (default: Desktop, Documents, Downloads, media folders)
   space trash PATH…          move picked files or folders to the Trash (lists them, asks first)
+  space archive PATH         verified SSH/tar archive; --to nas:/archive/name.tar
+                             --remove-local removes originals only after verification;
+                             installed development environments need --inactive-development
   apps leftovers             data left by apps that are gone (untouched 30 days, unknown to Spotlight)
   apps leftovers remove ID…|all
                              move that data to the Trash; asks first

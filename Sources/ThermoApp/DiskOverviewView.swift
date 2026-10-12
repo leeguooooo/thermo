@@ -233,8 +233,7 @@ struct DiskOverviewView: View {
 
     func capacityBar(capacity: Int64, free: Int64, purgeable: Int64 = 0) -> some View {
         let usedBytes = max(0, capacity - free)
-        return
-        VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: 6) {
             GeometryReader { g in
                 let used = capacity > 0 ? min(1, max(0, CGFloat(usedBytes) / CGFloat(capacity))) : 0
                 ZStack(alignment: .leading) {

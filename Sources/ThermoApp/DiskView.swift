@@ -77,7 +77,7 @@ final class DiskModel: ObservableObject {
                 $0.discoverProjectRoots == options.discoverProjectRoots && $0.olderThanDays == options.olderThanDays
         }) else { return false }
         report = r
-        selected = Set(r.items.filter { $0.cleanable && $0.safety == .safe }.map(\.id))
+        selected = Set(r.items.filter(\.automaticallySelected).map(\.id))
         return true
     }
 
@@ -115,7 +115,7 @@ final class DiskModel: ObservableObject {
                 let items = Self.sorted((self.report?.items ?? []) + found)
                 self.report = ScanReport(items: items, denied: [], started: started, duration: Date().timeIntervalSince(started))
                 self.report?.language = language
-                self.selected.formUnion(found.filter { $0.cleanable && $0.safety == .safe }.map(\.id))
+                self.selected.formUnion(found.filter(\.automaticallySelected).map(\.id))
             }
         }
         queue.async { [weak self] in
@@ -134,7 +134,7 @@ final class DiskModel: ObservableObject {
     /// Preserve choices made while partial results were arriving. Only newly discovered safe items are selected.
     func acceptScan(_ result: ScanReport) {
         let seen = Set(report?.items.map(\.id) ?? [])
-        let newSafe = result.items.filter { !seen.contains($0.id) && $0.cleanable && $0.safety == .safe }
+        let newSafe = result.items.filter { !seen.contains($0.id) && $0.automaticallySelected }
         selected = selected.intersection(result.items.filter(\.cleanable).map(\.id)).union(newSafe.map(\.id))
         report = result
         if let categories = result.categories {

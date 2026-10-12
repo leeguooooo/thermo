@@ -64,13 +64,27 @@ final class CleaningStateTests: XCTestCase {
     }
 
     func testCompletingScanPreservesDeselectionAndSelectsNewSafeItems() {
-        let first = CleanItem(id: "first", category: .devCaches, title: "First", safety: .safe, bytes: 10, paths: ["/fixture/first"])
-        let next = CleanItem(id: "next", category: .devCaches, title: "Next", safety: .safe, bytes: 20, paths: ["/fixture/next"])
+        let first = CleanItem(id: "first", category: .system, title: "First", safety: .safe, bytes: 10, paths: ["/fixture/first"])
+        let next = CleanItem(id: "next", category: .system, title: "Next", safety: .safe, bytes: 20, paths: ["/fixture/next"])
         let model = DiskModel(report: ScanReport(items: [first], denied: [], started: Date(), duration: 0))
         // The streamed item was manually unchecked before the scan finished.
         model.selected = []
         model.acceptScan(ScanReport(items: [first, next], denied: [], started: Date(), duration: 1))
         XCTAssertEqual(model.selected, ["next"])
+    }
+
+    func testSelectSafeAndScanCompletionKeepDevelopmentDependencies() {
+        let logs = CleanItem(id: "logs", category: .system, title: "Logs", safety: .safe, bytes: 10, paths: ["/fixture/logs"])
+        let sdk = CleanItem(id: "sdk", category: .xcode, title: "SDK", safety: .safe, bytes: 100, paths: ["/fixture/sdk"])
+        let report = ScanReport(items: [logs, sdk], denied: [], started: Date(), duration: 0)
+        let model = DiskModel()
+        model.acceptScan(report)
+        XCTAssertEqual(model.selected, ["logs"])
+        model.selectSafe()
+        XCTAssertEqual(model.selected, ["logs"])
+        XCTAssertEqual(model.safeBytes, 10)
+        model.toggle(sdk)
+        XCTAssertTrue(model.selected.contains("sdk"), "An explicit choice remains possible")
     }
 
     func testPartialSessionCleanupKeepsUnselectedSession() {
