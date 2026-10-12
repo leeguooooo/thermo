@@ -39,11 +39,33 @@ enum AppData {
     static let minimum: Int64 = 1_000_000_000
 
     static func scan(_ ctx: ScanContext) -> [CleanItem] {
+        // Tens of GB in up to 100,000 files per app: measured side by side. Private sizes, not used
+        // space: WhatsApp's 12 GB on disk frees 4 GB (its media is hard-linked and cloned).
+        let present = apps.map { app in (app, app.paths.map(ctx.path).filter(FS.exists)) }.filter { !$0.1.isEmpty }
+        let containers = ctx.path("~/Library/Containers")
+        let extras = FS.children(containers).filter {
+            let n = ($0 as NSString).lastPathComponent
+            return n.hasPrefix("com.tencent.xinWeChat") && n != "com.tencent.xinWeChat"
+        }
+        let jobs = present.flatMap { $0.1 } + extras
+        var sizes = [TreeSize](repeating: TreeSize(), count: jobs.count)
+        let lock = NSLock()
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 4
+        queue.qualityOfService = ctx.options.lowPriority ? .background : .utility
+        for (i, path) in jobs.enumerated() {
+            queue.addOperation {
+                guard ScanCancellation.current?.isCancelled != true else { return }
+                let s = FS.size(path, trackNewest: true)
+                lock.lock(); sizes[i] = s; lock.unlock()
+            }
+        }
+        queue.waitUntilAllOperationsAreFinished()
+        let measured = Dictionary(zip(jobs, sizes), uniquingKeysWith: { a, _ in a })
+
         var out: [CleanItem] = []
-        for app in apps {
-            let roots = app.paths.map(ctx.path).filter(FS.exists)
-            guard !roots.isEmpty else { continue }
-            let size = roots.reduce(TreeSize()) { $0 + FS.size($1, trackNewest: true) }
+        for (app, roots) in present {
+            let size = roots.reduce(TreeSize()) { $0 + (measured[$1] ?? TreeSize()) }
             guard size.bytes >= minimum else { continue }
             out.append(CleanItem(id: "app-data/\(app.id)", category: .system, title: tr("%1$@ data", app.name),
                                  detail: roots.count == 1 ? ctx.tilde(roots[0]) : tr("%1$@ and %2$@ more", ctx.tilde(roots[0]), String(roots.count - 1)),
@@ -52,11 +74,9 @@ enum AppData {
                                  hint: tr("in %1$@: %2$@", app.name, tr(app.howTo))))
         }
         // Copies of a chat app's container made by automation tools (e.g. a second WeChat sandbox).
-        let containers = ctx.path("~/Library/Containers")
-        for c in FS.children(containers) {
+        for c in extras {
             let n = (c as NSString).lastPathComponent
-            guard n.hasPrefix("com.tencent.xinWeChat"), n != "com.tencent.xinWeChat" else { continue }
-            let size = FS.size(c, trackNewest: true)
+            let size = measured[c] ?? TreeSize()
             guard size.bytes >= minimum else { continue }
             out.append(CleanItem(id: "app-data/\(n)", category: .system, title: tr("Extra WeChat sandbox · %1$@", n),
                                  detail: ctx.tilde(c), safety: .review, bytes: size.bytes, files: size.files, lastUsed: size.newest,

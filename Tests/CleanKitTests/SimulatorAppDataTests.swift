@@ -47,12 +47,12 @@ final class SimulatorAppDataTests: XCTestCase {
 
         let old = try? XCTUnwrap(byID["simulator-runtime/OLD"])
         XCTAssertEqual(old?.title, "Simulator runtime · iOS 27.2")
-        XCTAssertEqual(old?.commands?.first, ["xcrun", "simctl", "runtime", "delete", "OLD"])
+        XCTAssertEqual(old?.commands, [["xcrun", "simctl", "runtime", "delete", "OLD"], ["xcrun", "simctl", "delete", "A"]])
         XCTAssertTrue(old?.cleanable ?? false, "commands alone make an item cleanable")
         XCTAssertNil(byID["simulator-runtime/USED"], "used two days ago")
         XCTAssertNil(byID["simulator-runtime/SYS"], "not deletable")
 
-        XCTAssertEqual(byID["simulator-unavailable"]?.commands, [["xcrun", "simctl", "delete", "unavailable"]])
+        XCTAssertEqual(byID["simulator-unavailable"]?.commands, [["xcrun", "simctl", "delete", "D"]])
         XCTAssertEqual(byID["simulator-device/B"]?.commands, [["xcrun", "simctl", "erase", "B"]])
         XCTAssertNotNil(byID["simulator-device/C"]?.blocked, "a running simulator is not erased")
         XCTAssertNil(byID["simulator-device/A"], "small device data is not worth a line")

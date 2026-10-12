@@ -11,6 +11,7 @@ struct PulseCommand {
         let verdict: String
         let summary: String
         let culprit: String?
+        let nextStep: MachinePulse.NextStep?
         let load1: Double
         let load5: Double
         let cores: Int
@@ -20,6 +21,9 @@ struct PulseCommand {
         let swapTotalMB: Int
         /// "Swap files take N GB of disk space …" when they are big.
         let swapNote: String?
+        /// Free space on the startup disk, and a warning once it runs low.
+        let diskFreeBytes: Int64?
+        let diskNote: String?
         /// Every program's advice in one place (e.g. "restart Chrome, frees about 19 GB").
         let advice: [String]
         let programs: [MachinePulse.Hog]
@@ -48,10 +52,10 @@ struct PulseCommand {
             if let v = s?.cpu { temps["cpu"] = v }
             if let v = s?.gpu { temps["gpu"] = v }
             let report = Report(
-                verdict: pulse.verdict.rawValue, summary: pulse.verdictText, culprit: pulse.culpritText,
+                verdict: pulse.verdict.rawValue, summary: pulse.verdictText, culprit: pulse.culpritText, nextStep: pulse.nextStep,
                 load1: pulse.load1, load5: pulse.load5, cores: pulse.cores, thermal: pulse.thermal.rawValue,
                 memory: pulse.memory.rawValue, swapUsedMB: pulse.swapUsedMB, swapTotalMB: pulse.swapTotalMB,
-                swapNote: pulse.swapDiskText, advice: pulse.hogs.compactMap { $0.advice?.text },
+                swapNote: pulse.swapDiskText, diskFreeBytes: pulse.diskFreeBytes, diskNote: pulse.diskText, advice: pulse.hogs.compactMap { $0.advice?.text },
                 programs: pulse.hogs, temperatures: temps,
                 fans: (s?.fans ?? []).map { .init(name: $0.name, rpm: $0.rpm, min: $0.min, max: $0.max, manual: $0.manual) },
                 systemPowerW: s?.systemPower, batteryPercent: s?.battery?.percent)
@@ -62,6 +66,12 @@ struct PulseCommand {
         let mark = pulse.verdict == .ok ? style.green("✓") : pulse.verdict == .busy ? style.yellow("!") : style.red("!")
         var lines = [mark + " " + style.bold(pulse.verdictText)]
         if let c = pulse.culpritText { lines.append("  " + c) }
+        if let next = pulse.nextStep {
+            lines.append("  " + next.text)
+            if next.kind == "inspectBrowser", let program = next.program {
+                lines.append(style.dim("  thermo pulse chrome --app " + ("'" + program.replacingOccurrences(of: "'", with: "'\"'\"'") + "'") + " --watch 30"))
+            }
+        }
         lines.append(style.dim("  " + tr("load %1$@ / %2$@ (1 / 5 min) on %3$@ cores · memory %4$@ · swap %5$@ · thermal pressure %6$@",
                                          String(format: "%.1f", pulse.load1), String(format: "%.1f", pulse.load5), String(pulse.cores),
                                          MachinePulse.memoryName(pulse.memory), Self.size(pulse.swapUsedMB * 1024),
@@ -86,6 +96,7 @@ struct PulseCommand {
                 }
             }
         }
+        if let note = pulse.diskText { lines.append(""); lines.append("  " + style.yellow(note)) }
         if let note = pulse.swapDiskText { lines.append(""); lines.append("  " + style.dim(note)) }
         if let s {
             lines.append("")
@@ -191,7 +202,7 @@ struct PulseCommand {
     func restart(_ targets: [String]) throws {
         guard let target = targets.first else { throw CLIError("usage: thermo pulse restart NAME|PID [--yes]") }
         let style = app.style
-        let h = try pick(target)
+        var h = try pick(target)
         guard h.quittable, let path = h.app else {
             throw CLIError("\(h.name) can't be restarted from here (not an app, a system process, an AI agent session or Thermo)")
         }
@@ -202,6 +213,10 @@ struct PulseCommand {
         if windows == .thermoReopensTabs { print("  reopen its tabs  (saved to \(BrowserSession.backupURL().path))") }
         print("  " + style.yellow(MachinePulse.restartNote(windows)))
         guard try confirm() else { return }
+        let originalID = h.id
+        h = try pick(target)
+        guard h.id == originalID, h.quittable else { throw CLIError("program changed since confirmation; check again") }
+        let before = MachinePulse.sample()
         var saved: BrowserSession.Saved?
         if windows == .thermoReopensTabs {
             // Without the tab list, quitting would lose them: don't.
@@ -228,10 +243,24 @@ struct PulseCommand {
             guard BrowserSession.reopen(saved) else {
                 throw CLIError("\(h.name) restarted but its tabs could not be reopened; they are listed in \(BrowserSession.backupURL().path)")
             }
-            print(style.green("✓") + " restarted \(h.name) and reopened \(saved.tabCount) tabs")
+            print("Reopen request sent to \(h.name); reopened \(saved.tabCount) tabs")
+            review(h, before: before, action: .restart)
             return
         }
-        print(style.green("✓") + " restarted \(h.name)")
+        print("Reopen request sent to \(h.name)")
+        review(h, before: before, action: .restart)
+    }
+
+    /// Confirm the action's effect separately from successfully sending a quit/open request.
+    func review(_ hog: MachinePulse.Hog, before: MachinePulse, action: PulseActionReview.Action) {
+        print(app.style.dim(tr("Checking the effect of the action…")))
+        Thread.sleep(forTimeInterval: 5)
+        let after = MachinePulse.sample()
+        let inventory = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
+        let result = PulseActionReview(action: action, target: hog, before: before, after: after,
+                                       afterTarget: PulseActionReview.findTarget(hog, in: inventory), inventoryAvailable: !inventory.isEmpty)
+        print(result.summary)
+        print(app.style.dim(result.detail))
     }
 
     func quitApp(_ path: String, name: String) throws {
@@ -260,7 +289,7 @@ struct PulseCommand {
     func quit(_ targets: [String]) throws {
         guard let target = targets.first else { throw CLIError("usage: thermo pulse quit NAME|PID [--yes]") }
         let style = app.style
-        let h = try pick(target)
+        var h = try pick(target)
         guard h.quittable else {
             throw CLIError("\(h.name) is not offered for quitting (system process, AI agent session or Thermo itself)")
         }
@@ -269,12 +298,17 @@ struct PulseCommand {
         print(style.bold("About to stop \(h.name)") + style.dim(String(format: "  %.0f%% CPU · %@", h.cpu, Self.size(h.memoryKB))))
         print("  " + plan)
         guard try confirm() else { return }
+        let originalID = h.id
+        h = try pick(target)
+        guard h.id == originalID, h.quittable else { throw CLIError("program changed since confirmation; check again") }
+        let before = MachinePulse.sample()
         if let path = h.app {
             try quitApp(path, name: h.name)
         } else {
             for pid in h.pids where pid != getpid() { kill(pid, SIGTERM) }
         }
         print(style.green("✓") + " asked \(h.name) to stop")
+        review(h, before: before, action: .quit)
     }
 }
 

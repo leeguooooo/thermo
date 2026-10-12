@@ -20,6 +20,14 @@ public struct TreeSize: Sendable {
     }
 }
 
+/// Used space, not a promise of how much deletion frees (APFS clones may share blocks).
+public struct DiskFootprint: Sendable {
+    public let allocated: Int64
+    public let files: Int
+    public let newest: Date?
+    public let denied: Bool
+}
+
 public enum FS {
     static let fm = FileManager.default
 
@@ -32,6 +40,10 @@ public enum FS {
         var st = stat()
         return lstat(path, &st) == 0 && (st.st_mode & S_IFMT) == S_IFDIR
     }
+
+    /// Ages count status changes (ctime) as well as content changes, so something moved, renamed or
+    /// unpacked recently is not taken for untouched. Tests that backdate files with `utimes` turn it off.
+    nonisolated(unsafe) static var countsStatusChanges = true
 
     public static func mtime(_ path: String) -> Date? {
         var st = stat()
@@ -61,6 +73,16 @@ public enum FS {
     /// Sizes a path. `trackNewest` stats modification times too (slightly slower).
     /// Stops early (partial size) when the running scan is cancelled.
     public static func size(_ path: String, trackNewest: Bool = false, cancellation: ScanCancellation? = nil) -> TreeSize {
+        measure(path, trackNewest: trackNewest, cancellation: cancellation, privateSizes: true)
+    }
+
+    /// Fast discovery: batched allocation metadata only; no expensive APFS private-block queries.
+    public static func footprint(_ path: String, cancellation: ScanCancellation? = nil) -> DiskFootprint {
+        let result = measure(path, trackNewest: false, cancellation: cancellation, privateSizes: false)
+        return DiskFootprint(allocated: result.allocated, files: result.files, newest: result.newest, denied: result.denied)
+    }
+
+    private static func measure(_ path: String, trackNewest: Bool, cancellation: ScanCancellation?, privateSizes: Bool) -> TreeSize {
         let cancellation = cancellation ?? ScanCancellation.current
         if cancellation?.isCancelled == true { return TreeSize() }
         var r = TreeSize()
@@ -71,16 +93,16 @@ public enum FS {
         }
         if (st.st_mode & S_IFMT) != S_IFDIR {
             let blocks = Int64(st.st_blocks) * 512
-            let sizes = (st.st_mode & S_IFMT) == S_IFREG ? BulkWalk.fileSize(path) : nil
+            let sizes = privateSizes && (st.st_mode & S_IFMT) == S_IFREG ? BulkWalk.fileSize(path) : nil
             r.allocated = sizes?.allocated ?? blocks
             r.bytes = sizes?.privateSize ?? blocks
             r.files = 1
-            r.newest = Date(timeIntervalSince1970: TimeInterval(st.st_mtimespec.tv_sec))
+            r.newest = Date(timeIntervalSince1970: TimeInterval(max(st.st_mtimespec.tv_sec, countsStatusChanges ? st.st_ctimespec.tv_sec : 0)))
             return r
         }
         // Batched attributes with private sizes; fts below is the fallback for file systems
         // without getattrlistbulk.
-        if let bulk = BulkWalk.size(path, trackNewest: trackNewest, device: st.st_dev, cancellation: cancellation) { return bulk }
+        if let bulk = BulkWalk.size(path, trackNewest: trackNewest, device: st.st_dev, cancellation: cancellation, privateSizes: privateSizes) { return bulk }
         var seenInodes = Set<UInt64>()
         let opts = FTS_PHYSICAL | FTS_NOCHDIR | FTS_XDEV
         var newest: Int = 0
@@ -108,7 +130,7 @@ public enum FS {
                     }
                     r.bytes += Int64(s.st_blocks) * 512
                     r.allocated += Int64(s.st_blocks) * 512
-                    if trackNewest, s.st_mtimespec.tv_sec > newest { newest = s.st_mtimespec.tv_sec }
+                    if trackNewest { newest = max(newest, s.st_mtimespec.tv_sec, FS.countsStatusChanges ? s.st_ctimespec.tv_sec : 0) }
                 }
             }
         }
@@ -143,7 +165,9 @@ public struct CleanResult: Codable, Sendable {
     public var id: String
     public var removed: [String] = []
     public var failed: [String: String] = [:]
+    /// Estimated private bytes of the removed files, not the measured volume change.
     public var bytes: Int64 = 0
+    public var spaceObservation: DiskSpaceObservation?
     public var trashed: Bool
 
     public init(id: String, trashed: Bool) { self.id = id; self.trashed = trashed }
@@ -175,20 +199,149 @@ public enum Cleaner {
     /// `item.paths` is touched.
     /// `scannedAt`: paths modified after this moment changed since the user saw the scan and are skipped.
     public static func clean(_ item: CleanItem, mode: RemovalMode = .auto, guard g: Guard = Guard(),
-                             scannedAt: Date? = nil) -> CleanResult {
-        let trash = mode.trashes(item.safety)
+                             scannedAt: Date? = nil, processTable: ProcessTable? = nil) -> CleanResult {
+        let before = DiskSpaceSnapshot.measure(path: g.home)
+        var result = perform(item, mode: mode, guard: g, scannedAt: scannedAt, processTable: processTable)
+        if !result.removed.isEmpty {
+            ScanReportCache.invalidate(home: g.home)
+            SpaceOverview.invalidate(home: g.home)
+        }
+        result.spaceObservation = DiskSpaceObservation(before: before, after: DiskSpaceSnapshot.measure(path: g.home))
+        log(result, item: item, to: logURL(home: g.home))
+        return result
+    }
+
+    /// A live check, also usable while preparing a review. A cached scan is not proof that
+    /// its owning app, build tool, or executable is still idle.
+    public static func refusal(_ item: CleanItem, mode: RemovalMode, processes: ProcessTable) -> String? {
+        refusal(item, mode: mode, processes: processes, locations: item.paths.map(Guard.deletionLocation))
+    }
+
+    /// `locations`: the item's paths as removal would resolve them, computed once per item.
+    static func refusal(_ item: CleanItem, mode: RemovalMode, processes: ProcessTable, locations: [String]) -> String? {
+        let rule = Rules.paths.first(where: { $0.id == item.id })
+        if let blocked = item.blocked {
+            // Only the rule's known running-app block may be cleared by this live check.
+            let appMessages = (rule?.apps ?? []).map { tr("quit %1$@ first", $0) }
+            let projectMessages = item.category == .projects ? [tr("an agent is running in it"), tr("a build tool is running in this project"), tr("a running executable uses this location")] : []
+            if !appMessages.contains(blocked) && !projectMessages.contains(blocked) { return blocked }
+        }
+        if mode == .trash, !(item.commands ?? []).isEmpty {
+            return tr("Tool-managed removal is permanent and cannot use the Trash")
+        }
+        if let rule, let app = processes.running(rule.apps) {
+            return tr("quit %1$@ first", app)
+        }
+        if ToolCleanup.isBrowserOldVersion(item), let app = processes.running([String(item.id.dropFirst(ToolCleanup.oldVersionPrefix.count))]) {
+            return tr("quit %1$@ first", app)
+        }
+        if let group = item.group, item.category == .projects {
+            let dir = URL(fileURLWithPath: group).resolvingSymlinksInPath().path
+            let related: (String) -> Bool = { rawCWD in
+                let cwd = URL(fileURLWithPath: rawCWD).resolvingSymlinksInPath().path
+                return cwd == dir || cwd.hasPrefix(dir + "/") ||
+                    (dir.hasPrefix(cwd + "/") && ProjectSignals.isRepoRoot(cwd, containing: dir))
+            }
+            if processes.agentDirectories().contains(where: related) { return tr("an agent is running in it") }
+            let builders = ["swift", "swift-build", "swift-frontend", "cargo", "rustc", "xcodebuild", "clang", "clang++",
+                            "cmake", "ninja", "make", "gradle", "mvn", "flutter", "dart", "npm", "pnpm", "yarn",
+                            "node", "java", "python", "python3", "dotnet", "zig", "go"]
+            if processes.entries.contains(where: { builders.contains($0.name) && $0.cwd.map(related) == true }) {
+                return tr("a build tool is running in this project")
+            }
+        }
+        // Resolved once per item: per process it was paths × processes symlink lookups (1,600 sessions took minutes).
+        if processes.entries.contains(where: { process in
+            guard let exe = process.executable else { return false }
+            return locations.contains { exe == $0 || exe.hasPrefix($0 + "/") }
+        }) { return tr("a running executable uses this location") }
+        return nil
+    }
+
+    private static func perform(_ item: CleanItem, mode: RemovalMode, guard g: Guard, scannedAt: Date?, processTable: ProcessTable?) -> CleanResult {
+        let trash = mode.trashes(item.safety) && !item.paths.isEmpty
         var result = CleanResult(id: item.id, trashed: trash)
-        guard item.blocked == nil else {
-            result.failed[item.id] = item.blocked
+        if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
+            result.failed[item.id] = why
             return result
         }
+        // A saved scan can outlive a Git add or a newly started agent. Recheck projects
+        // immediately before removing their output rather than trusting the cached decision.
+        let projectProcesses = item.category == .projects ? ProcessTable.current(.init(cpu: false)) : nil
+        let liveSessionIDs = item.category == .aiSessions
+            ? Set(ClaudeSessions.live(AgentHome(home: g.home)).map(\.sessionId)) : []
+        let resumeProcesses = item.category == .aiSessions ? (processTable ?? ProcessTable.current(.init(cpu: false))).entries : []
+        let resumedIDs = Set(resumeProcesses.flatMap { process -> [String] in
+            guard ProcessTable.agentNames.contains(process.name) || ProcessTable.agentNames.contains(((process.argv.first ?? "") as NSString).lastPathComponent) else { return [] }
+            var ids: [String] = []
+            for (index, argument) in process.argv.enumerated() where ["resume", "--resume", "--session"].contains(argument) {
+                if index + 1 < process.argv.count, process.argv[index + 1].count >= 8 { ids.append(process.argv[index + 1]) }
+            }
+            return ids
+        })
         let fm = FileManager.default
+        var openFiles: OpenFiles?? = nil
+        // Rechecked as removal goes (an app may start meanwhile), but with the paths resolved once
+        // and the process list read at most once a second: per path, 1,600 sessions took 8 minutes.
+        let locations = item.paths.map(Guard.deletionLocation)
+        // The item-wide answer depends only on the process list, so it is recomputed when that is reread.
+        var processesRead = Date()
+        var itemRefusal = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false)), locations: locations)
+        func currentRefusal() -> String? {
+            if processTable == nil, Date().timeIntervalSince(processesRead) >= 1 {
+                itemRefusal = refusal(item, mode: mode, processes: ProcessTable.current(.init(cpu: false)), locations: locations)
+                processesRead = Date()
+            }
+            return itemRefusal
+        }
         for path in item.paths {
-            if let why = g.refusal(path) { result.failed[path] = why; continue }
+            if let why = ToolCleanup.isBrowserOldVersion(item) ? ToolCleanup.oldVersionRefusal(path) : g.refusal(path) { result.failed[path] = why; continue }
             guard FS.exists(path) else { continue }
+            if item.category == .aiSessions {
+                let name = ((path as NSString).lastPathComponent as NSString).deletingPathExtension
+                if liveSessionIDs.contains(name) || resumedIDs.contains(where: { name == $0 || name.hasSuffix("-" + $0) }) {
+                    result.failed[path] = tr("this session is running")
+                    continue
+                }
+            }
+            if item.category == .projects {
+                let dir = item.group ?? (path as NSString).deletingLastPathComponent
+                guard path.hasPrefix(dir + "/") else { result.failed[path] = "project path does not match its group"; continue }
+                let name = String(path.dropFirst(dir.count + 1))
+                if Projects.protectedArtifacts(dir, [name]).contains(name) {
+                    result.failed[path] = "Git tracks this output, or its status could not be verified"
+                    continue
+                }
+                if let processes = projectProcesses,
+                   processes.agentDirectories().contains(where: { $0 == dir || $0.hasPrefix(dir + "/") ||
+                       (dir.hasPrefix($0 + "/") && ProjectSignals.isRepoRoot($0, containing: dir)) }) {
+                    result.failed[path] = "an agent is running in it"
+                    continue
+                }
+            }
             let size = FS.size(path, trackNewest: scannedAt != nil)
             if let t = scannedAt, let n = size.newest, n > t.addingTimeInterval(1) {
                 result.failed[path] = "modified since the scan"
+                continue
+            }
+            if let why = currentRefusal() {
+                result.failed[path] = why
+                continue
+            }
+            // Resolve ancestors again after sizing: a changed parent alias must not redirect removal.
+            if let why = ToolCleanup.isBrowserOldVersion(item) ? ToolCleanup.oldVersionRefusal(path) : g.refusal(path) { result.failed[path] = why; continue }
+            // The same file as scanned, and nothing running holds it or anything inside it open.
+            if let scanned = item.identities?[path], FileIdentity.of(path) != scanned {
+                result.failed[path] = tr("replaced since the scan")
+                continue
+            }
+            if openFiles == nil { openFiles = .some(OpenFiles.current()) }
+            guard let snapshot = openFiles ?? nil else {
+                result.failed[path] = tr("could not check whether a program is using it")
+                continue
+            }
+            if let holder = snapshot.holder(of: path) {
+                result.failed[path] = tr("%1$@ has files open here", holder.name)
                 continue
             }
             // Items already in the Trash can only be removed for good.
@@ -207,19 +360,28 @@ public enum Cleaner {
         }
         // Things only their own tool may remove: report the item's size once every command succeeded.
         if let commands = item.commands, !commands.isEmpty {
+            if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
+                result.failed[item.id] = why
+                return result
+            }
             var ok = true
+            let measuredBefore = item.measure.map { FS.size($0) }
             for argv in commands {
+                if let why = Simulators.currentRemovalRefusal([argv], requireUnavailable: item.id == "simulator-unavailable") {
+                    ok = false; result.failed[argv.joined(separator: " ")] = why
+                    break
+                }
                 let (status, output) = Shell.exec(argv, timeout: 180)
                 let line = argv.joined(separator: " ")
-                if status == 0 { result.removed.append("ran: " + line) } else { ok = false; result.failed[line] = output.isEmpty ? "exit \(status)" : output }
+                if status == 0 { result.removed.append("ran: " + line) } else { ok = false; result.failed[line] = output.isEmpty ? "exit \(status)" : output; break }
             }
-            if ok { result.bytes += item.bytes }
+            if ok, let before = measuredBefore, let paths = item.measure {
+                result.bytes += max(0, before.bytes - FS.size(paths).bytes)
+            } else if ok { result.bytes += item.bytes }
         }
         if !result.removed.isEmpty, let cmds = item.afterClean {
             for c in cmds { _ = Shell.run(c, timeout: 30) }
         }
-        if !result.removed.isEmpty { ScanReportCache.invalidate(home: g.home) }
-        log(result, item: item, to: logURL(home: g.home))
         return result
     }
 
@@ -228,6 +390,9 @@ public enum Cleaner {
         var lines = r.removed.map { "\(f.string(from: Date())) \(r.trashed ? "trash" : "delete") \(item.id) \($0)" }
         lines += r.failed.map { "\(f.string(from: Date())) failed \(item.id) \($0.key): \($0.value)" }
         guard !lines.isEmpty else { return }
+        if let observation = r.spaceObservation, let delta = observation.availableChangeBytes {
+            lines.append("\(f.string(from: Date())) disk-change \(item.id) \(delta) bytes (includes other disk activity)")
+        }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         let data = (lines.joined(separator: "\n") + "\n").data(using: .utf8)!
         if let h = try? FileHandle(forWritingTo: url) {
@@ -241,43 +406,24 @@ public enum Cleaner {
 // MARK: - Shell
 
 enum Shell {
-    /// Runs a program directly (no shell): exit status and combined output, or -1 on timeout.
-    static func exec(_ argv: [String], timeout: TimeInterval) -> (Int32, String) {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        p.arguments = argv
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = pipe
-        p.standardInput = FileHandle.nullDevice
-        do { try p.run() } catch { return (-1, "\(error)") }
-        let done = DispatchSemaphore(value: 0)
-        var data = Data()
-        DispatchQueue.global().async { data = pipe.fileHandleForReading.readDataToEndOfFile(); done.signal() }
-        if done.wait(timeout: .now() + timeout) == .timedOut { p.terminate(); return (-1, "timed out") }
-        p.waitUntilExit()
-        return (p.terminationStatus, String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines))
+    /// Bounded output, with timeout/cancellation limited to this command's own child.
+    static func exec(_ argv: [String], timeout: TimeInterval, cancellation: ScanCancellation? = nil) -> (Int32, String) {
+        let result = CommandRunner.run("/usr/bin/env", arguments: argv, timeout: timeout,
+                                       cancelled: { cancellation?.isCancelled == true })
+        if result.cancelled { return (-1, "cancelled") }
+        if result.timedOut { return (-1, "timed out") }
+        if result.truncated { return (-1, "command output exceeded the limit") }
+        return (result.status, result.output.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
-    /// Runs `/bin/sh -c command`, returns stdout (nil on failure or timeout).
+    /// Read-only scan commands inherit the current scan token unless explicitly supplied.
     @discardableResult
-    static func run(_ command: String, timeout: TimeInterval = 10) -> String? {
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/bin/sh")
-        p.arguments = ["-c", command]
-        let out = Pipe()
-        p.standardOutput = out
-        p.standardError = FileHandle.nullDevice
-        do { try p.run() } catch { return nil }
-        let deadline = Date().addingTimeInterval(timeout)
-        var data = Data()
-        let reader = DispatchQueue(label: "dev.thermo.clean.shell")
-        let done = DispatchSemaphore(value: 0)
-        reader.async { data = out.fileHandleForReading.readDataToEndOfFile(); done.signal() }
-        while p.isRunning && Date() < deadline { usleep(20_000) }
-        if p.isRunning { p.terminate(); return nil }
-        done.wait()
-        return p.terminationStatus == 0 ? String(data: data, encoding: .utf8) : nil
+    static func run(_ command: String, timeout: TimeInterval = 10, cancellation: ScanCancellation? = nil) -> String? {
+        let token = cancellation ?? ScanCancellation.current
+        let result = CommandRunner.run("/bin/sh", arguments: ["-c", command], timeout: timeout,
+                                       captureError: false, cancelled: { token?.isCancelled == true })
+        guard result.status == 0, !result.timedOut, !result.cancelled, !result.truncated else { return nil }
+        return result.output
     }
 
     static func quote(_ s: String) -> String { "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'" }

@@ -3,10 +3,12 @@
 // User-facing text goes through tr(); the CLI pins English, the app follows the chosen language.
 @_exported import ThermoL10n
 import Foundation
+import CryptoKit
 
 /// What a finding is, for grouping in the CLI and the app.
 public enum CleanCategory: String, CaseIterable, Codable, Sendable {
     case aiSessions = "ai-sessions"
+    case agentWorktrees = "agent-worktrees"
     case aiModels = "ai-models"
     case aiCaches = "ai-caches"
     case devCaches = "dev-caches"
@@ -18,6 +20,7 @@ public enum CleanCategory: String, CaseIterable, Codable, Sendable {
     public var title: String {
         switch self {
         case .aiSessions: return tr("AI sessions")
+        case .agentWorktrees: return tr("Agent worktrees")
         case .aiModels: return tr("AI models")
         case .aiCaches: return tr("AI tool caches")
         case .devCaches: return tr("Developer caches")
@@ -28,7 +31,7 @@ public enum CleanCategory: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    public var isAI: Bool { [.aiSessions, .aiModels, .aiCaches].contains(self) }
+    public var isAI: Bool { [.aiSessions, .agentWorktrees, .aiModels, .aiCaches].contains(self) }
 }
 
 /// How sure we are that removing something costs the user nothing.
@@ -87,15 +90,20 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     public var parts: [CleanPart]?
     /// Items with the same group belong together (build output of one project folder).
     public var group: String?
+    /// For commands whose effect is not known beforehand (`pnpm store prune`): folders measured before
+    /// and after, so the result reports what was actually freed rather than `bytes` (an upper bound).
+    public var measure: [String]?
+    /// `device:inode` of each path when it was scanned; a path that names another file at cleanup is skipped.
+    public var identities: [String: String]?
 
     public init(id: String, category: CleanCategory, title: String, detail: String = "", safety: Safety,
                 bytes: Int64 = 0, files: Int = 0, lastUsed: Date? = nil, paths: [String] = [],
                 note: String? = nil, blocked: String? = nil, hint: String? = nil, afterClean: [String]? = nil,
-                parts: [CleanPart]? = nil, group: String? = nil, commands: [[String]]? = nil) {
+                parts: [CleanPart]? = nil, group: String? = nil, commands: [[String]]? = nil, measure: [String]? = nil) {
         self.id = id; self.category = category; self.title = title; self.detail = detail; self.safety = safety
         self.bytes = bytes; self.files = files; self.lastUsed = lastUsed; self.paths = paths
         self.note = note; self.blocked = blocked; self.hint = hint; self.afterClean = afterClean; self.parts = parts; self.group = group
-        self.commands = commands
+        self.commands = commands; self.measure = measure
     }
 
     public var cleanable: Bool { blocked == nil && bytes > 0 && (!paths.isEmpty || !(commands ?? []).isEmpty) }
@@ -132,6 +140,8 @@ public struct ScanReport: Codable, Sendable {
     /// What the scan covered, so a saved report is only reused for selections it can answer.
     public var categories: [CleanCategory]?
     public var olderThanDays: Int?
+    public var projectRoots: [String]?
+    public var discoverProjectRoots: Bool?
     /// Titles and notes are written in this language at scan time ("en", "zh-Hans").
     public var language: String?
 
@@ -143,7 +153,7 @@ public struct ScanReport: Codable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays, language
+        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays, projectRoots, discoverProjectRoots, language
     }
 
     public init(from decoder: Decoder) throws {
@@ -157,12 +167,27 @@ public struct ScanReport: Codable, Sendable {
         categories = try c.decodeIfPresent([CleanCategory].self, forKey: .categories)
         olderThanDays = try c.decodeIfPresent(Int.self, forKey: .olderThanDays)
         language = try c.decodeIfPresent(String.self, forKey: .language)
+        projectRoots = try c.decodeIfPresent([String].self, forKey: .projectRoots)
+        discoverProjectRoots = try c.decodeIfPresent(Bool.self, forKey: .discoverProjectRoots)
+        // Before worktrees had their own category, cached session scans included them.
+        let oldWorktrees = items.indices.filter { items[$0].category == .aiSessions && items[$0].id.hasPrefix("worktree/") }
+        for i in oldWorktrees { items[i].category = .agentWorktrees }
+        if !oldWorktrees.isEmpty, var scope = categories, !scope.contains(.agentWorktrees) {
+            scope.append(.agentWorktrees)
+            categories = scope
+        }
     }
 
     public var totalBytes: Int64 { items.filter(\.cleanable).reduce(0) { $0 + $1.bytes } }
 
     public func bytes(in category: CleanCategory) -> Int64 {
         items.filter { $0.category == category && $0.cleanable }.reduce(0) { $0 + $1.bytes }
+    }
+
+    /// Found but held back (its app is running, an agent works in it): a category heading that
+    /// shows only `bytes(in:)` reads 4 KB while 1.5 GB sits right under it.
+    public func blockedBytes(in category: CleanCategory) -> Int64 {
+        items.filter { $0.category == category && !$0.cleanable && $0.blocked != nil }.reduce(0) { $0 + $1.bytes }
     }
 }
 
@@ -171,16 +196,22 @@ public struct ScanOptions: Sendable {
     public var olderThanDays: Int = 30
     /// Folders searched for project build artifacts and agent worktrees.
     public var projectRoots: [String] = ScanOptions.defaultProjectRoots
+    /// Include projects discovered from editor and agent history (disable for an explicit root).
+    public var discoverProjectRoots = true
     public var categories: Set<CleanCategory> = Set(CleanCategory.allCases)
     public var home: String = NSHomeDirectory()
     /// Background priority: macOS throttles the scan's CPU and disk I/O so it stays out
     /// of the way (slower). The app uses this; the CLI, where someone waits, does not.
     public var lowPriority = false
+    /// `thermo clean run ID…`: only the steps that can produce these items run (one id must not
+    /// walk every project and app folder). Nil scans everything the categories allow.
+    public var onlyIDs: Set<String>? = nil
 
     public init() {}
 
-    public static var defaultProjectRoots: [String] {
-        let home = NSHomeDirectory()
+    public static var defaultProjectRoots: [String] { defaultProjectRoots(home: NSHomeDirectory()) }
+
+    public static func defaultProjectRoots(home: String) -> [String] {
         let fm = FileManager.default
         let candidates = ["Developer", "Projects", "projects", "Code", "code", "src", "dev", "work", "repos", "git", "github",
                           "github.com", "gitlab.com", "Workspace", "workspace", "Sites"]
@@ -190,8 +221,16 @@ public struct ScanOptions: Sendable {
             roots += top.filter { $0.hasSuffix(".com") || $0.hasSuffix(".org") || $0.hasSuffix(".io") }
                 .map { home + "/" + $0 }
         }
+        let resolvedHome = URL(fileURLWithPath: home).resolvingSymlinksInPath().path
         var seen = Set<String>()
-        return roots.filter { seen.insert(URL(fileURLWithPath: $0).resolvingSymlinksInPath().path).inserted }
+        let distinct = roots.filter {
+            let resolved = URL(fileURLWithPath: $0).resolvingSymlinksInPath().path
+            return FS.isDirectory($0) && resolved != resolvedHome && seen.insert(resolved).inserted
+        }
+        let resolved = distinct.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }
+        return distinct.enumerated().compactMap { index, root in
+            resolved.indices.contains { $0 != index && resolved[index].hasPrefix(resolved[$0] + "/") } ? nil : root
+        }
     }
 }
 
@@ -274,22 +313,60 @@ public func parseDays(_ s: String) -> Int? {
 /// The last finished scan, kept so `thermo clean run` can act on it without scanning everything
 /// again (a full scan takes minutes on a busy disk). Removal still re-checks every path.
 public enum ScanReportCache {
+    private static let lock = NSLock()
+    private static func directory(home: String) -> URL {
+        url(home: home).deletingLastPathComponent().appendingPathComponent("clean-reports", isDirectory: true)
+    }
+
+    private static func scopedURL(_ report: ScanReport, home: String) -> URL {
+        let scope: [String: Any] = [
+            "categories": report.categories?.map(\.rawValue).sorted() as Any? ?? NSNull(),
+            "age": report.olderThanDays as Any? ?? NSNull(),
+            "language": report.language as Any? ?? NSNull(),
+            "roots": report.projectRoots?.sorted() as Any? ?? NSNull(),
+            "discover": report.discoverProjectRoots as Any? ?? NSNull()
+        ]
+        let data = (try? JSONSerialization.data(withJSONObject: scope, options: .sortedKeys)) ?? Data()
+        let key = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        return directory(home: home).appendingPathComponent(key + ".json")
+    }
+
     public static func url(home: String = NSHomeDirectory()) -> URL {
         URL(fileURLWithPath: home).appendingPathComponent("Library/Caches/dev.thermo/clean-report.json")
     }
 
     public static func save(_ r: ScanReport, home: String = NSHomeDirectory()) {
         guard valid(r) else { return }
-        let u = url(home: home)
-        try? FileManager.default.createDirectory(at: u.deletingLastPathComponent(), withIntermediateDirectories: true)
+        lock.lock(); defer { lock.unlock() }
+        let folder = directory(home: home)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let e = JSONEncoder()
         e.dateEncodingStrategy = .iso8601
-        try? e.encode(r).write(to: u, options: .atomic)
+        guard let data = try? e.encode(r) else { return }
+        try? data.write(to: url(home: home), options: .atomic) // compatibility with older builds
+        let scoped = scopedURL(r, home: home)
+        if let previous = decode(scoped), previous.started > r.started { return }
+        try? data.write(to: scoped, options: .atomic)
+        // Bound disk use even when custom roots / languages / age limits vary frequently.
+        let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        let sorted = files.sorted {
+            ((try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast) >
+            ((try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast)
+        }
+        for old in sorted.dropFirst(32) { try? FileManager.default.removeItem(at: old) }
     }
 
-    /// Cleaning changes the paths in the report; the old scan must not reappear on next launch.
+    /// Cleaning invalidates every scope, so older plans cannot reappear after removal.
     public static func invalidate(home: String = NSHomeDirectory()) {
+        lock.lock(); defer { lock.unlock() }
         try? FileManager.default.removeItem(at: url(home: home))
+        try? FileManager.default.removeItem(at: directory(home: home))
+    }
+
+    private static func decode(_ url: URL) -> ScanReport? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601
+        return try? d.decode(ScanReport.self, from: data)
     }
 
     private static func valid(_ report: ScanReport) -> Bool {
@@ -315,14 +392,19 @@ public enum ScanReportCache {
         return true
     }
 
-    /// The saved report when it is younger than `maxAge` seconds.
-    public static func load(home: String = NSHomeDirectory(), maxAge: TimeInterval, now: Date = Date()) -> ScanReport? {
-        guard let data = try? Data(contentsOf: url(home: home)) else { return nil }
-        let d = JSONDecoder()
-        d.dateDecodingStrategy = .iso8601
-        guard let r = try? d.decode(ScanReport.self, from: data),
-              valid(r), now.timeIntervalSince(r.started) < maxAge, now >= r.started else { return nil }
-        return r
+    /// The newest complete report matching the caller's exact scope and freshness needs.
+    /// Reports keep their own scan dates; a fresh category never renews an older category.
+    public static func load(home: String = NSHomeDirectory(), maxAge: TimeInterval, now: Date = Date(),
+                            matching: (ScanReport) -> Bool = { _ in true }) -> ScanReport? {
+        lock.lock(); defer { lock.unlock() }
+        let saved = (try? FileManager.default.contentsOfDirectory(at: directory(home: home), includingPropertiesForKeys: nil)) ?? []
+        var best: ScanReport?
+        // Decode one report at a time; session reports can contain thousands of selectable parts.
+        for candidate in [url(home: home)] + saved.filter({ $0.pathExtension == "json" }) {
+            guard let r = decode(candidate), valid(r), now >= r.started,
+                  now.timeIntervalSince(r.started) < maxAge, matching(r) else { continue }
+            if best == nil || r.started > best!.started { best = r }
+        }
+        return best
     }
 }
-

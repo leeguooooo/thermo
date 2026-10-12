@@ -319,11 +319,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         let hog = MachinePulse.sample().hogs.first { $0.name == name }
         let model = models.browser(name, memoryKB: hog?.memoryKB, gpuKB: hog?.parts?.first { $0.role == "GPU" }?.memoryKB)
         if let i = args.firstIndex(of: "--fixture"), i + 2 < args.count {
-            let read: (String) -> ChromeInspector.Snapshot? = { p in try? JSONDecoder().decode(ChromeInspector.Snapshot.self, from: Data(contentsOf: URL(fileURLWithPath: p))) }
-            if let before = read(args[i + 1]), let after = read(args[i + 2]) {
-                model.diagnosis = ChromeInspector.diagnosis(ChromeInspector.diagnose(after, before: before), app: name,
-                                                            appMemoryKB: model.appMemoryKB, gpuKB: model.gpuKB)
-            }
+            model.loadFixture(before: args[i + 1], after: args[i + 2])
         }
         page = .browser(name)
     }
@@ -337,6 +333,11 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         case .disk: return args.contains("--no-scan") ? !models.disk.scanning : models.disk.report != nil && !models.disk.scanning
         case .agents: return models.agents.report != nil && !models.agents.scanning
         case let .browser(app): return models.browser(app).diagnosis != nil
+        case .apps(.installed): return !models.apps.loading && !models.apps.apps.isEmpty
+        case .apps(.leftovers): return models.apps.orphans != nil
+        case .memory: return MemoryModel.shared.breakdown != nil && Date().timeIntervalSince(started) > 4
+        case .space(.duplicates): return true
+        case .space: return SpaceLensModel.shared.tree != nil && !SpaceLensModel.shared.scanning
         case .overview: return models.monitor.snapshot != nil && SystemPulse.shared.sampled && Date().timeIntervalSince(started) > 4
         default: return models.monitor.snapshot != nil
         }

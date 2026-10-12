@@ -34,6 +34,47 @@ final class SpaceCacheTests: XCTestCase {
         }
     }
 
+    func testCleanupInvalidationRejectsLateResultsAndAllowsNewMeasurement() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: home) }
+        let url = home.appendingPathComponent("Library/Caches/dev.thermo/space-overview.json")
+        let old = fixture()
+        old.save(to: url)
+        SpaceOverview.invalidate(home: home.path, now: Date(timeIntervalSince1970: 200))
+        old.save(to: url)
+        XCTAssertNil(SpaceOverview.cached(from: url, now: Date(timeIntervalSince1970: 300)),
+                     "late callbacks must not resurrect a pre-cleanup measurement")
+        var fresh = fixture(); fresh.measuredAt = Date(timeIntervalSince1970: 250)
+        fresh.save(to: url)
+        XCTAssertNotNil(SpaceOverview.cached(from: url, now: Date(timeIntervalSince1970: 300)))
+        // Even an older process ignoring the marker cannot make an old file valid.
+        try JSONEncoder().encode(old).write(to: url)
+        XCTAssertNil(SpaceOverview.cached(from: url, now: Date(timeIntervalSince1970: 300)))
+    }
+
+    func testKnownHeadingsRelocalizeWithoutRenewingMeasurementOrChangingPaths() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: url) }
+        var overview = fixture()
+        overview.entries = [.init(id: "apps", title: "Applications", bytes: 10,
+                                  children: [.init(id: "/fixture/app", title: "User Named App", path: "/fixture/app", bytes: 10, children: [])])]
+        overview.save(to: url)
+        L10n.override = .simplifiedChinese
+        let cached = try XCTUnwrap(SpaceOverview.cached(from: url, now: Date(timeIntervalSince1970: 200), localize: true))
+        XCTAssertEqual(cached.1, Date(timeIntervalSince1970: 100))
+        XCTAssertEqual(cached.0.entries.first?.title, tr("Applications"))
+        XCTAssertEqual(cached.0.entries.first?.children.first?.title, "User Named App")
+        XCTAssertEqual(cached.0.entries.first?.children.first?.path, "/fixture/app")
+        XCTAssertEqual(cached.0.entries.first?.bytes, 10)
+    }
+
+    func testUnknownOverviewCategoryDoesNotPretendToBeTranslated() {
+        var overview = fixture()
+        overview.entries = [.init(id: "unknown", title: "Custom English Heading", bytes: 10, children: [])]
+        L10n.override = .simplifiedChinese
+        XCTAssertNil(overview.localizedForCurrentLanguage())
+    }
+
     func testCacheRejectsInvalidCapacityAndDuplicateOrNegativeEntries() throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: url) }

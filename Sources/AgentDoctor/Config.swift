@@ -44,6 +44,7 @@ struct ConfigChecks {
     var findings: [Finding] = []
     var inventory = Inventory()
     var servers: [MCPServer] = []
+    var crashKeys: [CrashKey] = []
 
     init(env: DoctorEnvironment) { self.env = env }
 
@@ -196,6 +197,7 @@ struct ConfigChecks {
     mutating func check(_ h: HookCommand) {
         let guarded = Shell.isGuarded(h.command)
         let subject = h.event + (h.matcher.map { $0.isEmpty || $0 == "*" ? "" : " [\($0)]" } ?? "")
+        noteCrashKey(.hooks, agent: h.agent, subject: subject, source: h.source, commands: Shell.programs(h.command), vars: h.vars)
         for program in Shell.programs(h.command) {
             let p = env.expand(program, vars: h.vars)
             if p.contains("$") { continue }  // depends on a variable we can't know
@@ -333,6 +335,7 @@ struct ConfigChecks {
         item(.mcp, agent: s.agent, id: "\(s.agent)|\(s.source)|\(s.project ?? "")|\(s.name)", name: subject,
              detail: s.url ?? ([s.command ?? ""] + s.args).joined(separator: " "), source: s.source, enabled: !s.disabled)
         defer { currentItem = nil }
+        if let cmd = s.command, !s.disabled { noteCrashKey(.mcp, agent: s.agent, subject: subject, source: s.source, commands: [cmd]) }
         offerRemoval(s)
         guard !s.disabled else { return }
 

@@ -1,5 +1,49 @@
 # Changelog
 
+## 1.1.13
+
+- Where the space is accounts for the whole disk: every folder in your home, Library and the system data volume falls under a heading (apps, app data, projects, tool and agent folders, Apple's downloaded models and voices by name, system-wide data), macOS's own volumes are shown as what cannot be removed, swap and the sleep image come from the VM volume, and each heading says what to do about it. What cannot be attributed (APFS metadata, local snapshots) is one named line, and hard links or clones counted twice are said instead of hidden.
+- A nearly full disk is named as the reason the Mac is slow (swap cannot grow, every write waits) instead of the busiest program; a warning appears below 5 GB.
+- Leftover code-sign clones of apps (Chrome left one per relaunch): free while they share blocks with the app, a full copy each once it updates; the one a running app uses stays.
+- The full cleanup scan takes about 35 s instead of minutes: APFS is asked for a file's reclaimable size only when the file may be a clone. Removing a chosen item no longer scans everything first, and 1,600 agent sessions go to the Trash in seconds instead of minutes.
+- Cleanup categories show what is held back by a running app next to what can go now. The `claude` command line and Claude.app's browser helper no longer count as the Claude app running, which kept its caches from ever being cleaned.
+- Memory gets its own section: where the memory is (apps, wired, compressed, cached files, free), swap on the disk, memory and swap over the last hour, six or 24, and every program by memory with its helpers and pages folded in, each with Quit, Restart or (for a browser) its pages.
+- Worth a restart: programs that keep growing and do not come down, and big apps that have run for a day or more (Xcode, 26 h, 2.4 GB). Thermo records each program's memory every five minutes to tell a leak from a program that is simply big.
+- When the disk is nearly full the Memory page says so first: swap cannot grow, which is what makes macOS say it has run out of application memory and ask you to force quit apps.
+- Space Lens (Disk Cleanup): your home folder measured once, then any folder opens at once, biggest first, with a block chart beside the list; click a block or a row to look inside. Tick files or folders from any tab into one basket; they go to the Trash after a confirmation that lists every path. macOS and tool folders, keys, iCloud, mail, photo library insides and git metadata cannot be picked, and anything a program has open is skipped.
+- Large files: everything of 100 MB or more, with when it was last opened, filtered to files not opened for 3 months or a year.
+- Duplicates: identical files of 1 MB or more in Desktop, Documents, Downloads, Movies, Music and Pictures, compared byte for byte; keep the oldest of each in one click.
+- `thermo space [PATH]`, `thermo space large`, `thermo space dupes` and `thermo space trash` do the same in the terminal.
+
+## 1.1.12
+
+- Uninstalling an app or removing leftovers updates the list in place instead of measuring every app (or searching for leftovers) again.
+
+## 1.1.11
+
+- AI Agent Diagnostics finds programs an agent started that keep crashing (each crash leaves a report and can show the "quit unexpectedly" dialog), with the crash reason and the newest report; it names the MCP server or hook that runs the program when only one does, otherwise the ones it could be.
+
+## 1.1.10
+
+- Uninstall apps (Disk Cleanup → Uninstall apps, or `thermo apps`): the app and the files it keeps in your home folder go to the Trash after you see every path; running, system and protected apps (password managers, VPNs, input methods, security software) are refused. Data left by apps you already deleted is found too (`thermo apps leftovers`).
+
+- Cleanup checks each path again just before removing it: a path swapped for another file since the scan, or one a running program holds open (files or working directory), is skipped and named. Ages count when a file was moved or unpacked, not only its modification date.
+- New cleanup items: Chrome, Edge, Brave, Arc and Chromium GPU and script caches in every profile; caches of Electron apps that are not running; editors' replaced extensions (VS Code, Cursor, Windsurf); Corepack, Electron, TypeScript, Carthage and Android caches; unfinished downloads and `.ipsw` firmware in Downloads.
+- Homebrew's old versions (`brew cleanup`) and Go's module cache (`go clean -modcache`) are cleaned by the tools themselves, sized by Homebrew's own dry run.
+- `pnpm store prune` removes packages no project uses; the result reports the space it actually freed. Chrome, Edge and Brave's previous version, left inside the app after an update until a restart, can be moved to the Trash while the browser is closed; the version in use and the app's signature stay intact.
+- Uninstalling a browser, chat or mail app keeps its profiles, chat history and mail unless asked for (`thermo apps uninstall NAME --with-data`); the confirmation lists what stays.
+- iOS device support keeps the two most recently used versions. A folder another rule covers (such as an app's logs inside ~/Library/Logs) is counted once.
+
+## 1.1.9
+
+- Disk scans show results as folders finish, support stopping and time budgets, and keep incomplete measurements clearly labeled. Scanning uses bounded concurrency and less memory.
+- Space Overview lists projects and source folders separately, with shortcuts to scan build output, Xcode files, developer caches and temporary leftovers.
+- Project cleanup recognizes build directories such as `target`, `.build`, `dist` and `node_modules`, preserves Git-tracked files and checks running agents, build tools and executables before removal.
+- Cleanup dry-run never deletes files or runs commands, even with `--yes`. Confirmation distinguishes Trash from permanent tool-managed removal; simulator cleanup uses reviewed device IDs and checks live state.
+- Cleanup reports measured disk space before and after, separately from estimated file sizes. Path protection checks symbolic-link ancestors, and cached plans keep their original scope and scan dates.
+- Browser pages support selecting several tabs and reviewing duplicate or growing pages, protect active or unknown-current tabs, and recheck memory after closing. Slowdown actions now recheck their results.
+- Native cleanup pages show progress, a Stop button and an explicit partial-results notice. Space Overview can reuse CLI measurements in the selected language without rescanning.
+
 ## 1.1.8
 
 - Browser pages read Chrome through chrome-use (1.5.186+): the tab list without attaching to pages, memory per page only when you ask (`thermo pulse chrome --measure`, or `--watch 60` to see which pages grow), pages not measured are counted, and stale chrome-use records are no longer mistaken for hidden pages. It tells you when chrome-use's Chrome extension is out of date or its update is waiting.

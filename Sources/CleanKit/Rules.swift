@@ -1,6 +1,7 @@
 import Foundation
 
 /// A fixed-location rule: each existing path (or each child, for `.contents`) is removed when cleaned.
+/// A `*` in a path matches one folder level (each Chrome profile, for instance).
 public struct PathRule: Sendable {
     public enum Scope: Sendable {
         /// Remove the listed paths themselves.
@@ -22,11 +23,13 @@ public struct PathRule: Sendable {
     public let note: String?
     /// Child names matched by `fnmatch`, for `.contents`/`.staleContents` (nil = all).
     public let match: [String]?
+    /// For `.contents`/`.staleContents`: the most recently used children of each folder that are kept.
+    public let keepNewest: Int
 
     public init(_ id: String, _ category: CleanCategory, _ title: String, _ paths: [String], scope: Scope = .whole,
-                safety: Safety = .safe, apps: [String] = [], note: String? = nil, match: [String]? = nil) {
+                safety: Safety = .safe, apps: [String] = [], note: String? = nil, match: [String]? = nil, keepNewest: Int = 0) {
         self.id = id; self.category = category; self.title = title; self.paths = paths; self.scope = scope
-        self.safety = safety; self.apps = apps; self.note = note; self.match = match
+        self.safety = safety; self.apps = apps; self.note = note; self.match = match; self.keepNewest = keepNewest
     }
 }
 
@@ -34,6 +37,14 @@ public struct PathRule: Sendable {
 /// Pearcleaner and DevCleaner, plus AI tooling. Everything is under the user's home.
 public enum Rules {
     static let appSupport = "~/Library/Application Support"
+
+    /// GPU, shader and compiled-script caches of a Chromium browser: in every profile and at the top.
+    /// Pages, logins and history live elsewhere in the profile and are not touched.
+    static func chromiumCaches(_ root: String) -> [String] {
+        let r = "\(appSupport)/\(root)"
+        return ["Code Cache", "GPUCache", "DawnCache", "DawnGraphiteCache", "DawnWebGPUCache", "Service Worker/ScriptCache"]
+            .map { "\(r)/*/\($0)" } + ["GrShaderCache", "ShaderCache", "GraphiteDawnCache"].map { "\(r)/\($0)" }
+    }
 
     public static let paths: [PathRule] = [
         // MARK: AI tool caches (regenerable)
@@ -92,6 +103,22 @@ public enum Rules {
         PathRule("bun-cache", .devCaches, "Bun cache", ["~/.bun/install/cache"], scope: .contents),
         PathRule("deno-cache", .devCaches, "Deno cache", ["~/Library/Caches/deno"], scope: .contents),
         PathRule("node-gyp", .devCaches, "node-gyp headers", ["~/Library/Caches/node-gyp", "~/.node-gyp"], scope: .contents),
+        PathRule("corepack-cache", .devCaches, "Corepack package managers", ["~/.cache/node/corepack"], scope: .contents,
+                 note: "pnpm and Yarn versions Corepack downloaded; fetched again when a project asks for them"),
+        PathRule("electron-download-cache", .devCaches, "Electron downloads",
+                 ["~/Library/Caches/electron", "~/Library/Caches/electron-builder"], scope: .contents),
+        PathRule("typescript-cache", .devCaches, "TypeScript type cache", ["~/Library/Caches/typescript"], scope: .contents),
+        PathRule("carthage-cache", .devCaches, "Carthage cache", ["~/Library/Caches/org.carthage.CarthageKit"], scope: .contents),
+        PathRule("android-caches", .devCaches, "Android build caches", ["~/.android/cache", "~/.android/build-cache"],
+                 scope: .contents, apps: ["studio"]),
+        PathRule("pnpm-store-prune", .devCaches, "pnpm packages no project uses", [], apps: ["pnpm"]),
+        PathRule("go-mod-cache", .devCaches, "Go module cache", [], safety: .review, apps: ["go"],
+                 note: "downloaded modules; Go fetches them again on the next build"),
+        PathRule("homebrew-old-versions", .devCaches, "Homebrew old versions", [], apps: ["brew"],
+                 note: "older versions of installed formulae and casks; the current ones stay"),
+        PathRule("editor-obsolete-extensions-code", .devCaches, "VS Code replaced extensions", [], apps: ["Code", "Electron"]),
+        PathRule("editor-obsolete-extensions-cursor", .devCaches, "Cursor replaced extensions", [], apps: ["Cursor"]),
+        PathRule("editor-obsolete-extensions-windsurf", .devCaches, "Windsurf replaced extensions", [], apps: ["Windsurf"]),
         PathRule("pip-cache", .devCaches, "pip cache", ["~/Library/Caches/pip", "~/.cache/pip"], scope: .contents),
         PathRule("uv-cache", .devCaches, "uv cache", ["~/.cache/uv", "~/Library/Caches/uv"], scope: .contents, apps: ["uv"]),
         PathRule("poetry-cache", .devCaches, "Poetry cache", ["~/Library/Caches/pypoetry"], scope: .contents),
@@ -125,7 +152,8 @@ public enum Rules {
         PathRule("xcode-device-support", .xcode, "iOS / watchOS device support",
                  ["~/Library/Developer/Xcode/iOS DeviceSupport", "~/Library/Developer/Xcode/watchOS DeviceSupport",
                   "~/Library/Developer/Xcode/tvOS DeviceSupport", "~/Library/Developer/Xcode/visionOS DeviceSupport"],
-                 scope: .staleContents, safety: .safe, note: "symbols copied from devices; recreated when a device connects"),
+                 scope: .staleContents, safety: .safe, note: "symbols copied from devices; recreated when a device connects",
+                 keepNewest: 2),
         PathRule("xcode-archives", .xcode, "Xcode archives", ["~/Library/Developer/Xcode/Archives"],
                  scope: .staleContents, safety: .review, note: "needed to symbolicate crash reports of shipped builds"),
         PathRule("xcode-caches", .xcode, "Xcode caches & previews",
@@ -146,6 +174,16 @@ public enum Rules {
                  scope: .contents, apps: ["Arc"]),
         PathRule("firefox-cache", .browsers, "Firefox cache", ["~/Library/Caches/Firefox"], scope: .contents,
                  apps: ["firefox"]),
+        PathRule("chrome-profile-caches", .browsers, "Chrome GPU & script caches", chromiumCaches("Google/Chrome"),
+                 scope: .contents, apps: ["Google Chrome"]),
+        PathRule("edge-profile-caches", .browsers, "Edge GPU & script caches", chromiumCaches("Microsoft Edge"),
+                 scope: .contents, apps: ["Microsoft Edge"]),
+        PathRule("brave-profile-caches", .browsers, "Brave GPU & script caches", chromiumCaches("BraveSoftware/Brave-Browser"),
+                 scope: .contents, apps: ["Brave Browser"]),
+        PathRule("arc-profile-caches", .browsers, "Arc GPU & script caches", chromiumCaches("Arc/User Data"),
+                 scope: .contents, apps: ["Arc"]),
+        PathRule("chromium-profile-caches", .browsers, "Chromium GPU & script caches", chromiumCaches("Chromium"),
+                 scope: .contents, apps: ["Chromium"]),
         PathRule("safari-cache", .browsers, "Safari cache", ["~/Library/Caches/com.apple.Safari"], scope: .contents,
                  apps: ["Safari"]),
 
@@ -155,7 +193,10 @@ public enum Rules {
         PathRule("trash", .system, "Trash", ["~/.Trash"], scope: .contents, safety: .review,
                  note: "emptying the Trash cannot be undone"),
         PathRule("old-installers", .system, "Old installers in Downloads", ["~/Downloads"], scope: .staleContents,
-                 safety: .review, match: ["*.dmg", "*.pkg", "*.iso", "*.xip", "*.mpkg"]),
+                 safety: .review, match: ["*.dmg", "*.pkg", "*.iso", "*.xip", "*.mpkg", "*.ipsw"]),
+        PathRule("incomplete-downloads", .system, "Unfinished downloads", ["~/Downloads"], scope: .staleContents,
+                 safety: .review, note: "downloads a browser never finished",
+                 match: ["*.crdownload", "*.download", "*.part", "*.partial", "*.opdownload"]),
         PathRule("ios-backups", .system, "iPhone / iPad backups", ["~/Library/Application Support/MobileSync/Backup"],
                  scope: .staleContents, safety: .review, note: "old device backups; keep the latest one"),
         PathRule("ios-updates", .system, "iOS software updates",

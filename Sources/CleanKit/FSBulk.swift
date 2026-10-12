@@ -13,10 +13,12 @@ enum BulkWalk {
         var a = attrlist()
         a.bitmapcount = u_short(ATTR_BIT_MAP_COUNT)
         a.commonattr = attrgroup_t(ATTR_CMN_RETURNED_ATTRS) | attrgroup_t(ATTR_CMN_NAME) | attrgroup_t(ATTR_CMN_ERROR)
-            | attrgroup_t(ATTR_CMN_OBJTYPE) | attrgroup_t(ATTR_CMN_MODTIME) | attrgroup_t(ATTR_CMN_FILEID)
+            | attrgroup_t(ATTR_CMN_OBJTYPE) | attrgroup_t(ATTR_CMN_MODTIME) | attrgroup_t(ATTR_CMN_CHGTIME)
+            | attrgroup_t(ATTR_CMN_FILEID)
         a.fileattr = attrgroup_t(ATTR_FILE_LINKCOUNT) | attrgroup_t(ATTR_FILE_ALLOCSIZE)
-        // Private size is costly for every file; `size` asks for it per large file instead.
-        a.forkattr = 0
+        // Private size is costly for every file; `size` asks for it per large file instead, and
+        // only when the extended flags say the file may share blocks (a clone).
+        a.forkattr = attrgroup_t(ATTR_CMNEXT_EXT_FLAGS)
         return a
     }
 
@@ -27,11 +29,21 @@ enum BulkWalk {
         var isDir: Bool
         var isFile: Bool
         var modified: Int
+        var modifiedNanoseconds: Int = 0
+        /// Status change time: set when a file is moved, renamed, extracted or re-permissioned, so a
+        /// download unpacked today with an old mtime is not mistaken for something untouched.
+        var changed: Int = 0
         var fileID: UInt64
         var links: UInt32
         var allocated: Int64
         var privateSize: Int64
         var error: Int32
+        /// EF_* flags; nil when the file system did not return them.
+        var extFlags: UInt64? = nil
+
+        /// Its blocks may be shared with another file (an APFS clone): only then can the private
+        /// size be smaller than the allocated size. Unknown counts as maybe.
+        var maySharesBlocks: Bool { extFlags.map { $0 & UInt64(EF_MAY_SHARE_BLOCKS) != 0 } ?? true }
     }
 
     /// Calls `body` for every entry of `dir` (not recursive). Returns false if it can't be read.
@@ -64,14 +76,16 @@ enum BulkWalk {
                 q += MemoryLayout<attrreference_t>.size
                 let type = q.loadUnaligned(as: UInt32.self); q += 4
                 let mod = q.loadUnaligned(as: timespec.self); q += MemoryLayout<timespec>.size
+                let chg = q.loadUnaligned(as: timespec.self); q += MemoryLayout<timespec>.size
                 let fileID = q.loadUnaligned(as: UInt64.self); q += 8
                 // File attributes are packed (zero-filled) for every entry because of PACK_INVAL.
                 let links = q.loadUnaligned(as: UInt32.self); q += 4
-                let alloc = q.loadUnaligned(as: Int64.self)
-                _ = returned
+                let alloc = q.loadUnaligned(as: Int64.self); q += 8
+                let flags = q.loadUnaligned(as: UInt64.self)
+                let hasFlags = returned.forkattr & attrgroup_t(ATTR_CMNEXT_EXT_FLAGS) != 0
                 body(Entry(name: name, isDir: type == VDIR.rawValue, isFile: type == VREG.rawValue,
-                           modified: mod.tv_sec, fileID: fileID, links: links, allocated: alloc,
-                           privateSize: alloc, error: Int32(bitPattern: error)))
+                           modified: mod.tv_sec, modifiedNanoseconds: mod.tv_nsec, changed: chg.tv_sec, fileID: fileID, links: links, allocated: alloc,
+                           privateSize: alloc, error: Int32(bitPattern: error), extFlags: hasFlags ? flags : nil))
                 p += len
             }
         }
@@ -87,13 +101,14 @@ enum BulkWalk {
     /// Reclaimable bytes: a hard-linked file only counts when all its links are inside the tree
     /// (pnpm and bun link node_modules to a global store, so deleting node_modules frees nothing);
     /// a large file counts only its private blocks (APFS clones share theirs).
-    static func size(_ root: String, trackNewest: Bool, device: dev_t, cancellation: ScanCancellation? = nil) -> TreeSize? {
+    static func size(_ root: String, trackNewest: Bool, device: dev_t, cancellation: ScanCancellation? = nil, privateSizes: Bool = true) -> TreeSize? {
         let cancellation = cancellation ?? ScanCancellation.current
         var r = TreeSize()
         var linked: [UInt64: (links: UInt32, seen: UInt32, bytes: Int64)] = [:]
         var stack = [root]
         var newest = 0
         var visited = 0
+        let changes = FS.countsStatusChanges
         while let dir = stack.popLast() {
             visited += 1
             if cancellation?.isCancelled == true { break }
@@ -118,9 +133,10 @@ enum BulkWalk {
                 }
                 r.files += 1
                 r.allocated += e.allocated
-                r.bytes += e.allocated >= privateSizeThreshold
+                // A file that shares no blocks frees all it allocates; asking APFS costs ~2 ms a file.
+                r.bytes += privateSizes && e.allocated >= privateSizeThreshold && e.maySharesBlocks
                     ? (fileSize(dir + "/" + e.name)?.privateSize ?? e.allocated) : e.allocated
-                if trackNewest, e.modified > newest { newest = e.modified }
+                if trackNewest { newest = max(newest, e.modified, changes ? e.changed : 0) }
             }
             if !ok {
                 let e = errno

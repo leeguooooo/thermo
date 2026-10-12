@@ -23,22 +23,25 @@ extension DiskModel {
     /// One line per item for the confirmation: how it goes, size, name, paths.
     var planLines: [String] {
         selectedItems.flatMap { i -> [String] in
-            let how = i.safety == .safe ? tr("delete") : tr("trash")
+            let how = !(i.commands ?? []).isEmpty ? tr("permanent tool removal") : i.safety == .safe ? tr("delete") : tr("trash")
             let paths = trCount(i.paths.count, "%1$@ path", "%1$@ paths")
             return ["\(how) · \(ByteFormat.string(i.bytes)) · \(i.title) (\(paths))"]
                 + i.paths.map { "    " + FSPath.tilde($0) }
+                + (i.commands ?? []).map { "    " + $0.joined(separator: " ") }
         }
     }
 
     var confirmSummary: String {
         let items = selectedItems
-        let trash = items.filter { $0.safety != .safe }
+        let trash = items.filter { $0.safety != .safe && ($0.commands ?? []).isEmpty }
+        let toolItems = items.filter { !($0.commands ?? []).isEmpty }
         var parts = [trCount(items.count, "%1$@ item.", "%1$@ items.")]
-        if trash.count < items.count { parts.append(tr("Caches and build output are deleted.")) }
+        if items.contains(where: { $0.safety == .safe && !($0.paths).isEmpty }) { parts.append(tr("Caches and build output are deleted.")) }
         if !trash.isEmpty {
             parts.append(trCount(trash.count, "%1$@ item with your data (sessions, models, worktrees) goes to the Trash.",
                                  "%1$@ items with your data (sessions, models, worktrees) go to the Trash."))
         }
+        if !toolItems.isEmpty { parts.append(tr("Tool-managed items are removed permanently; they do not go to the Trash.")) }
         return parts.joined(separator: " ")
     }
 
@@ -49,9 +52,17 @@ extension DiskModel {
 }
 
 enum DiskStyle {
+    /// "1.2 GB" or "4 KB · 1.5 GB waiting for apps to quit": what is held back is said, not hidden.
+    static func categoryStatus(_ r: ScanReport, _ c: CleanCategory) -> String {
+        let waiting = r.blockedBytes(in: c)
+        let ready = ByteFormat.string(r.bytes(in: c))
+        return waiting > 0 ? tr("%1$@ · %2$@ held back", ready, ByteFormat.string(waiting)) : ready
+    }
+
     static func icon(_ c: CleanCategory) -> String {
         switch c {
         case .aiSessions: return "bubble.left.and.text.bubble.right.fill"
+        case .agentWorktrees: return "arrow.triangle.branch"
         case .aiModels: return "cpu.fill"
         case .aiCaches: return "sparkles"
         case .devCaches: return "hammer.fill"
@@ -65,6 +76,7 @@ enum DiskStyle {
     static func tint(_ c: CleanCategory) -> Color {
         switch c {
         case .aiSessions: return Color(red: 0.62, green: 0.42, blue: 1.0)
+        case .agentWorktrees: return Color(red: 0.45, green: 0.72, blue: 1.0)
         case .aiModels: return Color(red: 0.95, green: 0.42, blue: 0.75)
         case .aiCaches: return Color(red: 0.45, green: 0.5, blue: 1.0)
         case .devCaches: return Color(red: 1.0, green: 0.62, blue: 0.25)
@@ -100,9 +112,11 @@ struct DiskHome: View {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {
                         ForEach(CleanCategory.allCases, id: \.self) { c in
                             let inCat = r.items.filter { $0.category == c && $0.cleanable }
-                            if !inCat.isEmpty {
+                            let waiting = r.blockedBytes(in: c)
+                            // A category whose items all wait for an app to quit still shows, with that said.
+                            if !inCat.isEmpty || waiting > 0 {
                                 CategoryCard(symbol: DiskStyle.icon(c), color: DiskStyle.tint(c), title: c.title,
-                                             status: ByteFormat.string(r.bytes(in: c)), statusColor: .white.opacity(0.7),
+                                             status: DiskStyle.categoryStatus(r, c), statusColor: .white.opacity(0.7),
                                              count: inCat.count) { open(c) }
                             }
                         }
@@ -197,6 +211,12 @@ struct DiskCategoryPage: View {
     var body: some View {
         VStack(spacing: 0) {
             header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
+            if model.report?.cancelled == true {
+                Label(tr("Scan stopped. These are partial results."), systemImage: "pause.circle")
+                    .font(.callout).foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 28).padding(.bottom, 10)
+            }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 10) {
                     let list = items
@@ -227,15 +247,14 @@ struct DiskCategoryPage: View {
                             VStack(alignment: .leading, spacing: 12) {
                                 Label(tr("Find space you can free"), systemImage: "magnifyingglass")
                                 Button(tr("Scan")) {
-                                    if !category.isAI { model.scope = .all }
-                                    model.scan()
+                                    model.scan(category: category)
                                 }.buttonStyle(PillButtonStyle())
                             }
                             .foregroundStyle(.secondary).padding(.top, 30)
                         } else if model.report?.cancelled == true {
                             VStack(alignment: .leading, spacing: 12) {
                                 Label(tr("Scan stopped. These are partial results."), systemImage: "pause.circle")
-                                Button(tr("Scan again")) { model.scan() }.buttonStyle(PillButtonStyle())
+                                Button(tr("Scan again")) { model.scan(category: category) }.buttonStyle(PillButtonStyle())
                             }
                             .foregroundStyle(.secondary).padding(.top, 30)
                         } else {
@@ -248,6 +267,7 @@ struct DiskCategoryPage: View {
             }
             footer
         }
+        .onAppear { model.loadSaved(category: category) }
     }
 
     var header: some View {
@@ -256,7 +276,7 @@ struct DiskCategoryPage: View {
             IconTile(symbol: DiskStyle.icon(category), color: DiskStyle.tint(category), size: 44)
             VStack(alignment: .leading, spacing: 3) {
                 Text(category.title).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
-                Text(tr("%1$@ · %2$@ selected", ByteFormat.string(model.report?.bytes(in: category) ?? 0),
+                Text(tr("%1$@ · %2$@ selected", model.report.map { DiskStyle.categoryStatus($0, category) } ?? ByteFormat.string(0),
                         ByteFormat.string(selected.reduce(0) { $0 + $1.bytes })))
                     .font(.callout).foregroundStyle(.white.opacity(0.6))
             }
@@ -323,6 +343,24 @@ struct DiskCategoryPage: View {
     }
 
     var footer: some View {
+        Group {
+            if model.scanning {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text(model.progress).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                    Spacer()
+                    Button(model.stopping ? tr("stopping…") : tr("Stop")) { model.stop() }
+                        .buttonStyle(PillButtonStyle()).disabled(model.stopping)
+                }
+            } else {
+                selectionFooter
+            }
+        }
+        .padding(.horizontal, 28).padding(.vertical, 14)
+        .background(Color.black.opacity(0.18))
+    }
+
+    var selectionFooter: some View {
         HStack(spacing: 10) {
             Button(tr("Safe")) {
                 let ids = (model.report?.items ?? []).filter { $0.category == category && $0.cleanable && $0.safety == .safe }.map(\.id)
@@ -337,8 +375,6 @@ struct DiskCategoryPage: View {
                 .buttonStyle(PillButtonStyle(prominent: true, color: .pink))
                 .disabled(model.selectedItems.isEmpty || model.cleaning || model.scanning)
         }
-        .padding(.horizontal, 28).padding(.vertical, 14)
-        .background(Color.black.opacity(0.18))
     }
 }
 
@@ -412,6 +448,7 @@ struct DiskItemDetail: View {
     }
 
     var safetyText: String {
+        if !(item.commands ?? []).isEmpty { return tr("Tool-managed items are removed permanently; they do not go to the Trash.") }
         switch item.safety {
         case .safe: return tr("Safe: this is regenerated automatically (caches, logs, build output). It is deleted, not moved to the Trash.")
         case .review: return tr("Your data, probably no longer needed. It goes to the Trash, so you can still get it back.")

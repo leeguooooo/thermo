@@ -132,7 +132,7 @@ struct Renderer {
 enum Export {
     static func pulseCSV<T: Encodable>(_ report: T) -> String {
         guard let object = (try? JSONSerialization.jsonObject(with: Data(diagnosticJSON(report).utf8))) as? [String: Any] else { return "" }
-        let units = ["load1": "load", "load5": "load", "cores": "count", "swapUsedMB": "MiB", "swapTotalMB": "MiB",
+        let units = ["load1": "load", "load5": "load", "cores": "count", "swapUsedMB": "MiB", "swapTotalMB": "MiB", "diskFreeBytes": "B",
                      "systemPowerW": "W", "batteryPercent": "%", "records": "count", "strugglingRecords": "count",
                      "peakLoad": "load", "peakSwapMB": "MiB"]
         func cell(_ value: Any) -> String {

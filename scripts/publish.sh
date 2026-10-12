@@ -21,6 +21,8 @@ R=releases
 [ -f "$R/appcast.xml" ] || { echo "no $R/appcast.xml — run: make release" >&2; exit 1; }
 [ -f "$R/Thermo-$VERSION.dmg" ] || { echo "no $R/Thermo-$VERSION.dmg" >&2; exit 1; }
 
+cp install.sh "$R/install.sh"
+
 # Public addresses live on app.leeguoo.com/thermo/ (the App Center relays to this project).
 # Here: newest-DMG redirect, cache rules, and the bare host sends people to the product page.
 printf '/download /Thermo-%s.dmg 302\n/ https://app.leeguoo.com/thermo 301\n' "$VERSION" > "$R/_redirects"

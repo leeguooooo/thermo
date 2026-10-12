@@ -20,8 +20,11 @@ public struct PulseRecord: Codable, Sendable, Equatable {
     public var swapTotalMB: Int
     public var thermal: MachinePulse.Thermal
     public var top: [Program]
+    /// Memory in use (app, wired, compressed) and compressed, MiB; absent in older lines.
+    public var usedMB: Int? = nil
+    public var compressedMB: Int? = nil
 
-    public init(_ p: MachinePulse) {
+    public init(_ p: MachinePulse, memory breakdown: MemoryBreakdown? = MemoryBreakdown.read()) {
         t = p.sampled
         load1 = p.load1
         cores = p.cores
@@ -35,6 +38,8 @@ public struct PulseRecord: Codable, Sendable, Equatable {
         var picked: [MachinePulse.Hog] = []
         for h in byLoad.prefix(2) + biggest where !picked.contains(where: { $0.id == h.id }) && picked.count < 3 { picked.append(h) }
         top = picked.map { Program(name: $0.name, cpu: $0.cpu, memoryKB: $0.memoryKB, project: $0.project, owner: $0.owner) }
+        usedMB = breakdown.map { Int($0.used >> 20) }
+        compressedMB = breakdown.map { Int($0.compressed >> 20) }
     }
 
     public init(t: Date, load1: Double, cores: Int, memory: MachinePulse.Memory, swapUsedMB: Int, swapTotalMB: Int,

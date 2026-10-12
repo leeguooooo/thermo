@@ -11,7 +11,7 @@ struct Args {
     var flags: Set<String> = []
     var options: [String: String] = [:]
 
-    static let valueOptions: Set<String> = ["interval", "count", "sensor", "format", "older-than", "root",
+    static let valueOptions: Set<String> = ["interval", "count", "sensor", "format", "older-than", "root", "budget",
                                             "area", "agent", "action",
         "since",  // pulse history
         "watch", "app", "title"]  // pulse chrome
@@ -19,7 +19,8 @@ struct Args {
         "i": "interval", "n": "count", "s": "sensor", "a": "all", "j": "json",
         "h": "help", "v": "version", "f": "format", "y": "yes",
     ]
-    static let knownFlags: Set<String> = ["json", "csv", "all", "no-color", "no-cache", "help", "version", "fahrenheit", "yes", "trash", "permanent", "dry-run",
+    static let knownFlags: Set<String> = ["json", "csv", "all", "no-color", "no-cache", "help", "version", "fahrenheit", "yes", "trash", "permanent", "dry-run", "with-data",
+        "stream", // clean: newline-delimited incremental scan results
         "rescan",  // rescan: clean run ignores the saved scan
         "measure"]  // pulse chrome: measure memory per page once
 

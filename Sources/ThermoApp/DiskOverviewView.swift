@@ -9,6 +9,7 @@ import ThermoL10n
 final class SpaceOverviewModel: ObservableObject {
     static let shared = SpaceOverviewModel()
 
+    @Published private(set) var diskSpace: DiskSpaceSnapshot?
     @Published private(set) var overview: SpaceOverview?
     @Published private(set) var measuredAt: Date?
     /// Places finished in the current measurement, shown before the whole thing is done.
@@ -19,8 +20,10 @@ final class SpaceOverviewModel: ObservableObject {
     private var cancellation: ScanCancellation?
     private var measurementLanguage: String?
     private var restartAfterCurrent = false
+    private var generation = UUID()
 
-    init(cached: (SpaceOverview, Date)? = SpaceOverview.cached()) {
+    init(cached: (SpaceOverview, Date)? = SpaceOverview.cached(localize: true), diskSpace: DiskSpaceSnapshot? = .measure()) {
+        self.diskSpace = diskSpace
         if let (o, at) = cached { overview = o; measuredAt = at }
     }
 
@@ -35,8 +38,20 @@ final class SpaceOverviewModel: ObservableObject {
         return entries.values.sorted { $0.bytes == $1.bytes ? $0.id < $1.id : $0.bytes > $1.bytes }
     }
 
+    func acceptEntry(_ entry: SpaceOverview.Entry) {
+        if let index = partial.firstIndex(where: { $0.id == entry.id }) {
+            let previous = partial[index]
+            guard !(previous.complete == true && entry.complete == false),
+                  (entry.measuredLocations ?? 0) >= (previous.measuredLocations ?? 0) else { return }
+            partial[index] = entry
+        } else { partial.append(entry) }
+    }
+
     func measure() {
         guard !measuring else { return }
+        diskSpace = .measure()
+        let generation = UUID()
+        self.generation = generation
         measuring = true
         measurementLanguage = L10n.current.rawValue
         restartAfterCurrent = false
@@ -48,12 +63,13 @@ final class SpaceOverviewModel: ObservableObject {
         Task.detached(priority: .utility) {
             let o = SpaceOverview.measure(onEntry: { e in
                 Task { @MainActor in
-                    guard self.cancellation === cancellation, !cancellation.isCancelled else { return }
-                    self.partial.append(e)
+                    guard self.generation == generation, self.cancellation === cancellation, !cancellation.isCancelled else { return }
+                    self.acceptEntry(e)
                 }
-            }, cancellation: cancellation)
-            o.save()
+            }, cancellation: cancellation, lowPriority: true)
             await MainActor.run {
+                guard self.generation == generation else { return }
+                o.save()
                 let restart = self.restartAfterCurrent
                 self.restartAfterCurrent = false
                 if o.language != L10n.current.rawValue {
@@ -64,6 +80,7 @@ final class SpaceOverviewModel: ObservableObject {
                     self.stopped = true
                 } else {
                     self.overview = o
+                    self.diskSpace = .measure()
                     self.measuredAt = o.measuredAt
                 }
                 self.measuring = false
@@ -72,6 +89,23 @@ final class SpaceOverviewModel: ObservableObject {
                 if restart { self.measure() }
             }
         }
+    }
+
+    /// A cleanup invalidates cached breakdowns. Late callbacks from an old measurement
+    /// must neither restore stale folders nor write their old overview back to disk.
+    func invalidateAfterCleanup() {
+        generation = UUID()
+        cancellation?.cancel()
+        cancellation = nil
+        restartAfterCurrent = false
+        measurementLanguage = nil
+        measuring = false
+        stopping = false
+        stopped = false
+        overview = nil
+        measuredAt = nil
+        partial = []
+        diskSpace = .measure()
     }
 
     func stop() {
@@ -84,14 +118,20 @@ final class SpaceOverviewModel: ObservableObject {
     /// Measures on first open, or when the saved numbers are over an hour old.
     func discardIncompatibleResults() {
         if let overview, overview.language != L10n.current.rawValue {
-            self.overview = nil
-            measuredAt = nil
+            if let localized = overview.localizedForCurrentLanguage() {
+                self.overview = localized
+            } else {
+                self.overview = nil
+                measuredAt = nil
+            }
             partial = []
             stopped = false
         }
     }
 
     func measureIfStale() {
+        diskSpace = .measure()
+        if overview != nil, !SpaceOverview.isCurrent(measuredAt: measuredAt) { invalidateAfterCleanup() }
         discardIncompatibleResults()
         if measuring {
             if measurementLanguage != L10n.current.rawValue {
@@ -108,15 +148,21 @@ final class SpaceOverviewModel: ObservableObject {
 /// The volume's used space, by place, with each place's biggest folders.
 struct DiskOverviewView: View {
     @ObservedObject var model = SpaceOverviewModel.shared
+    var openCleanup: (CleanCategory?) -> Void = { _ in }
+    var cleanupDisabled = false
     @State private var open: Set<String> = []
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 header
-                if let o = model.overview { capacityBar(o) }
+                if let live = model.diskSpace {
+                    capacityBar(capacity: live.capacityBytes, free: live.availableBytes)
+                } else if let o = model.overview {
+                    capacityBar(capacity: o.capacity, free: o.free, purgeable: o.purgeable)
+                }
                 if model.measuring, model.overview != nil {
-                    Text(tr("Previous results stay visible until each location is measured again."))
+                    Text(tr("Categories update as folders finish; unfinished totals are lower bounds."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 if let unreadable = model.overview?.unreadable, !unreadable.isEmpty {
@@ -127,16 +173,25 @@ struct DiskOverviewView: View {
                             .buttonStyle(PillButtonStyle())
                     }
                 }
+                if !model.measuring, let over = model.overview?.overcounted {
+                    Text(tr("The headings add up to %1$@ more than the disk uses: hard links (pnpm), APFS clones and files written while measuring count in each place.", ByteFormat.string(over)))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 if model.stopped {
-                    Text(model.overview == nil ? tr("Measurement stopped. Only locations completed before stopping are shown.") : tr("Measurement stopped. Complete previous results are kept; newly measured locations may be partial."))
+                    Text(model.overview == nil ? tr("Measurement stopped. Only completed folders are counted; unfinished categories show a lower bound.") : tr("Measurement stopped. Unchanged categories keep previous results; updated categories count only completed folders."))
                         .font(.callout).foregroundStyle(.orange)
                 }
-                if model.entries.isEmpty && !model.stopped {
-                    HStack(spacing: 8) {
-                        ProgressView().controlSize(.small)
-                        Text(tr("Measuring where your disk space is…")).foregroundStyle(.secondary)
+                if model.entries.isEmpty {
+                    if model.stopped {
+                        Text(tr("No folders finished before stopping. Measure again to continue."))
+                            .font(.callout).foregroundStyle(.secondary).padding(.top, 12)
+                    } else {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text(tr("Measuring where your disk space is…")).foregroundStyle(.secondary)
+                        }
+                        .padding(.top, 20)
                     }
-                    .padding(.top, 20)
                 } else {
                     VStack(spacing: 0) {
                         ForEach(model.entries) { e in
@@ -171,15 +226,17 @@ struct DiskOverviewView: View {
     }
 
     var subtitle: String {
-        if model.measuring { return tr("measuring… %1$@ places so far", String(model.partial.count)) }
+        if model.measuring { return tr("measuring… %1$@ places so far", String(model.partial.reduce(0) { $0 + ($1.measuredLocations ?? 1) })) }
         guard let at = model.measuredAt else { return "" }
         return tr("measured %1$@", at.formatted(date: .abbreviated, time: .shortened))
     }
 
-    func capacityBar(_ o: SpaceOverview) -> some View {
+    func capacityBar(capacity: Int64, free: Int64, purgeable: Int64 = 0) -> some View {
+        let usedBytes = max(0, capacity - free)
+        return
         VStack(alignment: .leading, spacing: 6) {
             GeometryReader { g in
-                let used = o.capacity > 0 ? min(1, max(0, CGFloat(o.used) / CGFloat(o.capacity))) : 0
+                let used = capacity > 0 ? min(1, max(0, CGFloat(usedBytes) / CGFloat(capacity))) : 0
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.15))
                     RoundedRectangle(cornerRadius: 5).fill(used > 0.95 ? Color.red : used > 0.85 ? Color.orange : Color.accentColor)
@@ -187,8 +244,8 @@ struct DiskOverviewView: View {
                 }
             }
             .frame(height: 12)
-            Text(tr("%1$@ used of %2$@ · %3$@ free", ByteFormat.string(o.used), ByteFormat.string(o.capacity), ByteFormat.string(o.free))
-                 + (o.purgeable > 1_000_000_000 ? " · " + tr("%1$@ more can be freed by macOS on demand", ByteFormat.string(o.purgeable)) : ""))
+            Text(tr("%1$@ used of %2$@ · %3$@ free", ByteFormat.string(usedBytes), ByteFormat.string(capacity), ByteFormat.string(free))
+                 + (purgeable > 1_000_000_000 ? " · " + tr("%1$@ more can be freed by macOS on demand", ByteFormat.string(purgeable)) : ""))
                 .font(.callout).foregroundStyle(.secondary)
         }
     }
@@ -199,13 +256,39 @@ struct DiskOverviewView: View {
                 .font(.caption2).foregroundStyle(.secondary).frame(width: 12)
             Text(entry.title).font(.body)
             Spacer()
-            Text(ByteFormat.string(entry.bytes)).font(.body.monospacedDigit())
+            if entry.complete == false {
+                Text(tr("at least %1$@", ByteFormat.string(entry.bytes))).font(.body.monospacedDigit()).foregroundStyle(.orange)
+            } else {
+                Text(ByteFormat.string(entry.bytes)).font(.body.monospacedDigit())
+            }
         }
         .contentShape(Rectangle())
     }
 
+    /// A command reads as one (monospaced, selectable so it can be copied); a sentence as text.
+    func actionLine(_ action: String) -> some View {
+        let command = action.hasPrefix("xcrun ") || action.hasPrefix("brew ") || action.hasPrefix("thermo ")
+        return Text("→ " + action)
+            .font(command ? .caption.monospaced() : .caption)
+            .foregroundStyle(.orange)
+            .textSelection(.enabled)
+            .lineLimit(1).truncationMode(.middle)
+    }
+
+    static func cleanupRoute(for id: String) -> (label: String, category: CleanCategory?)? {
+        switch id {
+        case "projects": return (tr("Scan build artifacts"), .projects)
+        case "home-tools": return (tr("Find cleanup candidates"), .aiSessions)
+        case "developer", "simulator-runtimes": return (tr("Review Xcode cleanup"), .xcode)
+        case "homebrew": return (tr("Scan developer caches"), .devCaches)
+        case "temp": return (tr("Scan temporary files and leftovers"), .system)
+        case "caches", "other": return (tr("Find cleanup candidates"), nil)
+        default: return nil
+        }
+    }
+
     func row(_ e: SpaceOverview.Entry) -> some View {
-        let total = max(1, model.overview?.used ?? model.entries.reduce(0) { $0 + $1.bytes })
+        let total = max(1, model.diskSpace.map { $0.capacityBytes - $0.availableBytes } ?? model.overview?.used ?? model.entries.reduce(0) { $0 + $1.bytes })
         let expanded = open.contains(e.id)
         return VStack(alignment: .leading, spacing: 6) {
             if e.children.isEmpty {
@@ -223,12 +306,22 @@ struct DiskOverviewView: View {
                     .frame(width: min(g.size.width, max(2, g.size.width * CGFloat(e.bytes) / CGFloat(total))))
             }
             .frame(height: 4).padding(.leading, 20)
+            if e.complete == false, let measured = e.measuredLocations, let total = e.totalLocations {
+                Text(tr("%1$@ of %2$@ locations measured", String(measured), String(total)))
+                    .font(.caption).foregroundStyle(.orange).padding(.leading, 20)
+            }
             if let n = e.note { Text(n).font(.caption).foregroundStyle(.secondary).padding(.leading, 20) }
+            if let a = e.action { actionLine(a).padding(.leading, 20) }
+            if let route = Self.cleanupRoute(for: e.id) {
+                Button(route.label) { openCleanup(route.category) }
+                    .buttonStyle(PillButtonStyle()).disabled(cleanupDisabled).padding(.leading, 20).padding(.vertical, 4)
+            }
             if expanded {
                 ForEach(e.children) { c in
                     HStack {
                         Text(c.title).font(.callout.monospaced()).lineLimit(1).truncationMode(.middle)
                         Spacer()
+                        if let a = c.action { actionLine(a) }
                         Text(ByteFormat.string(c.bytes)).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
                         if let p = c.path {
                             Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) } label: {

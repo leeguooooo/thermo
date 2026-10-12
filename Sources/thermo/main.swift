@@ -51,10 +51,22 @@ COMMANDS
                              language, Dock icon (KEY=VALUE also works)
   clean [CATEGORY|ai]        what can be cleaned: AI sessions/models/caches, dev caches,
                              Xcode, project build output, browsers (read-only)
-  clean run safe|ID…         remove items (safe: delete; review: to Trash); asks first
+  clean run safe|ID…         remove items (safe: delete; review files: Trash); asks first
+                             --dry-run shows the plan without deleting or running commands
   clean log                  what earlier cleanups removed
   clean overview             where the used space is: the big places and their
                              biggest folders (--json)
+  apps                       installed apps, their size and the files they keep in your home folder
+  apps uninstall NAME        move the app and its files to the Trash (lists every path, asks first;
+                             --dry-run only lists; refuses running, system and protected apps;
+                             browser, chat and mail data stays unless --with-data)
+  space [PATH]               what takes the space in a folder, biggest first (one walk, kept an hour)
+  space large                files over 100 MB and when they were last opened (--older-than DAYS)
+  space dupes [PATH…]        identical files (default: Desktop, Documents, Downloads, media folders)
+  space trash PATH…          move picked files or folders to the Trash (lists them, asks first)
+  apps leftovers             data left by apps that are gone (untouched 30 days, unknown to Spotlight)
+  apps leftovers remove ID…|all
+                             move that data to the Trash; asks first
 
 OPTIONS
   -a, --all                  include sensors without a known name
@@ -68,6 +80,8 @@ OPTIONS
       --no-color             disable colors (also honours NO_COLOR)
       --no-cache             rescan SMC keys instead of using the discovery cache
       --older-than DAYS      clean: sessions/projects idle this long are stale (default 30; 2w, 6m)
+      --budget SECONDS       clean: stop read-only scan after this budget; mark results incomplete
+      --stream               clean: incremental JSON events, one per line (read-only)
       --root DIR[,DIR]       clean: folders searched for projects (default ~/Developer, ~/code, …)
   -y, --yes                  clean run: do not ask for confirmation
       --trash | --permanent  clean run: send everything to the Trash / delete everything
@@ -120,6 +134,8 @@ struct App {
         case "bench": try benchCommand()
         case "agents", "agent", "doctor": try AgentsCommand(app: self).run(rest)
         case "clean": try CleanCommand(app: self).run(rest)
+        case "apps", "app": try AppsCommand(app: self).run(rest)
+        case "space": try SpaceCommand(app: self).run(rest)
         case "pulse", "status": try PulseCommand(app: self).run(rest)
         case "settings", "config": try SettingsCommand(app: self).run(rest)
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")

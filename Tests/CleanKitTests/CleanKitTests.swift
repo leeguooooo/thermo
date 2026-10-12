@@ -7,6 +7,8 @@ final class CleanKitTests: XCTestCase {
     let now = Date()
 
     override func setUpWithError() throws {
+        // Fixtures are backdated with utimes, which cannot backdate ctime.
+        FS.countsStatusChanges = false
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("cleankit-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         home = dir.resolvingSymlinksInPath().path
@@ -15,6 +17,7 @@ final class CleanKitTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
+        FS.countsStatusChanges = true
         try? FileManager.default.removeItem(atPath: home)
         L10n.override = nil
     }
@@ -158,6 +161,73 @@ final class CleanKitTests: XCTestCase {
         XCTAssertTrue(item.note?.contains("fix the login bug") ?? false)
     }
 
+    func testSessionScanMeasuresOnlyCleanupCandidates() throws {
+        let cwd = home + "/src/here"
+        try FileManager.default.createDirectory(atPath: cwd, withIntermediateDirectories: true)
+        let group = SessionGroup(cwd: cwd, label: "here", sessions: [
+            SessionFile(id: "old", paths: ["old.jsonl", "old-sidecar"], size: TreeSize(), modified: now.addingTimeInterval(-45 * 86400), needsSize: true),
+            SessionFile(id: "recent", paths: ["recent.jsonl"], size: TreeSize(), modified: now.addingTimeInterval(-3 * 86400), needsSize: true),
+            SessionFile(id: "live", paths: ["live.jsonl"], size: TreeSize(), modified: now.addingTimeInterval(-60 * 86400), needsSize: true),
+            SessionFile(id: "active", paths: ["active.jsonl"], size: TreeSize(), modified: now.addingTimeInterval(-3600), needsSize: true)
+        ])
+        var measured: [[String]] = []
+        let items = AISessions.items(tool: "Fixture", idPrefix: "fixture", groups: [group], ctx: context(live: ["live"])) { paths in
+            measured.append(paths)
+            var size = TreeSize(); size.bytes = 8192; size.files = 2
+            return size
+        }
+        XCTAssertEqual(measured, [["old.jsonl", "old-sidecar"]], "kept sessions must not be walked or queried for private blocks")
+        let item = try XCTUnwrap(items.first)
+        XCTAssertEqual(item.bytes, 8192)
+        XCTAssertEqual(item.files, 2)
+        XCTAssertEqual(item.paths, ["old.jsonl", "old-sidecar"])
+        XCTAssertTrue(item.note?.contains("3 recent sessions, 2 in use") == true)
+        XCTAssertFalse(item.note?.contains("0 B") == true, "unmeasured retained space must not be shown as zero")
+    }
+
+    func testSessionScanDoesNoSizingWhenAllSessionsAreKept() throws {
+        let cwd = home + "/src/here"
+        try FileManager.default.createDirectory(atPath: cwd, withIntermediateDirectories: true)
+        let group = SessionGroup(cwd: cwd, label: "here", sessions: [
+            SessionFile(id: "recent", paths: ["recent.jsonl"], size: TreeSize(), modified: now, needsSize: true)
+        ])
+        let items = AISessions.items(tool: "Fixture", idPrefix: "fixture", groups: [group], ctx: context()) { _ in
+            XCTFail("a group with no cleanup candidates must not request sizes")
+            return TreeSize()
+        }
+        XCTAssertTrue(items.isEmpty)
+    }
+
+    func testWorktreeOnlyProjectWalkSkipsBuildOutputAndAiderCaches() throws {
+        let cwd = home + "/src/here"
+        try write("src/here/package.json", "{}")
+        try write("src/here/dist/output.js")
+        try write("src/here/.aider.tags.cache/file")
+        try write("src/here/.claude/worktrees/old/file")
+        var options = context().options; options.categories = [.agentWorktrees]
+        let scoped = ScanContext(options: options, now: now, processes: ProcessTable(entries: []), agentDirs: [], liveClaudeSessions: [])
+        var visited = Set<String>(); var candidates: [Projects.Candidate] = []
+        Projects.walk(cwd, depth: 0, ctx: scoped, visited: &visited, into: &candidates)
+        XCTAssertEqual(candidates.count, 1)
+        if case let .worktree(path, repo) = try XCTUnwrap(candidates.first) {
+            XCTAssertEqual(path, cwd + "/.claude/worktrees/old")
+            XCTAssertEqual(repo, cwd)
+        } else { XCTFail("worktree scans should only offer the worktree") }
+    }
+
+    func testOldWorktreeReportsKeepTheirActionsInTheNewCategory() throws {
+        let old = CleanItem(id: "worktree/repo/checkout", category: .aiSessions, title: "Old checkout", safety: .risky,
+                            bytes: 4096, paths: ["/fixture/checkout"], afterClean: ["git worktree prune"])
+        var report = ScanReport(items: [old], denied: [], started: now, duration: 1)
+        report.categories = [.aiSessions]
+        let decoded = try JSONDecoder().decode(ScanReport.self, from: JSONEncoder().encode(report))
+        XCTAssertEqual(decoded.items.first?.category, .agentWorktrees)
+        XCTAssertEqual(decoded.items.first?.safety, .risky)
+        XCTAssertEqual(decoded.items.first?.afterClean, old.afterClean)
+        XCTAssertEqual(Set(decoded.categories ?? []), [.aiSessions, .agentWorktrees])
+        XCTAssertTrue(CleanCategory.agentWorktrees.isAI)
+    }
+
     func testSimplifiedChineseText() throws {
         L10n.override = .simplifiedChinese
         try write(".claude/projects/-nowhere/77777777-7777-7777-7777-777777777777.jsonl", "{\"cwd\":\"\(home)/src/gone\"}\n", age: 40)
@@ -268,6 +338,70 @@ final class CleanKitTests: XCTestCase {
         XCTAssertFalse(items.contains { $0.paths.contains { $0.contains("left-pad") } }, "does not descend into artifacts")
     }
 
+    func testNestedTrackedBuildOutputsAreProtected() throws {
+        try write("src/repo/packages/web/package.json", "{}")
+        try write("src/repo/packages/web/dist/release.js", "release")
+        try write("src/repo/packages/web/node_modules/vendor.js", "vendored")
+        let repo = home + "/src/repo"
+        XCTAssertEqual(Shell.exec(["git", "init", repo], timeout: 5).0, 0)
+        XCTAssertEqual(Shell.exec(["git", "-C", repo, "add", "."], timeout: 5).0, 0)
+        let protected = Projects.protectedArtifacts(repo + "/packages/web", ["dist", "node_modules", "build"])
+        XCTAssertEqual(protected, ["dist", "node_modules"])
+    }
+
+    func testUnreadableGitMetadataProtectsAllArtifacts() throws {
+        try write("src/broken/.git", "gitdir: /missing/thermo-test-git-directory")
+        XCTAssertEqual(Projects.protectedArtifacts(home + "/src/broken", ["target", ".build"]), ["target", ".build"])
+    }
+
+    func testRunningAgentBlocksProjectArtifact() throws {
+        try write("src/web/package.json", "{}", age: 90)
+        try write("src/web/node_modules/output", String(repeating: "x", count: 1_100_000), age: 90)
+        let dir = home + "/src/web"
+        let item = try XCTUnwrap(Projects.make(.artifact(project: dir, kind: "Node", name: "node_modules",
+                                                       activity: now.addingTimeInterval(-90 * 86400), source: nil),
+                                             ctx: context(agentDirs: [dir + "/src"])))
+        XCTAssertEqual(item.blocked, "an agent is running in it")
+    }
+
+    func testExplicitProjectRootsStayWithinScopeAndEmitItems() throws {
+        let big = String(repeating: "x", count: 1_100_000)
+        try write("src/web/package.json", "{}")
+        try write("src/web/node_modules/output", big)
+        let other = home + "/elsewhere/project"
+        try write("elsewhere/project/package.json", "{}")
+        try write("elsewhere/project/node_modules/output", big)
+        try write(".claude/projects/other/session.jsonl", "{\"cwd\":\"\(other)\"}\n")
+        var ctx = context()
+        var options = ctx.options
+        options.discoverProjectRoots = false
+        ctx = ScanContext(options: options, now: now, processes: ctx.processes, agentDirs: [], liveClaudeSessions: [])
+        let lock = NSLock()
+        var emitted: [String] = []
+        let items = Projects.scan(ctx, onItem: { item in
+            lock.lock(); emitted.append(item.id); lock.unlock()
+        })
+        XCTAssertFalse(items.isEmpty)
+        XCTAssertFalse(items.contains { $0.group == other })
+        XCTAssertEqual(Set(emitted), Set(items.map(\.id)))
+        options.discoverProjectRoots = true
+        let expanded = Projects.scan(ScanContext(options: options, now: now, processes: ctx.processes, agentDirs: [], liveClaudeSessions: []))
+        XCTAssertTrue(expanded.contains { $0.group == other })
+    }
+
+    func testCleaningRechecksNewlyTrackedProjectOutput() throws {
+        let dir = home + "/src/repo"
+        let path = try write("src/repo/dist/release.js", "must survive")
+        XCTAssertEqual(Shell.exec(["git", "init", dir], timeout: 5).0, 0)
+        let item = CleanItem(id: "project/test", category: .projects, title: "dist", safety: .review,
+                             bytes: 4096, paths: [dir + "/dist"], group: dir)
+        XCTAssertEqual(Shell.exec(["git", "-C", dir, "add", "."], timeout: 5).0, 0)
+        let result = Cleaner.clean(item, mode: .permanent, guard: Guard(home: home))
+        XCTAssertTrue(result.removed.isEmpty)
+        XCTAssertFalse(result.failed.isEmpty)
+        XCTAssertTrue(FS.exists(path))
+    }
+
     func testLeftoverWorktreeIsSafe() throws {
         try write("src/repo/package.json", "{}")
         try write("src/repo/.claude/worktrees/agent-1/file.txt", age: 10)
@@ -289,6 +423,68 @@ final class CleanKitTests: XCTestCase {
         var o = ScanOptions(); o.home = home
         let item = try XCTUnwrap(DiskScanner(options: o).evaluate(rule, ctx: context(), denied: { _ in }))
         XCTAssertEqual(item.paths, [home + "/Downloads/old.dmg"])
+    }
+
+    func testRecentlyMovedFileIsNotStale() throws {
+        FS.countsStatusChanges = true
+        try write("Downloads/unpacked.dmg", age: 60)
+        let rule = try XCTUnwrap(Rules.paths.first { $0.id == "old-installers" })
+        var o = ScanOptions(); o.home = home
+        XCTAssertNil(DiskScanner(options: o).evaluate(rule, ctx: context(), denied: { _ in }),
+                     "an old modification date on a file that just arrived is not age")
+    }
+
+    func testFolderOfAnotherRuleIsCountedOnce() throws {
+        try write("Library/Logs/JetBrains/idea.log", age: 60)
+        try write("Library/Logs/Other/app.log", age: 60)
+        let rule = try XCTUnwrap(Rules.paths.first { $0.id == "user-logs" })
+        var o = ScanOptions(); o.home = home
+        let item = try XCTUnwrap(DiskScanner(options: o).evaluate(rule, ctx: context(), denied: { _ in }))
+        XCTAssertEqual(item.paths, [home + "/Library/Logs/Other"])
+    }
+
+    func testKeepsNewestDeviceSupport() throws {
+        let base = "Library/Developer/Xcode/iOS DeviceSupport/"
+        try write(base + "16.0/a", age: 300)
+        try write(base + "17.0/a", age: 200)
+        try write(base + "18.0/a", age: 100)
+        let rule = try XCTUnwrap(Rules.paths.first { $0.id == "xcode-device-support" })
+        var o = ScanOptions(); o.home = home
+        let item = try XCTUnwrap(DiskScanner(options: o).evaluate(rule, ctx: context(), denied: { _ in }))
+        XCTAssertEqual(item.paths, [home + "/" + base + "16.0"])
+    }
+
+    func testChromeProfileCachesExpandProfiles() throws {
+        let chrome = "Library/Application Support/Google/Chrome/"
+        try write(chrome + "Default/Code Cache/js/a")
+        try write(chrome + "Profile 2/GPUCache/data_0")
+        try write(chrome + "Default/History", "keep")
+        let rule = try XCTUnwrap(Rules.paths.first { $0.id == "chrome-profile-caches" })
+        var o = ScanOptions(); o.home = home
+        let item = try XCTUnwrap(DiskScanner(options: o).evaluate(rule, ctx: context(), denied: { _ in }))
+        XCTAssertEqual(Set(item.paths), [home + "/" + chrome + "Default/Code Cache/js", home + "/" + chrome + "Profile 2/GPUCache/data_0"])
+    }
+
+    func testCleanerSkipsReplacedAndOpenPaths() throws {
+        let replaced = try write("Library/Caches/demo/replaced")
+        let held = home + "/Library/Caches/demo/held"
+        try FileManager.default.createDirectory(atPath: held, withIntermediateDirectories: true)
+        let free = try write("Library/Caches/demo/free")
+        var item = CleanItem(id: "test", category: .system, title: "", safety: .safe, bytes: 1, paths: [replaced, held, free])
+        item.identities = Dictionary(uniqueKeysWithValues: item.paths.map { ($0, FileIdentity.of($0)!) })
+        try FileManager.default.removeItem(atPath: replaced)
+        _ = try write("Library/Caches/demo/replaced")
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/sleep"); p.arguments = ["20"]
+        p.currentDirectoryURL = URL(fileURLWithPath: held)
+        try p.run()
+        defer { p.terminate() }
+        Thread.sleep(forTimeInterval: 0.2)
+        let result = Cleaner.clean(item, mode: .permanent, guard: Guard(home: home))
+        XCTAssertEqual(result.removed, [free])
+        XCTAssertNotNil(result.failed[replaced])
+        XCTAssertEqual(result.failed[held], tr("%1$@ has files open here", "sleep"))
+        XCTAssertTrue(FS.exists(replaced) && FS.exists(held))
     }
 
     func testSelection() {

@@ -7,19 +7,79 @@ struct CleanCommand {
     var style: Style { app.style }
     var args: Args { app.args }
 
+    /// Each line is a complete JSON event; concurrent scanner callbacks never interleave writes.
+    final class ScanStream {
+        struct Event: Encodable {
+            var event: String
+            var step: String? = nil
+            var freeBytes: Int64? = nil
+            var capacityBytes: Int64? = nil
+            var items: [CleanItem]? = nil
+            var entry: SpaceOverview.Entry? = nil
+            var report: ScanReport? = nil
+            var overview: SpaceOverview? = nil
+        }
+        let lock = NSLock()
+        let write: (Data) -> Void
+        init(write: @escaping (Data) -> Void = { FileHandle.standardOutput.write($0) }) { self.write = write }
+        func emit(_ event: Event) {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = [.sortedKeys]
+            guard var data = try? encoder.encode(event) else { return }
+            data.append(10)
+            lock.lock(); defer { lock.unlock() }
+            write(data)
+        }
+        func start() {
+            let values = try? URL(fileURLWithPath: NSHomeDirectory()).resourceValues(forKeys: [.volumeAvailableCapacityKey, .volumeTotalCapacityKey])
+            emit(Event(event: "started", freeBytes: values?.volumeAvailableCapacity.map(Int64.init),
+                       capacityBytes: values?.volumeTotalCapacity.map(Int64.init)))
+        }
+    }
+
     func run(_ rest: [String]) throws {
+        if args.options["budget"] != nil, (rest.first == "log" || (rest.first == "run" && !args.has("dry-run"))) {
+            throw CLIError("--budget is for read-only scans")
+        }
+        if args.has("stream") {
+            guard !args.has("csv"), !["run", "log"].contains(rest.first ?? "") else {
+                throw CLIError("--stream is for read-only scans and cannot be combined with --csv")
+            }
+        }
         switch rest.first {
         case "run": try clean(Array(rest.dropFirst()))
         case "log": showLog()
-        case "overview", "space": overview()
+        case "overview", "space": try overview()
         default: try report(filter: rest)
         }
     }
 
-    /// Where the used space is: the big places on this disk and the biggest folders in each.
-    func overview() {
-        let tty = isatty(STDERR_FILENO) != 0 && !args.has("json")
-        let o = SpaceOverview.measure(onProgress: tty ? { _ in FileHandle.standardError.write(".".data(using: .utf8)!) } : nil)
+    static func budget(_ args: Args) throws -> TimeInterval? {
+        let value = try args.double("budget")
+        if let value, value > 86400 { throw CLIError("--budget must be at most 86400 seconds") }
+        return value
+    }
+
+    static func deadline(after seconds: TimeInterval?, cancellation: ScanCancellation) -> DispatchWorkItem? {
+        guard let seconds else { return nil }
+        let item = DispatchWorkItem { cancellation.cancel() }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + seconds, execute: item)
+        return item
+    }
+
+    func overview() throws {
+        let cancellation = ScanCancellation()
+        let deadline = Self.deadline(after: try Self.budget(args), cancellation: cancellation)
+        defer { deadline?.cancel() }
+        let stream = args.has("stream") ? ScanStream() : nil
+        stream?.start()
+        let tty = isatty(STDERR_FILENO) != 0 && !args.has("json") && stream == nil
+        let o = SpaceOverview.measure(onProgress: { step in
+            stream?.emit(.init(event: "progress", step: step))
+            if tty { FileHandle.standardError.write(Data(".".utf8)) }
+        }, onEntry: { entry in stream?.emit(.init(event: "entry", entry: entry)) }, cancellation: cancellation)
+        if let stream { stream.emit(.init(event: "finished", overview: o)); o.save(); return }
         o.save()  // the app's Overview opens with these numbers
         if tty { FileHandle.standardError.write("\n".data(using: .utf8)!) }
         if args.has("json") { print(Export.json(o)); return }
@@ -27,14 +87,19 @@ struct CleanCommand {
         var lines = [style.bold("Disk") + style.dim(String(format: " · %@ used of %@ · %@ free", gb(o.used), gb(o.capacity), gb(o.free))
                      + (o.purgeable > 1_000_000_000 ? " (+\(gb(o.purgeable)) purgeable)" : "")), ""]
         for e in o.entries where e.bytes >= 100_000_000 {
-            lines.append(pad(gb(e.bytes), 9, right: true) + "  " + style.bold(e.title))
+            lines.append(pad(gb(e.bytes), 9, right: true) + "  " + style.bold(e.title) + (e.complete == false ? style.yellow(" · at least this much; category unfinished") : ""))
             if let n = e.note { lines.append(pad("", 11) + style.dim(n)) }
+            if let a = e.action { lines.append(pad("", 11) + style.yellow("→ " + a)) }
             for c in e.children.prefix(args.has("all") ? 20 : 5) where c.bytes >= 100_000_000 {
-                lines.append(pad("", 11) + pad(gb(c.bytes), 9, right: true) + "  " + c.title)
+                lines.append(pad("", 11) + pad(gb(c.bytes), 9, right: true) + "  " + c.title + (c.action.map { style.dim("  → " + $0) } ?? ""))
             }
         }
+        if let over = o.overcounted {
+            lines.append(""); lines.append(style.dim(tr("The headings add up to %1$@ more than the disk uses: hard links (pnpm), APFS clones and files written while measuring count in each place.", gb(over))))
+        }
         lines.append("")
-        lines.append(style.dim(String(format: "measured in %.0f s · what can go: thermo clean", o.duration)))
+        lines.append(style.dim(o.cancelled == true ? String(format: "stopped after %.1f s · completed folders counted; unfinished categories are lower bounds", o.duration)
+                                                    : String(format: "measured in %.0f s · what can go: thermo clean", o.duration)))
         out(lines)
     }
 
@@ -45,17 +110,27 @@ struct CleanCommand {
             o.olderThanDays = d
         }
         if let roots = args.options["root"] {
+            o.discoverProjectRoots = false
             o.projectRoots = roots.split(separator: ",").map { FS.expand(String($0)) }
                 .map { URL(fileURLWithPath: $0).standardizedFileURL.path }
         }
         return o
     }
 
-    func scan(_ categories: Set<CleanCategory>? = nil) throws -> ScanReport {
+    func scan(_ categories: Set<CleanCategory>? = nil, onlyIDs: Set<String>? = nil) throws -> ScanReport {
         var o = try options()
         if let categories { o.categories = categories }
+        o.onlyIDs = onlyIDs
         let scanner = DiskScanner(options: o)
-        let tty = isatty(STDERR_FILENO) != 0 && !args.has("json") && !args.has("csv")
+        let deadline = Self.deadline(after: try Self.budget(args), cancellation: scanner.cancellation)
+        defer { deadline?.cancel() }
+        let stream = args.has("stream") ? ScanStream() : nil
+        stream?.start()
+        if let stream {
+            scanner.onItems = { stream.emit(.init(event: "items", items: $0)) }
+            scanner.onProgress = { stream.emit(.init(event: "progress", step: $0)) }
+        }
+        let tty = isatty(STDERR_FILENO) != 0 && !args.has("json") && !args.has("csv") && stream == nil
         if tty {
             let lock = NSLock()
             var done = 0
@@ -65,6 +140,7 @@ struct CleanCommand {
             }
         }
         let r = scanner.scan()
+        stream?.emit(.init(event: "finished", report: r))
         if tty { FileHandle.standardError.write("\r\u{1B}[2K".data(using: .utf8)!) }
         return r
     }
@@ -77,6 +153,7 @@ struct CleanCommand {
             if f == "ai" { set.formUnion(CleanCategory.allCases.filter(\.isAI)) }
             else if let c = CleanCategory(rawValue: f) { set.insert(c) }
             else if f == "sessions" { set.insert(.aiSessions) }
+            else if f == "worktrees" { set.insert(.agentWorktrees) }
             else if f == "models" { set.insert(.aiModels) }
             else {
                 throw CLIError("unknown category '\(f)'; use ai, " + CleanCategory.allCases.map(\.rawValue).joined(separator: ", "))
@@ -90,6 +167,7 @@ struct CleanCommand {
     func report(filter: [String]) throws {
         let cats = try categories(for: filter)
         let r = try scan(cats)
+        if args.has("stream") { return }
         if args.has("json") { print(Export.json(r)); return }
         if args.has("csv") {
             print("id,category,safety,bytes,files,last_used,title,detail,blocked")
@@ -107,7 +185,9 @@ struct CleanCommand {
             let items = r.items.filter { $0.category == c }
             guard !items.isEmpty else { continue }
             lines.append("")
-            lines.append(pad(style.bold(c.title), 0) + style.dim("  " + ByteFormat.string(r.bytes(in: c))))
+            let waiting = r.blockedBytes(in: c)
+            lines.append(pad(style.bold(c.title), 0) + style.dim("  " + ByteFormat.string(r.bytes(in: c)))
+                         + (waiting > 0 ? style.yellow("  + " + tr("%1$@ held back (see skipped)", ByteFormat.string(waiting))) : ""))
             let shown = showAll ? items : Array(items.prefix(6))
             for i in shown { lines += render(i, width: width) }
             if shown.count < items.count {
@@ -115,7 +195,11 @@ struct CleanCommand {
                 lines.append(style.dim("  + \(more.count) more (\(ByteFormat.string(more.reduce(0) { $0 + $1.bytes }))) · thermo clean \(c.rawValue)"))
             }
         }
-        if r.items.isEmpty { lines.append(""); lines.append(style.dim("  nothing to clean")) }
+        if r.cancelled { lines.append(style.yellow("scan stopped · completed findings only; results are incomplete")) }
+        if r.items.isEmpty {
+            lines.append("")
+            lines.append(style.dim(r.cancelled ? "  no completed findings before the scan stopped" : "  nothing to clean"))
+        }
         if let days = r.claudeCleanupDays {
             lines.append("")
             lines.append(style.dim("Claude Code deletes its own sessions after \(days) days (cleanupPeriodDays in ~/.claude/settings.json)."))
@@ -165,6 +249,34 @@ struct CleanCommand {
 
     // MARK: run
 
+    /// The item ids named by a selection (`ID` or `ID#SESSION`), or nil when any selector is a
+    /// group (all, safe, ai, a category) that has to be found by scanning.
+    static func itemIDs(in selectors: [String]) -> Set<String>? {
+        var ids = Set<String>()
+        for selector in selectors {
+            let s = selector.lowercased()
+            if ["all", "safe", "ai"].contains(s) || CleanCategory(rawValue: s) != nil || s.hasSuffix("*") { return nil }
+            ids.insert(String(s.split(separator: "#", maxSplits: 1).first ?? Substring(s)))
+        }
+        return ids.isEmpty ? nil : ids
+    }
+
+    static func cleanupCategories(for selectors: [String]) -> Set<CleanCategory>? {
+        var categories = Set<CleanCategory>()
+        for selector in selectors {
+            let s = selector.lowercased()
+            if ["all", "safe"].contains(s) { return nil }
+            if s == "ai" { categories.formUnion(CleanCategory.allCases.filter(\.isAI)); continue }
+            if let category = CleanCategory(rawValue: s) { categories.insert(category); continue }
+            if s.hasPrefix("project/") { categories.insert(.projects); continue }
+            if s.hasPrefix("worktree/") { categories.insert(.agentWorktrees); continue }
+            if s.hasPrefix("simulator-") { categories.insert(.xcode); continue }
+            if let rule = Rules.paths.first(where: { $0.id == s }) { categories.insert(rule.category); continue }
+            return nil
+        }
+        return categories
+    }
+
     func clean(_ selectors: [String]) throws {
         guard !selectors.isEmpty else {
             throw CLIError("usage: thermo clean run safe|all|ai|CATEGORY|ID… [--older-than 30d] [--trash|--permanent] [--yes]")
@@ -184,23 +296,67 @@ struct CleanCommand {
                 print(style.dim("using the scan from \(AgeFormat.string(r.started)); sizes are from then (--rescan to scan again)"))
             }
         } else {
-            r = try scan(needsProjects ? nil : Set(CleanCategory.allCases.filter { $0 != .projects }))
+            r = try scan(Self.cleanupCategories(for: selectors) ?? (needsProjects ? nil : Set(CleanCategory.allCases.filter { $0 != .projects })),
+                         onlyIDs: Self.itemIDs(in: selectors))
             picked = r.select(selectors)
         }
+        try execute(report: r, picked: picked, mode: mode)
+    }
+
+    struct Preview: Encodable {
+        let dryRun = true
+        let scannedAt: Date
+        let scanCancelled: Bool
+        let removalMode: String
+        let items: [PreviewItem]
+        let skipped: [CleanItem]
+    }
+    struct PreviewItem: Encodable {
+        let item: CleanItem
+        let action: String
+    }
+
+    /// The reviewed execution boundary is shared by real execution and dry-run tests.
+    func execute(report r: ScanReport, picked: [CleanItem], mode: RemovalMode,
+                 write: (String) -> Void = { print($0) }) throws {
         guard !picked.isEmpty else {
-            throw CLIError("nothing matches \(selectors.joined(separator: " ")); see thermo clean")
+            if args.has("dry-run"), r.cancelled {
+                if args.has("json") {
+                    write(Export.json(Preview(scannedAt: r.started, scanCancelled: true, removalMode: mode.rawValue,
+                                              items: [], skipped: [])))
+                } else { write("dry run · scan stopped before any matching item completed; nothing was removed") }
+                return
+            }
+            throw CLIError("nothing matches; see thermo clean")
         }
-        let todo = picked.filter(\.cleanable)
-        let skipped = picked.filter { !$0.cleanable }
+        let processes = ProcessTable.current(.init(cpu: false))
+        let reviewed = picked.map { original -> CleanItem in
+            var item = original
+            item.blocked = Cleaner.refusal(item, mode: mode, processes: processes)
+            return item
+        }
+        let todo = reviewed.filter(\.cleanable)
+        let skipped = reviewed.filter { !$0.cleanable }
         let total = todo.reduce(Int64(0)) { $0 + $1.bytes }
 
         var plan = [style.bold("About to clean \(ByteFormat.string(total)) in \(todo.count) item\(todo.count == 1 ? "" : "s"):")]
         for i in todo {
-            let how = mode.trashes(i.safety) ? style.yellow("trash ") : style.red("delete")
+            let how = !(i.commands ?? []).isEmpty ? style.red("tool removal") : mode.trashes(i.safety) ? style.yellow("trash ") : style.red("delete")
             plan.append("  " + pad(ByteFormat.string(i.bytes), 8, right: true) + "  " + how + "  " + i.title + style.dim("  \(i.paths.count) path\(i.paths.count == 1 ? "" : "s")"))
         }
         for i in skipped {
             plan.append(style.dim("  skipped  \(i.title): \(i.blocked ?? (i.hint.map { "run \($0)" } ?? "nothing to remove"))"))
+        }
+        if args.has("dry-run") {
+            if args.has("json") {
+                write(Export.json(Preview(scannedAt: r.started, scanCancelled: r.cancelled, removalMode: mode.rawValue,
+                                          items: todo.map { PreviewItem(item: $0, action: !($0.commands ?? []).isEmpty ? "tool-removal" : mode.trashes($0.safety) ? "trash" : "delete") },
+                                          skipped: skipped)))
+            } else {
+                write(plan.joined(separator: "\n"))
+                write("dry run · no files removed and no cleanup commands executed")
+            }
+            return
         }
         if args.has("json") == false { out(plan) }
         guard !todo.isEmpty else { return }
@@ -212,6 +368,7 @@ struct CleanCommand {
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print("cancelled"); return }
         }
 
+        let spaceBefore = DiskSpaceSnapshot.measure()
         var results: [CleanResult] = []
         for i in todo {
             let res = Cleaner.clean(i, mode: mode, scannedAt: r.started)
@@ -223,35 +380,42 @@ struct CleanCommand {
                 for (p, why) in res.failed.sorted(by: { $0.key < $1.key }).prefix(5) { print(style.dim("      \(FS.tilde(p)): \(why)")) }
             }
         }
+        let observation = DiskSpaceObservation(before: spaceBefore, after: DiskSpaceSnapshot.measure())
         if args.has("json") { print(Export.json(results)); return }
         let freed = results.filter { !$0.trashed }.reduce(Int64(0)) { $0 + $1.bytes }
         let trashed = results.filter(\.trashed).reduce(Int64(0)) { $0 + $1.bytes }
-        var summary = "freed \(ByteFormat.string(freed))"
+        var summary = "deleted \(ByteFormat.string(freed)) (estimated file size)"
         if trashed > 0 { summary += ", moved \(ByteFormat.string(trashed)) to the Trash (empty it to reclaim the space)" }
+        print(observation.summary)
         print(style.bold(summary) + style.dim(" · log: \(FS.tilde(Cleaner.logURL.path))"))
     }
 
     /// The saved report when it is under 15 minutes old, made with the same age limit, and covers
     /// what `selectors` ask for; the picked items come back without paths that are gone.
     func reusableReport(for selectors: [String]) throws -> (report: ScanReport, picked: [CleanItem])? {
-        guard let r = ScanReportCache.load(maxAge: 15 * 60), r.olderThanDays == (try options()).olderThanDays,
-              r.language == L10n.current.rawValue else { return nil }
-        let covered = Set(r.categories ?? [])
-        for s in selectors.map({ $0.lowercased() }) {
-            let needs: Set<CleanCategory> = ["all", "safe"].contains(s) ? Set(CleanCategory.allCases)
-                : s == "ai" ? Set(CleanCategory.allCases.filter(\.isAI))
-                : CleanCategory(rawValue: s).map { [$0] } ?? []
-            guard needs.isSubset(of: covered) else { return nil }
+        let configured = try options()
+        let needs = selectors.reduce(into: Set<CleanCategory>()) { set, selector in
+            let s = selector.lowercased()
+            if ["all", "safe"].contains(s) { set.formUnion(CleanCategory.allCases) }
+            else if s == "ai" { set.formUnion(CleanCategory.allCases.filter(\.isAI)) }
+            else if let c = CleanCategory(rawValue: s) { set.insert(c) }
         }
+        guard let r = ScanReportCache.load(maxAge: 15 * 60, matching: { report in
+            guard report.olderThanDays == configured.olderThanDays,
+                  report.language == L10n.current.rawValue,
+                  needs.isSubset(of: Set(report.categories ?? [])),
+                  report.projectRoots == Array(Set(configured.projectRoots)).sorted(),
+                  report.discoverProjectRoots == configured.discoverProjectRoots else { return false }
+            return selectors.allSatisfy { !report.select([$0]).isEmpty }
+        }) else { return nil }
         let picked = r.select(selectors)
-        // Ids the old scan did not know about need a fresh one.
         guard !picked.isEmpty else { return nil }
         return (r, picked.map(refreshed))
     }
 
     /// The item as it is now: paths that are gone are dropped. Sizes stay as scanned — measuring
     /// again would cost what we are avoiding, and removal re-walks each path anyway (it skips
-    /// anything changed since the scan and reports what was really freed).
+    /// anything changed since the scan and reports removed file estimates and live volume measurements).
     func refreshed(_ item: CleanItem) -> CleanItem {
         var i = item
         let kept = item.paths.filter(FS.exists)

@@ -1,0 +1,424 @@
+import AgentCore
+import AppKit
+import CleanKit
+import SwiftUI
+
+enum AppsTab: String, Hashable, CaseIterable {
+    case installed, leftovers
+}
+
+/// Installed apps with their files, and data left behind by apps that are gone. Everything removed
+/// goes to the Trash after a confirmation that lists every path.
+@MainActor
+final class AppsModel: ObservableObject {
+    @Published private(set) var apps: [InstalledApp] = []
+    @Published private(set) var measured = 0
+    @Published private(set) var loading = false
+    @Published private(set) var running: Set<String> = []
+    @Published private(set) var orphans: [OrphanData]?
+    @Published private(set) var scanningOrphans = false
+    @Published var selectedOrphans: Set<String> = []
+    @Published var plan: UninstallPlan?
+    @Published private(set) var planning: String?
+    @Published private(set) var working = false
+    @Published var outcome: String?
+    private var cancellation: ScanCancellation?
+
+    var measuring: Bool { loading && measured < apps.count }
+    var totalBytes: Int64 { apps.reduce(0) { $0 + $1.totalBytes } }
+
+    func load(ifEmpty: Bool = false) {
+        if ifEmpty, !apps.isEmpty || loading { return }
+        cancellation?.cancel()
+        let token = ScanCancellation()
+        cancellation = token
+        loading = true
+        measured = 0
+        Task.detached(priority: .userInitiated) {
+            let found = AppUninstaller.installed()
+            let busy = Self.runningPaths(found)
+            await MainActor.run {
+                guard self.cancellation === token else { return }
+                self.apps = found
+                self.running = busy
+            }
+            _ = AppUninstaller.measure(found, cancellation: token) { app in
+                Task { @MainActor in
+                    guard self.cancellation === token, let i = self.apps.firstIndex(where: { $0.path == app.path }) else { return }
+                    self.apps[i] = app
+                    self.measured += 1
+                }
+            }
+            await MainActor.run { if self.cancellation === token { self.loading = false } }
+        }
+    }
+
+    nonisolated static func runningPaths(_ apps: [InstalledApp]) -> Set<String> {
+        let table = ProcessTable.current(.init(cpu: false))
+        return Set(apps.filter { AppUninstaller.runningProcess(in: [$0.path], processes: table) != nil }.map(\.path))
+    }
+
+    /// Looks the app's files up again and opens the confirmation.
+    func review(_ app: InstalledApp) {
+        planning = app.path
+        let all = apps
+        Task.detached(priority: .userInitiated) {
+            let plan = AppUninstaller.plan(app, installed: all)
+            await MainActor.run {
+                self.planning = nil
+                self.plan = plan
+            }
+        }
+    }
+
+    func uninstall(_ plan: UninstallPlan) {
+        self.plan = nil
+        working = true
+        Task.detached(priority: .userInitiated) {
+            let result = AppUninstaller.uninstall(plan)
+            await MainActor.run {
+                self.working = false
+                self.outcome = Self.summary([result])
+                self.apps = Self.afterUninstall(self.apps, appPath: plan.app.path, removed: Set(result.removed))
+            }
+        }
+    }
+
+    func scanOrphans() {
+        guard !scanningOrphans else { return }
+        scanningOrphans = true
+        Task.detached(priority: .userInitiated) {
+            let installed = AppUninstaller.installed()
+            let known = AppUninstaller.knownBundleIDs(installed: installed, processes: ProcessTable.current(.init(cpu: false)))
+            let found = AppUninstaller.orphans(known: known, minimumBytes: 1 << 20)
+            await MainActor.run {
+                self.orphans = found
+                self.selectedOrphans.formIntersection(found.map(\.id))
+                self.scanningOrphans = false
+            }
+        }
+    }
+
+    var pickedOrphans: [OrphanData] { (orphans ?? []).filter { selectedOrphans.contains($0.id) } }
+
+    func removeOrphans() {
+        let picked = pickedOrphans
+        guard !picked.isEmpty else { return }
+        working = true
+        Task.detached(priority: .userInitiated) {
+            let results = AppUninstaller.removeOrphans(picked)
+            await MainActor.run {
+                self.working = false
+                self.outcome = Self.summary(results)
+                self.selectedOrphans = []
+                self.orphans = Self.afterRemoval(self.orphans ?? [], removed: Set(results.flatMap(\.removed)))
+            }
+        }
+    }
+
+    /// The list after an uninstall, without measuring every app again: the app leaves the list once its
+    /// bundle is gone; otherwise it stays, without the files that moved.
+    nonisolated static func afterUninstall(_ apps: [InstalledApp], appPath: String, removed: Set<String>) -> [InstalledApp] {
+        if removed.contains(appPath) || !FileManager.default.fileExists(atPath: appPath) {
+            return apps.filter { $0.path != appPath }
+        }
+        return apps.map { app in
+            guard app.path == appPath else { return app }
+            var app = app
+            app.leftovers.removeAll { removed.contains($0.path) }
+            return app
+        }
+    }
+
+    /// Leftovers after a removal, without searching again: moved folders drop out, emptied entries go.
+    nonisolated static func afterRemoval(_ orphans: [OrphanData], removed: Set<String>) -> [OrphanData] {
+        orphans.compactMap { o in
+            var o = o
+            o.items.removeAll { removed.contains($0.path) }
+            return o.items.isEmpty ? nil : o
+        }
+    }
+
+    nonisolated static func summary(_ results: [CleanResult]) -> String {
+        let bytes = results.reduce(Int64(0)) { $0 + $1.bytes }
+        let failed = results.flatMap { $0.failed.map { FSPath.tilde($0.key) + ": " + $0.value } }
+        var text = tr("Moved %1$@ to the Trash (empty it to get the space back)", ByteFormat.string(bytes))
+        if !failed.isEmpty { text += "\n" + tr("Not moved:") + "\n" + failed.prefix(6).joined(separator: "\n") }
+        return text
+    }
+}
+
+struct AppsPage: View {
+    @ObservedObject var model: AppsModel
+    @Binding var tab: AppsTab
+    @State private var search = ""
+    @State private var open: Set<String> = []
+    @State private var confirmingOrphans = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
+            if let outcome = model.outcome {
+                HStack(alignment: .top) {
+                    Label(outcome, systemImage: "trash").font(.callout).foregroundStyle(.white.opacity(0.85)).textSelection(.enabled)
+                    Spacer()
+                    Button { model.outcome = nil } label: { Image(systemName: "xmark") }.buttonStyle(.plain)
+                        .accessibilityLabel(tr("Dismiss")).help(tr("Dismiss"))
+                }
+                .padding(12).glass(radius: 12).padding(.horizontal, 28).padding(.bottom, 10)
+            }
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 10) {
+                    if tab == .installed { installedList } else { leftoverList }
+                }
+                .padding(.horizontal, 28).padding(.bottom, 20)
+            }
+            footer
+        }
+        .onAppear {
+            model.load(ifEmpty: true)
+            if tab == .leftovers, model.orphans == nil { model.scanOrphans() }
+        }
+        .onChange(of: tab) { t in if t == .leftovers, model.orphans == nil { model.scanOrphans() } }
+        .sheet(item: Binding(get: { model.plan.map(PlanBox.init) }, set: { if $0 == nil { model.plan = nil } })) { box in
+            let p = box.plan
+            ConfirmSheet(title: tr("Uninstall %1$@?", p.app.name),
+                         summary: tr("%1$@ and %2$@ of its files go to the Trash: %3$@ in all.", p.app.name,
+                                     String(p.paths.count - 1), ByteFormat.string(p.bytes)),
+                         destructive: false, heading: tr("What will be moved to the Trash"),
+                         lines: lines(p),
+                         footnote: tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
+                         confirmTitle: tr("Move to Trash"),
+                         confirm: { model.uninstall(p) }, cancel: { model.plan = nil })
+        }
+        .sheet(isPresented: $confirmingOrphans) {
+            let picked = model.pickedOrphans
+            ConfirmSheet(title: tr("Remove data of %1$@ deleted apps?", String(picked.count)),
+                         summary: tr("%1$@ goes to the Trash. Each one is checked again first: still not installed, not running, untouched for 30 days.",
+                                     ByteFormat.string(picked.reduce(0) { $0 + $1.bytes })),
+                         destructive: false, heading: tr("What will be moved to the Trash"),
+                         lines: picked.flatMap { o in o.items.map { ByteFormat.string($0.bytes).padding(toLength: 10, withPad: " ", startingAt: 0) + FSPath.tilde($0.path) } },
+                         footnote: tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
+                         confirmTitle: tr("Move to Trash"),
+                         confirm: { confirmingOrphans = false; model.removeOrphans() }, cancel: { confirmingOrphans = false })
+        }
+    }
+
+    struct PlanBox: Identifiable { let plan: UninstallPlan; var id: String { plan.app.path } }
+
+    func lines(_ p: UninstallPlan) -> [String] {
+        var out = [ByteFormat.string(p.app.bytes).padding(toLength: 10, withPad: " ", startingAt: 0) + p.app.path]
+        out += p.app.leftovers.filter { p.paths.contains($0.path) }.map { ByteFormat.string($0.bytes).padding(toLength: 10, withPad: " ", startingAt: 0) + FSPath.tilde($0.path) }
+        if let kept = p.kept, !kept.isEmpty {
+            out.append(tr("Kept, your data (profiles, chat history, mail); remove it in the app first, or with thermo apps uninstall --with-data:"))
+            out += kept.map { ByteFormat.string($0.bytes).padding(toLength: 10, withPad: " ", startingAt: 0) + FSPath.tilde($0.path) }
+        }
+        if let cask = p.app.cask { out.append(tr("Homebrew installed it: run brew uninstall --cask %1$@ afterwards so Homebrew forgets it.", cask)) }
+        if !p.receipts.isEmpty { out.append(tr("Installed by a package (%1$@); files it put outside your home folder stay.", p.receipts.joined(separator: ", "))) }
+        return out
+    }
+
+    var header: some View {
+        HStack(spacing: 14) {
+            IconTile(symbol: "square.grid.2x2.fill", color: .indigo, size: 44)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(tr("Uninstall apps")).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                Text(subtitle).font(.callout).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+            }
+            Spacer()
+            Picker("", selection: $tab) {
+                Text(tr("Apps")).tag(AppsTab.installed)
+                Text(tr("Leftovers")).tag(AppsTab.leftovers)
+            }
+            .pickerStyle(.segmented).labelsHidden().frame(width: 170)
+            .accessibilityLabel(tr("Show"))
+            if tab == .installed {
+                TextField(tr("Search"), text: $search).textFieldStyle(.roundedBorder).frame(width: 150)
+                    .accessibilityLabel(tr("Search"))
+            }
+        }
+    }
+
+    var subtitle: String {
+        switch tab {
+        case .installed:
+            if model.apps.isEmpty { return tr("Looking…") }
+            let base = tr("%1$@ apps · %2$@ with their files", String(model.apps.count), ByteFormat.string(model.totalBytes))
+            return model.measuring ? base + " · " + tr("measuring %1$@ of %2$@", String(model.measured), String(model.apps.count)) : base
+        case .leftovers:
+            guard let o = model.orphans else { return tr("Looking for data of apps that are gone…") }
+            return tr("%1$@ in %2$@ apps that are gone", ByteFormat.string(o.reduce(0) { $0 + $1.bytes }), String(o.count))
+        }
+    }
+
+    var filtered: [InstalledApp] {
+        let q = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        let list = q.isEmpty ? model.apps : model.apps.filter { ($0.name + " " + ($0.bundleID ?? "")).localizedCaseInsensitiveContains(q) }
+        return list.sorted { $0.totalBytes > $1.totalBytes }
+    }
+
+    @ViewBuilder var installedList: some View {
+        let list = filtered
+        ForEach(list) { appCard($0) }
+        if list.isEmpty {
+            Text(model.loading ? tr("Looking…") : tr("No matching items")).foregroundStyle(.secondary).padding(.top, 30)
+        }
+    }
+
+    func appCard(_ a: InstalledApp) -> some View {
+        let expanded = open.contains(a.path)
+        let running = model.running.contains(a.path)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: a.path)).resizable().frame(width: 36, height: 36)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(a.name).font(.system(size: 14, weight: .medium)).foregroundStyle(.white).lineLimit(1)
+                        if let v = a.version { Text(v).font(.caption).foregroundStyle(.white.opacity(0.45)).lineLimit(1) }
+                        if a.protected != nil { tag(tr("Protected"), .gray) }
+                        if running { tag(tr("Running"), .orange) }
+                        if a.cask != nil { tag("Homebrew", .yellow) }
+                    }
+                    Text(a.protected ?? detail(a)).font(.caption).foregroundStyle(.white.opacity(0.55)).lineLimit(1).truncationMode(.middle)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(a.bytes > 0 ? ByteFormat.string(a.totalBytes) : "…")
+                        .font(.system(size: 15, weight: .semibold).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
+                    if a.leftoverBytes > 0 {
+                        Text(tr("%1$@ of files", ByteFormat.string(a.leftoverBytes))).font(.caption.monospacedDigit()).foregroundStyle(.white.opacity(0.5))
+                    }
+                }
+                Button(model.planning == a.path ? tr("Looking…") : tr("Uninstall…")) { model.review(a) }
+                    .buttonStyle(PillButtonStyle())
+                    .disabled(a.protected != nil || running || model.working || model.planning != nil)
+                    .help(a.protected ?? (running ? tr("%1$@ is running; quit it first", a.name) : tr("Lists every file first")))
+                Button { toggle(a.path) } label: {
+                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.6))
+                        .rotationEffect(.degrees(expanded ? 90 : 0)).frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain).accessibilityLabel(tr("Details for %1$@", a.name))
+                .accessibilityValue(expanded ? tr("Expanded") : tr("Collapsed"))
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { toggle(a.path) }
+            if expanded {
+                VStack(alignment: .leading, spacing: 4) {
+                    pathRow(a.path, a.bytes)
+                    ForEach(a.leftovers, id: \.path) { pathRow($0.path, $0.bytes) }
+                    if a.leftovers.isEmpty && a.bytes > 0 {
+                        Text(tr("No files of it found in your home folder.")).font(.caption).foregroundStyle(.white.opacity(0.5))
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .glass(radius: 14)
+        .contextMenu {
+            Button(tr("Show in Finder")) { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: a.path)]) }
+            if let id = a.bundleID {
+                Button(tr("Copy ID")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(id, forType: .string) }
+            }
+        }
+    }
+
+    func detail(_ a: InstalledApp) -> String {
+        [a.bundleID, FSPath.tilde((a.path as NSString).deletingLastPathComponent)].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    func toggle(_ id: String) { if open.contains(id) { open.remove(id) } else { open.insert(id) } }
+
+    func tag(_ text: String, _ color: Color) -> some View {
+        Text(text).font(.system(size: 10, weight: .semibold)).foregroundStyle(color)
+            .padding(.horizontal, 6).padding(.vertical, 1).background(Capsule().fill(color.opacity(0.18)))
+    }
+
+    func pathRow(_ path: String, _ bytes: Int64) -> some View {
+        HStack {
+            Text(FSPath.tilde(path)).font(.caption.monospaced()).foregroundStyle(.white.opacity(0.75)).lineLimit(1).truncationMode(.middle)
+                .textSelection(.enabled)
+            Spacer()
+            Text(ByteFormat.string(bytes)).font(.caption.monospacedDigit()).foregroundStyle(.white.opacity(0.55))
+        }
+    }
+
+    @ViewBuilder var leftoverList: some View {
+        if let orphans = model.orphans {
+            Text(tr("Data of apps that are no longer installed: not running, untouched for 30 days, and Spotlight knows no app with that ID."))
+                .font(.caption).foregroundStyle(.white.opacity(0.5)).fixedSize(horizontal: false, vertical: true)
+            ForEach(orphans) { orphanCard($0) }
+            if orphans.isEmpty {
+                Label(tr("No data left behind by deleted apps."), systemImage: "checkmark.circle").foregroundStyle(.secondary).padding(.top, 30)
+            }
+        } else {
+            Label(tr("Looking…"), systemImage: "hourglass").foregroundStyle(.secondary).padding(.top, 30)
+        }
+    }
+
+    func orphanCard(_ o: OrphanData) -> some View {
+        let ticked = model.selectedOrphans.contains(o.id)
+        let expanded = open.contains(o.id)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Button { if ticked { model.selectedOrphans.remove(o.id) } else { model.selectedOrphans.insert(o.id) } } label: {
+                    Image(systemName: ticked ? "checkmark.circle.fill" : "circle").font(.title3)
+                        .foregroundStyle(ticked ? Color.indigo : .white.opacity(0.5)).frame(width: 28, height: 28).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).disabled(model.working)
+                .accessibilityLabel(tr("Select %1$@", o.bundleID))
+                .accessibilityValue(ticked ? tr("Selected") : tr("Not selected"))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(o.bundleID).font(.system(size: 14, weight: .medium)).foregroundStyle(.white).lineLimit(1)
+                    Text([trCount(o.items.count, "%1$@ place", "%1$@ places"), o.lastUsed.map { tr("last changed %1$@", AgeFormat.string($0)) }]
+                            .compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption).foregroundStyle(.white.opacity(0.55))
+                }
+                Spacer()
+                Text(ByteFormat.string(o.bytes)).font(.system(size: 15, weight: .semibold).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
+                Button { toggle(o.id) } label: {
+                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.6))
+                        .rotationEffect(.degrees(expanded ? 90 : 0)).frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain).accessibilityLabel(tr("Details for %1$@", o.bundleID))
+                .accessibilityValue(expanded ? tr("Expanded") : tr("Collapsed"))
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { toggle(o.id) }
+            if expanded {
+                VStack(alignment: .leading, spacing: 4) { ForEach(o.items, id: \.path) { pathRow($0.path, $0.bytes) } }
+            }
+        }
+        .padding(14)
+        .glass(radius: 14, highlighted: ticked)
+    }
+
+    var footer: some View {
+        HStack(spacing: 10) {
+            if tab == .installed {
+                if model.measuring || model.working {
+                    ProgressView().controlSize(.small)
+                    Text(model.working ? tr("Moving to the Trash…") : tr("measuring %1$@ of %2$@", String(model.measured), String(model.apps.count)))
+                        .font(.callout).foregroundStyle(.secondary)
+                } else {
+                    Text(tr("Running apps, macOS apps, password managers, VPNs and input methods cannot be uninstalled here."))
+                        .font(.caption).foregroundStyle(.white.opacity(0.5)).lineLimit(2)
+                }
+                Spacer()
+                Button(tr("Scan again")) { model.load() }.buttonStyle(PillButtonStyle()).disabled(model.loading || model.working)
+            } else {
+                if model.scanningOrphans || model.working { ProgressView().controlSize(.small) }
+                Button(tr("All")) { model.selectedOrphans = Set((model.orphans ?? []).map(\.id)) }
+                    .buttonStyle(PillButtonStyle()).disabled(model.orphans?.isEmpty != false || model.working)
+                Button(tr("None")) { model.selectedOrphans = [] }.buttonStyle(PillButtonStyle()).disabled(model.selectedOrphans.isEmpty)
+                Button(tr("Scan again")) { model.scanOrphans() }.buttonStyle(PillButtonStyle()).disabled(model.scanningOrphans || model.working)
+                Spacer()
+                Button(tr("Move %1$@ to Trash", ByteFormat.string(model.pickedOrphans.reduce(0) { $0 + $1.bytes }))) { confirmingOrphans = true }
+                    .buttonStyle(PillButtonStyle(prominent: true, color: .indigo))
+                    .disabled(model.pickedOrphans.isEmpty || model.working || model.scanningOrphans)
+            }
+        }
+        .padding(.horizontal, 28).padding(.vertical, 14)
+        .background(Color.black.opacity(0.18))
+    }
+}

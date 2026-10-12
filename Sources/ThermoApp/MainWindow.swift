@@ -13,6 +13,7 @@ final class AppModels {
     lazy var updates = Updates()
     lazy var disk = DiskModel()
     lazy var agents = AgentScanner()
+    lazy var apps = AppsModel()
     private var browsers: [String: ChromePagesModel] = [:]
 
     func stopBrowserChecks() {
@@ -35,9 +36,12 @@ enum MainPage: Hashable {
     case browser(String)
     case disk(DiskPage)
     case agents(SidebarEntry)
+    case apps(AppsTab)
+    case space(SpaceTab)
+    case memory
 
     /// `--page` values: overview, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
-    /// agents, agents:<area>.
+    /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates, memory.
     init?(argument: String) {
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
         guard let command = parts.first else { return nil }
@@ -49,12 +53,17 @@ enum MainPage: Hashable {
         case "pages": self = .browser(parts.count > 1 ? parts[1] : "Google Chrome")
         case "disk": self = .disk(parts.count > 1 ? (DiskPage(argument: parts[1]) ?? .home) : .home)
         case "agents": self = .agents(parts.count > 1 ? (Area(rawValue: parts[1]).map { .area($0) } ?? .home) : .home)
+        case "apps": self = .apps(parts.count > 1 ? (AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
+        case "memory": self = .memory
+        case "space": self = .space(parts.count > 1 ? (SpaceTab(rawValue: parts[1]) ?? .browse) : .browse)
         default: return nil
         }
     }
 
     var isDisk: Bool { if case .disk = self { return true } else { return false } }
     var isAgents: Bool { if case .agents = self { return true } else { return false } }
+    var appsTab: AppsTab? { if case let .apps(t) = self { return t } else { return nil } }
+    var spaceTab: SpaceTab? { if case let .space(t) = self { return t } else { return nil } }
 }
 
 /// The main window: everything Thermo does, in the Disk Cleanup look — a sidebar of places and a
@@ -211,11 +220,11 @@ struct MainView: View {
                             .frame(maxWidth: .infinity, alignment: .leading).padding(14).glass(radius: 12)
                             .padding(.horizontal, 32).padding(.top, 12)
                     }
-                    if page.isDisk, disk.stale || disk.resultsNeedRefresh || disk.languageStale {
+                    if cleanupNoticeNeeded {
                         HStack {
                             Text(disk.resultsNeedRefresh ? tr("Some paths could not be removed. Scan again to refresh the remaining items.") : disk.languageStale ? tr("Scan again to refresh results in the selected language.") : tr("Scan scope changed. Scan again to update these results.")).font(.callout)
                             Spacer()
-                            Button(tr("Scan again")) { disk.scan() }.disabled(disk.scanning || disk.cleaning)
+                            Button(tr("Scan again")) { disk.scan(category: cleanupCategory) }.disabled(disk.scanning || disk.cleaning)
                         }
                         .padding(14).glass(radius: 12).padding(.horizontal, 32).padding(.top, 12)
                     }
@@ -264,6 +273,19 @@ struct MainView: View {
         }
     }
 
+    var cleanupCategory: CleanCategory? {
+        if case let .disk(.category(category)) = page { return category }
+        return nil
+    }
+
+    var cleanupNoticeNeeded: Bool {
+        switch page {
+        case .disk(.home), .disk(.category):
+            return disk.scopeNeedsRefresh(category: cleanupCategory) || disk.resultsNeedRefresh || disk.languageStale
+        default: return false
+        }
+    }
+
     func startClean() { if !disk.selectedItems.isEmpty { confirmingClean = true } }
 
     @ViewBuilder var content: some View {
@@ -285,7 +307,11 @@ struct MainView: View {
         case .disk(.home):
             DiskHome(model: disk, open: { page = .disk(.category($0)) }, clean: startClean).transition(.opacity)
         case .disk(.overview):
-            DiskOverviewView().transition(.opacity)
+            DiskOverviewView(openCleanup: { category in
+                SpaceOverviewModel.shared.stop()
+                if !disk.scanning && !disk.cleaning { disk.scan(category: category) }
+                page = category.map { .disk(.category($0)) } ?? .disk(.home)
+            }, cleanupDisabled: disk.scanning || disk.cleaning).transition(.opacity)
         case let .disk(.category(c)):
             DiskCategoryPage(model: disk, category: c, clean: startClean).id(c)
                 .transition(.opacity.combined(with: .move(edge: .trailing)))
@@ -293,6 +319,12 @@ struct MainView: View {
             DiagnosticsHome(scanner: agents, open: { a in page = .agents(.area(a)) }).transition(.opacity)
         case let .agents(.area(a)):
             AreaPage(scanner: agents, area: a).id(a).transition(.opacity.combined(with: .move(edge: .trailing)))
+        case let .apps(tab):
+            AppsPage(model: models.apps, tab: Binding(get: { tab }, set: { page = .apps($0) })).transition(.opacity)
+        case .memory:
+            MemoryPage(model: MemoryModel.shared, open: { page = $0 }).transition(.opacity)
+        case let .space(tab):
+            SpacePage(model: SpaceLensModel.shared, tab: Binding(get: { tab }, set: { page = .space($0) })).transition(.opacity)
         }
     }
 }
@@ -331,6 +363,11 @@ struct MainSidebar: View {
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
 
     var items: [CleanItem] { disk.report?.items ?? [] }
+    /// Share of memory in use; refreshed with the sidebar (the monitor ticks while the window is open).
+    var memoryTrailing: String? {
+        guard monitor.snapshot != nil, let m = SystemStats.memory() else { return nil }
+        return String(format: "%.0f%%", Double(m.usedBytes) / Double(max(1, m.totalBytes)) * 100)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -346,6 +383,9 @@ struct MainSidebar: View {
                     row(.sensors, tr("Sensors"), "thermometer.medium", .red, trailing: nil)
                     row(.fans, tr("Fans"), "fan.fill", .blue,
                         trailing: monitor.snapshot?.fans.map(\.rpm).max().map { tr("%1$@ rpm", String(Int($0))) })
+
+                    header(tr("Memory"))
+                    row(.memory, tr("Memory usage"), "memorychip.fill", .green, trailing: memoryTrailing)
                     row(.browser("Google Chrome"), tr("Browser pages"), "rectangle.stack.fill", .teal, trailing: nil)
 
                     header(tr("Disk Cleanup"))
@@ -359,6 +399,11 @@ struct MainSidebar: View {
                             }
                         }
                     }
+
+                    row(.space(page.spaceTab ?? .browse), tr("Space Lens"), "square.grid.3x3.topleft.filled", .cyan, trailing: nil,
+                        selected: page.spaceTab != nil)
+                    row(.apps(page.appsTab ?? .installed), tr("Uninstall apps"), "square.grid.2x2.fill", .indigo, trailing: nil,
+                        selected: page.appsTab != nil)
 
                     header(tr("AI Agent Diagnostics"))
                     row(.agents(.home), tr("Smart Check"), "stethoscope", .purple, trailing: nil, badge: agents.report?.problemCount ?? 0)
@@ -384,8 +429,8 @@ struct MainSidebar: View {
     }
 
     func row(_ target: MainPage, _ title: String, _ symbol: String, _ color: Color, trailing: String?,
-             badge: Int = 0, indent: Bool = false) -> some View {
-        let on = page == target
+             badge: Int = 0, indent: Bool = false, selected: Bool? = nil) -> some View {
+        let on = selected ?? (page == target)
         return Button { page = target } label: {
             HStack(spacing: 10) {
                 IconTile(symbol: symbol, color: color, size: indent ? 20 : 24)
@@ -480,7 +525,7 @@ struct OverviewPage: View {
                                         caption: MachinePulse.memoryName(pulse.memory)),
                  detail: [mem.map { tr("%1$@ of %2$@", MemoryFormat.string(bytes: $0.usedBytes), MemoryFormat.string(bytes: $0.totalBytes)) },
                           pulse.current.flatMap { $0.swapUsedMB > 0 ? tr("swap %1$@", MemoryFormat.string(mebibytes: $0.swapUsedMB)) : nil }]
-                    .compactMap { $0 }.joined(separator: "\n")) { openDetails() }
+                    .compactMap { $0 }.joined(separator: "\n")) { open(.memory) }
             card(tr("Disk"), RingGauge(value: disk.map { 1 - Double($0.freeBytes) / Double(max(1, $0.totalBytes)) },
                                       text: disk.map { ByteFormat.string($0.freeBytes) } ?? "—", caption: tr("free"),
                                       colors: [.cyan, .blue, .purple, .pink]),

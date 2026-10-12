@@ -15,6 +15,16 @@ Fans
   1 Fan 2     5205 rpm  ████████████ 100%  [1700–5200]  auto
 ```
 
+## 安装
+
+CLI（正式签名双架构二进制）：
+
+```sh
+curl -fsSL https://thermo-updates.pages.dev/install.sh | sh
+```
+
+默认安装到 `~/.local/bin`，同时提供 `thermo-use` 别名，不会自动安装或重启 root 风扇 helper。App 请下载[正式 DMG](https://app.leeguoo.com/thermo/download)，已有 App 可通过自动更新升级。
+
 ## 构建
 
 ```sh
@@ -103,7 +113,11 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 `agents`、`agents list`、`agents show NAME` 支持 CSV。`kind=item` 为项目，`kind=finding` 为总体说明；`findings` 和 `actions` 列保留脱敏后的 JSON，`generated` 标明本次检查时间。
 
+退出或重启程序后，Thermo 会等待 5 秒复查：目标是否仍在运行、内存占用是否下降、系统内存压力和温度压力是否变化。复查会包含空闲程序，避免把刚重启后 CPU 很低的 App 当成“没有重新打开”。短时占用下降不等于整机已经变快；交换内存和平均负载可能延迟变化。
+
 `pulse --csv` 和 `pulse history --csv` 使用 `kind,name,value,unit` 列，温度为 °C，交换内存为 MiB；风扇、进程和历史归因记录的 `value` 为脱敏后的 JSON，保留其明细。
+
+浏览器页面支持查看所有标签页、搜索、多选以及「选择推荐候选」。重复地址和两次采样间的增长会给出理由；高占用本身不会被推荐关闭，窗口当前页也不会被自动选中。确认清单后，按标签页唯一 ID 关闭，已变化或刚切换到的页面会跳过。5 秒后复查浏览器占用、内存压力、温度压力和平均负载；旧的逐页测量值会明确标记。未保存输入、固定标签页和音频状态不会读取，需要用户自己核对。
 
 `pulse chrome --json/--csv` 保留浏览器模式、提示和测量报告。无法读取浏览器时仍输出结构化结果，并返回退出码 1；CSV 的嵌套报告使用 `JSON` 单位标记。
 
@@ -121,14 +135,28 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 `thermo clean` 和 App 的 **Disk** 页。常规清理（开发缓存、Xcode、浏览器、日志、旧安装包）之外，重点放在 AI 工具留在磁盘上的东西：
 
-- **AI 会话**：Claude Code、Codex、Gemini CLI 的会话按项目归组，标签取会话里记录的 `cwd`，标题取第一条提问或 Codex 线程名；Cline / Roo / Kilo 任务；Cursor、VS Code、Windsurf 里已删除项目的聊天和工作区数据；agent 留在仓库里的 worktree。超过 `--older-than`（默认 30 天）没动过的会话，或所属项目文件夹已经删了的会话，才会被选中。
+- **AI 会话**：Claude Code、Codex、Gemini CLI 的会话按项目归组，标签取会话里记录的 `cwd`，标题取第一条提问或 Codex 线程名；Cline / Roo / Kilo 任务；Cursor、VS Code、Windsurf 里已删除项目的聊天和工作区数据。超过 `--older-than`（默认 30 天）没动过的会话，或所属项目文件夹已经删了的会话，才会被选中。
 - **AI 工具残留**：Claude Code 自动更新留下的旧版本、插件旧版本、`/private/tmp/claude-*` 里已结束会话的临时目录、已删会话的 file-history / todos、Claude 桌面版和 Cursor 等的缓存、给 agent 用的 Playwright 浏览器。
 - **模型**：Ollama 每个模型单独一项，和其他模型共用的层不删；Hugging Face 缓存按仓库列出；LM Studio、Whisper、PyTorch Hub、GPT4All、Jan 等。
 - **项目构建产物**：按标志文件识别（`package.json` → `node_modules`、`Cargo.toml` → `target`、`Package.swift` → `.build` 等），默认在 `~/Developer`、`~/code`、`~/github.com` 这类目录下找，`--root` 可以指定。
+  指定 `--root` 时仅扫描指定目录。Git 已跟踪的产物会保留；正在运行 agent 的项目会阻止清理。项目发现与目录统计同时进行，页面逐项显示结果。
+
+  `thermo clean projects --root ~/github.com,~/tk.com --stream` 会输出逐行 JSON：`started`（磁盘剩余空间）、`items`、`progress`、`finished`（完整报告）。`thermo clean overview --stream` 同样支持逐项输出。只收到部分事件时，扫描还未完成；普通 `--json` 的完整报告格式保持不变。
+  总览单独显示项目与源代码目录，按仓库列出整体占用；它包含源码，不能当作全部可释放空间。点击“扫描构建产物”进入项目分类，再选择具体产物。Xcode、开发缓存和临时文件也有对应扫描入口，按钮不直接执行删除。项目根目录会去掉重复别名、嵌套根目录和指向整个 home 的别名；其他磁盘上的项目不计入当前磁盘容量。
+  空间总览可复用 CLI 的完整缓存，并按 App 当前语言显示分类标题；切换语言只更新文字，保留原扫描日期和大小。路径保护同时核对父目录符号链接解析后的实际位置，避免缓存或项目别名指向文稿、凭据或用户目录以外的内容。
+  空间总览按子目录增量更新。流式 `entry` 的 `id` 在分类内保持不变，调用方应替换该分类的旧条目；`complete`、`measuredLocations`、`totalLocations` 标明分类进度。未完成分类显示“至少”多少空间，`finished` 事件返回扫描结束时的最终状态。扫描最多四个工作线程，页面更新会合并，避免大量临时文件造成任务和界面更新堆积。
+  给 agent 限时获取结果可用 `thermo clean overview --budget 10 --stream`，或 `thermo clean projects --budget 10 --json`。预算到期后在下一处取消检查停止，结果标记 `cancelled: true`，仅统计已完整测量的目录；未完成分类标注 `complete: false`，大小是下限，不替换已有完整报告。`--budget` 只用于扫描，不能用于执行清理。
+  完成的报告按分类、项目目录、保留天数和语言分别缓存，最多保留 32 个范围。再次打开分类页面或执行清理时，只复用范围一致且未过期的报告；清理后所有旧计划失效。项目活动读取会校验文件身份和修改时间，未变化的 Codex 会话无需反复打开。
+  `thermo clean run projects --dry-run --json` 只返回清理计划，不删除文件、不执行清理命令，即使加了 `--yes` 也如此。真实执行前会复查应用、构建进程和正在运行的可执行文件。模拟器移除会永久删除，由确认框明确说明；`--trash` 不会执行这种操作。设备 ID 固定在扫描结果里，执行前再检查当前状态；旧的 `delete unavailable` 批量命令必须重新扫描。
+  清理结果分别显示已删除文件的估计大小、移入废纸篓的大小，以及磁盘可用空间的前后实测变化。JSON 结果保留原有数组格式，每项新增 `spaceObservation`（`before`、`after`、`availableChangeBytes`）；差值包含同时发生的其他磁盘活动，不能全部归因于清理。清理后旧空间总览失效，页面容量条直接读取当前可用空间，无需等待文件扫描。
+
+
+
 
 安全规则：
 
 - 扫描只读。`clean run` 先列出计划，再要求确认。
+- **Agent 工作树**：`thermo clean worktrees` 单独扫描 agent 留在仓库里的 checkout；`thermo clean sessions` 只扫描会话记录，避免等待整个项目目录遍历。`thermo clean ai` 仍会包含两类。工作树的未提交改动、运行中的 agent 和近期写入检查仍会阻止误删。
 - 每项都有级别。`safe` 是会自动重建的缓存，直接删除；`review` 是会话、模型这类数据，移到废纸篓；`risky` 是有未提交改动的 worktree，`safe` / `all` 都不会选中它，必须写出完整 id。
 - 正在运行的 Claude Code 会话、2 小时内写过的会话、正在运行的 agent 所在目录、所属 App 还开着的缓存，一律跳过。
 - 删除前逐条复查路径：家目录以外的路径、`~/Documents`、`~/.ssh`、`.git`、Claude 的 `memory/` 这类位置永远不删。只移除列出的路径，不跟随符号链接。

@@ -52,6 +52,12 @@ final class DiskModel: ObservableObject {
     var languageStale: Bool { report.map { $0.language != L10n.current.rawValue } ?? false }
     var selectedBytes: Int64 { selectedItems.reduce(0) { $0 + $1.bytes } }
 
+    func scopeNeedsRefresh(category: CleanCategory? = nil) -> Bool {
+        guard !scanning, let report else { return false }
+        if let category { return !(report.categories ?? []).contains(category) }
+        return stale
+    }
+
     static let order = Dictionary(uniqueKeysWithValues: CleanCategory.allCases.enumerated().map { ($1, $0) })
 
     static func sorted(_ items: [CleanItem]) -> [CleanItem] {
@@ -61,18 +67,29 @@ final class DiskModel: ObservableObject {
     /// Shows the last finished scan (CLI or app) when it is under an hour old and covers the
     /// current scope, so the window opens with results instead of minutes of scanning.
     @discardableResult
-    func loadSaved() -> Bool {
+    func loadSaved(category: CleanCategory? = nil) -> Bool {
         // The CLI scans in English; a report in another language would show the wrong titles here.
-        guard report == nil, !scanning, let r = ScanReportCache.load(maxAge: 3600),
-              r.language == L10n.current.rawValue else { return false }
-        let wanted = scope == .ai ? Set(CleanCategory.allCases.filter(\.isAI)) : Set(CleanCategory.allCases)
-        guard wanted.isSubset(of: Set(r.categories ?? [])) else { return false }
+        let wanted = category.map { Set([$0]) } ?? (scope == .ai ? Set(CleanCategory.allCases.filter(\.isAI)) : Set(CleanCategory.allCases))
+        let options = Self.scanOptions(scope: scope, category: category)
+        guard report == nil, !scanning, let r = ScanReportCache.load(maxAge: 3600, matching: {
+            $0.language == L10n.current.rawValue && wanted.isSubset(of: Set($0.categories ?? [])) &&
+                $0.projectRoots == Array(Set(options.projectRoots)).sorted() &&
+                $0.discoverProjectRoots == options.discoverProjectRoots && $0.olderThanDays == options.olderThanDays
+        }) else { return false }
         report = r
         selected = Set(r.items.filter { $0.cleanable && $0.safety == .safe }.map(\.id))
         return true
     }
 
-    func scan() {
+    static func scanOptions(scope: Scope, category: CleanCategory? = nil) -> ScanOptions {
+        var options = ScanOptions()
+        options.lowPriority = true
+        if let category { options.categories = [category] }
+        else if scope == .ai { options.categories = Set(CleanCategory.allCases.filter(\.isAI)) }
+        return options
+    }
+
+    func scan(category: CleanCategory? = nil) {
         guard !scanning, !cleaning else { return }
         Monitor.requestNotificationPermission()
         scanning = true
@@ -85,9 +102,7 @@ final class DiskModel: ObservableObject {
         report = nil
         selected = []
         excluded = [:]
-        var options = ScanOptions()
-        options.lowPriority = true
-        if scope == .ai { options.categories = Set(CleanCategory.allCases.filter(\.isAI)) }
+        let options = Self.scanOptions(scope: scope, category: category)
         let scanner = DiskScanner(options: options)
         self.scanner = scanner
         let started = Date()
@@ -157,24 +172,31 @@ final class DiskModel: ObservableObject {
         cleaningTotal = items.count
         queue.async { [weak self] in
             ScanReportCache.invalidate()
+            let spaceBefore = DiskSpaceSnapshot.measure()
+            var removedAny = false
             var freed: Int64 = 0, trashed: Int64 = 0, failures = 0
             var remaining: [String: CleanItem] = [:]
             for (n, i) in items.enumerated() {
                 DispatchQueue.main.async { self?.cleaningStep = i.title; self?.cleaningDone = n }
                 let r = Cleaner.clean(i, scannedAt: scannedAt)
+                removedAny = removedAny || !r.removed.isEmpty
                 if r.trashed { trashed += r.bytes } else { freed += r.bytes }
                 failures += r.failed.count
                 if let original = originals[i.id], let rest = Self.remainder(original, attempted: i, result: r) {
                     remaining[i.id] = rest
                 }
             }
-            var text = tr("freed %1$@", ByteFormat.string(freed))
+            let observation = DiskSpaceObservation(before: spaceBefore, after: DiskSpaceSnapshot.measure())
+            var text = tr("deleted %1$@ (estimated file size)", ByteFormat.string(freed))
             if trashed > 0 { text += tr(", %1$@ moved to the Trash", ByteFormat.string(trashed)) }
             if failures > 0 { text += " · " + trCount(failures, "%1$@ path could not be removed (see log)", "%1$@ paths could not be removed (see log)") }
+            text += "\n" + observation.summary
+            let invalidateOverview = removedAny
             let remainingItems = remaining
             let hadFailures = failures > 0
             DispatchQueue.main.async {
                 guard let self else { return }
+                if invalidateOverview { SpaceOverviewModel.shared.invalidateAfterCleanup() }
                 self.cleaning = false
                 self.cleaningDone = self.cleaningTotal
                 self.resultsNeedRefresh = hadFailures

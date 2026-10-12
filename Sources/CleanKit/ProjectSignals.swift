@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 /// When each project folder was last *used*, and by what. File modification times alone mislead
 /// (a `git pull` makes a dead project look fresh; a day of agent work may change nothing on disk),
@@ -58,14 +59,15 @@ public struct ProjectSignals: Sendable {
     public static func collect(home: String) -> ProjectSignals {
         var s = ProjectSignals()
         claude(home: home, into: &s)
-        codex(home: home, into: &s)
-        editors(home: home, into: &s)
+        if ScanCancellation.current?.isCancelled != true { codex(home: home, into: &s) }
+        if ScanCancellation.current?.isCancelled != true { editors(home: home, into: &s) }
         return s
     }
 
     /// `~/.claude/projects/<dir>/*.jsonl`: the newest transcript's `cwd`, dated by its mtime.
     static func claude(home: String, into s: inout ProjectSignals) {
         for dir in FS.children(home + "/.claude/projects") where FS.isDirectory(dir) {
+            guard ScanCancellation.current?.isCancelled != true else { return }
             let newest = FS.children(dir).filter { $0.hasSuffix(".jsonl") }
                 .compactMap { f in FS.mtime(f).map { (f, $0) } }.max { $0.1 < $1.1 }
             guard let (file, date) = newest, let cwd = AISessions.jsonString(in: file, key: "cwd") else { continue }
@@ -73,21 +75,81 @@ public struct ProjectSignals: Sendable {
         }
     }
 
-    /// `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`: newest first, one `cwd` read per file
-    /// until every folder has its latest date.
-    static func codex(home: String, into s: inout ProjectSignals) {
+    struct SessionHeader: Codable, Equatable {
+        var inode: UInt64
+        var seconds: Int
+        var nanoseconds: Int
+        var allocated: Int64
+        var cwd: String?
+    }
+
+    struct HeaderCache: Codable {
+        var version = 1
+        var headers: [String: SessionHeader]
+    }
+
+    /// Cache only metadata and cwd, never transcript text. Every scan enumerates current files
+    /// and checks identity + nanosecond mtime; changed, replaced and new files are read afresh.
+    static func codex(home: String, into s: inout ProjectSignals,
+                      readCWD: (String) -> String? = { AISessions.codexMeta($0).cwd }) {
+        guard ScanCancellation.current?.isCancelled != true else { return }
         let root = home + "/.codex/sessions"
-        guard let e = FileManager.default.enumerator(atPath: root) else { return }
-        var files: [(String, Date)] = []
-        while let rel = e.nextObject() as? String {
-            guard rel.hasSuffix(".jsonl") else { continue }
-            let f = root + "/" + rel
-            if let m = FS.mtime(f) { files.append((f, m)) }
+        var rootStat = stat()
+        guard lstat(root, &rootStat) == 0, (rootStat.st_mode & S_IFMT) == S_IFDIR else { return }
+        let cacheURL = URL(fileURLWithPath: home + "/Library/Caches/dev.thermo/codex-project-headers.json")
+        var cached: [String: SessionHeader] = [:]
+        if let size = try? cacheURL.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= 32 * 1024 * 1024,
+           let data = try? Data(contentsOf: cacheURL), data.count <= 32 * 1024 * 1024,
+           let cache = try? JSONDecoder().decode(HeaderCache.self, from: data), cache.version == 1 {
+            cached = cache.headers
         }
-        var seen = Set<String>()
-        for (f, m) in files.sorted(by: { $0.1 > $1.1 }) {
-            guard let cwd = AISessions.codexMeta(f).cwd, seen.insert(cwd).inserted else { continue }
-            s.record(cwd, m, "Codex")
+        var current: [String: SessionHeader] = [:]
+        var stack = [root]
+        func see(_ path: String, _ signature: SessionHeader) {
+            guard path.hasSuffix(".jsonl"), ScanCancellation.current?.isCancelled != true else { return }
+            let relative = String(path.dropFirst(root.count + 1))
+            var header = signature
+            if let old = cached[relative], old.inode == header.inode, old.seconds == header.seconds,
+               old.nanoseconds == header.nanoseconds, old.allocated == header.allocated, old.cwd != nil {
+                header.cwd = old.cwd
+            } else {
+                header.cwd = readCWD(path)
+            }
+            current[relative] = header
+            if let cwd = header.cwd {
+                let date = Date(timeIntervalSince1970: Double(header.seconds) + Double(header.nanoseconds) / 1e9)
+                s.record(cwd, date, "Codex")
+            }
+        }
+        while let dir = stack.popLast() {
+            guard ScanCancellation.current?.isCancelled != true else { return }
+            let ok = BulkWalk.entries(of: dir) { entry in
+                guard entry.error == 0 else { return }
+                let path = dir + "/" + entry.name
+                if entry.isDir { stack.append(path) }
+                else if entry.isFile {
+                    see(path, SessionHeader(inode: entry.fileID, seconds: entry.modified,
+                                            nanoseconds: entry.modifiedNanoseconds, allocated: entry.allocated))
+                }
+            }
+            if !ok {
+                // Filesystems without getattrlistbulk still get safe, no-follow traversal.
+                for (name, _) in FS.entries(dir) ?? [] {
+                    let path = dir + "/" + name
+                    var st = stat()
+                    guard lstat(path, &st) == 0 else { continue }
+                    if (st.st_mode & S_IFMT) == S_IFDIR { stack.append(path) }
+                    else if (st.st_mode & S_IFMT) == S_IFREG {
+                        see(path, SessionHeader(inode: st.st_ino, seconds: st.st_mtimespec.tv_sec,
+                                                nanoseconds: st.st_mtimespec.tv_nsec, allocated: Int64(st.st_blocks) * 512))
+                    }
+                }
+            }
+        }
+        guard ScanCancellation.current?.isCancelled != true else { return }
+        try? FileManager.default.createDirectory(at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if let data = try? JSONEncoder().encode(HeaderCache(headers: current)), data.count <= 32 * 1024 * 1024 {
+            try? data.write(to: cacheURL, options: .atomic)
         }
     }
 
@@ -96,6 +158,7 @@ public struct ProjectSignals: Sendable {
         for (app, name) in AISessions.editors {
             let root = home + "/Library/Application Support/\(app)/User/workspaceStorage"
             for ws in FS.children(root) where FS.isDirectory(ws) {
+                guard ScanCancellation.current?.isCancelled != true else { return }
                 guard let data = FileManager.default.contents(atPath: ws + "/workspace.json"),
                       let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       let uri = obj["folder"] as? String, let url = URL(string: uri), url.isFileURL else { continue }

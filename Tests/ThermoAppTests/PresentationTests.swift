@@ -100,7 +100,7 @@ final class PresentationTests: XCTestCase {
         XCTAssertFalse(MainWindow.usableFrame(frame, screens: []))
     }
 
-    @MainActor func testLanguageSwitchDiscardsDiskTitlesFromPreviousLanguage() {
+    @MainActor func testLanguageSwitchRelocalizesDiskTitlesWithoutRescanning() {
         L10n.override = .english
         defer { L10n.override = nil }
         var overview = SpaceOverview(capacity: 100, free: 25, purgeable: 0,
@@ -110,9 +110,11 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(model.entries.count, 1)
         L10n.override = .simplifiedChinese
         model.discardIncompatibleResults()
-        XCTAssertTrue(model.entries.isEmpty)
-        XCTAssertNil(model.overview)
-        XCTAssertNil(model.measuredAt)
+        XCTAssertEqual(model.entries.first?.title, tr("Applications"))
+        XCTAssertEqual(model.entries.first?.bytes, 10)
+        XCTAssertEqual(model.overview?.language, "zh-Hans")
+        XCTAssertNotNil(model.measuredAt)
+        XCTAssertFalse(model.measuring)
     }
 
     func testEmptyPageArgumentDoesNotCrash() {

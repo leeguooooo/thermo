@@ -157,7 +157,14 @@ public struct ProcessTable: Sendable {
         for n in names {
             let lower = n.lowercased()
             if let e = entries.first(where: {
-                $0.name.lowercased() == lower || ($0.executable ?? "").lowercased().contains("/\(lower).app/")
+                let exe = ($0.executable ?? "").lowercased()
+                // A helper another app launches from inside the bundle (Claude.app's Chrome native
+                // host) does not mean the app is open.
+                if exe.contains("/\(lower).app/") { return !exe.contains("/\(lower).app/contents/helpers/") }
+                // A command-line program matches only its exact name: the `claude` CLI is not the
+                // Claude app, `go` and `pnpm` still match themselves.
+                if !exe.isEmpty && !exe.contains(".app/") { return $0.name == n }
+                return $0.name.lowercased() == lower
             }) {
                 return (e.executable ?? "").contains(".app/") ? n : e.name
             }
