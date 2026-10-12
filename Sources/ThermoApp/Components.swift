@@ -155,6 +155,9 @@ struct ConfirmSheet: View {
         }
         .padding(20)
         .frame(width: 480)
+        // Set the presentation's native appearance too: a dark SwiftUI environment alone
+        // can leave the sheet background light while its labels and Cancel button are white.
+        .preferredColorScheme(.dark)
     }
 }
 

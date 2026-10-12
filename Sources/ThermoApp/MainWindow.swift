@@ -233,7 +233,7 @@ struct MainView: View {
             }
         }
         .ignoresSafeArea()
-        .environment(\.colorScheme, .dark)
+        .preferredColorScheme(.dark)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: page)
         .onChange(of: page) { p in
             if p.isAgents { agents.scan(ifOlderThan: 60) }

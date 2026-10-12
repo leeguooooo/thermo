@@ -290,6 +290,15 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
 
 L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
 let app = NSApplication.shared
+// Snapshot/render jobs do not present interactive windows or create Dock items.
+if !CommandLine.arguments.contains("--offscreen"), !CommandLine.arguments.contains("--render-preview") {
+    do {
+        guard try MainActor.assumeIsolated({ try SingleInstance.claim() }) else { exit(0) }
+    } catch {
+        fputs("Thermo cannot acquire its instance lock: \(error)\n", stderr)
+        exit(1)
+    }
+}
 if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < CommandLine.arguments.count {
     app.setActivationPolicy(.prohibited)
     MainActor.assumeIsolated { renderPreviews(to: CommandLine.arguments[i + 1]) }

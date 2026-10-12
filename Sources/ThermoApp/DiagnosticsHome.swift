@@ -470,6 +470,6 @@ struct BatchResult: View {
             }
         }
         .frame(width: 560, height: 520)
-        .environment(\.colorScheme, .dark)
+        .preferredColorScheme(.dark)
     }
 }
