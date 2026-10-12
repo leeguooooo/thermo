@@ -49,16 +49,21 @@ SCANNERS = [
 ]
 
 
-def strings(text: str) -> list[str]:
+def strings(text: str, constants=None) -> list[str]:
     """Swift string literals in `text`, with \\(constant) interpolations resolved."""
+    constants = CONSTANTS if constants is None else constants
     out = []
     for raw in re.findall(r'"((?:[^"\\]|\\.)*)"', text):
         def sub(m):
             name = m.group(1)
-            if name not in CONSTANTS:
+            if name not in constants:
                 sys.exit(f"export-clean-rules: unknown interpolation \\({name}) in {raw!r}")
-            return CONSTANTS[name]
-        out.append(re.sub(r"\\\(([A-Za-z_]+)\)", sub, raw))
+            return constants[name]
+        resolved = re.sub(r"\\\(([^)]*)\)", sub, raw)
+        try:
+            out.append(json.loads('"' + resolved + '"'))
+        except json.JSONDecodeError:
+            sys.exit(f"export-clean-rules: unsupported Swift escape in {raw!r}")
     return out
 
 
@@ -85,8 +90,27 @@ def rule_calls(source: str) -> list[str]:
     return calls
 
 
-def parse(call: str) -> dict:
-    head = re.match(r'\s*"([^"]+)",\s*\.(\w+),\s*"([^"]+)",\s*\[(.*?)\]', call, re.S)
+def chromium_paths(source: str, root: str) -> list[str]:
+    # Read both lists and their templates from the helper; do not duplicate its
+    # cache names here. Reject new helper shapes rather than exporting stale paths.
+    helper = re.search(
+        r'static func chromiumCaches\(_ root: String\) -> \[String\] \{\s*'
+        r'let r = "([^"\n]+)"\s*return \[(.*?)\]\s*'
+        r'\.map \{ "([^"\n]+)" \} \+ \[(.*?)\]\.map \{ "([^"\n]+)" \}\s*\}',
+        source, re.S)
+    if not helper:
+        sys.exit("export-clean-rules: unsupported chromiumCaches helper")
+    base, profile_names, profile_template, shared_names, shared_template = helper.groups()
+    constants = {**CONSTANTS, "root": root}
+    constants["r"] = strings('"' + base + '"', constants)[0]
+    return [strings('"' + template + '"', {**constants, "$0": name})[0]
+            for names, template in [(profile_names, profile_template), (shared_names, shared_template)]
+            for name in strings(names)]
+
+
+def parse(call: str, source: str = "") -> dict:
+    head = re.match(r'\s*"([^"]+)",\s*\.(\w+),\s*"([^"]+)",\s*'
+                    r'(\[.*?\]|chromiumCaches\("[^"\n]+"\))', call, re.S)
     if not head:
         sys.exit(f"export-clean-rules: cannot parse PathRule({call[:80]}…)")
     rid, category, title, paths = head.groups()
@@ -101,6 +125,8 @@ def parse(call: str) -> dict:
             return strings(value[:value.index("]")])
         if value.startswith('"'):
             return strings(value)[0]
+        if name == "keepNewest":
+            return int(re.match(r"\d+", value).group(0))
         return re.match(r"\.(\w+)", value).group(1)
 
     camel = {"aiSessions": "ai-sessions", "aiModels": "ai-models", "aiCaches": "ai-caches", "devCaches": "dev-caches"}
@@ -108,12 +134,13 @@ def parse(call: str) -> dict:
         "id": rid,
         "category": camel.get(category, category),
         "title": title,
-        "paths": strings(paths),
+        "paths": chromium_paths(source, strings(paths)[0]) if paths.startswith("chromiumCaches(") else strings(paths),
         "scope": label("scope", "whole"),
         "safety": label("safety", "safe"),
         "apps": label("apps", []),
         "note": label("note"),
         "match": label("match"),
+        "keepNewest": label("keepNewest", 0),
         "select": rid,
     }
 
@@ -121,7 +148,7 @@ def parse(call: str) -> dict:
 def main() -> None:
     source = RULES.read_text()
     calls = rule_calls(source[source.index("public static let paths"):])
-    rules = [parse(c) for c in calls]
+    rules = [parse(c, source) for c in calls]
     expected = source.count('PathRule("')
     if len(rules) != expected:
         sys.exit(f"export-clean-rules: parsed {len(rules)} of {expected} rules")
