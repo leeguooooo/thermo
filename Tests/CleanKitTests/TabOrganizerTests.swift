@@ -38,6 +38,12 @@ final class TabOrganizerTests: XCTestCase {
         let rule=TabOrganizer.Rule(domain:"example.test",name:"Project")
         XCTAssertEqual(TabOrganizer.plan(inventory([page(1)]),rules:[rule]).count,1)
     }
+    func testPlanJSONIncludesReviewCounts() throws {
+        let plan=TabOrganizer.plan(inventory([page(1),page(2)]))
+        let object=try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(plan)) as? [String:Any])
+        XCTAssertEqual(object["count"] as? Int,2)
+        XCTAssertEqual(object["unsupported"] as? Int,0)
+    }
     func testConfigurationAndJournalsUsePrivateFilesWithoutConfusingSavedTabs() async throws {
         let root=try home();var config=TabOrganizer.Configuration();config.enabled=true;config.rules=[.init(domain:"example.test",name:"Research")]
         try TabOrganizer.configure(config,home:root);XCTAssertTrue(try TabOrganizer.configuration(home:root).enabled)

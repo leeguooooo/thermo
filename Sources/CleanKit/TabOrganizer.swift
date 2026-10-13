@@ -28,7 +28,7 @@ public enum TabOrganizer {
         public var app: String
         public var groups: [Group]
         public var unsupported: Int
-        public var count: Int { groups.reduce(0) { $0 + $1.pages.count } }
+        public var count: Int
     }
     public struct Outcome: Codable, Sendable {
         public var tabId: Int
@@ -97,7 +97,8 @@ public enum TabOrganizer {
         // Avoid turning every lone website into a one-tab group. Explicit custom rules may group one.
         let groups = grouped.values.filter { group in group.pages.count >= 2 || explicit.contains(group.id) }
             .sorted { ($0.window, $0.name) < ($1.window, $1.name) }
-        return Plan(app: inventory.app, groups: groups, unsupported: unsupported)
+        return Plan(app: inventory.app, groups: groups, unsupported: unsupported,
+                    count: groups.reduce(0) { $0 + $1.pages.count })
     }
     public static func batches(home: String = NSHomeDirectory()) throws -> [Batch] {
         let directory = root(home)
