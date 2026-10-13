@@ -105,6 +105,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         main.addItem(appItem)
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: tr("Open Console"), action: #selector(openFromMenu), keyEquivalent: "o").target = self
+        appMenu.addItem(withTitle: tr("Save and close background tabs"), action: #selector(archiveTabsFromMenu), keyEquivalent: "s").target = self
+        appMenu.items.last?.keyEquivalentModifierMask = [.command, .shift]
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: tr("Hide Thermo"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(withTitle: tr("Quit Thermo"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -112,6 +114,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         NSApp.mainMenu = main
         installStandardMenus()
     }
+
+    @objc fileprivate func archiveTabsFromMenu() { TabQuickAction.request() }
 
     @objc fileprivate func openFromMenu() { MainWindow.show() }
 
@@ -341,7 +345,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         switch page {
         case .disk: return args.contains("--no-scan") ? !models.disk.scanning : models.disk.report != nil && !models.disk.scanning
         case .agents: return models.agents.report != nil && !models.agents.scanning
-        case let .browser(app): return models.browser(app).diagnosis != nil
+        case let .browser(app): return TabWorkspaceModel.loadedApps.contains(app)
         case .apps(.installed): return !models.apps.loading && !models.apps.apps.isEmpty
         case .apps(.leftovers): return models.apps.orphans != nil
         case .memory: return MemoryModel.shared.breakdown != nil && Date().timeIntervalSince(started) > 4

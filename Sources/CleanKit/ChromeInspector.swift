@@ -405,8 +405,10 @@ public enum ChromeInspector {
         private var nextID = 0
         private var waiting: [Int: CheckedContinuation<[String: Any]?, Never>] = [:]
 
-        init(_ url: URL) {
-            task = URLSession.shared.webSocketTask(with: url)
+        init(_ url: URL, diagnostic: Bool = false) {
+            var request = URLRequest(url: url)
+            if diagnostic { request.setValue("1", forHTTPHeaderField: "x-chrome-use-diagnostic") }
+            task = URLSession.shared.webSocketTask(with: request)
             task.maximumMessageSize = 64 << 20
             task.resume()
             receive()

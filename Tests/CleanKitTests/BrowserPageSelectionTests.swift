@@ -75,7 +75,7 @@ final class BrowserPageSelectionTests: XCTestCase {
         function page(id,url,title,fail) {
           return {id:()=>id,url:()=>url,title:()=>title,close:()=>{if(fail)throw Error('refused');closedIDs.push(id);entries=entries.filter(t=>t.id()!==id);}};
         }
-        const window = {tabs:()=>entries,activeTabIndex:()=>entries.findIndex(t=>t.id()===activeID)+1};
+        const window = {id:()=>1,tabs:()=>entries,activeTabIndex:()=>entries.findIndex(t=>t.id()===activeID)+1};
         function Application(name) {return {running:()=>true,windows:()=>[window]};}
         \(fixture)
         """.replacingOccurrences(of: "let entries =", with: "var entries ="))

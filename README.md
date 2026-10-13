@@ -117,6 +117,26 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 `pulse --csv` 和 `pulse history --csv` 使用 `kind,name,value,unit` 列，温度为 °C，交换内存为 MiB；风扇、进程和历史归因记录的 `value` 为脱敏后的 JSON，保留其明细。
 
+浏览器页默认打开「标签组」。按网站自动归类，也可多选后命名 Thermo 标签组；已有 Chrome 原生组会作为分类名称读取。Thermo 分组保存在本机，不移动浏览器窗口、不改写原生标签组。每组可「保存并收起」，也可一键保存并关闭当前窗口的后台标签；需要扩大范围时明确选择所有窗口。
+
+保存完成并读回校验后才关闭。保留各窗口当前页、固定页、音频页、隐私标签、浏览器设置及 agent/调试器使用中的页面；保护信息缺失时不能批量关闭。每页关闭前再检查，关闭后核对标签是否消失。记录使用本机用户权限保存，不上传。保存的是网址、标题、顺序和 Thermo 分组，不能恢复未提交输入、网页运行状态或登录有效性。
+
+「已保存的标签组」支持逐页查看结果、打开链接和批量恢复。默认恢复到原来的浏览器窗口，原会话结束后要明确选择目标窗口，避免打开到错误账号。已恢复页面不会再次打开，结果不明确的操作不自动重试。CLI 与 App 共用 `~/Library/Application Support/Thermo/TabWorkspace/`，并用系统锁防止同时操作。
+
+```sh
+thermo tabs list --json
+thermo tabs group 调研 --ids ID,ID --yes
+thermo tabs archive --group 调研 --dry-run
+thermo tabs archive --group 调研 --yes
+thermo tabs archive --all-windows --name 暂存 --yes
+thermo tabs saved --json
+thermo tabs show UUID --json
+thermo tabs restore UUID --yes
+thermo tabs restore UUID --window WINDOW_ID --yes
+```
+
+标签 ID 和窗口 ID 从 `tabs list` 读取；默认只操作前方窗口。`--ids`、`--group`、`--window` 可组合缩小范围。`tabs group --by-site --yes` 将当前范围重新按网站分组。标签整理通过 chrome-use 的只读浏览器元数据接口读取保护信息，不附加页面调试器；未连接时会显示具体原因。其他 Chromium 浏览器需兼容的连接，否则保持只读。
+
 浏览器页面支持查看所有标签页、搜索、多选以及「选择推荐候选」。重复地址和两次采样间的增长会给出理由；高占用本身不会被推荐关闭，窗口当前页也不会被自动选中。确认清单后，按标签页唯一 ID 关闭，已变化或刚切换到的页面会跳过。5 秒后复查浏览器占用、内存压力、温度压力和平均负载；旧的逐页测量值会明确标记。未保存输入、固定标签页和音频状态不会读取，需要用户自己核对。
 
 `pulse chrome --json/--csv` 保留浏览器模式、提示和测量报告。无法读取浏览器时仍输出结构化结果，并返回退出码 1；CSV 的嵌套报告使用 `JSON` 单位标记。

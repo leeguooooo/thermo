@@ -66,7 +66,7 @@ extension ChromeInspector {
               let process = selected.first?.browserProcess, selected.allSatisfy({ $0.browserProcess == process }),
               process == identity(app) else { return refused() }
         let payload = selected.map { ["key": $0.selectionID, "id": $0.browserID!, "url": $0.url, "title": $0.title,
-                                      "protectActive": $0.active != true] as [String: Any] }
+                                      "protectActive": $0.active != true, "window": $0.window] as [String: Any] }
         guard let data = try? JSONSerialization.data(withJSONObject: payload) else { return refused() }
         let script = """
         const app = Application(\(jsString(app)));
@@ -82,6 +82,7 @@ extension ChromeInspector {
             if (!hits.length) return {id:r.key, status:'missing'};
             if (hits.length !== 1) return {id:r.key, status:'unavailable'};
             const h = hits[0];
+            if (String(h.window.id()) !== String(r.window)) return {id:r.key,status:'changed'};
             if (h.tab.url() !== r.url || h.tab.title() !== r.title) return {id:r.key,status:'changed'};
             if (r.protectActive && h.window.activeTabIndex() === h.index) return {id:r.key,status:'becameActive'};
             h.tab.close();

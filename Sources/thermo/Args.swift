@@ -15,7 +15,7 @@ struct Args {
                                             "area", "agent", "action",
         "to", // space archive: SSH alias:/absolute/archive.tar
         "since",  // pulse history
-        "watch", "app", "title"]  // pulse chrome
+        "watch", "app", "title", "ids", "group", "name", "window"]  // pulse chrome
     static let aliases: [String: String] = [
         "i": "interval", "n": "count", "s": "sensor", "a": "all", "j": "json",
         "h": "help", "v": "version", "f": "format", "y": "yes",
@@ -24,7 +24,7 @@ struct Args {
         "stream", // clean: newline-delimited incremental scan results
         "rescan",  // rescan: clean run ignores the saved scan
         "remove-local", "inactive-development",
-        "measure"]  // pulse chrome: measure memory per page once
+        "measure", "all-windows", "by-site"]  // pulse chrome: measure memory per page once
 
     init(_ argv: [String]) throws {
         var i = 0

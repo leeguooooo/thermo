@@ -207,9 +207,21 @@ struct ChromePagesView: View {
     @State private var confirming: ClosePlan?
     @State private var search = ""
     @State private var onlyRecommended = false
+    @State private var manageTabs = true
     struct ClosePlan: Identifiable { let id = UUID(); let tabs: [ChromeInspector.Tab] }
 
     var body: some View {
+        VStack(spacing: 0) {
+            Picker(tr("Browser pages"), selection: $manageTabs) {
+                Text(tr("Tab groups")).tag(true)
+                Text(tr("Memory diagnostics")).tag(false)
+            }.pickerStyle(.segmented).padding(.horizontal, 24).padding(.top, 24)
+            if manageTabs { TabWorkspaceView(app: model.app) }
+            else { diagnosticsBody }
+        }
+    }
+
+    var diagnosticsBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             header.padding(embedded ? 32 : 14).padding(.top, embedded ? 16 : 0)
                 .frame(maxWidth: embedded ? 884 : .infinity).frame(maxWidth: .infinity)

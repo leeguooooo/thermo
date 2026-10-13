@@ -139,11 +139,11 @@ extension PulseCommand {
     func closeTab(_ rest: [String], browser: String) throws {
         guard let url = rest.first else { throw CLIError("usage: thermo pulse chrome close URL [--title TITLE] [--yes]") }
         let title = app.args.options["title"]
-        let matches = (ChromeInspector.tabs(app: browser) ?? []).filter { $0.url == url }
-        guard !matches.isEmpty else { throw CLIError("no \(browser) tab shows \(url)") }
-        print(tr("Close the %1$@ tab %2$@?", browser, title ?? matches.last!.title) + (matches.count > 1 ? " " + tr("(one of %1$@ with this address)", String(matches.count)) : ""))
+        let matches = (ChromeInspector.tabs(app: browser) ?? []).filter { $0.url == url && (title == nil || $0.title == title) }
+        guard matches.count == 1, let tab = matches.first else { throw CLIError("Tab is missing or ambiguous. Use thermo tabs list and an exact tab ID.") }
+        print(tr("Close the %1$@ tab %2$@?", browser, tab.title))
         guard try app.args.has("yes") || confirm() else { print(tr("Nothing closed.")); return }
-        guard ChromeInspector.close(url: url, title: title, app: browser) else { throw CLIError("\(browser) did not close the tab") }
+        guard ChromeInspector.closeTabs([tab], app: browser).first?.status == .closed else { throw CLIError("The selected tab changed, became unavailable, or did not close.") }
         print(app.style.green("✓") + " " + tr("closed"))
     }
 }

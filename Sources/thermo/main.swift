@@ -47,6 +47,14 @@ COMMANDS
   pulse chrome [--watch 60]   which Chrome page leaks or is biggest, duplicate tabs, hidden pages
                               (memory per page needs chrome-use; --app "Microsoft Edge" for others)
   pulse chrome close URL      close one tab showing URL (--title to pick); asks first
+  tabs list|groups           tabs, Thermo groups and protection reasons (--app BROWSER)
+  tabs group NAME --ids IDS  create a Thermo group; --by-site resets grouping to websites
+  tabs archive               save and close unprotected background tabs in the front window
+                             --group NAME / --ids IDS / --window ID / --all-windows
+                             --name NAME, --dry-run to review, --yes to execute
+  tabs saved|show UUID       saved batches and individual close/restore results
+  tabs restore UUID          reopen a saved batch in its original window; --window ID
+                             explicitly selects a destination after a browser restart
   settings [KEY [VALUE]]     the app's settings: menu bar text, interval, alerts, units,
                              language, Dock icon (KEY=VALUE also works)
   clean [CATEGORY|ai]        what can be cleaned: AI sessions/models/caches, dev caches,
@@ -140,6 +148,7 @@ struct App {
         case "apps", "app": try AppsCommand(app: self).run(rest)
         case "space": try SpaceCommand(app: self).run(rest)
         case "pulse", "status": try PulseCommand(app: self).run(rest)
+        case "tabs": try TabsCommand(app: self).run(rest)
         case "settings", "config": try SettingsCommand(app: self).run(rest)
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
         }

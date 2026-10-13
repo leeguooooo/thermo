@@ -75,6 +75,12 @@ struct PopoverView: View {
                     .onTapGesture { monitor.lastError = nil }
             }
             Divider()
+            if !renderingPreview {
+                Button { TabQuickAction.request() } label: {
+                    Label(tr("Save and close background tabs"), systemImage: "archivebox")
+                        .frame(maxWidth: .infinity)
+                }.buttonStyle(.bordered)
+            }
             footer
         }
         .padding(14)
@@ -127,7 +133,7 @@ struct PopoverView: View {
             Spacer()
             shortcut("internaldrive", tr("Disk Cleanup"), .disk(.home))
             shortcut("stethoscope", tr("AI Agent Diagnostics"), .agents(.home))
-            shortcut("rectangle.stack", tr("Browser pages"), .browser("Google Chrome"))
+            shortcut("rectangle.stack", tr("Save and organize tabs"), .browser("Google Chrome"))
             shortcut("gearshape", tr("Settings"), .settings)
             Button { NSApp.terminate(nil) } label: { Image(systemName: "power") }
                 .buttonStyle(.borderless).help(tr("Quit Thermo"))

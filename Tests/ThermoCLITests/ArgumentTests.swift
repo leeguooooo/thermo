@@ -85,4 +85,13 @@ final class ArgumentTests: XCTestCase {
         XCTAssertEqual(w.options["app"], "Microsoft Edge")
         XCTAssertThrowsError(try Args(["pulse", "chrome", "--measure=1"]))
     }
+    func testTabWorkspaceScopeFlagsParse() throws {
+        let args = try Args(["tabs", "archive", "--ids", "id1,id2", "--group", "Research", "--window", "12", "--name", "Later", "--all-windows", "--dry-run"])
+        XCTAssertEqual(args.positionals, ["tabs", "archive"])
+        XCTAssertEqual(args.options["ids"], "id1,id2")
+        XCTAssertEqual(try args.int("window"), 12)
+        XCTAssertTrue(args.has("all-windows"))
+        XCTAssertTrue(args.has("dry-run"))
+    }
+
 }
