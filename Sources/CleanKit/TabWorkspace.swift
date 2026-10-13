@@ -10,14 +10,16 @@ public enum TabWorkspace {
         public var group: String
         public var color: String?
         public var protectedReason: String?
+        public var profileID: String? = nil
         public var id: String { tab.selectionID }
         public var canArchive: Bool { protectedReason == nil && tab.canSelect && tab.active == false }
-        enum OutputKeys: String, CodingKey { case id, tab, group, color, protectedReason }
+        enum OutputKeys: String, CodingKey { case id, tab, group, color, protectedReason, profileID }
         public func encode(to encoder: Encoder) throws {
             var out = encoder.container(keyedBy: OutputKeys.self)
             try out.encode(id, forKey: .id); try out.encode(tab, forKey: .tab)
             try out.encode(group, forKey: .group); try out.encodeIfPresent(color, forKey: .color)
             try out.encodeIfPresent(protectedReason, forKey: .protectedReason)
+            try out.encodeIfPresent(profileID, forKey: .profileID)
         }
     }
     public struct Inventory: Codable, Sendable {
@@ -71,11 +73,12 @@ public enum TabWorkspace {
         }
         let assignments = try groups(home: home).assignments
         var records: [String: [String: Any]] = [:]
-        var nativeGroups: [Int: [String: Any]] = [:]
+        var recordProfiles: [String: String] = [:]
+        var nativeGroups: [String: [String: Any]] = [:]
         var owned = Set<String>()
         var agentWindows = Set<Int>()
         var metadata = false
-        if let endpoint = ChromeInspector.endpoint(app: app, home: home) {
+        for (profile, endpoint) in connections(app: app, home: home).sorted(by: { $0.key < $1.key }) {
             let cdp = ChromeInspector.CDP(endpoint, diagnostic: true)
             defer { cdp.close() }
             if let response = await cdp.send("ABExt.call", ["namespace": "tabs", "method": "query", "args": [[:]]]),
@@ -85,15 +88,15 @@ public enum TabWorkspace {
                 metadata = true
                 if let window = state["agentWindowId"] as? Int { agentWindows.insert(window) }
                 owned.formUnion(held.map(String.init))
-                for row in attached {
+                for row in attached where row["attached"] as? Bool != false {
                     if let id = row["tabId"] as? Int { owned.insert(String(id)) }
                 }
                 for row in rows {
-                    if let id = row["id"] as? Int { records[String(id)] = row }
+                    if let id = row["id"] as? Int { records[String(id)] = row; recordProfiles[String(id)] = profile }
                 }
                 if let response = await cdp.send("ABExt.call", ["namespace": "tabGroups", "method": "query", "args": [[:]]]),
                    let rows = response["result"] as? [[String: Any]] {
-                    for row in rows { if let id = row["id"] as? Int { nativeGroups[id] = row } }
+                    for row in rows { if let id = row["id"] as? Int { nativeGroups[profile + ":" + String(id)] = row } }
                 }
             }
         }
@@ -101,13 +104,35 @@ public enum TabWorkspace {
             let row = records[tab.browserID ?? ""]
             let matches = row?["url"] as? String == tab.url && row?["windowId"] as? Int == tab.window
             let groupID = row?["groupId"] as? Int ?? -1
-            let native = nativeGroups[groupID]
+            let profile = recordProfiles[tab.browserID ?? ""]
+            let native = nativeGroups[(profile ?? "") + ":" + String(groupID)]
             let group = assignments[tab.selectionID] ?? (matches ? native?["title"] as? String : nil) ?? site(tab.url)
             let reason = protection(tab, row: matches ? row : nil, owned: owned, metadata: metadata, agentWindows: agentWindows)
-            return Page(tab: tab, group: group.isEmpty ? site(tab.url) : group, color: native?["color"] as? String, protectedReason: reason)
+            return Page(tab: tab, group: group.isEmpty ? site(tab.url) : group, color: native?["color"] as? String, protectedReason: reason, profileID: matches ? profile : nil)
         }
         return Inventory(app: app, generated: Date(), pages: pages,
-                         hint: metadata ? nil : "Connect chrome-use to read pinned, audio and agent protection status. Quick archive is disabled until those flags are known.")
+                         hint: pages.contains(where: { $0.protectedReason == "Protection status unavailable" }) || !metadata ? "Connect chrome-use to read pinned, audio and agent protection status. Quick archive is disabled until those flags are known." : nil)
+    }
+
+    static func connections(app: String, home: String, env: [String: String] = ProcessInfo.processInfo.environment) -> [String: URL] {
+        if let explicit = env["THERMO_CDP_URL"], let url = URL(string: explicit) { return ["_override": url] }
+        var result: [String: URL] = [:]
+        if app == "Google Chrome" {
+            let dir = URL(fileURLWithPath: home + "/.chrome-use")
+            let files = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
+            for file in files.sorted().filter({ $0.hasPrefix("relay-cdp-url-") }).prefix(64) {
+                let profile = String(file.dropFirst("relay-cdp-url-".count))
+                guard !profile.isEmpty, profile.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || "-_.".contains($0)) }),
+                      let raw = try? String(contentsOf: dir.appendingPathComponent(file)),
+                      let url = URL(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
+                      ["ws", "wss"].contains(url.scheme ?? ""),
+                      ["127.0.0.1", "localhost", "[::1]", "::1"].contains(url.host ?? ""),
+                      !result.values.contains(url) else { continue }
+                result[profile] = url
+            }
+        }
+        if let endpoint = ChromeInspector.endpoint(app: app, home: home, env: env), !result.values.contains(endpoint) { result["_default"] = endpoint }
+        return result
     }
 
     static func protection(_ tab: ChromeInspector.Tab, row: [String: Any]?, owned: Set<String>, metadata: Bool, agentWindows: Set<Int> = []) -> String? {
@@ -139,7 +164,7 @@ public enum TabWorkspace {
             throw WorkspaceError("Cannot recheck tab protection status.")
         }
         var owned = Set(ids.map(String.init))
-        for held in attached { if let id = held["tabId"] as? Int { owned.insert(String(id)) } }
+        for held in attached where held["attached"] as? Bool != false { if let id = held["tabId"] as? Int { owned.insert(String(id)) } }
         var current = page
         current.tab.url = row["url"] as? String ?? ""
         current.tab.title = row["title"] as? String ?? ""
@@ -225,8 +250,9 @@ public enum TabWorkspace {
         let lock = try Lock(home: home); defer { lock.release() }
         guard !selected.isEmpty, Set(selected.map(\.id)).count == selected.count,
               selected.allSatisfy(\.canArchive) else { throw WorkspaceError("Choose unprotected background tabs before saving and closing.") }
-        let connection = readInventory == nil ? ChromeInspector.endpoint(app: app, home: home).map { ChromeInspector.CDP($0, diagnostic: true) } : nil
-        defer { connection?.close() }
+        let endpoints = readInventory == nil ? connections(app: app, home: home) : [:]
+        var clients: [String: ChromeInspector.CDP] = [:]
+        defer { for client in clients.values { client.close() } }
         let close = close ?? { ChromeInspector.closeTabs($0, app: $1) }
         var archive = Archive(name: name.isEmpty ? "Saved tabs" : name, app: app, entries: selected.map { Entry(page: $0) })
         let url = archiveURL(archive.id, home: home)
@@ -235,6 +261,9 @@ public enum TabWorkspace {
         // unknown delivery. Journal 'closing' first so a crash leaves a recoverable uncertainty.
         for i in archive.entries.indices {
             let page = archive.entries[i].page
+            let profile = page.profileID ?? "_default"
+            if clients[profile] == nil, let endpoint = endpoints[profile] { clients[profile] = ChromeInspector.CDP(endpoint, diagnostic: true) }
+            let connection = clients[profile]
             let current = try await (readInventory.map { reader in { try await reader(app) } } ?? { try await live(page, app: app, cdp: connection) })()
             guard let refreshed = current.pages.first(where: { $0.id == page.id }), refreshed.canArchive,
                   refreshed.tab.url == page.tab.url, refreshed.tab.title == page.tab.title, refreshed.tab.window == page.tab.window else {

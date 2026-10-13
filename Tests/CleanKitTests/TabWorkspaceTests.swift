@@ -71,6 +71,21 @@ final class TabWorkspaceTests: XCTestCase {
         XCTAssertThrowsError(try TabWorkspace.assign([page("one")], name: "A", home: root))
         do { _ = try await TabWorkspace.archive([page("current", active: true)], app: "Fixture", name: "Test", home: try home(), readInventory: { _ in XCTFail(); throw TabWorkspace.WorkspaceError("No") }); XCTFail() } catch {}
     }
+    func testProfileConnectionsKeepStableIDsAndIgnoreNonLocalSidecars() throws {
+        let root = try home()
+        let dir = URL(fileURLWithPath: root + "/.chrome-use")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        for (name, url) in [("relay-cdp-url-a", "ws://127.0.0.1:1234/"), ("relay-cdp-url-b", "ws://127.0.0.1:4321/"), ("relay-cdp-url-remote", "ws://example.test:1234/"), ("relay-cdp-url", "ws://127.0.0.1:4321/")] {
+            try url.write(to: dir.appendingPathComponent(name), atomically: true, encoding: .utf8)
+        }
+        let found = TabWorkspace.connections(app: "Google Chrome", home: root, env: [:])
+        XCTAssertEqual(Set(found.keys), ["a", "b"])
+        XCTAssertEqual(found["a"]?.port, 1234)
+        XCTAssertEqual(found["b"]?.port, 4321)
+        let override = TabWorkspace.connections(app: "Google Chrome", home: root, env: ["THERMO_CDP_URL": "ws://127.0.0.1:9999/"])
+        XCTAssertEqual(Set(override.keys), ["_override"])
+        XCTAssertEqual(override["_override"]?.port, 9999)
+    }
     func testInventoryExportsActionableExactIDs() throws {
         let p = page("one")
         let data = try JSONEncoder().encode(p)
