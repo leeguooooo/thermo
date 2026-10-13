@@ -11,15 +11,19 @@ public enum TabWorkspace {
         public var color: String?
         public var protectedReason: String?
         public var profileID: String? = nil
+        public var nativeGroupID: Int? = nil
+        public var organizerVersion: Int? = nil
         public var id: String { tab.selectionID }
         public var canArchive: Bool { protectedReason == nil && tab.canSelect && tab.active == false }
-        enum OutputKeys: String, CodingKey { case id, tab, group, color, protectedReason, profileID }
+        enum OutputKeys: String, CodingKey { case id, tab, group, color, protectedReason, profileID, nativeGroupID, organizerVersion }
         public func encode(to encoder: Encoder) throws {
             var out = encoder.container(keyedBy: OutputKeys.self)
             try out.encode(id, forKey: .id); try out.encode(tab, forKey: .tab)
             try out.encode(group, forKey: .group); try out.encodeIfPresent(color, forKey: .color)
             try out.encodeIfPresent(protectedReason, forKey: .protectedReason)
             try out.encodeIfPresent(profileID, forKey: .profileID)
+            try out.encodeIfPresent(nativeGroupID, forKey: .nativeGroupID)
+            try out.encodeIfPresent(organizerVersion, forKey: .organizerVersion)
         }
     }
     public struct Inventory: Codable, Sendable {
@@ -27,6 +31,9 @@ public enum TabWorkspace {
         public var generated: Date
         public var pages: [Page]
         public var hint: String?
+        public init(app: String, generated: Date, pages: [Page], hint: String? = nil) {
+            self.app = app; self.generated = generated; self.pages = pages; self.hint = hint
+        }
     }
     public struct Entry: Codable, Sendable, Identifiable {
         public var id: UUID = UUID()
@@ -78,14 +85,17 @@ public enum TabWorkspace {
         var owned = Set<String>()
         var agentWindows = Set<Int>()
         var metadata = false
+        var organizerVersions: [String: Int] = [:]
         for (profile, endpoint) in connections(app: app, home: home).sorted(by: { $0.key < $1.key }) {
             let cdp = ChromeInspector.CDP(endpoint, diagnostic: true)
             defer { cdp.close() }
-            if let response = await cdp.send("ABExt.call", ["namespace": "tabs", "method": "query", "args": [[:]]]),
-               let rows = response["result"] as? [[String: Any]],
-               let state = await cdp.send("ABExt.state"),
-               let held = state["ownedTabs"] as? [Int], let attached = state["attachedTargets"] as? [[String: Any]] {
+            guard let state = await cdp.send("ABExt.state"),
+                  let held = state["ownedTabs"] as? [Int], let attached = state["attachedTargets"] as? [[String: Any]] else { continue }
+            let compact = (state["userTabGroupsVersion"] as? Int ?? 0) == 1
+            let response = compact ? await cdp.send("ABExt.userTabMetadata") : await cdp.send("ABExt.call", ["namespace": "tabs", "method": "query", "args": [[:]]])
+            if let rows = response?[compact ? "tabs" : "result"] as? [[String: Any]] {
                 metadata = true
+                organizerVersions[profile] = state["userTabGroupsVersion"] as? Int ?? 0
                 if let window = state["agentWindowId"] as? Int { agentWindows.insert(window) }
                 owned.formUnion(held.map(String.init))
                 for row in attached where row["attached"] as? Bool != false {
@@ -102,13 +112,13 @@ public enum TabWorkspace {
         }
         let pages = (tabs.filter { !agentWindows.contains($0.window) } + tabs.filter { agentWindows.contains($0.window) }).map { tab -> Page in
             let row = records[tab.browserID ?? ""]
-            let matches = row?["url"] as? String == tab.url && row?["windowId"] as? Int == tab.window
+            let matches = row?["windowId"] as? Int == tab.window && (row?["url"] == nil || row?["url"] as? String == tab.url)
             let groupID = row?["groupId"] as? Int ?? -1
             let profile = recordProfiles[tab.browserID ?? ""]
             let native = nativeGroups[(profile ?? "") + ":" + String(groupID)]
             let group = assignments[tab.selectionID] ?? (matches ? native?["title"] as? String : nil) ?? site(tab.url)
             let reason = protection(tab, row: matches ? row : nil, owned: owned, metadata: metadata, agentWindows: agentWindows)
-            return Page(tab: tab, group: group.isEmpty ? site(tab.url) : group, color: native?["color"] as? String, protectedReason: reason, profileID: matches ? profile : nil)
+            return Page(tab: tab, group: group.isEmpty ? site(tab.url) : group, color: native?["color"] as? String, protectedReason: reason, profileID: matches ? profile : nil, nativeGroupID: matches ? groupID : nil, organizerVersion: profile.flatMap { organizerVersions[$0] })
         }
         return Inventory(app: app, generated: Date(), pages: pages,
                          hint: pages.contains(where: { $0.protectedReason == "Protection status unavailable" }) || !metadata ? "Connect chrome-use to read pinned, audio and agent protection status. Quick archive is disabled until those flags are known." : nil)

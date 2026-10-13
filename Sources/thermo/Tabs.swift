@@ -7,8 +7,46 @@ struct TabsCommand {
         let sub = rest.first ?? "list"
         let browser = app.args.options["app"] ?? "Google Chrome"
         let count = rest.isEmpty ? 1 : rest.count
-        if ["list", "groups", "archive", "saved"].contains(sub), count != 1 { throw CLIError("Unexpected positional argument. Use explicit --ids, --group or --window options.") }
+        if ["list", "groups", "archive", "saved", "organize", "organized"].contains(sub), count != 1 { throw CLIError("Unexpected positional argument. Use explicit --ids, --group or --window options.") }
         if sub == "restore", app.args.options["ids"] != nil || app.args.options["group"] != nil || app.args.has("all-windows") { throw CLIError("restore accepts a saved batch UUID and an optional --window, not a tab selection.") }
+        if sub == "organize" {
+            let inventory = try blocking { try await TabWorkspace.inventory(app: browser) }
+            let config = try TabOrganizer.configuration()
+            let plan = TabOrganizer.plan(inventory, pages: try select(inventory, archive: false), rules: config.rules)
+            if app.args.has("dry-run") { try emit(plan); return }
+            guard plan.count > 0 else { throw CLIError("No eligible native groups. Existing groups and protected tabs are kept; update the chrome-use extension to 0.5.48+ if unsupported.") }
+            try approve("Create \(plan.groups.count) native Chrome groups for \(plan.count) background tabs? Existing groups remain unchanged.")
+            try emit(try blocking { try await TabOrganizer.organize(plan) }); return
+        }
+        if sub == "organized" { try emit(TabOrganizer.batches()); return }
+        if sub == "undo-organize" {
+            guard rest.count == 2, let id = UUID(uuidString: rest[1]) else { throw CLIError("usage: thermo tabs undo-organize UUID --yes") }
+            if app.args.has("dry-run") { try emit(try TabOrganizer.batches().first { $0.id == id }); return }
+            try approve("Undo this native grouping? Changed and protected pages are skipped.")
+            try emit(try blocking { try await TabOrganizer.undo(id) }); return
+        }
+        if sub == "auto" {
+            var config = try TabOrganizer.configuration()
+            if rest.count == 2 {
+                guard ["on", "off"].contains(rest[1]) else { throw CLIError("usage: thermo tabs auto [on|off]") }
+                if app.args.has("dry-run") { config.enabled = rest[1] == "on"; try emit(config); return }
+                try approve("\(rest[1] == "on" ? "Enable" : "Disable") continuous native grouping while Thermo.app is running?")
+                config.enabled = rest[1] == "on"; try TabOrganizer.configure(config)
+            }
+            try emit(config); return
+        }
+        if sub == "rule" {
+            var config = try TabOrganizer.configuration()
+            guard rest.count >= 2 else { try emit(config.rules); return }
+            if rest[1] == "add", rest.count == 4 {
+                config.rules.append(.init(domain: rest[2], name: rest[3], color: app.args.options["color"] ?? "blue"))
+            } else if rest[1] == "remove", rest.count == 3, let id = UUID(uuidString: rest[2]) {
+                guard config.rules.contains(where: { $0.id == id }) else { throw CLIError("Unknown rule UUID.") }
+                config.rules.removeAll { $0.id == id }
+            } else { throw CLIError("usage: thermo tabs rule add DOMAIN NAME [--color COLOR] | rule remove UUID") }
+            if !app.args.has("dry-run") { try approve("Save the native tab grouping rules?"); try TabOrganizer.configure(config) }
+            try emit(config.rules); return
+        }
         switch sub {
         case "saved": try emit(TabWorkspace.archives())
         case "show": try emit(saved(rest))

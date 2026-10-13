@@ -52,6 +52,10 @@ COMMANDS
   tabs archive               save and close unprotected background tabs in the front window
                              --group NAME / --ids IDS / --window ID / --all-windows
                              --name NAME, --dry-run to review, --yes to execute
+  tabs organize --dry-run    preview native Chrome groups; --yes applies website/custom rules
+  tabs auto [on|off]         opt-in automatic native grouping every minute while the app runs
+  tabs rule [add DOMAIN NAME|remove UUID]  grouping rules (--color COLOR)
+  tabs organized             grouping history; tabs undo-organize UUID --yes undoes a batch
   tabs saved|show UUID       saved batches and individual close/restore results
   tabs restore UUID          reopen a saved batch in its original window; --window ID
                              explicitly selects a destination after a browser restart

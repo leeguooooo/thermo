@@ -113,7 +113,7 @@ struct TabWorkspaceView: View {
                 if model.busy { ProgressView().controlSize(.small) }
                 Button(tr("Refresh tabs")) { model.refresh() }.disabled(model.busy)
             }
-            Text(tr("Group tabs in Thermo, save them before closing, and reopen a saved group later. Browser windows and native groups are not rearranged."))
+            Text(tr("Organize native Chrome groups, or save web links before closing tabs and reopen them later. Local Thermo categories are separate from native groups."))
                 .font(.callout).foregroundStyle(.secondary)
             if let error = model.error { Text(error).foregroundStyle(.orange).textSelection(.enabled) }
             if let notice = model.notice { Text(notice).font(.callout).foregroundStyle(.green) }
@@ -149,6 +149,7 @@ struct TabWorkspaceView: View {
     }
     var openTabs: some View {
         VStack(alignment: .leading, spacing: 12) {
+            NativeTabOrganizerView(app: model.app, pages: model.pages, working: $model.busy, refresh: model.refresh)
             HStack {
                 Toggle(tr("All windows"), isOn: $model.allWindows).toggleStyle(.checkbox)
                 if !model.allWindows, let inv = model.inventory {
@@ -163,8 +164,8 @@ struct TabWorkspaceView: View {
             if let hint = model.inventory?.hint { Text(tr(hint)).font(.caption).foregroundStyle(.orange) }
             TextField(tr("Search pages"), text: $search).textFieldStyle(.roundedBorder)
             HStack {
-                TextField(tr("New group name"), text: $groupName).textFieldStyle(.roundedBorder)
-                Button(tr("Group selected")) { model.group(groupName) }.disabled(model.chosen.isEmpty || groupName.trimmingCharacters(in: .whitespaces).isEmpty || model.busy)
+                TextField(tr("Thermo category name"), text: $groupName).textFieldStyle(.roundedBorder)
+                Button(tr("Set Thermo category")) { model.group(groupName) }.disabled(model.chosen.isEmpty || groupName.trimmingCharacters(in: .whitespaces).isEmpty || model.busy)
                 Button(tr("Group by website")) { model.group(nil) }.disabled(model.busy || model.pages.isEmpty)
             }
             HStack {

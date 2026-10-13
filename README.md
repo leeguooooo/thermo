@@ -117,7 +117,9 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 `pulse --csv` 和 `pulse history --csv` 使用 `kind,name,value,unit` 列，温度为 °C，交换内存为 MiB；风扇、进程和历史归因记录的 `value` 为脱敏后的 JSON，保留其明细。
 
-浏览器页默认打开「标签组」。按网站自动归类，也可多选后命名 Thermo 标签组；已有 Chrome 原生组会作为分类名称读取。Thermo 分组保存在本机，不移动浏览器窗口、不改写原生标签组。每组可「保存并收起」，也可一键保存并关闭当前窗口的后台标签；需要扩大范围时明确选择所有窗口。
+浏览器页默认打开「标签组」。点「预览整理方案」会按网站或自定义域名规则生成方案，确认后建立 Chrome 原生标签组。默认只整理同一窗口、同一账号中尚未分组的后台标签；已有标签组、当前页、固定页、音频页、隐私页和 agent 标签保持原样。普通网站至少有两个后台标签才建组，自定义规则可以整理单个标签。完成后可撤销本批操作，撤销时已被用户改名、移动、激活或保护的标签会跳过。
+
+「持续自动整理新标签」默认关闭。开启后，Thermo App 运行期间每分钟检查一次并应用同一套规则；不会关闭标签，也不会跨窗口或 Chrome Profile 移动标签。需要 chrome-use 扩展 0.5.48 或更高版本。另有 Thermo 本地分类，可多选后命名；本地分类不会改写 Chrome 原生标签组。
 
 保存完成并读回校验后才关闭。保留各窗口当前页、固定页、音频页、隐私标签、浏览器设置及 agent/调试器使用中的页面；保护信息缺失时不能批量关闭。每页关闭前再检查，关闭后核对标签是否消失。记录使用本机用户权限保存，不上传。保存的是网址、标题、顺序和 Thermo 分组，不能恢复未提交输入、网页运行状态或登录有效性。
 
@@ -125,6 +127,12 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 ```sh
 thermo tabs list --json
+thermo tabs organize --dry-run --json
+thermo tabs organize --yes --json
+thermo tabs auto on --yes
+thermo tabs rule add github.com GitHub --color purple --yes
+thermo tabs organized --json
+thermo tabs undo-organize UUID --yes
 thermo tabs group 调研 --ids ID,ID --yes
 thermo tabs archive --group 调研 --dry-run
 thermo tabs archive --group 调研 --yes
@@ -135,7 +143,7 @@ thermo tabs restore UUID --yes
 thermo tabs restore UUID --window WINDOW_ID --yes
 ```
 
-标签 ID 和窗口 ID 从 `tabs list` 读取；默认只操作前方窗口。`--ids`、`--group`、`--window` 可组合缩小范围。`tabs group --by-site --yes` 将当前范围重新按网站分组。标签整理分别读取所有已连接 Chrome Profile 的保护信息，关闭前使用标签所属账号的连接，不改变 chrome-use 的默认账号或 agent 会话。不附加页面调试器；未连接时会显示具体原因。其他 Chromium 浏览器需兼容的连接，否则保持只读。
+标签 ID 和窗口 ID 从 `tabs list` 读取；默认只操作前方窗口。`--ids`、`--group`、`--window` 可组合缩小范围。`tabs organize --dry-run` 先列出原生标签组方案，`--yes` 才执行；`tabs auto on` 开启持续整理，`tabs undo-organize` 按批次撤销。`tabs group --by-site --yes` 只调整 Thermo 本地分类。标签整理分别读取所有已连接 Chrome Profile 的保护信息，执行前使用标签所属账号的连接再次核对，不改变 chrome-use 的默认账号或 agent 会话，也不附加页面调试器。其他 Chromium 浏览器需兼容的连接，否则保持只读。
 
 浏览器页面支持查看所有标签页、搜索、多选以及「选择推荐候选」。重复地址和两次采样间的增长会给出理由；高占用本身不会被推荐关闭，窗口当前页也不会被自动选中。确认清单后，按标签页唯一 ID 关闭，已变化或刚切换到的页面会跳过。5 秒后复查浏览器占用、内存压力、温度压力和平均负载；旧的逐页测量值会明确标记。未保存输入、固定标签页和音频状态不会读取，需要用户自己核对。
 
