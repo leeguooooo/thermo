@@ -94,6 +94,8 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     /// and after, so the result reports what was actually freed rather than `bytes` (an upper bound).
     public var measure: [String]?
     /// `device:inode` of each path when it was scanned; a path that names another file at cleanup is skipped.
+    public var sizeIncomplete: Bool? = nil
+    public var estimatedSize: Bool? = nil
     public var identities: [String: String]?
 
     public init(id: String, category: CleanCategory, title: String, detail: String = "", safety: Safety,
@@ -145,6 +147,11 @@ public struct ScanReport: Codable, Sendable {
     /// Titles and notes are written in this language at scan time ("en", "zh-Hans").
     public var language: String?
 
+    public var exactSizes: Bool? = nil
+    public var spaceContext: CleanSpaceContext? = nil
+    public var growth: [ScanGrowth]? = nil
+    public var changesSince: Date? = nil
+
     public init(items: [CleanItem], denied: [String], started: Date, duration: TimeInterval, claudeCleanupDays: Int? = nil,
                 cancelled: Bool = false) {
         self.items = items; self.denied = denied; self.started = started; self.duration = duration
@@ -153,7 +160,7 @@ public struct ScanReport: Codable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays, projectRoots, discoverProjectRoots, language
+        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays, projectRoots, discoverProjectRoots, language, spaceContext, growth, changesSince, exactSizes
     }
 
     public init(from decoder: Decoder) throws {
@@ -166,6 +173,10 @@ public struct ScanReport: Codable, Sendable {
         cancelled = try c.decodeIfPresent(Bool.self, forKey: .cancelled) ?? false
         categories = try c.decodeIfPresent([CleanCategory].self, forKey: .categories)
         olderThanDays = try c.decodeIfPresent(Int.self, forKey: .olderThanDays)
+        exactSizes = try c.decodeIfPresent(Bool.self, forKey: .exactSizes)
+        spaceContext = try c.decodeIfPresent(CleanSpaceContext.self, forKey: .spaceContext)
+        growth = try c.decodeIfPresent([ScanGrowth].self, forKey: .growth)
+        changesSince = try c.decodeIfPresent(Date.self, forKey: .changesSince)
         language = try c.decodeIfPresent(String.self, forKey: .language)
         projectRoots = try c.decodeIfPresent([String].self, forKey: .projectRoots)
         discoverProjectRoots = try c.decodeIfPresent(Bool.self, forKey: .discoverProjectRoots)
@@ -203,6 +214,7 @@ public struct ScanOptions: Sendable {
     /// Background priority: macOS throttles the scan's CPU and disk I/O so it stays out
     /// of the way (slower). The app uses this; the CLI, where someone waits, does not.
     public var lowPriority = false
+    public var exactSizes = false
     /// `thermo clean run ID…`: only the steps that can produce these items run (one id must not
     /// walk every project and app folder). Nil scans everything the categories allow.
     public var onlyIDs: Set<String>? = nil

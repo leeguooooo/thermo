@@ -108,6 +108,9 @@ struct DiskHome: View {
         ScrollView {
             VStack(spacing: 26) {
                 hero.padding(.top, 54)
+                if let report = model.report {
+                    scanInsights(report).padding(.horizontal, 28)
+                }
                 if let r = model.report, !r.items.isEmpty {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {
                         ForEach(CleanCategory.allCases, id: \.self) { c in
@@ -147,6 +150,28 @@ struct DiskHome: View {
         }
     }
 
+    @ViewBuilder func scanInsights(_ report: ScanReport) -> some View {
+        if report.spaceContext != nil || report.changesSince != nil {
+            VStack(alignment: .leading, spacing: 8) {
+                if let c = report.spaceContext {
+                    Text(tr("Outside folder totals")).font(.callout.weight(.semibold))
+                    Text(tr("Swap files: %1$@ · runtime images: %2$@ · purgeable estimate: %3$@",
+                            c.swapFiles.map(ByteFormat.string) ?? "—", c.simulatorRuntimes.map(ByteFormat.string) ?? "—",
+                            c.purgeable.map(ByteFormat.string) ?? "—")).font(.caption)
+                    Text(tr("These share the APFS container and must not be added to folder totals. No process attribution is inferred."))
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+                if let since = report.changesSince, let growth = report.growth {
+                    Text(tr("Changes since %1$@ (same scan scope)", AgeFormat.string(since))).font(.callout.weight(.semibold))
+                    ForEach(Array(growth.prefix(5)), id: \.id) { change in
+                        Text((change.changeBytes > 0 ? "+" : "−") + ByteFormat.string(abs(change.changeBytes)) + " · " + change.title).font(.caption)
+                    }
+                    if growth.isEmpty { Text(tr("No measured size changes")).font(.caption).foregroundStyle(.secondary) }
+                }
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(14).glass(radius: 14)
+        }
+    }
+
     @ViewBuilder var hero: some View {
         if model.cleaning {
             HeroStatus(symbol: "trash.fill", color: .orange, title: tr("Cleaning…"),
@@ -162,7 +187,7 @@ struct DiskHome: View {
         } else if let r = model.report {
             VStack(spacing: 18) {
                 HeroStatus(symbol: r.totalBytes > 0 ? "internaldrive.fill" : "checkmark", color: r.totalBytes > 0 ? .pink : .green,
-                           title: r.totalBytes > 0 ? tr("%1$@ can be freed", ByteFormat.string(r.totalBytes)) : tr("Nothing to clean."),
+                           title: r.totalBytes > 0 ? (r.items.contains { $0.estimatedSize == true || $0.sizeIncomplete == true } ? tr("%1$@ in measured files (estimated)", ByteFormat.string(r.totalBytes)) : tr("%1$@ can be freed", ByteFormat.string(r.totalBytes))) : tr("Nothing to clean."),
                            subtitle: tr("%1$@ selected by default. Development dependencies are kept; other items need your review.", ByteFormat.string(model.safeBytes)))
                 HStack(spacing: 20) {
                     BigRoundButton(title: tr("Clean"), color: .pink, busy: model.cleaning) {
@@ -392,6 +417,13 @@ struct DiskItemDetail: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if item.sizeIncomplete == true {
+                Text(tr("Size is a lower bound; the large-tree scan was limited. Use an exact scan for a complete measurement."))
+                    .font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+            } else if item.estimatedSize == true {
+                Text(tr("Allocated size estimate; shared blocks may not be reclaimed."))
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
             if let n = item.note { Text(n).font(.callout).foregroundStyle(.white.opacity(0.75)).fixedSize(horizontal: false, vertical: true) }
             if item.developmentDependency {
                 Text(tr("Kept by default: development may need these files again. Archive them only when the environment or project is inactive."))

@@ -91,8 +91,8 @@ enum AITools {
 
     /// Claude Code scratchpads in `/private/tmp/claude-<uid>/<project>/<session>/`. Kept while the
     /// session runs; removed once it has been idle for a day.
-    static func claudeScratch(_ ctx: ScanContext) -> [CleanItem] {
-        let root = "/private/tmp/claude-\(getuid())"
+    static func claudeScratch(_ ctx: ScanContext, scratchRoot: String? = nil) -> [CleanItem] {
+        let root = scratchRoot ?? "/private/tmp/claude-\(getuid())"
         guard FS.isDirectory(root) else { return [] }
         let dayAgo = ctx.now.addingTimeInterval(-86400)
         var old: [String] = []
@@ -111,8 +111,8 @@ enum AITools {
         guard !old.isEmpty else { return [] }
         let s = FS.size(old)
         return [CleanItem(id: "claude-scratchpads", category: .aiCaches, title: tr("Claude Code scratchpads") + " · " + trCount(old.count, "%1$@ session", "%1$@ sessions"),
-                          detail: root, safety: .safe, bytes: s.bytes, files: s.files, lastUsed: newest, paths: old,
-                          note: tr("temporary files of finished sessions; idle for over a day"))]
+                          detail: root, safety: .review, bytes: s.bytes, files: s.files, lastUsed: newest, paths: old,
+                          note: tr("temporary files of finished sessions; idle for over a day") + MediaFindings.note(in: old))]
     }
 
     /// `~/.cache/codex-runtimes/*`: interrupted downloads (`tmp*`, `*.incomplete`) are dead weight.

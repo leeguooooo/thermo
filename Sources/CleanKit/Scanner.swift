@@ -57,6 +57,7 @@ public final class DiskScanner: @unchecked Sendable {
         }
         let timing = ProcessInfo.processInfo.environment["THERMO_CLEAN_TIMING"] != nil
         if timing { FileHandle.standardError.write(Data("scan: reading processes\n".utf8)) }
+        onProgress?("reading processes")
         let processes = ProcessTable.current(.init(cpu: false))
         if timing { FileHandle.standardError.write(Data(String(format: "scan: processes %.2fs\n", Date().timeIntervalSince(started)).utf8)) }
         let live = ClaudeSessions.live(AgentHome(home: options.home))
@@ -126,6 +127,14 @@ public final class DiskScanner: @unchecked Sendable {
         report.projectRoots = Array(Set(options.projectRoots)).sorted()
         report.discoverProjectRoots = options.discoverProjectRoots
         report.language = language
+        report.exactSizes = options.exactSizes
+        if saveReport, options.onlyIDs == nil {
+            onProgress?("space context")
+            report.spaceContext = CleanSpaceContext.read(home: options.home, cancellation: cancellation)
+            report.cancelled = cancellation.isCancelled
+            report.duration = Date().timeIntervalSince(started)
+            CleanScanHistory.record(&report, home: options.home)
+        }
         // A scan narrowed to some ids is not a full report; a later run must not reuse it.
         if saveReport && options.onlyIDs == nil { ScanReportCache.save(report, home: options.home) }
         return report

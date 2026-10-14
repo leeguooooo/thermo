@@ -39,24 +39,29 @@ struct CleanCommand {
     }
 
     func run(_ rest: [String]) throws {
-        if args.options["budget"] != nil, (rest.first == "log" || (rest.first == "run" && !args.has("dry-run"))) {
+        if args.options["budget"] != nil || args.options["timeout"] != nil, (rest.first == "log" || (rest.first == "run" && !args.has("dry-run"))) {
             throw CLIError("--budget is for read-only scans")
         }
         if args.has("stream") {
-            guard !args.has("csv"), !["run", "log"].contains(rest.first ?? "") else {
+            guard !args.has("csv"), !["run", "log", "empty-trash", "repair-worktrees"].contains(rest.first ?? "") else {
                 throw CLIError("--stream is for read-only scans and cannot be combined with --csv")
             }
         }
         switch rest.first {
         case "run": try clean(Array(rest.dropFirst()))
         case "log": showLog()
+        case "empty-trash": try emptyTrash(Array(rest.dropFirst()))
+        case "repair-worktrees":
+            guard rest.count == 1 else { throw CLIError("repair-worktrees takes --root REPO, not positional paths") }
+            try repairWorktrees()
         case "overview", "space": try overview()
         default: try report(filter: rest)
         }
     }
 
     static func budget(_ args: Args) throws -> TimeInterval? {
-        let value = try args.double("budget")
+        guard !(args.options["budget"] != nil && args.options["timeout"] != nil) else { throw CLIError("choose --budget or --timeout") }
+        let value = try args.double("budget") ?? args.double("timeout")
         if let value, value > 86400 { throw CLIError("--budget must be at most 86400 seconds") }
         return value
     }
@@ -105,6 +110,7 @@ struct CleanCommand {
 
     func options() throws -> ScanOptions {
         var o = ScanOptions()
+        o.exactSizes = args.has("exact")
         if let v = args.options["older-than"] {
             guard let d = parseDays(v) else { throw CLIError("--older-than expects days like 30, 2w, 6m or 1y; got '\(v)'") }
             o.olderThanDays = d
@@ -122,7 +128,7 @@ struct CleanCommand {
         if let categories { o.categories = categories }
         o.onlyIDs = onlyIDs
         let scanner = DiskScanner(options: o)
-        let deadline = Self.deadline(after: try Self.budget(args), cancellation: scanner.cancellation)
+        let deadline = Self.deadline(after: try Self.budget(args) ?? 60, cancellation: scanner.cancellation)
         defer { deadline?.cancel() }
         let stream = args.has("stream") ? ScanStream() : nil
         stream?.start()
@@ -130,18 +136,23 @@ struct CleanCommand {
             scanner.onItems = { stream.emit(.init(event: "items", items: $0)) }
             scanner.onProgress = { stream.emit(.init(event: "progress", step: $0)) }
         }
-        let tty = isatty(STDERR_FILENO) != 0 && !args.has("json") && !args.has("csv") && stream == nil
-        if tty {
-            let lock = NSLock()
-            var done = 0
-            scanner.onProgress = { step in
-                lock.lock(); done += 1; let n = done; lock.unlock()
-                FileHandle.standardError.write("\r\u{1B}[2Kscanning… \(n) · \(step.prefix(40))".data(using: .utf8)!)
-            }
+        let progress = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
+        let progressStarted = Date()
+        FileHandle.standardError.write(Data("scanning… budget \(try Self.budget(args) ?? 60)s; JSON results arrive when finished (--stream for events)\n".utf8))
+        progress.schedule(deadline: .now() + 5, repeating: 5)
+        progress.setEventHandler {
+            FileHandle.standardError.write(Data(String(format: "scanning… %.0fs elapsed\n", Date().timeIntervalSince(progressStarted)).utf8))
+        }
+        progress.resume()
+        defer { progress.cancel() }
+        let existing = scanner.onProgress
+        scanner.onProgress = { step in
+            existing?(step)
+            FileHandle.standardError.write(Data("scan: \(step)\n".utf8))
         }
         let r = scanner.scan()
         stream?.emit(.init(event: "finished", report: r))
-        if tty { FileHandle.standardError.write("\r\u{1B}[2K".data(using: .utf8)!) }
+        FileHandle.standardError.write(Data("scan finished: \(r.items.count) items; partial=\(r.cancelled)\n".utf8))
         return r
     }
 
@@ -179,7 +190,19 @@ struct CleanCommand {
             return
         }
         let showAll = args.has("all") || cats != nil
-        var lines = [style.bold("thermo clean") + style.dim(" · ") + style.green(ByteFormat.string(r.totalBytes)) + style.dim(" reclaimable · scanned in \(String(format: "%.1f", r.duration)) s · nothing was deleted")]
+        var lines = [style.bold("thermo clean") + style.dim(" · ") + style.green(ByteFormat.string(r.totalBytes)) + style.dim(" in file-size estimates (not guaranteed reclaimed) · scanned in \(String(format: "%.1f", r.duration)) s · nothing was deleted")]
+        if let c = r.spaceContext {
+            func value(_ bytes: Int64?) -> String { bytes.map(ByteFormat.string) ?? "unknown" }
+            lines.append("Swap files: " + value(c.swapFiles) + " (used " + value(c.swapUsed) + "); simulator runtime images: " + value(c.simulatorRuntimes) + "; purgeable estimate: " + value(c.purgeable))
+            lines.append(style.dim(c.note))
+        }
+        if let since = r.changesSince, let growth = r.growth {
+            lines.append("Changes since " + ISO8601DateFormatter().string(from: since) + " (same scan scope):")
+            for change in growth.prefix(10) {
+                lines.append("  " + (change.changeBytes > 0 ? "+" : "−") + ByteFormat.string(abs(change.changeBytes)) + "  " + change.title)
+            }
+            if growth.isEmpty { lines.append("  no measured size changes") }
+        }
         let width = min(terminalWidth(), 140)
         for c in CleanCategory.allCases {
             let items = r.items.filter { $0.category == c }
@@ -237,6 +260,8 @@ struct CleanCommand {
             let limit = max(40, width - 22)
             lines.append(indent + style.dim(n.count > limit ? String(n.prefix(limit - 1)) + "…" : n))
         }
+        if i.sizeIncomplete == true { lines.append(indent + style.yellow("size is a lower bound; large tree scan was limited")) }
+        else if i.estimatedSize == true { lines.append(indent + style.dim("allocated size estimate; shared blocks may not be reclaimed")) }
         if let h = i.hint { lines.append(indent + style.dim("run: ") + h) }
         if args.has("all"), let parts = i.parts, parts.count > 1 {
             for p in parts {
@@ -370,24 +395,75 @@ struct CleanCommand {
 
         let spaceBefore = DiskSpaceSnapshot.measure()
         var results: [CleanResult] = []
+        let batchID = UUID().uuidString
         for i in todo {
-            let res = Cleaner.clean(i, mode: mode, scannedAt: r.started)
+            let res = Cleaner.clean(i, mode: mode, scannedAt: r.started, batchID: batchID)
             results.append(res)
             if !args.has("json") {
                 let ok = res.failed.isEmpty
                 print("  " + (ok ? style.green("✓") : style.yellow("!")) + " " + pad(ByteFormat.string(res.bytes), 8, right: true) + "  " + i.title
-                      + (res.trashed ? style.dim("  (Trash)") : ""))
+                      + (res.trashed ? style.dim("  (Trash)") : "")
+                      + (res.outcome == "partial" ? "  (partially completed; remainder kept)" : "")
+                      + (res.bytesIncomplete == true ? "  (removed-size estimate incomplete)" : ""))
                 for (p, why) in res.failed.sorted(by: { $0.key < $1.key }).prefix(5) { print(style.dim("      \(FS.tilde(p)): \(why)")) }
             }
         }
         let observation = DiskSpaceObservation(before: spaceBefore, after: DiskSpaceSnapshot.measure())
         if args.has("json") { print(Export.json(results)); return }
         let freed = results.filter { !$0.trashed }.reduce(Int64(0)) { $0 + $1.bytes }
-        let trashed = results.filter(\.trashed).reduce(Int64(0)) { $0 + $1.bytes }
+        let trashed = results.filter(\.trashed).reduce(Int64(0)) { $0 + ($1.trashedAllocatedBytes ?? $1.bytes) }
         var summary = "deleted \(ByteFormat.string(freed)) (estimated file size)"
-        if trashed > 0 { summary += ", moved \(ByteFormat.string(trashed)) to the Trash (empty it to reclaim the space)" }
+        if trashed > 0 {
+            summary += ", \(ByteFormat.string(trashed)) still occupies Trash space; empty only this batch to attempt reclaiming it"
+        }
+        if results.contains(where: { $0.trashBatchID == batchID }) {
+            print("Review this batch: thermo clean empty-trash \(batchID) --dry-run")
+            print("Empty only this batch: thermo clean empty-trash \(batchID) --yes")
+        }
+        if results.contains(where: { $0.bytesIncomplete == true }) { summary += "; some partial deletions could not be measured completely" }
         print(observation.summary)
         print(style.bold(summary) + style.dim(" · log: \(FS.tilde(Cleaner.logURL.path))"))
+    }
+
+    func repairWorktrees() throws {
+        guard let repo = args.options["root"], !repo.contains(",") else { throw CLIError("usage: thermo clean repair-worktrees --root REPO --dry-run|--yes") }
+        guard args.options["budget"] == nil, args.options["timeout"] == nil else { throw CLIError("scan budgets do not apply to registration repair") }
+        let entries = try WorktreeRegistrationRepair.inspect(repo: repo)
+        if args.has("dry-run") || !args.has("json") {
+            if args.has("json") { print(Export.json(entries)) }
+            else { for entry in entries { print(entry.path + (entry.blocked.map { " · kept: " + $0 } ?? " · missing; registration can be backed up and removed")) } }
+        }
+        if args.has("dry-run") { return }
+        guard args.has("yes") else { throw CLIError("review with --dry-run, then add --yes to confirm registration repair") }
+        let results = WorktreeRegistrationRepair.repair(repo: repo, entries: entries)
+        if args.has("json") { print(Export.json(results)) }
+        else { for result in results { print(result.path + ": " + (result.error ?? "registration removed") + (result.backup.map { " · backup: " + $0 } ?? "")) } }
+    }
+
+    func emptyTrash(_ selectors: [String], home: String = NSHomeDirectory(), write: (String) -> Void = { print($0) }) throws {
+        guard selectors.count == 1 else { throw CLIError("usage: thermo clean empty-trash BATCH --dry-run|--yes") }
+        guard !args.has("budget"), args.options["budget"] == nil, args.options["timeout"] == nil else { throw CLIError("scan budgets do not apply to deleting Trash items") }
+        let batch = try TrashBatches.load(selectors[0], home: home)
+        struct Review: Encodable { let batch: TrashBatch; let refusals: [String: String]; let permanent = true; let dryRun: Bool }
+        let refused = Dictionary(batch.entries.compactMap { e in TrashBatches.refusal(e, home: home).map { (e.destination, $0) } }, uniquingKeysWith: { a, _ in a })
+        if args.has("dry-run") || !args.has("json") {
+            if args.has("json") { write(Export.json(Review(batch: batch, refusals: refused, dryRun: args.has("dry-run")))) }
+            else {
+                write("Permanent removal of only this batch's Trash entries:")
+                for entry in batch.entries { write("  " + entry.destination + (refused[entry.destination].map { " · skipped: " + $0 } ?? "")) }
+            }
+        }
+        if args.has("dry-run") { return }
+        if !args.has("yes") {
+            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("add --yes after reviewing the batch with --dry-run") }
+            print("Permanently remove this batch? [y/N] ", terminator: ""); fflush(stdout)
+            guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { return }
+        }
+        let result = try TrashBatches.empty(batch.id, home: home)
+        if args.has("json") { write(Export.json(result)); return }
+        write("deleted \(ByteFormat.string(result.bytes)) (estimated); \(result.outcome ?? "unknown")")
+        for (path, reason) in result.failed.sorted(by: { $0.key < $1.key }) { write("  kept \(path): \(reason)") }
+        if let observation = result.spaceObservation { write(observation.summary) }
     }
 
     /// The saved report when it is under 15 minutes old, made with the same age limit, and covers
@@ -402,6 +478,7 @@ struct CleanCommand {
         }
         guard let r = ScanReportCache.load(maxAge: 15 * 60, matching: { report in
             guard report.olderThanDays == configured.olderThanDays,
+                  (report.exactSizes ?? false) == configured.exactSizes,
                   report.language == L10n.current.rawValue,
                   needs.isSubset(of: Set(report.categories ?? [])),
                   report.projectRoots == Array(Set(configured.projectRoots)).sorted(),

@@ -1446,4 +1446,18 @@ let zhHans: [String: String] = [
     "Limited disk space for swap": "可供 swap 使用的磁盘空间不足",
     "Only %1$@ of disk capacity is available to swap. This may restrict memory management; free space, then check again.": "可供 swap 使用的磁盘空间仅剩 %1$@，可能影响内存管理。请释放空间后重新查看。",
     "%1$@ s": "%1$@ 秒",
+
+    "Outside folder totals": "目录统计之外的空间",
+    "Swap files: %1$@ · runtime images: %2$@ · purgeable estimate: %3$@": "Swap 文件：%1$@ · 模拟器镜像：%2$@ · 可清除空间估算：%3$@",
+    "These share the APFS container and must not be added to folder totals. No process attribution is inferred.": "这些数据共用 APFS 容器，不能与目录统计相加，也不能据此归因到某个进程。",
+    "Changes since %1$@ (same scan scope)": "与 %1$@ 的同范围扫描相比",
+    "No measured size changes": "已测量条目的大小没有变化",
+    "Size is a lower bound; the large-tree scan was limited. Use an exact scan for a complete measurement.": "大型目录扫描已限量，大小为下限；完整测量请使用精确扫描。",
+    "Allocated size estimate; shared blocks may not be reclaimed.": "这是已分配空间的估算，共享块可能无法释放。",
+    ", %1$@ still occupies Trash space; empty only this batch to reclaim it": "，%1$@ 仍占用废纸篓空间，需要清空本批项目才会尝试释放",
+    "%1$@ items partially completed; remaining files kept": "%1$@ 项已部分完成，剩余文件保留",
+    "partial deletion size could not be measured completely": "无法完整测量部分删除的大小",
+    "; review contents before removal (scratchpads may contain work products)": "；删除前请检查，临时目录可能含有工作成果",
+    "; media to review: %1$@": "；请保留需要的媒体文件：%1$@",
+    "%1$@ in measured files (estimated)": "已测量文件估算为 %1$@",
 ]

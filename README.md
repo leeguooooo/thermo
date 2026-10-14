@@ -173,6 +173,8 @@ thermo tabs restore UUID --window WINDOW_ID --yes
   总览单独显示项目与源代码目录，按仓库列出整体占用；它包含源码，不能当作全部可释放空间。点击“扫描构建产物”进入项目分类，再选择具体产物。Xcode、开发缓存和临时文件也有对应扫描入口，按钮不直接执行删除。项目根目录会去掉重复别名、嵌套根目录和指向整个 home 的别名；其他磁盘上的项目不计入当前磁盘容量。
   空间总览可复用 CLI 的完整缓存，并按 App 当前语言显示分类标题；切换语言只更新文字，保留原扫描日期和大小。路径保护同时核对父目录符号链接解析后的实际位置，避免缓存或项目别名指向文稿、凭据或用户目录以外的内容。
   空间总览按子目录增量更新。流式 `entry` 的 `id` 在分类内保持不变，调用方应替换该分类的旧条目；`complete`、`measuredLocations`、`totalLocations` 标明分类进度。未完成分类显示“至少”多少空间，`finished` 事件返回扫描结束时的最终状态。扫描最多四个工作线程，页面更新会合并，避免大量临时文件造成任务和界面更新堆积。
+  扫描默认使用 60 秒的协作式预算，并持续向 stderr 输出进度（包括 `--json` 模式）；stdout 保持单份有效 JSON。`--timeout` 是 `--budget` 的别名，两者不能同时指定。大型项目和工作树使用有界的已分配空间测量，下限标为 `sizeIncomplete`，估算标为 `estimatedSize`；`--exact --budget 300` 可完整测量。严重磁盘 I/O 等待可能延迟到下一处取消检查，预算不是内核调用的硬超时。
+
   给 agent 限时获取结果可用 `thermo clean overview --budget 10 --stream`，或 `thermo clean projects --budget 10 --json`。预算到期后在下一处取消检查停止，结果标记 `cancelled: true`，仅统计已完整测量的目录；未完成分类标注 `complete: false`，大小是下限，不替换已有完整报告。`--budget` 只用于扫描，不能用于执行清理。
   完成的报告按分类、项目目录、保留天数和语言分别缓存，最多保留 32 个范围。再次打开分类页面或执行清理时，只复用范围一致且未过期的报告；清理后所有旧计划失效。项目活动读取会校验文件身份和修改时间，未变化的 Codex 会话无需反复打开。
   `thermo clean run projects --dry-run --json` 只返回清理计划，不删除文件、不执行清理命令，即使加了 `--yes` 也如此。真实执行前会复查应用、构建进程和正在运行的可执行文件。模拟器移除会永久删除，由确认框明确说明；`--trash` 不会执行这种操作。设备 ID 固定在扫描结果里，执行前再检查当前状态；旧的 `delete unavailable` 批量命令必须重新扫描。
@@ -270,3 +272,35 @@ thermo space archive ~/Downloads/old-project --to nas:/archive/old-project.tar -
 ```sh
 ssh nas 'cat /archive/old-project.tar' | tar -xSpf - -C ~/Downloads
 ```
+
+### 清理结果与本批废纸篓
+
+递归删除中途失败会报告 `outcome: partial` 和 `partialRemoved`，可确认的已删除量仍计入 `bytes`。无法完整比较残留内容时，`bytesIncomplete` 标明估算不完整；系统可用空间变化单独显示，包含并发磁盘活动。
+
+移入废纸篓会记录实际位置和文件身份，并返回 `trashBatchID`。文件仍占用空间，清空后的实际可用空间变化取决于 APFS 共享块、快照及并发活动。
+
+```sh
+thermo clean empty-trash BATCH_ID --dry-run --json
+thermo clean empty-trash BATCH_ID --yes --json
+```
+
+该命令只处理记录中的本批项目；已经恢复、被替换、仍在使用、无法读取或不在当前用户废纸篓中的项目会保留。不会清空整个废纸篓，也不会按原路径追删新文件。
+
+工作树会重新检查未提交内容和活动进程，仅对能确认持有者已退出的 Claude agent 锁解锁。移入废纸篓后通过 Git 注销单个注册项，不使用全仓库 prune 或 force；分支保留。恢复所需的 Git 注册副本与 checkout 一起留在废纸篓，位置见批次记录的 `registrationBackup` 和 `registrationOriginal`。恢复时，先确认原路径及注册位置为空，把注册副本移回 `registrationOriginal`，再把 checkout 移回原路径；检查 `git status`。恢复前还应确认同名分支没有被其他工作树使用或改动，不覆盖现有文件或注册项。
+
+### 扫描对比与大目录提示
+
+普通 clean 报告开头显示 swap 文件、模拟器 runtime 磁盘镜像及可清除空间估算。这些数据共用 APFS 容器，不能与目录统计相加，不会据此推断某个进程使用了多少 swap。
+
+扫描快照保存在 `~/Library/Caches/dev.thermo/scan-history/`，最多保留 24 份近期快照和 32 个范围基线。只有同分类、根目录、发现规则、年龄阈值和测量口径的完整结果才参与前后比较；取消、读取失败或有界测量不完整的快照保留供检查，不替换完整基线。
+
+Rust 项目的 target 以及 `~/.cache/*-target`、`*_target` 等具有 Rust 构建特征的目录会显示，即使没有 Cargo.toml；保持默认保留开发依赖和活跃构建保护。Claude scratchpads 改为需要审阅，说明中列出发现的大媒体文件，避免把渲染成果当作一次性缓存直接删除。
+
+旧版本留下的悬空 agent 工作树注册可单独检查与修复：
+
+```sh
+thermo clean repair-worktrees --root /path/to/repo --dry-run --json
+thermo clean repair-worktrees --root /path/to/repo --yes --json
+```
+
+仅处理该仓库 `.claude/worktrees/`、`.codex/worktrees/`、`.worktrees/` 中路径已经不存在的注册。未知锁、活锁、仍被使用或审阅后重新出现的目录保留；注册信息先备份到 Thermo 的私有目录，分支和其他工作树不变。

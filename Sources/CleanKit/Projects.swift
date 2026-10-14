@@ -84,6 +84,16 @@ enum Projects {
         if timing {
             FileHandle.standardError.write(Data("walk: \(visited.count) dirs, \(found.count) candidates, \(String(format: "%.2f", Date().timeIntervalSince(ctx.now)))s\n".utf8))
         }
+        if ctx.options.categories.contains(.projects) {
+            for root in FS.children(ctx.path("~/.cache")) where FS.isDirectory(root) {
+                let name = (root as NSString).lastPathComponent.lowercased()
+                let target = name == "target" || name.hasSuffix("-target") || name.hasSuffix("_target")
+                if target, FS.exists(root + "/.rustc_info.json") || FS.isDirectory(root + "/debug") || FS.isDirectory(root + "/release") {
+                    enqueue(.artifact(project: (root as NSString).deletingLastPathComponent, kind: "Rust cache", name: (root as NSString).lastPathComponent,
+                                      activity: FS.mtime(root), source: nil))
+                }
+            }
+        }
         queue.waitUntilAllOperationsAreFinished()
         return items
     }
@@ -97,7 +107,7 @@ enum Projects {
         switch c {
         case let .artifact(dir, kind, a, activity, source):
             let p = dir + "/" + a
-            let s = FS.size(p)
+            let s = ctx.options.exactSizes ? FS.size(p) : FS.discoverySize(p)
             guard s.bytes > 1_000_000 else { return nil }
             let stale = activity.map { $0 < ctx.staleBefore } ?? true
             var note = activity.map { d in
@@ -109,7 +119,7 @@ enum Projects {
                     (dir.hasPrefix($0 + "/") && ProjectSignals.isRepoRoot($0, containing: dir))
             }
                 ? tr("an agent is running in it") : nil
-            return CleanItem(
+            var item = CleanItem(
                 id: "project/" + id(p, ctx: ctx), category: .projects,
                 title: "\((dir as NSString).lastPathComponent) · \(a)",
                 detail: FS.tilde(dir, home: ctx.home) + " · \(kind)",
@@ -117,6 +127,8 @@ enum Projects {
                 // release binary in `dist`): never in the one-click safe set, always to the Trash.
                 safety: stale && !generic.contains(a) ? .safe : .review,
                 bytes: s.bytes, files: s.files, lastUsed: activity, paths: [p], note: note, blocked: blocked, group: dir)
+            item.estimatedSize = !ctx.options.exactSizes; item.sizeIncomplete = s.incomplete
+            return item
         case let .worktree(wt, repo):
             return worktreeItem(wt, repo: repo, repoName: (repo as NSString).lastPathComponent, ctx: ctx)
         case let .aider(dir, paths):
@@ -228,7 +240,7 @@ enum Projects {
 
     /// A worktree an agent created. Removed only through git, and only when it has nothing unsaved.
     static func worktreeItem(_ wt: String, repo: String, repoName: String, ctx: ScanContext) -> CleanItem? {
-        let s = FS.size(wt, trackNewest: true)
+        let s = ctx.options.exactSizes ? FS.size(wt, trackNewest: true) : FS.discoverySize(wt)
         let gitFile = wt + "/.git"
         let registered = FS.exists(gitFile)
         let name = (wt as NSString).lastPathComponent
@@ -237,7 +249,7 @@ enum Projects {
         var blocked: String?
         var detail = FS.tilde(wt, home: ctx.home)
         if !registered {
-            safety = .safe
+            safety = .review
             note = tr("not a git worktree any more (left behind)")
         } else {
             let q = Shell.quote(wt)
@@ -258,9 +270,11 @@ enum Projects {
         if ctx.agentDirs.contains(where: { $0 == wt || $0.hasPrefix(wt + "/") }) { blocked = tr("an agent is running in it") }
         if (s.newest ?? ctx.now) > ctx.activeAfter, blocked == nil { blocked = tr("modified in the last 2 hours") }
         guard s.bytes > 0 else { return nil }
-        return CleanItem(id: "worktree/" + AISessions.slug(repoName) + "/" + AISessions.slug(name), category: .agentWorktrees,
+        var item = CleanItem(id: "worktree/" + AISessions.slug(repoName) + "/" + AISessions.slug(name), category: .agentWorktrees,
                          title: tr("Agent worktree") + " · \(repoName)/\(name)", detail: detail, safety: safety,
                          bytes: s.bytes, files: s.files, lastUsed: s.newest, paths: [wt], note: note, blocked: blocked,
-                         afterClean: ["git -C \(Shell.quote(repo)) worktree prune"])
+                         group: repo)
+        item.estimatedSize = !ctx.options.exactSizes; item.sizeIncomplete = s.incomplete
+        return item
     }
 }

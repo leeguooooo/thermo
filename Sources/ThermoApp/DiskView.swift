@@ -173,14 +173,21 @@ final class DiskModel: ObservableObject {
         queue.async { [weak self] in
             ScanReportCache.invalidate()
             let spaceBefore = DiskSpaceSnapshot.measure()
+            let batchID = UUID().uuidString
+            var batchRecorded = false
+            var partialCount = 0
+            var estimateIncomplete = false
             var removedAny = false
             var freed: Int64 = 0, trashed: Int64 = 0, failures = 0
             var remaining: [String: CleanItem] = [:]
             for (n, i) in items.enumerated() {
                 DispatchQueue.main.async { self?.cleaningStep = i.title; self?.cleaningDone = n }
-                let r = Cleaner.clean(i, scannedAt: scannedAt)
-                removedAny = removedAny || !r.removed.isEmpty
-                if r.trashed { trashed += r.bytes } else { freed += r.bytes }
+                let r = Cleaner.clean(i, scannedAt: scannedAt, batchID: batchID)
+                batchRecorded = batchRecorded || r.trashBatchID == batchID
+                partialCount += r.outcome == "partial" ? 1 : 0
+                estimateIncomplete = estimateIncomplete || r.bytesIncomplete == true
+                removedAny = removedAny || !r.removed.isEmpty || r.partialRemoved?.isEmpty == false
+                if r.trashed { trashed += r.trashedAllocatedBytes ?? r.bytes } else { freed += r.bytes }
                 failures += r.failed.count
                 if let original = originals[i.id], let rest = Self.remainder(original, attempted: i, result: r) {
                     remaining[i.id] = rest
@@ -188,7 +195,10 @@ final class DiskModel: ObservableObject {
             }
             let observation = DiskSpaceObservation(before: spaceBefore, after: DiskSpaceSnapshot.measure())
             var text = tr("deleted %1$@ (estimated file size)", ByteFormat.string(freed))
-            if trashed > 0 { text += tr(", %1$@ moved to the Trash", ByteFormat.string(trashed)) }
+            if trashed > 0 { text += tr(", %1$@ still occupies Trash space; empty only this batch to reclaim it", ByteFormat.string(trashed)) }
+            if batchRecorded { text += "\nthermo clean empty-trash \(batchID) --dry-run" }
+            if partialCount > 0 { text += " · " + tr("%1$@ items partially completed; remaining files kept", String(partialCount)) }
+            if estimateIncomplete { text += " · " + tr("partial deletion size could not be measured completely") }
             if failures > 0 { text += " · " + trCount(failures, "%1$@ path could not be removed (see log)", "%1$@ paths could not be removed (see log)") }
             text += "\n" + observation.summary
             let invalidateOverview = removedAny

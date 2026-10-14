@@ -402,15 +402,16 @@ final class CleanKitTests: XCTestCase {
         XCTAssertTrue(FS.exists(path))
     }
 
-    func testLeftoverWorktreeIsSafe() throws {
+    func testLeftoverWorktreeRequiresReviewAndAvoidsGlobalPrune() throws {
         try write("src/repo/package.json", "{}")
         try write("src/repo/.claude/worktrees/agent-1/file.txt", age: 10)
         try touch(home + "/src/repo/.claude/worktrees/agent-1", age: 10)
         let items = Projects.scan(context())
         let wt = try XCTUnwrap(items.first { $0.id.hasPrefix("worktree/") })
-        XCTAssertEqual(wt.safety, .safe)
+        XCTAssertEqual(wt.safety, .review)
         XCTAssertNil(wt.blocked)
-        XCTAssertEqual(wt.afterClean?.first?.contains("worktree prune"), true)
+        XCTAssertNil(wt.afterClean)
+        XCTAssertFalse(wt.automaticallySelected)
     }
 
     // MARK: path rules, selection, cleaning

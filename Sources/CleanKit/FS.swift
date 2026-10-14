@@ -11,10 +11,11 @@ public struct TreeSize: Sendable {
     public var files: Int = 0
     public var newest: Date?
     public var denied = false
+    public var incomplete = false
 
     public static func + (a: TreeSize, b: TreeSize) -> TreeSize {
         var r = a
-        r.bytes += b.bytes; r.allocated += b.allocated; r.files += b.files; r.denied = a.denied || b.denied
+        r.bytes += b.bytes; r.allocated += b.allocated; r.files += b.files; r.denied = a.denied || b.denied; r.incomplete = a.incomplete || b.incomplete
         if let n = b.newest, n > (r.newest ?? .distantPast) { r.newest = n }
         return r
     }
@@ -82,7 +83,14 @@ public enum FS {
         return DiskFootprint(allocated: result.allocated, files: result.files, newest: result.newest, denied: result.denied)
     }
 
-    private static func measure(_ path: String, trackNewest: Bool, cancellation: ScanCancellation?, privateSizes: Bool) -> TreeSize {
+    /// Bounded allocation discovery, never used as a deletion's before/after measurement.
+    public static func discoverySize(_ path: String, maxEntries: Int = 20_000) -> TreeSize {
+        var result = measure(path, trackNewest: true, cancellation: nil, privateSizes: false, maxEntries: maxEntries)
+        result.bytes = result.allocated
+        return result
+    }
+
+    private static func measure(_ path: String, trackNewest: Bool, cancellation: ScanCancellation?, privateSizes: Bool, maxEntries: Int? = nil) -> TreeSize {
         let cancellation = cancellation ?? ScanCancellation.current
         if cancellation?.isCancelled == true { return TreeSize() }
         var r = TreeSize()
@@ -102,7 +110,7 @@ public enum FS {
         }
         // Batched attributes with private sizes; fts below is the fallback for file systems
         // without getattrlistbulk.
-        if let bulk = BulkWalk.size(path, trackNewest: trackNewest, device: st.st_dev, cancellation: cancellation, privateSizes: privateSizes) { return bulk }
+        if let bulk = BulkWalk.size(path, trackNewest: trackNewest, device: st.st_dev, cancellation: cancellation, privateSizes: privateSizes, maxEntries: maxEntries) { return bulk }
         var seenInodes = Set<UInt64>()
         let opts = FTS_PHYSICAL | FTS_NOCHDIR | FTS_XDEV
         var newest: Int = 0
@@ -114,7 +122,7 @@ public enum FS {
             var visited = 0
             while let ent = fts_read(fts) {
                 visited += 1
-                if visited & 0x3FF == 0, cancellation?.isCancelled == true { break }
+                if cancellation?.isCancelled == true || maxEntries.map({ visited > $0 }) == true { r.incomplete = true; break }
                 let info = Int32(ent.pointee.fts_info)
                 switch info {
                 case FTS_DNR, FTS_ERR, FTS_NS:
@@ -169,6 +177,11 @@ public struct CleanResult: Codable, Sendable {
     public var bytes: Int64 = 0
     public var spaceObservation: DiskSpaceObservation?
     public var trashed: Bool
+    public var partialRemoved: [String]? = nil
+    public var bytesIncomplete: Bool? = nil
+    public var outcome: String? = nil
+    public var trashBatchID: String? = nil
+    public var trashedAllocatedBytes: Int64? = nil
 
     public init(id: String, trashed: Bool) { self.id = id; self.trashed = trashed }
 }
@@ -199,10 +212,20 @@ public enum Cleaner {
     /// `item.paths` is touched.
     /// `scannedAt`: paths modified after this moment changed since the user saw the scan and are skipped.
     public static func clean(_ item: CleanItem, mode: RemovalMode = .auto, guard g: Guard = Guard(),
-                             scannedAt: Date? = nil, processTable: ProcessTable? = nil) -> CleanResult {
+                             scannedAt: Date? = nil, processTable: ProcessTable? = nil, batchID: String? = nil) -> CleanResult {
+        clean(item, mode: mode, guard: g, scannedAt: scannedAt, processTable: processTable, batchID: batchID, operations: .live)
+    }
+
+    static func clean(_ item: CleanItem, mode: RemovalMode, guard g: Guard, scannedAt: Date?,
+                      processTable: ProcessTable?, batchID: String?, operations: RemovalOperations) -> CleanResult {
         let before = DiskSpaceSnapshot.measure(path: g.home)
-        var result = perform(item, mode: mode, guard: g, scannedAt: scannedAt, processTable: processTable)
-        if !result.removed.isEmpty {
+        var result = perform(item, mode: mode, guard: g, scannedAt: scannedAt, processTable: processTable, batchID: batchID ?? UUID().uuidString, operations: operations)
+        if let batch = result.trashBatchID {
+            do { try TrashBatches.synchronize(batch, home: g.home) }
+            catch { result.failed["batch/" + batch] = error.localizedDescription }
+        }
+        result.outcome = result.failed.isEmpty ? "success" : (result.removed.isEmpty && result.partialRemoved?.isEmpty != false ? "failed" : "partial")
+        if !result.removed.isEmpty || result.partialRemoved?.isEmpty == false {
             ScanReportCache.invalidate(home: g.home)
             SpaceOverview.invalidate(home: g.home)
         }
@@ -223,7 +246,7 @@ public enum Cleaner {
         if let blocked = item.blocked {
             // Only the rule's known running-app block may be cleared by this live check.
             let appMessages = (rule?.apps ?? []).map { tr("quit %1$@ first", $0) }
-            let projectMessages = item.category == .projects ? [tr("an agent is running in it"), tr("a build tool is running in this project"), tr("a running executable uses this location")] : []
+            let projectMessages = [.projects, .agentWorktrees].contains(item.category) ? [tr("an agent is running in it"), tr("a build tool is running in this project"), tr("a running executable uses this location")] : []
             if !appMessages.contains(blocked) && !projectMessages.contains(blocked) { return blocked }
         }
         if mode == .trash, !(item.commands ?? []).isEmpty {
@@ -235,6 +258,15 @@ public enum Cleaner {
         if ToolCleanup.isBrowserOldVersion(item), let app = processes.running([String(item.id.dropFirst(ToolCleanup.oldVersionPrefix.count))]) {
             return tr("quit %1$@ first", app)
         }
+        if item.category == .agentWorktrees {
+            for path in item.paths {
+                do { _ = try WorktreeCleanup.registration(path, processes: processes) }
+                catch { return String(describing: error) }
+            }
+        }
+        if item.category == .projects, processes.entries.contains(where: { process in
+            process.argv.contains { argument in locations.contains { argument == $0 || argument.hasPrefix($0 + "/") || argument.contains("=" + $0 + "/") || argument.hasSuffix("=" + $0) } }
+        }) { return tr("a build tool is running in this project") }
         if let group = item.group, item.category == .projects {
             let dir = URL(fileURLWithPath: group).resolvingSymlinksInPath().path
             let related: (String) -> Bool = { rawCWD in
@@ -258,7 +290,8 @@ public enum Cleaner {
         return nil
     }
 
-    private static func perform(_ item: CleanItem, mode: RemovalMode, guard g: Guard, scannedAt: Date?, processTable: ProcessTable?) -> CleanResult {
+    static func perform(_ item: CleanItem, mode: RemovalMode, guard g: Guard, scannedAt: Date?, processTable: ProcessTable?,
+                        batchID: String, operations: RemovalOperations) -> CleanResult {
         let trash = mode.trashes(item.safety) && !item.paths.isEmpty
         var result = CleanResult(id: item.id, trashed: trash)
         if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
@@ -279,7 +312,6 @@ public enum Cleaner {
             }
             return ids
         })
-        let fm = FileManager.default
         var openFiles: OpenFiles?? = nil
         // Rechecked as removal goes (an app may start meanwhile), but with the paths resolved once
         // and the process list read at most once a second: per path, 1,600 sessions took 8 minutes.
@@ -346,15 +378,38 @@ public enum Cleaner {
             }
             // Items already in the Trash can only be removed for good.
             let inTrash = path.hasPrefix(g.home + "/.Trash/")
+            let originalIdentity = FileIdentity.of(path)
+            var backupName: String?
+            var registration: WorktreeCleanup.Registration?
             do {
-                if trash && !inTrash {
-                    try fm.trashItem(at: URL(fileURLWithPath: path), resultingItemURL: nil)
-                } else {
-                    try fm.removeItem(atPath: path)
+                if item.category == .agentWorktrees {
+                    registration = try WorktreeCleanup.registration(path, processes: processTable ?? ProcessTable.current(.init(cpu: false)))
                 }
-                result.removed.append(path)
-                result.bytes += size.bytes
+                if trash && !inTrash {
+                    if let registration { backupName = try WorktreeCleanup.prepare(registration) }
+                    let destination = try operations.trash(path)
+                    result.removed.append(path); result.bytes += size.bytes
+                    result.trashedAllocatedBytes = (result.trashedAllocatedBytes ?? 0) + size.allocated
+                    guard let identity = FileIdentity.of(destination.path) else { throw WorktreeCleanup.Refusal("Trash destination identity could not be read") }
+                    let entry = TrashBatch.Entry(original: path, destination: destination.path, identity: identity, bytes: size.bytes,
+                                                registrationBackup: backupName.map { destination.path + "/" + $0 },
+                                                registrationOriginal: registration?.metadata)
+                    do {
+                        try TrashBatches.append(entry, id: batchID, home: g.home)
+                        result.trashBatchID = batchID
+                    } catch { result.failed["batch/" + path] = "moved to " + destination.path + ", but batch recording failed: " + error.localizedDescription }
+                    if let registration {
+                        do { try WorktreeCleanup.unregister(registration) }
+                        catch { result.failed["git/" + path] = "files preserved in Trash; Git cleanup failed: " + String(describing: error) }
+                    }
+                } else {
+                    if let registration { try WorktreeCleanup.remove(registration) }
+                    else { try operations.remove(path) }
+                    result.removed.append(path); result.bytes += size.bytes
+                }
             } catch {
+                if !trash { accountPartialRemoval(path, before: size, identity: originalIdentity, result: &result) }
+                if let backupName, FS.exists(path + "/" + backupName) { try? FileManager.default.removeItem(atPath: path + "/" + backupName) }
                 result.failed[path] = (error as NSError).localizedDescription
             }
         }
@@ -379,17 +434,38 @@ public enum Cleaner {
                 result.bytes += max(0, before.bytes - FS.size(paths).bytes)
             } else if ok { result.bytes += item.bytes }
         }
-        if !result.removed.isEmpty, let cmds = item.afterClean {
-            for c in cmds { _ = Shell.run(c, timeout: 30) }
+        if item.category != .agentWorktrees, !result.removed.isEmpty, let cmds = item.afterClean {
+            for c in cmds {
+                let (status, output) = Shell.exec(["sh", "-c", c], timeout: 30)
+                if status != 0 { result.failed["afterClean/" + c] = output.isEmpty ? "post-clean command failed" : output }
+            }
         }
         return result
+    }
+
+    /// A failed recursive delete may already have removed children. Do not call that zero.
+    static func accountPartialRemoval(_ path: String, before: TreeSize, identity: String?, result: inout CleanResult) {
+        let after = FS.size(path)
+        let same = FileIdentity.of(path) == identity || !FS.exists(path)
+        if !same || before.denied || after.denied || after.incomplete {
+            result.bytesIncomplete = true
+            result.partialRemoved = (result.partialRemoved ?? []) + [path]
+            return
+        }
+        let estimate = max(0, before.bytes - after.bytes)
+        if estimate > 0 || before.allocated > after.allocated {
+            result.bytes += estimate
+            result.partialRemoved = (result.partialRemoved ?? []) + [path]
+        }
     }
 
     static func log(_ r: CleanResult, item: CleanItem, to url: URL) {
         let f = ISO8601DateFormatter()
         var lines = r.removed.map { "\(f.string(from: Date())) \(r.trashed ? "trash" : "delete") \(item.id) \($0)" }
+        lines += (r.partialRemoved ?? []).map { "\(f.string(from: Date())) partial \(item.id) \($0) (estimated removed bytes included; complete estimate=\(r.bytesIncomplete != true))" }
         lines += r.failed.map { "\(f.string(from: Date())) failed \(item.id) \($0.key): \($0.value)" }
         guard !lines.isEmpty else { return }
+        lines.append("\(f.string(from: Date())) result \(item.id) outcome=\(r.outcome ?? "unknown") estimatedRemovedBytes=\(r.bytes) estimateIncomplete=\(r.bytesIncomplete == true) trashBatch=\(r.trashBatchID ?? "none")")
         if let observation = r.spaceObservation, let delta = observation.availableChangeBytes {
             lines.append("\(f.string(from: Date())) disk-change \(item.id) \(delta) bytes (includes other disk activity)")
         }
@@ -453,4 +529,16 @@ public final class ScanCancellation: @unchecked Sendable {
         get { currentLock.lock(); defer { currentLock.unlock() }; return _current }
         set { currentLock.lock(); _current = newValue; currentLock.unlock() }
     }
+}
+
+/// Narrow injection seam for failure/Trash tests; production always uses macOS operations.
+struct RemovalOperations {
+    var trash: (String) throws -> URL
+    var remove: (String) throws -> Void
+    static let live = RemovalOperations(trash: { path in
+        var destination: NSURL?
+        try FileManager.default.trashItem(at: URL(fileURLWithPath: path), resultingItemURL: &destination)
+        guard let destination else { throw NSError(domain: "Thermo", code: 1, userInfo: [NSLocalizedDescriptionKey: "macOS did not return the Trash destination"]) }
+        return destination as URL
+    }, remove: { try FileManager.default.removeItem(atPath: $0) })
 }

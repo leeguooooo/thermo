@@ -48,7 +48,7 @@ enum BulkWalk {
 
     /// Calls `body` for every entry of `dir` (not recursive). Returns false if it can't be read.
     @discardableResult
-    static func entries(of dir: String, cancellation: ScanCancellation? = nil, _ body: (Entry) -> Void) -> Bool {
+    static func entries(of dir: String, cancellation: ScanCancellation? = nil, shouldStop: (() -> Bool)? = nil, _ body: (Entry) -> Void) -> Bool {
         let cancellation = cancellation ?? ScanCancellation.current
         let fd = open(dir, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)
         guard fd >= 0 else { return false }
@@ -59,12 +59,13 @@ enum BulkWalk {
         defer { buf.deallocate() }
         while true {
             // Checked per batch, so a huge flat folder stops promptly too.
-            if cancellation?.isCancelled == true { return true }
+            if cancellation?.isCancelled == true || shouldStop?() == true { return true }
             let n = getattrlistbulk(fd, &list, buf, bufSize, options)
             if n < 0 { return false }
             if n == 0 { return true }
             var p = buf
             for _ in 0..<n {
+                if cancellation?.isCancelled == true || shouldStop?() == true { return true }
                 let len = Int(p.loadUnaligned(as: UInt32.self))
                 var q = p + 4
                 // attribute_set_t: which attributes are valid for this entry.
@@ -101,18 +102,21 @@ enum BulkWalk {
     /// Reclaimable bytes: a hard-linked file only counts when all its links are inside the tree
     /// (pnpm and bun link node_modules to a global store, so deleting node_modules frees nothing);
     /// a large file counts only its private blocks (APFS clones share theirs).
-    static func size(_ root: String, trackNewest: Bool, device: dev_t, cancellation: ScanCancellation? = nil, privateSizes: Bool = true) -> TreeSize? {
+    static func size(_ root: String, trackNewest: Bool, device: dev_t, cancellation: ScanCancellation? = nil, privateSizes: Bool = true, maxEntries: Int? = nil) -> TreeSize? {
         let cancellation = cancellation ?? ScanCancellation.current
         var r = TreeSize()
         var linked: [UInt64: (links: UInt32, seen: UInt32, bytes: Int64)] = [:]
         var stack = [root]
         var newest = 0
         var visited = 0
+        var entriesSeen = 0
         let changes = FS.countsStatusChanges
         while let dir = stack.popLast() {
             visited += 1
-            if cancellation?.isCancelled == true { break }
-            let ok = entries(of: dir, cancellation: cancellation) { e in
+            if cancellation?.isCancelled == true || r.incomplete { r.incomplete = true; break }
+            let ok = entries(of: dir, cancellation: cancellation, shouldStop: { r.incomplete }) { e in
+                entriesSeen += 1
+                if cancellation?.isCancelled == true || maxEntries.map({ entriesSeen > $0 }) == true { r.incomplete = true; return }
                 if e.error != 0 {
                     if e.error == EACCES || e.error == EPERM { r.denied = true }
                     return

@@ -11,7 +11,7 @@ struct Args {
     var flags: Set<String> = []
     var options: [String: String] = [:]
 
-    static let valueOptions: Set<String> = ["interval", "count", "sensor", "format", "older-than", "root", "budget",
+    static let valueOptions: Set<String> = ["interval", "count", "sensor", "format", "older-than", "root", "budget", "timeout",
                                             "area", "agent", "action",
         "to", // space archive: SSH alias:/absolute/archive.tar
         "since",  // pulse history
@@ -21,6 +21,7 @@ struct Args {
         "h": "help", "v": "version", "f": "format", "y": "yes",
     ]
     static let knownFlags: Set<String> = ["json", "csv", "all", "no-color", "no-cache", "help", "version", "fahrenheit", "yes", "trash", "permanent", "dry-run", "with-data",
+        "exact", // clean: full per-item size walks
         "stream", // clean: newline-delimited incremental scan results
         "rescan",  // rescan: clean run ignores the saved scan
         "remove-local", "inactive-development",
