@@ -6,6 +6,7 @@ struct NativeTabOrganizerView: View {
     let app: String
     let pages: [TabWorkspace.Page]
     @Binding var working: Bool
+    var previewOnly = false
     let refresh: () -> Void
     @State private var config = TabOrganizer.Configuration()
     @State private var review: TabOrganizer.Plan?
@@ -20,35 +21,75 @@ struct NativeTabOrganizerView: View {
         TabOrganizer.plan(.init(app: app, generated: Date(), pages: pages), rules: config.rules)
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Label(tr("Automatic Chrome groups"), systemImage: "rectangle.3.group.fill").font(.headline)
-                Spacer()
-                Button(tr("Grouping rules")) { editingRules = true }
-                Button(tr("Preview organization")) { review = plan }.disabled(working || plan.count == 0)
-                    .buttonStyle(.borderedProminent)
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                Label(tr("Group tabs where you use them"), systemImage: "rectangle.3.group.fill").font(.headline)
+                Text(tr("Tabs from the same website become a named, colored group in Chrome's tab bar. Nothing is closed."))
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(tr("%1$@ tabs → %2$@ Chrome groups", String(plan.count), String(plan.groups.count)))
+                            .font(.system(size: 18, weight: .semibold)).monospacedDigit()
+                        Text(tr("Preview first. Existing groups and protected tabs stay as they are."))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    Button { review = plan } label: { Label(tr("Review groups"), systemImage: "eye") }
+                        .buttonStyle(PillButtonStyle(prominent: true)).disabled(working || plan.count == 0)
+                }
+                if plan.count == 0 && !working {
+                    Text(plan.unsupported > 0 ? tr("Browser grouping support is unavailable. Update the browser extension, then refresh tabs.")
+                         : tr("No new groups in this scope. A website needs at least two ungrouped background tabs; existing groups are kept."))
+                        .font(.caption).foregroundStyle(plan.unsupported > 0 ? Color.orange : .secondary).fixedSize(horizontal: false, vertical: true)
+                }
             }
-            Text(tr("Creates native Chrome groups by website or your rules. Existing groups, current, pinned, audible, private and agent tabs are kept. Tabs stay in their own window and account."))
-                .font(.caption).foregroundStyle(.secondary)
-            if plan.unsupported > 0 {
-                Text(tr("%1$@ eligible tabs need chrome-use extension 0.5.48 or newer for native grouping.", String(plan.unsupported)))
-                    .font(.caption).foregroundStyle(.orange)
+            if !plan.groups.isEmpty {
+                Text(tr("What you will see in Chrome")).font(.callout.weight(.medium))
+                ForEach(plan.groups) { group in
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Circle().fill(groupColor(group.color)).frame(width: 10, height: 10)
+                            Text(group.name).font(.callout.weight(.semibold)).lineLimit(1)
+                            Spacer()
+                            Text(tr("%1$@ tabs", String(group.pages.count))).font(.caption).foregroundStyle(.secondary)
+                        }
+                        ForEach(Array(group.pages.prefix(3))) { page in
+                            Text(page.tab.title.isEmpty ? TabWorkspace.site(page.tab.url) : page.tab.title)
+                                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        }
+                        if group.pages.count > 3 { Text(tr("and %1$@ more", String(group.pages.count - 3))).font(.caption2).foregroundStyle(.secondary) }
+                    }.padding(12).glass(radius: 10)
+                }
             }
-            Toggle(tr("Keep organizing new tabs automatically"), isOn: Binding(get: { config.enabled }, set: { enabled in
-                var updated = config; updated.enabled = enabled
-                do { try TabOrganizer.configure(updated); config = updated }
-                catch { self.error = error.localizedDescription }
-            })).toggleStyle(.checkbox)
-            Text(tr("When enabled, Thermo checks every minute while running. Ordinary website groups need two background tabs; a custom rule can group one. No tabs are closed."))
-                .font(.caption).foregroundStyle(.secondary)
-            if let error { Text(error).font(.caption).foregroundStyle(.orange) }
-            if let notice { Text(notice).font(.caption).foregroundStyle(.green) }
+            DisclosureGroup(tr("Protected tabs are kept")) {
+                Text(tr("Current, pinned, audio, private and agent tabs are not grouped or closed. Tabs stay in their original window and account."))
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }.font(.caption)
+            DisclosureGroup(tr("Custom rules and automatic grouping")) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text(tr("Want your own group names? Add a website rule.")).font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button(tr("Edit website rules")) { editingRules = true }
+                    }
+                    Toggle(tr("Automatically group new tabs"), isOn: Binding(get: { config.enabled }, set: { enabled in
+                        guard !previewOnly else { return }
+                        var updated = config; updated.enabled = enabled
+                        do { try TabOrganizer.configure(updated); config = updated }
+                        catch { self.error = error.localizedDescription }
+                    })).toggleStyle(.checkbox).disabled(previewOnly || working)
+                    Text(tr("Runs once a minute while Thermo is open. It only groups eligible tabs and never closes them."))
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }.padding(.top, 8)
+            }.font(.caption)
+            if let error { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
+            if let notice { Label(notice, systemImage: "checkmark.circle").font(.caption).foregroundStyle(.green) }
             if let latest = records.first(where: { $0.grouped > 0 }) {
                 HStack {
-                    Text(tr("Last batch: %1$@ tabs grouped", String(latest.grouped))).font(.caption)
+                    Text(tr("Last batch: %1$@ tabs grouped", String(latest.grouped))).font(.caption).foregroundStyle(.secondary)
                     Spacer()
-                    Button(tr("Undo native grouping")) { undo(latest) }
-                        .disabled(working || Set(latest.requests.keys).isSubset(of: latest.undoAttempted))
+                    Button(tr("Undo the last grouping")) { undo(latest) }
+                        .disabled(working || previewOnly || Set(latest.requests.keys).isSubset(of: latest.undoAttempted))
                 }
             }
         }
@@ -61,16 +102,18 @@ struct NativeTabOrganizerView: View {
                              destructive: false, heading: tr("Planned groups"),
                              lines: review.groups.map { $0.name + " (" + String($0.pages.count) + ")\n" + $0.pages.map { $0.tab.title }.joined(separator: "\n") },
                              footnote: tr("Each page is rechecked before grouping. Changed or protected pages are skipped. You can undo this batch afterwards."),
-                             confirmTitle: tr("Organize tabs"), confirm: { self.review = nil; organize(review) }, cancel: { self.review = nil })
+                             confirmTitle: tr("Create Chrome groups"), confirm: { self.review = nil; organize(review) }, cancel: { self.review = nil })
             }
         }
         .sheet(isPresented: $editingRules) { ruleEditor }
     }
     func load() {
+        if previewOnly { return }
         do { config = try TabOrganizer.configuration(); records = try TabOrganizer.batches().filter { $0.app == app } }
         catch { self.error = error.localizedDescription }
     }
     func organize(_ plan: TabOrganizer.Plan) {
+        guard !previewOnly else { return }
         working = true; error = nil
         Task {
             do {
@@ -82,6 +125,7 @@ struct NativeTabOrganizerView: View {
         }
     }
     func undo(_ batch: TabOrganizer.Batch) {
+        guard !previewOnly else { return }
         working = true; error = nil
         Task {
             do {
@@ -92,18 +136,27 @@ struct NativeTabOrganizerView: View {
             working = false; load(); refresh()
         }
     }
+    func groupColor(_ name: String) -> Color {
+        switch name {
+        case "red": return .red; case "green": return .green; case "orange": return .orange
+        case "purple": return .purple; case "cyan": return .cyan; case "yellow": return .yellow
+        case "pink": return .pink; case "grey": return .gray; default: return .blue
+        }
+    }
     var ruleEditor: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(tr("Grouping rules")).font(.headline)
+            Text(tr("Choose names for your website groups")).font(.headline)
             Text(tr("A domain also matches its subdomains. The first matching rule wins. Rules are saved locally."))
                 .font(.caption).foregroundStyle(.secondary)
+            Text(tr("Example: github.com → Work. Subdomains are included; the first matching rule wins."))
+                .font(.callout).foregroundStyle(.secondary)
             HStack {
                 TextField(tr("Domain (github.com)"), text: $domain).textFieldStyle(.roundedBorder)
                 TextField(tr("Group name"), text: $name).textFieldStyle(.roundedBorder)
                 Picker(tr("Color"), selection: $color) { ForEach(TabOrganizer.colors, id: \.self) { Text(tr($0)).tag($0) } }.frame(width: 120)
                 Button(tr("Add rule")) {
                     var updated = config; updated.rules.append(.init(domain: domain, name: name, color: color))
-                    do { try TabOrganizer.configure(updated); config = updated; domain = ""; name = "" }
+                    do { if !previewOnly { try TabOrganizer.configure(updated) }; config = updated; domain = ""; name = "" }
                     catch { self.error = error.localizedDescription }
                 }.disabled(domain.isEmpty || name.isEmpty)
             }
@@ -115,7 +168,7 @@ struct NativeTabOrganizerView: View {
                             Spacer()
                             Button(tr("Remove rule")) {
                                 var updated = config; updated.rules.removeAll { $0.id == rule.id }
-                                do { try TabOrganizer.configure(updated); config = updated }
+                                do { if !previewOnly { try TabOrganizer.configure(updated) }; config = updated }
                                 catch { self.error = error.localizedDescription }
                             }
                         }

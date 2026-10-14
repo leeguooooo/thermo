@@ -386,7 +386,7 @@ struct MainSidebar: View {
 
                     header(tr("Memory"))
                     row(.memory, tr("Memory usage"), "memorychip.fill", .green, trailing: memoryTrailing)
-                    row(.browser("Google Chrome"), tr("Tab groups"), "rectangle.stack.fill", .teal, trailing: nil)
+                    row(.browser("Google Chrome"), tr("Tab organizer"), "rectangle.stack.fill", .teal, trailing: nil)
 
                     header(tr("Disk Cleanup"))
                     row(.disk(.home), tr("Smart Scan"), "sparkles", .pink, trailing: disk.report.map { ByteFormat.string($0.totalBytes) })

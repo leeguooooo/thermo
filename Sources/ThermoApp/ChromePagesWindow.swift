@@ -213,7 +213,7 @@ struct ChromePagesView: View {
     var body: some View {
         VStack(spacing: 0) {
             Picker(tr("Browser pages"), selection: $manageTabs) {
-                Text(tr("Tab groups")).tag(true)
+                Text(tr("Tab organizer")).tag(true)
                 Text(tr("Memory diagnostics")).tag(false)
             }.pickerStyle(.segmented).padding(.horizontal, 24).padding(.top, 24)
             if manageTabs { TabWorkspaceView(app: model.app) }
