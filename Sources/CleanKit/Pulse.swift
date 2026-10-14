@@ -23,8 +23,9 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var project: String? = nil
         /// Who started it: the agent, terminal or editor up its parent chain ("Claude Code", "Terminal", "Cursor").
         public var owner: String? = nil
-        /// Memory actually resident in RAM; far below `memoryKB` means most of it is compressed or swapped out.
+        /// Resident mappings (RSS), including shared pages; not subtractable from footprint.
         public var residentKB: Int? = nil
+        public var memoryMetric: MemoryMetric? = nil
         /// How long it has been running (its longest-lived process).
         public var uptime: TimeInterval? = nil
         /// Chromium/Electron: the highest renderer id, roughly how many pages it has opened since launch.
@@ -39,12 +40,15 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     }
 
     /// One process of a multi-process app: the GPU process, a renderer (page), an extension …
+    public enum MemoryMetric: String, Codable, Sendable { case footprint, residentEstimate, mixed, unavailable }
+
     public struct Part: Codable, Sendable, Equatable {
         public var pid: Int32
         /// main | GPU | renderer | extension | network | utility | helper
         public var role: String
         public var memoryKB: Int
         public var residentKB: Int?
+        public var memoryMetric: MemoryMetric? = nil
         public var cpu: Double
         public var uptime: TimeInterval?
     }
@@ -59,7 +63,10 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var windows: BrowserSession.Windows? = nil
     }
 
-    public enum Memory: String, Codable, Sendable { case normal, warning, critical }
+    public enum Memory: String, Codable, Sendable {
+        case normal, warning, critical, unknown
+        public var isHigh: Bool { self == .warning || self == .critical }
+    }
     public enum Thermal: String, Codable, Sendable { case nominal, fair, serious, critical }
     /// The headline, most urgent first.
     public enum Verdict: String, Codable, Sendable { case hot, disk, overloaded, memory, busy, ok }
@@ -94,7 +101,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         if thermal == .serious || thermal == .critical { return .hot }
         if diskCritical { return .disk }
         if busy >= 2 { return .overloaded }
-        if memory != .normal { return .memory }
+        if memory.isHigh { return .memory }
         if busy >= 1 { return .busy }
         return .ok
     }
@@ -127,7 +134,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             return NextStep(kind: "pauseWork", program: hogs.max(by: { $0.cpu < $1.cpu })?.name,
                             text: tr("Pause work you can postpone, then check CPU load and thermal pressure again."))
         }
-        if memory != .normal {
+        if memory.isHigh {
             let target = hogs.filter { $0.quittable && $0.memoryKB >= 512 * 1024 }.max { $0.memoryKB < $1.memoryKB }
             if let target, ChromeInspector.isBrowser(target.name) {
                 return NextStep(kind: "inspectBrowser", program: target.name,
@@ -159,7 +166,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             return tr("Mostly %1$@, using %2$@ cores", top.name, String(format: "%.1f", top.cpu / 100))
         }
         // High load without a busy program: processes are waiting, usually on memory or the disk.
-        if memory != .normal || (busy >= 1 && swapUsedMB >= 4096), let big = hogs.max(by: { $0.memoryKB < $1.memoryKB }) {
+        if memory.isHigh || (busy >= 1 && swapUsedMB >= 4096), let big = hogs.max(by: { $0.memoryKB < $1.memoryKB }) {
             if swapUsedMB >= 4096 {
                 // Say it plainly: memory lives on the disk now, and everything waits for the disk.
                 return tr("%1$@ of memory has been moved to the disk, memory pressure may be contributing to slow responses. %2$@ uses the most (%3$@).",
@@ -201,20 +208,17 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     static func memoryLevel() -> Memory {
         var level: Int32 = 0
         var size = MemoryLayout<Int32>.size
-        sysctlbyname("kern.memorystatus_vm_pressure_level", &level, &size, nil, 0)
-        return level >= 4 ? .critical : level >= 2 ? .warning : .normal
+        guard sysctlbyname("kern.memorystatus_vm_pressure_level", &level, &size, nil, 0) == 0 else { return .unknown }
+        switch level { case 1: return .normal; case 2: return .warning; case 4: return .critical; default: return .unknown }
     }
 
     /// Load, memory, swap and thermal state around a list of programs.
     static func measure(hogs: [Hog]) -> MachinePulse {
         var avg = [Double](repeating: 0, count: 3)
         getloadavg(&avg, 3)
-        var level: Int32 = 0
-        var size = MemoryLayout<Int32>.size
-        sysctlbyname("kern.memorystatus_vm_pressure_level", &level, &size, nil, 0)
-        let memory: Memory = level >= 4 ? .critical : level >= 2 ? .warning : .normal
+        let memory = memoryLevel()
         var swap = xsw_usage()
-        size = MemoryLayout<xsw_usage>.size
+        var size = MemoryLayout<xsw_usage>.size
         sysctlbyname("vm.swapusage", &swap, &size, nil, 0)
         let thermal: Thermal
         switch ProcessInfo.processInfo.thermalState {
@@ -225,7 +229,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         }
         let relevantHogs = hogs.map { hog -> Hog in
             var hog = hog
-            if memory == .normal { hog.advice = nil }
+            if !memory.isHigh { hog.advice = nil }
             return hog
         }
         let volume = try? URL(fileURLWithPath: NSHomeDirectory()).resourceValues(forKeys: [.volumeAvailableCapacityKey, .volumeAvailableCapacityForImportantUsageKey])
@@ -240,10 +244,15 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     /// ones when memory is short).
     /// `limit: nil` returns every program of this user, idle ones included (for `thermo pulse quit`).
     public static func group(_ procs: [AgentProcess], byMemory: Bool = false, me: pid_t = getpid(), limit: Int? = 4) -> [Hog] {
-        group(procs.map { Candidate(pid: $0.pid, uid: $0.uid, name: $0.name, cpu: $0.cpu, memoryKB: max($0.footprintKB, $0.rssKB),
-                                    details: ProcessDetails(executable: $0.executable, argv: $0.argv, cwd: $0.cwd),
-                                    residentKB: $0.rssKB, uptime: $0.elapsed > 0 ? $0.elapsed : nil) },
-              byMemory: byMemory, me: me, limit: limit)
+        group(procs.map { p in
+            let reading = p.memoryReading ?? ProcessMemoryReading(footprintKB: p.footprintKB > 0 ? p.footprintKB : nil,
+                                                                  residentKB: p.rssKB)
+            return Candidate(pid: p.pid, uid: p.uid, name: p.name, cpu: p.cpu,
+                             memoryKB: reading.footprintKB ?? reading.residentKB ?? 0,
+                             details: ProcessDetails(executable: p.executable, argv: p.argv, cwd: p.cwd),
+                             residentKB: reading.residentKB, uptime: p.elapsed > 0 ? p.elapsed : nil,
+                             memoryMetric: reading.footprintKB != nil ? .footprint : reading.residentKB != nil ? .residentEstimate : .unavailable)
+        }, byMemory: byMemory, me: me, limit: limit)
     }
 
     /// A process worth considering, with what it takes to name it.
@@ -257,6 +266,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         var owner: String? = nil
         var residentKB: Int? = nil
         var uptime: TimeInterval? = nil
+        var memoryMetric: MemoryMetric = .footprint
     }
 
     static func group(_ procs: [Candidate], byMemory: Bool, me: pid_t, limit: Int? = 4) -> [Hog] {
@@ -280,27 +290,31 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             let quittable = p.pid != me && p.uid == getuid() && !agent && !exe.hasPrefix("/System/") && !exe.hasPrefix("/usr/")
             var h = byKey[key] ?? Hog(id: key, name: name, cpu: 0, memoryKB: 0, pids: [], app: app, quittable: quittable,
                                       project: project, owner: app == nil ? p.owner : nil)
+            if h.pids.isEmpty { h.memoryMetric = p.memoryMetric }
+            else if h.memoryMetric != p.memoryMetric { h.memoryMetric = .mixed }
             h.cpu += p.cpu
             h.memoryKB += p.memoryKB
             h.pids.append(p.pid)
             h.quittable = h.quittable && quittable
-            if let r = p.residentKB { h.residentKB = (h.residentKB ?? 0) + r }
+            if h.pids.count == 1 { h.residentKB = p.residentKB }
+            else if let r = p.residentKB, let existing = h.residentKB { h.residentKB = existing + r }
+            else { h.residentKB = nil }
             if let u = p.uptime, u > (h.uptime ?? 0) { h.uptime = u }
             if let id = rendererID(p.details.argv), id > (h.pagesOpened ?? 0) { h.pagesOpened = id }
-            if app != nil {
+            do {
                 var parts = h.parts ?? []
                 parts.append(Part(pid: p.pid, role: role(p.details.argv), memoryKB: p.memoryKB, residentKB: p.residentKB,
-                                  cpu: p.cpu, uptime: p.uptime))
+                                  memoryMetric: p.memoryMetric, cpu: p.cpu, uptime: p.uptime))
                 h.parts = parts
             }
             byKey[key] = h
         }
         for (k, var h) in byKey {
-            // Only worth listing for apps made of several processes (browsers, Electron apps).
-            // and only when they differ in kind: four copies of one small process say nothing.
+            // Keep the full inventory for drill-down; presentation decides what to expand.
             if let parts = h.parts {
-                h.parts = parts.count >= 3 && parts.contains(where: { $0.role != "main" })
-                    ? Array(parts.sorted { $0.memoryKB > $1.memoryKB }.prefix(4)) : nil
+                h.parts = parts.sorted { a, b in
+                    a.memoryKB == b.memoryKB ? a.pid < b.pid : a.memoryKB > b.memoryKB
+                }
             }
             h.advice = advice(for: h)
             byKey[k] = h
@@ -340,7 +354,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
 
     /// Memory pressure and thermal state as words.
     public static func memoryName(_ m: Memory) -> String {
-        switch m { case .normal: return tr("normal"); case .warning: return tr("tight"); case .critical: return tr("running out") }
+        switch m { case .normal: return tr("normal"); case .warning: return tr("tight"); case .critical: return tr("running out"); case .unknown: return tr("unavailable") }
     }
 
     public static func thermalName(_ t: Thermal) -> String {
@@ -360,13 +374,12 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         }.first
     }
 
-    /// Restart an app that has run for half a day or more and holds gigabytes, most of it already
-    /// squeezed out of RAM (compressed or swapped): quitting and reopening gives that back, and the
-    /// app restores its windows. Never for agents, system processes or Thermo (not quittable).
+    /// Optional advice for a large app under pressure. Age/size is not a leak diagnosis,
+    /// and no footprint/RSS difference is treated as per-process swap.
     static func advice(for h: Hog) -> Advice? {
         guard h.app != nil, h.quittable, let up = h.uptime, up >= 12 * 3600, h.memoryKB >= 2 * 1_048_576 else { return nil }
-        let resident = h.residentKB ?? h.memoryKB
-        guard h.memoryKB >= resident * 2 || h.memoryKB >= 6 * 1_048_576 else { return nil }
+        // A large footprint alone does not prove a leak or per-task swap.
+        guard h.memoryMetric == nil || h.memoryMetric == .footprint, h.memoryKB >= 6 * 1_048_576 else { return nil }
         let hours = String(Int(up / 3600))
         var text: String
         if let pages = h.pagesOpened, pages >= 100 {

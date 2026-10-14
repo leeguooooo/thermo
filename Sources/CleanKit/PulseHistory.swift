@@ -133,7 +133,7 @@ public final class PulseHistory: @unchecked Sendable {
     public static func blame(_ records: [PulseRecord], interval: TimeInterval = 60) -> [Share] {
         var byName: [String: Share] = [:]
         for (i, r) in records.enumerated() {
-            let struggling = r.load1 >= Double(max(1, r.cores)) || r.memory != .normal || r.thermal == .serious || r.thermal == .critical
+            let struggling = r.load1 >= Double(max(1, r.cores)) || r.memory.isHigh || r.thermal == .serious || r.thermal == .critical
             guard struggling else { continue }
             let span = i + 1 < records.count ? min(records[i + 1].t.timeIntervalSince(r.t), 10 * 60) : interval
             for p in r.top {

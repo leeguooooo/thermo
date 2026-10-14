@@ -65,8 +65,10 @@ final class PulseRecorder: ObservableObject {
         DispatchQueue.main.async { self.recent = snapshot }
         if now.timeIntervalSince(lastProgramRecord) >= 290 {
             lastProgramRecord = now
-            let all = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
-            programHistory.append(ProgramMemoryRecord(all, at: now), now: now)
+            let inventory = MemoryInventory.collect()
+            if inventory.available {
+                programHistory.append(ProgramMemoryRecord(inventory.programs.map(\.historyEntry), at: now), now: now)
+            }
         }
 
         let enabled = UserDefaults.standard.object(forKey: Self.alertsKey) as? Bool ?? true

@@ -10,10 +10,16 @@ import ThermoL10n
 final class MemoryModel: ObservableObject {
     static let shared = MemoryModel()
 
+    @Published private(set) var activity: MemoryActivity?
     @Published private(set) var breakdown: MemoryBreakdown?
-    @Published private(set) var programs: [MachinePulse.Hog] = []
+    @Published private(set) var programs: [MemoryProgram] = []
+    @Published private(set) var unreadableCount = 0
+    @Published private(set) var inventoryAvailable = false
+    @Published private(set) var sampled: Date?
     @Published private(set) var suspects: [MemorySuspect] = []
     @Published private(set) var day: [PulseRecord] = []
+    @Published private(set) var programReadings: [ProgramMemoryRecord] = []
+    private var liveReadings: [ProgramMemoryRecord] = []
     private var timer: Timer?
     private var sampling = false
     private var dayLoaded = Date.distantPast
@@ -21,8 +27,8 @@ final class MemoryModel: ObservableObject {
     func start() {
         guard timer == nil else { return }
         sample()
-        timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { _ in
-            MainActor.assumeIsolated { MemoryModel.shared.sample() }
+        timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.sample() }
         }
     }
 
@@ -34,26 +40,35 @@ final class MemoryModel: ObservableObject {
         if Date().timeIntervalSince(dayLoaded) >= 60 { loadDay() }
         Task.detached(priority: .utility) {
             let b = MemoryBreakdown.read()
-            var all = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
-                .filter { $0.memoryKB >= 50 * 1024 }.sorted { $0.memoryKB > $1.memoryKB }
-            // Captured with the reading, so End only signals the same processes (as PulseSampler does).
-            for i in all.indices where all[i].quittable && all[i].app == nil {
-                all[i].processIdentities = all[i].pids.compactMap(ProcessTable.identity)
-            }
+            let inventory = MemoryInventory.collect()
             let history = PulseRecorder.shared.programHistory.records(since: Date().addingTimeInterval(-PulseHistory.keep))
-            let suspects = MemorySuspects.find(programs: all, history: history)
-            let found = all
             await MainActor.run {
-                var list = found
-                for i in list.indices {
-                    if let path = list[i].app,
-                       let app = NSWorkspace.shared.runningApplications.first(where: { $0.bundleURL?.standardizedFileURL.path == path }) {
-                        list[i].applicationIdentity = ProcessTable.identity(app.processIdentifier)
+                // App action identity is captured for each original context, never for merged groups.
+                let applications = NSWorkspace.shared.runningApplications
+                let programs = inventory.programs.map { program in
+                    let contexts = program.contexts.map { h -> MachinePulse.Hog in
+                        var h = h
+                        if let path = h.app, let app = applications.first(where: { $0.bundleURL?.standardizedFileURL.path == path }) {
+                            h.applicationIdentity = ProcessTable.identity(app.processIdentifier)
+                        }
+                        return h
                     }
+                    return MemoryProgram(id: program.id, name: program.name, contexts: contexts)
                 }
+                self.programs = programs
+                self.unreadableCount = inventory.unreadableCount
+                self.inventoryAvailable = inventory.available
+                self.sampled = inventory.sampled
+                let entries = programs.map(\.historyEntry)
+                let now = inventory.sampled
+                if inventory.available {
+                    self.liveReadings.append(ProgramMemoryRecord(entries, at: now))
+                    self.liveReadings.removeAll { now.timeIntervalSince($0.t) > 3600 }
+                }
+                self.programReadings = (history + self.liveReadings).sorted { $0.t < $1.t }
+                self.suspects = MemorySuspects.find(programs: entries, history: self.programReadings, now: now)
+                self.activity = b.flatMap { MemoryActivity(previous: self.breakdown, current: $0) }
                 self.breakdown = b
-                self.programs = list
-                self.suspects = suspects
                 self.sampling = false
             }
         }
@@ -73,10 +88,19 @@ struct MemoryPage: View {
     @ObservedObject private var pulse = SystemPulse.shared
     let open: (MainPage) -> Void
     @State private var hours = 6
-    @State private var expanded: Set<String> = []
+    @State private var expanded: Set<String> = {
+        // Offscreen review can open a named program without invoking any process action.
+        let args = CommandLine.arguments
+        guard args.contains("--main"), let i = args.firstIndex(of: "--inspect-memory"), i + 1 < args.count else { return [] }
+        let name = args[i + 1].lowercased()
+        return ["program:cmd:" + name, "program:app:" + name]
+    }()
     @State private var confirming: MachinePulse.Hog?
     @State private var restartTarget: MachinePulse.Hog?
     @State private var showAll = false
+    @State private var search = ""
+    @State private var expandedContexts: Set<String> = []
+    @State private var sortByResident = false
 
     var body: some View {
         ScrollView {
@@ -85,9 +109,9 @@ struct MemoryPage: View {
                 if let b = model.breakdown {
                     if b.swapBlocked { swapBlockedBanner(b) }
                     breakdownCard(b)
-                    trendCard
                     if !model.suspects.isEmpty { suspectsCard }
                     programsCard
+                    trendCard
                     swapExplainer(b)
                 } else {
                     ProgressView().frame(maxWidth: .infinity).padding(.top, 60)
@@ -142,9 +166,9 @@ struct MemoryPage: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "externaldrive.fill.badge.exclamationmark").foregroundStyle(.red).font(.title3)
             VStack(alignment: .leading, spacing: 4) {
-                Text(tr("Swap has no room to grow")).font(.callout.weight(.semibold)).foregroundStyle(.white)
-                Text(tr("When memory is short macOS writes some of it to the disk. With only %1$@ free, that fails and macOS asks you to force quit apps, even ones using little memory.",
-                        ByteFormat.string(b.diskFree ?? 0)))
+                Text(tr("Limited disk space for swap")).font(.callout.weight(.semibold)).foregroundStyle(.white)
+                Text(tr("Only %1$@ of disk capacity is available to swap. This may restrict memory management; free space, then check again.",
+                        ByteFormat.string(b.diskAvailable ?? b.diskFree ?? 0)))
                     .font(.caption).foregroundStyle(.white.opacity(0.7)).fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
@@ -174,7 +198,7 @@ struct MemoryPage: View {
                 Text(MemoryFormat.string(bytes: b.used)).font(.system(size: 30, weight: .bold).monospacedDigit()).foregroundStyle(.white)
                 Text(tr("used of %1$@", MemoryFormat.string(bytes: b.total))).font(.callout).foregroundStyle(.white.opacity(0.6))
                 Spacer()
-                pill(tr("Pressure: %1$@", MachinePulse.memoryName(b.pressure)), color: b.pressure == .normal ? .green : b.pressure == .warning ? .orange : .red)
+                pill(tr("Pressure: %1$@", MachinePulse.memoryName(b.pressure)), color: b.pressure == .unknown ? .gray : b.pressure == .normal ? .green : b.pressure == .warning ? .orange : .red)
             }
             GeometryReader { g in
                 HStack(spacing: 2) {
@@ -202,11 +226,20 @@ struct MemoryPage: View {
                     Image(systemName: "externaldrive").font(.caption).foregroundStyle(.yellow).padding(.top, 2)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(tr("Swap on the disk")).font(.caption).foregroundStyle(.white.opacity(0.6))
-                        Text(b.swapFiles > 0 ? tr("%1$@ of %2$@", MemoryFormat.string(bytes: b.swapUsed), MemoryFormat.string(bytes: b.swapFiles)) : tr("none"))
+                        Text(b.swapReadable == false ? "—" : b.swapFiles > 0 ? tr("%1$@ of %2$@", MemoryFormat.string(bytes: b.swapUsed), MemoryFormat.string(bytes: b.swapFiles)) : tr("none"))
                             .font(.callout.monospacedDigit()).foregroundStyle(b.swapUsed >= 4 << 30 ? .orange : .white)
                     }
                 }
                 .accessibilityElement(children: .combine)
+            }
+            if let activity = model.activity {
+                Text(tr("Current swap activity: read %1$@/s · write %2$@/s",
+                        MemoryFormat.string(mebibytes: activity.swapReadBytesPerSecond / 1_048_576),
+                        MemoryFormat.string(mebibytes: activity.swapWriteBytesPerSecond / 1_048_576)))
+                    .font(.caption).foregroundStyle(.white.opacity(0.6))
+            } else {
+                Text(tr("Current swap activity: waiting for comparable readings"))
+                    .font(.caption).foregroundStyle(.white.opacity(0.5))
             }
         }
         .padding(16).glass(radius: 16)
@@ -238,22 +271,22 @@ struct MemoryPage: View {
                 Chart {
                     ForEach(records, id: \.t) { r in
                         if let used = r.usedMB {
-                            LineMark(x: .value("t", r.t), y: .value("GB", Double(used) / 1024), series: .value("k", "used"))
+                            LineMark(x: .value("t", r.t), y: .value("GiB", Double(used) / 1024), series: .value("k", "used"))
                                 .foregroundStyle(by: .value("k", tr("Memory used")))
                         }
-                        LineMark(x: .value("t", r.t), y: .value("GB", Double(r.swapUsedMB) / 1024), series: .value("k", "swap"))
+                        LineMark(x: .value("t", r.t), y: .value("GiB", Double(r.swapUsedMB) / 1024), series: .value("k", "swap"))
                             .foregroundStyle(by: .value("k", tr("Swap")))
-                        if r.memory != .normal {
+                        if r.memory.isHigh {
                             RuleMark(x: .value("t", r.t)).foregroundStyle(r.memory == .critical ? Color.red.opacity(0.25) : Color.orange.opacity(0.18))
                         }
                     }
                     if let b = model.breakdown {
-                        RuleMark(y: .value("GB", Double(b.total) / 1_073_741_824)).foregroundStyle(.white.opacity(0.25))
+                        RuleMark(y: .value("GiB", Double(b.total) / 1_073_741_824)).foregroundStyle(.white.opacity(0.25))
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                     }
                 }
                 .chartForegroundStyleScale([tr("Memory used"): Color.green, tr("Swap"): Color.yellow])
-                .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let d = v.as(Double.self) { Text("\(Int(d)) GB") } } } }
+                .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let d = v.as(Double.self) { Text("\(Int(d)) GiB") } } } }
                 .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.hour().minute()) } }
                 .frame(height: 150)
                 Text(tr("Shaded: memory pressure was high. Dashed line: installed memory."))
@@ -270,7 +303,7 @@ struct MemoryPage: View {
 
     var suspectsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(tr("Worth a restart"), systemImage: "arrow.triangle.2.circlepath").font(.callout.weight(.semibold)).foregroundStyle(.orange)
+            Label(tr("Programs growing in memory"), systemImage: "chart.line.uptrend.xyaxis").font(.callout.weight(.semibold)).foregroundStyle(.orange)
             ForEach(model.suspects) { s in
                 HStack(alignment: .top, spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -279,7 +312,7 @@ struct MemoryPage: View {
                     }
                     Spacer()
                     Text(MemoryFormat.string(kibibytes: s.memoryKB)).font(.callout.monospacedDigit()).foregroundStyle(.white.opacity(0.9))
-                    if let h = model.programs.first(where: { $0.id == s.id }) { actions(h, emphasizeRestart: true) }
+                    Button(tr("Inspect")) { expanded.insert(s.id); search = s.name }.buttonStyle(PillButtonStyle())
                 }
             }
         }
@@ -288,80 +321,162 @@ struct MemoryPage: View {
 
     // MARK: Programs
 
+    var visiblePrograms: [MemoryProgram] {
+        let filtered = model.programs.filter { p in
+            search.isEmpty || p.name.localizedCaseInsensitiveContains(search)
+                || p.projects.contains { $0.localizedCaseInsensitiveContains(search) }
+                || p.contexts.contains { h in h.pids.contains { String($0).contains(search) } }
+        }
+        return filtered.sorted { a, b in
+            let av = sortByResident ? a.residentKB ?? -1 : (a.memoryMetric == .unavailable || a.memoryMetric == .mixed ? -1 : a.memoryKB)
+            let bv = sortByResident ? b.residentKB ?? -1 : (b.memoryMetric == .unavailable || b.memoryMetric == .mixed ? -1 : b.memoryKB)
+            return av == bv ? a.id < b.id : av > bv
+        }
+    }
+
     var programsCard: some View {
-        let list = showAll ? model.programs : Array(model.programs.prefix(15))
-        let top = Double(max(1, model.programs.first?.memoryKB ?? 1))
-        return VStack(alignment: .leading, spacing: 8) {
+        let visible = visiblePrograms
+        let list = showAll ? visible : Array(visible.prefix(15))
+        let top = Double(max(1, visible.map { sortByResident ? $0.residentKB ?? 0 : ($0.memoryMetric == .mixed || $0.memoryMetric == .unavailable ? 0 : $0.memoryKB) }.max() ?? 1))
+        return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(tr("Programs by memory")).font(.callout.weight(.semibold)).foregroundStyle(.white)
                 Spacer()
-                Text(tr("helpers and pages counted with their app")).font(.caption).foregroundStyle(.white.opacity(0.45))
+                if let sampled = model.sampled { Text(sampled, style: .time).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
             }
-            ForEach(list) { h in programRow(h, top: top) }
-            if model.programs.count > 15 {
-                Button(showAll ? tr("Show fewer") : tr("Show all %1$@", String(model.programs.count))) { showAll.toggle() }
+            HStack {
+                TextField(tr("Search programs, projects or PID"), text: $search).textFieldStyle(.roundedBorder)
+                Picker(tr("Sort by"), selection: $sortByResident) {
+                    Text(tr("Memory footprint")).tag(false)
+                    Text(tr("Resident memory")).tag(true)
+                }.frame(width: 180)
+            }
+            HStack {
+                Text(tr("Program / project / process")).frame(maxWidth: .infinity, alignment: .leading)
+                Text(tr("Memory footprint")).frame(width: 84, alignment: .trailing)
+                Text(tr("Resident memory")).frame(width: 84, alignment: .trailing)
+                Spacer().frame(width: 210)
+            }.font(.caption2).foregroundStyle(.white.opacity(0.5))
+            if !model.inventoryAvailable {
+                Text(tr("Process readings unavailable. Try refreshing.")).font(.caption).foregroundStyle(.orange)
+            }
+            ForEach(list) { programRow($0, top: top) }
+            if visible.count > 15 {
+                Button(showAll ? tr("Show fewer") : tr("Show all %1$@", String(visible.count))) { showAll.toggle() }
                     .buttonStyle(.link).font(.caption)
+            }
+            Text(tr("Footprint includes charged compressed memory. Resident memory includes shared pages; these columns cannot be subtracted to calculate swap or added to match installed RAM."))
+                .font(.caption2).foregroundStyle(.white.opacity(0.5)).fixedSize(horizontal: false, vertical: true)
+            if model.unreadableCount > 0 {
+                Text(tr("%1$@ processes have no footprint reading; resident estimates and missing values are marked.", String(model.unreadableCount)))
+                    .font(.caption2).foregroundStyle(.orange)
             }
             ForEach([pulse.quitProblem, pulse.restartProblem, pulse.actionFeedback].compactMap { $0 }, id: \.self) { t in
                 Text(t).font(.caption).foregroundStyle(.white.opacity(0.7)).fixedSize(horizontal: false, vertical: true)
             }
-        }
-        .padding(16).glass(radius: 16)
+        }.padding(16).glass(radius: 16)
     }
 
-    func programRow(_ h: MachinePulse.Hog, top: Double) -> some View {
-        let open_ = expanded.contains(h.id)
-        return VStack(alignment: .leading, spacing: 4) {
+    func metric(_ memory: Int, _ kind: MachinePulse.MemoryMetric?) -> String {
+        if kind == .unavailable || kind == .mixed { return "—" }
+        return (kind == .residentEstimate ? "≈ " : "") + MemoryFormat.string(kibibytes: memory)
+    }
+
+    func programRow(_ program: MemoryProgram, top: Double) -> some View {
+        let isOpen = expanded.contains(program.id)
+        return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                if let app = h.app {
-                    Image(nsImage: NSWorkspace.shared.icon(forFile: app)).resizable().frame(width: 22, height: 22).accessibilityHidden(true)
-                } else {
-                    Image(systemName: "terminal").frame(width: 22, height: 22).foregroundStyle(.white.opacity(0.6)).accessibilityHidden(true)
-                }
-                VStack(alignment: .leading, spacing: 1) {
+                Button { if isOpen { expanded.remove(program.id) } else { expanded.insert(program.id) } } label: {
+                    Image(systemName: isOpen ? "chevron.down" : "chevron.right").frame(width: 10)
+                }.buttonStyle(.plain).accessibilityLabel(tr("Inspect %1$@", program.name))
+                if let app = program.contexts.first?.app {
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: app)).resizable().frame(width: 22, height: 22)
+                } else { Image(systemName: "terminal").frame(width: 22, height: 22).foregroundStyle(.secondary) }
+                VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
-                        Text(h.name).font(.system(size: 13, weight: .medium)).foregroundStyle(.white).lineLimit(1)
-                        if h.pids.count > 1 { Text("×\(h.pids.count)").font(.caption2.monospacedDigit()).foregroundStyle(.white.opacity(0.45)) }
+                        Text(program.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
+                        Text("×\(program.processCount)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
                     }
-                    Text(detail(h)).font(.caption).foregroundStyle(.white.opacity(0.5)).lineLimit(1).truncationMode(.middle)
-                }
-                Spacer(minLength: 6)
+                    Text(program.contexts.first?.app != nil ? tr("App · expand for processes") : tr("%1$@ projects · expand for processes", String(program.projects.count)))
+                        .font(.caption).foregroundStyle(.secondary)
+                }.frame(maxWidth: .infinity, alignment: .leading)
                 GeometryReader { g in
                     ZStack(alignment: .leading) {
                         Capsule().fill(Color.white.opacity(0.08))
-                        Capsule().fill(Color.green.opacity(0.7)).frame(width: max(2, g.size.width * CGFloat(Double(h.memoryKB) / top)))
+                        Capsule().fill(Color.green.opacity(0.7)).frame(width: g.size.width * CGFloat(min(1, max(0, Double(sortByResident ? program.residentKB ?? 0 : (program.memoryMetric == .mixed || program.memoryMetric == .unavailable ? 0 : program.memoryKB)) / top))))
                     }
-                }
-                .frame(width: 80, height: 5).accessibilityHidden(true)
-                Text(MemoryFormat.string(kibibytes: h.memoryKB)).font(.system(size: 13, weight: .medium).monospacedDigit())
-                    .foregroundStyle(.white.opacity(0.9)).frame(width: 72, alignment: .trailing)
-                actions(h, emphasizeRestart: false)
+                }.frame(width: 60, height: 5).accessibilityHidden(true)
+                Text(metric(program.memoryKB, program.memoryMetric)).frame(width: 84, alignment: .trailing)
+                Text(program.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").foregroundStyle(.secondary).frame(width: 84, alignment: .trailing)
+                Group {
+                    if let target = program.actionTarget { actions(target, emphasizeRestart: false) }
+                    else { Button(tr("Inspect")) { expanded.insert(program.id) }.buttonStyle(PillButtonStyle()) }
+                }.frame(width: 210, alignment: .trailing)
+            }.font(.system(size: 12).monospacedDigit())
+            if isOpen {
+                programTrend(program)
+                ForEach(program.contexts) { h in contextRow(h, showActions: program.actionTarget == nil) }
             }
-            .contentShape(Rectangle())
-            .onTapGesture { if h.parts != nil { if open_ { expanded.remove(h.id) } else { expanded.insert(h.id) } } }
-            if open_, let parts = h.parts {
-                ForEach(parts, id: \.pid) { p in
-                    HStack {
-                        Text("\(MachinePulse.roleName(p.role)) · pid \(p.pid)").font(.caption.monospaced()).foregroundStyle(.white.opacity(0.6))
-                        Spacer()
-                        Text(MemoryFormat.string(kibibytes: p.memoryKB)).font(.caption.monospacedDigit()).foregroundStyle(.white.opacity(0.6))
-                    }
-                    .padding(.leading, 32)
-                }
-            }
-        }
-        .padding(.vertical, 4)
+        }.padding(.vertical, 6)
     }
 
-    /// "shop · started by Claude Code · up 26 h · mostly compressed".
+    @ViewBuilder func programTrend(_ program: MemoryProgram) -> some View {
+        let points = MemoryTrends.points(for: program.id, records: model.programReadings)
+        if let first = points.first, let last = points.last, points.count >= 2 {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(tr("Program footprint: %1$@ → %2$@ over %3$@",
+                        MemoryFormat.string(kibibytes: first.memoryKB), MemoryFormat.string(kibibytes: last.memoryKB),
+                        MemorySuspects.duration(last.sampled.timeIntervalSince(first.sampled))))
+                Chart(points) { p in
+                    LineMark(x: .value("t", p.sampled), y: .value("GiB", Double(p.memoryKB) / 1_048_576))
+                        .foregroundStyle(.green)
+                }.frame(height: 65).chartXAxis(.hidden)
+                    .chartYAxis { AxisMarks { v in
+                        AxisGridLine()
+                        AxisValueLabel { if let d = v.as(Double.self) { Text(String(format: "%.1f GiB", d)) } }
+                    } }
+                Text(tr("Program totals include changing workloads; growth alone does not prove a leak."))
+                    .foregroundStyle(.secondary)
+            }.font(.caption2).padding(.leading, 32).padding(.trailing, 16)
+        } else {
+            Text(tr("Program trend appears after comparable samples are collected."))
+                .font(.caption2).foregroundStyle(.secondary).padding(.leading, 32)
+        }
+    }
+
+    func contextRow(_ h: MachinePulse.Hog, showActions: Bool) -> some View {
+        let isOpen = expandedContexts.contains(h.id)
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 10) {
+                Button { if isOpen { expandedContexts.remove(h.id) } else { expandedContexts.insert(h.id) } } label: {
+                    Image(systemName: isOpen ? "chevron.down" : "chevron.right").frame(width: 10)
+                }.buttonStyle(.plain)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(h.project ?? h.app ?? tr("Unknown project")).lineLimit(1).truncationMode(.middle).help(h.project ?? h.app ?? "")
+                    Text(detail(h)).font(.caption2).foregroundStyle(.secondary)
+                }.frame(maxWidth: .infinity, alignment: .leading)
+                Text(metric(h.memoryKB, h.memoryMetric)).frame(width: 84, alignment: .trailing)
+                Text(h.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").foregroundStyle(.secondary).frame(width: 84, alignment: .trailing)
+                Group { if showActions { actions(h, emphasizeRestart: false) } }.frame(width: 210, alignment: .trailing)
+            }
+            if isOpen, let parts = h.parts {
+                ForEach(parts, id: \.pid) { p in
+                    HStack {
+                        Text("\(MachinePulse.roleName(p.role)) · PID \(p.pid)").frame(maxWidth: .infinity, alignment: .leading)
+                        Text(metric(p.memoryKB, p.memoryMetric)).frame(width: 84, alignment: .trailing)
+                        Text(p.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").frame(width: 84, alignment: .trailing)
+                        Spacer().frame(width: 210)
+                    }.foregroundStyle(.secondary).padding(.leading, 20)
+                }
+            }
+        }.font(.caption.monospacedDigit()).padding(.leading, 32)
+    }
+
     func detail(_ h: MachinePulse.Hog) -> String {
-        var parts: [String] = []
-        if let p = h.project { parts.append((p as NSString).lastPathComponent) }
+        var parts = [tr("%1$@ processes", String(h.pids.count))]
         if let o = h.owner { parts.append(tr("started by %1$@", o)) }
-        if let up = h.uptime { parts.append(tr("up %1$@", MemorySuspects.duration(up))) }
-        if let r = h.residentKB, h.memoryKB >= 200 * 1024, r * 2 < h.memoryKB { parts.append(tr("mostly compressed or swapped out")) }
-        if let n = h.pagesOpened, n > 0 { parts.append(tr("%1$@ pages opened since launch", String(n))) }
-        if h.parts != nil { parts.append(tr("click for its processes")) }
+        if let up = h.uptime { parts.append(tr("oldest process: %1$@", MemorySuspects.duration(up))) }
+        if !h.quittable { parts.append(tr("Protected from stop actions")) }
         return parts.joined(separator: " · ")
     }
 

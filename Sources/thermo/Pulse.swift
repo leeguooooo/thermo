@@ -126,7 +126,7 @@ struct PulseCommand {
         let since = Date().addingTimeInterval(-hours * 3600)
         let records = PulseHistory().records(since: since)
         let blame = PulseHistory.blame(records)
-        let struggling = records.filter { $0.load1 >= Double(max(1, $0.cores)) || $0.memory != .normal || $0.thermal == .serious || $0.thermal == .critical }
+        let struggling = records.filter { $0.load1 >= Double(max(1, $0.cores)) || $0.memory.isHigh || $0.thermal == .serious || $0.thermal == .critical }
         let peakLoad = records.map(\.load1).max() ?? 0
         let peakSwap = records.map(\.swapUsedMB).max() ?? 0
         if app.args.has("json") || app.args.has("csv") {

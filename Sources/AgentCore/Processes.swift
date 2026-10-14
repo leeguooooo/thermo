@@ -21,6 +21,9 @@ public struct AgentProcess: Equatable, Sendable {
     /// Memory as Activity Monitor counts it (phys_footprint: includes compressed and swapped pages).
     public var footprintKB: Int = 0
     public var elapsed: TimeInterval
+    /// Nil only for legacy/manual fixtures. Live reads preserve unavailable counters.
+    public var memoryReading: ProcessMemoryReading? = nil
+    public var sampledIdentity: ProcessIdentity? = nil
 
     public init(pid: pid_t, ppid: pid_t = 1, uid: uid_t = getuid(), name: String, executable: String? = nil,
                 executableFromArgv: Bool = false, argv: [String] = [], cwd: String? = nil, cpu: Double = 0,
@@ -70,10 +73,21 @@ public struct ProcessTable: Sendable {
             var exe = pidPath(pid)
             var fromArgv = false
             if exe == nil, let first = argv.first, first.hasPrefix("/") { exe = first; fromArgv = true }
-            out.append(AgentProcess(pid: pid, ppid: k.kp_eproc.e_ppid, uid: k.kp_eproc.e_ucred.cr_uid, name: name,
+            // Reuse the start/UID from the process-list snapshot and the path already read.
+            // One identity recheck after reading avoids attaching an old measurement to a reused PID.
+            let before: ProcessIdentity? = started > 0 && !fromArgv ? exe.map {
+                ProcessIdentity(pid: pid, uid: k.kp_eproc.e_ucred.cr_uid,
+                                started: Date(timeIntervalSince1970: started), executable: $0)
+            } : nil
+            let reading = memory(pid)
+            var process = AgentProcess(pid: pid, ppid: k.kp_eproc.e_ppid, uid: k.kp_eproc.e_ucred.cr_uid, name: name,
                                     executable: exe, executableFromArgv: fromArgv, argv: argv, cwd: cwd(pid),
-                                    cpu: options.cpu ? cpuUsage(pid) : 0, rssKB: residentKB(pid),
-                                    footprintKB: footprintKB(pid), elapsed: started > 0 ? max(0, now - started) : 0))
+                                    cpu: options.cpu ? cpuUsage(pid) : 0, rssKB: reading.residentKB ?? 0,
+                                    footprintKB: reading.footprintKB ?? 0, elapsed: started > 0 ? max(0, now - started) : 0)
+            if let before, before != identity(pid) { continue }
+            process.sampledIdentity = before
+            process.memoryReading = reading
+            out.append(process)
         }
         return ProcessTable(entries: out)
     }
@@ -100,19 +114,8 @@ public struct ProcessTable: Sendable {
         return Date(timeIntervalSince1970: TimeInterval(info.pbi_start_tvsec) + TimeInterval(info.pbi_start_tvusec) / 1e6)
     }
 
-    public static func residentKB(_ pid: pid_t) -> Int {
-        var info = proc_taskinfo()
-        guard proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &info, Int32(MemoryLayout<proc_taskinfo>.size)) > 0 else { return 0 }
-        return Int(info.pti_resident_size / 1024)
-    }
-
-    static func footprintKB(_ pid: pid_t) -> Int {
-        var info = rusage_info_v2()
-        let ok = withUnsafeMutablePointer(to: &info) { p in
-            p.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) { proc_pid_rusage(pid, RUSAGE_INFO_V2, $0) }
-        }
-        return ok == 0 ? Int(info.ri_phys_footprint / 1024) : 0
-    }
+    /// Legacy convenience reader. New diagnostics use `memory` to retain unavailable values.
+    public static func residentKB(_ pid: pid_t) -> Int { memory(pid).residentKB ?? 0 }
 
     /// Sum of the scheduler's decayed per-thread usage, the figure `ps` shows as %CPU.
     static func cpuUsage(_ pid: pid_t) -> Double {

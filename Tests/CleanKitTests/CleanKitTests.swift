@@ -649,11 +649,10 @@ final class CleanKitTests: XCTestCase {
         ]
         let hogs = MachinePulse.group(procs, byMemory: true, me: 99)
         let c = hogs.first { $0.name == "Google Chrome" }!
-        XCTAssertEqual(c.parts?.map(\.role), ["GPU", "renderer", "main", "extension"], "biggest four, by kind")
+        XCTAssertEqual(c.parts?.map(\.role), ["GPU", "renderer", "main", "extension", "network"], "all processes remain inspectable")
         XCTAssertEqual(c.pagesOpened, 1975)
         XCTAssertEqual(c.uptime, 31 * 3600)
-        XCTAssertEqual(c.advice?.kind, "restart", "31 h, 5 GB, mostly out of RAM")
-        XCTAssertTrue(c.advice?.text.contains("1975") ?? false)
+        XCTAssertNil(c.advice, "a footprint/RSS ratio is not evidence of swapped memory")
 
         // Fresh, or mostly resident: nothing to suggest.
         XCTAssertNil(MachinePulse.group(procs.map { var x = $0; x.uptime = 3600; return x }, byMemory: true, me: 99).first?.advice)

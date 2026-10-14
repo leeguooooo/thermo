@@ -38,11 +38,12 @@ public final class PulseSampler {
             // Resident size and start time only for candidates: a few calls, not one per process.
             candidates.append(.init(pid: u.pid, uid: u.uid, name: u.name, cpu: cpu, memoryKB: u.footprintKB,
                                     details: ProcessTable.details(u.pid), owner: owner(of: u, in: byPid),
-                                    residentKB: ProcessTable.residentKB(u.pid),
-                                    uptime: ProcessTable.started(u.pid).map { Date().timeIntervalSince($0) }))
+                                    residentKB: u.memoryReading?.residentKB,
+                                    uptime: ProcessTable.started(u.pid).map { Date().timeIntervalSince($0) },
+                                    memoryMetric: u.memoryReading?.footprintKB == nil ? .unavailable : .footprint))
         }
         let memory = MachinePulse.memoryLevel()
-        var pulse = MachinePulse.measure(hogs: MachinePulse.group(candidates, byMemory: memory != .normal, me: getpid()))
+        var pulse = MachinePulse.measure(hogs: MachinePulse.group(candidates, byMemory: memory.isHigh, me: getpid()))
         for index in pulse.hogs.indices {
             pulse.hogs[index].processIdentities = pulse.hogs[index].pids.compactMap(ProcessTable.identity)
         }

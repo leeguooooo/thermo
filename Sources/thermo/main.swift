@@ -39,6 +39,7 @@ COMMANDS
   agents list [AREA]         everything checked, each marked OK or not; AREA is
                              hooks, mcp, plugins, skills, statusline, launchd
                              or processes
+  memory                    program memory by app/tool, with project and process details (--json)
   pulse                      why is this Mac slow: verdict, busiest programs, load,
                              memory, thermal state, temperatures, fans (--json for agents)
   pulse quit NAME|PID         stop a program pulse lists (apps quit like ⌘Q); asks first
@@ -151,6 +152,7 @@ struct App {
         case "clean": try CleanCommand(app: self).run(rest)
         case "apps", "app": try AppsCommand(app: self).run(rest)
         case "space": try SpaceCommand(app: self).run(rest)
+        case "memory": try MemoryCommand(app: self).run(rest)
         case "pulse", "status": try PulseCommand(app: self).run(rest)
         case "tabs": try TabsCommand(app: self).run(rest)
         case "settings", "config": try SettingsCommand(app: self).run(rest)

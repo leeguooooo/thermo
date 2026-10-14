@@ -398,6 +398,7 @@ struct PulseCard: View {
 
     var memoryText: String {
         switch pulse.memory {
+        case .unknown: return tr("unavailable")
         case .normal: return tr("normal")
         case .warning: return tr("tight")
         case .critical: return tr("running out")

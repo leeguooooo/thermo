@@ -1,18 +1,23 @@
 @testable import CleanKit
 import XCTest
+import AgentCore
 
 final class MemorySuspectTests: XCTestCase {
     let now = Date()
+    var identity: ProcessIdentity { ProcessIdentity(pid: 1, uid: 501, started: now.addingTimeInterval(-86400), executable: "/fixture/tool") }
 
     func hog(_ id: String, mb: Int, up: TimeInterval? = nil, quittable: Bool = true) -> MachinePulse.Hog {
         var h = MachinePulse.Hog(id: id, name: id, cpu: 0, memoryKB: mb * 1024, pids: [1], app: "/Applications/\(id).app", quittable: quittable)
         h.uptime = up
+        h.processIdentities = [identity]
         return h
     }
 
     func history(_ id: String, _ mbs: [Int], every: TimeInterval = 1200) -> [ProgramMemoryRecord] {
         mbs.enumerated().map { i, mb in
-            ProgramMemoryRecord(t: now.addingTimeInterval(-Double(mbs.count - i) * every), programs: [id: mb * 1024], names: [id: id])
+            var r = ProgramMemoryRecord(t: now.addingTimeInterval(-Double(mbs.count - i) * every), programs: [id: mb * 1024], names: [id: id])
+            r.identities = [id: [identity]]
+            return r
         }
     }
 
@@ -27,15 +32,29 @@ final class MemorySuspectTests: XCTestCase {
         XCTAssertTrue(s.isEmpty)
     }
 
-    func testBigAppRunningForDaysIsWorthARestart() {
+    func testAgeAndSizeAloneDoNotSuggestRestart() {
         let s = MemorySuspects.find(programs: [hog("Xcode", mb: 2400, up: 26 * 3600), hog("Notes", mb: 300, up: 9 * 86400)], history: [], now: now)
-        XCTAssertEqual(s.map(\.name), ["Xcode"])
-        XCTAssertEqual(s.first?.kind, .longRunning)
+        XCTAssertTrue(s.isEmpty)
     }
 
     func testAgentsAndSystemProcessesAreNeverSuggested() {
         let s = MemorySuspects.find(programs: [hog("claude", mb: 3000, up: 3 * 86400, quittable: false)], history: [], now: now)
         XCTAssertTrue(s.isEmpty)
+    }
+
+
+    func testRestartedProcessAndLegacyRecordsDoNotBecomeGrowth() {
+        var h = hog("Tool", mb: 1800)
+        h.processIdentities = [ProcessIdentity(pid: 1, uid: 501, started: now.addingTimeInterval(-60), executable: "/fixture/tool")]
+        XCTAssertTrue(MemorySuspects.find(programs: [h], history: history("Tool", [500, 700, 900, 1200]), now: now).isEmpty)
+        let legacy = history("Tool", [500, 700, 900, 1200]).map { r in var r = r; r.identities = nil; return r }
+        XCTAssertTrue(MemorySuspects.find(programs: [hog("Tool", mb: 1800)], history: legacy, now: now).isEmpty)
+    }
+
+    func testResidentFallbackDoesNotBecomeFootprintGrowth() {
+        var h = hog("Tool", mb: 1800)
+        h.memoryMetric = .residentEstimate
+        XCTAssertTrue(MemorySuspects.find(programs: [h], history: history("Tool", [500, 700, 900, 1200]), now: now).isEmpty)
     }
 
     func testFullDiskBlocksSwap() {

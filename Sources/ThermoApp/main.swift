@@ -310,6 +310,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     app.run()
 }
 /// `Thermo --main [--page PAGE]` (and the older `--disk [PAGE]`, `--agents [AREA]`, `--chrome-pages`):
+/// `--inspect-memory NAME` expands that program for read-only layout review.
 /// just the main window, no menu bar item; quits when closed. With `--offscreen --snapshot PATH` it
 /// draws the window into a PNG once the page has its data, and quits (verification).
 /// `--fixture BEFORE.json AFTER.json` shows two saved browser samples instead of measuring.
