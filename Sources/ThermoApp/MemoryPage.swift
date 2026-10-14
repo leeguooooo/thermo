@@ -351,11 +351,14 @@ struct MemoryPage: View {
                     Text(tr("Resident memory")).tag(true)
                 }.frame(width: 180)
             }
-            HStack {
+            ViewThatFits(in: .horizontal) {
+                HStack {
                 Text(tr("Program / project / process")).frame(maxWidth: .infinity, alignment: .leading)
                 Text(tr("Memory footprint")).frame(width: 84, alignment: .trailing)
                 Text(tr("Resident memory")).frame(width: 84, alignment: .trailing)
                 Spacer().frame(width: 210)
+            }.frame(minWidth: 640)
+                Text(tr("Memory footprint") + " · " + tr("Resident memory"))
             }.font(.caption2).foregroundStyle(.white.opacity(0.5))
             if !model.inventoryAvailable {
                 Text(tr("Process readings unavailable. Try refreshing.")).font(.caption).foregroundStyle(.orange)
@@ -385,6 +388,7 @@ struct MemoryPage: View {
     func programRow(_ program: MemoryProgram, top: Double) -> some View {
         let isOpen = expanded.contains(program.id)
         return VStack(alignment: .leading, spacing: 8) {
+            ViewThatFits(in: .horizontal) {
             HStack(spacing: 10) {
                 Button { if isOpen { expanded.remove(program.id) } else { expanded.insert(program.id) } } label: {
                     Image(systemName: isOpen ? "chevron.down" : "chevron.right").frame(width: 10)
@@ -412,6 +416,28 @@ struct MemoryPage: View {
                     if let target = program.actionTarget { actions(target, emphasizeRestart: false) }
                     else { Button(tr("Inspect")) { expanded.insert(program.id) }.buttonStyle(PillButtonStyle()) }
                 }.frame(width: 210, alignment: .trailing)
+            }.frame(minWidth: 640)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Button { if isOpen { expanded.remove(program.id) } else { expanded.insert(program.id) } } label: {
+                            Image(systemName: isOpen ? "chevron.down" : "chevron.right")
+                        }.buttonStyle(.plain).accessibilityLabel(tr("Inspect %1$@", program.name))
+                        Text(program.name).font(.callout.weight(.medium)).lineLimit(1).truncationMode(.middle)
+                        Text("×\(program.processCount)").foregroundStyle(.secondary).fixedSize()
+                        Spacer(minLength: 0)
+                        Text(metric(program.memoryKB, program.memoryMetric)).fixedSize()
+                    }
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(program.contexts.first?.app != nil ? tr("App · expand for processes") : tr("%1$@ projects · expand for processes", String(program.projects.count)))
+                                .lineLimit(1)
+                            Text(tr("Resident memory") + ": " + (program.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"))
+                        }.font(.caption2).foregroundStyle(.secondary)
+                        Spacer(minLength: 4)
+                        if let target = program.actionTarget { actions(target, emphasizeRestart: false) }
+                        else { Button(tr("Inspect")) { expanded.insert(program.id) }.buttonStyle(PillButtonStyle()) }
+                    }
+                }
             }.font(.system(size: 12).monospacedDigit())
             if isOpen {
                 programTrend(program)
@@ -447,6 +473,7 @@ struct MemoryPage: View {
     func contextRow(_ h: MachinePulse.Hog, showActions: Bool) -> some View {
         let isOpen = expandedContexts.contains(h.id)
         return VStack(alignment: .leading, spacing: 6) {
+            ViewThatFits(in: .horizontal) {
             HStack(spacing: 10) {
                 Button { if isOpen { expandedContexts.remove(h.id) } else { expandedContexts.insert(h.id) } } label: {
                     Image(systemName: isOpen ? "chevron.down" : "chevron.right").frame(width: 10)
@@ -459,13 +486,39 @@ struct MemoryPage: View {
                 Text(h.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").foregroundStyle(.secondary).frame(width: 84, alignment: .trailing)
                 Group { if showActions { actions(h, emphasizeRestart: false) } }.frame(width: 210, alignment: .trailing)
             }
+                .frame(minWidth: 600)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Button { if isOpen { expandedContexts.remove(h.id) } else { expandedContexts.insert(h.id) } } label: {
+                            Image(systemName: isOpen ? "chevron.down" : "chevron.right")
+                        }.buttonStyle(.plain)
+                        Text(h.project ?? h.app ?? tr("Unknown project")).lineLimit(1).truncationMode(.middle)
+                        Spacer(minLength: 0)
+                        Text(metric(h.memoryKB, h.memoryMetric)).fixedSize()
+                    }
+                    Text(detail(h)).foregroundStyle(.secondary).lineLimit(2)
+                    HStack {
+                        Text(tr("Resident memory") + ": " + (h.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"))
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 4)
+                        if showActions { actions(h, emphasizeRestart: false) }
+                    }
+                }
+            }
             if isOpen, let parts = h.parts {
                 ForEach(parts, id: \.pid) { p in
+                    ViewThatFits(in: .horizontal) {
                     HStack {
                         Text("\(MachinePulse.roleName(p.role)) · PID \(p.pid)").frame(maxWidth: .infinity, alignment: .leading)
                         Text(metric(p.memoryKB, p.memoryMetric)).frame(width: 84, alignment: .trailing)
                         Text(p.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").frame(width: 84, alignment: .trailing)
                         Spacer().frame(width: 210)
+                    }.frame(minWidth: 600)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(MachinePulse.roleName(p.role)) · PID \(p.pid)")
+                            Text(tr("Memory footprint") + ": " + metric(p.memoryKB, p.memoryMetric)
+                                 + " · " + tr("Resident memory") + ": " + (p.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"))
+                        }
                     }.foregroundStyle(.secondary).padding(.leading, 20)
                 }
             }
