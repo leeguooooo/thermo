@@ -15,6 +15,8 @@ public struct ProcessUsage: Equatable, Sendable {
     /// Memory as Activity Monitor counts it (phys_footprint), in KB.
     public var footprintKB: Int
     public var memoryReading: ProcessMemoryReading? = nil
+    public var started: Date? = nil
+    public var cpuAvailable = true
 
     public init(pid: pid_t, ppid: pid_t = 1, uid: uid_t = getuid(), name: String, cpuNanos: UInt64 = 0, footprintKB: Int = 0) {
         self.pid = pid; self.ppid = ppid; self.uid = uid; self.name = name; self.cpuNanos = cpuNanos; self.footprintKB = footprintKB
@@ -58,6 +60,9 @@ extension ProcessTable {
             let ticks = ok ? info.ri_user_time &+ info.ri_system_time : 0
             var process = ProcessUsage(pid: pid, ppid: k.kp_eproc.e_ppid, uid: k.kp_eproc.e_ucred.cr_uid, name: name,
                                     cpuNanos: ticks &* numer / denom, footprintKB: ok ? Int(info.ri_phys_footprint / 1024) : 0)
+            process.cpuAvailable = ok
+            let start = k.kp_proc.p_un.__p_starttime
+            process.started = start.tv_sec > 0 ? Date(timeIntervalSince1970: Double(start.tv_sec) + Double(start.tv_usec) / 1e6) : nil
             process.memoryReading = ok ? ProcessMemoryReading(footprintKB: process.footprintKB, residentKB: Int(info.ri_resident_size / 1024))
                 : ProcessMemoryReading(footprintKB: nil, residentKB: nil)
             out.append(process)

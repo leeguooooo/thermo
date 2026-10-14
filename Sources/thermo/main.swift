@@ -39,6 +39,7 @@ COMMANDS
   agents list [AREA]         everything checked, each marked OK or not; AREA is
                              hooks, mcp, plugins, skills, statusline, launchd
                              or processes
+  activity [--json]          whole-machine and per-program CPU/GPU readings
   memory                    program memory by app/tool, with project and process details (--json)
   pulse                      why is this Mac slow: verdict, busiest programs, load,
                              memory, thermal state, temperatures, fans (--json for agents)
@@ -154,6 +155,7 @@ struct App {
         case "apps", "app": try AppsCommand(app: self).run(rest)
         case "space": try SpaceCommand(app: self).run(rest)
         case "memory": try MemoryCommand(app: self).run(rest)
+        case "activity": try ComputeCommand(app: self).run(rest)
         case "pulse", "status": try PulseCommand(app: self).run(rest)
         case "tabs": try TabsCommand(app: self).run(rest)
         case "settings", "config": try SettingsCommand(app: self).run(rest)

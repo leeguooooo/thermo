@@ -39,9 +39,10 @@ enum MainPage: Hashable {
     case apps(AppsTab)
     case space(SpaceTab)
     case memory
+    case compute(Bool)
 
     /// `--page` values: overview, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
-    /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates, memory.
+    /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates, memory, cpu, gpu.
     init?(argument: String) {
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
         guard let command = parts.first else { return nil }
@@ -55,6 +56,8 @@ enum MainPage: Hashable {
         case "agents": self = .agents(parts.count > 1 ? (Area(rawValue: parts[1]).map { .area($0) } ?? .home) : .home)
         case "apps": self = .apps(parts.count > 1 ? (AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
         case "memory": self = .memory
+        case "cpu": self = .compute(false)
+        case "gpu": self = .compute(true)
         case "space": self = .space(parts.count > 1 ? (SpaceTab(rawValue: parts[1]) ?? .browse) : .browse)
         default: return nil
         }
@@ -321,6 +324,8 @@ struct MainView: View {
             AreaPage(scanner: agents, area: a).id(a).transition(.opacity.combined(with: .move(edge: .trailing)))
         case let .apps(tab):
             AppsPage(model: models.apps, tab: Binding(get: { tab }, set: { page = .apps($0) })).transition(.opacity)
+        case let .compute(gpu):
+            ComputePage(gpu: gpu).id(gpu).transition(.opacity)
         case .memory:
             MemoryPage(model: MemoryModel.shared, open: { page = $0 }).transition(.opacity)
         case let .space(tab):
@@ -384,7 +389,9 @@ struct MainSidebar: View {
                     row(.fans, tr("Fans"), "fan.fill", .blue,
                         trailing: monitor.snapshot?.fans.map(\.rpm).max().map { tr("%1$@ rpm", String(Int($0))) })
 
-                    header(tr("Memory"))
+                    header(tr("Resources"))
+                    row(.compute(false), tr("CPU usage"), "cpu", .cyan, trailing: nil)
+                    row(.compute(true), tr("GPU usage"), "cpu.fill", .purple, trailing: nil)
                     row(.memory, tr("Memory usage"), "memorychip.fill", .green, trailing: memoryTrailing)
                     row(.browser("Google Chrome"), tr("Tab organizer"), "rectangle.stack.fill", .teal, trailing: nil)
 
@@ -519,7 +526,7 @@ struct OverviewPage: View {
                  detail: "CPU \(tempText(s?.cpu, fahrenheit: fahrenheit)) · GPU \(tempText(s?.gpu, fahrenheit: fahrenheit))") { open(.sensors) }
             card(tr("CPU load"), RingGauge(value: load.map { $0 / 2 }, text: load.map { String(format: "%.1f×", $0) } ?? "—",
                                           caption: tr("load per core")),
-                 detail: pulse.current.map { tr("%1$@ cores", String($0.cores)) + " · " + tr("load %1$@", String(format: "%.1f", $0.load1)) } ?? "") { openDetails() }
+                 detail: pulse.current.map { tr("%1$@ cores", String($0.cores)) + " · " + tr("load %1$@", String(format: "%.1f", $0.load1)) } ?? "") { open(.compute(false)) }
             card(tr("Memory"), RingGauge(value: mem.map { Double($0.usedBytes) / Double(max(1, $0.totalBytes)) },
                                         text: mem.map { String(format: "%.0f%%", Double($0.usedBytes) / Double(max(1, $0.totalBytes)) * 100) } ?? "—",
                                         caption: MachinePulse.memoryName(pulse.memory)),

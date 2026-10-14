@@ -350,6 +350,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         case let .browser(app): return TabWorkspaceModel.loadedApps.contains(app)
         case .apps(.installed): return !models.apps.loading && !models.apps.apps.isEmpty
         case .apps(.leftovers): return models.apps.orphans != nil
+        case .compute: return ComputeModel.shared.current?.cpu != nil && Date().timeIntervalSince(started) > 4
         case .memory: return MemoryModel.shared.breakdown != nil && Date().timeIntervalSince(started) > 4
         case .space(.duplicates): return true
         case .space: return SpaceLensModel.shared.tree != nil && !SpaceLensModel.shared.scanning
