@@ -347,6 +347,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         switch page {
         case .disk: return args.contains("--no-scan") ? !models.disk.scanning : models.disk.report != nil && !models.disk.scanning
         case .agents: return models.agents.report != nil && !models.agents.scanning
+        case .claudeCleanup, .privacyTools: return models.claudeCleanup.loaded && !models.claudeCleanup.busy
         case let .browser(app): return TabWorkspaceModel.loadedApps.contains(app)
         case .apps(.installed): return !models.apps.loading && !models.apps.apps.isEmpty
         case .apps(.leftovers): return models.apps.orphans != nil

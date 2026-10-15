@@ -246,6 +246,12 @@ Sources/ThermoApp/   菜单栏 App（AppKit + SwiftUI + Swift Charts）
 
 调试：`Thermo.app/Contents/MacOS/Thermo --render-preview DIR` 把面板各页渲染为 PNG（AppKit 原生控件会显示为占位块）。helper 日志：`/var/log/dev.thermo.helper.log`。
 
+### Claude 清理与隐私设置
+
+App 侧栏的“Claude 清理”提供本地状态重置和隐私/网络工具。重置前逐项展示登录、设置及历史记录的影响；默认不选，保留私有恢复副本，并阻止运行中的 Claude 数据被重置。隐私页支持浏览器定位/WebRTC 设置、mail.com Cookie 清理、用户 launchd 变量清理、DNS 缓存刷新及系统时区操作，每项单独确认。
+
+浏览器设置可恢复；Cookie 备份需手动恢复，launchd 变量清理不可撤销。重置副本仍占磁盘空间。支持范围、原包 REA 证据和限制见[分析记录](docs/kelaude-analysis.md)。本地构建可用 `Thermo --main --page claude-cleanup` 或 `--page claude-cleanup:privacy` 打开。
+
 ### 保留开发环境与 NAS 归档
 
 App 的自动勾选和 `thermo clean run safe` 默认保留开发依赖、SDK、模拟器数据、项目编译缓存、AI 模型和工作树。它们仍会显示在扫描结果里；确实不再需要时，可以按具体项目 ID 或分类选择。文件能重新生成，并不代表清理后不会影响下一次开发。
