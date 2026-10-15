@@ -23,8 +23,22 @@ final class HistoryModel: ObservableObject {
         }
     }
 
-    // RESTORE-PLACEHOLDER: replaced once Trash batch restore lands.
-    func restore(_ record: OperationRecord) {}
+    /// Puts a recorded Trash batch back; anything changed, missing or in the way is skipped and listed.
+    func restore(_ record: OperationRecord) {
+        guard !busy, record.undo?.kind == "trashBatch", let id = record.undo?.ref else { return }
+        busy = true
+        Task.detached(priority: .userInitiated) {
+            let text: String
+            do {
+                let result = try TrashBatches.restore(id: id)
+                let restored = result.items.filter { $0.status == "restored" }.count
+                let others = result.items.filter { $0.status != "restored" }
+                text = ([tr("%1$@ of %2$@ items put back.", String(restored), String(result.items.count))]
+                        + others.map { FS.tilde($0.original) + ": " + ($0.reason ?? $0.status) }).joined(separator: "\n")
+            } catch { text = error.localizedDescription }
+            await MainActor.run { self.notice = text; self.busy = false; self.load() }
+        }
+    }
 }
 
 /// Every change Thermo made, newest first, each with where it is undone. Entries moved to the

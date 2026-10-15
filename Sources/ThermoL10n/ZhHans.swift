@@ -1604,6 +1604,7 @@ let zhHans: [String: String] = [
     "Refresh": "刷新",
     "Today": "今天",
     "Yesterday": "昨天",
+    "%1$@ of %2$@ items put back.": "已放回 %1$@/%2$@ 项。",
     // Overview heat chain
     "Heat chain": "热链路",
     "Load": "负载",

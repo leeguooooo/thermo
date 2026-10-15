@@ -483,14 +483,13 @@ public enum Cleaner {
 }
 
 extension Cleaner {
-    /// Every cleanup, uninstall, hand-picked Trash move and Trash-batch empty goes through `log`;
-    /// this mirrors it into the shared operation history, with where it can be undone.
+    /// Cleanups and Trash-batch empties go through `log`; this mirrors them into the shared
+    /// operation history, with where they can be undone.
     static func journal(_ r: CleanResult, item: CleanItem, home: String) {
         let feature: String, action: String
         switch r.id {
-        case let id where id.hasPrefix("app:"): (feature, action) = ("apps", "uninstall")
-        case let id where id.hasPrefix("leftovers:"): (feature, action) = ("apps", "remove")
-        case "manual": (feature, action) = ("space", "trash")
+        // Uninstalls, leftovers and hand-picked Trash moves record themselves, with per-path sizes.
+        case let id where id.hasPrefix("app:") || id.hasPrefix("leftovers:") || id == "manual": return
         case let id where id.hasPrefix("trash-batch/"): (feature, action) = ("clean", "emptyTrash")
         default: (feature, action) = ("clean", r.trashed ? "trash" : "delete")
         }

@@ -38,15 +38,14 @@ final class OperationHistoryTests: XCTestCase {
         var deleted = CleanResult(id: "npm-cache", trashed: false); deleted.removed = ["/z"]; deleted.bytes = 5; deleted.bytesIncomplete = true
         for r in [app, manual, empty, deleted] { log(r) }
         let byAction = Dictionary(OperationJournal.read(home: home).map { ($0.feature + "/" + $0.action, $0) }, uniquingKeysWith: { a, _ in a })
-        XCTAssertEqual(byAction["apps/uninstall"]?.items.first?.bytes, 10)
-        XCTAssertEqual(byAction["apps/uninstall"]?.undo?.kind, "trash")
-        XCTAssertNotNil(byAction["space/trash"])
+        // Uninstalls and hand-picked moves record themselves; the cleanup log must not record them twice.
+        XCTAssertEqual(Set(byAction.keys), ["clean/emptyTrash", "clean/delete"])
         XCTAssertNil(byAction["clean/emptyTrash"]?.undo)
         XCTAssertNil(byAction["clean/delete"]?.items.first?.bytes, "a single path with an incomplete size is not given an exact size")
         L10n.override = .english
         XCTAssertEqual(byAction["clean/delete"]?.undoText, "Deleted for good; nothing to restore.")
         L10n.override = .simplifiedChinese
-        XCTAssertEqual(byAction["apps/uninstall"]?.title, "卸载了应用")
+        XCTAssertEqual(byAction["clean/delete"]?.title, "清理时删除了文件")
     }
 
     func testNothingRemovedNothingFailedRecordsNothing() {
