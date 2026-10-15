@@ -177,8 +177,12 @@ final class Service: NSObject, ThermoHelperProtocol {
     }
 
     func setLidAwake(_ on: Bool, reply: @escaping (String?) -> Void) {
+        setLidAwake(on, heatGuard: true, reply: reply)
+    }
+
+    func setLidAwake(_ on: Bool, heatGuard: Bool, reply: @escaping (String?) -> Void) {
         controller.queue.async {
-            do { try self.controller.lidAwake.set(on); reply(nil) } catch { reply("\(error)") }
+            do { try self.controller.lidAwake.set(on, heatGuard: heatGuard); reply(nil) } catch { reply("\(error)") }
         }
     }
 

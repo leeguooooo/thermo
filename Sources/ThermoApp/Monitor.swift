@@ -39,6 +39,8 @@ enum Settings {
     static let interval = "interval"
     static let titleMetric = "titleMetric"
     static let alertsEnabled = "alertsEnabled"
+    /// Whether heat turns "stay awake with the lid closed" off (default on).
+    static let lidAwakeHeatGuard = "lidAwakeHeatGuard"
     static let alertThreshold = "alertThreshold"
     static let fahrenheit = "fahrenheit"
     static let unnamedSensors = "unnamedSensors"
@@ -77,6 +79,7 @@ enum Settings {
     static func register(_ defaults: UserDefaults = .standard) {
         defaults.register(defaults: [
             showInDock: true,
+            lidAwakeHeatGuard: true,
             PulseRecorder.alertsKey: true,
             interval: 2.0, titleMetric: TitleMetric.cpu.rawValue,
             alertsEnabled: false, alertThreshold: 90.0, fahrenheit: false,
@@ -372,9 +375,11 @@ final class Monitor: ObservableObject {
         Task { @MainActor in
             defer { lidAwakeBusy = false }
             do {
-                try await helper.setLidAwake(on)
+                let heatGuard = UserDefaults.standard.bool(forKey: Settings.lidAwakeHeatGuard)
+                try await helper.setLidAwake(on, heatGuard: heatGuard)
                 OperationJournal.record(OperationRecord(feature: "power", action: on ? "lidAwakeOn" : "lidAwakeOff",
-                                                        items: [.init(target: "disablesleep", status: "done")]))
+                                                        items: [.init(target: "disablesleep", status: "done",
+                                                                      detail: on && !heatGuard ? "heat guard off" : nil)]))
             } catch {
                 lastError = tr("Could not change lid-closed sleep: %1$@", error.localizedDescription)
                 OperationJournal.record(OperationRecord(feature: "power", action: on ? "lidAwakeOn" : "lidAwakeOff",

@@ -1633,6 +1633,9 @@ let zhHans: [String: String] = [
     "Turned on staying awake with the lid closed": "开启了合盖不休眠",
     "Turns itself off at %1$@ or at 20%% battery on battery power.": "温度达到 %1$@ 或使用电池且电量降到 20%% 时自动关闭。",
     "Updating Thermo's helper first; it turns on when the helper is ready.": "正在先更新 Thermo 辅助程序，就绪后自动开启。",
+    "Turn off when the Mac gets hot": "过热时自动关闭",
+    "macOS still slows down and shuts down on its own at critical temperatures, and the fan failsafe stays on.": "关闭后 macOS 仍会在温度过高时自动降频，到危险温度会强制关机；风扇超温保护也保持开启。",
+    "Turns itself off only at 20%% battery on battery power; macOS still protects itself from heat.": "仅在使用电池且电量降到 20%% 时自动关闭；过热时 macOS 仍会自行保护。",
     // Overview heat chain
     "Heat chain": "热链路",
     "Load": "负载",

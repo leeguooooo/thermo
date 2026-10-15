@@ -19,14 +19,16 @@ struct AwakeCommand {
             let s = try state()
             if app.args.has("json") { print(Export.json(s)); return }
             print(s.armed ? app.style.yellow("on") + (s.lidClosed == true ? " · lid closed" : "") : "off")
-            print(app.style.dim(String(format: "turns itself off at %.0f °C, at 20%% battery on battery power, or without temperature readings", s.limit)))
+            print(app.style.dim(s.heatGuard == false ? "turns itself off only at 20% battery on battery power (heat guard off; macOS still protects itself)"
+                : String(format: "turns itself off at %.0f °C, at 20%% battery on battery power, or without temperature readings", s.limit)))
             if let off = s.lastAutoOff {
                 print(app.style.dim("last turned itself off \(ISO8601DateFormatter().string(from: off.time)): \(off.reason) (\(off.detail))"))
             }
         case "on", "off":
             let on = rest.first == "on"
             do {
-                try client.blocking(timeout: 8) { try await $0.setLidAwake(on) }
+                let heatGuard = !app.args.has("no-heat-guard")
+                try client.blocking(timeout: 8) { try await $0.setLidAwake(on, heatGuard: heatGuard) }
                 OperationJournal.record(OperationRecord(feature: "power", action: on ? "lidAwakeOn" : "lidAwakeOff",
                                                         items: [.init(target: "disablesleep", status: "done")]))
             } catch {
@@ -37,7 +39,10 @@ struct AwakeCommand {
             let s = try state()
             if app.args.has("json") { print(Export.json(s)); return }
             print(s.armed ? "on: the Mac stays awake with the lid closed" : "off: closing the lid puts the Mac to sleep")
-            if s.armed { print(app.style.dim(String(format: "turns itself off at %.0f °C or 20%% battery on battery power", s.limit))) }
+            if s.armed {
+                print(app.style.dim(s.heatGuard == false ? "turns itself off only at 20% battery on battery power"
+                    : String(format: "turns itself off at %.0f °C or 20%% battery on battery power (--no-heat-guard to skip the heat rule)", s.limit)))
+            }
         default:
             throw CLIError("usage: thermo awake [status|on|off] [--json]")
         }

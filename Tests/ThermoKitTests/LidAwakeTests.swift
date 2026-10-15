@@ -82,4 +82,27 @@ final class LidAwakeTests: XCTestCase {
         XCTAssertEqual(LidAwakeGuard(limits: .forHardware(appleSilicon: LidAwakeController.appleSilicon)).state.limit, 100)
         #endif
     }
+
+    func testWithTheHeatRuleOffOnlyLowBatteryEndsIt() throws {
+        var g = LidAwakeGuard(limits: .appleSilicon)
+        g.arm(heatGuard: false)
+        for _ in 0..<5 { XCTAssertNil(g.tick(hottest: 108, battery: nil, lidClosed: true)) }
+        for _ in 0..<5 { XCTAssertNil(g.tick(hottest: nil, battery: nil, lidClosed: true)) }
+        XCTAssertTrue(g.state.armed)
+        XCTAssertEqual(g.tick(hottest: 108, battery: battery(19, plugged: false), lidClosed: true)?.reason, "battery")
+
+        // Switching the rule while on changes only the rule, not the system setting.
+        let fake = FakeSwitch(false)
+        let c = LidAwakeController(limits: .appleSilicon, sleep: fake.sleepSwitch, originalFile: file)
+        try c.set(true)
+        try c.set(true, heatGuard: false)
+        XCTAssertEqual(fake.writes, [true])
+        XCTAssertEqual(c.state.heatGuard, false)
+        XCTAssertNil(c.tick(hottest: 110, battery: nil, lidClosed: true))
+        XCTAssertNil(c.tick(hottest: 110, battery: nil, lidClosed: true))
+        XCTAssertTrue(c.state.armed)
+        try c.set(true, heatGuard: true)
+        _ = c.tick(hottest: 110, battery: nil, lidClosed: true)
+        XCTAssertEqual(c.tick(hottest: 110, battery: nil, lidClosed: true)?.reason, "thermal")
+    }
 }

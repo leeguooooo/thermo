@@ -17,6 +17,7 @@ enum LidAwakeText {
 struct LidAwakeSwitch: View {
     @ObservedObject var monitor: Monitor
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
+    @AppStorage(Settings.lidAwakeHeatGuard) private var heatGuard = true
 
     var on: Bool { monitor.lidAwake?.armed == true || monitor.lidAwakePending }
 
@@ -40,6 +41,17 @@ struct LidAwakeSwitch: View {
             }
             Text(caption).font(.caption).foregroundStyle(captionColor).fixedSize(horizontal: false, vertical: true)
                 .padding(.leading, 26)
+            if !renderingPreview {
+                Toggle(tr("Turn off when the Mac gets hot"), isOn: Binding(get: { heatGuard }, set: { value in
+                    heatGuard = value
+                    // Already on: hand the new rule to the helper right away.
+                    if monitor.lidAwake?.armed == true { monitor.setLidAwake(true) }
+                }))
+                .toggleStyle(.checkbox).controlSize(.small).font(.caption)
+                .disabled(monitor.lidAwakeBusy)
+                .padding(.leading, 26)
+                .help(tr("macOS still slows down and shuts down on its own at critical temperatures, and the fan failsafe stays on."))
+            }
         }
         .accessibilityElement(children: .contain)
     }
@@ -53,6 +65,9 @@ struct LidAwakeSwitch: View {
         }
         if let state = monitor.lidAwake, state.armed {
             let closed = state.lidClosed == true ? tr("Lid closed, staying awake.") : tr("On.")
+            if state.heatGuard == false {
+                return closed + " " + tr("Turns itself off only at 20%% battery on battery power; macOS still protects itself from heat.")
+            }
             return closed + " " + tr("Turns itself off at %1$@ or at 20%% battery on battery power.", limit)
         }
         if let off = monitor.lidAwake?.lastAutoOff, Date().timeIntervalSince(off.time) < 3600 { return LidAwakeText.autoOff(off) }

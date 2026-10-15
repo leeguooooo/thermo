@@ -19,6 +19,9 @@ public struct LidAwakeState: Codable, Sendable, Equatable {
     public var lastAutoOff: AutoOff?
     /// The hottest compute sensor at which it turns itself off.
     public var limit: Double
+    /// False when the user turned off the heat rule: only low battery ends it then. macOS still
+    /// throttles and shuts down on its own at critical temperatures, and the fan failsafe stays.
+    public var heatGuard: Bool? = true
     public init(limit: Double) { self.limit = limit }
 }
 
@@ -35,7 +38,8 @@ public struct LidAwakeGuard: Sendable {
 
     public init(limits: SafetyLimits) { state = LidAwakeState(limit: Self.limit(for: limits)) }
 
-    public mutating func arm(now: Date = Date()) {
+    public mutating func arm(now: Date = Date(), heatGuard: Bool = true) {
+        state.heatGuard = heatGuard
         guard !state.armed else { return }
         state.armed = true; state.since = now; hot = 0; missing = 0
     }
@@ -49,7 +53,9 @@ public struct LidAwakeGuard: Sendable {
         state.lidClosed = lidClosed
         guard state.armed else { return nil }
         var reason: LidAwakeState.AutoOff?
-        if let t = hottest, t.isFinite {
+        if state.heatGuard == false {
+            hot = 0; missing = 0
+        } else if let t = hottest, t.isFinite {
             missing = 0
             hot = t >= state.limit ? hot + 1 : 0
             if hot >= Self.hotTicksToTrip {
@@ -158,9 +164,10 @@ public final class LidAwakeController: @unchecked Sendable {
         guardState.disarm()
     }
 
-    public func set(_ on: Bool, now: Date = Date()) throws {
+    public func set(_ on: Bool, heatGuard: Bool = true, now: Date = Date()) throws {
         if on {
-            guard !state.armed else { return }
+            // Already on: only the heat rule changes.
+            guard !state.armed else { guardState.arm(now: now, heatGuard: heatGuard); log("lid-awake: heat guard \(heatGuard ? "on" : "off")"); return }
             if savedOriginal() == nil {
                 guard let before = sleep.read() else { throw FanControlError.helper("cannot read the current sleep setting") }
                 let dir = (originalFile as NSString).deletingLastPathComponent
@@ -171,8 +178,8 @@ public final class LidAwakeController: @unchecked Sendable {
                 }
             }
             try sleep.write(true)
-            guardState.arm(now: now)
-            log("lid-awake: on")
+            guardState.arm(now: now, heatGuard: heatGuard)
+            log("lid-awake: on" + (heatGuard ? "" : " (heat guard off)"))
         } else {
             restoreOriginal(reason: "turned off")
         }

@@ -6,7 +6,7 @@ public enum HelperConstants {
     public static let machService = "dev.thermo.helper"
     public static let installedBinary = "/Library/PrivilegedHelperTools/dev.thermo.helper"
     public static let launchdPlist = "/Library/LaunchDaemons/dev.thermo.helper.plist"
-    public static let protocolVersion = "2"
+    public static let protocolVersion = "3"
     /// Reported by the helper: "<protocol>/<app version>".
     public static var version: String { "\(protocolVersion)/\(ThermoVersion.string)" }
     /// Plist bundled at Contents/Library/LaunchDaemons for SMAppService registration.
@@ -115,6 +115,8 @@ public enum HelperSelfUpdate {
     func policies(reply: @escaping (Data) -> Void)
     /// Keep the Mac awake with the lid closed (protocol 2). Reply carries an error message or nil.
     func setLidAwake(_ on: Bool, reply: @escaping (String?) -> Void)
+    /// Protocol 3: the same, choosing whether heat turns it off.
+    func setLidAwake(_ on: Bool, heatGuard: Bool, reply: @escaping (String?) -> Void)
     /// JSON-encoded LidAwakeState.
     func lidAwakeState(reply: @escaping (Data) -> Void)
 }
@@ -254,14 +256,14 @@ public final class HelperClient: @unchecked Sendable {
         return try PolicyCoding.decoder().decode([Int: FanPolicy].self, from: data)
     }
 
-    public func setLidAwake(_ on: Bool) async throws {
+    public func setLidAwake(_ on: Bool, heatGuard: Bool = true) async throws {
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             let once = Once()
             guard let p = proxy({ e in once.run { cont.resume(throwing: FanControlError.helperUnavailable(e.localizedDescription)) } }) else {
                 return once.run { cont.resume(throwing: FanControlError.helperUnavailable("no proxy")) }
             }
             deadline(5, once) { cont.resume(throwing: FanControlError.helperUnavailable("no answer within 5 s")) }
-            p.setLidAwake(on) { err in
+            p.setLidAwake(on, heatGuard: heatGuard) { err in
                 once.run { if let err { cont.resume(throwing: FanControlError.helper(err)) } else { cont.resume() } }
             }
         }

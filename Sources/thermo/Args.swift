@@ -26,7 +26,8 @@ struct Args {
         "stream", // clean: newline-delimited incremental scan results
         "rescan",  // rescan: clean run ignores the saved scan
         "remove-local", "inactive-development",
-        "measure", "all-windows", "by-site"]  // pulse chrome: measure memory per page once
+        "measure", "all-windows", "by-site",
+        "no-heat-guard"]  // awake on: only low battery turns it off  // pulse chrome: measure memory per page once
 
     init(_ argv: [String]) throws {
         var i = 0
