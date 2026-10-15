@@ -220,6 +220,9 @@ struct PulseCard: View {
     let active: Bool
     /// On a glass panel (main window): no tinted background of its own.
     var plain = false
+    /// False on the main window's overview, which says the verdict, thermal pressure and history itself.
+    var headline = true
+    private var indent: CGFloat { headline ? 28 : 0 }
     @ObservedObject private var pulse = SystemPulse.shared
     @State private var confirming: SystemPulse.Hog?
     @State private var restartTarget: SystemPulse.Hog?
@@ -228,6 +231,7 @@ struct PulseCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
+            if headline {
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: !pulse.sampled ? "hourglass" : pulse.severity == .green ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                     .foregroundStyle(pulse.sampled ? pulse.severity : .secondary).font(.title3)
@@ -238,7 +242,8 @@ struct PulseCard: View {
             }
             if let next = pulse.current?.nextStep {
                 Text(next.text).font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true).padding(.leading, 28)
+                    .fixedSize(horizontal: false, vertical: true).padding(.leading, indent)
+            }
             }
             ForEach(pulse.hogs) { h in
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -273,13 +278,13 @@ struct PulseCard: View {
                     }
                     .frame(width: 52, alignment: .trailing)
                 }
-                .padding(.leading, 28)
+                .padding(.leading, indent)
                 .background(RoundedRectangle(cornerRadius: 6).fill(recorder.highlighted == h.name ? Color.orange.opacity(0.18) : .clear))
                 // A big app, split: its GPU process and heaviest pages.
                 if let parts = h.parts, !parts.isEmpty {
                     Text(parts.map { "\(roleText($0.role)) \(memoryText($0.memoryKB))" }.joined(separator: " · "))
                         .font(.caption2.monospacedDigit()).foregroundStyle(.secondary).lineLimit(1)
-                        .padding(.leading, 28)
+                        .padding(.leading, indent)
                 }
                 // A browser: which of its pages is the problem (measured only when asked).
                 if ChromeInspector.isBrowser(h.name) && !renderingPreview {
@@ -288,7 +293,7 @@ struct PulseCard: View {
                         MainWindow.show(.browser(h.name))
                     }
                     .controlSize(.small).buttonStyle(.link).font(.caption)
-                    .padding(.leading, 28)
+                    .padding(.leading, indent)
                 }
                 if let a = h.advice {
                     HStack(alignment: .top, spacing: 6) {
@@ -300,31 +305,33 @@ struct PulseCard: View {
                                 .disabled(pulse.restarting != nil)
                         }
                     }
-                    .padding(.leading, 28)
+                    .padding(.leading, indent)
                 }
             }
             if let problem = pulse.quitProblem {
-                Text(problem).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true).padding(.leading, 28)
+                Text(problem).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true).padding(.leading, indent)
             }
             if let problem = pulse.restartProblem {
-                Text(problem).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true).padding(.leading, 28)
+                Text(problem).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true).padding(.leading, indent)
             }
             if let feedback = pulse.actionFeedback {
                 Text(feedback).font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true).padding(.leading, 28)
+                    .fixedSize(horizontal: false, vertical: true).padding(.leading, indent)
             }
             if let note = pulse.current?.diskText {
-                Text(note).font(.caption).foregroundStyle(.orange).padding(.leading, 28)
+                Text(note).font(.caption).foregroundStyle(.orange).padding(.leading, indent)
             }
             if let note = pulse.current?.swapDiskText {
-                Text(note).font(.caption2).foregroundStyle(.secondary).padding(.leading, 28)
+                Text(note).font(.caption2).foregroundStyle(.secondary).padding(.leading, indent)
             }
-            PulseHistoryChart()
-            HStack(spacing: 10) {
-                label(tr("Thermal pressure"), thermalText, thermalColor)
-                label(tr("Memory"), memoryText, pulse.memory == .normal ? .secondary : pulse.memory == .warning ? .orange : .red)
+            if headline {
+                PulseHistoryChart()
+                HStack(spacing: 10) {
+                    label(tr("Thermal pressure"), thermalText, thermalColor)
+                    label(tr("Memory"), memoryText, pulse.memory == .normal ? .secondary : pulse.memory == .warning ? .orange : .red)
+                }
+                .padding(.leading, indent)
             }
-            .padding(.leading, 28)
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill((pulse.sampled ? pulse.severity : .secondary).opacity(plain ? 0 : 0.08)))
