@@ -9,11 +9,14 @@ public struct SpaceEntry: Codable, Sendable, Identifiable, Hashable {
     public var path: String
     public var name: String
     public var isDir: Bool
-    /// Space removing it gives back: APFS clones count their private blocks, a hard-linked file once.
+    /// Estimated private usage, counting hard links once; actual reclaimed space is measured separately.
     public var bytes: Int64
     public var files: Int
     /// Newest modification or status change inside.
     public var newest: Date?
+    public var sizeState: AppSizeState? = nil
+    public var effectiveSizeState: AppSizeState { sizeState ?? (bytes > 0 ? .incomplete : .unavailable) }
+    public var sizeText: String { AppSize.text(bytes, state: effectiveSizeState) }
 }
 
 /// A folder's contents, biggest first. Items under the size floor are summed into `otherBytes`.
@@ -42,6 +45,8 @@ public struct SpaceTree: Codable, Sendable {
     public var complete: Bool
     public var duration: TimeInterval
     public var language: String?
+    public var sizeVersion: Int? = nil
+    public var cancelled: Bool? = nil
 
     public func folder(_ path: String) -> SpaceFolder? { folders[path] }
 
@@ -108,14 +113,15 @@ public enum SpaceLens {
         var st = stat()
         guard lstat(rootPath, &st) == 0, (st.st_mode & S_IFMT) == S_IFDIR else {
             return SpaceTree(root: rootPath, scanned: started, folders: [:], large: [], unreadable: [rootPath],
-                             complete: false, duration: 0, language: L10n.current.rawValue)
+                             complete: false, duration: 0, language: L10n.current.rawValue, sizeVersion: 1, cancelled: cancellation.isCancelled)
         }
         let walker = Walker(root: rootPath, device: st.st_dev, cancellation: cancellation, progress: progress)
         walker.run()
         return SpaceTree(root: rootPath, scanned: started, folders: walker.folders,
-                         large: walker.large.sorted { $0.bytes > $1.bytes }, unreadable: walker.unreadable.sorted(),
-                         complete: !cancellation.isCancelled, duration: Date().timeIntervalSince(started),
-                         language: L10n.current.rawValue)
+                         large: walker.large.sorted { $0.bytes > $1.bytes }, unreadable: Set(walker.unreadable).sorted(),
+                         complete: !cancellation.isCancelled && walker.folders[rootPath]?.entry.effectiveSizeState == .complete,
+                         duration: Date().timeIntervalSince(started), language: L10n.current.rawValue,
+                         sizeVersion: 1, cancelled: cancellation.isCancelled)
     }
 
     /// A fixed pool of threads takes folders off one shared stack, at every depth. Listing a
@@ -133,6 +139,7 @@ public enum SpaceLens {
             var other: Int64 = 0
             var otherCount = 0
             var ok = true
+            var finished = false
             init(path: String, parent: Node?) { self.path = path; self.parent = parent }
         }
 
@@ -143,6 +150,7 @@ public enum SpaceLens {
         let lock = NSLock()
         let queue = NSCondition()
         var stack: [Node] = []
+        var nodes: [String: Node] = [:]
         var done = false
         var folders: [String: SpaceFolder] = [:]
         var large: [LargeFile] = []
@@ -159,6 +167,7 @@ public enum SpaceLens {
 
         func run() {
             stack = [Node(path: root, parent: nil)]
+            nodes = [root: stack[0]]
             let group = DispatchGroup()
             for _ in 0..<Walker.threads {
                 let t = Thread { [self] in work(); group.leave() }
@@ -167,6 +176,14 @@ public enum SpaceLens {
                 t.start()
             }
             group.wait()
+            // Cancelled workers leave queued children unfinished. Fold each of those back into
+            // its parent so known bytes remain browsable and unvisited folders stay unknown.
+            if cancellation.isCancelled {
+                for node in nodes.values.sorted(by: { $0.path.count > $1.path.count }) where !node.finished {
+                    node.ok = false
+                    finish(node)
+                }
+            }
         }
 
         private func work() {
@@ -184,13 +201,16 @@ public enum SpaceLens {
             let dir = node.path
             var subdirs: [String] = []
             var fileEntries: [BulkWalk.Entry] = []
-            node.ok = BulkWalk.entries(of: dir, cancellation: cancellation) { e in
-                if e.error != 0 { return }
+            var failures: [String] = []
+            let listed = BulkWalk.entries(of: dir, cancellation: cancellation) { e in
+                if e.error != 0 { failures.append(dir + "/" + e.name); return }
                 if e.isDir { subdirs.append(dir + "/" + e.name) } else { fileEntries.append(e) }
             }
+            node.ok = listed && failures.isEmpty && !cancellation.isCancelled
             var bigFiles: [LargeFile] = []
             var own: Int64 = 0
             for e in fileEntries {
+                if cancellation.isCancelled { node.ok = false; break }
                 let path = dir + "/" + e.name
                 var size: Int64
                 if e.links > 1 {
@@ -207,17 +227,22 @@ public enum SpaceLens {
                 }
                 if size >= SpaceLens.floor {
                     node.kids.append(SpaceEntry(path: path, name: e.name, isDir: false, bytes: size, files: 1,
-                                                newest: Date(timeIntervalSince1970: TimeInterval(changed))))
+                                                newest: Date(timeIntervalSince1970: TimeInterval(changed)), sizeState: .complete))
                 } else { node.other += size; node.otherCount += 1 }
             }
             node.total = own
             // Stay on this volume: mounted images and network shares are not this disk's space.
-            let local = subdirs.filter { var st = stat(); return lstat($0, &st) == 0 && st.st_dev == device }
+            let local = subdirs.filter { path in
+                var st = stat()
+                guard lstat(path, &st) == 0 else { failures.append(path); node.ok = false; return false }
+                return st.st_dev == device
+            }
 
             lock.lock()
             large += bigFiles
-            if !node.ok { unreadable.append(dir) }
-            files += fileEntries.count
+            if !listed { unreadable.append(dir) }
+            unreadable += failures
+            files += node.count
             bytes += own
             let report = progress != nil && Date().timeIntervalSince(lastReport) > 0.25
             if report { lastReport = Date() }
@@ -228,7 +253,10 @@ public enum SpaceLens {
 
             if local.isEmpty { finish(node); return }
             queue.lock()
-            stack.append(contentsOf: local.reversed().map { Node(path: $0, parent: node) })
+            let children = local.reversed().map { Node(path: $0, parent: node) }
+            stack.append(contentsOf: children)
+            // Register unfinished nodes before making them runnable; finished nodes are released.
+            lock.lock(); for child in children { nodes[child.path] = child }; lock.unlock()
             queue.broadcast()
             queue.unlock()
         }
@@ -237,15 +265,21 @@ public enum SpaceLens {
         private func finish(_ start: Node) {
             var node: Node? = start
             while let n = node {
+                if n.finished { return }
+                n.finished = true
                 n.kids.sort { $0.bytes > $1.bytes }
-                if n.kids.count > SpaceLens.maxChildren {
-                    for k in n.kids[SpaceLens.maxChildren...] { n.other += k.bytes; n.otherCount += 1 }
-                    n.kids.removeLast(n.kids.count - SpaceLens.maxChildren)
+                let known = n.kids.filter { $0.effectiveSizeState == .complete }
+                if known.count > SpaceLens.maxChildren {
+                    for k in known.dropFirst(SpaceLens.maxChildren) { n.other += k.bytes; n.otherCount += 1 }
+                    n.kids = Array(known.prefix(SpaceLens.maxChildren)) + n.kids.filter { $0.effectiveSizeState != .complete }
+                    n.kids.sort { $0.bytes > $1.bytes }
                 }
                 let entry = SpaceEntry(path: n.path, name: (n.path as NSString).lastPathComponent, isDir: true, bytes: n.total,
-                                       files: n.count, newest: n.newest > 0 ? Date(timeIntervalSince1970: TimeInterval(n.newest)) : nil)
+                                       files: n.count, newest: n.newest > 0 ? Date(timeIntervalSince1970: TimeInterval(n.newest)) : nil,
+                                       sizeState: n.ok ? .complete : (n.total > 0 ? .incomplete : .unavailable))
                 lock.lock()
-                if n.total >= SpaceLens.floor || n.parent == nil {
+                nodes[n.path] = nil
+                if n.total >= SpaceLens.floor || !n.ok || n.parent == nil {
                     folders[n.path] = SpaceFolder(entry: entry, children: n.kids, otherBytes: n.other, otherCount: n.otherCount)
                 }
                 guard let p = n.parent else {
@@ -254,8 +288,9 @@ public enum SpaceLens {
                     return
                 }
                 p.total += entry.bytes; p.count += entry.files
+                p.ok = p.ok && n.ok
                 if let d = entry.newest { p.newest = max(p.newest, Int(d.timeIntervalSince1970)) }
-                if entry.bytes >= SpaceLens.floor { p.kids.append(entry) } else { p.other += entry.bytes; p.otherCount += 1 }
+                if entry.bytes >= SpaceLens.floor || !n.ok { p.kids.append(entry) } else { p.other += entry.bytes; p.otherCount += 1 }
                 p.pending -= 1
                 let last = p.pending == 0
                 lock.unlock()
@@ -272,14 +307,23 @@ public enum SpaceLens {
 
     public static func cached(root: String, from url: URL = cacheURL) -> SpaceTree? {
         guard let data = try? Data(contentsOf: url), let t = try? JSONDecoder().decode(SpaceTree.self, from: data),
-              t.root == root, t.complete, t.language == L10n.current.rawValue, t.folders[root] != nil else { return nil }
+              t.root == root, validCache(t), t.language == L10n.current.rawValue else { return nil }
         return t
     }
 
     public static func save(_ tree: SpaceTree, to url: URL = cacheURL) {
-        guard tree.complete else { return }
+        guard validCache(tree) else { return }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? JSONEncoder().encode(tree).write(to: url, options: .atomic)
+    }
+
+    private static func validCache(_ tree: SpaceTree) -> Bool {
+        tree.complete && tree.sizeVersion == 1 && tree.cancelled != true && tree.unreadable.isEmpty && tree.folders[tree.root] != nil &&
+            tree.folders.allSatisfy { path, folder in
+                path == folder.entry.path && folder.entry.effectiveSizeState == .complete && folder.entry.bytes >= 0 && folder.entry.files >= 0 &&
+                    folder.otherBytes >= 0 && folder.otherCount >= 0 &&
+                    folder.children.allSatisfy { $0.effectiveSizeState == .complete && $0.bytes >= 0 && $0.files >= 0 }
+            }
     }
 
     // MARK: Last opened

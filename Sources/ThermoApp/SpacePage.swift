@@ -18,6 +18,7 @@ final class SpaceLensModel: ObservableObject {
     @Published private(set) var tree: SpaceTree?
     @Published var path: String
     @Published private(set) var scanning = false
+    @Published private(set) var stopping = false
     @Published private(set) var progress: SpaceLens.Progress?
     /// Picked paths and what removing each gives back.
     @Published var basket: [String: Int64] = [:]
@@ -30,36 +31,50 @@ final class SpaceLensModel: ObservableObject {
     @Published private(set) var duplicateProgress: Duplicates.Progress?
     private var cancellation: ScanCancellation?
     private var duplicateCancellation: ScanCancellation?
+    private let cache: URL
+    private let measure: @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree
 
-    init(root: String = NSHomeDirectory()) {
+    init(root: String = NSHomeDirectory(), cache: URL = SpaceLens.cacheURL,
+         measure: @escaping @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree = { SpaceLens.scan($0, cancellation: $1, progress: $2) }) {
         self.root = root
+        self.cache = cache; self.measure = measure
         path = root
-        tree = SpaceLens.cached(root: root)
+        tree = SpaceLens.cached(root: root, from: cache)
     }
 
     var folder: SpaceFolder? { tree?.folder(path) }
     var basketBytes: Int64 { basket.values.reduce(0, +) }
+    func sizeState(_ path: String) -> AppSizeState {
+        if let entry = tree?.folder(path)?.entry { return entry.effectiveSizeState }
+        return tree?.folder((path as NSString).deletingLastPathComponent)?.children.first { $0.path == path }?.effectiveSizeState ?? .complete
+    }
+    var basketSizeText: String { AppSize.text(basketBytes, state: AppSize.combined(basket.keys.map(sizeState), bytes: basketBytes)) }
 
     static let duplicateRoots = ["Desktop", "Documents", "Downloads", "Movies", "Music", "Pictures"]
         .map { NSHomeDirectory() + "/" + $0 }
 
     func scan() {
+        guard !scanning, !working else { return }
         cancellation?.cancel()
         let token = ScanCancellation()
         cancellation = token
         scanning = true
+        stopping = false
         progress = nil
         let root = root
+        let measure = self.measure, cache = self.cache
         Task.detached(priority: .userInitiated) {
-            let tree = SpaceLens.scan(root, cancellation: token) { p in
+            let tree = measure(root, token) { p in
                 Task { @MainActor in if self.cancellation === token { self.progress = p } }
             }
-            SpaceLens.save(tree)
+            SpaceLens.save(tree, to: cache)
             await MainActor.run {
                 guard self.cancellation === token else { return }
                 self.scanning = false
+                self.stopping = false
                 self.progress = nil
-                if tree.complete || self.tree == nil { self.tree = tree }
+                self.tree = tree
+                self.cancellation = nil
                 if self.tree?.folder(self.path) == nil { self.path = root }
                 self.lastOpened = [:]
             }
@@ -67,10 +82,9 @@ final class SpaceLensModel: ObservableObject {
     }
 
     func stop() {
+        guard scanning else { return }
         cancellation?.cancel()
-        cancellation = nil
-        scanning = false
-        progress = nil
+        stopping = true
     }
 
     func open(_ path: String) { if tree?.folder(path) != nil { self.path = path } }
@@ -91,16 +105,18 @@ final class SpaceLensModel: ObservableObject {
 
     /// One line per path for the confirmation, biggest first.
     var basketLines: [String] {
-        basket.sorted { $0.value > $1.value }.map { ByteFormat.string($0.value).padding(toLength: 10, withPad: " ", startingAt: 0) + FSPath.tilde($0.key) }
+        basket.sorted { $0.value > $1.value }.map { AppSize.text($0.value, state: sizeState($0.key)) + "  " + FSPath.tilde($0.key) }
     }
 
     func trash() {
+        guard !scanning, !working else { return }
         let picked = basket
         guard !picked.isEmpty else { return }
         working = true
         let root = root
+        let incomplete = Set(picked.keys.filter { sizeState($0) != .complete })
         Task.detached(priority: .userInitiated) {
-            let result = ManualRemoval.trash(picked.keys.sorted(), sizes: picked, home: root)
+            let result = ManualRemoval.trash(picked.keys.sorted(), sizes: picked, home: root, incompletePaths: incomplete)
             await MainActor.run { self.afterTrash(result) }
         }
     }
@@ -112,7 +128,7 @@ final class SpaceLensModel: ObservableObject {
         if let t = tree {
             let updated = t.removing(removed)
             tree = updated
-            SpaceLens.save(updated)
+            SpaceLens.save(updated, to: cache)
             if updated.folder(path) == nil { path = root }
         }
         if let groups = duplicates {
@@ -124,7 +140,7 @@ final class SpaceLensModel: ObservableObject {
                 return g
             }
         }
-        var parts = [tr("Moved %1$@ to the Trash (%2$@).", trCount(result.removed.count, "%1$@ item", "%1$@ items"), ByteFormat.string(result.bytes))]
+        var parts = [tr("Moved %1$@ to the Trash (%2$@).", trCount(result.removed.count, "%1$@ item", "%1$@ items"), AppSize.text(result.bytes, state: result.bytesIncomplete == true ? .incomplete : .complete))]
         if !result.failed.isEmpty {
             parts.append(tr("Not moved: %1$@", result.failed.sorted { $0.key < $1.key }.map { "\(FSPath.tilde($0.key)) (\($0.value))" }.joined(separator: "; ")))
         }
@@ -187,6 +203,10 @@ struct SpacePage: View {
     var body: some View {
         VStack(spacing: 0) {
             header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 12)
+            if let tree = model.tree, !tree.complete {
+                Text(tr("Some locations were not fully measured. Sizes and chart areas show only known data."))
+                    .font(.callout).foregroundStyle(.orange).padding(.horizontal, 28).padding(.bottom, 8)
+            }
             if let outcome = model.outcome {
                 HStack(alignment: .top) {
                     Label(outcome, systemImage: "trash").font(.callout).foregroundStyle(.white.opacity(0.85)).textSelection(.enabled)
@@ -209,7 +229,7 @@ struct SpacePage: View {
         }
         .onChange(of: tab) { t in if t == .large { model.loadLastOpened() } }
         .sheet(isPresented: $confirming) {
-            ConfirmSheet(title: tr("Move %1$@ to the Trash?", ByteFormat.string(model.basketBytes)),
+            ConfirmSheet(title: tr("Move %1$@ to the Trash?", model.basketSizeText),
                          summary: tr("%1$@ you picked go to the Trash. Each one is checked again first; anything a program has open is skipped.",
                                      trCount(model.basket.count, "%1$@ item", "%1$@ items")),
                          destructive: false, heading: tr("What will be moved to the Trash"), lines: model.basketLines,
@@ -240,12 +260,13 @@ struct SpacePage: View {
     }
 
     var subtitle: String {
+        if model.stopping { return tr("Stopping…") }
         if model.scanning {
             guard let p = model.progress else { return tr("Measuring your home folder…") }
             return tr("Measuring… %1$@ files, %2$@", String(p.files), ByteFormat.string(p.bytes))
         }
-        guard let t = model.tree, let top = t.folder(t.root) else { return tr("Measuring your home folder…") }
-        return tr("Home folder %1$@ · measured %2$@", ByteFormat.string(top.entry.bytes), AgeFormat.string(t.scanned))
+        guard let t = model.tree, let top = t.folder(t.root) else { return tr("Size unavailable") }
+        return tr("Home folder %1$@ · measured %2$@", top.entry.sizeText, AgeFormat.string(t.scanned))
     }
 
     var footer: some View {
@@ -253,7 +274,7 @@ struct SpacePage: View {
             if model.scanning || model.working {
                 ProgressView().controlSize(.small)
                 if model.scanning {
-                    Button(tr("Stop")) { model.stop() }.buttonStyle(PillButtonStyle())
+                    Button(tr("Stop")) { model.stop() }.buttonStyle(PillButtonStyle()).disabled(model.stopping)
                 }
             } else {
                 Button(tr("Measure again")) { model.scan() }.buttonStyle(PillButtonStyle()).disabled(model.working)
@@ -264,9 +285,9 @@ struct SpacePage: View {
             Spacer()
             Text(model.basket.isEmpty ? tr("Tick files or folders to remove them") : trCount(model.basket.count, "%1$@ picked", "%1$@ picked"))
                 .font(.callout).foregroundStyle(.white.opacity(0.55))
-            Button(model.basket.isEmpty ? tr("Move to Trash") : tr("Review %1$@…", ByteFormat.string(model.basketBytes))) { confirming = true }
+            Button(model.basket.isEmpty ? tr("Move to Trash") : tr("Review %1$@…", model.basketSizeText)) { confirming = true }
                 .buttonStyle(PillButtonStyle(prominent: true, color: .cyan))
-                .disabled(model.basket.isEmpty || model.working)
+                .disabled(model.basket.isEmpty || model.working || model.scanning)
         }
         .padding(.horizontal, 28).padding(.vertical, 14)
         .background(Color.black.opacity(0.2))
@@ -296,7 +317,7 @@ struct SpacePage: View {
                         }
                         .padding(.horizontal, 12).padding(.vertical, 6)
                     }
-                    if f.children.isEmpty && f.otherCount == 0 {
+                    if f.children.isEmpty && f.otherCount == 0 && f.entry.effectiveSizeState == .complete {
                         Text(tr("Empty")).foregroundStyle(.secondary).padding(.top, 20)
                     }
                 }
@@ -304,8 +325,9 @@ struct SpacePage: View {
             }
         } else {
             VStack(spacing: 12) {
-                ProgressView()
-                Text(tr("Measuring your home folder once; after that every folder opens at once.")).font(.callout).foregroundStyle(.secondary)
+                if model.scanning { ProgressView() }
+                Text(model.scanning ? tr("Measuring your home folder once; after that every folder opens at once.") : tr("This location could not be measured. Check access and scan again."))
+                    .font(.callout).foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -330,7 +352,7 @@ struct SpacePage: View {
                     }
                     .buttonStyle(.plain)
                 }
-                Text(ByteFormat.string(model.folder?.entry.bytes ?? 0)).font(.caption.monospacedDigit()).foregroundStyle(.white.opacity(0.45))
+                Text(model.folder?.entry.sizeText ?? tr("Size unavailable")).font(.caption.monospacedDigit()).foregroundStyle(.white.opacity(0.45))
                     .padding(.leading, 6)
             }
         }
@@ -358,8 +380,8 @@ struct SpacePage: View {
                 }
             }
             .frame(width: 90, height: 5).accessibilityHidden(true)
-            Text(ByteFormat.string(e.bytes)).font(.system(size: 13, weight: .medium).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
-                .frame(width: 76, alignment: .trailing)
+            Text(e.sizeText).font(.system(size: 13, weight: .medium).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
+                .frame(minWidth: 76, alignment: .trailing)
             Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(canOpen ? 0.5 : 0))
                 .frame(width: 14).accessibilityHidden(true)
         }
@@ -548,7 +570,7 @@ struct Treemap: View {
             if r.width > 54 && r.height > 28 {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(e.name).font(.system(size: 11, weight: .medium)).lineLimit(1)
-                    Text(ByteFormat.string(e.bytes)).font(.system(size: 10).monospacedDigit()).opacity(0.7)
+                    Text(e.sizeText).font(.system(size: 10).monospacedDigit()).opacity(0.7)
                 }
                 .foregroundStyle(.white).padding(5)
             }
@@ -557,9 +579,9 @@ struct Treemap: View {
         .offset(x: r.minX + 1, y: r.minY + 1)
         .contentShape(Rectangle())
         .onTapGesture { open(e) }
-        .help("\(e.name) · \(ByteFormat.string(e.bytes))")
+        .help("\(e.name) · \(e.sizeText)")
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(e.name), \(ByteFormat.string(e.bytes))")
+        .accessibilityLabel("\(e.name), \(e.sizeText)")
         .accessibilityAddTraits(e.isDir ? .isButton : [])
     }
 

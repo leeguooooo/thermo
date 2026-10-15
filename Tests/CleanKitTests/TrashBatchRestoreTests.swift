@@ -41,6 +41,15 @@ final class TrashBatchRestoreTests: XCTestCase {
         XCTAssertNil(TrashBatches.refusal(batch.entries[0], home: home))
     }
 
+    func testManualTrashPreservesIncompleteSizeInResultAndHistory() throws {
+        let path = home + "/Downloads/partial.bin"
+        try file(path)
+        let result = ManualRemoval.trash([path], sizes: [path: 0], home: home, incompletePaths: [path], move: move)
+        XCTAssertEqual(result.removed, [path])
+        XCTAssertEqual(result.bytesIncomplete, true)
+        XCTAssertEqual(OperationJournal.read(home: home).first?.bytesIncomplete, true)
+    }
+
     func testAppTrashRecordsABatchAndEmptyTrashRemovesOnlyIt() throws {
         let app = home + "/Applications/Fixture.app"
         try file(app + "/Contents/Info.plist")

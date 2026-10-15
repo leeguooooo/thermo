@@ -22,7 +22,7 @@ public enum AppSize {
         return .unmeasured
     }
 
-    static func measured(_ size: TreeSize, exists: Bool) -> AppSizeState {
+    public static func measured(_ size: TreeSize, exists: Bool) -> AppSizeState {
         if !exists { return .unavailable }
         if size.denied || size.incomplete {
             return max(size.bytes, size.allocated) > 0 ? .incomplete : .unavailable

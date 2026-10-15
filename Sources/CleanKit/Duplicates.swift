@@ -142,11 +142,11 @@ public enum ManualRemoval {
     }
 
     /// Moves each path to the Trash after checking it again: allowed, still there, not held open by a running program.
-    public static func trash(_ paths: [String], sizes: [String: Int64] = [:], home: String = NSHomeDirectory()) -> CleanResult {
-        trash(paths, sizes: sizes, home: home, move: RemovalOperations.live.trash)
+    public static func trash(_ paths: [String], sizes: [String: Int64] = [:], home: String = NSHomeDirectory(), incompletePaths: Set<String> = []) -> CleanResult {
+        trash(paths, sizes: sizes, home: home, incompletePaths: incompletePaths, move: RemovalOperations.live.trash)
     }
 
-    static func trash(_ paths: [String], sizes: [String: Int64], home: String, move: (String) throws -> URL) -> CleanResult {
+    static func trash(_ paths: [String], sizes: [String: Int64], home: String, incompletePaths: Set<String> = [], move: (String) throws -> URL) -> CleanResult {
         var result = CleanResult(id: "manual", trashed: true)
         let batchID = UUID().uuidString
         let open = OpenFiles.current()
@@ -161,6 +161,7 @@ public enum ManualRemoval {
             do {
                 let unrecorded = try TrashBatches.trash(path, bytes: sizes[path] ?? 0, id: batchID, home: home, move: move)
                 result.removed.append(path)
+                if incompletePaths.contains(path) || sizes[path] == nil { result.bytesIncomplete = true }
                 result.bytes += sizes[path] ?? 0
                 if let unrecorded { result.failed["batch/" + path] = unrecorded } else { result.trashBatchID = batchID }
             } catch {

@@ -1,5 +1,6 @@
 @testable import CleanKit
 import XCTest
+import Darwin
 
 final class SpaceLensTests: XCTestCase {
     var dir: String!
@@ -74,5 +75,58 @@ final class SpaceLensTests: XCTestCase {
         XCTAssertNotNil(ManualRemoval.refusal(home + "/github.com/project/.git", home: home))
         XCTAssertNotNil(ManualRemoval.refusal("/Applications/Safari.app", home: home))
         XCTAssertNotNil(ManualRemoval.refusal(home + "/Downloads/../.ssh", home: home))
+    }
+
+    func testUnreadableSmallFolderStaysVisibleAndMakesAncestorsPartial() throws {
+        try XCTSkipIf(getuid() == 0, "requires ordinary user permissions")
+        try write("readable/file.bin", mb: 2)
+        let locked = dir + "/locked"
+        try FileManager.default.createDirectory(atPath: locked, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: locked)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: locked) }
+        let tree = SpaceLens.scan(dir)
+        XCTAssertFalse(tree.complete)
+        XCTAssertTrue(tree.unreadable.contains(locked))
+        let top = try XCTUnwrap(tree.folder(dir))
+        XCTAssertEqual(top.entry.effectiveSizeState, .incomplete)
+        XCTAssertGreaterThan(top.entry.bytes, 0)
+        let child = try XCTUnwrap(top.children.first { $0.path == locked })
+        XCTAssertEqual(child.effectiveSizeState, .unavailable)
+        XCTAssertEqual(tree.folder(locked)?.entry.effectiveSizeState, .unavailable)
+    }
+
+    func testCancellationKeepsKnownBytesAndUnvisitedChildrenInTheReturnedTree() throws {
+        try write("known.bin", mb: 2)
+        try write("queued/other.bin", mb: 2)
+        let cancellation = ScanCancellation()
+        let tree = SpaceLens.scan(dir, cancellation: cancellation) { _ in cancellation.cancel() }
+        XCTAssertFalse(tree.complete)
+        XCTAssertEqual(tree.cancelled, true)
+        let top = try XCTUnwrap(tree.folder(dir))
+        XCTAssertGreaterThan(top.entry.bytes, 0)
+        XCTAssertEqual(top.entry.effectiveSizeState, .incomplete)
+        XCTAssertEqual(top.children.first { $0.name == "known.bin" }?.effectiveSizeState, .complete)
+        XCTAssertEqual(top.children.first { $0.name == "queued" }?.effectiveSizeState, .unavailable)
+    }
+
+    func testPrecancelledScanStillReturnsAnUnknownRoot() throws {
+        let token = ScanCancellation(); token.cancel()
+        let tree = SpaceLens.scan(dir, cancellation: token)
+        XCTAssertFalse(tree.complete)
+        XCTAssertEqual(tree.folder(dir)?.entry.effectiveSizeState, .unavailable)
+        XCTAssertNotNil(tree.folder(dir))
+    }
+
+    func testIncompleteAndLegacyTreesCannotBeReusedAsCompleteCaches() throws {
+        let url = URL(fileURLWithPath: dir + "/cache.json")
+        let complete = SpaceLens.scan(dir)
+        SpaceLens.save(complete, to: url)
+        XCTAssertNotNil(SpaceLens.cached(root: dir, from: url))
+        var legacy = complete; legacy.sizeVersion = nil
+        var partial = complete; partial.folders[dir]?.entry.sizeState = .unavailable
+        for invalid in [legacy, partial] {
+            try JSONEncoder().encode(invalid).write(to: url)
+            XCTAssertNil(SpaceLens.cached(root: dir, from: url))
+        }
     }
 }

@@ -80,12 +80,13 @@ struct SpaceCommand {
             throw CLIError(tr("%1$@ is smaller than 1 MB or was not measured", FS.tilde(path)))
         }
         if args.has("json") { print(Export.json(f)); return }
-        var lines = [style.bold(FS.tilde(path) + "  " + ByteFormat.string(f.entry.bytes))]
+        var lines = [style.bold(FS.tilde(path) + "  " + f.entry.sizeText)]
+        if f.entry.effectiveSizeState != .complete { lines.append(style.yellow(tr("Some locations were not fully measured. Sizes and chart areas show only known data."))) }
         let total = max(1, f.entry.bytes)
         for c in f.children.prefix(args.has("all") ? .max : 30) {
             let share = Double(c.bytes) / Double(total)
             let bar = String(repeating: "█", count: Int(share * 20)) + String(repeating: "·", count: 20 - Int(share * 20))
-            lines.append("  " + pad(ByteFormat.string(c.bytes), 9, right: true) + "  " + style.dim(bar) + "  " + c.name + (c.isDir ? "/" : ""))
+            lines.append("  " + pad(c.sizeText, 18, right: true) + "  " + style.dim(bar) + "  " + c.name + (c.isDir ? "/" : ""))
         }
         if f.otherBytes > 0 {
             lines.append(style.dim("  " + pad(ByteFormat.string(f.otherBytes), 9, right: true) + "  "
@@ -146,7 +147,10 @@ struct SpaceCommand {
         var ok: [String] = []
         for p in paths {
             if let why = ManualRemoval.refusal(p) { lines.append(style.yellow("  ✗ " + FS.tilde(p) + "  " + why)) }
-            else { ok.append(p); lines.append("  " + pad(ByteFormat.string(FS.size(p).bytes), 9, right: true) + "  " + FS.tilde(p)) }
+            else {
+                let size = FS.size(p)
+                ok.append(p); lines.append("  " + AppSize.text(size.bytes, state: AppSize.measured(size, exists: FS.exists(p))) + "  " + FS.tilde(p))
+            }
         }
         out(lines)
         guard !ok.isEmpty else { exit(1) }
@@ -157,9 +161,11 @@ struct SpaceCommand {
             fflush(stdout)
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print(tr("cancelled")); return }
         }
-        let sizes = Dictionary(uniqueKeysWithValues: ok.map { ($0, FS.size($0).bytes) })
-        let result = ManualRemoval.trash(ok, sizes: sizes)
-        print(tr("Moved %1$@ to the Trash (empty it to get the space back)", ByteFormat.string(result.bytes)))
+        let measured = Dictionary(ok.map { ($0, FS.size($0)) }, uniquingKeysWith: { first, _ in first })
+        let sizes = measured.mapValues(\.bytes)
+        let incomplete = Set(measured.filter { $0.value.incomplete || $0.value.denied }.map(\.key))
+        let result = ManualRemoval.trash(ok, sizes: sizes, incompletePaths: incomplete)
+        print(tr("Moved %1$@ to the Trash (empty it to get the space back)", AppSize.text(result.bytes, state: result.bytesIncomplete == true ? .incomplete : .complete)))
         if let id = result.trashBatchID { print(style.dim(tr("Put back: thermo clean restore %1$@", id))) }
         for (p, why) in result.failed.sorted(by: { $0.key < $1.key }) { print(style.yellow("  ✗ " + FS.tilde(p) + "  " + why)) }
         for p in result.whitelisted ?? [] { print(style.dim("  " + FS.tilde(p) + "  " + Whitelist.reason)) }

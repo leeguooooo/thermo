@@ -5,6 +5,8 @@ let zhHans: [String: String] = [
     "Complete size measurement": "完整测量大小",
     "This data could not be fully checked; inspect it in Finder before removing it": "此数据未能检查完整，移除前请先在 Finder 中核实",
     "Size unavailable": "大小未知",
+    "Some locations were not fully measured. Sizes and chart areas show only known data.": "部分位置未能完整测量，大小和图块面积只表示已测到的数据。",
+    "This location could not be measured. Check access and scan again.": "无法测量此位置，请检查访问权限后重新扫描。",
     "Signed ZIP and DMG app updates can be installed here with recovery; other formats use the original updater.": "签名 ZIP、DMG 应用更新可在此安装并保留恢复副本；其他格式请用原更新器。",
     "The update image mount or cleanup could not be confirmed; its workspace was preserved for manual inspection": "无法确认更新镜像的挂载或卸载结果，工作目录已保留，请手动检查",
     "The disk image could not be safely inspected or mounted": "无法安全检查或挂载更新镜像",
