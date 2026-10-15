@@ -368,15 +368,19 @@ enum CurvePreset: String, CaseIterable, Identifiable {
     }
 }
 
+/// The Fans page: one inspector panel per fan with its controls, then the speed history.
 struct FansView: View {
     @ObservedObject var monitor: Monitor
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             helperBanner
             if let s = monitor.snapshot {
                 if s.fans.isEmpty {
-                    Text(tr("This Mac has no fans.")).foregroundStyle(.secondary)
+                    InspectorPanel {
+                        Label(tr("This Mac has no fans."), systemImage: "fan")
+                            .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).padding(16)
+                    }
                 }
                 ForEach(s.fans) { f in
                     // Always usable: without a helper, Apply queues the setting and starts setup.
@@ -388,34 +392,35 @@ struct FansView: View {
                     Button(tr("All fans to Auto")) { monitor.setPolicy(.auto, fan: -1) }.disabled(monitor.helperBusy)
                 }
             }
-            FanChart(history: monitor.history)
+            VStack(alignment: .leading, spacing: 6) {
+                SectionHeader(title: tr("Fan speed, last 10 minutes"))
+                InspectorPanel { FanChart(history: monitor.history).padding(14) }
+            }
             Text(tr("Safety: fans go back to Auto while the CPU/GPU stays above %1$@ °C (%2$@ °C on Apple Silicon) and your settings resume once it cools down; also whenever the helper stops.",
                     String(Int(SafetyLimits.intel.ceiling)), String(Int(SafetyLimits.appleSilicon.ceiling))))
-                .font(.caption2).foregroundStyle(.secondary)
+                .font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
+                .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 4)
         }
         .onAppear { monitor.refreshHelper() }
     }
 
-    /// Setup card: one button, one administrator password, done.
+    /// Progress states are a quiet notice; states that need the person get a panel with its buttons.
     @ViewBuilder var helperBanner: some View {
         if monitor.uninstallingHelper {
-            setupCard(icon: "hourglass", title: tr("Uninstalling the fan helper…"),
-                      body: tr("Fan controls are paused while the helper is removed. Sensor readings remain available."), primary: nil)
+            notice(tr("Uninstalling the fan helper…"), tr("Fan controls are paused while the helper is removed. Sensor readings remain available."))
         } else {
         switch monitor.helperState {
         case .running:
             EmptyView()
         case .outdated:
-            setupCard(icon: "arrow.triangle.2.circlepath", title: tr("Updating the fan helper…"),
-                      body: tr("It switches to the new version by itself in a few seconds."), primary: nil)
+            notice(tr("Updating the fan helper…"), tr("It switches to the new version by itself in a few seconds."))
         case .notRunning:
             setupCard(icon: "exclamationmark.triangle", title: tr("Could not connect to the fan helper"),
                       body: tr("Check the connection again, or reinstall the helper. macOS may ask for an administrator password."),
                       primary: (tr("Retry"), { monitor.refreshHelper() }),
                       secondary: (tr("Reinstall…"), { monitor.beginSetup() }))
         case .unknown:
-            setupCard(icon: "hourglass", title: tr("Checking the fan helper…"),
-                      body: tr("Reading the helper’s status. You can keep viewing sensor readings."), primary: nil)
+            notice(tr("Checking the fan helper…"), tr("Reading the helper’s status. You can keep viewing sensor readings."))
         case .notInstalled, .needsApproval:
             setupCard(icon: "fan", title: tr("Let Thermo control the fans"),
                       body: tr("Fan control uses a small helper that runs with system rights. It only sets fan speeds within the fan's own limits, and hands the fans back to macOS when the helper stops or the Mac gets too hot. macOS asks for your password once; updates need nothing more."),
@@ -424,24 +429,42 @@ struct FansView: View {
         }
     }
 
+    func notice(_ title: String, _ body: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            NoticeBanner(text: title + " " + body + (monitor.settingUp && !monitor.uninstallingHelper ? " " + tr("Setting up…") : ""), busy: true)
+            pendingNote
+        }
+    }
+
+    @ViewBuilder var pendingNote: some View {
+        if !monitor.pendingPolicies.isEmpty {
+            Text(tr("Your fan setting is applied as soon as the helper is ready."))
+                .font(.system(size: 11)).foregroundStyle(.orange).padding(.horizontal, 4)
+        }
+    }
+
     func setupCard(icon: String, title: String, body: String, primary: (String, () -> Void)?, secondary: (String, () -> Void)? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        InspectorPanel {
             HStack(alignment: .top, spacing: 10) {
-                Image(systemName: icon).font(.title3).foregroundStyle(Color.accentColor).frame(width: 22)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title).font(.callout.weight(.semibold))
-                    Text(body).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Image(systemName: icon).font(.system(size: 13)).foregroundStyle(.white.opacity(0.55))
+                    .frame(width: 18).padding(.top, 1).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+                    Text(body).font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).fixedSize(horizontal: false, vertical: true)
                     if !monitor.pendingPolicies.isEmpty {
                         Text(tr("Your fan setting is applied as soon as the helper is ready."))
-                            .font(.caption).foregroundStyle(.orange)
+                            .font(.system(size: 11)).foregroundStyle(.orange)
                     }
                 }
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, 14).padding(.vertical, 11)
             if !renderingPreview {
+                InspectorDivider(inset: 14)
                 HStack(spacing: 8) {
                     if monitor.settingUp || monitor.uninstallingHelper {
                         ProgressView().controlSize(.small)
-                        Text(tr(monitor.uninstallingHelper ? "Uninstalling…" : "Setting up…")).font(.caption).foregroundStyle(.secondary)
+                        Text(tr(monitor.uninstallingHelper ? "Uninstalling…" : "Setting up…")).font(.system(size: 11)).foregroundStyle(.white.opacity(0.55))
                     }
                     Spacer()
                     if let secondary {
@@ -452,10 +475,9 @@ struct FansView: View {
                             .modifier(ActionButtonStyle(prominent: true)).disabled(monitor.settingUp || monitor.helperBusy)
                     }
                 }
+                .padding(.horizontal, 14).padding(.vertical, 9)
             }
         }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(0.08)))
     }
 }
 
@@ -476,51 +498,79 @@ struct FanControlCard: View {
     @State private var curveError: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            FanRow(fan: fan)
-            Picker(tr("Mode"), selection: $mode) { ForEach(FanMode.allCases) { Text($0.title).tag($0) } }
-                .pickerStyle(.segmented)
-                .labelsHidden().accessibilityLabel(tr("Mode"))
-                .disabled(!enabled)
-            switch mode {
-            case .auto:
-                EmptyView()
-            case .fixed:
-                HStack {
-                    Slider(value: $rpm, in: fan.min...max(fan.max, fan.min + 1), step: 100).accessibilityLabel(tr("Fan speed"))
-                    Text(tr("%1$@ rpm", String(Int(rpm)))).monospacedDigit().frame(width: 76, alignment: .trailing)
+        InspectorPanel {
+            header
+            InspectorDivider(inset: 14)
+            VStack(alignment: .leading, spacing: 8) {
+                Picker(tr("Mode"), selection: $mode) { ForEach(FanMode.allCases) { Text($0.title).tag($0) } }
+                    .pickerStyle(.segmented)
+                    .labelsHidden().accessibilityLabel(tr("Mode"))
+                    .disabled(!enabled)
+                switch mode {
+                case .auto:
+                    EmptyView()
+                case .fixed:
+                    HStack {
+                        Slider(value: $rpm, in: fan.min...max(fan.max, fan.min + 1), step: 100).accessibilityLabel(tr("Fan speed"))
+                        Text(tr("%1$@ rpm", String(Int(rpm)))).font(.system(size: 12.5, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(.white.opacity(0.9)).frame(width: 76, alignment: .trailing)
+                    }
+                case .curve:
+                    HStack {
+                        Picker(tr("Preset"), selection: $preset) { ForEach(CurvePreset.allCases) { Text($0.title).tag($0) } }
+                        Picker(tr("Sensor"), selection: $sensor) { ForEach(CurveSensor.allCases, id: \.self) { Text($0.rawValue.uppercased()).tag($0) } }
+                            .frame(width: 130)
+                    }
+                    if preset == .custom {
+                        TextField("TEMP:RPM,…", text: $customCurve).textFieldStyle(.roundedBorder).font(.callout.monospaced())
+                            .accessibilityLabel(tr("Custom fan curve"))
+                            .onChange(of: customCurve) { _ in curveError = nil }
+                        Text(tr("Curve temperatures use °C. RPM is limited to this fan’s range."))
+                            .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55))
+                    } else if let c = preset.curve {
+                        Text(c.points.map { "\(Int($0.temperature))°C→\($0.rpm.isInfinite ? "max" : $0.rpm == 0 ? "min" : String(Int($0.rpm)))" }.joined(separator: "  "))
+                            .font(.system(size: 11).monospaced()).foregroundStyle(.white.opacity(0.55))
+                    }
+                    if let curveError { Text(curveError).font(.system(size: 11)).foregroundStyle(.red) }
                 }
-            case .curve:
-                HStack {
-                    Picker(tr("Preset"), selection: $preset) { ForEach(CurvePreset.allCases) { Text($0.title).tag($0) } }
-                    Picker(tr("Sensor"), selection: $sensor) { ForEach(CurveSensor.allCases, id: \.self) { Text($0.rawValue.uppercased()).tag($0) } }
-                        .frame(width: 130)
-                }
-                if preset == .custom {
-                    TextField("TEMP:RPM,…", text: $customCurve).textFieldStyle(.roundedBorder).font(.callout.monospaced())
-                        .accessibilityLabel(tr("Custom fan curve"))
-                        .onChange(of: customCurve) { _ in curveError = nil }
-                    Text(tr("Curve temperatures use °C. RPM is limited to this fan’s range."))
-                        .font(.caption).foregroundStyle(.secondary)
-                } else if let c = preset.curve {
-                    Text(c.points.map { "\(Int($0.temperature))°C→\($0.rpm.isInfinite ? "max" : $0.rpm == 0 ? "min" : String(Int($0.rpm)))" }.joined(separator: "  "))
-                        .font(.caption.monospaced()).foregroundStyle(.secondary)
-                }
-                if let curveError { Text(curveError).font(.caption).foregroundStyle(.red) }
             }
+            .padding(.horizontal, 14).padding(.vertical, 11)
+            InspectorDivider(inset: 14)
             HStack {
-                Text(pending ? tr("Waiting for helper: %1$@", policyText) : policyAvailable ? tr("Active: %1$@", policyText) : tr("Active policy unavailable")).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(pending ? tr("Waiting for helper: %1$@", policyText) : policyAvailable ? tr("Active: %1$@", policyText) : tr("Active policy unavailable"))
+                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
                 Spacer()
-                Button(applying ? tr("Applying…") : tr("Apply")) { applyCurrent() }.disabled(!enabled)
+                Button(applying ? tr("Applying…") : tr("Apply")) { applyCurrent() }.controlSize(.small).disabled(!enabled)
             }
+            .padding(.horizontal, 14).padding(.vertical, 9)
         }
         .disabled(!enabled)
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary.opacity(0.5)))
         .onAppear(perform: load)
         // The helper's policies arrive after the card appears (at launch, after a helper restart):
         // show what is really active, or Apply would send the stale Auto the card started with.
         .onChange(of: policy) { _ in load() }
+    }
+
+    /// Name, live speed and range on one line, with a thin load bar under it.
+    var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: "fan").font(.system(size: 13)).foregroundStyle(fan.manual ? Color.orange : .white.opacity(0.55))
+                    .frame(width: 18).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(fan.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+                    Text(tr("%1$@–%2$@ rpm · %3$@", String(Int(fan.min)), String(Int(fan.max)), fan.manual ? tr("manual") : tr("auto")))
+                        .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).monospacedDigit()
+                }
+                Spacer(minLength: 8)
+                Text(tr("%1$@ rpm", String(Int(fan.rpm))))
+                    .font(.system(size: 17, weight: .semibold, design: .rounded).monospacedDigit()).foregroundStyle(.white)
+            }
+            Bar(value: fan.load, color: fan.manual ? .orange : .blue)
+                .padding(.leading, 28).accessibilityHidden(true)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 11)
+        .accessibilityElement(children: .combine)
     }
 
     var policyText: String {

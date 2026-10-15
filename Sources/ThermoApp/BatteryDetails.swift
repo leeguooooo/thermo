@@ -26,24 +26,32 @@ struct BatteryDetails: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                IconTile(symbol: battery.charging ? "battery.100.bolt" : "battery.75", color: .green, size: 28)
-                Text(tr("Battery")).font(.callout.weight(.semibold))
-                Spacer()
-                if battery.charging { Text(tr("Charging")).font(.caption).foregroundStyle(.secondary) }
+        let pairs = stride(from: 0, to: rows.count, by: 2).map { Array(rows[$0..<min($0 + 2, rows.count)]) }
+        return VStack(alignment: .leading, spacing: 6) {
+            SectionHeader(title: tr("Battery")) {
+                if battery.charging {
+                    Label(tr("Charging"), systemImage: "bolt.fill").font(.system(size: 11)).foregroundStyle(.white.opacity(0.55))
+                }
             }
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                    HStack {
-                        Text(row.0).font(.caption).foregroundStyle(.secondary)
-                        Spacer()
-                        Text(row.1).font(.callout.monospacedDigit())
+            InspectorPanel {
+                ForEach(Array(pairs.enumerated()), id: \.offset) { i, pair in
+                    if i > 0 { InspectorDivider(inset: 14) }
+                    HStack(spacing: 0) {
+                        ForEach(Array(pair.enumerated()), id: \.offset) { j, row in
+                            if j > 0 { Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1).padding(.vertical, 6) }
+                            HStack(spacing: 8) {
+                                Text(row.0).font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                                Spacer(minLength: 4)
+                                Text(row.1).font(.system(size: 12.5, weight: .semibold).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
+                                    .lineLimit(1)
+                            }
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .frame(maxWidth: .infinity)
+                            .accessibilityElement(children: .combine)
+                        }
                     }
-                    .padding(.horizontal, 6)
                 }
             }
         }
-        .padding(16).glass()
     }
 }
