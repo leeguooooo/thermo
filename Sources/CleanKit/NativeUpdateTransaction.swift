@@ -92,7 +92,7 @@ public enum NativeUpdateTransaction {
         try privateDirectory(workspace)
         var keep = false
         defer { if !keep { try? FileManager.default.removeItem(atPath: workspace) } }
-        let payload = URL(fileURLWithPath: workspace + "/payload.zip")
+        let payload = URL(fileURLWithPath: workspace + "/payload.archive")
         try FileManager.default.copyItem(at: archive, to: payload)
         var st = stat()
         guard lstat(payload.path, &st) == 0, st.st_mode & S_IFMT == S_IFREG, st.st_size > 0, st.st_size <= 2 * 1024 * 1024 * 1024 else {
@@ -106,15 +106,20 @@ public enum NativeUpdateTransaction {
             guard let previous = Data(base64Encoded: reviewedArchiveSignature), previous.count == 64,
                   key.isValidSignature(previous, for: data) else { throw failure("The downloaded archive differs from the reviewed signed archive") }
         }
-        let expanded = try NativeZipManifest.validate(payload)
-        let free = (try FileManager.default.attributesOfFileSystem(forPath: workspace)[.systemFreeSize] as? NSNumber)?.int64Value ?? 0
-        guard free > expanded * 2 + 16 * 1024 * 1024 else { throw failure("There is not enough space to prepare and preserve this update") }
         let unpacked = workspace + "/unpacked"
         try privateDirectory(unpacked)
         try Task.checkCancellation()
-        let extracted = CommandRunner.run("/usr/bin/tar", arguments: ["-x", "-f", payload.path, "-C", unpacked, "--no-same-owner", "--no-same-permissions", "--safe-writes"],
+        if NativeDiskImage.isUDIF(data) {
+            do { try NativeDiskImage.copyApplication(from: payload, workspace: workspace, to: unpacked) }
+            catch let error as NativeDiskImage.CleanupFailure { keep = true; throw error }
+        } else {
+            let expanded = try NativeZipManifest.validate(payload)
+            let free = (try FileManager.default.attributesOfFileSystem(forPath: workspace)[.systemFreeSize] as? NSNumber)?.int64Value ?? 0
+            guard free > expanded * 2 + 16 * 1024 * 1024 else { throw failure("There is not enough space to prepare and preserve this update") }
+            let extracted = CommandRunner.run("/usr/bin/tar", arguments: ["-x", "-f", payload.path, "-C", unpacked, "--no-same-owner", "--no-same-permissions", "--safe-writes"],
                                           timeout: 120, outputLimit: 1_048_576, captureError: false, cancelled: { Task.isCancelled })
-        guard extracted.status == 0, !extracted.timedOut, !extracted.cancelled else { throw failure("The update could not be safely extracted") }
+            guard extracted.status == 0, !extracted.timedOut, !extracted.cancelled else { throw failure("The update could not be safely extracted") }
+        }
         var bundles: [String] = []
         func find(_ directory: String, depth: Int) throws {
             for name in try FileManager.default.contentsOfDirectory(atPath: directory) where !name.hasPrefix(".") && name != "__MACOSX" {

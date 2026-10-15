@@ -17,7 +17,23 @@ final class NativeUpdateTransactionTests: XCTestCase {
         try makeApp(package, version: "2.0", build: "200")
         try zip()
     }
-    override func tearDownWithError() throws { try FileManager.default.removeItem(atPath: home) }
+    override func tearDownWithError() throws {
+        for path in try ownedMountedImages() { XCTAssertTrue(NativeDiskImage.detachOwned(path), "temporary test image must detach") }
+        try FileManager.default.removeItem(atPath: home)
+    }
+
+    func ownedMountedImages() throws -> [String] {
+        let result = CommandRunner.run("/usr/bin/hdiutil", arguments: ["info", "-plist"], timeout: 15)
+        let info = try NativeDiskImage.plist(result)
+        return (info["images"] as? [[String: Any]] ?? []).compactMap { $0["image-path"] as? String }
+            .filter { NativeDiskImage.canonical($0).hasPrefix(home + "/") }
+    }
+
+    func dmg() throws {
+        archive = home + "/update.dmg"
+        try execute("/usr/bin/hdiutil", ["create", "-quiet", "-srcfolder", (package as NSString).deletingLastPathComponent,
+                                        "-format", "UDZO", archive])
+    }
 
     func execute(_ executable: String, _ args: [String]) throws {
         let result = CommandRunner.run(executable, arguments: args, timeout: 30)
@@ -158,10 +174,10 @@ final class NativeUpdateTransactionTests: XCTestCase {
         XCTAssertNoThrow(try NativeBundleValidation.compatible(new, with: old, release: prepared.release, host: "arm64"))
     }
 
-    func feedData(build: String = "200", token: String = "initial", signature supplied: String? = nil) throws -> Data {
+    func feedData(build: String = "200", token: String = "initial", signature supplied: String? = nil, format: String = "zip") throws -> Data {
         let bytes = try Data(contentsOf: URL(fileURLWithPath: archive))
         let signature = try supplied ?? key.signature(for: bytes).base64EncodedString()
-        return Data("<rss xmlns:s=\"\(SparkleFeed.namespace)\"><channel><item><s:version>\(build)</s:version><s:shortVersionString>2.0</s:shortVersionString><enclosure url=\"https://updates.example.test/Fixture.zip?token=\(token)\" length=\"\(bytes.count)\" s:edSignature=\"\(signature)\"/></item></channel></rss>".utf8)
+        return Data("<rss xmlns:s=\"\(SparkleFeed.namespace)\"><channel><item><s:version>\(build)</s:version><s:shortVersionString>2.0</s:shortVersionString><enclosure url=\"https://updates.example.test/Fixture.\(format)?token=\(token)\" length=\"\(bytes.count)\" s:edSignature=\"\(signature)\"/></item></channel></rss>".utf8)
     }
 
     func testDownloadPreparationAndCommitUseTheSameAuthenticatedPipeline() async throws {
@@ -178,6 +194,22 @@ final class NativeUpdateTransactionTests: XCTestCase {
         XCTAssertEqual(result.outcome, "succeeded", result.message)
         XCTAssertEqual(build(original), "200")
         XCTAssertEqual(result.receipt?.phase, "installed")
+    }
+
+    func testDMGDownloadPipelineAcceptsDeclaredFormatAndCleansItsMount() async throws {
+        try dmg()
+        let source = try XCTUnwrap(NativeAppUpdates.sources(apps: [try XCTUnwrap(AppUninstaller.read(original))]).first)
+        let feed = try feedData(format: "dmg")
+        let check = await NativeAppUpdates.check(source, fetcher: { _ in feed })
+        XCTAssertNil(NativeUpdateTransaction.installationRefusal(check))
+        let sourceArchive = URL(fileURLWithPath: archive)
+        let result = await NativeUpdateTransaction.installAvailable(check, home: home, feedFetcher: { _ in feed }, downloader: { url, destination, _ in
+            XCTAssertEqual(url.pathExtension, "dmg")
+            try FileManager.default.copyItem(at: sourceArchive, to: destination)
+        })
+        XCTAssertEqual(result.outcome, "succeeded", result.message)
+        XCTAssertEqual(build(original), "200")
+        XCTAssertTrue(try ownedMountedImages().isEmpty)
     }
 
     func testFeedChangingBeforeDownloadDoesNotStartAnInstaller() async throws {
@@ -234,6 +266,53 @@ final class NativeUpdateTransactionTests: XCTestCase {
         // This does not substitute for Developer ID certificate-rotation acceptance.
         XCTAssertNoThrow(try NativeBundleValidation.publisherMatches(original: original, replacement: original, team: "synthetic-nonempty-team"))
         XCTAssertThrowsError(try NativeBundleValidation.publisherMatches(original: original, replacement: package, team: "synthetic-nonempty-team"))
+    }
+
+    func testSignedDMGInstallsRestoresAndLeavesNoMountedVolume() throws {
+        try dmg()
+        let prepared = try prepared()
+        XCTAssertTrue(try ownedMountedImages().isEmpty)
+        let result = NativeUpdateTransaction.commit(prepared, home: home, processes: { ProcessTable(entries: []) }, afterSwap: {})
+        XCTAssertEqual(result.outcome, "succeeded", result.message)
+        XCTAssertEqual(build(original), "200")
+        let restored = NativeUpdateTransaction.recover(try XCTUnwrap(result.receipt).id, home: home, processes: { ProcessTable(entries: []) })
+        XCTAssertEqual(restored.outcome, "succeeded", restored.message)
+        XCTAssertEqual(build(original), "100")
+        XCTAssertTrue(try ownedMountedImages().isEmpty)
+        try NativeUpdateTransaction.discard(prepared, home: home)
+    }
+
+    func testSignedZIP64UsesTheSameInstallerAndRecovery() throws {
+        try zip64Fixture(Data(contentsOf: URL(fileURLWithPath: archive))).write(to: URL(fileURLWithPath: archive))
+        let prepared = try prepared()
+        let result = NativeUpdateTransaction.commit(prepared, home: home, processes: { ProcessTable(entries: []) }, afterSwap: {})
+        XCTAssertEqual(result.outcome, "succeeded", result.message)
+        XCTAssertEqual(build(original), "200")
+        let recovered = NativeUpdateTransaction.recover(try XCTUnwrap(result.receipt).id, home: home, processes: { ProcessTable(entries: []) })
+        XCTAssertEqual(recovered.outcome, "succeeded", recovered.message)
+        XCTAssertEqual(build(original), "100")
+    }
+
+    func testDMGWithMultipleAppsFailsAndStillDetaches() throws {
+        try makeApp(home + "/package/Other.app", version: "2.0", build: "200", id: "com.example.other")
+        try dmg()
+        XCTAssertThrowsError(try prepared())
+        XCTAssertTrue(try ownedMountedImages().isEmpty)
+        XCTAssertEqual(build(original), "100")
+    }
+
+    func testDiskImageLicenseEncryptionAndUnknownMetadataStayOutsideThermo() {
+        let valid: [String: Any] = ["Properties": ["Encrypted": false, "Software License Agreement": false, "Checksummed": true],
+                                    "Format": "UDZO", "Size Information": ["Total Bytes": 10_000_000]]
+        XCTAssertNoThrow(try NativeDiskImage.validateInfo(valid))
+        for flag in ["Encrypted", "Software License Agreement", "Checksummed"] {
+            var bad = valid
+            var properties = valid["Properties"] as! [String: Bool]
+            properties[flag] = flag != "Checksummed"
+            bad["Properties"] = properties
+            XCTAssertThrowsError(try NativeDiskImage.validateInfo(bad))
+        }
+        XCTAssertThrowsError(try NativeDiskImage.validateInfo([:]))
     }
 
     func testUnreadableRecoveryRecordDoesNotLookLikeAnEmptyHistory() throws {

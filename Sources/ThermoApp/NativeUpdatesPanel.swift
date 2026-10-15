@@ -245,7 +245,7 @@ struct NativeUpdatesPanel: View {
             }
             HStack {
                 if model.loading { ProgressView().controlSize(.small) }
-                Text(tr("Signed ZIP updates can be installed here with recovery; other formats use the original updater."))
+                Text(tr("Signed ZIP and DMG app updates can be installed here with recovery; other formats use the original updater."))
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button(tr("Recovery")) { model.showRecovery = true }.buttonStyle(PillButtonStyle())

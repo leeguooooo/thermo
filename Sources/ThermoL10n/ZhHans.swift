@@ -1,6 +1,15 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Signed ZIP and DMG app updates can be installed here with recovery; other formats use the original updater.": "签名 ZIP、DMG 应用更新可在此安装并保留恢复副本；其他格式请用原更新器。",
+    "The update image mount or cleanup could not be confirmed; its workspace was preserved for manual inspection": "无法确认更新镜像的挂载或卸载结果，工作目录已保留，请手动检查",
+    "The disk image could not be safely inspected or mounted": "无法安全检查或挂载更新镜像",
+    "Encrypted, licensed, oversized or unsupported disk images require the original updater": "加密、附带许可协议、过大或不支持的镜像请用原更新器处理",
+    "The disk image has no recognized mount": "无法识别更新镜像的挂载点",
+    "The disk image mounted outside its private mount point": "更新镜像没有挂载到指定私有目录",
+    "The update disk image was not mounted read-only": "更新镜像未以只读方式挂载",
+    "Cannot inspect the disk image contents": "无法核实更新镜像内容",
+    "The copied app differs from the read-only disk image": "复制的应用与只读镜像中的应用不一致",
     "The downloaded archive differs from the reviewed signed archive": "下载的归档与确认过的签名归档不同",
     "The installed app or recovery copy did not pass final verification": "安装后的应用或恢复副本未通过最终核实",
     "The app or recovery copy changed after replacement; both were preserved without overwriting": "替换后应用或恢复副本又发生变化，已保留两份对象，未覆盖它们",

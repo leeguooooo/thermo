@@ -8,7 +8,7 @@ extension NativeUpdateTransaction {
     public static func installationRefusal(_ check: NativeUpdateCheck) -> String? {
         guard check.status == "available", let release = check.release,
               check.source.kind == "sparkle", check.source.blocked == nil else { return "Check this app's update feed before installing" }
-        guard release.downloadURL?.pathExtension.lowercased() == "zip" else { return "This archive format must be installed by the original updater" }
+        guard ["zip", "dmg"].contains(release.downloadURL?.pathExtension.lowercased() ?? "") else { return "This archive format must be installed by the original updater" }
         if let type = release.installationType, type != "application" { return "This archive format must be installed by the original updater" }
         guard release.signature != nil,
               let info = NSDictionary(contentsOfFile: check.source.app.path + "/Contents/Info.plist"),
@@ -45,7 +45,7 @@ extension NativeUpdateTransaction {
             try privateDirectory(directory)
             let identity = FileIdentity.of(directory)
             defer { if FileIdentity.of(directory) == identity { try? FileManager.default.removeItem(atPath: directory) } }
-            let archive = URL(fileURLWithPath: directory + "/payload.zip")
+            let archive = URL(fileURLWithPath: directory + "/payload.archive")
             if let downloader { try await downloader(url, archive, current.length) }
             else { try await download(url, to: archive, length: current.length) }
             try Task.checkCancellation()
