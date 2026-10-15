@@ -1,0 +1,19 @@
+Window: "", App: Thermo QA.
+0 sheet Secondary Actions: Raise
+	1 container
+		2 image (selected) Description: 已选择, ID: checkmark.circle.fill
+		3 text 卸载 QA Roundtrip Fixture？ QA Roundtrip Fixture 和它的 1 处文件会移到废纸篓，共 36.9 KB。
+		4 scroll area
+			5 text 将移到废纸篓的内容
+			6 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+				7 text 12.3 KB  /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-visible-roundtrip-7r7mcldh/home/Applications/QA Roundtrip Fixture.app 24.6 KB  ~/Library/Caches/com.example.roundtrip.87ce22ae9e86424591bf8bde1d73e28b
+		8 text 可以从废纸篓放回。移动记录在 ~/Library/Logs/Thermo/clean.log。
+		9 button 取消
+		10 button 移到废纸篓
+11 menu bar
+	12 Thermo QA
+	13 编辑, ID: thermo.edit
+	14 显示, ID: thermo.view
+	15 窗口, ID: thermo.window
+
+The focused UI element is 0 sheet Secondary Actions: Raise

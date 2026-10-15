@@ -1,0 +1,52 @@
+Window: "Thermo", App: Thermo QA.
+0 standard window Thermo, Secondary Actions: Raise
+	1 container
+		2 image thermometer.medium
+		3 text Thermo
+		4 image Description: 网格2x2, ID: square.grid.2x2.fill
+		5 text 软件管理
+		6 text field (settable) Description: 搜索, Value: QA Roundtrip Fixture
+		7 scroll area
+			8 button 概览
+			9 button 传感器
+			10 button 风扇
+			11 text 资源监控
+			12 button CPU 占用
+			13 button GPU 占用
+			14 button 内存占用
+			15 button 标签整理
+			16 text 磁盘清理
+			17 button 智能扫描
+			18 button 空间透视
+			19 button Description: 软件管理, Value: 已选中
+			20 text AI Agent 诊断
+			21 button Claude 清理
+			22 button 智能检查
+		23 text 67 个应用 · 连同相关文件共 至少 22.3 GB
+		24 显示
+			25 radio button Description: 应用, Value: 1
+			26 radio button Description: 残留数据, Value: 0
+			27 radio button Description: 启动项, Value: 0
+			28 radio button Description: 更新, Value: 0
+		29 text 已把 24.6 KB 移到废纸篓（清倒废纸篓后才会腾出空间）
+		30 button Description: 关闭提示, ID: xmark
+		31 button 操作记录
+		32 scroll area
+			33 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+				34 text QA Roundtrip Fixture 1.0 com.example.roundtrip.87ce22ae9e86424591bf8bde1d73e28b · ~/Applications 12.3 KB
+				35 button Description: 卸载…, Help: 会先列出全部文件
+				36 button Description: QA Roundtrip Fixture的详情, Value: 已收起, ID: chevron.right
+		37 button 设置
+		38 text 运行中的应用、macOS 自带应用、密码管理器、VPN 和输入法不能在这里卸载。
+		39 button 完整测量大小
+		40 button 重新扫描
+	41 close button
+	42 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	43 minimize button
+44 menu bar
+	45 Thermo QA
+	46 编辑, ID: thermo.edit
+	47 显示, ID: thermo.view
+	48 窗口, ID: thermo.window
+
+The focused UI element is 6 text field (settable) Description: 搜索, Value: QA Roundtrip Fixture

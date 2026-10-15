@@ -7,8 +7,15 @@ enum AppExitGuard {
         let token = UUID(); helperRemovals.insert(token); return token
     }
     static func endHelperRemoval(_ token: UUID) { helperRemovals.remove(token) }
+    private static var restores = Set<UUID>()
+    static func beginRestore() -> UUID { let token = UUID(); restores.insert(token); return token }
+    static func endRestore(_ token: UUID) { restores.remove(token) }
 
     static func reply(show: @MainActor (MainPage) -> Void = { MainWindow.show($0) }) -> NSApplication.TerminateReply {
+        if !restores.isEmpty {
+            show(.history)
+            return .terminateCancel
+        }
         if !helperRemovals.isEmpty {
             show(.settings)
             return .terminateCancel

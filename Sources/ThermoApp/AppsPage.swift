@@ -113,6 +113,16 @@ final class AppsModel: ObservableObject {
         // Keep planning occupied until the physical read returns; reopening cannot add a worker.
     }
 
+    /// A successful restore changes both installed bundles and their related data.
+    /// Retain the list for navigation, but require a fresh inventory on next appearance.
+    func invalidateAfterRestore() {
+        retire()
+        measurementComplete = false
+        outcome = nil
+        orphans = nil
+        selectedOrphans.removeAll()
+    }
+
     nonisolated static func runningPaths(_ apps: [InstalledApp]) -> Set<String> {
         let table = ProcessTable.current(.init(cpu: false))
         return Set(apps.filter { AppUninstaller.runningProcess(in: [$0.path], processes: table) != nil }.map(\.path))

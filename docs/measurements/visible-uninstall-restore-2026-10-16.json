@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-15T21:29:51.049746+00:00",
+  "baseSourceCommit": "53a08b9",
+  "mode": "visible independent ad-hoc QA bundle; isolated Foundation home; native macOS Trash for owned fixtures only",
+  "qaBundleID": "dev.thermo.qa.2632e279015b4e2d96d5d9a73e9d41ec",
+  "qaBinarySHA256": "45bf8b105cc37cbdd96aa04664e6f739e98b5d82e13e64b905c9e3c5153dc9d1",
+  "beforeRefreshFixBinarySHA256": "3fadbae002383844831e92280e8dbe2acf13911575c4dbb4cc94b430cf61b028",
+  "probe": {
+    "foundationHome": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-visible-roundtrip-7r7mcldh/home",
+    "trashDestination": "/Users/leo/.Trash/trash-probe.txt",
+    "fileManagerHome": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-visible-roundtrip-7r7mcldh/home",
+    "probeRestored": "true"
+  },
+  "fixtureID": "com.example.roundtrip.87ce22ae9e86424591bf8bde1d73e28b",
+  "initialPayloadSHA256": {
+    "Applications/QA Roundtrip Fixture.app/Contents/Info.plist": "2774edfafb484927f8431a2b6f94ab512999902ba25a13127d76dd56e991e0ea",
+    "Applications/QA Roundtrip Fixture.app/Contents/MacOS/Fixture": "306c6ca7407560340797866e077e053627ad409277d1b9da58106fce4cf717cb",
+    "Applications/QA Roundtrip Fixture.app/Contents/Resources/marker.txt": "dc548091fe531888db13ca5f8887a52df8586ed130725bc418efde38a9566586",
+    "Library/Caches/com.example.roundtrip.87ce22ae9e86424591bf8bde1d73e28b/payload.bin": "bddf0c6d6cb71c4018cb08030e5993ea1c5c338fb226b10406b204fd744d8f0c"
+  },
+  "dataOnlyRestoredHashesMatch": true,
+  "fullRestoredHashesMatch": true,
+  "finalPayloadHashesMatch": true,
+  "allOwnedTrashItemsRetrieved": true,
+  "batchIDs": [
+    "26DA0507-4231-4AE5-8E65-BD0B9850629E",
+    "335D1E30-A723-4302-9525-440212A098FB",
+    "D0C8F791-98BA-469B-BAC9-E95F1AD5208A"
+  ],
+  "ownershipRecheckRefusedOneAttempt": true,
+  "refusedAttemptMovedNothing": true,
+  "reReviewThenSucceeded": true,
+  "visibleRestoreCounts": [
+    "1/1",
+    "2/2",
+    "1/1"
+  ],
+  "afterFullRestoreListRefreshedWithoutManualScan": true,
+  "afterDataRestoreListRefreshedWithoutManualScan": true,
+  "qaProcessAbsentAfterWindowClose": true,
+  "sourceSHA256": {
+    "Sources/CleanKit/TrashBatch.swift": "e08484b832054e8d02274006bc8941c561ea91c9f438e7c68c8e995c85acc529",
+    "Sources/ThermoApp/AppsPage.swift": "4f261c853d2aeba743430044b1e617049840c6e7e7e75ccc4ec99f298b5a6d3b",
+    "Sources/ThermoApp/HistoryPage.swift": "2d0787b7159aa32477fff6d0f3fb27bf7dd125a096a6e981cc972d0dc1199a13",
+    "Sources/ThermoApp/AppExitGuard.swift": "195239ae401470cf8daf095f8c2c218ab9eb1299a29b8c1a4f54952616fd502b"
+  },
+  "artifacts": {
+    "roundtrip-list-refreshed-2026-10-16": {
+      "screenshot": "roundtrip-list-refreshed-2026-10-16.jpg",
+      "screenshotSHA256": "5c4c08d36a437c287b8c582cc4cbb3306f30523507fa4fa67569aa2f510b8fcc",
+      "accessibility": "roundtrip-list-refreshed-2026-10-16.ax.txt"
+    },
+    "roundtrip-data-list-refreshed-2026-10-16": {
+      "screenshot": "roundtrip-data-list-refreshed-2026-10-16.jpg",
+      "screenshotSHA256": "ee7f57b880536f7153a9ec1fe1abe45a4ea2c25bc3041511f22c7d1a17251023",
+      "accessibility": "roundtrip-data-list-refreshed-2026-10-16.ax.txt"
+    },
+    "roundtrip-uninstall-review-2026-10-16": {
+      "screenshot": "roundtrip-uninstall-review-2026-10-16.jpg",
+      "screenshotSHA256": "8a9fc4bf00762638d4db94a58d423af45915fe012c0de0bb00d982c1f3164b71",
+      "accessibility": "roundtrip-uninstall-review-2026-10-16.ax.txt"
+    },
+    "roundtrip-data-review-2026-10-16": {
+      "screenshot": "roundtrip-data-review-2026-10-16.jpg",
+      "screenshotSHA256": "b439ba21745554fd9befff630f4b7eb2f793699eb114d258f3dddb7381a2d34a",
+      "accessibility": "roundtrip-data-review-2026-10-16.ax.txt"
+    },
+    "roundtrip-data-restored-2026-10-16": {
+      "screenshot": "roundtrip-data-restored-2026-10-16.jpg",
+      "screenshotSHA256": "1522de6f97ecc785e8c494b550893b495082202633fbb6a2ea902618f3b94ae2",
+      "accessibility": "roundtrip-data-restored-2026-10-16.ax.txt"
+    },
+    "roundtrip-full-restored-2026-10-16": {
+      "screenshot": "roundtrip-full-restored-2026-10-16.jpg",
+      "screenshotSHA256": "235d9c3c4a39e589897fe9b7f98bef92217706faabfa463412e89f1d1f15e595",
+      "accessibility": "roundtrip-full-restored-2026-10-16.ax.txt"
+    },
+    "roundtrip-stale-apps-before-fix-2026-10-16": {
+      "screenshot": "roundtrip-stale-apps-before-fix-2026-10-16.jpg",
+      "screenshotSHA256": "36820b10bda9ee78cf0983d7ad997ca406a5c4f6279cd97303afc9f59f03ab08",
+      "accessibility": "roundtrip-stale-apps-before-fix-2026-10-16.ax.txt"
+    }
+  },
+  "regression": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 55,
+      "ThermoAppTests": 131,
+      "CleanKitTests": 452,
+      "AgentCoreTests": 24
+    },
+    "total": 776,
+    "failures": 0,
+    "skippedHardwareTests": true,
+    "agentDoctorNotSelected": true
+  },
+  "boundaries": [
+    "All moved files were owned disposable QA samples; no Trash emptying",
+    "The native OS selected the real user Trash despite the isolated Foundation home; only returned destinations for owned samples were used",
+    "No fan control, helper install/uninstall or explicit helper restart action",
+    "Third-party application and external-volume restores remain unverified",
+    "Recovery availability of historical records and deep content changes remain separate acceptance items"
+  ],
+  "ownedWorkspaceRemoved": true
+}

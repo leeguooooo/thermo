@@ -13,7 +13,13 @@ final class HistoryModel: ObservableObject {
     @Published var notice: String?
 
     private let reader: @Sendable () -> [OperationRecord]
-    init(reader: @escaping @Sendable () -> [OperationRecord] = { OperationJournal.read(limit: 300) }) { self.reader = reader }
+    private let restoreBatch: @Sendable (String) throws -> TrashRestore
+    private let didRestore: @MainActor ([String]) -> Void
+    init(reader: @escaping @Sendable () -> [OperationRecord] = { OperationJournal.read(limit: 300) },
+         restoreBatch: @escaping @Sendable (String) throws -> TrashRestore = { try TrashBatches.restore(id: $0) },
+         didRestore: @escaping @MainActor ([String]) -> Void = { _ in AppModels.shared.apps.invalidateAfterRestore() }) {
+        self.reader = reader; self.restoreBatch = restoreBatch; self.didRestore = didRestore
+    }
 
     func load() {
         let reader = reader
@@ -27,16 +33,26 @@ final class HistoryModel: ObservableObject {
     func restore(_ record: OperationRecord) {
         guard !busy, record.undo?.kind == "trashBatch", let id = record.undo?.ref else { return }
         busy = true
+        let exitGuard = AppExitGuard.beginRestore()
+        let restoreBatch = self.restoreBatch
         Task.detached(priority: .userInitiated) {
             let text: String
+            var paths: [String] = []
             do {
-                let result = try TrashBatches.restore(id: id)
+                let result = try restoreBatch(id)
+                paths = result.items.filter { $0.status == "restored" }.map(\.original)
                 let restored = result.items.filter { $0.status == "restored" }.count
                 let others = result.items.filter { $0.status != "restored" }
                 text = ([tr("%1$@ of %2$@ items put back.", String(restored), String(result.items.count))]
                         + others.map { FS.tilde($0.original) + ": " + ($0.reason ?? $0.status) }).joined(separator: "\n")
             } catch { text = error.localizedDescription }
-            await MainActor.run { self.notice = text; self.busy = false; self.load() }
+            let restoredPaths = paths
+            await MainActor.run {
+                if !restoredPaths.isEmpty { self.didRestore(restoredPaths) }
+                self.notice = text; self.busy = false
+                AppExitGuard.endRestore(exitGuard)
+                self.load()
+            }
         }
     }
 }

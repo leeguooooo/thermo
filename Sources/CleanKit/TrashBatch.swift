@@ -121,11 +121,26 @@ public enum TrashBatches {
 
     /// `owner` nil accepts any owner: putting back a root-owned app Thermo itself moved is guarded by
     /// its recorded identity, while deleting one for good keeps requiring the user's own item.
+    /// The state home need not be where macOS actually puts this volume's Trash.
+    /// Never learn an allowed root from the journal: ask the OS for the original location.
+    static func trashDirectory(_ entry: TrashBatch.Entry, home: String, currentHome: String = NSHomeDirectory(),
+                               nativeTrash: (String) throws -> String = { path in
+                                   try FileManager.default.url(for: .trashDirectory, in: .userDomainMask,
+                                       appropriateFor: URL(fileURLWithPath: path), create: false).path
+                               }) -> String? {
+        let parent = (entry.destination as NSString).deletingLastPathComponent
+        if parent == home + "/.Trash" { return parent }
+        guard home == currentHome, entry.original.hasPrefix("/"),
+              !entry.original.split(separator: "/").contains(where: { $0 == "." || $0 == ".." }),
+              let native = try? nativeTrash((entry.original as NSString).deletingLastPathComponent),
+              native == parent else { return nil }
+        return native
+    }
+
     public static func refusal(_ entry: TrashBatch.Entry, home: String = NSHomeDirectory(), owner: uid_t? = getuid()) -> String? {
-        let trash = home + "/.Trash"
         let path = entry.destination
         // Immediate children only, with the directory's identity and resolved ancestors rechecked.
-        guard (path as NSString).deletingLastPathComponent == trash,
+        guard let trash = trashDirectory(entry, home: home),
               URL(fileURLWithPath: trash).resolvingSymlinksInPath().path == trash,
               Guard.deletionLocation(path) == path else { return "batch target is outside the expected Trash" }
         guard FS.exists(path) else { return "item was restored or is missing" }
@@ -177,7 +192,7 @@ public enum TrashBatches {
                 item.status = status; item.reason = reason
             } else if !dryRun {
                 do {
-                    let source = try RestoreDirectory(home + "/.Trash")
+                    let source = try RestoreDirectory((entry.destination as NSString).deletingLastPathComponent)
                     let target = try RestoreDirectory((entry.original as NSString).deletingLastPathComponent)
                     try beforeMove(entry)
                     if let (status, reason) = restoreRefusal(entry, home: home) {

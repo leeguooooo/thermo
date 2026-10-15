@@ -1,0 +1,57 @@
+Window: "Thermo", App: Thermo QA.
+0 standard window Thermo, Secondary Actions: Raise
+	1 container
+		2 image thermometer.medium
+		3 text Thermo
+		4 scroll area
+			5 button 概览
+			6 button 传感器
+			7 button 风扇
+			8 text 资源监控
+			9 button CPU 占用
+			10 button GPU 占用
+			11 button 内存占用
+			12 button 标签整理
+			13 text 磁盘清理
+			14 button 智能扫描
+			15 button 空间透视
+			16 button 软件管理
+			17 text AI Agent 诊断
+			18 button Claude 清理
+			19 button 智能检查
+		20 button Description: 操作记录, Value: 已选中
+		21 button 设置
+		22 scroll area
+			23 text 操作记录 Thermo 做过的每一项改动，以及在哪里撤销。 ~/Library/Application Support/Thermo/operations.jsonl
+			24 button Description: 刷新, ID: arrow.clockwise
+			25 text 已放回 1/1 项。
+			26 button Description: 关闭提示, ID: xmark
+			27 heading 今天
+			28 text 从废纸篓放回了文件
+			29 button Description: 显示详情, Help: 从废纸篓放回了文件, ID: chevron.right
+			30 text 6:25 · 335D1E30-A723-4302-9525-440212A098FB · 24.6 KB 已移除关联数据，应用本体保留 6:25 · QA Roundtrip Fixture · 24.6 KB
+			31 button 恢复…
+			32 button Description: 显示详情, Help: 已移除关联数据，应用本体保留, ID: chevron.right
+			33 text 可在此处放回原处。 从废纸篓放回了文件
+			34 button Description: 显示详情, Help: 从废纸篓放回了文件, ID: chevron.right
+			35 text 6:22 · 26DA0507-4231-4AE5-8E65-BD0B9850629E · 2 项 · 36.9 KB 卸载了应用 6:20 · QA Roundtrip Fixture · 2 项 · 36.9 KB
+			36 button 恢复…
+			37 button Description: 显示详情, Help: 卸载了应用, ID: chevron.right
+			38 text 可在此处放回原处。 卸载了应用 失败
+			39 button Description: 显示详情, Help: 卸载了应用, ID: chevron.right
+			40 text 6:17 · QA Roundtrip Fixture 从废纸篓放回了文件
+			41 button Description: 显示详情, Help: 从废纸篓放回了文件, ID: chevron.right
+			42 text 6:08 · D0C8F791-98BA-469B-BAC9-E95F1AD5208A · 24.6 KB 已移除关联数据，应用本体保留 6:08 · QA Roundtrip Fixture · 24.6 KB
+			43 button 恢复…
+			44 button Description: 显示详情, Help: 已移除关联数据，应用本体保留, ID: chevron.right
+			45 text 可在此处放回原处。
+	46 close button
+	47 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	48 minimize button
+49 menu bar
+	50 Thermo QA
+	51 编辑, ID: thermo.edit
+	52 显示, ID: thermo.view
+	53 窗口, ID: thermo.window
+
+The focused UI element is 0 standard window Thermo, Secondary Actions: Raise
