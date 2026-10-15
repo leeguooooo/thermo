@@ -546,8 +546,8 @@ enum Shell {
 }
 
 
-/// Lets a running scan be stopped. `current` is the scan in progress in this process
-/// (one at a time); the deep size walks check it every 1024 entries.
+/// Lets a running scan be stopped. Synchronous walks inherit a thread-scoped token;
+/// work dispatched to another thread must explicitly install its owning scan's token.
 public final class ScanCancellation: @unchecked Sendable {
     private let lock = NSLock()
     private var cancelled = false
@@ -563,11 +563,21 @@ public final class ScanCancellation: @unchecked Sendable {
         lock.lock(); cancelled = true; lock.unlock()
     }
 
-    private static let currentLock = NSLock()
-    nonisolated(unsafe) private static var _current: ScanCancellation?
+    private static let currentKey = "dev.thermo.scanCancellation"
     public static var current: ScanCancellation? {
-        get { currentLock.lock(); defer { currentLock.unlock() }; return _current }
-        set { currentLock.lock(); _current = newValue; currentLock.unlock() }
+        get { Thread.current.threadDictionary[currentKey] as? ScanCancellation }
+        set {
+            if let newValue { Thread.current.threadDictionary[currentKey] = newValue }
+            else { Thread.current.threadDictionary.removeObject(forKey: currentKey) }
+        }
+    }
+
+    /// Synchronous scope only: do not suspend or dispatch work without forwarding the token.
+    static func withCurrent<T>(_ token: ScanCancellation?, _ body: () throws -> T) rethrows -> T {
+        let previous = current
+        current = token
+        defer { current = previous }
+        return try body()
     }
 }
 

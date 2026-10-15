@@ -198,6 +198,16 @@ thermo tabs restore UUID --window WINDOW_ID --yes
 
 清理只以当前用户身份运行，root helper 不链接 CleanKit。
 
+## 软件管理
+
+「软件管理 → 更新」检查 Homebrew 管理的应用。首次打开使用 Homebrew 已有记录；「刷新目录并检查」先执行 `brew update`，再检查版本。App Store 更新有单独入口，其他来源的应用仍由各自更新器管理。
+
+`thermo apps updates --json` 输出覆盖范围、候选、跳过项与错误；`--refresh-catalog` 刷新 Homebrew 目录。`thermo apps updates apply TOKEN --dry-run` 预览单项更新，去掉 `--dry-run` 后交互确认，或用 `--yes` 执行。预览后应用、安装记录或 cask 定义变化会拒绝执行，正在运行的应用需要先退出。安装只指定该 cask，要求校验值，不强制覆盖，关闭自动清理和依赖升级，并使用 Homebrew 的 `--no-quit` 模式；Homebrew 仍会执行该软件包自己的安装步骤及附带工具更新。
+
+安装后同时核实 Homebrew 安装记录和应用目录中的版本；带构建号的版本也会核对构建号。命令失败、超时或版本不符均不算成功。更新开始时先记录“尚未核实”，结果再写入同一操作；安装与核实时会阻止正常退出，结束后可再次退出。Thermo 不提供软件更新的自动回退。
+
+「软件管理 → 启动项」可查看用户 `~/Library/LaunchAgents` 中的后台服务，并确认启用或停用。CLI 使用 `thermo apps startup` 查看，`thermo apps startup disable LABEL --dry-run` 预览，去掉 `--dry-run` 后交互确认，或加 `--yes` 执行。开关修改 launchd 的持久启用状态，不改写 plist，也不立即停止或启动程序。执行前复核文件与状态，完成后重新读取确认；可在同一页面反向切换，历史记录也提供撤销入口。系统级服务及 App 注册的其他登录项请点「打开系统登录项」管理。
+
 ## 风扇控制安全机制
 
 - 只有 root helper（`dev.thermo.helper`）写 SMC；转速始终限制在 SMC 报告的 min–max 内。

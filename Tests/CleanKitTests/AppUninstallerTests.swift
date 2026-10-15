@@ -39,6 +39,67 @@ final class AppUninstallerTests: XCTestCase {
 
     // MARK: guard
 
+    func testReviewedAppReplacementRefusesBeforeMovingLeftovers() throws {
+        let target = app("Review", "com.example.review")
+        make("Applications/Review.app/Contents")
+        make("Library/Caches/com.example.review")
+        let plan = AppUninstaller.plan(target, installed: [target], home: home, processes: ProcessTable(entries: []))
+        XCTAssertNil(plan.blocked)
+        try FileManager.default.moveItem(atPath: target.path, toPath: target.path + ".old")
+        make("Applications/Review.app/Contents")
+        let result = AppUninstaller.uninstall(plan, home: home, processes: { ProcessTable(entries: []) })
+        XCTAssertTrue(result.removed.isEmpty)
+        XCTAssertEqual(result.failed[target.path], "The app changed after review; review the uninstall again")
+        XCTAssertTrue(FS.exists(home + "/Library/Caches/com.example.review"))
+    }
+
+    func testInPlaceExecutableUpdateInvalidatesReview() throws {
+        make("Applications/Review.app/Contents/MacOS")
+        let path = home + "/Applications/Review.app"
+        let plist: [String: Any] = ["CFBundleExecutable": "Review", "CFBundleIdentifier": "com.example.review"]
+        let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+        try data.write(to: URL(fileURLWithPath: path + "/Contents/Info.plist"))
+        let executable = URL(fileURLWithPath: path + "/Contents/MacOS/Review")
+        try Data("old".utf8).write(to: executable)
+        let before = try XCTUnwrap(AppReviewIdentity.capture(path))
+        XCTAssertEqual(before, AppReviewIdentity.capture(path))
+        try Data("updated executable".utf8).write(to: executable)
+        XCTAssertNotEqual(before, AppReviewIdentity.capture(path))
+    }
+
+    func testOldSerializedPlanRequiresNewReview() throws {
+        make("Applications/Review.app/Contents")
+        let target = app("Review", "com.example.review")
+        let plan = UninstallPlan(app: target, paths: [target.path], bytes: 0)
+        let decoded = try JSONDecoder().decode(UninstallPlan.self, from: JSONEncoder().encode(plan))
+        let result = AppUninstaller.uninstall(decoded, home: home, processes: { ProcessTable(entries: []) })
+        XCTAssertTrue(result.removed.isEmpty)
+        XCTAssertEqual(result.failed[target.path], "The app changed after review; review the uninstall again")
+    }
+
+    func testReplacedLeftoverIsSkippedWhileUnchangedItemCanMove() throws {
+        let path = home + "/Library/Caches/com.example.review"
+        make("Library/Caches/com.example.review")
+        let identity = try XCTUnwrap(FileIdentity.of(path))
+        var result = CleanResult(id: "test", trashed: true)
+        var moves = 0
+        AppUninstaller.trash([path], bundleIDs: [], sizes: [:], home: home, processes: { ProcessTable(entries: []) },
+                             into: &result, identities: [path: identity], move: { source in
+            moves += 1
+            throw NSError(domain: "test", code: 1)
+        })
+        XCTAssertEqual(moves, 1)
+        try FileManager.default.moveItem(atPath: path, toPath: path + ".old")
+        make("Library/Caches/com.example.review")
+        result = CleanResult(id: "test", trashed: true)
+        AppUninstaller.trash([path], bundleIDs: [], sizes: [:], home: home, processes: { ProcessTable(entries: []) },
+                             into: &result, identities: [path: identity], move: { _ in
+            XCTFail("must not move a replacement")
+            throw NSError(domain: "test", code: 1)
+        })
+        XCTAssertEqual(result.failed[path], "The item changed after review; review the uninstall again")
+    }
+
     func testGuardAllowsAppBundlesAndMatchingPreferencesOnly() {
         let g = Guard(home: home)
         make("Library/Preferences/com.foo.Bar.plist", dir: false)

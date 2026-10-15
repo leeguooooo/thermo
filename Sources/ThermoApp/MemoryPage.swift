@@ -23,26 +23,31 @@ final class MemoryModel: ObservableObject {
     private var timer: Timer?
     private var sampling = false
     private var dayLoaded = Date.distantPast
+    private var generation = UUID()
 
     func start() {
         guard timer == nil else { return }
+        generation = UUID()
         sample()
         timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.sample() }
         }
     }
 
-    func stop() { timer?.invalidate(); timer = nil }
+    func stop() { timer?.invalidate(); timer = nil; generation = UUID() }
 
     func sample() {
         guard !sampling else { return }
         sampling = true
+        let token = generation
         if Date().timeIntervalSince(dayLoaded) >= 60 { loadDay() }
         Task.detached(priority: .utility) {
             let b = MemoryBreakdown.read()
             let inventory = MemoryInventory.collect()
             let history = PulseRecorder.shared.programHistory.records(since: Date().addingTimeInterval(-PulseHistory.keep))
             await MainActor.run {
+                self.sampling = false
+                guard self.generation == token else { return }
                 // App action identity is captured for each original context, never for merged groups.
                 let applications = NSWorkspace.shared.runningApplications
                 let programs = inventory.programs.map { program in
@@ -69,16 +74,16 @@ final class MemoryModel: ObservableObject {
                 self.suspects = MemorySuspects.find(programs: entries, history: self.programReadings, now: now)
                 self.activity = b.flatMap { MemoryActivity(previous: self.breakdown, current: $0) }
                 self.breakdown = b
-                self.sampling = false
             }
         }
     }
 
     func loadDay() {
         dayLoaded = Date()
+        let token = generation
         Task.detached(priority: .utility) {
             let records = PulseRecorder.shared.history.records(since: Date().addingTimeInterval(-PulseHistory.keep))
-            await MainActor.run { self.day = records }
+            await MainActor.run { if self.generation == token { self.day = records } }
         }
     }
 }

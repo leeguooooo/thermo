@@ -2,6 +2,18 @@ import XCTest
 @testable import AgentCore
 
 final class OperationJournalTests: XCTestCase {
+    func testLastAppendFinishesPendingOperationEvenInTheSameSecond() {
+        let started = OperationRecord(id: "same-operation", time: Date(timeIntervalSince1970: 100), feature: "apps", action: "update",
+            items: [.init(target: "fixture", status: "partial")])
+        var finished = started
+        finished.outcome = "succeeded"
+        finished.items = [.init(target: "fixture", status: "done")]
+        OperationJournal.record(started, home: home)
+        OperationJournal.record(finished, home: home)
+        let read = OperationJournal.read(home: home)
+        XCTAssertEqual(read.count, 1)
+        XCTAssertEqual(read.first?.outcome, "succeeded")
+    }
     var home: String!
     override func setUpWithError() throws {
         home = NSTemporaryDirectory() + "journal-" + UUID().uuidString

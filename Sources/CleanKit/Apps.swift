@@ -56,6 +56,9 @@ public struct UninstallPlan: Codable, Sendable {
     /// Everything that goes to the Trash: the bundle first, then its leftovers.
     public var paths: [String]
     public var bytes: Int64
+    /// Captured before review; absent in older serialized plans, which must be reviewed again.
+    public var identities: [String: String]? = nil
+    public var appIdentity: AppReviewIdentity? = nil
     /// Set when it cannot be uninstalled now.
     public var blocked: String?
     /// Installer packages that put files outside the home folder; Thermo leaves those.
@@ -117,14 +120,24 @@ public enum AppUninstaller {
                                each: ((InstalledApp) -> Void)? = nil) -> [InstalledApp] {
         var out = apps
         let lock = NSLock()
-        DispatchQueue.concurrentPerform(iterations: apps.count) { i in
-            if cancellation?.isCancelled == true { return }
-            var app = apps[i]
-            app.bytes = bundleSize(app.path, cancellation: cancellation)
-            app.leftovers = leftovers(for: app, installed: apps, home: home)
-            lock.lock(); out[i] = app; lock.unlock()
-            each?(app)
+        let cancellation = cancellation ?? ScanCancellation.current
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = min(4, max(2, ProcessInfo.processInfo.activeProcessorCount / 2))
+        queue.qualityOfService = .utility
+        for i in apps.indices {
+            queue.addOperation {
+                ScanCancellation.withCurrent(cancellation) {
+                    if cancellation?.isCancelled == true { return }
+                    var app = apps[i]
+                    app.bytes = bundleSize(app.path, cancellation: cancellation)
+                    app.leftovers = leftovers(for: app, installed: apps, home: home)
+                    guard cancellation?.isCancelled != true else { return }
+                    lock.lock(); out[i] = app; lock.unlock()
+                    each?(app)
+                }
+            }
         }
+        queue.waitUntilAllOperationsAreFinished()
         return out
     }
 
@@ -418,6 +431,8 @@ public enum AppUninstaller {
                                  receipts: receipts(for: app.bundleID))
         plan.kept = kept.isEmpty ? nil : kept
         plan.whitelisted = saved.isEmpty ? nil : saved
+        plan.identities = paths.reduce(into: [:]) { result, path in result[path] = FileIdentity.of(path) }
+        plan.appIdentity = AppReviewIdentity.capture(app.path)
         plan.blocked = refusal(plan, home: home, processes: processes ?? ProcessTable.current(.init(cpu: false)))
         return plan
     }
@@ -450,11 +465,13 @@ public enum AppUninstaller {
         var result = CleanResult(id: id, trashed: true)
         if let why = refusal(plan, home: home, processes: table()) {
             result.failed[plan.app.path] = why
+        } else if plan.appIdentity == nil || AppReviewIdentity.capture(plan.app.path) != plan.appIdentity {
+            result.failed[plan.app.path] = tr("The app changed after review; review the uninstall again")
         } else {
             let ids = plan.app.bundleID.map { [$0] } ?? []
             let sizes = Dictionary(uniqueKeysWithValues: plan.app.leftovers.map { ($0.path, $0.bytes) })
             trash(plan.paths, bundleIDs: ids, sizes: sizes.merging([plan.app.path: plan.app.bytes]) { a, _ in a },
-                  home: home, processes: table, into: &result)
+                  home: home, processes: table, into: &result, identities: plan.identities ?? [:])
         }
         finish(result, title: plan.app.name, home: home)
         return result
@@ -462,6 +479,7 @@ public enum AppUninstaller {
 
     static func trash(_ paths: [String], bundleIDs: [String], sizes: [String: Int64], home: String,
                       processes: () -> ProcessTable, into result: inout CleanResult,
+                      identities: [String: String]? = nil,
                       move: (String) throws -> URL = RemovalOperations.live.trash) {
         let g = Guard(home: home)
         let batchID = UUID().uuidString
@@ -475,6 +493,10 @@ public enum AppUninstaller {
             if let why = g.uninstallRefusal(path, bundleIDs: bundleIDs) { result.failed[path] = why; continue }
             if whitelist.protects(path) { result.whitelisted = (result.whitelisted ?? []) + [path]; continue }
             guard FS.exists(path) else { continue }
+            if let identities, identities[path] == nil || identities[path] != FileIdentity.of(path) {
+                result.failed[path] = tr("The item changed after review; review the uninstall again")
+                continue
+            }
             if runningProcess(in: [path], processes: table) != nil {
                 result.failed[path] = tr("a running executable uses this location")
                 continue

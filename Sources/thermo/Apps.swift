@@ -14,9 +14,71 @@ struct AppsCommand {
         switch rest.first {
         case "uninstall", "remove", "rm": try uninstall(Array(rest.dropFirst()))
         case "leftovers", "orphans": try leftovers(Array(rest.dropFirst()))
+        case "startup": try startup(Array(rest.dropFirst()))
+        case "updates": try updates(Array(rest.dropFirst()))
         case nil, "list", "ls": list()
-        default: throw CLIError("usage: thermo apps [uninstall NAME [--dry-run] [--yes] | leftovers [remove ID…|all]]")
+        default: throw CLIError("usage: thermo apps [uninstall NAME | leftovers | startup [enable|disable LABEL]]")
         }
+    }
+
+    func updates(_ rest: [String]) throws {
+        let report = AppUpdates.scan(refreshCatalog: args.has("refresh-catalog"))
+        if rest.isEmpty || rest == ["list"] {
+            if args.has("json") { print(Export.json(report)); return }
+            out([tr("Homebrew apps only. App Store and other app updaters are managed separately.")]
+                + report.items.map { "\($0.token)  \($0.installedVersions.joined(separator: ", ")) → \($0.targetVersion)" + ($0.blocked.map { " · " + tr($0) } ?? "") }
+                + report.skipped.keys.sorted().map { $0 + ": " + tr(report.skipped[$0] ?? "") }
+                + report.issues.map { tr($0) })
+            return
+        }
+        guard rest.count == 2, rest[0] == "apply", let item = report.items.first(where: { $0.token == rest[1] }) else {
+            throw CLIError("usage: thermo apps updates [list | apply TOKEN] [--refresh-catalog] [--dry-run] [--yes]")
+        }
+        if args.has("dry-run") {
+            if args.has("json") { print(Export.json(item)) }
+            else { out([item.name + ": " + item.installedVersions.joined(separator: ", ") + " → " + item.targetVersion] + item.appPaths + (item.blocked.map { [tr($0)] } ?? [])) }
+            return
+        }
+        if let why = item.blocked { throw CLIError(tr(why)) }
+        if !args.has("yes") {
+            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("not a terminal; add --yes to confirm") }
+            out([item.name + ": " + item.installedVersions.joined(separator: ", ") + " → " + item.targetVersion] + item.appPaths
+                + [tr("Homebrew runs the installation steps and may update bundled tools. Thermo cannot automatically roll this update back. Quit the app first.")])
+            print(tr("Install this update? [y/N] "), terminator: ""); fflush(stdout)
+            guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { return }
+        }
+        let result = AppUpdates.install(item)
+        if args.has("json") { print(Export.json(result)) } else { out([tr(result.message)]) }
+        if result.outcome != "succeeded" { throw CLIError(tr("The update was not verified")) }
+    }
+
+    func startup(_ rest: [String]) throws {
+        let report = StartupItems.scan()
+        guard let action = rest.first, action != "list" else {
+            guard rest.count <= 1 else { throw CLIError("usage: thermo apps startup [list]") }
+            if args.has("json") { print(Export.json(report)); return }
+            out(report.items.map { "\($0.enabled.map { $0 ? "on " : "off" } ?? "?  ")  \($0.label)  \($0.path)" + ($0.blocked.map { " · " + tr($0) } ?? "") }
+                + report.issues.map { tr($0) })
+            return
+        }
+        guard ["enable", "disable"].contains(action), rest.count == 2,
+              let item = report.items.first(where: { $0.label == rest[1] }) else {
+            throw CLIError("usage: thermo apps startup [list | enable LABEL | disable LABEL] [--dry-run] [--yes]")
+        }
+        guard item.blocked == nil, item.enabled != nil else { throw CLIError(tr(item.blocked ?? "Could not read startup state; refresh before changing it")) }
+        if args.has("dry-run") {
+            if args.has("json") { print(Export.json(["action": action, "label": item.label, "path": item.path])) }
+            else { out([action + " " + item.label, item.path, tr("Changes background startup eligibility; does not stop or start a running program.")]) }
+            return
+        }
+        if !args.has("yes") {
+            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("not a terminal; add --yes to confirm") }
+            print(action + " " + item.label + "? [y/N] ", terminator: ""); fflush(stdout)
+            guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { return }
+        }
+        let changed = try StartupItems.setEnabled(action == "enable", item: item)
+        if args.has("json") { print(Export.json(changed)) }
+        else { out([tr("Startup state verified"), changed.label + ": " + (changed.enabled == true ? "on" : "off")]) }
     }
 
     func progress(_ text: String) {

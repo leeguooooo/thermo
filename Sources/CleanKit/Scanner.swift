@@ -49,8 +49,9 @@ public final class DiskScanner: @unchecked Sendable {
     public func scan() -> ScanReport {
         let started = Date()
         let language = L10n.current.rawValue
+        let previousCancellation = ScanCancellation.current
         ScanCancellation.current = cancellation
-        defer { ScanCancellation.current = nil }
+        defer { ScanCancellation.current = previousCancellation }
         // Stopped before it began: skip even the setup (reading every process is slow on a busy Mac).
         if cancellation.isCancelled {
             return ScanReport(items: [], denied: [], started: started, duration: 0, cancelled: true)
@@ -117,7 +118,9 @@ public final class DiskScanner: @unchecked Sendable {
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = min(4, max(2, ProcessInfo.processInfo.activeProcessorCount / 2))
         queue.qualityOfService = options.lowPriority ? .background : .utility
-        for i in jobs.indices { queue.addOperation { runJob(i) } }
+        for i in jobs.indices {
+            queue.addOperation { ScanCancellation.withCurrent(self.cancellation) { runJob(i) } }
+        }
         queue.waitUntilAllOperationsAreFinished()
 
         for i in items.indices where !items[i].paths.isEmpty {

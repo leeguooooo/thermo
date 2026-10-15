@@ -14,6 +14,8 @@ final class AppModels {
     lazy var disk = DiskModel()
     lazy var agents = AgentScanner()
     lazy var apps = AppsModel()
+    lazy var startup = StartupItemsModel()
+    lazy var softwareUpdates = AppUpdatesModel()
     lazy var claudeCleanup = ClaudeCleanupModel()
     private var browsers: [String: ChromePagesModel] = [:]
 
@@ -102,6 +104,28 @@ enum MainWindow {
 
     static var offscreen: Bool { CommandLine.arguments.contains("--offscreen") }
 
+    /// Keep the window placement, but release page-local state and appearance-owned tasks.
+    static func retireContent(in window: NSWindow) {
+        let bounds = window.contentView?.bounds ?? .zero
+        window.contentViewController = nil
+        window.contentView = NSView(frame: bounds)
+    }
+
+    static func restoreContent(in window: NSWindow, make: () -> NSViewController) {
+        guard window.contentViewController == nil else { return }
+        window.contentViewController = make()
+    }
+
+    private static func installContent(in window: NSWindow, models: AppModels) {
+        restoreContent(in: window) {
+            let host = NSHostingController(rootView: Host(state: state, models: models)
+                .frame(minWidth: minimumContentSize.width, maxWidth: .infinity,
+                       minHeight: minimumContentSize.height, maxHeight: .infinity))
+            host.sizingOptions = [.minSize]
+            return host
+        }
+    }
+
     static func show(_ page: MainPage? = nil) {
         if let page { state.page = page }
         let models = AppModels.shared
@@ -113,11 +137,7 @@ enum MainWindow {
             w.titlebarAppearsTransparent = true
             w.titleVisibility = .hidden
             // Content first, SwiftUI sets only the minimum; autosave last (it would record the shrunken size).
-            let host = NSHostingController(rootView: Host(state: state, models: models)
-                .frame(minWidth: minimumContentSize.width, maxWidth: .infinity,
-                       minHeight: minimumContentSize.height, maxHeight: .infinity))
-            host.sizingOptions = [.minSize]
-            w.contentViewController = host
+            installContent(in: w, models: models)
             // Snapshot windows neither read nor write the user's saved window placement.
             if offscreen {
                 w.styleMask = [.borderless]
@@ -147,11 +167,20 @@ enum MainWindow {
                 MainActor.assumeIsolated {
                     models.monitor.windowOpen = false
                     models.stopBrowserChecks()
+                    models.apps.stopMeasuring()
+                    models.startup.retire()
+                    models.softwareUpdates.retire()
                     SpaceOverviewModel.shared.stop()
+                    SpaceLensModel.shared.stop()
+                    SpaceLensModel.shared.stopDuplicates()
+                    MemoryModel.shared.stop()
+                    ComputeModel.shared.stop()
+                    retireContent(in: w)
                 }
             }
             window = w
         }
+        if let window { installContent(in: window, models: models) }
         window?.title = "Thermo"
         models.monitor.windowOpen = true
         if offscreen {
@@ -332,7 +361,8 @@ struct MainView: View {
         case let .agents(.area(a)):
             AreaPage(scanner: agents, area: a).id(a).transition(.opacity.combined(with: .move(edge: .trailing)))
         case let .apps(tab):
-            AppsPage(model: models.apps, tab: Binding(get: { tab }, set: { page = .apps($0) })).transition(.opacity)
+            AppsPage(model: models.apps, startup: models.startup, updates: models.softwareUpdates,
+                     tab: Binding(get: { tab }, set: { page = .apps($0) })).transition(.opacity)
         case let .compute(gpu):
             ComputePage(gpu: gpu).id(gpu).transition(.opacity)
         case .memory:
@@ -424,7 +454,7 @@ struct MainSidebar: View {
 
                     row(.space(page.spaceTab ?? .browse), tr("Space Lens"), "square.grid.3x3.topleft.filled", .cyan, trailing: nil,
                         selected: page.spaceTab != nil)
-                    row(.apps(page.appsTab ?? .installed), tr("Uninstall apps"), "square.grid.2x2.fill", .indigo, trailing: nil,
+                    row(.apps(page.appsTab ?? .installed), tr("Software"), "square.grid.2x2.fill", .indigo, trailing: nil,
                         selected: page.appsTab != nil)
 
                     header(tr("AI Agent Diagnostics"))

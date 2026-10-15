@@ -67,13 +67,16 @@ enum Projects {
         queue.qualityOfService = ctx.options.lowPriority ? .background : .utility
         let lock = NSLock()
         var items: [CleanItem] = []
+        let cancellation = ScanCancellation.current
         // Start measuring as projects are discovered; large roots must not delay every result.
         func enqueue(_ candidate: Candidate) {
             queue.addOperation {
-                guard ScanCancellation.current?.isCancelled != true else { return }
-                guard let item = make(candidate, ctx: ctx), ScanCancellation.current?.isCancelled != true else { return }
-                lock.lock(); items.append(item); lock.unlock()
-                onItem?(item)
+                ScanCancellation.withCurrent(cancellation) {
+                    guard ScanCancellation.current?.isCancelled != true else { return }
+                    guard let item = make(candidate, ctx: ctx), ScanCancellation.current?.isCancelled != true else { return }
+                    lock.lock(); items.append(item); lock.unlock()
+                    onItem?(item)
+                }
             }
         }
         let roots = ctx.options.projectRoots + (ctx.options.discoverProjectRoots ? ctx.signals.roots(home: ctx.home) : [])

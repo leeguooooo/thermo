@@ -53,11 +53,14 @@ enum AppData {
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = 4
         queue.qualityOfService = ctx.options.lowPriority ? .background : .utility
+        let cancellation = ScanCancellation.current
         for (i, path) in jobs.enumerated() {
             queue.addOperation {
-                guard ScanCancellation.current?.isCancelled != true else { return }
-                let s = FS.size(path, trackNewest: true)
-                lock.lock(); sizes[i] = s; lock.unlock()
+                ScanCancellation.withCurrent(cancellation) {
+                    guard ScanCancellation.current?.isCancelled != true else { return }
+                    let s = FS.size(path, trackNewest: true)
+                    lock.lock(); sizes[i] = s; lock.unlock()
+                }
             }
         }
         queue.waitUntilAllOperationsAreFinished()

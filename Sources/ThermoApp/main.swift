@@ -13,6 +13,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     private var monitor: Monitor { AppModels.shared.monitor }
     private var lastTitle: String?
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply { AppExitGuard.reply() }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         Settings.register()
         _ = AppModels.shared.updates  // Sparkle starts checking with the app
@@ -352,6 +354,8 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         case let .browser(app): return TabWorkspaceModel.loadedApps.contains(app)
         case .apps(.installed): return !models.apps.loading && !models.apps.apps.isEmpty
         case .apps(.leftovers): return models.apps.orphans != nil
+        case .apps(.startup): return models.startup.report != nil && !models.startup.busy
+        case .apps(.updates): return models.softwareUpdates.report != nil && !models.softwareUpdates.busy
         case .compute: return ComputeModel.shared.current?.cpu != nil && Date().timeIntervalSince(started) > 4
         case .memory: return MemoryModel.shared.breakdown != nil && Date().timeIntervalSince(started) > 4
         case .space(.duplicates): return true
@@ -363,14 +367,22 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
 }
 
 if ["--main", "--disk", "--agents", "--chrome-pages"].contains(where: CommandLine.arguments.contains) {
+    let mainOnlyDelegate = MainActor.assumeIsolated { MainOnlyDelegate() }
+    app.delegate = mainOnlyDelegate
     // `--offscreen`: no Dock icon, no window on the user's screen.
     app.setActivationPolicy(CommandLine.arguments.contains("--offscreen") ? .accessory : .regular)
     DispatchQueue.main.async { MainActor.assumeIsolated { openMainOnly(CommandLine.arguments) } }
     // Only the main window closing ends the app (not sheets, menus or alerts).
     NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { n in
-        MainActor.assumeIsolated { if let w = n.object as? NSWindow, w === MainWindow.window { exit(0) } }
+        MainActor.assumeIsolated {
+            guard let w = n.object as? NSWindow, w === MainWindow.window else { return }
+            if AppModels.shared.softwareUpdates.working {
+                AppModels.shared.softwareUpdates.exitRequested = true
+                DispatchQueue.main.async { MainWindow.show(.apps(.updates)) }
+            } else { exit(0) }
+        }
     }
-    app.run()
+    withExtendedLifetime(mainOnlyDelegate) { app.run() }
 }
 let delegate = MainActor.assumeIsolated { AppDelegate() }
 app.delegate = delegate

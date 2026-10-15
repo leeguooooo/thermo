@@ -179,6 +179,10 @@ struct HistoryPage: View {
     /// The one button an entry gets: put back here, or go to where it is restored.
     @ViewBuilder func action(_ r: OperationRecord) -> some View {
         switch r.undo?.kind {
+        case nil where r.feature == "apps" && r.action == "update":
+            Button(tr("Open")) { open(.apps(.updates)) }.buttonStyle(PillButtonStyle()).fixedSize()
+        case "startup":
+            Button(tr("Open")) { open(.apps(.startup)) }.buttonStyle(PillButtonStyle()).fixedSize()
         case "trashBatch":
             Button(tr("Restore…")) { restoring = r }.buttonStyle(PillButtonStyle()).disabled(model.busy).fixedSize()
         case "claudeReset":

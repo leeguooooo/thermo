@@ -13,6 +13,9 @@ extension OperationRecord {
         case ("clean", "whitelistRemove"): return tr("Removed from the cleanup whitelist")
         case ("apps", "uninstall"): return tr("Uninstalled an app")
         case ("apps", "remove"): return tr("Removed app leftovers")
+        case ("apps", "enable"): return tr("Enabled a startup item")
+        case ("apps", "disable"): return tr("Disabled a startup item")
+        case ("apps", "update"): return tr("Updated an app")
         case ("space", "trash"): return tr("Moved hand-picked files to the Trash")
         case ("agents", "fix"): return tr("Fixed an agent problem")
         case ("agents", "uninstall"): return tr("Removed an agent item")
@@ -66,12 +69,14 @@ extension OperationRecord {
     public var undoText: String? {
         guard let undo else {
             switch (feature, action) {
+            case ("apps", "update"): return tr("Check the installed version in Software → Updates. Thermo cannot automatically roll updates back.")
             case ("privacy", "clearClaudeEnvironment"): return tr("Cannot be undone: the values were never read or saved.")
             case ("clean", "delete"), ("clean", "emptyTrash"): return tr("Deleted for good; nothing to restore.")
             default: return nil
             }
         }
         switch undo.kind {
+        case "startup": return tr("Undo in Software → Startup items, or with thermo apps startup %1$@ %2$@.", action == "enable" ? "disable" : "enable", undo.ref)
         case "trashBatch": return tr("Restorable from this history (thermo clean restore %1$@).", undo.ref)
         case "trash": return tr("Put back from the Trash in Finder.")
         case "claudeReset": return tr("Restore from Claude cleanup → Recovery records.")

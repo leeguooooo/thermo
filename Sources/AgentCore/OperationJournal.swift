@@ -128,7 +128,9 @@ public enum OperationJournal {
         var records: [OperationRecord] = []
         for file in files {
             guard let data = safeRead(file) else { continue }
-            for line in data.split(separator: 10) {
+            // Later entries may finish an operation previously recorded as unconfirmed.
+            // Prefer the last append even when ISO timestamps fall in the same second.
+            for line in data.split(separator: 10).reversed() {
                 if let record = try? decoder().decode(OperationRecord.self, from: Data(line)) { records.append(record) }
             }
         }

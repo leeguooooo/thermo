@@ -4,7 +4,25 @@ import CleanKit
 import SwiftUI
 
 enum AppsTab: String, Hashable, CaseIterable {
-    case installed, leftovers
+    case installed, leftovers, startup, updates
+
+    var title: String {
+        switch self {
+        case .installed: return tr("Apps")
+        case .leftovers: return tr("Leftovers")
+        case .startup: return tr("Startup items")
+        case .updates: return tr("Updates")
+        }
+    }
+}
+
+struct SoftwareTabPicker: View {
+    @Binding var tab: AppsTab
+    var body: some View {
+        Picker(tr("Show"), selection: $tab) {
+            ForEach(AppsTab.allCases, id: \.self) { Text($0.title).tag($0) }
+        }.pickerStyle(.segmented).labelsHidden().frame(width: 340)
+    }
 }
 
 /// Installed apps with their files, and data left behind by apps that are gone. Everything removed
@@ -23,16 +41,18 @@ final class AppsModel: ObservableObject {
     @Published private(set) var working = false
     @Published var outcome: String?
     private var cancellation: ScanCancellation?
+    private var measurementComplete = false
 
     var measuring: Bool { loading && measured < apps.count }
     var totalBytes: Int64 { apps.reduce(0) { $0 + $1.totalBytes } }
 
     func load(ifEmpty: Bool = false) {
-        if ifEmpty, !apps.isEmpty || loading { return }
+        if ifEmpty, measurementComplete || loading { return }
         cancellation?.cancel()
         let token = ScanCancellation()
         cancellation = token
         loading = true
+        measurementComplete = false
         measured = 0
         Task.detached(priority: .userInitiated) {
             let found = AppUninstaller.installed()
@@ -49,8 +69,19 @@ final class AppsModel: ObservableObject {
                     self.measured += 1
                 }
             }
-            await MainActor.run { if self.cancellation === token { self.loading = false } }
+            await MainActor.run {
+                guard self.cancellation === token else { return }
+                self.loading = false
+                self.measurementComplete = !token.isCancelled
+            }
         }
+    }
+
+    /// Resume an interrupted inventory on the next appearance, retaining results until then.
+    func stopMeasuring() {
+        cancellation?.cancel()
+        cancellation = nil
+        loading = false
     }
 
     nonisolated static func runningPaths(_ apps: [InstalledApp]) -> Set<String> {
@@ -150,12 +181,22 @@ final class AppsModel: ObservableObject {
 
 struct AppsPage: View {
     @ObservedObject var model: AppsModel
+    let startup: StartupItemsModel
+    let updates: AppUpdatesModel
     @Binding var tab: AppsTab
     @State private var search = ""
     @State private var open: Set<String> = []
     @State private var confirmingOrphans = false
 
     var body: some View {
+        Group {
+            if tab == .startup { StartupItemsPage(model: startup, tab: $tab) }
+            else if tab == .updates { AppUpdatesPage(model: updates, tab: $tab) }
+            else { uninstallBody }
+        }
+    }
+
+    var uninstallBody: some View {
         VStack(spacing: 0) {
             header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
             if let outcome = model.outcome {
@@ -219,23 +260,20 @@ struct AppsPage: View {
     }
 
     var header: some View {
-        HStack(spacing: 14) {
-            IconTile(symbol: "square.grid.2x2.fill", color: .indigo, size: 44)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(tr("Uninstall apps")).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
-                Text(subtitle).font(.callout).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 14) {
+                IconTile(symbol: "square.grid.2x2.fill", color: .indigo, size: 44)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(tr("Software")).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                    Text(subtitle).font(.callout).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                }
+                Spacer()
+                if tab == .installed {
+                    TextField(tr("Search"), text: $search).textFieldStyle(.roundedBorder).frame(width: 150)
+                        .accessibilityLabel(tr("Search"))
+                }
             }
-            Spacer()
-            Picker("", selection: $tab) {
-                Text(tr("Apps")).tag(AppsTab.installed)
-                Text(tr("Leftovers")).tag(AppsTab.leftovers)
-            }
-            .pickerStyle(.segmented).labelsHidden().frame(width: 170)
-            .accessibilityLabel(tr("Show"))
-            if tab == .installed {
-                TextField(tr("Search"), text: $search).textFieldStyle(.roundedBorder).frame(width: 150)
-                    .accessibilityLabel(tr("Search"))
-            }
+            SoftwareTabPicker(tab: $tab)
         }
     }
 
@@ -248,6 +286,8 @@ struct AppsPage: View {
         case .leftovers:
             guard let o = model.orphans else { return tr("Looking for data of apps that are gone…") }
             return tr("%1$@ in %2$@ apps that are gone", ByteFormat.string(o.reduce(0) { $0 + $1.bytes }), String(o.count))
+        case .startup: return tr("Startup items")
+        case .updates: return tr("Updates")
         }
     }
 
