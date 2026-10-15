@@ -78,6 +78,9 @@ public struct UninstallPlan: Codable, Sendable {
     /// Absent in older plans means a normal uninstall; false explicitly preserves the bundle.
     public var removeApp: Bool? = nil
     public var removesApp: Bool { removeApp ?? true }
+    public var ownership: AppOwnershipSnapshot? = nil
+    public var dataIdentities: [String: String]? = nil
+    public var ownershipKept: [String]? = nil
 }
 
 public enum AppUninstaller {
@@ -518,9 +521,19 @@ public enum AppUninstaller {
     public static func plan(_ app: InstalledApp, installed: [InstalledApp], home: String = NSHomeDirectory(),
                             processes: ProcessTable? = nil, includePersonal: Bool = false, removeApp: Bool = true,
                             cancellation: ScanCancellation? = nil) -> UninstallPlan {
+        plan(app, installed: installed, home: home, processes: processes, includePersonal: includePersonal,
+             removeApp: removeApp, cancellation: cancellation, ownershipDirectories: appDirs(home: home))
+    }
+
+    static func plan(_ app: InstalledApp, installed: [InstalledApp], home: String, processes: ProcessTable? = nil,
+                     includePersonal: Bool = false, removeApp: Bool = true, cancellation: ScanCancellation? = nil,
+                     ownershipDirectories: [String]) -> UninstallPlan {
         let token = cancellation ?? ScanCancellation.current
         var plan = ScanCancellation.withCurrent(token) {
-            makePlan(app, installed: installed, home: home, processes: processes, includePersonal: includePersonal, removeApp: removeApp)
+            let extras = installed.map(\.path).filter { path in !ownershipDirectories.contains { path.hasPrefix($0 + "/") } }
+            let ownership = AppOwnershipSnapshot.capture(directories: ownershipDirectories, additionalPaths: extras)
+            return makePlan(app, installed: ownership.apps, home: home, processes: processes, includePersonal: includePersonal,
+                            removeApp: removeApp, ownership: ownership)
         }
         if token?.isCancelled == true {
             plan.blocked = tr("Review stopped; review again before removing files")
@@ -530,14 +543,13 @@ public enum AppUninstaller {
     }
 
     private static func makePlan(_ app: InstalledApp, installed: [InstalledApp], home: String,
-                                 processes: ProcessTable?, includePersonal: Bool, removeApp: Bool) -> UninstallPlan {
+                                 processes: ProcessTable?, includePersonal: Bool, removeApp: Bool, ownership: AppOwnershipSnapshot) -> UninstallPlan {
         var app = app
-        if app.leftovers.isEmpty {
-            let related = checkedLeftovers(for: app, installed: installed, home: home)
-            app.leftovers = related.items; app.relatedDataState = related.state
-        } else if app.relatedDataState == nil {
-            app.relatedDataState = AppSize.combined(app.leftovers.map(\.effectiveSizeState), bytes: app.leftoverBytes)
-        }
+        let previousPaths = app.leftovers.map(\.path)
+        let related = checkedLeftovers(for: app, installed: installed, home: home)
+        let possible = candidates(for: app, installed: [app], home: home)
+        let keptByOwnership = Set(possible + previousPaths).subtracting(related.items.map(\.path)).filter { FS.exists($0) }.sorted()
+        app.leftovers = related.items; app.relatedDataState = related.state
         if removeApp && (app.sizeState == nil || app.bundleSizeState != .complete) {
             let size = FS.allocatedSize(app.path)
             let exists = FS.isDirectory(app.path)
@@ -554,6 +566,9 @@ public enum AppUninstaller {
                                  receipts: receipts(for: app.bundleID))
         plan.kept = kept.isEmpty ? nil : kept
         plan.removeApp = removeApp
+        plan.ownership = ownership
+        plan.ownershipKept = keptByOwnership.isEmpty ? nil : keptByOwnership
+        plan.dataIdentities = moved.reduce(into: [:]) { $0[$1.path] = AppDataReviewIdentity.of($1.path) }
         plan.sizeState = AppSize.combined((removeApp ? [app.bundleSizeState] : []) + [app.relatedDataState ?? .unmeasured] + moved.map(\.effectiveSizeState), bytes: plan.bytes)
         plan.whitelisted = saved.isEmpty ? nil : saved
         plan.identities = paths.reduce(into: [:]) { result, path in result[path] = FileIdentity.of(path) }
@@ -569,6 +584,9 @@ public enum AppUninstaller {
             plan.blocked = plan.blocked ?? tr("The app changed since the inventory; refresh the app list and review again")
         } else {
             plan.appIdentity = current?.inventoryIdentity
+        }
+        if !ownership.complete, !moved.isEmpty {
+            plan.blocked = plan.blocked ?? tr("Could not verify installed app ownership; refresh before removing associated data")
         }
         return plan
     }
@@ -608,7 +626,8 @@ public enum AppUninstaller {
         uninstall(plan, home: home, processes: processes, move: RemovalOperations.live.trash)
     }
 
-    static func uninstall(_ plan: UninstallPlan, home: String, processes: (() -> ProcessTable)?, move: (String) throws -> URL) -> CleanResult {
+    static func uninstall(_ plan: UninstallPlan, home: String, processes: (() -> ProcessTable)?, ownershipDirectories: [String]? = nil,
+                          move: (String) throws -> URL) -> CleanResult {
         let table = processes ?? { ProcessTable.current(.init(cpu: false)) }
         let id = (plan.removesApp ? "app:" : "app-data:") + (plan.app.bundleID ?? plan.app.name)
         var result = CleanResult(id: id, trashed: true)
@@ -616,13 +635,20 @@ public enum AppUninstaller {
             result.failed[plan.app.path] = why
         } else if plan.appIdentity == nil || AppReviewIdentity.capture(plan.app.path) != plan.appIdentity {
             result.failed[plan.app.path] = plan.removesApp ? tr("The app changed after review; review the uninstall again") : tr("The app changed after review; review the data removal again")
+        } else if plan.paths.contains(where: { $0 != plan.app.path }) &&
+                    (plan.ownership?.complete != true || plan.ownership != AppOwnershipSnapshot.capture(directories: ownershipDirectories ?? appDirs(home: home), additionalPaths: plan.ownership?.extraPaths ?? [])) {
+            result.failed[plan.app.path] = tr("Installed apps changed or ownership could not be verified; review associated data again")
+        } else if let changed = plan.paths.first(where: { $0 != plan.app.path &&
+            (plan.dataIdentities?[$0] == nil || plan.dataIdentities?[$0] != AppDataReviewIdentity.of($0)) }) {
+            result.failed[changed] = tr("Associated data changed after review; review it again")
         } else {
             let ids = plan.app.bundleID.map { [$0] } ?? []
             let sizes = Dictionary(uniqueKeysWithValues: plan.app.leftovers.map { ($0.path, $0.bytes) })
             trash(plan.paths, bundleIDs: ids, sizes: sizes.merging([plan.app.path: plan.app.bytes]) { a, _ in a },
                   home: home, processes: table, into: &result, identities: plan.identities ?? [:],
                   incompletePaths: Set(plan.app.leftovers.filter { $0.effectiveSizeState != .complete }.map(\.path))
-                    .union(plan.app.bundleSizeState == .complete ? [] : [plan.app.path]), move: move)
+                    .union(plan.app.bundleSizeState == .complete ? [] : [plan.app.path]),
+                  reviewIdentities: plan.dataIdentities ?? [:], bundlePath: plan.app.path, move: move)
         }
         finish(result, title: plan.app.name, home: home)
         return result
@@ -632,6 +658,8 @@ public enum AppUninstaller {
                       processes: () -> ProcessTable, into result: inout CleanResult,
                       identities: [String: String]? = nil,
                       incompletePaths: Set<String> = [],
+                      reviewIdentities: [String: String]? = nil,
+                      bundlePath: String? = nil,
                       move: (String) throws -> URL = RemovalOperations.live.trash) {
         let g = Guard(home: home)
         let batchID = UUID().uuidString
@@ -651,6 +679,10 @@ public enum AppUninstaller {
             }
             if runningProcess(in: [path], processes: table) != nil {
                 result.failed[path] = tr("a running executable uses this location")
+                continue
+            }
+            if let reviewIdentities, path != bundlePath, reviewIdentities[path] == nil || reviewIdentities[path] != AppDataReviewIdentity.of(path) {
+                result.failed[path] = tr("Associated data changed after review; review it again")
                 continue
             }
             do {

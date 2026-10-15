@@ -27,7 +27,7 @@ final class AppDataRemovalTests: XCTestCase {
     }
     func plan(removeApp: Bool = false) throws -> UninstallPlan {
         let app = try XCTUnwrap(AppUninstaller.read(appPath))
-        return AppUninstaller.plan(app, installed: [app], home: home, processes: empty, removeApp: removeApp)
+        return AppUninstaller.plan(app, installed: [app], home: home, processes: empty, removeApp: removeApp, ownershipDirectories: [home + "/Applications"])
     }
     func move(_ path: String) throws -> URL {
         let trash = home + "/.Trash"
@@ -37,7 +37,7 @@ final class AppDataRemovalTests: XCTestCase {
         return destination
     }
     func execute(_ plan: UninstallPlan, processes: ProcessTable? = nil) -> CleanResult {
-        AppUninstaller.uninstall(plan, home: home, processes: { processes ?? self.empty }, move: move)
+        AppUninstaller.uninstall(plan, home: home, processes: { processes ?? self.empty }, ownershipDirectories: [home + "/Applications"], move: move)
     }
 
     func testDataOnlyMovesAndRestoresDataWithoutTouchingTheBundle() throws {
@@ -138,7 +138,7 @@ final class AppDataRemovalTests: XCTestCase {
     func testCancelledReviewCannotAuthorizeDataRemoval() throws {
         let app = try XCTUnwrap(AppUninstaller.read(appPath))
         let token = ScanCancellation(); token.cancel()
-        let reviewed = AppUninstaller.plan(app, installed: [app], home: home, processes: empty, removeApp: false, cancellation: token)
+        let reviewed = AppUninstaller.plan(app, installed: [app], home: home, processes: empty, removeApp: false, cancellation: token, ownershipDirectories: [home + "/Applications"])
         XCTAssertEqual(reviewed.blocked, tr("Review stopped; review again before removing files"))
         XCTAssertNil(reviewed.appIdentity)
         let result = execute(reviewed)
@@ -157,5 +157,92 @@ final class AppDataRemovalTests: XCTestCase {
         let empty = try plan()
         XCTAssertTrue(empty.paths.isEmpty)
         XCTAssertNotNil(empty.blocked)
+    }
+
+    func peer(_ name: String, id: String) throws -> String {
+        let path = home + "/Applications/" + name + ".app"
+        try FileManager.default.createDirectory(atPath: path + "/Contents", withIntermediateDirectories: true)
+        try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": id], format: .xml, options: 0)
+            .write(to: URL(fileURLWithPath: path + "/Contents/Info.plist"))
+        return path
+    }
+
+    func testReviewRecomputesCachedDataOwnershipAgainstNewlyInstalledPeers() throws {
+        let group = home + "/Library/Group Containers/TEAM.com.example.fixture"
+        try data(group)
+        var cached = try XCTUnwrap(AppUninstaller.read(appPath))
+        cached.leftovers = [AppLeftover(path: group, bytes: 999, sizeState: .complete)]
+        _ = try peer("Peer", id: "com.example.peer")
+        let reviewed = AppUninstaller.plan(cached, installed: [cached], home: home, processes: empty,
+                                          removeApp: false, ownershipDirectories: [home + "/Applications"])
+        XCTAssertNil(reviewed.blocked)
+        XCTAssertTrue(reviewed.paths.contains(cachePath))
+        XCTAssertFalse(reviewed.paths.contains(group))
+        XCTAssertTrue(reviewed.ownershipKept?.contains(group) == true)
+        XCTAssertEqual(reviewed.ownership?.claims.count, 2)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(reviewed)) as? [String: Any])
+        let ownership = try XCTUnwrap(json["ownership"] as? [String: Any])
+        XCTAssertNil(ownership["claims"], "a single app's plan exports an inventory fingerprint, not unrelated app names")
+        let roundTrip = try JSONDecoder().decode(UninstallPlan.self, from: JSONEncoder().encode(reviewed))
+        XCTAssertEqual(roundTrip.ownership, reviewed.ownership)
+        XCTAssertEqual(execute(reviewed).removed, [cachePath])
+        XCTAssertTrue(FS.exists(group))
+    }
+
+    func testPeerInstalledAfterReviewPreventsBothFullAndDataOnlyRemoval() throws {
+        for removeApp in [true, false] {
+            let reviewed = try plan(removeApp: removeApp)
+            let path = try peer("Peer", id: "com.example.fixture")
+            let result = execute(reviewed)
+            XCTAssertTrue(result.removed.isEmpty)
+            XCTAssertEqual(result.failed[appPath], tr("Installed apps changed or ownership could not be verified; review associated data again"))
+            XCTAssertTrue(FS.exists(appPath)); XCTAssertTrue(FS.exists(cachePath))
+            try FileManager.default.removeItem(atPath: path)
+        }
+    }
+
+    func testSameInodePreferenceRewriteIsRefusedAfterReview() throws {
+        let pref = home + "/Library/Preferences/com.example.fixture.plist"
+        try FileManager.default.createDirectory(atPath: (pref as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+        try Data("before".utf8).write(to: URL(fileURLWithPath: pref))
+        for removeApp in [true, false] {
+            let reviewed = try plan(removeApp: removeApp)
+            let identity = FileIdentity.of(pref)
+            let handle = try FileHandle(forWritingTo: URL(fileURLWithPath: pref))
+            try handle.truncate(atOffset: 0); try handle.write(contentsOf: Data(UUID().uuidString.utf8)); try handle.close()
+            XCTAssertEqual(FileIdentity.of(pref), identity)
+            let result = execute(reviewed)
+            XCTAssertTrue(result.removed.isEmpty)
+            XCTAssertEqual(result.failed[pref], tr("Associated data changed after review; review it again"))
+            XCTAssertTrue(FS.exists(appPath)); XCTAssertTrue(FS.exists(pref)); XCTAssertTrue(FS.exists(cachePath))
+        }
+    }
+
+    func testUnreadableOwnershipInventoryCannotAuthorizeAssociatedDataRemoval() throws {
+        try XCTSkipIf(getuid() == 0, "requires regular user permissions")
+        let path = try peer("Unreadable", id: "com.example.peer") + "/Contents/Info.plist"
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: path) }
+        let reviewed = try plan()
+        XCTAssertFalse(reviewed.ownership?.complete ?? true)
+        XCTAssertNotNil(reviewed.blocked)
+        XCTAssertTrue(execute(reviewed).removed.isEmpty)
+        XCTAssertTrue(FS.exists(cachePath))
+    }
+
+    func testPeerNamespaceChangeWithoutDirectoryReplacementRequiresReviewAgain() throws {
+        let path = try peer("Peer", id: "org.unrelated.peer")
+        let reviewed = try plan()
+        try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": "com.example.fixture"], format: .xml, options: 0)
+            .write(to: URL(fileURLWithPath: path + "/Contents/Info.plist"))
+        XCTAssertTrue(execute(reviewed).removed.isEmpty)
+        XCTAssertTrue(FS.exists(cachePath)); XCTAssertTrue(FS.exists(appPath))
+    }
+
+    func testOlderPlansWithoutOwnershipProofCannotRemoveAssociatedData() throws {
+        var reviewed = try plan(removeApp: true)
+        reviewed.ownership = nil
+        XCTAssertTrue(execute(reviewed).removed.isEmpty)
+        XCTAssertTrue(FS.exists(appPath)); XCTAssertTrue(FS.exists(cachePath))
     }
 }

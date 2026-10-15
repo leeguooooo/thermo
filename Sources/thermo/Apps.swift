@@ -205,8 +205,16 @@ struct AppsCommand {
                                    target.bundleID ?? tr("no bundle ID"), plan.sizeText) : tr("Keep %1$@. Move only the selected associated files to the Trash: %2$@.", target.name, plan.sizeText))]
         lines.append(plan.removesApp ? "  " + pad(plan.app.bundleSizeText, 9, right: true) + "  " + FS.tilde(plan.app.path) : tr("App kept: %1$@", FS.tilde(plan.app.path)))
         if !plan.removesApp { lines.append(style.dim(tr("Removing selected data can reset settings or sign-in state. Restore it from History before reopening the app."))) }
+        if let issues = plan.ownership?.issues, !issues.isEmpty {
+            lines.append(style.yellow(tr("Ownership could not be checked at:")))
+            lines += issues.map { style.dim("  " + FS.tilde($0)) }
+        }
         for l in plan.app.leftovers where plan.paths.contains(l.path) {
             lines.append("  " + pad(l.sizeText, 9, right: true) + "  " + FS.tilde(l.path))
+        }
+        if let kept = plan.ownershipKept, !kept.isEmpty {
+            lines.append(style.dim(tr("Kept: shared data or ownership could not be established")))
+            lines += kept.map { style.dim("  " + FS.tilde($0)) }
         }
         if let kept = plan.kept, !kept.isEmpty {
             lines.append(style.dim(tr("Kept, your data (profiles, chat history, mail); add --with-data to move it too:")))

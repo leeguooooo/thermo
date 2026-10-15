@@ -47,6 +47,10 @@ final class AppUninstallerTests: XCTestCase {
             .write(to: URL(fileURLWithPath: target.path + "/Contents/Info.plist"), options: .atomic)
     }
 
+    func fixturePlan(_ app: InstalledApp, installed: [InstalledApp], home: String, processes: ProcessTable? = nil, includePersonal: Bool = false) -> UninstallPlan {
+        AppUninstaller.plan(app, installed: installed, home: home, processes: processes, includePersonal: includePersonal, ownershipDirectories: [home + "/Applications"])
+    }
+
     // MARK: guard
 
     func testReviewedAppReplacementRefusesBeforeMovingLeftovers() throws {
@@ -54,7 +58,7 @@ final class AppUninstallerTests: XCTestCase {
         make("Applications/Review.app/Contents")
         try writeInfo(target)
         make("Library/Caches/com.example.review")
-        let plan = AppUninstaller.plan(target, installed: [target], home: home, processes: ProcessTable(entries: []))
+        let plan = fixturePlan(target, installed: [target], home: home, processes: ProcessTable(entries: []))
         XCTAssertNil(plan.blocked)
         try FileManager.default.moveItem(atPath: target.path, toPath: target.path + ".old")
         make("Applications/Review.app/Contents")
@@ -71,13 +75,13 @@ final class AppUninstallerTests: XCTestCase {
             let inventory = try XCTUnwrap(AppUninstaller.read(target.path))
             let replacement = app("Review", changeID ? "com.example.other" : target.bundleID)
             try writeInfo(replacement, version: changeID ? "1.0" : "2.0")
-            let plan = AppUninstaller.plan(inventory, installed: [inventory], home: home, processes: ProcessTable(entries: []))
+            let plan = fixturePlan(inventory, installed: [inventory], home: home, processes: ProcessTable(entries: []))
             XCTAssertEqual(plan.blocked, "The app changed since the inventory; refresh the app list and review again")
             XCTAssertNil(plan.appIdentity)
             XCTAssertTrue(AppUninstaller.uninstall(plan, home: home, processes: { ProcessTable(entries: []) }).removed.isEmpty)
             XCTAssertTrue(FS.exists(target.path))
             let refreshed = try XCTUnwrap(AppUninstaller.read(target.path))
-            XCTAssertNil(AppUninstaller.plan(refreshed, installed: [refreshed], home: home, processes: ProcessTable(entries: [])).blocked)
+            XCTAssertNil(fixturePlan(refreshed, installed: [refreshed], home: home, processes: ProcessTable(entries: [])).blocked)
         }
     }
 
@@ -89,7 +93,7 @@ final class AppUninstallerTests: XCTestCase {
         try Data("old".utf8).write(to: executable)
         let inventory = try XCTUnwrap(AppUninstaller.read(target.path))
         try Data("new executable contents".utf8).write(to: executable)
-        let plan = AppUninstaller.plan(inventory, installed: [inventory], home: home, processes: ProcessTable(entries: []))
+        let plan = fixturePlan(inventory, installed: [inventory], home: home, processes: ProcessTable(entries: []))
         XCTAssertNotNil(plan.blocked)
         XCTAssertNil(plan.appIdentity)
         XCTAssertTrue(AppUninstaller.uninstall(plan, home: home, processes: { ProcessTable(entries: []) }).removed.isEmpty)
@@ -107,7 +111,7 @@ final class AppUninstallerTests: XCTestCase {
         XCTAssertEqual(entry.bundleID, target.bundleID)
         XCTAssertNil(entry.inventoryIdentity)
         XCTAssertNotNil(entry.protected)
-        let plan = AppUninstaller.plan(entry, installed: found, home: home, processes: ProcessTable(entries: []))
+        let plan = fixturePlan(entry, installed: found, home: home, processes: ProcessTable(entries: []))
         XCTAssertNotNil(plan.blocked)
         XCTAssertNil(plan.appIdentity)
         XCTAssertTrue(AppUninstaller.uninstall(plan, home: home, processes: { ProcessTable(entries: []) }).removed.isEmpty)
@@ -254,12 +258,12 @@ final class AppUninstallerTests: XCTestCase {
                     "Library/Caches/com.google.Chrome"] { make(rel) }
         make("Library/Preferences/com.google.Chrome.plist", dir: false)
         let processes = ProcessTable(entries: [])
-        let plan = AppUninstaller.plan(chrome, installed: [chrome], home: home, processes: processes)
+        let plan = fixturePlan(chrome, installed: [chrome], home: home, processes: processes)
         let rel = { (p: String) in String(p.dropFirst(self.home.count + 1)) }
         XCTAssertEqual(plan.kept?.map { rel($0.path) }, ["Library/Application Support/Google/Chrome"])
         XCTAssertFalse(plan.paths.contains(home + "/Library/Application Support/Google/Chrome"))
         XCTAssertTrue(plan.paths.contains(home + "/Library/Caches/Google/Chrome"))
-        let all = AppUninstaller.plan(chrome, installed: [chrome], home: home, processes: processes, includePersonal: true)
+        let all = fixturePlan(chrome, installed: [chrome], home: home, processes: processes, includePersonal: true)
         XCTAssertNil(all.kept)
         XCTAssertTrue(all.paths.contains(home + "/Library/Application Support/Google/Chrome"))
         XCTAssertGreaterThan(all.bytes, plan.bytes)
@@ -267,7 +271,7 @@ final class AppUninstallerTests: XCTestCase {
         // Other apps' data folders go with them as before.
         let foo = app("Foo", "com.foo.Foo")
         make("Library/Application Support/com.foo.Foo")
-        XCTAssertNil(AppUninstaller.plan(foo, installed: [foo], home: home, processes: processes).kept)
+        XCTAssertNil(fixturePlan(foo, installed: [foo], home: home, processes: processes).kept)
     }
 
     func testLeftoversLeaveWhatOtherInstalledAppsShare() {
@@ -303,7 +307,7 @@ final class AppUninstallerTests: XCTestCase {
         make("Library/Caches/com.foo.Bar")
         let target = app("Foo Bar", "com.foo.Bar")
         let running = ProcessTable(entries: [AgentProcess(pid: 42, name: "Foo Bar", executable: target.path + "/Contents/MacOS/Foo Bar")])
-        let plan = AppUninstaller.plan(target, installed: [target], home: home, processes: running)
+        let plan = fixturePlan(target, installed: [target], home: home, processes: running)
         XCTAssertEqual(plan.blocked, "Foo Bar is running; quit it first")
         XCTAssertEqual(plan.paths, [target.path, home + "/Library/Caches/com.foo.Bar"])
         let result = AppUninstaller.uninstall(plan, home: home, processes: { running })
@@ -312,11 +316,11 @@ final class AppUninstallerTests: XCTestCase {
 
         // A helper running from the app's data blocks the whole uninstall, not just that folder.
         let helper = ProcessTable(entries: [AgentProcess(pid: 43, name: "helper", executable: home + "/Library/Caches/com.foo.Bar/helper")])
-        XCTAssertEqual(AppUninstaller.plan(target, installed: [target], home: home, processes: helper).blocked, "helper is running; quit it first")
+        XCTAssertEqual(fixturePlan(target, installed: [target], home: home, processes: helper).blocked, "helper is running; quit it first")
 
         var vpn = app("Foo VPN", "com.foo.vpn")
         vpn.protected = AppUninstaller.protection(vpn, home: home)
-        let blocked = AppUninstaller.uninstall(AppUninstaller.plan(vpn, installed: [vpn], home: home, processes: ProcessTable(entries: [])), home: home,
+        let blocked = AppUninstaller.uninstall(fixturePlan(vpn, installed: [vpn], home: home, processes: ProcessTable(entries: [])), home: home,
                                                processes: { ProcessTable(entries: []) })
         XCTAssertTrue(blocked.removed.isEmpty)
         XCTAssertFalse(blocked.failed.isEmpty)

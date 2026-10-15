@@ -58,12 +58,18 @@ final class AppSizeTests: XCTestCase {
     }
 
     func testPlanAndJSONPreserveIncompleteAssociatedData() throws {
+        try XCTSkipIf(getuid() == 0, "requires ordinary user permissions")
         let path = home + "/Applications/Fixture.app"
         try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
         var app = InstalledApp(path: path, name: "Fixture", bundleID: nil)
         app.sizeState = .complete
-        app.leftovers = [AppLeftover(path: home + "/Library/Caches/Fixture", bytes: 100, sizeState: .incomplete)]
-        let plan = AppUninstaller.plan(app, installed: [app], home: home, processes: ProcessTable(entries: []))
+        let cache = home + "/Library/Caches/Fixture"
+        try FileManager.default.createDirectory(atPath: cache + "/locked", withIntermediateDirectories: true)
+        try Data(repeating: 1, count: 8192).write(to: URL(fileURLWithPath: cache + "/readable"))
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: cache + "/locked")
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: cache + "/locked") }
+        app.leftovers = [AppLeftover(path: cache, bytes: 100, sizeState: .complete)]
+        let plan = AppUninstaller.plan(app, installed: [app], home: home, processes: ProcessTable(entries: []), ownershipDirectories: [home + "/Applications"])
         XCTAssertEqual(plan.sizeState, .incomplete)
         XCTAssertTrue(plan.sizeText.hasPrefix("at least "))
         let decoded = try JSONDecoder().decode(UninstallPlan.self, from: JSONEncoder().encode(plan))

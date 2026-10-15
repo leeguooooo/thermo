@@ -40,21 +40,26 @@ final class AppsModel: ObservableObject {
     @Published var plan: UninstallPlan?
     @Published private(set) var planning: String?
     @Published private(set) var working = false
+    @Published var exitRequested = false
     @Published var outcome: String?
     private var cancellation: ScanCancellation?
     private var reviewCancellation: ScanCancellation?
     private let reviewPlan: @Sendable (InstalledApp, [InstalledApp], Bool, ScanCancellation) -> UninstallPlan
+    private let remove: @Sendable (UninstallPlan) -> CleanResult
     private var measurementComplete = false
 
     init(reviewPlan: @escaping @Sendable (InstalledApp, [InstalledApp], Bool, ScanCancellation) -> UninstallPlan = { app, all, removeApp, token in
         AppUninstaller.plan(app, installed: all, removeApp: removeApp, cancellation: token)
-    }) { self.reviewPlan = reviewPlan }
+    }, remove: @escaping @Sendable (UninstallPlan) -> CleanResult = { AppUninstaller.uninstall($0) }) {
+        self.reviewPlan = reviewPlan; self.remove = remove
+    }
 
     var measuring: Bool { loading }
     var totalBytes: Int64 { apps.reduce(0) { $0 + $1.totalBytes } }
     var totalSizeText: String { AppSize.text(totalBytes, state: AppSize.combined(apps.map(\.totalSizeState), bytes: totalBytes)) }
 
     func load(ifEmpty: Bool = false, exact: Bool = false) {
+        guard !working else { return }
         if ifEmpty, measurementComplete || loading { return }
         cancellation?.cancel()
         let token = ScanCancellation()
@@ -133,15 +138,19 @@ final class AppsModel: ObservableObject {
     }
 
     func uninstall(_ plan: UninstallPlan) {
+        guard !working else { return }
         stopMeasuring()
         self.plan = nil
         working = true
+        exitRequested = false
+        let remove = self.remove
         Task.detached(priority: .userInitiated) {
-            let result = AppUninstaller.uninstall(plan)
+            let result = remove(plan)
             await MainActor.run {
                 self.working = false
                 self.outcome = Self.summary([result])
-                self.apps = Self.afterUninstall(self.apps, appPath: plan.app.path, removed: Set(result.removed))
+                self.apps = Self.afterUninstall(self.apps, appPath: plan.app.path, removed: Set(result.removed),
+                                               reviewed: result.removed.isEmpty ? nil : plan.app)
             }
         }
     }
@@ -180,13 +189,13 @@ final class AppsModel: ObservableObject {
 
     /// The list after an uninstall, without measuring every app again: the app leaves the list once its
     /// bundle is gone; otherwise it stays, without the files that moved.
-    nonisolated static func afterUninstall(_ apps: [InstalledApp], appPath: String, removed: Set<String>) -> [InstalledApp] {
+    nonisolated static func afterUninstall(_ apps: [InstalledApp], appPath: String, removed: Set<String>, reviewed: InstalledApp? = nil) -> [InstalledApp] {
         if removed.contains(appPath) || !FileManager.default.fileExists(atPath: appPath) {
             return apps.filter { $0.path != appPath }
         }
         return apps.map { app in
             guard app.path == appPath else { return app }
-            var app = app
+            var app = reviewed?.path == appPath ? reviewed! : app
             app.leftovers.removeAll { removed.contains($0.path) }
             return app
         }
@@ -231,6 +240,10 @@ struct AppsPage: View {
     var uninstallBody: some View {
         VStack(spacing: 0) {
             header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
+            if model.exitRequested && model.working {
+                Text(tr("Wait for the app removal operation to finish before quitting."))
+                    .font(.callout).foregroundStyle(.orange).padding(.horizontal, 28)
+            }
             if let notice = model.sizeNotice {
                 Text(notice).font(.callout).foregroundStyle(.secondary).padding(.horizontal, 28).padding(.bottom, 10)
             }
@@ -285,7 +298,15 @@ struct AppsPage: View {
 
     static func lines(_ p: UninstallPlan) -> [String] {
         var out = p.removesApp ? [p.app.bundleSizeText + "  " + p.app.path] : [tr("App kept: %1$@", p.app.path)]
+        if let issues = p.ownership?.issues, !issues.isEmpty {
+            out.append(tr("Ownership could not be checked at:"))
+            out += issues.map { FSPath.tilde($0) }
+        }
         out += p.app.leftovers.filter { p.paths.contains($0.path) }.map { $0.sizeText + "  " + FSPath.tilde($0.path) }
+        if let kept = p.ownershipKept, !kept.isEmpty {
+            out.append(tr("Kept: shared data or ownership could not be established"))
+            out += kept.map { FSPath.tilde($0) }
+        }
         if let kept = p.kept, !kept.isEmpty {
             out.append(p.removesApp ? tr("Kept, your data (profiles, chat history, mail); remove it in the app first, or with thermo apps uninstall --with-data:") : tr("Personal data kept. To include it while keeping the app, review thermo apps uninstall NAME --data-only --with-data --dry-run first."))
             out += kept.map { $0.sizeText + "  " + FSPath.tilde($0.path) }
