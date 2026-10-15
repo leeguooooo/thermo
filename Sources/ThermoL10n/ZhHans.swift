@@ -1585,7 +1585,6 @@ let zhHans: [String: String] = [
     "Restore instructions are in %1$@.": "恢复说明在 %1$@。",
     "Restored Claude data": "恢复了 Claude 数据",
     "Saved and closed tabs": "暂存并关闭了标签",
-    "size unknown": "大小未知",
     "Stopped a program": "停止了程序",
     "Undid tab grouping": "撤销了标签分组",
     "Undo with Privacy & network → Restore last browser change.": "可用「隐私与网络 → 恢复上次浏览器修改」撤销。",
@@ -1605,6 +1604,7 @@ let zhHans: [String: String] = [
     "Today": "今天",
     "Yesterday": "昨天",
     "%1$@ of %2$@ items put back.": "已放回 %1$@/%2$@ 项。",
+    "Can be put back from here.": "可在此处放回原处。",
     // Overview heat chain
     "Heat chain": "热链路",
     "Load": "负载",

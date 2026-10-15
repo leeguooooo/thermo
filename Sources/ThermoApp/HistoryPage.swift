@@ -130,10 +130,10 @@ struct HistoryPage: View {
                             RequirementTag(text: r.outcomeText, warning: true)
                         }
                     }
-                    Text(([r.time.formatted(date: .omitted, time: .shortened), r.subject, tr("%1$@ items", String(r.items.count)), r.sizeText]
+                    Text(([r.time.formatted(date: .omitted, time: .shortened), r.subject, r.items.count > 1 ? tr("%1$@ items", String(r.items.count)) : nil, r.sizeText]
                         .compactMap { $0 }).joined(separator: " · "))
                         .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).lineLimit(1).truncationMode(.middle)
-                    if let undo = r.undoText {
+                    if let undo = r.restorableHere ? tr("Can be put back from here.") : r.undoText {
                         Text(undo).font(.system(size: 11)).foregroundStyle(.white.opacity(0.45)).fixedSize(horizontal: false, vertical: true)
                     }
                 }

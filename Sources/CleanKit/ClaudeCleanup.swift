@@ -279,6 +279,6 @@ public final class ClaudeCleanup {
             OperationRecord.Item(target: ClaudeResetTarget(rawValue: key).map(path) ?? key, status: "failed", detail: why)
         }
         let undo = action == "reset" && !result.succeeded.isEmpty ? result.batch.map { OperationRecord.Undo(kind: "claudeReset", ref: $0.id) } : nil
-        OperationJournal.record(OperationRecord(feature: "claudeReset", action: action, subject: result.batch?.id, items: items, undo: undo), home: home)
+        OperationJournal.record(OperationRecord(feature: "claudeReset", action: action, items: items, undo: undo), home: home)
     }
 }

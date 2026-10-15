@@ -35,7 +35,7 @@ struct HistoryCommand {
         let f = DateFormatter(); f.dateStyle = .short; f.timeStyle = .short
         for r in records {
             let mark = r.outcome == "succeeded" ? style.green("✓") : r.outcome == "partial" ? style.yellow("◐") : style.red("✗")
-            let meta = [String(r.id.prefix(8)), f.string(from: r.time), tr("%1$@ items", String(r.items.count)), r.sizeText].compactMap { $0 }
+            let meta = [String(r.id.prefix(8)), f.string(from: r.time), r.items.count > 1 ? tr("%1$@ items", String(r.items.count)) : nil, r.sizeText].compactMap { $0 }
             print("\(mark) \(style.bold(r.title))" + (r.subject.map { "  " + $0 } ?? "") + style.dim("  " + meta.joined(separator: " · ")))
             if let undo = r.undoText { print(style.dim("    " + undo)) }
         }

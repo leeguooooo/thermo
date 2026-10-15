@@ -51,7 +51,8 @@ extension OperationRecord {
 
     /// Size, honest about what was not measured.
     public var sizeText: String? {
-        guard let bytes else { return bytesIncomplete == true ? tr("size unknown") : nil }
+        // Nothing measured: agent fixes, privacy settings, tabs and quits have no size to speak of.
+        guard let bytes else { return nil }
         return (bytesIncomplete == true ? tr("at least %1$@", ByteFormat.string(bytes)) : ByteFormat.string(bytes))
     }
 
