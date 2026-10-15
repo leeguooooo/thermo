@@ -42,7 +42,7 @@ final class SpaceOverviewModel: ObservableObject {
         if let index = partial.firstIndex(where: { $0.id == entry.id }) {
             let previous = partial[index]
             guard !(previous.complete == true && entry.complete == false),
-                  (entry.measuredLocations ?? 0) >= (previous.measuredLocations ?? 0) else { return }
+                  (entry.attemptedLocations ?? entry.measuredLocations ?? 0) >= (previous.attemptedLocations ?? previous.measuredLocations ?? 0) else { return }
             partial[index] = entry
         } else { partial.append(entry) }
     }
@@ -173,6 +173,10 @@ struct DiskOverviewView: View {
                             .buttonStyle(PillButtonStyle())
                     }
                 }
+                if model.entries.contains(where: { $0.effectiveSizeState != .complete }) {
+                    Text(tr("Some categories could not be fully measured. Known bytes are lower bounds; the unattributed residual is not a measured folder size."))
+                        .font(.callout).foregroundStyle(.orange)
+                }
                 if !model.measuring, let over = model.overview?.overcounted {
                     Text(tr("The headings add up to %1$@ more than the disk uses: hard links (pnpm), APFS clones and files written while measuring count in each place.", ByteFormat.string(over)))
                         .font(.caption).foregroundStyle(.secondary)
@@ -255,11 +259,7 @@ struct DiskOverviewView: View {
                 .font(.caption2).foregroundStyle(.secondary).frame(width: 12)
             Text(entry.title).font(.body)
             Spacer()
-            if entry.complete == false {
-                Text(tr("at least %1$@", ByteFormat.string(entry.bytes))).font(.body.monospacedDigit()).foregroundStyle(.orange)
-            } else {
-                Text(ByteFormat.string(entry.bytes)).font(.body.monospacedDigit())
-            }
+            Text(entry.sizeText).font(.body.monospacedDigit()).foregroundStyle(entry.effectiveSizeState == .complete ? Color.primary : .orange)
         }
         .contentShape(Rectangle())
     }
@@ -321,7 +321,7 @@ struct DiskOverviewView: View {
                         Text(c.title).font(.callout.monospaced()).lineLimit(1).truncationMode(.middle)
                         Spacer()
                         if let a = c.action { actionLine(a) }
-                        Text(ByteFormat.string(c.bytes)).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+                        Text(c.sizeText).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
                         if let p = c.path {
                             Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) } label: {
                                 Image(systemName: "magnifyingglass")

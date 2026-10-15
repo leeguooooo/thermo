@@ -9,6 +9,7 @@ final class SpaceCacheTests: XCTestCase {
         var overview = SpaceOverview(capacity: 100, free: 25, purgeable: 5, entries: [], duration: 10)
         overview.measuredAt = Date(timeIntervalSince1970: 100)
         overview.language = "en"
+        overview.sizeVersion = 1
         return overview
     }
 
@@ -28,7 +29,8 @@ final class SpaceCacheTests: XCTestCase {
         var future = fixture(); future.measuredAt = Date(timeIntervalSince1970: 300)
         var translated = fixture(); translated.language = "zh-Hans"
         var legacy = fixture(); legacy.measuredAt = nil; legacy.language = nil
-        for overview in [cancelled, future, translated, legacy] {
+        var missingCompleteness = fixture(); missingCompleteness.sizeVersion = nil
+        for overview in [cancelled, future, translated, legacy, missingCompleteness] {
             try JSONEncoder().encode(overview).write(to: url)
             XCTAssertNil(SpaceOverview.cached(from: url, now: Date(timeIntervalSince1970: 200)))
         }

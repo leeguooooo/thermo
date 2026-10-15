@@ -43,4 +43,17 @@ final class SpaceOverviewLifecycleTests: XCTestCase {
         XCTAssertFalse(model.stopped, "next open may refresh instead of showing old results as stopped")
         XCTAssertNotNil(model.diskSpace)
     }
+
+    @MainActor
+    func testIncompleteUpdatesUseAttemptsToRejectOlderResultsWithTheSameMeasuredCount() {
+        let model = SpaceOverviewModel(cached: nil, diskSpace: nil)
+        let old = SpaceOverview.Entry(id: "apps", title: "Apps", bytes: 10, children: [], complete: false,
+                                       measuredLocations: 0, totalLocations: 2, attemptedLocations: 1, sizeState: .incomplete)
+        var latest = old; latest.bytes = 20; latest.attemptedLocations = 2
+        model.acceptEntry(old)
+        model.acceptEntry(latest)
+        model.acceptEntry(old)
+        XCTAssertEqual(model.partial.first?.bytes, 20)
+        XCTAssertEqual(model.partial.first?.attemptedLocations, 2)
+    }
 }

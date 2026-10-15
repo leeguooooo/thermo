@@ -20,6 +20,10 @@ public struct SpaceOverview: Codable, Sendable {
         public var totalLocations: Int? = nil
         /// What can be done about it: a command, a setting, or that macOS owns it.
         public var action: String? = nil
+        public var attemptedLocations: Int? = nil
+        public var sizeState: AppSizeState? = nil
+        public var effectiveSizeState: AppSizeState { sizeState ?? (complete == false ? (bytes > 0 ? .incomplete : .unavailable) : .complete) }
+        public var sizeText: String { AppSize.text(bytes, state: effectiveSizeState) }
     }
 
     public var capacity: Int64
@@ -35,6 +39,8 @@ public struct SpaceOverview: Codable, Sendable {
     /// The headings add up to more than the disk uses by this much: hard links (pnpm stores and
     /// node_modules), APFS clones and files written while measuring count in each place.
     public var overcounted: Int64? = nil
+    public var incompleteLocations: [String]? = nil
+    public var sizeVersion: Int? = nil
 
     public var used: Int64 { capacity - free }
 
@@ -60,15 +66,19 @@ public struct SpaceOverview: Codable, Sendable {
         let paths: [String]
         var planned = true
         var done = 0
+        var attempted = 0
+        var incomplete: [String] = []
         var bytes: Int64 = 0
         var kids: [Entry] = []
         var denied: [String] = []
         var lastEmission: UInt64 = 0
 
         func entry() -> Entry {
-            Entry(id: spot.id, title: spot.title, path: roots.count == 1 ? roots[0] : nil,
-                  bytes: bytes, children: kids, note: spot.note, complete: planned && done == paths.count,
-                  measuredLocations: done, totalLocations: paths.count, action: spot.action)
+            let complete = planned && attempted == paths.count && incomplete.isEmpty
+            return Entry(id: spot.id, title: spot.title, path: roots.count == 1 ? roots[0] : nil,
+                  bytes: bytes, children: kids, note: spot.note, complete: complete,
+                  measuredLocations: done, totalLocations: paths.count, action: spot.action, attemptedLocations: attempted,
+                  sizeState: complete ? .complete : bytes > 0 ? .incomplete : attempted > 0 || !incomplete.isEmpty ? .unavailable : .unmeasured)
         }
     }
 
@@ -103,17 +113,22 @@ public struct SpaceOverview: Codable, Sendable {
             var roots: [String] = []
             var paths: [String] = []
             var denied: [String] = []
+            var incomplete: [String] = []
             for root in spot.paths {
                 guard !cancellation.isCancelled else { break }
-                guard FS.exists(root) else {
-                    if FS.footprint(root, cancellation: cancellation).denied { denied.append(root) }
+                var info = stat()
+                guard lstat(root, &info) == 0 else {
+                    if errno != ENOENT {
+                        incomplete.append(root)
+                        if spot.reportsDenied && Self.ownedByMe(root) { denied.append(root) }
+                    }
                     continue
                 }
                 roots.append(root)
                 let children = spot.expand && spot.children > 0 && FS.isDirectory(root) && !isBundle(root) ? FS.children(root).sorted() : []
                 paths += children.isEmpty ? [root] : children
             }
-            return MeasurementState(spot: spot, roots: roots, paths: paths, planned: !cancellation.isCancelled, denied: denied)
+            return MeasurementState(spot: spot, roots: roots, paths: paths, planned: !cancellation.isCancelled, incomplete: incomplete, denied: denied)
         }
         let plannedPaths = states.map(\.paths)
         let lock = NSLock()
@@ -127,21 +142,12 @@ public struct SpaceOverview: Codable, Sendable {
         if includeRuntimes { queue.addOperation {
             guard !cancellation.isCancelled else { return }
             let (status, json) = Shell.exec(["xcrun", "simctl", "runtime", "list", "-j"], timeout: 30, cancellation: cancellation)
-            if status == 0, let list = try? JSONDecoder().decode([String: Simulators.Runtime].self, from: Data(json.utf8)) {
-                let kids = list.values.map { r in
-                    Entry(id: "runtime/" + r.identifier, title: Simulators.runtimeName(r.runtimeIdentifier, version: r.version),
-                          path: nil, bytes: r.sizeBytes ?? 0, children: [],
-                          action: r.deletable == false ? nil : "xcrun simctl runtime delete " + r.identifier)
-                }.sorted { $0.bytes > $1.bytes }
-                guard !cancellation.isCancelled else { return }
-                let total = kids.reduce(Int64(0)) { $0 + $1.bytes }
-                if total > 0 {
-                    let e = Entry(id: "simulator-runtimes", title: tr("Simulator runtimes"), path: nil, bytes: total, children: kids,
-                                  note: tr("separate disk images; remove unused ones with xcrun simctl runtime delete"))
-                    lock.lock(); runtimes = e; lock.unlock()
-                    onEntry?(e)
-                }
-            }
+            guard !cancellation.isCancelled else { return }
+            let e = status == 0 ? Self.runtimeEntry(Data(json.utf8)) : nil
+            let entry = e ?? Entry(id: "simulator-runtimes", title: tr("Simulator runtimes"), bytes: 0, children: [],
+                                   note: tr("Simulator runtime sizes could not be checked."), complete: false, sizeState: .unavailable)
+            lock.lock(); runtimes = entry; lock.unlock()
+            onEntry?(entry)
             onProgress?(tr("Simulator runtimes"))
         } }
         let order = spots.indices.sorted { priority(spots[$0].id) < priority(spots[$1].id) }
@@ -176,20 +182,25 @@ public struct SpaceOverview: Codable, Sendable {
                         FileHandle.standardError.write(Data(String(format: "overview: %.2fs %@, %d files\n", Date().timeIntervalSince(began), path, measured.files).utf8))
                     }
                     lock.lock()
-                    states[i].done += 1
+                    states[i].attempted += 1
+                    let complete = !measured.denied && !measured.incomplete
+                    if complete { states[i].done += 1 } else { states[i].incomplete.append(path) }
                     states[i].bytes += measured.allocated
                     // Only what the user owns can be opened by granting Full Disk Access; another
                     // user's or root's folder (/tmp/RustDesk-service) is expected to stay closed.
                     if measured.denied && states[i].spot.reportsDenied && Self.ownedByMe(path) { states[i].denied.append(path) }
-                    if states[i].spot.children > 0, measured.allocated > 0 {
+                    if states[i].spot.children > 0, measured.allocated > 0 || !complete {
                         states[i].kids.append(Entry(id: path, title: Self.displayTitle(path, home: home), path: path,
-                                                   bytes: measured.allocated, children: [], action: Self.assetAction(path)))
+                                                   bytes: measured.allocated, children: [], complete: complete, action: Self.assetAction(path),
+                                                   sizeState: complete ? .complete : measured.allocated > 0 ? .incomplete : .unavailable))
                         states[i].kids.sort { $0.bytes > $1.bytes }
-                        states[i].kids = Array(states[i].kids.prefix(states[i].spot.children))
+                        let known = states[i].kids.filter { $0.effectiveSizeState == .complete }
+                        states[i].kids = Array(known.prefix(states[i].spot.children)) + states[i].kids.filter { $0.effectiveSizeState != .complete }
+                        states[i].kids.sort { $0.bytes > $1.bytes }
                     }
                     let now = DispatchTime.now().uptimeNanoseconds
-                    let complete = states[i].done == plannedPaths[i].count
-                    if states[i].lastEmission == 0 || complete || now - states[i].lastEmission >= 250_000_000 {
+                    let finished = states[i].attempted == plannedPaths[i].count
+                    if states[i].lastEmission == 0 || finished || now - states[i].lastEmission >= 250_000_000 {
                         states[i].lastEmission = now
                         let entry = states[i].entry()
                         // Serialized delivery prevents an older partial update following completion.
@@ -207,7 +218,7 @@ public struct SpaceOverview: Codable, Sendable {
 
         let unreadable = states.flatMap(\.denied)
         let volumes = includeVolumes && !cancellation.isCancelled ? Self.containerVolumes(home: home) : nil
-        var list = states.filter { $0.done > 0 || ($0.planned && $0.paths.isEmpty) }.map { $0.entry() } + [runtimes].compactMap { $0 }
+        var list = states.filter { $0.attempted > 0 || !$0.incomplete.isEmpty || ($0.planned && $0.paths.isEmpty) }.map { $0.entry() } + [runtimes].compactMap { $0 }
         if !cancellation.isCancelled {
             list += volumes.map { Self.volumeEntries($0) } ?? [swap()].compactMap { $0 }
         }
@@ -218,8 +229,10 @@ public struct SpaceOverview: Codable, Sendable {
             let note = snapshots > 0
                 ? tr("%1$@ local snapshots, APFS metadata and folders only macOS can read; Time Machine snapshots go away on their own as space is needed", String(snapshots))
                 : tr("APFS metadata and folders only macOS can read (Spotlight index, file versions); not measured one by one")
+            let complete = list.allSatisfy { $0.effectiveSizeState == .complete }
             list.append(Entry(id: "other", title: tr("Not attributed to a folder"), path: nil, bytes: used - counted,
-                              children: [], note: note))
+                              children: [], note: complete ? note : tr("Includes unmeasured locations; this residual is not a measured folder size."),
+                              complete: complete, sizeState: complete ? .complete : .unavailable))
         }
         list.sort { $0.bytes > $1.bytes }
         var result = SpaceOverview(capacity: capacity, free: free, purgeable: max(0, important - free), entries: list,
@@ -228,8 +241,31 @@ public struct SpaceOverview: Codable, Sendable {
         result.measuredAt = started
         result.language = language
         result.unreadable = Array(Set(unreadable)).sorted()
+        result.incompleteLocations = Array(Set(states.flatMap(\.incomplete))).sorted()
+        result.sizeVersion = 1
         if !cancellation.isCancelled, counted > used + 1_000_000_000 { result.overcounted = counted - used }
         return result
+    }
+
+    static func runtimeEntry(_ data: Data) -> Entry? {
+        guard let list = try? JSONDecoder().decode([String: Simulators.Runtime].self, from: data),
+              list.values.allSatisfy({ ($0.sizeBytes ?? 0) >= 0 }) else { return nil }
+        let kids = list.values.map { runtime in
+            Entry(id: "runtime/" + runtime.identifier, title: Simulators.runtimeName(runtime.runtimeIdentifier, version: runtime.version),
+                  path: nil, bytes: runtime.sizeBytes ?? 0, children: [], complete: runtime.sizeBytes != nil,
+                  action: runtime.deletable == false ? nil : "xcrun simctl runtime delete " + runtime.identifier,
+                  sizeState: runtime.sizeBytes == nil ? .unavailable : .complete)
+        }.sorted { $0.bytes > $1.bytes }
+        var total: Int64 = 0
+        for child in kids {
+            let sum = total.addingReportingOverflow(child.bytes)
+            guard !sum.overflow else { return nil }
+            total = sum.partialValue
+        }
+        let complete = kids.allSatisfy { $0.effectiveSizeState == .complete }
+        return Entry(id: "simulator-runtimes", title: tr("Simulator runtimes"), path: nil, bytes: total, children: kids,
+                     note: tr("separate disk images; remove unused ones with xcrun simctl runtime delete"), complete: complete,
+                     sizeState: complete ? .complete : total > 0 ? .incomplete : .unavailable)
     }
 
     /// The capacity bar describes the home volume; repositories on another disk cannot be
@@ -521,7 +557,8 @@ public struct SpaceOverview: Codable, Sendable {
     public static func cached(from url: URL = cacheURL, now: Date = Date(), localize: Bool = false) -> (SpaceOverview, Date)? {
         guard let data = try? Data(contentsOf: url),
               let overview = try? JSONDecoder().decode(SpaceOverview.self, from: data),
-              overview.cancelled != true, (overview.language == L10n.current.rawValue || localize),
+              overview.cancelled != true, overview.sizeVersion == 1, overview.incompleteLocations?.isEmpty != false,
+              (overview.language == L10n.current.rawValue || localize),
               let measuredAt = overview.measuredAt, measuredAt <= now, isCurrent(measuredAt: measuredAt, cacheURL: url),
               overview.capacity > 0, overview.free >= 0, overview.free <= overview.capacity,
               overview.purgeable >= 0, overview.duration.isFinite, overview.duration >= 0,
@@ -569,6 +606,12 @@ public struct SpaceOverview: Codable, Sendable {
             guard let heading = headings[copy.entries[index].id] else { return nil }
             copy.entries[index].title = tr(heading)
             if let note = notes[copy.entries[index].id] { copy.entries[index].note = tr(note) }
+            if copy.entries[index].id == "other", copy.entries[index].effectiveSizeState != .complete {
+                copy.entries[index].note = tr("Includes unmeasured locations; this residual is not a measured folder size.")
+            }
+            if copy.entries[index].id == "simulator-runtimes", copy.entries[index].effectiveSizeState == .unavailable, copy.entries[index].children.isEmpty {
+                copy.entries[index].note = tr("Simulator runtime sizes could not be checked.")
+            }
             if let action = actions[copy.entries[index].id] { copy.entries[index].action = tr(action) }
         }
         copy.language = L10n.current.rawValue
@@ -577,11 +620,12 @@ public struct SpaceOverview: Codable, Sendable {
 
     private static func validEntries(_ entries: [Entry]) -> Bool {
         var ids = Set<String>()
-        return entries.allSatisfy { $0.complete != false && $0.bytes >= 0 && ids.insert($0.id).inserted && validEntries($0.children) }
+        return entries.allSatisfy { $0.complete != false && $0.effectiveSizeState == .complete && $0.bytes >= 0 && ids.insert($0.id).inserted && validEntries($0.children) }
     }
 
     public func save(to url: URL = Self.cacheURL) {
-        guard cancelled != true, Self.validEntries(entries), Self.isCurrent(measuredAt: measuredAt, cacheURL: url) else { return }
+        guard cancelled != true, sizeVersion == 1, incompleteLocations?.isEmpty != false,
+              Self.validEntries(entries), Self.isCurrent(measuredAt: measuredAt, cacheURL: url) else { return }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? JSONEncoder().encode(self).write(to: url, options: .atomic)
     }

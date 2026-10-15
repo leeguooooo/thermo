@@ -49,6 +49,7 @@ final class OverviewSchedulingTests: XCTestCase {
         let url = URL(fileURLWithPath: home + "/overview.json")
         var full = SpaceOverview(capacity: 1000, free: 100, purgeable: 0, entries: [], duration: 1)
         full.measuredAt = Date(timeIntervalSince1970: 100); full.language = "en"
+        full.sizeVersion = 1
         L10n.override = .english
         defer { L10n.override = nil }
         full.save(to: url)

@@ -93,12 +93,13 @@ struct CleanCommand {
         func gb(_ b: Int64) -> String { b >= 1_000_000_000 ? String(format: "%.1f GB", Double(b) / 1e9) : String(format: "%.0f MB", Double(b) / 1e6) }
         var lines = [style.bold("Disk") + style.dim(String(format: " · %@ used of %@ · %@ free", gb(o.used), gb(o.capacity), gb(o.free))
                      + (o.purgeable > 1_000_000_000 ? " (+\(gb(o.purgeable)) purgeable)" : "")), ""]
-        for e in o.entries where e.bytes >= 100_000_000 {
-            lines.append(pad(gb(e.bytes), 9, right: true) + "  " + style.bold(e.title) + (e.complete == false ? style.yellow(" · at least this much; category unfinished") : ""))
+        for e in o.entries where e.bytes >= 100_000_000 || e.effectiveSizeState != .complete {
+            lines.append(pad(e.sizeText, 18, right: true) + "  " + style.bold(e.title))
             if let n = e.note { lines.append(pad("", 11) + style.dim(n)) }
             if let a = e.action { lines.append(pad("", 11) + style.yellow("→ " + a)) }
-            for c in e.children.prefix(args.has("all") ? 20 : 5) where c.bytes >= 100_000_000 {
-                lines.append(pad("", 11) + pad(gb(c.bytes), 9, right: true) + "  " + c.title + (c.action.map { style.dim("  → " + $0) } ?? ""))
+            let children = Array(e.children.filter { $0.effectiveSizeState == .complete }.prefix(args.has("all") ? 20 : 5)) + e.children.filter { $0.effectiveSizeState != .complete }
+            for c in children where c.bytes >= 100_000_000 || c.effectiveSizeState != .complete {
+                lines.append(pad("", 11) + pad(c.sizeText, 18, right: true) + "  " + c.title + (c.action.map { style.dim("  → " + $0) } ?? ""))
             }
         }
         if let over = o.overcounted {

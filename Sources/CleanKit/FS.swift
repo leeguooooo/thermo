@@ -28,6 +28,7 @@ public struct DiskFootprint: Sendable {
     public let files: Int
     public let newest: Date?
     public let denied: Bool
+    public var incomplete = false
 }
 
 public enum FS {
@@ -89,7 +90,7 @@ public enum FS {
     /// Fast discovery: batched allocation metadata only; no expensive APFS private-block queries.
     public static func footprint(_ path: String, cancellation: ScanCancellation? = nil) -> DiskFootprint {
         let result = measure(path, trackNewest: false, cancellation: cancellation, privateSizes: false)
-        return DiskFootprint(allocated: result.allocated, files: result.files, newest: result.newest, denied: result.denied)
+        return DiskFootprint(allocated: result.allocated, files: result.files, newest: result.newest, denied: result.denied, incomplete: result.incomplete)
     }
 
     /// Bounded allocation discovery, never used as a deletion's before/after measurement.
@@ -101,10 +102,11 @@ public enum FS {
 
     private static func measure(_ path: String, trackNewest: Bool, cancellation: ScanCancellation?, privateSizes: Bool, maxEntries: Int? = nil) -> TreeSize {
         let cancellation = cancellation ?? ScanCancellation.current
-        if cancellation?.isCancelled == true { return TreeSize() }
+        if cancellation?.isCancelled == true { var result = TreeSize(); result.incomplete = true; return result }
         var r = TreeSize()
         var st = stat()
         guard lstat(path, &st) == 0 else {
+            r.incomplete = true
             if errno == EACCES || errno == EPERM { r.denied = true }
             return r
         }
