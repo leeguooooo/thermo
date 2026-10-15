@@ -49,6 +49,8 @@ COMMANDS
   pulse chrome [--watch 60]   which Chrome page leaks or is biggest, duplicate tabs, hidden pages
                               (memory per page needs chrome-use; --app "Microsoft Edge" for others)
   pulse chrome close URL      close one tab showing URL (--title to pick); asks first
+  pulse inspect NAME|PID      every copy of one program in every folder: per-process memory (footprint and RSS),
+                              CPU, uptime, parent and owner (--json)
   tabs list|groups           tabs, Thermo groups and protection reasons (--app BROWSER)
   tabs group NAME --ids IDS  create a Thermo group; --by-site resets grouping to websites
   tabs archive               save and close unprotected background tabs in the front window
@@ -144,11 +146,29 @@ struct App {
         style = s
     }
 
+    /// A copy of thermo outside Thermo.app (say, copied into ~/.local/bin) does not update with the
+    /// app; once the app is newer its readings can differ from the app's. Says so, changes nothing.
+    static func staleCopyWarning(executable: String? = Bundle.main.executableURL?.resolvingSymlinksInPath().path,
+                                 version: String = thermoVersion,
+                                 apps: [String] = ["/Applications/Thermo.app", NSHomeDirectory() + "/Applications/Thermo.app"]) -> String? {
+        guard let executable, !executable.contains(".app/Contents/"), !executable.contains("/.build/") else { return nil }
+        for app in apps {
+            guard let info = NSDictionary(contentsOfFile: app + "/Contents/Info.plist"),
+                  let appVersion = info["CFBundleShortVersionString"] as? String else { continue }
+            guard version.compare(appVersion, options: .numeric) == .orderedAscending else { return nil }
+            let cli = app + "/Contents/Helpers/thermo"
+            return "note: this thermo (\(version), \(executable)) is a copy older than \(app) \(appVersion) and does not update with it; "
+                + "its readings may differ from the app's. To use the app's copy: ln -sf '\(cli)' '\(executable)'"
+        }
+        return nil
+    }
+
     func sampler() throws -> Sampler {
         try Sampler(scope: args.has("all") ? .all : .known, useCache: !args.has("no-cache"))
     }
 
     func run() throws {
+        if let warning = Self.staleCopyWarning() { FileHandle.standardError.write(Data((warning + "\n").utf8)) }
         if args.has("version") { print("thermo \(thermoVersion)"); return }
         let cmd = args.positionals.first ?? ""
         let rest = Array(args.positionals.dropFirst())

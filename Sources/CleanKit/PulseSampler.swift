@@ -9,6 +9,8 @@ public final class PulseSampler {
     private var last: (at: UInt64, cpu: [pid_t: UInt64])?
     /// Executable per pid, for the parent-chain walk; dropped when the pid's name changes.
     private var exeCache: [pid_t: (name: String, exe: String)] = [:]
+    /// Arguments and folder of idle processes read to complete a row; they are rechecked when the pid's name changes.
+    private var detailsCache: [pid_t: (name: String, details: ProcessDetails, owner: String?, started: Date?)] = [:]
 
     public init() {}
 
@@ -31,19 +33,44 @@ public final class PulseSampler {
         let byPid = Dictionary(usage.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
         var candidates: [MachinePulse.Candidate] = []
         let me = getpid(), uid = getuid()
-        for u in usage where u.uid == uid && u.pid != me {  // Thermo is the observer, not a suspect
+        func cpu(_ u: ProcessUsage) -> Double {
             let before = previous.cpu[u.pid] ?? u.cpuNanos  // new since the last pass: no share yet
-            let cpu = u.cpuNanos >= before ? Double(u.cpuNanos - before) / window * 100 : 0
-            guard cpu > 0.5 || u.footprintKB > 200_000 else { continue }
-            // Resident size and start time only for candidates: a few calls, not one per process.
-            candidates.append(.init(pid: u.pid, uid: u.uid, name: u.name, cpu: cpu, memoryKB: u.footprintKB,
-                                    details: ProcessTable.details(u.pid), owner: owner(of: u, in: byPid),
-                                    residentKB: u.memoryReading?.residentKB,
-                                    uptime: ProcessTable.started(u.pid).map { Date().timeIntervalSince($0) },
-                                    memoryMetric: u.memoryReading?.footprintKB == nil ? .unavailable : .footprint))
+            return u.cpuNanos >= before ? Double(u.cpuNanos - before) / window * 100 : 0
+        }
+        func candidate(_ u: ProcessUsage, details: ProcessDetails, owner: String?, started: Date?) -> MachinePulse.Candidate {
+            .init(pid: u.pid, uid: u.uid, name: u.name, cpu: cpu(u), memoryKB: u.footprintKB,
+                  details: details, owner: owner,
+                  residentKB: u.memoryReading?.residentKB,
+                  uptime: started.map { Date().timeIntervalSince($0) },
+                  memoryMetric: u.memoryReading?.footprintKB == nil ? .unavailable : .footprint, ppid: u.ppid)
+        }
+        let mine = usage.filter { $0.uid == uid && $0.pid != me }  // Thermo is the observer, not a suspect
+        // Resident size and start time only for candidates: a few calls, not one per process.
+        for u in mine where cpu(u) > 0.5 || u.footprintKB > 200_000 {
+            candidates.append(candidate(u, details: ProcessTable.details(u.pid), owner: owner(of: u, in: byPid),
+                                        started: ProcessTable.started(u.pid)))
         }
         let memory = MachinePulse.memoryLevel()
-        var pulse = MachinePulse.measure(hogs: MachinePulse.group(candidates, byMemory: memory.isHigh, me: getpid()))
+        var hogs = MachinePulse.group(candidates, byMemory: memory.isHigh, me: me)
+        // Complete the rows that made the list: their small processes, and the same program in
+        // other folders, so a row's totals and `elsewhere` cover every copy. Only processes that
+        // could belong (same command name, or inside the same app) are looked at.
+        let taken = Set(candidates.map(\.pid))
+        let shownPids = Set(hogs.flatMap(\.pids))
+        let commands = Set(usage.filter { shownPids.contains($0.pid) }.map(\.name))
+        let apps = hogs.compactMap(\.app).map { $0 + "/" }
+        var more: [MachinePulse.Candidate] = []
+        for u in mine where !taken.contains(u.pid) {
+            let inApp = !apps.isEmpty && { let exe = executable(u); return apps.contains { exe.hasPrefix($0) } }()
+            guard inApp || commands.contains(u.name) else { continue }
+            if detailsCache[u.pid]?.name != u.name {
+                detailsCache[u.pid] = (u.name, ProcessTable.details(u.pid), owner(of: u, in: byPid), ProcessTable.started(u.pid))
+            }
+            let c = detailsCache[u.pid]!
+            more.append(candidate(u, details: c.details, owner: c.owner, started: c.started))
+        }
+        if !more.isEmpty { hogs = MachinePulse.group(candidates + more, byMemory: memory.isHigh, me: me) }
+        var pulse = MachinePulse.measure(hogs: hogs)
         for index in pulse.hogs.indices {
             pulse.hogs[index].processIdentities = pulse.hogs[index].pids.compactMap(ProcessTable.identity)
         }
@@ -54,6 +81,7 @@ public final class PulseSampler {
         last = (at, Dictionary(usage.map { ($0.pid, $0.cpuNanos) }, uniquingKeysWith: { a, _ in a }))
         let alive = Set(usage.map(\.pid))
         exeCache = exeCache.filter { alive.contains($0.key) }
+        detailsCache = detailsCache.filter { alive.contains($0.key) }
     }
 
     private func executable(_ u: ProcessUsage) -> String {
@@ -75,7 +103,7 @@ public final class PulseSampler {
         return nil
     }
 
-    static func recognise(name: String, executable exe: String) -> String? {
+    public static func recognise(name: String, executable exe: String) -> String? {
         let base = (exe as NSString).lastPathComponent.lowercased()
         if exe.contains("/claude/versions/") || base == "claude" { return "Claude Code" }
         if base == "codex" || exe.contains("/codex/") && !exe.contains(".app/") { return "Codex" }

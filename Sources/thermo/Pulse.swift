@@ -8,6 +8,10 @@ struct PulseCommand {
 
     /// What `--json` prints: the pulse plus the sensor headline numbers.
     struct Report: Encodable {
+        let sampled: Date
+        /// What each number means (units, memory metric); see MachinePulse.units.
+        let units: [String: String]
+        let selection: String
         let verdict: String
         let summary: String
         let culprit: String?
@@ -39,6 +43,7 @@ struct PulseCommand {
         if rest.first == "quit" { try quit(Array(rest.dropFirst())); return }
         if rest.first == "restart" { try restart(Array(rest.dropFirst())); return }
         if rest.first == "history" { try history(); return }
+        if rest.first == "inspect" { try inspect(Array(rest.dropFirst())); return }
         if rest.first == "chrome" { try chrome(Array(rest.dropFirst())); return }
         let style = app.style
         let pulse = MachinePulse.sample()
@@ -52,6 +57,7 @@ struct PulseCommand {
             if let v = s?.cpu { temps["cpu"] = v }
             if let v = s?.gpu { temps["gpu"] = v }
             let report = Report(
+                sampled: pulse.sampled, units: MachinePulse.units, selection: MachinePulse.selection,
                 verdict: pulse.verdict.rawValue, summary: pulse.verdictText, culprit: pulse.culpritText, nextStep: pulse.nextStep,
                 load1: pulse.load1, load5: pulse.load5, cores: pulse.cores, thermal: pulse.thermal.rawValue,
                 memory: pulse.memory.rawValue, swapUsedMB: pulse.swapUsedMB, swapTotalMB: pulse.swapTotalMB,
@@ -87,9 +93,20 @@ struct PulseCommand {
                              + style.dim([h.project, h.owner.map { tr("started by %1$@", $0) },
                                           h.uptime.map { tr("running %1$@", Self.duration($0)) }].compactMap { $0 }.map { "  · " + $0 }.joined()))
                 // Big apps, split: the GPU process and the heaviest pages, each with how long it has run.
-                for p in h.parts ?? [] {
+                let parts = h.parts ?? []
+                for p in parts.prefix(Self.partsShown) {
                     lines.append(style.dim("            " + pad(Self.size(p.memoryKB), 8, right: true) + "  " + MachinePulse.roleName(p.role)
                                            + (p.uptime.map { "  · " + Self.duration($0) } ?? "") + "  · pid \(p.pid)"))
+                }
+                if parts.count > Self.partsShown {
+                    lines.append(style.dim("            " + tr("… and %1$@ more processes (%2$@ in all)", String(parts.count - Self.partsShown), Self.size(h.memoryKB))))
+                }
+                if h.owner == nil, let owners = h.owners {
+                    lines.append(style.dim("            " + tr("started by %1$@", owners.joined(separator: ", "))))
+                }
+                if let e = h.elsewhere {
+                    lines.append(style.dim("            " + tr("also %1$@ processes in %2$@ other folders (%3$@)", String(e.processes), String(e.projects.count), Self.size(e.memoryKB))
+                                           + "  thermo pulse inspect \"\(h.name)\""))
                 }
                 if let a = h.advice {
                     lines.append("            " + style.yellow("→ " + a.text) + style.dim("  thermo pulse restart \"\(h.name)\""))
@@ -132,10 +149,15 @@ struct PulseCommand {
         if app.args.has("json") || app.args.has("csv") {
             struct Out: Encodable {
                 let since: Date; let records: Int; let strugglingRecords: Int; let peakLoad: Double; let peakSwapMB: Int
+                let units: [String: String]
                 let blame: [PulseHistory.Share]
             }
+            let units = ["peakMemoryKB": "KiB, the row's largest reading while it was at the top; memoryMetric says how it was measured (footprint unless said; older records have none)",
+                         "peakCPU": MachinePulse.units["cpu"] ?? "", "peakSwapMB": "MiB of swap in use, whole machine",
+                         "minutes": "minutes among the top three while the Mac was struggling (load ≥ cores, memory pressure or throttling)",
+                         "peakProcesses": "most processes the row had at those moments; recorded since 1.1.26"]
             let report = Out(since: since, records: records.count, strugglingRecords: struggling.count,
-                             peakLoad: peakLoad, peakSwapMB: peakSwap, blame: blame)
+                             peakLoad: peakLoad, peakSwapMB: peakSwap, units: units, blame: blame)
             print(app.args.has("json") ? Export.diagnosticJSON(report) : Export.pulseCSV(report))
             return
         }
@@ -154,9 +176,92 @@ struct PulseCommand {
             for s in blame.prefix(8) {
                 lines.append("  " + pad(tr("%1$@ min", String(s.minutes)), 8, right: true) + "  " + pad(s.name, 24)
                              + style.dim(tr("peak %1$@ CPU · %2$@", String(format: "%.0f%%", s.peakCPU), Self.size(s.peakMemoryKB))
-                                         + ([s.project, s.owner.map { tr("started by %1$@", $0) }].compactMap { $0 }.map { "  · " + $0 }.joined())))
+                                         + ([s.peakProcesses.map { tr("(%1$@ processes)", String($0)) }, s.project, s.owner.map { tr("started by %1$@", $0) }].compactMap { $0 }.map { "  · " + $0 }.joined())))
             }
         }
+        out(lines)
+    }
+
+    static let partsShown = 5
+
+    /// `thermo pulse inspect NAME|PID`: every copy of one program, in every folder, with each
+    /// process's memory, CPU, start, parent and owner: what to check before calling copies leftovers.
+    func inspect(_ targets: [String]) throws {
+        guard let target = targets.first else { throw CLIError("usage: thermo pulse inspect NAME|PID [--json]") }
+        let style = app.style
+        // Everyone's processes for the parent chain (it passes root-owned `login`); only this user's are listed.
+        let everyone = ProcessTable.current(.init(uid: nil))
+        let byPid = Dictionary(everyone.entries.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
+        func owner(_ p: AgentProcess) -> String? {
+            var pid = p.ppid
+            for _ in 0..<16 {
+                guard pid > 1, let q = byPid[pid] else { return nil }
+                if let o = PulseSampler.recognise(name: q.name, executable: q.executable ?? "") { return o }
+                pid = q.ppid
+            }
+            return nil
+        }
+        let uid = getuid()
+        let all = MachinePulse.group(everyone.entries.filter { $0.uid == uid }, byMemory: true, limit: nil, owner: owner)
+        let lower = target.lowercased()
+        var rows: [MachinePulse.Hog]
+        if let pid = Int32(target) {
+            // A pid names its program; show every copy of that program.
+            guard let h = all.first(where: { $0.pids.contains(pid) }) else { throw CLIError("no process \(pid) of yours is running") }
+            rows = all.filter { $0.name == h.name && ($0.app == nil) == (h.app == nil) }
+        } else {
+            rows = all.filter { $0.name.lowercased() == lower }
+            if rows.isEmpty { rows = all.filter { $0.name.lowercased().contains(lower) } }
+        }
+        guard !rows.isEmpty else { throw CLIError("no running program matches '\(target)'; see thermo pulse or thermo memory") }
+        rows.sort { $0.memoryKB > $1.memoryKB }
+        let names = Set(rows.map(\.name))
+        let parts = rows.flatMap { $0.parts ?? [] }
+        // A command-line process whose parent has exited is adopted by launchd (ppid 1).
+        let orphaned = rows.filter { $0.app == nil }.flatMap { $0.parts ?? [] }.filter { $0.ppid == 1 }.count
+        let metrics = Set(rows.compactMap(\.memoryMetric))
+        let metric: MachinePulse.MemoryMetric? = metrics.count == 1 ? metrics.first : metrics.isEmpty ? nil : .mixed
+        let resident: Int? = parts.allSatisfy { $0.residentKB != nil } ? parts.reduce(0) { $0 + ($1.residentKB ?? 0) } : nil
+        if app.args.has("json") {
+            struct Out: Encodable {
+                let sampled: Date; let units: [String: String]; let query: String; let programs: [String]
+                let processes: Int; let rows: Int; let cpu: Double; let memoryKB: Int; let memoryMetric: MachinePulse.MemoryMetric?
+                let residentKB: Int?; let orphaned: Int; let orphanedNote: String; let programsDetail: [MachinePulse.Hog]
+            }
+            var units = MachinePulse.units
+            units["cpu"] = "percent of one core, decayed average like ps -o pcpu"
+            print(Export.diagnosticJSON(Out(sampled: Date(), units: units, query: target, programs: names.sorted(), processes: parts.count,
+                                            rows: rows.count, cpu: rows.reduce(0) { $0 + $1.cpu }, memoryKB: rows.reduce(0) { $0 + $1.memoryKB },
+                                            memoryMetric: metric, residentKB: resident, orphaned: orphaned,
+                                            orphanedNote: "command-line processes whose parent has exited (ppid 1); a hint for leftovers, not proof",
+                                            programsDetail: rows)))
+            return
+        }
+        let metricName = metric == .footprint ? tr("footprint") : metric == .residentEstimate ? tr("resident") : tr("mixed measures")
+        var lines = [style.bold(names.sorted().joined(separator: ", "))
+                     + "  " + tr("%1$@ processes in %2$@ rows", String(parts.count), String(rows.count))
+                     + style.dim("  · " + Self.size(rows.reduce(0) { $0 + $1.memoryKB }) + " " + metricName
+                                 + (resident.map { " · " + Self.size($0) + " " + tr("resident (RSS)") } ?? "")
+                                 + String(format: " · %.0f%% CPU", rows.reduce(0) { $0 + $1.cpu }))]
+        if orphaned > 0 {
+            lines.append("  " + style.yellow(tr("%1$@ processes outlived the program that started them (parent exited)", String(orphaned))))
+        }
+        for h in rows {
+            lines.append("")
+            lines.append("  " + style.bold(h.app ?? h.project ?? h.name) + style.dim("  " + tr("(%1$@ processes)", String(h.pids.count)) + " · " + Self.size(h.memoryKB)
+                                                                         + ((h.owner.map { [$0] } ?? h.owners).map { " · " + tr("started by %1$@", $0.joined(separator: ", ")) } ?? "")))
+            for p in h.parts ?? [] {
+                let parent = p.ppid.map { $0 == 1 && h.app == nil ? style.yellow(tr("parent exited")) : "ppid \($0)" } ?? ""
+                lines.append("    " + pad("pid \(p.pid)", 11) + pad(Self.size(p.memoryKB), 9, right: true)
+                             + style.dim(pad(p.residentKB.map { "RSS " + Self.size($0) } ?? "", 14, right: true)
+                                         + pad(String(format: "%.0f%%", p.cpu), 6, right: true)
+                                         + "  " + (p.uptime.map(Self.duration) ?? "—"))
+                             + "  " + parent
+                             + style.dim(h.owner == nil ? (p.owner.map { "  · " + $0 } ?? "") : ""))
+            }
+        }
+        lines.append("")
+        lines.append(style.dim(tr("Memory is %1$@; RSS counts shared pages in every process and is not comparable with it. Many copies or long uptimes alone do not prove a leak.", metricName)))
         out(lines)
     }
 

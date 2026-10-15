@@ -125,7 +125,7 @@ extension ConfigChecks {
             let rss = Double(members.reduce(0) { $0 + $1.row.rssKB }) / 1024
             let cpu = members.reduce(0) { $0 + $1.row.cpu }
             let detached = members.filter(\.detached)
-            let detail = tr("%1$@× · %2$@ · %3$@%% CPU", String(members.count), Self.mb(Int(rss * 1024)), String(Int(cpu)))
+            let detail = tr("%1$@× · %2$@ resident (RSS) · %3$@%% CPU", String(members.count), Self.mb(Int(rss * 1024)), String(Int(cpu)))
                 + (detached.isEmpty ? "" : " · " + tr("%1$@ detached", String(detached.count)))
             item(.processes, agent: "system", id: name, name: name, detail: detail, source: nil)
             defer { currentItem = nil }

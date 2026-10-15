@@ -59,7 +59,7 @@ struct AgentsCommand {
 
         let top = report.processes.prefix(all ? 15 : 8)
         if !top.isEmpty {
-            lines.append(style.bold("Agent processes") + style.dim("  (by memory)"))
+            lines.append(style.bold("Agent processes") + style.dim("  (by resident memory, RSS)"))
             for g in top {
                 let detached = g.detached > 0 ? style.yellow("  \(g.detached) detached") : ""
                 lines.append("  " + pad(String(g.count), 4, right: true) + "×  "

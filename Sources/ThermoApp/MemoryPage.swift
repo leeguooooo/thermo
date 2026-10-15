@@ -349,6 +349,9 @@ struct MemoryPage: View {
                 Spacer()
                 if let sampled = model.sampled { Text(sampled, style: .time).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
             }
+            // Said before the numbers, not under them: the column is easy to read as RAM or swap.
+            Text(tr("Memory footprint is Activity Monitor's Memory column: what a program is charged for, compressed memory included, some of which may be in swap. Adding programs up gives neither the used memory above nor the swap size; resident memory counts shared pages and cannot be subtracted from footprint to get swap."))
+                .font(.caption2).foregroundStyle(.white.opacity(0.6)).fixedSize(horizontal: false, vertical: true)
             HStack {
                 TextField(tr("Search programs, projects or PID"), text: $search).textFieldStyle(.roundedBorder)
                 Picker(tr("Sort by"), selection: $sortByResident) {
@@ -373,8 +376,6 @@ struct MemoryPage: View {
                 Button(showAll ? tr("Show fewer") : tr("Show all %1$@", String(visible.count))) { showAll.toggle() }
                     .buttonStyle(.link).font(.caption)
             }
-            Text(tr("Footprint includes charged compressed memory. Resident memory includes shared pages; these columns cannot be subtracted to calculate swap or added to match installed RAM."))
-                .font(.caption2).foregroundStyle(.white.opacity(0.5)).fixedSize(horizontal: false, vertical: true)
             if model.unreadableCount > 0 {
                 Text(tr("%1$@ processes have no footprint reading; resident estimates and missing values are marked.", String(model.unreadableCount)))
                     .font(.caption2).foregroundStyle(.orange)

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.26
+
+- `thermo pulse` 每一行都把同一程序在同一文件夹的所有进程算进来，不再只合计其中较大的几个；同一程序在其他文件夹还有副本时，会标出「另有 N 个进程在其他 M 个文件夹」。JSON 新增 `processCount`、`elsewhere`、每个进程的 `ppid`/`owner`/`project`，以及 `sampled`、`units`（各数值的单位和内存口径）和 `selection`（列出哪些程序、每行统计范围）。同一行的进程由不同 agent 启动时，不再只写第一个，而是全部列出（`owners`）。
+- 新增 `thermo pulse inspect NAME|PID`：一个程序在所有文件夹的全部副本，逐个进程列出内存占用（footprint）和 RSS、CPU、运行时长、父进程和启动者，并标出启动者已退出的进程。只能作为判断是否遗留的线索，不能直接证明泄漏。
+- `thermo pulse history` 记录每行的进程数和内存口径（`peakProcesses`、`memoryMetric`），JSON 附带单位说明。
+- `thermo agents` 的进程列表注明内存是驻留内存（RSS），JSON 增加 `memoryMetric`。
+- 内存页把口径说明移到程序列表上方：内存占用即活动监视器的「内存」列，含压缩内存（可能部分已换出），各程序相加不等于已用内存，也不等于 swap。
+- 不在 Thermo.app 里的 `thermo` 副本（例如复制到 `~/.local/bin` 的）比已安装的 App 旧时，会提示版本差异，并给出改成指向 App 自带命令的方法；不会自动改动该文件。
+
 ## 1.1.25
 
 - 菜单栏面板重新设计：CPU、GPU、内存、可用空间、网络、风扇改成卡片，有最近两分钟的曲线和温度标记；电池显示放电功率和剩余时间；「占用最多的程序」标出所在项目和启动它的 agent；顶部一句话说明现在是否过热或超负荷、主要原因是什么。
