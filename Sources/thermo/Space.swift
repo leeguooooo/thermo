@@ -162,6 +162,7 @@ struct SpaceCommand {
         print(tr("Moved %1$@ to the Trash (empty it to get the space back)", ByteFormat.string(result.bytes)))
         if let id = result.trashBatchID { print(style.dim(tr("Put back: thermo clean restore %1$@", id))) }
         for (p, why) in result.failed.sorted(by: { $0.key < $1.key }) { print(style.yellow("  ✗ " + FS.tilde(p) + "  " + why)) }
+        for p in result.whitelisted ?? [] { print(style.dim("  " + FS.tilde(p) + "  " + Whitelist.reason)) }
         if !result.failed.isEmpty { exit(1) }
     }
 

@@ -74,6 +74,9 @@ COMMANDS
   clean restore BATCH        move this batch's Trash items back where they were (--dry-run first;
                              never overwrites anything now at the original path)
   clean log                  what earlier cleanups removed
+  clean whitelist [add|remove PATH…]
+                             paths and globs every cleanup keeps (one per line in
+                             ~/Library/Application Support/Thermo/whitelist; --json)
   clean overview             where the used space is: the big places and their
                              biggest folders (--json)
   apps                       installed apps, their size and the files they keep in your home folder

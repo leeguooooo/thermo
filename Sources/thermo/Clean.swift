@@ -43,13 +43,14 @@ struct CleanCommand {
             throw CLIError("--budget is for read-only scans")
         }
         if args.has("stream") {
-            guard !args.has("csv"), !["run", "log", "empty-trash", "restore", "repair-worktrees"].contains(rest.first ?? "") else {
+            guard !args.has("csv"), !["run", "log", "empty-trash", "restore", "repair-worktrees", "whitelist"].contains(rest.first ?? "") else {
                 throw CLIError("--stream is for read-only scans and cannot be combined with --csv")
             }
         }
         switch rest.first {
         case "run": try clean(Array(rest.dropFirst()))
         case "log": showLog()
+        case "whitelist": try whitelist(Array(rest.dropFirst()))
         case "empty-trash": try emptyTrash(Array(rest.dropFirst()))
         case "restore": try restoreBatch(Array(rest.dropFirst()))
         case "repair-worktrees":
@@ -220,6 +221,7 @@ struct CleanCommand {
             }
         }
         if r.cancelled { lines.append(style.yellow("scan stopped · completed findings only; results are incomplete")) }
+        if let why = r.whitelistError { lines.append(style.red(why + " · " + tr("cleanup is disabled until it is fixed"))) }
         if r.items.isEmpty {
             lines.append("")
             lines.append(style.dim(r.cancelled ? "  no completed findings before the scan stopped" : "  nothing to clean"))
@@ -257,6 +259,7 @@ struct CleanCommand {
         var sub = [style.cyan(i.id), i.detail].filter { !$0.isEmpty }.joined(separator: style.dim(" · "))
         if !sub.isEmpty { sub = indent + sub; lines.append(sub) }
         if let b = i.blocked { lines.append(indent + style.red("skipped: " + b)) }
+        else if let kept = i.whitelisted { lines.append(indent + style.dim(tr("%1$@ whitelisted paths kept", String(kept.count)))) }
         if let n = i.note {
             let limit = max(40, width - 22)
             lines.append(indent + style.dim(n.count > limit ? String(n.prefix(limit - 1)) + "…" : n))
@@ -355,9 +358,12 @@ struct CleanCommand {
             }
             throw CLIError("nothing matches; see thermo clean")
         }
+        // A saved scan can predate a whitelist edit; an unreadable whitelist stops the run.
+        let whitelist: Whitelist
+        do { whitelist = try Whitelist.load() } catch { throw CLIError(Whitelist.unreadable(error) + "; nothing was removed") }
         let processes = ProcessTable.current(.init(cpu: false))
         let reviewed = picked.map { original -> CleanItem in
-            var item = original
+            var item = whitelist.apply(original)
             item.blocked = Cleaner.refusal(item, mode: mode, processes: processes)
             return item
         }
@@ -368,7 +374,8 @@ struct CleanCommand {
         var plan = [style.bold("About to clean \(ByteFormat.string(total)) in \(todo.count) item\(todo.count == 1 ? "" : "s"):")]
         for i in todo {
             let how = !(i.commands ?? []).isEmpty ? style.red("tool removal") : mode.trashes(i.safety) ? style.yellow("trash ") : style.red("delete")
-            plan.append("  " + pad(ByteFormat.string(i.bytes), 8, right: true) + "  " + how + "  " + i.title + style.dim("  \(i.paths.count) path\(i.paths.count == 1 ? "" : "s")"))
+            plan.append("  " + pad(ByteFormat.string(i.bytes), 8, right: true) + "  " + how + "  " + i.title + style.dim("  \(i.paths.count) path\(i.paths.count == 1 ? "" : "s")")
+                        + (i.whitelisted.map { style.dim(" · " + tr("%1$@ whitelisted paths kept", String($0.count))) } ?? ""))
         }
         for i in skipped {
             plan.append(style.dim("  skipped  \(i.title): \(i.blocked ?? (i.hint.map { "run \($0)" } ?? "nothing to remove"))"))
@@ -407,6 +414,7 @@ struct CleanCommand {
                       + (res.outcome == "partial" ? "  (partially completed; remainder kept)" : "")
                       + (res.bytesIncomplete == true ? "  (removed-size estimate incomplete)" : ""))
                 for (p, why) in res.failed.sorted(by: { $0.key < $1.key }).prefix(5) { print(style.dim("      \(FS.tilde(p)): \(why)")) }
+                for p in (res.whitelisted ?? []).prefix(5) { print(style.dim("      \(FS.tilde(p)): " + Whitelist.reason)) }
             }
         }
         let observation = DiskSpaceObservation(before: spaceBefore, after: DiskSpaceSnapshot.measure())
@@ -424,6 +432,45 @@ struct CleanCommand {
         if results.contains(where: { $0.bytesIncomplete == true }) { summary += "; some partial deletions could not be measured completely" }
         print(observation.summary)
         print(style.bold(summary) + style.dim(" · log: \(FS.tilde(Cleaner.logURL.path))"))
+    }
+
+    // MARK: whitelist
+
+    struct WhitelistListing: Encodable {
+        let file: String
+        let entries: [String]
+        let rejected: [Whitelist.Rejected]
+    }
+
+    /// `thermo clean whitelist [add|remove PATH…]`: paths every cleanup keeps.
+    func whitelist(_ rest: [String], home: String = NSHomeDirectory(), cwd: String = FileManager.default.currentDirectoryPath,
+                   write: (String) -> Void = { print($0) }) throws {
+        let usage = "usage: thermo clean whitelist [add|remove PATH…] [--json]"
+        // Relative paths are taken from the current folder; ~ and absolute paths and globs as typed.
+        let paths = rest.dropFirst().map { $0.hasPrefix("/") || $0.hasPrefix("~") ? $0 : cwd + "/" + $0 }
+        do {
+            switch rest.first {
+            case nil, "list":
+                guard rest.count <= 1 else { throw CLIError(usage) }
+                let w = try Whitelist.load(home: home)
+                if args.has("json") { write(Export.json(WhitelistListing(file: w.file, entries: w.entries, rejected: w.rejected))); return }
+                write(style.bold(tr("Whitelist")) + style.dim(" · " + FS.tilde(w.file, home: home)))
+                if w.entries.isEmpty { write(style.dim("  " + tr("nothing whitelisted; add paths with thermo clean whitelist add PATH…"))) }
+                for e in w.entries { write("  " + FS.tilde(e, home: home)) }
+                for r in w.rejected { write(style.yellow("  " + tr("line %1$@ ignored: %2$@ (%3$@)", String(r.line), r.text, tr(r.reason)))) }
+            case "add":
+                guard !paths.isEmpty else { throw CLIError(usage) }
+                let added = try Whitelist.add(paths, home: home)
+                for p in added { write(style.green("+ ") + FS.tilde(p, home: home)) }
+                if added.count < paths.count { write(style.dim(tr("already whitelisted: %1$@", String(paths.count - added.count)))) }
+            case "remove", "rm":
+                guard !paths.isEmpty else { throw CLIError(usage) }
+                let removed = try Whitelist.remove(paths, home: home)
+                for p in removed { write(style.red("- ") + FS.tilde(p, home: home)) }
+                if removed.count < paths.count { write(style.dim(tr("not in the whitelist: %1$@", String(paths.count - removed.count)))) }
+            default: throw CLIError(usage)
+            }
+        } catch let e as CLIError { throw e } catch { throw CLIError(error.localizedDescription) }
     }
 
     func repairWorktrees() throws {

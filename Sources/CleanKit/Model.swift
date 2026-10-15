@@ -97,6 +97,8 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     public var sizeIncomplete: Bool? = nil
     public var estimatedSize: Bool? = nil
     public var identities: [String: String]?
+    /// Paths left out because the user's whitelist keeps them.
+    public var whitelisted: [String]? = nil
 
     public init(id: String, category: CleanCategory, title: String, detail: String = "", safety: Safety,
                 bytes: Int64 = 0, files: Int = 0, lastUsed: Date? = nil, paths: [String] = [],
@@ -151,6 +153,8 @@ public struct ScanReport: Codable, Sendable {
     public var spaceContext: CleanSpaceContext? = nil
     public var growth: [ScanGrowth]? = nil
     public var changesSince: Date? = nil
+    /// Set when the whitelist could not be read; every item is then blocked.
+    public var whitelistError: String? = nil
 
     public init(items: [CleanItem], denied: [String], started: Date, duration: TimeInterval, claudeCleanupDays: Int? = nil,
                 cancelled: Bool = false) {
@@ -160,7 +164,7 @@ public struct ScanReport: Codable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays, projectRoots, discoverProjectRoots, language, spaceContext, growth, changesSince, exactSizes
+        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays, projectRoots, discoverProjectRoots, language, spaceContext, growth, changesSince, exactSizes, whitelistError
     }
 
     public init(from decoder: Decoder) throws {
@@ -177,6 +181,7 @@ public struct ScanReport: Codable, Sendable {
         spaceContext = try c.decodeIfPresent(CleanSpaceContext.self, forKey: .spaceContext)
         growth = try c.decodeIfPresent([ScanGrowth].self, forKey: .growth)
         changesSince = try c.decodeIfPresent(Date.self, forKey: .changesSince)
+        whitelistError = try c.decodeIfPresent(String.self, forKey: .whitelistError)
         language = try c.decodeIfPresent(String.self, forKey: .language)
         projectRoots = try c.decodeIfPresent([String].self, forKey: .projectRoots)
         discoverProjectRoots = try c.decodeIfPresent(Bool.self, forKey: .discoverProjectRoots)

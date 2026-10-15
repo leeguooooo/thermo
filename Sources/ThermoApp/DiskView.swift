@@ -43,7 +43,9 @@ final class DiskModel: ObservableObject {
 
     /// What a clean would remove: ticked items, narrowed to the parts still ticked.
     var selectedItems: [CleanItem] {
-        (report?.items ?? []).filter { selected.contains($0.id) && $0.cleanable }.compactMap { i in
+        // An unreadable whitelist disables cleaning altogether.
+        guard report?.whitelistError == nil else { return [] }
+        return (report?.items ?? []).filter { selected.contains($0.id) && $0.cleanable }.compactMap { i in
             guard let off = excluded[i.id], !off.isEmpty, let parts = i.parts else { return i }
             let narrowed = i.only(Set(parts.map(\.id)).subtracting(off))
             return narrowed.bytes > 0 ? narrowed : nil
@@ -76,7 +78,9 @@ final class DiskModel: ObservableObject {
                 $0.projectRoots == Array(Set(options.projectRoots)).sorted() &&
                 $0.discoverProjectRoots == options.discoverProjectRoots && $0.olderThanDays == options.olderThanDays
         }) else { return false }
-        report = r
+        var marked = r
+        marked.applyWhitelist()
+        report = marked
         selected = Set(r.items.filter(\.automaticallySelected).map(\.id))
         return true
     }
@@ -171,6 +175,11 @@ final class DiskModel: ObservableObject {
         cleaningDone = 0
         cleaningTotal = items.count
         queue.async { [weak self] in
+            do { _ = try Whitelist.load() } catch {
+                let why = Whitelist.unreadable(error)
+                DispatchQueue.main.async { self?.error = why; self?.cleaning = false }
+                return
+            }
             ScanReportCache.invalidate()
             let spaceBefore = DiskSpaceSnapshot.measure()
             let batchID = UUID().uuidString
@@ -178,7 +187,7 @@ final class DiskModel: ObservableObject {
             var partialCount = 0
             var estimateIncomplete = false
             var removedAny = false
-            var freed: Int64 = 0, trashed: Int64 = 0, failures = 0
+            var freed: Int64 = 0, trashed: Int64 = 0, failures = 0, kept = 0
             var remaining: [String: CleanItem] = [:]
             for (n, i) in items.enumerated() {
                 DispatchQueue.main.async { self?.cleaningStep = i.title; self?.cleaningDone = n }
@@ -189,6 +198,7 @@ final class DiskModel: ObservableObject {
                 removedAny = removedAny || !r.removed.isEmpty || r.partialRemoved?.isEmpty == false
                 if r.trashed { trashed += r.trashedAllocatedBytes ?? r.bytes } else { freed += r.bytes }
                 failures += r.failed.count
+                kept += r.whitelisted?.count ?? 0
                 if let original = originals[i.id], let rest = Self.remainder(original, attempted: i, result: r) {
                     remaining[i.id] = rest
                 }
@@ -200,6 +210,7 @@ final class DiskModel: ObservableObject {
             if partialCount > 0 { text += " · " + tr("%1$@ items partially completed; remaining files kept", String(partialCount)) }
             if estimateIncomplete { text += " · " + tr("partial deletion size could not be measured completely") }
             if failures > 0 { text += " · " + trCount(failures, "%1$@ path could not be removed (see log)", "%1$@ paths could not be removed (see log)") }
+            if kept > 0 { text += " · " + tr("%1$@ whitelisted paths kept", String(kept)) }
             text += "\n" + observation.summary
             let invalidateOverview = removedAny
             let remainingItems = remaining
@@ -243,6 +254,25 @@ final class DiskModel: ObservableObject {
             excluded[item.id] = Set((item.parts ?? []).map(\.id)).subtracting([part.id])
         } else {
             excluded[item.id]?.remove(part.id)
+        }
+    }
+
+    /// "Always keep": the item's paths (or just some: one session, one path) go into the whitelist
+    /// and stay out of every cleanup.
+    func alwaysKeep(_ item: CleanItem, paths: [String]? = nil) {
+        do {
+            try Whitelist.add(paths ?? item.paths)
+            error = nil
+        } catch {
+            self.error = error.localizedDescription
+            return
+        }
+        report?.applyWhitelist()
+        let cleanable = Set((report?.items ?? []).filter(\.cleanable).map(\.id))
+        selected = selected.intersection(cleanable)
+        if let parts = report?.items.first(where: { $0.id == item.id })?.parts, var off = excluded[item.id] {
+            off.formIntersection(parts.map(\.id))
+            excluded[item.id] = off.isEmpty ? nil : off
         }
     }
 

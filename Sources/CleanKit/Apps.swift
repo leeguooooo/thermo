@@ -62,6 +62,8 @@ public struct UninstallPlan: Codable, Sendable {
     public var receipts: [String] = []
     /// Personal data left in place (profiles, chat history, mail), unless the plan includes it.
     public var kept: [AppLeftover]?
+    /// Leftovers left in place because the user's whitelist keeps them.
+    public var whitelisted: [String]? = nil
 }
 
 public enum AppUninstaller {
@@ -408,17 +410,21 @@ public enum AppUninstaller {
         if app.bytes == 0 { app.bytes = bundleSize(app.path) }
         app.protected = app.protected ?? protection(app, home: home)
         let kept = includePersonal ? [] : app.leftovers.filter { $0.personal == true }
-        let moved = app.leftovers.filter { l in !kept.contains { $0.path == l.path } }
+        let whitelist = try? Whitelist.load(home: home)
+        let saved = app.leftovers.map(\.path).filter { whitelist?.protects($0) == true }
+        let moved = app.leftovers.filter { l in !kept.contains { $0.path == l.path } && !saved.contains(l.path) }
         let paths = [app.path] + moved.map(\.path)
         var plan = UninstallPlan(app: app, paths: paths, bytes: app.bytes + moved.reduce(0) { $0 + $1.bytes },
                                  receipts: receipts(for: app.bundleID))
         plan.kept = kept.isEmpty ? nil : kept
+        plan.whitelisted = saved.isEmpty ? nil : saved
         plan.blocked = refusal(plan, home: home, processes: processes ?? ProcessTable.current(.init(cpu: false)))
         return plan
     }
 
     static func refusal(_ plan: UninstallPlan, home: String, processes: ProcessTable) -> String? {
         if let why = plan.app.protected { return why }
+        if let why = Whitelist.refusal(plan.app.path, home: home) { return why }
         if runningProcess(in: [plan.app.path], processes: processes) != nil {
             return tr("%1$@ is running; quit it first", plan.app.name)
         }
@@ -455,8 +461,14 @@ public enum AppUninstaller {
         let g = Guard(home: home)
         let batchID = UUID().uuidString
         let table = processes()
+        let whitelist: Whitelist
+        do { whitelist = try Whitelist.load(home: home) } catch {
+            for path in paths { result.failed[path] = Whitelist.unreadable(error) }
+            return
+        }
         for path in paths {
             if let why = g.uninstallRefusal(path, bundleIDs: bundleIDs) { result.failed[path] = why; continue }
+            if whitelist.protects(path) { result.whitelisted = (result.whitelisted ?? []) + [path]; continue }
             guard FS.exists(path) else { continue }
             if runningProcess(in: [path], processes: table) != nil {
                 result.failed[path] = tr("a running executable uses this location")
@@ -531,8 +543,11 @@ public enum AppUninstaller {
             }
         }
         var out: [OrphanData] = []
-        for (id, paths) in byID.sorted(by: { $0.key < $1.key }) {
+        let whitelist = try? Whitelist.load(home: home)
+        for (id, all) in byID.sorted(by: { $0.key < $1.key }) {
             if cancellation?.isCancelled == true { break }
+            let paths = all.filter { whitelist?.protects($0) != true }
+            if paths.isEmpty { continue }
             let lower = id.lowercased()
             if known.contains(where: { lower == $0 || startsWith(lower, id: $0) || startsWith($0, id: lower) }) { continue }
             let items = paths.map { path -> AppLeftover in
