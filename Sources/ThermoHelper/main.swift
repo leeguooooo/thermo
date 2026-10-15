@@ -159,31 +159,33 @@ final class Controller {
     func setPolicy(_ policy: FanPolicy, fan: Int) throws {
         guard !removalGuard.isPreparing else { throw FanControlError.helper("helper is preparing for removal; fan policy changes are blocked") }
         try policy.validate()
-        if pendingRecovery != nil, !restoreFans(reason: "before policy change").confirmed {
+        if policy != .auto, pendingRecovery != nil, !restoreFans(reason: "before policy change").confirmed {
             throw FanControlError.helper(pendingRecovery?.summary ?? "automatic control unconfirmed")
         }
         let ids = fan == -1 ? sampler.discovery.fans.map(\.index) : [fan]
         for id in ids { guard sampler.discovery.fans.contains(where: { $0.index == id }) else { throw FanControlError.noSuchFan(id) } }
-        defer { do { try PolicyStore.save(engine.policies) } catch { log("could not save policies: \(error)") } }
-        for id in ids {
-            engine.set(policy, for: id)
-            written[id] = nil
-            if policy == .auto {
-                do {
-                    try writer.setAuto(id)
-                } catch {
-                    // Never leave a fan stranded in manual mode: fall back to a full reset.
-                    log("fan \(id): auto failed (\(error)); resetting all fans")
-                    let restored = restoreFans(reason: "auto fallback")
-                    if !restored.confirmed { throw FanControlError.helper(restored.summary) }
+        var next = engine
+        for id in ids { next.set(policy, for: id) }
+        try FanPolicyCommit.apply(policy,
+            save: { try PolicyStore.save(next.policies) },
+            commit: {
+                self.engine = next
+                for id in ids { self.written[id] = nil }
+            },
+            applyAutomatic: {
+                var errors: [String] = []
+                for id in ids {
+                    do { try self.writer.setAuto(id) } catch { errors.append(String(describing: error)) }
                 }
-            }
-            log("fan \(id): requested \(policy.description)")
-        }
-        if !engine.isActive && sampler.discovery.fanTestKey {
-            let report = restoreFans(reason: "last policy returned to auto")
-            if !report.confirmed { throw FanControlError.helper(report.summary) }
-        }
+                if !self.engine.isActive && self.sampler.discovery.fanTestKey {
+                    let report = self.restoreFans(reason: "last policy returned to auto")
+                    if !report.confirmed { errors.append(report.summary) }
+                }
+                if !errors.isEmpty { throw FanControlError.helper(errors.joined(separator: "; ")) }
+            },
+            restoreAll: { self.restoreFans(reason: "policy change recovery") },
+            recordFault: { self.controlError = $0 })
+        for id in ids { log("fan \(id): requested \(policy.description)") }
         controlError = nil
     }
 }
