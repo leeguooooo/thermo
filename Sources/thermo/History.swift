@@ -6,6 +6,18 @@ import ThermoL10n
 /// `thermo history`: every change Thermo made, newest first, and where each one is undone.
 struct HistoryCommand {
     let app: App
+    struct Detail: Encodable {
+        let operation: OperationRecord
+        let complete: Bool
+        let issues: [String]
+        enum QualityKeys: String, CodingKey { case complete, issues }
+        func encode(to encoder: Encoder) throws {
+            try operation.encode(to: encoder)
+            var quality = encoder.container(keyedBy: QualityKeys.self)
+            try quality.encode(complete, forKey: .complete)
+            try quality.encode(issues, forKey: .issues)
+        }
+    }
 
     func run(_ rest: [String]) throws {
         switch rest.first {
@@ -24,14 +36,16 @@ struct HistoryCommand {
             guard let n = Int(value), (1...1000).contains(n) else { throw CLIError("--limit takes 1–1000") }
             return n
         } ?? 20
-        let records = OperationJournal.read(limit: limit)
+        let report = OperationJournal.readReport(limit: limit)
+        let records = report.records
         if app.args.has("json") {
-            struct Output: Encodable { let journal: String; let limit: Int; let operations: [OperationRecord] }
-            print(String(decoding: try Self.encoder().encode(Output(journal: OperationJournal.url().path, limit: limit, operations: records)), as: UTF8.self))
+            struct Output: Encodable { let journal: String; let limit: Int; let operations: [OperationRecord]; let complete: Bool; let issues: [String] }
+            print(String(decoding: try Self.encoder().encode(Output(journal: OperationJournal.url().path, limit: limit, operations: records, complete: report.complete, issues: report.issues)), as: UTF8.self))
             return
         }
         let style = app.style
-        guard !records.isEmpty else { print(style.dim(tr("No operations recorded yet."))); return }
+        if !report.complete { print(style.yellow(tr("History is incomplete: %1$@", report.issues.joined(separator: "\n")))) }
+        guard !records.isEmpty else { print(style.dim(tr(report.complete ? "No operations recorded yet." : "No verified history records are available."))); return }
         let f = DateFormatter(); f.dateStyle = .short; f.timeStyle = .short
         for r in records {
             let mark = r.outcome == "succeeded" ? style.green("✓") : r.outcome == "partial" ? style.yellow("◐") : style.red("✗")
@@ -43,9 +57,15 @@ struct HistoryCommand {
     }
 
     func show(_ id: String?) throws {
-        guard let id, let r = OperationJournal.find(id) else { throw CLIError("usage: thermo history show ID (see thermo history)") }
-        if app.args.has("json") { print(String(decoding: try Self.encoder().encode(r), as: UTF8.self)); return }
+        guard let id else { throw CLIError("usage: thermo history show ID (see thermo history)") }
+        let report = OperationJournal.readReport()
+        guard let r = report.records.first(where: { $0.id == id || ($0.id.hasPrefix(id) && id.count >= 8) }) else {
+            if !report.complete { throw CLIError("history is incomplete: " + report.issues.joined(separator: "; ")) }
+            throw CLIError("usage: thermo history show ID (see thermo history)")
+        }
+        if app.args.has("json") { print(String(decoding: try Self.encoder().encode(Detail(operation: r, complete: report.complete, issues: report.issues)), as: UTF8.self)); return }
         let style = app.style
+        if !report.complete { print(style.yellow(tr("History is incomplete: %1$@", report.issues.joined(separator: "\n")))) }
         print(style.bold(r.title) + style.dim("  \(r.id) · \(r.outcomeText)"))
         if let subject = r.subject { print(style.dim("  " + subject)) }
         for item in r.items {

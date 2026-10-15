@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-15T22:07:36.575261+00:00",
+  "baseSourceCommit": "263aea4",
+  "sourceSHA256": {
+    "Sources/AgentCore/OperationJournal.swift": "b22cc169340ee616ca3225d43f15de9ce6d5d3ca79682876b89c6a6d378a1f34",
+    "Sources/ThermoApp/HistoryPage.swift": "94ae940a1058f1b05c5ac0769e7a16aef1986feb12a0be5ba4934781c63922f5",
+    "Sources/thermo/History.swift": "12c31c70e2881aa546cd59ad8e2ad3dd6db99658cdc090019a37f398b8ef5479",
+    "Tests/AgentCoreTests/OperationJournalReadTests.swift": "f1561d9998db2b880f9a03d03cb8e5adba3ae42a6c286fb283d349de7c1369f0",
+    "Tests/ThermoAppTests/HistoryReadTests.swift": "d82ce24f113920cfec82fd8d02ab7863169952a8c2bd66d062fc2f506d0206b9"
+  },
+  "fullRegression": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 55,
+      "ThermoAppTests": 135,
+      "CleanKitTests": 452,
+      "AgentCoreTests": 32
+    },
+    "total": 788,
+    "failures": 0
+  },
+  "finalCLIRetest": {
+    "tests": 55,
+    "failures": 0
+  },
+  "nativeCLI": {
+    "binarySHA256": "c265a5bc075b4a7f45eb825295722e1152151e819e423f884f23d127cbb43fd1",
+    "results": [
+      {
+        "case": "missing",
+        "exitCode": 0,
+        "complete": true,
+        "recordCount": 0,
+        "issueCount": 0,
+        "elapsedSeconds": 0.012
+      },
+      {
+        "case": "directory",
+        "exitCode": 0,
+        "complete": false,
+        "recordCount": 0,
+        "issueCount": 1,
+        "elapsedSeconds": 0.007
+      },
+      {
+        "case": "fifo",
+        "exitCode": 0,
+        "complete": false,
+        "recordCount": 0,
+        "issueCount": 1,
+        "elapsedSeconds": 0.006
+      },
+      {
+        "case": "complete",
+        "exitCode": 0,
+        "complete": true,
+        "recordCount": 1,
+        "issueCount": 0,
+        "elapsedSeconds": 0.007
+      },
+      {
+        "case": "partial",
+        "exitCode": 0,
+        "complete": false,
+        "recordCount": 1,
+        "issueCount": 1,
+        "elapsedSeconds": 0.007
+      },
+      {
+        "case": "show-known-incomplete",
+        "exitCode": 0,
+        "recordFieldsPreserved": true,
+        "complete": false
+      },
+      {
+        "case": "show-unknown-incomplete",
+        "exitCode": 2,
+        "explicitIncompleteError": true
+      },
+      {
+        "case": "locked",
+        "exitCode": 0,
+        "complete": false,
+        "recordCount": 0,
+        "issueCount": 1,
+        "elapsedSeconds": 0.006
+      },
+      {
+        "case": "oversized",
+        "exitCode": 0,
+        "complete": false,
+        "recordCount": 0,
+        "issueCount": 1,
+        "elapsedSeconds": 0.006
+      }
+    ],
+    "ownedWorkspaceRemoved": true
+  },
+  "coalescingAssertions": {
+    "refreshRequests": 1000,
+    "readerCalls": 2,
+    "peakConcurrentReaders": 1,
+    "supersededSnapshotNotPublished": true
+  },
+  "rotationRegression": {
+    "before": "both directory and symlink preservation assertions failed on owned temporary fixtures",
+    "after": "both pass; unexpected generations abort rotation and cleanup uses unlink rather than recursive removal"
+  },
+  "boundaries": [
+    "Only owned temporary journals and synthetic model data were used; no user history was modified",
+    "No helper installation, SMC/pmset writes or native UI actions",
+    "Read complete describes successfully inspected retained files, not all historical events or an atomic cross-process snapshot",
+    "Cross-process rotation coordination and durable write acknowledgements remain unverified",
+    "The new read-error banners and revised recovery wording have not had visible-window QA"
+  ]
+}

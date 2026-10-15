@@ -60,7 +60,7 @@ public struct OperationRecord: Codable, Sendable, Identifiable, Equatable {
 }
 
 /// Append-only history of every change Thermo makes, kept beside the batch and backup stores it
-/// points at. Writing never fails or blocks the operation it records; reading skips damaged lines.
+/// points at. Writes are best effort; checked reads preserve valid rows and report gaps.
 public enum OperationJournal {
     public static let maxBytes = 4 * 1024 * 1024
     /// Rotated generations kept besides the live file (operations.1.jsonl, operations.2.jsonl).
@@ -82,12 +82,13 @@ public enum OperationJournal {
         guard !record.items.isEmpty || record.outcome == "failed" else { return }
         guard var line = try? encoder().encode(record) else { return }
         line.append(10)
+        guard line.count <= maxBytes * 2 else { return }
         lock.lock(); defer { lock.unlock() }
         let location = url(home: home)
         let directory = location.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        rotateIfNeeded(location, adding: line.count)
-        let fd = open(location.path, O_WRONLY | O_APPEND | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0o600)
+        guard rotateIfNeeded(location, adding: line.count) else { return }
+        let fd = open(location.path, O_WRONLY | O_APPEND | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0o600)
         guard fd >= 0 else { return }
         defer { close(fd) }
         var info = stat()
@@ -104,53 +105,98 @@ public enum OperationJournal {
         }
     }
 
-    static func rotateIfNeeded(_ location: URL, adding: Int) {
+    static func rotateIfNeeded(_ location: URL, adding: Int) -> Bool {
         var info = stat()
-        guard lstat(location.path, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG, Int(info.st_size) + adding > maxBytes else { return }
+        guard lstat(location.path, &info) == 0 else { return errno == ENOENT }
+        guard info.st_uid == getuid(), (info.st_mode & S_IFMT) == S_IFREG, info.st_nlink == 1, info.st_size >= 0 else { return false }
+        guard info.st_size > off_t(maxBytes) || adding > maxBytes - Int(info.st_size) else { return true }
         let fm = FileManager.default
         func generation(_ n: Int) -> URL {
             location.deletingLastPathComponent().appendingPathComponent("operations.\(n).jsonl")
         }
-        try? fm.removeItem(at: generation(generations))
-        for n in stride(from: generations - 1, through: 1, by: -1) where fm.fileExists(atPath: generation(n).path) {
-            try? fm.moveItem(at: generation(n), to: generation(n + 1))
+        for n in 1...generations {
+            var candidate = stat()
+            if lstat(generation(n).path, &candidate) != 0 {
+                guard errno == ENOENT else { return false }; continue
+            }
+            guard candidate.st_uid == getuid(), candidate.st_mode & S_IFMT == S_IFREG, candidate.st_nlink == 1 else { return false }
         }
-        try? fm.moveItem(at: location, to: generation(1))
+        // unlink never recurses into a directory if the namespace changes after checking.
+        if unlink(generation(generations).path) != 0 && errno != ENOENT { return false }
+        do {
+            for n in stride(from: generations - 1, through: 1, by: -1) where fm.fileExists(atPath: generation(n).path) {
+                try fm.moveItem(at: generation(n), to: generation(n + 1))
+            }
+            try fm.moveItem(at: location, to: generation(1))
+            return true
+        } catch { return false }
     }
 
     /// Newest first, across the live file and its rotated generations. Damaged lines are skipped,
     /// never fatal: one torn write must not hide the rest of the history.
     public static func read(home: String = NSHomeDirectory(), limit: Int? = nil) -> [OperationRecord] {
+        readReport(home: home, limit: limit).records
+    }
+
+    public struct ReadReport: Sendable {
+        public var records: [OperationRecord]
+        public var issues: [String]
+        public var complete: Bool { issues.isEmpty }
+        public init(records: [OperationRecord], issues: [String] = []) { self.records = records; self.issues = issues }
+    }
+
+    /// Preserve readable records while distinguishing missing journals from unreadable or damaged ones.
+    public static func readReport(home: String = NSHomeDirectory(), limit: Int? = nil) -> ReadReport {
         let location = url(home: home)
         let files = [location] + (1...generations).map {
             location.deletingLastPathComponent().appendingPathComponent("operations.\($0).jsonl")
         }
         var records: [OperationRecord] = []
+        var issues: [String] = []
         for file in files {
-            guard let data = safeRead(file) else { continue }
+            let result = readFile(file)
+            if let issue = result.issue { issues.append(issue) }
+            guard let data = result.data else { continue }
+            var damaged = 0
             // Later entries may finish an operation previously recorded as unconfirmed.
             // Prefer the last append even when ISO timestamps fall in the same second.
             for line in data.split(separator: 10).reversed() {
                 if let record = try? decoder().decode(OperationRecord.self, from: Data(line)) { records.append(record) }
+                else { damaged += 1 }
             }
+            if damaged > 0 { issues.append("\(file.path): \(damaged) damaged history line(s) skipped") }
         }
         var seen = Set<String>()
         records = records.filter { seen.insert($0.id).inserted }.sorted { $0.time > $1.time }
-        if let limit { return Array(records.prefix(max(0, limit))) }
-        return records
+        if let limit { records = Array(records.prefix(max(0, limit))) }
+        return ReadReport(records: records, issues: issues)
     }
 
     public static func find(_ id: String, home: String = NSHomeDirectory()) -> OperationRecord? {
         read(home: home).first { $0.id == id || ($0.id.hasPrefix(id) && id.count >= 8) }
     }
 
-    static func safeRead(_ url: URL) -> Data? {
-        let fd = open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
-        guard fd >= 0 else { return nil }
+    private static func readFile(_ url: URL) -> (data: Data?, issue: String?) {
+        let fd = open(url.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+        guard fd >= 0 else {
+            return errno == ENOENT ? (nil, nil) : (nil, "\(url.path): \(String(cString: strerror(errno)))")
+        }
         defer { close(fd) }
         var info = stat()
-        guard fstat(fd, &info) == 0, info.st_uid == getuid(), (info.st_mode & S_IFMT) == S_IFREG,
-              info.st_size <= off_t(maxBytes * 2) else { return nil }
-        return try? FileHandle(fileDescriptor: fd, closeOnDealloc: false).readToEnd()
+        guard fstat(fd, &info) == 0, info.st_uid == getuid(), (info.st_mode & S_IFMT) == S_IFREG, info.st_nlink == 1,
+              info.st_size <= off_t(maxBytes * 2) else { return (nil, "\(url.path): history file identity, type or size could not be verified") }
+        guard flock(fd, LOCK_SH | LOCK_NB) == 0 else { return (nil, "\(url.path): history file is busy") }
+        defer { flock(fd, LOCK_UN) }
+        do {
+            let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: false)
+            var data = Data()
+            let cap = maxBytes * 2
+            while data.count <= cap {
+                let chunk = try handle.read(upToCount: min(65536, cap + 1 - data.count)) ?? Data()
+                if chunk.isEmpty { return (data, nil) }
+                data.append(chunk)
+            }
+            return (nil, "\(url.path): history file exceeded the read limit")
+        } catch { return (nil, "\(url.path): \(error.localizedDescription)") }
     }
 }

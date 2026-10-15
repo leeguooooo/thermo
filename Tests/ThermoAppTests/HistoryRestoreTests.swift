@@ -15,7 +15,7 @@ final class HistoryRestoreTests: XCTestCase {
         let release = DispatchSemaphore(value: 0)
         defer { release.signal() }
         var paths: [String] = []
-        let model = HistoryModel(reader: { [] }, restoreBatch: { id in
+        let model = HistoryModel(reader: { .init(records: []) }, restoreBatch: { id in
             began.fulfill()
             _ = release.wait(timeout: .now() + 5)
             return TrashRestore(id: id, dryRun: false, items: [
@@ -37,7 +37,7 @@ final class HistoryRestoreTests: XCTestCase {
     }
 
     @MainActor func testFailedRestoreReleasesExitGuardWithoutInvalidatingSuccessfulData() async {
-        let model = HistoryModel(reader: { [] }, restoreBatch: { _ in throw NSError(domain: "fixture", code: 1) },
+        let model = HistoryModel(reader: { .init(records: []) }, restoreBatch: { _ in throw NSError(domain: "fixture", code: 1) },
                                  didRestore: { _ in XCTFail("nothing was restored") })
         model.restore(record())
         for _ in 0..<100 where model.busy { try? await Task.sleep(nanoseconds: 10_000_000) }

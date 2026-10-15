@@ -9,27 +9,43 @@ final class HistoryModel: ObservableObject {
     static let shared = HistoryModel()
     @Published private(set) var records: [OperationRecord] = []
     @Published private(set) var loaded = false
+    @Published private(set) var reading = false
+    @Published private(set) var readIssue: String?
     @Published var busy = false
     @Published var notice: String?
 
-    private let reader: @Sendable () -> [OperationRecord]
+    private let reader: @Sendable () -> OperationJournal.ReadReport
+    private var readAgain = false
     private let restoreBatch: @Sendable (String) throws -> TrashRestore
     private let didRestore: @MainActor ([String]) -> Void
-    init(reader: @escaping @Sendable () -> [OperationRecord] = { OperationJournal.read(limit: 300) },
+    init(reader: @escaping @Sendable () -> OperationJournal.ReadReport = { OperationJournal.readReport(limit: 300) },
          restoreBatch: @escaping @Sendable (String) throws -> TrashRestore = { try TrashBatches.restore(id: $0) },
          didRestore: @escaping @MainActor ([String]) -> Void = { _ in AppModels.shared.apps.invalidateAfterRestore() }) {
         self.reader = reader; self.restoreBatch = restoreBatch; self.didRestore = didRestore
     }
 
     func load() {
+        guard !reading else { readAgain = true; return }
+        reading = true
         let reader = reader
         Task.detached(priority: .userInitiated) {
-            let records = reader()
-            await MainActor.run { self.records = records; self.loaded = true }
+            let report = reader()
+            await MainActor.run {
+                self.reading = false
+                if self.readAgain { self.readAgain = false; self.load(); return }
+                if report.complete { self.records = report.records }
+                else {
+                    var seen = Set<String>()
+                    self.records = Array((report.records + self.records).filter { seen.insert($0.id).inserted }
+                        .sorted { $0.time > $1.time }.prefix(300))
+                }
+                self.readIssue = report.complete ? nil : tr("History is incomplete: %1$@", report.issues.joined(separator: "\n"))
+                self.loaded = true
+            }
         }
     }
 
-    /// Puts a recorded Trash batch back; anything changed, missing or in the way is skipped and listed.
+    /// Puts recorded items back; replacements, missing items and original-path conflicts are skipped.
     func restore(_ record: OperationRecord) {
         guard !busy, record.undo?.kind == "trashBatch", let id = record.undo?.ref else { return }
         busy = true
@@ -73,18 +89,20 @@ struct HistoryPage: View {
                 Text(FS.tilde(OperationJournal.url().path)).font(.system(size: 11).monospaced()).foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
                 Spacer(minLength: 8)
-                if model.busy { ProgressView().controlSize(.small) }
+                if model.busy || model.reading { ProgressView().controlSize(.small) }
                 Button { model.load() } label: { Image(systemName: "arrow.clockwise") }
                     .buttonStyle(.plain).foregroundStyle(.white.opacity(0.7))
                     .accessibilityLabel(tr("Refresh")).help(tr("Refresh"))
+                    .disabled(model.busy || model.reading)
             }
             .padding(.horizontal, 4)
             if let notice = model.notice { NoticeBanner(text: notice) { model.notice = nil } }
+            if let issue = model.readIssue { NoticeBanner(text: issue) }
             if !model.loaded {
                 NoticeBanner(text: tr("Reading the history…"), busy: true)
             } else if model.records.isEmpty {
                 InspectorPanel {
-                    Text(tr("No operations recorded yet. Cleanups, uninstalls, agent fixes, Claude resets, privacy changes and tab batches will appear here."))
+                    Text(tr(model.readIssue == nil ? "No operations recorded yet. Cleanups, uninstalls, agent fixes, Claude resets, privacy changes and tab batches will appear here." : "No verified history records are available."))
                         .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).fixedSize(horizontal: false, vertical: true)
                         .padding(16)
                 }
@@ -240,7 +258,7 @@ struct HistoryPage: View {
                     }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
                 }.frame(maxHeight: 200)
             }
-            Text(tr("Each item goes back only if it is still in the Trash unchanged and nothing new is at its original place; anything else is skipped and listed."))
+            Text(tr("Only recorded items still in the Trash are put back when their original locations are empty; other items are skipped and listed."))
                 .font(.system(size: 12)).foregroundStyle(.white.opacity(0.8)).fixedSize(horizontal: false, vertical: true)
             HStack {
                 Button(tr("Cancel")) { restoring = nil }.keyboardShortcut(.cancelAction)
