@@ -33,6 +33,7 @@ final class Controller {
     var engine: FanPolicyEngine
     /// Last RPM written per fan, for hysteresis and ramping.
     var written: [Int: Double] = [:]
+    var pendingRecovery: FanAutoRecoveryReport?
     var timer: DispatchSourceTimer?
     let lidAwake: LidAwakeController
     var lidTimer: DispatchSourceTimer?
@@ -57,10 +58,10 @@ final class Controller {
 
     func start() {
         queue.sync {
-            writer.setAllAuto()
+            restoreFans(reason: "helper started")
             // Keep-awake-with-the-lid-closed never survives a restart (crash, update, reboot).
             lidAwake.restoreOriginal(reason: "helper started")
-            log("started; \(sampler.discovery.fans.count) fan(s), \(sampler.discovery.sensors.filter(\.essential).count) control sensors; fans set to auto")
+            log("started; \(sampler.discovery.fans.count) fan(s), \(sampler.discovery.sensors.filter(\.essential).count) control sensors")
             // What the user chose survives restarts (updates, reboots); the next tick applies it,
             // with the over-temperature protection as always.
             let saved = PolicyStore.load()
@@ -92,29 +93,42 @@ final class Controller {
         lidAwake.tick(hottest: s.hottest, battery: Battery.read(), lidClosed: SleepSwitch.lidClosed())
     }
 
-    func shutdown(reason: String) {
+    func shutdown(reason: String) -> FanAutoRecoveryReport {
         queue.sync {
-            writer.setAllAuto()
+            let report = restoreFans(reason: reason)
             lidAwake.restoreOriginal(reason: reason)
-            log("\(reason); fans returned to auto")
+            return report
         }
+    }
+
+    @discardableResult
+    func restoreFans(reason: String) -> FanAutoRecoveryReport {
+        let report = writer.setAllAuto()
+        pendingRecovery = report.confirmed ? nil : report
+        written.removeAll()
+        log("\(reason); \(report.summary)")
+        if !report.requestErrors.isEmpty { log("reset requests: " + report.requestErrors.joined(separator: "; ")) }
+        return report
     }
 
     /// Must run on `queue`.
     func tick() {
+        if pendingRecovery != nil, !restoreFans(reason: "retry automatic control").confirmed { return }
         guard engine.isActive else { return }
         let snapshot = sampler.sample()
         for action in engine.tick(snapshot) {
             switch action {
             case .failsafe(let t):
-                writer.setAllAuto()
-                written.removeAll()
-                log(String(format: "FAILSAFE: %.1f °C ≥ %.0f °C; fans on auto, policies suspended until below %.0f °C for %d s",
+                let restored = restoreFans(reason: "thermal failsafe")
+                log(String(format: "FAILSAFE: %.1f °C ≥ %.0f °C; policies suspended until below %.0f °C for %d s",
                            t, engine.limits.ceiling, engine.limits.resumeBelow, engine.limits.resumeTicks * Int(Self.interval)))
+                if !restored.confirmed { return }
             case .resume(let t):
                 log(String(format: "cooled to %.1f °C; resuming fan policies", t))
             case .auto(let fan):
-                try? writer.setAuto(fan)
+                do { try writer.setAuto(fan) } catch {
+                    if !restoreFans(reason: "fan \(fan) auto failed: \(error)").confirmed { return }
+                }
                 written[fan] = nil
             case .manual(let fan, var rpm):
                 if let last = written[fan] {
@@ -132,9 +146,13 @@ final class Controller {
 
     func setPolicy(_ policy: FanPolicy, fan: Int) throws {
         try policy.validate()
+        if pendingRecovery != nil, !restoreFans(reason: "before policy change").confirmed {
+            throw FanControlError.helper(pendingRecovery?.summary ?? "automatic control unconfirmed")
+        }
         let ids = fan == -1 ? sampler.discovery.fans.map(\.index) : [fan]
+        for id in ids { guard sampler.discovery.fans.contains(where: { $0.index == id }) else { throw FanControlError.noSuchFan(id) } }
+        defer { do { try PolicyStore.save(engine.policies) } catch { log("could not save policies: \(error)") } }
         for id in ids {
-            guard sampler.discovery.fans.contains(where: { $0.index == id }) else { throw FanControlError.noSuchFan(id) }
             engine.set(policy, for: id)
             written[id] = nil
             if policy == .auto {
@@ -143,13 +161,16 @@ final class Controller {
                 } catch {
                     // Never leave a fan stranded in manual mode: fall back to a full reset.
                     log("fan \(id): auto failed (\(error)); resetting all fans")
-                    writer.setAllAuto()
+                    let restored = restoreFans(reason: "auto fallback")
+                    if !restored.confirmed { throw FanControlError.helper(restored.summary) }
                 }
             }
-            log("fan \(id): \(policy.description)")
+            log("fan \(id): requested \(policy.description)")
         }
-        if !engine.isActive && sampler.discovery.fanTestKey { writer.setAllAuto() }
-        do { try PolicyStore.save(engine.policies) } catch { log("could not save policies: \(error)") }
+        if !engine.isActive && sampler.discovery.fanTestKey {
+            let report = restoreFans(reason: "last policy returned to auto")
+            if !report.confirmed { throw FanControlError.helper(report.summary) }
+        }
     }
 }
 
@@ -196,7 +217,7 @@ final class Service: NSObject, ThermoHelperProtocol {
 
     func policies(reply: @escaping (Data) -> Void) {
         controller.queue.async {
-            reply((try? PolicyCoding.encoder().encode(self.controller.engine.policies)) ?? Data("{}".utf8))
+            reply((try? FanPolicyReply.encode(self.controller.engine.policies, recovery: self.controller.pendingRecovery)) ?? Data(#"{"_thermoError":"Could not encode fan control state"}"#.utf8))
         }
     }
 }
@@ -228,8 +249,8 @@ for sig in [SIGTERM, SIGINT, SIGHUP] {
     signal(sig, SIG_IGN)
     let src = DispatchSource.makeSignalSource(signal: sig, queue: .main)
     src.setEventHandler {
-        controller.shutdown(reason: "signal \(sig)")
-        exit(0)
+        let recovery = controller.shutdown(reason: "signal \(sig)")
+        exit(recovery.confirmed ? 0 : 1)
     }
     src.resume()
     signalSources.append(src)
@@ -244,8 +265,8 @@ if let path = Bundle.main.executablePath ?? CommandLine.arguments.first {
     if fd >= 0 {
         let src = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: [.delete, .rename, .write], queue: .main)
         src.setEventHandler {
-            controller.shutdown(reason: "executable replaced (update)")
-            exit(0)
+            let recovery = controller.shutdown(reason: "executable replaced (update)")
+            exit(recovery.confirmed ? 0 : 1)
         }
         src.setCancelHandler { close(fd) }
         src.resume()
@@ -274,8 +295,8 @@ if let i = CommandLine.arguments.firstIndex(of: "--source"), i + 1 < CommandLine
         case .rejected(let why):
             if why != lastRejection { log("self-update skipped: \(why)"); lastRejection = why }
         case .updated(let v):
-            controller.shutdown(reason: "updated itself to \(v) from \(source)")
-            exit(0)
+            let recovery = controller.shutdown(reason: "updated itself to \(v) from \(source)")
+            exit(recovery.confirmed ? 0 : 1)
         }
     }
     t.resume()

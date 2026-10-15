@@ -64,7 +64,7 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 ## 卸载
 
-1. Thermo → 设置 → Fan helper → Uninstall（或 `thermo helper uninstall`），风扇恢复自动。
+1. 先用 `thermo fan auto all` 请求恢复自动控制，确认成功后，再用 Thermo → 设置 → Fan helper → Uninstall（或 `thermo helper uninstall`）移除 helper。卸载本身的成功提示不证明风扇已经恢复自动。
 2. 删除 `/Applications/Thermo.app`、`/usr/local/bin/thermo*`。
 3. 可选：`rm -rf ~/Library/Caches/dev.thermo && defaults delete dev.thermo.app`。
 
@@ -107,6 +107,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 `get --csv` 使用 `key,type,value,hex,error` 列。单个 key 读取失败时保留错误行，其他 key 继续读取；命令最终返回非零退出码。
 
 `fan status --csv` 输出转速、范围、手动模式和 helper 策略；`policies_available=false` 时策略为 `unknown`。`helper status` 的 JSON/CSV 包含 `installationSource`：`legacy` 表示发现旧式安装文件，`connected` 表示已连接到后台 helper，`unknown` 表示无法确认后台注册；此时 `installed=false` 只表示未检测到安装。
+
+helper 恢复自动控制时逐扇请求并读回模式或强制位；Apple Silicon 还检查 `Ftst` 解锁位。恢复未获确认时，策略查询返回错误，后台重试恢复并暂缓应用手动策略；退出状态也反映恢复失败。这些检查确认控制寄存器的读回结果，不能代替真实硬件验收，手动转速写入也尚未增加读回确认。
 
 `bench --json/--csv` 导出每次操作的平均 wall/CPU 毫秒、重复次数、最后一次采样返回的记录数和 CPU 开销估算。采样测试包含温度、风扇、功率、电压、电流；估算不是整个 App 的实际 CPU 占用。SMC 传感器数量单独记录，返回记录数包含 IOHID 和风扇，也不等于 SMC 调用次数。
 

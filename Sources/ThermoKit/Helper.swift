@@ -253,7 +253,7 @@ public final class HelperClient: @unchecked Sendable {
             deadline(3, once) { cont.resume(throwing: FanControlError.helperUnavailable("no answer within 3 s")) }
             p.policies { d in once.run { cont.resume(returning: d) } }
         }
-        return try PolicyCoding.decoder().decode([Int: FanPolicy].self, from: data)
+        return try FanPolicyReply.decode(data)
     }
 
     public func setLidAwake(_ on: Bool, heatGuard: Bool = true) async throws {

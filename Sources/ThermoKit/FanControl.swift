@@ -144,8 +144,22 @@ public enum FanControlError: Error, CustomStringConvertible {
 }
 
 /// Performs SMC writes for fan control. Requires root (used by the helper).
+public protocol FanSMCAccess: AnyObject {
+    func double(_ key: FourCC) throws -> Double
+    func write(_ key: FourCC, value: Double) throws
+}
+
+extension SMC: FanSMCAccess {}
+
+public struct FanAutoRecoveryReport: Codable, Sendable, Equatable {
+    public var unconfirmed: [String]
+    public var requestErrors: [String]
+    public var confirmed: Bool { unconfirmed.isEmpty }
+    public var summary: String { confirmed ? "automatic control confirmed" : "automatic control unconfirmed: " + unconfirmed.joined(separator: "; ") }
+}
+
 public final class FanWriter {
-    let smc: SMC
+    let smc: any FanSMCAccess
     let discovery: Discovery
     private var unlocked = false
     /// Intel: F<i>Md value seen before we touched anything, restored by setAuto.
@@ -153,7 +167,7 @@ public final class FanWriter {
     /// write of 3 — there auto is F<i>Md=0 followed by Ftst=0; see setAuto.)
     private var originalMode: [Int: Double] = [:]
 
-    public init(smc: SMC, discovery: Discovery) {
+    public init(smc: any FanSMCAccess, discovery: Discovery) {
         self.smc = smc
         self.discovery = discovery
         for f in discovery.fans where f.hasModeKey {
@@ -189,7 +203,7 @@ public final class FanWriter {
         if f.hasModeKey {
             try retrying { try smc.write(f.modeKey, value: 1) }
         } else if discovery.fanForceKey {
-            let bits = Int(try smc.double("FS! "))
+            let bits = try forceBits(fan: id)
             try smc.write("FS! ", value: Double(bits | (1 << id)))
         }
         try smc.write(f.targetKey, value: target)
@@ -204,18 +218,52 @@ public final class FanWriter {
             let mode = discovery.fanTestKey ? 0 : (originalMode[id] ?? 0)
             try smc.write(f.modeKey, value: mode)
         } else if discovery.fanForceKey {
-            let bits = Int(try smc.double("FS! "))
+            let bits = try forceBits(fan: id)
             try smc.write("FS! ", value: Double(bits & ~(1 << id)))
         }
+        try verifyAuto(f)
     }
 
-    /// Best-effort: every fan back to firmware control.
-    public func setAllAuto() {
-        for f in discovery.fans { try? setAuto(f.index) }
-        if discovery.fanTestKey {
-            try? smc.write("Ftst", value: 0)
-            unlocked = false
+    private func verifyAuto(_ f: FanDescriptor) throws {
+        if f.hasModeKey {
+            let value = try smc.double(f.modeKey)
+            let expected = originalMode[f.index] ?? 0
+            let valid = discovery.fanTestKey ? (value == 0 || value == 3) : (expected != 1 && value == expected)
+            guard valid else { throw FanControlError.helper("fan \(f.index): automatic mode readback did not match") }
+        } else if discovery.fanForceKey {
+            guard try forceBits(fan: f.index) & (1 << f.index) == 0 else {
+                throw FanControlError.helper("fan \(f.index): force bit still set or unavailable")
+            }
+        } else { throw FanControlError.helper("fan \(f.index): no automatic-control readback key") }
+    }
+
+    private func forceBits(fan: Int) throws -> Int {
+        let value = try smc.double("FS! ")
+        guard (0..<16).contains(fan), value.isFinite, value >= 0, value <= 65535, value.rounded() == value else {
+            throw FanControlError.helper("fan \(fan): invalid force-bitfield readback")
         }
+        return Int(value)
+    }
+
+    /// Attempt every reset, then independently read back the resulting state. A successful
+    /// write is not confirmation; a failed request may still be recovered by clearing Ftst.
+    @discardableResult
+    public func setAllAuto() -> FanAutoRecoveryReport {
+        var requests: [String] = [], unconfirmed: [String] = []
+        for f in discovery.fans {
+            do { try setAuto(f.index) } catch { requests.append(String(describing: error)) }
+        }
+        if discovery.fanTestKey {
+            do { try smc.write("Ftst", value: 0) } catch { requests.append(String(describing: error)) }
+            unlocked = false
+            do {
+                guard try smc.double("Ftst") == 0 else { throw FanControlError.helper("Ftst unlock remains active") }
+            } catch { unconfirmed.append(String(describing: error)) }
+        }
+        for f in discovery.fans {
+            do { try verifyAuto(f) } catch { unconfirmed.append(String(describing: error)) }
+        }
+        return FanAutoRecoveryReport(unconfirmed: unconfirmed, requestErrors: requests)
     }
 
     /// Mode writes can be refused for a moment right after the Ftst unlock.
