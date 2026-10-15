@@ -182,6 +182,8 @@ public struct CleanResult: Codable, Sendable {
     public var outcome: String? = nil
     public var trashBatchID: String? = nil
     public var trashedAllocatedBytes: Int64? = nil
+    /// Paths skipped because the user's whitelist keeps them (reason "whitelisted").
+    public var whitelisted: [String]? = nil
 
     public init(id: String, trashed: Bool) { self.id = id; self.trashed = trashed }
 }
@@ -294,6 +296,11 @@ public enum Cleaner {
                         batchID: String, operations: RemovalOperations) -> CleanResult {
         let trash = mode.trashes(item.safety) && !item.paths.isEmpty
         var result = CleanResult(id: item.id, trashed: trash)
+        let whitelist: Whitelist
+        do { whitelist = try Whitelist.load(home: g.home) } catch {
+            result.failed[item.id] = Whitelist.unreadable(error)
+            return result
+        }
         if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
             result.failed[item.id] = why
             return result
@@ -328,6 +335,7 @@ public enum Cleaner {
         }
         for path in item.paths {
             if let why = ToolCleanup.isBrowserOldVersion(item) ? ToolCleanup.oldVersionRefusal(path) : g.refusal(path) { result.failed[path] = why; continue }
+            if whitelist.protects(path) { result.whitelisted = (result.whitelisted ?? []) + [path]; continue }
             guard FS.exists(path) else { continue }
             if item.category == .aiSessions {
                 let name = ((path as NSString).lastPathComponent as NSString).deletingPathExtension

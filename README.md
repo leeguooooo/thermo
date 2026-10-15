@@ -96,6 +96,7 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 | `thermo clean [ai\|CATEGORY]` | 列出可清理的内容，只读不删 |
 | `thermo clean run safe\|ID…` | 清理指定项（先确认；`--yes` 跳过确认，`--trash` / `--permanent` 指定处理方式） |
 | `thermo clean log` | 历次清理删了什么 |
+| `thermo clean whitelist [add\|remove PATH…]` | 始终保留的路径或 glob（`~/Library/Application Support/Thermo/whitelist`，每行一个，`#` 注释）；所有清理、卸载和移到废纸篓都会跳过，文件不可信时拒绝清理；`--json` |
 
 所有读取命令都支持 `--json`、`--csv`，另有 `--fahrenheit`、`--no-color`（也遵循 `NO_COLOR`）。
 

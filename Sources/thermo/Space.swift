@@ -161,6 +161,7 @@ struct SpaceCommand {
         let result = ManualRemoval.trash(ok, sizes: sizes)
         print(tr("Moved %1$@ to the Trash (empty it to get the space back)", ByteFormat.string(result.bytes)))
         for (p, why) in result.failed.sorted(by: { $0.key < $1.key }) { print(style.yellow("  ✗ " + FS.tilde(p) + "  " + why)) }
+        for p in result.whitelisted ?? [] { print(style.dim("  " + FS.tilde(p) + "  " + Whitelist.reason)) }
         if !result.failed.isEmpty { exit(1) }
     }
 

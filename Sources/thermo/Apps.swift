@@ -75,6 +75,10 @@ struct AppsCommand {
             lines.append(style.dim(tr("Kept, your data (profiles, chat history, mail); add --with-data to move it too:")))
             for l in kept { lines.append(style.dim("  " + pad(ByteFormat.string(l.bytes), 9, right: true) + "  " + FS.tilde(l.path))) }
         }
+        if let saved = plan.whitelisted {
+            lines.append(style.dim(tr("Kept, whitelisted:")))
+            for p in saved { lines.append(style.dim("  " + FS.tilde(p))) }
+        }
         if let cask = plan.app.cask {
             lines.append(style.dim(tr("Homebrew installed it: run brew uninstall --cask %1$@ afterwards so Homebrew forgets it.", cask)))
         }
@@ -157,6 +161,7 @@ struct AppsCommand {
         for r in results {
             for p in r.removed { print("  " + style.green("✓") + " " + FS.tilde(p)) }
             for (p, why) in r.failed.sorted(by: { $0.key < $1.key }) { print("  " + style.yellow("!") + " " + FS.tilde(p) + style.dim(": " + why)) }
+            for p in r.whitelisted ?? [] { print("  " + style.dim("- " + FS.tilde(p) + ": " + Whitelist.reason)) }
         }
         let bytes = results.reduce(Int64(0)) { $0 + $1.bytes }
         print(style.bold(tr("Moved %1$@ to the Trash (empty it to get the space back)", ByteFormat.string(bytes)))

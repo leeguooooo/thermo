@@ -130,6 +130,9 @@ struct DiskHome: View {
                     Label(tr("Scan stopped. These are partial results."), systemImage: "pause.circle")
                         .font(.callout).foregroundStyle(.orange)
                 }
+                if let why = model.error ?? model.report?.whitelistError {
+                    Label(why, systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.red)
+                }
                 if let denied = model.report?.denied, !denied.isEmpty {
                     VStack(spacing: 8) {
                         Text(tr("%1$@ locations could not be read. Results may be incomplete.", String(denied.count)))
@@ -236,6 +239,12 @@ struct DiskCategoryPage: View {
     var body: some View {
         VStack(spacing: 0) {
             header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
+            if let why = model.error ?? model.report?.whitelistError {
+                Label(why, systemImage: "exclamationmark.triangle")
+                    .font(.callout).foregroundStyle(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 28).padding(.bottom, 10)
+            }
             if model.report?.cancelled == true {
                 Label(tr("Scan stopped. These are partial results."), systemImage: "pause.circle")
                     .font(.callout).foregroundStyle(.orange)
@@ -363,6 +372,7 @@ struct DiskCategoryPage: View {
         .glass(radius: 14, highlighted: ticked)
         .contextMenu {
             Button(tr("Show in Finder")) { model.reveal(i) }.disabled(i.paths.isEmpty)
+            Button(tr("Always keep")) { model.alwaysKeep(i) }.disabled(i.paths.isEmpty || i.blocked == tr(Whitelist.reason) || model.cleaning)
             Button(tr("Copy ID")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(i.id, forType: .string) }
         }
     }
@@ -424,6 +434,9 @@ struct DiskItemDetail: View {
                 Text(tr("Allocated size estimate; shared blocks may not be reclaimed."))
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
+            if let kept = item.whitelisted {
+                Text(tr("%1$@ whitelisted paths kept", String(kept.count))).font(.caption).foregroundStyle(.white.opacity(0.55))
+            }
             if let n = item.note { Text(n).font(.callout).foregroundStyle(.white.opacity(0.75)).fixedSize(horizontal: false, vertical: true) }
             if item.developmentDependency {
                 Text(tr("Kept by default: development may need these files again. Archive them only when the environment or project is inactive."))
@@ -460,6 +473,7 @@ struct DiskItemDetail: View {
                                     .frame(width: 70, alignment: .trailing)
                             }
                             .font(.callout)
+                            .contextMenu { Button(tr("Always keep")) { model.alwaysKeep(item, paths: p.paths) }.disabled(model.cleaning) }
                         }
                     }
                 }
@@ -474,6 +488,7 @@ struct DiskItemDetail: View {
                             Image(systemName: "magnifyingglass")
                         }.buttonStyle(.borderless).foregroundStyle(.white.opacity(0.6)).help(tr("Show in Finder"))
                     }
+                    .contextMenu { Button(tr("Always keep")) { model.alwaysKeep(item, paths: [p]) }.disabled(model.cleaning) }
                 }
                 if item.paths.count > 12 {
                     Text(tr("… and %1$@ more", String(item.paths.count - 12))).font(.caption).foregroundStyle(.white.opacity(0.45))

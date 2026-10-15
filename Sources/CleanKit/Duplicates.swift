@@ -122,8 +122,9 @@ public enum Duplicates {
 /// before it moves: Documents or Downloads may go, but never the folders themselves, keys and
 /// credentials, iCloud, mail, photo libraries' insides, git metadata or anything outside home.
 public enum ManualRemoval {
-    public static func refusal(_ path: String, home: String = NSHomeDirectory()) -> String? {
+    public static func refusal(_ path: String, home: String = NSHomeDirectory(), whitelist: Whitelist? = nil) -> String? {
         if !path.hasPrefix("/") || path.split(separator: "/").contains(where: { $0 == ".." || $0 == "." }) { return tr("not a full path") }
+        if let why = Whitelist.refusal(path, home: home, whitelist: whitelist) { return why }
         let real = Guard.deletionLocation(path)
         let canonicalHome = URL(fileURLWithPath: home).resolvingSymlinksInPath().path
         let p = real.hasPrefix(canonicalHome + "/") ? home + real.dropFirst(canonicalHome.count) : real
@@ -144,8 +145,11 @@ public enum ManualRemoval {
     public static func trash(_ paths: [String], sizes: [String: Int64] = [:], home: String = NSHomeDirectory()) -> CleanResult {
         var result = CleanResult(id: "manual", trashed: true)
         let open = OpenFiles.current()
-        for path in paths {
-            if let why = refusal(path, home: home) { result.failed[path] = why; continue }
+        var whitelist: Whitelist?
+        do { whitelist = try Whitelist.load(home: home) } catch { for path in paths { result.failed[path] = Whitelist.unreadable(error) } }
+        for path in paths where whitelist != nil {
+            if whitelist?.protects(path) == true { result.whitelisted = (result.whitelisted ?? []) + [path]; continue }
+            if let why = refusal(path, home: home, whitelist: whitelist) { result.failed[path] = why; continue }
             guard FileManager.default.fileExists(atPath: path) || (try? FileManager.default.destinationOfSymbolicLink(atPath: path)) != nil else { continue }
             guard let open else { result.failed[path] = tr("could not check whether a program is using it"); continue }
             if let h = open.holder(of: path) { result.failed[path] = tr("%1$@ has files open here", h.name); continue }

@@ -68,9 +68,17 @@ public final class DiskScanner: @unchecked Sendable {
         let lock = NSLock()
         var items: [CleanItem] = []
         var denied: [String] = []
+        // Marked as found, so streamed results already show what the whitelist keeps.
+        let whitelist: Whitelist?, whitelistError: String?
+        do { whitelist = try Whitelist.load(home: options.home); whitelistError = nil }
+        catch { whitelist = nil; whitelistError = Whitelist.unreadable(error) }
+        let mark: ([CleanItem]) -> [CleanItem] = { found in
+            if let whitelist { return whitelist.apply(found) }
+            return found.map { item in var i = item; if !i.paths.isEmpty || !(i.commands ?? []).isEmpty { i.blocked = whitelistError }; return i }
+        }
 
         var jobs: [(String, Set<CleanCategory>, () -> [CleanItem])] = [
-            ("projects", [.projects, .agentWorktrees, .aiCaches], { Projects.scan(ctx, onItem: { self.onItems?([$0]) }) }),
+            ("projects", [.projects, .agentWorktrees, .aiCaches], { Projects.scan(ctx, onItem: { self.onItems?(mark([$0])) }) }),
             ("AI sessions", [.aiSessions], { AISessions.scan(ctx) }),
             ("AI tools", [.aiCaches], { AITools.scan(ctx) }),
             ("AI models", [.aiModels], { AIModels.scan(ctx) }),
@@ -95,7 +103,7 @@ public final class DiskScanner: @unchecked Sendable {
         func runJob(_ i: Int) {
             guard !cancellation.isCancelled else { return }
             let t0 = Date()
-            let found = jobs[i].2().filter { options.categories.contains($0.category) }
+            let found = mark(jobs[i].2().filter { options.categories.contains($0.category) })
             guard !cancellation.isCancelled || jobs[i].0 == "projects" else { return }
             if timing { FileHandle.standardError.write(String(format: "%6.2fs %@\n", Date().timeIntervalSince(t0), jobs[i].0).data(using: .utf8)!) }
             lock.lock()
@@ -122,6 +130,7 @@ public final class DiskScanner: @unchecked Sendable {
         var report = ScanReport(items: items, denied: Array(Set(denied)).sorted(), started: started,
                                 duration: Date().timeIntervalSince(started), claudeCleanupDays: claudeCleanupDays(),
                                 cancelled: cancellation.isCancelled)
+        report.whitelistError = whitelistError
         report.categories = CleanCategory.allCases.filter { options.categories.contains($0) }
         report.olderThanDays = options.olderThanDays
         report.projectRoots = Array(Set(options.projectRoots)).sorted()
