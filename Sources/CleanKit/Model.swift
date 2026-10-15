@@ -99,6 +99,8 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     public var identities: [String: String]?
     /// Paths left out because the user's whitelist keeps them.
     public var whitelisted: [String]? = nil
+    /// The cache's own clean command, run instead of deleting the folders it owns (`npm cache clean`).
+    public var native: NativeClean? = nil
 
     public init(id: String, category: CleanCategory, title: String, detail: String = "", safety: Safety,
                 bytes: Int64 = 0, files: Int = 0, lastUsed: Date? = nil, paths: [String] = [],
@@ -128,6 +130,54 @@ public struct CleanItem: Codable, Identifiable, Sendable {
             item.title = title[..<r.upperBound] + trCount(chosen.count, "%1$@ session", "%1$@ sessions")
         }
         return item
+    }
+}
+
+/// A tool's own cleanup for a cache folder: the tool knows its locks and layout, so it runs instead
+/// of deleting the folder. The item's paths stay the fallback when the tool cannot be used.
+public struct NativeClean: Codable, Sendable, Equatable {
+    public struct Run: Codable, Sendable, Equatable {
+        /// The folder this command empties; item paths in it are not deleted when it runs.
+        public var folder: String
+        /// Absolute program first, preceded by `NAME=value` settings (run through `env`, no shell).
+        public var argv: [String]
+
+        public init(folder: String, argv: [String]) { self.folder = folder; self.argv = argv }
+
+        /// The exact line that runs, quoted where needed.
+        public var commandLine: String {
+            argv.map { $0.allSatisfy { $0.isLetter || $0.isNumber || "-_./=:,+@%".contains($0) } ? $0 : Shell.quote($0) }
+                .joined(separator: " ")
+        }
+        /// The program, after any `NAME=value` settings.
+        public var executable: String? { argv.first { !$0.contains("=") } }
+    }
+
+    /// `npm`, `pip3`, …
+    public var tool: String
+    /// What the review says runs: `npm cache clean --force`.
+    public var display: String
+    /// Empty when the tool cannot be used; `fallback` says why.
+    public var runs: [Run]
+    /// Why the folders are deleted instead (tool not found, whitelist).
+    public var fallback: String?
+    /// `notFound` or `whitelisted`, for the result.
+    public var fallbackStatus: String?
+
+    public init(tool: String, display: String, runs: [Run], fallback: String? = nil, fallbackStatus: String? = nil) {
+        self.tool = tool; self.display = display; self.runs = runs; self.fallback = fallback; self.fallbackStatus = fallbackStatus
+    }
+
+    /// The paths of `item` a run takes over.
+    public func owns(_ path: String) -> Bool {
+        runs.contains { path == $0.folder || path.hasPrefix($0.folder + "/") }
+    }
+}
+
+public extension CleanItem {
+    /// Whether removing this item runs a tool's own cleanup (not when the Trash is wanted).
+    func runsNativeClean(_ mode: RemovalMode) -> Bool {
+        !(native?.runs ?? []).isEmpty && !mode.trashes(safety)
     }
 }
 

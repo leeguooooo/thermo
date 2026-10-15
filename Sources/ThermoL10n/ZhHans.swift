@@ -1952,4 +1952,12 @@ let zhHans: [String: String] = [
     "%1$@: %2$@": "%1$@：%2$@",
     "whitelist would be larger than %1$@ KB": "白名单将超过 %1$@ KB",
     "whitelist could not be written": "无法写入白名单",
+    "%1$@ was not found in the standard locations; the folder is deleted instead": "在常用位置找不到 %1$@，改为直接删除文件夹",
+    "the Trash was chosen, so the folder is moved there instead": "选择了移到废纸篓，因此改为把文件夹移到废纸篓",
+    "the whitelist keeps something inside; folders are deleted one by one instead": "白名单保留了其中的内容，改为逐个删除文件夹",
+    "runs `%1$@`": "运行 `%1$@`",
+    "ran `%1$@`": "已运行 `%1$@`",
+    "did not run `%1$@`; folder deleted instead": "未运行 `%1$@`，改为删除文件夹",
+    "tool clean": "工具自行清理",
+    "Caches with their own clean command are emptied by that tool.": "自带清理命令的缓存由该工具自行清空。",
 ]

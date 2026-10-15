@@ -23,10 +23,15 @@ extension DiskModel {
     /// One line per item for the confirmation: how it goes, size, name, paths.
     var planLines: [String] {
         selectedItems.flatMap { i -> [String] in
-            let how = !(i.commands ?? []).isEmpty ? tr("permanent tool removal") : i.safety == .safe ? tr("delete") : tr("trash")
-            let paths = trCount(i.paths.count, "%1$@ path", "%1$@ paths")
-            return ["\(how) · \(ByteFormat.string(i.bytes)) · \(i.title) (\(paths))"]
-                + i.paths.map { "    " + FSPath.tilde($0) }
+            // A tool's own clean command replaces deleting the folders it owns: name the command.
+            let native = i.runsNativeClean(.auto) ? i.native : nil
+            let deleted = i.paths.filter { native?.owns($0) != true }
+            let how = native != nil ? tr("tool clean") : !(i.commands ?? []).isEmpty ? tr("permanent tool removal") : i.safety == .safe ? tr("delete") : tr("trash")
+            let paths = trCount(deleted.count, "%1$@ path", "%1$@ paths")
+            return ["\(how) · \(ByteFormat.string(i.bytes)) · \(i.title)" + (native == nil || !deleted.isEmpty ? " (\(paths))" : "")]
+                + (native.map { ["    " + tr("runs `%1$@`", $0.display)] } ?? [])
+                + (native == nil ? [i.native?.fallback].compactMap { $0 }.map { "    " + $0 } : [])
+                + deleted.map { "    " + FSPath.tilde($0) }
                 + (i.commands ?? []).map { "    " + $0.joined(separator: " ") }
         }
     }
@@ -42,6 +47,9 @@ extension DiskModel {
                                  "%1$@ items with your data (sessions, models, worktrees) go to the Trash."))
         }
         if !toolItems.isEmpty { parts.append(tr("Tool-managed items are removed permanently; they do not go to the Trash.")) }
+        if items.contains(where: { $0.runsNativeClean(.auto) }) {
+            parts.append(tr("Caches with their own clean command are emptied by that tool."))
+        }
         return parts.joined(separator: " ")
     }
 
