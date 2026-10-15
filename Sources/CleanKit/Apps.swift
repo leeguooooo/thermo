@@ -1,5 +1,6 @@
 import AgentCore
 import Foundation
+import Darwin
 import ThermoL10n
 
 /// An app bundle found in /Applications or ~/Applications.
@@ -13,6 +14,8 @@ public struct InstalledApp: Codable, Identifiable, Sendable, Equatable {
     public var inventoryIdentity: AppReviewIdentity? = nil
     /// Size of the bundle itself (0 until measured).
     public var bytes: Int64 = 0
+    public var sizeState: AppSizeState? = nil
+    public var relatedDataState: AppSizeState? = nil
     /// Files the app keeps in the home folder, found by bundle ID and name (empty until looked up).
     public var leftovers: [AppLeftover] = []
     /// Why Thermo will not uninstall it (system app, password manager, VPN, input method, …).
@@ -31,13 +34,14 @@ public struct InstalledApp: Codable, Identifiable, Sendable, Equatable {
 public struct AppLeftover: Codable, Sendable, Equatable, Hashable {
     public var path: String
     public var bytes: Int64
+    public var sizeState: AppSizeState? = nil
     /// Newest modification inside it.
     public var lastUsed: Date?
     /// A browser profile, chat history or mailbox: kept unless asked for.
     public var personal: Bool?
 
-    public init(path: String, bytes: Int64, lastUsed: Date? = nil, personal: Bool? = nil) {
-        self.path = path; self.bytes = bytes; self.lastUsed = lastUsed; self.personal = personal
+    public init(path: String, bytes: Int64, lastUsed: Date? = nil, personal: Bool? = nil, sizeState: AppSizeState? = nil) {
+        self.path = path; self.bytes = bytes; self.lastUsed = lastUsed; self.personal = personal; self.sizeState = sizeState
     }
 }
 
@@ -46,6 +50,7 @@ public struct OrphanData: Codable, Identifiable, Sendable, Equatable {
     public var id: String { bundleID }
     public var bundleID: String
     public var items: [AppLeftover]
+    public var blocked: String? = nil
 
     public init(bundleID: String, items: [AppLeftover]) { self.bundleID = bundleID; self.items = items }
     public var bytes: Int64 { items.reduce(0) { $0 + $1.bytes } }
@@ -58,6 +63,7 @@ public struct UninstallPlan: Codable, Sendable {
     /// Everything that goes to the Trash: the bundle first, then its leftovers.
     public var paths: [String]
     public var bytes: Int64
+    public var sizeState: AppSizeState? = nil
     /// Captured before review; absent in older serialized plans, which must be reviewed again.
     public var identities: [String: String]? = nil
     public var appIdentity: AppReviewIdentity? = nil
@@ -125,37 +131,87 @@ public enum AppUninstaller {
                             version: (info["CFBundleShortVersionString"] as? String) ?? (info["CFBundleVersion"] as? String)))
     }
 
-    /// Measures every app and looks up its leftovers, several at a time; `each` hears about each one
-    /// as it finishes (from any thread).
+    /// Publishes bundle allocation first, then associated data. Default discovery is bounded;
+    /// budget:nil requests a full measurement. Callbacks may publish twice per app, from workers.
     public static func measure(_ apps: [InstalledApp], home: String = NSHomeDirectory(), cancellation: ScanCancellation? = nil,
+                               budget: TimeInterval? = 60,
                                each: ((InstalledApp) -> Void)? = nil) -> [InstalledApp] {
-        var out = apps
-        let lock = NSLock()
-        let cancellation = cancellation ?? ScanCancellation.current
+        let sizing: (String, ScanCancellation?) -> TreeSize = budget == nil ? FS.allocatedSize : { path, _ in FS.discoverySize(path, maxEntries: 20_000) }
+        return measureInventory(apps, home: home, cancellation: cancellation, budget: budget, size: sizing, each: each)
+    }
+
+    private static let measurementQueue: OperationQueue = {
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = min(4, max(2, ProcessInfo.processInfo.activeProcessorCount / 2))
         queue.qualityOfService = .utility
+        return queue
+    }()
+
+    static func measureInventory(_ apps: [InstalledApp], home: String, cancellation: ScanCancellation?, budget: TimeInterval?,
+                                 size: @escaping (String, ScanCancellation?) -> TreeSize,
+                                 each: ((InstalledApp) -> Void)?) -> [InstalledApp] {
+        let cancellation = cancellation ?? ScanCancellation.current ?? ScanCancellation()
+        if cancellation.isCancelled { return apps }
+        var out = apps.map { app -> InstalledApp in
+            var app = app; app.bytes = 0; app.sizeState = .unmeasured; app.leftovers = []; app.relatedDataState = .unmeasured
+            return app
+        }
+        let lock = NSLock()
+        let group = DispatchGroup()
+        func publish(_ app: InstalledApp, at i: Int) {
+            lock.lock()
+            guard !cancellation.isCancelled else { lock.unlock(); return }
+            out[i] = app
+            lock.unlock()
+            if !cancellation.isCancelled { each?(app) }
+        }
+        var bundles: [Operation] = [], related: [Operation] = []
+        let barrier = BlockOperation()
         for i in apps.indices {
-            queue.addOperation {
+            group.enter()
+            let bundle = BlockOperation {
+                defer { group.leave() }
                 ScanCancellation.withCurrent(cancellation) {
-                    if cancellation?.isCancelled == true { return }
+                    if cancellation.isCancelled { return }
                     var app = apps[i]
-                    app.bytes = bundleSize(app.path, cancellation: cancellation)
-                    app.leftovers = leftovers(for: app, installed: apps, home: home)
-                    guard cancellation?.isCancelled != true else { return }
-                    lock.lock(); out[i] = app; lock.unlock()
-                    each?(app)
+                    app.relatedDataState = .unmeasured; app.leftovers = []
+                    let size = size(app.path, cancellation)
+                    let exists = FS.isDirectory(app.path)
+                    app.bytes = exists ? max(size.bytes, size.allocated) : 0
+                    app.sizeState = AppSize.measured(size, exists: exists)
+                    publish(app, at: i)
                 }
             }
+            bundles.append(bundle); barrier.addDependency(bundle)
+            group.enter()
+            let files = BlockOperation {
+                defer { group.leave() }
+                ScanCancellation.withCurrent(cancellation) {
+                    guard !cancellation.isCancelled else { return }
+                    lock.lock(); var app = out[i]; lock.unlock()
+                    let related = checkedLeftovers(for: app, installed: apps, home: home)
+                    app.leftovers = related.items
+                    app.relatedDataState = related.state
+                    publish(app, at: i)
+                }
+            }
+            files.addDependency(barrier); related.append(files)
         }
-        queue.waitUntilAllOperationsAreFinished()
+        measurementQueue.addOperations(bundles + [barrier] + related, waitUntilFinished: false)
+        let began = DispatchTime.now().uptimeNanoseconds
+        let seconds = budget.map { $0.isFinite ? max(0, $0) : 0 }
+        while group.wait(timeout: .now() + 0.05) != .success {
+            if cancellation.isCancelled { break }
+            if let seconds, Double(DispatchTime.now().uptimeNanoseconds - began) / 1e9 >= seconds { cancellation.cancel(); break }
+        }
+        lock.lock(); defer { lock.unlock() }
         return out
     }
 
     /// The bundle's size as Finder shows it. Browsers keep their versions as clones, so the private
     /// bytes alone (what disk cleanup reports) can be a few megabytes for a gigabyte app.
     public static func bundleSize(_ path: String, cancellation: ScanCancellation? = nil) -> Int64 {
-        let size = FS.size(path, cancellation: cancellation)
+        let size = FS.allocatedSize(path, cancellation: cancellation)
         return max(size.bytes, size.allocated)
     }
 
@@ -304,16 +360,25 @@ public enum AppUninstaller {
     /// Files `app` keeps in the home folder that exist now. Name-based places are skipped when another
     /// installed app shares the name, and Group Containers when another app shares the bundle ID prefix.
     public static func leftovers(for app: InstalledApp, installed: [InstalledApp], home: String = NSHomeDirectory()) -> [AppLeftover] {
-        candidates(for: app, installed: installed, home: home).compactMap { path in
-            var st = stat()
-            guard lstat(path, &st) == 0 else { return nil }
-            let size = FS.size(path, trackNewest: true)
-            return AppLeftover(path: path, bytes: size.bytes, lastUsed: size.newest,
-                               personal: isPersonal(path, bundleID: app.bundleID, home: home) ? true : nil)
-        }
+        checkedLeftovers(for: app, installed: installed, home: home).items
     }
 
-    static func candidates(for app: InstalledApp, installed: [InstalledApp], home: String) -> [String] {
+    static func checkedLeftovers(for app: InstalledApp, installed: [InstalledApp], home: String) -> (items: [AppLeftover], state: AppSizeState) {
+        var incomplete = false
+        let paths = candidates(for: app, installed: installed, home: home, discoveryFailed: { incomplete = true })
+        let items = paths.compactMap { path -> AppLeftover? in
+            var st = stat()
+            guard lstat(path, &st) == 0 else { incomplete = true; return nil }
+            let size = FS.size(path, trackNewest: true)
+            return AppLeftover(path: path, bytes: size.bytes, lastUsed: size.newest,
+                               personal: isPersonal(path, bundleID: app.bundleID, home: home) ? true : nil,
+                               sizeState: AppSize.measured(size, exists: FS.exists(path)))
+        }
+        let bytes = items.reduce(Int64(0)) { $0 + $1.bytes }
+        return (items, AppSize.combined(items.map(\.effectiveSizeState) + [incomplete ? .unavailable : .complete], bytes: bytes))
+    }
+
+    static func candidates(for app: InstalledApp, installed: [InstalledApp], home: String, discoveryFailed: (() -> Void)? = nil) -> [String] {
         let lib = home + "/Library"
         var out: [String] = []
         let others = installed.filter { $0.path != app.path }
@@ -354,7 +419,7 @@ public enum AppUninstaller {
             // containers, and per-host preferences (com.foo.app.<host UUID>.plist). Plain Preferences take
             // only the exact name: com.google.Chrome.for.testing is another app.
             for dir in ["Preferences/ByHost", "LaunchAgents", "Containers", "Application Scripts"] {
-                for entry in (try? FileManager.default.contentsOfDirectory(atPath: lib + "/" + dir)) ?? [] {
+                for entry in names(in: lib + "/" + dir, onFailure: discoveryFailed) ?? [] {
                     guard startsWith(entry, id: id), entry.count > id.count,
                           !otherIDs.contains(where: { startsWith(entry, id: $0) && $0.count > id.count }) else { continue }
                     if dir != "Containers" && dir != "Application Scripts" { guard entry.hasSuffix(".plist") else { continue } }
@@ -365,8 +430,8 @@ public enum AppUninstaller {
             let parts = id.split(separator: ".").map(String.init)
             if parts.count == 3, parts[2].count >= 3 {
                 for root in ["Application Support", "Caches", "Logs"] {
-                    guard let vendor = entry(named: parts[1], in: lib + "/" + root),
-                          let product = entry(named: parts[2], in: lib + "/" + root + "/" + vendor) else { continue }
+                    guard let vendor = entry(named: parts[1], in: lib + "/" + root, onFailure: discoveryFailed),
+                          let product = entry(named: parts[2], in: lib + "/" + root + "/" + vendor, onFailure: discoveryFailed) else { continue }
                     // Another app of the same vendor and product (not one of this app's own sub-IDs) shares it.
                     let shared = otherIDs.contains { other in
                         let o = other.lowercased().split(separator: ".")
@@ -376,7 +441,7 @@ public enum AppUninstaller {
                 }
             }
             // Group Containers: TEAMID.<bundle ID> or group.<bundle ID>, unless another installed app could share it.
-            for entry in (try? FileManager.default.contentsOfDirectory(atPath: lib + "/Group Containers")) ?? [] {
+            for entry in names(in: lib + "/Group Containers", onFailure: discoveryFailed) ?? [] {
                 let lower = entry.lowercased(), lid = id.lowercased()
                 guard lower == lid || lower.hasSuffix("." + lid) || lower == "group." + lid else { continue }
                 let vendor = id.split(separator: ".").prefix(2).joined(separator: ".").lowercased() + "."
@@ -392,8 +457,25 @@ public enum AppUninstaller {
     }
 
     /// The real spelling of `name` among `dir`'s entries, ignoring case.
-    static func entry(named name: String, in dir: String) -> String? {
-        ((try? FileManager.default.contentsOfDirectory(atPath: dir)) ?? []).first { $0.caseInsensitiveCompare(name) == .orderedSame }
+    static func entry(named name: String, in dir: String, onFailure: (() -> Void)? = nil) -> String? {
+        (names(in: dir, onFailure: onFailure) ?? []).first { $0.caseInsensitiveCompare(name) == .orderedSame }
+    }
+
+    /// A name-only pass must not request URL attributes for every cache/container entry.
+    /// In particular, a file provider's slow attribute lookup must not block unrelated apps.
+    static func names(in path: String, onFailure: (() -> Void)? = nil) -> [String]? {
+        guard let directory = opendir(path) else { if errno != ENOENT { onFailure?() }; return nil }
+        defer { closedir(directory) }
+        var names: [String] = []
+        while true {
+            if ScanCancellation.current?.isCancelled == true { onFailure?(); return nil }
+            errno = 0
+            guard let entry = readdir(directory) else { if errno != 0 { onFailure?(); return nil }; return names }
+            let name = withUnsafePointer(to: &entry.pointee.d_name) {
+                $0.withMemoryRebound(to: CChar.self, capacity: Int(entry.pointee.d_namlen) + 1) { String(cString: $0) }
+            }
+            if name != "." && name != ".." { names.append(name) }
+        }
     }
 
     // MARK: - Running
@@ -433,8 +515,18 @@ public enum AppUninstaller {
     public static func plan(_ app: InstalledApp, installed: [InstalledApp], home: String = NSHomeDirectory(),
                             processes: ProcessTable? = nil, includePersonal: Bool = false) -> UninstallPlan {
         var app = app
-        if app.leftovers.isEmpty { app.leftovers = leftovers(for: app, installed: installed, home: home) }
-        if app.bytes == 0 { app.bytes = bundleSize(app.path) }
+        if app.leftovers.isEmpty {
+            let related = checkedLeftovers(for: app, installed: installed, home: home)
+            app.leftovers = related.items; app.relatedDataState = related.state
+        } else if app.relatedDataState == nil {
+            app.relatedDataState = AppSize.combined(app.leftovers.map(\.effectiveSizeState), bytes: app.leftoverBytes)
+        }
+        if app.sizeState == nil || app.bundleSizeState != .complete {
+            let size = FS.allocatedSize(app.path)
+            let exists = FS.isDirectory(app.path)
+            app.bytes = exists ? max(size.bytes, size.allocated) : 0
+            app.sizeState = AppSize.measured(size, exists: exists)
+        }
         app.protected = app.protected ?? protection(app, home: home)
         let kept = includePersonal ? [] : app.leftovers.filter { $0.personal == true }
         let whitelist = try? Whitelist.load(home: home)
@@ -444,6 +536,7 @@ public enum AppUninstaller {
         var plan = UninstallPlan(app: app, paths: paths, bytes: app.bytes + moved.reduce(0) { $0 + $1.bytes },
                                  receipts: receipts(for: app.bundleID))
         plan.kept = kept.isEmpty ? nil : kept
+        plan.sizeState = AppSize.combined([app.bundleSizeState, app.relatedDataState ?? .unmeasured] + moved.map(\.effectiveSizeState), bytes: plan.bytes)
         plan.whitelisted = saved.isEmpty ? nil : saved
         plan.identities = paths.reduce(into: [:]) { result, path in result[path] = FileIdentity.of(path) }
         plan.appIdentity = AppReviewIdentity.capture(app.path)
@@ -496,7 +589,9 @@ public enum AppUninstaller {
             let ids = plan.app.bundleID.map { [$0] } ?? []
             let sizes = Dictionary(uniqueKeysWithValues: plan.app.leftovers.map { ($0.path, $0.bytes) })
             trash(plan.paths, bundleIDs: ids, sizes: sizes.merging([plan.app.path: plan.app.bytes]) { a, _ in a },
-                  home: home, processes: table, into: &result, identities: plan.identities ?? [:])
+                  home: home, processes: table, into: &result, identities: plan.identities ?? [:],
+                  incompletePaths: Set(plan.app.leftovers.filter { $0.effectiveSizeState != .complete }.map(\.path))
+                    .union(plan.app.bundleSizeState == .complete ? [] : [plan.app.path]))
         }
         finish(result, title: plan.app.name, home: home)
         return result
@@ -505,6 +600,7 @@ public enum AppUninstaller {
     static func trash(_ paths: [String], bundleIDs: [String], sizes: [String: Int64], home: String,
                       processes: () -> ProcessTable, into result: inout CleanResult,
                       identities: [String: String]? = nil,
+                      incompletePaths: Set<String> = [],
                       move: (String) throws -> URL = RemovalOperations.live.trash) {
         let g = Guard(home: home)
         let batchID = UUID().uuidString
@@ -529,6 +625,7 @@ public enum AppUninstaller {
             do {
                 let unrecorded = try TrashBatches.trash(path, bytes: sizes[path] ?? 0, id: batchID, home: home, move: move)
                 result.removed.append(path)
+                if incompletePaths.contains(path) { result.bytesIncomplete = true }
                 result.bytes += sizes[path] ?? 0
                 if let unrecorded { result.failed["batch/" + path] = unrecorded } else { result.trashBatchID = batchID }
             } catch {
@@ -603,12 +700,13 @@ public enum AppUninstaller {
             if known.contains(where: { lower == $0 || startsWith(lower, id: $0) || startsWith($0, id: lower) }) { continue }
             let items = paths.map { path -> AppLeftover in
                 let size = FS.size(path, trackNewest: true, cancellation: cancellation)
-                return AppLeftover(path: path, bytes: size.bytes, lastUsed: newest(path, size.newest))
+                return AppLeftover(path: path, bytes: size.bytes, lastUsed: newest(path, size.newest), sizeState: AppSize.measured(size, exists: FS.exists(path)))
             }
-            let data = OrphanData(bundleID: id, items: items)
-            guard data.bytes >= minimumBytes else { continue }
+            var data = OrphanData(bundleID: id, items: items)
+            guard data.bytes >= minimumBytes || data.sizeState != .complete else { continue }
             if let last = data.lastUsed, now.timeIntervalSince(last) < orphanAge { continue }
             if spotlight(id) { continue }
+            if data.sizeState != .complete { data.blocked = tr("This data could not be fully checked; inspect it in Finder before removing it") }
             out.append(data)
         }
         return out.sorted { $0.bytes > $1.bytes }
@@ -651,11 +749,14 @@ public enum AppUninstaller {
         return picked.map { data in
             var result = CleanResult(id: "leftovers:" + data.bundleID, trashed: true)
             let still = current.first { $0.bundleID == data.bundleID }
-            if let still {
+            if let still, let why = still.blocked {
+                result.failed[data.bundleID] = why
+            } else if let still {
                 let current = Set(still.items.map(\.path))
                 let paths = data.items.map(\.path).filter(current.contains)
                 let sizes = Dictionary(uniqueKeysWithValues: still.items.map { ($0.path, $0.bytes) })
-                trash(paths, bundleIDs: [data.bundleID], sizes: sizes, home: home, processes: table, into: &result)
+                trash(paths, bundleIDs: [data.bundleID], sizes: sizes, home: home, processes: table, into: &result,
+                      incompletePaths: Set(still.items.filter { $0.effectiveSizeState != .complete }.map(\.path)))
             } else {
                 result.failed[data.bundleID] = tr("no longer looks left behind: an app uses it again, or it changed")
             }

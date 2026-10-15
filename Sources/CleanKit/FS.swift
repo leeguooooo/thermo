@@ -78,6 +78,14 @@ public enum FS {
         measure(path, trackNewest: trackNewest, cancellation: cancellation, privateSizes: true)
     }
 
+    /// Application inventory reports allocated usage, not reclaimable private blocks.
+    /// Keep completeness flags without performing per-file APFS ownership queries.
+    static func allocatedSize(_ path: String, cancellation: ScanCancellation? = nil) -> TreeSize {
+        var result = measure(path, trackNewest: false, cancellation: cancellation, privateSizes: false)
+        result.bytes = result.allocated
+        return result
+    }
+
     /// Fast discovery: batched allocation metadata only; no expensive APFS private-block queries.
     public static func footprint(_ path: String, cancellation: ScanCancellation? = nil) -> DiskFootprint {
         let result = measure(path, trackNewest: false, cancellation: cancellation, privateSizes: false)
@@ -118,20 +126,23 @@ public enum FS {
         path.withCString { cpath in
             var argv: [UnsafeMutablePointer<CChar>?] = [strdup(cpath), nil]
             defer { free(argv[0]) }
-            guard let fts = fts_open(&argv, opts, nil) else { return }
+            guard let fts = fts_open(&argv, opts, nil) else { r.incomplete = true; return }
             defer { fts_close(fts) }
             var visited = 0
-            while let ent = fts_read(fts) {
+            while true {
+                errno = 0
+                guard let ent = fts_read(fts) else { if errno != 0 { r.incomplete = true }; break }
                 visited += 1
                 if cancellation?.isCancelled == true || maxEntries.map({ visited > $0 }) == true { r.incomplete = true; break }
                 let info = Int32(ent.pointee.fts_info)
                 switch info {
                 case FTS_DNR, FTS_ERR, FTS_NS:
+                    r.incomplete = true
                     if ent.pointee.fts_errno == EACCES || ent.pointee.fts_errno == EPERM { r.denied = true }
                 case FTS_DP:
                     continue
                 default:
-                    guard let sp = ent.pointee.fts_statp else { continue }
+                    guard let sp = ent.pointee.fts_statp else { r.incomplete = true; continue }
                     let s = sp.pointee
                     if (s.st_mode & S_IFMT) != S_IFDIR {
                         if s.st_nlink > 1 && !seenInodes.insert(UInt64(s.st_ino)).inserted { continue }

@@ -164,19 +164,20 @@ struct AppsCommand {
 
     func list() {
         progress(tr("Measuring apps…"))
-        let apps = AppUninstaller.measure(AppUninstaller.installed()).sorted { $0.totalBytes > $1.totalBytes }
+        let apps = AppUninstaller.measure(AppUninstaller.installed(), budget: args.has("exact") ? nil : 60).sorted { $0.totalBytes > $1.totalBytes }
         clearProgress()
         if args.has("json") { print(Export.json(apps)); return }
-        var lines = [style.bold(pad(tr("App"), 34) + pad(tr("App size"), 10, right: true) + pad(tr("Its files"), 11, right: true))]
+        var lines = [style.bold(pad(tr("App"), 34) + pad(tr("App size"), 18, right: true) + "  " + pad(tr("Its files"), 18, right: true))]
         for a in apps {
-            var line = pad(String(a.name.prefix(33)), 34) + pad(ByteFormat.string(a.bytes), 10, right: true)
-                + pad(a.leftovers.isEmpty ? "–" : ByteFormat.string(a.leftoverBytes), 11, right: true)
+            var line = pad(String(a.name.prefix(33)), 34) + pad(a.bundleSizeText, 18, right: true)
+                + "  " + pad(a.leftovers.isEmpty && a.relatedDataState == .complete ? "–" : AppSize.text(a.leftoverBytes, state: a.leftoverSizeState), 18, right: true)
             if let why = a.protected { line += style.dim("  " + why) }
             else if let cask = a.cask { line += style.dim("  brew: " + cask) }
             lines.append(line)
         }
         let total = apps.reduce(Int64(0)) { $0 + $1.totalBytes }
-        lines.append(style.dim(tr("%1$@ apps, %2$@ with their files · thermo apps uninstall NAME", String(apps.count), ByteFormat.string(total))))
+        let totalText = AppSize.text(total, state: AppSize.combined(apps.map(\.totalSizeState), bytes: total))
+        lines.append(style.dim(tr("%1$@ apps, %2$@ with their files · thermo apps uninstall NAME", String(apps.count), totalText)))
         out(lines)
     }
 
@@ -199,14 +200,14 @@ struct AppsCommand {
             return
         }
         var lines = [style.bold(tr("Uninstall %1$@ (%2$@): move %3$@ to the Trash", target.name + (target.version.map { " " + $0 } ?? ""),
-                                   target.bundleID ?? tr("no bundle ID"), ByteFormat.string(plan.bytes)))]
-        lines.append("  " + pad(ByteFormat.string(plan.app.bytes), 9, right: true) + "  " + FS.tilde(plan.app.path))
+                                   target.bundleID ?? tr("no bundle ID"), plan.sizeText))]
+        lines.append("  " + pad(plan.app.bundleSizeText, 9, right: true) + "  " + FS.tilde(plan.app.path))
         for l in plan.app.leftovers where plan.paths.contains(l.path) {
-            lines.append("  " + pad(ByteFormat.string(l.bytes), 9, right: true) + "  " + FS.tilde(l.path))
+            lines.append("  " + pad(l.sizeText, 9, right: true) + "  " + FS.tilde(l.path))
         }
         if let kept = plan.kept, !kept.isEmpty {
             lines.append(style.dim(tr("Kept, your data (profiles, chat history, mail); add --with-data to move it too:")))
-            for l in kept { lines.append(style.dim("  " + pad(ByteFormat.string(l.bytes), 9, right: true) + "  " + FS.tilde(l.path))) }
+            for l in kept { lines.append(style.dim("  " + pad(l.sizeText, 9, right: true) + "  " + FS.tilde(l.path))) }
         }
         if let saved = plan.whitelisted {
             lines.append(style.dim(tr("Kept, whitelisted:")))
@@ -252,31 +253,38 @@ struct AppsCommand {
             guard !found.isEmpty else { print(tr("No data left behind by deleted apps (untouched for 30 days and unknown to Spotlight).")); return }
             var lines: [String] = []
             for o in found {
-                lines.append(pad(ByteFormat.string(o.bytes), 9, right: true) + "  " + style.bold(o.bundleID)
+                lines.append(pad(o.sizeText, 9, right: true) + "  " + style.bold(o.bundleID)
                              + style.dim("  " + (o.lastUsed.map { tr("last changed %1$@", Self.day($0)) } ?? "")))
+                if let why = o.blocked { lines.append(style.yellow(why)) }
                 for i in o.items { lines.append(style.dim("           " + FS.tilde(i.path))) }
             }
             let total = found.reduce(Int64(0)) { $0 + $1.bytes }
-            lines.append(style.dim(tr("%1$@ in %2$@ apps that are gone · thermo apps leftovers remove ID…|all", ByteFormat.string(total), String(found.count))))
+            let totalText = AppSize.text(total, state: AppSize.combined(found.map(\.sizeState), bytes: total))
+            lines.append(style.dim(tr("%1$@ in %2$@ apps that are gone · thermo apps leftovers remove ID…|all", totalText, String(found.count))))
             out(lines)
             return
         }
 
         let ids = Array(rest.dropFirst())
         guard !ids.isEmpty else { throw CLIError("usage: thermo apps leftovers remove ID…|all [--dry-run] [--yes]") }
-        let picked = ids == ["all"] ? found : found.filter { o in ids.contains { $0.caseInsensitiveCompare(o.bundleID) == .orderedSame } }
+        let picked = ids == ["all"] ? found.filter { $0.blocked == nil } : found.filter { o in ids.contains { $0.caseInsensitiveCompare(o.bundleID) == .orderedSame } }
         let missing = ids == ["all"] ? [] : ids.filter { id in !found.contains { $0.bundleID.caseInsensitiveCompare(id) == .orderedSame } }
         if !missing.isEmpty { throw CLIError(tr("not left behind by a deleted app: %1$@", missing.joined(separator: ", "))) }
-        guard !picked.isEmpty else { print(tr("Nothing to remove.")); return }
+        guard !picked.isEmpty else {
+            if let why = found.compactMap(\.blocked).first { throw CLIError(why) }
+            print(tr("Nothing to remove.")); return
+        }
         let total = picked.reduce(Int64(0)) { $0 + $1.bytes }
-        var lines = [style.bold(tr("Move %1$@ left behind by %2$@ deleted apps to the Trash:", ByteFormat.string(total), String(picked.count)))]
+        let totalText = AppSize.text(total, state: AppSize.combined(picked.map(\.sizeState), bytes: total))
+        var lines = [style.bold(tr("Move %1$@ left behind by %2$@ deleted apps to the Trash:", totalText, String(picked.count)))]
         for o in picked {
-            for i in o.items { lines.append("  " + pad(ByteFormat.string(i.bytes), 9, right: true) + "  " + FS.tilde(i.path)) }
+            for i in o.items { lines.append("  " + pad(i.sizeText, 9, right: true) + "  " + FS.tilde(i.path)) }
         }
         if args.has("dry-run") {
             if args.has("json") { print(Export.json(picked)) } else { out(lines + [tr("dry run · nothing moved")]) }
             return
         }
+        if let why = picked.compactMap(\.blocked).first { throw CLIError(why) }
         if !args.has("json") { out(lines) }
         if !args.has("yes") {
             guard isatty(STDIN_FILENO) != 0 else { throw CLIError("not a terminal; add --yes to confirm") }
@@ -297,7 +305,8 @@ struct AppsCommand {
             for p in r.whitelisted ?? [] { print("  " + style.dim("- " + FS.tilde(p) + ": " + Whitelist.reason)) }
         }
         let bytes = results.reduce(Int64(0)) { $0 + $1.bytes }
-        print(style.bold(tr("Moved %1$@ to the Trash (empty it to get the space back)", ByteFormat.string(bytes)))
+        let sizeText = AppSize.text(bytes, state: results.contains { $0.bytesIncomplete == true } ? .incomplete : .complete)
+        print(style.bold(tr("Moved %1$@ to the Trash (empty it to get the space back)", sizeText))
               + style.dim(" · log: \(FS.tilde(Cleaner.logURL.path))"))
         for id in results.compactMap(\.trashBatchID) { print(style.dim(tr("Put back: thermo clean restore %1$@", id))) }
     }

@@ -29,6 +29,11 @@ final class NativeUpdateTransactionTests: XCTestCase {
             .filter { NativeDiskImage.canonical($0).hasPrefix(home + "/") }
     }
 
+    func assertNoOwnedMountedImages(file: StaticString = #filePath, line: UInt = #line) throws {
+        let paths = try ownedMountedImages()
+        XCTAssertTrue(paths.isEmpty, "unexpected owned images: " + paths.joined(separator: ", "), file: file, line: line)
+    }
+
     func dmg() throws {
         archive = home + "/update.dmg"
         try execute("/usr/bin/hdiutil", ["create", "-quiet", "-srcfolder", (package as NSString).deletingLastPathComponent,
@@ -209,7 +214,7 @@ final class NativeUpdateTransactionTests: XCTestCase {
         })
         XCTAssertEqual(result.outcome, "succeeded", result.message)
         XCTAssertEqual(build(original), "200")
-        XCTAssertTrue(try ownedMountedImages().isEmpty)
+        try assertNoOwnedMountedImages()
     }
 
     func testFeedChangingBeforeDownloadDoesNotStartAnInstaller() async throws {
@@ -271,14 +276,14 @@ final class NativeUpdateTransactionTests: XCTestCase {
     func testSignedDMGInstallsRestoresAndLeavesNoMountedVolume() throws {
         try dmg()
         let prepared = try prepared()
-        XCTAssertTrue(try ownedMountedImages().isEmpty)
+        try assertNoOwnedMountedImages()
         let result = NativeUpdateTransaction.commit(prepared, home: home, processes: { ProcessTable(entries: []) }, afterSwap: {})
         XCTAssertEqual(result.outcome, "succeeded", result.message)
         XCTAssertEqual(build(original), "200")
         let restored = NativeUpdateTransaction.recover(try XCTUnwrap(result.receipt).id, home: home, processes: { ProcessTable(entries: []) })
         XCTAssertEqual(restored.outcome, "succeeded", restored.message)
         XCTAssertEqual(build(original), "100")
-        XCTAssertTrue(try ownedMountedImages().isEmpty)
+        try assertNoOwnedMountedImages()
         try NativeUpdateTransaction.discard(prepared, home: home)
     }
 
@@ -297,7 +302,7 @@ final class NativeUpdateTransactionTests: XCTestCase {
         try makeApp(home + "/package/Other.app", version: "2.0", build: "200", id: "com.example.other")
         try dmg()
         XCTAssertThrowsError(try prepared())
-        XCTAssertTrue(try ownedMountedImages().isEmpty)
+        try assertNoOwnedMountedImages()
         XCTAssertEqual(build(original), "100")
     }
 

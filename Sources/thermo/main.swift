@@ -82,7 +82,7 @@ COMMANDS
                              ~/Library/Application Support/Thermo/whitelist; --json)
   clean overview             where the used space is: the big places and their
                              biggest folders (--json)
-  apps                       installed apps, their size and the files they keep in your home folder
+  apps                       installed apps and associated data (60 s discovery; --exact completes sizes)
   apps uninstall NAME        move the app and its files to the Trash (lists every path, asks first;
                              --dry-run only lists; refuses running, system and protected apps;
                              browser, chat and mail data stays unless --with-data)

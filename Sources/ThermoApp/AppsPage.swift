@@ -32,6 +32,7 @@ final class AppsModel: ObservableObject {
     @Published private(set) var apps: [InstalledApp] = []
     @Published private(set) var measured = 0
     @Published private(set) var loading = false
+    @Published private(set) var sizeNotice: String?
     @Published private(set) var running: Set<String> = []
     @Published private(set) var orphans: [OrphanData]?
     @Published private(set) var scanningOrphans = false
@@ -43,10 +44,11 @@ final class AppsModel: ObservableObject {
     private var cancellation: ScanCancellation?
     private var measurementComplete = false
 
-    var measuring: Bool { loading && measured < apps.count }
+    var measuring: Bool { loading }
     var totalBytes: Int64 { apps.reduce(0) { $0 + $1.totalBytes } }
+    var totalSizeText: String { AppSize.text(totalBytes, state: AppSize.combined(apps.map(\.totalSizeState), bytes: totalBytes)) }
 
-    func load(ifEmpty: Bool = false) {
+    func load(ifEmpty: Bool = false, exact: Bool = false) {
         if ifEmpty, measurementComplete || loading { return }
         cancellation?.cancel()
         let token = ScanCancellation()
@@ -54,6 +56,7 @@ final class AppsModel: ObservableObject {
         loading = true
         measurementComplete = false
         measured = 0
+        sizeNotice = nil
         Task.detached(priority: .userInitiated) {
             let found = AppUninstaller.installed(cancellation: token)
             guard !token.isCancelled else { return }
@@ -63,17 +66,22 @@ final class AppsModel: ObservableObject {
                 self.apps = found
                 self.running = busy
             }
-            _ = AppUninstaller.measure(found, cancellation: token) { app in
+            let completed = AppUninstaller.measure(found, cancellation: token, budget: exact ? nil : 60) { app in
                 Task { @MainActor in
                     guard self.cancellation === token, let i = self.apps.firstIndex(where: { $0.path == app.path }) else { return }
                     self.apps[i] = app
-                    self.measured += 1
+                    self.measured = self.apps.filter { $0.relatedDataState != nil && $0.relatedDataState != .unmeasured }.count
                 }
             }
             await MainActor.run {
                 guard self.cancellation === token else { return }
+                let latest = Dictionary(completed.map { ($0.path, $0) }, uniquingKeysWith: { first, _ in first })
+                self.apps = self.apps.map { latest[$0.path] ?? $0 }
+                self.measured = self.apps.filter { $0.relatedDataState != nil && $0.relatedDataState != .unmeasured }.count
                 self.loading = false
                 self.measurementComplete = !token.isCancelled
+                self.sizeNotice = token.isCancelled ? tr("Some sizes are unfinished. Known bytes are lower bounds; resume a full measurement when ready.") : nil
+                self.cancellation = nil
             }
         }
     }
@@ -83,6 +91,7 @@ final class AppsModel: ObservableObject {
         cancellation?.cancel()
         cancellation = nil
         loading = false
+        sizeNotice = tr("Some sizes are unfinished. Known bytes are lower bounds; resume a full measurement when ready.")
     }
 
     nonisolated static func runningPaths(_ apps: [InstalledApp]) -> Set<String> {
@@ -104,6 +113,7 @@ final class AppsModel: ObservableObject {
     }
 
     func uninstall(_ plan: UninstallPlan) {
+        stopMeasuring()
         self.plan = nil
         working = true
         Task.detached(priority: .userInitiated) {
@@ -131,7 +141,7 @@ final class AppsModel: ObservableObject {
         }
     }
 
-    var pickedOrphans: [OrphanData] { (orphans ?? []).filter { selectedOrphans.contains($0.id) } }
+    var pickedOrphans: [OrphanData] { (orphans ?? []).filter { selectedOrphans.contains($0.id) && $0.blocked == nil } }
 
     func removeOrphans() {
         let picked = pickedOrphans
@@ -174,7 +184,7 @@ final class AppsModel: ObservableObject {
     nonisolated static func summary(_ results: [CleanResult]) -> String {
         let bytes = results.reduce(Int64(0)) { $0 + $1.bytes }
         let failed = results.flatMap { $0.failed.map { FSPath.tilde($0.key) + ": " + $0.value } }
-        var text = tr("Moved %1$@ to the Trash (empty it to get the space back)", ByteFormat.string(bytes))
+        var text = tr("Moved %1$@ to the Trash (empty it to get the space back)", AppSize.text(bytes, state: results.contains { $0.bytesIncomplete == true } ? .incomplete : .complete))
         if !failed.isEmpty { text += "\n" + tr("Not moved:") + "\n" + failed.prefix(6).joined(separator: "\n") }
         return text
     }
@@ -201,6 +211,9 @@ struct AppsPage: View {
     var uninstallBody: some View {
         VStack(spacing: 0) {
             header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
+            if let notice = model.sizeNotice {
+                Text(notice).font(.callout).foregroundStyle(.secondary).padding(.horizontal, 28).padding(.bottom, 10)
+            }
             if let outcome = model.outcome {
                 HStack(alignment: .top) {
                     Label(outcome, systemImage: "trash").font(.callout).foregroundStyle(.white.opacity(0.85)).textSelection(.enabled)
@@ -227,7 +240,7 @@ struct AppsPage: View {
             let p = box.plan
             ConfirmSheet(title: tr("Uninstall %1$@?", p.app.name),
                          summary: tr("%1$@ and %2$@ of its files go to the Trash: %3$@ in all.", p.app.name,
-                                     String(p.paths.count - 1), ByteFormat.string(p.bytes)),
+                                     String(p.paths.count - 1), p.sizeText),
                          destructive: false, heading: tr("What will be moved to the Trash"),
                          lines: lines(p),
                          footnote: p.blocked ?? tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
@@ -239,9 +252,9 @@ struct AppsPage: View {
             let picked = model.pickedOrphans
             ConfirmSheet(title: tr("Remove data of %1$@ deleted apps?", String(picked.count)),
                          summary: tr("%1$@ goes to the Trash. Each one is checked again first: still not installed, not running, untouched for 30 days.",
-                                     ByteFormat.string(picked.reduce(0) { $0 + $1.bytes })),
+                                     orphanSize(picked)),
                          destructive: false, heading: tr("What will be moved to the Trash"),
-                         lines: picked.flatMap { o in o.items.map { ByteFormat.string($0.bytes).padding(toLength: 10, withPad: " ", startingAt: 0) + FSPath.tilde($0.path) } },
+                         lines: picked.flatMap { o in o.items.map { $0.sizeText + "  " + FSPath.tilde($0.path) } },
                          footnote: tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
                          confirmTitle: tr("Move to Trash"),
                          confirm: { confirmingOrphans = false; model.removeOrphans() }, cancel: { confirmingOrphans = false })
@@ -251,11 +264,11 @@ struct AppsPage: View {
     struct PlanBox: Identifiable { let plan: UninstallPlan; var id: String { plan.app.path } }
 
     func lines(_ p: UninstallPlan) -> [String] {
-        var out = [ByteFormat.string(p.app.bytes).padding(toLength: 10, withPad: " ", startingAt: 0) + p.app.path]
-        out += p.app.leftovers.filter { p.paths.contains($0.path) }.map { ByteFormat.string($0.bytes).padding(toLength: 10, withPad: " ", startingAt: 0) + FSPath.tilde($0.path) }
+        var out = [p.app.bundleSizeText + "  " + p.app.path]
+        out += p.app.leftovers.filter { p.paths.contains($0.path) }.map { $0.sizeText + "  " + FSPath.tilde($0.path) }
         if let kept = p.kept, !kept.isEmpty {
             out.append(tr("Kept, your data (profiles, chat history, mail); remove it in the app first, or with thermo apps uninstall --with-data:"))
-            out += kept.map { ByteFormat.string($0.bytes).padding(toLength: 10, withPad: " ", startingAt: 0) + FSPath.tilde($0.path) }
+            out += kept.map { $0.sizeText + "  " + FSPath.tilde($0.path) }
         }
         if let cask = p.app.cask { out.append(tr("Homebrew installed it: run brew uninstall --cask %1$@ afterwards so Homebrew forgets it.", cask)) }
         if !p.receipts.isEmpty { out.append(tr("Installed by a package (%1$@); files it put outside your home folder stay.", p.receipts.joined(separator: ", "))) }
@@ -284,11 +297,11 @@ struct AppsPage: View {
         switch tab {
         case .installed:
             if model.apps.isEmpty { return tr("Looking…") }
-            let base = tr("%1$@ apps · %2$@ with their files", String(model.apps.count), ByteFormat.string(model.totalBytes))
+            let base = tr("%1$@ apps · %2$@ with their files", String(model.apps.count), model.totalSizeText)
             return model.measuring ? base + " · " + tr("measuring %1$@ of %2$@", String(model.measured), String(model.apps.count)) : base
         case .leftovers:
             guard let o = model.orphans else { return tr("Looking for data of apps that are gone…") }
-            return tr("%1$@ in %2$@ apps that are gone", ByteFormat.string(o.reduce(0) { $0 + $1.bytes }), String(o.count))
+            return tr("%1$@ in %2$@ apps that are gone", orphanSize(o), String(o.count))
         case .startup: return tr("Startup items")
         case .updates: return tr("Updates")
         }
@@ -298,6 +311,11 @@ struct AppsPage: View {
         let q = search.trimmingCharacters(in: .whitespacesAndNewlines)
         let list = q.isEmpty ? model.apps : model.apps.filter { ($0.name + " " + ($0.bundleID ?? "")).localizedCaseInsensitiveContains(q) }
         return list.sorted { $0.totalBytes > $1.totalBytes }
+    }
+
+    func orphanSize(_ items: [OrphanData]) -> String {
+        let bytes = items.reduce(Int64(0)) { $0 + $1.bytes }
+        return AppSize.text(bytes, state: AppSize.combined(items.map(\.sizeState), bytes: bytes))
     }
 
     @ViewBuilder var installedList: some View {
@@ -327,10 +345,10 @@ struct AppsPage: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(a.bytes > 0 ? ByteFormat.string(a.totalBytes) : "…")
+                    Text(a.totalSizeText)
                         .font(.system(size: 15, weight: .semibold).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
                     if a.leftoverBytes > 0 {
-                        Text(tr("%1$@ of files", ByteFormat.string(a.leftoverBytes))).font(.caption.monospacedDigit()).foregroundStyle(.white.opacity(0.5))
+                        Text(tr("%1$@ of files", AppSize.text(a.leftoverBytes, state: a.leftoverSizeState))).font(.caption.monospacedDigit()).foregroundStyle(.white.opacity(0.5))
                     }
                 }
                 Button(model.planning == a.path ? tr("Looking…") : tr("Uninstall…")) { model.review(a) }
@@ -348,9 +366,9 @@ struct AppsPage: View {
             .onTapGesture { toggle(a.path) }
             if expanded {
                 VStack(alignment: .leading, spacing: 4) {
-                    pathRow(a.path, a.bytes)
-                    ForEach(a.leftovers, id: \.path) { pathRow($0.path, $0.bytes) }
-                    if a.leftovers.isEmpty && a.bytes > 0 {
+                    pathRow(a.path, a.bytes, state: a.bundleSizeState)
+                    ForEach(a.leftovers, id: \.path) { pathRow($0.path, $0.bytes, state: $0.effectiveSizeState) }
+                    if a.leftovers.isEmpty && a.relatedDataState == .complete {
                         Text(tr("No files of it found in your home folder.")).font(.caption).foregroundStyle(.white.opacity(0.5))
                     }
                 }
@@ -377,12 +395,12 @@ struct AppsPage: View {
             .padding(.horizontal, 6).padding(.vertical, 1).background(Capsule().fill(color.opacity(0.18)))
     }
 
-    func pathRow(_ path: String, _ bytes: Int64) -> some View {
+    func pathRow(_ path: String, _ bytes: Int64, state: AppSizeState = .complete) -> some View {
         HStack {
             Text(FSPath.tilde(path)).font(.caption.monospaced()).foregroundStyle(.white.opacity(0.75)).lineLimit(1).truncationMode(.middle)
                 .textSelection(.enabled)
             Spacer()
-            Text(ByteFormat.string(bytes)).font(.caption.monospacedDigit()).foregroundStyle(.white.opacity(0.55))
+            Text(AppSize.text(bytes, state: state)).font(.caption.monospacedDigit()).foregroundStyle(.white.opacity(0.55))
         }
     }
 
@@ -408,17 +426,17 @@ struct AppsPage: View {
                     Image(systemName: ticked ? "checkmark.circle.fill" : "circle").font(.title3)
                         .foregroundStyle(ticked ? Color.indigo : .white.opacity(0.5)).frame(width: 28, height: 28).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).disabled(model.working)
+                .buttonStyle(.plain).disabled(model.working || o.blocked != nil)
                 .accessibilityLabel(tr("Select %1$@", o.bundleID))
                 .accessibilityValue(ticked ? tr("Selected") : tr("Not selected"))
                 VStack(alignment: .leading, spacing: 3) {
                     Text(o.bundleID).font(.system(size: 14, weight: .medium)).foregroundStyle(.white).lineLimit(1)
-                    Text([trCount(o.items.count, "%1$@ place", "%1$@ places"), o.lastUsed.map { tr("last changed %1$@", AgeFormat.string($0)) }]
+                    Text(o.blocked ?? [trCount(o.items.count, "%1$@ place", "%1$@ places"), o.lastUsed.map { tr("last changed %1$@", AgeFormat.string($0)) }]
                             .compactMap { $0 }.joined(separator: " · "))
                         .font(.caption).foregroundStyle(.white.opacity(0.55))
                 }
                 Spacer()
-                Text(ByteFormat.string(o.bytes)).font(.system(size: 15, weight: .semibold).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
+                Text(o.sizeText).font(.system(size: 15, weight: .semibold).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
                 Button { toggle(o.id) } label: {
                     Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.6))
                         .rotationEffect(.degrees(expanded ? 90 : 0)).frame(width: 28, height: 28)
@@ -429,7 +447,8 @@ struct AppsPage: View {
             .contentShape(Rectangle())
             .onTapGesture { toggle(o.id) }
             if expanded {
-                VStack(alignment: .leading, spacing: 4) { ForEach(o.items, id: \.path) { pathRow($0.path, $0.bytes) } }
+                if let why = o.blocked { Text(why).font(.caption).foregroundStyle(.orange) }
+                VStack(alignment: .leading, spacing: 4) { ForEach(o.items, id: \.path) { pathRow($0.path, $0.bytes, state: $0.effectiveSizeState) } }
             }
         }
         .padding(14)
@@ -448,15 +467,20 @@ struct AppsPage: View {
                         .font(.caption).foregroundStyle(.white.opacity(0.5)).lineLimit(2)
                 }
                 Spacer()
+                if model.loading {
+                    Button(tr("Stop")) { model.stopMeasuring() }.buttonStyle(PillButtonStyle())
+                } else if model.apps.contains(where: { $0.totalSizeState != .complete }) {
+                    Button(tr("Complete size measurement")) { model.load(exact: true) }.buttonStyle(PillButtonStyle()).disabled(model.working)
+                }
                 Button(tr("Scan again")) { model.load() }.buttonStyle(PillButtonStyle()).disabled(model.loading || model.working)
             } else {
                 if model.scanningOrphans || model.working { ProgressView().controlSize(.small) }
-                Button(tr("All")) { model.selectedOrphans = Set((model.orphans ?? []).map(\.id)) }
-                    .buttonStyle(PillButtonStyle()).disabled(model.orphans?.isEmpty != false || model.working)
+                Button(tr("All")) { model.selectedOrphans = Set((model.orphans ?? []).filter { $0.blocked == nil }.map(\.id)) }
+                    .buttonStyle(PillButtonStyle()).disabled((model.orphans ?? []).allSatisfy { $0.blocked != nil } || model.working)
                 Button(tr("None")) { model.selectedOrphans = [] }.buttonStyle(PillButtonStyle()).disabled(model.selectedOrphans.isEmpty)
                 Button(tr("Scan again")) { model.scanOrphans() }.buttonStyle(PillButtonStyle()).disabled(model.scanningOrphans || model.working)
                 Spacer()
-                Button(tr("Move %1$@ to Trash", ByteFormat.string(model.pickedOrphans.reduce(0) { $0 + $1.bytes }))) { confirmingOrphans = true }
+                Button(tr("Move %1$@ to Trash", orphanSize(model.pickedOrphans))) { confirmingOrphans = true }
                     .buttonStyle(PillButtonStyle(prominent: true, color: .indigo))
                     .disabled(model.pickedOrphans.isEmpty || model.working || model.scanningOrphans)
             }

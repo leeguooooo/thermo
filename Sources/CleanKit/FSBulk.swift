@@ -110,14 +110,16 @@ enum BulkWalk {
         var newest = 0
         var visited = 0
         var entriesSeen = 0
+        var stopped = false
         let changes = FS.countsStatusChanges
         while let dir = stack.popLast() {
             visited += 1
-            if cancellation?.isCancelled == true || r.incomplete { r.incomplete = true; break }
-            let ok = entries(of: dir, cancellation: cancellation, shouldStop: { r.incomplete }) { e in
+            if cancellation?.isCancelled == true || stopped { r.incomplete = true; break }
+            let ok = entries(of: dir, cancellation: cancellation, shouldStop: { stopped }) { e in
                 entriesSeen += 1
-                if cancellation?.isCancelled == true || maxEntries.map({ entriesSeen > $0 }) == true { r.incomplete = true; return }
+                if cancellation?.isCancelled == true || maxEntries.map({ entriesSeen > $0 }) == true { r.incomplete = true; stopped = true; return }
                 if e.error != 0 {
+                    r.incomplete = true
                     if e.error == EACCES || e.error == EPERM { r.denied = true }
                     return
                 }
@@ -125,7 +127,8 @@ enum BulkWalk {
                     let child = dir + "/" + e.name
                     var st = stat()
                     // Stay on this volume (mounted disk images, network shares inside caches).
-                    if lstat(child, &st) == 0, st.st_dev == device { stack.append(child) }
+                    if lstat(child, &st) == 0 { if st.st_dev == device { stack.append(child) } }
+                    else { r.incomplete = true }
                     return
                 }
                 if e.links > 1 {
@@ -145,6 +148,7 @@ enum BulkWalk {
             if !ok {
                 let e = errno
                 if dir == root, e == ENOTSUP || e == EINVAL { return nil }
+                r.incomplete = true
                 if e == EACCES || e == EPERM { r.denied = true }
             }
         }
