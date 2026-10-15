@@ -165,6 +165,10 @@ public enum TrashBatches {
     /// Trash item, nothing is at its original path (new data there wins), and the original folder is
     /// still there on the same volume. A rename, never a copy; one bad entry never stops the rest.
     public static func restore(id: String, home: String = NSHomeDirectory(), dryRun: Bool = false) throws -> TrashRestore {
+        try restore(id: id, home: home, dryRun: dryRun, beforeMove: { _ in })
+    }
+
+    static func restore(id: String, home: String, dryRun: Bool, beforeMove: (TrashBatch.Entry) throws -> Void) throws -> TrashRestore {
         let batch = try load(id, home: home)
         var result = TrashRestore(id: batch.id, dryRun: dryRun)
         for entry in batch.entries {
@@ -172,10 +176,22 @@ public enum TrashBatches {
             if let (status, reason) = restoreRefusal(entry, home: home) {
                 item.status = status; item.reason = reason
             } else if !dryRun {
-                if renamex_np(entry.destination, entry.original, UInt32(RENAME_EXCL)) != 0 {
-                    let code = errno
-                    item.status = code == EEXIST ? "conflict" : "failed"
-                    item.reason = code == EEXIST ? tr("something new is at the original path; it was kept") : String(cString: strerror(code))
+                do {
+                    let source = try RestoreDirectory(home + "/.Trash")
+                    let target = try RestoreDirectory((entry.original as NSString).deletingLastPathComponent)
+                    try beforeMove(entry)
+                    if let (status, reason) = restoreRefusal(entry, home: home) {
+                        item.status = status; item.reason = reason
+                    } else if !source.matches() || !target.matches() {
+                        item.status = "changed"; item.reason = tr("its original folder is gone or moved")
+                    } else if renameatx_np(source.descriptor, (entry.destination as NSString).lastPathComponent,
+                                           target.descriptor, (entry.original as NSString).lastPathComponent, UInt32(RENAME_EXCL)) != 0 {
+                        let code = errno
+                        item.status = code == EEXIST ? "conflict" : "failed"
+                        item.reason = code == EEXIST ? tr("something new is at the original path; it was kept") : String(cString: strerror(code))
+                    }
+                } catch {
+                    item.status = "failed"; item.reason = error.localizedDescription
                 }
             }
             result.items.append(item)
@@ -190,6 +206,45 @@ public enum TrashBatches {
                   status: $0.status == "restored" ? "done" : $0.status == "skipped" ? "skipped" : "failed", detail: $0.reason)
         }), home: home)
         return result
+    }
+
+    /// Resolve system aliases (such as /var), walk the canonical components without links,
+    /// then keep the directory open through rename.
+    /// Path checks can reject a changed namespace; descriptor-relative rename cannot follow it.
+    private final class RestoreDirectory {
+        let path: String
+        let descriptor: Int32
+        let device: dev_t
+        let inode: ino_t
+
+        init(_ path: String) throws {
+            guard path.hasPrefix("/"), !path.split(separator: "/").contains(where: { $0 == "." || $0 == ".." }) else {
+                throw TrashBatches.error("invalid restore directory")
+            }
+            guard let resolved = realpath(path, nil) else { throw TrashBatches.error("cannot resolve restore directory") }
+            let canonical = String(cString: resolved)
+            free(resolved)
+            var fd = open("/", O_RDONLY | O_DIRECTORY | O_CLOEXEC)
+            guard fd >= 0 else { throw TrashBatches.error("cannot open restore directory") }
+            var keep = false
+            defer { if !keep { close(fd) } }
+            for component in canonical.split(separator: "/") {
+                let next = openat(fd, String(component), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+                guard next >= 0 else { throw TrashBatches.error("restore directory is unavailable or changed") }
+                close(fd); fd = next
+            }
+            var info = stat()
+            guard fstat(fd, &info) == 0 else { throw TrashBatches.error("cannot inspect restore directory") }
+            self.path = path; descriptor = fd; device = info.st_dev; inode = info.st_ino
+            keep = true
+        }
+
+        deinit { close(descriptor) }
+
+        func matches() -> Bool {
+            guard let current = try? RestoreDirectory(path) else { return false }
+            return current.device == device && current.inode == inode
+        }
     }
 
     /// Why an entry stays in the Trash, as (status, reason); nil when it can move back.

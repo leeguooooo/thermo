@@ -154,6 +154,62 @@ final class TrashBatchRestoreTests: XCTestCase {
         XCTAssertThrowsError(try TrashBatches.restore(id: "../../etc", home: home))
     }
 
+    func testRestoreRejectsAParentReplacedAfterReviewAndContinuesOtherItems() throws {
+        let a = home + "/Downloads/a.bin", b = home + "/Documents/b.bin"
+        try file(a); try file(b)
+        let batch = try trashed([a, b])
+        let result = try TrashBatches.restore(id: batch.id, home: home, dryRun: false) { entry in
+            guard entry.original == a else { return }
+            try FileManager.default.moveItem(atPath: self.home + "/Downloads", toPath: self.home + "/OldDownloads")
+            try FileManager.default.createDirectory(atPath: self.home + "/Downloads", withIntermediateDirectories: true)
+        }
+        XCTAssertEqual(result.items.first { $0.original == a }?.status, "changed")
+        XCTAssertEqual(result.items.first { $0.original == b }?.status, "restored")
+        XCTAssertFalse(FS.exists(a)); XCTAssertFalse(FS.exists(home + "/OldDownloads/a.bin"))
+        XCTAssertTrue(FS.exists(b))
+        XCTAssertTrue(FS.exists(try XCTUnwrap(batch.entries.first { $0.original == a }).destination))
+        XCTAssertEqual(history()?.outcome, "partial")
+    }
+
+    func testRestoreDoesNotFollowAnAncestorReplacedWithALink() throws {
+        let path = home + "/Downloads/sub/a.bin"
+        try file(path)
+        try FileManager.default.createDirectory(atPath: home + "/Elsewhere/sub", withIntermediateDirectories: true)
+        let batch = try trashed([path])
+        let result = try TrashBatches.restore(id: batch.id, home: home, dryRun: false) { _ in
+            try FileManager.default.moveItem(atPath: self.home + "/Downloads", toPath: self.home + "/OldDownloads")
+            try FileManager.default.createSymbolicLink(atPath: self.home + "/Downloads", withDestinationPath: self.home + "/Elsewhere")
+        }
+        XCTAssertNotEqual(result.items.first?.status, "restored")
+        XCTAssertFalse(FS.exists(home + "/Elsewhere/sub/a.bin"))
+        XCTAssertFalse(FS.exists(home + "/OldDownloads/sub/a.bin"))
+        XCTAssertTrue(FS.exists(batch.entries[0].destination))
+    }
+
+    func testRestoreRechecksSourceAfterOpeningDirectories() throws {
+        let path = home + "/Downloads/a.bin"
+        try file(path)
+        let batch = try trashed([path])
+        let result = try TrashBatches.restore(id: batch.id, home: home, dryRun: false) { entry in
+            try FileManager.default.moveItem(atPath: entry.destination, toPath: entry.destination + ".saved")
+            try self.file(entry.destination, bytes: 10)
+        }
+        XCTAssertEqual(result.items.first?.status, "changed")
+        XCTAssertFalse(FS.exists(path))
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: batch.entries[0].destination)).count, 10)
+        XCTAssertTrue(FS.exists(batch.entries[0].destination + ".saved"))
+    }
+
+    func testRestorePreservesAConflictCreatedImmediatelyBeforeRename() throws {
+        let path = home + "/Downloads/a.bin"
+        try file(path)
+        let batch = try trashed([path])
+        let result = try TrashBatches.restore(id: batch.id, home: home, dryRun: false) { _ in try self.file(path, bytes: 10) }
+        XCTAssertEqual(result.items.first?.status, "conflict")
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: path)).count, 10)
+        XCTAssertTrue(FS.exists(batch.entries[0].destination))
+    }
+
     /// A root-owned app moved by Thermo itself can come back: identity guards it, not the owner.
     /// Permanent deletion keeps requiring the user's own item.
     func testOwnershipIsRequiredToDeleteButNotToPutBack() throws {
