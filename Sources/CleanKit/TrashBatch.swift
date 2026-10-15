@@ -119,14 +119,6 @@ public enum TrashBatches {
         do { try synchronize(batch, home: home) } catch { result.failed["batch/" + batch] = error.localizedDescription }
     }
 
-    /// The operation history entry for a hand-picked move to the Trash, undoable through its batch.
-    static func journal(_ result: CleanResult, feature: String, action: String, subject: String?, sizes: [String: Int64], home: String) {
-        let moved = result.removed.map { OperationRecord.Item(target: $0, bytes: sizes[$0], status: "done") }
-        let failed = result.failed.sorted { $0.key < $1.key }.map { OperationRecord.Item(target: $0.key, status: "failed", detail: $0.value) }
-        OperationJournal.record(OperationRecord(feature: feature, action: action, subject: subject, items: moved + failed,
-                                                undo: result.trashBatchID.map { .init(kind: "trashBatch", ref: $0) }), home: home)
-    }
-
     public static func refusal(_ entry: TrashBatch.Entry, home: String = NSHomeDirectory()) -> String? {
         let trash = home + "/.Trash"
         let path = entry.destination

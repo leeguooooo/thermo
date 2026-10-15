@@ -28,10 +28,10 @@ final class TrashBatchRestoreTests: XCTestCase {
         return try TrashBatches.load(XCTUnwrap(result.trashBatchID), home: home)
     }
 
-    /// Journal times have whole-second precision, so pick the restore record by feature.
+    /// The cleanup log may journal other entries in the same second; pick the restore record by feature.
     func history() -> OperationRecord? { OperationJournal.read(home: home).first { $0.feature == "history" } }
 
-    func testManualTrashRecordsABatchAndJournal() throws {
+    func testManualTrashRecordsABatch() throws {
         let path = home + "/Downloads/fixture.bin"
         try file(path)
         let result = ManualRemoval.trash([path], sizes: [path: 4096], home: home, move: move)
@@ -39,10 +39,6 @@ final class TrashBatchRestoreTests: XCTestCase {
         let batch = try TrashBatches.load(id, home: home)
         XCTAssertEqual(batch.entries.map(\.original), [path])
         XCTAssertNil(TrashBatches.refusal(batch.entries[0], home: home))
-        let record = try XCTUnwrap(OperationJournal.read(home: home).first)
-        XCTAssertEqual(record.feature, "space"); XCTAssertEqual(record.action, "trash")
-        XCTAssertEqual(record.undo, .init(kind: "trashBatch", ref: id))
-        XCTAssertEqual(record.items, [.init(target: path, bytes: 4096, status: "done")])
     }
 
     func testAppTrashRecordsABatchAndEmptyTrashRemovesOnlyIt() throws {
@@ -51,16 +47,11 @@ final class TrashBatchRestoreTests: XCTestCase {
         var result = CleanResult(id: "app:fixture", trashed: true)
         AppUninstaller.trash([app], bundleIDs: ["com.example.fixture"], sizes: [app: 4096], home: home,
                              processes: { ProcessTable(entries: []) }, into: &result, move: move)
-        AppUninstaller.finish(result, title: "Fixture", home: home, action: "uninstall", subject: "com.example.fixture", sizes: [:])
         XCTAssertTrue(result.failed.isEmpty, "\(result.failed)")
         let id = try XCTUnwrap(result.trashBatchID)
         try file(home + "/.Trash/unrelated")
         XCTAssertEqual(try TrashBatches.empty(id, home: home).outcome, "success")
         XCTAssertTrue(FS.exists(home + "/.Trash/unrelated"))
-        let record = try XCTUnwrap(OperationJournal.read(home: home).first)
-        XCTAssertEqual(record.feature, "apps"); XCTAssertEqual(record.action, "uninstall")
-        XCTAssertEqual(record.undo?.ref, id)
-        XCTAssertNil(record.items.first?.bytes, "unknown size stays unknown")
     }
 
     func testRestorePutsItemsBackAndJournalsIt() throws {
