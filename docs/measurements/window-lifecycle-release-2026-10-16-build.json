@@ -1,0 +1,38 @@
+{
+  "sourceCommit": "04166706b7b03d05a2cf0404c16962f4e3b2e305",
+  "buildCommand": "swift build -c release --jobs 4 --product ThermoApp",
+  "buildDurationSeconds": 125.06,
+  "binary": ".build/release/ThermoApp",
+  "binarySHA256": "8efd40f09626309aa283d2d84d0b91e754ca39900c36c02ab53e97042777c996",
+  "binaryBytes": 19689432,
+  "binaryModifiedUTC": "2026-10-15T17:05:23.591103+00:00",
+  "architecture": "arm64",
+  "macOSVersion": "26.6.2",
+  "report": "window-lifecycle-release-2026-10-16.json",
+  "warmupCycles": 2,
+  "observedCycleEndFootprintMiB": [
+    128.188,
+    127.688,
+    128.735,
+    123.719,
+    159.719,
+    128.562,
+    182.923,
+    127.656,
+    131.156,
+    130.798,
+    128.703,
+    133.157
+  ],
+  "warmFootprintMiBRange": [
+    123.719,
+    182.923
+  ],
+  "warmLinearSlopeMiBPerMinute": -1.6375,
+  "idleCpuSingleCorePercentRange": [
+    0.0974,
+    0.1966
+  ],
+  "idleCpuSingleCorePercentMedian": 0.1427,
+  "memoryLeakFreedomProven": false
+}
