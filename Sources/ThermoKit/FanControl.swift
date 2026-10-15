@@ -193,11 +193,25 @@ public final class FanWriter {
     public func setManual(_ id: Int, rpm: Double) throws -> Double {
         let f = try fan(id)
         let (lo, hi) = try limits(id)
+        guard lo.isFinite, hi.isFinite, lo >= 0, hi > 0, lo <= hi,
+              rpm >= 0, rpm.isFinite || rpm == .infinity else {
+            throw FanControlError.helper("fan \(id): invalid speed or hardware limits")
+        }
+        guard f.hasModeKey || discovery.fanForceKey else {
+            throw FanControlError.helper("fan \(id): no manual-control readback key")
+        }
         let target = rpm.isInfinite ? hi : Swift.min(hi, Swift.max(lo, rpm))
 
         if discovery.fanTestKey && !unlocked {
             // Apple Silicon: thermalmonitord owns the fans until Ftst=1.
             try smc.write("Ftst", value: 1)
+        }
+        // Recheck ownership even when a previous write unlocked it: firmware may reclaim it.
+        if discovery.fanTestKey {
+            guard try smc.double("Ftst") == 1 else {
+                unlocked = false
+                throw FanControlError.helper("fan \(id): manual unlock readback did not match")
+            }
             unlocked = true
         }
         if f.hasModeKey {
@@ -207,7 +221,37 @@ public final class FanWriter {
             try smc.write("FS! ", value: Double(bits | (1 << id)))
         }
         try smc.write(f.targetKey, value: target)
-        return target
+        return try verifyManual(id, rpm: target)
+    }
+
+    /// Check an unchanged target without rewriting it; firmware can reclaim control
+    /// between helper ticks, including while hysteresis suppresses further writes.
+    @discardableResult
+    public func verifyManual(_ id: Int, rpm target: Double) throws -> Double {
+        let f = try fan(id)
+        guard target.isFinite, target >= 0 else { throw FanControlError.helper("fan \(id): invalid target") }
+        if discovery.fanTestKey {
+            guard try smc.double("Ftst") == 1 else {
+                unlocked = false
+                throw FanControlError.helper("fan \(id): manual unlock readback did not match")
+            }
+        }
+        if f.hasModeKey {
+            guard try smc.double(f.modeKey) == 1 else {
+                throw FanControlError.helper("fan \(id): manual mode readback did not match")
+            }
+        } else if discovery.fanForceKey {
+            guard try forceBits(fan: id) & (1 << id) != 0 else {
+                throw FanControlError.helper("fan \(id): manual force bit did not match")
+            }
+        } else { throw FanControlError.helper("fan \(id): no manual-control readback key") }
+        let actual = try smc.double(f.targetKey)
+        // Integer, fpe2 and Float targets quantize differently. One RPM covers the
+        // representable rounding; this is target-register confirmation, not rotor speed.
+        guard actual.isFinite, abs(actual - target) <= 1 else {
+            throw FanControlError.helper("fan \(id): target speed readback did not match")
+        }
+        return actual
     }
 
     public func setAuto(_ id: Int) throws {

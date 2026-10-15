@@ -108,7 +108,9 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 `fan status --csv` 输出转速、范围、手动模式和 helper 策略；`policies_available=false` 时策略为 `unknown`。`helper status` 的 JSON/CSV 包含 `installationSource`：`legacy` 表示发现旧式安装文件，`connected` 表示已连接到后台 helper，`unknown` 表示无法确认后台注册；此时 `installed=false` 只表示未检测到安装。
 
-helper 恢复自动控制时逐扇请求并读回模式或强制位；Apple Silicon 还检查 `Ftst` 解锁位。恢复未获确认时，策略查询返回错误，后台重试恢复并暂缓应用手动策略；退出状态也反映恢复失败。这些检查确认控制寄存器的读回结果，不能代替真实硬件验收，手动转速写入也尚未增加读回确认。
+helper 恢复自动控制时逐扇请求并读回模式或强制位；Apple Silicon 还检查 `Ftst` 解锁位。恢复未获确认时，策略查询返回错误，后台重试恢复并暂缓应用手动策略；退出状态也反映恢复失败。
+
+手动控制先检查转速范围，写入后读回解锁位、控制模式和目标转速；目标寄存器允许 1 RPM 的编码误差。目标不变时仍核对控制权。失败后尝试恢复所有风扇为自动，保留错误并暂停手动策略，直到再次明确修改策略。这些检查确认寄存器状态，不能证明风扇实际转速已达到目标，也不能代替真实硬件验收。策略设置的成功回复表示请求被接受，实际写入由后台执行；应继续查看 `fan status`，策略查询失败时显示未知。
 
 `bench --json/--csv` 导出每次操作的平均 wall/CPU 毫秒、重复次数、最后一次采样返回的记录数和 CPU 开销估算。采样测试包含温度、风扇、功率、电压、电流；估算不是整个 App 的实际 CPU 占用。SMC 传感器数量单独记录，返回记录数包含 IOHID 和风扇，也不等于 SMC 调用次数。
 

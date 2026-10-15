@@ -34,6 +34,7 @@ final class Controller {
     /// Last RPM written per fan, for hysteresis and ramping.
     var written: [Int: Double] = [:]
     var pendingRecovery: FanAutoRecoveryReport?
+    var controlError: String?
     var timer: DispatchSourceTimer?
     let lidAwake: LidAwakeController
     var lidTimer: DispatchSourceTimer?
@@ -114,6 +115,9 @@ final class Controller {
     /// Must run on `queue`.
     func tick() {
         if pendingRecovery != nil, !restoreFans(reason: "retry automatic control").confirmed { return }
+        // A failed manual request stays suspended until an explicit policy change.
+        // Automatic recovery must not silently retry the same faulty manual write.
+        guard controlError == nil else { return }
         guard engine.isActive else { return }
         let snapshot = sampler.sample()
         for action in engine.tick(snapshot) {
@@ -131,14 +135,20 @@ final class Controller {
                 }
                 written[fan] = nil
             case .manual(let fan, var rpm):
-                if let last = written[fan] {
-                    if abs(rpm - last) < Self.hysteresis { continue }
-                    if rpm < last { rpm = max(rpm, last - Self.rampDown) }
-                }
                 do {
+                    if let last = written[fan] {
+                        if abs(rpm - last) < Self.hysteresis {
+                            try writer.verifyManual(fan, rpm: last)
+                            continue
+                        }
+                        if rpm < last { rpm = max(rpm, last - Self.rampDown) }
+                    }
                     written[fan] = try writer.setManual(fan, rpm: rpm)
                 } catch {
                     log("fan \(fan): write failed: \(error)")
+                    controlError = "fan \(fan): manual control failed: \(error)"
+                    restoreFans(reason: "manual control failed")
+                    return
                 }
             }
         }
@@ -171,6 +181,7 @@ final class Controller {
             let report = restoreFans(reason: "last policy returned to auto")
             if !report.confirmed { throw FanControlError.helper(report.summary) }
         }
+        controlError = nil
     }
 }
 
@@ -217,7 +228,7 @@ final class Service: NSObject, ThermoHelperProtocol {
 
     func policies(reply: @escaping (Data) -> Void) {
         controller.queue.async {
-            reply((try? FanPolicyReply.encode(self.controller.engine.policies, recovery: self.controller.pendingRecovery)) ?? Data(#"{"_thermoError":"Could not encode fan control state"}"#.utf8))
+            reply((try? FanPolicyReply.encode(self.controller.engine.policies, recovery: self.controller.pendingRecovery, controlError: self.controller.controlError)) ?? Data(#"{"_thermoError":"Could not encode fan control state"}"#.utf8))
         }
     }
 }

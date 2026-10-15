@@ -10,6 +10,7 @@ final class FanRecoveryTests: XCTestCase {
         var ignoredWrites = Set<FourCC>()
         var writes: [(FourCC, Double)] = []
         var firmwareOnUnlockReset = false
+        var quantizeTargets = false
         func double(_ key: FourCC) throws -> Double {
             guard !failedReads.contains(key), let value = values[key] else { throw Fault.injected }
             return value
@@ -18,6 +19,7 @@ final class FanRecoveryTests: XCTestCase {
             writes.append((key, value))
             if failedWrites.contains(key) { throw Fault.injected }
             if !ignoredWrites.contains(key) { values[key] = value }
+            if quantizeTargets, key == "F0Tg" { values[key] = value.rounded(.down) }
             if key == "Ftst", value == 0, firmwareOnUnlockReset {
                 values["F0Md"] = 3; values["F1Md"] = 3
             }
@@ -90,5 +92,84 @@ final class FanRecoveryTests: XCTestCase {
         XCTAssertEqual(try FanPolicyReply.decode(recovered), [:])
         let desired: [Int: FanPolicy] = [0: .fixed(rpm: 2500)]
         XCTAssertEqual(try FanPolicyReply.decode(FanPolicyReply.encode(desired, recovery: nil)), desired)
+    }
+
+    func manualSMC() -> FakeSMC {
+        let smc = FakeSMC()
+        smc.values["F0Mn"] = 1200; smc.values["F0Mx"] = 6000
+        smc.values["F0Tg"] = 1400; smc.values["F0Md"] = 0
+        smc.values["Ftst"] = 0; smc.values["FS! "] = 4
+        return smc
+    }
+
+    func testManualClampsAndConfirmsQuantizedTargetWithoutRewritingDuringVerification() throws {
+        let smc = manualSMC(); smc.quantizeTargets = true
+        let writer = FanWriter(smc: smc, discovery: discovery())
+        XCTAssertEqual(try writer.setManual(0, rpm: 2500.75), 2500)
+        XCTAssertEqual(try writer.setManual(0, rpm: 0), 1200)
+        XCTAssertEqual(try writer.setManual(0, rpm: .infinity), 6000)
+        let count = smc.writes.count
+        XCTAssertEqual(try writer.verifyManual(0, rpm: 6000), 6000)
+        XCTAssertEqual(smc.writes.count, count)
+        smc.values["F0Md"] = 0
+        XCTAssertThrowsError(try writer.verifyManual(0, rpm: 6000), "firmware reclaim must not be hidden by hysteresis")
+    }
+
+    func testManualRejectsInvalidLimitsAndRequestsBeforeAnyWrite() {
+        for (lo, hi) in [(Double.nan, 6000.0), (1200, Double.infinity), (-1, 6000), (6000, 1200), (0, 0)] {
+            let smc = manualSMC(); smc.values["F0Mn"] = lo; smc.values["F0Mx"] = hi
+            XCTAssertThrowsError(try FanWriter(smc: smc, discovery: discovery()).setManual(0, rpm: 2500))
+            XCTAssertTrue(smc.writes.isEmpty)
+        }
+        for rpm in [Double.nan, -Double.infinity, -1] {
+            let smc = manualSMC()
+            XCTAssertThrowsError(try FanWriter(smc: smc, discovery: discovery()).setManual(0, rpm: rpm))
+            XCTAssertTrue(smc.writes.isEmpty)
+        }
+        let smc = manualSMC()
+        XCTAssertThrowsError(try FanWriter(smc: smc, discovery: discovery(modes: false)).setManual(0, rpm: 2500))
+        XCTAssertTrue(smc.writes.isEmpty)
+    }
+
+    func testManualRejectsIgnoredModeTargetAndUnreadableTargets() {
+        for ignored: FourCC in ["F0Md", "F0Tg"] {
+            let smc = manualSMC(); smc.ignoredWrites = [ignored]
+            XCTAssertThrowsError(try FanWriter(smc: smc, discovery: discovery()).setManual(0, rpm: 2500))
+        }
+        let smc = manualSMC(); smc.failedReads = ["F0Tg"]
+        XCTAssertThrowsError(try FanWriter(smc: smc, discovery: discovery()).setManual(0, rpm: 2500))
+        smc.failedReads = []
+        let writer = FanWriter(smc: smc, discovery: discovery())
+        for actual in [Double.nan, Double.infinity, -1, 2498] {
+            smc.values["F0Md"] = 1; smc.values["F0Tg"] = actual
+            XCTAssertThrowsError(try writer.verifyManual(0, rpm: 2500))
+        }
+    }
+
+    func testManualUnlockMustBeObservedAndRecheckedAfterFirmwareReclaimsIt() throws {
+        let smc = manualSMC(); smc.ignoredWrites = ["Ftst"]
+        let writer = FanWriter(smc: smc, discovery: discovery(apple: true))
+        XCTAssertThrowsError(try writer.setManual(0, rpm: 2500))
+        XCTAssertEqual(smc.writes.count, 1, "do not write mode/target without unlock confirmation")
+        smc.ignoredWrites = []
+        XCTAssertEqual(try writer.setManual(0, rpm: 2500), 2500)
+        smc.values["Ftst"] = 0
+        XCTAssertThrowsError(try writer.verifyManual(0, rpm: 2500))
+        XCTAssertEqual(try writer.setManual(0, rpm: 2500), 2500, "unlock cache must be invalidated")
+    }
+
+    func testManualForceBitsPreserveOtherFansAndRequireReadback() throws {
+        let smc = manualSMC()
+        let writer = FanWriter(smc: smc, discovery: discovery(modes: false, force: true))
+        XCTAssertEqual(try writer.setManual(0, rpm: 2500), 2500)
+        XCTAssertEqual(smc.values["FS! "], 5)
+        smc.values["FS! "] = 4; smc.ignoredWrites = ["FS! "]
+        XCTAssertThrowsError(try writer.setManual(0, rpm: 2500))
+    }
+
+    func testControlFaultReplyRemainsUnknownEvenAfterAutomaticRecoveryConfirmed() throws {
+        let data = try FanPolicyReply.encode([0: .fixed(rpm: 2500)], recovery: .init(unconfirmed: [], requestErrors: []), controlError: "target write failed")
+        XCTAssertThrowsError(try FanPolicyReply.decode(data))
+        XCTAssertThrowsError(try PolicyCoding.decoder().decode([Int: FanPolicy].self, from: data))
     }
 }
