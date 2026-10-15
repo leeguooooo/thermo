@@ -1814,7 +1814,6 @@ let zhHans: [String: String] = [
     "conflict": "有冲突",
     "missing": "已不在",
     "changed": "已变化",
-    "failed": "失败",
     "something new is at the original path; it was kept": "原路径已有新内容，已保留",
     "Git worktree with its registration; restore manually": "带 Git 注册信息的工作树，请手动恢复",
     "no longer in the Trash": "已不在废纸篓中",
