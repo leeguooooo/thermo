@@ -12,7 +12,7 @@ final class OperationHistoryTests: XCTestCase {
     override func tearDownWithError() throws { try? FileManager.default.removeItem(atPath: home); L10n.override = nil }
 
     func log(_ r: CleanResult, title: String = "Xcode") {
-        Cleaner.log(r, item: CleanItem(id: r.id, category: .system, title: title, safety: .review), to: Cleaner.logURL(home: home))
+        Cleaner.log(r, item: CleanItem(id: r.id, category: .system, title: title, safety: .review), home: home)
     }
 
     func testCleanupTrashBatchIsRecordedWithItsUndo() {

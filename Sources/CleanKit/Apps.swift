@@ -491,8 +491,7 @@ public enum AppUninstaller {
             ScanReportCache.invalidate(home: home)
             SpaceOverview.invalidate(home: home)
         }
-        Cleaner.log(result, item: CleanItem(id: result.id, category: .system, title: title, safety: .review),
-                    to: Cleaner.logURL(home: home))
+        Cleaner.log(result, item: CleanItem(id: result.id, category: .system, title: title, safety: .review), home: home)
     }
 
     // MARK: - Orphaned data

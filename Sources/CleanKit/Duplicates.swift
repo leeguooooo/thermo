@@ -173,7 +173,7 @@ public enum ManualRemoval {
             SpaceOverview.invalidate(home: home)
         }
         Cleaner.log(result, item: CleanItem(id: "manual", category: .system, title: tr("Picked by hand"), safety: .review,
-                                            paths: paths), to: Cleaner.logURL(home: home))
+                                            paths: paths), home: home)
         return result
     }
 }

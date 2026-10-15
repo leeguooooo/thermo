@@ -233,7 +233,7 @@ public enum Cleaner {
             SpaceOverview.invalidate(home: g.home)
         }
         result.spaceObservation = DiskSpaceObservation(before: before, after: DiskSpaceSnapshot.measure(path: g.home))
-        log(result, item: item, to: logURL(home: g.home))
+        log(result, item: item, home: g.home)
         return result
     }
 
@@ -468,9 +468,9 @@ public enum Cleaner {
         }
     }
 
-    static func log(_ r: CleanResult, item: CleanItem, to url: URL) {
-        // The log lives at <home>/Library/Logs/Thermo/clean.log.
-        journal(r, item: item, home: url.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().path)
+    static func log(_ r: CleanResult, item: CleanItem, home: String) {
+        let url = logURL(home: home)
+        journal(r, item: item, home: home)
         let f = ISO8601DateFormatter()
         var lines = r.removed.map { "\(f.string(from: Date())) \(r.trashed ? "trash" : "delete") \(item.id) \($0)" }
         lines += (r.partialRemoved ?? []).map { "\(f.string(from: Date())) partial \(item.id) \($0) (estimated removed bytes included; complete estimate=\(r.bytesIncomplete != true))" }

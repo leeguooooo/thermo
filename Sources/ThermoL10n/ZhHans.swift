@@ -1605,6 +1605,8 @@ let zhHans: [String: String] = [
     "Yesterday": "昨天",
     "%1$@ of %2$@ items put back.": "已放回 %1$@/%2$@ 项。",
     "Can be put back from here.": "可在此处放回原处。",
+    "not in your Trash folder (another volume?); put it back in Finder": "不在你的废纸篓目录里（可能在其他磁盘），请在访达中放回",
+    "the item in the Trash was changed or replaced; it was kept": "废纸篓里的项目已被改动或替换，已保留",
     // Overview heat chain
     "Heat chain": "热链路",
     "Load": "负载",

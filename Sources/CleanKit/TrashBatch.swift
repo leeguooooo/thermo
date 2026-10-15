@@ -119,7 +119,9 @@ public enum TrashBatches {
         do { try synchronize(batch, home: home) } catch { result.failed["batch/" + batch] = error.localizedDescription }
     }
 
-    public static func refusal(_ entry: TrashBatch.Entry, home: String = NSHomeDirectory()) -> String? {
+    /// `owner` nil accepts any owner: putting back a root-owned app Thermo itself moved is guarded by
+    /// its recorded identity, while deleting one for good keeps requiring the user's own item.
+    public static func refusal(_ entry: TrashBatch.Entry, home: String = NSHomeDirectory(), owner: uid_t? = getuid()) -> String? {
         let trash = home + "/.Trash"
         let path = entry.destination
         // Immediate children only, with the directory's identity and resolved ancestors rechecked.
@@ -129,7 +131,7 @@ public enum TrashBatches {
         guard FS.exists(path) else { return "item was restored or is missing" }
         guard FileIdentity.of(path) == entry.identity, let birth = entry.birthIdentity, birthIdentity(path) == birth else { return "Trash item was replaced" }
         var st = stat()
-        guard lstat(path, &st) == 0, st.st_uid == getuid(), (st.st_mode & S_IFMT) != S_IFLNK else { return "Trash item ownership or type changed" }
+        guard lstat(path, &st) == 0, owner.map({ st.st_uid == $0 }) ?? true, (st.st_mode & S_IFMT) != S_IFLNK else { return "Trash item ownership or type changed" }
         return nil
     }
 
@@ -155,7 +157,7 @@ public enum TrashBatches {
         result.outcome = result.failed.isEmpty ? "success" : (result.removed.isEmpty && result.partialRemoved?.isEmpty != false ? "failed" : "partial")
         result.spaceObservation = DiskSpaceObservation(before: before, after: DiskSpaceSnapshot.measure(path: home))
         let item = CleanItem(id: result.id, category: .system, title: "Trash batch", safety: .risky, paths: batch.entries.map(\.destination))
-        Cleaner.log(result, item: item, to: Cleaner.logURL(home: home))
+        Cleaner.log(result, item: item, home: home)
         return result
     }
 
@@ -194,7 +196,13 @@ public enum TrashBatches {
     static func restoreRefusal(_ entry: TrashBatch.Entry, home: String) -> (String, String)? {
         if entry.registrationBackup != nil { return ("skipped", tr("Git worktree with its registration; restore manually")) }
         guard FS.exists(entry.destination) else { return ("missing", tr("no longer in the Trash")) }
-        if let why = refusal(entry, home: home) { return ("changed", why) }
+        if let why = refusal(entry, home: home, owner: nil) {
+            switch why {
+            case "batch target is outside the expected Trash": return ("skipped", tr("not in your Trash folder (another volume?); put it back in Finder"))
+            case "Trash item was replaced": return ("changed", tr("the item in the Trash was changed or replaced; it was kept"))
+            default: return ("changed", why)
+            }
+        }
         let original = entry.original
         guard original.hasPrefix("/"), !original.split(separator: "/").contains(where: { $0 == ".." || $0 == "." }) else {
             return ("skipped", tr("not a full path"))

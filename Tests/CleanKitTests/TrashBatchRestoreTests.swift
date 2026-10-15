@@ -153,4 +153,18 @@ final class TrashBatchRestoreTests: XCTestCase {
     func testRestoreRejectsAnInvalidBatchID() {
         XCTAssertThrowsError(try TrashBatches.restore(id: "../../etc", home: home))
     }
+
+    /// A root-owned app moved by Thermo itself can come back: identity guards it, not the owner.
+    /// Permanent deletion keeps requiring the user's own item.
+    func testOwnershipIsRequiredToDeleteButNotToPutBack() throws {
+        let path = home + "/Downloads/owned.bin"
+        try file(path)
+        let entry = try trashed([path]).entries[0]
+        XCTAssertNotNil(TrashBatches.refusal(entry, home: home, owner: getuid() &+ 1), "a different owner refuses deletion")
+        XCTAssertNil(TrashBatches.refusal(entry, home: home, owner: nil))
+        XCTAssertNil(TrashBatches.restoreRefusal(entry, home: home))
+        try FileManager.default.removeItem(atPath: entry.destination)
+        try Data("swapped".utf8).write(to: URL(fileURLWithPath: entry.destination))
+        XCTAssertNotNil(TrashBatches.refusal(entry, home: home, owner: nil), "a replaced item is still refused without the owner check")
+    }
 }
