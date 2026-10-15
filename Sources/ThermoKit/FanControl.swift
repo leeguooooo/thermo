@@ -172,8 +172,8 @@ public final class FanWriter {
         self.discovery = discovery
         for f in discovery.fans where f.hasModeKey {
             if let m = try? smc.double(f.modeKey) {
-                // A leftover manual mode (e.g. after a crash) is not worth restoring.
-                originalMode[f.index] = m == 1 ? 0 : m
+                // Restore only known automatic states, never leftover manual or unknown modes.
+                originalMode[f.index] = m == 3 ? 3 : 0
             }
         }
     }
@@ -256,29 +256,35 @@ public final class FanWriter {
 
     public func setAuto(_ id: Int) throws {
         let f = try fan(id)
+        var failures: [String] = []
         if f.hasModeKey {
             // Apple Silicon: 0 hands the fan back; thermalmonitord sets its own mode
             // once Ftst is cleared (setAllAuto / the last fan going auto).
             let mode = discovery.fanTestKey ? 0 : (originalMode[id] ?? 0)
-            try smc.write(f.modeKey, value: mode)
-        } else if discovery.fanForceKey {
-            let bits = try forceBits(fan: id)
-            try smc.write("FS! ", value: Double(bits & ~(1 << id)))
+            do { try smc.write(f.modeKey, value: mode) } catch { failures.append(String(describing: error)) }
         }
-        try verifyAuto(f)
+        if discovery.fanForceKey {
+            do {
+                let bits = try forceBits(fan: id)
+                try smc.write("FS! ", value: Double(bits & ~(1 << id)))
+            } catch { failures.append(String(describing: error)) }
+        }
+        do { try verifyAuto(f) } catch { failures.append(String(describing: error)) }
+        if !failures.isEmpty { throw FanControlError.helper(failures.joined(separator: "; ")) }
     }
 
     private func verifyAuto(_ f: FanDescriptor) throws {
         if f.hasModeKey {
             let value = try smc.double(f.modeKey)
-            let expected = originalMode[f.index] ?? 0
-            let valid = discovery.fanTestKey ? (value == 0 || value == 3) : (expected != 1 && value == expected)
+            let valid = value == 0 || value == 3
             guard valid else { throw FanControlError.helper("fan \(f.index): automatic mode readback did not match") }
-        } else if discovery.fanForceKey {
+        }
+        if discovery.fanForceKey {
             guard try forceBits(fan: f.index) & (1 << f.index) == 0 else {
                 throw FanControlError.helper("fan \(f.index): force bit still set or unavailable")
             }
-        } else { throw FanControlError.helper("fan \(f.index): no automatic-control readback key") }
+        }
+        if !f.hasModeKey && !discovery.fanForceKey { throw FanControlError.helper("fan \(f.index): no automatic-control readback key") }
     }
 
     private func forceBits(fan: Int) throws -> Int {

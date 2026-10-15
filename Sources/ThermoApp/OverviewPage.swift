@@ -155,9 +155,9 @@ struct OverviewPage: View {
         let fans = s?.fans ?? []
         let top = fans.max { $0.rpm < $1.rpm }
         let hot = (s?.hottest ?? 0) >= 85
-        let lagging = hot && fans.contains { !$0.manual } && (fans.map(\.load).max() ?? 1) < 0.6
-        let state: LinkState = s == nil ? .unknown : fans.isEmpty ? .unknown : lagging ? .alert : .normal
-        let mode = fans.contains(where: \.manual) ? tr("manual") : tr("auto")
+        let lagging = hot && fans.contains { $0.manual == false } && (fans.map(\.load).max() ?? 1) < 0.6
+        let state: LinkState = s == nil ? .unknown : fans.isEmpty || fans.contains { $0.manual == nil } ? .unknown : lagging ? .alert : .normal
+        let mode = fans.contains { $0.manual == nil } ? tr("unknown") : fans.contains { $0.manual == true } ? tr("manual") : tr("auto")
         let detail: String? = s == nil ? nil : fans.isEmpty ? tr("No fans")
             : lagging ? tr("Hot, but the fans are not at full speed")
             : top.map { mode + " · " + tr("%1$@ of max", String(format: "%.0f%%", $0.load * 100)) }

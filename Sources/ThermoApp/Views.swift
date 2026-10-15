@@ -225,13 +225,13 @@ struct FanRow: View {
     let fan: FanReading
     var body: some View {
         HStack {
-            Image(systemName: "fan").foregroundStyle(fan.manual ? .orange : .secondary)
+            Image(systemName: "fan").foregroundStyle(fan.manual == true ? .orange : .secondary)
             Text(fan.name).frame(width: 52, alignment: .leading)
-            Bar(value: fan.load, color: fan.manual ? .orange : .blue)
+            Bar(value: fan.load, color: fan.manual == nil ? .gray : fan.manual == true ? .orange : .blue)
             Text(tr("%1$@ rpm", String(Int(fan.rpm)))).monospacedDigit().frame(width: 76, alignment: .trailing)
         }
         .font(.callout)
-        .help(tr("%1$@–%2$@ rpm · %3$@", String(Int(fan.min)), String(Int(fan.max)), fan.manual ? tr("manual") : tr("auto")))
+        .help(tr("%1$@–%2$@ rpm · %3$@", String(Int(fan.min)), String(Int(fan.max)), tr(fan.controlMode)))
     }
 }
 
@@ -568,18 +568,18 @@ struct FanControlCard: View {
     var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Image(systemName: "fan").font(.system(size: 13)).foregroundStyle(fan.manual ? Color.orange : .white.opacity(0.55))
+                Image(systemName: "fan").font(.system(size: 13)).foregroundStyle(fan.manual == true ? Color.orange : .white.opacity(0.55))
                     .frame(width: 18).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(fan.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
-                    Text(tr("%1$@–%2$@ rpm · %3$@", String(Int(fan.min)), String(Int(fan.max)), fan.manual ? tr("manual") : tr("auto")))
+                    Text(tr("%1$@–%2$@ rpm · %3$@", String(Int(fan.min)), String(Int(fan.max)), tr(fan.controlMode)))
                         .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).monospacedDigit()
                 }
                 Spacer(minLength: 8)
                 Text(tr("%1$@ rpm", String(Int(fan.rpm))))
                     .font(.system(size: 17, weight: .semibold, design: .rounded).monospacedDigit()).foregroundStyle(.white)
             }
-            Bar(value: fan.load, color: fan.manual ? .orange : .blue)
+            Bar(value: fan.load, color: fan.manual == nil ? .gray : fan.manual == true ? .orange : .blue)
                 .padding(.leading, 28).accessibilityHidden(true)
         }
         .padding(.horizontal, 14).padding(.vertical, 11)

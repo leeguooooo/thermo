@@ -48,7 +48,18 @@ public struct FanReading: Codable, Hashable, Sendable, Identifiable {
     public let min: Double
     public let max: Double
     public let target: Double?
-    public let manual: Bool
+    /// nil when control mode could not be established; never inferred as automatic.
+    public let manual: Bool?
+    public var controlMode: String { manual.map { $0 ? "manual" : "auto" } ?? "unknown" }
+
+    enum CodingKeys: String, CodingKey { case id, name, rpm, min, max, target, manual }
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id); try c.encode(name, forKey: .name)
+        try c.encode(rpm, forKey: .rpm); try c.encode(min, forKey: .min); try c.encode(max, forKey: .max)
+        try c.encodeIfPresent(target, forKey: .target)
+        try c.encode(manual, forKey: .manual)
+    }
 
     /// 0...1 position between min and max.
     public var load: Double {

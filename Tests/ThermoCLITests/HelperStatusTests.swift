@@ -55,4 +55,19 @@ final class HelperStatusTests: XCTestCase {
         XCTAssertTrue(csv.contains("failed,"))
         XCTAssertTrue(csv.contains("\"mode lost, retry required\""))
     }
+
+    func testUnknownSampledModeStaysUnknownInTerminalCSVAndPulse() throws {
+        let fan = try JSONDecoder().decode(FanReading.self, from: Data("""
+        {"id":0,"name":"Fixture","rpm":1800,"min":1200,"max":6000,"manual":null}
+        """.utf8))
+        let csv = Export.fanStatusCSV([fan], policies: [:], helperNote: nil)
+        XCTAssertTrue(csv.contains(",unknown,auto,unavailable,"), "known desired auto is separate from unknown sampled mode")
+        let snapshot = Snapshot(temperatures: [], fans: [fan], power: [], voltages: [], currents: [], battery: nil)
+        let terminal = Renderer(style: Style(enabled: false), showAll: false).fans(snapshot).joined(separator: "\n")
+        XCTAssertTrue(terminal.contains("unknown"))
+        XCTAssertFalse(terminal.contains("auto"))
+        let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(PulseCommand.Report.Fan(fan))) as? [String: Any]
+        XCTAssertEqual(json?["controlMode"] as? String, "unknown")
+        XCTAssertNil(json?["manual"] as? Bool)
+    }
 }

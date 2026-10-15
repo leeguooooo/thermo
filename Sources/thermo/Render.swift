@@ -78,12 +78,12 @@ struct Renderer {
         var lines = [style.bold("Fans")]
         if s.fans.isEmpty { return lines + [style.dim("  no fans (fanless Mac)")] }
         for f in s.fans {
-            let mode = f.manual ? style.yellow("manual") : style.green("auto")
+            let mode = f.manual == true ? style.yellow("manual") : f.manual == false ? style.green("auto") : style.dim("unknown")
             let range = style.dim("[\(Int(f.min))–\(Int(f.max))]")
             lines.append("  " + pad("\(f.id) " + f.name, 10) + pad("\(Int(f.rpm.rounded())) rpm", 10, right: true)
                          + "  " + style.bar(f.load, width: 12) + pad(String(format: "%3.0f%%", f.load * 100), 5, right: true)
                          + "  " + range + "  " + mode
-                         + (f.manual ? style.dim("  → \(Int(f.target ?? 0))") : ""))
+                         + (f.manual == true ? style.dim("  → " + (f.target.map { String(format: "%.0f", $0) } ?? "unknown")) : ""))
         }
         return lines
     }
@@ -222,7 +222,7 @@ enum Export {
         }
         var rows = fans.map { fan in
             [String(fan.id), fan.name, number(fan.rpm), number(fan.min), number(fan.max), number(fan.target),
-             fan.manual ? "true" : "false", Renderer.policyText(policies[fan.id], available: available)]
+             fan.manual.map { $0 ? "true" : "false" } ?? "unknown", Renderer.policyText(policies[fan.id], available: available)]
              + verification(fan.id) + [available ? "true" : "false", helperNote ?? "running"]
         }
         // Preserve helper status even on fanless machines.

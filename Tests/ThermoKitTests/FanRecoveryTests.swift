@@ -56,6 +56,32 @@ final class FanRecoveryTests: XCTestCase {
         XCTAssertFalse(writer.setAllAuto().confirmed)
     }
 
+    func testAutomaticRecoveryRequiresBothModeAndForceFlagsWhenBothExist() {
+        let smc = FakeSMC()
+        let writer = FanWriter(smc: smc, discovery: discovery(force: true))
+        smc.ignoredWrites = ["FS! "]
+        XCTAssertFalse(writer.setAllAuto().confirmed, "mode zero cannot override an uncleared force bit")
+        smc.ignoredWrites = []; smc.failedWrites = ["F0Md"]; smc.values["F0Md"] = 1
+        XCTAssertFalse(writer.setAllAuto().confirmed)
+        XCTAssertEqual(smc.values["FS! "], 0, "still attempt the force reset when mode writing fails")
+        smc.failedWrites = []
+        XCTAssertTrue(writer.setAllAuto().confirmed)
+    }
+
+    func testUnexpectedOriginalModeIsNotRestoredOrCertifiedAsAutomatic() {
+        let smc = FakeSMC(); smc.values["F0Md"] = 2
+        let writer = FanWriter(smc: smc, discovery: discovery())
+        smc.ignoredWrites = ["F0Md"]
+        XCTAssertFalse(writer.setAllAuto().confirmed)
+        smc.ignoredWrites = []
+        XCTAssertTrue(writer.setAllAuto().confirmed)
+        XCTAssertEqual(smc.values["F0Md"], 0)
+        smc.values["F0Md"] = 3
+        let previouslyThree = FanWriter(smc: smc, discovery: discovery())
+        smc.values["F0Md"] = 0; smc.ignoredWrites = ["F0Md"]
+        XCTAssertTrue(previouslyThree.setAllAuto().confirmed, "both known system modes remain automatic even if firmware transitions between them")
+    }
+
     func testAppleFirmwareFallbackCanConfirmAutoDespiteIndividualRequestFailure() {
         let smc = FakeSMC(); smc.failedWrites = ["F0Md", "F1Md"]; smc.firmwareOnUnlockReset = true
         let report = FanWriter(smc: smc, discovery: discovery(apple: true)).setAllAuto()

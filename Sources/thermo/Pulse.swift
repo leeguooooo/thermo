@@ -32,7 +32,14 @@ struct PulseCommand {
         let systemPowerW: Double?
         let batteryPercent: Double?
 
-        struct Fan: Encodable { let name: String; let rpm: Double; let min: Double; let max: Double; let manual: Bool }
+        struct Fan: Encodable {
+            let name: String; let rpm: Double; let min: Double; let max: Double; let manual: Bool?
+            let controlMode: String
+            init(_ reading: FanReading) {
+                name = reading.name; rpm = reading.rpm; min = reading.min; max = reading.max
+                manual = reading.manual; controlMode = reading.controlMode
+            }
+        }
     }
 
     func run(_ rest: [String] = []) throws {
@@ -57,7 +64,7 @@ struct PulseCommand {
                 memory: pulse.memory.rawValue, swapUsedMB: pulse.swapUsedMB, swapTotalMB: pulse.swapTotalMB,
                 swapNote: pulse.swapDiskText, diskFreeBytes: pulse.diskFreeBytes, diskNote: pulse.diskText, advice: pulse.hogs.compactMap { $0.advice?.text },
                 programs: pulse.hogs, temperatures: temps,
-                fans: (s?.fans ?? []).map { .init(name: $0.name, rpm: $0.rpm, min: $0.min, max: $0.max, manual: $0.manual) },
+                fans: (s?.fans ?? []).map { .init($0) },
                 systemPowerW: s?.systemPower, batteryPercent: s?.battery?.percent)
             print(app.args.has("json") ? Export.diagnosticJSON(report) : Export.pulseCSV(report))
             return
@@ -107,7 +114,7 @@ struct PulseCommand {
             if let w = s.systemPower { sensors.append(String(format: "%.1f W", w)) }
             lines.append("  " + sensors.joined(separator: style.dim(" · ")))
             for f in s.fans {
-                lines.append("  " + f.name + "  \(Int(f.rpm)) rpm" + style.dim("  [\(Int(f.min))–\(Int(f.max))] " + (f.manual ? tr("manual") : tr("auto"))))
+                lines.append("  " + f.name + "  \(Int(f.rpm)) rpm" + style.dim("  [\(Int(f.min))–\(Int(f.max))] " + (tr(f.controlMode))))
             }
         }
         out(lines)

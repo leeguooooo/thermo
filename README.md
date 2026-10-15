@@ -110,6 +110,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 协议 5 的 `fan status --json` 另含 `controlState`，区分已设策略、最近一次寄存器核对、核对时间、温度保护暂停和控制错误。CSV 增加 `verification_state,last_observed_mode,verified_target_rpm,checked_at,policies_suspended,control_failure`；时间为 UTC ISO 8601。`policies_available` 只表示能读到已设策略，不表示硬件已执行。旧 helper 的硬件核对显示不可用。App 同样分开展示已设策略和上次核对；读回结果是历史观察，实际转速另外显示，不能把它当作当前控制权或转速保证。
 
+实时风扇模式可为手动、自动或未知。存在模式键和强制位时，两者都读到且解除强制才确认自动；任一有效标志表明手动就保留手动，其余不完整或异常读数为未知。快照 JSON 中未知的 `manual` 为 `null`，CSV 为 `unknown`；旧布尔值快照仍可读取。Pulse JSON 的未知模式不输出布尔值，并以 `controlMode=unknown` 标记。读取这些输出的程序需要处理未知，不能将缺少或 `null` 当作 `false`。
+
 helper 恢复自动控制时逐扇请求并读回模式或强制位；Apple Silicon 还检查 `Ftst` 解锁位。恢复未获确认时，策略查询返回错误，后台重试恢复并暂缓应用手动策略；退出状态也反映恢复失败。
 
 手动控制先检查转速范围，写入后读回解锁位、控制模式和目标转速；目标寄存器允许 1 RPM 的编码误差。目标不变时仍核对控制权。失败后尝试恢复所有风扇为自动，保留错误并暂停手动策略，直到再次明确修改策略。这些检查确认寄存器状态，不能证明风扇实际转速已达到目标，也不能代替真实硬件验收。策略设置的成功回复表示请求被接受，实际写入由后台执行；应继续查看 `fan status`，策略查询失败时显示未知。
