@@ -70,6 +70,10 @@ struct PopoverView: View {
                     .onTapGesture { monitor.iconHidden = false }
             }
             OverviewView(monitor: monitor)
+            if monitor.snapshot?.battery != nil || renderingPreview {
+                Divider()
+                LidAwakeSwitch(monitor: monitor)
+            }
             if let err = monitor.lastError {
                 Text(err).font(.caption).foregroundStyle(.red).lineLimit(3)
                     .onTapGesture { monitor.lastError = nil }

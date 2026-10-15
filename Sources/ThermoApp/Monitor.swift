@@ -256,6 +256,11 @@ final class Monitor: ObservableObject {
 
     /// Fan settings chosen before the helper could take them; applied as soon as it answers.
     @Published private(set) var pendingPolicies: [Int: FanPolicy] = [:]
+    /// Keep awake with the lid closed, as the helper reports it; nil when the helper cannot say (absent or outdated).
+    @Published private(set) var lidAwake: LidAwakeState?
+    /// Turned on before the helper was ready; applied once it answers.
+    @Published private(set) var lidAwakePending = false
+    @Published private(set) var lidAwakeBusy = false
     /// Set while the user is being walked through allowing the helper.
     @Published private(set) var settingUp = false
     @Published private(set) var setupStarted: Date?
@@ -276,6 +281,7 @@ final class Monitor: ObservableObject {
                 policiesAvailable = active != nil
                 if let active { policies = active }
                 helperState = v == HelperConstants.version ? .running : .outdated
+                observeLidAwake(helperState == .running ? try? await helper.lidAwakeState() : nil)
                 if helperState == .outdated { restartOutdatedHelper() }
                 finishSetup()
                 return
@@ -348,6 +354,48 @@ final class Monitor: ObservableObject {
         let pending = pendingPolicies
         pendingPolicies = [:]
         if !pending.isEmpty { applyPolicies(pending.sorted(by: { $0.key < $1.key }).map { ($0.key, $0.value) }) }
+        if lidAwakePending, helperState == .running { lidAwakePending = false; setLidAwake(true) }
+    }
+
+    // MARK: Keep awake with the lid closed
+
+    /// Through the helper: only root can stop lid-close sleep. Without a current helper this walks
+    /// the user through installing or updating it first, then turns it on.
+    func setLidAwake(_ on: Bool) {
+        guard !lidAwakeBusy else { return }
+        guard helperState == .running else {
+            lidAwakePending = on
+            if on, !settingUp { beginSetup() }
+            return
+        }
+        lidAwakeBusy = true
+        Task { @MainActor in
+            defer { lidAwakeBusy = false }
+            do {
+                try await helper.setLidAwake(on)
+                OperationJournal.record(OperationRecord(feature: "power", action: on ? "lidAwakeOn" : "lidAwakeOff",
+                                                        items: [.init(target: "disablesleep", status: "done")]))
+            } catch {
+                lastError = tr("Could not change lid-closed sleep: %1$@", error.localizedDescription)
+                OperationJournal.record(OperationRecord(feature: "power", action: on ? "lidAwakeOn" : "lidAwakeOff",
+                                                        items: [.init(target: "disablesleep", status: "failed", detail: error.localizedDescription)]))
+            }
+            observeLidAwake(try? await helper.lidAwakeState())
+        }
+    }
+
+    /// Notices the helper turning it off by itself (heat, battery, no readings) and says so once.
+    private func observeLidAwake(_ state: LidAwakeState?) {
+        let before = lidAwake
+        lidAwake = state
+        guard let state, let off = state.lastAutoOff, off != before?.lastAutoOff, before?.armed == true, !state.armed else { return }
+        OperationJournal.record(OperationRecord(feature: "power", action: "lidAwakeAutoOff", subject: off.reason,
+                                                items: [.init(target: "disablesleep", status: "done", detail: off.detail)]))
+        guard Bundle.main.bundleIdentifier != nil else { return }
+        let content = UNMutableNotificationContent()
+        content.title = tr("Lid-closed awake turned off")
+        content.body = LidAwakeText.autoOff(off) + " " + tr("The Mac can sleep again when the lid is closed.")
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "thermo.lidawake", content: content, trigger: nil))
     }
 
     /// The fallback that always works: one administrator prompt installs the helper as a

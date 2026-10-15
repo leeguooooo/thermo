@@ -37,6 +37,9 @@ extension OperationRecord {
         case ("pulse", "quit"): return tr("Stopped a program")
         case ("pulse", "restart"): return tr("Restarted an app")
         case ("history", "restore"): return tr("Put files back from the Trash")
+        case ("power", "lidAwakeOn"): return tr("Turned on staying awake with the lid closed")
+        case ("power", "lidAwakeOff"): return tr("Turned off staying awake with the lid closed")
+        case ("power", "lidAwakeAutoOff"): return tr("Staying awake with the lid closed turned itself off")
         default: return feature + " · " + action
         }
     }

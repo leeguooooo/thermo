@@ -61,6 +61,8 @@ COMMANDS
   tabs saved|show UUID       saved batches and individual close/restore results
   tabs restore UUID          reopen a saved batch in its original window; --window ID
                              explicitly selects a destination after a browser restart
+  awake [status|on|off]      keep a laptop awake with the lid closed (through the helper; turns itself
+                             off when hot, at 20% battery on battery power, or without temperature readings)
   history                    every change Thermo made (cleanups, uninstalls, agent fixes, Claude reset,
                              privacy, tabs, archives, quits), newest first, and where each is undone;
                              --limit N, --json; history show ID for every item
@@ -167,6 +169,7 @@ struct App {
         case "pulse", "status": try PulseCommand(app: self).run(rest)
         case "tabs": try TabsCommand(app: self).run(rest)
         case "settings", "config": try SettingsCommand(app: self).run(rest)
+        case "awake": try AwakeCommand(app: self).run(rest)
         case "history": try HistoryCommand(app: self).run(rest)
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
         }

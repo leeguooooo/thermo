@@ -34,6 +34,8 @@ final class Controller {
     /// Last RPM written per fan, for hysteresis and ramping.
     var written: [Int: Double] = [:]
     var timer: DispatchSourceTimer?
+    let lidAwake: LidAwakeController
+    var lidTimer: DispatchSourceTimer?
 
     static let interval: TimeInterval = 2
     static let hysteresis = 50.0
@@ -47,11 +49,14 @@ final class Controller {
         writer = FanWriter(smc: sampler.smc, discovery: sampler.discovery)
         // Apple Silicon is the platform with the Ftst unlock key.
         engine = FanPolicyEngine(limits: .forHardware(appleSilicon: sampler.discovery.fanTestKey))
+        lidAwake = LidAwakeController(limits: engine.limits, log: log)
     }
 
     func start() {
         queue.sync {
             writer.setAllAuto()
+            // Keep-awake-with-the-lid-closed never survives a restart (crash, update, reboot).
+            lidAwake.restoreOriginal(reason: "helper started")
             log("started; \(sampler.discovery.fans.count) fan(s), \(sampler.discovery.sensors.filter(\.essential).count) control sensors; fans set to auto")
             // What the user chose survives restarts (updates, reboots); the next tick applies it,
             // with the over-temperature protection as always.
@@ -67,11 +72,27 @@ final class Controller {
         t.setEventHandler { [weak self] in self?.tick() }
         t.resume()
         timer = t
+        let lid = DispatchSource.makeTimerSource(queue: queue)
+        lid.schedule(deadline: .now() + 10, repeating: 10, leeway: .seconds(1))
+        lid.setEventHandler { [weak self] in self?.lidTick() }
+        lid.resume()
+        lidTimer = lid
+    }
+
+    /// Must run on `queue`. The safety rules run whether or not the lid is closed: a hot Mac is hot either way.
+    func lidTick() {
+        guard lidAwake.state.armed else {
+            lidAwake.tick(hottest: nil, battery: nil, lidClosed: SleepSwitch.lidClosed())
+            return
+        }
+        let s = sampler.sample()
+        lidAwake.tick(hottest: s.hottest, battery: Battery.read(), lidClosed: SleepSwitch.lidClosed())
     }
 
     func shutdown(reason: String) {
         queue.sync {
             writer.setAllAuto()
+            lidAwake.restoreOriginal(reason: reason)
             log("\(reason); fans returned to auto")
         }
     }
@@ -149,6 +170,20 @@ final class Service: NSObject, ThermoHelperProtocol {
             } catch {
                 reply("\(error)")
             }
+        }
+    }
+
+    func setLidAwake(_ on: Bool, reply: @escaping (String?) -> Void) {
+        controller.queue.async {
+            do { try self.controller.lidAwake.set(on); reply(nil) } catch { reply("\(error)") }
+        }
+    }
+
+    func lidAwakeState(reply: @escaping (Data) -> Void) {
+        controller.queue.async {
+            var state = self.controller.lidAwake.state
+            state.lidClosed = SleepSwitch.lidClosed()
+            reply((try? PolicyCoding.encoder().encode(state)) ?? Data("{}".utf8))
         }
     }
 
