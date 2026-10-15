@@ -30,7 +30,9 @@ public struct Whitelist: Sendable {
         func matches(_ path: String) -> Bool {
             if path == "/" { return true }
             return values.contains { value in
-                guard glob else { return path == value || path.hasPrefix(value + "/") || value.hasPrefix(path + "/") }
+                // Also literally: a real name like `film [1].mkv` is not meant as a character class.
+                if path == value || path.hasPrefix(value + "/") || value.hasPrefix(path + "/") { return true }
+                guard glob else { return false }
                 let have = path.split(separator: "/").map(String.init)
                 let want = value.split(separator: "/").map(String.init)
                 // A glob matches a whole number of components: inside a match, or a folder that may hold one.
@@ -90,9 +92,10 @@ public struct Whitelist: Sendable {
     public static func load(home: String = NSHomeDirectory()) throws -> Whitelist {
         let file = url(home: home).path
         guard let text = try read(home: home) else { return Whitelist(file: file) }
+        let canonicalHome = URL(fileURLWithPath: home).resolvingSymlinksInPath().path
         var entries: [String] = [], rejected: [Rejected] = []
         for (index, raw) in lines(text).enumerated() {
-            switch parse(raw, home: home) {
+            switch parse(raw, home: home, canonicalHome: canonicalHome) {
             case .none: continue
             case .entry(let entry): if !entries.contains(entry) { entries.append(entry) }
             case .rejected(let reason): rejected.append(Rejected(line: index + 1, text: raw, reason: reason))
@@ -107,7 +110,7 @@ public struct Whitelist: Sendable {
 
     enum Line: Equatable { case none, entry(String), rejected(String) }
 
-    static func parse(_ raw: String, home: String) -> Line {
+    static func parse(_ raw: String, home: String, canonicalHome: String? = nil) -> Line {
         let line = raw.trimmingCharacters(in: .whitespaces)
         if line.isEmpty || line.hasPrefix("#") { return .none }
         if line.unicodeScalars.contains(where: { $0.value < 0x20 || $0.value == 0x7f }) { return .rejected("contains control characters") }
@@ -116,7 +119,7 @@ public struct Whitelist: Sendable {
         let parts = expanded.split(separator: "/")
         if parts.contains("..") { return .rejected("contains ..") }
         let path = "/" + parts.filter { $0 != "." }.joined(separator: "/")
-        let canonicalHome = URL(fileURLWithPath: home).resolvingSymlinksInPath().path
+        let canonicalHome = canonicalHome ?? URL(fileURLWithPath: home).resolvingSymlinksInPath().path
         let roots = ["/", home, canonicalHome, "/Users", "/System", "/Library", "/Applications", "/private", "/var", "/Volumes"]
         if roots.contains(path) { return .rejected("a system root or your home folder") }
         if isGlob(path) {

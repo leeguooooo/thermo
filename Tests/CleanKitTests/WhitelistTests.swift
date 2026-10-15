@@ -110,6 +110,15 @@ final class WhitelistTests: XCTestCase {
         XCTAssertFalse(w.protects(home + "/repos/app/node_modules"))
     }
 
+    func testBracketsInRealNamesMatchLiterally() throws {
+        let film = home + "/Downloads/film [1080p].mkv"
+        try Whitelist.add([film], home: home)
+        let w = try Whitelist.load(home: home)
+        XCTAssertTrue(w.protects(film))
+        XCTAssertTrue(w.protects(home + "/Downloads"))
+        XCTAssertFalse(w.protects(home + "/Downloads/film 2.mkv"))
+    }
+
     func testSymlinkedParentIsMatched() throws {
         try FileManager.default.createDirectory(atPath: home + "/real/keep", withIntermediateDirectories: true)
         try FileManager.default.createSymbolicLink(atPath: home + "/alias", withDestinationPath: home + "/real")
