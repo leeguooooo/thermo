@@ -6,7 +6,7 @@ public enum HelperConstants {
     public static let machService = "dev.thermo.helper"
     public static let installedBinary = "/Library/PrivilegedHelperTools/dev.thermo.helper"
     public static let launchdPlist = "/Library/LaunchDaemons/dev.thermo.helper.plist"
-    public static let protocolVersion = "3"
+    public static let protocolVersion = "4"
     /// Reported by the helper: "<protocol>/<app version>".
     public static var version: String { "\(protocolVersion)/\(ThermoVersion.string)" }
     /// Plist bundled at Contents/Library/LaunchDaemons for SMAppService registration.
@@ -119,6 +119,8 @@ public enum HelperSelfUpdate {
     func setLidAwake(_ on: Bool, heatGuard: Bool, reply: @escaping (String?) -> Void)
     /// JSON-encoded LidAwakeState.
     func lidAwakeState(reply: @escaping (Data) -> Void)
+    /// Protocol 4: confirm automatic fan control and fence manual requests for removal.
+    func prepareRemoval(_ prepare: Bool, token: String, reply: @escaping (String?) -> Void)
 }
 
 /// The helper's fan policies on disk, so a helper restart (update, reboot) keeps what the user
@@ -281,6 +283,33 @@ public final class HelperClient: @unchecked Sendable {
         return try PolicyCoding.decoder().decode(LidAwakeState.self, from: data)
     }
 
+    public func prepareRemoval(_ prepare: Bool, token: String) async throws {
+        let v = try await version()
+        guard let major = Int(v.split(separator: "/").first ?? ""), major >= 4 else {
+            throw FanControlError.helper("helper cannot confirm safe removal; update the helper first")
+        }
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            let once = Once()
+            guard let p = proxy({ error in once.run { cont.resume(throwing: error) } }) else {
+                return once.run { cont.resume(throwing: FanControlError.helperUnavailable("no proxy")) }
+            }
+            deadline(10, once) { cont.resume(throwing: FanControlError.helperUnavailable("removal preparation timed out")) }
+            p.prepareRemoval(prepare, token: token) { error in
+                once.run {
+                    if let error { cont.resume(throwing: FanControlError.helper(error)) } else { cont.resume() }
+                }
+            }
+        }
+    }
+
+    public func withRemovalPreparation(_ remove: () throws -> Void) throws {
+        let token = UUID().uuidString
+        try HelperRemovalOperation.run(
+            prepare: { try self.blocking(timeout: 15) { try await $0.prepareRemoval(true, token: token) } },
+            remove: remove,
+            cancel: { try self.blocking(timeout: 15) { try await $0.prepareRemoval(false, token: token) } })
+    }
+
     // MARK: blocking (CLI)
 
     public func blocking<T>(timeout: TimeInterval = 5, _ op: @escaping (HelperClient) async throws -> T) throws -> T {
@@ -373,13 +402,15 @@ public enum HelperInstaller {
         try runPrivileged(script)
     }
 
+    static func removalScript(bootout: String = "/bin/launchctl bootout system/\(HelperConstants.label)",
+                              paths: [String] = [HelperConstants.launchdPlist, HelperConstants.installedBinary, PolicyStore.path]) -> String {
+        ([bootout, "/bin/rm -f " + paths.map(shellQuote).joined(separator: " ")]
+            + paths.map { "test ! -e \(shellQuote($0)) && test ! -L \(shellQuote($0))" }).joined(separator: " && ")
+    }
+
     public static func uninstall() throws {
-        let script = [
-            "/bin/launchctl bootout system/\(HelperConstants.label) 2>/dev/null",
-            "/bin/rm -f \(shellQuote(HelperConstants.launchdPlist)) \(shellQuote(HelperConstants.installedBinary)) \(shellQuote(PolicyStore.path))",
-            "true",
-        ].joined(separator: "; ")
-        try runPrivileged(script)
+        let script = removalScript()
+        try HelperClient().withRemovalPreparation { try runPrivileged(script) }
     }
 
     static func runPrivileged(_ shell: String) throws {

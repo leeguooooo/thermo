@@ -509,19 +509,28 @@ final class Monitor: ObservableObject {
 
     func openLoginItemsSettings() { SMAppService.openSystemSettingsLoginItems() }
 
-    func uninstallHelper() {
+    @MainActor func uninstallHelper() {
         uninstallHelper(operation: {
-            if self.usesSMAppService && self.daemon.status != .notRegistered {
-                try self.daemon.unregister()
+            if HelperInstaller.isInstalled {
+                try HelperInstaller.uninstall()
+            } else if self.usesSMAppService && self.daemon.status != .notRegistered {
+                try self.helper.withRemovalPreparation {
+                    try self.daemon.unregister()
+                    guard self.daemon.status == .notRegistered else {
+                        throw FanControlError.helper("helper background registration removal was not confirmed")
+                    }
+                }
+            } else {
+                throw FanControlError.helper("no helper registration could be verified; nothing was removed")
             }
-            if HelperInstaller.isInstalled { try HelperInstaller.uninstall() }
         })
     }
 
     /// The injected operation keeps regression checks away from the real root helper.
-    func uninstallHelper(operation: @escaping () throws -> Void, finished: @escaping () -> Void = {}) {
+    @MainActor func uninstallHelper(operation: @escaping () throws -> Void, finished: @escaping () -> Void = {}) {
         guard !helperBusy, !settingUp else { return }
         uninstallingHelper = true
+        let exitGuard = AppExitGuard.beginHelperRemoval()
         policyRevision += 1
         policiesAvailable = false
         stopSetup()
@@ -531,6 +540,7 @@ final class Monitor: ObservableObject {
             do { try operation() } catch { failure = "\(error)" }
             let error = failure
             DispatchQueue.main.async {
+                AppExitGuard.endHelperRemoval(exitGuard)
                 self.uninstallingHelper = false
                 self.lastError = error
                 self.helper.reset()

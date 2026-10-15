@@ -35,6 +35,7 @@ final class Controller {
     var written: [Int: Double] = [:]
     var pendingRecovery: FanAutoRecoveryReport?
     var controlError: String?
+    let removalGuard = HelperRemovalGuard()
     var timer: DispatchSourceTimer?
     let lidAwake: LidAwakeController
     var lidTimer: DispatchSourceTimer?
@@ -115,6 +116,7 @@ final class Controller {
     /// Must run on `queue`.
     func tick() {
         if pendingRecovery != nil, !restoreFans(reason: "retry automatic control").confirmed { return }
+        guard !removalGuard.isPreparing else { return }
         // A failed manual request stays suspended until an explicit policy change.
         // Automatic recovery must not silently retry the same faulty manual write.
         guard controlError == nil else { return }
@@ -155,6 +157,7 @@ final class Controller {
     }
 
     func setPolicy(_ policy: FanPolicy, fan: Int) throws {
+        guard !removalGuard.isPreparing else { throw FanControlError.helper("helper is preparing for removal; fan policy changes are blocked") }
         try policy.validate()
         if pendingRecovery != nil, !restoreFans(reason: "before policy change").confirmed {
             throw FanControlError.helper(pendingRecovery?.summary ?? "automatic control unconfirmed")
@@ -187,9 +190,36 @@ final class Controller {
 
 final class Service: NSObject, ThermoHelperProtocol {
     let controller: Controller
+    private let connectionID = UUID().uuidString
+    private var removalToken: String?
     init(_ c: Controller) { controller = c }
 
     func version(reply: @escaping (String) -> Void) { reply(HelperConstants.version) }
+
+    func prepareRemoval(_ prepare: Bool, token: String, reply: @escaping (String?) -> Void) {
+        controller.queue.async {
+            do {
+                let scopedToken = self.connectionID + ":" + token
+                if prepare {
+                    guard self.removalToken == nil || self.removalToken == scopedToken else {
+                        throw FanControlError.helper("this connection already has a removal in progress")
+                    }
+                    self.removalToken = scopedToken
+                    try self.controller.removalGuard.prepare(
+                        token: scopedToken,
+                        clearPolicies: { self.controller.engine.clear(); self.controller.written.removeAll() },
+                        savePolicies: { try PolicyStore.save([:]) },
+                        restoreFans: { self.controller.restoreFans(reason: "prepare removal") },
+                        restoreSleep: { try self.controller.lidAwake.restoreOriginalChecked(reason: "prepare removal") })
+                    self.controller.controlError = nil
+                } else {
+                    try self.controller.removalGuard.cancel(token: scopedToken)
+                    self.removalToken = nil
+                }
+                reply(nil)
+            } catch { reply("\(error)") }
+        }
+    }
 
     func setPolicy(fan: Int, policy: Data, reply: @escaping (String?) -> Void) {
         controller.queue.async {
@@ -214,6 +244,7 @@ final class Service: NSObject, ThermoHelperProtocol {
 
     func setLidAwake(_ on: Bool, heatGuard: Bool, reply: @escaping (String?) -> Void) {
         controller.queue.async {
+            guard !self.controller.removalGuard.isPreparing else { reply("helper is preparing for removal"); return }
             do { try self.controller.lidAwake.set(on, heatGuard: heatGuard); reply(nil) } catch { reply("\(error)") }
         }
     }
@@ -240,7 +271,8 @@ final class ListenerDelegate: NSObject, NSXPCListenerDelegate {
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection c: NSXPCConnection) -> Bool {
         c.setCodeSigningRequirement(HelperConstants.clientRequirement)
         c.exportedInterface = NSXPCInterface(with: ThermoHelperProtocol.self)
-        c.exportedObject = service
+        let clientService = Service(service.controller)
+        c.exportedObject = clientService
         c.resume()
         return true
     }

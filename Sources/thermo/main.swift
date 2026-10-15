@@ -374,8 +374,11 @@ struct App {
             let v = try? HelperClient().blocking(timeout: 5) { try await $0.version() }
             print(v != nil ? style.green("helper installed and running") : style.yellow("helper installed; not responding yet"))
         case "uninstall":
+            guard HelperInstaller.isInstalled else {
+                throw CLIError("legacy helper installation not detected; remove an app-registered helper in Thermo settings")
+            }
             try HelperInstaller.uninstall()
-            print("helper removed; fans returned to automatic control")
+            print("helper removed; automatic fan control confirmed before removal")
         case "status":
             let installed = HelperInstaller.isInstalled
             let v = try? HelperClient().blocking(timeout: 2) { try await $0.version() }

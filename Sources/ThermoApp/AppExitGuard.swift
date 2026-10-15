@@ -2,7 +2,17 @@ import AppKit
 
 @MainActor
 enum AppExitGuard {
+    private static var helperRemovals = Set<UUID>()
+    static func beginHelperRemoval() -> UUID {
+        let token = UUID(); helperRemovals.insert(token); return token
+    }
+    static func endHelperRemoval(_ token: UUID) { helperRemovals.remove(token) }
+
     static func reply(show: @MainActor (MainPage) -> Void = { MainWindow.show($0) }) -> NSApplication.TerminateReply {
+        if !helperRemovals.isEmpty {
+            show(.settings)
+            return .terminateCancel
+        }
         if AppModels.shared.apps.working {
             AppModels.shared.apps.exitRequested = true
             show(.apps(.installed))

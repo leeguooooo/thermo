@@ -83,6 +83,33 @@ final class LidAwakeTests: XCTestCase {
         #endif
     }
 
+    func testCheckedRestoreRetainsRecoveryRecordOnIgnoredWriteOrReadFailure() throws {
+        let fake = FakeSwitch(false)
+        try LidAwakeController(limits: .intel, sleep: fake.sleepSwitch, originalFile: file).set(true)
+        for read: (() -> Bool?) in [{ true }, { nil }] {
+            let c = LidAwakeController(limits: .intel, sleep: SleepSwitch(read: read, write: { _ in }), originalFile: file)
+            XCTAssertThrowsError(try c.restoreOriginalChecked(reason: "test removal"))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: file))
+        }
+        let c = LidAwakeController(limits: .intel, sleep: fake.sleepSwitch, originalFile: file)
+        try c.restoreOriginalChecked(reason: "test removal")
+        XCTAssertFalse(fake.value)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file))
+    }
+
+    func testCheckedRestoreRejectsCorruptRecordAndMissingArmedRecord() throws {
+        let fake = FakeSwitch(false)
+        let c = LidAwakeController(limits: .intel, sleep: fake.sleepSwitch, originalFile: file)
+        try c.restoreOriginalChecked(reason: "nothing owned")
+        try c.set(true)
+        try Data("broken".utf8).write(to: URL(fileURLWithPath: file))
+        XCTAssertThrowsError(try c.restoreOriginalChecked(reason: "corrupt"))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: file))
+        try FileManager.default.removeItem(atPath: file)
+        XCTAssertThrowsError(try c.restoreOriginalChecked(reason: "missing"))
+        XCTAssertTrue(c.state.armed)
+    }
+
     func testWithTheHeatRuleOffOnlyLowBatteryEndsIt() throws {
         var g = LidAwakeGuard(limits: .appleSilicon)
         g.arm(heatGuard: false)

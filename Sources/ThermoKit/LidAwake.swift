@@ -153,15 +153,28 @@ public final class LidAwakeController: @unchecked Sendable {
 
     /// Helper start and exit: never carry "armed" across; put back what the user had.
     public func restoreOriginal(reason: String) {
-        guard let original = savedOriginal() else { return }
         do {
-            try sleep.write(original)
-            try? FileManager.default.removeItem(atPath: originalFile)
-            log("lid-awake: \(reason); sleep setting restored to disablesleep \(original ? 1 : 0)")
+            try restoreOriginalChecked(reason: reason)
         } catch {
             log("lid-awake: \(reason); could not restore sleep setting: \(error)")
         }
         guardState.disarm()
+    }
+
+    /// Removal must retain the recovery record and refuse to proceed on any uncertainty.
+    public func restoreOriginalChecked(reason: String) throws {
+        let data: Data
+        do { data = try Data(contentsOf: URL(fileURLWithPath: originalFile)) }
+        catch let error as CocoaError where error.code == .fileReadNoSuchFile {
+            guard !state.armed else { throw FanControlError.helper("lid-awake recovery record is missing") }
+            return
+        }
+        let original = try JSONDecoder().decode(Original.self, from: data).sleepDisabled
+        try sleep.write(original)
+        guard sleep.read() == original else { throw FanControlError.helper("lid-awake sleep setting restoration was not confirmed") }
+        try FileManager.default.removeItem(atPath: originalFile)
+        guardState.disarm()
+        log("lid-awake: \(reason); sleep setting restored to disablesleep \(original ? 1 : 0)")
     }
 
     public func set(_ on: Bool, heatGuard: Bool = true, now: Date = Date()) throws {

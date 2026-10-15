@@ -14,6 +14,9 @@ final class HelperMaintenanceTests: XCTestCase {
         }, finished: { finished.fulfill() })
         XCTAssertTrue(monitor.uninstallingHelper)
         XCTAssertTrue(monitor.helperBusy)
+        var destinations: [MainPage] = []
+        XCTAssertEqual(AppExitGuard.reply(show: { destinations.append($0) }), .terminateCancel)
+        XCTAssertEqual(destinations, [.settings])
         monitor.uninstallHelper(operation: { duplicate.fulfill() })
         monitor.setPolicy(.auto, fan: 0)
         monitor.beginSetup()
@@ -24,6 +27,7 @@ final class HelperMaintenanceTests: XCTestCase {
         XCTAssertFalse(monitor.uninstallingHelper)
         XCTAssertFalse(monitor.helperBusy)
         XCTAssertNil(monitor.lastError)
+        XCTAssertEqual(AppExitGuard.reply(show: { _ in XCTFail("completed removal must allow exit") }), .terminateNow)
     }
 
     @MainActor func testFailedRemovalReleasesBusyStateAndReportsFailure() async {
@@ -37,5 +41,6 @@ final class HelperMaintenanceTests: XCTestCase {
         XCTAssertFalse(monitor.uninstallingHelper)
         XCTAssertTrue(monitor.lastError?.contains("fixture removal failure") == true)
         XCTAssertFalse(monitor.policiesAvailable)
+        XCTAssertEqual(AppExitGuard.reply(show: { _ in XCTFail("failed removal must release exit guard") }), .terminateNow)
     }
 }
