@@ -223,9 +223,10 @@ public final class DiskScanner: @unchecked Sendable {
         if rule.keepNewest > 0 {
             note = [note, tr("the %1$@ most recently used are kept", String(rule.keepNewest))].compactMap { $0 }.joined(separator: tr("; "))
         }
-        return CleanItem(id: rule.id, category: rule.category, title: tr(rule.title), detail: detail, safety: rule.safety,
-                         bytes: size.bytes, files: size.files, lastUsed: size.newest, paths: paths, note: note,
-                         blocked: ctx.processes.running(rule.apps).map { tr("quit %1$@ first", $0) })
+        let item = CleanItem(id: rule.id, category: rule.category, title: tr(rule.title), detail: detail, safety: rule.safety,
+                             bytes: size.bytes, files: size.files, lastUsed: size.newest, paths: paths, note: note,
+                             blocked: ctx.processes.running(rule.apps).map { tr("quit %1$@ first", $0) })
+        return NativeCleanup.attach(item, home: ctx.home)
     }
 
     /// `~/Library/Caches` folders no specific rule covers.

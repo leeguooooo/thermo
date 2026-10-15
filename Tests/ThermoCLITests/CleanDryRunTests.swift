@@ -1,5 +1,6 @@
 import XCTest
 import CleanKit
+import ThermoL10n
 @testable import thermo
 
 final class CleanDryRunTests: XCTestCase {
@@ -47,6 +48,42 @@ final class CleanDryRunTests: XCTestCase {
         XCTAssertEqual(json["dryRun"] as? Bool, true)
         XCTAssertEqual((json["items"] as? [[String: Any]])?.first?["action"] as? String, "tool-removal")
     }
+    func testDryRunNamesTheToolCommandAndRunsNothing() throws {
+        // The CLI pins English (main.swift); the test process follows the system language.
+        let language = L10n.override
+        L10n.override = .english
+        defer { L10n.override = language }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-dry-native-" + UUID().uuidString).resolvingSymlinksInPath()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let cache = root.appendingPathComponent(".npm/_cacache")
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        try Data("blob".utf8).write(to: cache.appendingPathComponent("blob"))
+        let sentinel = root.appendingPathComponent("command-must-not-run")
+        let program = root.appendingPathComponent("npm")
+        try Data("#!/bin/sh\ntouch '\(sentinel.path)'\n".utf8).write(to: program)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: program.path)
+        var item = CleanItem(id: "fixture", category: .devCaches, title: "npm cache", safety: .safe, bytes: 100, paths: [cache.path])
+        item.native = NativeClean(tool: "npm", display: "npm cache clean --force",
+                                  runs: [.init(folder: cache.path, argv: [program.path, "cache", "clean", "--force"])])
+        let report = ScanReport(items: [item], denied: [], started: Date(), duration: 1)
+        for flags in [["--dry-run", "--yes"], ["--dry-run", "--yes", "--json"]] {
+            var output = ""
+            try CleanCommand(app: App(args: try Args(["clean", "run", "fixture"] + flags)))
+                .execute(report: report, picked: [item], mode: .auto, write: { output += $0 + "\n" })
+            XCTAssertFalse(FileManager.default.fileExists(atPath: sentinel.path))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: cache.path))
+            if flags.contains("--json") {
+                let json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(output.utf8)) as? [String: Any])
+                let first = try XCTUnwrap((json["items"] as? [[String: Any]])?.first)
+                XCTAssertEqual(first["action"] as? String, "tool-clean")
+                XCTAssertEqual(first["commands"] as? [String], [program.path + " cache clean --force"])
+            } else {
+                XCTAssertTrue(output.contains("runs `npm cache clean --force`"), output)
+                XCTAssertTrue(output.contains(program.path + " cache clean --force"), output)
+            }
+        }
+    }
+
     func testTrashOnlyPreviewSkipsPermanentToolCommands() throws {
         let item = CleanItem(id: "fixture", category: .xcode, title: "Fixture", safety: .review, bytes: 100,
                              commands: [["/usr/bin/true"]])

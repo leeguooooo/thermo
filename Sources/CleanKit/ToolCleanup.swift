@@ -74,7 +74,7 @@ enum ToolCleanup {
                          safety: .review, bytes: s.bytes, files: s.files, lastUsed: s.newest,
                          note: tr("downloaded modules; Go fetches them again on the next build"),
                          blocked: ctx.processes.running(["go"]).map { tr("quit %1$@ first", $0) },
-                         hint: "go clean -modcache", commands: [[go, "clean", "-modcache"]])
+                         hint: "go clean -modcache", commands: [[go, "clean", "-modcache"]], measure: [dir])
     }
 
     // MARK: pnpm

@@ -147,6 +147,20 @@ public struct Whitelist: Sendable {
     /// The item with whitelisted paths taken out and listed in `whitelisted`; when every path is
     /// whitelisted it keeps its paths and is blocked instead.
     public func apply(_ item: CleanItem) -> CleanItem {
+        var item = item
+        // A tool's clean command empties its whole folder; with something inside whitelisted the
+        // folder is deleted path by path instead, which leaves the whitelisted part alone.
+        if var native = item.native, native.runs.contains(where: { protects($0.folder) }) {
+            native.runs = []
+            native.fallback = tr("the whitelist keeps something inside; folders are deleted one by one instead")
+            native.fallbackStatus = "whitelisted"
+            item.native = native
+        }
+        // Tool-only removal (`pnpm store prune`, `go clean -modcache`) cannot leave anything out.
+        if !(item.commands ?? []).isEmpty, let kept = (item.measure ?? []).first(where: protects) {
+            item.whitelisted = Array(Set((item.whitelisted ?? []) + [kept])).sorted()
+            item.blocked = item.blocked ?? tr(Self.reason)
+        }
         let hits = item.paths.filter(protects)
         guard !hits.isEmpty else { return item }
         var i = item
