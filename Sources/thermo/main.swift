@@ -71,6 +71,8 @@ COMMANDS
   clean run safe|ID…         remove items (safe: delete; review files: Trash); asks first
                              --dry-run shows the plan without deleting or running commands
   clean empty-trash BATCH    review this batch with --dry-run; --yes permanently removes only its Trash items
+  clean restore BATCH        move this batch's Trash items back where they were (--dry-run first;
+                             never overwrites anything now at the original path)
   clean log                  what earlier cleanups removed
   clean overview             where the used space is: the big places and their
                              biggest folders (--json)

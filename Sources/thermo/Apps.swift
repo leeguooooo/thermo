@@ -161,6 +161,7 @@ struct AppsCommand {
         let bytes = results.reduce(Int64(0)) { $0 + $1.bytes }
         print(style.bold(tr("Moved %1$@ to the Trash (empty it to get the space back)", ByteFormat.string(bytes)))
               + style.dim(" · log: \(FS.tilde(Cleaner.logURL.path))"))
+        for id in results.compactMap(\.trashBatchID) { print(style.dim(tr("Put back: thermo clean restore %1$@", id))) }
     }
 
     static func day(_ d: Date) -> String {

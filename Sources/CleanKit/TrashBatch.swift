@@ -101,6 +101,32 @@ public enum TrashBatches {
         guard fsync(fd) == 0 else { throw error("batch journal could not be synchronized") }
     }
 
+    /// Moves a hand-picked path to the Trash and records where macOS put it in batch `id`. The move
+    /// throws; a failed recording comes back as the reason, with the item already in the Trash.
+    static func trash(_ path: String, bytes: Int64, id: String, home: String,
+                      move: (String) throws -> URL = RemovalOperations.live.trash) throws -> String? {
+        let destination = try move(path)
+        do {
+            guard let identity = FileIdentity.of(destination.path) else { throw error("Trash destination identity could not be read") }
+            try append(TrashBatch.Entry(original: path, destination: destination.path, identity: identity, bytes: bytes), id: id, home: home)
+            return nil
+        } catch { return "moved to " + destination.path + ", but batch recording failed: " + error.localizedDescription }
+    }
+
+    /// Flushes the batch a result recorded; a failure is reported, the items stay in the Trash.
+    static func seal(_ result: inout CleanResult, home: String) {
+        guard let batch = result.trashBatchID else { return }
+        do { try synchronize(batch, home: home) } catch { result.failed["batch/" + batch] = error.localizedDescription }
+    }
+
+    /// The operation history entry for a hand-picked move to the Trash, undoable through its batch.
+    static func journal(_ result: CleanResult, feature: String, action: String, subject: String?, sizes: [String: Int64], home: String) {
+        let moved = result.removed.map { OperationRecord.Item(target: $0, bytes: sizes[$0], status: "done") }
+        let failed = result.failed.sorted { $0.key < $1.key }.map { OperationRecord.Item(target: $0.key, status: "failed", detail: $0.value) }
+        OperationJournal.record(OperationRecord(feature: feature, action: action, subject: subject, items: moved + failed,
+                                                undo: result.trashBatchID.map { .init(kind: "trashBatch", ref: $0) }), home: home)
+    }
+
     public static func refusal(_ entry: TrashBatch.Entry, home: String = NSHomeDirectory()) -> String? {
         let trash = home + "/.Trash"
         let path = entry.destination
@@ -140,4 +166,75 @@ public enum TrashBatches {
         Cleaner.log(result, item: item, to: Cleaner.logURL(home: home))
         return result
     }
+
+    /// Puts a batch's items back where they were. Each one moves only when it is still the same
+    /// Trash item, nothing is at its original path (new data there wins), and the original folder is
+    /// still there on the same volume. A rename, never a copy; one bad entry never stops the rest.
+    public static func restore(id: String, home: String = NSHomeDirectory(), dryRun: Bool = false) throws -> TrashRestore {
+        let batch = try load(id, home: home)
+        var result = TrashRestore(id: batch.id, dryRun: dryRun)
+        for entry in batch.entries {
+            var item = TrashRestore.Item(original: entry.original, destination: entry.destination, bytes: entry.bytes, status: "restored")
+            if let (status, reason) = restoreRefusal(entry, home: home) {
+                item.status = status; item.reason = reason
+            } else if !dryRun {
+                if renamex_np(entry.destination, entry.original, UInt32(RENAME_EXCL)) != 0 {
+                    let code = errno
+                    item.status = code == EEXIST ? "conflict" : "failed"
+                    item.reason = code == EEXIST ? tr("something new is at the original path; it was kept") : String(cString: strerror(code))
+                }
+            }
+            result.items.append(item)
+        }
+        guard !dryRun else { return result }
+        if result.items.contains(where: { $0.status == "restored" }) {
+            ScanReportCache.invalidate(home: home)
+            SpaceOverview.invalidate(home: home)
+        }
+        OperationJournal.record(OperationRecord(feature: "history", action: "restore", subject: batch.id, items: result.items.map {
+            .init(target: $0.original, bytes: $0.status == "restored" && $0.bytes > 0 ? $0.bytes : nil,
+                  status: $0.status == "restored" ? "done" : $0.status == "skipped" ? "skipped" : "failed", detail: $0.reason)
+        }), home: home)
+        return result
+    }
+
+    /// Why an entry stays in the Trash, as (status, reason); nil when it can move back.
+    static func restoreRefusal(_ entry: TrashBatch.Entry, home: String) -> (String, String)? {
+        if entry.registrationBackup != nil { return ("skipped", tr("Git worktree with its registration; restore manually")) }
+        guard FS.exists(entry.destination) else { return ("missing", tr("no longer in the Trash")) }
+        if let why = refusal(entry, home: home) { return ("changed", why) }
+        let original = entry.original
+        guard original.hasPrefix("/"), !original.split(separator: "/").contains(where: { $0 == ".." || $0 == "." }) else {
+            return ("skipped", tr("not a full path"))
+        }
+        var st = stat()
+        // lstat: a dangling link at the original path is still something there.
+        if lstat(original, &st) == 0 { return ("conflict", tr("something new is at the original path; it was kept")) }
+        let parent = (original as NSString).deletingLastPathComponent
+        var dir = stat(), item = stat()
+        guard lstat(parent, &dir) == 0, (dir.st_mode & S_IFMT) == S_IFDIR,
+              URL(fileURLWithPath: parent).resolvingSymlinksInPath().path == parent else {
+            return ("skipped", tr("its original folder is gone or moved"))
+        }
+        // The user's own folders, or an app folder (root:admin) the user may write to.
+        guard dir.st_uid == getuid() || (["/Applications", home + "/Applications"].contains(parent) && access(parent, W_OK) == 0) else {
+            return ("skipped", tr("its original folder belongs to another user"))
+        }
+        guard lstat(entry.destination, &item) == 0, item.st_dev == dir.st_dev else { return ("skipped", tr("on another volume")) }
+        return nil
+    }
+}
+
+public struct TrashRestore: Codable, Sendable {
+    public struct Item: Codable, Sendable {
+        public var original: String
+        public var destination: String
+        public var bytes: Int64
+        /// restored (would be restored, in a dry run) | conflict | missing | changed | skipped | failed
+        public var status: String
+        public var reason: String? = nil
+    }
+    public var id: String
+    public var dryRun: Bool
+    public var items: [Item] = []
 }
