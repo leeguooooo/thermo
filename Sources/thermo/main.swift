@@ -98,6 +98,7 @@ COMMANDS
   apps leftovers remove ID…|all
                              move that data to the Trash; asks first
   apps startup [list]        user/shared LaunchAgents and system services (--json)
+    --authorize-background   read modern registrations with administrator approval; no switches changed
   apps startup enable|disable LABEL_OR_PATH
                              change startup eligibility; --dry-run previews, --yes confirms
   apps updates               Homebrew app updates (--json; --refresh-catalog refreshes Homebrew)
