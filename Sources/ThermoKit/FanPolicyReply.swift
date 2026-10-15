@@ -13,6 +13,8 @@ public enum FanPolicyReply {
 
     public static func decode(_ data: Data) throws -> [Int: FanPolicy] {
         if let failure = try? PolicyCoding.decoder().decode(Failure.self, from: data) { throw FanControlError.helper(failure._thermoError) }
-        return try PolicyCoding.decoder().decode([Int: FanPolicy].self, from: data)
+        let policies = try PolicyCoding.decoder().decode([Int: FanPolicy].self, from: data)
+        try PolicyCoding.validatePolicies(policies)
+        return policies
     }
 }

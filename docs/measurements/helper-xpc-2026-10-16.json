@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-15T20:56:49.930528+00:00",
+  "baselineCommit": "24e6c97",
+  "transport": "Foundation NSXPCConnection and owned anonymous NSXPCListener in the XCTest process",
+  "fixtureVersions": [
+    "3/fixture",
+    "5/fixture"
+  ],
+  "sourceSHA256": {
+    "Sources/ThermoKit/Helper.swift": "7b106f5f41ab0c090ff6408acde32925a342302b4a30e496d3126f6172f47e58",
+    "Sources/ThermoKit/FanPolicyReply.swift": "c5fbd5d12fa77840e0450eeca2788ec3b1afabfbb7cb14f42e53d3cfb61d1407",
+    "Tests/ThermoKitTests/HelperXPCTests.swift": "296df213def77121fef25ab0f91cee185ba6e058ab08f44ec4ef9151a646fca1"
+  },
+  "fullRegression": {
+    "command": "swift test --jobs 4 --filter 'CleanKitTests|ThermoAppTests|ThermoCLITests|AgentCoreTests|ThermoKitTests' --skip HardwareTests",
+    "exitCode": 0,
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 55,
+      "ThermoAppTests": 128,
+      "CleanKitTests": 449,
+      "AgentCoreTests": 24
+    },
+    "total": 770,
+    "failures": 0
+  },
+  "xpcTests": [
+    {
+      "name": "testAcceptedRequestIsPendingUntilAnIndependentObservedReplyArrives",
+      "passed": true,
+      "elapsedSeconds": 0.001
+    },
+    {
+      "name": "testLegacyVersionCannotEnterRemovalPreparation",
+      "passed": true,
+      "elapsedSeconds": 0.0
+    },
+    {
+      "name": "testLegacyVersionUsesDictionaryAndDoesNotInventHardwareObservations",
+      "passed": true,
+      "elapsedSeconds": 0.0
+    },
+    {
+      "name": "testMalformedStateReplyThrowsInsteadOfBecomingEmptyAutomaticPolicies",
+      "passed": true,
+      "elapsedSeconds": 0.0
+    },
+    {
+      "name": "testMissingReplyTimesOutAndLateReplyCannotCorruptTheNextConnection",
+      "passed": true,
+      "elapsedSeconds": 3.008
+    },
+    {
+      "name": "testRemovalBridgeSendsOneTokenAndCancelsAfterFailure",
+      "passed": true,
+      "elapsedSeconds": 0.001
+    },
+    {
+      "name": "testSemanticallyInvalidPoliciesAreRejectedInModernAndLegacyReplies",
+      "passed": true,
+      "elapsedSeconds": 0.001
+    },
+    {
+      "name": "testServerDisconnectDropsTheConnectionAndAllowsReconnect",
+      "passed": true,
+      "elapsedSeconds": 0.016
+    }
+  ],
+  "reconnectRepetition": {
+    "stage": "after reconnect-wait fix; before adding semantic-invalid-reply test and validation patch",
+    "rounds": [
+      {
+        "round": 1,
+        "exitCode": 0,
+        "passed": true,
+        "elapsedSeconds": 3.602
+      },
+      {
+        "round": 2,
+        "exitCode": 0,
+        "passed": true,
+        "elapsedSeconds": 1.572
+      },
+      {
+        "round": 3,
+        "exitCode": 0,
+        "passed": true,
+        "elapsedSeconds": 1.677
+      },
+      {
+        "round": 4,
+        "exitCode": 0,
+        "passed": true,
+        "elapsedSeconds": 1.504
+      },
+      {
+        "round": 5,
+        "exitCode": 0,
+        "passed": true,
+        "elapsedSeconds": 1.493
+      },
+      {
+        "round": 6,
+        "exitCode": 0,
+        "passed": true,
+        "elapsedSeconds": 1.578
+      },
+      {
+        "round": 7,
+        "exitCode": 0,
+        "passed": true,
+        "elapsedSeconds": 1.588
+      },
+      {
+        "round": 8,
+        "exitCode": 0,
+        "passed": true,
+        "elapsedSeconds": 1.609
+      },
+      {
+        "round": 9,
+        "exitCode": 0,
+        "passed": true,
+        "elapsedSeconds": 1.745
+      },
+      {
+        "round": 10,
+        "exitCode": 0,
+        "passed": true,
+        "elapsedSeconds": 1.724
+      }
+    ]
+  },
+  "invalidPolicyRegression": {
+    "cases": 4,
+    "before": "all four invalid replies were accepted; regression test failed",
+    "after": "all four rejected by the real client over XPC"
+  },
+  "boundaries": [
+    "Service replies are fixture-controlled; production Service/Controller is not running",
+    "No system Mach service registration or connection; production signing and root authorization unverified",
+    "No helper installation, SMC/pmset writes or system policy mutations",
+    "Independent root-process crash/restart and physical hardware recovery remain unverified"
+  ]
+}

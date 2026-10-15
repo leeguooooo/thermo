@@ -110,6 +110,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 协议 5 的 `fan status --json` 另含 `controlState`，区分已设策略、最近一次寄存器核对、核对时间、温度保护暂停和控制错误。CSV 增加 `verification_state,last_observed_mode,verified_target_rpm,checked_at,policies_suspended,suspension_reason,control_failure`；时间为 UTC ISO 8601。`policies_available` 只表示能读到已设策略，不表示硬件已执行。旧 helper 的硬件核对显示不可用。App 同样分开展示已设策略和上次核对；读回结果是历史观察，实际转速另外显示，不能把它当作当前控制权或转速保证。
 
+新旧格式的策略回复都会检查风扇编号和策略数值，非法回复会报错，不能作为有效控制状态使用，也不会回落为自动。
+
 风扇保护要求有效的已命名 CPU 温度，不用电池、主板或 0°C 代替。helper 清单中的必需 GPU 来源，以及本次运行中曾读到的 GPU 温度，也不能在恢复判断中无故消失。必需温度缺失时立即暂停非全速策略并尝试自动控制；恢复后默认需连续 60 秒低于恢复阈值，失联或回温会重置计时。曲线所选传感器缺失时转回自动，全速散热可继续。`controlState.suspensionReason` 和 CSV 的 `suspension_reason` 区分 `thermal` 与 `temperatureUnavailable`；合盖保护共享这套温度有效性检查。当所有风扇实际交回自动时，会尝试释放 Apple Silicon 的全局手动解锁并读回确认。
 
 实时风扇模式可为手动、自动或未知。存在模式键和强制位时，两者都读到且解除强制才确认自动；任一有效标志表明手动就保留手动，其余不完整或异常读数为未知。快照 JSON 中未知的 `manual` 为 `null`，CSV 为 `unknown`；旧布尔值快照仍可读取。Pulse JSON 的未知模式不输出布尔值，并以 `controlMode=unknown` 标记。读取这些输出的程序需要处理未知，不能将缺少或 `null` 当作 `false`。

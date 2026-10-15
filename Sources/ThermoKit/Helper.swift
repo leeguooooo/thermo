@@ -153,6 +153,11 @@ public enum PolicyStore {
 }
 
 public enum PolicyCoding {
+    static func validatePolicies(_ policies: [Int: FanPolicy]) throws {
+        guard policies.keys.allSatisfy({ $0 >= 0 }) else { throw FanControlError.helper("helper returned an invalid fan identifier") }
+        for policy in policies.values { try policy.validate() }
+    }
+
     public static func encoder() -> JSONEncoder {
         let e = JSONEncoder()
         e.nonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan")
@@ -173,15 +178,21 @@ public final class HelperClient: @unchecked Sendable {
     /// reinstall, switching from Login Items to the password install).
     private var connection: NSXPCConnection?
     private let lock = NSLock()
+    private let makeConnection: @Sendable () -> NSXPCConnection
 
-    public init() {}
+    public init() {
+        makeConnection = { NSXPCConnection(machServiceName: HelperConstants.machService, options: .privileged) }
+    }
+
+    /// Package tests may use an owned anonymous endpoint; normal clients always use launchd.
+    init(makeConnection: @escaping @Sendable () -> NSXPCConnection) { self.makeConnection = makeConnection }
 
     deinit { connection?.invalidate() }
 
     private func current() -> NSXPCConnection {
         lock.lock(); defer { lock.unlock() }
         if let c = connection { return c }
-        let c = NSXPCConnection(machServiceName: HelperConstants.machService, options: .privileged)
+        let c = makeConnection()
         c.remoteObjectInterface = NSXPCInterface(with: ThermoHelperProtocol.self)
         c.invalidationHandler = { [weak self, weak c] in self?.drop(c) }
         // Interrupted means the helper exited (update, restart); reconnect on the next call too.
@@ -298,7 +309,9 @@ public final class HelperClient: @unchecked Sendable {
             deadline(3, once) { cont.resume(throwing: FanControlError.helperUnavailable("fan state query timed out")) }
             p.fanControlState { data in once.run { cont.resume(returning: data) } }
         }
-        return try PolicyCoding.decoder().decode(FanControlState.self, from: data)
+        let state = try PolicyCoding.decoder().decode(FanControlState.self, from: data)
+        try PolicyCoding.validatePolicies(state.policies)
+        return state
     }
 
     public func prepareRemoval(_ prepare: Bool, token: String) async throws {
