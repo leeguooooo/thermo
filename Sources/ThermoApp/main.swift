@@ -37,6 +37,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         popover.animates = false
         popover.delegate = self
         popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor))
+        // The panel's curves keep a slow history while it is closed.
+        PanelModel.shared.setActive(false)
 
         applyDockPreference()
         installMainMenu()
@@ -220,6 +222,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     let monitor = AppModels.shared.monitor
     // ImageRenderer never fires onAppear; start the "why is it slow" sampler up front.
     SystemPulse.shared.start()
+    PanelModel.shared.setActive(true)
     monitor.popoverOpen = true
     DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
         let r = ImageRenderer(content: PopoverView(monitor: monitor).background(Color(nsColor: .windowBackgroundColor)))
