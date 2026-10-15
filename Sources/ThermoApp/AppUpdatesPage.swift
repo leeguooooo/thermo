@@ -11,7 +11,7 @@ final class AppUpdatesModel: ObservableObject {
     @Published private(set) var working = false
     @Published private(set) var result: AppUpdateResult?
     @Published var exitRequested = false
-    var busy: Bool { loading || working }
+    var busy: Bool { loading || working || AppModels.shared.nativeUpdates.installing }
     private var generation = UUID()
     private var inFlight = false
     private var pending: Bool?

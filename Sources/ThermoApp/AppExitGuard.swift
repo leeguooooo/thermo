@@ -4,9 +4,10 @@ import AppKit
 enum AppExitGuard {
     static func reply() -> NSApplication.TerminateReply {
         let model = AppModels.shared.softwareUpdates
-        guard model.working else { return .terminateNow }
-        model.exitRequested = true
-        model.channel = "homebrew"
+        let native = AppModels.shared.nativeUpdates
+        guard model.working || native.installing else { return .terminateNow }
+        if model.working { model.exitRequested = true; model.channel = "homebrew" }
+        else { native.exitRequested = true; model.channel = "native" }
         MainWindow.show(.apps(.updates))
         return .terminateCancel
     }

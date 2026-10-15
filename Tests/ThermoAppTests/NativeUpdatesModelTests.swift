@@ -3,6 +3,12 @@
 import XCTest
 
 final class NativeUpdatesModelTests: XCTestCase {
+    private actor Gate {
+        var continuation: CheckedContinuation<Void, Never>?
+        var released = false
+        func wait() async { if !released { await withCheckedContinuation { continuation = $0 } } }
+        func release() { released = true; continuation?.resume(); continuation = nil }
+    }
     private final class Counter: @unchecked Sendable {
         private let lock = NSLock()
         private var active = 0
@@ -88,5 +94,29 @@ final class NativeUpdatesModelTests: XCTestCase {
         XCTAssertEqual(model.results.values.filter { $0.status == "cancelled" }.count, 4)
         XCTAssertNil(model.results[sources[5].id])
         model.retire()
+    }
+
+    @MainActor
+    func testConfirmedNativeInstallSurvivesRetirementAndRetainsItsResult() async throws {
+        let began = expectation(description: "native install running")
+        let gate = Gate()
+        let source = NativeUpdateSource(app: InstalledApp(path: "/fixture/app.app", name: "Fixture", bundleID: "com.example.fixture"), kind: "sparkle")
+        let check = NativeUpdateCheck(source: source, status: "available", message: "fixture")
+        let model = NativeUpdatesModel(read: { _ in [] }, installer: { _ in
+            began.fulfill(); await gate.wait()
+            XCTAssertFalse(Task.isCancelled)
+            return NativeInstallResult(outcome: "succeeded", message: "synthetic installation verified")
+        }, recoveryReader: { NativeRecoveryReport() })
+        model.install(check)
+        await fulfillment(of: [began], timeout: 5)
+        model.retire()
+        XCTAssertTrue(model.installing)
+        model.check(source)
+        XCTAssertTrue(model.checking.isEmpty)
+        await gate.release()
+        for _ in 0..<100 where model.installing || model.loading { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertFalse(model.installing)
+        XCTAssertEqual(model.installResult?.outcome, "succeeded")
+        XCTAssertEqual(model.message, "synthetic installation verified")
     }
 }

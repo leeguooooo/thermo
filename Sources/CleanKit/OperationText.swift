@@ -16,6 +16,8 @@ extension OperationRecord {
         case ("apps", "enable"): return tr("Enabled a startup item")
         case ("apps", "disable"): return tr("Disabled a startup item")
         case ("apps", "update"): return tr("Updated an app")
+        case ("apps", "nativeUpdate"): return tr("Installed a native app update")
+        case ("apps", "nativeRestore"): return tr("Restored a previous app version")
         case ("space", "trash"): return tr("Moved hand-picked files to the Trash")
         case ("agents", "fix"): return tr("Fixed an agent problem")
         case ("agents", "uninstall"): return tr("Removed an agent item")
@@ -76,6 +78,7 @@ extension OperationRecord {
             }
         }
         switch undo.kind {
+        case "nativeUpdate": return tr("Inspect and restore in Software → Updates → Other apps → Recovery.")
         case "startup": return tr("Undo in Software → Startup items, or with thermo apps startup %1$@ %2$@.", action == "enable" ? "disable" : "enable", undo.ref)
         case "trashBatch": return tr("Restorable from this history (thermo clean restore %1$@).", undo.ref)
         case "trash": return tr("Put back from the Trash in Finder.")

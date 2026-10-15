@@ -29,15 +29,17 @@ public struct SparkleRelease: Codable, Sendable {
     public var channel: String?
     public var os: String?
     public var architecture: String?
+    public var installationType: String? = nil
     // Authenticated feed URLs and signed download query strings must not enter exported JSON.
     var downloadURL: URL? = nil
     enum CodingKeys: String, CodingKey {
         case build, version, downloadHost, enclosureFingerprint, signature, length, minimumOS, maximumOS
-        case minimumUpdateBuild, hardware, channel, os, architecture
+        case minimumUpdateBuild, hardware, channel, os, architecture, installationType
     }
 }
 
-public struct NativeUpdateCheck: Codable, Sendable {
+public struct NativeUpdateCheck: Codable, Sendable, Identifiable {
+    public var id: String { source.id }
     public var source: NativeUpdateSource
     /// available | noNewerCompatibleVersion | manual | changed | failed | cancelled
     public var status: String
@@ -314,6 +316,7 @@ enum SparkleFeed {
                     minimumOS: fields["minimumSystemVersion"], maximumOS: fields["maximumSystemVersion"], minimumUpdateBuild: fields["minimumUpdateVersion"],
                     hardware: hardware, channel: fields["channel"], os: enclosure["os"], architecture: enclosure["arch"])
                 release.downloadURL = url
+                release.installationType = enclosure["installationType"]
                 releases.append(release)
             }
         }

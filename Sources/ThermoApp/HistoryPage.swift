@@ -179,6 +179,12 @@ struct HistoryPage: View {
     /// The one button an entry gets: put back here, or go to where it is restored.
     @ViewBuilder func action(_ r: OperationRecord) -> some View {
         switch r.undo?.kind {
+        case "nativeUpdate":
+            Button(tr("Open")) {
+                AppModels.shared.softwareUpdates.channel = "native"
+                AppModels.shared.nativeUpdates.showRecovery = true
+                open(.apps(.updates))
+            }.buttonStyle(PillButtonStyle()).fixedSize()
         case nil where r.feature == "apps" && r.action == "update":
             Button(tr("Open")) { open(.apps(.updates)) }.buttonStyle(PillButtonStyle()).fixedSize()
         case "startup":

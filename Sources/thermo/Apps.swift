@@ -22,7 +22,7 @@ struct AppsCommand {
     }
 
     func updates(_ rest: [String]) throws {
-        if rest.first == "sources" || rest.first == "check" { try nativeUpdates(rest); return }
+        if ["sources", "check", "install", "recovery"].contains(rest.first ?? "") { try nativeUpdates(rest); return }
         let report = AppUpdates.scan(refreshCatalog: args.has("refresh-catalog"))
         if rest.isEmpty || rest == ["list"] {
             if args.has("json") { print(Export.json(report)); return }
@@ -54,15 +54,41 @@ struct AppsCommand {
     }
 
     final class FeedResultBox: @unchecked Sendable { var value: NativeUpdateCheck? }
+    final class InstallResultBox: @unchecked Sendable { var value: NativeInstallResult? }
+
+    func approveNative(_ lines: [String]) throws -> Bool {
+        if args.has("yes") { return true }
+        guard !args.has("json"), isatty(STDIN_FILENO) != 0 else { throw CLIError("Review the plan, then add --yes to execute.") }
+        out(lines); print(tr("Continue? [y/N] "), terminator: ""); fflush(stdout)
+        return readLine().map { ["y", "yes"].contains($0.lowercased()) } ?? false
+    }
 
     func nativeUpdates(_ rest: [String]) throws {
+        if rest.first == "recovery" {
+            let report = NativeUpdateTransaction.recovery(), records = report.records
+            if rest.count == 1 {
+                if args.has("json") { print(Export.json(report)) }
+                else { out(records.map { $0.id + " · " + $0.target + " · " + $0.previousVersion + " → " + $0.installedVersion + " · " + $0.phase } + report.issues.map { tr($0) }) }
+                return
+            }
+            guard rest.count == 3, rest[1] == "restore", let record = records.first(where: { $0.id == rest[2] }) else {
+                throw CLIError("usage: thermo apps updates recovery [restore ID] [--dry-run] [--yes]")
+            }
+            if args.has("dry-run") { if args.has("json") { print(Export.json(record)) } else { out([record.target, record.backup]) }; return }
+            guard try approveNative([record.target, record.installedVersion + " → " + record.previousVersion,
+                                     tr("Recovery refuses changed applications and preserves both versions.")]) else { return }
+            let result = NativeUpdateTransaction.restore(record.id)
+            if args.has("json") { print(Export.json(result)) } else { out([tr(result.message)]) }
+            if result.outcome != "succeeded" { throw CLIError(tr(result.message)) }
+            return
+        }
         let sources = NativeAppUpdates.sources()
         if rest == ["sources"] {
             if args.has("json") { print(Export.json(sources)) }
             else { out(sources.map { $0.app.name + " · " + $0.kind + ($0.feedHost.map { " · " + $0 } ?? "") + ($0.blocked.map { " · " + tr($0) } ?? "") }) }
             return
         }
-        guard rest.count == 2, rest[0] == "check" else { throw CLIError("usage: thermo apps updates sources | check NAME [--dry-run] [--json]") }
+        guard rest.count == 2, ["check", "install"].contains(rest[0]) else { throw CLIError("usage: thermo apps updates sources | check NAME | install NAME [--dry-run] [--json]") }
         let query = rest[1]
         let matches = sources.filter {
             $0.app.path == query || $0.app.bundleID?.caseInsensitiveCompare(query) == .orderedSame ||
@@ -82,7 +108,17 @@ struct AppsCommand {
         guard done.wait(timeout: .now() + 35) == .success, let result = box.value else {
             task.cancel(); throw CLIError(tr("Update check timed out; use the app's own updater"))
         }
-        if args.has("json") { print(Export.json(result)) }
+        if rest[0] == "install" {
+            if let why = NativeUpdateTransaction.installationRefusal(result) { throw CLIError(tr(why)) }
+            guard try approveNative([source.app.path, (source.app.version ?? "") + " → " + (result.release?.version ?? ""),
+                                     tr("The old app is preserved for recovery. Quit the app first.")]) else { return }
+            let installed = InstallResultBox(), finished = DispatchSemaphore(value: 0)
+            Task.detached { installed.value = await NativeUpdateTransaction.installAvailable(result); finished.signal() }
+            finished.wait()
+            guard let outcome = installed.value else { throw CLIError(tr("The native update was not installed")) }
+            if args.has("json") { print(Export.json(outcome)) } else { out([tr(outcome.message)]) }
+            if outcome.outcome != "succeeded" { throw CLIError(tr(outcome.message)) }
+        } else if args.has("json") { print(Export.json(result)) }
         else { out([source.app.name, tr(result.message)] + (result.release.map { [$0.version + " (" + $0.build + ")"] } ?? []) + result.skipped.map { tr($0) }) }
         if ["failed", "changed", "cancelled"].contains(result.status) { throw CLIError(tr(result.message)) }
     }

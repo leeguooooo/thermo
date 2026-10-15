@@ -103,6 +103,8 @@ COMMANDS
   apps updates apply TOKEN   review then install one update (--dry-run, --yes); verifies app version
   apps updates sources       discover app-declared update sources locally (--json)
   apps updates check NAME    check one app's Sparkle feed; --dry-run stays offline
+  apps updates install NAME  confirm a signed ZIP update, verify and preserve the old app (--yes)
+  apps updates recovery      native update recovery records; restore ID [--dry-run] [--yes]
 
 OPTIONS
   -a, --all                  include sensors without a known name

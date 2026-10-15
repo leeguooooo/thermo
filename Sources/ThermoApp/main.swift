@@ -379,10 +379,8 @@ if ["--main", "--disk", "--agents", "--chrome-pages"].contains(where: CommandLin
     NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { n in
         MainActor.assumeIsolated {
             guard let w = n.object as? NSWindow, w === MainWindow.window else { return }
-            if AppModels.shared.softwareUpdates.working {
-                AppModels.shared.softwareUpdates.exitRequested = true
-                AppModels.shared.softwareUpdates.channel = "homebrew"
-                DispatchQueue.main.async { MainWindow.show(.apps(.updates)) }
+            if AppModels.shared.softwareUpdates.working || AppModels.shared.nativeUpdates.installing {
+                DispatchQueue.main.async { _ = AppExitGuard.reply() }
             } else { exit(0) }
         }
     }

@@ -12,6 +12,12 @@ final class NativeUpdatesModel: ObservableObject {
     @Published private(set) var checking: Set<String> = []
     @Published private(set) var results: [String: NativeUpdateCheck] = [:]
     @Published private(set) var message: String?
+    @Published private(set) var installing = false
+    @Published private(set) var installResult: NativeInstallResult?
+    @Published private(set) var recoveryRecords: [NativeUpdateReceipt] = []
+    @Published private(set) var recoveryIssues: [String] = []
+    @Published var showRecovery = false
+    @Published var exitRequested = false
     static let maximumChecks = 4
     private var generation = UUID()
     private var loadInFlight = false, pendingLoad = false
@@ -20,18 +26,25 @@ final class NativeUpdatesModel: ObservableObject {
     private var pending: [NativeUpdateSource] = []
     private let read: @Sendable (ScanCancellation) -> [NativeUpdateSource]
     private let checker: @Sendable (NativeUpdateSource) async -> NativeUpdateCheck
+    private let installer: @Sendable (NativeUpdateCheck) async -> NativeInstallResult
+    private let restorer: @Sendable (String) -> NativeInstallResult
+    private let recoveryReader: @Sendable () -> NativeRecoveryReport
 
     init(read: @escaping @Sendable (ScanCancellation) -> [NativeUpdateSource] = { token in
         NativeAppUpdates.sources(apps: AppUninstaller.installed(cancellation: token))
-    }, checker: @escaping @Sendable (NativeUpdateSource) async -> NativeUpdateCheck = { await NativeAppUpdates.check($0) }) {
-        self.read = read; self.checker = checker
+    }, checker: @escaping @Sendable (NativeUpdateSource) async -> NativeUpdateCheck = { await NativeAppUpdates.check($0) },
+         installer: @escaping @Sendable (NativeUpdateCheck) async -> NativeInstallResult = { await NativeUpdateTransaction.installAvailable($0) },
+         restorer: @escaping @Sendable (String) -> NativeInstallResult = { NativeUpdateTransaction.restore($0) },
+         recoveryReader: @escaping @Sendable () -> NativeRecoveryReport = { NativeUpdateTransaction.recovery() }) {
+        self.read = read; self.checker = checker; self.installer = installer; self.restorer = restorer; self.recoveryReader = recoveryReader
     }
 
-    func load() {
+    func load(preservingMessage: Bool = false) {
+        guard !installing else { return }
         if loadInFlight { pendingLoad = true; loading = true; return }
         generation = UUID()
         for task in tasks.values { task.cancel() }
-        pending = []; results = [:]; message = nil; loading = true; loaded = false; loadInFlight = true
+        pending = []; results = [:]; if !preservingMessage { message = nil }; loading = true; loaded = false; loadInFlight = true
         let token = ScanCancellation(); loadToken = token
         let read = self.read
         Task.detached(priority: .utility) {
@@ -48,12 +61,12 @@ final class NativeUpdatesModel: ObservableObject {
     }
 
     func check(_ source: NativeUpdateSource) {
-        guard !loading, source.canCheck, !checking.contains(source.id), checking.count < Self.maximumChecks else { return }
+        guard !loading, !installing, source.canCheck, !checking.contains(source.id), checking.count < Self.maximumChecks else { return }
         start(source)
     }
 
     func checkAll(_ sources: [NativeUpdateSource]) {
-        guard !loading else { return }
+        guard !loading, !installing else { return }
         var queued = Set(pending.map(\.id)).union(checking)
         pending += sources.filter { $0.canCheck && queued.insert($0.id).inserted }
         pump()
@@ -114,12 +127,52 @@ final class NativeUpdatesModel: ObservableObject {
             }
         }
     }
+
+    func install(_ reviewed: NativeUpdateCheck) {
+        guard !installing, !loading, checking.isEmpty, !AppModels.shared.softwareUpdates.working else {
+            message = tr("Wait for the current update or checks to finish"); return
+        }
+        installing = true; exitRequested = false
+        let installer = self.installer, recovery = self.recoveryReader
+        Task.detached(priority: .utility) {
+            let result = await installer(reviewed)
+            let report = recovery()
+            await MainActor.run {
+                self.installResult = result; self.message = tr(result.message); self.recoveryRecords = report.records; self.recoveryIssues = report.issues
+                self.installing = false
+                self.load(preservingMessage: true)
+            }
+        }
+    }
+
+    func refreshRecovery() {
+        let recovery = self.recoveryReader
+        Task.detached(priority: .utility) {
+            let report = recovery()
+            await MainActor.run { self.recoveryRecords = report.records; self.recoveryIssues = report.issues }
+        }
+    }
+
+    func restore(_ record: NativeUpdateReceipt) {
+        guard !installing, !AppModels.shared.softwareUpdates.working else { message = tr("Wait for the current update or checks to finish"); return }
+        stopAll(); installing = true; exitRequested = false
+        let restore = self.restorer, recovery = self.recoveryReader
+        Task.detached(priority: .utility) {
+            let result = restore(record.id)
+            let report = recovery()
+            await MainActor.run {
+                self.installResult = result; self.message = tr(result.message); self.recoveryRecords = report.records; self.recoveryIssues = report.issues
+                self.installing = false; self.load(preservingMessage: true)
+            }
+        }
+    }
 }
 
 struct NativeUpdatesPanel: View {
     @ObservedObject var model: NativeUpdatesModel
     @State private var search = ""
     @State private var confirmingAll = false
+    @State private var installing: NativeUpdateCheck?
     private var visible: [NativeUpdateSource] {
         model.sources.filter { search.isEmpty || ($0.app.name + " " + ($0.app.bundleID ?? "")).localizedCaseInsensitiveContains(search) }
             .sorted { ($0.kind == "sparkle" ? 0 : $0.kind == "appStore" ? 1 : 2, $0.app.name) < ($1.kind == "sparkle" ? 0 : $1.kind == "appStore" ? 1 : 2, $1.app.name) }
@@ -130,6 +183,9 @@ struct NativeUpdatesPanel: View {
                 .font(.callout).foregroundStyle(.secondary)
             TextField(tr("Search"), text: $search).textFieldStyle(.roundedBorder).accessibilityLabel(tr("Search"))
             if let message = model.message { Text(message).font(.callout).foregroundStyle(.secondary) }
+            if model.exitRequested && model.installing {
+                Text(tr("Wait for installation and verification to finish before quitting Thermo.")).font(.callout).foregroundStyle(.orange)
+            }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 10) {
                     ForEach(visible) { source in
@@ -150,15 +206,15 @@ struct NativeUpdatesPanel: View {
                                         Button(tr("Stop")) { model.stop(source) }.buttonStyle(PillButtonStyle())
                                     } else {
                                         Button(tr("Check")) { model.check(source) }.buttonStyle(PillButtonStyle())
-                                            .disabled(model.loading || model.checking.count >= NativeUpdatesModel.maximumChecks)
+                                            .disabled(model.loading || model.installing || model.checking.count >= NativeUpdatesModel.maximumChecks)
                                     }
                                 }
                                 if source.app.inventoryIdentity == nil {
                                     Button(tr("Show in Finder")) { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: source.app.path)]) }
-                                        .buttonStyle(PillButtonStyle()).disabled(model.loading)
+                                        .buttonStyle(PillButtonStyle()).disabled(model.loading || model.installing)
                                 } else {
                                     Button(source.kind == "appStore" ? tr("App Store") : tr("Open app")) { model.openUpdater(source) }
-                                        .buttonStyle(PillButtonStyle()).disabled(model.loading)
+                                        .buttonStyle(PillButtonStyle()).disabled(model.loading || model.installing)
                                 }
                             }
                             if model.checking.contains(source.id) { ProgressView().controlSize(.small) }
@@ -168,6 +224,14 @@ struct NativeUpdatesPanel: View {
                                     Text(tr("Feed candidate: %1$@ (build %2$@)", release.version, release.build)).font(.callout)
                                 }
                                 Text(tr(result.message)).font(.caption).foregroundStyle(result.status == "failed" || result.status == "changed" ? Color.orange : Color.secondary)
+                                if result.status == "available" {
+                                    if let why = NativeUpdateTransaction.installationRefusal(result) {
+                                        Text(tr(why)).font(.caption).foregroundStyle(.secondary)
+                                    } else {
+                                        Button(tr("Install in Thermo…")) { installing = result }.buttonStyle(PillButtonStyle())
+                                            .disabled(model.installing || model.loading || !model.checking.isEmpty)
+                                    }
+                                }
                                 if !result.skipped.isEmpty {
                                     DisclosureGroup(tr("Feed entries not selected")) {
                                         ForEach(result.skipped, id: \.self) { Text(tr($0)).font(.caption).foregroundStyle(.secondary) }
@@ -181,13 +245,15 @@ struct NativeUpdatesPanel: View {
             }
             HStack {
                 if model.loading { ProgressView().controlSize(.small) }
-                Text(tr("Version notices only; finish downloads and installation in the app or on its official website."))
+                Text(tr("Signed ZIP updates can be installed here with recovery; other formats use the original updater."))
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button(tr("Refresh")) { model.load() }.buttonStyle(PillButtonStyle()).disabled(model.loading)
-                if !model.checking.isEmpty {
+                Button(tr("Recovery")) { model.showRecovery = true }.buttonStyle(PillButtonStyle())
+                if model.installing { ProgressView().controlSize(.small) }
+                else if !model.checking.isEmpty {
                     Button(tr("Stop checks")) { model.stopAll() }.buttonStyle(PillButtonStyle())
                 } else {
+                    Button(tr("Refresh")) { model.load() }.buttonStyle(PillButtonStyle()).disabled(model.loading)
                     Button(tr("Check listed feeds…")) { confirmingAll = true }.buttonStyle(PillButtonStyle())
                         .disabled(model.loading || !visible.contains(where: \.canCheck))
                 }
@@ -203,5 +269,47 @@ struct NativeUpdatesPanel: View {
                 confirmTitle: tr("Check"), confirmEnabled: !sources.isEmpty,
                 confirm: { confirmingAll = false; model.checkAll(sources) }, cancel: { confirmingAll = false })
         }
+        .sheet(item: $installing) { checked in
+            ConfirmSheet(title: tr("Install this native update?"),
+                summary: checked.source.app.name + " → " + (checked.release?.version ?? ""), destructive: false,
+                heading: tr("Applications to replace"), lines: [checked.source.app.path],
+                footnote: tr("The archive, publisher, version and architecture are checked before replacement. Quit the app first. The old app is preserved for recovery."),
+                confirmTitle: tr("Install"), confirmEnabled: !model.installing,
+                confirm: { installing = nil; model.install(checked) }, cancel: { installing = nil })
+        }
+        .sheet(isPresented: $model.showRecovery) { NativeUpdateRecoveryView(model: model) }
+    }
+}
+
+struct NativeUpdateRecoveryView: View {
+    @ObservedObject var model: NativeUpdatesModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var restoring: NativeUpdateReceipt?
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(tr("Native update recovery")).font(.headline)
+            Text(tr("Recovery only replaces the unchanged app installed by this recorded operation. Both copies are kept.")).font(.callout).foregroundStyle(.secondary)
+            if let message = model.message { Text(message).font(.callout).textSelection(.enabled) }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(model.recoveryIssues, id: \.self) { Text(tr($0)).font(.callout).foregroundStyle(.orange) }
+                    ForEach(model.recoveryRecords) { record in
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(record.target).font(.caption).textSelection(.enabled)
+                            Text(record.previousVersion + " → " + record.installedVersion + " · " + tr(record.phase)).font(.caption).foregroundStyle(.secondary)
+                            Button(tr("Restore previous app…")) { restoring = record }.disabled(model.installing || record.phase == "restored" || record.phase == "rolledBack")
+                        }
+                    }
+                    if model.recoveryRecords.isEmpty && model.recoveryIssues.isEmpty { Text(tr("No native update recovery records")).foregroundStyle(.secondary) }
+                }
+            }.frame(maxHeight: 300)
+            HStack { if model.installing { ProgressView().controlSize(.small) }; Spacer(); Button(tr("Close")) { dismiss() } }
+        }.padding(20).frame(width: 520).onAppear { model.refreshRecovery() }
+            .sheet(item: $restoring) { record in
+                ConfirmSheet(title: tr("Restore the previous app?"), summary: record.installedVersion + " → " + record.previousVersion,
+                    destructive: false, heading: tr("Applications to replace"), lines: [record.target, record.backup],
+                    footnote: tr("Quit the app first. Recovery refuses changed applications and preserves both versions."),
+                    confirmTitle: tr("Restore"), confirm: { restoring = nil; model.restore(record) }, cancel: { restoring = nil })
+            }
     }
 }

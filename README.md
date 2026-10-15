@@ -206,7 +206,13 @@ thermo tabs restore UUID --window WINDOW_ID --yes
 
 `thermo apps updates sources --json` 只发现本地来源；`thermo apps updates check NAME --dry-run --json` 离线预览，去掉 `--dry-run` 才检查选定 feed。导出不包含私密更新 URL 和下载地址参数。请求不使用 Cookie、钥匙串凭据、SSO 或客户端证书，TLS 由系统校验。
 
-Sparkle 检查比较构建号，区分完整包、增量包、测试渠道、系统及声明的硬件要求。结果是版本候选，下载与安装仍由原应用或官网完成。feed 限制为 2 MiB、30 秒，拒绝实体声明和超深 XML；失败或不支持的条目保留原因，不视为“所有应用都是最新版”。
+Sparkle 检查比较构建号，区分完整包、增量包、测试渠道、系统及声明的硬件要求。feed 限制为 2 MiB、30 秒，拒绝实体声明和超深 XML；失败或不支持的条目保留原因，不视为“所有应用都是最新版”。
+
+有嵌入 Ed25519 公钥的应用，其已签名普通 ZIP 更新可点击「在 Thermo 中安装」。确认后重查 feed，下载至私有目录，验证归档签名、代码签名、发布者、Bundle ID、版本、构建号、目录结构和实际 Mach-O 架构，再原子替换。原生 Apple 芯片版本不会被 Intel-only 包覆盖。替换后再次核实新应用和保留副本；失败时只在对象身份未变化且备份仍有效的情况下回滚，不覆盖其他进程换入的对象。
+
+「恢复记录」以及历史入口可恢复未再变化的已安装应用；两份版本均保留。`thermo apps updates install NAME --dry-run --json` 离线预览来源，去掉 `--dry-run` 后检查并确认安装，`--yes` 用于非交互执行。`thermo apps updates recovery --json` 查看记录，`recovery restore ID --dry-run` 预览恢复，确认后去掉 `--dry-run` 执行。记录损坏或无法读取会显示问题，不当作空历史。
+
+当前原生安装支持 ZIP32 普通应用包（归档最多 2 GiB、展开预算最多 8 GiB），不支持加密 ZIP、ZIP64、DMG、PKG、增量包及安装脚本；这些格式继续使用原应用更新器。安装以当前用户运行，无权写入的应用交由原更新器处理，不向硬件辅助程序添加软件安装权限。安装及恢复期间阻止正常退出；真实第三方软件安装仍需单独验收。
 
 `thermo apps updates --json` 输出覆盖范围、候选、跳过项与错误；`--refresh-catalog` 刷新 Homebrew 目录。`thermo apps updates apply TOKEN --dry-run` 预览单项更新，去掉 `--dry-run` 后交互确认，或用 `--yes` 执行。预览后应用、安装记录或 cask 定义变化会拒绝执行，正在运行的应用需要先退出。安装只指定该 cask，要求校验值，不强制覆盖，关闭自动清理和依赖升级，并使用 Homebrew 的 `--no-quit` 模式；Homebrew 仍会执行该软件包自己的安装步骤及附带工具更新。
 
