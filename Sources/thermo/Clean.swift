@@ -43,7 +43,7 @@ struct CleanCommand {
             throw CLIError("--budget is for read-only scans")
         }
         if args.has("stream") {
-            guard !args.has("csv"), !["run", "log", "empty-trash", "repair-worktrees"].contains(rest.first ?? "") else {
+            guard !args.has("csv"), !["run", "log", "empty-trash", "restore", "repair-worktrees"].contains(rest.first ?? "") else {
                 throw CLIError("--stream is for read-only scans and cannot be combined with --csv")
             }
         }
@@ -51,6 +51,7 @@ struct CleanCommand {
         case "run": try clean(Array(rest.dropFirst()))
         case "log": showLog()
         case "empty-trash": try emptyTrash(Array(rest.dropFirst()))
+        case "restore": try restoreBatch(Array(rest.dropFirst()))
         case "repair-worktrees":
             guard rest.count == 1 else { throw CLIError("repair-worktrees takes --root REPO, not positional paths") }
             try repairWorktrees()
@@ -464,6 +465,51 @@ struct CleanCommand {
         write("deleted \(ByteFormat.string(result.bytes)) (estimated); \(result.outcome ?? "unknown")")
         for (path, reason) in result.failed.sorted(by: { $0.key < $1.key }) { write("  kept \(path): \(reason)") }
         if let observation = result.spaceObservation { write(observation.summary) }
+    }
+
+    /// `thermo clean restore BATCH`: moves the batch's Trash items back to where they were.
+    func restoreBatch(_ selectors: [String], home: String = NSHomeDirectory(), write: (String) -> Void = { print($0) }) throws {
+        guard selectors.count == 1 else { throw CLIError("usage: thermo clean restore BATCH --dry-run|--yes") }
+        guard args.options["budget"] == nil, args.options["timeout"] == nil else { throw CLIError("scan budgets do not apply to restoring Trash items") }
+        let review = try TrashBatches.restore(id: selectors[0], home: home, dryRun: true)
+        func lines(_ r: TrashRestore) -> [String] {
+            r.items.map { i in
+                (i.status == "restored" ? "  " + style.green("✓") + " " : "  " + style.yellow("!") + " ") + FS.tilde(i.original)
+                    + (i.reason.map { style.dim(" · " + Self.restoreStatus(i.status) + ": " + $0) } ?? "")
+            }
+        }
+        if args.has("dry-run") || !args.has("json") {
+            if args.has("json") { write(Export.json(review)) }
+            else { write(style.bold(tr("Put this batch back where it was:"))); lines(review).forEach(write) }
+        }
+        if args.has("dry-run") { return }
+        guard review.items.contains(where: { $0.status == "restored" }) else {
+            if !args.has("json") { write(tr("Nothing in this batch can be restored.")) }
+            exit(1)
+        }
+        if !args.has("yes") {
+            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("add --yes after reviewing the batch with --dry-run") }
+            print(tr("Restore these items? [y/N] "), terminator: ""); fflush(stdout)
+            guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print(tr("cancelled")); return }
+        }
+        let result = try TrashBatches.restore(id: selectors[0], home: home)
+        let restored = result.items.filter { $0.status == "restored" }
+        if args.has("json") { write(Export.json(result)) }
+        else {
+            lines(result).forEach(write)
+            write(style.bold(tr("Restored %1$@ of %2$@ items", String(restored.count), String(result.items.count))))
+        }
+        if restored.count != result.items.count { exit(1) }
+    }
+
+    static func restoreStatus(_ status: String) -> String {
+        switch status {
+        case "conflict": return tr("conflict")
+        case "missing": return tr("missing")
+        case "changed": return tr("changed")
+        case "skipped": return tr("skipped")
+        default: return tr("failed")
+        }
     }
 
     /// The saved report when it is under 15 minutes old, made with the same age limit, and covers

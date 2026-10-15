@@ -292,6 +292,15 @@ thermo clean empty-trash BATCH_ID --yes --json
 
 该命令只处理记录中的本批项目；已经恢复、被替换、仍在使用、无法读取或不在当前用户废纸篓中的项目会保留。不会清空整个废纸篓，也不会按原路径追删新文件。
 
+`apps uninstall`、`apps leftovers remove` 和 `space trash` 同样记录批次并返回 `trashBatchID`。放回原处：
+
+```sh
+thermo clean restore BATCH_ID --dry-run --json
+thermo clean restore BATCH_ID --yes
+```
+
+只移动仍是原废纸篓项目（身份未变）、原路径为空、原文件夹仍在同一宗卷的项目，用重命名而非复制；原路径已有新内容时报告 `conflict` 并保留两边。带 Git 注册信息的工作树需按下文手动恢复。
+
 工作树会重新检查未提交内容和活动进程，仅对能确认持有者已退出的 Claude agent 锁解锁。移入废纸篓后通过 Git 注销单个注册项，不使用全仓库 prune 或 force；分支保留。恢复所需的 Git 注册副本与 checkout 一起留在废纸篓，位置见批次记录的 `registrationBackup` 和 `registrationOriginal`。恢复时，先确认原路径及注册位置为空，把注册副本移回 `registrationOriginal`，再把 checkout 移回原路径；检查 `git status`。恢复前还应确认同名分支没有被其他工作树使用或改动，不覆盖现有文件或注册项。
 
 ### 扫描对比与大目录提示
