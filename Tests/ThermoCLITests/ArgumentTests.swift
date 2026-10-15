@@ -3,6 +3,16 @@ import ThermoL10n
 @testable import thermo
 
 final class ArgumentTests: XCTestCase {
+    func testDataOnlyFlagIsAcceptedForAppRemovalAndRejectedForOtherActions() throws {
+        let args = try Args(["apps", "uninstall", "Fixture", "--data-only", "--dry-run", "--json"])
+        XCTAssertTrue(args.has("data-only"))
+        XCTAssertEqual(args.positionals, ["apps", "uninstall", "Fixture"])
+        for invalid in [["apps", "leftovers", "remove", "all", "--data-only"], ["space", "trash", "/fixture", "--data-only"],
+                        ["apps", "uninstall", "Fixture", "--data-only=false"]] {
+            XCTAssertThrowsError(try Args(invalid))
+        }
+    }
+
     func testHistoryRangeIsFinitePositiveAndCappedConsistently() {
         XCTAssertEqual(PulseCommand.hours("30m"), 0.5)
         XCTAssertEqual(PulseCommand.hours(" 6H "), 6)

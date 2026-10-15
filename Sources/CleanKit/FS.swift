@@ -509,6 +509,7 @@ extension Cleaner {
     static func journal(_ r: CleanResult, item: CleanItem, home: String) {
         let feature: String, action: String
         switch r.id {
+        case let id where id.hasPrefix("app-data:"): (feature, action) = ("apps", "removeData")
         case let id where id.hasPrefix("app:"): (feature, action) = ("apps", "uninstall")
         case let id where id.hasPrefix("leftovers:"): (feature, action) = ("apps", "remove")
         case "manual": (feature, action) = ("space", "trash")

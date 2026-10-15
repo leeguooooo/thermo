@@ -184,7 +184,7 @@ struct AppsCommand {
     }
 
     func uninstall(_ names: [String]) throws {
-        guard let query = names.first, names.count == 1 else { throw CLIError("usage: thermo apps uninstall NAME [--dry-run] [--yes] [--with-data]") }
+        guard let query = names.first, names.count == 1 else { throw CLIError("usage: thermo apps uninstall NAME [--data-only] [--dry-run] [--yes] [--with-data]") }
         let installed = AppUninstaller.installed()
         let found = AppUninstaller.find(query, in: installed)
         guard !found.isEmpty else { throw CLIError(tr("no installed app matches '%1$@' (see thermo apps)", query)) }
@@ -193,7 +193,7 @@ struct AppsCommand {
                            + found.map { "  \($0.name)  \($0.bundleID ?? "")  \($0.path)" }.joined(separator: "\n"))
         }
         progress(tr("Looking for %1$@'s files…", target.name))
-        let plan = AppUninstaller.plan(target, installed: installed, includePersonal: args.has("with-data"))
+        let plan = AppUninstaller.plan(target, installed: installed, includePersonal: args.has("with-data"), removeApp: !args.has("data-only"))
         clearProgress()
 
         if args.has("json") && (args.has("dry-run") || plan.blocked != nil) {
@@ -201,9 +201,10 @@ struct AppsCommand {
             if plan.blocked != nil { exit(1) }
             return
         }
-        var lines = [style.bold(tr("Uninstall %1$@ (%2$@): move %3$@ to the Trash", target.name + (target.version.map { " " + $0 } ?? ""),
-                                   target.bundleID ?? tr("no bundle ID"), plan.sizeText))]
-        lines.append("  " + pad(plan.app.bundleSizeText, 9, right: true) + "  " + FS.tilde(plan.app.path))
+        var lines = [style.bold(plan.removesApp ? tr("Uninstall %1$@ (%2$@): move %3$@ to the Trash", target.name + (target.version.map { " " + $0 } ?? ""),
+                                   target.bundleID ?? tr("no bundle ID"), plan.sizeText) : tr("Keep %1$@. Move only the selected associated files to the Trash: %2$@.", target.name, plan.sizeText))]
+        lines.append(plan.removesApp ? "  " + pad(plan.app.bundleSizeText, 9, right: true) + "  " + FS.tilde(plan.app.path) : tr("App kept: %1$@", FS.tilde(plan.app.path)))
+        if !plan.removesApp { lines.append(style.dim(tr("Removing selected data can reset settings or sign-in state. Restore it from History before reopening the app."))) }
         for l in plan.app.leftovers where plan.paths.contains(l.path) {
             lines.append("  " + pad(l.sizeText, 9, right: true) + "  " + FS.tilde(l.path))
         }
@@ -215,14 +216,14 @@ struct AppsCommand {
             lines.append(style.dim(tr("Kept, whitelisted:")))
             for p in saved { lines.append(style.dim("  " + FS.tilde(p))) }
         }
-        if let cask = plan.app.cask {
+        if plan.removesApp, let cask = plan.app.cask {
             lines.append(style.dim(tr("Homebrew installed it: run brew uninstall --cask %1$@ afterwards so Homebrew forgets it.", cask)))
         }
         if !plan.receipts.isEmpty {
             lines.append(style.dim(tr("Installed by a package (%1$@); files it put outside your home folder stay.", plan.receipts.joined(separator: ", "))))
         }
         if let why = plan.blocked {
-            lines.append(style.yellow(tr("Not uninstalled: %1$@", why)))
+            lines.append(style.yellow(plan.removesApp ? tr("Not uninstalled: %1$@", why) : tr("Not moved: %1$@", why)))
             out(lines)
             exit(1)
         }

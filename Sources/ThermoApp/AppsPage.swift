@@ -42,7 +42,13 @@ final class AppsModel: ObservableObject {
     @Published private(set) var working = false
     @Published var outcome: String?
     private var cancellation: ScanCancellation?
+    private var reviewCancellation: ScanCancellation?
+    private let reviewPlan: @Sendable (InstalledApp, [InstalledApp], Bool, ScanCancellation) -> UninstallPlan
     private var measurementComplete = false
+
+    init(reviewPlan: @escaping @Sendable (InstalledApp, [InstalledApp], Bool, ScanCancellation) -> UninstallPlan = { app, all, removeApp, token in
+        AppUninstaller.plan(app, installed: all, removeApp: removeApp, cancellation: token)
+    }) { self.reviewPlan = reviewPlan }
 
     var measuring: Bool { loading }
     var totalBytes: Int64 { apps.reduce(0) { $0 + $1.totalBytes } }
@@ -88,10 +94,18 @@ final class AppsModel: ObservableObject {
 
     /// Resume an interrupted inventory on the next appearance, retaining results until then.
     func stopMeasuring() {
+        let interrupted = loading
         cancellation?.cancel()
         cancellation = nil
         loading = false
-        sizeNotice = tr("Some sizes are unfinished. Known bytes are lower bounds; resume a full measurement when ready.")
+        if interrupted { sizeNotice = tr("Some sizes are unfinished. Known bytes are lower bounds; resume a full measurement when ready.") }
+    }
+
+    func retire() {
+        stopMeasuring()
+        reviewCancellation?.cancel()
+        plan = nil
+        // Keep planning occupied until the physical read returns; reopening cannot add a worker.
     }
 
     nonisolated static func runningPaths(_ apps: [InstalledApp]) -> Set<String> {
@@ -100,14 +114,20 @@ final class AppsModel: ObservableObject {
     }
 
     /// Looks the app's files up again and opens the confirmation.
-    func review(_ app: InstalledApp) {
+    func review(_ app: InstalledApp, removeApp: Bool = true) {
+        guard planning == nil, !working else { return }
         planning = app.path
         let all = apps
+        let token = ScanCancellation()
+        reviewCancellation = token
+        let buildPlan = reviewPlan
         Task.detached(priority: .userInitiated) {
-            let plan = AppUninstaller.plan(app, installed: all)
+            let plan = token.isCancelled ? nil : buildPlan(app, all, removeApp, token)
             await MainActor.run {
+                guard self.reviewCancellation === token else { return }
                 self.planning = nil
-                self.plan = plan
+                self.reviewCancellation = nil
+                if !token.isCancelled { self.plan = plan }
             }
         }
     }
@@ -238,12 +258,12 @@ struct AppsPage: View {
         .onChange(of: tab) { t in if t == .leftovers, model.orphans == nil { model.scanOrphans() } }
         .sheet(item: Binding(get: { model.plan.map(PlanBox.init) }, set: { if $0 == nil { model.plan = nil } })) { box in
             let p = box.plan
-            ConfirmSheet(title: tr("Uninstall %1$@?", p.app.name),
-                         summary: tr("%1$@ and %2$@ of its files go to the Trash: %3$@ in all.", p.app.name,
-                                     String(p.paths.count - 1), p.sizeText),
+            ConfirmSheet(title: p.removesApp ? tr("Uninstall %1$@?", p.app.name) : tr("Remove associated data for %1$@?", p.app.name),
+                         summary: p.removesApp ? tr("%1$@ and %2$@ of its files go to the Trash: %3$@ in all.", p.app.name,
+                                     String(max(0, p.paths.count - 1)), p.sizeText) : tr("Keep %1$@. Move only the selected associated files to the Trash: %2$@.", p.app.name, p.sizeText),
                          destructive: false, heading: tr("What will be moved to the Trash"),
-                         lines: lines(p),
-                         footnote: p.blocked ?? tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
+                         lines: Self.lines(p),
+                         footnote: p.blocked ?? (p.removesApp ? tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log.") : tr("Removing selected data can reset settings or sign-in state. Restore it from History before reopening the app.")),
                          confirmTitle: tr("Move to Trash"),
                          confirmEnabled: p.blocked == nil,
                          confirm: { model.uninstall(p) }, cancel: { model.plan = nil })
@@ -263,14 +283,14 @@ struct AppsPage: View {
 
     struct PlanBox: Identifiable { let plan: UninstallPlan; var id: String { plan.app.path } }
 
-    func lines(_ p: UninstallPlan) -> [String] {
-        var out = [p.app.bundleSizeText + "  " + p.app.path]
+    static func lines(_ p: UninstallPlan) -> [String] {
+        var out = p.removesApp ? [p.app.bundleSizeText + "  " + p.app.path] : [tr("App kept: %1$@", p.app.path)]
         out += p.app.leftovers.filter { p.paths.contains($0.path) }.map { $0.sizeText + "  " + FSPath.tilde($0.path) }
         if let kept = p.kept, !kept.isEmpty {
-            out.append(tr("Kept, your data (profiles, chat history, mail); remove it in the app first, or with thermo apps uninstall --with-data:"))
+            out.append(p.removesApp ? tr("Kept, your data (profiles, chat history, mail); remove it in the app first, or with thermo apps uninstall --with-data:") : tr("Personal data kept. To include it while keeping the app, review thermo apps uninstall NAME --data-only --with-data --dry-run first."))
             out += kept.map { $0.sizeText + "  " + FSPath.tilde($0.path) }
         }
-        if let cask = p.app.cask { out.append(tr("Homebrew installed it: run brew uninstall --cask %1$@ afterwards so Homebrew forgets it.", cask)) }
+        if p.removesApp, let cask = p.app.cask { out.append(tr("Homebrew installed it: run brew uninstall --cask %1$@ afterwards so Homebrew forgets it.", cask)) }
         if !p.receipts.isEmpty { out.append(tr("Installed by a package (%1$@); files it put outside your home folder stay.", p.receipts.joined(separator: ", "))) }
         return out
     }
@@ -371,6 +391,9 @@ struct AppsPage: View {
                     if a.leftovers.isEmpty && a.relatedDataState == .complete {
                         Text(tr("No files of it found in your home folder.")).font(.caption).foregroundStyle(.white.opacity(0.5))
                     }
+                    Button(tr("Review data only…")) { model.review(a, removeApp: false) }
+                        .buttonStyle(PillButtonStyle())
+                        .disabled(a.protected != nil || running || model.working || model.planning != nil)
                 }
             }
         }

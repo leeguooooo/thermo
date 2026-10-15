@@ -12,6 +12,7 @@ extension OperationRecord {
         case ("clean", "whitelistAdd"): return tr("Added to the cleanup whitelist")
         case ("clean", "whitelistRemove"): return tr("Removed from the cleanup whitelist")
         case ("apps", "uninstall"): return tr("Uninstalled an app")
+        case ("apps", "removeData"): return tr("Removed associated data; kept the app")
         case ("apps", "remove"): return tr("Removed app leftovers")
         case ("apps", "enable"): return tr("Enabled a startup item")
         case ("apps", "disable"): return tr("Disabled a startup item")

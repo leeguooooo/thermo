@@ -86,6 +86,7 @@ COMMANDS
   apps uninstall NAME        move the app and its files to the Trash (lists every path, asks first;
                              --dry-run only lists; refuses running, system and protected apps;
                              browser, chat and mail data stays unless --with-data)
+                             --data-only keeps the app and reviews only associated files
   space [PATH]               what takes the space in a folder, biggest first (one walk, kept an hour)
   space large                files over 100 MB and when they were last opened (--older-than DAYS)
   space dupes [PATH…]        identical files (default: Desktop, Documents, Downloads, media folders)

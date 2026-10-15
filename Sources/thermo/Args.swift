@@ -22,7 +22,7 @@ struct Args {
         "h": "help", "v": "version", "f": "format", "y": "yes",
     ]
     static let knownFlags: Set<String> = ["json", "csv", "all", "no-color", "no-cache", "help", "version", "fahrenheit", "yes", "trash", "permanent", "dry-run", "with-data",
-        "refresh-catalog",
+        "refresh-catalog", "data-only",
         "exact", // clean: full per-item size walks
         "stream", // clean: newline-delimited incremental scan results
         "rescan",  // rescan: clean run ignores the saved scan
@@ -57,6 +57,9 @@ struct Args {
             } else {
                 throw CLIError("unknown option '\(a)' (see thermo --help)")
             }
+        }
+        if flags.contains("data-only"), Array(positionals.prefix(2)) != ["apps", "uninstall"] {
+            throw CLIError("--data-only is only supported by apps uninstall")
         }
     }
 

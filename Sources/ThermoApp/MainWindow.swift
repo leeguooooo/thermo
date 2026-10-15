@@ -168,7 +168,7 @@ enum MainWindow {
                 MainActor.assumeIsolated {
                     models.monitor.windowOpen = false
                     models.stopBrowserChecks()
-                    models.apps.stopMeasuring()
+                    models.apps.retire()
                     models.startup.retire()
                     models.softwareUpdates.retire()
                     models.nativeUpdates.retire()

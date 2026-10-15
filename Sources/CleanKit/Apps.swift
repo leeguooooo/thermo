@@ -60,7 +60,7 @@ public struct OrphanData: Codable, Identifiable, Sendable, Equatable {
 /// What an uninstall will do, shown in full before anything moves.
 public struct UninstallPlan: Codable, Sendable {
     public var app: InstalledApp
-    /// Everything that goes to the Trash: the bundle first, then its leftovers.
+    /// Selected Trash paths: the optional bundle first, followed by associated data.
     public var paths: [String]
     public var bytes: Int64
     public var sizeState: AppSizeState? = nil
@@ -75,6 +75,9 @@ public struct UninstallPlan: Codable, Sendable {
     public var kept: [AppLeftover]?
     /// Leftovers left in place because the user's whitelist keeps them.
     public var whitelisted: [String]? = nil
+    /// Absent in older plans means a normal uninstall; false explicitly preserves the bundle.
+    public var removeApp: Bool? = nil
+    public var removesApp: Bool { removeApp ?? true }
 }
 
 public enum AppUninstaller {
@@ -513,7 +516,21 @@ public enum AppUninstaller {
 
     /// `includePersonal`: also move browser profiles, chat history and mail (left in place by default).
     public static func plan(_ app: InstalledApp, installed: [InstalledApp], home: String = NSHomeDirectory(),
-                            processes: ProcessTable? = nil, includePersonal: Bool = false) -> UninstallPlan {
+                            processes: ProcessTable? = nil, includePersonal: Bool = false, removeApp: Bool = true,
+                            cancellation: ScanCancellation? = nil) -> UninstallPlan {
+        let token = cancellation ?? ScanCancellation.current
+        var plan = ScanCancellation.withCurrent(token) {
+            makePlan(app, installed: installed, home: home, processes: processes, includePersonal: includePersonal, removeApp: removeApp)
+        }
+        if token?.isCancelled == true {
+            plan.blocked = tr("Review stopped; review again before removing files")
+            plan.appIdentity = nil
+        }
+        return plan
+    }
+
+    private static func makePlan(_ app: InstalledApp, installed: [InstalledApp], home: String,
+                                 processes: ProcessTable?, includePersonal: Bool, removeApp: Bool) -> UninstallPlan {
         var app = app
         if app.leftovers.isEmpty {
             let related = checkedLeftovers(for: app, installed: installed, home: home)
@@ -521,7 +538,7 @@ public enum AppUninstaller {
         } else if app.relatedDataState == nil {
             app.relatedDataState = AppSize.combined(app.leftovers.map(\.effectiveSizeState), bytes: app.leftoverBytes)
         }
-        if app.sizeState == nil || app.bundleSizeState != .complete {
+        if removeApp && (app.sizeState == nil || app.bundleSizeState != .complete) {
             let size = FS.allocatedSize(app.path)
             let exists = FS.isDirectory(app.path)
             app.bytes = exists ? max(size.bytes, size.allocated) : 0
@@ -532,11 +549,12 @@ public enum AppUninstaller {
         let whitelist = try? Whitelist.load(home: home)
         let saved = app.leftovers.map(\.path).filter { whitelist?.protects($0) == true }
         let moved = app.leftovers.filter { l in !kept.contains { $0.path == l.path } && !saved.contains(l.path) }
-        let paths = [app.path] + moved.map(\.path)
-        var plan = UninstallPlan(app: app, paths: paths, bytes: app.bytes + moved.reduce(0) { $0 + $1.bytes },
+        let paths = (removeApp ? [app.path] : []) + moved.map(\.path)
+        var plan = UninstallPlan(app: app, paths: paths, bytes: (removeApp ? app.bytes : 0) + moved.reduce(0) { $0 + $1.bytes },
                                  receipts: receipts(for: app.bundleID))
         plan.kept = kept.isEmpty ? nil : kept
-        plan.sizeState = AppSize.combined([app.bundleSizeState, app.relatedDataState ?? .unmeasured] + moved.map(\.effectiveSizeState), bytes: plan.bytes)
+        plan.removeApp = removeApp
+        plan.sizeState = AppSize.combined((removeApp ? [app.bundleSizeState] : []) + [app.relatedDataState ?? .unmeasured] + moved.map(\.effectiveSizeState), bytes: plan.bytes)
         plan.whitelisted = saved.isEmpty ? nil : saved
         plan.identities = paths.reduce(into: [:]) { result, path in result[path] = FileIdentity.of(path) }
         plan.appIdentity = AppReviewIdentity.capture(app.path)
@@ -556,8 +574,17 @@ public enum AppUninstaller {
     }
 
     static func refusal(_ plan: UninstallPlan, home: String, processes: ProcessTable) -> String? {
+        let appLocation = Guard.deletionLocation(plan.app.path)
+        if plan.removesApp != plan.paths.contains(plan.app.path) || (!plan.removesApp && plan.paths.contains(where: {
+            let location = Guard.deletionLocation($0)
+            return location == appLocation || location.hasPrefix(appLocation + "/") || appLocation.hasPrefix(location + "/")
+        })) { return tr("The removal selection changed; review it again") }
+        if !plan.removesApp && plan.paths.isEmpty { return tr("No associated files are selected; the app will be kept") }
         if let why = plan.app.protected { return why }
-        if let why = Whitelist.refusal(plan.app.path, home: home) { return why }
+        do {
+            let whitelist = try Whitelist.load(home: home)
+            if plan.removesApp && whitelist.protects(plan.app.path) { return tr(Whitelist.reason) }
+        } catch { return Whitelist.unreadable(error) }
         if runningProcess(in: [plan.app.path], processes: processes) != nil {
             return tr("%1$@ is running; quit it first", plan.app.name)
         }
@@ -568,30 +595,34 @@ public enum AppUninstaller {
         if let why = g.uninstallRefusal(plan.app.path, bundleIDs: []) { return why }
         // macOS will not move a folder the user cannot write to (its ".." entry has to change), so an
         // app installed as root would fail halfway; say so before anything moves.
-        if access(plan.app.path, W_OK) != 0 {
+        if plan.removesApp && access(plan.app.path, W_OK) != 0 {
             return tr("%1$@ belongs to the administrator account, so Thermo cannot move it. Drag it to the Trash in Finder, which asks for your password.", plan.app.name)
         }
         return nil
     }
 
-    /// Moves the app and its leftovers to the Trash; nothing is deleted for good. Everything is checked
+    /// Moves selected app/data paths to the Trash; a data-only plan keeps the bundle. Everything is checked
     /// again right before it moves: protection, running processes, and the guard for each path.
     public static func uninstall(_ plan: UninstallPlan, home: String = NSHomeDirectory(),
                                  processes: (() -> ProcessTable)? = nil) -> CleanResult {
+        uninstall(plan, home: home, processes: processes, move: RemovalOperations.live.trash)
+    }
+
+    static func uninstall(_ plan: UninstallPlan, home: String, processes: (() -> ProcessTable)?, move: (String) throws -> URL) -> CleanResult {
         let table = processes ?? { ProcessTable.current(.init(cpu: false)) }
-        let id = "app:" + (plan.app.bundleID ?? plan.app.name)
+        let id = (plan.removesApp ? "app:" : "app-data:") + (plan.app.bundleID ?? plan.app.name)
         var result = CleanResult(id: id, trashed: true)
-        if let why = refusal(plan, home: home, processes: table()) {
+        if let why = plan.blocked ?? refusal(plan, home: home, processes: table()) {
             result.failed[plan.app.path] = why
         } else if plan.appIdentity == nil || AppReviewIdentity.capture(plan.app.path) != plan.appIdentity {
-            result.failed[plan.app.path] = tr("The app changed after review; review the uninstall again")
+            result.failed[plan.app.path] = plan.removesApp ? tr("The app changed after review; review the uninstall again") : tr("The app changed after review; review the data removal again")
         } else {
             let ids = plan.app.bundleID.map { [$0] } ?? []
             let sizes = Dictionary(uniqueKeysWithValues: plan.app.leftovers.map { ($0.path, $0.bytes) })
             trash(plan.paths, bundleIDs: ids, sizes: sizes.merging([plan.app.path: plan.app.bytes]) { a, _ in a },
                   home: home, processes: table, into: &result, identities: plan.identities ?? [:],
                   incompletePaths: Set(plan.app.leftovers.filter { $0.effectiveSizeState != .complete }.map(\.path))
-                    .union(plan.app.bundleSizeState == .complete ? [] : [plan.app.path]))
+                    .union(plan.app.bundleSizeState == .complete ? [] : [plan.app.path]), move: move)
         }
         finish(result, title: plan.app.name, home: home)
         return result
