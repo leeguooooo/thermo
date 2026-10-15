@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-15T22:44:43.931419+00:00",
+  "baseSourceCommit": "1d0047b",
+  "sourceSHA256": {
+    "Sources/CleanKit/TrashBatch.swift": "c571d03992c0a8ae71d870c393a5514be1e05271b9409daf02d7d3c26405a096",
+    "Tests/CleanKitTests/NativeTrashLocationTests.swift": "4a8d12ccb5b69c4d04b8831dc5d104000cf9efcf54c81cf95299a14f475fc973",
+    "Tests/ThermoCLITests/VolumeTrashRestoreTests.swift": "f0a22e28ccf40b49fb34afd371c4e2a99544e52bb738ed4978eac951894f72cf",
+    "Tests/Fixtures/VolumeTrashProbe.swift": "b4fbc09ebb9c49dbb812a43eccc8f90326a5e35068c4a0b47e1a32509a2044bc"
+  },
+  "binarySHA256": "a960a7c390d888251b5dcd4dfca5969b21c7ed05791c791fe6ba4629e8c6938a",
+  "scenario": "owned writable 64 MiB APFS disk image; isolated state home; native volume Trash",
+  "entry": {
+    "bytes": 20,
+    "home": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-volume-restore-4g5zu2gz/home",
+    "destination": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-volume-restore-4g5zu2gz/mounted/.Trashes/501/owned-fixture.txt",
+    "original": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-volume-restore-4g5zu2gz/mounted/owned-fixture.txt",
+    "identity": "16777288:16",
+    "birthIdentity": "1792103216:404805863:0",
+    "nativeQuery": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-volume-restore-4g5zu2gz/mounted/.Trashes/501"
+  },
+  "sourceVolumeNativeTrashMode": "0o1311",
+  "sourceParentUID": 501,
+  "before": {
+    "review": {
+      "dryRun": true,
+      "id": "91e56191-73ec-4d31-97aa-d2a07f8270f4",
+      "items": [
+        {
+          "bytes": 20,
+          "destination": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-volume-restore-4g5zu2gz/mounted/.Trashes/501/owned-fixture.txt",
+          "original": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-volume-restore-4g5zu2gz/mounted/owned-fixture.txt",
+          "reason": "not in your Trash folder (another volume?); put it back in Finder",
+          "status": "skipped"
+        }
+      ]
+    },
+    "executionExitCode": 1
+  },
+  "afterPathNormalization": {
+    "dryRun": false,
+    "id": "91e56191-73ec-4d31-97aa-d2a07f8270f4",
+    "items": [
+      {
+        "bytes": 20,
+        "destination": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-volume-restore-4g5zu2gz/mounted/.Trashes/501/owned-fixture.txt",
+        "original": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-volume-restore-4g5zu2gz/mounted/owned-fixture.txt",
+        "reason": "restore directory is unavailable or changed",
+        "status": "failed"
+      }
+    ]
+  },
+  "afterSearchDescriptors": {
+    "dryRun": false,
+    "id": "91e56191-73ec-4d31-97aa-d2a07f8270f4",
+    "items": [
+      {
+        "bytes": 20,
+        "destination": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-volume-restore-4g5zu2gz/mounted/.Trashes/501/owned-fixture.txt",
+        "original": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-volume-restore-4g5zu2gz/mounted/owned-fixture.txt",
+        "status": "restored"
+      }
+    ]
+  },
+  "payloadSHA256": "0a5a7275cf83484bf4204e5f4e01e2e7f9ab29c1e612f7ada1125c77299e8c9d",
+  "exactImageDetach": {
+    "device": "/dev/disk34",
+    "exitCode": 0,
+    "stdout": "\"disk34\" ejected.\n",
+    "stderr": ""
+  },
+  "ownedImageAndWorkspaceRemoved": true,
+  "integrationAssertions": [
+    "real FileManager.trashItem selected .Trashes/currentUID on the image",
+    "CLI dry-run preserved both paths",
+    "new original file produced conflict and both byte payloads survived",
+    "after removing only the owned conflict fixture, CLI restore returned the original bytes",
+    "test cleanup checked exact image ownership and absence after detach"
+  ],
+  "regression": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 56,
+      "ThermoAppTests": 135,
+      "CleanKitTests": 455,
+      "AgentCoreTests": 34
+    },
+    "total": 794,
+    "failures": 0
+  },
+  "boundaries": [
+    "Only owned temporary images and files; no existing external disks or user files",
+    "No directory permission was changed on the native .Trashes ancestor; O_SEARCH uses existing search rights",
+    "Other filesystems, real external devices, permission failures and forced-unmount recovery remain unverified",
+    "No UI actions, helper lifecycle, SMC or pmset changes"
+  ]
+}

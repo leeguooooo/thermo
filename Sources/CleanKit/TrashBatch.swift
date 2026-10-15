@@ -129,11 +129,13 @@ public enum TrashBatches {
                                        appropriateFor: URL(fileURLWithPath: path), create: false).path
                                }) -> String? {
         let parent = (entry.destination as NSString).deletingLastPathComponent
-        if parent == home + "/.Trash" { return parent }
-        guard home == currentHome, entry.original.hasPrefix("/"),
+        guard entry.destination.hasPrefix("/"), !entry.destination.split(separator: "/").contains(where: { $0 == "." || $0 == ".." }) else { return nil }
+        let standardParent = URL(fileURLWithPath: parent).standardizedFileURL.path
+        if standardParent == URL(fileURLWithPath: home + "/.Trash").standardizedFileURL.path { return parent }
+        guard URL(fileURLWithPath: home).standardizedFileURL.path == URL(fileURLWithPath: currentHome).standardizedFileURL.path, entry.original.hasPrefix("/"),
               !entry.original.split(separator: "/").contains(where: { $0 == "." || $0 == ".." }),
               let native = try? nativeTrash((entry.original as NSString).deletingLastPathComponent),
-              native == parent else { return nil }
+              URL(fileURLWithPath: native).standardizedFileURL.path == standardParent else { return nil }
         return native
     }
 
@@ -141,8 +143,8 @@ public enum TrashBatches {
         let path = entry.destination
         // Immediate children only, with the directory's identity and resolved ancestors rechecked.
         guard let trash = trashDirectory(entry, home: home),
-              URL(fileURLWithPath: trash).resolvingSymlinksInPath().path == trash,
-              Guard.deletionLocation(path) == path else { return "batch target is outside the expected Trash" }
+              URL(fileURLWithPath: trash).resolvingSymlinksInPath().path == URL(fileURLWithPath: trash).standardizedFileURL.path,
+              Guard.deletionLocation(path) == URL(fileURLWithPath: trash).standardizedFileURL.appendingPathComponent((path as NSString).lastPathComponent).path else { return "batch target is outside the expected Trash" }
         guard FS.exists(path) else { return "item was restored or is missing" }
         guard FileIdentity.of(path) == entry.identity, let birth = entry.birthIdentity, birthIdentity(path) == birth else { return "Trash item was replaced" }
         var st = stat()
@@ -239,12 +241,12 @@ public enum TrashBatches {
             guard let resolved = realpath(path, nil) else { throw TrashBatches.error("cannot resolve restore directory") }
             let canonical = String(cString: resolved)
             free(resolved)
-            var fd = open("/", O_RDONLY | O_DIRECTORY | O_CLOEXEC)
+            var fd = open("/", O_SEARCH | O_DIRECTORY | O_CLOEXEC)
             guard fd >= 0 else { throw TrashBatches.error("cannot open restore directory") }
             var keep = false
             defer { if !keep { close(fd) } }
             for component in canonical.split(separator: "/") {
-                let next = openat(fd, String(component), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+                let next = openat(fd, String(component), O_SEARCH | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
                 guard next >= 0 else { throw TrashBatches.error("restore directory is unavailable or changed") }
                 close(fd); fd = next
             }
@@ -283,7 +285,7 @@ public enum TrashBatches {
         let parent = (original as NSString).deletingLastPathComponent
         var dir = stat(), item = stat()
         guard lstat(parent, &dir) == 0, (dir.st_mode & S_IFMT) == S_IFDIR,
-              URL(fileURLWithPath: parent).resolvingSymlinksInPath().path == parent else {
+              URL(fileURLWithPath: parent).resolvingSymlinksInPath().path == URL(fileURLWithPath: parent).standardizedFileURL.path else {
             return ("skipped", tr("its original folder is gone or moved"))
         }
         // The user's own folders, or an app folder (root:admin) the user may write to.
