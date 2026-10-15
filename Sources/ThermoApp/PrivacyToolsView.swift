@@ -77,61 +77,123 @@ struct PrivacyToolsView: View {
             case .restoreTimezone: return tr("macOS will request administrator approval to restore the timezone saved before Thermo's first change. Country, region and language are unchanged.")
             }
         }
+        var symbol: String {
+            switch self {
+            case .location: return "location.slash"
+            case .webRTC: return "video.slash"
+            case .cookies: return "envelope.badge"
+            case .restoreBrowser: return "arrow.uturn.backward"
+            case .environment: return "terminal"
+            case .dns: return "network"
+            case .lookup: return "mappin.and.ellipse"
+            case .timezone: return "clock.badge.checkmark"
+            case .china: return "clock"
+            case .restoreTimezone: return "clock.arrow.circlepath"
+            }
+        }
+        /// One line on the row; the full `detail` is shown before anything runs.
+        var summary: String {
+            switch self {
+            case .location: return tr("Sets the default location permission to blocked. Existing site grants may override it.")
+            case .webRTC: return tr("Limits non-proxied WebRTC traffic. Calls and meetings may stop working.")
+            case .cookies: return tr("Deletes only mail.com cookies and signs you out there.")
+            case .restoreBrowser: return tr("Restores the latest settings backup if the files still match Thermo's changes.")
+            case .environment: return tr("Removes named Claude and Anthropic variables from the user launchd environment.")
+            case .dns: return tr("Clears cached DNS answers. DNS servers and proxies are unchanged.")
+            case .lookup: return tr("Asks ipwho.is for this app's exit country and timezone. Changes nothing.")
+            case .timezone: return tr("Sets the system timezone to the detected one.")
+            case .china: return tr("Sets the system timezone to Asia/Shanghai.")
+            case .restoreTimezone: return tr("Restores the timezone saved before Thermo's first change.")
+            }
+        }
+        var tags: [(String, Bool)] {
+            switch self {
+            case .location, .webRTC: return [(tr("Quit browsers first"), false), (tr("Backed up"), false)]
+            case .cookies: return [(tr("Quit browsers first"), false), (tr("Signs you out"), true)]
+            case .restoreBrowser: return [(tr("Quit browsers first"), false)]
+            case .environment: return [(tr("Cannot be undone"), true)]
+            case .dns: return [(tr("Administrator approval"), false)]
+            case .lookup: return [(tr("Sends your public IP"), false)]
+            case .timezone, .china: return [(tr("Administrator approval"), false), (tr("Previous timezone saved"), false)]
+            case .restoreTimezone: return [(tr("Administrator approval"), false)]
+            }
+        }
+        var verb: String {
+            switch self {
+            case .restoreBrowser, .restoreTimezone: return tr("Restore…")
+            case .environment: return tr("Remove…")
+            case .dns: return tr("Flush…")
+            case .lookup: return tr("Look up…")
+            default: return tr("Apply…")
+            }
+        }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text(tr("Browser & system privacy")).font(.title2.bold())
-            Text(tr("Explicit controls for local settings. Review each action before applying it. No account restriction or anonymity guarantees.")).foregroundStyle(.secondary)
-            GroupBox {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Label(tr("Browser profiles"), systemImage: "globe").font(.headline)
-                        Spacer()
-                        Button(tr("Scan profiles")) { model.inspect() }
-                    }
-                    Text(tr("Chrome, Edge, Brave and Firefox standard profiles only. Browsers must be fully closed before changes; Thermo never closes them.")).font(.caption).foregroundStyle(.secondary)
-                    if !model.profiles.isEmpty {
-                        ForEach(model.profiles) { profile in Text(profile.name).font(.caption).textSelection(.enabled) }
-                    }
-                    HStack { button(.location); button(.webRTC); button(.cookies) }
-                    button(.restoreBrowser)
-                    Button(tr("Show private backups")) {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "hand.raised").foregroundStyle(.white.opacity(0.55)).frame(width: 18).accessibilityHidden(true)
+                Text(tr("Explicit controls for local settings. Review each action before applying it. No account restriction or anonymity guarantees."))
+                    .font(.system(size: 12)).foregroundStyle(.white.opacity(0.65)).fixedSize(horizontal: false, vertical: true)
+            }.padding(.horizontal, 4)
+            if model.busy || model.result != nil {
+                NoticeBanner(text: model.busy ? tr("Working…") : model.result ?? "", busy: model.busy,
+                             dismiss: model.busy ? nil : { model.result = nil })
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                SectionHeader(title: tr("Browser profiles")) {
+                    Button(tr("Scan profiles")) { model.inspect() }.buttonStyle(PillButtonStyle())
+                }
+                InspectorPanel {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "globe").font(.system(size: 13)).foregroundStyle(.white.opacity(0.55))
+                            .frame(width: 18).padding(.top, 1).accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(tr("Chrome, Edge, Brave and Firefox standard profiles only. Browsers must be fully closed before changes; Thermo never closes them."))
+                                .font(.system(size: 12)).foregroundStyle(.white.opacity(0.65)).fixedSize(horizontal: false, vertical: true)
+                            if !model.profiles.isEmpty {
+                                FlowChips(items: model.profiles.map(\.name))
+                            }
+                        }
+                    }.padding(.horizontal, 14).padding(.vertical, 11)
+                    InspectorDivider()
+                    row(.location); InspectorDivider()
+                    row(.webRTC); InspectorDivider()
+                    row(.cookies); InspectorDivider()
+                    row(.restoreBrowser); InspectorDivider()
+                    linkRow("lock.doc", tr("Show private backups")) {
                         let url = model.service.home.appendingPathComponent("Library/Application Support/Thermo/PrivacyBackups")
                         NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: url.deletingLastPathComponent().path)
-                    }.font(.caption)
-                }.padding(8)
-            }
-            GroupBox {
-                VStack(alignment: .leading, spacing: 12) {
-                    Label(tr("System settings"), systemImage: "gearshape").font(.headline)
-                    HStack {
-                        button(.environment); button(.dns)
-                        Button(tr("Open Location Services")) {
-                            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices") { NSWorkspace.shared.open(url) }
-                        }
                     }
-                    Text(tr("System Location Services remain under your control in macOS Settings. DNS proxy enforcement and forced extension installation are not provided.")).font(.caption).foregroundStyle(.secondary)
-                    Divider()
-                    Text(tr("System timezone")).font(.headline)
-                    button(.lookup)
+                }
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                SectionHeader(title: tr("System settings"))
+                InspectorPanel {
+                    row(.environment); InspectorDivider()
+                    row(.dns); InspectorDivider()
+                    linkRow("location", tr("Open Location Services")) {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices") { NSWorkspace.shared.open(url) }
+                    }
+                }
+                footnote(tr("System Location Services remain under your control in macOS Settings. DNS proxy enforcement and forced extension installation are not provided."))
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                SectionHeader(title: tr("System timezone"))
+                InspectorPanel {
+                    row(.lookup)
                     if let location = model.location {
-                        Text("\(location.country) · \(location.timezone)").textSelection(.enabled)
-                        button(.timezone)
+                        InspectorDivider()
+                        row(.timezone, detected: "\(location.country) · \(location.timezone)")
                     }
-                    HStack {
-                        button(.china); button(.restoreTimezone)
-                        Button(tr("Open Language & Region")) {
-                            if let url = URL(string: "x-apple.systempreferences:com.apple.Localization-Settings.extension") { NSWorkspace.shared.open(url) }
-                        }
+                    InspectorDivider()
+                    row(.china); InspectorDivider()
+                    row(.restoreTimezone); InspectorDivider()
+                    linkRow("globe.asia.australia", tr("Open Language & Region")) {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.Localization-Settings.extension") { NSWorkspace.shared.open(url) }
                     }
-                    Text(tr("Timezone changes do not change country, language or browser locale. Automatic timezone can override manual changes.")).font(.caption).foregroundStyle(.secondary)
-                }.padding(8)
-            }
-            if model.busy { ProgressView().controlSize(.small) }
-            if let result = model.result {
-                Text(result).font(.callout).textSelection(.enabled).padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading).background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                }
+                footnote(tr("Timezone changes do not change country, language or browser locale. Automatic timezone can override manual changes."))
             }
         }
         .disabled(model.busy)
@@ -139,7 +201,49 @@ struct PrivacyToolsView: View {
             Alert(title: Text(action.title), message: Text(action.detail), primaryButton: .destructive(Text(tr("Continue"))) { execute(action) }, secondaryButton: .cancel())
         }
     }
-    private func button(_ action: Action) -> some View { Button(action.title) { pending = action } }
+
+    private func row(_ action: Action, detected: String? = nil) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: action.symbol).font(.system(size: 13)).foregroundStyle(.white.opacity(0.55))
+                .frame(width: 18).frame(maxHeight: .infinity, alignment: .top).padding(.top, 2).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(action.title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+                if let detected {
+                    Text(detected).font(.system(size: 12, weight: .medium).monospaced()).foregroundStyle(.white.opacity(0.85))
+                        .textSelection(.enabled)
+                }
+                Text(action.summary).font(.system(size: 12)).foregroundStyle(.white.opacity(0.62))
+                    .fixedSize(horizontal: false, vertical: true)
+                FlowChips(items: action.tags.map(\.0), warnings: Set(action.tags.filter(\.1).map(\.0)))
+            }
+            Spacer(minLength: 8)
+            Button(action.verb) { pending = action }
+                .buttonStyle(PillButtonStyle())
+                .fixedSize()
+                .accessibilityLabel(action.title)
+                .accessibilityHint(action.summary)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 11)
+    }
+
+    private func linkRow(_ symbol: String, _ title: String, _ open: @escaping () -> Void) -> some View {
+        Button(action: open) {
+            HStack(spacing: 10) {
+                Image(systemName: symbol).font(.system(size: 13)).foregroundStyle(.white.opacity(0.55)).frame(width: 18)
+                    .accessibilityHidden(true)
+                Text(title).font(.system(size: 13)).foregroundStyle(.white.opacity(0.85))
+                Spacer()
+                Image(systemName: "arrow.up.forward").font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.4))
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 14).padding(.vertical, 10).contentShape(Rectangle())
+        }.buttonStyle(.plain)
+    }
+
+    private func footnote(_ text: String) -> some View {
+        Text(text).font(.system(size: 11)).foregroundStyle(.white.opacity(0.45)).padding(.horizontal, 4)
+            .fixedSize(horizontal: false, vertical: true)
+    }
     private func execute(_ action: Action) {
         switch action {
         case .location: model.perform { try $0.applyBrowser(.location) }
@@ -154,5 +258,50 @@ struct PrivacyToolsView: View {
         case .china: model.perform { try $0.setTimezone("Asia/Shanghai") }
         case .restoreTimezone: model.perform { try $0.restoreTimezone() }
         }
+    }
+}
+
+/// Capsules that wrap onto new lines when the row is narrow.
+struct FlowChips: View {
+    let items: [String]
+    var warnings: Set<String> = []
+    var body: some View {
+        FlowLayout(spacing: 5) {
+            ForEach(items, id: \.self) { RequirementTag(text: $0, warning: warnings.contains($0)) }
+        }
+    }
+}
+
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = arrange(proposal.width ?? .infinity, subviews)
+        return CGSize(width: rows.map(\.width).max() ?? 0, height: rows.reduce(0) { $0 + $1.height } + spacing * CGFloat(max(0, rows.count - 1)))
+    }
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in arrange(bounds.width, subviews) {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+            y += row.height + spacing
+        }
+    }
+    private func arrange(_ width: CGFloat, _ subviews: Subviews) -> [(indices: [Int], width: CGFloat, height: CGFloat)] {
+        var rows: [(indices: [Int], width: CGFloat, height: CGFloat)] = []
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            if let last = rows.last, last.width + spacing + size.width <= width {
+                rows[rows.count - 1].indices.append(index)
+                rows[rows.count - 1].width += spacing + size.width
+                rows[rows.count - 1].height = max(last.height, size.height)
+            } else {
+                rows.append(([index], size.width, size.height))
+            }
+        }
+        return rows
     }
 }

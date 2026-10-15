@@ -124,7 +124,11 @@ enum MainWindow {
                     $0 + 1 < arguments.count ? Double(arguments[$0 + 1]) : nil
                 }
                 let width = requested.flatMap { $0.isFinite && $0 >= minimumContentSize.width && $0 <= 2200 ? $0 : nil } ?? 1100
-                w.setFrame(NSRect(x: -6000, y: -6000, width: width, height: 740), display: true)
+                let requestedHeight = arguments.firstIndex(of: "--snapshot-height").flatMap {
+                    $0 + 1 < arguments.count ? Double(arguments[$0 + 1]) : nil
+                }
+                let height = requestedHeight.flatMap { $0.isFinite && $0 >= minimumContentSize.height && $0 <= 1600 ? $0 : nil } ?? 740
+                w.setFrame(NSRect(x: -6000, y: -6000, width: width, height: height), display: true)
             } else {
                 if !w.setFrameUsingName("ThermoMain") || !usableFrame(w.frame, screens: NSScreen.screens.map(\.visibleFrame)) {
                     w.setContentSize(NSSize(width: 1100, height: 740))
