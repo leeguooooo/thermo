@@ -143,7 +143,7 @@ final class StartupItemsTests: XCTestCase {
         return path
     }
 
-    func testScopesReadTheirOwnDomainsAndSystemItemsStayBlocked() throws {
+    func testScopesReadTheirOwnDomainsAndMarkSystemAuthorization() throws {
         let locations = try fixtureLocations()
         try copyFixture(to: locations[1])
         try copyFixture(to: locations[2])
@@ -155,7 +155,8 @@ final class StartupItemsTests: XCTestCase {
         let shared = try XCTUnwrap(report.items.first { $0.effectiveScope == .sharedAgent })
         let daemon = try XCTUnwrap(report.items.first { $0.effectiveScope == .systemDaemon })
         XCTAssertEqual(shared.enabled, true); XCTAssertNil(shared.blocked)
-        XCTAssertEqual(daemon.enabled, false); XCTAssertNotNil(daemon.blocked)
+        XCTAssertEqual(daemon.enabled, false); XCTAssertNil(daemon.blocked)
+        XCTAssertTrue(daemon.requiresAdministrator)
         XCTAssertTrue(report.issues.isEmpty)
     }
 

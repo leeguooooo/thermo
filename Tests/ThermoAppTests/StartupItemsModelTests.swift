@@ -3,6 +3,30 @@
 import XCTest
 
 final class StartupItemsModelTests: XCTestCase {
+    @MainActor
+    func testConfirmedChangeSurvivesPageRetirementAndPreventsAnotherChange() async throws {
+        let began = expectation(description: "change waiting for approval")
+        let release = DispatchSemaphore(value: 0)
+        let calls = Calls()
+        let model = StartupItemsModel(read: { StartupReport(items: [], issues: ["readback"]) }, change: { _, _ in
+            _ = calls.next(); began.fulfill()
+            XCTAssertEqual(release.wait(timeout: .now() + 5), .success)
+        })
+        let item = StartupItem(path: "/fixture", label: "fixture", enabled: true)
+        model.apply(item)
+        await fulfillment(of: [began], timeout: 5)
+        model.retire()
+        XCTAssertTrue(model.working)
+        model.apply(item)
+        model.refresh()
+        XCTAssertEqual(calls.value, 1)
+        release.signal()
+        for _ in 0..<100 where model.working { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertFalse(model.working)
+        XCTAssertEqual(model.report?.issues, ["readback"])
+        XCTAssertNotNil(model.message)
+    }
+
     private final class Calls: @unchecked Sendable {
         let lock = NSLock()
         private var count = 0

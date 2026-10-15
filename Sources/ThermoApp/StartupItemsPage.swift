@@ -10,12 +10,17 @@ final class StartupItemsModel: ObservableObject {
     @Published private(set) var working = false
     var busy: Bool { loading || working }
     @Published private(set) var message: String?
+    @Published var exitRequested = false
     private var generation = UUID()
     private var refreshInFlight = false
     private var restartAfterCurrent = false
     private let read: @Sendable () -> StartupReport
+    private let change: @Sendable (Bool, StartupItem) throws -> Void
 
-    init(read: @escaping @Sendable () -> StartupReport = { StartupItems.scan() }) { self.read = read }
+    init(read: @escaping @Sendable () -> StartupReport = { StartupItems.scan() },
+         change: @escaping @Sendable (Bool, StartupItem) throws -> Void = { enabled, item in _ = try StartupItems.setEnabled(enabled, item: item) }) {
+        self.read = read; self.change = change
+    }
 
     func refresh() {
         guard !working else { return }
@@ -46,13 +51,15 @@ final class StartupItemsModel: ObservableObject {
     func apply(_ item: StartupItem) {
         guard !busy, let enabled = item.enabled else { return }
         working = true
+        exitRequested = false
+        let change = self.change, read = self.read
         Task.detached(priority: .utility) {
             let message: String
             do {
-                _ = try StartupItems.setEnabled(!enabled, item: item)
+                try change(!enabled, item)
                 message = "Startup state verified"
             } catch { message = error.localizedDescription }
-            let report = StartupItems.scan()
+            let report = read()
             await MainActor.run {
                 self.message = tr(message)
                 self.report = report
@@ -80,6 +87,7 @@ struct StartupItemsPage: View {
             Text(tr("Changes background startup eligibility; does not stop or start a running program."))
                 .font(.callout).foregroundStyle(.secondary)
             if let message = model.message { Text(message).font(.callout).textSelection(.enabled) }
+            if model.exitRequested { Text(tr("Wait for the startup change to finish before quitting.")).font(.callout).foregroundStyle(.orange) }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
                     if let issues = model.report?.issues, !issues.isEmpty {
@@ -93,6 +101,7 @@ struct StartupItemsPage: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(item.label).font(.headline).textSelection(.enabled)
                                 Text(item.effectiveScope.title).font(.caption).foregroundStyle(.secondary)
+                                if item.requiresAdministrator { Text(tr("Administrator approval required")).font(.caption).foregroundStyle(.secondary) }
                                 Text(item.program ?? item.path).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                                 Text(item.enabled.map { $0 ? tr("Enabled") : tr("Disabled") } ?? tr("Unknown"))
                                     .font(.caption).foregroundStyle(.secondary)
@@ -124,7 +133,7 @@ struct StartupItemsPage: View {
             ConfirmSheet(title: item.enabled == true ? tr("Disable startup item?") : tr("Enable startup item?"),
                 summary: tr("Changes background startup eligibility; does not stop or start a running program."),
                 destructive: false, heading: tr("Startup items"), lines: [item.label, item.path],
-                footnote: tr("Undo this change here or with thermo apps startup. The change is recorded in History."),
+                footnote: item.requiresAdministrator ? tr("macOS will request administrator approval. Changes system startup eligibility; running services keep running. You can reverse the change here; History records the result.") : tr("Undo this change here or with thermo apps startup. The change is recorded in History."),
                 confirmTitle: item.enabled == true ? tr("Disable") : tr("Enable"),
                 confirm: { reviewed = nil; model.apply(item) }, cancel: { reviewed = nil })
         }

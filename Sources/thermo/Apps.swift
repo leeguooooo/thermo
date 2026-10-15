@@ -139,10 +139,11 @@ struct AppsCommand {
         guard matches.count == 1, let item = matches.first else { throw CLIError(tr("Startup selector is missing or ambiguous; use the full plist path")) }
         guard item.blocked == nil, item.enabled != nil else { throw CLIError(tr(item.blocked ?? "Could not read startup state; refresh before changing it")) }
         if args.has("dry-run") {
-            if args.has("json") { print(Export.json(["action": action, "label": item.label, "path": item.path])) }
-            else { out([action + " " + item.label, item.path, tr("Changes background startup eligibility; does not stop or start a running program.")]) }
+            if args.has("json") { print(Export.json(["action": action, "label": item.label, "path": item.path, "authorization": item.requiresAdministrator ? "administrator" : "user"])) }
+            else { out([action + " " + item.label, item.path, tr("Changes background startup eligibility; does not stop or start a running program.")] + (item.requiresAdministrator ? [tr("Administrator approval required")] : [])) }
             return
         }
+        if item.requiresAdministrator && !args.has("json") { print(tr("Administrator approval required")) }
         if !args.has("yes") {
             guard isatty(STDIN_FILENO) != 0 else { throw CLIError("not a terminal; add --yes to confirm") }
             print(action + " " + item.label + "? [y/N] ", terminator: ""); fflush(stdout)

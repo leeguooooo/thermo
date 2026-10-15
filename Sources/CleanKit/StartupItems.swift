@@ -26,6 +26,7 @@ public struct StartupItem: Codable, Sendable, Identifiable {
     public var fingerprint: String?
     public var scope: StartupScope? = nil
     public var effectiveScope: StartupScope { scope ?? .userAgent }
+    public var requiresAdministrator: Bool { effectiveScope == .systemDaemon }
 }
 
 public struct StartupReport: Codable, Sendable {
@@ -105,7 +106,7 @@ public enum StartupItems {
         let program = (plist["Program"] as? String) ?? (plist["ProgramArguments"] as? [String])?.first
         let fingerprint = "\(st.st_dev):\(st.st_ino):" + SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         let protected = label.hasPrefix("com.apple.") || label.hasPrefix("dev.thermo.")
-        let blocked = location.scope == .systemDaemon ? "System services require administrator management; open Login Items or the app's settings" : protected ? "Manage this service in System Settings" : nil
+        let blocked = protected ? "Manage this service in System Settings" : nil
         return (StartupItem(path: path, label: label, program: program, enabled: nil,
                             blocked: blocked, fingerprint: fingerprint, scope: location.scope),
                 !(plist["Disabled"] as? Bool ?? false))
@@ -152,11 +153,11 @@ public enum StartupItems {
     }
 
     /// The reviewed row is the plan; changing either the file or its effective state invalidates it.
-    public static func setEnabled(_ enabled: Bool, item: StartupItem, home: String = NSHomeDirectory(), includeSystem: Bool = true, runner: Runner? = nil) throws -> StartupItem {
-        try setEnabled(enabled, item: item, home: home, locations: locations(home: home, includeSystem: includeSystem), runner: runner)
+    public static func setEnabled(_ enabled: Bool, item: StartupItem, home: String = NSHomeDirectory(), includeSystem: Bool = true, runner: Runner? = nil, administrator: AdministratorRunner? = nil) throws -> StartupItem {
+        try setEnabled(enabled, item: item, home: home, locations: locations(home: home, includeSystem: includeSystem), runner: runner, administrator: administrator)
     }
 
-    static func setEnabled(_ enabled: Bool, item: StartupItem, home: String, locations: [Location], runner: Runner?) throws -> StartupItem {
+    static func setEnabled(_ enabled: Bool, item: StartupItem, home: String, locations: [Location], runner: Runner?, administrator: AdministratorRunner? = nil) throws -> StartupItem {
         let run = runner ?? command
         let action = enabled ? "enable" : "disable"
         do {
@@ -164,12 +165,20 @@ public enum StartupItems {
             guard let current = report.items.first(where: { $0.path == item.path }), current.blocked == nil,
                   item.blocked == nil, item.fingerprint != nil, current.fingerprint == item.fingerprint,
                   current.label == item.label, current.effectiveScope == item.effectiveScope,
-                  current.effectiveScope != .systemDaemon, let state = current.enabled, state == item.enabled else {
+                  let state = current.enabled, state == item.enabled else {
                 throw Failure(message: "Startup item changed or could not be verified; refresh and review it again")
             }
             if state == enabled { return current }
-            let result = run([action, "gui/\(getuid())/" + current.label])
-            guard result.status == 0, !result.timedOut, !result.cancelled, !result.truncated else {
+            let result: CommandRunner.Result
+            if current.requiresAdministrator {
+                guard let location = locations.first(where: { $0.scope == .systemDaemon && $0.path == (current.path as NSString).deletingLastPathComponent }),
+                      let (_, defaultEnabled) = read(current.path, location: location) else {
+                    throw Failure(message: "Startup item changed or could not be verified; refresh and review it again")
+                }
+                result = (administrator ?? authorizeStartup)(try administratorScript(enabled, item: current, defaultEnabled: defaultEnabled, root: location.path))
+            } else { result = run([action, "gui/\(getuid())/" + current.label]) }
+            guard result.status == 0, !result.timedOut, !result.cancelled, !result.truncated,
+                  !current.requiresAdministrator || result.output.trimmingCharacters(in: .whitespacesAndNewlines) == administratorReceipt else {
                 throw Failure(message: "Startup change could not be confirmed; refresh to check its current state")
             }
             let after = scan(home: home, locations: locations, runner: run)
