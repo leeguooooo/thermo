@@ -462,9 +462,10 @@ struct ClaudeCleanupPage: View {
     var recovery: some View {
         VStack(alignment: .leading, spacing: 6) {
             SectionHeader(title: tr("Recovery records")) {
-                Button(tr("Open recovery folder")) { revealRecovery(nil) }
-                    .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.white.opacity(0.6))
-                    .opacity(model.batches.isEmpty ? 0 : 1)
+                if !model.batches.isEmpty {
+                    Button(tr("Open recovery folder")) { revealRecovery(nil) }
+                        .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.white.opacity(0.6))
+                }
             }
             InspectorPanel {
                 if model.batches.isEmpty {
