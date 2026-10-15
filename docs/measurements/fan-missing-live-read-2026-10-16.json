@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-15T20:27:48.110273+00:00",
+  "scenario": "read-only native fan sample after missing-reading changes",
+  "baselineCommit": "b2271c1",
+  "command": ".build/out/Products/Debug/thermo fans --json",
+  "exitCode": 0,
+  "binarySHA256": "e773a9e3c495e7d2bec0e9ebc1558a9d09b3c76fc0ebb00ac39c8c3d49a16d6c",
+  "sourceSHA256": {
+    "Sources/ThermoKit/Models.swift": "e909c917cdc5e734a9a3fbaf26f62d4ea0c4f7ae823e16840d4c1d3634b5b310",
+    "Sources/ThermoKit/Sampler.swift": "75d1622ba42769cc63641a9294f54f757b91155001003eb701711e1c1d198785",
+    "Sources/ThermoKit/FanSampler.swift": "aa05fe324079ee5cca8922fb624bef7220da24568de409369edbc7009e625fae",
+    "Sources/ThermoKit/FanControl.swift": "3ae549ad5d5b879795879705ffeecd7b0b2f4c54765a0feb11bc4d48b6d2603a"
+  },
+  "fans": [
+    {
+      "id": 0,
+      "manual": true,
+      "max": 6800,
+      "min": 2317,
+      "name": "Fan",
+      "rpm": 6601.0234375,
+      "target": 6617
+    }
+  ],
+  "boundaries": [
+    "Only SMC reads; no helper install, policy change, or SMC write",
+    "Normal live sample; missing-read and invalid-limit faults were injected only in tests",
+    "Does not verify physical control recovery or visible UI"
+  ]
+}

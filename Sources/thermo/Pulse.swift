@@ -33,7 +33,7 @@ struct PulseCommand {
         let batteryPercent: Double?
 
         struct Fan: Encodable {
-            let name: String; let rpm: Double; let min: Double; let max: Double; let manual: Bool?
+            let name: String; let rpm: Double?; let min: Double?; let max: Double?; let manual: Bool?
             let controlMode: String
             init(_ reading: FanReading) {
                 name = reading.name; rpm = reading.rpm; min = reading.min; max = reading.max
@@ -114,7 +114,7 @@ struct PulseCommand {
             if let w = s.systemPower { sensors.append(String(format: "%.1f W", w)) }
             lines.append("  " + sensors.joined(separator: style.dim(" · ")))
             for f in s.fans {
-                lines.append("  " + f.name + "  \(Int(f.rpm)) rpm" + style.dim("  [\(Int(f.min))–\(Int(f.max))] " + (tr(f.controlMode))))
+                lines.append("  " + f.name + "  \(Renderer.fanNumber(f.rpm)) rpm" + style.dim("  [\(Renderer.fanNumber(f.min))–\(Renderer.fanNumber(f.max))] " + (tr(f.controlMode))))
             }
         }
         out(lines)

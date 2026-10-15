@@ -384,7 +384,10 @@ final class HardwareTests: XCTestCase {
         let s = sampler.sample()
         XCTAssertFalse(s.temperatures.isEmpty)
         for r in s.temperatures { XCTAssertTrue(r.value > 0 && r.value < 130, "\(r.key)=\(r.value)") }
-        for f in s.fans { XCTAssertGreaterThanOrEqual(f.max, f.min) }
+        for f in s.fans {
+            let range = try XCTUnwrap(f.validRange, "live fan range unavailable")
+            XCTAssertGreaterThanOrEqual(range.max, range.min)
+        }
         // Writing must be refused without root. Write the current value back so the test
         // is a no-op even if it unexpectedly succeeds; never run it as root.
         guard getuid() != 0, let current = try? sampler.smc.read("F0Md") else { return }

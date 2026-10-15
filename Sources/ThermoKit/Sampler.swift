@@ -78,7 +78,7 @@ public final class Sampler {
     private var hidBuffer: [smc_hid_reading]
 
     /// Fan min/max are near-static; refresh them occasionally instead of every sample.
-    private var fanLimits: [Int: (min: Double, max: Double)] = [:]
+    private var fanLimits: [Int: (min: Double?, max: Double?)] = [:]
     private var fanLimitsRead = Date.distantPast
     public var fanLimitRefresh: TimeInterval = 30
 
@@ -152,20 +152,12 @@ public final class Sampler {
         guard !discovery.fans.isEmpty else { return [] }
         if Date().timeIntervalSince(fanLimitsRead) > fanLimitRefresh {
             for f in discovery.fans {
-                fanLimits[f.index] = ((try? smc.double(f.minKey)) ?? 0, (try? smc.double(f.maxKey)) ?? 0)
+                fanLimits[f.index] = (try? smc.double(f.minKey), try? smc.double(f.maxKey))
             }
             fanLimitsRead = Date()
         }
-        let forceBits = discovery.fanForceKey ? (try? smc.double("FS! ")) : nil
-        return discovery.fans.compactMap { f -> FanReading? in
-            guard let rpm = try? smc.double(f.actualKey) else { return nil }
-            let mode = f.hasModeKey ? (try? smc.double(f.modeKey)) : nil
-            // F<i>Md: 1 = forced/manual. Apple Silicon reports 3 for system control and 0 when idle.
-            let manual = FanModeReader.manual(mode: mode, hasModeKey: f.hasModeKey,
-                                              forceBits: forceBits, hasForceKey: discovery.fanForceKey, fan: f.index)
-            let lim = fanLimits[f.index] ?? (0, 0)
-            return FanReading(id: f.index, name: f.name, rpm: Swift.max(0, rpm), min: lim.min, max: lim.max,
-                              target: manual == true ? try? smc.double(f.targetKey) : nil, manual: manual)
+        return FanSampler.read(discovery.fans, hasForceKey: discovery.fanForceKey, limits: fanLimits) {
+            try smc.double($0)
         }
     }
 

@@ -70,4 +70,17 @@ final class HelperStatusTests: XCTestCase {
         XCTAssertEqual(json?["controlMode"] as? String, "unknown")
         XCTAssertNil(json?["manual"] as? Bool)
     }
+
+    func testMissingSpeedAndRangeAreRetainedWithoutZeroOrFanlessClaims() throws {
+        let fan = FanReading(id: 0, name: "Fixture", rpm: nil, min: nil, max: nil, target: nil, manual: nil)
+        let snapshot = Snapshot(temperatures: [], fans: [fan], power: [], voltages: [], currents: [], battery: nil)
+        let text = Renderer(style: Style(enabled: false), showAll: false).fans(snapshot).joined(separator: "\n")
+        XCTAssertTrue(text.contains("Fixture")); XCTAssertTrue(text.contains("unknown rpm"))
+        XCTAssertFalse(text.contains("no fans")); XCTAssertFalse(text.contains("0 rpm"))
+        XCTAssertTrue(Export.csv(snapshot, all: true).contains("fan,F0Ac,Fixture,Fan,\n") || Export.csv(snapshot, all: true).hasSuffix("fan,F0Ac,Fixture,Fan,"))
+        XCTAssertTrue(Export.fanStatusCSV([fan], policies: [:], helperNote: nil).contains("0,Fixture,,,,,unknown"))
+        let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(snapshot)) as? [String: Any]
+        let fans = try XCTUnwrap(object?["fans"] as? [[String: Any]])
+        XCTAssertEqual(fans.count, 1); XCTAssertTrue(fans[0]["rpm"] is NSNull)
+    }
 }

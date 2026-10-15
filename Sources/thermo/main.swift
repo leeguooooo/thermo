@@ -357,8 +357,9 @@ struct App {
 
     func warnClamp(_ rpm: Double, sm: Sampler) {
         guard rpm.isFinite, rpm > 0 else { return }
-        for f in sm.sample().fans where rpm < f.min || rpm > f.max {
-            FileHandle.standardError.write("thermo: note: \(f.name) is limited to \(Int(f.min))–\(Int(f.max)) rpm; value clamped\n".data(using: .utf8)!)
+        for f in sm.sample().fans {
+            guard let range = f.validRange, rpm < range.min || rpm > range.max else { continue }
+            FileHandle.standardError.write("thermo: note: \(f.name) is limited to \(Renderer.fanNumber(range.min))–\(Renderer.fanNumber(range.max)) rpm; value clamped\n".data(using: .utf8)!)
         }
     }
 

@@ -28,7 +28,7 @@ struct HistoryPoint: Identifiable {
     let time: Date
     let cpu: Double?
     let gpu: Double?
-    let fans: [Double]
+    let fans: [Double?]
     let power: Double?
     /// 1-minute load average per core at this tick; 1 means every core has work.
     var load: Double? = nil
@@ -245,7 +245,7 @@ final class Monitor: ObservableObject {
         content.title = tr("Mac is running hot")
         let fahrenheit = d.bool(forKey: Settings.fahrenheit)
         content.body = tr(fahrenheit ? "Hottest sensor at %1$@ °F" : "Hottest sensor at %1$@ °C", String(format: "%.0f", fahrenheit ? hot * 9 / 5 + 32 : hot))
-            + (s.fans.first.map { tr(", fans at %1$@ rpm", String(format: "%.0f", $0.rpm)) } ?? "")
+            + (s.fans.first.flatMap(\.rpm).map { tr(", fans at %1$@ rpm", String(format: "%.0f", $0)) } ?? "")
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "thermo.hot", content: content, trigger: nil))
     }
 

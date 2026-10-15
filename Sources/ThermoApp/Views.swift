@@ -158,14 +158,14 @@ struct QuickFanSwitch: View {
 
     /// These buttons select desired policies; register observations are separate.
     var current: FanPolicy { monitor.pendingPolicies[fan.id] ?? monitor.policies[fan.id] ?? .auto }
-    var isMax: Bool { if case .fixed(let r) = current { return r.isInfinite || r >= fan.max } else { return false } }
+    var isMax: Bool { if case .fixed(let r) = current, let max = fan.max { return r.isInfinite || r >= max } else { return false } }
     var isCustom: Bool { current != .auto && !isMax }
 
     var body: some View {
         HStack(spacing: 4) {
             Text(tr("Requested policy")).font(.system(size: 10)).foregroundStyle(.secondary)
             option(tr("Auto"), on: monitor.policiesAvailable && current == .auto) { monitor.setPolicy(.auto, fan: fan.id) }
-            option(tr("Max"), on: monitor.policiesAvailable && isMax) { monitor.setPolicy(.fixed(rpm: .infinity), fan: fan.id) }
+            option(tr("Max"), on: monitor.policiesAvailable && isMax) { monitor.setPolicy(.fixed(rpm: .infinity), fan: fan.id) }.disabled(fan.validRange == nil)
             if monitor.policiesAvailable && isCustom {
                 option(tr("Custom"), on: true) { MainWindow.show(.fans) }
             }
@@ -227,11 +227,11 @@ struct FanRow: View {
         HStack {
             Image(systemName: "fan").foregroundStyle(fan.manual == true ? .orange : .secondary)
             Text(fan.name).frame(width: 52, alignment: .leading)
-            Bar(value: fan.load, color: fan.manual == nil ? .gray : fan.manual == true ? .orange : .blue)
-            Text(tr("%1$@ rpm", String(Int(fan.rpm)))).monospacedDigit().frame(width: 76, alignment: .trailing)
+            FanLoadIndicator(fan: fan)
+            Text(tr("%1$@ rpm", FanControlPresentation.rpm(fan.rpm))).monospacedDigit().frame(width: 76, alignment: .trailing)
         }
         .font(.callout)
-        .help(tr("%1$@–%2$@ rpm · %3$@", String(Int(fan.min)), String(Int(fan.max)), tr(fan.controlMode)))
+        .help(tr("%1$@–%2$@ rpm · %3$@", FanControlPresentation.rpm(fan.min), FanControlPresentation.rpm(fan.max), tr(fan.controlMode)))
     }
 }
 
@@ -517,10 +517,12 @@ struct FanControlCard: View {
                 case .auto:
                     EmptyView()
                 case .fixed:
+                    if let range = fan.validRange {
                     HStack {
-                        Slider(value: $rpm, in: fan.min...max(fan.max, fan.min + 1), step: 100).accessibilityLabel(tr("Fan speed"))
-                        Text(tr("%1$@ rpm", String(Int(rpm)))).font(.system(size: 12.5, weight: .semibold).monospacedDigit())
+                        Slider(value: $rpm, in: range.min...max(range.max, range.min + 1), step: 100).accessibilityLabel(tr("Fan speed"))
+                        Text(tr("%1$@ rpm", String(format: "%.0f", rpm))).font(.system(size: 12.5, weight: .semibold).monospacedDigit())
                             .foregroundStyle(.white.opacity(0.9)).frame(width: 76, alignment: .trailing)
+                    }
                     }
                 case .curve:
                     HStack {
@@ -540,6 +542,7 @@ struct FanControlCard: View {
                     }
                     if let curveError { Text(curveError).font(.system(size: 11)).foregroundStyle(.red) }
                 }
+                if mode != .auto && fan.validRange == nil { Text(tr("Fan range unavailable")).font(.system(size: 11)).foregroundStyle(.secondary) }
             }
             .padding(.horizontal, 14).padding(.vertical, 11)
             InspectorDivider(inset: 14)
@@ -553,7 +556,7 @@ struct FanControlCard: View {
                 }
                 .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).fixedSize(horizontal: false, vertical: true)
                 Spacer()
-                Button(applying ? tr("Sending…") : tr("Apply")) { applyCurrent() }.controlSize(.small).disabled(!enabled)
+                Button(applying ? tr("Sending…") : tr("Apply")) { applyCurrent() }.controlSize(.small).disabled(!enabled || (mode != .auto && fan.validRange == nil))
             }
             .padding(.horizontal, 14).padding(.vertical, 9)
         }
@@ -572,14 +575,14 @@ struct FanControlCard: View {
                     .frame(width: 18).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(fan.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
-                    Text(tr("%1$@–%2$@ rpm · %3$@", String(Int(fan.min)), String(Int(fan.max)), tr(fan.controlMode)))
+                    Text(tr("%1$@–%2$@ rpm · %3$@", FanControlPresentation.rpm(fan.min), FanControlPresentation.rpm(fan.max), tr(fan.controlMode)))
                         .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).monospacedDigit()
                 }
                 Spacer(minLength: 8)
-                Text(tr("%1$@ rpm", String(Int(fan.rpm))))
+                Text(tr("%1$@ rpm", FanControlPresentation.rpm(fan.rpm)))
                     .font(.system(size: 17, weight: .semibold, design: .rounded).monospacedDigit()).foregroundStyle(.white)
             }
-            Bar(value: fan.load, color: fan.manual == nil ? .gray : fan.manual == true ? .orange : .blue)
+            FanLoadIndicator(fan: fan)
                 .padding(.leading, 28).accessibilityHidden(true)
         }
         .padding(.horizontal, 14).padding(.vertical, 11)
@@ -596,10 +599,10 @@ struct FanControlCard: View {
 
     func load() {
         curveError = nil
-        rpm = min(fan.max, max(fan.min, fan.target ?? fan.rpm))
+        rpm = fan.validRange.map { min($0.max, max($0.min, fan.target ?? fan.rpm ?? $0.min)) } ?? 0
         switch policy {
         case .auto: mode = .auto
-        case .fixed(let r): mode = .fixed; rpm = r.isInfinite ? fan.max : min(fan.max, max(fan.min, r))
+        case .fixed(let r): mode = .fixed; rpm = fan.validRange.map { r.isInfinite ? $0.max : min($0.max, max($0.min, r)) } ?? 0
         case .curve(let c):
             mode = .curve
             sensor = c.sensor
@@ -629,16 +632,25 @@ struct FanChart: View {
     let history: [HistoryPoint]
     var body: some View {
         Chart {
-            ForEach(history) { p in
-                ForEach(Array(p.fans.enumerated()), id: \.offset) { i, rpm in
-                    LineMark(x: .value("Time", p.time), y: .value("RPM", rpm), series: .value("Fan", "Fan \(i + 1)"))
-                        .foregroundStyle(by: .value("Fan", "Fan \(i + 1)"))
-                }
+            ForEach(FanChartSample.samples(history)) { p in
+                LineMark(x: .value("Time", p.time), y: .value("RPM", p.rpm), series: .value("Segment", "\(p.fan):\(p.segment)"))
+                    .foregroundStyle(by: .value("Fan", "Fan \(p.fan + 1)"))
             }
         }
         .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisGridLine(); AxisValueLabel(format: .dateTime.hour().minute()) } }
         .chartLegend(position: .top, alignment: .trailing)
         .frame(height: 90)
+    }
+}
+
+struct FanLoadIndicator: View {
+    let fan: FanReading
+    var body: some View {
+        if let load = fan.load {
+            Bar(value: load, color: fan.manual == nil ? .gray : fan.manual == true ? .orange : .blue)
+        } else {
+            Color.secondary.opacity(0.1).frame(height: 3).accessibilityLabel(tr("unknown"))
+        }
     }
 }
 

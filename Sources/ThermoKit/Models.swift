@@ -44,15 +44,30 @@ public struct Reading: Codable, Hashable, Sendable, Identifiable {
 public struct FanReading: Codable, Hashable, Sendable, Identifiable {
     public let id: Int
     public let name: String
-    public let rpm: Double
-    public let min: Double
-    public let max: Double
+    public let rpm: Double?
+    public let min: Double?
+    public let max: Double?
     public let target: Double?
     /// nil when control mode could not be established; never inferred as automatic.
     public let manual: Bool?
     public var controlMode: String { manual.map { $0 ? "manual" : "auto" } ?? "unknown" }
 
     enum CodingKeys: String, CodingKey { case id, name, rpm, min, max, target, manual }
+    public init(id: Int, name: String, rpm: Double?, min: Double?, max: Double?, target: Double?, manual: Bool?) {
+        self.id = id; self.name = name; self.manual = manual
+        func valid(_ value: Double?) -> Double? { value.flatMap { $0.isFinite && $0 >= 0 ? $0 : nil } }
+        self.rpm = valid(rpm); self.target = valid(target)
+        let lo = valid(min), hi = valid(max).flatMap { $0 > 0 ? $0 : nil }
+        if let lo, let hi, lo > hi { self.min = nil; self.max = nil }
+        else { self.min = lo; self.max = hi }
+    }
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(id: try c.decode(Int.self, forKey: .id), name: try c.decode(String.self, forKey: .name),
+                  rpm: try c.decodeIfPresent(Double.self, forKey: .rpm), min: try c.decodeIfPresent(Double.self, forKey: .min),
+                  max: try c.decodeIfPresent(Double.self, forKey: .max), target: try c.decodeIfPresent(Double.self, forKey: .target),
+                  manual: try c.decodeIfPresent(Bool.self, forKey: .manual))
+    }
     public func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(id, forKey: .id); try c.encode(name, forKey: .name)
@@ -62,9 +77,13 @@ public struct FanReading: Codable, Hashable, Sendable, Identifiable {
     }
 
     /// 0...1 position between min and max.
-    public var load: Double {
-        guard max > min else { return 0 }
-        return Swift.min(1, Swift.max(0, (rpm - min) / (max - min)))
+    public var validRange: (min: Double, max: Double)? {
+        guard let min, let max, min <= max else { return nil }
+        return (min, max)
+    }
+    public var load: Double? {
+        guard let rpm, let range = validRange, range.max > range.min else { return nil }
+        return Swift.min(1, Swift.max(0, (rpm - range.min) / (range.max - range.min)))
     }
 }
 

@@ -434,7 +434,7 @@ struct MainSidebar: View {
                         trailing: monitor.snapshot.map { tempText($0.maximumKnownTemperature, fahrenheit: fahrenheit) })
                     row(.sensors, tr("Sensors"), "thermometer.medium", .red, trailing: nil)
                     row(.fans, tr("Fans"), "fan.fill", .blue,
-                        trailing: monitor.snapshot?.fans.map(\.rpm).max().map { tr("%1$@ rpm", String(Int($0))) })
+                        trailing: monitor.snapshot.flatMap { FanControlPresentation.speedSummary($0.fans) })
 
                     header(tr("Resources"))
                     row(.compute(false), tr("CPU usage"), "cpu", .cyan, trailing: nil)

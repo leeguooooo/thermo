@@ -3,6 +3,13 @@ import ThermoKit
 import ThermoL10n
 
 enum FanControlPresentation {
+    static func rpm(_ value: Double?) -> String { value.map { String(format: "%.0f", $0) } ?? tr("unknown") }
+    static func speedSummary(_ fans: [FanReading]) -> String? {
+        guard !fans.isEmpty else { return nil }
+        let speed = fans.compactMap(\.rpm).max()
+        let prefix = speed != nil && fans.contains { $0.rpm == nil } ? "≥ " : ""
+        return prefix + tr("%1$@ rpm", rpm(speed))
+    }
     static func observation(_ state: FanControlState?, fan: Int) -> String {
         guard let state, state.observationsSupported else { return tr("Hardware verification unavailable") }
         if state.verification(for: fan) == .unavailable { return tr("Hardware verification unavailable") }

@@ -400,7 +400,9 @@ public struct FanPolicyEngine: Sendable {
         // Fans asked to run flat out cool better than system control ever would, so the
         // failsafe leaves them alone; only policies that could under-cool are suspended.
         let fullCooling = fullCoolingActions(s)
-        if fullCooling.count == policies.count { resetSafety(); return policyActions(s) }
+        if fullCooling.count == policies.count && fullCooling.allSatisfy({ if case .manual = $0 { return true }; return false }) {
+            resetSafety(); return policyActions(s)
+        }
 
         if suspended {
             coolTicks = hot < limits.resumeBelow ? coolTicks + 1 : 0
@@ -427,22 +429,28 @@ public struct FanPolicyEngine: Sendable {
 
     private func fullCoolingActions(_ s: Snapshot) -> [Action] {
         s.fans.compactMap { fan in
-            guard let p = policies[fan.id], Self.isFullCooling(p, max: fan.max) else { return nil }
-            return .manual(fan: fan.id, rpm: fan.max)
+            guard let p = policies[fan.id] else { return nil }
+            guard let range = fan.validRange else { return .auto(fan: fan.id) }
+            guard Self.isFullCooling(p, max: range.max) else { return nil }
+            return .manual(fan: fan.id, rpm: range.max)
         }
     }
 
     private func policyActions(_ s: Snapshot) -> [Action] {
         var actions: [Action] = []
         for fan in s.fans {
+            guard let range = fan.validRange else {
+                if policies[fan.id] != nil { actions.append(.auto(fan: fan.id)) }
+                continue
+            }
             switch policies[fan.id] ?? .auto {
             case .auto:
                 continue
             case .fixed(let rpm):
-                actions.append(.manual(fan: fan.id, rpm: rpm.isInfinite ? fan.max : Swift.min(fan.max, Swift.max(fan.min, rpm))))
+                actions.append(.manual(fan: fan.id, rpm: rpm.isInfinite ? range.max : Swift.min(range.max, Swift.max(range.min, rpm))))
             case .curve(let c):
                 guard let t = s.temperature(for: c.sensor) else { actions.append(.auto(fan: fan.id)); continue }
-                actions.append(.manual(fan: fan.id, rpm: c.rpm(at: t, min: fan.min, max: fan.max)))
+                actions.append(.manual(fan: fan.id, rpm: c.rpm(at: t, min: range.min, max: range.max)))
             }
         }
         return actions

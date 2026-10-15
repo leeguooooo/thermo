@@ -153,15 +153,15 @@ struct OverviewPage: View {
     var fanLink: some View {
         let s = monitor.snapshot
         let fans = s?.fans ?? []
-        let top = fans.max { $0.rpm < $1.rpm }
+        let top = fans.filter { $0.rpm != nil }.max { ($0.rpm ?? 0) < ($1.rpm ?? 0) }
         let hot = (s?.hottest ?? 0) >= 85
-        let lagging = hot && fans.contains { $0.manual == false } && (fans.map(\.load).max() ?? 1) < 0.6
-        let state: LinkState = s == nil ? .unknown : fans.isEmpty || fans.contains { $0.manual == nil } ? .unknown : lagging ? .alert : .normal
+        let lagging = hot && fans.contains { $0.manual == false } && (fans.compactMap(\.load).max() ?? 1) < 0.6
+        let state: LinkState = s == nil ? .unknown : fans.isEmpty || fans.contains { $0.manual == nil || $0.rpm == nil || $0.validRange == nil } ? .unknown : lagging ? .alert : .normal
         let mode = fans.contains { $0.manual == nil } ? tr("unknown") : fans.contains { $0.manual == true } ? tr("manual") : tr("auto")
         let detail: String? = s == nil ? nil : fans.isEmpty ? tr("No fans")
             : lagging ? tr("Hot, but the fans are not at full speed")
-            : top.map { mode + " · " + tr("%1$@ of max", String(format: "%.0f%%", $0.load * 100)) }
-        return link(tr("Fans"), "fan", value: top.map { tr("%1$@ rpm", String(Int($0.rpm))) } ?? "—", caption: nil,
+            : top.map { mode + " · " + tr("%1$@ of max", $0.load.map { String(format: "%.0f%%", $0 * 100) } ?? tr("unknown")) }
+        return link(tr("Fans"), "fan", value: FanControlPresentation.speedSummary(fans) ?? "—", caption: nil,
                     detail: detail, state: state, accessory: fans.isEmpty ? nil : AnyView(fanControls(fans))) { open(.fans) }
     }
 
@@ -186,12 +186,12 @@ struct OverviewPage: View {
             let policies = fans.map { monitor.pendingPolicies[$0.id] ?? monitor.policies[$0.id] ?? .auto }
             let allAuto = policies.allSatisfy { $0 == .auto }
             let allMax = zip(fans, policies).allSatisfy { fan, policy in
-                if case .fixed(let rpm) = policy { return rpm.isInfinite || rpm >= fan.max } else { return false }
+                if case .fixed(let rpm) = policy { return fan.max.map { rpm.isInfinite || rpm >= $0 } ?? false } else { return false }
             }
             HStack(spacing: 4) {
                 Text(tr("Requested policy")).font(.system(size: 10)).foregroundStyle(.secondary)
                 fanOption(tr("Auto"), on: allAuto) { fans.forEach { monitor.setPolicy(.auto, fan: $0.id) } }
-                fanOption(tr("Max"), on: allMax) { fans.forEach { monitor.setPolicy(.fixed(rpm: .infinity), fan: $0.id) } }
+                fanOption(tr("Max"), on: allMax) { fans.forEach { monitor.setPolicy(.fixed(rpm: .infinity), fan: $0.id) } }.disabled(fans.contains { $0.validRange == nil })
             }
         } else {
             Button(tr("Fan settings…")) { open(.fans) }

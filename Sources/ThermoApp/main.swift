@@ -188,14 +188,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
             return f ? String(format: "%.0f°", c * 9 / 5 + 32) : String(format: "%.0f°", c)
         }
         func rpm(_ r: Double) -> String { r >= 1000 ? String(format: "%.1fk", r / 1000) : String(Int(r)) }
-        let fanRPM = s.fans.map(\.rpm).max()
+        let fanRPM = s.fans.compactMap(\.rpm).max()
 
         let text: String
         switch metric {
         case .cpu: text = t(s.cpu ?? s.maximumKnownTemperature)
         case .hottest: text = t(s.maximumKnownTemperature)
-        case .fan: text = fanRPM.map { "\(Int($0)) rpm" } ?? t(s.maximumKnownTemperature)
-        case .cpuAndFan: text = t(s.cpu ?? s.maximumKnownTemperature) + (fanRPM.map { " · " + rpm($0) } ?? "")
+        case .fan: text = FanControlPresentation.speedSummary(s.fans) ?? t(s.maximumKnownTemperature)
+        case .cpuAndFan: text = t(s.cpu ?? s.maximumKnownTemperature) + (fanRPM.map { " · " + (s.fans.contains { $0.rpm == nil } ? "≥ " : "") + rpm($0) } ?? (s.fans.isEmpty ? "" : " · " + tr("unknown")))
         case .power: text = s.systemPower.map { String(format: "%.0f W", $0) } ?? t(s.maximumKnownTemperature)
         case .iconOnly: text = ""
         }

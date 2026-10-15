@@ -4,6 +4,7 @@ import AgentDoctor
 
 /// Text renderers. Each returns lines so `watch` can compose and trim them to the screen.
 struct Renderer {
+    static func fanNumber(_ value: Double?) -> String { value.map { String(format: "%.0f", $0) } ?? "unknown" }
     var style: Style
     var showAll: Bool
 
@@ -79,9 +80,9 @@ struct Renderer {
         if s.fans.isEmpty { return lines + [style.dim("  no fans (fanless Mac)")] }
         for f in s.fans {
             let mode = f.manual == true ? style.yellow("manual") : f.manual == false ? style.green("auto") : style.dim("unknown")
-            let range = style.dim("[\(Int(f.min))–\(Int(f.max))]")
-            lines.append("  " + pad("\(f.id) " + f.name, 10) + pad("\(Int(f.rpm.rounded())) rpm", 10, right: true)
-                         + "  " + style.bar(f.load, width: 12) + pad(String(format: "%3.0f%%", f.load * 100), 5, right: true)
+            let range = style.dim("[\(Self.fanNumber(f.min))–\(Self.fanNumber(f.max))]")
+            lines.append("  " + pad("\(f.id) " + f.name, 10) + pad("\(Self.fanNumber(f.rpm)) rpm", 10, right: true)
+                         + "  " + ((f.load.map { style.bar($0, width: 12) + pad(String(format: "%3.0f%%", $0 * 100), 5, right: true) }) ?? style.dim("       unknown   "))
                          + "  " + range + "  " + mode
                          + (f.manual == true ? style.dim("  → " + (f.target.map { String(format: "%.0f", $0) } ?? "unknown")) : ""))
         }
@@ -287,7 +288,7 @@ enum Export {
         let f: (Reading) -> Bool = { all || $0.known }
         lines += csvRows(s.temperatures.filter(f), kind: "temperature")
         for fan in s.fans {
-            lines.append("fan,F\(fan.id)Ac,\(csvField(fan.name)),Fan,\(String(format: "%.0f", fan.rpm))")
+            lines.append("fan,F\(fan.id)Ac,\(csvField(fan.name)),Fan,\(fan.rpm.map { String(format: "%.0f", $0) } ?? "")")
         }
         lines += csvRows(s.power.filter(f), kind: "power")
         lines += csvRows(s.voltages.filter(f), kind: "voltage")
