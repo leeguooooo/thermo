@@ -30,6 +30,8 @@ struct HistoryPoint: Identifiable {
     let gpu: Double?
     let fans: [Double]
     let power: Double?
+    /// 1-minute load average per core at this tick; 1 means every core has work.
+    var load: Double? = nil
     var id: Date { time }
 }
 
@@ -128,7 +130,7 @@ final class Monitor: ObservableObject {
         if open { sampleNow(); refreshHelper() }
     }
 
-    static let historyWindow: TimeInterval = 600
+    static let historyWindow: TimeInterval = 900
 
     private let queue = DispatchQueue(label: "dev.thermo.app.sampler", qos: .utility)
     private var sampler: Sampler?
@@ -202,7 +204,9 @@ final class Monitor: ObservableObject {
         sampler.parts = plan.parts
         sampler.groups = plan.groups
         let s = sampler.sample()
-        let point = HistoryPoint(time: s.timestamp, cpu: s.cpu, gpu: s.gpu, fans: s.fans.map(\.rpm), power: s.systemPower)
+        var averages = [Double](repeating: 0, count: 3)
+        let load = getloadavg(&averages, 3) > 0 ? averages[0] / Double(max(1, ProcessInfo.processInfo.activeProcessorCount)) : nil
+        let point = HistoryPoint(time: s.timestamp, cpu: s.cpu, gpu: s.gpu, fans: s.fans.map(\.rpm), power: s.systemPower, load: load)
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.latest = s

@@ -433,6 +433,11 @@ public enum AppUninstaller {
         }
         let g = Guard(home: home)
         if let why = g.uninstallRefusal(plan.app.path, bundleIDs: []) { return why }
+        // macOS will not move a folder the user cannot write to (its ".." entry has to change), so an
+        // app installed as root would fail halfway; say so before anything moves.
+        if access(plan.app.path, W_OK) != 0 {
+            return tr("%1$@ belongs to the administrator account, so Thermo cannot move it. Drag it to the Trash in Finder, which asks for your password.", plan.app.name)
+        }
         return nil
     }
 

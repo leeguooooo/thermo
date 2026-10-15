@@ -239,4 +239,17 @@ final class AppUninstallerTests: XCTestCase {
         // An ID that could break out of the query counts as found, so its data is kept.
         XCTAssertTrue(AppUninstaller.spotlightFinds("com.foo' || true || 'x.y"))
     }
+
+    /// A bundle the user cannot write to (installed as root) cannot be moved by macOS at all;
+    /// the plan is refused up front instead of failing halfway.
+    func testAnAppTheUserCannotWriteToIsRefusedBeforeAnythingMoves() throws {
+        make("Applications/Locked.app/Contents")
+        let path = home + "/Applications/Locked.app"
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path) }
+        let plan = UninstallPlan(app: app("Locked", "com.example.locked"), paths: [path], bytes: 0)
+        let why = AppUninstaller.refusal(plan, home: home, processes: ProcessTable(entries: []))
+        XCTAssertEqual(why, "Locked belongs to the administrator account, so Thermo cannot move it. Drag it to the Trash in Finder, which asks for your password.")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: path))
+    }
 }

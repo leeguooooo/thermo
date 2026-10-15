@@ -62,6 +62,7 @@ final class SystemPulse: ObservableObject {
                 }
             }
             self.current = pulse
+            MainActor.assumeIsolated { TimelineEvents.shared.observe(pulse) }
         }
     }
 

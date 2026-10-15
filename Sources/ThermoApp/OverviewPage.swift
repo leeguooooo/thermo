@@ -12,6 +12,7 @@ struct OverviewPage: View {
     @ObservedObject var monitor: Monitor
     let open: (MainPage) -> Void
     @ObservedObject private var pulse = SystemPulse.shared
+    @ObservedObject private var events = TimelineEvents.shared
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
 
     var body: some View {
@@ -30,8 +31,15 @@ struct OverviewPage: View {
                 }
             }
             VStack(alignment: .leading, spacing: 6) {
-                SectionHeader(title: tr("Temperature, last 10 minutes"))
-                InspectorPanel { TemperatureChart(history: monitor.history).padding(14) }
+                SectionHeader(title: tr("Last 15 minutes"))
+                InspectorPanel {
+                    TimelineView(.periodic(from: .now, by: 3)) { context in
+                        HeatTimeline(history: monitor.history, events: events.events, now: context.date)
+                            .onAppear { events.refreshJournal() }
+                            .onChange(of: context.date) { _ in events.refreshJournal() }
+                    }
+                    .padding(14)
+                }
             }
         }
     }
