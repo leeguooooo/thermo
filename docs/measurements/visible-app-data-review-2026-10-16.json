@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "baseSourceCommit": "b17a10ad1571e01afb0a95253b0ede92f4080855",
+  "mode": "visible native QA bundle; isolated home; preview and cancel only",
+  "actions": [
+    "search own fixture",
+    "expand details",
+    "review data only",
+    "cancel",
+    "review uninstall",
+    "cancel",
+    "resize own window",
+    "review shared-data block",
+    "review unreadable-peer block",
+    "cancel all",
+    "close QA window"
+  ],
+  "fixturePayloadSHA256": "a11f5f4bd9f1624603d0d27152d4dc94eb5ca3dcc4ceeda8950288d0adfa6176",
+  "fixtureDataAndAppPreserved": true,
+  "moveToTrashInvoked": false,
+  "qaExitedNormally": true,
+  "compactWindowScreenshotPixels": [
+    1600,
+    1216
+  ],
+  "capturedStates": {
+    "data": {
+      "accessibility": "data-only-visible-review-2026-10-16.ax.txt",
+      "screenshot": "data-only-visible-review-2026-10-16.jpg",
+      "imageSHA256": "ec4fd9741caf22e125fe290685905ac63d89f9286ceed8373ebfa4f3749bceab"
+    },
+    "compact": {
+      "accessibility": "data-only-visible-compact-2026-10-16.ax.txt",
+      "screenshot": "data-only-visible-compact-2026-10-16.jpg",
+      "imageSHA256": "399681c26ec349786f19c2a9224853e866e13bb75dfa8cb85db5eb2ccdec071a"
+    },
+    "shared": {
+      "accessibility": "data-only-visible-shared-blocked-2026-10-16.ax.txt",
+      "screenshot": "data-only-visible-shared-blocked-2026-10-16.jpg",
+      "imageSHA256": "676b1b4841367f6c1d79ff928135e4ba8665171bfe0860443250664f269530e8"
+    },
+    "error": {
+      "accessibility": "data-only-visible-ownership-error-2026-10-16.ax.txt",
+      "screenshot": "data-only-visible-ownership-error-2026-10-16.jpg",
+      "imageSHA256": "4c1f0ed75ec9e5fb76d821a6b458092c042561f9fdaf0e6e8729ca4e3d649498"
+    },
+    "uninstall": {
+      "accessibility": "uninstall-visible-review-2026-10-16.ax.txt",
+      "screenshot": "uninstall-visible-review-2026-10-16.jpg",
+      "imageSHA256": "f644775a0be4fd724b5999e11ef6ea7bbc349ccac2865132da7a2b02a5bcb3f0"
+    }
+  },
+  "sourceHashes": {
+    "Sources/ThermoApp/Components.swift": "1bf75c67b35ddeef9c2907befdf7f728f94dc8e8af7c3d43403b89606a542ff2",
+    "Sources/ThermoApp/AppsPage.swift": "7b023182d429d0beec3be59991151581a751bcce19bbe4bd64b32181a3aecc54",
+    "Sources/ThermoL10n/ZhHans.swift": "d1fd61ebded741ca8b42640a4bcf3d18829837d1a038e41115d4c0791dd2938e"
+  },
+  "ownedWorkspaceRemoved": true
+}

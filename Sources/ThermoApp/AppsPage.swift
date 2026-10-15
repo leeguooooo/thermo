@@ -276,6 +276,7 @@ struct AppsPage: View {
                                      String(max(0, p.paths.count - 1)), p.sizeText) : tr("Keep %1$@. Move only the selected associated files to the Trash: %2$@.", p.app.name, p.sizeText),
                          destructive: false, heading: tr("What will be moved to the Trash"),
                          lines: Self.lines(p),
+                         retainedLines: Self.retainedLines(p), detailLines: Self.detailLines(p),
                          footnote: p.blocked ?? (p.removesApp ? tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log.") : tr("Removing selected data can reset settings or sign-in state. Restore it from History before reopening the app.")),
                          confirmTitle: tr("Move to Trash"),
                          confirmEnabled: p.blocked == nil,
@@ -297,19 +298,36 @@ struct AppsPage: View {
     struct PlanBox: Identifiable { let plan: UninstallPlan; var id: String { plan.app.path } }
 
     static func lines(_ p: UninstallPlan) -> [String] {
-        var out = p.removesApp ? [p.app.bundleSizeText + "  " + p.app.path] : [tr("App kept: %1$@", p.app.path)]
-        if let issues = p.ownership?.issues, !issues.isEmpty {
-            out.append(tr("Ownership could not be checked at:"))
-            out += issues.map { FSPath.tilde($0) }
-        }
+        var out = p.removesApp ? [p.app.bundleSizeText + "  " + p.app.path] : []
         out += p.app.leftovers.filter { p.paths.contains($0.path) }.map { $0.sizeText + "  " + FSPath.tilde($0.path) }
+        return out
+    }
+
+    static func retainedLines(_ p: UninstallPlan) -> [String] {
+        var out = p.removesApp ? [] : [tr("App kept: %1$@", FSPath.tilde(p.app.path))]
         if let kept = p.ownershipKept, !kept.isEmpty {
             out.append(tr("Kept: shared data or ownership could not be established"))
             out += kept.map { FSPath.tilde($0) }
         }
         if let kept = p.kept, !kept.isEmpty {
-            out.append(p.removesApp ? tr("Kept, your data (profiles, chat history, mail); remove it in the app first, or with thermo apps uninstall --with-data:") : tr("Personal data kept. To include it while keeping the app, review thermo apps uninstall NAME --data-only --with-data --dry-run first."))
+            out.append(tr("Personal data kept"))
             out += kept.map { $0.sizeText + "  " + FSPath.tilde($0.path) }
+        }
+        if let kept = p.whitelisted, !kept.isEmpty {
+            out.append(tr("Kept, whitelisted:"))
+            out += kept.map { FSPath.tilde($0) }
+        }
+        return out
+    }
+
+    static func detailLines(_ p: UninstallPlan) -> [String] {
+        var out: [String] = []
+        if let issues = p.ownership?.issues, !issues.isEmpty {
+            out.append(tr("Ownership could not be checked at:"))
+            out += issues.map { FSPath.tilde($0) }
+        }
+        if p.kept?.isEmpty == false {
+            out.append(p.removesApp ? tr("Kept, your data (profiles, chat history, mail); remove it in the app first, or with thermo apps uninstall --with-data:") : tr("Personal data kept. To include it while keeping the app, review thermo apps uninstall NAME --data-only --with-data --dry-run first."))
         }
         if p.removesApp, let cask = p.app.cask { out.append(tr("Homebrew installed it: run brew uninstall --cask %1$@ afterwards so Homebrew forgets it.", cask)) }
         if !p.receipts.isEmpty { out.append(tr("Installed by a package (%1$@); files it put outside your home folder stay.", p.receipts.joined(separator: ", "))) }

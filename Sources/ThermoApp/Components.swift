@@ -117,20 +117,38 @@ struct ConfirmSheet: View {
     let destructive: Bool
     let heading: String
     let lines: [String]
+    var retainedLines: [String] = []
+    var detailLines: [String] = []
     let footnote: String
     let confirmTitle: String
     var confirmEnabled = true
     let confirm: () -> Void
     let cancel: () -> Void
 
-    var list: some View {
+    func list(_ values: [String]) -> some View {
         LazyVStack(alignment: .leading, spacing: 4) {
-            ForEach(Array(lines.enumerated()), id: \.offset) { _, l in
+            ForEach(Array(values.enumerated()), id: \.offset) { _, l in
                 Text(l).font(.caption.monospaced()).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(10).frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
+    }
+
+    var reviewContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(heading).font(.subheadline.weight(.semibold))
+            if lines.isEmpty { Text(tr("No items selected")).font(.caption).foregroundStyle(.secondary) }
+            else { list(lines) }
+            if !retainedLines.isEmpty {
+                Text(tr("Kept in place")).font(.subheadline.weight(.semibold))
+                list(retainedLines)
+            }
+            if !detailLines.isEmpty {
+                Text(tr("Details")).font(.subheadline.weight(.semibold))
+                list(detailLines)
+            }
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
     var body: some View {
@@ -143,9 +161,8 @@ struct ConfirmSheet: View {
                     Text(summary).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }
-            Text(heading).font(.subheadline.weight(.semibold))
             // ImageRenderer cannot draw scroll views; previews get the plain list.
-            if renderingPreview { list } else { ScrollView { list }.frame(maxHeight: 220) }
+            if renderingPreview { reviewContent } else { ScrollView { reviewContent }.frame(maxHeight: 220) }
             Text(footnote).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             HStack {
                 Spacer()

@@ -1,0 +1,22 @@
+Window: "", App: Thermo QA.
+0 sheet Secondary Actions: Raise
+	1 container
+		2 image (selected) Description: 已选择, ID: checkmark.circle.fill
+		3 text 移除 QA Data Fixture 的关联数据？ 保留 QA Data Fixture，仅将选中的关联文件移入废纸篓，共 4.1 KB。
+		4 scroll area
+			5 text 将移到废纸篓的内容
+			6 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+				7 text 4.1 KB  ~/Library/Caches/com.example.visibleqa.fa50d7f92a85f4a3db838f4d6e63fb3ec
+			8 text 保留在原处
+			9 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+				10 text 保留应用：~/Applications/QA Data Fixture.app
+		11 text 移除选中数据可能重置设置或登录状态。如需恢复，请在重新打开应用前通过操作记录恢复。
+		12 button 取消
+		13 button 移到废纸篓
+14 menu bar
+	15 Thermo QA
+	16 编辑, ID: thermo.edit
+	17 显示, ID: thermo.view
+	18 窗口, ID: thermo.window
+
+The focused UI element is 0 sheet Secondary Actions: Raise

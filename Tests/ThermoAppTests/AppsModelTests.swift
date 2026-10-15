@@ -74,16 +74,20 @@ final class AppsModelTests: XCTestCase {
         plan.ownershipKept = ["/fixture/shared"]
         plan.ownership = AppOwnershipSnapshot(roots: ["/fixture"], extraPaths: [], issues: ["/fixture/unreadable"], fingerprint: "fixture")
         let lines = AppsPage.lines(plan)
-        XCTAssertTrue(lines.contains { $0.contains(app.path) })
+        let retained = AppsPage.retainedLines(plan)
+        let details = AppsPage.detailLines(plan)
+        XCTAssertFalse(lines.contains { $0.contains(app.path) })
+        XCTAssertTrue(retained.contains { $0.contains(app.path) })
         XCTAssertTrue(lines.contains { $0.contains(data.path) })
-        XCTAssertTrue(lines.contains { $0.contains("/fixture/shared") })
-        XCTAssertTrue(lines.contains { $0.contains("/fixture/unreadable") })
+        XCTAssertTrue(retained.contains { $0.contains("/fixture/shared") })
+        XCTAssertFalse(lines.contains { $0.contains("/fixture/shared") })
+        XCTAssertTrue(details.contains { $0.contains("/fixture/unreadable") })
         XCTAssertFalse(lines.contains { $0.hasPrefix(app.bundleSizeText + "  ") })
         XCTAssertFalse(lines.contains { $0.contains("brew uninstall") })
-        XCTAssertTrue(lines.contains { $0.contains("--data-only --with-data --dry-run") })
+        XCTAssertTrue(details.contains { $0.contains("--data-only --with-data --dry-run") })
         plan.removeApp = true
         plan.paths.insert(app.path, at: 0)
-        XCTAssertTrue(AppsPage.lines(plan).contains { $0.contains("brew uninstall") })
+        XCTAssertTrue(AppsPage.detailLines(plan).contains { $0.contains("brew uninstall") })
     }
 
     func app(_ name: String, leftovers: [String] = []) -> InstalledApp {
