@@ -614,7 +614,7 @@ struct SensorsPage: View {
                                 .lineLimit(1).textSelection(.enabled)
                         }
                         Text(r.2).font(.system(size: 12.5, weight: .semibold).monospacedDigit()).foregroundStyle(r.3)
-                            .frame(minWidth: 52, alignment: .trailing)
+                            .frame(width: 60, alignment: .trailing)
                     }
                     .padding(.horizontal, 14).padding(.vertical, 6)
                     .accessibilityElement(children: .combine)
