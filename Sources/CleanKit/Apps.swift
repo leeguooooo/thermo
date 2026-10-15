@@ -445,8 +445,7 @@ public enum AppUninstaller {
             trash(plan.paths, bundleIDs: ids, sizes: sizes.merging([plan.app.path: plan.app.bytes]) { a, _ in a },
                   home: home, processes: table, into: &result)
         }
-        finish(result, title: plan.app.name, home: home, action: "uninstall", subject: plan.app.bundleID ?? plan.app.name,
-               sizes: Dictionary(plan.app.leftovers.map { ($0.path, $0.bytes) } + [(plan.app.path, plan.app.bytes)]) { a, _ in a })
+        finish(result, title: plan.app.name, home: home)
         return result
     }
 
@@ -475,8 +474,7 @@ public enum AppUninstaller {
         TrashBatches.seal(&result, home: home)
     }
 
-    static func finish(_ result: CleanResult, title: String, home: String, action: String, subject: String, sizes: [String: Int64]) {
-        TrashBatches.journal(result, feature: "apps", action: action, subject: subject, sizes: sizes, home: home)
+    static func finish(_ result: CleanResult, title: String, home: String) {
         if !result.removed.isEmpty {
             ScanReportCache.invalidate(home: home)
             SpaceOverview.invalidate(home: home)
@@ -595,8 +593,7 @@ public enum AppUninstaller {
             } else {
                 result.failed[data.bundleID] = tr("no longer looks left behind: an app uses it again, or it changed")
             }
-            finish(result, title: data.bundleID, home: home, action: "remove", subject: data.bundleID,
-                   sizes: Dictionary(data.items.map { ($0.path, $0.bytes) }) { a, _ in a })
+            finish(result, title: data.bundleID, home: home)
             return result
         }
     }

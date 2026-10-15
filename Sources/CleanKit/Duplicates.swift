@@ -168,7 +168,6 @@ public enum ManualRemoval {
             ScanReportCache.invalidate(home: home)
             SpaceOverview.invalidate(home: home)
         }
-        TrashBatches.journal(result, feature: "space", action: "trash", subject: nil, sizes: sizes, home: home)
         Cleaner.log(result, item: CleanItem(id: "manual", category: .system, title: tr("Picked by hand"), safety: .review,
                                             paths: paths), to: Cleaner.logURL(home: home))
         return result
