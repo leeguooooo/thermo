@@ -445,13 +445,16 @@ public enum AppUninstaller {
             trash(plan.paths, bundleIDs: ids, sizes: sizes.merging([plan.app.path: plan.app.bytes]) { a, _ in a },
                   home: home, processes: table, into: &result)
         }
-        finish(result, title: plan.app.name, home: home)
+        finish(result, title: plan.app.name, home: home, action: "uninstall", subject: plan.app.bundleID ?? plan.app.name,
+               sizes: Dictionary(plan.app.leftovers.map { ($0.path, $0.bytes) } + [(plan.app.path, plan.app.bytes)]) { a, _ in a })
         return result
     }
 
     static func trash(_ paths: [String], bundleIDs: [String], sizes: [String: Int64], home: String,
-                      processes: () -> ProcessTable, into result: inout CleanResult) {
+                      processes: () -> ProcessTable, into result: inout CleanResult,
+                      move: (String) throws -> URL = RemovalOperations.live.trash) {
         let g = Guard(home: home)
+        let batchID = UUID().uuidString
         let table = processes()
         for path in paths {
             if let why = g.uninstallRefusal(path, bundleIDs: bundleIDs) { result.failed[path] = why; continue }
@@ -461,16 +464,19 @@ public enum AppUninstaller {
                 continue
             }
             do {
-                try FileManager.default.trashItem(at: URL(fileURLWithPath: path), resultingItemURL: nil)
+                let unrecorded = try TrashBatches.trash(path, bytes: sizes[path] ?? 0, id: batchID, home: home, move: move)
                 result.removed.append(path)
                 result.bytes += sizes[path] ?? 0
+                if let unrecorded { result.failed["batch/" + path] = unrecorded } else { result.trashBatchID = batchID }
             } catch {
                 result.failed[path] = (error as NSError).localizedDescription
             }
         }
+        TrashBatches.seal(&result, home: home)
     }
 
-    static func finish(_ result: CleanResult, title: String, home: String) {
+    static func finish(_ result: CleanResult, title: String, home: String, action: String, subject: String, sizes: [String: Int64]) {
+        TrashBatches.journal(result, feature: "apps", action: action, subject: subject, sizes: sizes, home: home)
         if !result.removed.isEmpty {
             ScanReportCache.invalidate(home: home)
             SpaceOverview.invalidate(home: home)
@@ -589,7 +595,8 @@ public enum AppUninstaller {
             } else {
                 result.failed[data.bundleID] = tr("no longer looks left behind: an app uses it again, or it changed")
             }
-            finish(result, title: data.bundleID, home: home)
+            finish(result, title: data.bundleID, home: home, action: "remove", subject: data.bundleID,
+                   sizes: Dictionary(data.items.map { ($0.path, $0.bytes) }) { a, _ in a })
             return result
         }
     }

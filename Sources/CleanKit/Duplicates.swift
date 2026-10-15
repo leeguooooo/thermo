@@ -142,7 +142,12 @@ public enum ManualRemoval {
 
     /// Moves each path to the Trash after checking it again: allowed, still there, not held open by a running program.
     public static func trash(_ paths: [String], sizes: [String: Int64] = [:], home: String = NSHomeDirectory()) -> CleanResult {
+        trash(paths, sizes: sizes, home: home, move: RemovalOperations.live.trash)
+    }
+
+    static func trash(_ paths: [String], sizes: [String: Int64], home: String, move: (String) throws -> URL) -> CleanResult {
         var result = CleanResult(id: "manual", trashed: true)
+        let batchID = UUID().uuidString
         let open = OpenFiles.current()
         for path in paths {
             if let why = refusal(path, home: home) { result.failed[path] = why; continue }
@@ -150,17 +155,20 @@ public enum ManualRemoval {
             guard let open else { result.failed[path] = tr("could not check whether a program is using it"); continue }
             if let h = open.holder(of: path) { result.failed[path] = tr("%1$@ has files open here", h.name); continue }
             do {
-                try FileManager.default.trashItem(at: URL(fileURLWithPath: path), resultingItemURL: nil)
+                let unrecorded = try TrashBatches.trash(path, bytes: sizes[path] ?? 0, id: batchID, home: home, move: move)
                 result.removed.append(path)
                 result.bytes += sizes[path] ?? 0
+                if let unrecorded { result.failed["batch/" + path] = unrecorded } else { result.trashBatchID = batchID }
             } catch {
                 result.failed[path] = (error as NSError).localizedDescription
             }
         }
+        TrashBatches.seal(&result, home: home)
         if !result.removed.isEmpty {
             ScanReportCache.invalidate(home: home)
             SpaceOverview.invalidate(home: home)
         }
+        TrashBatches.journal(result, feature: "space", action: "trash", subject: nil, sizes: sizes, home: home)
         Cleaner.log(result, item: CleanItem(id: "manual", category: .system, title: tr("Picked by hand"), safety: .review,
                                             paths: paths), to: Cleaner.logURL(home: home))
         return result
