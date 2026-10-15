@@ -38,8 +38,9 @@ final class OperationHistoryTests: XCTestCase {
         var deleted = CleanResult(id: "npm-cache", trashed: false); deleted.removed = ["/z"]; deleted.bytes = 5; deleted.bytesIncomplete = true
         for r in [app, manual, empty, deleted] { log(r) }
         let byAction = Dictionary(OperationJournal.read(home: home).map { ($0.feature + "/" + $0.action, $0) }, uniquingKeysWith: { a, _ in a })
-        // Uninstalls and hand-picked moves record themselves; the cleanup log must not record them twice.
-        XCTAssertEqual(Set(byAction.keys), ["clean/emptyTrash", "clean/delete"])
+        XCTAssertEqual(Set(byAction.keys), ["apps/uninstall", "space/trash", "clean/emptyTrash", "clean/delete"])
+        XCTAssertEqual(byAction["apps/uninstall"]?.items.first?.bytes, 10)
+        XCTAssertEqual(byAction["apps/uninstall"]?.undo?.kind, "trash")
         XCTAssertNil(byAction["clean/emptyTrash"]?.undo)
         XCTAssertNil(byAction["clean/delete"]?.items.first?.bytes, "a single path with an incomplete size is not given an exact size")
         L10n.override = .english
