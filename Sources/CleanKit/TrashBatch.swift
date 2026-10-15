@@ -192,7 +192,7 @@ public enum TrashBatches {
             SpaceOverview.invalidate(home: home)
         }
         OperationJournal.record(OperationRecord(feature: "history", action: "restore", subject: batch.id, items: result.items.map {
-            .init(target: $0.original, bytes: $0.status == "restored" ? $0.bytes : nil,
+            .init(target: $0.original, bytes: $0.status == "restored" && $0.bytes > 0 ? $0.bytes : nil,
                   status: $0.status == "restored" ? "done" : $0.status == "skipped" ? "skipped" : "failed", detail: $0.reason)
         }), home: home)
         return result

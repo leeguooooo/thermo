@@ -484,7 +484,7 @@ struct CleanCommand {
         }
         if args.has("dry-run") { return }
         guard review.items.contains(where: { $0.status == "restored" }) else {
-            if !args.has("json") { write(tr("Nothing in this batch can be restored.")) }
+            write(args.has("json") ? Export.json(review) : tr("Nothing in this batch can be restored."))
             exit(1)
         }
         if !args.has("yes") {
