@@ -1,0 +1,289 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-15T22:23:45.154465+00:00",
+  "baseSourceCommit": "bcd854e",
+  "sourceSHA256": {
+    "Sources/AgentCore/OperationJournal.swift": "54ed218388498f4557ac42b75b461a8f4a84094d791fe3fde995ce5800853b11",
+    "Tests/AgentCoreTests/OperationJournalConcurrencyTests.swift": "48b4855fe60934d4fd08c4968e955ca82160a62d53f6fab1a19c25d46aeeef8e",
+    "Tests/Fixtures/JournalConcurrencyWorker.swift": "84280d18d39adb8c25dde72de540c099c76a71af4951c36f48e4db0f550f1019"
+  },
+  "beforeBinarySHA256": "9822b8868525003d09e9732179c6c3963cd6874e8c3079a770a55ff3263b0b16",
+  "before": [
+    {
+      "round": 0,
+      "expected": 361,
+      "observed": 331,
+      "missing": 30,
+      "damagedLines": 0,
+      "exitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "afterBinarySHA256": "9684bb441a11ee8505957474e7a75fff7685ca7dbe178f431954db008aaa87e5",
+  "after": [
+    {
+      "round": 0,
+      "expected": 361,
+      "observedUnique": 361,
+      "rawRows": 361,
+      "missing": 0,
+      "damagedLines": 0,
+      "exitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "round": 1,
+      "expected": 361,
+      "observedUnique": 361,
+      "rawRows": 361,
+      "missing": 0,
+      "damagedLines": 0,
+      "exitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "round": 2,
+      "expected": 361,
+      "observedUnique": 361,
+      "rawRows": 361,
+      "missing": 0,
+      "damagedLines": 0,
+      "exitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "round": 3,
+      "expected": 361,
+      "observedUnique": 361,
+      "rawRows": 361,
+      "missing": 0,
+      "damagedLines": 0,
+      "exitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "round": 4,
+      "expected": 361,
+      "observedUnique": 361,
+      "rawRows": 361,
+      "missing": 0,
+      "damagedLines": 0,
+      "exitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "round": 5,
+      "expected": 361,
+      "observedUnique": 361,
+      "rawRows": 361,
+      "missing": 0,
+      "damagedLines": 0,
+      "exitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "round": 6,
+      "expected": 361,
+      "observedUnique": 361,
+      "rawRows": 361,
+      "missing": 0,
+      "damagedLines": 0,
+      "exitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "round": 7,
+      "expected": 361,
+      "observedUnique": 361,
+      "rawRows": 361,
+      "missing": 0,
+      "damagedLines": 0,
+      "exitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "round": 8,
+      "expected": 361,
+      "observedUnique": 361,
+      "rawRows": 361,
+      "missing": 0,
+      "damagedLines": 0,
+      "exitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "round": 9,
+      "expected": 361,
+      "observedUnique": 361,
+      "rawRows": 361,
+      "missing": 0,
+      "damagedLines": 0,
+      "exitCodes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "processTests": [
+    {
+      "name": "testConcurrentProcessesRotateWithoutLosingOrCorruptingRecords",
+      "passed": true,
+      "elapsedSeconds": 1.098
+    },
+    {
+      "name": "testReaderReportsBusyAndProcessDeathReleasesTheWaitingWriter",
+      "passed": true,
+      "elapsedSeconds": 0.137
+    }
+  ],
+  "regression": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 55,
+      "ThermoAppTests": 135,
+      "CleanKitTests": 452,
+      "AgentCoreTests": 34
+    },
+    "total": 790,
+    "failures": 0
+  },
+  "boundaries": [
+    "All journals and child processes belonged to disposable isolated fixtures",
+    "The test worker compiles the actual OperationJournal.swift; it does not reimplement the writer",
+    "The holder is terminated without releasing its directory lock in user code; the OS releases it and the waiting writer completes",
+    "The new coordination requires cooperating updated writers; legacy writers, namespace replacement and other filesystems remain unverified",
+    "No user history, helper lifecycle, SMC or pmset changes; writes are still best effort on I/O failure"
+  ],
+  "ownedWorkspaceRemoved": true,
+  "ownedProcessesAbsent": true
+}

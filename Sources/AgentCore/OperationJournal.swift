@@ -87,6 +87,9 @@ public enum OperationJournal {
         let location = url(home: home)
         let directory = location.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        let coordination = coordinate(directory, exclusive: true)
+        guard let directoryFD = coordination.descriptor else { return }
+        defer { flock(directoryFD, LOCK_UN); close(directoryFD) }
         guard rotateIfNeeded(location, adding: line.count) else { return }
         let fd = open(location.path, O_WRONLY | O_APPEND | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0o600)
         guard fd >= 0 else { return }
@@ -151,12 +154,11 @@ public enum OperationJournal {
         let files = [location] + (1...generations).map {
             location.deletingLastPathComponent().appendingPathComponent("operations.\($0).jsonl")
         }
+        // Copy bytes under the shared directory lock; decoding happens after releasing it.
+        let snapshot = readFiles(files, directory: location.deletingLastPathComponent())
         var records: [OperationRecord] = []
-        var issues: [String] = []
-        for file in files {
-            let result = readFile(file)
-            if let issue = result.issue { issues.append(issue) }
-            guard let data = result.data else { continue }
+        var issues = snapshot.issues
+        for (file, data) in snapshot.files {
             var damaged = 0
             // Later entries may finish an operation previously recorded as unconfirmed.
             // Prefer the last append even when ISO timestamps fall in the same second.
@@ -170,6 +172,39 @@ public enum OperationJournal {
         records = records.filter { seen.insert($0.id).inserted }.sorted { $0.time > $1.time }
         if let limit { records = Array(records.prefix(max(0, limit))) }
         return ReadReport(records: records, issues: issues)
+    }
+
+    private static func coordinate(_ directory: URL, exclusive: Bool) -> (descriptor: Int32?, issue: String?) {
+        let fd = open(directory.path, O_RDONLY | O_DIRECTORY | O_NONBLOCK | O_CLOEXEC)
+        guard fd >= 0 else {
+            return errno == ENOENT ? (nil, nil) : (nil, "\(directory.path): \(String(cString: strerror(errno)))")
+        }
+        var info = stat()
+        guard fstat(fd, &info) == 0, info.st_uid == getuid(), info.st_mode & S_IFMT == S_IFDIR else {
+            close(fd); return (nil, "\(directory.path): history directory identity could not be verified")
+        }
+        guard flock(fd, exclusive ? LOCK_EX : (LOCK_SH | LOCK_NB)) == 0 else {
+            close(fd); return (nil, "\(directory.path): history directory is busy or cannot be locked")
+        }
+        var visible = stat()
+        guard stat(directory.path, &visible) == 0, visible.st_dev == info.st_dev, visible.st_ino == info.st_ino,
+              visible.st_uid == info.st_uid else {
+            flock(fd, LOCK_UN); close(fd); return (nil, "\(directory.path): history directory changed")
+        }
+        return (fd, nil)
+    }
+
+    private static func readFiles(_ files: [URL], directory: URL) -> (files: [(URL, Data)], issues: [String]) {
+        let coordination = coordinate(directory, exclusive: false)
+        guard let fd = coordination.descriptor else { return ([], coordination.issue.map { [$0] } ?? []) }
+        defer { flock(fd, LOCK_UN); close(fd) }
+        var values: [(URL, Data)] = [], issues: [String] = []
+        for file in files {
+            let result = readFile(file)
+            if let issue = result.issue { issues.append(issue) }
+            if let data = result.data { values.append((file, data)) }
+        }
+        return (values, issues)
     }
 
     public static func find(_ id: String, home: String = NSHomeDirectory()) -> OperationRecord? {
