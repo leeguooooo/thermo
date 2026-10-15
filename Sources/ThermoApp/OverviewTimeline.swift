@@ -119,6 +119,7 @@ struct HeatTimeline: View {
             }
             .chartXScale(domain: domain)
             .chartYScale(domain: temperatureDomain)
+            .chartYAxis { AxisMarks(values: .automatic(desiredCount: 4)) { v in AxisGridLine(); AxisValueLabel { axisLabel(v.as(Double.self)) } } }
             .chartXAxis(.hidden)
             .chartYAxisLabel(fahrenheit ? "°F" : "°C")
             .chartLegend(position: .top, alignment: .trailing)
@@ -151,9 +152,13 @@ struct HeatTimeline: View {
             }
             .chartXScale(domain: domain)
             .chartYScale(domain: 0...loadTop)
+            .chartYAxis { AxisMarks(values: Array(Set([0, 1, max(2, (loadTop * 0.9).rounded(.down))])).sorted()) { v in AxisGridLine(); AxisValueLabel { axisLabel(v.as(Double.self)) } } }
             .chartYAxisLabel(tr("load per core"))
-            .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisGridLine(); AxisValueLabel(format: .dateTime.hour().minute()) } }
-            .frame(height: 70)
+            // Every 5 minutes back from now; "now" itself would sit on the edge and be clipped.
+            .chartXAxis { AxisMarks(values: [15, 10, 5].map { now.addingTimeInterval(-Double($0) * 60) }) { _ in
+                AxisGridLine(); AxisValueLabel(format: .dateTime.hour().minute())
+            } }
+            .frame(height: 80)
             .accessibilityLabel(tr("Load per core, last 15 minutes"))
 
             if events.isEmpty {
@@ -174,6 +179,12 @@ struct HeatTimeline: View {
                 .padding(.top, 6)
             }
         }
+    }
+
+    /// Same width on both charts, so their plot areas — and the event lines across them — line up.
+    func axisLabel(_ value: Double?) -> some View {
+        Text(value.map { String(format: "%.0f", $0) } ?? "").font(.system(size: 10).monospacedDigit())
+            .frame(width: 28, alignment: .leading)
     }
 
     func color(_ kind: TimelineEvents.Event.Kind) -> Color {

@@ -98,6 +98,7 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 | `thermo clean log` | 历次清理删了什么 |
 | `thermo clean whitelist [add\|remove PATH…]` | 始终保留的路径或 glob（`~/Library/Application Support/Thermo/whitelist`，每行一个，`#` 注释）；所有清理、卸载和移到废纸篓都会跳过，文件不可信时拒绝清理；`--json` |
 | `thermo history [show ID]` | Thermo 做过的每项改动（清理、卸载、agent 修复、Claude 重置、隐私设置、标签、归档、退出程序），最新的在前，并写明在哪里撤销；记录在 `~/Library/Application Support/Thermo/operations.jsonl`；`--limit N`、`--json` |
+| `thermo awake [status\|on\|off]` | 笔记本合盖不休眠（经辅助程序切换 `pmset disablesleep`）；温度接近风扇安全上限、使用电池且电量降到 20%、或读不到温度时自动关闭，关闭和辅助程序重启时恢复你原来的设置；`--json` |
 
 所有读取命令都支持 `--json`、`--csv`，另有 `--fahrenheit`、`--no-color`（也遵循 `NO_COLOR`）。
 
