@@ -72,7 +72,7 @@ struct StartupItemsPage: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(tr("Startup items")).font(.system(size: 22, weight: .semibold))
-                    Text(tr("Your user LaunchAgents")).font(.callout).foregroundStyle(.secondary)
+                    Text(tr("User and shared startup items, plus system services")).font(.callout).foregroundStyle(.secondary)
                 }
                 Spacer()
                 SoftwareTabPicker(tab: $tab)
@@ -82,12 +82,17 @@ struct StartupItemsPage: View {
             if let message = model.message { Text(message).font(.callout).textSelection(.enabled) }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
-                    ForEach(model.report?.issues ?? [], id: \.self) { Text(tr($0)).font(.callout).foregroundStyle(.orange) }
+                    if let issues = model.report?.issues, !issues.isEmpty {
+                        DisclosureGroup(tr("%1$@ startup files or states need review", String(issues.count))) {
+                            ForEach(issues, id: \.self) { Text(tr($0)).font(.callout).textSelection(.enabled) }
+                        }.font(.callout).foregroundStyle(.orange)
+                    }
                     ForEach(model.report?.items ?? []) { item in
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: "power").foregroundStyle(.indigo).padding(.top, 3)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(item.label).font(.headline).textSelection(.enabled)
+                                Text(item.effectiveScope.title).font(.caption).foregroundStyle(.secondary)
                                 Text(item.program ?? item.path).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                                 Text(item.enabled.map { $0 ? tr("Enabled") : tr("Disabled") } ?? tr("Unknown"))
                                     .font(.caption).foregroundStyle(.secondary)
@@ -99,7 +104,7 @@ struct StartupItemsPage: View {
                         }.padding(14).glass(radius: 14)
                     }
                     if let report = model.report, report.items.isEmpty {
-                        Text(tr("No user LaunchAgents found. Other login items are managed in System Settings."))
+                        Text(tr("No launch services found. Other login items are managed in System Settings."))
                             .font(.callout).foregroundStyle(.secondary)
                     }
                 }

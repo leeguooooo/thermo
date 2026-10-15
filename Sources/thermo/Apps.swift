@@ -128,14 +128,15 @@ struct AppsCommand {
         guard let action = rest.first, action != "list" else {
             guard rest.count <= 1 else { throw CLIError("usage: thermo apps startup [list]") }
             if args.has("json") { print(Export.json(report)); return }
-            out(report.items.map { "\($0.enabled.map { $0 ? "on " : "off" } ?? "?  ")  \($0.label)  \($0.path)" + ($0.blocked.map { " · " + tr($0) } ?? "") }
+            out(report.items.map { "\($0.enabled.map { $0 ? "on " : "off" } ?? "?  ")  \($0.label)  [\($0.effectiveScope.title)]  \($0.path)" + ($0.blocked.map { " · " + tr($0) } ?? "") }
                 + report.issues.map { tr($0) })
             return
         }
-        guard ["enable", "disable"].contains(action), rest.count == 2,
-              let item = report.items.first(where: { $0.label == rest[1] }) else {
-            throw CLIError("usage: thermo apps startup [list | enable LABEL | disable LABEL] [--dry-run] [--yes]")
+        guard ["enable", "disable"].contains(action), rest.count == 2 else {
+            throw CLIError("usage: thermo apps startup [list | enable LABEL_OR_PATH | disable LABEL_OR_PATH] [--dry-run] [--yes]")
         }
+        let matches = report.items.filter { $0.label == rest[1] || $0.path == rest[1] }
+        guard matches.count == 1, let item = matches.first else { throw CLIError(tr("Startup selector is missing or ambiguous; use the full plist path")) }
         guard item.blocked == nil, item.enabled != nil else { throw CLIError(tr(item.blocked ?? "Could not read startup state; refresh before changing it")) }
         if args.has("dry-run") {
             if args.has("json") { print(Export.json(["action": action, "label": item.label, "path": item.path])) }

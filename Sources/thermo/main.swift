@@ -96,8 +96,8 @@ COMMANDS
   apps leftovers             data left by apps that are gone (untouched 30 days, unknown to Spotlight)
   apps leftovers remove ID…|all
                              move that data to the Trash; asks first
-  apps startup [list]        user LaunchAgents and verified startup eligibility (--json)
-  apps startup enable|disable LABEL
+  apps startup [list]        user/shared LaunchAgents and system services (--json)
+  apps startup enable|disable LABEL_OR_PATH
                              change startup eligibility; --dry-run previews, --yes confirms
   apps updates               Homebrew app updates (--json; --refresh-catalog refreshes Homebrew)
   apps updates apply TOKEN   review then install one update (--dry-run, --yes); verifies app version

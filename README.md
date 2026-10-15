@@ -224,7 +224,7 @@ Sparkle 检查比较构建号，区分完整包、增量包、测试渠道、系
 
 安装后同时核实 Homebrew 安装记录和应用目录中的版本；带构建号的版本也会核对构建号。命令失败、超时或版本不符均不算成功。更新开始时先记录“尚未核实”，结果再写入同一操作；安装与核实时会阻止正常退出，结束后可再次退出。Thermo 不提供软件更新的自动回退。
 
-「软件管理 → 启动项」可查看用户 `~/Library/LaunchAgents` 中的后台服务，并确认启用或停用。CLI 使用 `thermo apps startup` 查看，`thermo apps startup disable LABEL --dry-run` 预览，去掉 `--dry-run` 后交互确认，或加 `--yes` 执行。开关修改 launchd 的持久启用状态，不改写 plist，也不立即停止或启动程序。执行前复核文件与状态，完成后重新读取确认；可在同一页面反向切换，历史记录也提供撤销入口。系统级服务及 App 注册的其他登录项请点「打开系统登录项」管理。
+「软件管理 → 启动项」可查看 `~/Library/LaunchAgents`、`/Library/LaunchAgents` 和 `/Library/LaunchDaemons` 中的后台服务，并区分用户、共享和系统来源。用户及共享 LaunchAgent 的开关只调整当前用户的启动资格；系统 LaunchDaemon 显示状态并保留管理入口，暂不通过 Thermo 修改。CLI 使用 `thermo apps startup` 查看，`thermo apps startup disable LABEL --dry-run` 预览；同名项可用完整 plist 路径选择。去掉 `--dry-run` 后交互确认，或加 `--yes` 执行。开关不改写 plist，也不立即停止或启动程序。执行前复核文件、来源和状态，完成后重新读取确认；可在同一页面反向切换，历史记录也提供入口。同一用户域中有多个文件使用相同 Label 时禁止修改。系统级服务及 App 注册的其他登录项请点「打开系统登录项」或所属应用设置管理。
 
 ## 风扇控制安全机制
 
