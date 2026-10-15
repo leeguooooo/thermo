@@ -21,8 +21,17 @@ final class SpaceOverviewModel: ObservableObject {
     private var measurementLanguage: String?
     private var restartAfterCurrent = false
     private var generation = UUID()
+    private var inFlight = false
+    private var invalidatedDuringMeasurement = false
+    private let read: @Sendable (ScanCancellation, ((SpaceOverview.Entry) -> Void)?) -> SpaceOverview
+    private let save: @Sendable (SpaceOverview) -> Void
+    private let readDiskSpace: @Sendable () -> DiskSpaceSnapshot?
 
-    init(cached: (SpaceOverview, Date)? = SpaceOverview.cached(localize: true), diskSpace: DiskSpaceSnapshot? = .measure()) {
+    init(cached: (SpaceOverview, Date)? = SpaceOverview.cached(localize: true), diskSpace: DiskSpaceSnapshot? = .measure(),
+         read: @escaping @Sendable (ScanCancellation, ((SpaceOverview.Entry) -> Void)?) -> SpaceOverview = { SpaceOverview.measure(onEntry: $1, cancellation: $0, lowPriority: true) },
+         save: @escaping @Sendable (SpaceOverview) -> Void = { $0.save() },
+         readDiskSpace: @escaping @Sendable () -> DiskSpaceSnapshot? = { .measure() }) {
+        self.read = read; self.save = save; self.readDiskSpace = readDiskSpace
         self.diskSpace = diskSpace
         if let (o, at) = cached { overview = o; measuredAt = at }
     }
@@ -48,11 +57,16 @@ final class SpaceOverviewModel: ObservableObject {
     }
 
     func measure() {
-        guard !measuring else { return }
-        diskSpace = .measure()
+        guard !inFlight else {
+            if invalidatedDuringMeasurement { restartAfterCurrent = true }
+            return
+        }
+        diskSpace = readDiskSpace()
         let generation = UUID()
         self.generation = generation
         measuring = true
+        inFlight = true
+        invalidatedDuringMeasurement = false
         measurementLanguage = L10n.current.rawValue
         restartAfterCurrent = false
         stopping = false
@@ -60,18 +74,27 @@ final class SpaceOverviewModel: ObservableObject {
         partial = []
         let cancellation = ScanCancellation()
         self.cancellation = cancellation
+        let read = self.read, save = self.save
         Task.detached(priority: .utility) {
-            let o = SpaceOverview.measure(onEntry: { e in
+            let o = read(cancellation, { e in
                 Task { @MainActor in
                     guard self.generation == generation, self.cancellation === cancellation, !cancellation.isCancelled else { return }
                     self.acceptEntry(e)
                 }
-            }, cancellation: cancellation, lowPriority: true)
+            })
             await MainActor.run {
-                guard self.generation == generation else { return }
-                o.save()
+                guard self.cancellation === cancellation else { return }
+                self.inFlight = false
+                self.measuring = false
+                self.stopping = false
+                self.cancellation = nil
                 let restart = self.restartAfterCurrent
                 self.restartAfterCurrent = false
+                guard self.generation == generation else {
+                    if restart { self.measure() }
+                    return
+                }
+                save(o)
                 if o.language != L10n.current.rawValue {
                     self.partial = []
                     self.stopped = !restart
@@ -80,12 +103,9 @@ final class SpaceOverviewModel: ObservableObject {
                     self.stopped = true
                 } else {
                     self.overview = o
-                    self.diskSpace = .measure()
+                    self.diskSpace = self.readDiskSpace()
                     self.measuredAt = o.measuredAt
                 }
-                self.measuring = false
-                self.stopping = false
-                self.cancellation = nil
                 if restart { self.measure() }
             }
         }
@@ -96,16 +116,17 @@ final class SpaceOverviewModel: ObservableObject {
     func invalidateAfterCleanup() {
         generation = UUID()
         cancellation?.cancel()
-        cancellation = nil
+        if !inFlight { cancellation = nil }
+        invalidatedDuringMeasurement = inFlight
         restartAfterCurrent = false
         measurementLanguage = nil
-        measuring = false
-        stopping = false
+        measuring = inFlight
+        stopping = inFlight
         stopped = false
         overview = nil
         measuredAt = nil
         partial = []
-        diskSpace = .measure()
+        diskSpace = readDiskSpace()
     }
 
     func stop() {
@@ -130,10 +151,11 @@ final class SpaceOverviewModel: ObservableObject {
     }
 
     func measureIfStale() {
-        diskSpace = .measure()
+        diskSpace = readDiskSpace()
         if overview != nil, !SpaceOverview.isCurrent(measuredAt: measuredAt) { invalidateAfterCleanup() }
         discardIncompatibleResults()
         if measuring {
+            if invalidatedDuringMeasurement { restartAfterCurrent = true }
             if measurementLanguage != L10n.current.rawValue {
                 restartAfterCurrent = true
                 cancellation?.cancel()

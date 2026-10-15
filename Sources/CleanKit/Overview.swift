@@ -82,6 +82,14 @@ public struct SpaceOverview: Codable, Sendable {
         }
     }
 
+    static let measurementConcurrency = min(4, max(1, ProcessInfo.processInfo.activeProcessorCount / 2))
+    private static let measurementQueue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = measurementConcurrency
+        queue.qualityOfService = .background
+        return queue
+    }()
+
     /// Measures in parallel; the app uses lowPriority to keep background disk I/O quiet. `onProgress` gets each finished spot's title,
     /// `onEntry` the spot itself, so a UI can show results as they come in.
     public static func measure(home: String = NSHomeDirectory(), onProgress: ((String) -> Void)? = nil,
@@ -133,13 +141,17 @@ public struct SpaceOverview: Codable, Sendable {
         let plannedPaths = states.map(\.paths)
         let lock = NSLock()
         let emissions = DispatchQueue(label: "dev.thermo.overview.results")
-        let queue = OperationQueue()
-        queue.maxConcurrentOperationCount = min(4, max(1, ProcessInfo.processInfo.activeProcessorCount / 2))
-        queue.qualityOfService = lowPriority ? .background : .utility
+        let group = DispatchGroup()
+        func enqueue(_ work: @escaping () -> Void) {
+            group.enter()
+            let operation = BlockOperation { defer { group.leave() }; work() }
+            operation.qualityOfService = lowPriority ? .background : .utility
+            measurementQueue.addOperation(operation)
+        }
         let timing = ProcessInfo.processInfo.environment["THERMO_CLEAN_TIMING"] != nil
         // Simulator runtimes live on their own disk images: same disk, no folder to measure.
         var runtimes: Entry?
-        if includeRuntimes { queue.addOperation {
+        if includeRuntimes { enqueue {
             guard !cancellation.isCancelled else { return }
             let (status, json) = Shell.exec(["xcrun", "simctl", "runtime", "list", "-j"], timeout: 30, cancellation: cancellation)
             guard !cancellation.isCancelled else { return }
@@ -171,8 +183,8 @@ public struct SpaceOverview: Codable, Sendable {
             }
             return nil
         }
-        for _ in 0..<queue.maxConcurrentOperationCount {
-            queue.addOperation {
+        for _ in 0..<measurementConcurrency {
+            enqueue {
                 while !cancellation.isCancelled, let (i, path) = nextJob() {
                     guard !cancellation.isCancelled else { return }
                     let began = Date()
@@ -213,7 +225,7 @@ public struct SpaceOverview: Codable, Sendable {
                 }
             }
         }
-        queue.waitUntilAllOperationsAreFinished()
+        group.wait()
         emissions.sync {}
 
         let unreadable = states.flatMap(\.denied)

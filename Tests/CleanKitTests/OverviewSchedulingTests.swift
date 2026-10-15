@@ -59,4 +59,45 @@ final class OverviewSchedulingTests: XCTestCase {
         partial.save(to: url)
         XCTAssertEqual(SpaceOverview.cached(from: url, now: Date(timeIntervalSince1970: 200))?.0.entries.count, 0)
     }
+
+    func testConcurrentMeasurementsSharePhysicalWorkerSlotsAfterCancellation() async throws {
+        let count = SpaceOverview.measurementConcurrency
+        let paths = try (0..<count).map { i -> String in
+            let path = home + "/held-\(i)"
+            try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
+            return path
+        }
+        let spot = SpaceOverview.Spot(id: "held", title: "Held", paths: paths, children: 0)
+        let first = ScanCancellation(), second = ScanCancellation()
+        let held = expectation(description: "all physical slots held"); held.expectedFulfillmentCount = count
+        let entered = expectation(description: "second caller entered")
+        let unexpected = expectation(description: "no extra physical slots"); unexpected.isInverted = true
+        let finished = expectation(description: "both measurements finished"); finished.expectedFulfillmentCount = 2
+        let release = DispatchSemaphore(value: 0)
+        defer { first.cancel(); second.cancel(); for _ in 0..<count { release.signal() } }
+        let home = home
+        DispatchQueue.global().async {
+            _ = SpaceOverview.measure(home: home, spots: [spot], cancellation: first, footprint: { _, _ in
+                held.fulfill()
+                XCTAssertEqual(release.wait(timeout: .now() + 5), .success)
+                return DiskFootprint(allocated: 1, files: 1, newest: nil, denied: false)
+            })
+            finished.fulfill()
+        }
+        await fulfillment(of: [held], timeout: 5)
+        first.cancel()
+        DispatchQueue.global().async {
+            entered.fulfill()
+            _ = SpaceOverview.measure(home: home, spots: [spot], cancellation: second, footprint: { _, _ in
+                unexpected.fulfill()
+                return DiskFootprint(allocated: 1, files: 1, newest: nil, denied: false)
+            })
+            finished.fulfill()
+        }
+        await fulfillment(of: [entered], timeout: 5)
+        await fulfillment(of: [unexpected], timeout: 0.15)
+        second.cancel()
+        for _ in 0..<count { release.signal() }
+        await fulfillment(of: [finished], timeout: 5)
+    }
 }
