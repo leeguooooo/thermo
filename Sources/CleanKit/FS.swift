@@ -1,3 +1,4 @@
+import AgentCore
 import Darwin
 import Foundation
 
@@ -460,6 +461,8 @@ public enum Cleaner {
     }
 
     static func log(_ r: CleanResult, item: CleanItem, to url: URL) {
+        // The log lives at <home>/Library/Logs/Thermo/clean.log.
+        journal(r, item: item, home: url.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().path)
         let f = ISO8601DateFormatter()
         var lines = r.removed.map { "\(f.string(from: Date())) \(r.trashed ? "trash" : "delete") \(item.id) \($0)" }
         lines += (r.partialRemoved ?? []).map { "\(f.string(from: Date())) partial \(item.id) \($0) (estimated removed bytes included; complete estimate=\(r.bytesIncomplete != true))" }
@@ -476,6 +479,35 @@ public enum Cleaner {
         } else {
             try? data.write(to: url)
         }
+    }
+}
+
+extension Cleaner {
+    /// Every cleanup, uninstall, hand-picked Trash move and Trash-batch empty goes through `log`;
+    /// this mirrors it into the shared operation history, with where it can be undone.
+    static func journal(_ r: CleanResult, item: CleanItem, home: String) {
+        let feature: String, action: String
+        switch r.id {
+        case let id where id.hasPrefix("app:"): (feature, action) = ("apps", "uninstall")
+        case let id where id.hasPrefix("leftovers:"): (feature, action) = ("apps", "remove")
+        case "manual": (feature, action) = ("space", "trash")
+        case let id where id.hasPrefix("trash-batch/"): (feature, action) = ("clean", "emptyTrash")
+        default: (feature, action) = ("clean", r.trashed ? "trash" : "delete")
+        }
+        let partial = Set(r.partialRemoved ?? [])
+        // Per-path sizes are not kept by the cleaner; a single removed path carries the total.
+        let single = r.removed.count == 1 && r.bytesIncomplete != true
+        var items = r.removed.map { OperationRecord.Item(target: $0, bytes: single ? r.bytes : nil, status: partial.contains($0) ? "partial" : "done") }
+        items += partial.subtracting(r.removed).sorted().map { OperationRecord.Item(target: $0, status: "partial") }
+        items += r.failed.sorted { $0.key < $1.key }.map { OperationRecord.Item(target: $0.key, status: "failed", detail: $0.value) }
+        let undo: OperationRecord.Undo? = r.trashBatchID.map { .init(kind: "trashBatch", ref: $0) }
+            ?? (r.trashed && action != "emptyTrash" && !r.removed.isEmpty ? .init(kind: "trash", ref: "") : nil)
+        var record = OperationRecord(feature: feature, action: action, subject: item.id == r.id ? item.title : item.id, items: items, undo: undo)
+        if !single, !r.removed.isEmpty {
+            record.bytes = r.bytes
+            record.bytesIncomplete = r.bytesIncomplete == true ? true : nil
+        }
+        OperationJournal.record(record, home: home)
     }
 }
 

@@ -259,6 +259,7 @@ struct PulseCommand {
         let inventory = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
         let result = PulseActionReview(action: action, target: hog, before: before, after: after,
                                        afterTarget: PulseActionReview.findTarget(hog, in: inventory), inventoryAvailable: !inventory.isEmpty)
+        result.record()
         print(result.summary)
         print(app.style.dim(result.detail))
     }

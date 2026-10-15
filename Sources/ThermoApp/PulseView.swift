@@ -75,6 +75,7 @@ final class SystemPulse: ObservableObject {
             let all = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
             let result = PulseActionReview(action: action, target: hog, before: before, after: after,
                                            afterTarget: PulseActionReview.findTarget(hog, in: all), inventoryAvailable: !all.isEmpty)
+            result.record()
             DispatchQueue.main.async {
                 guard self.reviewID == id else { return }
                 self.actionFeedback = MachinePulse.sentences(result.summary, result.detail)

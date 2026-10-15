@@ -290,6 +290,7 @@ public enum TabWorkspace {
             }
             try write(archive, to: url)
         }
+        journal(archive, action: "archive", home: home)
         return archive
     }
 
@@ -326,7 +327,22 @@ public enum TabWorkspace {
             } else { archive.entries[i].restoreState = "unconfirmed" }
             try write(archive, to: url)
         }
+        journal(archive, action: "restore", home: home)
         return archive
+    }
+    /// Saving-and-closing and reopening tabs both go into the shared operation history.
+    static func journal(_ archive: Archive, action: String, home: String) {
+        let items: [OperationRecord.Item] = archive.entries.compactMap { entry in
+            let target = entry.page.tab.url
+            if action == "archive" {
+                let status = entry.status == "closed" ? "done" : entry.status == "skipped" ? "skipped" : entry.status == "unconfirmed" ? "partial" : "failed"
+                return .init(target: target, status: status, detail: entry.page.tab.title)
+            }
+            guard let state = entry.restoreState else { return nil }
+            return .init(target: target, status: state == "restored" ? "done" : "partial", detail: entry.page.tab.title)
+        }
+        OperationJournal.record(OperationRecord(feature: "tabs", action: action, subject: archive.name, items: items,
+                                                undo: action == "archive" ? .init(kind: "tabArchive", ref: archive.id.uuidString) : nil), home: home)
     }
     static func reopen(_ page: Page, _ app: String, execute: ((String) -> String?)? = nil) -> String? {
         let script = """

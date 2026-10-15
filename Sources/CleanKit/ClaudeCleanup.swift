@@ -233,6 +233,7 @@ public final class ClaudeCleanup {
             }
             result.batch = batch
         } catch { result.failed["reset"] = error.localizedDescription }
+        journal(result, action: "reset", bytes: Dictionary(selections.map { ($0.target, $0.bytes) }, uniquingKeysWith: { a, _ in a }))
         return result
     }
     public func restore(batchID: String) -> ClaudeResetResult {
@@ -268,6 +269,16 @@ public final class ClaudeCleanup {
             }
             result.batch = batch
         } catch { result.failed["restore"] = error.localizedDescription }
+        journal(result, action: "restore", bytes: Dictionary((result.batch?.entries ?? []).map { ($0.target, $0.bytes) }, uniquingKeysWith: { a, _ in a }))
         return result
+    }
+    /// Mirrors a reset or restore into the shared operation history; resets point at their recovery record.
+    private func journal(_ result: ClaudeResetResult, action: String, bytes: [ClaudeResetTarget: Int64]) {
+        var items = result.succeeded.map { OperationRecord.Item(target: path($0), bytes: bytes[$0], status: "done") }
+        items += result.failed.sorted { $0.key < $1.key }.map { key, why in
+            OperationRecord.Item(target: ClaudeResetTarget(rawValue: key).map(path) ?? key, status: "failed", detail: why)
+        }
+        let undo = action == "reset" && !result.succeeded.isEmpty ? result.batch.map { OperationRecord.Undo(kind: "claudeReset", ref: $0.id) } : nil
+        OperationJournal.record(OperationRecord(feature: "claudeReset", action: action, subject: result.batch?.id, items: items, undo: undo), home: home)
     }
 }

@@ -1,3 +1,4 @@
+import AgentCore
 import CryptoKit
 import Darwin
 import Foundation
@@ -176,8 +177,19 @@ public enum VerifiedArchive {
 
     public static func archive(source: String, destination: SSHArchiveDestination, removeLocal: Bool = false,
                                allowDevelopment: Bool = false, progress: ((Int64) -> Void)? = nil) throws -> ArchiveReceipt {
-        try archive(source: source, destination: destination, removeLocal: removeLocal, allowDevelopment: allowDevelopment,
-                    transport: Transport(host: destination.host), idle: ensureIdle, progress: progress)
+        let remote = destination.host + ":" + destination.path
+        do {
+            let receipt = try archive(source: source, destination: destination, removeLocal: removeLocal, allowDevelopment: allowDevelopment,
+                                      transport: Transport(host: destination.host), idle: ensureIdle, progress: progress)
+            OperationJournal.record(OperationRecord(feature: "archive", action: receipt.localRemoved ? "archiveAndRemove" : "archive", subject: remote,
+                                                    items: [.init(target: source, bytes: receipt.archiveBytes, status: "done", detail: "sha256 " + receipt.sha256)],
+                                                    undo: .init(kind: "archiveManifest", ref: remote + ".manifest.json")))
+            return receipt
+        } catch {
+            OperationJournal.record(OperationRecord(feature: "archive", action: removeLocal ? "archiveAndRemove" : "archive", subject: remote,
+                                                    items: [.init(target: source, status: "failed", detail: error.localizedDescription)]))
+            throw error
+        }
     }
 
     static func archive(source: String, destination: SSHArchiveDestination, removeLocal: Bool, allowDevelopment: Bool,

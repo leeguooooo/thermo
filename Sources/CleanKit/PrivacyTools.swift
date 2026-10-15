@@ -1,3 +1,4 @@
+import AgentCore
 import Foundation
 import Darwin
 import CryptoKit
@@ -147,6 +148,40 @@ public struct PrivacyToolsService: @unchecked Sendable {
         }
     }
     public func applyBrowser(_ control: PrivacyBrowserControl) throws -> String {
+        try journaled(control == .location ? "blockLocation" : "restrictWebRTC", undo: .init(kind: "browserBackup", ref: "PrivacyBackups")) { try unjournaledApplyBrowser(control) }
+    }
+    public func restoreLatestBrowserChange() throws -> String {
+        try journaled("restoreBrowser") { try unjournaledRestoreLatestBrowserChange() }
+    }
+    public func clearMailCookies() throws -> String {
+        try journaled("clearMailCookies", undo: .init(kind: "browserBackup", ref: "PrivacyBackups")) { try unjournaledClearMailCookies() }
+    }
+    public func clearClaudeEnvironment() throws -> String {
+        try journaled("clearClaudeEnvironment") { try unjournaledClearClaudeEnvironment() }
+    }
+    public func flushDNS() throws -> String {
+        try journaled("flushDNS") { try unjournaledFlushDNS() }
+    }
+    public func setTimezone(_ timezone: String) throws -> String {
+        try journaled("setTimezone", subject: timezone, undo: .init(kind: "timezoneBackup", ref: "timezone.json")) { try unjournaledSetTimezone(timezone) }
+    }
+    public func restoreTimezone() throws -> String {
+        try journaled("restoreTimezone") { try unjournaledRestoreTimezone() }
+    }
+    /// Every privacy action, applied or refused, lands in the shared operation history with its message.
+    private func journaled(_ action: String, subject: String? = nil, undo: OperationRecord.Undo? = nil, _ body: () throws -> String) throws -> String {
+        do {
+            let message = try body()
+            OperationJournal.record(OperationRecord(feature: "privacy", action: action, subject: subject,
+                                                    items: [.init(target: subject ?? action, status: "done", detail: message)], undo: undo), home: home.path)
+            return message
+        } catch {
+            OperationJournal.record(OperationRecord(feature: "privacy", action: action, subject: subject,
+                                                    items: [.init(target: subject ?? action, status: "failed", detail: error.localizedDescription)]), home: home.path)
+            throw error
+        }
+    }
+    private func unjournaledApplyBrowser(_ control: PrivacyBrowserControl) throws -> String {
         try requireBrowsersClosed()
         let profiles = try discoverProfiles()
         guard !profiles.isEmpty else { throw failure("No supported browser profiles found.") }
@@ -196,7 +231,7 @@ public struct PrivacyToolsService: @unchecked Sendable {
         }
         return tr("Updated %1$@ profiles. Restart browsers to apply. Backups: %2$@", String(profiles.count), storage.path)
     }
-    public func restoreLatestBrowserChange() throws -> String {
+    private func unjournaledRestoreLatestBrowserChange() throws -> String {
         try requireBrowsersClosed(); try safe(storage)
         let files = (try? fm.contentsOfDirectory(at: storage, includingPropertiesForKeys: nil)) ?? []
         guard let latest = files.filter({ $0.lastPathComponent.hasPrefix("browser-") }).sorted(by: { $0.lastPathComponent > $1.lastPathComponent }).first else { throw failure("No browser backup found.") }
@@ -225,7 +260,7 @@ public struct PrivacyToolsService: @unchecked Sendable {
         return tr("Restored the previous browser settings. Restart browsers to apply.")
     }
     public static let mailCookiePredicate = "lower(%@) = 'mail.com' OR lower(%@) LIKE '%%.mail.com'"
-    public func clearMailCookies() throws -> String {
+    private func unjournaledClearMailCookies() throws -> String {
         try requireBrowsersClosed(); try prepareStorage()
         var count = 0
         var errors: [String] = []
@@ -262,7 +297,7 @@ public struct PrivacyToolsService: @unchecked Sendable {
         let summary = tr("Deleted %1$@ mail.com cookies. Cookie backups contain login data; keep them private: %2$@. Cookie restore is manual and requires closed browsers.", String(count), storage.path)
         return errors.isEmpty ? summary : summary + "\n" + tr("Some profiles failed: %1$@", errors.joined(separator: "\n"))
     }
-    public func clearClaudeEnvironment() throws -> String {
+    private func unjournaledClearClaudeEnvironment() throws -> String {
         let names = ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_OAUTH_REFRESH_TOKEN", "ANTHROPIC_BASE_URL", "ANTHROPIC_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_OPUS_MODEL", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"]
         var succeeded: [String] = []
         var failed: [String] = []
@@ -279,7 +314,7 @@ public struct PrivacyToolsService: @unchecked Sendable {
         let escaped = script.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
         _ = try checked("/usr/bin/osascript", ["-e", "do shell script \"\(escaped)\" with administrator privileges"])
     }
-    public func flushDNS() throws -> String {
+    private func unjournaledFlushDNS() throws -> String {
         try authorize("/usr/bin/dscacheutil -flushcache && /usr/bin/killall -HUP mDNSResponder")
         return tr("DNS cache flush requested successfully. DNS servers and proxy settings were unchanged.")
     }
@@ -296,7 +331,7 @@ public struct PrivacyToolsService: @unchecked Sendable {
               let country = object["country_code"] as? String, country.range(of: "^[A-Z]{2}$", options: .regularExpression) != nil else { throw failure("Exit location lookup failed. No settings changed.") }
         return .init(country: country, timezone: tz)
     }
-    public func setTimezone(_ timezone: String) throws -> String {
+    private func unjournaledSetTimezone(_ timezone: String) throws -> String {
         guard Self.validTimezone(timezone) else { throw failure("Invalid timezone.") }
         try prepareStorage()
         let previous = try fm.destinationOfSymbolicLink(atPath: "/etc/localtime")
@@ -309,10 +344,10 @@ public struct PrivacyToolsService: @unchecked Sendable {
         guard try fm.destinationOfSymbolicLink(atPath: "/etc/localtime").hasSuffix("/" + timezone) else { throw failure("Timezone read-back failed.") }
         return tr("System timezone: %1$@. Automatic timezone may override it. Country, language and browser-only proxies are unchanged.", timezone)
     }
-    public func restoreTimezone() throws -> String {
+    private func unjournaledRestoreTimezone() throws -> String {
         let backup = storage.appendingPathComponent("timezone.json"); try safe(backup)
         let value = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: backup))
         guard let previous = value["previous"] else { throw failure("No previous timezone backup found.") }
-        let result = try setTimezone(previous); try fm.removeItem(at: backup); return result
+        let result = try unjournaledSetTimezone(previous); try fm.removeItem(at: backup); return result
     }
 }

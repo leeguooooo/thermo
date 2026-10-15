@@ -39,7 +39,7 @@ public enum WorktreeRegistrationRepair {
         return result.sorted { $0.path < $1.path }
     }
     public static func repair(repo: String, entries: [Entry], home: String = NSHomeDirectory()) -> [Result] {
-        entries.map { reviewed in
+        let results = entries.map { reviewed -> Result in
             var result = Result(path: reviewed.path)
             do {
                 // Re-discover provenance and lock state after review; paths and ids are not trusted input.
@@ -61,5 +61,11 @@ public enum WorktreeRegistrationRepair {
             } catch { result.error = String(describing: error) }
             return result
         }
+        let backups = results.compactMap(\.backup)
+        OperationJournal.record(OperationRecord(feature: "worktrees", action: "repair", subject: repo,
+                                                items: results.map { .init(target: $0.path, status: $0.error == nil ? "done" : "failed", detail: $0.error) },
+                                                undo: backups.isEmpty ? nil : .init(kind: "worktreeBackup", ref: (backups[0] as NSString).deletingLastPathComponent)),
+                                home: home)
+        return results
     }
 }

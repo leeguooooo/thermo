@@ -61,6 +61,9 @@ COMMANDS
   tabs saved|show UUID       saved batches and individual close/restore results
   tabs restore UUID          reopen a saved batch in its original window; --window ID
                              explicitly selects a destination after a browser restart
+  history                    every change Thermo made (cleanups, uninstalls, agent fixes, Claude reset,
+                             privacy, tabs, archives, quits), newest first, and where each is undone;
+                             --limit N, --json; history show ID for every item
   settings [KEY [VALUE]]     the app's settings: menu bar text, interval, alerts, units,
                              language, Dock icon (KEY=VALUE also works)
   clean [CATEGORY|ai]        what can be cleaned: AI sessions/models/caches, dev caches,
@@ -159,6 +162,7 @@ struct App {
         case "pulse", "status": try PulseCommand(app: self).run(rest)
         case "tabs": try TabsCommand(app: self).run(rest)
         case "settings", "config": try SettingsCommand(app: self).run(rest)
+        case "history": try HistoryCommand(app: self).run(rest)
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
         }
     }

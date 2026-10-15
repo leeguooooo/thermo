@@ -150,6 +150,7 @@ public enum TabOrganizer {
             } catch { batch.errors[profile] = error.localizedDescription }
             try TabWorkspace.write(batch, to: file)
         }
+        journal(batch, action: "organize", home: home)
         return batch
     }
     public static func undo(_ id: UUID, home: String = NSHomeDirectory(), execute: Execute? = nil) async throws -> Batch {
@@ -175,6 +176,16 @@ public enum TabOrganizer {
             } catch { batch.errors[profile] = error.localizedDescription }
             try TabWorkspace.write(batch, to: file)
         }
+        journal(batch, action: "undoOrganize", home: home)
         return batch
+    }
+    static func journal(_ batch: Batch, action: String, home: String) {
+        var items = batch.plan.groups.map { group in
+            OperationRecord.Item(target: group.name, status: batch.errors[group.profileID] == nil ? "done" : "failed",
+                                 detail: batch.errors[group.profileID] ?? String(group.pages.count))
+        }
+        if items.isEmpty { items = batch.errors.map { .init(target: $0.key, status: "failed", detail: $0.value) } }
+        OperationJournal.record(OperationRecord(feature: "tabs", action: action, subject: batch.app, items: items,
+                                                undo: action == "organize" ? .init(kind: "tabBatch", ref: batch.id.uuidString) : nil), home: home)
     }
 }

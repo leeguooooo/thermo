@@ -15,6 +15,7 @@ struct Args {
                                             "area", "agent", "action",
         "to", // space archive: SSH alias:/absolute/archive.tar
         "since",  // pulse history
+        "limit",  // history
         "watch", "app", "title", "ids", "group", "name", "window", "color"]  // pulse chrome
     static let aliases: [String: String] = [
         "i": "interval", "n": "count", "s": "sensor", "a": "all", "j": "json",

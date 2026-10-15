@@ -1,3 +1,4 @@
+import AgentCore
 import Foundation
 
 /// A short follow-up after an explicit action. Observations, never a promise that the Mac is fixed.
@@ -66,5 +67,15 @@ public struct PulseActionReview: Codable, Sendable {
 
     public static func findTarget(_ target: MachinePulse.Hog, in inventory: [MachinePulse.Hog]) -> MachinePulse.Hog? {
         inventory.first { $0.id == target.id }
+    }
+}
+
+extension PulseActionReview {
+    /// Quits and restarts go into the shared operation history with what the follow-up reading saw.
+    public func record(home: String = NSHomeDirectory()) {
+        let ok: Set<Outcome> = [.stopped, .memoryDecreased, .noClearDecrease]
+        OperationJournal.record(OperationRecord(feature: "pulse", action: action.rawValue, subject: program,
+                                                items: [.init(target: program, status: ok.contains(outcome) ? "done" : outcome == .unavailable ? "partial" : "failed",
+                                                              detail: outcome.rawValue)]), home: home)
     }
 }

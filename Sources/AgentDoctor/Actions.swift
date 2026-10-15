@@ -108,18 +108,29 @@ public enum ActionRunner {
             backups.append(dest.path)
         }
 
+        var items: [OperationRecord.Item] = []
+        func journal() {
+            let undo: OperationRecord.Undo? = !backups.isEmpty ? .init(kind: "agentBackup", ref: backupDir.path)
+                : action.steps.contains(where: { if case .trash = $0 { return true } else { return false } }) ? .init(kind: "trash", ref: "") : nil
+            OperationJournal.record(OperationRecord(feature: "agents", action: action.kind.rawValue, subject: Redact.text(action.title),
+                                                    items: items, undo: undo), home: env.home.path)
+        }
         for step in action.steps {
             do {
                 try perform(step, env: env, backup: backup)
                 log.append("✓ " + Redact.text(step.display))
                 record(env, action: action, step: step)
+                items.append(.init(target: Redact.text(step.display), status: "done"))
             } catch {
                 let failure = Redact.text("\(error)")
                 log.append("✗ " + Redact.text(step.display) + " — " + failure)
                 record(env, action: action, step: step, failure: failure)
+                items.append(.init(target: Redact.text(step.display), status: "failed", detail: failure))
+                journal()
                 return ActionResult(ok: false, log: log, backups: backups)
             }
         }
+        journal()
         return ActionResult(ok: true, log: log, backups: backups)
     }
 

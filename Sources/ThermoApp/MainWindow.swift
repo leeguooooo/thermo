@@ -42,9 +42,10 @@ enum MainPage: Hashable {
     case memory
     case claudeCleanup, privacyTools
     case compute(Bool)
+    case history
 
     /// `--page` values: overview, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
-    /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates, memory, cpu, gpu, claude-cleanup.
+    /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates, memory, cpu, gpu, claude-cleanup, history.
     init?(argument: String) {
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
         guard let command = parts.first else { return nil }
@@ -58,6 +59,7 @@ enum MainPage: Hashable {
         case "agents": self = .agents(parts.count > 1 ? (Area(rawValue: parts[1]).map { .area($0) } ?? .home) : .home)
         case "apps": self = .apps(parts.count > 1 ? (AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
         case "memory": self = .memory
+        case "history": self = .history
         case "claude-cleanup": self = parts.count > 1 && parts[1] == "privacy" ? .privacyTools : .claudeCleanup
         case "cpu": self = .compute(false)
         case "gpu": self = .compute(true)
@@ -339,6 +341,8 @@ struct MainView: View {
             ClaudeCleanupPage(model: models.claudeCleanup).transition(.opacity)
         case .privacyTools:
             ClaudeCleanupPage(model: models.claudeCleanup, initialTab: 1).transition(.opacity)
+        case .history:
+            HistoryPage(model: HistoryModel.shared, open: { page = $0 }).transition(.opacity)
         case let .space(tab):
             SpacePage(model: SpaceLensModel.shared, tab: Binding(get: { tab }, set: { page = .space($0) })).transition(.opacity)
         }
@@ -437,7 +441,10 @@ struct MainSidebar: View {
                 .padding(.bottom, 12)
             }
             Rectangle().fill(Color.white.opacity(0.06)).frame(height: 1).padding(.horizontal, 12)
-            row(.settings, tr("Settings"), "gearshape.fill", .gray, trailing: nil).padding(.vertical, 10)
+            VStack(spacing: 2) {
+                row(.history, tr("History"), "clock.arrow.circlepath", .brown, trailing: nil)
+                row(.settings, tr("Settings"), "gearshape.fill", .gray, trailing: nil)
+            }.padding(.vertical, 10)
         }
         .frame(maxHeight: .infinity, alignment: .top)
     }
