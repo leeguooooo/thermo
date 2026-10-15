@@ -6,7 +6,7 @@ public enum HelperConstants {
     public static let machService = "dev.thermo.helper"
     public static let installedBinary = "/Library/PrivilegedHelperTools/dev.thermo.helper"
     public static let launchdPlist = "/Library/LaunchDaemons/dev.thermo.helper.plist"
-    public static let protocolVersion = "1"
+    public static let protocolVersion = "2"
     /// Reported by the helper: "<protocol>/<app version>".
     public static var version: String { "\(protocolVersion)/\(ThermoVersion.string)" }
     /// Plist bundled at Contents/Library/LaunchDaemons for SMAppService registration.
@@ -113,6 +113,10 @@ public enum HelperSelfUpdate {
     func setPolicy(fan: Int, policy: Data, reply: @escaping (String?) -> Void)
     /// JSON-encoded [Int: FanPolicy].
     func policies(reply: @escaping (Data) -> Void)
+    /// Keep the Mac awake with the lid closed (protocol 2). Reply carries an error message or nil.
+    func setLidAwake(_ on: Bool, reply: @escaping (String?) -> Void)
+    /// JSON-encoded LidAwakeState.
+    func lidAwakeState(reply: @escaping (Data) -> Void)
 }
 
 /// The helper's fan policies on disk, so a helper restart (update, reboot) keeps what the user
@@ -248,6 +252,31 @@ public final class HelperClient: @unchecked Sendable {
             p.policies { d in once.run { cont.resume(returning: d) } }
         }
         return try PolicyCoding.decoder().decode([Int: FanPolicy].self, from: data)
+    }
+
+    public func setLidAwake(_ on: Bool) async throws {
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            let once = Once()
+            guard let p = proxy({ e in once.run { cont.resume(throwing: FanControlError.helperUnavailable(e.localizedDescription)) } }) else {
+                return once.run { cont.resume(throwing: FanControlError.helperUnavailable("no proxy")) }
+            }
+            deadline(5, once) { cont.resume(throwing: FanControlError.helperUnavailable("no answer within 5 s")) }
+            p.setLidAwake(on) { err in
+                once.run { if let err { cont.resume(throwing: FanControlError.helper(err)) } else { cont.resume() } }
+            }
+        }
+    }
+
+    public func lidAwakeState() async throws -> LidAwakeState {
+        let data: Data = try await withCheckedThrowingContinuation { cont in
+            let once = Once()
+            guard let p = proxy({ e in once.run { cont.resume(throwing: FanControlError.helperUnavailable(e.localizedDescription)) } }) else {
+                return once.run { cont.resume(throwing: FanControlError.helperUnavailable("no proxy")) }
+            }
+            deadline(3, once) { cont.resume(throwing: FanControlError.helperUnavailable("no answer within 3 s")) }
+            p.lidAwakeState { d in once.run { cont.resume(returning: d) } }
+        }
+        return try PolicyCoding.decoder().decode(LidAwakeState.self, from: data)
     }
 
     // MARK: blocking (CLI)
