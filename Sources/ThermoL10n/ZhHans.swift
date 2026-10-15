@@ -1183,6 +1183,7 @@ let zhHans: [String: String] = [
     "Choose how fast each fan runs. Settings stay when Thermo quits or updates.": "选择每个风扇的转速。Thermo 退出或更新后设置仍然保留。",
     "Browser pages": "浏览器页面",
     "Temperature, last 10 minutes": "最近 10 分钟温度",
+    "Fan speed, last 10 minutes": "最近 10 分钟风扇转速",
     "CPU load": "CPU 负载",
     "%1$@ cores": "%1$@ 核",
     "load %1$@": "负载 %1$@",
