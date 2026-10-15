@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "evidence": "XCTest assertions and completed test log",
+  "productionSourceCommit": "c12a59aa609cea635cdfa779edb37d9dbc0c0323",
+  "testSource": "Tests/CleanKitTests/RuntimeDMGOwnershipTests.swift",
+  "testSourceSHA256": "fbc85752cb2d8e59f146e7a9aa90baa4d8c6e01f6ac4b3c7f03f644e2ffe3082",
+  "command": "swift test --jobs 4 --filter RuntimeDMGOwnershipTests",
+  "testMethod": "testReadOnlyDMGRunningCopyKeepsSharedDataAndInvalidatesAnEarlierPlan",
+  "durationSeconds": 12.549,
+  "macOSVersion": "26.6.2",
+  "architecture": "arm64",
+  "readOnlyUDZOMountVerified": true,
+  "nativeAppKitBackgroundProcessStarted": true,
+  "kernelProcessEntriesUsed": true,
+  "processScope": "owned fixture child and test host only",
+  "isolatedHomeVerifiedBeforeAppKitStartup": true,
+  "oldPlanRefusedAfterRuntimeStarted": true,
+  "freshPlanMovesOnlyTemporaryInstalledBundle": true,
+  "bundleIDAndNameDataPreserved": true,
+  "ownedChildTerminationAndImageDetachVerified": true,
+  "interactiveThirdPartyGUIAcceptance": false,
+  "fullSuiteFixtureDurationSeconds": 10.387,
+  "sharedPayloadBytesPreserved": true,
+  "fullSuiteCounts": {
+    "CleanKit": 449,
+    "ThermoApp": 123,
+    "ThermoCLI": 51,
+    "AgentCore": 24,
+    "total": 647,
+    "failures": 0
+  }
+}
