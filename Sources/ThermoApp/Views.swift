@@ -156,13 +156,14 @@ struct QuickFanSwitch: View {
     @ObservedObject var monitor: Monitor
     let fan: FanReading
 
-    /// Read live from the helper's policies (never copied), so it always shows what is active.
+    /// These buttons select desired policies; register observations are separate.
     var current: FanPolicy { monitor.pendingPolicies[fan.id] ?? monitor.policies[fan.id] ?? .auto }
     var isMax: Bool { if case .fixed(let r) = current { return r.isInfinite || r >= fan.max } else { return false } }
     var isCustom: Bool { current != .auto && !isMax }
 
     var body: some View {
         HStack(spacing: 4) {
+            Text(tr("Requested policy")).font(.system(size: 10)).foregroundStyle(.secondary)
             option(tr("Auto"), on: monitor.policiesAvailable && current == .auto) { monitor.setPolicy(.auto, fan: fan.id) }
             option(tr("Max"), on: monitor.policiesAvailable && isMax) { monitor.setPolicy(.fixed(rpm: .infinity), fan: fan.id) }
             if monitor.policiesAvailable && isCustom {
@@ -390,7 +391,8 @@ struct FansView: View {
                     // Always usable: without a helper, Apply queues the setting and starts setup.
                     FanControlCard(fan: f, policy: monitor.pendingPolicies[f.id] ?? monitor.policies[f.id] ?? .auto,
                                    enabled: !monitor.helperBusy, pending: monitor.pendingPolicies[f.id] != nil,
-                                   policyAvailable: monitor.policiesAvailable, applying: monitor.applyingPolicies) { monitor.setPolicy($0, fan: f.id) }
+                                   policyAvailable: monitor.policiesAvailable, applying: monitor.applyingPolicies,
+                                   controlState: monitor.fanControlState) { monitor.setPolicy($0, fan: f.id) }
                 }
                 if s.fans.count > 1 && [.running, .outdated].contains(monitor.helperState) {
                     Button(tr("All fans to Auto")) { monitor.setPolicy(.auto, fan: -1) }.disabled(monitor.helperBusy)
@@ -400,7 +402,7 @@ struct FansView: View {
                 SectionHeader(title: tr("Fan speed, last 10 minutes"))
                 InspectorPanel { FanChart(history: monitor.history).padding(14) }
             }
-            Text(tr("Safety: fans go back to Auto while the CPU/GPU stays above %1$@ °C (%2$@ °C on Apple Silicon) and your settings resume once it cools down; also whenever the helper stops.",
+            Text(tr("Safety: sustained heat above %1$@ °C (%2$@ °C on Apple Silicon) pauses policies that reduce cooling. Full-speed cooling can continue. The helper attempts Auto on stopping; recovery failures are reported.",
                     String(Int(SafetyLimits.intel.ceiling)), String(Int(SafetyLimits.appleSilicon.ceiling))))
                 .font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
                 .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 4)
@@ -427,7 +429,7 @@ struct FansView: View {
             notice(tr("Checking the fan helper…"), tr("Reading the helper’s status. You can keep viewing sensor readings."))
         case .notInstalled, .needsApproval:
             setupCard(icon: "fan", title: tr("Let Thermo control the fans"),
-                      body: tr("Fan control uses a small helper that runs with system rights. It only sets fan speeds within the fan's own limits, and hands the fans back to macOS when the helper stops or the Mac gets too hot. macOS asks for your password once; updates need nothing more."),
+                      body: tr("Fan control uses a small helper with system rights. It limits requests to each fan's range and attempts automatic control when it stops or heat protection triggers. Recovery failures are reported. macOS may ask for your password."),
                       primary: (tr("Allow…"), { monitor.beginSetup() }))
         }
         }
@@ -492,6 +494,7 @@ struct FanControlCard: View {
     var pending = false
     var policyAvailable = true
     var applying = false
+    var controlState: FanControlState?
     let apply: (FanPolicy) -> Void
 
     @State private var mode: FanMode = .auto
@@ -541,17 +544,23 @@ struct FanControlCard: View {
             .padding(.horizontal, 14).padding(.vertical, 11)
             InspectorDivider(inset: 14)
             HStack {
-                Text(pending ? tr("Waiting for helper: %1$@", policyText) : policyAvailable ? tr("Active: %1$@", policyText) : tr("Active policy unavailable"))
-                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(pending ? tr("Waiting for helper: %1$@", policyText) : policyAvailable ? tr("Requested policy: %1$@", policyText) : tr("Requested policy unavailable"))
+                    Text(FanControlPresentation.observation(controlState, fan: fan.id))
+                    if let checked = controlState?.observations[fan.id]?.checkedAt, checked.timeIntervalSince1970.isFinite {
+                        Text(tr("Checked at %1$@", checked.formatted(date: .numeric, time: .standard)))
+                    }
+                }
+                .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).fixedSize(horizontal: false, vertical: true)
                 Spacer()
-                Button(applying ? tr("Applying…") : tr("Apply")) { applyCurrent() }.controlSize(.small).disabled(!enabled)
+                Button(applying ? tr("Sending…") : tr("Apply")) { applyCurrent() }.controlSize(.small).disabled(!enabled)
             }
             .padding(.horizontal, 14).padding(.vertical, 9)
         }
         .disabled(!enabled)
         .onAppear(perform: load)
         // The helper's policies arrive after the card appears (at launch, after a helper restart):
-        // show what is really active, or Apply would send the stale Auto the card started with.
+        // Load the desired policy so Apply does not resend stale editor defaults.
         .onChange(of: policy) { _ in load() }
     }
 

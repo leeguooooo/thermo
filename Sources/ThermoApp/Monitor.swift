@@ -95,6 +95,7 @@ final class Monitor: ObservableObject {
     @Published private(set) var helperState: HelperState = .unknown
     @Published private(set) var policies: [Int: FanPolicy] = [:]
     @Published private(set) var policiesAvailable = false
+    @Published private(set) var fanControlState: FanControlState?
     @Published private(set) var applyingPolicies = false
     @Published private(set) var installingHelper = false
     @Published private(set) var uninstallingHelper = false
@@ -282,10 +283,11 @@ final class Monitor: ObservableObject {
             defer { refreshingHelper = false }
             // Whatever answers is running, however it was installed (Login Items or password).
             if let v = try? await helper.version() {
-                let active = try? await helper.policies()
+                let state = try? await helper.fanControlState()
                 guard revision == policyRevision, !helperBusy else { return }
-                policiesAvailable = active != nil
-                if let active { policies = active }
+                fanControlState = state
+                policiesAvailable = state != nil
+                if let state { policies = state.policies }
                 helperState = v == HelperConstants.version ? .running : .outdated
                 observeLidAwake(helperState == .running ? try? await helper.lidAwakeState() : nil)
                 if helperState == .outdated { restartOutdatedHelper() }
@@ -294,6 +296,7 @@ final class Monitor: ObservableObject {
             }
             guard revision == policyRevision, !helperBusy else { return }
             policiesAvailable = false
+            fanControlState = nil
             if usesSMAppService {
                 switch daemon.status {
                 case .requiresApproval:
@@ -492,12 +495,18 @@ final class Monitor: ObservableObject {
         applyingPolicies = true
         policyRevision += 1
         Task { @MainActor in
+            var state: FanControlState?
             let result = await FanPolicyOperation.run(changes,
                 set: { try await self.helper.setPolicy($0, fan: $1) },
-                read: { try await self.helper.policies() })
+                read: {
+                    let current = try await self.helper.fanControlState()
+                    state = current
+                    return current.policies
+                })
+            fanControlState = state
             if let active = result.policies { policies = active }
             policiesAvailable = result.policies != nil
-            lastError = result.error
+            lastError = result.error ?? state?.failure
             applyingPolicies = false
             sampleNow()
             if result.policies == nil { refreshHelper() }
@@ -533,6 +542,7 @@ final class Monitor: ObservableObject {
         let exitGuard = AppExitGuard.beginHelperRemoval()
         policyRevision += 1
         policiesAvailable = false
+        fanControlState = nil
         stopSetup()
         pendingPolicies = [:]
         DispatchQueue.global(qos: .userInitiated).async {

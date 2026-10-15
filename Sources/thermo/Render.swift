@@ -11,6 +11,14 @@ struct Renderer {
         available ? policy?.description ?? "auto" : "unknown"
     }
 
+    static func controlText(_ state: FanControlState?, fan: Int) -> String {
+        guard let state else { return "hardware verification unavailable" }
+        let phase = state.verification(for: fan)
+        guard phase == .checked, let observation = state.observations[fan] else { return "hardware verification: " + phase.rawValue }
+        let target = observation.target.map { $0.isFinite ? String(format: "%.0f rpm", $0) : "unknown" } ?? ""
+        return "last register check: \(observation.mode.rawValue) \(target) at \(observation.checkedAt.ISO8601Format())"
+    }
+
     private var nameWidth: Int { 26 }
 
     func header(_ s: Snapshot, model: String) -> [String] {
@@ -198,20 +206,27 @@ enum Export {
         guard let safe = try? Redact.jsonExport(Data(raw.utf8)) else { return "{}" }
         return String(decoding: safe, as: UTF8.self)
     }
-    static func fanStatusCSV(_ fans: [FanReading], policies: [Int: FanPolicy], helperNote: String?) -> String {
+    static func fanStatusCSV(_ fans: [FanReading], policies: [Int: FanPolicy], helperNote: String?, controlState: FanControlState? = nil) -> String {
         let available = helperNote == nil
-        let columns = ["id", "name", "rpm", "min_rpm", "max_rpm", "target_rpm", "manual", "policy", "policies_available", "helper"]
+        let columns = ["id", "name", "rpm", "min_rpm", "max_rpm", "target_rpm", "manual", "policy", "verification_state", "last_observed_mode", "verified_target_rpm", "checked_at", "policies_suspended", "control_failure", "policies_available", "helper"]
         func number(_ value: Double?) -> String {
             guard let value, value.isFinite else { return "" }
             return String(format: "%.3f", value)
         }
+        func verification(_ id: Int) -> [String] {
+            let observation = controlState?.observations[id]
+            let checked = observation.flatMap { $0.checkedAt.timeIntervalSince1970.isFinite ? $0.checkedAt.ISO8601Format() : nil }
+            return [controlState?.verification(for: id).rawValue ?? "unavailable", observation?.mode.rawValue ?? "",
+                    number(observation?.target), checked ?? "",
+                    controlState.map { $0.suspended ? "true" : "false" } ?? "", controlState?.failure ?? ""]
+        }
         var rows = fans.map { fan in
             [String(fan.id), fan.name, number(fan.rpm), number(fan.min), number(fan.max), number(fan.target),
-             fan.manual ? "true" : "false", Renderer.policyText(policies[fan.id], available: available),
-             available ? "true" : "false", helperNote ?? "running"]
+             fan.manual ? "true" : "false", Renderer.policyText(policies[fan.id], available: available)]
+             + verification(fan.id) + [available ? "true" : "false", helperNote ?? "running"]
         }
         // Preserve helper status even on fanless machines.
-        if rows.isEmpty { rows = [["", "", "", "", "", "", "", "", available ? "true" : "false", helperNote ?? "running"]] }
+        if rows.isEmpty { rows = [Array(repeating: "", count: 8) + verification(-1) + [available ? "true" : "false", helperNote ?? "running"]] }
         return ([columns.joined(separator: ",")] + rows.map { $0.map(csvField).joined(separator: ",") }).joined(separator: "\n")
     }
 

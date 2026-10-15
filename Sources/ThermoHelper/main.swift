@@ -35,6 +35,7 @@ final class Controller {
     var written: [Int: Double] = [:]
     var pendingRecovery: FanAutoRecoveryReport?
     var controlError: String?
+    var observations: [Int: FanControlObservation] = [:]
     let removalGuard = HelperRemovalGuard()
     var timer: DispatchSourceTimer?
     let lidAwake: LidAwakeController
@@ -108,6 +109,10 @@ final class Controller {
         let report = writer.setAllAuto()
         pendingRecovery = report.confirmed ? nil : report
         written.removeAll()
+        observations.removeAll()
+        if report.confirmed {
+            for fan in sampler.discovery.fans { observations[fan.index] = .init(mode: .automatic) }
+        }
         log("\(reason); \(report.summary)")
         if !report.requestErrors.isEmpty { log("reset requests: " + report.requestErrors.joined(separator: "; ")) }
         return report
@@ -136,16 +141,19 @@ final class Controller {
                     if !restoreFans(reason: "fan \(fan) auto failed: \(error)").confirmed { return }
                 }
                 written[fan] = nil
+                observations[fan] = .init(mode: .automatic)
             case .manual(let fan, var rpm):
                 do {
                     if let last = written[fan] {
                         if abs(rpm - last) < Self.hysteresis {
-                            try writer.verifyManual(fan, rpm: last)
+                            let target = try writer.verifyManual(fan, rpm: last)
+                            observations[fan] = .init(mode: .manual, target: target)
                             continue
                         }
                         if rpm < last { rpm = max(rpm, last - Self.rampDown) }
                     }
                     written[fan] = try writer.setManual(fan, rpm: rpm)
+                    observations[fan] = .init(mode: .manual, target: written[fan])
                 } catch {
                     log("fan \(fan): write failed: \(error)")
                     controlError = "fan \(fan): manual control failed: \(error)"
@@ -154,6 +162,11 @@ final class Controller {
                 }
             }
         }
+    }
+
+    var controlState: FanControlState {
+        FanControlState(policies: engine.policies, observations: observations, suspended: engine.suspended,
+                        failure: pendingRecovery?.summary ?? controlError)
     }
 
     func setPolicy(_ policy: FanPolicy, fan: Int) throws {
@@ -170,12 +183,15 @@ final class Controller {
             save: { try PolicyStore.save(next.policies) },
             commit: {
                 self.engine = next
-                for id in ids { self.written[id] = nil }
+                for id in ids { self.written[id] = nil; self.observations[id] = nil }
             },
             applyAutomatic: {
                 var errors: [String] = []
                 for id in ids {
-                    do { try self.writer.setAuto(id) } catch { errors.append(String(describing: error)) }
+                    do {
+                        try self.writer.setAuto(id)
+                        self.observations[id] = .init(mode: .automatic)
+                    } catch { errors.append(String(describing: error)) }
                 }
                 if !self.engine.isActive && self.sampler.discovery.fanTestKey {
                     let report = self.restoreFans(reason: "last policy returned to auto")
@@ -259,9 +275,15 @@ final class Service: NSObject, ThermoHelperProtocol {
         }
     }
 
+    func fanControlState(reply: @escaping (Data) -> Void) {
+        controller.queue.async {
+            reply((try? PolicyCoding.encoder().encode(self.controller.controlState)) ?? Data())
+        }
+    }
+
     func policies(reply: @escaping (Data) -> Void) {
         controller.queue.async {
-            reply((try? FanPolicyReply.encode(self.controller.engine.policies, recovery: self.controller.pendingRecovery, controlError: self.controller.controlError)) ?? Data(#"{"_thermoError":"Could not encode fan control state"}"#.utf8))
+            reply((try? FanPolicyReply.encode(self.controller.engine.policies, recovery: self.controller.pendingRecovery, controlError: self.controller.controlState.legacyError)) ?? Data(#"{"_thermoError":"Could not encode fan control state"}"#.utf8))
         }
     }
 }

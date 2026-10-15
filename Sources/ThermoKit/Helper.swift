@@ -6,7 +6,7 @@ public enum HelperConstants {
     public static let machService = "dev.thermo.helper"
     public static let installedBinary = "/Library/PrivilegedHelperTools/dev.thermo.helper"
     public static let launchdPlist = "/Library/LaunchDaemons/dev.thermo.helper.plist"
-    public static let protocolVersion = "4"
+    public static let protocolVersion = "5"
     /// Reported by the helper: "<protocol>/<app version>".
     public static var version: String { "\(protocolVersion)/\(ThermoVersion.string)" }
     /// Plist bundled at Contents/Library/LaunchDaemons for SMAppService registration.
@@ -121,6 +121,8 @@ public enum HelperSelfUpdate {
     func lidAwakeState(reply: @escaping (Data) -> Void)
     /// Protocol 4: confirm automatic fan control and fence manual requests for removal.
     func prepareRemoval(_ prepare: Bool, token: String, reply: @escaping (String?) -> Void)
+    /// Protocol 5: desired policies, last hardware observations and suspension/fault state.
+    func fanControlState(reply: @escaping (Data) -> Void)
 }
 
 /// The helper's fan policies on disk, so a helper restart (update, reboot) keeps what the user
@@ -281,6 +283,22 @@ public final class HelperClient: @unchecked Sendable {
             p.lidAwakeState { d in once.run { cont.resume(returning: d) } }
         }
         return try PolicyCoding.decoder().decode(LidAwakeState.self, from: data)
+    }
+
+    public func fanControlState() async throws -> FanControlState {
+        let v = try await version()
+        guard let major = Int(v.split(separator: "/").first ?? ""), major >= 5 else {
+            return FanControlState(policies: try await policies(), observationsSupported: false)
+        }
+        let data: Data = try await withCheckedThrowingContinuation { cont in
+            let once = Once()
+            guard let p = proxy({ error in once.run { cont.resume(throwing: error) } }) else {
+                return once.run { cont.resume(throwing: FanControlError.helperUnavailable("no proxy")) }
+            }
+            deadline(3, once) { cont.resume(throwing: FanControlError.helperUnavailable("fan state query timed out")) }
+            p.fanControlState { data in once.run { cont.resume(returning: data) } }
+        }
+        return try PolicyCoding.decoder().decode(FanControlState.self, from: data)
     }
 
     public func prepareRemoval(_ prepare: Bool, token: String) async throws {

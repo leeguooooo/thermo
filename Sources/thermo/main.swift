@@ -301,22 +301,29 @@ struct App {
         case "status":
             let s = sm.sample()
             var policies: [Int: FanPolicy] = [:]
+            var controlState: FanControlState?
             var helperNote: String?
-            do { policies = try client.blocking(timeout: 2) { try await $0.policies() } }
-            catch { helperNote = "helper unavailable (thermo helper status)" }
+            do {
+                controlState = try client.blocking(timeout: 7) { try await $0.fanControlState() }
+                policies = controlState?.policies ?? [:]
+            } catch { helperNote = String(describing: error) }
             if args.has("json") {
-                struct Status: Encodable { let fans: [FanReading]; let policies: [String: FanPolicy]; let helper: String?; let policiesAvailable: Bool }
+                struct Status: Encodable { let fans: [FanReading]; let policies: [String: FanPolicy]; let helper: String?; let policiesAvailable: Bool; let controlState: FanControlState? }
                 print(Export.json(Status(fans: s.fans,
                                          policies: Dictionary(uniqueKeysWithValues: policies.map { (String($0.key), $0.value) }),
-                                         helper: helperNote, policiesAvailable: helperNote == nil)))
+                                         helper: helperNote, policiesAvailable: helperNote == nil, controlState: controlState)))
                 return
             }
-            if args.has("csv") { print(Export.fanStatusCSV(s.fans, policies: policies, helperNote: helperNote)); return }
+            if args.has("csv") { print(Export.fanStatusCSV(s.fans, policies: policies, helperNote: helperNote, controlState: controlState)); return }
             out(renderer.fans(s))
             print("")
-            print(style.bold("Policies"))
-            for f in s.fans { print("  " + pad("\(f.id) " + f.name, 10) + Renderer.policyText(policies[f.id], available: helperNote == nil)) }
+            print(style.bold("Requested policies (not hardware confirmation)"))
+            for f in s.fans {
+                print("  " + pad("\(f.id) " + f.name, 10) + Renderer.policyText(policies[f.id], available: helperNote == nil))
+                print("    " + Renderer.controlText(controlState, fan: f.id))
+            }
             if let helperNote { print(style.dim("  " + helperNote)) }
+            if let failure = controlState?.failure { print("  control failure: " + failure) }
 
         case "set":
             guard rest.count == 3 else { throw CLIError("usage: thermo fan set ID|all RPM|max") }
@@ -325,7 +332,7 @@ struct App {
                 try client.blocking(timeout: 15) { try await $0.setPolicy(.fixed(rpm: rpm), fan: id) }
             }
             warnClamp(rpm, sm: sm)
-            print("fan \(rest[1]): fixed \(Self.fanRPMText(rpm))")
+            print("fan \(rest[1]): fixed \(Self.fanRPMText(rpm)) request accepted; check fan status for hardware verification")
 
         case "curve":
             guard rest.count == 3 else { throw CLIError("usage: thermo fan curve ID|all 50:min,70:3000,85:max [--sensor cpu|gpu|max]") }
@@ -335,13 +342,13 @@ struct App {
             for id in try fanTargets(rest[1], fans: sm.fans) {
                 try client.blocking(timeout: 15) { try await $0.setPolicy(.curve(curve), fan: id) }
             }
-            print("fan \(rest[1]): curve \(curve.description)")
+            print("fan \(rest[1]): curve \(curve.description) request accepted; check fan status for hardware verification")
 
         case "auto":
             for id in try fanTargets(rest.count > 1 ? rest[1] : "all", fans: sm.fans) {
                 try client.blocking(timeout: 15) { try await $0.setPolicy(.auto, fan: id) }
             }
-            print("fan \(rest.count > 1 ? rest[1] : "all"): auto")
+            print("fan \(rest.count > 1 ? rest[1] : "all"): auto request accepted; check fan status for hardware verification")
 
         default:
             throw CLIError("unknown fan command '\(sub)' (status, set, curve, auto)")

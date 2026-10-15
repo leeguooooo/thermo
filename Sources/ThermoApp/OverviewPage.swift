@@ -189,6 +189,7 @@ struct OverviewPage: View {
                 if case .fixed(let rpm) = policy { return rpm.isInfinite || rpm >= fan.max } else { return false }
             }
             HStack(spacing: 4) {
+                Text(tr("Requested policy")).font(.system(size: 10)).foregroundStyle(.secondary)
                 fanOption(tr("Auto"), on: allAuto) { fans.forEach { monitor.setPolicy(.auto, fan: $0.id) } }
                 fanOption(tr("Max"), on: allMax) { fans.forEach { monitor.setPolicy(.fixed(rpm: .infinity), fan: $0.id) } }
             }
