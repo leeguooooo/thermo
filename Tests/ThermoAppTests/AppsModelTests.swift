@@ -11,6 +11,30 @@ final class AppsModelTests: XCTestCase {
         var count: Int { lock.lock(); defer { lock.unlock() }; return calls }
     }
 
+    @MainActor func testPartialOrphanScanRetainsKnownRowsButRequiresNewReviewUntilACompleteResult() async throws {
+        let calls = OrphanCalls()
+        let data = OrphanData(bundleID: "com.example.known", items: [AppLeftover(path: "/fixture", bytes: 1)])
+        let model = AppsModel(readOrphanReport: { _ in
+            switch calls.next() {
+            case 1: return .init(items: [data])
+            case 2: return .init(issues: [.init("Could not read residual data directory", path: "/fixture")])
+            default: return .init()
+            }
+        })
+        model.scanOrphans()
+        for _ in 0..<100 where model.scanningOrphans { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertTrue(model.orphanScanComplete)
+        model.selectedOrphans = [data.id]
+        model.scanOrphans()
+        for _ in 0..<100 where model.scanningOrphans { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertFalse(model.orphanScanComplete); XCTAssertEqual(model.orphanIssues.count, 1)
+        XCTAssertEqual(model.orphans?.map(\.id), [data.id]); XCTAssertTrue(model.pickedOrphans.isEmpty)
+        XCTAssertNotNil(model.orphans?.first?.blocked)
+        model.scanOrphans()
+        for _ in 0..<100 where model.scanningOrphans { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertTrue(model.orphanScanComplete); XCTAssertTrue(model.orphanIssues.isEmpty); XCTAssertEqual(model.orphans, [])
+    }
+
     @MainActor func testOrphanRefreshAfterRestoreWaitsForOldWorkerAndDoesNotPublishItsResults() async throws {
         let calls = OrphanCalls(), first = expectation(description: "old scan"), second = expectation(description: "replacement")
         let release = DispatchSemaphore(value: 0)

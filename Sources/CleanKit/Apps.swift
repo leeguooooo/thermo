@@ -59,6 +59,25 @@ public struct OrphanData: Codable, Identifiable, Sendable, Equatable {
     public var lastUsed: Date? { items.compactMap(\.lastUsed).max() }
 }
 
+public enum OrphanAppPresence: String, Sendable { case present, absent, unavailable }
+
+public struct OrphanScanIssue: Codable, Sendable, Hashable {
+    public var message: String
+    public var path: String?
+    public init(_ message: String, path: String? = nil) { self.message = message; self.path = path }
+}
+
+public struct OrphanScanReport: Codable, Sendable {
+    public let items: [OrphanData]
+    public let issues: [OrphanScanIssue]
+    public let cancelled: Bool
+    public let complete: Bool
+    public init(items: [OrphanData] = [], issues: [OrphanScanIssue] = [], cancelled: Bool = false) {
+        self.items = items; self.issues = issues; self.cancelled = cancelled
+        complete = issues.isEmpty && !cancelled
+    }
+}
+
 /// What an uninstall will do, shown in full before anything moves.
 public struct UninstallPlan: Codable, Sendable {
     public var app: InstalledApp
@@ -783,19 +802,39 @@ public enum AppUninstaller {
     static func reviewedOrphans(home: String, known: Set<String>, now: Date, spotlight: (String) -> Bool,
                                 minimumBytes: Int64 = 0, cancellation: ScanCancellation? = nil,
                                 processes: ProcessTable, directories: [String]) -> [OrphanData] {
+        reviewedOrphanReport(home: home, known: known, now: now, spotlight: { spotlight($0) ? .present : .absent },
+                             minimumBytes: minimumBytes, cancellation: cancellation, processes: processes, directories: directories).items
+    }
+
+    public static func orphanReport(home: String = NSHomeDirectory(), known: Set<String> = [], now: Date = Date(),
+                                    spotlight: ((String) -> OrphanAppPresence)? = nil, minimumBytes: Int64 = 0,
+                                    cancellation: ScanCancellation? = nil) -> OrphanScanReport {
+        reviewedOrphanReport(home: home, known: known, now: now, spotlight: spotlight ?? spotlightPresence,
+                             minimumBytes: minimumBytes, cancellation: cancellation,
+                             processes: ProcessTable.current(.init(cpu: false)), directories: appDirs(home: home))
+    }
+
+    static func reviewedOrphanReport(home: String, known: Set<String>, now: Date, spotlight: (String) -> OrphanAppPresence,
+                                     minimumBytes: Int64 = 0, cancellation: ScanCancellation? = nil,
+                                     processes: ProcessTable, directories: [String]) -> OrphanScanReport {
         let previousCancellation = ScanCancellation.current
         ScanCancellation.current = cancellation ?? previousCancellation
         defer { ScanCancellation.current = previousCancellation }
-        guard cancellation?.isCancelled != true else { return [] }
+        guard ScanCancellation.current?.isCancelled != true else { return .init(cancelled: true) }
         let runtime = AppOwnershipSnapshot.supplementalPaths(processes, directories: directories)
         var ownership = AppOwnershipSnapshot.capture(directories: directories, additionalPaths: runtime, requiredPaths: runtime)
         if !processes.available { ownership.issues.append("Could not verify running apps; refresh before removing files") }
+        var issues = ownership.issues.map { issue in
+            issue.hasPrefix("/") ? OrphanScanIssue("Could not verify installed app ownership", path: issue) : OrphanScanIssue(issue)
+        }
         let known = known.union(knownBundleIDs(installed: ownership.apps, processes: processes))
         let lib = home + "/Library"
         var byID: [String: [String]] = [:]
         for root in orphanRoots {
-            if cancellation?.isCancelled == true { break }
-            for entry in (try? FileManager.default.contentsOfDirectory(atPath: lib + "/" + root)) ?? [] {
+            if ScanCancellation.current?.isCancelled == true { break }
+            let directory = lib + "/" + root
+            let entries = names(in: directory, onFailure: { issues.append(.init("Could not read residual data directory", path: directory)) }) ?? []
+            for entry in entries {
                 guard let id = orphanID(entry, root: root) else { continue }
                 byID[id, default: []].append(lib + "/" + root + "/" + entry)
             }
@@ -803,7 +842,7 @@ public enum AppUninstaller {
         var out: [OrphanData] = []
         let whitelist = try? Whitelist.load(home: home)
         for (id, all) in byID.sorted(by: { $0.key < $1.key }) {
-            if cancellation?.isCancelled == true { break }
+            if ScanCancellation.current?.isCancelled == true { break }
             let paths = all.filter { whitelist?.protects($0) != true }
             if paths.isEmpty { continue }
             let lower = id.lowercased()
@@ -819,15 +858,27 @@ public enum AppUninstaller {
             var data = OrphanData(bundleID: id, items: items)
             data.dataIdentities = identities
             data.ownership = ownership
+            for item in items where item.effectiveSizeState != .complete {
+                issues.append(.init("Residual data measurement was incomplete", path: item.path))
+            }
+            if changed { issues.append(.init("Associated data changed after review; review it again", path: paths.first)) }
             guard data.bytes >= minimumBytes || data.sizeState != .complete else { continue }
             if let last = data.lastUsed, now.timeIntervalSince(last) < orphanAge { continue }
-            if spotlight(id) { continue }
+            switch spotlight(id) {
+            case .present: continue
+            case .unavailable:
+                issues.append(.init("Spotlight could not verify whether the app is installed", path: paths.first))
+                continue
+            case .absent: break
+            }
             if data.sizeState != .complete { data.blocked = tr("This data could not be fully checked; inspect it in Finder before removing it") }
             if changed { data.blocked = tr("Associated data changed after review; review it again") }
             if !ownership.complete { data.blocked = tr("Could not verify installed app ownership; refresh before removing associated data") }
             out.append(data)
         }
-        return out.sorted { $0.bytes > $1.bytes }
+        return .init(items: out.sorted { $0.bytes > $1.bytes }, issues: Array(Set(issues)).sorted {
+            ($0.path ?? "", $0.message) < ($1.path ?? "", $1.message)
+        }, cancelled: ScanCancellation.current?.isCancelled == true)
     }
 
     /// The bundle ID an entry under a Library root is named after, or nil when it is not app data.
@@ -850,9 +901,21 @@ public enum AppUninstaller {
 
     /// True when Spotlight finds an app with this bundle ID, or cannot answer within 5 seconds.
     public static func spotlightFinds(_ bundleID: String) -> Bool {
-        guard isBundleID(bundleID) else { return true }
-        let (status, output) = Shell.exec(["mdfind", "kMDItemCFBundleIdentifier == '\(bundleID)'"], timeout: 5)
-        return status != 0 || !output.isEmpty
+        spotlightPresence(bundleID) != .absent
+    }
+
+    public static func spotlightPresence(_ bundleID: String) -> OrphanAppPresence {
+        spotlightPresence(bundleID, query: { id in
+            CommandRunner.run("/usr/bin/mdfind", arguments: ["kMDItemCFBundleIdentifier == '\(id)'"], timeout: 5,
+                              outputLimit: 65_536, captureError: false, cancelled: { ScanCancellation.current?.isCancelled == true })
+        })
+    }
+
+    static func spotlightPresence(_ bundleID: String, query: (String) -> CommandRunner.Result) -> OrphanAppPresence {
+        guard isBundleID(bundleID) else { return .unavailable }
+        let result = query(bundleID)
+        guard result.status == 0, !result.timedOut, !result.cancelled, !result.truncated else { return .unavailable }
+        return result.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .absent : .present
     }
 
     /// Moves orphaned data to the Trash after checking again that it is still orphaned.

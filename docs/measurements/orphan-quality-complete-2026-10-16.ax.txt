@@ -1,0 +1,48 @@
+Window: "Thermo", App: ThermoOrphanQA.
+0 standard window Thermo, Secondary Actions: Raise
+	1 container
+		2 image thermometer.medium
+		3 text Thermo
+		4 image Description: 网格2x2, ID: square.grid.2x2.fill
+		5 text 软件管理
+		6 scroll area
+			7 button 概览
+			8 button 传感器
+			9 button 风扇
+			10 text 资源监控
+			11 button CPU 占用
+			12 button GPU 占用
+			13 button 内存占用
+			14 button 标签整理
+			15 text 磁盘清理
+			16 button 智能扫描
+			17 button 空间透视
+			18 button Description: 软件管理, Value: 已选中
+			19 text AI Agent 诊断
+			20 button Claude 清理
+			21 button 智能检查
+		22 text 0 个已删除的应用留下 0 B
+		23 显示
+			24 radio button Description: 应用, Value: 0
+			25 radio button Description: 残留数据, Value: 1
+			26 radio button Description: 启动项, Value: 0
+			27 radio button Description: 更新, Value: 0
+		28 button 操作记录
+		29 scroll area
+			30 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+				31 text 已卸载应用留下的数据：没在运行、30 天没动过，且 Spotlight 找不到对应 ID 的应用。 没有已删除应用留下的数据。
+		32 button 设置
+		33 button (disabled) 全选
+		34 button (disabled) 全不选
+		35 button 重新扫描
+		36 button (disabled) 把 0 B 移到废纸篓
+	37 close button
+	38 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	39 minimize button
+40 menu bar
+	41 ThermoOrphanQA
+	42 编辑, ID: thermo.edit
+	43 显示, ID: thermo.view
+	44 窗口, ID: thermo.window
+
+The focused UI element is 0 standard window Thermo, Secondary Actions: Raise

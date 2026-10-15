@@ -261,15 +261,16 @@ struct AppsCommand {
     func leftovers(_ rest: [String]) throws {
         let removing = rest.first == "remove" || rest.first == "clean"
         progress(tr("Looking for data of apps that are gone…"))
-        let installed = AppUninstaller.installed()
-        let known = AppUninstaller.knownBundleIDs(installed: installed, processes: ProcessTable.current(.init(cpu: false)))
-        let found = AppUninstaller.orphans(known: known, minimumBytes: args.has("all") || removing ? 0 : 1 << 20)
+        let scan = AppUninstaller.orphanReport(minimumBytes: args.has("all") || removing ? 0 : 1 << 20)
+        let found = scan.items
         clearProgress()
 
         if !removing {
-            if args.has("json") { print(Export.json(found)); return }
-            guard !found.isEmpty else { print(tr("No data left behind by deleted apps (untouched for 30 days and unknown to Spotlight).")); return }
+            if args.has("json") { print(Export.json(scan)); return }
+            if found.isEmpty && scan.complete { print(tr("No data left behind by deleted apps (untouched for 30 days and unknown to Spotlight).")); return }
             var lines: [String] = []
+            if !scan.complete { lines.append(tr("Residual scan incomplete; showing known results")) }
+            lines += scan.issues.map { tr($0.message) + ($0.path.map { " · " + FS.tilde($0) } ?? "") }
             for o in found {
                 lines.append(pad(o.sizeText, 9, right: true) + "  " + style.bold(o.bundleID)
                              + style.dim("  " + (o.lastUsed.map { tr("last changed %1$@", Self.day($0)) } ?? "")))
@@ -287,9 +288,13 @@ struct AppsCommand {
         guard !ids.isEmpty else { throw CLIError("usage: thermo apps leftovers remove ID…|all [--dry-run] [--yes]") }
         let picked = ids == ["all"] ? found.filter { $0.blocked == nil } : found.filter { o in ids.contains { $0.caseInsensitiveCompare(o.bundleID) == .orderedSame } }
         let missing = ids == ["all"] ? [] : ids.filter { id in !found.contains { $0.bundleID.caseInsensitiveCompare(id) == .orderedSame } }
-        if !missing.isEmpty { throw CLIError(tr("not left behind by a deleted app: %1$@", missing.joined(separator: ", "))) }
+        if !missing.isEmpty {
+            if !scan.complete { throw CLIError(tr("Residual scan incomplete; refresh before selecting missing items")) }
+            throw CLIError(tr("not left behind by a deleted app: %1$@", missing.joined(separator: ", ")))
+        }
         guard !picked.isEmpty else {
             if let why = found.compactMap(\.blocked).first { throw CLIError(why) }
+            if !scan.complete { throw CLIError(tr("Residual scan incomplete; no verified data selected")) }
             print(tr("Nothing to remove.")); return
         }
         let total = picked.reduce(Int64(0)) { $0 + $1.bytes }
@@ -310,7 +315,7 @@ struct AppsCommand {
             fflush(stdout)
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print(tr("cancelled")); return }
         }
-        let results = AppUninstaller.removeOrphans(picked, installed: installed)
+        let results = AppUninstaller.removeOrphans(picked)
         report(results)
         if results.contains(where: { !$0.failed.isEmpty }) { exit(1) }
     }

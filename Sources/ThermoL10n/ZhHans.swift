@@ -2179,4 +2179,12 @@ let zhHans: [String: String] = [
     "%1$@: %2$@": "%1$@：%2$@",
     "whitelist would be larger than %1$@ KB": "白名单将超过 %1$@ KB",
     "whitelist could not be written": "无法写入白名单",
+    "Could not verify installed app ownership": "无法核实已安装应用的归属",
+    "Could not read residual data directory": "无法读取残留数据目录",
+    "Spotlight could not verify whether the app is installed": "Spotlight 无法核实此应用是否已安装",
+    "Residual data measurement was incomplete": "残留数据未测量完整",
+    "This scan was incomplete; scan again before removing this data": "本次扫描不完整，请重新扫描后再移除此数据",
+    "Residual scan incomplete; showing known results": "残留扫描不完整，当前显示已知结果",
+    "Residual scan incomplete; refresh before selecting missing items": "残留扫描不完整，请刷新后再选择未找到的项目",
+    "Residual scan incomplete; no verified data selected": "残留扫描不完整，尚未选中已核实的数据",
 ]

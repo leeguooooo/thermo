@@ -1,0 +1,121 @@
+{
+  "date": "2026-10-16",
+  "scope": "Orphan scan completeness, unknown lookup state and visible empty-state accuracy",
+  "sourceSHA256": {
+    "Sources/CleanKit/Apps.swift": "d29392ec1455de9970a81c11cc92e68f57af286c7b635475f5b98d2b980e71d2",
+    "Sources/ThermoApp/AppsPage.swift": "7584a081f359fa92faa305b9baf7bf4efa98db2d3fa7f63f2b221b08b27729f0",
+    "Sources/ThermoL10n/ZhHans.swift": "f8161972d69e0183a225184ddb37831c5ec725a298a9ed4edc9a5d900527df80",
+    "Sources/thermo/Apps.swift": "26acd912a25cc21ece53602db08cf31938dd0612342faf87f9a26b74ce4a8a8d",
+    "Tests/CleanKitTests/OrphanReviewTests.swift": "dba8f3f90656591864a842568250ad1e39739fcdfa0c1305422d9d948c473fb9",
+    "Tests/ThermoAppTests/AppsModelTests.swift": "428d0df34774fbe9d4e098ae470603390df60193ba9d3cb3ca57a8bf8de0904b"
+  },
+  "newTests": {
+    "CleanKit": 8,
+    "ThermoApp": 1,
+    "scenarios": [
+      "Missing optional roots remain normal",
+      "Library root ENOTDIR does not become a complete empty scan",
+      "Unknown ownership is reported even with zero candidates",
+      "Unavailable Spotlight is not confirmed absence",
+      "Precancelled scan starts no query",
+      "Cancellation during a query remains visible",
+      "Unreadable nested data reports measurement issue and blocked candidate",
+      "Failed/timed out/truncated/cancelled Spotlight output remains unavailable",
+      "Partial refresh retains known rows with removal disabled; complete empty refresh clears them"
+    ]
+  },
+  "nativeCLIJSON": [
+    {
+      "invalidCacheRoot": false,
+      "exit": 0,
+      "elapsedSeconds": 0.348,
+      "items": 0,
+      "complete": true,
+      "cancelled": false,
+      "issues": 0,
+      "ownedRootIssue": false,
+      "stderrBytes": 0
+    },
+    {
+      "invalidCacheRoot": true,
+      "exit": 0,
+      "elapsedSeconds": 0.231,
+      "items": 0,
+      "complete": false,
+      "cancelled": false,
+      "issues": 1,
+      "ownedRootIssue": true,
+      "stderrBytes": 0
+    }
+  ],
+  "nativeCLITextAndPreview": [
+    {
+      "arguments": [
+        "apps",
+        "leftovers"
+      ],
+      "exit": 0,
+      "reportsIncomplete": true,
+      "falseEmptyClaim": false
+    },
+    {
+      "arguments": [
+        "apps",
+        "leftovers",
+        "remove",
+        "com.example.missing",
+        "--dry-run",
+        "--json"
+      ],
+      "exit": 2,
+      "reportsIncomplete": true,
+      "falseEmptyClaim": false
+    },
+    {
+      "arguments": [
+        "apps",
+        "leftovers",
+        "remove",
+        "all",
+        "--dry-run",
+        "--json"
+      ],
+      "exit": 2,
+      "reportsIncomplete": true,
+      "falseEmptyClaim": false
+    }
+  ],
+  "visibleQA": {
+    "fixture": "Owned temporary Home with Library/Caches as a plain file, then replaced with an empty directory",
+    "initialIncompleteWarning": true,
+    "initialNoFalseEmptyClaim": true,
+    "removeDisabled": true,
+    "refreshRetainsWarningWhileRootInvalid": true,
+    "repairedRootRefreshShowsCompleteEmpty": true,
+    "screenshot": "orphan-quality-2026-10-16.jpg",
+    "accessibility": "orphan-quality-2026-10-16.ax.txt",
+    "completeScreenshot": "orphan-quality-complete-2026-10-16.jpg",
+    "completeAccessibility": "orphan-quality-complete-2026-10-16.ax.txt",
+    "ownedProcessAbsent": true,
+    "ownedWorkspaceRemoved": true,
+    "installedAppReplaced": false
+  },
+  "CLICompatibility": "apps leftovers --json now returns an object; consumers read .items. Preview and execution formats unchanged. Legacy library orphans API retains array compatibility.",
+  "limitations": [
+    "Completeness covers implemented roots/ownership checks and observed candidates, not universal app/data discovery",
+    "Nested helper declaration completeness still needs a separate audit",
+    "No real user residual data moved or restored",
+    "No new root query, helper installation, hardware control or release"
+  ],
+  "fullRegression": {
+    "CleanKit": 485,
+    "ThermoApp": 142,
+    "ThermoCLI": 57,
+    "ThermoKitExcludingHardwareTests": 114,
+    "AgentCore": 34,
+    "total": 832,
+    "failures": 0,
+    "log": "/tmp/thermo-orphan-quality-full-tests.log"
+  },
+  "build": "passed as part of swift test"
+}

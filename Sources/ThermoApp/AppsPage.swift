@@ -35,6 +35,8 @@ final class AppsModel: ObservableObject {
     @Published private(set) var sizeNotice: String?
     @Published private(set) var running: Set<String> = []
     @Published private(set) var orphans: [OrphanData]?
+    @Published private(set) var orphanIssues: [OrphanScanIssue] = []
+    @Published private(set) var orphanScanComplete = false
     @Published private(set) var scanningOrphans = false
     @Published var selectedOrphans: Set<String> = []
     @Published var plan: UninstallPlan?
@@ -46,7 +48,7 @@ final class AppsModel: ObservableObject {
     private var reviewCancellation: ScanCancellation?
     private let reviewPlan: @Sendable (InstalledApp, [InstalledApp], Bool, ScanCancellation) -> UninstallPlan
     private let remove: @Sendable (UninstallPlan) -> CleanResult
-    private let readOrphans: @Sendable (ScanCancellation) -> [OrphanData]
+    private let readOrphans: @Sendable (ScanCancellation) -> OrphanScanReport
     private let removeOrphanData: @Sendable ([OrphanData]) -> [CleanResult]
     private var orphanCancellation: ScanCancellation?
     private var orphanInFlight = false
@@ -56,13 +58,12 @@ final class AppsModel: ObservableObject {
     init(reviewPlan: @escaping @Sendable (InstalledApp, [InstalledApp], Bool, ScanCancellation) -> UninstallPlan = { app, all, removeApp, token in
         AppUninstaller.plan(app, installed: all, removeApp: removeApp, cancellation: token)
     }, remove: @escaping @Sendable (UninstallPlan) -> CleanResult = { AppUninstaller.uninstall($0) },
-       readOrphans: @escaping @Sendable (ScanCancellation) -> [OrphanData] = { token in
-           let installed = AppUninstaller.installed(cancellation: token)
-           let known = AppUninstaller.knownBundleIDs(installed: installed, processes: ProcessTable.current(.init(cpu: false)))
-           return AppUninstaller.orphans(known: known, minimumBytes: 1 << 20, cancellation: token)
-       }, removeOrphanData: @escaping @Sendable ([OrphanData]) -> [CleanResult] = { AppUninstaller.removeOrphans($0) }) {
+       readOrphans: (@Sendable (ScanCancellation) -> [OrphanData])? = nil,
+       readOrphanReport: @escaping @Sendable (ScanCancellation) -> OrphanScanReport = { AppUninstaller.orphanReport(minimumBytes: 1 << 20, cancellation: $0) },
+       removeOrphanData: @escaping @Sendable ([OrphanData]) -> [CleanResult] = { AppUninstaller.removeOrphans($0) }) {
         self.reviewPlan = reviewPlan; self.remove = remove
-        self.readOrphans = readOrphans; self.removeOrphanData = removeOrphanData
+        self.readOrphans = { token in readOrphans.map { OrphanScanReport(items: $0(token)) } ?? readOrphanReport(token) }
+        self.removeOrphanData = removeOrphanData
     }
 
     var measuring: Bool { loading }
@@ -133,6 +134,8 @@ final class AppsModel: ObservableObject {
         measurementComplete = false
         outcome = nil
         orphans = nil
+        orphanIssues = []
+        orphanScanComplete = false
         selectedOrphans.removeAll()
     }
 
@@ -189,7 +192,7 @@ final class AppsModel: ObservableObject {
         orphanCancellation = token
         let read = readOrphans
         Task.detached(priority: .userInitiated) {
-            let found = read(token)
+            let report = read(token)
             await MainActor.run {
                 self.orphanInFlight = false
                 self.scanningOrphans = false
@@ -200,13 +203,28 @@ final class AppsModel: ObservableObject {
                     return
                 }
                 guard !token.isCancelled else { return }
+                let found = Self.mergeOrphanReport(report, previous: self.orphans ?? [])
                 self.orphans = found
+                self.orphanIssues = report.issues
+                self.orphanScanComplete = report.complete
                 self.selectedOrphans.formIntersection(found.map(\.id))
             }
         }
     }
 
     var pickedOrphans: [OrphanData] { (orphans ?? []).filter { selectedOrphans.contains($0.id) && $0.blocked == nil } }
+
+    nonisolated static func mergeOrphanReport(_ report: OrphanScanReport, previous: [OrphanData]) -> [OrphanData] {
+        guard !report.complete else { return report.items }
+        let observed = Set(report.items.map(\.id))
+        let retained = previous.filter { !observed.contains($0.id) }.map { item -> OrphanData in
+            var item = item
+            item.blocked = tr("This scan was incomplete; scan again before removing this data")
+            item.dataIdentities = nil
+            return item
+        }
+        return (report.items + retained).sorted { $0.bytes > $1.bytes }
+    }
 
     func removeOrphans() {
         let picked = pickedOrphans
@@ -399,7 +417,7 @@ struct AppsPage: View {
             return model.measuring ? base + " · " + tr("measuring %1$@ of %2$@", String(model.measured), String(model.apps.count)) : base
         case .leftovers:
             guard let o = model.orphans else { return tr("Looking for data of apps that are gone…") }
-            return tr("%1$@ in %2$@ apps that are gone", orphanSize(o), String(o.count))
+            return model.orphanScanComplete ? tr("%1$@ in %2$@ apps that are gone", orphanSize(o), String(o.count)) : tr("Residual scan incomplete; showing known results")
         case .startup: return tr("Startup items")
         case .updates: return tr("Updates")
         }
@@ -507,10 +525,18 @@ struct AppsPage: View {
 
     @ViewBuilder var leftoverList: some View {
         if let orphans = model.orphans {
+            if !model.orphanScanComplete {
+                Label(tr("Residual scan incomplete; showing known results"), systemImage: "exclamationmark.triangle")
+                    .font(.callout).foregroundStyle(.orange)
+                ForEach(model.orphanIssues, id: \.self) { issue in
+                    Text(tr(issue.message) + (issue.path.map { " · " + FSPath.tilde($0) } ?? ""))
+                        .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                }
+            }
             Text(tr("Data of apps that are no longer installed: not running, untouched for 30 days, and Spotlight knows no app with that ID."))
                 .font(.caption).foregroundStyle(.white.opacity(0.5)).fixedSize(horizontal: false, vertical: true)
             ForEach(orphans) { orphanCard($0) }
-            if orphans.isEmpty {
+            if orphans.isEmpty && model.orphanScanComplete {
                 Label(tr("No data left behind by deleted apps."), systemImage: "checkmark.circle").foregroundStyle(.secondary).padding(.top, 30)
             }
         } else {

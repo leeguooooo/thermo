@@ -349,6 +349,8 @@ thermo clean empty-trash BATCH_ID --yes --json
 
 该命令只处理记录中的本批项目；已经恢复、被替换、仍在使用、无法读取或不在当前用户废纸篓中的项目会保留。不会清空整个废纸篓，也不会按原路径追删新文件。
 
+`apps leftovers --json` 返回 `{items, complete, issues, cancelled}` 对象，读取项目时使用 `.items`。目录读取、应用归属或 Spotlight 查询失败，以及取消或测量不完整，都会使 `complete` 为 false；空 `items` 此时不表示没有残留。旧的数组式列表 JSON 已改为该报告结构，移除预览和执行结果格式保持原样。
+
 `apps uninstall`、`apps leftovers remove` 和 `space trash` 同样记录批次并返回 `trashBatchID`。放回原处：
 
 ```sh

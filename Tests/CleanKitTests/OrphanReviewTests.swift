@@ -103,4 +103,65 @@ final class OrphanReviewTests: XCTestCase {
             processes: .init(entries: []), directories: [file])
         XCTAssertEqual(found.count, 1); XCTAssertNotNil(found.first?.blocked)
     }
+
+    func report(spotlight: (String) -> OrphanAppPresence = { _ in .absent }, cancellation: ScanCancellation? = nil) -> OrphanScanReport {
+        AppUninstaller.reviewedOrphanReport(home: home, known: [], now: later, spotlight: spotlight,
+            cancellation: cancellation, processes: .init(entries: []), directories: directories)
+    }
+    func testMissingOptionalRootsAreACompleteScanRatherThanReadErrors() {
+        let result = report(spotlight: { _ in .present })
+        XCTAssertTrue(result.complete); XCTAssertTrue(result.issues.isEmpty); XCTAssertTrue(result.items.isEmpty)
+    }
+    func testInvalidLibraryRootCannotBecomeACompleteEmptyResult() throws {
+        try FileManager.default.removeItem(atPath: home + "/Library/Caches")
+        try write(home + "/Library/Caches")
+        let result = report()
+        XCTAssertFalse(result.complete); XCTAssertTrue(result.items.isEmpty)
+        XCTAssertTrue(result.issues.contains { $0.path == home + "/Library/Caches" })
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(result)) as? [String: Any])
+        XCTAssertEqual(json["complete"] as? Bool, false)
+    }
+    func testEmptyResultStillReportsUnknownApplicationOwnership() throws {
+        try FileManager.default.removeItem(atPath: cache)
+        try FileManager.default.removeItem(atPath: directories[0])
+        try write(directories[0])
+        let result = report()
+        XCTAssertTrue(result.items.isEmpty); XCTAssertFalse(result.complete)
+        XCTAssertTrue(result.issues.contains { $0.path == directories[0] })
+    }
+    func testUnavailableSpotlightDoesNotConfirmAbsenceOrAnEmptyScan() {
+        let result = report(spotlight: { _ in .unavailable })
+        XCTAssertTrue(result.items.isEmpty); XCTAssertFalse(result.complete)
+        XCTAssertTrue(result.issues.contains { $0.message.contains("Spotlight") })
+    }
+    func testPrecancelledReportIsIncompleteAndDoesNotStartQueries() {
+        let token = ScanCancellation(); token.cancel()
+        let result = report(spotlight: { _ in XCTFail("Cancelled scan must not query Spotlight"); return .absent }, cancellation: token)
+        XCTAssertTrue(result.cancelled); XCTAssertFalse(result.complete)
+    }
+    func testCancellationDuringAQueryRemainsVisibleInReport() {
+        let token = ScanCancellation()
+        let result = report(spotlight: { _ in token.cancel(); return .absent }, cancellation: token)
+        XCTAssertTrue(result.cancelled); XCTAssertFalse(result.complete)
+    }
+    func testIncompleteMeasurementIsReportedAlongsideTheBlockedCandidate() throws {
+        try XCTSkipIf(getuid() == 0, "requires ordinary user permissions")
+        try FileManager.default.removeItem(atPath: cache)
+        try write(cache + "/nested/file")
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: cache + "/nested")
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: cache + "/nested") }
+        let result = report()
+        XCTAssertFalse(result.complete); XCTAssertNotNil(result.items.first?.blocked)
+        XCTAssertTrue(result.issues.contains { $0.path == cache && $0.message.contains("measurement") })
+    }
+    func testFailedTimedOutTruncatedAndCancelledSpotlightResultsStayUnknown() {
+        for result in [CommandRunner.Result(status: 1, output: "", timedOut: false, cancelled: false),
+                       .init(status: 0, output: "", timedOut: true, cancelled: false),
+                       .init(status: 0, output: "", timedOut: false, cancelled: true),
+                       .init(status: 0, output: "", timedOut: false, cancelled: false, truncated: true)] {
+            XCTAssertEqual(AppUninstaller.spotlightPresence(id, query: { _ in result }), .unavailable)
+        }
+        XCTAssertEqual(AppUninstaller.spotlightPresence(id, query: { _ in .init(status: 0, output: "\n", timedOut: false, cancelled: false) }), .absent)
+        XCTAssertEqual(AppUninstaller.spotlightPresence(id, query: { _ in .init(status: 0, output: "/Applications/Existing.app\n", timedOut: false, cancelled: false) }), .present)
+    }
 }
