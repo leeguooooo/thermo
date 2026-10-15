@@ -49,7 +49,10 @@ final class Controller {
         writer = FanWriter(smc: sampler.smc, discovery: sampler.discovery)
         // Apple Silicon is the platform with the Ftst unlock key.
         engine = FanPolicyEngine(limits: .forHardware(appleSilicon: sampler.discovery.fanTestKey))
-        lidAwake = LidAwakeController(limits: engine.limits, log: log)
+        // The fan limits follow the Ftst key, which some Apple Silicon Macs lack (then the stricter Intel
+        // ceiling applies to fans, which is safe). Lid-awake follows the actual CPU instead, or it would
+        // turn itself off at 85 °C during ordinary work on those Macs.
+        lidAwake = LidAwakeController(limits: .forHardware(appleSilicon: LidAwakeController.appleSilicon), log: log)
     }
 
     func start() {

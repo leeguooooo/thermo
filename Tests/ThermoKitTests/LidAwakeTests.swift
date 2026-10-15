@@ -75,4 +75,11 @@ final class LidAwakeTests: XCTestCase {
         XCTAssertThrowsError(try c.set(true))
         XCTAssertFalse(c.state.armed)
     }
+
+    func testAppleSiliconFollowsTheCPU() {
+        #if arch(arm64)
+        XCTAssertTrue(LidAwakeController.appleSilicon)
+        XCTAssertEqual(LidAwakeGuard(limits: .forHardware(appleSilicon: LidAwakeController.appleSilicon)).state.limit, 100)
+        #endif
+    }
 }
