@@ -33,6 +33,7 @@ public struct StartupReport: Codable, Sendable {
     public var scope = "launchServices"
     public var items: [StartupItem]
     public var issues: [String]
+    public var background: BackgroundStartupReport? = nil
 }
 
 /// User and shared LaunchAgents plus system LaunchDaemons. Changing a user-domain override never rewrites a plist,
@@ -113,7 +114,9 @@ public enum StartupItems {
     }
 
     public static func scan(home: String = NSHomeDirectory(), includeSystem: Bool = true, runner: Runner? = nil) -> StartupReport {
-        scan(home: home, locations: locations(home: home, includeSystem: includeSystem), runner: runner)
+        var report = scan(home: home, locations: locations(home: home, includeSystem: includeSystem), runner: runner)
+        report.background = BackgroundStartupItems.readWithoutApproval()
+        return report
     }
 
     static func scan(home: String, locations: [Location], runner: Runner?) -> StartupReport {

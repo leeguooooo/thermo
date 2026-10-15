@@ -3,6 +3,43 @@
 import XCTest
 
 final class StartupItemsModelTests: XCTestCase {
+    @MainActor func testRepeatedVisibleRefreshDiscardsOldScanAndRunsOneReplacement() async throws {
+        let calls = Calls(), first = expectation(description: "first"), second = expectation(description: "second")
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let model = StartupItemsModel(read: {
+            let n = calls.next()
+            if n == 1 { first.fulfill(); _ = release.wait(timeout: .now() + 5) } else { second.fulfill() }
+            return StartupReport(items: [], issues: ["scan \(n)"])
+        })
+        var published: [String] = []
+        let observation = model.$report.sink { published += $0?.issues ?? [] }
+        model.refresh(); await fulfillment(of: [first], timeout: 2)
+        for _ in 0..<100 { model.refresh() }
+        XCTAssertEqual(calls.value, 1)
+        release.signal(); await fulfillment(of: [second], timeout: 2)
+        for _ in 0..<100 where model.loading { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(calls.value, 2); XCTAssertEqual(model.report?.issues, ["scan 2"])
+        XCTAssertFalse(published.contains("scan 1")); observation.cancel()
+    }
+
+    @MainActor func testExplicitBackgroundInspectionIsSerializedAndDoesNotChangeStartupItems() async throws {
+        let began = expectation(description: "read authorization"); began.assertForOverFulfill = true
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let model = StartupItemsModel(read: { .init(items: [], issues: []) }, change: { _, _ in XCTFail("read must not change launchctl state") }, readBackground: {
+            began.fulfill(); _ = release.wait(timeout: .now() + 5)
+            return .requiresAuthorization
+        })
+        model.inspectBackground(); await fulfillment(of: [began], timeout: 2)
+        XCTAssertTrue(model.authorizing); XCTAssertTrue(model.working)
+        model.apply(StartupItem(path: "/fixture", label: "fixture", enabled: true))
+        model.inspectBackground(); model.retire()
+        release.signal()
+        for _ in 0..<100 where model.working { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertFalse(model.authorizing); XCTAssertFalse(model.working)
+        XCTAssertEqual(model.background.status, .requiresAuthorization)
+    }
     @MainActor
     func testConfirmedChangeSurvivesPageRetirementAndPreventsAnotherChange() async throws {
         let began = expectation(description: "change waiting for approval")

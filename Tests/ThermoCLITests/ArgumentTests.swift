@@ -3,6 +3,12 @@ import ThermoL10n
 @testable import thermo
 
 final class ArgumentTests: XCTestCase {
+    func testBackgroundAuthorizationFlagCannotBeReusedForChangesOrDryRuns() throws {
+        XCTAssertTrue(try Args(["apps", "startup", "list", "--authorize-background"]).has("authorize-background"))
+        for arguments in [["apps", "startup", "enable", "fixture", "--authorize-background"], ["clean", "--authorize-background"], ["apps", "startup", "list", "--authorize-background", "--dry-run"], ["apps", "startup", "--authorize-background=false"]] {
+            XCTAssertThrowsError(try Args(arguments))
+        }
+    }
     func testDataOnlyFlagIsAcceptedForAppRemovalAndRejectedForOtherActions() throws {
         let args = try Args(["apps", "uninstall", "Fixture", "--data-only", "--dry-run", "--json"])
         XCTAssertTrue(args.has("data-only"))

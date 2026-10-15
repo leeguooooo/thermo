@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-16",
+  "scope": "modern login/background registration read-only discovery",
+  "sourceSHA256": {
+    "Sources/CleanKit/BackgroundStartupAuthorization.swift": "8894045ce7ed250f13f2eb2444dde681371201278e0f06b85ce78d324d679936",
+    "Sources/CleanKit/BackgroundStartupItems.swift": "f950348f080fac4dacaf87dc3bd0dda471b3c4d55004152373a9e9bc322fc60a",
+    "Sources/CleanKit/StartupItems.swift": "27312b3d5927204cde6dcb0dbe75349b55e96d04b8a80bb80bf2ad3f5b0f8366",
+    "Sources/ThermoApp/StartupItemsPage.swift": "d38b4a9777b790151142ec4ed3a6aea2ccbbc0b095c09ea50abc9d0e0e2ab67b",
+    "Sources/thermo/Args.swift": "c5740e9959a700f7437662ad8e7906a94a3ef159fcfe35b736314e40aa73434d",
+    "Sources/thermo/Apps.swift": "e0ed00f71b5fc662a034c101edb370b24f191d7e94ce6301c825a700c703047e",
+    "Tests/CleanKitTests/BackgroundStartupItemsTests.swift": "d77dae80390c59795f361f4af799105c522b6cf601f9e2ee9eec07ba6185003f",
+    "Tests/ThermoAppTests/StartupItemsModelTests.swift": "fa8c8518b6952f45ec65bffbf61abfb76c514524a6fbcd439054cd762ff2a2c6",
+    "Tests/ThermoCLITests/ArgumentTests.swift": "52c31c8de9ff459818bdbcc8eaf7b1f9ace81752238a79df785b213929eb45af"
+  },
+  "fullRegression": {
+    "CleanKit": 467,
+    "ThermoApp": 137,
+    "ThermoCLI": 57,
+    "ThermoKitExcludingHardwareTests": 114,
+    "AgentCore": 34,
+    "total": 809,
+    "failures": 0
+  },
+  "finalTargetedRegression": {
+    "total": 43,
+    "failures": 0,
+    "log": "/tmp/thermo-background-startup-final-tests.log"
+  },
+  "build": "passed",
+  "defaultNativeCLI": {
+    "exit": 0,
+    "elapsedSeconds": 0.197,
+    "backgroundStatus": "requiresAuthorization",
+    "legacyItemCount": 27,
+    "issueCount": 5,
+    "stderrBytes": 0,
+    "isolatedStateHomeRemoved": true
+  },
+  "visibleQA": {
+    "reviewCommand": "/usr/bin/sfltool dumpbtm",
+    "cancelReturnedToUnreadList": true,
+    "finalAuthorizationClicked": false,
+    "processAbsent": true,
+    "ownedWorkspaceRemoved": true,
+    "screenshot": "startup-background-review-2026-10-16.jpg",
+    "accessibility": "startup-background-review-2026-10-16.ax.txt"
+  },
+  "authorization": {
+    "performed": false,
+    "unprivilegedProbe": {
+      "elapsedSecondsGreaterThan": 77,
+      "outputBytes": 0,
+      "ownedPID": 97832,
+      "terminated": true
+    },
+    "watchdog": "TERM at 30s then KILL after 2s, parent-checked owned query; fixture tested without elevation",
+    "actualSuccessfulFormatVerified": false
+  },
+  "limitations": [
+    "Actual privileged query and OS authorization lifecycle unverified",
+    "macOS 13 branch fixture-tested only",
+    "Human diagnostic format is version-dependent",
+    "No third-party modern registration toggles implemented",
+    "No hardware writes, startup changes, helper installation, installed app replacement, push or release"
+  ]
+}

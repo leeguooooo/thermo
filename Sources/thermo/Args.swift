@@ -22,7 +22,7 @@ struct Args {
         "h": "help", "v": "version", "f": "format", "y": "yes",
     ]
     static let knownFlags: Set<String> = ["json", "csv", "all", "no-color", "no-cache", "help", "version", "fahrenheit", "yes", "trash", "permanent", "dry-run", "with-data",
-        "refresh-catalog", "data-only",
+        "refresh-catalog", "data-only", "authorize-background",
         "exact", // clean: full per-item size walks
         "stream", // clean: newline-delimited incremental scan results
         "rescan",  // rescan: clean run ignores the saved scan
@@ -60,6 +60,13 @@ struct Args {
         }
         if flags.contains("data-only"), Array(positionals.prefix(2)) != ["apps", "uninstall"] {
             throw CLIError("--data-only is only supported by apps uninstall")
+        }
+        if flags.contains("authorize-background") {
+            guard Array(positionals.prefix(2)) == ["apps", "startup"],
+                  positionals.count == 2 || (positionals.count == 3 && positionals[2] == "list"),
+                  !flags.contains("dry-run") else {
+                throw CLIError("--authorize-background only supports apps startup list without --dry-run")
+            }
         }
     }
 

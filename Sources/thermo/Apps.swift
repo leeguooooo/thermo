@@ -124,14 +124,21 @@ struct AppsCommand {
     }
 
     func startup(_ rest: [String]) throws {
-        let report = StartupItems.scan()
+        var report = StartupItems.scan()
         guard let action = rest.first, action != "list" else {
             guard rest.count <= 1 else { throw CLIError("usage: thermo apps startup [list]") }
+            if args.has("authorize-background") { report.background = BackgroundStartupItems.readAuthorized() }
             if args.has("json") { print(Export.json(report)); return }
             out(report.items.map { "\($0.enabled.map { $0 ? "on " : "off" } ?? "?  ")  \($0.label)  [\($0.effectiveScope.title)]  \($0.path)" + ($0.blocked.map { " · " + tr($0) } ?? "") }
-                + report.issues.map { tr($0) })
+                + report.issues.map { tr($0) }
+                + (report.background.map { background in
+                    [tr(background.status == .requiresAuthorization ? "Read modern registrations with --authorize-background or open System Settings." : "Login and background registrations")]
+                    + background.items.map { "\($0.name) · \($0.identifier ?? $0.uuid) · requested=\($0.requested.map(String.init) ?? "unknown") · allowed=\($0.allowed.map(String.init) ?? "unknown")" }
+                    + background.issues.map { tr($0) }
+                } ?? []))
             return
         }
+        guard !args.has("authorize-background") else { throw CLIError("--authorize-background only applies to startup list") }
         guard ["enable", "disable"].contains(action), rest.count == 2 else {
             throw CLIError("usage: thermo apps startup [list | enable LABEL_OR_PATH | disable LABEL_OR_PATH] [--dry-run] [--yes]")
         }

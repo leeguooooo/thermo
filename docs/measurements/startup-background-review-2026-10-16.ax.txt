@@ -1,0 +1,19 @@
+Window: "", App: ThermoStartupQA.
+0 sheet Secondary Actions: Raise
+	1 container
+		2 image (selected) Description: 已选择, ID: checkmark.circle.fill
+		3 text 读取登录与后台项目？ 需要管理员授权读取本机登记信息；界面显示当前用户和系统范围。
+		4 scroll area
+			5 text 只读系统查询
+			6 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+				7 text /usr/bin/sfltool dumpbtm
+		8 text 登记请求与系统允许状态分别展示，开关请在系统设置中管理。
+		9 button 取消
+		10 button 授权读取…
+11 menu bar
+	12 ThermoStartupQA
+	13 编辑, ID: thermo.edit
+	14 显示, ID: thermo.view
+	15 窗口, ID: thermo.window
+
+The focused UI element is 0 sheet Secondary Actions: Raise
