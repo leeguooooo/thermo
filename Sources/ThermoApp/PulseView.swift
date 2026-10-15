@@ -46,6 +46,8 @@ final class SystemPulse: ObservableObject {
 
     /// Cards showing the pulse (panel and main window): sampling runs while at least one is visible.
     private var holders = 0
+    var samplingActive: Bool { timer != nil }
+    var holderCount: Int { holders }
     func hold() { holders += 1; if holders == 1 { start() } }
     func release() { holders = max(0, holders - 1); if holders == 0 { stop() } }
 

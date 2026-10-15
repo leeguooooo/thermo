@@ -298,13 +298,32 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
 L10n.apply(preference: UserDefaults.standard.string(forKey: L10n.defaultsKey))
 let app = NSApplication.shared
 // Snapshot/render jobs do not present interactive windows or create Dock items.
-if !CommandLine.arguments.contains("--offscreen"), !CommandLine.arguments.contains("--render-preview") {
+if !CommandLine.arguments.contains("--offscreen"), !CommandLine.arguments.contains("--render-preview"), !CommandLine.arguments.contains("--verify-lifecycle") {
     do {
         guard try MainActor.assumeIsolated({ try SingleInstance.claim() }) else { exit(0) }
     } catch {
         fputs("Thermo cannot acquire its instance lock: \(error)\n", stderr)
         exit(1)
     }
+}
+if CommandLine.arguments.contains("--verify-lifecycle") {
+    do {
+        let options = try MainActor.assumeIsolated { try WindowLifecycleCheck.Options(arguments: CommandLine.arguments) }
+        app.setActivationPolicy(.accessory)
+        let lifecycleDelegate = MainActor.assumeIsolated { MainOnlyDelegate() }
+        app.delegate = lifecycleDelegate
+        DispatchQueue.main.async {
+            Task { @MainActor in
+                do {
+                    let report = try await WindowLifecycleCheck.run(options)
+                    let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]; encoder.dateEncodingStrategy = .iso8601
+                    try encoder.encode(report).write(to: URL(fileURLWithPath: options.output), options: .atomic)
+                    exit(report.functionalChecksPassed ? 0 : 2)
+                } catch { fputs("Lifecycle verification failed: \(error)\n", stderr); exit(1) }
+            }
+        }
+        withExtendedLifetime(lifecycleDelegate) { app.run() }
+    } catch { fputs("Lifecycle verification failed: \(error)\n", stderr); exit(1) }
 }
 if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < CommandLine.arguments.count {
     app.setActivationPolicy(.prohibited)

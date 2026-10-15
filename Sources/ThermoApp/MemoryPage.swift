@@ -24,6 +24,8 @@ final class MemoryModel: ObservableObject {
     private var sampling = false
     private var dayLoaded = Date.distantPast
     private var generation = UUID()
+    var samplingActive: Bool { timer != nil }
+    var sampleInFlight: Bool { sampling }
 
     func start() {
         guard timer == nil else { return }

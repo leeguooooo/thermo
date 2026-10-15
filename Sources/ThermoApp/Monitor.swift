@@ -153,8 +153,10 @@ final class Monitor: ObservableObject {
     private var buffer: [HistoryPoint] = []
     private(set) var latest: Snapshot?
     private let helper = HelperClient()
+    private let helperInteraction: Bool
 
-    init(startMonitoring: Bool = true) {
+    init(startMonitoring: Bool = true, helperInteraction: Bool = true) {
+        self.helperInteraction = helperInteraction
         guard startMonitoring else { return }
         queue.async { [weak self] in self?.prepareSampler() }
         reschedule()
@@ -271,6 +273,7 @@ final class Monitor: ObservableObject {
     private var refreshingHelper = false
 
     func refreshHelper() {
+        guard helperInteraction else { return }
         guard !refreshingHelper, !helperBusy else { return }
         refreshingHelper = true
         lastHelperRefresh = Date()

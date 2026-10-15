@@ -28,6 +28,8 @@ final class ComputeModel: ObservableObject {
     private var timer: Timer?
     private var sampling = false
     private var generation = UUID()
+    var samplingActive: Bool { timer != nil }
+    var sampleInFlight: Bool { sampling }
     func start() {
         guard timer == nil else { return }
         generation = UUID()
