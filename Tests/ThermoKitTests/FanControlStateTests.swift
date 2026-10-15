@@ -2,6 +2,17 @@ import XCTest
 @testable import ThermoKit
 
 final class FanControlStateTests: XCTestCase {
+    func testTemperatureLossReasonSurvivesEncodingAndOlderRepliesRemainReadable() throws {
+        let state = FanControlState(policies: [0: .fixed(rpm: 2500)], suspended: true, suspensionReason: .temperatureUnavailable)
+        let data = try PolicyCoding.encoder().encode(state)
+        XCTAssertEqual(try PolicyCoding.decoder().decode(FanControlState.self, from: data).suspensionReason, .temperatureUnavailable)
+        XCTAssertTrue(state.legacyError?.contains("required temperature") == true)
+        var old = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        old.removeValue(forKey: "suspensionReason")
+        let decoded = try PolicyCoding.decoder().decode(FanControlState.self, from: JSONSerialization.data(withJSONObject: old))
+        XCTAssertTrue(decoded.suspended)
+        XCTAssertNil(decoded.suspensionReason)
+    }
     func testAcceptedPolicyHasNoHardwareConfirmationAndLegacyClientsRejectIt() throws {
         var state = FanControlState(policies: [0: .fixed(rpm: 3000)])
         XCTAssertEqual(state.verification(for: 0), .pending)

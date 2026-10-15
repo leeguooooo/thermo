@@ -14,7 +14,9 @@ enum FanControlPresentation {
         guard let state, state.observationsSupported else { return tr("Hardware verification unavailable") }
         if state.verification(for: fan) == .unavailable { return tr("Hardware verification unavailable") }
         if let failure = state.failure { return tr("Control error: %1$@", failure) }
-        if state.verification(for: fan) == .suspended { return tr("Manual policies suspended for thermal safety") }
+        if state.verification(for: fan) == .suspended {
+            return state.suspensionReason == .temperatureUnavailable ? tr("Temperature readings were lost; waiting for stable safe readings") : tr("Manual policies suspended for thermal safety")
+        }
         guard let observation = state.observations[fan] else { return tr("Waiting for hardware verification") }
         switch observation.mode {
         case .automatic: return tr("Last register check: automatic control")

@@ -505,6 +505,7 @@ let zhHans: [String: String] = [
     "Hardware verification unavailable": "无法取得硬件核对结果",
     "Control error: %1$@": "控制错误：%1$@",
     "Manual policies suspended for thermal safety": "手动策略因温度保护暂停",
+    "Temperature readings were lost; waiting for stable safe readings": "温度读数曾中断，等待稳定安全读数",
     "Waiting for hardware verification": "等待硬件读回确认",
     "Last register check: automatic control": "上次寄存器核对：自动控制",
     "Last register check: manual target %1$@ rpm": "上次寄存器核对：手动目标 %1$@ rpm",

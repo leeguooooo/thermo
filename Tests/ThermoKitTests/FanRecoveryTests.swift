@@ -184,6 +184,22 @@ final class FanRecoveryTests: XCTestCase {
         XCTAssertEqual(try writer.setManual(0, rpm: 2500), 2500, "unlock cache must be invalidated")
     }
 
+    func testLastObservedAutomaticFanReleasesUnlockButMixedManualFanKeepsIt() throws {
+        let smc = manualSMC(); smc.values["F1Md"] = 0
+        smc.values["F1Mn"] = 1200; smc.values["F1Mx"] = 6000
+        let writer = FanWriter(smc: smc, discovery: discovery(apple: true))
+        try writer.setManual(0, rpm: 2500); try writer.setManual(1, rpm: 3000)
+        try writer.setAuto(0)
+        XCTAssertEqual(smc.values["Ftst"], 1, "do not revoke the other fan's manual ownership")
+        smc.firmwareOnUnlockReset = true
+        try writer.setAuto(1)
+        XCTAssertEqual(smc.values["Ftst"], 0)
+        XCTAssertTrue(writer.setAllAuto().confirmed)
+        try writer.setManual(0, rpm: 2500)
+        smc.ignoredWrites = ["Ftst"]
+        XCTAssertThrowsError(try writer.setAuto(0), "mode readbacks alone do not confirm release of the final unlock")
+    }
+
     func testManualForceBitsPreserveOtherFansAndRequireReadback() throws {
         let smc = manualSMC()
         let writer = FanWriter(smc: smc, discovery: discovery(modes: false, force: true))

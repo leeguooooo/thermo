@@ -25,6 +25,8 @@ final class FanControlPresentationTests: XCTestCase {
         XCTAssertEqual(FanControlPresentation.observation(state, fan: 0), tr("Last register check: automatic control"))
         state.suspended = true
         XCTAssertEqual(FanControlPresentation.observation(state, fan: 0), tr("Manual policies suspended for thermal safety"))
+        state.suspensionReason = .temperatureUnavailable
+        XCTAssertEqual(FanControlPresentation.observation(state, fan: 0), tr("Temperature readings were lost; waiting for stable safe readings"))
         state.failure = "policy was not saved"
         XCTAssertEqual(FanControlPresentation.observation(state, fan: 0), tr("Control error: %1$@", "policy was not saved"))
     }

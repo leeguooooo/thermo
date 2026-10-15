@@ -17,20 +17,21 @@ public struct FanControlState: Codable, Equatable, Sendable {
     public var policies: [Int: FanPolicy]
     public var observations: [Int: FanControlObservation]
     public var suspended: Bool
+    public var suspensionReason: FanPolicySuspension?
     public var failure: String?
     public var observationsSupported: Bool
 
     public init(policies: [Int: FanPolicy], observations: [Int: FanControlObservation] = [:],
-                suspended: Bool = false, failure: String? = nil, observationsSupported: Bool = true) {
+                suspended: Bool = false, suspensionReason: FanPolicySuspension? = nil, failure: String? = nil, observationsSupported: Bool = true) {
         self.policies = policies; self.observations = observations
-        self.suspended = suspended; self.failure = failure; self.observationsSupported = observationsSupported
+        self.suspended = suspended; self.suspensionReason = suspensionReason; self.failure = failure; self.observationsSupported = observationsSupported
     }
 
     /// Older clients only know an "active policy" dictionary. Refuse to send it
     /// while the observed mode cannot support that interpretation.
     public var legacyError: String? {
         if let failure { return failure }
-        if suspended { return "fan policies are suspended for thermal safety" }
+        if suspended { return suspensionReason == .temperatureUnavailable ? "fan policies suspended after required temperature readings were lost" : "fan policies are suspended for thermal safety" }
         for (id, policy) in policies where policy != .auto {
             guard observations[id]?.mode == .manual, verification(for: id) == .checked else { return "fan \(id): policy accepted; manual control has not been confirmed" }
         }

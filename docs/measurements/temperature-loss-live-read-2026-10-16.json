@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-15T20:41:37.562021+00:00",
+  "baselineCommit": "ca4c6ff",
+  "command": ".build/out/Products/Debug/thermo temps --json",
+  "exitCode": 0,
+  "scope": "known (CLI); not the helper essential-scope runtime",
+  "binarySHA256": "9d258b7b3040e763d121cd0675a37a388eba7ae1aa2858a62d7fa6d2ef07f5ca",
+  "sourceSHA256": {
+    "Sources/ThermoKit/Models.swift": "430cf4bbc846d3842ae9150972b2272610603d93f701a9350f896700cbfd7e11",
+    "Sources/ThermoKit/FanControl.swift": "ff8b7e0fc0cecec6e50b74954c7ff229d85bad370f45f191fed2de6759194e78",
+    "Sources/ThermoHelper/main.swift": "d3f9d331f5d5875e57d943591f5dc91d4734b326af73635995eb257489efc8d7"
+  },
+  "observed": {
+    "positiveKnownCPUCount": 76,
+    "positiveKnownGPUCount": 13,
+    "cpuMaximum": 76.375,
+    "gpuMaximum": 53.36003875732422
+  },
+  "boundaries": [
+    "SMC reads only; no fan policy change, helper install, SMC write or pmset write",
+    "Normal sample only; telemetry-loss transitions are covered by injected tests",
+    "Does not prove the installed helper runs the new code or verify physical recovery"
+  ]
+}

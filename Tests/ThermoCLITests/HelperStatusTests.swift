@@ -3,6 +3,13 @@ import ThermoKit
 @testable import thermo
 
 final class HelperStatusTests: XCTestCase {
+    func testTemperatureLossSuspensionIsReportedWithoutClaimingOverheating() {
+        let state = FanControlState(policies: [:], suspended: true, suspensionReason: .temperatureUnavailable)
+        XCTAssertTrue(Renderer.controlText(state, fan: 0).contains("temperature telemetry loss"))
+        let csv = Export.fanStatusCSV([], policies: [:], helperNote: nil, controlState: state)
+        XCTAssertTrue(csv.contains("policies_suspended,suspension_reason,control_failure"))
+        XCTAssertTrue(csv.contains("true,temperatureUnavailable,"))
+    }
     func testUnavailablePoliciesAreNotReportedAsAuto() {
         XCTAssertEqual(Renderer.policyText(nil, available: false), "unknown")
         XCTAssertEqual(Renderer.policyText(.fixed(rpm: 3500), available: false), "unknown")

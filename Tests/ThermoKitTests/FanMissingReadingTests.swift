@@ -42,7 +42,7 @@ final class FanMissingReadingTests: XCTestCase {
 
     func testMissingLimitsRequestAutoForFixedAndCurvePoliciesIncludingWhileSuspended() {
         let fan = FanReading(id: 0, name: "Fixture", rpm: nil, min: nil, max: nil, target: nil, manual: true)
-        let snapshot = Snapshot(temperatures: [], fans: [fan], power: [], voltages: [], currents: [], battery: nil)
+        let snapshot = Snapshot(temperatures: [.init(key: "TC0P", name: "CPU", group: .cpu, value: 50)], fans: [fan], power: [], voltages: [], currents: [], battery: nil)
         for policy: FanPolicy in [.fixed(rpm: 2500), .fixed(rpm: .infinity), .curve(.quiet)] {
             var engine = FanPolicyEngine()
             engine.set(policy, for: 0)

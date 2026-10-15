@@ -156,6 +156,21 @@ public struct Snapshot: Codable, Sendable {
         }
     }
 
+    /// Control must never substitute a battery/board reading for CPU telemetry.
+    /// A selected curve sensor must also supply its own valid positive reading.
+    public func controlTemperature(for sensor: CurveSensor = .max) -> Double? {
+        func valid(_ group: SensorGroup) -> Double? {
+            temperatures.lazy.filter { $0.group == group && $0.known && $0.value.isFinite && $0.value > 0 }.map(\.value).max()
+        }
+        switch sensor {
+        case .cpu: return valid(.cpu)
+        case .gpu: return valid(.gpu)
+        case .max:
+            guard let cpu = valid(.cpu) else { return nil }
+            return Swift.max(cpu, valid(.gpu) ?? cpu)
+        }
+    }
+
     /// Whole-system draw in watts, best available source.
     public var systemPower: Double? {
         power.first { $0.key == "PSTR" }?.value ?? power.first { $0.key == "PDTR" }?.value

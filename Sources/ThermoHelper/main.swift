@@ -52,7 +52,8 @@ final class Controller {
         sampler.fanLimitRefresh = 10
         writer = FanWriter(smc: sampler.smc, discovery: sampler.discovery)
         // Apple Silicon is the platform with the Ftst unlock key.
-        engine = FanPolicyEngine(limits: .forHardware(appleSilicon: sampler.discovery.fanTestKey))
+        engine = FanPolicyEngine(limits: .forHardware(appleSilicon: sampler.discovery.fanTestKey),
+                                 requiresGPU: sampler.discovery.sensors.contains { $0.essential && $0.known && $0.quantity == .temperature && $0.group == .gpu })
         // The fan limits follow the Ftst key, which some Apple Silicon Macs lack (then the stricter Intel
         // ceiling applies to fans, which is safe). Lid-awake follows the actual CPU instead, or it would
         // turn itself off at 85 °C during ordinary work on those Macs.
@@ -93,7 +94,7 @@ final class Controller {
             return
         }
         let s = sampler.sample()
-        lidAwake.tick(hottest: s.hottest, battery: Battery.read(), lidClosed: SleepSwitch.lidClosed())
+        lidAwake.tick(hottest: engine.observeControlTemperature(s), battery: Battery.read(), lidClosed: SleepSwitch.lidClosed())
     }
 
     func shutdown(reason: String) -> FanAutoRecoveryReport {
@@ -129,6 +130,9 @@ final class Controller {
         let snapshot = sampler.sample()
         for action in engine.tick(snapshot) {
             switch action {
+            case .temperatureUnavailable:
+                let restored = restoreFans(reason: "required CPU/GPU temperature unavailable; under-cooling policies suspended")
+                if !restored.confirmed { return }
             case .failsafe(let t):
                 let restored = restoreFans(reason: "thermal failsafe")
                 log(String(format: "FAILSAFE: %.1f °C ≥ %.0f °C; policies suspended until below %.0f °C for %d s",
@@ -165,7 +169,7 @@ final class Controller {
     }
 
     var controlState: FanControlState {
-        FanControlState(policies: engine.policies, observations: observations, suspended: engine.suspended,
+        FanControlState(policies: engine.policies, observations: observations, suspended: engine.suspended, suspensionReason: engine.suspensionReason,
                         failure: pendingRecovery?.summary ?? controlError)
     }
 

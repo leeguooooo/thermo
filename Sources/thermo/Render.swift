@@ -15,6 +15,7 @@ struct Renderer {
     static func controlText(_ state: FanControlState?, fan: Int) -> String {
         guard let state else { return "hardware verification unavailable" }
         let phase = state.verification(for: fan)
+        if phase == .suspended, state.suspensionReason == .temperatureUnavailable { return "policies paused after temperature telemetry loss; waiting for stable safe readings" }
         guard phase == .checked, let observation = state.observations[fan] else { return "hardware verification: " + phase.rawValue }
         let target = observation.target.map { $0.isFinite ? String(format: "%.0f rpm", $0) : "unknown" } ?? ""
         return "last register check: \(observation.mode.rawValue) \(target) at \(observation.checkedAt.ISO8601Format())"
@@ -209,7 +210,7 @@ enum Export {
     }
     static func fanStatusCSV(_ fans: [FanReading], policies: [Int: FanPolicy], helperNote: String?, controlState: FanControlState? = nil) -> String {
         let available = helperNote == nil
-        let columns = ["id", "name", "rpm", "min_rpm", "max_rpm", "target_rpm", "manual", "policy", "verification_state", "last_observed_mode", "verified_target_rpm", "checked_at", "policies_suspended", "control_failure", "policies_available", "helper"]
+        let columns = ["id", "name", "rpm", "min_rpm", "max_rpm", "target_rpm", "manual", "policy", "verification_state", "last_observed_mode", "verified_target_rpm", "checked_at", "policies_suspended", "suspension_reason", "control_failure", "policies_available", "helper"]
         func number(_ value: Double?) -> String {
             guard let value, value.isFinite else { return "" }
             return String(format: "%.3f", value)
@@ -219,7 +220,7 @@ enum Export {
             let checked = observation.flatMap { $0.checkedAt.timeIntervalSince1970.isFinite ? $0.checkedAt.ISO8601Format() : nil }
             return [controlState?.verification(for: id).rawValue ?? "unavailable", observation?.mode.rawValue ?? "",
                     number(observation?.target), checked ?? "",
-                    controlState.map { $0.suspended ? "true" : "false" } ?? "", controlState?.failure ?? ""]
+                    controlState.map { $0.suspended ? "true" : "false" } ?? "", controlState?.suspensionReason?.rawValue ?? "", controlState?.failure ?? ""]
         }
         var rows = fans.map { fan in
             [String(fan.id), fan.name, number(fan.rpm), number(fan.min), number(fan.max), number(fan.target),

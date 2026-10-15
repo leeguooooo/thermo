@@ -270,6 +270,16 @@ public final class FanWriter {
             } catch { failures.append(String(describing: error)) }
         }
         do { try verifyAuto(f) } catch { failures.append(String(describing: error)) }
+        if discovery.fanTestKey && unlocked && discovery.fans.allSatisfy({ fan in
+            do { try verifyAuto(fan); return true } catch { return false }
+        }) {
+            do {
+                try smc.write("Ftst", value: 0)
+                guard try smc.double("Ftst") == 0 else { throw FanControlError.helper("Ftst unlock remains active") }
+                unlocked = false
+                for fan in discovery.fans { try verifyAuto(fan) }
+            } catch { failures.append(String(describing: error)) }
+        }
         if !failures.isEmpty { throw FanControlError.helper(failures.joined(separator: "; ")) }
     }
 
@@ -351,20 +361,23 @@ public struct SafetyLimits: Equatable, Sendable {
     public static func forHardware(appleSilicon: Bool) -> SafetyLimits { appleSilicon ? .appleSilicon : .intel }
 }
 
-/// Holds per-fan policies and decides what to write on each tick. Pure logic, no I/O.
-///
-/// When the machine runs hot under a policy, the fans go back to system control
-/// and the policies are *suspended*, not lost: they resume once it has cooled.
+public enum FanPolicySuspension: String, Codable, Sendable { case thermal, temperatureUnavailable }
+
+/// Pure control decisions. Unsafe policies wait for valid cooling telemetry after
+/// heat or sensor loss; the user's desired policies are retained.
 public struct FanPolicyEngine: Sendable {
     public private(set) var policies: [Int: FanPolicy] = [:]
     public let limits: SafetyLimits
     /// Over-temperature: fans are on system control until it cools down.
     public private(set) var suspended = false
+    public private(set) var suspensionReason: FanPolicySuspension?
     private var hotTicks = 0
     private var coolTicks = 0
+    private var requiresGPU: Bool
 
-    public init(limits: SafetyLimits = .intel) {
+    public init(limits: SafetyLimits = .intel, requiresGPU: Bool = false) {
         self.limits = limits
+        self.requiresGPU = requiresGPU
     }
 
     public var isActive: Bool { policies.values.contains { $0 != .auto } }
@@ -381,6 +394,7 @@ public struct FanPolicyEngine: Sendable {
 
     private mutating func resetSafety() {
         suspended = false
+        suspensionReason = nil
         hotTicks = 0
         coolTicks = 0
     }
@@ -390,21 +404,41 @@ public struct FanPolicyEngine: Sendable {
         case auto(fan: Int)
         /// Over-temperature: every fan to system control; policies kept but suspended.
         case failsafe(temperature: Double)
+        /// Required CPU temperature is unavailable; under-cooling policies must wait.
+        case temperatureUnavailable
         /// Cooled down after a failsafe: policies apply again (manual actions follow).
         case resume(temperature: Double)
     }
 
+    /// Share telemetry coverage with the lid-awake guard, even without fan policies.
+    public mutating func observeControlTemperature(_ s: Snapshot) -> Double? {
+        let gpu = s.controlTemperature(for: .gpu)
+        if gpu != nil { requiresGPU = true }
+        return requiresGPU && gpu == nil ? nil : s.controlTemperature()
+    }
+
     public mutating func tick(_ s: Snapshot) -> [Action] {
         guard isActive else { return [] }
-        let hot = s.hottest ?? 0
+        let temperature = observeControlTemperature(s)
         // Fans asked to run flat out cool better than system control ever would, so the
         // failsafe leaves them alone; only policies that could under-cool are suspended.
         let fullCooling = fullCoolingActions(s)
         if fullCooling.count == policies.count && fullCooling.allSatisfy({ if case .manual = $0 { return true }; return false }) {
-            resetSafety(); return policyActions(s)
+            resetSafety(); return temperature == nil ? fullCooling : policyActions(s)
+        }
+
+        guard let hot = temperature else {
+            hotTicks = 0; coolTicks = 0
+            let newlyMissing = suspensionReason != .temperatureUnavailable
+            suspended = true; suspensionReason = .temperatureUnavailable
+            return (newlyMissing ? [.temperatureUnavailable] : []) + fullCooling
         }
 
         if suspended {
+            if suspensionReason == .temperatureUnavailable && hot >= limits.ceiling {
+                suspensionReason = .thermal
+                return [.failsafe(temperature: hot)] + fullCooling
+            }
             coolTicks = hot < limits.resumeBelow ? coolTicks + 1 : 0
             guard coolTicks >= limits.resumeTicks else { return fullCooling }
             resetSafety()
@@ -414,6 +448,7 @@ public struct FanPolicyEngine: Sendable {
         hotTicks = hot >= limits.ceiling ? hotTicks + 1 : 0
         if hotTicks >= limits.triggerTicks {
             suspended = true
+            suspensionReason = .thermal
             hotTicks = 0
             coolTicks = 0
             return [.failsafe(temperature: hot)] + fullCooling
@@ -449,7 +484,7 @@ public struct FanPolicyEngine: Sendable {
             case .fixed(let rpm):
                 actions.append(.manual(fan: fan.id, rpm: rpm.isInfinite ? range.max : Swift.min(range.max, Swift.max(range.min, rpm))))
             case .curve(let c):
-                guard let t = s.temperature(for: c.sensor) else { actions.append(.auto(fan: fan.id)); continue }
+                guard let t = s.controlTemperature(for: c.sensor) else { actions.append(.auto(fan: fan.id)); continue }
                 actions.append(.manual(fan: fan.id, rpm: c.rpm(at: t, min: range.min, max: range.max)))
             }
         }
