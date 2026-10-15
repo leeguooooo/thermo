@@ -100,7 +100,12 @@ enum NativeBundleValidation {
 
     /// A content seal survives copying and renaming. Every symlink must resolve inside the bundle.
     static func treeSeal(_ root: String) throws -> String {
-        guard URL(fileURLWithPath: root).resolvingSymlinksInPath().path == root else { throw fail("The application path is an alias") }
+        guard URL(fileURLWithPath: root).resolvingSymlinksInPath().path == root,
+              let physical = realpath(root, nil) else { throw fail("The application path is an alias") }
+        // Foundation can return /var for the system alias while realpath returns
+        // /private/var. Compare link containment in one physical namespace.
+        let physicalRoot = String(cString: physical)
+        free(physical)
         var hash = SHA256(), count = 0
         var bytes: Int64 = 0
         func add(_ text: String) { hash.update(data: Data(text.utf8)); hash.update(data: Data([0])) }
@@ -128,7 +133,7 @@ enum NativeBundleValidation {
                 let target = try FileManager.default.destinationOfSymbolicLink(atPath: path)
                 guard !target.hasPrefix("/"), let resolved = realpath(path, nil) else { throw fail("The app contains an unsupported symbolic link") }
                 defer { free(resolved) }
-                guard String(cString: resolved).hasPrefix(root + "/") else { throw fail("A symbolic link leaves the application bundle") }
+                guard String(cString: resolved).hasPrefix(physicalRoot + "/") else { throw fail("A symbolic link leaves the application bundle") }
                 add(target)
             } else { throw fail("The app contains a special file") }
         }

@@ -100,6 +100,26 @@ final class NativeUpdateTransactionTests: XCTestCase {
         XCTAssertEqual(build(original), "100")
     }
 
+    func testSignedAppInternalVersionedLinksAcceptSystemPathAliases() throws {
+        let framework = package + "/Contents/Resources/Versioned"
+        try FileManager.default.createDirectory(atPath: framework + "/Versions/A/Resources", withIntermediateDirectories: true)
+        try Data("vendor resource".utf8).write(to: URL(fileURLWithPath: framework + "/Versions/A/Resources/data"))
+        try FileManager.default.createSymbolicLink(atPath: framework + "/Versions/Current", withDestinationPath: "A")
+        try FileManager.default.createSymbolicLink(atPath: framework + "/Resources", withDestinationPath: "Versions/Current/Resources")
+        try execute("/usr/bin/codesign", ["--force", "--sign", "-", package])
+        XCTAssertNoThrow(try NativeBundleValidation.facts(package))
+    }
+
+    func testSystemPathAliasComparisonStillRejectsExternalAndAbsoluteLinks() throws {
+        let link = package + "/Contents/Resources/link"
+        try Data("outside".utf8).write(to: URL(fileURLWithPath: home + "/outside"))
+        try FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: "../../../../outside")
+        XCTAssertThrowsError(try NativeBundleValidation.treeSeal(package))
+        try FileManager.default.removeItem(atPath: link)
+        try FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: package + "/Contents/Resources/data")
+        XCTAssertThrowsError(try NativeBundleValidation.treeSeal(package))
+    }
+
     func testUnsignedOrModifiedCodeIsRejectedEvenInsideASignedArchive() throws {
         try Data("modified".utf8).write(to: URL(fileURLWithPath: package + "/Contents/Resources/data"))
         try zip()
