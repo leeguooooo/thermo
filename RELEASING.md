@@ -16,6 +16,8 @@
    - `releases/` —— appcast.xml、所有历史 DMG、更新说明；`make publish` 整个上传（`/download` 跳最新版；产品页在应用中心 `pages/thermo.vue`）
    - DMG 设了 immutable 缓存：**同一版本号不要重发**，有改动就升版本。
 4. 打 tag：`git tag v<ver> && git push --tags`。
+   然后更新 Homebrew tap：`scripts/update-tap.sh <ver>`（会核对线上 DMG 与 `releases/` 里的一致，再推到 `leeguooooo/homebrew-tap` 的 `Casks/thermo.rb`）。
+   GitHub Release 也要手动建：`gh release create v<ver>`，附上 DMG、zip、`thermo-cli-macos-universal.tar.gz` 及其 `.sha256` 和 `Thermo-<ver>-SHA256SUMS.txt`。
 5. 装一份旧版本，「设置 → Check for Updates…」验证能升级到新版本。
 
 `releases/` 要长期保留（不进 git），appcast 依赖其中的历史版本；丢了就从服务器拉回来再发版。
