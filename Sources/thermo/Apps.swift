@@ -22,6 +22,7 @@ struct AppsCommand {
     }
 
     func updates(_ rest: [String]) throws {
+        if rest.first == "sources" || rest.first == "check" { try nativeUpdates(rest); return }
         let report = AppUpdates.scan(refreshCatalog: args.has("refresh-catalog"))
         if rest.isEmpty || rest == ["list"] {
             if args.has("json") { print(Export.json(report)); return }
@@ -50,6 +51,40 @@ struct AppsCommand {
         let result = AppUpdates.install(item)
         if args.has("json") { print(Export.json(result)) } else { out([tr(result.message)]) }
         if result.outcome != "succeeded" { throw CLIError(tr("The update was not verified")) }
+    }
+
+    final class FeedResultBox: @unchecked Sendable { var value: NativeUpdateCheck? }
+
+    func nativeUpdates(_ rest: [String]) throws {
+        let sources = NativeAppUpdates.sources()
+        if rest == ["sources"] {
+            if args.has("json") { print(Export.json(sources)) }
+            else { out(sources.map { $0.app.name + " · " + $0.kind + ($0.feedHost.map { " · " + $0 } ?? "") + ($0.blocked.map { " · " + tr($0) } ?? "") }) }
+            return
+        }
+        guard rest.count == 2, rest[0] == "check" else { throw CLIError("usage: thermo apps updates sources | check NAME [--dry-run] [--json]") }
+        let query = rest[1]
+        let matches = sources.filter {
+            $0.app.path == query || $0.app.bundleID?.caseInsensitiveCompare(query) == .orderedSame ||
+            $0.app.name.caseInsensitiveCompare(query) == .orderedSame || ($0.app.name + ".app").caseInsensitiveCompare(query) == .orderedSame
+        }
+        guard matches.count == 1, let source = matches.first else { throw CLIError("Choose one exact app name, bundle ID or path from thermo apps updates sources") }
+        if args.has("dry-run") {
+            if args.has("json") { print(Export.json(source)) }
+            else { out([source.app.name, source.kind, source.feedHost ?? tr("No app-declared update feed")]) }
+            return
+        }
+        let box = FeedResultBox(), done = DispatchSemaphore(value: 0)
+        let task = Task.detached {
+            box.value = await NativeAppUpdates.check(source)
+            done.signal()
+        }
+        guard done.wait(timeout: .now() + 35) == .success, let result = box.value else {
+            task.cancel(); throw CLIError(tr("Update check timed out; use the app's own updater"))
+        }
+        if args.has("json") { print(Export.json(result)) }
+        else { out([source.app.name, tr(result.message)] + (result.release.map { [$0.version + " (" + $0.build + ")"] } ?? []) + result.skipped.map { tr($0) }) }
+        if ["failed", "changed", "cancelled"].contains(result.status) { throw CLIError(tr(result.message)) }
     }
 
     func startup(_ rest: [String]) throws {

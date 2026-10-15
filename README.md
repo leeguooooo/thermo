@@ -202,6 +202,12 @@ thermo tabs restore UUID --window WINDOW_ID --yes
 
 「软件管理 → 更新」检查 Homebrew 管理的应用。首次打开使用 Homebrew 已有记录；「刷新目录并检查」先执行 `brew update`，再检查版本。App Store 更新有单独入口，其他来源的应用仍由各自更新器管理。
 
+「其他应用」从本机声明中识别 Sparkle 更新源、App Store 收据及未声明来源的应用。发现来源不访问服务器；单项检查或确认批量检查后才请求所选 HTTPS feed。最多同时检查四项，支持停止并保留已完成结果；离开页面会取消请求并清空队列。
+
+`thermo apps updates sources --json` 只发现本地来源；`thermo apps updates check NAME --dry-run --json` 离线预览，去掉 `--dry-run` 才检查选定 feed。导出不包含私密更新 URL 和下载地址参数。请求不使用 Cookie、钥匙串凭据、SSO 或客户端证书，TLS 由系统校验。
+
+Sparkle 检查比较构建号，区分完整包、增量包、测试渠道、系统及声明的硬件要求。结果是版本候选，下载与安装仍由原应用或官网完成。feed 限制为 2 MiB、30 秒，拒绝实体声明和超深 XML；失败或不支持的条目保留原因，不视为“所有应用都是最新版”。
+
 `thermo apps updates --json` 输出覆盖范围、候选、跳过项与错误；`--refresh-catalog` 刷新 Homebrew 目录。`thermo apps updates apply TOKEN --dry-run` 预览单项更新，去掉 `--dry-run` 后交互确认，或用 `--yes` 执行。预览后应用、安装记录或 cask 定义变化会拒绝执行，正在运行的应用需要先退出。安装只指定该 cask，要求校验值，不强制覆盖，关闭自动清理和依赖升级，并使用 Homebrew 的 `--no-quit` 模式；Homebrew 仍会执行该软件包自己的安装步骤及附带工具更新。
 
 安装后同时核实 Homebrew 安装记录和应用目录中的版本；带构建号的版本也会核对构建号。命令失败、超时或版本不符均不算成功。更新开始时先记录“尚未核实”，结果再写入同一操作；安装与核实时会阻止正常退出，结束后可再次退出。Thermo 不提供软件更新的自动回退。

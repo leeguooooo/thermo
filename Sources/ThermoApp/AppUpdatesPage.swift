@@ -5,6 +5,7 @@ import ThermoL10n
 
 @MainActor
 final class AppUpdatesModel: ObservableObject {
+    @Published var channel = "homebrew"
     @Published private(set) var report: AppUpdateReport?
     @Published private(set) var loading = false
     @Published private(set) var working = false
@@ -57,6 +58,7 @@ final class AppUpdatesModel: ObservableObject {
 
 struct AppUpdatesPage: View {
     @ObservedObject var model: AppUpdatesModel
+    @ObservedObject var native: NativeUpdatesModel
     @Binding var tab: AppsTab
     @State private var reviewed: AppUpdate?
     @State private var showSkipped = true
@@ -65,6 +67,28 @@ struct AppUpdatesPage: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(tr("App updates")).font(.system(size: 22, weight: .semibold))
             SoftwareTabPicker(tab: $tab)
+            Picker(tr("Update source"), selection: $model.channel) {
+                Text("Homebrew").tag("homebrew")
+                Text(tr("Other apps")).tag("native")
+            }.pickerStyle(.segmented).frame(width: 240)
+            if model.channel == "native" { NativeUpdatesPanel(model: native) }
+            else { homebrewContent }
+        }
+        .padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
+        .onAppear { if model.channel == "homebrew" { model.refresh() } }
+        .onChange(of: model.channel) { value in if value == "homebrew", model.report == nil { model.refresh() } }
+        .onDisappear { model.retire(); native.retire() }
+        .sheet(item: $reviewed) { item in
+            ConfirmSheet(title: tr("Update %1$@?", item.name),
+                summary: item.installedVersions.joined(separator: ", ") + " → " + item.targetVersion,
+                destructive: false, heading: tr("Applications to replace"), lines: item.appPaths,
+                footnote: tr("Homebrew runs the installation steps and may update bundled tools. Thermo cannot automatically roll this update back. Quit the app first."),
+                confirmTitle: tr("Update"), confirm: { reviewed = nil; model.apply(item) }, cancel: { reviewed = nil })
+        }
+    }
+
+    var homebrewContent: some View {
+        VStack(alignment: .leading, spacing: 14) {
             Text(tr("Homebrew apps only. App Store and other app updaters are managed separately."))
                 .font(.callout).foregroundStyle(.secondary)
             if let report = model.report {
@@ -121,15 +145,6 @@ struct AppUpdatesPage: View {
                         .buttonStyle(PillButtonStyle()).disabled(model.busy)
                 }
             }
-        }
-        .padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
-        .onAppear { model.refresh() }.onDisappear { model.retire() }
-        .sheet(item: $reviewed) { item in
-            ConfirmSheet(title: tr("Update %1$@?", item.name),
-                summary: item.installedVersions.joined(separator: ", ") + " → " + item.targetVersion,
-                destructive: false, heading: tr("Applications to replace"), lines: item.appPaths,
-                footnote: tr("Homebrew runs the installation steps and may update bundled tools. Thermo cannot automatically roll this update back. Quit the app first."),
-                confirmTitle: tr("Update"), confirm: { reviewed = nil; model.apply(item) }, cancel: { reviewed = nil })
         }
     }
 }

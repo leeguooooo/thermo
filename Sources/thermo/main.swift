@@ -101,6 +101,8 @@ COMMANDS
                              change startup eligibility; --dry-run previews, --yes confirms
   apps updates               Homebrew app updates (--json; --refresh-catalog refreshes Homebrew)
   apps updates apply TOKEN   review then install one update (--dry-run, --yes); verifies app version
+  apps updates sources       discover app-declared update sources locally (--json)
+  apps updates check NAME    check one app's Sparkle feed; --dry-run stays offline
 
 OPTIONS
   -a, --all                  include sensors without a known name

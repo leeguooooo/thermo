@@ -9,6 +9,8 @@ public struct InstalledApp: Codable, Identifiable, Sendable, Equatable {
     public var name: String
     public var bundleID: String?
     public var version: String?
+    /// What the inventory actually observed, before later measuring and review.
+    public var inventoryIdentity: AppReviewIdentity? = nil
     /// Size of the bundle itself (0 until measured).
     public var bytes: Int64 = 0
     /// Files the app keeps in the home folder, found by bundle ID and name (empty until looked up).
@@ -77,11 +79,12 @@ public enum AppUninstaller {
     }
 
     /// Apps in /Applications and ~/Applications, read from their Info.plist, sorted by name. Sizes are not measured.
-    public static func installed(home: String = NSHomeDirectory(), dirs: [String]? = nil) -> [InstalledApp] {
+    public static func installed(home: String = NSHomeDirectory(), dirs: [String]? = nil, cancellation: ScanCancellation? = nil) -> [InstalledApp] {
         let fm = FileManager.default
         var seen = Set<String>()
         var apps: [InstalledApp] = []
         for dir in dirs ?? appDirs(home: home) {
+            if cancellation?.isCancelled == true { break }
             var bundles: [String] = []
             for name in (try? fm.contentsOfDirectory(atPath: dir)) ?? [] where !name.hasPrefix(".") {
                 let path = dir + "/" + name
@@ -91,9 +94,11 @@ public enum AppUninstaller {
                 bundles += ((try? fm.contentsOfDirectory(atPath: path)) ?? []).filter { $0.hasSuffix(".app") }.map { path + "/" + $0 }
             }
             for path in bundles {
+                if cancellation?.isCancelled == true { break }
                 guard seen.insert(path).inserted, var app = read(path) else { continue }
                 app.protected = protection(app, home: home)
-                app.cask = cask(for: app)
+                if app.protected == nil, app.inventoryIdentity == nil { app.protected = tr("Could not verify this app's file identity; inspect it in Finder") }
+                app.cask = cask(for: app, cancellation: cancellation)
                 apps.append(app)
             }
         }
@@ -101,17 +106,23 @@ public enum AppUninstaller {
     }
 
     public static func read(_ path: String) -> InstalledApp? {
+        let identity = AppReviewIdentity.capture(path)
+        func observed(_ app: InstalledApp) -> InstalledApp? {
+            var app = app
+            if identity != nil, AppReviewIdentity.capture(path) == identity { app.inventoryIdentity = identity }
+            return app
+        }
         let plist = path + "/Contents/Info.plist"
         guard let data = FileManager.default.contents(atPath: plist),
               let info = (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? [String: Any] else {
             // A bundle without a readable Info.plist is still an app the user can see and remove.
             guard FS.exists(path) else { return nil }
-            return InstalledApp(path: path, name: ((path as NSString).lastPathComponent as NSString).deletingPathExtension, bundleID: nil)
+            return observed(InstalledApp(path: path, name: ((path as NSString).lastPathComponent as NSString).deletingPathExtension, bundleID: nil))
         }
         let file = ((path as NSString).lastPathComponent as NSString).deletingPathExtension
         let id = (info["CFBundleIdentifier"] as? String).flatMap { isBundleID($0) ? $0 : nil }
-        return InstalledApp(path: path, name: file, bundleID: id,
-                            version: (info["CFBundleShortVersionString"] as? String) ?? (info["CFBundleVersion"] as? String))
+        return observed(InstalledApp(path: path, name: file, bundleID: id,
+                            version: (info["CFBundleShortVersionString"] as? String) ?? (info["CFBundleVersion"] as? String)))
     }
 
     /// Measures every app and looks up its leftovers, several at a time; `each` hears about each one
@@ -254,14 +265,17 @@ public enum AppUninstaller {
     public static let caskrooms = ["/opt/homebrew/Caskroom", "/usr/local/Caskroom"]
 
     /// The Homebrew cask that installed `app`, read from Homebrew's own records.
-    public static func cask(for app: InstalledApp, caskrooms: [String] = caskrooms) -> String? {
+    public static func cask(for app: InstalledApp, caskrooms: [String] = caskrooms, cancellation: ScanCancellation? = nil) -> String? {
         let fm = FileManager.default
         let file = (app.path as NSString).lastPathComponent
         for room in caskrooms {
             for token in (try? fm.contentsOfDirectory(atPath: room)) ?? [] where !token.hasPrefix(".") {
+                if cancellation?.isCancelled == true { return nil }
                 let meta = room + "/" + token + "/.metadata"
                 guard let walker = fm.enumerator(atPath: meta) else { continue }
-                for case let rel as String in walker where rel.hasSuffix(".json") || rel.hasSuffix(".rb") {
+                for case let rel as String in walker {
+                    if cancellation?.isCancelled == true { return nil }
+                    guard rel.hasSuffix(".json") || rel.hasSuffix(".rb") else { continue }
                     guard rel.contains("Casks/"), let text = try? String(contentsOfFile: meta + "/" + rel, encoding: .utf8) else { continue }
                     if text.contains("\"" + file + "\"") || text.contains("'" + file + "'") { return token }
                 }
@@ -434,6 +448,17 @@ public enum AppUninstaller {
         plan.identities = paths.reduce(into: [:]) { result, path in result[path] = FileIdentity.of(path) }
         plan.appIdentity = AppReviewIdentity.capture(app.path)
         plan.blocked = refusal(plan, home: home, processes: processes ?? ProcessTable.current(.init(cpu: false)))
+        let current = read(app.path)
+        if current?.inventoryIdentity == nil {
+            plan.appIdentity = nil
+            plan.blocked = plan.blocked ?? tr("Could not verify this app's file identity; inspect it in Finder")
+        } else if current?.bundleID != app.bundleID || current?.version != app.version ||
+            (app.inventoryIdentity != nil && current?.inventoryIdentity != app.inventoryIdentity) {
+            plan.appIdentity = nil
+            plan.blocked = plan.blocked ?? tr("The app changed since the inventory; refresh the app list and review again")
+        } else {
+            plan.appIdentity = current?.inventoryIdentity
+        }
         return plan
     }
 

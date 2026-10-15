@@ -16,6 +16,7 @@ final class AppModels {
     lazy var apps = AppsModel()
     lazy var startup = StartupItemsModel()
     lazy var softwareUpdates = AppUpdatesModel()
+    lazy var nativeUpdates = NativeUpdatesModel()
     lazy var claudeCleanup = ClaudeCleanupModel()
     private var browsers: [String: ChromePagesModel] = [:]
 
@@ -59,7 +60,7 @@ enum MainPage: Hashable {
         case "pages": self = .browser(parts.count > 1 ? parts[1] : "Google Chrome")
         case "disk": self = .disk(parts.count > 1 ? (DiskPage(argument: parts[1]) ?? .home) : .home)
         case "agents": self = .agents(parts.count > 1 ? (Area(rawValue: parts[1]).map { .area($0) } ?? .home) : .home)
-        case "apps": self = .apps(parts.count > 1 ? (AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
+        case "apps": self = .apps(parts.count > 1 ? (parts[1] == "feeds" ? .updates : AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
         case "memory": self = .memory
         case "history": self = .history
         case "claude-cleanup": self = parts.count > 1 && parts[1] == "privacy" ? .privacyTools : .claudeCleanup
@@ -170,6 +171,7 @@ enum MainWindow {
                     models.apps.stopMeasuring()
                     models.startup.retire()
                     models.softwareUpdates.retire()
+                    models.nativeUpdates.retire()
                     SpaceOverviewModel.shared.stop()
                     SpaceLensModel.shared.stop()
                     SpaceLensModel.shared.stopDuplicates()
@@ -361,7 +363,7 @@ struct MainView: View {
         case let .agents(.area(a)):
             AreaPage(scanner: agents, area: a).id(a).transition(.opacity.combined(with: .move(edge: .trailing)))
         case let .apps(tab):
-            AppsPage(model: models.apps, startup: models.startup, updates: models.softwareUpdates,
+            AppsPage(model: models.apps, startup: models.startup, updates: models.softwareUpdates, native: models.nativeUpdates,
                      tab: Binding(get: { tab }, set: { page = .apps($0) })).transition(.opacity)
         case let .compute(gpu):
             ComputePage(gpu: gpu).id(gpu).transition(.opacity)

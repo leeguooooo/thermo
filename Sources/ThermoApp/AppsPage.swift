@@ -55,7 +55,8 @@ final class AppsModel: ObservableObject {
         measurementComplete = false
         measured = 0
         Task.detached(priority: .userInitiated) {
-            let found = AppUninstaller.installed()
+            let found = AppUninstaller.installed(cancellation: token)
+            guard !token.isCancelled else { return }
             let busy = Self.runningPaths(found)
             await MainActor.run {
                 guard self.cancellation === token else { return }
@@ -183,6 +184,7 @@ struct AppsPage: View {
     @ObservedObject var model: AppsModel
     let startup: StartupItemsModel
     let updates: AppUpdatesModel
+    let native: NativeUpdatesModel
     @Binding var tab: AppsTab
     @State private var search = ""
     @State private var open: Set<String> = []
@@ -191,7 +193,7 @@ struct AppsPage: View {
     var body: some View {
         Group {
             if tab == .startup { StartupItemsPage(model: startup, tab: $tab) }
-            else if tab == .updates { AppUpdatesPage(model: updates, tab: $tab) }
+            else if tab == .updates { AppUpdatesPage(model: updates, native: native, tab: $tab) }
             else { uninstallBody }
         }
     }
@@ -228,8 +230,9 @@ struct AppsPage: View {
                                      String(p.paths.count - 1), ByteFormat.string(p.bytes)),
                          destructive: false, heading: tr("What will be moved to the Trash"),
                          lines: lines(p),
-                         footnote: tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
+                         footnote: p.blocked ?? tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
                          confirmTitle: tr("Move to Trash"),
+                         confirmEnabled: p.blocked == nil,
                          confirm: { model.uninstall(p) }, cancel: { model.plan = nil })
         }
         .sheet(isPresented: $confirmingOrphans) {

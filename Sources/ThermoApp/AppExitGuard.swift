@@ -6,6 +6,7 @@ enum AppExitGuard {
         let model = AppModels.shared.softwareUpdates
         guard model.working else { return .terminateNow }
         model.exitRequested = true
+        model.channel = "homebrew"
         MainWindow.show(.apps(.updates))
         return .terminateCancel
     }

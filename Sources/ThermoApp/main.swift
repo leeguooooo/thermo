@@ -322,6 +322,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     let models = AppModels.shared
     func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
     var page = value(after: "--page").flatMap(MainPage.init(argument:)) ?? .overview
+    if value(after: "--page") == "apps:feeds" { models.softwareUpdates.channel = "native" }
     if args.contains("--disk") {
         page = .disk(value(after: "--page").flatMap(DiskPage.init(argument:)) ?? .home)
         if args.contains("--all") { models.disk.scope = .all }
@@ -355,7 +356,9 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         case .apps(.installed): return !models.apps.loading && !models.apps.apps.isEmpty
         case .apps(.leftovers): return models.apps.orphans != nil
         case .apps(.startup): return models.startup.report != nil && !models.startup.busy
-        case .apps(.updates): return models.softwareUpdates.report != nil && !models.softwareUpdates.busy
+        case .apps(.updates): return models.softwareUpdates.channel == "native"
+            ? models.nativeUpdates.loaded && !models.nativeUpdates.loading
+            : models.softwareUpdates.report != nil && !models.softwareUpdates.busy
         case .compute: return ComputeModel.shared.current?.cpu != nil && Date().timeIntervalSince(started) > 4
         case .memory: return MemoryModel.shared.breakdown != nil && Date().timeIntervalSince(started) > 4
         case .space(.duplicates): return true
@@ -378,6 +381,7 @@ if ["--main", "--disk", "--agents", "--chrome-pages"].contains(where: CommandLin
             guard let w = n.object as? NSWindow, w === MainWindow.window else { return }
             if AppModels.shared.softwareUpdates.working {
                 AppModels.shared.softwareUpdates.exitRequested = true
+                AppModels.shared.softwareUpdates.channel = "homebrew"
                 DispatchQueue.main.async { MainWindow.show(.apps(.updates)) }
             } else { exit(0) }
         }

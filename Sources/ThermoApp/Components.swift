@@ -119,6 +119,7 @@ struct ConfirmSheet: View {
     let lines: [String]
     let footnote: String
     let confirmTitle: String
+    var confirmEnabled = true
     let confirm: () -> Void
     let cancel: () -> Void
 
@@ -150,6 +151,7 @@ struct ConfirmSheet: View {
                 Spacer()
                 Button(tr("Cancel"), action: cancel).keyboardShortcut(.cancelAction)
                 Button(role: destructive ? .destructive : nil, action: confirm) { Text(confirmTitle) }
+                    .disabled(!confirmEnabled)
                     .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
             }
         }

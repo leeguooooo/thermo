@@ -37,11 +37,22 @@ final class AppUninstallerTests: XCTestCase {
         InstalledApp(path: (dir ?? home + "/Applications") + "/\(name).app", name: name, bundleID: id)
     }
 
+    func writeInfo(_ target: InstalledApp, version: String? = nil, executable: String? = nil) throws {
+        try FileManager.default.createDirectory(atPath: target.path + "/Contents", withIntermediateDirectories: true)
+        var info: [String: String] = [:]
+        info["CFBundleIdentifier"] = target.bundleID
+        info["CFBundleShortVersionString"] = version
+        info["CFBundleExecutable"] = executable
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+            .write(to: URL(fileURLWithPath: target.path + "/Contents/Info.plist"), options: .atomic)
+    }
+
     // MARK: guard
 
     func testReviewedAppReplacementRefusesBeforeMovingLeftovers() throws {
         let target = app("Review", "com.example.review")
         make("Applications/Review.app/Contents")
+        try writeInfo(target)
         make("Library/Caches/com.example.review")
         let plan = AppUninstaller.plan(target, installed: [target], home: home, processes: ProcessTable(entries: []))
         XCTAssertNil(plan.blocked)
@@ -51,6 +62,56 @@ final class AppUninstallerTests: XCTestCase {
         XCTAssertTrue(result.removed.isEmpty)
         XCTAssertEqual(result.failed[target.path], "The app changed after review; review the uninstall again")
         XCTAssertTrue(FS.exists(home + "/Library/Caches/com.example.review"))
+    }
+
+    func testInventoryToReviewRejectsDifferentBundleAndVersion() throws {
+        let target = app("Review", "com.example.review")
+        for changeID in [false, true] {
+            try writeInfo(target, version: "1.0")
+            let inventory = try XCTUnwrap(AppUninstaller.read(target.path))
+            let replacement = app("Review", changeID ? "com.example.other" : target.bundleID)
+            try writeInfo(replacement, version: changeID ? "1.0" : "2.0")
+            let plan = AppUninstaller.plan(inventory, installed: [inventory], home: home, processes: ProcessTable(entries: []))
+            XCTAssertEqual(plan.blocked, "The app changed since the inventory; refresh the app list and review again")
+            XCTAssertNil(plan.appIdentity)
+            XCTAssertTrue(AppUninstaller.uninstall(plan, home: home, processes: { ProcessTable(entries: []) }).removed.isEmpty)
+            XCTAssertTrue(FS.exists(target.path))
+            let refreshed = try XCTUnwrap(AppUninstaller.read(target.path))
+            XCTAssertNil(AppUninstaller.plan(refreshed, installed: [refreshed], home: home, processes: ProcessTable(entries: [])).blocked)
+        }
+    }
+
+    func testInventoryToReviewDetectsChangedExecutableWithUnchangedVersion() throws {
+        let target = app("Review", "com.example.review")
+        try writeInfo(target, version: "1.0", executable: "Review")
+        try FileManager.default.createDirectory(atPath: target.path + "/Contents/MacOS", withIntermediateDirectories: true)
+        let executable = URL(fileURLWithPath: target.path + "/Contents/MacOS/Review")
+        try Data("old".utf8).write(to: executable)
+        let inventory = try XCTUnwrap(AppUninstaller.read(target.path))
+        try Data("new executable contents".utf8).write(to: executable)
+        let plan = AppUninstaller.plan(inventory, installed: [inventory], home: home, processes: ProcessTable(entries: []))
+        XCTAssertNotNil(plan.blocked)
+        XCTAssertNil(plan.appIdentity)
+        XCTAssertTrue(AppUninstaller.uninstall(plan, home: home, processes: { ProcessTable(entries: []) }).removed.isEmpty)
+    }
+
+    func testUnverifiableMetadataRemainsVisibleButCannotBeUninstalled() throws {
+        let target = app("Review", "com.example.review")
+        try writeInfo(target, version: "1.0")
+        let info = target.path + "/Contents/Info.plist"
+        let stored = home + "/external-info.plist"
+        try FileManager.default.moveItem(atPath: info, toPath: stored)
+        try FileManager.default.createSymbolicLink(atPath: info, withDestinationPath: stored)
+        let found = AppUninstaller.installed(home: home, dirs: [home + "/Applications"])
+        let entry = try XCTUnwrap(found.first)
+        XCTAssertEqual(entry.bundleID, target.bundleID)
+        XCTAssertNil(entry.inventoryIdentity)
+        XCTAssertNotNil(entry.protected)
+        let plan = AppUninstaller.plan(entry, installed: found, home: home, processes: ProcessTable(entries: []))
+        XCTAssertNotNil(plan.blocked)
+        XCTAssertNil(plan.appIdentity)
+        XCTAssertTrue(AppUninstaller.uninstall(plan, home: home, processes: { ProcessTable(entries: []) }).removed.isEmpty)
+        XCTAssertTrue(FS.exists(target.path))
     }
 
     func testInPlaceExecutableUpdateInvalidatesReview() throws {
