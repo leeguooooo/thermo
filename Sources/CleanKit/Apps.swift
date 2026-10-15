@@ -51,6 +51,8 @@ public struct OrphanData: Codable, Identifiable, Sendable, Equatable {
     public var bundleID: String
     public var items: [AppLeftover]
     public var blocked: String? = nil
+    public var dataIdentities: [String: String]? = nil
+    public var ownership: AppOwnershipSnapshot? = nil
 
     public init(bundleID: String, items: [AppLeftover]) { self.bundleID = bundleID; self.items = items }
     public var bytes: Int64 { items.reduce(0) { $0 + $1.bytes } }
@@ -670,6 +672,7 @@ public enum AppUninstaller {
                       reviewIdentities: [String: String]? = nil,
                       bundlePath: String? = nil,
                       ownership: AppOwnershipSnapshot? = nil,
+                      recheckOwnershipEachPath: Bool = false,
                       move: (String) throws -> URL = RemovalOperations.live.trash) {
         let g = Guard(home: home)
         let batchID = UUID().uuidString
@@ -686,6 +689,12 @@ public enum AppUninstaller {
             }
             if let ownership, !Set(AppOwnershipSnapshot.supplementalPaths(table, directories: ownership.roots)).isSubset(of: Set(ownership.extraPaths)) {
                 for remaining in paths[index...] { result.failed[remaining] = tr("Running app ownership changed; review associated data again") }
+                break
+            }
+            if recheckOwnershipEachPath, let ownership,
+               ownership != AppOwnershipSnapshot.capture(directories: ownership.roots, additionalPaths: ownership.extraPaths,
+                                                          requiredPaths: ownership.extraPaths) {
+                for remaining in paths[index...] { result.failed[remaining] = tr("Installed apps changed or ownership could not be verified; review associated data again") }
                 break
             }
             if let bundlePath, runningProcess(in: [bundlePath], processes: table) != nil {
@@ -767,9 +776,25 @@ public enum AppUninstaller {
     public static func orphans(home: String = NSHomeDirectory(), known: Set<String>, now: Date = Date(),
                                spotlight: (String) -> Bool = spotlightFinds, minimumBytes: Int64 = 0,
                                cancellation: ScanCancellation? = nil) -> [OrphanData] {
+        reviewedOrphans(home: home, known: known, now: now, spotlight: spotlight, minimumBytes: minimumBytes,
+                        cancellation: cancellation, processes: ProcessTable.current(.init(cpu: false)), directories: appDirs(home: home))
+    }
+
+    static func reviewedOrphans(home: String, known: Set<String>, now: Date, spotlight: (String) -> Bool,
+                                minimumBytes: Int64 = 0, cancellation: ScanCancellation? = nil,
+                                processes: ProcessTable, directories: [String]) -> [OrphanData] {
+        let previousCancellation = ScanCancellation.current
+        ScanCancellation.current = cancellation ?? previousCancellation
+        defer { ScanCancellation.current = previousCancellation }
+        guard cancellation?.isCancelled != true else { return [] }
+        let runtime = AppOwnershipSnapshot.supplementalPaths(processes, directories: directories)
+        var ownership = AppOwnershipSnapshot.capture(directories: directories, additionalPaths: runtime, requiredPaths: runtime)
+        if !processes.available { ownership.issues.append("Could not verify running apps; refresh before removing files") }
+        let known = known.union(knownBundleIDs(installed: ownership.apps, processes: processes))
         let lib = home + "/Library"
         var byID: [String: [String]] = [:]
         for root in orphanRoots {
+            if cancellation?.isCancelled == true { break }
             for entry in (try? FileManager.default.contentsOfDirectory(atPath: lib + "/" + root)) ?? [] {
                 guard let id = orphanID(entry, root: root) else { continue }
                 byID[id, default: []].append(lib + "/" + root + "/" + entry)
@@ -783,15 +808,23 @@ public enum AppUninstaller {
             if paths.isEmpty { continue }
             let lower = id.lowercased()
             if known.contains(where: { lower == $0 || startsWith(lower, id: $0) || startsWith($0, id: lower) }) { continue }
+            var identities: [String: String] = [:]
+            var changed = false
             let items = paths.map { path -> AppLeftover in
+                let before = AppDataReviewIdentity.of(path)
                 let size = FS.size(path, trackNewest: true, cancellation: cancellation)
+                if let before, before == AppDataReviewIdentity.of(path) { identities[path] = before } else { changed = true }
                 return AppLeftover(path: path, bytes: size.bytes, lastUsed: newest(path, size.newest), sizeState: AppSize.measured(size, exists: FS.exists(path)))
             }
             var data = OrphanData(bundleID: id, items: items)
+            data.dataIdentities = identities
+            data.ownership = ownership
             guard data.bytes >= minimumBytes || data.sizeState != .complete else { continue }
             if let last = data.lastUsed, now.timeIntervalSince(last) < orphanAge { continue }
             if spotlight(id) { continue }
             if data.sizeState != .complete { data.blocked = tr("This data could not be fully checked; inspect it in Finder before removing it") }
+            if changed { data.blocked = tr("Associated data changed after review; review it again") }
+            if !ownership.complete { data.blocked = tr("Could not verify installed app ownership; refresh before removing associated data") }
             out.append(data)
         }
         return out.sorted { $0.bytes > $1.bytes }
@@ -826,22 +859,37 @@ public enum AppUninstaller {
     public static func removeOrphans(_ picked: [OrphanData], home: String = NSHomeDirectory(), installed: [InstalledApp]? = nil,
                                      processes: (() -> ProcessTable)? = nil,
                                      spotlight: (String) -> Bool = spotlightFinds) -> [CleanResult] {
+        removeOrphans(picked, home: home, installed: installed, processes: processes, spotlight: spotlight,
+                      directories: appDirs(home: home), now: Date(), move: RemovalOperations.live.trash)
+    }
+
+    static func removeOrphans(_ picked: [OrphanData], home: String, installed: [InstalledApp]?,
+                              processes: (() -> ProcessTable)?, spotlight: (String) -> Bool,
+                              directories: [String], now: Date, move: (String) throws -> URL) -> [CleanResult] {
         let table = processes ?? { ProcessTable.current(.init(cpu: false)) }
         let apps = installed ?? AppUninstaller.installed(home: home)
         let known = knownBundleIDs(installed: apps, processes: table())
         let wanted = Set(picked.map(\.bundleID))
-        let current = orphans(home: home, known: known, spotlight: { wanted.contains($0) ? spotlight($0) : true })
+        let current = reviewedOrphans(home: home, known: known, now: now, spotlight: { wanted.contains($0) ? spotlight($0) : true },
+                                      processes: table(), directories: directories)
         return picked.map { data in
             var result = CleanResult(id: "leftovers:" + data.bundleID, trashed: true)
             let still = current.first { $0.bundleID == data.bundleID }
-            if let still, let why = still.blocked {
+            if data.blocked != nil || data.ownership?.complete != true || data.dataIdentities == nil {
+                result.failed[data.bundleID] = data.blocked ?? tr("Installed apps changed or ownership could not be verified; review associated data again")
+            } else if let still, let why = still.blocked {
                 result.failed[data.bundleID] = why
+            } else if let still, data.ownership != still.ownership {
+                result.failed[data.bundleID] = tr("Installed apps changed or ownership could not be verified; review associated data again")
+            } else if data.items.contains(where: { data.dataIdentities?[$0.path] == nil || data.dataIdentities?[$0.path] != AppDataReviewIdentity.of($0.path) }) {
+                result.failed[data.bundleID] = tr("Associated data changed after review; review it again")
             } else if let still {
                 let current = Set(still.items.map(\.path))
                 let paths = data.items.map(\.path).filter(current.contains)
                 let sizes = Dictionary(uniqueKeysWithValues: still.items.map { ($0.path, $0.bytes) })
                 trash(paths, bundleIDs: [data.bundleID], sizes: sizes, home: home, processes: table, into: &result,
-                      incompletePaths: Set(still.items.filter { $0.effectiveSizeState != .complete }.map(\.path)))
+                      incompletePaths: Set(still.items.filter { $0.effectiveSizeState != .complete }.map(\.path)),
+                      reviewIdentities: data.dataIdentities, ownership: data.ownership, recheckOwnershipEachPath: true, move: move)
             } else {
                 result.failed[data.bundleID] = tr("no longer looks left behind: an app uses it again, or it changed")
             }

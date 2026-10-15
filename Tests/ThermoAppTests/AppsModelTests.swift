@@ -4,6 +4,95 @@ import XCTest
 import AppKit
 
 final class AppsModelTests: XCTestCase {
+    private final class OrphanCalls: @unchecked Sendable {
+        let lock = NSLock()
+        private var calls = 0
+        func next() -> Int { lock.lock(); defer { lock.unlock() }; calls += 1; return calls }
+        var count: Int { lock.lock(); defer { lock.unlock() }; return calls }
+    }
+
+    @MainActor func testOrphanRefreshAfterRestoreWaitsForOldWorkerAndDoesNotPublishItsResults() async throws {
+        let calls = OrphanCalls(), first = expectation(description: "old scan"), second = expectation(description: "replacement")
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let model = AppsModel(readOrphans: { _ in
+            let n = calls.next()
+            if n == 1 { first.fulfill(); _ = release.wait(timeout: .now() + 5) } else { second.fulfill() }
+            return [OrphanData(bundleID: "com.example.scan\(n)", items: [])]
+        })
+        var published: [String] = []
+        let observation = model.$orphans.sink { published += $0?.map(\.bundleID) ?? [] }
+        model.scanOrphans(); await fulfillment(of: [first], timeout: 2)
+        model.invalidateAfterRestore()
+        for _ in 0..<100 { model.scanOrphans() }
+        XCTAssertEqual(calls.count, 1); XCTAssertTrue(model.scanningOrphans)
+        release.signal(); await fulfillment(of: [second], timeout: 2)
+        for _ in 0..<100 where model.scanningOrphans { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(calls.count, 2)
+        XCTAssertEqual(model.orphans?.map(\.bundleID), ["com.example.scan2"])
+        XCTAssertFalse(published.contains("com.example.scan1")); observation.cancel()
+    }
+
+    @MainActor func testOrphanRemovalSurvivesRetirementAndSerializesFurtherReadsAndWrites() async throws {
+        let reads = OrphanCalls(), writes = OrphanCalls()
+        let began = expectation(description: "orphan removal")
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let data = OrphanData(bundleID: "com.example.orphan", items: [AppLeftover(path: "/fixture", bytes: 1)])
+        let model = AppsModel(readOrphans: { _ in _ = reads.next(); return [data] }, removeOrphanData: { _ in
+            _ = writes.next(); began.fulfill(); _ = release.wait(timeout: .now() + 5)
+            return [CleanResult(id: "leftovers:fixture", trashed: true)]
+        })
+        model.scanOrphans()
+        for _ in 0..<100 where model.scanningOrphans { try await Task.sleep(nanoseconds: 10_000_000) }
+        model.selectedOrphans = [data.id]
+        model.removeOrphans(); await fulfillment(of: [began], timeout: 2)
+        model.retire(); model.removeOrphans(); model.scanOrphans(); model.load()
+        XCTAssertTrue(model.working); XCTAssertEqual(reads.count, 1); XCTAssertEqual(writes.count, 1)
+        let previous = AppModels.shared.apps; AppModels.shared.apps = model
+        defer { AppModels.shared.apps = previous }
+        XCTAssertEqual(AppExitGuard.reply(show: { _ in }), .terminateCancel)
+        release.signal()
+        for _ in 0..<100 where model.working { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertFalse(model.working)
+    }
+
+    @MainActor func testRetiredOrphanReadCannotRepopulateThePage() async throws {
+        let began = expectation(description: "scan")
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let model = AppsModel(readOrphans: { _ in
+            began.fulfill(); _ = release.wait(timeout: .now() + 5)
+            return [OrphanData(bundleID: "com.example.old", items: [])]
+        })
+        model.scanOrphans(); await fulfillment(of: [began], timeout: 2)
+        model.retire(); release.signal()
+        for _ in 0..<100 where model.scanningOrphans { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertFalse(model.scanningOrphans); XCTAssertNil(model.orphans)
+    }
+
+    @MainActor func testQueuedOrphanRefreshDoesNotLeaveBusyStateWhenAnUninstallBegins() async throws {
+        let readBegan = expectation(description: "read"), removalBegan = expectation(description: "removal")
+        let readRelease = DispatchSemaphore(value: 0), removalRelease = DispatchSemaphore(value: 0)
+        defer { readRelease.signal(); removalRelease.signal() }
+        let model = AppsModel(remove: { _ in
+            removalBegan.fulfill(); _ = removalRelease.wait(timeout: .now() + 5)
+            return CleanResult(id: "fixture", trashed: true)
+        }, readOrphans: { _ in
+            readBegan.fulfill(); _ = readRelease.wait(timeout: .now() + 5)
+            return []
+        })
+        model.scanOrphans(); await fulfillment(of: [readBegan], timeout: 2)
+        model.scanOrphans()
+        model.uninstall(UninstallPlan(app: InstalledApp(path: "/fixture.app", name: "Fixture", bundleID: nil), paths: [], bytes: 0))
+        await fulfillment(of: [removalBegan], timeout: 2)
+        readRelease.signal()
+        for _ in 0..<100 where model.scanningOrphans { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertFalse(model.scanningOrphans)
+        removalRelease.signal()
+        for _ in 0..<100 where model.working { try await Task.sleep(nanoseconds: 10_000_000) }
+    }
+
     @MainActor
     func testConfirmedRemovalSurvivesWindowRetirementAndBlocksQuitWithoutOpeningARealWindow() async throws {
         let began = expectation(description: "removal running")

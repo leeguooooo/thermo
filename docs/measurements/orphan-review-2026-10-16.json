@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-16",
+  "scope": "Orphan data review binding and model lifecycle",
+  "sourceSHA256": {
+    "Sources/CleanKit/Apps.swift": "c1e4aa7d52b3a9a8f5d0add2b3c4cb767803fdbf0216fab2c4afc243bffb640e",
+    "Sources/ThermoApp/AppsPage.swift": "cd08f1930d814594821a5bf52307809a25ec18b1217ba1d925f199f1e1e3522f",
+    "Tests/CleanKitTests/OrphanReviewTests.swift": "f37e2cbd274d64fd174679017d75d04c829e9f8ebd4f07f84c3da2fdc16f8eef",
+    "Tests/ThermoAppTests/AppsModelTests.swift": "d5a510d2fe13a5f155cb30d2f25122257ebb9de067d5a2a86617f70c2e4b9a3b"
+  },
+  "fileScenarios": [
+    "Unchanged review moves owned data and records a readable Trash batch",
+    "Same-path replacement is preserved",
+    "Reinstalled app is discovered despite stale installed argument",
+    "Changed ownership inventory requires review",
+    "Unavailable process table blocks removal",
+    "App returning between two moves leaves remaining data",
+    "Legacy review without identity cannot authorize removal",
+    "Unreadable ownership directory blocks candidates"
+  ],
+  "modelScenarios": [
+    "100 refresh requests wait for old worker and publish only replacement after restore invalidation",
+    "Confirmed orphan removal survives retirement and serializes reads/writes; quit guard rejects ordinary exit",
+    "Retired read cannot repopulate page",
+    "Queued orphan refresh followed by uninstall does not remain busy"
+  ],
+  "regressionBeforeFix": {
+    "test": "testQueuedOrphanRefreshDoesNotLeaveBusyStateWhenAnUninstallBegins",
+    "failure": "scanningOrphans remained true after old worker returned",
+    "log": "/tmp/thermo-orphan-queue-before.log"
+  },
+  "nativeCLIRead": {
+    "command": "thermo apps leftovers --json",
+    "isolatedEmptyHome": true,
+    "items": 0,
+    "exit": 0,
+    "elapsedSeconds": 0.7,
+    "stderrBytes": 0,
+    "ownedWorkspaceRemoved": true
+  },
+  "safety": {
+    "testFilesOnly": true,
+    "ordinaryUser": true,
+    "trashMover": "Only custom fixture move within test Home; no native user Trash modified",
+    "age": "Fixture clock advanced 40 days; current production clock unchanged"
+  },
+  "limitations": [
+    "No real user orphan data moved",
+    "No new visible-window orphan confirmation/restore acceptance",
+    "Top-level data metadata is pinned; recursive data contents are not sealed",
+    "Ownership roots and observed running app declarations are checked; arbitrary inactive apps elsewhere still depend on Spotlight",
+    "Nested helper declaration completeness and unreadable scan roots need separate reporting audit",
+    "An OS call already in flight must return before replacement scan begins",
+    "No root/helper installation, fan writes or release"
+  ],
+  "fullRegression": {
+    "CleanKit": 477,
+    "ThermoApp": 141,
+    "ThermoCLI": 57,
+    "ThermoKitExcludingHardwareTests": 114,
+    "AgentCore": 34,
+    "total": 823,
+    "failures": 0,
+    "log": "/tmp/thermo-orphan-full-tests.log"
+  },
+  "build": "passed as part of swift test"
+}

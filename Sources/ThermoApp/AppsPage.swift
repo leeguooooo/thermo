@@ -46,12 +46,23 @@ final class AppsModel: ObservableObject {
     private var reviewCancellation: ScanCancellation?
     private let reviewPlan: @Sendable (InstalledApp, [InstalledApp], Bool, ScanCancellation) -> UninstallPlan
     private let remove: @Sendable (UninstallPlan) -> CleanResult
+    private let readOrphans: @Sendable (ScanCancellation) -> [OrphanData]
+    private let removeOrphanData: @Sendable ([OrphanData]) -> [CleanResult]
+    private var orphanCancellation: ScanCancellation?
+    private var orphanInFlight = false
+    private var restartOrphans = false
     private var measurementComplete = false
 
     init(reviewPlan: @escaping @Sendable (InstalledApp, [InstalledApp], Bool, ScanCancellation) -> UninstallPlan = { app, all, removeApp, token in
         AppUninstaller.plan(app, installed: all, removeApp: removeApp, cancellation: token)
-    }, remove: @escaping @Sendable (UninstallPlan) -> CleanResult = { AppUninstaller.uninstall($0) }) {
+    }, remove: @escaping @Sendable (UninstallPlan) -> CleanResult = { AppUninstaller.uninstall($0) },
+       readOrphans: @escaping @Sendable (ScanCancellation) -> [OrphanData] = { token in
+           let installed = AppUninstaller.installed(cancellation: token)
+           let known = AppUninstaller.knownBundleIDs(installed: installed, processes: ProcessTable.current(.init(cpu: false)))
+           return AppUninstaller.orphans(known: known, minimumBytes: 1 << 20, cancellation: token)
+       }, removeOrphanData: @escaping @Sendable ([OrphanData]) -> [CleanResult] = { AppUninstaller.removeOrphans($0) }) {
         self.reviewPlan = reviewPlan; self.remove = remove
+        self.readOrphans = readOrphans; self.removeOrphanData = removeOrphanData
     }
 
     var measuring: Bool { loading }
@@ -110,6 +121,8 @@ final class AppsModel: ObservableObject {
         stopMeasuring()
         reviewCancellation?.cancel()
         plan = nil
+        orphanCancellation?.cancel()
+        restartOrphans = false
         // Keep planning occupied until the physical read returns; reopening cannot add a worker.
     }
 
@@ -150,6 +163,8 @@ final class AppsModel: ObservableObject {
     func uninstall(_ plan: UninstallPlan) {
         guard !working else { return }
         stopMeasuring()
+        orphanCancellation?.cancel()
+        restartOrphans = false
         self.plan = nil
         working = true
         exitRequested = false
@@ -166,16 +181,27 @@ final class AppsModel: ObservableObject {
     }
 
     func scanOrphans() {
-        guard !scanningOrphans else { return }
+        guard !working else { return }
+        if orphanInFlight { restartOrphans = true; return }
+        orphanInFlight = true
         scanningOrphans = true
+        let token = ScanCancellation()
+        orphanCancellation = token
+        let read = readOrphans
         Task.detached(priority: .userInitiated) {
-            let installed = AppUninstaller.installed()
-            let known = AppUninstaller.knownBundleIDs(installed: installed, processes: ProcessTable.current(.init(cpu: false)))
-            let found = AppUninstaller.orphans(known: known, minimumBytes: 1 << 20)
+            let found = read(token)
             await MainActor.run {
+                self.orphanInFlight = false
+                self.scanningOrphans = false
+                self.orphanCancellation = nil
+                if self.restartOrphans {
+                    self.restartOrphans = false
+                    self.scanOrphans()
+                    return
+                }
+                guard !token.isCancelled else { return }
                 self.orphans = found
                 self.selectedOrphans.formIntersection(found.map(\.id))
-                self.scanningOrphans = false
             }
         }
     }
@@ -184,10 +210,13 @@ final class AppsModel: ObservableObject {
 
     func removeOrphans() {
         let picked = pickedOrphans
-        guard !picked.isEmpty else { return }
+        guard !working, !orphanInFlight, planning == nil, !picked.isEmpty else { return }
+        stopMeasuring()
         working = true
+        exitRequested = false
+        let remove = removeOrphanData
         Task.detached(priority: .userInitiated) {
-            let results = AppUninstaller.removeOrphans(picked)
+            let results = remove(picked)
             await MainActor.run {
                 self.working = false
                 self.outcome = Self.summary(results)
