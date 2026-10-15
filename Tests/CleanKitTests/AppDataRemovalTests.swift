@@ -245,4 +245,127 @@ final class AppDataRemovalTests: XCTestCase {
         XCTAssertTrue(execute(reviewed).removed.isEmpty)
         XCTAssertTrue(FS.exists(appPath)); XCTAssertTrue(FS.exists(cachePath))
     }
+
+    func outsideCopy(id: String? = "com.example.fixture") throws -> String {
+        let path = home + "/Portable/Copy.app"
+        try FileManager.default.createDirectory(atPath: path + "/Contents", withIntermediateDirectories: true)
+        var info = ["CFBundleName": "Copy"]
+        info["CFBundleIdentifier"] = id
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+            .write(to: URL(fileURLWithPath: path + "/Contents/Info.plist"))
+        return path
+    }
+    func running(_ path: String) -> ProcessTable {
+        ProcessTable(entries: [AgentProcess(pid: 42, name: "Fixture", executable: path + "/Contents/MacOS/Fixture")])
+    }
+
+    func testRunningOutsideCopyKeepsBothIDAndNameDataWhileInstalledBundleCanMove() throws {
+        let copy = try outsideCopy()
+        let named = home + "/Library/Caches/Fixture"
+        try data(named)
+        let app = try XCTUnwrap(AppUninstaller.read(appPath))
+        let active = running(copy)
+        let reviewed = AppUninstaller.plan(app, installed: [app], home: home, processes: active, ownershipDirectories: [home + "/Applications"])
+        XCTAssertNil(reviewed.blocked)
+        XCTAssertEqual(reviewed.paths, [appPath])
+        XCTAssertTrue(reviewed.ownershipKept?.contains(cachePath) == true)
+        XCTAssertTrue(reviewed.ownershipKept?.contains(named) == true)
+        let result = execute(reviewed, processes: active)
+        XCTAssertEqual(result.removed, [appPath])
+        XCTAssertTrue(FS.exists(copy)); XCTAssertTrue(FS.exists(cachePath)); XCTAssertTrue(FS.exists(named))
+    }
+
+    func testOutsideCopyStartedAfterReviewStopsBothRemovalModesBeforeAnyMove() throws {
+        let copy = try outsideCopy()
+        for removeApp in [true, false] {
+            let result = execute(try plan(removeApp: removeApp), processes: running(copy))
+            XCTAssertTrue(result.removed.isEmpty)
+            XCTAssertTrue(FS.exists(appPath)); XCTAssertTrue(FS.exists(cachePath))
+        }
+    }
+
+    func testOutsideCopyAppearingAtMoveBoundaryStopsTheWholeRemainingBatch() throws {
+        let copy = try outsideCopy()
+        let reviewed = try plan(removeApp: true)
+        var reads = 0
+        let result = AppUninstaller.uninstall(reviewed, home: home, processes: {
+            reads += 1
+            return reads == 1 ? self.empty : self.running(copy)
+        }, ownershipDirectories: [home + "/Applications"], move: move)
+        XCTAssertGreaterThanOrEqual(reads, 2)
+        XCTAssertTrue(result.removed.isEmpty)
+        XCTAssertEqual(result.failed.count, reviewed.paths.count)
+        XCTAssertTrue(result.failed.values.allSatisfy { $0 == tr("Running app ownership changed; review associated data again") })
+        XCTAssertTrue(FS.exists(appPath)); XCTAssertTrue(FS.exists(cachePath))
+    }
+
+    func testTargetStartingAtMoveBoundaryDoesNotLeaveDataRemovalRunning() throws {
+        let reviewed = try plan(removeApp: true)
+        var reads = 0
+        let result = AppUninstaller.uninstall(reviewed, home: home, processes: {
+            reads += 1
+            return reads == 1 ? self.empty : self.running(self.appPath)
+        }, ownershipDirectories: [home + "/Applications"], move: move)
+        XCTAssertTrue(result.removed.isEmpty)
+        XCTAssertEqual(result.failed.count, reviewed.paths.count)
+        XCTAssertTrue(FS.exists(appPath)); XCTAssertTrue(FS.exists(cachePath))
+    }
+
+    func testRunningOutsideAppWithUnknownDeclarationCannotAuthorizeDataRemoval() throws {
+        let copy = try outsideCopy(id: nil)
+        let app = try XCTUnwrap(AppUninstaller.read(appPath))
+        let reviewed = AppUninstaller.plan(app, installed: [app], home: home, processes: running(copy), removeApp: false,
+                                          ownershipDirectories: [home + "/Applications"])
+        XCTAssertNotNil(reviewed.blocked)
+        XCTAssertTrue(reviewed.ownership?.issues.contains(copy) == true)
+        XCTAssertTrue(execute(reviewed, processes: running(copy)).removed.isEmpty)
+    }
+
+    func testRuntimeDiscoveryIncludesNestedAppDeclarationsButNotOrdinarySuiteDuplicates() {
+        let directories = ["/Applications", "/Applications/Utilities"]
+        let nested = "/Applications/Outer.app/Contents/Helpers/Inner.app"
+        let paths = AppOwnershipSnapshot.supplementalPaths(running(nested), directories: directories)
+        XCTAssertEqual(paths, [nested])
+        XCTAssertFalse(AppOwnershipSnapshot.isDiscovered("/Applications/Outer.app/Inner.app", directories: directories))
+        XCTAssertFalse(AppOwnershipSnapshot.isDiscovered("/Applications/Utilities/More/Extra.app", directories: directories))
+        XCTAssertTrue(AppOwnershipSnapshot.isDiscovered("/Applications/Suite/Extra.app", directories: directories))
+    }
+
+    func testAppSuffixedWrapperWithoutDeclarationIsNotASecondUnknownApp() throws {
+        let container = home + "/Portable/com.helper.app"
+        let actual = container + "/Actual.app"
+        try FileManager.default.createDirectory(atPath: actual + "/Contents", withIntermediateDirectories: true)
+        try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": "org.unrelated.helper"], format: .xml, options: 0)
+            .write(to: URL(fileURLWithPath: actual + "/Contents/Info.plist"))
+        let app = try XCTUnwrap(AppUninstaller.read(appPath))
+        let reviewed = AppUninstaller.plan(app, installed: [app], home: home, processes: running(actual), removeApp: false,
+                                          ownershipDirectories: [home + "/Applications"])
+        XCTAssertNil(reviewed.blocked)
+        XCTAssertTrue(reviewed.ownership?.extraPaths.contains(actual) == true)
+        XCTAssertFalse(reviewed.ownership?.extraPaths.contains(container) == true)
+        XCTAssertTrue(reviewed.paths.contains(cachePath))
+    }
+
+    func testUnavailableProcessInventoryIsNotAnEmptyVerifiedInventory() throws {
+        let unavailable = ProcessTable(entries: [], available: false)
+        let app = try XCTUnwrap(AppUninstaller.read(appPath))
+        let reviewed = AppUninstaller.plan(app, installed: [app], home: home, processes: unavailable, removeApp: false,
+                                          ownershipDirectories: [home + "/Applications"])
+        XCTAssertEqual(reviewed.blocked, tr("Could not verify running apps; refresh before removing files"))
+        XCTAssertTrue(execute(try plan(), processes: unavailable).removed.isEmpty)
+        XCTAssertTrue(FS.exists(appPath)); XCTAssertTrue(FS.exists(cachePath))
+    }
+
+    func testProcessInventoryFailureAtMoveBoundaryStopsAllRemainingPaths() throws {
+        let reviewed = try plan(removeApp: true)
+        var reads = 0
+        let result = AppUninstaller.uninstall(reviewed, home: home, processes: {
+            reads += 1
+            return reads == 1 ? self.empty : ProcessTable(entries: [], available: false)
+        }, ownershipDirectories: [home + "/Applications"], move: move)
+        XCTAssertTrue(result.removed.isEmpty)
+        XCTAssertEqual(result.failed.count, reviewed.paths.count)
+        XCTAssertTrue(result.failed.values.allSatisfy { $0 == tr("Could not verify running apps; refresh before removing files") })
+        XCTAssertTrue(FS.exists(appPath)); XCTAssertTrue(FS.exists(cachePath))
+    }
 }

@@ -5,6 +5,8 @@ let zhHans: [String: String] = [
     "Complete size measurement": "完整测量大小",
     "This data could not be fully checked; inspect it in Finder before removing it": "此数据未能检查完整，移除前请先在 Finder 中核实",
     "Size unavailable": "大小未知",
+    "Could not verify running apps; refresh before removing files": "无法核实运行中的应用，请刷新后再移除文件",
+    "Running app ownership changed; review associated data again": "运行中的应用归属已变化，请重新审阅关联数据",
     "Wait for the app removal operation to finish before quitting.": "应用或关联数据的移除尚未完成，请稍后退出。",
     "Could not verify installed app ownership; refresh before removing associated data": "无法核实已安装应用的归属，请刷新后再移除关联数据",
     "Installed apps changed or ownership could not be verified; review associated data again": "已安装应用已变化或归属无法核实，请重新审阅关联数据",

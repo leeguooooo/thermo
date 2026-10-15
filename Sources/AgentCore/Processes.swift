@@ -40,8 +40,9 @@ public struct AgentProcess: Equatable, Sendable {
 /// A snapshot of running processes. Build one by hand in tests with `init(entries:)`.
 public struct ProcessTable: Sendable {
     public let entries: [AgentProcess]
+    public let available: Bool
 
-    public init(entries: [AgentProcess]) { self.entries = entries }
+    public init(entries: [AgentProcess], available: Bool = true) { self.entries = entries; self.available = available }
 
     public struct Options: Sendable {
         /// Only processes of this user (nil = everyone; details of others' processes are mostly unavailable).
@@ -55,10 +56,10 @@ public struct ProcessTable: Sendable {
         var mib: [Int32] = options.uid.map { [CTL_KERN, KERN_PROC, KERN_PROC_UID, Int32(bitPattern: $0)] }
             ?? [CTL_KERN, KERN_PROC, KERN_PROC_ALL]
         var size = 0
-        guard sysctl(&mib, UInt32(mib.count), nil, &size, nil, 0) == 0 else { return ProcessTable(entries: []) }
+        guard sysctl(&mib, UInt32(mib.count), nil, &size, nil, 0) == 0 else { return ProcessTable(entries: [], available: false) }
         size += size / 8
         var procs = [kinfo_proc](repeating: kinfo_proc(), count: size / MemoryLayout<kinfo_proc>.stride)
-        guard sysctl(&mib, UInt32(mib.count), &procs, &size, nil, 0) == 0 else { return ProcessTable(entries: []) }
+        guard sysctl(&mib, UInt32(mib.count), &procs, &size, nil, 0) == 0 else { return ProcessTable(entries: [], available: false) }
         let count = size / MemoryLayout<kinfo_proc>.stride
         let now = Date().timeIntervalSince1970
         var out: [AgentProcess] = []
@@ -89,7 +90,8 @@ public struct ProcessTable: Sendable {
             process.memoryReading = reading
             out.append(process)
         }
-        return ProcessTable(entries: out)
+        let expectsSelf = options.uid == nil || options.uid == getuid()
+        return ProcessTable(entries: out, available: !expectsSelf || out.contains { $0.pid == getpid() })
     }
 
     // MARK: per-process readers (each returns nil/0 when the kernel says no)

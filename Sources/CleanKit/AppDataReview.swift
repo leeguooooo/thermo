@@ -1,4 +1,5 @@
 import CryptoKit
+import AgentCore
 import Darwin
 import Foundation
 
@@ -36,7 +37,35 @@ public struct AppOwnershipSnapshot: Codable, Sendable, Equatable {
 
     var apps: [InstalledApp] { claims.map { InstalledApp(path: $0.path, name: $0.name, bundleID: $0.bundleID) } }
 
-    static func capture(directories: [String], additionalPaths: [String] = []) -> AppOwnershipSnapshot {
+    static func supplementalPaths(_ processes: ProcessTable, directories: [String]) -> [String] {
+        var paths = Set<String>()
+        for process in processes.entries {
+            guard let executable = process.executable, executable.hasPrefix("/") else { continue }
+            var ancestors: [String] = []
+            var start = executable.startIndex
+            while let range = executable.range(of: ".app/", range: start..<executable.endIndex) {
+                let path = String(executable[..<range.lowerBound]) + ".app"
+                ancestors.append(path)
+                start = range.upperBound
+            }
+            // A storage directory may itself end in .app (cmux helper containers do this).
+            // Always inspect the innermost executable bundle; outer hosts need a declaration.
+            for path in ancestors where path == ancestors.last || FS.exists(path + "/Contents/Info.plist") {
+                if !isDiscovered(path, directories: directories) { paths.insert(path) }
+            }
+        }
+        return paths.sorted()
+    }
+
+    static func isDiscovered(_ path: String, directories: [String]) -> Bool {
+        directories.contains { root in
+            guard path.hasPrefix(root + "/") else { return false }
+            let parts = path.dropFirst(root.count + 1).split(separator: "/")
+            return (parts.count == 1 || (parts.count == 2 && !parts[0].hasSuffix(".app") && root != "/Applications/Utilities")) && parts.last?.hasSuffix(".app") == true
+        }
+    }
+
+    static func capture(directories: [String], additionalPaths: [String] = [], requiredPaths: [String] = []) -> AppOwnershipSnapshot {
         let roots = Set(directories).sorted()
         let extras = Set(additionalPaths).sorted()
         var issues: [String] = []
@@ -67,6 +96,7 @@ public struct AppOwnershipSnapshot: Codable, Sendable, Equatable {
             if ScanCancellation.current?.isCancelled == true { issues.append(claim.path); break }
             if read(claim.path) != claim { issues.append(claim.path) }
         }
+        for path in requiredPaths where !claims.contains(where: { $0.path == path && $0.bundleID != nil }) { issues.append(path) }
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         let data: Data
         do { data = try encoder.encode(claims) }

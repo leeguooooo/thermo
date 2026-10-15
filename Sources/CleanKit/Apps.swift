@@ -389,11 +389,12 @@ public enum AppUninstaller {
         var out: [String] = []
         let others = installed.filter { $0.path != app.path }
         let otherNames = Set(others.map { normalized($0.name) })
+        let idShared = others.contains { $0.bundleID != nil && $0.bundleID?.lowercased() == app.bundleID?.lowercased() }
 
         // Names: "Maestro Studio" → MaestroStudio, Maestro_Studio, Maestro-Studio, and lowercase forms.
         let name = app.name
         let n = normalized(name)
-        if name.count >= 3, !sharedNames.contains(n), !otherNames.contains(n) {
+        if name.count >= 3, !sharedNames.contains(n), !otherNames.contains(n), !idShared {
             var variants = [name]
             if name.contains(" ") {
                 variants += [name.replacingOccurrences(of: " ", with: ""), name.replacingOccurrences(of: " ", with: "_"),
@@ -414,7 +415,6 @@ public enum AppUninstaller {
         }
 
         // Two copies of one app (Xcode and an Xcode beta) share their files: removing one copy must leave them.
-        let idShared = others.contains { $0.bundleID != nil && $0.bundleID?.lowercased() == app.bundleID?.lowercased() }
         if let id = app.bundleID, isBundleID(id), !idShared {
             out += ["Application Support/\(id)", "Caches/\(id)", "Logs/\(id)", "Saved Application State/\(id).savedState",
                     "Containers/\(id)", "WebKit/\(id)", "HTTPStorages/\(id)", "HTTPStorages/\(id).binarycookies",
@@ -530,10 +530,14 @@ public enum AppUninstaller {
                      ownershipDirectories: [String]) -> UninstallPlan {
         let token = cancellation ?? ScanCancellation.current
         var plan = ScanCancellation.withCurrent(token) {
-            let extras = installed.map(\.path).filter { path in !ownershipDirectories.contains { path.hasPrefix($0 + "/") } }
-            let ownership = AppOwnershipSnapshot.capture(directories: ownershipDirectories, additionalPaths: extras)
-            return makePlan(app, installed: ownership.apps, home: home, processes: processes, includePersonal: includePersonal,
-                            removeApp: removeApp, ownership: ownership)
+            let observed = processes ?? ProcessTable.current(.init(cpu: false))
+            let runtime = AppOwnershipSnapshot.supplementalPaths(observed, directories: ownershipDirectories)
+            let extras = installed.map(\.path).filter { !AppOwnershipSnapshot.isDiscovered($0, directories: ownershipDirectories) }
+            let ownership = AppOwnershipSnapshot.capture(directories: ownershipDirectories, additionalPaths: extras + runtime, requiredPaths: runtime)
+            var result = makePlan(app, installed: ownership.apps, home: home, processes: processes, includePersonal: includePersonal,
+                                  removeApp: removeApp, ownership: ownership)
+            if !observed.available { result.blocked = tr("Could not verify running apps; refresh before removing files") }
+            return result
         }
         if token?.isCancelled == true {
             plan.blocked = tr("Review stopped; review again before removing files")
@@ -592,6 +596,7 @@ public enum AppUninstaller {
     }
 
     static func refusal(_ plan: UninstallPlan, home: String, processes: ProcessTable) -> String? {
+        if !processes.available { return tr("Could not verify running apps; refresh before removing files") }
         let appLocation = Guard.deletionLocation(plan.app.path)
         if plan.removesApp != plan.paths.contains(plan.app.path) || (!plan.removesApp && plan.paths.contains(where: {
             let location = Guard.deletionLocation($0)
@@ -629,14 +634,17 @@ public enum AppUninstaller {
     static func uninstall(_ plan: UninstallPlan, home: String, processes: (() -> ProcessTable)?, ownershipDirectories: [String]? = nil,
                           move: (String) throws -> URL) -> CleanResult {
         let table = processes ?? { ProcessTable.current(.init(cpu: false)) }
+        let current = table()
+        let directories = ownershipDirectories ?? appDirs(home: home)
+        let runtime = AppOwnershipSnapshot.supplementalPaths(current, directories: directories)
         let id = (plan.removesApp ? "app:" : "app-data:") + (plan.app.bundleID ?? plan.app.name)
         var result = CleanResult(id: id, trashed: true)
-        if let why = plan.blocked ?? refusal(plan, home: home, processes: table()) {
+        if let why = plan.blocked ?? refusal(plan, home: home, processes: current) {
             result.failed[plan.app.path] = why
         } else if plan.appIdentity == nil || AppReviewIdentity.capture(plan.app.path) != plan.appIdentity {
             result.failed[plan.app.path] = plan.removesApp ? tr("The app changed after review; review the uninstall again") : tr("The app changed after review; review the data removal again")
         } else if plan.paths.contains(where: { $0 != plan.app.path }) &&
-                    (plan.ownership?.complete != true || plan.ownership != AppOwnershipSnapshot.capture(directories: ownershipDirectories ?? appDirs(home: home), additionalPaths: plan.ownership?.extraPaths ?? [])) {
+                    (plan.ownership?.complete != true || plan.ownership != AppOwnershipSnapshot.capture(directories: directories, additionalPaths: (plan.ownership?.extraPaths ?? []) + runtime, requiredPaths: runtime)) {
             result.failed[plan.app.path] = tr("Installed apps changed or ownership could not be verified; review associated data again")
         } else if let changed = plan.paths.first(where: { $0 != plan.app.path &&
             (plan.dataIdentities?[$0] == nil || plan.dataIdentities?[$0] != AppDataReviewIdentity.of($0)) }) {
@@ -648,7 +656,8 @@ public enum AppUninstaller {
                   home: home, processes: table, into: &result, identities: plan.identities ?? [:],
                   incompletePaths: Set(plan.app.leftovers.filter { $0.effectiveSizeState != .complete }.map(\.path))
                     .union(plan.app.bundleSizeState == .complete ? [] : [plan.app.path]),
-                  reviewIdentities: plan.dataIdentities ?? [:], bundlePath: plan.app.path, move: move)
+                  reviewIdentities: plan.dataIdentities ?? [:], bundlePath: plan.app.path,
+                  ownership: plan.paths.contains(where: { $0 != plan.app.path }) ? plan.ownership : nil, move: move)
         }
         finish(result, title: plan.app.name, home: home)
         return result
@@ -660,16 +669,29 @@ public enum AppUninstaller {
                       incompletePaths: Set<String> = [],
                       reviewIdentities: [String: String]? = nil,
                       bundlePath: String? = nil,
+                      ownership: AppOwnershipSnapshot? = nil,
                       move: (String) throws -> URL = RemovalOperations.live.trash) {
         let g = Guard(home: home)
         let batchID = UUID().uuidString
-        let table = processes()
         let whitelist: Whitelist
         do { whitelist = try Whitelist.load(home: home) } catch {
             for path in paths { result.failed[path] = Whitelist.unreadable(error) }
             return
         }
-        for path in paths {
+        for (index, path) in paths.enumerated() {
+            let table = processes()
+            if !table.available {
+                for remaining in paths[index...] { result.failed[remaining] = tr("Could not verify running apps; refresh before removing files") }
+                break
+            }
+            if let ownership, !Set(AppOwnershipSnapshot.supplementalPaths(table, directories: ownership.roots)).isSubset(of: Set(ownership.extraPaths)) {
+                for remaining in paths[index...] { result.failed[remaining] = tr("Running app ownership changed; review associated data again") }
+                break
+            }
+            if let bundlePath, runningProcess(in: [bundlePath], processes: table) != nil {
+                for remaining in paths[index...] { result.failed[remaining] = tr("a running executable uses this location") }
+                break
+            }
             if let why = g.uninstallRefusal(path, bundleIDs: bundleIDs) { result.failed[path] = why; continue }
             if whitelist.protects(path) { result.whitelisted = (result.whitelisted ?? []) + [path]; continue }
             guard FS.exists(path) else { continue }
