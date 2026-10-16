@@ -1,7 +1,6 @@
 {
   "date": "2026-10-17",
   "baseCommit": "8c08170",
-  "productionCodeEquivalentToCandidate": "60f5ad3",
   "fixtureRoot": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-process-tcp-ui-9mw3qe50",
   "sources": {
     "scripts/process-tcp-ui-server.py": "ab943e3ff4f8f1da4756a165ab9e9cb90edb019e1804dc0533a9ab5723b0373c",
@@ -209,5 +208,19 @@
     "ownSocketsClosed": true,
     "userProcessesSignalled": false,
     "temporaryRootRemoved": true
+  },
+  "testedInspectorSourcesMatchCandidateSource": "60f5ad3",
+  "subsequentMainIntegration": {
+    "incomingCommit": "599aaf4",
+    "integrationParent": "cd7f1bb604249d78b2c3e39928917849b04fc2a0",
+    "productSourceDeltaToCandidate": [
+      "Sources/CleanKit/NativeDiskImage.swift"
+    ],
+    "change": "Disk image cleanup diagnostics; outside the exercised process-detail path",
+    "attachmentOwnershipRegressionTests": 10,
+    "failures": 0,
+    "testLog": "/tmp/thermo-tcp-integration-disk-image-tests.log",
+    "testLogSHA256": "d760d43e3a55acd5c5bb2f49db9a8b4f0a81b8ee4219e2d7a2513be4b0c42036",
+    "scope": "Existing tests inject image inventories and detach functions; no real image attach/detach in this selected suite."
   }
 }

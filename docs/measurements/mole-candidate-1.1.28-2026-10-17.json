@@ -200,5 +200,16 @@
       "embeddedHelper"
     ],
     "candidateInstalled": false
+  },
+  "subsequentSourceStatus": {
+    "mainIntegration": "cd7f1bb604249d78b2c3e39928917849b04fc2a0",
+    "sourceCommitNotIncluded": "599aaf4",
+    "productSourceDelta": [
+      "Sources/CleanKit/NativeDiskImage.swift"
+    ],
+    "requiresRebuildForCurrentMain": true,
+    "existingCandidateRemainsHistoricalVerifiedArtifact": true,
+    "rootHelperAndAWDLNotDeployed": true,
+    "reason": "Main added disk-image cleanup refusal diagnostics after the signed 346 candidate was built."
   }
 }
