@@ -76,6 +76,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 内存、进程占用和交换空间使用 MiB / GiB（二进制单位）；磁盘容量和清理大小使用 MB / GB（十进制单位）。JSON 保留既有数值字段：`memoryKB` 使用 KiB，`swapUsedMB`、`heapMB` 使用 MiB，数值不变。
 
+本地开发版的菜单栏与设置提供「清洁屏幕」：选择 1、2、5 分钟或手动退出，按住 Esc 或屏幕退出控件 3 秒结束。辅助功能权限未开启时不能启动；退出后停止拦截，但系统权限保留。它不记录输入的文字，也不替代 Mac 锁屏。真实媒体键、多显示器、休眠与恢复仍待授权后的设备验收。
+
 ## CLI
 
 | 命令 | 说明 |

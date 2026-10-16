@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "89d8e1d",
+  "sourceSHA256": {
+    "Sources/ThermoApp/CleanScreenSession.swift": "145009565b9b195614bad098c52e0340c550b3918c88d92c123fdf19eed84694",
+    "Sources/ThermoApp/CleanScreenController.swift": "a9338c1ff8b9004166498b89ade3b959a379f30a2f00afbbb290e0f1ee0e2e0a",
+    "Sources/ThermoApp/CleanScreenView.swift": "5842078d91471f318f7589decff789b27b805072f644b472e38ae903b2f54dc8",
+    "Sources/ThermoApp/Views.swift": "aeaa5774d2105fecb1ce093690b016e696e135307daf8499d3ac72341d41e81d",
+    "Sources/ThermoL10n/ZhHans.swift": "7536e25d2528e729064b2a12d921c9a9e9f9eba82184065af765e8a1a8e27dd8",
+    "Tests/ThermoAppTests/CleanScreenTests.swift": "226cd21dc2f8440255256aaa4ca1afee06e2df32eca0566055a7c4b6e728990b",
+    "scripts/verify-clean-screen-ui.swift": "19b29429393f274245fdb2842856802817cf17353d946866fd2954a6d5640e0c",
+    "README.md": "13fbc7ec036d001631d638671d7c019b5a35d95d9d21e856bbf98edb66da13ff"
+  },
+  "isolatedBroadRegressionBeforeFollowUps": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 66,
+      "ThermoAppTests": 219,
+      "CleanKitTests": 712,
+      "AgentDoctorTests": 46,
+      "AgentCoreTests": 37
+    },
+    "total": 1194,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests"
+    ],
+    "AgentDoctorSelection": [
+      "ProcessExplanationTests",
+      "ProcessListenersTests",
+      "ProcessSleepAssertionsTests",
+      "ProcessLaunchServicesTests",
+      "RedactTests",
+      "CancellationTests"
+    ]
+  },
+  "finalAppRegression": {
+    "ThermoAppTests": 222,
+    "CleanScreenTests": 12,
+    "failures": 0,
+    "includes1000OrdinaryInputsWithoutStatePublication": true
+  },
+  "native": {
+    "screens": 1,
+    "existingAccessibilityTrust": true,
+    "permissionChanged": false,
+    "trace": [
+      "AX_TRUSTED true baselineTaps=0 screens=1",
+      "TIME 1792173457.369308 ACTIVE true taps=2 overlays=1 cause=none completed=nil",
+      "LOCAL_KEY_DOWN",
+      "LOCAL_KEY_DOWN",
+      "TIME 1792173467.290266 ACTIVE false taps=0 overlays=0 cause=none completed=Optional(ThermoApp.CleanScreenSession.Finish.escape)",
+      "LOCAL_KEY_DOWN",
+      "LOCAL_KEY_DOWN"
+    ],
+    "UIEvidence": [
+      "black overlay visible",
+      "a did not populate text field",
+      "Escape hold ended session with finish=escape",
+      "own taps 2 to 0 and visible overlays 1 to 0",
+      "b entered text field after exit"
+    ],
+    "emergencyQAWatchdogUsedForSuccessfulRun": false,
+    "previousAttempts": [
+      "unconditional display notification interrupted first attempts",
+      "session tap alone did not consume AppKit-directed test events; QA watchdog restored that attempt"
+    ],
+    "fixtureProcessesExited": true,
+    "fixtureDirectoriesRemoved": 4
+  },
+  "remaining": [
+    "physical keyboard, brightness, volume and Dictation events",
+    "multiple displays and real hotplug",
+    "real sleep/session switch and timed expiration",
+    "global shortcut",
+    "installed-app integration and release"
+  ],
+  "integrationParent": "fa54c3a",
+  "integrationRegressionBeforeInputPublicationGuard": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 66,
+      "ThermoAppTests": 221,
+      "CleanKitTests": 712,
+      "AgentDoctorTests": 54,
+      "AgentCoreTests": 37
+    },
+    "total": 1204,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests"
+    ],
+    "additionalAgentDoctorSelection": [
+      "ContextFootprintTests"
+    ]
+  },
+  "integratedSourceSHA256": {
+    "Sources/ThermoApp/CleanScreenSession.swift": "145009565b9b195614bad098c52e0340c550b3918c88d92c123fdf19eed84694",
+    "Sources/ThermoApp/CleanScreenController.swift": "2bfa5f89abfd5ceb64b9f67876903205afb9332a1d80b5195876a031f7b875e6",
+    "Sources/ThermoApp/CleanScreenView.swift": "5842078d91471f318f7589decff789b27b805072f644b472e38ae903b2f54dc8",
+    "Sources/ThermoApp/Views.swift": "aeaa5774d2105fecb1ce093690b016e696e135307daf8499d3ac72341d41e81d",
+    "Sources/ThermoL10n/ZhHans.swift": "a9c8bd615d57e5a57ac81026bf424d86fbf5b4ca7a68a5458f2f95fa9633525a",
+    "Tests/ThermoAppTests/CleanScreenTests.swift": "8e4d0ada15e3a18b108d8172dc25f644514d397839cddc106c78e6fb3e8c6281",
+    "scripts/verify-clean-screen-ui.swift": "19b29429393f274245fdb2842856802817cf17353d946866fd2954a6d5640e0c",
+    "README.md": "13fbc7ec036d001631d638671d7c019b5a35d95d9d21e856bbf98edb66da13ff"
+  }
+}

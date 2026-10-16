@@ -80,6 +80,7 @@ struct PopoverView: View {
             }
             Divider()
             if !renderingPreview {
+                CleanScreenButton()
                 Button { TabQuickAction.request() } label: {
                     Label(tr("Save and close background tabs"), systemImage: "archivebox")
                         .frame(maxWidth: .infinity)
@@ -675,6 +676,9 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 20) {
             section(tr("Disk Cleanup")) {
                 CleanupProtectionsButton(disk: disk)
+            }
+            section(tr("Clean Screen")) {
+                CleanScreenButton()
             }
             section(tr("General")) {
                 row(tr("Language")) {
