@@ -138,7 +138,7 @@ struct AreaPage: View {
                     SkillContextCard(items: report.items.filter { $0.area == .skills })
                 }
                 if area == .mcp {
-                    Text(tr("MCP definitions, connection timing and actual usage have not been measured. Configuration checks do not prove that a server is reachable or that its tools work."))
+                    Text(tr("This configuration scan does not connect to MCP servers. Use Connect & inspect for a stdio server’s definitions and connection timing; actual tool usage remains unmeasured."))
                         .font(.callout).foregroundStyle(.secondary).padding(18).glass()
                 }
                 DiagnosticScanControl(scanner: scanner)
@@ -297,6 +297,7 @@ private struct ProblemCard: View {
                       systemImage: last.result.ok ? "checkmark.circle.fill" : "xmark.octagon.fill")
                     .font(.system(size: 12, weight: .medium)).foregroundStyle(last.result.ok ? .green : .red).padding(.leading, 48)
             }
+            if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy).padding(.leading, 48) }
             Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { details.toggle() } } label: {
                 HStack(spacing: 4) {
                     Text(tr("Details")).font(.system(size: 12, weight: .medium))
@@ -394,6 +395,7 @@ private struct HealthyRow: View {
                 }
             }
             Spacer()
+            if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy) }
             if !item.actions.isEmpty {
                 Menu {
                     ForEach(item.actions) { a in Button(a.title, role: a.kind == .uninstall ? .destructive : nil) { confirming = a } }

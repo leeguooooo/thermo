@@ -12,6 +12,9 @@ struct AgentsCommand {
         switch sub {
         case "": break
         case "context": return try context()
+        case "inspect":
+            guard rest.count == 2 else { throw CLIError("usage: thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--json]") }
+            return try inspectMCP(try required(name, sub))
         case "list", "ls": return try list(name)
         case "show": return try show(try required(name, sub))
         case "fix":
@@ -124,6 +127,7 @@ struct AgentsCommand {
     static let usage = """
     usage: thermo agents [--all] [--json]                 what is wrong with the AI agents on this Mac
            thermo agents context [--agent AGENT] [--json] static Skill footprint ranking; MCP coverage
+           thermo agents inspect NAME [--json]            start one stdio MCP; handshake, list and rank definitions
            thermo agents list [AREA] [--json]             everything checked, marked OK or not
            thermo agents show NAME [--json]               one item: problems, suggestions, numbered actions
            thermo agents fix [--dry-run] [--yes]          every safe automatic fix for problem items
@@ -132,6 +136,31 @@ struct AgentsCommand {
       NAME is the item's name or id; narrow with --area AREA and --agent AGENT, or --all for every match.
       Actions print their exact steps first and ask; --yes skips the question, --dry-run only prints.
     """
+
+    func inspectMCP(_ name: String) throws {
+        guard !app.args.has("csv"), !app.args.has("all"), !app.args.has("dry-run") else {
+            throw CLIError("agents inspect supports one server, --agent, --timeout and --json")
+        }
+        let report = AgentDoctor.inspectMCP(name, agent: app.args.options["agent"], timeout: try app.args.double("timeout") ?? 10)
+        if app.args.has("json") { print(Export.diagnosticJSON(report)) }
+        else {
+            var lines = [style.bold(report.name) + " [" + report.agent + "] · " + report.state.rawValue, report.message,
+                         String(format: "Elapsed %.3fs", report.elapsedSeconds)]
+            func seconds(_ value: Double?) -> String { value.map { String(format: "%.3fs", $0) } ?? "not measured" }
+            lines.append("Start \(seconds(report.startupSeconds)) · handshake \(seconds(report.handshakeSeconds)) · list \(seconds(report.listingSeconds))")
+            if let definitions = report.definitions {
+                lines.append("\(report.tools.count) tools · definitions ≈\(definitions.estimatedTokens) tokens · \(definitions.bytes) bytes")
+            }
+            if let instructions = report.instructions { lines.append("Server instructions ≈\(instructions.estimatedTokens) tokens") }
+            for tool in report.tools {
+                lines.append("  " + tool.name + " ≈\(tool.definition.estimatedTokens) tokens (description \(tool.description.estimatedTokens), input schema \(tool.inputSchema.estimatedTokens), output schema \(tool.outputSchema.estimatedTokens))")
+                for issue in tool.issues { lines.append("    ! " + issue) }
+            }
+            lines.append(report.measurementNote)
+            out(lines)
+        }
+        if report.state != .ready { throw CLIError("MCP inspection did not produce a complete tool listing.") }
+    }
 
     func context() throws {
         guard !app.args.has("csv") else { throw CLIError("agents context supports --json, not --csv") }

@@ -1,0 +1,71 @@
+{
+  "agent" : "codex",
+  "complete" : true,
+  "definitions" : {
+    "bytes" : 1716,
+    "characters" : 1706,
+    "estimatedTokens" : 431,
+    "estimator" : "ascii4-unicode1-v1",
+    "lines" : 1
+  },
+  "elapsedSeconds" : 0.63888470899837557,
+  "generated" : "2026-10-16T18:00:16Z",
+  "handshakeSeconds" : 0.55496158300229581,
+  "instructions" : {
+    "bytes" : 1389,
+    "characters" : 1377,
+    "estimatedTokens" : 349,
+    "estimator" : "ascii4-unicode1-v1",
+    "lines" : 23
+  },
+  "listingSeconds" : 0.0081494160040165298,
+  "measurementNote" : "Static definition estimates use ascii4-unicode1-v1, not a model tokenizer. Full definitions may differ from what an agent loads. Output schema is a definition, not actual tool output. No business tools were called; runtime usage and task success are unmeasured.",
+  "message" : "Handshake and complete tool listing succeeded. Business tool behavior has not been tested.",
+  "name" : "codegraph",
+  "protocolVersion" : "2024-11-05",
+  "startupSeconds" : 0.0012917089989059605,
+  "state" : "ready",
+  "tools" : [
+    {
+      "annotations" : {
+        "bytes" : 89,
+        "characters" : 89,
+        "estimatedTokens" : 23,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "definition" : {
+        "bytes" : 1714,
+        "characters" : 1704,
+        "estimatedTokens" : 430,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "description" : {
+        "bytes" : 588,
+        "characters" : 582,
+        "estimatedTokens" : 148,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "inputSchema" : {
+        "bytes" : 958,
+        "characters" : 954,
+        "estimatedTokens" : 240,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "issues" : [
+
+      ],
+      "name" : "codegraph_explore",
+      "outputSchema" : {
+        "bytes" : 0,
+        "characters" : 0,
+        "estimatedTokens" : 0,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 0
+      }
+    }
+  ]
+}
