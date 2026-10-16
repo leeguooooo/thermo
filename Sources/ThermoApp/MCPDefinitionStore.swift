@@ -95,4 +95,3 @@ import ThermoL10n
         return result
     }
 }
-

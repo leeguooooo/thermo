@@ -93,5 +93,10 @@
     "standaloneResultRendererCompiled": true,
     "offscreenResultPNGCreated": true,
     "scope": "Helper dependency smoke only; native summary acceptance is recorded separately."
+  },
+  "postVerificationFormatting": {
+    "file": "Sources/ThermoApp/MCPDefinitionStore.swift",
+    "afterSHA256": "c009c95c95fa63ce3991e07f15157fad4ed4941782e4b60e186f76935660a584",
+    "change": "Removed one extra blank line at EOF after native verification; executable statements unchanged. sourceSHA256 above preserves the native-verified source hash."
   }
 }
