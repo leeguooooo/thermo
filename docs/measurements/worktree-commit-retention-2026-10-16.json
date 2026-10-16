@@ -1,0 +1,68 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "83d8d6d",
+  "sourceSHA256": {
+    "Sources/CleanKit/WorktreeCleanup.swift": "4da4e9e15ee42c2ad581f3ae44caeaa10ba194ad1c9ccfb62763e1710d74d6e9",
+    "Sources/CleanKit/WorktreeRegistrationRepair.swift": "552ec6fb7f2753c0b72301db82373fa47d2833bf47d18a79540670e5106d90ba",
+    "Sources/CleanKit/Projects.swift": "331840fa6b63a8c8efb1169b44424c4183e9ca904bf7888bff7ce6726903b877",
+    "Sources/CleanKit/FS.swift": "e79a3dad23d7e7f989bb48aff0a5d5a9ab692aff49b5685cb09ba0ed81ba08fe",
+    "Sources/ThermoL10n/ZhHans.swift": "4f1ebacb556687651a0f07c6bc1f78ecb21734fb473c4dc4c4362574844abd68",
+    "Tests/CleanKitTests/CleanupIssueRegressionTests.swift": "f376618d231bb2b3238f906ad151bec96a54f5cf3403fb80aa37b57925534868",
+    "scripts/verify-worktree-retention.swift": "1a11bd07e053f4c286b97c7cc7f4e26df6d80c185e1e3656cc5bb84d297b94f5"
+  },
+  "baseline": {
+    "tests": 2,
+    "failedAssertions": 5,
+    "detachedWorktreeRemoved": true,
+    "onlyCommitPrunedAfterOwnedReflogExpiryAndGC": true,
+    "unknownProcessTableAccepted": true,
+    "logSHA256": "6fec10730fe961e8c58646a40e2f94fc707d8fc5805eb3248848cf8f7f2d9120"
+  },
+  "newTests": 9,
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 63,
+      "ThermoAppTests": 197,
+      "CleanKitTests": 675,
+      "AgentCoreTests": 34
+    },
+    "total": 1083,
+    "failures": 0,
+    "logSHA256": "4438dd1e5d918f87c66f04eb793adedb0c4ba2ba80fdd06fb24af979236bd72b",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ]
+  },
+  "nativeReadOnlyAcceptance": {
+    "proof": {
+      "uniqueRefused": true,
+      "inheritedGitContextIgnored": true,
+      "sharedBranchAllowed": true,
+      "correctRepoMetadataSelected": true,
+      "gitVersion": "git version 2.54.0 (Apple Git-157)",
+      "mutationsWereOwnedFixtureSetupOnly": true,
+      "probeWasReadOnly": true
+    },
+    "executableSHA256": "d2c6a3a3ade3218bc7353e972b2278aa13ea9c7570346773ea1477fbdd529128",
+    "scriptSHA256": "1a11bd07e053f4c286b97c7cc7f4e26df6d80c185e1e3656cc5bb84d297b94f5",
+    "cleanup": {
+      "openProcessCount": 0,
+      "ownedWorkspaceRemoved": true
+    }
+  },
+  "references": {
+    "gitRevList": "https://git-scm.com/docs/git-rev-list"
+  },
+  "limits": [
+    "Commit retention does not prove ignored files are reconstructible; ignored payload/T3 coverage remains incomplete",
+    "Unregistered leftover folders retain explicit Trash review workflow; direct permanent removal is refused",
+    "Repository refs and final filesystem actions are not a global atomic transaction against external writers",
+    "Shared branch refs and the preserved main context may retain a commit; temporary linked HEADs/private refs and reflogs are not accepted as independent anchors",
+    "Tests delete and GC owned synthetic repositories only; real user worktrees untouched",
+    "Unsupported or incompletely queried Git states are kept; Git queries use the system executable",
+    "No new visible UI QA, root operations, hardware writes, push or release",
+    "Overall Mole parity remains unproven"
+  ]
+}

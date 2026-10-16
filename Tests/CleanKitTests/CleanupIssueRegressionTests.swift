@@ -310,3 +310,103 @@ final class CleanupIssueRegressionTests: XCTestCase {
         XCTAssertTrue(FS.exists(path))
     }
 }
+
+extension CleanupIssueRegressionTests {
+    func testDetachedWorktreeOnlyCommitCannotBeDiscardedThenPruned() throws {
+        let (repo, path) = try worktree()
+        _ = try git(path, ["checkout", "--detach"])
+        _ = try git(path, ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--allow-empty", "-m", "worktree-only"])
+        let head = try git(path, ["rev-parse", "HEAD"])
+        XCTAssertThrowsError(try WorktreeCleanup.registration(path, processes: .init(entries: [])))
+        let result = clean(CleanItem(id: "worktree/unique", category: .agentWorktrees, title: "Fixture", safety: .review, bytes: 4096, paths: [path], group: repo), mode: .permanent)
+        XCTAssertFalse(result.failed.isEmpty)
+        XCTAssertTrue(FS.exists(path))
+        _ = try git(repo, ["reflog", "expire", "--expire=now", "--all"])
+        _ = try git(repo, ["gc", "--prune=now"])
+        XCTAssertNoThrow(try git(repo, ["cat-file", "-e", head + "^{commit}"]))
+    }
+    func testUnknownProcessTableCannotAuthorizeWorktreeCleanup() throws {
+        let (_, path) = try worktree()
+        XCTAssertThrowsError(try WorktreeCleanup.registration(path, processes: .init(entries: [], available: false)))
+    }
+}
+
+extension CleanupIssueRegressionTests {
+    func detachedUnique() throws -> (String,String,String) {
+        let (repo,path) = try worktree()
+        _ = try git(path,["checkout","--detach"])
+        _ = try git(path,["-c","user.name=Fixture","-c","user.email=fixture@example.invalid","commit","--allow-empty","-m","unique"])
+        return (repo,path,try git(path,["rev-parse","HEAD"]))
+    }
+    func testSharedBranchRetainsCommitAfterCheckoutRemovalAndGC() throws {
+        let (repo,path,head) = try detachedUnique()
+        _ = try git(repo,["branch","retained",head])
+        XCTAssertNotNil(try WorktreeCleanup.registration(path, processes: .init(entries: [])))
+        let result = clean(CleanItem(id:"worktree/shared",category:.agentWorktrees,title:"Fixture",safety:.review,bytes:4096,paths:[path],group:repo),mode:.permanent)
+        XCTAssertTrue(result.failed.isEmpty, "\(result.failed)"); XCTAssertFalse(FS.exists(path))
+        _ = try git(repo,["reflog","expire","--expire=now","--all"]); _ = try git(repo,["gc","--prune=now"])
+        XCTAssertEqual(try git(repo,["rev-parse","retained"]),head)
+        XCTAssertNoThrow(try git(repo,["cat-file","-e",head+"^{commit}"]))
+    }
+    func testPrivateRefsAndOtherLinkedHeadsDoNotPretendToBeSharedAnchors() throws {
+        let (repo,path,head) = try detachedUnique()
+        _ = try git(path,["update-ref","refs/worktree/private",head])
+        _ = try git(repo,["worktree","add","--detach",home+"/other",head])
+        XCTAssertThrowsError(try WorktreeCleanup.registration(path, processes: .init(entries: [])))
+    }
+    func testAnchorDisappearingAfterRegistrationStopsBeforePreparation() throws {
+        let (repo,path,head) = try detachedUnique()
+        _ = try git(repo,["tag","retained",head])
+        let review = try XCTUnwrap(WorktreeCleanup.registration(path, processes: .init(entries: [])))
+        _ = try git(repo,["tag","-d","retained"])
+        XCTAssertThrowsError(try WorktreeCleanup.prepare(review))
+        XCTAssertTrue(FS.exists(path))
+        XCTAssertFalse(FS.children(path).contains { ($0 as NSString).lastPathComponent.hasPrefix(".thermo-worktree-registration-") })
+    }
+    func testHeadChangeAfterRegistrationRequiresNewReview() throws {
+        let (_,path) = try worktree()
+        let review = try XCTUnwrap(WorktreeCleanup.registration(path, processes: .init(entries: [])))
+        _ = try git(path,["-c","user.name=Fixture","-c","user.email=fixture@example.invalid","commit","--allow-empty","-m","new-head"])
+        XCTAssertThrowsError(try WorktreeCleanup.prepare(review))
+        XCTAssertTrue(FS.exists(path))
+    }
+    func testUnregisteredAgentFolderRefusesPermanentButCanGoToTrash() throws {
+        let path = home+"/repo/.claude/worktrees/unregistered"; try file(path+"/important.txt")
+        let result = clean(CleanItem(id:"worktree/unregistered",category:.agentWorktrees,title:"Fixture",safety:.review,bytes:4096,paths:[path]),mode:.permanent)
+        XCTAssertFalse(result.failed.isEmpty); XCTAssertTrue(FS.exists(path+"/important.txt"))
+        let trashed = clean(CleanItem(id:"worktree/unregistered",category:.agentWorktrees,title:"Fixture",safety:.review,bytes:4096,paths:[path]),mode:.trash)
+        XCTAssertTrue(trashed.failed.isEmpty, "\(trashed.failed)"); XCTAssertFalse(FS.exists(path))
+        XCTAssertNotNil(trashed.trashBatchID)
+    }
+}
+
+extension CleanupIssueRegressionTests {
+    func testMissingRegistrationWithOnlyCommitIsNotPrunedByRepair() throws {
+        let (repo,path,head) = try detachedUnique()
+        try FileManager.default.moveItem(atPath: path, toPath: home+"/saved-checkout")
+        let plan = try WorktreeRegistrationRepair.inspect(repo: repo, home: home)
+        XCTAssertEqual(plan.count,1); XCTAssertNotNil(plan.first?.blocked)
+        let result = WorktreeRegistrationRepair.repair(repo: repo, entries: plan, home: home)
+        XCTAssertNotNil(result.first?.error)
+        XCTAssertTrue(FS.exists(try XCTUnwrap(plan.first).metadata))
+        _ = try git(repo,["reflog","expire","--expire=now","--all"]); _ = try git(repo,["gc","--prune=now"])
+        XCTAssertNoThrow(try git(repo,["cat-file","-e",head+"^{commit}"]))
+    }
+}
+
+extension CleanupIssueRegressionTests {
+    func testForwardGitFileCannotBorrowAnotherWorktreesSafeHead() throws {
+        let (repo,path,head) = try detachedUnique()
+        let metadata = try git(path,["rev-parse","--absolute-git-dir"])
+        let other = home+"/other"
+        _ = try git(repo,["worktree","add","--detach",other])
+        let pointer = try Data(contentsOf: URL(fileURLWithPath:other+"/.git"))
+        try pointer.write(to:URL(fileURLWithPath:path+"/.git"),options:.atomic)
+        XCTAssertThrowsError(try WorktreeCleanup.registration(path,processes:.init(entries:[])))
+        let result = clean(CleanItem(id:"worktree/mismatched",category:.agentWorktrees,title:"Fixture",safety:.review,bytes:4096,paths:[path],group:repo),mode:.permanent)
+        XCTAssertFalse(result.failed.isEmpty)
+        XCTAssertTrue(FS.exists(path)); XCTAssertTrue(FS.exists(metadata)); XCTAssertTrue(FS.exists(other))
+        _ = try git(repo,["reflog","expire","--expire=now","--all"]); _ = try git(repo,["gc","--prune=now"])
+        XCTAssertNoThrow(try git(repo,["cat-file","-e",head+"^{commit}"]))
+    }
+}

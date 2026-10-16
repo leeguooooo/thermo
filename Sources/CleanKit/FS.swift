@@ -298,7 +298,11 @@ public enum Cleaner {
         }
         if item.category == .agentWorktrees {
             for path in item.paths {
-                do { _ = try WorktreeCleanup.registration(path, processes: processes) }
+                do {
+                    if try WorktreeCleanup.registration(path, processes: processes) == nil, !mode.trashes(item.safety) {
+                        return tr("Git worktree registration is unavailable; keep this folder")
+                    }
+                }
                 catch { return String(describing: error) }
             }
         }
@@ -428,6 +432,7 @@ public enum Cleaner {
             do {
                 if item.category == .agentWorktrees {
                     registration = try WorktreeCleanup.registration(path, processes: processTable ?? ProcessTable.current(.init(cpu: false)))
+                    if registration == nil && (!trash || inTrash) { throw WorktreeCleanup.Refusal(tr("Git worktree registration is unavailable; keep this folder")) }
                 }
                 // Sizing and process checks may outlive a protection edit. Read again at the move boundary.
                 do {

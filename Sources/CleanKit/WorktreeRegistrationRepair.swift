@@ -30,8 +30,13 @@ public enum WorktreeRegistrationRepair {
             let path = WorktreeCleanup.physical(rawPath)
             guard prefixes.contains(where: { path.hasPrefix($0) }), !FS.exists(path), let identity = FileIdentity.of(metadata) else { continue }
             var blocked: String?
-            do { _ = try WorktreeCleanup.staleLock(metadata: metadata, path: path) }
-            catch { blocked = String(describing: error) }
+            do {
+                guard let commonIdentity = FileIdentity.of(common) else { throw WorktreeCleanup.Refusal("shared Git repository changed") }
+                let registration = WorktreeCleanup.Registration(path: path, common: common, metadata: metadata,
+                    metadataIdentity: identity, commonIdentity: commonIdentity, head: try WorktreeCleanup.head(metadata),
+                    staleLock: try WorktreeCleanup.staleLock(metadata: metadata, path: path))
+                try WorktreeCleanup.verifyRetention(registration)
+            } catch { blocked = String(describing: error) }
             var st = stat()
             if lstat(metadata, &st) != 0 || st.st_uid != getuid() { blocked = "registration is not owned by this user" }
             result.append(Entry(path: path, metadata: metadata, metadataIdentity: identity, blocked: blocked))
@@ -44,13 +49,16 @@ public enum WorktreeRegistrationRepair {
             do {
                 // Re-discover provenance and lock state after review; paths and ids are not trusted input.
                 guard let current = try inspect(repo: repo, home: home).first(where: { $0.path == reviewed.path }),
-                      current.blocked == nil, current.metadata == reviewed.metadata,
+                      current.metadata == reviewed.metadata,
                       current.metadataIdentity == reviewed.metadataIdentity else { throw WorktreeCleanup.Refusal("registration changed, is locked, or the worktree exists") }
+                if let why = current.blocked { throw WorktreeCleanup.Refusal(why) }
                 guard let open = OpenFiles.current(), open.holder(of: current.metadata) == nil else { throw WorktreeCleanup.Refusal("registration may still be in use") }
                 let commonDir = ((current.metadata as NSString).deletingLastPathComponent as NSString).deletingLastPathComponent
+                guard let commonIdentity = FileIdentity.of(commonDir) else { throw WorktreeCleanup.Refusal("shared Git repository changed") }
                 let registration = WorktreeCleanup.Registration(path: current.path, common: commonDir, metadata: current.metadata,
-                                                                 metadataIdentity: current.metadataIdentity,
-                                                                 staleLock: try WorktreeCleanup.staleLock(metadata: current.metadata, path: current.path))
+                    metadataIdentity: current.metadataIdentity, commonIdentity: commonIdentity, head: try WorktreeCleanup.head(current.metadata),
+                    staleLock: try WorktreeCleanup.staleLock(metadata: current.metadata, path: current.path))
+                try WorktreeCleanup.verifyRetention(registration)
                 let folder = URL(fileURLWithPath: home).appendingPathComponent("Library/Application Support/Thermo/worktree-registration-backups")
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
                 let backup = folder.appendingPathComponent(UUID().uuidString)
