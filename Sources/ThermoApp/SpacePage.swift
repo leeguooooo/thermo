@@ -34,6 +34,10 @@ final class SpaceLensModel: ObservableObject {
     private var cancellation: ScanCancellation?
     private var scanGeneration = UUID(), needsRestoreRefresh = false, pendingRestoreRefresh = false
     private var lastOpenedGeneration = UUID()
+    @Published private(set) var loadingLastOpened = false
+    private var lastOpenedCancellation: ScanCancellation?
+    private var wantsLastOpened = false
+    private let readLastOpened: @Sendable (String) -> Date?
     private var duplicateCancellation: ScanCancellation?
     private var duplicateInFlight = false, pendingDuplicate = false
     private let searchDuplicates: @Sendable ([String], ScanCancellation, ((Duplicates.Progress) -> Void)?) -> [DuplicateGroup]
@@ -50,7 +54,8 @@ final class SpaceLensModel: ObservableObject {
              ManualRemoval.trash($0, sizes: $1, home: $2, incompletePaths: $3, reviewIdentities: $4, requiredIdentities: $5)
          }, searchDuplicates: @escaping @Sendable ([String], ScanCancellation, ((Duplicates.Progress) -> Void)?) -> [DuplicateGroup] = {
              Duplicates.find(in: $0, cancellation: $1, progress: $2)
-         }) {
+         }, readLastOpened: @escaping @Sendable (String) -> Date? = { SpaceLens.lastOpened($0) }) {
+        self.readLastOpened = readLastOpened
         self.root = root
         self.cache = cache; self.measure = measure; self.remove = remove
         self.searchDuplicates = searchDuplicates
@@ -80,6 +85,7 @@ final class SpaceLensModel: ObservableObject {
             return
         }
         cancellation?.cancel()
+        lastOpenedGeneration = UUID(); lastOpenedCancellation?.cancel(); lastOpened = [:]
         let token = ScanCancellation()
         cancellation = token
         scanGeneration = UUID(); let generation = scanGeneration
@@ -106,11 +112,13 @@ final class SpaceLensModel: ObservableObject {
                 self.tree = tree
                 if self.tree?.folder(self.path) == nil { self.path = root }
                 self.lastOpened = [:]
+                if self.wantsLastOpened { self.loadLastOpened() }
             }
         }
     }
 
     func stop() {
+        stopLastOpened()
         pendingRestoreRefresh = false
         guard scanning else { return }
         cancellation?.cancel()
@@ -123,7 +131,7 @@ final class SpaceLensModel: ObservableObject {
         cancellation?.cancel(); progress = nil
         if scanning { stopping = true }
         stopDuplicates(); duplicates = nil
-        lastOpenedGeneration = UUID(); lastOpened = [:]
+        stopLastOpened(); lastOpenedGeneration = UUID(); lastOpened = [:]
         basket = [:]; selectionIdentities = [:]; selectionRequirements = [:]; selectionSizeStates = [:]
         tree = nil; outcome = nil
         if !SpaceLens.invalidateCache(at: cache) { outcome = tr("The old space cache could not be cleared; scan again before using saved results") }
@@ -178,6 +186,10 @@ final class SpaceLensModel: ObservableObject {
     func afterTrash(_ result: CleanResult) {
         working = false
         let removed = Set(result.removed)
+        if !removed.isEmpty {
+            lastOpenedGeneration = UUID(); lastOpenedCancellation?.cancel()
+            lastOpened = lastOpened.filter { path, _ in !removed.contains { path == $0 || path.hasPrefix($0 + "/") } }
+        }
         let cacheCleared = removed.isEmpty || SpaceLens.invalidateCache(at: cache)
         for p in removed { basket[p] = nil; selectionIdentities[p] = nil; selectionRequirements[p] = nil; selectionSizeStates[p] = nil }
         if let t = tree {
@@ -202,19 +214,39 @@ final class SpaceLensModel: ObservableObject {
             parts.append(tr("Not moved: %1$@", result.failed.sorted { $0.key < $1.key }.map { "\(FSPath.tilde($0.key)) (\($0.value))" }.joined(separator: "; ")))
         }
         outcome = parts.joined(separator: " ")
+        if wantsLastOpened { loadLastOpened() }
     }
 
-    /// Asks Spotlight when each big file was last opened, in the background.
+    /// Keep one physical metadata reader until it returns, including after cancellation.
     func loadLastOpened() {
-        let files = (tree?.large ?? []).map(\.path).filter { lastOpened[$0] == nil }
+        wantsLastOpened = true
+        guard !loadingLastOpened, !scanning, !working else { return }
+        let files = (tree?.large ?? []).prefix(3000).map(\.path).filter { lastOpened[$0] == nil }
         guard !files.isEmpty else { return }
-        let generation = lastOpenedGeneration
+        let generation = lastOpenedGeneration, token = ScanCancellation(), read = readLastOpened
+        lastOpenedCancellation = token; loadingLastOpened = true
         Task.detached(priority: .utility) {
             var found: [String: Date?] = [:]
-            for f in files.prefix(3000) { found[f] = .some(SpaceLens.lastOpened(f)) }
+            for file in files {
+                if token.isCancelled { break }
+                let value = read(file)
+                if token.isCancelled { break }
+                found[file] = .some(value)
+            }
             let result = found
-            await MainActor.run { if self.lastOpenedGeneration == generation { self.lastOpened.merge(result) { _, new in new } } }
+            await MainActor.run {
+                self.loadingLastOpened = false; self.lastOpenedCancellation = nil
+                if self.wantsLastOpened && !token.isCancelled && self.lastOpenedGeneration == generation {
+                    self.lastOpened.merge(result) { _, new in new }
+                }
+                if self.wantsLastOpened { self.loadLastOpened() }
+            }
         }
+    }
+
+    func stopLastOpened() {
+        wantsLastOpened = false
+        lastOpenedCancellation?.cancel()
     }
 
     func findDuplicates() {
@@ -319,7 +351,8 @@ struct SpacePage: View {
             if model.tree == nil { model.scan() }
             if tab == .large { model.loadLastOpened() }
         }
-        .onChange(of: tab) { t in if t == .large { model.loadLastOpened() } }
+        .onChange(of: tab) { t in if t == .large { model.loadLastOpened() } else { model.stopLastOpened() } }
+        .onDisappear { model.stopLastOpened() }
         .sheet(isPresented: $confirming) {
             ConfirmSheet(title: tr("Move %1$@ to the Trash?", model.basketSizeText),
                          summary: tr("%1$@ you picked go to the Trash. Each one is checked again first; anything a program has open is skipped.",
@@ -512,8 +545,7 @@ struct SpacePage: View {
         guard olderThan > 0 else { return all }
         let cutoff = Date().addingTimeInterval(-Double(olderThan) * 86400)
         return all.filter { f in
-            let used = (model.lastOpened[f.path] ?? nil) ?? f.modified
-            return used < cutoff
+            SpaceLens.notOpened(since: cutoff, lastOpened: model.lastOpened[f.path] ?? nil)
         }
     }
 
@@ -521,6 +553,7 @@ struct SpacePage: View {
         HStack {
             Text(tr("Files of 100 MB or more in your home folder.")).font(.caption).foregroundStyle(.white.opacity(0.5))
             Spacer()
+            if model.loadingLastOpened { ProgressView().controlSize(.small).accessibilityLabel(tr("Checking last opened dates")) }
             Picker(tr("Not opened for"), selection: $olderThan) {
                 Text(tr("Any age")).tag(0)
                 Text(tr("Not opened for 3 months")).tag(90)
@@ -533,6 +566,13 @@ struct SpacePage: View {
         ScrollView {
             LazyVStack(spacing: 2) {
                 let files = largeFiles
+                if olderThan > 0 {
+                    let unknown = (model.tree?.large ?? []).filter { (model.lastOpened[$0.path] ?? nil) == nil }.count
+                    if unknown > 0 {
+                        Text(tr("%1$@ files have no known last opened date and are excluded from this filter.", String(unknown)))
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
                 ForEach(files) { largeRow($0) }
                 if files.isEmpty {
                     Text(model.tree == nil ? tr("Measuring your home folder…") : tr("No matching items")).foregroundStyle(.secondary).padding(.top, 30)

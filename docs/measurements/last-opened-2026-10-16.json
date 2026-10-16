@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-16",
+  "scope": "last-opened evidence and bounded metadata reader",
+  "sourceSHA256": {
+    "Sources/CleanKit/SpaceLens.swift": "3e3834a139bffa114ea9955d7ab7b3373aee3af6ee5f4b80abd2139eb3b7de9c",
+    "Sources/ThermoApp/SpacePage.swift": "fa95676258a42e4b661f7bbb12d26a3fd7f9744596c2ec379c16fa951fb84970",
+    "Sources/thermo/Space.swift": "6c8487553660c28e3bdce93054d926ad22a0f3391d0eaf051638bc230b980f3f",
+    "Tests/CleanKitTests/LastOpenedFilterTests.swift": "deaa3b4b562d257cc7f21c6470f959763a224bab2071b7b925af2b5b85c45b2e",
+    "Tests/ThermoAppTests/LastOpenedModelTests.swift": "215df2b99c115f9f6c8f902168d5515f2822c9fa4d9a70631fa8114e42444dfc"
+  },
+  "focused": {
+    "log": "/tmp/thermo-last-opened-focused.log",
+    "newModelTests": 5,
+    "newFilterTests": 2,
+    "result": "passed"
+  },
+  "nativeCLI": {
+    "ownedTemporaryHome": true,
+    "fixtureBytes": 110100480,
+    "case": "own file removed after fresh cached scan",
+    "cachedModifiedYear": 2000,
+    "unknownLastOpened": true,
+    "unfilteredCachedRows": 1,
+    "olderThan90Rows": 0,
+    "exclusionNotice": true,
+    "neverClaimAbsent": true,
+    "temporaryDirectoryRemoved": true,
+    "initialTrial": "existing file had a system-supplied date; did not establish unknown metadata"
+  },
+  "full": {
+    "log": "/tmp/thermo-last-opened-full.log",
+    "result": "passed",
+    "counts": {
+      "CleanKitTests": 559,
+      "ThermoAppTests": 163,
+      "ThermoCLITests": 57,
+      "ThermoKitTests": 114,
+      "AgentCoreTests": 34
+    },
+    "total": 927,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "logSHA256": "1f1c073c25f2b5554a3649471e6611b3b82d0d51ce44580b0e1ee88171673535"
+  },
+  "limits": [
+    "No visible GUI filter-flow acceptance",
+    "In-progress system metadata calls cannot be interrupted",
+    "One reader per space model; no claim of a cross-process global limit",
+    "No user files moved, hardware writes, helper installation, installed-app replacement or release"
+  ]
+}

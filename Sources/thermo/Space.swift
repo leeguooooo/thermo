@@ -101,9 +101,10 @@ struct SpaceCommand {
         let t = tree(covering: NSHomeDirectory())
         let days = try args.int("older-than")
         var rows: [(LargeFile, Date?)] = t.large.prefix(500).map { ($0, SpaceLens.lastOpened($0.path)) }
+        let unknownDates = rows.filter { $0.1 == nil }.count
         if let days {
             let cutoff = Date().addingTimeInterval(-Double(days) * 86400)
-            rows = rows.filter { ($0.1 ?? $0.0.modified) < cutoff }
+            rows = rows.filter { SpaceLens.notOpened(since: cutoff, lastOpened: $0.1) }
         }
         if args.has("json") {
             struct Row: Encodable { let path: String; let bytes: Int64; let modified: Date; let lastOpened: Date? }
@@ -111,9 +112,12 @@ struct SpaceCommand {
             return
         }
         var lines = [style.bold(pad(tr("Size"), 9, right: true) + "  " + pad(tr("Last opened"), 12) + "  " + tr("File"))]
+        if days != nil && unknownDates > 0 {
+            lines.append(style.dim(tr("%1$@ files have no known last opened date and are excluded from this filter.", String(unknownDates))))
+        }
         for (f, opened) in rows.prefix(args.has("all") ? .max : 40) {
             lines.append(pad(ByteFormat.string(f.bytes), 9, right: true) + "  "
-                         + pad(opened.map(Self.day) ?? style.dim(tr("never")), 12) + "  " + FS.tilde(f.path))
+                         + pad(opened.map(Self.day) ?? style.dim(tr("Unknown")), 12) + "  " + FS.tilde(f.path))
         }
         let total = rows.reduce(Int64(0)) { $0 + $1.0.bytes }
         lines.append(style.dim(tr("%1$@ files over 100 MB, %2$@ · --older-than DAYS · thermo space trash PATH…",

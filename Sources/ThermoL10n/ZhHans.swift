@@ -1,6 +1,8 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Checking last opened dates": "正在查询上次打开时间",
+    "%1$@ files have no known last opened date and are excluded from this filter.": "%1$@ 个文件的上次打开时间未知，未纳入此筛选。",
     "Some sizes are unfinished. Known bytes are lower bounds; resume a full measurement when ready.": "部分大小尚未测完，已知数值只是下限；需要时可继续完整测量。",
     "Complete size measurement": "完整测量大小",
     "This data could not be fully checked; inspect it in Finder before removing it": "此数据未能检查完整，移除前请先在 Finder 中核实",

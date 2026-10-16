@@ -408,6 +408,12 @@ public enum SpaceLens {
 
     // MARK: Last opened
 
+    /// Unknown metadata cannot establish that a file has not been opened recently.
+    public static func notOpened(since cutoff: Date, lastOpened: Date?) -> Bool {
+        guard let lastOpened, lastOpened.timeIntervalSinceReferenceDate.isFinite else { return false }
+        return lastOpened < cutoff
+    }
+
     /// When Spotlight last saw the file opened, or nil when it does not know.
     public static func lastOpened(_ path: String) -> Date? {
         guard let item = MDItemCreate(nil, path as CFString) else { return nil }
