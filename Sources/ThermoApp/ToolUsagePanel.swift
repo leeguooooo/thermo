@@ -32,6 +32,7 @@ struct ToolUsagePanel: View {
     let kind: String
     var encoding: TextEncoding = .heuristic
     @State private var sort = UsageSort.text
+    @State private var visibleRowLimit = 8
     enum UsageSort: String, CaseIterable {
         case text, errors, time, calls
         var title: String {
@@ -100,7 +101,11 @@ struct ToolUsagePanel: View {
                     Text(tr("No directly attributable calls were observed. This does not prove the tool or Skill was unused."))
                         .font(.callout).foregroundStyle(.secondary)
                 }
-                ForEach(Array(rows.prefix(8))) { row in
+                if !rows.isEmpty {
+                    Text(tr("Showing %1$@ of %2$@ entries", String(min(visibleRowLimit, rows.count)), String(rows.count)))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                ForEach(Array(rows.prefix(visibleRowLimit))) { row in
                     VStack(alignment: .leading, spacing: 4) {
                         Text((row.server.map { $0 + " / " } ?? "") + row.name + " · " + row.host)
                             .font(.subheadline.weight(.medium)).textSelection(.enabled)
@@ -119,6 +124,9 @@ struct ToolUsagePanel: View {
                         }
                     }
                 }
+                if visibleRowLimit < rows.count {
+                    Button(tr("Show more entries")) { visibleRowLimit = min(rows.count, visibleRowLimit + 8) }
+                }
                 if !report.sessionTokens.isEmpty {
                     Text(tr("Request counters, not individual tool consumption")).font(.subheadline.weight(.medium))
                     ForEach(report.sessionTokens, id: \.host) { usage in
@@ -134,5 +142,8 @@ struct ToolUsagePanel: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(18).glass()
+        .onChange(of: sort) { _ in visibleRowLimit = 8 }
+        .onChange(of: kind) { _ in visibleRowLimit = 8 }
+        .onChange(of: model.report?.generated) { _ in visibleRowLimit = 8 }
     }
 }

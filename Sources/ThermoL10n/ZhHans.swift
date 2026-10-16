@@ -2614,6 +2614,8 @@ let zhHans: [String: String] = [
     "Observed time": "观察耗时",
     "Call count": "调用次数",
     "Sort observed usage": "用量排序",
+    "Showing %1$@ of %2$@ entries": "已显示 %1$@ / %2$@ 项",
+    "Show more entries": "显示更多",
     "Analysis stopped; partial results are shown.": "分析已停止，当前显示部分结果。",
     "A log scan limit was reached; results are partial.": "已达到日志扫描上限，当前结果不完整。",
     "%1$@ unreadable files · %2$@ results without a matching call": "%1$@ 个文件无法读取 · %2$@ 个结果缺少对应调用",
