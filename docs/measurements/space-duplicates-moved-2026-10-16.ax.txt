@@ -1,0 +1,49 @@
+Window: "Thermo", App: Thermo Space QA.
+0 standard window Thermo, Secondary Actions: Raise
+	1 container
+		2 image thermometer.medium
+		3 text Thermo
+		4 image square.grid.3x3.topleft.filled
+		5 text 空间透视
+		6 显示
+			7 radio button Description: 文件夹, Value: 0
+			8 radio button Description: 大文件, Value: 0
+			9 radio button Description: 重复文件, Value: 1
+		10 scroll area
+			11 button 概览
+			12 button 传感器
+			13 button 风扇
+			14 text 资源监控
+			15 button CPU 占用
+			16 button GPU 占用
+			17 button 内存占用
+			18 button 标签整理
+			19 text 磁盘清理
+			20 button 智能扫描
+			21 button Description: 空间透视, Value: 已选中
+			22 button 软件管理
+			23 text AI Agent 诊断
+			24 button Claude 清理
+			25 button 智能检查
+		26 text 个人文件夹 112 MB · 测量于 1 分钟前 已把 2 项 移到废纸篓（4.2 MB）。
+		27 button Description: 关闭提示, ID: xmark
+		28 text 在桌面、文稿、下载、影片、音乐和图片里找 1 MB 及以上、内容逐字节相同的文件。
+		29 button 重新查找
+		30 button 操作记录
+		31 scroll area
+			32 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+				33 text 没有找到重复文件。
+		34 button 设置
+		35 button 重新测量
+		36 text 勾选要删除的文件或文件夹
+		37 button (disabled) 移到废纸篓
+	38 close button
+	39 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	40 minimize button
+41 menu bar
+	42 Thermo Space QA
+	43 编辑, ID: thermo.edit
+	44 显示, ID: thermo.view
+	45 窗口, ID: thermo.window
+
+The focused UI element is 0 standard window Thermo, Secondary Actions: Raise

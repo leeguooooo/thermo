@@ -1,0 +1,88 @@
+{
+  "date": "2026-10-16",
+  "sourceCommit": "6ca3e95cc893432e5d651ef3f45bd282197740d3",
+  "mode": "visible independent ad-hoc QA bundle with current production binary; isolated CFFIXED_USER_HOME",
+  "sourceSHA256": {
+    "Sources/ThermoApp/SpacePage.swift": "fa95676258a42e4b661f7bbb12d26a3fd7f9744596c2ec379c16fa951fb84970",
+    "Sources/CleanKit/Duplicates.swift": "b286cf5e73ba1cb4e018b2b39f4f5f65b47a78a57bb98c28901a0126779402c5",
+    "Sources/CleanKit/SpaceLens.swift": "3e3834a139bffa114ea9955d7ab7b3373aee3af6ee5f4b80abd2139eb3b7de9c",
+    "Sources/ThermoApp/HistoryPage.swift": "c0dc6f4bb4499169261e3b4446b20300fd6e99e4363beca4a8e016ab75083f08"
+  },
+  "duplicateFlow": {
+    "copies": 3,
+    "keptReferenceDisabled": true,
+    "reviewListedExtraCopiesOnly": true,
+    "changedKeeperAttemptMoved": 0,
+    "changedKeeperErrorVisible": true,
+    "extrasUnchangedAfterRefusal": true,
+    "normalAttemptMoved": 2,
+    "retainedCopySHA256Unchanged": true,
+    "nativeTrashUsedForOwnedSamplesOnly": true,
+    "historyRestoreCount": "2/2",
+    "allOriginalPayloadSHA256MatchAfterRestore": true,
+    "spaceTotalRefreshedAfterRestore": true,
+    "oldDuplicateResultsClearedAfterRestore": true,
+    "explicitNewComparisonFoundCopies": 3,
+    "finalSelectionsEmpty": true,
+    "trashEntries": [
+      {
+        "name": "extra-a.bin",
+        "trashDestinationAbsent": true
+      },
+      {
+        "name": "extra-b.bin",
+        "trashDestinationAbsent": true
+      }
+    ]
+  },
+  "unknownDateFlow": {
+    "knownOldRecordVisible": true,
+    "unknownCachedRecordVisibleWithoutFilter": true,
+    "unknownExcludedWith90DayFilter": true,
+    "visibleUnknownCount": 1,
+    "cachePreparation": "Production GUI scan in Chinese; close; remove own file; reopen same home without cache edits",
+    "initialCacheLanguageMismatch": "Initial English CLI cache was remeasured by Chinese GUI; not counted as unknown-flow evidence"
+  },
+  "captures": {
+    "space-duplicates-selected": {
+      "image": "space-duplicates-selected-2026-10-16.jpg",
+      "sha256": "37cd0201e45ed37d16eb9a914ee5cd648627492595d2f32e41c79d8979093f61",
+      "AX": "space-duplicates-selected-2026-10-16.ax.txt"
+    },
+    "space-duplicates-blocked": {
+      "image": "space-duplicates-blocked-2026-10-16.jpg",
+      "sha256": "4943b3bcc721a4d2f00a87842f0cdaa996c906ad0ecd692441bee7b2d604125a",
+      "AX": "space-duplicates-blocked-2026-10-16.ax.txt"
+    },
+    "space-duplicates-moved": {
+      "image": "space-duplicates-moved-2026-10-16.jpg",
+      "sha256": "25aacaaf97176ee04a9ac77cfe0ddba7b9a0aa565b39f9b2ed9533cdd5c64499",
+      "AX": "space-duplicates-moved-2026-10-16.ax.txt"
+    },
+    "space-duplicates-restored": {
+      "image": "space-duplicates-restored-2026-10-16.jpg",
+      "sha256": "8dcd432e2e1660aa5a33058cb02caa0a3a044768451bf5a1dfbfe29b78c84dd5",
+      "AX": "space-duplicates-restored-2026-10-16.ax.txt"
+    },
+    "space-duplicates-refreshed": {
+      "image": "space-duplicates-refreshed-2026-10-16.jpg",
+      "sha256": "95e536d154d368476d33d82c7ed564e929b011779af7c5b9c9f327f7548c5ff1",
+      "AX": "space-duplicates-refreshed-2026-10-16.ax.txt"
+    },
+    "space-large-unknown-filter": {
+      "image": "space-large-unknown-filter-2026-10-16.jpg",
+      "sha256": "c4d98accb9592ae0de1057a1345f3d344e8290e51e5e4f0dc23fd632ac978d77",
+      "AX": "space-large-unknown-filter-2026-10-16.ax.txt"
+    }
+  },
+  "qaExitCodes": [
+    0,
+    0
+  ],
+  "workspaceRemoved": true,
+  "limits": [
+    "No installed application replacement, publication, helper installation, root query, hardware writes or user-file cleanup",
+    "Owned sample native Trash roundtrip does not prove all filesystems or real concurrent-app behavior",
+    "Failure banner still begins with zero-items-moved wording; history shows failure; wording can be improved"
+  ]
+}

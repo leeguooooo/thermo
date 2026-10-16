@@ -1,0 +1,57 @@
+Window: "Thermo", App: Thermo Space QA.
+0 standard window Thermo, Secondary Actions: Raise
+	1 container
+		2 image thermometer.medium
+		3 text Thermo
+		4 image square.grid.3x3.topleft.filled
+		5 text 空间透视
+		6 显示
+			7 radio button Description: 文件夹, Value: 0
+			8 radio button Description: 大文件, Value: 0
+			9 radio button Description: 重复文件, Value: 1
+		10 scroll area
+			11 button 概览
+			12 button 传感器
+			13 button 风扇
+			14 text 资源监控
+			15 button CPU 占用
+			16 button GPU 占用
+			17 button 内存占用
+			18 button 标签整理
+			19 text 磁盘清理
+			20 button 智能扫描
+			21 button Description: 空间透视, Value: 已选中
+			22 button 软件管理
+			23 text AI Agent 诊断
+			24 button Claude 清理
+			25 button 智能检查
+		26 text 个人文件夹 116 MB · 测量于 1 分钟前 已把 0 项 移到废纸篓（0 B）。 没有移动：~/Downloads/extra-a.bin (保留的副本已变化或消失，请重新比对); ~/Downloads/extra-b.bin (保留的副本已变化或消失，请重新比对)
+		27 button Description: 关闭提示, ID: xmark
+		28 text 在桌面、文稿、下载、影片、音乐和图片里找 1 MB 及以上、内容逐字节相同的文件。
+		29 button 每组只留最早的
+		30 button 重新查找
+		31 button 操作记录
+		32 scroll area
+			33 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+				34 text 每组只留一份，可释放 4.2 MB。 keep-oldest.bin 3 份，每份 2.1 MB
+				35 button (disabled) Description: 选择keep-oldest.bin, Help: 保留此副本作为比对依据, Value: 未选中, ID: lock.fill
+				36 text ~/Downloads/keep-oldest.bin 最早
+				37 button (selected) Description: 选择extra-a.bin, Help: 已选，将移到废纸篓, Value: 已选中, ID: checkmark.circle.fill
+				38 text ~/Downloads/extra-a.bin
+				39 button (selected) Description: 选择extra-b.bin, Help: 已选，将移到废纸篓, Value: 已选中, ID: checkmark.circle.fill
+				40 text ~/Downloads/extra-b.bin
+		41 button 设置
+		42 button 重新测量
+		43 button 清空
+		44 text 已选 2 项
+		45 button 检查 4.2 MB…
+	46 close button
+	47 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	48 minimize button
+49 menu bar
+	50 Thermo Space QA
+	51 编辑, ID: thermo.edit
+	52 显示, ID: thermo.view
+	53 窗口, ID: thermo.window
+
+The focused UI element is 38 text ~/Downloads/extra-a.bin
