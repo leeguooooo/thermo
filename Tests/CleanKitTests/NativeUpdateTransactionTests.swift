@@ -1,6 +1,7 @@
 @testable import AgentCore
 @testable import CleanKit
 import CryptoKit
+import Darwin
 import Foundation
 import XCTest
 
@@ -18,31 +19,51 @@ final class NativeUpdateTransactionTests: XCTestCase {
         try zip()
     }
     override func tearDownWithError() throws {
-        for path in try ownedMountedImages() { XCTAssertTrue(NativeDiskImage.detachOwned(path), "temporary test image must detach") }
+        for path in try ownedMountedImages() {
+            guard NativeDiskImage.detachOwned(path) else { throw ArchiveFailure("Temporary test image cleanup unconfirmed; preserve " + home) }
+        }
+        guard try ownedImageRecords().isEmpty else { throw ArchiveFailure("Temporary test images remain; preserve " + home) }
         try FileManager.default.removeItem(atPath: home)
     }
 
     func ownedMountedImages() throws -> [String] {
-        let result = CommandRunner.run("/usr/bin/hdiutil", arguments: ["info", "-plist"], timeout: 15)
-        let info = try NativeDiskImage.plist(result)
-        return (info["images"] as? [[String: Any]] ?? []).compactMap { $0["image-path"] as? String }
+        try ownedImageRecords().compactMap { $0["image-path"] as? String }
             .filter { NativeDiskImage.canonical($0).hasPrefix(home + "/") }
     }
 
+    func ownedImageRecords() throws -> [[String: Any]] {
+        let result = CommandRunner.run("/usr/bin/hdiutil", arguments: ["info", "-plist"], timeout: 15)
+        let info = try NativeDiskImage.plist(result)
+        guard let images = info["images"] as? [[String: Any]] else { throw ArchiveFailure("Image inventory was incomplete") }
+        return images.filter { image in
+            (image["image-path"] as? String).map { NativeDiskImage.canonical($0).hasPrefix(home + "/") } == true ||
+            (image["system-entities"] as? [[String: Any]])?.contains {
+                ($0["mount-point"] as? String).map { NativeDiskImage.canonical($0).hasPrefix(home + "/") } == true
+            } == true
+        }
+    }
+
     func assertNoOwnedMountedImages(file: StaticString = #filePath, line: UInt = #line) throws {
-        let paths = try ownedMountedImages()
-        XCTAssertTrue(paths.isEmpty, "unexpected owned images: " + paths.joined(separator: ", "), file: file, line: line)
+        let records = try ownedImageRecords()
+        let summary = records.map { ["image-path": $0["image-path"] ?? "unknown", "system-entities": $0["system-entities"] ?? []] }
+        XCTAssertTrue(records.isEmpty, "unexpected owned images: \(summary)", file: file, line: line)
     }
 
     func dmg() throws {
         archive = home + "/update.dmg"
         try execute("/usr/bin/hdiutil", ["create", "-quiet", "-srcfolder", (package as NSString).deletingLastPathComponent,
                                         "-format", "UDZO", archive])
+        // Image creation may temporarily attach its own backing file. Establish
+        // a clean fixture baseline instead of attributing it to the updater.
+        if try ownedMountedImages().contains(where: { NativeDiskImage.canonical($0) == NativeDiskImage.canonical(archive) }) {
+            guard NativeDiskImage.detachOwned(archive) else { throw ArchiveFailure("Created fixture image is still busy; preserve " + home) }
+        }
+        guard try ownedImageRecords().isEmpty else { throw ArchiveFailure("Fixture creation left an attachment; preserve " + home) }
     }
 
     func execute(_ executable: String, _ args: [String]) throws {
         let result = CommandRunner.run(executable, arguments: args, timeout: 30)
-        guard result.status == 0 else { throw ArchiveFailure(result.output) }
+        guard result.status == 0 else { throw ArchiveFailure("Command exited \(result.status): " + result.output) }
     }
     func makeApp(_ path: String, version: String, build: String, id: String = "com.example.thermo-native-fixture") throws {
         try FileManager.default.createDirectory(atPath: path + "/Contents/MacOS", withIntermediateDirectories: true)
@@ -235,6 +256,29 @@ final class NativeUpdateTransactionTests: XCTestCase {
         XCTAssertEqual(result.outcome, "succeeded", result.message)
         XCTAssertEqual(build(original), "200")
         try assertNoOwnedMountedImages()
+    }
+
+    func testPrivateUpdateCopyDoesNotDetachAnAlreadyMountedOriginalImage() throws {
+        try dmg()
+        let mount = home + "/original-mounted"
+        try FileManager.default.createDirectory(atPath: mount, withIntermediateDirectories: true)
+        let mountIdentity = try XCTUnwrap(FileIdentity.of(mount))
+        for attempt in 0..<3 {
+            let result = CommandRunner.run("/usr/bin/hdiutil", arguments: ["attach", "-readonly", "-nobrowse", "-noautoopen", "-plist", "-mountpoint", mount, archive], timeout: 30)
+            if result.status == 0 { break }
+            guard attempt < 2, !result.timedOut, !result.cancelled,
+                  [EAGAIN, EBUSY].contains(result.status), try ownedImageRecords().isEmpty,
+                  FileIdentity.of(mount) == mountIdentity else { throw ArchiveFailure("Fixture attach exited \(result.status): " + result.output) }
+            usleep(200_000)
+        }
+        let before = try ownedMountedImages()
+        XCTAssertEqual(before.map(NativeDiskImage.canonical), [NativeDiskImage.canonical(archive)])
+        let prepared = try prepared()
+        let result = NativeUpdateTransaction.install(prepared, home: home)
+        XCTAssertEqual(result.outcome, "succeeded", result.message)
+        try NativeUpdateTransaction.discard(prepared, home: home)
+        XCTAssertEqual(try ownedMountedImages().map(NativeDiskImage.canonical), [NativeDiskImage.canonical(archive)])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: mount + "/Fixture.app/Contents/Info.plist"))
     }
 
     func testFeedChangingBeforeDownloadDoesNotStartAnInstaller() async throws {

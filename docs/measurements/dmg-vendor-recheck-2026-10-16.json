@@ -1,0 +1,48 @@
+{
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "bundleID": "com.knollsoft.Rectangle",
+  "feedSHA256": "7e993a6d18d6ca16c993dfc11644c2871dcf0cdc853b75b0756d4d38e42cef52",
+  "installed": true,
+  "installedApplicationsChanged": false,
+  "modifiedArchiveRejected": true,
+  "newArchiveSHA256": "a48883b56fbe3fbbd699a05bc8ddbfce65c0c73c66f71eaebbe9f1fdc5a3dcb5",
+  "newBuild": "110",
+  "newSeal": "6d0e53d2a1fe82e78dcfdbd7a509981d92d0657a5ff9c69fc360a6bfb8e76e93",
+  "newVersion": "2.0.3",
+  "oldArchiveSHA256": "7a42f6b9e852fa7ef827ebe58596a49456d64754154da156df1a1dd184c38833",
+  "oldBuild": "109",
+  "oldSeal": "0221e582df928a3436a9ba40b7d6d84e12d810584d69ecb591d64c1c9a2ec3b2",
+  "oldVersion": "2.0.2",
+  "ownedImagesDetached": true,
+  "postSwapFailureRolledBack": true,
+  "productionHTTPSDownloadVerified": true,
+  "repeatRecovery": true,
+  "restored": true,
+  "team": "XSYZ3E4B7D",
+  "vendorAppLaunched": false,
+  "date": "2026-10-16",
+  "scope": "Real vendor signed update acceptance after DMG attachment cleanup changes",
+  "sourceSHA256": {
+    "Sources/CleanKit/NativeDiskImage.swift": "ea7322a4946d72923cd459f109f2ea0af4f91751cb6bf17cda000b9cf3082eff",
+    "Sources/CleanKit/NativeUpdateTransaction.swift": "2252165f07d94bfb3021b31f6669ad5e419627ac14494143ac022b529e795b2e",
+    "scripts/verify-native-vendor-update.swift": "3c98438a8f511e9a75dc2448edd1dd5803af6adcb98b4be44cfc3a19b6d02ff0"
+  },
+  "ownedImagesAbsentBeforeCleanup": true,
+  "ownedDownloadsAndProcessHomeRemoved": true,
+  "feedURL": "https://rectangleapp.com/downloads/updates.xml",
+  "archives": [
+    {
+      "url": "https://github.com/rxhanson/Rectangle/releases/download/v2.0.3/Rectangle2.0.3.dmg",
+      "length": 4730793,
+      "version": "2.0.3"
+    },
+    {
+      "url": "https://github.com/rxhanson/Rectangle/releases/download/v2.0.2/Rectangle2.0.2.dmg",
+      "length": 4679140,
+      "version": "2.0.2"
+    }
+  ]
+}

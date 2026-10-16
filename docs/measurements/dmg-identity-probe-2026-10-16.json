@@ -1,0 +1,390 @@
+{
+  "root": "<owned temporary workspace>",
+  "stages": [
+    {
+      "name": "after-create",
+      "ownedImages": []
+    },
+    {
+      "name": "after-copy",
+      "identical": true,
+      "ownedImages": []
+    },
+    {
+      "name": "clone-alone",
+      "attachEntities": [
+        {
+          "content-hint": "Apple_APFS",
+          "dev-entry": "/dev/disk34s1",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "7C3457EF-0000-11AA-AA11-00306543ECAC"
+        },
+        {
+          "content-hint": "GUID_partition_scheme",
+          "dev-entry": "/dev/disk34",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "GUID_partition_scheme"
+        },
+        {
+          "content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+          "dev-entry": "/dev/disk35s1",
+          "mount-point": "<owned temporary workspace>/clone-alone",
+          "potentially-mountable": true,
+          "unmapped-content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+          "volume-kind": "apfs"
+        },
+        {
+          "content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC",
+          "dev-entry": "/dev/disk35",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC"
+        }
+      ],
+      "ownedImages": [
+        {
+          "path": "clone.dmg",
+          "entities": [
+            {
+              "content-hint": "GUID_partition_scheme",
+              "dev-entry": "/dev/disk34"
+            },
+            {
+              "content-hint": "7C3457EF-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk34s1"
+            },
+            {
+              "content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk35"
+            },
+            {
+              "content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk35s1",
+              "mount-point": "<owned temporary workspace>/clone-alone"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "clone-alone-detached",
+      "ownedImages": []
+    },
+    {
+      "name": "plain-alone",
+      "attachEntities": [
+        {
+          "content-hint": "Apple_APFS",
+          "dev-entry": "/dev/disk34s1",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "7C3457EF-0000-11AA-AA11-00306543ECAC"
+        },
+        {
+          "content-hint": "GUID_partition_scheme",
+          "dev-entry": "/dev/disk34",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "GUID_partition_scheme"
+        },
+        {
+          "content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+          "dev-entry": "/dev/disk35s1",
+          "mount-point": "<owned temporary workspace>/plain-alone",
+          "potentially-mountable": true,
+          "unmapped-content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+          "volume-kind": "apfs"
+        },
+        {
+          "content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC",
+          "dev-entry": "/dev/disk35",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC"
+        }
+      ],
+      "ownedImages": [
+        {
+          "path": "plain.dmg",
+          "entities": [
+            {
+              "content-hint": "GUID_partition_scheme",
+              "dev-entry": "/dev/disk34"
+            },
+            {
+              "content-hint": "7C3457EF-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk34s1"
+            },
+            {
+              "content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk35"
+            },
+            {
+              "content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk35s1",
+              "mount-point": "<owned temporary workspace>/plain-alone"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "plain-alone-detached",
+      "ownedImages": []
+    },
+    {
+      "name": "original-attached",
+      "attachEntities": [
+        {
+          "content-hint": "Apple_APFS",
+          "dev-entry": "/dev/disk34s1",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "7C3457EF-0000-11AA-AA11-00306543ECAC"
+        },
+        {
+          "content-hint": "GUID_partition_scheme",
+          "dev-entry": "/dev/disk34",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "GUID_partition_scheme"
+        },
+        {
+          "content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC",
+          "dev-entry": "/dev/disk35",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC"
+        },
+        {
+          "content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+          "dev-entry": "/dev/disk35s1",
+          "mount-point": "<owned temporary workspace>/original-mounted",
+          "potentially-mountable": true,
+          "unmapped-content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+          "volume-kind": "apfs"
+        }
+      ],
+      "ownedImages": [
+        {
+          "path": "source.dmg",
+          "entities": [
+            {
+              "content-hint": "GUID_partition_scheme",
+              "dev-entry": "/dev/disk34"
+            },
+            {
+              "content-hint": "7C3457EF-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk34s1"
+            },
+            {
+              "content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk35"
+            },
+            {
+              "content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk35s1",
+              "mount-point": "<owned temporary workspace>/original-mounted"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "clone-with-original",
+      "attachEntities": [
+        {
+          "content-hint": "Apple_APFS",
+          "dev-entry": "/dev/disk36s1",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "7C3457EF-0000-11AA-AA11-00306543ECAC"
+        },
+        {
+          "content-hint": "GUID_partition_scheme",
+          "dev-entry": "/dev/disk36",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "GUID_partition_scheme"
+        },
+        {
+          "content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC",
+          "dev-entry": "/dev/disk37",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC"
+        },
+        {
+          "content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+          "dev-entry": "/dev/disk37s1",
+          "mount-point": "<owned temporary workspace>/clone-with-original",
+          "potentially-mountable": true,
+          "unmapped-content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+          "volume-kind": "apfs"
+        }
+      ],
+      "ownedImages": [
+        {
+          "path": "source.dmg",
+          "entities": [
+            {
+              "content-hint": "GUID_partition_scheme",
+              "dev-entry": "/dev/disk34"
+            },
+            {
+              "content-hint": "7C3457EF-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk34s1"
+            },
+            {
+              "content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk35"
+            },
+            {
+              "content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk35s1",
+              "mount-point": "<owned temporary workspace>/original-mounted"
+            }
+          ]
+        },
+        {
+          "path": "clone.dmg",
+          "entities": [
+            {
+              "content-hint": "GUID_partition_scheme",
+              "dev-entry": "/dev/disk36"
+            },
+            {
+              "content-hint": "7C3457EF-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk36s1"
+            },
+            {
+              "content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk37"
+            },
+            {
+              "content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk37s1",
+              "mount-point": "<owned temporary workspace>/clone-with-original"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "plain-with-original",
+      "attachEntities": [
+        {
+          "content-hint": "Apple_APFS",
+          "dev-entry": "/dev/disk38s1",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "7C3457EF-0000-11AA-AA11-00306543ECAC"
+        },
+        {
+          "content-hint": "GUID_partition_scheme",
+          "dev-entry": "/dev/disk38",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "GUID_partition_scheme"
+        },
+        {
+          "content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC",
+          "dev-entry": "/dev/disk39",
+          "potentially-mountable": false,
+          "unmapped-content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC"
+        },
+        {
+          "content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+          "dev-entry": "/dev/disk39s1",
+          "mount-point": "<owned temporary workspace>/plain-with-original",
+          "potentially-mountable": true,
+          "unmapped-content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+          "volume-kind": "apfs"
+        }
+      ],
+      "ownedImages": [
+        {
+          "path": "source.dmg",
+          "entities": [
+            {
+              "content-hint": "GUID_partition_scheme",
+              "dev-entry": "/dev/disk34"
+            },
+            {
+              "content-hint": "7C3457EF-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk34s1"
+            },
+            {
+              "content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk35"
+            },
+            {
+              "content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk35s1",
+              "mount-point": "<owned temporary workspace>/original-mounted"
+            }
+          ]
+        },
+        {
+          "path": "clone.dmg",
+          "entities": [
+            {
+              "content-hint": "GUID_partition_scheme",
+              "dev-entry": "/dev/disk36"
+            },
+            {
+              "content-hint": "7C3457EF-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk36s1"
+            },
+            {
+              "content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk37"
+            },
+            {
+              "content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk37s1",
+              "mount-point": "<owned temporary workspace>/clone-with-original"
+            }
+          ]
+        },
+        {
+          "path": "plain.dmg",
+          "entities": [
+            {
+              "content-hint": "GUID_partition_scheme",
+              "dev-entry": "/dev/disk38"
+            },
+            {
+              "content-hint": "7C3457EF-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk38s1"
+            },
+            {
+              "content-hint": "EF57347C-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk39"
+            },
+            {
+              "content-hint": "41504653-0000-11AA-AA11-00306543ECAC",
+              "dev-entry": "/dev/disk39s1",
+              "mount-point": "<owned temporary workspace>/plain-with-original"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "all-owned-detached",
+      "ownedImages": []
+    }
+  ],
+  "started": 1792111984.9417868,
+  "complete": true,
+  "archives": {
+    "source.dmg": {
+      "sha256": "58b8902235e1371fd5074f2067fc63a4756bb556bcc0edb186ddd9fed4343bd1",
+      "bytes": 16669,
+      "inode": 886794072
+    },
+    "clone.dmg": {
+      "sha256": "58b8902235e1371fd5074f2067fc63a4756bb556bcc0edb186ddd9fed4343bd1",
+      "bytes": 16669,
+      "inode": 886794242
+    },
+    "plain.dmg": {
+      "sha256": "58b8902235e1371fd5074f2067fc63a4756bb556bcc0edb186ddd9fed4343bd1",
+      "bytes": 16669,
+      "inode": 886794243
+    }
+  },
+  "date": "2026-10-16",
+  "originalIntermittentFailureReproduced": false,
+  "ownedImagesAbsent": true,
+  "workspaceRemoved": true
+}

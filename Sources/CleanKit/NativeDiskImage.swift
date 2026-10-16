@@ -30,6 +30,63 @@ enum NativeDiskImage {
     }
     static func canonical(_ path: String) -> String { URL(fileURLWithPath: path).resolvingSymlinksInPath().path }
 
+    static func deviceEntries(_ info: [String: Any]) throws -> Set<String> {
+        guard let images = info["images"] as? [[String: Any]] else { throw CleanupFailure() }
+        var devices = Set<String>()
+        for image in images {
+            guard let entities = image["system-entities"] as? [[String: Any]] else { throw CleanupFailure() }
+            devices.formUnion(entities.compactMap { $0["dev-entry"] as? String })
+        }
+        return devices
+    }
+
+    static func rootDevice(_ entities: [[String: Any]]) -> String? {
+        let roots = entities.filter { ($0["dev-entry"] as? String)?.range(of: #"^/dev/disk[0-9]+$"#, options: .regularExpression) != nil }
+        let physical = roots.filter { ($0["content-hint"] as? String)?.hasSuffix("_partition_scheme") == true }
+        if physical.count == 1 { return physical[0]["dev-entry"] as? String }
+        if roots.count == 1 { return roots[0]["dev-entry"] as? String }
+        return nil
+    }
+
+    static func imageInfo() throws -> [String: Any] {
+        try plist(CommandRunner.run("/usr/bin/hdiutil", arguments: ["info", "-plist"], timeout: 15, captureError: false))
+    }
+
+    /// Bind cleanup to a newly attached device and the private mount, not just
+    /// an image-path string which can differ when an attachment is reused.
+    static func finishAttachment(payload: String, mount: String, mountIdentity: String, previousDevices: Set<String>,
+                                 attachedDevices: Set<String>, query: () throws -> [String: Any] = imageInfo,
+                                 detach: (String) -> Bool = { device in
+                                     let result = CommandRunner.run("/usr/bin/hdiutil", arguments: ["detach", device], timeout: 30, captureError: false)
+                                     return result.status == 0 && !result.timedOut && !result.cancelled
+                                 }, identity: (String) -> String? = FileIdentity.of) -> Bool {
+        func matches(_ image: [String: Any]) -> Bool {
+            if (image["image-path"] as? String).map({ canonical($0) == canonical(payload) }) == true { return true }
+            return (image["system-entities"] as? [[String: Any]])?.contains {
+                ($0["mount-point"] as? String).map { canonical($0) == canonical(mount) } == true
+            } == true
+        }
+        func hasReturnedDevice(_ image: [String: Any]) -> Bool {
+            (image["system-entities"] as? [[String: Any]])?.contains {
+                ($0["dev-entry"] as? String).map(attachedDevices.contains) == true
+            } == true
+        }
+        guard let before = try? query(), let images = before["images"] as? [[String: Any]] else { return false }
+        // A returned device at an unrecognized path/point is still unresolved;
+        // do not detach it by device name alone or claim that cleanup finished.
+        guard !images.contains(where: { !matches($0) && hasReturnedDevice($0) }) else { return false }
+        let candidates = images.filter(matches)
+        for image in candidates {
+            guard let entities = image["system-entities"] as? [[String: Any]], let device = rootDevice(entities),
+                  !previousDevices.contains(device) else { return false }
+            let exactPayload = (image["image-path"] as? String).map { canonical($0) == canonical(payload) } == true
+            guard exactPayload || attachedDevices.contains(device), detach(device) else { return false }
+        }
+        guard let after = try? query(), let remaining = after["images"] as? [[String: Any]],
+              !remaining.contains(where: { matches($0) || hasReturnedDevice($0) }), identity(mount) == mountIdentity else { return false }
+        return true
+    }
+
     /// Re-discover devices by this exact private image path before detaching. Never force-detach
     /// another app's mount, and preserve the workspace if ownership or cleanup is uncertain.
     static func detachOwned(_ payload: String) -> Bool {
@@ -39,8 +96,7 @@ enum NativeDiskImage {
         if matches.isEmpty { return true }
         for image in matches {
             guard let entities = image["system-entities"] as? [[String: Any]],
-                  let device = entities.compactMap({ $0["dev-entry"] as? String }).first,
-                  device.range(of: #"^/dev/disk[0-9]+$"#, options: .regularExpression) != nil else { return false }
+                  let device = rootDevice(entities) else { return false }
             let detached = CommandRunner.run("/usr/bin/hdiutil", arguments: ["detach", device], timeout: 30, captureError: false)
             if detached.status != 0 || detached.timedOut { return false }
         }
@@ -57,14 +113,25 @@ enum NativeDiskImage {
         guard free > expanded * 2 + 16 * 1024 * 1024 else { throw ArchiveFailure("There is not enough space to prepare and preserve this update") }
         let mount = workspace + "/mounted"
         try NativeUpdateTransaction.privateDirectory(mount)
+        guard let mountIdentity = FileIdentity.of(mount) else { throw CleanupFailure() }
+        let before = try imageInfo()
+        let previousDevices = try deviceEntries(before)
+        guard let images = before["images"] as? [[String: Any]], !images.contains(where: { image in
+            (image["image-path"] as? String).map { canonical($0) == canonical(payload.path) } == true ||
+            (image["system-entities"] as? [[String: Any]])?.contains {
+                ($0["mount-point"] as? String).map { canonical($0) == canonical(mount) } == true
+            } == true
+        }) else { throw CleanupFailure() }
         var problem: Error?
         var uncertainAttach = false
+        var attachedDevices = Set<String>()
         do {
             let outcome = CommandRunner.run("/usr/bin/hdiutil", arguments: ["attach", "-readonly", "-nobrowse", "-noautoopen", "-noautofsck",
                 "-verify", "-stdinpass", "-plist", "-mountpoint", mount, payload.path], timeout: 60, captureError: false)
             uncertainAttach = outcome.timedOut || outcome.cancelled
             let attached = try plist(outcome)
             guard let entities = attached["system-entities"] as? [[String: Any]] else { throw ArchiveFailure("The disk image has no recognized mount") }
+            attachedDevices = Set(entities.compactMap { $0["dev-entry"] as? String })
             let mounted = entities.compactMap { $0["mount-point"] as? String }
             guard mounted.count == 1, canonical(mounted[0]) == mount else { throw ArchiveFailure("The disk image mounted outside its private mount point") }
             var filesystem = statfs()
@@ -90,7 +157,8 @@ enum NativeDiskImage {
             try FileManager.default.copyItem(atPath: app, toPath: copy)
             guard try NativeBundleValidation.facts(copy).seal == before.seal else { throw ArchiveFailure("The copied app differs from the read-only disk image") }
         } catch { problem = error }
-        guard detachOwned(payload.path), !uncertainAttach else { throw CleanupFailure() }
+        guard finishAttachment(payload: payload.path, mount: mount, mountIdentity: mountIdentity,
+                               previousDevices: previousDevices, attachedDevices: attachedDevices), !uncertainAttach else { throw CleanupFailure() }
         if let problem { throw problem }
     }
 }

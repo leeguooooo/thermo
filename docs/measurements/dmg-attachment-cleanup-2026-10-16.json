@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-16",
+  "scope": "Native update DMG attachment cleanup identity and independent private-mount confirmation",
+  "sourceSHA256": {
+    "Sources/CleanKit/NativeDiskImage.swift": "ea7322a4946d72923cd459f109f2ea0af4f91751cb6bf17cda000b9cf3082eff",
+    "Tests/CleanKitTests/DiskImageAttachmentTests.swift": "34b132fcec88572f13944b087de35e14257bc44eb89c34bb830a4c92530d5d52",
+    "Tests/CleanKitTests/NativeUpdateTransactionTests.swift": "315a9aaad88dda399ece33dd1b6863d4edb14fa4084f3a33d3e959fd5425a7c5"
+  },
+  "nativeProbe": "dmg-identity-probe-2026-10-16.json",
+  "probeResult": "APFS clone and ordinary byte copy attached as independent devices, including while original remained attached; original sporadic residual mount not reproduced",
+  "newBehavior": [
+    "Record image-device inventory and private directory identity before attach",
+    "Do not adopt an already attached payload or existing private mount",
+    "Select physical root by partition scheme rather than entity order",
+    "Detach only newly observed physical image devices bound to exact private payload, or returned attach device plus private mount",
+    "Returned devices at unknown paths/points remain unresolved, never detached by name alone",
+    "Requery image inventory and require original private directory identity after detach",
+    "Unknown/failed cleanup preserves workspace through existing CleanupFailure path",
+    "Test cleanup refuses recursive removal until owned-image absence is confirmed and failure diagnostics retain device/mount entries"
+  ],
+  "newTests": {
+    "DiskImageAttachmentTests": 10,
+    "NativeUpdateTransactionTests": 1
+  },
+  "targetedBeforeFinalUnknownLocationGuard": {
+    "tests": 36,
+    "failures": 0,
+    "log": "/tmp/thermo-dmg-lease-targeted-tests.log"
+  },
+  "initialFullRegressionBeforeFinalGuard": {
+    "tests": 857,
+    "failures": 0,
+    "log": "/tmp/thermo-dmg-attachment-full-tests.log"
+  },
+  "regressionBeforeFinalGuard": {
+    "test": "testReturnedDeviceAtUnexpectedLocationCannotBeReportedAsClean",
+    "failure": "A returned device outside both expected payload and mount was incorrectly considered gone",
+    "log": "/tmp/thermo-dmg-unexpected-mount-before.log"
+  },
+  "realMountedOriginalAcceptance": {
+    "test": "testPrivateUpdateCopyDoesNotDetachAnAlreadyMountedOriginalImage",
+    "privateUpdateInstalled": true,
+    "privateCopyDiscarded": true,
+    "preexistingOwnedOriginalStillAttached": true,
+    "originalReadable": true,
+    "fixtureCleanupVerified": true
+  },
+  "originalIntermittentFailure": {
+    "originalLog": "/tmp/thermo-nested-ownership-full-tests.log",
+    "rootCauseResolved": false,
+    "issueRemainsOpen": true,
+    "note": "New safeguards close independently demonstrated cleanup-confirmation gaps; they do not prove the historical source-image residual mechanism."
+  },
+  "limits": [
+    "Device names may be reused; conservative existing-device refusal can require manual inspection",
+    "No adversarial device-reuse race or I/O/permission fault acceptance on live hardware",
+    "Unknown output or cleanup preserves workspace instead of force-detaching",
+    "No user-owned mount detachment, installed application replacement, root query, helper install, hardware writes or release"
+  ],
+  "fullRegression": {
+    "CleanKit": 511,
+    "ThermoApp": 142,
+    "ThermoCLI": 57,
+    "ThermoKitExcludingHardwareTests": 114,
+    "AgentCore": 34,
+    "total": 858,
+    "failures": 0,
+    "log": "/tmp/thermo-dmg-final-baseline-full-tests.log"
+  },
+  "build": "passed as part of final full regression",
+  "fixtureFollowup": {
+    "intermediateRun": {
+      "tests": 27,
+      "failures": 1,
+      "test": "testPrivateUpdateCopyDoesNotDetachAnAlreadyMountedOriginalImage",
+      "output": "hdiutil: attach failed - resource temporarily unavailable",
+      "log": "/tmp/thermo-dmg-fixture-cleanup-final-tests.log"
+    },
+    "changes": [
+      "After fixture image creation establish absence of owned attachments before updater starts",
+      "Only recognized EAGAIN/EBUSY allows at most two fixture attach retries, and only after confirmed absence and unchanged mount directory",
+      "Diagnostics now preserve command exit status and image device/mount entries",
+      "Unknown image path at an owned mount prevents recursive fixture cleanup; it is never detached by an outside path"
+    ],
+    "finalTargeted": {
+      "tests": 27,
+      "failures": 0,
+      "log": "/tmp/thermo-dmg-fixture-baseline-tests.log"
+    }
+  },
+  "realVendorRecheck": "dmg-vendor-recheck-2026-10-16.json"
+}
