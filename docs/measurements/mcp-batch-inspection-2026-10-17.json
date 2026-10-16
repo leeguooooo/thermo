@@ -19,7 +19,11 @@
     "startingNewBatchInvalidatesQueuedOldSuccessValues": true,
     "clearingMeasurementsDropsObsoleteBatchProgress": true,
     "finalPresentationLabelsLatestBatchSeparatelyFromCurrentSelection": true,
-    "completedBatchFeedsDefinitionSummary": true
+    "completedBatchFeedsDefinitionSummary": true,
+    "chineseSelectionBudgetAndDefaultState": true,
+    "chineseSuccessRowsAndCounts": true,
+    "chineseCancellationAndNotStartedCounts": true,
+    "chineseRootSummaryAfterCancellation": true
   },
   "observedSuccess": {
     "processed": 2,
@@ -66,7 +70,6 @@
   "originalAppPreserved": true,
   "originalAppPID": 94672,
   "remaining": [
-    "Native Chinese batch-panel acceptance",
     "Actual selected real-service batch acceptance",
     "Universal Release package containing the new batch UI; previous validated package is at fb0aeee",
     "Formal signing, notarization, installation and update acceptance"
@@ -76,5 +79,25 @@
     "No automatic retry or business tool execution is part of the coordinator. Configuration discovery and connection inspection use the existing AgentDoctor API.",
     "The host process scanner still observes real processes; no repair or removal action was clicked.",
     "An independent AWDL commit landed in the shared worktree during verification. Final App test counts include its additions; no hardware-control acceptance is claimed here."
-  ]
+  ],
+  "chineseNativeAcceptance": {
+    "generated": "2026-10-16T22:50:53.962857+00:00",
+    "matchedMCPSourceHashes": true,
+    "runtimeScope": "Existing isolated Debug QA snapshot whose recorded MCP source hashes match current source. This is not acceptance of the full merged 1.1.27 release line.",
+    "success": {
+      "returned": 2,
+      "complete": 2,
+      "notStarted": 0
+    },
+    "cancel": {
+      "selected": 3,
+      "returned": 1,
+      "incomplete": 1,
+      "notStarted": 2
+    },
+    "defaultSelectionEmpty": true,
+    "controlsAndExplanationVisuallyComplete": true,
+    "qaClosed": true,
+    "originalAppPreserved": true
+  }
 }

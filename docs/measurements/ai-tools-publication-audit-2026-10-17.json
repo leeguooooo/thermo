@@ -1,0 +1,40 @@
+{
+  "publishedTag": "v1.1.27",
+  "remoteTagCommit": "9a85495800f52d6336d440b4ae6e1dd7ee814e5e",
+  "localTagMatchesRemote": true,
+  "containsByAncestry": {
+    "skillFootprint": false,
+    "stdioInspection": false,
+    "httpInspection": false,
+    "localUsage": false,
+    "skillContent": false,
+    "referenceTokenizer": false,
+    "taskComparison": false,
+    "appComparison": false,
+    "definitionSummary": false,
+    "minimumWindowFix": false,
+    "batchInspection": false
+  },
+  "publishedTreeFiles": {
+    "Sources/AgentDoctor/ContextFootprint.swift": false,
+    "Sources/AgentDoctor/MCPInspection.swift": false,
+    "Sources/AgentDoctor/ToolUsageReport.swift": false,
+    "Sources/AgentDoctor/SkillQuality.swift": false,
+    "Sources/AgentDoctor/ReferenceTokenizer.swift": false,
+    "Sources/AgentDoctor/TaskComparison.swift": false,
+    "Sources/ThermoApp/MCPDefinitionSummary.swift": false,
+    "Sources/ThermoApp/MCPBatchInspectionModel.swift": false
+  },
+  "scope": "Ancestry describes commit inclusion, not cherry-pick equivalence. Published tree file presence is checked separately; no publication or tag mutation was performed.",
+  "generated": "2026-10-16T22:50:55.817522+00:00",
+  "latestRelease": {
+    "publishedAt": "2026-10-16T10:08:16Z",
+    "tagName": "v1.1.27",
+    "targetCommitish": "main",
+    "url": "https://github.com/leeguooooo/thermo/releases/tag/v1.1.27"
+  },
+  "stillLatestAtFinalRead": true,
+  "currentSourceCommit": "b967c5c55180bea6e0da6556ba59333927bebaad",
+  "currentMarketingVersion": "1.1.27",
+  "conclusion": "The latest published tag is v1.1.27; the new AI diagnostic implementation files checked here are absent from its tree. Source completion and local QA must not be presented as published availability. A subsequent release needs a new version and its own artifact acceptance."
+}
