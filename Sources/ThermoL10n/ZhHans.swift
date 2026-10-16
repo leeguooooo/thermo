@@ -1796,6 +1796,7 @@ let zhHans: [String: String] = [
     "Allocated size estimate; shared blocks may not be reclaimed.": "这是已分配空间的估算，共享块可能无法释放。",
     ", %1$@ still occupies Trash space; empty only this batch to reclaim it": "，%1$@ 仍占用废纸篓空间，需要清空本批项目才会尝试释放",
     "%1$@ items partially completed; remaining files kept": "%1$@ 项已部分完成，剩余文件保留",
+    "Removed size could not be measured completely": "无法完整测量已移除的大小",
     "partial deletion size could not be measured completely": "无法完整测量部分删除的大小",
     "; review contents before removal (scratchpads may contain work products)": "；删除前请检查，临时目录可能含有工作成果",
     "; media to review: %1$@": "；请保留需要的媒体文件：%1$@",

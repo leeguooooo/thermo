@@ -101,7 +101,7 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     /// Items with the same group belong together (build output of one project folder).
     public var group: String?
     /// For commands whose effect is not known beforehand (`pnpm store prune`): folders measured before
-    /// and after, so the result reports what was actually freed rather than `bytes` (an upper bound).
+    /// and after, so the result reports a removed-size estimate rather than the scanned upper bound.
     public var measure: [String]?
     /// `device:inode` of each path when it was scanned; a path that names another file at cleanup is skipped.
     public var sizeIncomplete: Bool? = nil

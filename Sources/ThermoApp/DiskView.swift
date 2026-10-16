@@ -195,7 +195,7 @@ final class DiskModel: ObservableObject {
                 batchRecorded = batchRecorded || r.trashBatchID == batchID
                 partialCount += r.outcome == "partial" ? 1 : 0
                 estimateIncomplete = estimateIncomplete || r.bytesIncomplete == true
-                removedAny = removedAny || !r.removed.isEmpty || r.partialRemoved?.isEmpty == false
+                removedAny = removedAny || !r.removed.isEmpty || r.partialRemoved?.isEmpty == false || r.partialCommands?.isEmpty == false || (r.bytesIncomplete == true && !(i.commands ?? []).isEmpty)
                 if r.trashed { trashed += r.trashedAllocatedBytes ?? r.bytes } else { freed += r.bytes }
                 failures += r.failed.count
                 kept += r.whitelisted?.count ?? 0
@@ -208,7 +208,7 @@ final class DiskModel: ObservableObject {
             if trashed > 0 { text += tr(", %1$@ still occupies Trash space; empty only this batch to reclaim it", ByteFormat.string(trashed)) }
             if batchRecorded { text += "\nthermo clean empty-trash \(batchID) --dry-run" }
             if partialCount > 0 { text += " · " + tr("%1$@ items partially completed; remaining files kept", String(partialCount)) }
-            if estimateIncomplete { text += " · " + tr("partial deletion size could not be measured completely") }
+            if estimateIncomplete { text += " · " + tr("Removed size could not be measured completely") }
             if failures > 0 { text += " · " + trCount(failures, "%1$@ path could not be removed (see log)", "%1$@ paths could not be removed (see log)") }
             if kept > 0 { text += " · " + tr("%1$@ whitelisted paths kept", String(kept)) }
             text += "\n" + observation.summary

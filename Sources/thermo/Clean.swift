@@ -433,7 +433,7 @@ struct CleanCommand {
             print("Review this batch: thermo clean empty-trash \(batchID) --dry-run")
             print("Empty only this batch: thermo clean empty-trash \(batchID) --yes")
         }
-        if results.contains(where: { $0.bytesIncomplete == true }) { summary += "; some partial deletions could not be measured completely" }
+        if results.contains(where: { $0.bytesIncomplete == true }) { summary += "; some removed sizes could not be measured completely" }
         print(observation.summary)
         print(style.bold(summary) + style.dim(" · log: \(FS.tilde(Cleaner.logURL.path))"))
     }

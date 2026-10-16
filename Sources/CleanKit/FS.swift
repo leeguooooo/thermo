@@ -210,6 +210,9 @@ public struct CleanResult: Codable, Sendable {
     public var spaceObservation: DiskSpaceObservation?
     public var trashed: Bool
     public var partialRemoved: [String]? = nil
+    /// Attempted commands in a failed batch whose measured bytes or entry count decreased.
+    /// This does not attribute the measured delta to an individual command.
+    public var partialCommands: [String]? = nil
     public var bytesIncomplete: Bool? = nil
     public var outcome: String? = nil
     public var trashBatchID: String? = nil
@@ -258,8 +261,8 @@ public enum Cleaner {
             do { try TrashBatches.synchronize(batch, home: g.home) }
             catch { result.failed["batch/" + batch] = error.localizedDescription }
         }
-        result.outcome = result.failed.isEmpty ? "success" : (result.removed.isEmpty && result.partialRemoved?.isEmpty != false ? "failed" : "partial")
-        if !result.removed.isEmpty || result.partialRemoved?.isEmpty == false {
+        result.outcome = result.failed.isEmpty ? "success" : (result.removed.isEmpty && result.partialRemoved?.isEmpty != false && result.partialCommands?.isEmpty != false ? "failed" : "partial")
+        if !result.removed.isEmpty || result.partialRemoved?.isEmpty == false || result.partialCommands?.isEmpty == false || (result.bytesIncomplete == true && !(item.commands ?? []).isEmpty) {
             ScanReportCache.invalidate(home: g.home)
             SpaceOverview.invalidate(home: g.home)
         }
@@ -477,7 +480,7 @@ public enum Cleaner {
                 return nil
             } catch { return Whitelist.unreadable(error) }
         }
-        // Things only their own tool may remove: report the item's size once every command succeeded.
+        // Command exit status is not proof that the scanned estimate was removed.
         if let commands = item.commands, !commands.isEmpty {
             if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
                 result.failed[item.id] = why
@@ -486,7 +489,9 @@ public enum Cleaner {
             if let why = Simulators.reviewRefusal(item) { result.failed[item.id] = why; return result }
             if let why = ManagedToolScope.refusal(item, whitelist: whitelist, home: g.home) { result.failed[item.id] = why; return result }
             var ok = true
-            let measuredBefore = item.measure.map { FS.commandSize($0) }
+            var attempted: [String] = []
+            let measurementPaths = item.measure.flatMap { $0.isEmpty ? nil : $0 }
+            let measuredBefore = measurementPaths.map { FS.commandSize($0) }
             for argv in commands {
                 if let why = changedProtection() { ok = false; result.failed["whitelist"] = why; break }
                 do {
@@ -499,15 +504,22 @@ public enum Cleaner {
                 }
                 var execution = argv
                 if Simulators.isCommand(argv) { execution[0] = "/usr/bin/xcrun" }
+                attempted.append(argv.joined(separator: " "))
                 let (status, output) = Shell.exec(execution, timeout: 180)
                 let line = argv.joined(separator: " ")
                 if status == 0 { result.removed.append("ran: " + line) } else { ok = false; result.failed[line] = output.isEmpty ? "exit \(status)" : output; break }
             }
-            if ok, let before = measuredBefore, let paths = item.measure {
-                let after = FS.commandSize(paths)
-                if before.denied || before.incomplete || after.denied || after.incomplete { result.bytesIncomplete = true }
-                else { result.bytes += max(0, before.bytes - after.bytes) }
-            } else if ok { result.bytes += item.bytes }
+            if !attempted.isEmpty {
+                if let before = measuredBefore, let paths = measurementPaths {
+                    let after = FS.commandSize(paths)
+                    if before.denied || before.incomplete || after.denied || after.incomplete { result.bytesIncomplete = true }
+                    else {
+                        let removed = max(0, before.bytes - after.bytes)
+                        result.bytes += removed
+                        if !ok && (removed > 0 || before.allocated > after.allocated || before.files > after.files) { result.partialCommands = attempted }
+                    }
+                } else { result.bytesIncomplete = true }
+            }
         }
         if item.category != .agentWorktrees, !result.removed.isEmpty, let cmds = item.afterClean {
             for c in cmds {
@@ -541,6 +553,7 @@ public enum Cleaner {
         let f = ISO8601DateFormatter()
         var lines = r.removed.map { "\(f.string(from: Date())) \(r.trashed ? "trash" : "delete") \(item.id) \($0)" }
         lines += (r.partialRemoved ?? []).map { "\(f.string(from: Date())) partial \(item.id) \($0) (estimated removed bytes included; complete estimate=\(r.bytesIncomplete != true))" }
+        lines += (r.partialCommands ?? []).map { "\(f.string(from: Date())) partial-tool \(item.id) \($0) (aggregate removed estimate=\(r.bytes))" }
         lines += r.failed.map { "\(f.string(from: Date())) failed \(item.id) \($0.key): \($0.value)" }
         guard !lines.isEmpty else { return }
         lines.append("\(f.string(from: Date())) result \(item.id) outcome=\(r.outcome ?? "unknown") estimatedRemovedBytes=\(r.bytes) estimateIncomplete=\(r.bytesIncomplete == true) trashBatch=\(r.trashBatchID ?? "none")")
@@ -570,16 +583,16 @@ extension Cleaner {
         case let id where id.hasPrefix("trash-batch/"): (feature, action) = ("clean", "emptyTrash")
         default: (feature, action) = ("clean", r.trashed ? "trash" : "delete")
         }
-        let partial = Set(r.partialRemoved ?? [])
+        let partial = Set((r.partialRemoved ?? []) + (r.partialCommands ?? []).map { "tool: " + $0 })
         // Per-path sizes are not kept by the cleaner; a single removed path carries the total.
-        let single = r.removed.count == 1 && r.bytesIncomplete != true
+        let single = r.removed.count == 1 && partial.isEmpty && r.bytesIncomplete != true
         var items = r.removed.map { OperationRecord.Item(target: $0, bytes: single ? r.bytes : nil, status: partial.contains($0) ? "partial" : "done") }
         items += partial.subtracting(r.removed).sorted().map { OperationRecord.Item(target: $0, status: "partial") }
         items += r.failed.sorted { $0.key < $1.key }.map { OperationRecord.Item(target: $0.key, status: "failed", detail: $0.value) }
         let undo: OperationRecord.Undo? = r.trashBatchID.map { .init(kind: "trashBatch", ref: $0) }
             ?? (r.trashed && action != "emptyTrash" && !r.removed.isEmpty ? .init(kind: "trash", ref: "") : nil)
         var record = OperationRecord(feature: feature, action: action, subject: item.id == r.id ? item.title : item.id, items: items, undo: undo)
-        if !single, !r.removed.isEmpty {
+        if !single, !r.removed.isEmpty || !partial.isEmpty || r.bytesIncomplete == true {
             record.bytes = r.bytes
             record.bytesIncomplete = r.bytesIncomplete == true ? true : nil
         }

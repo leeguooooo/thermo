@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "787be98",
+  "finalSourceSHA256": {
+    "Sources/CleanKit/FS.swift": "394460ef89c204d5e0e099944e6ed6daaa65de9158292c6b0b45217497a600fb",
+    "Sources/CleanKit/Model.swift": "0bc53198fb4bf5f6302a8ee39fb18d6e2cf0258860f1d04c24939db24ae1ba01",
+    "Sources/CleanKit/ToolCleanup.swift": "8a2bd9d53122026331795d964072212d7ca2ac30d0f3f3f3a648dee8fa9719bf",
+    "Sources/ThermoApp/DiskView.swift": "8f5375ddedec40a0ad1eaa0144d2c455719fa7fc2177227503ca447e86c917fe",
+    "Sources/ThermoL10n/ZhHans.swift": "2b4a2630ebabe5e8e61bbb8338c9d301c03b1b7f7d3bfd9d359d6aa7d1910c26",
+    "Sources/thermo/Clean.swift": "0aed9eb0f87c580f0ed015d7f7248236845ed74e712476ff2e1485481a42a485",
+    "Tests/CleanKitTests/SimulatorAppDataTests.swift": "d3d6972a4c2614eeedad03d8a5aa3dffa2ef8118e118bee7309d0184a367fad5",
+    "Tests/CleanKitTests/CommandAccountingTests.swift": "c814dd8a417bf1a14b4f4f70eb9bcbec8c63d444fc0c0798bec21b86a34a70c4"
+  },
+  "baseline": {
+    "tests": 5,
+    "failedAssertions": 10,
+    "logSHA256": "535bfd79187d9e37f2cf0564ca01b3e2b5278a54d4bf34402da44f1f3f4c6da9",
+    "observedNoOpClaimedBytes": 1000000000,
+    "observedFailedCommandOmittedBytes": 65536
+  },
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 59,
+      "ThermoAppTests": 175,
+      "CleanKitTests": 634,
+      "AgentCoreTests": 34
+    },
+    "total": 1016,
+    "failures": 0,
+    "logSHA256": "66eafb2f61012323aa52f48fb1f54c34beb12b478a539424f53e655cde648d0a",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "revisionBoundary": "Before final empty-file detection; byte-delta branch and initial seven tests included"
+  },
+  "finalFocused": {
+    "tests": 32,
+    "newCommandAccountingTests": 8,
+    "failures": 0,
+    "logSHA256": "d2a889fd8a5156bf27ff8d4859e1d3cdbeb7aa47828dbd46fab3109449e7d873",
+    "revisionBoundary": "Final source, including zero-byte entry-count reduction; overlaps full suite and is not added to its count"
+  },
+  "execution": {
+    "realSystemCommandsAgainstOwnedFixtures": true,
+    "realVendorCleanupExecuted": false,
+    "userDataChanged": false,
+    "hardwareWrites": false,
+    "published": false
+  },
+  "limits": [
+    "Before/after file sizes are estimates, not attributed volume savings or an atomic filesystem transaction",
+    "External concurrent activity inside a measured scope may affect the aggregate delta",
+    "partialCommands identifies attempted commands in a partial batch, not each command's contribution",
+    "No new visible result-page acceptance; UI source compiled and existing model suite passed",
+    "Unmeasured command failure has unknown size and does not prove zero side effects"
+  ]
+}

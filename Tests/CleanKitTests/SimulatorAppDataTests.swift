@@ -77,12 +77,13 @@ final class SimulatorAppDataTests: XCTestCase {
     func testCleanerRunsCommandsAndReportsFailure() {
         let ok = CleanItem(id: "ok", category: .xcode, title: "ok", safety: .safe, bytes: 42, commands: [["true"]])
         let r = Cleaner.clean(ok, guard: Guard(home: home))
-        XCTAssertEqual(r.bytes, 42)
+        XCTAssertEqual(r.bytes, 0)
+        XCTAssertEqual(r.bytesIncomplete, true)
         XCTAssertEqual(r.removed, ["ran: true"])
 
         let bad = CleanItem(id: "bad", category: .xcode, title: "bad", safety: .safe, bytes: 42, commands: [["false"]])
         let f = Cleaner.clean(bad, guard: Guard(home: home))
-        XCTAssertEqual(f.bytes, 0, "nothing freed when a command fails")
+        XCTAssertEqual(f.bytes, 0, "a failed unmeasured command has no known byte count")
         XCTAssertEqual(f.failed.keys.sorted(), ["false"])
     }
 

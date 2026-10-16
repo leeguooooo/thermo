@@ -86,7 +86,7 @@ enum ToolCleanup {
                          safety: .review, bytes: s.bytes, files: s.files, lastUsed: s.newest,
                          note: tr("downloaded modules; Go fetches them again on the next build"),
                          blocked: verified == nil ? tr(ManagedToolScope.unavailable) : ctx.processes.running(["go"]).map { tr("quit %1$@ first", $0) },
-                         hint: "/usr/bin/env " + command.map(Shell.quote).joined(separator: " "), commands: [command], commandScope: verified.map { [$0] })
+                         hint: "/usr/bin/env " + command.map(Shell.quote).joined(separator: " "), commands: [command], measure: [dir], commandScope: verified.map { [$0] })
     }
 
     // MARK: pnpm
