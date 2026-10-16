@@ -3,6 +3,82 @@
 import XCTest
 
 final class SpaceLensModelTests: XCTestCase {
+    @MainActor func testLeavingAgainCancelsTheQueuedPostRestoreRefresh() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let old = SpaceLens.scan(root.path), calls = CountedReads()
+        let began = expectation(description: "old scan"), release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache.json"), measure: { _, _, _ in
+            _ = calls.next(); began.fulfill(); _ = release.wait(timeout: .now() + 5); return old
+        })
+        model.scan(); await fulfillment(of: [began], timeout: 2)
+        model.invalidateAfterRestore([root.path + "/restored"])
+        model.scan(); model.stop()
+        release.signal()
+        for _ in 0..<100 where model.scanning { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(calls.count, 1); XCTAssertNil(model.tree)
+    }
+    @MainActor func testRestoreInvalidationDiscardsOldScanAndWaitsBeforeRequestedReplacement() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("Downloads"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let cache = root.appendingPathComponent("cache.json"), old = SpaceLens.scan(root.path)
+        SpaceLens.save(old, to: cache)
+        let calls = CountedReads(), began = expectation(description: "old scan"), next = expectation(description: "fresh scan")
+        let release = DispatchSemaphore(value: 0); defer { release.signal() }
+        let model = SpaceLensModel(root: root.path, cache: cache, measure: { path, token, _ in
+            if calls.next() == 1 { began.fulfill(); _ = release.wait(timeout: .now() + 5); return old }
+            next.fulfill(); return SpaceLens.scan(path, cancellation: token)
+        })
+        model.scan(); await fulfillment(of: [began], timeout: 2)
+        let restored = root.appendingPathComponent("Downloads/restored.bin")
+        try Data(repeating: 37, count: 2 << 20).write(to: restored)
+        model.invalidateAfterRestore([restored.path])
+        XCTAssertNil(model.tree); XCTAssertTrue(model.scanning); XCTAssertTrue(model.stopping)
+        for _ in 0..<100 { model.scan() }
+        XCTAssertEqual(calls.count, 1)
+        release.signal(); await fulfillment(of: [next], timeout: 2)
+        for _ in 0..<100 where model.scanning { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(calls.count, 2)
+        XCTAssertTrue(model.tree?.folder(root.appendingPathComponent("Downloads").path)?.children.contains { $0.path == restored.path } == true)
+        XCTAssertTrue(SpaceLens.cached(root: root.path, from: cache)?.folder(root.appendingPathComponent("Downloads").path)?.children.contains { $0.path == restored.path } == true)
+    }
+
+    @MainActor func testRestoreInvalidationWithoutReopenDoesNotStartHiddenReplacementOrRepublishCache() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let cache = root.appendingPathComponent("cache.json"), old = SpaceLens.scan(root.path)
+        SpaceLens.save(old, to: cache)
+        let began = expectation(description: "old scan"), release = DispatchSemaphore(value: 0), calls = CountedReads()
+        defer { release.signal() }
+        let model = SpaceLensModel(root: root.path, cache: cache, measure: { _, _, _ in
+            _ = calls.next(); began.fulfill(); _ = release.wait(timeout: .now() + 5); return old
+        })
+        model.scan(); await fulfillment(of: [began], timeout: 2)
+        model.invalidateAfterRestore([root.path + "/restored"])
+        release.signal()
+        for _ in 0..<100 where model.scanning { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertNil(model.tree); XCTAssertEqual(calls.count, 1)
+        XCTAssertNil(SpaceLens.cached(root: root.path, from: cache))
+    }
+
+    @MainActor func testRestoreInvalidationClearsSelectionAndPreservesUnrelatedTree() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("Downloads"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("Downloads/item"), cache = root.appendingPathComponent("cache.json")
+        try Data("fixture".utf8).write(to: file)
+        SpaceLens.save(SpaceLens.scan(root.path), to: cache)
+        let model = SpaceLensModel(root: root.path, cache: cache)
+        model.toggle(file.path, bytes: 7); model.outcome = "old outcome"
+        model.invalidateAfterRestore(["/unrelated-restoration"])
+        XCTAssertNotNil(model.tree); XCTAssertEqual(model.basket.count, 1)
+        model.invalidateAfterRestore([file.path])
+        XCTAssertNil(model.tree); XCTAssertTrue(model.basket.isEmpty); XCTAssertNil(model.outcome)
+    }
     @MainActor func testCancelledDuplicateWorkerRetainsSlotAndCoalescesReopenRequests() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root.appendingPathComponent("Downloads"), withIntermediateDirectories: true)

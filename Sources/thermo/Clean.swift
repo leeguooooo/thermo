@@ -546,6 +546,7 @@ struct CleanCommand {
         else {
             lines(result).forEach(write)
             write(style.bold(tr("Restored %1$@ of %2$@ items", String(restored.count), String(result.items.count))))
+            for issue in result.issues ?? [] { write(style.yellow(tr(issue))) }
         }
         if restored.count != result.items.count { exit(1) }
     }

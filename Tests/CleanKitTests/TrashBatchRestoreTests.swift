@@ -76,6 +76,34 @@ final class TrashBatchRestoreTests: XCTestCase {
         XCTAssertEqual(record.items.map(\.status), ["done", "done"])
     }
 
+    func testActualRestoreInvalidatesSavedSpaceTreeButPreviewDoesNot() throws {
+        let legacy = try JSONDecoder().decode(TrashRestore.self, from: Data(#"{"id":"legacy","dryRun":false,"items":[]}"#.utf8))
+        XCTAssertNil(legacy.issues)
+        let path = home + "/Downloads/item"
+        try file(path)
+        let batch = try trashed([path])
+        let cache = SpaceLens.cacheURL(home: home)
+        SpaceLens.save(SpaceLens.scan(home), to: cache)
+        XCTAssertNotNil(SpaceLens.cached(root: home, from: cache))
+        _ = try TrashBatches.restore(id: batch.id, home: home, dryRun: true)
+        XCTAssertTrue(FS.exists(cache.path))
+        let result = try TrashBatches.restore(id: batch.id, home: home)
+        XCTAssertEqual(result.items.first?.status, "restored"); XCTAssertFalse(FS.exists(cache.path))
+    }
+
+    func testRestorePreservesAnUnexpectedCacheDirectoryAndReportsSeparateIssue() throws {
+        let path = home + "/Downloads/item"
+        try file(path)
+        let batch = try trashed([path])
+        let cache = SpaceLens.cacheURL(home: home)
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+        try Data("must remain".utf8).write(to: cache.appendingPathComponent("marker"))
+        let result = try TrashBatches.restore(id: batch.id, home: home)
+        XCTAssertEqual(result.items.first?.status, "restored"); XCTAssertEqual(result.issues?.count, 1)
+        XCTAssertEqual(try String(contentsOf: cache.appendingPathComponent("marker")), "must remain")
+        XCTAssertEqual(history()?.outcome, "partial")
+    }
+
     func testRestoreNeverOverwritesNewDataAtTheOriginalPath() throws {
         let path = home + "/Downloads/a.bin"
         try file(path)

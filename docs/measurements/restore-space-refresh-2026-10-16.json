@@ -1,0 +1,68 @@
+{
+  "date": "2026-10-16",
+  "scope": "Successful Trash restore invalidates space cache and old in-memory reads",
+  "sourceSHA256": {
+    "Sources/CleanKit/TrashBatch.swift": "26a422de9c39c3412a434ff5304ab1ea16b1d3f6f680570849c932d7879de0d3",
+    "Sources/ThermoApp/HistoryPage.swift": "c0dc6f4bb4499169261e3b4446b20300fd6e99e4363beca4a8e016ab75083f08",
+    "Sources/ThermoApp/SpacePage.swift": "14e7f8ed91f36eb593138de34abc30e09a9824abf61c3e9e16b74ef6bd018990",
+    "Sources/thermo/Clean.swift": "02ba222c09bf968e3b918faf4d142668f2b3a01240fef7d68a7933de972f5797",
+    "Tests/CleanKitTests/TrashBatchRestoreTests.swift": "3104896ef4acc1f5585e5b13a307b71a2499d067a3f578bc1518a0fdd2797ee6",
+    "Tests/ThermoAppTests/HistoryRestoreTests.swift": "14b015891c8dc16d699bec6bb54900f0d7f13824c9383cce110462057e422ce8",
+    "Tests/ThermoAppTests/SpaceLensModelTests.swift": "4579d67823296d6f9c887cdd93ef3a3cfc68c752a484f6b942b124d06355f56f"
+  },
+  "fullRegressionBeforeFinalLeaveQueueCase": {
+    "CleanKit": 551,
+    "ThermoApp": 155,
+    "ThermoCLI": 57,
+    "ThermoKitExcludingHardwareTests": 114,
+    "AgentCore": 34,
+    "total": 911,
+    "failures": 0,
+    "log": "/tmp/thermo-restore-space-full-tests.log"
+  },
+  "targetedBeforeLeaveQueueCase": {
+    "CleanKit": 27,
+    "ThermoApp": 13,
+    "total": 40,
+    "failures": 0,
+    "log": "/tmp/thermo-restore-space-targeted.log"
+  },
+  "newTests": {
+    "TrashBatchRestoreTests": 2,
+    "SpaceLensModelTests": 4,
+    "HistoryRestoreTests": 1
+  },
+  "nativeCLI": {
+    "scope": "owned temporary Home and fake Trash; real CLI restore",
+    "previewKeepsCacheAndDoesNotRestore": true,
+    "exit": 0,
+    "cacheInvalidated": true,
+    "bytes": 2097152,
+    "sha256": "b2b319a671a9a8f6cdbd7d47594f67859f5c8c83c51ea3edb672835cc4de7d6a",
+    "ownedWorkspaceRemoved": true
+  },
+  "behavior": [
+    "Real successful restore invalidates home-scoped SpaceLens cache; preview does not",
+    "Cache invalidation failure is an optional issue and distinct history cache item; actual restored paths still count as restored",
+    "Default History callback invalidates both app and space models",
+    "Space invalidation cancels old scans/duplicates, clears stale selection and metadata, and resets tree",
+    "Old worker cannot republish pre-restore tree/cache; a requested replacement starts only after it returns",
+    "Hidden models do not automatically launch replacement scans; leaving again clears pending request",
+    "Old last-opened metadata result is dropped after restore generation changes"
+  ],
+  "limits": [
+    "No new visible restore-to-space GUI acceptance",
+    "CLI uses real restore code but an owned temporary fake Trash, not user native Trash",
+    "Cross-process scan/restore cache ordering is not globally serialized",
+    "Last-opened metadata worker physical concurrency remains outside this change",
+    "Filesystem calls may delay cancellation; no force-quit/crash durability acceptance",
+    "Selection size provenance remains to audit",
+    "No user files moved, root query, helper install, hardware writes or release"
+  ],
+  "finalAppRetest": {
+    "tests": 156,
+    "failures": 0,
+    "log": "/tmp/thermo-restore-space-final-app-tests.log"
+  },
+  "build": "passed as part of final App retest"
+}

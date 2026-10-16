@@ -32,6 +32,8 @@ final class SpaceLensModel: ObservableObject {
     @Published private(set) var stoppingDuplicates = false
     @Published private(set) var duplicateProgress: Duplicates.Progress?
     private var cancellation: ScanCancellation?
+    private var scanGeneration = UUID(), needsRestoreRefresh = false, pendingRestoreRefresh = false
+    private var lastOpenedGeneration = UUID()
     private var duplicateCancellation: ScanCancellation?
     private var duplicateInFlight = false, pendingDuplicate = false
     private let searchDuplicates: @Sendable ([String], ScanCancellation, ((Duplicates.Progress) -> Void)?) -> [DuplicateGroup]
@@ -66,10 +68,16 @@ final class SpaceLensModel: ObservableObject {
         .map { NSHomeDirectory() + "/" + $0 }
 
     func scan() {
-        guard !scanning, !working else { return }
+        guard !working else { return }
+        if scanning {
+            if needsRestoreRefresh { pendingRestoreRefresh = true }
+            return
+        }
         cancellation?.cancel()
         let token = ScanCancellation()
         cancellation = token
+        scanGeneration = UUID(); let generation = scanGeneration
+        needsRestoreRefresh = false; pendingRestoreRefresh = false
         scanning = true
         stopping = false
         progress = nil
@@ -77,16 +85,19 @@ final class SpaceLensModel: ObservableObject {
         let measure = self.measure, cache = self.cache
         Task.detached(priority: .userInitiated) {
             let tree = measure(root, token) { p in
-                Task { @MainActor in if self.cancellation === token { self.progress = p } }
+                Task { @MainActor in if self.cancellation === token && self.scanGeneration == generation && !token.isCancelled { self.progress = p } }
             }
-            SpaceLens.save(tree, to: cache)
+            if !token.isCancelled { SpaceLens.save(tree, to: cache) }
+            if token.isCancelled { SpaceLens.invalidateCache(at: cache) }
             await MainActor.run {
                 guard self.cancellation === token else { return }
                 self.scanning = false
                 self.stopping = false
                 self.progress = nil
-                self.tree = tree
                 self.cancellation = nil
+                if self.pendingRestoreRefresh { self.pendingRestoreRefresh = false; self.scan(); return }
+                guard self.scanGeneration == generation else { return }
+                self.tree = tree
                 if self.tree?.folder(self.path) == nil { self.path = root }
                 self.lastOpened = [:]
             }
@@ -94,9 +105,22 @@ final class SpaceLensModel: ObservableObject {
     }
 
     func stop() {
+        pendingRestoreRefresh = false
         guard scanning else { return }
         cancellation?.cancel()
         stopping = true
+    }
+
+    func invalidateAfterRestore(_ paths: [String]) {
+        guard paths.contains(where: { $0 == root || $0.hasPrefix(root + "/") }) else { return }
+        scanGeneration = UUID(); needsRestoreRefresh = true; pendingRestoreRefresh = false
+        cancellation?.cancel(); progress = nil
+        if scanning { stopping = true }
+        stopDuplicates(); duplicates = nil
+        lastOpenedGeneration = UUID(); lastOpened = [:]
+        basket = [:]; selectionIdentities = [:]
+        tree = nil; outcome = nil
+        if !SpaceLens.invalidateCache(at: cache) { outcome = tr("The old space cache could not be cleared; scan again before using saved results") }
     }
 
     func open(_ path: String) { if tree?.folder(path) != nil { self.path = path } }
@@ -172,11 +196,12 @@ final class SpaceLensModel: ObservableObject {
     func loadLastOpened() {
         let files = (tree?.large ?? []).map(\.path).filter { lastOpened[$0] == nil }
         guard !files.isEmpty else { return }
+        let generation = lastOpenedGeneration
         Task.detached(priority: .utility) {
             var found: [String: Date?] = [:]
             for f in files.prefix(3000) { found[f] = .some(SpaceLens.lastOpened(f)) }
             let result = found
-            await MainActor.run { self.lastOpened.merge(result) { _, new in new } }
+            await MainActor.run { if self.lastOpenedGeneration == generation { self.lastOpened.merge(result) { _, new in new } } }
         }
     }
 
@@ -262,7 +287,7 @@ struct SpacePage: View {
             footer
         }
         .onAppear {
-            if model.tree == nil, !model.scanning { model.scan() }
+            if model.tree == nil { model.scan() }
             if tab == .large { model.loadLastOpened() }
         }
         .onChange(of: tab) { t in if t == .large { model.loadLastOpened() } }

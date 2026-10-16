@@ -20,7 +20,10 @@ final class HistoryModel: ObservableObject {
     private let didRestore: @MainActor ([String]) -> Void
     init(reader: @escaping @Sendable () -> OperationJournal.ReadReport = { OperationJournal.readReport(limit: 300) },
          restoreBatch: @escaping @Sendable (String) throws -> TrashRestore = { try TrashBatches.restore(id: $0) },
-         didRestore: @escaping @MainActor ([String]) -> Void = { _ in AppModels.shared.apps.invalidateAfterRestore() }) {
+         didRestore: @escaping @MainActor ([String]) -> Void = {
+             AppModels.shared.apps.invalidateAfterRestore()
+             SpaceLensModel.shared.invalidateAfterRestore($0)
+         }) {
         self.reader = reader; self.restoreBatch = restoreBatch; self.didRestore = didRestore
     }
 
@@ -60,7 +63,7 @@ final class HistoryModel: ObservableObject {
                 let restored = result.items.filter { $0.status == "restored" }.count
                 let others = result.items.filter { $0.status != "restored" }
                 text = ([tr("%1$@ of %2$@ items put back.", String(restored), String(result.items.count))]
-                        + others.map { FS.tilde($0.original) + ": " + ($0.reason ?? $0.status) }).joined(separator: "\n")
+                        + others.map { FS.tilde($0.original) + ": " + ($0.reason ?? $0.status) } + (result.issues ?? [])).joined(separator: "\n")
             } catch { text = error.localizedDescription }
             let restoredPaths = paths
             await MainActor.run {

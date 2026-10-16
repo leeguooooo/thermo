@@ -217,11 +217,14 @@ public enum TrashBatches {
         if result.items.contains(where: { $0.status == "restored" }) {
             ScanReportCache.invalidate(home: home)
             SpaceOverview.invalidate(home: home)
+            if !SpaceLens.invalidateCache(at: SpaceLens.cacheURL(home: home)) {
+                result.issues = [tr("The old space cache could not be cleared; scan again before using saved results")]
+            }
         }
         OperationJournal.record(OperationRecord(feature: "history", action: "restore", subject: batch.id, items: result.items.map {
             .init(target: $0.original, bytes: $0.status == "restored" && $0.bytes > 0 ? $0.bytes : nil,
                   status: $0.status == "restored" ? "done" : $0.status == "skipped" ? "skipped" : "failed", detail: $0.reason)
-        }), home: home)
+        } + (result.issues ?? []).map { .init(target: SpaceLens.cacheURL(home: home).path, status: "failed", detail: $0) }), home: home)
         return result
     }
 
@@ -309,4 +312,5 @@ public struct TrashRestore: Codable, Sendable {
     public var id: String
     public var dryRun: Bool
     public var items: [Item] = []
+    public var issues: [String]? = nil
 }

@@ -5,6 +5,15 @@ import AgentCore
 @testable import ThermoApp
 
 final class HistoryRestoreTests: XCTestCase {
+    @MainActor func testRestoreReportsCacheIssueWithoutLosingSuccessfulPaths() async throws {
+        var paths: [String] = []
+        let model = HistoryModel(reader: { .init(records: []) }, restoreBatch: { id in
+            .init(id: id, dryRun: false, items: [.init(original: "/restored", destination: "/trash", bytes: 1, status: "restored")], issues: ["cache warning fixture"])
+        }, didRestore: { paths = $0 })
+        model.restore(record())
+        for _ in 0..<100 where model.busy { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(paths, ["/restored"]); XCTAssertTrue(model.notice?.contains("cache warning fixture") == true)
+    }
     func record() -> OperationRecord {
         .init(feature: "apps", action: "uninstall", items: [.init(target: "/fixture", status: "done")],
               undo: .init(kind: "trashBatch", ref: UUID().uuidString))
