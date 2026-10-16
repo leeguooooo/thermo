@@ -4,7 +4,11 @@ import Foundation
 
 enum NativeDiskImage {
     struct CleanupFailure: LocalizedError {
-        var errorDescription: String? { "The update image mount or cleanup could not be confirmed; its workspace was preserved for manual inspection" }
+        var reason: String? = nil
+        var errorDescription: String? {
+            let message = "The update image mount or cleanup could not be confirmed; its workspace was preserved for manual inspection"
+            return reason.map { message + " (" + $0 + ")" } ?? message
+        }
     }
     static func isUDIF(_ data: Data) -> Bool {
         data.count >= 512 && data[(data.count - 512)..<(data.count - 508)].elementsEqual([0x6b, 0x6f, 0x6c, 0x79])
@@ -59,7 +63,9 @@ enum NativeDiskImage {
                                  detach: (String) -> Bool = { device in
                                      let result = CommandRunner.run("/usr/bin/hdiutil", arguments: ["detach", device], timeout: 30, captureError: false)
                                      return result.status == 0 && !result.timedOut && !result.cancelled
-                                 }, identity: (String) -> String? = FileIdentity.of) -> Bool {
+                                 }, identity: (String) -> String? = FileIdentity.of,
+                                 diagnostic: (String) -> Void = { _ in }) -> Bool {
+        func refuse(_ reason: String) -> Bool { diagnostic(reason); return false }
         func matches(_ image: [String: Any]) -> Bool {
             if (image["image-path"] as? String).map({ canonical($0) == canonical(payload) }) == true { return true }
             return (image["system-entities"] as? [[String: Any]])?.contains {
@@ -71,19 +77,21 @@ enum NativeDiskImage {
                 ($0["dev-entry"] as? String).map(attachedDevices.contains) == true
             } == true
         }
-        guard let before = try? query(), let images = before["images"] as? [[String: Any]] else { return false }
+        guard let before = try? query(), let images = before["images"] as? [[String: Any]] else { return refuse("image inventory unavailable") }
         // A returned device at an unrecognized path/point is still unresolved;
         // do not detach it by device name alone or claim that cleanup finished.
-        guard !images.contains(where: { !matches($0) && hasReturnedDevice($0) }) else { return false }
+        guard !images.contains(where: { !matches($0) && hasReturnedDevice($0) }) else { return refuse("returned device has an unrecognized attachment") }
         let candidates = images.filter(matches)
         for image in candidates {
-            guard let entities = image["system-entities"] as? [[String: Any]], let device = rootDevice(entities),
-                  !previousDevices.contains(device) else { return false }
+            guard let entities = image["system-entities"] as? [[String: Any]], let device = rootDevice(entities) else { return refuse("attachment has no unique root device") }
+            guard !previousDevices.contains(device) else { return refuse("root device was already present before attachment") }
             let exactPayload = (image["image-path"] as? String).map { canonical($0) == canonical(payload) } == true
-            guard exactPayload || attachedDevices.contains(device), detach(device) else { return false }
+            guard exactPayload || attachedDevices.contains(device) else { return refuse("device ownership is unconfirmed") }
+            guard detach(device) else { return refuse("normal detach did not succeed") }
         }
-        guard let after = try? query(), let remaining = after["images"] as? [[String: Any]],
-              !remaining.contains(where: { matches($0) || hasReturnedDevice($0) }), identity(mount) == mountIdentity else { return false }
+        guard let after = try? query(), let remaining = after["images"] as? [[String: Any]] else { return refuse("post-detach inventory unavailable") }
+        guard !remaining.contains(where: { matches($0) || hasReturnedDevice($0) }) else { return refuse("attachment is still present after detach") }
+        guard identity(mount) == mountIdentity else { return refuse("private mount directory identity changed") }
         return true
     }
 
@@ -157,8 +165,12 @@ enum NativeDiskImage {
             try FileManager.default.copyItem(atPath: app, toPath: copy)
             guard try NativeBundleValidation.facts(copy).seal == before.seal else { throw ArchiveFailure("The copied app differs from the read-only disk image") }
         } catch { problem = error }
+        var cleanupReason: String?
         guard finishAttachment(payload: payload.path, mount: mount, mountIdentity: mountIdentity,
-                               previousDevices: previousDevices, attachedDevices: attachedDevices), !uncertainAttach else { throw CleanupFailure() }
+                               previousDevices: previousDevices, attachedDevices: attachedDevices,
+                               diagnostic: { cleanupReason = $0 }), !uncertainAttach else {
+            throw CleanupFailure(reason: cleanupReason ?? "attach outcome was uncertain")
+        }
         if let problem { throw problem }
     }
 }
