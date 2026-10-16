@@ -30,6 +30,7 @@ import ThermoL10n
     @Published private(set) var issue: String?
     private(set) var interruption: Interruption?
     private(set) var finished: CleanScreenSession.Finish?
+    var shortcutInput: ((Int64, UInt32, Bool, Bool) -> Void)?
     private let driver: CleanScreenDriver
     private let clock: () -> TimeInterval
     var active: Bool { session != nil }
@@ -88,11 +89,13 @@ private final class CleanScreenWindow: NSWindow {
     private var observations: [(NotificationCenter, NSObjectProtocol)] = []
     private weak var model: CleanScreenModel?
     private weak var previousWindow: NSWindow?
+    private var previousApplication: NSRunningApplication?
     private enum Failure: Error { case unavailable }
     func begin(_ model: CleanScreenModel) throws {
         guard let displays = Self.displayConfiguration(), taps.isEmpty, windows.isEmpty, hasAccessibility else { throw Failure.unavailable }
         let frames = displays.map(\.frame)
         self.model = model; previousWindow = NSApp?.keyWindow?.sheetParent ?? NSApp?.keyWindow
+        previousApplication = NSWorkspace.shared.frontmostApplication
         // Session tap: never use the root-only HID tap. System-defined events cover
         // media keys delivered to this stream; hardware/OS paths still need device acceptance.
         // Keep ordinary keys in their own tap. If macOS strips denied key events,
@@ -112,6 +115,7 @@ private final class CleanScreenWindow: NSWindow {
                             return Unmanaged.passUnretained(event)
                         }
                         if type == .keyDown || type == .keyUp {
+                            model.shortcutInput?(event.getIntegerValueField(.keyboardEventKeycode),CleanScreenKeyBinding.flags(event.flags),type == .keyDown,event.getIntegerValueField(.keyboardEventAutorepeat) != 0)
                             let flags = event.flags.intersection([.maskCommand, .maskControl, .maskAlternate, .maskShift])
                             model.key(event.getIntegerValueField(.keyboardEventKeycode), down: type == .keyDown,
                                       repeated: event.getIntegerValueField(.keyboardEventAutorepeat) != 0, modified: !flags.isEmpty)
@@ -132,6 +136,7 @@ private final class CleanScreenWindow: NSWindow {
             MainActor.assumeIsolated {
                 guard let model, model.active else { return event }
                 if event.type == .keyDown || event.type == .keyUp {
+                    model.shortcutInput?(Int64(event.keyCode),CleanScreenKeyBinding.flags(event.modifierFlags),event.type == .keyDown,event.isARepeat)
                     let flags = event.modifierFlags.intersection([.command,.control,.option,.shift])
                     model.key(Int64(event.keyCode),down:event.type == .keyDown,repeated:event.isARepeat,modified:!flags.isEmpty)
                 } else if event.type == .flagsChanged { model.modifiersChanged() }
@@ -180,6 +185,7 @@ private final class CleanScreenWindow: NSWindow {
         observations.append((center, observer))
     }
     func end() {
+        let restoreFocus = model?.interruption == nil
         for tap in taps { CGEvent.tapEnable(tap: tap, enable: false) }
         for source in sources { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
         for tap in taps { CFMachPortInvalidate(tap) }
@@ -189,7 +195,11 @@ private final class CleanScreenWindow: NSWindow {
         for (center, observer) in observations { center.removeObserver(observer) }; observations = []
         let old = windows; windows = []
         for window in old { window.close() }
-        if NSApp?.isActive == true, previousWindow?.isVisible == true { previousWindow?.makeKeyAndOrderFront(nil) }
-        previousWindow = nil
+        if restoreFocus, NSApp?.isActive == true {
+            if let previousApplication,previousApplication.processIdentifier != getpid(),!previousApplication.isTerminated {
+                previousApplication.activate(options:.activateIgnoringOtherApps)
+            } else if previousWindow?.isVisible == true { previousWindow?.makeKeyAndOrderFront(nil) }
+        }
+        previousWindow = nil;previousApplication = nil
     }
 }

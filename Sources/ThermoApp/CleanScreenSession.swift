@@ -3,6 +3,7 @@ import ThermoL10n
 
 enum CleanScreenDuration: String, CaseIterable, Identifiable {
     case oneMinute, twoMinutes, fiveMinutes, manual
+    static let preferenceKey = "dev.thermo.cleanScreen.duration"
     var id: String { rawValue }
     var seconds: TimeInterval? {
         switch self { case .oneMinute: return 60; case .twoMinutes: return 120; case .fiveMinutes: return 300; case .manual: return nil }

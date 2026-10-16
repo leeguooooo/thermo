@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "df0f909",
+  "sourceSHA256": {
+    "Sources/ThermoApp/CleanScreenShortcut.swift": "1d940a3f3d7d656ec3aa18405a8931248cc6b43e7ac6d9715f9e0de90dcf3124",
+    "Sources/ThermoApp/CleanScreenShortcutView.swift": "639012dab6340b9c441ece41b8997169ea703b692eb287cb31e12a5fe521e552",
+    "Sources/ThermoApp/CleanScreenController.swift": "d06d97837f99278151f62d5a10b52bb79a614b8c5d4c007c87a4515d53e72976",
+    "Sources/ThermoApp/CleanScreenSession.swift": "f08cd37bfff7732200ccb42cccdd0bb01c55b10f10d14bd11aa298c7569b3610",
+    "Sources/ThermoApp/CleanScreenView.swift": "a388473641791accd0a4208cd4c4dfd59c01458d95b1a5d7f623c4d88c998ed3",
+    "Sources/ThermoApp/main.swift": "a98fa2afc254c826b4672717fa277455e2e37cef2c02b1c7f5e46375770405c2",
+    "Sources/ThermoL10n/ZhHans.swift": "67b843ab6705fa93f0e1bcd415f1d4a48733e424975ecc3291db281fedd1f4c5",
+    "Tests/ThermoAppTests/CleanScreenShortcutTests.swift": "7adbd2ac256e90d58d5bf4c96a87038e3fa3cdf68101b4f4c944615c7c238cb4",
+    "scripts/verify-clean-screen-shortcut-ui.swift": "435529400b2a3db53df361abc8a8bed5b11b7b0b5306a2b96d9de66b3ba767c2"
+  },
+  "regression": {
+    "broadBeforeExclusiveOptionFix": {
+      "tests": 1241,
+      "failures": 0,
+      "excluded": [
+        "HardwareTests"
+      ],
+      "logSHA256": "f042068227b61db2bb507e194c53988f1c4830ddbdfc11ca407e4d414e2eea87"
+    },
+    "finalExclusiveAppSuite": {
+      "tests": 235,
+      "failures": 0,
+      "shortcutModelTests": 13,
+      "logSHA256": "f0cb0450a18f2760037bf6f4478a063088242878e5cdcdb6033ea5ac354a3548"
+    }
+  },
+  "native": {
+    "existingAccessibilityTrust": true,
+    "permissionChanged": false,
+    "privateHome": true,
+    "singleDisplay": true,
+    "trace": [
+      "AX_TRUSTED true baselineTaps=0",
+      "BINDING ⌃⌥⌘Y stored=true",
+      "ACTIVE true taps=2 overlays=1 cause=none",
+      "ACTIVE false taps=0 overlays=0 cause=none",
+      "ACTIVE true taps=2 overlays=1 cause=none",
+      "ACTIVE false taps=0 overlays=0 cause=none",
+      "FRONT com.cmuxterm.app",
+      "FRONT dev.thermo.qa.shortcut.checker.72b72bd8106646cf9854cfa2e33712f9",
+      "FRONT com.cmuxterm.app",
+      "CONFLICT_PRESERVED true issue=true",
+      "CONFLICT_RESERVATION_RELEASE 0",
+      "BINDING Off stored=false"
+    ],
+    "crossProcessExclusiveRegistration": [
+      "Y: register=-9878",
+      "Y: register=0, release=0"
+    ],
+    "userReport": "新候选就绪后，用户实际按键并回复：黑屏了",
+    "globalBackgroundScope": "用户按提示在其他 App 前台测试并确认黑屏；日志缺少第一次启动前的前台 App 身份，后台启动及焦点恢复仍待最终安装候选复验",
+    "watchdogUsed": false,
+    "fixtureProcessesExited": true,
+    "testShortcutRemovedBeforeExit": true,
+    "preferenceRemoved": true
+  },
+  "limitations": [
+    "No installed app replacement or release",
+    "Physical media keys, multi-display/hotplug, sleep and timed expiry remain pending",
+    "Exclusive Carbon registration detects competing exclusive hotkeys; does not establish all possible third-party shortcut conflict behavior"
+  ],
+  "qaIncident": {
+    "app": "Calculator",
+    "effect": "Esc intended for menu dismissal cleared displayed 1 to 0; AX number 1 restored displayed 1, Undo unavailable",
+    "remaining": "Original calculation context could not be verified or restored. No further Calculator actions taken."
+  }
+}
