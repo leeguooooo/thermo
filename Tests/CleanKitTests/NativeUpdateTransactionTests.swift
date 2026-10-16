@@ -559,7 +559,9 @@ final class NativeUpdateTransactionTests: XCTestCase {
     func testDMGWithMultipleAppsFailsAndStillDetaches() throws {
         try makeApp(home + "/package/Other.app", version: "2.0", build: "200", id: "com.example.other")
         try dmg()
-        XCTAssertThrowsError(try prepared())
+        XCTAssertThrowsError(try prepared()) { error in
+            if error is NativeDiskImage.CleanupFailure { XCTFail("Multiple-app rejection left cleanup unconfirmed: " + error.localizedDescription) }
+        }
         try assertNoOwnedMountedImages()
         XCTAssertEqual(build(original), "100")
     }
