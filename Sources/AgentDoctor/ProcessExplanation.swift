@@ -29,11 +29,13 @@ public struct ProcessExplanation: Codable, Sendable {
     public var listeners: ProcessListeners? = nil
     public var sleepAssertions: ProcessSleepAssertions? = nil
     public var launchServices: ProcessLaunchServices? = nil
+    public var gitContext: ProcessGitContext? = nil
 
     public static func capture(_ pid: Int32, expected: ProcessIdentity? = nil) throws -> ProcessExplanation {
         guard pid > 0, expected.map({ $0.pid == pid }) ?? true else { throw Unavailable() }
         return try capture(pid, expected: expected, table: ProcessTable.current(.init(uid: nil, cpu: false, detailsUID: getuid())),
-                    identity: ProcessTable.identity, parent: ProcessTable.parentPID, paths: { OpenFiles.observe($0) }, listeners: ProcessListeners.capture, sleepAssertions: ProcessSleepAssertions.capture, launchServices: ProcessLaunchServices.capture)
+                    identity: ProcessTable.identity, parent: ProcessTable.parentPID, paths: { OpenFiles.observe($0) }, listeners: ProcessListeners.capture, sleepAssertions: ProcessSleepAssertions.capture, launchServices: ProcessLaunchServices.capture,
+                    gitContext: ProcessGitContext.capture, workingDirectory: ProcessTable.workingDirectory)
     }
 
     struct Unavailable: LocalizedError {
@@ -51,7 +53,9 @@ public struct ProcessExplanation: Codable, Sendable {
                         paths: (Int32) -> OpenFiles.Observation, uid: UInt32 = getuid(), maximumDepth: Int = 32,
                         listeners: (Int32) -> ProcessListeners? = { _ in nil },
                         sleepAssertions: (Int32) -> ProcessSleepAssertions? = { _ in nil },
-                        launchServices: (Int32) -> ProcessLaunchServices? = { _ in nil }) throws -> ProcessExplanation {
+                        launchServices: (Int32) -> ProcessLaunchServices? = { _ in nil },
+                        gitContext: (String?) -> ProcessGitContext = { _ in .unavailable },
+                        workingDirectory: ((Int32) -> String?)? = nil) throws -> ProcessExplanation {
         guard pid > 0, maximumDepth > 0, maximumDepth <= 128, table.available,
               let target = table.entries.first(where: { $0.pid == pid }), let initial = target.sampledIdentity,
               expected.map({ $0 == initial }) ?? true, identity(pid) == initial else { throw Unavailable() }
@@ -74,6 +78,8 @@ public struct ProcessExplanation: Codable, Sendable {
         let listening = target.uid == uid ? listeners(pid) : nil
         let sleep = target.uid == uid ? sleepAssertions(pid) : nil
         let services = target.uid == uid ? launchServices(pid) : nil
+        var git = target.uid == uid ? gitContext(target.cwd) : nil
+        if target.uid == uid,let workingDirectory,workingDirectory(pid) != target.cwd { git = .unavailable }
         // Verify relationships too: a live child can be reparented without changing its identity.
         for process in captured {
             guard let expected = process.sampledIdentity, identity(process.pid) == expected,
@@ -102,6 +108,6 @@ public struct ProcessExplanation: Codable, Sendable {
         return .init(pid: pid, sampled: Date(), chain: nodes, chainComplete: complete, application: application,
                      attribution: attribution, observedPaths: observation.map { Array($0.paths.prefix(100)).map(displayed) },
                      pathQueriesComplete: (observation?.complete ?? false) && !shortenedPaths,
-                     pathsTruncated: (observation?.truncated ?? false) || shortenedPaths, issues: issues, listeners: listening, sleepAssertions: sleep, launchServices: services)
+                     pathsTruncated: (observation?.truncated ?? false) || shortenedPaths, issues: issues, listeners: listening, sleepAssertions: sleep, launchServices: services,gitContext:git)
     }
 }

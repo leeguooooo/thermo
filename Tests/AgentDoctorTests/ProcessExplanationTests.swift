@@ -99,6 +99,29 @@ extension ProcessExplanationTests {
 }
 
 extension ProcessExplanationTests {
+    func testGitReadCannotPublishAfterPIDReuse() throws {
+        let p=process(10,parent:0);var actual=p.sampledIdentity!
+        XCTAssertThrowsError(try ProcessExplanation.capture(10,table:.init(entries:[p]),identity:{ _ in actual },parent:{ _ in 0 },paths:{ _ in .init(paths:[],complete:true) },uid:501,gitContext:{ _ in
+            actual.started.addTimeInterval(1);return .init(state:.noneObserved,queryComplete:true)
+        }))
+    }
+    func testGitReaderDoesNotInspectOtherUsers() throws {
+        let p=process(10,parent:0,uid:900)
+        let report=try ProcessExplanation.capture(10,table:.init(entries:[p]),identity:{ _ in p.sampledIdentity },parent:{ _ in 0 },paths:{ _ in .init(paths:[],complete:true) },uid:501,gitContext:{ _ in
+            XCTFail("do not inspect another user's repository");return .unavailable
+        },workingDirectory:{ _ in XCTFail("do not read another user's cwd");return nil })
+        XCTAssertNil(report.gitContext)
+    }
+    func testWorkingDirectoryChangeDiscardsGitObservation() throws {
+        let p=process(10,parent:0)
+        let report=try ProcessExplanation.capture(10,table:.init(entries:[p]),identity:{ _ in p.sampledIdentity },parent:{ _ in 0 },paths:{ _ in .init(paths:[],complete:true) },uid:501,gitContext:{ cwd in
+            XCTAssertEqual(cwd,p.cwd);return .init(state:.observed,root:"/fixture",branch:"main",queryComplete:true)
+        },workingDirectory:{ _ in "/other-project" })
+        XCTAssertEqual(report.gitContext?.state,.unavailable);XCTAssertNil(report.gitContext?.root)
+    }
+}
+
+extension ProcessExplanationTests {
     func testPowerAssertionReadCannotPublishAfterPIDReuse() throws {
         let p=process(10,parent:0);var actual=p.sampledIdentity!
         XCTAssertThrowsError(try ProcessExplanation.capture(10,table:.init(entries:[p]),identity:{ _ in actual },parent:{ _ in 0 },paths:{ _ in .init(paths:[],complete:true) },uid:501,sleepAssertions:{ _ in

@@ -1,6 +1,15 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Git context near the process working directory": "进程工作目录附近的 Git 信息",
+    "Repository: %1$@": "仓库：%1$@",
+    "Branch: %1$@": "分支：%1$@",
+    "Detached HEAD": "游离 HEAD",
+    "HEAD: %1$@": "HEAD：%1$@",
+    "The branch was observed, but its commit could not be established.": "已观察到分支，但无法核实它的提交。",
+    "No Git marker was observed in the working directory or its inspected parents.": "工作目录及已检查的上级目录中未发现 Git 标记。",
+    "Git context is unavailable or changed during inspection.": "Git 信息无法读取，或在检查期间发生变化。",
+    "Working directory metadata does not prove which project the process is using. Git status, remotes and repository scripts are not inspected.": "工作目录信息不能证明进程正在使用哪个项目。此处不检查 Git 状态、远端或仓库脚本。",
     "Simulator cleanup scope could not be verified; scan again before cleaning.": "无法核实模拟器清理范围，请重新扫描后再清理。",
     "Simulator cleanup overlaps a whitelisted location; it was kept.": "模拟器清理涉及白名单保护的位置，已保留。",
     "Last simulator use is unavailable": "模拟器上次使用时间未知",

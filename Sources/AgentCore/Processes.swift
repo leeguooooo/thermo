@@ -107,8 +107,13 @@ public struct ProcessTable: Sendable {
     }
 
     static func cwd(_ pid: pid_t) -> String? {
+        workingDirectory(pid)
+    }
+
+    /// Current kernel-observed cwd, unavailable when the process cannot be read.
+    public static func workingDirectory(_ pid: pid_t) -> String? {
         var vp = proc_vnodepathinfo()
-        guard proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &vp, Int32(MemoryLayout<proc_vnodepathinfo>.size)) > 0 else { return nil }
+        guard pid > 0, proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &vp, Int32(MemoryLayout<proc_vnodepathinfo>.size)) == MemoryLayout<proc_vnodepathinfo>.size else { return nil }
         let s = withUnsafeBytes(of: vp.pvi_cdir.vip_path) { raw in String(decoding: raw.prefix { $0 != 0 }, as: UTF8.self) }
         return s.isEmpty ? nil : s
     }

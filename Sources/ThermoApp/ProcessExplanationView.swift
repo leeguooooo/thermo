@@ -82,6 +82,17 @@ struct ProcessInspectionTarget: Identifiable {
                                 if !node.args.isEmpty { Text(node.args.map { String(reflecting: $0) }.joined(separator: " ")).font(.caption.monospaced()) }
                             }.textSelection(.enabled)
                         }
+                        Text(tr("Git context near the process working directory")).font(.headline)
+                        if let git=report.gitContext,git.state == .observed {
+                            if let root=git.root { Text(tr("Repository: %1$@",root)).font(.caption.monospaced()).textSelection(.enabled) }
+                            if let branch=git.branch { Text(tr("Branch: %1$@",branch)).font(.caption).textSelection(.enabled) }
+                            if git.detached == true { Text(tr("Detached HEAD")).font(.caption) }
+                            if let commit=git.commit { Text(tr("HEAD: %1$@",commit)).font(.caption.monospaced()).textSelection(.enabled) }
+                            if !git.queryComplete { Text(tr("The branch was observed, but its commit could not be established.")).font(.caption).foregroundStyle(.orange) }
+                        } else {
+                            Text(tr(report.gitContext?.state == .noneObserved ? "No Git marker was observed in the working directory or its inspected parents." : "Git context is unavailable or changed during inspection.")).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Text(tr("Working directory metadata does not prove which project the process is using. Git status, remotes and repository scripts are not inspected.")).font(.caption).foregroundStyle(.secondary)
                         Text(tr("Observed cwd and vnode descriptor paths")).font(.headline)
                         if let paths = report.observedPaths {
                             if paths.isEmpty { Text(tr("No paths were observed; this does not prove the process has no open files.")).font(.caption) }

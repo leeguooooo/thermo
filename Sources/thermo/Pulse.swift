@@ -57,6 +57,15 @@ struct PulseCommand {
                 if !node.args.isEmpty { lines.append(node.args.map { String(reflecting: $0) }.joined(separator: " ")) }
             }
             lines += report.issues.map { tr($0) }
+            lines.append(tr("Git context near the process working directory"))
+            if let git=report.gitContext,git.state == .observed {
+                if let root=git.root { lines.append(tr("Repository: %1$@",root)) }
+                if let branch=git.branch { lines.append(tr("Branch: %1$@",branch)) }
+                if git.detached == true { lines.append(tr("Detached HEAD")) }
+                if let commit=git.commit { lines.append(tr("HEAD: %1$@",commit)) }
+                if !git.queryComplete { lines.append(tr("The branch was observed, but its commit could not be established.")) }
+            } else { lines.append(tr(report.gitContext?.state == .noneObserved ? "No Git marker was observed in the working directory or its inspected parents." : "Git context is unavailable or changed during inspection.")) }
+            lines.append(tr("Working directory metadata does not prove which project the process is using. Git status, remotes and repository scripts are not inspected."))
             lines.append(tr("Observed cwd and vnode descriptor paths")); lines += report.observedPaths ?? [tr("Path inspection is unavailable for this process")]
             lines.append(tr("Observed TCP listeners"))
             if let listeners = report.listeners {
