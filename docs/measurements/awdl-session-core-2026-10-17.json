@@ -1,0 +1,260 @@
+{
+  "date": "2026-10-17",
+  "sourceCommit": "be4103364094152d4e0d6cb09da2593bd2c3774e",
+  "parentCommit": "d47cbb3c9924b165381f7578e2111f6d861950dd",
+  "sourceSHA256": {
+    "Sources/CSMC/awdl.c": "f79ac3bfb52801af90b6bd00e277bf9f918ed41521af46949af5b9de7de71e88",
+    "Sources/CSMC/include/awdl.h": "df4ecb5a00935ac99fedc2d709b97f7b96417e4f29e0b67c6cd2723ef5825398",
+    "Sources/CSMC/include/smc.h": "40222d39b67992274b7a6604fc3c0fd3b859bb2d3a667f3a65e0ba0398586f7e",
+    "Sources/ThermoKit/AWDLLeaseFile.swift": "fa3662ace2015195770d1b73c7fdaf15d063cdcca1f77c1159415b3ec3e0c984",
+    "Sources/ThermoKit/AWDLSession.swift": "ab313aed15483628427dd19e85a4354b5d329b00944a394901ca0a759209cdb4",
+    "Tests/ThermoKitTests/AWDLLeaseFileTests.swift": "edffbe675bcc4e4999fc5198bd60aa63a9e8d8894eb012f42f6335681cb5311c",
+    "Tests/ThermoKitTests/AWDLSessionTests.swift": "5a3fbd0fd55a38b5f592e506f40ec932383ee778f4bc4b0464005a9082d83ec8",
+    "docs/mole-native-functions.md": "d8539d1769a97c544425c1a4170f919c2093a3d45c1fc266f811ec0963f492ea",
+    "docs/mole-parity.md": "58499174510fd0ec21fb6af89beb124f42a835a03e040021cd4d3af09ef4ae86",
+    "scripts/verify-awdl-recovery.swift": "5c1ba36f07ba1ca424bebbfacce028da01f0e1606d83ace3b26c444663e677ae"
+  },
+  "status": "AWDL foundation only; not exposed by helper, CLI or App",
+  "regression": {
+    "ThermoKitSelectedTests": 139,
+    "failures": 0,
+    "newAWDLTests": 25,
+    "excluded": [
+      "HardwareTests"
+    ],
+    "selection": "All XCTestCase class declarations in Tests/ThermoKitTests except HardwareTests",
+    "testLogSHA256": "05831d4cdecd2eb4647404d6691c8ff57cad7aba39ff2a59f44149e550238319",
+    "buildLogSHA256": "61da077da178dc122feb7de71cc6303ca9f27865f5a7d18f79afeeb5e15389eb",
+    "helperProductBuilt": true,
+    "helperProductExecuted": false,
+    "nativeSourceMatchesIntegratedRuntimeFiles": true,
+    "integrationNote": "Rebase ae714d4 to d47cbb3 changed no ThermoKit, CSMC, Kit tests or Package.swift files; verified with git diff. Only the native acceptance script added the prepared-write crash scenario after component tests."
+  },
+  "native": {
+    "fixtureOnlyActuator": true,
+    "rootPrivilegeUsed": false,
+    "realInterfaceWrites": false,
+    "helperInstalledOrStarted": false,
+    "moleHelperExecuted": false,
+    "processResults": [
+      {
+        "label": "final-probe-before",
+        "exit": 0,
+        "observation": {
+          "bootIdentityAvailable": true,
+          "continuousClockAvailable": true,
+          "index": 15,
+          "mode": "readOnlyProbe",
+          "present": true,
+          "up": true
+        }
+      },
+      {
+        "label": "final-prepared-crash",
+        "exit": -9,
+        "observation": {
+          "interfaceUp": true,
+          "mode": "simulatedPreparedCrash",
+          "recordSaved": true
+        }
+      },
+      {
+        "label": "final-recover-prepared-crash",
+        "exit": 0,
+        "observation": {
+          "interfaceUp": true,
+          "mode": "simulatedRecovery",
+          "phase": "idle",
+          "reason": "helperStarted",
+          "recordRemoved": true,
+          "writes": 0
+        }
+      },
+      {
+        "label": "final-arm-crash",
+        "exit": -9,
+        "observation": {
+          "active": true,
+          "interfaceUp": false,
+          "mode": "simulatedCrash"
+        }
+      },
+      {
+        "label": "final-recover-arm-crash",
+        "exit": 0,
+        "observation": {
+          "interfaceUp": true,
+          "mode": "simulatedRecovery",
+          "phase": "idle",
+          "reason": "helperStarted",
+          "recordRemoved": true,
+          "writes": 1
+        }
+      },
+      {
+        "label": "final-probe-after",
+        "exit": 0,
+        "observation": {
+          "bootIdentityAvailable": true,
+          "continuousClockAvailable": true,
+          "index": 15,
+          "mode": "readOnlyProbe",
+          "present": true,
+          "up": true
+        }
+      }
+    ],
+    "binarySHA256": "fd336d08f83aef5be5861bbcd7407a70f9841d1a34c5b846d88ceea1da3edbdb",
+    "compileLogSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "preparedCrashEvidence": "Record was durable, process died before fake actuator effect; fresh worker cleared record with zero writes.",
+    "appliedCrashEvidence": "Process died after fake actuator disabled JSON interface; fresh worker restored with one write and removed record.",
+    "workerScope": "All actuator changes use an owned JSON file and AWDLLeaseFile in an owned UID directory; no real interface setter is passed to the controller.",
+    "realProbeScope": "C SIOCGIFFLAGS read only; before and after probes report the same index 15 and UP=true. No MAC or IP addresses are included.",
+    "allWorkersTerminal": true
+  },
+  "moleStudy": {
+    "version": "1.16.0",
+    "build": "324",
+    "helperSHA256": "2f309f5f3d6f4ce416ea92cc78363ab97869771dd0817edf98849fbcc1a19e1d",
+    "architecture": "arm64",
+    "fatSliceOffset": 180224,
+    "fatSliceLength": 181840,
+    "provider": "REA Hopper",
+    "analysisProfileDigest": "671f379fc1470e7c1faa3a87f552462434f74660ec0faa71bbba6d7c4835ab1a",
+    "observedProcedures": {
+      "flagsRead": "0x10000c590",
+      "flagsWrite": "0x10000c714",
+      "leaseLoad": "0x10000ca08",
+      "leaseWrite": "0x10000ccfc",
+      "startCandidate": "0x100004ea0",
+      "disableCandidate": "0x100004fc0",
+      "restoreCandidate": "0x100004bf4"
+    },
+    "confirmedStoreAssembly": [
+      "0x10000cd9c: mov w1, #0xb01",
+      "0x10000cda0: mov w2, #0x180",
+      "0x10000cda4: bl Darwin.open wrapper"
+    ],
+    "sdkMapping": {
+      "0xb01": [
+        "O_WRONLY",
+        "O_CREAT",
+        "O_EXCL",
+        "O_NOFOLLOW"
+      ],
+      "0x180": "0600",
+      "0xc0206911": "SIOCGIFFLAGS",
+      "0x80206910": "SIOCSIFFLAGS",
+      "IFF_UP": "0x1"
+    },
+    "artifacts": [
+      {
+        "file": "dist/mole-study/awdl-helper-2026-10-17/disable-decompile.json",
+        "sha256": "0b07f327124e416bcc0fd878f528152c80c13212360712be47b76e2f9ade6940",
+        "evidenceID": "ev_e5ef970a5263c7b5a829dde62fb7826a9bcd3fc1e10a8575cc2db4aa740030c3",
+        "operation": "procedure_pseudo_code",
+        "confidence": "observed"
+      },
+      {
+        "file": "dist/mole-study/awdl-helper-2026-10-17/interface-decompile.json",
+        "sha256": "fc2bdd7cb5264dd4dc304bcfba7cc7f714bd18e78ff77724d91c0b31a9dd2b39",
+        "evidenceID": "ev_8ce26b94f20514ab12e0d0013f2f19fafd745230ade6b2781e6a4b1d6ae8bd7e",
+        "operation": "batch_decompile",
+        "confidence": "derived"
+      },
+      {
+        "file": "dist/mole-study/awdl-helper-2026-10-17/lease-decompile.json",
+        "sha256": "0d3ba916fef378d0368f2ff63fd099e71ec4cda9be6017b7b44d3707639b3f8b",
+        "evidenceID": "ev_ff6474f7791afe90126134a97dfca5e30f23606c6c6d3ffccd5a7f891fb531c0",
+        "operation": "batch_decompile",
+        "confidence": "derived"
+      },
+      {
+        "file": "dist/mole-study/awdl-helper-2026-10-17/lease-xrefs.json",
+        "sha256": "8c01c1be47493e61a8f00090d8bf80ad9a4542a5a1c3d7af3bca05a373977449",
+        "evidenceID": "ev_ecbc8af40cea0a4c848e766c6fb641f82a12bcfff2e378d09c6170ef26be4f11",
+        "operation": "xrefs",
+        "confidence": "observed"
+      },
+      {
+        "file": "dist/mole-study/awdl-helper-2026-10-17/procedures.json",
+        "sha256": "fb69be52da7ae4439ecb86d18049c9717f0a98718dab03bdf20206fb397f45bb",
+        "evidenceID": "ev_114e627922840f5a20c695ab8fcbe0e44336b599b82781d70550ba5a08922fcf",
+        "operation": "search_procedures",
+        "confidence": "observed"
+      },
+      {
+        "file": "dist/mole-study/awdl-helper-2026-10-17/restore-callers.json",
+        "sha256": "2a57542c462744cffa472c8808de235ecd65999e4fbd6ab9e1b25d7d2a5c80f3",
+        "evidenceID": "ev_5d75d834efb202a73381416b08311d51fff52b50d710a1017c12c1f749bbcc38",
+        "operation": "procedure_callers",
+        "confidence": "observed"
+      },
+      {
+        "file": "dist/mole-study/awdl-helper-2026-10-17/start-decompile.json",
+        "sha256": "60ffc556cae0f92d239e944e737990d4dac9a628dce99e2f494ded90544a964f",
+        "evidenceID": "ev_871825c6fb7ded372324d00bd596ab588214148236d107295237b4f671b6f6e5",
+        "operation": "procedure_pseudo_code",
+        "confidence": "observed"
+      },
+      {
+        "file": "dist/mole-study/awdl-helper-2026-10-17/store-assembly.json",
+        "sha256": "793962486855d9cfa9eaafd7b00068cb4fefc56df8ef1886e4876205f124cd94",
+        "evidenceID": "ev_76b093821ec4be75fefe3685f33501705feb3e28ececd180bdadd3636e349d24",
+        "operation": "procedure_assembly",
+        "confidence": "observed"
+      },
+      {
+        "file": "dist/mole-study/awdl-helper-2026-10-17/store-callers.json",
+        "sha256": "7b308b863dec5dc52b438373fecd6e00bad4bdce0d131981e55a33915771c510",
+        "evidenceID": "ev_8b89ce6e92ef141fd0664dc9efdb713c8dd61a28d0855f4136ec57ff0298a7f6",
+        "operation": "procedure_callers",
+        "confidence": "observed"
+      },
+      {
+        "file": "dist/mole-study/awdl-helper-2026-10-17/strings.json",
+        "sha256": "f4d5b9ed204cd800973ae1e0a43277ca5e6da139bab5781006ca1715d39796ac",
+        "evidenceID": "ev_ae4d0d60898f77851b630fe4436dc4e05befa06b7ce83af0c507ba987303d6f2",
+        "operation": "search_strings",
+        "confidence": "observed"
+      }
+    ],
+    "analysisTargetClosed": true,
+    "limitations": [
+      "Function names are stripped; semantic names are derived from references and call order.",
+      "Swift pseudocode has register reconstruction errors and is not original source.",
+      "No Mole runtime helper operation, complete XPC trust-path audit or full recovery-branch audit was performed.",
+      "Raw complete Evidence is local-only; permanent findings, addresses and hashes are retained here and in mole-native-functions.md."
+    ]
+  },
+  "design": {
+    "fixedInterface": "awdl0",
+    "durationSeconds": [
+      60,
+      3600
+    ],
+    "clock": "mach_continuous_time (SDK contract advances through sleep)",
+    "persistentRecord": "version 1; interface index, original UP flag, boot session UUID",
+    "fileStore": "root-owned directory and 0600 single-link regular file, O_NOFOLLOW/O_NONBLOCK, O_EXCL creation, lifetime flock, fsync file and directory, identity-bound clear",
+    "onFailure": "No new session until recovery or record cleanup is confirmed; expired/disconnected/restarted sessions do not automatically resume.",
+    "identityChange": "Boot change or missing/different interface index retires old record without writing to a different named interface.",
+    "limitations": [
+      "Interface index plus boot identity is not an atomic interface-generation identity.",
+      "Metadata validation and ioctl updates have check/use windows.",
+      "Filesystem and kernel calls do not have a hard timeout.",
+      "Caller must serialize access, schedule tick, and recover on all shutdown/removal paths; the core does not create its own timer."
+    ]
+  },
+  "nextRequiredIntegration": [
+    "Dedicated network queue independent of fan safety sampling.",
+    "AWDL startup recovery must still work when SMC/fan initialization is unavailable; current helper exits on SMC initialization failure.",
+    "Version-gated XPC protocol, one global network manager, per-connection ownership and disconnect recovery.",
+    "Dedicated network client connection so unrelated helper-call timeouts do not unexpectedly end its session.",
+    "Normal exit, helper update/replacement, removal preparation and recovery-failure handling must cover AWDL.",
+    "App/CLI support states, explicit disruption explanation, finite duration, stop/recovery controls and honest requested/observed state.",
+    "Signed root helper/device acceptance for actual AWDL toggling, sleep/wake, disconnect, expiry and recovery.",
+    "Charging control remains unimplemented; battery presence/charging observation does not establish charge-limit support."
+  ],
+  "installedAppReplaced": false,
+  "pushedOrReleased": false
+}
