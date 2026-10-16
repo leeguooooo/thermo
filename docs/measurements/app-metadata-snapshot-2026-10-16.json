@@ -1,0 +1,114 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "baa6c43",
+  "sourceSHA256": {
+    "Sources/CleanKit/AppMetadata.swift": "d5b74035d672134b6c039e1b9ce71856ce8a61e70dcf572eb3b95cbd6a5f76f0",
+    "Sources/CleanKit/AppReviewIdentity.swift": "d5ab9465bda9772cdee904f0a388d7037ded7c49e745769bc547e65e09a01640",
+    "Sources/CleanKit/Apps.swift": "63f9f3911be6ece301a5ac24b5f1648196360dc4edf195faa70e042695a85e06",
+    "Sources/CleanKit/AppUpdates.swift": "363f40d199def0a6442b7277e0f877ee321348d0e542c12929dc72c26a70222a",
+    "Sources/CleanKit/NativeAppUpdates.swift": "9f0865453c19f0c8c5bfafcbdf0762f8a289a03c2213a1b9ebb88c80979e9be8",
+    "Sources/CleanKit/NativeUpdateDownload.swift": "aa87ff4d8aa99cf9f48c4402ee50f4368f31652a5b6af663003ca407c80ece20",
+    "Sources/CleanKit/NativeUpdateTransaction.swift": "1b9a8c71a5ed1b97c0399b5d8bc8808115e3389b3a235aac1832e735711889ae",
+    "Sources/CleanKit/NativeBundleValidation.swift": "b4ceaac0b5c5d444bbbacf1ec768920f795c8a067db2f346e6af4341059bb5bc",
+    "Tests/CleanKitTests/AppMetadataTests.swift": "9d437cdee1fc7f889e28b31ed496ad5e3189eab00416b31cf71ed1cbe1d56f04",
+    "Tests/CleanKitTests/NativeUpdateTransactionTests.swift": "45e5695a0f5253c2ec9908dea74588f7c449ada6ffb5e05e26650fa5a806b00b"
+  },
+  "baselineNativeProbe": [
+    {
+      "mode": "identity",
+      "timedOut": false,
+      "exit": 0,
+      "stdout": "known",
+      "seconds": 0.006914625002536923
+    },
+    {
+      "mode": "read",
+      "timedOut": false,
+      "exit": 0,
+      "stdout": "known",
+      "seconds": 0.004282375000911998
+    },
+    {
+      "mode": "source",
+      "timedOut": false,
+      "exit": 0,
+      "stdout": "1",
+      "seconds": 0.005384332998801256
+    }
+  ],
+  "baselineExecutableSHA256": "2d04754c1365b21d08f200117f1b4ef840959bdc89abf8f69e00c597b932b4de",
+  "finalNativeProbe": [
+    {
+      "mode": "identity",
+      "exit": 0,
+      "stdout": "unknown",
+      "seconds": 0.008238124999479624
+    },
+    {
+      "mode": "read",
+      "exit": 0,
+      "stdout": "unknown",
+      "seconds": 0.005118874996696832
+    },
+    {
+      "mode": "source",
+      "exit": 0,
+      "stdout": "1",
+      "seconds": 0.012542749998829095
+    },
+    {
+      "mode": "pipeline",
+      "exit": 0,
+      "stdout": "{\"blocked\":true,\"canCheck\":false,\"identityKnown\":false,\"visible\":true}",
+      "seconds": 0.010201375000178814
+    }
+  ],
+  "finalExecutableSHA256": "295367cccbaeefa793677642c2b26765eeaa7aa3daf896bdda9a0e06aaafc38e",
+  "observedFailure": "FIFO did not block on this host, but old review/read incorrectly returned a known identity",
+  "inputLimitBytes": 1048576,
+  "newTests": {
+    "AppMetadataTests": 7,
+    "signedShortIdentifierMinimumOSSnapshot": 1
+  },
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 63,
+      "ThermoAppTests": 191,
+      "CleanKitTests": 663,
+      "AgentCoreTests": 34
+    },
+    "total": 1065,
+    "failures": 0,
+    "logSHA256": "7ef4982e363e64fbd3ef6239dcecd6783a5dd509d693137ff528c7a4c975a8a8",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ]
+  },
+  "nativeAcceptance": {
+    "fifoPreserved": true,
+    "appRemainsVisible": true,
+    "fifoIdentityUnknown": true,
+    "sourceBlocked": true,
+    "sourceCanCheck": false,
+    "metadataProbesOnly": true,
+    "feedsContacted": false,
+    "installedAppsChanged": false,
+    "signedBundleValidationUsesOwnedAdHocFixture": true,
+    "minimumOSMissingInOldFactsJSONDecodes": true
+  },
+  "cleanup": {
+    "allProbeProcessesExited": true,
+    "ownedWorkspaceRemoved": true
+  },
+  "limits": [
+    "This host did not reproduce a FIFO hang; the verified defect was a false known identity",
+    "Info.plist input is capped; blocking regular filesystems or pathological parsing do not have a promised worst-case latency",
+    "Linked Info.plist may supply bounded display fields but cannot establish trusted identity",
+    "Existing invalid metadata, signatures or declared key files refuse identity; absence remains an explicitly recorded missing state",
+    "Info snapshots and identity comparisons are not an atomic filesystem lease or a seal of every bundle file",
+    "No new visible window acceptance; production view behavior unchanged, library/probe states verified",
+    "No real application update, root helper, hardware write or release"
+  ]
+}

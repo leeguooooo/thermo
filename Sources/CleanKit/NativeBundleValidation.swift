@@ -11,20 +11,23 @@ struct NativeBundleFacts: Codable, Sendable {
     var team: String?
     var architectures: [String]
     var seal: String
+    var minimumOS: String? = nil
 }
 
 enum NativeBundleValidation {
     static func fail(_ message: String) -> ArchiveFailure { ArchiveFailure(message) }
 
     static func facts(_ path: String) throws -> NativeBundleFacts {
-        guard let info = NSDictionary(contentsOfFile: path + "/Contents/Info.plist"),
-              let id = info["CFBundleIdentifier"] as? String, AppUninstaller.isBundleID(id),
+        guard let metadata = AppMetadata.read(path + "/Contents/Info.plist") else { throw fail("The update is not a complete application bundle") }
+        let info = metadata.info
+        guard let id = info["CFBundleIdentifier"] as? String, AppOwnershipSnapshot.validDeclaredID(id),
               let version = info["CFBundleShortVersionString"] as? String,
               let build = info["CFBundleVersion"] as? String, UpdateVersion.compare(build, build) != nil,
               info["CFBundlePackageType"] as? String == "APPL",
               let name = info["CFBundleExecutable"] as? String, !name.isEmpty, name != ".", name != "..", !name.contains("/") else {
             throw fail("The update is not a complete application bundle")
         }
+        guard info["LSMinimumSystemVersion"] == nil || info["LSMinimumSystemVersion"] is String else { throw fail("The update is not a complete application bundle") }
         let binary = path + "/Contents/MacOS/" + name
         var st = stat()
         guard lstat(binary, &st) == 0, st.st_mode & S_IFMT == S_IFREG, st.st_mode & 0o111 != 0 else {
@@ -42,8 +45,12 @@ enum NativeBundleValidation {
               let signed = signing as? [String: Any], signed[kSecCodeInfoIdentifier as String] as? String == id else {
             throw fail("The signed identity does not match the application bundle")
         }
+        guard let finalMetadata = AppMetadata.read(path + "/Contents/Info.plist"),
+              finalMetadata.identity == metadata.identity, finalMetadata.digest == metadata.digest else {
+            throw fail("The application changed while its metadata was being validated")
+        }
         return NativeBundleFacts(bundleID: id, version: version, build: build, team: signed[kSecCodeInfoTeamIdentifier as String] as? String,
-                                 architectures: architectures.sorted(), seal: seal)
+                                 architectures: architectures.sorted(), seal: seal, minimumOS: info["LSMinimumSystemVersion"] as? String)
     }
 
     /// Read only Mach-O headers, without executing a downloaded binary or relying on its filename.

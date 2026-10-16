@@ -11,7 +11,7 @@ extension NativeUpdateTransaction {
         guard ["zip", "dmg"].contains(release.downloadURL?.pathExtension.lowercased() ?? "") else { return "This archive format must be installed by the original updater" }
         if let type = release.installationType, type != "application" { return "This archive format must be installed by the original updater" }
         guard release.signature != nil,
-              let info = NSDictionary(contentsOfFile: check.source.app.path + "/Contents/Info.plist"),
+              let info = AppMetadata.dictionary(check.source.app.path + "/Contents/Info.plist"),
               let value = info["SUPublicEDKey"] as? String, Data(base64Encoded: value)?.count == 32 else {
             return "This update requires the original updater because its Ed25519 proof is unavailable"
         }

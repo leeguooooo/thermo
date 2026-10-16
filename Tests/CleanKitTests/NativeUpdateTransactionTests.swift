@@ -620,3 +620,24 @@ final class NativeUpdateTransactionTests: XCTestCase {
         }
     }
 }
+
+extension NativeUpdateTransactionTests {
+    func testSignedShortIdentifierAndMinimumOSUseValidatedMetadataSnapshot() throws {
+        let path = home + "/Short.app"
+        try makeApp(path, version: "1.0", build: "1", id: "md.fixture")
+        let file = path + "/Contents/Info.plist"
+        var info = try XCTUnwrap(AppMetadata.dictionary(file)); info["LSMinimumSystemVersion"] = "13.0"
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(to: URL(fileURLWithPath: file), options: .atomic)
+        try execute("/usr/bin/codesign", ["--force", "--sign", "-", path])
+        let facts = try NativeBundleValidation.facts(path)
+        XCTAssertEqual(facts.bundleID, "md.fixture"); XCTAssertEqual(facts.minimumOS, "13.0")
+        var oldJSON = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(facts)) as? [String: Any])
+        oldJSON.removeValue(forKey: "minimumOS")
+        XCTAssertNil(try JSONDecoder().decode(NativeBundleFacts.self, from: JSONSerialization.data(withJSONObject: oldJSON)).minimumOS)
+        info["LSMinimumSystemVersion"] = 42
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(to: URL(fileURLWithPath: file), options: .atomic)
+        XCTAssertThrowsError(try NativeBundleValidation.facts(path)) { error in
+            XCTAssertEqual(error.localizedDescription, "The update is not a complete application bundle")
+        }
+    }
+}

@@ -64,7 +64,7 @@ public enum NativeAppUpdates {
     }
 
     static func feed(_ path: String) -> URL? {
-        guard let info = NSDictionary(contentsOfFile: path + "/Contents/Info.plist"),
+        guard let info = AppMetadata.dictionary(path + "/Contents/Info.plist"),
               let value = info["SUFeedURL"] as? String, let url = URL(string: value), https(url) else { return nil }
         return url
     }
@@ -72,7 +72,8 @@ public enum NativeAppUpdates {
     public static func sources(home: String = NSHomeDirectory(), apps: [InstalledApp]? = nil) -> [NativeUpdateSource] {
         guard let apps else { return sourceReport(home: home).sources }
         return apps.map { app in
-            let info = NSDictionary(contentsOfFile: app.path + "/Contents/Info.plist")
+            let metadata = AppMetadata.read(app.path + "/Contents/Info.plist")
+            let info = metadata?.info
             var source = NativeUpdateSource(app: app, kind: "application")
             if FS.exists(app.path + "/Contents/_MASReceipt/receipt") { source.kind = "appStore" }
             else if info?["SUFeedURL"] != nil {
@@ -88,7 +89,7 @@ public enum NativeAppUpdates {
             }
             if app.inventoryIdentity == nil {
                 source.blocked = "Could not verify this app's file identity; inspect it in Finder"
-            } else if AppReviewIdentity.capture(app.path) != app.inventoryIdentity {
+            } else if AppReviewIdentity.capture(app.path, metadata: metadata) != app.inventoryIdentity {
                 source.blocked = "The app changed since the inventory; refresh the app list and review again"
             }
             return source

@@ -117,15 +117,14 @@ public enum AppUninstaller {
     }
 
     public static func read(_ path: String) -> InstalledApp? {
-        let identity = AppReviewIdentity.capture(path)
+        let metadata = AppMetadata.read(path + "/Contents/Info.plist")
+        let identity = AppReviewIdentity.capture(path, metadata: metadata)
         func observed(_ app: InstalledApp) -> InstalledApp? {
             var app = app
             if identity != nil, AppReviewIdentity.capture(path) == identity { app.inventoryIdentity = identity }
             return app
         }
-        let plist = path + "/Contents/Info.plist"
-        guard let data = FileManager.default.contents(atPath: plist),
-              let info = (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? [String: Any] else {
+        guard let info = metadata?.info ?? AppMetadata.linkedDisplayDictionary(path + "/Contents/Info.plist") else {
             // A bundle without a readable Info.plist is still an app the user can see and remove.
             guard FS.exists(path) else { return nil }
             return observed(InstalledApp(path: path, name: ((path as NSString).lastPathComponent as NSString).deletingPathExtension, bundleID: nil))

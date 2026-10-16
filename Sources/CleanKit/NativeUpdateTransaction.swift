@@ -97,7 +97,7 @@ public enum NativeUpdateTransaction {
         if let why = targetRefusal(reviewed.source.app.path, home: home, processes: ProcessTable.current(.init(cpu: false))) { throw failure(why) }
         let old = try NativeBundleValidation.facts(reviewed.source.app.path)
         guard old.bundleID == id, old.build == reviewed.source.installedBuild,
-              let info = NSDictionary(contentsOfFile: reviewed.source.app.path + "/Contents/Info.plist"),
+              let info = AppMetadata.dictionary(reviewed.source.app.path + "/Contents/Info.plist"),
               let encodedKey = info["SUPublicEDKey"] as? String, let keyData = Data(base64Encoded: encodedKey), keyData.count == 32,
               let encodedSignature = release.signature, let signature = Data(base64Encoded: encodedSignature), signature.count == 64 else {
             throw failure("A valid embedded Ed25519 key and update signature are required")
@@ -157,7 +157,7 @@ public enum NativeUpdateTransaction {
             let new = try NativeBundleValidation.facts(bundle)
             try NativeBundleValidation.compatible(new, with: old, release: release)
             try NativeBundleValidation.publisherMatches(original: reviewed.source.app.path, replacement: bundle, team: old.team)
-            if let info = NSDictionary(contentsOfFile: bundle + "/Contents/Info.plist"), let minimum = info["LSMinimumSystemVersion"] as? String {
+            if let minimum = new.minimumOS {
                 let os = ProcessInfo.processInfo.operatingSystemVersion
                 let order = UpdateVersion.compare("\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)", minimum)
                 guard order == .orderedSame || order == .orderedDescending else {

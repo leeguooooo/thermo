@@ -242,6 +242,8 @@ thermo tabs restore UUID --window WINDOW_ID --yes
 
 「软件管理 → 更新」检查 Homebrew 管理的应用。首次打开使用 Homebrew 已有记录；「刷新目录并检查」先执行 `brew update`，再检查版本。App Store 更新有单独入口，其他来源的应用仍由各自更新器管理。
 
+应用 `Info.plist` 使用最多 1 MiB 的普通文件快照读取；FIFO、目录、无效或超大内容不会建立可信审阅身份。链接目标仍可提供受大小限制的展示字段，但链接本身不能授权卸载或更新。解析字节的摘要会进入身份复核，旧缓存身份需要刷新；这仍不代替整个应用的代码签名验证，也不承诺阻塞文件系统的最坏读取延迟。
+
 「其他应用」从本机声明中识别 Sparkle 更新源、App Store 收据及未声明来源的应用。发现来源不访问服务器；单项检查或确认批量检查后才请求所选 HTTPS feed。最多同时检查四项，支持停止并保留已完成结果；离开页面会取消请求并清空队列。
 
 `thermo apps updates sources --json` 现在返回报告对象，旧数组脚本需改读 `.sources`。报告包含 `complete`、`scopeComplete`、`issues`、`issuesTruncated`、`cancelled`、`roots` 与 `discovered`；`complete` 同时考虑目录覆盖和应用元数据，`scopeComplete` 只表示支持的目录布局已枚举。部分结果仍输出 JSON，但命令返回非零，不能据空数组认定没有应用或更新。目录范围未读完整时必须用精确应用路径选择检查/安装；范围完整但部分元数据未知时，可用确切应用名或路径，Bundle ID 选择需完整发现。已确认来源仍可独立检查；发现完整也不表示已经访问过所有更新源。

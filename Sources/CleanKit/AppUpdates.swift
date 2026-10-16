@@ -83,11 +83,12 @@ public enum AppUpdates {
     static func baseVersion(_ version: String) -> String { String(version.split(separator: ",", maxSplits: 1).first ?? "") }
 
     static func bundleMatches(_ path: String, version: String) -> Bool {
-        guard let app = AppUninstaller.read(path), app.version == baseVersion(version) else { return false }
+        guard let app = AppUninstaller.read(path), app.inventoryIdentity != nil, app.version == baseVersion(version) else { return false }
         let parts = version.split(separator: ",", omittingEmptySubsequences: false)
         guard parts.count > 1 else { return true }
-        guard parts.count == 2, let plist = NSDictionary(contentsOfFile: path + "/Contents/Info.plist") else { return false }
-        return plist["CFBundleVersion"] as? String == String(parts[1])
+        guard parts.count == 2, let metadata = AppMetadata.read(path + "/Contents/Info.plist"),
+              AppReviewIdentity.capture(path, metadata: metadata) == app.inventoryIdentity else { return false }
+        return metadata.info["CFBundleVersion"] as? String == String(parts[1])
     }
 
     static func appPaths(_ info: [String: Any], home: String) -> [String] {
