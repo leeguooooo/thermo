@@ -21,7 +21,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var quittable: Bool
         /// Where a command-line program runs (its working directory, `~/…`), e.g. the project a test runner belongs to.
         public var project: String? = nil
-        /// Who started it: the agent, terminal or editor up its parent chain ("Claude Code", "Terminal", "Cursor").
+        /// An observed agent, terminal or editor in its current parent chain ("Claude Code", "Terminal", "Cursor").
         public var owner: String? = nil
         /// Resident mappings (RSS), including shared pages; not subtractable from footprint.
         public var residentKB: Int? = nil

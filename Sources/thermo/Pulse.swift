@@ -1,4 +1,5 @@
 import CleanKit
+import AgentDoctor
 import Foundation
 import ThermoKit
 
@@ -43,6 +44,25 @@ struct PulseCommand {
     }
 
     func run(_ rest: [String] = []) throws {
+        if rest.first == "explain" {
+            guard rest.count == 2, let pid = Int32(rest[1]), pid > 0 else { throw CLIError("usage: thermo pulse explain PID [--json]") }
+            let report = try ProcessExplanation.capture(pid)
+            if app.args.has("json") { print(Export.diagnosticJSON(report)); return }
+            var lines = [tr("Why is this running?"), "PID \(report.pid)", tr("Observed at %1$@", report.sampled.ISO8601Format()), tr("Observed parent chain")]
+            if let application = report.application { lines.append(tr(report.attribution == .executableLocation ? "Executable located inside: %1$@" : "Observed ancestor application: %1$@", application)) }
+            else { lines.append(tr("No application attribution was established")) }
+            for node in report.chain {
+                lines.append("\(node.name) · PID \(node.pid) → \(node.parentPID) · " + node.executable)
+                if let cwd = node.workingDirectory { lines.append(tr("Working directory: %1$@", cwd)) }
+                if !node.args.isEmpty { lines.append(node.args.map { String(reflecting: $0) }.joined(separator: " ")) }
+            }
+            lines += report.issues.map { tr($0) }
+            lines.append(tr("Observed cwd and vnode descriptor paths")); lines += report.observedPaths ?? [tr("Path inspection is unavailable for this process")]
+            lines.append(tr("A current parent chain does not prove the original launcher or a publisher's identity."))
+            lines.append(tr("Memory mappings, listening ports, launch service registration and sleep assertions were not inspected."))
+            lines.append(tr("Known credential patterns are masked. Custom positional arguments may remain."))
+            out(lines); return
+        }
         if rest.first == "quit" { try quit(Array(rest.dropFirst())); return }
         if rest.first == "restart" { try restart(Array(rest.dropFirst())); return }
         if rest.first == "history" { try history(); return }
@@ -91,7 +111,7 @@ struct PulseCommand {
                 lines.append("  " + (h.cpu >= 100 ? style.red(cpu) : h.cpu >= 50 ? style.yellow(cpu) : cpu)
                              + "  " + pad(Self.size(h.memoryKB), 8, right: true)
                              + "  " + h.name + style.dim(h.pids.count > 1 ? "  " + tr("(%1$@ processes)", String(h.pids.count)) : "  pid \(h.pids[0])")
-                             + style.dim([h.project, h.owner.map { tr("started by %1$@", $0) },
+                             + style.dim([h.project, h.owner.map { tr("observed ancestor: %1$@", $0) },
                                           h.uptime.map { tr("running %1$@", Self.duration($0)) }].compactMap { $0 }.map { "  · " + $0 }.joined()))
                 // Big apps, split: the GPU process and the heaviest pages, each with how long it has run.
                 for p in h.parts ?? [] {
@@ -161,7 +181,7 @@ struct PulseCommand {
             for s in blame.prefix(8) {
                 lines.append("  " + pad(tr("%1$@ min", String(s.minutes)), 8, right: true) + "  " + pad(s.name, 24)
                              + style.dim(tr("peak %1$@ CPU · %2$@", String(format: "%.0f%%", s.peakCPU), Self.size(s.peakMemoryKB))
-                                         + ([s.project, s.owner.map { tr("started by %1$@", $0) }].compactMap { $0 }.map { "  · " + $0 }.joined())))
+                                         + ([s.project, s.owner.map { tr("recorded association: %1$@", $0) }].compactMap { $0 }.map { "  · " + $0 }.joined())))
             }
         }
         out(lines)

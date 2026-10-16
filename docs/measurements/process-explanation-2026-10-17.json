@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "e2eebfa",
+  "sourceSHA256": {
+    "Sources/AgentCore/Processes.swift": "89618dd19ef2e359a8c38a0cd4671b3b8a91b7bb8c2a673d8d0986f5c0bf9e5f",
+    "Sources/AgentCore/OpenFiles.swift": "01794474857dd285f11097e11f3d239c641c09e06b0b91be240ede2f539805a6",
+    "Sources/AgentDoctor/ProcessExplanation.swift": "6d24d322065cc80ce0b50dfecc55d100f8e0793b87e97b1b2cd59df175c207aa",
+    "Sources/CleanKit/Pulse.swift": "f278bedd48049594064718fb7779eaaf50735cd009429e5c111c7364079e1a8d",
+    "Sources/CleanKit/PulseSampler.swift": "344d3d237ffbf14d07151c9bbb14650685a25eb5c4a73efabdc3f9392db5d2a3",
+    "Sources/ThermoApp/ProcessExplanationView.swift": "07d3786b67575eb903bc64b207f9f0db2fa030f7500c8bb2c3d09a7ce2b21d49",
+    "Sources/ThermoApp/PulseView.swift": "46205d1df20a65aff09e156129bbfc22634b85a3301ae611db48c3dee5e94594",
+    "Sources/thermo/Pulse.swift": "a2c8459f5033dfb95dc3a1bd558d5f4fe6f0f4ef31e784c7b32fddad9c946d15",
+    "Sources/thermo/main.swift": "9ad2668c85cb4113b10bdd2f5707753e7634facb0c4080b1ef2d265de00c23d8",
+    "Sources/ThermoL10n/ZhHans.swift": "dc153866ff5e0248137cf1a843c6ef9778833154b4fbd88982617dbcf383c472",
+    "Tests/AgentDoctorTests/ProcessExplanationTests.swift": "15a30bc96899efbf1ad768b503e02eaf28b3df55bc8147feec7bf47c8078c41e",
+    "Tests/AgentCoreTests/ProcessObservationTests.swift": "ecdd07555ce3f966932c8a0e23d3dd2ffc592e061c2dbeee15a14e0e954bb593",
+    "Tests/CleanKitTests/PulseOwnerEvidenceTests.swift": "2b3d0d02fc9b0c07334d6c27063f1a03a404eb8fdf297c0b9ed61752574938d1",
+    "Tests/ThermoAppTests/ProcessExplanationModelTests.swift": "b5989af6f70ac79549f66cc625edad8e1864a7e892f65e7efc767dd9bac1adb5",
+    "README.md": "41966cd69783aa50814ae472dd11f29d0d091a72011b1645c5d6e0ac696c58aa"
+  },
+  "newTests": {
+    "AgentDoctorTests": 10,
+    "AgentCoreTests": 3,
+    "CleanKitTests": 2,
+    "ThermoAppTests": 1
+  },
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 66,
+      "ThermoAppTests": 202,
+      "CleanKitTests": 712,
+      "AgentDoctorTests": 20,
+      "AgentCoreTests": 37
+    },
+    "total": 1151,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests"
+    ],
+    "AgentDoctorSelection": [
+      "ProcessExplanationTests",
+      "RedactTests"
+    ],
+    "logSHA256": "d3ed6e4bde992eb1522d726d3509d87eaa44fc2535b31eb2a46e933cfc0789c9"
+  },
+  "nativeCLI": {
+    "jsonExit": 0,
+    "textExit": 0,
+    "identityObserved": true,
+    "cwdMatches": true,
+    "ownedDescriptorObserved": true,
+    "controlCharactersEscaped": true,
+    "fixtureCredentialAbsentFromBothOutputs": true,
+    "chainCount": 3,
+    "chainComplete": false,
+    "pathQueriesComplete": true,
+    "pathsTruncated": false,
+    "attribution": "executableLocation",
+    "jsonSHA256": "9a3c42759b773940d729e959346e6cf6705fc15a15ce02cef5b44021976ee299",
+    "textSHA256": "223dd6fcbe0a14c6162605455615c180b35ca558b284a63736ce9d901fb67f75",
+    "executableSHA256": "4a247a91814824e147a7893f3a7d389d821ebf123d8de125c529e01318d4e9b6"
+  },
+  "invalidPIDExit": 2,
+  "policy": {
+    "readOnly": true,
+    "identity": [
+      "PID",
+      "UID",
+      "start time",
+      "kernel executable path"
+    ],
+    "relationship": "parent PID rechecked after observation",
+    "argumentPrivacy": "current UID only; recognized credentials masked; positional values may remain",
+    "terminalControls": "escaped before display/export",
+    "limits": {
+      "parentDepth": 32,
+      "descriptors": 4096,
+      "paths": 100,
+      "argumentsPerNode": 64,
+      "charactersPerArgument": 2048
+    },
+    "attribution": "executable-location fact or current-ancestor evidence; not original launcher or publisher verification",
+    "lifecycle": "one serial UI reader; stale/closed target callbacks ignored",
+    "legacyPulse": "no PID+name executable cache; identity/relationship-bound observed ancestor"
+  },
+  "scopeNotInspected": [
+    "listening ports",
+    "launchd registration",
+    "sleep assertions",
+    "memory mappings",
+    "Git context",
+    "complete child process graph"
+  ],
+  "cleanup": {
+    "ownedChildTerminatedAndWaited": true,
+    "openFixtureHandles": 0,
+    "ownedRootRemoved": true,
+    "noRawAncestorArgumentsPersisted": true
+  },
+  "limitations": [
+    "No visible process-inspector page acceptance this turn",
+    "Kernel calls can delay reader cancellation",
+    "No signal/file modification actions in inspector",
+    "No hardware writes, push or release"
+  ]
+}

@@ -1,0 +1,102 @@
+import AgentCore
+import AgentDoctor
+import AppKit
+import CleanKit
+import SwiftUI
+import ThermoL10n
+
+struct ProcessInspectionTarget: Identifiable {
+    let identity: ProcessIdentity
+    var candidates: [ProcessIdentity] = []
+    var id: String { "\(identity.pid):\(identity.started.timeIntervalSince1970)" }
+    var choices: [ProcessIdentity] {
+        var seen = Set<Int32>()
+        return ([identity] + candidates).filter { seen.insert($0.pid).inserted }
+    }
+}
+
+@MainActor final class ProcessExplanationModel: ObservableObject {
+    @Published private(set) var report: ProcessExplanation?
+    @Published private(set) var loading = false
+    @Published private(set) var problem: String?
+    private static let queue = DispatchQueue(label: "dev.thermo.process-explanation", qos: .utility)
+    private var token: ScanCancellation?
+    private let reader: @Sendable (ProcessIdentity) throws -> ProcessExplanation
+    init(reader: @escaping @Sendable (ProcessIdentity) throws -> ProcessExplanation = { try ProcessExplanation.capture($0.pid, expected: $0) }) { self.reader = reader }
+    func load(_ expected: ProcessIdentity) {
+        guard !loading else { return }
+        let token = ScanCancellation(); self.token = token
+        loading = true; report = nil; problem = nil
+        let read = reader
+        Self.queue.async { [weak self] in
+            guard !token.isCancelled else { return }
+            let result = Result { try read(expected) }
+            DispatchQueue.main.async {
+                guard let self, self.token === token, !token.isCancelled else { return }
+                self.loading = false
+                switch result {
+                case .success(let report): self.report = report
+                case .failure(let error): self.problem = tr(error.localizedDescription)
+                }
+            }
+        }
+    }
+    func stop() { token?.cancel(); token = nil; loading = false }
+}
+
+@MainActor struct ProcessExplanationView: View {
+    let target: ProcessInspectionTarget
+    @StateObject private var model = ProcessExplanationModel()
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedPID: Int32?
+    private var expected: ProcessIdentity { target.choices.first { $0.pid == selectedPID } ?? target.identity }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(tr("Why is this running?")).font(.headline)
+            if target.choices.count > 1 {
+                Picker(tr("Processes from this reading"), selection: Binding(get: { expected.pid }, set: { pid in
+                    selectedPID = pid; model.stop(); model.load(expected)
+                })) {
+                    ForEach(target.choices, id: \.pid) { value in Text("PID \(value.pid) · " + Redact.text((value.executable as NSString).lastPathComponent)).tag(value.pid) }
+                }
+            }
+            Text("PID \(expected.pid) · " + String(reflecting: Redact.text(expected.executable))).font(.caption).textSelection(.enabled)
+            if model.loading { ProgressView(tr("Reading process evidence…")) }
+            if let problem = model.problem { Text(problem).foregroundStyle(.orange) }
+            ScrollView {
+                if let report = model.report {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text(tr("Observed at %1$@", report.sampled.formatted(date: .omitted, time: .standard))).font(.caption).foregroundStyle(.secondary)
+                        if let application = report.application {
+                            Text(tr(report.attribution == .executableLocation ? "Executable located inside: %1$@" : "Observed ancestor application: %1$@", application)).font(.callout)
+                        } else { Text(tr("No application attribution was established")).font(.callout) }
+                        Text(tr("A current parent chain does not prove the original launcher or a publisher's identity.")).font(.caption).foregroundStyle(.secondary)
+                        ForEach(report.issues, id: \.self) { Text(tr($0)).font(.caption).foregroundStyle(.orange) }
+                        Text(tr("Observed parent chain")).font(.headline)
+                        ForEach(report.chain) { node in
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("\(node.name) · PID \(node.pid) → \(node.parentPID) · UID \(node.uid)").font(.callout.weight(.medium))
+                                Text(node.executable).font(.caption.monospaced())
+                                Text(tr("Started at %1$@", node.started.formatted(date: .abbreviated, time: .standard))).font(.caption).foregroundStyle(.secondary)
+                                if let cwd = node.workingDirectory { Text(tr("Working directory: %1$@", cwd)).font(.caption) }
+                                if !node.args.isEmpty { Text(node.args.map { String(reflecting: $0) }.joined(separator: " ")).font(.caption.monospaced()) }
+                            }.textSelection(.enabled)
+                        }
+                        Text(tr("Observed cwd and vnode descriptor paths")).font(.headline)
+                        if let paths = report.observedPaths {
+                            if paths.isEmpty { Text(tr("No paths were observed; this does not prove the process has no open files.")).font(.caption) }
+                            ForEach(Array(paths.enumerated()), id: \.offset) { _, path in Text(path).font(.caption.monospaced()).textSelection(.enabled) }
+                        } else { Text(tr("Path inspection is unavailable for this process")).font(.caption) }
+                        Text(tr("Memory mappings, listening ports, launch service registration and sleep assertions were not inspected.")).font(.caption).foregroundStyle(.secondary)
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            Text(tr("Known credential patterns are masked. Custom positional arguments may remain.")).font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Button(tr("Refresh")) { model.load(expected) }.disabled(model.loading)
+                Spacer(); Button(tr("Close")) { dismiss() }
+            }
+        }.padding(20).frame(width: 600, height: 520)
+            .onAppear { model.load(expected) }.onDisappear { model.stop() }
+    }
+}

@@ -7,8 +7,6 @@ import Foundation
 /// only for the handful of processes that could make the list. Not thread-safe; use from one queue.
 public final class PulseSampler {
     private var last: (at: UInt64, cpu: [pid_t: UInt64])?
-    /// Executable per pid, for the parent-chain walk; dropped when the pid's name changes.
-    private var exeCache: [pid_t: (name: String, exe: String)] = [:]
 
     public init() {}
 
@@ -52,25 +50,24 @@ public final class PulseSampler {
 
     private func remember(_ usage: [ProcessUsage], at: UInt64) {
         last = (at, Dictionary(usage.map { ($0.pid, $0.cpuNanos) }, uniquingKeysWith: { a, _ in a }))
-        let alive = Set(usage.map(\.pid))
-        exeCache = exeCache.filter { alive.contains($0.key) }
     }
 
-    private func executable(_ u: ProcessUsage) -> String {
-        if let c = exeCache[u.pid], c.name == u.name { return c.exe }
-        let exe = ProcessTable.pidPath(u.pid) ?? ""
-        exeCache[u.pid] = (u.name, exe)
-        return exe
-    }
-
-    /// The first agent, terminal or editor above a process: who to ask about it.
-    func owner(of u: ProcessUsage, in byPid: [pid_t: ProcessUsage]) -> String? {
-        var pid = u.ppid
+    /// Current ancestor evidence, never a claim about the original launcher.
+    func owner(of u: ProcessUsage, in byPid: [pid_t: ProcessUsage],
+               identity: (pid_t) -> ProcessIdentity? = ProcessTable.identity,
+               parent: (pid_t) -> pid_t? = ProcessTable.parentPID) -> String? {
+        var current = u, seen = Set<pid_t>(), checked: [(ProcessUsage, ProcessIdentity)] = []
         for _ in 0..<16 {
-            guard pid > 1, let p = byPid[pid] else { return nil }
-            let exe = executable(p)
-            if let o = Self.recognise(name: p.name, executable: exe) { return o }
-            pid = p.ppid
+            guard seen.insert(current.pid).inserted, let started = current.started,
+                  let actual = identity(current.pid), actual.uid == current.uid, actual.started == started,
+                  parent(current.pid) == current.ppid else { return nil }
+            checked.append((current, actual))
+            if current.pid != u.pid, let owner = Self.recognise(name: (actual.executable as NSString).lastPathComponent, executable: actual.executable) {
+                guard checked.allSatisfy({ identity($0.0.pid) == $0.1 && parent($0.0.pid) == $0.0.ppid }) else { return nil }
+                return owner
+            }
+            guard current.ppid > 1, let next = byPid[current.ppid] else { return nil }
+            current = next
         }
         return nil
     }

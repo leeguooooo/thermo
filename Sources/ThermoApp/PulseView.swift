@@ -230,6 +230,7 @@ struct PulseCard: View {
     @ObservedObject private var pulse = SystemPulse.shared
     @State private var confirming: SystemPulse.Hog?
     @State private var restartTarget: SystemPulse.Hog?
+    @State private var explaining: ProcessInspectionTarget?
     @State private var holds = false
     @ObservedObject private var recorder = PulseRecorder.shared
 
@@ -254,6 +255,11 @@ struct PulseCard: View {
                     VStack(alignment: .leading, spacing: 1) {
                         HStack(spacing: 4) {
                             Text(h.name).font(.callout).lineLimit(1)
+                            if !renderingPreview, let identity = h.applicationIdentity ?? h.processIdentities?.first {
+                                Button { explaining = .init(identity: identity, candidates: h.processIdentities ?? []) } label: { Image(systemName: "info.circle") }
+                                    .buttonStyle(.plain).help(tr("Why is this running?"))
+                                    .accessibilityLabel(tr("Why is %1$@ running?", h.name))
+                            }
                             if h.pids.count > 1 && h.app == nil {
                                 Text("×\(h.pids.count)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
                             }
@@ -363,6 +369,7 @@ struct PulseCard: View {
                          confirmTitle: tr("Restart"),
                          confirm: { restartTarget = nil; pulse.restart(h) }, cancel: { restartTarget = nil })
         }
+        .sheet(item: $explaining) { ProcessExplanationView(target: $0) }
     }
 
     /// This card's share in keeping the sampler running (the panel and the main window each have one).
@@ -372,10 +379,10 @@ struct PulseCard: View {
         if on { pulse.hold() } else { pulse.release() }
     }
 
-    /// "shop · started by Claude Code": the folder a command-line program runs in and who started it.
+    /// Working folder plus current ancestor evidence; not an original-launcher claim.
     func origin(_ h: SystemPulse.Hog) -> String? {
         let folder = h.project.map { ($0 as NSString).lastPathComponent }.flatMap { $0.isEmpty || $0 == "~" ? nil : $0 }
-        let parts = [folder, h.owner.map { tr("started by %1$@", $0) }].compactMap { $0 }
+        let parts = [folder, h.owner.map { tr("observed ancestor: %1$@", $0) }].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 

@@ -45,6 +45,7 @@ COMMANDS
                              memory, thermal state, temperatures, fans (--json for agents)
   pulse quit NAME|PID         stop a program pulse lists (apps quit like ⌘Q); asks first
   pulse restart NAME          quit an app, wait, reopen it (frees what a long-running app piled up)
+  pulse explain PID [--json]   read-only process identity, current parent chain and observed paths
   pulse history [--since 6h]  who slowed the Mac down lately (recorded by Thermo.app; 1h, 6h, 24h)
   pulse chrome [--watch 60]   which Chrome page leaks or is biggest, duplicate tabs, hidden pages
                               (memory per page needs chrome-use; --app "Microsoft Edge" for others)

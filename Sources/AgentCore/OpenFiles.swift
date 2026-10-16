@@ -15,6 +15,51 @@ public struct OpenFiles: Sendable {
 
     public init(holders: [Holder]) { self.holders = holders.sorted { $0.path < $1.path } }
 
+    public struct Observation: Codable, Sendable {
+        public var paths: [String]
+        /// Completeness of cwd/vnode-FD queries only; does not include memory mappings.
+        public var complete: Bool
+        public var truncated: Bool
+        public init(paths: [String], complete: Bool, truncated: Bool = false) {
+            self.paths = paths; self.complete = complete; self.truncated = truncated
+        }
+    }
+
+    /// Bounded diagnostic reader. Unlike cleanup's inventory, no process names are ignored.
+    public static func observe(_ pid: pid_t, maximumDescriptors: Int = 4096, maximumPaths: Int = 100) -> Observation {
+        var result = Observation(paths: [], complete: true)
+        guard maximumDescriptors > 0, maximumDescriptors <= 65_536, maximumPaths > 0 else {
+            return .init(paths: [], complete: false, truncated: true)
+        }
+        var vpi = proc_vnodepathinfo()
+        if proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &vpi, Int32(MemoryLayout<proc_vnodepathinfo>.size)) > 0 {
+            let path = string(vpi.pvi_cdir.vip_path)
+            if !path.isEmpty { result.paths.append(path) }
+        } else { result.complete = false }
+        let bytes = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, nil, 0)
+        guard bytes > 0 else { result.complete = false; return result }
+        let stride = MemoryLayout<proc_fdinfo>.stride
+        let count = min(maximumDescriptors, Int(bytes) / stride + 16)
+        var fds = [proc_fdinfo](repeating: proc_fdinfo(), count: count)
+        let capacity = count * stride
+        let got = fds.withUnsafeMutableBytes { proc_pidinfo(pid, PROC_PIDLISTFDS, 0, $0.baseAddress, Int32($0.count)) }
+        guard got > 0 else { result.complete = false; return result }
+        if Int(got) >= capacity || Int(bytes) > capacity { result.complete = false; result.truncated = true }
+        for fd in fds.prefix(min(count, Int(got) / stride)) where fd.proc_fdtype == UInt32(PROX_FDTYPE_VNODE) {
+            var info = vnode_fdinfowithpath()
+            guard proc_pidfdinfo(pid, fd.proc_fd, PROC_PIDFDVNODEPATHINFO, &info, Int32(MemoryLayout<vnode_fdinfowithpath>.size)) > 0 else {
+                result.complete = false; continue
+            }
+            let path = string(info.pvip.vip_path)
+            if !path.isEmpty { result.paths.append(path) }
+        }
+        result.paths = Array(Set(result.paths)).sorted()
+        if result.paths.count > maximumPaths {
+            result.paths = Array(result.paths.prefix(maximumPaths)); result.complete = false; result.truncated = true
+        }
+        return result
+    }
+
     /// Indexers and other system helpers that open files briefly while looking at them.
     static let ignored: Set<String> = ["mdworker", "mdworker_shared", "mds_stores", "mdwrite", "fseventsd", "lsd", "revisiond"]
 

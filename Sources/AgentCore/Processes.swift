@@ -49,7 +49,11 @@ public struct ProcessTable: Sendable {
         public var uid: uid_t? = getuid()
         /// Per-thread CPU usage costs one call per thread; skip it when not needed.
         public var cpu = true
-        public init(uid: uid_t? = getuid(), cpu: Bool = true) { self.uid = uid; self.cpu = cpu }
+        /// Restrict argv/cwd/memory detail reads while retaining other users in the parent graph.
+        public var detailsUID: uid_t? = nil
+        public init(uid: uid_t? = getuid(), cpu: Bool = true, detailsUID: uid_t? = nil) {
+            self.uid = uid; self.cpu = cpu; self.detailsUID = detailsUID
+        }
     }
 
     public static func current(_ options: Options = Options()) -> ProcessTable {
@@ -70,7 +74,8 @@ public struct ProcessTable: Sendable {
             let name = withUnsafeBytes(of: k.kp_proc.p_comm) { raw in String(decoding: raw.prefix { $0 != 0 }, as: UTF8.self) }
             let start = k.kp_proc.p_un.__p_starttime
             let started = TimeInterval(start.tv_sec) + TimeInterval(start.tv_usec) / 1e6
-            let argv = arguments(pid)
+            let inspectDetails = options.detailsUID.map { $0 == k.kp_eproc.e_ucred.cr_uid } ?? true
+            let argv = inspectDetails ? arguments(pid) : []
             var exe = pidPath(pid)
             var fromArgv = false
             if exe == nil, let first = argv.first, first.hasPrefix("/") { exe = first; fromArgv = true }
@@ -80,9 +85,9 @@ public struct ProcessTable: Sendable {
                 ProcessIdentity(pid: pid, uid: k.kp_eproc.e_ucred.cr_uid,
                                 started: Date(timeIntervalSince1970: started), executable: $0)
             } : nil
-            let reading = memory(pid)
+            let reading = inspectDetails ? memory(pid) : ProcessMemoryReading(footprintKB: nil, residentKB: nil)
             var process = AgentProcess(pid: pid, ppid: k.kp_eproc.e_ppid, uid: k.kp_eproc.e_ucred.cr_uid, name: name,
-                                    executable: exe, executableFromArgv: fromArgv, argv: argv, cwd: cwd(pid),
+                                    executable: exe, executableFromArgv: fromArgv, argv: argv, cwd: inspectDetails ? cwd(pid) : nil,
                                     cpu: options.cpu ? cpuUsage(pid) : 0, rssKB: reading.residentKB ?? 0,
                                     footprintKB: reading.footprintKB ?? 0, elapsed: started > 0 ? max(0, now - started) : 0)
             if let before, before != identity(pid) { continue }
@@ -208,6 +213,12 @@ public struct ProcessIdentity: Codable, Sendable, Equatable {
 }
 
 extension ProcessTable {
+    public static func parentPID(_ pid: pid_t) -> pid_t? {
+        var info = proc_bsdinfo()
+        guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, Int32(MemoryLayout<proc_bsdinfo>.size)) > 0 else { return nil }
+        return Int32(bitPattern: info.pbi_ppid)
+    }
+
     public static func identity(_ pid: pid_t) -> ProcessIdentity? {
         var info = proc_bsdinfo()
         guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, Int32(MemoryLayout<proc_bsdinfo>.size)) > 0,
