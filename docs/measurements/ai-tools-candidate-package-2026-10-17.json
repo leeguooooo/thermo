@@ -1,0 +1,238 @@
+{
+  "generated": "2026-10-16T23:42:47.211001+00:00",
+  "candidateCommit": "f02328d5f0bc6a9158865225e2c98b8f09e38bf7",
+  "version": "1.2.0",
+  "build": "347",
+  "scope": "Local ad-hoc candidate package only; no Developer ID signature, notarization, installation, update feed or publication. x86_64 execution uses Rosetta, not a real Intel host.",
+  "metadataVerification": "Verified signatures, deployment target 13.0 and required architectures: arm64 x86_64",
+  "artifacts": {
+    "thermo": {
+      "bytes": 34582912,
+      "sha256": "021c451f32325de6c54765b2199d2fd0cea5a8d980abe8dafe2b20a6280ebe3e",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "thermo-helper": {
+      "bytes": 2723936,
+      "sha256": "b3055d83af07b0bf61f3eccf85ca1d8665cbf8206882db1189fbb4e132e21674",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "Thermo.app/Contents/MacOS/Thermo": {
+      "bytes": 61379024,
+      "sha256": "4a013af10d152225d92b3c26c458929bd6376ecdb90622247891752edd384249",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "Thermo.app/Contents/Helpers/thermo": {
+      "bytes": 34582912,
+      "sha256": "021c451f32325de6c54765b2199d2fd0cea5a8d980abe8dafe2b20a6280ebe3e",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "Thermo.app/Contents/Helpers/thermo-helper": {
+      "bytes": 2723936,
+      "sha256": "b3055d83af07b0bf61f3eccf85ca1d8665cbf8206882db1189fbb4e132e21674",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ]
+    }
+  },
+  "cliChecks": [
+    {
+      "mode": "native-arm64",
+      "check": "verify-skill-context.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "userUniqueFiles": 1,
+        "projectUniqueFiles": 2,
+        "aliasesExcluded": 1,
+        "cacheFilesCountedSeparately": 1,
+        "coverageWarningPreserved": true
+      }
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-skill-quality.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "missingReferences": 2,
+        "sourceLinesVerified": true,
+        "emptyBodies": 1,
+        "identicalIndependentCopies": 2,
+        "examplesIgnored": true,
+        "noMCPExecution": true,
+        "noSkillChanges": true
+      }
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-tool-usage.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "mcpCalls": 2,
+        "skillCalls": 1,
+        "requestTokensKeptSeparate": true,
+        "privateTextExcluded": true,
+        "imageTokensUnknown": true
+      }
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-reference-encoding.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "encodings": [
+          "cl100k_base",
+          "o200k_base"
+        ],
+        "standaloneBinary": true,
+        "skillMCPAndUsageCountsMatchReference": true,
+        "modelNamesNotInferred": true
+      }
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-task-comparison.py",
+      "passed": true,
+      "result": {
+        "evidenceKind": "synthetic",
+        "checksPassed": 7,
+        "checks": [
+          "compiled JSON output retains outcomes and paired metric sample sizes",
+          "text output labels synthetic evidence and delta direction",
+          "missing metrics and unverified outcomes remain unknown in JSON and text",
+          "missing and changed-task pairs are excluded rather than compared",
+          "mixed cohorts and duplicate results fail closed",
+          "extra content is not exported or executed; unsupported options rejected",
+          "FIFO and directory inputs are rejected without waiting for data"
+        ],
+        "notVerified": [
+          "real model task effect",
+          "independent outcome authenticity",
+          "App integration",
+          "release installation"
+        ]
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-skill-context.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "userUniqueFiles": 1,
+        "projectUniqueFiles": 2,
+        "aliasesExcluded": 1,
+        "cacheFilesCountedSeparately": 1,
+        "coverageWarningPreserved": true
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-skill-quality.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "missingReferences": 2,
+        "sourceLinesVerified": true,
+        "emptyBodies": 1,
+        "identicalIndependentCopies": 2,
+        "examplesIgnored": true,
+        "noMCPExecution": true,
+        "noSkillChanges": true
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-tool-usage.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "mcpCalls": 2,
+        "skillCalls": 1,
+        "requestTokensKeptSeparate": true,
+        "privateTextExcluded": true,
+        "imageTokensUnknown": true
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-reference-encoding.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "encodings": [
+          "cl100k_base",
+          "o200k_base"
+        ],
+        "standaloneBinary": true,
+        "skillMCPAndUsageCountsMatchReference": true,
+        "modelNamesNotInferred": true
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-task-comparison.py",
+      "passed": true,
+      "result": {
+        "evidenceKind": "synthetic",
+        "checksPassed": 7,
+        "checks": [
+          "compiled JSON output retains outcomes and paired metric sample sizes",
+          "text output labels synthetic evidence and delta direction",
+          "missing metrics and unverified outcomes remain unknown in JSON and text",
+          "missing and changed-task pairs are excluded rather than compared",
+          "mixed cohorts and duplicate results fail closed",
+          "extra content is not exported or executed; unsupported options rejected",
+          "FIFO and directory inputs are rejected without waiting for data"
+        ],
+        "notVerified": [
+          "real model task effect",
+          "independent outcome authenticity",
+          "App integration",
+          "release installation"
+        ]
+      }
+    }
+  ],
+  "updateFeedAbsent": true,
+  "originalCleanupObservationResolved": false,
+  "nativeAppCheck": {
+    "scope": "Isolated copy of local ad-hoc package; changed bundle identity and launcher, with owned fixture Home. No installed-app or formal installation acceptance.",
+    "bundleID": "dev.thermo.aiqa.candidate12",
+    "runtimePathVerified": true,
+    "instructionSectionsMatchBothArchitectures": true,
+    "originalArtifactHashesUnchanged": true,
+    "originalInstalledAppProcessPreserved": true,
+    "batch": {
+      "selected": 2,
+      "complete": 2,
+      "tools": 3,
+      "definitionBytes": 634,
+      "heuristicDefinitionTokens": 159,
+      "heuristicInstructionTokens": 4,
+      "rankingTokens": [
+        118,
+        21,
+        20
+      ],
+      "uninspectedEnabledConfigs": 1,
+      "overallSizeKeptUnknown": true
+    },
+    "visibleChineseUIVerified": true
+  }
+}

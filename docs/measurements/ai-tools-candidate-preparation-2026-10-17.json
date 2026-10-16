@@ -267,5 +267,7 @@
     "scope": "Current instrumented snapshot passed; no explanation of the prior intermittent retained mount is claimed. No signing, notarization, installation or publication."
   },
   "releaseReady": false,
-  "scope": "Local candidate only. Both failed full runs are retained; diagnostic repeats are not a substitute for resolving or explaining the original cleanup observation. No sign/notarize/install/publish action has been performed."
+  "scope": "Local candidate only. Ad-hoc packaging and isolated fixture UI verified; no Developer ID signing, notarization, installation or publication. Both failed full runs retained; original cleanup observation remains unexplained.",
+  "packageCommit": "f02328d5f0bc6a9158865225e2c98b8f09e38bf7",
+  "localPackageValidation": "ai-tools-candidate-package-2026-10-17.json"
 }
