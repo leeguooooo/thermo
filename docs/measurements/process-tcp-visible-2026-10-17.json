@@ -1,0 +1,213 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "8c08170",
+  "productionCodeEquivalentToCandidate": "60f5ad3",
+  "fixtureRoot": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-process-tcp-ui-9mw3qe50",
+  "sources": {
+    "scripts/process-tcp-ui-server.py": "ab943e3ff4f8f1da4756a165ab9e9cb90edb019e1804dc0533a9ab5723b0373c",
+    "scripts/verify-process-tcp-ui.swift": "59cab9ddae470efa7e3aaad173add59d24c41043f63c582bd42bbcf37f31078a",
+    "Sources/ThermoApp/ProcessExplanationView.swift": "f90ee39f2f9194c619183c6abbc7978e2e89f8892bcdd5c529632e79d5d73272",
+    "Sources/AgentDoctor/ProcessExplanation.swift": "7c0d17eaf1e57e5345c43952ae9e2669ee28f2ed45ce00c29285cd4085b16e59",
+    "Sources/AgentDoctor/ProcessListeners.swift": "5e650f9838c43eb1ba06cc6044cf055d6484ef2ee820cbb907807b2d35acab84"
+  },
+  "rootViewMode": {
+    "initial": {
+      "appPID": 14122,
+      "sentinel": {
+        "endpoints": [
+          {
+            "address": "127.0.0.1",
+            "family": "IPv4",
+            "port": 57764
+          },
+          {
+            "address": "::1",
+            "family": "IPv6",
+            "port": 57765
+          }
+        ],
+        "pid": 14124,
+        "state": "listening"
+      },
+      "sentinelPID": 14124,
+      "target": {
+        "endpoints": [
+          {
+            "address": "127.0.0.1",
+            "family": "IPv4",
+            "port": 57766
+          },
+          {
+            "address": "::1",
+            "family": "IPv6",
+            "port": 57767
+          }
+        ],
+        "pid": 14123,
+        "state": "listening"
+      },
+      "targetPID": 14123
+    },
+    "checks": {
+      "harnessSHA256": "508a374ab19682a55a4b2d0ccff2c6cece6e6646d0d5f21b04fc55c6cbd8f44f",
+      "binarySHA256": "ad781548f61c8bb90da0a0b392f031f597bf31f0f6740386d14e592fb82bcfc8",
+      "targetOpenPortsShown": [
+        57766,
+        57767
+      ],
+      "unrelatedSentinelPortsExcluded": [
+        57764,
+        57765
+      ],
+      "targetStayedAliveAfterSocketClose": true,
+      "refreshClearedOldEndpoints": true,
+      "noneObservedText": "未观察到 TCP 监听端口；这不能证明没有监听。",
+      "sentinelSelectionShowedOnlyItsEndpoints": true,
+      "returnToTargetShowedNoneObserved": true,
+      "threeLiveScreenshotsInspected": true,
+      "parentChainReportedIncomplete": true
+    },
+    "targetClosedWhileSentinelListened": {
+      "target": {
+        "endpoints": [],
+        "pid": 14123,
+        "state": "closed"
+      },
+      "sentinel": {
+        "endpoints": [
+          {
+            "address": "127.0.0.1",
+            "family": "IPv4",
+            "port": 57764
+          },
+          {
+            "address": "::1",
+            "family": "IPv6",
+            "port": 57765
+          }
+        ],
+        "pid": 14124,
+        "state": "listening"
+      }
+    },
+    "stopped": {
+      "target": {
+        "endpoints": [],
+        "pid": 14123,
+        "state": "stopped"
+      },
+      "sentinel": {
+        "endpoints": [],
+        "pid": 14124,
+        "state": "stopped"
+      }
+    }
+  },
+  "sheetMode": {
+    "initial": {
+      "appPID": 17422,
+      "sentinel": {
+        "endpoints": [
+          {
+            "address": "127.0.0.1",
+            "family": "IPv4",
+            "port": 58482
+          },
+          {
+            "address": "::1",
+            "family": "IPv6",
+            "port": 58484
+          }
+        ],
+        "pid": 17432,
+        "state": "listening"
+      },
+      "sentinelPID": 17432,
+      "target": {
+        "endpoints": [
+          {
+            "address": "127.0.0.1",
+            "family": "IPv4",
+            "port": 58483
+          },
+          {
+            "address": "::1",
+            "family": "IPv6",
+            "port": 58485
+          }
+        ],
+        "pid": 17431,
+        "state": "listening"
+      },
+      "targetPID": 17431
+    },
+    "checks": {
+      "harnessSHA256": "59cab9ddae470efa7e3aaad173add59d24c41043f63c582bd42bbcf37f31078a",
+      "binarySHA256": "0243c931ca595bafac9fec626086a0927f34791ca06e63609c75b4b5edff8311",
+      "presentation": "sheet(item:) matching the production PulseCard hosting mechanism; launcher button is fixture-only",
+      "initialRoleWasSheet": true,
+      "initialTargetEndpointsShown": [
+        {
+          "address": "127.0.0.1",
+          "family": "IPv4",
+          "port": 58483
+        },
+        {
+          "address": "::1",
+          "family": "IPv6",
+          "port": 58485
+        }
+      ],
+      "closeButtonReturnedToHost": true,
+      "targetListenersClosedWhileSheetDismissed": true,
+      "targetStayedAlive": true,
+      "reopenShowedSameTargetPID": 17431,
+      "reopenShowedNoneObserved": true,
+      "oldEndpointsAbsentAfterReopen": true,
+      "secondCloseReturnedToHost": true,
+      "oneLiveModalScreenshotInspected": true
+    },
+    "targetClosedWhileSheetDismissed": {
+      "endpoints": [],
+      "pid": 17431,
+      "state": "closed"
+    },
+    "stopped": {
+      "target": {
+        "endpoints": [],
+        "pid": 17431,
+        "state": "stopped"
+      },
+      "sentinel": {
+        "endpoints": [],
+        "pid": 17432,
+        "state": "stopped"
+      }
+    }
+  },
+  "screenshots": {
+    "liveInspected": 4,
+    "localFilesProduced": false,
+    "states": [
+      "target with IPv4 and IPv6 loopback listeners",
+      "same live target after closing sockets",
+      "selected sentinel with its own listeners",
+      "reopened modal sheet after target sockets closed"
+    ]
+  },
+  "limits": [
+    "Independent component and fixture launcher; installed main App info-button entry not exercised.",
+    "sheet(item:) matches the production hosting mechanism, but the launcher button is fixture-only.",
+    "Parent chain and descendants were reported incomplete; this is not a complete process-tree acceptance.",
+    "No forced in-flight query/cancellation race, UDP, wildcard bind or external reachability test.",
+    "No root helper interaction, AWDL switching, system sleep assertion, installed-app replacement or publishing.",
+    "Only summary evidence retained; raw ancestor arguments not saved to the repository."
+  ],
+  "cleanup": {
+    "bothQAAppInstancesExited": true,
+    "allFourOwnedPythonChildrenExited": true,
+    "ownSocketsClosed": true,
+    "userProcessesSignalled": false,
+    "temporaryRootRemoved": true
+  }
+}
