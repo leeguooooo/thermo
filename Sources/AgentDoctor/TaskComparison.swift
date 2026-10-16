@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 /// Explicit, local evaluation records. No task execution or outcome inference from logs.
 public enum TaskComparison {
@@ -89,6 +90,20 @@ public enum TaskComparison {
         public let description: String
     }
     static func reject(_ message: String) -> InvalidRecords { InvalidRecords(description: message) }
+    /// Bounded regular-file input shared by the App and CLI. Pipes cannot block an import.
+    public static func read(_ url: URL) throws -> Report {
+        guard url.isFileURL else { throw reject("Evaluation input must be a local file") }
+        let fd = open(url.path, O_RDONLY | O_NONBLOCK | O_CLOEXEC)
+        guard fd >= 0 else { throw reject("Cannot open local evaluation file") }
+        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        defer { try? handle.close() }
+        var metadata = stat()
+        guard fstat(fd, &metadata) == 0, metadata.st_mode & S_IFMT == S_IFREG else { throw reject("Evaluation input must be a regular file") }
+        let data: Data
+        do { data = try handle.read(upToCount: 4 * 1024 * 1024 + 1) ?? Data() }
+        catch { throw reject("Cannot read local evaluation file") }
+        return try compare(data)
+    }
     static func identifier(_ value: String) -> Bool {
         !value.isEmpty && value.utf8.count <= 128 && value.utf8.allSatisfy {
             (48...57).contains($0) || (65...90).contains($0) || (97...122).contains($0) || [45, 46, 58, 95].contains($0)

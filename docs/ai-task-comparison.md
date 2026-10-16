@@ -2,6 +2,8 @@
 
 `thermo agents compare FILE [--json]` 比较本地 JSON 中的两组任务记录。命令只读取指定文件，不运行任务、模型、工具或验收脚本，不从普通会话日志推测任务成功。
 
+App 的 MCP / Skills 页面也有“任务评测”卡片，点击“选择评测文件…”导入同样的 JSON，再点“查看对照”。报告只保留在当前窗口的内存中，两个分类共享；只有对应分类显示结果。清除只移除内存中的报告，不删除原文件。导入失败会清掉旧结果，避免把旧报告误当作新结果。
+
 ```sh
 thermo agents compare docs/examples/task-comparison.json
 thermo agents compare /path/to/measured-records.json --json
@@ -44,8 +46,10 @@ thermo agents compare /path/to/measured-records.json --json
 
 示例有 3 对合成记录：双方通过 1 对、各有 1 对仅自己通过，通过率差 0 个百分点；任务时间差中位数为 +2 秒。token 只有 2 对可比，输入差中位数 +35、输出差中位数 −15。这个例子同时说明“输出更少”并不代表“整体更好”。
 
-当前只做描述性比较，不提供显著性、综合质量分、自动卸载建议或跨工具排名。汇总按配对计权，重复更多的任务权重更大；报告同时列出任务数，评测应预先统一每项任务的重复次数。任务数量、覆盖面和采集偏差仍需人工评审；`measured` 不代表结果已由 Thermo 独立验真。App 尚未接入该评测入口。
+当前只做描述性比较，不提供显著性、综合质量分、自动卸载建议或跨工具排名。汇总按配对计权，重复更多的任务权重更大；报告同时列出任务数，评测应预先统一每项任务的重复次数。任务数量、覆盖面和采集偏差仍需人工评审；`measured` 不代表结果已由 Thermo 独立验真。导入报告不会自动匹配当前安装的工具或 Skill，需自行核对报告中的版本和环境哈希。
 
 方法参考 [Anthropic 的 Skill 评测说明](https://claude.com/resources/articles/improving-skill-creator-test-measure-and-refine-agent-skills)：固定任务，比较有无 Skill 或不同版本，分别记录验收、耗时和 token。外部资料于 2026-10-17 核对。
 
 [验收记录](measurements/task-comparison-2026-10-17.json)包含 41 项相关 Swift 测试、7 项编译后 CLI 检查及二进制 / 夹具哈希。`python3 scripts/verify-task-comparison.py .build/debug/thermo` 可重复验证结果计算、未知值、条件不符、重复记录、内容不执行和管道输入拒绝；范围为本地 Debug CLI 与合成数据，不包含实际模型任务、App 或发布安装。
+
+[App 交互验收](measurements/task-comparison-app-2026-10-17.json)另外记录了 13 项定向测试及真实原生窗口操作：英文指标、中英文切换、分类隔离、无效文件替换、未知值、展开版本信息、滚动与清除报告。QA 使用独立 App 副本和合成文件，原应用保留运行，原始夹具内容未变；这不代表正式安装或真实任务效果已验收。最小窗口、大字体、实测声明与排除明细的原生操作仍待验证。

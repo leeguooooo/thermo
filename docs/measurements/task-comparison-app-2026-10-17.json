@@ -1,0 +1,56 @@
+{
+  "generated": "2026-10-16T21:06:51.275451+00:00",
+  "evidenceKind": "synthetic",
+  "verificationKind": "Real native macOS UI via cua_repl on an owned QA copy, independent bundle ID and fixture Home. Not installed production acceptance.",
+  "qaBundleID": "dev.thermo.aiqa",
+  "originalAppPID": 94672,
+  "originalAppPreserved": true,
+  "qaAppClosed": true,
+  "verifiedFlows": {
+    "filePanelStartsInFixtureHome": true,
+    "importJSONAndOpenComparison": true,
+    "englishResultNumbersMatchFixture": true,
+    "syntheticEvidenceExplicitlyLabeled": true,
+    "wrongCategoryHidesComparison": true,
+    "returningToSkillRetainsReport": true,
+    "invalidImportRemovesPreviousReport": true,
+    "chineseImportAndErrorLabels": true,
+    "unknownOutcomesAndMetricsRemainUnknown": true,
+    "declaredHashesExpandableAndScrollable": true,
+    "clearRemovesInMemoryReportOnly": true,
+    "sourceFixtureFilesUnchanged": true
+  },
+  "observed": {
+    "tasks": 1,
+    "matchedPairs": 3,
+    "candidateTimeouts": 1,
+    "baselineFailures": 1,
+    "medianSecondsDelta": 2,
+    "medianInputTokenDelta": 35,
+    "medianOutputTokenDelta": -15,
+    "tokenMetricPairs": 2,
+    "unknownFixtureUnverifiedPairs": 3
+  },
+  "checks": {
+    "appModelTests": 3,
+    "coreComparisonTests": 7,
+    "localizationTests": 3,
+    "compiledCLIChecks": 7
+  },
+  "sourceSHA256": {
+    "Sources/ThermoApp/TaskComparisonPanel.swift": "0f15a01ad77fe590611dba7b263b634b5625f51cce04d36a287edc3068f966de",
+    "Sources/AgentDoctor/TaskComparison.swift": "4ad453abef393819ba08f68df299f04dbebc5f9e78a614ed207898611bab9af9",
+    "Sources/ThermoL10n/ZhHans.swift": "9b44dd0cd4f05c2be00843aedff409581c6eaf849dbdd89762efc5f0e266511c"
+  },
+  "notYetVerified": [
+    "real model task-quality comparisons",
+    "minimum-size and large-font layouts",
+    "measured-record declaration and excluded-pair details in native UI",
+    "notarized release installation"
+  ],
+  "scopeNotes": [
+    "Only owned synthetic JSON files were selected. No private source files were opened.",
+    "The QA process scanner still observes host processes; no repair, removal, setup or permission action was clicked.",
+    "Language settings were changed only in the QA app. No model, business tool or supplied verifier was run."
+  ]
+}

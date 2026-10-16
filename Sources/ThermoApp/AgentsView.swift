@@ -10,6 +10,7 @@ import ThermoL10n
 @MainActor
 final class AgentScanner: ObservableObject {
     let toolUsage = ToolUsageModel()
+    let taskComparison = TaskComparisonModel()
     @Published var report: DoctorReport?
     @Published var scanning = false
     /// The item the diagnostics window shows.

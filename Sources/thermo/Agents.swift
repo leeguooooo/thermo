@@ -1,6 +1,5 @@
 import AgentDoctor
 import Foundation
-import Darwin
 
 /// `thermo agents`: what is wrong with the AI agents on this Mac.
 struct AgentsCommand {
@@ -157,16 +156,7 @@ struct AgentsCommand {
         guard app.args.flags.isSubset(of: ["json", "no-color"]), app.args.options.isEmpty else {
             throw CLIError("agents compare accepts only FILE, --json and --no-color")
         }
-        let fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC)
-        guard fd >= 0 else { throw CLIError("Cannot open local evaluation file") }
-        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
-        defer { try? handle.close() }
-        var metadata = stat()
-        guard fstat(fd, &metadata) == 0, metadata.st_mode & S_IFMT == S_IFREG else { throw CLIError("Evaluation input must be a regular file") }
-        let data: Data
-        do { data = try handle.read(upToCount: 4 * 1024 * 1024 + 1) ?? Data() }
-        catch { throw CLIError("Cannot read local evaluation file") }
-        let report = try TaskComparison.compare(data)
+        let report = try TaskComparison.read(URL(fileURLWithPath: path))
         if app.args.has("json") { print(Export.diagnosticJSON(report)); return }
         func metric(_ label: String, _ value: TaskComparison.Delta) -> String {
             guard let median = value.medianCandidateMinusBaseline else { return "\(label): unknown (0 paired samples)" }
