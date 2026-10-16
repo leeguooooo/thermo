@@ -1,6 +1,9 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Nothing was moved to the Trash.": "没有项目移到废纸篓。",
+    "Kept by the whitelist: %1$@": "按白名单保留：%1$@",
+    "Recovery record issue: %1$@": "恢复记录出现问题：%1$@",
     "Checking last opened dates": "正在查询上次打开时间",
     "%1$@ files have no known last opened date and are excluded from this filter.": "%1$@ 个文件的上次打开时间未知，未纳入此筛选。",
     "Some sizes are unfinished. Known bytes are lower bounds; resume a full measurement when ready.": "部分大小尚未测完，已知数值只是下限；需要时可继续完整测量。",

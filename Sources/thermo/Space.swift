@@ -175,10 +175,8 @@ struct SpaceCommand {
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print(tr("cancelled")); return }
         }
         let result = ManualRemoval.trash(ok, sizes: sizes, incompletePaths: incomplete, reviewIdentities: identities)
-        print(tr("Moved %1$@ to the Trash (empty it to get the space back)", AppSize.text(result.bytes, state: result.bytesIncomplete == true ? .incomplete : .complete)))
+        for line in ManualRemoval.feedback(result) { print(line) }
         if let id = result.trashBatchID { print(style.dim(tr("Put back: thermo clean restore %1$@", id))) }
-        for (p, why) in result.failed.sorted(by: { $0.key < $1.key }) { print(style.yellow("  ✗ " + FS.tilde(p) + "  " + why)) }
-        for p in result.whitelisted ?? [] { print(style.dim("  " + FS.tilde(p) + "  " + Whitelist.reason)) }
         if !result.failed.isEmpty { exit(1) }
     }
 

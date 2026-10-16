@@ -1,8 +1,28 @@
 @testable import CleanKit
 @testable import ThermoApp
 import XCTest
+import ThermoL10n
 
 final class SpaceLensModelTests: XCTestCase {
+    @MainActor func testRemovalFeedbackRetainsUnmovedSelectionsAndMarksFailure() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("Downloads"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("Downloads/keep"); try Data("owned".utf8).write(to: file)
+        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache"))
+        model.toggle(file.path, bytes: 5)
+        var failed = CleanResult(id: "manual", trashed: true); failed.failed[file.path] = "fixture failure"
+        model.afterTrash(failed)
+        XCTAssertEqual(model.basket[file.path], 5); XCTAssertTrue(model.outcomeIsWarning)
+        XCTAssertTrue(try XCTUnwrap(model.outcome).hasPrefix(tr("Nothing was moved to the Trash.")))
+        var kept = CleanResult(id: "manual", trashed: true); kept.whitelisted = [file.path]
+        model.afterTrash(kept)
+        XCTAssertFalse(model.outcomeIsWarning); XCTAssertTrue(try XCTUnwrap(model.outcome).contains(tr("Kept by the whitelist: %1$@", FS.tilde(file.path))))
+        var success = CleanResult(id: "manual", trashed: true); success.removed = [file.path]
+        model.afterTrash(success)
+        XCTAssertTrue(model.basket.isEmpty); XCTAssertFalse(model.outcomeIsWarning)
+    }
+
     @MainActor func testDuplicateSelectionBindsComparisonAndRetainedCopy() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
         try FileManager.default.createDirectory(at: root.appendingPathComponent("Downloads"), withIntermediateDirectories: true)

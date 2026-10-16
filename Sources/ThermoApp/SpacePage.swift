@@ -25,6 +25,7 @@ final class SpaceLensModel: ObservableObject {
     @Published private(set) var working = false
     @Published var exitRequested = false
     @Published var outcome: String?
+    @Published private(set) var outcomeIsWarning = false
     /// When Spotlight last saw each big file opened (nil inside: it does not know).
     @Published private(set) var lastOpened: [String: Date?] = [:]
     @Published private(set) var duplicates: [DuplicateGroup]?
@@ -133,8 +134,8 @@ final class SpaceLensModel: ObservableObject {
         stopDuplicates(); duplicates = nil
         stopLastOpened(); lastOpenedGeneration = UUID(); lastOpened = [:]
         basket = [:]; selectionIdentities = [:]; selectionRequirements = [:]; selectionSizeStates = [:]
-        tree = nil; outcome = nil
-        if !SpaceLens.invalidateCache(at: cache) { outcome = tr("The old space cache could not be cleared; scan again before using saved results") }
+        tree = nil; outcome = nil; outcomeIsWarning = false
+        if !SpaceLens.invalidateCache(at: cache) { outcomeIsWarning = true; outcome = tr("The old space cache could not be cleared; scan again before using saved results") }
     }
 
     func open(_ path: String) { if tree?.folder(path) != nil { self.path = path } }
@@ -145,7 +146,7 @@ final class SpaceLensModel: ObservableObject {
         guard !working else { return }
         if basket[path] != nil { basket[path] = nil; selectionIdentities[path] = nil; selectionRequirements[path] = nil; selectionSizeStates[path] = nil; return }
         guard refusal(path) == nil else { return }
-        guard let identity = ManualRemoval.reviewIdentity(path) else { outcome = tr("Could not verify the selected item; refresh before selecting it"); return }
+        guard let identity = ManualRemoval.reviewIdentity(path) else { outcomeIsWarning = true; outcome = tr("Could not verify the selected item; refresh before selecting it"); return }
         // A folder already holds what is under it; picking one replaces its picked insides,
         // and an inside path is not picked again on top of its picked folder.
         if basket.keys.contains(where: { path.hasPrefix($0 + "/") }) { return }
@@ -208,11 +209,9 @@ final class SpaceLensModel: ObservableObject {
                 return g
             }
         }
-        var parts = [tr("Moved %1$@ to the Trash (%2$@).", trCount(result.removed.count, "%1$@ item", "%1$@ items"), AppSize.text(result.bytes, state: result.bytesIncomplete == true ? .incomplete : .complete))]
+        var parts = ManualRemoval.feedback(result)
+        outcomeIsWarning = !result.failed.isEmpty || !cacheCleared
         if !cacheCleared { parts.append(tr("The old space cache could not be cleared; scan again before using saved results")) }
-        if !result.failed.isEmpty {
-            parts.append(tr("Not moved: %1$@", result.failed.sorted { $0.key < $1.key }.map { "\(FSPath.tilde($0.key)) (\($0.value))" }.joined(separator: "; ")))
-        }
         outcome = parts.joined(separator: " ")
         if wantsLastOpened { loadLastOpened() }
     }
@@ -301,6 +300,7 @@ final class SpaceLensModel: ObservableObject {
         guard let keeper = group.paths.first, path != keeper, let identities = group.reviewIdentities,
               let selected = identities[path], let retained = identities[keeper],
               ManualRemoval.reviewIdentity(path) == selected, ManualRemoval.reviewIdentity(keeper) == retained else {
+            outcomeIsWarning = true
             outcome = tr("Duplicate comparison changed; compare the files again")
             return
         }
@@ -333,7 +333,7 @@ struct SpacePage: View {
             }
             if let outcome = model.outcome {
                 HStack(alignment: .top) {
-                    Label(outcome, systemImage: "trash").font(.callout).foregroundStyle(.white.opacity(0.85)).textSelection(.enabled)
+                    Label(outcome, systemImage: model.outcomeIsWarning ? "exclamationmark.triangle" : "trash").font(.callout).foregroundStyle(.white.opacity(0.85)).textSelection(.enabled)
                     Spacer()
                     Button { model.outcome = nil } label: { Image(systemName: "xmark") }.buttonStyle(.plain)
                         .accessibilityLabel(tr("Dismiss")).help(tr("Dismiss"))

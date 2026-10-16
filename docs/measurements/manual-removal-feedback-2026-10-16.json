@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "e5a172d",
+  "sourceSHA256": {
+    "Sources/CleanKit/ManualRemovalFeedback.swift": "b7f8cb57ed24f818ca5ccad9e7093114566800ceb6903d87ced9aa8f7033218a",
+    "Sources/ThermoApp/SpacePage.swift": "b9dde68e7f5699beefa48e1937998671ce5188d673f9b6cf2b1722727fc05434",
+    "Sources/thermo/Space.swift": "82072f7a4a66a6bc2a2d8d1d96a2018660751802d47fb132cd9c0a43958044f0",
+    "Sources/ThermoL10n/ZhHans.swift": "feb1caea722b76127399e32608a912bf5fe706b6d46fd88717d9739bdd9d7af8",
+    "Tests/CleanKitTests/ManualRemovalFeedbackTests.swift": "c4e21c7bebe54dfceb32fced68cf41492d5b279ffcea244dbe8b4bd174cd0849",
+    "Tests/ThermoAppTests/SpaceLensModelTests.swift": "ca5ca31cf8177eee7563b9ac03743c8d8e97a27b90b3a1f023cbe5e63df116ec"
+  },
+  "buildAppBinarySHA256": "fe73749abcbd8a93503096e2b7dfcc3fcb53f3b46c75cfe6a575320d361258ae",
+  "focused": {
+    "log": "/tmp/thermo-manual-feedback-focused.log",
+    "newFormatterTests": 4,
+    "newModelTests": 1,
+    "existingHistoryTests": 4,
+    "failures": 0
+  },
+  "nativeCLI": {
+    "case": "owned child holds own selected file open",
+    "exit": 1,
+    "summary": "Nothing was moved to the Trash.",
+    "holderReasonPresent": true,
+    "fileBytesUnchanged": true,
+    "ownedChildExited": true,
+    "temporaryHomeRemoved": true
+  },
+  "visibleQA": {
+    "case": "owned duplicate reference changed after selection",
+    "nothingMovedSummaryChinese": true,
+    "warningTriangleVisible": true,
+    "reasonVisible": true,
+    "failedSelectionRetained": true,
+    "selectedExtraBytesUnchanged": true,
+    "trashBatchCreated": false,
+    "qaExitCode": 0,
+    "temporaryWorkspaceRemoved": true,
+    "screenshot": "manual-removal-feedback-2026-10-16.jpg",
+    "screenshotSHA256": "4e3cf69b8c5f8a504ee0d5dd52acf337e4f41cddcccb83d89e2b87623aaa6c3e",
+    "accessibility": "manual-removal-feedback-2026-10-16.ax.txt"
+  },
+  "full": {
+    "log": "/tmp/thermo-manual-feedback-full.log",
+    "result": "passed",
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 57,
+      "ThermoAppTests": 164,
+      "CleanKitTests": 570,
+      "AgentCoreTests": 34
+    },
+    "total": 939,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "logSHA256": "521cac30031f3017cb98bd1b44c5ebbc8e05ce144b04bb83c915556f42276c13"
+  },
+  "limits": [
+    "Whitelist and post-move record/cache issues verified by formatter/model tests, not new visible injected I/O failures",
+    "History restore behavior unchanged; existing tests retain success paths, issues, failure notice and exit-guard release",
+    "No user files moved, root query, helper installation, hardware writes, installed-app replacement or release"
+  ]
+}
