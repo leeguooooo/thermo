@@ -310,7 +310,7 @@ public extension ScanReport {
             for i in items {
                 let exact = i.id.lowercased() == s
                 let byPrefix = i.id.lowercased().hasPrefix(s + "/") || (s.hasSuffix("*") && i.id.lowercased().hasPrefix(String(s.dropLast())))
-                let byGroup = s == i.category.rawValue || (s == "ai" && i.category.isAI) || s == "all" || (s == "safe" && i.safety == .safe && !i.developmentDependency)
+                let byGroup = s == i.category.rawValue || (s == "ai" && i.category.isAI) || s == "all" || (s == "safe" && i.safety == .safe && i.category != .aiSessions && !i.developmentDependency)
                 if exact || ((byPrefix || byGroup) && i.safety != .risky) { add(i) }
             }
         }

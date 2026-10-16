@@ -301,13 +301,18 @@ struct DiskCategoryPage: View {
                     Text(tr("Conversation retention"))
                     Picker(tr("Conversation retention"), selection: Binding(get: { model.sessionRetentionDays ?? -1 }, set: { model.setSessionRetentionDays($0 < 0 ? nil : $0) })) {
                         Text(tr("Keep all conversations")).tag(-1)
-                        ForEach([1, 7, 30, 90, 180, 365], id: \.self) { days in
+                        ForEach(ConversationRetentionPreferences.choices, id: \.self) { days in
                             Text(tr("List conversations older than %1$@ days", String(days))).tag(days)
                         }
                     }.labelsHidden().frame(maxWidth: 280)
                     Spacer()
                 }.font(.callout).padding(.horizontal, 28).padding(.bottom, 10)
                     .disabled(model.scanning || model.cleaning)
+                if model.remembersSessionRetention {
+                    Text(tr("This choice is remembered on this Mac. Conversations are never selected automatically."))
+                        .font(.caption).foregroundStyle(.secondary).frame(maxWidth:.infinity,alignment:.leading)
+                        .padding(.horizontal,28).padding(.bottom,10)
+                }
             }
             if model.loadingSaved {
                 Label(tr("Loading saved results…"), systemImage: "hourglass")

@@ -11,7 +11,7 @@ final class AppModels {
     static let shared = AppModels()
     lazy var monitor = Monitor()
     lazy var updates = Updates()
-    lazy var disk = DiskModel()
+    lazy var disk = DiskModel(retentionPreferences:.stored(in:.standard))
     lazy var agents = AgentScanner()
     lazy var apps = AppsModel()
     lazy var startup = StartupItemsModel()

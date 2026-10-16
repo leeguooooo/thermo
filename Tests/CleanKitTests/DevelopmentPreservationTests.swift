@@ -2,6 +2,14 @@ import XCTest
 @testable import CleanKit
 
 final class DevelopmentPreservationTests: XCTestCase {
+    func testSafeSelectionNeverImplicitlyIncludesConversationsEvenWithASafeLabel() {
+        let chat=CleanItem(id:"fixture-session",category:.aiSessions,title:"Conversation",safety:.safe,bytes:10,paths:["/fixture/session"])
+        let cache=CleanItem(id:"fixture-cache",category:.system,title:"Cache",safety:.safe,bytes:10,paths:["/fixture/cache"])
+        let report=ScanReport(items:[chat,cache],denied:[],started:Date(),duration:0)
+        XCTAssertFalse(chat.automaticallySelected)
+        XCTAssertEqual(report.select(["safe"]).map(\.id),[cache.id])
+        XCTAssertEqual(report.select([chat.id]).map(\.id),[chat.id])
+    }
     func testAutomaticSelectionKeepsDevelopmentDependenciesButExplicitIDsStillWork() {
         let cache = CleanItem(id: "user-logs", category: .system, title: "Logs", safety: .safe, bytes: 10, paths: ["/fixture/logs"])
         let dependencies = [CleanCategory.devCaches, .projects, .xcode, .aiModels].enumerated().map {

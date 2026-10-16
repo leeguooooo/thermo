@@ -9,7 +9,7 @@ public extension CleanItem {
     }
 
     var automaticallySelected: Bool {
-        cleanable && safety == .safe && !developmentDependency
+        cleanable && safety == .safe && category != .aiSessions && !developmentDependency
     }
 }
 

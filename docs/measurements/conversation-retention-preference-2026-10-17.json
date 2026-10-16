@@ -1,0 +1,187 @@
+{
+  "date": "2026-10-17",
+  "sourceCommit": "843baabb736b292f776c40b2b078faf2d87b7317",
+  "parentCommit": "b50676a2b465fdc931591aee59aaafa393323bef",
+  "sourceSHA256": {
+    "README.md": "b8c082f83f541864b03522337b93bc680378faa5c748d2fdb842760aea2c94ab",
+    "Sources/CleanKit/DevelopmentPreservation.swift": "f69679137fccc9a6df0bc24ad46bf9414a99d587c44a54e554fb5fd19560e704",
+    "Sources/CleanKit/Scanner.swift": "b3594d85855bc0562d72dcaa1300e81cd7194b17668c53549301626bef3f2279",
+    "Sources/ThermoApp/ConversationRetentionPreferences.swift": "db2dcbfdb9449d26b6954f52e5aa205b880a508151e37942a311c1c97000788c",
+    "Sources/ThermoApp/DiskView.swift": "16935ef2a869ab367240828798355c35e8c6b3a8602723982fdeaa4f3e1b88ad",
+    "Sources/ThermoApp/DiskWindow.swift": "4984246524dc7d82b4fac20a770255516e9779190d178e10673b400a4ed28bb2",
+    "Sources/ThermoApp/MainWindow.swift": "5bb20c67c81c7e647fab18a52fe46985ea0f217313699b2922341a929bdacc5b",
+    "Sources/ThermoL10n/ZhHans.swift": "d547669bbc7a7dfad65062f6d426fe001a62aa5cab15a21c0d1bfc175f6717df",
+    "Tests/CleanKitTests/DevelopmentPreservationTests.swift": "d4045f9938d07e3152e4f1b06e585ca25566b22ac47c4e009b43caacf6c08bc8",
+    "Tests/ThermoAppTests/ConversationRetentionTests.swift": "a24048791c586c25ff03661734624746f55086fdcf25023043569cd57b058c0a",
+    "docs/mole-parity.md": "41600612d1821e43070f4b421d54945836ed9a0dda1ec2a16234e0fe1971e3ca",
+    "scripts/verify-conversation-retention-ui.swift": "56914ba48ee18147757de0109cd629245e1501b8031bbf92bdc5b1adb3f8ff80"
+  },
+  "preIntegrationRegression": {
+    "sourceCommit": "2f8ed4c",
+    "counts": {
+      "ThermoAppTests": 242,
+      "ThermoCLITests": 66,
+      "CleanKitTests": 713
+    },
+    "total": 1021,
+    "failures": 0,
+    "testLogSHA256": "811dbb1a175c81b18d5f4c2d52dc718b39122c3b1de33126f986999bb399dcd5",
+    "buildLogSHA256": "f44a614be4d41438ff77cec87868494e8c2109f0de5f5952c6545f32029e46ed"
+  },
+  "integratedRegression": {
+    "sourceCommit": "843baabb736b292f776c40b2b078faf2d87b7317",
+    "counts": {
+      "ThermoCLITests": 66,
+      "ThermoAppTests": 242
+    },
+    "total": 308,
+    "failures": 0,
+    "overlapsEarlierCounts": true,
+    "testLogSHA256": "e71310db32680b3c97471166688f08ea4e0db7dae020b2d7d25e383de0827b93",
+    "buildLogSHA256": "33076cf0d3d617069a804de2a9d97339a3d9c7876ecaf0aaae9fee582e75b855",
+    "cleanKitEvidenceRetained": "git diff c6a0d0d b50676a -- Sources/CleanKit Tests/CleanKitTests Sources/AgentCore was empty; the 713 CleanKit tests were not repeated."
+  },
+  "initialFailuresResolved": {
+    "firstAppRunTests": 242,
+    "failedAssertions": 4,
+    "affectedTestCases": 2,
+    "finding": "A safe-labeled conversation was implicitly selected from a scan or cached report. Chat safety depended on scanner labels.",
+    "fix": "Conversations are excluded by CleanItem.automaticallySelected and CLI safe-group selection, regardless of safety label. Explicit IDs remain available.",
+    "logSHA256": "12e63f884389a83b68bc370fa31d4a7880b07fcb0c2f3698c9ddff0561ad4669"
+  },
+  "native": {
+    "sourceCommit": "2f8ed4c",
+    "preservedBranch": "codex/retention-native-2f8ed4c",
+    "runtimeFilesIdenticalAfterRebase": [
+      "Sources/ThermoApp/ConversationRetentionPreferences.swift",
+      "Sources/ThermoApp/DiskView.swift",
+      "Sources/ThermoApp/DiskWindow.swift",
+      "Sources/ThermoApp/MainWindow.swift",
+      "Sources/CleanKit/DevelopmentPreservation.swift",
+      "Sources/CleanKit/Scanner.swift"
+    ],
+    "fixtureBundleID": "dev.thermo.qa.retention.b2053af0347f4ac8bcce5c9ed068151f",
+    "preferenceScope": "UserDefaults.standard in a distinct fixture bundle; no production preference domain was used",
+    "appSHA256": "da1a312801ed4056d48291c86dd3af8441df8581d4ea851ea101e0753d6b2d8b",
+    "sameBinaryAcrossThreeLaunches": true,
+    "receipts": {
+      "choose": {
+        "days": 90,
+        "hasReport": false,
+        "phase": "choose",
+        "scanning": false,
+        "selected": 0,
+        "stored": true
+      },
+      "restore-initial": {
+        "days": 90,
+        "hasReport": false,
+        "phase": "restore",
+        "scanning": false,
+        "selected": 0,
+        "stored": true
+      },
+      "restore": {
+        "days": -1,
+        "hasReport": false,
+        "phase": "restore",
+        "scanning": false,
+        "selected": 0,
+        "stored": false
+      },
+      "kept": {
+        "days": -1,
+        "hasReport": false,
+        "phase": "kept",
+        "scanning": false,
+        "selected": 0,
+        "stored": false
+      }
+    },
+    "trace": {
+      "choose": [
+        {
+          "days": -1,
+          "hasReport": false,
+          "phase": "choose",
+          "scanning": false,
+          "selected": 0,
+          "stored": false
+        },
+        {
+          "days": 90,
+          "hasReport": false,
+          "phase": "choose",
+          "scanning": false,
+          "selected": 0,
+          "stored": true
+        }
+      ],
+      "restore": [
+        {
+          "days": 90,
+          "hasReport": false,
+          "phase": "restore",
+          "scanning": false,
+          "selected": 0,
+          "stored": true
+        },
+        {
+          "days": -1,
+          "hasReport": false,
+          "phase": "restore",
+          "scanning": false,
+          "selected": 0,
+          "stored": false
+        }
+      ],
+      "kept": [
+        {
+          "days": -1,
+          "hasReport": false,
+          "phase": "kept",
+          "scanning": false,
+          "selected": 0,
+          "stored": false
+        }
+      ]
+    },
+    "allThreeProcessExitCodes": [
+      0,
+      0,
+      0
+    ],
+    "noAutomaticScanObserved": true,
+    "cleanupDisconnected": true,
+    "actualConversationsReadOrMoved": false,
+    "permissionChanged": false,
+    "AXEvidence": [
+      "First launch defaults to Keep all conversations",
+      "Choosing 90 days shows zero selections, disabled cleanup and an explicit Scan button",
+      "Second independent launch restores 90 days, with no report or selection",
+      "Choosing Keep all removes the stored value",
+      "Third independent launch still shows Keep all and zero selections"
+    ],
+    "visualAcceptance": "Not completed. Screenshot API returned ScreenCaptureKit -3812 and -3811; AX state was re-read, and preferences were verified from independent-process receipts. No permission changes or duplicate launches were used to recover."
+  },
+  "preferenceFormat": {
+    "key": "dev.thermo.clean.session-retention.v1",
+    "version": 1,
+    "allowedDays": [
+      1,
+      7,
+      30,
+      90,
+      180,
+      365
+    ],
+    "keepAll": "absence of preference value",
+    "invalidOrUnsupported": "Keep all; no selection or cleanup plan is restored",
+    "limitBytes": 1024
+  },
+  "remaining": [
+    "Installed main App entry and complete real-tool session workflows",
+    "Fresh visual layout acceptance after screenshot access recovers",
+    "No installed app replacement, push or release"
+  ]
+}

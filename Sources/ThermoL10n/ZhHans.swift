@@ -1,6 +1,7 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "This choice is remembered on this Mac. Conversations are never selected automatically.": "此选择会在本机记住，会话不会被自动勾选。",
     "Observed descendant processes": "观察到的子孙进程",
     "No descendants were observed in this process reading.": "本次进程读数中未观察到子孙进程。",
     "Descendant relationships are unavailable.": "无法读取子孙进程关系。",

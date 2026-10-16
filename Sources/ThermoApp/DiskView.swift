@@ -38,6 +38,8 @@ final class DiskModel: ObservableObject {
     @Published private(set) var loadingSaved = false
     private let scanIO: DiskScanIO
     private let requestNotifications: () -> Void
+    private let retentionPreferences: ConversationRetentionPreferences
+    var remembersSessionRetention: Bool { retentionPreferences.persistent }
     private var savedLoadGeneration = UUID()
     private var savedReadRunning = false
     private var savedRequest: SavedRequest?
@@ -61,10 +63,14 @@ final class DiskModel: ObservableObject {
     @Published private(set) var cleaningDone = 0
     @Published private(set) var cleaningTotal = 0
 
-    init(report: ScanReport? = nil, scanIO: DiskScanIO = .live, requestNotifications: @escaping () -> Void = Monitor.requestNotificationPermission) {
+    init(report: ScanReport? = nil, scanIO: DiskScanIO = .live, requestNotifications: @escaping () -> Void = Monitor.requestNotificationPermission,
+         retentionPreferences: ConversationRetentionPreferences = .transient) {
         self.report = report
         self.scanIO = scanIO
         self.requestNotifications = requestNotifications
+        self.retentionPreferences = retentionPreferences
+        let saved=retentionPreferences.read()
+        self.sessionRetentionDays=saved.flatMap { ConversationRetentionPreferences.choices.contains($0) ? $0 : nil }
     }
 
     private let queue = DispatchQueue(label: "dev.thermo.app.disk", qos: .background)
@@ -86,7 +92,9 @@ final class DiskModel: ObservableObject {
     var selectedBytes: Int64 { selectedItems.reduce(0) { $0 + $1.bytes } }
 
     func setSessionRetentionDays(_ days: Int?) {
-        guard !scanning, !cleaning, days != sessionRetentionDays, days.map({ $0 >= 0 }) ?? true else { return }
+        guard !scanning, !cleaning, days.map({ ConversationRetentionPreferences.choices.contains($0) }) ?? true else { return }
+        retentionPreferences.write(days)
+        guard days != sessionRetentionDays else { return }
         invalidateSavedLoad()
         sessionRetentionDays = days
         report = nil; selected = []; excluded = [:]

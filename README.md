@@ -236,7 +236,7 @@ thermo tabs restore UUID --window WINDOW_ID --yes
 安全规则：
 
 - 扫描只读。`clean run` 先列出计划，再要求确认。
-- **聊天保留**：常规 Everything 和缓存分类扫描不带入聊天清理期限；专门的会话或 AI 范围才使用当前进程中选择的期限。更改期限会清空旧报告及选择；扫描或执行期间不能更改。CLI `--older-than 90d` 同时指定通用过滤天数并显式启用旧会话审阅。库调用请设置 `ScanOptions.sessionRetentionDays`，单独设置缓存的 `olderThanDays` 不会启用聊天候选。
+- **聊天保留**：常规 Everything 和缓存分类扫描不带入聊天清理期限；专门的会话或 AI 范围才使用所选期限。App 会在本机记住“保留全部”或所选天数；损坏或不支持的偏好按保留全部处理，不恢复旧的勾选或清理计划。更改期限会清空旧报告及选择；扫描或执行期间不能更改。同期限的有效缓存仍可显示，期限不同的缓存不能复用。会话即使被标为安全，也不自动勾选或进入 `safe` 推荐分组。CLI 仍须显式提供 `--older-than 90d`，不读取 App 的期限偏好。库调用请设置 `ScanOptions.sessionRetentionDays`，单独设置缓存的 `olderThanDays` 不会启用聊天候选。
 - **Agent 工作树**：`thermo clean worktrees` 单独扫描 agent 留在仓库里的 checkout；`thermo clean sessions` 只扫描会话记录，避免等待整个项目目录遍历。`thermo clean ai` 仍会包含两类。工作树的未提交改动、运行中的 agent 和近期写入检查仍会阻止误删。
 - 每项都有级别。`safe` 是会自动重建的缓存，直接删除；`review` 是会话、模型这类数据，移到废纸篓；`risky` 不进入批量推荐。工作树的独有提交、未提交/未跟踪/被忽略本地文件、近期活动和归属保护不能靠手写 id 绕过。
 - 正在运行的 Claude Code 会话、2 小时内写过的会话、正在运行的 agent 所在目录、所属 App 还开着的缓存，一律跳过。
