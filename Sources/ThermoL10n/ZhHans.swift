@@ -2726,6 +2726,8 @@ let zhHans: [String: String] = [
     "the Trash was chosen, so the folder is moved there instead": "选择了移到废纸篓，因此改为把文件夹移到废纸篓",
     "the whitelist keeps something inside; folders are deleted one by one instead": "白名单保留了其中的内容，改为逐个删除文件夹",
     "Native cleanup scope or tool changed; scan and review again.": "清理范围或工具已变化，请重新扫描并确认。",
+    "modified since the scan": "扫描后已修改",
+    "The whitelist protects this cache; scan and review it again.": "白名单保护了此缓存，请重新扫描并确认。",
     "runs `%1$@`": "运行 `%1$@`",
     "ran `%1$@`": "已运行 `%1$@`",
     "did not run `%1$@`; folder deleted instead": "未运行 `%1$@`，改为删除文件夹",

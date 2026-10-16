@@ -214,7 +214,7 @@ enum NativeCleanup {
             if mode.trashes(item.safety) { fallBack("trash", tr("the Trash was chosen, so the folder is moved there instead")); continue }
             if let why=protectionChanged() { stop("refused",why);continue }
             if let why=g.refusal(run.folder) { stop("refused",why);continue }
-            if whitelist.protects(run.folder) { stop("whitelisted",tr("the whitelist keeps something inside; folders are deleted one by one instead"));continue }
+            if whitelist.protects(run.folder) { stop("whitelisted",tr("The whitelist protects this cache; scan and review it again."));continue }
             if let why=Self.refusal(item,run:run,home:g.home) { stop("refused",why);continue }
             guard let program = run.executable, FileManager.default.isExecutableFile(atPath: program) else {
                 stop("notFound",tr(changed));continue
