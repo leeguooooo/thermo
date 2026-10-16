@@ -317,6 +317,22 @@ CacheItem.pathIdentity
 
 ## 已验证的工具边界
 
-Hopper 原生 MCP 已实际返回文档、段、引用、函数信息、汇编和伪代码；不是仅初始化握手成功。没有购买许可证，没有修改 TCC 数据库，也没有为 cmux 打开其他权限。REA 原有 Apple Events 启动问题仍在；后续可继续用原生 MCP 的只读接口分析，但两类证据的来源必须保持区分。
+Hopper 原生 MCP 此前已实际返回文档、段、引用、函数信息、汇编和伪代码。没有购买许可证，没有修改 TCC 数据库，也没有为 cmux 打开其他权限。前述主程序研究曾遇到 REA 的 Apple Events 启动问题；该条属于当时环境记录。下述 AWDL 补充已通过当前 REA 的 Hopper provider 成功读取，证据来源分别保留。
 
 本地 `hopper_read.py` 只允许一组已核对的读取接口，不包含重命名、修改注释或执行任意代码。原生 MCP 服务偶有提前关闭连接的情况，本轮没有将空输出当成无匹配；失败的读取只在确认应用会话仍可用后重新发起。为减少连接冲突，后续应串行使用同一个 Hopper 应用。
+
+## 9. AWDL 的关闭动作被放在持久恢复记录之后
+
+本轮直接使用 REA 的 Hopper provider 分析已安装 Mole 1.16.0（324）的 helper。原 FAT 文件 SHA-256 为 `2f309f5f3d6f4ce416ea92cc78363ab97869771dd0817edf98849fbcc1a19e1d`；REA 验证后提取 ARM64 切片，原文件偏移 180224、长度 181840。下列地址属于该切片的虚拟地址，不可用于其他版本或架构。没有执行 Mole helper 或切换实际网络。
+
+| 地址 | 观察与推断 |
+|---|---|
+| `0x10000c590` | 调用 `socket(2,2,0)` 和 ioctl `0xc0206911`，接口文字为 `awdl0`。与本地 SDK 对照，该请求是 `SIOCGIFFLAGS`；读取接口标志属于推导结论 |
+| `0x10000c714` | 在写入前比较 `if_nametoindex("awdl0")` 与传入值；先读取标志、替换低位，再调用 ioctl `0x80206910`。SDK 将它定义为 `SIOCSIFFLAGS`，`IFF_UP` 为低位 |
+| `0x10000ccfc` | 汇编确认 `JSONEncoder` 后以 flags `0xb01`、mode `0x180` 打开 lease 文件，再写入、fsync 和关闭。SDK 对照得到 `O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW`、0600 |
+| `0x100004ea0` | 启动候选先调用记录读取与恢复候选，随后读取索引和标志、调用上述持久化函数，再进入 `0x100004fc0`；后者调用关闭接口的包装并再次读取。失败分支还会调用恢复候选 |
+| `0x100004bf4` | 恢复候选包含索引比较、标志读取、设置、再次读取、lease unlink 和异常路径；完整错误分支及状态字段尚未全部解释 |
+
+函数名仍是剥离后的 `sub_*`；“启动”“恢复”是根据调用顺序和数据引用作出的分析命名。Swift 寄存器打包与错误路径会被反编译器错误还原，不能把伪代码当作原源码，或据此宣称全部恢复路径可靠。helper 中还可观察到按秒开始低延迟会话、移除前结束会话的 selector，以及 lease 路径对应的 launchd PathState 文本；实际连接身份、断连、休眠与卸载闭环仍需后续追踪或设备验收。
+
+完整 REA Evidence 本机保存在 `dist/mole-study/awdl-helper-2026-10-17/`，包含主体摘要、provider/profile、原始伪代码与汇编、调用者和局限。可移植的函数摘要与文件哈希见 [AWDL 核心记录](measurements/awdl-session-core-2026-10-17.json)。Thermo 依据公开 ioctl 和上述恢复要求独立实现，没有复制 Mole 的私有代码。

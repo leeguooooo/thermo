@@ -8,6 +8,8 @@
 extern "C" {
 #endif
 
+#include "awdl.h"
+
 /* Error codes. Negative values are thermo errors; positive values are raw kern_return_t. */
 enum {
     SMC_OK = 0,
