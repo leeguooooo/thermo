@@ -410,3 +410,39 @@ extension CleanupIssueRegressionTests {
         XCTAssertNoThrow(try git(repo,["cat-file","-e",head+"^{commit}"]))
     }
 }
+
+
+extension CleanupIssueRegressionTests {
+    func testIgnoredLocalDataCannotBeDiscardedWithCleanWorktree() throws {
+        let (repo,path) = try worktree()
+        try Data(".env\nnode_modules/\n".utf8).write(to: URL(fileURLWithPath: path+"/.gitignore"))
+        _ = try git(path,["add",".gitignore"])
+        _ = try git(path,["-c","user.name=Fixture","-c","user.email=fixture@example.invalid","commit","-m","ignore local files"])
+        try file(path+"/.env")
+        // A conventional cache directory name does not prove all its contents disposable.
+        try file(path+"/node_modules/local-private-data")
+        XCTAssertEqual(try git(path,["status","--porcelain","--untracked-files=all"]),"")
+        let result = clean(CleanItem(id:"worktree/ignored",category:.agentWorktrees,title:"Fixture",safety:.review,bytes:8192,paths:[path],group:repo),mode:.permanent)
+        XCTAssertFalse(result.failed.isEmpty)
+        XCTAssertTrue(FS.exists(path+"/.env"))
+        XCTAssertTrue(FS.exists(path+"/node_modules/local-private-data"))
+    }
+    func testIgnoredFileAppearingAfterReviewStopsBeforeRegistrationBackup() throws {
+        let (_,path) = try worktree()
+        let metadata = try git(path,["rev-parse","--absolute-git-dir"])
+        try Data(".env\n".utf8).write(to: URL(fileURLWithPath: metadata+"/../../info/exclude"))
+        let review = try XCTUnwrap(WorktreeCleanup.registration(path,processes:.init(entries:[])))
+        try file(path+"/.env")
+        XCTAssertThrowsError(try WorktreeCleanup.prepare(review))
+        XCTAssertTrue(FS.exists(path+"/.env"))
+        XCTAssertFalse(FS.children(path).contains { ($0 as NSString).lastPathComponent.hasPrefix(".thermo-worktree-registration-") })
+    }
+    func testUntrackedFileAppearingAfterReviewStopsBeforeGitRemoval() throws {
+        let (_,path) = try worktree()
+        let review = try XCTUnwrap(WorktreeCleanup.registration(path,processes:.init(entries:[])))
+        try file(path+"/new-local-data")
+        XCTAssertThrowsError(try WorktreeCleanup.prepare(review))
+        XCTAssertThrowsError(try WorktreeCleanup.remove(review))
+        XCTAssertTrue(FS.exists(path+"/new-local-data"))
+    }
+}

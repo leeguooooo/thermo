@@ -1835,6 +1835,7 @@ let zhHans: [String: String] = [
     "worktree has commits not retained by the shared repository; keep it": "工作树含有未由共享仓库保留的提交，已保留。",
     "could not verify processes using this worktree; keep it": "无法核实哪些进程正在使用工作树，已保留。",
     "Git worktree registration is unavailable; keep this folder": "无法核实 Git 工作树注册信息，已保留此文件夹。",
+    "worktree has modified, untracked or ignored local files; keep it": "工作树存在已修改、未跟踪或被忽略的本地文件，已保留。",
     "worktree has uncommitted or untracked files; keep it": "工作树存在未提交或未跟踪文件，已保留。",
     "worktrees with submodules are kept": "含子模块的工作树会保留。",
     "Show log": "查看日志",

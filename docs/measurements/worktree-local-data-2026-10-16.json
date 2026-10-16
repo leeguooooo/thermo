@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "63526a0",
+  "sourceSHA256": {
+    "Sources/CleanKit/WorktreeCleanup.swift": "a1566bee0825870bdf5fbea42b7c00bd9a1dc536fcc6289563b2fdcef6077d11",
+    "Sources/ThermoL10n/ZhHans.swift": "2f06fe0e9b2c71c91daa7b9fee22614683c03b108151ed947895101b3309cd10",
+    "Tests/CleanKitTests/CleanupIssueRegressionTests.swift": "47d57d590c620e37dcae30809e12c793e946d899ff4e1871a29c76ddf8065ab0"
+  },
+  "baseline": {
+    "tests": 3,
+    "failedAssertions": 6,
+    "ignoredEnvAndCacheNamedLocalPayloadActuallyDeletedInOwnedFixture": true,
+    "lateIgnoredAndUntrackedFilesDidNotStopPreparation": true,
+    "logSHA256": "e145db0ca615bb7225ceb4c599e526e2afe145c56c63e1d1c8b164b990ea0b03"
+  },
+  "newTests": 3,
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 63,
+      "ThermoAppTests": 197,
+      "CleanKitTests": 678,
+      "AgentCoreTests": 34
+    },
+    "total": 1086,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "logSHA256": "4865494f7154639209fc5663ca176d467b508c7fa038b21c75eb67ed9e4a622e"
+  },
+  "policy": {
+    "ignoredPayload": "keep entire registered checkout; no cache-name exceptions",
+    "recheckedAt": [
+      "registration",
+      "prepare",
+      "permanent remove"
+    ],
+    "missingPathRepair": "does not query checkout contents; commit retention and missing-path checks retained"
+  },
+  "limitations": [
+    "No complete Mole reconstruction algorithm established",
+    "Ignored rebuildable artifacts also keep the checkout",
+    "Concurrent writes after final check are not atomically excluded",
+    "No real user worktrees cleaned",
+    "No native UI acceptance or release this turn"
+  ]
+}

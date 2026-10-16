@@ -73,6 +73,17 @@ enum WorktreeCleanup {
               FileIdentity.of(registration.common) == registration.commonIdentity,
               FileIdentity.of(registration.metadata) == registration.metadataIdentity else { throw Refusal("worktree Git identity or HEAD changed; scan again") }
     }
+    static func verifyContents(path: String, metadata: String) throws {
+        // Ignored files can contain credentials, databases or local edits, including
+        // beneath conventional build/cache names. Git's clean status alone loses them.
+        // Bind both contexts rather than following a changed checkout .git pointer.
+        let status = try runGit(["--git-dir", metadata, "--work-tree", path, "status",
+                                 "--porcelain", "-z", "--untracked-files=all",
+                                 "--ignored=matching", "--ignore-submodules=none"])
+        guard status.isEmpty else {
+            throw Refusal("worktree has modified, untracked or ignored local files; keep it")
+        }
+    }
     static func physical(_ path: String) -> String {
         var ancestor = path
         var suffix: [String] = []
@@ -98,8 +109,7 @@ enum WorktreeCleanup {
         let common = try git(path, ["rev-parse", "--path-format=absolute", "--git-common-dir"])
         guard (metadata as NSString).deletingLastPathComponent == common + "/worktrees",
               let identity = FileIdentity.of(metadata), let commonIdentity = FileIdentity.of(common) else { throw Refusal("worktree registration could not be verified") }
-        let status = try git(path, ["status", "--porcelain", "--untracked-files=all", "--ignore-submodules=none"])
-        guard status.isEmpty else { throw Refusal("worktree has uncommitted or untracked files; keep it") }
+        try verifyContents(path: path, metadata: metadata)
         // Submodule worktrees have additional registrations we cannot safely detach here.
         guard !FS.exists(metadata + "/modules"), !FS.exists(path + "/.gitmodules") else { throw Refusal("worktrees with submodules are kept") }
         let lock = try staleLock(metadata: metadata, path: path)
@@ -139,6 +149,7 @@ enum WorktreeCleanup {
         }
     }
     static func prepare(_ registration: Registration) throws -> String {
+        try verifyContents(path: registration.path, metadata: registration.metadata)
         try unlock(registration)
         let name = ".thermo-worktree-registration-" + UUID().uuidString
         let backup = registration.path + "/" + name
@@ -147,6 +158,7 @@ enum WorktreeCleanup {
         return name
     }
     static func remove(_ registration: Registration) throws {
+        try verifyContents(path: registration.path, metadata: registration.metadata)
         try unlock(registration)
         _ = try git(registration.path, ["worktree", "remove", registration.path])
         guard !FS.exists(registration.path), !FS.exists(registration.metadata) else { throw Refusal("Git removal could not be confirmed") }
