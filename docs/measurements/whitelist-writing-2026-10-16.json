@@ -1,0 +1,69 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "2a84a78",
+  "sourceSHA256": {
+    "Sources/CleanKit/Whitelist.swift": "0c8a2d0cc3031668baf04cbb98fa9fe08fa5d8508a3a09358491d41dc7b93fc5",
+    "Sources/CleanKit/WhitelistWriting.swift": "3faa626a59a8fa241391a31c0be725ae0e0057b5f4e4c98f5957b636faffccd7",
+    "Sources/ThermoL10n/ZhHans.swift": "3f2ff75a99d8e7f4cae1cccfe720a6515319bb2680c0f161d61947e55ad465a1",
+    "Tests/CleanKitTests/WhitelistWritingTests.swift": "ba9fa5cace903edf1102e66b4dc3dc9255dfc37c999157e32a7dd04f10aaa963"
+  },
+  "beforeNativeCLI": {
+    "rounds": 3,
+    "bothExitZeroEveryRound": true,
+    "lostOneSuccessfulAddEveryRound": true,
+    "fixturePaddingLines": 10000,
+    "temporaryHomesRemoved": true
+  },
+  "afterNativeCLI": {
+    "rounds": 20,
+    "bothEntriesPresentAfterExplicitRetryEveryRound": true,
+    "initialNonzeroExits": 19,
+    "explicitRetries": 19,
+    "fixturePaddingLines": 10000,
+    "ownedChildrenReaped": true,
+    "temporaryHomesRemoved": true
+  },
+  "controlledLock": {
+    "busyExit": 2,
+    "reason": "whitelist is being edited by another process; try again",
+    "configurationUnchangedWhileLocked": true,
+    "retryAfterOwnerExit": 0,
+    "originalAndNewEntriesPresent": true,
+    "lockFilePersistedWithoutHoldingTheLock": true
+  },
+  "newTests": {
+    "WhitelistWritingTests": 7,
+    "cases": [
+      "busy lock preserves config",
+      "external file appears after absent snapshot",
+      "in-place config rewrite before commit",
+      "replacement config before remove commit",
+      "parent directory replacement preserves both configs and removes only owned temp",
+      "replaced temporary file is neither committed nor deleted as ours",
+      "lock symlink FIFO and hardlink refusal"
+    ]
+  },
+  "full": {
+    "log": "/tmp/thermo-whitelist-writing-full.log",
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 59,
+      "ThermoAppTests": 175,
+      "CleanKitTests": 606,
+      "AgentCoreTests": 34
+    },
+    "total": 988,
+    "failures": 0,
+    "logSHA256": "6cc965c2ac20d76ac9e80609a227bb4b25e93f4e2f0c4e0090d6757069e04ca5",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ]
+  },
+  "limits": [
+    "Cooperating updated writers use the kernel lock; mixed older writers or external editors cannot be guaranteed atomic across the final validation-to-rename interval",
+    "Observed external edits before commit are rejected; no automatic merge or retry",
+    "No new visible GUI fault injection; native independent CLI processes and file fixtures verified",
+    "No user config edits, user cleanup, root query, helper installation, hardware writes, installed-app replacement or release"
+  ]
+}

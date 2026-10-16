@@ -1,6 +1,14 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "whitelist temporary file changed; nothing was committed": "白名单临时文件发生变化，未提交修改",
+    "whitelist folder could not be locked": "无法锁定白名单所在文件夹",
+    "whitelist folder is not trusted for writing": "白名单所在文件夹不符合安全写入条件",
+    "whitelist write lock is unavailable": "白名单写入锁不可用",
+    "whitelist is being edited by another process; try again": "其他进程正在编辑白名单，请重试",
+    "whitelist folder changed during editing; try again": "编辑期间白名单所在文件夹发生变化，请重试",
+    "whitelist changed during editing; review it and try again": "白名单在编辑期间发生变化，请检查后重试",
+
     "Whitelist protection changed during cleanup; review the remaining tool operations again.": "清理期间白名单保护发生变化，请重新审阅剩余的工具操作。",
     "whitelist folder contains a symbolic link: %1$@": "白名单所在文件夹包含符号链接：%1$@",
     "whitelist changed during reading; try again: %1$@": "白名单在读取期间发生变化，请重试：%1$@",

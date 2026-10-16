@@ -65,8 +65,7 @@ public struct Whitelist: Sendable {
 
     // MARK: - Reading
 
-    /// The file's text, or nil when there is no file. Anything else that is wrong throws.
-    static func read(home: String, afterRead: () throws -> Void = {}) throws -> String? {
+    static func checkedLocation(home: String) throws -> URL {
         let location = url(home: home).path
         func systemSpelling(_ value: String) -> String {
             for root in ["/private/var", "/private/tmp", "/private/etc"] where value == root || value.hasPrefix(root + "/") {
@@ -77,6 +76,12 @@ public struct Whitelist: Sendable {
         let plain = url(home: home).standardizedFileURL
         let resolved = plain.deletingLastPathComponent().resolvingSymlinksInPath().appendingPathComponent(plain.lastPathComponent)
         guard systemSpelling(plain.path) == systemSpelling(resolved.path) else { throw error(tr("whitelist folder contains a symbolic link: %1$@", location)) }
+        return plain
+    }
+
+    /// The file's text, or nil when there is no file. Anything else that is wrong throws.
+    static func read(home: String, afterRead: () throws -> Void = {}) throws -> String? {
+        let location = try checkedLocation(home: home).path
         let fd = open(location, O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK)
         guard fd >= 0 else {
             if errno == ENOENT { return nil }
@@ -247,19 +252,28 @@ public struct Whitelist: Sendable {
     /// Appends the paths not already listed; returns what was added. Comments and other lines stay.
     @discardableResult
     public static func add(_ paths: [String], home: String = NSHomeDirectory()) throws -> [String] {
+        try add(paths, home: home, beforeCommit: {})
+    }
+
+    static func add(_ paths: [String], home: String, beforeCommit: () throws -> Void) throws -> [String] {
         lock.lock(); defer { lock.unlock() }
         let stored = try paths.map { try storedForm($0, home: home) }
-        let text = try read(home: home) ?? "# Thermo cleanup whitelist: one absolute path or glob per line; ~/ is your home folder.\n"
-        var lines = lines(text)
-        if lines.last == "" { lines.removeLast() }
-        var present = Set(lines.compactMap { if case .entry(let e) = parse($0, home: home) { return e }; return nil })
-        var added: [String] = []
-        for s in stored {
-            let entry = FS.expand(s, home: home)
-            guard present.insert(entry).inserted else { continue }
-            lines.append(s); added.append(entry)
+        let added = try WhitelistWriteTransaction.run(home: home) { transaction in
+            let snapshot = try transaction.snapshot()
+            let text = snapshot.text ?? "# Thermo cleanup whitelist: one absolute path or glob per line; ~/ is your home folder.\n"
+            var lines = lines(text)
+            if lines.last == "" { lines.removeLast() }
+            var present = Set(lines.compactMap { if case .entry(let entry) = parse($0, home: home) { return entry }; return nil })
+            var added: [String] = []
+            for stored in stored {
+                let entry = FS.expand(stored, home: home)
+                guard present.insert(entry).inserted else { continue }
+                lines.append(stored); added.append(entry)
+            }
+            if !added.isEmpty { try transaction.write(lines, expected: snapshot.identity, beforeCommit: beforeCommit) }
+            return added
         }
-        if !added.isEmpty { try write(lines, home: home) }
+        if !added.isEmpty { ScanReportCache.invalidate(home: home) }
         record("whitelistAdd", added, home: home)
         return added
     }
@@ -267,18 +281,26 @@ public struct Whitelist: Sendable {
     /// Removes lines naming these paths; returns what was removed. Comments and other lines stay.
     @discardableResult
     public static func remove(_ paths: [String], home: String = NSHomeDirectory()) throws -> [String] {
+        try remove(paths, home: home, beforeCommit: {})
+    }
+
+    static func remove(_ paths: [String], home: String, beforeCommit: () throws -> Void) throws -> [String] {
         lock.lock(); defer { lock.unlock() }
         let wanted = Set(try paths.map { FS.expand(try storedForm($0, home: home), home: home) })
-        guard let text = try read(home: home) else { return [] }
-        var lines = lines(text)
-        if lines.last == "" { lines.removeLast() }
-        var removed: [String] = []
-        lines.removeAll { line in
-            guard case .entry(let e) = parse(line, home: home), wanted.contains(e) else { return false }
-            if !removed.contains(e) { removed.append(e) }
-            return true
+        let removed = try WhitelistWriteTransaction.run(home: home) { transaction -> [String] in
+            let snapshot = try transaction.snapshot()
+            guard let text = snapshot.text else { return [] }
+            var lines = lines(text)
+            if lines.last == "" { lines.removeLast() }
+            var removed: [String] = []
+            lines.removeAll { line in
+                guard case .entry(let entry) = parse(line, home: home), wanted.contains(entry) else { return false }
+                if !removed.contains(entry) { removed.append(entry) }; return true
+            }
+            if !removed.isEmpty { try transaction.write(lines, expected: snapshot.identity, beforeCommit: beforeCommit) }
+            return removed
         }
-        if !removed.isEmpty { try write(lines, home: home) }
+        if !removed.isEmpty { ScanReportCache.invalidate(home: home) }
         record("whitelistRemove", removed, home: home)
         return removed
     }
@@ -289,29 +311,7 @@ public struct Whitelist: Sendable {
                                                 items: paths.map { .init(target: $0, status: "done") }), home: home)
     }
 
-    /// Temp file in the same folder, 0600, synced, then renamed over the old one.
-    static func write(_ lines: [String], home: String) throws {
-        let location = url(home: home)
-        let data = Data((lines.joined(separator: "\n") + "\n").utf8)
-        guard data.count <= maxBytes else { throw error(tr("whitelist would be larger than %1$@ KB", String(maxBytes / 1024))) }
-        let dir = location.deletingLastPathComponent()
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        var template = Array((dir.path + "/.whitelist.XXXXXX").utf8CString)
-        let fd = mkstemp(&template)
-        guard fd >= 0 else { throw error(tr("whitelist could not be written")) }
-        let temp = String(cString: template)
-        var ok = false
-        defer { if !ok { unlink(temp) } }
-        do {
-            defer { close(fd) }
-            guard fchmod(fd, 0o600) == 0 else { throw error(tr("whitelist could not be written")) }
-            try FileHandle(fileDescriptor: fd, closeOnDealloc: false).write(contentsOf: data)
-            guard fsync(fd) == 0 else { throw error(tr("whitelist could not be written")) }
-        }
-        guard rename(temp, location.path) == 0 else { throw error(tr("whitelist could not be written")) }
-        ok = true
-        ScanReportCache.invalidate(home: home)
-    }
+
 }
 
 public extension ScanReport {
