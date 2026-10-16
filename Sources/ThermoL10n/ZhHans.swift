@@ -2595,4 +2595,13 @@ let zhHans: [String: String] = [
     "%1$@ reference text tokens: %2$@ · %3$@ results unavailable": "%1$@ 参考文本 token：%2$@ · %3$@ 个结果无法计数",
     "Local definition analysis: %1$@": "本地定义分析：%1$@",
     "The selected encoding differs from this report; analyze again to update counts.": "当前所选编码与这份报告不同，请重新分析以更新计数。",
+    // AI diagnostics visible acceptance fixes
+    "No configuration problems detected. Connection and tool behavior are not verified by this scan.": "未发现配置问题。本次扫描未验证连接和工具行为。",
+    "%1$@ configuration entries": "%1$@ 条配置记录",
+    "Heuristic comparison": "启发式对照",
+    "Coverage and counting method": "检查范围与计数方法",
+    "Connection budget": "连接时限",
+    "%1$@ seconds": "%1$@ 秒",
+    "Total connection inspection time: %1$@": "连接检查总耗时：%1$@",
+    "%1$@ configuration entries; connection unchecked": "%1$@ 条配置记录；连接未经检查",
 ]

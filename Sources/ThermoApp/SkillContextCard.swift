@@ -27,6 +27,7 @@ struct SkillContextCard: View {
                         Text(tr("%1$@ reference counts · catalog %2$@ · documents %3$@ · %4$@ files unavailable", encoding, summary.referenceCatalogTokens.map(String.init) ?? tr("Unknown"), summary.referenceDocumentTokens.map(String.init) ?? tr("Unknown"), String(summary.unavailableReferenceFiles ?? 0)))
                             .font(.caption.monospaced()).textSelection(.enabled)
                     }
+                    if summary.referenceEncoding != nil { Text(tr("Heuristic comparison")).font(.caption).foregroundStyle(.secondary) }
                     Text(tr("%1$@ unique files · catalog ≈%2$@ tokens · documents ≈%3$@ tokens · %4$@ bytes", String(summary.uniqueFiles), String(summary.catalogEstimatedTokens), String(summary.documentEstimatedTokens), String(summary.documentBytes)))
                         .font(.caption.monospaced()).textSelection(.enabled)
                     Text(tr("%1$@ duplicate file entries excluded · cache inventory %2$@ files / %3$@ bytes, counted separately", String(summary.aliases), String(summary.cacheUniqueFiles), String(summary.cacheDocumentBytes)))
@@ -57,10 +58,13 @@ struct SkillContextCard: View {
                 Text(tr("Content checks: %1$@ local references checked · %2$@ findings · %3$@ incomplete inspections", String(checked), String(issues), String(qualities.filter { !$0.complete }.count)))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Text(tr("Reference checks only test current local targets; generated files and intentional copies need review. No quality score or automatic removal is inferred."))
-                .font(.caption).foregroundStyle(.secondary)
-            Text(SkillFootprint.coverage).font(.caption).foregroundStyle(.secondary)
-            Text(SkillFootprint.caveat).font(.caption).foregroundStyle(.secondary)
+            DisclosureGroup(tr("Coverage and counting method")) {
+                Text(tr("Reference checks only test current local targets; generated files and intentional copies need review. No quality score or automatic removal is inferred."))
+                    .font(.caption).foregroundStyle(.secondary)
+                Text(SkillFootprint.coverage).font(.caption).foregroundStyle(.secondary)
+                Text(SkillFootprint.caveat).font(.caption).foregroundStyle(.secondary)
+            }.font(.caption)
+
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(18).glass()
     }

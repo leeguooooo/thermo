@@ -250,7 +250,7 @@ struct AgentsCommand {
             if let encoding = summary.referenceEncoding {
                 lines.append("\(summary.host) \(encoding): catalog \(summary.referenceCatalogTokens.map(String.init) ?? "unknown"), documents \(summary.referenceDocumentTokens.map(String.init) ?? "unknown"); unavailable files \(summary.unavailableReferenceFiles ?? 0)")
             }
-            lines.append("\(summary.host): \(summary.uniqueFiles) unique directory/plugin files · catalog ≈\(summary.catalogEstimatedTokens) tokens · documents ≈\(summary.documentEstimatedTokens) tokens · \(summary.documentBytes) bytes · \(summary.aliases) duplicate file entries excluded from document totals")
+            lines.append("\(summary.host) heuristic comparison: \(summary.uniqueFiles) unique directory/plugin files · catalog ≈\(summary.catalogEstimatedTokens) tokens · documents ≈\(summary.documentEstimatedTokens) tokens · \(summary.documentBytes) bytes · \(summary.aliases) duplicate file entries excluded from document totals")
             if summary.inconsistentFiles > 0 || summary.unverifiedIdentityEntries > 0 { lines.append("  excluded: \(summary.inconsistentFiles) changing files, \(summary.unverifiedIdentityEntries) entries with unknown identity") }
             lines.append("  cache inventory: \(summary.cacheEntries) entries, \(summary.cacheUniqueFiles) unique files, \(summary.cacheDocumentBytes) bytes; excluded from directory totals")
         }

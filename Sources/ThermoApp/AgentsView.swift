@@ -214,4 +214,9 @@ final class AgentScanner: ObservableObject {
 
 extension AgentItem {
     var isProblem: Bool { severity == .error || severity == .warning }
+    /// Content evidence should lead to review; removal remains a separate choice.
+    var primaryDiagnosticAction: Action? {
+        if let fix = actions.first(where: { $0.kind == .fix }) { return fix }
+        return area == .skills ? nil : actions.first
+    }
 }

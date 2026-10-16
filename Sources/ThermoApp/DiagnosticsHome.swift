@@ -98,9 +98,9 @@ struct DiagnosticsHome: View {
                 let worst = (bad.compactMap(\.severity) + general.map(\.severity)).min()
                 let fixable = bad.filter { i in i.actions.contains { $0.kind == .fix && $0.bulk } }.count
                 CategoryCard(symbol: AgentStyle.icon(a), color: AgentStyle.tint(a), title: AgentStyle.title(a),
-                             status: empty ? tr("No items to check") : problems == 0 && items.isEmpty ? tr("Notes available") : problems == 0 ? tr("%1$@ checked, all fine", String(items.count))
+                             status: empty ? tr("No items to check") : problems == 0 && items.isEmpty ? tr("Notes available") : problems == 0 && a == .mcp ? tr("%1$@ configuration entries; connection unchecked", String(items.count)) : problems == 0 ? tr("%1$@ checked, all fine", String(items.count))
                                  : fixable > 0 ? tr("%1$@ fixable in one click", String(fixable)) : tr("needs your decision"),
-                             statusColor: empty || (problems == 0 && items.isEmpty) ? .secondary : problems == 0 ? .green : AgentStyle.color(worst),
+                             statusColor: empty || (problems == 0 && (items.isEmpty || a == .mcp)) ? .secondary : problems == 0 ? .green : AgentStyle.color(worst),
                              count: problems) { open(a) }
             }
         }
@@ -162,9 +162,9 @@ struct AreaPage: View {
                     HStack(spacing: 10) {
                         let checking = scanner.scanning && scanner.report == nil
                         let empty = items.isEmpty
-                        Image(systemName: checking ? "hourglass" : empty ? "magnifyingglass" : "checkmark.seal.fill")
-                            .font(.title2).foregroundStyle(checking || empty ? Color.secondary : Color.green)
-                        Text(checking ? tr(scanner.stopRequested ? "Stopping check…" : "Checking your AI agents…") : scanner.stopped && scanner.report == nil ? tr("Check stopped") : empty && !query.isEmpty ? tr("No matching items") : empty ? tr("No items to check") : tr("Nothing to fix here.")).font(.system(size: 15, weight: .medium)).foregroundStyle(.white.opacity(0.85))
+                        Image(systemName: checking ? "hourglass" : empty ? "magnifyingglass" : area == .mcp ? "info.circle" : "checkmark.seal.fill")
+                            .font(.title2).foregroundStyle(checking || empty || area == .mcp ? Color.secondary : Color.green)
+                        Text(checking ? tr(scanner.stopRequested ? "Stopping check…" : "Checking your AI agents…") : scanner.stopped && scanner.report == nil ? tr("Check stopped") : empty && !query.isEmpty ? tr("No matching items") : empty ? tr("No items to check") : area == .mcp ? tr("No configuration problems detected. Connection and tool behavior are not verified by this scan.") : tr("Nothing to fix here.")).font(.system(size: 15, weight: .medium)).foregroundStyle(.white.opacity(0.85))
                     }
                     .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass()
                 }
@@ -184,7 +184,7 @@ struct AreaPage: View {
                         Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showHealthy.toggle() } } label: {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                                Text(tr("%1$@ without detected problems", String(rest.count))).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
+                                Text(area == .mcp ? tr("%1$@ configuration entries", String(rest.count)) : tr("%1$@ without detected problems", String(rest.count))).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
                                 Spacer()
                                 Image(systemName: "chevron.down").rotationEffect(.degrees(showHealthy ? 180 : 0)).foregroundStyle(.white.opacity(0.5))
                             }
@@ -227,7 +227,7 @@ struct AreaPage: View {
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = false
-        panel.directoryURL = scanner.project
+        panel.directoryURL = scanner.project ?? FileManager.default.homeDirectoryForCurrentUser
         panel.begin { response in
             if response == .OK, let url = panel.url { scanner.selectProject(url) }
         }
@@ -378,7 +378,7 @@ private struct ProblemCard: View {
     }
 
     @ViewBuilder var actions: some View {
-        let primary = item.actions.first { $0.kind == .fix } ?? item.actions.first
+        let primary = item.primaryDiagnosticAction
         let others = item.actions.filter { $0.id != primary?.id }
         HStack(spacing: 8) {
             if let p = primary {
@@ -410,8 +410,8 @@ private struct HealthyRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: !item.enabled ? "minus.circle" : item.severity == .info ? "info.circle" : "checkmark.circle.fill")
-                .foregroundStyle(item.enabled ? Color.green.opacity(0.85) : Color.white.opacity(0.35))
+            Image(systemName: !item.enabled ? "minus.circle" : item.area == .mcp ? "questionmark.circle" : item.severity == .info ? "info.circle" : "checkmark.circle.fill")
+                .foregroundStyle(item.area == .mcp ? Color.secondary : item.enabled ? Color.green.opacity(0.85) : Color.white.opacity(0.35))
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(item.name).font(.system(size: 13)).foregroundStyle(.white.opacity(item.enabled ? 0.92 : 0.5)).lineLimit(1).truncationMode(.middle)

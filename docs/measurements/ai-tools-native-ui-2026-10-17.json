@@ -1,0 +1,48 @@
+{
+  "scope": "Visible UI interaction through cua_repl on an isolated native QA copy, with a unique bundle ID and fixture Home. Existing installed Thermo process was preserved.",
+  "fixtureKind": "synthetic Skill files, project, MCP stdio services and JSONL records",
+  "postFixVerified": true,
+  "generated": "2026-10-16T20:50:05.871188+00:00",
+  "verificationKind": "Real native window interaction with synthetic data; not installed production app acceptance",
+  "verifiedFlows": {
+    "skillReferenceVsHeuristicLabels": true,
+    "contentRemovalNotPrimary": true,
+    "methodDisclosureCollapsedByDefault": true,
+    "mcpConfigConnectionUnknown": true,
+    "mcpTimeoutShowsTotalTime": true,
+    "mcpCancelExplicitlyShown": true,
+    "mcpBudgetChangedTo30Seconds": true,
+    "projectScope3To4To3Files": true,
+    "projectPickerStartsInFixtureHome": true,
+    "englishAndChinese": true,
+    "usageSharedAcrossCategories": true,
+    "unknownRequestTokensRemainUnknown": true,
+    "overviewMCPConnectionUnchecked": true
+  },
+  "observedCancel": {
+    "budgetSeconds": 30,
+    "result": "Inspection cancelled",
+    "elapsedSeconds": 12.265
+  },
+  "sourceLineEvidence": "SKILL.md:5 in the controlled fixture",
+  "originalAppPreserved": true,
+  "originalAppPID": 94672,
+  "qaAppClosed": true,
+  "notYetVerified": [
+    "minimum-size and large-font layouts",
+    "production data/task-quality comparisons",
+    "notarized release installation"
+  ],
+  "finalFollowup": "Overview MCP wording was compiled and visibly verified: 2 configuration entries; connection unchecked.",
+  "tests": {
+    "isolatedAppTests": 245,
+    "isolatedLocalizationTests": 3,
+    "finalActionPriorityTests": 3,
+    "finalLocalizationTests": 3
+  },
+  "scopeNotes": [
+    "The process list still represents the real host; no process repair or removal action was clicked.",
+    "The initial native file panel showed OS recent locations; subsequent selection used only the owned fixture project. No private files were opened.",
+    "The QA refresh needed the app-bundle Frameworks rpath; the helper now restores that before ad-hoc signing."
+  ]
+}

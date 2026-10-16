@@ -8,14 +8,14 @@ final class MCPInspectionModel: ObservableObject {
     @Published var running = false
     private var cancellation: DoctorCancellation?
 
-    func inspect(_ item: AgentItem, encoding: TextEncoding = .heuristic) {
+    func inspect(_ item: AgentItem, encoding: TextEncoding = .heuristic, timeout: TimeInterval = 10) {
         guard !running else { return }
         let cancellation = DoctorCancellation()
         self.cancellation = cancellation
         report = nil
         running = true
         Task.detached(priority: .userInitiated) {
-            let result = AgentDoctor.inspectMCP(item.id, timeout: 10,
+            let result = AgentDoctor.inspectMCP(item.id, timeout: timeout,
                                                env: DoctorEnvironment(tokenEncoding: encoding, cancelled: { cancellation.isCancelled }))
             await MainActor.run {
                 guard self.cancellation === cancellation else { return }
@@ -32,11 +32,12 @@ struct MCPInspectButton: View {
     let item: AgentItem
     var busy: Bool
     var encoding: TextEncoding = .heuristic
+    @State private var timeout: Double = 10
     @State private var showing = false
     @StateObject private var model = MCPInspectionModel()
 
     var body: some View {
-        Button(tr("Connect & inspect")) { showing = true; model.inspect(item, encoding: encoding) }
+        Button(tr("Connect & inspect")) { showing = true; model.inspect(item, encoding: encoding, timeout: timeout) }
             .disabled(busy || !item.enabled)
             .help(tr("Starts the configured stdio server or connects to its HTTP endpoint and reads tool definitions. No business tools are called."))
             .sheet(isPresented: $showing) {
@@ -45,10 +46,15 @@ struct MCPInspectButton: View {
                     Text(tr("Starts the configured stdio server or connects to its HTTP endpoint and reads tool definitions. No business tools are called."))
                         .font(.callout).foregroundStyle(.secondary)
                     Text(item.detail).font(.caption.monospaced()).textSelection(.enabled)
+                    Picker(tr("Connection budget"), selection: $timeout) {
+                        ForEach([10.0, 30.0, 60.0, 120.0], id: \.self) { value in
+                            Text(tr("%1$@ seconds", String(Int(value)))).tag(value)
+                        }
+                    }.disabled(model.running)
                     if let report = model.report { MCPInspectionResultView(report: report) }
                     else if model.running { ProgressView(tr("Inspecting MCP definitions…")) }
                     HStack {
-                        Button(tr("Check Again")) { model.inspect(item, encoding: encoding) }.disabled(model.running)
+                        Button(tr("Check Again")) { model.inspect(item, encoding: encoding, timeout: timeout) }.disabled(model.running)
                         if model.running { Button(tr("Stop checking")) { model.cancel() } }
                         Spacer()
                         Button(tr("Close")) { model.cancel(); showing = false }.keyboardShortcut(.cancelAction)
@@ -73,6 +79,7 @@ struct MCPInspectionResultView: View {
                 Text(report.message).font(.callout).textSelection(.enabled)
                 if let encoding = report.referenceEncoding { Text(tr("Ordinary-text reference encoding: %1$@", encoding)).font(.caption).foregroundStyle(.secondary) }
                 Text(report.generated, style: .time).font(.caption).foregroundStyle(.secondary)
+                Text(tr("Total connection inspection time: %1$@", seconds(report.elapsedSeconds))).font(.caption.monospaced())
                 if report.transport == "streamable-http" {
                     Text(tr("HTTP handshake %1$@ · list %2$@", seconds(report.handshakeSeconds), seconds(report.listingSeconds)))
                         .font(.caption.monospaced())
