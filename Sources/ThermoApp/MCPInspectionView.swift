@@ -37,11 +37,11 @@ struct MCPInspectButton: View {
     var body: some View {
         Button(tr("Connect & inspect")) { showing = true; model.inspect(item) }
             .disabled(busy || !item.enabled)
-            .help(tr("Starts the configured stdio server and reads its tool definitions. No business tools are called."))
+            .help(tr("Starts the configured stdio server or connects to its HTTP endpoint and reads tool definitions. No business tools are called."))
             .sheet(isPresented: $showing) {
                 VStack(alignment: .leading, spacing: 14) {
                     Text(item.name).font(.title2.weight(.semibold)).textSelection(.enabled)
-                    Text(tr("Starts the configured stdio server and reads its tool definitions. No business tools are called."))
+                    Text(tr("Starts the configured stdio server or connects to its HTTP endpoint and reads tool definitions. No business tools are called."))
                         .font(.callout).foregroundStyle(.secondary)
                     Text(item.detail).font(.caption.monospaced()).textSelection(.enabled)
                     if let report = model.report { MCPInspectionResultView(report: report) }
@@ -71,8 +71,13 @@ struct MCPInspectionResultView: View {
                     .font(.headline)
                 Text(report.message).font(.callout).textSelection(.enabled)
                 Text(report.generated, style: .time).font(.caption).foregroundStyle(.secondary)
-                Text(tr("Start %1$@ · handshake %2$@ · list %3$@", seconds(report.startupSeconds), seconds(report.handshakeSeconds), seconds(report.listingSeconds)))
-                    .font(.caption.monospaced())
+                if report.transport == "streamable-http" {
+                    Text(tr("HTTP handshake %1$@ · list %2$@", seconds(report.handshakeSeconds), seconds(report.listingSeconds)))
+                        .font(.caption.monospaced())
+                } else {
+                    Text(tr("Start %1$@ · handshake %2$@ · list %3$@", seconds(report.startupSeconds), seconds(report.handshakeSeconds), seconds(report.listingSeconds)))
+                        .font(.caption.monospaced())
+                }
                 if let definitions = report.definitions {
                     Text(tr("%1$@ tools · definitions ≈%2$@ tokens · %3$@ bytes", String(report.tools.count), String(definitions.estimatedTokens), String(definitions.bytes)))
                         .font(.subheadline.weight(.medium))
@@ -90,6 +95,10 @@ struct MCPInspectionResultView: View {
                             Text(issue).font(.caption).foregroundStyle(.orange).textSelection(.enabled)
                         }
                     }
+                }
+                if report.transport == "streamable-http", let cleanup = report.cleanupStatus {
+                    Text(cleanup == "closed" ? tr("HTTP inspection session closed") : cleanup == "not_needed" ? tr("No HTTP session was created") : cleanup == "server_retained" ? tr("Server does not support explicit session closure") : tr("HTTP session closure was not confirmed"))
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 Text(report.measurementNote).font(.caption).foregroundStyle(.secondary)
             }

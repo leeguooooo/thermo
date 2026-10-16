@@ -14,13 +14,15 @@ public struct MCPToolFootprint: Codable, Sendable {
 
 public struct MCPInspection: Codable, Sendable {
     public enum State: String, Codable, Sendable {
-        case ready, failed, timedOut, cancelled, unsupported, disabled
+        case ready, failed, timedOut, cancelled, unsupported, disabled, authenticationRequired
     }
     public var generated: Date
     public var name: String
     public var agent: String
     public var state: State = .failed
     public var message = ""
+    public var transport: String?
+    public var cleanupStatus: String?
     public var protocolVersion: String?
     public var startupSeconds: Double?
     public var handshakeSeconds: Double?
@@ -100,18 +102,21 @@ enum MCPInspector {
         guard timeout.isFinite, timeout > 0, timeout <= 120 else { report.message = tr("Timeout must be between 0 and 120 seconds."); return finish() }
         guard !server.disabled else { report.state = .disabled; report.message = tr("Server is disabled; no connection attempted."); return finish() }
         guard !env.cancelled() else { report.state = .cancelled; report.message = tr("Inspection cancelled."); return finish() }
-        guard let command = server.command else {
-            report.state = .unsupported
-            report.message = tr("This inspector currently supports stdio only; HTTP definitions have not been measured.")
-            return finish()
-        }
-        var lookup = env
-        if let path = server.env["PATH"] { lookup.path = env.expand(path).components(separatedBy: ":").filter { !$0.isEmpty } }
-        guard let executable = lookup.resolve(env.expand(command)) else { report.message = tr("Configured executable could not be resolved."); return finish() }
         do {
-            let transport = try MCPStdio(executable: executable, server: server, env: env, deadline: started + timeout)
-            defer { transport.close() }
-            report.startupSeconds = clock() - started
+            let transport: MCPTransport
+            if let command = server.command {
+                var lookup = env
+                if let path = server.env["PATH"] { lookup.path = env.expand(path).components(separatedBy: ":").filter { !$0.isEmpty } }
+                guard let executable = lookup.resolve(env.expand(command)) else { throw Failure(message: tr("Configured executable could not be resolved.")) }
+                transport = try MCPStdio(executable: executable, server: server, env: env, deadline: started + timeout)
+                report.transport = "stdio"
+                report.startupSeconds = clock() - started
+            } else {
+                transport = try MCPHTTP(server: server, env: env, deadline: started + timeout)
+                report.transport = "streamable-http"
+                // HTTP has no child process startup; connection setup is part of handshake.
+            }
+            defer { transport.close(); report.cleanupStatus = transport.cleanupStatus }
             let handshake = clock()
             let initialized = try transport.request("initialize", params: [
                 "protocolVersion": "2025-06-18", "capabilities": [String: Any](),
@@ -127,6 +132,7 @@ enum MCPInspector {
                 throw Failure(state: .unsupported, message: tr("Server selected an unsupported protocol version."))
             }
             report.protocolVersion = version
+            transport.negotiated(version)
             try transport.send(["jsonrpc": "2.0", "method": "notifications/initialized"])
             report.handshakeSeconds = clock() - handshake
             report.instructions = TextFootprint(initialized["instructions"] as? String ?? "")
@@ -169,9 +175,23 @@ enum MCPInspector {
     }
 }
 
+protocol MCPTransport: AnyObject {
+    func request(_ method: String, params: [String: Any]) throws -> [String: Any]
+    func send(_ message: [String: Any]) throws
+    func check() throws
+    func negotiated(_ version: String)
+    func close()
+    var cleanupStatus: String? { get }
+}
+
+extension MCPTransport {
+    func negotiated(_ version: String) {}
+    var cleanupStatus: String? { nil }
+}
+
 /// Synchronous, bounded JSONL transport. All pipe operations are nonblocking.
 /// It owns only the child it starts; stderr is discarded, never mixed with protocol data.
-final class MCPStdio {
+final class MCPStdio: MCPTransport {
     let process = Process()
     let input = Pipe()
     let output = Pipe()

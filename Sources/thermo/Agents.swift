@@ -127,7 +127,7 @@ struct AgentsCommand {
     static let usage = """
     usage: thermo agents [--all] [--json]                 what is wrong with the AI agents on this Mac
            thermo agents context [--agent AGENT] [--json] static Skill footprint ranking; MCP coverage
-           thermo agents inspect NAME [--json]            start one stdio MCP; handshake, list and rank definitions
+           thermo agents inspect NAME [--json]            connect to one MCP; handshake, list and rank definitions
            thermo agents list [AREA] [--json]             everything checked, marked OK or not
            thermo agents show NAME [--json]               one item: problems, suggestions, numbered actions
            thermo agents fix [--dry-run] [--yes]          every safe automatic fix for problem items
@@ -147,7 +147,9 @@ struct AgentsCommand {
             var lines = [style.bold(report.name) + " [" + report.agent + "] · " + report.state.rawValue, report.message,
                          String(format: "Elapsed %.3fs", report.elapsedSeconds)]
             func seconds(_ value: Double?) -> String { value.map { String(format: "%.3fs", $0) } ?? "not measured" }
-            lines.append("Start \(seconds(report.startupSeconds)) · handshake \(seconds(report.handshakeSeconds)) · list \(seconds(report.listingSeconds))")
+            if report.transport == "streamable-http" {
+                lines.append("HTTP handshake \(seconds(report.handshakeSeconds)) · list \(seconds(report.listingSeconds))")
+            } else { lines.append("Start \(seconds(report.startupSeconds)) · handshake \(seconds(report.handshakeSeconds)) · list \(seconds(report.listingSeconds))") }
             if let definitions = report.definitions {
                 lines.append("\(report.tools.count) tools · definitions ≈\(definitions.estimatedTokens) tokens · \(definitions.bytes) bytes")
             }
@@ -156,6 +158,7 @@ struct AgentsCommand {
                 lines.append("  " + tool.name + " ≈\(tool.definition.estimatedTokens) tokens (description \(tool.description.estimatedTokens), input schema \(tool.inputSchema.estimatedTokens), output schema \(tool.outputSchema.estimatedTokens))")
                 for issue in tool.issues { lines.append("    ! " + issue) }
             }
+            if let cleanup = report.cleanupStatus { lines.append("HTTP session cleanup: " + cleanup) }
             lines.append(report.measurementNote)
             out(lines)
         }

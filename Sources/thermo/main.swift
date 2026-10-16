@@ -31,7 +31,7 @@ COMMANDS
                              (Claude Code, Codex, Cursor, Gemini; read-only)
   agents fix [--dry-run]     apply every safe automatic fix (shows the plan, asks first;
                              --yes to skip the question)
-  agents inspect NAME        connect to one stdio MCP, measure handshake and rank definitions
+  agents inspect NAME        connect to one MCP, measure handshake and rank definitions
   agents context [--json]    static Skill footprint ranking and MCP measurement coverage
   agents show NAME           one item: problems, suggestions and numbered actions
   agents fix|uninstall|disable NAME

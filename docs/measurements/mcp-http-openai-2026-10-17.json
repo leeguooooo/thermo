@@ -1,0 +1,236 @@
+{
+  "agent" : "codex",
+  "cleanupStatus" : "not_needed",
+  "complete" : true,
+  "definitions" : {
+    "bytes" : 3265,
+    "characters" : 3255,
+    "estimatedTokens" : 818,
+    "estimator" : "ascii4-unicode1-v1",
+    "lines" : 1
+  },
+  "elapsedSeconds" : 0.80208358300296823,
+  "generated" : "2026-10-16T18:08:01Z",
+  "handshakeSeconds" : 0.52963720900152111,
+  "instructions" : {
+    "bytes" : 0,
+    "characters" : 0,
+    "estimatedTokens" : 0,
+    "estimator" : "ascii4-unicode1-v1",
+    "lines" : 0
+  },
+  "listingSeconds" : 0.27227504099573707,
+  "measurementNote" : "Static definition estimates use ascii4-unicode1-v1, not a model tokenizer. Full definitions may differ from what an agent loads. Output schema is a definition, not actual tool output. No business tools were called; runtime usage and task success are unmeasured.",
+  "message" : "Handshake and complete tool listing succeeded. Business tool behavior has not been tested.",
+  "name" : "openaiDeveloperDocs",
+  "protocolVersion" : "2025-06-18",
+  "state" : "ready",
+  "tools" : [
+    {
+      "annotations" : {
+        "bytes" : 45,
+        "characters" : 45,
+        "estimatedTokens" : 12,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "definition" : {
+        "bytes" : 812,
+        "characters" : 810,
+        "estimatedTokens" : 204,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "description" : {
+        "bytes" : 454,
+        "characters" : 452,
+        "estimatedTokens" : 114,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "inputSchema" : {
+        "bytes" : 172,
+        "characters" : 172,
+        "estimatedTokens" : 43,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "issues" : [
+
+      ],
+      "name" : "fetch_openai_doc",
+      "outputSchema" : {
+        "bytes" : 0,
+        "characters" : 0,
+        "estimatedTokens" : 0,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 0
+      }
+    },
+    {
+      "annotations" : {
+        "bytes" : 45,
+        "characters" : 45,
+        "estimatedTokens" : 12,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "definition" : {
+        "bytes" : 797,
+        "characters" : 791,
+        "estimatedTokens" : 200,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "description" : {
+        "bytes" : 444,
+        "characters" : 438,
+        "estimatedTokens" : 112,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "inputSchema" : {
+        "bytes" : 167,
+        "characters" : 167,
+        "estimatedTokens" : 42,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "issues" : [
+
+      ],
+      "name" : "list_openai_docs",
+      "outputSchema" : {
+        "bytes" : 0,
+        "characters" : 0,
+        "estimatedTokens" : 0,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 0
+      }
+    },
+    {
+      "annotations" : {
+        "bytes" : 45,
+        "characters" : 45,
+        "estimatedTokens" : 12,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "definition" : {
+        "bytes" : 740,
+        "characters" : 738,
+        "estimatedTokens" : 186,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "description" : {
+        "bytes" : 321,
+        "characters" : 319,
+        "estimatedTokens" : 81,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "inputSchema" : {
+        "bytes" : 228,
+        "characters" : 228,
+        "estimatedTokens" : 57,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "issues" : [
+
+      ],
+      "name" : "search_openai_docs",
+      "outputSchema" : {
+        "bytes" : 0,
+        "characters" : 0,
+        "estimatedTokens" : 0,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 0
+      }
+    },
+    {
+      "annotations" : {
+        "bytes" : 45,
+        "characters" : 45,
+        "estimatedTokens" : 12,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "definition" : {
+        "bytes" : 567,
+        "characters" : 567,
+        "estimatedTokens" : 142,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "description" : {
+        "bytes" : 129,
+        "characters" : 129,
+        "estimatedTokens" : 33,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "inputSchema" : {
+        "bytes" : 252,
+        "characters" : 252,
+        "estimatedTokens" : 63,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "issues" : [
+
+      ],
+      "name" : "get_openapi_spec",
+      "outputSchema" : {
+        "bytes" : 0,
+        "characters" : 0,
+        "estimatedTokens" : 0,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 0
+      }
+    },
+    {
+      "annotations" : {
+        "bytes" : 45,
+        "characters" : 45,
+        "estimatedTokens" : 12,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "definition" : {
+        "bytes" : 343,
+        "characters" : 343,
+        "estimatedTokens" : 86,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "description" : {
+        "bytes" : 64,
+        "characters" : 64,
+        "estimatedTokens" : 16,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "inputSchema" : {
+        "bytes" : 89,
+        "characters" : 89,
+        "estimatedTokens" : 23,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 1
+      },
+      "issues" : [
+
+      ],
+      "name" : "list_api_endpoints",
+      "outputSchema" : {
+        "bytes" : 0,
+        "characters" : 0,
+        "estimatedTokens" : 0,
+        "estimator" : "ascii4-unicode1-v1",
+        "lines" : 0
+      }
+    }
+  ],
+  "transport" : "streamable-http"
+}

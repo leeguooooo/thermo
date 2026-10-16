@@ -86,8 +86,8 @@ final class MCPInspectionTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent("requests").path))
     }
 
-    func testHTTPIsExplicitlyUnsupportedNotEmptyHealthy() {
-        let s = MCPServer(name: "http", agent: "fixture", source: "fixture", url: "https://example.invalid/mcp")
+    func testUnsupportedURLSchemeIsNotEmptyHealthy() {
+        let s = MCPServer(name: "http", agent: "fixture", source: "fixture", url: "file:///tmp/fixture-mcp")
         let report = MCPInspector.inspect(s, env: env, timeout: 1)
         XCTAssertEqual(report.state, .unsupported)
         XCTAssertFalse(report.complete)

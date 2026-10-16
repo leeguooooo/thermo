@@ -11,6 +11,8 @@ struct MCPServer: Equatable {
     var env: [String: String] = [:]
     var url: String?
     var headers: [String: String] = [:]
+    var bearerTokenEnv: String?
+    var headerEnv: [String: String] = [:]
     var disabled = false
     /// Set for servers configured for one project only.
     var project: String?
@@ -288,11 +290,13 @@ struct ConfigChecks {
             let value = line[line.index(after: eq)...].trimmingCharacters(in: .whitespaces)
             switch (sub, key) {
             case ("env", _): servers[name]?.env[key] = tomlString(value) ?? value
+            case ("env_http_headers", _): servers[name]?.headerEnv[key] = tomlString(value)
             case ("http_headers", _), ("headers", _): servers[name]?.headers[key] = tomlString(value) ?? value
             case (nil, "command"): servers[name]?.command = tomlString(value)
             case (nil, "url"): servers[name]?.url = tomlString(value)
             case (nil, "args"): servers[name]?.args = tomlArray(value)
             case (nil, "enabled"): servers[name]?.disabled = value.hasPrefix("false")
+            case (nil, "bearer_token_env_var"): servers[name]?.bearerTokenEnv = tomlString(value)
             case (nil, "bearer_token"): servers[name]?.headers["bearer_token"] = tomlString(value)
             default: break
             }

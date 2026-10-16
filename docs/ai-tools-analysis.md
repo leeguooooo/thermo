@@ -18,18 +18,24 @@ thermo 的 AI 工具页需要回答：配置是否有故障、定义有多大、
 
 ## MCP 主动检查
 
-普通体检仍只检查配置，不启动任何 MCP。`thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--json]` 或 App 的“连接并检查”会显式启动选定的 stdio 服务，执行 initialize、notifications/initialized 和完整分页 tools/list，不调用业务工具。不改写配置，也不连接其他已运行的服务实例。
+普通体检仍只检查配置，不启动任何 MCP。`thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--json]` 或 App 的“连接并检查”会显式启动选定的 stdio 服务或连接配置的 Streamable HTTP 地址，执行 initialize、notifications/initialized 和完整分页 tools/list，不调用业务工具。不改写配置。stdio 使用自己启动的子进程；HTTP 建立新的检查会话，不接管其他客户端的会话。
 
 结果分别给出启动、握手、列表和总耗时，以及服务 instructions、完整工具定义数组、逐工具描述、输入 / 输出 schema 和 annotations 的静态占用。完整定义用排序键的紧凑 JSON 测量，正文不导出；工具名称脱敏，服务返回的错误正文不回显。分项估算不保证相加等于完整 JSON 的估算；未测量宿主的包装、延迟加载或缓存。
 
-- 当前支持 stdio 与 2024-11-05、2025-03-26、2025-06-18 协议版本。HTTP 明确返回 unsupported，不显示为空清单或正常。
+- 当前支持 stdio、Streamable HTTP 和 2024-11-05、2025-03-26、2025-06-18 协议版本。HTTP 支持 JSON 和增量 SSE 响应，SSE 包含 LF、CRLF、CR 换行及分块 UTF-8 文本；取得响应后不等待长连接自然结束。旧版独立 SSE 端点发现和 OAuth 登录未实现。
 - 默认总时限 10 秒，最大 120 秒。采用单调时钟，所有读写非阻塞；超时、取消、协议错误、断流和大小上限返回未完成。
-- 单条待解析消息最多 8 MiB，整个连接最多接收 16 MiB；最多 100 页、10,000 个工具。重复或无效游标拒绝作为完整清单。
+- stdio 单条待解析消息或单次 HTTP 响应最多 8 MiB，整个检查最多接收 16 MiB；最多 100 页、10,000 个工具。重复或无效游标拒绝作为完整清单。
 - 不向服务声明 sampling、elicitation 或 roots 能力；只响应 ping，其他服务发起的请求返回不支持。
-- 关闭自己启动的子进程：先关 stdin，短暂等待，再依次 TERM / KILL；不会结束用户已经运行的 MCP 实例。
+- 关闭自己启动的子进程：先关 stdin，短暂等待，再依次 TERM / KILL；不会结束用户已经运行的 MCP 实例。HTTP 不启动进程，连接建立计入握手时间，启动时间保持空值。
 - 缺失描述、缺失 / 非对象输入 schema、错误 schema type 和重复工具名给出具体提示。它们是定义问题，不能直接推断任务成功率。
 
+HTTP 保留配置中的请求头，支持 Codex 的 bearer_token_env_var 和 env_http_headers。缺失环境变量、401 / 403 或认证挑战明确报告 authenticationRequired，不调用登录流程，不使用系统凭据或自动 Cookie，不跟随重定向，也不重放失败的请求。协议保留的会话头、版本头及传输字段不能由普通配置请求头覆盖。
+
+HTTP 在初始化收到新会话 ID 后验证可见 ASCII 字符和长度，再将其与协商的协议版本带到后续请求。关闭时只对这次新建的会话尝试一次 DELETE，最多额外等待 250 ms。JSON 的 cleanupStatus 区分 closed、not_needed、server_retained 和 unconfirmed；工具清单成功不代表会话关闭已确认。会话 ID、凭据和响应正文不写入报告。
+
 本机 CodeGraph 已完成一次真实握手和完整工具列表读取，见 [测量记录](measurements/mcp-codegraph-2026-10-17.json)。这次未调用 codegraph_explore，不代表业务调用已验收。App 当前通过编译，检查结果页已完成[中文原生离屏渲染检查](measurements/mcp-inspection-zh-2026-10-17.png)；这不是已安装 App 中点击与取消的实际验收。
+
+公开的 OpenAI 文档 MCP 已实际完成 HTTP 握手并读取 5 个工具，见 [HTTP 测量记录](measurements/mcp-http-openai-2026-10-17.json)；该服务未返回会话 ID。状态会话、完整分页、SSE 分块、认证失败、超时、取消和关闭请求另由本地 HTTP 夹具验证。没有调用文档检索等业务工具。[HTTP 中文结果页](measurements/mcp-http-inspection-zh-2026-10-17.png)为原生离屏渲染，长列表可在实际窗口中滚动；尚未完成已安装 App 的点击操作验收。
 
 协议实现依据：[生命周期](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle)、[stdio 传输](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)、[工具列表](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)。
 

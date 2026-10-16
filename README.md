@@ -90,6 +90,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 | `thermo fan auto [id\|all]` / `fan status` | 恢复自动 / 查看策略 |
 | `thermo helper install\|uninstall\|status` | 管理特权 helper |
 | `thermo bench` | 采样延迟基准 |
+| `thermo agents context [--agent AGENT] [--json]` | Skill 静态占用排名：目录描述、正文与完整文件分别统计；显示检查范围和估算方法，不代表会话实际用量 |
+| `thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--json]` | 主动连接一个 stdio / Streamable HTTP MCP，测量握手和完整工具定义，按估算 token 排名；不调用业务工具。HTTP 支持 JSON / SSE；认证失败、超时和未完成检查分别报告 |
 | `thermo agents fix [NAME] [--dry-run] [--yes]` | 自动修复：先列出每一步要执行的命令再确认。优先调用 agent 自带的命令（`claude mcp remove`、`claude plugin uninstall`、`codex mcp remove`）；改配置前备份到 `~/Library/Application Support/Thermo/Backups`；文件移到废纸篓；结束进程前复核命令行；每步记录到 `~/Library/Logs/Thermo/fix.log` |
 | `thermo agents list [AREA]` | 列出检查过的每一项（hooks / mcp / plugins / skills / statusline / launchd / processes），逐项标 ✓ 正常、! 警告、✗ 错误、- 已关闭；App 的 Agents 标签页和「Open Report」窗口显示同一份清单 |
 | `thermo agents [--all] [--json]` | AI agent 诊断：Claude Code / Codex / Cursor / Gemini 的 hooks、MCP server、插件、skills、状态栏，以及 launchd 重启风暴、泄漏/跑着已删除二进制的进程、明文凭据（只读，输出已脱敏；有 error 时退出码 1） |

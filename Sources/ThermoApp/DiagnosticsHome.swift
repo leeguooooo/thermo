@@ -138,7 +138,7 @@ struct AreaPage: View {
                     SkillContextCard(items: report.items.filter { $0.area == .skills })
                 }
                 if area == .mcp {
-                    Text(tr("This configuration scan does not connect to MCP servers. Use Connect & inspect for a stdio server’s definitions and connection timing; actual tool usage remains unmeasured."))
+                    Text(tr("This configuration scan does not connect to MCP servers. Use Connect & inspect for definitions and connection timing; actual tool usage remains unmeasured."))
                         .font(.callout).foregroundStyle(.secondary).padding(18).glass()
                 }
                 DiagnosticScanControl(scanner: scanner)
