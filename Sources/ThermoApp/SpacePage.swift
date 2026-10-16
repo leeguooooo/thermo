@@ -23,6 +23,7 @@ final class SpaceLensModel: ObservableObject {
     /// Picked paths and what removing each gives back.
     @Published var basket: [String: Int64] = [:]
     @Published private(set) var working = false
+    @Published var exitRequested = false
     @Published var outcome: String?
     /// When Spotlight last saw each big file opened (nil inside: it does not know).
     @Published private(set) var lastOpened: [String: Date?] = [:]
@@ -33,11 +34,16 @@ final class SpaceLensModel: ObservableObject {
     private var duplicateCancellation: ScanCancellation?
     private let cache: URL
     private let measure: @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree
+    private var selectionIdentities: [String: String] = [:]
+    private let remove: @Sendable ([String], [String: Int64], String, Set<String>, [String: String]) -> CleanResult
 
     init(root: String = NSHomeDirectory(), cache: URL = SpaceLens.cacheURL,
-         measure: @escaping @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree = { SpaceLens.scan($0, cancellation: $1, progress: $2) }) {
+         measure: @escaping @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree = { SpaceLens.scan($0, cancellation: $1, progress: $2) },
+         remove: @escaping @Sendable ([String], [String: Int64], String, Set<String>, [String: String]) -> CleanResult = {
+             ManualRemoval.trash($0, sizes: $1, home: $2, incompletePaths: $3, reviewIdentities: $4)
+         }) {
         self.root = root
-        self.cache = cache; self.measure = measure
+        self.cache = cache; self.measure = measure; self.remove = remove
         path = root
         tree = SpaceLens.cached(root: root, from: cache)
     }
@@ -92,13 +98,16 @@ final class SpaceLensModel: ObservableObject {
     func refusal(_ path: String) -> String? { ManualRemoval.refusal(path, home: root) }
 
     func toggle(_ path: String, bytes: Int64) {
-        if basket[path] != nil { basket[path] = nil; return }
+        guard !working else { return }
+        if basket[path] != nil { basket[path] = nil; selectionIdentities[path] = nil; return }
         guard refusal(path) == nil else { return }
+        guard let identity = ManualRemoval.reviewIdentity(path) else { outcome = tr("Could not verify the selected item; refresh before selecting it"); return }
         // A folder already holds what is under it; picking one replaces its picked insides,
         // and an inside path is not picked again on top of its picked folder.
         if basket.keys.contains(where: { path.hasPrefix($0 + "/") }) { return }
-        for key in basket.keys where key.hasPrefix(path + "/") { basket[key] = nil }
+        for key in basket.keys where key.hasPrefix(path + "/") { basket[key] = nil; selectionIdentities[key] = nil }
         basket[path] = bytes
+        selectionIdentities[path] = identity
     }
 
     func isCovered(_ path: String) -> Bool { basket.keys.contains { path.hasPrefix($0 + "/") } }
@@ -112,19 +121,23 @@ final class SpaceLensModel: ObservableObject {
         guard !scanning, !working else { return }
         let picked = basket
         guard !picked.isEmpty else { return }
+        stopDuplicates()
         working = true
+        exitRequested = false
+        let lease = AppExitGuard.beginManualRemoval { self.exitRequested = true }
         let root = root
         let incomplete = Set(picked.keys.filter { sizeState($0) != .complete })
+        let identities = selectionIdentities, remove = self.remove
         Task.detached(priority: .userInitiated) {
-            let result = ManualRemoval.trash(picked.keys.sorted(), sizes: picked, home: root, incompletePaths: incomplete)
-            await MainActor.run { self.afterTrash(result) }
+            let result = remove(picked.keys.sorted(), picked, root, incomplete, identities)
+            await MainActor.run { self.afterTrash(result); AppExitGuard.endManualRemoval(lease) }
         }
     }
 
     func afterTrash(_ result: CleanResult) {
         working = false
         let removed = Set(result.removed)
-        for p in removed { basket[p] = nil }
+        for p in removed { basket[p] = nil; selectionIdentities[p] = nil }
         if let t = tree {
             let updated = t.removing(removed)
             tree = updated
@@ -160,6 +173,7 @@ final class SpaceLensModel: ObservableObject {
     }
 
     func findDuplicates() {
+        guard !working else { return }
         duplicateCancellation?.cancel()
         let token = ScanCancellation()
         duplicateCancellation = token
@@ -189,9 +203,11 @@ final class SpaceLensModel: ObservableObject {
     /// Picks every copy but the oldest one in each group.
     func pickAllButOldest() {
         for g in duplicates ?? [] {
-            for p in g.paths.dropFirst() where basket[p] == nil && refusal(p) == nil { basket[p] = g.size }
+            for p in g.paths.dropFirst() where basket[p] == nil && refusal(p) == nil { toggle(p, bytes: g.size) }
         }
     }
+
+    func clearBasket() { guard !working else { return }; basket = [:]; selectionIdentities = [:] }
 }
 
 struct SpacePage: View {
@@ -203,6 +219,9 @@ struct SpacePage: View {
     var body: some View {
         VStack(spacing: 0) {
             header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 12)
+            if model.exitRequested && model.working {
+                Text(tr("Wait for the selected files to finish moving before quitting.")).font(.callout).foregroundStyle(.orange).padding(.horizontal, 28)
+            }
             if let tree = model.tree, !tree.complete {
                 Text(tr("Some locations were not fully measured. Sizes and chart areas show only known data."))
                     .font(.callout).foregroundStyle(.orange).padding(.horizontal, 28).padding(.bottom, 8)
@@ -280,7 +299,7 @@ struct SpacePage: View {
                 Button(tr("Measure again")) { model.scan() }.buttonStyle(PillButtonStyle()).disabled(model.working)
             }
             if !model.basket.isEmpty {
-                Button(tr("Clear")) { model.basket = [:] }.buttonStyle(PillButtonStyle()).disabled(model.working)
+                Button(tr("Clear")) { model.clearBasket() }.buttonStyle(PillButtonStyle()).disabled(model.working)
             }
             Spacer()
             Text(model.basket.isEmpty ? tr("Tick files or folders to remove them") : trCount(model.basket.count, "%1$@ picked", "%1$@ picked"))

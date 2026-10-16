@@ -2205,4 +2205,7 @@ let zhHans: [String: String] = [
     "Prepared update file cleanup could not be confirmed; inspect the recorded workspace": "准备文件的清理结果未能确认，请检查记录的目录",
     "Native update file cleanup": "原生更新文件清理",
     "Download file cleanup could not be confirmed; inspect the recorded workspace": "下载文件的清理结果未能确认，请检查记录的目录",
+    "The selected item changed after review; select it again": "所选项目在审阅后发生变化，请重新选择",
+    "Could not verify the selected item; refresh before selecting it": "无法核实所选项目，请刷新后再选择",
+    "Wait for the selected files to finish moving before quitting.": "请等待所选文件移入废纸篓后再退出。",
 ]

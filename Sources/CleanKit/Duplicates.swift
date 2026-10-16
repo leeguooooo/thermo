@@ -122,6 +122,14 @@ public enum Duplicates {
 /// before it moves: Documents or Downloads may go, but never the folders themselves, keys and
 /// credentials, iCloud, mail, photo libraries' insides, git metadata or anything outside home.
 public enum ManualRemoval {
+    /// Opaque metadata token for the selected entry and its actual parent.
+    /// This does not seal recursive directory contents.
+    public static func reviewIdentity(_ path: String) -> String? {
+        guard let entry = AppDataReviewIdentity.of(path) else { return nil }
+        let location = Guard.deletionLocation(path)
+        guard let parent = FileIdentity.of((location as NSString).deletingLastPathComponent) else { return nil }
+        return SHA256.hash(data: Data((entry + "\n" + location + "\n" + parent).utf8)).map { String(format: "%02x", $0) }.joined()
+    }
     public static func refusal(_ path: String, home: String = NSHomeDirectory(), whitelist: Whitelist? = nil) -> String? {
         if !path.hasPrefix("/") || path.split(separator: "/").contains(where: { $0 == ".." || $0 == "." }) { return tr("not a full path") }
         if let why = Whitelist.refusal(path, home: home, whitelist: whitelist) { return why }
@@ -142,22 +150,35 @@ public enum ManualRemoval {
     }
 
     /// Moves each path to the Trash after checking it again: allowed, still there, not held open by a running program.
-    public static func trash(_ paths: [String], sizes: [String: Int64] = [:], home: String = NSHomeDirectory(), incompletePaths: Set<String> = []) -> CleanResult {
-        trash(paths, sizes: sizes, home: home, incompletePaths: incompletePaths, move: RemovalOperations.live.trash)
+    public static func trash(_ paths: [String], sizes: [String: Int64] = [:], home: String = NSHomeDirectory(), incompletePaths: Set<String> = [],
+                             reviewIdentities: [String: String]? = nil) -> CleanResult {
+        trash(paths, sizes: sizes, home: home, incompletePaths: incompletePaths, reviewIdentities: reviewIdentities, move: RemovalOperations.live.trash)
     }
 
-    static func trash(_ paths: [String], sizes: [String: Int64], home: String, incompletePaths: Set<String> = [], move: (String) throws -> URL) -> CleanResult {
+    static func trash(_ paths: [String], sizes: [String: Int64], home: String, incompletePaths: Set<String> = [],
+                       reviewIdentities: [String: String]? = nil, openFiles: () -> OpenFiles? = { OpenFiles.current() },
+                       move: (String) throws -> URL) -> CleanResult {
         var result = CleanResult(id: "manual", trashed: true)
         let batchID = UUID().uuidString
-        let open = OpenFiles.current()
-        var whitelist: Whitelist?
-        do { whitelist = try Whitelist.load(home: home) } catch { for path in paths { result.failed[path] = Whitelist.unreadable(error) } }
-        for path in paths where whitelist != nil {
-            if whitelist?.protects(path) == true { result.whitelisted = (result.whitelisted ?? []) + [path]; continue }
+        let paths = Array(Set(paths)).sorted()
+        let reviewed = reviewIdentities ?? paths.reduce(into: [String: String]()) { $0[$1] = reviewIdentity($1) }
+        for (index, path) in paths.enumerated() {
+            let open = openFiles()
+            let whitelist: Whitelist
+            do { whitelist = try Whitelist.load(home: home) }
+            catch {
+                for remaining in paths[index...] { result.failed[remaining] = Whitelist.unreadable(error) }
+                break
+            }
+            if whitelist.protects(path) { result.whitelisted = (result.whitelisted ?? []) + [path]; continue }
             if let why = refusal(path, home: home, whitelist: whitelist) { result.failed[path] = why; continue }
             guard FileManager.default.fileExists(atPath: path) || (try? FileManager.default.destinationOfSymbolicLink(atPath: path)) != nil else { continue }
             guard let open else { result.failed[path] = tr("could not check whether a program is using it"); continue }
             if let h = open.holder(of: path) { result.failed[path] = tr("%1$@ has files open here", h.name); continue }
+            guard let identity = reviewed[path], reviewIdentity(path) == identity else {
+                result.failed[path] = tr("The selected item changed after review; select it again")
+                continue
+            }
             do {
                 let unrecorded = try TrashBatches.trash(path, bytes: sizes[path] ?? 0, id: batchID, home: home, move: move)
                 result.removed.append(path)

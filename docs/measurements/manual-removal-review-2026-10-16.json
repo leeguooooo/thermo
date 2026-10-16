@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-16",
+  "scope": "Reviewed manual file removal in space browser and CLI",
+  "sourceSHA256": {
+    "Sources/CleanKit/Duplicates.swift": "a9d7d7e52226c74d539b0af858191c2302027a22a7b03a5a13f531288a3d5ec4",
+    "Sources/ThermoApp/SpacePage.swift": "9e4b7431dd0f7c50dd8fe31c4a87f593fe607f77e54c878d1011ce3daa8b23c2",
+    "Sources/ThermoApp/AppExitGuard.swift": "440668b82b3c5b3297a71f7eab900620c18b2d439e0ba5b2dc16c06949d350ba",
+    "Sources/thermo/Space.swift": "02b34c0ca4569f52ab4850d28c2c649719d0609f90e46e2e4bb98805dc284569",
+    "Tests/CleanKitTests/ManualRemovalReviewTests.swift": "f3da374371367482e9abf84f259b38583ac5aff11b6f3501d8cf382b163dcfa5",
+    "Tests/ThermoAppTests/SpaceLensModelTests.swift": "7b2763d0c81b02e908fe706bd9769049e1588dcd2ede9ed1cce501dba6aa8bc5"
+  },
+  "newTests": {
+    "ManualRemovalReviewTests": 8,
+    "SpaceLensModelTests": 2
+  },
+  "targeted": {
+    "CleanKit": 45,
+    "ThermoApp": 3,
+    "total": 48,
+    "failures": 0,
+    "log": "/tmp/thermo-manual-review-final-targeted-tests.log"
+  },
+  "nativeCLI": {
+    "scenario": "CLI selected path replaced while confirmation prompt waits",
+    "exit": 1,
+    "reviewPromptObserved": true,
+    "replacementPreserved": true,
+    "originalPreserved": true,
+    "ownedWorkspaceRemoved": true,
+    "nativeTrashMove": false
+  },
+  "behavior": [
+    "Selection token binds selected entry metadata, deletion location and parent directory identity",
+    "CLI retains preview identity and measured sizes across confirmation instead of silently remeasuring a replacement",
+    "Execution rechecks open-file inventory and current whitelist for each path before final identity check",
+    "Unknown process-open inventory or missing/mismatched selection token cannot authorize a move",
+    "Repeated paths are deduplicated; partial moves retain readable Trash batch and incomplete-size marker",
+    "Space model holds quit lease until confirmed removal worker returns and rejects duplicate work/selection edits",
+    "Old duplicate scan result is invalidated before removal"
+  ],
+  "limits": [
+    "Metadata token does not seal recursive directory contents or eliminate final check/use races",
+    "OpenFiles kernel visibility is best effort; unavailable per-process details are not a full proof that no program uses the item",
+    "Ordinary quit is blocked; force quit, crashes and power loss are not covered",
+    "No new visible-window Space removal acceptance; model guard and real CLI prompt race were verified",
+    "Duplicate worker physical resource cap and SpaceTree cache invalidation need separate audits",
+    "No user files moved, native Trash modified, root query, helper installation, hardware writes or release"
+  ],
+  "fullRegression": {
+    "CleanKit": 540,
+    "ThermoApp": 148,
+    "ThermoCLI": 57,
+    "ThermoKitExcludingHardwareTests": 114,
+    "AgentCore": 34,
+    "total": 893,
+    "failures": 0,
+    "log": "/tmp/thermo-manual-review-full-tests.log"
+  },
+  "build": "passed as part of full regression"
+}

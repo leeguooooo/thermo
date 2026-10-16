@@ -10,6 +10,11 @@ enum AppExitGuard {
     private static var restores = Set<UUID>()
     static func beginRestore() -> UUID { let token = UUID(); restores.insert(token); return token }
     static func endRestore(_ token: UUID) { restores.remove(token) }
+    private static var manualRemovals: [UUID: () -> Void] = [:]
+    static func beginManualRemoval(onQuit: @escaping () -> Void) -> UUID {
+        let token = UUID(); manualRemovals[token] = onQuit; return token
+    }
+    static func endManualRemoval(_ token: UUID) { manualRemovals[token] = nil }
 
     static func reply(show: @MainActor (MainPage) -> Void = { MainWindow.show($0) }) -> NSApplication.TerminateReply {
         if !restores.isEmpty {
@@ -18,6 +23,11 @@ enum AppExitGuard {
         }
         if !helperRemovals.isEmpty {
             show(.settings)
+            return .terminateCancel
+        }
+        if !manualRemovals.isEmpty {
+            for notify in manualRemovals.values { notify() }
+            show(.space(.browse))
             return .terminateCancel
         }
         if AppModels.shared.apps.working {

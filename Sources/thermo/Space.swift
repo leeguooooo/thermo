@@ -145,10 +145,19 @@ struct SpaceCommand {
         let paths = raw.map(Self.expand)
         var lines = [style.bold(tr("Move to the Trash:"))]
         var ok: [String] = []
-        for p in paths {
+        var sizes: [String: Int64] = [:], identities: [String: String] = [:]
+        var incomplete = Set<String>()
+        for p in Array(Set(paths)).sorted() {
             if let why = ManualRemoval.refusal(p) { lines.append(style.yellow("  ✗ " + FS.tilde(p) + "  " + why)) }
             else {
+                let identity = ManualRemoval.reviewIdentity(p)
                 let size = FS.size(p)
+                guard let identity, ManualRemoval.reviewIdentity(p) == identity else {
+                    lines.append(style.yellow("  ✗ " + FS.tilde(p) + "  " + tr("The selected item changed after review; select it again")))
+                    continue
+                }
+                identities[p] = identity; sizes[p] = size.bytes
+                if size.incomplete || size.denied { incomplete.insert(p) }
                 ok.append(p); lines.append("  " + AppSize.text(size.bytes, state: AppSize.measured(size, exists: FS.exists(p))) + "  " + FS.tilde(p))
             }
         }
@@ -161,10 +170,7 @@ struct SpaceCommand {
             fflush(stdout)
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print(tr("cancelled")); return }
         }
-        let measured = Dictionary(ok.map { ($0, FS.size($0)) }, uniquingKeysWith: { first, _ in first })
-        let sizes = measured.mapValues(\.bytes)
-        let incomplete = Set(measured.filter { $0.value.incomplete || $0.value.denied }.map(\.key))
-        let result = ManualRemoval.trash(ok, sizes: sizes, incompletePaths: incomplete)
+        let result = ManualRemoval.trash(ok, sizes: sizes, incompletePaths: incomplete, reviewIdentities: identities)
         print(tr("Moved %1$@ to the Trash (empty it to get the space back)", AppSize.text(result.bytes, state: result.bytesIncomplete == true ? .incomplete : .complete)))
         if let id = result.trashBatchID { print(style.dim(tr("Put back: thermo clean restore %1$@", id))) }
         for (p, why) in result.failed.sorted(by: { $0.key < $1.key }) { print(style.yellow("  ✗ " + FS.tilde(p) + "  " + why)) }
