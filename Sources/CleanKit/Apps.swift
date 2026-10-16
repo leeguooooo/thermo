@@ -583,7 +583,7 @@ public enum AppUninstaller {
         }
         app.protected = app.protected ?? protection(app, home: home)
         let kept = includePersonal ? [] : app.leftovers.filter { $0.personal == true }
-        let whitelist = try? Whitelist.load(home: home)
+        let whitelist = try? Whitelist.loadForRemoval(home: home)
         let saved = app.leftovers.map(\.path).filter { whitelist?.protects($0) == true }
         let moved = app.leftovers.filter { l in !kept.contains { $0.path == l.path } && !saved.contains(l.path) }
         let paths = (removeApp ? [app.path] : []) + moved.map(\.path)
@@ -626,7 +626,7 @@ public enum AppUninstaller {
         if !plan.removesApp && plan.paths.isEmpty { return tr("No associated files are selected; the app will be kept") }
         if let why = plan.app.protected { return why }
         do {
-            let whitelist = try Whitelist.load(home: home)
+            let whitelist = try Whitelist.loadForRemoval(home: home)
             if plan.removesApp && whitelist.protects(plan.app.path) { return tr(Whitelist.reason) }
         } catch { return Whitelist.unreadable(error) }
         if runningProcess(in: [plan.app.path], processes: processes) != nil {
@@ -696,7 +696,7 @@ public enum AppUninstaller {
         let g = Guard(home: home)
         let batchID = UUID().uuidString
         let whitelist: Whitelist
-        do { whitelist = try Whitelist.load(home: home) } catch {
+        do { whitelist = try Whitelist.loadForRemoval(home: home) } catch {
             for path in paths { result.failed[path] = Whitelist.unreadable(error) }
             return
         }
@@ -828,7 +828,12 @@ public enum AppUninstaller {
             }
         }
         var out: [OrphanData] = []
-        let whitelist = try? Whitelist.load(home: home)
+        let whitelist: Whitelist?, whitelistIssue: String?
+        do { whitelist = try Whitelist.loadForRemoval(home: home); whitelistIssue = nil }
+        catch {
+            whitelist = nil; whitelistIssue = Whitelist.unreadable(error)
+            issues.append(.init(Whitelist.unreadable(error), path: Whitelist.url(home: home).path))
+        }
         for (id, all) in byID.sorted(by: { $0.key < $1.key }) {
             if ScanCancellation.current?.isCancelled == true { break }
             let paths = all.filter { whitelist?.protects($0) != true }
@@ -862,6 +867,7 @@ public enum AppUninstaller {
             if data.sizeState != .complete { data.blocked = tr("This data could not be fully checked; inspect it in Finder before removing it") }
             if changed { data.blocked = tr("Associated data changed after review; review it again") }
             if !ownership.complete { data.blocked = tr("Could not verify installed app ownership; refresh before removing associated data") }
+            if let whitelistIssue { data.blocked = whitelistIssue }
             out.append(data)
         }
         return .init(items: out.sorted { $0.bytes > $1.bytes }, issues: Array(Set(issues)).sorted {

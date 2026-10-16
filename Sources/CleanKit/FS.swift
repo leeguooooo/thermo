@@ -311,7 +311,7 @@ public enum Cleaner {
         let trash = mode.trashes(item.safety) && !item.paths.isEmpty
         var result = CleanResult(id: item.id, trashed: trash)
         let whitelist: Whitelist
-        do { whitelist = try Whitelist.load(home: g.home) } catch {
+        do { whitelist = try Whitelist.loadForRemoval(home: g.home) } catch {
             result.failed[item.id] = Whitelist.unreadable(error)
             return result
         }

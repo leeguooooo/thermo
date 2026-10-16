@@ -108,6 +108,12 @@ final class OrphanReviewTests: XCTestCase {
         AppUninstaller.reviewedOrphanReport(home: home, known: [], now: later, spotlight: spotlight,
             cancellation: cancellation, processes: .init(entries: []), directories: directories)
     }
+    func testInvalidWhitelistMakesResidualReportIncompleteAndBlocksCandidates() throws {
+        try write(Whitelist.url(home: home).path, bytes: "relative/protected-path\n")
+        let result = report()
+        XCTAssertFalse(result.complete); XCTAssertFalse(result.issues.isEmpty)
+        XCTAssertEqual(result.items.count, 1); XCTAssertNotNil(result.items.first?.blocked)
+    }
     func testMissingOptionalRootsAreACompleteScanRatherThanReadErrors() {
         let result = report(spotlight: { _ in .present })
         XCTAssertTrue(result.complete); XCTAssertTrue(result.issues.isEmpty); XCTAssertTrue(result.items.isEmpty)

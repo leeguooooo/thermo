@@ -71,7 +71,7 @@ public final class DiskScanner: @unchecked Sendable {
         var denied: [String] = []
         // Marked as found, so streamed results already show what the whitelist keeps.
         let whitelist: Whitelist?, whitelistError: String?
-        do { whitelist = try Whitelist.load(home: options.home); whitelistError = nil }
+        do { whitelist = try Whitelist.loadForRemoval(home: options.home); whitelistError = nil }
         catch { whitelist = nil; whitelistError = Whitelist.unreadable(error) }
         let mark: ([CleanItem]) -> [CleanItem] = { found in
             if let whitelist { return whitelist.apply(found) }

@@ -66,9 +66,18 @@ public struct Whitelist: Sendable {
     // MARK: - Reading
 
     /// The file's text, or nil when there is no file. Anything else that is wrong throws.
-    static func read(home: String) throws -> String? {
+    static func read(home: String, afterRead: () throws -> Void = {}) throws -> String? {
         let location = url(home: home).path
-        let fd = open(location, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        func systemSpelling(_ value: String) -> String {
+            for root in ["/private/var", "/private/tmp", "/private/etc"] where value == root || value.hasPrefix(root + "/") {
+                return String(value.dropFirst("/private".count))
+            }
+            return value
+        }
+        let plain = url(home: home).standardizedFileURL
+        let resolved = plain.deletingLastPathComponent().resolvingSymlinksInPath().appendingPathComponent(plain.lastPathComponent)
+        guard systemSpelling(plain.path) == systemSpelling(resolved.path) else { throw error(tr("whitelist folder contains a symbolic link: %1$@", location)) }
+        let fd = open(location, O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK)
         guard fd >= 0 else {
             if errno == ENOENT { return nil }
             if errno == ELOOP { throw error(tr("whitelist is a symbolic link: %1$@", location)) }
@@ -81,14 +90,36 @@ public struct Whitelist: Sendable {
         guard info.st_uid == getuid() else { throw error(tr("whitelist is not owned by you: %1$@", location)) }
         guard info.st_mode & (S_IWGRP | S_IWOTH) == 0 else { throw error(tr("whitelist is writable by other users: %1$@", location)) }
         guard info.st_nlink == 1 else { throw error(tr("whitelist has other hard links: %1$@", location)) }
-        guard info.st_size <= maxBytes else { throw error(tr("whitelist is larger than %1$@ KB: %2$@", String(maxBytes / 1024), location)) }
+        guard info.st_size >= 0, info.st_size <= maxBytes else { throw error(tr("whitelist is larger than %1$@ KB: %2$@", String(maxBytes / 1024), location)) }
         let data = try FileHandle(fileDescriptor: fd, closeOnDealloc: false).read(upToCount: maxBytes + 1) ?? Data()
         guard data.count <= maxBytes else { throw error(tr("whitelist is larger than %1$@ KB: %2$@", String(maxBytes / 1024), location)) }
-        guard let text = String(data: data, encoding: .utf8) else { throw error(tr("whitelist is not UTF-8 text: %1$@", location)) }
+        try afterRead()
+        var after = stat(), visible = stat()
+        guard data.count == info.st_size, fstat(fd, &after) == 0, lstat(location, &visible) == 0,
+              after.st_nlink == 1, visible.st_nlink == 1,
+              AppDataReviewIdentity.text(info) == AppDataReviewIdentity.text(after),
+              AppDataReviewIdentity.text(after) == AppDataReviewIdentity.text(visible) else {
+            throw error(tr("whitelist changed during reading; try again: %1$@", location))
+        }
+        guard var text = String(data: data, encoding: .utf8) else { throw error(tr("whitelist is not UTF-8 text: %1$@", location)) }
+        if text.hasPrefix("\u{FEFF}") { text.removeFirst() }
         return text
     }
 
-    /// Absent file → empty whitelist. Lines that are not acceptable are skipped and listed in `rejected`.
+    public var removalIssue: String? {
+        guard !rejected.isEmpty else { return nil }
+        return tr("whitelist has invalid entries at lines %1$@; fix them before cleanup", rejected.prefix(8).map { String($0.line) }.joined(separator: ", "))
+    }
+
+    /// Inspection can retain rejected rows, while every removal entry point requires a valid list.
+    public static func loadForRemoval(home: String = NSHomeDirectory()) throws -> Whitelist {
+        let value = try load(home: home)
+        if let issue = value.removalIssue { throw error(issue) }
+        return value
+    }
+
+    /// Inspection: absent file is empty; invalid lines are retained in `rejected`.
+    /// Destructive callers must use loadForRemoval or validate removalIssue.
     public static func load(home: String = NSHomeDirectory()) throws -> Whitelist {
         let file = url(home: home).path
         guard let text = try read(home: home) else { return Whitelist(file: file) }
@@ -105,7 +136,7 @@ public struct Whitelist: Sendable {
     }
 
     static func lines(_ text: String) -> [String] {
-        text.split(separator: "\n", omittingEmptySubsequences: false).map { $0.hasSuffix("\r") ? String($0.dropLast()) : String($0) }
+        text.components(separatedBy: "\n").map { $0.hasSuffix("\r") ? String($0.dropLast()) : String($0) }
     }
 
     enum Line: Equatable { case none, entry(String), rejected(String) }
@@ -138,6 +169,7 @@ public struct Whitelist: Sendable {
     /// Whether removing `path` would remove something whitelisted: the path itself, anything under a
     /// whitelisted folder, or a folder holding a whitelisted path. Symlinked parents are checked both ways.
     public func protects(_ path: String) -> Bool {
+        if removalIssue != nil { return true }
         guard !patterns.isEmpty else { return false }
         let standard = URL(fileURLWithPath: path).standardizedFileURL.path
         let candidates = Set([standard, Guard.deletionLocation(standard), URL(fileURLWithPath: standard).resolvingSymlinksInPath().path])
@@ -147,6 +179,11 @@ public struct Whitelist: Sendable {
     /// The item with whitelisted paths taken out and listed in `whitelisted`; when every path is
     /// whitelisted it keeps its paths and is blocked instead.
     public func apply(_ item: CleanItem) -> CleanItem {
+        if let issue = removalIssue {
+            var blocked = item
+            if !item.paths.isEmpty || !(item.commands ?? []).isEmpty { blocked.blocked = issue }
+            return blocked
+        }
         let hits = item.paths.filter(protects)
         guard !hits.isEmpty else { return item }
         var i = item
@@ -181,7 +218,11 @@ public struct Whitelist: Sendable {
 
     /// Why `path` must stay, or nil. An unreadable whitelist refuses everything.
     public static func refusal(_ path: String, home: String = NSHomeDirectory(), whitelist: Whitelist? = nil) -> String? {
-        do { return try (whitelist ?? load(home: home)).protects(path) ? tr(reason) : nil }
+        do {
+            let value = try whitelist ?? loadForRemoval(home: home)
+            if let issue = value.removalIssue { return issue }
+            return value.protects(path) ? tr(reason) : nil
+        }
         catch { return unreadable(error) }
     }
 
@@ -272,7 +313,7 @@ public extension ScanReport {
     /// Marks whitelisted paths; an unreadable whitelist blocks every item with paths (fail closed).
     mutating func applyWhitelist(home: String = NSHomeDirectory()) {
         do {
-            items = try Whitelist.load(home: home).apply(items)
+            items = try Whitelist.loadForRemoval(home: home).apply(items)
             whitelistError = nil
         } catch {
             let why = Whitelist.unreadable(error)

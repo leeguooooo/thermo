@@ -361,7 +361,7 @@ struct CleanCommand {
         }
         // A saved scan can predate a whitelist edit; an unreadable whitelist stops the run.
         let whitelist: Whitelist
-        do { whitelist = try Whitelist.load() } catch { throw CLIError(Whitelist.unreadable(error) + "; nothing was removed") }
+        do { whitelist = try Whitelist.loadForRemoval() } catch { throw CLIError(Whitelist.unreadable(error) + "; nothing was removed") }
         let processes = ProcessTable.current(.init(cpu: false))
         let reviewed = picked.map { original -> CleanItem in
             var item = whitelist.apply(original)
@@ -441,6 +441,8 @@ struct CleanCommand {
         let file: String
         let entries: [String]
         let rejected: [Whitelist.Rejected]
+        let removalAllowed: Bool
+        let issue: String?
     }
 
     /// `thermo clean whitelist [add|remove PATH…]`: paths every cleanup keeps.
@@ -454,9 +456,10 @@ struct CleanCommand {
             case nil, "list":
                 guard rest.count <= 1 else { throw CLIError(usage) }
                 let w = try Whitelist.load(home: home)
-                if args.has("json") { write(Export.json(WhitelistListing(file: w.file, entries: w.entries, rejected: w.rejected))); return }
+                if args.has("json") { write(Export.json(WhitelistListing(file: w.file, entries: w.entries, rejected: w.rejected, removalAllowed: w.removalIssue == nil, issue: w.removalIssue))); return }
                 write(style.bold(tr("Whitelist")) + style.dim(" · " + FS.tilde(w.file, home: home)))
-                if w.entries.isEmpty { write(style.dim("  " + tr("nothing whitelisted; add paths with thermo clean whitelist add PATH…"))) }
+                if let issue = w.removalIssue { write(style.red(issue)) }
+                else if w.entries.isEmpty { write(style.dim("  " + tr("nothing whitelisted; add paths with thermo clean whitelist add PATH…"))) }
                 for e in w.entries { write("  " + FS.tilde(e, home: home)) }
                 for r in w.rejected { write(style.yellow("  " + tr("line %1$@ ignored: %2$@ (%3$@)", String(r.line), r.text, tr(r.reason)))) }
             case "add":
@@ -494,7 +497,7 @@ struct CleanCommand {
         guard !args.has("budget"), args.options["budget"] == nil, args.options["timeout"] == nil else { throw CLIError("scan budgets do not apply to deleting Trash items") }
         let batch = try TrashBatches.load(selectors[0], home: home)
         struct Review: Encodable { let batch: TrashBatch; let refusals: [String: String]; let permanent = true; let dryRun: Bool }
-        let refused = Dictionary(batch.entries.compactMap { e in TrashBatches.refusal(e, home: home).map { (e.destination, $0) } }, uniquingKeysWith: { a, _ in a })
+        let refused = Dictionary(batch.entries.compactMap { e in TrashBatches.emptyRefusal(e, home: home).map { (e.destination, $0) } }, uniquingKeysWith: { a, _ in a })
         if args.has("dry-run") || !args.has("json") {
             if args.has("json") { write(Export.json(Review(batch: batch, refusals: refused, dryRun: args.has("dry-run")))) }
             else {
@@ -513,6 +516,7 @@ struct CleanCommand {
         if args.has("json") { write(Export.json(result)); return }
         write("deleted \(ByteFormat.string(result.bytes)) (estimated); \(result.outcome ?? "unknown")")
         for (path, reason) in result.failed.sorted(by: { $0.key < $1.key }) { write("  kept \(path): \(reason)") }
+        for path in result.whitelisted ?? [] { write("  kept " + path + ": " + tr(Whitelist.reason)) }
         if let observation = result.spaceObservation { write(observation.summary) }
     }
 

@@ -185,22 +185,40 @@ public enum TrashBatches {
         return current
     }
 
+    /// Permanent removal must honor protection for both the original and current Trash location.
+    public static func emptyRefusal(_ entry: TrashBatch.Entry, home: String = NSHomeDirectory()) -> String? {
+        do {
+            let whitelist = try Whitelist.loadForRemoval(home: home)
+            if whitelist.protects(entry.original) || whitelist.protects(entry.destination) { return tr(Whitelist.reason) }
+        } catch { return Whitelist.unreadable(error) }
+        return refusal(entry, home: home)
+    }
+
     public static func empty(_ id: String, home: String = NSHomeDirectory(), reviewIdentity: String? = nil,
                              reviewedDestinations: Set<String>? = nil) throws -> CleanResult {
         let batch = try load(id, home: home)
         _ = try validateReview(reviewIdentity, batch: batch)
+        _ = try Whitelist.loadForRemoval(home: home)
         var result = CleanResult(id: "trash-batch/" + id, trashed: false)
         let before = DiskSpaceSnapshot.measure(path: home)
         for entry in batch.entries {
             if let reviewedDestinations, !reviewedDestinations.contains(entry.destination) {
                 result.failed[entry.destination] = tr("Not included in the confirmed review; review this item again."); continue
             }
-            if let reason = refusal(entry, home: home) { result.failed[entry.destination] = reason; continue }
+            if let reason = emptyRefusal(entry, home: home) {
+                if reason == tr(Whitelist.reason) { result.whitelisted = (result.whitelisted ?? []) + [entry.destination] }
+                else { result.failed[entry.destination] = reason }
+                continue
+            }
             let size = FS.size(entry.destination)
             guard !size.denied else { result.failed[entry.destination] = "cannot measure Trash item"; continue }
             guard let files = OpenFiles.current() else { result.failed[entry.destination] = "cannot check open files"; continue }
             if let holder = files.holder(of: entry.destination) { result.failed[entry.destination] = "in use by " + holder.name; continue }
-            if let reason = refusal(entry, home: home) { result.failed[entry.destination] = reason; continue }
+            if let reason = emptyRefusal(entry, home: home) {
+                if reason == tr(Whitelist.reason) { result.whitelisted = (result.whitelisted ?? []) + [entry.destination] }
+                else { result.failed[entry.destination] = reason }
+                continue
+            }
             do {
                 try FileManager.default.removeItem(atPath: entry.destination)
                 result.removed.append(entry.destination); result.bytes += size.bytes

@@ -175,7 +175,7 @@ final class DiskModel: ObservableObject {
         cleaningDone = 0
         cleaningTotal = items.count
         queue.async { [weak self] in
-            do { _ = try Whitelist.load() } catch {
+            do { _ = try Whitelist.loadForRemoval() } catch {
                 let why = Whitelist.unreadable(error)
                 DispatchQueue.main.async { self?.error = why; self?.cleaning = false }
                 return

@@ -269,7 +269,7 @@ public enum ManualRemoval {
         for (index, path) in paths.enumerated() {
             let open = openFiles()
             let whitelist: Whitelist
-            do { whitelist = try Whitelist.load(home: home) }
+            do { whitelist = try Whitelist.loadForRemoval(home: home) }
             catch {
                 for remaining in paths[index...] { result.failed[remaining] = Whitelist.unreadable(error) }
                 break

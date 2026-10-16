@@ -4,6 +4,19 @@ import AgentCore
 @testable import thermo
 
 final class CleanupIssueCLITests: XCTestCase {
+    func testInvalidWhitelistListingRetainsRowsAndReportsRemovalDisabled() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        let file = Whitelist.url(home: home)
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("~/keep\nrelative/path\n".utf8).write(to: file)
+        var output = ""
+        try CleanCommand(app: App(args: try Args(["--json"]))).whitelist([], home: home, write: { output = $0 })
+        let result = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(output.utf8)) as? [String: Any])
+        XCTAssertEqual(result["removalAllowed"] as? Bool, false)
+        XCTAssertEqual((result["rejected"] as? [[String: Any]])?.first?["line"] as? Int, 2)
+        XCTAssertNotNil(result["issue"] as? String)
+    }
     func testTimeoutAliasAndExclusiveBudgets() throws {
         XCTAssertEqual(try CleanCommand.budget(Args(["--timeout", "5"])), 5)
         XCTAssertEqual(try CleanCommand.budget(Args(["--budget", "2s"])), 2)

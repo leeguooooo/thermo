@@ -1,0 +1,84 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "b405268",
+  "sourceSHA256": {
+    "Sources/CleanKit/Whitelist.swift": "238b891a03cc3470fbb3d48d69765c6bd02b04d1b12d16c0153f73ea3439869b",
+    "Sources/CleanKit/Apps.swift": "7ea1c22a2426fff99352e7166b9434e28bfb09c9ca48203e309170b5a4dfd0ff",
+    "Sources/CleanKit/FS.swift": "91d00f35f16f5700113b9fe5dfedac095088482e8d7a9e081a05eab602927618",
+    "Sources/CleanKit/Scanner.swift": "58da0a797c763be9fb127856b5e3de5ec5194efb59f49fa388af8b4ba6fa7e0e",
+    "Sources/CleanKit/Duplicates.swift": "22a1efa239452ad7d35373b8cbb9c2ac7107b5fa7b265ec3f82494d2942c137d",
+    "Sources/CleanKit/TrashBatch.swift": "fc040b845a25afc7da407b6ad606865e6776f47612e2b0f831d729b04b15c49d",
+    "Sources/ThermoApp/DiskView.swift": "d598242e20086dc511d473b725a5beeb7e55fd55c44b71b23c737afb1692bfd6",
+    "Sources/thermo/Clean.swift": "3b56f9b224740e00cf269cd917f0f0b4a46a316c9aa8bb29b438c651e18abd3d",
+    "Tests/CleanKitTests/WhitelistReadTrustTests.swift": "73134d7ca9838c2c06ee30d65542b06378f9551a030a3eb115396a971173c50f",
+    "Tests/CleanKitTests/OrphanReviewTests.swift": "a2969550a3e716768991bd24be6518fa5c4eea873c58e5189f57b1f146719d81",
+    "Tests/ThermoCLITests/CleanupIssueCLITests.swift": "0abbd7c5a3b55d1b97979efd07411e2428dbdd308f5d07f5b2e975286e36e0a9"
+  },
+  "before": {
+    "FIFOQueryTimedOut": true,
+    "timeoutSeconds": 1.5,
+    "ownedCLIReaped": true,
+    "invalidLineRemovalPreviewExit": 0,
+    "invalidLinePreviewOfferedRemoval": true,
+    "fixtureOnlyAndDryRun": true
+  },
+  "afterCLI": {
+    "FIFOQueryExit": 2,
+    "FIFOQueryElapsedSeconds": 0.007,
+    "FIFOPreserved": true,
+    "invalidLineListingRetained": true,
+    "removalAllowed": false,
+    "invalidLineRemovalPreviewExit": 1,
+    "BOMAndCRLFEntriesRecognized": true,
+    "payloadUnchanged": true,
+    "temporaryHomesRemoved": true
+  },
+  "nativeTrashPreview": {
+    "ownedSampleOnly": true,
+    "originalPathWhitelistRefusedPreview": true,
+    "invalidWhitelistRefusedPreview": true,
+    "restoredWithInvalidWhitelist": true,
+    "payloadSHA256": "7f230c2a0a51ec9483d6f5742fabafd697622c3d165649fb6af18249c4af5d45",
+    "ownedDestinationAbsentAfterRestore": true,
+    "permanentDeletionExecuted": false,
+    "temporaryHomeRemoved": true
+  },
+  "newTests": {
+    "WhitelistReadTrustTests": 10,
+    "OrphanReviewTests": 1,
+    "CleanupIssueCLITests": 1
+  },
+  "fullBeforeBatchEntryFollowup": {
+    "log": "/tmp/thermo-whitelist-trust-full.log",
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 59,
+      "ThermoAppTests": 175,
+      "CleanKitTests": 589,
+      "AgentCoreTests": 34
+    },
+    "total": 971,
+    "failures": 0,
+    "logSHA256": "d0668e6fa37b60bc304b963588c009e095a209a650fd810314f1af11fdb87df6"
+  },
+  "finalCleanAndCLIRetest": {
+    "log": "/tmp/thermo-whitelist-trust-final-clean-cli.log",
+    "counts": {
+      "ThermoCLITests": 59,
+      "CleanKitTests": 592
+    },
+    "total": 651,
+    "failures": 0,
+    "logSHA256": "d59689e78f8afd0cb3a1fbcfcbc9cb322edcb0f772f93f160f8ed70915ed71b0"
+  },
+  "excluded": [
+    "HardwareTests",
+    "AgentDoctorTests"
+  ],
+  "limits": [
+    "No new visible GUI failure injection; App regression covered unchanged configuration gates",
+    "Metadata validation does not make config and file operations atomic",
+    "Dynamic whitelist edits throughout general cleanup/uninstall and cross-process config-write coordination remain to be audited",
+    "No user permanent deletion, root query, helper installation, hardware writes, installed-app replacement or release"
+  ]
+}

@@ -100,6 +100,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 | `thermo history [show ID]` | Thermo 做过的每项改动（清理、卸载、agent 修复、Claude 重置、隐私设置、标签、归档、退出程序），最新的在前，并写明在哪里撤销；记录在 `~/Library/Application Support/Thermo/operations.jsonl`；`--limit N`、`--json` |
 | `thermo awake [status\|on\|off]` | 笔记本合盖不休眠（经辅助程序切换 `pmset disablesleep`）；温度接近风扇安全上限、使用电池且电量降到 20%、或读不到温度时自动关闭，关闭和辅助程序重启时恢复你原来的设置；`--json` |
 
+`clean whitelist --json` 保留 `entries` 和逐行 `rejected`，并提供 `removalAllowed` 与可选 `issue`。存在无效行时仍可查看配置，但清理、卸载和手动移除会停止，直到修正；无效配置不再当成空白名单。支持 UTF-8 BOM 和 CRLF。白名单文件及其用户目录链接、读取中变化、权限或编码错误都会拒绝使用。清空已记录的废纸篓批次还会检查原路径与废纸篓路径的保护；配置异常仍允许恢复原文件。
+
 所有读取命令都支持 `--json`、`--csv`，另有 `--fahrenheit`、`--no-color`（也遵循 `NO_COLOR`）。
 
 电池 CSV 和汇总 CSV 使用 `kind,key,name,group,value` 列；电池字段的 key 标明单位，例如 `temperature_c`、`current_a`、`health_percent`。缺失读数不输出，充电和外接电源状态使用 0/1。CSV 温度始终以摄氏度输出。
