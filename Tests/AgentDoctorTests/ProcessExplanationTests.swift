@@ -97,3 +97,19 @@ extension ProcessExplanationTests {
         XCTAssertNil(report.listeners)
     }
 }
+
+extension ProcessExplanationTests {
+    func testPowerAssertionReadCannotPublishAfterPIDReuse() throws {
+        let p=process(10,parent:0);var actual=p.sampledIdentity!
+        XCTAssertThrowsError(try ProcessExplanation.capture(10,table:.init(entries:[p]),identity:{ _ in actual },parent:{ _ in 0 },paths:{ _ in .init(paths:[],complete:true) },uid:501,sleepAssertions:{ _ in
+            actual.started.addTimeInterval(1);return .init(state:.noneObserved,assertions:[],queryComplete:true,limited:false)
+        }))
+    }
+    func testPowerAssertionReaderDoesNotInspectOtherUsers() throws {
+        let p=process(10,parent:0,uid:900)
+        let report=try ProcessExplanation.capture(10,table:.init(entries:[p]),identity:{ _ in p.sampledIdentity },parent:{ _ in 0 },paths:{ _ in .init(paths:[],complete:true) },uid:501,sleepAssertions:{ _ in
+            XCTFail("do not inspect another user's power assertions");return nil
+        })
+        XCTAssertNil(report.sleepAssertions)
+    }
+}

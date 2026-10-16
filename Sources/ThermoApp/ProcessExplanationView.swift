@@ -98,11 +98,26 @@ struct ProcessInspectionTarget: Identifiable {
                             if listeners.limited { Text(tr("TCP listener reading reached a limit")).font(.caption).foregroundStyle(.orange) }
                         } else { Text(tr("TCP listener inspection is unavailable")).font(.caption) }
                         Text(tr("A listening address does not prove internet reachability.")).font(.caption).foregroundStyle(.secondary)
-                        Text(tr("Memory mappings, launch service registration and sleep assertions were not inspected.")).font(.caption).foregroundStyle(.secondary)
+                        Text(tr("Observed process power assertions")).font(.headline)
+                        if let power = report.sleepAssertions {
+                            ForEach(Array(power.assertions.enumerated()), id: \.offset) { _, assertion in
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(assertion.type + " · " + tr(assertion.active == true ? "Active request" : assertion.active == false ? "Inactive request" : "Unknown assertion level")).font(.caption.weight(.medium))
+                                    Text(sleepRequest(assertion.request)).font(.caption)
+                                    if let name = assertion.name { Text(name).font(.caption).textSelection(.enabled) }
+                                }
+                            }
+                            if power.state == .noneObserved { Text(tr("No process assertions were observed; other mechanisms may still prevent sleep.")).font(.caption) }
+                            if power.state == .unavailable { Text(tr("Power assertion inspection is unavailable")).font(.caption).foregroundStyle(.orange) }
+                            if !power.queryComplete { Text(tr("Power assertion reading is incomplete")).font(.caption).foregroundStyle(.orange) }
+                            if power.limited { Text(tr("Power assertion reading reached a limit")).font(.caption).foregroundStyle(.orange) }
+                        } else { Text(tr("Power assertion inspection is unavailable")).font(.caption) }
+                        Text(tr("Power requests do not guarantee prevention of lid-close, low-battery or policy-driven sleep.")).font(.caption).foregroundStyle(.secondary)
+                        Text(tr("Memory mappings and launch service registration were not inspected.")).font(.caption).foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            Text(tr("Known credential patterns are masked. Custom positional arguments may remain.")).font(.caption).foregroundStyle(.secondary)
+            Text(tr("Known credential patterns are masked. Custom arguments and assertion names may contain personal data.")).font(.caption).foregroundStyle(.secondary)
             HStack {
                 Button(tr("Refresh")) { model.load(expected) }.disabled(model.loading)
                 Spacer(); Button(tr("Close")) { dismiss() }
@@ -115,6 +130,15 @@ struct ProcessInspectionTarget: Identifiable {
         case .loopback: return tr("Loopback bind address")
         case .wildcardAddress: return tr("Wildcard bind address")
         case .specifiedAddress: return tr("Specific bind address")
+        }
+    }
+    private func sleepRequest(_ value: ProcessSleepAssertions.Assertion.Request) -> String {
+        switch value {
+        case .idleSystem: return tr("Idle system sleep request")
+        case .idleDisplayAndSystem: return tr("Idle display and system sleep request")
+        case .diskIdle: return tr("Disk idle request; not a system sleep block")
+        case .systemSleep: return tr("System sleep request; power policy still applies")
+        case .other: return tr("Other power assertion; effect not interpreted")
         }
     }
 }

@@ -1,0 +1,108 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "f0c1aa8",
+  "sourceSHA256": {
+    "Sources/AgentDoctor/ProcessSleepAssertions.swift": "e09fea88fea116d11e7239d15bfe9dee065011a4621e249b7829d80b836ef846",
+    "Sources/AgentDoctor/ProcessExplanation.swift": "518b045ccb1146123bfde0a65214e9391dcb3fba60c92a86e9b000a8b377f1e7",
+    "Sources/ThermoApp/ProcessExplanationView.swift": "e7dbecc5a631fc0a5bd67c02c375c31827f1e7521f47536524f5f82323de3a6e",
+    "Sources/thermo/Pulse.swift": "b37f902c929b48d9269a9a22740bcf2638018f44d4a81c936c5db7e67927375c",
+    "Sources/ThermoL10n/ZhHans.swift": "d0aaf57bc8290975819f070a77915e11aad9fbfe4af2844fa2e3881e613ee785",
+    "Tests/AgentDoctorTests/ProcessSleepAssertionsTests.swift": "c209f597d96611dfd19d68662dbc19749f81a662b84025d20c4988c7ae7e99b7",
+    "Tests/AgentDoctorTests/ProcessExplanationTests.swift": "dbccd36ac565d4a0e26c60b25f97621b5bbda181bcf80f9a7eb8ea6781ae0b59",
+    "README.md": "0bbcda1c949fc9aaee65d3def58c0446f81477f07eca2de8616f971d347dab31"
+  },
+  "newTests": {
+    "ProcessSleepAssertionsTests": 6,
+    "ProcessExplanationTests": 2
+  },
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 66,
+      "ThermoAppTests": 202,
+      "CleanKitTests": 712,
+      "AgentDoctorTests": 35,
+      "AgentCoreTests": 37
+    },
+    "total": 1166,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests"
+    ],
+    "AgentDoctorSelection": [
+      "ProcessSleepAssertionsTests",
+      "ProcessListenersTests",
+      "ProcessExplanationTests",
+      "RedactTests"
+    ],
+    "logSHA256": "93ae0293657421302736402c92c3dd3b0ec662cc3306ee75ba077aa7f5786c01"
+  },
+  "nativeCLI": {
+    "firstState": "observed",
+    "firstTypes": [
+      "PreventUserIdleSystemSleep"
+    ],
+    "firstActiveLevels": [
+      255
+    ],
+    "afterOwnedReleaseSameProcess": {
+      "assertions": [],
+      "limited": false,
+      "queryComplete": true,
+      "state": "noneObserved"
+    },
+    "samePID": true,
+    "fixtureCredentialMasked": true,
+    "controlCharactersEscaped": true,
+    "firstJSONSHA256": "33c0fc0add3aac3b3309469397fba9e21e1f132a43ea226a9bac383118e0a332",
+    "secondJSONSHA256": "9c3d57fbc864403a13e438f15a7b354dcb9ab5b7b5e376362f7fe14c9e493971",
+    "textExit": 0,
+    "binarySHA256": "cb455dd79c64579ec25238f9adf3e1b060dcb28bd1e3659885a5b52b4498d151",
+    "fixtureBinarySHA256": "6f9c5f0695cbb5732989b326f54a7d8f67003aeffeb24f374da0584b2ca3b0c3"
+  },
+  "fixtureSourceSHA256": "1df765234170570a98a26914ba76b5c12aa930583460ab97beda4b639b2bc48c",
+  "reference": {
+    "API": "IOPMCopyAssertionsByProcess",
+    "SDKHeader": "IOKit.framework/Headers/pwr_mgt/IOPMLib.h",
+    "copyOwnership": "takeRetainedValue; released after use",
+    "activeLevel": 255,
+    "inactiveLevel": 0
+  },
+  "policy": {
+    "currentUIDOnly": true,
+    "identityBound": true,
+    "dataRetained": [
+      "type",
+      "name",
+      "level",
+      "active/unknown",
+      "requested behavior"
+    ],
+    "otherPIDNamesNotExported": true,
+    "maximumAssertions": 64,
+    "maximumNameCharacters": 2048,
+    "unknownOrInvalidLevel": "active remains nil; not inactive",
+    "knownRequests": [
+      "idleSystem",
+      "idleDisplayAndSystem",
+      "diskIdle",
+      "systemSleep"
+    ],
+    "interpretation": "request observation only; effective machine sleep policy not inferred",
+    "compatibility": "absent sleepAssertions means not inspected"
+  },
+  "cleanup": {
+    "ownedTemporaryAssertionReleased": true,
+    "fixtureProcessTerminatedAndWaited": true,
+    "openFixtureHandles": 0,
+    "ownedRootRemoved": true,
+    "noPersistentPowerSettingsChanged": true
+  },
+  "limitations": [
+    "No forced sleep/wake or lid-close acceptance",
+    "System policy can override requests; absence does not prove no sleep blockers",
+    "IOKit calls may delay cancellation",
+    "Other power assertion types remain uninterpreted",
+    "No visible inspector acceptance, hardware control, push or release"
+  ]
+}

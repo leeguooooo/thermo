@@ -68,8 +68,17 @@ struct PulseCommand {
             } else { lines.append(tr("TCP listener inspection is unavailable")) }
             lines.append(tr("A listening address does not prove internet reachability."))
             lines.append(tr("A current parent chain does not prove the original launcher or a publisher's identity."))
-            lines.append(tr("Memory mappings, launch service registration and sleep assertions were not inspected."))
-            lines.append(tr("Known credential patterns are masked. Custom positional arguments may remain."))
+            lines.append(tr("Observed process power assertions"))
+            if let power = report.sleepAssertions {
+                lines += power.assertions.map { $0.type + " · " + tr($0.active == true ? "Active request" : $0.active == false ? "Inactive request" : "Unknown assertion level") + " · " + $0.request.rawValue + ($0.name.map { " · " + $0 } ?? "") }
+                if power.state == .noneObserved { lines.append(tr("No process assertions were observed; other mechanisms may still prevent sleep.")) }
+                if power.state == .unavailable { lines.append(tr("Power assertion inspection is unavailable")) }
+                if !power.queryComplete { lines.append(tr("Power assertion reading is incomplete")) }
+                if power.limited { lines.append(tr("Power assertion reading reached a limit")) }
+            } else { lines.append(tr("Power assertion inspection is unavailable")) }
+            lines.append(tr("Power requests do not guarantee prevention of lid-close, low-battery or policy-driven sleep."))
+            lines.append(tr("Memory mappings and launch service registration were not inspected."))
+            lines.append(tr("Known credential patterns are masked. Custom arguments and assertion names may contain personal data."))
             out(lines); return
         }
         if rest.first == "quit" { try quit(Array(rest.dropFirst())); return }
