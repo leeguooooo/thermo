@@ -60,9 +60,8 @@ enum NativeDiskImage {
     /// an image-path string which can differ when an attachment is reused.
     static func finishAttachment(payload: String, mount: String, mountIdentity: String, previousDevices: Set<String>,
                                  attachedDevices: Set<String>, query: () throws -> [String: Any] = imageInfo,
-                                 detach: (String) -> Bool = { device in
-                                     let result = CommandRunner.run("/usr/bin/hdiutil", arguments: ["detach", device], timeout: 30, captureError: false)
-                                     return result.status == 0 && !result.timedOut && !result.cancelled
+                                 detach: (String) -> CommandRunner.Result = { device in
+                                     CommandRunner.run("/usr/bin/hdiutil", arguments: ["detach", device], timeout: 30, captureError: false)
                                  }, identity: (String) -> String? = FileIdentity.of,
                                  diagnostic: (String) -> Void = { _ in }) -> Bool {
         func refuse(_ reason: String) -> Bool { diagnostic(reason); return false }
@@ -87,7 +86,12 @@ enum NativeDiskImage {
             guard !previousDevices.contains(device) else { return refuse("root device was already present before attachment") }
             let exactPayload = (image["image-path"] as? String).map { canonical($0) == canonical(payload) } == true
             guard exactPayload || attachedDevices.contains(device) else { return refuse("device ownership is unconfirmed") }
-            guard detach(device) else { return refuse("normal detach did not succeed") }
+            let result = detach(device)
+            guard result.status == 0 && !result.timedOut && !result.cancelled else {
+                // Keep process evidence without retaining hdiutil output, which
+                // can contain paths. Success still requires the fresh inventory below.
+                return refuse("normal detach did not succeed: exit=\(result.status), timedOut=\(result.timedOut), cancelled=\(result.cancelled)")
+            }
         }
         guard let after = try? query(), let remaining = after["images"] as? [[String: Any]] else { return refuse("post-detach inventory unavailable") }
         guard !remaining.contains(where: { matches($0) || hasReturnedDevice($0) }) else { return refuse("attachment is still present after detach") }

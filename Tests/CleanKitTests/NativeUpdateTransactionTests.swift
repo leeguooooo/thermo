@@ -560,7 +560,8 @@ final class NativeUpdateTransactionTests: XCTestCase {
         try makeApp(home + "/package/Other.app", version: "2.0", build: "200", id: "com.example.other")
         try dmg()
         XCTAssertThrowsError(try prepared()) { error in
-            if error is NativeDiskImage.CleanupFailure { XCTFail("Multiple-app rejection left cleanup unconfirmed: " + error.localizedDescription) }
+            XCTAssertEqual(error.localizedDescription, "The archive must contain exactly one application",
+                           "Expected multiple-app rejection, not a mount or cleanup failure")
         }
         try assertNoOwnedMountedImages()
         XCTAssertEqual(build(original), "100")
