@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "fd6a682",
+  "sourceSHA256": {
+    "Sources/CleanKit/NativeBackupReview.swift": "f1c421e4ef9200081b97f7305d59dafbe9e410c1aca10897f5199d0030e9c470",
+    "Sources/ThermoL10n/ZhHans.swift": "a7cfcf284a2e46c94bb767c40bb7d7224a0c013c28af4cf844b5b0944f1ff76d",
+    "Tests/CleanKitTests/NativeBackupReviewTests.swift": "7af8b1261f5be7d765d0907cf61f6d21580445b1d473522f9d6d584601b2627d",
+    "scripts/verify-native-backup-ui.swift": "73984a0adb2a43729bf194fe810d50542ad5273c082a444b72008e9c681d22e6"
+  },
+  "change": "missing recovery copy now points to History restore, not an ineffective refresh-only instruction",
+  "checks": {
+    "selectedTests": 25,
+    "failures": 0,
+    "logSHA256": "2399a34bc207842dffc842305d14db522248d9ca17c91de0092300ec88eb554b"
+  },
+  "visibleAcceptance": {
+    "host": "standard SwiftUI App/WindowGroup, production components, owned CFFIXED_USER_HOME",
+    "executableSHA256": "7c992e27e74330ac883a523d5098bb874c937aecd0d719e5759280325caec750",
+    "backupConfirmationVersions": [
+      "1.0",
+      "2.0 kept"
+    ],
+    "cancelKeptCopy": true,
+    "nativeTrashAndBatchIDVisible": true,
+    "historyRestore1of1VisibleTwice": true,
+    "appRestore2to1ConfirmedAndVerified": true,
+    "correctedMissingCopyInstructionVisible": true,
+    "retentionDefault": "keep all; no candidate; clean disabled",
+    "retention30Days": "one owned 100-day transcript, review, not selected automatically",
+    "retentionScanBusy": "age control disabled",
+    "retentionAfterSelectThenKeepAll": "rows and selection cleared; clean disabled",
+    "rawTranscriptSHA256": "5e5f408ef14102e7c4958203d5ccefa8559b4741fe74b8554febb58c0082516b",
+    "transcriptCleaningDisabledInFixture": true,
+    "screenshots": "conversation only; no screenshots persisted"
+  },
+  "nativeReadback": {
+    "Home5": {
+      "current": "200",
+      "backup": "100",
+      "phase": "installed"
+    },
+    "Home6": {
+      "current": "100",
+      "backup": "200",
+      "phase": "restored"
+    },
+    "Home7": {
+      "current": "200",
+      "backup": "100",
+      "phase": "installed"
+    }
+  },
+  "cleanup": {
+    "qaExited": true,
+    "nativeTrashBatchesCheckedAndReturned": 2,
+    "openFixtureHandles": 0,
+    "ownedRootRemoved": true
+  },
+  "limitations": [
+    "Owned ad-hoc signed copies, not real installed vendor apps",
+    "Installed main-app navigation/entry not exercised",
+    "Main-thread cache/options I/O seen in diagnostic sample; no claim it caused the timeout",
+    "Manual NSWindow host capture failed; WindowGroup succeeded; no universal TCC/permission fix claim",
+    "No persistent power or system settings changes",
+    "No push or release"
+  ]
+}

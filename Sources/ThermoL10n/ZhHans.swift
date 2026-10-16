@@ -2393,4 +2393,5 @@ let zhHans: [String: String] = [
     "Disk idle request; not a system sleep block": "防止磁盘空闲的请求，不代表阻止系统休眠",
     "System sleep request; power policy still applies": "系统休眠请求，仍受电源策略约束",
     "Other power assertion; effect not interpreted": "其他电源断言，未解释其效果",
+    "The recovery copy is not at its recorded path. If it was moved to the Trash, restore it from History first.": "恢复副本不在记录的位置。若已移入废纸篓，请先从历史记录放回副本。",
 ]

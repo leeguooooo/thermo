@@ -23,24 +23,35 @@ import ThermoL10n
 @MainActor struct BackupFixture: View {
     let home: String
     @State var scenario = 0
+    @State var page = 0
     @StateObject var history = HistoryModel()
+    @StateObject var disk = DiskModel()
+    init(home: String, initialPage: Int = 0) { self.home=home;_page=State(initialValue:initialPage) }
     var body: some View {
         VStack {
             Text("独立验收：自有签名夹具；仅移入废纸篓与恢复，不安装真实应用").font(.caption)
             Picker("场景",selection:$scenario) {
                 Text("完整测量").tag(0); Text("测量下限").tag(1); Text("大小未知").tag(2)
             }.pickerStyle(.segmented)
-            TabView {
-                BackupScenario(scenario,home:home).id(scenario).tabItem { Text("备份") }
-                HistoryPage(model:history,open:{ _ in }).tabItem { Text("历史恢复") }
-            }
+            Picker("验收页面",selection:$page) {
+                Text("备份").tag(0);Text("历史恢复").tag(1);Text("聊天期限（只读）").tag(2)
+            }.pickerStyle(.segmented)
+            if page == 0 { BackupScenario(scenario,home:home).id(scenario) }
+            else if page == 1 { HistoryPage(model:history,open:{ _ in }) }
+            else { DiskCategoryPage(model:disk,category:.aiSessions,clean:{}) }
+
         }.padding(14).preferredColorScheme(.dark)
     }
 }
-@main struct BackupAcceptance {
-    @MainActor static func main() throws {
+@MainActor enum BackupFixtureSetup {
+    static func prepare() throws -> String {
         let home = URL(fileURLWithPath:NSHomeDirectory()).resolvingSymlinksInPath().path
         guard home.contains("/thermo-backup-ui-"), FileManager.default.fileExists(atPath:home+"/.thermo-backup-ui-fixture") else { exit(2) }
+        let sessions=home+"/.codex/sessions/2026/01/01"
+        try FileManager.default.createDirectory(atPath:sessions,withIntermediateDirectories:true)
+        let chat=sessions+"/rollout-owned-old.jsonl"
+        try Data(("{\"type\":\"session_meta\",\"payload\":{\"id\":\"owned-old\",\"cwd\":\""+home+"/missing-project\"}}\n").utf8).write(to:URL(fileURLWithPath:chat))
+        try FileManager.default.setAttributes([.modificationDate:Date().addingTimeInterval(-100*86400)],ofItemAtPath:chat)
         let id = UUID().uuidString, target = home+"/Applications/Fixture.app"
         let backup = home+"/Applications/.thermo-update-"+id+"/previous.app"
         let source = home+"/fixture.c", executable = home+"/fixture-tool"
@@ -64,15 +75,24 @@ import ThermoL10n
         guard let oldID = FileIdentity.of(backup), let newID = FileIdentity.of(target) else { exit(2) }
         try NativeUpdateTransaction.save(.init(id:id,target:target,backup:backup,phase:"installed",original:before,replacement:after,originalID:oldID,replacementID:newID),home:home)
         L10n.apply(preference:"zh-Hans")
-        let app = NSApplication.shared; app.setActivationPolicy(.regular)
-        let menu = NSMenu(), item = NSMenuItem(), submenu = NSMenu()
-        submenu.addItem(withTitle:"Quit",action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q")
-        item.submenu = submenu; menu.addItem(item); app.mainMenu = menu
-        let window = NSWindow(contentRect:NSRect(x:0,y:0,width:800,height:580),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
-        window.title = "Thermo Backup QA"; window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView:BackupFixture(home:home).frame(width:800,height:580))
-        window.center(); window.makeKeyAndOrderFront(nil); app.activate(ignoringOtherApps:true)
-        DispatchQueue.main.asyncAfter(deadline:.now()+600) { app.terminate(nil) }
-        withExtendedLifetime(window) { app.run() }
+        return home
+    }
+}
+
+@main @MainActor struct BackupAcceptance: App {
+    private let home: String
+    init() {
+        do { home=try BackupFixtureSetup.prepare() }
+        catch { fatalError("Owned fixture setup failed: \(error)") }
+    }
+    var body: some Scene {
+        WindowGroup("Thermo Recovery QA") {
+            BackupFixture(home:home,initialPage:CommandLine.arguments.contains("--conversations") ? 2 : 0).frame(width:800,height:580)
+                .onAppear {
+                    NSApp.setActivationPolicy(.regular)
+                    NSApp.activate(ignoringOtherApps:true)
+                    DispatchQueue.main.asyncAfter(deadline:.now()+1800) { NSApp.terminate(nil) }
+                }
+        }.defaultSize(width:800,height:580)
     }
 }

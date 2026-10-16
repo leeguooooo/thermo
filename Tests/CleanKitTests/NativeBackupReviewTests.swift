@@ -43,6 +43,7 @@ final class NativeBackupReviewTests: XCTestCase {
             XCTAssertEqual(report.records.count,1)
             let usage = try XCTUnwrap(report.backups?.first)
             XCTAssertFalse(usage.complete); XCTAssertNil(usage.allocatedBytes); XCTAssertNotNil(usage.issue)
+            if !linked { XCTAssertTrue(usage.issue?.contains("restore it from History") == true) }
         }
         XCTAssertTrue(FS.exists(receipt.target))
     }

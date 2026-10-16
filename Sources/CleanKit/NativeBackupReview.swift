@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 /// Allocated usage of a recovery copy, not a promise of space deletion would free.
 public struct NativeBackupUsage: Codable, Sendable, Identifiable {
@@ -22,6 +23,10 @@ extension NativeUpdateTransaction {
             throw failure("Native update recovery record changed. Refresh recovery and review it again.")
         }
         let url = URL(fileURLWithPath: reviewed.backup)
+        var presence = stat()
+        if lstat(reviewed.backup, &presence) != 0, errno == ENOENT {
+            throw failure("The recovery copy is not at its recorded path. If it was moved to the Trash, restore it from History first.")
+        }
         guard url.resolvingSymlinksInPath().path == reviewed.backup,
               FS.isDirectory(reviewed.backup), let identity = FileIdentity.of(reviewed.backup),
               identity == reviewed.originalID || identity == reviewed.replacementID else {
