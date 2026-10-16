@@ -132,11 +132,11 @@ struct SpaceCommand {
         if args.has("json") { print(Export.json(groups)); return }
         var lines: [String] = []
         for g in groups.prefix(args.has("all") ? .max : 25) {
-            lines.append(style.bold(ByteFormat.string(g.size)) + style.dim("  ×\(g.paths.count)  " + tr("frees %1$@", ByteFormat.string(g.reclaimable))))
+            lines.append(style.bold(ByteFormat.string(g.size)) + style.dim("  ×\(g.paths.count)  " + tr("frees %1$@", AppSize.text(g.reclaimable, state: g.reclaimableState ?? .unavailable))))
             for (i, p) in g.paths.enumerated() { lines.append((i == 0 ? "  = " : "  + ") + FS.tilde(p)) }
         }
         let total = groups.reduce(Int64(0)) { $0 + $1.reclaimable }
-        lines.append(style.dim(tr("%1$@ sets of identical files; removing the extra copies (+) frees %2$@", String(groups.count), ByteFormat.string(total))))
+        lines.append(style.dim(tr("%1$@ sets of identical files; removing the extra copies (+) frees %2$@", String(groups.count), AppSize.text(total, state: AppSize.combined(groups.map { $0.reclaimableState ?? .unavailable }, bytes: total)))))
         out(lines)
     }
 

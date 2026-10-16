@@ -3,6 +3,48 @@
 import XCTest
 
 final class SpaceLensModelTests: XCTestCase {
+    @MainActor func testDuplicateSelectionBindsComparisonAndRetainedCopy() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("Downloads"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let keeper = root.appendingPathComponent("Downloads/keeper").path, extra = root.appendingPathComponent("Downloads/extra").path
+        for path in [keeper, extra] { try Data("same".utf8).write(to: URL(fileURLWithPath: path)) }
+        let ids = [keeper: try XCTUnwrap(ManualRemoval.reviewIdentity(keeper)), extra: try XCTUnwrap(ManualRemoval.reviewIdentity(extra))]
+        let group = DuplicateGroup(hash: "fixture", size: 999999, paths: [keeper, extra], reclaimable: 0, reviewIdentities: ids, privateBytes: [extra: 0], reclaimableState: .complete)
+        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache"), remove: { paths, sizes, _, _, reviewed, required in
+            XCTAssertEqual(paths, [extra]); XCTAssertEqual(sizes[extra], 0)
+            XCTAssertEqual(reviewed[extra], ids[extra]); XCTAssertEqual(required, [keeper: ids[keeper]!])
+            return CleanResult(id: "fixture", trashed: true)
+        }, searchDuplicates: { _, _, _ in [group] })
+        model.findDuplicates()
+        for _ in 0..<100 where model.findingDuplicates { try await Task.sleep(nanoseconds: 10_000_000) }
+        model.toggleDuplicate(keeper, group: group); XCTAssertTrue(model.basket.isEmpty)
+        model.toggleDuplicate(extra, group: group); XCTAssertEqual(model.basketBytes, 0); XCTAssertEqual(model.sizeState(extra), .complete)
+        model.trash()
+        for _ in 0..<100 where model.working { try await Task.sleep(nanoseconds: 10_000_000) }
+        model.clearBasket()
+        try Data("changed".utf8).write(to: URL(fileURLWithPath: extra))
+        model.toggleDuplicate(extra, group: group); XCTAssertTrue(model.basket.isEmpty)
+    }
+
+    @MainActor func testUnknownDuplicateAllocationIsNotReportedAsLogicalBytes() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("Downloads"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let keeper = root.appendingPathComponent("Downloads/keeper").path, extra = root.appendingPathComponent("Downloads/extra").path
+        for path in [keeper, extra] { try Data("same".utf8).write(to: URL(fileURLWithPath: path)) }
+        let ids = [keeper: try XCTUnwrap(ManualRemoval.reviewIdentity(keeper)), extra: try XCTUnwrap(ManualRemoval.reviewIdentity(extra))]
+        let group = DuplicateGroup(hash: "fixture", size: 999999, paths: [keeper, extra], reclaimable: 0, reviewIdentities: ids)
+        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache"), remove: { paths, sizes, _, incomplete, _, _ in
+            XCTAssertEqual(paths, [extra]); XCTAssertNil(sizes[extra]); XCTAssertTrue(incomplete.contains(extra))
+            return CleanResult(id: "fixture", trashed: true)
+        })
+        model.toggleDuplicate(extra, group: group)
+        XCTAssertEqual(model.sizeState(extra), .unavailable); XCTAssertEqual(model.basketBytes, 0)
+        model.trash()
+        for _ in 0..<100 where model.working { try await Task.sleep(nanoseconds: 10_000_000) }
+    }
+
     @MainActor func testLeavingAgainCancelsTheQueuedPostRestoreRefresh() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -123,7 +165,7 @@ final class SpaceLensModelTests: XCTestCase {
         let file = root.appendingPathComponent("Downloads/a"); try Data("fixture".utf8).write(to: file)
         let began = expectation(description: "duplicate worker"), release = DispatchSemaphore(value: 0), calls = CountedReads()
         defer { release.signal() }
-        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache.json"), remove: { _, _, _, _, _ in CleanResult(id: "fixture", trashed: true) }, searchDuplicates: { _, _, _ in
+        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache.json"), remove: { _, _, _, _, _, _ in CleanResult(id: "fixture", trashed: true) }, searchDuplicates: { _, _, _ in
             _ = calls.next(); began.fulfill(); _ = release.wait(timeout: .now() + 5)
             return [DuplicateGroup(hash: "fixture", size: 1, paths: [file.path, "/b"], reclaimable: 1)]
         })
@@ -149,7 +191,7 @@ final class SpaceLensModelTests: XCTestCase {
         let expected = try XCTUnwrap(ManualRemoval.reviewIdentity(path))
         let began = expectation(description: "moving"), release = DispatchSemaphore(value: 0), calls = Calls()
         defer { release.signal() }
-        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache.json"), remove: { paths, _, _, _, identities in
+        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache.json"), remove: { paths, _, _, _, identities, _ in
             calls.next(); XCTAssertEqual(paths, [path]); XCTAssertEqual(identities[path], expected)
             began.fulfill(); _ = release.wait(timeout: .now() + 5)
             return CleanResult(id: "manual", trashed: true)
@@ -173,8 +215,8 @@ final class SpaceLensModelTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: root) }
         let path = root.appendingPathComponent("Downloads/item").path
         try Data("before".utf8).write(to: URL(fileURLWithPath: path))
-        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache.json"), remove: { paths, sizes, home, incomplete, identities in
-            ManualRemoval.trash(paths, sizes: sizes, home: home, incompletePaths: incomplete, reviewIdentities: identities,
+        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache.json"), remove: { paths, sizes, home, incomplete, identities, required in
+            ManualRemoval.trash(paths, sizes: sizes, home: home, incompletePaths: incomplete, reviewIdentities: identities, requiredIdentities: required,
                 openFiles: { .init(holders: []) }, move: { _ in XCTFail("Stale selection must not move"); return URL(fileURLWithPath: "/unused") })
         })
         model.toggle(path, bytes: 6)

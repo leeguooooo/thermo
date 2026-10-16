@@ -40,12 +40,14 @@ final class SpaceLensModel: ObservableObject {
     private let cache: URL
     private let measure: @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree
     private var selectionIdentities: [String: String] = [:]
-    private let remove: @Sendable ([String], [String: Int64], String, Set<String>, [String: String]) -> CleanResult
+    private var selectionSizeStates: [String: AppSizeState] = [:]
+    private var selectionRequirements: [String: [String: String]] = [:]
+    private let remove: @Sendable ([String], [String: Int64], String, Set<String>, [String: String], [String: String]) -> CleanResult
 
     init(root: String = NSHomeDirectory(), cache: URL = SpaceLens.cacheURL,
          measure: @escaping @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree = { SpaceLens.scan($0, cancellation: $1, progress: $2) },
-         remove: @escaping @Sendable ([String], [String: Int64], String, Set<String>, [String: String]) -> CleanResult = {
-             ManualRemoval.trash($0, sizes: $1, home: $2, incompletePaths: $3, reviewIdentities: $4)
+         remove: @escaping @Sendable ([String], [String: Int64], String, Set<String>, [String: String], [String: String]) -> CleanResult = {
+             ManualRemoval.trash($0, sizes: $1, home: $2, incompletePaths: $3, reviewIdentities: $4, requiredIdentities: $5)
          }, searchDuplicates: @escaping @Sendable ([String], ScanCancellation, ((Duplicates.Progress) -> Void)?) -> [DuplicateGroup] = {
              Duplicates.find(in: $0, cancellation: $1, progress: $2)
          }) {
@@ -57,10 +59,14 @@ final class SpaceLensModel: ObservableObject {
     }
 
     var folder: SpaceFolder? { tree?.folder(path) }
-    var basketBytes: Int64 { basket.values.reduce(0, +) }
+    var basketBytes: Int64 { basket.filter { sizeState($0.key) != .unavailable && sizeState($0.key) != .unmeasured }.values.reduce(0, +) }
     func sizeState(_ path: String) -> AppSizeState {
+        if let state = selectionSizeStates[path] { return state }
         if let entry = tree?.folder(path)?.entry { return entry.effectiveSizeState }
-        return tree?.folder((path as NSString).deletingLastPathComponent)?.children.first { $0.path == path }?.effectiveSizeState ?? .complete
+        if let entry = tree?.folder((path as NSString).deletingLastPathComponent)?.children.first(where: { $0.path == path }) { return entry.effectiveSizeState }
+        if tree?.large.contains(where: { $0.path == path }) == true { return .complete }
+        if duplicates?.contains(where: { $0.privateBytes?[path] != nil }) == true { return .complete }
+        return .unavailable
     }
     var basketSizeText: String { AppSize.text(basketBytes, state: AppSize.combined(basket.keys.map(sizeState), bytes: basketBytes)) }
 
@@ -118,7 +124,7 @@ final class SpaceLensModel: ObservableObject {
         if scanning { stopping = true }
         stopDuplicates(); duplicates = nil
         lastOpenedGeneration = UUID(); lastOpened = [:]
-        basket = [:]; selectionIdentities = [:]
+        basket = [:]; selectionIdentities = [:]; selectionRequirements = [:]; selectionSizeStates = [:]
         tree = nil; outcome = nil
         if !SpaceLens.invalidateCache(at: cache) { outcome = tr("The old space cache could not be cleared; scan again before using saved results") }
     }
@@ -129,13 +135,14 @@ final class SpaceLensModel: ObservableObject {
 
     func toggle(_ path: String, bytes: Int64) {
         guard !working else { return }
-        if basket[path] != nil { basket[path] = nil; selectionIdentities[path] = nil; return }
+        if basket[path] != nil { basket[path] = nil; selectionIdentities[path] = nil; selectionRequirements[path] = nil; selectionSizeStates[path] = nil; return }
         guard refusal(path) == nil else { return }
         guard let identity = ManualRemoval.reviewIdentity(path) else { outcome = tr("Could not verify the selected item; refresh before selecting it"); return }
         // A folder already holds what is under it; picking one replaces its picked insides,
         // and an inside path is not picked again on top of its picked folder.
         if basket.keys.contains(where: { path.hasPrefix($0 + "/") }) { return }
-        for key in basket.keys where key.hasPrefix(path + "/") { basket[key] = nil; selectionIdentities[key] = nil }
+        for key in basket.keys where key.hasPrefix(path + "/") { basket[key] = nil; selectionIdentities[key] = nil; selectionRequirements[key] = nil; selectionSizeStates[key] = nil }
+        selectionSizeStates[path] = sizeState(path)
         basket[path] = bytes
         selectionIdentities[path] = identity
     }
@@ -151,6 +158,7 @@ final class SpaceLensModel: ObservableObject {
         guard !scanning, !working else { return }
         let picked = basket
         guard !picked.isEmpty else { return }
+        let measured = picked.filter { sizeState($0.key) != .unavailable && sizeState($0.key) != .unmeasured }
         stopDuplicates()
         working = true
         exitRequested = false
@@ -158,8 +166,11 @@ final class SpaceLensModel: ObservableObject {
         let root = root
         let incomplete = Set(picked.keys.filter { sizeState($0) != .complete })
         let identities = selectionIdentities, remove = self.remove
+        let required = picked.keys.reduce(into: [String: String]()) { result, path in
+            result.merge(selectionRequirements[path] ?? [:]) { first, _ in first }
+        }
         Task.detached(priority: .userInitiated) {
-            let result = remove(picked.keys.sorted(), picked, root, incomplete, identities)
+            let result = remove(picked.keys.sorted(), measured, root, incomplete, identities, required)
             await MainActor.run { self.afterTrash(result); AppExitGuard.endManualRemoval(lease) }
         }
     }
@@ -168,7 +179,7 @@ final class SpaceLensModel: ObservableObject {
         working = false
         let removed = Set(result.removed)
         let cacheCleared = removed.isEmpty || SpaceLens.invalidateCache(at: cache)
-        for p in removed { basket[p] = nil; selectionIdentities[p] = nil }
+        for p in removed { basket[p] = nil; selectionIdentities[p] = nil; selectionRequirements[p] = nil; selectionSizeStates[p] = nil }
         if let t = tree {
             let updated = t.removing(removed)
             tree = updated
@@ -180,7 +191,8 @@ final class SpaceLensModel: ObservableObject {
                 var g = g
                 g.paths.removeAll { p in removed.contains { p == $0 || p.hasPrefix($0 + "/") } }
                 guard g.paths.count > 1 else { return nil }
-                g.reclaimable = g.size * Int64(g.paths.count - 1)
+                g.reclaimable = g.paths.dropFirst().reduce(0) { $0 + (g.privateBytes?[$1] ?? 0) }
+                g.reclaimableState = g.paths.dropFirst().allSatisfy { g.privateBytes?[$0] != nil } ? .complete : (g.reclaimable > 0 ? .incomplete : .unavailable)
                 return g
             }
         }
@@ -247,11 +259,28 @@ final class SpaceLensModel: ObservableObject {
     /// Picks every copy but the oldest one in each group.
     func pickAllButOldest() {
         for g in duplicates ?? [] {
-            for p in g.paths.dropFirst() where basket[p] == nil && refusal(p) == nil { toggle(p, bytes: g.size) }
+            for p in g.paths.dropFirst() where basket[p] == nil && refusal(p) == nil { toggleDuplicate(p, group: g) }
         }
     }
 
-    func clearBasket() { guard !working else { return }; basket = [:]; selectionIdentities = [:] }
+    func toggleDuplicate(_ path: String, group: DuplicateGroup) {
+        guard !working else { return }
+        if basket[path] != nil { toggle(path, bytes: 0); return }
+        guard let keeper = group.paths.first, path != keeper, let identities = group.reviewIdentities,
+              let selected = identities[path], let retained = identities[keeper],
+              ManualRemoval.reviewIdentity(path) == selected, ManualRemoval.reviewIdentity(keeper) == retained else {
+            outcome = tr("Duplicate comparison changed; compare the files again")
+            return
+        }
+        toggle(path, bytes: group.privateBytes?[path] ?? 0)
+        if basket[path] != nil {
+            selectionIdentities[path] = selected
+            selectionRequirements[path] = [keeper: retained]
+            selectionSizeStates[path] = group.privateBytes?[path] == nil ? .unavailable : .complete
+        }
+    }
+
+    func clearBasket() { guard !working else { return }; basket = [:]; selectionIdentities = [:]; selectionRequirements = [:]; selectionSizeStates = [:] }
 }
 
 struct SpacePage: View {
@@ -457,8 +486,8 @@ struct SpacePage: View {
         .contextMenu { pathMenu(e.path) }
     }
 
-    func tick(_ path: String, bytes: Int64, picked: Bool, refusal: String?, name: String) -> some View {
-        Button { model.toggle(path, bytes: bytes) } label: {
+    func tick(_ path: String, bytes: Int64, picked: Bool, refusal: String?, name: String, action: (() -> Void)? = nil) -> some View {
+        Button { if let action { action() } else { model.toggle(path, bytes: bytes) } } label: {
             Image(systemName: refusal != nil ? "lock.fill" : picked ? "checkmark.circle.fill" : "circle")
                 .font(refusal != nil ? .caption : .body)
                 .foregroundStyle(picked ? Color.cyan : .white.opacity(refusal != nil ? 0.3 : 0.5))
@@ -567,7 +596,7 @@ struct SpacePage: View {
                     if groups.isEmpty {
                         Label(tr("No duplicate files found."), systemImage: "checkmark.circle").foregroundStyle(.secondary).padding(.top, 30)
                     } else {
-                        Text(tr("%1$@ could be freed by keeping one copy of each.", ByteFormat.string(groups.reduce(0) { $0 + $1.reclaimable })))
+                        Text(tr("%1$@ could be freed by keeping one copy of each.", AppSize.text(groups.reduce(0) { $0 + $1.reclaimable }, state: AppSize.combined(groups.map { $0.reclaimableState ?? .unavailable }, bytes: groups.reduce(0) { $0 + $1.reclaimable }))))
                             .font(.callout).foregroundStyle(.white.opacity(0.75))
                         ForEach(groups) { duplicateCard($0) }
                     }
@@ -589,7 +618,7 @@ struct SpacePage: View {
             ForEach(Array(g.paths.enumerated()), id: \.element) { i, p in
                 let picked = model.basket[p] != nil || model.isCovered(p)
                 HStack(spacing: 8) {
-                    tick(p, bytes: g.size, picked: picked, refusal: model.refusal(p), name: (p as NSString).lastPathComponent)
+                    tick(p, bytes: g.privateBytes?[p] ?? 0, picked: picked, refusal: i == 0 ? tr("This copy is kept as the comparison reference") : model.refusal(p), name: (p as NSString).lastPathComponent, action: { model.toggleDuplicate(p, group: g) })
                     Text(FSPath.tilde(p)).font(.caption.monospaced()).foregroundStyle(.white.opacity(0.75)).lineLimit(1).truncationMode(.middle)
                         .textSelection(.enabled)
                     if i == 0 {

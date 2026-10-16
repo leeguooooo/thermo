@@ -20,6 +20,28 @@ final class ManualRemovalReviewTests: XCTestCase {
         let url = URL(fileURLWithPath: home + "/.Trash/" + UUID().uuidString)
         try FileManager.default.moveItem(atPath: path, toPath: url.path); return url
     }
+    func testRetainedCopyChangedBetweenMovesStopsRemainingCopies() throws {
+        let keeper = try file("keeper"), a = try file("a"), b = try file("b")
+        let identity = try XCTUnwrap(ManualRemoval.reviewIdentity(keeper))
+        let result = ManualRemoval.trash([a, b], sizes: [:], home: home, requiredIdentities: [keeper: identity], openFiles: { .init(holders: []) }, move: { path in
+            let destination = try self.move(path)
+            try Data("unique replacement".utf8).write(to: URL(fileURLWithPath: keeper))
+            return destination
+        })
+        XCTAssertEqual(result.removed, [a]); XCTAssertNotNil(result.failed[b])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: b))
+    }
+    func testSelectingRetainedCopyOrItsParentPreventsAllMoves() throws {
+        try FileManager.default.createDirectory(atPath: home + "/Downloads/sub", withIntermediateDirectories: true)
+        let keeper = try file("keeper"), a = try file("a")
+        let identity = try XCTUnwrap(ManualRemoval.reviewIdentity(keeper))
+        for selected in [[a, keeper], [home + "/Downloads/sub", a]] {
+            let required = selected.contains(keeper) ? keeper : try file("sub/keeper")
+            let token = required == keeper ? identity : try XCTUnwrap(ManualRemoval.reviewIdentity(required))
+            let result = ManualRemoval.trash(selected, sizes: [:], home: home, requiredIdentities: [required: token], openFiles: { .init(holders: []) }, move: { _ in XCTFail("Must keep comparison reference"); return URL(fileURLWithPath: "/unused") })
+            XCTAssertTrue(result.removed.isEmpty)
+        }
+    }
     func testReplacementAfterSelectionIsNotMoved() throws {
         let path = try file("a")
         let identity = try XCTUnwrap(ManualRemoval.reviewIdentity(path))

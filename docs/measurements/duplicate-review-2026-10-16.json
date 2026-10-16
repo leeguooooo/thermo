@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-16",
+  "scope": "duplicate comparison review and private-size provenance",
+  "sourceSHA256": {
+    "Sources/CleanKit/Duplicates.swift": "b286cf5e73ba1cb4e018b2b39f4f5f65b47a78a57bb98c28901a0126779402c5",
+    "Sources/ThermoApp/SpacePage.swift": "f6e6396ee141c325c6cae96f727a1adef5e2c16d88814108a8ef8fc072523015",
+    "Sources/thermo/Space.swift": "8946af18153cfd07ae07cdbe61b47417f8e7efabce4852d69658825c9d417622",
+    "Tests/CleanKitTests/DuplicateReviewTests.swift": "38c9e83297094eb96ccff53321ae4630fa38e6d6e2e949be35f917ed2382595b",
+    "Tests/CleanKitTests/ManualRemovalReviewTests.swift": "6e414115e6fa1c14e454962f5739dd6c3ab2880dca1164bd75933a02fca31249",
+    "Tests/ThermoAppTests/SpaceLensModelTests.swift": "68a0ddaafc1aa14996c0b07f15052c93412d8b937ed5a8b41ea4d2ba9d628c50"
+  },
+  "nativeCLI": {
+    "ownedTemporaryHome": true,
+    "copies": 2,
+    "logicalBytesPerCopy": 2400000,
+    "privateBytesPerCopy": [
+      2400256,
+      2400256
+    ],
+    "reclaimable": 2400256,
+    "reclaimableState": "complete",
+    "reviewIdentityCount": 2,
+    "sourceSHA256Unchanged": true,
+    "temporaryDirectoryRemoved": true
+  },
+  "checks": {
+    "focusedLog": "/tmp/thermo-duplicate-focused-final.log",
+    "fullLog": "/tmp/thermo-duplicate-full-tests.log",
+    "fullResult": "passed",
+    "testCounts": {
+      "CleanKitTests": 557,
+      "ThermoAppTests": 158,
+      "ThermoCLITests": 57,
+      "ThermoKitTests": 114,
+      "AgentCoreTests": 34
+    },
+    "total": 920,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "fullLogSHA256": "eee23091747e6d6d7361511a134599cb92d35a2909fe3dcce05a63a793f22efb"
+  },
+  "limits": [
+    "No visible GUI duplicate-cleanup acceptance",
+    "Metadata checks do not remove the final check-to-move concurrency window",
+    "No user files moved; no hardware writes; no installed application replacement or release"
+  ]
+}

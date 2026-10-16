@@ -14,6 +14,9 @@ public struct DuplicateGroup: Codable, Sendable, Identifiable, Hashable {
     public var paths: [String]
     /// What removing every copy but the first gives back (APFS clones share their blocks: ~0).
     public var reclaimable: Int64
+    public var reviewIdentities: [String: String]? = nil
+    public var privateBytes: [String: Int64]? = nil
+    public var reclaimableState: AppSizeState? = nil
 }
 
 public enum Duplicates {
@@ -34,7 +37,7 @@ public enum Duplicates {
     public static func find(in roots: [String], minimum: Int64 = 1 << 20, cancellation: ScanCancellation = ScanCancellation(),
                             progress: ((Progress) -> Void)? = nil) -> [DuplicateGroup] {
         // 1. Every regular file above the minimum, by exact length. Hard links are one file.
-        var bySize: [Int64: [(path: String, modified: Date)]] = [:]
+        var bySize: [Int64: [(path: String, modified: Date, identity: String)]] = [:]
         var seenInodes = Set<String>()
         var listed = 0
         func visit(_ dir: String) {
@@ -51,7 +54,11 @@ public enum Duplicates {
                 case S_IFREG:
                     guard Int64(st.st_size) >= minimum else { continue }
                     if !seenInodes.insert("\(st.st_dev):\(st.st_ino)").inserted { continue }
-                    bySize[Int64(st.st_size), default: []].append((path, Date(timeIntervalSince1970: TimeInterval(st.st_mtimespec.tv_sec))))
+                    guard let identity = ManualRemoval.reviewIdentity(path) else { continue }
+                    var after = stat()
+                    guard lstat(path, &after) == 0, AppDataReviewIdentity.text(st) == AppDataReviewIdentity.text(after),
+                          ManualRemoval.reviewIdentity(path) == identity else { continue }
+                    bySize[Int64(st.st_size), default: []].append((path, Date(timeIntervalSince1970: TimeInterval(st.st_mtimespec.tv_sec)), identity))
                     listed += 1
                     if listed % 500 == 0 { progress?(Progress(stage: tr("Listing files"), done: listed, total: 0)) }
                 default: continue
@@ -67,54 +74,81 @@ public enum Duplicates {
         var groups: [DuplicateGroup] = []
         for (size, files) in candidates.sorted(by: { $0.key > $1.key }) {
             if cancellation.isCancelled { break }
-            var byEnds: [String: [(path: String, modified: Date)]] = [:]
+            var byEnds: [String: [(path: String, modified: Date, identity: String)]] = [:]
             for f in files {
-                if let h = endsHash(f.path, size: size) { byEnds[h, default: []].append(f) }
+                if let h = endsHash(f.path, size: size, expected: f.identity) { byEnds[h, default: []].append(f) }
                 done += 1
             }
             progress?(Progress(stage: tr("Comparing contents"), done: done, total: total))
             for (_, same) in byEnds where same.count > 1 {
-                var byFull: [String: [(path: String, modified: Date)]] = [:]
+                var byFull: [String: [(path: String, modified: Date, identity: String)]] = [:]
                 for f in same {
                     if cancellation.isCancelled { break }
-                    if let h = fullHash(f.path, cancellation: cancellation) { byFull[h, default: []].append(f) }
+                    if let h = fullHash(f.path, cancellation: cancellation, expected: f.identity, size: size) { byFull[h, default: []].append(f) }
                 }
                 for (hash, copies) in byFull where copies.count > 1 {
                     let ordered = copies.sorted { ($0.modified, $0.path.count, $0.path) < ($1.modified, $1.path.count, $1.path) }
-                    let extra = ordered.dropFirst().reduce(Int64(0)) { sum, f in
-                        sum + (BulkWalk.fileSize(f.path)?.privateSize ?? size)
+                    guard ordered.allSatisfy({ ManualRemoval.reviewIdentity($0.path) == $0.identity }) else { continue }
+                    var privateBytes: [String: Int64] = [:]
+                    for file in ordered {
+                        if let bytes = BulkWalk.fileSize(file.path)?.privateSize, bytes >= 0 { privateBytes[file.path] = bytes }
                     }
-                    groups.append(DuplicateGroup(hash: hash, size: size, paths: ordered.map(\.path), reclaimable: extra))
+                    guard ordered.allSatisfy({ ManualRemoval.reviewIdentity($0.path) == $0.identity }) else { continue }
+                    let extra = ordered.dropFirst().reduce(Int64(0)) { $0 + (privateBytes[$1.path] ?? 0) }
+                    let quality: AppSizeState = ordered.dropFirst().allSatisfy { privateBytes[$0.path] != nil } ? .complete : (extra > 0 ? .incomplete : .unavailable)
+                    groups.append(DuplicateGroup(hash: hash, size: size, paths: ordered.map(\.path), reclaimable: extra,
+                        reviewIdentities: Dictionary(uniqueKeysWithValues: ordered.map { ($0.path, $0.identity) }),
+                        privateBytes: privateBytes, reclaimableState: quality))
                 }
             }
         }
         return groups.sorted { $0.reclaimable > $1.reclaimable }
     }
 
-    static func endsHash(_ path: String, size: Int64) -> String? {
-        guard let h = FileHandle(forReadingAtPath: path) else { return nil }
-        defer { try? h.close() }
-        let chunk = 64 * 1024
-        var data = h.readData(ofLength: chunk)
-        if size > Int64(chunk * 2) {
-            try? h.seek(toOffset: UInt64(size) - UInt64(chunk))
-            data.append(h.readData(ofLength: chunk))
-        }
-        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    static func endsHash(_ path: String, size: Int64, expected: String? = nil) -> String? {
+        verifiedHash(path, size: size, expected: expected, cancellation: nil, endsOnly: true)
     }
 
-    static func fullHash(_ path: String, cancellation: ScanCancellation) -> String? {
-        guard let h = FileHandle(forReadingAtPath: path) else { return nil }
-        defer { try? h.close() }
-        var hasher = SHA256()
-        while true {
-            if cancellation.isCancelled { return nil }
-            let data = h.readData(ofLength: 1 << 20)
-            if data.isEmpty { break }
-            hasher.update(data: data)
-        }
-        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    static func fullHash(_ path: String, cancellation: ScanCancellation, expected: String? = nil, size: Int64? = nil) -> String? {
+        var st = stat()
+        guard lstat(path, &st) == 0 else { return nil }
+        return verifiedHash(path, size: size ?? Int64(st.st_size), expected: expected, cancellation: cancellation, endsOnly: false)
     }
+
+    private static func verifiedHash(_ path: String, size: Int64, expected: String?, cancellation: ScanCancellation?, endsOnly: Bool) -> String? {
+        guard size >= 0, cancellation?.isCancelled != true,
+              let identity = expected ?? ManualRemoval.reviewIdentity(path), ManualRemoval.reviewIdentity(path) == identity else { return nil }
+        let fd = open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+        guard fd >= 0 else { return nil }
+        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        var before = stat(), after = stat()
+        guard fstat(fd, &before) == 0, before.st_mode & S_IFMT == S_IFREG, before.st_size == size, AppDataReviewIdentity.of(path) == AppDataReviewIdentity.text(before),
+              ManualRemoval.reviewIdentity(path) == identity else { return nil }
+        do {
+            var hasher = SHA256()
+            if endsOnly {
+                guard let first = try handle.read(upToCount: Int(min(size, 65_536))), first.count == min(size, 65_536) else { return nil }
+                hasher.update(data: first)
+                if size > 131_072 {
+                    try handle.seek(toOffset: UInt64(size - 65_536))
+                    guard let last = try handle.read(upToCount: 65_536), last.count == 65_536 else { return nil }
+                    hasher.update(data: last)
+                }
+            } else {
+                var remaining = size
+                while remaining > 0 {
+                    if cancellation?.isCancelled == true { return nil }
+                    guard let data = try handle.read(upToCount: Int(min(remaining, 1 << 20))), !data.isEmpty else { return nil }
+                    hasher.update(data: data); remaining -= Int64(data.count)
+                }
+                guard (try handle.read(upToCount: 1))?.isEmpty != false else { return nil }
+            }
+            guard cancellation?.isCancelled != true, fstat(fd, &after) == 0,
+                  AppDataReviewIdentity.text(before) == AppDataReviewIdentity.text(after), AppDataReviewIdentity.of(path) == AppDataReviewIdentity.text(after), ManualRemoval.reviewIdentity(path) == identity else { return nil }
+            return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        } catch { return nil }
+    }
+
 }
 
 /// Moving things a person picked by hand (in the space browser, the large files list or the
@@ -151,12 +185,12 @@ public enum ManualRemoval {
 
     /// Moves each path to the Trash after checking it again: allowed, still there, not held open by a running program.
     public static func trash(_ paths: [String], sizes: [String: Int64] = [:], home: String = NSHomeDirectory(), incompletePaths: Set<String> = [],
-                             reviewIdentities: [String: String]? = nil) -> CleanResult {
-        trash(paths, sizes: sizes, home: home, incompletePaths: incompletePaths, reviewIdentities: reviewIdentities, move: RemovalOperations.live.trash)
+                             reviewIdentities: [String: String]? = nil, requiredIdentities: [String: String] = [:]) -> CleanResult {
+        trash(paths, sizes: sizes, home: home, incompletePaths: incompletePaths, reviewIdentities: reviewIdentities, requiredIdentities: requiredIdentities, move: RemovalOperations.live.trash)
     }
 
     static func trash(_ paths: [String], sizes: [String: Int64], home: String, incompletePaths: Set<String> = [],
-                       reviewIdentities: [String: String]? = nil, openFiles: () -> OpenFiles? = { OpenFiles.current() },
+                       reviewIdentities: [String: String]? = nil, requiredIdentities: [String: String] = [:], openFiles: () -> OpenFiles? = { OpenFiles.current() },
                        move: (String) throws -> URL) -> CleanResult {
         var result = CleanResult(id: "manual", trashed: true)
         let batchID = UUID().uuidString
@@ -175,6 +209,12 @@ public enum ManualRemoval {
             guard FileManager.default.fileExists(atPath: path) || (try? FileManager.default.destinationOfSymbolicLink(atPath: path)) != nil else { continue }
             guard let open else { result.failed[path] = tr("could not check whether a program is using it"); continue }
             if let h = open.holder(of: path) { result.failed[path] = tr("%1$@ has files open here", h.name); continue }
+            if requiredIdentities.contains(where: { required in
+                reviewIdentity(required.key) != required.value || paths.contains { required.key == $0 || required.key.hasPrefix($0 + "/") }
+            }) {
+                for remaining in paths[index...] { result.failed[remaining] = tr("A retained duplicate changed or disappeared; compare the files again") }
+                break
+            }
             guard let identity = reviewed[path], reviewIdentity(path) == identity else {
                 result.failed[path] = tr("The selected item changed after review; select it again")
                 continue
