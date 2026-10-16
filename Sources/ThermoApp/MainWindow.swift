@@ -339,7 +339,7 @@ struct MainView: View {
             }
         case .settings:
             WindowPage(title: tr("Settings"), subtitle: "Thermo \(AppInfo.version)") {
-                SettingsView(monitor: monitor, updates: models.updates)
+                SettingsView(disk: disk, monitor: monitor, updates: models.updates)
             }
         case let .browser(app):
             ChromePagesView(model: models.browser(app), embedded: true).id(app).transition(.opacity)

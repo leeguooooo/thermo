@@ -1,0 +1,89 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "61a36dd",
+  "sourceSHA256": {
+    "Sources/CleanKit/Whitelist.swift": "2de83ee425097b1a3e629ada9e9f7466e24952243f84ea5799e4eaecd7139928",
+    "Sources/ThermoApp/CleanupProtectionsView.swift": "2e3281d0abcc350272b84d0df8026d0c8397fe48c5c0454605dc421985444c18",
+    "Sources/ThermoApp/DiskView.swift": "a6ed9c689c9a8512e3b76e331a30a3b0440dff3e582d7afdad0046b21dffc1d4",
+    "Sources/ThermoApp/DiskWindow.swift": "dccddd840582c03c31b6ae95c8d3405657733d5bfb6f130b81d26d196024ccf9",
+    "Sources/ThermoApp/Views.swift": "5e59c2cfca0d60645da0ad19d8709947fe39ce0cfb62d584f52e871a459c6dd7",
+    "Sources/ThermoApp/MainWindow.swift": "0a5599f69c17701a4b3faf17f766a3d46e8210272ead914e67de3199c8e5803c",
+    "Sources/ThermoL10n/ZhHans.swift": "2a25bd690018574645ddee372d42fe09f7fee4f6192ded666c1025e8011bb676",
+    "Tests/CleanKitTests/WhitelistReviewTests.swift": "58766fe2523befbc178f427c50b3faddbcf66c6bb4a380db1f460cd44b5a773c",
+    "Tests/ThermoAppTests/CleanupProtectionsManagerTests.swift": "18e85e90286279cf4a52c1e5b8fb23679d44df090f0d3b08b7026c4db80eac7b",
+    "scripts/verify-clean-review-ui.swift": "cc4341aa02863b7e0b4cad45a2cd5dd490487f706657772aca1c1c8d8f4b4773"
+  },
+  "newTests": {
+    "WhitelistReviewTests": 6,
+    "CleanupProtectionsManagerTests": 4
+  },
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 59,
+      "ThermoAppTests": 187,
+      "CleanKitTests": 646,
+      "AgentCoreTests": 34
+    },
+    "total": 1040,
+    "failures": 0,
+    "logSHA256": "10624c2952ebf0151753d30982d377490f7a38615eea1b4f6f41bd4bb11284c6",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "revisionBoundary": "Before final notice reset and added notice regression; includes final unchanged whitelist review/removal backend"
+  },
+  "finalApp": {
+    "tests": 188,
+    "failures": 0,
+    "logSHA256": "b9b566013799ac146a430be0526de5b0280bf48921914a29f790c5c3eef4fb9a",
+    "revisionBoundary": "Final source with notice reset and existing rejection-message translations"
+  },
+  "intermediateFailure": {
+    "reason": "Duplicate translation keys added during finishing caused a runtime dictionary initialization trap",
+    "resolvedBy": "Removed redundant new keys and used existing translations; final App suite and visible QA passed",
+    "logSHA256": "24e5c89a213ecfa8f73888a07d8794b6dc8b96954ac25375d3a49db246a5ac4d"
+  },
+  "uniqueTranslationKeys": 2185,
+  "visibleNativeAcceptance": {
+    "locale": "zh-Hans",
+    "windowContentSize": [
+      800,
+      580
+    ],
+    "source": "CUA screenshots and accessibility in conversation",
+    "readOnlyAbsentListCreatedNoConfig": true,
+    "twoRulesListedAndOneRemovedWithoutRemovingOther": true,
+    "oldListRefusedAfterExternalEdit": true,
+    "refreshEnabledReviewedRemoval": true,
+    "invalidRuleLineAndChineseReasonShown": true,
+    "oldPlanAndSelectionsDiscardedAfterManagement": true,
+    "finalFailureClearedEarlierSuccessNotice": true,
+    "finalExternalEditAndRulePreserved": true,
+    "historyActions": [
+      "whitelistAdd",
+      "whitelistAdd",
+      "whitelistRemove",
+      "whitelistRemove",
+      "whitelistRemove"
+    ],
+    "cleanupCommandsExecuted": false,
+    "realUserConfigChanged": false
+  },
+  "qaExecutableSHA256": "7eb01043197e937a37e089da261b54b182dc3ca9aa84c435a88928da544fe74b",
+  "firstQaExecutableSHA256": "5dee5182d16e6b1e2b408500d8211be492c6c9beee88830b1fc575ec542f273f",
+  "runtimeLogSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "cleanup": {
+    "processExited": true,
+    "ownedWorkspaceRemoved": true
+  },
+  "limits": [
+    "Settings entry compiled; visible QA exercised category entry and shared manager",
+    "No real user rules, files, root helper or hardware were changed",
+    "Read failures use owned FIFO model test; visible QA covered empty, populated, stale and invalid lists",
+    "No standalone screenshot files; conversation CUA evidence retained",
+    "Full suite and final App suite overlap and are not added together",
+    "No push or release; full Mole parity remains unproven"
+  ]
+}

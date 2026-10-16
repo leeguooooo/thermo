@@ -131,8 +131,12 @@ public struct Whitelist: Sendable {
     /// Inspection: absent file is empty; invalid lines are retained in `rejected`.
     /// Destructive callers must use loadForRemoval or validate removalIssue.
     public static func load(home: String = NSHomeDirectory()) throws -> Whitelist {
+        inspect(try read(home: home), home: home)
+    }
+
+    static func inspect(_ text: String?, home: String) -> Whitelist {
         let file = url(home: home).path
-        guard let text = try read(home: home) else { return Whitelist(file: file) }
+        guard let text else { return Whitelist(file: file) }
         let canonicalHome = URL(fileURLWithPath: home).resolvingSymlinksInPath().path
         var entries: [String] = [], rejected: [Rejected] = []
         for (index, raw) in lines(text).enumerated() {
@@ -259,6 +263,50 @@ public struct Whitelist: Sendable {
         case .rejected(let reason): throw error(tr("%1$@: %2$@", input, tr(reason)))
         case .none: throw error(tr("%1$@: %2$@", input, tr("not an absolute path")))
         }
+    }
+
+    public struct ProtectionReview: Sendable {
+        public let value: Whitelist
+        fileprivate let home: String
+        fileprivate let identity: String?
+        fileprivate let text: String?
+    }
+
+    /// Read-only review, including invalid rows; opening the manager creates no files.
+    public static func review(home: String = NSHomeDirectory()) throws -> ProtectionReview {
+        try review(home: home, afterRead: {})
+    }
+
+    static func review(home: String, afterRead: () throws -> Void) throws -> ProtectionReview {
+        let file = try checkedLocation(home: home).path
+        let before = AppDataReviewIdentity.of(file)
+        let text = try read(home: home)
+        try afterRead()
+        guard AppDataReviewIdentity.of(file) == before else {
+            throw error(tr("Protection list changed. Refresh it before changing a rule."))
+        }
+        return ProtectionReview(value: inspect(text, home: home), home: home, identity: before, text: text)
+    }
+
+    @discardableResult
+    public static func removeReviewed(_ entry: String, review: ProtectionReview) throws -> [String] {
+        guard review.value.entries.contains(entry) else { throw error(tr("This protection was not part of the reviewed list.")) }
+        if let issue = review.value.removalIssue { throw error(issue) }
+        lock.lock(); defer { lock.unlock() }
+        let removed = try WhitelistWriteTransaction.run(home: review.home) { transaction in
+            let snapshot = try transaction.snapshot()
+            guard snapshot.identity == review.identity, snapshot.text == review.text, let text = snapshot.text else {
+                throw error(tr("Protection list changed. Refresh it before changing a rule."))
+            }
+            var lines = lines(text)
+            if lines.last == "" { lines.removeLast() }
+            lines.removeAll { if case .entry(let value) = parse($0, home: review.home) { return value == entry }; return false }
+            try transaction.write(lines, expected: snapshot.identity, beforeCommit: {})
+            return [entry]
+        }
+        ScanReportCache.invalidate(home: review.home)
+        record("whitelistRemove", removed, home: review.home)
+        return removed
     }
 
     /// One local, exact-version undo for entries newly added by this operation.

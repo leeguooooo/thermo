@@ -160,6 +160,7 @@ struct DiskHome: View {
         ScrollView {
             VStack(spacing: 26) {
                 hero.padding(.top, 54)
+                CleanupProtectionsButton(disk: model)
                 if let report = model.report {
                     scanInsights(report).padding(.horizontal, 28)
                 }
@@ -368,6 +369,7 @@ struct DiskCategoryPage: View {
                     .font(.callout).foregroundStyle(.white.opacity(0.6))
             }
             Spacer()
+            CleanupProtectionsButton(disk: model, compact: true)
             HStack(spacing: 6) {
                 TextField(tr("Search"), text: $search).textFieldStyle(.roundedBorder)
                     .focused($searchFocused).accessibilityLabel(tr("Search"))

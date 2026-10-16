@@ -657,6 +657,7 @@ struct FanLoadIndicator: View {
 // MARK: - Settings
 
 struct SettingsView: View {
+    @ObservedObject var disk: DiskModel
     @ObservedObject var monitor: Monitor
     @AppStorage(Settings.showInDock) private var showInDock = true
     @AppStorage(PulseRecorder.alertsKey) private var slowdownAlerts = true
@@ -672,6 +673,9 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
+            section(tr("Disk Cleanup")) {
+                CleanupProtectionsButton(disk: disk)
+            }
             section(tr("General")) {
                 row(tr("Language")) {
                     Picker("", selection: $language) {

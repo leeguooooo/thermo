@@ -295,6 +295,12 @@ final class DiskModel: ObservableObject {
         } catch { self.error = error.localizedDescription }
     }
 
+    func protectionRulesChanged() {
+        protectionUndo = nil
+        protectionNotice = tr("Protection changed. Scan again to review the available cleanup items.")
+        report = nil; selected = []; excluded = [:]; error = nil
+    }
+
     func openFullDiskAccess() {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
     }
