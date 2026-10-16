@@ -190,5 +190,15 @@
     },
     "candidateBuildScriptSource": "60f5ad327a10919d1925f7c76d22ae9d6c12ff47",
     "candidateRebuiltForSchedulerChange": false
+  },
+  "archiveRoundTrip": {
+    "archiveSHA256": "de1b31510a4c365451334457d4e2237092d744e5e984caaac80d8c16d8910474",
+    "extractedAppStrictSignatureVerified": true,
+    "exactBinaryHashesMatched": [
+      "app",
+      "embeddedCLI",
+      "embeddedHelper"
+    ],
+    "candidateInstalled": false
   }
 }
