@@ -32,6 +32,14 @@ public struct DiskFootprint: Sendable {
 }
 
 public enum FS {
+    /// Normalize only macOS's equivalent system spellings, including not-yet-created children.
+    static func systemSpelling(_ path: String) -> String {
+        for prefix in ["/private/var", "/private/tmp", "/private/etc"] where path == prefix || path.hasPrefix(prefix + "/") {
+            return String(path.dropFirst("/private".count))
+        }
+        return path
+    }
+
     static let fm = FileManager.default
 
     public static func exists(_ path: String) -> Bool {
@@ -160,6 +168,16 @@ public enum FS {
         return r
     }
 
+    /// Tool boundaries can include auxiliary caches that have never been created.
+    /// Proven absence is zero; permission and structural failures remain unknown.
+    static func commandSize(_ paths: [String]) -> TreeSize {
+        paths.reduce(TreeSize()) { total, path in
+            var info = stat()
+            if lstat(path, &info) != 0 && errno == ENOENT { return total }
+            return total + size(path)
+        }
+    }
+
     public static func size(_ paths: [String], trackNewest: Bool = false) -> TreeSize {
         paths.reduce(TreeSize()) { $0 + size($1, trackNewest: trackNewest) }
     }
@@ -265,6 +283,7 @@ public enum Cleaner {
             let projectMessages = [.projects, .agentWorktrees].contains(item.category) ? [tr("an agent is running in it"), tr("a build tool is running in this project"), tr("a running executable uses this location")] : []
             if !appMessages.contains(blocked) && !projectMessages.contains(blocked) { return blocked }
         }
+        if let why = ManagedToolScope.runningRefusal(item, processes: processes) { return why }
         if mode == .trash, !(item.commands ?? []).isEmpty {
             return tr("Tool-managed removal is permanent and cannot use the Trash")
         }
@@ -464,20 +483,30 @@ public enum Cleaner {
                 result.failed[item.id] = why
                 return result
             }
+            if let why = ManagedToolScope.refusal(item, whitelist: whitelist, home: g.home) { result.failed[item.id] = why; return result }
             var ok = true
-            let measuredBefore = item.measure.map { FS.size($0) }
+            let measuredBefore = item.measure.map { FS.commandSize($0) }
             for argv in commands {
                 if let why = changedProtection() { ok = false; result.failed["whitelist"] = why; break }
+                do {
+                    let current = try Whitelist.loadForRemoval(home: g.home)
+                    if let why = ManagedToolScope.refusal(item, whitelist: current, home: g.home) { ok = false; result.failed[item.id] = why; break }
+                } catch { ok = false; result.failed["whitelist"] = Whitelist.unreadable(error); break }
                 if let why = Simulators.currentRemovalRefusal([argv], requireUnavailable: item.id == "simulator-unavailable") {
                     ok = false; result.failed[argv.joined(separator: " ")] = why
                     break
+                }
+                if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
+                    ok = false; result.failed[item.id] = why; break
                 }
                 let (status, output) = Shell.exec(argv, timeout: 180)
                 let line = argv.joined(separator: " ")
                 if status == 0 { result.removed.append("ran: " + line) } else { ok = false; result.failed[line] = output.isEmpty ? "exit \(status)" : output; break }
             }
             if ok, let before = measuredBefore, let paths = item.measure {
-                result.bytes += max(0, before.bytes - FS.size(paths).bytes)
+                let after = FS.commandSize(paths)
+                if before.denied || before.incomplete || after.denied || after.incomplete { result.bytesIncomplete = true }
+                else { result.bytes += max(0, before.bytes - after.bytes) }
             } else if ok { result.bytes += item.bytes }
         }
         if item.category != .agentWorktrees, !result.removed.isEmpty, let cmds = item.afterClean {

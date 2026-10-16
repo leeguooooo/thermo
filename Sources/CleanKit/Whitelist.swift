@@ -49,7 +49,7 @@ public struct Whitelist: Sendable {
         patterns = entries.map { entry in
             let glob = Self.isGlob(entry)
             let resolved = glob ? entry : URL(fileURLWithPath: entry).resolvingSymlinksInPath().path
-            return Pattern(glob: glob, values: Array(Set([entry, resolved])))
+            return Pattern(glob: glob, values: Array(Set([FS.systemSpelling(entry), FS.systemSpelling(resolved)])))
         }
     }
 
@@ -183,7 +183,7 @@ public struct Whitelist: Sendable {
         guard !patterns.isEmpty else { return false }
         let standard = URL(fileURLWithPath: path).standardizedFileURL.path
         let candidates = Set([standard, Guard.deletionLocation(standard), URL(fileURLWithPath: standard).resolvingSymlinksInPath().path])
-        return candidates.contains { c in patterns.contains { $0.matches(c) } }
+        return candidates.contains { c in patterns.contains { $0.matches(FS.systemSpelling(c)) } }
     }
 
     /// The item with whitelisted paths taken out and listed in `whitelisted`; when every path is
@@ -193,6 +193,17 @@ public struct Whitelist: Sendable {
             var blocked = item
             if !item.paths.isEmpty || !(item.commands ?? []).isEmpty { blocked.blocked = issue }
             return blocked
+        }
+        if !(item.commands ?? []).isEmpty, ManagedToolScope.ids.contains(item.id), item.commandScope?.isEmpty != false {
+            var blocked = item; blocked.blocked = tr(ManagedToolScope.unavailable); return blocked
+        }
+        if !(item.commands ?? []).isEmpty, let scope = item.commandScope {
+            let protected = scope.filter(protects)
+            if !protected.isEmpty {
+                var blocked = item; blocked.blocked = tr("Tool cleanup overlaps a whitelisted location; keep it protected or review the whitelist first.")
+                blocked.whitelisted = Array(Set((item.whitelisted ?? []) + protected)).sorted()
+                return blocked
+            }
         }
         let hits = item.paths.filter(protects)
         guard !hits.isEmpty else { return item }

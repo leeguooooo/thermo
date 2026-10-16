@@ -1,6 +1,10 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "store occupancy estimate; the tool can also prune its auxiliary caches and unused global data": "仓库占用估计；工具还可能清理附属缓存和不再使用的全局数据",
+    "Tool cleanup scope could not be verified; scan again before cleaning.": "无法核实工具清理范围，请重新扫描后再清理。",
+    "Tool cleanup overlaps a whitelisted location; keep it protected or review the whitelist first.": "工具清理涉及白名单保护的位置，当前不会执行，请先审阅白名单。",
+    "Tool-managed locations": "工具清理涉及的位置",
     "whitelist temporary file changed; nothing was committed": "白名单临时文件发生变化，未提交修改",
     "whitelist folder could not be locked": "无法锁定白名单所在文件夹",
     "whitelist folder is not trusted for writing": "白名单所在文件夹不符合安全写入条件",

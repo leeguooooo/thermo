@@ -100,6 +100,8 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 | `thermo history [show ID]` | Thermo 做过的每项改动（清理、卸载、agent 修复、Claude 重置、隐私设置、标签、归档、退出程序），最新的在前，并写明在哪里撤销；记录在 `~/Library/Application Support/Thermo/operations.jsonl`；`--limit N`、`--json` |
 | `thermo awake [status\|on\|off]` | 笔记本合盖不休眠（经辅助程序切换 `pmset disablesleep`）；温度接近风扇安全上限、使用电池且电量降到 20%、或读不到温度时自动关闭，关闭和辅助程序重启时恢复你原来的设置；`--json` |
 
+Homebrew、Go 和 pnpm 的工具清理项增加 `commandScope`，表示工具可能涉及的位置，与 Thermo 直接删除的 `paths` 分开。扫描与确认清单会展示这些位置，执行前重新核对；与白名单相交时阻止整项工具操作，无关保护不影响它。旧缓存缺少范围时要求重扫。Go 固定审阅的 `GOMODCACHE` 并使用本地工具链；Homebrew 调用显式关闭自动更新和自动移除；pnpm 固定仓库、缓存、全局及状态目录并核对机器目录。范围依赖工具配置与公开语义，不是系统调用沙盒。参考 [Homebrew 自动移除策略](https://brew.sh/2024/05/14/homebrew-4.3.0/)、[Go 模块缓存](https://go.dev/ref/mod#module-cache)和[pnpm store](https://pnpm.io/cli/store)。
+
 `clean whitelist --json` 保留 `entries` 和逐行 `rejected`，并提供 `removalAllowed` 与可选 `issue`。存在无效行时仍可查看配置，但清理、卸载和手动移除会停止，直到修正；无效配置不再当成空白名单。支持 UTF-8 BOM 和 CRLF。白名单文件及其用户目录链接、读取中变化、权限或编码错误都会拒绝使用。清空已记录的废纸篓批次还会检查原路径与废纸篓路径的保护；配置异常仍允许恢复原文件。执行中的后续路径会重新核对白名单；工具命令和清理后脚本遇到保护范围变化时停止剩余操作，要求重新审阅。只修改注释不触发这种停止，已完成的移动及批次记录保留。白名单增删通过独立的 `.whitelist.lock` 内核锁协调，竞争时返回忙碌错误而不覆盖其他写入；进程退出会释放占用，锁文件本身会保留。提交前若发现配置、目录或临时文件变化，会拒绝覆盖并要求检查后重试。
 
 所有读取命令都支持 `--json`、`--csv`，另有 `--fahrenheit`、`--no-color`（也遵循 `NO_COLOR`）。

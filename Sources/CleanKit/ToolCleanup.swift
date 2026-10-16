@@ -20,11 +20,18 @@ enum ToolCleanup {
     static func homebrew(_ ctx: ScanContext) -> CleanItem? {
         guard let brew = tool("brew", ctx: ctx) else { return nil }
         let days = String(ctx.options.olderThanDays)
-        let env = ["HOMEBREW_NO_AUTO_UPDATE=1", "HOMEBREW_NO_ENV_HINTS=1", "HOMEBREW_NO_ANALYTICS=1"]
-        let (status, output) = Shell.exec(env + [brew, "cleanup", "--dry-run", "--prune=\(days)"], timeout: 60)
+        let env = ["HOMEBREW_NO_AUTO_UPDATE=1", "HOMEBREW_NO_ENV_HINTS=1", "HOMEBREW_NO_ANALYTICS=1", "HOMEBREW_NO_AUTOREMOVE=1"]
+        let cacheResult = ManagedToolScope.read(env + [brew, "--cache"])
+        let processHome = ProcessInfo.processInfo.environment["HOME"] ?? ctx.home
+        guard cacheResult.0 == 0, let actualCache = ManagedToolScope.path(cacheResult.1, home: ctx.home),
+              let logs = ManagedToolScope.root(ProcessInfo.processInfo.environment["HOMEBREW_LOGS"] ?? processHome + "/Library/Logs/Homebrew", home: ctx.home) else { return nil }
+        let bound = env + ["HOMEBREW_CACHE=" + actualCache, "HOMEBREW_LOGS=" + logs]
+        let command = bound + [brew, "cleanup", "--prune=\(days)"]
+        let scope = ManagedToolScope.scope(command, id: "homebrew-old-versions", home: ctx.home) { ManagedToolScope.read($0) }
+        let (status, output) = Shell.exec(bound + [brew, "cleanup", "--dry-run", "--prune=\(days)"], timeout: 60, cancellation: ScanCancellation.current)
         guard status == 0 else { return nil }
         // The download cache is the Homebrew downloads rule's; count only what that leaves.
-        let cache = ctx.path("~/Library/Caches/Homebrew")
+        let cache = actualCache
         let found = parseBrewDryRun(output).filter { !$0.path.hasPrefix(cache + "/") && $0.path != cache }
         let bytes = found.reduce(Int64(0)) { $0 + $1.bytes }
         guard bytes > 0 else { return nil }
@@ -35,8 +42,9 @@ enum ToolCleanup {
                          detail: unique.prefix(5).joined(separator: ", ") + (unique.count > 5 ? "…" : ""),
                          safety: .safe, bytes: bytes, files: found.count,
                          note: tr("older versions of installed formulae and casks; the current ones stay"),
-                         hint: "brew cleanup --prune=\(days)",
-                         commands: [env + [brew, "cleanup", "--prune=\(days)"]])
+                         blocked: scope == nil ? tr(ManagedToolScope.unavailable) : nil,
+                         hint: "/usr/bin/env " + command.map(Shell.quote).joined(separator: " "),
+                         commands: [command], commandScope: scope)
     }
 
     /// `Would remove: /opt/homebrew/Cellar/node/22.1.0 (2,345 files, 81.2MB)` lines.
@@ -55,7 +63,9 @@ enum ToolCleanup {
         let units: [(String, Double)] = [("TB", 1e12), ("GB", 1e9), ("MB", 1e6), ("KB", 1e3), ("B", 1)]
         for (u, f) in units where s.hasSuffix(u) {
             guard let v = Double(s.dropLast(u.count).replacingOccurrences(of: ",", with: "")) else { return 0 }
-            return Int64(v * f)
+            let bytes = v * f
+            guard bytes.isFinite, bytes >= 0, bytes < Double(Int64.max) else { return 0 }
+            return Int64(bytes)
         }
         return 0
     }
@@ -65,16 +75,18 @@ enum ToolCleanup {
     /// Go keeps modules read-only, so deleting the folder fails half-way; `go clean -modcache` is the way.
     static func goModules(_ ctx: ScanContext) -> CleanItem? {
         guard let go = tool("go", ctx: ctx) else { return nil }
-        let (status, output) = Shell.exec([go, "env", "GOMODCACHE"], timeout: 15)
-        let dir = status == 0 && output.hasPrefix("/") ? output : ctx.path("~/go/pkg/mod")
+        let (status, output) = ManagedToolScope.read(["GOTOOLCHAIN=local", go, "env", "GOMODCACHE"])
+        let verified = status == 0 ? ManagedToolScope.path(output, home: ctx.home) : nil
+        let dir = verified ?? ctx.path("~/go/pkg/mod")
         guard FS.isDirectory(dir) else { return nil }
+        let command = ["GOTOOLCHAIN=local", "GOMODCACHE=" + dir, go, "clean", "-modcache"]
         let s = FS.size(dir, trackNewest: true)
         guard s.bytes > 0 else { return nil }
         return CleanItem(id: "go-mod-cache", category: .devCaches, title: tr("Go module cache"), detail: ctx.tilde(dir),
                          safety: .review, bytes: s.bytes, files: s.files, lastUsed: s.newest,
                          note: tr("downloaded modules; Go fetches them again on the next build"),
-                         blocked: ctx.processes.running(["go"]).map { tr("quit %1$@ first", $0) },
-                         hint: "go clean -modcache", commands: [[go, "clean", "-modcache"]])
+                         blocked: verified == nil ? tr(ManagedToolScope.unavailable) : ctx.processes.running(["go"]).map { tr("quit %1$@ first", $0) },
+                         hint: "/usr/bin/env " + command.map(Shell.quote).joined(separator: " "), commands: [command], commandScope: verified.map { [$0] })
     }
 
     // MARK: pnpm
@@ -83,16 +95,34 @@ enum ToolCleanup {
     /// store's size is the upper bound and the cleanup reports what it measured afterwards.
     static func pnpmPrune(_ ctx: ScanContext) -> CleanItem? {
         guard let pnpm = tool("pnpm", ctx: ctx) else { return nil }
-        let (status, output) = Shell.exec([pnpm, "store", "path"], timeout: 15)
-        guard status == 0, let store = output.split(separator: "\n").last.map(String.init), store.hasPrefix("/"),
+        let (status, output) = ManagedToolScope.read([pnpm, "store", "path"])
+        guard status == 0, let store = ManagedToolScope.path(output, home: ctx.home),
               FS.isDirectory(store) else { return nil }
+        let processHome = ProcessInfo.processInfo.environment["HOME"] ?? ctx.home
+        let root = (store as NSString).lastPathComponent.range(of: "^v[0-9]+$", options: .regularExpression) != nil ? (store as NSString).deletingLastPathComponent : store
+        var settingsVerified = true
+        func setting(_ key: String, fallback: String) -> String {
+            let result = ManagedToolScope.read([pnpm, "config", "get", key])
+            if result.0 == 0, ManagedToolScope.value(result.1) == "undefined" { return fallback }
+            if result.0 == 0, let path = ManagedToolScope.path(result.1, home: ctx.home) { return path }
+            settingsVerified = false; return fallback
+        }
+        let pnpmHome = ProcessInfo.processInfo.environment["PNPM_HOME"] ?? setting("pnpm-home-dir", fallback: processHome + "/Library/pnpm")
+        let cacheBase = ProcessInfo.processInfo.environment["XDG_CACHE_HOME"] ?? processHome + "/Library/Caches"
+        let stateBase = ProcessInfo.processInfo.environment["XDG_STATE_HOME"].map { $0 + "/pnpm" } ?? pnpmHome + "/state"
+        let cache = setting("cache-dir", fallback: cacheBase + "/pnpm")
+        let global = setting("global-dir", fallback: pnpmHome + "/global")
+        let state = setting("state-dir", fallback: stateBase)
+        let command = ["PNPM_HOME=" + pnpmHome, pnpm, "--config.store-dir=" + root, "--config.cache-dir=" + cache,
+                       "--config.global-dir=" + global, "--config.state-dir=" + state, "store", "prune"]
+        let scope = settingsVerified ? ManagedToolScope.scope(command, id: "pnpm-store-prune", home: ctx.home, run: { ManagedToolScope.read($0) }) : nil
         let s = FS.size(store, trackNewest: true)
         guard s.bytes > 0 else { return nil }
         return CleanItem(id: "pnpm-store-prune", category: .devCaches, title: tr("pnpm packages no project uses"),
                          detail: ctx.tilde(store), safety: .safe, bytes: s.bytes, files: s.files, lastUsed: s.newest,
-                         note: tr("up to the store's size; pnpm keeps what your projects link to, and the result shows what it freed"),
-                         blocked: ctx.processes.running(["pnpm"]).map { tr("quit %1$@ first", $0) },
-                         hint: "pnpm store prune", commands: [[pnpm, "store", "prune"]], measure: [store])
+                         note: tr("store occupancy estimate; the tool can also prune its auxiliary caches and unused global data"),
+                         blocked: scope == nil ? tr(ManagedToolScope.unavailable) : ctx.processes.running(["pnpm"]).map { tr("quit %1$@ first", $0) },
+                         hint: "/usr/bin/env " + command.map(Shell.quote).joined(separator: " "), commands: [command], measure: scope.map { roots in roots.filter { root in !roots.contains { $0 != root && root.hasPrefix($0 + "/") } } } ?? [store], commandScope: scope)
     }
 
     // MARK: Browser updates

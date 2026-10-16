@@ -378,6 +378,9 @@ struct CleanCommand {
             plan.append("  " + pad(ByteFormat.string(i.bytes), 8, right: true) + "  " + how + "  " + i.title + style.dim("  \(i.paths.count) path\(i.paths.count == 1 ? "" : "s")")
                         + (i.whitelisted.map { style.dim(" · " + tr("%1$@ whitelisted paths kept", String($0.count))) } ?? ""))
         }
+        for item in todo {
+            for path in item.commandScope ?? [] { plan.append("    " + tr("Tool-managed locations") + ": " + FS.tilde(path)) }
+        }
         for i in skipped {
             plan.append(style.dim("  skipped  \(i.title): \(i.blocked ?? (i.hint.map { "run \($0)" } ?? "nothing to remove"))"))
         }

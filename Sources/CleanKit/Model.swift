@@ -86,6 +86,8 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     /// Commands (argv, no shell) that do the removal instead of deleting paths, for things a tool
     /// must remove itself (e.g. `xcrun simctl runtime delete <id>`).
     public var commands: [[String]]?
+    /// Reviewed boundaries of a tool-managed operation; never direct deletion targets.
+    public var commandScope: [String]? = nil
     /// Separately selectable pieces, newest first; together they make up `paths`.
     public var parts: [CleanPart]?
     /// Items with the same group belong together (build output of one project folder).
@@ -103,11 +105,11 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     public init(id: String, category: CleanCategory, title: String, detail: String = "", safety: Safety,
                 bytes: Int64 = 0, files: Int = 0, lastUsed: Date? = nil, paths: [String] = [],
                 note: String? = nil, blocked: String? = nil, hint: String? = nil, afterClean: [String]? = nil,
-                parts: [CleanPart]? = nil, group: String? = nil, commands: [[String]]? = nil, measure: [String]? = nil) {
+                parts: [CleanPart]? = nil, group: String? = nil, commands: [[String]]? = nil, measure: [String]? = nil, commandScope: [String]? = nil) {
         self.id = id; self.category = category; self.title = title; self.detail = detail; self.safety = safety
         self.bytes = bytes; self.files = files; self.lastUsed = lastUsed; self.paths = paths
         self.note = note; self.blocked = blocked; self.hint = hint; self.afterClean = afterClean; self.parts = parts; self.group = group
-        self.commands = commands; self.measure = measure
+        self.commands = commands; self.measure = measure; self.commandScope = commandScope
     }
 
     public var cleanable: Bool { blocked == nil && bytes > 0 && (!paths.isEmpty || !(commands ?? []).isEmpty) }

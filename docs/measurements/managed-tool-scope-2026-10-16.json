@@ -1,0 +1,98 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "6fe990b",
+  "sourceSHA256": {
+    "Sources/CleanKit/ManagedToolScope.swift": "ba6553e660105cc07b180ea1315c9b02614954716c4408a53d4784550fdd553e",
+    "Sources/CleanKit/ToolCleanup.swift": "3e19d481cd9584599da27bbc14df93fbfed82fc9937836a11b87bbb6f18980ae",
+    "Sources/CleanKit/Model.swift": "5ba760acfad0f27f4e0f124d8934930e7c41ce6f39d887b9a4e47468f97a4bbb",
+    "Sources/CleanKit/FS.swift": "be6da9b850c7c9aa54ee105e090f144d0d26ed44c0cc9531d937cd76f89fa483",
+    "Sources/CleanKit/Whitelist.swift": "a8316deedf5bb75778f593a2410e84e82d20995645e913878b011452196cbdd1",
+    "Sources/ThermoApp/DiskWindow.swift": "cc887b7954b8f2c151159edc2a851dd162e66b065648181b4b2dd1946ae5f151",
+    "Sources/thermo/Clean.swift": "5ecfbae46d78bd315b9c0a6ff7035bb9f98857ec58176491ff34fe440997d069",
+    "Tests/CleanKitTests/ManagedToolScopeTests.swift": "43a89878ba605e302aafe4e5d657635df9d8714b934c2e6eb636ae8540471ad4",
+    "scripts/verify-managed-tool-scope.swift": "914ddc294de617a795a8fbd4269ac3898365d1797eb254a5e9192469491eaaa7"
+  },
+  "newTests": {
+    "ManagedToolScopeTests": 14
+  },
+  "nativeHostPathQueries": {
+    "brewPrefix": true,
+    "brewCellar": true,
+    "brewRepository": true,
+    "brewCache": true,
+    "goModuleCache": true,
+    "allExitZeroAndAbsoluteSinglePaths": true,
+    "cleanupExecuted": false
+  },
+  "officialPnpmReadOnlyAcceptance": [
+    {
+      "auxiliaryProtectionRefused": true,
+      "cleanupExecuted": false,
+      "queries": 22,
+      "scopeCount": 5,
+      "unrelatedProtectionAllowed": true,
+      "version": "12.11.2",
+      "probeExecutableSHA256": "6520937743e412ec00237fcda22953c3a5a8729447cd347afdb3772946bf8e6b"
+    },
+    {
+      "auxiliaryProtectionRefused": true,
+      "cleanupExecuted": false,
+      "queries": 22,
+      "scopeCount": 5,
+      "unrelatedProtectionAllowed": true,
+      "version": "10.28.1",
+      "probeExecutableSHA256": "6520937743e412ec00237fcda22953c3a5a8729447cd347afdb3772946bf8e6b"
+    }
+  ],
+  "officialPackages": {
+    "12.11.2": {
+      "packageLockSHA256": "d84476b89e4e1598625c68ec73260975cf3965e85bc86cd9bdb36c0d21552fe6",
+      "packageIntegrity": "sha512-JaUWUqGWeFr18ovabf6NxYLr76SsHRgCIc4TkCMcX7dmN4IupLbkYzznSs3LCnf3Ja8RutOBd/3t2u6BipVcuQ==",
+      "registry": "https://registry.npmjs.org/pnpm/-/pnpm-12.11.2.tgz"
+    },
+    "10.28.1": {
+      "packageLockSHA256": "a1fa79d7b7b30aaeb05d7427c71320f3787b5c5d66130a2cfdaa0f8741cf94d4",
+      "packageIntegrity": "sha512-fX27yp6ZRHt8O/enMoavqva+mSUeuUmLrvp9QGiS9nuHmts6HX5of8TMwaOIxxdfuq5WeiarRNEGe1T8sNajFg==",
+      "registry": "https://registry.npmjs.org/pnpm/-/pnpm-10.28.1.tgz"
+    }
+  },
+  "probeDependencies": {
+    "installedOnlyInOwnedScratch": true,
+    "installScriptsDisabled": true,
+    "userAndGlobalNpmConfigOverriddenWithOwnedEmptyFiles": true,
+    "globalInstallPerformed": false,
+    "temporaryDirectoryRemoved": true
+  },
+  "full": {
+    "log": "/tmp/thermo-tool-scope-final-full.log",
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 59,
+      "ThermoAppTests": 175,
+      "CleanKitTests": 620,
+      "AgentCoreTests": 34
+    },
+    "total": 1002,
+    "failures": 0,
+    "logSHA256": "df6886a35db3469f5e3f1532cb94f4f48db48b5956e62863c801412ada42014d",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ]
+  },
+  "references": {
+    "homebrewCleanupLocalSHA256": "d18d2668d6bb70823c886df30bd5870c60833ba4d170c265484e6194ebeb3948",
+    "pnpmSourceSnapshot": "1d909993c4edc08b0136755bd9a43a8afb2882ea",
+    "homebrewPolicy": "https://brew.sh/2024/05/14/homebrew-4.3.0/",
+    "goModuleCache": "https://go.dev/ref/mod#module-cache",
+    "pnpmPrune": "https://pnpm.io/cli/store"
+  },
+  "limits": [
+    "Scope reflects configured management boundaries and trusted upstream semantics, not an OS filesystem sandbox",
+    "No real Homebrew/Go/pnpm cleanup; shims only touch owned canaries; official vendors were queried read-only",
+    "Pnpm 10 relies on explicitly pinned CLI settings plus active-store verification because its config getter omits CLI overrides; pnpm 12 echoes the pinned settings",
+    "Unusual nested symlink layouts, real prune outcomes, further versions and Simulator tool scopes remain unverified",
+    "No new visible scope-list layout acceptance",
+    "No root query, helper installation, hardware writes, installed-app replacement or release"
+  ]
+}

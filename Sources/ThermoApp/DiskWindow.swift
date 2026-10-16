@@ -27,6 +27,7 @@ extension DiskModel {
             let paths = trCount(i.paths.count, "%1$@ path", "%1$@ paths")
             return ["\(how) · \(ByteFormat.string(i.bytes)) · \(i.title) (\(paths))"]
                 + i.paths.map { "    " + FSPath.tilde($0) }
+                + (i.commandScope ?? []).map { "    " + tr("Tool-managed locations") + ": " + FSPath.tilde($0) }
                 + (i.commands ?? []).map { "    " + $0.joined(separator: " ") }
         }
     }
@@ -441,6 +442,10 @@ struct DiskItemDetail: View {
             if item.developmentDependency {
                 Text(tr("Kept by default: development may need these files again. Archive them only when the environment or project is inactive."))
                     .font(.callout).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+            }
+            if let scope = item.commandScope, !scope.isEmpty {
+                Text(tr("Tool-managed locations")).font(.caption).foregroundStyle(.secondary)
+                ForEach(scope, id: \.self) { Text(FSPath.tilde($0)).font(.caption.monospaced()).textSelection(.enabled) }
             }
             if let h = item.hint { Text(tr("Run: %1$@", h)).font(.callout.monospaced()).foregroundStyle(.white.opacity(0.8)).textSelection(.enabled) }
             Text(safetyText).font(.caption).foregroundStyle(.white.opacity(0.5)).fixedSize(horizontal: false, vertical: true)
