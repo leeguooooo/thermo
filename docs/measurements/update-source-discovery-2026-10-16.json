@@ -1,0 +1,124 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "b813ce9",
+  "sourceSHA256": {
+    "Sources/CleanKit/AppInventory.swift": "cc87fe6f979a9e546198adb6811975793c8100a601830066737b4cc36ba9d0c8",
+    "Sources/CleanKit/Apps.swift": "9124b1bd2367b906ed3b53004f71cf69c16506cb5ef236fb7c2e8818d5871a35",
+    "Sources/CleanKit/NativeAppUpdates.swift": "b2c405bb0e7ad91d67bcd55fb68c25e645abd5f6cd47091ac085735fc71be41a",
+    "Sources/ThermoApp/NativeUpdatesPanel.swift": "18234f27df8f8e08183c6c363df1d1592db3b3e7790a0e4a5a682500b359fcb5",
+    "Sources/thermo/Apps.swift": "54c815ea2bfedcf5494ad9908a7cd80e2f544cf02ccd4bfe5fbd355e7da133b8",
+    "Sources/ThermoL10n/ZhHans.swift": "c8311e7c9ea7e33cdca87cd2c74bc58d04b9e6ac0c4da3952fb770bee47022bd",
+    "Tests/CleanKitTests/AppInventoryReportTests.swift": "52d9e7eceb91f867308d2fcbc9a8e2e4445ac9be30fa13571855311f1a87b361",
+    "Tests/ThermoAppTests/NativeSourceDiscoveryTests.swift": "77f7f19f9ae6f4160a434b18263bc15c0e232f55d4cc392fe514a7cf276aca92",
+    "Tests/ThermoCLITests/UpdateSourceReportTests.swift": "be7abdc60e8ba3fdd9f28129b62eba3723c0d4f2959691fb662801970950c44a",
+    "scripts/verify-update-sources-ui.swift": "dc5d9f057be391550beb41168dd60caec0a4693e53bfe9146c6f92cf014b84ab"
+  },
+  "newTests": {
+    "AppInventoryReportTests": 7,
+    "NativeSourceDiscoveryTests": 3,
+    "UpdateSourceReportTests": 4
+  },
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 63,
+      "ThermoAppTests": 191,
+      "CleanKitTests": 655,
+      "AgentCoreTests": 34
+    },
+    "total": 1057,
+    "failures": 0,
+    "logSHA256": "d70652656ba44a77ee5f7a2359ee4321eac12f613666df77a94a0d5346039613",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "revisionBoundary": "Before final warning text clarification; behavioral code unchanged; final copy checked separately"
+  },
+  "nativeReadOnlyCLI": {
+    "exitCode": 2,
+    "complete": false,
+    "scopeComplete": true,
+    "sources": 74,
+    "issues": 4,
+    "sourceKinds": {
+      "appStore": 14,
+      "application": 48,
+      "sparkle": 12
+    },
+    "rawOutputSHA256": "fc0c69136cbf970703684352b50bb49ccb12c009b52e82621dc3fbc20362864d",
+    "nameSelectionDryRunExit": 0,
+    "nameSelectionBundleID": "md.obsidian",
+    "feedsContacted": false,
+    "installedAppsChanged": false,
+    "recognizedShortIdentifiers": {
+      "Obsidian": "md.obsidian",
+      "SwitchHosts": "SwitchHosts"
+    }
+  },
+  "initialReadOnlyCLI": {
+    "exitCode": 2,
+    "complete": false,
+    "sources": 74,
+    "issues": 6,
+    "cancelled": false,
+    "sourceKinds": {
+      "appStore": 14,
+      "application": 48,
+      "sparkle": 12
+    },
+    "rawOutputSHA256": "ee34bc0fe4b96b48a1645c7e98565fb22c4ac8feab90bf38784a39bbad4c55c1",
+    "feedsContacted": false,
+    "installedAppsChanged": false
+  },
+  "visibleNativeAcceptance": {
+    "locale": "zh-Hans",
+    "windowContentSize": [
+      800,
+      580
+    ],
+    "source": "CUA screenshots and accessibility in conversation",
+    "incompleteEmptyClearlyUnknown": true,
+    "partialKnownSourceStillCheckable": true,
+    "knownSourceFixtureCheckDoesNotClearDiscoveryIssues": true,
+    "completeEmptyDistinctFromSearchOrFailure": true,
+    "lateOldResultsAndIssuesRejectedByModelTest": true,
+    "fixtureChecksOnly": true,
+    "feedsContacted": false,
+    "installsExecuted": false,
+    "revisionBoundary": "Final update view code; compiled fixture before independent archive reader fix, which this view never invokes"
+  },
+  "qaExecutableSHA256": "79aa7ac000ef8e51335881eacc2d08e74a117fcf75556ce6a3c2bb64d1548e4b",
+  "runtimeLogSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "uniqueTranslationKeys": 2197,
+  "cleanup": {
+    "qaProcessExited": true,
+    "ownedWorkspaceRemoved": true
+  },
+  "compatibility": {
+    "legacyLibraryArrayProjectionsKept": true,
+    "cliSourcesJSONNowReportObject": true,
+    "jsonArrayCallersReadField": "sources",
+    "incompleteReportsPrintJSONThenExitNonzero": true
+  },
+  "limits": [
+    "Discovery covers configured app directories and one real suite-directory level, not every app on the Mac",
+    "Metadata checks do not seal every nested bundle file or guarantee latency on blocking filesystems",
+    "Visible incomplete/known/empty scenarios use injected reports and a no-network checker; live CLI separately reads real app metadata",
+    "No new updater channel or real application installation was added or tested",
+    "No standalone screenshots; conversation evidence retained",
+    "No release; overall Mole parity remains unproven"
+  ],
+  "initialBaseCommit": "2aa200e",
+  "finalCopyVerification": {
+    "tests": 3,
+    "failures": 0,
+    "logSHA256": "3066b6d113cb2ce71a19ac9a4ccecbc22a9b06556fb97bafe9003cf98d029410",
+    "nativeWarningText": "应用发现未完成。已列出的条目也可能有身份或读取问题；列表缺少项目不代表没有其他更新。",
+    "nativeAXAndScreenshotChecked": true,
+    "qaExecutableSHA256": "efa3062cf3910469d25f3654800d6b4a97cddecc259c6e8ea9945b1a793bbab7",
+    "runtimeLogSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "processExited": true,
+    "ownedWorkspaceRemoved": true
+  }
+}

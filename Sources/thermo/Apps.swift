@@ -10,6 +10,34 @@ struct AppsCommand {
     var style: Style { app.style }
     var args: Args { app.args }
 
+    func writeUpdateSources(_ report: NativeUpdateSourcesReport, write: (String) -> Void = { print($0) }) throws {
+        if args.has("json") { write(Export.json(report)) }
+        else {
+            var lines = report.sources.map { $0.app.name + " · " + $0.kind + ($0.feedHost.map { " · " + $0 } ?? "") + ($0.blocked.map { " · " + tr($0) } ?? "") }
+            lines += report.issues.map { tr($0.message) + " · " + $0.path }
+            if report.issuesTruncated { lines.append(tr("More discovery issues were omitted.")) }
+            if report.complete && report.sources.isEmpty { lines.append(tr("No app update sources were found in the inspected locations.")) }
+            if !report.complete { lines.append(tr("Application source discovery is incomplete; this is not a complete update check.")) }
+            write(lines.joined(separator: "\n"))
+        }
+        if !report.complete { throw CLIError("Application source discovery is incomplete; inspect the reported issues and try again") }
+    }
+
+    func updateSource(_ query: String, in report: NativeUpdateSourcesReport) throws -> NativeUpdateSource {
+        guard report.scopeComplete || query.hasPrefix("/") else {
+            throw CLIError("Application discovery is incomplete; choose an exact app path from thermo apps updates sources")
+        }
+        let matches = report.sources.filter {
+            $0.app.path == query || (report.complete && $0.app.bundleID?.caseInsensitiveCompare(query) == .orderedSame) ||
+                $0.app.name.caseInsensitiveCompare(query) == .orderedSame || ($0.app.name + ".app").caseInsensitiveCompare(query) == .orderedSame
+        }
+        guard matches.count == 1, let source = matches.first else {
+            if !report.complete { throw CLIError("Application identifiers may be incomplete; choose one exact app name or path from thermo apps updates sources") }
+            throw CLIError("Choose one exact app name, bundle ID or path from thermo apps updates sources")
+        }
+        return source
+    }
+
     func run(_ rest: [String]) throws {
         switch rest.first {
         case "uninstall", "remove", "rm": try uninstall(Array(rest.dropFirst()))
@@ -90,19 +118,11 @@ struct AppsCommand {
             if result.outcome != "succeeded" { throw CLIError(tr(result.message)) }
             return
         }
-        let sources = NativeAppUpdates.sources()
-        if rest == ["sources"] {
-            if args.has("json") { print(Export.json(sources)) }
-            else { out(sources.map { $0.app.name + " · " + $0.kind + ($0.feedHost.map { " · " + $0 } ?? "") + ($0.blocked.map { " · " + tr($0) } ?? "") }) }
-            return
-        }
+        let discovery = NativeAppUpdates.sourceReport(), sources = discovery.sources
+        if rest == ["sources"] { try writeUpdateSources(discovery); return }
         guard rest.count == 2, ["check", "install"].contains(rest[0]) else { throw CLIError("usage: thermo apps updates sources | check NAME | install NAME [--dry-run] [--json]") }
         let query = rest[1]
-        let matches = sources.filter {
-            $0.app.path == query || $0.app.bundleID?.caseInsensitiveCompare(query) == .orderedSame ||
-            $0.app.name.caseInsensitiveCompare(query) == .orderedSame || ($0.app.name + ".app").caseInsensitiveCompare(query) == .orderedSame
-        }
-        guard matches.count == 1, let source = matches.first else { throw CLIError("Choose one exact app name, bundle ID or path from thermo apps updates sources") }
+        let source = try updateSource(query, in: discovery)
         if args.has("dry-run") {
             if args.has("json") { print(Export.json(source)) }
             else { out([source.app.name, source.kind, source.feedHost ?? tr("No app-declared update feed")]) }

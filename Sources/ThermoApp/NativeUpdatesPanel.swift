@@ -7,6 +7,7 @@ import ThermoL10n
 @MainActor
 final class NativeUpdatesModel: ObservableObject {
     @Published private(set) var sources: [NativeUpdateSource] = []
+    @Published private(set) var discoveryReport: NativeUpdateSourcesReport?
     @Published private(set) var loading = false
     @Published private(set) var loaded = false
     @Published private(set) var checking: Set<String> = []
@@ -29,19 +30,23 @@ final class NativeUpdatesModel: ObservableObject {
     private var loadToken: ScanCancellation?
     private var tasks: [String: Task<Void, Never>] = [:]
     private var pending: [NativeUpdateSource] = []
-    private let read: @Sendable (ScanCancellation) -> [NativeUpdateSource]
+    private let read: @Sendable (ScanCancellation) -> NativeUpdateSourcesReport
     private let checker: @Sendable (NativeUpdateSource) async -> NativeUpdateCheck
     private let installer: @Sendable (NativeUpdateCheck) async -> NativeInstallResult
     private let restorer: @Sendable (String) -> NativeInstallResult
     private let recoveryReader: @Sendable () -> NativeRecoveryReport
 
-    init(read: @escaping @Sendable (ScanCancellation) -> [NativeUpdateSource] = { token in
-        NativeAppUpdates.sources(apps: AppUninstaller.installed(cancellation: token))
-    }, checker: @escaping @Sendable (NativeUpdateSource) async -> NativeUpdateCheck = { await NativeAppUpdates.check($0) },
+    init(read: (@Sendable (ScanCancellation) -> [NativeUpdateSource])? = nil,
+         discovery: (@Sendable (ScanCancellation) -> NativeUpdateSourcesReport)? = nil,
+         checker: @escaping @Sendable (NativeUpdateSource) async -> NativeUpdateCheck = { await NativeAppUpdates.check($0) },
          installer: @escaping @Sendable (NativeUpdateCheck) async -> NativeInstallResult = { await NativeUpdateTransaction.installAvailable($0) },
          restorer: @escaping @Sendable (String) -> NativeInstallResult = { NativeUpdateTransaction.restore($0) },
          recoveryReader: @escaping @Sendable () -> NativeRecoveryReport = { NativeUpdateTransaction.recovery() }) {
-        self.read = read; self.checker = checker; self.installer = installer; self.restorer = restorer; self.recoveryReader = recoveryReader
+        self.read = discovery ?? { token in
+            if let read { return .init(sources: read(token), cancelled: token.isCancelled) }
+            return NativeAppUpdates.sourceReport(cancellation: token)
+        }
+        self.checker = checker; self.installer = installer; self.restorer = restorer; self.recoveryReader = recoveryReader
     }
 
     func load(preservingMessage: Bool = false) {
@@ -49,7 +54,7 @@ final class NativeUpdatesModel: ObservableObject {
         if loadInFlight { pendingLoad = true; loading = true; return }
         generation = UUID()
         for task in tasks.values { task.cancel() }
-        pending = []; results = [:]; if !preservingMessage { message = nil }; loading = true; loaded = false; loadInFlight = true
+        pending = []; results = [:]; if !preservingMessage { message = nil }; loading = true; loaded = false; discoveryReport = nil; loadInFlight = true
         let token = ScanCancellation(); loadToken = token
         let read = self.read
         Task.detached(priority: .utility) {
@@ -58,7 +63,7 @@ final class NativeUpdatesModel: ObservableObject {
                 self.loadInFlight = false
                 let pending = self.pendingLoad; self.pendingLoad = false
                 if self.loadToken === token, !token.isCancelled {
-                    self.sources = found; self.loading = false; self.loaded = true; self.loadToken = nil
+                    self.sources = found.sources; self.discoveryReport = found; self.loading = false; self.loaded = true; self.loadToken = nil
                 }
                 if pending { self.load() }
             }
@@ -238,6 +243,14 @@ struct NativeUpdatesPanel: View {
             }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 10) {
+                    if let report = model.discoveryReport, !report.complete {
+                        Label(tr("Application discovery is incomplete. Listed entries may have identity or read issues; missing rows do not prove that no other updates exist."), systemImage: "exclamationmark.triangle")
+                            .font(.callout).foregroundStyle(.orange)
+                        ForEach(Array(report.issues.enumerated()), id: \.offset) { _, issue in
+                            Text(tr(issue.message) + " · " + FSPath.tilde(issue.path)).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                        }
+                        if report.issuesTruncated { Text(tr("More discovery issues were omitted.")).font(.caption).foregroundStyle(.orange) }
+                    }
                     ForEach(visible) { source in
                         VStack(alignment: .leading, spacing: 8) {
                             HStack(alignment: .top) {
@@ -290,7 +303,11 @@ struct NativeUpdatesPanel: View {
                             }
                         }.padding(14).glass(radius: 14)
                     }
-                    if !model.loading && visible.isEmpty { Text(tr("No matching items")).foregroundStyle(.secondary) }
+                    if model.loaded && !model.loading && visible.isEmpty {
+                        Text(tr(model.sources.isEmpty
+                            ? (model.discoveryReport?.complete == true ? "No app update sources were found in the inspected locations." : "No app sources could be confirmed; discovery is incomplete.")
+                            : "No matching items")).foregroundStyle(.secondary)
+                    }
                 }
             }
             HStack {

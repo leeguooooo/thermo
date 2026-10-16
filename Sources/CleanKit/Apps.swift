@@ -113,29 +113,7 @@ public enum AppUninstaller {
 
     /// Apps in /Applications and ~/Applications, read from their Info.plist, sorted by name. Sizes are not measured.
     public static func installed(home: String = NSHomeDirectory(), dirs: [String]? = nil, cancellation: ScanCancellation? = nil) -> [InstalledApp] {
-        let fm = FileManager.default
-        var seen = Set<String>()
-        var apps: [InstalledApp] = []
-        for dir in dirs ?? appDirs(home: home) {
-            if cancellation?.isCancelled == true { break }
-            var bundles: [String] = []
-            for name in (try? fm.contentsOfDirectory(atPath: dir)) ?? [] where !name.hasPrefix(".") {
-                let path = dir + "/" + name
-                if name.hasSuffix(".app") { bundles.append(path); continue }
-                // Suites keep their apps one folder down ("Adobe Photoshop 2025/Adobe Photoshop 2025.app").
-                guard dir != "/Applications/Utilities", FS.isDirectory(path) else { continue }
-                bundles += ((try? fm.contentsOfDirectory(atPath: path)) ?? []).filter { $0.hasSuffix(".app") }.map { path + "/" + $0 }
-            }
-            for path in bundles {
-                if cancellation?.isCancelled == true { break }
-                guard seen.insert(path).inserted, var app = read(path) else { continue }
-                app.protected = protection(app, home: home)
-                if app.protected == nil, app.inventoryIdentity == nil { app.protected = tr("Could not verify this app's file identity; inspect it in Finder") }
-                app.cask = cask(for: app, cancellation: cancellation)
-                apps.append(app)
-            }
-        }
-        return apps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        installedReport(home: home, dirs: dirs, cancellation: cancellation).apps
     }
 
     public static func read(_ path: String) -> InstalledApp? {
@@ -153,7 +131,7 @@ public enum AppUninstaller {
             return observed(InstalledApp(path: path, name: ((path as NSString).lastPathComponent as NSString).deletingPathExtension, bundleID: nil))
         }
         let file = ((path as NSString).lastPathComponent as NSString).deletingPathExtension
-        let id = (info["CFBundleIdentifier"] as? String).flatMap { isBundleID($0) ? $0 : nil }
+        let id = (info["CFBundleIdentifier"] as? String).flatMap { AppOwnershipSnapshot.validDeclaredID($0) ? $0 : nil }
         return observed(InstalledApp(path: path, name: file, bundleID: id,
                             version: (info["CFBundleShortVersionString"] as? String) ?? (info["CFBundleVersion"] as? String)))
     }

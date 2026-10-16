@@ -244,6 +244,8 @@ thermo tabs restore UUID --window WINDOW_ID --yes
 
 「其他应用」从本机声明中识别 Sparkle 更新源、App Store 收据及未声明来源的应用。发现来源不访问服务器；单项检查或确认批量检查后才请求所选 HTTPS feed。最多同时检查四项，支持停止并保留已完成结果；离开页面会取消请求并清空队列。
 
+`thermo apps updates sources --json` 现在返回报告对象，旧数组脚本需改读 `.sources`。报告包含 `complete`、`scopeComplete`、`issues`、`issuesTruncated`、`cancelled`、`roots` 与 `discovered`；`complete` 同时考虑目录覆盖和应用元数据，`scopeComplete` 只表示支持的目录布局已枚举。部分结果仍输出 JSON，但命令返回非零，不能据空数组认定没有应用或更新。目录范围未读完整时必须用精确应用路径选择检查/安装；范围完整但部分元数据未知时，可用确切应用名或路径，Bundle ID 选择需完整发现。已确认来源仍可独立检查；发现完整也不表示已经访问过所有更新源。
+
 `thermo apps updates sources --json` 只发现本地来源；`thermo apps updates check NAME --dry-run --json` 离线预览，去掉 `--dry-run` 才检查选定 feed。导出不包含私密更新 URL 和下载地址参数。请求不使用 Cookie、钥匙串凭据、SSO 或客户端证书，TLS 由系统校验。
 
 Sparkle 检查比较构建号，区分完整包、增量包、测试渠道、系统及声明的硬件要求。feed 限制为 2 MiB、30 秒，拒绝实体声明和超深 XML；失败或不支持的条目保留原因，不视为“所有应用都是最新版”。

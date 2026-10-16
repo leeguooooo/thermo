@@ -70,7 +70,8 @@ public enum NativeAppUpdates {
     }
 
     public static func sources(home: String = NSHomeDirectory(), apps: [InstalledApp]? = nil) -> [NativeUpdateSource] {
-        (apps ?? AppUninstaller.installed(home: home)).map { app in
+        guard let apps else { return sourceReport(home: home).sources }
+        return apps.map { app in
             let info = NSDictionary(contentsOfFile: app.path + "/Contents/Info.plist")
             var source = NativeUpdateSource(app: app, kind: "application")
             if FS.exists(app.path + "/Contents/_MASReceipt/receipt") { source.kind = "appStore" }
