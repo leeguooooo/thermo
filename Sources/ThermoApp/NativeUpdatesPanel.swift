@@ -33,14 +33,14 @@ final class NativeUpdatesModel: ObservableObject {
     private let read: @Sendable (ScanCancellation) -> NativeUpdateSourcesReport
     private let checker: @Sendable (NativeUpdateSource) async -> NativeUpdateCheck
     private let installer: @Sendable (NativeUpdateCheck) async -> NativeInstallResult
-    private let restorer: @Sendable (String) -> NativeInstallResult
+    private let restorer: @Sendable (NativeUpdateReceipt) -> NativeInstallResult
     private let recoveryReader: @Sendable () -> NativeRecoveryReport
 
     init(read: (@Sendable (ScanCancellation) -> [NativeUpdateSource])? = nil,
          discovery: (@Sendable (ScanCancellation) -> NativeUpdateSourcesReport)? = nil,
          checker: @escaping @Sendable (NativeUpdateSource) async -> NativeUpdateCheck = { await NativeAppUpdates.check($0) },
          installer: @escaping @Sendable (NativeUpdateCheck) async -> NativeInstallResult = { await NativeUpdateTransaction.installAvailable($0) },
-         restorer: @escaping @Sendable (String) -> NativeInstallResult = { NativeUpdateTransaction.restore($0) },
+         restorer: @escaping @Sendable (NativeUpdateReceipt) -> NativeInstallResult = { NativeUpdateTransaction.restore($0.id, review: $0) },
          recoveryReader: @escaping @Sendable () -> NativeRecoveryReport = { NativeUpdateTransaction.recovery() }) {
         self.read = discovery ?? { token in
             if let read { return .init(sources: read(token), cancelled: token.isCancelled) }
@@ -205,7 +205,7 @@ final class NativeUpdatesModel: ObservableObject {
         recoveryLoaded = false
         let restore = self.restorer
         Task.detached(priority: .utility) {
-            let result = restore(record.id)
+            let result = restore(record)
             await MainActor.run {
                 self.installResult = result; self.message = tr(result.message)
                 self.installing = false; self.refreshRecovery(); self.load(preservingMessage: true)

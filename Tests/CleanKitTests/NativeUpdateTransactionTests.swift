@@ -641,3 +641,62 @@ extension NativeUpdateTransactionTests {
         }
     }
 }
+
+extension NativeUpdateTransactionTests {
+    func testRecoveryCannotRetargetTheApplicationAfterUserReview() throws {
+        let prepared = try prepared()
+        let installed = NativeUpdateTransaction.commit(prepared, home: home, processes: { .init(entries: []) }, afterSwap: {})
+        let reviewed = try XCTUnwrap(installed.receipt)
+        let other = home + "/Applications/Other.app"
+        try FileManager.default.copyItem(atPath: original, toPath: other)
+        XCTAssertEqual(try NativeBundleValidation.facts(other).seal, reviewed.replacement.seal)
+        var changed = reviewed
+        changed.target = other
+        changed.replacementID = try XCTUnwrap(FileIdentity.of(other))
+        try NativeUpdateTransaction.save(changed, home: home)
+        let result = NativeUpdateTransaction.recover(reviewed.id, home: home, review: reviewed, processes: { .init(entries: []) })
+        XCTAssertEqual(result.outcome, "failed", "A record changed after confirmation must be reviewed again")
+        XCTAssertEqual(build(original), "200")
+        XCTAssertEqual(build(other), "200", "Never restore a different target from an old confirmation")
+        XCTAssertEqual(build(reviewed.backup), "100")
+        let fresh = try NativeUpdateTransaction.load(reviewed.id, home: home)
+        let restored = NativeUpdateTransaction.recover(fresh.id, home: home, review: fresh, processes: { .init(entries: []) })
+        XCTAssertEqual(restored.outcome, "succeeded", restored.message)
+        XCTAssertEqual(build(original), "200"); XCTAssertEqual(build(other), "100")
+        try NativeUpdateTransaction.discard(prepared, home: home)
+    }
+}
+
+extension NativeUpdateTransactionTests {
+    func testRecoveryRecordChangeDuringLiveChecksStopsBeforeSwap() throws {
+        let installed = NativeUpdateTransaction.commit(try prepared(), home: home, processes: { .init(entries: []) }, afterSwap: {})
+        let reviewed = try XCTUnwrap(installed.receipt)
+        var changed = false
+        let result = NativeUpdateTransaction.recover(reviewed.id, home: home, review: reviewed, processes: {
+            if !changed {
+                changed = true; var external = reviewed; external.original.version = "external-version"
+                try! NativeUpdateTransaction.save(external, home: self.home)
+            }
+            return .init(entries: [])
+        })
+        XCTAssertEqual(result.outcome, "failed"); XCTAssertEqual(build(original), "200")
+        XCTAssertEqual(build(reviewed.backup), "100")
+        XCTAssertEqual(try NativeUpdateTransaction.load(reviewed.id, home: home).original.version, "external-version")
+    }
+    func testAlreadyRestoredPathDoesNotOverwriteAChangedRecord() throws {
+        let installed = NativeUpdateTransaction.commit(try prepared(), home: home, processes: { .init(entries: []) }, afterSwap: {})
+        let id = try XCTUnwrap(installed.receipt).id
+        XCTAssertEqual(NativeUpdateTransaction.recover(id, home: home, processes: { .init(entries: []) }).outcome, "succeeded")
+        let reviewed = try NativeUpdateTransaction.load(id, home: home)
+        var changed = false
+        let result = NativeUpdateTransaction.recover(id, home: home, review: reviewed, processes: {
+            if !changed {
+                changed = true; var external = reviewed; external.phase = "unconfirmed"
+                try! NativeUpdateTransaction.save(external, home: self.home)
+            }
+            return .init(entries: [])
+        })
+        XCTAssertEqual(result.outcome, "failed"); XCTAssertEqual(build(original), "100")
+        XCTAssertEqual(try NativeUpdateTransaction.load(id, home: home).phase, "unconfirmed")
+    }
+}

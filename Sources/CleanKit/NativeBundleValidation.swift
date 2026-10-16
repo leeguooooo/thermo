@@ -4,7 +4,7 @@ import Darwin
 import Foundation
 import Security
 
-struct NativeBundleFacts: Codable, Sendable {
+struct NativeBundleFacts: Codable, Sendable, Equatable {
     var bundleID: String
     var version: String
     var build: String

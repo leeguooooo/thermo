@@ -111,9 +111,9 @@ struct AppsCommand {
                 throw CLIError("usage: thermo apps updates recovery [inspect ID | restore ID] [--dry-run] [--yes]")
             }
             if args.has("dry-run") { if args.has("json") { print(Export.json(record)) } else { out([record.target, record.backup]) }; return }
-            guard try approveNative([record.target, record.installedVersion + " → " + record.previousVersion,
+            guard try approveNative([record.target, record.backup, record.installedVersion + " → " + record.previousVersion,
                                      tr("Recovery refuses changed applications and preserves both versions.")]) else { return }
-            let result = NativeUpdateTransaction.restore(record.id)
+            let result = NativeUpdateTransaction.restore(record.id, review: record)
             if args.has("json") { print(Export.json(result)) } else { out([tr(result.message)]) }
             if result.outcome != "succeeded" { throw CLIError(tr(result.message)) }
             return

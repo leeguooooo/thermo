@@ -254,7 +254,7 @@ Sparkle 检查比较构建号，区分完整包、增量包、测试渠道、系
 
 有嵌入 Ed25519 公钥的应用，其已签名 ZIP 或受支持的 DMG 更新可点击「在 Thermo 中安装」。确认后重查 feed，下载至私有目录，验证归档签名、代码签名、发布者、Bundle ID、版本、构建号、目录结构和实际 Mach-O 架构，再原子替换。原生 Apple 芯片版本不会被 Intel-only 包覆盖。替换后再次核实新应用和保留副本；失败时只在对象身份未变化且备份仍有效的情况下回滚，不覆盖其他进程换入的对象。
 
-「恢复记录」以及历史入口可恢复未再变化的已安装应用；两份版本均保留。`thermo apps updates install NAME --dry-run --json` 离线预览来源，去掉 `--dry-run` 后检查并确认安装，`--yes` 用于非交互执行。`thermo apps updates recovery --json` 查看记录，`recovery restore ID --dry-run` 预览恢复，确认后去掉 `--dry-run` 执行。记录损坏或无法读取会显示问题，不当作空历史。
+「恢复记录」以及历史入口可恢复未再变化的已安装应用；两份版本均保留。`thermo apps updates install NAME --dry-run --json` 离线预览来源，去掉 `--dry-run` 后检查并确认安装，`--yes` 用于非交互执行。`thermo apps updates recovery --json` 查看记录，`recovery restore ID --dry-run` 预览恢复，确认后去掉 `--dry-run` 执行。记录损坏或无法读取会显示问题，不当作空历史。 App 和 CLI 的恢复确认会绑定当次审阅的完整记录，包括目标、备份、版本与身份；记录在等待确认或执行检查期间变化时，必须重新读取并审阅。CLI 确认会列出备份路径；`--yes` 授权本次调用读取的记录，单独的 `--dry-run` 不会锁定另一调用。
 
 准备阶段无法确认镜像清理时，应用尚未由 Thermo 替换。新结果的 `preservedWorkspace` 给出保留目录，`workspaceRecordSaved` 表示是否写入了可重开后查找的记录。恢复列表的可选 `workspaces` 与应用版本 `records` 分开；`thermo apps updates recovery inspect ID --json` 只核对并返回保留目录，不执行版本恢复、卸载镜像或删除文件。界面可从「恢复记录」或历史入口查看文件，也可打开恢复目录检查旧版遗留但没有记录的文件。记录写入失败会显示提示和可保留的路径。 安装完成后的准备目录清理若失败，保留原安装结果，并另行返回 `cleanupIssue` 和检查目录；不会因临时文件清理失败就自动回滚已确认的应用版本。 下载目录也使用相同的身份检查和异常记录；同一次操作保留多处目录时，额外路径位于可选 `additionalPreservedWorkspaces`，每项分别包含 `workspace` 与 `recorded`，不能只读取旧的单目录字段。记录的可选 `kind=download` 只允许对应 `download-UUID` 目录，旧记录缺省仍为准备目录。
 

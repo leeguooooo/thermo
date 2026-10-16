@@ -1,0 +1,91 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "a0c8a33",
+  "sourceSHA256": {
+    "Sources/CleanKit/NativeUpdateTransaction.swift": "81fb26e71b2b94753afe58bfe1d6f27aa80afc89ed7034bc22c5fa0737c2fb7a",
+    "Sources/CleanKit/NativeBundleValidation.swift": "d1a061ac961f9ee2b1e4efc7bc7bf17db773989c5a58cf89cf70b78297c2339b",
+    "Sources/ThermoApp/NativeUpdatesPanel.swift": "acc6414cd7464e5c9700026f04484055b28c529ada278cd186db72fd56c89e68",
+    "Sources/thermo/Apps.swift": "befe108b37e257c3ff790989997df14b0d4899656083bbd0ad87152e20b52d5a",
+    "Sources/ThermoL10n/ZhHans.swift": "476f2f34c3400b001cecd92b6335926ded4e447364749ecee9b3b53281c06fcf",
+    "Tests/CleanKitTests/NativeUpdateTransactionTests.swift": "212a6f7f98d0013ae054a2bc25c7f79739e6361f728ff1f012b81ab7bea5c7db",
+    "Tests/ThermoAppTests/NativeRestoreReviewTests.swift": "9eae69eecb7f690f17d72fd001ebd46a5121d79ee5f4b53ebc40be7f2fa4c342",
+    "scripts/verify-native-restore-review.swift": "2bf96ec7a4f6b14703c053868adbcbc34e4298c2b2218e202554bc1946bdf316"
+  },
+  "baseline": {
+    "tests": 1,
+    "failedAssertions": 3,
+    "observedOutcome": "succeeded",
+    "observedUnreviewedOtherBuild": "100",
+    "observedBackupBuild": "200",
+    "logSHA256": "56a61b710383db2182cad0eebb2ad2524b04510bcb8e5ba23d49840099343d6b",
+    "appsWereOwnedSignedFixtures": true
+  },
+  "newTests": {
+    "backendReceiptReview": 3,
+    "modelWholeConfirmedReceipt": 1
+  },
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 63,
+      "ThermoAppTests": 192,
+      "CleanKitTests": 666,
+      "AgentCoreTests": 34
+    },
+    "total": 1069,
+    "failures": 0,
+    "logSHA256": "05688392f9da77a9c5a9bc32e77ac8c0786c94c3926444c6e4b2bdad3e3c931a",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ]
+  },
+  "finalModelRefinement": {
+    "tests": 1,
+    "failures": 0,
+    "oldReviewPreservedEvenWithNewPublishedList": true,
+    "logSHA256": "d9767fe0490cb732570a3dac5c537a5cc66fcdce6eafc489c1dd4fd5766d60af",
+    "revisionBoundary": "Only model test setup strengthened after full regression; production code unchanged"
+  },
+  "nativeCLIConfirmationWait": {
+    "promptShowedOriginalTargetAndBackup": true,
+    "recordChangedWhileWaiting": true,
+    "staleConfirmationExit": 2,
+    "changedRecordPreservedOnRefusal": true,
+    "beforeFreshReview": {
+      "targetBuild": "200",
+      "otherBuild": "200",
+      "backupBuild": "100",
+      "phase": "installed"
+    },
+    "freshYesInvocationExit": 0,
+    "freshOutcome": "succeeded",
+    "afterFreshReview": {
+      "targetBuild": "200",
+      "otherBuild": "100",
+      "backupBuild": "200",
+      "phase": "restored"
+    },
+    "outputSHA256": "304f7bf3f1df5fb03e1271ab3dbd1a65f12c13628526f37dd3a7e2f23f89030a",
+    "stderrSHA256": "adfa2e2c6d8bc6d9c3eec87de6e1936f7617eaeba57cf010117c74f0817ad5e2",
+    "allCLIProcessesExited": true,
+    "networkUsed": false,
+    "realInstalledAppsChanged": false
+  },
+  "fixtureExecutableSHA256": "782b1a5b6f9c52de265bdf5c19f74e3c03724d054c5f2de6b316ecdcfe65ea1c",
+  "setupLogSHA256": "fff16e3b8babb3b1b170b7553ae76cbb11b6d83f9640107f11689166deea61d8",
+  "cleanup": {
+    "allFixtureProcessesExited": true,
+    "openProcessCount": 0,
+    "ownedWorkspaceRemoved": true
+  },
+  "limits": [
+    "Review compares every decoded operation field, not byte-for-byte JSON formatting or unknown unused fields",
+    "Record checks and app exchange are not an atomic filesystem transaction against uncooperative external writers",
+    "Legacy direct library restore without review binds to the record read at invocation; production confirmation callers supply the full reviewed record",
+    "CLI --yes authorizes that invocation; a separate dry-run does not bind later invocations",
+    "Visible confirmation UI layout unchanged; model and actual CLI PTY flow verified, no new visible-window QA",
+    "Owned ad-hoc signed fixture apps only; no vendor network, root helper, hardware or real installed-app changes",
+    "No push or release; overall Mole parity remains unproven"
+  ]
+}

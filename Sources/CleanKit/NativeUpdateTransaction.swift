@@ -13,7 +13,7 @@ public struct PreparedNativeUpdate: Sendable {
     let workspaceID: String
 }
 
-public struct NativeUpdateReceipt: Codable, Sendable, Identifiable {
+public struct NativeUpdateReceipt: Codable, Sendable, Identifiable, Equatable {
     public var id: String
     public var target: String
     public var backup: String
@@ -374,11 +374,11 @@ public enum NativeUpdateTransaction {
         return receipt
     }
 
-    public static func restore(_ id: String, home: String = NSHomeDirectory()) -> NativeInstallResult {
-        recover(id, home: home, processes: { ProcessTable.current(.init(cpu: false)) })
+    public static func restore(_ id: String, home: String = NSHomeDirectory(), review: NativeUpdateReceipt? = nil) -> NativeInstallResult {
+        recover(id, home: home, review: review, processes: { ProcessTable.current(.init(cpu: false)) })
     }
 
-    static func recover(_ id: String, home: String, processes: () -> ProcessTable) -> NativeInstallResult {
+    static func recover(_ id: String, home: String, review: NativeUpdateReceipt? = nil, processes: () -> ProcessTable) -> NativeInstallResult {
         var result = NativeInstallResult(outcome: "failed", message: "The previous app was not restored")
         defer {
             OperationJournal.record(OperationRecord(feature: "apps", action: "nativeRestore", subject: result.receipt?.target,
@@ -387,9 +387,17 @@ public enum NativeUpdateTransaction {
         }
         do {
             var record = try load(id, home: home)
+            let expected = review ?? record
+            func checkReview() throws {
+                guard record == expected, try load(id, home: home) == expected else {
+                    throw failure("Native update recovery record changed. Refresh recovery and review it again.")
+                }
+            }
+            try checkReview()
             result.receipt = record
             let lock = try TargetLock(target: record.target, home: home)
             defer { withExtendedLifetime(lock) {} }
+            try checkReview()
             if let why = targetRefusal(record.target, home: home, processes: processes()) { throw failure(why) }
             guard AppUninstaller.runningProcess(in: [record.backup], processes: processes()) == nil else { throw failure("Quit the preserved app before recovery") }
             let parent = try Parent((record.target as NSString).deletingLastPathComponent)
@@ -397,6 +405,7 @@ public enum NativeUpdateTransaction {
             let backup = ".thermo-update-" + record.id + "/previous.app"
             if parent.entry(name) == record.originalID,
                try NativeBundleValidation.facts(record.target).seal == record.original.seal {
+                try checkReview()
                 record.phase = "restored"; try save(record, home: home)
                 result.outcome = "succeeded"; result.message = "The original application is already in place"; result.receipt = record
                 return result
@@ -406,6 +415,7 @@ public enum NativeUpdateTransaction {
                   try NativeBundleValidation.facts(record.backup).seal == record.original.seal else {
                 throw failure("The installed or preserved app changed; recovery will not overwrite it")
             }
+            try checkReview()
             record.phase = "restoring"; try save(record, home: home)
             try parent.swap(backup, name)
             do {
