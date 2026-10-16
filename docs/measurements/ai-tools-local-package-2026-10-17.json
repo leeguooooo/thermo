@@ -1,0 +1,270 @@
+{
+  "generated": "2026-10-16T21:50:56.813080+00:00",
+  "sourceCommit": "fb0aeee6d6c31109f34966d39fd96b08f7f4c606",
+  "scope": "Local release-configuration universal artifacts with ad-hoc signatures, no notarization, installation, appcast or publication. x86_64 execution is under Rosetta on Apple Silicon, not real Intel hardware.",
+  "artifacts": {
+    "thermo": {
+      "sha256": "0702b8ddfadab86312c737ce97ea904a0d62590ca860097050703092918df28e",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "bytes": 33673472
+    },
+    "thermo-helper": {
+      "sha256": "3ff6fdd88f34c6a64059fb84e9fb060825cf33a95008b84708eceec9a64892ae",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "bytes": 2531520
+    },
+    "Thermo.app/Contents/MacOS/Thermo": {
+      "sha256": "a2b1232d488e59cf637fbbe2bc93f53f792f3f82f6a1b89af42613ad7a76e7a0",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "bytes": 59529408
+    },
+    "Thermo.app/Contents/Helpers/thermo": {
+      "sha256": "0702b8ddfadab86312c737ce97ea904a0d62590ca860097050703092918df28e",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "bytes": 33673472
+    },
+    "Thermo.app/Contents/Helpers/thermo-helper": {
+      "sha256": "3ff6fdd88f34c6a64059fb84e9fb060825cf33a95008b84708eceec9a64892ae",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "bytes": 2531520
+    }
+  },
+  "checks": [
+    {
+      "check": "signatures architectures and deployment target",
+      "passed": true,
+      "minimumMacOS": "13.0"
+    },
+    {
+      "check": "version entrypoint",
+      "execution": "native-arm64-universal",
+      "output": "thermo 1.1.24"
+    },
+    {
+      "check": "verify-skill-context.py",
+      "execution": "native-arm64-universal",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "userUniqueFiles": 1,
+        "projectUniqueFiles": 2,
+        "aliasesExcluded": 1,
+        "cacheFilesCountedSeparately": 1,
+        "coverageWarningPreserved": true
+      }
+    },
+    {
+      "check": "verify-skill-quality.py",
+      "execution": "native-arm64-universal",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "missingReferences": 2,
+        "sourceLinesVerified": true,
+        "emptyBodies": 1,
+        "identicalIndependentCopies": 2,
+        "examplesIgnored": true,
+        "noMCPExecution": true,
+        "noSkillChanges": true
+      }
+    },
+    {
+      "check": "verify-tool-usage.py",
+      "execution": "native-arm64-universal",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "mcpCalls": 2,
+        "skillCalls": 1,
+        "requestTokensKeptSeparate": true,
+        "privateTextExcluded": true,
+        "imageTokensUnknown": true
+      }
+    },
+    {
+      "check": "verify-reference-encoding.py",
+      "execution": "native-arm64-universal",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "encodings": [
+          "cl100k_base",
+          "o200k_base"
+        ],
+        "standaloneBinary": true,
+        "skillMCPAndUsageCountsMatchReference": true,
+        "modelNamesNotInferred": true
+      }
+    },
+    {
+      "check": "verify-task-comparison.py",
+      "execution": "native-arm64-universal",
+      "passed": true,
+      "result": {
+        "evidenceKind": "synthetic",
+        "checksPassed": 7,
+        "checks": [
+          "compiled JSON output retains outcomes and paired metric sample sizes",
+          "text output labels synthetic evidence and delta direction",
+          "missing metrics and unverified outcomes remain unknown in JSON and text",
+          "missing and changed-task pairs are excluded rather than compared",
+          "mixed cohorts and duplicate results fail closed",
+          "extra content is not exported or executed; unsupported options rejected",
+          "FIFO and directory inputs are rejected without waiting for data"
+        ],
+        "notVerified": [
+          "real model task effect",
+          "independent outcome authenticity",
+          "App integration",
+          "release installation"
+        ]
+      }
+    },
+    {
+      "check": "version entrypoint",
+      "execution": "rosetta-x86_64-thin",
+      "output": "thermo 1.1.24"
+    },
+    {
+      "check": "verify-skill-context.py",
+      "execution": "rosetta-x86_64-thin",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "userUniqueFiles": 1,
+        "projectUniqueFiles": 2,
+        "aliasesExcluded": 1,
+        "cacheFilesCountedSeparately": 1,
+        "coverageWarningPreserved": true
+      }
+    },
+    {
+      "check": "verify-skill-quality.py",
+      "execution": "rosetta-x86_64-thin",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "missingReferences": 2,
+        "sourceLinesVerified": true,
+        "emptyBodies": 1,
+        "identicalIndependentCopies": 2,
+        "examplesIgnored": true,
+        "noMCPExecution": true,
+        "noSkillChanges": true
+      }
+    },
+    {
+      "check": "verify-tool-usage.py",
+      "execution": "rosetta-x86_64-thin",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "mcpCalls": 2,
+        "skillCalls": 1,
+        "requestTokensKeptSeparate": true,
+        "privateTextExcluded": true,
+        "imageTokensUnknown": true
+      }
+    },
+    {
+      "check": "verify-reference-encoding.py",
+      "execution": "rosetta-x86_64-thin",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "encodings": [
+          "cl100k_base",
+          "o200k_base"
+        ],
+        "standaloneBinary": true,
+        "skillMCPAndUsageCountsMatchReference": true,
+        "modelNamesNotInferred": true
+      }
+    },
+    {
+      "check": "verify-task-comparison.py",
+      "execution": "rosetta-x86_64-thin",
+      "passed": true,
+      "result": {
+        "evidenceKind": "synthetic",
+        "checksPassed": 7,
+        "checks": [
+          "compiled JSON output retains outcomes and paired metric sample sizes",
+          "text output labels synthetic evidence and delta direction",
+          "missing metrics and unverified outcomes remain unknown in JSON and text",
+          "missing and changed-task pairs are excluded rather than compared",
+          "mixed cohorts and duplicate results fail closed",
+          "extra content is not exported or executed; unsupported options rejected",
+          "FIFO and directory inputs are rejected without waiting for data"
+        ],
+        "notVerified": [
+          "real model task effect",
+          "independent outcome authenticity",
+          "App integration",
+          "release installation"
+        ]
+      }
+    }
+  ],
+  "notarized": false,
+  "installed": false,
+  "published": false,
+  "validationRoot": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-ai-release-2xkmd4a_",
+  "x86DerivedCLI": {
+    "sha256": "444e33f9b7f599914b42b5342f179d79ef1e857117e6e959a5c3cd2bc175688c",
+    "architectures": [
+      "x86_64"
+    ],
+    "signatureVerifiedWithoutResigning": true
+  },
+  "runtimeQA": {
+    "bundleID": "dev.thermo.aiqa.release",
+    "scope": "Copy of the packaged release app with identity and launcher changed for isolated UI startup; original distribution bundle untouched. Main runtime and bundled frameworks are from the verified package.",
+    "fixtureHomeSharedWithOwnedDebugQA": true,
+    "excludedAttempt": "Initial copied launcher executed the older Debug QA runtime; detected by process path and excluded from Release acceptance.",
+    "correctedRuntimePath": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-ai-release-2xkmd4a_/Thermo Release QA.app/Contents/MacOS/ThermoRuntime",
+    "actualRuntimePIDObserved": 44014,
+    "actualPathVerified": true,
+    "skillsPageVisible": true,
+    "mcpSummaryPageVisible": true,
+    "versionVisible": "1.1.24 (330)",
+    "closed": true,
+    "originalAppPreserved": true,
+    "originalAppPID": 94672,
+    "instructionSectionHashesMatchingPackagedApp": {
+      "arm64": "f465f2a059523297c86fd85bec489c5ff86298c21a3bd362b0a62298e948cd77",
+      "x86_64": "6d5a509981dc499169f2251d9403367d7522870ec417c079f81bc4c0571b8906"
+    }
+  },
+  "bundle": {
+    "version": "1.1.24",
+    "build": "330",
+    "identifier": "dev.thermo.app",
+    "updateFeedAbsent": true
+  },
+  "signingKind": "ad-hoc",
+  "hostRuntimeEvidence": "arm64 host; native universal CLI and thin x86_64 CLI under already-available Rosetta. No real Intel machine was used.",
+  "remaining": [
+    "Developer ID signing and notarization",
+    "Real Intel hardware acceptance",
+    "Installed-app and automatic-update acceptance",
+    "Large-font/system text scaling acceptance",
+    "Full real MCP fleet and real task-effect evidence"
+  ],
+  "originalArtifactsUnchangedAfterRuntimeQA": true
+}

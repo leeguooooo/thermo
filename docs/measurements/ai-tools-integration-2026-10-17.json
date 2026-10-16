@@ -93,5 +93,5 @@
     "Full real installed MCP fleet and real task-effect acceptance",
     "Formal signing/notarization/install/update acceptance"
   ],
-  "packagingStatus": "A universal local build of the pre-layout-fix commit is in progress in an owned detached worktree. It is not the final fixed candidate, installed acceptance or publication."
+  "packagingStatus": "Local universal Release-configuration candidate at fb0aeee built and verified with ad-hoc signatures. Native and Rosetta CLI fixture checks and isolated packaged-runtime UI startup passed; see ai-tools-local-package-2026-10-17.json. No notarization, installation or publication."
 }
