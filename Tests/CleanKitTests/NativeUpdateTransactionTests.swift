@@ -242,6 +242,72 @@ final class NativeUpdateTransactionTests: XCTestCase {
         XCTAssertEqual(result.receipt?.phase, "installed")
         XCTAssertFalse(OperationJournal.read(home: home).contains { $0.action == "nativeUpdatePreparation" })
         XCTAssertNil(result.cleanupIssue)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: NativeUpdateTransaction.storage(home)).filter { $0.hasPrefix("download-") }.isEmpty)
+    }
+
+    func testPartialDownloadFailureClearsItsOwnFilesWithoutChangingTheApp() async throws {
+        let source = try XCTUnwrap(NativeAppUpdates.sources(apps: [try XCTUnwrap(AppUninstaller.read(original))]).first)
+        let feed = try feedData(), fixtureHome = home
+        let check = await NativeAppUpdates.check(source, fetcher: { _ in feed })
+        let result = await NativeUpdateTransaction.installAvailable(check, home: home, feedFetcher: { _ in feed }, downloader: { _, destination, _ in
+            try Data("partial".utf8).write(to: destination)
+            throw ArchiveFailure("injected partial download failure")
+        })
+        XCTAssertEqual(result.outcome, "failed"); XCTAssertNil(result.cleanupIssue); XCTAssertTrue(result.workspacePreservations.isEmpty)
+        XCTAssertEqual(build(original), "100")
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: NativeUpdateTransaction.storage(fixtureHome)).filter { $0.hasPrefix("download-") }.isEmpty)
+    }
+
+    func testDownloadDirectoryReplacementIsKeptAndReportedAfterDownloadError() async throws {
+        let source = try XCTUnwrap(NativeAppUpdates.sources(apps: [try XCTUnwrap(AppUninstaller.read(original))]).first)
+        let feed = try feedData()
+        let check = await NativeAppUpdates.check(source, fetcher: { _ in feed })
+        let result = await NativeUpdateTransaction.installAvailable(check, home: home, feedFetcher: { _ in feed }, downloader: { _, destination, _ in
+            let directory = destination.deletingLastPathComponent().path
+            try Data("partial".utf8).write(to: destination)
+            try FileManager.default.moveItem(atPath: directory, toPath: directory + "-kept")
+            try NativeUpdateTransaction.privateDirectory(directory)
+            try Data("replacement".utf8).write(to: URL(fileURLWithPath: directory + "/marker"))
+            throw ArchiveFailure("injected download error after replacement")
+        })
+        XCTAssertEqual(result.outcome, "failed"); XCTAssertNotNil(result.cleanupIssue)
+        let record = try XCTUnwrap(result.preservedWorkspace)
+        XCTAssertEqual(record.kind, "download"); XCTAssertEqual(result.workspaceRecordSaved, true)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: record.path + "/marker"))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: record.path + "-kept/payload.archive"))
+        XCTAssertThrowsError(try NativeUpdateTransaction.preservedWorkspaceURL(record, home: home))
+        XCTAssertEqual(build(original), "100")
+    }
+
+    func testBothCleanupFailuresRemainDiscoverableWithoutChangingInstallResult() throws {
+        let value = try prepared()
+        let first = NativeUpdateTransaction.installAndDiscard(value, home: home, cleanup: { _, _ in throw ArchiveFailure("prepared cleanup fault") })
+        let directory = try NativeUpdateTransaction.storage(home) + "/download-" + UUID().uuidString
+        try NativeUpdateTransaction.privateDirectory(directory)
+        let result = NativeUpdateTransaction.finishDownload(first, directory: directory, identity: try XCTUnwrap(FileIdentity.of(directory)),
+            source: value.source, home: home, remove: { _ in throw ArchiveFailure("download cleanup fault") })
+        XCTAssertEqual(result.outcome, "succeeded"); XCTAssertEqual(result.receipt?.phase, "installed")
+        XCTAssertEqual(result.workspacePreservations.count, 2)
+        XCTAssertTrue(result.workspacePreservations.allSatisfy(\.recorded))
+        for item in result.workspacePreservations { XCTAssertNoThrow(try NativeUpdateTransaction.preservedWorkspaceURL(item.workspace, home: home)) }
+        let report = NativeUpdateTransaction.recovery(home: home)
+        XCTAssertEqual(report.workspaces?.count, 2); XCTAssertEqual(report.records.count, 1)
+        XCTAssertEqual(build(original), "200"); XCTAssertEqual(build(try XCTUnwrap(result.receipt?.backup)), "100")
+    }
+
+    func testAdditionalCleanupRecordFailureDoesNotHideItsDirectPath() throws {
+        let value = try prepared()
+        let first = NativeUpdateTransaction.installAndDiscard(value, home: home, cleanup: { _, _ in throw ArchiveFailure("prepared cleanup fault") })
+        let id = UUID().uuidString, root = try NativeUpdateTransaction.storage(home)
+        let directory = root + "/download-" + id
+        try NativeUpdateTransaction.privateDirectory(directory)
+        try FileManager.default.createDirectory(atPath: root + "/workspace-" + id + ".json", withIntermediateDirectories: false)
+        let result = NativeUpdateTransaction.finishDownload(first, directory: directory, identity: try XCTUnwrap(FileIdentity.of(directory)),
+            source: value.source, home: home, remove: { _ in throw ArchiveFailure("download cleanup fault") })
+        XCTAssertEqual(result.outcome, "succeeded"); XCTAssertEqual(result.workspaceRecordSaved, true)
+        XCTAssertEqual(result.additionalPreservedWorkspaces?.first?.recorded, false)
+        XCTAssertEqual(result.additionalPreservedWorkspaces?.first?.workspace.path, directory)
+        XCTAssertNoThrow(try NativeUpdateTransaction.preservedWorkspaceURL(try XCTUnwrap(result.additionalPreservedWorkspaces?.first?.workspace), home: home))
     }
 
     func testCleanupFailureDoesNotChangeConfirmedInstallationResultOrLoseRecoveryCopy() throws {

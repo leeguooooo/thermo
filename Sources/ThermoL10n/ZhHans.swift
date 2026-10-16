@@ -2204,4 +2204,5 @@ let zhHans: [String: String] = [
     "No native update records exist": "暂无原生更新记录",
     "Prepared update file cleanup could not be confirmed; inspect the recorded workspace": "准备文件的清理结果未能确认，请检查记录的目录",
     "Native update file cleanup": "原生更新文件清理",
+    "Download file cleanup could not be confirmed; inspect the recorded workspace": "下载文件的清理结果未能确认，请检查记录的目录",
 ]

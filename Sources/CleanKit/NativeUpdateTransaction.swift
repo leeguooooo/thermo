@@ -34,6 +34,11 @@ public struct NativeInstallResult: Codable, Sendable {
     public var preservedWorkspace: NativePreservedWorkspace? = nil
     public var workspaceRecordSaved: Bool? = nil
     public var cleanupIssue: String? = nil
+    public var additionalPreservedWorkspaces: [NativeWorkspacePreservation]? = nil
+    public var workspacePreservations: [NativeWorkspacePreservation] {
+        (preservedWorkspace.map { [NativeWorkspacePreservation(workspace: $0, recorded: workspaceRecordSaved == true)] } ?? [])
+            + (additionalPreservedWorkspaces ?? [])
+    }
 }
 
 public struct NativeRecoveryReport: Codable, Sendable {

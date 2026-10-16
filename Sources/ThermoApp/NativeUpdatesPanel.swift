@@ -175,7 +175,7 @@ final class NativeUpdatesModel: ObservableObject {
 
     var allPreservedWorkspaces: [NativePreservedWorkspace] {
         var records = preservedWorkspaces
-        if let record = installResult?.preservedWorkspace, !records.contains(where: { $0.id == record.id }) { records.append(record) }
+        for entry in installResult?.workspacePreservations ?? [] where !records.contains(where: { $0.id == entry.id }) { records.append(entry.workspace) }
         return records
     }
 
@@ -224,13 +224,14 @@ struct NativeUpdatesPanel: View {
                 .font(.callout).foregroundStyle(.secondary)
             TextField(tr("Search"), text: $search).textFieldStyle(.roundedBorder).accessibilityLabel(tr("Search"))
             if let message = model.message { Text(message).font(.callout).foregroundStyle(.secondary) }
-            if let issue = model.installResult?.cleanupIssue { Text(tr(issue)).font(.callout).foregroundStyle(.orange) }
-            if let workspace = model.installResult?.preservedWorkspace {
-                Text(workspace.path).font(.caption).textSelection(.enabled)
-                if model.installResult?.workspaceRecordSaved == false {
+            if let issue = model.installResult?.cleanupIssue, model.installResult?.workspacePreservations.isEmpty == true { Text(tr(issue)).font(.callout).foregroundStyle(.orange) }
+            ForEach(model.installResult?.workspacePreservations ?? []) { entry in
+                Text(tr(entry.workspace.reason)).font(.caption).foregroundStyle(.orange)
+                Text(entry.workspace.path).font(.caption).textSelection(.enabled)
+                if !entry.recorded {
                     Text(tr("The workspace recovery record could not be saved; keep this path")).font(.caption).foregroundStyle(.orange)
                 }
-                Button(tr("Inspect preserved update files")) { model.inspect(workspace) }.disabled(model.installing)
+                Button(tr("Inspect preserved update files")) { model.inspect(entry.workspace) }.disabled(model.installing)
             }
             if model.exitRequested && model.installing {
                 Text(tr("Wait for installation and verification to finish before quitting Thermo.")).font(.callout).foregroundStyle(.orange)

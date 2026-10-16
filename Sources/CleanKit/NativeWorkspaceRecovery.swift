@@ -9,6 +9,13 @@ public struct NativePreservedWorkspace: Codable, Sendable, Identifiable {
     public var directoryIdentity: String
     public var reason: String
     public var created: Date
+    public var kind: String? = nil
+}
+
+public struct NativeWorkspacePreservation: Codable, Sendable, Identifiable {
+    public var id: String { workspace.id }
+    public var workspace: NativePreservedWorkspace
+    public var recorded: Bool
 }
 
 extension NativeUpdateTransaction {
@@ -18,9 +25,12 @@ extension NativeUpdateTransaction {
         var errorDescription: String? { workspace.reason + "\n" + workspace.path }
     }
 
-    static func preserveWorkspace(_ path: String, identity: String, target: String, reason: String, home: String) -> PreservedWorkspaceFailure {
-        let record = NativePreservedWorkspace(id: (path as NSString).lastPathComponent, target: target, path: path,
-                                               directoryIdentity: identity, reason: reason, created: Date())
+    static func preserveWorkspace(_ path: String, identity: String, target: String, reason: String, home: String,
+                                   kind: String? = nil) -> PreservedWorkspaceFailure {
+        let name = (path as NSString).lastPathComponent
+        let id = kind == "download" && name.hasPrefix("download-") ? String(name.dropFirst(9)) : name
+        let record = NativePreservedWorkspace(id: id, target: target, path: path,
+                                               directoryIdentity: identity, reason: reason, created: Date(), kind: kind)
         do {
             let root = try storage(home)
             try validateWorkspaceLocation(record, root: root)
@@ -53,7 +63,11 @@ extension NativeUpdateTransaction {
     }
 
     private static func validateWorkspaceLocation(_ record: NativePreservedWorkspace, root: String) throws {
-        guard UUID(uuidString: record.id) != nil, record.path == root + "/" + record.id,
+        guard record.kind == nil || record.kind == "prepared" || record.kind == "download" else {
+            throw failure("The preserved update workspace is missing or changed")
+        }
+        let name = (record.kind == "download" ? "download-" : "") + record.id
+        guard UUID(uuidString: record.id) != nil, record.path == root + "/" + name,
               !record.directoryIdentity.isEmpty, record.directoryIdentity.utf8.count <= 128 else {
             throw failure("The preserved update workspace is missing or changed")
         }
@@ -92,6 +106,30 @@ extension NativeUpdateTransaction {
         OperationJournal.record(OperationRecord(feature: "apps", action: "nativeUpdatePreparation", subject: source.app.name,
             outcome: workspace == nil ? "failed" : "partial", items: items,
             undo: workspace?.recorded == true ? .init(kind: "nativePreparation", ref: workspace!.workspace.id) : nil), home: home)
+        return result
+    }
+
+    static func preparationFailure(_ source: NativeUpdateSource, error: Error, home: String) -> NativeInstallResult {
+        if let workspace = error as? PreservedWorkspaceFailure {
+            return preparationFailure(source, message: "The app was not replaced; preserved update files need inspection", home: home, workspace: workspace)
+        }
+        if error is CancellationError { return preparationFailure(source, message: "Update preparation stopped; the installed app was not replaced", home: home) }
+        return preparationFailure(source, message: error.localizedDescription, home: home)
+    }
+
+    static func preservingCleanupFailure(_ original: NativeInstallResult, path: String, identity: String,
+                                         source: NativeUpdateSource, reason: String, home: String, kind: String? = nil) -> NativeInstallResult {
+        var result = original
+        let preserved = preserveWorkspace(path, identity: identity, target: source.app.path, reason: reason, home: home, kind: kind)
+        result.cleanupIssue = result.cleanupIssue ?? reason
+        if result.preservedWorkspace == nil {
+            result.preservedWorkspace = preserved.workspace; result.workspaceRecordSaved = preserved.recorded
+        } else {
+            result.additionalPreservedWorkspaces = (result.additionalPreservedWorkspaces ?? []) + [.init(workspace: preserved.workspace, recorded: preserved.recorded)]
+        }
+        OperationJournal.record(OperationRecord(feature: "apps", action: "nativeUpdateCleanup", subject: source.app.name,
+            outcome: "partial", items: [.init(target: path, status: "partial", detail: reason)],
+            undo: preserved.recorded ? .init(kind: "nativePreparation", ref: preserved.workspace.id) : nil), home: home)
         return result
     }
 }

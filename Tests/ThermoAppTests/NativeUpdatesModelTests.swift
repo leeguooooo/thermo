@@ -3,6 +3,20 @@
 import XCTest
 
 final class NativeUpdatesModelTests: XCTestCase {
+    @MainActor func testAllDirectPreservationPathsRemainVisibleWhenARecordCouldNotBeSaved() async throws {
+        let a = NativePreservedWorkspace(id: UUID().uuidString, target: "/fixture.app", path: "/first", directoryIdentity: "1:2", reason: "fixture", created: Date())
+        let b = NativePreservedWorkspace(id: UUID().uuidString, target: "/fixture.app", path: "/second", directoryIdentity: "1:3", reason: "fixture", created: Date(), kind: "download")
+        let model = NativeUpdatesModel(read: { _ in [] }, installer: { _ in
+            NativeInstallResult(outcome: "succeeded", message: "installed fixture", preservedWorkspace: a, workspaceRecordSaved: true,
+                cleanupIssue: "cleanup fixture", additionalPreservedWorkspaces: [.init(workspace: b, recorded: false)])
+        }, recoveryReader: { .init(workspaces: [a]) })
+        let source = NativeUpdateSource(app: InstalledApp(path: "/fixture.app", name: "Fixture", bundleID: "com.example.fixture"), kind: "sparkle")
+        model.install(.init(source: source, status: "available", message: "fixture"))
+        for _ in 0..<100 where model.installing || model.recoveryLoading { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(Set(model.allPreservedWorkspaces.map(\.id)), [a.id, b.id])
+        XCTAssertEqual(model.installResult?.outcome, "succeeded")
+        XCTAssertEqual(model.installResult?.workspacePreservations.count, 2)
+    }
     private final class Reads: @unchecked Sendable {
         let lock = NSLock(); private var value = 0
         func next() -> Int { lock.lock(); defer { lock.unlock() }; value += 1; return value }

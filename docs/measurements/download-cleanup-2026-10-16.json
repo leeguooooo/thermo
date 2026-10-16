@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-16",
+  "scope": "Download-directory cleanup and multiple independently preserved update paths",
+  "sourceSHA256": {
+    "Sources/CleanKit/NativeUpdateDownload.swift": "d25682d326a609779aef1828315e1af5d6d36df74bcde8388ef21a9e7ee2470b",
+    "Sources/CleanKit/NativeUpdateTransaction.swift": "8a27c340c81c59f18079e350bad1dc672bc5aa558de8b2996fef3d6ef2df21ab",
+    "Sources/CleanKit/NativeWorkspaceRecovery.swift": "22b6bf22434751c35cc51ce8491a9aa732fd3e2a8b6023197287d4619a057433",
+    "Sources/ThermoApp/NativeUpdatesPanel.swift": "c247b0ef31175fef4c9a170fa536ebb2a336501e58746b8ad15765a02f882e3f",
+    "Sources/thermo/Apps.swift": "0fc7dea213423685f6225ded3849aa02d3e5fb0728f1e23116acbaaf6dd769ab",
+    "Tests/CleanKitTests/NativeUpdateTransactionTests.swift": "cb31a24c1c9d5f52ac511657a76015a3727c42b22916dde163a729151ac6798a",
+    "Tests/CleanKitTests/NativeWorkspaceRecoveryTests.swift": "3c0d76addc5905fa8a059e142edadada2e535dce34ac20f43523690ebfd11037",
+    "Tests/ThermoAppTests/NativeUpdatesModelTests.swift": "f1b574f861bec671ac54ab7c12a51118a96d2ace03df5615e37bc820f24fdfd1"
+  },
+  "behavior": [
+    "Download cleanup runs before result is returned on success, failure and cancellation",
+    "Removal requires own storage parent, download-UUID shape, unchanged directory identity and non-alias location",
+    "Download record kind permits only its exact download-UUID namespace",
+    "Multiple preservation entries carry independent recorded flags and remain distinct from app version result",
+    "CLI and model expose direct paths even when a secondary record cannot be saved"
+  ],
+  "newTests": {
+    "NativeUpdateTransactionTests": 4,
+    "NativeWorkspaceRecoveryTests": 2,
+    "NativeUpdatesModelTests": 1
+  },
+  "targeted": {
+    "CleanKit": 48,
+    "ThermoApp": 8,
+    "total": 56,
+    "failures": 0,
+    "log": "/tmp/thermo-download-cleanup-targeted.log"
+  },
+  "validationBoundary": "Signed synthetic app updates run in owned temporary directories. Cleanup errors and path replacement are injected; no user data or real OS permission faults are used.",
+  "compatibility": "Optional kind/additionalPreservedWorkspaces fields; old prepared workspace kind nil and legacy single-preservation fields remain supported. workspacePreservations is an in-memory aggregate, not a duplicate JSON field.",
+  "limits": [
+    "No fresh visible GUI acceptance with two simultaneous pending paths; model and backend tests cover this case",
+    "Storage/journal persistence remains best effort under I/O failure",
+    "Directory checks do not eliminate all namespace races or seal deep contents",
+    "No crash/power-loss recovery acceptance",
+    "Historical source-image residual mechanism remains open",
+    "No real installed app replacement, root query, helper installation, hardware writes or release"
+  ],
+  "fullRegression": {
+    "CleanKit": 532,
+    "ThermoApp": 146,
+    "ThermoCLI": 57,
+    "ThermoKitExcludingHardwareTests": 114,
+    "AgentCore": 34,
+    "total": 883,
+    "failures": 0,
+    "log": "/tmp/thermo-download-cleanup-full-tests.log"
+  },
+  "build": "passed as part of full regression"
+}

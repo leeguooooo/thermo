@@ -44,18 +44,37 @@ extension NativeUpdateTransaction {
             if let why = targetRefusal(reviewed.source.app.path, home: home, processes: ProcessTable.current(.init(cpu: false))) { throw failure(why) }
             let root = try storage(home), directory = root + "/download-" + UUID().uuidString
             try privateDirectory(directory)
-            let identity = FileIdentity.of(directory)
-            defer { if FileIdentity.of(directory) == identity { try? FileManager.default.removeItem(atPath: directory) } }
-            let archive = URL(fileURLWithPath: directory + "/payload.archive")
-            if let downloader { try await downloader(url, archive, current.length) }
-            else { try await download(url, to: archive, length: current.length) }
-            try Task.checkCancellation()
-            let prepared = try prepare(fresh, archive: archive, home: home, reviewedArchiveSignature: expected.signature)
-            return installAndDiscard(prepared, home: home)
-        } catch let error as PreservedWorkspaceFailure {
-            return preparationFailure(reviewed.source, message: "The app was not replaced; preserved update files need inspection", home: home, workspace: error)
-        } catch is CancellationError { return preparationFailure(reviewed.source, message: "Update preparation stopped; the installed app was not replaced", home: home) }
-        catch { return preparationFailure(reviewed.source, message: error.localizedDescription, home: home) }
+            guard let identity = FileIdentity.of(directory) else { throw failure("The update workspace disappeared") }
+            let result: NativeInstallResult
+            do {
+                let archive = URL(fileURLWithPath: directory + "/payload.archive")
+                if let downloader { try await downloader(url, archive, current.length) }
+                else { try await download(url, to: archive, length: current.length) }
+                try Task.checkCancellation()
+                let prepared = try prepare(fresh, archive: archive, home: home, reviewedArchiveSignature: expected.signature)
+                result = installAndDiscard(prepared, home: home)
+            } catch { result = preparationFailure(reviewed.source, error: error, home: home) }
+            return finishDownload(result, directory: directory, identity: identity, source: reviewed.source, home: home)
+        } catch { return preparationFailure(reviewed.source, error: error, home: home) }
+    }
+
+    static func finishDownload(_ result: NativeInstallResult, directory: String, identity: String,
+                                source: NativeUpdateSource, home: String,
+                                remove: (String) throws -> Void = { try FileManager.default.removeItem(atPath: $0) }) -> NativeInstallResult {
+        do {
+            let root = try storage(home, create: false)
+            let name = (directory as NSString).lastPathComponent
+            guard (directory as NSString).deletingLastPathComponent == root, name.hasPrefix("download-"),
+                  UUID(uuidString: String(name.dropFirst(9))) != nil, FileIdentity.of(directory) == identity,
+                  URL(fileURLWithPath: directory).resolvingSymlinksInPath().path == directory else {
+                throw failure("The update workspace changed; it was preserved")
+            }
+            try remove(directory)
+            return result
+        } catch {
+            return preservingCleanupFailure(result, path: directory, identity: identity, source: source,
+                reason: "Download file cleanup could not be confirmed; inspect the recorded workspace", home: home, kind: "download")
+        }
     }
 
     static func installAndDiscard(_ prepared: PreparedNativeUpdate, home: String,
@@ -63,15 +82,8 @@ extension NativeUpdateTransaction {
         var result = install(prepared, home: home)
         do { try cleanup(prepared, home) }
         catch {
-            let reason = "Prepared update file cleanup could not be confirmed; inspect the recorded workspace"
-            let preserved = preserveWorkspace(prepared.workspace, identity: prepared.workspaceID,
-                target: prepared.source.app.path, reason: reason, home: home)
-            result.cleanupIssue = reason
-            result.preservedWorkspace = preserved.workspace
-            result.workspaceRecordSaved = preserved.recorded
-            OperationJournal.record(OperationRecord(feature: "apps", action: "nativeUpdateCleanup", subject: prepared.source.app.name,
-                outcome: "partial", items: [.init(target: prepared.workspace, status: "partial", detail: reason)],
-                undo: preserved.recorded ? .init(kind: "nativePreparation", ref: preserved.workspace.id) : nil), home: home)
+            result = preservingCleanupFailure(result, path: prepared.workspace, identity: prepared.workspaceID,
+                source: prepared.source, reason: "Prepared update file cleanup could not be confirmed; inspect the recorded workspace", home: home)
         }
         return result
     }

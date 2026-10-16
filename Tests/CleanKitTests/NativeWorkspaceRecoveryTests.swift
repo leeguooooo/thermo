@@ -75,6 +75,7 @@ final class NativeWorkspaceRecoveryTests: XCTestCase {
         let result = try JSONDecoder().decode(NativeInstallResult.self, from: Data(#"{"outcome":"failed","message":"old"}"#.utf8))
         XCTAssertNil(result.preservedWorkspace); XCTAssertNil(result.workspaceRecordSaved)
         XCTAssertNil(result.cleanupIssue)
+        XCTAssertNil(result.additionalPreservedWorkspaces)
         let report = try JSONDecoder().decode(NativeRecoveryReport.self, from: Data(#"{"records":[],"issues":[]}"#.utf8))
         XCTAssertNil(report.workspaces)
     }
@@ -83,5 +84,21 @@ final class NativeWorkspaceRecoveryTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: home + "/Library/Application Support/Thermo/app-updates"))
         _ = try preserved()
         XCTAssertEqual(try NativeUpdateTransaction.recoveryFolderURL(home: home).path, try NativeUpdateTransaction.storage(home))
+    }
+
+    func testDownloadWorkspaceKindIsPersistedAndInspectedWithinItsOwnNamespace() throws {
+        let root = try NativeUpdateTransaction.storage(home), path = root + "/download-" + UUID().uuidString
+        try NativeUpdateTransaction.privateDirectory(path)
+        let failure = NativeUpdateTransaction.preserveWorkspace(path, identity: try XCTUnwrap(FileIdentity.of(path)), target: "/fixture.app", reason: "fixture", home: home, kind: "download")
+        XCTAssertTrue(failure.recorded)
+        let record = try XCTUnwrap(NativeUpdateTransaction.recovery(home: home).workspaces?.first)
+        XCTAssertEqual(record.kind, "download"); XCTAssertEqual(try NativeUpdateTransaction.preservedWorkspaceURL(record, home: home).path, path)
+    }
+    func testWorkspaceKindCannotExpandOrChangeTheAllowedDirectory() throws {
+        var record = try preserved().workspace
+        record.kind = "download"
+        XCTAssertThrowsError(try NativeUpdateTransaction.preservedWorkspaceURL(record, home: home))
+        record.kind = "arbitrary"
+        XCTAssertThrowsError(try NativeUpdateTransaction.preservedWorkspaceURL(record, home: home))
     }
 }
