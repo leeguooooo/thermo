@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "0239c79",
+  "sourceSHA256": {
+    "Sources/CleanKit/TrashBatch.swift": "3764132c86212d1fe314eb04e122d7fb9764b3bb382e387d1dd1cd2dec1e80a0",
+    "Tests/CleanKitTests/TrashBatchRecordTests.swift": "e4ced33dec820d69f562b1cbccd2fbc3e75be5c919a1c37054ec03ae326048b9"
+  },
+  "before": {
+    "case": "owned FIFO at cleanup-batches/UUID.jsonl",
+    "command": "clean restore UUID --dry-run --json",
+    "timeoutSeconds": 1.5,
+    "timedOut": true,
+    "elapsedSeconds": 1.503,
+    "ownedCLIReaped": true
+  },
+  "after": [
+    {
+      "action": "restore",
+      "dryRun": true,
+      "exit": 1,
+      "elapsedSeconds": 0.013,
+      "timedOut": false
+    },
+    {
+      "action": "empty-trash",
+      "dryRun": true,
+      "exit": 1,
+      "elapsedSeconds": 0.006,
+      "timedOut": false
+    }
+  ],
+  "afterFIFOPreserved": true,
+  "temporaryDirectoriesRemoved": true,
+  "focused": {
+    "log": "/tmp/thermo-batch-record-focused.log",
+    "newRecordTests": 7,
+    "existingRestoreTests": 18,
+    "existingCLITests": 3,
+    "failures": 0
+  },
+  "full": {
+    "log": "/tmp/thermo-batch-record-full.log",
+    "result": "passed",
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 57,
+      "ThermoAppTests": 163,
+      "CleanKitTests": 566,
+      "AgentCoreTests": 34
+    },
+    "total": 934,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "logSHA256": "3911f6968cccba3d2ed8e972c8dd3232e891b4122ed06375b26ec3361243e0cf"
+  },
+  "limits": [
+    "No user Trash operations, root query, helper installation, hardware writes, installed-app replacement or release",
+    "No bound on an uninterruptible underlying filesystem call",
+    "Snapshot validation does not remove all later check-to-move races"
+  ]
+}

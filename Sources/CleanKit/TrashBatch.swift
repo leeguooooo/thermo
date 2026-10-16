@@ -20,6 +20,7 @@ public struct TrashBatch: Codable, Sendable {
 /// Records the actual Trash URLs returned by macOS. A manifest never authorizes a whole Trash.
 public enum TrashBatches {
     private static let lock = NSLock()
+    static let maximumRecordBytes = 8 * 1024 * 1024
     static func root(home: String) -> URL {
         URL(fileURLWithPath: home).appendingPathComponent("Library/Application Support/Thermo/cleanup-batches")
     }
@@ -36,16 +37,24 @@ public enum TrashBatches {
         NSError(domain: "Thermo", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
     }
     public static func load(_ id: String, home: String = NSHomeDirectory()) throws -> TrashBatch {
+        try load(id, home: home, afterRead: {})
+    }
+    static func load(_ id: String, home: String, afterRead: () throws -> Void) throws -> TrashBatch {
         let location = try url(id, home: home)
-        let fd = open(location.path, O_RDONLY | O_NOFOLLOW)
+        let fd = open(location.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
         guard fd >= 0 else { throw error("batch record could not be opened") }
         defer { close(fd) }
         var info = stat()
         guard fstat(fd, &info) == 0, info.st_uid == getuid(), (info.st_mode & S_IFMT) == S_IFREG, info.st_nlink == 1,
-              info.st_size <= 8 * 1024 * 1024, flock(fd, LOCK_SH | LOCK_NB) == 0 else { throw error("batch record is unavailable or busy") }
+              info.st_size >= 0, info.st_size <= maximumRecordBytes, flock(fd, LOCK_SH | LOCK_NB) == 0 else { throw error("batch record is unavailable or busy") }
         defer { flock(fd, LOCK_UN) }
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: false)
-        let data = try handle.readToEnd() ?? Data()
+        let data = try handle.read(upToCount: maximumRecordBytes + 1) ?? Data()
+        try afterRead()
+        var after = stat()
+        guard data.count == info.st_size, fstat(fd, &after) == 0,
+              AppDataReviewIdentity.text(info) == AppDataReviewIdentity.text(after),
+              currentRecord(fd, at: location) else { throw error("batch record changed during reading") }
         guard data.last == 10 else { throw error("incomplete batch journal; no deletion is authorized") }
         let lines = data.split(separator: 10)
         guard let first = lines.first else { throw error("empty batch journal") }
@@ -59,6 +68,14 @@ public enum TrashBatches {
         }
         return TrashBatch(id: id, created: created, entries: entries.values.sorted { $0.destination < $1.destination })
     }
+    private static func currentRecord(_ fd: Int32, at location: URL) -> Bool {
+        var opened = stat(), visible = stat()
+        return fstat(fd, &opened) == 0 && lstat(location.path, &visible) == 0 &&
+            opened.st_mode & S_IFMT == S_IFREG && opened.st_uid == getuid() && opened.st_nlink == 1 &&
+            visible.st_nlink == 1 && opened.st_size >= 0 && opened.st_size <= maximumRecordBytes &&
+            AppDataReviewIdentity.text(opened) == AppDataReviewIdentity.text(visible)
+    }
+
     static func birthIdentity(_ path: String) -> String? {
         var value = stat()
         guard lstat(path, &value) == 0 else { return nil }
@@ -72,33 +89,34 @@ public enum TrashBatches {
         let location = try url(id, home: home)
         try FileManager.default.createDirectory(at: root(home: home), withIntermediateDirectories: true,
                                                attributes: [.posixPermissions: 0o700])
-        let fd = open(location.path, O_WRONLY | O_APPEND | O_CREAT | O_NOFOLLOW, 0o600)
+        let fd = open(location.path, O_WRONLY | O_APPEND | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0o600)
         guard fd >= 0 else { throw error("batch journal could not be opened") }
         defer { close(fd) }
         var info = stat()
         guard fstat(fd, &info) == 0, info.st_uid == getuid(), (info.st_mode & S_IFMT) == S_IFREG, info.st_nlink == 1,
-              info.st_size <= 8 * 1024 * 1024, flock(fd, LOCK_EX | LOCK_NB) == 0 else { throw error("batch journal is unavailable or busy") }
+              info.st_size >= 0, info.st_size <= maximumRecordBytes, flock(fd, LOCK_EX | LOCK_NB) == 0 else { throw error("batch journal is unavailable or busy") }
         defer { flock(fd, LOCK_UN) }
-        guard fstat(fd, &info) == 0 else { throw error("batch journal changed") }
+        guard fstat(fd, &info) == 0, currentRecord(fd, at: location) else { throw error("batch journal changed") }
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         var data = Data()
         if info.st_size == 0 {
             data.append(try encoder.encode(JournalLine(id: id, created: Date(), entry: nil))); data.append(10)
         }
         data.append(try encoder.encode(JournalLine(id: nil, created: nil, entry: entry))); data.append(10)
-        guard info.st_size + Int64(data.count) <= 8 * 1024 * 1024 else { throw error("batch journal size limit reached") }
+        guard info.st_size + Int64(data.count) <= maximumRecordBytes else { throw error("batch journal size limit reached") }
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: false)
         try handle.write(contentsOf: data)
+        guard currentRecord(fd, at: location) else { throw error("batch journal changed") }
 
     }
     static func synchronize(_ id: String, home: String) throws {
         let location = try url(id, home: home)
-        let fd = open(location.path, O_RDWR | O_NOFOLLOW)
+        let fd = open(location.path, O_RDWR | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
         guard fd >= 0 else { throw error("batch journal could not be synchronized") }
         defer { close(fd) }
-        guard flock(fd, LOCK_EX | LOCK_NB) == 0 else { throw error("batch journal is busy") }
+        guard currentRecord(fd, at: location), flock(fd, LOCK_EX | LOCK_NB) == 0 else { throw error("batch journal is unavailable or busy") }
         defer { flock(fd, LOCK_UN) }
-        guard fsync(fd) == 0 else { throw error("batch journal could not be synchronized") }
+        guard fsync(fd) == 0, currentRecord(fd, at: location) else { throw error("batch journal could not be synchronized") }
     }
 
     /// Moves a hand-picked path to the Trash and records where macOS put it in batch `id`. The move
