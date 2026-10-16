@@ -264,6 +264,7 @@ final class SpaceLensModel: ObservableObject {
             pendingDuplicate = true; duplicateCancellation?.cancel(); stoppingDuplicates = true
             return
         }
+        clearDuplicateSelectionsForNewScan()
         duplicateInFlight = true
         duplicateStopped = false
         let token = ScanCancellation()
@@ -298,29 +299,76 @@ final class SpaceLensModel: ObservableObject {
         duplicateProgress = nil
     }
 
-    /// Picks every copy but the oldest one in each group.
-    func pickAllButOldest() {
-        for g in duplicates ?? [] {
-            for p in g.paths.dropFirst() where basket[p] == nil && refusal(p) == nil { toggleDuplicate(p, group: g) }
+    private func clearDuplicateSelectionsForNewScan() {
+        let selected = Array(selectionRequirements.keys)
+        for path in selected {
+            basket[path] = nil; selectionIdentities[path] = nil
+            selectionRequirements[path] = nil; selectionSizeStates[path] = nil
         }
+        if !selected.isEmpty {
+            outcomeIsWarning = false
+            outcome = tr("%1$@ previous duplicate selections cleared; choose files from the new comparison.", String(selected.count))
+        }
+    }
+
+    private struct DuplicateChoice {
+        let path: String, identity: String, keeper: String, keeperIdentity: String
+        let bytes: Int64?
+    }
+
+    private func duplicateChoices(in groups: [DuplicateGroup], only path: String? = nil) -> [DuplicateChoice]? {
+        guard !findingDuplicates else {
+            outcomeIsWarning = true
+            outcome = tr("Wait for the duplicate scan to finish before choosing files.")
+            return nil
+        }
+        func changed() {
+            outcomeIsWarning = true; outcome = tr("Duplicate comparison changed; compare the files again")
+        }
+        let currentGroups = Set(duplicates ?? [])
+        var choices: [DuplicateChoice] = []
+        for group in groups {
+            guard currentGroups.contains(group), group.paths.count > 1,
+                  let keeper = group.paths.first, let identities = group.reviewIdentities,
+                  let retained = identities[keeper] else { changed(); return nil }
+            let candidates = path.map { [$0] } ?? Array(group.paths.dropFirst())
+            guard candidates.allSatisfy({ $0 != keeper && group.paths.contains($0) }) else { changed(); return nil }
+            guard basket[keeper] == nil, !isCovered(keeper), !candidates.contains(where: isCovered) else {
+                outcomeIsWarning = true
+                outcome = tr("A copy to keep or a containing folder is already selected. Deselect overlapping items before choosing duplicates.")
+                return nil
+            }
+            guard ManualRemoval.reviewIdentity(keeper) == retained else { changed(); return nil }
+            for candidate in candidates where refusal(candidate) == nil {
+                guard let identity = identities[candidate], ManualRemoval.reviewIdentity(candidate) == identity else { changed(); return nil }
+                choices.append(DuplicateChoice(path: candidate, identity: identity, keeper: keeper,
+                                               keeperIdentity: retained, bytes: group.privateBytes?[candidate]))
+            }
+        }
+        return choices
+    }
+
+    private func applyDuplicateChoices(_ choices: [DuplicateChoice]) {
+        if !choices.isEmpty { outcome = nil; outcomeIsWarning = false }
+        for choice in choices {
+            basket[choice.path] = choice.bytes ?? 0
+            selectionIdentities[choice.path] = choice.identity
+            selectionRequirements[choice.path] = [choice.keeper: choice.keeperIdentity]
+            selectionSizeStates[choice.path] = choice.bytes == nil ? .unavailable : .complete
+        }
+    }
+
+    /// Review every choice first, including files already selected on another page.
+    func pickAllButOldest() {
+        guard !working, let choices = duplicateChoices(in: duplicates ?? []) else { return }
+        applyDuplicateChoices(choices)
     }
 
     func toggleDuplicate(_ path: String, group: DuplicateGroup) {
         guard !working else { return }
         if basket[path] != nil { toggle(path, bytes: 0); return }
-        guard let keeper = group.paths.first, path != keeper, let identities = group.reviewIdentities,
-              let selected = identities[path], let retained = identities[keeper],
-              ManualRemoval.reviewIdentity(path) == selected, ManualRemoval.reviewIdentity(keeper) == retained else {
-            outcomeIsWarning = true
-            outcome = tr("Duplicate comparison changed; compare the files again")
-            return
-        }
-        toggle(path, bytes: group.privateBytes?[path] ?? 0)
-        if basket[path] != nil {
-            selectionIdentities[path] = selected
-            selectionRequirements[path] = [keeper: retained]
-            selectionSizeStates[path] = group.privateBytes?[path] == nil ? .unavailable : .complete
-        }
+        guard let choices = duplicateChoices(in: [group], only: path) else { return }
+        applyDuplicateChoices(choices)
     }
 
     func clearBasket() { guard !working else { return }; basket = [:]; selectionIdentities = [:]; selectionRequirements = [:]; selectionSizeStates = [:] }
@@ -535,13 +583,13 @@ struct SpacePage: View {
 
     func tick(_ path: String, bytes: Int64, picked: Bool, refusal: String?, name: String, action: (() -> Void)? = nil) -> some View {
         Button { if let action { action() } else { model.toggle(path, bytes: bytes) } } label: {
-            Image(systemName: refusal != nil ? "lock.fill" : picked ? "checkmark.circle.fill" : "circle")
+            Image(systemName: refusal != nil && !picked ? "lock.fill" : picked ? "checkmark.circle.fill" : "circle")
                 .font(refusal != nil ? .caption : .body)
                 .foregroundStyle(picked ? Color.cyan : .white.opacity(refusal != nil ? 0.3 : 0.5))
                 .frame(width: 22, height: 22).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(refusal != nil || model.working || (model.isCovered(path) && model.basket[path] == nil))
+        .disabled((refusal != nil && !picked) || model.working || (model.isCovered(path) && model.basket[path] == nil))
         .help(refusal ?? (picked ? tr("Picked to move to the Trash") : tr("Pick to move to the Trash")))
         .accessibilityLabel(tr("Select %1$@", name))
         .accessibilityValue(picked ? tr("Selected") : tr("Not selected"))

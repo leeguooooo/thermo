@@ -77,7 +77,9 @@ final class SpaceLensModelTests: XCTestCase {
         let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache"), remove: { paths, sizes, _, incomplete, _, _ in
             XCTAssertEqual(paths, [extra]); XCTAssertNil(sizes[extra]); XCTAssertTrue(incomplete.contains(extra))
             return CleanResult(id: "fixture", trashed: true)
-        })
+        }, searchDuplicates: { _, _, _ in .init(groups: [group]) })
+        model.findDuplicates()
+        for _ in 0..<100 where model.findingDuplicates { try await Task.sleep(nanoseconds: 10_000_000) }
         model.toggleDuplicate(extra, group: group)
         XCTAssertEqual(model.sizeState(extra), .unavailable); XCTAssertEqual(model.basketBytes, 0)
         model.trash()

@@ -1,0 +1,19 @@
+Window: "", App: Thermo Selection QA.
+0 sheet Secondary Actions: Raise
+	1 container
+		2 image (selected) Description: 已选择, ID: checkmark.circle.fill
+		3 text 把 2.0 MB 移到废纸篓？ 你选的 1 项 会移到废纸篓。移动前逐个再检查一次，正被程序打开的会跳过。
+		4 scroll area
+			5 text 将移到废纸篓的内容
+			6 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+				7 text 2.0 MB  ~/Downloads/manual.bin
+		8 text 可以从废纸篓放回。移动记录在 ~/Library/Logs/Thermo/clean.log。
+		9 button 取消
+		10 button 移到废纸篓
+11 menu bar
+	12 Thermo Selection QA
+	13 编辑, ID: thermo.edit
+	14 显示, ID: thermo.view
+	15 窗口, ID: thermo.window
+
+The focused UI element is 0 sheet Secondary Actions: Raise

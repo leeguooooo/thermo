@@ -1,0 +1,89 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "715cca2",
+  "sourceSHA256": {
+    "Sources/ThermoApp/SpacePage.swift": "dce39c43bd7b9b07b9966b5a576fbe751fc2cce8f0e8a30c86cfa08065f5e59a",
+    "Sources/ThermoL10n/ZhHans.swift": "391eee29d80f46628cba2d35f362b0ebb71d0d49421c5f7c212ff194e55158a4",
+    "Tests/ThermoAppTests/DuplicateSelectionRefreshTests.swift": "f7daece64920814ee41472c988ec5ac8986bd8d7e895e5fc93ba8cef4bac4b6c",
+    "Tests/ThermoAppTests/SpaceLensModelTests.swift": "ec6645210c316bd8196cc1798f476045edfe1bd6fd56ef1309f5068e9e3b5bf7"
+  },
+  "beforeRegression": {
+    "log": "/tmp/thermo-duplicate-selection-before.log",
+    "tests": 3,
+    "failedAssertions": 7,
+    "expectedFailures": true,
+    "cases": [
+      "old duplicate selection survives rescan",
+      "manual selected duplicate lacks retained proof and new private size",
+      "keep-oldest does not explain selected keeper overlap"
+    ]
+  },
+  "newTests": 6,
+  "fullRegressionBeforeFinalUIFollowup": {
+    "log": "/tmp/thermo-duplicate-selection-full.log",
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 57,
+      "ThermoAppTests": 172,
+      "CleanKitTests": 577,
+      "AgentCoreTests": 34
+    },
+    "total": 954,
+    "failures": 0,
+    "logSHA256": "a89feb116f271220afadf143e71f066dc58beac4d290400705ad6f315ad59d5c"
+  },
+  "finalAppRetest": {
+    "log": "/tmp/thermo-duplicate-selection-final-app.log",
+    "count": 172,
+    "failures": 0,
+    "reason": "allow deselection of already-selected protected/reference rows, clear resolved duplicate selection notice, extend existing model assertion",
+    "logSHA256": "4f8f2f7374c1cd3247c4301296fa26fed71a88840e2734c04bd10879caa35b04"
+  },
+  "visibleQA": {
+    "isolatedHome": true,
+    "adHocIndependentBundle": true,
+    "finalBinaryUsedForAllSavedCaptures": true,
+    "unrelatedManualSelectionPreserved": true,
+    "duplicateSelectionClearedAtRescan": true,
+    "clearNoticeVisible": true,
+    "confirmationListedOnlyManualFile": true,
+    "allConfirmationsCancelled": true,
+    "selectedKeeperOverlapReportedBeforeConfirm": true,
+    "selectedKeeperCanBeDeselectedInDuplicatePage": true,
+    "unselectedKeeperRemainsLocked": true,
+    "subsequentDuplicateSelectionClearsResolvedWarning": true,
+    "allPayloadSHA256Unchanged": true,
+    "qaExitCodes": [
+      0,
+      0
+    ],
+    "workspaceRemoved": true,
+    "trashBatchCreated": false,
+    "captures": {
+      "duplicate-selection-refresh": {
+        "image": "duplicate-selection-refresh-2026-10-16.jpg",
+        "sha256": "717db9c79dccbbf4248c2fb6c8c0f684af29837ed7afa4e91c6356ec55bca9a1",
+        "accessibility": "duplicate-selection-refresh-2026-10-16.ax.txt"
+      },
+      "duplicate-selection-confirm": {
+        "image": "duplicate-selection-confirm-2026-10-16.jpg",
+        "sha256": "a25663ce5157e53062417fa87960b7e42fbc72d412dfbce3ae0c628658d1d7e2",
+        "accessibility": "duplicate-selection-confirm-2026-10-16.ax.txt"
+      },
+      "duplicate-selection-overlap-resolved": {
+        "image": "duplicate-selection-overlap-resolved-2026-10-16.jpg",
+        "sha256": "44a0eef2a4b6f06a2cca42a9ed7b29d28381fc1dbcda9783e97561f2eb9219c3",
+        "accessibility": "duplicate-selection-overlap-resolved-2026-10-16.ax.txt"
+      }
+    }
+  },
+  "excluded": [
+    "HardwareTests",
+    "AgentDoctorTests"
+  ],
+  "limits": [
+    "Cross-page retained-proof handoff and stale multi-group actions verified by injected removal/model tests; native moves were not repeated in this selection-only QA",
+    "Preflight metadata is not an atomic filesystem snapshot; execution still independently rechecks identities",
+    "No user files moved, root query, helper installation, hardware writes, installed-app replacement or release"
+  ]
+}

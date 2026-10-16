@@ -1,6 +1,9 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "%1$@ previous duplicate selections cleared; choose files from the new comparison.": "已清除上次比对的 %1$@ 项选择，请按新结果重新选择。",
+    "Wait for the duplicate scan to finish before choosing files.": "请等待重复文件扫描完成后再选择。",
+    "A copy to keep or a containing folder is already selected. Deselect overlapping items before choosing duplicates.": "保留副本或包含这些文件的文件夹已被选中，请先取消重叠选择，再选择重复副本。",
     "Could not read this folder": "无法读取此文件夹",
     "Could not inspect this file": "无法检查此文件",
     "This folder changed during the duplicate scan": "重复文件扫描期间，此文件夹发生了变化",
