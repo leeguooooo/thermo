@@ -112,6 +112,13 @@ struct ToolUsagePanel: View {
                         Text(tr("%1$@ calls · %2$@ results · %3$@ explicit errors · %4$@ unknown error status · %5$@ missing results",
                                 String(row.calls), String(row.completed), String(row.reportedErrors), String(row.unknownErrorStatus), String(row.missingResults)))
                             .font(.caption)
+                        if let rate = row.explicitErrorRate, let denominator = row.knownStatusResults {
+                            Text(tr("Explicit errors among known-status results: %1$@ / %2$@ (%3$@)", String(row.reportedErrors), String(denominator), String(format: "%.1f%%", rate * 100)))
+                                .font(.caption)
+                        } else {
+                            Text(tr("Explicit error rate unknown; no usable known-status denominator."))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                         Text(tr("Returned text %1$@ bytes / ≈%2$@ tokens · median %3$@ · P95 %4$@ · observed sum %5$@",
                                 String(row.returnedTextBytes), String(row.returnedTextEstimatedTokens), seconds(row.medianSeconds), seconds(row.p95Seconds), seconds(row.totalObservedSeconds)))
                             .font(.caption.monospaced()).textSelection(.enabled)
@@ -126,6 +133,10 @@ struct ToolUsagePanel: View {
                 }
                 if visibleRowLimit < rows.count {
                     Button(tr("Show more entries")) { visibleRowLimit = min(rows.count, visibleRowLimit + 8) }
+                }
+                if !rows.isEmpty {
+                    Text(tr("Error proportions exclude missing results and unknown error statuses; they do not measure task success."))
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 if !report.sessionTokens.isEmpty {
                     Text(tr("Request counters, not individual tool consumption")).font(.subheadline.weight(.medium))

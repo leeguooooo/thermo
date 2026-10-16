@@ -14,6 +14,40 @@ final class ToolUsageTests: XCTestCase {
     func output(_ id: String, _ value: Any, _ seconds: Double) -> [String: Any] {
         event("response_item", ["type": "function_call_output", "call_id": id, "output": value], seconds)
     }
+    func testExplicitErrorProportionUsesOnlyKnownStatusResults() throws {
+        var p = parser()
+        for id in ["error", "success", "unknown", "missing"] {
+            p.consume(call(id, "mcp__server__tool", 1), host: "codex", session: "a")
+        }
+        p.consume(output("error", ["isError": true, "content": []], 2), host: "codex", session: "a")
+        p.consume(output("success", ["isError": false, "content": []], 2), host: "codex", session: "a")
+        p.consume(output("unknown", "no explicit status", 2), host: "codex", session: "a")
+        let row = try XCTUnwrap(p.report().tools.first)
+        XCTAssertEqual(row.calls, 4)
+        XCTAssertEqual(row.completed, 3)
+        XCTAssertEqual(row.unknownErrorStatus, 1)
+        XCTAssertEqual(row.missingResults, 1)
+        XCTAssertEqual(row.knownStatusResults, 2)
+        XCTAssertEqual(row.explicitErrorRate, 0.5)
+    }
+    func testNoKnownStatusesIsUnknownRatherThanZeroErrors() {
+        var row = ToolUsageRow(id: "fixture", host: "codex", kind: "mcp", name: "tool")
+        XCTAssertEqual(row.knownStatusResults, 0)
+        XCTAssertNil(row.explicitErrorRate)
+        row.calls = 10; row.completed = 7; row.unknownErrorStatus = 7; row.missingResults = 3
+        XCTAssertEqual(row.knownStatusResults, 0)
+        XCTAssertNil(row.explicitErrorRate)
+        row.unknownErrorStatus = 0
+        XCTAssertEqual(row.explicitErrorRate, 0)
+    }
+    func testInconsistentCountersDoNotProduceAnErrorProportion() {
+        for (completed, unknown, errors) in [(2, 3, 0), (2, 1, 2), (-1, 0, 0), (2, -1, 0), (2, 0, -1)] {
+            var row = ToolUsageRow(id: "fixture", host: "codex", kind: "mcp", name: "tool")
+            row.completed = completed; row.unknownErrorStatus = unknown; row.reportedErrors = errors
+            XCTAssertNil(row.knownStatusResults)
+            XCTAssertNil(row.explicitErrorRate)
+        }
+    }
     func testConcurrentCallsUseIndependentPairsAndNeverReceiveRequestTokens() throws {
         var p = parser()
         for value in [call("a", "mcp__server__one", 1), call("b", "mcp__server__two", 2), output("b", "longer output", 3), output("a", "ok", 5)] {
