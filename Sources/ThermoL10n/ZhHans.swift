@@ -1,6 +1,17 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Could not read this folder": "无法读取此文件夹",
+    "Could not inspect this file": "无法检查此文件",
+    "This folder changed during the duplicate scan": "重复文件扫描期间，此文件夹发生了变化",
+    "This file changed during the duplicate scan": "重复文件扫描期间，此文件发生了变化",
+    "Could not compare this file, or it changed during the scan": "无法比对此文件，或文件在扫描期间发生了变化",
+    "Duplicate scan stopped. Displayed results may be out of date; run it again.": "重复文件扫描已停止，当前结果可能已过时，请重新扫描。",
+    "Duplicate scan is incomplete. Some locations could not be compared.": "重复文件扫描未完成，部分位置未能比对。",
+    "Locations requiring another check": "需要重新检查的位置",
+    "%1$@ additional scan issues were omitted.": "另有 %1$@ 项扫描问题未列出。",
+    "No confirmed duplicate groups in this incomplete scan.": "此次扫描未完成，目前没有已确认的重复文件组。",
+
     "Nothing was moved to the Trash.": "没有项目移到废纸篓。",
     "Kept by the whitelist: %1$@": "按白名单保留：%1$@",
     "Recovery record issue: %1$@": "恢复记录出现问题：%1$@",

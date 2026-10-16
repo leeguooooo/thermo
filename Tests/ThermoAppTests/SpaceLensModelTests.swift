@@ -4,6 +4,25 @@ import XCTest
 import ThermoL10n
 
 final class SpaceLensModelTests: XCTestCase {
+    @MainActor func testIncompleteDuplicateTotalsRemainLowerBounds() async throws {
+        let group = DuplicateGroup(hash: "fixture", size: 8, paths: ["/fixture/a", "/fixture/b"], reclaimable: 4, reclaimableState: .complete)
+        let issue = DuplicateScanReport.Issue(path: "/fixture/unreadable", reason: "fixture")
+        let model = SpaceLensModel(searchDuplicates: { _, _, _ in .init(groups: [group], issues: [issue]) })
+        model.findDuplicates()
+        for _ in 0..<100 where model.findingDuplicates { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(model.duplicateSizeText, AppSize.text(4, state: .incomplete))
+        XCTAssertEqual(model.duplicates?.count, 1)
+    }
+
+    @MainActor func testIncompleteDuplicateReportDoesNotBecomeAConfirmedEmptyResult() async throws {
+        let issue = DuplicateScanReport.Issue(path: "/fixture/unreadable", reason: "fixture read failure")
+        let model = SpaceLensModel(searchDuplicates: { _, _, _ in .init(groups: [], issues: [issue]) })
+        model.findDuplicates()
+        for _ in 0..<100 where model.findingDuplicates { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(model.duplicates?.count, 0); XCTAssertEqual(model.duplicateReport?.complete, false)
+        XCTAssertEqual(model.duplicateReport?.issues, [issue]); XCTAssertFalse(model.duplicateStopped)
+    }
+
     @MainActor func testRemovalFeedbackRetainsUnmovedSelectionsAndMarksFailure() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
         try FileManager.default.createDirectory(at: root.appendingPathComponent("Downloads"), withIntermediateDirectories: true)
@@ -35,7 +54,7 @@ final class SpaceLensModelTests: XCTestCase {
             XCTAssertEqual(paths, [extra]); XCTAssertEqual(sizes[extra], 0)
             XCTAssertEqual(reviewed[extra], ids[extra]); XCTAssertEqual(required, [keeper: ids[keeper]!])
             return CleanResult(id: "fixture", trashed: true)
-        }, searchDuplicates: { _, _, _ in [group] })
+        }, searchDuplicates: { _, _, _ in DuplicateScanReport(groups: [group]) })
         model.findDuplicates()
         for _ in 0..<100 where model.findingDuplicates { try await Task.sleep(nanoseconds: 10_000_000) }
         model.toggleDuplicate(keeper, group: group); XCTAssertTrue(model.basket.isEmpty)
@@ -152,7 +171,7 @@ final class SpaceLensModelTests: XCTestCase {
             XCTAssertTrue(roots.allSatisfy { $0.hasPrefix(root.path + "/") })
             let n = calls.next()
             if n == 1 { began.fulfill(); _ = release.wait(timeout: .now() + 5) } else { second.fulfill() }
-            return [DuplicateGroup(hash: "fixture", size: 1, paths: ["/scan\(n)/a", "/scan\(n)/b"], reclaimable: 1)]
+            return DuplicateScanReport(groups: [DuplicateGroup(hash: "fixture", size: 1, paths: ["/scan\(n)/a", "/scan\(n)/b"], reclaimable: 1)])
         })
         model.findDuplicates(); await fulfillment(of: [began], timeout: 2)
         model.stopDuplicates(); XCTAssertTrue(model.findingDuplicates); XCTAssertTrue(model.stoppingDuplicates)
@@ -169,13 +188,13 @@ final class SpaceLensModelTests: XCTestCase {
         defer { release.signal() }
         let model = SpaceLensModel(searchDuplicates: { _, _, _ in
             began.fulfill(); _ = release.wait(timeout: .now() + 5)
-            return [DuplicateGroup(hash: "fixture", size: 1, paths: ["/a", "/b"], reclaimable: 1)]
+            return DuplicateScanReport(groups: [DuplicateGroup(hash: "fixture", size: 1, paths: ["/a", "/b"], reclaimable: 1)])
         })
         model.findDuplicates(); await fulfillment(of: [began], timeout: 2)
         model.stopDuplicates(); XCTAssertTrue(model.findingDuplicates)
         release.signal()
         for _ in 0..<100 where model.findingDuplicates { try await Task.sleep(nanoseconds: 10_000_000) }
-        XCTAssertFalse(model.findingDuplicates); XCTAssertNil(model.duplicates)
+        XCTAssertFalse(model.findingDuplicates); XCTAssertNil(model.duplicates); XCTAssertTrue(model.duplicateStopped)
     }
 
     @MainActor func testRemovalCancelsQueuedDuplicateRefreshBeforeItCanRepopulateRows() async throws {
@@ -187,7 +206,7 @@ final class SpaceLensModelTests: XCTestCase {
         defer { release.signal() }
         let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache.json"), remove: { _, _, _, _, _, _ in CleanResult(id: "fixture", trashed: true) }, searchDuplicates: { _, _, _ in
             _ = calls.next(); began.fulfill(); _ = release.wait(timeout: .now() + 5)
-            return [DuplicateGroup(hash: "fixture", size: 1, paths: [file.path, "/b"], reclaimable: 1)]
+            return DuplicateScanReport(groups: [DuplicateGroup(hash: "fixture", size: 1, paths: [file.path, "/b"], reclaimable: 1)])
         })
         model.findDuplicates(); await fulfillment(of: [began], timeout: 2)
         model.findDuplicates(); model.toggle(file.path, bytes: 7); model.trash()

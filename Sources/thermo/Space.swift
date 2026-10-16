@@ -127,21 +127,28 @@ struct SpaceCommand {
 
     func dupes(_ roots: [String]) throws {
         let home = NSHomeDirectory()
-        let paths = roots.isEmpty ? ["Desktop", "Documents", "Downloads", "Movies", "Music", "Pictures"].map { home + "/" + $0 }
+        let paths = roots.isEmpty ? Duplicates.defaultRoots(home: home)
             : roots.map(Self.expand)
-        let groups = Duplicates.find(in: paths.filter { FileManager.default.fileExists(atPath: $0) }) { p in
+        let report = Duplicates.scan(in: paths) { p in
             progress(p.total > 0 ? "\(p.stage) \(p.done)/\(p.total)" : "\(p.stage) \(p.done)")
         }
         clearProgress()
-        if args.has("json") { print(Export.json(groups)); return }
+        if args.has("json") { print(Export.json(report)); if !report.complete { exit(1) }; return }
+        let groups = report.groups
         var lines: [String] = []
+        if !report.complete {
+            lines.append(style.yellow(tr("Duplicate scan is incomplete. Some locations could not be compared.")))
+            for issue in report.issues { lines.append(style.dim(FS.tilde(issue.path) + ": " + issue.reason)) }
+            if report.omittedIssueCount > 0 { lines.append(tr("%1$@ additional scan issues were omitted.", String(report.omittedIssueCount))) }
+        }
         for g in groups.prefix(args.has("all") ? .max : 25) {
             lines.append(style.bold(ByteFormat.string(g.size)) + style.dim("  ×\(g.paths.count)  " + tr("frees %1$@", AppSize.text(g.reclaimable, state: g.reclaimableState ?? .unavailable))))
             for (i, p) in g.paths.enumerated() { lines.append((i == 0 ? "  = " : "  + ") + FS.tilde(p)) }
         }
         let total = groups.reduce(Int64(0)) { $0 + $1.reclaimable }
-        lines.append(style.dim(tr("%1$@ sets of identical files; removing the extra copies (+) frees %2$@", String(groups.count), AppSize.text(total, state: AppSize.combined(groups.map { $0.reclaimableState ?? .unavailable }, bytes: total)))))
+        lines.append(style.dim(tr("%1$@ sets of identical files; removing the extra copies (+) frees %2$@", String(groups.count), AppSize.text(total, state: AppSize.combined(groups.map { $0.reclaimableState ?? .unavailable } + (report.complete ? [] : [.incomplete]), bytes: total)))))
         out(lines)
+        if !report.complete { exit(1) }
     }
 
     func trash(_ raw: [String]) throws {

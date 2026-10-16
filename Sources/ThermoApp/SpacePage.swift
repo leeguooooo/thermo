@@ -29,6 +29,8 @@ final class SpaceLensModel: ObservableObject {
     /// When Spotlight last saw each big file opened (nil inside: it does not know).
     @Published private(set) var lastOpened: [String: Date?] = [:]
     @Published private(set) var duplicates: [DuplicateGroup]?
+    @Published private(set) var duplicateReport: DuplicateScanReport?
+    @Published private(set) var duplicateStopped = false
     @Published private(set) var findingDuplicates = false
     @Published private(set) var stoppingDuplicates = false
     @Published private(set) var duplicateProgress: Duplicates.Progress?
@@ -41,7 +43,7 @@ final class SpaceLensModel: ObservableObject {
     private let readLastOpened: @Sendable (String) -> Date?
     private var duplicateCancellation: ScanCancellation?
     private var duplicateInFlight = false, pendingDuplicate = false
-    private let searchDuplicates: @Sendable ([String], ScanCancellation, ((Duplicates.Progress) -> Void)?) -> [DuplicateGroup]
+    private let searchDuplicates: @Sendable ([String], ScanCancellation, ((Duplicates.Progress) -> Void)?) -> DuplicateScanReport
     private let cache: URL
     private let measure: @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree
     private var selectionIdentities: [String: String] = [:]
@@ -53,8 +55,8 @@ final class SpaceLensModel: ObservableObject {
          measure: @escaping @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree = { SpaceLens.scan($0, cancellation: $1, progress: $2) },
          remove: @escaping @Sendable ([String], [String: Int64], String, Set<String>, [String: String], [String: String]) -> CleanResult = {
              ManualRemoval.trash($0, sizes: $1, home: $2, incompletePaths: $3, reviewIdentities: $4, requiredIdentities: $5)
-         }, searchDuplicates: @escaping @Sendable ([String], ScanCancellation, ((Duplicates.Progress) -> Void)?) -> [DuplicateGroup] = {
-             Duplicates.find(in: $0, cancellation: $1, progress: $2)
+         }, searchDuplicates: @escaping @Sendable ([String], ScanCancellation, ((Duplicates.Progress) -> Void)?) -> DuplicateScanReport = {
+             Duplicates.scan(in: $0, cancellation: $1, progress: $2)
          }, readLastOpened: @escaping @Sendable (String) -> Date? = { SpaceLens.lastOpened($0) }) {
         self.readLastOpened = readLastOpened
         self.root = root
@@ -131,7 +133,7 @@ final class SpaceLensModel: ObservableObject {
         scanGeneration = UUID(); needsRestoreRefresh = true; pendingRestoreRefresh = false
         cancellation?.cancel(); progress = nil
         if scanning { stopping = true }
-        stopDuplicates(); duplicates = nil
+        stopDuplicates(); duplicates = nil; duplicateReport = nil; duplicateStopped = false
         stopLastOpened(); lastOpenedGeneration = UUID(); lastOpened = [:]
         basket = [:]; selectionIdentities = [:]; selectionRequirements = [:]; selectionSizeStates = [:]
         tree = nil; outcome = nil; outcomeIsWarning = false
@@ -209,6 +211,7 @@ final class SpaceLensModel: ObservableObject {
                 return g
             }
         }
+        duplicateReport?.groups = duplicates ?? []
         var parts = ManualRemoval.feedback(result)
         outcomeIsWarning = !result.failed.isEmpty || !cacheCleared
         if !cacheCleared { parts.append(tr("The old space cache could not be cleared; scan again before using saved results")) }
@@ -248,6 +251,13 @@ final class SpaceLensModel: ObservableObject {
         lastOpenedCancellation?.cancel()
     }
 
+    var duplicateSizeText: String {
+        let groups = duplicates ?? [], bytes = groups.reduce(Int64(0)) { $0 + $1.reclaimable }
+        let states = groups.map { $0.reclaimableState ?? .unavailable } +
+            (duplicateReport?.complete == true && !duplicateStopped ? [] : [.incomplete])
+        return AppSize.text(bytes, state: AppSize.combined(states, bytes: bytes))
+    }
+
     func findDuplicates() {
         guard !working else { return }
         if duplicateInFlight {
@@ -255,16 +265,16 @@ final class SpaceLensModel: ObservableObject {
             return
         }
         duplicateInFlight = true
+        duplicateStopped = false
         let token = ScanCancellation()
         duplicateCancellation = token
         findingDuplicates = true
         stoppingDuplicates = false
         duplicateProgress = nil
-        let roots = ["Desktop", "Documents", "Downloads", "Movies", "Music", "Pictures"].map { root + "/" + $0 }
-            .filter { FileManager.default.fileExists(atPath: $0) }
+        let roots = Duplicates.defaultRoots(home: root)
         let search = searchDuplicates
         Task.detached(priority: .userInitiated) {
-            let groups = search(roots, token) { p in
+            let report = search(roots, token) { p in
                 Task { @MainActor in if self.duplicateCancellation === token && !token.isCancelled { self.duplicateProgress = p } }
             }
             await MainActor.run {
@@ -275,12 +285,13 @@ final class SpaceLensModel: ObservableObject {
                 self.stoppingDuplicates = false
                 self.duplicateProgress = nil
                 if pending { self.findDuplicates(); return }
-                if !token.isCancelled { self.duplicates = groups }
+                if !token.isCancelled { self.duplicateReport = report; self.duplicates = report.groups }
             }
         }
     }
 
     func stopDuplicates() {
+        if duplicateInFlight { duplicateStopped = true }
         duplicateCancellation?.cancel()
         pendingDuplicate = false
         stoppingDuplicates = duplicateInFlight
@@ -351,8 +362,11 @@ struct SpacePage: View {
             if model.tree == nil { model.scan() }
             if tab == .large { model.loadLastOpened() }
         }
-        .onChange(of: tab) { t in if t == .large { model.loadLastOpened() } else { model.stopLastOpened() } }
-        .onDisappear { model.stopLastOpened() }
+        .onChange(of: tab) { t in
+            if t == .large { model.loadLastOpened() } else { model.stopLastOpened() }
+            if t != .duplicates { model.stopDuplicates() }
+        }
+        .onDisappear { model.stopLastOpened(); model.stopDuplicates() }
         .sheet(isPresented: $confirming) {
             ConfirmSheet(title: tr("Move %1$@ to the Trash?", model.basketSizeText),
                          summary: tr("%1$@ you picked go to the Trash. Each one is checked again first; anything a program has open is skipped.",
@@ -632,13 +646,33 @@ struct SpacePage: View {
                             .font(.callout).foregroundStyle(.secondary)
                     }
                     .padding(.top, 20)
-                } else if let groups = model.duplicates {
-                    if groups.isEmpty {
-                        Label(tr("No duplicate files found."), systemImage: "checkmark.circle").foregroundStyle(.secondary).padding(.top, 30)
-                    } else {
-                        Text(tr("%1$@ could be freed by keeping one copy of each.", AppSize.text(groups.reduce(0) { $0 + $1.reclaimable }, state: AppSize.combined(groups.map { $0.reclaimableState ?? .unavailable }, bytes: groups.reduce(0) { $0 + $1.reclaimable }))))
-                            .font(.callout).foregroundStyle(.white.opacity(0.75))
-                        ForEach(groups) { duplicateCard($0) }
+                } else {
+                    if model.duplicateStopped {
+                        Label(tr("Duplicate scan stopped. Displayed results may be out of date; run it again."), systemImage: "pause.circle").foregroundStyle(.secondary)
+                    }
+                    if let report = model.duplicateReport, !report.complete {
+                        Label(tr("Duplicate scan is incomplete. Some locations could not be compared."), systemImage: "exclamationmark.triangle").foregroundStyle(.secondary)
+                        DisclosureGroup(tr("Locations requiring another check")) {
+                            ForEach(Array(report.issues.enumerated()), id: \.offset) { _, issue in
+                                Text(FSPath.tilde(issue.path) + ": " + issue.reason).font(.caption).textSelection(.enabled)
+                            }
+                            if report.omittedIssueCount > 0 {
+                                Text(tr("%1$@ additional scan issues were omitted.", String(report.omittedIssueCount))).font(.caption)
+                            }
+                        }
+                    }
+                    if let groups = model.duplicates {
+                        if groups.isEmpty {
+                            if model.duplicateReport?.complete == true && !model.duplicateStopped {
+                                Label(tr("No duplicate files found."), systemImage: "checkmark.circle").foregroundStyle(.secondary).padding(.top, 30)
+                            } else {
+                                Text(tr("No confirmed duplicate groups in this incomplete scan.")).foregroundStyle(.secondary)
+                            }
+                        } else {
+                            Text(tr("%1$@ could be freed by keeping one copy of each.", model.duplicateSizeText))
+                                .font(.callout).foregroundStyle(.white.opacity(0.75))
+                            ForEach(groups) { duplicateCard($0) }
+                        }
                     }
                 }
             }

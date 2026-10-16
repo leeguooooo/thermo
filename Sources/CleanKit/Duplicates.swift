@@ -19,6 +19,30 @@ public struct DuplicateGroup: Codable, Sendable, Identifiable, Hashable {
     public var reclaimableState: AppSizeState? = nil
 }
 
+public struct DuplicateScanReport: Codable, Sendable {
+    public struct Issue: Codable, Sendable, Hashable {
+        public var path: String
+        public var reason: String
+        public init(path: String, reason: String) { self.path = path; self.reason = reason }
+    }
+    public var groups: [DuplicateGroup]
+    public var roots: [String]
+    public var issues: [Issue]
+    public var omittedIssueCount: Int
+    /// Eligible regular files admitted to comparison after metadata checks.
+    public var eligibleFiles: Int
+    /// Attempted short-fingerprint comparisons, including refused reads.
+    public var comparisonAttempts: Int
+    public var cancelled: Bool
+    public var complete: Bool
+    public init(groups: [DuplicateGroup], roots: [String] = [], issues: [Issue] = [], omittedIssueCount: Int = 0,
+                eligibleFiles: Int = 0, comparisonAttempts: Int = 0, cancelled: Bool = false) {
+        self.groups = groups; self.roots = roots; self.issues = issues; self.omittedIssueCount = omittedIssueCount
+        self.eligibleFiles = eligibleFiles; self.comparisonAttempts = comparisonAttempts; self.cancelled = cancelled
+        complete = issues.isEmpty && omittedIssueCount == 0 && !cancelled
+    }
+}
+
 public enum Duplicates {
     /// Folders skipped by default: build output, dependencies, app data and version control, where
     /// identical files are expected and removing one breaks something.
@@ -34,19 +58,54 @@ public enum Duplicates {
         public var total: Int
     }
 
+    /// Compatibility projection; use scan to retain completeness and read issues.
     public static func find(in roots: [String], minimum: Int64 = 1 << 20, cancellation: ScanCancellation = ScanCancellation(),
                             progress: ((Progress) -> Void)? = nil) -> [DuplicateGroup] {
+        scan(in: roots, minimum: minimum, cancellation: cancellation, progress: progress).groups
+    }
+
+    /// Absent standard folders are outside the default scope; inaccessible ones remain reportable.
+    public static func defaultRoots(home: String = NSHomeDirectory()) -> [String] {
+        var info = stat()
+        guard stat(home, &info) == 0, info.st_mode & S_IFMT == S_IFDIR else { return [home] }
+        return ["Desktop", "Documents", "Downloads", "Movies", "Music", "Pictures"].map { home + "/" + $0 }.filter {
+            var value = stat()
+            return lstat($0, &value) == 0 || errno != ENOENT
+        }
+    }
+
+    /// Completeness refers to eligible files in the requested roots, with the documented exclusions.
+    public static func scan(in roots: [String], minimum: Int64 = 1 << 20, cancellation: ScanCancellation = ScanCancellation(),
+                            progress: ((Progress) -> Void)? = nil) -> DuplicateScanReport {
+        var issues: [DuplicateScanReport.Issue] = [], omittedIssues = 0
+        func issue(_ path: String, _ reason: String) {
+            let value = DuplicateScanReport.Issue(path: path, reason: reason)
+            guard !issues.contains(value) else { return }
+            if issues.count < 128 { issues.append(value) } else { omittedIssues += 1 }
+        }
         // 1. Every regular file above the minimum, by exact length. Hard links are one file.
         var bySize: [Int64: [(path: String, modified: Date, identity: String)]] = [:]
         var seenInodes = Set<String>()
         var listed = 0
         func visit(_ dir: String) {
-            guard !cancellation.isCancelled, let names = try? FileManager.default.contentsOfDirectory(atPath: dir) else { return }
+            guard !cancellation.isCancelled else { return }
+            var before = stat(), after = stat()
+            guard stat(dir, &before) == 0, before.st_mode & S_IFMT == S_IFDIR else {
+                issue(dir, tr("Could not read this folder")); return
+            }
+            let names: [String]
+            do { names = try FileManager.default.contentsOfDirectory(atPath: dir) }
+            catch { issue(dir, tr("Could not read this folder")); return }
+            defer {
+                if !cancellation.isCancelled && (stat(dir, &after) != 0 || AppDataReviewIdentity.text(before) != AppDataReviewIdentity.text(after)) {
+                    issue(dir, tr("This folder changed during the duplicate scan"))
+                }
+            }
             for name in names {
                 if cancellation.isCancelled { return }
                 let path = dir + "/" + name
                 var st = stat()
-                guard lstat(path, &st) == 0 else { continue }
+                guard lstat(path, &st) == 0 else { issue(path, tr("Could not inspect this file")); continue }
                 switch st.st_mode & S_IFMT {
                 case S_IFDIR:
                     if skippedNames.contains(name) || skippedExtensions.contains((name as NSString).pathExtension.lowercased()) { continue }
@@ -54,10 +113,10 @@ public enum Duplicates {
                 case S_IFREG:
                     guard Int64(st.st_size) >= minimum else { continue }
                     if !seenInodes.insert("\(st.st_dev):\(st.st_ino)").inserted { continue }
-                    guard let identity = ManualRemoval.reviewIdentity(path) else { continue }
+                    guard let identity = ManualRemoval.reviewIdentity(path) else { issue(path, tr("Could not inspect this file")); continue }
                     var after = stat()
                     guard lstat(path, &after) == 0, AppDataReviewIdentity.text(st) == AppDataReviewIdentity.text(after),
-                          ManualRemoval.reviewIdentity(path) == identity else { continue }
+                          ManualRemoval.reviewIdentity(path) == identity else { issue(path, tr("This file changed during the duplicate scan")); continue }
                     bySize[Int64(st.st_size), default: []].append((path, Date(timeIntervalSince1970: TimeInterval(st.st_mtimespec.tv_sec)), identity))
                     listed += 1
                     if listed % 500 == 0 { progress?(Progress(stage: tr("Listing files"), done: listed, total: 0)) }
@@ -76,7 +135,9 @@ public enum Duplicates {
             if cancellation.isCancelled { break }
             var byEnds: [String: [(path: String, modified: Date, identity: String)]] = [:]
             for f in files {
+                if cancellation.isCancelled { break }
                 if let h = endsHash(f.path, size: size, expected: f.identity) { byEnds[h, default: []].append(f) }
+                else if !cancellation.isCancelled { issue(f.path, tr("Could not compare this file, or it changed during the scan")) }
                 done += 1
             }
             progress?(Progress(stage: tr("Comparing contents"), done: done, total: total))
@@ -85,15 +146,22 @@ public enum Duplicates {
                 for f in same {
                     if cancellation.isCancelled { break }
                     if let h = fullHash(f.path, cancellation: cancellation, expected: f.identity, size: size) { byFull[h, default: []].append(f) }
+                    else if !cancellation.isCancelled { issue(f.path, tr("Could not compare this file, or it changed during the scan")) }
                 }
                 for (hash, copies) in byFull where copies.count > 1 {
                     let ordered = copies.sorted { ($0.modified, $0.path.count, $0.path) < ($1.modified, $1.path.count, $1.path) }
-                    guard ordered.allSatisfy({ ManualRemoval.reviewIdentity($0.path) == $0.identity }) else { continue }
+                    let changed = ordered.filter { ManualRemoval.reviewIdentity($0.path) != $0.identity }
+                    guard changed.isEmpty else {
+                        for file in changed { issue(file.path, tr("This file changed during the duplicate scan")) }; continue
+                    }
                     var privateBytes: [String: Int64] = [:]
                     for file in ordered {
                         if let bytes = BulkWalk.fileSize(file.path)?.privateSize, bytes >= 0 { privateBytes[file.path] = bytes }
                     }
-                    guard ordered.allSatisfy({ ManualRemoval.reviewIdentity($0.path) == $0.identity }) else { continue }
+                    let changedAfterSize = ordered.filter { ManualRemoval.reviewIdentity($0.path) != $0.identity }
+                    guard changedAfterSize.isEmpty else {
+                        for file in changedAfterSize { issue(file.path, tr("This file changed during the duplicate scan")) }; continue
+                    }
                     let extra = ordered.dropFirst().reduce(Int64(0)) { $0 + (privateBytes[$1.path] ?? 0) }
                     let quality: AppSizeState = ordered.dropFirst().allSatisfy { privateBytes[$0.path] != nil } ? .complete : (extra > 0 ? .incomplete : .unavailable)
                     groups.append(DuplicateGroup(hash: hash, size: size, paths: ordered.map(\.path), reclaimable: extra,
@@ -102,7 +170,9 @@ public enum Duplicates {
                 }
             }
         }
-        return groups.sorted { $0.reclaimable > $1.reclaimable }
+        return DuplicateScanReport(groups: groups.sorted { $0.reclaimable > $1.reclaimable }, roots: roots,
+            issues: issues.sorted { ($0.path, $0.reason) < ($1.path, $1.reason) }, omittedIssueCount: omittedIssues,
+            eligibleFiles: listed, comparisonAttempts: done, cancelled: cancellation.isCancelled)
     }
 
     static func endsHash(_ path: String, size: Int64, expected: String? = nil) -> String? {

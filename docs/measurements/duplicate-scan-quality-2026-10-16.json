@@ -1,0 +1,109 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "e5e99bd",
+  "sourceSHA256": {
+    "Sources/CleanKit/Duplicates.swift": "e23ec21aaa9d3cf7602a072dfe98c66032eb39ea76a54b66a204699d0c5f0d4a",
+    "Sources/ThermoApp/SpacePage.swift": "d0d9d9a7be57e8d2a4772b3b24bd518df726b84f1978cacabbac60e92b15f743",
+    "Sources/thermo/Space.swift": "aca37572652550e75c4c3e6d0e04e223a0299613b42f80aee6137658a6225eb0",
+    "Sources/ThermoL10n/ZhHans.swift": "03a4727e3c595f9986c962c0cf6d0bd8c8ce956fddf21cad52d3ecefce8914a9",
+    "Tests/CleanKitTests/DuplicateScanReportTests.swift": "7b3cce03cd48d517bcd3f51a3ca4d7b7299d050abf570aa88663315fba1d7287",
+    "Tests/ThermoAppTests/SpaceLensModelTests.swift": "f9174a62a51b2f47fa726ef4230c610145443bf1bd99ded71420a1e6eb2d329c"
+  },
+  "beforeCLI": {
+    "case": "explicit missing root",
+    "exit": 0,
+    "jsonWasEmptyArray": true
+  },
+  "afterCLI": [
+    {
+      "case": "explicit missing root",
+      "exit": 1,
+      "complete": false,
+      "groups": 0,
+      "issues": 1
+    },
+    {
+      "case": "verified empty root",
+      "exit": 0,
+      "complete": true,
+      "groups": 0,
+      "issues": 0
+    },
+    {
+      "case": "unreadable directory and verified duplicate group",
+      "exit": 1,
+      "complete": false,
+      "groups": 1,
+      "issues": 1,
+      "eligibleFiles": 2
+    },
+    {
+      "case": "permissions restored and rescanned",
+      "exit": 0,
+      "complete": true,
+      "groups": 1,
+      "issues": 0,
+      "eligibleFiles": 2
+    }
+  ],
+  "newTests": {
+    "DuplicateScanReportTests": 7,
+    "SpaceLensModelTests": 2,
+    "existingStopModelAssertionEnhanced": true
+  },
+  "visibleQA": {
+    "independentAdHocApp": true,
+    "isolatedHome": true,
+    "unreadableOwnedDirectoryDetected": true,
+    "incompleteEmptyWasNotConfirmedEmpty": true,
+    "issuePathAndReasonVisible": true,
+    "restoredPermissionsThenRescanned": true,
+    "confirmedEmptyAfterSuccessfulScan": true,
+    "duplicateWarningsCleared": true,
+    "payloadSHA256Unchanged": true,
+    "qaExitCode": 0,
+    "workspaceRemoved": true,
+    "captures": {
+      "duplicate-incomplete": {
+        "image": "duplicate-incomplete-2026-10-16.jpg",
+        "sha256": "ee967e839276e0d85f77b2d3052955a172d9a2c7da73572965aa61c4d699fa02",
+        "accessibility": "duplicate-incomplete-2026-10-16.ax.txt"
+      },
+      "duplicate-confirmed-empty": {
+        "image": "duplicate-confirmed-empty-2026-10-16.jpg",
+        "sha256": "0d9211b868e8ac0fb6727477dfc24ada84ab81fa812f38ac48dfae427460439f",
+        "accessibility": "duplicate-confirmed-empty-2026-10-16.ax.txt"
+      }
+    }
+  },
+  "full": {
+    "log": "/tmp/thermo-duplicate-quality-full.log",
+    "result": "passed",
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 57,
+      "ThermoAppTests": 166,
+      "CleanKitTests": 577,
+      "AgentCoreTests": 34
+    },
+    "total": 948,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "logSHA256": "3d16a7e1f333191c5cbc3166fcbbea1c545ddfa06092e50863e825a1d3e7bb9a"
+  },
+  "compatibility": {
+    "cliJSON": "Object with groups, roots, complete, cancelled, issues, omittedIssueCount, eligibleFiles and comparisonAttempts; former bare array replaced; README updated",
+    "legacyLibraryFind": "Kept as a groups-only projection; production CLI and App use scan report"
+  },
+  "limits": [
+    "Completeness describes successfully checked eligible scope, not an atomic filesystem snapshot or all home files",
+    "Configured dependency/package exclusions and child symlinks remain outside scope",
+    "Issue details bounded to 128, additional events counted",
+    "GUI stop and mid-hash filesystem faults remain model/library fixtures; visible permission failure and recovery verified",
+    "Space-tree header retains its own prior measurement state until that separate measurement is refreshed",
+    "No user files moved, root query, helper installation, hardware writes, installed-app replacement or release"
+  ]
+}
