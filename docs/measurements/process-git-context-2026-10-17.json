@@ -1,0 +1,145 @@
+{
+  "date": "2026-10-17",
+  "sourceCommit": "8dba5cc2e3b172e3cd36363579df37f3b229ef42",
+  "parent": "d75efb9",
+  "checkout": "isolated worktree; concurrent uncommitted changes excluded",
+  "sourceSHA256": {
+    "README.md": "e107da73d9d975ca8868be115f1e48fd831eab850c5918e544efa1655c16d4a9",
+    "Sources/AgentCore/Processes.swift": "8a652d853865d86cc221150cd018e8604c4ab32cfcdf534030a3da6398ab53c2",
+    "Sources/AgentDoctor/ProcessExplanation.swift": "4942443e325ebd6c663d7af8255aa26a50904e6dc61d30f9dd8b735d22e36610",
+    "Sources/AgentDoctor/ProcessGitContext.swift": "d7b19506f40eb6eacc1b460fd3fb438920b1575025cc2159fd25a8d25490e4c0",
+    "Sources/ThermoApp/ProcessExplanationView.swift": "97c213650ce362a592dcafb66e7c6ea339e17d47df501cdcbbdb2904f51942c7",
+    "Sources/ThermoL10n/ZhHans.swift": "cec2e5ed6a0e16755e1625669a4c27480cf96af97f5d9fd6ebf2c0267d3d85fd",
+    "Sources/thermo/Pulse.swift": "e59009faddf18c1b72d29289a460306f6051b25f501c9e1ac94eab7ace995e22",
+    "Tests/AgentDoctorTests/ProcessExplanationTests.swift": "7e8dc6327f9b78204fbe4432472c4fe97d8228f65f7ebea8658937a6edb60db2",
+    "Tests/AgentDoctorTests/ProcessGitContextTests.swift": "8ccba22103ecf7ca3c2489cac6fe3c9c2e12095b77087b6d52976c18a72c2aa6",
+    "docs/mole-parity.md": "ad7897acae47625126ef95fb55f8db9df27be6f5ce84372823aab7490fb54aef",
+    "scripts/verify-process-git-ui.swift": "7ebe2a29b6e7e071ebb85511f8eafba4bf5f2de3118f0d4d27120c395e71ae67"
+  },
+  "finalFocusedRegression": {
+    "tests": 48,
+    "failures": 0,
+    "classes": [
+      "ProcessGitContextTests",
+      "ProcessExplanationTests",
+      "ProcessListenersTests",
+      "ProcessSleepAssertionsTests",
+      "ProcessLaunchServicesTests"
+    ],
+    "newGitTests": 12,
+    "newIdentityTests": 3,
+    "buildCommand": "swift build --target AgentDoctorTests",
+    "testCommand": "xcrun xctest -XCTest <the five classes above> .build/out/Products/Debug/AgentDoctorTests.xctest",
+    "logSHA256": "ad315427a8c889d19904b83a30ff7977a0dcf628fa56b76b747c86ae7ce8c575"
+  },
+  "preCorrectionBroadRegression": {
+    "logSHA256": "a32dca10acc85bc0517308a9ab3829b4550cd8b60b7b7c224aa034bdc9404422",
+    "counts": {
+      "ThermoKitTests": {
+        "tests": 115,
+        "failures": 0
+      },
+      "ThermoCLITests": {
+        "tests": 66,
+        "failures": 0
+      },
+      "ThermoAppTests": {
+        "tests": 236,
+        "failures": 0
+      },
+      "CleanKitTests": {
+        "tests": 0,
+        "failures": 0
+      },
+      "AgentDoctorTests": {
+        "tests": 48,
+        "failures": 2
+      },
+      "AgentCoreTests": {
+        "tests": 37,
+        "failures": 0
+      }
+    },
+    "exitCode": 1,
+    "resolvedFailures": [
+      "No-marker lookup encountered the /var alias instead of a physical directory",
+      "Linked-worktree path expectation used a different /private/var spelling"
+    ],
+    "followUp": "POSIX realpath, directory descriptor retention, unrelated sibling changes ignored; final 48 selected tests passed. Other suites were not rerun after this correction."
+  },
+  "native": {
+    "ownedTemporaryRepository": true,
+    "permissionChanged": false,
+    "finalFixturePID": 37757,
+    "appSHA256": "b0fe8022919f7298286b8baaf2a9c576bb87b9e8673ac3e0c04a4bdef0b1a6e1",
+    "cliSHA256": "0f7b788fa1b8068ea0edf672ef1c950aa0455fbd3db0d836c123fe264c55b8bb",
+    "fiveStatesObservedInChineseWindow": [
+      "normal branch and matching HEAD",
+      "detached HEAD without branch",
+      "unborn branch without stale HEAD and with incomplete notice",
+      "no marker shown as none observed",
+      "invalid HEAD shown as unavailable rather than no repository"
+    ],
+    "readObservationRecovery": "A transient noWindowsAvailable observation was followed by a live PID/session check and a successful reread of the same app; no duplicate process was launched.",
+    "screenshotInspected": "Chinese branch, path, HEAD and scope note readable in independent 640x560 window before canonical-path fix; final window verified with AX after the fix",
+    "fixtureExited": true,
+    "cli": {
+      "normal": {
+        "gitContext": {
+          "branch": "feature/process-context",
+          "commit": "483a3685958e08e8c8dd09ce7a44f698abbfd9b2",
+          "detached": false,
+          "gitDirectory": "$FIXTURE/repository/.git",
+          "queryComplete": true,
+          "root": "$FIXTURE/repository",
+          "state": "observed"
+        },
+        "fullReportSHA256": "89849295ca9e99f7f778ccbb6a9bb53d782327e44b7fecb5337247229764c77f"
+      },
+      "detached": {
+        "gitContext": {
+          "commit": "483a3685958e08e8c8dd09ce7a44f698abbfd9b2",
+          "detached": true,
+          "gitDirectory": "$FIXTURE/repository/.git",
+          "queryComplete": true,
+          "root": "$FIXTURE/repository",
+          "state": "observed"
+        },
+        "fullReportSHA256": "94b9c6956cc37c8cfc04dba6b18a0ae01e9d1f0e258c4d65f7353852aa928715"
+      },
+      "unborn": {
+        "gitContext": {
+          "branch": "unborn-fixture",
+          "detached": false,
+          "gitDirectory": "$FIXTURE/repository/.git",
+          "queryComplete": false,
+          "root": "$FIXTURE/repository",
+          "state": "observed"
+        },
+        "fullReportSHA256": "10a5ee9af71d7a15a03058186024952d08ae802c823315fab332ed4439ec95b8"
+      },
+      "absent": {
+        "gitContext": {
+          "queryComplete": true,
+          "state": "noneObserved"
+        },
+        "fullReportSHA256": "ba8b1e51cd800bc924e8609b4523088d824c5242491508391198b01f90cb4bba"
+      },
+      "invalid": {
+        "gitContext": {
+          "queryComplete": false,
+          "state": "unavailable"
+        },
+        "fullReportSHA256": "6eab16f0697b972f6a4618c46bc88c6bdf43fe975fdb455cb962d1543d434bcc"
+      }
+    }
+  },
+  "limitations": [
+    "No Git commands, hooks, config, remotes, status or object database are read by production capture",
+    "HEAD is an observed object ID, not proof that a commit exists or that the process is using this project",
+    "Unborn branches, unsupported symbolic refs and reftable retain unknown commit state",
+    "Depth, byte and soft monotonic time budgets do not provide a hard timeout for blocked filesystem calls",
+    "PID/cwd and metadata checks are not an atomic snapshot",
+    "Installed app was not replaced or released"
+  ]
+}
