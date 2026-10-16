@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "2cc6895",
+  "sourceSHA256": {
+    "Sources/CleanKit/Whitelist.swift": "383f01b7827cc404868b603aad292c1e449204b7cc8371d7c696de19eba7422c",
+    "Sources/CleanKit/FS.swift": "aed6ad92d5cdf812adca68bcd2d3e9040b702346a06a733cf9054009642aad1e",
+    "Sources/CleanKit/Apps.swift": "8f0107b0827d704fe7eca12e8a3d41d44eccf9a8a9552f22b50d7d1bf26fc359",
+    "Sources/ThermoL10n/ZhHans.swift": "f8de1b4f3fb3fdfd0eb51626fd1938dab98499d66cd00110090f1132f7d4cff3",
+    "Tests/CleanKitTests/WhitelistLiveChangeTests.swift": "0b855401243e30abb22df86ac3cebc517f418817848f864f3766f04cef5673b4"
+  },
+  "before": {
+    "log": "/tmp/thermo-whitelist-live-before.log",
+    "tests": 2,
+    "failedAssertions": 6,
+    "case": "first owned move writes protection for second path; old Cleaner and AppUninstaller still move both",
+    "realOwnedFilesWithInjectedTrashAndProcessInventory": true
+  },
+  "after": {
+    "newTests": 7,
+    "cases": [
+      "Cleaner preserves second file newly protected after first move",
+      "AppUninstaller preserves second file newly protected after first move",
+      "invalid configuration stops remaining Cleaner paths and first move remains restorable",
+      "invalid configuration stops remaining app paths without losing batch record",
+      "changed effective protection stops later tool command",
+      "comment-only change keeps command execution available",
+      "changed protection skips post-clean hook without losing first move outcome"
+    ],
+    "externalCommandFixtures": "Only /bin/cp of owned config fixture and /usr/bin/touch of owned canaries; no cleanup commands against real tools",
+    "permanentUserDeletionExecuted": false
+  },
+  "full": {
+    "log": "/tmp/thermo-whitelist-live-full.log",
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 59,
+      "ThermoAppTests": 175,
+      "CleanKitTests": 599,
+      "AgentCoreTests": 34
+    },
+    "total": 981,
+    "failures": 0,
+    "logSHA256": "b9813688cfeb0155b414645e1146d8c0fd4c0487052280b7ecfe598f276e8e52",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ]
+  },
+  "limits": [
+    "No new visible GUI fault injection; live mutations were deterministic filesystem fixtures",
+    "Configuration and target operation are not one atomic filesystem transaction",
+    "Resolved protection paths are reread; no claimed worst-case latency for large lists or blocking filesystem calls",
+    "Original tool-command scope versus existing whitelist entries and multi-process whitelist writes remain to be audited",
+    "No root query, helper installation, hardware writes, installed-app replacement or release"
+  ]
+}

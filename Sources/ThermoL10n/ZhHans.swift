@@ -1,6 +1,7 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Whitelist protection changed during cleanup; review the remaining tool operations again.": "清理期间白名单保护发生变化，请重新审阅剩余的工具操作。",
     "whitelist folder contains a symbolic link: %1$@": "白名单所在文件夹包含符号链接：%1$@",
     "whitelist changed during reading; try again: %1$@": "白名单在读取期间发生变化，请重试：%1$@",
     "whitelist has invalid entries at lines %1$@; fix them before cleanup": "白名单第 %1$@ 行无效，请修正后再清理",

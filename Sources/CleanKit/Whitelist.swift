@@ -106,6 +106,11 @@ public struct Whitelist: Sendable {
         return text
     }
 
+    /// Effective protection, ignoring comments/order while retaining resolved alias targets.
+    var protectionKey: [String] {
+        patterns.map { ($0.glob ? "glob:" : "path:") + $0.values.sorted().joined(separator: "\u{0}") }.sorted()
+    }
+
     public var removalIssue: String? {
         guard !rejected.isEmpty else { return nil }
         return tr("whitelist has invalid entries at lines %1$@; fix them before cleanup", rejected.prefix(8).map { String($0.line) }.joined(separator: ", "))

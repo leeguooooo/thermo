@@ -347,7 +347,7 @@ public enum Cleaner {
             }
             return itemRefusal
         }
-        for path in item.paths {
+        for (index, path) in item.paths.enumerated() {
             if let why = ToolCleanup.isBrowserOldVersion(item) ? ToolCleanup.oldVersionRefusal(path) : g.refusal(path) { result.failed[path] = why; continue }
             if whitelist.protects(path) { result.whitelisted = (result.whitelisted ?? []) + [path]; continue }
             guard FS.exists(path) else { continue }
@@ -407,6 +407,21 @@ public enum Cleaner {
                 if item.category == .agentWorktrees {
                     registration = try WorktreeCleanup.registration(path, processes: processTable ?? ProcessTable.current(.init(cpu: false)))
                 }
+                // Sizing and process checks may outlive a protection edit. Read again at the move boundary.
+                do {
+                    if try Whitelist.loadForRemoval(home: g.home).protects(path) {
+                        result.whitelisted = (result.whitelisted ?? []) + [path]; continue
+                    }
+                } catch {
+                    for remaining in item.paths[index...] { result.failed[remaining] = Whitelist.unreadable(error) }
+                    return result
+                }
+                // Keep namespace and item checks after the configuration read as well.
+                if let why = ToolCleanup.isBrowserOldVersion(item) ? ToolCleanup.oldVersionRefusal(path) : g.refusal(path) { result.failed[path] = why; continue }
+                guard let currentIdentity = FileIdentity.of(path), currentIdentity == originalIdentity,
+                      item.identities?[path].map({ $0 == currentIdentity }) ?? true else {
+                    result.failed[path] = tr("replaced since the scan"); continue
+                }
                 if trash && !inTrash {
                     if let registration { backupName = try WorktreeCleanup.prepare(registration) }
                     let destination = try operations.trash(path)
@@ -435,6 +450,14 @@ public enum Cleaner {
                 result.failed[path] = (error as NSError).localizedDescription
             }
         }
+        func changedProtection() -> String? {
+            do {
+                if try Whitelist.loadForRemoval(home: g.home).protectionKey != whitelist.protectionKey {
+                    return tr("Whitelist protection changed during cleanup; review the remaining tool operations again.")
+                }
+                return nil
+            } catch { return Whitelist.unreadable(error) }
+        }
         // Things only their own tool may remove: report the item's size once every command succeeded.
         if let commands = item.commands, !commands.isEmpty {
             if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
@@ -444,6 +467,7 @@ public enum Cleaner {
             var ok = true
             let measuredBefore = item.measure.map { FS.size($0) }
             for argv in commands {
+                if let why = changedProtection() { ok = false; result.failed["whitelist"] = why; break }
                 if let why = Simulators.currentRemovalRefusal([argv], requireUnavailable: item.id == "simulator-unavailable") {
                     ok = false; result.failed[argv.joined(separator: " ")] = why
                     break
@@ -458,6 +482,7 @@ public enum Cleaner {
         }
         if item.category != .agentWorktrees, !result.removed.isEmpty, let cmds = item.afterClean {
             for c in cmds {
+                if let why = changedProtection() { result.failed["afterClean/whitelist"] = why; break }
                 let (status, output) = Shell.exec(["sh", "-c", c], timeout: 30)
                 if status != 0 { result.failed["afterClean/" + c] = output.isEmpty ? "post-clean command failed" : output }
             }

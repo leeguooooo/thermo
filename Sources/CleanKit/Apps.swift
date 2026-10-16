@@ -695,8 +695,7 @@ public enum AppUninstaller {
                       move: (String) throws -> URL = RemovalOperations.live.trash) {
         let g = Guard(home: home)
         let batchID = UUID().uuidString
-        let whitelist: Whitelist
-        do { whitelist = try Whitelist.loadForRemoval(home: home) } catch {
+        do { _ = try Whitelist.loadForRemoval(home: home) } catch {
             for path in paths { result.failed[path] = Whitelist.unreadable(error) }
             return
         }
@@ -720,8 +719,15 @@ public enum AppUninstaller {
                 for remaining in paths[index...] { result.failed[remaining] = tr("a running executable uses this location") }
                 break
             }
+            do {
+                if try Whitelist.loadForRemoval(home: home).protects(path) {
+                    result.whitelisted = (result.whitelisted ?? []) + [path]; continue
+                }
+            } catch {
+                for remaining in paths[index...] { result.failed[remaining] = Whitelist.unreadable(error) }
+                break
+            }
             if let why = g.uninstallRefusal(path, bundleIDs: bundleIDs) { result.failed[path] = why; continue }
-            if whitelist.protects(path) { result.whitelisted = (result.whitelisted ?? []) + [path]; continue }
             guard FS.exists(path) else { continue }
             if let identities, identities[path] == nil || identities[path] != FileIdentity.of(path) {
                 result.failed[path] = tr("The item changed after review; review the uninstall again")
