@@ -7,6 +7,17 @@ enum SpaceTab: String, Hashable, CaseIterable {
     case browse, large, duplicates
 }
 
+struct ManualRemovalReview: Identifiable, Sendable {
+    let id = UUID()
+    let selection: [String: Int64]
+    let measured: [String: Int64]
+    let incomplete: Set<String>
+    let identities: [String: String]
+    let required: [String: String]
+    let sizeText: String
+    let lines: [String]
+}
+
 /// The space browser: the home folder measured once, then any folder looked into without walking
 /// again; the big files; the duplicate files. What the user picks waits in one basket and goes to
 /// the Trash only after a confirmation that lists every path.
@@ -165,21 +176,32 @@ final class SpaceLensModel: ObservableObject {
         basket.sorted { $0.value > $1.value }.map { AppSize.text($0.value, state: sizeState($0.key)) + "  " + FSPath.tilde($0.key) }
     }
 
-    func trash() {
-        guard !scanning, !working else { return }
-        let picked = basket
-        guard !picked.isEmpty else { return }
-        let measured = picked.filter { sizeState($0.key) != .unavailable && sizeState($0.key) != .unmeasured }
-        stopDuplicates()
-        working = true
-        exitRequested = false
-        let lease = AppExitGuard.beginManualRemoval { self.exitRequested = true }
-        let root = root
-        let incomplete = Set(picked.keys.filter { sizeState($0) != .complete })
-        let identities = selectionIdentities, remove = self.remove
-        let required = picked.keys.reduce(into: [String: String]()) { result, path in
-            result.merge(selectionRequirements[path] ?? [:]) { first, _ in first }
+    func removalReview() -> ManualRemovalReview? {
+        guard !scanning, !working, !basket.isEmpty else { return nil }
+        return ManualRemovalReview(selection: basket,
+            measured: basket.filter { sizeState($0.key) != .unavailable && sizeState($0.key) != .unmeasured },
+            incomplete: Set(basket.keys.filter { sizeState($0) != .complete }), identities: selectionIdentities,
+            required: basket.keys.reduce(into: [String: String]()) { result, path in
+                result.merge(selectionRequirements[path] ?? [:]) { first, _ in first }
+            }, sizeText: basketSizeText, lines: basketLines)
+    }
+
+    func trash(review: ManualRemovalReview? = nil) {
+        guard !working else { return }
+        guard let current = removalReview() else {
+            if review != nil { outcomeIsWarning = true; outcome = tr("Selection changed after review; review the items again.") }
+            return
         }
+        let frozen = review ?? current
+        guard frozen.selection == current.selection, frozen.measured == current.measured,
+              frozen.incomplete == current.incomplete, frozen.identities == current.identities, frozen.required == current.required else {
+            outcomeIsWarning = true; outcome = tr("Selection changed after review; review the items again."); return
+        }
+        let picked = frozen.selection, measured = frozen.measured, incomplete = frozen.incomplete
+        let identities = frozen.identities, required = frozen.required, remove = self.remove, root = root
+        stopDuplicates()
+        working = true; exitRequested = false
+        let lease = AppExitGuard.beginManualRemoval { self.exitRequested = true }
         Task.detached(priority: .userInitiated) {
             let result = remove(picked.keys.sorted(), measured, root, incomplete, identities, required)
             await MainActor.run { self.afterTrash(result); AppExitGuard.endManualRemoval(lease) }
@@ -377,7 +399,7 @@ final class SpaceLensModel: ObservableObject {
 struct SpacePage: View {
     @ObservedObject var model: SpaceLensModel
     @Binding var tab: SpaceTab
-    @State private var confirming = false
+    @State private var confirming: ManualRemovalReview?
     @State private var olderThan = 0
 
     var body: some View {
@@ -415,14 +437,14 @@ struct SpacePage: View {
             if t != .duplicates { model.stopDuplicates() }
         }
         .onDisappear { model.stopLastOpened(); model.stopDuplicates() }
-        .sheet(isPresented: $confirming) {
-            ConfirmSheet(title: tr("Move %1$@ to the Trash?", model.basketSizeText),
+        .sheet(item: $confirming) { review in
+            ConfirmSheet(title: tr("Move %1$@ to the Trash?", review.sizeText),
                          summary: tr("%1$@ you picked go to the Trash. Each one is checked again first; anything a program has open is skipped.",
-                                     trCount(model.basket.count, "%1$@ item", "%1$@ items")),
-                         destructive: false, heading: tr("What will be moved to the Trash"), lines: model.basketLines,
+                                     trCount(review.selection.count, "%1$@ item", "%1$@ items")),
+                         destructive: false, heading: tr("What will be moved to the Trash"), lines: review.lines,
                          footnote: tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
                          confirmTitle: tr("Move to Trash"),
-                         confirm: { confirming = false; model.trash() }, cancel: { confirming = false })
+                         confirm: { confirming = nil; model.trash(review: review) }, cancel: { confirming = nil })
         }
     }
 
@@ -472,7 +494,7 @@ struct SpacePage: View {
             Spacer()
             Text(model.basket.isEmpty ? tr("Tick files or folders to remove them") : trCount(model.basket.count, "%1$@ picked", "%1$@ picked"))
                 .font(.callout).foregroundStyle(.white.opacity(0.55))
-            Button(model.basket.isEmpty ? tr("Move to Trash") : tr("Review %1$@…", model.basketSizeText)) { confirming = true }
+            Button(model.basket.isEmpty ? tr("Move to Trash") : tr("Review %1$@…", model.basketSizeText)) { confirming = model.removalReview() }
                 .buttonStyle(PillButtonStyle(prominent: true, color: .cyan))
                 .disabled(model.basket.isEmpty || model.working || model.scanning)
         }

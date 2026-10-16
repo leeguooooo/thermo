@@ -47,12 +47,12 @@ final class HistoryReadTests: XCTestCase {
         let began = expectation(description: "old read"), release = DispatchSemaphore(value: 0)
         defer { release.signal() }
         let reader = Reader([.init(records: [record("before")]), .init(records: [record("restored")])], gates: [0: (began, release)])
-        let model = HistoryModel(reader: { reader.read() }, restoreBatch: { id in
+        let model = HistoryModel(reader: { reader.read() }, restoreBatch: { id, _ in
             TrashRestore(id: id, dryRun: false, items: [.init(original: "/fixture", destination: "/trash/fixture", bytes: 1, status: "restored")])
         }, didRestore: { _ in })
         model.load(); await fulfillment(of: [began], timeout: 2)
         let entry = OperationRecord(feature: "fixture", action: "remove", items: [.init(target: "/fixture", status: "done")], undo: .init(kind: "trashBatch", ref: UUID().uuidString))
-        model.restore(entry)
+        model.restore(entry, review: TrashRestore(id: entry.undo!.ref, dryRun: true, items: [.init(original: "/fixture", destination: "/trash/fixture", bytes: 1, status: "restored")], reviewIdentity: "fixture"))
         for _ in 0..<200 where model.busy { try? await Task.sleep(nanoseconds: 10_000_000) }
         XCTAssertFalse(model.busy); XCTAssertEqual(reader.stats.calls, 1)
         release.signal(); await finish(model)

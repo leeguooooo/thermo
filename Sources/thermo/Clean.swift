@@ -508,7 +508,8 @@ struct CleanCommand {
             print("Permanently remove this batch? [y/N] ", terminator: ""); fflush(stdout)
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { return }
         }
-        let result = try TrashBatches.empty(batch.id, home: home)
+        let result = try TrashBatches.empty(batch.id, home: home, reviewIdentity: try TrashBatches.reviewIdentity(batch),
+            reviewedDestinations: Set(batch.entries.filter { refused[$0.destination] == nil }.map(\.destination)))
         if args.has("json") { write(Export.json(result)); return }
         write("deleted \(ByteFormat.string(result.bytes)) (estimated); \(result.outcome ?? "unknown")")
         for (path, reason) in result.failed.sorted(by: { $0.key < $1.key }) { write("  kept \(path): \(reason)") }
@@ -540,7 +541,9 @@ struct CleanCommand {
             print(tr("Restore these items? [y/N] "), terminator: ""); fflush(stdout)
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print(tr("cancelled")); return }
         }
-        let result = try TrashBatches.restore(id: selectors[0], home: home)
+        guard let identity = review.reviewIdentity else { throw CLIError(tr("Restore review is unavailable; review the batch again.")) }
+        let result = try TrashBatches.restore(id: selectors[0], home: home, reviewIdentity: identity,
+            reviewedDestinations: Set(review.items.filter { $0.status == "restored" }.map(\.destination)))
         let restored = result.items.filter { $0.status == "restored" }
         if args.has("json") { write(Export.json(result)) }
         else {

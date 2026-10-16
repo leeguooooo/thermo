@@ -13,18 +13,29 @@ final class HistoryModel: ObservableObject {
     @Published private(set) var readIssue: String?
     @Published var busy = false
     @Published var notice: String?
+    @Published private(set) var restoreReview: TrashRestore?
+    @Published private(set) var restoreReviewIssue: String?
+    @Published private(set) var reviewingRestore = false
+    private var restoreReviewGeneration = UUID(), restoreReviewInFlight = false
+    private var restoreReviewTarget: String?
+    private var pendingRestoreReview: OperationRecord?
+    private let reviewBatch: @Sendable (String) throws -> TrashRestore
 
     private let reader: @Sendable () -> OperationJournal.ReadReport
     private var readAgain = false
-    private let restoreBatch: @Sendable (String) throws -> TrashRestore
+    private let restoreBatch: @Sendable (String, TrashRestore) throws -> TrashRestore
     private let didRestore: @MainActor ([String]) -> Void
     init(reader: @escaping @Sendable () -> OperationJournal.ReadReport = { OperationJournal.readReport(limit: 300) },
-         restoreBatch: @escaping @Sendable (String) throws -> TrashRestore = { try TrashBatches.restore(id: $0) },
+         reviewBatch: @escaping @Sendable (String) throws -> TrashRestore = { try TrashBatches.restore(id: $0, dryRun: true) },
+         restoreBatch: @escaping @Sendable (String, TrashRestore) throws -> TrashRestore = { id, review in
+             try TrashBatches.restore(id: id, reviewIdentity: review.reviewIdentity,
+                 reviewedDestinations: Set(review.items.filter { $0.status == "restored" }.map(\.destination)))
+         },
          didRestore: @escaping @MainActor ([String]) -> Void = {
              AppModels.shared.apps.invalidateAfterRestore()
              SpaceLensModel.shared.invalidateAfterRestore($0)
          }) {
-        self.reader = reader; self.restoreBatch = restoreBatch; self.didRestore = didRestore
+        self.reader = reader; self.reviewBatch = reviewBatch; self.restoreBatch = restoreBatch; self.didRestore = didRestore
     }
 
     func load() {
@@ -48,9 +59,52 @@ final class HistoryModel: ObservableObject {
         }
     }
 
-    /// Puts recorded items back; replacements, missing items and original-path conflicts are skipped.
-    func restore(_ record: OperationRecord) {
+    func prepareRestore(_ record: OperationRecord) {
         guard !busy, record.undo?.kind == "trashBatch", let id = record.undo?.ref else { return }
+        restoreReviewTarget = id
+        restoreReviewGeneration = UUID(); restoreReview = nil; restoreReviewIssue = nil; reviewingRestore = true
+        if restoreReviewInFlight { pendingRestoreReview = record; return }
+        readRestoreReview(record)
+    }
+
+    private func readRestoreReview(_ record: OperationRecord) {
+        guard let id = record.undo?.ref else { return }
+        let generation = restoreReviewGeneration, reviewBatch = reviewBatch
+        restoreReviewInFlight = true
+        Task.detached(priority: .userInitiated) {
+            let result = Result { try reviewBatch(id) }
+            await MainActor.run {
+                self.restoreReviewInFlight = false
+                if let pending = self.pendingRestoreReview {
+                    self.pendingRestoreReview = nil; self.readRestoreReview(pending); return
+                }
+                guard self.restoreReviewGeneration == generation else { return }
+                self.reviewingRestore = false
+                switch result {
+                case .success(let review) where review.id == id && review.dryRun && review.reviewIdentity != nil:
+                    self.restoreReview = review
+                case .success:
+                    self.restoreReviewIssue = tr("Restore review is unavailable; review the batch again.")
+                case .failure(let error): self.restoreReviewIssue = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    func cancelRestoreReview(for id: String? = nil) {
+        guard id == nil || restoreReviewTarget == id else { return }
+        restoreReviewTarget = nil
+        restoreReviewGeneration = UUID(); pendingRestoreReview = nil
+        restoreReview = nil; restoreReviewIssue = nil; reviewingRestore = false
+    }
+
+    /// Puts recorded items back; replacements, missing items and original-path conflicts are skipped.
+    func restore(_ record: OperationRecord, review: TrashRestore) {
+        guard !busy, record.undo?.kind == "trashBatch", let id = record.undo?.ref else { return }
+        guard review.id == id, review.dryRun, review.reviewIdentity != nil,
+              review.items.contains(where: { $0.status == "restored" }) else {
+            notice = tr("Restore review is unavailable; review the batch again."); return
+        }
         busy = true
         let exitGuard = AppExitGuard.beginRestore()
         let restoreBatch = self.restoreBatch
@@ -58,7 +112,7 @@ final class HistoryModel: ObservableObject {
             let text: String
             var paths: [String] = []
             do {
-                let result = try restoreBatch(id)
+                let result = try restoreBatch(id, review)
                 paths = result.items.filter { $0.status == "restored" }.map(\.original)
                 let restored = result.items.filter { $0.status == "restored" }.count
                 let others = result.items.filter { $0.status != "restored" }
@@ -252,23 +306,37 @@ struct HistoryPage: View {
         VStack(alignment: .leading, spacing: 14) {
             Text(tr("Put these back from the Trash?")).font(.system(size: 17, weight: .bold))
             Text(r.title + (r.subject.map { " · " + $0 } ?? "")).font(.system(size: 12)).foregroundStyle(.secondary)
-            InspectorPanel {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(Array(r.items.filter { $0.status == "done" || $0.status == "partial" }.prefix(100).enumerated()), id: \.offset) { _, item in
-                            Text(FS.tilde(item.target)).font(.system(size: 11).monospaced()).lineLimit(1).truncationMode(.middle)
-                        }
-                    }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                }.frame(maxHeight: 200)
+            if model.reviewingRestore { NoticeBanner(text: tr("Reviewing the current Trash batch…"), busy: true) }
+            if let issue = model.restoreReviewIssue { NoticeBanner(text: issue) }
+            if let review = model.restoreReview {
+                InspectorPanel {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 8) {
+                            ForEach(Array(review.items.enumerated()), id: \.offset) { _, item in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(FS.tilde(item.original)).font(.system(size: 11).monospaced()).textSelection(.enabled)
+                                    if item.status != "restored" {
+                                        Text(item.reason ?? tr("This item will stay in the Trash")).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
+                    }.frame(minHeight: 100, maxHeight: 240)
+                }
             }
             Text(tr("Only recorded items still in the Trash are put back when their original locations are empty; other items are skipped and listed."))
                 .font(.system(size: 12)).foregroundStyle(.white.opacity(0.8)).fixedSize(horizontal: false, vertical: true)
             HStack {
                 Button(tr("Cancel")) { restoring = nil }.keyboardShortcut(.cancelAction)
                 Spacer()
-                Button(tr("Restore")) { restoring = nil; model.restore(r) }.buttonStyle(PillButtonStyle(prominent: true))
+                Button(tr("Restore")) {
+                    if let review = model.restoreReview { restoring = nil; model.restore(r, review: review) }
+                }.buttonStyle(PillButtonStyle(prominent: true))
+                    .disabled(model.busy || model.reviewingRestore || model.restoreReview?.items.contains(where: { $0.status == "restored" }) != true)
             }
         }
+        .onAppear { model.prepareRestore(r) }
+        .onDisappear { model.cancelRestoreReview(for: r.undo?.ref) }
         .padding(24).frame(width: 520)
         .background(Color(red: 0.09, green: 0.10, blue: 0.18))
         .preferredColorScheme(.dark)

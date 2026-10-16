@@ -1,0 +1,17 @@
+Window: "", App: Thermo Restore QA.
+0 sheet Secondary Actions: Raise
+	1 container
+		2 text 把这些项目从废纸篓放回原处？ 把手动选择的文件移到了废纸篓 · Picked by hand
+		3 scroll area
+			4 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+				5 text ~/Downloads/owned-restore.bin
+		6 text 只放回仍在废纸篓中的原项目，且原位置必须为空；其他项目会跳过并列出。
+		7 button 取消
+		8 button 恢复
+9 menu bar
+	10 Thermo Restore QA
+	11 编辑, ID: thermo.edit
+	12 显示, ID: thermo.view
+	13 窗口, ID: thermo.window
+
+The focused UI element is 0 sheet Secondary Actions: Raise

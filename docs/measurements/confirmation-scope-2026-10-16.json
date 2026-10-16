@@ -1,0 +1,86 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "c16826f",
+  "sourceSHA256": {
+    "Sources/CleanKit/TrashBatch.swift": "1cddcabf298ad250ca9be901f9945248abc1b2cf08350a3779967766f03f4cbb",
+    "Sources/ThermoApp/HistoryPage.swift": "21a67c7b8ed8579c028002141bbcc4c080150262541cdbaa38f24eaced15493b",
+    "Sources/ThermoApp/SpacePage.swift": "3e92242d85dcf3352b74af95750e7bd79bc9b45ecc42098384dca96bb8871412",
+    "Sources/thermo/Clean.swift": "a8da8d700eed79b1a1fb9ade3f1101a407183395a754a33438dae9b7cefd99b9",
+    "Tests/CleanKitTests/TrashReviewScopeTests.swift": "d5f69bf800f3ff9053abf82229b345d5683829a9ba58a050e321c35f9f41be73",
+    "Tests/ThermoAppTests/ConfirmationReviewTests.swift": "12f061a5caa195365d12a18baba7ac9bb6cc2c6f11b0c62812200fb4718b83b6",
+    "Tests/ThermoCLITests/TrashConfirmationTests.swift": "ffbab1a8e88a59502099b56ec47fcbb4f8b6bd51c261a095e49dc604cff93c8d"
+  },
+  "before": {
+    "log": "/tmp/thermo-confirmation-before.log",
+    "case": "CLI preview callback appends another owned fake-Trash entry before execution",
+    "testFailures": 1,
+    "failedAssertions": 5,
+    "bothEntriesRestoredByOldCode": true,
+    "fixtureOnly": true
+  },
+  "newTests": {
+    "TrashReviewScopeTests": 4,
+    "ConfirmationReviewTests": 3,
+    "TrashConfirmationTests": 1
+  },
+  "visibleQA": {
+    "independentAdHocApp": true,
+    "isolatedHome": true,
+    "ownedSampleInNativeTrash": true,
+    "actualBatchPreviewVisible": true,
+    "fault": "owned journal header created field changed after preview",
+    "changedBatchRefusedBeforeMove": true,
+    "payloadStayedInTrashAfterRefusal": true,
+    "freshReviewThenRestored": "1/1",
+    "payloadSHA256Unchanged": "76418a6a7738f4107880fc04f7a34fd23b27e4ffb76e6de50226acf577dcbdce",
+    "ownedNativeTrashDestinationAbsentAfterRestore": true,
+    "qaExitCode": 0,
+    "workspaceRemoved": true,
+    "captures": {
+      "restore-confirmation-review": {
+        "image": "restore-confirmation-review-2026-10-16.jpg",
+        "sha256": "5a70fb9c4c9bf29c7aa043b331887dbd48b890e424bf435fbb6358da7d097f9f",
+        "accessibility": "restore-confirmation-review-2026-10-16.ax.txt"
+      },
+      "restore-confirmation-changed": {
+        "image": "restore-confirmation-changed-2026-10-16.jpg",
+        "sha256": "8ef444fd0beafd3a25526e6575788e8bd6fc3b21ded84d215ad1ca2c63ece7e7",
+        "accessibility": "restore-confirmation-changed-2026-10-16.ax.txt"
+      },
+      "restore-confirmation-refreshed": {
+        "image": "restore-confirmation-refreshed-2026-10-16.jpg",
+        "sha256": "8f69f50e5aaa2fc3e17e7317acfa7a3e1cf99572d56e2293797738e5b4cffa0b",
+        "accessibility": "restore-confirmation-refreshed-2026-10-16.ax.txt"
+      }
+    }
+  },
+  "full": {
+    "log": "/tmp/thermo-confirmation-full.log",
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 58,
+      "ThermoAppTests": 175,
+      "CleanKitTests": 581,
+      "AgentCoreTests": 34
+    },
+    "total": 962,
+    "failures": 0,
+    "logSHA256": "638fd2cb839c9d280d4373c839bbf3cce809d7f9b5a7a75f64504a38527c6b2b",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ]
+  },
+  "compatibility": {
+    "TrashRestore.reviewIdentity": "optional; legacy decode tested; UI requires proof from a fresh preview",
+    "directLibraryCalls": "optional review/scope parameters preserve existing direct-call behavior",
+    "CLI": "interactive confirmation binds the current command preview; --yes authorizes the preview read by that invocation, not a persisted review from another invocation"
+  },
+  "limits": [
+    "No atomic filesystem snapshot; per-entry path/destination checks remain necessary",
+    "Cancelled preview publication is discarded while its physical reader remains occupied until it returns",
+    "Permanent removal scope tested only with owned fake-Trash fixtures and rejection before deletion; no real Trash emptying",
+    "Space selection changes verified by model test; visible QA covers native restore confirmation and changed-batch rejection",
+    "No root query, helper installation, hardware writes, installed-app replacement or release"
+  ]
+}

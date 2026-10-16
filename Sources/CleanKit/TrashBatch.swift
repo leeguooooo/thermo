@@ -1,4 +1,5 @@
 import AgentCore
+import CryptoKit
 import Darwin
 import Foundation
 
@@ -170,11 +171,30 @@ public enum TrashBatches {
         return nil
     }
 
-    public static func empty(_ id: String, home: String = NSHomeDirectory()) throws -> CleanResult {
+    /// Bind confirmation to the resolved batch contents, independent of journal line order.
+    public static func reviewIdentity(_ batch: TrashBatch) throws -> String {
+        var canonical = batch
+        canonical.entries.sort { $0.destination < $1.destination }
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        return SHA256.hash(data: try encoder.encode(canonical)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func validateReview(_ expected: String?, batch: TrashBatch) throws -> String {
+        let current = try reviewIdentity(batch)
+        if let expected, expected != current { throw error(tr("Trash batch changed after review; review it again.")) }
+        return current
+    }
+
+    public static func empty(_ id: String, home: String = NSHomeDirectory(), reviewIdentity: String? = nil,
+                             reviewedDestinations: Set<String>? = nil) throws -> CleanResult {
         let batch = try load(id, home: home)
+        _ = try validateReview(reviewIdentity, batch: batch)
         var result = CleanResult(id: "trash-batch/" + id, trashed: false)
         let before = DiskSpaceSnapshot.measure(path: home)
         for entry in batch.entries {
+            if let reviewedDestinations, !reviewedDestinations.contains(entry.destination) {
+                result.failed[entry.destination] = tr("Not included in the confirmed review; review this item again."); continue
+            }
             if let reason = refusal(entry, home: home) { result.failed[entry.destination] = reason; continue }
             let size = FS.size(entry.destination)
             guard !size.denied else { result.failed[entry.destination] = "cannot measure Trash item"; continue }
@@ -199,16 +219,21 @@ public enum TrashBatches {
     /// Puts a batch's items back where they were. Each one moves only when it is still the same
     /// Trash item, nothing is at its original path (new data there wins), and the original folder is
     /// still there on the same volume. A rename, never a copy; one bad entry never stops the rest.
-    public static func restore(id: String, home: String = NSHomeDirectory(), dryRun: Bool = false) throws -> TrashRestore {
-        try restore(id: id, home: home, dryRun: dryRun, beforeMove: { _ in })
+    public static func restore(id: String, home: String = NSHomeDirectory(), dryRun: Bool = false,
+                               reviewIdentity: String? = nil, reviewedDestinations: Set<String>? = nil) throws -> TrashRestore {
+        try restore(id: id, home: home, dryRun: dryRun, reviewIdentity: reviewIdentity,
+                    reviewedDestinations: reviewedDestinations, beforeMove: { _ in })
     }
 
-    static func restore(id: String, home: String, dryRun: Bool, beforeMove: (TrashBatch.Entry) throws -> Void) throws -> TrashRestore {
+    static func restore(id: String, home: String, dryRun: Bool, reviewIdentity: String? = nil, reviewedDestinations: Set<String>? = nil, beforeMove: (TrashBatch.Entry) throws -> Void) throws -> TrashRestore {
         let batch = try load(id, home: home)
-        var result = TrashRestore(id: batch.id, dryRun: dryRun)
+        let identity = try validateReview(reviewIdentity, batch: batch)
+        var result = TrashRestore(id: batch.id, dryRun: dryRun, reviewIdentity: identity)
         for entry in batch.entries {
             var item = TrashRestore.Item(original: entry.original, destination: entry.destination, bytes: entry.bytes, status: "restored")
-            if let (status, reason) = restoreRefusal(entry, home: home) {
+            if let reviewedDestinations, !reviewedDestinations.contains(entry.destination) {
+                item.status = "skipped"; item.reason = tr("Not included in the confirmed review; review this item again.")
+            } else if let (status, reason) = restoreRefusal(entry, home: home) {
                 item.status = status; item.reason = reason
             } else if !dryRun {
                 do {
@@ -331,4 +356,5 @@ public struct TrashRestore: Codable, Sendable {
     public var dryRun: Bool
     public var items: [Item] = []
     public var issues: [String]? = nil
+    public var reviewIdentity: String? = nil
 }
