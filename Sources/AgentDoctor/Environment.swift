@@ -5,6 +5,7 @@ import ThermoL10n
 /// Everything the doctor reads from the machine, injectable so tests can run against a fixture home.
 public struct DoctorEnvironment {
     /// Explicit project context; nil means user-level inspection only.
+    public var tokenEncoding: TextEncoding
     public var project: URL?
     public var home: URL
     public var uid: uid_t
@@ -25,12 +26,13 @@ public struct DoctorEnvironment {
     public var logFile: URL
 
     public init(home: URL = FileManager.default.homeDirectoryForCurrentUser,
-                project: URL? = nil,
+                project: URL? = nil, tokenEncoding: TextEncoding = .heuristic,
                 uid: uid_t = getuid(),
                 path: [String]? = nil,
                 run: ((String, [String]) -> String?)? = nil,
                 executablePath: @escaping (Int32) -> String? = DoctorEnvironment.procPath,
                 now: Date = Date(), cancelled: @escaping () -> Bool = { false }) {
+        self.tokenEncoding = tokenEncoding
         self.project = project
         self.home = home
         execute = DoctorEnvironment.executeTool

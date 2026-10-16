@@ -74,7 +74,7 @@ struct ConfigChecks {
         return key
     }
 
-    mutating func runAll() {
+    mutating func runAll(includeSkills: Bool = true) {
         guard !env.cancelled() else { return }
         let claudeDir = env.url(".claude")
         if env.exists(claudeDir.path) { inventory.agents.append("claude") }
@@ -142,7 +142,7 @@ struct ConfigChecks {
         }
         inventory.mcpServers = servers.filter { !$0.disabled }.count
 
-        checkSkills()
+        if includeSkills { checkSkills() }
         currentItem = nil
     }
 
@@ -544,8 +544,8 @@ struct ConfigChecks {
                         let key = item(.skills, agent: agent, id: "\(agent)|\(origin)|\(u.path)", name: name,
                                        detail: front?["description"] ?? env.short(u.path), source: origin)
                         let body = Self.skillBody(text)
-                        var footprint = SkillFootprint(catalog: TextFootprint(name + "\n" + (front?["description"] ?? "")),
-                                                       document: TextFootprint(text), body: TextFootprint(body),
+                        var footprint = SkillFootprint(catalog: TextFootprint(name + "\n" + (front?["description"] ?? ""), encoding: env.tokenEncoding),
+                                                       document: TextFootprint(text, encoding: env.tokenEncoding), body: TextFootprint(body, encoding: env.tokenEncoding),
                                                        sourcePath: Redact.text(env.short(skill.path)),
                                                        contentHash: SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined())
                         footprint.canonicalID = Self.skillFileIdentity(skill)

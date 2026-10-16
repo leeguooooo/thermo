@@ -1,2 +1,5 @@
 # Preserve upstream license/notice bytes, including their final blank lines.
 Resources/ThirdPartyNotices/* whitespace=-blank-at-eof
+
+# Compressed public tokenizer data is regenerated and hash-verified by the tool.
+Sources/CTokenData/TokenData.c linguist-generated=true

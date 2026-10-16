@@ -10,13 +10,13 @@ import ThermoL10n
 
     init(report: ToolUsageReport? = nil) { self.report = report }
 
-    func analyze() {
+    func analyze(encoding: TextEncoding = .heuristic) {
         guard !running else { return }
         let cancellation = DoctorCancellation()
         self.cancellation = cancellation
         running = true; stopping = false
         Task.detached(priority: .utility) {
-            let report = AgentDoctor.usage(env: DoctorEnvironment(cancelled: { cancellation.isCancelled }))
+            let report = AgentDoctor.usage(env: DoctorEnvironment(tokenEncoding: encoding, cancelled: { cancellation.isCancelled }))
             await MainActor.run {
                 guard self.cancellation === cancellation else { return }
                 self.report = report
@@ -30,6 +30,7 @@ import ThermoL10n
 struct ToolUsagePanel: View {
     @ObservedObject var model: ToolUsageModel
     let kind: String
+    var encoding: TextEncoding = .heuristic
     @State private var sort = UsageSort.text
     enum UsageSort: String, CaseIterable {
         case text, errors, time, calls
@@ -43,7 +44,7 @@ struct ToolUsagePanel: View {
         }
         func value(_ row: ToolUsageRow) -> Double {
             switch self {
-            case .text: return Double(row.returnedTextBytes)
+            case .text: return row.referenceEncoding == nil ? Double(row.returnedTextEstimatedTokens) : row.referenceReturnedTextTokens.map(Double.init) ?? -1
             case .errors: return Double(row.reportedErrors)
             case .time: return row.totalObservedSeconds ?? -1
             case .calls: return Double(row.calls)
@@ -60,11 +61,15 @@ struct ToolUsagePanel: View {
                 if model.running {
                     ProgressView().controlSize(.small)
                     Button(tr("Stop checking")) { model.stop() }.disabled(model.stopping)
-                } else { Button(tr("Analyze local logs")) { model.analyze() } }
+                } else { Button(tr("Analyze local logs")) { model.analyze(encoding: encoding) } }
             }
             Text(tr("Reads local Claude/Codex logs for the last 7 days, across projects. Prompts, arguments and result text stay out of the report."))
                 .font(.caption).foregroundStyle(.secondary)
             if let report = model.report {
+                if report.referenceEncoding != (encoding == .heuristic ? nil : encoding.rawValue) {
+                    Text(tr("The selected encoding differs from this report; analyze again to update counts.")).font(.caption).foregroundStyle(.orange)
+                }
+                if let encoding = report.referenceEncoding { Text(tr("Ordinary-text reference encoding: %1$@", encoding)).font(.caption).foregroundStyle(.secondary) }
                 if model.running { Text(tr("Showing the previous analysis while refreshing…")).font(.caption).foregroundStyle(.secondary) }
                 let rows = report.tools.filter { $0.kind == kind }.sorted {
                     sort.value($0) == sort.value($1) ? $0.id < $1.id : sort.value($0) > sort.value($1)
@@ -106,6 +111,9 @@ struct ToolUsagePanel: View {
                                 String(row.returnedTextBytes), String(row.returnedTextEstimatedTokens), seconds(row.medianSeconds), seconds(row.p95Seconds), seconds(row.totalObservedSeconds)))
                             .font(.caption.monospaced()).textSelection(.enabled)
                             .help(tr("P95 is shown only with at least 20 valid timing samples."))
+                        if let encoding = row.referenceEncoding {
+                            Text(tr("%1$@ reference text tokens: %2$@ · %3$@ results unavailable", encoding, row.referenceReturnedTextTokens.map(String.init) ?? tr("Unknown"), String(row.unavailableReferenceResults ?? 0))).font(.caption.monospaced())
+                        }
                         if row.nonTextBlocks > 0 {
                             Text(tr("%1$@ non-text result blocks were not tokenized.", String(row.nonTextBlocks))).font(.caption).foregroundStyle(.secondary)
                         }

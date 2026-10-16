@@ -7,6 +7,9 @@ public struct ToolUsageRow: Codable, Identifiable, Sendable {
     public var kind: String
     public var server: String?
     public var name: String
+    public var referenceEncoding: String? = nil
+    public var referenceReturnedTextTokens: Int? = nil
+    public var unavailableReferenceResults: Int? = nil
     public var calls = 0
     public var completed = 0
     public var reportedErrors = 0
@@ -60,6 +63,8 @@ public struct ToolUsageReport: Codable, Sendable {
     /// Request-level counters, deliberately never allocated to individual tools.
     public var sessionTokens: [LoggedTokenUsage]
     public var note: String
+    public var referenceEncoding: String? = nil
+    public var referenceEngine: String? = nil
     public var returnedTextEstimator: String? = "ascii4-unicode1-v1"
 
     public static var explanation: String {

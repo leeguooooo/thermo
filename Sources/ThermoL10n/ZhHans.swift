@@ -2582,4 +2582,16 @@ let zhHans: [String: String] = [
     "Or press %1$@": "或按 %1$@",
     "Skill content evidence has not been collected.": "尚未采集 Skill 内容检查证据。",
     "Content checks: %1$@ local references checked · %2$@ findings · %3$@ incomplete inspections": "内容检查：已核实 %1$@ 个本地引用 · %2$@ 个发现 · %3$@ 项检查不完整",
+    // Local reference token encodings
+    "Heuristic fields use 4 ASCII characters or 1 Unicode scalar per token. Optional ordinary-text reference counts use the selected encoding; they do not prove a model’s actual prompt or billed usage. Catalog and SKILL.md remain separate views; referenced files and actual loading are not measured.": "启发式字段按每 4 个 ASCII 字符或 1 个 Unicode 标量计 1 token。可选参考计数使用选定的普通文本编码，不能证明模型实际上下文或计费用量。目录与 SKILL.md 分开统计；未测量引用文件和实际加载量。",
+    "Heuristic definition fields use ascii4-unicode1-v1; optional reference counts use the named ordinary-text encoding. Neither proves actual prompt framing or billed usage. Full definitions may differ from agent loading. Output schema is a definition, not returned content. No business tools were called.": "定义的启发式字段使用 ascii4-unicode1-v1，可选参考计数使用标明的普通文本编码，均不能证明实际上下文包装或计费用量。完整定义可能与宿主加载量不同；输出 schema 不是实际返回内容。本次未调用业务工具。",
+    "Text encoding": "文本编码",
+    "Heuristic": "启发式估算",
+    "Reference encodings count ordinary text locally, not a model’s full prompt or invoice. No model name is inferred.": "参考编码在本地统计普通文本，不代表模型完整上下文或账单；不会自动推断模型名称。",
+    "%1$@ reference counts · catalog %2$@ · documents %3$@ · %4$@ files unavailable": "%1$@ 参考计数 · 目录 %2$@ · 完整文件 %3$@ · %4$@ 个文件无法计数",
+    "Reference count unavailable: %1$@": "参考计数不可用：%1$@",
+    "Ordinary-text reference encoding: %1$@": "普通文本参考编码：%1$@",
+    "%1$@ reference text tokens: %2$@ · %3$@ results unavailable": "%1$@ 参考文本 token：%2$@ · %3$@ 个结果无法计数",
+    "Local definition analysis: %1$@": "本地定义分析：%1$@",
+    "The selected encoding differs from this report; analyze again to update counts.": "当前所选编码与这份报告不同，请重新分析以更新计数。",
 ]

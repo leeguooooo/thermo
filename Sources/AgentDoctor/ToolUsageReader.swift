@@ -5,7 +5,7 @@ extension AgentDoctor {
     public static func usage(since: Date? = nil, host: String? = nil, fileLimit: Int = 100,
                              env: DoctorEnvironment = DoctorEnvironment()) -> ToolUsageReport {
         let since = since ?? env.now.addingTimeInterval(-7 * 86400)
-        var parser = ToolUsageParser(since: since, until: env.now)
+        var parser = ToolUsageParser(since: since, until: env.now, encoding: env.tokenEncoding)
         guard since <= env.now, (1...1000).contains(fileLimit), host == nil || ["claude", "codex"].contains(host!) else {
             parser.coverage.limitReached = true; return parser.report()
         }

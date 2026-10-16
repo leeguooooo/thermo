@@ -24,10 +24,11 @@ let package = Package(
             linkerSettings: [.linkedFramework("IOKit"), .linkedFramework("CoreFoundation")]
         ),
         .target(name: "ThermoKit", dependencies: ["CSMC"]),
+        .target(name: "CTokenData", linkerSettings: [.linkedLibrary("z")]),
         // Userspace-only diagnostics; kept out of ThermoKit so the root helper never links it.
         // UI strings and translations; the root helper never links it.
         .target(name: "ThermoL10n"),
-        .target(name: "AgentDoctor", dependencies: ["ThermoL10n", "AgentCore", .product(name: "Markdown", package: "swift-markdown")]),
+        .target(name: "AgentDoctor", dependencies: ["ThermoL10n", "AgentCore", "CTokenData", .product(name: "Markdown", package: "swift-markdown")]),
         // What both agent features read: processes, live sessions, plugins, protected paths. User-level only.
         .target(name: "AgentCore"),
         // Disk cleanup runs as the user only: the root helper must never link it.
@@ -42,7 +43,7 @@ let package = Package(
         .testTarget(name: "ThermoCLITests", dependencies: ["thermo"]),
         .testTarget(name: "ThermoAppTests", dependencies: ["ThermoApp", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor"]),
         .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC"]),
-        .testTarget(name: "AgentDoctorTests", dependencies: ["AgentDoctor", "ThermoL10n", "AgentCore"]),
+        .testTarget(name: "AgentDoctorTests", dependencies: ["AgentDoctor", "ThermoL10n", "AgentCore"], exclude: ["Fixtures"]),
         .testTarget(name: "CleanKitTests", dependencies: ["CleanKit"]),
         .testTarget(name: "AgentCoreTests", dependencies: ["AgentCore"]),
     ],

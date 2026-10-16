@@ -21,18 +21,21 @@ public struct MCPInspection: Codable, Sendable {
     public var agent: String
     public var state: State = .failed
     public var message = ""
+    public var referenceEncoding: String?
+    public var referenceEngine: String? = nil
     public var transport: String?
     public var cleanupStatus: String?
     public var protocolVersion: String?
     public var startupSeconds: Double?
     public var handshakeSeconds: Double?
     public var listingSeconds: Double?
+    public var analysisSeconds: Double?
     public var elapsedSeconds: Double = 0
     public var complete = false
     public var instructions: TextFootprint?
     public var definitions: TextFootprint?
     public var tools: [MCPToolFootprint] = []
-    public var measurementNote = tr("Static definition estimates use ascii4-unicode1-v1, not a model tokenizer. Full definitions may differ from what an agent loads. Output schema is a definition, not actual tool output. No business tools were called; runtime usage and task success are unmeasured.")
+    public var measurementNote = tr("Heuristic definition fields use ascii4-unicode1-v1; optional reference counts use the named ordinary-text encoding. Neither proves actual prompt framing or billed usage. Full definitions may differ from agent loading. Output schema is a definition, not returned content. No business tools were called.")
 }
 
 extension AgentDoctor {
@@ -41,7 +44,7 @@ extension AgentDoctor {
     public static func inspectMCP(_ name: String, agent: String? = nil, timeout: TimeInterval = 10,
                                   env: DoctorEnvironment = DoctorEnvironment()) -> MCPInspection {
         var checks = ConfigChecks(env: env)
-        checks.runAll()
+        checks.runAll(includeSkills: false)
         if env.cancelled() {
             return MCPInspection(generated: env.now, name: Redact.text(name), agent: agent ?? "",
                                  state: .cancelled, message: tr("Inspection cancelled."))
@@ -69,7 +72,8 @@ enum MCPInspector {
         return String(decoding: data, as: UTF8.self)
     }
 
-    static func footprint(_ tool: [String: Any]) throws -> MCPToolFootprint {
+    static func footprint(_ tool: [String: Any], encoding: TextEncoding = .heuristic) throws -> MCPToolFootprint {
+        func measure(_ text: String) -> TextFootprint { TextFootprint(text, encoding: encoding) }
         guard let name = tool["name"] as? String, !name.isEmpty else { throw Failure(message: tr("Tool entry has no valid name.")) }
         var issues: [String] = []
         let description = tool["description"] as? String ?? ""
@@ -77,24 +81,26 @@ enum MCPInspector {
         func schema(_ key: String, required: Bool) throws -> TextFootprint {
             guard let value = tool[key] else {
                 if required { issues.append(tr("Input schema is missing.")) }
-                return TextFootprint("")
+                return measure("")
             }
             if let object = value as? [String: Any] {
                 if object["type"] as? String != "object" { issues.append(tr("%1$@ must declare object type.", key)) }
             } else { issues.append(tr("%1$@ is not a JSON object.", key)) }
-            return TextFootprint(try json(value))
+            return measure(try json(value))
         }
         let input = try schema("inputSchema", required: true)
         let output = try schema("outputSchema", required: false)
-        return MCPToolFootprint(name: Redact.text(String(name.prefix(500))), description: TextFootprint(description),
+        return MCPToolFootprint(name: Redact.text(String(name.prefix(500))), description: measure(description),
                                 inputSchema: input, outputSchema: output,
-                                annotations: TextFootprint(try tool["annotations"].map(json) ?? ""),
-                                definition: TextFootprint(try json(tool)), issues: issues)
+                                annotations: measure(try tool["annotations"].map(json) ?? ""),
+                                definition: measure(try json(tool)), issues: issues)
     }
 
     static func inspect(_ server: MCPServer, env: DoctorEnvironment, timeout: TimeInterval) -> MCPInspection {
         let started = clock()
         var report = MCPInspection(generated: env.now, name: Redact.text(server.name), agent: server.agent)
+        report.referenceEncoding = env.tokenEncoding == .heuristic ? nil : env.tokenEncoding.rawValue
+        report.referenceEngine = env.tokenEncoding == .heuristic ? nil : ReferenceTokenizer.engine
         func finish() -> MCPInspection {
             report.elapsedSeconds = max(0, clock() - started)
             return report
@@ -135,7 +141,6 @@ enum MCPInspector {
             transport.negotiated(version)
             try transport.send(["jsonrpc": "2.0", "method": "notifications/initialized"])
             report.handshakeSeconds = clock() - handshake
-            report.instructions = TextFootprint(initialized["instructions"] as? String ?? "")
             let listing = clock()
             var tools: [[String: Any]] = []
             if capabilities["tools"] != nil {
@@ -152,15 +157,18 @@ enum MCPInspector {
                     if page == 99 { throw Failure(message: tr("Pagination exceeded the inspection limit; results are incomplete.")) }
                 }
             }
+            report.listingSeconds = clock() - listing
+            let analysis = clock()
+            report.instructions = TextFootprint(initialized["instructions"] as? String ?? "", encoding: env.tokenEncoding)
             var names = Set<String>()
             report.tools = try tools.map { tool in
                 try transport.check()
-                var row = try footprint(tool)
+                var row = try footprint(tool, encoding: env.tokenEncoding)
                 if !names.insert(tool["name"] as? String ?? "").inserted { row.issues.append(tr("Duplicate tool name in the server listing.")) }
                 return row
-            }.sorted { $0.definition.estimatedTokens == $1.definition.estimatedTokens ? $0.name < $1.name : $0.definition.estimatedTokens > $1.definition.estimatedTokens }
-            report.definitions = TextFootprint(try json(tools))
-            report.listingSeconds = clock() - listing
+            }.sorted { ($0.definition.comparisonTokens ?? -1) == ($1.definition.comparisonTokens ?? -1) ? $0.name < $1.name : ($0.definition.comparisonTokens ?? -1) > ($1.definition.comparisonTokens ?? -1) }
+            report.definitions = TextFootprint(try json(tools), encoding: env.tokenEncoding)
+            report.analysisSeconds = clock() - analysis
             try transport.check()
             report.complete = true
             report.state = .ready

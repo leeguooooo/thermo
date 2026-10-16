@@ -23,18 +23,26 @@ final class AgentScanner: ObservableObject {
     @Published private(set) var history: [LastResult] = []
     @Published private(set) var stopped = false
     @Published private(set) var stopRequested = false
+    @Published private(set) var tokenEncoding: TextEncoding = .heuristic
     @Published private(set) var project: URL?
     private let diagnose: (@Sendable () -> DoctorReport)?
-    private let scanDiagnosis: @Sendable (DoctorCancellation, URL?) -> DoctorReport
+    private let scanDiagnosis: @Sendable (DoctorCancellation, URL?, TextEncoding) -> DoctorReport
     private var scanCancellation: DoctorCancellation?
     private var operationLanguage: String?
     private var needsLanguageRefresh = false
 
     init(diagnose: (@Sendable () -> DoctorReport)? = nil) {
         self.diagnose = diagnose
-        self.scanDiagnosis = { cancellation, project in
-            diagnose?() ?? AgentDoctor.run(DoctorEnvironment(project: project, cancelled: { cancellation.isCancelled }))
+        self.scanDiagnosis = { cancellation, project, encoding in
+            diagnose?() ?? AgentDoctor.run(DoctorEnvironment(project: project, tokenEncoding: encoding, cancelled: { cancellation.isCancelled }))
         }
+    }
+
+    func selectEncoding(_ encoding: TextEncoding) {
+        guard !busy else { return }
+        tokenEncoding = encoding
+        report = nil; selection = nil
+        scan()
     }
 
     func selectProject(_ project: URL?) {
@@ -48,7 +56,8 @@ final class AgentScanner: ObservableObject {
     private func currentDiagnosis() -> @Sendable () -> DoctorReport {
         let project = project
         let custom = diagnose
-        return { custom?() ?? AgentDoctor.run(DoctorEnvironment(project: project)) }
+        let encoding = tokenEncoding
+        return { custom?() ?? AgentDoctor.run(DoctorEnvironment(project: project, tokenEncoding: encoding)) }
     }
 
     struct Batch {
@@ -90,8 +99,9 @@ final class AgentScanner: ObservableObject {
         needsLanguageRefresh = false
         let diagnose = scanDiagnosis
         let project = project
+        let encoding = tokenEncoding
         Task.detached(priority: .userInitiated) {
-            let r = diagnose(cancellation, project)
+            let r = diagnose(cancellation, project, encoding)
             await MainActor.run {
                 guard self.scanCancellation === cancellation else { return }
                 if cancellation.isCancelled || r.cancelled == true {

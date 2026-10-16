@@ -18,6 +18,7 @@ struct ToolUsageParser {
         var textBytes = 0
         var estimatedTokens = 0
         var nonText = 0
+        var referenceTokens: Int?
     }
     struct Usage {
         var date: Date
@@ -28,6 +29,7 @@ struct ToolUsageParser {
     }
     let since: Date
     let until: Date
+    var encoding: TextEncoding = .heuristic
     var coverage = ToolUsageCoverage()
     var calls: [String: Call] = [:]
     var usage: [String: (host: String, value: Usage)] = [:]
@@ -82,28 +84,28 @@ struct ToolUsageParser {
         calls[key] = call
     }
     /// JSON strings are text as logged, not reinterpreted as arbitrary status prose.
-    static func result(_ value: Any?) -> (TextFootprint, Int, Bool?) {
+    static func result(_ value: Any?, encoding: TextEncoding = .heuristic) -> (TextFootprint, Int, Bool?) {
         if let text = value as? String {
             if text.first == "{", let data = text.data(using: .utf8),
                let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-               object["content"] is [[String: Any]] || object["structuredContent"] != nil { return result(object) }
-            return (TextFootprint(text), 0, nil)
+               object["content"] is [[String: Any]] || object["structuredContent"] != nil { return result(object, encoding: encoding) }
+            return (TextFootprint(text, encoding: encoding), 0, nil)
         }
         if let blocks = value as? [[String: Any]] {
             let texts = blocks.compactMap { $0["type"] as? String == "text" ? $0["text"] as? String : nil }
-            return (TextFootprint(texts.joined(separator: "\n")), blocks.filter { $0["type"] as? String != "text" }.count, nil)
+            return (TextFootprint(texts.joined(separator: "\n"), encoding: encoding), blocks.filter { $0["type"] as? String != "text" }.count, nil)
         }
         if let object = value as? [String: Any] {
             if let content = object["content"] {
-                let measured = result(content)
+                let measured = result(content, encoding: encoding)
                 return (measured.0, measured.1, boolean(object["isError"]))
             }
             if let structured = object["structuredContent"],
                let data = try? JSONSerialization.data(withJSONObject: structured, options: [.sortedKeys, .fragmentsAllowed]) {
-                return (TextFootprint(String(decoding: data, as: UTF8.self)), 0, boolean(object["isError"]))
+                return (TextFootprint(String(decoding: data, as: UTF8.self), encoding: encoding), 0, boolean(object["isError"]))
             }
         }
-        return (TextFootprint(""), 0, nil)
+        return (TextFootprint("", encoding: encoding), 0, nil)
     }
     mutating func end(host: String, session: String, id: String, value: Any?, error: Bool?, time: Date?) {
         guard id.count <= 512, !id.isEmpty else { coverage.limitReached = true; return }
@@ -111,11 +113,12 @@ struct ToolUsageParser {
         if calls[key]?.endSeen == true { coverage.duplicateRecords += 1; return }
         guard calls.count < 100_000 || calls[key] != nil else { coverage.limitReached = true; return }
         var call = calls[key] ?? Call(host: host)
-        let measured = Self.result(value)
+        let measured = call.startSeen && call.kind == nil ? (TextFootprint(""), 0, nil as Bool?) : Self.result(value, encoding: encoding)
         call.ended = time; call.endSeen = true
         if error == true || measured.2 == true { call.isError = true }
         else if error != nil || measured.2 != nil { call.isError = false }
         else { call.isError = nil }
+        call.referenceTokens = measured.0.referenceTokens
         call.textBytes = measured.0.bytes; call.estimatedTokens = measured.0.estimatedTokens; call.nonText = measured.1
         if time == nil { coverage.missingTimestamps += 1 }
         calls[key] = call
@@ -176,8 +179,16 @@ struct ToolUsageParser {
             guard let kind = call.kind, let name = call.name else { coverage.otherToolCalls += 1; continue }
             let key = call.groupID ?? Self.identity(call.host + "|" + kind + "|" + (call.server ?? "") + "|" + name)
             var row = rows[key] ?? ToolUsageRow(id: key, host: call.host, kind: kind, server: call.server, name: name)
+            row.referenceEncoding = encoding == .heuristic ? nil : encoding.rawValue
+            if encoding != .heuristic, row.unavailableReferenceResults == nil { row.unavailableReferenceResults = 0 }
             row.calls += 1
             if call.endSeen, inWindow(call.ended) {
+                if encoding != .heuristic {
+                    if row.completed == 0 { row.referenceReturnedTextTokens = call.referenceTokens }
+                    else if let sum = row.referenceReturnedTextTokens, let count = call.referenceTokens { row.referenceReturnedTextTokens = sum + count }
+                    else { row.referenceReturnedTextTokens = nil }
+                    if call.referenceTokens == nil { row.unavailableReferenceResults = (row.unavailableReferenceResults ?? 0) + 1 }
+                }
                 row.completed += 1
                 if call.isError == true { row.reportedErrors += 1 }
                 if call.isError == nil { row.unknownErrorStatus += 1 }
@@ -205,6 +216,6 @@ struct ToolUsageParser {
         let complete = !coverage.cancelled && !coverage.limitReached && coverage.clippedFiles == 0 && coverage.unreadableFiles == 0 && coverage.malformedLines == 0 && coverage.oversizedLines == 0 && coverage.missingTimestamps == 0 && coverage.unmatchedResults == 0
         return ToolUsageReport(generated: until, since: since, until: until, complete: complete, coverage: coverage,
                                tools: rows.values.sorted { $0.returnedTextBytes == $1.returnedTextBytes ? $0.id < $1.id : $0.returnedTextBytes > $1.returnedTextBytes },
-                               sessionTokens: totals.values.sorted { $0.host < $1.host }, note: ToolUsageReport.explanation)
+                               sessionTokens: totals.values.sorted { $0.host < $1.host }, note: ToolUsageReport.explanation, referenceEncoding: encoding == .heuristic ? nil : encoding.rawValue, referenceEngine: encoding == .heuristic ? nil : ReferenceTokenizer.engine)
     }
 }

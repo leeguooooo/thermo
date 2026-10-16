@@ -18,6 +18,6 @@ with tempfile.TemporaryDirectory(prefix='thermo-render-usage-') as temporary:
     glass.write_text('import SwiftUI\n' + source[start:end])
     binary = temporary / 'render'
     subprocess.run(['swiftc', '-parse-as-library', '-I', str(root / '.build/debug'), '-L', str(root / '.build/debug'),
-                    '-lAgentDoctor', '-lAgentCore', '-lThermoL10n', str(root / 'Sources/ThermoApp/ToolUsagePanel.swift'),
+                    '-lAgentDoctor', '-lAgentCore', '-lThermoL10n', '-lz', str(root / 'Sources/ThermoApp/ToolUsagePanel.swift'),
                     str(glass), str(root / 'scripts/render-tool-usage.swift'), '-o', str(binary)], check=True)
     subprocess.run([str(binary), str(Path(sys.argv[1]).resolve()), str(Path(sys.argv[2]).resolve())], check=True)

@@ -134,6 +134,14 @@ struct AreaPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header(problems)
+                if area == .skills || area == .mcp {
+                    Picker(tr("Text encoding"), selection: Binding(get: { scanner.tokenEncoding }, set: { scanner.selectEncoding($0) })) {
+                        Text(tr("Heuristic")).tag(TextEncoding.heuristic)
+                        Text("cl100k_base").tag(TextEncoding.cl100k)
+                        Text("o200k_base").tag(TextEncoding.o200k)
+                    }.disabled(scanner.busy)
+                    Text(tr("Reference encodings count ordinary text locally, not a model’s full prompt or invoice. No model name is inferred.")).font(.caption).foregroundStyle(.secondary)
+                }
                 if area == .skills {
                     HStack {
                         Text(scanner.project?.path ?? tr("User Skill context only")).font(.caption).textSelection(.enabled)
@@ -147,7 +155,7 @@ struct AreaPage: View {
                     Text(tr("This configuration scan does not connect to MCP servers. Use Connect & inspect for definitions and connection timing; actual tool usage remains unmeasured."))
                         .font(.callout).foregroundStyle(.secondary).padding(18).glass()
                 }
-                if area == .mcp || area == .skills { ToolUsagePanel(model: scanner.toolUsage, kind: area == .mcp ? "mcp" : "skill") }
+                if area == .mcp || area == .skills { ToolUsagePanel(model: scanner.toolUsage, kind: area == .mcp ? "mcp" : "skill", encoding: scanner.tokenEncoding) }
                 DiagnosticScanControl(scanner: scanner)
                 if !scanner.history.isEmpty { AgentActivity(scanner: scanner) }
                 if problems.isEmpty && !notes.contains(where: { $0.severity == .error || $0.severity == .warning }) {
@@ -318,7 +326,7 @@ private struct ProblemCard: View {
                       systemImage: last.result.ok ? "checkmark.circle.fill" : "xmark.octagon.fill")
                     .font(.system(size: 12, weight: .medium)).foregroundStyle(last.result.ok ? .green : .red).padding(.leading, 48)
             }
-            if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy).padding(.leading, 48) }
+            if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy, encoding: scanner.tokenEncoding).padding(.leading, 48) }
             Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { details.toggle() } } label: {
                 HStack(spacing: 4) {
                     Text(tr("Details")).font(.system(size: 12, weight: .medium))
@@ -428,7 +436,7 @@ private struct HealthyRow: View {
                 }
             }
             Spacer()
-            if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy) }
+            if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy, encoding: scanner.tokenEncoding) }
             if !item.actions.isEmpty {
                 Menu {
                     ForEach(item.actions) { a in Button(a.title, role: a.kind == .uninstall ? .destructive : nil) { confirming = a } }

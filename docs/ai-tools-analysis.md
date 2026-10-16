@@ -23,6 +23,21 @@ thermo 的 AI 工具页需要回答：配置是否有故障、定义有多大、
 
 发现规则参考 [Codex Skill 位置与同名行为](https://developers.openai.com/codex/skills)、[Codex 插件缓存布局](https://developers.openai.com/plugins/build/plugins)、[Claude Code 项目 Skill 与同名规则](https://code.claude.com/docs/en/skills)。这些规则于 2026-10-17 核对；实现对未识别的加载状态保持未知。
 
+## 本地参考分词
+
+`context`、`inspect`、`usage` 可增加 `--encoding cl100k_base` 或 `--encoding o200k_base`；默认 heuristic 保持旧的低成本估算。App 的 MCP / Skills 分类可选择同样的编码。它们是普通文本参考编码，不自动映射模型名称，也不宣称等于 Claude、最新模型、工具包装、图片或账单用量。
+
+- 使用 OpenAI tiktoken 0.14.0 的词表和普通文本预分词规则，保留所有格与正则量词。BPE 用最小堆与相邻片段合并，按 rank、再按左侧位置选取；不实现解码器或自动下载接口。
+- 编译进二进制的两份压缩词表约 2.9 MiB 源码，运行时不依赖 Python、资源目录或网络。原始词表 SHA-256、转换后二进制哈希和规则记录在 Resources/TokenVocabularyProvenance.json，加载时验证转换数据哈希。
+- NSRegularExpression 使用系统 ICU；referenceEngine 标识本地实现、参考版本与 ordinary 模式。测试验证的是当前主机上与官方参考的符合性，不是所有系统版本和任意模型的实际上下文保证。
+- 老字段 estimatedTokens / estimator 保留启发式结果，新增 referenceEncoding、referenceTokens、referenceError。参考值不可用时保持 nil / 错误代码，不把启发式结果伪装成参考计数。对比排序将不可用项放到末尾；有缺失文件的参考汇总保持未知。
+- 单次文本上限 1 MiB、单个预分词片段上限 65,536 字节。触及边界返回 input_limit / piece_limit。控制标记按普通文字处理，不当作隐含的模型控制 token。
+- 日志的参考计数只用于返回文本，请求原生 token 记录不变；非文本结果仍保持未知。MCP 将列表读取与本地定义分析分开计时，单项连接检查也不再为发现服务而重复统计全部 Skill。
+
+[本轮对照与打包证据](measurements/reference-tokenizer-2026-10-17.json)记录了 488 项相关回归、独立 CLI 和旧报告回读结果。Debug 包复制到无资源目录后仍能计数；root helper 未带入词表符号。未公证或安装验收。
+
+Tests/AgentDoctorTests/Fixtures 保留由官方 tiktoken 0.14.0 生成的 734 个 token ID 样例，包含语言、schema、组合字符、emoji、NUL、空白、重复文本和随机 Unicode 标量；独立 CLI 夹具另外验证文档、目录、MCP schema 和日志返回值。开发者可用 scripts/generate-tokenizer-reference.py 重建样例，scripts/generate-token-vocabularies.py 使用固定哈希的官方表重建内嵌数据；这些脚本不是产品运行依赖。
+
 ## Skill 内容证据
 
 每份成功读取的 Skill 增加 quality 元数据。解析由固定版本的 [Swift Markdown 0.9.0](https://github.com/swiftlang/swift-markdown/tree/0.9.0) / cmark-gfm 完成，依赖提交记录在 Package.resolved 中。检查不执行 Skill、脚本或 MCP，不联网获取引用，也不读取引用文件正文。

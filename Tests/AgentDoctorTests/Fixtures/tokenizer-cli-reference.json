@@ -1,0 +1,27 @@
+{
+  "text": "---\nname: fixture\ndescription: 验证本地分词\n---\nHello, world!\n我们能看出来 MCP 占多少 token？",
+  "body": "Hello, world!\n我们能看出来 MCP 占多少 token？",
+  "catalog": "fixture\n验证本地分词",
+  "tool": {
+    "name": "fixture",
+    "description": "搜索文档",
+    "inputSchema": {
+      "type": "object"
+    }
+  },
+  "reference": "tiktoken 0.14.0 encode_ordinary",
+  "encodings": {
+    "cl100k_base": {
+      "document": 33,
+      "body": 16,
+      "catalog": 8,
+      "definition": 19
+    },
+    "o200k_base": {
+      "document": 30,
+      "body": 14,
+      "catalog": 7,
+      "definition": 19
+    }
+  }
+}

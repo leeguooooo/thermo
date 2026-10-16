@@ -138,8 +138,15 @@ struct AgentsCommand {
            thermo agents fix|uninstall|disable NAME       that action on one item
            thermo agents run NAME --action N              action N from `show`
       NAME is the item's name or id; narrow with --area AREA and --agent AGENT, or --all for every match.
+      --encoding heuristic|cl100k_base|o200k_base selects ordinary-text reference counts for context/inspect/usage.
       Actions print their exact steps first and ask; --yes skips the question, --dry-run only prints.
     """
+
+    func encoding() throws -> TextEncoding {
+        guard let name = app.args.options["encoding"] else { return .heuristic }
+        guard let value = TextEncoding(rawValue: name) else { throw CLIError("--encoding must be heuristic, cl100k_base or o200k_base; model names are not inferred") }
+        return value
+    }
 
     func usage() throws {
         guard !app.args.has("csv"), app.args.options["root"] == nil else { throw CLIError("agents usage supports --json; project filtering and CSV are not supported") }
@@ -161,18 +168,20 @@ struct AgentsCommand {
             }
             guard let since, since <= Date() else { throw CLIError("--since must be a past ISO date or YYYY-MM-DD (UTC)") }
         }
-        let report = AgentDoctor.usage(since: since, host: host, fileLimit: count)
+        let report = AgentDoctor.usage(since: since, host: host, fileLimit: count, env: DoctorEnvironment(tokenEncoding: try encoding()))
         if app.args.has("json") { print(Export.diagnosticJSON(report)); return }
         let iso = ISO8601DateFormatter()
         let coverage = report.coverage
         var lines = [style.bold("Observed local tool usage"), iso.string(from: report.since) + " → " + iso.string(from: report.until),
                      "Log reading: " + (report.complete ? "complete within selected scope" : "partial"),
                      "\(coverage.filesRead)/\(coverage.filesDiscovered) eligible files · \(coverage.bytesRead) bytes · \(coverage.clippedFiles) clipped · \(coverage.malformedLines) malformed records", ""]
+        if let encoding = report.referenceEncoding { lines.append("Ordinary-text reference encoding: " + encoding + "; not a model invoice or prompt framing count") }
         for row in report.tools.prefix(app.args.has("all") ? report.tools.count : 20) {
             lines.append(style.bold((row.server.map { $0 + " / " } ?? "") + row.name) + " [" + row.host + ", " + row.kind + "]")
             lines.append("  \(row.calls) calls · \(row.completed) results · \(row.reportedErrors) explicit errors · \(row.unknownErrorStatus) unknown error status · \(row.missingResults) missing results")
             let median = row.medianSeconds.map { String(format: "%.3fs", $0) } ?? "unknown"
             let p95 = row.p95Seconds.map { String(format: "%.3fs", $0) } ?? "unknown (requires 20 samples)"
+            if let encoding = row.referenceEncoding { lines.append("  " + encoding + ": " + (row.referenceReturnedTextTokens.map(String.init) ?? "unknown") + " reference tokens; unavailable results: \(row.unavailableReferenceResults ?? 0)") }
             lines.append("  result text: \(row.returnedTextBytes) bytes / ≈\(row.returnedTextEstimatedTokens) tokens · median \(median) · P95 \(p95) · \(row.nonTextBlocks) non-text blocks not tokenized")
         }
         if report.tools.isEmpty { lines.append("No directly attributable MCP or explicit Skill calls were observed; this does not prove they were unused.") }
@@ -190,7 +199,7 @@ struct AgentsCommand {
         guard !app.args.has("csv"), !app.args.has("all"), !app.args.has("dry-run") else {
             throw CLIError("agents inspect supports one server, --agent, --timeout and --json")
         }
-        let report = AgentDoctor.inspectMCP(name, agent: app.args.options["agent"], timeout: try app.args.double("timeout") ?? 10)
+        let report = AgentDoctor.inspectMCP(name, agent: app.args.options["agent"], timeout: try app.args.double("timeout") ?? 10, env: DoctorEnvironment(tokenEncoding: try encoding()))
         if app.args.has("json") { print(Export.diagnosticJSON(report)) }
         else {
             var lines = [style.bold(report.name) + " [" + report.agent + "] · " + report.state.rawValue, report.message,
@@ -199,12 +208,14 @@ struct AgentsCommand {
             if report.transport == "streamable-http" {
                 lines.append("HTTP handshake \(seconds(report.handshakeSeconds)) · list \(seconds(report.listingSeconds))")
             } else { lines.append("Start \(seconds(report.startupSeconds)) · handshake \(seconds(report.handshakeSeconds)) · list \(seconds(report.listingSeconds))") }
+            if let encoding = report.referenceEncoding { lines.append("Ordinary-text reference encoding: " + encoding + "; not a model invoice or prompt framing count") }
+            if let analysis = report.analysisSeconds { lines.append(String(format: "Local analysis %.3fs", analysis)) }
             if let definitions = report.definitions {
-                lines.append("\(report.tools.count) tools · definitions ≈\(definitions.estimatedTokens) tokens · \(definitions.bytes) bytes")
+                lines.append("\(report.tools.count) tools · definitions ≈\(definitions.tokenLabel) tokens · \(definitions.bytes) bytes")
             }
-            if let instructions = report.instructions { lines.append("Server instructions ≈\(instructions.estimatedTokens) tokens") }
+            if let instructions = report.instructions { lines.append("Server instructions ≈\(instructions.tokenLabel) tokens") }
             for tool in report.tools {
-                lines.append("  " + tool.name + " ≈\(tool.definition.estimatedTokens) tokens (description \(tool.description.estimatedTokens), input schema \(tool.inputSchema.estimatedTokens), output schema \(tool.outputSchema.estimatedTokens))")
+                lines.append("  " + tool.name + " ≈\(tool.definition.tokenLabel) tokens (description \(tool.description.tokenLabel), input schema \(tool.inputSchema.tokenLabel), output schema \(tool.outputSchema.tokenLabel))")
                 for issue in tool.issues { lines.append("    ! " + issue) }
             }
             if let cleanup = report.cleanupStatus { lines.append("HTTP session cleanup: " + cleanup) }
@@ -223,7 +234,7 @@ struct AgentsCommand {
                 throw CLIError("--root must name an existing project directory")
             }
         }
-        var report = AgentDoctor.context(DoctorEnvironment(project: project))
+        var report = AgentDoctor.context(DoctorEnvironment(project: project, tokenEncoding: try encoding()))
         if let agent = app.args.options["agent"] {
             let visible = agent == "codex" ? ["codex", "shared", "codex-cache"] : agent == "claude" ? ["claude", "plugin"] : [agent]
             report.skills = report.skills.filter { visible.contains($0.agent) }
@@ -234,7 +245,11 @@ struct AgentsCommand {
         report.summaries = SkillContextSummary.summarize(report.skills)
         if app.args.has("json") { print(Export.diagnosticJSON(report)); return }
         var lines = [style.bold("Skill footprint · static estimates"), report.coverageNote, report.measurementNote, ""]
+        if let encoding = report.referenceEncoding { lines.append("Ordinary-text reference encoding: " + encoding + "; not a model invoice or prompt framing count") }
         for summary in report.summaries {
+            if let encoding = summary.referenceEncoding {
+                lines.append("\(summary.host) \(encoding): catalog \(summary.referenceCatalogTokens.map(String.init) ?? "unknown"), documents \(summary.referenceDocumentTokens.map(String.init) ?? "unknown"); unavailable files \(summary.unavailableReferenceFiles ?? 0)")
+            }
             lines.append("\(summary.host): \(summary.uniqueFiles) unique directory/plugin files · catalog ≈\(summary.catalogEstimatedTokens) tokens · documents ≈\(summary.documentEstimatedTokens) tokens · \(summary.documentBytes) bytes · \(summary.aliases) duplicate file entries excluded from document totals")
             if summary.inconsistentFiles > 0 || summary.unverifiedIdentityEntries > 0 { lines.append("  excluded: \(summary.inconsistentFiles) changing files, \(summary.unverifiedIdentityEntries) entries with unknown identity") }
             lines.append("  cache inventory: \(summary.cacheEntries) entries, \(summary.cacheUniqueFiles) unique files, \(summary.cacheDocumentBytes) bytes; excluded from directory totals")
@@ -247,6 +262,7 @@ struct AgentsCommand {
                 lines.append("  cache version; loading unverified; configured enabled: " + (item.skillFootprint?.pluginConfiguredEnabled.map(String.init) ?? "unknown"))
             }
             lines.append("  " + (item.skillFootprint?.summary ?? "Content not measured"))
+            if let error = item.skillFootprint?.document.referenceError { lines.append("  reference count unavailable: " + error + "; heuristic retained separately") }
             if let source = item.skillFootprint?.sourcePath ?? item.source { lines.append("  " + style.dim(source)) }
         }
         lines += ["", style.bold("MCP · \(report.mcpServers.count) configuration entries"), report.mcpNote]
