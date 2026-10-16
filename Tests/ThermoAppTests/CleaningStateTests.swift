@@ -127,6 +127,51 @@ final class CleaningStateTests: XCTestCase {
 
     func testFullyRemovedItemDisappears() {
         let item = CleanItem(id: "cache", category: .devCaches, title: "Cache", safety: .safe, bytes: 30, paths: ["/fixture/removed"])
-        XCTAssertNil(DiskModel.remainder(item, attempted: item, result: CleanResult(id: item.id, trashed: false)) { _ in nil })
+        var result = CleanResult(id: item.id, trashed: false); result.removed = item.paths
+        XCTAssertNil(DiskModel.remainder(item, attempted: item, result: result) { _ in nil })
     }
+}
+
+extension CleaningStateTests {
+    func testFailedToolBatchCannotReplayEarlierCommandsFromOldReport() throws {
+        let item = CleanItem(id: "tool", category: .devCaches, title: "Fixture", safety: .review, bytes: 100,
+                             commands: [["/usr/bin/true"], ["/usr/bin/false"]])
+        var result = CleanResult(id: item.id, trashed: false)
+        result.removed = ["ran: /usr/bin/true"]; result.failed = ["/usr/bin/false": "exit 1"]
+        let rest = try XCTUnwrap(DiskModel.remainder(item, attempted: item, result: result))
+        XCTAssertNotNil(rest.blocked)
+        XCTAssertFalse(rest.cleanable)
+        XCTAssertEqual(rest.commands, item.commands, "Keep the failed review inspectable; do not synthesize a new retry plan")
+    }
+    func testBatchLevelFailureDoesNotHideAnUnreadableRemainingPath() throws {
+        let item = CleanItem(id: "cache", category: .system, title: "Fixture", safety: .safe, bytes: 100, paths: ["/fixture/remaining"])
+        var result = CleanResult(id: item.id, trashed: false)
+        result.failed = ["whitelist": "cannot read configuration"]
+        let rest = try XCTUnwrap(DiskModel.remainder(item, attempted: item, result: result) { _ in nil })
+        XCTAssertEqual(rest.paths, item.paths)
+        XCTAssertFalse(rest.cleanable)
+    }
+    func testKnownRemovedPathCannotAdoptAReplacementDuringRemainderMeasurement() {
+        let item = CleanItem(id: "cache", category: .system, title: "Fixture", safety: .safe, bytes: 100, paths: ["/fixture/removed"])
+        var result = CleanResult(id: item.id, trashed: true); result.removed = item.paths
+        XCTAssertNil(DiskModel.remainder(item, attempted: item, result: result) { _ in
+            XCTFail("A replacement at the old path is not part of the reviewed cleanup")
+            return 200
+        })
+    }
+    func testFreshScanRestoresExplicitToolSelectionAfterFailedReview() throws {
+        let item = CleanItem(id: "tool", category: .devCaches, title: "Fixture", safety: .review, bytes: 100,
+                             commands: [["/usr/bin/true"]])
+        var result = CleanResult(id: item.id, trashed: false); result.failed = ["tool": "unavailable"]
+        let rest = try XCTUnwrap(DiskModel.remainder(item, attempted: item, result: result))
+        let model = DiskModel(report: .init(items: [rest], denied: [], started: Date(), duration: 0))
+        model.selected = [rest.id]
+        XCTAssertTrue(model.selectedItems.isEmpty, "A caller cannot bypass a blocked review by changing the selection set")
+        model.selected = []
+        model.acceptScan(.init(items: [item], denied: [], started: Date(), duration: 0))
+        XCTAssertTrue(model.selectedItems.isEmpty, "Review-risk tools still require an explicit new choice")
+        model.toggle(item)
+        XCTAssertEqual(model.selectedItems.map(\.id), [item.id])
+    }
+
 }

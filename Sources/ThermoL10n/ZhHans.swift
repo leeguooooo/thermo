@@ -1797,6 +1797,7 @@ let zhHans: [String: String] = [
     ", %1$@ still occupies Trash space; empty only this batch to reclaim it": "，%1$@ 仍占用废纸篓空间，需要清空本批项目才会尝试释放",
     "%1$@ items partially completed; remaining files kept": "%1$@ 项已部分完成，剩余文件保留",
     "Removed items are listed in ~/Library/Logs/Thermo/clean.log. Targets are checked again before each operation; checks do not seal all folder contents.": "移除记录保存在 ~/Library/Logs/Thermo/clean.log。每次操作前会重新检查目标，但检查不涵盖文件夹内所有内容的变化。",
+    "Cleanup did not finish. Scan again to review the remaining items before retrying.": "清理未全部完成。请重新扫描并审阅剩余项目后再试。",
     "Show log": "查看日志",
     "Removed size is unknown": "已移除的大小未知",
     "Measured removed size: %1$@; total size is unknown": "已测得移除 %1$@，总大小未知",

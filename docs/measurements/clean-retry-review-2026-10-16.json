@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "5113f19",
+  "sourceSHA256": {
+    "Sources/ThermoApp/CleaningState.swift": "c6493e592a6de3b48bde07ad04edd33de9561950f55dec5d60f2363427d5a440",
+    "Sources/ThermoL10n/ZhHans.swift": "1d2400fa316c4f7a725ac61f749c8a3ab383328bda1cacc0020aba37c87b0d1e",
+    "Tests/ThermoAppTests/CleaningStateTests.swift": "1420d55ddf4ec11911bb5dd76a78d83e962588b0a68d542ca242c1aa8570f4cd",
+    "scripts/verify-clean-review-ui.swift": "cc4341aa02863b7e0b4cad45a2cd5dd490487f706657772aca1c1c8d8f4b4773"
+  },
+  "baseline": {
+    "tests": 14,
+    "failedAssertions": 5,
+    "newRegressionCases": 3,
+    "logSHA256": "a84fd812f81feefc1e3a8a18a633e214ee04ca43e419be4c99f4a187aa340a45"
+  },
+  "final": {
+    "AppTests": 181,
+    "CleaningStateTestsIncluded": 15,
+    "newTests": 4,
+    "failures": 0,
+    "logSHA256": "74e7ede668935fa3bfbe54b946309043a5baadc00d29cbf947db327c1f53d5d1"
+  },
+  "visibleNativeAcceptance": {
+    "windowContentSize": [
+      800,
+      580
+    ],
+    "locale": "zh-Hans",
+    "commands": [
+      [
+        "/usr/bin/true"
+      ],
+      [
+        "/usr/bin/false"
+      ]
+    ],
+    "resultOutcome": "partial",
+    "remainingRowPresent": true,
+    "remainingSelectionDisabled": true,
+    "cleanButtonDisabled": true,
+    "selectedItemCount": 0,
+    "reason": "清理未全部完成。请重新扫描并审阅剩余项目后再试。",
+    "screenshots": "CUA tool evidence in this conversation; no standalone repository screenshot",
+    "historyRecords": 1
+  },
+  "qaExecutableSHA256": "b5d71978c38e4eb9aa5ad0b4f76507f418b8087b45dbd97aaf2f7a8a82206bde",
+  "runtimeLogSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "cleanup": {
+    "processExited": true,
+    "ownedWorkspaceRemoved": true
+  },
+  "limits": [
+    "Fresh-scan selection recovery and unreadable/replacement path cases use model tests",
+    "No real vendor cleanup or deletion; isolated fixture executes only system true/false",
+    "Failed rows preserve prior review data for inspection; fresh scan is required before execution",
+    "Only affected App suite rerun; no hardware/root helper/AgentDoctor tests or release",
+    "Overall Mole parity remains unproven"
+  ]
+}
