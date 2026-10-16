@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "da1bfff",
+  "sourceSHA256": {
+    "Sources/CleanKit/Whitelist.swift": "70a36a975aeb03fcfb21bcf1f226399a3975cf832c74ccfb4d8e9d547f780a0f",
+    "Sources/CleanKit/WhitelistWriting.swift": "0a8e15f36b9f28d9b67c4346755592428819df0eca85deaa14204a2bd0138eae",
+    "Sources/ThermoApp/DiskView.swift": "c421f37ee0e2a6379f660179857b1b0910e2f28c31dd6cc2020ef8bfb5ff3fe0",
+    "Sources/ThermoApp/DiskWindow.swift": "473d7600958fa231190b39c546fd1fcb3fdf5a54ffe01b7b797cad36754a3cc4",
+    "Sources/ThermoL10n/ZhHans.swift": "7b52e00914af3e57aa5b256300fb775512795618e167b72cc98b7a150869101c",
+    "Tests/CleanKitTests/WhitelistUndoTests.swift": "00504e18e6f954836b551b28bf5b22a76b5a31af33788b49cfb0092d0862b738",
+    "Tests/ThermoAppTests/CleanupProtectionTests.swift": "ed65a796dc56f31d4d62163bf3f5107efe0b98b9c425fa7669d9188354d0e8e9",
+    "scripts/verify-clean-review-ui.swift": "cc4341aa02863b7e0b4cad45a2cd5dd490487f706657772aca1c1c8d8f4b4773"
+  },
+  "newTests": {
+    "WhitelistUndoTests": 5,
+    "CleanupProtectionTests": 3
+  },
+  "visibleNativeAcceptance": {
+    "locale": "zh-Hans",
+    "windowContentSize": [
+      800,
+      580
+    ],
+    "source": "CUA screenshots and accessibility in this conversation",
+    "individualLocationShieldAction": true,
+    "protectedRowAndCleanButtonDisabled": true,
+    "newProtectionPersisted": true,
+    "undoRemovedOnlyFirstRule": true,
+    "undoClearedOldReportAndSelections": true,
+    "scanActionVisibleAfterUndo": true,
+    "externalCommentEditCausedUndoRefusal": true,
+    "protectedFileUnchangedAfterRefusal": true,
+    "remainingProtectedEntries": 1,
+    "historyActions": [
+      "whitelistAdd",
+      "whitelistRemove",
+      "whitelistAdd"
+    ],
+    "toolCleanupExecuted": false,
+    "userDataChanged": false
+  },
+  "qaExecutableSHA256": "1482365120595e5b89a8f7ac0b21caf10ff02309bf54030d385430f6a388a949",
+  "runtimeLogSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "cleanup": {
+    "processExited": true,
+    "ownedWorkspaceRemoved": true
+  },
+  "limits": [
+    "One in-memory undo for the most recent successful addition; no persistent undo stack",
+    "Any observed configuration change invalidates undo, including unrelated edits; no automatic merge",
+    "Cooperating writers share the lock; final verification and rename are not a full compare-exchange against uncooperative writers",
+    "Visible QA only changes owned temporary Home; no real user whitelist or vendor cleanup touched",
+    "Undo requests a fresh scan rather than restoring an old removal plan",
+    "Screenshots remain in conversation evidence; no standalone screenshot artifact",
+    "No release and full Mole parity remains unproven"
+  ],
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 59,
+      "ThermoAppTests": 184,
+      "CleanKitTests": 640,
+      "AgentCoreTests": 34
+    },
+    "total": 1031,
+    "failures": 0,
+    "logSHA256": "be8a9b5c6a85383b322c0a4de70eeddee928f3f758d810f662dad507504691ce",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ]
+  },
+  "focused": {
+    "tests": 45,
+    "failures": 0,
+    "logSHA256": "9fb150ead83df7e4f5f7acab57f2727826a96cd04ba3248d5369613e23e45c62"
+  }
+}

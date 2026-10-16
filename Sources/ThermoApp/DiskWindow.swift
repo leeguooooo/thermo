@@ -72,6 +72,22 @@ struct DiskCleanConfirmation: View {
     }
 }
 
+struct DiskProtectionNotice: View {
+    @ObservedObject var model: DiskModel
+    var body: some View {
+        if let notice = model.protectionNotice {
+            HStack(alignment: .top) {
+                Label(notice, systemImage: "shield.checkered").fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                if model.protectionUndo != nil {
+                    Button(tr("Undo")) { model.undoProtection() }
+                        .disabled(model.cleaning || model.scanning).buttonStyle(PillButtonStyle())
+                }
+            }.font(.callout).padding(14).glass(radius: 14)
+        }
+    }
+}
+
 /// Keep execution feedback visible on the page from which cleanup was started.
 struct DiskCleanupResult: View {
     @ObservedObject var model: DiskModel
@@ -176,6 +192,7 @@ struct DiskHome: View {
                         Button(tr("Open Full Disk Access")) { model.openFullDiskAccess() }.buttonStyle(PillButtonStyle())
                     }
                 }
+                DiskProtectionNotice(model: model)
                 DiskCleanupResult(model: model)
                 if let days = model.report?.claudeCleanupDays {
                     Text(tr("Claude Code deletes its own sessions after %1$@ days (cleanupPeriodDays).", String(days)))
@@ -287,6 +304,7 @@ struct DiskCategoryPage: View {
             }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 10) {
+                    DiskProtectionNotice(model: model)
                     DiskCleanupResult(model: model)
                     let list = items
                     let groups = Dictionary(grouping: list, by: { $0.group ?? "" })
@@ -407,7 +425,8 @@ struct DiskCategoryPage: View {
         .glass(radius: 14, highlighted: ticked)
         .contextMenu {
             Button(tr("Show in Finder")) { model.reveal(i) }.disabled(i.paths.isEmpty)
-            Button(tr("Always keep")) { model.alwaysKeep(i) }.disabled(i.paths.isEmpty || i.blocked == tr(Whitelist.reason) || model.cleaning)
+            Button(tr("Always keep")) { model.alwaysKeep(i) }
+                .disabled((i.paths.isEmpty && (i.commandScope ?? []).isEmpty) || i.blocked == tr(Whitelist.reason) || model.cleaning || model.scanning)
             Button(tr("Copy ID")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(i.id, forType: .string) }
         }
     }
@@ -479,7 +498,16 @@ struct DiskItemDetail: View {
             }
             if let scope = item.commandScope, !scope.isEmpty {
                 Text(tr("Tool-managed locations")).font(.caption).foregroundStyle(.secondary)
-                ForEach(scope, id: \.self) { Text(FSPath.tilde($0)).font(.caption.monospaced()).textSelection(.enabled) }
+                ForEach(scope, id: \.self) { path in
+                    HStack(alignment: .top, spacing: 10) {
+                        Text(FSPath.tilde(path)).font(.caption.monospaced()).textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Button { model.alwaysKeep(item, paths: [path]) } label: { Image(systemName: "shield.lefthalf.filled") }
+                            .buttonStyle(.plain).help(tr("Always keep"))
+                            .accessibilityLabel(tr("Always keep %1$@", FSPath.tilde(path)))
+                            .disabled(model.cleaning || model.scanning || item.whitelisted?.contains(path) == true)
+                    }
+                }
             }
             if let h = item.hint { Text(tr("Run: %1$@", h)).font(.callout.monospaced()).foregroundStyle(.white.opacity(0.8)).textSelection(.enabled) }
             Text(safetyText).font(.caption).foregroundStyle(.white.opacity(0.5)).fixedSize(horizontal: false, vertical: true)
@@ -512,7 +540,7 @@ struct DiskItemDetail: View {
                                     .frame(width: 70, alignment: .trailing)
                             }
                             .font(.callout)
-                            .contextMenu { Button(tr("Always keep")) { model.alwaysKeep(item, paths: p.paths) }.disabled(model.cleaning) }
+                            .contextMenu { Button(tr("Always keep")) { model.alwaysKeep(item, paths: p.paths) }.disabled(model.cleaning || model.scanning) }
                         }
                     }
                 }
@@ -527,7 +555,7 @@ struct DiskItemDetail: View {
                             Image(systemName: "magnifyingglass")
                         }.buttonStyle(.borderless).foregroundStyle(.white.opacity(0.6)).help(tr("Show in Finder"))
                     }
-                    .contextMenu { Button(tr("Always keep")) { model.alwaysKeep(item, paths: [p]) }.disabled(model.cleaning) }
+                    .contextMenu { Button(tr("Always keep")) { model.alwaysKeep(item, paths: [p]) }.disabled(model.cleaning || model.scanning) }
                 }
                 if item.paths.count > 12 {
                     Text(tr("… and %1$@ more", String(item.paths.count - 12))).font(.caption).foregroundStyle(.white.opacity(0.45))

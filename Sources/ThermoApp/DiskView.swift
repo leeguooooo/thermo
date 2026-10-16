@@ -30,6 +30,8 @@ final class DiskModel: ObservableObject {
     /// The scan in progress, so it can be stopped.
     private var scanner: DiskScanner?
     @Published private(set) var stopping = false
+    @Published private(set) var protectionNotice: String?
+    @Published private(set) var protectionUndo: Whitelist.AdditionUndo?
     @Published var lastResult: String?
     @Published var error: String?
     /// While cleaning: which item is being removed, and how far along we are.
@@ -102,6 +104,7 @@ final class DiskModel: ObservableObject {
         resultsNeedRefresh = false
         error = nil
         lastResult = nil
+        protectionNotice = nil; protectionUndo = nil
         progress = tr("starting…")
         report = nil
         selected = []
@@ -261,21 +264,35 @@ final class DiskModel: ObservableObject {
 
     /// "Always keep": the item's paths (or just some: one session, one path) go into the whitelist
     /// and stay out of every cleanup.
-    func alwaysKeep(_ item: CleanItem, paths: [String]? = nil) {
+    func alwaysKeep(_ item: CleanItem, paths: [String]? = nil, home: String = NSHomeDirectory()) {
+        guard !cleaning, !scanning else { return }
         do {
-            try Whitelist.add(paths ?? item.paths)
+            let change = try Whitelist.addWithUndo(paths ?? (item.paths + (item.commandScope ?? [])), home: home)
+            protectionUndo = change.undo
+            protectionNotice = change.added.isEmpty ? tr("These locations are already protected.") : tr("Protected %1$@ locations from cleanup.", String(change.added.count))
             error = nil
         } catch {
             self.error = error.localizedDescription
             return
         }
-        report?.applyWhitelist()
+        report?.applyWhitelist(home: home)
         let cleanable = Set((report?.items ?? []).filter(\.cleanable).map(\.id))
         selected = selected.intersection(cleanable)
         if let parts = report?.items.first(where: { $0.id == item.id })?.parts, var off = excluded[item.id] {
             off.formIntersection(parts.map(\.id))
             excluded[item.id] = off.isEmpty ? nil : off
         }
+    }
+
+    func undoProtection() {
+        guard !cleaning, !scanning, let undo = protectionUndo else { return }
+        do {
+            try Whitelist.undoAddition(undo)
+            protectionUndo = nil
+            protectionNotice = tr("Protection undone. Scan again to review the available cleanup items.")
+            // Protection filtering may have narrowed paths and sizes. Never reconstruct an old deletion plan.
+            report = nil; selected = []; excluded = [:]; error = nil
+        } catch { self.error = error.localizedDescription }
     }
 
     func openFullDiskAccess() {

@@ -261,6 +261,41 @@ public struct Whitelist: Sendable {
         }
     }
 
+    /// One local, exact-version undo for entries newly added by this operation.
+    public struct AdditionUndo: Sendable {
+        fileprivate let home: String
+        fileprivate let paths: [String]
+        fileprivate let identity: String
+        fileprivate let text: String
+    }
+
+    public static func addWithUndo(_ paths: [String], home: String = NSHomeDirectory()) throws -> (added: [String], undo: AdditionUndo?) {
+        try addChange(paths, home: home, reviewable: true, beforeCommit: {})
+    }
+
+    @discardableResult
+    public static func undoAddition(_ undo: AdditionUndo) throws -> [String] {
+        lock.lock(); defer { lock.unlock() }
+        let removed = try WhitelistWriteTransaction.run(home: undo.home) { transaction in
+            let snapshot = try transaction.snapshot()
+            guard snapshot.identity == undo.identity, snapshot.text == undo.text else {
+                throw error(tr("Whitelist changed after protection was added. Review it before removing protection."))
+            }
+            var lines = lines(undo.text)
+            if lines.last == "" { lines.removeLast() }
+            let wanted = Set(undo.paths)
+            lines.removeAll { line in
+                if case .entry(let entry) = parse(line, home: undo.home) { return wanted.contains(entry) }
+                return false
+            }
+            try transaction.write(lines, expected: snapshot.identity, beforeCommit: {})
+            return undo.paths
+        }
+        ScanReportCache.invalidate(home: undo.home)
+        record("whitelistRemove", removed, home: undo.home)
+        return removed
+    }
+
     /// Appends the paths not already listed; returns what was added. Comments and other lines stay.
     @discardableResult
     public static func add(_ paths: [String], home: String = NSHomeDirectory()) throws -> [String] {
@@ -268,9 +303,14 @@ public struct Whitelist: Sendable {
     }
 
     static func add(_ paths: [String], home: String, beforeCommit: () throws -> Void) throws -> [String] {
+        try addChange(paths, home: home, reviewable: false, beforeCommit: beforeCommit).added
+    }
+
+    private static func addChange(_ paths: [String], home: String, reviewable: Bool,
+                                  beforeCommit: () throws -> Void) throws -> (added: [String], undo: AdditionUndo?) {
         lock.lock(); defer { lock.unlock() }
         let stored = try paths.map { try storedForm($0, home: home) }
-        let added = try WhitelistWriteTransaction.run(home: home) { transaction in
+        let change = try WhitelistWriteTransaction.run(home: home) { transaction -> (added: [String], undo: AdditionUndo?) in
             let snapshot = try transaction.snapshot()
             let text = snapshot.text ?? "# Thermo cleanup whitelist: one absolute path or glob per line; ~/ is your home folder.\n"
             var lines = lines(text)
@@ -282,12 +322,20 @@ public struct Whitelist: Sendable {
                 guard present.insert(entry).inserted else { continue }
                 lines.append(stored); added.append(entry)
             }
-            if !added.isEmpty { try transaction.write(lines, expected: snapshot.identity, beforeCommit: beforeCommit) }
-            return added
+            var committedIdentity: String?
+            if !added.isEmpty { committedIdentity = try transaction.write(lines, expected: snapshot.identity, beforeCommit: beforeCommit) }
+            var undo: AdditionUndo?
+            if reviewable, !added.isEmpty {
+                let committed = try transaction.snapshot()
+                guard let identity = committed.identity, identity == committedIdentity,
+                      let text = committed.text, text == lines.joined(separator: "\n") + "\n" else { throw error(tr("whitelist changed during editing; review it and try again")) }
+                undo = AdditionUndo(home: home, paths: added, identity: identity, text: text)
+            }
+            return (added, undo)
         }
-        if !added.isEmpty { ScanReportCache.invalidate(home: home) }
-        record("whitelistAdd", added, home: home)
-        return added
+        if !change.added.isEmpty { ScanReportCache.invalidate(home: home) }
+        record("whitelistAdd", change.added, home: home)
+        return change
     }
 
     /// Removes lines naming these paths; returns what was removed. Comments and other lines stay.

@@ -56,7 +56,8 @@ struct WhitelistWriteTransaction {
         return (text, expected)
     }
 
-    func write(_ lines: [String], expected: String?, beforeCommit: () throws -> Void) throws {
+    @discardableResult
+    func write(_ lines: [String], expected: String?, beforeCommit: () throws -> Void) throws -> String {
         let data = Data((lines.joined(separator: "\n") + "\n").utf8)
         guard data.count <= Whitelist.maxBytes else { throw Whitelist.error(tr("whitelist would be larger than %1$@ KB", String(Whitelist.maxBytes / 1024))) }
         let name = ".whitelist." + UUID().uuidString
@@ -86,6 +87,10 @@ struct WhitelistWriteTransaction {
         guard matches(), try identity() == expected else { throw Whitelist.error(tr("whitelist changed during editing; review it and try again")) }
         let flags: UInt32 = expected == nil ? UInt32(RENAME_EXCL) : 0
         guard renameatx_np(directoryDescriptor, name, directoryDescriptor, "whitelist", flags) == 0 else { throw Whitelist.error(tr("whitelist could not be written")) }
-        guard matches() else { throw Whitelist.error(tr("whitelist folder changed during editing; try again")) }
+        var committed = stat()
+        guard matches(), fstat(fd, &committed) == 0, try identity() == AppDataReviewIdentity.text(committed) else {
+            throw Whitelist.error(tr("whitelist folder changed during editing; try again"))
+        }
+        return AppDataReviewIdentity.text(committed)
     }
 }
