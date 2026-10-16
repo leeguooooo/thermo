@@ -45,10 +45,11 @@ struct MCPInspectButton: View {
             .help(tr("Starts the configured stdio server or connects to its HTTP endpoint and reads tool definitions. No business tools are called."))
             .sheet(isPresented: $showing) {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text(item.name).font(.title2.weight(.semibold)).textSelection(.enabled)
+                    Text(item.name).font(.title2.weight(.semibold)).lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true).help(item.name).textSelection(.enabled)
                     Text(tr("Starts the configured stdio server or connects to its HTTP endpoint and reads tool definitions. No business tools are called."))
-                        .font(.callout).foregroundStyle(.secondary)
-                    Text(item.detail).font(.caption.monospaced()).textSelection(.enabled)
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Text(item.detail).font(.caption.monospaced()).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
                     Picker(tr("Connection budget"), selection: $timeout) {
                         ForEach([10.0, 30.0, 60.0, 120.0], id: \.self) { value in
                             Text(tr("%1$@ seconds", String(Int(value)))).tag(value)
@@ -125,6 +126,6 @@ struct MCPInspectionResultView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(height: 350)
+        .frame(minHeight: 180, idealHeight: 350, maxHeight: 350)
     }
 }

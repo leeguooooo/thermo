@@ -1,0 +1,97 @@
+{
+  "generated": "2026-10-16T21:40:31.819052+00:00",
+  "fullSuiteSourceCommit": "301c2ab93261f71f62e063a888f372482aa22070",
+  "fullSuite": {
+    "total": 1406,
+    "failures": 0,
+    "suites": [
+      {
+        "name": "ThermoKitTests.xctest",
+        "tests": 140
+      },
+      {
+        "name": "ThermoCLITests.xctest",
+        "tests": 66
+      },
+      {
+        "name": "ThermoAppTests.xctest",
+        "tests": 257
+      },
+      {
+        "name": "CleanKitTests.xctest",
+        "tests": 713
+      },
+      {
+        "name": "AgentDoctorTests.xctest",
+        "tests": 193
+      },
+      {
+        "name": "AgentCoreTests.xctest",
+        "tests": 37
+      }
+    ]
+  },
+  "postLayoutFixTargeted": {
+    "total": 260,
+    "failures": 0,
+    "suites": [
+      {
+        "name": "ThermoKitTests.xctest",
+        "tests": 0
+      },
+      {
+        "name": "ThermoCLITests.xctest",
+        "tests": 0
+      },
+      {
+        "name": "ThermoAppTests.xctest",
+        "tests": 257
+      },
+      {
+        "name": "CleanKitTests.xctest",
+        "tests": 0
+      },
+      {
+        "name": "AgentDoctorTests.xctest",
+        "tests": 3
+      },
+      {
+        "name": "AgentCoreTests.xctest",
+        "tests": 0
+      }
+    ]
+  },
+  "nativeUI": {
+    "kind": "Real native CUA interactions with synthetic local inputs in an isolated QA copy",
+    "minimumReachedByDraggingUntilWindowStoppedShrinking": true,
+    "windowScreenshotPixels": [
+      1600,
+      1216
+    ],
+    "configuredMinimumContentPoints": [
+      800,
+      580
+    ],
+    "measurementNote": "Screenshot includes native window chrome at backing scale 2; no global display/font settings were changed.",
+    "verified": [
+      "Chinese and English Skill and MCP headers and metric cards at the enforced minimum window",
+      "English MCP summary before and after a successful fixture inspection",
+      "Evaluation file selection and comparison sheet at minimum window, including visible Close button",
+      "MCP operation explanation and configuration detail wrap fully after the fix",
+      "MCP result area scrolls to tool definitions and measurement caveat while Close stays visible"
+    ],
+    "foundAndFixed": "At minimum window size, English MCP inspection explanation and configuration summary were visually ellipsized. Vertical text sizing and a flexible 180-350 point result region now preserve complete header text.",
+    "originalAppPreserved": true,
+    "originalAppPID": 94672,
+    "qaAppClosed": true
+  },
+  "postFixSourceSHA256": {
+    "Sources/ThermoApp/MCPInspectionView.swift": "60647b2c9a4eb1632566c95c4cd4ebfff04b44f5a03779b33a3abc15194ca920"
+  },
+  "remaining": [
+    "Large-font/system text scaling acceptance",
+    "Full real installed MCP fleet and real task-effect acceptance",
+    "Formal signing/notarization/install/update acceptance"
+  ],
+  "packagingStatus": "A universal local build of the pre-layout-fix commit is in progress in an owned detached worktree. It is not the final fixed candidate, installed acceptance or publication."
+}
