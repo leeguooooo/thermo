@@ -1,7 +1,7 @@
 {
-  "generated": "2026-10-16T23:04:46.852718+00:00",
+  "generated": "2026-10-16T23:28:30.567049+00:00",
   "candidateVersion": "1.2.0",
-  "candidateCommit": "2f3627231dd19059d05525d3b658c146e01a0099",
+  "candidateCommit": "0f1a003c471d1567792739a377301f432b35b557",
   "candidateBranch": "codex/ai-tools-1.2.0-rc",
   "sourceClean": true,
   "developerIDCertificateAvailable": true,
@@ -10,23 +10,219 @@
   "publicationPerformed": false,
   "installedAppChanged": false,
   "fullReleaseConfigurationTestLog": "/tmp/thermo-ai-rc-tests.log",
-  "resourcePreflight": {
-    "ownedOldUICacheRemoved": true,
-    "head": "e77b57e120e142c0883698d77da92fcfeda87fd6",
-    "trackedDiffSHA256": "45772ee608241f299ab2f71062617070dd2b2e36586ded562e72ad4dee1b02c1",
-    "trackedAndUntrackedSourcePreserved": true,
-    "noActiveProcessesOrOpenFiles": true,
-    "dependencyCheckoutsClean": true,
-    "freeBytesBefore": 1110351872,
-    "freeBytesAfter": 1971142656
+  "initialCandidateCommit": "2f3627231dd19059d05525d3b658c146e01a0099",
+  "firstFullRun": {
+    "generated": "2026-10-16T23:11:24.030041+00:00",
+    "candidateCommit": "2f3627231dd19059d05525d3b658c146e01a0099",
+    "configuration": "release",
+    "jobs": 1,
+    "total": 1467,
+    "failures": 2,
+    "suites": [
+      {
+        "name": "ThermoKitTests.xctest",
+        "state": "passed",
+        "tests": 144,
+        "failures": 0
+      },
+      {
+        "name": "ThermoHelperTests.xctest",
+        "state": "passed",
+        "tests": 7,
+        "failures": 0
+      },
+      {
+        "name": "ThermoCLITests.xctest",
+        "state": "failed",
+        "tests": 70,
+        "failures": 1
+      },
+      {
+        "name": "ThermoAppTests.xctest",
+        "state": "passed",
+        "tests": 271,
+        "failures": 0
+      },
+      {
+        "name": "CleanKitTests.xctest",
+        "state": "passed",
+        "tests": 745,
+        "failures": 0
+      },
+      {
+        "name": "AgentDoctorTests.xctest",
+        "state": "failed",
+        "tests": 193,
+        "failures": 1
+      },
+      {
+        "name": "AgentCoreTests.xctest",
+        "state": "passed",
+        "tests": 37,
+        "failures": 0
+      }
+    ],
+    "logSHA256": "34260e7c587865ef21402d5b4c7af43f4ee8e3037d95a85ba06f4d2a0d6c6f82",
+    "failuresObserved": [
+      "VolumeTrashRestoreTests owned-build path assertion",
+      "LocalizationTests missing NativeCleanup modified-since-scan translation"
+    ],
+    "focusedFixVerification": "running; no pass claimed yet"
+  },
+  "secondFullRun": {
+    "candidateCommit": "44b9b1d0419f74e4ac0f6fcef68ee32dac52fbab",
+    "total": 1467,
+    "failures": 1,
+    "unresolvedFailure": "NativeUpdateTransactionTests.testDMGWithMultipleAppsFailsAndStillDetaches observed an owned attachment after preparation rejection"
+  },
+  "focusedFixRun": {
+    "total": 4,
+    "failures": 0,
+    "logSHA256": "b90095862775c01c98c6b2c0fdd3a5b12f8c562fad059dfbd859bb7597d059c5"
+  },
+  "nativeCLI": {
+    "generated": "2026-10-16T23:13:27.762536+00:00",
+    "candidateCommit": "44b9b1d0419f74e4ac0f6fcef68ee32dac52fbab",
+    "version": "thermo 1.2.0",
+    "configuration": "release",
+    "execution": "native arm64; not a universal package check",
+    "binarySHA256": "eb5e883a718ca1e2bc5b43fcc8f484c5d9dba4f07e9ff483fdd51f8b5028e86e",
+    "checks": [
+      {
+        "name": "verify-skill-context.py",
+        "result": {
+          "passed": true,
+          "userUniqueFiles": 1,
+          "projectUniqueFiles": 2,
+          "aliasesExcluded": 1,
+          "cacheFilesCountedSeparately": 1,
+          "coverageWarningPreserved": true
+        },
+        "passed": true
+      },
+      {
+        "name": "verify-skill-quality.py",
+        "result": {
+          "passed": true,
+          "missingReferences": 2,
+          "sourceLinesVerified": true,
+          "emptyBodies": 1,
+          "identicalIndependentCopies": 2,
+          "examplesIgnored": true,
+          "noMCPExecution": true,
+          "noSkillChanges": true
+        },
+        "passed": true
+      },
+      {
+        "name": "verify-tool-usage.py",
+        "result": {
+          "passed": true,
+          "mcpCalls": 2,
+          "skillCalls": 1,
+          "requestTokensKeptSeparate": true,
+          "privateTextExcluded": true,
+          "imageTokensUnknown": true
+        },
+        "passed": true
+      },
+      {
+        "name": "verify-reference-encoding.py",
+        "result": {
+          "passed": true,
+          "encodings": [
+            "cl100k_base",
+            "o200k_base"
+          ],
+          "standaloneBinary": true,
+          "skillMCPAndUsageCountsMatchReference": true,
+          "modelNamesNotInferred": true
+        },
+        "passed": true
+      },
+      {
+        "name": "verify-task-comparison.py",
+        "result": {
+          "evidenceKind": "synthetic",
+          "checksPassed": 7,
+          "checks": [
+            "compiled JSON output retains outcomes and paired metric sample sizes",
+            "text output labels synthetic evidence and delta direction",
+            "missing metrics and unverified outcomes remain unknown in JSON and text",
+            "missing and changed-task pairs are excluded rather than compared",
+            "mixed cohorts and duplicate results fail closed",
+            "extra content is not exported or executed; unsupported options rejected",
+            "FIFO and directory inputs are rejected without waiting for data"
+          ],
+          "notVerified": [
+            "real model task effect",
+            "independent outcome authenticity",
+            "App integration",
+            "release installation"
+          ]
+        },
+        "passed": true
+      }
+    ],
+    "scope": "Owned synthetic fixture homes only. No real configured MCP, installation or publication."
+  },
+  "cleanupDiagnostics": {
+    "behaviorGuardsUnchanged": true,
+    "targetedCases": 11,
+    "nativeUpdateClassCases": 51,
+    "stress": {
+      "generated": "2026-10-16T23:24:50.844690+00:00",
+      "results": [
+        {
+          "iteration": 1,
+          "exitCode": 0,
+          "log": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-ai-rc-jj69sotc/dmg-stress-1.log"
+        },
+        {
+          "iteration": 2,
+          "exitCode": 0,
+          "log": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-ai-rc-jj69sotc/dmg-stress-2.log"
+        },
+        {
+          "iteration": 3,
+          "exitCode": 0,
+          "log": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-ai-rc-jj69sotc/dmg-stress-3.log"
+        },
+        {
+          "iteration": 4,
+          "exitCode": 0,
+          "log": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-ai-rc-jj69sotc/dmg-stress-4.log"
+        },
+        {
+          "iteration": 5,
+          "exitCode": 0,
+          "log": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-ai-rc-jj69sotc/dmg-stress-5.log"
+        },
+        {
+          "iteration": 6,
+          "exitCode": 0,
+          "log": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-ai-rc-jj69sotc/dmg-stress-6.log"
+        },
+        {
+          "iteration": 7,
+          "exitCode": 0,
+          "log": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-ai-rc-jj69sotc/dmg-stress-7.log"
+        },
+        {
+          "iteration": 8,
+          "exitCode": 0,
+          "log": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-ai-rc-jj69sotc/dmg-stress-8.log"
+        }
+      ],
+      "stoppedOnFirstFailure": true
+    },
+    "originalFailureCause": "not yet captured; do not claim fixed from successful repeats"
   },
   "fullReleaseConfigurationTests": {
     "statusAtObservation": "running",
-    "verifiedPIDs": [
-      414
-    ],
     "command": "swift test --jobs 1 -c release",
-    "log": "/tmp/thermo-ai-rc-tests.log"
+    "log": "/tmp/thermo-ai-rc-instrumented-full-tests.log"
   },
-  "scope": "Local candidate preparation only. Version/changelog are on the isolated candidate branch; main marketing version, installed app, public tags and published assets are unchanged."
+  "releaseReady": false,
+  "scope": "Local candidate only. Both failed full runs are retained; diagnostic repeats are not a substitute for resolving or explaining the original cleanup observation. No sign/notarize/install/publish action has been performed."
 }
