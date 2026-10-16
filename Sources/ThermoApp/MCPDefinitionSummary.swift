@@ -6,13 +6,14 @@ struct MCPDefinitionSummaryPanel: View {
     @ObservedObject var store: MCPDefinitionStore
     let items: [AgentItem]
     let encoding: TextEncoding
+    var busy = false
     var body: some View {
         let summary = store.summary(items: items, encoding: encoding)
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Label(tr("Inspected MCP definitions"), systemImage: "chart.bar.doc.horizontal").font(.headline)
                 Spacer()
-                if !store.entries.isEmpty { Button(tr("Clear inspection measurements")) { store.reset() }.disabled(!store.pending.isEmpty) }
+                if !store.entries.isEmpty { Button(tr("Clear inspection measurements")) { store.reset() }.disabled(busy || !store.pending.isEmpty) }
             }
             Text(tr("%1$@ of %2$@ enabled configurations inspected completely · %3$@ incomplete · %4$@ running · %5$@ disabled", String(summary.completed), String(summary.configured), String(summary.incomplete), String(summary.running), String(summary.disabled)))
                 .font(.caption).textSelection(.enabled)
