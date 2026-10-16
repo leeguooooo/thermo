@@ -12,6 +12,11 @@ enum Simulators {
         var sizeBytes: Int64?
         var lastUsedAt: String?
         var deletable: Bool?
+        var path: String? = nil
+        var runtimeBundlePath: String? = nil
+        var mountPath: String? = nil
+        var parentMountPath: String? = nil
+        var state: String? = nil
     }
 
     struct Device: Decodable {
@@ -22,14 +27,16 @@ enum Simulators {
         var dataPath: String?
         var dataPathSize: Int64?
         var lastBootedAt: String?
+        var logPath: String? = nil
+        var lastUsedAt: String? = nil
     }
 
     static func scan(_ ctx: ScanContext) -> [CleanItem] {
         guard FS.exists("/Applications/Xcode.app") || FS.exists("/Library/Developer/CommandLineTools") else { return [] }
         let cancellation = ScanCancellation.current
-        let runtimeResult = Shell.exec(["xcrun", "simctl", "runtime", "list", "-j"], timeout: 30, cancellation: cancellation)
+        let runtimeResult = Shell.exec(["/usr/bin/xcrun", "simctl", "runtime", "list", "-j"], timeout: 30, cancellation: cancellation)
         guard runtimeResult.0 == 0 else { return [] }
-        let deviceResult = Shell.exec(["xcrun", "simctl", "list", "devices", "-j"], timeout: 30, cancellation: cancellation)
+        let deviceResult = Shell.exec(["/usr/bin/xcrun", "simctl", "list", "devices", "-j"], timeout: 30, cancellation: cancellation)
         guard deviceResult.0 == 0 else { return [] }
         let runtimesJSON = runtimeResult.1
         let devicesJSON = deviceResult.1
@@ -38,28 +45,12 @@ enum Simulators {
         return items(runtimes: runtimes, devices: byRuntime, ctx: ctx)
     }
 
-    static func currentRemovalRefusal(_ commands: [[String]], requireUnavailable: Bool) -> String? {
-        guard commands.contains(where: { $0.starts(with: ["xcrun", "simctl"]) }) else { return nil }
-        let deviceResult = Shell.exec(["xcrun", "simctl", "list", "devices", "-j"], timeout: 10)
-        guard deviceResult.0 == 0,
-              let data = try? JSONDecoder().decode([String: [String: [Device]]].self, from: Data(deviceResult.1.utf8)),
-              let devices = data["devices"] else { return tr("could not verify current simulator state") }
-        var runtimes: [Runtime] = []
-        if commands.contains(where: { $0.starts(with: ["xcrun", "simctl", "runtime", "delete"]) }) {
-            let runtimeResult = Shell.exec(["xcrun", "simctl", "runtime", "list", "-j"], timeout: 10)
-            guard runtimeResult.0 == 0, let list = try? JSONDecoder().decode([String: Runtime].self, from: Data(runtimeResult.1.utf8)) else {
-                return tr("could not verify current simulator state")
-            }
-            runtimes = Array(list.values)
-        }
-        return removalRefusal(commands, runtimes: runtimes, devices: devices, requireUnavailable: requireUnavailable)
-    }
-
     static func removalRefusal(_ commands: [[String]], runtimes: [Runtime], devices: [String: [Device]], requireUnavailable: Bool) -> String? {
         let all = devices.values.flatMap { $0 }
-        for command in commands where command.starts(with: ["xcrun", "simctl"]) {
+        for command in commands {
+            guard target(command) != nil else { return tr("simulator cleanup needs a fresh scan with exact device IDs") }
             if command.count == 5, command[2] == "runtime", command[3] == "delete" {
-                guard let runtime = runtimes.first(where: { $0.identifier == command[4] }), runtime.deletable != false,
+                guard let runtime = runtimes.first(where: { $0.identifier == command[4] }), runtime.deletable == true, runtime.state == "Ready",
                       let identifier = runtime.runtimeIdentifier else { return tr("could not verify current simulator state") }
                 if (devices[identifier] ?? []).contains(where: { $0.state != "Shutdown" }) {
                     return tr("a simulator is running or its state is unknown")
@@ -79,7 +70,12 @@ enum Simulators {
         return f
     }()
 
-    static func date(_ s: String?) -> Date? { s.flatMap { iso.date(from: $0) } }
+    static func date(_ s: String?) -> Date? {
+        guard let s else { return nil }
+        if let value = iso.date(from: s) { return value }
+        let fractional = ISO8601DateFormatter(); fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return fractional.date(from: s)
+    }
 
     /// "iOS 27.2" from "com.apple.CoreSimulator.SimRuntime.iOS-27-2".
     static func runtimeName(_ id: String?, version: String?) -> String {
@@ -90,7 +86,6 @@ enum Simulators {
     static func items(runtimes: [Runtime], devices: [String: [Device]], ctx: ScanContext) -> [CleanItem] {
         var out: [CleanItem] = []
         let stale = ctx.staleBefore
-        let days = String(ctx.options.olderThanDays)
 
         // Runtimes nobody has used for a while: each is a multi-GB disk image.
         for r in runtimes where r.deletable != false {
@@ -102,12 +97,12 @@ enum Simulators {
             out.append(CleanItem(
                 id: "simulator-runtime/\(r.identifier)", category: .xcode,
                 title: tr("Simulator runtime · %1$@", name),
-                detail: used == nil ? tr("never used") : tr("last used %1$@ days ago", String(Int(ctx.now.timeIntervalSince(used!) / 86400))),
+                detail: used == nil ? tr("Last simulator use is unavailable") : tr("last used %1$@ days ago", String(Int(ctx.now.timeIntervalSince(used!) / 86400))),
                 safety: .review, bytes: size, files: 1, lastUsed: used,
                 note: devs.isEmpty ? nil : tr("its %1$@ simulator device(s) are removed with it", String(devs.count)),
                 blocked: booted ? tr("a simulator using it is running") : nil,
                 hint: "xcrun simctl runtime delete \(r.identifier)",
-                commands: [["xcrun", "simctl", "runtime", "delete", r.identifier]] + devs.map { ["xcrun", "simctl", "delete", $0.udid] }))
+                commands: [["/usr/bin/xcrun", "simctl", "runtime", "delete", r.identifier]] + devs.map { ["/usr/bin/xcrun", "simctl", "delete", $0.udid] }))
         }
 
         let all = devices.values.flatMap { $0 }
@@ -120,7 +115,7 @@ enum Simulators {
                                  detail: unavailable.prefix(3).map(\.name).joined(separator: ", "),
                                  safety: .safe, bytes: lost, files: unavailable.count,
                                  hint: "thermo clean run simulator-unavailable",
-                                 commands: unavailable.map { ["xcrun", "simctl", "delete", $0.udid] }))
+                                 commands: unavailable.map { ["/usr/bin/xcrun", "simctl", "delete", $0.udid] }))
         }
 
         // Big devices nobody booted lately: erasing resets their data and keeps the device.
@@ -128,21 +123,36 @@ enum Simulators {
             for d in devs where d.isAvailable != false {
                 let size = d.dataPathSize ?? 0
                 guard size >= 500_000_000 else { continue }
-                let booted = date(d.lastBootedAt)
+                let booted = date(d.lastBootedAt) ?? date(d.lastUsedAt)
                 let touched = booted ?? d.dataPath.flatMap { (try? FileManager.default.attributesOfItem(atPath: $0))?[.modificationDate] as? Date }
                 guard (touched ?? .distantPast) < stale else { continue }
                 out.append(CleanItem(
                     id: "simulator-device/\(d.udid)", category: .xcode,
                     title: tr("Simulator data · %1$@", d.name),
-                    detail: runtimeName(runtime, version: nil) + " · " + (booted == nil ? tr("not booted in %1$@ days", days)
+                    detail: runtimeName(runtime, version: nil) + " · " + (booted == nil ? tr("Last simulator use is unavailable")
                         : tr("last booted %1$@ days ago", String(Int(ctx.now.timeIntervalSince(booted!) / 86400)))),
                     safety: .review, bytes: size, files: 1, lastUsed: touched,
                     note: tr("erasing resets the simulator like a new device; apps installed in it are removed"),
                     blocked: d.state == "Booted" ? tr("the simulator is running") : nil,
                     hint: "xcrun simctl erase \(d.udid)",
-                    commands: [["xcrun", "simctl", "erase", d.udid]]))
+                    commands: [["/usr/bin/xcrun", "simctl", "erase", d.udid]]))
             }
         }
-        return out
+        return out.map { original in
+            var item = original
+            let commands = item.commands ?? []
+            var scopes: [CleanupCommandScope] = []
+            for command in commands {
+                guard let paths = scope(command, runtimes: runtimes, devices: devices, home: ctx.home) else {
+                    item.blocked = item.blocked ?? tr(scopeIssue); return item
+                }
+                guard let identity = reviewIdentity(command, runtimes: runtimes, devices: devices) else { item.blocked = tr(scopeIssue); return item }
+                scopes.append(.init(command: command, paths: paths, reviewIdentity: identity))
+            }
+            item.commandScopes = scopes; item.commandScope = Array(Set(scopes.flatMap(\.paths))).sorted()
+            item.blocked = item.blocked ?? removalRefusal(commands, runtimes: runtimes, devices: devices, requireUnavailable: item.id == "simulator-unavailable")
+            item.blocked = item.blocked ?? reviewRefusal(item)
+            return item
+        }
     }
 }

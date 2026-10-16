@@ -483,6 +483,7 @@ public enum Cleaner {
                 result.failed[item.id] = why
                 return result
             }
+            if let why = Simulators.reviewRefusal(item) { result.failed[item.id] = why; return result }
             if let why = ManagedToolScope.refusal(item, whitelist: whitelist, home: g.home) { result.failed[item.id] = why; return result }
             var ok = true
             let measuredBefore = item.measure.map { FS.commandSize($0) }
@@ -491,15 +492,14 @@ public enum Cleaner {
                 do {
                     let current = try Whitelist.loadForRemoval(home: g.home)
                     if let why = ManagedToolScope.refusal(item, whitelist: current, home: g.home) { ok = false; result.failed[item.id] = why; break }
+                    if let why = Simulators.currentScopeRefusal(argv, item: item, whitelist: current, home: g.home) { ok = false; result.failed[item.id] = why; break }
                 } catch { ok = false; result.failed["whitelist"] = Whitelist.unreadable(error); break }
-                if let why = Simulators.currentRemovalRefusal([argv], requireUnavailable: item.id == "simulator-unavailable") {
-                    ok = false; result.failed[argv.joined(separator: " ")] = why
-                    break
-                }
                 if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
                     ok = false; result.failed[item.id] = why; break
                 }
-                let (status, output) = Shell.exec(argv, timeout: 180)
+                var execution = argv
+                if Simulators.isCommand(argv) { execution[0] = "/usr/bin/xcrun" }
+                let (status, output) = Shell.exec(execution, timeout: 180)
                 let line = argv.joined(separator: " ")
                 if status == 0 { result.removed.append("ran: " + line) } else { ok = false; result.failed[line] = output.isEmpty ? "exit \(status)" : output; break }
             }

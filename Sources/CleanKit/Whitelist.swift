@@ -194,6 +194,7 @@ public struct Whitelist: Sendable {
             if !item.paths.isEmpty || !(item.commands ?? []).isEmpty { blocked.blocked = issue }
             return blocked
         }
+        if Simulators.isItem(item), let issue = Simulators.reviewRefusal(item) { var blocked = item; blocked.blocked = issue; return blocked }
         if !(item.commands ?? []).isEmpty, ManagedToolScope.ids.contains(item.id), item.commandScope?.isEmpty != false {
             var blocked = item; blocked.blocked = tr(ManagedToolScope.unavailable); return blocked
         }

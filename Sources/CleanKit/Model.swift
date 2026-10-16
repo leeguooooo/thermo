@@ -61,6 +61,13 @@ public struct CleanPart: Codable, Identifiable, Sendable, Equatable {
 }
 
 /// One thing that can be cleaned: a set of paths removed together.
+public struct CleanupCommandScope: Codable, Sendable, Equatable {
+    public var command: [String]
+    public var paths: [String]
+    public var reviewIdentity: String? = nil
+    public init(command: [String], paths: [String], reviewIdentity: String? = nil) { self.command = command; self.paths = paths; self.reviewIdentity = reviewIdentity }
+}
+
 public struct CleanItem: Codable, Identifiable, Sendable {
     /// Stable across scans, e.g. `xcode-derived-data` or `claude-sessions/-Users-leo-src-app`.
     public var id: String
@@ -88,6 +95,7 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     public var commands: [[String]]?
     /// Reviewed boundaries of a tool-managed operation; never direct deletion targets.
     public var commandScope: [String]? = nil
+    public var commandScopes: [CleanupCommandScope]? = nil
     /// Separately selectable pieces, newest first; together they make up `paths`.
     public var parts: [CleanPart]?
     /// Items with the same group belong together (build output of one project folder).
@@ -105,11 +113,11 @@ public struct CleanItem: Codable, Identifiable, Sendable {
     public init(id: String, category: CleanCategory, title: String, detail: String = "", safety: Safety,
                 bytes: Int64 = 0, files: Int = 0, lastUsed: Date? = nil, paths: [String] = [],
                 note: String? = nil, blocked: String? = nil, hint: String? = nil, afterClean: [String]? = nil,
-                parts: [CleanPart]? = nil, group: String? = nil, commands: [[String]]? = nil, measure: [String]? = nil, commandScope: [String]? = nil) {
+                parts: [CleanPart]? = nil, group: String? = nil, commands: [[String]]? = nil, measure: [String]? = nil, commandScope: [String]? = nil, commandScopes: [CleanupCommandScope]? = nil) {
         self.id = id; self.category = category; self.title = title; self.detail = detail; self.safety = safety
         self.bytes = bytes; self.files = files; self.lastUsed = lastUsed; self.paths = paths
         self.note = note; self.blocked = blocked; self.hint = hint; self.afterClean = afterClean; self.parts = parts; self.group = group
-        self.commands = commands; self.measure = measure; self.commandScope = commandScope
+        self.commands = commands; self.measure = measure; self.commandScope = commandScope; self.commandScopes = commandScopes
     }
 
     public var cleanable: Bool { blocked == nil && bytes > 0 && (!paths.isEmpty || !(commands ?? []).isEmpty) }

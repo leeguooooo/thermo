@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "c63d1a2",
+  "sourceSHA256": {
+    "Sources/CleanKit/SimulatorScope.swift": "45685bc8ebb93d7fba002994ef98dcfdefd6aede9610f8181d9c88d8fb50e960",
+    "Sources/CleanKit/Simulators.swift": "7c1fcaf0903b8a58be86246e4f8169c223e6b3e99bb5552e3f4b360109907c8b",
+    "Sources/CleanKit/Model.swift": "bd07903054ab1021830de62751eb38518fadee7db26cf44003be75b721458962",
+    "Sources/CleanKit/FS.swift": "770bc58209aea890b7abea041a1d3cbdc7caa9c8279ae789d3b854ce5452f3a6",
+    "Sources/CleanKit/Whitelist.swift": "9e563f480c3c70df87ae4548733d392535341dd55e9452facbd83385befb26e0",
+    "Sources/ThermoL10n/ZhHans.swift": "ba29cabd27af35b225b2cbbbad34ca449401085c132168f929252903099f6095",
+    "Tests/CleanKitTests/SimulatorScopeTests.swift": "c252c4188aca79c2f7a80d77de17b916809947cebc26de9285b3a6fab32f4d0b",
+    "Tests/CleanKitTests/SimulatorRemovalGuardTests.swift": "83a0358a6ab1ec136bcbb786a47bb65787884dbf7216114e66d29ae1edc22173",
+    "Tests/CleanKitTests/SimulatorAppDataTests.swift": "bc37a9f202a91a643c0c2be7e7a21ce5c49bec8ba38986aac4f2491cad591d53",
+    "scripts/verify-simulator-scope.swift": "48351e5339923bb6082765ef5c2ffca2c6d6c161a8993bf5857065db18825a0d"
+  },
+  "nativeReadOnlyAcceptance": {
+    "assetRoots": 3,
+    "devices": 15,
+    "deviceScopes": 15,
+    "mutationExecuted": false,
+    "queries": 4,
+    "runtimes": 3,
+    "runtimeScopes": 3,
+    "shutdownDeviceProtectionChecked": true
+  },
+  "probeExecutableSHA256": "e7672725009114d13cf23e076be439474c729ac9a09f821945e0f5994bb4befd",
+  "newTests": {
+    "SimulatorScopeTests": 7
+  },
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 59,
+      "ThermoAppTests": 175,
+      "CleanKitTests": 627,
+      "AgentCoreTests": 34
+    },
+    "total": 1009,
+    "failures": 0,
+    "log": "/tmp/thermo-simulator-scope-full.log",
+    "logSHA256": "f9a8e0f47ec34e921ebdc15bdecc78d8af5d025a4ed985d834d29f5d6cb5167d",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ]
+  },
+  "limits": [
+    "No real simulator delete, erase, mount or shutdown was executed",
+    "Metadata scope and upstream semantics are not an OS sandbox or atomic transaction",
+    "No new visible scope-list UI acceptance",
+    "Full Mole parity remains unproven"
+  ],
+  "temporaryProbeRemoved": true
+}

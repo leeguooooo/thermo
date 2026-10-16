@@ -529,3 +529,14 @@ Homebrew 从当前工具读取 prefix、Cellar、repository、cache，固定 cac
 证据见 [工具范围记录](measurements/managed-tool-scope-2026-10-16.json)，复验入口为 scripts/verify-managed-tool-scope.swift。尚未运行真实工具清理，也未新增可见范围列表验收；其他版本、非标准深层链接布局和 Simulator 等其他工具入口的范围仍待补齐。这些是基于配置的管理边界与上游语义检查，不是系统调用级沙盒，不能据此宣称任意工具版本均不可能越界。
 
 工具范围检查点：清理 620 项、App 175 项、CLI 59 项、ThermoKit 114 项（排除 HardwareTests）、AgentCore 34 项，共 1002 项通过，0 失败，全部目标编译通过。未运行 AgentDoctor、真实工具清理、管理员读取、helper 安装、硬件写入或发布；整体对齐继续。
+
+
+模拟器清理范围：每条精确 ID 的 simctl delete/erase 绑定独立范围与审阅摘要，整项保留范围并集供现有清单展示。runtime 范围包括镜像、挂载位置、整个关联 MobileAsset、关联设备目录与日志；设备范围包括数据的父设备目录和日志。缺少可信路径、旧缓存或批量选择器时禁止执行。查询与执行固定 /usr/bin/xcrun，不能从 PATH 换成其他程序。
+
+执行每条命令之前重新读取 Xcode 清单，核对路径、关联设备、使用时间及当前状态；运行中、过渡状态或 runtime 不再明确 Ready/deletable 时保留。任一范围与白名单相交也保留整项。runtime 删除完成后的设备删除只重读设备清单，不要求已删除的 runtime 仍存在；后续状态变化失败时如实保留已完成结果，没有回滚承诺。无法取得使用时间的文案改为未知，不再声称从未使用。当前 Xcode 的 lastUsedAt 与带小数的 ISO 日期也纳入读取。
+
+7 项新增测试覆盖 MobileAsset 元数据和日志保护、无关保护放行、新增关联设备与路径变化、runtime 删除后继续核对设备、审阅后重新使用或启动、删除许可变化、异常选择器与程序路径，以及缺少日志元数据。测试使用构造清单与只读查询替身，没有真实 delete/erase。完整回归为清理 627 项、App 175 项、CLI 59 项、ThermoKit 114 项（排除 HardwareTests）、AgentCore 34 项，共 1009 项通过，0 失败；AgentDoctor 无用例执行。
+
+最终库另接本机 Xcode 做只读验收：3 个 runtime、15 个设备均能绑定范围，识别出 3 个完整 MobileAsset 根；四次允许的清单查询证明已关闭设备的数据保护被拦截，无关保护可通过。验收器拒绝所有非清单查询，mutationExecuted 为 false。证据见 [模拟器范围记录](measurements/simulator-scope-2026-10-16.json)，复验入口为 scripts/verify-simulator-scope.swift；编译验收器的自有临时目录已清理。
+
+真实模拟器删除和擦除、更多 Xcode 版本及可见范围列表仍待验收。这些检查依赖 Apple 清单与工具语义，不是系统调用沙盒，也不消除最终检查到工具执行之间的变化窗口。未运行管理员读取、helper 安装、硬件写入或发布；整体对齐继续。

@@ -24,7 +24,7 @@ final class SimulatorRemovalGuardTests: XCTestCase {
     }
     func testRuntimeRemovalProtectsAssociatedRunningDevice() throws {
         let runtime = try JSONDecoder().decode(Simulators.Runtime.self,
-            from: Data(#"{"identifier":"runtime-image","runtimeIdentifier":"runtime","deletable":true}"#.utf8))
+            from: Data(#"{"identifier":"runtime-image","runtimeIdentifier":"runtime","deletable":true,"state":"Ready"}"#.utf8))
         let command = [["xcrun", "simctl", "runtime", "delete", "runtime-image"]]
         XCTAssertNotNil(Simulators.removalRefusal(command, runtimes: [runtime], devices: try devices("Booted"), requireUnavailable: false))
         XCTAssertNil(Simulators.removalRefusal(command, runtimes: [runtime], devices: try devices("Shutdown"), requireUnavailable: false))
@@ -37,7 +37,7 @@ final class SimulatorRemovalGuardTests: XCTestCase {
         var device = try XCTUnwrap(inventory["runtime"]?.first)
         device.dataPathSize = 1_000_000
         let item = try XCTUnwrap(Simulators.items(runtimes: [], devices: ["runtime": [device]], ctx: ctx).first)
-        XCTAssertEqual(item.commands, [["xcrun", "simctl", "delete", "reviewed-device"]])
+        XCTAssertEqual(item.commands, [["/usr/bin/xcrun", "simctl", "delete", "reviewed-device"]])
         XCTAssertFalse(item.commands?.contains { $0.contains("unavailable") } == true)
     }
 }
