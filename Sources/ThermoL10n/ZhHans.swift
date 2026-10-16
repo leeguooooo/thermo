@@ -2400,4 +2400,5 @@ let zhHans: [String: String] = [
     "Launchd registration reading is incomplete": "launchd 服务登记读取不完整",
     "A registration does not prove the original launcher. System services and service descendants were not inspected.": "服务登记不能证明最初由谁启动。本次未检查系统域服务及服务的子孙进程。",
     "Memory mappings were not inspected.": "本次未检查内存映射。",
+    "Loading saved results…": "正在读取上次扫描结果…",
 ]

@@ -7,7 +7,7 @@ import UserNotifications
 /// Scans only when the user starts it (low priority, stoppable at any time), notifies
 /// when a scan finishes in the background, and removes what the user ticks.
 final class DiskModel: ObservableObject {
-    enum Scope: String, CaseIterable, Identifiable {
+    enum Scope: String, CaseIterable, Identifiable, Sendable {
         case ai = "AI", all = "Everything"
         var id: String { rawValue }
         var label: String { self == .ai ? "AI" : tr("Everything") }
@@ -23,13 +23,34 @@ final class DiskModel: ObservableObject {
     @Published private(set) var sessionRetentionDays: Int?
     /// Everything by default: build output in every project is often the biggest win.
     @Published var scope: Scope = .all {
-        didSet { if scope != oldValue, report != nil { stale = true } }
+        didSet {
+            if scope != oldValue {
+                invalidateSavedLoad()
+                if report != nil { stale = true }
+            }
+        }
     }
     /// The scope changed since the results were found; scan again to refresh.
     @Published private(set) var stale = false
     @Published private(set) var resultsNeedRefresh = false
     /// The scan in progress, so it can be stopped.
-    private var scanner: DiskScanner?
+    private var scanCancellation: ScanCancellation?
+    @Published private(set) var loadingSaved = false
+    private let scanIO: DiskScanIO
+    private let requestNotifications: () -> Void
+    private var savedLoadGeneration = UUID()
+    private var savedReadRunning = false
+    private var savedRequest: SavedRequest?
+    private struct SavedRequest: Equatable {
+        var scope: Scope
+        var category: CleanCategory?
+        var retention: Int?
+        var language: String
+        var scanIfMissing: Bool
+        func matches(_ other: SavedRequest) -> Bool {
+            scope == other.scope && category == other.category && retention == other.retention && language == other.language
+        }
+    }
     @Published private(set) var stopping = false
     @Published private(set) var protectionNotice: String?
     @Published private(set) var protectionUndo: Whitelist.AdditionUndo?
@@ -40,7 +61,11 @@ final class DiskModel: ObservableObject {
     @Published private(set) var cleaningDone = 0
     @Published private(set) var cleaningTotal = 0
 
-    init(report: ScanReport? = nil) { self.report = report }
+    init(report: ScanReport? = nil, scanIO: DiskScanIO = .live, requestNotifications: @escaping () -> Void = Monitor.requestNotificationPermission) {
+        self.report = report
+        self.scanIO = scanIO
+        self.requestNotifications = requestNotifications
+    }
 
     private let queue = DispatchQueue(label: "dev.thermo.app.disk", qos: .background)
 
@@ -62,6 +87,7 @@ final class DiskModel: ObservableObject {
 
     func setSessionRetentionDays(_ days: Int?) {
         guard !scanning, !cleaning, days != sessionRetentionDays, days.map({ $0 >= 0 }) ?? true else { return }
+        invalidateSavedLoad()
         sessionRetentionDays = days
         report = nil; selected = []; excluded = [:]
         stale = false; resultsNeedRefresh = false; lastResult = nil; error = nil
@@ -82,24 +108,54 @@ final class DiskModel: ObservableObject {
         items.sorted { (order[$0.category]!, -$0.bytes, $0.id) < (order[$1.category]!, -$1.bytes, $1.id) }
     }
 
-    /// Shows the last finished scan (CLI or app) when it is under an hour old and covers the
-    /// current scope, so the window opens with results instead of minutes of scanning.
-    @discardableResult
-    func loadSaved(category: CleanCategory? = nil) -> Bool {
-        // The CLI scans in English; a report in another language would show the wrong titles here.
-        let wanted = category.map { Set([$0]) } ?? (scope == .ai ? Set(CleanCategory.allCases.filter(\.isAI)) : Set(CleanCategory.allCases))
-        let options = Self.scanOptions(scope: scope, category: category, sessionRetentionDays: sessionRetentionDays)
-        guard report == nil, !scanning, let r = ScanReportCache.load(maxAge: 3600, matching: {
-            $0.sessionPolicyVersion == ScanOptions.sessionPolicyVersion && $0.sessionRetentionDays == options.sessionRetentionDays &&
-            $0.language == L10n.current.rawValue && wanted.isSubset(of: Set($0.categories ?? [])) &&
-                $0.projectRoots == Array(Set(options.projectRoots)).sorted() &&
-                $0.discoverProjectRoots == options.discoverProjectRoots && $0.olderThanDays == options.olderThanDays
-        }) else { return false }
-        var marked = r
-        marked.applyWhitelist()
-        report = marked
-        selected = Set(r.items.filter(\.automaticallySelected).map(\.id))
-        return true
+    /// Repeated page appearances share one physical reader. A later request replaces
+    /// the pending scope; superseded results never become a cleanup plan.
+    func loadSaved(category: CleanCategory? = nil, scanIfMissing: Bool = false) {
+        guard report == nil, !scanning, !cleaning else { return }
+        let request = SavedRequest(scope: scope, category: category, retention: sessionRetentionDays,
+                                   language: L10n.current.rawValue, scanIfMissing: scanIfMissing)
+        if let current = savedRequest, current.matches(request) {
+            savedRequest?.scanIfMissing = current.scanIfMissing || scanIfMissing
+            return
+        }
+        savedRequest = request
+        savedLoadGeneration = UUID()
+        loadingSaved = true
+        if !savedReadRunning { readSaved() }
+    }
+
+    private func invalidateSavedLoad() {
+        savedLoadGeneration = UUID()
+        savedRequest = nil
+        loadingSaved = false
+    }
+
+    private func readSaved() {
+        guard let request = savedRequest else { return }
+        let generation = savedLoadGeneration, io = scanIO
+        savedReadRunning = true
+        queue.async { [weak self] in
+            let options = io.options(request.scope, request.category, request.retention)
+            let cached = io.cached(options, request.language)
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.savedReadRunning = false
+                guard generation == self.savedLoadGeneration else {
+                    if self.savedRequest != nil { self.readSaved() }
+                    return
+                }
+                let autoScan = self.savedRequest?.scanIfMissing == true
+                self.savedRequest = nil
+                self.loadingSaved = false
+                guard self.report == nil, !self.scanning, !self.cleaning,
+                      self.scope == request.scope, self.sessionRetentionDays == request.retention,
+                      L10n.current.rawValue == request.language else { return }
+                if let cached {
+                    self.report = cached
+                    self.selected = Set(cached.items.filter(\.automaticallySelected).map(\.id))
+                } else if autoScan { self.scan(category: request.category) }
+            }
+        }
     }
 
     static func scanOptions(scope: Scope, category: CleanCategory? = nil, sessionRetentionDays: Int? = nil) -> ScanOptions {
@@ -113,7 +169,7 @@ final class DiskModel: ObservableObject {
 
     func scan(category: CleanCategory? = nil) {
         guard !scanning, !cleaning else { return }
-        Monitor.requestNotificationPermission()
+        requestNotifications()
         scanning = true
         stopping = false
         stale = false
@@ -125,39 +181,58 @@ final class DiskModel: ObservableObject {
         report = nil
         selected = []
         excluded = [:]
-        let options = Self.scanOptions(scope: scope, category: category, sessionRetentionDays: sessionRetentionDays)
-        let scanner = DiskScanner(options: options)
-        self.scanner = scanner
-        let started = Date()
-        let language = L10n.current.rawValue
-        scanner.onProgress = { [weak self] step in DispatchQueue.main.async { self?.progress = step } }
-        // Results show up as each step finishes; safe ones are ticked as they arrive.
-        scanner.onItems = { [weak self] found in
-            DispatchQueue.main.async {
-                guard let self, self.scanning else { return }
-                let items = Self.sorted((self.report?.items ?? []) + found)
-                self.report = ScanReport(items: items, denied: [], started: started, duration: Date().timeIntervalSince(started))
-                self.report?.language = language
-                self.report?.sessionRetentionDays = options.sessionRetentionDays
-                self.report?.sessionPolicyVersion = ScanOptions.sessionPolicyVersion
-                self.selected.formUnion(found.filter(\.automaticallySelected).map(\.id))
-            }
+        invalidateSavedLoad()
+        let cancellation = ScanCancellation()
+        scanCancellation = cancellation
+        let requestedScope = scope, retention = sessionRetentionDays, io = scanIO
+        let started = Date(), language = L10n.current.rawValue
+        let stoppedReport: @Sendable () -> ScanReport = {
+            var report = ScanReport(items: [], denied: [], started: started, duration: Date().timeIntervalSince(started), cancelled: true)
+            report.language = language
+            report.categories = category.map { [$0] } ?? CleanCategory.allCases.filter { requestedScope == .all || $0.isAI }
+            report.sessionRetentionDays = category == .aiSessions || (category == nil && requestedScope == .ai) ? retention : nil
+            report.sessionPolicyVersion = ScanOptions.sessionPolicyVersion
+            return report
         }
         queue.async { [weak self] in
-            let r = scanner.scan()
+            let result: ScanReport
+            if cancellation.isCancelled { result = stoppedReport() }
+            else {
+                let options = io.options(requestedScope, category, retention)
+                if cancellation.isCancelled { result = stoppedReport() }
+                else {
+                    result = io.scan(options, cancellation, { step in
+                        DispatchQueue.main.async { [weak self] in
+                            guard let self, self.scanning, self.scanCancellation === cancellation else { return }
+                            self.progress = step
+                        }
+                    }, { found in
+                        DispatchQueue.main.async { [weak self] in
+                            guard let self, self.scanning, self.scanCancellation === cancellation else { return }
+                            let items = Self.sorted((self.report?.items ?? []) + found)
+                            self.report = ScanReport(items: items, denied: [], started: started, duration: Date().timeIntervalSince(started))
+                            self.report?.language = language
+                            self.report?.sessionRetentionDays = options.sessionRetentionDays
+                            self.report?.sessionPolicyVersion = ScanOptions.sessionPolicyVersion
+                            self.selected.formUnion(found.filter(\.automaticallySelected).map(\.id))
+                        }
+                    })
+                }
+            }
             DispatchQueue.main.async {
-                guard let self else { return }
-                self.acceptScan(r)
+                guard let self, self.scanCancellation === cancellation else { return }
+                self.acceptScan(result)
                 self.scanning = false
                 self.stopping = false
-                self.scanner = nil
-                if !r.cancelled { self.notifyFinished(r) }
+                self.scanCancellation = nil
+                if !result.cancelled { self.notifyFinished(result) }
             }
         }
     }
 
     /// Preserve choices made while partial results were arriving. Only newly discovered safe items are selected.
     func acceptScan(_ result: ScanReport) {
+        invalidateSavedLoad()
         let seen = Set(report?.items.map(\.id) ?? [])
         let newSafe = result.items.filter { !seen.contains($0.id) && $0.automaticallySelected }
         selected = selected.intersection(result.items.filter(\.cleanable).map(\.id)).union(newSafe.map(\.id))
@@ -170,16 +245,17 @@ final class DiskModel: ObservableObject {
 
     /// Stop the running scan; whatever was found so far stays on screen.
     func stop() {
-        guard scanning, let scanner else { return }
+        guard scanning, let scanCancellation else { return }
         stopping = true
         progress = tr("stopping…")
-        scanner.cancel()
+        scanCancellation.cancel()
     }
 
     /// Tell the user a scan finished, unless they are looking at it.
     private func notifyFinished(_ r: ScanReport) {
-        let watching = NSApp.isActive && (NSApp.keyWindow?.isVisible ?? false)
-        guard !watching, r.duration > 3, Bundle.main.bundleIdentifier != nil else { return }
+        guard r.duration > 3, let app = NSApp, Bundle.main.bundleIdentifier != nil else { return }
+        let watching = app.isActive && (app.keyWindow?.isVisible ?? false)
+        guard !watching else { return }
         let content = UNMutableNotificationContent()
         content.title = tr("Disk scan finished")
         content.body = r.items.isEmpty ? tr("Nothing to clean.")
@@ -199,6 +275,7 @@ final class DiskModel: ObservableObject {
         let originals = Dictionary(uniqueKeysWithValues: (report?.items ?? []).map { ($0.id, $0) })
         guard !items.isEmpty, !cleaning, !scanning else { return }
         error = nil; lastResult = nil
+        invalidateSavedLoad()
         cleaning = true
         cleaningDone = 0
         cleaningTotal = items.count
@@ -293,6 +370,7 @@ final class DiskModel: ObservableObject {
         guard !cleaning, !scanning else { return }
         do {
             let change = try Whitelist.addWithUndo(paths ?? (item.paths + (item.commandScope ?? [])), home: home)
+            invalidateSavedLoad()
             protectionUndo = change.undo
             protectionNotice = change.added.isEmpty ? tr("These locations are already protected.") : tr("Protected %1$@ locations from cleanup.", String(change.added.count))
             error = nil
@@ -316,11 +394,13 @@ final class DiskModel: ObservableObject {
             protectionUndo = nil
             protectionNotice = tr("Protection undone. Scan again to review the available cleanup items.")
             // Protection filtering may have narrowed paths and sizes. Never reconstruct an old deletion plan.
+            invalidateSavedLoad()
             report = nil; selected = []; excluded = [:]; error = nil
         } catch { self.error = error.localizedDescription }
     }
 
     func protectionRulesChanged() {
+        invalidateSavedLoad()
         protectionUndo = nil
         protectionNotice = tr("Protection changed. Scan again to review the available cleanup items.")
         report = nil; selected = []; excluded = [:]; error = nil

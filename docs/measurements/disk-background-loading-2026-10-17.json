@@ -1,0 +1,81 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "3e737bc",
+  "sourceSHA256": {
+    "Sources/CleanKit/Model.swift": "5d68938f721245b107f375f3945620c2b9672162c4b9f0da0de9b70b0c3b3723",
+    "Sources/CleanKit/Scanner.swift": "b25c04ee95b1d12660d4db235645f9a35375b0d9b3c26368b8a24b88c13ddc1a",
+    "Sources/ThermoApp/DiskScanIO.swift": "c8b5cc5ec60c0084ac6404bcb50f173919866824dc98825ca62a4cbe154e9f69",
+    "Sources/ThermoApp/DiskView.swift": "80ebfbf38c929f72e937eae3465746e10287d13a4ee80b3f8ddeadff2b6590f8",
+    "Sources/ThermoApp/DiskWindow.swift": "18856366295ed195a42e0c9d350b753d8f60da807c123a1c6606aadbf7d4bb90",
+    "Sources/ThermoApp/MainWindow.swift": "11de186db16f880ac08dd6c8a51e8d02ebc2e87687abb91e6a3f73d085ad419a",
+    "Sources/ThermoApp/main.swift": "430090228dc4cc5b5cf9ab7e65985b89c3471ef888e767b8f448749eb18a82c4",
+    "Sources/ThermoL10n/ZhHans.swift": "f84296867c98e8cd15fc3dd86ba7b327a1195055feea1363633b48b17cb596e2",
+    "Tests/ThermoAppTests/DiskBackgroundLoadingTests.swift": "f58b3dd7b174418709468f155cfc978d7c6ce38dc7270f00d4d272ebf35435bf",
+    "scripts/verify-disk-background-ui.swift": "ece51c9c7f6e03dd504b05f43e230d3a651765e7b3de0ff3c8ef9d055a0ac39b",
+    "README.md": "ee128e7189e9b0b229fd127cbb233ac526dadc9aec74f565db0452ef3e1fd5f4"
+  },
+  "broadRegression": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 66,
+      "ThermoAppTests": 210,
+      "CleanKitTests": 712,
+      "AgentDoctorTests": 46,
+      "AgentCoreTests": 37
+    },
+    "total": 1185,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests"
+    ],
+    "AgentDoctorSelection": [
+      "ProcessExplanationTests",
+      "ProcessListenersTests",
+      "ProcessSleepAssertionsTests",
+      "ProcessLaunchServicesTests",
+      "RedactTests",
+      "CancellationTests"
+    ]
+  },
+  "afterCategoryLoadingLabel": {
+    "ThermoAppTests": 210,
+    "failures": 0
+  },
+  "newTests": 8,
+  "nativeUI": {
+    "window": "owned 800x580 SwiftUI WindowGroup with production DiskCategoryPage",
+    "cache": "real report in private fixture home; gate simulates blocked storage",
+    "firstRun": [
+      "CACHE_BEGIN 1 main=false",
+      "UI_CLICK 1",
+      "cached item visible, unselected",
+      "CACHE_BEGIN 2 main=false",
+      "SCANNING true cancelled=false",
+      "UI_CLICK 2",
+      "SCANNING false cancelled=true"
+    ],
+    "actualScannerStarts": 0,
+    "finalRun": [
+      "CACHE_BEGIN 1 main=false",
+      "loading text visible",
+      "UI_CLICK 1",
+      "gate released, loading text removed, cached item visible and unselected"
+    ],
+    "noUserCleanupOrNotificationPermission": true,
+    "fixtureProcessesExited": true,
+    "fixtureDirectoryRemoved": true
+  },
+  "limitations": [
+    "A blocking file-system call is not forcibly interrupted; stopping waits for the worker",
+    "No installed-app replacement, root helper, physical hardware tests, push or release",
+    "No claim that every page is free of synchronous file I/O"
+  ],
+  "startupCategoryFollowUp": {
+    "change": "Initial --disk category cache request now matches the category page so its scan-if-missing flag is retained",
+    "build": "ThermoApp compiled",
+    "DiskBackgroundLoadingTests": 8,
+    "WindowLifecycleCheckTests": 1,
+    "failures": 0,
+    "installedAppStartupAccepted": false
+  }
+}

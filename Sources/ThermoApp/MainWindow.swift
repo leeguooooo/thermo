@@ -280,11 +280,11 @@ struct MainView: View {
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: page)
         .onChange(of: page) { p in
             if p.isAgents { agents.scan(ifOlderThan: 60) }
-            if p.isDisk, disk.report == nil, !disk.scanning { disk.loadSaved() }
+            if p.isDisk, disk.report == nil, !disk.scanning { disk.loadSaved(category: cleanupCategory) }
         }
         .onAppear {
             if page.isAgents { agents.scan(ifOlderThan: 60) }
-            if page.isDisk, disk.report == nil, !disk.scanning { disk.loadSaved() }
+            if page.isDisk, disk.report == nil, !disk.scanning { disk.loadSaved(category: cleanupCategory) }
         }
         .sheet(item: $cleanReview) { review in
             DiskCleanConfirmation(review: review,

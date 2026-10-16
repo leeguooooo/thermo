@@ -10,12 +10,15 @@ public final class DiskScanner: @unchecked Sendable {
     public var onItems: (([CleanItem]) -> Void)?
 
     /// Stops the scan at the next check; what was found so far is returned.
-    public let cancellation = ScanCancellation()
+    public let cancellation: ScanCancellation
 
     /// Keep the finished report for `thermo clean run` (off in tests).
     public var saveReport = true
 
-    public init(options: ScanOptions = ScanOptions()) { self.options = options }
+    public init(options: ScanOptions = ScanOptions(), cancellation: ScanCancellation = ScanCancellation()) {
+        self.options = options
+        self.cancellation = cancellation
+    }
 
     public func cancel() { cancellation.cancel() }
 

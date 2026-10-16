@@ -183,6 +183,9 @@ struct DiskHome: View {
                     Label(tr("Scan stopped. These are partial results."), systemImage: "pause.circle")
                         .font(.callout).foregroundStyle(.orange)
                 }
+                if model.loadingSaved {
+                    Label(tr("Loading saved results…"), systemImage: "hourglass").font(.caption).foregroundStyle(.secondary)
+                }
                 if let why = model.error ?? model.report?.whitelistError {
                     Label(why, systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.red)
                 }
@@ -261,7 +264,7 @@ struct DiskHome: View {
             VStack(spacing: 18) {
                 HeroStatus(symbol: "internaldrive.fill", color: Color(red: 0.4, green: 0.5, blue: 1.0),
                            title: tr("Find space you can free"),
-                           subtitle: tr("Old AI sessions, model downloads, agent leftovers, build output and caches. Nothing is removed until you choose."))
+                           subtitle: model.loadingSaved ? tr("Loading saved results…") : tr("Old AI sessions, model downloads, agent leftovers, build output and caches. Nothing is removed until you choose."), spinning: model.loadingSaved)
                 BigRoundButton(title: tr("Scan"), color: Color(red: 0.35, green: 0.5, blue: 1.0)) { model.scan() }
             }
         }
@@ -305,6 +308,10 @@ struct DiskCategoryPage: View {
                     Spacer()
                 }.font(.callout).padding(.horizontal, 28).padding(.bottom, 10)
                     .disabled(model.scanning || model.cleaning)
+            }
+            if model.loadingSaved {
+                Label(tr("Loading saved results…"), systemImage: "hourglass")
+                    .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 28).padding(.bottom, 10)
             }
             if let why = model.error ?? model.report?.whitelistError {
                 Label(why, systemImage: "exclamationmark.triangle")

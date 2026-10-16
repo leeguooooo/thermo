@@ -229,7 +229,7 @@ public struct ScanOptions: Sendable {
     /// Conversation cleanup is opt-in: nil keeps every transcript, including missing projects.
     public var sessionRetentionDays: Int? = nil
     /// Folders searched for project build artifacts and agent worktrees.
-    public var projectRoots: [String] = ScanOptions.defaultProjectRoots
+    public var projectRoots: [String]
     /// Include projects discovered from editor and agent history (disable for an explicit root).
     public var discoverProjectRoots = true
     public var categories: Set<CleanCategory> = Set(CleanCategory.allCases)
@@ -242,7 +242,7 @@ public struct ScanOptions: Sendable {
     /// walk every project and app folder). Nil scans everything the categories allow.
     public var onlyIDs: Set<String>? = nil
 
-    public init() {}
+    public init(projectRoots: [String] = ScanOptions.defaultProjectRoots) { self.projectRoots = projectRoots }
 
     public static var defaultProjectRoots: [String] { defaultProjectRoots(home: NSHomeDirectory()) }
 

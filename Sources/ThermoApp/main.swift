@@ -345,7 +345,11 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
     if args.contains("--disk") {
         page = .disk(value(after: "--page").flatMap(DiskPage.init(argument:)) ?? .home)
         if args.contains("--all") { models.disk.scope = .all }
-        if !args.contains("--no-scan"), !models.disk.loadSaved() { models.disk.scan() }
+        if !args.contains("--no-scan") {
+            let category: CleanCategory?
+            if case let .disk(.category(selected)) = page { category = selected } else { category = nil }
+            models.disk.loadSaved(category: category, scanIfMissing: true)
+        }
     }
     if args.contains("--agents") {
         page = .agents(value(after: "--agents").flatMap(Area.init(rawValue:)).map { .area($0) } ?? .home)
@@ -367,7 +371,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         // Give each page what it needs to be worth a picture, but never wait more than 90 s.
         if Date().timeIntervalSince(started) > 90 { return true }
         switch page {
-        case .disk: return args.contains("--no-scan") ? !models.disk.scanning : models.disk.report != nil && !models.disk.scanning
+        case .disk: return !models.disk.loadingSaved && (args.contains("--no-scan") ? !models.disk.scanning : models.disk.report != nil && !models.disk.scanning)
         case .agents: return models.agents.report != nil && !models.agents.scanning
         case .claudeCleanup, .privacyTools: return models.claudeCleanup.loaded && !models.claudeCleanup.busy
         case .history: return HistoryModel.shared.loaded
