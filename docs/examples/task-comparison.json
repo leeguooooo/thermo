@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "synthetic",
+  "kind": "skill",
+  "baselineRevision": "none",
+  "candidateRevision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "runs": [
+    {
+      "taskID": "fixture-extract",
+      "repetition": 1,
+      "variant": "baseline",
+      "conditions": {
+        "model": "fixture-model",
+        "environment": "1111111111111111111111111111111111111111111111111111111111111111",
+        "settings": "2222222222222222222222222222222222222222222222222222222222222222",
+        "task": "3333333333333333333333333333333333333333333333333333333333333333",
+        "verifier": "4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "outcome": "passed",
+      "seconds": 10,
+      "inputTokens": 100,
+      "outputTokens": 20,
+      "tokenSemantics": "native-input-includes-cache-v1"
+    },
+    {
+      "taskID": "fixture-extract",
+      "repetition": 1,
+      "variant": "candidate",
+      "conditions": {
+        "model": "fixture-model",
+        "environment": "1111111111111111111111111111111111111111111111111111111111111111",
+        "settings": "2222222222222222222222222222222222222222222222222222222222222222",
+        "task": "3333333333333333333333333333333333333333333333333333333333333333",
+        "verifier": "4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "outcome": "passed",
+      "seconds": 8,
+      "inputTokens": 150,
+      "outputTokens": 10,
+      "tokenSemantics": "native-input-includes-cache-v1"
+    },
+    {
+      "taskID": "fixture-extract",
+      "repetition": 2,
+      "variant": "baseline",
+      "conditions": {
+        "model": "fixture-model",
+        "environment": "1111111111111111111111111111111111111111111111111111111111111111",
+        "settings": "2222222222222222222222222222222222222222222222222222222222222222",
+        "task": "3333333333333333333333333333333333333333333333333333333333333333",
+        "verifier": "4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "outcome": "failed",
+      "seconds": 5,
+      "inputTokens": 50,
+      "outputTokens": 40,
+      "tokenSemantics": "native-input-includes-cache-v1"
+    },
+    {
+      "taskID": "fixture-extract",
+      "repetition": 2,
+      "variant": "candidate",
+      "conditions": {
+        "model": "fixture-model",
+        "environment": "1111111111111111111111111111111111111111111111111111111111111111",
+        "settings": "2222222222222222222222222222222222222222222222222222222222222222",
+        "task": "3333333333333333333333333333333333333333333333333333333333333333",
+        "verifier": "4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "outcome": "passed",
+      "seconds": 7,
+      "inputTokens": 70,
+      "outputTokens": 20,
+      "tokenSemantics": "native-input-includes-cache-v1"
+    },
+    {
+      "taskID": "fixture-extract",
+      "repetition": 3,
+      "variant": "baseline",
+      "conditions": {
+        "model": "fixture-model",
+        "environment": "1111111111111111111111111111111111111111111111111111111111111111",
+        "settings": "2222222222222222222222222222222222222222222222222222222222222222",
+        "task": "3333333333333333333333333333333333333333333333333333333333333333",
+        "verifier": "4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "outcome": "passed",
+      "seconds": 6,
+      "inputTokens": 60,
+      "outputTokens": 30,
+      "tokenSemantics": "native-input-includes-cache-v1"
+    },
+    {
+      "taskID": "fixture-extract",
+      "repetition": 3,
+      "variant": "candidate",
+      "conditions": {
+        "model": "fixture-model",
+        "environment": "1111111111111111111111111111111111111111111111111111111111111111",
+        "settings": "2222222222222222222222222222222222222222222222222222222222222222",
+        "task": "3333333333333333333333333333333333333333333333333333333333333333",
+        "verifier": "4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "outcome": "timeout",
+      "seconds": 30,
+      "inputTokens": null,
+      "outputTokens": null,
+      "tokenSemantics": null
+    }
+  ]
+}

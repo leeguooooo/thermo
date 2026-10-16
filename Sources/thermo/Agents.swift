@@ -1,5 +1,6 @@
 import AgentDoctor
 import Foundation
+import Darwin
 
 /// `thermo agents`: what is wrong with the AI agents on this Mac.
 struct AgentsCommand {
@@ -12,6 +13,9 @@ struct AgentsCommand {
         switch sub {
         case "": break
         case "context": return try context()
+        case "compare":
+            guard rest.count == 2 else { throw CLIError("usage: thermo agents compare FILE [--json]") }
+            return try compareTasks(try required(name, sub))
         case "usage":
             guard rest.count == 1 else { throw CLIError("usage: thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--limit FILES] [--json]") }
             return try usage()
@@ -131,6 +135,7 @@ struct AgentsCommand {
     usage: thermo agents [--all] [--json]                 what is wrong with the AI agents on this Mac
            thermo agents context [--agent AGENT] [--root PROJECT] [--json] static footprint ranking and deduplicated inventory
            thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--limit FILES] [--json] local log metrics
+           thermo agents compare FILE [--json]            compare declared local task evaluations; never executes tasks
            thermo agents inspect NAME [--json]            connect to one MCP; handshake, list and rank definitions
            thermo agents list [AREA] [--json]             everything checked, marked OK or not
            thermo agents show NAME [--json]               one item: problems, suggestions, numbered actions
@@ -146,6 +151,40 @@ struct AgentsCommand {
         guard let name = app.args.options["encoding"] else { return .heuristic }
         guard let value = TextEncoding(rawValue: name) else { throw CLIError("--encoding must be heuristic, cl100k_base or o200k_base; model names are not inferred") }
         return value
+    }
+
+    func compareTasks(_ path: String) throws {
+        guard app.args.flags.isSubset(of: ["json", "no-color"]), app.args.options.isEmpty else {
+            throw CLIError("agents compare accepts only FILE, --json and --no-color")
+        }
+        let fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC)
+        guard fd >= 0 else { throw CLIError("Cannot open local evaluation file") }
+        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        defer { try? handle.close() }
+        var metadata = stat()
+        guard fstat(fd, &metadata) == 0, metadata.st_mode & S_IFMT == S_IFREG else { throw CLIError("Evaluation input must be a regular file") }
+        let data: Data
+        do { data = try handle.read(upToCount: 4 * 1024 * 1024 + 1) ?? Data() }
+        catch { throw CLIError("Cannot read local evaluation file") }
+        let report = try TaskComparison.compare(data)
+        if app.args.has("json") { print(Export.diagnosticJSON(report)); return }
+        func metric(_ label: String, _ value: TaskComparison.Delta) -> String {
+            guard let median = value.medianCandidateMinusBaseline else { return "\(label): unknown (0 paired samples)" }
+            return "\(label): median Δ \(String(format: "%+.3f", median)) · range \(String(format: "%+.3f", value.minimumCandidateMinusBaseline!))…\(String(format: "%+.3f", value.maximumCandidateMinusBaseline!)) · \(value.samples) paired samples"
+        }
+        func outcomes(_ label: String, _ value: TaskComparison.Outcomes) -> String {
+            "\(label): passed \(value.passed) · failed \(value.failed) · timeout \(value.timeout) · error \(value.error) · unverified \(value.unverified)"
+        }
+        let exclusions = Dictionary(grouping: report.excluded, by: \.reason).map { "\($0.key): \($0.value.count)" }.sorted().joined(separator: ", ")
+        out([style.bold("Declared task evaluation comparison"),
+             "Evidence: \(report.evidenceKind) · \(report.kind) · model \(report.model)",
+             "\(report.totalRuns) records · \(report.matchedPairs) matched pairs across \(report.matchedTasks) tasks · \(report.excluded.count) excluded pairs",
+             "Exclusions: " + (exclusions.isEmpty ? "none" : exclusions),
+             outcomes("Baseline", report.baseline), outcomes("Candidate", report.candidate),
+             "Verified outcomes: \(report.verifiedOutcomePairs) pairs · both passed \(report.bothPassed) · candidate only \(report.candidateOnlyPassed) · baseline only \(report.baselineOnlyPassed) · neither \(report.neitherPassed)",
+             "Pass-rate difference: " + (report.passRateDifferencePercentagePoints.map { String(format: "%+.2f percentage points", $0) } ?? "unknown"),
+             metric("Elapsed seconds", report.seconds), metric("Native input tokens", report.inputTokens), metric("Native output tokens", report.outputTokens),
+             "Token accounting mismatches: \(report.tokenSemanticsMismatchPairs) pairs", report.note])
     }
 
     func usage() throws {

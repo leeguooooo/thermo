@@ -1,0 +1,29 @@
+{
+  "evidenceKind": "synthetic",
+  "checksPassed": 7,
+  "checks": [
+    "compiled JSON output retains outcomes and paired metric sample sizes",
+    "text output labels synthetic evidence and delta direction",
+    "missing metrics and unverified outcomes remain unknown in JSON and text",
+    "missing and changed-task pairs are excluded rather than compared",
+    "mixed cohorts and duplicate results fail closed",
+    "extra content is not exported or executed; unsupported options rejected",
+    "FIFO and directory inputs are rejected without waiting for data"
+  ],
+  "notVerified": [
+    "real model task effect",
+    "independent outcome authenticity",
+    "App integration",
+    "release installation"
+  ],
+  "generated": "2026-10-16T20:57:54.084973+00:00",
+  "binarySHA256": "b8ef194ca5e3484a70193e82c6e0eae7008cd3a810867829981590c4b5be7b7a",
+  "fixtureSHA256": "06f601a00cabc905b1248df107689174abdc6ca9aa50336b937f939ef29af166",
+  "swiftTests": {
+    "taskComparison": 7,
+    "toolUsage": 14,
+    "cliArgumentsAndExport": 20,
+    "failures": 0
+  },
+  "scope": "Compiled local Debug CLI and synthetic evaluation records; no model, business tool, verifier or production app was executed."
+}
