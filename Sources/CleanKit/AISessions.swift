@@ -17,6 +17,7 @@ struct ScanContext {
 
     var home: String { options.home }
     var staleBefore: Date { now.addingTimeInterval(-Double(options.olderThanDays) * 86400) }
+    var sessionStaleBefore: Date { options.sessionRetentionDays.map { now.addingTimeInterval(-Double($0) * 86400) } ?? .distantPast }
     /// Sessions written this recently are treated as open, whatever else we know.
     var activeAfter: Date { now.addingTimeInterval(-2 * 3600) }
 
@@ -45,6 +46,10 @@ struct SessionGroup {
 
 enum AISessions {
     static func scan(_ ctx: ScanContext) -> [CleanItem] {
+        // Do not parse or measure transcripts just to offer cleanup before an age is chosen.
+        guard ctx.options.categories.contains(.aiSessions), ctx.options.sessionRetentionDays != nil else {
+            return opencode(ctx).filter { $0.category != .aiSessions }
+        }
         var items: [CleanItem] = []
         items += claudeCode(ctx)
         items += codex(ctx)
@@ -52,7 +57,17 @@ enum AISessions {
         items += editorTasks(ctx)
         items += editorWorkspaces(ctx)
         items += opencode(ctx)
-        return items
+        return items.filter { $0.category != .aiSessions || ctx.options.sessionRetentionDays != nil }
+    }
+
+    /// Chat sidecars/backups/workspaces may be the last remaining copy. A missing
+    /// project or transcript is not an age proof, nor proof the data is regenerable.
+    static func historyDataIsOld(_ path: String, ctx: ScanContext) -> Bool {
+        guard let days = ctx.options.sessionRetentionDays, days >= 0 else { return false }
+        do {
+            try FileActivityReview.requireOlder(paths: [path], before: min(ctx.sessionStaleBefore, ctx.activeAfter))
+            return true
+        } catch { return false }
     }
 
     // MARK: grouping → items
@@ -60,6 +75,7 @@ enum AISessions {
     /// Turns per-project session groups into items holding the stale sessions.
     static func items(tool: String, idPrefix: String, groups: [SessionGroup], ctx: ScanContext,
                       measure: ([String]) -> TreeSize = { FS.size($0) }) -> [CleanItem] {
+        guard ctx.options.sessionRetentionDays != nil else { return [] }
         var out: [CleanItem] = []
         for g in groups {
             if ScanCancellation.current?.isCancelled == true { break }
@@ -73,7 +89,7 @@ enum AISessions {
                 let active = s.modified > ctx.activeAfter || (agentHere && s.modified == newest)
                     || ctx.liveClaudeSessions.contains(s.id)
                 if active { live += 1; kept.append(s) }
-                else if s.modified < ctx.staleBefore || projectGone { stale.append(s) }
+                else if s.modified < ctx.sessionStaleBefore { stale.append(s) }
                 else { kept.append(s) }
             }
             guard !stale.isEmpty else { continue }
@@ -174,21 +190,21 @@ enum AISessions {
         for sub in ["file-history", "session-env"] {
             for p in FS.children(root + "/" + sub) {
                 let sid = (p as NSString).lastPathComponent
-                if sid.count == 36, !allSessions.contains(sid), (FS.mtime(p) ?? ctx.now) < ctx.activeAfter { orphans.append(p) }
+                if sid.count == 36, !allSessions.contains(sid), !ctx.liveClaudeSessions.contains(sid), historyDataIsOld(p, ctx: ctx) { orphans.append(p) }
             }
         }
-        for (sid, files) in todoBySession where sid.count == 36 && !allSessions.contains(sid) {
-            orphans += files.filter { (FS.mtime($0) ?? ctx.now) < ctx.activeAfter }
+        for (sid, files) in todoBySession where sid.count == 36 && !allSessions.contains(sid) && !ctx.liveClaudeSessions.contains(sid) {
+            orphans += files.filter { historyDataIsOld($0, ctx: ctx) }
         }
         if !orphans.isEmpty {
-            let s = FS.size(orphans)
+            let s = FS.size(orphans, trackNewest: true)
             items.append(CleanItem(id: "claude-orphans", category: .aiSessions,
                                    title: tr("Claude Code leftovers of deleted sessions"),
                                    detail: tr("file history, todos and env of sessions that no longer exist"),
-                                   safety: .safe, bytes: s.bytes, files: s.files, paths: orphans))
+                                   safety: .review, bytes: s.bytes, files: s.files, lastUsed: s.newest, paths: orphans))
         }
         // Backups people make of the projects folder before upgrades.
-        let backups = FS.children(root).filter { ($0 as NSString).lastPathComponent.hasPrefix("projects-backup") }
+        let backups = FS.children(root).filter { ($0 as NSString).lastPathComponent.hasPrefix("projects-backup") && historyDataIsOld($0, ctx: ctx) }
         if !backups.isEmpty {
             let s = FS.size(backups, trackNewest: true)
             items.append(CleanItem(id: "claude-project-backups", category: .aiSessions, title: tr("Claude Code projects backups"),
@@ -371,7 +387,8 @@ enum AISessions {
     }
 
     /// `User/workspaceStorage/<hash>/workspace.json` points at a folder; when that folder is gone the
-    /// workspace state (including Cursor / Copilot chat history for it) is dead weight.
+    /// workspace state can include the last remaining chat copy. Keep it until its
+    /// activity passes the explicit retention window, even when the project is gone.
     static func editorWorkspaces(_ ctx: ScanContext) -> [CleanItem] {
         var items: [CleanItem] = []
         for (app, appName) in editors {
@@ -383,7 +400,7 @@ enum AISessions {
                       let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       let uri = (obj["folder"] ?? obj["workspace"]) as? String,
                       let url = URL(string: uri), url.isFileURL else { continue }
-                if !FS.exists(url.path) { dead.append(ws) }
+                if !FS.exists(url.path), historyDataIsOld(ws, ctx: ctx) { dead.append(ws) }
             }
             guard !dead.isEmpty else { continue }
             let s = FS.size(dead, trackNewest: true)

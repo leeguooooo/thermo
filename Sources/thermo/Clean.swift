@@ -117,6 +117,7 @@ struct CleanCommand {
         if let v = args.options["older-than"] {
             guard let d = parseDays(v) else { throw CLIError("--older-than expects days like 30, 2w, 6m or 1y; got '\(v)'") }
             o.olderThanDays = d
+            o.sessionRetentionDays = d
         }
         if let roots = args.options["root"] {
             o.discoverProjectRoots = false
@@ -194,6 +195,7 @@ struct CleanCommand {
         }
         let showAll = args.has("all") || cats != nil
         var lines = [style.bold("thermo clean") + style.dim(" · ") + style.green(ByteFormat.string(r.totalBytes)) + style.dim(" in file-size estimates (not guaranteed reclaimed) · scanned in \(String(format: "%.1f", r.duration)) s · nothing was deleted")]
+        if r.sessionRetentionDays == nil { lines.append(tr("All conversations are kept. Add --older-than to review old sessions.")) }
         if let c = r.spaceContext {
             func value(_ bytes: Int64?) -> String { bytes.map(ByteFormat.string) ?? "unknown" }
             lines.append("Swap files: " + value(c.swapFiles) + " (used " + value(c.swapUsed) + "); simulator runtime images: " + value(c.simulatorRuntimes) + "; purgeable estimate: " + value(c.purgeable))
@@ -281,9 +283,14 @@ struct CleanCommand {
 
     /// The item ids named by a selection (`ID` or `ID#SESSION`), or nil when any selector is a
     /// group (all, safe, ai, a category) that has to be found by scanning.
+    static func normalizedSelectors(_ selectors: [String]) -> [String] {
+        let aliases = ["sessions": CleanCategory.aiSessions.rawValue, "worktrees": CleanCategory.agentWorktrees.rawValue, "models": CleanCategory.aiModels.rawValue]
+        return selectors.map { aliases[$0.lowercased()] ?? $0 }
+    }
+
     static func itemIDs(in selectors: [String]) -> Set<String>? {
         var ids = Set<String>()
-        for selector in selectors {
+        for selector in normalizedSelectors(selectors) {
             let s = selector.lowercased()
             if ["all", "safe", "ai"].contains(s) || CleanCategory(rawValue: s) != nil || s.hasSuffix("*") { return nil }
             ids.insert(String(s.split(separator: "#", maxSplits: 1).first ?? Substring(s)))
@@ -293,11 +300,15 @@ struct CleanCommand {
 
     static func cleanupCategories(for selectors: [String]) -> Set<CleanCategory>? {
         var categories = Set<CleanCategory>()
-        for selector in selectors {
+        for selector in normalizedSelectors(selectors) {
             let s = selector.lowercased()
             if ["all", "safe"].contains(s) { return nil }
             if s == "ai" { categories.formUnion(CleanCategory.allCases.filter(\.isAI)); continue }
             if let category = CleanCategory(rawValue: s) { categories.insert(category); continue }
+            if ["claude-sessions", "codex-sessions", "gemini-sessions", "cline-tasks", "roo-code-tasks", "kilo-code-tasks", "roo-tasks", "kilo-tasks"].contains(where: { s == $0 || s.hasPrefix($0 + "/") }) {
+                categories.insert(.aiSessions); continue
+            }
+            if ["claude-orphans", "claude-project-backups"].contains(s) || s.hasSuffix("-orphan-workspaces") { categories.insert(.aiSessions); continue }
             if s.hasPrefix("project/") { categories.insert(.projects); continue }
             if s.hasPrefix("worktree/") { categories.insert(.agentWorktrees); continue }
             if s.hasPrefix("simulator-") { categories.insert(.xcode); continue }
@@ -307,11 +318,15 @@ struct CleanCommand {
         return categories
     }
 
-    func clean(_ selectors: [String]) throws {
+    func clean(_ requested: [String]) throws {
+        let selectors = Self.normalizedSelectors(requested)
         guard !selectors.isEmpty else {
             throw CLIError("usage: thermo clean run safe|all|ai|CATEGORY|ID… [--older-than 30d] [--trash|--permanent] [--yes]")
         }
         if args.has("trash") && args.has("permanent") { throw CLIError("--trash and --permanent are exclusive") }
+        if try options().sessionRetentionDays == nil, Self.cleanupCategories(for: selectors) == Set([.aiSessions]) {
+            throw CLIError(tr("All conversations are kept. Add --older-than to review old sessions."))
+        }
         let mode: RemovalMode = args.has("permanent") ? .permanent : args.has("trash") ? .trash : .auto
         // Project folders are the slow part; only walk them when the selection can include build output.
         let needsProjects = selectors.contains { ["all", "safe", "projects"].contains($0) || $0.hasPrefix("project") }
@@ -340,6 +355,8 @@ struct CleanCommand {
         let removalMode: String
         let items: [PreviewItem]
         let skipped: [CleanItem]
+        var sessionRetentionDays: Int? = nil
+        var sessionPolicyVersion: Int? = nil
     }
     struct PreviewItem: Encodable {
         let item: CleanItem
@@ -353,7 +370,7 @@ struct CleanCommand {
             if args.has("dry-run"), r.cancelled {
                 if args.has("json") {
                     write(Export.json(Preview(scannedAt: r.started, scanCancelled: true, removalMode: mode.rawValue,
-                                              items: [], skipped: [])))
+                                              items: [], skipped: [], sessionRetentionDays: r.sessionRetentionDays, sessionPolicyVersion: r.sessionPolicyVersion)))
                 } else { write("dry run · scan stopped before any matching item completed; nothing was removed") }
                 return
             }
@@ -388,7 +405,7 @@ struct CleanCommand {
             if args.has("json") {
                 write(Export.json(Preview(scannedAt: r.started, scanCancelled: r.cancelled, removalMode: mode.rawValue,
                                           items: todo.map { PreviewItem(item: $0, action: !($0.commands ?? []).isEmpty ? "tool-removal" : mode.trashes($0.safety) ? "trash" : "delete") },
-                                          skipped: skipped)))
+                                          skipped: skipped, sessionRetentionDays: r.sessionRetentionDays, sessionPolicyVersion: r.sessionPolicyVersion)))
             } else {
                 write(plan.joined(separator: "\n"))
                 write("dry run · no files removed and no cleanup commands executed")
@@ -586,6 +603,8 @@ struct CleanCommand {
         }
         guard let r = ScanReportCache.load(maxAge: 15 * 60, matching: { report in
             guard report.olderThanDays == configured.olderThanDays,
+                  report.sessionRetentionDays == configured.sessionRetentionDays,
+                  report.sessionPolicyVersion == ScanOptions.sessionPolicyVersion,
                   (report.exactSizes ?? false) == configured.exactSizes,
                   report.language == L10n.current.rawValue,
                   needs.isSubset(of: Set(report.categories ?? [])),

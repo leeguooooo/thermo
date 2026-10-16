@@ -37,16 +37,20 @@ public struct ScanGrowth: Codable, Sendable {
 
 public enum CleanScanHistory {
     struct Scope: Codable, Equatable {
-        var schema = 1
+        var schema = 2
         var categories: [String]
         var roots: [String]
         var olderThan: Int
+        var sessionRetentionDays: Int?
+        var sessionPolicyVersion: Int?
         var discover: Bool
         var exact: Bool
         init(_ report: ScanReport) {
             categories = (report.categories ?? CleanCategory.allCases).map(\.rawValue).sorted()
             roots = (report.projectRoots ?? []).sorted()
             olderThan = report.olderThanDays ?? 30
+            sessionRetentionDays = report.sessionRetentionDays
+            sessionPolicyVersion = report.sessionPolicyVersion
             discover = report.discoverProjectRoots ?? true
             exact = report.exactSizes ?? false
         }

@@ -59,3 +59,25 @@ final class CleanDryRunTests: XCTestCase {
         XCTAssertEqual((json["skipped"] as? [Any])?.count, 1)
     }
 }
+
+extension CleanDryRunTests {
+    func testConversationAgeNeedsAnExplicitOption() throws {
+        let defaults = CleanCommand(app:App(args:try Args(["clean","sessions"])))
+        XCTAssertNil(try defaults.options().sessionRetentionDays)
+        let explicit = CleanCommand(app:App(args:try Args(["clean","sessions","--older-than","90d"])))
+        XCTAssertEqual(try explicit.options().sessionRetentionDays,90)
+    }
+    func testSessionOnlyRunWithoutAgeRefusesBeforeScanning() throws {
+        let command = CleanCommand(app:App(args:try Args(["clean","run","sessions","--dry-run","--yes"])))
+        XCTAssertThrowsError(try command.clean(["sessions"])) { XCTAssertTrue(String(describing:$0).contains("--older-than")) }
+        XCTAssertThrowsError(try command.clean(["codex-sessions/fixture"])) { XCTAssertTrue(String(describing:$0).contains("--older-than")) }
+    }
+    func testSessionAliasesAndIdsUseTheSameNarrowScope() {
+        XCTAssertEqual(CleanCommand.cleanupCategories(for:["sessions"]),[.aiSessions])
+        XCTAssertEqual(CleanCommand.cleanupCategories(for:["codex-sessions/fixture#a"]),[.aiSessions])
+        XCTAssertEqual(CleanCommand.cleanupCategories(for:["roo-code-tasks/code"]),[.aiSessions])
+        XCTAssertEqual(CleanCommand.cleanupCategories(for:["kilo-code-tasks/code"]),[.aiSessions])
+        XCTAssertNil(CleanCommand.itemIDs(in:["sessions"]))
+        XCTAssertEqual(CleanCommand.normalizedSelectors(["sessions","worktrees","models"]),["ai-sessions","agent-worktrees","ai-models"])
+    }
+}

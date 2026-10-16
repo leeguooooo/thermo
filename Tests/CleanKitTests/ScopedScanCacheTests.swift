@@ -43,3 +43,27 @@ final class ScopedScanCacheTests: XCTestCase {
         XCTAssertEqual(saved.started, Date(timeIntervalSince1970: 200))
     }
 }
+
+extension ScopedScanCacheTests {
+    func testKeepAllAndDifferentConversationAgesHaveSeparateCachedPlans() throws {
+        let choices: [Int?] = [nil,30,90]
+        for (index,days) in choices.enumerated() {
+            var r = report(.aiSessions,at:100+Double(index));r.sessionPolicyVersion = ScanOptions.sessionPolicyVersion;r.sessionRetentionDays = days
+            ScanReportCache.save(r,home:home)
+        }
+        for days in choices {
+            let cached = ScanReportCache.load(home:home,maxAge:200,now:Date(timeIntervalSince1970:250),matching:{ $0.sessionRetentionDays == days && $0.sessionPolicyVersion == ScanOptions.sessionPolicyVersion })
+            XCTAssertNotNil(cached)
+            XCTAssertEqual(cached?.sessionRetentionDays,days)
+        }
+    }
+    func testConversationPolicyChangeCannotLookLikeFilesWereCleaned() {
+        var before = report(.aiSessions,at:100);before.sessionRetentionDays = 30;before.sessionPolicyVersion = ScanOptions.sessionPolicyVersion
+        var after = before;after.started = Date(timeIntervalSince1970:200);after.items[0].bytes = 5
+        XCTAssertNotNil(CleanScanHistory.compare(after,with:before))
+        after.sessionRetentionDays = nil
+        XCTAssertNil(CleanScanHistory.compare(after,with:before))
+        after.sessionRetentionDays = 30;after.sessionPolicyVersion = nil
+        XCTAssertNil(CleanScanHistory.compare(after,with:before))
+    }
+}

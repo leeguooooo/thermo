@@ -279,6 +279,8 @@ struct DiskCategoryPage: View {
     @State private var open: Set<String> = []
 
     var items: [CleanItem] {
+        if category == .aiSessions && model.sessionRetentionDays == nil { return [] }
+        if category == .aiSessions && model.scopeNeedsRefresh(category: category) { return [] }
         var list = (model.report?.items ?? []).filter { $0.category == category }
         if !search.isEmpty {
             let q = search.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -291,6 +293,19 @@ struct DiskCategoryPage: View {
     var body: some View {
         VStack(spacing: 0) {
             header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
+            if category == .aiSessions {
+                HStack {
+                    Text(tr("Conversation retention"))
+                    Picker(tr("Conversation retention"), selection: Binding(get: { model.sessionRetentionDays ?? -1 }, set: { model.setSessionRetentionDays($0 < 0 ? nil : $0) })) {
+                        Text(tr("Keep all conversations")).tag(-1)
+                        ForEach([1, 7, 30, 90, 180, 365], id: \.self) { days in
+                            Text(tr("List conversations older than %1$@ days", String(days))).tag(days)
+                        }
+                    }.labelsHidden().frame(maxWidth: 280)
+                    Spacer()
+                }.font(.callout).padding(.horizontal, 28).padding(.bottom, 10)
+                    .disabled(model.scanning || model.cleaning)
+            }
             if let why = model.error ?? model.report?.whitelistError {
                 Label(why, systemImage: "exclamationmark.triangle")
                     .font(.callout).foregroundStyle(.red)
@@ -328,10 +343,13 @@ struct DiskCategoryPage: View {
                         ForEach(list) { card($0) }
                     }
                     if list.isEmpty {
-                        if model.scanning {
+                        if category == .aiSessions && model.sessionRetentionDays == nil {
+                            Text(tr("All conversations are kept. Choose an age, then scan to review old sessions."))
+                                .foregroundStyle(.secondary).padding(.top, 30)
+                        } else if model.scanning {
                             Label(tr("Looking…"), systemImage: "hourglass")
                                 .foregroundStyle(.secondary).padding(.top, 30)
-                        } else if model.report == nil || model.report?.categories?.contains(category) == false {
+                        } else if model.report == nil || model.scopeNeedsRefresh(category: category) {
                             VStack(alignment: .leading, spacing: 12) {
                                 Label(tr("Find space you can free"), systemImage: "magnifyingglass")
                                 Button(tr("Scan")) {
@@ -346,7 +364,7 @@ struct DiskCategoryPage: View {
                             }
                             .foregroundStyle(.secondary).padding(.top, 30)
                         } else {
-                            Text(!search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? tr("No matching items") : tr("Nothing here."))
+                            Text(!search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? tr("No matching items") : category == .aiSessions ? tr("No conversations are eligible. Recent, active or unverified data are kept.") : tr("Nothing here."))
                                 .foregroundStyle(.secondary).padding(.top, 30)
                         }
                     }

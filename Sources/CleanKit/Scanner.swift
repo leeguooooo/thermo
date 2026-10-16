@@ -80,7 +80,7 @@ public final class DiskScanner: @unchecked Sendable {
 
         var jobs: [(String, Set<CleanCategory>, () -> [CleanItem])] = [
             ("projects", [.projects, .agentWorktrees, .aiCaches], { Projects.scan(ctx, onItem: { self.onItems?(mark([$0])) }) }),
-            ("AI sessions", [.aiSessions], { AISessions.scan(ctx) }),
+            ("AI sessions", [.aiSessions, .aiCaches], { AISessions.scan(ctx) }),
             ("AI tools", [.aiCaches], { AITools.scan(ctx) }),
             ("AI models", [.aiModels], { AIModels.scan(ctx) }),
             ("other caches", [.system], { [self.otherCaches(ctx)].compactMap { $0 } }),
@@ -136,6 +136,8 @@ public final class DiskScanner: @unchecked Sendable {
         report.whitelistError = whitelistError
         report.categories = CleanCategory.allCases.filter { options.categories.contains($0) }
         report.olderThanDays = options.olderThanDays
+        report.sessionRetentionDays = options.sessionRetentionDays
+        report.sessionPolicyVersion = ScanOptions.sessionPolicyVersion
         report.projectRoots = Array(Set(options.projectRoots)).sorted()
         report.discoverProjectRoots = options.discoverProjectRoots
         report.language = language

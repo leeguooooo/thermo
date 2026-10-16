@@ -1,0 +1,153 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "1ddfbfc",
+  "sourceSHA256": {
+    "Sources/CleanKit/AISessions.swift": "0b35858c7702b84ff86b3af551068249561c877d7acde95fa9dc096fef8651fc",
+    "Sources/CleanKit/FileActivityReview.swift": "fa48761ba4ef9d2cee3a542cf70f076905e5c99304e0094791339296a1ccdf16",
+    "Sources/CleanKit/WorktreeCleanup.swift": "55fc5dfa66475707713ac99678105c076ed5c35a5871acd82c57e00788b873c2",
+    "Sources/CleanKit/Model.swift": "a71b1d6abe44fc63dc42c382a57add0b588701a6debf97424f916ef055a4ba7d",
+    "Sources/CleanKit/ScanInsights.swift": "3d146ec47eaeafcf75ef75ef66d8bc8739ef30d72cb6641d873cc41e527295b1",
+    "Sources/CleanKit/Scanner.swift": "608b5fe88ae638c26c675253ceccc4ee97aff64f4cee3182989609accaedce10",
+    "Sources/ThermoApp/DiskView.swift": "159db7ee8d097c9fbb53a481e4b50fcac989df9a8d1c6bbd5ab3c2c1e5c62b9b",
+    "Sources/ThermoApp/DiskWindow.swift": "850df49d472b0d866c4c25919384faca36647a58e8e00292f453686f1eff08ad",
+    "Sources/thermo/Clean.swift": "f93cc1806c938ec2b12b7f78b0b6a84a99c7e4828ab026354c1bb6ce9fcc9eb3",
+    "Sources/ThermoL10n/ZhHans.swift": "dd154884979b69877d8ca840e87606563682125a3d5e4ecee54ea6662db085a1",
+    "Tests/CleanKitTests/CleanKitTests.swift": "bfab77108103a220d79f99687b580a68492412a9b48eca0c9816b04bd629ee59",
+    "Tests/CleanKitTests/ScopedScanCacheTests.swift": "60482ef117983c3be160ab8496be3b24c39ea30ecb68d7ffbb5e7f59175fc032",
+    "Tests/ThermoAppTests/ConversationRetentionTests.swift": "f1221c2cbce9d11bce40d26f722c39466622e546fc2754f83afab151f837cbf4",
+    "Tests/ThermoCLITests/CleanDryRunTests.swift": "ffb3311f92f0199150b7c8ea8b5cd09cc4939ffb2603d8267c9f394862a6b538",
+    "README.md": "351b1fa3c2d1cb869a41e5f58cb40f457b9c0c2f14d3b7974944b558be8835fd"
+  },
+  "reference": {
+    "retainedEnglishResourcesSHA256": "1fd7c629c66bd6a3528595d8010e5c322080eb545f2437e55ff5a65449dd1f8f",
+    "keys": [
+      "ai.retention.help",
+      "ai.retention.never",
+      "ai.retention.option.none",
+      "ai.row.sessions.never"
+    ],
+    "resourceLines": [
+      71,
+      72,
+      73,
+      74,
+      107
+    ],
+    "DMGMatchesOriginalStudy": true,
+    "noNewMoleRuntimeDefaultClaim": true
+  },
+  "baselines": {
+    "defaultTranscript": {
+      "tests": 1,
+      "failedAssertions": 1,
+      "logSHA256": "44e5628f48d89d6c2e8d1ae722ee6e41f3ec166144493255ad88dd723270f999"
+    },
+    "auxiliaryCopies": {
+      "tests": 2,
+      "failedAssertions": 5,
+      "logSHA256": "11be0564e331757b72c156d5c02cf3884f0621f870f7d3ba89a5e36b6cd25515",
+      "recentSidecarsBackupsAndWorkspacesWereListed": true,
+      "orphanSidecarWasSafeAndRecommended": true
+    }
+  },
+  "newTests": {
+    "CleanKitTests": 8,
+    "ThermoAppTests": 3,
+    "ThermoCLITests": 3
+  },
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 66,
+      "ThermoAppTests": 201,
+      "CleanKitTests": 710,
+      "AgentCoreTests": 34
+    },
+    "total": 1125,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "logSHA256": "e64844ddf5d94ef53256edeefb83c705667822c0adf5057806f7b168a968039d"
+  },
+  "nativeCLI": {
+    "ownedTranscriptAgesDays": [
+      100,
+      40,
+      5
+    ],
+    "projectMissing": true,
+    "candidateCounts": [
+      0,
+      2,
+      1
+    ],
+    "ages": [
+      null,
+      30,
+      90
+    ],
+    "noAgeRunExit": 2,
+    "dryRunWithYes": "policy 2; 30 days; no changes",
+    "allTranscriptBytesUnchanged": true,
+    "deliveryRecheck": {
+      "versions": [
+        2,
+        2,
+        2
+      ],
+      "candidateCounts": [
+        0,
+        2,
+        1
+      ],
+      "sourceBytesUnchanged": true
+    },
+    "executableSHA256": "7240f660c2c386be49b4deb5be2d46665ff6a7be1a243dcae1fc13c834bfc1a5",
+    "evidenceSHA256": "3d6379b0b4ef379dfc4142135f80e527eae9cd2d62e07a31d315548b0b4a8110"
+  },
+  "policy": {
+    "version": 2,
+    "default": "keep all conversations",
+    "regularAppScans": "keep history even if a dedicated conversation age was chosen",
+    "explicitContexts": [
+      "AI scope",
+      "conversation category",
+      "CLI explicit --older-than"
+    ],
+    "missingProjects": "do not bypass age",
+    "sidecarsBackupsOrphanWorkspaces": "review only; bounded subtree activity and live-session checks; unknown kept",
+    "cacheAndGrowthScope": [
+      "retention days",
+      "policy version"
+    ],
+    "legacyReports": "decode as unknown; not reused as current cleanup plans",
+    "choiceLifetime": "current app process; no change while busy; changing choice invalidates the prior plan"
+  },
+  "sharedActivityTraversal": {
+    "roots": "directories and regular files",
+    "includes": [
+      "directory timestamps",
+      "hard-link names",
+      "production ctime"
+    ],
+    "defaultMaximumEntries": 20000,
+    "doesNotFollowLinksOrCrossChildMounts": true,
+    "worktree24HourContractPreserved": true
+  },
+  "cleanup": {
+    "ownedCLIHomeRemoved": true,
+    "openFixtureHandles": 0,
+    "crashedLegacyWorkspaceTestFixtureVerifiedAndRemoved": true,
+    "noTranscriptDeletion": true
+  },
+  "limitations": [
+    "No visible retention-picker acceptance this turn; previous desktop blocker not rechecked",
+    "Retention preference not persisted across app restarts",
+    "Mole cross-launch retention behavior not established",
+    "Filesystem checks are not atomic against concurrent writers",
+    "Per-tool actual session deletion/index compatibility remains independent work",
+    "No push or release"
+  ]
+}

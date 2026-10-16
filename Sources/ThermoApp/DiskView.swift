@@ -20,6 +20,7 @@ final class DiskModel: ObservableObject {
     @Published var selected: Set<String> = []
     /// Item id → parts (sessions) the user unticked inside a selected item.
     @Published var excluded: [String: Set<String>] = [:]
+    @Published private(set) var sessionRetentionDays: Int?
     /// Everything by default: build output in every project is often the biggest win.
     @Published var scope: Scope = .all {
         didSet { if scope != oldValue, report != nil { stale = true } }
@@ -47,7 +48,10 @@ final class DiskModel: ObservableObject {
     var selectedItems: [CleanItem] {
         // An unreadable whitelist disables cleaning altogether.
         guard report?.whitelistError == nil else { return [] }
-        return (report?.items ?? []).filter { selected.contains($0.id) && $0.cleanable }.compactMap { i in
+        return (report?.items ?? []).filter {
+            selected.contains($0.id) && $0.cleanable && ($0.category != .aiSessions ||
+                (sessionRetentionDays != nil && report?.sessionPolicyVersion == ScanOptions.sessionPolicyVersion && report?.sessionRetentionDays == sessionRetentionDays))
+        }.compactMap { i in
             guard let off = excluded[i.id], !off.isEmpty, let parts = i.parts else { return i }
             let narrowed = i.only(Set(parts.map(\.id)).subtracting(off))
             return narrowed.bytes > 0 ? narrowed : nil
@@ -56,9 +60,19 @@ final class DiskModel: ObservableObject {
     var languageStale: Bool { report.map { $0.language != L10n.current.rawValue } ?? false }
     var selectedBytes: Int64 { selectedItems.reduce(0) { $0 + $1.bytes } }
 
+    func setSessionRetentionDays(_ days: Int?) {
+        guard !scanning, !cleaning, days != sessionRetentionDays, days.map({ $0 >= 0 }) ?? true else { return }
+        sessionRetentionDays = days
+        report = nil; selected = []; excluded = [:]
+        stale = false; resultsNeedRefresh = false; lastResult = nil; error = nil
+    }
+
     func scopeNeedsRefresh(category: CleanCategory? = nil) -> Bool {
         guard !scanning, let report else { return false }
-        if let category { return !(report.categories ?? []).contains(category) }
+        if let category {
+            if category == .aiSessions, report.sessionPolicyVersion != ScanOptions.sessionPolicyVersion || report.sessionRetentionDays != sessionRetentionDays { return true }
+            return !(report.categories ?? []).contains(category)
+        }
         return stale
     }
 
@@ -74,8 +88,9 @@ final class DiskModel: ObservableObject {
     func loadSaved(category: CleanCategory? = nil) -> Bool {
         // The CLI scans in English; a report in another language would show the wrong titles here.
         let wanted = category.map { Set([$0]) } ?? (scope == .ai ? Set(CleanCategory.allCases.filter(\.isAI)) : Set(CleanCategory.allCases))
-        let options = Self.scanOptions(scope: scope, category: category)
+        let options = Self.scanOptions(scope: scope, category: category, sessionRetentionDays: sessionRetentionDays)
         guard report == nil, !scanning, let r = ScanReportCache.load(maxAge: 3600, matching: {
+            $0.sessionPolicyVersion == ScanOptions.sessionPolicyVersion && $0.sessionRetentionDays == options.sessionRetentionDays &&
             $0.language == L10n.current.rawValue && wanted.isSubset(of: Set($0.categories ?? [])) &&
                 $0.projectRoots == Array(Set(options.projectRoots)).sorted() &&
                 $0.discoverProjectRoots == options.discoverProjectRoots && $0.olderThanDays == options.olderThanDays
@@ -87,8 +102,9 @@ final class DiskModel: ObservableObject {
         return true
     }
 
-    static func scanOptions(scope: Scope, category: CleanCategory? = nil) -> ScanOptions {
+    static func scanOptions(scope: Scope, category: CleanCategory? = nil, sessionRetentionDays: Int? = nil) -> ScanOptions {
         var options = ScanOptions()
+        options.sessionRetentionDays = category == .aiSessions || (category == nil && scope == .ai) ? sessionRetentionDays : nil
         options.lowPriority = true
         if let category { options.categories = [category] }
         else if scope == .ai { options.categories = Set(CleanCategory.allCases.filter(\.isAI)) }
@@ -109,7 +125,7 @@ final class DiskModel: ObservableObject {
         report = nil
         selected = []
         excluded = [:]
-        let options = Self.scanOptions(scope: scope, category: category)
+        let options = Self.scanOptions(scope: scope, category: category, sessionRetentionDays: sessionRetentionDays)
         let scanner = DiskScanner(options: options)
         self.scanner = scanner
         let started = Date()
@@ -122,6 +138,8 @@ final class DiskModel: ObservableObject {
                 let items = Self.sorted((self.report?.items ?? []) + found)
                 self.report = ScanReport(items: items, denied: [], started: started, duration: Date().timeIntervalSince(started))
                 self.report?.language = language
+                self.report?.sessionRetentionDays = options.sessionRetentionDays
+                self.report?.sessionPolicyVersion = ScanOptions.sessionPolicyVersion
                 self.selected.formUnion(found.filter(\.automaticallySelected).map(\.id))
             }
         }

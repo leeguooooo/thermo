@@ -2333,4 +2333,10 @@ let zhHans: [String: String] = [
     "The update backup was not completely moved; inspect the result": "更新备份未完整移动，请检查执行结果",
     "Trash batch: %1$@": "废纸篓批次：%1$@",
     "Current version kept: %1$@": "保留当前版本：%1$@",
+    "Conversation retention": "聊天记录保留期限",
+    "Keep all conversations": "保留全部聊天记录",
+    "List conversations older than %1$@ days": "列出 %1$@ 天前未更新的聊天",
+    "All conversations are kept. Choose an age, then scan to review old sessions.": "所有聊天记录均保留。选择保留期限后，再扫描并逐项审阅旧会话。",
+    "All conversations are kept. Add --older-than to review old sessions.": "所有聊天记录均保留。请指定 --older-than，再审阅旧会话。",
+    "No conversations are eligible. Recent, active or unverified data are kept.": "没有符合条件的聊天。近期、正在使用或无法核实的数据均已保留。",
 ]

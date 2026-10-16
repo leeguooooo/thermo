@@ -40,6 +40,7 @@ final class CleanKitTests: XCTestCase {
         var o = ScanOptions()
         o.home = home
         o.olderThanDays = days
+        o.sessionRetentionDays = days
         o.projectRoots = [home + "/src"]
         return ScanContext(options: o, now: now, processes: ProcessTable(entries: []), agentDirs: agentDirs,
                            liveClaudeSessions: live)
@@ -239,23 +240,24 @@ final class CleanKitTests: XCTestCase {
         XCTAssertEqual(AgeFormat.string(now.addingTimeInterval(-3 * 86400), now: now), "3 天前")
     }
 
-    func testClaudeSessionsOfDeletedProjectAreAllStale() throws {
+    func testDeletedProjectDoesNotOverrideConversationRetention() throws {
         let sid = "44444444-4444-4444-4444-444444444444"
-        try write(".claude/projects/-nowhere/\(sid).jsonl", "{\"cwd\":\"\(home)/src/deleted\"}\n", age: 5)
-        let items = AISessions.claudeCode(context())
-        let item = try XCTUnwrap(items.first)
+        let path = try write(".claude/projects/-nowhere/\(sid).jsonl", "{\"cwd\":\"\(home)/src/deleted\"}\n", age: 5)
+        XCTAssertTrue(AISessions.claudeCode(context()).isEmpty)
+        let item = try XCTUnwrap(AISessions.claudeCode(context(days:1)).first)
         XCTAssertTrue(item.detail.contains("project folder deleted"))
-        XCTAssertEqual(item.paths.count, 1)
+        XCTAssertEqual(item.paths,[path])
     }
 
-    func testClaudeOrphanSidecars() throws {
+    func testClaudeOrphanSidecarsRespectAgeAndRequireReview() throws {
         try write(".claude/projects/-p/55555555-5555-5555-5555-555555555555.jsonl", "{}", age: 1)
         try write(".claude/file-history/66666666-6666-6666-6666-666666666666/f", age: 1)
         try touch(home + "/.claude/file-history/66666666-6666-6666-6666-666666666666", age: 1)
-        let items = AISessions.claudeCode(context())
+        XCTAssertFalse(AISessions.claudeCode(context()).contains { $0.id == "claude-orphans" })
+        let items = AISessions.claudeCode(context(days:0))
         let orphan = try XCTUnwrap(items.first { $0.id == "claude-orphans" })
         XCTAssertEqual(orphan.paths, [home + "/.claude/file-history/66666666-6666-6666-6666-666666666666"])
-        XCTAssertEqual(orphan.safety, .safe)
+        XCTAssertEqual(orphan.safety, .review)
     }
 
     // MARK: Codex
@@ -278,13 +280,14 @@ final class CleanKitTests: XCTestCase {
 
     func testEditorWorkspaceOrphans() throws {
         let ws = "Library/Application Support/Cursor/User/workspaceStorage"
-        try write("\(ws)/aaa/workspace.json", "{\"folder\":\"file://\(home)/src/gone\"}")
-        try write("\(ws)/aaa/state.vscdb", age: 10)
+        try write("\(ws)/aaa/workspace.json", "{\"folder\":\"file://\(home)/src/gone\"}", age:40)
+        try write("\(ws)/aaa/state.vscdb", age:40)
+        try touch(home + "/\(ws)/aaa", age:40)
         try FileManager.default.createDirectory(atPath: home + "/src/here", withIntermediateDirectories: true)
         try write("\(ws)/bbb/workspace.json", "{\"folder\":\"file://\(home)/src/here\"}")
         let items = AISessions.editorWorkspaces(context())
         XCTAssertEqual(items.count, 1)
-        XCTAssertEqual(items[0].paths, [home + "/\(ws)/aaa"])
+        XCTAssertEqual(try XCTUnwrap(items.first).paths, [home + "/\(ws)/aaa"])
     }
 
     // MARK: tool versions
@@ -841,5 +844,94 @@ final class SpaceCancellationTests: XCTestCase {
         try previous.write(to: url)
         overview.save(to: url)
         XCTAssertEqual(try Data(contentsOf: url), previous)
+    }
+}
+
+extension CleanKitTests {
+    func testDefaultConversationCleanupKeepsOldTranscriptsUntilAgeIsChosen() throws {
+        let meta = "{\"type\":\"session_meta\",\"payload\":{\"id\":\"old-fixture\",\"cwd\":\"\(home)/missing-project\"}}\n"
+        let path = try write(".codex/sessions/2026/01/01/rollout-old.jsonl",meta,age:100)
+        var options = ScanOptions(); options.home = home; options.projectRoots = []
+        let ctx = ScanContext(options:options,now:now,processes:.init(entries:[]),agentDirs:[],liveClaudeSessions:[])
+        XCTAssertTrue(AISessions.scan(ctx).filter { $0.category == .aiSessions }.isEmpty)
+        XCTAssertTrue(FS.exists(path))
+    }
+}
+
+extension CleanKitTests {
+    func testConversationRetentionIsIndependentOfCacheAgeAndNeverAutoSelectsChats() throws {
+        let meta = "{\"type\":\"session_meta\",\"payload\":{\"id\":\"fixture\",\"cwd\":\"\(home)/missing-project\"}}\n"
+        let oldest = try write(".codex/sessions/2026/01/01/rollout-oldest.jsonl",meta,age:100)
+        let month = try write(".codex/sessions/2026/01/01/rollout-month.jsonl",meta,age:40)
+        _ = try write(".codex/sessions/2026/01/01/rollout-recent.jsonl",meta,age:5)
+        var o = ScanOptions(); o.home = home; o.olderThanDays = 1
+        for (age,expected) in [(90,Set([oldest])),(30,Set([oldest,month]))] {
+            o.sessionRetentionDays = age
+            let ctx = ScanContext(options:o,now:now,processes:.init(entries:[]),agentDirs:[],liveClaudeSessions:[])
+            let items = AISessions.scan(ctx).filter { $0.category == .aiSessions }
+            XCTAssertEqual(Set(items.flatMap(\.paths)),expected)
+            XCTAssertTrue(items.allSatisfy { !$0.automaticallySelected })
+        }
+    }
+    func testKeepAllSkipsOldTranscriptSizingAndStillFindsMaintenanceLogs() throws {
+        var o = ScanOptions(); o.home = home
+        let ctx = ScanContext(options:o,now:now,processes:.init(entries:[]),agentDirs:[],liveClaudeSessions:[])
+        let group = SessionGroup(cwd:home,label:"fixture",sessions:[SessionFile(id:"old",paths:["old.jsonl"],size:TreeSize(),modified:now.addingTimeInterval(-100*86400),needsSize:true)])
+        XCTAssertTrue(AISessions.items(tool:"Fixture",idPrefix:"fixture",groups:[group],ctx:ctx,measure:{ _ in
+            XCTFail("keep-all must not measure old transcripts"); return TreeSize()
+        }).isEmpty)
+        try write(".local/share/opencode/log/old.log",age:3)
+        let items = AISessions.scan(ctx)
+        XCTAssertTrue(items.contains { $0.id == "opencode-logs" && $0.category == .aiCaches })
+        XCTAssertFalse(items.contains { $0.category == .aiSessions })
+        let meta = "{\"type\":\"session_meta\",\"payload\":{\"id\":\"fixture\",\"cwd\":\"\(home)/missing\"}}\n"
+        try write(".codex/sessions/2026/01/01/rollout-old.jsonl",meta,age:100)
+        o.sessionRetentionDays = 30
+        let optedIn = ScanContext(options:o,now:now,processes:.init(entries:[]),agentDirs:[],liveClaudeSessions:[])
+        XCTAssertTrue(AISessions.scan(optedIn).contains { $0.category == .aiSessions })
+        o.categories = [.aiCaches]
+        let cacheOnly = ScanContext(options:o,now:now,processes:.init(entries:[]),agentDirs:[],liveClaudeSessions:[])
+        XCTAssertTrue(AISessions.scan(cacheOnly).contains { $0.id == "opencode-logs" })
+        XCTAssertFalse(AISessions.scan(cacheOnly).contains { $0.category == .aiSessions })
+    }
+    func testScannerWritesExplicitConversationPolicyAndLegacyDecoderKeepsItUnknown() throws {
+        var o = ScanOptions(); o.home = home; o.projectRoots = []; o.discoverProjectRoots = false; o.categories = [.aiSessions]
+        let report = DiskScanner(options:o).scan()
+        XCTAssertEqual(report.sessionPolicyVersion,ScanOptions.sessionPolicyVersion); XCTAssertNil(report.sessionRetentionDays)
+        let old = Data("{\"items\":[],\"denied\":[],\"started\":0,\"duration\":0}".utf8)
+        let legacy = try JSONDecoder().decode(ScanReport.self,from:old)
+        XCTAssertNil(legacy.sessionPolicyVersion); XCTAssertNil(legacy.sessionRetentionDays)
+    }
+}
+
+extension CleanKitTests {
+    func testConversationAuxiliaryCopiesRespectAgeAndRequireReview() throws {
+        try FileManager.default.createDirectory(atPath:home+"/.claude/projects",withIntermediateDirectories:true)
+        let old = home+"/.claude/file-history/88888888-8888-8888-8888-888888888888"
+        let recent = home+"/.claude/file-history/99999999-9999-9999-9999-999999999999"
+        try write(String(old.dropFirst(home.count+1))+"/payload",age:100);try touch(old,age:100)
+        try write(String(recent.dropFirst(home.count+1))+"/payload",age:5);try touch(recent,age:100)
+        let oldBackup = home+"/.claude/projects-backup-old", recentBackup = home+"/.claude/projects-backup-recent"
+        try write(".claude/projects-backup-old/payload",age:100);try touch(oldBackup,age:100)
+        try write(".claude/projects-backup-recent/payload",age:5);try touch(recentBackup,age:100)
+        let items = AISessions.claudeCode(context())
+        let orphan = try XCTUnwrap(items.first { $0.id == "claude-orphans" })
+        XCTAssertEqual(orphan.paths,[old]);XCTAssertEqual(orphan.safety,.review);XCTAssertFalse(orphan.automaticallySelected)
+        let backups = try XCTUnwrap(items.first { $0.id == "claude-project-backups" })
+        XCTAssertEqual(backups.paths,[oldBackup])
+        XCTAssertFalse(AISessions.claudeCode(context(live:["88888888-8888-8888-8888-888888888888"])).contains { $0.id == "claude-orphans" })
+    }
+    func testOrphanWorkspaceStillKeepsRecentlyUpdatedChatState() throws {
+        let base = "Library/Application Support/Cursor/User/workspaceStorage/"
+        for (name,age) in [("old",40.0),("recent",5.0)] {
+            let root = home+"/"+base+name
+            let metadata = "{\"folder\":\""+URL(fileURLWithPath:home+"/missing-project").absoluteString+"\"}"
+            try write(base+name+"/workspace.json",metadata,age:100)
+            try write(base+name+"/state.vscdb",age:age)
+            try touch(root,age:100)
+        }
+        let item = try XCTUnwrap(AISessions.editorWorkspaces(context()).first { $0.id == "cursor-orphan-workspaces" })
+        XCTAssertEqual(item.paths,[home+"/"+base+"old"])
+        XCTAssertEqual(item.safety,.review)
     }
 }

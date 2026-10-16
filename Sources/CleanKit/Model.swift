@@ -154,6 +154,9 @@ public struct ScanReport: Codable, Sendable {
     /// What the scan covered, so a saved report is only reused for selections it can answer.
     public var categories: [CleanCategory]?
     public var olderThanDays: Int?
+    /// Nil keeps all conversations; absent policy version means a legacy report.
+    public var sessionRetentionDays: Int?
+    public var sessionPolicyVersion: Int?
     public var projectRoots: [String]?
     public var discoverProjectRoots: Bool?
     /// Titles and notes are written in this language at scan time ("en", "zh-Hans").
@@ -174,7 +177,7 @@ public struct ScanReport: Codable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays, projectRoots, discoverProjectRoots, language, spaceContext, growth, changesSince, exactSizes, whitelistError
+        case items, denied, started, duration, claudeCleanupDays, cancelled, categories, olderThanDays, sessionRetentionDays, sessionPolicyVersion, projectRoots, discoverProjectRoots, language, spaceContext, growth, changesSince, exactSizes, whitelistError
     }
 
     public init(from decoder: Decoder) throws {
@@ -187,6 +190,8 @@ public struct ScanReport: Codable, Sendable {
         cancelled = try c.decodeIfPresent(Bool.self, forKey: .cancelled) ?? false
         categories = try c.decodeIfPresent([CleanCategory].self, forKey: .categories)
         olderThanDays = try c.decodeIfPresent(Int.self, forKey: .olderThanDays)
+        sessionRetentionDays = try c.decodeIfPresent(Int.self, forKey: .sessionRetentionDays)
+        sessionPolicyVersion = try c.decodeIfPresent(Int.self, forKey: .sessionPolicyVersion)
         exactSizes = try c.decodeIfPresent(Bool.self, forKey: .exactSizes)
         spaceContext = try c.decodeIfPresent(CleanSpaceContext.self, forKey: .spaceContext)
         growth = try c.decodeIfPresent([ScanGrowth].self, forKey: .growth)
@@ -218,8 +223,11 @@ public struct ScanReport: Codable, Sendable {
 }
 
 public struct ScanOptions: Sendable {
-    /// AI sessions / project artifacts untouched for this many days count as stale.
+    public static let sessionPolicyVersion = 2
+    /// Project artifacts and caches untouched for this many days count as stale.
     public var olderThanDays: Int = 30
+    /// Conversation cleanup is opt-in: nil keeps every transcript, including missing projects.
+    public var sessionRetentionDays: Int? = nil
     /// Folders searched for project build artifacts and agent worktrees.
     public var projectRoots: [String] = ScanOptions.defaultProjectRoots
     /// Include projects discovered from editor and agent history (disable for an explicit root).
@@ -349,6 +357,8 @@ public enum ScanReportCache {
         let scope: [String: Any] = [
             "categories": report.categories?.map(\.rawValue).sorted() as Any? ?? NSNull(),
             "age": report.olderThanDays as Any? ?? NSNull(),
+            "sessionAge": report.sessionRetentionDays as Any? ?? NSNull(),
+            "sessionPolicy": report.sessionPolicyVersion as Any? ?? NSNull(),
             "language": report.language as Any? ?? NSNull(),
             "roots": report.projectRoots?.sorted() as Any? ?? NSNull(),
             "discover": report.discoverProjectRoots as Any? ?? NSNull()

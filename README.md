@@ -196,7 +196,7 @@ thermo tabs restore UUID --window WINDOW_ID --yes
 
 `thermo clean` 和 App 的 **Disk** 页。常规清理（开发缓存、Xcode、浏览器、日志、旧安装包）之外，重点放在 AI 工具留在磁盘上的东西：
 
-- **AI 会话**：Claude Code、Codex、Gemini CLI 的会话按项目归组，标签取会话里记录的 `cwd`，标题取第一条提问或 Codex 线程名；Cline / Roo / Kilo 任务；Cursor、VS Code、Windsurf 里已删除项目的聊天和工作区数据。超过 `--older-than`（默认 30 天）没动过的会话，或所属项目文件夹已经删了的会话，才会被选中。
+- **AI 会话**：Claude Code、Codex、Gemini CLI 的会话按项目归组，标签取会话里记录的 `cwd`，标题取第一条提问或 Codex 线程名；Cline / Roo / Kilo 任务；Cursor、VS Code、Windsurf 里已删除项目的聊天和工作区数据。默认保留全部聊天记录，不生成聊天清理候选。App 在会话页选择保留期限后再扫描；CLI 需显式提供 `--older-than`，才列出超过该期限未更新的会话。项目目录消失不会绕过期限；已删会话的辅助文件、项目备份和孤立工作区也须满足期限，活动无法核实时保留。列出后仍须自行选择，聊天相关数据不会进入安全推荐集合。
 - **AI 工具残留**：Claude Code 自动更新留下的旧版本、插件旧版本、`/private/tmp/claude-*` 里已结束会话的临时目录、已删会话的 file-history / todos、Claude 桌面版和 Cursor 等的缓存、给 agent 用的 Playwright 浏览器。
 - **模型**：Ollama 每个模型单独一项，和其他模型共用的层不删；Hugging Face 缓存按仓库列出；LM Studio、Whisper、PyTorch Hub、GPT4All、Jan 等。
 - **项目构建产物**：按标志文件识别（`package.json` → `node_modules`、`Cargo.toml` → `target`、`Package.swift` → `.build` 等），默认在 `~/Developer`、`~/code`、`~/github.com` 这类目录下找，`--root` 可以指定。
@@ -219,12 +219,21 @@ thermo tabs restore UUID --window WINDOW_ID --yes
 安全规则：
 
 - 扫描只读。`clean run` 先列出计划，再要求确认。
+- **聊天保留**：常规 Everything 和缓存分类扫描不带入聊天清理期限；专门的会话或 AI 范围才使用当前进程中选择的期限。更改期限会清空旧报告及选择；扫描或执行期间不能更改。CLI `--older-than 90d` 同时指定通用过滤天数并显式启用旧会话审阅。库调用请设置 `ScanOptions.sessionRetentionDays`，单独设置缓存的 `olderThanDays` 不会启用聊天候选。
 - **Agent 工作树**：`thermo clean worktrees` 单独扫描 agent 留在仓库里的 checkout；`thermo clean sessions` 只扫描会话记录，避免等待整个项目目录遍历。`thermo clean ai` 仍会包含两类。工作树的未提交改动、运行中的 agent 和近期写入检查仍会阻止误删。
-- 每项都有级别。`safe` 是会自动重建的缓存，直接删除；`review` 是会话、模型这类数据，移到废纸篓；`risky` 是有未提交改动的 worktree，`safe` / `all` 都不会选中它，必须写出完整 id。
+- 每项都有级别。`safe` 是会自动重建的缓存，直接删除；`review` 是会话、模型这类数据，移到废纸篓；`risky` 不进入批量推荐。工作树的独有提交、未提交/未跟踪/被忽略本地文件、近期活动和归属保护不能靠手写 id 绕过。
 - 正在运行的 Claude Code 会话、2 小时内写过的会话、正在运行的 agent 所在目录、所属 App 还开着的缓存，一律跳过。
 - 删除前逐条复查路径：家目录以外的路径、`~/Documents`、`~/.ssh`、`.git`、Claude 的 `memory/` 这类位置永远不删。只移除列出的路径，不跟随符号链接。
 - 每次删除都写进 `~/Library/Logs/Thermo/clean.log`。
 - 尊重 Claude Code 自己的 `cleanupPeriodDays`，报告里会显示这个值。Codex 的线程索引存在 SQLite 里，Thermo 不改它，所以删掉会话后 Codex 列表里可能还会留着标题。
+
+```sh
+thermo clean sessions --json                         # 默认保留全部
+thermo clean sessions --older-than 90d --json        # 只列出指定期限之外的会话
+thermo clean run sessions --older-than 90d --dry-run # 审阅计划，不移动文件
+```
+
+扫描及 dry-run JSON 增加 `sessionPolicyVersion` 与可选 `sessionRetentionDays`。版本为 2 且期限缺省表示保留全部；旧报告缺失版本或仍为早期版本时，不能视为已按新策略检查，不会复用于新清理计划。缓存和扫描变化比较也区分保留策略，切换期限不计作文件被清理。
 
 清理只以当前用户身份运行，root helper 不链接 CleanKit。
 
