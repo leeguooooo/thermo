@@ -18,6 +18,32 @@ spec.loader.exec_module(collector)
 
 
 class GraderTests(unittest.TestCase):
+    def testVersionTwoCasesDiscloseMissingResultAndErrorStatusContract(self):
+        suite = json.loads(collector.EVALS.read_text())
+        self.assertEqual(suite['taskVersion'], 'evidence-contract-v2')
+        for case in suite['evals']:
+            self.assertTrue(case['name'].endswith('-v2'))
+            self.assertIn('Among completed calls only', case['prompt'])
+            self.assertIn('Missing-result calls contribute to neither', case['prompt'])
+        incomplete = next(c for c in suite['evals'] if c['name'] == 'incomplete-and-cache-v2')
+        self.assertEqual(incomplete['expected']['unknownErrorCalls'], 0)
+        self.assertEqual(incomplete['expected']['missingResults'], 1)
+
+    def testSkillContentAttestationRequiresSuccessfulExactOutput(self):
+        event = {'type': 'item.completed', 'item': {'type': 'command_execution',
+                 'command': 'cat .agents/skills/ai-diagnostics-evidence/SKILL.md',
+                 'exit_code': 0, 'aggregated_output': 'fixture skill\n'}}
+        self.assertTrue(collector.skill_content_observed([event], b'fixture skill\n'))
+        for change in [{'exit_code': 1}, {'exit_code': False}, {'aggregated_output': 'wrong body'},
+                       {'aggregated_output': None}, {'command': 'echo unrelated'}, {'type': 'agent_message'}]:
+            changed = dict(event, item=dict(event['item'], **change))
+            self.assertFalse(collector.skill_content_observed([changed], b'fixture skill\n'))
+
+    def testSkillPathMentionAloneDoesNotAttestBody(self):
+        event = {'type': 'item.completed', 'item': {'type': 'command_execution',
+                 'command': 'cat .agents/skills/ai-diagnostics-evidence/SKILL.md'}}
+        self.assertFalse(collector.skill_content_observed([event], b'fixture skill\n'))
+
     def testExactKnownAndUnknownFieldsPass(self):
         result = collector.grade('{"count":1,"tokens":null}', {'count': 1, 'tokens': None})
         self.assertEqual(result['summary']['failed'], 0)
