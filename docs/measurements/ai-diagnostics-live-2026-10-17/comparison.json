@@ -1,0 +1,56 @@
+{
+  "baseline" : {
+    "error" : 0,
+    "failed" : 2,
+    "passed" : 1,
+    "timeout" : 0,
+    "unverified" : 0
+  },
+  "baselineOnlyPassed" : 0,
+  "baselineRevision" : "none",
+  "bothPassed" : 1,
+  "candidate" : {
+    "error" : 0,
+    "failed" : 1,
+    "passed" : 2,
+    "timeout" : 0,
+    "unverified" : 0
+  },
+  "candidateOnlyPassed" : 1,
+  "candidateRevision" : "94ec3f88c3bbe08588e1be5d7702f50a76bd319cb9da2e49ae3db14bd4afd20b",
+  "environment" : "89b5e6466218f493f5615ffe92b6df18a5be192f5d80159cab37432f01060573",
+  "evidenceKind" : "measured",
+  "excluded" : [
+
+  ],
+  "inputTokens" : {
+    "maximumCandidateMinusBaseline" : 422,
+    "medianCandidateMinusBaseline" : 420,
+    "minimumCandidateMinusBaseline" : 416,
+    "samples" : 3
+  },
+  "kind" : "skill",
+  "matchedPairs" : 3,
+  "matchedTasks" : 3,
+  "model" : "gpt-6.1-sol",
+  "neitherPassed" : 1,
+  "note" : "Declared local evaluation records only. Outcome checks and conditions are supplied by the evaluator, not verified by Thermo. Deltas are paired candidate minus baseline, include unsuccessful runs when measured, and are descriptive rather than a causal or significance claim. Missing metrics stay unknown. Request tokens are never allocated to individual tools; token semantics must match. No task, script, verifier or network request is executed.",
+  "outputTokens" : {
+    "maximumCandidateMinusBaseline" : 23,
+    "medianCandidateMinusBaseline" : -79,
+    "minimumCandidateMinusBaseline" : -150,
+    "samples" : 3
+  },
+  "passRateDifferencePercentagePoints" : 33.333333333333336,
+  "schemaVersion" : 1,
+  "seconds" : {
+    "maximumCandidateMinusBaseline" : 0.18538220800110139,
+    "medianCandidateMinusBaseline" : -1.7944918330176733,
+    "minimumCandidateMinusBaseline" : -2.6271187079837546,
+    "samples" : 3
+  },
+  "settings" : "20163b9bc4749cac80fdec999ff5437f69a6d25a29421461389c171d80616faa",
+  "tokenSemanticsMismatchPairs" : 0,
+  "totalRuns" : 6,
+  "verifiedOutcomePairs" : 3
+}

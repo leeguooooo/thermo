@@ -1,0 +1,26 @@
+{
+  "generated": "2026-10-16T21:12:49.010608+00:00",
+  "evidenceKind": "measured model executions on synthetic task inputs",
+  "runs": 6,
+  "repetitionsPerTaskPerVariant": 1,
+  "requestedModel": "gpt-6.1-sol",
+  "reasoningEffort": "medium",
+  "cliVersion": "0.163.0",
+  "credentialCopiesRemaining": 0,
+  "scope": "Explicit Skill invocation in clean per-run Home and project, read-only sandbox, no user config and no MCP connections supplied by the experiment. Native turn.completed counters; task elapsed time excludes fixture setup. All six runs completed with zero command executions. Raw private runtime homes and stderr are not included.",
+  "limitations": [
+    "Three diagnostic microtasks, one run per variant; no significance or production-quality claim.",
+    "unknownErrorCalls contract is ambiguous in common prompt; both variants fail its predeclared rule on one task. No post-hoc regrading or dropped rows.",
+    "Explicit Skill invocation is recorded, but no shell read was observed. Absence of a shell command does not establish that host-side loading did or did not occur. Body inclusion is not independently attested.",
+    "Parallel execution, provider cache state and backend scheduling confound timing. Cached input counters were 12288 for all six runs.",
+    "skill-creator benchmark pass_rate counts assertions, while Thermo task outcomes require every assertion; they are different metrics.",
+    "Revision 1 verifier field hashes collector source; the expected contract is separately frozen and hashed here."
+  ],
+  "sourceSHA256": {
+    "collected-SKILL.md": "94ec3f88c3bbe08588e1be5d7702f50a76bd319cb9da2e49ae3db14bd4afd20b",
+    "collected-evals.json": "32026986325ebf0e015eacca882a968e1e1a8db525ada1b0d9c51e8dd0193a8a",
+    "collected-collect-ai-diagnostics-eval.py": "8340b55cb271ce467362284ff1b958112e09e7559e7020ae0199ac5062425001"
+  },
+  "offlineCollectorChecks": 8,
+  "safeArtifactsVerified": "Six measured rows, raw native counters, unchanged grades and all frozen source hashes were cross-checked after collection. No model calls during verification."
+}

@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "measured",
+  "kind": "skill",
+  "baselineRevision": "none",
+  "candidateRevision": "94ec3f88c3bbe08588e1be5d7702f50a76bd319cb9da2e49ae3db14bd4afd20b",
+  "runs": [
+    {
+      "taskID": "config-only",
+      "repetition": 1,
+      "variant": "candidate",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "89b5e6466218f493f5615ffe92b6df18a5be192f5d80159cab37432f01060573",
+        "settings": "20163b9bc4749cac80fdec999ff5437f69a6d25a29421461389c171d80616faa",
+        "task": "bcbc73c33f39643c2165301cbe40c442777e933ac3459a18aa5c16937141e91a",
+        "verifier": "8340b55cb271ce467362284ff1b958112e09e7559e7020ae0199ac5062425001"
+      },
+      "outcome": "passed",
+      "seconds": 10.447108959007892,
+      "inputTokens": 14857,
+      "outputTokens": 219,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1"
+    },
+    {
+      "taskID": "config-only",
+      "repetition": 1,
+      "variant": "baseline",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "89b5e6466218f493f5615ffe92b6df18a5be192f5d80159cab37432f01060573",
+        "settings": "20163b9bc4749cac80fdec999ff5437f69a6d25a29421461389c171d80616faa",
+        "task": "bcbc73c33f39643c2165301cbe40c442777e933ac3459a18aa5c16937141e91a",
+        "verifier": "8340b55cb271ce467362284ff1b958112e09e7559e7020ae0199ac5062425001"
+      },
+      "outcome": "failed",
+      "seconds": 13.074227666991646,
+      "inputTokens": 14441,
+      "outputTokens": 298,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1"
+    },
+    {
+      "taskID": "incomplete-and-cache",
+      "repetition": 1,
+      "variant": "candidate",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "89b5e6466218f493f5615ffe92b6df18a5be192f5d80159cab37432f01060573",
+        "settings": "20163b9bc4749cac80fdec999ff5437f69a6d25a29421461389c171d80616faa",
+        "task": "3177c5a43aff61d3f8fc05935ebd4962e53279d61e6a3cb5eb07085f79bcfb30",
+        "verifier": "8340b55cb271ce467362284ff1b958112e09e7559e7020ae0199ac5062425001"
+      },
+      "outcome": "failed",
+      "seconds": 9.184471792003023,
+      "inputTokens": 14908,
+      "outputTokens": 122,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1"
+    },
+    {
+      "taskID": "incomplete-and-cache",
+      "repetition": 1,
+      "variant": "baseline",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "89b5e6466218f493f5615ffe92b6df18a5be192f5d80159cab37432f01060573",
+        "settings": "20163b9bc4749cac80fdec999ff5437f69a6d25a29421461389c171d80616faa",
+        "task": "3177c5a43aff61d3f8fc05935ebd4962e53279d61e6a3cb5eb07085f79bcfb30",
+        "verifier": "8340b55cb271ce467362284ff1b958112e09e7559e7020ae0199ac5062425001"
+      },
+      "outcome": "failed",
+      "seconds": 8.999089584001922,
+      "inputTokens": 14488,
+      "outputTokens": 99,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1"
+    },
+    {
+      "taskID": "definition-and-unknown-status",
+      "repetition": 1,
+      "variant": "candidate",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "89b5e6466218f493f5615ffe92b6df18a5be192f5d80159cab37432f01060573",
+        "settings": "20163b9bc4749cac80fdec999ff5437f69a6d25a29421461389c171d80616faa",
+        "task": "b9bdbdc8f1defa736fc5642b9f33b33c9d49bb096eb10120d85b5a2338122d3b",
+        "verifier": "8340b55cb271ce467362284ff1b958112e09e7559e7020ae0199ac5062425001"
+      },
+      "outcome": "passed",
+      "seconds": 9.04896462499164,
+      "inputTokens": 14959,
+      "outputTokens": 106,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1"
+    },
+    {
+      "taskID": "definition-and-unknown-status",
+      "repetition": 1,
+      "variant": "baseline",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "89b5e6466218f493f5615ffe92b6df18a5be192f5d80159cab37432f01060573",
+        "settings": "20163b9bc4749cac80fdec999ff5437f69a6d25a29421461389c171d80616faa",
+        "task": "b9bdbdc8f1defa736fc5642b9f33b33c9d49bb096eb10120d85b5a2338122d3b",
+        "verifier": "8340b55cb271ce467362284ff1b958112e09e7559e7020ae0199ac5062425001"
+      },
+      "outcome": "passed",
+      "seconds": 10.843456458009314,
+      "inputTokens": 14537,
+      "outputTokens": 256,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1"
+    }
+  ]
+}

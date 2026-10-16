@@ -1,0 +1,1 @@
+{"connection":"verified","completedCalls":2,"missingResults":0,"knownErrors":1,"unknownErrorCalls":1,"requestInputTokens":700,"cachedInputTokens":0,"qualityFindings":["missing_description:read","missing_input_schema:write"]}

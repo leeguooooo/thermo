@@ -1,0 +1,443 @@
+{
+  "metadata": {
+    "skill_name": "ai-diagnostics-evidence",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-10-16T21:11:46Z",
+    "evals_run": [
+      1,
+      2,
+      3
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 10.447108959007892,
+        "tokens": 15076,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "connection matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"unverified\", \"observed\": \"unverified\"}"
+        },
+        {
+          "text": "completedCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "missingResults matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "knownErrors matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 0, \"observed\": 0}"
+        },
+        {
+          "text": "unknownErrorCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "requestInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        },
+        {
+          "text": "cachedInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        },
+        {
+          "text": "qualityFindings matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8888888888888888,
+        "passed": 8,
+        "failed": 1,
+        "total": 9,
+        "time_seconds": 9.184471792003023,
+        "tokens": 15030,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "connection matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"incomplete\", \"observed\": \"incomplete\"}"
+        },
+        {
+          "text": "completedCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 2, \"observed\": 2}"
+        },
+        {
+          "text": "missingResults matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "knownErrors matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "unknownErrorCalls matches the predefined evidence contract",
+          "passed": false,
+          "evidence": "{\"expected\": 0, \"observed\": 1}"
+        },
+        {
+          "text": "requestInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1200, \"observed\": 1200}"
+        },
+        {
+          "text": "cachedInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 400, \"observed\": 400}"
+        },
+        {
+          "text": "qualityFindings matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 9.04896462499164,
+        "tokens": 15065,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "connection matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"verified\", \"observed\": \"verified\"}"
+        },
+        {
+          "text": "completedCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 2, \"observed\": 2}"
+        },
+        {
+          "text": "missingResults matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 0, \"observed\": 0}"
+        },
+        {
+          "text": "knownErrors matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "unknownErrorCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "requestInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 700, \"observed\": 700}"
+        },
+        {
+          "text": "cachedInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 0, \"observed\": 0}"
+        },
+        {
+          "text": "qualityFindings matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": [\"missing_description:read\", \"missing_input_schema:write\"], \"observed\": [\"missing_description:read\", \"missing_input_schema:write\"]}"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8888888888888888,
+        "passed": 8,
+        "failed": 1,
+        "total": 9,
+        "time_seconds": 13.074227666991646,
+        "tokens": 14739,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "connection matches the predefined evidence contract",
+          "passed": false,
+          "evidence": "{\"expected\": \"unverified\", \"observed\": \"incomplete\"}"
+        },
+        {
+          "text": "completedCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "missingResults matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "knownErrors matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 0, \"observed\": 0}"
+        },
+        {
+          "text": "unknownErrorCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "requestInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        },
+        {
+          "text": "cachedInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        },
+        {
+          "text": "qualityFindings matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8888888888888888,
+        "passed": 8,
+        "failed": 1,
+        "total": 9,
+        "time_seconds": 8.999089584001922,
+        "tokens": 14587,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "connection matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"incomplete\", \"observed\": \"incomplete\"}"
+        },
+        {
+          "text": "completedCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 2, \"observed\": 2}"
+        },
+        {
+          "text": "missingResults matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "knownErrors matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "unknownErrorCalls matches the predefined evidence contract",
+          "passed": false,
+          "evidence": "{\"expected\": 0, \"observed\": 1}"
+        },
+        {
+          "text": "requestInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1200, \"observed\": 1200}"
+        },
+        {
+          "text": "cachedInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 400, \"observed\": 400}"
+        },
+        {
+          "text": "qualityFindings matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 10.843456458009314,
+        "tokens": 14793,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "connection matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"verified\", \"observed\": \"verified\"}"
+        },
+        {
+          "text": "completedCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 2, \"observed\": 2}"
+        },
+        {
+          "text": "missingResults matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 0, \"observed\": 0}"
+        },
+        {
+          "text": "knownErrors matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "unknownErrorCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "requestInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 700, \"observed\": 700}"
+        },
+        {
+          "text": "cachedInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 0, \"observed\": 0}"
+        },
+        {
+          "text": "qualityFindings matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": [\"missing_description:read\", \"missing_input_schema:write\"], \"observed\": [\"missing_description:read\", \"missing_input_schema:write\"]}"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 0.963,
+        "stddev": 0.0642,
+        "min": 0.8889,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 9.5602,
+        "stddev": 0.7711,
+        "min": 9.049,
+        "max": 10.4471
+      },
+      "tokens": {
+        "mean": 15057.0,
+        "stddev": 24.0208,
+        "min": 15030,
+        "max": 15076
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.9259,
+        "stddev": 0.0642,
+        "min": 0.8889,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 10.9723,
+        "stddev": 2.0406,
+        "min": 8.9991,
+        "max": 13.0742
+      },
+      "tokens": {
+        "mean": 14706.3333,
+        "stddev": 106.8145,
+        "min": 14587,
+        "max": 14793
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.04",
+      "time_seconds": "-1.4",
+      "tokens": "+351"
+    }
+  },
+  "notes": []
+}

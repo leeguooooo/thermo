@@ -1,0 +1,440 @@
+[
+  {
+    "taskID": "config-only",
+    "variant": "candidate",
+    "outcome": "passed",
+    "seconds": 10.447108959007892,
+    "nativeUsage": {
+      "input_tokens": 14857,
+      "cached_input_tokens": 12288,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 219,
+      "reasoning_output_tokens": 168
+    },
+    "skillReadCommandObserved": false,
+    "commandCount": 0,
+    "commandReadAudit": [],
+    "grading": {
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "connection matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"unverified\", \"observed\": \"unverified\"}"
+        },
+        {
+          "text": "completedCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "missingResults matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "knownErrors matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 0, \"observed\": 0}"
+        },
+        {
+          "text": "unknownErrorCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "requestInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        },
+        {
+          "text": "cachedInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        },
+        {
+          "text": "qualityFindings matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        }
+      ],
+      "summary": {
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "pass_rate": 1.0
+      }
+    },
+    "finalOutput": "{\"connection\":\"unverified\",\"completedCalls\":1,\"missingResults\":1,\"knownErrors\":0,\"unknownErrorCalls\":1,\"requestInputTokens\":null,\"cachedInputTokens\":null,\"qualityFindings\":null}",
+    "cliVersion": "codex-cli 0.163.0"
+  },
+  {
+    "taskID": "config-only",
+    "variant": "baseline",
+    "outcome": "failed",
+    "seconds": 13.074227666991646,
+    "nativeUsage": {
+      "input_tokens": 14441,
+      "cached_input_tokens": 12288,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 298,
+      "reasoning_output_tokens": 247
+    },
+    "skillReadCommandObserved": false,
+    "commandCount": 0,
+    "commandReadAudit": [],
+    "grading": {
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "connection matches the predefined evidence contract",
+          "passed": false,
+          "evidence": "{\"expected\": \"unverified\", \"observed\": \"incomplete\"}"
+        },
+        {
+          "text": "completedCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "missingResults matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "knownErrors matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 0, \"observed\": 0}"
+        },
+        {
+          "text": "unknownErrorCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "requestInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        },
+        {
+          "text": "cachedInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        },
+        {
+          "text": "qualityFindings matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        }
+      ],
+      "summary": {
+        "passed": 8,
+        "failed": 1,
+        "total": 9,
+        "pass_rate": 0.8888888888888888
+      }
+    },
+    "finalOutput": "{\"connection\":\"incomplete\",\"completedCalls\":1,\"missingResults\":1,\"knownErrors\":0,\"unknownErrorCalls\":1,\"requestInputTokens\":null,\"cachedInputTokens\":null,\"qualityFindings\":null}",
+    "cliVersion": "codex-cli 0.163.0"
+  },
+  {
+    "taskID": "incomplete-and-cache",
+    "variant": "candidate",
+    "outcome": "failed",
+    "seconds": 9.184471792003023,
+    "nativeUsage": {
+      "input_tokens": 14908,
+      "cached_input_tokens": 12288,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 122,
+      "reasoning_output_tokens": 70
+    },
+    "skillReadCommandObserved": false,
+    "commandCount": 0,
+    "commandReadAudit": [],
+    "grading": {
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "connection matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"incomplete\", \"observed\": \"incomplete\"}"
+        },
+        {
+          "text": "completedCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 2, \"observed\": 2}"
+        },
+        {
+          "text": "missingResults matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "knownErrors matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "unknownErrorCalls matches the predefined evidence contract",
+          "passed": false,
+          "evidence": "{\"expected\": 0, \"observed\": 1}"
+        },
+        {
+          "text": "requestInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1200, \"observed\": 1200}"
+        },
+        {
+          "text": "cachedInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 400, \"observed\": 400}"
+        },
+        {
+          "text": "qualityFindings matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        }
+      ],
+      "summary": {
+        "passed": 8,
+        "failed": 1,
+        "total": 9,
+        "pass_rate": 0.8888888888888888
+      }
+    },
+    "finalOutput": "{\"connection\":\"incomplete\",\"completedCalls\":2,\"missingResults\":1,\"knownErrors\":1,\"unknownErrorCalls\":1,\"requestInputTokens\":1200,\"cachedInputTokens\":400,\"qualityFindings\":null}",
+    "cliVersion": "codex-cli 0.163.0"
+  },
+  {
+    "taskID": "incomplete-and-cache",
+    "variant": "baseline",
+    "outcome": "failed",
+    "seconds": 8.999089584001922,
+    "nativeUsage": {
+      "input_tokens": 14488,
+      "cached_input_tokens": 12288,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 99,
+      "reasoning_output_tokens": 47
+    },
+    "skillReadCommandObserved": false,
+    "commandCount": 0,
+    "commandReadAudit": [],
+    "grading": {
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "connection matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"incomplete\", \"observed\": \"incomplete\"}"
+        },
+        {
+          "text": "completedCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 2, \"observed\": 2}"
+        },
+        {
+          "text": "missingResults matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "knownErrors matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "unknownErrorCalls matches the predefined evidence contract",
+          "passed": false,
+          "evidence": "{\"expected\": 0, \"observed\": 1}"
+        },
+        {
+          "text": "requestInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1200, \"observed\": 1200}"
+        },
+        {
+          "text": "cachedInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 400, \"observed\": 400}"
+        },
+        {
+          "text": "qualityFindings matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": null, \"observed\": null}"
+        }
+      ],
+      "summary": {
+        "passed": 8,
+        "failed": 1,
+        "total": 9,
+        "pass_rate": 0.8888888888888888
+      }
+    },
+    "finalOutput": "{\"connection\":\"incomplete\",\"completedCalls\":2,\"missingResults\":1,\"knownErrors\":1,\"unknownErrorCalls\":1,\"requestInputTokens\":1200,\"cachedInputTokens\":400,\"qualityFindings\":null}",
+    "cliVersion": "codex-cli 0.163.0"
+  },
+  {
+    "taskID": "definition-and-unknown-status",
+    "variant": "candidate",
+    "outcome": "passed",
+    "seconds": 9.04896462499164,
+    "nativeUsage": {
+      "input_tokens": 14959,
+      "cached_input_tokens": 12288,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 106,
+      "reasoning_output_tokens": 46
+    },
+    "skillReadCommandObserved": false,
+    "commandCount": 0,
+    "commandReadAudit": [],
+    "grading": {
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "connection matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"verified\", \"observed\": \"verified\"}"
+        },
+        {
+          "text": "completedCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 2, \"observed\": 2}"
+        },
+        {
+          "text": "missingResults matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 0, \"observed\": 0}"
+        },
+        {
+          "text": "knownErrors matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "unknownErrorCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "requestInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 700, \"observed\": 700}"
+        },
+        {
+          "text": "cachedInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 0, \"observed\": 0}"
+        },
+        {
+          "text": "qualityFindings matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": [\"missing_description:read\", \"missing_input_schema:write\"], \"observed\": [\"missing_description:read\", \"missing_input_schema:write\"]}"
+        }
+      ],
+      "summary": {
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "pass_rate": 1.0
+      }
+    },
+    "finalOutput": "{\"connection\":\"verified\",\"completedCalls\":2,\"missingResults\":0,\"knownErrors\":1,\"unknownErrorCalls\":1,\"requestInputTokens\":700,\"cachedInputTokens\":0,\"qualityFindings\":[\"missing_description:read\",\"missing_input_schema:write\"]}",
+    "cliVersion": "codex-cli 0.163.0"
+  },
+  {
+    "taskID": "definition-and-unknown-status",
+    "variant": "baseline",
+    "outcome": "passed",
+    "seconds": 10.843456458009314,
+    "nativeUsage": {
+      "input_tokens": 14537,
+      "cached_input_tokens": 12288,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 256,
+      "reasoning_output_tokens": 196
+    },
+    "skillReadCommandObserved": false,
+    "commandCount": 0,
+    "commandReadAudit": [],
+    "grading": {
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "connection matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"verified\", \"observed\": \"verified\"}"
+        },
+        {
+          "text": "completedCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 2, \"observed\": 2}"
+        },
+        {
+          "text": "missingResults matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 0, \"observed\": 0}"
+        },
+        {
+          "text": "knownErrors matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "unknownErrorCalls matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "requestInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 700, \"observed\": 700}"
+        },
+        {
+          "text": "cachedInputTokens matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 0, \"observed\": 0}"
+        },
+        {
+          "text": "qualityFindings matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": [\"missing_description:read\", \"missing_input_schema:write\"], \"observed\": [\"missing_description:read\", \"missing_input_schema:write\"]}"
+        }
+      ],
+      "summary": {
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "pass_rate": 1.0
+      }
+    },
+    "finalOutput": "{\"connection\":\"verified\",\"completedCalls\":2,\"missingResults\":0,\"knownErrors\":1,\"unknownErrorCalls\":1,\"requestInputTokens\":700,\"cachedInputTokens\":0,\"qualityFindings\":[\"missing_description:read\",\"missing_input_schema:write\"]}",
+    "cliVersion": "codex-cli 0.163.0"
+  }
+]

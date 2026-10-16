@@ -1,0 +1,55 @@
+{
+  "expectations": [
+    {
+      "text": "Output has exactly the required fields",
+      "passed": true,
+      "evidence": "Parsed output field set checked against predefined contract"
+    },
+    {
+      "text": "connection matches the predefined evidence contract",
+      "passed": true,
+      "evidence": "{\"expected\": \"unverified\", \"observed\": \"unverified\"}"
+    },
+    {
+      "text": "completedCalls matches the predefined evidence contract",
+      "passed": true,
+      "evidence": "{\"expected\": 1, \"observed\": 1}"
+    },
+    {
+      "text": "missingResults matches the predefined evidence contract",
+      "passed": true,
+      "evidence": "{\"expected\": 1, \"observed\": 1}"
+    },
+    {
+      "text": "knownErrors matches the predefined evidence contract",
+      "passed": true,
+      "evidence": "{\"expected\": 0, \"observed\": 0}"
+    },
+    {
+      "text": "unknownErrorCalls matches the predefined evidence contract",
+      "passed": true,
+      "evidence": "{\"expected\": 1, \"observed\": 1}"
+    },
+    {
+      "text": "requestInputTokens matches the predefined evidence contract",
+      "passed": true,
+      "evidence": "{\"expected\": null, \"observed\": null}"
+    },
+    {
+      "text": "cachedInputTokens matches the predefined evidence contract",
+      "passed": true,
+      "evidence": "{\"expected\": null, \"observed\": null}"
+    },
+    {
+      "text": "qualityFindings matches the predefined evidence contract",
+      "passed": true,
+      "evidence": "{\"expected\": null, \"observed\": null}"
+    }
+  ],
+  "summary": {
+    "passed": 9,
+    "failed": 0,
+    "total": 9,
+    "pass_rate": 1.0
+  }
+}

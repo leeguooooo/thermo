@@ -1,0 +1,8 @@
+{
+  "eval_id": 3,
+  "eval_name": "definition-and-unknown-status",
+  "prompt": "Summarize these MCP diagnostic records using only supplied evidence. Return only a JSON object with exactly these fields: connection (unverified, incomplete, or verified), completedCalls, missingResults, knownErrors, unknownErrorCalls, requestInputTokens, cachedInputTokens, qualityFindings. Use null for unavailable token counts or unavailable definitions. qualityFindings is a sorted list of codes missing_description:NAME or missing_input_schema:NAME for definition problems, or null if definitions are unavailable. Do not access the network or modify files. Only use a shell command if needed to read a supplied SKILL.md.\nInput:\n{\"calls\": [{\"isError\": true, \"resultPresent\": true}, {\"isError\": \"false\", \"resultPresent\": true}], \"configurationValid\": true, \"inspection\": {\"status\": \"complete\", \"tools\": [{\"description\": \"\", \"inputSchema\": {\"type\": \"object\"}, \"name\": \"read\"}, {\"description\": \"Write objects\", \"inputSchema\": null, \"name\": \"write\"}, {\"description\": \"Read objects\", \"inputSchema\": {\"type\": \"object\"}, \"name\": \"good\"}]}, \"requestUsage\": {\"cachedInputTokens\": 0, \"inputTokens\": 700, \"outputTokens\": 20}}",
+  "assertions": [
+    "Every required field matches the predefined evidence contract; unknown facts remain null."
+  ]
+}
