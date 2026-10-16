@@ -13,9 +13,11 @@ public enum TabWorkspace {
         public var profileID: String? = nil
         public var nativeGroupID: Int? = nil
         public var organizerVersion: Int? = nil
+        /// The extension can add tabs to a group the organizer made earlier (instead of a new one).
+        public var organizerCanJoin: Bool? = nil
         public var id: String { tab.selectionID }
         public var canArchive: Bool { protectedReason == nil && tab.canSelect && tab.active == false }
-        enum OutputKeys: String, CodingKey { case id, tab, group, color, protectedReason, profileID, nativeGroupID, organizerVersion }
+        enum OutputKeys: String, CodingKey { case id, tab, group, color, protectedReason, profileID, nativeGroupID, organizerVersion, organizerCanJoin }
         public func encode(to encoder: Encoder) throws {
             var out = encoder.container(keyedBy: OutputKeys.self)
             try out.encode(id, forKey: .id); try out.encode(tab, forKey: .tab)
@@ -24,6 +26,18 @@ public enum TabWorkspace {
             try out.encodeIfPresent(profileID, forKey: .profileID)
             try out.encodeIfPresent(nativeGroupID, forKey: .nativeGroupID)
             try out.encodeIfPresent(organizerVersion, forKey: .organizerVersion)
+            try out.encodeIfPresent(organizerCanJoin, forKey: .organizerCanJoin)
+        }
+    }
+    /// A native Chrome tab group as it is now.
+    public struct NativeGroup: Codable, Sendable, Equatable {
+        public var profileID: String
+        public var id: Int
+        public var window: Int
+        public var title: String
+        public var color: String?
+        public init(profileID: String, id: Int, window: Int, title: String, color: String?) {
+            self.profileID = profileID; self.id = id; self.window = window; self.title = title; self.color = color
         }
     }
     public struct Inventory: Codable, Sendable {
@@ -31,8 +45,9 @@ public enum TabWorkspace {
         public var generated: Date
         public var pages: [Page]
         public var hint: String?
-        public init(app: String, generated: Date, pages: [Page], hint: String? = nil) {
-            self.app = app; self.generated = generated; self.pages = pages; self.hint = hint
+        public var nativeGroups: [NativeGroup]? = nil
+        public init(app: String, generated: Date, pages: [Page], nativeGroups: [NativeGroup]? = nil, hint: String? = nil) {
+            self.app = app; self.generated = generated; self.pages = pages; self.hint = hint; self.nativeGroups = nativeGroups
         }
     }
     public struct Entry: Codable, Sendable, Identifiable {
@@ -86,6 +101,7 @@ public enum TabWorkspace {
         var agentWindows = Set<Int>()
         var metadata = false
         var organizerVersions: [String: Int] = [:]
+        var canJoin = Set<String>()
         for (profile, endpoint) in connections(app: app, home: home).sorted(by: { $0.key < $1.key }) {
             let cdp = ChromeInspector.CDP(endpoint, diagnostic: true)
             defer { cdp.close() }
@@ -96,6 +112,7 @@ public enum TabWorkspace {
             if let rows = response?[compact ? "tabs" : "result"] as? [[String: Any]] {
                 metadata = true
                 organizerVersions[profile] = state["userTabGroupsVersion"] as? Int ?? 0
+                if state["userTabGroupsJoin"] as? Bool == true { canJoin.insert(profile) }
                 if let window = state["agentWindowId"] as? Int { agentWindows.insert(window) }
                 owned.formUnion(held.map(String.init))
                 for row in attached where row["attached"] as? Bool != false {
@@ -118,9 +135,15 @@ public enum TabWorkspace {
             let native = nativeGroups[(profile ?? "") + ":" + String(groupID)]
             let group = assignments[tab.selectionID] ?? (matches ? native?["title"] as? String : nil) ?? site(tab.url)
             let reason = protection(tab, row: matches ? row : nil, owned: owned, metadata: metadata, agentWindows: agentWindows)
-            return Page(tab: tab, group: group.isEmpty ? site(tab.url) : group, color: native?["color"] as? String, protectedReason: reason, profileID: matches ? profile : nil, nativeGroupID: matches ? groupID : nil, organizerVersion: profile.flatMap { organizerVersions[$0] })
+            return Page(tab: tab, group: group.isEmpty ? site(tab.url) : group, color: native?["color"] as? String, protectedReason: reason, profileID: matches ? profile : nil, nativeGroupID: matches ? groupID : nil, organizerVersion: profile.flatMap { organizerVersions[$0] },
+                        organizerCanJoin: profile.map { canJoin.contains($0) })
         }
-        return Inventory(app: app, generated: Date(), pages: pages,
+        let current = nativeGroups.compactMap { key, row -> NativeGroup? in
+            guard let profile = key.split(separator: ":", maxSplits: 1).first.map(String.init),
+                  let id = row["id"] as? Int, let window = row["windowId"] as? Int else { return nil }
+            return NativeGroup(profileID: profile, id: id, window: window, title: row["title"] as? String ?? "", color: row["color"] as? String)
+        }
+        return Inventory(app: app, generated: Date(), pages: pages, nativeGroups: current,
                          hint: pages.contains(where: { $0.protectedReason == "Protection status unavailable" }) || !metadata ? "Connect chrome-use to read pinned, audio and agent protection status. Quick archive is disabled until those flags are known." : nil)
     }
 

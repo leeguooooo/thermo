@@ -5,6 +5,7 @@ import ThermoL10n
 struct NativeTabOrganizerView: View {
     let app: String
     let pages: [TabWorkspace.Page]
+    var nativeGroups: [TabWorkspace.NativeGroup] = []
     @Binding var working: Bool
     var previewOnly = false
     let refresh: () -> Void
@@ -18,7 +19,7 @@ struct NativeTabOrganizerView: View {
     @State private var name = ""
     @State private var color = "blue"
     var plan: TabOrganizer.Plan {
-        TabOrganizer.plan(.init(app: app, generated: Date(), pages: pages), rules: config.rules)
+        TabOrganizer.plan(.init(app: app, generated: Date(), pages: pages, nativeGroups: nativeGroups), rules: config.rules, batches: records)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -39,6 +40,7 @@ struct NativeTabOrganizerView: View {
                 }
                 if plan.count == 0 && !working {
                     Text(plan.unsupported > 0 ? tr("Browser grouping support is unavailable. Update the browser extension, then refresh tabs.")
+                         : (plan.waitingForJoin ?? 0) > 0 ? tr("%1$@ websites already have a Thermo group. Update chrome-use so new tabs can join those groups instead of starting another.", String(plan.waitingForJoin ?? 0))
                          : tr("No new groups in this scope. A website needs at least two ungrouped background tabs; existing groups are kept."))
                         .font(.caption).foregroundStyle(plan.unsupported > 0 ? Color.orange : .secondary).fixedSize(horizontal: false, vertical: true)
                 }
@@ -51,7 +53,8 @@ struct NativeTabOrganizerView: View {
                             Circle().fill(groupColor(group.color)).frame(width: 10, height: 10)
                             Text(group.name).font(.callout.weight(.semibold)).lineLimit(1)
                             Spacer()
-                            Text(tr("%1$@ tabs", String(group.pages.count))).font(.caption).foregroundStyle(.secondary)
+                            Text(group.groupId != nil ? tr("+%1$@ tabs to the existing group", String(group.pages.count)) : tr("%1$@ tabs", String(group.pages.count)))
+                                .font(.caption).foregroundStyle(.secondary)
                         }
                         ForEach(Array(group.pages.prefix(3))) { page in
                             Text(page.tab.title.isEmpty ? TabWorkspace.site(page.tab.url) : page.tab.title)
@@ -62,7 +65,7 @@ struct NativeTabOrganizerView: View {
                 }
             }
             DisclosureGroup(tr("Protected tabs are kept")) {
-                Text(tr("Current, pinned, audio, private and agent tabs are not grouped or closed. Tabs stay in their original window and account."))
+                Text(tr("Current, pinned, audio, private and agent tabs are not grouped or closed, and tabs already in a group (including chrome-use agent groups) are left where they are. New tabs only join groups Thermo made. Tabs stay in their original window and account."))
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }.font(.caption)
             DisclosureGroup(tr("Custom rules and automatic grouping")) {

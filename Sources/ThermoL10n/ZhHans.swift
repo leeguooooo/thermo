@@ -1992,4 +1992,7 @@ let zhHans: [String: String] = [
     "%1$@ processes outlived the program that started them (parent exited)": "%1$@ 个进程的启动者已退出（父进程不在了）",
     "parent exited": "父进程已退出",
     "Memory is %1$@; RSS counts shared pages in every process and is not comparable with it. Many copies or long uptimes alone do not prove a leak.": "内存按%1$@计；RSS 在每个进程里都计入共享页，不能与它比较。副本多或运行时间长，本身都不能证明泄漏。",
+    "%1$@ websites already have a Thermo group. Update chrome-use so new tabs can join those groups instead of starting another.": "%1$@ 个网站已有 Thermo 建的分组。更新 chrome-use 后，新标签会加入这些分组，不再另建一个。",
+    "+%1$@ tabs to the existing group": "+%1$@ 个标签，加入已有分组",
+    "Current, pinned, audio, private and agent tabs are not grouped or closed, and tabs already in a group (including chrome-use agent groups) are left where they are. New tabs only join groups Thermo made. Tabs stay in their original window and account.": "当前、固定、正在播放声音、无痕窗口和 agent 使用中的标签不会被分组或关闭；已在分组里的标签（包括 chrome-use 的 agent 分组）保持原样。新标签只会加入 Thermo 自己建的分组。标签留在原来的窗口和账号里。",
 ]

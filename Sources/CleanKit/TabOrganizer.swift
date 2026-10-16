@@ -23,12 +23,16 @@ public enum TabOrganizer {
         public var name: String
         public var color: String
         public var pages: [TabWorkspace.Page]
+        /// A group Thermo made earlier in this window, still there with this name: the pages join it.
+        public var groupId: Int? = nil
     }
     public struct Plan: Codable, Sendable {
         public var app: String
         public var groups: [Group]
         public var unsupported: Int
         public var count: Int
+        /// Sites left alone because their Thermo group exists and this chrome-use cannot add to it.
+        public var waitingForJoin: Int? = nil
     }
     public struct Outcome: Codable, Sendable {
         public var tabId: Int
@@ -75,11 +79,16 @@ public enum TabOrganizer {
         let domain = rule.domain.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         return host == domain || host.hasSuffix("." + domain)
     }
-    public static func plan(_ inventory: TabWorkspace.Inventory, pages: [TabWorkspace.Page]? = nil, rules: [Rule] = []) -> Plan {
+    /// `batches`: earlier runs, so a site that already has a Thermo group gets added to it rather
+    /// than given a second group. `auto`: the every-minute run, which never adds a duplicate.
+    public static func plan(_ inventory: TabWorkspace.Inventory, pages: [TabWorkspace.Page]? = nil, rules: [Rule] = [],
+                            batches: [Batch] = [], auto: Bool = false) -> Plan {
         let pages = pages ?? inventory.pages
+        let existing = madeByThermo(batches, current: inventory.nativeGroups ?? [])
         var grouped: [String: Group] = [:]
         var unsupported = 0
         var explicit = Set<String>()
+        var skipped = Set<String>()
         for page in pages {
             guard page.canArchive, page.nativeGroupID == -1 else { continue }
             guard page.organizerVersion == 1, let profile = page.profileID else { unsupported += 1; continue }
@@ -88,17 +97,51 @@ public enum TabOrganizer {
             let name = rule?.name ?? host
             var hash: UInt64 = 14695981039346656037
             for byte in name.utf8 { hash = (hash ^ UInt64(byte)) &* 1099511628211 }
-            let color = rule?.color ?? colors[Int(hash % UInt64(colors.count))]
+            var color = rule?.color ?? colors[Int(hash % UInt64(colors.count))]
             let key = profile + ":" + String(page.tab.window) + ":" + name
-            if rule != nil { explicit.insert(key) }
-            if grouped[key] == nil { grouped[key] = Group(id: key, profileID: profile, window: page.tab.window, name: name, color: color, pages: []) }
+            var target: Int?
+            if let group = existing[key] {
+                if page.organizerCanJoin == true {
+                    target = group.id
+                    if let c = group.color, colors.contains(c) { color = c }
+                } else if auto {
+                    // This extension cannot add to the existing group; a second one every minute is worse.
+                    skipped.insert(key); continue
+                }
+            }
+            if rule != nil || target != nil { explicit.insert(key) }
+            if grouped[key] == nil {
+                grouped[key] = Group(id: key, profileID: profile, window: page.tab.window, name: name, color: color, pages: [], groupId: target)
+            }
             grouped[key]!.pages.append(page)
         }
-        // Avoid turning every lone website into a one-tab group. Explicit custom rules may group one.
+        // Avoid turning every lone website into a one-tab group. Explicit custom rules may group one,
+        // and one new tab may join its site's existing group.
         let groups = grouped.values.filter { group in group.pages.count >= 2 || explicit.contains(group.id) }
             .sorted { ($0.window, $0.name) < ($1.window, $1.name) }
         return Plan(app: inventory.app, groups: groups, unsupported: unsupported,
-                    count: groups.reduce(0) { $0 + $1.pages.count })
+                    count: groups.reduce(0) { $0 + $1.pages.count }, waitingForJoin: skipped.count)
+    }
+
+    /// Groups Thermo itself made (from its batch records, never from a title match: chrome-use
+    /// names agent session groups too), keyed like plan groups, that still exist in the same
+    /// window with the same title. Newest first wins.
+    static func madeByThermo(_ batches: [Batch], current: [TabWorkspace.NativeGroup]) -> [String: TabWorkspace.NativeGroup] {
+        var result: [String: TabWorkspace.NativeGroup] = [:]
+        for batch in batches.sorted(by: { $0.created > $1.created }) {
+            for group in batch.plan.groups {
+                let key = group.profileID + ":" + String(group.window) + ":" + group.name
+                guard result[key] == nil else { continue }
+                let tabs = Set(group.pages.compactMap { Int($0.tab.browserID ?? "") })
+                let ids = Set((batch.replies[group.profileID]?.results ?? [])
+                    .filter { $0.status == "grouped" && tabs.contains($0.tabId) }.compactMap(\.groupId))
+                if let live = current.first(where: { ids.contains($0.id) && $0.profileID == group.profileID
+                                                    && $0.window == group.window && $0.title == group.name }) {
+                    result[key] = live
+                }
+            }
+        }
+        return result
     }
     public static func batches(home: String = NSHomeDirectory()) throws -> [Batch] {
         let directory = root(home)
@@ -132,9 +175,11 @@ public enum TabOrganizer {
                 batch.errors[profile] = "Browser session changed; grouping skipped."; try TabWorkspace.write(batch, to: file); continue
             }
             let payload: [String: Any] = ["version": 1, "id": id, "reviewed": true, "groups": groups.map { group in
-                ["name": group.name, "color": group.color, "tabs": group.pages.map { page in
+                var row: [String: Any] = ["name": group.name, "color": group.color, "tabs": group.pages.map { page in
                     ["id": Int(page.tab.browserID ?? "") ?? -1, "windowId": page.tab.window, "index": page.tab.index - 1, "url": page.tab.url, "title": page.tab.title] as [String: Any]
-                }] as [String: Any]
+                }]
+                if let target = group.groupId { row["groupId"] = target }
+                return row
             }]
             do {
                 let reply: Reply
