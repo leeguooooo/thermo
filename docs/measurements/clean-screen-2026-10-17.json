@@ -103,5 +103,44 @@
     "Tests/ThermoAppTests/CleanScreenTests.swift": "8e4d0ada15e3a18b108d8172dc25f644514d397839cddc106c78e6fb3e8c6281",
     "scripts/verify-clean-screen-ui.swift": "19b29429393f274245fdb2842856802817cf17353d946866fd2954a6d5640e0c",
     "README.md": "13fbc7ec036d001631d638671d7c019b5a35d95d9d21e856bbf98edb66da13ff"
+  },
+  "mainSnapshotRegression": {
+    "commit": "7dde7c6",
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 66,
+      "ThermoAppTests": 222,
+      "CleanKitTests": 712,
+      "AgentDoctorTests": 77,
+      "AgentCoreTests": 37
+    },
+    "total": 1228,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests"
+    ],
+    "AgentDoctorSelection": [
+      "ProcessExplanationTests",
+      "ProcessListenersTests",
+      "ProcessSleepAssertionsTests",
+      "ProcessLaunchServicesTests",
+      "RedactTests",
+      "CancellationTests",
+      "ContextFootprintTests",
+      "MCPInspectionTests",
+      "MCPHTTPTests"
+    ],
+    "logSHA256": "a4bc51b3c1c43bc63570022a78097f1bcd56fdbc28e64e6b2c6e3b0027503b5c",
+    "sourceSHA256": {
+      "Sources/ThermoApp/CleanScreenSession.swift": "145009565b9b195614bad098c52e0340c550b3918c88d92c123fdf19eed84694",
+      "Sources/ThermoApp/CleanScreenController.swift": "2bfa5f89abfd5ceb64b9f67876903205afb9332a1d80b5195876a031f7b875e6",
+      "Sources/ThermoApp/CleanScreenView.swift": "5842078d91471f318f7589decff789b27b805072f644b472e38ae903b2f54dc8",
+      "Sources/ThermoApp/Views.swift": "aeaa5774d2105fecb1ce093690b016e696e135307daf8499d3ac72341d41e81d",
+      "Sources/ThermoL10n/ZhHans.swift": "4643a64032c96b7d10be9df6a98e38b7071f934edd88af47d9a44b1eb922a1e9",
+      "Tests/ThermoAppTests/CleanScreenTests.swift": "8e4d0ada15e3a18b108d8172dc25f644514d397839cddc106c78e6fb3e8c6281",
+      "scripts/verify-clean-screen-ui.swift": "19b29429393f274245fdb2842856802817cf17353d946866fd2954a6d5640e0c",
+      "README.md": "3ac2aa27f8ac9a50a58e173446d0762ab489406eca0a5b66bd34612a9ab63149"
+    },
+    "verificationCheckout": "detached worktree; no uncommitted parallel edits included"
   }
 }
