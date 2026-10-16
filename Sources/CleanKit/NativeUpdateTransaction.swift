@@ -33,6 +33,7 @@ public struct NativeInstallResult: Codable, Sendable {
     public var receipt: NativeUpdateReceipt?
     public var preservedWorkspace: NativePreservedWorkspace? = nil
     public var workspaceRecordSaved: Bool? = nil
+    public var cleanupIssue: String? = nil
 }
 
 public struct NativeRecoveryReport: Codable, Sendable {

@@ -127,6 +127,7 @@ struct AppsCommand {
             if args.has("json") { print(Export.json(outcome)) }
             else {
                 var lines = [tr(outcome.message)]
+                if let issue = outcome.cleanupIssue { lines.append(tr(issue)) }
                 if let workspace = outcome.preservedWorkspace { lines.append(workspace.path) }
                 if outcome.workspaceRecordSaved == false { lines.append(tr("The workspace recovery record could not be saved; keep this path")) }
                 out(lines)

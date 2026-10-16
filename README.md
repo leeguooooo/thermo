@@ -242,7 +242,7 @@ Sparkle 检查比较构建号，区分完整包、增量包、测试渠道、系
 
 「恢复记录」以及历史入口可恢复未再变化的已安装应用；两份版本均保留。`thermo apps updates install NAME --dry-run --json` 离线预览来源，去掉 `--dry-run` 后检查并确认安装，`--yes` 用于非交互执行。`thermo apps updates recovery --json` 查看记录，`recovery restore ID --dry-run` 预览恢复，确认后去掉 `--dry-run` 执行。记录损坏或无法读取会显示问题，不当作空历史。
 
-准备阶段无法确认镜像清理时，应用尚未由 Thermo 替换。新结果的 `preservedWorkspace` 给出保留目录，`workspaceRecordSaved` 表示是否写入了可重开后查找的记录。恢复列表的可选 `workspaces` 与应用版本 `records` 分开；`thermo apps updates recovery inspect ID --json` 只核对并返回保留目录，不执行版本恢复、卸载镜像或删除文件。界面可从「恢复记录」或历史入口查看文件，也可打开恢复目录检查旧版遗留但没有记录的文件。记录写入失败会显示提示和可保留的路径。
+准备阶段无法确认镜像清理时，应用尚未由 Thermo 替换。新结果的 `preservedWorkspace` 给出保留目录，`workspaceRecordSaved` 表示是否写入了可重开后查找的记录。恢复列表的可选 `workspaces` 与应用版本 `records` 分开；`thermo apps updates recovery inspect ID --json` 只核对并返回保留目录，不执行版本恢复、卸载镜像或删除文件。界面可从「恢复记录」或历史入口查看文件，也可打开恢复目录检查旧版遗留但没有记录的文件。记录写入失败会显示提示和可保留的路径。 安装完成后的准备目录清理若失败，保留原安装结果，并另行返回 `cleanupIssue` 和检查目录；不会因临时文件清理失败就自动回滚已确认的应用版本。
 
 
 当前原生安装支持 ZIP32、ZIP64 普通应用包及 UDRO/UDZO/UDBZ/ULFO/ULMO 只读 UDIF 镜像（归档最多 2 GiB、展开预算最多 8 GiB）。DMG 在私有目录只读挂载，要求没有加密或许可协议；只选择一个应用，复制校验后仅卸载该私有镜像，不强制卸载其他卷。挂载超时或无法确认卸载时保留工作目录，交由人工检查。

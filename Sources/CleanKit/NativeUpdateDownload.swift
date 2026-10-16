@@ -51,12 +51,29 @@ extension NativeUpdateTransaction {
             else { try await download(url, to: archive, length: current.length) }
             try Task.checkCancellation()
             let prepared = try prepare(fresh, archive: archive, home: home, reviewedArchiveSignature: expected.signature)
-            defer { try? discard(prepared, home: home) }
-            return install(prepared, home: home)
+            return installAndDiscard(prepared, home: home)
         } catch let error as PreservedWorkspaceFailure {
             return preparationFailure(reviewed.source, message: "The app was not replaced; preserved update files need inspection", home: home, workspace: error)
         } catch is CancellationError { return preparationFailure(reviewed.source, message: "Update preparation stopped; the installed app was not replaced", home: home) }
         catch { return preparationFailure(reviewed.source, message: error.localizedDescription, home: home) }
+    }
+
+    static func installAndDiscard(_ prepared: PreparedNativeUpdate, home: String,
+                                   cleanup: (PreparedNativeUpdate, String) throws -> Void = discard) -> NativeInstallResult {
+        var result = install(prepared, home: home)
+        do { try cleanup(prepared, home) }
+        catch {
+            let reason = "Prepared update file cleanup could not be confirmed; inspect the recorded workspace"
+            let preserved = preserveWorkspace(prepared.workspace, identity: prepared.workspaceID,
+                target: prepared.source.app.path, reason: reason, home: home)
+            result.cleanupIssue = reason
+            result.preservedWorkspace = preserved.workspace
+            result.workspaceRecordSaved = preserved.recorded
+            OperationJournal.record(OperationRecord(feature: "apps", action: "nativeUpdateCleanup", subject: prepared.source.app.name,
+                outcome: "partial", items: [.init(target: prepared.workspace, status: "partial", detail: reason)],
+                undo: preserved.recorded ? .init(kind: "nativePreparation", ref: preserved.workspace.id) : nil), home: home)
+        }
+        return result
     }
 
     static func download(_ url: URL, to destination: URL, length: Int64?) async throws {

@@ -74,6 +74,7 @@ final class NativeWorkspaceRecoveryTests: XCTestCase {
     func testLegacyResultsAndReportsDecodeWithoutWorkspaceFields() throws {
         let result = try JSONDecoder().decode(NativeInstallResult.self, from: Data(#"{"outcome":"failed","message":"old"}"#.utf8))
         XCTAssertNil(result.preservedWorkspace); XCTAssertNil(result.workspaceRecordSaved)
+        XCTAssertNil(result.cleanupIssue)
         let report = try JSONDecoder().decode(NativeRecoveryReport.self, from: Data(#"{"records":[],"issues":[]}"#.utf8))
         XCTAssertNil(report.workspaces)
     }

@@ -1,0 +1,57 @@
+{
+  "date": "2026-10-16",
+  "scope": "Post-install prepared-file cleanup result independent from application result",
+  "sourceSHA256": {
+    "Sources/CleanKit/NativeUpdateDownload.swift": "f96348bde4dab68274be4eb233e1a6a6a09586bfdea72f482f767cb72b034fdc",
+    "Sources/CleanKit/NativeUpdateTransaction.swift": "2ea29f418200d480fef31176b8f7db0c8be2a300b67c77fe096e02f153696d49",
+    "Sources/CleanKit/NativeWorkspaceRecovery.swift": "9a2d114f7e33675d4c407850a3c6db3e09e63512c781c756c3d6abbf455767dc",
+    "Sources/CleanKit/OperationText.swift": "0c02d07340c9180db35bbd256f1cb2a196cf759ab9d4dab90677511eb66798d1",
+    "Sources/ThermoApp/NativeUpdatesPanel.swift": "5254913e6be1f2613073c1fd01f7ae2e2181de27f7e58e979a2466e4d456f9b9",
+    "Sources/thermo/Apps.swift": "f120a860f9d3a9baf8fca4f9d497586e9267cf58799d3a2380d45b7dd0f3caa4",
+    "Tests/CleanKitTests/NativeUpdateTransactionTests.swift": "f240d502f3b43041b41c51cf2c9270442d5a7cc68b6f1fe3f3e07eddad264b9d",
+    "Tests/CleanKitTests/NativeWorkspaceRecoveryTests.swift": "b553c84d9bc6cd1c6224782ae50daa12bf58fe5a414e5a1339dc147088f7534f"
+  },
+  "behavior": [
+    "installAvailable no longer ignores discard errors",
+    "Original install outcome/message/receipt are retained",
+    "Optional cleanupIssue and preservedWorkspace independently expose unresolved prepared-file cleanup",
+    "Cleanup history event is partial and links to read-only inspection when record save succeeds",
+    "Directory replacement is not adopted or deleted; inspection rejects mismatched identity",
+    "No automatic rollback is triggered by temporary-file cleanup failure"
+  ],
+  "newTests": {
+    "NativeUpdateTransactionTests": 4,
+    "scenarios": [
+      "Successful install plus failed discard preserves verified version result, recovery copy, inspectable workspace and distinct history event",
+      "Normal cleanup removes prepared workspace and keeps installed/backup versions",
+      "Failed install plus failed discard keeps both results distinct and original app unchanged",
+      "Changed workspace directory is preserved instead of deleted"
+    ]
+  },
+  "targetedBeforeNormalCleanupCase": {
+    "NativeUpdateTransactionTests": 34,
+    "NativeWorkspaceRecoveryTests": 7,
+    "NativeUpdatesModelTests": 7,
+    "failures": 0,
+    "log": "/tmp/thermo-post-install-cleanup-targeted.log"
+  },
+  "validationBoundary": "Cleanup faults are injected in owned temporary directories; actual signed fixture install/recovery code runs. No live OS deletion permission failure was forced.",
+  "limits": [
+    "Temporary download-directory cleanup still uses a separate best-effort path and remains to audit",
+    "No adversarial namespace race or physical I/O fault acceptance",
+    "The historic source DMG residual mechanism remains unresolved",
+    "No new visible GUI acceptance of successful-install cleanup warning; existing inspection UI and backend fault cases cover this checkpoint",
+    "No real installed app replacement, root query, helper installation, hardware writes or release"
+  ],
+  "fullRegression": {
+    "CleanKit": 526,
+    "ThermoApp": 145,
+    "ThermoCLI": 57,
+    "ThermoKitExcludingHardwareTests": 114,
+    "AgentCore": 34,
+    "total": 876,
+    "failures": 0,
+    "log": "/tmp/thermo-post-install-cleanup-full-tests.log"
+  },
+  "build": "passed as part of full regression"
+}

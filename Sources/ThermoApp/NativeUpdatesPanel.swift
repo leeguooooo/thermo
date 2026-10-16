@@ -224,6 +224,7 @@ struct NativeUpdatesPanel: View {
                 .font(.callout).foregroundStyle(.secondary)
             TextField(tr("Search"), text: $search).textFieldStyle(.roundedBorder).accessibilityLabel(tr("Search"))
             if let message = model.message { Text(message).font(.callout).foregroundStyle(.secondary) }
+            if let issue = model.installResult?.cleanupIssue { Text(tr(issue)).font(.callout).foregroundStyle(.orange) }
             if let workspace = model.installResult?.preservedWorkspace {
                 Text(workspace.path).font(.caption).textSelection(.enabled)
                 if model.installResult?.workspaceRecordSaved == false {

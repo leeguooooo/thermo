@@ -241,6 +241,58 @@ final class NativeUpdateTransactionTests: XCTestCase {
         XCTAssertEqual(build(original), "200")
         XCTAssertEqual(result.receipt?.phase, "installed")
         XCTAssertFalse(OperationJournal.read(home: home).contains { $0.action == "nativeUpdatePreparation" })
+        XCTAssertNil(result.cleanupIssue)
+    }
+
+    func testCleanupFailureDoesNotChangeConfirmedInstallationResultOrLoseRecoveryCopy() throws {
+        let value = try prepared()
+        let result = NativeUpdateTransaction.installAndDiscard(value, home: home, cleanup: { _, _ in throw ArchiveFailure("injected discard failure") })
+        XCTAssertEqual(result.outcome, "succeeded"); XCTAssertEqual(result.receipt?.phase, "installed")
+        XCTAssertNotNil(result.cleanupIssue); XCTAssertEqual(result.workspaceRecordSaved, true)
+        XCTAssertEqual(build(original), "200")
+        XCTAssertEqual(build(try XCTUnwrap(result.receipt?.backup)), "100")
+        let record = try XCTUnwrap(result.preservedWorkspace)
+        XCTAssertNoThrow(try NativeUpdateTransaction.preservedWorkspaceURL(record, home: home))
+        let report = NativeUpdateTransaction.recovery(home: home)
+        XCTAssertEqual(report.records.count, 1); XCTAssertEqual(report.workspaces?.count, 1)
+        let events = OperationJournal.read(home: home)
+        XCTAssertEqual(events.filter { $0.action == "nativeUpdateCleanup" }.count, 1)
+        XCTAssertTrue(events.contains { $0.action == "nativeUpdate" && $0.outcome == "succeeded" })
+        XCTAssertEqual(events.first { $0.action == "nativeUpdateCleanup" }?.outcome, "partial")
+        let recovered = NativeUpdateTransaction.restore(try XCTUnwrap(result.receipt?.id), home: home)
+        XCTAssertEqual(recovered.outcome, "succeeded"); XCTAssertEqual(build(original), "100")
+    }
+
+    func testNormalPostInstallCleanupRemovesOnlyPreparedWorkspace() throws {
+        let value = try prepared()
+        let result = NativeUpdateTransaction.installAndDiscard(value, home: home)
+        XCTAssertEqual(result.outcome, "succeeded"); XCTAssertNil(result.cleanupIssue); XCTAssertNil(result.preservedWorkspace)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: value.workspace))
+        XCTAssertEqual(build(original), "200")
+        XCTAssertEqual(build(try XCTUnwrap(result.receipt?.backup)), "100")
+        XCTAssertFalse(OperationJournal.read(home: home).contains { $0.action == "nativeUpdateCleanup" })
+    }
+
+    func testCleanupFailureAlsoPreservesAnUnchangedFailedInstallationResult() throws {
+        let value = try prepared()
+        try Data("changed prepared bytes".utf8).write(to: URL(fileURLWithPath: value.bundle + "/Contents/Resources/data"))
+        let result = NativeUpdateTransaction.installAndDiscard(value, home: home, cleanup: { _, _ in throw ArchiveFailure("injected discard failure") })
+        XCTAssertEqual(result.outcome, "failed"); XCTAssertNil(result.receipt)
+        XCTAssertNotNil(result.cleanupIssue); XCTAssertNotNil(result.preservedWorkspace)
+        XCTAssertEqual(build(original), "100")
+    }
+
+    func testReplacedWorkspaceIsNeverDeletedDuringPostInstallCleanup() throws {
+        let value = try prepared()
+        try FileManager.default.moveItem(atPath: value.workspace, toPath: value.workspace + "-kept")
+        try NativeUpdateTransaction.privateDirectory(value.workspace)
+        try Data("replacement".utf8).write(to: URL(fileURLWithPath: value.workspace + "/replacement.txt"))
+        let result = NativeUpdateTransaction.installAndDiscard(value, home: home)
+        XCTAssertEqual(result.outcome, "failed"); XCTAssertNotNil(result.cleanupIssue)
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: value.workspace + "/replacement.txt")), Data("replacement".utf8))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: value.workspace + "-kept/payload.archive"))
+        XCTAssertThrowsError(try NativeUpdateTransaction.preservedWorkspaceURL(try XCTUnwrap(result.preservedWorkspace), home: home))
+        XCTAssertEqual(build(original), "100")
     }
 
     func testAuthenticatedPreparationCleanupFailurePersistsItsWorkspaceBeforeThrowing() throws {
