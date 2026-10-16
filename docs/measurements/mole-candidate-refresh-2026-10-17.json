@@ -206,5 +206,24 @@
     "Explicit user choice for installing/updating the root helper and one actual AWDL session remains pending.",
     "No helper deployment, real AWDL switching, sleep/wake acceptance, notarization or publication.",
     "Translated x86_64 CLI checks do not establish physical Intel acceptance."
-  ]
+  ],
+  "postFreezeMainChange": {
+    "commit": "6d84403",
+    "integrationCommit": "6d95c2634bb5e596bec901ceecf2e38b95fffabb",
+    "productDelta": [
+      "Sources/CleanKit/NativeDiskImage.swift"
+    ],
+    "description": "Retains detach exit status, timeout and cancellation in diagnostic text. The rejection predicate remains status==0 and not timedOut and not cancelled; fresh absence/identity checks remain.",
+    "snapshotStatus": "362 remains a verified frozen local review artifact for cd04472; it is not a build of the later main commit.",
+    "helperAWDLAndAppSourcesUnchanged": true,
+    "targetedRegression": {
+      "suite": "DiskImageAttachmentTests",
+      "passed": 11,
+      "failures": 0,
+      "command": "swift test --filter DiskImageAttachmentTests",
+      "log": "/tmp/thermo-362-later-diagnostics-tests.log",
+      "sha256": "582896f66f21ff3c0799f6673caf26ae5736edb86b1b35d951a189a751e4999b",
+      "scope": "Injected inventories/detach results, no actual image detach; not added to the frozen 1469-test total."
+    }
+  }
 }
