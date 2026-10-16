@@ -67,27 +67,69 @@ public struct SpaceTree: Codable, Sendable {
     /// them shrink by what they held. Nothing is measured again.
     public func removing(_ paths: Set<String>) -> SpaceTree {
         var t = self
-        for path in paths {
-            // What the removed thing held, from its parent's listing.
+        var selected: [String] = []
+        for path in paths.sorted() where path == root || path.hasPrefix(root + "/") {
+            if !selected.contains(where: { path.hasPrefix($0 + "/") }) { selected.append(path) }
+        }
+        var uncertain = Set<String>()
+        for path in selected {
             let parent = (path as NSString).deletingLastPathComponent
-            guard let held = t.folders[parent]?.children.first(where: { $0.path == path }) else { continue }
+            let held = folders[parent]?.children.first(where: { $0.path == path }) ?? folders[path]?.entry
+            let knownBytes = held?.bytes ?? large.first(where: { $0.path == path })?.bytes
+            let knownFiles = held?.files ?? (large.contains(where: { $0.path == path }) ? 1 : nil)
             for key in t.folders.keys where key == path || key.hasPrefix(path + "/") { t.folders[key] = nil }
             t.large.removeAll { $0.path == path || $0.path.hasPrefix(path + "/") }
-            var p = parent
-            while var f = t.folders[p] {
-                f.children.removeAll { $0.path == path }
-                if let i = f.children.firstIndex(where: { path.hasPrefix($0.path + "/") }) {
-                    f.children[i].bytes = max(0, f.children[i].bytes - held.bytes)
-                    f.children[i].files = max(0, f.children[i].files - held.files)
-                }
-                f.children.sort { $0.bytes > $1.bytes }
-                f.entry.bytes = max(0, f.entry.bytes - held.bytes)
-                f.entry.files = max(0, f.entry.files - held.files)
-                t.folders[p] = f
-                if p == t.root || p == "/" { break }
-                p = (p as NSString).deletingLastPathComponent
+            for key in t.folders.keys where path.hasPrefix(key + "/") {
+                guard var f = t.folders[key] else { continue }
+                let represented = f.children.contains { $0.path == path || path.hasPrefix($0.path + "/") }
+                f.children.removeAll { $0.path == path || $0.path.hasPrefix(path + "/") }
+                if let bytes = knownBytes, let count = knownFiles, folders[parent] != nil {
+                    if let i = f.children.firstIndex(where: { path.hasPrefix($0.path + "/") }) {
+                        f.children[i].bytes = max(0, f.children[i].bytes - bytes)
+                        f.children[i].files = max(0, f.children[i].files - count)
+                    }
+                    if !represented {
+                        f.otherBytes = max(0, f.otherBytes - bytes)
+                        if key == parent { f.otherCount = max(0, f.otherCount - 1) }
+                    }
+                    f.entry.bytes = max(0, f.entry.bytes - bytes); f.entry.files = max(0, f.entry.files - count)
+                } else { uncertain.insert(path) }
+                f.children.sort { $0.bytes > $1.bytes }; t.folders[key] = f
             }
         }
+        // An omitted entry with no retained estimate cannot be subtracted from
+        // an aggregate. Rebuild affected ancestors from surviving known entries;
+        // never label an old overestimate as a lower bound.
+        if !uncertain.isEmpty {
+            t.complete = false
+            let beforeUnknown = t.folders
+            for key in t.folders.keys.sorted(by: { $0.count > $1.count }) where uncertain.contains(where: { $0.hasPrefix(key + "/") }) {
+                guard var f = t.folders[key] else { continue }
+                let affected = uncertain.filter { $0.hasPrefix(key + "/") }
+                // Omitted directory branches still have retained folder records.
+                // Bring affected branches back as partial entries so their known
+                // survivors are not lost with the parent's aggregate bucket.
+                for (childPath, child) in t.folders where (childPath as NSString).deletingLastPathComponent == key &&
+                    affected.contains(where: { $0.hasPrefix(childPath + "/") }) && !f.children.contains(where: { $0.path == childPath }) {
+                    if let previous = beforeUnknown[childPath] {
+                        f.otherBytes = max(0, f.otherBytes - previous.entry.bytes); f.otherCount = max(0, f.otherCount - 1)
+                        f.children.append(child.entry)
+                    }
+                }
+                let uncovered = affected.contains { removed in !f.children.contains { removed.hasPrefix($0.path + "/") } }
+                for i in f.children.indices where affected.contains(where: { $0.hasPrefix(f.children[i].path + "/") }) {
+                    if let child = t.folders[f.children[i].path] { f.children[i] = child.entry }
+                    else { f.children[i].bytes = 0; f.children[i].files = 0; f.children[i].sizeState = .unavailable }
+                }
+                if uncovered { f.otherBytes = 0; f.otherCount = 0 }
+                f.entry.bytes = f.children.reduce(f.otherBytes) { $0 + $1.bytes }
+                f.entry.files = f.children.reduce(f.otherCount) { $0 + $1.files }
+                f.entry.sizeState = f.entry.bytes > 0 ? .incomplete : .unavailable
+                f.children.sort { $0.bytes > $1.bytes }
+                t.folders[key] = f
+            }
+        }
+
         return t
     }
 }
@@ -302,19 +344,57 @@ public enum SpaceLens {
     // MARK: Cache
 
     public static var cacheURL: URL {
-        URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Caches/dev.thermo/space-lens.json")
+        cacheURL(home: NSHomeDirectory())
+    }
+    public static func cacheURL(home: String) -> URL {
+        URL(fileURLWithPath: home).appendingPathComponent("Library/Caches/dev.thermo/space-lens.json")
+    }
+    @discardableResult public static func invalidateCache(at url: URL = cacheURL) -> Bool {
+        guard directCacheLocation(url) else { return false }
+        var value = stat()
+        guard lstat(url.path, &value) == 0 else { return errno == ENOENT }
+        guard value.st_mode & S_IFMT == S_IFREG, value.st_uid == getuid(), value.st_nlink == 1 else { return false }
+        return unlink(url.path) == 0
     }
 
     public static func cached(root: String, from url: URL = cacheURL) -> SpaceTree? {
-        guard let data = try? Data(contentsOf: url), let t = try? JSONDecoder().decode(SpaceTree.self, from: data),
+        guard directCacheLocation(url) else { return nil }
+        let fd = open(url.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+        guard fd >= 0 else { return nil }
+        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        var before = stat(), after = stat(), visible = stat()
+        guard fstat(fd, &before) == 0, before.st_mode & S_IFMT == S_IFREG, before.st_uid == getuid(), before.st_nlink == 1,
+              before.st_size > 0, before.st_size <= 64 * 1024 * 1024,
+              let data = try? handle.read(upToCount: 64 * 1024 * 1024 + 1), data.count == before.st_size,
+              fstat(fd, &after) == 0, lstat(url.path, &visible) == 0,
+              AppDataReviewIdentity.text(before) == AppDataReviewIdentity.text(after),
+              visible.st_dev == before.st_dev, visible.st_ino == before.st_ino,
+              let t = try? JSONDecoder().decode(SpaceTree.self, from: data),
               t.root == root, validCache(t), t.language == L10n.current.rawValue else { return nil }
         return t
     }
 
     public static func save(_ tree: SpaceTree, to url: URL = cacheURL) {
-        guard validCache(tree) else { return }
+        guard validCache(tree), directCacheLocation(url) else { return }
+        var existing = stat()
+        if lstat(url.path, &existing) == 0 {
+            guard existing.st_mode & S_IFMT == S_IFREG, existing.st_uid == getuid(), existing.st_nlink == 1 else { return }
+        } else if errno != ENOENT { return }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? JSONEncoder().encode(tree).write(to: url, options: .atomic)
+        guard let data = try? JSONEncoder().encode(tree), data.count <= 64 * 1024 * 1024 else { return }
+        try? data.write(to: url, options: .atomic)
+    }
+
+    private static func directCacheLocation(_ url: URL) -> Bool {
+        func systemSpelling(_ path: String) -> String {
+            for root in ["/private/var", "/private/tmp", "/private/etc"] where path == root || path.hasPrefix(root + "/") {
+                return String(path.dropFirst("/private".count))
+            }
+            return path
+        }
+        let plain = url.standardizedFileURL
+        let location = plain.deletingLastPathComponent().resolvingSymlinksInPath().appendingPathComponent(plain.lastPathComponent).path
+        return systemSpelling(location) == systemSpelling(plain.path)
     }
 
     private static func validCache(_ tree: SpaceTree) -> Bool {

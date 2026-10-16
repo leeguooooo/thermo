@@ -3,6 +3,67 @@
 import XCTest
 
 final class SpaceLensModelTests: XCTestCase {
+    @MainActor func testCancelledDuplicateWorkerRetainsSlotAndCoalescesReopenRequests() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("Downloads"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let began = expectation(description: "first duplicate worker"), second = expectation(description: "replacement worker")
+        let release = DispatchSemaphore(value: 0); defer { release.signal() }
+        let calls = CountedReads()
+        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache.json"), searchDuplicates: { roots, _, _ in
+            XCTAssertTrue(roots.allSatisfy { $0.hasPrefix(root.path + "/") })
+            let n = calls.next()
+            if n == 1 { began.fulfill(); _ = release.wait(timeout: .now() + 5) } else { second.fulfill() }
+            return [DuplicateGroup(hash: "fixture", size: 1, paths: ["/scan\(n)/a", "/scan\(n)/b"], reclaimable: 1)]
+        })
+        model.findDuplicates(); await fulfillment(of: [began], timeout: 2)
+        model.stopDuplicates(); XCTAssertTrue(model.findingDuplicates); XCTAssertTrue(model.stoppingDuplicates)
+        for _ in 0..<100 { model.findDuplicates() }
+        XCTAssertEqual(calls.count, 1)
+        release.signal(); await fulfillment(of: [second], timeout: 2)
+        for _ in 0..<100 where model.findingDuplicates { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(calls.count, 2); XCTAssertFalse(model.stoppingDuplicates)
+        XCTAssertEqual(model.duplicates?.first?.paths, ["/scan2/a", "/scan2/b"])
+    }
+
+    @MainActor func testStoppedDuplicateReadDoesNotPublishItsLateResult() async throws {
+        let began = expectation(description: "duplicate worker"), release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let model = SpaceLensModel(searchDuplicates: { _, _, _ in
+            began.fulfill(); _ = release.wait(timeout: .now() + 5)
+            return [DuplicateGroup(hash: "fixture", size: 1, paths: ["/a", "/b"], reclaimable: 1)]
+        })
+        model.findDuplicates(); await fulfillment(of: [began], timeout: 2)
+        model.stopDuplicates(); XCTAssertTrue(model.findingDuplicates)
+        release.signal()
+        for _ in 0..<100 where model.findingDuplicates { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertFalse(model.findingDuplicates); XCTAssertNil(model.duplicates)
+    }
+
+    @MainActor func testRemovalCancelsQueuedDuplicateRefreshBeforeItCanRepopulateRows() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("Downloads"), withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("Downloads/a"); try Data("fixture".utf8).write(to: file)
+        let began = expectation(description: "duplicate worker"), release = DispatchSemaphore(value: 0), calls = CountedReads()
+        defer { release.signal() }
+        let model = SpaceLensModel(root: root.path, cache: root.appendingPathComponent("cache.json"), remove: { _, _, _, _, _ in CleanResult(id: "fixture", trashed: true) }, searchDuplicates: { _, _, _ in
+            _ = calls.next(); began.fulfill(); _ = release.wait(timeout: .now() + 5)
+            return [DuplicateGroup(hash: "fixture", size: 1, paths: [file.path, "/b"], reclaimable: 1)]
+        })
+        model.findDuplicates(); await fulfillment(of: [began], timeout: 2)
+        model.findDuplicates(); model.toggle(file.path, bytes: 7); model.trash()
+        for _ in 0..<100 where model.working { try await Task.sleep(nanoseconds: 10_000_000) }
+        release.signal()
+        for _ in 0..<100 where model.findingDuplicates { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(calls.count, 1); XCTAssertNil(model.duplicates)
+    }
+
+    private final class CountedReads: @unchecked Sendable {
+        let lock = NSLock(); private var value = 0
+        func next() -> Int { lock.lock(); defer { lock.unlock() }; value += 1; return value }
+        var count: Int { lock.lock(); defer { lock.unlock() }; return value }
+    }
     @MainActor func testConfirmedManualRemovalPinsSelectionAndBlocksQuitUntilWorkerReturns() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).resolvingSymlinksInPath()
         try FileManager.default.createDirectory(at: root.appendingPathComponent("Downloads"), withIntermediateDirectories: true)

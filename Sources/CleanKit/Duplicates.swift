@@ -193,6 +193,9 @@ public enum ManualRemoval {
         if !result.removed.isEmpty {
             ScanReportCache.invalidate(home: home)
             SpaceOverview.invalidate(home: home)
+            if !SpaceLens.invalidateCache(at: SpaceLens.cacheURL(home: home)) {
+                result.failed["cache"] = tr("The old space cache could not be cleared; scan again before using saved results")
+            }
         }
         Cleaner.log(result, item: CleanItem(id: "manual", category: .system, title: tr("Picked by hand"), safety: .review,
                                             paths: paths), home: home)

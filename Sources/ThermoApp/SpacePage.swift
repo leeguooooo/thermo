@@ -29,9 +29,12 @@ final class SpaceLensModel: ObservableObject {
     @Published private(set) var lastOpened: [String: Date?] = [:]
     @Published private(set) var duplicates: [DuplicateGroup]?
     @Published private(set) var findingDuplicates = false
+    @Published private(set) var stoppingDuplicates = false
     @Published private(set) var duplicateProgress: Duplicates.Progress?
     private var cancellation: ScanCancellation?
     private var duplicateCancellation: ScanCancellation?
+    private var duplicateInFlight = false, pendingDuplicate = false
+    private let searchDuplicates: @Sendable ([String], ScanCancellation, ((Duplicates.Progress) -> Void)?) -> [DuplicateGroup]
     private let cache: URL
     private let measure: @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree
     private var selectionIdentities: [String: String] = [:]
@@ -41,9 +44,12 @@ final class SpaceLensModel: ObservableObject {
          measure: @escaping @Sendable (String, ScanCancellation, ((SpaceLens.Progress) -> Void)?) -> SpaceTree = { SpaceLens.scan($0, cancellation: $1, progress: $2) },
          remove: @escaping @Sendable ([String], [String: Int64], String, Set<String>, [String: String]) -> CleanResult = {
              ManualRemoval.trash($0, sizes: $1, home: $2, incompletePaths: $3, reviewIdentities: $4)
+         }, searchDuplicates: @escaping @Sendable ([String], ScanCancellation, ((Duplicates.Progress) -> Void)?) -> [DuplicateGroup] = {
+             Duplicates.find(in: $0, cancellation: $1, progress: $2)
          }) {
         self.root = root
         self.cache = cache; self.measure = measure; self.remove = remove
+        self.searchDuplicates = searchDuplicates
         path = root
         tree = SpaceLens.cached(root: root, from: cache)
     }
@@ -137,6 +143,7 @@ final class SpaceLensModel: ObservableObject {
     func afterTrash(_ result: CleanResult) {
         working = false
         let removed = Set(result.removed)
+        let cacheCleared = removed.isEmpty || SpaceLens.invalidateCache(at: cache)
         for p in removed { basket[p] = nil; selectionIdentities[p] = nil }
         if let t = tree {
             let updated = t.removing(removed)
@@ -147,13 +154,14 @@ final class SpaceLensModel: ObservableObject {
         if let groups = duplicates {
             duplicates = groups.compactMap { g in
                 var g = g
-                g.paths.removeAll { removed.contains($0) }
+                g.paths.removeAll { p in removed.contains { p == $0 || p.hasPrefix($0 + "/") } }
                 guard g.paths.count > 1 else { return nil }
                 g.reclaimable = g.size * Int64(g.paths.count - 1)
                 return g
             }
         }
         var parts = [tr("Moved %1$@ to the Trash (%2$@).", trCount(result.removed.count, "%1$@ item", "%1$@ items"), AppSize.text(result.bytes, state: result.bytesIncomplete == true ? .incomplete : .complete))]
+        if !cacheCleared { parts.append(tr("The old space cache could not be cleared; scan again before using saved results")) }
         if !result.failed.isEmpty {
             parts.append(tr("Not moved: %1$@", result.failed.sorted { $0.key < $1.key }.map { "\(FSPath.tilde($0.key)) (\($0.value))" }.joined(separator: "; ")))
         }
@@ -174,20 +182,31 @@ final class SpaceLensModel: ObservableObject {
 
     func findDuplicates() {
         guard !working else { return }
-        duplicateCancellation?.cancel()
+        if duplicateInFlight {
+            pendingDuplicate = true; duplicateCancellation?.cancel(); stoppingDuplicates = true
+            return
+        }
+        duplicateInFlight = true
         let token = ScanCancellation()
         duplicateCancellation = token
         findingDuplicates = true
+        stoppingDuplicates = false
         duplicateProgress = nil
-        let roots = Self.duplicateRoots.filter { FileManager.default.fileExists(atPath: $0) }
+        let roots = ["Desktop", "Documents", "Downloads", "Movies", "Music", "Pictures"].map { root + "/" + $0 }
+            .filter { FileManager.default.fileExists(atPath: $0) }
+        let search = searchDuplicates
         Task.detached(priority: .userInitiated) {
-            let groups = Duplicates.find(in: roots, cancellation: token) { p in
-                Task { @MainActor in if self.duplicateCancellation === token { self.duplicateProgress = p } }
+            let groups = search(roots, token) { p in
+                Task { @MainActor in if self.duplicateCancellation === token && !token.isCancelled { self.duplicateProgress = p } }
             }
             await MainActor.run {
-                guard self.duplicateCancellation === token else { return }
+                self.duplicateInFlight = false
+                self.duplicateCancellation = nil
+                let pending = self.pendingDuplicate; self.pendingDuplicate = false
                 self.findingDuplicates = false
+                self.stoppingDuplicates = false
                 self.duplicateProgress = nil
+                if pending { self.findDuplicates(); return }
                 if !token.isCancelled { self.duplicates = groups }
             }
         }
@@ -195,8 +214,8 @@ final class SpaceLensModel: ObservableObject {
 
     func stopDuplicates() {
         duplicateCancellation?.cancel()
-        duplicateCancellation = nil
-        findingDuplicates = false
+        pendingDuplicate = false
+        stoppingDuplicates = duplicateInFlight
         duplicateProgress = nil
     }
 
@@ -500,7 +519,7 @@ struct SpacePage: View {
                 .font(.caption).foregroundStyle(.white.opacity(0.5)).fixedSize(horizontal: false, vertical: true)
             Spacer()
             if model.findingDuplicates {
-                Button(tr("Stop")) { model.stopDuplicates() }.buttonStyle(PillButtonStyle())
+                Button(tr(model.stoppingDuplicates ? "Stopping…" : "Stop")) { model.stopDuplicates() }.buttonStyle(PillButtonStyle()).disabled(model.stoppingDuplicates)
             } else {
                 if let d = model.duplicates, !d.isEmpty {
                     Button(tr("Keep the oldest of each")) { model.pickAllButOldest() }.buttonStyle(PillButtonStyle()).disabled(model.working)

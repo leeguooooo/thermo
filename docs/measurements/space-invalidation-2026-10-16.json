@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-16",
+  "scope": "Space removal invalidation, retained-size quality and duplicate worker lifecycle",
+  "sourceSHA256": {
+    "Sources/CleanKit/SpaceLens.swift": "106aca5558ec683d607d59f2818c790d46da1b4d6b16163616204cffa1864110",
+    "Sources/CleanKit/Duplicates.swift": "8a7e7f46e5236243f0c9d5bac98f37d8dd494ed16c1ff37728a0ec53f93e8dbf",
+    "Sources/ThermoApp/SpacePage.swift": "5afc2ba3658ca93e1ec8e0757c84c12a13a884ee355d3b14deb717c1efa6cfae",
+    "Tests/CleanKitTests/SpaceRemovalCacheTests.swift": "7fad22d0b765e5a48d26eef13e52a686c51b792bba5afd8411704745c567ba45",
+    "Tests/ThermoAppTests/SpaceLensModelTests.swift": "90a2006e4ab0a55aa60eed5ed243e8a041db730e96aa685af102a1d39ad913c8"
+  },
+  "newTests": {
+    "SpaceRemovalCacheTests": 9,
+    "SpaceLensModelTests": 3
+  },
+  "targetedBeforeFinalCacheIOChecks": {
+    "CleanKit": 23,
+    "ThermoApp": 6,
+    "total": 29,
+    "failures": 0,
+    "log": "/tmp/thermo-space-invalidation-final-targeted.log"
+  },
+  "cacheFIFOProbeBefore": {
+    "scenario": "FIFO space cache",
+    "timeoutSeconds": 1.5,
+    "timedOut": false,
+    "exit": 0,
+    "elapsedSeconds": 0.018
+  },
+  "behavior": [
+    "Removed folders/large-file rows are purged independently of capped parent child index",
+    "Known removed estimates adjust visible ancestors and folded aggregate buckets",
+    "Unknown omitted extents rebuild conservative lower bounds; old overestimate is not relabeled as a lower bound",
+    "Affected omitted directories remain visible with known survivors and incomplete state",
+    "Successful manual moves invalidate old space cache; invalidation unlinks only owned regular single-link files",
+    "Cache reader is explicit nonblocking bounded 64 MiB and validates file identity; parent user symlinks are rejected for read/write/invalidation",
+    "Duplicate stop retains physical worker slot; repeated reopen requests queue only one replacement; cancelled late results do not publish",
+    "Duplicate search roots follow the model home rather than unrelated global home"
+  ],
+  "validationBoundary": "Small synthetic retained-tree models and blocked injected duplicate readers; cache files and links are owned temporary fixtures. No user tree scanned for duplicate acceptance.",
+  "limits": [
+    "No new visible GUI or long-running real duplicate workload acceptance",
+    "Foundation FIFO baseline already returned promptly on this host; no historic cache hang is claimed",
+    "Lower-bound rebuild intentionally drops unidentifiable aggregate contributions and requires rescan for full totals",
+    "Directory/syscall cancellation cannot force immediate return; worker slot stays reserved",
+    "No race-free claim for cache namespace check/use",
+    "Restoration-to-space-model invalidation and selection size provenance remain separate audit items",
+    "No user files removed, root query, helper install, hardware writes or release"
+  ],
+  "fullRegression": {
+    "CleanKit": 549,
+    "ThermoApp": 151,
+    "ThermoCLI": 57,
+    "ThermoKitExcludingHardwareTests": 114,
+    "AgentCore": 34,
+    "total": 905,
+    "failures": 0,
+    "log": "/tmp/thermo-space-invalidation-full-tests.log"
+  },
+  "build": "passed as part of full regression"
+}

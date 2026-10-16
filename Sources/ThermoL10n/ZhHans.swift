@@ -2208,4 +2208,5 @@ let zhHans: [String: String] = [
     "The selected item changed after review; select it again": "所选项目在审阅后发生变化，请重新选择",
     "Could not verify the selected item; refresh before selecting it": "无法核实所选项目，请刷新后再选择",
     "Wait for the selected files to finish moving before quitting.": "请等待所选文件移入废纸篓后再退出。",
+    "The old space cache could not be cleared; scan again before using saved results": "未能清除旧的空间缓存，使用保存结果前请重新扫描",
 ]
