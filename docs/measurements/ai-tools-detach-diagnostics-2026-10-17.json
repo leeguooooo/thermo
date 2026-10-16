@@ -1,0 +1,22 @@
+{
+  "generated": "2026-10-16T23:49:59.473355+00:00",
+  "baseCommit": "5cdd63f6ddd4d34b2be883834ff148d1282fe479",
+  "sourceSHA256": {
+    "Sources/CleanKit/NativeDiskImage.swift": "08b3dd523b4ad62eca32ebc74058842d0407ce90dd3a8c8417e69fcc9548f28d",
+    "Tests/CleanKitTests/DiskImageAttachmentTests.swift": "0b5b4c485696c588b3ddf3c248f009f10f5b5bf08974b4367f0ee09487956d3d",
+    "Tests/CleanKitTests/NativeUpdateTransactionTests.swift": "6722aabb5f80fbfd24783d20cfeb005df3cf4ebaef3831d0110c684ef0f90f0d"
+  },
+  "change": "Retain normal-detach exit status, timeout and cancellation flags without command output; require the exact multiple-app rejection in integration test.",
+  "behavior": "Existing ownership checks, normal detach arguments and post-detach inventory checks unchanged. No retries or forced detach.",
+  "verification": {
+    "command": "swift test --jobs 1 --filter 'DiskImageAttachmentTests|NativeUpdateTransactionTests.testDMGWithMultipleAppsFailsAndStillDetaches'",
+    "configuration": "debug",
+    "tests": 12,
+    "failures": 0,
+    "logSHA256": "bd4a531d1eb722577a931337aaedb6c27974ee15086969e8e5dd7f5e33606d59",
+    "scope": "11 attachment tests including process failure, timeout and cancellation; one real owned multi-App disk-image rejection and cleanup fixture."
+  },
+  "originalCleanupObservationResolved": false,
+  "candidatePackageRebuilt": false,
+  "published": false
+}
