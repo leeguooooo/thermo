@@ -9,6 +9,7 @@ import ThermoL10n
 /// so it runs when the tab or window opens (if the last result is stale), on Rescan, and after an action.
 @MainActor
 final class AgentScanner: ObservableObject {
+    let toolUsage = ToolUsageModel()
     @Published var report: DoctorReport?
     @Published var scanning = false
     /// The item the diagnostics window shows.

@@ -46,6 +46,23 @@ HTTP 在初始化收到新会话 ID 后验证可见 ASCII 字符和长度，再�
 
 协议实现依据：[生命周期](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle)、[stdio 传输](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)、[工具列表](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)。
 
+## 本地使用历史
+
+`thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--limit FILES] [--all] [--json]` 显式读取本地会话日志。默认最近 7 天、最多 100 个文件；日期简写 YYYY-MM-DD 按 UTC 解释。App 的 MCP / Skills 分类共享一次“分析本地日志”的结果，支持按返回文本、明确错误、观察耗时或次数排序；项目选择不会改变这块跨项目统计的范围。
+
+- 来源是 `~/.claude/projects` 与 `~/.codex/sessions` 中最近修改的 JSONL 文件，不包含归档目录。只处理窗口内、带有效 ISO 时间戳的记录。按文件修改时间选择意味着保留旧修改时间的导入日志可能不在范围内。
+- 最多发现 20,000 个目录条目，递归深度 6；最多读取 64 MiB，每个文件只读末尾 4 MiB，单行最多 1 MiB，扫描阶段最多 20 秒。超限、取消、截断、无法读取、无效 JSON 和缺失关联均在 coverage 或调用条目中保留。读取使用打开文件的长度快照，未结束的末行不作为完整事件。
+- 通过宿主、会话与 call id 关联调用和结果，过滤重复记录。调用按开始时间归入窗口；窗口外开始、窗口内结束的不算新调用。支持 Claude 的 tool_use / tool_result、Codex 的 function_call / custom_tool_call 及对应结果。MCP 只识别日志中直接出现的 mcp__server__tool 名称；不解析脚本字符串推断嵌套调用。其他工具调用保留数量，不能据此断言其中没有 MCP。
+- Skill 目前只识别 Claude 显式 Skill 工具调用。隐式注入、通过普通文件读取加载 Skill，以及 Codex 的 Skill 使用不能完整识别。没有观察到记录不等于没有使用。
+- 结果出现算 completed；只有明确布尔 is_error / isError 标记才归为已知错误状态。普通返回文本里的 ERROR 字样不会被猜成失败，缺少状态标记保持未知。结果缺失也不等于失败或成功。
+- 耗时是日志调用至结果的时间间隔，包含宿主和传输开销，不代表纯服务执行时间。异常负间隔不计入样本。中位数依有效样本计算，至少 20 个样本才给最近秩 P95；累计间隔可能互相重叠，不能当作实际经过时间。
+- 返回文本单独计量，JSON 的 returnedTextEstimator 标识启发式算法版本。标准内容块只统计 text；图片等非文本块计数但不估算 token。结构化输出仅在没有 content 时序列化计量，避免把同一结果重复加总。报告只保留工具 / Skill 名称与聚合数字，不写入提示词、其他参数或返回正文；Skill 名称须通过标识符字符校验。脱敏后同名的工具也用原始名称哈希保持独立。
+- 请求 token 单独列出：Claude message.usage 与 Codex token_usage_record.payload.usage。原生 msg_ / resp_ ID 跨镜像日志去重，其他 ID 在会话内去重；渐进计数使用较新的记录。Codex 累积 token_count 不求和。缺失或不支持的记录保留计数，缓存字段缺失保持未知；不同宿主的缓存字段不归一化、不再与 input 相加。
+
+请求 token 不分摊给工具，也不根据调用所在的整条模型消息推算工具占比。这份报告不提供账单、任务成功率或“哪个版本的工具更好”的结论。按照日志名称汇总也不能证明它对应当前安装版本。
+
+[本机聚合观察记录](measurements/observed-tool-usage-2026-10-17.json)分别保留了 Codex 两个文件和 Claude 二十个文件的窗口、覆盖限制及调用数量，不包含提示词、工具名称、项目路径或原始 token 计数。`python3 scripts/verify-tool-usage.py .build/debug/thermo` 在独立临时 Home 中运行编译后的 CLI，核实并行 MCP / 显式 Skill 计数、请求 token 分离、图片未知与正文不导出。App 已接入分析入口；[中文原生离屏预览](measurements/observed-tool-usage-zh-2026-10-17.png)使用[合成夹具](measurements/observed-tool-usage-fixture-2026-10-17.json)，不是真实工具性能样本。预览由 scripts/render-tool-usage.py 直接编译面板与当前玻璃样式生成，未操作已安装 App；实际窗口操作验收仍待完成。
+
 ## 后续实现与验收
 
 | 能力 | 完成所需证据 |

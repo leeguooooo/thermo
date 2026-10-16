@@ -1,0 +1,65 @@
+{
+  "scope": "Local observed records, not all account usage; prompts, names, paths and raw request counters omitted from this checked-in evidence.",
+  "samples": [
+    {
+      "host": "codex",
+      "generated": "2026-10-16T18:41:41Z",
+      "since": "2026-10-16T00:00:00Z",
+      "until": "2026-10-16T18:41:41Z",
+      "complete": false,
+      "coverage": {
+        "bytesRead": 8388608,
+        "cancelled": false,
+        "clippedFiles": 2,
+        "duplicateRecords": 0,
+        "filesDiscovered": 178,
+        "filesRead": 2,
+        "limitReached": true,
+        "malformedLines": 0,
+        "missingTimestamps": 0,
+        "otherToolCalls": 296,
+        "oversizedLines": 0,
+        "unmatchedResults": 1,
+        "unreadableFiles": 0,
+        "unsupportedUsageRecords": 305
+      },
+      "mcpCalls": 0,
+      "explicitSkillCalls": 0,
+      "requestRecords": 303
+    },
+    {
+      "host": "claude",
+      "generated": "2026-10-16T18:43:09Z",
+      "since": "2026-10-09T18:43:09Z",
+      "until": "2026-10-16T18:43:09Z",
+      "complete": false,
+      "coverage": {
+        "bytesRead": 60287571,
+        "cancelled": false,
+        "clippedFiles": 9,
+        "duplicateRecords": 0,
+        "filesDiscovered": 380,
+        "filesRead": 20,
+        "limitReached": true,
+        "malformedLines": 0,
+        "missingTimestamps": 0,
+        "otherToolCalls": 2035,
+        "oversizedLines": 0,
+        "unmatchedResults": 2,
+        "unreadableFiles": 0,
+        "unsupportedUsageRecords": 0
+      },
+      "mcpCalls": 0,
+      "explicitSkillCalls": 1,
+      "requestRecords": 2089
+    }
+  ],
+  "cliFixture": {
+    "passed": true,
+    "mcpCalls": 2,
+    "skillCalls": 1,
+    "requestTokensKeptSeparate": true,
+    "privateTextExcluded": true,
+    "imageTokensUnknown": true
+  }
+}

@@ -147,6 +147,7 @@ struct AreaPage: View {
                     Text(tr("This configuration scan does not connect to MCP servers. Use Connect & inspect for definitions and connection timing; actual tool usage remains unmeasured."))
                         .font(.callout).foregroundStyle(.secondary).padding(18).glass()
                 }
+                if area == .mcp || area == .skills { ToolUsagePanel(model: scanner.toolUsage, kind: area == .mcp ? "mcp" : "skill") }
                 DiagnosticScanControl(scanner: scanner)
                 if !scanner.history.isEmpty { AgentActivity(scanner: scanner) }
                 if problems.isEmpty && !notes.contains(where: { $0.severity == .error || $0.severity == .warning }) {

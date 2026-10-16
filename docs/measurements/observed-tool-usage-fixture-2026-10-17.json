@@ -1,0 +1,77 @@
+{
+  "complete" : true,
+  "coverage" : {
+    "bytesRead" : 1820,
+    "cancelled" : false,
+    "clippedFiles" : 0,
+    "duplicateRecords" : 0,
+    "filesDiscovered" : 2,
+    "filesRead" : 2,
+    "limitReached" : false,
+    "malformedLines" : 0,
+    "missingTimestamps" : 0,
+    "otherToolCalls" : 0,
+    "oversizedLines" : 0,
+    "unmatchedResults" : 0,
+    "unreadableFiles" : 0,
+    "unsupportedUsageRecords" : 0
+  },
+  "generated" : "2026-10-16T18:56:17Z",
+  "note" : "Observed local log records only. Call\/result elapsed time includes host overhead; overlapping calls are not wall-clock totals. Returned-text tokens are estimates, not billed usage. Request tokens are separate and never charged to individual tools. Script-wrapped MCP calls, implicit Skill reads, images and missing logs cannot be fully attributed.",
+  "returnedTextEstimator" : "ascii4-unicode1-v1",
+  "sessionTokens" : [
+    {
+      "host" : "claude",
+      "inputTokens" : 100,
+      "outputTokens" : 5,
+      "requests" : 1,
+      "semantics" : "Raw host counters; cache overlap is not normalized or added to input"
+    },
+    {
+      "host" : "codex",
+      "inputTokens" : 1000,
+      "outputTokens" : 10,
+      "requests" : 1,
+      "semantics" : "Raw host counters; cache overlap is not normalized or added to input"
+    }
+  ],
+  "since" : "2026-10-09T18:56:17Z",
+  "tools" : [
+    {
+      "calls" : 2,
+      "completed" : 2,
+      "host" : "codex",
+      "id" : "dd5043e8aec51eb2285ef142b70288458742d1667fc2b685e0d9e7eb82c1328e",
+      "kind" : "mcp",
+      "medianSeconds" : 5,
+      "missingResults" : 0,
+      "name" : "read",
+      "nonTextBlocks" : 2,
+      "reportedErrors" : 0,
+      "returnedTextBytes" : 44,
+      "returnedTextEstimatedTokens" : 12,
+      "server" : "fixture",
+      "timingSamples" : 2,
+      "totalObservedSeconds" : 10,
+      "unknownErrorStatus" : 0
+    },
+    {
+      "calls" : 1,
+      "completed" : 1,
+      "host" : "claude",
+      "id" : "1b4fb29f52ed41fd34fb9cf84a3654a26752e59927120513cbc6656470605589",
+      "kind" : "skill",
+      "medianSeconds" : 6,
+      "missingResults" : 0,
+      "name" : "fixture-skill",
+      "nonTextBlocks" : 0,
+      "reportedErrors" : 0,
+      "returnedTextBytes" : 22,
+      "returnedTextEstimatedTokens" : 6,
+      "timingSamples" : 1,
+      "totalObservedSeconds" : 6,
+      "unknownErrorStatus" : 0
+    }
+  ],
+  "until" : "2026-10-16T18:56:17Z"
+}

@@ -12,6 +12,9 @@ struct AgentsCommand {
         switch sub {
         case "": break
         case "context": return try context()
+        case "usage":
+            guard rest.count == 1 else { throw CLIError("usage: thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--limit FILES] [--json]") }
+            return try usage()
         case "inspect":
             guard rest.count == 2 else { throw CLIError("usage: thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--json]") }
             return try inspectMCP(try required(name, sub))
@@ -127,6 +130,7 @@ struct AgentsCommand {
     static let usage = """
     usage: thermo agents [--all] [--json]                 what is wrong with the AI agents on this Mac
            thermo agents context [--agent AGENT] [--root PROJECT] [--json] static footprint ranking and deduplicated inventory
+           thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--limit FILES] [--json] local log metrics
            thermo agents inspect NAME [--json]            connect to one MCP; handshake, list and rank definitions
            thermo agents list [AREA] [--json]             everything checked, marked OK or not
            thermo agents show NAME [--json]               one item: problems, suggestions, numbered actions
@@ -136,6 +140,51 @@ struct AgentsCommand {
       NAME is the item's name or id; narrow with --area AREA and --agent AGENT, or --all for every match.
       Actions print their exact steps first and ask; --yes skips the question, --dry-run only prints.
     """
+
+    func usage() throws {
+        guard !app.args.has("csv"), app.args.options["root"] == nil else { throw CLIError("agents usage supports --json; project filtering and CSV are not supported") }
+        let host = app.args.options["agent"]
+        guard host == nil || ["claude", "codex"].contains(host!) else { throw CLIError("--agent must be claude or codex") }
+        let count = try app.args.int("limit") ?? 100
+        guard count <= 1000 else { throw CLIError("--limit must be between 1 and 1000 files") }
+        var since: Date?
+        if let text = app.args.options["since"] {
+            let iso = ISO8601DateFormatter()
+            since = iso.date(from: text)
+            if since == nil {
+                iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                since = iso.date(from: text)
+            }
+            if since == nil {
+                let date = DateFormatter(); date.locale = Locale(identifier: "en_US_POSIX"); date.timeZone = TimeZone(secondsFromGMT: 0); date.dateFormat = "yyyy-MM-dd"; date.isLenient = false
+                if let parsed = date.date(from: text), date.string(from: parsed) == text { since = parsed }
+            }
+            guard let since, since <= Date() else { throw CLIError("--since must be a past ISO date or YYYY-MM-DD (UTC)") }
+        }
+        let report = AgentDoctor.usage(since: since, host: host, fileLimit: count)
+        if app.args.has("json") { print(Export.diagnosticJSON(report)); return }
+        let iso = ISO8601DateFormatter()
+        let coverage = report.coverage
+        var lines = [style.bold("Observed local tool usage"), iso.string(from: report.since) + " → " + iso.string(from: report.until),
+                     "Log reading: " + (report.complete ? "complete within selected scope" : "partial"),
+                     "\(coverage.filesRead)/\(coverage.filesDiscovered) eligible files · \(coverage.bytesRead) bytes · \(coverage.clippedFiles) clipped · \(coverage.malformedLines) malformed records", ""]
+        for row in report.tools.prefix(app.args.has("all") ? report.tools.count : 20) {
+            lines.append(style.bold((row.server.map { $0 + " / " } ?? "") + row.name) + " [" + row.host + ", " + row.kind + "]")
+            lines.append("  \(row.calls) calls · \(row.completed) results · \(row.reportedErrors) explicit errors · \(row.unknownErrorStatus) unknown error status · \(row.missingResults) missing results")
+            let median = row.medianSeconds.map { String(format: "%.3fs", $0) } ?? "unknown"
+            let p95 = row.p95Seconds.map { String(format: "%.3fs", $0) } ?? "unknown (requires 20 samples)"
+            lines.append("  result text: \(row.returnedTextBytes) bytes / ≈\(row.returnedTextEstimatedTokens) tokens · median \(median) · P95 \(p95) · \(row.nonTextBlocks) non-text blocks not tokenized")
+        }
+        if report.tools.isEmpty { lines.append("No directly attributable MCP or explicit Skill calls were observed; this does not prove they were unused.") }
+        lines += ["", "Request counters (not individual tool consumption):"]
+        if report.sessionTokens.isEmpty { lines.append("  No supported request token records; usage is unknown.") }
+        for tokens in report.sessionTokens {
+            lines.append("  \(tokens.host): \(tokens.requests) requests · input \(tokens.inputTokens) · output \(tokens.outputTokens) · cached input \(tokens.cachedInputTokens.map(String.init) ?? "unknown") · cache creation \(tokens.cacheWriteInputTokens.map(String.init) ?? "unknown")")
+        }
+        lines.append("Other tool calls: \(coverage.otherToolCalls); unmatched results: \(coverage.unmatchedResults); unsupported usage events: \(coverage.unsupportedUsageRecords)")
+        lines.append(report.note)
+        out(lines)
+    }
 
     func inspectMCP(_ name: String) throws {
         guard !app.args.has("csv"), !app.args.has("all"), !app.args.has("dry-run") else {
