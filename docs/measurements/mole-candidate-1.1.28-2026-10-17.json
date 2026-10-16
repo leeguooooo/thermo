@@ -211,5 +211,12 @@
     "existingCandidateRemainsHistoricalVerifiedArtifact": true,
     "rootHelperAndAWDLNotDeployed": true,
     "reason": "Main added disk-image cleanup refusal diagnostics after the signed 346 candidate was built."
+  },
+  "rebuildResolution": {
+    "record": "mole-candidate-refresh-2026-10-17.json",
+    "sourceCommit": "cd04472da5ede369269503d5d65227f65013e460",
+    "build": "362",
+    "readyForLocalReview": true,
+    "installed": false
   }
 }

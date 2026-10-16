@@ -1,0 +1,210 @@
+{
+  "date": "2026-10-17",
+  "sourceCommit": "cd04472da5ede369269503d5d65227f65013e460",
+  "documentationIntegrationParent": "e2a4e30b74a5f51119a9e68eefa8447aeb904fed",
+  "sourceAndTestTreesUnchangedByDocumentationMerge": true,
+  "trees": {
+    "Sources": "0fefd21c2970c2b1f1ec1f2f75dffeb21d64afcf",
+    "Tests": "0b99370efb9651eaa5fc84e08567a1b36b953207",
+    "Resources": "7fe48abe048a9cd438b4a5f537a33bc9f2a2869b",
+    "scripts": "fc26c977c0efc4dd7a5a0d71770be0042c982dfc"
+  },
+  "regression": {
+    "source": "cd04472da5ede369269503d5d65227f65013e460",
+    "suites": {
+      "ThermoKitTests.xctest": 143,
+      "ThermoHelperTests.xctest": 7,
+      "ThermoCLITests.xctest": 70,
+      "ThermoAppTests.xctest": 271,
+      "CleanKitTests.xctest": 748,
+      "AgentDoctorTests.xctest": 193,
+      "AgentCoreTests.xctest": 37
+    },
+    "total": 1469,
+    "failures": 0
+  },
+  "regressionCommand": "swift test --skip HardwareTests",
+  "regressionLog": "/tmp/thermo-1-1-28-refresh-tests.log",
+  "regressionLogSHA256": "47997f5933c66cf536b4d17f9c1a0a82051b8595a7790d09814dad7012b67ca1",
+  "build": {
+    "configuration": "release",
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "jobs": 2,
+    "signing": "Developer ID Application, team 6ZPXG4KVVS",
+    "log": "/tmp/thermo-1-1-28-refresh-build.log",
+    "sha256": "204b6b93d1f598e5fbd5508956d4e25843d29b1ce8b68206b2173bd935d3a929"
+  },
+  "artifact": {
+    "date": "2026-10-16T23:43:06.967857+00:00",
+    "root": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-ej_aiasl",
+    "version": "1.1.28",
+    "build": "362",
+    "installedVersion": "1.1.27",
+    "installedBuild": "233",
+    "artifacts": {
+      "app": {
+        "sha256": "642883962a32ae60c1e50337e8ec5ce0ee8b8be6ebd8ca612e19d5800d6260fb",
+        "size": 61344208,
+        "identifier": "dev.thermo.app",
+        "team": "6ZPXG4KVVS",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "cli": {
+        "sha256": "07c3122b8bd48de518b654bf5915d25ebc3c7555af8a3be8293e918fdfa29bbf",
+        "size": 34567648,
+        "identifier": "dev.thermo.cli",
+        "team": "6ZPXG4KVVS",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "helper": {
+        "sha256": "274daf793683cc625449662acff7e73a77ab6f5cb8756fa06ce8501d55380ab2",
+        "size": 2722528,
+        "identifier": "dev.thermo.helper",
+        "team": "6ZPXG4KVVS",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "embeddedCLI": {
+        "sha256": "c70d0292263133283a53361dc77c50e3f42396312cd7be99533d9aefb69a5ed7",
+        "size": 34567648,
+        "identifier": "dev.thermo.cli",
+        "team": "6ZPXG4KVVS",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "embeddedHelper": {
+        "sha256": "135461ff2fa815ca68da311b88455b680e0ed9ba7dfaf416a12e0b45154f375b",
+        "size": 2722528,
+        "identifier": "dev.thermo.helper",
+        "team": "6ZPXG4KVVS",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      }
+    },
+    "nativeCLI": "thermo 1.1.28",
+    "translatedX86CLI": {
+      "exit": 0,
+      "version": "thermo 1.1.28",
+      "awdlDryRun": {
+        "changesMade": false,
+        "holdsConnection": true,
+        "interface": "awdl0",
+        "minimumHelperProtocol": 6,
+        "seconds": 60
+      },
+      "awdlProbe": {
+        "interface": {
+          "index": 15,
+          "up": true
+        },
+        "sessionStateQueried": false
+      },
+      "isPhysicalIntelAcceptance": false
+    },
+    "awdlDryRun": {
+      "changesMade": false,
+      "holdsConnection": true,
+      "interface": "awdl0",
+      "minimumHelperProtocol": 6,
+      "seconds": 60
+    },
+    "awdlReadOnlyBefore": {
+      "interface": {
+        "index": 15,
+        "up": true
+      },
+      "sessionStateQueried": false
+    },
+    "awdlReadOnlyAfter": {
+      "interface": {
+        "index": 15,
+        "up": true
+      },
+      "sessionStateQueried": false
+    },
+    "ownProcess": {
+      "ownPID": 30682,
+      "explainChainObserved": true,
+      "chainComplete": false,
+      "inspectIncludesOwnPID": true,
+      "ownerMeaning": "identity-checked agent, terminal or editor observed in the current ancestor chain; not proof of the original launcher",
+      "orphanedNote": "legacy field orphaned counts command-line processes with current parent PID 1 (launchd); this does not prove a parent exited or the process is leftover"
+    },
+    "sourceCommit": "cd04472da5ede369269503d5d65227f65013e460",
+    "notarized": false,
+    "installed": false,
+    "helperDeployed": false,
+    "realAWDLSwitched": false,
+    "published": false,
+    "allArchitectureSignaturesVerified": [
+      "app",
+      "cli",
+      "helper",
+      "embeddedCLI",
+      "embeddedHelper"
+    ],
+    "newDiskImageDiagnosticStringsInBothSlices": {
+      "app": {
+        "arm64": true,
+        "x86_64": true
+      },
+      "cli": {
+        "arm64": true,
+        "x86_64": true
+      }
+    },
+    "diagnosticStringCheckScope": "Read-only slice inspection, not a production error-path runtime test",
+    "archive": {
+      "path": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-ej_aiasl/Thermo-1.1.28-362-candidate.zip",
+      "sha256": "c90b612886f78495e550ee1443b858519fc941069147468daf6c6773309ebc8d",
+      "bytes": 34893364,
+      "extractionStrictSignatureVerified": true,
+      "extractedBinaryHashesMatched": true
+    }
+  },
+  "lifecycle": {
+    "cycles": 3,
+    "pages": [
+      "overview",
+      "memory",
+      "cpu"
+    ],
+    "openClosePairs": 9,
+    "samples": 28,
+    "functionalChecksPassed": true,
+    "pid": 31320,
+    "exitCode": 0,
+    "helperInteraction": false,
+    "menuBarRecorder": false,
+    "memoryGrowthAssessed": false,
+    "report": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-ej_aiasl/lifecycle.json",
+    "sha256": "30f80dcd3276a37dfe5f2e2d91892de0ae01ab91c0a4259dabc85c3386670492",
+    "scope": "Release offscreen AppKit page lifecycle; not visible installed-app acceptance or a memory-growth assessment."
+  },
+  "installedAppAndKnownHelperPathsUnchanged": true,
+  "replaces": {
+    "record": "mole-candidate-1.1.28-2026-10-17.json",
+    "source": "60f5ad3",
+    "build": "346"
+  },
+  "remaining": [
+    "Explicit user choice for installing/updating the root helper and one actual AWDL session remains pending.",
+    "No helper deployment, real AWDL switching, sleep/wake acceptance, notarization or publication.",
+    "Translated x86_64 CLI checks do not establish physical Intel acceptance."
+  ]
+}
