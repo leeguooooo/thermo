@@ -16,6 +16,7 @@ final class NativeUpdatesModel: ObservableObject {
     @Published private(set) var installing = false
     @Published private(set) var installResult: NativeInstallResult?
     @Published private(set) var recoveryRecords: [NativeUpdateReceipt] = []
+    @Published private(set) var recoveryBackups: [NativeBackupUsage] = []
     @Published private(set) var preservedWorkspaces: [NativePreservedWorkspace] = []
     @Published private(set) var recoveryIssues: [String] = []
     @Published private(set) var recoveryLoading = false
@@ -173,7 +174,8 @@ final class NativeUpdatesModel: ObservableObject {
                 if self.pendingRecovery { self.pendingRecovery = false; self.refreshRecovery(); return }
                 guard self.recoveryGeneration == token else { self.recoveryLoading = false; return }
                 self.recoveryLoading = false; self.recoveryLoaded = true
-                self.recoveryRecords = report.records; self.preservedWorkspaces = report.workspaces ?? []; self.recoveryIssues = report.issues
+                self.recoveryRecords = report.records; self.recoveryBackups = report.backups ?? []
+                self.preservedWorkspaces = report.workspaces ?? []; self.recoveryIssues = report.issues
             }
         }
     }
@@ -195,6 +197,11 @@ final class NativeUpdatesModel: ObservableObject {
 
     func openRecoveryFolder() {
         do { NSWorkspace.shared.open(try NativeUpdateTransaction.recoveryFolderURL()) }
+        catch { message = tr(error.localizedDescription) }
+    }
+
+    func inspectBackup(_ record: NativeUpdateReceipt) {
+        do { NSWorkspace.shared.activateFileViewerSelecting([try NativeUpdateTransaction.backupURL(record)]) }
         catch { message = tr(error.localizedDescription) }
     }
 
@@ -364,6 +371,16 @@ struct NativeUpdateRecoveryView: View {
                         VStack(alignment: .leading, spacing: 5) {
                             Text(record.target).font(.caption).textSelection(.enabled)
                             Text(record.previousVersion + " → " + record.installedVersion + " · " + tr(record.phase)).font(.caption).foregroundStyle(.secondary)
+                            Text(record.backup).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                            if let usage = model.recoveryBackups.first(where: { $0.id == record.id }) {
+                                Text(usage.allocatedBytes.map {
+                                    tr(usage.complete ? "Preserved app allocated usage: %1$@" : "Preserved app allocated usage: at least %1$@", ByteCountFormatter.string(fromByteCount: $0, countStyle: .file))
+                                } ?? tr("Preserved app size is unknown")).font(.caption)
+                                if let issue = usage.issue { Text(tr(issue)).font(.caption).foregroundStyle(.orange) }
+                            } else {
+                                Text(tr("Preserved app size is unknown")).font(.caption)
+                            }
+                            Button(tr("Reveal preserved app in Finder")) { model.inspectBackup(record) }.disabled(model.installing)
                             Button(tr("Restore previous app…")) { restoring = record }.disabled(model.installing || record.phase == "restored" || record.phase == "rolledBack")
                         }
                     }

@@ -43,6 +43,7 @@ public struct NativeInstallResult: Codable, Sendable {
 
 public struct NativeRecoveryReport: Codable, Sendable {
     public var records: [NativeUpdateReceipt] = []
+    public var backups: [NativeBackupUsage]? = nil
     public var workspaces: [NativePreservedWorkspace]? = nil
     public var issues: [String] = []
 }
@@ -357,7 +358,11 @@ public enum NativeUpdateTransaction {
                     } catch { report.issues.append("A preserved update workspace record could not be safely read") }
                     continue
                 }
-                do { report.records.append(try load(String(file.dropLast(5)), home: home)) }
+                do {
+                    let record = try load(String(file.dropLast(5)), home: home)
+                    report.records.append(record)
+                    report.backups = (report.backups ?? []) + [backupUsage(record, home: home)]
+                }
                 catch { report.issues.append("A native recovery record could not be safely read; preserve the recovery folder") }
             }
         } catch { report.issues.append("Native recovery storage could not be safely read; do not discard the application backups") }

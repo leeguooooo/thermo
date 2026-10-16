@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "ee98e75",
+  "sourceSHA256": {
+    "Sources/CleanKit/NativeBackupReview.swift": "72711910d76e4bb4af90d2ae0c1cd375ea692872de77679b3c7c063f6d1cdf52",
+    "Sources/CleanKit/NativeUpdateTransaction.swift": "565c972d114ee698025b0baafdae41170bf635e3b12e44f8cad212763961c133",
+    "Sources/ThermoApp/NativeUpdatesPanel.swift": "a9249f283a939f055c055463e5b6884579a20879d9635d4073a3624fa8d0c94a",
+    "Sources/ThermoL10n/ZhHans.swift": "eaaee6f9e2b426ddffb126d8d2d792ccb1796369998e34171c85e654824208c6",
+    "Tests/CleanKitTests/NativeBackupReviewTests.swift": "d8b35f373d6d890ab7459a4aec56d17b5d4897b0cab5280b5c62f36088b62a4e",
+    "scripts/verify-native-backup-ui.swift": "22e210d7aa74fa25c421289d2ea4e34794882001c55601457c97b0b76a7f1904"
+  },
+  "newTests": 5,
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 63,
+      "ThermoAppTests": 197,
+      "CleanKitTests": 694,
+      "AgentCoreTests": 34
+    },
+    "total": 1102,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "logSHA256": "3845135d69b36fb3e301435083a8c432f7cd560e32ca62617978867a49bf05b9"
+  },
+  "nativeVisibleAcceptance": {
+    "executableSHA256": "f6cba669dd838a37c9ab582568e669a6d68323b7196cac85921e23959253c580",
+    "fixture": "dummy owned app directories, not a signed installation",
+    "actualRecords": 2,
+    "actualAllocatedBytesEach": 8192,
+    "fullSizeVisible": true,
+    "injectedLowerBoundVisible": "at least 2.15 GB",
+    "injectedUnknownVisible": true,
+    "finderSelected": "previous.app in the exact reviewed .thermo-update UUID folder; 8 KB visible",
+    "transientCaptureError": "ScreenCaptureKit failed once, later AX and screenshots succeeded",
+    "mainMenuStub": "fixture only; production recovery view/model linked from current testable objects",
+    "screenshots": "visible in conversation only, no separate screenshot artifact"
+  },
+  "cli": {
+    "command": "thermo apps updates recovery --json (owned CFFIXED_USER_HOME)",
+    "exitCode": 0,
+    "records": 2,
+    "backups": 2,
+    "allocatedBytesEach": 8192,
+    "completeEach": true,
+    "jsonSHA256": "6b1c899e035b9ff06c0c73e70c4c93936bfaac1cca40745124d1dee47471b2b0"
+  },
+  "cleanup": {
+    "qaProcessExited": true,
+    "openFixtureHandles": 0,
+    "ownedRootRemoved": true
+  },
+  "limitations": [
+    "Allocated size is not guaranteed reclaimable APFS space",
+    "Identity inspection does not validate every file or the backup signature",
+    "No automatic backup deletion or rotation",
+    "No deletion or update of real installed apps",
+    "No push or release"
+  ]
+}

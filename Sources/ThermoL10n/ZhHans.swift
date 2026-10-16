@@ -2305,4 +2305,12 @@ let zhHans: [String: String] = [
     "Could not verify the selected item; refresh before selecting it": "无法核实所选项目，请刷新后再选择",
     "Wait for the selected files to finish moving before quitting.": "请等待所选文件移入废纸篓后再退出。",
     "The old space cache could not be cleared; scan again before using saved results": "未能清除旧的空间缓存，使用保存结果前请重新扫描",
+    "Preserved app allocated usage: %1$@": "保留副本占用：%1$@",
+    "Preserved app allocated usage: at least %1$@": "保留副本占用：至少 %1$@",
+    "Preserved app size is unknown": "保留副本大小未知",
+    "Preserved app size is incomplete; the shown usage is a lower bound": "保留副本未测量完整，显示的占用只是已知下限",
+    "The preserved app is missing or changed; refresh recovery before inspecting it": "保留副本缺失或已变化，请刷新恢复记录后再查看",
+    "The preserved app changed while measuring it; refresh recovery": "测量期间保留副本发生变化，请刷新恢复记录",
+    "Reveal preserved app in Finder": "在 Finder 中显示保留副本",
+    "Preserved app size could not be measured": "无法测量保留副本大小",
 ]
