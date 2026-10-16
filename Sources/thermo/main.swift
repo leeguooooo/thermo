@@ -31,6 +31,7 @@ COMMANDS
                              (Claude Code, Codex, Cursor, Gemini; read-only)
   agents fix [--dry-run]     apply every safe automatic fix (shows the plan, asks first;
                              --yes to skip the question)
+  agents context [--json]    static Skill footprint ranking and MCP measurement coverage
   agents show NAME           one item: problems, suggestions and numbered actions
   agents fix|uninstall|disable NAME
                              that action on one item (--area/--agent to narrow,

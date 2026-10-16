@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import ThermoL10n
 
 struct MCPServer: Equatable {
@@ -501,90 +502,147 @@ struct ConfigChecks {
         ] + skillDirs
         let fm = FileManager.default
         var byName: [String: [(agent: String, real: String, origin: String, key: String)]] = [:]
+        var remaining = 10_000
         for (dir, agent, origin) in roots {
             guard !env.cancelled() else { return }
-            guard let entries = try? fm.contentsOfDirectory(atPath: dir.path) else { continue }
-            for e in entries.sorted() where !e.hasPrefix(".") {
+            var incomplete = false
+            // Track ancestors per branch: two visible aliases must still both be inventoried.
+            var pending: [(url: URL, depth: Int, ancestors: Set<String>)] = [(dir, 0, [])]
+            while let node = pending.popLast() {
                 guard !env.cancelled() else { return }
-                let u = dir.appendingPathComponent(e)
+                guard remaining > 0 else { incomplete = true; break }
+                remaining -= 1
+                let u = node.url
+                let real = u.resolvingSymlinksInPath().standardizedFileURL.path
+                if node.ancestors.contains(real) { incomplete = true; continue }
                 let attrs = try? fm.attributesOfItem(atPath: u.path)
                 if attrs?[.type] as? FileAttributeType == .typeSymbolicLink, !fm.fileExists(atPath: u.path) {
-                    let target = (try? fm.destinationOfSymbolicLink(atPath: u.path)) ?? "?"
-                    item(.skills, agent: agent, id: u.path, name: e, detail: "→ " + target, source: origin)
-                    offer(.fix, tr("Remove broken link"), tr("Deletes the symlink %1$@. Its target is already gone.", env.short(u.path)), [.unlink(path: u.path)])
-                    add(Finding(.warning, .skills, agent: agent, subject: e,
-                                tr("broken symlink → %1$@; the skill no longer loads", target),
-                                fix: tr("remove the link"), source: origin))
+                    item(.skills, agent: agent, id: u.path, name: u.lastPathComponent,
+                         detail: env.short(u.path), source: origin)
+                    if node.depth == 1 {
+                        offer(.fix, tr("Remove broken link"), tr("Deletes the symlink %1$@. Its target is already gone.", env.short(u.path)), [.unlink(path: u.path)])
+                    }
+                    add(Finding(.warning, .skills, agent: agent, subject: u.lastPathComponent,
+                                tr("broken symlink → %1$@; the skill no longer loads", (try? fm.destinationOfSymbolicLink(atPath: u.path)) ?? "?"), source: origin))
+                    currentItem = nil
                     continue
                 }
                 var isDir: ObjCBool = false
                 guard fm.fileExists(atPath: u.path, isDirectory: &isDir), isDir.boolValue else { continue }
                 let skill = u.appendingPathComponent("SKILL.md")
-                guard let text = try? String(contentsOf: skill, encoding: .utf8) else {
-                    // A folder of skills (e.g. a synced collection) is fine; an empty one is not.
-                    let nested = Self.containsSkill(u, depth: 3, cancelled: env.cancelled)
-                    if !nested {
-                        item(.skills, agent: agent, id: u.path, name: e, detail: env.short(u.path), source: origin)
-                        if agent != "plugin" { offerSkillRemoval(u) }
-                        add(Finding(.warning, .skills, agent: agent, subject: e, tr("directory has no SKILL.md, so it isn't a skill"),
-                                    fix: tr("add SKILL.md or remove the folder"), source: origin))
+                if fm.fileExists(atPath: skill.path) {
+                    // Bound allocations even for malformed or unexpectedly huge installed skills.
+                    if let text = Self.readSkill(skill) {
+                        inventory.skills += 1
+                        let front = Self.frontMatter(text)
+                        let name = front?["name"] ?? u.lastPathComponent
+                        let key = item(.skills, agent: agent, id: u.path, name: name,
+                                       detail: front?["description"] ?? env.short(u.path), source: origin)
+                        let body = Self.skillBody(text)
+                        let footprint = SkillFootprint(catalog: TextFootprint(name + "\n" + (front?["description"] ?? "")),
+                                                       document: TextFootprint(text), body: TextFootprint(body),
+                                                       sourcePath: Redact.text(env.short(skill.path)),
+                                                       contentHash: SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined())
+                        if let i = items.firstIndex(where: { $0.id == key }) { items[i].skillFootprint = footprint }
+                        // Nested collections may resolve through a shared symlink: never offer removal of their targets.
+                        if agent != "plugin", node.depth == 1 { offerSkillRemoval(u) }
+                        if front == nil || front?["description"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
+                            add(Finding(.warning, .skills, agent: agent, subject: name,
+                                        tr("SKILL.md has no front matter description, so agents can't tell when to use it"),
+                                        fix: tr("start SKILL.md with ---\\nname: %1$@\\ndescription: …\\n---", name), source: origin))
+                        }
+                        byName[name, default: []].append((agent, real, origin, key))
+                    } else {
+                        item(.skills, agent: agent, id: u.path, name: u.lastPathComponent, detail: env.short(skill.path), source: origin)
+                        add(Finding(.warning, .skills, agent: agent, subject: u.lastPathComponent,
+                                    tr("SKILL.md could not be read as UTF-8 within the 1 MiB limit; its content was not inspected."), source: origin))
+                        incomplete = true
                     }
-                    continue
+                    currentItem = nil
+                    continue // references/scripts below a skill are not independent skills
                 }
-                inventory.skills += 1
-                let front = Self.frontMatter(text)
-                let key = item(.skills, agent: agent, id: u.path, name: front?["name"] ?? e,
-                               detail: front?["description"] ?? env.short(u.path), source: origin)
-                if agent != "plugin" { offerSkillRemoval(u) }
-                if front == nil || front?["description"]?.isEmpty != false {
-                    add(Finding(.warning, .skills, agent: agent, subject: e,
-                                tr("SKILL.md has no front matter description, so agents can't tell when to use it"),
-                                fix: tr("start SKILL.md with ---\\nname: %1$@\\ndescription: …\\n---", e), source: origin))
-                }
-                let name = front?["name"] ?? e
-                byName[name, default: []].append((agent, u.resolvingSymlinksInPath().path, origin, key))
+                guard node.depth < 16 else { incomplete = true; continue }
+                do {
+                    let children = try fm.contentsOfDirectory(atPath: u.path).filter { !$0.hasPrefix(".") || $0 == ".system" }.sorted()
+                    let directories = children.map { u.appendingPathComponent($0) }.filter {
+                        var d: ObjCBool = false
+                        return (fm.fileExists(atPath: $0.path, isDirectory: &d) && d.boolValue)
+                            || (try? fm.attributesOfItem(atPath: $0.path))?[.type] as? FileAttributeType == .typeSymbolicLink
+                    }
+                    if directories.isEmpty, node.depth > 0 {
+                        item(.skills, agent: agent, id: u.path, name: u.lastPathComponent, detail: env.short(u.path), source: origin)
+                        if agent != "plugin", node.depth == 1 { offerSkillRemoval(u) }
+                        add(Finding(.warning, .skills, agent: agent, subject: u.lastPathComponent,
+                                    tr("directory has no SKILL.md, so it isn't a skill"), source: origin))
+                        currentItem = nil
+                    }
+                    let ancestors = node.ancestors.union([real])
+                    for child in directories.reversed().prefix(remaining) {
+                        pending.append((child, node.depth + 1, ancestors))
+                    }
+                    if directories.count > remaining { incomplete = true }
+                } catch { incomplete = true }
+            }
+            if incomplete {
+                currentItem = nil
+                add(Finding(.warning, .skills, agent: agent, subject: origin,
+                            tr("Skill inspection is incomplete: an unreadable entry, link cycle, depth limit or entry limit was encountered. Totals cover inspected files only."), source: origin))
             }
         }
-        // The same name in two folders one agent loads: it uses one and silently ignores the other.
-        // Plugin skills are namespaced (plugin:skill), so they can't collide.
+        // Plugin namespaces are separate. Shared paths are visible to Codex, not Claude Code.
         for (name, copies) in byName.sorted(by: { $0.key < $1.key }) {
             guard !env.cancelled() else { return }
-            // Claude Code reads ~/.claude/skills only; Codex also reads the shared ~/.agents/skills.
             for agent in ["claude", "codex"] {
                 let visible = copies.filter { $0.agent == agent || (agent == "codex" && $0.agent == "shared") }
                 guard Set(visible.map(\.real)).count > 1 else { continue }
-                currentItem = visible[0].key
-                add(Finding(.info, .skills, agent: agent, subject: name,
-                            tr("%1$@ different skills share this name (%2$@); only one is used", String(visible.count), visible.map(\.origin).joined(separator: ", ")),
-                            fix: tr("rename or remove the copy you don't want"), source: nil))
+                for copy in visible {
+                    currentItem = copy.key
+                    add(Finding(.info, .skills, agent: agent, subject: name,
+                                tr("%1$@ different skills share this name (%2$@); only one is used", String(Set(visible.map(\.real)).count), visible.map(\.origin).joined(separator: ", ")),
+                                fix: tr("rename or remove the copy you don't want"), source: nil))
+                }
             }
         }
+        currentItem = nil
     }
 
-    static func containsSkill(_ dir: URL, depth: Int, cancelled: () -> Bool = { false }) -> Bool {
-        guard !cancelled(), depth > 0, let items = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return false }
-        for item in items {
-            guard !cancelled() else { return false }
-            let u = dir.appendingPathComponent(item)
-            if FileManager.default.fileExists(atPath: u.appendingPathComponent("SKILL.md").path) || containsSkill(u, depth: depth - 1, cancelled: cancelled) { return true }
-        }
-        return false
+    static func readSkill(_ url: URL) -> String? {
+        guard (try? FileManager.default.attributesOfItem(atPath: url.resolvingSymlinksInPath().path))?[.type] as? FileAttributeType == .typeRegular,
+              let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        guard let data = try? handle.read(upToCount: 1_048_577), data.count <= 1_048_576 else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    static func skillBody(_ text: String) -> String {
+        let lines = text.components(separatedBy: "\n")
+        guard lines.first?.trimmingCharacters(in: .whitespacesAndNewlines) == "---",
+              let end = lines.dropFirst().firstIndex(where: { $0.trimmingCharacters(in: .whitespacesAndNewlines) == "---" }) else { return text }
+        return lines.dropFirst(end + 1).joined(separator: "\n")
     }
 
     static func frontMatter(_ text: String) -> [String: String]? {
-        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map { $0.trimmingCharacters(in: .whitespaces) }
+        let lines = text.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .newlines) }
         guard lines.first == "---", let end = lines.dropFirst().firstIndex(of: "---") else { return nil }
         var out: [String: String] = [:]
-        var lastKey: String?
-        for l in lines[1..<end] {
-            if let c = l.firstIndex(of: ":"), !l.hasPrefix("-"), l.range(of: "^[A-Za-z_-]+:", options: .regularExpression) != nil {
-                let k = String(l[..<c])
-                out[k] = l[l.index(after: c)...].trimmingCharacters(in: CharacterSet(charactersIn: " \"'"))
-                lastKey = k
-            } else if let k = lastKey, out[k] == "|" || out[k] == ">" || out[k] == ">-" || out[k] == "|-" || out[k]?.isEmpty == true {
-                out[k] = l  // block scalar: first line is enough to know it's non-empty
-            }
+        var blockKey: String?
+        var blockLines: [String] = []
+        func flushBlock() {
+            if let key = blockKey { out[key] = blockLines.joined(separator: " ").trimmingCharacters(in: .whitespaces) }
+            blockKey = nil
+            blockLines = []
         }
+        for raw in lines[1..<end] {
+            let l = raw.trimmingCharacters(in: .whitespaces)
+            if !raw.hasPrefix(" "), !raw.hasPrefix("\t"), let c = l.firstIndex(of: ":"), !l.hasPrefix("-"), l.range(of: "^[A-Za-z_-]+:", options: .regularExpression) != nil {
+                flushBlock()
+                let k = String(l[..<c])
+                let value = l[l.index(after: c)...].trimmingCharacters(in: CharacterSet(charactersIn: " \"'"))
+                if ["|", ">", ">-", "|-", "|+", ">+"].contains(value) { blockKey = k }
+                else { out[k] = value }
+            } else if blockKey != nil { blockLines.append(l) }
+        }
+        flushBlock()
         return out
     }
 

@@ -2401,4 +2401,16 @@ let zhHans: [String: String] = [
     "A registration does not prove the original launcher. System services and service descendants were not inspected.": "服务登记不能证明最初由谁启动。本次未检查系统域服务及服务的子孙进程。",
     "Memory mappings were not inspected.": "本次未检查内存映射。",
     "Loading saved results…": "正在读取上次扫描结果…",
+    // AI context inspection
+    "Catalog ≈%1$@ tokens · SKILL.md ≈%2$@ tokens · %3$@ bytes": "目录描述约 %1$@ token · SKILL.md 约 %2$@ token · %3$@ 字节",
+    "Static estimates use 4 ASCII characters or 1 Unicode scalar per token, not a model tokenizer. Catalog and SKILL.md are separate views; referenced files and actual session loading are not measured.": "静态估算按每 4 个 ASCII 字符或 1 个 Unicode 标量计 1 token，未使用模型分词器。目录描述和 SKILL.md 分别统计；未测量引用文件和会话实际加载量。",
+    "MCP definitions, connection timing and actual usage have not been measured. Configuration checks do not prove that a server is reachable or that its tools work.": "尚未测量 MCP 定义、连接耗时和实际用量。配置检查不能证明服务可连接或工具可用。",
+    "SKILL.md could not be read as UTF-8 within the 1 MiB limit; its content was not inspected.": "无法在 1 MiB 上限内将 SKILL.md 读为 UTF-8，未检查其内容。",
+    "Skill inspection is incomplete: an unreadable entry, link cycle, depth limit or entry limit was encountered. Totals cover inspected files only.": "Skill 检查未完成：遇到无法读取的条目、循环链接、目录深度或条目数量上限。统计仅覆盖已检查的文件。",
+    "Skill footprint": "Skill 上下文占用",
+    "Largest inspected SKILL.md files · %1$@ measured entries": "已检查文件的大小排名 · 已测量 %1$@ 项",
+    "No configuration or process problems found": "未发现配置或进程问题",
+    "%1$@ without detected problems": "%1$@ 项未发现问题",
+    "Continue? [y/N] ": "继续？[y/N] ",
+    "Coverage: user-level Skill directories and enabled Claude plugins. Project Skills and the Codex plugin catalog are not included yet. Entries may include aliases of the same file.": "检查范围：用户级 Skill 目录和已启用的 Claude 插件。尚未包含项目级 Skill 和 Codex 插件目录；部分条目可能指向同一文件。",
 ]

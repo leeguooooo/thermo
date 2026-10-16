@@ -11,6 +11,7 @@ struct AgentsCommand {
         let name = rest.count > 1 ? rest[1] : nil
         switch sub {
         case "": break
+        case "context": return try context()
         case "list", "ls": return try list(name)
         case "show": return try show(try required(name, sub))
         case "fix":
@@ -122,6 +123,7 @@ struct AgentsCommand {
 
     static let usage = """
     usage: thermo agents [--all] [--json]                 what is wrong with the AI agents on this Mac
+           thermo agents context [--agent AGENT] [--json] static Skill footprint ranking; MCP coverage
            thermo agents list [AREA] [--json]             everything checked, marked OK or not
            thermo agents show NAME [--json]               one item: problems, suggestions, numbered actions
            thermo agents fix [--dry-run] [--yes]          every safe automatic fix for problem items
@@ -130,6 +132,28 @@ struct AgentsCommand {
       NAME is the item's name or id; narrow with --area AREA and --agent AGENT, or --all for every match.
       Actions print their exact steps first and ask; --yes skips the question, --dry-run only prints.
     """
+
+    func context() throws {
+        guard !app.args.has("csv") else { throw CLIError("agents context supports --json, not --csv") }
+        var report = AgentDoctor.context()
+        if let agent = app.args.options["agent"] {
+            report.skills = report.skills.filter { $0.agent == agent || (agent == "codex" && $0.agent == "shared") }
+            report.mcpServers = report.mcpServers.filter { $0.agent == agent }
+            let ids = Set((report.skills + report.mcpServers).map(\.id))
+            report.findings = report.findings.filter { $0.item.map(ids.contains) ?? ($0.agent == agent || (agent == "codex" && $0.agent == "shared")) }
+        }
+        if app.args.has("json") { print(Export.diagnosticJSON(report)); return }
+        var lines = [style.bold("Skill footprint · static estimates"), report.coverageNote, report.measurementNote, ""]
+        for item in report.skills {
+            lines.append(style.bold(item.name) + style.dim(" [" + item.agent + "]"))
+            lines.append("  " + (item.skillFootprint?.summary ?? "Content not measured"))
+            if let source = item.skillFootprint?.sourcePath ?? item.source { lines.append("  " + style.dim(source)) }
+        }
+        lines += ["", style.bold("MCP · \(report.mcpServers.count) configuration entries"), report.mcpNote]
+        for finding in report.findings { lines.append("  \(finding.severity.symbol) \(finding.subject): \(finding.message)") }
+        if report.cancelled { lines.append("Inspection stopped; results are incomplete.") }
+        out(lines)
+    }
 
     func required(_ name: String?, _ sub: String) throws -> String {
         guard let name, !name.isEmpty else { throw CLIError("usage: thermo agents \(sub) NAME (see thermo agents list)") }
@@ -177,6 +201,10 @@ struct AgentsCommand {
                 : i.severity == .info ? style.dim("note") : style.green("OK")
             lines.append(style.bold(i.name) + "  " + status + style.dim("  \(i.area.rawValue)" + (i.agent == "system" ? "" : " · \(i.agent)")))
             lines.append("  " + i.detail)
+            if let footprint = i.skillFootprint {
+                lines.append("  " + footprint.summary)
+                lines.append(style.dim("  " + SkillFootprint.caveat))
+            }
             if let src = i.source { lines.append(style.dim("  " + src)) }
             lines.append(style.dim("  id: \(i.id)"))
             for f in report.findings(for: i) {

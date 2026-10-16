@@ -367,7 +367,7 @@ final class DoctorTests: XCTestCase {
         try write(".codex/skills/good/SKILL.md", "---\nname: good\ndescription: codex copy\n---")
         let r = diagnose()
         XCTAssertTrue(find(r, .skills, "good").allSatisfy { $0.agent == "codex" }, "Claude Code does not read ~/.agents/skills")
-        XCTAssertEqual(find(r, .skills, "good").count, 1)
+        XCTAssertEqual(find(r, .skills, "good").count, 2, "both conflicting Codex entries carry the finding")
         XCTAssertEqual(find(r, .skills, "nodesc").first?.severity, .warning)
         XCTAssertEqual(find(r, .skills, "empty").first?.severity, .warning)
         XCTAssertTrue(find(r, .skills, "collection").isEmpty)

@@ -55,6 +55,8 @@ public struct AgentItem: Codable, Equatable, Identifiable, Sendable {
     public var severity: Severity?
     /// What the user can do about it: fix, disable, uninstall. Empty when it's managed elsewhere.
     public var actions: [Action] = []
+    /// Static text measurements; never actual session consumption.
+    public var skillFootprint: SkillFootprint? = nil
 }
 
 public struct Inventory: Codable, Equatable, Sendable {

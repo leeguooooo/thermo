@@ -65,7 +65,7 @@ struct DiagnosticsHome: View {
             }
         } else if problems == 0 {
             VStack(spacing: 26) {
-                HeroStatus(symbol: "checkmark", color: .green, title: tr("Everything looks good"),
+                HeroStatus(symbol: "checkmark", color: .green, title: tr("No configuration or process problems found"),
                            subtitle: tr("No problems in %1$@ items your AI agents use.", String(scanner.report?.items.count ?? 0)),
                            spinning: scanner.scanning)
                 BigRoundButton(title: tr("Check Again"), color: .green, busy: scanner.scanning) { scanner.scan() }
@@ -134,6 +134,13 @@ struct AreaPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header(problems)
+                if area == .skills, let report = scanner.report {
+                    SkillContextCard(items: report.items.filter { $0.area == .skills })
+                }
+                if area == .mcp {
+                    Text(tr("MCP definitions, connection timing and actual usage have not been measured. Configuration checks do not prove that a server is reachable or that its tools work."))
+                        .font(.callout).foregroundStyle(.secondary).padding(18).glass()
+                }
                 DiagnosticScanControl(scanner: scanner)
                 if !scanner.history.isEmpty { AgentActivity(scanner: scanner) }
                 if problems.isEmpty && !notes.contains(where: { $0.severity == .error || $0.severity == .warning }) {
@@ -162,7 +169,7 @@ struct AreaPage: View {
                         Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showHealthy.toggle() } } label: {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                                Text(tr("%1$@ more are fine", String(rest.count))).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
+                                Text(tr("%1$@ without detected problems", String(rest.count))).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
                                 Spacer()
                                 Image(systemName: "chevron.down").rotationEffect(.degrees(showHealthy ? 180 : 0)).foregroundStyle(.white.opacity(0.5))
                             }
@@ -309,6 +316,9 @@ private struct ProblemCard: View {
                     Text(item.detail).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white.opacity(0.55)).textSelection(.enabled)
                         .padding(8).frame(maxWidth: .infinity, alignment: .leading)
                         .background(RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.25)))
+                    if let footprint = item.skillFootprint {
+                        Text(footprint.summary).font(.caption.monospaced()).textSelection(.enabled)
+                    }
                     if let src = item.source {
                         HStack {
                             Text(src).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white.opacity(0.4)).lineLimit(1).truncationMode(.middle)
@@ -379,6 +389,9 @@ private struct HealthyRow: View {
                     if !item.enabled { Text(tr("off")).font(.system(size: 10)).foregroundStyle(.white.opacity(0.4)) }
                 }
                 Text(item.detail).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white.opacity(0.4)).lineLimit(1).truncationMode(.middle)
+                if let footprint = item.skillFootprint {
+                    Text(footprint.summary).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                }
             }
             Spacer()
             if !item.actions.isEmpty {
