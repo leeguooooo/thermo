@@ -23,9 +23,10 @@ extension NativeUpdateTransaction {
     /// prepares the app, and commits through the same recoverable transaction used by local tests.
     public static func installAvailable(_ reviewed: NativeUpdateCheck, home: String = NSHomeDirectory(),
                                         feedFetcher: NativeAppUpdates.Fetcher? = nil, downloader: ArchiveDownloader? = nil) async -> NativeInstallResult {
-        if let why = installationRefusal(reviewed) { return NativeInstallResult(outcome: "failed", message: why) }
+        if let why = installationRefusal(reviewed) { return preparationFailure(reviewed.source, message: why, home: home) }
         let fresh = await NativeAppUpdates.check(reviewed.source, fetcher: feedFetcher)
         do {
+            if fresh.status == "cancelled" { throw CancellationError() }
             guard fresh.status == "available", let expected = reviewed.release, let current = fresh.release, let url = current.downloadURL else {
                 throw failure("The update changed after review; check it again")
             }
@@ -52,8 +53,10 @@ extension NativeUpdateTransaction {
             let prepared = try prepare(fresh, archive: archive, home: home, reviewedArchiveSignature: expected.signature)
             defer { try? discard(prepared, home: home) }
             return install(prepared, home: home)
-        } catch is CancellationError { return NativeInstallResult(outcome: "failed", message: "Update preparation stopped; the installed app was not replaced") }
-        catch { return NativeInstallResult(outcome: "failed", message: error.localizedDescription) }
+        } catch let error as PreservedWorkspaceFailure {
+            return preparationFailure(reviewed.source, message: "The app was not replaced; preserved update files need inspection", home: home, workspace: error)
+        } catch is CancellationError { return preparationFailure(reviewed.source, message: "Update preparation stopped; the installed app was not replaced", home: home) }
+        catch { return preparationFailure(reviewed.source, message: error.localizedDescription, home: home) }
     }
 
     static func download(_ url: URL, to destination: URL, length: Int64?) async throws {

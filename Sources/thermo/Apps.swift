@@ -68,11 +68,19 @@ struct AppsCommand {
             let report = NativeUpdateTransaction.recovery(), records = report.records
             if rest.count == 1 {
                 if args.has("json") { print(Export.json(report)) }
-                else { out(records.map { $0.id + " · " + $0.target + " · " + $0.previousVersion + " → " + $0.installedVersion + " · " + $0.phase } + report.issues.map { tr($0) }) }
+                else { out(records.map { $0.id + " · " + $0.target + " · " + $0.previousVersion + " → " + $0.installedVersion + " · " + $0.phase }
+                    + (report.workspaces ?? []).map { $0.id + " · " + tr("Preserved update files") + " · " + $0.path }
+                    + report.issues.map { tr($0) }) }
+                return
+            }
+            if rest.count == 3, rest[1] == "inspect", let workspace = report.workspaces?.first(where: { $0.id == rest[2] }) {
+                let url = try NativeUpdateTransaction.preservedWorkspaceURL(workspace)
+                if args.has("json") { print(Export.json(["id": workspace.id, "workspace": url.path, "target": workspace.target])) }
+                else { out([tr("Preserved update files"), url.path, tr(workspace.reason)]) }
                 return
             }
             guard rest.count == 3, rest[1] == "restore", let record = records.first(where: { $0.id == rest[2] }) else {
-                throw CLIError("usage: thermo apps updates recovery [restore ID] [--dry-run] [--yes]")
+                throw CLIError("usage: thermo apps updates recovery [inspect ID | restore ID] [--dry-run] [--yes]")
             }
             if args.has("dry-run") { if args.has("json") { print(Export.json(record)) } else { out([record.target, record.backup]) }; return }
             guard try approveNative([record.target, record.installedVersion + " → " + record.previousVersion,
@@ -116,7 +124,13 @@ struct AppsCommand {
             Task.detached { installed.value = await NativeUpdateTransaction.installAvailable(result); finished.signal() }
             finished.wait()
             guard let outcome = installed.value else { throw CLIError(tr("The native update was not installed")) }
-            if args.has("json") { print(Export.json(outcome)) } else { out([tr(outcome.message)]) }
+            if args.has("json") { print(Export.json(outcome)) }
+            else {
+                var lines = [tr(outcome.message)]
+                if let workspace = outcome.preservedWorkspace { lines.append(workspace.path) }
+                if outcome.workspaceRecordSaved == false { lines.append(tr("The workspace recovery record could not be saved; keep this path")) }
+                out(lines)
+            }
             if outcome.outcome != "succeeded" { throw CLIError(tr(outcome.message)) }
         } else if args.has("json") { print(Export.json(result)) }
         else { out([source.app.name, tr(result.message)] + (result.release.map { [$0.version + " (" + $0.build + ")"] } ?? []) + result.skipped.map { tr($0) }) }

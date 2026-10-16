@@ -71,7 +71,7 @@ struct HistoryCommand {
         for item in r.items {
             let mark = item.status == "done" ? style.green("✓") : item.status == "partial" ? style.yellow("◐") : item.status == "skipped" ? style.dim("–") : style.red("✗")
             let size = item.bytes.map { "  " + ByteFormat.string($0) } ?? ""
-            print("  \(mark) \(item.target)" + style.dim(size + (item.detail.map { "  " + $0 } ?? "")))
+            print("  \(mark) \(item.target)" + style.dim(size + (item.detail.map { "  " + tr($0) } ?? "")))
         }
         if let size = r.sizeText { print(style.dim("  " + size)) }
         if let undo = r.undoText { print("  " + undo) }

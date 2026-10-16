@@ -31,10 +31,13 @@ public struct NativeInstallResult: Codable, Sendable {
     public var outcome: String
     public var message: String
     public var receipt: NativeUpdateReceipt?
+    public var preservedWorkspace: NativePreservedWorkspace? = nil
+    public var workspaceRecordSaved: Bool? = nil
 }
 
 public struct NativeRecoveryReport: Codable, Sendable {
     public var records: [NativeUpdateReceipt] = []
+    public var workspaces: [NativePreservedWorkspace]? = nil
     public var issues: [String] = []
 }
 
@@ -72,6 +75,12 @@ public enum NativeUpdateTransaction {
 
     public static func prepare(_ reviewed: NativeUpdateCheck, archive: URL, home: String = NSHomeDirectory(),
                                reviewedArchiveSignature: String? = nil) throws -> PreparedNativeUpdate {
+        try prepare(reviewed, archive: archive, home: home, reviewedArchiveSignature: reviewedArchiveSignature,
+                    copyImage: NativeDiskImage.copyApplication)
+    }
+
+    static func prepare(_ reviewed: NativeUpdateCheck, archive: URL, home: String,
+                        reviewedArchiveSignature: String? = nil, copyImage: (URL, String, String) throws -> Void) throws -> PreparedNativeUpdate {
         guard reviewed.status == "available", let release = reviewed.release, reviewed.source.canCheck,
               release.installationType == nil || release.installationType == "application",
               NativeAppUpdates.unchanged(reviewed.source), let id = reviewed.source.app.bundleID,
@@ -90,63 +99,82 @@ public enum NativeUpdateTransaction {
         let root = try storage(home)
         let workspace = root + "/" + UUID().uuidString
         try privateDirectory(workspace)
+        guard let workspaceIdentity = FileIdentity.of(workspace) else { throw failure("The update workspace disappeared") }
         var keep = false
-        defer { if !keep { try? FileManager.default.removeItem(atPath: workspace) } }
-        let payload = URL(fileURLWithPath: workspace + "/payload.archive")
-        try FileManager.default.copyItem(at: archive, to: payload)
-        var st = stat()
-        guard lstat(payload.path, &st) == 0, st.st_mode & S_IFMT == S_IFREG, st.st_size > 0, st.st_size <= 2 * 1024 * 1024 * 1024 else {
-            throw failure("The update archive is unsafe or too large")
-        }
-        let data = try Data(contentsOf: payload, options: .mappedIfSafe)
-        if let length = release.length, length != Int64(data.count) { throw failure("The update archive length differs from the feed") }
-        let key = try Curve25519.Signing.PublicKey(rawRepresentation: keyData)
-        guard key.isValidSignature(signature, for: data) else { throw failure("The update archive's Ed25519 signature is invalid") }
-        if let reviewedArchiveSignature, reviewedArchiveSignature != encodedSignature {
-            guard let previous = Data(base64Encoded: reviewedArchiveSignature), previous.count == 64,
-                  key.isValidSignature(previous, for: data) else { throw failure("The downloaded archive differs from the reviewed signed archive") }
-        }
-        let unpacked = workspace + "/unpacked"
-        try privateDirectory(unpacked)
-        try Task.checkCancellation()
-        if NativeDiskImage.isUDIF(data) {
-            do { try NativeDiskImage.copyApplication(from: payload, workspace: workspace, to: unpacked) }
-            catch let error as NativeDiskImage.CleanupFailure { keep = true; throw error }
-        } else {
-            let expanded = try NativeZipManifest.validate(payload)
-            let free = (try FileManager.default.attributesOfFileSystem(forPath: workspace)[.systemFreeSize] as? NSNumber)?.int64Value ?? 0
-            guard free > expanded * 2 + 16 * 1024 * 1024 else { throw failure("There is not enough space to prepare and preserve this update") }
-            let extracted = CommandRunner.run("/usr/bin/tar", arguments: ["-x", "-f", payload.path, "-C", unpacked, "--no-same-owner", "--no-same-permissions", "--safe-writes"],
-                                          timeout: 120, outputLimit: 1_048_576, captureError: false, cancelled: { Task.isCancelled })
-            guard extracted.status == 0, !extracted.timedOut, !extracted.cancelled else { throw failure("The update could not be safely extracted") }
-        }
-        var bundles: [String] = []
-        func find(_ directory: String, depth: Int) throws {
-            for name in try FileManager.default.contentsOfDirectory(atPath: directory) where !name.hasPrefix(".") && name != "__MACOSX" {
-                let path = directory + "/" + name
-                var entry = stat()
-                guard lstat(path, &entry) == 0 else { throw failure("Cannot inspect the extracted update") }
-                if entry.st_mode & S_IFMT != S_IFDIR { continue }
-                if name.hasSuffix(".app") { bundles.append(path) }
-                else if depth < 1 { try find(path, depth: depth + 1) }
+        defer { if !keep, FileIdentity.of(workspace) == workspaceIdentity { try? FileManager.default.removeItem(atPath: workspace) } }
+        do {
+            let payload = URL(fileURLWithPath: workspace + "/payload.archive")
+            try FileManager.default.copyItem(at: archive, to: payload)
+            var st = stat()
+            guard lstat(payload.path, &st) == 0, st.st_mode & S_IFMT == S_IFREG, st.st_size > 0, st.st_size <= 2 * 1024 * 1024 * 1024 else {
+                throw failure("The update archive is unsafe or too large")
             }
-        }
-        try find(unpacked, depth: 0)
-        guard bundles.count == 1, let bundle = bundles.first else { throw failure("The archive must contain exactly one application") }
-        let new = try NativeBundleValidation.facts(bundle)
-        try NativeBundleValidation.compatible(new, with: old, release: release)
-        try NativeBundleValidation.publisherMatches(original: reviewed.source.app.path, replacement: bundle, team: old.team)
-        if let info = NSDictionary(contentsOfFile: bundle + "/Contents/Info.plist"), let minimum = info["LSMinimumSystemVersion"] as? String {
-            let os = ProcessInfo.processInfo.operatingSystemVersion
-            let order = UpdateVersion.compare("\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)", minimum)
-            guard order == .orderedSame || order == .orderedDescending else {
-                throw failure("The downloaded app requires a newer or unrecognized macOS version")
+            let data = try Data(contentsOf: payload, options: .mappedIfSafe)
+            if let length = release.length, length != Int64(data.count) { throw failure("The update archive length differs from the feed") }
+            let key = try Curve25519.Signing.PublicKey(rawRepresentation: keyData)
+            guard key.isValidSignature(signature, for: data) else { throw failure("The update archive's Ed25519 signature is invalid") }
+            if let reviewedArchiveSignature, reviewedArchiveSignature != encodedSignature {
+                guard let previous = Data(base64Encoded: reviewedArchiveSignature), previous.count == 64,
+                      key.isValidSignature(previous, for: data) else { throw failure("The downloaded archive differs from the reviewed signed archive") }
             }
+            let unpacked = workspace + "/unpacked"
+            try privateDirectory(unpacked)
+            try Task.checkCancellation()
+            if NativeDiskImage.isUDIF(data) {
+                do { try copyImage(payload, workspace, unpacked) }
+                catch let error as NativeDiskImage.CleanupFailure {
+                    keep = true
+                    throw preserveWorkspace(workspace, identity: workspaceIdentity, target: reviewed.source.app.path,
+                                            reason: error.localizedDescription, home: home)
+                }
+            } else {
+                let expanded = try NativeZipManifest.validate(payload)
+                let free = (try FileManager.default.attributesOfFileSystem(forPath: workspace)[.systemFreeSize] as? NSNumber)?.int64Value ?? 0
+                guard free > expanded * 2 + 16 * 1024 * 1024 else { throw failure("There is not enough space to prepare and preserve this update") }
+                let extracted = CommandRunner.run("/usr/bin/tar", arguments: ["-x", "-f", payload.path, "-C", unpacked, "--no-same-owner", "--no-same-permissions", "--safe-writes"],
+                                              timeout: 120, outputLimit: 1_048_576, captureError: false, cancelled: { Task.isCancelled })
+                guard extracted.status == 0, !extracted.timedOut, !extracted.cancelled else { throw failure("The update could not be safely extracted") }
+            }
+            var bundles: [String] = []
+            func find(_ directory: String, depth: Int) throws {
+                for name in try FileManager.default.contentsOfDirectory(atPath: directory) where !name.hasPrefix(".") && name != "__MACOSX" {
+                    let path = directory + "/" + name
+                    var entry = stat()
+                    guard lstat(path, &entry) == 0 else { throw failure("Cannot inspect the extracted update") }
+                    if entry.st_mode & S_IFMT != S_IFDIR { continue }
+                    if name.hasSuffix(".app") { bundles.append(path) }
+                    else if depth < 1 { try find(path, depth: depth + 1) }
+                }
+            }
+            try find(unpacked, depth: 0)
+            guard bundles.count == 1, let bundle = bundles.first else { throw failure("The archive must contain exactly one application") }
+            let new = try NativeBundleValidation.facts(bundle)
+            try NativeBundleValidation.compatible(new, with: old, release: release)
+            try NativeBundleValidation.publisherMatches(original: reviewed.source.app.path, replacement: bundle, team: old.team)
+            if let info = NSDictionary(contentsOfFile: bundle + "/Contents/Info.plist"), let minimum = info["LSMinimumSystemVersion"] as? String {
+                let os = ProcessInfo.processInfo.operatingSystemVersion
+                let order = UpdateVersion.compare("\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)", minimum)
+                guard order == .orderedSame || order == .orderedDescending else {
+                    throw failure("The downloaded app requires a newer or unrecognized macOS version")
+                }
+            }
+            guard NativeAppUpdates.unchanged(reviewed.source) else { throw failure("The installed app changed while preparing the update") }
+            guard FileIdentity.of(workspace) == workspaceIdentity else {
+                keep = true
+                throw preserveWorkspace(workspace, identity: workspaceIdentity, target: reviewed.source.app.path,
+                                        reason: "The update workspace changed; it was preserved", home: home)
+            }
+            keep = true
+            return PreparedNativeUpdate(source: reviewed.source, release: release, workspace: workspace, bundle: bundle, original: old, replacement: new, workspaceID: workspaceIdentity)
+        } catch {
+            if error is PreservedWorkspaceFailure { throw error }
+            if FileIdentity.of(workspace) != workspaceIdentity {
+                keep = true
+                throw preserveWorkspace(workspace, identity: workspaceIdentity, target: reviewed.source.app.path,
+                                        reason: "The update workspace changed; it was preserved", home: home)
+            }
+            throw error
         }
-        guard NativeAppUpdates.unchanged(reviewed.source) else { throw failure("The installed app changed while preparing the update") }
-        guard let workspaceID = FileIdentity.of(workspace) else { throw failure("The update workspace disappeared") }
-        keep = true
-        return PreparedNativeUpdate(source: reviewed.source, release: release, workspace: workspace, bundle: bundle, original: old, replacement: new, workspaceID: workspaceID)
     }
 
     public static func discard(_ prepared: PreparedNativeUpdate, home: String = NSHomeDirectory()) throws {
@@ -313,6 +341,16 @@ public enum NativeUpdateTransaction {
         do {
             let root = try storage(home, create: false)
             for file in try FileManager.default.contentsOfDirectory(atPath: root).sorted() where file.hasSuffix(".json") {
+                if file.hasPrefix("workspace-") {
+                    do {
+                        let workspace = try loadPreservedWorkspace(String(file.dropFirst("workspace-".count).dropLast(5)), home: home)
+                        report.workspaces = (report.workspaces ?? []) + [workspace]
+                        if (try? preservedWorkspaceURL(workspace, home: home)) == nil {
+                            report.issues.append("A preserved update workspace is missing or changed; inspect the recorded path manually")
+                        }
+                    } catch { report.issues.append("A preserved update workspace record could not be safely read") }
+                    continue
+                }
                 do { report.records.append(try load(String(file.dropLast(5)), home: home)) }
                 catch { report.issues.append("A native recovery record could not be safely read; preserve the recovery folder") }
             }
@@ -323,14 +361,7 @@ public enum NativeUpdateTransaction {
 
     static func load(_ id: String, home: String) throws -> NativeUpdateReceipt {
         guard UUID(uuidString: id) != nil else { throw failure("Invalid update receipt") }
-        let root = try storage(home, create: false)
-        let fd = open(root + "/" + id + ".json", O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
-        guard fd >= 0 else { throw failure("Cannot read the update receipt") }
-        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
-        var st = stat()
-        guard fstat(fd, &st) == 0, st.st_mode & S_IFMT == S_IFREG, st.st_uid == getuid(), st.st_nlink == 1,
-              st.st_size > 0, st.st_size < 1_048_576 else { throw failure("The update receipt is unsafe") }
-        let data = try handle.readToEnd() ?? Data()
+        let data = try recoveryData(id + ".json", home: home)
         let receipt = try JSONDecoder().decode(NativeUpdateReceipt.self, from: data)
         let parent = (receipt.target as NSString).deletingLastPathComponent
         guard receipt.id == id, receipt.backup == parent + "/.thermo-update-" + id + "/previous.app" else { throw failure("The recovery path is invalid") }

@@ -1,0 +1,16 @@
+Window: "", App: ThermoRecoveryQA.
+0 sheet Secondary Actions: Raise
+	1 container
+		2 text 原生更新恢复记录 版本记录可恢复未变更的应用；准备阶段保留的文件可单独查看。
+		3 scroll area
+			4 text 保留的更新文件 /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-workspace-ui-a78zwn64/home/Applications/QA Sample.app 无法确认更新镜像的挂载或卸载结果，工作目录已保留，请手动检查 /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-workspace-ui-a78zwn64/home/Library/Application Support/Thermo/app-updates/3E8DB62E-9F04-424C-AEE5-61BFE1028F0C
+			5 button 查看保留的更新文件
+		6 button 打开恢复目录
+		7 button 关闭
+8 menu bar
+	9 ThermoRecoveryQA
+	10 编辑, ID: thermo.edit
+	11 显示, ID: thermo.view
+	12 窗口, ID: thermo.window
+
+The focused UI element is 0 sheet Secondary Actions: Raise

@@ -195,7 +195,7 @@ struct HistoryPage: View {
                             }
                         }
                         if let detail = item.detail, !detail.isEmpty {
-                            Text(detail).font(.system(size: 11)).foregroundStyle(.white.opacity(0.45)).padding(.leading, 18)
+                            Text(tr(detail)).font(.system(size: 11)).foregroundStyle(.white.opacity(0.45)).padding(.leading, 18)
                                 .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
                         }
                     }
@@ -213,7 +213,7 @@ struct HistoryPage: View {
     /// The one button an entry gets: put back here, or go to where it is restored.
     @ViewBuilder func action(_ r: OperationRecord) -> some View {
         switch r.undo?.kind {
-        case "nativeUpdate":
+        case "nativeUpdate", "nativePreparation":
             Button(tr("Open")) {
                 AppModels.shared.softwareUpdates.channel = "native"
                 AppModels.shared.nativeUpdates.showRecovery = true

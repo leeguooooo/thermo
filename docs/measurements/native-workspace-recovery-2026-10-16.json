@@ -1,0 +1,123 @@
+{
+  "date": "2026-10-16",
+  "scope": "Persistent, inspectable preparation failure and nonblocking native recovery reads",
+  "sourceSHA256": {
+    "Sources/CleanKit/NativeWorkspaceRecovery.swift": "9a2d114f7e33675d4c407850a3c6db3e09e63512c781c756c3d6abbf455767dc",
+    "Sources/CleanKit/NativeUpdateDownload.swift": "38ecba6d20759be5e515da984590dc3c1b99b25051cba3275260a4e3c59d9abd",
+    "Sources/CleanKit/NativeUpdateTransaction.swift": "dd76f7601e7cef07fda441f10c31cfa9ca45676fe41674aace0e347ceddd1fff",
+    "Sources/CleanKit/OperationText.swift": "23a6cfc6d1f7b9f1c861c079085b5075847bd5b436053f3a398bda4b9601c3b9",
+    "Sources/ThermoApp/NativeUpdatesPanel.swift": "3e1d57e95e1985fdf0c73d28033a9f50ab417d6e4263f3fb73e2a0b96c47f7e8",
+    "Sources/ThermoApp/HistoryPage.swift": "41622b9602d5ba21bcc1f84334c60cd464157e10e17a9fe4cff64c7cdb3dfa92",
+    "Sources/thermo/Apps.swift": "a5f278969471474ae8197163f172213837c0b798a912ab7baec31b8202100e65",
+    "Sources/thermo/History.swift": "820f70077e914df0d241043f426217949dc12c2e034d76a58b51adf4ea111b3a",
+    "Tests/CleanKitTests/NativeWorkspaceRecoveryTests.swift": "b92375c42c8dbf81c7908a9becfc4b754b9aa335eff801c231de46c5ece92bf2",
+    "Tests/CleanKitTests/NativeUpdateTransactionTests.swift": "037aa56d3b9a397a3201ba8e1fd4a1f9dcb62dff081701c5a548fe8c61184ba5",
+    "Tests/ThermoAppTests/NativeUpdatesModelTests.swift": "8f5bdf99580a1be26bfdfebaa7fe8ea58ee34c47a68ae1ec6e3ee6cf08af1f4d"
+  },
+  "finalUIAndCLIRetest": {
+    "ThermoApp": 145,
+    "ThermoCLI": 57,
+    "total": 202,
+    "failures": 0,
+    "log": "/tmp/thermo-native-recovery-final-ui-cli-tests.log",
+    "reason": "Visible recovery list minimum height and localized history details"
+  },
+  "newTests": {
+    "NativeWorkspaceRecoveryTests": 7,
+    "NativeUpdateTransactionTests": 4,
+    "NativeUpdatesModelTests": 3
+  },
+  "FIFORegressionBefore": {
+    "scenario": "owned FIFO in native recovery records",
+    "timeoutSeconds": 1.5,
+    "timedOut": true,
+    "ownedCLIReaped": true,
+    "elapsedSeconds": 1.507
+  },
+  "nativeCLI": [
+    {
+      "command": "apps updates recovery --json",
+      "exit": 0,
+      "verified": true
+    },
+    {
+      "command": "apps updates recovery inspect 3E8DB62E-9F04-424C-AEE5-61BFE1028F0C --json",
+      "exit": 0,
+      "verified": true
+    },
+    {
+      "scenario": "FIFO recovery record",
+      "exit": 0,
+      "elapsedSeconds": 0.01,
+      "issues": 1,
+      "timedOut": false
+    }
+  ],
+  "visibleQA": {
+    "qaAppProcessAbsent": true,
+    "sameHomeRelaunches": 2,
+    "workspaceID": "3E8DB62E-9F04-424C-AEE5-61BFE1028F0C",
+    "payloadSHA256": "b5f1f52ca6264e0277ce88a4f342130b5247d94e2368451b0ec8b381f21349c6",
+    "payloadUnchangedAfterInspection": true,
+    "ownedImagesAbsent": true,
+    "finderOpenedOwnedWorkspace": true,
+    "finderOwnedWindowClosed": true,
+    "historyRouteOpenedRecovery": true,
+    "historyDetailsLocalized": true,
+    "ownedWorkspaceRemoved": true
+  },
+  "proofFiles": {
+    "recoveryBeforeLayout": "native-workspace-recovery-before-layout-2026-10-16.jpg",
+    "recoveryAfterLayout": "native-workspace-recovery-2026-10-16.jpg",
+    "recoveryAX": "native-workspace-recovery-2026-10-16.ax.txt",
+    "finderAXExcerpt": "native-workspace-finder-2026-10-16.ax.txt",
+    "history": "native-workspace-history-2026-10-16.jpg",
+    "historyAX": "native-workspace-history-2026-10-16.ax.txt"
+  },
+  "safety": {
+    "qaRecord": "Synthetic preparation failure; plain payload.txt marker; no image mounted for GUI fixture",
+    "realHdiCleanupFailureInjected": false,
+    "realUserAppsReplaced": false,
+    "rootQueryPerformed": false,
+    "helperInstalled": false,
+    "fanWrites": false,
+    "release": false
+  },
+  "compatibility": "NativeInstallResult and NativeRecoveryReport add optional fields; legacy JSON decode tested. Raw stored diagnostic keys remain language independent.",
+  "limits": [
+    "Actual OS cleanup failure leading to persistent record remains fault-injected; historic source-image residual cause remains open",
+    "Record persistence and journal writes are best effort under I/O failure; failed record saves return direct path and explicit warning",
+    "Previously unrecorded or abandoned workspaces are accessible through validated recovery folder, not automatically classified or deleted",
+    "Directory identity is checked for inspection, not a seal of all nested contents",
+    "No cleanup/unmount/delete action is added for unresolved workspaces; post-commit discard failures remain a separate audit item"
+  ],
+  "priorFullRegression": {
+    "CleanKit": 521,
+    "ThermoApp": 145,
+    "ThermoCLI": 57,
+    "ThermoKitExcludingHardwareTests": 114,
+    "AgentCore": 34,
+    "total": 871,
+    "failures": 0,
+    "log": "/tmp/thermo-workspace-recovery-final-full-tests.log"
+  },
+  "workspaceReplacementFailure": {
+    "test": "testReplacedWorkspaceIsPreservedEvenWhenPreparationThrowsAnOrdinaryError",
+    "replacementDataKept": true,
+    "renamedOriginalKept": true,
+    "inspectionRejectsMismatchedIdentity": true,
+    "appNotReplaced": true,
+    "testMechanism": "Signed synthetic UDIF and injected ordinary copy failure after owned-directory rename/replacement; no mount used"
+  },
+  "fullRegression": {
+    "CleanKit": 522,
+    "ThermoApp": 145,
+    "ThermoCLI": 57,
+    "ThermoKitExcludingHardwareTests": 114,
+    "AgentCore": 34,
+    "total": 872,
+    "failures": 0,
+    "log": "/tmp/thermo-workspace-recovery-identity-final-tests.log"
+  },
+  "build": "passed as part of final full regression"
+}

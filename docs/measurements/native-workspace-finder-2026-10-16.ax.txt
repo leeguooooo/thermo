@@ -1,0 +1,7 @@
+Window: "3E8DB62E-9F04-424C-AEE5-61BFE1028F0C", App: 访达.
+0 标准窗口 3E8DB62E-9F04-424C-AEE5-61BFE1028F0C, ID: FinderWindow, Secondary Actions: Raise
+							294 文本栏 (settable) Value: 3E8DB62E-9F04-424C-AEE5-61BFE1028F0C, Secondary Actions: 打开“访达”项目, URL: file:///private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-workspace-ui-a78zwn64/home/Library/Application%20Support/Thermo/app-updates/3E8DB62E-9F04-424C-AEE5-61BFE1028F0C/
+							297 文本栏 (settable) Value: workspace-3E8DB62E-9F04-424C-AEE5-61BFE1028F0C.json, Secondary Actions: 打开“访达”项目, URL: file:///private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-workspace-ui-a78zwn64/home/Library/Application%20Support/Thermo/app-updates/workspace-3E8DB62E-9F04-424C-AEE5-61BFE1028F0C.json
+							303 文本栏 (settable) Value: payload.txt, Secondary Actions: 打开“访达”项目, URL: file:///private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-workspace-ui-a78zwn64/home/Library/Application%20Support/Thermo/app-updates/3E8DB62E-9F04-424C-AEE5-61BFE1028F0C/payload.txt
+	324 关闭按钮
+	327 文本 3E8DB62E-9F04-424C-AEE5-61BFE1028F0C

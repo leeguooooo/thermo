@@ -15,12 +15,17 @@ final class NativeUpdatesModel: ObservableObject {
     @Published private(set) var installing = false
     @Published private(set) var installResult: NativeInstallResult?
     @Published private(set) var recoveryRecords: [NativeUpdateReceipt] = []
+    @Published private(set) var preservedWorkspaces: [NativePreservedWorkspace] = []
     @Published private(set) var recoveryIssues: [String] = []
+    @Published private(set) var recoveryLoading = false
+    private var recoveryLoaded = false
     @Published var showRecovery = false
     @Published var exitRequested = false
     static let maximumChecks = 4
     private var generation = UUID()
     private var loadInFlight = false, pendingLoad = false
+    private var recoveryInFlight = false, pendingRecovery = false
+    private var recoveryGeneration = UUID()
     private var loadToken: ScanCancellation?
     private var tasks: [String: Task<Void, Never>] = [:]
     private var pending: [NativeUpdateSource] = []
@@ -103,6 +108,8 @@ final class NativeUpdatesModel: ObservableObject {
         loadToken?.cancel(); loadToken = nil; loading = false
         // Keep slots reserved until cancelled workers actually return.
         for task in tasks.values { task.cancel() }
+        recoveryGeneration = UUID(); pendingRecovery = false
+        recoveryLoading = false; recoveryLoaded = false
     }
 
     func stop(_ source: NativeUpdateSource) { tasks[source.id]?.cancel() }
@@ -133,36 +140,70 @@ final class NativeUpdatesModel: ObservableObject {
             message = tr("Wait for the current update or checks to finish"); return
         }
         installing = true; exitRequested = false
-        let installer = self.installer, recovery = self.recoveryReader
+        recoveryGeneration = UUID(); pendingRecovery = false
+        recoveryLoaded = false
+        let installer = self.installer
         Task.detached(priority: .utility) {
             let result = await installer(reviewed)
-            let report = recovery()
             await MainActor.run {
-                self.installResult = result; self.message = tr(result.message); self.recoveryRecords = report.records; self.recoveryIssues = report.issues
+                self.installResult = result; self.message = tr(result.message)
                 self.installing = false
+                self.refreshRecovery()
                 self.load(preservingMessage: true)
             }
         }
     }
 
     func refreshRecovery() {
+        guard !installing else { pendingRecovery = true; recoveryLoading = true; return }
+        if recoveryInFlight { pendingRecovery = true; recoveryLoading = true; return }
+        recoveryInFlight = true; pendingRecovery = false
+        recoveryLoading = true
+        let token = recoveryGeneration
         let recovery = self.recoveryReader
         Task.detached(priority: .utility) {
             let report = recovery()
-            await MainActor.run { self.recoveryRecords = report.records; self.recoveryIssues = report.issues }
+            await MainActor.run {
+                self.recoveryInFlight = false
+                if self.pendingRecovery { self.pendingRecovery = false; self.refreshRecovery(); return }
+                guard self.recoveryGeneration == token else { self.recoveryLoading = false; return }
+                self.recoveryLoading = false; self.recoveryLoaded = true
+                self.recoveryRecords = report.records; self.preservedWorkspaces = report.workspaces ?? []; self.recoveryIssues = report.issues
+            }
         }
+    }
+
+    var allPreservedWorkspaces: [NativePreservedWorkspace] {
+        var records = preservedWorkspaces
+        if let record = installResult?.preservedWorkspace, !records.contains(where: { $0.id == record.id }) { records.append(record) }
+        return records
+    }
+
+    var recoveryIsConfirmedEmpty: Bool {
+        recoveryLoaded && !recoveryLoading && recoveryRecords.isEmpty && allPreservedWorkspaces.isEmpty && recoveryIssues.isEmpty
+    }
+
+    func inspect(_ record: NativePreservedWorkspace) {
+        do { NSWorkspace.shared.open(try NativeUpdateTransaction.preservedWorkspaceURL(record)) }
+        catch { message = tr(error.localizedDescription) }
+    }
+
+    func openRecoveryFolder() {
+        do { NSWorkspace.shared.open(try NativeUpdateTransaction.recoveryFolderURL()) }
+        catch { message = tr(error.localizedDescription) }
     }
 
     func restore(_ record: NativeUpdateReceipt) {
         guard !installing, !AppModels.shared.softwareUpdates.working else { message = tr("Wait for the current update or checks to finish"); return }
         stopAll(); installing = true; exitRequested = false
-        let restore = self.restorer, recovery = self.recoveryReader
+        recoveryGeneration = UUID(); pendingRecovery = false
+        recoveryLoaded = false
+        let restore = self.restorer
         Task.detached(priority: .utility) {
             let result = restore(record.id)
-            let report = recovery()
             await MainActor.run {
-                self.installResult = result; self.message = tr(result.message); self.recoveryRecords = report.records; self.recoveryIssues = report.issues
-                self.installing = false; self.load(preservingMessage: true)
+                self.installResult = result; self.message = tr(result.message)
+                self.installing = false; self.refreshRecovery(); self.load(preservingMessage: true)
             }
         }
     }
@@ -183,6 +224,13 @@ struct NativeUpdatesPanel: View {
                 .font(.callout).foregroundStyle(.secondary)
             TextField(tr("Search"), text: $search).textFieldStyle(.roundedBorder).accessibilityLabel(tr("Search"))
             if let message = model.message { Text(message).font(.callout).foregroundStyle(.secondary) }
+            if let workspace = model.installResult?.preservedWorkspace {
+                Text(workspace.path).font(.caption).textSelection(.enabled)
+                if model.installResult?.workspaceRecordSaved == false {
+                    Text(tr("The workspace recovery record could not be saved; keep this path")).font(.caption).foregroundStyle(.orange)
+                }
+                Button(tr("Inspect preserved update files")) { model.inspect(workspace) }.disabled(model.installing)
+            }
             if model.exitRequested && model.installing {
                 Text(tr("Wait for installation and verification to finish before quitting Thermo.")).font(.callout).foregroundStyle(.orange)
             }
@@ -288,7 +336,7 @@ struct NativeUpdateRecoveryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(tr("Native update recovery")).font(.headline)
-            Text(tr("Recovery only replaces the unchanged app installed by this recorded operation. Both copies are kept.")).font(.callout).foregroundStyle(.secondary)
+            Text(tr("Version records can restore unchanged apps. Preserved preparation files are available for inspection.")).font(.callout).foregroundStyle(.secondary)
             if let message = model.message { Text(message).font(.callout).textSelection(.enabled) }
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
@@ -300,10 +348,23 @@ struct NativeUpdateRecoveryView: View {
                             Button(tr("Restore previous app…")) { restoring = record }.disabled(model.installing || record.phase == "restored" || record.phase == "rolledBack")
                         }
                     }
-                    if model.recoveryRecords.isEmpty && model.recoveryIssues.isEmpty { Text(tr("No native update recovery records")).foregroundStyle(.secondary) }
+                    ForEach(model.allPreservedWorkspaces) { workspace in
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(tr("Preserved update files")).font(.headline)
+                            Text(workspace.target).font(.caption).textSelection(.enabled)
+                            Text(tr(workspace.reason)).font(.callout).foregroundStyle(.orange)
+                            Text(workspace.path).font(.caption).textSelection(.enabled)
+                            Button(tr("Inspect preserved update files")) { model.inspect(workspace) }.disabled(model.installing)
+                        }
+                    }
+                    if model.recoveryIsConfirmedEmpty { Text(tr("No native update recovery records")).foregroundStyle(.secondary) }
                 }
-            }.frame(maxHeight: 300)
-            HStack { if model.installing { ProgressView().controlSize(.small) }; Spacer(); Button(tr("Close")) { dismiss() } }
+            }.frame(minHeight: 180, maxHeight: 300)
+            HStack {
+                Button(tr("Open recovery folder")) { model.openRecoveryFolder() }.disabled(model.installing)
+                if model.installing || model.recoveryLoading { ProgressView().controlSize(.small) }
+                Spacer(); Button(tr("Close")) { dismiss() }
+            }
         }.padding(20).frame(width: 520).onAppear { model.refreshRecovery() }
             .sheet(item: $restoring) { record in
                 ConfirmSheet(title: tr("Restore the previous app?"), summary: record.installedVersion + " → " + record.previousVersion,

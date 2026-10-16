@@ -1,0 +1,45 @@
+Window: "Thermo", App: ThermoRecoveryQA.
+0 standard window Thermo, Secondary Actions: Raise
+	1 container
+		2 image thermometer.medium
+		3 text Thermo
+		4 scroll area
+			5 button 概览
+			6 button 传感器
+			7 button 风扇
+			8 text 资源监控
+			9 button CPU 占用
+			10 button GPU 占用
+			11 button 内存占用
+			12 button 标签整理
+			13 text 磁盘清理
+			14 button 智能扫描
+			15 button 空间透视
+			16 button 软件管理
+			17 text AI Agent 诊断
+			18 button Claude 清理
+			19 button 智能检查
+		20 button Description: 操作记录, Value: 已选中
+		21 button 设置
+		22 scroll area
+			23 text 操作记录 Thermo 做过的每一项改动，以及在哪里撤销。 ~/Library/Application Support/Thermo/operations.jsonl
+			24 button Description: 刷新, ID: arrow.clockwise
+			25 heading 今天
+			26 text 原生更新准备 部分完成 10:55 · QA Sample · 2 项
+			27 button 打开
+			28 button Description: 隐藏详情, Help: 原生更新准备, ID: chevron.right
+			29 text 在软件管理 → 更新 → 其他应用 → 恢复中查看保留的文件。
+			30 image Description: failed, ID: xmark
+			31 text /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-workspace-ui-a78zwn64/home/Applications/QA Sample.app 应用未被替换，保留的更新文件需要检查
+			32 image Description: partial, ID: circle.lefthalf.filled
+			33 text /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-workspace-ui-a78zwn64/home/Library/Application Support/Thermo/app-updates/3E8DB62E-9F04-424C-AEE5-61BFE1028F0C 无法确认更新镜像的挂载或卸载结果，工作目录已保留，请手动检查
+	34 close button
+	35 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	36 minimize button
+37 menu bar
+	38 ThermoRecoveryQA
+	39 编辑, ID: thermo.edit
+	40 显示, ID: thermo.view
+	41 窗口, ID: thermo.window
+
+The focused UI element is 0 standard window Thermo, Secondary Actions: Raise

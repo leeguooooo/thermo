@@ -240,6 +240,82 @@ final class NativeUpdateTransactionTests: XCTestCase {
         XCTAssertEqual(result.outcome, "succeeded", result.message)
         XCTAssertEqual(build(original), "200")
         XCTAssertEqual(result.receipt?.phase, "installed")
+        XCTAssertFalse(OperationJournal.read(home: home).contains { $0.action == "nativeUpdatePreparation" })
+    }
+
+    func testAuthenticatedPreparationCleanupFailurePersistsItsWorkspaceBeforeThrowing() throws {
+        var image = Data(repeating: 0, count: 1024)
+        image.replaceSubrange(512..<516, with: [0x6b, 0x6f, 0x6c, 0x79])
+        try image.write(to: URL(fileURLWithPath: archive))
+        var captured: NativeUpdateTransaction.PreservedWorkspaceFailure?
+        do {
+            _ = try NativeUpdateTransaction.prepare(reviewed(), archive: URL(fileURLWithPath: archive), home: home,
+                copyImage: { _, _, _ in throw NativeDiskImage.CleanupFailure() })
+            XCTFail("Expected preserved preparation failure")
+        } catch let failure as NativeUpdateTransaction.PreservedWorkspaceFailure { captured = failure }
+        let failure = try XCTUnwrap(captured)
+        XCTAssertTrue(failure.recorded)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: failure.workspace.path + "/payload.archive"))
+        XCTAssertNoThrow(try NativeUpdateTransaction.preservedWorkspaceURL(failure.workspace, home: home))
+        XCTAssertEqual(build(original), "100")
+        XCTAssertEqual(NativeUpdateTransaction.recovery(home: home).workspaces?.count, 1)
+    }
+
+    func testReplacedWorkspaceIsPreservedEvenWhenPreparationThrowsAnOrdinaryError() throws {
+        var image = Data(repeating: 0, count: 1024)
+        image.replaceSubrange(512..<516, with: [0x6b, 0x6f, 0x6c, 0x79])
+        try image.write(to: URL(fileURLWithPath: archive))
+        var path: String?
+        do {
+            _ = try NativeUpdateTransaction.prepare(reviewed(), archive: URL(fileURLWithPath: archive), home: home, copyImage: { _, workspace, _ in
+                path = workspace
+                try FileManager.default.moveItem(atPath: workspace, toPath: workspace + "-kept")
+                try NativeUpdateTransaction.privateDirectory(workspace)
+                try Data("replacement must stay".utf8).write(to: URL(fileURLWithPath: workspace + "/replacement.txt"))
+                throw ArchiveFailure("ordinary injected preparation error")
+            })
+            XCTFail("Expected preserved workspace failure")
+        } catch let error as NativeUpdateTransaction.PreservedWorkspaceFailure {
+            XCTAssertTrue(error.recorded)
+            XCTAssertThrowsError(try NativeUpdateTransaction.preservedWorkspaceURL(error.workspace, home: home))
+        }
+        let workspace = try XCTUnwrap(path)
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: workspace + "/replacement.txt")), Data("replacement must stay".utf8))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: workspace + "-kept/payload.archive"))
+        XCTAssertEqual(build(original), "100")
+        XCTAssertEqual(NativeUpdateTransaction.recovery(home: home).workspaces?.count, 1)
+    }
+
+    func testPreparationFailureReturnsPreservedPathAndRecordsInspectionHistory() async throws {
+        let source = try XCTUnwrap(NativeAppUpdates.sources(apps: [try XCTUnwrap(AppUninstaller.read(original))]).first)
+        let feed = try feedData()
+        let check = await NativeAppUpdates.check(source, fetcher: { _ in feed })
+        let root = try NativeUpdateTransaction.storage(home), fixtureHome = home
+        let result = await NativeUpdateTransaction.installAvailable(check, home: home, feedFetcher: { _ in feed }, downloader: { _, _, _ in
+            let workspace = root + "/" + UUID().uuidString
+            try NativeUpdateTransaction.privateDirectory(workspace)
+            throw NativeUpdateTransaction.preserveWorkspace(workspace, identity: try XCTUnwrap(FileIdentity.of(workspace)),
+                target: source.app.path, reason: "cleanup unconfirmed fixture", home: fixtureHome)
+        })
+        XCTAssertEqual(result.outcome, "failed"); XCTAssertEqual(result.workspaceRecordSaved, true)
+        let workspace = try XCTUnwrap(result.preservedWorkspace)
+        XCTAssertNoThrow(try NativeUpdateTransaction.preservedWorkspaceURL(workspace, home: home))
+        XCTAssertEqual(build(original), "100")
+        let records = OperationJournal.read(home: home).filter { $0.action == "nativeUpdatePreparation" }
+        XCTAssertEqual(records.count, 1); XCTAssertEqual(records.first?.outcome, "partial")
+        XCTAssertEqual(records.first?.undo?.kind, "nativePreparation"); XCTAssertEqual(records.first?.undo?.ref, workspace.id)
+    }
+
+    func testCancelledFeedRecheckRecordsAStoppedPreparationWithoutDownloading() async throws {
+        let source = try XCTUnwrap(NativeAppUpdates.sources(apps: [try XCTUnwrap(AppUninstaller.read(original))]).first)
+        let feed = try feedData()
+        let check = await NativeAppUpdates.check(source, fetcher: { _ in feed })
+        let result = await NativeUpdateTransaction.installAvailable(check, home: home, feedFetcher: { _ in throw CancellationError() },
+            downloader: { _, _, _ in XCTFail("Cancelled recheck must not download") })
+        XCTAssertEqual(result.message, "Update preparation stopped; the installed app was not replaced")
+        XCTAssertNil(result.preservedWorkspace); XCTAssertEqual(build(original), "100")
+        let history = OperationJournal.read(home: home).filter { $0.action == "nativeUpdatePreparation" }
+        XCTAssertEqual(history.count, 1); XCTAssertEqual(history.first?.outcome, "failed")
     }
 
     func testDMGDownloadPipelineAcceptsDeclaredFormatAndCleansItsMount() async throws {

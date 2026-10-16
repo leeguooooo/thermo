@@ -3,6 +3,70 @@
 import XCTest
 
 final class NativeUpdatesModelTests: XCTestCase {
+    private final class Reads: @unchecked Sendable {
+        let lock = NSLock(); private var value = 0
+        func next() -> Int { lock.lock(); defer { lock.unlock() }; value += 1; return value }
+        var count: Int { lock.lock(); defer { lock.unlock() }; return value }
+    }
+
+    @MainActor func testRecoveryCannotClaimEmptyUntilItsReadCompletes() async throws {
+        let began = expectation(description: "recovery reading")
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let model = NativeUpdatesModel(read: { _ in [] }, recoveryReader: {
+            began.fulfill(); _ = release.wait(timeout: .now() + 5); return .init()
+        })
+        XCTAssertFalse(model.recoveryIsConfirmedEmpty)
+        model.refreshRecovery(); await fulfillment(of: [began], timeout: 2)
+        XCTAssertTrue(model.recoveryLoading); XCTAssertFalse(model.recoveryIsConfirmedEmpty)
+        release.signal()
+        for _ in 0..<100 where model.recoveryLoading { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertTrue(model.recoveryIsConfirmedEmpty)
+        model.retire(); XCTAssertFalse(model.recoveryIsConfirmedEmpty)
+    }
+
+    @MainActor func testRecoveryRefreshCoalescesAndRetirementDiscardsOldReport() async throws {
+        let calls = Reads(), first = expectation(description: "old recovery"), second = expectation(description: "fresh recovery")
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let model = NativeUpdatesModel(read: { _ in [] }, recoveryReader: {
+            let n = calls.next()
+            if n == 1 { first.fulfill(); _ = release.wait(timeout: .now() + 5) } else { second.fulfill() }
+            return NativeRecoveryReport(issues: ["recovery \(n)"])
+        })
+        var published: [String] = []
+        let observation = model.$recoveryIssues.sink { published += $0 }
+        model.refreshRecovery(); await fulfillment(of: [first], timeout: 2)
+        model.retire()
+        for _ in 0..<100 { model.refreshRecovery() }
+        XCTAssertEqual(calls.count, 1)
+        release.signal(); await fulfillment(of: [second], timeout: 2)
+        for _ in 0..<100 where model.recoveryIssues != ["recovery 2"] { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(calls.count, 2); XCTAssertEqual(model.recoveryIssues, ["recovery 2"])
+        XCTAssertFalse(published.contains("recovery 1")); observation.cancel()
+    }
+
+    @MainActor func testOldRecoveryReadCannotOverwriteTheConfirmedInstallFailure() async throws {
+        let calls = Reads(), began = expectation(description: "old recovery")
+        let release = DispatchSemaphore(value: 0)
+        defer { release.signal() }
+        let workspace = NativePreservedWorkspace(id: UUID().uuidString, target: "/fixture.app", path: "/fixture/workspace", directoryIdentity: "1:2", reason: "fixture", created: Date())
+        let model = NativeUpdatesModel(read: { _ in [] }, installer: { _ in
+            NativeInstallResult(outcome: "failed", message: "fixture inspection needed", preservedWorkspace: workspace, workspaceRecordSaved: true)
+        }, recoveryReader: {
+            if calls.next() == 1 { began.fulfill(); _ = release.wait(timeout: .now() + 5); return .init(issues: ["old"]) }
+            return .init(workspaces: [workspace], issues: ["fresh"])
+        })
+        model.refreshRecovery(); await fulfillment(of: [began], timeout: 2)
+        let source = NativeUpdateSource(app: InstalledApp(path: "/fixture.app", name: "Fixture", bundleID: "com.example.fixture"), kind: "sparkle")
+        model.install(NativeUpdateCheck(source: source, status: "available", message: "fixture"))
+        for _ in 0..<100 where model.installResult == nil { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(model.allPreservedWorkspaces.map(\.id), [workspace.id])
+        release.signal()
+        for _ in 0..<100 where model.recoveryIssues != ["fresh"] { try await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertEqual(model.recoveryIssues, ["fresh"]); XCTAssertEqual(calls.count, 2)
+        XCTAssertEqual(model.preservedWorkspaces.map(\.id), [workspace.id])
+    }
     private actor Gate {
         var continuation: CheckedContinuation<Void, Never>?
         var released = false
