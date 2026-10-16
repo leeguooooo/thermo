@@ -82,6 +82,20 @@ struct ProcessInspectionTarget: Identifiable {
                                 if !node.args.isEmpty { Text(node.args.map { String(reflecting: $0) }.joined(separator: " ")).font(.caption.monospaced()) }
                             }.textSelection(.enabled)
                         }
+                        Text(tr("Observed descendant processes")).font(.headline)
+                        if let descendants=report.descendants {
+                            ForEach(descendants.children) { child in
+                                VStack(alignment:.leading,spacing:3) {
+                                    Text("\(child.name) · PID \(String(child.pid)) → \(String(child.parentPID)) · UID \(String(child.uid))").font(.caption.weight(.medium))
+                                    Text(child.executable).font(.caption.monospaced())
+                                }.padding(.leading,CGFloat(child.depth-1)*12).textSelection(.enabled)
+                            }
+                            if descendants.state == .noneObserved { Text(tr("No descendants were observed in this process reading.")).font(.caption) }
+                            if descendants.state == .unavailable { Text(tr("Descendant relationships are unavailable.")).font(.caption).foregroundStyle(.orange) }
+                            if !descendants.queryComplete { Text(tr("The descendant reading is incomplete; some relationships could not be verified.")).font(.caption).foregroundStyle(.orange) }
+                            if descendants.limited { Text(tr("The descendant reading reached an inspection limit.")).font(.caption).foregroundStyle(.orange) }
+                        } else { Text(tr("Descendant relationships are unavailable.")).font(.caption).foregroundStyle(.secondary) }
+                        Text(tr("Processes can start, exit or change parents after this reading. This tree does not prove the original launcher.")).font(.caption).foregroundStyle(.secondary)
                         Text(tr("Git context near the process working directory")).font(.headline)
                         if let git=report.gitContext,git.state == .observed {
                             if let root=git.root { Text(tr("Repository: %1$@",root)).font(.caption.monospaced()).textSelection(.enabled) }

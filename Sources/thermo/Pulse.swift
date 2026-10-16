@@ -57,6 +57,15 @@ struct PulseCommand {
                 if !node.args.isEmpty { lines.append(node.args.map { String(reflecting: $0) }.joined(separator: " ")) }
             }
             lines += report.issues.map { tr($0) }
+            lines.append(tr("Observed descendant processes"))
+            if let descendants=report.descendants {
+                lines += descendants.children.map { String(repeating:"  ",count:max(0,$0.depth-1)) + "\($0.name) · PID \($0.pid) → \($0.parentPID) · UID \($0.uid) · " + $0.executable }
+                if descendants.state == .noneObserved { lines.append(tr("No descendants were observed in this process reading.")) }
+                if descendants.state == .unavailable { lines.append(tr("Descendant relationships are unavailable.")) }
+                if !descendants.queryComplete { lines.append(tr("The descendant reading is incomplete; some relationships could not be verified.")) }
+                if descendants.limited { lines.append(tr("The descendant reading reached an inspection limit.")) }
+            } else { lines.append(tr("Descendant relationships are unavailable.")) }
+            lines.append(tr("Processes can start, exit or change parents after this reading. This tree does not prove the original launcher."))
             lines.append(tr("Git context near the process working directory"))
             if let git=report.gitContext,git.state == .observed {
                 if let root=git.root { lines.append(tr("Repository: %1$@",root)) }

@@ -1,0 +1,149 @@
+{
+  "date": "2026-10-17",
+  "sourceCommit": "57eb228541ad40ab104e7d9c9ce239527a1e86a6",
+  "parentCommit": "c9cee153540716a57fff3363c6c4fba1136680a6",
+  "checkout": "isolated worktree; concurrent tokenization work excluded",
+  "sourceSHA256": {
+    "README.md": "ed3562b9a611a55d328b52f777263f82d29ccaa86599492d6fa091ec9dcc7dc4",
+    "Sources/AgentCore/Processes.swift": "551883b7402b6248e4a28c8439d0714ba3e25624b49b2c90a7cb665125ee9e55",
+    "Sources/AgentDoctor/ProcessDescendants.swift": "1818f95b404c682205f6244696c2a3c2af09a1341262f34129e7d978e6042ab8",
+    "Sources/AgentDoctor/ProcessExplanation.swift": "7c0d17eaf1e57e5345c43952ae9e2669ee28f2ed45ce00c29285cd4085b16e59",
+    "Sources/ThermoApp/ProcessExplanationView.swift": "f90ee39f2f9194c619183c6abbc7978e2e89f8892bcdd5c529632e79d5d73272",
+    "Sources/ThermoL10n/ZhHans.swift": "e72ce3f065a5646528f186019947f6587ce550309f3df172e1dacf075341aeb8",
+    "Sources/thermo/Pulse.swift": "5d8976ee061d1190f6282fbb72cab8ac676d171c29cd09fabf73cf4cfb015892",
+    "Tests/AgentDoctorTests/ProcessDescendantsTests.swift": "14a7ad4a63396c0dbcc2e9de376bc22d3317d575a05b9f341f7ff4940916ad17",
+    "docs/mole-parity.md": "53c097919c43a6152d71fbb19f6118c94ad75fa759d85b257165217d70df31d3",
+    "scripts/verify-process-descendants-ui.swift": "beb2195f67f7e47c9e5ead84919ed37bde7c7bede0ff70905803936c045651d8"
+  },
+  "finalRegression": {
+    "counts": {
+      "AgentDoctorTests": 60,
+      "AgentCoreTests": 37,
+      "ThermoCLITests": 66,
+      "ThermoAppTests": 236
+    },
+    "total": 399,
+    "failures": 0,
+    "newDescendantTests": 12,
+    "AgentDoctorSelection": [
+      "ProcessDescendantsTests",
+      "ProcessExplanationTests",
+      "ProcessGitContextTests",
+      "ProcessListenersTests",
+      "ProcessSleepAssertionsTests",
+      "ProcessLaunchServicesTests"
+    ],
+    "commands": [
+      "swift build --target AgentDoctorTests",
+      "swift build --target AgentCoreTests",
+      "swift build --target ThermoCLITests",
+      "swift build --target ThermoAppTests",
+      "xcrun xctest -XCTest <six listed AgentDoctor classes> AgentDoctorTests.xctest",
+      "xcrun xctest AgentCoreTests.xctest",
+      "xcrun xctest ThermoCLITests.xctest",
+      "xcrun xctest ThermoAppTests.xctest"
+    ],
+    "buildLogSHA256": "a916aa8e42b47d858326b55c638bb8323e5e2e6a3326a9975dda87555064fd14",
+    "testLogSHA256": {
+      "thermo-descendants-final-tests.log": "8c7c48f0744d07483cbead25d501c293f7b4b60f0d8a3e640a135063a20c6b87",
+      "thermo-descendants-app-cli-tests.log": "1ee318308370da9f98c5a8c9badd991354412877fb636cef172bf60c27cfe78b"
+    }
+  },
+  "native": {
+    "ownedFixture": true,
+    "permissionChanged": false,
+    "expectedPIDs": {
+      "branch": 62697,
+      "root": 62692,
+      "grandchild": 62704,
+      "sibling": 62698
+    },
+    "before": {
+      "children": [
+        {
+          "depth": 1,
+          "executable": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python",
+          "name": "Python",
+          "parentPID": 62692,
+          "pid": 62697,
+          "started": "2026-10-16T19:54:48Z",
+          "uid": 501
+        },
+        {
+          "depth": 2,
+          "executable": "/bin/sleep",
+          "name": "sleep",
+          "parentPID": 62697,
+          "pid": 62704,
+          "started": "2026-10-16T19:54:48Z",
+          "uid": 501
+        },
+        {
+          "depth": 1,
+          "executable": "/bin/sleep",
+          "name": "sleep",
+          "parentPID": 62692,
+          "pid": 62698,
+          "started": "2026-10-16T19:54:48Z",
+          "uid": 501
+        }
+      ],
+      "inventoryComplete": false,
+      "limited": false,
+      "queryComplete": false,
+      "state": "observed"
+    },
+    "after": {
+      "children": [
+        {
+          "depth": 1,
+          "executable": "/bin/sleep",
+          "name": "sleep",
+          "parentPID": 62692,
+          "pid": 62698,
+          "started": "2026-10-16T19:54:48Z",
+          "uid": 501
+        }
+      ],
+      "inventoryComplete": false,
+      "limited": false,
+      "queryComplete": false,
+      "state": "observed"
+    },
+    "fullCLIReportHashes": {
+      "before": "7d5a1d53ddae72aaa7a6778b17798967eb61033b2b2871f5a33d2ee0b2ee3827",
+      "after": "b3861c9348efd50577a5975abc82fa21af3bf8205f149da77bdac7ef5f022d7e",
+      "afterText": "2751a1eed74ff27aa78887c24bdf383b39dbcc4467a38655b198880431d794ec"
+    },
+    "nativeTrace": [
+      "QA_PIDS root=62692 branch=62697 sibling=62698",
+      "QA_BRANCH_EXITED",
+      "QA_CHILDREN_EXITED"
+    ],
+    "UIEvidence": [
+      "Chinese window showed two direct children and one grandchild",
+      "Grandchild immediately followed its correct parent with deeper indentation; long executable path wrapped",
+      "Partial inventory warning was present rather than claiming all relationships were known",
+      "QA-only stop button ended owned Python branch and its sleep child",
+      "Refresh removed both exited nodes while preserving the same sibling PID and start time"
+    ],
+    "fixtureExitCode": 0,
+    "allFourOwnedPIDsGone": true,
+    "screenshots": "Inspected through CUA; screenshot retained in tool result, not independently saved",
+    "appSHA256": "4962986acbc035e12c269a6258bbb51a4f842c972d7e60645b3aaffccf6973ab",
+    "cliSHA256": "1ad2c4f5888927c6759bd2be0e2ac5500bfbd0cea4c433fab0731bc1d8cf6799"
+  },
+  "limits": {
+    "maximumNodes": 128,
+    "maximumDepth": 16,
+    "maximumCandidates": 512,
+    "softTimeBudgetSeconds": 0.5
+  },
+  "remaining": [
+    "No installed-app replacement or release",
+    "Large live process trees, real cross-user permission boundaries, and high concurrent process churn still need device acceptance",
+    "Process discovery and per-edge verification are not an atomic snapshot; new children can appear after the original inventory",
+    "Kernel calls and inventory construction do not provide a hard cancellation deadline",
+    "Current relationships do not prove the original launcher; no descendant signals or other actions are exposed"
+  ]
+}

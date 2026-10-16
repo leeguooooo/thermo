@@ -30,6 +30,7 @@ public struct ProcessExplanation: Codable, Sendable {
     public var sleepAssertions: ProcessSleepAssertions? = nil
     public var launchServices: ProcessLaunchServices? = nil
     public var gitContext: ProcessGitContext? = nil
+    public var descendants: ProcessDescendants? = nil
 
     public static func capture(_ pid: Int32, expected: ProcessIdentity? = nil) throws -> ProcessExplanation {
         guard pid > 0, expected.map({ $0.pid == pid }) ?? true else { throw Unavailable() }
@@ -80,6 +81,7 @@ public struct ProcessExplanation: Codable, Sendable {
         let services = target.uid == uid ? launchServices(pid) : nil
         var git = target.uid == uid ? gitContext(target.cwd) : nil
         if target.uid == uid,let workingDirectory,workingDirectory(pid) != target.cwd { git = .unavailable }
+        let descendants=ProcessDescendants.capture(initial,table:table,identity:identity,parent:parent)
         // Verify relationships too: a live child can be reparented without changing its identity.
         for process in captured {
             guard let expected = process.sampledIdentity, identity(process.pid) == expected,
@@ -108,6 +110,6 @@ public struct ProcessExplanation: Codable, Sendable {
         return .init(pid: pid, sampled: Date(), chain: nodes, chainComplete: complete, application: application,
                      attribution: attribution, observedPaths: observation.map { Array($0.paths.prefix(100)).map(displayed) },
                      pathQueriesComplete: (observation?.complete ?? false) && !shortenedPaths,
-                     pathsTruncated: (observation?.truncated ?? false) || shortenedPaths, issues: issues, listeners: listening, sleepAssertions: sleep, launchServices: services,gitContext:git)
+                     pathsTruncated: (observation?.truncated ?? false) || shortenedPaths, issues: issues, listeners: listening, sleepAssertions: sleep, launchServices: services,gitContext:git,descendants:descendants)
     }
 }

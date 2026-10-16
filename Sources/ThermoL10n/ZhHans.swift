@@ -1,6 +1,12 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Observed descendant processes": "观察到的子孙进程",
+    "No descendants were observed in this process reading.": "本次进程读数中未观察到子孙进程。",
+    "Descendant relationships are unavailable.": "无法读取子孙进程关系。",
+    "The descendant reading is incomplete; some relationships could not be verified.": "子孙进程读数不完整，部分关系无法核实。",
+    "The descendant reading reached an inspection limit.": "子孙进程读取已达到检查上限。",
+    "Processes can start, exit or change parents after this reading. This tree does not prove the original launcher.": "进程可能在读数之后启动、退出或更换父进程；这棵树不能证明最初由谁启动。",
     "Git context near the process working directory": "进程工作目录附近的 Git 信息",
     "Repository: %1$@": "仓库：%1$@",
     "Branch: %1$@": "分支：%1$@",

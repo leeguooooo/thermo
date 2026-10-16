@@ -41,8 +41,13 @@ public struct AgentProcess: Equatable, Sendable {
 public struct ProcessTable: Sendable {
     public let entries: [AgentProcess]
     public let available: Bool
+    /// False if rows were dropped because process identities changed during enumeration.
+    public let inventoryComplete: Bool
+    public let includesAllUsers: Bool
 
-    public init(entries: [AgentProcess], available: Bool = true) { self.entries = entries; self.available = available }
+    public init(entries: [AgentProcess], available: Bool = true, inventoryComplete: Bool = true, includesAllUsers: Bool = true) {
+        self.entries=entries;self.available=available;self.inventoryComplete=available && inventoryComplete;self.includesAllUsers=includesAllUsers
+    }
 
     public struct Options: Sendable {
         /// Only processes of this user (nil = everyone; details of others' processes are mostly unavailable).
@@ -67,6 +72,7 @@ public struct ProcessTable: Sendable {
         let count = size / MemoryLayout<kinfo_proc>.stride
         let now = Date().timeIntervalSince1970
         var out: [AgentProcess] = []
+        var inventoryComplete = true
         out.reserveCapacity(count)
         for k in procs.prefix(count) {
             let pid = k.kp_proc.p_pid
@@ -90,13 +96,14 @@ public struct ProcessTable: Sendable {
                                     executable: exe, executableFromArgv: fromArgv, argv: argv, cwd: inspectDetails ? cwd(pid) : nil,
                                     cpu: options.cpu ? cpuUsage(pid) : 0, rssKB: reading.residentKB ?? 0,
                                     footprintKB: reading.footprintKB ?? 0, elapsed: started > 0 ? max(0, now - started) : 0)
-            if let before, before != identity(pid) { continue }
+            if let before, before != identity(pid) { inventoryComplete=false;continue }
             process.sampledIdentity = before
             process.memoryReading = reading
             out.append(process)
         }
         let expectsSelf = options.uid == nil || options.uid == getuid()
-        return ProcessTable(entries: out, available: !expectsSelf || out.contains { $0.pid == getpid() })
+        return ProcessTable(entries: out, available: !expectsSelf || out.contains { $0.pid == getpid() },
+                            inventoryComplete:inventoryComplete,includesAllUsers:options.uid == nil)
     }
 
     // MARK: per-process readers (each returns nil/0 when the kernel says no)
