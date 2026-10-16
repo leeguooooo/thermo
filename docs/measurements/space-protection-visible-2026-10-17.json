@@ -1,0 +1,140 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "7a6cbc7",
+  "productionCodeEquivalentToCandidateSource": "60f5ad3",
+  "harness": "scripts/verify-space-protection-ui.swift",
+  "harnessSHA256": "200e8e21d3de8b89735996ac358d9495d667dac8553383a25594ab8bf269f482",
+  "productionSourceHashes": {
+    "Sources/ThermoApp/SpacePage.swift": "3e92242d85dcf3352b74af95750e7bd79bc9b45ecc42098384dca96bb8871412",
+    "Sources/CleanKit/Duplicates.swift": "22a1efa239452ad7d35373b8cbb9c2ac7107b5fa7b265ec3f82494d2942c137d",
+    "Sources/CleanKit/TrashBatch.swift": "fc040b845a25afc7da407b6ad606865e6776f47612e2b0f831d729b04b15c49d",
+    "Sources/CleanKit/ManualRemovalFeedback.swift": "b7f8cb57ed24f818ca5ccad9e7093114566800ceb6903d87ced9aa8f7033218a"
+  },
+  "fixtureRoot": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx",
+  "files": {
+    "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx/home/Downloads/01-keeper.bin": {
+      "sha256": "abce52e15396982447407a1dcaf2ef229595b736a2b67fb67088186dab192a9d",
+      "bytes": 2400000
+    },
+    "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx/home/Downloads/02-extra.bin": {
+      "sha256": "abce52e15396982447407a1dcaf2ef229595b736a2b67fb67088186dab192a9d",
+      "bytes": 2400000
+    }
+  },
+  "lateWhitelist": {
+    "confirmationOpenedBeforeWhitelistEdit": true,
+    "onlyExtraCopyProtected": true,
+    "bothOriginalHashesUnchanged": true,
+    "nothingMovedTextObserved": true,
+    "keptPathTextObserved": true,
+    "selectionRetained": true,
+    "deselectRemainedAvailable": true,
+    "retryAutomaticSelectionKeptBasketEmpty": true,
+    "privateStateHomeOnly": true
+  },
+  "postMoveRecordFailure": {
+    "move": "Injected filesystem move into the private test home/.Trash, not the macOS Trash service",
+    "fault": "A regular file occupied the test cleanup-batches directory; the real record append failed after the move returned",
+    "visibleMovedCount": 1,
+    "visibleMovedBytes": 2400000,
+    "visibleSeparateRecoveryIssue": true,
+    "visibleWarningTriangle": true,
+    "movedFileMissingAtOriginalAndHashVerifiedAtDestination": true,
+    "manualFixtureRestoreVerified": true,
+    "historyUndoTested": false,
+    "explicitRescanRediscoveredTwoCopies": true,
+    "userTrashTouched": false
+  },
+  "receipts": {
+    "kept": {
+      "findingDuplicates": false,
+      "groups": [
+        [
+          "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx/home/Downloads/01-keeper.bin",
+          "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx/home/Downloads/02-extra.bin"
+        ]
+      ],
+      "outcome": "没有项目移到废纸篓。 按白名单保留：/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx/home/Downloads/02-extra.bin",
+      "pid": 3254,
+      "scanning": false,
+      "selected": [
+        "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx/home/Downloads/02-extra.bin"
+      ],
+      "warning": false,
+      "working": false
+    },
+    "deselected": {
+      "findingDuplicates": false,
+      "groups": [
+        [
+          "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx/home/Downloads/01-keeper.bin",
+          "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx/home/Downloads/02-extra.bin"
+        ]
+      ],
+      "outcome": "没有项目移到废纸篓。 按白名单保留：/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx/home/Downloads/02-extra.bin",
+      "pid": 3254,
+      "scanning": false,
+      "selected": [],
+      "warning": false,
+      "working": false
+    },
+    "recordFailure": {
+      "findingDuplicates": false,
+      "groups": [],
+      "outcome": "已把 1 项 移到废纸篓（2.4 MB）。 恢复记录出现问题：moved to /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx/home/.Trash/2FAE6DE2-C655-4844-AD16-7B1965D628CD.bin, but batch recording failed: The file “cleanup-batches” couldn’t be saved in the folder “Thermo” because a file with the same name already exists.",
+      "pid": 7404,
+      "scanning": false,
+      "selected": [],
+      "warning": true,
+      "working": false
+    },
+    "refreshed": {
+      "findingDuplicates": false,
+      "groups": [
+        [
+          "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx/home/Downloads/01-keeper.bin",
+          "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx/home/Downloads/02-extra.bin"
+        ]
+      ],
+      "outcome": "已把 1 项 移到废纸篓（2.4 MB）。 恢复记录出现问题：moved to /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-space-protection-ui-tewfj2nx/home/.Trash/2FAE6DE2-C655-4844-AD16-7B1965D628CD.bin, but batch recording failed: The file “cleanup-batches” couldn’t be saved in the folder “Thermo” because a file with the same name already exists.",
+      "pid": 7404,
+      "scanning": false,
+      "selected": [],
+      "warning": true,
+      "working": false
+    },
+    "restored": {
+      "originalFilesRestored": true,
+      "allOriginalHashesMatch": true,
+      "privateTrashEmpty": true,
+      "restoreKind": "Fixture cleanup using mv -n after checking the original path was absent; not product History undo"
+    }
+  },
+  "screenshots": "Two live CUA screenshots visually inspected in the conversation; no local screenshot file was produced.",
+  "cleanup": {
+    "allQAProcessesExited": true,
+    "allOriginalHashesMatchedBeforeCleanup": true,
+    "privateTrashEmptyBeforeCleanup": true,
+    "rootRemoved": true
+  },
+  "scope": [
+    "Production SpacePage, frozen removal review, SpaceLensModel, ManualRemoval feedback and TrashBatches error accounting.",
+    "No installed app replacement, root helper interaction, real AWDL change or product History restoration.",
+    "The existing ordinary duplicate/macOS-Trash round trip evidence remains separate.",
+    "Duplicate size is still the content-comparison potential; this run does not establish an eligible-after-whitelist space estimate."
+  ],
+  "integrationChecks": {
+    "incomingMain": "8c2a0ba",
+    "duplicateTranslationRemoved": "modified since the scan; retained canonical preexisting Chinese definition",
+    "localizationSourceMatchesVerifiedCandidate": true,
+    "suites": {
+      "ThermoCLITests.xctest": 70,
+      "AgentDoctorTests.xctest": 3
+    },
+    "total": 73,
+    "failures": 0,
+    "log": "/tmp/thermo-space-protection-integration-tests.log",
+    "sha256": "a0b936a30b6c9bdf04e5e0d27cf64abd53df020293ec86b4778006c69a7d6789",
+    "baseline": "1469 full non-hardware tests were previously run on the unchanged product source; not counted again."
+  }
+}
