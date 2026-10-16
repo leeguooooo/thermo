@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "361808f",
+  "sourceSHA256": {
+    "Sources/CleanKit/Model.swift": "89db0854220f8e50bdd7c1541c65f175393e05eb3ddcc8a23305a96a57ab3978",
+    "Sources/ThermoApp/DiskCleanupReview.swift": "d57fd5cd8bce15629262f1e78142f35cab026f69dc76c514e1a7ae232e4f1641",
+    "Sources/ThermoApp/DiskView.swift": "fa064b3c5d6de23c5e548952e6186d14fae114afb0a624420bd890859f219875",
+    "Sources/ThermoApp/DiskWindow.swift": "3381064c04ac4e3942e869832877855808a97991c6586d7957e92d7d3eeeb308",
+    "Sources/ThermoApp/MainWindow.swift": "68cb70eedd11008516bf76c401faf5a8a4b2c99b9d642750724cdfa7b6bfb5cf",
+    "Sources/ThermoL10n/ZhHans.swift": "80d5eb25b24bc5c15d9e2ad51b2ab291b95802aa00922807e1017b1181f0195b",
+    "Tests/ThermoAppTests/DiskCleanupReviewTests.swift": "788962f529edd773d29f7ac22c5e700e4f2b2db872cddc12dbafd5e886817c6e",
+    "scripts/verify-clean-review-ui.swift": "f538b5009cca456a30146e620eb272a125f5fe64c95fb08439e47f99a4fb155e"
+  },
+  "baseline": {
+    "tests": 1,
+    "failedAssertions": 1,
+    "observedConfirmationFollowedChangedSelection": true,
+    "logSHA256": "8b81e72568b511d5eec2ba863204e929adf5d39aa966bbb57e9bd9db0e1364af"
+  },
+  "newTests": 5,
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 63,
+      "ThermoAppTests": 197,
+      "CleanKitTests": 666,
+      "AgentCoreTests": 34
+    },
+    "total": 1074,
+    "failures": 0,
+    "logSHA256": "8eeaeac8e32031b479afeff377dc7a6e822beea519de9bf23b5e13e31d1ce72f",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ]
+  },
+  "visibleNativeAcceptance": {
+    "locale": "zh-Hans",
+    "windowContentSize": [
+      800,
+      580
+    ],
+    "source": "CUA screenshots and accessibility in conversation",
+    "controlledBackgroundModelSelectionChange": true,
+    "frozenReviewShowsAAfterModelSelectsB": true,
+    "staleConfirmRefusedWithReviewAgainMessage": true,
+    "bothCanariesAbsentAfterRefusal": true,
+    "freshReviewShowsB": true,
+    "freshBExecutedOnly": true,
+    "oldErrorClearedWhenFreshReviewAccepted": true,
+    "historyRecords": 1,
+    "fileDeletionExecuted": false,
+    "realUserDataChanged": false
+  },
+  "fixtureCompiledSourceSHA256": "7564e27bcdb64eb1457888aae322a8755d0eb13533143570f5eae3018787e768",
+  "fixtureCommentClarifiedAfterCompile": true,
+  "fixtureExecutableSHA256": "769992d167d16428f4faebcfab44324c8bf74fb42277d7831fe1ef9049a91848",
+  "runtimeLogSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "cleanup": {
+    "processExited": true,
+    "ownedWorkspaceRemoved": true
+  },
+  "limits": [
+    "Background selection mutation was deliberately injected, not claimed as a naturally observed production event",
+    "Snapshot comparison does not replace runtime process, whitelist and filesystem checks or seal deep contents",
+    "Visible QA uses generic owned canary commands only; no real vendor cleanup",
+    "Legacy internal clean() without a review uses invocation-time selection; production confirmation passes frozen review",
+    "No standalone screenshots; conversation evidence retained",
+    "No push or release; overall Mole parity remains unproven"
+  ]
+}

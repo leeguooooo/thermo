@@ -169,11 +169,18 @@ final class DiskModel: ObservableObject {
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "thermo.disk-scan", content: content, trigger: nil))
     }
 
-    func clean() {
-        let items = selectedItems
-        let scannedAt = report?.started
+    func clean(review: DiskCleanupReview? = nil) {
+        guard !cleaning, !scanning else { return }
+        if let review, !isCurrentCleanupReview(review) {
+            error = tr("Cleanup plan changed. Review the current items before cleaning.")
+            lastResult = nil
+            return
+        }
+        let items = review?.items ?? selectedItems
+        let scannedAt = review == nil ? report?.started : review?.scannedAt
         let originals = Dictionary(uniqueKeysWithValues: (report?.items ?? []).map { ($0.id, $0) })
         guard !items.isEmpty, !cleaning, !scanning else { return }
+        error = nil; lastResult = nil
         cleaning = true
         cleaningDone = 0
         cleaningTotal = items.count

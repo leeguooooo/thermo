@@ -59,14 +59,14 @@ extension DiskModel {
 
 /// Shared by the main window and the opt-in native UI acceptance harness.
 struct DiskCleanConfirmation: View {
-    @ObservedObject var model: DiskModel
+    let review: DiskCleanupReview
     let confirm: () -> Void
     let cancel: () -> Void
 
     var body: some View {
-        ConfirmSheet(title: tr("Clean %1$@?", ByteFormat.string(model.selectedBytes)), summary: model.confirmSummary,
-                     destructive: model.confirmationIsDestructive, heading: tr("What will be removed"),
-                     lines: model.planLines,
+        ConfirmSheet(title: tr("Clean %1$@?", ByteFormat.string(review.bytes)), summary: review.summary,
+                     destructive: review.destructive, heading: tr("What will be removed"),
+                     lines: review.lines,
                      footnote: tr("Removed items are listed in ~/Library/Logs/Thermo/clean.log. Targets are checked again before each operation; checks do not seal all folder contents."),
                      confirmTitle: tr("Clean"), confirm: confirm, cancel: cancel)
     }

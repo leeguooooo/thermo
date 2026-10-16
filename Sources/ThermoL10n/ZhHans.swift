@@ -1828,6 +1828,7 @@ let zhHans: [String: String] = [
     "No app sources could be confirmed; discovery is incomplete.": "未能确认应用来源，发现过程未完成。",
     "Application source discovery is incomplete; this is not a complete update check.": "应用来源发现未完成，本次结果不是完整更新检查。",
     "Native update recovery record changed. Refresh recovery and review it again.": "原生更新恢复记录已变化。请刷新恢复记录并重新审阅。",
+    "Cleanup plan changed. Review the current items before cleaning.": "清理计划已变化。请重新审阅当前项目后再清理。",
     "Show log": "查看日志",
     "Removed size is unknown": "已移除的大小未知",
     "Measured removed size: %1$@; total size is unknown": "已测得移除 %1$@，总大小未知",

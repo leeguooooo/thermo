@@ -68,7 +68,7 @@ public struct CleanupCommandScope: Codable, Sendable, Equatable {
     public init(command: [String], paths: [String], reviewIdentity: String? = nil) { self.command = command; self.paths = paths; self.reviewIdentity = reviewIdentity }
 }
 
-public struct CleanItem: Codable, Identifiable, Sendable {
+public struct CleanItem: Codable, Identifiable, Sendable, Equatable {
     /// Stable across scans, e.g. `xcode-derived-data` or `claude-sessions/-Users-leo-src-app`.
     public var id: String
     public var category: CleanCategory

@@ -232,7 +232,7 @@ struct MainView: View {
     @ObservedObject var disk: DiskModel
     @ObservedObject var agents: AgentScanner
     let models: AppModels
-    @State private var confirmingClean = false
+    @State private var cleanReview: DiskCleanupReview?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -286,9 +286,9 @@ struct MainView: View {
             if page.isAgents { agents.scan(ifOlderThan: 60) }
             if page.isDisk, disk.report == nil, !disk.scanning { disk.loadSaved() }
         }
-        .sheet(isPresented: $confirmingClean) {
-            DiskCleanConfirmation(model: disk,
-                                  confirm: { confirmingClean = false; disk.clean() }, cancel: { confirmingClean = false })
+        .sheet(item: $cleanReview) { review in
+            DiskCleanConfirmation(review: review,
+                                  confirm: { cleanReview = nil; disk.clean(review: review) }, cancel: { cleanReview = nil })
         }
         .sheet(isPresented: Binding(get: { agents.batch?.finished == true }, set: { if !$0 { agents.batch = nil } })) {
             BatchResult(scanner: agents)
@@ -325,7 +325,7 @@ struct MainView: View {
         }
     }
 
-    func startClean() { if !disk.selectedItems.isEmpty { confirmingClean = true } }
+    func startClean() { if cleanReview == nil { cleanReview = disk.cleanupReview() } }
 
     @ViewBuilder var content: some View {
         switch page {
