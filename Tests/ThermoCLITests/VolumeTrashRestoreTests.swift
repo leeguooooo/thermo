@@ -61,7 +61,12 @@ final class VolumeTrashRestoreTests: XCTestCase {
         try journal.write(to: folder.appendingPathComponent(id + ".jsonl"))
         let sibling = Bundle(for: VolumeTrashRestoreTests.self).bundleURL.deletingLastPathComponent().appendingPathComponent("thermo")
         let binary = fm.isExecutableFile(atPath: sibling.path) ? sibling : repo.appendingPathComponent(".build/debug/thermo")
-        XCTAssertTrue(binary.resolvingSymlinksInPath().path.hasPrefix(repo.path + "/.build/"))
+        let ownedBuildPrefix = repo.resolvingSymlinksInPath().path + "/.build/"
+        let resolvedBinary = binary.resolvingSymlinksInPath().path
+        guard resolvedBinary.hasPrefix(ownedBuildPrefix) else {
+            XCTFail("Selected CLI is outside the owned build directory: " + resolvedBinary + "; expected " + ownedBuildPrefix)
+            return
+        }
         var environment = ProcessInfo.processInfo.environment
         environment["CFFIXED_USER_HOME"] = home.path; environment["THERMO_LANG"] = "en"
         func restore(_ options: [String]) -> CommandRunner.Result { run(binary.path, ["clean", "restore", id] + options + ["--json"], environment: environment) }

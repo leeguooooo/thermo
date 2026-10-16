@@ -2770,4 +2770,5 @@ let zhHans: [String: String] = [
     "Inspection timed out.": "检查超时。",
     "Authentication required": "需要认证",
     "Unsupported": "不支持",
+    "modified since the scan": "扫描后已修改",
 ]
