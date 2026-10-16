@@ -113,7 +113,17 @@ struct ProcessInspectionTarget: Identifiable {
                             if power.limited { Text(tr("Power assertion reading reached a limit")).font(.caption).foregroundStyle(.orange) }
                         } else { Text(tr("Power assertion inspection is unavailable")).font(.caption) }
                         Text(tr("Power requests do not guarantee prevention of lid-close, low-battery or policy-driven sleep.")).font(.caption).foregroundStyle(.secondary)
-                        Text(tr("Memory mappings and launch service registration were not inspected.")).font(.caption).foregroundStyle(.secondary)
+                        Text(tr("Observed launchd service registrations")).font(.headline)
+                        if let services = report.launchServices {
+                            ForEach(services.registrations, id: \.self) { service in
+                                Text(service.domain + "/" + service.label + " · PID " + String(service.pid) + (service.serviceState.map { " · " + $0 } ?? "")).font(.caption.monospaced()).textSelection(.enabled)
+                            }
+                            if services.state == .noneObserved { Text(tr("No direct registration was observed in the current user's GUI and User domains.")).font(.caption) }
+                            if services.state == .unavailable { Text(tr("Launchd registration inspection is unavailable")).font(.caption).foregroundStyle(.orange) }
+                            if !services.queryComplete { Text(tr("Launchd registration reading is incomplete")).font(.caption).foregroundStyle(.orange) }
+                        } else { Text(tr("Launchd registration inspection is unavailable")).font(.caption) }
+                        Text(tr("A registration does not prove the original launcher. System services and service descendants were not inspected.")).font(.caption).foregroundStyle(.secondary)
+                        Text(tr("Memory mappings were not inspected.")).font(.caption).foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }
             }

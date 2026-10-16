@@ -58,7 +58,7 @@ final class ProcessExplanationTests: XCTestCase {
     }
     func testOtherUsersHaveNoArgumentsWorkingDirectoryOrPathInspection() throws {
         let p = process(10,parent:0,uid:900)
-        let report = try ProcessExplanation.capture(10,table:.init(entries:[p]),identity:{ _ in p.sampledIdentity },parent:{ _ in 0 },paths:{ _ in XCTFail("do not inspect other users' descriptors");return .init(paths:[],complete:true) },uid:501)
+        let report = try ProcessExplanation.capture(10,table:.init(entries:[p]),identity:{ _ in p.sampledIdentity },parent:{ _ in 0 },paths:{ _ in XCTFail("do not inspect other users' descriptors");return .init(paths:[],complete:true) },uid:501,launchServices:{ _ in XCTFail("do not inspect another user’s launchd services");return nil })
         XCTAssertTrue(report.chain[0].args.isEmpty);XCTAssertNil(report.chain[0].workingDirectory);XCTAssertNil(report.observedPaths)
         XCTAssertFalse(report.pathQueriesComplete)
     }

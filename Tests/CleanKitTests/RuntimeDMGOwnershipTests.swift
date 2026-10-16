@@ -75,7 +75,8 @@ final class RuntimeDMGOwnershipTests: XCTestCase {
         import AppKit
         import Darwin
         let observedHome = NSHomeDirectory()
-        try Data(observedHome.utf8).write(to: URL(fileURLWithPath: CommandLine.arguments[1]))
+        // Publish readiness only after the complete home proof has been written.
+        try Data(observedHome.utf8).write(to: URL(fileURLWithPath: CommandLine.arguments[1]), options: .atomic)
         guard observedHome == CommandLine.arguments[2] else { exit(17) }
         MainActor.assumeIsolated {
             let app = NSApplication.shared

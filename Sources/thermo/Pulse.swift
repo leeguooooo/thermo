@@ -77,7 +77,15 @@ struct PulseCommand {
                 if power.limited { lines.append(tr("Power assertion reading reached a limit")) }
             } else { lines.append(tr("Power assertion inspection is unavailable")) }
             lines.append(tr("Power requests do not guarantee prevention of lid-close, low-battery or policy-driven sleep."))
-            lines.append(tr("Memory mappings and launch service registration were not inspected."))
+            lines.append(tr("Observed launchd service registrations"))
+            if let services = report.launchServices {
+                lines += services.registrations.map { $0.domain + "/" + $0.label + " · PID " + String($0.pid) + ($0.serviceState.map { " · " + $0 } ?? "") }
+                if services.state == .noneObserved { lines.append(tr("No direct registration was observed in the current user's GUI and User domains.")) }
+                if services.state == .unavailable { lines.append(tr("Launchd registration inspection is unavailable")) }
+                if !services.queryComplete { lines.append(tr("Launchd registration reading is incomplete")) }
+            } else { lines.append(tr("Launchd registration inspection is unavailable")) }
+            lines.append(tr("A registration does not prove the original launcher. System services and service descendants were not inspected."))
+            lines.append(tr("Memory mappings were not inspected."))
             lines.append(tr("Known credential patterns are masked. Custom arguments and assertion names may contain personal data."))
             out(lines); return
         }

@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "782d4f8",
+  "sourceSHA256": {
+    "Sources/AgentDoctor/ProcessLaunchServices.swift": "32299fdf9ccbaa6277c35ffbf7752770c27317914429b81382afcd12649a1313",
+    "Sources/AgentDoctor/ProcessExplanation.swift": "47fd166a005685c68f6440d0aa9629424ad08aebe2631639fb1cc2fe0e56d4db",
+    "Sources/ThermoApp/ProcessExplanationView.swift": "b3c0b4f818b043d358aff5fca1a6a6e6efc080db644d12e4ad616a7608d9c9a9",
+    "Sources/thermo/Pulse.swift": "545223a999a94f6225ee2c425767bf43f52336772d63f2a3631d4b2069fab6cf",
+    "Sources/ThermoL10n/ZhHans.swift": "cac8078b5ced1e73dd99133ee7500bf03a3edf5245a307218bf41782c2b03411",
+    "Tests/AgentDoctorTests/ProcessLaunchServicesTests.swift": "ec086bd913895e85290d379ccbd5dd3bc93ff70d4e70633b0392d5530bed4165",
+    "Tests/AgentDoctorTests/ProcessExplanationTests.swift": "e4c496f5b8de6bb665e1d96a7c2967f9d059684dc9a9a839e5a4de458659bc65",
+    "Tests/CleanKitTests/RuntimeDMGOwnershipTests.swift": "3952eceb619a014b00751adbab8b972e42973b654f39d9fe8e45f9348f994a73",
+    "scripts/verify-process-launch-services.py": "f0315412032d43805641932dc3043d3ccc02bca9d3c961ec09d848d67e32ef9c"
+  },
+  "native": {
+    "plainTextContainsRegistration": true,
+    "fixture": "own temporary RunAtLoad sleep service; no KeepAlive",
+    "directRegistration": {
+      "queriedDomains": [
+        "gui/501",
+        "user/501"
+      ],
+      "queryComplete": true,
+      "registrations": [
+        {
+          "domain": "gui/501",
+          "label": "com.thermo.qa.169798e714c4473b90890e256b71e3aa",
+          "pid": 75656,
+          "serviceState": "running"
+        }
+      ],
+      "state": "observed"
+    },
+    "targetIdentityVerified": true,
+    "fullDomainOutputSaved": false,
+    "ordinaryChild": {
+      "queriedDomains": [
+        "gui/501",
+        "user/501"
+      ],
+      "queryComplete": true,
+      "registrations": [],
+      "state": "noneObserved"
+    },
+    "cleanup": {
+      "serviceUnregistered": true,
+      "fixtureDirectoryRemoved": true,
+      "ordinaryChildExited": true
+    }
+  },
+  "newUnitTests": 8,
+  "initialBroadRegression": {
+    "total": 1172,
+    "failures": 1,
+    "failure": "RuntimeDMGOwnershipTests readiness file observed empty; fixture publication changed to atomic write"
+  },
+  "limitations": [
+    "Only direct PID registrations in current user GUI/User domains; no system domain or service descendants",
+    "No new visible-window acceptance; installed app not replaced",
+    "No root helper, hardware tests, push or release"
+  ],
+  "finalRegression": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 66,
+      "ThermoAppTests": 202,
+      "CleanKitTests": 712,
+      "AgentDoctorTests": 43,
+      "AgentCoreTests": 37
+    },
+    "total": 1174,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests"
+    ],
+    "AgentDoctorSelection": [
+      "ProcessExplanationTests",
+      "ProcessListenersTests",
+      "ProcessSleepAssertionsTests",
+      "ProcessLaunchServicesTests",
+      "RedactTests"
+    ],
+    "runtimeDMGReadinessAtomicPublicationPassed": true
+  }
+}
