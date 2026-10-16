@@ -152,7 +152,8 @@ struct AreaPage: View {
                     if let report = scanner.report { SkillContextCard(items: report.items.filter { $0.area == .skills }) }
                 }
                 if area == .mcp {
-                    MCPDefinitionSummaryPanel(store: scanner.mcpDefinitions, items: scanner.report?.items ?? [], encoding: scanner.tokenEncoding)
+                    MCPBatchInspectButton(model: scanner.mcpBatch, store: scanner.mcpDefinitions, items: scanner.report?.items ?? [], encoding: scanner.tokenEncoding, busy: scanner.busy)
+                    MCPDefinitionSummaryPanel(store: scanner.mcpDefinitions, items: scanner.report?.items ?? [], encoding: scanner.tokenEncoding, busy: scanner.mcpBatchRunning)
                     Text(tr("This configuration scan does not connect to MCP servers. Use Connect & inspect for definitions and connection timing; actual tool usage remains unmeasured."))
                         .font(.callout).foregroundStyle(.secondary).padding(18).glass()
                 }

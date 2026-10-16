@@ -11,7 +11,9 @@ import ThermoL10n
 final class AgentScanner: ObservableObject {
     let toolUsage = ToolUsageModel()
     let taskComparison = TaskComparisonModel()
-    let mcpDefinitions = MCPDefinitionStore()
+    let mcpDefinitions: MCPDefinitionStore
+    let mcpBatch: MCPBatchInspectionModel
+    @Published private(set) var mcpBatchRunning = false
     @Published var report: DoctorReport?
     @Published var scanning = false
     /// The item the diagnostics window shows.
@@ -33,10 +35,17 @@ final class AgentScanner: ObservableObject {
     private var operationLanguage: String?
     private var needsLanguageRefresh = false
 
-    init(diagnose: (@Sendable () -> DoctorReport)? = nil) {
+    init(diagnose: (@Sendable () -> DoctorReport)? = nil, inspectMCP: MCPBatchInspectionModel.Inspector? = nil) {
+        let store = MCPDefinitionStore()
+        mcpDefinitions = store
+        mcpBatch = MCPBatchInspectionModel(store: store, inspector: inspectMCP)
         self.diagnose = diagnose
         self.scanDiagnosis = { cancellation, project, encoding in
             diagnose?() ?? AgentDoctor.run(DoctorEnvironment(project: project, tokenEncoding: encoding, cancelled: { cancellation.isCancelled }))
+        }
+        mcpBatch.runningChanged = { [weak self] running in
+            self?.mcpBatchRunning = running
+            if !running { self?.resumeLanguageRefresh() }
         }
     }
 
@@ -83,7 +92,7 @@ final class AgentScanner: ObservableObject {
         var result: ActionResult
     }
 
-    var busy: Bool { scanning || running != nil || batching || batch?.finished == false }
+    var busy: Bool { scanning || running != nil || batching || batch?.finished == false || mcpBatchRunning }
 
     func scan(ifOlderThan age: TimeInterval = 0) {
         if stopped && age > 0 { return }

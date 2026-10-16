@@ -1,0 +1,80 @@
+{
+  "generated": "2026-10-16T22:35:41.499792+00:00",
+  "verificationKind": "Real native CUA interaction on an isolated Debug QA copy and local synthetic MCP services; real configured services were not batch-started.",
+  "qaBundleID": "dev.thermo.aiqa",
+  "sourceBaseCommit": "bc091784a0284133394732fcf90fc981958e35be",
+  "checks": {
+    "appTests": 271,
+    "localizationTests": 3,
+    "batchCoordinatorTestsWithinAppSuite": 7,
+    "failures": 0
+  },
+  "nativeFlows": {
+    "defaultSelectionEmptyAndStartDisabled": true,
+    "disabledConfigurationsOmitted": true,
+    "successfulTwoItemBatchDisplaysBothResultRows": true,
+    "hostChangeClearsSelection": true,
+    "stopFirstSlowItemLeavesTwoNotStarted": true,
+    "cancelledResultAndReasonVisible": true,
+    "startingNewBatchInvalidatesQueuedOldSuccessValues": true,
+    "clearingMeasurementsDropsObsoleteBatchProgress": true,
+    "finalPresentationLabelsLatestBatchSeparatelyFromCurrentSelection": true,
+    "completedBatchFeedsDefinitionSummary": true
+  },
+  "observedSuccess": {
+    "processed": 2,
+    "complete": 2,
+    "incomplete": 0,
+    "notStarted": 0,
+    "tools": 3,
+    "definitionBytes": 634,
+    "definitionEstimatedTokenSum": 159,
+    "instructionEstimatedTokenSum": 4
+  },
+  "observedCancel": {
+    "selected": 3,
+    "processed": 1,
+    "complete": 0,
+    "incomplete": 1,
+    "notStarted": 2
+  },
+  "uiIssueFixed": "Selection rows and result rows initially shared identifiers in one lazy stack, hiding the result rows. Results now use a distinct identity type; both success and cancellation rows were visibly verified.",
+  "sourceSHA256": {
+    "Sources/ThermoApp/MCPBatchInspectionModel.swift": "120e176a260fb634f2bcec0fd86c826f527238d7b1e98b58dcf75c97fea85875",
+    "Sources/ThermoApp/MCPBatchInspectButton.swift": "698ae8d1d1bd345a05b771f5999e8f1bddf99916c2cd5c5f0a04130243de12b5",
+    "Sources/ThermoApp/MCPDefinitionStore.swift": "d04c445f318bb03275fc8612eac16819dbf9ee332512da19a63fc58e19d3ad03",
+    "Sources/ThermoApp/AgentsView.swift": "6f26f8ef131e3171e7162d5664f547a89681dda866659d011ad242ebaee9c70f"
+  },
+  "resourceRecovery": {
+    "initialFinalRerun": "Build interrupted by no space left on device, not an assertion failure",
+    "ownedGeneratedCacheRemovedOnly": {
+      "removedOwnedGeneratedBuildCache": true,
+      "sourceRetained": true,
+      "sourceClean": true,
+      "dependencyCheckoutsClean": true,
+      "noActiveProcessOrOpenFiles": true,
+      "validatedArtifactsRetainedAndHashesMatched": true,
+      "freeBytesBefore": 1397030912,
+      "freeBytesAfter": 2539954176
+    },
+    "buildDatabaseQuickCheck": "ok",
+    "finalRerunJobs": 1,
+    "finalRerunPassed": true
+  },
+  "qaClosed": true,
+  "fixtureProcessesRemaining": 0,
+  "originalAppPreserved": true,
+  "originalAppPID": 94672,
+  "remaining": [
+    "Native Chinese batch-panel acceptance",
+    "Actual selected real-service batch acceptance",
+    "Universal Release package containing the new batch UI; previous validated package is at fb0aeee",
+    "Formal signing, notarization, installation and update acceptance"
+  ],
+  "scopeNotes": [
+    "Global budget expiry and sequential execution were checked with deterministic model fixtures; the native cancellation test used a 30-second per-item budget.",
+    "No automatic retry or business tool execution is part of the coordinator. Configuration discovery and connection inspection use the existing AgentDoctor API.",
+    "The host process scanner still observes real processes; no repair or removal action was clicked.",
+    "An independent AWDL commit landed in the shared worktree during verification. Final App test counts include its additions; no hardware-control acceptance is claimed here."
+  ]
+}

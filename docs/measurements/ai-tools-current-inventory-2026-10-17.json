@@ -1,0 +1,58 @@
+{
+  "generated": "2026-10-16T22:09:38.320003+00:00",
+  "sourceBinaryCommit": "fb0aeee6d6c31109f34966d39fd96b08f7f4c606",
+  "scope": "Static local MCP configuration inventory and Codex Skill footprint/content checks; no MCP or Skill execution, no source contents or names exported.",
+  "mcp": {
+    "configurations": 36,
+    "enabled": 29,
+    "byHost": {
+      "claude": 13,
+      "codex": 16,
+      "gemini": 4,
+      "cursor": 3
+    },
+    "enabledByHost": {
+      "claude": 13,
+      "codex": 9,
+      "gemini": 4,
+      "cursor": 3
+    },
+    "definitionTotal": "unknown until selected configuration inspections complete"
+  },
+  "skills": {
+    "entries": 356,
+    "summaries": [
+      {
+        "aliases": 2,
+        "cacheDocumentBytes": 2213927,
+        "cacheEntries": 215,
+        "cacheUniqueFiles": 215,
+        "catalogEntries": 138,
+        "catalogEstimatedTokens": 17740,
+        "documentBytes": 1615684,
+        "documentEstimatedTokens": 421851,
+        "entries": 356,
+        "host": "codex",
+        "inconsistentFiles": 0,
+        "measuredEntries": 355,
+        "referenceCatalogTokens": 16581,
+        "referenceDocumentTokens": 413671,
+        "referenceEncoding": "cl100k_base",
+        "unavailableReferenceFiles": 0,
+        "uniqueFiles": 138,
+        "unverifiedIdentityEntries": 0
+      }
+    ],
+    "localReferencesChecked": 876,
+    "incompleteContentChecks": 0,
+    "findingCounts": {
+      "missing_local_reference": 2
+    }
+  },
+  "limitations": [
+    "Inventory is not an effective session context or current loading proof.",
+    "Catalog and full document counts remain separate; cached plugins are separate inventory.",
+    "Reference counts use cl100k_base ordinary-text encoding, not a model invoice.",
+    "Missing local references may be generated at runtime and require review."
+  ]
+}

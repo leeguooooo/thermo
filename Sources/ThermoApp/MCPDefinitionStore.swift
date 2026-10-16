@@ -4,7 +4,7 @@ import ThermoL10n
 
 /// Retains only measurements and the largest ten rows per configuration, never definition text.
 @MainActor final class MCPDefinitionStore: ObservableObject {
-    struct Ticket: Equatable { let generation: UUID; let run: UUID }
+    struct Ticket: Equatable, Sendable { let generation: UUID; let run: UUID }
     struct Entry {
         let name: String
         let agent: String
@@ -41,13 +41,20 @@ import ThermoL10n
     @Published private(set) var entries: [String: Entry] = [:]
     @Published private(set) var pending: [String: Ticket] = [:]
     private var generation = UUID()
+    var onReset: (() -> Void)?
 
-    func reset() { generation = UUID(); entries = [:]; pending = [:] }
+    func reset() { onReset?(); generation = UUID(); entries = [:]; pending = [:] }
+    func removeMeasurements(for ids: [String]) {
+        for id in ids { entries.removeValue(forKey: id) }
+    }
     func begin(_ id: String) -> Ticket {
         let ticket = Ticket(generation: generation, run: UUID())
         entries.removeValue(forKey: id)
         pending[id] = ticket
         return ticket
+    }
+    func abandon(_ id: String, ticket: Ticket) {
+        if pending[id] == ticket { pending.removeValue(forKey: id) }
     }
     func accept(_ report: MCPInspection, id: String, encoding: TextEncoding, ticket: Ticket) {
         guard ticket.generation == generation, pending[id] == ticket else { return }
