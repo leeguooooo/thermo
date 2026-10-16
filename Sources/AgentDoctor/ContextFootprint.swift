@@ -27,6 +27,11 @@ public struct SkillFootprint: Codable, Equatable, Sendable {
     public var body: TextFootprint
     public var sourcePath: String
     public var contentHash: String
+    /// Device/inode identity, with a canonical-path fallback; only its hash is exported.
+    public var canonicalID: String? = nil
+    public var scope: String? = nil
+    public var namespace: String? = nil
+    public var pluginConfiguredEnabled: Bool? = nil
 
     public var summary: String {
         tr("Catalog ≈%1$@ tokens · SKILL.md ≈%2$@ tokens · %3$@ bytes",
@@ -34,7 +39,7 @@ public struct SkillFootprint: Codable, Equatable, Sendable {
     }
 
     public static var coverage: String {
-        tr("Coverage: user-level Skill directories and enabled Claude plugins. Project Skills and the Codex plugin catalog are not included yet. Entries may include aliases of the same file.")
+        tr("Coverage: user Skill directories, enabled Claude plugins and Codex plugin cache inventories. Project directories are included only with an explicit project root. Cache presence does not prove loading; admin and remotely supplied Skills are not inspected.")
     }
 
     public static var caveat: String {
@@ -52,6 +57,8 @@ public struct ContextInventory: Codable, Sendable {
     public var coverageNote: String
     public var measurementNote: String
     public var mcpNote: String
+    public var project: String? = nil
+    public var summaries: [SkillContextSummary] = []
 }
 
 extension AgentDoctor {
@@ -70,6 +77,6 @@ extension AgentDoctor {
         return ContextInventory(generated: env.now, skills: skills, mcpServers: items.filter { $0.area == .mcp },
                                 findings: checks.findings.filter { $0.area == .skills || $0.area == .mcp },
                                 cancelled: env.cancelled(), coverageNote: SkillFootprint.coverage, measurementNote: SkillFootprint.caveat,
-                                mcpNote: tr("MCP definitions, connection timing and actual usage have not been measured. Configuration checks do not prove that a server is reachable or that its tools work."))
+                                mcpNote: tr("MCP definitions, connection timing and actual usage have not been measured. Configuration checks do not prove that a server is reachable or that its tools work."), project: env.project.map { Redact.text(env.short($0.path)) }, summaries: SkillContextSummary.summarize(skills))
     }
 }

@@ -126,7 +126,7 @@ struct AgentsCommand {
 
     static let usage = """
     usage: thermo agents [--all] [--json]                 what is wrong with the AI agents on this Mac
-           thermo agents context [--agent AGENT] [--json] static Skill footprint ranking; MCP coverage
+           thermo agents context [--agent AGENT] [--root PROJECT] [--json] static footprint ranking and deduplicated inventory
            thermo agents inspect NAME [--json]            connect to one MCP; handshake, list and rank definitions
            thermo agents list [AREA] [--json]             everything checked, marked OK or not
            thermo agents show NAME [--json]               one item: problems, suggestions, numbered actions
@@ -167,17 +167,36 @@ struct AgentsCommand {
 
     func context() throws {
         guard !app.args.has("csv") else { throw CLIError("agents context supports --json, not --csv") }
-        var report = AgentDoctor.context()
+        let project = app.args.options["root"].map { URL(fileURLWithPath: $0).standardizedFileURL }
+        if let project {
+            var directory: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: project.path, isDirectory: &directory), directory.boolValue else {
+                throw CLIError("--root must name an existing project directory")
+            }
+        }
+        var report = AgentDoctor.context(DoctorEnvironment(project: project))
         if let agent = app.args.options["agent"] {
-            report.skills = report.skills.filter { $0.agent == agent || (agent == "codex" && $0.agent == "shared") }
+            let visible = agent == "codex" ? ["codex", "shared", "codex-cache"] : agent == "claude" ? ["claude", "plugin"] : [agent]
+            report.skills = report.skills.filter { visible.contains($0.agent) }
             report.mcpServers = report.mcpServers.filter { $0.agent == agent }
             let ids = Set((report.skills + report.mcpServers).map(\.id))
-            report.findings = report.findings.filter { $0.item.map(ids.contains) ?? ($0.agent == agent || (agent == "codex" && $0.agent == "shared")) }
+            report.findings = report.findings.filter { $0.item.map(ids.contains) ?? visible.contains($0.agent) }
         }
+        report.summaries = SkillContextSummary.summarize(report.skills)
         if app.args.has("json") { print(Export.diagnosticJSON(report)); return }
         var lines = [style.bold("Skill footprint · static estimates"), report.coverageNote, report.measurementNote, ""]
+        for summary in report.summaries {
+            lines.append("\(summary.host): \(summary.uniqueFiles) unique directory/plugin files · catalog ≈\(summary.catalogEstimatedTokens) tokens · documents ≈\(summary.documentEstimatedTokens) tokens · \(summary.documentBytes) bytes · \(summary.aliases) duplicate file entries excluded from document totals")
+            if summary.inconsistentFiles > 0 || summary.unverifiedIdentityEntries > 0 { lines.append("  excluded: \(summary.inconsistentFiles) changing files, \(summary.unverifiedIdentityEntries) entries with unknown identity") }
+            lines.append("  cache inventory: \(summary.cacheEntries) entries, \(summary.cacheUniqueFiles) unique files, \(summary.cacheDocumentBytes) bytes; excluded from directory totals")
+        }
+        lines.append("Deduplicated inventory estimates, not effective session context. Same-name selection and actual loading are not inferred.")
+        lines.append("")
         for item in report.skills {
             lines.append(style.bold(item.name) + style.dim(" [" + item.agent + "]"))
+            if item.skillFootprint?.scope == "cache" {
+                lines.append("  cache version; loading unverified; configured enabled: " + (item.skillFootprint?.pluginConfiguredEnabled.map(String.init) ?? "unknown"))
+            }
             lines.append("  " + (item.skillFootprint?.summary ?? "Content not measured"))
             if let source = item.skillFootprint?.sourcePath ?? item.source { lines.append("  " + style.dim(source)) }
         }

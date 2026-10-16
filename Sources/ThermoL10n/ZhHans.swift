@@ -2502,4 +2502,18 @@ let zhHans: [String: String] = [
     "Server does not support explicit session closure": "服务不支持主动关闭会话",
     "HTTP session closure was not confirmed": "尚未确认 HTTP 会话已关闭",
     "HTTP handshake %1$@ · list %2$@": "HTTP 握手 %1$@ · 列表 %2$@",
+    // Skill discovery and deduplicated inventory
+    "Coverage: user Skill directories, enabled Claude plugins and Codex plugin cache inventories. Project directories are included only with an explicit project root. Cache presence does not prove loading; admin and remotely supplied Skills are not inspected.": "检查范围：用户 Skill 目录、已启用的 Claude 插件和 Codex 插件缓存。指定项目目录后才检查项目级 Skill。缓存存在不能证明已加载；未检查管理员目录和远程提供的 Skill。",
+    "Codex plugin cache inspection is incomplete; a manifest, path or discovery limit could not be verified.": "Codex 插件缓存检查未完成：清单、路径或发现上限无法核实。",
+    "Plugin cache inventory; current loaded version is unverified": "插件缓存清单，当前加载版本未经核实",
+    "%1$@ different skills share this name (%2$@); selection depends on the agent and scope": "%1$@ 个不同 Skill 使用相同名称（%2$@）；选择规则取决于 Agent 和来源范围",
+    "%1$@ unique files · catalog ≈%2$@ tokens · documents ≈%3$@ tokens · %4$@ bytes": "%1$@ 个独立文件 · 目录描述约 %2$@ token · 完整文件约 %3$@ token · %4$@ 字节",
+    "%1$@ duplicate file entries excluded · cache inventory %2$@ files / %3$@ bytes, counted separately": "已排除 %1$@ 个重复文件条目 · 缓存 %2$@ 个文件 / %3$@ 字节，单独统计",
+    "These are deduplicated inventory estimates, not effective session context. Same-name selection and actual loading are not inferred.": "以上为去重后的静态清单估算，不代表会话实际上下文；未推断同名 Skill 的选择结果和实际加载量。",
+    "Largest unique directory/plugin SKILL.md files · %1$@ files": "目录与插件中的最大独立 SKILL.md · %1$@ 个文件",
+    "%1$@ changing files and %2$@ entries with unknown identity were excluded from totals.": "有 %1$@ 个变化中的文件和 %2$@ 个身份未知条目未计入总量。",
+    "User Skill context only": "仅用户级 Skill 范围",
+    "Choose Skill project…": "选择 Skill 项目…",
+    "User scope": "用户范围",
+    "Choose a project for Skill inspection": "选择要检查 Skill 的项目",
 ]

@@ -4,6 +4,8 @@ import ThermoL10n
 
 /// Everything the doctor reads from the machine, injectable so tests can run against a fixture home.
 public struct DoctorEnvironment {
+    /// Explicit project context; nil means user-level inspection only.
+    public var project: URL?
     public var home: URL
     public var uid: uid_t
     /// Directories searched for bare command names (hooks and MCP servers run with the agent's PATH, not ours).
@@ -23,11 +25,13 @@ public struct DoctorEnvironment {
     public var logFile: URL
 
     public init(home: URL = FileManager.default.homeDirectoryForCurrentUser,
+                project: URL? = nil,
                 uid: uid_t = getuid(),
                 path: [String]? = nil,
                 run: ((String, [String]) -> String?)? = nil,
                 executablePath: @escaping (Int32) -> String? = DoctorEnvironment.procPath,
                 now: Date = Date(), cancelled: @escaping () -> Bool = { false }) {
+        self.project = project
         self.home = home
         execute = DoctorEnvironment.executeTool
         trash = { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }

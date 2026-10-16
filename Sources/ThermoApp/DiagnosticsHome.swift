@@ -134,8 +134,14 @@ struct AreaPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header(problems)
-                if area == .skills, let report = scanner.report {
-                    SkillContextCard(items: report.items.filter { $0.area == .skills })
+                if area == .skills {
+                    HStack {
+                        Text(scanner.project?.path ?? tr("User Skill context only")).font(.caption).textSelection(.enabled)
+                        Spacer()
+                        Button(tr("Choose Skill project…")) { chooseProject() }.disabled(scanner.busy)
+                        if scanner.project != nil { Button(tr("User scope")) { scanner.selectProject(nil) }.disabled(scanner.busy) }
+                    }
+                    if let report = scanner.report { SkillContextCard(items: report.items.filter { $0.area == .skills }) }
                 }
                 if area == .mcp {
                     Text(tr("This configuration scan does not connect to MCP servers. Use Connect & inspect for definitions and connection timing; actual tool usage remains unmeasured."))
@@ -201,6 +207,20 @@ struct AreaPage: View {
                          footnote: tr("Every step is in ~/Library/Logs/Thermo/fix.log; changed config files were backed up first."),
                          confirmTitle: tr("Fix"), confirm: { confirmingFixes = nil; scanner.performAll(plans) },
                          cancel: { confirmingFixes = nil })
+        }
+    }
+
+    @MainActor
+    func chooseProject() {
+        let panel = NSOpenPanel()
+        panel.title = tr("Choose a project for Skill inspection")
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = false
+        panel.directoryURL = scanner.project
+        panel.begin { response in
+            if response == .OK, let url = panel.url { scanner.selectProject(url) }
         }
     }
 

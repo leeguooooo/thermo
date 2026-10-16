@@ -4,17 +4,24 @@ thermo 的 AI 工具页需要回答：配置是否有故障、定义有多大、
 
 ## 已实现的静态 Skill 检查
 
-`thermo agents context [--agent AGENT] [--json]` 只读取配置与 Skill 文件，不启动 MCP，不执行工具，不读取会话正文。按完整 SKILL.md 的估算 token 排名，输出目录描述、正文和完整文档的独立测量。App 的 Skills 分类显示最大的五项；逐项清单显示占用。
+`thermo agents context [--agent AGENT] [--root PROJECT] [--json]` 只读取配置与 Skill 文件，不启动 MCP，不执行工具，不读取会话正文。按完整 SKILL.md 的估算 token 排名，输出目录描述、正文和完整文档的独立测量。App 的 Skills 分类按宿主汇总占用，显示最大的五个独立文件；逐项清单保留所有来源。可在 App 选择 Skill 项目，或回到用户范围。
 
 - 字节、字符和行数来自原始文本，输出不包含正文。
 - token 是 `ascii4-unicode1-v1` 启发式估算：每四个 ASCII 标量计一个 token，每个其他 Unicode 标量计一个 token。它不代表任何模型的分词结果或账单。
 - 目录项由 name 和完整 description 构成，完整文档含 front matter。两者不能相加当作实际加载量。未读取引用文件。
 - 递归检查独立 Skill，找到 SKILL.md 后不继续把其 scripts / references 当作独立 Skill。包含 Codex 的 `.system` 目录。
 - 每个文件最多读取 1 MiB，扫描最多处理 10,000 个目录节点、深度 16。无法读取、循环链接或达到上限会报告不完整；统计只覆盖成功读取的文件。
-- 同一真实路径的别名保留为安装条目，不报成同名冲突。跨目录的不同同名 Skill 分别挂上冲突提示。插件命名空间不参与普通 Skill 的同名判断。
-- 嵌套条目不提供删除操作，避免沿合集链接移除共享目标。
+- 使用设备号与 inode 识别文件，符号链接、硬链接和重复来源只计一次文档占用；无法取得文件身份时回退到规范路径。相同正文但独立存储的文件不合并。文件身份仅输出哈希。
+- 文档按文件去重，目录描述按文件与插件命名空间去重。同名但不同文件只提示来源重叠，不推断宿主只会保留一个。若扫描期间同一身份出现不同内容，相关文件从总量排除。
+- Codex 插件缓存按 marketplace / plugin / version 盘点，支持 portable、Codex 和 Claude 兼容清单。缓存版本可能过期、关闭或由桌面端管理；本地 enabled 只作为配置证据保留，不当成当前加载状态。所有缓存版本单独统计，不混入目录与已配置 Claude 插件的总量。普通扫描不执行 codex plugin list。
+- 项目范围只在显式传入目录后读取：从所选目录向上至 Git 根标记的 `.agents/skills` 和 `.claude/skills`。没有 Git 根标记时只查所选目录，不扫描无关父目录；不递归搜整台机器的仓库。项目目录选择后会清掉旧范围报告，再扫描；进行中的检查和修复不接受范围变更。
+- 嵌套、项目和 Codex 缓存条目不提供删除操作，避免沿合集链接移除共享目标。
 
-当前范围不包含项目级 Skill 和 Codex 插件目录；条目数也可能包含同一文件的多个别名。该范围同时显示在 App、CLI 和 JSON 中。
+汇总是静态清单，不是最终会话上下文；目录描述和完整文档也不能相加当实际消耗。JSON 的 summaries 区分条目数、成功测量数、独立文件数、重复文件条目、目录估算、文档估算、缓存数量和变化 / 身份未知的排除项。按 --agent 过滤会同时保留对应共享来源与覆盖警告。
+
+仍未覆盖管理员目录、宿主通过远程服务提供的 Skill、会话内动态加入的目录、宿主配置的完整优先级与启用覆盖规则。工作树主检出回退规则也未模拟。因此不能把静态目录总量称为“该宿主当前加载的全部 Skill”。
+
+发现规则参考 [Codex Skill 位置与同名行为](https://developers.openai.com/codex/skills)、[Codex 插件缓存布局](https://developers.openai.com/plugins/build/plugins)、[Claude Code 项目 Skill 与同名规则](https://code.claude.com/docs/en/skills)。这些规则于 2026-10-17 核对；实现对未识别的加载状态保持未知。
 
 ## MCP 主动检查
 

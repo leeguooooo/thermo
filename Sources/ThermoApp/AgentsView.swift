@@ -22,17 +22,32 @@ final class AgentScanner: ObservableObject {
     @Published private(set) var history: [LastResult] = []
     @Published private(set) var stopped = false
     @Published private(set) var stopRequested = false
-    private let diagnose: @Sendable () -> DoctorReport
-    private let scanDiagnosis: @Sendable (DoctorCancellation) -> DoctorReport
+    @Published private(set) var project: URL?
+    private let diagnose: (@Sendable () -> DoctorReport)?
+    private let scanDiagnosis: @Sendable (DoctorCancellation, URL?) -> DoctorReport
     private var scanCancellation: DoctorCancellation?
     private var operationLanguage: String?
     private var needsLanguageRefresh = false
 
     init(diagnose: (@Sendable () -> DoctorReport)? = nil) {
-        self.diagnose = diagnose ?? { AgentDoctor.run() }
-        self.scanDiagnosis = { cancellation in
-            diagnose?() ?? AgentDoctor.run(DoctorEnvironment(cancelled: { cancellation.isCancelled }))
+        self.diagnose = diagnose
+        self.scanDiagnosis = { cancellation, project in
+            diagnose?() ?? AgentDoctor.run(DoctorEnvironment(project: project, cancelled: { cancellation.isCancelled }))
         }
+    }
+
+    func selectProject(_ project: URL?) {
+        guard !busy else { return }
+        self.project = project?.standardizedFileURL
+        report = nil
+        selection = nil
+        scan()
+    }
+
+    private func currentDiagnosis() -> @Sendable () -> DoctorReport {
+        let project = project
+        let custom = diagnose
+        return { custom?() ?? AgentDoctor.run(DoctorEnvironment(project: project)) }
     }
 
     struct Batch {
@@ -73,8 +88,9 @@ final class AgentScanner: ObservableObject {
         operationLanguage = L10n.current.rawValue
         needsLanguageRefresh = false
         let diagnose = scanDiagnosis
+        let project = project
         Task.detached(priority: .userInitiated) {
-            let r = diagnose(cancellation)
+            let r = diagnose(cancellation, project)
             await MainActor.run {
                 guard self.scanCancellation === cancellation else { return }
                 if cancellation.isCancelled || r.cancelled == true {
@@ -100,7 +116,7 @@ final class AgentScanner: ObservableObject {
         guard !busy else { return }
         running = action.id
         operationLanguage = L10n.current.rawValue
-        let diagnose = diagnose
+        let diagnose = currentDiagnosis()
         Task.detached(priority: .userInitiated) {
             let result = ActionRunner.perform(action, env: DoctorEnvironment())
             let r = diagnose()
@@ -127,7 +143,7 @@ final class AgentScanner: ObservableObject {
         guard !busy, !plans.isEmpty else { return }
         batching = true
         operationLanguage = L10n.current.rawValue
-        let diagnose = diagnose
+        let diagnose = currentDiagnosis()
         batch = Batch(total: plans.count, before: problems.count)
         Task.detached(priority: .userInitiated) {
             let env = DoctorEnvironment()

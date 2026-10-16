@@ -497,13 +497,14 @@ struct ConfigChecks {
     // MARK: skills
 
     var skillDirs: [(URL, String, String)] = []
+    var cacheSkillSources: [String: (namespace: String, enabled: Bool?)] = [:]
 
     mutating func checkSkills() {
         let roots: [(URL, String, String)] = [
             (env.url(".claude/skills"), "claude", "~/.claude/skills"),
             (env.url(".agents/skills"), "shared", "~/.agents/skills"),
             (env.url(".codex/skills"), "codex", "~/.codex/skills"),
-        ] + skillDirs
+        ] + skillDirs + projectSkillRoots() + codexCacheSkillRoots()
         let fm = FileManager.default
         var byName: [String: [(agent: String, real: String, origin: String, key: String)]] = [:]
         var remaining = 10_000
@@ -521,9 +522,9 @@ struct ConfigChecks {
                 if node.ancestors.contains(real) { incomplete = true; continue }
                 let attrs = try? fm.attributesOfItem(atPath: u.path)
                 if attrs?[.type] as? FileAttributeType == .typeSymbolicLink, !fm.fileExists(atPath: u.path) {
-                    item(.skills, agent: agent, id: u.path, name: u.lastPathComponent,
+                    item(.skills, agent: agent, id: "\(agent)|\(origin)|\(u.path)", name: u.lastPathComponent,
                          detail: env.short(u.path), source: origin)
-                    if node.depth == 1 {
+                    if node.depth == 1, agent != "plugin", agent != "codex-cache", !origin.hasPrefix("project ") {
                         offer(.fix, tr("Remove broken link"), tr("Deletes the symlink %1$@. Its target is already gone.", env.short(u.path)), [.unlink(path: u.path)])
                     }
                     add(Finding(.warning, .skills, agent: agent, subject: u.lastPathComponent,
@@ -540,24 +541,35 @@ struct ConfigChecks {
                         inventory.skills += 1
                         let front = Self.frontMatter(text)
                         let name = front?["name"] ?? u.lastPathComponent
-                        let key = item(.skills, agent: agent, id: u.path, name: name,
+                        let key = item(.skills, agent: agent, id: "\(agent)|\(origin)|\(u.path)", name: name,
                                        detail: front?["description"] ?? env.short(u.path), source: origin)
                         let body = Self.skillBody(text)
-                        let footprint = SkillFootprint(catalog: TextFootprint(name + "\n" + (front?["description"] ?? "")),
+                        var footprint = SkillFootprint(catalog: TextFootprint(name + "\n" + (front?["description"] ?? "")),
                                                        document: TextFootprint(text), body: TextFootprint(body),
                                                        sourcePath: Redact.text(env.short(skill.path)),
                                                        contentHash: SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined())
+                        footprint.canonicalID = Self.skillFileIdentity(skill)
+                        footprint.scope = origin.hasPrefix("project ") ? "project" : agent == "codex-cache" ? "cache" : agent == "plugin" ? "plugin" : "user"
+                        if agent == "plugin" { footprint.namespace = String(origin.dropFirst("plugin ".count)) }
+                        if let info = cacheSkillSources[dir.path] {
+                            footprint.namespace = info.namespace
+                            footprint.pluginConfiguredEnabled = info.enabled
+                            if let index = items.firstIndex(where: { $0.id == key }) {
+                                items[index].enabled = info.enabled != false
+                                items[index].detail = tr("Plugin cache inventory; current loaded version is unverified") + " · " + items[index].detail
+                            }
+                        }
                         if let i = items.firstIndex(where: { $0.id == key }) { items[i].skillFootprint = footprint }
                         // Nested collections may resolve through a shared symlink: never offer removal of their targets.
-                        if agent != "plugin", node.depth == 1 { offerSkillRemoval(u) }
+                        if agent != "plugin", agent != "codex-cache", !origin.hasPrefix("project "), node.depth == 1 { offerSkillRemoval(u) }
                         if front == nil || front?["description"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
                             add(Finding(.warning, .skills, agent: agent, subject: name,
                                         tr("SKILL.md has no front matter description, so agents can't tell when to use it"),
                                         fix: tr("start SKILL.md with ---\\nname: %1$@\\ndescription: …\\n---", name), source: origin))
                         }
-                        byName[name, default: []].append((agent, real, origin, key))
+                        byName[name, default: []].append((agent, footprint.canonicalID ?? real, origin, key))
                     } else {
-                        item(.skills, agent: agent, id: u.path, name: u.lastPathComponent, detail: env.short(skill.path), source: origin)
+                        item(.skills, agent: agent, id: "\(agent)|\(origin)|\(u.path)", name: u.lastPathComponent, detail: env.short(skill.path), source: origin)
                         add(Finding(.warning, .skills, agent: agent, subject: u.lastPathComponent,
                                     tr("SKILL.md could not be read as UTF-8 within the 1 MiB limit; its content was not inspected."), source: origin))
                         incomplete = true
@@ -574,8 +586,8 @@ struct ConfigChecks {
                             || (try? fm.attributesOfItem(atPath: $0.path))?[.type] as? FileAttributeType == .typeSymbolicLink
                     }
                     if directories.isEmpty, node.depth > 0 {
-                        item(.skills, agent: agent, id: u.path, name: u.lastPathComponent, detail: env.short(u.path), source: origin)
-                        if agent != "plugin", node.depth == 1 { offerSkillRemoval(u) }
+                        item(.skills, agent: agent, id: "\(agent)|\(origin)|\(u.path)", name: u.lastPathComponent, detail: env.short(u.path), source: origin)
+                        if agent != "plugin", agent != "codex-cache", !origin.hasPrefix("project "), node.depth == 1 { offerSkillRemoval(u) }
                         add(Finding(.warning, .skills, agent: agent, subject: u.lastPathComponent,
                                     tr("directory has no SKILL.md, so it isn't a skill"), source: origin))
                         currentItem = nil
@@ -602,12 +614,23 @@ struct ConfigChecks {
                 for copy in visible {
                     currentItem = copy.key
                     add(Finding(.info, .skills, agent: agent, subject: name,
-                                tr("%1$@ different skills share this name (%2$@); only one is used", String(Set(visible.map(\.real)).count), visible.map(\.origin).joined(separator: ", ")),
+                                tr("%1$@ different skills share this name (%2$@); selection depends on the agent and scope", String(Set(visible.map(\.real)).count), visible.map(\.origin).joined(separator: ", ")),
                                 fix: tr("rename or remove the copy you don't want"), source: nil))
                 }
             }
         }
         currentItem = nil
+    }
+
+    static func skillFileIdentity(_ url: URL) -> String {
+        let path = url.resolvingSymlinksInPath().standardizedFileURL.path
+        let attributes = try? FileManager.default.attributesOfItem(atPath: path)
+        let identity: String
+        if let device = attributes?[.systemNumber] as? NSNumber,
+           let inode = attributes?[.systemFileNumber] as? NSNumber {
+            identity = "file:\(device.stringValue):\(inode.stringValue)"
+        } else { identity = "path:" + path }
+        return SHA256.hash(data: Data(identity.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
     static func readSkill(_ url: URL) -> String? {

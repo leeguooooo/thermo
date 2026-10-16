@@ -1,0 +1,38 @@
+{
+  "generated": "2026-10-16T18:25:20Z",
+  "source": "thermo agents context --agent codex --root <thermo checkout> --json",
+  "coverageNote": "Coverage: user Skill directories, enabled Claude plugins and Codex plugin cache inventories. Project directories are included only with an explicit project root. Cache presence does not prove loading; admin and remotely supplied Skills are not inspected.",
+  "measurementNote": "Static estimates use 4 ASCII characters or 1 Unicode scalar per token, not a model tokenizer. Catalog and SKILL.md are separate views; referenced files and actual session loading are not measured.",
+  "summaries": [
+    {
+      "aliases": 2,
+      "cacheDocumentBytes": 2213927,
+      "cacheEntries": 215,
+      "cacheUniqueFiles": 215,
+      "catalogEntries": 138,
+      "catalogEstimatedTokens": 17740,
+      "documentBytes": 1615472,
+      "documentEstimatedTokens": 421789,
+      "entries": 356,
+      "host": "codex",
+      "inconsistentFiles": 0,
+      "measuredEntries": 355,
+      "uniqueFiles": 138,
+      "unverifiedIdentityEntries": 0
+    }
+  ],
+  "cancelled": false,
+  "cacheConfigurationCounts": {
+    "True": 68,
+    "False": 27,
+    "None": 120
+  },
+  "cliFixtureAcceptance": {
+    "passed": true,
+    "userUniqueFiles": 1,
+    "projectUniqueFiles": 2,
+    "aliasesExcluded": 1,
+    "cacheFilesCountedSeparately": 1,
+    "coverageWarningPreserved": true
+  }
+}
