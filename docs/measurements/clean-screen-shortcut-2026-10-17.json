@@ -67,5 +67,34 @@
     "app": "Calculator",
     "effect": "Esc intended for menu dismissal cleared displayed 1 to 0; AX number 1 restored displayed 1, Undo unavailable",
     "remaining": "Original calculation context could not be verified or restored. No further Calculator actions taken."
+  },
+  "integratedSnapshotRegression": {
+    "commit": "ac2ca31",
+    "checkout": "isolated detached worktree; parallel uncommitted changes excluded",
+    "counts": {
+      "ThermoKitTests": 115,
+      "ThermoCLITests": 66,
+      "ThermoAppTests": 236,
+      "CleanKitTests": 712,
+      "AgentDoctorTests": 77,
+      "AgentCoreTests": 37
+    },
+    "total": 1243,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests"
+    ],
+    "AgentDoctorSelection": [
+      "ProcessExplanationTests",
+      "ProcessListenersTests",
+      "ProcessSleepAssertionsTests",
+      "ProcessLaunchServicesTests",
+      "RedactTests",
+      "CancellationTests",
+      "ContextFootprintTests",
+      "MCPInspectionTests",
+      "MCPHTTPTests"
+    ],
+    "logSHA256": "469b902da8746b5176b68947564bc62cbe087045a83c6b2b81c1cd0c58765853"
   }
 }
