@@ -117,4 +117,20 @@ final class VerifiedArchiveTests: XCTestCase {
             XCTAssertThrowsError(try SSHArchiveDestination(spec))
         }
     }
+    func testStoppedPipeReadersFinishWithoutFoundationDescriptorExceptions() throws {
+        for _ in 0..<40 {
+            let running = try VerifiedArchive.Running(["/bin/sh", "-c", "printf ready; printf diagnostic >&2; /bin/sleep 0.05"])
+            running.stop(); running.stop()
+            XCTAssertEqual(running.drains.wait(timeout: .now() + 2), .success)
+            XCTAssertNotEqual(try running.finish().status, 0)
+        }
+    }
+    func testPrivateReadersDrainBothPipesCompletelyBeforeSuccess() throws {
+        let running = try VerifiedArchive.Running(["/bin/sh", "-c", "/usr/bin/head -c 131072 /dev/zero; /usr/bin/head -c 65536 /dev/zero >&2"])
+        try running.input.fileHandleForWriting.close()
+        let result = try running.finish()
+        XCTAssertEqual(result.status, 0)
+        XCTAssertEqual(result.output.count, 131072); XCTAssertEqual(result.error.count, 65536)
+    }
+
 }

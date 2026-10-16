@@ -220,7 +220,7 @@ public enum VerifiedArchive {
         guard !limit.overflow else { tar.stop(); writer.stop(); throw ArchiveFailure("Archive size overflow") }
         do {
             while true {
-                let block = tar.output.fileHandleForReading.readData(ofLength: 1 << 20)
+                let block = try tar.output.fileHandleForReading.read(upToCount: 1 << 20) ?? Data()
                 if block.isEmpty { break }
                 bytes += Int64(block.count)
                 guard bytes <= limit.partialValue else { throw ArchiveFailure("Archive unexpectedly expanded sparse data; local files retained") }
@@ -289,32 +289,69 @@ public enum VerifiedArchive {
 
     struct Result { let status: Int32; let output: Data; let error: Data }
     final class Buffer: @unchecked Sendable {
-        let lock = NSLock(); var data = Data()
+        let lock = NSLock(); var data = Data(); var failed = false
+        func fail() { lock.lock(); defer { lock.unlock() }; failed = true }
         func append(_ bytes: Data) { lock.lock(); defer { lock.unlock() }; data.append(bytes.prefix(max(0, (1 << 20) - data.count))) }
+    }
+    final class ReaderStop: @unchecked Sendable {
+        private let lock = NSLock(); private var stopped = false
+        func stop() { lock.lock(); defer { lock.unlock() }; stopped = true }
+        var isStopped: Bool { lock.lock(); defer { lock.unlock() }; return stopped }
     }
     final class Running {
         let process = Process(); let input = Pipe(); let output = Pipe(); let errors = Pipe()
-        let out = Buffer(); let err = Buffer(); let drains = DispatchGroup()
+        let out = Buffer(); let err = Buffer(); let drains = DispatchGroup(); let readers = ReaderStop()
         init(_ arguments: [String], streamOutput: Bool = false) throws {
             process.executableURL = URL(fileURLWithPath: arguments[0]); process.arguments = Array(arguments.dropFirst())
             process.standardInput = input; process.standardOutput = output; process.standardError = errors
             try process.run()
-            func drain(_ handle: FileHandle, into buffer: Buffer) {
+            func drain(_ handle: FileHandle, into buffer: Buffer) throws {
+                // Only this reader owns/closes the duplicated descriptor. stop() may close the
+                // original FileHandle without racing a Foundation read or a reused descriptor.
+                let fd = fcntl(handle.fileDescriptor, F_DUPFD_CLOEXEC, 0)
+                guard fd >= 0 else { throw ArchiveFailure("Could not prepare archive subprocess output") }
+                let flags = fcntl(fd, F_GETFL)
+                guard flags >= 0, fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 else {
+                    close(fd); throw ArchiveFailure("Could not prepare archive subprocess output")
+                }
                 drains.enter()
-                DispatchQueue.global(qos: .utility).async { [drains] in
-                    while true { let bytes = handle.readData(ofLength: 16_384); if bytes.isEmpty { break }; buffer.append(bytes) }
-                    drains.leave()
+                DispatchQueue.global(qos: .utility).async { [drains, readers] in
+                    defer { close(fd); drains.leave() }
+                    var bytes = [UInt8](repeating: 0, count: 16_384)
+                    while !readers.isStopped {
+                        var event = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
+                        let ready = poll(&event, 1, 100)
+                        if ready == 0 { continue }
+                        if ready < 0 { if errno == EINTR { continue }; buffer.fail(); break }
+                        if event.revents & Int16(POLLNVAL) != 0 { buffer.fail(); break }
+                        let count = bytes.withUnsafeMutableBytes { Darwin.read(fd, $0.baseAddress, $0.count) }
+                        if count > 0 { buffer.append(Data(bytes.prefix(count))); continue }
+                        if count == 0 { break }
+                        if errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK { continue }
+                        buffer.fail(); break
+                    }
                 }
             }
-            if !streamOutput { drain(output.fileHandleForReading, into: out) }
-            drain(errors.fileHandleForReading, into: err)
-            if streamOutput { try input.fileHandleForWriting.close() }
+            do {
+                if !streamOutput { try drain(output.fileHandleForReading, into: out) }
+                try drain(errors.fileHandleForReading, into: err)
+                if streamOutput { try input.fileHandleForWriting.close() }
+            } catch { stop(); throw error }
         }
         func finish() throws -> Result {
             process.waitUntilExit(); drains.wait()
-            return Result(status: process.terminationStatus, output: out.data, error: err.data)
+            let failed = readers.isStopped || out.failed || err.failed
+            return Result(status: failed ? -1 : process.terminationStatus, output: out.data,
+                          error: err.data + (out.failed || err.failed ? Data("Archive subprocess output could not be read".utf8) : Data()))
         }
-        func stop() { if process.isRunning { process.terminate() }; try? input.fileHandleForWriting.close(); try? output.fileHandleForReading.close() }
+        func stop() {
+            readers.stop()
+            if process.isRunning { process.terminate() }
+            try? input.fileHandleForWriting.close()
+            try? output.fileHandleForReading.close()
+            try? errors.fileHandleForReading.close()
+        }
+        deinit { stop() }
     }
 }
 

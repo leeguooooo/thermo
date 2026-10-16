@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "2aa200e",
+  "sourceSHA256": {
+    "Sources/CleanKit/VerifiedArchive.swift": "15fb98164e6c81459584ecb98252e81aeb66f52a66ed0a0aa6d45939d962c1c6",
+    "Tests/CleanKitTests/VerifiedArchiveTests.swift": "864c0acddbb0fc1c4183095079fe47c516eac1395a3517aa8d7c029104d48bbc"
+  },
+  "observedFailure": {
+    "exception": "NSFileHandleOperationException from background readData(ofLength:) after stop closed its reader",
+    "signal": 6,
+    "logSHA256": "7800dbf87f01665291639f77727376a7bed8a0378a09413a9f1143d3e76eec44"
+  },
+  "focused": {
+    "archiveTests": 11,
+    "failures": 0,
+    "stopIterations": 40,
+    "stopRequestsPerIteration": 2,
+    "stdoutBytesVerified": 131072,
+    "stderrBytesVerified": 65536,
+    "logSHA256": "a26f00922924e41a4d139de239890ab6480010b9db7fec772a6a028736c8bb37",
+    "revisionBoundary": "Before the final withUnsafeMutableBytes buffer borrow; full regression covers final source"
+  },
+  "crashedFixtureCleanup": {
+    "birthTimeMatchedArchiveSuite": true,
+    "syntheticPayloadAndHardlinkVerified": true,
+    "openProcessCount": 0,
+    "removed": true
+  },
+  "limits": [
+    "Archive tests use a local synthetic shell transport, never a real NAS or SSH server",
+    "Reader cancellation is checked during poll; not a guarantee that arbitrary descendants ignoring termination are reaped",
+    "No real user archive data was removed; the deleted crash residue was the matched owned test fixture"
+  ],
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 63,
+      "ThermoAppTests": 191,
+      "CleanKitTests": 655,
+      "AgentCoreTests": 34
+    },
+    "total": 1057,
+    "failures": 0,
+    "logSHA256": "d70652656ba44a77ee5f7a2359ee4321eac12f613666df77a94a0d5346039613",
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ]
+  }
+}
