@@ -173,7 +173,7 @@ struct PulseCommand {
                     lines.append(style.dim("            " + tr("… and %1$@ more processes (%2$@ in all)", String(parts.count - Self.partsShown), Self.size(h.memoryKB))))
                 }
                 if h.owner == nil, let owners = h.owners {
-                    lines.append(style.dim("            " + tr("started by %1$@", owners.joined(separator: ", "))))
+                    lines.append(style.dim("            " + tr("observed ancestor: %1$@", owners.joined(separator: ", "))))
                 }
                 if let e = h.elsewhere {
                     lines.append(style.dim("            " + tr("also %1$@ processes in %2$@ other folders (%3$@)", String(e.processes), String(e.projects.count), Self.size(e.memoryKB))
@@ -263,15 +263,8 @@ struct PulseCommand {
         // Everyone's processes for the parent chain (it passes root-owned `login`); only this user's are listed.
         let everyone = ProcessTable.current(.init(uid: nil))
         let byPid = Dictionary(everyone.entries.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
-        func owner(_ p: AgentProcess) -> String? {
-            var pid = p.ppid
-            for _ in 0..<16 {
-                guard pid > 1, let q = byPid[pid] else { return nil }
-                if let o = PulseSampler.recognise(name: q.name, executable: q.executable ?? "") { return o }
-                pid = q.ppid
-            }
-            return nil
-        }
+        let sampler=PulseSampler()
+        func owner(_ p: AgentProcess) -> String? { sampler.owner(of:p,in:byPid) }
         let uid = getuid()
         let all = MachinePulse.group(everyone.entries.filter { $0.uid == uid }, byMemory: true, limit: nil, owner: owner)
         let lower = target.lowercased()
@@ -288,7 +281,7 @@ struct PulseCommand {
         rows.sort { $0.memoryKB > $1.memoryKB }
         let names = Set(rows.map(\.name))
         let parts = rows.flatMap { $0.parts ?? [] }
-        // A command-line process whose parent has exited is adopted by launchd (ppid 1).
+        // PPID 1 can mean direct launchd startup or adoption; it cannot prove a parent's exit.
         let orphaned = rows.filter { $0.app == nil }.flatMap { $0.parts ?? [] }.filter { $0.ppid == 1 }.count
         let metrics = Set(rows.compactMap(\.memoryMetric))
         let metric: MachinePulse.MemoryMetric? = metrics.count == 1 ? metrics.first : metrics.isEmpty ? nil : .mixed
@@ -297,14 +290,17 @@ struct PulseCommand {
             struct Out: Encodable {
                 let sampled: Date; let units: [String: String]; let query: String; let programs: [String]
                 let processes: Int; let rows: Int; let cpu: Double; let memoryKB: Int; let memoryMetric: MachinePulse.MemoryMetric?
-                let residentKB: Int?; let orphaned: Int; let orphanedNote: String; let programsDetail: [MachinePulse.Hog]
+                let residentKB: Int?; let orphaned: Int; let orphanedNote: String; let ownerMeaning: String
+                let inventoryComplete: Bool; let programsDetail: [MachinePulse.Hog]
             }
             var units = MachinePulse.units
             units["cpu"] = "percent of one core, decayed average like ps -o pcpu"
             print(Export.diagnosticJSON(Out(sampled: Date(), units: units, query: target, programs: names.sorted(), processes: parts.count,
                                             rows: rows.count, cpu: rows.reduce(0) { $0 + $1.cpu }, memoryKB: rows.reduce(0) { $0 + $1.memoryKB },
                                             memoryMetric: metric, residentKB: resident, orphaned: orphaned,
-                                            orphanedNote: "command-line processes whose parent has exited (ppid 1); a hint for leftovers, not proof",
+                                            orphanedNote: "legacy field orphaned counts command-line processes with current parent PID 1 (launchd); this does not prove a parent exited or the process is leftover",
+                                            ownerMeaning: "identity-checked agent, terminal or editor observed in the current ancestor chain; not proof of the original launcher",
+                                            inventoryComplete: everyone.inventoryComplete,
                                             programsDetail: rows)))
             return
         }
@@ -314,15 +310,18 @@ struct PulseCommand {
                      + style.dim("  · " + Self.size(rows.reduce(0) { $0 + $1.memoryKB }) + " " + metricName
                                  + (resident.map { " · " + Self.size($0) + " " + tr("resident (RSS)") } ?? "")
                                  + String(format: " · %.0f%% CPU", rows.reduce(0) { $0 + $1.cpu }))]
+        if !everyone.inventoryComplete {
+            lines.append(style.yellow(tr("The process inventory is incomplete; totals cover observed processes only.")))
+        }
         if orphaned > 0 {
-            lines.append("  " + style.yellow(tr("%1$@ processes outlived the program that started them (parent exited)", String(orphaned))))
+            lines.append("  " + style.yellow(tr("%1$@ processes currently have launchd as parent; this does not prove a parent exited.", String(orphaned))))
         }
         for h in rows {
             lines.append("")
             lines.append("  " + style.bold(h.app ?? h.project ?? h.name) + style.dim("  " + tr("(%1$@ processes)", String(h.pids.count)) + " · " + Self.size(h.memoryKB)
-                                                                         + ((h.owner.map { [$0] } ?? h.owners).map { " · " + tr("started by %1$@", $0.joined(separator: ", ")) } ?? "")))
+                                                                         + ((h.owner.map { [$0] } ?? h.owners).map { " · " + tr("observed ancestor: %1$@", $0.joined(separator: ", ")) } ?? "")))
             for p in h.parts ?? [] {
-                let parent = p.ppid.map { $0 == 1 && h.app == nil ? style.yellow(tr("parent exited")) : "ppid \($0)" } ?? ""
+                let parent = p.ppid.map { $0 == 1 && h.app == nil ? style.yellow(tr("parent: launchd")) : "ppid \($0)" } ?? ""
                 lines.append("    " + pad("pid \(p.pid)", 11) + pad(Self.size(p.memoryKB), 9, right: true)
                              + style.dim(pad(p.residentKB.map { "RSS " + Self.size($0) } ?? "", 14, right: true)
                                          + pad(String(format: "%.0f%%", p.cpu), 6, right: true)

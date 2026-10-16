@@ -82,6 +82,26 @@ public final class PulseSampler {
     }
 
     /// Current ancestor evidence, never a claim about the original launcher.
+    public func owner(of process: AgentProcess, in byPid: [pid_t: AgentProcess],
+                      identity: (pid_t) -> ProcessIdentity? = ProcessTable.identity,
+                      parent: (pid_t) -> pid_t? = ProcessTable.parentPID) -> String? {
+        var current=process,seen=Set<pid_t>(),checked:[(AgentProcess,ProcessIdentity)]=[]
+        for _ in 0..<16 {
+            guard seen.insert(current.pid).inserted,let expected=current.sampledIdentity,
+                  expected.pid == current.pid,expected.uid == current.uid,expected.executable == current.executable,
+                  identity(current.pid) == expected,parent(current.pid) == current.ppid else { return nil }
+            checked.append((current,expected))
+            if current.pid != process.pid,let owner=Self.recognise(name:(expected.executable as NSString).lastPathComponent,executable:expected.executable) {
+                guard checked.allSatisfy({ identity($0.0.pid) == $0.1 && parent($0.0.pid) == $0.0.ppid }) else { return nil }
+                return owner
+            }
+            guard current.ppid > 1,let next=byPid[current.ppid] else { return nil }
+            current=next
+        }
+        return nil
+    }
+
+    /// Cheap usage samples have start/UID evidence rather than full sampled identities.
     func owner(of u: ProcessUsage, in byPid: [pid_t: ProcessUsage],
                identity: (pid_t) -> ProcessIdentity? = ProcessTable.identity,
                parent: (pid_t) -> pid_t? = ProcessTable.parentPID) -> String? {

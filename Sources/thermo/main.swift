@@ -58,7 +58,7 @@ COMMANDS
                               (memory per page needs chrome-use; --app "Microsoft Edge" for others)
   pulse chrome close URL      close one tab showing URL (--title to pick); asks first
   pulse inspect NAME|PID      every copy of one program in every folder: per-process memory (footprint and RSS),
-                              CPU, uptime, parent and owner (--json)
+                              CPU, uptime, parent and identity-checked observed ancestor (--json)
   tabs list|groups           tabs, Thermo groups and protection reasons (--app BROWSER)
   tabs group NAME --ids IDS  create a Thermo group; --by-site resets grouping to websites
   tabs archive               save and close unprotected background tabs in the front window

@@ -297,7 +297,7 @@ struct PopoverView: View {
         .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Color.white.opacity(0.08)))
     }
 
-    /// "thermo · Claude Code": the project a command-line program runs in and who started it.
+    /// "thermo · Claude Code": the working folder and a currently observed ancestor.
     static func origin(_ h: MachinePulse.Hog) -> String? {
         let folder = h.project.map { ($0 as NSString).lastPathComponent }.flatMap { $0.isEmpty || $0 == "~" ? nil : $0 }
         let parts = [folder, h.owner].compactMap { $0 }

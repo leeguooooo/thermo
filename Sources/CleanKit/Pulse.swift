@@ -66,7 +66,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var memoryMetric: MemoryMetric? = nil
         public var cpu: Double
         public var uptime: TimeInterval?
-        /// Parent pid; 1 means its parent has exited and launchd adopted it.
+        /// Current parent PID; 1 alone does not distinguish launchd startup from adoption.
         public var ppid: Int32? = nil
         public var owner: String? = nil
         public var project: String? = nil

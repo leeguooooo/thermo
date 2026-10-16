@@ -219,7 +219,7 @@ public struct SlowdownAlerts: Sendable {
         // The same program on more than 1.5 cores for the whole window.
         for p in last.top where p.cpu >= limits.cpuPercent {
             if held(for: limits.cpuFor, { r in r.top.contains { $0.name == p.name && $0.cpu >= limits.cpuPercent } }) {
-                let place = [p.project, p.owner.map { tr("started by %1$@", $0) }].compactMap { $0 }.joined(separator: " · ")
+                let place = [p.project, p.owner.map { tr("recorded association: %1$@", $0) }].compactMap { $0 }.joined(separator: " · ")
                 out.append(Alert(key: "cpu:\(p.name)", title: tr("%1$@ has been busy for 10 minutes", p.name),
                                  body: tr("It is using %1$@ cores.", String(format: "%.1f", p.cpu / 100))
                                     + (place.isEmpty ? "" : " " + place),

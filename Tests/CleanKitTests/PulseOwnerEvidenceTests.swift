@@ -4,6 +4,45 @@ import XCTest
 @testable import CleanKit
 
 final class PulseOwnerEvidenceTests: XCTestCase {
+    func process(_ pid: Int32,parent: Int32,exe: String) -> AgentProcess {
+        var value=AgentProcess(pid:pid,ppid:parent,uid:501,name:"fixture",executable:exe)
+        value.sampledIdentity = .init(pid:pid,uid:501,started:Date(timeIntervalSince1970:10000+Double(pid)),executable:exe)
+        return value
+    }
+    func testDetailedRowsRequireMatchingSampledIdentitiesAndCurrentParents() {
+        let child=process(10,parent:20,exe:"/usr/bin/node")
+        let terminal=process(20,parent:1,exe:"/Applications/Terminal.app/Contents/MacOS/Terminal")
+        let rows: [Int32:AgentProcess]=[10:child,20:terminal]
+        let ids=rows.mapValues { $0.sampledIdentity! }
+        let sampler=PulseSampler()
+        XCTAssertEqual(sampler.owner(of:child,in:rows,identity:{ ids[$0] },parent:{ rows[$0]?.ppid }),"Terminal")
+        var changed=ids;changed[20]?.started.addTimeInterval(1)
+        XCTAssertNil(sampler.owner(of:child,in:rows,identity:{ changed[$0] },parent:{ rows[$0]?.ppid }))
+        changed=ids;changed[20]?.uid=502
+        XCTAssertNil(sampler.owner(of:child,in:rows,identity:{ changed[$0] },parent:{ rows[$0]?.ppid }))
+        changed=ids;changed[20]?.executable="/usr/bin/false"
+        XCTAssertNil(sampler.owner(of:child,in:rows,identity:{ changed[$0] },parent:{ rows[$0]?.ppid }))
+        XCTAssertNil(sampler.owner(of:child,in:rows,identity:{ ids[$0] },parent:{ $0 == 10 ? 1 : rows[$0]?.ppid }))
+        var unknown=child;unknown.sampledIdentity=nil
+        XCTAssertNil(sampler.owner(of:unknown,in:rows,identity:{ ids[$0] },parent:{ rows[$0]?.ppid }))
+    }
+    func testDetailedRowsRecheckEarlierNodesBeforeReturningAnAncestor() {
+        let child=process(10,parent:20,exe:"/usr/bin/node")
+        let terminal=process(20,parent:1,exe:"/Applications/Terminal.app/Contents/MacOS/Terminal")
+        let rows: [Int32:AgentProcess]=[10:child,20:terminal];var reads=0
+        let owner=PulseSampler().owner(of:child,in:rows,identity:{ pid in
+            if pid == 10 { reads += 1;if reads > 1 { return nil } }
+            return rows[pid]?.sampledIdentity
+        },parent:{ rows[$0]?.ppid })
+        XCTAssertNil(owner)
+    }
+    func testDetailedRowsDoNotInventAnOwnerForLaunchdChildrenOrParentCycles() {
+        let direct=process(10,parent:1,exe:"/usr/bin/node")
+        XCTAssertNil(PulseSampler().owner(of:direct,in:[10:direct],identity:{ _ in direct.sampledIdentity },parent:{ _ in 1 }))
+        let a=process(10,parent:20,exe:"/usr/bin/node"),b=process(20,parent:10,exe:"/usr/bin/python3")
+        let rows: [Int32:AgentProcess]=[10:a,20:b]
+        XCTAssertNil(PulseSampler().owner(of:a,in:rows,identity:{ rows[$0]?.sampledIdentity },parent:{ rows[$0]?.ppid }))
+    }
     func usage(_ pid: Int32, parent: Int32) -> ProcessUsage {
         var p = ProcessUsage(pid:pid,ppid:parent,uid:501,name:"fixture")
         p.started = Date(timeIntervalSince1970:10000+Double(pid));return p
