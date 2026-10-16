@@ -12,6 +12,7 @@
 #                                          (upload everything in releases/ to that directory)
 #   ARCHS="arm64 x86_64" scripts/build.sh  universal binaries
 #   THERMO_BUILD_CONFIGURATION=debug …    local review using existing debug outputs
+#   THERMO_BUILD_JOBS=1 …                 bound compiler concurrency on constrained hosts
 set -eu
 
 cd "$(dirname "$0")/.."
@@ -23,6 +24,14 @@ APPCAST_URL="${APPCAST_URL:-}"
 ARCHS="${ARCHS:-}"
 CONFIGURATION="${THERMO_BUILD_CONFIGURATION:-release}"
 case "$CONFIGURATION" in release|debug) ;; *) echo "invalid build configuration: $CONFIGURATION" >&2; exit 2 ;; esac
+BUILD_JOB_COUNT="${THERMO_BUILD_JOBS:-}"
+if [ -n "$BUILD_JOB_COUNT" ]; then
+    case "$BUILD_JOB_COUNT" in *[!0-9]*) echo "THERMO_BUILD_JOBS must be a positive decimal integer" >&2; exit 2 ;; esac
+    [ "$BUILD_JOB_COUNT" -gt 0 ] 2>/dev/null || { echo "THERMO_BUILD_JOBS must be a positive decimal integer" >&2; exit 2; }
+    set -- --jobs "$BUILD_JOB_COUNT"
+else
+    set --
+fi
 VERSION="$(sed -n 's/.*static let string = "\(.*\)"/\1/p' Sources/ThermoKit/Version.swift)"
 BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 DIST="${THERMO_DIST_DIR:-dist}"
@@ -35,9 +44,9 @@ arch_flags=""
 for a in $ARCHS; do arch_flags="$arch_flags --arch $a"; done
 
 # shellcheck disable=SC2086
-swift build -c "$CONFIGURATION" $arch_flags
+swift build -c "$CONFIGURATION" $arch_flags "$@"
 # shellcheck disable=SC2086
-BIN="$(swift build -c "$CONFIGURATION" $arch_flags --show-bin-path)"
+BIN="$(swift build -c "$CONFIGURATION" $arch_flags "$@" --show-bin-path)"
 
 mkdir -p "$DIST"
 # Replace only our generated products; preserve unrelated files in a custom output directory.
