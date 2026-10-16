@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "b201f32",
+  "sourceSHA256": {
+    "Sources/ThermoApp/ProcessExplanationView.swift": "009b20509ac13a534e6110791bce7c617920dcd40e4d14dca668e746cda4b0e2",
+    "scripts/verify-process-explanation-ui.swift": "0eb75c61a96a87ae91c45d2a37be4aa1231dc770a79d6e056b28859760ece492"
+  },
+  "change": "PID/PPID/UID use plain decimal String interpolation, not localized number formatting",
+  "checks": {
+    "selectedTests": 26,
+    "failures": 0,
+    "logSHA256": "736d9eaa9a27a6c268cdd933af6845717bb0234ece885d8b13b8172d83d0a01f",
+    "noAdditionalFormatterMirrorTest": true
+  },
+  "nativeVisibleAcceptance": {
+    "binarySHA256": "8b78d12fc8072d39c0b08e2d584de4fbfb48d8855f9a80a78c24a470e0b97379",
+    "source": "current testable production ProcessExplanationView object, no installed-app replacement",
+    "realWindowRead": true,
+    "screenshotAndAXSeen": true,
+    "capturedProcessChoices": "own QA process and owned caffeinate child",
+    "parentChainAndIncompleteNoticeVisible": true,
+    "PIDFormattingObservedWithoutSeparators": true,
+    "TCPNoneObservedDisclaimerVisible": true,
+    "activeIdleSystemAssertionVisible": true,
+    "scrollToBottomAndFooterChecked": true,
+    "childStoppedAfterParentAndCommandAttributionCheck": true,
+    "refreshClearedOldDetailsAndDisplayedStaleProcessRefusal": true,
+    "switchBackReadNewCurrentProcess": true,
+    "windowDiagnostics": "initial other-Space state followed by activeSpace=true; not treated as visible proof until CUA succeeded",
+    "windowSizeAfterLayout": [
+      600,
+      552
+    ],
+    "screenshots": "conversation only; no raw ancestor arguments or images persisted"
+  },
+  "cleanup": {
+    "qaExited": true,
+    "ownedChildExited": true,
+    "temporaryIdleAssertionReleasedByChildExit": true,
+    "openFixtureHandles": 0,
+    "ownedRootRemoved": true
+  },
+  "limitations": [
+    "Independent component acceptance; installed main-app entry not exercised",
+    "Positive TCP endpoint, malformed and truncation states covered by prior CLI/unit tests, not all visible here",
+    "Root-hosted Close button not claimed as modal dismissal acceptance",
+    "No push or release"
+  ]
+}

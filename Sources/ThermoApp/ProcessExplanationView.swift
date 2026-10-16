@@ -75,7 +75,7 @@ struct ProcessInspectionTarget: Identifiable {
                         Text(tr("Observed parent chain")).font(.headline)
                         ForEach(report.chain) { node in
                             VStack(alignment: .leading, spacing: 3) {
-                                Text("\(node.name) · PID \(node.pid) → \(node.parentPID) · UID \(node.uid)").font(.callout.weight(.medium))
+                                Text("\(node.name) · PID \(String(node.pid)) → \(String(node.parentPID)) · UID \(String(node.uid))").font(.callout.weight(.medium))
                                 Text(node.executable).font(.caption.monospaced())
                                 Text(tr("Started at %1$@", node.started.formatted(date: .abbreviated, time: .standard))).font(.caption).foregroundStyle(.secondary)
                                 if let cwd = node.workingDirectory { Text(tr("Working directory: %1$@", cwd)).font(.caption) }
