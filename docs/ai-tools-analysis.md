@@ -23,6 +23,23 @@ thermo 的 AI 工具页需要回答：配置是否有故障、定义有多大、
 
 发现规则参考 [Codex Skill 位置与同名行为](https://developers.openai.com/codex/skills)、[Codex 插件缓存布局](https://developers.openai.com/plugins/build/plugins)、[Claude Code 项目 Skill 与同名规则](https://code.claude.com/docs/en/skills)。这些规则于 2026-10-17 核对；实现对未识别的加载状态保持未知。
 
+## Skill 内容证据
+
+每份成功读取的 Skill 增加 quality 元数据。解析由固定版本的 [Swift Markdown 0.9.0](https://github.com/swiftlang/swift-markdown/tree/0.9.0) / cmark-gfm 完成，依赖提交记录在 Package.resolved 中。检查不执行 Skill、脚本或 MCP，不联网获取引用，也不读取引用文件正文。
+
+- 检查 Markdown 链接、图片和已解析的参考式链接，保留原 SKILL.md 行号。代码块、行内代码、HTML 注释和未解析成链接的括号文字不会当作文件引用。
+- 只核实静态相对路径。URL、绝对路径、锚点、变量和 glob 不查；编码空格和嵌套括号按 Markdown 解析，父目录引用从真实的 Skill 文件位置解析，避免链接目录改变 ../ 的含义。
+- 目标不存在与无权限 / 无法核实分开处理。缺失引用明确写“当前不存在”，提醒判断它应随 Skill 打包还是使用时生成，不宣称 Skill 一定不能用。
+- 去掉元信息和注释后没有正文会列出 empty_body；没有长度评分，也不把长文档直接判为差。
+- 同一宿主下、独立文件的 SKILL.md 完全相同会给 info 提示和来源，别名 / 硬链接不算独立副本。缓存的多版本不参与重复安装提示；缓存引用问题只作信息证据，不当成已加载版本的健康故障。
+- 每份文档最多处理 100,000 个语法节点、512 个引用；取消或达到上限明确标为检查未完成。HTML href、引用锚点正确性和任务语义不在检查范围。
+
+App 显示内容检查数量，问题详情给出来源及行号；信息条目也可展开证据。旧报告没有 quality 时显示尚未采集，不能用 0 个问题代替未知。
+
+[本机盘点与隔离验收](measurements/skill-quality-2026-10-17.json)记录了 Codex 范围的 355 个文档条目、876 次本地引用检查和 2 个当前缺失的目标；未包含 Skill 名称或路径。`scripts/verify-skill-quality.py` 用编译后的 CLI 核实引用位置、正文空缺、副本和不执行 MCP、不改 Skill 的边界。
+
+Swift Markdown 与 swift-cmark 的许可证、NOTICE / COPYING 保存在 Resources/ThirdPartyNotices。构建脚本将它们带入 App、CLI ZIP 和 GitHub Release tar 包；本轮验证的是独立目录中的 Debug ad-hoc 包和归档布局，没有公证、安装或发布。root helper 未链接 Markdown，原生离屏预览脚本也已复核可运行。
+
 ## MCP 主动检查
 
 普通体检仍只检查配置，不启动任何 MCP。`thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--json]` 或 App 的“连接并检查”会显式启动选定的 stdio 服务或连接配置的 Streamable HTTP 地址，执行 initialize、notifications/initialized 和完整分页 tools/list，不调用业务工具。不改写配置。stdio 使用自己启动的子进程；HTTP 建立新的检查会话，不接管其他客户端的会话。

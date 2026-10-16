@@ -559,6 +559,17 @@ struct ConfigChecks {
                                 items[index].detail = tr("Plugin cache inventory; current loaded version is unverified") + " · " + items[index].detail
                             }
                         }
+                        footprint.quality = SkillQuality.inspect(text, at: skill, cancelled: env.cancelled)
+                        if let quality = footprint.quality {
+                            for issue in quality.issues {
+                                add(Finding(agent == "codex-cache" ? .info : .warning, .skills, agent: agent, subject: name, issue.message,
+                                            source: env.short(skill.path) + ":" + String(issue.line)))
+                            }
+                            if !quality.complete {
+                                add(Finding(.info, .skills, agent: agent, subject: name,
+                                            tr("Local reference inspection is incomplete; only supported static Markdown targets were checked."), source: env.short(skill.path)))
+                            }
+                        }
                         if let i = items.firstIndex(where: { $0.id == key }) { items[i].skillFootprint = footprint }
                         // Nested collections may resolve through a shared symlink: never offer removal of their targets.
                         if agent != "plugin", agent != "codex-cache", !origin.hasPrefix("project "), node.depth == 1 { offerSkillRemoval(u) }
@@ -619,6 +630,7 @@ struct ConfigChecks {
                 }
             }
         }
+        checkIdenticalSkillContent()
         currentItem = nil
     }
 

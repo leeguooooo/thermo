@@ -32,6 +32,8 @@ public struct SkillFootprint: Codable, Equatable, Sendable {
     public var scope: String? = nil
     public var namespace: String? = nil
     public var pluginConfiguredEnabled: Bool? = nil
+    public var quality: SkillQualityReport? = nil
+    public var identicalContentFiles: Int? = nil
 
     public var summary: String {
         tr("Catalog ≈%1$@ tokens · SKILL.md ≈%2$@ tokens · %3$@ bytes",

@@ -43,6 +43,17 @@ struct SkillContextCard: View {
                     if let source = item.skillFootprint?.sourcePath { Text(source).font(.caption).foregroundStyle(.secondary).textSelection(.enabled) }
                 }
             }
+            let qualities = items.compactMap { $0.skillFootprint?.quality }
+            let checked = qualities.reduce(0) { $0 + $1.checkedLocalReferences }
+            let issues = qualities.reduce(0) { $0 + $1.issues.count }
+            if qualities.isEmpty {
+                Text(tr("Skill content evidence has not been collected.")).font(.caption).foregroundStyle(.secondary)
+            } else {
+                Text(tr("Content checks: %1$@ local references checked · %2$@ findings · %3$@ incomplete inspections", String(checked), String(issues), String(qualities.filter { !$0.complete }.count)))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Text(tr("Reference checks only test current local targets; generated files and intentional copies need review. No quality score or automatic removal is inferred."))
+                .font(.caption).foregroundStyle(.secondary)
             Text(SkillFootprint.coverage).font(.caption).foregroundStyle(.secondary)
             Text(SkillFootprint.caveat).font(.caption).foregroundStyle(.secondary)
         }

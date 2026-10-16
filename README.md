@@ -92,7 +92,7 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 | `thermo fan auto [id\|all]` / `fan status` | 恢复自动 / 查看策略 |
 | `thermo helper install\|uninstall\|status` | 管理特权 helper |
 | `thermo bench` | 采样延迟基准 |
-| `thermo agents context [--agent AGENT] [--root PROJECT] [--json]` | Skill 静态占用排名与按宿主去重汇总；可指定项目，Codex 插件缓存单独计量。目录描述和完整文件分开统计，不代表会话实际用量 |
+| `thermo agents context [--agent AGENT] [--root PROJECT] [--json]` | Skill 静态占用排名与按宿主去重汇总；可指定项目，Codex 插件缓存单独计量。目录描述和完整文件分开统计，不代表会话实际用量；另给出缺失本地引用、空正文和相同内容副本的证据 |
 | `thermo agents usage [--since ISO_DATE] [--agent claude\|codex] [--limit FILES] [--json]` | 显式分析本地日志，统计可归因的 MCP / Skill 调用、观察耗时、明确错误和返回文本；请求 token 单列，覆盖不足与未知状态明确显示 |
 | `thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--json]` | 主动连接一个 stdio / Streamable HTTP MCP，测量握手和完整工具定义，按估算 token 排名；不调用业务工具。HTTP 支持 JSON / SSE；认证失败、超时和未完成检查分别报告 |
 | `thermo agents fix [NAME] [--dry-run] [--yes]` | 自动修复：先列出每一步要执行的命令再确认。优先调用 agent 自带的命令（`claude mcp remove`、`claude plugin uninstall`、`codex mcp remove`）；改配置前备份到 `~/Library/Application Support/Thermo/Backups`；文件移到废纸篓；结束进程前复核命令行；每步记录到 `~/Library/Logs/Thermo/fix.log` |

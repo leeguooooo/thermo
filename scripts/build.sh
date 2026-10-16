@@ -56,6 +56,8 @@ cp "$BIN/ThermoApp" "$C/MacOS/Thermo"
 cp "$BIN/thermo-helper" "$BIN/thermo" "$C/Helpers/"
 cp Resources/dev.thermo.helper.plist "$C/Library/LaunchDaemons/"
 cp Resources/AppIcon.icns "$C/Resources/"
+ditto Resources/ThirdPartyNotices "$C/Resources/ThirdPartyNotices"
+ditto Resources/ThirdPartyNotices "$DIST/ThirdPartyNotices"
 ditto "$BIN/Sparkle.framework" "$C/Frameworks/Sparkle.framework"
 # Not sandboxed, so Sparkle's XPC services are unnecessary.
 rm -rf "$C/Frameworks/Sparkle.framework/Versions/B/XPCServices" "$C/Frameworks/Sparkle.framework/XPCServices"
@@ -117,12 +119,16 @@ if [ -n "$NOTARY_PROFILE" ]; then
 
     # Standalone CLI (tickets cannot be stapled to bare Mach-O files; Gatekeeper checks online)
     CLI_ZIP="$DIST/thermo-cli-$VERSION.zip"
-    ditto -c -k "$DIST/thermo" "$CLI_ZIP"
+    CLI_NOTARY_STAGE="$(mktemp -d "$DIST/.thermo-cli-XXXXXX")"
+    cp "$DIST/thermo" "$CLI_NOTARY_STAGE/thermo"
+    ditto Resources/ThirdPartyNotices "$CLI_NOTARY_STAGE/ThirdPartyNotices"
+    ditto -c -k "$CLI_NOTARY_STAGE" "$CLI_ZIP"
+    rm -rf "$CLI_NOTARY_STAGE"
     notarize "$CLI_ZIP"
 
     # Public CLI mirror and GitHub Release use the same signed universal archive.
     CLI_ARCHIVE=thermo-cli-macos-universal.tar.gz
-    tar -czf "$DIST/$CLI_ARCHIVE" -C "$DIST" thermo thermo-helper
+    tar -czf "$DIST/$CLI_ARCHIVE" -C "$DIST" thermo thermo-helper ThirdPartyNotices
     (cd "$DIST" && shasum -a 256 "$CLI_ARCHIVE" > "$CLI_ARCHIVE.sha256")
 
     spctl -a -vv "$APP"

@@ -334,6 +334,9 @@ private struct ProblemCard: View {
                         if let fix = f.fix {
                             Text(tr("Suggestion: %1$@", fix)).font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).fixedSize(horizontal: false, vertical: true)
                         }
+                        if let source = f.source, source != item.source {
+                            Text(source).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                        }
                     }
                     Text(item.detail).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white.opacity(0.55)).textSelection(.enabled)
                         .padding(8).frame(maxWidth: .infinity, alignment: .leading)
@@ -398,8 +401,8 @@ private struct HealthyRow: View {
     @State private var confirming: Action?
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: item.enabled ? "checkmark.circle.fill" : "minus.circle")
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: !item.enabled ? "minus.circle" : item.severity == .info ? "info.circle" : "checkmark.circle.fill")
                 .foregroundStyle(item.enabled ? Color.green.opacity(0.85) : Color.white.opacity(0.35))
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -413,6 +416,15 @@ private struct HealthyRow: View {
                 Text(item.detail).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white.opacity(0.4)).lineLimit(1).truncationMode(.middle)
                 if let footprint = item.skillFootprint {
                     Text(footprint.summary).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                }
+                let evidence = scanner.report?.findings(for: item) ?? []
+                if !evidence.isEmpty {
+                    DisclosureGroup(tr("Details")) {
+                        ForEach(Array(evidence.enumerated()), id: \.offset) { _, finding in
+                            Text(finding.message).font(.caption).textSelection(.enabled)
+                            if let source = finding.source { Text(source).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled) }
+                        }
+                    }.font(.caption)
                 }
             }
             Spacer()

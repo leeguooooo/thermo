@@ -1,0 +1,2 @@
+# Preserve upstream license/notice bytes, including their final blank lines.
+Resources/ThirdPartyNotices/* whitespace=-blank-at-eof

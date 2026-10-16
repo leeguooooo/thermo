@@ -2545,6 +2545,14 @@ let zhHans: [String: String] = [
     "%1$@ oversized log lines were skipped; returned text totals may be incomplete.": "已跳过 %1$@ 个过大的日志行，返回文本总量可能不完整。",
     "P95 is shown only with at least 20 valid timing samples.": "至少有 20 个有效耗时样本才会显示 P95。",
     "No supported request token records were found; request usage is unknown.": "未找到受支持的请求 token 记录，请求用量未知。",
+    // Static Skill content evidence
+    "SKILL.md has no instruction body after front matter and comments.": "SKILL.md 在元信息和注释之后没有指令正文。",
+    "Local Markdown target does not exist now: %1$@. Check whether it should be packaged or generated during use.": "本地 Markdown 引用目标当前不存在：%1$@。请核实它应随 Skill 打包，还是使用时生成。",
+    "Identical SKILL.md content exists in %1$@ independent files. This may be intentional; no copy was selected for removal.": "%1$@ 个独立文件的 SKILL.md 内容完全相同。这可能是有意安排，未选择任何副本移除。",
+    "Compare the sources: %1$@": "对照这些来源：%1$@",
+    "Local reference inspection is incomplete; only supported static Markdown targets were checked.": "本地引用检查未完成，仅检查了支持的静态 Markdown 目标。",
+    "Static references: %1$@ checked · %2$@ findings · %3$@ incomplete inspections": "静态引用：已检查 %1$@ 项 · %2$@ 个发现 · %3$@ 项检查不完整",
+    "Reference checks only test current local targets; generated files and intentional copies need review. No quality score or automatic removal is inferred.": "引用检查只核实当前本地目标；生成文件和有意保留的副本需人工复核，不据此评分或自动移除。",
     "The saved shortcut is invalid. Record it again.": "保存的快捷键无效，请重新录制。",
     "Use at least two modifiers, including Command, Control or Option.": "请至少使用两个修饰键，且包含 Command、Control 或 Option。",
     "This shortcut is unavailable. Record another combination.": "此快捷键不可用，请录制其他组合。",
@@ -2557,4 +2565,6 @@ let zhHans: [String: String] = [
     "Record shortcut…": "录制快捷键…",
     "Record global Clean Screen shortcut": "录制清洁屏幕全局快捷键",
     "Or press %1$@": "或按 %1$@",
+    "Skill content evidence has not been collected.": "尚未采集 Skill 内容检查证据。",
+    "Content checks: %1$@ local references checked · %2$@ findings · %3$@ incomplete inspections": "内容检查：已核实 %1$@ 个本地引用 · %2$@ 个发现 · %3$@ 项检查不完整",
 ]
