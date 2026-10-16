@@ -425,7 +425,10 @@ struct CleanCommand {
         if args.has("json") { print(Export.json(results)); return }
         let freed = results.filter { !$0.trashed }.reduce(Int64(0)) { $0 + $1.bytes }
         let trashed = results.filter(\.trashed).reduce(Int64(0)) { $0 + ($1.trashedAllocatedBytes ?? $1.bytes) }
-        var summary = "deleted \(ByteFormat.string(freed)) (estimated file size)"
+        let estimateIncomplete = results.contains { $0.bytesIncomplete == true }
+        var summary = estimateIncomplete
+            ? (freed == 0 ? "removed size is unknown" : "measured removed size: \(ByteFormat.string(freed)); total size is unknown")
+            : "deleted \(ByteFormat.string(freed)) (estimated file size)"
         if trashed > 0 {
             summary += ", \(ByteFormat.string(trashed)) still occupies Trash space; empty only this batch to attempt reclaiming it"
         }

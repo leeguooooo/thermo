@@ -287,12 +287,8 @@ struct MainView: View {
             if page.isDisk, disk.report == nil, !disk.scanning { disk.loadSaved() }
         }
         .sheet(isPresented: $confirmingClean) {
-            ConfirmSheet(title: tr("Clean %1$@?", ByteFormat.string(disk.selectedBytes)), summary: disk.confirmSummary,
-                         destructive: disk.selectedItems.contains { $0.safety == .safe }, heading: tr("What will be removed"),
-                         lines: disk.planLines,
-                         footnote: tr("Removed items are listed in ~/Library/Logs/Thermo/clean.log. Anything changed since the scan is skipped."),
-                         confirmTitle: tr("Clean"),
-                         confirm: { confirmingClean = false; disk.clean() }, cancel: { confirmingClean = false })
+            DiskCleanConfirmation(model: disk,
+                                  confirm: { confirmingClean = false; disk.clean() }, cancel: { confirmingClean = false })
         }
         .sheet(isPresented: Binding(get: { agents.batch?.finished == true }, set: { if !$0 { agents.batch = nil } })) {
             BatchResult(scanner: agents)

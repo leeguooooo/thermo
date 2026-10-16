@@ -204,7 +204,9 @@ final class DiskModel: ObservableObject {
                 }
             }
             let observation = DiskSpaceObservation(before: spaceBefore, after: DiskSpaceSnapshot.measure())
-            var text = tr("deleted %1$@ (estimated file size)", ByteFormat.string(freed))
+            var text = estimateIncomplete
+                ? (freed == 0 ? tr("Removed size is unknown") : tr("Measured removed size: %1$@; total size is unknown", ByteFormat.string(freed)))
+                : tr("deleted %1$@ (estimated file size)", ByteFormat.string(freed))
             if trashed > 0 { text += tr(", %1$@ still occupies Trash space; empty only this batch to reclaim it", ByteFormat.string(trashed)) }
             if batchRecorded { text += "\nthermo clean empty-trash \(batchID) --dry-run" }
             if partialCount > 0 { text += " · " + tr("%1$@ items partially completed; remaining files kept", String(partialCount)) }

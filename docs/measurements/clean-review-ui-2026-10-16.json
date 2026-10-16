@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "d6014ef",
+  "sourceSHA256": {
+    "Sources/ThermoApp/DiskWindow.swift": "1b5a633f1bf77127bda71b85f01e9cd09610e71ff765d04952e641fbbeaa83b8",
+    "Sources/ThermoApp/MainWindow.swift": "2466241e0aa393aa62238adbb0ae0fc8dadf467b94f9fdc354ee52866822a6bf",
+    "Sources/ThermoApp/DiskView.swift": "59dd100d04cf6a0cdbdc48dacd7ec5e1641b426605a412f65942212f0238d994",
+    "Sources/thermo/Clean.swift": "cbf8866d01fa29e9b09704696802596350d2926c958c7cc47ae7a8d38652e0a0",
+    "Sources/ThermoL10n/ZhHans.swift": "665d05990109bf6d58c03eb0228fe102665e9ce97bdb9d42e80d03638ae2bdb6",
+    "Tests/ThermoAppTests/ConfirmationReviewTests.swift": "08c6917bd1588ece0714b1ed3ebeb706c92e75118c6efac1356eb52352492330",
+    "scripts/verify-clean-review-ui.swift": "cc4341aa02863b7e0b4cad45a2cd5dd490487f706657772aca1c1c8d8f4b4773"
+  },
+  "newTests": 2,
+  "tests": {
+    "counts": {
+      "ThermoCLITests": 59,
+      "ThermoAppTests": 177
+    },
+    "total": 236,
+    "failures": 0,
+    "logSHA256": "dec36f485b99465b3735fc83bd402992183479b6cfee1ef113351ca6df4b996d"
+  },
+  "visibleNativeAcceptance": {
+    "windowContentSize": [
+      800,
+      580
+    ],
+    "locale": "zh-Hans",
+    "source": "CUA accessibility and screenshots in this conversation",
+    "sharedProductionViews": [
+      "DiskCategoryPage",
+      "DiskCleanConfirmation",
+      "DiskCleanupResult"
+    ],
+    "reviewedScopePaths": 18,
+    "scrolledToLastPathAndCommand": true,
+    "permanentToolWarningIcon": "exclamationmark.triangle.fill",
+    "toolSafetyLabel": "需确认",
+    "unknownSizeText": "已移除的大小未知",
+    "logButtonText": "查看日志",
+    "partialResultRemainsOnCategoryPage": true,
+    "actualCommands": {
+      "success": [
+        [
+          "/usr/bin/true"
+        ]
+      ],
+      "partial": [
+        [
+          "/usr/bin/true"
+        ],
+        [
+          "/usr/bin/false"
+        ]
+      ]
+    },
+    "vendorCleanupExecuted": false,
+    "dataDeletionExecuted": false
+  },
+  "nativeHistory": [
+    {
+      "outcome": "succeeded",
+      "bytes": 0,
+      "bytesIncomplete": true,
+      "items": [
+        {
+          "target": "ran: /usr/bin/true",
+          "status": "done"
+        }
+      ]
+    },
+    {
+      "outcome": "partial",
+      "bytes": 0,
+      "bytesIncomplete": true,
+      "items": [
+        {
+          "target": "ran: /usr/bin/true",
+          "status": "done"
+        },
+        {
+          "target": "/usr/bin/false",
+          "status": "failed"
+        }
+      ]
+    }
+  ],
+  "qaExecutableSHA256": "fa14a7d0dcf7a4f727c09f4bfd5360274081a4629c1a7516992b55fedb5e6143",
+  "runtimeLogSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "temporaryHomeIsolated": true,
+  "qaProcessesExited": true,
+  "ownedWorkspaceRemoved": true,
+  "limits": [
+    "Visible isolated QA window uses production components and no-op tools; no real vendor deletion or installed-app replacement",
+    "Long scope scrolling verified in first QA binary; final label/result changes separately verified after rebuilding",
+    "Standalone screenshots were not written to repository; visible screenshots remain in conversation tool evidence",
+    "Only affected App/CLI suites rerun; hardware, root helper, AgentDoctor and full Mole parity not accepted",
+    "No push or release"
+  ]
+}

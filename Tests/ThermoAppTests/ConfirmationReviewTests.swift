@@ -48,6 +48,25 @@ final class ConfirmationReviewTests: XCTestCase {
         model.toggle(b.path, bytes: 3); model.trash(review: snapshot)
         XCTAssertFalse(model.working); XCTAssertEqual(model.basket.count, 2); XCTAssertEqual(snapshot.selection.keys.sorted(), [a.path]); XCTAssertTrue(model.outcomeIsWarning)
     }
+    @MainActor func testPermanentToolConfirmationWarnsRegardlessOfSafetyTag() {
+        for safety in [Safety.safe, .review, .risky] {
+            let item = CleanItem(id: "fixture", category: .xcode, title: "fixture", safety: safety, bytes: 1,
+                                 commands: [["/usr/bin/true"]], commandScope: ["/fixture/scope"])
+            let model = DiskModel(report: .init(items: [item], denied: [], started: Date(), duration: 0))
+            model.selected = [item.id]
+            XCTAssertTrue(model.confirmationIsDestructive)
+            XCTAssertFalse(model.planLines[0].contains("(0 "))
+        }
+    }
+    @MainActor func testTrashOnlyConfirmationAndEmptySelectionAreNotPermanent() {
+        for safety in [Safety.safe, .review, .risky] {
+            let item = CleanItem(id: "fixture", category: .system, title: "fixture", safety: safety, bytes: 1, paths: ["/fixture/data"])
+            let model = DiskModel(report: .init(items: [item], denied: [], started: Date(), duration: 0))
+            XCTAssertFalse(model.confirmationIsDestructive)
+            model.selected = [item.id]
+            XCTAssertEqual(model.confirmationIsDestructive, safety == .safe)
+        }
+    }
     private final class Calls: @unchecked Sendable {
         let lock = NSLock(); private var value = 0
         func next() -> Int { lock.lock(); defer { lock.unlock() }; value += 1; return value }

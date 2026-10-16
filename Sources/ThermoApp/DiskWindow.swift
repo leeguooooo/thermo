@@ -25,7 +25,8 @@ extension DiskModel {
         selectedItems.flatMap { i -> [String] in
             let how = !(i.commands ?? []).isEmpty ? tr("permanent tool removal") : i.safety == .safe ? tr("delete") : tr("trash")
             let paths = trCount(i.paths.count, "%1$@ path", "%1$@ paths")
-            return ["\(how) · \(ByteFormat.string(i.bytes)) · \(i.title) (\(paths))"]
+            let suffix = (i.commands ?? []).isEmpty ? " (\(paths))" : ""
+            return ["\(how) · \(ByteFormat.string(i.bytes)) · \(i.title)\(suffix)"]
                 + i.paths.map { "    " + FSPath.tilde($0) }
                 + (i.commandScope ?? []).map { "    " + tr("Tool-managed locations") + ": " + FSPath.tilde($0) }
                 + (i.commands ?? []).map { "    " + $0.joined(separator: " ") }
@@ -46,10 +47,44 @@ extension DiskModel {
         return parts.joined(separator: " ")
     }
 
+    var confirmationIsDestructive: Bool {
+        selectedItems.contains { !($0.commands ?? []).isEmpty || ($0.safety == .safe && !$0.paths.isEmpty) }
+    }
+
     var safeItems: [CleanItem] { (report?.items ?? []).filter(\.automaticallySelected) }
     var safeBytes: Int64 { safeItems.reduce(0) { $0 + $1.bytes } }
 
     func selectSafe() { selected = Set(safeItems.map(\.id)) }
+}
+
+/// Shared by the main window and the opt-in native UI acceptance harness.
+struct DiskCleanConfirmation: View {
+    @ObservedObject var model: DiskModel
+    let confirm: () -> Void
+    let cancel: () -> Void
+
+    var body: some View {
+        ConfirmSheet(title: tr("Clean %1$@?", ByteFormat.string(model.selectedBytes)), summary: model.confirmSummary,
+                     destructive: model.confirmationIsDestructive, heading: tr("What will be removed"),
+                     lines: model.planLines,
+                     footnote: tr("Removed items are listed in ~/Library/Logs/Thermo/clean.log. Targets are checked again before each operation; checks do not seal all folder contents."),
+                     confirmTitle: tr("Clean"), confirm: confirm, cancel: cancel)
+    }
+}
+
+/// Keep execution feedback visible on the page from which cleanup was started.
+struct DiskCleanupResult: View {
+    @ObservedObject var model: DiskModel
+    var body: some View {
+        if let result = model.lastResult {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(result).font(.callout).foregroundStyle(.white.opacity(0.8))
+                    .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
+                Button(tr("Show log")) { model.openLog() }.buttonStyle(PillButtonStyle())
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(14)
+                .glass(radius: 14)
+        }
+    }
 }
 
 enum DiskStyle {
@@ -141,9 +176,7 @@ struct DiskHome: View {
                         Button(tr("Open Full Disk Access")) { model.openFullDiskAccess() }.buttonStyle(PillButtonStyle())
                     }
                 }
-                if let res = model.lastResult {
-                    Text(res).font(.callout).foregroundStyle(.white.opacity(0.7)).onTapGesture { model.openLog() }
-                }
+                DiskCleanupResult(model: model)
                 if let days = model.report?.claudeCleanupDays {
                     Text(tr("Claude Code deletes its own sessions after %1$@ days (cleanupPeriodDays).", String(days)))
                         .font(.caption).foregroundStyle(.white.opacity(0.4))
@@ -254,6 +287,7 @@ struct DiskCategoryPage: View {
             }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 10) {
+                    DiskCleanupResult(model: model)
                     let list = items
                     let groups = Dictionary(grouping: list, by: { $0.group ?? "" })
                     if category == .projects && groups.count > 1 {
@@ -335,7 +369,7 @@ struct DiskCategoryPage: View {
     func card(_ i: CleanItem) -> some View {
         let ticked = model.selected.contains(i.id)
         let expanded = open.contains(i.id)
-        let (tag, tagColor) = DiskStyle.safety(i.safety, info: i.paths.isEmpty)
+        let (tag, tagColor) = DiskStyle.safety(i.safety, info: i.paths.isEmpty && (i.commands ?? []).isEmpty)
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 Button { model.toggle(i) } label: {
