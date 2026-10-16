@@ -179,7 +179,8 @@ struct TabWorkspaceView: View {
                 }
                 if task == .organize {
                     ScrollView {
-                        NativeTabOrganizerView(app: model.app, pages: model.pages, working: $model.busy,
+                        NativeTabOrganizerView(app: model.app, pages: model.pages, nativeGroups: model.inventory?.nativeGroups ?? [],
+                                               working: $model.busy,
                                                previewOnly: model.isPreview, refresh: model.refresh)
                     }
                 } else { archiveTabs }

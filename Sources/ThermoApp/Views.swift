@@ -1,3 +1,4 @@
+import CleanKit
 import Charts
 import SwiftUI
 import ThermoKit
@@ -50,16 +51,20 @@ struct Bar: View {
 /// the way into the main window, where everything else lives.
 struct PopoverView: View {
     @ObservedObject var monitor: Monitor
+    @ObservedObject private var panel = PanelModel.shared
+    @ObservedObject private var pulse = SystemPulse.shared
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
     @AppStorage(L10n.defaultsKey) private var language = "system"
 
     var body: some View {
         let _ = L10n.apply(preference: language)
         content.id(language)  // rebuild every string in the new language
+            .onAppear { panel.setActive(monitor.panelVisible || renderingPreview) }
+            .onChange(of: monitor.panelVisible) { panel.setActive($0) }
     }
 
     var content: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             header
             if monitor.iconHidden {
                 // The menu bar icon is behind the notch; say how to get it back.
@@ -69,10 +74,15 @@ struct PopoverView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .onTapGesture { monitor.iconHidden = false }
             }
-            OverviewView(monitor: monitor)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                cpuCard; gpuCard; memoryCard; diskCard; networkCard; fanCard
+            }
+            if let b = monitor.snapshot?.battery { batteryCard(b) }
+            programs
             if monitor.snapshot?.battery != nil || renderingPreview {
-                Divider()
                 LidAwakeSwitch(monitor: monitor)
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color.white.opacity(0.055)))
             }
             if let err = monitor.lastError {
                 Text(err).font(.caption).foregroundStyle(.red).lineLimit(3)
@@ -80,76 +90,241 @@ struct PopoverView: View {
             }
             Divider()
             if !renderingPreview {
-                CleanScreenButton()
-                AWDLButton()
-                Button { TabQuickAction.request() } label: {
-                    Label(tr("Save and close background tabs"), systemImage: "archivebox")
-                        .frame(maxWidth: .infinity)
-                }.buttonStyle(.bordered)
+                HStack { CleanScreenButton();AWDLButton() }
             }
             footer
         }
-        .padding(14)
-        .frame(width: 380)
+        .padding(12)
+        .frame(width: 372)
+        .background(LinearGradient(colors: [Color(red: 0.11, green: 0.10, blue: 0.20), Color(red: 0.06, green: 0.09, blue: 0.17)],
+                                   startPoint: .top, endPoint: .bottom))
+        .environment(\.colorScheme, .dark)
     }
+
+    // MARK: Header: how hot, why, and who
 
     var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(tempText(monitor.snapshot?.maximumKnownTemperature, fahrenheit: fahrenheit))
-                .font(.system(size: 30, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(heatColor(monitor.snapshot?.maximumKnownTemperature))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(tr("Hottest")).font(.caption).foregroundStyle(.secondary)
-                Text(monitor.model).font(.caption2).foregroundStyle(.tertiary)
-            }
-            Spacer()
-            if let w = monitor.snapshot?.systemPower {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(String(format: "%.1f W", w)).font(.title3.monospacedDigit())
-                    Text(tr("System")).font(.caption).foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-
-    /// Into the main window: the whole app, or straight to a place in it.
-    @ViewBuilder var footer: some View {
-        if renderingPreview {
-            // ImageRenderer cannot draw AppKit buttons; a look-alike for the preview.
-            HStack(spacing: 12) {
-                Label(tr("Open Console"), systemImage: "macwindow").font(.callout).foregroundStyle(.white)
-                    .padding(.horizontal, 10).padding(.vertical, 4).background(Capsule().fill(Color.accentColor))
+        let hot = monitor.snapshot?.maximumKnownTemperature
+        let current = pulse.current
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(tempText(hot, fahrenheit: fahrenheit))
+                    .font(.system(size: 30, weight: .semibold, design: .rounded)).monospacedDigit()
+                    .foregroundStyle(heatColor(hot))
+                Text(current == nil ? tr("Checking…") : verdictWord)
+                    .font(.system(size: 13, weight: .semibold)).foregroundStyle(current == nil ? .white.opacity(0.5) : pulse.severity)
                 Spacer()
-                ForEach(["internaldrive", "stethoscope", "rectangle.stack", "gearshape", "power"], id: \.self) {
-                    Image(systemName: $0).foregroundStyle(.secondary)
+                if let w = monitor.snapshot?.systemPower {
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text(String(format: "%.1f W", w)).font(.system(size: 14, weight: .semibold).monospacedDigit()).foregroundStyle(.white)
+                        Text(tr("System")).font(.system(size: 10)).foregroundStyle(.white.opacity(0.5))
+                    }
                 }
             }
-        } else {
-            liveFooter
+            if let current, let why = OverviewPage.sourceText(current) ?? current.culpritText {
+                Text(why).font(.system(size: 11)).foregroundStyle(.white.opacity(0.7)).lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 5) {
+                ForEach([panel.chip, PanelFormat.gb(panel.memoryTotal) + " GB", panel.macOS] + (PanelModel.uptime.map { [PanelFormat.uptime($0)] } ?? []), id: \.self) { fact in
+                    Text(fact).font(.system(size: 10, weight: .medium)).foregroundStyle(.white.opacity(0.6))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Capsule().fill(Color.white.opacity(0.07)))
+                }
+            }
         }
     }
 
-    var liveFooter: some View {
-        HStack(spacing: 6) {
-            Button { MainWindow.show(.overview) } label: {
-                Label(tr("Open Console"), systemImage: "macwindow")
+    /// The verdict in two or three words, for the header.
+    var verdictWord: String {
+        switch pulse.current?.verdict {
+        case .hot: return tr("Too hot")
+        case .disk: return tr("Disk full")
+        case .overloaded: return tr("Overloaded")
+        case .memory: return tr("Memory tight")
+        case .busy: return tr("Busy")
+        default: return tr("All good")
+        }
+    }
+
+    // MARK: Cards
+
+    var cpuCard: some View {
+        let s = monitor.snapshot
+        let busy = pulse.current?.busy
+        return PanelCard(title: "CPU", symbol: "cpu", tint: .green, badge: s?.cpu.map { tempText($0, fahrenheit: fahrenheit) },
+                         badgeTint: heatColor(s?.cpu)) {
+            BigValue(value: panel.cpu.last.map { String(format: "%.0f", $0) } ?? "—", unit: "%")
+            Sparkline(values: panel.cpu, top: 100, color: .green)
+            Text([busy.map { tr("load %1$@× per core", String(format: "%.1f", $0)) }, s?.cpuPower.map { String(format: "%.1f W", $0) }]
+                .compactMap { $0 }.joined(separator: " · "))
+                .font(.system(size: 10)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+        }
+    }
+
+    var gpuCard: some View {
+        let s = monitor.snapshot
+        return PanelCard(title: "GPU", symbol: "square.stack.3d.up", tint: .orange, badge: s?.gpu.map { tempText($0, fahrenheit: fahrenheit) },
+                         badgeTint: heatColor(s?.gpu)) {
+            BigValue(value: panel.gpu.last.map { String(format: "%.0f", $0) } ?? "—", unit: panel.gpu.isEmpty ? nil : "%")
+            Sparkline(values: panel.gpu, top: 100, color: .orange)
+            Text(panel.gpu.isEmpty ? tr("not reported") : (panel.gpu.last ?? 0) >= 50 ? tr("busy") : tr("light"))
+                .font(.system(size: 10)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+        }
+    }
+
+    var memoryCard: some View {
+        let m = SystemStats.memory()
+        let pressure = pulse.current?.memory ?? .unknown
+        return PanelCard(title: tr("Memory"), symbol: "memorychip", tint: .yellow, badge: MachinePulse.memoryName(pressure),
+                         badgeTint: pressure == .critical ? .red : pressure == .warning ? .orange : .white.opacity(0.6)) {
+            BigValue(value: panel.memory.last.map { String(format: "%.0f", $0) } ?? "—", unit: "%")
+            Sparkline(values: panel.memory, top: 100, color: .yellow)
+            Text([m.map { PanelFormat.gb($0.usedBytes) + " / " + PanelFormat.gb($0.totalBytes) + " GB" },
+                  pulse.current.flatMap { $0.swapUsedMB > 0 ? tr("swap %1$@", MemoryFormat.string(mebibytes: $0.swapUsedMB)) : nil }]
+                .compactMap { $0 }.joined(separator: " · "))
+                .font(.system(size: 10)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+        }
+    }
+
+    var diskCard: some View {
+        let d = SystemStats.disk()
+        let used = d.map { 1 - Double($0.freeBytes) / Double(max(1, $0.totalBytes)) } ?? 0
+        return PanelCard(title: tr("Free space"), symbol: "internaldrive", tint: .cyan,
+                         badge: d.map { ByteFormat.string($0.totalBytes) }) {
+            BigValue(value: d.map { ByteFormat.string($0.freeBytes) } ?? "—")
+            UsageBar(fraction: used, color: used > 0.9 ? .orange : .cyan)
+            Text(d.map { tr("%1$@ used · %2$@", ByteFormat.string($0.totalBytes - $0.freeBytes), String(format: "%.0f%%", used * 100)) } ?? "")
+                .font(.system(size: 10)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+        }
+    }
+
+    var networkCard: some View {
+        let (down, unit) = PanelFormat.rate(panel.download.last)
+        let (up, upUnit) = PanelFormat.rate(panel.upload)
+        return PanelCard(title: tr("Network"), symbol: "network", tint: .blue) {
+            BigValue(value: down, unit: unit)
+            Sparkline(values: panel.download, color: .blue)
+            Text(tr("upload %1$@", up + " " + upUnit)).font(.system(size: 10)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+        }
+    }
+
+    var fanCard: some View {
+        let fans = monitor.snapshot?.fans ?? []
+        let top = fans.filter { $0.rpm != nil }.max { $0.rpm! < $1.rpm! }
+        return PanelCard(title: tr("Fans"), symbol: "fan", tint: .teal,
+                         badge: top?.load.map { String(format: "%.0f%%", $0 * 100) }) {
+            BigValue(value: top.map { (fans.contains { $0.rpm == nil } ? "≥ " : "") + FanControlPresentation.rpm($0.rpm) } ?? "—", unit: top == nil ? nil : "RPM")
+            if fans.isEmpty {
+                Text(tr("No fans")).font(.system(size: 10)).foregroundStyle(.white.opacity(0.55))
+            } else if monitor.policiesAvailable {
+                let policies = fans.map { monitor.pendingPolicies[$0.id] ?? monitor.policies[$0.id] ?? .auto }
+                let allAuto = policies.allSatisfy { $0 == .auto }
+                let allMax = zip(fans, policies).allSatisfy { fan, policy in
+                    if case .fixed(let rpm) = policy, let range=fan.validRange { return rpm.isInfinite || rpm >= range.max } else { return false }
+                }
+                Text(tr("Requested policy")).font(.system(size:10)).foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    PanelButton(title: tr("Auto"), on: allAuto) { fans.forEach { monitor.setPolicy(.auto, fan: $0.id) } }
+                    PanelButton(title: tr("Max"), on: allMax) { fans.forEach { monitor.setPolicy(.fixed(rpm: .infinity), fan: $0.id) } }
+                        .disabled(fans.contains { $0.validRange == nil })
+                }
+                .disabled(monitor.helperBusy).padding(.top, 4)
+            } else {
+                Text(tr(fans.contains { $0.manual == true } ? "manual" : fans.contains { $0.manual == nil } ? "unknown" : "auto"))
+                    .font(.system(size: 10)).foregroundStyle(.white.opacity(0.55))
+                PanelButton(title: tr("Fan settings…")) { MainWindow.show(.fans) }
             }
-            .buttonStyle(.borderedProminent)
+        }
+    }
+
+    func batteryCard(_ b: BatteryInfo) -> some View {
+        let power = b.power.map { abs($0) }
+        let detail: String = {
+            if b.charging { return tr("Charging") + (power.map { String(format: " · %.1f W", $0) } ?? "") }
+            if b.externalPower { return tr("On power adapter") }
+            return [power.map { tr("drawing %1$@", String(format: "%.1f W", $0)) },
+                    panel.batteryMinutesLeft.map { tr("%1$@ left", PanelFormat.duration(minutes: $0)) }].compactMap { $0 }.joined(separator: " · ")
+        }()
+        return PanelCard(title: tr("Battery"), symbol: b.charging ? "battery.100.bolt" : "battery.75", tint: (b.percent ?? 100) < 20 ? .red : .green,
+                         badge: b.health.map { tr("health %1$@%%", String(format: "%.0f", $0 * 100)) }) {
+            HStack(alignment: .firstTextBaseline) {
+                BigValue(value: b.percent.map { String(format: "%.0f", $0) } ?? "—", unit: "%")
+                Spacer()
+                Text(detail).font(.system(size: 11)).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
+            }
+        }
+    }
+
+    /// The busiest programs, each with the project and agent behind it.
+    var programs: some View {
+        let hogs = Array((pulse.current?.hogs ?? []).sorted { $0.cpu > $1.cpu }.prefix(5))
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(tr("Busiest programs")).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.75))
+                Spacer()
+                Text(tr("Memory")).frame(width: 64, alignment: .trailing)
+                Text("CPU").frame(width: 46, alignment: .trailing)
+            }
+            .font(.system(size: 10)).foregroundStyle(.white.opacity(0.5)).padding(.bottom, 4)
+            if hogs.isEmpty {
+                Text(pulse.current == nil ? tr("Checking…") : tr("Nothing is busy."))
+                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.5)).padding(.vertical, 6)
+            }
+            ForEach(hogs) { h in
+                Button { MainWindow.show(.compute(false)) } label: {
+                    HStack(spacing: 6) {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(h.name).font(.system(size: 12, weight: .medium)).foregroundStyle(.white).lineLimit(1)
+                            if let origin = Self.origin(h) {
+                                Text(origin).font(.system(size: 10)).foregroundStyle(.white.opacity(0.5)).lineLimit(1)
+                            }
+                        }
+                        Spacer(minLength: 4)
+                        Text(MemoryFormat.string(kibibytes: h.memoryKB)).font(.system(size: 11).monospacedDigit())
+                            .foregroundStyle(.white.opacity(0.7)).frame(width: 64, alignment: .trailing)
+                        Text(String(format: "%.0f", h.cpu)).font(.system(size: 11, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(h.cpu >= 100 ? Color.red : h.cpu >= 50 ? .orange : .white.opacity(0.8))
+                            .frame(width: 46, alignment: .trailing)
+                    }
+                    .padding(.vertical, 4).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color.white.opacity(0.055)))
+        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Color.white.opacity(0.08)))
+    }
+
+    /// "thermo · Claude Code": the project a command-line program runs in and who started it.
+    static func origin(_ h: MachinePulse.Hog) -> String? {
+        let folder = h.project.map { ($0 as NSString).lastPathComponent }.flatMap { $0.isEmpty || $0 == "~" ? nil : $0 }
+        let parts = [folder, h.owner].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    // MARK: Footer
+
+    var footer: some View {
+        HStack(spacing: 6) {
+            PanelButton(title: tr("Open Console"), symbol: "macwindow", prominent: true) { MainWindow.show(.overview) }
             Spacer()
             shortcut("internaldrive", tr("Disk Cleanup"), .disk(.home))
             shortcut("stethoscope", tr("AI Agent Diagnostics"), .agents(.home))
-            shortcut("rectangle.stack", tr("Save and organize tabs"), .browser("Google Chrome"))
+            Button { TabQuickAction.request() } label: { Image(systemName: "archivebox").frame(width: 22) }
+                .buttonStyle(.plain).foregroundStyle(.white.opacity(0.7)).help(tr("Save and close background tabs"))
+            shortcut("clock.arrow.circlepath", tr("History"), .history)
             shortcut("gearshape", tr("Settings"), .settings)
-            Button { NSApp.terminate(nil) } label: { Image(systemName: "power") }
-                .buttonStyle(.borderless).help(tr("Quit Thermo"))
+            Button { NSApp.terminate(nil) } label: { Image(systemName: "power").frame(width: 22) }
+                .buttonStyle(.plain).foregroundStyle(.white.opacity(0.7)).help(tr("Quit Thermo"))
         }
-        .controlSize(.regular)
+        .padding(.top, 2)
     }
 
     func shortcut(_ symbol: String, _ title: String, _ page: MainPage) -> some View {
         Button { MainWindow.show(page) } label: { Image(systemName: symbol).frame(width: 22) }
-            .buttonStyle(.borderless).help(title)
+            .buttonStyle(.plain).foregroundStyle(.white.opacity(0.7)).help(title).accessibilityLabel(title)
     }
 }
 

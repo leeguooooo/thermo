@@ -74,8 +74,10 @@ public struct ProcessGroup: Codable, Equatable, Sendable {
     public var count: Int
     public var detached: Int
     public var cpu: Double
+    /// MiB of resident memory (RSS, shared pages counted in every process); not phys_footprint.
     public var rssMB: Double
     public var oldest: TimeInterval
+    public var memoryMetric: String = "resident"
 }
 
 public struct DoctorReport: Codable, Sendable {

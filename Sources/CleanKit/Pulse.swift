@@ -23,6 +23,7 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var project: String? = nil
         /// An observed agent, terminal or editor in its current parent chain ("Claude Code", "Terminal", "Cursor").
         public var owner: String? = nil
+        public var owners: [String]? = nil
         /// Resident mappings (RSS), including shared pages; not subtractable from footprint.
         public var residentKB: Int? = nil
         public var memoryMetric: MemoryMetric? = nil
@@ -37,6 +38,20 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         /// Captured with the reading, for rechecking before an explicit quit/end action.
         public var processIdentities: [ProcessIdentity]? = nil
         public var applicationIdentity: ProcessIdentity? = nil
+        /// The same command-line program running in other folders (other rows), so a row is never
+        /// mistaken for every copy of the program.
+        public var elsewhere: Elsewhere? = nil
+        /// Processes counted in this row: every process of the program in this folder (or app).
+        public var processCount: Int? = nil
+    }
+
+    /// Other rows of the same command-line program, summed.
+    public struct Elsewhere: Codable, Sendable, Equatable {
+        public var processes: Int
+        /// Folders (`~/…`), biggest first.
+        public var projects: [String]
+        public var memoryKB: Int
+        public var memoryMetric: MemoryMetric?
     }
 
     /// One process of a multi-process app: the GPU process, a renderer (page), an extension …
@@ -51,6 +66,10 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var memoryMetric: MemoryMetric? = nil
         public var cpu: Double
         public var uptime: TimeInterval?
+        /// Parent pid; 1 means its parent has exited and launchd adopted it.
+        public var ppid: Int32? = nil
+        public var owner: String? = nil
+        public var project: String? = nil
     }
 
     public struct Advice: Codable, Sendable, Equatable {
@@ -243,15 +262,17 @@ public struct MachinePulse: Codable, Sendable, Equatable {
     /// Folds helper processes into their app and returns the busiest programs (plus the biggest
     /// ones when memory is short).
     /// `limit: nil` returns every program of this user, idle ones included (for `thermo pulse quit`).
-    public static func group(_ procs: [AgentProcess], byMemory: Bool = false, me: pid_t = getpid(), limit: Int? = 4) -> [Hog] {
+    public static func group(_ procs: [AgentProcess], byMemory: Bool = false, me: pid_t = getpid(), limit: Int? = 4,
+                             owner: (AgentProcess) -> String? = { _ in nil }) -> [Hog] {
         group(procs.map { p in
             let reading = p.memoryReading ?? ProcessMemoryReading(footprintKB: p.footprintKB > 0 ? p.footprintKB : nil,
                                                                   residentKB: p.rssKB)
             return Candidate(pid: p.pid, uid: p.uid, name: p.name, cpu: p.cpu,
                              memoryKB: reading.footprintKB ?? reading.residentKB ?? 0,
                              details: ProcessDetails(executable: p.executable, argv: p.argv, cwd: p.cwd),
-                             residentKB: reading.residentKB, uptime: p.elapsed > 0 ? p.elapsed : nil,
-                             memoryMetric: reading.footprintKB != nil ? .footprint : reading.residentKB != nil ? .residentEstimate : .unavailable)
+                             owner: owner(p), residentKB: reading.residentKB, uptime: p.elapsed > 0 ? p.elapsed : nil,
+                             memoryMetric: reading.footprintKB != nil ? .footprint : reading.residentKB != nil ? .residentEstimate : .unavailable,
+                             ppid: p.ppid)
         }, byMemory: byMemory, me: me, limit: limit)
     }
 
@@ -267,48 +288,52 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         var residentKB: Int? = nil
         var uptime: TimeInterval? = nil
         var memoryMetric: MemoryMetric = .footprint
+        var ppid: pid_t? = nil
     }
 
     static func group(_ procs: [Candidate], byMemory: Bool, me: pid_t, limit: Int? = 4) -> [Hog] {
         var byKey: [String: Hog] = [:]
-        for p in procs where limit == nil || p.cpu > 0.5 || p.memoryKB > 200_000 {
+        // Every process given is counted; the size threshold applies to whole programs, so a row
+        // never sums only its bigger processes.
+        for p in procs {
+            let (key, name, app) = groupKey(p.details, fallback: p.name)
             let exe = p.details.executable ?? ""
-            var name = programName(p.details, fallback: p.name)
-            // Command-line programs: the same tool in the same folder is one row (e.g. 4 vitest workers).
-            var key = "cmd:\(name)|\(p.details.cwd ?? "")"
-            var app: String?
             var project: String?
-            if let r = exe.range(of: ".app/") {
-                let appPath = String(exe[..<r.lowerBound]) + ".app"
-                key = appPath
-                app = appPath
-                name = ((appPath as NSString).lastPathComponent as NSString).deletingPathExtension
-            } else if let cwd = p.details.cwd, cwd != "/" {
-                project = tilde(cwd)
-            }
+            if app == nil, let cwd = p.details.cwd, cwd != "/" { project = tilde(cwd) }
             let agent = ProcessTable.agentNames.contains(name.lowercased()) || exe.contains("/claude/versions/")
             let quittable = p.pid != me && p.uid == getuid() && !agent && !exe.hasPrefix("/System/") && !exe.hasPrefix("/usr/")
-            var h = byKey[key] ?? Hog(id: key, name: name, cpu: 0, memoryKB: 0, pids: [], app: app, quittable: quittable,
-                                      project: project, owner: app == nil ? p.owner : nil)
-            if h.pids.isEmpty { h.memoryMetric = p.memoryMetric }
-            else if h.memoryMetric != p.memoryMetric { h.memoryMetric = .mixed }
-            h.cpu += p.cpu
-            h.memoryKB += p.memoryKB
-            h.pids.append(p.pid)
-            h.quittable = h.quittable && quittable
-            if h.pids.count == 1 { h.residentKB = p.residentKB }
-            else if let r = p.residentKB, let existing = h.residentKB { h.residentKB = existing + r }
-            else { h.residentKB = nil }
-            if let u = p.uptime, u > (h.uptime ?? 0) { h.uptime = u }
-            if let id = rendererID(p.details.argv), id > (h.pagesOpened ?? 0) { h.pagesOpened = id }
-            do {
-                var parts = h.parts ?? []
-                parts.append(Part(pid: p.pid, role: role(p.details.argv), memoryKB: p.memoryKB, residentKB: p.residentKB,
-                                  memoryMetric: p.memoryMetric, cpu: p.cpu, uptime: p.uptime))
-                h.parts = parts
+            // In place: copying the row out and back would copy its pids and parts for every process.
+            func add(_ h: inout Hog) {
+                if app == nil, !h.pids.isEmpty, h.owner != p.owner || h.owners != nil {
+                    // Owners disagree: keep each, claim none for the row.
+                    var owners = h.owners ?? [h.owner ?? unknownOwner]
+                    let o = p.owner ?? unknownOwner
+                    if !owners.contains(o) { owners.append(o) }
+                    h.owners = owners.count > 1 ? owners : nil
+                    h.owner = owners.count > 1 ? nil : p.owner
+                }
+                if h.pids.isEmpty { h.memoryMetric = p.memoryMetric }
+                else if h.memoryMetric != p.memoryMetric { h.memoryMetric = .mixed }
+                h.cpu += p.cpu
+                h.memoryKB += p.memoryKB
+                h.pids.append(p.pid)
+                h.quittable = h.quittable && quittable
+                if h.pids.count == 1 { h.residentKB = p.residentKB }
+                else if let r = p.residentKB, let existing = h.residentKB { h.residentKB = existing + r }
+                else { h.residentKB = nil }
+                if let u = p.uptime, u > (h.uptime ?? 0) { h.uptime = u }
+                if let id = rendererID(p.details.argv), id > (h.pagesOpened ?? 0) { h.pagesOpened = id }
+                do {
+                    if h.parts == nil { h.parts = [] }
+                    h.parts!.append(Part(pid: p.pid, role: role(p.details.argv), memoryKB: p.memoryKB, residentKB: p.residentKB,
+                                      memoryMetric: p.memoryMetric, cpu: p.cpu, uptime: p.uptime,
+                                      ppid: p.ppid, owner: p.owner, project: project))
+                }
             }
-            byKey[key] = h
+            add(&byKey[key, default: Hog(id: key, name: name, cpu: 0, memoryKB: 0, pids: [], app: app, quittable: quittable,
+                                         project: project, owner: app == nil ? p.owner : nil)])
         }
+        let byName = Dictionary(grouping: byKey.values.filter { $0.app == nil }, by: \.name)
         for (k, var h) in byKey {
             // Keep the full inventory for drill-down; presentation decides what to expand.
             if let parts = h.parts {
@@ -317,16 +342,58 @@ public struct MachinePulse: Codable, Sendable, Equatable {
                 }
             }
             h.advice = advice(for: h)
+            h.elsewhere = elsewhere(of: h, in: byName[h.name] ?? [])
+            h.processCount = h.pids.count
             byKey[k] = h
         }
         guard let limit else { return byKey.values.sorted { $0.cpu > $1.cpu } }
-        var top = Array(byKey.values.sorted { $0.cpu > $1.cpu }.prefix(limit).filter { $0.cpu >= 5 })
+        let programs = byKey.values.filter { $0.cpu > 0.5 || $0.memoryKB > 200_000 }
+        var top = Array(programs.sorted { $0.cpu > $1.cpu }.prefix(limit).filter { $0.cpu >= 5 })
         if byMemory {
-            for h in byKey.values.sorted(by: { $0.memoryKB > $1.memoryKB }).prefix(2) where !top.contains(where: { $0.id == h.id }) {
+            for h in programs.sorted(by: { $0.memoryKB > $1.memoryKB }).prefix(2) where !top.contains(where: { $0.id == h.id }) {
                 top.append(h)
             }
         }
         return top
+    }
+
+    static let unknownOwner = "unknown"
+
+    /// What every memory and CPU number in pulse output means; printed with `--json` so a reading
+    /// is never an unlabeled "MB".
+    public static let units: [String: String] = [
+        "memoryKB": "KiB. memoryMetric footprint: phys_footprint, Activity Monitor's Memory column, including compressed memory (also when that is swapped out); residentEstimate: resident set size, used when footprint is unavailable; mixed: both within one row; unavailable: not readable",
+        "residentKB": "KiB resident set size (RSS) at sampling: pages in RAM now, shared pages counted in every process; not comparable with footprint",
+        "cpu": "percent of one core (200 = two cores) over the sampling window",
+        "swapUsedMB": "MiB of swap in use, whole machine",
+        "uptime": "seconds since the row's longest-running process started",
+    ]
+
+    /// Which programs pulse lists and what a row counts.
+    public static let selection = "programs: up to 4 using at least 5% CPU, plus the 2 largest by memory when memory is tight. A row is an app with all its processes, or one command-line program in one folder with all its processes there (processCount); elsewhere sums the same program in other folders. thermo pulse inspect NAME lists every copy."
+
+    /// The row a process belongs to: its app, or the same command-line tool in the same folder
+    /// (e.g. 4 vitest workers).
+    static func groupKey(_ d: ProcessDetails, fallback: String) -> (key: String, name: String, app: String?) {
+        let exe = d.executable ?? ""
+        if let r = exe.range(of: ".app/") {
+            let appPath = String(exe[..<r.lowerBound]) + ".app"
+            return (appPath, ((appPath as NSString).lastPathComponent as NSString).deletingPathExtension, appPath)
+        }
+        let name = programName(d, fallback: fallback)
+        return ("cmd:\(name)|\(d.cwd ?? "")", name, nil)
+    }
+
+    /// The same command-line program in other rows (other folders), summed.
+    static func elsewhere<S: Sequence>(of h: Hog, in all: S) -> Elsewhere? where S.Element == Hog {
+        guard h.app == nil else { return nil }
+        let others = all.filter { $0.app == nil && $0.name == h.name && $0.id != h.id }.sorted { $0.memoryKB > $1.memoryKB }
+        guard !others.isEmpty else { return nil }
+        let metrics = Set(others.compactMap(\.memoryMetric))
+        return Elsewhere(processes: others.reduce(0) { $0 + $1.pids.count },
+                         projects: others.map { $0.project ?? unknownOwner },
+                         memoryKB: others.reduce(0) { $0 + $1.memoryKB },
+                         memoryMetric: metrics.count == 1 ? metrics.first : metrics.isEmpty ? nil : .mixed)
     }
 
     /// What a Chromium / Electron helper is, from its `--type=` flags.
@@ -436,8 +503,9 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         return first
     }
 
+    private static let home = NSHomeDirectory()
+
     static func tilde(_ path: String) -> String {
-        let home = NSHomeDirectory()
         return path == home ? "~" : path.hasPrefix(home + "/") ? "~" + path.dropFirst(home.count) : path
     }
 }

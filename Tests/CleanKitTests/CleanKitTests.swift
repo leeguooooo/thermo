@@ -576,6 +576,49 @@ final class CleanKitTests: XCTestCase {
         XCTAssertNil(PulseSampler.recognise(name: "zsh", executable: "/bin/zsh"))
     }
 
+    func testPulseRowCountsEveryProcessAndNamesOtherFolders() {
+        // 3 big and 3 small copies in one folder, 2 more in another: the row sums all 6 of its own,
+        // not just the big ones, and says where the other 2 are.
+        let c = { (pid: Int32, cwd: String, kb: Int, owner: String?) in
+            MachinePulse.Candidate(pid: pid, uid: getuid(), name: "node", cpu: 0, memoryKB: kb,
+                                   details: ProcessDetails(executable: "/opt/homebrew/bin/node",
+                                                           argv: ["node", "/p/node_modules/.bin/rea", "mcp"], cwd: cwd),
+                                   owner: owner, residentKB: 1024, ppid: pid == 6 ? 1 : 500)
+        }
+        let procs = [c(1, "/w/a", 250_000, "Codex"), c(2, "/w/a", 250_000, "Codex"), c(3, "/w/a", 250_000, "Claude Code"),
+                     c(4, "/w/a", 2_000, "Codex"), c(5, "/w/a", 2_000, "Codex"), c(6, "/w/a", 2_000, nil),
+                     c(7, "/w/b", 2_000, "Codex"), c(8, "/w/b", 2_000, "Codex")]
+        let hogs = MachinePulse.group(procs, byMemory: true, me: 99)
+        let a = hogs.first { $0.project == "/w/a" }
+        XCTAssertEqual(a?.pids.sorted(), [1, 2, 3, 4, 5, 6])
+        XCTAssertEqual(a?.processCount, 6)
+        XCTAssertEqual(a?.memoryKB, 756_000)
+        XCTAssertEqual(a?.residentKB, 6 * 1024)
+        XCTAssertNil(a?.owner, "owners disagree, so the row claims none")
+        XCTAssertEqual(a?.owners, ["Codex", "Claude Code", "unknown"])
+        XCTAssertEqual(a?.parts?.first { $0.pid == 6 }?.ppid, 1)
+        XCTAssertEqual(a?.parts?.first { $0.pid == 3 }?.owner, "Claude Code")
+        XCTAssertEqual(a?.elsewhere?.processes, 2)
+        XCTAssertEqual(a?.elsewhere?.projects, ["/w/b"])
+        XCTAssertEqual(a?.elsewhere?.memoryKB, 4_000)
+        XCTAssertNil(hogs.first { $0.project == "/w/b" }, "a program below the size threshold as a whole stays off the list")
+        let all = MachinePulse.group(procs, byMemory: true, me: 99, limit: nil)
+        XCTAssertEqual(all.reduce(0) { $0 + $1.pids.count }, 8)
+    }
+
+    func testPulseHistoryKeepsProcessCountsAndOldLinesStillDecode() throws {
+        var hog = MachinePulse.Hog(id: "cmd:rea|/w", name: "rea", cpu: 0, memoryKB: 3_000_000, pids: [1, 2, 3], app: nil, quittable: true)
+        hog.memoryMetric = .footprint
+        let pulse = MachinePulse(load1: 9, load5: 9, cores: 8, thermal: .nominal, memory: .warning, swapUsedMB: 0, hogs: [hog], sampled: now)
+        let record = PulseRecord(pulse, memory: nil)
+        XCTAssertEqual(record.top.first?.processes, 3)
+        let share = PulseHistory.blame([record]).first
+        XCTAssertEqual(share?.peakProcesses, 3)
+        XCTAssertEqual(share?.memoryMetric, .footprint)
+        let old = #"{"name":"rea","cpu":0,"memoryKB":10}"#
+        XCTAssertNil(try JSONDecoder().decode(PulseRecord.Program.self, from: Data(old.utf8)).processes)
+    }
+
     func testRetainedSwapDoesNotExplainSlownessWhenPressureAndLoadAreNormal() {
         let hog = MachinePulse.Hog(id: "fixture", name: "Fixture", cpu: 1, memoryKB: 200_000, pids: [42], app: nil, quittable: true)
         let pulse = MachinePulse(load1: 0.5, load5: 0.5, cores: 8, thermal: .nominal, memory: .normal,

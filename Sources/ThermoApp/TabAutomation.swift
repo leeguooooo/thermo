@@ -21,7 +21,7 @@ final class TabAutomation: ObservableObject {
             do {
                 let batch = try await Task.detached { () -> TabOrganizer.Batch? in
                     let inventory = try await TabWorkspace.inventory()
-                    let plan = TabOrganizer.plan(inventory, rules: config.rules)
+                    let plan = TabOrganizer.plan(inventory, rules: config.rules, batches: ((try? TabOrganizer.batches()) ?? []).filter { $0.app == inventory.app }, auto: true)
                     guard plan.count > 0 else { return nil }
                     return try await TabOrganizer.organize(plan)
                 }.value

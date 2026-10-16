@@ -219,6 +219,8 @@ public struct CleanResult: Codable, Sendable {
     public var trashedAllocatedBytes: Int64? = nil
     /// Paths skipped because the user's whitelist keeps them (reason "whitelisted").
     public var whitelisted: [String]? = nil
+    /// Tool clean commands (`npm cache clean --force`): what ran, or why the folder was deleted instead.
+    public var toolCommands: [ToolCommandOutcome]? = nil
 
     public init(id: String, trashed: Bool) { self.id = id; self.trashed = trashed }
 }
@@ -360,6 +362,11 @@ public enum Cleaner {
             return ids
         })
         var openFiles: OpenFiles?? = nil
+        var openFilesRead=Date.distantPast
+        func currentOpenFiles() -> OpenFiles? {
+            if openFiles == nil || Date().timeIntervalSince(openFilesRead) >= 1 { openFiles = .some(OpenFiles.current());openFilesRead=Date() }
+            return openFiles ?? nil
+        }
         // Rechecked as removal goes (an app may start meanwhile), but with the paths resolved once
         // and the process list read at most once a second: per path, 1,600 sessions took 8 minutes.
         let locations = item.paths.map(Guard.deletionLocation)
@@ -373,7 +380,18 @@ public enum Cleaner {
             }
             return itemRefusal
         }
+        func changedProtection() -> String? {
+            do {
+                if try Whitelist.loadForRemoval(home: g.home).protectionKey != whitelist.protectionKey {
+                    return tr("Whitelist protection changed during cleanup; review the remaining tool operations again.")
+                }
+                return nil
+            } catch { return Whitelist.unreadable(error) }
+        }
+        let toolHandled=NativeCleanup.perform(item,mode:mode,guard:g,whitelist:whitelist,refusal:currentRefusal,
+            openFiles:currentOpenFiles,operations:operations,result:&result,scannedAt:scannedAt,protectionChanged:changedProtection)
         for (index, path) in item.paths.enumerated() {
+            if toolHandled.contains(where:{ path == $0 || path.hasPrefix($0+"/") }) { continue }
             if let why = ToolCleanup.isBrowserOldVersion(item) ? ToolCleanup.oldVersionRefusal(path) : g.refusal(path) { result.failed[path] = why; continue }
             if whitelist.protects(path) { result.whitelisted = (result.whitelisted ?? []) + [path]; continue }
             guard FS.exists(path) else { continue }
@@ -415,8 +433,7 @@ public enum Cleaner {
                 result.failed[path] = tr("replaced since the scan")
                 continue
             }
-            if openFiles == nil { openFiles = .some(OpenFiles.current()) }
-            guard let snapshot = openFiles ?? nil else {
+            guard let snapshot = currentOpenFiles() else {
                 result.failed[path] = tr("could not check whether a program is using it")
                 continue
             }
@@ -477,14 +494,6 @@ public enum Cleaner {
                 result.failed[path] = (error as NSError).localizedDescription
             }
         }
-        func changedProtection() -> String? {
-            do {
-                if try Whitelist.loadForRemoval(home: g.home).protectionKey != whitelist.protectionKey {
-                    return tr("Whitelist protection changed during cleanup; review the remaining tool operations again.")
-                }
-                return nil
-            } catch { return Whitelist.unreadable(error) }
-        }
         // Command exit status is not proof that the scanned estimate was removed.
         if let commands = item.commands, !commands.isEmpty {
             if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false)), locations: item.paths.map(Guard.deletionLocation), now: now) {
@@ -510,7 +519,7 @@ public enum Cleaner {
                 var execution = argv
                 if Simulators.isCommand(argv) { execution[0] = "/usr/bin/xcrun" }
                 attempted.append(argv.joined(separator: " "))
-                let (status, output) = Shell.exec(execution, timeout: 180)
+                let (status, output) = operations.run(execution, 180)
                 let line = argv.joined(separator: " ")
                 if status == 0 { result.removed.append("ran: " + line) } else { ok = false; result.failed[line] = output.isEmpty ? "exit \(status)" : output; break }
             }
@@ -560,6 +569,10 @@ public enum Cleaner {
         lines += (r.partialRemoved ?? []).map { "\(f.string(from: Date())) partial \(item.id) \($0) (estimated removed bytes included; complete estimate=\(r.bytesIncomplete != true))" }
         lines += (r.partialCommands ?? []).map { "\(f.string(from: Date())) partial-tool \(item.id) \($0) (aggregate removed estimate=\(r.bytes))" }
         lines += r.failed.map { "\(f.string(from: Date())) failed \(item.id) \($0.key): \($0.value)" }
+        lines += (r.toolCommands ?? []).map { o in
+            "\(f.string(from: Date())) tool \(item.id) \(o.status)\(o.fellBack == true ? " (folder deleted instead)" : "") \(o.command)"
+                + (o.bytesBefore.map { b in " before=\(b) after=\(o.bytesAfter ?? -1)" } ?? "") + (o.detail.map { ": " + $0 } ?? "")
+        }
         guard !lines.isEmpty else { return }
         lines.append("\(f.string(from: Date())) result \(item.id) outcome=\(r.outcome ?? "unknown") estimatedRemovedBytes=\(r.bytes) estimateIncomplete=\(r.bytesIncomplete == true) trashBatch=\(r.trashBatchID ?? "none")")
         if let observation = r.spaceObservation, let delta = observation.availableChangeBytes {
@@ -594,6 +607,10 @@ extension Cleaner {
         var items = r.removed.map { OperationRecord.Item(target: $0, bytes: single ? r.bytes : nil, status: partial.contains($0) ? "partial" : "done") }
         items += partial.subtracting(r.removed).sorted().map { OperationRecord.Item(target: $0, status: "partial") }
         items += r.failed.sorted { $0.key < $1.key }.map { OperationRecord.Item(target: $0.key, status: "failed", detail: $0.value) }
+        // The tool command that should have run, and why its folder was deleted instead.
+        items += (r.toolCommands ?? []).filter { $0.fellBack == true }.map {
+            OperationRecord.Item(target: $0.command, status: "skipped", detail: [$0.status, $0.detail].compactMap { $0 }.joined(separator: ": "))
+        }
         let undo: OperationRecord.Undo? = r.trashBatchID.map { .init(kind: "trashBatch", ref: $0) }
             ?? (r.trashed && action != "emptyTrash" && !r.removed.isEmpty ? .init(kind: "trash", ref: "") : nil)
         var record = OperationRecord(feature: feature, action: action, subject: item.id == r.id ? item.title : item.id, items: items, undo: undo)
@@ -671,6 +688,10 @@ public final class ScanCancellation: @unchecked Sendable {
 struct RemovalOperations {
     var trash: (String) throws -> URL
     var remove: (String) throws -> Void
+    /// Runs a tool command (argv through `env`, no shell) with a timeout.
+    var run: ([String], TimeInterval) -> (Int32, String) = { Shell.exec($0, timeout: $1, cancellation: ScanCancellation.current) }
+    /// For tool clean commands; a large npm or uv cache takes a while.
+    var commandTimeout: TimeInterval = 600
     static let live = RemovalOperations(trash: { path in
         var destination: NSURL?
         try FileManager.default.trashItem(at: URL(fileURLWithPath: path), resultingItemURL: &destination)

@@ -210,6 +210,14 @@ public struct Whitelist: Sendable {
                 return blocked
             }
         }
+        var item=item
+        if var native=item.native,native.runs.contains(where:{ protects($0.folder) }) {
+            native.runs=[];native.fallback=tr("the whitelist keeps something inside; folders are deleted one by one instead")
+            native.fallbackStatus="whitelisted";item.native=native
+        }
+        if !(item.commands ?? []).isEmpty,let kept=(item.measure ?? []).first(where:protects) {
+            item.whitelisted=Array(Set((item.whitelisted ?? [])+[kept])).sorted();item.blocked=item.blocked ?? tr(Self.reason)
+        }
         let hits = item.paths.filter(protects)
         guard !hits.isEmpty else { return item }
         var i = item

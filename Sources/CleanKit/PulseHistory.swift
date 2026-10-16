@@ -10,6 +10,9 @@ public struct PulseRecord: Codable, Sendable, Equatable {
         public var memoryKB: Int
         public var project: String?
         public var owner: String?
+        /// Processes in the row and how its memory was measured; absent in older lines.
+        public var processes: Int? = nil
+        public var memoryMetric: MachinePulse.MemoryMetric? = nil
     }
 
     public var t: Date
@@ -37,7 +40,8 @@ public struct PulseRecord: Codable, Sendable, Equatable {
         let biggest = p.hogs.sorted { $0.memoryKB > $1.memoryKB }
         var picked: [MachinePulse.Hog] = []
         for h in byLoad.prefix(2) + biggest where !picked.contains(where: { $0.id == h.id }) && picked.count < 3 { picked.append(h) }
-        top = picked.map { Program(name: $0.name, cpu: $0.cpu, memoryKB: $0.memoryKB, project: $0.project, owner: $0.owner) }
+        top = picked.map { Program(name: $0.name, cpu: $0.cpu, memoryKB: $0.memoryKB, project: $0.project, owner: $0.owner,
+                                     processes: $0.pids.count, memoryMetric: $0.memoryMetric) }
         usedMB = breakdown.map { Int($0.used >> 20) }
         compressedMB = breakdown.map { Int($0.compressed >> 20) }
     }
@@ -126,6 +130,9 @@ public final class PulseHistory: @unchecked Sendable {
         public var peakMemoryKB: Int
         public var project: String?
         public var owner: String?
+        /// Most processes the row had while at the top, and its memory metric (footprint unless said).
+        public var peakProcesses: Int? = nil
+        public var memoryMetric: MachinePulse.MemoryMetric? = nil
     }
 
     /// Ranks programs by how long they were at the top while the Mac was struggling (load ≥ cores,
@@ -141,6 +148,8 @@ public final class PulseHistory: @unchecked Sendable {
                 s.minutes += Int((span / 60).rounded())
                 s.peakCPU = max(s.peakCPU, p.cpu)
                 s.peakMemoryKB = max(s.peakMemoryKB, p.memoryKB)
+                if let n = p.processes { s.peakProcesses = max(s.peakProcesses ?? 0, n) }
+                if let m = p.memoryMetric { s.memoryMetric = s.memoryMetric == nil || s.memoryMetric == m ? m : .mixed }
                 byName[p.name] = s
             }
         }

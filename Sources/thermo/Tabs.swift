@@ -12,10 +12,12 @@ struct TabsCommand {
         if sub == "organize" {
             let inventory = try blocking { try await TabWorkspace.inventory(app: browser) }
             let config = try TabOrganizer.configuration()
-            let plan = TabOrganizer.plan(inventory, pages: try select(inventory, archive: false), rules: config.rules)
+            let plan = TabOrganizer.plan(inventory, pages: try select(inventory, archive: false), rules: config.rules,
+                                         batches: try TabOrganizer.batches().filter { $0.app == browser })
             if app.args.has("dry-run") { try emit(plan); return }
             guard plan.count > 0 else { throw CLIError("No eligible native groups. Existing groups and protected tabs are kept; update the chrome-use extension to 0.5.48+ if unsupported.") }
-            try approve("Create \(plan.groups.count) native Chrome groups for \(plan.count) background tabs? Existing groups remain unchanged.")
+            let joining = plan.groups.filter { $0.groupId != nil }.count
+            try approve("Group \(plan.count) background tabs: \(plan.groups.count - joining) new native Chrome groups, \(joining) added to groups Thermo made earlier? Other groups, including chrome-use agent groups, remain unchanged.")
             try emit(try blocking { try await TabOrganizer.organize(plan) }); return
         }
         if sub == "organized" { try emit(TabOrganizer.batches()); return }

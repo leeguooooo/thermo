@@ -32,6 +32,62 @@ final class TabOrganizerTests: XCTestCase {
         XCTAssertFalse(TabOrganizer.matching("notexample.test",rules[0]))
         XCTAssertEqual(TabOrganizer.plan(inventory(pages)).groups[0].color,TabOrganizer.plan(inventory(pages)).groups[0].color)
     }
+    /// An earlier batch that put tabs 1 and 2 into native group 900 named "example.test".
+    func earlier(groupId: Int = 900, window: Int = 1) -> TabOrganizer.Batch {
+        let group = TabOrganizer.Group(id: "first:\(window):example.test", profileID: "first", window: window, name: "example.test", color: "blue",
+                                       pages: [page(1, window: window), page(2, window: window)])
+        var batch = TabOrganizer.Batch(app: "Google Chrome", plan: .init(app: "Google Chrome", groups: [group], unsupported: 0, count: 2))
+        batch.requests["first"] = "r1"
+        batch.replies["first"] = .init(version: 1, id: "r1", phase: "complete",
+                                       results: [.init(tabId: 1, groupId: groupId, status: "grouped"), .init(tabId: 2, groupId: groupId, status: "grouped")], undoResults: nil)
+        return batch
+    }
+    func joinable(_ id: Int, window: Int = 1) -> TabWorkspace.Page { var p = page(id, window: window); p.organizerCanJoin = true; return p }
+
+    func testANewTabJoinsTheGroupThermoMadeInsteadOfStartingAnother() {
+        let live = [TabWorkspace.NativeGroup(profileID: "first", id: 900, window: 1, title: "example.test", color: "green")]
+        let inv = TabWorkspace.Inventory(app: "Google Chrome", generated: Date(), pages: [joinable(7)], nativeGroups: live)
+        let plan = TabOrganizer.plan(inv, batches: [earlier()], auto: true)
+        XCTAssertEqual(plan.groups.count, 1, "one new tab is enough to join")
+        XCTAssertEqual(plan.groups[0].groupId, 900)
+        XCTAssertEqual(plan.groups[0].color, "green", "keeps the group's current color")
+    }
+
+    func testOnlyGroupsThermoMadeAreJoined() {
+        // Same title, but not from a Thermo batch (e.g. a chrome-use agent group, or the user's own).
+        let foreign = [TabWorkspace.NativeGroup(profileID: "first", id: 555, window: 1, title: "example.test", color: "blue")]
+        let inv = TabWorkspace.Inventory(app: "Google Chrome", generated: Date(), pages: [joinable(7), joinable(8)], nativeGroups: foreign)
+        let plan = TabOrganizer.plan(inv, batches: [earlier()], auto: true)
+        XCTAssertNil(plan.groups.first?.groupId)
+        XCTAssertEqual(plan.groups.first?.pages.count, 2)
+        // Thermo's group renamed or moved to another window: not joined either.
+        for live in [TabWorkspace.NativeGroup(profileID: "first", id: 900, window: 1, title: "Renamed", color: "blue"),
+                     .init(profileID: "first", id: 900, window: 2, title: "example.test", color: "blue")] {
+            let inv = TabWorkspace.Inventory(app: "Google Chrome", generated: Date(), pages: [joinable(7)], nativeGroups: [live])
+            XCTAssertEqual(TabOrganizer.plan(inv, batches: [earlier()], auto: true).count, 0)
+        }
+    }
+
+    func testAutoModeNeverAddsADuplicateWhenTheExtensionCannotJoin() {
+        let live = [TabWorkspace.NativeGroup(profileID: "first", id: 900, window: 1, title: "example.test", color: "blue")]
+        let inv = TabWorkspace.Inventory(app: "Google Chrome", generated: Date(), pages: [page(7), page(8)], nativeGroups: live)
+        let auto = TabOrganizer.plan(inv, batches: [earlier()], auto: true)
+        XCTAssertEqual(auto.count, 0); XCTAssertEqual(auto.waitingForJoin, 1)
+        XCTAssertEqual(TabOrganizer.plan(inv, batches: [earlier()]).count, 2, "an explicit run still groups them")
+    }
+
+    func testJoinTargetIsSentToTheExtension() async throws {
+        let live = [TabWorkspace.NativeGroup(profileID: "first", id: 900, window: 1, title: "example.test", color: "blue")]
+        let plan = TabOrganizer.plan(.init(app: "Google Chrome", generated: Date(), pages: [joinable(7)], nativeGroups: live), batches: [earlier()], auto: true)
+        let sent = Box()
+        _ = try await TabOrganizer.organize(plan, home: try home()) { _, payload, _ in
+            sent.value = (payload["groups"] as? [[String: Any]])?.first?["groupId"] as? Int
+            return .init(version: 1, id: payload["id"] as! String, phase: "complete", results: [.init(tabId: 7, groupId: 900, status: "grouped")], undoResults: nil)
+        }
+        XCTAssertEqual(sent.value, 900)
+    }
+    final class Box: @unchecked Sendable { var value: Int? }
+
     func testSingletonAndUnsupportedPagesStayUngroupedUnlessRuleMatches() {
         var unsupported=page(3);unsupported.organizerVersion=0
         let plain=TabOrganizer.plan(inventory([page(1),unsupported]));XCTAssertEqual(plain.count,0);XCTAssertEqual(plain.unsupported,1)

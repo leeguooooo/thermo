@@ -270,6 +270,7 @@ struct CleanCommand {
         if i.sizeIncomplete == true { lines.append(indent + style.yellow("size is a lower bound; large tree scan was limited")) }
         else if i.estimatedSize == true { lines.append(indent + style.dim("allocated size estimate; shared blocks may not be reclaimed")) }
         if let h = i.hint { lines.append(indent + style.dim("run: ") + h) }
+        if let native = i.native, !native.runs.isEmpty { lines.append(indent + style.dim(tr("runs `%1$@`", native.display))) }
         if args.has("all"), let parts = i.parts, parts.count > 1 {
             for p in parts {
                 lines.append(indent + "  " + pad(ByteFormat.string(p.bytes), 8, right: true) + "  " + style.cyan("#" + p.id)
@@ -361,6 +362,8 @@ struct CleanCommand {
     struct PreviewItem: Encodable {
         let item: CleanItem
         let action: String
+        /// The exact tool command lines that would run instead of deleting their folders.
+        var commands: [String]? = nil
     }
 
     /// The reviewed execution boundary is shared by real execution and dry-run tests.
@@ -391,9 +394,19 @@ struct CleanCommand {
 
         var plan = [style.bold("About to clean \(ByteFormat.string(total)) in \(todo.count) item\(todo.count == 1 ? "" : "s"):")]
         for i in todo {
-            let how = !(i.commands ?? []).isEmpty ? style.red("tool removal") : mode.trashes(i.safety) ? style.yellow("trash ") : style.red("delete")
-            plan.append("  " + pad(ByteFormat.string(i.bytes), 8, right: true) + "  " + how + "  " + i.title + style.dim("  \(i.paths.count) path\(i.paths.count == 1 ? "" : "s")")
+            let native = i.runsNativeClean(mode) ? i.native : nil
+            let how = native != nil ? style.red("tool clean") : !(i.commands ?? []).isEmpty ? style.red("tool removal") : mode.trashes(i.safety) ? style.yellow("trash ") : style.red("delete")
+            // Paths a tool command takes over are not deleted; the review names the command instead.
+            let deleted = i.paths.filter { native?.owns($0) != true }.count
+            plan.append("  " + pad(ByteFormat.string(i.bytes), 8, right: true) + "  " + how + "  " + i.title
+                        + (native == nil || deleted > 0 ? style.dim("  \(deleted) path\(deleted == 1 ? "" : "s")") : "")
                         + (i.whitelisted.map { style.dim(" · " + tr("%1$@ whitelisted paths kept", String($0.count))) } ?? ""))
+            if let native {
+                plan.append(style.dim("            " + tr("runs `%1$@`", native.display)))
+                for run in native.runs { plan.append(style.dim("              " + run.commandLine)) }
+            } else if let why = i.native?.fallback, !mode.trashes(i.safety) {
+                plan.append(style.dim("            " + why))
+            }
         }
         for item in todo {
             for path in item.commandScope ?? [] { plan.append("    " + tr("Tool-managed locations") + ": " + FS.tilde(path)) }
@@ -404,7 +417,8 @@ struct CleanCommand {
         if args.has("dry-run") {
             if args.has("json") {
                 write(Export.json(Preview(scannedAt: r.started, scanCancelled: r.cancelled, removalMode: mode.rawValue,
-                                          items: todo.map { PreviewItem(item: $0, action: !($0.commands ?? []).isEmpty ? "tool-removal" : mode.trashes($0.safety) ? "trash" : "delete") },
+                                          items: todo.map { PreviewItem(item: $0, action: $0.runsNativeClean(mode) ? "tool-clean" : !($0.commands ?? []).isEmpty ? "tool-removal" : mode.trashes($0.safety) ? "trash" : "delete",
+                                                                       commands: $0.runsNativeClean(mode) ? $0.native?.runs.map(\.commandLine) : nil) },
                                           skipped: skipped, sessionRetentionDays: r.sessionRetentionDays, sessionPolicyVersion: r.sessionPolicyVersion)))
             } else {
                 write(plan.joined(separator: "\n"))
@@ -436,6 +450,11 @@ struct CleanCommand {
                       + (res.bytesIncomplete == true ? "  (removed-size estimate incomplete)" : ""))
                 for (p, why) in res.failed.sorted(by: { $0.key < $1.key }).prefix(5) { print(style.dim("      \(FS.tilde(p)): \(why)")) }
                 for p in (res.whitelisted ?? []).prefix(5) { print(style.dim("      \(FS.tilde(p)): " + Whitelist.reason)) }
+                // Failures are listed above with the other failed paths.
+                for o in res.toolCommands ?? [] where o.status == "ran" || o.fellBack == true {
+                    print(style.dim("      " + (o.status == "ran" ? tr("ran `%1$@`", o.command)
+                        : tr("did not run `%1$@`; folder deleted instead", o.command) + (o.detail.map { ": " + $0 } ?? ""))))
+                }
             }
         }
         let observation = DiskSpaceObservation(before: spaceBefore, after: DiskSpaceSnapshot.measure())

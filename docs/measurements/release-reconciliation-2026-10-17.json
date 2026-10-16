@@ -1,0 +1,90 @@
+{
+  "date": "2026-10-17",
+  "developmentParent": "bc091784a0284133394732fcf90fc981958e35be",
+  "releasedParent": "9a85495800f52d6336d440b4ae6e1dd7ee814e5e",
+  "mergeBase": "8f3b432d137c16275da3f882c2750d66b667eebb",
+  "sourceHashes": {
+    "Sources/AgentDoctor/Processes.swift": "4e2862696065befaf8afdfefa1b18e2e154d00f713597cdecbe412f10cce0fb1",
+    "Sources/AgentDoctor/Report.swift": "fc1d91862053d912a586bfdf9d528f3ed959ac17809a8996b076302036c16df3",
+    "Sources/CleanKit/FS.swift": "76a713ce1e42521b4ad584a374bc02b5849c20f14a9bd1400940ba9041ea2bbc",
+    "Sources/CleanKit/Model.swift": "aaddf026166443e045aaeb13cf6e27505e95b1a2c89299be75eb69e33c22c88e",
+    "Sources/CleanKit/NativeCleanup.swift": "a8e76e3538d5a3f968fe0889b743fdab1ef0dd5c1b9fcfbd1562fc0259568b91",
+    "Sources/CleanKit/Pulse.swift": "00f871db97e070d73d221b92ba56314326d6c7db678e507cf4cae6463e7a3b61",
+    "Sources/CleanKit/PulseHistory.swift": "0b750af4fa308a5c2b636621f2a0de771352f0546c099e03d2a3d8ebdeb3b702",
+    "Sources/CleanKit/PulseSampler.swift": "90cd249546745b31ee00b742778ae9a7087992bc3dc253113841025a2749bbf6",
+    "Sources/CleanKit/QuickLoad.swift": "81740fc73128319433a823d63096907ce5df40be495f7407202448ed7de8dd57",
+    "Sources/CleanKit/Scanner.swift": "ae417cc56c0b33ab37d157a49e0e0f070b430548a50a3235cf02bfac171a45a0",
+    "Sources/CleanKit/TabOrganizer.swift": "4774110efca06f1288b88f7915864a96ae6bf05997b7fa7714d5922a6f74769a",
+    "Sources/CleanKit/TabWorkspace.swift": "b795585482f703408052caa0673b8375f91092f52bba45c8a39bf2ce876421fa",
+    "Sources/CleanKit/Whitelist.swift": "503a5734f9be149ebd3a3f33c1a21e18689d379cc01e30215b4630d7ea5694f9",
+    "Sources/ThermoApp/DiskWindow.swift": "59b5f99e2e4d3630cdb7fd9fbc8f1aa680e139498e4e12e2d1618a4a68d3ca96",
+    "Sources/ThermoApp/MemoryPage.swift": "50703d8bc204625a4a3567c7c1b62854124df1167ff3835e1d11912be0ac60aa",
+    "Sources/ThermoApp/MenuPanel.swift": "7df684b1c395015255cf304e4546fd1840f3903aca474525b485f0920707b232",
+    "Sources/ThermoApp/NativeTabOrganizerView.swift": "3b6378b2477ccb06e02c6a54871f89e83e345205af4132574ee73b2d275edad1",
+    "Sources/ThermoApp/TabAutomation.swift": "8e48d0e2c03235936367c78afe961aa1581f5165f912d8d1d6b50e896c856a96",
+    "Sources/ThermoApp/TabWorkspaceView.swift": "3fef9f44da2f076b30ac6128f85a1087469a7fbe9de387b844dad2cf9a7977fa",
+    "Sources/ThermoApp/Views.swift": "b981435e3f5c315d5ba4ad4663645ee97355f1db5439b88bcd83791e9c1387a5",
+    "Sources/ThermoApp/main.swift": "1159adbb1a0f7fc081d8717ee1387d0175364904344bfd5cbe3dd65a54838401",
+    "Sources/ThermoKit/Version.swift": "5ad7b421b39e3ca45b6c657bdbf987f464370433340e9171999280bbdbe6b2f3",
+    "Sources/ThermoL10n/ZhHans.swift": "8a4d75a238c0995ce1c457c6ec2db862e3c3221bd0725f46e2f5eab22b3e4d03",
+    "Sources/thermo/Agents.swift": "51e6e262c55613f1a620c81e01eca8e21266836ed81688470f013d79e4e085d7",
+    "Sources/thermo/Clean.swift": "990ab6236b6b0bba154652c3ebc78ee9f71b4fcc5399b3eb9e5e6ed49d6c877a",
+    "Sources/thermo/Memory.swift": "6855bfe9d7e8123c23eb0ca8d4ab66c223a063200f592fbd863025f5481d432e",
+    "Sources/thermo/Pulse.swift": "5c13002a7686bc2c133b12829d65302cf5e26aedf5ce80467b1096314945b197",
+    "Sources/thermo/Tabs.swift": "e674eb92b2e6b737efbc1abed325b5e89460f877b523c5d1e644491e3eb08efa",
+    "Sources/thermo/main.swift": "360ddf38cc2b35ba58b89436e4b69f4d1a1dc8840f2752f01641b96510c59e33",
+    "Tests/CleanKitTests/CleanKitTests.swift": "394e537b96980959b6d66d229cad2d73a30a08c2a19fc42bfb3a7237a1fb320e",
+    "Tests/CleanKitTests/NativeCleanupTests.swift": "5101dc52f798bc28fe904f06da51991b31d4a216564a3b9c55848412b8c5f43b",
+    "Tests/CleanKitTests/TabOrganizerTests.swift": "8e3a7f0a4336be10ce3df760814c55d38e933fb3a29e0246941abd85c1204898",
+    "Tests/ThermoCLITests/CleanDryRunTests.swift": "76c9df643bf66457be49064112b17b7b859a866d3fd0196d1c076aa84dfc0607",
+    "Tests/ThermoCLITests/StaleCopyTests.swift": "3f47d32a01dd272db8ac25aa36377c2722c9f7888349e69491f694528e3f5288"
+  },
+  "tests": {
+    "CleanKit": 745,
+    "nativeCleanupSubsetIncluded": 26,
+    "ThermoApp": 264,
+    "ThermoCLI": 70,
+    "total": 1079,
+    "failures": 0,
+    "logs": {
+      "cleanKit": {
+        "path": "/tmp/thermo-release-reconcile-clean-final.log",
+        "sha256": "f480274506fb294a29a98c6635b2bc97be9eb30fcd22070bd849ee844cebdcf7"
+      },
+      "app": {
+        "path": "/tmp/thermo-release-reconcile-app-final.log",
+        "sha256": "b0a0481c0bf8bde3afe349ee21aa5aa6053e371aec662f5dc30a2fa3ec3098a7"
+      },
+      "cli": {
+        "path": "/tmp/thermo-release-reconcile-cli.log",
+        "sha256": "cbf25c896e3be0077fc624fba0eae2d7feb56c3e8dd042079426364aad956d80"
+      }
+    }
+  },
+  "resolutions": [
+    "Retain released menu panel, all-process totals, inspect command, tab-group reuse, native cache cleanup and distribution changes.",
+    "Retain prior tool scopes, whitelist trust checks, simulator review checks, session retention policy, observed ancestry identity checks, clean-screen and AWDL product integration.",
+    "Native cleanup binds fixed rule folders, complete path selection, exact argv, executable and folder metadata identities; rereads protection and activity at execution. Missing or changed tools after review require another review.",
+    "Missing post-command directory is proven zero using commandSize; denied/incomplete readings remain unknown; partially failed removals are recorded.",
+    "Tool discovery metadata reads are bounded regular-file snapshots and do not block on FIFOs.",
+    "Menu fan cards preserve unavailable readings and requested-policy language; maximum policy is disabled without valid fan ranges.",
+    "Raw per-path removal retains live whitelist updates and kept-path records; tool operations stop after protection changes."
+  ],
+  "nativeUI": {
+    "scope": "Production PopoverView in isolated app; Monitor(startMonitoring:false,helperInteraction:false), no controls or helper actions accepted.",
+    "observed": "Chinese panel, CPU/GPU/memory/disk/network/fan cards, clean-screen and AWDL entry, footer all visible without clipping.",
+    "fixtureRoot": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-menu-merge-ui-pzx8y2ab",
+    "exitedPID": 77442,
+    "processAbsenceVerified": true,
+    "limitations": "Static layout and unavailable readings only; no sensor/control acceptance or installed app acceptance."
+  },
+  "delivery": {
+    "sourceVersion": "1.1.27",
+    "installedAppUnchanged": true,
+    "helperInstalled": false,
+    "realAWDLSwitched": false,
+    "candidateBuilt": false,
+    "published": false,
+    "next": "Prepare a newer signed candidate from reconciled source, verify artifact and obtain explicit authorization before deploying the new root helper or switching actual AWDL."
+  }
+}

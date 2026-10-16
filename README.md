@@ -17,7 +17,13 @@ Fans
 
 ## 安装
 
-CLI（正式签名双架构二进制）：
+Homebrew（App 和 `thermo` 命令行一起装）：
+
+```sh
+brew install --cask leeguooooo/tap/thermo
+```
+
+只要 CLI（正式签名双架构二进制）：
 
 ```sh
 curl -fsSL https://thermo-updates.pages.dev/install.sh | sh
