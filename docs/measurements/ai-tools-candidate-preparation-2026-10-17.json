@@ -1,0 +1,32 @@
+{
+  "generated": "2026-10-16T23:04:46.852718+00:00",
+  "candidateVersion": "1.2.0",
+  "candidateCommit": "2f3627231dd19059d05525d3b658c146e01a0099",
+  "candidateBranch": "codex/ai-tools-1.2.0-rc",
+  "sourceClean": true,
+  "developerIDCertificateAvailable": true,
+  "signingPerformed": false,
+  "notarizationPerformed": false,
+  "publicationPerformed": false,
+  "installedAppChanged": false,
+  "fullReleaseConfigurationTestLog": "/tmp/thermo-ai-rc-tests.log",
+  "resourcePreflight": {
+    "ownedOldUICacheRemoved": true,
+    "head": "e77b57e120e142c0883698d77da92fcfeda87fd6",
+    "trackedDiffSHA256": "45772ee608241f299ab2f71062617070dd2b2e36586ded562e72ad4dee1b02c1",
+    "trackedAndUntrackedSourcePreserved": true,
+    "noActiveProcessesOrOpenFiles": true,
+    "dependencyCheckoutsClean": true,
+    "freeBytesBefore": 1110351872,
+    "freeBytesAfter": 1971142656
+  },
+  "fullReleaseConfigurationTests": {
+    "statusAtObservation": "running",
+    "verifiedPIDs": [
+      414
+    ],
+    "command": "swift test --jobs 1 -c release",
+    "log": "/tmp/thermo-ai-rc-tests.log"
+  },
+  "scope": "Local candidate preparation only. Version/changelog are on the isolated candidate branch; main marketing version, installed app, public tags and published assets are unchanged."
+}
