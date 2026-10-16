@@ -189,6 +189,23 @@ final class AppDataRemovalTests: XCTestCase {
         XCTAssertTrue(FS.exists(group))
     }
 
+    func testPeerNestedOwnerAppearingAfterReviewPreventsAssociatedDataRemoval() throws {
+        let peerPath = try peer("ExistingPeer", id: "org.example.other")
+        let reviewed = try plan()
+        XCTAssertTrue(reviewed.paths.contains(cachePath))
+        let before = AppDataReviewIdentity.of(peerPath)
+        let info = peerPath + "/Contents/XPCServices/Worker.xpc/Contents/Info.plist"
+        try FileManager.default.createDirectory(atPath: (info as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+        try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": "com.example.fixture"], format: .xml, options: 0)
+            .write(to: URL(fileURLWithPath: info))
+        XCTAssertEqual(AppDataReviewIdentity.of(peerPath), before)
+        let result = execute(reviewed)
+        XCTAssertTrue(result.removed.isEmpty); XCTAssertFalse(result.failed.isEmpty)
+        XCTAssertTrue(FS.exists(cachePath)); XCTAssertTrue(FS.exists(appPath))
+        let fresh = try plan()
+        XCTAssertFalse(fresh.paths.contains(cachePath))
+    }
+
     func testPeerInstalledAfterReviewPreventsBothFullAndDataOnlyRemoval() throws {
         for removeApp in [true, false] {
             let reviewed = try plan(removeApp: removeApp)

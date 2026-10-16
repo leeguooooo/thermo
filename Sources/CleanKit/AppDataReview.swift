@@ -25,6 +25,7 @@ public struct AppOwnershipSnapshot: Codable, Sendable, Equatable {
     public var roots: [String]
     public var extraPaths: [String]
     var claims: [Claim] = []
+    var nestedClaims: [Claim] = []
     public var issues: [String]
     public var fingerprint: String
     public var complete: Bool { issues.isEmpty }
@@ -36,6 +37,12 @@ public struct AppOwnershipSnapshot: Codable, Sendable, Equatable {
     }
 
     var apps: [InstalledApp] { claims.map { InstalledApp(path: $0.path, name: $0.name, bundleID: $0.bundleID) } }
+    var declaredBundleIDs: Set<String> { Set((claims + nestedClaims).compactMap { $0.bundleID?.lowercased() }) }
+
+    func dataOwners(excludingEmbeddedIn path: String) -> [InstalledApp] {
+        apps + nestedClaims.filter { !$0.path.hasPrefix(path + "/") && $0.bundleID != nil }
+            .map { InstalledApp(path: $0.path, name: $0.name, bundleID: $0.bundleID) }
+    }
 
     static func supplementalPaths(_ processes: ProcessTable, directories: [String]) -> [String] {
         var paths = Set<String>()
@@ -86,28 +93,43 @@ public struct AppOwnershipSnapshot: Codable, Sendable, Equatable {
             return result.sorted()
         }
         let before = paths()
+        let nestedBefore = nestedDeclarations(in: before, issues: &issues)
         var claims: [Claim] = []
         for path in before {
             if ScanCancellation.current?.isCancelled == true { issues.append(path); break }
             if let claim = read(path) { claims.append(claim) } else { issues.append(path) }
         }
+        var nestedClaims: [Claim] = []
+        for declaration in nestedBefore {
+            if ScanCancellation.current?.isCancelled == true { issues.append(declaration.path); break }
+            if let claim = readDeclaration(declaration) { nestedClaims.append(claim) } else { issues.append(declaration.path) }
+        }
         if paths() != before { issues += roots }
+        if nestedDeclarations(in: before, issues: &issues) != nestedBefore { issues += roots }
         for claim in claims {
             if ScanCancellation.current?.isCancelled == true { issues.append(claim.path); break }
             if read(claim.path) != claim { issues.append(claim.path) }
         }
+        let declarationsByPath = Dictionary(uniqueKeysWithValues: nestedBefore.map { ($0.path, $0) })
+        for claim in nestedClaims {
+            if ScanCancellation.current?.isCancelled == true { issues.append(claim.path); break }
+            guard let declaration = declarationsByPath[claim.path], readDeclaration(declaration) == claim else {
+                issues.append(claim.path); continue
+            }
+        }
         for path in requiredPaths where !claims.contains(where: { $0.path == path && $0.bundleID != nil }) { issues.append(path) }
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         let data: Data
-        do { data = try encoder.encode(claims) }
+        do { data = try encoder.encode([claims, nestedClaims]) }
         catch { data = Data(); issues += roots }
         let fingerprint = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-        return AppOwnershipSnapshot(roots: roots, extraPaths: extras, claims: claims, issues: Set(issues).sorted(), fingerprint: fingerprint)
+        return AppOwnershipSnapshot(roots: roots, extraPaths: extras, claims: claims, nestedClaims: nestedClaims,
+                                    issues: Set(issues).sorted(), fingerprint: fingerprint)
     }
 
-    private static func read(_ path: String) -> Claim? {
+    static func read(_ path: String, metadata: String? = nil) -> Claim? {
         guard let root = AppDataReviewIdentity.of(path) else { return nil }
-        let file = path + "/Contents/Info.plist"
+        let file = metadata ?? path + "/Contents/Info.plist"
         let fd = open(file, O_RDONLY | O_CLOEXEC | O_NONBLOCK)
         let name = ((path as NSString).lastPathComponent as NSString).deletingPathExtension
         guard fd >= 0 else {
@@ -125,7 +147,8 @@ public struct AppOwnershipSnapshot: Codable, Sendable, Equatable {
               stat(file, &visible) == 0, AppDataReviewIdentity.text(visible) == AppDataReviewIdentity.text(after),
               AppDataReviewIdentity.of(path) == root, AppDataReviewIdentity.of(file) == link,
               let plist = (try? PropertyListSerialization.propertyList(from: bytes, format: nil)) as? [String: Any] else { return nil }
-        let id = (plist["CFBundleIdentifier"] as? String).flatMap { AppUninstaller.isBundleID($0) ? $0 : nil }
+        let id = plist["CFBundleIdentifier"] as? String
+        if plist["CFBundleIdentifier"] != nil, id.map(validDeclaredID) != true { return nil }
         let hash = SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
         return Claim(path: path, name: name, bundleID: id, fingerprint: root + ":" + link + ":" + AppDataReviewIdentity.text(after) + ":" + hash)
     }

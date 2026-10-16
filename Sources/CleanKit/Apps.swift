@@ -555,7 +555,7 @@ public enum AppUninstaller {
             let runtime = AppOwnershipSnapshot.supplementalPaths(observed, directories: ownershipDirectories)
             let extras = installed.map(\.path).filter { !AppOwnershipSnapshot.isDiscovered($0, directories: ownershipDirectories) }
             let ownership = AppOwnershipSnapshot.capture(directories: ownershipDirectories, additionalPaths: extras + runtime, requiredPaths: runtime)
-            var result = makePlan(app, installed: ownership.apps, home: home, processes: processes, includePersonal: includePersonal,
+            var result = makePlan(app, installed: ownership.dataOwners(excludingEmbeddedIn: app.path), home: home, processes: processes, includePersonal: includePersonal,
                                   removeApp: removeApp, ownership: ownership)
             if !observed.available { result.blocked = tr("Could not verify running apps; refresh before removing files") }
             return result
@@ -769,24 +769,12 @@ public enum AppUninstaller {
     /// How long data must sit untouched before it counts as left behind.
     public static let orphanAge: TimeInterval = 30 * 86400
 
-    /// Bundle IDs of everything installed or running: every app bundle (and the bundles nested in it)
-    /// in the app folders, plus the bundle each running process comes from.
+    /// Declared IDs of supplied apps, standard embedded bundle locations, and observed running apps.
+    /// This compatibility set omits quality details; orphanReport preserves inventory failures.
     public static func knownBundleIDs(installed: [InstalledApp], processes: ProcessTable) -> Set<String> {
-        var ids = Set(installed.compactMap { $0.bundleID?.lowercased() })
-        let fm = FileManager.default
-        for app in installed {
-            // Helpers and extensions inside the bundle keep their own data folders.
-            for sub in ["Contents/Library/LoginItems", "Contents/Library/LaunchServices", "Contents/PlugIns", "Contents/XPCServices", "Contents/Helpers", "Contents/Frameworks"] {
-                for entry in (try? fm.contentsOfDirectory(atPath: app.path + "/" + sub)) ?? [] {
-                    if let id = read(app.path + "/" + sub + "/" + entry)?.bundleID { ids.insert(id.lowercased()) }
-                }
-            }
-        }
-        for p in processes.entries {
-            guard let exe = p.executable, let r = exe.range(of: ".app/", options: .backwards) else { continue }
-            if let id = read(String(exe[..<r.lowerBound]) + ".app")?.bundleID { ids.insert(id.lowercased()) }
-        }
-        return ids
+        let paths = installed.map(\.path) + AppOwnershipSnapshot.supplementalPaths(processes, directories: [])
+        let ownership = AppOwnershipSnapshot.capture(directories: [], additionalPaths: paths)
+        return Set(installed.compactMap { $0.bundleID?.lowercased() }).union(ownership.declaredBundleIDs)
     }
 
     /// A bundle ID left over by an app that is gone: not installed or running, nothing of it touched for
@@ -827,7 +815,7 @@ public enum AppUninstaller {
         var issues = ownership.issues.map { issue in
             issue.hasPrefix("/") ? OrphanScanIssue("Could not verify installed app ownership", path: issue) : OrphanScanIssue(issue)
         }
-        let known = known.union(knownBundleIDs(installed: ownership.apps, processes: processes))
+        let known = known.union(ownership.declaredBundleIDs)
         let lib = home + "/Library"
         var byID: [String: [String]] = [:]
         for root in orphanRoots {

@@ -1,0 +1,109 @@
+{
+  "date": "2026-10-16",
+  "scope": "Declared nested application ownership for associated-data and residual-data review",
+  "sourceSHA256": {
+    "Sources/CleanKit/AppDataReview.swift": "647ea1399a16aaedc2c3ffd751a50f5967cf6ee4f9a467fd798b82192f5e78a3",
+    "Sources/CleanKit/AppOwnershipNested.swift": "de19a9e9a9b90a59a2af3cc901f609119d03588d01c11d8046bed5ee439d5c42",
+    "Sources/CleanKit/Apps.swift": "26ffb42c2b936dcdb564fe3e206a7783e877302ee4413e2bc71caab13a7bd820",
+    "Tests/CleanKitTests/NestedAppOwnershipTests.swift": "be248285ecea32dbfc17b8c69c2c7fb0efb0af8a9eca869ce667f87c86efc1a6",
+    "Tests/CleanKitTests/AppDataRemovalTests.swift": "c51c97a3612b57f1c221683b79e54adf1a2e76edecc7f8d75e7052e301c469cc"
+  },
+  "coverage": [
+    "Nested app, appex, xpc, framework, resource bundle and systemextension metadata in fixed known locations",
+    "Versioned framework current Resources/Helpers/XPCServices declarations",
+    "Nested declarations are read twice and included in the inventory fingerprint",
+    "Peer embedded owners participate in data preservation; selected host embedded components stay in the host removal group",
+    "External links, unreadable or malformed executable bundle metadata and depth/count exhaustion are incomplete",
+    "Declared short IDs are distinct from stricter orphan-directory discovery heuristic"
+  ],
+  "bounds": {
+    "maximumNestedDeclarations": 4096,
+    "maximumPlistBytesPerRead": 1048576,
+    "launchesCode": false,
+    "enumeratesArbitraryResourceTrees": false,
+    "maximumRecursiveExpansionDepth": 8,
+    "depthBoundaryBehavior": "Observed boundary declaration may be recorded; deeper traversal stops and inventory is incomplete"
+  },
+  "newTests": {
+    "NestedAppOwnershipTests": 14,
+    "AppDataRemovalTests": 1
+  },
+  "firstTargetedRun": {
+    "tests": 71,
+    "failures": 0,
+    "log": "/tmp/thermo-nested-ownership-targeted.log",
+    "note": "Before final host-boundary/short-ID follow-up cases"
+  },
+  "regressionBeforeHostBoundaryFix": {
+    "test": "testRunningNestedAppMayShareAFrameworkInsideItsOuterHost",
+    "failure": "Valid shared framework inside the outer app was reported outside nested helper boundary",
+    "log": "/tmp/thermo-nested-host-boundary-before.log"
+  },
+  "initialFullRegression": {
+    "tests": 847,
+    "failures": 1,
+    "failingTest": "NativeUpdateTransactionTests.testDMGDownloadPipelineAcceptsDeclaredFormatAndCleansItsMount",
+    "failure": "An owned source update.dmg was still listed as attached after successful install",
+    "log": "/tmp/thermo-nested-ownership-full-tests.log"
+  },
+  "DMGFollowup": {
+    "failedImageCurrentlyAbsent": true,
+    "isolatedRepeatTests": 1,
+    "isolatedRepeatFailures": 0,
+    "log": "/tmp/thermo-nested-dmg-failure-repeat.log",
+    "rootCauseResolved": false
+  },
+  "nativeReadOnlyCLI": {
+    "exit": 0,
+    "elapsedSeconds": 6.55,
+    "complete": false,
+    "items": 0,
+    "issues": 14,
+    "cancelled": false,
+    "stderrBytes": 0,
+    "isolatedHome": true,
+    "workspaceRemoved": true
+  },
+  "observedCompatibility": {
+    "installedAppNamesUsedOnlyForLocalDiagnosis": [
+      "Infuse OpenCC framework",
+      "iTerm SwiftyMarkdown framework",
+      "SwitchHosts helper",
+      "OrbStack helper sharing outer LaunchServices"
+    ],
+    "installedAppIssuesAfterFix": 0,
+    "remainingIssuesInObservedRunningBundlesOutsideStandardAppRoots": 14,
+    "otherAppsModifiedOrStopped": false
+  },
+  "privacy": "Snapshots export only roots, extra paths, issues and aggregate fingerprint. Nested/root claim lists are not exported.",
+  "limits": [
+    "Fixed known embedded locations, current framework versions and observed .app executable ancestors; no universal filesystem discovery",
+    "Other metadata layouts, inactive framework versions, entitlements/Team-ID sharing and standalone non-app runtime bundles remain outside demonstrated coverage",
+    "Local file metadata checks do not eliminate every check/use race or seal recursive data contents",
+    "Native DMG cleanup failure remains open despite isolated repeat passing",
+    "No user data removal, helper installation, root query, hardware writes or release"
+  ],
+  "fullRegressionRecheck": {
+    "CleanKit": 500,
+    "ThermoApp": 142,
+    "ThermoCLI": 57,
+    "ThermoKitExcludingHardwareTests": 114,
+    "AgentCore": 34,
+    "total": 847,
+    "failures": 0,
+    "log": "/tmp/thermo-nested-ownership-full-recheck.log"
+  },
+  "build": "passed as part of full regression recheck",
+  "nativeReadOnlyCLIRecheckAfterTests": {
+    "exit": 0,
+    "elapsedSeconds": 1.003,
+    "complete": false,
+    "items": 0,
+    "issues": 14,
+    "cancelled": false,
+    "stderrBytes": 0,
+    "isolatedHome": true,
+    "afterFullTestsFinished": true,
+    "workspaceRemoved": true
+  }
+}
