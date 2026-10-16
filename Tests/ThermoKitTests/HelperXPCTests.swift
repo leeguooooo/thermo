@@ -4,9 +4,36 @@ import XCTest
 
 /// Real Foundation XPC transport, with an owned endpoint and no privileged service or hardware.
 final class HelperXPCTests: XCTestCase {
+    func testAWDLLegacyVersionIsRejectedBeforeCallingNewSelectors() async throws {
+        let endpoint=Endpoint();defer { endpoint.stop() }
+        endpoint.service.access { $0.version="5/fixture" }
+        let client=endpoint.client();defer { client.reset() }
+        do { _=try await client.awdlState();XCTFail("version 5 does not implement AWDL") } catch {}
+        do { try await client.beginAWDL(seconds:60);XCTFail("version 5 must not receive begin") } catch {}
+        XCTAssertEqual(endpoint.service.access { $0.awdlCalls },0)
+    }
+    func testAWDLStateRejectsInvalidIdentityAndTiming() async throws {
+        let endpoint=Endpoint();defer { endpoint.stop() };let client=endpoint.client();defer { client.reset() }
+        var state=AWDLSessionState();state.phase = .active;state.remainingSeconds=60;state.sessionID=UUID().uuidString
+        state.interfaceQueryComplete=true;state.interface = .init(index:15,up:false);state.ownedByCaller=true
+        endpoint.service.access { $0.version="6/fixture";$0.awdlData=try! PolicyCoding.encoder().encode(state) }
+        let valid=try await client.awdlState();XCTAssertEqual(valid.phase,.active)
+        state.remainingSeconds = -1
+        endpoint.service.access { $0.awdlData=try! PolicyCoding.encoder().encode(state) }
+        do { _=try await client.awdlState();XCTFail("negative duration must fail") } catch {}
+        state.remainingSeconds=60;state.sessionID="invalid"
+        endpoint.service.access { $0.awdlData=try! PolicyCoding.encoder().encode(state) }
+        do { _=try await client.awdlState();XCTFail("invalid session identity must fail") } catch {}
+    }
+    func testInvalidAWDLRequestDoesNotEvenCreateAConnection() async throws {
+        let endpoint=Endpoint();defer { endpoint.stop() };let client=endpoint.client();defer { client.reset() }
+        do { try await client.beginAWDL(seconds:1);XCTFail("too short") } catch {}
+        do { try await client.beginAWDL(seconds:60,sessionID:"invalid");XCTFail("invalid identity") } catch {}
+        XCTAssertEqual(endpoint.connectionCount,0)
+    }
     final class Service: NSObject, ThermoHelperProtocol, @unchecked Sendable {
         struct State {
-            var version = "5/fixture"
+            var version = "6/fixture"
             var control = FanControlState(policies: [:])
             var policyData: Data?
             var controlData: Data?
@@ -15,6 +42,8 @@ final class HelperXPCTests: XCTestCase {
             var controlCalls = 0
             var holdVersion = false
             var heldReplies: [(String) -> Void] = []
+            var awdlCalls=0
+            var awdlData: Data?
         }
         private var state = State()
         private let lock = NSLock()
@@ -59,6 +88,17 @@ final class HelperXPCTests: XCTestCase {
         func setLidAwake(_ on: Bool, reply: @escaping (String?) -> Void) { reply(nil) }
         func setLidAwake(_ on: Bool, heatGuard: Bool, reply: @escaping (String?) -> Void) { reply(nil) }
         func lidAwakeState(reply: @escaping (Data) -> Void) { reply(try! PolicyCoding.encoder().encode(LidAwakeState(limit: 95))) }
+        func beginAWDL(seconds: Int,sessionID: String,reply: @escaping (String?) -> Void) { access { $0.awdlCalls+=1 };reply(nil) }
+        func endAWDL(reply: @escaping (String?) -> Void) { access { $0.awdlCalls+=1 };reply(nil) }
+        func awdlState(reply: @escaping (Data) -> Void) {
+            let data=access { s in s.awdlCalls+=1;return s.awdlData ?? (try! PolicyCoding.encoder().encode(AWDLSessionState())) };reply(data)
+        }
+    }
+    func testLegacyRemovalCannotClaimAWDLWasRestored() async throws {
+        let endpoint=Endpoint();defer { endpoint.stop() };endpoint.service.access { $0.version="5/fixture" }
+        let client=endpoint.client();defer { client.reset() }
+        do { try await client.prepareRemoval(true,token:UUID().uuidString);XCTFail("legacy recovery excludes AWDL") } catch {}
+        XCTAssertTrue(endpoint.service.access { $0.preparations.isEmpty })
     }
 
     final class Endpoint: NSObject, NSXPCListenerDelegate, @unchecked Sendable {
@@ -169,6 +209,7 @@ final class HelperXPCTests: XCTestCase {
 
     func testServerDisconnectDropsTheConnectionAndAllowsReconnect() async throws {
         let endpoint = Endpoint(); defer { endpoint.stop() }
+        endpoint.service.access { $0.version="5/fixture" }
         let client = endpoint.client(); defer { client.reset() }
         let first = try await client.version(); XCTAssertEqual(first, "5/fixture")
         endpoint.disconnect()
@@ -186,7 +227,7 @@ final class HelperXPCTests: XCTestCase {
 
     func testMissingReplyTimesOutAndLateReplyCannotCorruptTheNextConnection() async throws {
         let endpoint = Endpoint(); defer { endpoint.stop() }
-        endpoint.service.access { $0.holdVersion = true }
+        endpoint.service.access { $0.holdVersion = true;$0.version="5/fixture" }
         let client = endpoint.client(); defer { client.reset() }
         do { _ = try await client.version(); XCTFail("missing reply must not hang") }
         catch { XCTAssertTrue(String(describing: error).contains("no answer within 3 s")) }

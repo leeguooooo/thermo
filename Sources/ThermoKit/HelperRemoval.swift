@@ -29,6 +29,9 @@ public final class HelperRemovalGuard {
         }
         activeToken = nil
     }
+    public func abandon(ownerPrefix: String) {
+        if !ownerPrefix.isEmpty,activeToken?.hasPrefix(ownerPrefix) == true { activeToken=nil }
+    }
 }
 
 /// Shared by CLI and App; every side effect is injectable without root or XPC.

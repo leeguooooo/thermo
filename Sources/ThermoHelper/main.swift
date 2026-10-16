@@ -27,7 +27,7 @@ guard getuid() == 0 else {
 }
 
 final class Controller {
-    let queue = DispatchQueue(label: "dev.thermo.helper.control")
+    let queue: DispatchQueue
     let sampler: Sampler
     let writer: FanWriter
     var engine: FanPolicyEngine
@@ -36,17 +36,20 @@ final class Controller {
     var pendingRecovery: FanAutoRecoveryReport?
     var controlError: String?
     var observations: [Int: FanControlObservation] = [:]
-    let removalGuard = HelperRemovalGuard()
+    let removalGuard: HelperRemovalGuard
     var timer: DispatchSourceTimer?
     let lidAwake: LidAwakeController
     var lidTimer: DispatchSourceTimer?
+    var stopping=false
+    var shutdownSleepPending=false
 
     static let interval: TimeInterval = 2
     static let hysteresis = 50.0
     /// Max decrease per tick, so fans spin down gently instead of hunting.
     static let rampDown = 400.0
 
-    init() throws {
+    init(queue: DispatchQueue,removalGuard: HelperRemovalGuard) throws {
+        self.queue=queue;self.removalGuard=removalGuard
         sampler = try Sampler(scope: .essential, useCache: false)
         sampler.parts = [.temperatures, .fans]
         sampler.fanLimitRefresh = 10
@@ -61,19 +64,17 @@ final class Controller {
     }
 
     func start() {
-        queue.sync {
-            restoreFans(reason: "helper started")
-            // Keep-awake-with-the-lid-closed never survives a restart (crash, update, reboot).
-            lidAwake.restoreOriginal(reason: "helper started")
-            log("started; \(sampler.discovery.fans.count) fan(s), \(sampler.discovery.sensors.filter(\.essential).count) control sensors")
-            // What the user chose survives restarts (updates, reboots); the next tick applies it,
-            // with the over-temperature protection as always.
-            let saved = PolicyStore.load()
-            for (fan, policy) in saved.sorted(by: { $0.key < $1.key })
-            where sampler.discovery.fans.contains(where: { $0.index == fan }) && policy != .auto {
-                engine.set(policy, for: fan)
-                log("fan \(fan): restored \(policy.description)")
-            }
+        restoreFans(reason: "helper started")
+        // Keep-awake-with-the-lid-closed never survives a restart (crash, update, reboot).
+        lidAwake.restoreOriginal(reason: "helper started")
+        log("started; \(sampler.discovery.fans.count) fan(s), \(sampler.discovery.sensors.filter(\.essential).count) control sensors")
+        // What the user chose survives restarts (updates, reboots); the next tick applies it,
+        // with the over-temperature protection as always.
+        let saved = PolicyStore.load()
+        for (fan, policy) in saved.sorted(by: { $0.key < $1.key })
+        where !removalGuard.isPreparing && sampler.discovery.fans.contains(where: { $0.index == fan }) && policy != .auto {
+            engine.set(policy, for: fan)
+            log("fan \(fan): restored \(policy.description)")
         }
         let t = DispatchSource.makeTimerSource(queue: queue)
         t.schedule(deadline: .now() + Self.interval, repeating: Self.interval, leeway: .milliseconds(200))
@@ -89,6 +90,7 @@ final class Controller {
 
     /// Must run on `queue`. The safety rules run whether or not the lid is closed: a hot Mac is hot either way.
     func lidTick() {
+        guard !stopping else { return }
         guard lidAwake.state.armed else {
             lidAwake.tick(hottest: nil, battery: nil, lidClosed: SleepSwitch.lidClosed())
             return
@@ -97,12 +99,11 @@ final class Controller {
         lidAwake.tick(hottest: engine.observeControlTemperature(s), battery: Battery.read(), lidClosed: SleepSwitch.lidClosed())
     }
 
-    func shutdown(reason: String) -> FanAutoRecoveryReport {
-        queue.sync {
-            let report = restoreFans(reason: reason)
-            lidAwake.restoreOriginal(reason: reason)
-            return report
-        }
+    func shutdown(reason: String) -> Bool {
+        stopping=true
+        let report = restoreFans(reason: reason)
+        do { try lidAwake.restoreOriginalChecked(reason:reason);shutdownSleepPending=false;return report.confirmed }
+        catch { shutdownSleepPending=true;log("sleep restoration failed: \(error)");return false }
     }
 
     @discardableResult
@@ -121,6 +122,14 @@ final class Controller {
 
     /// Must run on `queue`.
     func tick() {
+        if stopping {
+            if pendingRecovery != nil { restoreFans(reason:"shutdown automatic control retry") }
+            if shutdownSleepPending {
+                do { try lidAwake.restoreOriginalChecked(reason:"shutdown retry");shutdownSleepPending=false }
+                catch { log("sleep restoration retry failed: \(error)") }
+            }
+            return
+        }
         if pendingRecovery != nil, !restoreFans(reason: "retry automatic control").confirmed { return }
         guard !removalGuard.isPreparing else { return }
         // A failed manual request stays suspended until an explicit policy change.
@@ -174,6 +183,7 @@ final class Controller {
     }
 
     func setPolicy(_ policy: FanPolicy, fan: Int) throws {
+        guard !stopping else { throw FanControlError.helper("helper is stopping") }
         guard !removalGuard.isPreparing else { throw FanControlError.helper("helper is preparing for removal; fan policy changes are blocked") }
         try policy.validate()
         if policy != .auto, pendingRecovery != nil, !restoreFans(reason: "before policy change").confirmed {
@@ -210,118 +220,24 @@ final class Controller {
     }
 }
 
-final class Service: NSObject, ThermoHelperProtocol {
-    let controller: Controller
-    private let connectionID = UUID().uuidString
-    private var removalToken: String?
-    init(_ c: Controller) { controller = c }
+let fans=FanHost()
+let network=AWDLHelperCoordinator()
 
-    func version(reply: @escaping (String) -> Void) { reply(HelperConstants.version) }
-
-    func prepareRemoval(_ prepare: Bool, token: String, reply: @escaping (String?) -> Void) {
-        controller.queue.async {
-            do {
-                let scopedToken = self.connectionID + ":" + token
-                if prepare {
-                    guard self.removalToken == nil || self.removalToken == scopedToken else {
-                        throw FanControlError.helper("this connection already has a removal in progress")
-                    }
-                    self.removalToken = scopedToken
-                    try self.controller.removalGuard.prepare(
-                        token: scopedToken,
-                        clearPolicies: { self.controller.engine.clear(); self.controller.written.removeAll() },
-                        savePolicies: { try PolicyStore.save([:]) },
-                        restoreFans: { self.controller.restoreFans(reason: "prepare removal") },
-                        restoreSleep: { try self.controller.lidAwake.restoreOriginalChecked(reason: "prepare removal") })
-                    self.controller.controlError = nil
-                } else {
-                    try self.controller.removalGuard.cancel(token: scopedToken)
-                    self.removalToken = nil
-                }
-                reply(nil)
-            } catch { reply("\(error)") }
-        }
-    }
-
-    func setPolicy(fan: Int, policy: Data, reply: @escaping (String?) -> Void) {
-        controller.queue.async {
-            do {
-                let p = try PolicyCoding.decoder().decode(FanPolicy.self, from: policy)
-                if case .fixed(let r) = p, !(r >= 0) { throw FanControlError.helper("invalid rpm") }
-                try self.controller.setPolicy(p, fan: fan)
-                reply(nil)
-                // Apply right away, but after replying: on Apple Silicon the first
-                // manual write waits for the Ftst unlock (2+ s), longer than a client
-                // should block on an XPC reply.
-                self.controller.queue.async { self.controller.tick() }
-            } catch {
-                reply("\(error)")
-            }
-        }
-    }
-
-    func setLidAwake(_ on: Bool, reply: @escaping (String?) -> Void) {
-        setLidAwake(on, heatGuard: true, reply: reply)
-    }
-
-    func setLidAwake(_ on: Bool, heatGuard: Bool, reply: @escaping (String?) -> Void) {
-        controller.queue.async {
-            guard !self.controller.removalGuard.isPreparing else { reply("helper is preparing for removal"); return }
-            do { try self.controller.lidAwake.set(on, heatGuard: heatGuard); reply(nil) } catch { reply("\(error)") }
-        }
-    }
-
-    func lidAwakeState(reply: @escaping (Data) -> Void) {
-        controller.queue.async {
-            var state = self.controller.lidAwake.state
-            state.lidClosed = SleepSwitch.lidClosed()
-            reply((try? PolicyCoding.encoder().encode(state)) ?? Data("{}".utf8))
-        }
-    }
-
-    func fanControlState(reply: @escaping (Data) -> Void) {
-        controller.queue.async {
-            reply((try? PolicyCoding.encoder().encode(self.controller.controlState)) ?? Data())
-        }
-    }
-
-    func policies(reply: @escaping (Data) -> Void) {
-        controller.queue.async {
-            reply((try? FanPolicyReply.encode(self.controller.engine.policies, recovery: self.controller.pendingRecovery, controlError: self.controller.controlState.legacyError)) ?? Data(#"{"_thermoError":"Could not encode fan control state"}"#.utf8))
-        }
-    }
+func shutdownAll(reason: String) -> Bool {
+    let group=DispatchGroup(),result=ShutdownResult()
+    group.enter();fans.shutdown(reason:reason) { ok in result.record(ok);group.leave() }
+    group.enter();network.shutdown(reason:reason) { ok in result.record(ok);group.leave() }
+    guard group.wait(timeout:.now()+12) == .success else { log("shutdown recovery timed out; durable network recovery remains for restart");return false }
+    return result.confirmed
 }
-
-final class ListenerDelegate: NSObject, NSXPCListenerDelegate {
-    let service: Service
-    init(_ s: Service) { service = s }
-
-    func listener(_ listener: NSXPCListener, shouldAcceptNewConnection c: NSXPCConnection) -> Bool {
-        c.setCodeSigningRequirement(HelperConstants.clientRequirement)
-        c.exportedInterface = NSXPCInterface(with: ThermoHelperProtocol.self)
-        let clientService = Service(service.controller)
-        c.exportedObject = clientService
-        c.resume()
-        return true
-    }
-}
-
-let controller: Controller
-do {
-    controller = try Controller()
-} catch {
-    log("cannot open SMC: \(error)")
-    exit(1)
-}
-controller.start()
 
 var signalSources: [DispatchSourceSignal] = []
 for sig in [SIGTERM, SIGINT, SIGHUP] {
     signal(sig, SIG_IGN)
     let src = DispatchSource.makeSignalSource(signal: sig, queue: .main)
     src.setEventHandler {
-        let recovery = controller.shutdown(reason: "signal \(sig)")
-        exit(recovery.confirmed ? 0 : 1)
+        let recovery = shutdownAll(reason: "signal \(sig)")
+        exit(recovery ? 0 : 1)
     }
     src.resume()
     signalSources.append(src)
@@ -336,8 +252,8 @@ if let path = Bundle.main.executablePath ?? CommandLine.arguments.first {
     if fd >= 0 {
         let src = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: [.delete, .rename, .write], queue: .main)
         src.setEventHandler {
-            let recovery = controller.shutdown(reason: "executable replaced (update)")
-            exit(recovery.confirmed ? 0 : 1)
+            let recovery = shutdownAll(reason: "executable replaced (update)")
+            exit(recovery ? 0 : 1)
         }
         src.setCancelHandler { close(fd) }
         src.resume()
@@ -366,15 +282,15 @@ if let i = CommandLine.arguments.firstIndex(of: "--source"), i + 1 < CommandLine
         case .rejected(let why):
             if why != lastRejection { log("self-update skipped: \(why)"); lastRejection = why }
         case .updated(let v):
-            let recovery = controller.shutdown(reason: "updated itself to \(v) from \(source)")
-            exit(recovery.confirmed ? 0 : 1)
+            let recovery = shutdownAll(reason: "updated itself to \(v) from \(source)")
+            exit(recovery ? 0 : 1)
         }
     }
     t.resume()
     selfUpdateTimer = t
 }
 
-let delegate = ListenerDelegate(Service(controller))
+let delegate = ListenerDelegate(fans:fans,network:network)
 let listener = NSXPCListener(machServiceName: HelperConstants.machService)
 listener.delegate = delegate
 listener.resume()

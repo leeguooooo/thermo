@@ -25,6 +25,10 @@ COMMANDS
   fan curve ID|all CURVE     temperature curve, e.g. 50:min,70:3000,85:max
   fan auto [ID|all]          return fans to automatic control
   helper install|uninstall|status
+  awdl status [--probe]       query session state; --probe reads only the local interface
+  awdl on [--seconds 300]     pause AWDL while this command stays open (60–3600 s);
+                             Ctrl-C restores its original state; --dry-run previews
+  awdl recover               retry an unconfirmed recovery (cannot stop another owner)
   bench                      measure sampling latency
   agents                     diagnose AI agents: hooks, MCP servers, plugins,
                              skills, launch agents and leaked processes
@@ -186,6 +190,7 @@ struct App {
         case "tabs": try TabsCommand(app: self).run(rest)
         case "settings", "config": try SettingsCommand(app: self).run(rest)
         case "awake": try AwakeCommand(app: self).run(rest)
+        case "awdl": try AWDLCommand(app:self).run(rest)
         case "history": try HistoryCommand(app: self).run(rest)
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
         }

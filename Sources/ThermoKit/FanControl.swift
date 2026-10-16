@@ -154,6 +154,7 @@ extension SMC: FanSMCAccess {}
 public struct FanAutoRecoveryReport: Codable, Sendable, Equatable {
     public var unconfirmed: [String]
     public var requestErrors: [String]
+    public init(unconfirmed: [String],requestErrors: [String]) { self.unconfirmed=unconfirmed;self.requestErrors=requestErrors }
     public var confirmed: Bool { unconfirmed.isEmpty }
     public var summary: String { confirmed ? "automatic control confirmed" : "automatic control unconfirmed: " + unconfirmed.joined(separator: "; ") }
 }

@@ -12,7 +12,7 @@ struct Args {
     var options: [String: String] = [:]
 
     static let valueOptions: Set<String> = ["interval", "count", "sensor", "format", "older-than", "root", "budget", "timeout",
-                                            "area", "agent", "action", "encoding",
+                                            "area", "agent", "action", "encoding", "seconds",
         "to", // space archive: SSH alias:/absolute/archive.tar
         "since",  // pulse history
         "limit",  // history
@@ -28,7 +28,7 @@ struct Args {
         "rescan",  // rescan: clean run ignores the saved scan
         "remove-local", "inactive-development",
         "measure", "all-windows", "by-site",
-        "no-heat-guard"]  // awake on: only low battery turns it off  // pulse chrome: measure memory per page once
+        "no-heat-guard", "probe"]  // awake / read-only AWDL interface probe
 
     init(_ argv: [String]) throws {
         var i = 0

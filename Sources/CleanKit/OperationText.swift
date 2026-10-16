@@ -49,6 +49,8 @@ extension OperationRecord {
         case ("power", "lidAwakeOn"): return tr("Turned on staying awake with the lid closed")
         case ("power", "lidAwakeOff"): return tr("Turned off staying awake with the lid closed")
         case ("power", "lidAwakeAutoOff"): return tr("Staying awake with the lid closed turned itself off")
+        case ("network", "awdlBegin"): return tr("Started an AWDL low-latency session")
+        case ("network", "awdlRestore"): return tr("AWDL session ended")
         default: return feature + " · " + action
         }
     }
@@ -76,6 +78,7 @@ extension OperationRecord {
     public var undoText: String? {
         guard let undo else {
             switch (feature, action) {
+            case ("network", "awdlBegin"): return tr("Stop in Network low latency. A session started in Terminal ends with Ctrl-C.")
             case ("apps", "update"): return tr("Check the installed version in Software → Updates. Thermo cannot automatically roll updates back.")
             case ("privacy", "clearClaudeEnvironment"): return tr("Cannot be undone: the values were never read or saved.")
             case ("clean", "delete"), ("clean", "emptyTrash"): return tr("Deleted for good; nothing to restore.")

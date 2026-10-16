@@ -1,12 +1,18 @@
 import Foundation
 import Security
 
+public enum AWDLClientError: LocalizedError, CustomStringConvertible {
+    case notStarted(String)
+    public var errorDescription: String? { switch self { case .notStarted(let message): return message } }
+    public var description: String { errorDescription ?? "AWDL request was not started" }
+}
+
 public enum HelperConstants {
     public static let label = "dev.thermo.helper"
     public static let machService = "dev.thermo.helper"
     public static let installedBinary = "/Library/PrivilegedHelperTools/dev.thermo.helper"
     public static let launchdPlist = "/Library/LaunchDaemons/dev.thermo.helper.plist"
-    public static let protocolVersion = "5"
+    public static let protocolVersion = "6"
     /// Reported by the helper: "<protocol>/<app version>".
     public static var version: String { "\(protocolVersion)/\(ThermoVersion.string)" }
     /// Plist bundled at Contents/Library/LaunchDaemons for SMAppService registration.
@@ -123,6 +129,10 @@ public enum HelperSelfUpdate {
     func prepareRemoval(_ prepare: Bool, token: String, reply: @escaping (String?) -> Void)
     /// Protocol 5: desired policies, last hardware observations and suspension/fault state.
     func fanControlState(reply: @escaping (Data) -> Void)
+    /// Protocol 6. Fixed awdl0 only, owned by this XPC connection.
+    func beginAWDL(seconds: Int,sessionID: String,reply: @escaping (String?) -> Void)
+    func endAWDL(reply: @escaping (String?) -> Void)
+    func awdlState(reply: @escaping (Data) -> Void)
 }
 
 /// The helper's fan policies on disk, so a helper restart (update, reboot) keeps what the user
@@ -316,7 +326,7 @@ public final class HelperClient: @unchecked Sendable {
 
     public func prepareRemoval(_ prepare: Bool, token: String) async throws {
         let v = try await version()
-        guard let major = Int(v.split(separator: "/").first ?? ""), major >= 4 else {
+        guard let major = Int(v.split(separator: "/").first ?? ""), major >= 6 else {
             throw FanControlError.helper("helper cannot confirm safe removal; update the helper first")
         }
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
@@ -331,6 +341,56 @@ public final class HelperClient: @unchecked Sendable {
                 }
             }
         }
+    }
+
+    private func requireAWDL() async throws {
+        let value=try await version()
+        guard let major=Int(value.split(separator:"/").first ?? ""),major >= 6 else {
+            throw AWDLError("Update Thermo's helper before using AWDL sessions.")
+        }
+    }
+    public func beginAWDL(seconds: Int,sessionID: String = UUID().uuidString) async throws {
+        guard (60...3600).contains(seconds),UUID(uuidString:sessionID) != nil else { throw AWDLClientError.notStarted("Invalid AWDL session duration or identifier") }
+        do { try await requireAWDL() }
+        catch { throw AWDLClientError.notStarted((error as? FanControlError)?.description ?? error.localizedDescription) }
+        try await awdlAction { $0.beginAWDL(seconds:seconds,sessionID:sessionID,reply:$1) }
+    }
+    public func endAWDL() async throws {
+        try await requireAWDL()
+        try await awdlAction { $0.endAWDL(reply:$1) }
+    }
+    private func awdlAction(_ send: @escaping (ThermoHelperProtocol,@escaping (String?) -> Void) -> Void) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void,Error>) in
+            let once=Once()
+            guard let p=proxy({ error in once.run { continuation.resume(throwing:error) } }) else {
+                return once.run { continuation.resume(throwing:FanControlError.helperUnavailable("no proxy")) }
+            }
+            deadline(8,once) { continuation.resume(throwing:FanControlError.helperUnavailable("AWDL request timed out; recovery must be checked")) }
+            send(p) { error in once.run {
+                if let error { continuation.resume(throwing:AWDLError(error)) } else { continuation.resume() }
+            } }
+        }
+    }
+    public func awdlState() async throws -> AWDLSessionState {
+        try await requireAWDL()
+        let data: Data = try await withCheckedThrowingContinuation { continuation in
+            let once=Once()
+            guard let p=proxy({ error in once.run { continuation.resume(throwing:error) } }) else {
+                return once.run { continuation.resume(throwing:FanControlError.helperUnavailable("no proxy")) }
+            }
+            deadline(4,once) { continuation.resume(throwing:FanControlError.helperUnavailable("AWDL state query timed out")) }
+            p.awdlState { data in once.run { continuation.resume(returning:data) } }
+        }
+        let state=try PolicyCoding.decoder().decode(AWDLSessionState.self,from:data)
+        guard state.interface.map({ $0.index > 0 }) ?? true,
+              state.remainingSeconds.map({ (0...3600).contains($0) }) ?? true,
+              state.phase != .active || state.remainingSeconds != nil,
+              state.sessionID.map({ UUID(uuidString:$0) != nil }) ?? true,
+              state.phase != .active || state.sessionID != nil,
+              state.phase != .idle || state.sessionID == nil,
+              state.phase == .active || (!state.ownedByCaller && state.remainingSeconds == nil),
+              state.interfaceQueryComplete || state.interface == nil else { throw AWDLError("Invalid AWDL state reply") }
+        return state
     }
 
     public func withRemovalPreparation(_ remove: () throws -> Void) throws {

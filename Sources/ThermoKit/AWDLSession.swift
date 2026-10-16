@@ -42,10 +42,11 @@ public struct AWDLLeaseIO {
     }
 }
 
-public struct AWDLError: LocalizedError {
+public struct AWDLError: LocalizedError, CustomStringConvertible {
     public var message: String
     public init(_ message: String) { self.message=message }
     public var errorDescription: String? { message }
+    public var description: String { message }
 }
 
 public enum AWDLSystemClock {
@@ -70,6 +71,7 @@ public struct AWDLSessionState: Codable, Equatable, Sendable {
     public var interfaceQueryComplete = false
     public var remainingSeconds: Int?
     public var ownedByCaller = false
+    public var sessionID: String?
     public var lastEndReason: String?
     public var error: String?
     public init() {}
@@ -114,8 +116,8 @@ public final class AWDLSessionController {
         }
         return result
     }
-    public func begin(owner: String,seconds: Int) throws {
-        guard UUID(uuidString:owner) != nil,(60...3600).contains(seconds) else { throw AWDLError("Invalid AWDL session request") }
+    public func begin(owner: String,seconds: Int,sessionID: String = UUID().uuidString) throws {
+        guard UUID(uuidString:owner) != nil,UUID(uuidString:sessionID) != nil,(60...3600).contains(seconds) else { throw AWDLError("Invalid AWDL session request") }
         guard state.phase != .active else { throw AWDLError("An AWDL session is already active") }
         guard recover(reason:"beforeStart") else { throw AWDLError(state.error ?? "AWDL recovery is pending") }
         guard let boot=boot(),UUID(uuidString:boot) != nil,let before=try observe(),before.index > 0 else { throw AWDLError("AWDL identity is unavailable") }
@@ -123,7 +125,7 @@ public final class AWDLSessionController {
         let saved=AWDLRestoreRecord(index:before.index,wasUp:before.up,bootSession:boot)
         // No network write is allowed until the recovery record is durable.
         do { try store.save(saved) } catch { state.phase = .blocked;state.error=error.localizedDescription;throw error }
-        record=saved;self.owner=owner;began=now;deadline=now+Double(seconds);state.phase = .recovering
+        record=saved;self.owner=owner;began=now;deadline=now+Double(seconds);state.sessionID=sessionID;state.phase = .recovering
         do {
             guard sameBoot(boot),let current=try observe(),current.index == before.index else { throw AWDLError("AWDL identity changed before start") }
             if current.up { try io.write(before.index,false) }
@@ -158,7 +160,7 @@ public final class AWDLSessionController {
         owner=nil;began=nil;deadline=nil;state.phase = .recovering
         do {
             if record == nil { record=try store.load() }
-            guard let saved=record else { state.phase = .idle;state.error=nil;return true }
+            guard let saved=record else { state.phase = .idle;state.error=nil;state.sessionID=nil;return true }
             guard saved.valid,let currentBoot=boot(),UUID(uuidString:currentBoot) != nil else { throw AWDLError("AWDL recovery identity is invalid or unavailable") }
             var endReason=reason
             if UUID(uuidString:currentBoot) != UUID(uuidString:saved.bootSession) { endReason="bootChanged" }
@@ -169,7 +171,7 @@ public final class AWDLSessionController {
                 }
             } else { endReason="interfaceReplaced" }
             try store.clear(saved)
-            record=nil;state.phase = .idle;state.error=nil;state.lastEndReason=endReason
+            record=nil;state.phase = .idle;state.error=nil;state.sessionID=nil;state.lastEndReason=endReason
             return true
         } catch { state.phase = record == nil ? .blocked : .recovering;state.error=error.localizedDescription;return false }
     }

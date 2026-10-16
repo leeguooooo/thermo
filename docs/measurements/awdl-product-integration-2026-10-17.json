@@ -1,0 +1,168 @@
+{
+  "date": "2026-10-17",
+  "sourceCommit": "8356624ab97a552435e999038f1e294c4e6ccac7",
+  "integrationParent": "9cca48c",
+  "sourceSHA256": {
+    "Package.swift": "6ea3ee24f792efabad9f259c184495d0e7bfb512d7c578632e75deb289d7fdd4",
+    "Sources/CleanKit/OperationText.swift": "45306d4266260e69785dabeeac4faf0047941eec8bb1a9e4f061b772c950ab35",
+    "Sources/ThermoApp/AWDLView.swift": "702a4f65c33133d30c8781c8714d64b92f2d59832db5cd85498cccc5ee8a5ed6",
+    "Sources/ThermoApp/AppExitGuard.swift": "956f0c246c769ec77a7ad1d9c4296639bce853f07bb2b6579b5f173d405809e6",
+    "Sources/ThermoApp/Views.swift": "3fee708a4ec669131a439f8180cbeddcba5235b32b2a612ad6793704aa461e02",
+    "Sources/ThermoHelper/HelperServices.swift": "9c243c70e121d33e16cab44e9586b72faeef0a70240c5ca4c3323c039a0d7727",
+    "Sources/ThermoHelper/main.swift": "3a94ef1b9e9cfe75ef75cd9a7401e8a19536e2effbcce0a7b846d1e6fbbad4a0",
+    "Sources/ThermoKit/AWDLHelperCoordinator.swift": "3fdc9f7f7f9c05956b86714fdc90deb190faa02eedb055ffda79c83bd4903fa3",
+    "Sources/ThermoKit/AWDLSession.swift": "1c07b602bcdd472f9983ae68ff5c682acb48761bea5e623961e89e0a6aa2a7a0",
+    "Sources/ThermoKit/FanControl.swift": "4b57406ce98e7c92859ec9e72f8720b52715611a91068cef27836824fbeaf5c3",
+    "Sources/ThermoKit/Helper.swift": "a1a93d4891ec7d1d5ea07d3e11140a0407800668ad04c14e071790c22ef8d9bd",
+    "Sources/ThermoKit/HelperRemoval.swift": "663653901f5a6151bf223df567801fa80d51977d9fbe7b9ec686e8199c7ae43e",
+    "Sources/ThermoL10n/ZhHans.swift": "3251d609f7177862b6248e799bb7ad88185dba8b87fe5d3b4d450262f9d38688",
+    "Sources/thermo/AWDL.swift": "dceb0b646e1303c56f147954c2a8d00be1a423ba86a7f643106549cee33add7f",
+    "Sources/thermo/Args.swift": "59f2b0bf80f46162ca9a07cd51b0102561f0f24aec7226ba956e7760b86db612",
+    "Sources/thermo/main.swift": "aeddda474fe8d62da0d7fc65c18cbd5aa61f6c54314a1b9c86d1dead5822ee6f",
+    "Tests/ThermoAppTests/AWDLModelTests.swift": "4345c422f7d9a2fb0e814c4e65e87f0d9bbca9cc146820fb61949978d513eab3",
+    "Tests/ThermoCLITests/AWDLRequestTests.swift": "655dda35ad4903dd257ab8a1d4341f86eb19ee20882ce7d549855f09579236d2",
+    "Tests/ThermoHelperTests/AWDLServiceTests.swift": "d9635ded0a0d77cf9148cae022ebbf7f505d655ddf81b9cee7c39c5692682875",
+    "Tests/ThermoKitTests/HelperXPCTests.swift": "d9a8af67300f67b8d1d0d3c96d86e7e4326738bc01261714ed0581f4491e8a18",
+    "scripts/verify-awdl-ui.swift": "91b9b549e72f582aa2ef5eb04aa41ede40297d7ff9b382b8ed5cab76172282db"
+  },
+  "status": "Helper protocol 6, independent queues, client, App and CLI integrated in source; real installation and radio switching not accepted yet",
+  "regression": {
+    "initialSnapshot": "ddb49db",
+    "testedSnapshotBranch": "codex/awdl-tested-cf7edfc",
+    "counts": {
+      "ThermoKitTests": 143,
+      "ThermoHelperTests": 7,
+      "ThermoCLITests": 68,
+      "ThermoAppTests": 255
+    },
+    "total": 473,
+    "failures": 0,
+    "excluded": [
+      "ThermoKitTests.HardwareTests"
+    ],
+    "anonymousXPCServiceTests": 7,
+    "modelTests": 7,
+    "CLIRequestTests": 2,
+    "buildLogSHA256": "6805493a765e9888ec7bccf078fcdc07d36c04840da9b6212ae2f189bd5595ff",
+    "testLogSHA256": "e3d38cb514be0c1523d79756fdfb62289dbccc5845f12c86952f5a219f764d20",
+    "postPresentationAppTestLogSHA256": "98831d2404e44caf87d7a1554273332116f9b5ae377900edca9e499bb3c3bdbe",
+    "initialFixtureFailures": "Three old assertions expected 5/fixture after the mock default became 6; those legacy reconnect tests now explicitly set version 5."
+  },
+  "nativeUI": {
+    "bundle": "dev.thermo.qa.awdl.final.ae882e8703d143639bf31569a49521dc",
+    "productionPanelModelAndCoordinator": true,
+    "actuator": "owned JSON/memory fixture only; AWDLLeaseFile uses owned UID directory",
+    "launchdConnectionUsed": false,
+    "realInterfaceChanged": false,
+    "finalProgramSHA256": "5b09d2a4de58b54efb5c0c4572ee059c310cb4918b390c4b22280079e9058b4a",
+    "exitCode": 0,
+    "interfaceAfter": {
+      "up": true,
+      "index": 15
+    },
+    "leaseRemoved": true,
+    "traceSummary": [
+      "HISTORY awdlBegin done",
+      "HISTORY awdlRestore failed",
+      "QUIT_BLOCKED true",
+      "HISTORY awdlRestore failed",
+      "HISTORY awdlRestore done",
+      "QUIT_BLOCKED false"
+    ],
+    "readback": [
+      "Chinese duration and one recovery error visible",
+      "Start changed mock interface to down",
+      "Stop with injected write failure stayed recovering",
+      "Cmd-Q was cancelled while restoration remained unconfirmed",
+      "Allowing mock recovery led to original up state, lease removal and automatic successful exit"
+    ],
+    "visualEvidence": "Final screenshot inspected through CUA; retained in tool result. It confirms the recovery/exit warning, duration, disabled start and enabled recovery action; no independent screenshot file was saved.",
+    "earlyPresentationFixes": [
+      "Duration labels initially English and 1 minutes; fixed using trCount and Chinese keys",
+      "Identical model and backend errors were duplicated; merged when equal"
+    ],
+    "CLI": {
+      "preview": "{\n  \"changesMade\" : false,\n  \"holdsConnection\" : true,\n  \"interface\" : \"awdl0\",\n  \"minimumHelperProtocol\" : 6,\n  \"seconds\" : 60\n}\n",
+      "probe": "{\n  \"interface\" : {\n    \"index\" : 15,\n    \"up\" : true\n  },\n  \"sessionStateQueried\" : false\n}\n",
+      "invalidDurationExit": 2
+    }
+  },
+  "candidate": {
+    "path": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-awdl-candidate-eh_gikzd/dist/Thermo.app",
+    "sourceSnapshot": "ddb49db",
+    "signedTeam": "6ZPXG4KVVS",
+    "matchesInstalledAppSigningTeam": true,
+    "developerIDSignatureVerified": true,
+    "version": "1.1.24",
+    "build": "327",
+    "appExecutableSHA256": "e45bfe171d8e4e88db5f1540a484b71ae59581766f4edfd9977ffbbe34804d7a",
+    "helperSHA256": "9e84a392dc335ca5b3988d3c1031ed3ab594b275e6edcccce6574416de65c2f2",
+    "CLI_SHA256": "81d9e6281dde3e9e8e3dd49e9a284976813bcb2dbe2356971fbfdccd36ee3858",
+    "buildLogSHA256": "c250927955a2eee7162ae390d0f00e4782cbe6b85eedb524a129c4dcb8e80481",
+    "notarized": false,
+    "installed": false,
+    "launched": false,
+    "eligibleForInstallation": false,
+    "reason": "Installed App is 1.1.27 but development source remains 1.1.24. The 1.1.27 release branch diverges from main and its fixes must be preserved before using a new candidate."
+  },
+  "deploymentBaseline": {
+    "installedAppVersion": "1.1.27",
+    "installedAppTeam": "6ZPXG4KVVS",
+    "releaseTag": "v1.1.27",
+    "releaseCommit": "9a85495800f52d6336d440b4ae6e1dd7ee814e5e",
+    "mergeBaseWithDevelopment": "8f3b432d137c16275da3f882c2750d66b667eebb",
+    "incomingReleaseCommits": [
+      "49c8175",
+      "567b6bb",
+      "e01ebc7",
+      "2972352",
+      "9413cef",
+      "9a85495"
+    ],
+    "action": "Do not deploy the older numbered candidate or drop released fixes. Integrate release branch and choose a newer version first."
+  },
+  "behavior": {
+    "oneGlobalNetworkManager": true,
+    "dedicatedNetworkQueue": true,
+    "fanInitializationAsynchronousAndIndependent": true,
+    "fanUnavailableDoesNotBecomeConfirmedAuto": true,
+    "closedOwnerBlocksQueuedStarts": true,
+    "connectionOwnerAndSessionIDAreDistinct": true,
+    "minimumAWDLProtocol": 6,
+    "minimumProtectedRemovalProtocol": 6,
+    "exitWaitsForOwnRecoveryAndHistoryFence": true,
+    "lateFanTicksDuringShutdownRetryAutoOnly": true,
+    "networkRecoveryIsAttemptedEvenIfFanRemovalPreparationFails": true,
+    "CLIOnHoldsForegroundConnection": true
+  },
+  "references": [
+    {
+      "url": "https://support.apple.com/en-ca/guide/security/sec2261183f4/web",
+      "use": "Apple describes AirDrop peer-to-peer Wi-Fi; pause impact is a product consequence to verify on device."
+    },
+    {
+      "url": "https://arxiv.org/abs/1812.06743",
+      "use": "Primary AWDL research identifies its use by AirDrop/AirPlay; no throughput or latency improvement is claimed from this work."
+    }
+  ],
+  "remaining": [
+    "Integrate v1.1.27 release branch without regressing current Mole-derived safety behavior or parallel AI tooling work.",
+    "Prepare a correctly versioned, signed candidate after release reconciliation.",
+    "Obtain explicit approval before installing a new privileged helper or actually pausing this Mac network interface.",
+    "Real signed launchd/XPC, root ioctl, expiry, sleep/wake, disconnect, update and removal recovery acceptance.",
+    "No measured latency gain or whole-Mole parity claim.",
+    "Charging control remains incomplete."
+  ],
+  "mainIntegrationRegression": {
+    "counts": {
+      "ThermoCLITests": 68,
+      "ThermoAppTests": 264
+    },
+    "total": 332,
+    "failures": 0,
+    "includesParallelCommittedTests": true,
+    "testLogSHA256": "62c3725286ddcda0bd078e7056ec5815419adbf51fbe296749d3b5ba942ad9ef",
+    "buildLogSHA256": "458f26786980e3fd01cbe7a107c682fc1eef780e29d70c5485f4ba2e5cd5cbde",
+    "overlapsEarlierCounts": true
+  }
+}

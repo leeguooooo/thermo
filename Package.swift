@@ -43,6 +43,7 @@ let package = Package(
         .testTarget(name: "ThermoCLITests", dependencies: ["thermo"]),
         .testTarget(name: "ThermoAppTests", dependencies: ["ThermoApp", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor"]),
         .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC"]),
+        .testTarget(name: "ThermoHelperTests", dependencies: ["ThermoHelper", "ThermoKit"]),
         .testTarget(name: "AgentDoctorTests", dependencies: ["AgentDoctor", "ThermoL10n", "AgentCore"], exclude: ["Fixtures"]),
         .testTarget(name: "CleanKitTests", dependencies: ["CleanKit"]),
         .testTarget(name: "AgentCoreTests", dependencies: ["AgentCore"]),

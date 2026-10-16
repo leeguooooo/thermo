@@ -42,7 +42,10 @@ enum AppExitGuard {
             show(.apps(.startup))
             return .terminateCancel
         }
-        guard model.working || native.installing else { return .terminateNow }
+        guard model.working || native.installing else {
+            if AWDLModel.shared.requestQuit() { show(.settings);return .terminateCancel }
+            return .terminateNow
+        }
         if model.working { model.exitRequested = true; model.channel = "homebrew" }
         else { native.exitRequested = true; model.channel = "native" }
         show(.apps(.updates))
