@@ -1,0 +1,173 @@
+{
+  "date": "2026-10-17",
+  "candidateSource": "60f5ad327a10919d1925f7c76d22ae9d6c12ff47",
+  "documentationIntegrationParent": "16b42904d954c579b7b0d897d52298003294af00",
+  "includedMCPCommit": "b967c5c55180bea6e0da6556ba59333927bebaad",
+  "sourceTrees": {
+    "Sources": "0012cb759f679e05e55b72f6697528da37bbc267",
+    "Tests": "fe6588a82be0f10fdd697a4a36132939a2927daf",
+    "Resources": "7fe48abe048a9cd438b4a5f537a33bc9f2a2869b",
+    "scripts": "4413e1360c2dfb3125f93442372e076ca5d021e2"
+  },
+  "codeUnchangedByDocumentationMerge": true,
+  "tests": {
+    "command": "swift test --skip HardwareTests",
+    "suites": {
+      "ThermoKitTests.xctest": 143,
+      "ThermoHelperTests.xctest": 7,
+      "ThermoCLITests.xctest": 70,
+      "ThermoAppTests.xctest": 271,
+      "CleanKitTests.xctest": 748,
+      "AgentDoctorTests.xctest": 193,
+      "AgentCoreTests.xctest": 37
+    },
+    "total": 1469,
+    "failures": 0,
+    "excluded": "HardwareTests; no real SMC write attempt",
+    "log": "/tmp/thermo-1-1-28-integrated-regression.log",
+    "sha256": "245499546e62dc76102a74aba17393643bcbda7bc9d208c052cbbc173967abaf",
+    "earlierFailure": "The earlier 1462-test run found one missing native-cleanup translation; the final integrated 1469-test run passed after fixing it and rebuilding localization."
+  },
+  "artifact": {
+    "date": "2026-10-16T22:56:42.675217+00:00",
+    "root": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-candidate-v69l_pm8",
+    "version": "1.1.28",
+    "build": "346",
+    "installedVersion": "1.1.27",
+    "installedBuild": "233",
+    "artifacts": {
+      "app": {
+        "sha256": "5a6703e7e92f334872c4388663daeec03adbbc93e7116b9aa97cd60046d1f349",
+        "size": 61343856,
+        "identifier": "dev.thermo.app",
+        "team": "6ZPXG4KVVS",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "cli": {
+        "sha256": "7d1cc756dfaffde5ed8ff2d4c3bd574c525328f06ec2f93bb359f2f61f780972",
+        "size": 34567296,
+        "identifier": "dev.thermo.cli",
+        "team": "6ZPXG4KVVS",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "helper": {
+        "sha256": "0f5b0d9b8f8d2f807d7984245d5e173afb2205374750fa1a49fbb2ac1f2a54da",
+        "size": 2722528,
+        "identifier": "dev.thermo.helper",
+        "team": "6ZPXG4KVVS",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "embeddedCLI": {
+        "sha256": "89568382256a0fab9f346ba3c35ca56287717b4f076032c8124d45b9285c938e",
+        "size": 34567296,
+        "identifier": "dev.thermo.cli",
+        "team": "6ZPXG4KVVS",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "embeddedHelper": {
+        "sha256": "2eca0e93098becdfd31ca0aad0618250a649417e1aa71dd23c936fa6e398a301",
+        "size": 2722528,
+        "identifier": "dev.thermo.helper",
+        "team": "6ZPXG4KVVS",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      }
+    },
+    "nativeCLI": "thermo 1.1.28",
+    "translatedX86CLI": {
+      "exit": 0,
+      "version": "thermo 1.1.28",
+      "isPhysicalIntelAcceptance": false
+    },
+    "awdlDryRun": {
+      "changesMade": false,
+      "holdsConnection": true,
+      "interface": "awdl0",
+      "minimumHelperProtocol": 6,
+      "seconds": 60
+    },
+    "awdlReadOnlyBefore": {
+      "interface": {
+        "index": 15,
+        "up": true
+      },
+      "sessionStateQueried": false
+    },
+    "awdlReadOnlyAfter": {
+      "interface": {
+        "index": 15,
+        "up": true
+      },
+      "sessionStateQueried": false
+    },
+    "ownProcess": {
+      "ownPID": 98604,
+      "explainChainObserved": true,
+      "chainComplete": false,
+      "inspectIncludesOwnPID": true,
+      "ownerMeaning": "identity-checked agent, terminal or editor observed in the current ancestor chain; not proof of the original launcher",
+      "orphanedNote": "legacy field orphaned counts command-line processes with current parent PID 1 (launchd); this does not prove a parent exited or the process is leftover"
+    },
+    "sourceCommit": "60f5ad327a10919d1925f7c76d22ae9d6c12ff47",
+    "notarized": false,
+    "installed": false,
+    "helperDeployed": false,
+    "realAWDLSwitched": false,
+    "published": false,
+    "archive": {
+      "path": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-candidate-v69l_pm8/Thermo-1.1.28-candidate.zip",
+      "sha256": "de1b31510a4c365451334457d4e2237092d744e5e984caaac80d8c16d8910474",
+      "bytes": 34891549
+    }
+  },
+  "windowLifecycle": {
+    "cycles": 3,
+    "pages": [
+      "overview",
+      "memory",
+      "cpu"
+    ],
+    "openClosePairs": 9,
+    "samples": 28,
+    "functionalChecksPassed": true,
+    "buildConfiguration": "release",
+    "helperInteraction": false,
+    "menuBarRecorder": false,
+    "pid": 98850,
+    "exitCode": 0,
+    "memoryGrowthAssessed": false,
+    "report": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-candidate-v69l_pm8/lifecycle.json",
+    "sha256": "c3bef2b4e8e294bc99497b9a15d9280442528a97dba6adb023ba0e7d4cc38a7a",
+    "scope": "offscreen AppKit page-controller release, page sampling stop/restart, fresh data and frame preservation; not visible-window or long-term memory acceptance"
+  },
+  "installedAppAndKnownHelperPathsUnchanged": true,
+  "delivery": {
+    "installed": false,
+    "helperUpdated": false,
+    "AWDLSwitched": false,
+    "published": false,
+    "notarized": false,
+    "automaticUpdateFeedIncluded": false,
+    "awaiting": "Explicit scope for installing the candidate/updating the root helper and, separately selectable, one actual 60-second AWDL session."
+  },
+  "notes": [
+    "pulse inspect uses sampled/current process identity and parent checks rather than an unchecked ancestry walk.",
+    "PPID 1 is described as current launchd parentage, not proof of a former parent exit. Legacy orphaned JSON field retained with corrected meaning; ownerMeaning and inventoryComplete describe evidence scope.",
+    "Native cache protection that changes after review keeps the cache and asks for a new review; it does not claim that a fallback deletion ran.",
+    "Superseded/incomplete candidate roots are marked SUPERSEDED.txt and were never installed."
+  ]
+}
