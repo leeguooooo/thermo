@@ -254,9 +254,9 @@ public enum Cleaner {
     }
 
     static func clean(_ item: CleanItem, mode: RemovalMode, guard g: Guard, scannedAt: Date?,
-                      processTable: ProcessTable?, batchID: String?, operations: RemovalOperations) -> CleanResult {
+                      processTable: ProcessTable?, batchID: String?, operations: RemovalOperations, now: Date = Date()) -> CleanResult {
         let before = DiskSpaceSnapshot.measure(path: g.home)
-        var result = perform(item, mode: mode, guard: g, scannedAt: scannedAt, processTable: processTable, batchID: batchID ?? UUID().uuidString, operations: operations)
+        var result = perform(item, mode: mode, guard: g, scannedAt: scannedAt, processTable: processTable, batchID: batchID ?? UUID().uuidString, operations: operations, now: now)
         if let batch = result.trashBatchID {
             do { try TrashBatches.synchronize(batch, home: g.home) }
             catch { result.failed["batch/" + batch] = error.localizedDescription }
@@ -278,7 +278,7 @@ public enum Cleaner {
     }
 
     /// `locations`: the item's paths as removal would resolve them, computed once per item.
-    static func refusal(_ item: CleanItem, mode: RemovalMode, processes: ProcessTable, locations: [String]) -> String? {
+    static func refusal(_ item: CleanItem, mode: RemovalMode, processes: ProcessTable, locations: [String], now: Date = Date()) -> String? {
         let rule = Rules.paths.first(where: { $0.id == item.id })
         if let blocked = item.blocked {
             // Only the rule's known running-app block may be cleared by this live check.
@@ -299,7 +299,7 @@ public enum Cleaner {
         if item.category == .agentWorktrees {
             for path in item.paths {
                 do {
-                    if try WorktreeCleanup.registration(path, processes: processes) == nil, !mode.trashes(item.safety) {
+                    if try WorktreeCleanup.registration(path, processes: processes, now: now) == nil, !mode.trashes(item.safety) {
                         return tr("Git worktree registration is unavailable; keep this folder")
                     }
                 }
@@ -333,7 +333,7 @@ public enum Cleaner {
     }
 
     static func perform(_ item: CleanItem, mode: RemovalMode, guard g: Guard, scannedAt: Date?, processTable: ProcessTable?,
-                        batchID: String, operations: RemovalOperations) -> CleanResult {
+                        batchID: String, operations: RemovalOperations, now: Date = Date()) -> CleanResult {
         let trash = mode.trashes(item.safety) && !item.paths.isEmpty
         var result = CleanResult(id: item.id, trashed: trash)
         let whitelist: Whitelist
@@ -341,7 +341,7 @@ public enum Cleaner {
             result.failed[item.id] = Whitelist.unreadable(error)
             return result
         }
-        if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
+        if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false)), locations: item.paths.map(Guard.deletionLocation), now: now) {
             result.failed[item.id] = why
             return result
         }
@@ -365,10 +365,10 @@ public enum Cleaner {
         let locations = item.paths.map(Guard.deletionLocation)
         // The item-wide answer depends only on the process list, so it is recomputed when that is reread.
         var processesRead = Date()
-        var itemRefusal = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false)), locations: locations)
+        var itemRefusal = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false)), locations: locations, now: now)
         func currentRefusal() -> String? {
             if processTable == nil, Date().timeIntervalSince(processesRead) >= 1 {
-                itemRefusal = refusal(item, mode: mode, processes: ProcessTable.current(.init(cpu: false)), locations: locations)
+                itemRefusal = refusal(item, mode: mode, processes: ProcessTable.current(.init(cpu: false)), locations: locations, now: now)
                 processesRead = Date()
             }
             return itemRefusal
@@ -431,7 +431,7 @@ public enum Cleaner {
             var registration: WorktreeCleanup.Registration?
             do {
                 if item.category == .agentWorktrees {
-                    registration = try WorktreeCleanup.registration(path, processes: processTable ?? ProcessTable.current(.init(cpu: false)))
+                    registration = try WorktreeCleanup.registration(path, processes: processTable ?? ProcessTable.current(.init(cpu: false)), now: now)
                     if registration == nil && (!trash || inTrash) { throw WorktreeCleanup.Refusal(tr("Git worktree registration is unavailable; keep this folder")) }
                 }
                 // Sizing and process checks may outlive a protection edit. Read again at the move boundary.
@@ -450,7 +450,7 @@ public enum Cleaner {
                     result.failed[path] = tr("replaced since the scan"); continue
                 }
                 if trash && !inTrash {
-                    if let registration { backupName = try WorktreeCleanup.prepare(registration) }
+                    if let registration { backupName = try WorktreeCleanup.prepare(registration, now: now) }
                     let destination = try operations.trash(path)
                     result.removed.append(path); result.bytes += size.bytes
                     result.trashedAllocatedBytes = (result.trashedAllocatedBytes ?? 0) + size.allocated
@@ -467,7 +467,7 @@ public enum Cleaner {
                         catch { result.failed["git/" + path] = "files preserved in Trash; Git cleanup failed: " + String(describing: error) }
                     }
                 } else {
-                    if let registration { try WorktreeCleanup.remove(registration) }
+                    if let registration { try WorktreeCleanup.remove(registration, now: now) }
                     else { try operations.remove(path) }
                     result.removed.append(path); result.bytes += size.bytes
                 }
@@ -487,7 +487,7 @@ public enum Cleaner {
         }
         // Command exit status is not proof that the scanned estimate was removed.
         if let commands = item.commands, !commands.isEmpty {
-            if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
+            if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false)), locations: item.paths.map(Guard.deletionLocation), now: now) {
                 result.failed[item.id] = why
                 return result
             }
@@ -504,7 +504,7 @@ public enum Cleaner {
                     if let why = ManagedToolScope.refusal(item, whitelist: current, home: g.home) { ok = false; result.failed[item.id] = why; break }
                     if let why = Simulators.currentScopeRefusal(argv, item: item, whitelist: current, home: g.home) { ok = false; result.failed[item.id] = why; break }
                 } catch { ok = false; result.failed["whitelist"] = Whitelist.unreadable(error); break }
-                if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false))) {
+                if let why = refusal(item, mode: mode, processes: processTable ?? ProcessTable.current(.init(cpu: false)), locations: item.paths.map(Guard.deletionLocation), now: now) {
                     ok = false; result.failed[item.id] = why; break
                 }
                 var execution = argv

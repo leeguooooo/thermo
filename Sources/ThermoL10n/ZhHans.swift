@@ -1838,6 +1838,8 @@ let zhHans: [String: String] = [
     "worktree has modified, untracked or ignored local files; keep it": "工作树存在已修改、未跟踪或被忽略的本地文件，已保留。",
     "worktree has uncommitted or untracked files; keep it": "工作树存在未提交或未跟踪文件，已保留。",
     "T3-managed worktree; manage it in T3 Code": "T3 管理的工作树，请在 T3 Code 中管理。",
+    "worktree changed in the last 24 hours; keep it": "工作树在 24 小时内有变动，已保留。",
+    "could not completely verify worktree activity; keep it": "无法完整核实工作树的近期活动，已保留。",
     "worktrees with submodules are kept": "含子模块的工作树会保留。",
     "Show log": "查看日志",
     "Removed size is unknown": "已移除的大小未知",

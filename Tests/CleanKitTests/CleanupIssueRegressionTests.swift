@@ -5,6 +5,8 @@ import XCTest
 
 final class CleanupIssueRegressionTests: XCTestCase {
     var home = ""
+    // Existing Git tests simulate two idle days without mutating global filesystem clocks.
+    var worktreeNow: Date { Date().addingTimeInterval(2 * 86400) }
     override func setUpWithError() throws {
         home = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-issue-" + UUID().uuidString).resolvingSymlinksInPath().path
         try FileManager.default.createDirectory(atPath: home, withIntermediateDirectories: true)
@@ -39,7 +41,7 @@ final class CleanupIssueRegressionTests: XCTestCase {
     }
     func clean(_ item: CleanItem, mode: RemovalMode = .auto, ops: RemovalOperations? = nil, id: String? = nil) -> CleanResult {
         Cleaner.clean(item, mode: mode, guard: Guard(home: home), scannedAt: nil,
-                      processTable: ProcessTable(entries: []), batchID: id, operations: ops ?? operations())
+                      processTable: ProcessTable(entries: []), batchID: id, operations: ops ?? operations(), now: worktreeNow)
     }
     func testRecursiveFailureCountsRemovedChildrenAndKeepsResidual() throws {
         let path = home + "/Library/Caches/fixture"
@@ -238,7 +240,7 @@ final class CleanupIssueRegressionTests: XCTestCase {
     func testLiveWorkingDirectoryAliasIsProtected() throws {
         let (_, path) = try worktree()
         let process = AgentProcess(pid: 100, name: "worker", cwd: WorktreeCleanup.physical(path))
-        XCTAssertThrowsError(try WorktreeCleanup.registration(path, processes: ProcessTable(entries: [process])))
+        XCTAssertThrowsError(try WorktreeCleanup.registration(path, processes: ProcessTable(entries: [process]), now: worktreeNow))
     }
 
     func testSizeHistoryRejectsCorruptNegativeCountersAndExactModeChanges() {
@@ -317,7 +319,7 @@ extension CleanupIssueRegressionTests {
         _ = try git(path, ["checkout", "--detach"])
         _ = try git(path, ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "--allow-empty", "-m", "worktree-only"])
         let head = try git(path, ["rev-parse", "HEAD"])
-        XCTAssertThrowsError(try WorktreeCleanup.registration(path, processes: .init(entries: [])))
+        XCTAssertThrowsError(try WorktreeCleanup.registration(path, processes: .init(entries: []), now: worktreeNow))
         let result = clean(CleanItem(id: "worktree/unique", category: .agentWorktrees, title: "Fixture", safety: .review, bytes: 4096, paths: [path], group: repo), mode: .permanent)
         XCTAssertFalse(result.failed.isEmpty)
         XCTAssertTrue(FS.exists(path))
@@ -327,7 +329,7 @@ extension CleanupIssueRegressionTests {
     }
     func testUnknownProcessTableCannotAuthorizeWorktreeCleanup() throws {
         let (_, path) = try worktree()
-        XCTAssertThrowsError(try WorktreeCleanup.registration(path, processes: .init(entries: [], available: false)))
+        XCTAssertThrowsError(try WorktreeCleanup.registration(path, processes: .init(entries: [], available: false), now: worktreeNow))
     }
 }
 
@@ -341,7 +343,7 @@ extension CleanupIssueRegressionTests {
     func testSharedBranchRetainsCommitAfterCheckoutRemovalAndGC() throws {
         let (repo,path,head) = try detachedUnique()
         _ = try git(repo,["branch","retained",head])
-        XCTAssertNotNil(try WorktreeCleanup.registration(path, processes: .init(entries: [])))
+        XCTAssertNotNil(try WorktreeCleanup.registration(path, processes: .init(entries: []), now: worktreeNow))
         let result = clean(CleanItem(id:"worktree/shared",category:.agentWorktrees,title:"Fixture",safety:.review,bytes:4096,paths:[path],group:repo),mode:.permanent)
         XCTAssertTrue(result.failed.isEmpty, "\(result.failed)"); XCTAssertFalse(FS.exists(path))
         _ = try git(repo,["reflog","expire","--expire=now","--all"]); _ = try git(repo,["gc","--prune=now"])
@@ -352,22 +354,22 @@ extension CleanupIssueRegressionTests {
         let (repo,path,head) = try detachedUnique()
         _ = try git(path,["update-ref","refs/worktree/private",head])
         _ = try git(repo,["worktree","add","--detach",home+"/other",head])
-        XCTAssertThrowsError(try WorktreeCleanup.registration(path, processes: .init(entries: [])))
+        XCTAssertThrowsError(try WorktreeCleanup.registration(path, processes: .init(entries: []), now: worktreeNow))
     }
     func testAnchorDisappearingAfterRegistrationStopsBeforePreparation() throws {
         let (repo,path,head) = try detachedUnique()
         _ = try git(repo,["tag","retained",head])
-        let review = try XCTUnwrap(WorktreeCleanup.registration(path, processes: .init(entries: [])))
+        let review = try XCTUnwrap(WorktreeCleanup.registration(path, processes: .init(entries: []), now: worktreeNow))
         _ = try git(repo,["tag","-d","retained"])
-        XCTAssertThrowsError(try WorktreeCleanup.prepare(review))
+        XCTAssertThrowsError(try WorktreeCleanup.prepare(review, now: worktreeNow))
         XCTAssertTrue(FS.exists(path))
         XCTAssertFalse(FS.children(path).contains { ($0 as NSString).lastPathComponent.hasPrefix(".thermo-worktree-registration-") })
     }
     func testHeadChangeAfterRegistrationRequiresNewReview() throws {
         let (_,path) = try worktree()
-        let review = try XCTUnwrap(WorktreeCleanup.registration(path, processes: .init(entries: [])))
+        let review = try XCTUnwrap(WorktreeCleanup.registration(path, processes: .init(entries: []), now: worktreeNow))
         _ = try git(path,["-c","user.name=Fixture","-c","user.email=fixture@example.invalid","commit","--allow-empty","-m","new-head"])
-        XCTAssertThrowsError(try WorktreeCleanup.prepare(review))
+        XCTAssertThrowsError(try WorktreeCleanup.prepare(review, now: worktreeNow))
         XCTAssertTrue(FS.exists(path))
     }
     func testUnregisteredAgentFolderRefusesPermanentButCanGoToTrash() throws {
@@ -402,7 +404,7 @@ extension CleanupIssueRegressionTests {
         _ = try git(repo,["worktree","add","--detach",other])
         let pointer = try Data(contentsOf: URL(fileURLWithPath:other+"/.git"))
         try pointer.write(to:URL(fileURLWithPath:path+"/.git"),options:.atomic)
-        XCTAssertThrowsError(try WorktreeCleanup.registration(path,processes:.init(entries:[])))
+        XCTAssertThrowsError(try WorktreeCleanup.registration(path,processes:.init(entries:[]), now: worktreeNow))
         let result = clean(CleanItem(id:"worktree/mismatched",category:.agentWorktrees,title:"Fixture",safety:.review,bytes:4096,paths:[path],group:repo),mode:.permanent)
         XCTAssertFalse(result.failed.isEmpty)
         XCTAssertTrue(FS.exists(path)); XCTAssertTrue(FS.exists(metadata)); XCTAssertTrue(FS.exists(other))
@@ -431,18 +433,18 @@ extension CleanupIssueRegressionTests {
         let (_,path) = try worktree()
         let metadata = try git(path,["rev-parse","--absolute-git-dir"])
         try Data(".env\n".utf8).write(to: URL(fileURLWithPath: metadata+"/../../info/exclude"))
-        let review = try XCTUnwrap(WorktreeCleanup.registration(path,processes:.init(entries:[])))
+        let review = try XCTUnwrap(WorktreeCleanup.registration(path,processes:.init(entries:[]), now: worktreeNow))
         try file(path+"/.env")
-        XCTAssertThrowsError(try WorktreeCleanup.prepare(review))
+        XCTAssertThrowsError(try WorktreeCleanup.prepare(review, now: worktreeNow))
         XCTAssertTrue(FS.exists(path+"/.env"))
         XCTAssertFalse(FS.children(path).contains { ($0 as NSString).lastPathComponent.hasPrefix(".thermo-worktree-registration-") })
     }
     func testUntrackedFileAppearingAfterReviewStopsBeforeGitRemoval() throws {
         let (_,path) = try worktree()
-        let review = try XCTUnwrap(WorktreeCleanup.registration(path,processes:.init(entries:[])))
+        let review = try XCTUnwrap(WorktreeCleanup.registration(path,processes:.init(entries:[]), now: worktreeNow))
         try file(path+"/new-local-data")
-        XCTAssertThrowsError(try WorktreeCleanup.prepare(review))
-        XCTAssertThrowsError(try WorktreeCleanup.remove(review))
+        XCTAssertThrowsError(try WorktreeCleanup.prepare(review, now: worktreeNow))
+        XCTAssertThrowsError(try WorktreeCleanup.remove(review, now: worktreeNow))
         XCTAssertTrue(FS.exists(path+"/new-local-data"))
     }
 }
@@ -455,7 +457,7 @@ extension CleanupIssueRegressionTests {
             let managed = home+"/.t3/worktrees/project/thread-\(index)"
             _ = try git(repo,["worktree","add","--detach",managed])
             XCTAssertEqual(try git(managed,["status","--porcelain"]),"")
-            XCTAssertThrowsError(try WorktreeCleanup.registration(managed,processes:.init(entries:[])))
+            XCTAssertThrowsError(try WorktreeCleanup.registration(managed,processes:.init(entries:[]), now: worktreeNow))
             let result = clean(CleanItem(id:"worktree/t3",category:.agentWorktrees,title:"Fixture",safety:.review,bytes:4096,paths:[managed],group:repo),mode:mode)
             XCTAssertFalse(result.failed.isEmpty)
             XCTAssertTrue(FS.exists(managed+"/.git"))
@@ -475,7 +477,7 @@ extension CleanupIssueRegressionTests {
             if path == managed { XCTAssertNotNil(scanned); XCTAssertNotNil(scanned?.blocked) }
             XCTAssertNotNil(WorktreeCleanup.ownerRefusal(path))
             let item = scanned ?? CleanItem(id:"worktree/alias",category:.agentWorktrees,title:"Fixture",safety:.review,bytes:4096,paths:[path])
-            XCTAssertThrowsError(try WorktreeCleanup.registration(path,processes:.init(entries:[])))
+            XCTAssertThrowsError(try WorktreeCleanup.registration(path,processes:.init(entries:[]), now: worktreeNow))
             let result = clean(item,mode:.trash)
             XCTAssertFalse(result.failed.isEmpty)
             XCTAssertTrue(FS.exists(managed+"/local-data"))
@@ -485,7 +487,7 @@ extension CleanupIssueRegressionTests {
         let (repo,_) = try worktree()
         let ordinary = home+"/.t3/worktrees-archive/thread"
         _ = try git(repo,["worktree","add","--detach",ordinary])
-        XCTAssertNotNil(try WorktreeCleanup.registration(ordinary,processes:.init(entries:[])))
+        XCTAssertNotNil(try WorktreeCleanup.registration(ordinary,processes:.init(entries:[]), now: worktreeNow))
     }
 }
 
@@ -501,10 +503,90 @@ extension CleanupIssueRegressionTests {
         let registration = WorktreeCleanup.Registration(path:path,common:common,metadata:metadata,
             metadataIdentity:try XCTUnwrap(FileIdentity.of(metadata)),commonIdentity:try XCTUnwrap(FileIdentity.of(common)),
             head:try WorktreeCleanup.head(metadata),staleLock:nil)
-        XCTAssertThrowsError(try WorktreeCleanup.prepare(registration))
-        XCTAssertThrowsError(try WorktreeCleanup.remove(registration))
+        XCTAssertThrowsError(try WorktreeCleanup.prepare(registration, now: worktreeNow))
+        XCTAssertThrowsError(try WorktreeCleanup.remove(registration, now: worktreeNow))
         XCTAssertThrowsError(try WorktreeCleanup.unregister(registration))
         XCTAssertTrue(FS.exists(path+"/.git")); XCTAssertTrue(FS.exists(metadata))
         XCTAssertFalse(FS.children(path).contains { ($0 as NSString).lastPathComponent.hasPrefix(".thermo-worktree-registration-") })
+    }
+}
+
+extension CleanupIssueRegressionTests {
+    func testFreshCleanWorktreeIsKeptAtExecutionWithoutScanBlock() throws {
+        let (repo,path) = try worktree()
+        let result = Cleaner.clean(CleanItem(id:"worktree/recent",category:.agentWorktrees,title:"Fixture",safety:.review,bytes:4096,paths:[path],group:repo),
+            mode:.permanent,guard:Guard(home:home),scannedAt:nil,processTable:.init(entries:[]),batchID:nil,operations:operations())
+        XCTAssertFalse(result.failed.isEmpty)
+        XCTAssertTrue(FS.exists(path+"/.git"))
+    }
+}
+
+
+extension CleanupIssueRegressionTests {
+    func testWorktreeActivityWindowMatchesScanAndExecution() throws {
+        let (repo,path) = try worktree()
+        var options = ScanOptions(); options.home = home
+        for (hours,allowed) in [(23.0,false),(25.0,true)] {
+            let now = Date().addingTimeInterval(hours*3600)
+            let ctx = ScanContext(options:options,now:now,processes:.init(entries:[]),agentDirs:[],liveClaudeSessions:[])
+            let item = try XCTUnwrap(Projects.worktreeItem(path,repo:repo,repoName:"fixture",ctx:ctx))
+            XCTAssertEqual(item.blocked == nil,allowed)
+            if allowed { XCTAssertNotNil(try WorktreeCleanup.registration(path,processes:.init(entries:[]),now:now)) }
+            else {
+                XCTAssertThrowsError(try WorktreeCleanup.registration(path,processes:.init(entries:[]),now:now)) { XCTAssertTrue(String(describing:$0).contains("24 hours")) }
+            }
+        }
+    }
+    func testGitMetadataActivityAfterReviewStopsPrepareAndPermanentRemoval() throws {
+        let (_,path) = try worktree()
+        let now = worktreeNow
+        let review = try XCTUnwrap(WorktreeCleanup.registration(path,processes:.init(entries:[]),now:now))
+        try FileManager.default.setAttributes([.modificationDate:now.addingTimeInterval(-3600)],ofItemAtPath:review.metadata+"/HEAD")
+        XCTAssertEqual(try git(path,["status","--porcelain"]),"")
+        XCTAssertThrowsError(try WorktreeCleanup.prepare(review,now:now)) { XCTAssertTrue(String(describing:$0).contains("24 hours")) }
+        XCTAssertThrowsError(try WorktreeCleanup.remove(review,now:now)) { XCTAssertTrue(String(describing:$0).contains("24 hours")) }
+        XCTAssertTrue(FS.exists(path+"/.git"))
+        XCTAssertFalse(FS.children(path).contains { ($0 as NSString).lastPathComponent.hasPrefix(".thermo-worktree-registration-") })
+    }
+    func testCleanTrackedFileActivityAfterReviewIsNotHiddenByGitStatus() throws {
+        let (_,path) = try worktree()
+        try file(path+"/nested/clean.txt")
+        _ = try git(path,["add","nested/clean.txt"])
+        _ = try git(path,["-c","user.name=Fixture","-c","user.email=fixture@example.invalid","commit","-m","tracked fixture"])
+        let now = worktreeNow
+        let review = try XCTUnwrap(WorktreeCleanup.registration(path,processes:.init(entries:[]),now:now))
+        try FileManager.default.setAttributes([.modificationDate:now.addingTimeInterval(-3600)],ofItemAtPath:path+"/nested/clean.txt")
+        XCTAssertEqual(try git(path,["status","--porcelain"]),"")
+        XCTAssertThrowsError(try WorktreeCleanup.prepare(review,now:now)) { XCTAssertTrue(String(describing:$0).contains("24 hours")) }
+        XCTAssertThrowsError(try WorktreeCleanup.remove(review,now:now)) { XCTAssertTrue(String(describing:$0).contains("24 hours")) }
+        XCTAssertTrue(FS.exists(path+"/nested/clean.txt"))
+    }
+    func testUnverifiableWorktreeActivityIsKept() throws {
+        XCTAssertThrowsError(try WorktreeCleanup.verifyActivity(path:home+"/missing",metadata:nil,now:worktreeNow)) { XCTAssertTrue(String(describing:$0).contains("completely verify")) }
+    }
+}
+
+
+extension CleanupIssueRegressionTests {
+    func testDirectoryAndHardLinkActivityAreIncluded() throws {
+        let now = worktreeNow
+        for component in ["", "/nested", "/nested/hard-link"] {
+            let root = home+"/activity-"+UUID().uuidString
+            try file(root+"/nested/original")
+            try FileManager.default.linkItem(atPath:root+"/nested/original",toPath:root+"/nested/hard-link")
+            XCTAssertNoThrow(try WorktreeCleanup.verifyActivity(path:root,metadata:nil,now:now))
+            try FileManager.default.setAttributes([.modificationDate:now.addingTimeInterval(-3600)],ofItemAtPath:root+component)
+            XCTAssertThrowsError(try WorktreeCleanup.verifyActivity(path:root,metadata:nil,now:now)) { XCTAssertTrue(String(describing:$0).contains("24 hours")) }
+        }
+    }
+    func testActivityBudgetAndCancellationCannotAuthorizeRemoval() throws {
+        let root = home+"/activity"
+        try file(root+"/nested/file")
+        XCTAssertThrowsError(try WorktreeCleanup.verifyActivity(path:root,metadata:nil,now:worktreeNow,maxEntries:2)) { XCTAssertTrue(String(describing:$0).contains("completely verify")) }
+        let cancelled = ScanCancellation(); cancelled.cancel()
+        try ScanCancellation.withCurrent(cancelled) {
+            XCTAssertThrowsError(try WorktreeCleanup.verifyActivity(path:root,metadata:nil,now:worktreeNow)) { XCTAssertTrue(String(describing:$0).contains("completely verify")) }
+        }
+        XCTAssertTrue(FS.exists(root+"/nested/file"))
     }
 }

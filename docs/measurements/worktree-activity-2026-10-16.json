@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "a40876d",
+  "sourceSHA256": {
+    "Sources/CleanKit/WorktreeCleanup.swift": "c2551ff360ec518e940d4219b641931b720935df026ef0369f9b789d757fe475",
+    "Sources/CleanKit/FS.swift": "6d63c83d22d46693196ca26861241825baf99e30a8aa432877d62ce31d07cd06",
+    "Sources/CleanKit/Projects.swift": "5df55aa13458226ecfcbf7830c911d5c5e5c573f71c5fc06cfeda852214e23f9",
+    "Sources/ThermoL10n/ZhHans.swift": "1aad50374fbf7a421e5027a17c0d721376e3f562eb543e360155704d9f116732",
+    "Tests/CleanKitTests/CleanupIssueRegressionTests.swift": "5d59593d5eab604bd7021fba62d09412fc737c6569b3ed30ff55792afedd6ce5"
+  },
+  "baseline": {
+    "tests": 1,
+    "failedAssertions": 2,
+    "freshCleanOwnedCheckoutActuallyPermanentlyRemoved": true,
+    "logSHA256": "bbebccef91b9576c4afbfdedd12edd84d83c43d289eab934bfbbf00e95958c77"
+  },
+  "newTests": 7,
+  "targeted": {
+    "tests": 45,
+    "failures": 0,
+    "logSHA256": "70917ac2def3f6e325f69fc0f41abb55a4d5bbbbcdbeac0cb31d0eda5c1c6fae"
+  },
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 63,
+      "ThermoAppTests": 197,
+      "CleanKitTests": 689,
+      "AgentCoreTests": 34
+    },
+    "total": 1097,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "logSHA256": "b19b4667e6bef09aecbe0ad3d693558ebaa5f41d7d8bfbdd278f9833146f478a"
+  },
+  "policy": {
+    "idleWindowSeconds": 86400,
+    "boundary": "strictly older than cutoff",
+    "scopes": [
+      "checkout",
+      "per-worktree Git registration"
+    ],
+    "metadata": [
+      "mtime",
+      "ctime in production",
+      "directory roots and nested directories",
+      "every hard-link name"
+    ],
+    "maximumEntries": 20000,
+    "readProtection": [
+      "no-follow directory descriptors",
+      "before/after directory metadata and pathname identity comparison",
+      "no child mount traversal",
+      "unknown/error/cancelled/over-budget keeps checkout"
+    ],
+    "checkpoints": [
+      "registration including unregistered leftovers",
+      "scan",
+      "prepare backup",
+      "permanent remove"
+    ]
+  },
+  "testClock": {
+    "existingGitTests": "two simulated idle days; no global filesystem-time flag change",
+    "windowTests": "23 and 25 simulated hours",
+    "freshExecutionTest": "default real clock",
+    "lateChanges": "owned fixture timestamps"
+  },
+  "limitations": [
+    "No filesystem snapshot or atomic exclusion of concurrent writes after verification",
+    "Read-only access is not treated as modification activity",
+    "Blocking filesystem calls may delay cancellation",
+    "No real user worktrees cleaned",
+    "No visible UI acceptance, push or release"
+  ]
+}

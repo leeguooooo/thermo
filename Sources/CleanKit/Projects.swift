@@ -254,11 +254,13 @@ enum Projects {
         if !registered {
             safety = .review
             note = tr("not a git worktree any more (left behind)")
+            do { try WorktreeCleanup.verifyActivity(path: wt, metadata: nil, now: ctx.now) }
+            catch { blocked = tr(String(describing: error)) }
         } else {
             let branch = (try? WorktreeCleanup.git(wt, ["rev-parse", "--abbrev-ref", "HEAD"])) ?? "?"
             detail += " · " + (branch == "HEAD" ? tr("detached HEAD") : tr("branch %1$@", branch))
             do {
-                guard try WorktreeCleanup.registration(wt, processes: ctx.processes) != nil else {
+                guard try WorktreeCleanup.registration(wt, processes: ctx.processes, now: ctx.now) != nil else {
                     throw WorktreeCleanup.Refusal("Git worktree registration is unavailable; keep this folder")
                 }
                 note = branch == "HEAD" ? tr("clean, detached checkout") : tr("clean; branch %1$@ stays in the repository", branch)
@@ -267,7 +269,6 @@ enum Projects {
         if let why = WorktreeCleanup.ownerRefusal(wt) { blocked = tr(why) }
         if !ctx.processes.available { blocked = tr("could not verify processes using this worktree; keep it") }
         if ctx.agentDirs.contains(where: { $0 == wt || $0.hasPrefix(wt + "/") }) { blocked = tr("an agent is running in it") }
-        if (s.newest ?? ctx.now) > ctx.activeAfter, blocked == nil { blocked = tr("modified in the last 2 hours") }
         guard s.bytes > 0 else { return nil }
         var item = CleanItem(id: "worktree/" + AISessions.slug(repoName) + "/" + AISessions.slug(name), category: .agentWorktrees,
                          title: tr("Agent worktree") + " · \(repoName)/\(name)", detail: detail, safety: safety,
