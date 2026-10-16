@@ -11,6 +11,7 @@ import ThermoL10n
 final class AgentScanner: ObservableObject {
     let toolUsage = ToolUsageModel()
     let taskComparison = TaskComparisonModel()
+    let mcpDefinitions = MCPDefinitionStore()
     @Published var report: DoctorReport?
     @Published var scanning = false
     /// The item the diagnostics window shows.
@@ -91,6 +92,7 @@ final class AgentScanner: ObservableObject {
             return
         }
         if !stopped, let r = report, r.language == L10n.current.rawValue, Date().timeIntervalSince(r.generated) < age { return }
+        mcpDefinitions.reset()
         let cancellation = DoctorCancellation()
         scanCancellation = cancellation
         scanning = true
@@ -126,6 +128,7 @@ final class AgentScanner: ObservableObject {
 
     func perform(_ action: Action, on item: AgentItem) {
         guard !busy else { return }
+        mcpDefinitions.reset()
         running = action.id
         operationLanguage = L10n.current.rawValue
         let diagnose = currentDiagnosis()
@@ -153,6 +156,7 @@ final class AgentScanner: ObservableObject {
                     executor: (@Sendable (Action) -> ActionResult)? = nil,
                     rescan: (@Sendable () -> DoctorReport)? = nil) {
         guard !busy, !plans.isEmpty else { return }
+        mcpDefinitions.reset()
         batching = true
         operationLanguage = L10n.current.rawValue
         let diagnose = currentDiagnosis()

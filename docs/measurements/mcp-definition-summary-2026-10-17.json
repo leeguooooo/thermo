@@ -1,0 +1,97 @@
+{
+  "generated": "2026-10-16T21:26:08.892535+00:00",
+  "evidenceKind": "synthetic services, real native UI interactions and compiled CLI inspection",
+  "scope": "Owned QA copy with independent bundle ID and Home, three enabled MCP configurations and one disabled. No production configuration or installed app changed.",
+  "qaBundleID": "dev.thermo.aiqa",
+  "originalAppPID": 94672,
+  "originalAppPreserved": true,
+  "qaAppClosed": true,
+  "fixtureProcessesRemaining": 0,
+  "verifiedFlows": {
+    "initialOverallUnknown": true,
+    "singleInspectionRetainedAfterClosingSheet": true,
+    "crossConfigurationRankingMatchesCLI": true,
+    "disabledExcludedFromEnabledDenominator": true,
+    "incompleteExcludedFromSizeSum": true,
+    "partialTotalExplicitlyUnknown": true,
+    "clearReturnsToUnknown": true,
+    "configurationRescanInvalidatesPreviousMeasurements": true,
+    "chinesePanelVisuallyInspected": true
+  },
+  "observed": {
+    "enabled": 3,
+    "disabled": 1,
+    "complete": 2,
+    "incompleteAfterCancel": 1,
+    "tools": 3,
+    "definitionBytes": 634,
+    "definitionEstimatedTokensSum": 159,
+    "instructionEstimatedTokensSum": 4,
+    "toolsWithFindings": 1,
+    "rankingEstimatedTokens": [
+      118,
+      21,
+      20
+    ],
+    "cancelledAfterSeconds": 8.739
+  },
+  "independentCLI": [
+    {
+      "name": "fixture-small",
+      "tools": 1,
+      "definitions": 21,
+      "instructions": 1,
+      "bytes": 84,
+      "ranking": [
+        [
+          "small_read",
+          21
+        ]
+      ]
+    },
+    {
+      "name": "fixture-large",
+      "tools": 2,
+      "definitions": 138,
+      "instructions": 3,
+      "bytes": 550,
+      "ranking": [
+        [
+          "large_read",
+          118
+        ],
+        [
+          "blank_description",
+          20
+        ]
+      ]
+    }
+  ],
+  "checks": {
+    "storeTests": 9,
+    "scannerCancellationTests": 2,
+    "localizationTests": 3
+  },
+  "fixtureSHA256": "2e1cd9b2fa1af6194e02a70d0269e9caf88372ca4cf0323dd58a24ae037ad7b9",
+  "sourceSHA256": {
+    "Sources/ThermoApp/MCPDefinitionStore.swift": "a909f0de14276568b3f9811fa1f0d2648bf8ce758b458fcbf9024a878e039f04",
+    "Sources/ThermoApp/MCPDefinitionSummary.swift": "644541db0535f56c6b2663ff8c32496b3b72eeff801a57f8f8d5457fc6beb6c1",
+    "Sources/ThermoApp/MCPInspectionView.swift": "64377e3e5ec9553e5148e112de7883449abef423b01e4d3c9bfa005e899caf4a"
+  },
+  "notYetVerified": [
+    "native English and large-font/minimum-window layouts for this new panel",
+    "full real installed MCP inventory inspection",
+    "one-click selected batch inspection",
+    "notarized release installation"
+  ],
+  "scopeNotes": [
+    "Fixture counts describe independent configuration measurements, not a serialized prompt, actual loaded context or billed tokens.",
+    "The host process list remains visible to QA scans; no process repair, uninstall or permission action was clicked.",
+    "Reference-encoding unavailability, stale callbacks, duplicate identities, bounded ranking and measured empty lists were tested in code; this native run used heuristic counts."
+  ],
+  "rendererSmoke": {
+    "standaloneResultRendererCompiled": true,
+    "offscreenResultPNGCreated": true,
+    "scope": "Helper dependency smoke only; native summary acceptance is recorded separately."
+  }
+}

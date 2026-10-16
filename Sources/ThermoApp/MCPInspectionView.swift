@@ -8,7 +8,8 @@ final class MCPInspectionModel: ObservableObject {
     @Published var running = false
     private var cancellation: DoctorCancellation?
 
-    func inspect(_ item: AgentItem, encoding: TextEncoding = .heuristic, timeout: TimeInterval = 10) {
+    func inspect(_ item: AgentItem, encoding: TextEncoding = .heuristic, timeout: TimeInterval = 10,
+                 completion: (@MainActor (MCPInspection) -> Void)? = nil) {
         guard !running else { return }
         let cancellation = DoctorCancellation()
         self.cancellation = cancellation
@@ -20,6 +21,7 @@ final class MCPInspectionModel: ObservableObject {
             await MainActor.run {
                 guard self.cancellation === cancellation else { return }
                 self.report = result
+                completion?(result)
                 self.running = false
                 self.cancellation = nil
             }
@@ -32,12 +34,13 @@ struct MCPInspectButton: View {
     let item: AgentItem
     var busy: Bool
     var encoding: TextEncoding = .heuristic
+    let store: MCPDefinitionStore
     @State private var timeout: Double = 10
     @State private var showing = false
     @StateObject private var model = MCPInspectionModel()
 
     var body: some View {
-        Button(tr("Connect & inspect")) { showing = true; model.inspect(item, encoding: encoding, timeout: timeout) }
+        Button(tr("Connect & inspect")) { showing = true; start() }
             .disabled(busy || !item.enabled)
             .help(tr("Starts the configured stdio server or connects to its HTTP endpoint and reads tool definitions. No business tools are called."))
             .sheet(isPresented: $showing) {
@@ -54,7 +57,7 @@ struct MCPInspectButton: View {
                     if let report = model.report { MCPInspectionResultView(report: report) }
                     else if model.running { ProgressView(tr("Inspecting MCP definitions…")) }
                     HStack {
-                        Button(tr("Check Again")) { model.inspect(item, encoding: encoding, timeout: timeout) }.disabled(model.running)
+                        Button(tr("Check Again")) { start() }.disabled(model.running)
                         if model.running { Button(tr("Stop checking")) { model.cancel() } }
                         Spacer()
                         Button(tr("Close")) { model.cancel(); showing = false }.keyboardShortcut(.cancelAction)
@@ -63,6 +66,13 @@ struct MCPInspectButton: View {
                 .padding(24).frame(width: 640)
                 .onDisappear { model.cancel() }
             }
+    }
+    @MainActor private func start() {
+        guard !model.running else { return }
+        let ticket = store.begin(item.id)
+        model.inspect(item, encoding: encoding, timeout: timeout) { report in
+            store.accept(report, id: item.id, encoding: encoding, ticket: ticket)
+        }
     }
 }
 

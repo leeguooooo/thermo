@@ -152,6 +152,7 @@ struct AreaPage: View {
                     if let report = scanner.report { SkillContextCard(items: report.items.filter { $0.area == .skills }) }
                 }
                 if area == .mcp {
+                    MCPDefinitionSummaryPanel(store: scanner.mcpDefinitions, items: scanner.report?.items ?? [], encoding: scanner.tokenEncoding)
                     Text(tr("This configuration scan does not connect to MCP servers. Use Connect & inspect for definitions and connection timing; actual tool usage remains unmeasured."))
                         .font(.callout).foregroundStyle(.secondary).padding(18).glass()
                 }
@@ -327,7 +328,7 @@ private struct ProblemCard: View {
                       systemImage: last.result.ok ? "checkmark.circle.fill" : "xmark.octagon.fill")
                     .font(.system(size: 12, weight: .medium)).foregroundStyle(last.result.ok ? .green : .red).padding(.leading, 48)
             }
-            if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy, encoding: scanner.tokenEncoding).padding(.leading, 48) }
+            if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy, encoding: scanner.tokenEncoding, store: scanner.mcpDefinitions).padding(.leading, 48) }
             Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { details.toggle() } } label: {
                 HStack(spacing: 4) {
                     Text(tr("Details")).font(.system(size: 12, weight: .medium))
@@ -437,7 +438,7 @@ private struct HealthyRow: View {
                 }
             }
             Spacer()
-            if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy, encoding: scanner.tokenEncoding) }
+            if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy, encoding: scanner.tokenEncoding, store: scanner.mcpDefinitions) }
             if !item.actions.isEmpty {
                 Menu {
                     ForEach(item.actions) { a in Button(a.title, role: a.kind == .uninstall ? .destructive : nil) { confirming = a } }

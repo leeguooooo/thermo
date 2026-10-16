@@ -2652,4 +2652,15 @@ let zhHans: [String: String] = [
     "Mixed model, environment or settings; compare separate cohorts instead": "记录混用了模型、环境或设置，请分组比较",
     "Duplicate task/repetition/variant; refusing to choose a result": "任务、重复编号和版本出现重复，无法选择结果",
     "Task or verifier changed across repetitions; use separate task IDs": "重复测试中更改了任务或验收标准，请使用不同任务 ID",
+    // Cross-configuration manual MCP measurements
+    "Inspected MCP definitions": "已检查的 MCP 定义",
+    "The full configured total is still unknown; some configurations or counts are missing.": "完整配置总量仍未知，部分配置或计数尚未取得。",
+    "Clear inspection measurements": "清除检查计量",
+    "%1$@ of %2$@ enabled configurations inspected completely · %3$@ incomplete · %4$@ running · %5$@ disabled": "已完整检查 %1$@ / %2$@ 条启用配置 · %3$@ 条未完成 · %4$@ 条进行中 · %5$@ 条已停用",
+    "Inspected subset: %1$@ tools · %2$@ definition bytes · definition-array counts sum ≈%3$@ tokens": "已检查部分：%1$@ 个工具 · 定义 %2$@ 字节 · 各定义数组计数之和约 %3$@ token",
+    "Separate server-instruction counts sum ≈%1$@ tokens · %2$@ tools with definition findings · %3$@ tool counts unavailable": "独立的服务指令计数之和约 %1$@ token · %2$@ 个工具有定义提示 · %3$@ 个工具无法计数",
+    "Largest measured tool definitions across inspected configurations": "已检查配置中占用最大的工具定义",
+    "Definition ≈%1$@ tokens · %2$@ bytes · %3$@ findings": "定义约 %1$@ token · %2$@ 字节 · %3$@ 项提示",
+    "Overall definition size is unknown. Connect & inspect individual configurations to add measurements here.": "整体定义大小未知。对各条配置点击“连接并检查”，可在这里汇总计量。",
+    "Manual inspections in this window only; rescanning clears them. Counts are sums of separate configuration measurements, not an atomic snapshot or effective prompt usage. Shared servers configured in multiple hosts remain separate. Incomplete and uninspected configurations are not zero; definition findings do not establish task quality.": "仅汇总本窗口中的手动检查，重新扫描会清空。计数是各条配置独立计量之和，不代表同一时刻的快照或实际提示词用量。同一服务在不同宿主中的配置分开保留。未完成、未检查不按零计；定义提示不代表任务质量差。",
 ]

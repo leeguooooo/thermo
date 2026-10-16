@@ -1,5 +1,5 @@
 // Offline native view rendering; never activates or drives the installed app.
-// Link this file and MCPInspectionView.swift with Debug AgentDoctor/AgentCore/ThermoL10n libraries.
+// Link this file, MCPDefinitionStore.swift and MCPInspectionView.swift with Debug AgentDoctor/AgentCore/ThermoL10n libraries.
 // Arguments: inspection JSON (ISO-8601 dates), output PNG.
 import AgentDoctor
 import AppKit
