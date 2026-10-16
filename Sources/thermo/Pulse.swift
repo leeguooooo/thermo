@@ -58,8 +58,17 @@ struct PulseCommand {
             }
             lines += report.issues.map { tr($0) }
             lines.append(tr("Observed cwd and vnode descriptor paths")); lines += report.observedPaths ?? [tr("Path inspection is unavailable for this process")]
+            lines.append(tr("Observed TCP listeners"))
+            if let listeners = report.listeners {
+                lines += listeners.endpoints.map { $0.label + " · " + $0.family + " · " + $0.addressKind.rawValue }
+                if listeners.state == .noneObserved { lines.append(tr("No TCP listeners were observed; this does not prove none exist.")) }
+                if listeners.state == .unavailable { lines.append(tr("TCP listener inspection is unavailable")) }
+                if !listeners.queryComplete { lines.append(tr("TCP listener reading is incomplete")) }
+                if listeners.limited { lines.append(tr("TCP listener reading reached a limit")) }
+            } else { lines.append(tr("TCP listener inspection is unavailable")) }
+            lines.append(tr("A listening address does not prove internet reachability."))
             lines.append(tr("A current parent chain does not prove the original launcher or a publisher's identity."))
-            lines.append(tr("Memory mappings, listening ports, launch service registration and sleep assertions were not inspected."))
+            lines.append(tr("Memory mappings, launch service registration and sleep assertions were not inspected."))
             lines.append(tr("Known credential patterns are masked. Custom positional arguments may remain."))
             out(lines); return
         }

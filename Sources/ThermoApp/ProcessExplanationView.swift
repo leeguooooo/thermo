@@ -87,7 +87,18 @@ struct ProcessInspectionTarget: Identifiable {
                             if paths.isEmpty { Text(tr("No paths were observed; this does not prove the process has no open files.")).font(.caption) }
                             ForEach(Array(paths.enumerated()), id: \.offset) { _, path in Text(path).font(.caption.monospaced()).textSelection(.enabled) }
                         } else { Text(tr("Path inspection is unavailable for this process")).font(.caption) }
-                        Text(tr("Memory mappings, listening ports, launch service registration and sleep assertions were not inspected.")).font(.caption).foregroundStyle(.secondary)
+                        Text(tr("Observed TCP listeners")).font(.headline)
+                        if let listeners = report.listeners {
+                            ForEach(listeners.endpoints, id: \.self) { endpoint in
+                                Text(endpoint.label + " · " + endpoint.family + " · " + addressKind(endpoint.addressKind)).font(.caption.monospaced()).textSelection(.enabled)
+                            }
+                            if listeners.state == .noneObserved { Text(tr("No TCP listeners were observed; this does not prove none exist.")).font(.caption) }
+                            if listeners.state == .unavailable { Text(tr("TCP listener inspection is unavailable")).font(.caption).foregroundStyle(.orange) }
+                            if !listeners.queryComplete { Text(tr("TCP listener reading is incomplete")).font(.caption).foregroundStyle(.orange) }
+                            if listeners.limited { Text(tr("TCP listener reading reached a limit")).font(.caption).foregroundStyle(.orange) }
+                        } else { Text(tr("TCP listener inspection is unavailable")).font(.caption) }
+                        Text(tr("A listening address does not prove internet reachability.")).font(.caption).foregroundStyle(.secondary)
+                        Text(tr("Memory mappings, launch service registration and sleep assertions were not inspected.")).font(.caption).foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -98,5 +109,12 @@ struct ProcessInspectionTarget: Identifiable {
             }
         }.padding(20).frame(width: 600, height: 520)
             .onAppear { model.load(expected) }.onDisappear { model.stop() }
+    }
+    private func addressKind(_ value: ProcessListeners.Endpoint.AddressKind) -> String {
+        switch value {
+        case .loopback: return tr("Loopback bind address")
+        case .wildcardAddress: return tr("Wildcard bind address")
+        case .specifiedAddress: return tr("Specific bind address")
+        }
     }
 }

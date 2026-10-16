@@ -1,0 +1,116 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "27ba008",
+  "sourceSHA256": {
+    "Sources/AgentDoctor/ProcessListeners.swift": "5e650f9838c43eb1ba06cc6044cf055d6484ef2ee820cbb907807b2d35acab84",
+    "Sources/AgentDoctor/ProcessExplanation.swift": "7fe5870bc51d90f994b594c7a12bd8424989f40b50af40c14b27a1f67911af51",
+    "Sources/ThermoApp/ProcessExplanationView.swift": "428ac411ab9a5fae1f894efbe9c0f8968a3b4950cb5049db3993598f26579899",
+    "Sources/thermo/Pulse.swift": "23e482b262440fc4357b55eb73a2453d65702762f39da183d2d7fbcb1f0ce72c",
+    "Sources/ThermoL10n/ZhHans.swift": "b8eecdc06839f08af2563df5ef61fdca9f4a91b91336d9f7d7dc92fcfa4af729",
+    "Tests/AgentDoctorTests/ProcessListenersTests.swift": "efad7824e21d62f61e2b6e1d626d3fdffb028423fc64de3a53b7f9a72e1a361a",
+    "Tests/AgentDoctorTests/ProcessExplanationTests.swift": "f44a2fbb12181bb0e614a7a653ab70f57a2eb63f24d47d490957c3bc6a714ec5",
+    "README.md": "9c40ac410677119f2b469d309f2301c4653459112167c42f13939a1914afe31d"
+  },
+  "newTests": {
+    "ProcessListenersTests": 5,
+    "ProcessExplanationTests": 2
+  },
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 66,
+      "ThermoAppTests": 202,
+      "CleanKitTests": 712,
+      "AgentDoctorTests": 27,
+      "AgentCoreTests": 37
+    },
+    "total": 1158,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests"
+    ],
+    "AgentDoctorSelection": [
+      "ProcessListenersTests",
+      "ProcessExplanationTests",
+      "RedactTests"
+    ],
+    "logSHA256": "ee0251bfd14a4f394c955971dbb3cd4990aa22bafca17bad5df9148aed660d37"
+  },
+  "nativeCLI": {
+    "allocatedTargetPorts": [
+      {
+        "family": "IPv4",
+        "port": 56591
+      },
+      {
+        "family": "IPv6",
+        "port": 56593
+      }
+    ],
+    "allocatedOtherPorts": [
+      {
+        "family": "IPv4",
+        "port": 56590
+      },
+      {
+        "family": "IPv6",
+        "port": 56592
+      }
+    ],
+    "onlyTargetEndpointsReturned": true,
+    "observedEndpointCount": 2,
+    "allLiveAddressesLoopback": true,
+    "afterClosingTargetSocketsWhileOtherProcessListens": {
+      "endpoints": [],
+      "limited": false,
+      "queryComplete": true,
+      "state": "noneObserved"
+    },
+    "identityPIDUnchanged": true,
+    "fixtureCredentialAbsent": true,
+    "textExit": 0,
+    "firstJSONSHA256": "73aed621e8ff6f6684f5a1f00dfaba1feb61b25b4d65766dc5b20e8ab2d9fd59",
+    "secondJSONSHA256": "38340a2ea27059993bd40268412ef884882a666abfc0a86202cdcc6eb82a8c74",
+    "binarySHA256": "6ecdad63602d642c969d49b5e49ef2b515b8429367d1bd52b1708163ef6a2bf3"
+  },
+  "policy": {
+    "query": "/usr/sbin/lsof -nP -a -p PID -iTCP -sTCP:LISTEN -F0pftPn",
+    "currentUIDOnly": true,
+    "identityCheckedBeforeAndAfter": true,
+    "queryTimeoutSeconds": 3,
+    "outputLimitBytes": 131072,
+    "maximumEndpoints": 64,
+    "formatValidation": [
+      "PID association",
+      "numeric IPv4/IPv6 and port",
+      "TCP protocol",
+      "complete NUL fields"
+    ],
+    "states": [
+      "observed",
+      "noneObserved",
+      "unavailable"
+    ],
+    "queryCompleteMeaning": "tool query only, not full kernel visibility",
+    "addressKinds": [
+      "loopback",
+      "wildcardAddress",
+      "specifiedAddress"
+    ],
+    "internetReachability": "not inferred",
+    "compatibility": "listeners absent in legacy reports means not inspected"
+  },
+  "cleanup": {
+    "twoOwnedChildrenTerminatedAndWaited": true,
+    "openFixtureHandles": 0,
+    "ownedRootRemoved": true,
+    "externalInterfacesNotBound": true
+  },
+  "limitations": [
+    "TCP only; UDP not inspected",
+    "A lack of observations cannot prove absence of listeners",
+    "Wildcard addresses do not prove internet reachability",
+    "Visible inspector not exercised this turn",
+    "No target signals, hardware writes, push or release"
+  ]
+}

@@ -26,11 +26,12 @@ public struct ProcessExplanation: Codable, Sendable {
     public var pathQueriesComplete: Bool
     public var pathsTruncated: Bool
     public var issues: [String]
+    public var listeners: ProcessListeners? = nil
 
     public static func capture(_ pid: Int32, expected: ProcessIdentity? = nil) throws -> ProcessExplanation {
         guard pid > 0, expected.map({ $0.pid == pid }) ?? true else { throw Unavailable() }
         return try capture(pid, expected: expected, table: ProcessTable.current(.init(uid: nil, cpu: false, detailsUID: getuid())),
-                    identity: ProcessTable.identity, parent: ProcessTable.parentPID, paths: { OpenFiles.observe($0) })
+                    identity: ProcessTable.identity, parent: ProcessTable.parentPID, paths: { OpenFiles.observe($0) }, listeners: ProcessListeners.capture)
     }
 
     struct Unavailable: LocalizedError {
@@ -45,7 +46,8 @@ public struct ProcessExplanation: Codable, Sendable {
 
     static func capture(_ pid: Int32, expected: ProcessIdentity? = nil, table: ProcessTable,
                         identity: (Int32) -> ProcessIdentity?, parent: (Int32) -> Int32?,
-                        paths: (Int32) -> OpenFiles.Observation, uid: UInt32 = getuid(), maximumDepth: Int = 32) throws -> ProcessExplanation {
+                        paths: (Int32) -> OpenFiles.Observation, uid: UInt32 = getuid(), maximumDepth: Int = 32,
+                        listeners: (Int32) -> ProcessListeners? = { _ in nil }) throws -> ProcessExplanation {
         guard pid > 0, maximumDepth > 0, maximumDepth <= 128, table.available,
               let target = table.entries.first(where: { $0.pid == pid }), let initial = target.sampledIdentity,
               expected.map({ $0 == initial }) ?? true, identity(pid) == initial else { throw Unavailable() }
@@ -65,6 +67,7 @@ public struct ProcessExplanation: Codable, Sendable {
         }
         if !complete && captured.count == maximumDepth { issues.append("The parent-chain depth limit was reached") }
         let observation = target.uid == uid ? paths(pid) : nil
+        let listening = target.uid == uid ? listeners(pid) : nil
         // Verify relationships too: a live child can be reparented without changing its identity.
         for process in captured {
             guard let expected = process.sampledIdentity, identity(process.pid) == expected,
@@ -93,6 +96,6 @@ public struct ProcessExplanation: Codable, Sendable {
         return .init(pid: pid, sampled: Date(), chain: nodes, chainComplete: complete, application: application,
                      attribution: attribution, observedPaths: observation.map { Array($0.paths.prefix(100)).map(displayed) },
                      pathQueriesComplete: (observation?.complete ?? false) && !shortenedPaths,
-                     pathsTruncated: (observation?.truncated ?? false) || shortenedPaths, issues: issues)
+                     pathsTruncated: (observation?.truncated ?? false) || shortenedPaths, issues: issues, listeners: listening)
     }
 }

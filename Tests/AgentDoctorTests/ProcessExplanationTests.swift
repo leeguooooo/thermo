@@ -80,3 +80,20 @@ extension ProcessExplanationTests {
         XCTAssertFalse(report.observedPaths?.first?.contains("\u{1b}") == true)
     }
 }
+
+extension ProcessExplanationTests {
+    func testListenerReadCannotPublishAfterTargetPIDReuse() throws {
+        let p=process(10,parent:0);var actual=p.sampledIdentity!
+        XCTAssertThrowsError(try ProcessExplanation.capture(10,table:.init(entries:[p]),identity:{ _ in actual },parent:{ _ in 0 },paths:{ _ in .init(paths:[],complete:true) },uid:501,listeners:{ _ in
+            actual.started.addTimeInterval(1)
+            return .init(state:.noneObserved,endpoints:[],queryComplete:true,limited:false)
+        }))
+    }
+    func testListenerReaderDoesNotInspectAnotherUser() throws {
+        let p=process(10,parent:0,uid:900)
+        let report=try ProcessExplanation.capture(10,table:.init(entries:[p]),identity:{ _ in p.sampledIdentity },parent:{ _ in 0 },paths:{ _ in .init(paths:[],complete:true) },uid:501,listeners:{ _ in
+            XCTFail("do not read another user's listeners");return nil
+        })
+        XCTAssertNil(report.listeners)
+    }
+}
