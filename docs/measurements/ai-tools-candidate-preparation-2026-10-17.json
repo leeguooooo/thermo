@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-16T23:28:30.567049+00:00",
+  "generated": "2026-10-16T23:33:41.998283+00:00",
   "candidateVersion": "1.2.0",
   "candidateCommit": "0f1a003c471d1567792739a377301f432b35b557",
   "candidateBranch": "codex/ai-tools-1.2.0-rc",
@@ -216,13 +216,58 @@
       ],
       "stoppedOnFirstFailure": true
     },
-    "originalFailureCause": "not yet captured; do not claim fixed from successful repeats"
+    "originalFailureCause": "Not captured; eight independent fixtures, the full 51-case updater class and current 1467-case full suite passed. Prior failed full run remains retained."
   },
   "fullReleaseConfigurationTests": {
-    "statusAtObservation": "running",
-    "command": "swift test --jobs 1 -c release",
-    "log": "/tmp/thermo-ai-rc-instrumented-full-tests.log"
+    "generated": "2026-10-16T23:33:41.998283+00:00",
+    "candidateCommit": "0f1a003c471d1567792739a377301f432b35b557",
+    "configuration": "release",
+    "jobs": 1,
+    "total": 1467,
+    "failures": 0,
+    "suites": [
+      {
+        "name": "ThermoKitTests.xctest",
+        "tests": 144,
+        "failures": 0
+      },
+      {
+        "name": "ThermoHelperTests.xctest",
+        "tests": 7,
+        "failures": 0
+      },
+      {
+        "name": "ThermoCLITests.xctest",
+        "tests": 70,
+        "failures": 0
+      },
+      {
+        "name": "ThermoAppTests.xctest",
+        "tests": 271,
+        "failures": 0
+      },
+      {
+        "name": "CleanKitTests.xctest",
+        "tests": 745,
+        "failures": 0
+      },
+      {
+        "name": "AgentDoctorTests.xctest",
+        "tests": 193,
+        "failures": 0
+      },
+      {
+        "name": "AgentCoreTests.xctest",
+        "tests": 37,
+        "failures": 0
+      }
+    ],
+    "logSHA256": "ff13764473ad2da66f47658b75733d703618540d684bfba7e70703366b730934",
+    "originalCleanupObservationResolved": false,
+    "scope": "Current instrumented snapshot passed; no explanation of the prior intermittent retained mount is claimed. No signing, notarization, installation or publication."
   },
   "releaseReady": false,
-  "scope": "Local candidate only. Both failed full runs are retained; diagnostic repeats are not a substitute for resolving or explaining the original cleanup observation. No sign/notarize/install/publish action has been performed."
+  "scope": "Local candidate only. Ad-hoc packaging and isolated fixture UI verified; no Developer ID signing, notarization, installation or publication. Both failed full runs retained; original cleanup observation remains unexplained.",
+  "packageCommit": "f02328d5f0bc6a9158865225e2c98b8f09e38bf7",
+  "localPackageValidation": "ai-tools-candidate-package-2026-10-17.json"
 }
