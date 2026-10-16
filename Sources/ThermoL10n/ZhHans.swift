@@ -1837,6 +1837,7 @@ let zhHans: [String: String] = [
     "Git worktree registration is unavailable; keep this folder": "无法核实 Git 工作树注册信息，已保留此文件夹。",
     "worktree has modified, untracked or ignored local files; keep it": "工作树存在已修改、未跟踪或被忽略的本地文件，已保留。",
     "worktree has uncommitted or untracked files; keep it": "工作树存在未提交或未跟踪文件，已保留。",
+    "T3-managed worktree; manage it in T3 Code": "T3 管理的工作树，请在 T3 Code 中管理。",
     "worktrees with submodules are kept": "含子模块的工作树会保留。",
     "Show log": "查看日志",
     "Removed size is unknown": "已移除的大小未知",

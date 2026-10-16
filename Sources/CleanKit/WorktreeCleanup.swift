@@ -17,6 +17,20 @@ enum WorktreeCleanup {
         var description: String
         init(_ text: String) { description = text }
     }
+    static func ownerRefusal(_ path: String) -> String? {
+        // T3 owns thread/session lifetimes independently of Git cleanliness. Match
+        // components (not a substring), and check the physical target of aliases too.
+        for candidate in [path, physical(path)] {
+            let components = candidate.split(separator: "/")
+            if zip(components, components.dropFirst()).contains(where: { $0 == ".t3" && $1 == "worktrees" }) {
+                return "T3-managed worktree; manage it in T3 Code"
+            }
+        }
+        return nil
+    }
+    static func verifyOwner(_ path: String) throws {
+        if let why = ownerRefusal(path) { throw Refusal(why) }
+    }
     static func runGit(_ arguments: [String]) throws -> String {
         var environment = ProcessInfo.processInfo.environment
         for key in Array(environment.keys) where key.hasPrefix("GIT_") { environment.removeValue(forKey: key) }
@@ -56,6 +70,7 @@ enum WorktreeCleanup {
         return physical(String(pointer.dropLast(5)))
     }
     static func verifyRetention(_ registration: Registration) throws {
+        try verifyOwner(registration.path)
         guard FS.isDirectory(registration.metadata), FS.isDirectory(registration.common),
               FileIdentity.of(registration.metadata) == registration.metadataIdentity,
               FileIdentity.of(registration.common) == registration.commonIdentity,
@@ -98,6 +113,7 @@ enum WorktreeCleanup {
         }
     }
     static func registration(_ rawPath: String, processes: ProcessTable) throws -> Registration? {
+        try verifyOwner(rawPath)
         let path = physical(rawPath)
         guard processes.available else { throw Refusal("could not verify processes using this worktree; keep it") }
         guard FS.exists(path + "/.git") else { return nil }

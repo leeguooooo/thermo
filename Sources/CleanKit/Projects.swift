@@ -264,6 +264,7 @@ enum Projects {
                 note = branch == "HEAD" ? tr("clean, detached checkout") : tr("clean; branch %1$@ stays in the repository", branch)
             } catch { blocked = tr(String(describing: error)) }
         }
+        if let why = WorktreeCleanup.ownerRefusal(wt) { blocked = tr(why) }
         if !ctx.processes.available { blocked = tr("could not verify processes using this worktree; keep it") }
         if ctx.agentDirs.contains(where: { $0 == wt || $0.hasPrefix(wt + "/") }) { blocked = tr("an agent is running in it") }
         if (s.newest ?? ctx.now) > ctx.activeAfter, blocked == nil { blocked = tr("modified in the last 2 hours") }

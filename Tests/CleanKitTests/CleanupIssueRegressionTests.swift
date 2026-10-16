@@ -446,3 +446,65 @@ extension CleanupIssueRegressionTests {
         XCTAssertTrue(FS.exists(path+"/new-local-data"))
     }
 }
+
+
+extension CleanupIssueRegressionTests {
+    func testT3ManagedRegisteredWorktreeIsKeptDespiteCleanSharedHead() throws {
+        let (repo,_) = try worktree()
+        for (index,mode) in [RemovalMode.trash,.permanent].enumerated() {
+            let managed = home+"/.t3/worktrees/project/thread-\(index)"
+            _ = try git(repo,["worktree","add","--detach",managed])
+            XCTAssertEqual(try git(managed,["status","--porcelain"]),"")
+            XCTAssertThrowsError(try WorktreeCleanup.registration(managed,processes:.init(entries:[])))
+            let result = clean(CleanItem(id:"worktree/t3",category:.agentWorktrees,title:"Fixture",safety:.review,bytes:4096,paths:[managed],group:repo),mode:mode)
+            XCTAssertFalse(result.failed.isEmpty)
+            XCTAssertTrue(FS.exists(managed+"/.git"))
+        }
+    }
+    func testT3UnregisteredFolderAndAliasAreKeptAtScanAndExecution() throws {
+        let managed = home+"/.t3/worktrees/project/thread"
+        try file(managed+"/local-data")
+        let alias = home+"/alias"
+        try FileManager.default.createSymbolicLink(atPath:alias,withDestinationPath:managed)
+        var options = ScanOptions(); options.home = home
+        let ctx = ScanContext(options:options,now:Date().addingTimeInterval(3*86400),processes:.init(entries:[]),agentDirs:[],liveClaudeSessions:[])
+        for path in [managed,alias] {
+            // A symlink itself can occupy zero blocks and be omitted by the scanner.
+            // Exercise its ownership decision and direct execution independently.
+            let scanned = Projects.worktreeItem(path,repo:home,repoName:"fixture",ctx:ctx)
+            if path == managed { XCTAssertNotNil(scanned); XCTAssertNotNil(scanned?.blocked) }
+            XCTAssertNotNil(WorktreeCleanup.ownerRefusal(path))
+            let item = scanned ?? CleanItem(id:"worktree/alias",category:.agentWorktrees,title:"Fixture",safety:.review,bytes:4096,paths:[path])
+            XCTAssertThrowsError(try WorktreeCleanup.registration(path,processes:.init(entries:[])))
+            let result = clean(item,mode:.trash)
+            XCTAssertFalse(result.failed.isEmpty)
+            XCTAssertTrue(FS.exists(managed+"/local-data"))
+        }
+    }
+    func testT3PathComponentsDoNotBlockSimilarlyNamedOrdinaryWorktrees() throws {
+        let (repo,_) = try worktree()
+        let ordinary = home+"/.t3/worktrees-archive/thread"
+        _ = try git(repo,["worktree","add","--detach",ordinary])
+        XCTAssertNotNil(try WorktreeCleanup.registration(ordinary,processes:.init(entries:[])))
+    }
+}
+
+
+extension CleanupIssueRegressionTests {
+    func testT3OwnershipIsRecheckedForDirectRegistrationExecution() throws {
+        let (repo,_) = try worktree()
+        let managed = home+"/.t3/worktrees/project/thread"
+        _ = try git(repo,["worktree","add","--detach",managed])
+        let path = WorktreeCleanup.physical(managed)
+        let metadata = try git(path,["rev-parse","--absolute-git-dir"])
+        let common = try git(path,["rev-parse","--path-format=absolute","--git-common-dir"])
+        let registration = WorktreeCleanup.Registration(path:path,common:common,metadata:metadata,
+            metadataIdentity:try XCTUnwrap(FileIdentity.of(metadata)),commonIdentity:try XCTUnwrap(FileIdentity.of(common)),
+            head:try WorktreeCleanup.head(metadata),staleLock:nil)
+        XCTAssertThrowsError(try WorktreeCleanup.prepare(registration))
+        XCTAssertThrowsError(try WorktreeCleanup.remove(registration))
+        XCTAssertThrowsError(try WorktreeCleanup.unregister(registration))
+        XCTAssertTrue(FS.exists(path+"/.git")); XCTAssertTrue(FS.exists(metadata))
+        XCTAssertFalse(FS.children(path).contains { ($0 as NSString).lastPathComponent.hasPrefix(".thermo-worktree-registration-") })
+    }
+}

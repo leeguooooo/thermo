@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "193b1c8",
+  "sourceSHA256": {
+    "Sources/CleanKit/WorktreeCleanup.swift": "7e2c9d0ebbeb581282b30dead51af69fc5fcbe807dc30b10a3735ecc3801fe0a",
+    "Sources/CleanKit/Projects.swift": "77b0dbdf18f34b6620f84ccf289a5e4cc49a77d54b5fe7037088fc623f6fbb3a",
+    "Sources/ThermoL10n/ZhHans.swift": "1cb18883b29c042f1a7dce411311187614776f01fbec129b1d81d9e7b2c2c384",
+    "Tests/CleanKitTests/CleanupIssueRegressionTests.swift": "0d6ab808b1fb4eac120c3773fb6772f1e8e32acec5e7b81e7417c51fc63be284"
+  },
+  "baseline": {
+    "tests": 3,
+    "failedAssertions": 9,
+    "ownedRegisteredAndUnregisteredT3TargetsMovedToFixtureTrash": true,
+    "aliasBaselineNotIndependent": true,
+    "logSHA256": "5690d734516843ccb78cc3210b76c52a33fbda291619a24ab59684e005fb8fdb"
+  },
+  "targeted": {
+    "tests": 4,
+    "failures": 0,
+    "logSHA256": "36ccb785ebd89f46331755681cf09c2ec1cf8d56442cc7f4dee3d78be2b13dd9"
+  },
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 63,
+      "ThermoAppTests": 197,
+      "CleanKitTests": 682,
+      "AgentCoreTests": 34
+    },
+    "total": 1090,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "logSHA256": "5662f11b1f1f01d650553dd239fb7fdef7e34fe1dfba74f3067f54e5454e8086"
+  },
+  "referenceEvidence": {
+    "retainedMoleStringsSHA256": "6ebc64c84cd8ed401cddb8e5e559fdfd0f037f3458b4899a9bec97c25d0071ac",
+    "string": "/.t3/worktrees",
+    "localizedReason": "ai.worktree.keep.owner: Managed by T3",
+    "officialDocs": "https://github.com/pingdotgg/t3code/blob/main/docs/user/project-settings.md#worktree-location",
+    "officialSource": "https://github.com/pingdotgg/t3code/blob/main/apps/server/src/worktreesDirectory.ts"
+  },
+  "policy": {
+    "protectedLayout": ".t3/worktrees as adjacent complete path components",
+    "checks": [
+      "original path",
+      "physical target",
+      "scan",
+      "registration",
+      "retention recheck before prepare/remove/unregister"
+    ],
+    "unregisteredFoldersAlsoProtected": true
+  },
+  "limitations": [
+    "Custom T3 homes and current/previous custom worktree locations not inferred",
+    "No private T3 database read",
+    "Not a full reproduction of Mole ownership detection",
+    "No real user worktrees cleaned; fixtures only",
+    "No UI acceptance, push or release"
+  ]
+}
