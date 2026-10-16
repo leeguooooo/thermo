@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-16",
+  "baseCommit": "9546c5e",
+  "sourceSHA256": {
+    "Sources/CleanKit/NativeBackupCleanup.swift": "0a24e853dfc277339be28e4d0651fad95cbd1d04047f9a26bf2b9616f08e300b",
+    "Sources/CleanKit/NativeUpdateTransaction.swift": "7e12fd68248221d9d62d1214736cb85a6e9bb997cbdc5bd77622a029bb882933",
+    "Sources/CleanKit/OperationText.swift": "4039ecbc2055649eacf8a67aa6975328225cdd083b784ea5ac0614d82e903902",
+    "Sources/ThermoApp/NativeUpdatesPanel.swift": "1a69ac6e07b1f4c6745cd87340ce554b2eb9042512257a5176178f31878299e8",
+    "Sources/thermo/Apps.swift": "d5e4c7fdcea83f28dec985ed39fd65d6e3233324c5f6af9cf1d940fecd95907e",
+    "Sources/thermo/main.swift": "2874e50506b39ff6a6ba427184540fe6c765c72da8d29b5aa4e7ec6386319e8d",
+    "Sources/ThermoL10n/ZhHans.swift": "4ab0ea8ff7ada8a014e6ae7d62ff629c22a4f557ad418de522ad606f5f962b16",
+    "Tests/CleanKitTests/NativeUpdateTransactionTests.swift": "9d5a01b5a509d9be4fa92c5aaf4ee882b0f5312de43ea5e9a92b5a60f29f90a3",
+    "Tests/ThermoAppTests/NativeBackupRemovalReviewTests.swift": "9d65db90f075915771b12f494bf1d695830f44e14ba2d3b2a3aa686d10c2be4f",
+    "scripts/verify-native-backup-ui.swift": "29bf852bf3b977232e4a5b2cb0e87f8c53a9b9fa5afde0915c4daae0849c48b0",
+    "README.md": "f7ec115fefe67d3221f424511f1464c8da5cd1ae7043a408d567dacc2c972b92"
+  },
+  "newTests": {
+    "CleanKitTests": 8,
+    "ThermoAppTests": 1
+  },
+  "full": {
+    "counts": {
+      "ThermoKitTests": 114,
+      "ThermoCLITests": 63,
+      "ThermoAppTests": 198,
+      "CleanKitTests": 702,
+      "AgentCoreTests": 34
+    },
+    "total": 1111,
+    "failures": 0,
+    "excluded": [
+      "HardwareTests",
+      "AgentDoctorTests"
+    ],
+    "logSHA256": "bf85822862256f11f4a9852d4e6fa5de766567a880143cf9de5620b6a6f7a4c2"
+  },
+  "policy": {
+    "eligibleReceiptPhases": [
+      "installed",
+      "restored",
+      "rolledBack"
+    ],
+    "proof": [
+      "unchanged receipt",
+      "signed backup matches recorded content and identity",
+      "current app signature and publisher/bundle identity",
+      "current app and backup snapshots unchanged after confirmation",
+      "private owned adjacent directory",
+      "same native update target lock",
+      "whitelist re-read",
+      "process/open-file availability"
+    ],
+    "scope": "only the reviewed previous.app; parent and receipt preserved",
+    "recovery": "normal Trash batch and history; no automatic deletion or rotation",
+    "accounting": "allocated usage separate; removed private-byte size remains unknown, not allocated fallback"
+  },
+  "nativeCLI": {
+    "fixture": "owned ad-hoc signed apps, no vendor or installed user apps",
+    "previewExit": 0,
+    "noninteractiveWithoutYesExit": 2,
+    "trashExit": 0,
+    "movedToNativeTrash": true,
+    "currentAndBackupBuildAfterTrashRestore": {
+      "current": "200",
+      "backup": "100"
+    },
+    "appRestoreExit": 0,
+    "buildsAfterAppRestore": {
+      "current": "100",
+      "backup": "200"
+    },
+    "postRollbackReviewVersions": {
+      "backup": "2.0",
+      "current": "1.0"
+    },
+    "interactiveReceiptChange": {
+      "code": 2,
+      "promptObserved": true,
+      "confirmationSentAfterReceiptChange": true,
+      "bothCopiesPreserved": true
+    },
+    "evidenceSHA256": "90dd09120bde782eb5c140c4a1a9e4ba0c68ab641105edd912486388d1bea0b9"
+  },
+  "visibleAcceptance": {
+    "passed": false,
+    "blocker": "CUA repeatedly returned cgWindowNotFound while owned app process was live in NSApplication.run",
+    "fixedFrameAndUniqueBundleAlsoAttempted": true,
+    "userVisibilityQuestionPending": true,
+    "executableSHA256": "4260094b7e428ac02dcfa8628391ca3b1ff263d6950fa1c41b6b5752ae0c9f48",
+    "noWindowInteractionClaimed": true
+  },
+  "limitations": [
+    "Last validation and OS Trash move are not a filesystem transaction against external writers",
+    "Actual /Applications backup recycling not exercised; native fixture lives under owned Home",
+    "No Developer ID rotation acceptance",
+    "No automatic rotation",
+    "Confirmation and History UI visible acceptance remains pending",
+    "No push or release"
+  ],
+  "cleanup": {
+    "ownedQAProcessesStopped": true,
+    "openFixtureHandles": 0,
+    "ownCopiesVerifiedInFixtureBeforeDeletion": true,
+    "ownedRootRemoved": true,
+    "nativeTrashCopyReturnedBeforeCleanup": true
+  }
+}

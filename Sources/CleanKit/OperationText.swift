@@ -19,6 +19,7 @@ extension OperationRecord {
         case ("apps", "update"): return tr("Updated an app")
         case ("apps", "nativeUpdate"): return tr("Native app update")
         case ("apps", "nativeRestore"): return tr("Native app recovery")
+        case ("apps", "nativeBackupTrash"): return tr("Moved an update backup to the Trash")
         case ("apps", "nativeUpdatePreparation"): return tr("Native update preparation")
         case ("apps", "nativeUpdateCleanup"): return tr("Native update file cleanup")
         case ("space", "trash"): return tr("Moved hand-picked files to the Trash")

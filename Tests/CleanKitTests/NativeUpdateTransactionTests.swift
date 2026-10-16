@@ -700,3 +700,101 @@ extension NativeUpdateTransactionTests {
         XCTAssertEqual(try NativeUpdateTransaction.load(id, home: home).phase, "unconfirmed")
     }
 }
+
+extension NativeUpdateTransactionTests {
+    func backupCleanupFixture() throws -> (NativeUpdateReceipt, NativeBackupRemovalReview) {
+        let prepared = try prepared()
+        let installed = NativeUpdateTransaction.commit(prepared,home:home,processes:{ .init(entries:[]) },afterSwap:{})
+        XCTAssertEqual(installed.outcome,"succeeded",installed.message)
+        try NativeUpdateTransaction.discard(prepared,home:home)
+        let receipt = try XCTUnwrap(installed.receipt)
+        return (receipt,try NativeUpdateTransaction.reviewBackupRemoval(receipt,home:home,processes:.init(entries:[])))
+    }
+    func moveBackupToFixtureTrash(_ path: String) throws -> URL {
+        let folder = home+"/.Trash"
+        try FileManager.default.createDirectory(atPath:folder,withIntermediateDirectories:true)
+        let target = URL(fileURLWithPath:folder+"/"+UUID().uuidString+".app")
+        try FileManager.default.moveItem(atPath:path,toPath:target.path)
+        return target
+    }
+    func testNativeBackupTrashRoundTripKeepsCurrentAppAndRestoresRollback() throws {
+        let (receipt,review) = try backupCleanupFixture()
+        let result = NativeUpdateTransaction.trashBackup(review,home:home,processes:{ .init(entries:[]) },openFiles:{ .init(holders:[]) },move:moveBackupToFixtureTrash)
+        XCTAssertEqual(result.outcome,"success","\(result.failed)")
+        XCTAssertEqual(build(original),"200"); XCTAssertFalse(FS.exists(receipt.backup))
+        XCTAssertEqual(try NativeUpdateTransaction.load(receipt.id,home:home),receipt)
+        let restored = try TrashBatches.restore(id:XCTUnwrap(result.trashBatchID),home:home)
+        XCTAssertEqual(restored.items.first?.status,"restored")
+        XCTAssertEqual(build(receipt.backup),"100")
+        let rollback = NativeUpdateTransaction.recover(receipt.id,home:home,review:receipt,processes:{ .init(entries:[]) })
+        XCTAssertEqual(rollback.outcome,"succeeded",rollback.message); XCTAssertEqual(build(original),"100")
+        XCTAssertEqual(build(receipt.backup),"200")
+    }
+    func testNativeBackupTrashRejectsChangedReceiptAndUnconfirmedPhase() throws {
+        let (receipt,review) = try backupCleanupFixture()
+        var changed = receipt; changed.phase = "unconfirmed"; try NativeUpdateTransaction.save(changed,home:home)
+        XCTAssertThrowsError(try NativeUpdateTransaction.reviewBackupRemoval(changed,home:home,processes:.init(entries:[])))
+        let result = NativeUpdateTransaction.trashBackup(review,home:home,processes:{ .init(entries:[]) },openFiles:{ .init(holders:[]) },move:moveBackupToFixtureTrash)
+        XCTAssertEqual(result.outcome,"failed"); XCTAssertTrue(FS.exists(receipt.backup)); XCTAssertEqual(build(original),"200")
+    }
+    func testNativeBackupTrashRejectsDeepModificationInBackupOrCurrentApp() throws {
+        let (receipt,review) = try backupCleanupFixture()
+        for path in [receipt.backup,receipt.target] {
+            let injected = path+"/Contents/Resources/unreviewed-local-data"
+            try Data("fixture".utf8).write(to:URL(fileURLWithPath:injected))
+            let result = NativeUpdateTransaction.trashBackup(review,home:home,processes:{ .init(entries:[]) },openFiles:{ .init(holders:[]) },move:moveBackupToFixtureTrash)
+            XCTAssertEqual(result.outcome,"failed"); XCTAssertTrue(FS.exists(receipt.backup))
+            try FileManager.default.removeItem(atPath:injected)
+        }
+    }
+    func testNativeBackupTrashRechecksWhitelistAfterProcessEnumeration() throws {
+        let (receipt,review) = try backupCleanupFixture()
+        let result = NativeUpdateTransaction.trashBackup(review,home:home,processes:{ .init(entries:[]) },openFiles:{
+            _ = try? Whitelist.add([receipt.backup],home:self.home)
+            return .init(holders:[])
+        },move:moveBackupToFixtureTrash)
+        XCTAssertEqual(result.outcome,"failed"); XCTAssertTrue(FS.exists(receipt.backup))
+    }
+    func testNativeBackupTrashKeepsBackupOnUnknownOpenFilesOrBusyUpdateLock() throws {
+        let (receipt,review) = try backupCleanupFixture()
+        let unknown = NativeUpdateTransaction.trashBackup(review,home:home,processes:{ .init(entries:[]) },openFiles:{ nil },move:moveBackupToFixtureTrash)
+        XCTAssertEqual(unknown.outcome,"failed"); XCTAssertTrue(FS.exists(receipt.backup))
+        let lock = try NativeUpdateTransaction.TargetLock(target:receipt.target,home:home)
+        defer { withExtendedLifetime(lock) {} }
+        let busy = NativeUpdateTransaction.trashBackup(review,home:home,processes:{ .init(entries:[]) },openFiles:{ .init(holders:[]) },move:moveBackupToFixtureTrash)
+        XCTAssertEqual(busy.outcome,"failed"); XCTAssertTrue(FS.exists(receipt.backup))
+    }
+    func testNativeBackupTrashPreservesMovedCopyWhenBatchCannotBeRecorded() throws {
+        let (receipt,review) = try backupCleanupFixture()
+        let root = TrashBatches.root(home:home)
+        try FileManager.default.createDirectory(at:root.deletingLastPathComponent(),withIntermediateDirectories:true)
+        try Data("obstructed fixture".utf8).write(to:root)
+        var moved: URL?
+        let result = NativeUpdateTransaction.trashBackup(review,home:home,processes:{ .init(entries:[]) },openFiles:{ .init(holders:[]) },move:{ moved = try self.moveBackupToFixtureTrash($0); return moved! })
+        XCTAssertEqual(result.outcome,"partial"); XCTAssertNil(result.trashBatchID)
+        XCTAssertFalse(FS.exists(receipt.backup)); XCTAssertEqual(build(try XCTUnwrap(moved).path),"100")
+        XCTAssertEqual(build(original),"200"); XCTAssertFalse(result.failed.isEmpty)
+    }
+}
+
+extension NativeUpdateTransactionTests {
+    func testNativeBackupTrashRejectsLinkedReplacementAndKeepsBothCopies() throws {
+        let (receipt,review) = try backupCleanupFixture()
+        let saved = receipt.backup+".saved"
+        try FileManager.default.moveItem(atPath:receipt.backup,toPath:saved)
+        try FileManager.default.createSymbolicLink(atPath:receipt.backup,withDestinationPath:saved)
+        let result = NativeUpdateTransaction.trashBackup(review,home:home,processes:{ .init(entries:[]) },openFiles:{ .init(holders:[]) },move:moveBackupToFixtureTrash)
+        XCTAssertEqual(result.outcome,"failed"); XCTAssertEqual(build(saved),"100"); XCTAssertEqual(build(original),"200")
+    }
+    func testNativeBackupTrashAfterRollbackReviewsTheNewerPreservedCopy() throws {
+        let (receipt,_) = try backupCleanupFixture()
+        let rollback = NativeUpdateTransaction.recover(receipt.id,home:home,review:receipt,processes:{ .init(entries:[]) })
+        XCTAssertEqual(rollback.outcome,"succeeded",rollback.message)
+        let review = try NativeUpdateTransaction.reviewBackupRemoval(XCTUnwrap(rollback.receipt),home:home,processes:.init(entries:[]))
+        XCTAssertEqual(review.backupVersion,"2.0"); XCTAssertEqual(review.currentVersion,"1.0")
+        let result = NativeUpdateTransaction.trashBackup(review,home:home,processes:{ .init(entries:[]) },openFiles:{ .init(holders:[]) },move:moveBackupToFixtureTrash)
+        XCTAssertEqual(result.outcome,"success","\(result.failed)"); XCTAssertEqual(build(original),"100")
+        let restored = try TrashBatches.restore(id:XCTUnwrap(result.trashBatchID),home:home)
+        XCTAssertEqual(restored.items.first?.status,"restored"); XCTAssertEqual(build(receipt.backup),"200")
+    }
+}

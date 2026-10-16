@@ -17,6 +17,8 @@ final class NativeUpdatesModel: ObservableObject {
     @Published private(set) var installResult: NativeInstallResult?
     @Published private(set) var recoveryRecords: [NativeUpdateReceipt] = []
     @Published private(set) var recoveryBackups: [NativeBackupUsage] = []
+    @Published var backupRemovalReview: NativeBackupRemovalReview?
+    @Published private(set) var backupCleanupResult: CleanResult?
     @Published private(set) var preservedWorkspaces: [NativePreservedWorkspace] = []
     @Published private(set) var recoveryIssues: [String] = []
     @Published private(set) var recoveryLoading = false
@@ -36,18 +38,23 @@ final class NativeUpdatesModel: ObservableObject {
     private let installer: @Sendable (NativeUpdateCheck) async -> NativeInstallResult
     private let restorer: @Sendable (NativeUpdateReceipt) -> NativeInstallResult
     private let recoveryReader: @Sendable () -> NativeRecoveryReport
+    private let backupReviewer: @Sendable (NativeUpdateReceipt) throws -> NativeBackupRemovalReview
+    private let backupRemover: @Sendable (NativeBackupRemovalReview) -> CleanResult
 
     init(read: (@Sendable (ScanCancellation) -> [NativeUpdateSource])? = nil,
          discovery: (@Sendable (ScanCancellation) -> NativeUpdateSourcesReport)? = nil,
          checker: @escaping @Sendable (NativeUpdateSource) async -> NativeUpdateCheck = { await NativeAppUpdates.check($0) },
          installer: @escaping @Sendable (NativeUpdateCheck) async -> NativeInstallResult = { await NativeUpdateTransaction.installAvailable($0) },
          restorer: @escaping @Sendable (NativeUpdateReceipt) -> NativeInstallResult = { NativeUpdateTransaction.restore($0.id, review: $0) },
+         backupReviewer: @escaping @Sendable (NativeUpdateReceipt) throws -> NativeBackupRemovalReview = { try NativeUpdateTransaction.reviewBackupRemoval($0) },
+         backupRemover: @escaping @Sendable (NativeBackupRemovalReview) -> CleanResult = { NativeUpdateTransaction.trashBackup($0) },
          recoveryReader: @escaping @Sendable () -> NativeRecoveryReport = { NativeUpdateTransaction.recovery() }) {
         self.read = discovery ?? { token in
             if let read { return .init(sources: read(token), cancelled: token.isCancelled) }
             return NativeAppUpdates.sourceReport(cancellation: token)
         }
         self.checker = checker; self.installer = installer; self.restorer = restorer; self.recoveryReader = recoveryReader
+        self.backupReviewer = backupReviewer; self.backupRemover = backupRemover
     }
 
     func load(preservingMessage: Bool = false) {
@@ -203,6 +210,38 @@ final class NativeUpdatesModel: ObservableObject {
     func inspectBackup(_ record: NativeUpdateReceipt) {
         do { NSWorkspace.shared.activateFileViewerSelecting([try NativeUpdateTransaction.backupURL(record)]) }
         catch { message = tr(error.localizedDescription) }
+    }
+
+    func reviewBackupRemoval(_ record: NativeUpdateReceipt) {
+        guard !installing, !AppModels.shared.softwareUpdates.working else { message = tr("Wait for the current update or checks to finish"); return }
+        stopAll(); installing = true; backupRemovalReview = nil; backupCleanupResult = nil
+        let reviewer = backupReviewer
+        Task.detached(priority: .utility) {
+            do {
+                let review = try reviewer(record)
+                await MainActor.run { self.installing = false; self.backupRemovalReview = review }
+            } catch {
+                let reason = error.localizedDescription
+                await MainActor.run { self.installing = false; self.message = tr(reason) }
+            }
+        }
+    }
+
+    func trashBackup(_ review: NativeBackupRemovalReview) {
+        guard !installing, !AppModels.shared.softwareUpdates.working else { message = tr("Wait for the current update or checks to finish"); return }
+        stopAll(); installing = true; exitRequested = false; backupRemovalReview = nil
+        recoveryGeneration = UUID(); pendingRecovery = false; recoveryLoaded = false
+        let remove = backupRemover
+        Task.detached(priority: .utility) {
+            let result = remove(review)
+            await MainActor.run {
+                self.backupCleanupResult = result
+                self.message = result.failed.isEmpty && !result.removed.isEmpty
+                    ? tr("Backup moved to the Trash. Restore it from History before rolling back this app.")
+                    : result.failed.values.sorted().map { tr($0) }.joined(separator: "\n")
+                self.installing = false; self.refreshRecovery(); self.load(preservingMessage: true)
+            }
+        }
     }
 
     func restore(_ record: NativeUpdateReceipt) {
@@ -364,6 +403,9 @@ struct NativeUpdateRecoveryView: View {
             Text(tr("Native update recovery")).font(.headline)
             Text(tr("Version records can restore unchanged apps. Preserved preparation files are available for inspection.")).font(.callout).foregroundStyle(.secondary)
             if let message = model.message { Text(message).font(.callout).textSelection(.enabled) }
+            if let batch = model.backupCleanupResult?.trashBatchID {
+                Text(tr("Trash batch: %1$@", batch)).font(.caption).textSelection(.enabled)
+            }
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(model.recoveryIssues, id: \.self) { Text(tr($0)).font(.callout).foregroundStyle(.orange) }
@@ -381,6 +423,8 @@ struct NativeUpdateRecoveryView: View {
                                 Text(tr("Preserved app size is unknown")).font(.caption)
                             }
                             Button(tr("Reveal preserved app in Finder")) { model.inspectBackup(record) }.disabled(model.installing)
+                            Button(tr("Move backup to the Trash…")) { model.reviewBackupRemoval(record) }
+                                .disabled(model.installing || !["installed", "restored", "rolledBack"].contains(record.phase))
                             Button(tr("Restore previous app…")) { restoring = record }.disabled(model.installing || record.phase == "restored" || record.phase == "rolledBack")
                         }
                     }
@@ -407,6 +451,14 @@ struct NativeUpdateRecoveryView: View {
                     destructive: false, heading: tr("Applications to replace"), lines: [record.target, record.backup],
                     footnote: tr("Quit the app first. Recovery refuses changed applications and preserves both versions."),
                     confirmTitle: tr("Restore"), confirm: { restoring = nil; model.restore(record) }, cancel: { restoring = nil })
+            }
+            .sheet(item: $model.backupRemovalReview) { review in
+                ConfirmSheet(title: tr("Move this update backup to the Trash?"), summary: tr("Backup version: %1$@", review.backupVersion),
+                    destructive: true, heading: tr("Files to move to the Trash"),
+                    lines: [review.receipt.backup, tr("Current app kept: %1$@", review.receipt.target), tr("Current version kept: %1$@", review.currentVersion),
+                            tr(review.sizeComplete ? "Preserved app allocated usage: %1$@" : "Preserved app allocated usage: at least %1$@", ByteCountFormatter.string(fromByteCount: review.allocatedBytes, countStyle: .file))],
+                    footnote: tr("Restore the backup from History before rolling back this app. Space is not freed until the Trash is emptied."),
+                    confirmTitle: tr("Move to Trash"), confirm: { model.trashBackup(review) }, cancel: { model.backupRemovalReview = nil })
             }
     }
 }

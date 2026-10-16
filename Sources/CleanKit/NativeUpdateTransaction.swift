@@ -195,7 +195,7 @@ public enum NativeUpdateTransaction {
         try FileManager.default.removeItem(atPath: prepared.workspace)
     }
 
-    private final class TargetLock {
+    final class TargetLock {
         let descriptor: Int32
         init(target: String, home: String) throws {
             let root = try storage(home)

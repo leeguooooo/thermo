@@ -107,8 +107,21 @@ struct AppsCommand {
                 else { out([tr("Preserved update files"), url.path, tr(workspace.reason)]) }
                 return
             }
+            if rest.count == 3, rest[1] == "trash-backup", let record = records.first(where: { $0.id == rest[2] }) {
+                let review = try NativeUpdateTransaction.reviewBackupRemoval(record)
+                let lines = [record.backup, tr("Backup version: %1$@", review.backupVersion), tr("Current app kept: %1$@", record.target), tr("Current version kept: %1$@", review.currentVersion),
+                             tr(review.sizeComplete ? "Preserved app allocated usage: %1$@" : "Preserved app allocated usage: at least %1$@", ByteCountFormatter.string(fromByteCount:review.allocatedBytes,countStyle:.file)),
+                             tr("Restore the backup from History before rolling back this app. Space is not freed until the Trash is emptied.")]
+                if args.has("dry-run") { if args.has("json") { print(Export.json(review)) } else { out(lines) }; return }
+                guard try approveNative(lines) else { return }
+                let result = NativeUpdateTransaction.trashBackup(review)
+                if args.has("json") { print(Export.json(result)) }
+                else { out(result.failed.isEmpty ? [tr("Backup moved to the Trash. Restore it from History before rolling back this app.")] : result.failed.values.sorted().map { tr($0) }) }
+                guard result.failed.isEmpty, !result.removed.isEmpty else { throw CLIError("The update backup was not completely moved; inspect the result") }
+                return
+            }
             guard rest.count == 3, rest[1] == "restore", let record = records.first(where: { $0.id == rest[2] }) else {
-                throw CLIError("usage: thermo apps updates recovery [inspect ID | restore ID] [--dry-run] [--yes]")
+                throw CLIError("usage: thermo apps updates recovery [inspect ID | restore ID | trash-backup ID] [--dry-run] [--yes]")
             }
             if args.has("dry-run") { if args.has("json") { print(Export.json(record)) } else { out([record.target, record.backup]) }; return }
             guard try approveNative([record.target, record.backup, record.installedVersion + " → " + record.previousVersion,
