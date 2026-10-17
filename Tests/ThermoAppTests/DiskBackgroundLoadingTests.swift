@@ -63,6 +63,28 @@ final class DiskBackgroundLoadingTests: XCTestCase {
         }
         XCTFail("background operation did not reach expected state",file:file,line:line)
     }
+    @MainActor func testLateWorkerProgressCannotReplaceStoppingMessage() async {
+        let began = expectation(description: "scan started"), drained = expectation(description: "late progress processed")
+        let sendLate = DispatchSemaphore(value: 0), finish = DispatchSemaphore(value: 0)
+        defer { sendLate.signal(); finish.signal() }
+        let io = DiskScanIO(options: { _,_,_ in ScanOptions(projectRoots: []) }, cached: { _,_ in nil },
+            scan: { _, cancellation, progress, _ in
+                progress("reading processes"); began.fulfill()
+                _ = sendLate.wait(timeout: .now()+5)
+                progress("space context")
+                DispatchQueue.main.async { drained.fulfill() }
+                _ = finish.wait(timeout: .now()+5)
+                return ScanReport(items: [], denied: [], started: Date(), duration: 0, cancelled: cancellation.isCancelled)
+            })
+        let model = DiskModel(scanIO: io, requestNotifications: {})
+        model.scan(); await fulfillment(of: [began], timeout: 2)
+        model.stop(); let message = model.progress
+        XCTAssertTrue(model.stopping)
+        sendLate.signal(); await fulfillment(of: [drained], timeout: 2)
+        XCTAssertEqual(model.progress, message)
+        finish.signal(); await eventually { !model.scanning }
+        XCTAssertEqual(model.report?.cancelled, true)
+    }
     @MainActor func testCacheReadReturnsImmediatelyAndPageStormUsesOneReader() async {
         let began=expectation(description:"cache read"), release=DispatchSemaphore(value:0)
         defer { release.signal() }

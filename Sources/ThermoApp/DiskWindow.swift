@@ -259,10 +259,10 @@ struct DiskHome: View {
                 Button(tr("Stop")) { model.stop() }.buttonStyle(PillButtonStyle()).disabled(model.stopping)
             }
         } else if let r = model.report {
+            let summary = DiskScanSummary(r, safeBytes: model.safeBytes)
             VStack(spacing: 18) {
-                HeroStatus(symbol: r.totalBytes > 0 ? "internaldrive.fill" : "checkmark", color: r.totalBytes > 0 ? .pink : .green,
-                           title: r.totalBytes > 0 ? (r.items.contains { $0.estimatedSize == true || $0.sizeIncomplete == true } ? tr("%1$@ in measured files (estimated)", ByteFormat.string(r.totalBytes)) : tr("%1$@ can be freed", ByteFormat.string(r.totalBytes))) : tr("Nothing to clean."),
-                           subtitle: tr("%1$@ selected by default. Development dependencies are kept; other items need your review.", ByteFormat.string(model.safeBytes)))
+                HeroStatus(symbol: summary.symbol, color: summary.color,
+                           title: summary.title, subtitle: summary.subtitle)
                 HStack(spacing: 20) {
                     BigRoundButton(title: tr("Clean"), color: .pink, busy: model.cleaning) {
                         model.selectSafe()

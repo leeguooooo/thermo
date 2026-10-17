@@ -116,6 +116,14 @@ final class DiskModel: ObservableObject {
         items.sorted { (order[$0.category]!, -$0.bytes, $0.id) < (order[$1.category]!, -$1.bytes, $1.id) }
     }
 
+    static func progressTitle(_ step: String) -> String {
+        switch step {
+        case "reading processes": return tr("Reading processes…")
+        case "space context": return tr("Reading disk context…")
+        default: return tr(step)
+        }
+    }
+
     /// Repeated page appearances share one physical reader. A later request replaces
     /// the pending scope; superseded results never become a cleanup plan.
     func loadSaved(category: CleanCategory? = nil, scanIfMissing: Bool = false) {
@@ -211,8 +219,8 @@ final class DiskModel: ObservableObject {
                 else {
                     result = io.scan(options, cancellation, { step in
                         DispatchQueue.main.async { [weak self] in
-                            guard let self, self.scanning, self.scanCancellation === cancellation else { return }
-                            self.progress = step
+                            guard let self, self.scanning, !self.stopping, self.scanCancellation === cancellation else { return }
+                            self.progress = Self.progressTitle(step)
                         }
                     }, { found in
                         DispatchQueue.main.async { [weak self] in
@@ -265,9 +273,9 @@ final class DiskModel: ObservableObject {
         let watching = app.isActive && (app.keyWindow?.isVisible ?? false)
         guard !watching else { return }
         let content = UNMutableNotificationContent()
-        content.title = tr("Disk scan finished")
-        content.body = r.items.isEmpty ? tr("Nothing to clean.")
-            : tr("%1$@ reclaimable in %2$@", ByteFormat.string(r.totalBytes), trCount(r.items.count, "%1$@ item", "%1$@ items"))
+        let summary = DiskScanSummary(r, safeBytes: safeBytes)
+        content.title = summary.status == .incomplete ? summary.title : tr("Disk scan finished")
+        content.body = summary.status == .incomplete ? summary.subtitle : summary.title
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "thermo.disk-scan", content: content, trigger: nil))
     }
 

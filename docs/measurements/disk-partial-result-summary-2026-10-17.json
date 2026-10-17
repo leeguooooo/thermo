@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "59c35ea",
+  "fixtureRoot": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-window-ui-ao75e67u",
+  "fixtureHomeIsolated": true,
+  "scope": "Production MainWindow/AppModels with automatic helper interaction disabled; no main-app single-instance/control transport, charging preference restoration or shortcut activation. Native CUA clicks on Scan/Stop only; no cleanup. Explicit runtime/tool paths and machine counters can still reference the host read-only.",
+  "before": {
+    "observedViaCUA": "Stop requested; stopping UI shown; final main headline green checkmark and Nothing to clean while a lower label said partial results",
+    "knownBytes": 0,
+    "partialLabelPresent": true,
+    "notificationPermissionGrantActions": 0,
+    "exit": "Normal Command-Q, QA_EXIT logged"
+  },
+  "correction": [
+    "One summary distinguishes stopped, unreadable/incomplete, kept, measured, confirmed empty and review states",
+    "Only an issue-free empty item list receives a green checkmark",
+    "Completion notification reuses the same summary classification",
+    "Known scanner progress IDs are localized at the App boundary",
+    "Worker progress arriving after stop cannot overwrite the stopping message"
+  ],
+  "nativeAfter": {
+    "headline": "扫描已停止",
+    "symbol": "pause.circle",
+    "color": "orange",
+    "observedKnownBytes": 175000000,
+    "observedAmountIsApproximateDisplay": true,
+    "progressExamples": [
+      "Electron 应用",
+      "正在读取磁盘信息…"
+    ],
+    "screenshotsInspected": 2,
+    "screenshotsSaved": false,
+    "lateProgressFinding": "A queued space-context progress update replaced stopping text before completion; subsequently blocked and verified by deterministic regression",
+    "finalSubtitleWording": "Results found so far replaces completed findings to preserve partial size uncertainty"
+  },
+  "regression": {
+    "targeted": {
+      "tests": 19,
+      "failures": 0,
+      "exitCode": 0,
+      "logSHA256": "1aa970afd7c859ab9ff8615161b6db729dce66221e167cb4f7b426bf3cb6e2c0"
+    },
+    "fullApp": {
+      "tests": 300,
+      "failures": 0,
+      "exitCode": 0,
+      "logSHA256": "1986fa2e58293332abf82794d371317ba668569d96fa2aa0ae0134e3778f5586"
+    }
+  },
+  "cleanup": {
+    "ownedProcessesRemaining": false,
+    "seedFileSHA256": "ea0b918c0ee33c12d692b3aa9acdf6a34eef4d1a3de19aae076abdefc1e7ae1e",
+    "seedBytesUnchanged": true,
+    "cleanupButtonClicked": false,
+    "lastGUIExit": "Command-Q blocked by frontmostApplicationChanged; subsequent observation hit SCStreamErrorDomain -3812. Verified only owned idle QA path/UID and sent SIGTERM; process absence confirmed. Not normal-exit acceptance.",
+    "traceBefore": [
+      "QA_ISOLATED_HOME true",
+      "QA_EXIT"
+    ],
+    "traceAfter": [
+      "QA_ISOLATED_HOME true"
+    ]
+  },
+  "limits": [
+    "Isolated Debug UI, not installed/signature candidate acceptance",
+    "Final stopping-message guard and subtitle wording verified by tests after the successful live headline screenshot; not claimed as a new full GUI pass",
+    "No hardware writes or service installation performed",
+    "New summary is not packaged in signed440"
+  ]
+}
