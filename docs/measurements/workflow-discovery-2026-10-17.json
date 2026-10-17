@@ -1,0 +1,188 @@
+{
+  "date": "2026-10-17",
+  "selection": "Autonomously selected from recent local native MCP completion events; no user-supplied scenario.",
+  "discovery": {
+    "scope": {
+      "days": 7,
+      "files": 80,
+      "tailBytesPerFile": 1048576,
+      "clippedFiles": 43,
+      "readBytes": 59997501,
+      "excludedCurrentThread": true,
+      "partialSample": true
+    },
+    "groups": [
+      {
+        "server": "chrome_use",
+        "tool": "chrome_use_click",
+        "calls": 26,
+        "explicitErrors": 0,
+        "returnedTextBytes": 79328,
+        "sessions": 1
+      },
+      {
+        "server": "chrome_use",
+        "tool": "chrome_use_expect",
+        "calls": 21,
+        "explicitErrors": 1,
+        "returnedTextBytes": 31671,
+        "sessions": 1
+      },
+      {
+        "server": "chrome_use",
+        "tool": "chrome_use_snapshot",
+        "calls": 30,
+        "explicitErrors": 0,
+        "returnedTextBytes": 117579,
+        "sessions": 1
+      },
+      {
+        "server": "chrome_use",
+        "tool": "chrome_use_task",
+        "calls": 4,
+        "explicitErrors": 0,
+        "returnedTextBytes": 4850,
+        "sessions": 1
+      },
+      {
+        "server": "chrome_use",
+        "tool": "chrome_use_type",
+        "calls": 1,
+        "explicitErrors": 0,
+        "returnedTextBytes": 1348,
+        "sessions": 1
+      }
+    ],
+    "expectFailures": [
+      {
+        "noWait": true,
+        "success": true,
+        "pass": false,
+        "timedOut": false,
+        "errorIsNull": true,
+        "elapsedSeconds": 0.136
+      }
+    ],
+    "clickThenSnapshotWithin10Seconds": {
+      "pairs": 23,
+      "precededByCompleteObservationWithSnapshot": 8,
+      "identicalSnapshotText": 0
+    }
+  },
+  "discoveryLimitations": [
+    "Bounded tail sample, not full usage frequency or fleet ranking.",
+    "Returned text byte totals sum content blocks without inserting separators; not billed tokens.",
+    "Only native McpToolCall events are included; embedded scripts and other event representations are outside this scan.",
+    "Snapshot inequality does not prove extra snapshot value; equality was not found in the eight candidate pairs."
+  ],
+  "selectedScenario": {
+    "origin": "Observed click/observation/snapshot and no-wait assertion patterns.",
+    "fixture": "Owned local HTML: Save starts Saving and changes to Saved after 2200ms; submission counter increments once per click.",
+    "fixtureSHA256": "709c19fb243c0183f6f09dd490ca11692b481955fd4442a6b3960f282f933b7f",
+    "acceptance": [
+      "Intermediate observation is not treated as business success.",
+      "Immediate false assertion is distinguishable from timeout/transport failure.",
+      "Polling reaches Saved without repeating the click.",
+      "Submission count equals one."
+    ],
+    "cliVersion": "1.5.232",
+    "liveBrowser": true,
+    "rawPrivatePageReplayed": false,
+    "results": [
+      {
+        "args": [
+          "click",
+          "@e2",
+          "--observe"
+        ],
+        "exitCode": 0,
+        "wallSeconds": 0.3377,
+        "bytes": 900,
+        "success": true,
+        "errorIsNull": true,
+        "observationStatus": "complete",
+        "businessStatus": "Saving"
+      },
+      {
+        "args": [
+          "expect",
+          "text",
+          "#status",
+          "equals",
+          "Saved",
+          "--no-wait"
+        ],
+        "exitCode": 1,
+        "wallSeconds": 0.0311,
+        "bytes": 374,
+        "success": true,
+        "errorIsNull": true,
+        "data": {
+          "actual": "Saving",
+          "condition": "text #status equals \"Saved\"",
+          "kind": "text",
+          "pass": false,
+          "timedOut": false
+        }
+      },
+      {
+        "args": [
+          "expect",
+          "text",
+          "#status",
+          "equals",
+          "Saved",
+          "--timeout",
+          "5000"
+        ],
+        "exitCode": 0,
+        "wallSeconds": 2.0202,
+        "bytes": 385,
+        "success": true,
+        "errorIsNull": true,
+        "data": {
+          "actual": "Saved",
+          "condition": "text #status equals \"Saved\"",
+          "kind": "text",
+          "pass": true,
+          "timedOut": false
+        }
+      },
+      {
+        "args": [
+          "get",
+          "text",
+          "#count"
+        ],
+        "exitCode": 0,
+        "wallSeconds": 0.0236,
+        "bytes": 337,
+        "success": true,
+        "errorIsNull": true,
+        "data": {
+          "origin": "http://127.0.0.1:59115/index.html",
+          "text": "Submissions: 1"
+        }
+      }
+    ],
+    "allAcceptanceCriteriaMet": true,
+    "limitations": [
+      "One controlled local browser run, not real production business acceptance.",
+      "CLI responses are not claimed equivalent to native MCP wrapper error semantics.",
+      "No before/after Skill model comparison or token-saving claim."
+    ]
+  },
+  "cleanup": {
+    "ownedBrowserSessionClosed": true,
+    "tabsClosed": 1,
+    "verifiedAbsent": true,
+    "localHTTPServerStopped": true,
+    "otherSessionsModified": false
+  },
+  "implications": [
+    "Preserve the MCP explicit error flag while distinguishing failed task assertions from tool execution faults in quality assessment.",
+    "A complete observation can show an intermediate business state; verify the authoritative final condition.",
+    "Evaluate candidate repeated snapshots by missing task-relevant information, not adjacency alone.",
+    "Use this observed workflow shape for future same-task Skill comparisons; do not substitute a synthetic pass for measured Skill benefit."
+  ]
+}
