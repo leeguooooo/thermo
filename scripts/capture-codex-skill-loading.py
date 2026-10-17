@@ -18,6 +18,7 @@ arguments.add_argument('output_directory', type=Path)
 arguments.add_argument('codex_binary', type=Path)
 base_cases = ['catalog', 'explicit-user', 'duplicate-catalog', 'duplicate-explicit', 'alias-catalog', 'alias-explicit', 'copy-catalog', 'copy-explicit']
 arguments.add_argument('--cases', nargs='+', choices=base_cases+['copy-disabled-catalog', 'copy-disabled-explicit', 'alias-disabled-catalog', 'alias-disabled-explicit'])
+arguments.add_argument('--alias-source', choices=['user', 'legacy'], default='user')
 options = arguments.parse_args()
 root = options.output_directory.resolve()
 root.mkdir(mode=0o700)
@@ -34,15 +35,17 @@ for case in options.cases or base_cases:
     subprocess.run(['git', 'init', '--quiet', str(project)], check=True)
     scopes = {'legacy': codex_home/'skills', 'user': home/'.agents/skills', 'repo': project/'.agents/skills'}
     skills = []
-    # Create the canonical user file before linking aliases in other scopes.
-    for scope in (['user', 'legacy', 'repo'] if case.startswith(('alias', 'copy')) else scopes):
+    # Create the canonical file before linking aliases in other scopes.
+    source_scope = options.alias_source if case.startswith('alias') else 'user'
+    scope_order = [source_scope]+[s for s in scopes if s != source_scope]
+    for scope in (scope_order if case.startswith(('alias', 'copy')) else scopes):
         parent = scopes[scope]
         name = 'owned-shared' if case.startswith(('duplicate', 'alias', 'copy')) else 'owned-'+scope
         folder = parent/name
-        if case.startswith('alias') and scope != 'user':
+        if case.startswith('alias') and scope != source_scope:
             parent.mkdir(parents=True, exist_ok=True)
-            folder.symlink_to(scopes['user']/name, target_is_directory=True)
-            skills.append({'scope': scope, 'name': name, 'aliasOfUser': True,
+            folder.symlink_to(scopes[source_scope]/name, target_is_directory=True)
+            skills.append({'scope': scope, 'name': name, 'aliasOfUser': source_scope == 'user', 'aliasSource': source_scope,
                            'documentSHA256': hashlib.sha256((folder/'SKILL.md').read_bytes()).hexdigest()})
             continue
         if case.startswith('copy') and scope != 'user':
@@ -147,4 +150,5 @@ collection = {'clientVersion': subprocess.check_output([str(binary), '--version'
               'fixtureSHA256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               'realModelCalled': False, 'credentialsCopied': False, 'userSkillsModified': False,
               'syntheticUsageIsNotBilling': True, 'rawRequestsPublished': False, 'runs': runs}
+collection['aliasSource'] = options.alias_source
 (root/'collection.json').write_text(json.dumps(collection, indent=2)+'\n')
