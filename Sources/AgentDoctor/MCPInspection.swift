@@ -10,6 +10,13 @@ public struct MCPToolFootprint: Codable, Sendable {
     public var annotations: TextFootprint
     public var definition: TextFootprint
     public var issues: [String]
+    /// Serialized directory metadata only; absent in older reports means unmeasured.
+    public var icons: TextFootprint? = nil
+    public var metadata: TextFootprint? = nil
+
+    public static var metadataNote: String {
+        tr("Icon and _meta counters measure serialized directory text, not image tokens. Component views are not additive and do not prove model prompt usage.")
+    }
 }
 
 /// Sanitized cleanup evidence: never includes endpoint URLs, session IDs or error bodies.
@@ -121,7 +128,9 @@ enum MCPInspector {
         return MCPToolFootprint(name: Redact.text(String(name.prefix(500))), description: measure(description),
                                 inputSchema: input, outputSchema: output,
                                 annotations: measure(try tool["annotations"].map(json) ?? ""),
-                                definition: measure(try json(tool)), issues: issues)
+                                definition: measure(try json(tool)), issues: issues,
+                                icons: measure(try tool["icons"].map(json) ?? ""),
+                                metadata: measure(try tool["_meta"].map(json) ?? ""))
     }
 
     static func inspect(_ server: MCPServer, env: DoctorEnvironment, timeout: TimeInterval) -> MCPInspection {

@@ -35,6 +35,8 @@ App 与 CLI 的调用列表增加了 MCP / Skill 各分类返回文本的合计�
 
 ## 本地参考分词
 
+工具目录中的图标 URI 和 `_meta` 也会进入完整定义 JSON。`MCPToolFootprint.icons` / `.metadata` 单列这些序列化文本的计量；它们不保留原值，不估算图片模型 token，也不改变原完整定义。缺失于旧报告时保持未测量。[Figma 宿主目录实测](measurements/figma-host-catalog-and-metadata-2026-10-17.json)展示了图标字段独立计数大于输入 schema 的实例；这解释目录表示的大小，不能据此判断实际模型消耗或工具质量。
+
 需要调查单次会话时，可用 `thermo agents usage --agent codex --log-file /path/session.jsonl --json`（Claude 用 `--agent claude`），或 App 的“分析单个日志…”菜单。该模式从所选文件开头读，不发现其它日志；默认发现模式的 4 MiB 尾部限制不变。单文件仍有 64 MiB / 20 秒上限，默认只计最近七天事件；CLI 可用 `--since YYYY-MM-DD` 调整时间。JSON 的可选 `singleLogFile` 只表示输入范围，不包含路径，也不保证整个文件或实际用量都已覆盖。[源码与实测](measurements/selected-session-usage-2026-10-17.json)包含非阻塞普通文件检查、预算、取消、时间筛选、旧扫描模式和完整历史会话对照。
 
 [Skill 加载日志](measurements/skill-instruction-loads-2026-10-17.json)另计明确关联的 Claude 指令消息，而非把 `Skill` 的短启动回执当作正文。JSON 新增 `ToolUsageRow.skillInstructions`，包括事件数、文本字节、启发式 / 参考计数、非文本块及未完整计量数；旧报告缺少字段时保持未测量。仅关联同一解析会话内的 `sourceToolUseID`，事件 UUID 去重，原文和路径不进入报告。`coverage.unmatchedInstructionEvents` 保留无法关联或识别的元数据数；没有正文事件不证明没有加载。252 项 AgentDoctor 测试和 scripts/verify-skill-instruction-usage.py 覆盖独立回执、重复 / 乱序、孤立记录、普通用户文本、非 Skill 元数据、时间窗口、媒体、旧报告和占比分母。已纳入 472 本地 Release 包；可见交互和安装更新仍未验收。

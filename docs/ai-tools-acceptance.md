@@ -1,6 +1,8 @@
 # AI 工具体验验收
 
-截至 2026-10-17，统计、连接检查、本地调用观察和任务对照已有可用实现；实际业务质量与 Skill 净收益仍没有完整结论。[本机最新连接记录](measurements/mcp-auth-scope-and-coverage-2026-10-17.json)已尝试 Codex 全部 9 个启用配置，其中 8 个完整返回 305 个工具，定义数组合计 217,929 个 cl100k 参考 token，服务指令另计 893 token。Figma 独立检查需要鉴权，定义大小未知；当前代理会话的 `mcp__figma__whoami` 能返回帐号资料。两个通道的凭据和身份没有关联比对，不互相替代。
+截至 2026-10-17，统计、连接检查、本地调用观察和任务对照已有可用实现；实际业务质量与 Skill 净收益仍没有完整结论。[本机最新连接记录](measurements/mcp-auth-scope-and-coverage-2026-10-17.json)已尝试 Codex 全部 9 个启用配置，其中 8 个完整返回 305 个工具，定义数组合计 217,929 个 cl100k 参考 token，服务指令另计 893 token。Figma 独立检查需要鉴权，定义大小未知；当时代理会话的 `mcp__figma__whoami` 曾返回帐号资料。两个通道的凭据和身份没有关联比对，不互相替代。
+
+[Figma 宿主目录补充](measurements/figma-host-catalog-and-metadata-2026-10-17.json)经 Codex 0.163.0 原有 OAuth 配置和只读 [app-server 目录接口](https://learn.chatgpt.com/docs/app-server#api-overview)取得 44 个工具。宿主返回目录没有报告工具错误，HTTP origin 与配置一致；规范化、按名称排序的工具数组为 99,847 字节 / cl100k 24,196 参考 token。目录可能经宿主适配或来自缓存，没有独立验证帐号身份、时效或原服务初始化指令，不能替代独立连接通过，也不并入此前八个服务的总量。此过程未请求 OAuth 登录、启动模型回合或调用业务工具；原始目录计量后已移除。
 
 这些数字是不同时间、不同配置的独立计量，REA 使用下述输出声明配置；不是宿主实际加载上下文或账单。其他宿主尚未完成主动测量。[最新本地验证包 1.1.28 (472)](measurements/ai-tools-integrated-472-2026-10-17.json)固定在 8b0b6fb，已纳入 Skill 正文加载和单会话分析，沿用主线版本号，尚未决定正式发布版本。排除 HardwareTests 的 1,678 项 Release 回归、arm64 / Rosetta 各八组 CLI 夹具、原生 MCP 事件与完整真实会话回读通过。隔离窗口副本已准备好，但控制台锁屏，尚未启动窗口验收。普通启动、正式签名、公证、安装更新和硬件验收仍未完成，不能标为可发布。[456 历史记录](measurements/ai-tools-integrated-456-2026-10-17.json)保留其冻结源码下的关键 MCP / Skill 可见窗口证据；[421 历史记录](measurements/ai-tools-integrated-421-2026-10-17.json)保留原有范围和锁屏缺口。
 
@@ -71,6 +73,8 @@ QA 副本的两个架构所有有文件数据的 Mach-O 节与分发包运行体
 上述验证不替代真实 Intel 主机、全部系统版本、大字体或正式安装更新验收。没有据此授权发布、安装 helper 或切换 AWDL。[受控镜像占用实验](measurements/owned-dmg-busy-control-2026-10-17.json)只证明真实占用时普通卸载拒绝确认清理、结束占用后可成功；此前偶发清理观察的原因仍未解释，没有加入强制卸载或重试。
 
 ## 还需要的证据
+
+[目录元数据拆分](measurements/figma-host-catalog-and-metadata-2026-10-17.json)为 App / CLI 和 JSON 增加可选的图标、`_meta` 计量，完整定义及输入 / 输出 schema 计数保持原样；旧报告缺失字段时显示未测量。Figma 宿主目录中的 `open_figma_mcp_app_in_thread` 完整定义为 1,260 个参考 token，其中图标 JSON 独立计为 1,111、输入 schema 为 32、`_meta` 为 63。各字段是独立视图，不能相加为完整定义，更不能将图标目录文本直接解释成模型图片 token 或实际提示词成本。42 项相关测试、两种编码的独立 CLI 参考夹具及本地目录回放通过；[中文实际组件离屏图](measurements/mcp-metadata-breakdown-zh-2026-10-17.png)已检查，完整 App 交互与安装包尚未验证。本项未进入 472 包。
 
 [单会话日志分析](measurements/selected-session-usage-2026-10-17.json)增加 App 的“分析单个日志…”入口和 CLI `agents usage --agent codex|claude --log-file FILE`。默认发现仍只读各文件末尾 4 MiB；显式选择后只从该文件开头读取，保留 64 MiB / 20 秒预算和事件时间筛选。宿主必须明确选择，管道、目录和末级符号链接被拒绝；报告只新增单文件范围标记，不导出路径或正文。57 项定向测试、AgentDoctor / CLI / App 合计 665 项回归，以及 CLI 夹具通过。[中文组件离屏图](measurements/selected-session-usage-zh-2026-10-17.png)展示实际所选会话的统计，这项改动已进入 472 本地包；文件选择器交互仍待解锁后验收。
 

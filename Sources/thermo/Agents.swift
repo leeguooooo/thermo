@@ -341,11 +341,15 @@ struct AgentsCommand {
             if let instructions = report.instructions { lines.append("Server instructions ≈\(instructions.tokenLabel) tokens") }
             for tool in report.tools {
                 lines.append("  " + tool.name + " ≈\(tool.definition.tokenLabel) tokens (description \(tool.description.tokenLabel), input schema \(tool.inputSchema.tokenLabel), output schema \(tool.outputSchema.tokenLabel))")
+                if let icons = tool.icons, let metadata = tool.metadata {
+                    lines.append("    icons JSON \(icons.bytes) bytes / ≈\(icons.tokenLabel) tokens; _meta JSON \(metadata.bytes) bytes / ≈\(metadata.tokenLabel) tokens")
+                } else { lines.append("    Icon and _meta counts were not measured in this report.") }
                 for issue in tool.issues { lines.append("    ! " + issue) }
             }
             if let cleanup = report.cleanupStatus { lines.append("HTTP session cleanup: " + cleanup) }
             if let details = report.cleanupDetails, details.reason != "notNeeded" { lines.append(details.summary) }
             lines.append(report.measurementNote)
+            if !report.tools.isEmpty { lines.append(MCPToolFootprint.metadataNote) }
             out(lines)
         }
         if report.state != .ready { throw CLIError("MCP inspection did not produce a complete tool listing.") }

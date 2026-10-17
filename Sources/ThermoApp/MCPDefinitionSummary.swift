@@ -32,6 +32,11 @@ struct MCPDefinitionSummaryPanel: View {
                         Text(row.agent + " · " + row.server + " · " + row.tool.name).font(.caption).textSelection(.enabled)
                         Text(tr("Definition ≈%1$@ tokens · %2$@ bytes · %3$@ findings", row.tool.definition.tokenLabel, String(row.tool.definition.bytes), String(row.tool.issues.count)))
                             .font(.caption.monospaced()).foregroundStyle(.secondary)
+                        if let icons = row.tool.icons, let metadata = row.tool.metadata, icons.bytes > 0 || metadata.bytes > 0 {
+                            Text(tr("Icons JSON %1$@ bytes / ≈%2$@ tokens · _meta JSON %3$@ bytes / ≈%4$@ tokens",
+                                    String(icons.bytes), icons.tokenLabel, String(metadata.bytes), metadata.tokenLabel))
+                                .font(.caption.monospaced()).foregroundStyle(.secondary)
+                        }
                     }
                 }
             } else {

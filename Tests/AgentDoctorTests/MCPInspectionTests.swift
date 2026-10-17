@@ -102,6 +102,34 @@ final class MCPInspectionTests: XCTestCase {
         XCTAssertFalse(try MCPInspector.footprint(["name": "fixture"]).issues.isEmpty)
     }
 
+    func testIconsAndMetadataAreSeparateDirectoryViewsWithoutChangingSchemasOrExportingValues() throws {
+        let base: [String: Any] = ["name": "fixture", "description": "Read-only fixture", "inputSchema": ["type": "object"]]
+        let before = try MCPInspector.footprint(base, encoding: .cl100k)
+        var enriched = base
+        enriched["icons"] = [["src": "data:image/svg+xml,fixture-private-icon"]]
+        enriched["_meta"] = ["fixture": "fixture-private-metadata"]
+        let after = try MCPInspector.footprint(enriched, encoding: .cl100k)
+        XCTAssertEqual(before.icons?.bytes, 0); XCTAssertEqual(before.metadata?.bytes, 0)
+        XCTAssertEqual(after.inputSchema, before.inputSchema)
+        XCTAssertEqual(after.outputSchema, before.outputSchema)
+        XCTAssertEqual(after.description, before.description)
+        XCTAssertGreaterThan(after.definition.bytes, before.definition.bytes)
+        XCTAssertGreaterThan(try XCTUnwrap(after.icons?.bytes), 30)
+        XCTAssertGreaterThan(try XCTUnwrap(after.metadata?.referenceTokens), 0)
+        XCTAssertTrue(after.issues.isEmpty)
+        XCTAssertFalse(String(decoding: try JSONEncoder().encode(after), as: UTF8.self).contains("fixture-private"))
+    }
+
+    func testOldFootprintsLeaveIconsAndMetadataUnmeasured() throws {
+        let row = try MCPInspector.footprint(["name": "fixture", "inputSchema": ["type": "object"]])
+        let encoded = try JSONEncoder().encode(row)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        object.removeValue(forKey: "icons"); object.removeValue(forKey: "metadata")
+        let old = try JSONDecoder().decode(MCPToolFootprint.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertNil(old.icons); XCTAssertNil(old.metadata)
+        XCTAssertEqual(old.definition, row.definition)
+    }
+
     func testEmptyListIsCompleteButMalformedListIsNot() throws {
         let empty = try server("result={'tools':[]}")
         XCTAssertTrue(MCPInspector.inspect(empty, env: env, timeout: 5).complete)

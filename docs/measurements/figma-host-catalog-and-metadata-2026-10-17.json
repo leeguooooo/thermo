@@ -1,0 +1,3144 @@
+{
+  "recordedAt": "2026-10-17T09:19:35.626680+00:00",
+  "independentInspectorRecheck": {
+    "state": "authenticationRequired",
+    "complete": false,
+    "elapsedSeconds": 0.3397851250047097,
+    "unknownCatalogNotZero": true,
+    "OAuthLoginAttempted": false
+  },
+  "nativeHostCatalog": {
+    "source": "Codex 0.163.0 existing-profile app-server mcpServerStatus/list, serverName=figma, detail=toolsAndAuthOnly, no threadId.",
+    "officialDocumentation": "https://learn.chatgpt.com/docs/app-server#api-overview",
+    "protocolSchemaGeneratedFromInstalledCLI": true,
+    "result": {
+      "success": true,
+      "statuses": [
+        {
+          "name": "figma",
+          "authStatus": "oAuth",
+          "runtimeStatus": null,
+          "toolCount": 44,
+          "toolsErrorPresent": false,
+          "configuredOriginMatches": true,
+          "serverInfoVersion": "1.0.0"
+        }
+      ],
+      "nextCursorPresent": false,
+      "methods": [
+        "initialize",
+        "initialized",
+        "mcpServerStatus/list"
+      ],
+      "notifications": [
+        "configWarning",
+        "remoteControl/status/changed",
+        "account/updated"
+      ],
+      "threadOrTurnStarted": false,
+      "OAuthLoginRequested": false,
+      "businessToolCalled": false,
+      "credentialsCopiedByProbe": false,
+      "existingDaemonNotStopped": true
+    },
+    "catalogMayBeCachedOrHostAdapted": true,
+    "identityAndFreshnessIndependentlyVerified": false,
+    "originComparisonIsNotAccountIdentityProof": true,
+    "originalInitializationInstructionsAvailable": false,
+    "notSubstitutedForIndependentConnectionSuccess": true
+  },
+  "measurement": {
+    "scope": "Name-sorted tools array as returned by host; canonical JSON, not complete prompt or original wire envelope.",
+    "toolCount": 44,
+    "canonicalToolsArray": {
+      "bytes": 99847,
+      "characters": 99669,
+      "estimatedTokens": 24984,
+      "estimator": "ascii4-unicode1-v1",
+      "lines": 1,
+      "referenceEncoding": "cl100k_base",
+      "referenceTokens": 24196
+    },
+    "tools": [
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 2228,
+          "characters": 2228,
+          "estimatedTokens": 557,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 1260
+        },
+        "description": {
+          "bytes": 47,
+          "characters": 47,
+          "estimatedTokens": 12,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 10
+        },
+        "icons": {
+          "bytes": 1621,
+          "characters": 1621,
+          "estimatedTokens": 406,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 1111
+        },
+        "inputSchema": {
+          "bytes": 124,
+          "characters": 124,
+          "estimatedTokens": 31,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 32
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 249,
+          "characters": 249,
+          "estimatedTokens": 63,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 63
+        },
+        "name": "open_figma_mcp_app_in_thread",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 4594,
+          "characters": 4590,
+          "estimatedTokens": 1149,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 1081
+        },
+        "description": {
+          "bytes": 1592,
+          "characters": 1588,
+          "estimatedTokens": 399,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 7,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 365
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 2727,
+          "characters": 2727,
+          "estimatedTokens": 682,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 643
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "get_design_context",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 4144,
+          "characters": 4126,
+          "estimatedTokens": 1039,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 1045
+        },
+        "description": {
+          "bytes": 1178,
+          "characters": 1168,
+          "estimatedTokens": 296,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 296
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 2723,
+          "characters": 2715,
+          "estimatedTokens": 682,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 690
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "export_video",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 4180,
+          "characters": 4170,
+          "estimatedTokens": 1047,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 969
+        },
+        "description": {
+          "bytes": 1968,
+          "characters": 1964,
+          "estimatedTokens": 493,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 448
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 1953,
+          "characters": 1947,
+          "estimatedTokens": 489,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 457
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "get_screenshot",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 68,
+          "characters": 68,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 3943,
+          "characters": 3943,
+          "estimatedTokens": 986,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 892
+        },
+        "description": {
+          "bytes": 885,
+          "characters": 885,
+          "estimatedTokens": 222,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 184
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 2610,
+          "characters": 2610,
+          "estimatedTokens": 653,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 602
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 270,
+          "characters": 270,
+          "estimatedTokens": 68,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 68
+        },
+        "name": "generate_diagram",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 89,
+          "characters": 89,
+          "estimatedTokens": 23,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 25
+        },
+        "definition": {
+          "bytes": 3956,
+          "characters": 3956,
+          "estimatedTokens": 989,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 865
+        },
+        "description": {
+          "bytes": 1562,
+          "characters": 1562,
+          "estimatedTokens": 391,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 11,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 302
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 2112,
+          "characters": 2112,
+          "estimatedTokens": 528,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 483
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "send_code_to_figma",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 3538,
+          "characters": 3530,
+          "estimatedTokens": 886,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 855
+        },
+        "description": {
+          "bytes": 2055,
+          "characters": 2047,
+          "estimatedTokens": 515,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 23,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 484
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 1209,
+          "characters": 1209,
+          "estimatedTokens": 303,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 303
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "use_figma",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 68,
+          "characters": 68,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 3656,
+          "characters": 3656,
+          "estimatedTokens": 914,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 848
+        },
+        "description": {
+          "bytes": 1070,
+          "characters": 1070,
+          "estimatedTokens": 268,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 241
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 2338,
+          "characters": 2338,
+          "estimatedTokens": 585,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 547
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "upload_assets",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 68,
+          "characters": 68,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 3568,
+          "characters": 3568,
+          "estimatedTokens": 892,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 833
+        },
+        "description": {
+          "bytes": 568,
+          "characters": 568,
+          "estimatedTokens": 142,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 3,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 136
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 2731,
+          "characters": 2731,
+          "estimatedTokens": 683,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 632
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "send_code_connect_mappings",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 68,
+          "characters": 68,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 3370,
+          "characters": 3342,
+          "estimatedTokens": 846,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 811
+        },
+        "description": {
+          "bytes": 1332,
+          "characters": 1324,
+          "estimatedTokens": 334,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 302
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 1793,
+          "characters": 1773,
+          "estimatedTokens": 451,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 446
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "weave_run_tool",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 3303,
+          "characters": 3295,
+          "estimatedTokens": 827,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 792
+        },
+        "description": {
+          "bytes": 1630,
+          "characters": 1622,
+          "estimatedTokens": 409,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 379
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 1413,
+          "characters": 1413,
+          "estimatedTokens": 354,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 353
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "download_assets",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 2861,
+          "characters": 2857,
+          "estimatedTokens": 716,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 689
+        },
+        "description": {
+          "bytes": 1557,
+          "characters": 1553,
+          "estimatedTokens": 390,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 7,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 362
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 1046,
+          "characters": 1046,
+          "estimatedTokens": 262,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 262
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "generate_figma_design",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 68,
+          "characters": 68,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 2775,
+          "characters": 2775,
+          "estimatedTokens": 694,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 670
+        },
+        "description": {
+          "bytes": 517,
+          "characters": 517,
+          "estimatedTokens": 130,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 130
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 1999,
+          "characters": 1999,
+          "estimatedTokens": 500,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 478
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "add_code_connect_map",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 68,
+          "characters": 68,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 2745,
+          "characters": 2745,
+          "estimatedTokens": 687,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 659
+        },
+        "description": {
+          "bytes": 1053,
+          "characters": 1053,
+          "estimatedTokens": 264,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 240
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 1425,
+          "characters": 1425,
+          "estimatedTokens": 357,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 349
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "create_new_file",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 2576,
+          "characters": 2574,
+          "estimatedTokens": 645,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 657
+        },
+        "description": {
+          "bytes": 1549,
+          "characters": 1547,
+          "estimatedTokens": 388,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 365
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 772,
+          "characters": 772,
+          "estimatedTokens": 193,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 228
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "get_metadata",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 3104,
+          "characters": 3104,
+          "estimatedTokens": 776,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 656
+        },
+        "description": {
+          "bytes": 811,
+          "characters": 811,
+          "estimatedTokens": 203,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 182
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 2012,
+          "characters": 2012,
+          "estimatedTokens": 503,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 407
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "search_design_system",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 2496,
+          "characters": 2494,
+          "estimatedTokens": 625,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 610
+        },
+        "description": {
+          "bytes": 694,
+          "characters": 692,
+          "estimatedTokens": 174,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 141
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 1565,
+          "characters": 1565,
+          "estimatedTokens": 392,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 413
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "generate_image",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 2517,
+          "characters": 2517,
+          "estimatedTokens": 630,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 606
+        },
+        "description": {
+          "bytes": 615,
+          "characters": 615,
+          "estimatedTokens": 154,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 140
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 1651,
+          "characters": 1651,
+          "estimatedTokens": 413,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 404
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "get_motion_context",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1861,
+          "characters": 1859,
+          "estimatedTokens": 466,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 506
+        },
+        "description": {
+          "bytes": 521,
+          "characters": 521,
+          "estimatedTokens": 131,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 139
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 1096,
+          "characters": 1094,
+          "estimatedTokens": 275,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 305
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "get_figjam",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 2351,
+          "characters": 2351,
+          "estimatedTokens": 588,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 499
+        },
+        "description": {
+          "bytes": 735,
+          "characters": 735,
+          "estimatedTokens": 184,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 155
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 1376,
+          "characters": 1376,
+          "estimatedTokens": 344,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 288
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "update_shader",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1923,
+          "characters": 1923,
+          "estimatedTokens": 481,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 498
+        },
+        "description": {
+          "bytes": 790,
+          "characters": 790,
+          "estimatedTokens": 198,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 190
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 867,
+          "characters": 867,
+          "estimatedTokens": 217,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 242
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "get_variable_defs",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1982,
+          "characters": 1978,
+          "estimatedTokens": 496,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 494
+        },
+        "description": {
+          "bytes": 662,
+          "characters": 658,
+          "estimatedTokens": 166,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 3,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 155
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 1048,
+          "characters": 1048,
+          "estimatedTokens": 262,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 274
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "get_code_connect_suggestions",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1880,
+          "characters": 1880,
+          "estimatedTokens": 470,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 489
+        },
+        "description": {
+          "bytes": 691,
+          "characters": 691,
+          "estimatedTokens": 173,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 183
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 926,
+          "characters": 926,
+          "estimatedTokens": 232,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 241
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "get_code_connect_map",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 2230,
+          "characters": 2226,
+          "estimatedTokens": 558,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 487
+        },
+        "description": {
+          "bytes": 1453,
+          "characters": 1449,
+          "estimatedTokens": 364,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 281
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 480,
+          "characters": 480,
+          "estimatedTokens": 120,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 134
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "list_file_components_for_code_connect",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1794,
+          "characters": 1786,
+          "estimatedTokens": 450,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 474
+        },
+        "description": {
+          "bytes": 1004,
+          "characters": 998,
+          "estimatedTokens": 252,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 269
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 535,
+          "characters": 533,
+          "estimatedTokens": 134,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 140
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "weave_get_tool_inputs",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1896,
+          "characters": 1896,
+          "estimatedTokens": 474,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 470
+        },
+        "description": {
+          "bytes": 763,
+          "characters": 763,
+          "estimatedTokens": 191,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 165
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 867,
+          "characters": 867,
+          "estimatedTokens": 217,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 242
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "get_context_for_code_connect",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 2178,
+          "characters": 2178,
+          "estimatedTokens": 545,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 459
+        },
+        "description": {
+          "bytes": 734,
+          "characters": 734,
+          "estimatedTokens": 184,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 150
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 1182,
+          "characters": 1182,
+          "estimatedTokens": 296,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 249
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "update_generative_plugin",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 68,
+          "characters": 68,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1919,
+          "characters": 1895,
+          "estimatedTokens": 483,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 437
+        },
+        "description": {
+          "bytes": 830,
+          "characters": 806,
+          "estimatedTokens": 211,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 181
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 848,
+          "characters": 848,
+          "estimatedTokens": 212,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 200
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "create_shader",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 68,
+          "characters": 68,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1811,
+          "characters": 1803,
+          "estimatedTokens": 454,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 419
+        },
+        "description": {
+          "bytes": 645,
+          "characters": 639,
+          "estimatedTokens": 162,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 146
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 925,
+          "characters": 923,
+          "estimatedTokens": 232,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 214
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "weave_run_model",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 68,
+          "characters": 68,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1830,
+          "characters": 1814,
+          "estimatedTokens": 460,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 413
+        },
+        "description": {
+          "bytes": 880,
+          "characters": 864,
+          "estimatedTokens": 222,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 186
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 687,
+          "characters": 687,
+          "estimatedTokens": 172,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 167
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "create_generative_plugin",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1667,
+          "characters": 1667,
+          "estimatedTokens": 417,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 390
+        },
+        "description": {
+          "bytes": 940,
+          "characters": 940,
+          "estimatedTokens": 235,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 197
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 480,
+          "characters": 480,
+          "estimatedTokens": 120,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 134
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "list_file_shaders",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1525,
+          "characters": 1519,
+          "estimatedTokens": 382,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 366
+        },
+        "description": {
+          "bytes": 730,
+          "characters": 724,
+          "estimatedTokens": 184,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 174
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 534,
+          "characters": 534,
+          "estimatedTokens": 134,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 129
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "weave_get_tool_run_output",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1506,
+          "characters": 1506,
+          "estimatedTokens": 377,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 328
+        },
+        "description": {
+          "bytes": 591,
+          "characters": 591,
+          "estimatedTokens": 148,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 124
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 664,
+          "characters": 664,
+          "estimatedTokens": 166,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 145
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "get_generative_plugin",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1445,
+          "characters": 1445,
+          "estimatedTokens": 362,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 319
+        },
+        "description": {
+          "bytes": 552,
+          "characters": 552,
+          "estimatedTokens": 138,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 119
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 664,
+          "characters": 664,
+          "estimatedTokens": 166,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 145
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "get_shader",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1298,
+          "characters": 1290,
+          "estimatedTokens": 326,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 306
+        },
+        "description": {
+          "bytes": 794,
+          "characters": 786,
+          "estimatedTokens": 200,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 185
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 255,
+          "characters": 255,
+          "estimatedTokens": 64,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 57
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "weave_list_tools",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1359,
+          "characters": 1357,
+          "estimatedTokens": 340,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 284
+        },
+        "description": {
+          "bytes": 628,
+          "characters": 626,
+          "estimatedTokens": 158,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 120
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 496,
+          "characters": 496,
+          "estimatedTokens": 124,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 108
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "get_libraries",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 68,
+          "characters": 68,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1081,
+          "characters": 1079,
+          "estimatedTokens": 271,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 279
+        },
+        "description": {
+          "bytes": 700,
+          "characters": 698,
+          "estimatedTokens": 176,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 181
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 124,
+          "characters": 124,
+          "estimatedTokens": 31,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 32
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "weave_upload_asset",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1095,
+          "characters": 1089,
+          "estimatedTokens": 275,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 266
+        },
+        "description": {
+          "bytes": 583,
+          "characters": 577,
+          "estimatedTokens": 147,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 134
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 267,
+          "characters": 267,
+          "estimatedTokens": 67,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 71
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "weave_find_model",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1048,
+          "characters": 1048,
+          "estimatedTokens": 262,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 255
+        },
+        "description": {
+          "bytes": 337,
+          "characters": 337,
+          "estimatedTokens": 85,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 84
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 460,
+          "characters": 460,
+          "estimatedTokens": 115,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 110
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "weave_cancel_tool_run",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 1072,
+          "characters": 1068,
+          "estimatedTokens": 269,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 234
+        },
+        "description": {
+          "bytes": 499,
+          "characters": 495,
+          "estimatedTokens": 126,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 100
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 312,
+          "characters": 312,
+          "estimatedTokens": 78,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 71
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "weave_get_model_run_output",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 995,
+          "characters": 995,
+          "estimatedTokens": 249,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 212
+        },
+        "description": {
+          "bytes": 483,
+          "characters": 483,
+          "estimatedTokens": 121,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 95
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 257,
+          "characters": 257,
+          "estimatedTokens": 65,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 58
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "list_generative_plugins",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 954,
+          "characters": 954,
+          "estimatedTokens": 239,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 211
+        },
+        "description": {
+          "bytes": 606,
+          "characters": 606,
+          "estimatedTokens": 152,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 123
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 124,
+          "characters": 124,
+          "estimatedTokens": 31,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 32
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "whoami",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 67,
+          "characters": 67,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 853,
+          "characters": 853,
+          "estimatedTokens": 214,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 191
+        },
+        "description": {
+          "bytes": 363,
+          "characters": 363,
+          "estimatedTokens": 91,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 76
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 257,
+          "characters": 257,
+          "estimatedTokens": 65,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 58
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 64,
+          "characters": 64,
+          "estimatedTokens": 16,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "name": "list_shaders",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      },
+      {
+        "annotations": {
+          "bytes": 68,
+          "characters": 68,
+          "estimatedTokens": 17,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 18
+        },
+        "definition": {
+          "bytes": 695,
+          "characters": 695,
+          "estimatedTokens": 174,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 153
+        },
+        "description": {
+          "bytes": 108,
+          "characters": 108,
+          "estimatedTokens": 27,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 19
+        },
+        "icons": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        },
+        "inputSchema": {
+          "bytes": 306,
+          "characters": 306,
+          "estimatedTokens": 77,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 68
+        },
+        "issues": [],
+        "metadata": {
+          "bytes": 92,
+          "characters": 92,
+          "estimatedTokens": 23,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 25
+        },
+        "name": "authorize_mcp_app",
+        "outputSchema": {
+          "bytes": 0,
+          "characters": 0,
+          "estimatedTokens": 0,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 0
+        }
+      }
+    ],
+    "sourceInstructionsUnknown": true,
+    "notAddedToEarlierIndependentEightServerTotals": true,
+    "actualPromptOrBillingClaim": false
+  },
+  "metadataFinding": {
+    "tool": "open_figma_mcp_app_in_thread",
+    "independentFieldViews": [
+      {
+        "bytes": 124,
+        "field": "inputSchema",
+        "referenceTokens": 32
+      },
+      {
+        "bytes": 0,
+        "field": "outputSchema",
+        "referenceTokens": 0
+      },
+      {
+        "bytes": 1621,
+        "field": "icons",
+        "referenceTokens": 1111
+      },
+      {
+        "bytes": 249,
+        "field": "_meta",
+        "referenceTokens": 63
+      }
+    ],
+    "interpretation": "Icon JSON is the largest independently measured component of this tool's serialized directory definition. Component token counts are independent, not additive; this does not establish model token usage or poor tool quality.",
+    "noMetadataRemovedFromTools": true
+  },
+  "implementation": {
+    "newOptionalFields": [
+      "MCPToolFootprint.icons",
+      "MCPToolFootprint.metadata"
+    ],
+    "oldReports": "Missing fields stay unmeasured; existing full-definition counts unchanged.",
+    "AppAndCLI": "Show serialized icon and _meta JSON counts; explain non-additivity and lack of model/image token attribution.",
+    "probeDoesNotReadOrExportOAuthCredentialStore": true
+  },
+  "validation": {
+    "suites": [
+      {
+        "suite": "ThermoAppTests.xctest",
+        "tests": 9,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests.xctest",
+        "tests": 33,
+        "failures": 0
+      }
+    ],
+    "tests": 42,
+    "failures": 0,
+    "testLogSHA256": "0f977d5e7c4c7d71f8a3ed76d358655dbb39e39c192b6a710eff49bd36224430",
+    "CLI": {
+      "passed": true,
+      "toolCount": 44,
+      "canonicalArrayUnchanged": true,
+      "rawIconURINotExported": true,
+      "iconReferenceTokens": 1111,
+      "metadataReferenceTokens": 63,
+      "inputSchemaReferenceTokens": 32,
+      "textOutputAndScopeNoteVerified": true,
+      "realMCPBusinessToolsCalled": false
+    },
+    "referenceEncodingFixture": {
+      "passed": true,
+      "encodings": [
+        "cl100k_base",
+        "o200k_base"
+      ],
+      "standaloneBinary": true
+    },
+    "view": {
+      "screenshot": "mcp-metadata-breakdown-zh-2026-10-17.png",
+      "sha256": "6bcbd049a60f1dc8829779303e4b9d9a28ca0201d9c1219c30991421004b03fd",
+      "actualComponentOffscreen": true,
+      "sourceCaptionExplicitlyLocalReplay": true,
+      "visuallyInspected": true,
+      "fullAppInteractionVerified": false
+    }
+  },
+  "diagnosticFailuresRetained": {
+    "sharedProxy": {
+      "observation": "Owned proxy initialize request reached its client deadline without a response.",
+      "MCPStatusRequestSent": false,
+      "sharedDaemonRestartedOrStopped": false,
+      "daemonAfterProbe": {
+        "status": "running",
+        "appServerVersion": "0.163.0",
+        "cliVersion": "0.163.0"
+      },
+      "ownedProxyClosed": true
+    },
+    "temporaryConfigOverrides": "Quoted key names were rejected in a configuration-only control. Bare names were accepted; the corrected direct stdio metadata probe initialized and returned the catalog.",
+    "launcherDefectEstablished": false,
+    "measurementHelper": "An initial @testable standalone helper lacked internal C module search paths. Canonical counts were instead obtained through the existing local metadata-only replay analyzer.",
+    "noSharedDaemonRestartOrStop": true
+  },
+  "cleanup": {
+    "ownedMetadataPIDAbsent": true,
+    "sharedDaemonAfterProbe": {
+      "status": "running",
+      "appServerVersion": "0.163.0",
+      "cliVersion": "0.163.0"
+    },
+    "userConfigMatchesEarlierBaseline": true,
+    "rawCatalogPayloadsRemovedAfterCounting": true,
+    "rawPayloadSHA256": {
+      "figma-direct-valid-status-private.json": "d77db52fce29bb4766ed5e6726cef1273674ce43dffecacf944634d1440fadb3",
+      "host-tools-private.json": "5a6d5ce7e15e3484b75f1c24c8272882db4e972e824be013a9c7626fc2e67f2e"
+    },
+    "privateReplayProfileRemoved": true
+  },
+  "scope": {
+    "newOAuthGrantRequested": false,
+    "businessToolsCalled": false,
+    "threadOrModelTurnStartedByProbe": false,
+    "sourceMCPConfigurationWritten": false,
+    "SDKOrStatusbarChanged": false,
+    "newReleasePackageBuilt": false,
+    "installedOrPublished": false,
+    "completeBusinessQualityOrSkillNetBenefitEstablished": false
+  },
+  "sourceSHA256": {
+    "Sources/AgentDoctor/MCPInspection.swift": "25d72a9e9f18eec5e3f97233daddbfb3c7a78893f72eafd37037054b4ab6346f",
+    "Sources/ThermoApp/MCPInspectionView.swift": "4614a6bcc7ba83ccd70f9eed4859c4e9afe02d1d82c21752cbcc643fe5c518f8",
+    "Sources/ThermoApp/MCPDefinitionSummary.swift": "f3e766ee3da2b2aba750b39b7e9f865db27b24f387fa0893a394ffcf5f3eceba",
+    "Sources/thermo/Agents.swift": "08ac816732999ac1791b154ad43292a764f833a4a0afa94a273843d15b800e3e"
+  }
+}

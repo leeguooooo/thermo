@@ -107,12 +107,20 @@ struct MCPInspectionResultView: View {
                 if let instructions = report.instructions {
                     Text(tr("Server instructions ≈%1$@ tokens", instructions.tokenLabel)).font(.caption)
                 }
+                if !report.tools.isEmpty { Text(MCPToolFootprint.metadataNote).font(.caption).foregroundStyle(.secondary) }
                 ForEach(Array(report.tools.enumerated()), id: \.offset) { _, tool in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(tool.name).font(.subheadline.weight(.medium)).textSelection(.enabled)
                         Text(tr("Definition ≈%1$@ · description ≈%2$@ · input schema ≈%3$@ · output schema ≈%4$@ tokens",
                                 tool.definition.tokenLabel, tool.description.tokenLabel, tool.inputSchema.tokenLabel, tool.outputSchema.tokenLabel))
                             .font(.caption.monospaced()).textSelection(.enabled)
+                        if let icons = tool.icons, let metadata = tool.metadata {
+                            Text(tr("Icons JSON %1$@ bytes / ≈%2$@ tokens · _meta JSON %3$@ bytes / ≈%4$@ tokens",
+                                    String(icons.bytes), icons.tokenLabel, String(metadata.bytes), metadata.tokenLabel))
+                                .font(.caption.monospaced()).foregroundStyle(.secondary)
+                        } else {
+                            Text(tr("Icon and _meta counts were not measured in this report.")).font(.caption).foregroundStyle(.secondary)
+                        }
                         ForEach(Array(tool.issues.enumerated()), id: \.offset) { _, issue in
                             Text(issue).font(.caption).foregroundStyle(.orange).textSelection(.enabled)
                         }
