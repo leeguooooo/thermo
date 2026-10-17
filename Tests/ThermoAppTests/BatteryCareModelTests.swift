@@ -33,6 +33,7 @@ final class BatteryCareModelTests: XCTestCase {
         func faults(end: Bool = false, before: Bool = false, after: Bool = false) { failEnd = end; failBeforeSend = before; failAfterSend = after }
         func loseOwnership(sameSession: Bool) { value.ownedByCaller = false; if !sameSession { value.sessionID = UUID().uuidString } }
         func controllerUnavailable() { value = BatteryChargeState(); value.error = "initialization failed" }
+        func reading(_ percent: Double, plugged: Bool) { value.percent = percent; value.externalPower = plugged }
     }
     @MainActor func settle(_ model: BatteryCareModel) async {
         for _ in 0..<200 { if !model.busy { return }; try? await Task.sleep(nanoseconds: 10_000_000) }
@@ -136,5 +137,16 @@ final class BatteryCareModelTests: XCTestCase {
         XCTAssertNil(model.state); XCTAssertEqual(model.probe?.support, .systemSettings)
         XCTAssertTrue(model.needsQuitRecovery); XCTAssertFalse(model.canEnable)
         await rig.recover(); model.refresh(); await settle(model); XCTAssertFalse(model.needsQuitRecovery); model.close()
+    }
+    @MainActor func testFullChargeButtonMatchesACPercentAndExistingLimitRequirements() async {
+        let rig = Rig(), model = BatteryCareModel(backend: rig.backend, preferences: Preference().io, exit: {})
+        model.open(); await settle(model); XCTAssertFalse(model.canChargeToFull)
+        model.change(.limit80); await settle(model); XCTAssertTrue(model.canChargeToFull)
+        await rig.reading(100, plugged: true); model.refresh(); await settle(model); XCTAssertFalse(model.canChargeToFull)
+        let before = await rig.starts; model.change(.chargeToFull); let after = await rig.starts; XCTAssertEqual(before, after)
+        await rig.reading(90, plugged: false); model.refresh(); await settle(model); XCTAssertFalse(model.canChargeToFull)
+        await rig.reading(90, plugged: true); model.refresh(); await settle(model); XCTAssertTrue(model.canChargeToFull)
+        model.change(.chargeToFull); await settle(model); XCTAssertFalse(model.canChargeToFull)
+        model.change(.off); await settle(model); model.close()
     }
 }

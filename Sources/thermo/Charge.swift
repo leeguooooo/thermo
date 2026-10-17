@@ -37,13 +37,14 @@ struct ChargePlan: Encodable {
     var resumeBelowPercent: Int? { policy == .limit80 ? 75 : nil }
     let changesMade = false, holdsConnection = true, forcesCharging = false
     let minimumHelperProtocol = 8
-    enum CodingKeys: String, CodingKey { case policy, pauseAtPercent, resumeBelowPercent, changesMade, holdsConnection, forcesCharging, minimumHelperProtocol }
+    enum CodingKeys: String, CodingKey { case policy, pauseAtPercent, resumeBelowPercent, changesMade, holdsConnection, forcesCharging, minimumHelperProtocol, fullChargeEndConditions }
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(policy, forKey: .policy); try c.encodeIfPresent(pauseAtPercent, forKey: .pauseAtPercent)
         try c.encodeIfPresent(resumeBelowPercent, forKey: .resumeBelowPercent); try c.encode(changesMade, forKey: .changesMade)
         try c.encode(holdsConnection, forKey: .holdsConnection); try c.encode(forcesCharging, forKey: .forcesCharging)
         try c.encode(minimumHelperProtocol, forKey: .minimumHelperProtocol)
+        if policy == .chargeToFull { try c.encode(["reported100Percent", "externalPowerDisconnected", "powerStateUnavailable", "supportChanged"], forKey: .fullChargeEndConditions) }
     }
 }
 struct ChargeCommand {

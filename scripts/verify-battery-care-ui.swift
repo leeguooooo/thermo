@@ -12,6 +12,7 @@ final class FakeBattery: @unchecked Sendable {
     let root: URL, lock = NSLock()
     var bytes: [UInt8] = [0, 0, 0, 0]
     var allowRecovery = true, percent = 90.0
+    var externalPower: Bool? = true
     var batteryPresence: BatteryPresence = .present, hasChargeKey = true, nativeAvailable = false
     init(_ root: URL) { self.root = root }
     func permit(_ value: Bool) { lock.lock(); allowRecovery = value; lock.unlock() }
@@ -22,6 +23,7 @@ final class FakeBattery: @unchecked Sendable {
     }
     func presence() -> BatteryPresence { lock.lock(); defer { lock.unlock() }; return batteryPresence }
     func nativeEligible() -> Bool { lock.lock(); defer { lock.unlock() }; return nativeAvailable }
+    func powerState(_ value: Double, plugged: Bool?) { lock.lock(); percent = value; externalPower = plugged; lock.unlock() }
     func controller() -> BatteryChargingGate {
         let info = SMCKeyInfo(key: "CHTE", type: "ui32", size: 4, attributes: 0xd4)
         return .init(io: .init(info: { key in
@@ -39,7 +41,7 @@ final class FakeBattery: @unchecked Sendable {
     }
     func power() -> BatteryChargePolicy.Observation? {
         lock.lock(); defer { lock.unlock() }
-        return .init(percent: percent, externalPower: true, observedAt: AWDLSystemClock.now())
+        return .init(percent: percent, externalPower: externalPower, observedAt: AWDLSystemClock.now())
     }
 }
 @MainActor final class UIDelegate: NSObject, NSApplicationDelegate {
@@ -67,6 +69,12 @@ struct QAHost: View {
                     Button("模拟系统保护") { fake.mode(2) }
                     Button("模拟 SMC 支持") { fake.mode(0) }
                 }.padding(.top, 12)
+                HStack {
+                    Button("模拟 100%") { fake.powerState(100, plugged: true) }
+                    Button("模拟断电") { fake.powerState(90, plugged: false) }
+                    Button("模拟供电未知") { fake.powerState(90, plugged: nil) }
+                    Button("恢复 90% 接电") { fake.powerState(90, plugged: true) }
+                }
                 BatteryCarePanel(model: model, configureHelper: { print("NO_HELPER_INSTALL"); fflush(stdout) }, openBatterySettings: { print("NO_SYSTEM_SETTINGS"); fflush(stdout) })
             }
         }

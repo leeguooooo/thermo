@@ -59,7 +59,7 @@ struct ChargeForegroundSession {
                 let state = try backend.read(); try emit(state)
                 if Self.ended(state) {
                     if let error = state.error { throw BatteryGateError(error) }
-                    backend.record("charging-recovery", "done", nil); return
+                    backend.record("charging-recovery", "done", state.lastFullChargeEndReason?.rawValue); return
                 }
                 if state.policy != .off, let current = state.sessionID, current != id, !state.ownedByCaller {
                     backend.record("charging-recovery", "done", "Previous session ended; another process owns the current policy"); return

@@ -101,6 +101,7 @@ struct BatteryCareBackend: Sendable {
     var canEnable: Bool { !busy && !quitRequested && !anotherOwner && state?.support == .smc && state?.percent != nil && state?.externalPower != nil && state?.phase != .recovering && state?.ownership != .uncertain && (state?.gate == .allowed || (state?.ownedByCaller == true && state?.gate == .inhibited)) }
     var canStop: Bool { !busy && (needsQuitRecovery || state?.ownedByCaller == true || state?.phase == .recovering) }
     var canDisablePreference: Bool { !busy && preferenceEnabled }
+    var canChargeToFull: Bool { canEnable && state?.policy == .limit80 && state?.ownedByCaller == true && state?.externalPower == true && state?.percent.map({ $0 < 100 }) == true }
     func open() { viewers += 1; refresh() }
     func close() { viewers = max(0, viewers - 1); updatePolling() }
     func restoreSavedPreference() {
@@ -119,7 +120,7 @@ struct BatteryCareBackend: Sendable {
         Task { await readLatest(); finish(allowStop: true) }
     }
     func change(_ policy: BatteryChargePolicy) {
-        guard policy == .off ? (canStop || canDisablePreference) : canEnable else { return }
+        guard policy == .off ? (canStop || canDisablePreference) : (policy == .chargeToFull ? canChargeToFull : canEnable) else { return }
         if policy == .off {
             preferenceEnabled = false; preferences.save(false)
             if !canStop { return } // Disable startup preference without touching another owner.
@@ -215,6 +216,7 @@ struct BatteryCarePanel: View {
                 if let support = supportText(state.support ?? .unknown) { Text(support).font(.callout).foregroundStyle(.secondary) }
                 if state.support == nil { Button(tr("Set up or update Thermo's helper"), action: configureHelper) }
                 Text(status(state)).font(.headline)
+                if let reason = state.lastFullChargeEndReason { Text(endedText(reason)).font(.caption).foregroundStyle(.secondary) }
                 if let percent = state.percent { Text(tr("Observed battery: %1$@%%", String(format: "%.0f", percent))).monospacedDigit() }
                 if state.support == .smc || model.needsQuitRecovery { Text(tr(gateText(state))).font(.caption).foregroundStyle(.secondary) }
                 if model.anotherOwner { Text(tr("Another Thermo process owns this charging policy.")).font(.caption).foregroundStyle(.orange) }
@@ -228,11 +230,11 @@ struct BatteryCarePanel: View {
             }
             if let issue = model.issue, issue != model.state?.error, fallbackSupport == nil { Text(tr(issue)).font(.caption).foregroundStyle(.orange) }
             if model.preferenceEnabled { Text(tr("The 80% preference is saved. Thermo checks support before resuming it at startup. Opening this panel only checks status.")).font(.caption).foregroundStyle(.secondary) }
-            Text(tr("Charge to 100% pauses the 80% limit until you resume it. System protection or another controller may still prevent charging.")).font(.caption).foregroundStyle(.secondary)
+            Text(tr("Temporary full charge ends at a reported 100%, without external power, or when power state is unavailable. A previously active 80% preference is retained. System protection still applies.")).font(.caption).foregroundStyle(.secondary)
             if model.quitRequested { Text(tr("Waiting for charging recovery before quitting. Retry if recovery remains unconfirmed.")).foregroundStyle(.orange).font(.callout) }
             HStack {
                 Button(tr(model.state?.policy == .chargeToFull ? "Resume 80% limit" : "Enable 80% limit")) { model.change(.limit80) }.disabled(!model.canEnable)
-                Button(tr("Charge to 100%")) { model.change(.chargeToFull) }.disabled(!model.canEnable || !model.needsQuitRecovery)
+                Button(tr("Charge to 100%")) { model.change(.chargeToFull) }.disabled(!model.canChargeToFull)
                 Button(tr(model.canStop ? "Turn off and restore charging" : "Disable saved 80% preference")) { model.change(.off) }.disabled(!model.canStop && !model.canDisablePreference)
             }
             HStack {
@@ -257,6 +259,14 @@ struct BatteryCarePanel: View {
         case .systemSettings: return tr("Manage the system charging limit in Battery settings.")
         case .unsupported: return tr("No supported charging control was found on this Mac.")
         case .unknown: return tr("Charging support has not been verified.")
+        }
+    }
+    private func endedText(_ reason: BatteryFullChargeEndReason) -> String {
+        switch reason {
+        case .fullyCharged: return tr("A 100% reading ended the temporary full-charge request.")
+        case .unplugged: return tr("The temporary full-charge request ended because external power was not connected.")
+        case .observationUnavailable: return tr("The temporary full-charge request ended because fresh power state was unavailable.")
+        case .supportChanged: return tr("Charging support changed; the temporary full-charge request ended.")
         }
     }
     private func status(_ state: BatteryChargeState) -> String {

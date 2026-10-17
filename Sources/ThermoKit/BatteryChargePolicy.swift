@@ -1,5 +1,9 @@
 import Foundation
 
+public enum BatteryFullChargeEndReason: String, Codable, Sendable {
+    case fullyCharged, unplugged, observationUnavailable, supportChanged
+}
+
 /// Pure policy only. A helper must separately own, persist, apply and read back
 /// a charging gate lease before reporting that a requested change succeeded.
 public enum BatteryChargePolicy: String, Codable, Sendable {
@@ -28,6 +32,19 @@ public enum BatteryChargePolicy: String, Codable, Sendable {
             self.externalPower = externalPower
             self.observedAt = observedAt
         }
+    }
+
+    /// Mole clears its temporary override when AC/percent can no longer support
+    /// continuing it. Unknown input ends the override without claiming full charge.
+    public func fullChargeEnd(observation: Observation?, now: TimeInterval) -> BatteryFullChargeEndReason? {
+        guard self == .chargeToFull else { return nil }
+        guard let observation, now.isFinite, now >= 0, observation.observedAt.isFinite,
+              observation.observedAt >= 0, now >= observation.observedAt,
+              now - observation.observedAt <= 30 else { return .observationUnavailable }
+        if observation.externalPower == false { return .unplugged }
+        guard observation.externalPower == true, let percent = observation.percent,
+              percent.isFinite, (0...100).contains(percent) else { return .observationUnavailable }
+        return percent >= 100 ? .fullyCharged : nil
     }
 
     /// Stop at 80%, resume below 75%, retain the current hold between them.

@@ -9,6 +9,7 @@ public struct BatteryChargeState: Codable, Sendable {
     public var ownedByCaller = false
     public var sessionID: String?
     public var support: BatteryChargeSupport?
+    public var lastFullChargeEndReason: BatteryFullChargeEndReason?
     public var percent: Double?
     public var externalPower: Bool?
     public var error: String?
@@ -31,6 +32,7 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
     private var stopping = false, recoveryPending = true
     private var lastTick: TimeInterval?
     private var powerObservedAt: TimeInterval?
+    private var afterFull: BatteryChargePolicy = .off
     private var state = BatteryChargeState()
 
     public init(make: @escaping @Sendable () throws -> BatteryChargingGate = { try BatteryChargeSystem.make() },
@@ -63,7 +65,7 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
         state.error = recoveryPending ? controller.lastError ?? "Charging restoration is unconfirmed" : nil
         return !recoveryPending
     }
-    private func stopPolicy() { state.policy = .off; state.sessionID = nil; owner = nil }
+    private func stopPolicy() { state.policy = .off; state.sessionID = nil; owner = nil; afterFull = .off }
     private func updateObservation() {
         state.support = BatteryChargeProbe.support(presence: presence(), availability: controller?.availability() ?? .unavailable, nativeEligible: nativeEligible())
         guard let controller else { return }
@@ -97,6 +99,17 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
         guard let controller else { throw BatteryGateError(state.error ?? "Charging controller is unavailable") }
         updateObservation()
         let sample = samplePower(), now = clock()
+        if state.policy == .chargeToFull {
+            let reason = state.support == .smc ? state.policy.fullChargeEnd(observation: sample, now: now) :
+                (state.support == .unknown ? BatteryFullChargeEndReason.observationUnavailable : .supportChanged)
+            if let reason {
+                let resume = afterFull
+                afterFull = .off; state.lastFullChargeEndReason = reason
+                guard restore() else { throw BatteryGateError(state.error ?? "Charging restoration is unconfirmed") }
+                if resume == .limit80 { state.policy = .limit80 }
+                else { stopPolicy() }
+            }
+        }
         if state.support != .smc {
             let reason = supportReason
             if state.support != .unknown { stopPolicy() }
@@ -104,6 +117,7 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
             state.phase = state.policy == .off ? .off : .blocked; state.error = reason
             return
         }
+        guard state.policy != .off else { state.phase = .off; state.error = nil; return }
         switch state.policy.decision(observation: sample, now: now, gate: state.gate, ownership: state.ownership) {
         case .inhibit:
             guard owner?.isClosed == false else { throw BatteryGateError("Charging connection closed before apply") }
@@ -152,11 +166,14 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
             self.updateObservation()
             guard policy == .off || self.state.support == .smc else { reply(self.supportReason); return }
             if self.recoveryPending, !self.restore() { reply(self.state.error); return }
+            let returnPolicy: BatteryChargePolicy = policy == .chargeToFull ?
+                (self.state.policy == .chargeToFull ? self.afterFull : (self.state.policy == .limit80 ? .limit80 : .off)) : .off
             if policy != .limit80 {
                 self.stopPolicy()
                 guard self.restore() else { reply(self.state.error); return }
             }
             self.state.policy = policy; self.owner = policy == .off ? nil : owner
+            self.afterFull = returnPolicy; self.state.lastFullChargeEndReason = nil
             self.state.sessionID = policy == .off ? nil : sessionID
             self.lastTick = self.clock()
             do {

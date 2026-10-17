@@ -154,7 +154,9 @@ enum CommandHelp {
             if !selected.isEmpty { break }; path.removeLast()
         }
         guard !selected.isEmpty else { return "Unknown command. Run thermo --help." }
-        return selected.map { "thermo " + $0.usage + "\n  execution: " + $0.execution }.joined(separator: "\n\n")
+        let charging = selected.contains { $0.command == "charge" || $0.command.hasPrefix("charge ") } ?
+            "\n\nCharging controls require helper protocol 8. Full charge ends at a reported 100%, without external power, or when state is unavailable. A previous 80% policy resumes; a standalone full session ends. System charging protection still applies." : ""
+        return selected.map { "thermo " + $0.usage + "\n  execution: " + $0.execution }.joined(separator: "\n\n") + charging
             + "\n\n--dry-run never applies changes. Unsupported flags are rejected.\nApp commands require a running compatible Thermo.app. No request is automatically retried.\nExit 0: completed; 2: invalid/refused; 3: partial or unconfirmed result; 1: execution error."
     }
 }

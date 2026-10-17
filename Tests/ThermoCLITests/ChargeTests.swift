@@ -128,4 +128,14 @@ final class ChargeTests: XCTestCase {
         XCTAssertThrowsError(try CommandContract.validate(Args(["charge", "status", "--dry-run"])))
         XCTAssertThrowsError(try CommandContract.validate(Args(["charge", "full", "--csv"])))
     }
+    func testAutomaticFullCompletionEndsWithoutSendingAnotherOffRequest() throws {
+        let rig = Rig()
+        rig.afterRead = {
+            if rig.state.policy == .chargeToFull {
+                rig.state = .init(); rig.state.phase = .off; rig.state.gate = .allowed; rig.state.lastFullChargeEndReason = .fullyCharged
+            }
+        }
+        try ChargeForegroundSession(backend: rig.backend).run(policy: .chargeToFull, interrupted: { false }, wait: {}, emit: { _ in })
+        XCTAssertEqual(rig.actions, [.chargeToFull]); XCTAssertEqual(rig.resets, 1)
+    }
 }

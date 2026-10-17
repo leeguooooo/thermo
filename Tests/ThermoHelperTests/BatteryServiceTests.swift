@@ -240,4 +240,42 @@ final class BatteryServiceTests: XCTestCase {
         connection.invalidate(); _ = try await wait(observer) { $0.phase == .off }
         XCTAssertNil(rig.access { $0.record }); XCTAssertEqual(rig.access { $0.bytes }, [0, 0, 0, 0])
     }
+    func testFullCompletionResumesPreviouslyOwned80LimitOnSameConnection() async throws {
+        let rig = Rig(), endpoint = Endpoint(rig); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }
+        try await client.setBatteryChargePolicy(.limit80); try await client.setBatteryChargePolicy(.chargeToFull)
+        let full = try await client.batteryChargeState(); XCTAssertEqual(full.policy, .chargeToFull); XCTAssertEqual(full.gate, .allowed)
+        rig.access { $0.percent = 100 }
+        let resumed = try await wait(client) { $0.policy == .limit80 && $0.phase == .holding }
+        XCTAssertEqual(resumed.lastFullChargeEndReason, .fullyCharged); XCTAssertEqual(resumed.sessionID, full.sessionID)
+        XCTAssertTrue(resumed.ownedByCaller); XCTAssertEqual(rig.access { $0.bytes }, [1, 0, 0, 0])
+    }
+    func testStandaloneFullCompletionEndsInsteadOfCreatingAn80Limit() async throws {
+        let rig = Rig(), endpoint = Endpoint(rig); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }
+        try await client.setBatteryChargePolicy(.chargeToFull); rig.access { $0.percent = 100 }
+        let ended = try await wait(client) { $0.policy == .off && $0.phase == .off }
+        XCTAssertEqual(ended.lastFullChargeEndReason, .fullyCharged); XCTAssertFalse(ended.ownedByCaller); XCTAssertNil(ended.sessionID)
+        XCTAssertEqual(rig.access { $0.writes }, 0); XCTAssertNil(rig.access { $0.record })
+    }
+    func testUnplugEndsFullOverrideAndReplugUsesTheOriginal80Policy() async throws {
+        let rig = Rig(), endpoint = Endpoint(rig); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }
+        try await client.setBatteryChargePolicy(.limit80); try await client.setBatteryChargePolicy(.chargeToFull)
+        rig.access { $0.plugged = false }
+        let resumed = try await wait(client) { $0.policy == .limit80 && $0.phase == .watching }
+        XCTAssertEqual(resumed.lastFullChargeEndReason, .unplugged); XCTAssertNil(rig.access { $0.record })
+        rig.access { $0.plugged = true }; _ = try await wait(client) { $0.phase == .holding }
+    }
+    func testUnknownPowerEndsFullWithoutPretendingItReached100() async throws {
+        let rig = Rig(), endpoint = Endpoint(rig); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }
+        try await client.setBatteryChargePolicy(.limit80); try await client.setBatteryChargePolicy(.chargeToFull)
+        rig.access { $0.plugged = nil }
+        let blocked = try await wait(client) { $0.policy == .limit80 && $0.phase == .blocked }
+        XCTAssertEqual(blocked.lastFullChargeEndReason, .observationUnavailable); XCTAssertEqual(blocked.gate, .allowed)
+        rig.access { $0.plugged = true }; _ = try await wait(client) { $0.phase == .holding }
+    }
+    func testRepeatedFullRequestRetainsItsOriginalReturnPolicy() async throws {
+        let rig = Rig(), endpoint = Endpoint(rig); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }
+        try await client.setBatteryChargePolicy(.limit80); try await client.setBatteryChargePolicy(.chargeToFull)
+        try await client.setBatteryChargePolicy(.chargeToFull); rig.access { $0.percent = 100 }
+        _ = try await wait(client) { $0.policy == .limit80 && $0.phase == .holding }
+    }
 }

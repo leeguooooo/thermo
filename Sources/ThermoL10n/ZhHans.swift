@@ -2852,4 +2852,9 @@ let zhHans: [String: String] = [
     "Checking the system helper…": "正在检查系统辅助服务…",
     "Thermo's system helper manages fans, lid-closed wake, network low latency and charging protection. Fan requests stay within device ranges and recovery failures are reported. macOS may ask for an administrator password.": "Thermo 的系统辅助服务管理风扇、合盖唤醒、网络低延迟和充电保护。风扇请求限制在设备范围内，恢复失败会明确报告。macOS 可能要求管理员密码。",
     "The system helper did not respond. Your settings have not been applied. Retry setup when ready.": "系统辅助服务未响应，设置尚未应用。准备好后可重试。",
+    "Temporary full charge ends at a reported 100%, without external power, or when power state is unavailable. A previously active 80% preference is retained. System protection still applies.": "电量报告为 100%、未连接外接电源或供电状态不可用时，临时充满请求会结束。之前已启用的 80% 偏好会保留，系统保护仍会生效。",
+    "A 100% reading ended the temporary full-charge request.": "临时充满请求已因一次 100% 电量读数而结束。",
+    "The temporary full-charge request ended because external power was not connected.": "临时充满请求已因未连接外接电源而结束。",
+    "The temporary full-charge request ended because fresh power state was unavailable.": "临时充满请求已因缺少新的供电状态而结束。",
+    "Charging support changed; the temporary full-charge request ended.": "充电支持状态发生变化，临时充满请求已结束。",
 ]

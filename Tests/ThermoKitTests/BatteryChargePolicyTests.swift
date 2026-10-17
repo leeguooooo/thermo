@@ -6,6 +6,15 @@ final class BatteryChargePolicyTests: XCTestCase {
     func observation(_ percent: Double?, plugged: Bool? = true, time: Double = 100) -> Policy.Observation {
         .init(percent: percent, externalPower: plugged, observedAt: time)
     }
+    func testFullChargeEndsAt100OrWithoutACAndUnknownDoesNotClaimFull() {
+        XCTAssertNil(Policy.chargeToFull.fullChargeEnd(observation: observation(99.99), now: 100))
+        XCTAssertEqual(Policy.chargeToFull.fullChargeEnd(observation: observation(100), now: 100), .fullyCharged)
+        XCTAssertEqual(Policy.chargeToFull.fullChargeEnd(observation: observation(nil, plugged: false), now: 100), .unplugged)
+        for sample in [nil, observation(nil), observation(.nan), observation(101), observation(99, plugged: nil), observation(99, time: 69), observation(99, time: 101)] {
+            XCTAssertEqual(Policy.chargeToFull.fullChargeEnd(observation: sample, now: 100), .observationUnavailable)
+        }
+        XCTAssertNil(Policy.limit80.fullChargeEnd(observation: observation(100), now: 100))
+    }
 
     func testLimitStartsAt80OnlyWhenPluggedAndUnowned() {
         for percent in [0.0, 74, 75, 79.99] {

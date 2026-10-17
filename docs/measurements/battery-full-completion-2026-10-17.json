@@ -1,0 +1,105 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "695fd8a",
+  "artifact": {
+    "binarySHA256": "77702d3d4fc9269f74fbfd61f10fc63462a98da15ef45c7d303db8a06f718e4e",
+    "selectedArchitecture": "arm64",
+    "cacheInstructionBytesRevalidatedAgainstCurrentBinary": true,
+    "instructionsChecked": 1481,
+    "ranges": [
+      [
+        "0x10025d354",
+        "0x10025d4c0"
+      ],
+      [
+        "0x10025dd30",
+        "0x10025e09c"
+      ],
+      [
+        "0x10025e09c",
+        "0x10025ebd0"
+      ],
+      [
+        "0x10025fe0c",
+        "0x10025feac"
+      ],
+      [
+        "0x1002620c4",
+        "0x1002621a0"
+      ],
+      [
+        "0x10026228c",
+        "0x100262828"
+      ]
+    ],
+    "ivarOffsets": {
+      "enabled": "0x40",
+      "isSupported": "0x29",
+      "isChargingToFull": "0x41",
+      "statusTag": "0x38"
+    },
+    "snapshotFrameFields": {
+      "percent": "context+0x70 -> sp+0x18",
+      "acOptionalBool": "context+0x78 -> sp+0x24",
+      "smcHoldState": "context+0x79 -> sp+0x14",
+      "controlVariant": "context+0x7a -> sp+0x10"
+    },
+    "flow": [
+      "IOPS reader 0x100262568 returns percent x0 and optional AC bool w1",
+      "0x10025fe3c-0x10025fe44 stores reader output at return+0/+8",
+      "Task.value at0x10025e028 fills context+0x70",
+      "0x10025e6a4 loads isChargingToFull; enabled/support/AC and percent<=99 keep override",
+      "0x10025e804-0x10025e874 clears isChargingToFull on failed conditions",
+      "0x10025e878 onward continues normal80/75 policy; enabled flag not cleared there"
+    ],
+    "unknownState": "Power reader uses w1=2 for missing/invalid snapshot; bit0=0 routes to clearing override, not a charged-to100 assertion",
+    "scope": "Derived static ARM64 value flow; no target execution or battery writes; 0x10025d354 is button eligibility, not the completion rule"
+  },
+  "regression": {
+    "command": "swift test --skip HardwareTests",
+    "exitCode": 0,
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 185,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 29,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 104,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 290,
+        "failures": 0
+      },
+      "CleanKitTests.xctest": {
+        "tests": 751,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 216,
+        "failures": 0
+      },
+      "AgentCoreTests.xctest": {
+        "tests": 42,
+        "failures": 0
+      }
+    },
+    "total": 1617,
+    "logSHA256": "efe1a1524da44f484afb70cd90b73f84de0cd190776e5f4ea13d905e756719b9"
+  },
+  "nativeUI": {
+    "status": "pending",
+    "observationError": "cgWindowNotFound",
+    "newFlowClicked": false
+  },
+  "limitations": [
+    "No real battery writes",
+    "No installed App or helper replacement",
+    "No signed launchd or physical battery acceptance",
+    "30 second freshness is Thermo design, not an inferred Mole constant"
+  ]
+}
