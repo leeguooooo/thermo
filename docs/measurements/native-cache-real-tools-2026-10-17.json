@@ -506,5 +506,19 @@
     "outsideSentinelsUnchanged": true,
     "noRunningFixtureProcesses": true,
     "fixtureRemoved": true
+  },
+  "integrationCheck": {
+    "mainParent": "5f51796",
+    "integrationParent": "e42d2aefd5e0b8d2f5e862b6ff26d9ac36c1f283",
+    "sourceChangesFromIncomingMain": "Documentation only relative to this branch base",
+    "confirmationAndLocalizationPassed": 9,
+    "failures": 0,
+    "notAddedToFullRegressionTotal": true,
+    "log": "/tmp/thermo-native-tools-integration-tests.log",
+    "sha256": "21aea9bf62884653b0b7bde696b98311b3466199bdedaf458cfb3a47afa6d1d9"
+  },
+  "checkedInHarnessSHA256": {
+    "scripts/prepare-native-cache-fixture.py": "95b6d8785fd532264291dbcbbf5b0ec731c81bc0b7c5234ae207f40e4ac6acab",
+    "scripts/verify-native-cache-tools.swift": "886dc7d4d4e26a11aef6b793aff43e9c2f17e27c5181c545dbc008c8b4679f3c"
   }
 }
