@@ -77,8 +77,30 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     assert "explicit errors among known-status results: 0 / 2 (0.0%)" in text
     assert "explicit error rate unknown; no usable known-status denominator" in text
     assert "they do not measure task success" in text
+    assert "An explicit error may be an unmet assertion" in text
+    assert "Observed mcp returned text total (all rows): 75 bytes / ≈21 tokens" in text
+    assert "Observed skill returned text total (all rows): 22 bytes / ≈6 tokens" in text
+    assert "share of observed mcp returned-text tokens: 57.1%" in text
     assert "fixture-private" not in text
+    # The CLI shows 20 rows by default; the denominator must still include row 21.
+    many = []
+    for index in range(21):
+        ident = "many-" + str(index)
+        many += [event("response_item", {"type": "function_call", "call_id": ident,
+                                        "name": "mcp__fixture__tool" + str(index), "arguments": ""}, -10),
+                 event("response_item", {"type": "function_call_output", "call_id": ident,
+                                        "output": {"isError": False, "content": [{"type": "text", "text": "abcd"}]}}, -5)]
+    write(".codex/sessions/2026/10/17/fixture.jsonl", many)
+    for encoding in [None, "cl100k_base"]:
+        args = [str(binary), "agents", "usage", "--agent", "codex", "--since", stamp(-7 * 86400)]
+        if encoding:
+            args += ["--encoding", encoding]
+        rendered = subprocess.run(args, env=dict(os.environ, CFFIXED_USER_HOME=str(home), THERMO_LANG="en"),
+                                  capture_output=True, text=True, check=True, timeout=30).stdout
+        assert "Observed mcp returned text total (all rows): 84 bytes / " + ("" if encoding else "≈") + "21 tokens" in rendered
+        assert rendered.count("share of observed mcp returned-text tokens: 4.8%") == 20
     print(json.dumps({"passed": True, "mcpCalls": mcp["calls"], "skillCalls": skill["calls"],
                       "requestTokensKeptSeparate": True, "privateTextExcluded": True, "imageTokensUnknown": True,
                       "knownStatusErrorProportionVerified": True, "unknownErrorProportionPreserved": True,
-                      "nativeMCPEventsIncludedWithoutDoubleCounting": True}))
+                      "nativeMCPEventsIncludedWithoutDoubleCounting": True,
+                      "categoryTotalsAndSharesIncludeHiddenRows": True}))

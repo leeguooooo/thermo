@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-17",
+  "parentCommit": "0b34c1ff479a96e47765434adbc4b907a2e65abb",
+  "scope": "Source-level returned-text totals and token shares in App and CLI; no serialized report schema change.",
+  "sourceSHA256": {
+    "Sources/AgentDoctor/ToolUsageReport.swift": "57688c6744e11ce92c9f4e79d31e1faa148936f2f9ea738e4aee2834470f9df9",
+    "Sources/ThermoApp/ToolUsagePanel.swift": "083ce872ad1a507180ee42916fedc60196a1735abbe4fff11bca3a03e02693c2",
+    "Sources/ThermoL10n/ZhHans.swift": "e97e421199316574390855d7db51fe325ee61313c6a82c0ea4c697577bc183d8",
+    "Sources/thermo/Agents.swift": "be0c3c05227555d8582f94aa0e1d7316d6a6cf60582f8ded94ee52c22b5bbf6b",
+    "Tests/AgentDoctorTests/ToolUsageTests.swift": "04d7598d6735ea95ae2c9077bdb87297c92df80587e452533c56a3bde9511d32",
+    "scripts/verify-tool-usage.py": "1e66890229c24a9681919a2024e32117fa2264e830a204830773d54e3ad6677a",
+    "scripts/render-tool-usage.py": "9de05215d313058fd2d6b925782226e6979caa687e5fc856bfb41561108444d4",
+    "scripts/render-tool-usage.swift": "8960338770afd35abb7944e9cff5ad51688cfc39eb21a21987546907998137bb"
+  },
+  "tests": {
+    "selectedTests": 31,
+    "failures": 0,
+    "logSHA256": "11b7d9cbc08e9f1b872737f2ea7d47740cec0b47f736ede4c37395239db632dd",
+    "coverage": [
+      "native MCP unmet assertion retains outer Boolean isError",
+      "all category rows, separate MCP and Skill totals, no request allocation",
+      "missing reference counts, unavailable result, mixed encoding, zero, missing result, overflow and invalid count",
+      "localization key and placeholder coverage"
+    ]
+  },
+  "compiledCLI": {
+    "sha256": "28e1b92bb15adafa70226bc576d11e67ae1d9091b12f3a81ed71093d420ffe00",
+    "verification": {
+      "passed": true,
+      "mcpCalls": 2,
+      "skillCalls": 1,
+      "requestTokensKeptSeparate": true,
+      "privateTextExcluded": true,
+      "imageTokensUnknown": true,
+      "knownStatusErrorProportionVerified": true,
+      "unknownErrorProportionPreserved": true,
+      "nativeMCPEventsIncludedWithoutDoubleCounting": true,
+      "categoryTotalsAndSharesIncludeHiddenRows": true
+    },
+    "hiddenRowsFixture": {
+      "rows": 21,
+      "displayed": 20,
+      "totalBytes": 84,
+      "totalTextTokens": 21,
+      "eachVisibleShare": "4.8%",
+      "encodings": [
+        "heuristic",
+        "cl100k_base"
+      ]
+    }
+  },
+  "nativeOffscreenRender": {
+    "image": "tool-usage-return-shares-zh-2026-10-17.png",
+    "sha256": "be7c7dfdf0548400504ba83447973fcedaa26f9745f790d7e9c9b4b9ecf7810d",
+    "language": "zh-Hans",
+    "viewportPoints": [
+      760,
+      1200
+    ],
+    "visuallyReviewed": true,
+    "mcpTotalBytes": 75,
+    "mcpHeuristicTokens": 21,
+    "shares": [
+      "57.1%",
+      "28.6%",
+      "14.3%"
+    ],
+    "fullPanelTextVisible": true,
+    "fixtureOnly": true
+  },
+  "limitations": [
+    "Totals are sums of observed returned text per category, not effective context or billed request use.",
+    "All rows form the denominator even when UI or CLI hides some; partial log coverage remains partial.",
+    "Unavailable or incompatible reference counts suppress total token count and shares; bytes may remain available.",
+    "No inference of assertion vs service failure from arbitrary result text; raw explicit flags retained.",
+    "Offscreen rendering is not live App or installed-package acceptance.",
+    "Changes are not in the previously verified 1.2.0 (393) candidate; no signing, packaging, installation or publication this turn."
+  ]
+}

@@ -2776,4 +2776,8 @@ let zhHans: [String: String] = [
     "Inspection timed out.": "检查超时。",
     "Authentication required": "需要认证",
     "Unsupported": "不支持",
+    "Returned text total in this category: %1$@ bytes / %2$@ tokens": "本分类返回文本合计：%1$@ 字节 / %2$@ token",
+    "Totals include all observed entries in this category, including hidden rows. Missing logs, results and non-text content are not included; this is not request usage.": "合计包含本分类全部已观察条目，包括未展开的行。不含缺失日志、缺失结果和非文本内容，不是请求用量。",
+    "Share of this category's observed returned-text tokens: %1$@": "占本分类已观察返回文本 token：%1$@",
+    "Error proportions exclude missing results and unknown error statuses; they do not measure task success. An explicit error may be an unmet assertion, not a service fault; inspect the task evidence before judging tool quality.": "错误比例不计入结果缺失和错误状态未知的调用，不代表任务成功率。明确错误也可能只是条件断言未通过，并非服务故障；判断工具质量时需查看任务证据。",
 ]

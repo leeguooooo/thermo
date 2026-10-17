@@ -2,10 +2,12 @@
 
 截至 2026-10-17，已实现 MCP / Skill 占用、显式连接检查、本地日志观察和任务记录对照。本地候选 1.2.0 (393) 已验证；真实工作流中的工具质量和 Skill 净收益仍未完成评测，不能宣称全面完成。 最新[真实文档查询](mcp-real-docs-workflow.md)另发现并修正了原生 MCP 事件漏计；该修复已进入 393 包，374 包的漏计结果仍作为历史对照保留。
 
+后续源码已补充[返回文本合计与占比](measurements/tool-usage-return-shares-2026-10-17.json)，通过 31 项针对性测试、独立 CLI 夹具和[中文面板离屏复核](measurements/tool-usage-return-shares-zh-2026-10-17.png)。这些新增展示尚未进入 393 包，也未完成安装包验收。
+
 | 原始问题 | 当前能力与证据 | 仍不能据此判断 |
 |---|---|---|
 | MCP 总体有多大、占多少 token | 汇总已完整检查配置的定义字节、定义数组计数和独立服务指令计数；支持启发式和两种离线参考编码。[汇总与取消测试](../Tests/ThermoAppTests/MCPDefinitionStoreTests.swift)、[批量原生验收](measurements/mcp-batch-inspection-2026-10-17.json) | 未检查配置不按零计；多宿主配置保留独立计量。它不是宿主当前实际加载上下文或账单 |
-| 哪个工具占用最多、耗时多久 | 工具定义排名、返回文本排名；连接阶段耗时，以及日志中的中位数 / P95 / 累计观察间隔。[新包 CLI 与原生入口](measurements/ai-tools-integrated-package-2026-10-17.json) | 连接耗时不是业务工具耗时；并行间隔相加不是实际总耗时。图片 token、脚本内嵌调用和缺失日志不能完整归因 |
+| 哪个工具占用最多、耗时多久 | 工具定义排名、返回文本排名；源码增加分类内全部观察条目的返回文本合计及工具占比。连接阶段耗时，以及日志中的中位数 / P95 / 累计观察间隔。[新包 CLI 与原生入口](measurements/ai-tools-integrated-package-2026-10-17.json)、[合计与占比验证](measurements/tool-usage-return-shares-2026-10-17.json) | 连接耗时不是业务工具耗时；并行间隔相加不是实际总耗时。图片 token、脚本内嵌调用和缺失日志不能完整归因 |
 | 哪些 MCP 有问题 | 显示连接失败阶段、描述 / schema 问题、明确错误次数与已知状态分母、未知状态和缺失结果；列表可展开全部条目。[错误比例验证](measurements/tool-usage-error-proportions-2026-10-17.json) | 定义提示与错误比例不等于业务任务质量分。尚无覆盖实际配置的真实任务质量排行 |
 | Skill 是否臃肿或有内容问题 | 分开统计目录描述和完整文档，去重别名，单列插件缓存；给出缺失引用及行号、空正文和相同独立副本。[占用测试](../Tests/AgentDoctorTests/ContextFootprintTests.swift)、[内容测试](../Tests/AgentDoctorTests/SkillQualityTests.swift) | 静态清单不是已加载清单；长文档不直接判差，引用不存在也可能是运行时生成。未完整模拟所有宿主的覆盖优先级 |
 | Skill 有没有提高效果 | 支持相同任务 / 验收条件的配对记录，排除缺失或不兼容配对，保留失败、超时和未知。[对照测试](../Tests/AgentDoctorTests/TaskComparisonTests.swift)、[两轮模型试测](../evals/ai-diagnostics/README.md) | 第二轮三对微型题两组均全通过，没有成功率收益证据；显式读取增加模型往返，不能把输入差额当成 Skill 正文大小。隐式触发和真实工作流收益仍待测 |

@@ -1,6 +1,49 @@
 import Foundation
 import ThermoL10n
 
+/// Returned-text accounting within one observed category, never request/billing usage.
+public struct ToolUsageTextSummary: Sendable {
+    public let kind: String
+    public let returnedTextBytes: Int?
+    public let returnedTextTokens: Int?
+    public let referenceEncoding: String?
+    private let rowIDs: Set<String>
+
+    init(rows: [ToolUsageRow], kind: String, encoding: String?) {
+        self.kind = kind
+        referenceEncoding = encoding
+        rowIDs = Set(rows.map(\.id))
+        returnedTextBytes = Self.sum(rows.map { Optional($0.returnedTextBytes) })
+        returnedTextTokens = Self.sum(rows.map { Self.tokens($0, encoding: encoding) })
+    }
+
+    private static func sum(_ counts: [Int?]) -> Int? {
+        var total = 0
+        for count in counts {
+            guard let count, count >= 0 else { return nil }
+            let next = total.addingReportingOverflow(count)
+            guard !next.overflow else { return nil }
+            total = next.partialValue
+        }
+        return total
+    }
+
+    private static func tokens(_ row: ToolUsageRow, encoding: String?) -> Int? {
+        guard row.referenceEncoding == encoding else { return nil }
+        guard encoding != nil else { return row.returnedTextEstimatedTokens }
+        guard (row.unavailableReferenceResults ?? 0) == 0 else { return nil }
+        if row.completed == 0 && row.returnedTextBytes == 0 { return 0 }
+        return row.referenceReturnedTextTokens
+    }
+
+    public func percentage(of row: ToolUsageRow) -> Double? {
+        guard row.kind == kind, rowIDs.contains(row.id),
+              let total = returnedTextTokens, total > 0,
+              let count = Self.tokens(row, encoding: referenceEncoding), count >= 0, count <= total else { return nil }
+        return Double(count) / Double(total) * 100
+    }
+}
+
 public struct ToolUsageRow: Codable, Identifiable, Sendable {
     public var id: String
     public var host: String
@@ -78,6 +121,14 @@ public struct ToolUsageReport: Codable, Sendable {
     public var referenceEncoding: String? = nil
     public var referenceEngine: String? = nil
     public var returnedTextEstimator: String? = "ascii4-unicode1-v1"
+
+    public func returnedTextSummary(kind: String) -> ToolUsageTextSummary {
+        ToolUsageTextSummary(rows: tools.filter { $0.kind == kind }, kind: kind, encoding: referenceEncoding)
+    }
+
+    public static var errorStatusExplanation: String {
+        tr("Error proportions exclude missing results and unknown error statuses; they do not measure task success. An explicit error may be an unmet assertion, not a service fault; inspect the task evidence before judging tool quality.")
+    }
 
     public static var explanation: String {
         tr("Observed local log records only. Call/result elapsed time includes host overhead; overlapping calls are not wall-clock totals. Returned-text tokens are estimates, not billed usage. Request tokens are separate and never charged to individual tools. Script-wrapped MCP calls, implicit Skill reads, images and missing logs cannot be fully attributed.")
