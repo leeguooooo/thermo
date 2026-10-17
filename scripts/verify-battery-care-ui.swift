@@ -75,7 +75,12 @@ struct QAHost: View {
                     Button("模拟供电未知") { fake.powerState(90, plugged: nil) }
                     Button("恢复 90% 接电") { fake.powerState(90, plugged: true) }
                 }
-                BatteryCarePanel(model: model, configureHelper: { print("NO_HELPER_INSTALL"); fflush(stdout) }, openBatterySettings: { print("NO_SYSTEM_SETTINGS"); fflush(stdout) })
+                BatteryCarePanel(model: model, configureHelper: { print("NO_HELPER_INSTALL"); fflush(stdout) }, openBatterySettings: {
+                    if Bundle.main.object(forInfoDictionaryKey: "ThermoQABatterySettingsNavigation") as? Bool == true {
+                        print("OPEN_PRODUCTION_BATTERY_SETTINGS"); fflush(stdout)
+                        BatteryCarePanel(model: model).openBatterySettings()
+                    } else { print("NO_SYSTEM_SETTINGS"); fflush(stdout) }
+                })
             }
         }
     }

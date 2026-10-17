@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "0044d48",
+  "fixtureRoot": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-battery-ui-be3glg_l",
+  "source": "Production default BatteryCarePanel.openBatterySettings closure invoked by a real CUA button click; no duplicate URI implementation in fixture",
+  "targetURI": "x-apple.systempreferences:com.apple.Battery-Settings.extension",
+  "navigationObserved": {
+    "application": "com.apple.systempreferences",
+    "windowTitle": "电池",
+    "selectedSidebar": "电池",
+    "detailButtonID": "charging.infoButton",
+    "nativeChargeLimitControlID": "charge_limit_slider",
+    "nativeChargeLimitControlPresent": true,
+    "optimizedChargingControlID": "battery_health_obc_alert"
+  },
+  "actions": [
+    "Open isolated production panel",
+    "Click Open Battery settings",
+    "Inspect actual Battery pane",
+    "Open charging detail",
+    "Read native control presence",
+    "Escape detail",
+    "Quit System Settings",
+    "Close panel and Quit private QA"
+  ],
+  "stateChangingControlActionsPerformed": false,
+  "systemSettingsAppNotInInitialRunningInventory": true,
+  "systemSettingsAppNotInFinalRunningInventory": true,
+  "fixtureTrace": [
+    "QA_START",
+    "QA_WINDOW_READY",
+    "QA_WINDOW_STATE before-run number=19137 visible=true occlusion=8192 active=false frame=(536.0, 336.0, 680.0, 682.0)",
+    "QA_WINDOW_STATE running number=19137 visible=true occlusion=8192 active=false frame=(536.0, 877.0, 280.0, 141.0)",
+    "OPEN_PRODUCTION_BATTERY_SETTINGS",
+    "QUIT_BLOCKED false"
+  ],
+  "fixtureProcessesRemaining": false,
+  "simulatedRegisterWrites": 0,
+  "realHelperConnected": false,
+  "realChargingTested": false,
+  "screenshotsSaved": false,
+  "privateSystemAXDataPersisted": false,
+  "scope": "Navigation and presence of a native charge-limit UI on this Mac only. No slider/toggle input, actual native limit change, root service deployment or battery-write acceptance. Personal account sidebar and battery-usage history are intentionally not copied into this report."
+}
