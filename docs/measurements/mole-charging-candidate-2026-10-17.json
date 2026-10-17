@@ -622,5 +622,11 @@
     "/tmp/thermo-charging-candidate-build.log": "c8140dcd94534ac943fbf778ac9cbe9bbec2d1b01b33998afd930a4565d450d6",
     "/tmp/thermo-charging-candidate-verification.log": "1a26e30875f22fb7761e0abf69d6fe60a9047e23f6b24be36016fe5eadcd4b47"
   },
-  "rebuildRequiredBeforeDeployment": "Helper installer failure propagation and CLI exact version confirmation were corrected after this build."
+  "rebuildRequiredBeforeDeployment": "Helper installer failure propagation and CLI exact version confirmation were corrected after this build.",
+  "replacementCandidate": {
+    "build": "424",
+    "source": "f73aa4c",
+    "record": "mole-helper-install-candidate-2026-10-17.json",
+    "installed": false
+  }
 }
