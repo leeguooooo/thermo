@@ -625,8 +625,11 @@ struct ConfigChecks {
                 for copy in visible {
                     currentItem = copy.key
                     add(Finding(.info, .skills, agent: agent, subject: name,
-                                tr("%1$@ different skills share this name (%2$@); selection depends on the agent and scope", String(Set(visible.map(\.real)).count), visible.map(\.origin).joined(separator: ", ")),
-                                fix: tr("rename or remove the copy you don't want"), source: nil))
+                                agent == "codex"
+                                    ? tr("%1$@ different Codex skills share this name (%2$@); a name-only mention can be ambiguous. Use the intended source or path.", String(Set(visible.map(\.real)).count), visible.map(\.origin).joined(separator: ", "))
+                                    : tr("%1$@ different skills share this name (%2$@); selection depends on the agent and scope", String(Set(visible.map(\.real)).count), visible.map(\.origin).joined(separator: ", ")),
+                                fix: agent == "codex" ? tr("Select the intended source or read its SKILL.md by path. Rename or remove only unintended duplicates.")
+                                    : tr("rename or remove the copy you don't want"), source: nil))
                 }
             }
         }
