@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-17",
+  "source": "3aeb21c9216db75eb6546748178992bf68965cb5",
+  "version": "1.1.28",
+  "build": "457",
+  "cliSHA256": "35e5e24ee5c18f2cea44b3669ea7e7c4ffa948ccdd62eef4eb1f5c43ad3ca223",
+  "whitelist": {
+    "addAndRemoveExitCode": 0,
+    "manualTrashPreviewExcludedProtectedPath": true,
+    "protectedPayloadPreserved": true,
+    "executionAttempted": false
+  },
+  "openFiles": {
+    "actualPythonParentHeldFixtureOpen": true,
+    "manualTrashExecutionExitCode": 3,
+    "removed": [],
+    "failureReason": "Python has files open here",
+    "openedPayloadPreserved": true
+  },
+  "duplicates": {
+    "previewExitCode": 0,
+    "reviewIncludesPayloadHashAndEntryIdentities": true,
+    "trashExitCode": 0,
+    "retainedCopyUnchanged": true,
+    "removedOnlySelectedCopy": true,
+    "actualBatchRestoreExitCode": 0,
+    "bothCopiesMatchOriginalPayloadAfterRestore": true
+  },
+  "cleanup": {
+    "detachExitCode": 0,
+    "ownedImageDetached": true
+  },
+  "rawEvidenceSHA256": "f437a36d986297bd1c4850ccc41328ed23232b4472d55a053e300217c8687c38",
+  "scope": "Final signed CLI and self-created files in an owned APFS image and private home; no personal data or hardware control.",
+  "limitations": [
+    "Whitelist was checked through actual config and preview; no whitelist mutation attempt on protected data",
+    "No uninstall or installed App UI acceptance",
+    "No claim of atomicity against every concurrent writer or completeness across other-user process permissions"
+  ]
+}
