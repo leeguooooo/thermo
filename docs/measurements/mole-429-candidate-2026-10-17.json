@@ -1,0 +1,369 @@
+{
+  "date": "2026-10-17T04:12:47.474258+00:00",
+  "source": "6a8b754",
+  "version": "1.1.28",
+  "build": "429",
+  "artifacts": {
+    "thermo": {
+      "sha256": "ccdc4bea5b1e0cd3e45afc8a2cd34bcf88944458aedada5d96a5aa8ebeaa4851",
+      "bytes": 36984784
+    },
+    "thermo-helper": {
+      "sha256": "5daa71043d69527253913483b967d59929f28ccc03d352124e138b3262ddfd7c",
+      "bytes": 3432368
+    },
+    "Thermo.app/Contents/MacOS/Thermo": {
+      "sha256": "aeaec422bcdea633774a3bffc8624e75e6351f5bd7a46823c31c1ab9f553360e",
+      "bytes": 63365744
+    },
+    "Thermo.app/Contents/Helpers/thermo": {
+      "sha256": "348f0e3a9b321ee6b08e31517a07fa3afe90e458b5bb5faf04239f7fc5b29412",
+      "bytes": 36984784
+    },
+    "Thermo.app/Contents/Helpers/thermo-helper": {
+      "sha256": "20edf5cc4f65938de741bd09e6e5ff68d6d795e7b2ee369364295dd3f3635958",
+      "bytes": 3432368
+    }
+  },
+  "cliChecks": {
+    "native": {
+      "fullDryRun": {
+        "changesMade": false,
+        "forcesCharging": false,
+        "fullChargeEndConditions": [
+          "reported100Percent",
+          "externalPowerDisconnected",
+          "powerStateUnavailable",
+          "supportChanged"
+        ],
+        "holdsConnection": true,
+        "minimumHelperProtocol": 8,
+        "policy": "chargeToFull"
+      },
+      "limitDryRun": {
+        "changesMade": false,
+        "forcesCharging": false,
+        "holdsConnection": true,
+        "minimumHelperProtocol": 8,
+        "pauseAtPercent": 80,
+        "policy": "limit80",
+        "resumeBelowPercent": 75
+      },
+      "probe": {
+        "availability": "available",
+        "changesMade": false,
+        "gate": "allowed",
+        "presence": "present",
+        "registers": [
+          {
+            "key": "CH0B"
+          },
+          {
+            "key": "CH0C"
+          },
+          {
+            "hex": "00 00 00 00",
+            "info": {
+              "attributes": 212,
+              "key": "CHTE",
+              "size": 4,
+              "type": "ui32"
+            },
+            "key": "CHTE"
+          }
+        ],
+        "sessionStateQueried": false,
+        "support": "smc"
+      },
+      "physicalIntelAcceptance": false
+    },
+    "translatedX86": {
+      "fullDryRun": {
+        "changesMade": false,
+        "forcesCharging": false,
+        "fullChargeEndConditions": [
+          "reported100Percent",
+          "externalPowerDisconnected",
+          "powerStateUnavailable",
+          "supportChanged"
+        ],
+        "holdsConnection": true,
+        "minimumHelperProtocol": 8,
+        "policy": "chargeToFull"
+      },
+      "limitDryRun": {
+        "changesMade": false,
+        "forcesCharging": false,
+        "holdsConnection": true,
+        "minimumHelperProtocol": 8,
+        "pauseAtPercent": 80,
+        "policy": "limit80",
+        "resumeBelowPercent": 75
+      },
+      "probe": {
+        "availability": "available",
+        "changesMade": false,
+        "gate": "allowed",
+        "presence": "present",
+        "registers": [
+          {
+            "key": "CH0B"
+          },
+          {
+            "key": "CH0C"
+          },
+          {
+            "hex": "00 00 00 00",
+            "info": {
+              "attributes": 212,
+              "key": "CHTE",
+              "size": 4,
+              "type": "ui32"
+            },
+            "key": "CHTE"
+          }
+        ],
+        "sessionStateQueried": false,
+        "support": "smc"
+      },
+      "physicalIntelAcceptance": false
+    }
+  },
+  "installedAppAndHelperUnchanged": true,
+  "notarized": false,
+  "published": false,
+  "realBatteryWriteTested": false,
+  "nativeUIAccepted": false,
+  "candidateRoot": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-uzjjx_nv",
+  "regression": {
+    "source": "6a8b754cf8db872d846a4a3929b3fa4d9794b5fc",
+    "exitCode": 0,
+    "excluded": [
+      "HardwareTests"
+    ],
+    "total": 1622,
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 187,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 104,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 292,
+        "failures": 0
+      },
+      "CleanKitTests.xctest": {
+        "tests": 751,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 216,
+        "failures": 0
+      },
+      "AgentCoreTests.xctest": {
+        "tests": 42,
+        "failures": 0
+      }
+    },
+    "logSHA256": "7c9c44661f788dd55dd9e9d370399f5de15982e4c790570a502bf0f820d8c49c"
+  },
+  "archive": {
+    "archive": "Thermo-1.1.28-429-candidate.zip",
+    "sha256": "15935c7101b2befd735fd7516f74bf798b5542462f3404f7b0dd546ce804ca4e",
+    "bytes": 36271597,
+    "fileCount": 95,
+    "allFileBytesEqual": true,
+    "deepStrictSignatureVerified": true
+  },
+  "pageRenders": {
+    "source": "6a8b754",
+    "build": "429",
+    "renders": [
+      {
+        "page": "overview",
+        "requestedWidth": 1100,
+        "requestedHeight": 740,
+        "pixelWidth": 2200,
+        "pixelHeight": 1480,
+        "file": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-uzjjx_nv/page-renders/overview-1100x740.png",
+        "sha256": "62bb850a3cb5dae9a99a186d1aa6ee29ad5cf5bd7fb4d96b69b4a369de21d1fc",
+        "exitCode": 0
+      },
+      {
+        "page": "settings",
+        "requestedWidth": 1100,
+        "requestedHeight": 740,
+        "pixelWidth": 2200,
+        "pixelHeight": 1480,
+        "file": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-uzjjx_nv/page-renders/settings-1100x740.png",
+        "sha256": "b3269f5678509021da948997cf770db98976a45ac015e92c0cc19554c347e7da",
+        "exitCode": 0
+      },
+      {
+        "page": "overview",
+        "requestedWidth": 800,
+        "requestedHeight": 580,
+        "pixelWidth": 1600,
+        "pixelHeight": 1160,
+        "file": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-uzjjx_nv/page-renders/overview-800x580.png",
+        "sha256": "6bd13b0312170f6ed1749848e47715edc57a2c447192f38be60652d3453a1a49",
+        "exitCode": 0
+      },
+      {
+        "page": "settings",
+        "requestedWidth": 800,
+        "requestedHeight": 580,
+        "pixelWidth": 1600,
+        "pixelHeight": 1160,
+        "file": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-uzjjx_nv/page-renders/settings-800x580.png",
+        "sha256": "ee4b9616b8f6f1d9dcfd221c73ab01fa077c26766792d76fe7a85a6fed518bd8",
+        "exitCode": 0
+      }
+    ],
+    "realPreferencesFileUnchanged": true,
+    "helperInteractionDisabledByVerificationMode": true,
+    "systemControlActionsRequested": false,
+    "scope": "Offscreen bitmap export, not actual visible UI interaction. Private CFFIXED_USER_HOME for each job; no installed helper connection."
+  },
+  "visualReview": {
+    "reviewedAllFourBitmaps": true,
+    "observations": [
+      "Overview heat-chain cards use four columns at1100 and two columns at800",
+      "No overlapping main headings or action buttons observed in the four exported viewports",
+      "Navigation and Settings/footer remain visible in both sizes",
+      "Settings protected-location, screen cleaning, AWDL and battery entries are visible",
+      "Settings clean-screen button stretches while adjacent tool entries stay compact; visual consistency remains to refine",
+      "Scrollable content below the viewport and actual interactions were not verified"
+    ],
+    "imageFilesKeptLocalOnly": true
+  },
+  "lifecycleChecks": {
+    "parallel1Second": {
+      "exitCode": 2,
+      "functionalChecksPassed": false,
+      "options": {
+        "cycles": 2,
+        "idleSeconds": 2,
+        "openSeconds": 1,
+        "output": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-uzjjx_nv/lifecycle.json"
+      },
+      "opens": [
+        {
+          "cycle": 1,
+          "page": "overview",
+          "elapsed": 1.619164083,
+          "activeSampleFresh": false
+        },
+        {
+          "cycle": 1,
+          "page": "memory",
+          "elapsed": 6.389994792,
+          "activeSampleFresh": true
+        },
+        {
+          "cycle": 1,
+          "page": "cpu",
+          "elapsed": 11.199918208,
+          "activeSampleFresh": true
+        },
+        {
+          "cycle": 2,
+          "page": "overview",
+          "elapsed": 15.867442083,
+          "activeSampleFresh": true
+        },
+        {
+          "cycle": 2,
+          "page": "memory",
+          "elapsed": 20.500730875,
+          "activeSampleFresh": true
+        },
+        {
+          "cycle": 2,
+          "page": "cpu",
+          "elapsed": 24.959476167,
+          "activeSampleFresh": true
+        }
+      ],
+      "retiredControllersAllReleased": true,
+      "idlePublicationsStable": true,
+      "reportSHA256": "f8ec21f1f3e2f0a033518906cc21eae4cd1e1a4dfbb497ce09762e60eb7a704a",
+      "fullReportLocalPath": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-uzjjx_nv/lifecycle.json"
+    },
+    "sequential3Seconds": {
+      "exitCode": 2,
+      "functionalChecksPassed": false,
+      "options": {
+        "cycles": 2,
+        "idleSeconds": 2,
+        "openSeconds": 3,
+        "output": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-uzjjx_nv/lifecycle-sequential.json"
+      },
+      "opens": [
+        {
+          "cycle": 1,
+          "page": "overview",
+          "elapsed": 5.17476975,
+          "activeSampleFresh": false
+        },
+        {
+          "cycle": 1,
+          "page": "memory",
+          "elapsed": 11.734524042,
+          "activeSampleFresh": true
+        },
+        {
+          "cycle": 1,
+          "page": "cpu",
+          "elapsed": 20.672359167,
+          "activeSampleFresh": true
+        },
+        {
+          "cycle": 2,
+          "page": "overview",
+          "elapsed": 27.576227417,
+          "activeSampleFresh": true
+        },
+        {
+          "cycle": 2,
+          "page": "memory",
+          "elapsed": 34.507260125,
+          "activeSampleFresh": true
+        },
+        {
+          "cycle": 2,
+          "page": "cpu",
+          "elapsed": 41.155158625,
+          "activeSampleFresh": true
+        }
+      ],
+      "retiredControllersAllReleased": true,
+      "idlePublicationsStable": true,
+      "reportSHA256": "3ebd580a0062c628d2b2d42d07506afefad284e6c55ae75a22ed407aa4b67009",
+      "fullReportLocalPath": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-uzjjx_nv/lifecycle-sequential.json"
+    }
+  },
+  "acceptanceStatus": "pending: first Overview pulse unavailable within1s and3s; investigate cold-start sampling latency before claiming lifecycle acceptance",
+  "nextAction": "Profile the first SystemPulse/PulseSampler operation in an owned non-root process; do not merely increase the acceptance wait.",
+  "limits": [
+    "No visible interaction acceptance",
+    "No installed App or system-domain helper deployment",
+    "No hardware write or physical pause/restoration acceptance",
+    "No cold-start performance acceptance",
+    "Not notarized or published",
+    "Rosetta is not physical Intel acceptance"
+  ],
+  "logsSHA256": {
+    "/tmp/thermo-mole-final-regression.log": "7c9c44661f788dd55dd9e9d370399f5de15982e4c790570a502bf0f820d8c49c",
+    "/tmp/thermo-mole-final-candidate-build.log": "812d37003228f9c9344d330c33aa65c3a679030365e68fa86c2899e1545d6b4a",
+    "/tmp/thermo-mole-final-candidate-verification.log": "f366727096a6cf6ad8182585839d10c04b75d0ed2202e18fc24364c3ad72714e",
+    "/tmp/thermo-mole-final-page-renders.log": "4e17fa52a2f6d6ad439eec1f767b90fa6989a1c47e01a17b1aa176eff337feae"
+  }
+}
