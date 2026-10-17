@@ -55,7 +55,7 @@ final class FakeBattery: @unchecked Sendable {
 struct QAHost: View {
     @ObservedObject var model: BatteryCareModel
     let fake: FakeBattery
-    @State private var showing = true
+    @State private var showing = false
     var body: some View {
         VStack {
             Text("独立验收：仅模拟充电，不写真实电池")
@@ -87,6 +87,7 @@ struct QAHost: View {
         let root = URL(fileURLWithPath: path).resolvingSymlinksInPath()
         guard root.lastPathComponent.hasPrefix("thermo-battery-ui-"), FileManager.default.fileExists(atPath: root.appendingPathComponent(".thermo-battery-ui-fixture").path) else { exit(3) }
         _ = freopen(root.appendingPathComponent("trace.log").path, "a", stdout)
+        print("QA_START"); fflush(stdout)
         let fake = FakeBattery(root), owner = AWDLConnectionOwner()
         let manager = BatteryHelperCoordinator(make: { fake.controller() }, power: { fake.power() }, presence: { fake.presence() }, nativeEligible: { fake.nativeEligible() }, tickInterval: 0.1)
         let backend = BatteryCareBackend(read: {
@@ -112,6 +113,7 @@ struct QAHost: View {
         window.title = "Thermo Battery UI QA"; window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: QAHost(model: model, fake: fake).preferredColorScheme(.dark))
         window.center(); window.makeKeyAndOrderFront(nil); app.activate(ignoringOtherApps: true)
+        print("QA_WINDOW_READY"); fflush(stdout)
         model.restoreSavedPreference()
         DispatchQueue.main.asyncAfter(deadline: .now() + 600) { fake.permit(true); app.terminate(nil) }
         withExtendedLifetime((window, delegate, manager, fake)) { app.run() }

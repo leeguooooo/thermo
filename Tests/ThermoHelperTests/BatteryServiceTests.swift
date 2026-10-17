@@ -278,4 +278,23 @@ final class BatteryServiceTests: XCTestCase {
         try await client.setBatteryChargePolicy(.chargeToFull); rig.access { $0.percent = 100 }
         _ = try await wait(client) { $0.policy == .limit80 && $0.phase == .holding }
     }
+    func testChargeControlDisappearingDuringFullEndsWithoutReapplyingAfterItReturns() async throws {
+        let rig = Rig(), endpoint = Endpoint(rig); defer { endpoint.stop() }
+        let client = endpoint.client(); defer { client.reset() }
+        try await client.setBatteryChargePolicy(.limit80)
+        try await client.setBatteryChargePolicy(.chargeToFull)
+        let writesBeforeLoss = rig.access { $0.writes }
+        rig.access { $0.hasChargeKeys = false }
+        let ended = try await wait(client) { $0.policy == .off && $0.lastFullChargeEndReason == .supportChanged }
+        XCTAssertFalse(ended.ownedByCaller); XCTAssertNil(ended.sessionID)
+        XCTAssertNil(rig.access { $0.record }); XCTAssertEqual(rig.access { $0.bytes }, [0, 0, 0, 0])
+        rig.access { $0.hasChargeKeys = true }
+        _ = try await wait(client) { $0.support == .smc }
+        // Cross a timer tick after capability recovers, then query again. Restored
+        // capability alone must not recreate the old owner's charging policy.
+        try await Task.sleep(nanoseconds: 100_000_000)
+        let recovered = try await client.batteryChargeState()
+        XCTAssertEqual(recovered.policy, .off)
+        XCTAssertEqual(rig.access { $0.writes }, writesBeforeLoss)
+    }
 }

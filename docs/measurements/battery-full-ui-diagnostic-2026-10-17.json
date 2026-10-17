@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-17",
+  "fixtureRoot": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-battery-ui-glvbtp_2",
+  "pid": 46495,
+  "trace": [
+    "QA_START",
+    "QA_WINDOW_READY"
+  ],
+  "observationErrors": [
+    "getApp by path: cgWindowNotFound",
+    "getApp by observed bundle ID: cgWindowNotFound"
+  ],
+  "mainThreadSample": "NSApplication.run -> event loop -> mach_msg2_trap",
+  "sampleSHA256": "15f2d43538e9121bc225acf3a4b1f72734a38780a9351fdd7828966f7a5778e4",
+  "scope": "No UI action; no simulated writes or recovery record. Does not prove visible window or product UI acceptance.",
+  "cleanup": {
+    "exactPathAndUIDVerified": true,
+    "sentSIGTERM": true,
+    "filesPreserved": true,
+    "processExitConfirmed": true
+  },
+  "fixtureSourceChange": "Start with sheet closed; open it explicitly; log startup and window creation milestones",
+  "supportLossRegression": {
+    "command": "swift test --filter BatteryServiceTests",
+    "exitCode": 0,
+    "tests": 23,
+    "failures": 0,
+    "newTest": "testChargeControlDisappearingDuringFullEndsWithoutReapplyingAfterItReturns",
+    "logSHA256": "c138b99e9d4410353ca2cf9f24c8aac68564dc4a7b6c160807b07896ee065f65",
+    "usesRealAnonymousXPC": true,
+    "batteryRegistersSimulated": true
+  }
+}
