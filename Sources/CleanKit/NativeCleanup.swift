@@ -69,7 +69,7 @@ enum NativeCleanup {
         Spec(rule: "uv-cache", names: ["uv"], display: "uv cache clean", folders: ["~/.cache/uv", "~/Library/Caches/uv"],
              command: { ([], ["cache", "clean", "--cache-dir", $0]) }),
         Spec(rule: "go-cache", names: ["go"], display: "go clean -cache", folders: ["~/Library/Caches/go-build"],
-             command: { (["GOCACHE=" + $0], ["clean", "-cache"]) }),
+             command: { (["GOTOOLCHAIN=local", "GOCACHE=" + $0], ["clean", "-cache"]) }),
     ]
 
     static func spec(_ rule: String) -> Spec? { specs.first { $0.rule == rule } }

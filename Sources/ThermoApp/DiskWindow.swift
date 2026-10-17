@@ -27,12 +27,17 @@ extension DiskModel {
             let deleted=i.paths.filter { native?.owns($0) != true }
             let how=native != nil ? tr("tool clean") : !(i.commands ?? []).isEmpty ? tr("permanent tool removal") : i.safety == .safe ? tr("delete") : tr("trash")
             let paths=trCount(deleted.count,"%1$@ path","%1$@ paths")
-            return ["\(how) · \(ByteFormat.string(i.bytes)) · \(i.title)" + (!deleted.isEmpty ? " (\(paths))" : "")]
-                + (native.map { ["    " + tr("runs `%1$@`", $0.display)] } ?? [])
-                + (native == nil ? [i.native?.fallback].compactMap { $0 }.map { "    " + $0 } : [])
-                + deleted.map { "    " + FSPath.tilde($0) }
-                + (i.commandScope ?? []).map { "    " + tr("Tool-managed locations") + ": " + FSPath.tilde($0) }
-                + (i.commands ?? []).map { "    " + $0.joined(separator: " ") }
+            var lines=["\(how) · \(ByteFormat.string(i.bytes)) · \(i.title)" + (!deleted.isEmpty ? " (\(paths))" : "")]
+            if let native {
+                for run in native.runs {
+                    lines.append("    " + tr("Tool-managed locations") + ": " + FSPath.tilde(run.folder))
+                    lines.append("    " + tr("runs `%1$@`", run.commandLine))
+                }
+            } else if let fallback=i.native?.fallback { lines.append("    " + fallback) }
+            lines += deleted.map { "    " + FSPath.tilde($0) }
+            lines += (i.commandScope ?? []).map { "    " + tr("Tool-managed locations") + ": " + FSPath.tilde($0) }
+            lines += (i.commands ?? []).map { "    " + $0.joined(separator: " ") }
+            return lines
         }
     }
 

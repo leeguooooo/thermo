@@ -4,6 +4,18 @@ import AgentCore
 import XCTest
 
 final class ConfirmationReviewTests: XCTestCase {
+    @MainActor func testNativeToolReviewShowsEveryExecutableAndCacheBoundary() {
+        let roots=["/fixture/cache-one","/fixture/cache-two"],program="/fixture/tool-bin/pip3"
+        var item=CleanItem(id:"pip-cache",category:.devCaches,title:"pip cache",safety:.safe,bytes:4096,paths:roots)
+        item.native=NativeClean(tool:"pip3",display:"pip cache purge",runs:roots.map {
+            .init(folder:$0,argv:[program,"cache","purge","--cache-dir",$0])
+        })
+        let model=DiskModel(report:.init(items:[item],denied:[],started:Date(),duration:0));model.selected=[item.id]
+        let lines=model.planLines.joined(separator:"\n")
+        for root in roots { XCTAssertTrue(lines.contains(root),"The user must see each tool-managed cache boundary") }
+        XCTAssertTrue(lines.contains(program),"The reviewed executable must be visible")
+        XCTAssertTrue(model.confirmationIsDestructive)
+    }
     func record(_ id: String = UUID().uuidString) -> OperationRecord {
         .init(feature: "fixture", action: "remove", items: [.init(target: "/old-record", status: "done")], undo: .init(kind: "trashBatch", ref: id))
     }

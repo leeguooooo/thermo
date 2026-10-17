@@ -126,6 +126,32 @@ final class NativeCleanupTests: XCTestCase {
 
     // MARK: Cleaning
 
+    func testGoBuildCacheCleanupIsIndependentOfTheProjectsRequestedToolchain() throws {
+        guard let program=NativeCleanup.resolve(["go"],in:["/opt/homebrew/bin","/usr/local/bin","/usr/local/go/bin"]) else {
+            throw XCTSkip("No local Go installation for the real-tool regression")
+        }
+        let cache=home+"/Library/Caches/go-build",payload=cache+"/aa/"+String(repeating:"a",count:64)+"-d"
+        try file(payload)
+        let project=home+"/future-project"
+        try FileManager.default.createDirectory(atPath:project,withIntermediateDirectories:true)
+        try Data("module thermo.fixture/future\n\ngo 1.99\n".utf8).write(to:URL(fileURLWithPath:project+"/go.mod"))
+        let item=NativeCleanup.attach(CleanItem(id:"go-cache",category:.devCaches,title:"Go build cache",safety:.safe,
+            bytes:FS.size(cache).bytes,paths:[cache]),home:home,dirs:[(program as NSString).deletingLastPathComponent])
+        var operations=RemovalOperations.live,calls=0
+        operations.run={ argv,_ in
+            calls += 1
+            let environment=["PATH":"/usr/bin:/bin", "GOENV":"off", "GOTOOLCHAIN":"auto", "GOPROXY":"off", "GOSUMDB":"off",
+                "GOPATH":self.home+"/gopath", "GOMODCACHE":self.home+"/gomod"]
+            let result=CommandRunner.run("/usr/bin/env",arguments:argv,directory:project,environment:environment,timeout:20)
+            return (result.status,result.output.trimmingCharacters(in:.whitespacesAndNewlines))
+        }
+        let result=clean(item,ops:operations)
+        XCTAssertEqual(calls,1)
+        XCTAssertEqual(result.failed,[:])
+        XCTAssertEqual(result.toolCommands?.first?.status,"ran")
+        XCTAssertFalse(FS.exists(payload))
+    }
+
     func testCommandRunsInsteadOfDeletingAndSizesAreMeasured() throws {
         // A fake npm that empties `<--cache>/_cacache` the way the real one does and records its PATH.
         try script("npm", #"for a; do last="$a"; done; rm -rf "$last/_cacache"; echo "$PATH" > "$last/../path.txt""#)
