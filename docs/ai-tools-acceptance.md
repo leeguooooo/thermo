@@ -4,6 +4,18 @@
 
 后续源码已补充[返回文本合计与占比](measurements/tool-usage-return-shares-2026-10-17.json)，通过 31 项针对性测试、独立 CLI 夹具和[中文面板离屏复核](measurements/tool-usage-return-shares-zh-2026-10-17.png)。[完整 App 的隔离验证](measurements/tool-usage-native-qa-2026-10-17.json)确认了 8 → 16 → 21 项展开、编码切换后的旧报告提示与重新分析，以及 MCP / Skill 分类独立的合计和占比。另修复了分析完成后仍称“实际工具用量仍未测量”的说明，并通过 3 项本地化测试及完整窗口复核。新增展示与文案尚未进入 393 包，也未完成安装包验收。
 
+[Skill 内容汇总修复](measurements/skill-content-summary-2026-10-17.json)另通过 30 项针对性测试、CLI 夹具及完整 App 的同文件前后对照：别名不重复累计，目录 / 已配置插件与缓存分别展示；证据缺失或冲突单列。该次本机目录盘点为 138 个已检查独立文件、459 个引用、2 个发现，缓存为 215 个文件、417 个引用、0 个发现。两处缺失引用均来自 `unity-mcp-orchestrator`。此汇总修复也尚未进入 393 包。
+
+随后已[补齐本机 Unity Skill 的两份引用文档](measurements/unity-skill-reference-repair-2026-10-17.json)。三个既有文档与上游 `25357a0e75b9` 的同步来源逐字匹配，缺失文档来自同一快照的另一份完整 Skill 目录；已校验 Git blob 和 SHA-256。既有文件未改写，该 Skill 的 4 个本地引用全部通过，目录范围已采集发现降为 0，仍有 1 条未测量。上游同步来源仍只有三个文档，后续镜像可能再次删除补齐文件；仓库提供版本受限的检查 / 恢复脚本，不在默认诊断中自动执行。未验证 Unity 业务任务。
+
+[本机 HTTP MCP 检查](measurements/mcp-http-installed-audit-2026-10-17.json)覆盖 Codex 已启用的三个 HTTP 配置：OpenAI 文档完整返回 5 个工具、定义数组 781 个 cl100k 参考 token；ZEGO 完整返回 6 个工具、1,362 token，但本次会话关闭未确认；Figma 返回鉴权要求，定义大小未知。成功子集合计 11 个工具、8,446 字节、2,143 token，不是全部配置或宿主实际上下文。未调用业务工具，未自动登录或重试。原先唯一未测量的 Skill 条目也已核实为没有 `SKILL.md` 的空目录 `codex-primary-runtime`，不是正文读取失败；没有移除该目录。
+
+[HTTP 会话关闭诊断](measurements/mcp-cleanup-diagnostics-2026-10-17.json)新增可选的 `cleanupDetails`，在 App、CLI 和 JSON 中区分关闭确认、HTTP 错误、不支持关闭、等待超时、传输失败和无需关闭。保留 250 毫秒预算，不增加重试。29 项针对性测试及独立 CLI 验证通过。新版对一个新的 ZEGO 会话观察到：列表仍完整，关闭约 252 毫秒后记为预算内未确认，未取得 HTTP 状态码；不能推断服务端最终状态或回溯上次原因。新增诊断尚未进入 393 包，也未完成这项界面细节的完整 App 验收。
+
+[后续 stdio 检查](measurements/mcp-stdio-installed-audit-2026-10-17.json)完整读取 CodeGraph 的 1 个工具与 Discord 的 22 个工具，定义数组分别为 387、1,913 个 cl100k 参考 token。结合此前 HTTP 记录，已完整测量 4 个配置、34 个工具，定义数组合计 4,443 token，独立服务指令另计 370 token；不是一次原子快照或实际加载上下文。Figma 鉴权项与其余 4 个已启用配置仍没有完整计量，未启动业务工具或发送 Discord 消息。
+
+检查启动代码时发现并[修复本机 Claude Design 代理的 SSE 等待问题](measurements/claude-design-relay-sse-2026-10-17.json)：以前收到 JSON-RPC 响应后仍等待流结束，现在按请求 ID 识别完整响应。原有鉴权、刷新、重定向保护及分发逻辑保持一致，8 项离线用例在配置所用 Python 3.9.6 和 Python 3.14 均通过。自有流延迟关闭对照由约 1.03 秒等待变为约 1 毫秒返回，不能当作真实 Design 服务提速。源码已写入本机代理，现存实例未重启，下次启动加载；未访问真实 Design 服务或钥匙串。
+
 | 原始问题 | 当前能力与证据 | 仍不能据此判断 |
 |---|---|---|
 | MCP 总体有多大、占多少 token | 汇总已完整检查配置的定义字节、定义数组计数和独立服务指令计数；支持启发式和两种离线参考编码。[汇总与取消测试](../Tests/ThermoAppTests/MCPDefinitionStoreTests.swift)、[批量原生验收](measurements/mcp-batch-inspection-2026-10-17.json) | 未检查配置不按零计；多宿主配置保留独立计量。它不是宿主当前实际加载上下文或账单 |

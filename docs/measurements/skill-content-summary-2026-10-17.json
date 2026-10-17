@@ -1,0 +1,126 @@
+{
+  "date": "2026-10-17",
+  "parentCommit": "5c6263671b0aeeba461bdfef5b8d9e53019d1f76",
+  "scope": "Unique-file Skill content summaries in App and CLI; real local read-only Codex inventory refreshed without running Skills or MCPs.",
+  "sourceSHA256": {
+    "Sources/AgentDoctor/SkillQualitySummary.swift": "56a00385f1f7d9cb9c2ba9d5c312904a1dafb41604c4ab97f190995ff8f93f4c",
+    "Sources/AgentDoctor/SkillContextSummary.swift": "f132bb37f520aceb9bb81389b406e1cd08a4ec4ae9d9af1465183b7c2267d1da",
+    "Sources/AgentDoctor/ContextFootprint.swift": "3b7a96f90f7b63cdfbe964ada25f4dca633b9b79c45e9ad8a1e416c5a4c66f12",
+    "Sources/ThermoApp/SkillContextCard.swift": "f1f9f13e37f36e331049e8163492d647ceccbd29a01c99986ce1528c89b32db3",
+    "Sources/ThermoL10n/ZhHans.swift": "2258f65a1e9434468c3bfa1626a6eb308a680e9c5c313b201eb950ef287747f3",
+    "Sources/thermo/Agents.swift": "8d4d469d06c1db97d2703cefe52b82b0482cd8af23a94eb5a95e6b8c6faa94af",
+    "Tests/AgentDoctorTests/SkillQualitySummaryTests.swift": "28a556c2193783f64d6c2f86936aaffbf46a02edf64f46e219993b5a126da6e1",
+    "scripts/verify-skill-quality.py": "4c4123831aea17f8545be5a1996bce1b638c1ac0cec93e4eead95280774fbbab"
+  },
+  "tests": {
+    "selectedTests": 30,
+    "failures": 0,
+    "logSHA256": "2fc743634ed2892fd4ebafdcae8f9816c878e416326a2f04ed14d2b3e4628fe4",
+    "cli": {
+      "passed": true,
+      "missingReferences": 2,
+      "sourceLinesVerified": true,
+      "emptyBodies": 1,
+      "identicalIndependentCopies": 2,
+      "examplesIgnored": true,
+      "noMCPExecution": true,
+      "noSkillChanges": true,
+      "aliasEvidenceDeduplicated": true,
+      "cacheEvidenceSeparate": true,
+      "qualitySummariesRespectAgentFilter": true
+    }
+  },
+  "nativeUI": {
+    "before": {
+      "references": 3,
+      "findings": 3,
+      "directoryUniqueFiles": 1,
+      "aliasEntries": 1,
+      "cacheUniqueFiles": 1,
+      "nativeScreenshotVisuallyReviewed": true,
+      "runtimeAbsentAfterWindowClose": true,
+      "initialCaptureError": true,
+      "liveRuntimeVerifiedBeforeRebinding": true
+    },
+    "after": {
+      "directoryReferences": 1,
+      "directoryFindings": 1,
+      "directoryAliasEntriesExcluded": 1,
+      "cacheReferences": 1,
+      "cacheFindings": 1,
+      "cacheLoadingUnverifiedLabel": true,
+      "screenshotVisuallyReviewed": true,
+      "runtimeAbsentAfterWindowClose": true
+    },
+    "provenance": {
+      "debugBinarySHA256": "3eca9a6f389aa14bfb2eb309216a5ad27d4ace9977985143e7b27daea7697637",
+      "qaRuntimeSHA256": "be688abc92cf99906dea32fd825c9952f55ffa3d13423cd006f2e1517884e742",
+      "executableTextSHA256": "3d2b744e327ab1ac0c5c79201e25e8b25b2f4f86f424483a060c8d31eb4bb9a5",
+      "executableTextMatches": true
+    },
+    "beforeRuntimeSHA256": "b98622eb5a7e4e1b5fa6bfcdbd3dc6e40d872ba0b500dac9c9f69d56abcd17af"
+  },
+  "currentInventory": {
+    "generated": "2026-10-17T01:56:42Z",
+    "qualitySummaries": [
+      {
+        "aliases": 0,
+        "checkedLocalReferences": 417,
+        "conflictingFiles": 0,
+        "entries": 215,
+        "findings": 0,
+        "host": "codex",
+        "incompleteInspections": 0,
+        "inspectedFiles": 215,
+        "scope": "cache",
+        "unavailableFiles": 0,
+        "uniqueFiles": 215,
+        "unmeasuredEntries": 0,
+        "unverifiedIdentityEntries": 0
+      },
+      {
+        "aliases": 2,
+        "checkedLocalReferences": 459,
+        "conflictingFiles": 0,
+        "entries": 141,
+        "findings": 2,
+        "host": "codex",
+        "incompleteInspections": 0,
+        "inspectedFiles": 138,
+        "scope": "directory",
+        "unavailableFiles": 0,
+        "uniqueFiles": 138,
+        "unmeasuredEntries": 1,
+        "unverifiedIdentityEntries": 0
+      }
+    ],
+    "itemsWithContentFindings": [
+      {
+        "name": "unity-mcp-orchestrator",
+        "scope": "user",
+        "issues": [
+          {
+            "code": "missing_local_reference",
+            "target": "references/probuilder-guide.md",
+            "line": 191
+          },
+          {
+            "code": "missing_local_reference",
+            "target": "references/resources-reference.md",
+            "line": 280
+          }
+        ]
+      }
+    ],
+    "rawMetadataNotExported": true
+  },
+  "limitations": [
+    "Current local targets only; missing references may be generated at runtime and do not establish failed business tasks.",
+    "Host and directory/cache groups remain separate; cache presence does not prove loaded state.",
+    "Per-entry findings remain available for every source; only summary counts deduplicate aliases.",
+    "Unknown identity, unmeasured entries, missing quality and conflicting observations are excluded and explicitly counted.",
+    "Native before/after uses owned synthetic files and an ad-hoc arm64 Debug QA bundle, not installed/release-package acceptance.",
+    "Historical per-entry counts are not rewritten or treated as repaired defects.",
+    "One initial ScreenCaptureKit stream failure was followed by verified live-process reattachment; it is not classified as an App crash."
+  ]
+}

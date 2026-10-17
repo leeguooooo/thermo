@@ -518,7 +518,7 @@ final class Monitor: ObservableObject {
 
     func openLoginItemsSettings() { SMAppService.openSystemSettingsLoginItems() }
 
-    @MainActor func uninstallHelper() {
+    @MainActor func uninstallHelper(finished: @escaping () -> Void = {}) {
         uninstallHelper(operation: {
             if HelperInstaller.isInstalled {
                 try HelperInstaller.uninstall()
@@ -532,7 +532,7 @@ final class Monitor: ObservableObject {
             } else {
                 throw FanControlError.helper("no helper registration could be verified; nothing was removed")
             }
-        })
+        }, finished: finished)
     }
 
     /// The injected operation keeps regression checks away from the real root helper.

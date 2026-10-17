@@ -73,6 +73,8 @@ public struct ContextInventory: Codable, Sendable {
     public var referenceEngine: String? = nil
     public var project: String? = nil
     public var summaries: [SkillContextSummary] = []
+    /// Optional for reports written before unique-file content summaries were available.
+    public var qualitySummaries: [SkillQualitySummary]? = nil
 }
 
 extension AgentDoctor {
@@ -91,6 +93,6 @@ extension AgentDoctor {
         return ContextInventory(generated: env.now, skills: skills, mcpServers: items.filter { $0.area == .mcp },
                                 findings: checks.findings.filter { $0.area == .skills || $0.area == .mcp },
                                 cancelled: env.cancelled(), coverageNote: SkillFootprint.coverage, measurementNote: SkillFootprint.caveat,
-                                mcpNote: tr("MCP definitions, connection timing and actual usage have not been measured. Configuration checks do not prove that a server is reachable or that its tools work."), referenceEncoding: env.tokenEncoding == .heuristic ? nil : env.tokenEncoding.rawValue, referenceEngine: env.tokenEncoding == .heuristic ? nil : ReferenceTokenizer.engine, project: env.project.map { Redact.text(env.short($0.path)) }, summaries: SkillContextSummary.summarize(skills))
+                                mcpNote: tr("MCP definitions, connection timing and actual usage have not been measured. Configuration checks do not prove that a server is reachable or that its tools work."), referenceEncoding: env.tokenEncoding == .heuristic ? nil : env.tokenEncoding.rawValue, referenceEngine: env.tokenEncoding == .heuristic ? nil : ReferenceTokenizer.engine, project: env.project.map { Redact.text(env.short($0.path)) }, summaries: SkillContextSummary.summarize(skills), qualitySummaries: SkillQualitySummary.summarize(skills))
     }
 }

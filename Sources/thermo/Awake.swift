@@ -9,6 +9,10 @@ struct AwakeCommand {
     let app: App
 
     func run(_ rest: [String]) throws {
+        guard rest.count <= 1 else { throw CLIError("awake takes status, on or off") }
+        if app.args.has("dry-run"), let verb = rest.first, ["on","off"].contains(verb) {
+            app.receipt("awake." + verb, dryRun: true, outcome: "planned", message: "Set lid-closed awake \(verb); execution validates the helper. No changes made."); return
+        }
         let client = HelperClient()
         func state() throws -> LidAwakeState {
             do { return try client.blocking(timeout: 4) { try await $0.lidAwakeState() } }

@@ -48,6 +48,7 @@ struct PulseCommand {
     }
 
     func run(_ rest: [String] = []) throws {
+        guard rest.isEmpty || ["explain","quit","restart","history","inspect","chrome"].contains(rest[0]) else { throw CLIError("Unknown pulse operation. Run thermo pulse --help.") }
         if rest.first == "explain" {
             guard rest.count == 2, let pid = Int32(rest[1]), pid > 0 else { throw CLIError("usage: thermo pulse explain PID [--json]") }
             let report = try ProcessExplanation.capture(pid)
@@ -365,7 +366,7 @@ struct PulseCommand {
 
     func confirm() throws -> Bool {
         if app.args.has("yes") { return true }
-        guard isatty(STDIN_FILENO) != 0 else { throw CLIError("not a terminal; add --yes to confirm") }
+        guard !app.args.has("json"), isatty(STDIN_FILENO) != 0 else { throw CLIError("Review --dry-run, then add --yes to confirm") }
         print("Proceed? [y/N] ", terminator: "")
         fflush(stdout)
         guard let a = readLine(), ["y", "yes"].contains(a.lowercased()) else { print("cancelled"); return false }
@@ -374,19 +375,26 @@ struct PulseCommand {
 
     /// `thermo pulse restart NAME`: quit an app like ⌘Q, wait until it has gone, open it again.
     /// The app restores its own windows and tabs; what it had piled up in memory is freed.
+    func actionOutput(_ text: String) { if !app.args.has("json") { print(text) } }
+    func preview(_ hog: MachinePulse.Hog, action: String) {
+        struct Plan: Encodable { let dryRun = true; let action: String; let program: MachinePulse.Hog; let verification: String }
+        print(Export.json(Plan(action: action, program: hog, verification: "Execution rechecks process identity, then observes the result; unsaved work may prevent quit.")))
+    }
+
     func restart(_ targets: [String]) throws {
-        guard let target = targets.first else { throw CLIError("usage: thermo pulse restart NAME|PID [--yes]") }
+        guard targets.count == 1, let target = targets.first else { throw CLIError("usage: thermo pulse restart NAME|PID [--dry-run] [--yes] [--json]") }
         let style = app.style
         var h = try pick(target)
         guard h.quittable, let path = h.app else {
             throw CLIError("\(h.name) can't be restarted from here (not an app, a system process, an AI agent session or Thermo)")
         }
-        print(style.bold("About to restart \(h.name)") + style.dim("  \(Self.size(h.memoryKB))" + (h.uptime.map { " · running " + Self.duration($0) } ?? "")))
+        if app.args.has("dry-run") { preview(h, action: "restart"); return }
+        actionOutput(style.bold("About to restart \(h.name)") + style.dim("  \(Self.size(h.memoryKB))" + (h.uptime.map { " · running " + Self.duration($0) } ?? "")))
         let windows = BrowserSession.windows(for: h.name)
-        print("  quit \(path)  (like ⌘Q; it may ask to save)")
-        print("  open \(path)")
-        if windows == .thermoReopensTabs { print("  reopen its tabs  (saved to \(BrowserSession.backupURL().path))") }
-        print("  " + style.yellow(MachinePulse.restartNote(windows)))
+        actionOutput("  quit \(path)  (like ⌘Q; it may ask to save)")
+        actionOutput("  open \(path)")
+        if windows == .thermoReopensTabs { actionOutput("  reopen its tabs  (saved to \(BrowserSession.backupURL().path))") }
+        actionOutput("  " + style.yellow(MachinePulse.restartNote(windows)))
         guard try confirm() else { return }
         let originalID = h.id
         h = try pick(target)
@@ -399,7 +407,7 @@ struct PulseCommand {
                 throw CLIError("could not list \(h.name)'s tabs (allow Automation in System Settings → Privacy & Security); nothing was restarted")
             }
             saved = s
-            print(style.dim("  saved \(s.tabCount) tabs in \(s.windows.count) windows"))
+            actionOutput(style.dim("  saved \(s.tabCount) tabs in \(s.windows.count) windows"))
         }
         try quitApp(path, name: h.name)
         // Wait for every process of it to go; apps can take a while to save and close.
@@ -418,25 +426,29 @@ struct PulseCommand {
             guard BrowserSession.reopen(saved) else {
                 throw CLIError("\(h.name) restarted but its tabs could not be reopened; they are listed in \(BrowserSession.backupURL().path)")
             }
-            print("Reopen request sent to \(h.name); reopened \(saved.tabCount) tabs")
-            review(h, before: before, action: .restart)
+            actionOutput("Reopen request sent to \(h.name); reopened \(saved.tabCount) tabs")
+            try review(h, before: before, action: .restart)
             return
         }
-        print("Reopen request sent to \(h.name)")
-        review(h, before: before, action: .restart)
+        actionOutput("Reopen request sent to \(h.name)")
+        try review(h, before: before, action: .restart)
     }
 
     /// Confirm the action's effect separately from successfully sending a quit/open request.
-    func review(_ hog: MachinePulse.Hog, before: MachinePulse, action: PulseActionReview.Action) {
-        print(app.style.dim(tr("Checking the effect of the action…")))
+    func review(_ hog: MachinePulse.Hog, before: MachinePulse, action: PulseActionReview.Action) throws {
+        actionOutput(app.style.dim(tr("Checking the effect of the action…")))
         Thread.sleep(forTimeInterval: 5)
         let after = MachinePulse.sample()
         let inventory = MachinePulse.group(ProcessTable.current(.init(cpu: false)).entries, byMemory: true, limit: nil)
         let result = PulseActionReview(action: action, target: hog, before: before, after: after,
                                        afterTarget: PulseActionReview.findTarget(hog, in: inventory), inventoryAvailable: !inventory.isEmpty)
         result.record()
-        print(result.summary)
-        print(app.style.dim(result.detail))
+        if app.args.has("json") { print(Export.json(result)) }
+        if [.unavailable, .stillRunning, .notReopened].contains(result.outcome) {
+            throw CLIError(result.summary, exitCode: 3)
+        }
+        actionOutput(result.summary)
+        actionOutput(app.style.dim(result.detail))
     }
 
     func quitApp(_ path: String, name: String) throws {
@@ -463,16 +475,17 @@ struct PulseCommand {
     }
 
     func quit(_ targets: [String]) throws {
-        guard let target = targets.first else { throw CLIError("usage: thermo pulse quit NAME|PID [--yes]") }
+        guard targets.count == 1, let target = targets.first else { throw CLIError("usage: thermo pulse quit NAME|PID [--dry-run] [--yes] [--json]") }
         let style = app.style
         var h = try pick(target)
         guard h.quittable else {
             throw CLIError("\(h.name) is not offered for quitting (system process, AI agent session or Thermo itself)")
         }
+        if app.args.has("dry-run") { preview(h, action: "quit"); return }
         let plan = h.app.map { "quit \($0)  (like ⌘Q; it may ask to save)" }
             ?? "kill -TERM " + h.pids.map(String.init).joined(separator: " ")
-        print(style.bold("About to stop \(h.name)") + style.dim(String(format: "  %.0f%% CPU · %@", h.cpu, Self.size(h.memoryKB))))
-        print("  " + plan)
+        actionOutput(style.bold("About to stop \(h.name)") + style.dim(String(format: "  %.0f%% CPU · %@", h.cpu, Self.size(h.memoryKB))))
+        actionOutput("  " + plan)
         guard try confirm() else { return }
         let originalID = h.id
         h = try pick(target)
@@ -483,8 +496,8 @@ struct PulseCommand {
         } else {
             for pid in h.pids where pid != getpid() { kill(pid, SIGTERM) }
         }
-        print(style.green("✓") + " asked \(h.name) to stop")
-        review(h, before: before, action: .quit)
+        actionOutput(style.green("✓") + " asked \(h.name) to stop")
+        try review(h, before: before, action: .quit)
     }
 }
 

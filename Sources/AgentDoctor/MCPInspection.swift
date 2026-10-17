@@ -12,6 +12,33 @@ public struct MCPToolFootprint: Codable, Sendable {
     public var issues: [String]
 }
 
+/// Sanitized cleanup evidence: never includes endpoint URLs, session IDs or error bodies.
+public struct MCPCleanupDetails: Codable, Equatable, Sendable {
+    public var reason: String
+    public var httpStatusCode: Int?
+    public var elapsedSeconds: Double
+    public var budgetSeconds: Double
+
+    public var summary: String {
+        let label: String
+        switch reason {
+        case "closed": label = tr("Session closure acknowledged")
+        case "notNeeded": label = tr("No cleanup request was needed")
+        case "unsupported": label = tr("Explicit session closure is unsupported")
+        case "httpError": label = tr("Session closure returned an HTTP error")
+        case "timedOut": label = tr("Session closure was not confirmed before the time limit")
+        case "transportError": label = tr("Session closure transport failed")
+        case "authenticationRequired": label = tr("Session closure requires authentication; no login attempted")
+        case "invalidRequest": label = tr("Session closure request could not be constructed")
+        case "responseMissing": label = tr("Session closure ended without an HTTP response")
+        default: label = tr("Unknown")
+        }
+        return tr("Cleanup: %1$@ · HTTP %2$@ · observed %3$@ s · budget %4$@ s", label,
+                  httpStatusCode.map(String.init) ?? tr("Unknown"),
+                  String(format: "%.3f", elapsedSeconds), String(format: "%.3f", budgetSeconds))
+    }
+}
+
 public struct MCPInspection: Codable, Sendable {
     public enum State: String, Codable, Sendable {
         case ready, failed, timedOut, cancelled, unsupported, disabled, authenticationRequired
@@ -25,6 +52,7 @@ public struct MCPInspection: Codable, Sendable {
     public var referenceEngine: String? = nil
     public var transport: String?
     public var cleanupStatus: String?
+    public var cleanupDetails: MCPCleanupDetails? = nil
     public var protocolVersion: String?
     public var startupSeconds: Double?
     public var handshakeSeconds: Double?
@@ -122,7 +150,11 @@ enum MCPInspector {
                 report.transport = "streamable-http"
                 // HTTP has no child process startup; connection setup is part of handshake.
             }
-            defer { transport.close(); report.cleanupStatus = transport.cleanupStatus }
+            defer {
+                transport.close()
+                report.cleanupStatus = transport.cleanupStatus
+                report.cleanupDetails = transport.cleanupDetails
+            }
             let handshake = clock()
             let initialized = try transport.request("initialize", params: [
                 "protocolVersion": "2025-06-18", "capabilities": [String: Any](),
@@ -190,11 +222,13 @@ protocol MCPTransport: AnyObject {
     func negotiated(_ version: String)
     func close()
     var cleanupStatus: String? { get }
+    var cleanupDetails: MCPCleanupDetails? { get }
 }
 
 extension MCPTransport {
     func negotiated(_ version: String) {}
     var cleanupStatus: String? { nil }
+    var cleanupDetails: MCPCleanupDetails? { nil }
 }
 
 /// Synchronous, bounded JSONL transport. All pipe operations are nonblocking.

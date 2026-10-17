@@ -25,6 +25,9 @@ class Handler(BaseHTTPRequestHandler):
         if body: self.wfile.write(body); self.wfile.flush()
     def do_DELETE(self):
         with open(root+'/log','a') as f: f.write(json.dumps({'method':'DELETE','session':self.headers.get('Mcp-Session-Id')})+'\n')
+        if self.path=='/cleanup-slow': time.sleep(0.4)
+        if self.path=='/cleanup-error': return self.response(503,b'fixture-private-cleanup-error')
+        if self.path=='/cleanup-unsupported': return self.response(405)
         self.response(204)
     def do_POST(self):
         req=json.loads(self.rfile.read(int(self.headers['Content-Length'])))
@@ -57,11 +60,18 @@ class Handler(BaseHTTPRequestHandler):
             if self.path!='/incomplete': payload+=b'data: '+body+sep+sep
             for i in range(0,len(payload),7): self.wfile.write(payload[i:i+7]); self.wfile.flush()
             time.sleep(0.1 if self.path=='/incomplete' else 2); self.close_connection=True
-        else: self.response(200,body,headers)
+        else:
+            if self.path=='/cleanup-refused' and req.get('method')=='tools/list' and req.get('params',{}).get('cursor')=='two':
+                server.shutdown(); server.server_close()
+            if self.path=='/no-session': headers.pop('Mcp-Session-Id',None)
+            self.response(200,body,headers)
 server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
 server.daemon_threads=True
 with open(root+'/port','w') as f: f.write(str(server.server_port))
 server.serve_forever()
+# Keep the fixture process alive after closing its listener so the last listing
+# response can finish on the existing connection; cleanup uses a new connection.
+threading.Event().wait()
 """#
         let file = root.appendingPathComponent("fixture_http_server.py")
         try code.write(to: file, atomically: true, encoding: .utf8)
@@ -97,6 +107,8 @@ server.serve_forever()
         XCTAssertEqual(report.state, .ready, report.message)
         XCTAssertEqual(report.tools.map(\.name), ["large", "small"])
         XCTAssertEqual(report.cleanupStatus, "closed")
+        XCTAssertEqual(report.cleanupDetails?.reason, "closed")
+        XCTAssertEqual(report.cleanupDetails?.httpStatusCode, 204)
         XCTAssertNil(report.startupSeconds, "HTTP has no process startup")
         let calls = try log()
         XCTAssertEqual(calls.first?["auth"] as? String, "Bearer fixture-token")
@@ -107,6 +119,44 @@ server.serve_forever()
         for call in calls.dropFirst().dropLast() { XCTAssertEqual(call["version"] as? String, "2025-06-18") }
         XCTAssertFalse(String(decoding: try JSONEncoder().encode(report), as: UTF8.self).contains("fixture-token"))
         XCTAssertFalse(String(decoding: try JSONEncoder().encode(report), as: UTF8.self).contains("fixture-session"))
+    }
+    func testCleanupTimeoutAndHTTPFailuresAreDistinctFromSuccessfulListing() throws {
+        for (path, status, reason, code) in [("/cleanup-slow", "unconfirmed", "timedOut", nil as Int?),
+                                           ("/cleanup-error", "unconfirmed", "httpError", 503),
+                                           ("/cleanup-unsupported", "server_retained", "unsupported", 405)] {
+            let report = inspect(path)
+            XCTAssertTrue(report.complete, report.message)
+            XCTAssertEqual(report.state, .ready)
+            XCTAssertEqual(report.cleanupStatus, status)
+            let details = try XCTUnwrap(report.cleanupDetails)
+            XCTAssertEqual(details.reason, reason)
+            XCTAssertEqual(details.httpStatusCode, code)
+            XCTAssertEqual(details.budgetSeconds, 0.25)
+            XCTAssertGreaterThanOrEqual(details.elapsedSeconds, 0)
+            if reason == "timedOut" { XCTAssertGreaterThanOrEqual(details.elapsedSeconds, 0.20) }
+            XCTAssertFalse(String(decoding: try JSONEncoder().encode(report), as: UTF8.self).contains("fixture-private-cleanup-error"))
+        }
+        let calls = try log()
+        XCTAssertEqual(calls.filter { $0["method"] as? String == "DELETE" }.count, 3, "one close attempt per new session")
+        XCTAssertFalse(calls.contains { $0["method"] as? String == "tools/call" })
+    }
+    func testCleanupTransportFailureAndNoSessionAreExplicit() throws {
+        let noSession = inspect("/no-session")
+        XCTAssertTrue(noSession.complete)
+        XCTAssertEqual(noSession.cleanupStatus, "not_needed")
+        XCTAssertEqual(noSession.cleanupDetails?.reason, "notNeeded")
+        XCTAssertEqual(noSession.cleanupDetails?.budgetSeconds, 0)
+        XCTAssertFalse(try log().contains { $0["method"] as? String == "DELETE" })
+        let refused = inspect("/cleanup-refused")
+        XCTAssertTrue(refused.complete, refused.message)
+        XCTAssertEqual(refused.cleanupStatus, "unconfirmed")
+        XCTAssertEqual(refused.cleanupDetails?.reason, "transportError")
+        XCTAssertNil(refused.cleanupDetails?.httpStatusCode)
+    }
+    func testOldInspectionReportsDecodeWithoutCleanupDetails() throws {
+        let old = MCPInspection(generated: Date(), name: "fixture", agent: "fixture", cleanupStatus: "unconfirmed")
+        let data = try JSONEncoder().encode(old)
+        XCTAssertNil(try JSONDecoder().decode(MCPInspection.self, from: data).cleanupDetails)
     }
     func testSSEChunksAndCRLineEndingsDoNotWaitForStreamClosure() {
         for path in ["/sse", "/cr"] {

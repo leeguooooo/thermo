@@ -1,0 +1,77 @@
+{
+  "date": "2026-10-17",
+  "parentCommit": "dec8c250f0ae5bdcb0042d845fcdfd9297d821fa",
+  "scope": "Local installed Python stdio-to-HTTP relay repair, tested only against owned loopback fixtures. No real vendor endpoint, Keychain, OAuth refresh or business tools invoked.",
+  "installedScript": "~/.codex/tools/claude-design-mcp.py",
+  "change": {
+    "originalSHA256": "9a5ab8cd2227f107c0cc3cb211b6c99ad26c8a3fa8795f7b298529cc83e978af",
+    "installedSHA256": "def575b60c77e37dd57ad80a4e6c78fb45185bb35322720cd47d02359320806f",
+    "matchesTestedCandidate": true,
+    "existingProxyInstanceCountObserved": 36,
+    "existingInstancesNotRestarted": true,
+    "credentialRefreshAndRedirectASTUnchanged": true
+  },
+  "beforeControl": {
+    "elapsedSeconds": 1.0272612079861574,
+    "resultCorrect": true,
+    "responseSent": true,
+    "streamClosedBeforeReturn": true,
+    "realCredentialAccess": false,
+    "realNetworkServiceAccess": false,
+    "originalSHA256": "9a5ab8cd2227f107c0cc3cb211b6c99ad26c8a3fa8795f7b298529cc83e978af"
+  },
+  "afterControl": {
+    "elapsedSeconds": 0.0011362910008756444,
+    "resultCorrect": true,
+    "streamClosedBeforeReturn": false,
+    "realCredentialAccess": false,
+    "realNetworkServiceAccess": false,
+    "requests": [
+      "tools/list"
+    ]
+  },
+  "tests": {
+    "cases": 8,
+    "runtimes": [
+      {
+        "interpreter": "Python 3.14",
+        "failures": 0,
+        "logSHA256": "a36d8e84bf11d98dd2197ee8af22e083086403228ce34186ebc579155b6d86b2"
+      },
+      {
+        "interpreter": "configured /usr/bin/python3 3.9.6",
+        "failures": 0,
+        "logSHA256": "30cb4e487b5a99f07ed5146fc11005eb035596cab440ceb34bcae0f4d17752f2"
+      }
+    ],
+    "coverage": [
+      "return matching JSON-RPC response before SSE EOF",
+      "progress and Boolean request IDs do not complete integer-ID requests",
+      "LF/CRLF/CR, BOM, multiline SSE and split UTF-8",
+      "preserve RPC errors",
+      "incomplete and unrelated streams fail without retry",
+      "discard unterminated event at EOF",
+      "JSON batches and protocol/session headers",
+      "HTTP error bodies excluded and redirects not followed"
+    ]
+  },
+  "protectedASTUnchanged": [
+    "credential",
+    "token",
+    "NoRedirect",
+    "main",
+    "DesignMCP.__init__"
+  ],
+  "sourceSHA256": "def575b60c77e37dd57ad80a4e6c78fb45185bb35322720cd47d02359320806f",
+  "patchSHA256": "dad31a4a9c5bba9ff694fc2ea4d14184240f9a21e6d4b614efe062d2998dcad1",
+  "testScriptSHA256": "4a29696c984944e6a3fbf428b141a63a393d8f9d54d1544fd82539795d9c9f81",
+  "protocolReference": "https://modelcontextprotocol.io/specification/2025-03-26/basic/transports",
+  "limitations": [
+    "Controlled stream timing, not a live Design API benchmark or business-task acceptance.",
+    "Existing relay processes were not restarted; changed source is loaded on next startup.",
+    "The relay remains a serial request bridge; continuous server-to-client dispatch and resumption are not added.",
+    "No changes to configured endpoint, credential lookup, credential refresh, redirects or login.",
+    "No automatic retries added; tool-call failure does not establish that its action was not executed.",
+    "Only a local source repair and reviewable patch are delivered; no upstream submission or App release."
+  ]
+}

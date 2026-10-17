@@ -1,0 +1,427 @@
+{
+  "date": "2026-10-17",
+  "parentCommit": "ab789cb1391e848c1d1af517f9ae94e19cf5b1fc",
+  "sourceSHA256": {
+    "Sources/AgentDoctor/MCPHTTP.swift": "f9160fc82aba93627637bea09e327ab03830655064434fa36512a2d07b7fa7ec",
+    "Sources/AgentDoctor/MCPInspection.swift": "7686d56720d6b5090d2d3d6e6a51bc5150426ae933195dc12e400f415177c3d1",
+    "Sources/ThermoApp/MCPInspectionView.swift": "2e59c3019317173033c760f07f75ce3b9ebf38b268fa87dbed3d6bd74afe2ae0",
+    "Sources/ThermoL10n/ZhHans.swift": "0c0a25b5561c15e8557ccb4d5244e97e4fa98d9a5c41af06fb9183f5a24d892e",
+    "Sources/thermo/Agents.swift": "961c1044cdd7da1b599ae80bf5c419062c004493fcebfc9460520e8437307601",
+    "Tests/AgentDoctorTests/MCPHTTPTests.swift": "e398ef9ad95bc7b11c79f2c57441a764493deac9ba308a0f25727266203e8708",
+    "scripts/verify-mcp-cleanup-details.py": "9b76238fbd9343cd91d99551f9e2394d5b9609a517d9c3b5935c9251972489a5"
+  },
+  "binarySHA256": "f7b22a55dcb6324a94346b19cde8a86ea0610bc6cdbea10fd246dee965ccf88d",
+  "change": "Optional sanitized cleanupDetails in inspection JSON, App and CLI. Existing cleanupStatus preserved; closure budget remains 250 ms and no explicit retry added.",
+  "tests": {
+    "final": {
+      "selectedTests": 29,
+      "failures": 0,
+      "logSHA256": "87f71cf92031a1573732a7a2c747afd8593c69f5d9325b2dfe71e33ea1b61628"
+    },
+    "initial": {
+      "selectedTests": 29,
+      "failures": 1,
+      "classification": "invalid controlled fixture lifecycle; last listing response was lost when fixture listener shutdown ended the process",
+      "logSHA256": "fccc86d99248fcd414c9c35a8551ddb020bd2f24b05035da56d4b9ebbe310bf0",
+      "retainedWithoutRewriting": true
+    },
+    "coverage": [
+      "normal closure HTTP 204",
+      "HTTP 503 distinct from 405 unsupported closure",
+      "250ms timeout with delayed response",
+      "listener unavailable during cleanup while listing remains complete",
+      "no-session case sends no DELETE",
+      "old reports decode without optional details",
+      "error body, session ID and auth token excluded",
+      "localization keys and placeholders"
+    ],
+    "compiledCLI": {
+      "passed": true,
+      "reports": [
+        {
+          "path": "/cleanup-error",
+          "cleanupStatus": "unconfirmed",
+          "details": {
+            "budgetSeconds": 0.25,
+            "elapsedSeconds": 0.002582916000392288,
+            "httpStatusCode": 503,
+            "reason": "httpError"
+          }
+        },
+        {
+          "path": "/cleanup-slow",
+          "cleanupStatus": "unconfirmed",
+          "details": {
+            "budgetSeconds": 0.25,
+            "elapsedSeconds": 0.2503529170062393,
+            "reason": "timedOut"
+          }
+        },
+        {
+          "path": "/no-session",
+          "cleanupStatus": "not_needed",
+          "details": {
+            "budgetSeconds": 0,
+            "elapsedSeconds": 0,
+            "reason": "notNeeded"
+          }
+        }
+      ],
+      "transportFailureVerified": true,
+      "textOutputShowsReasonStatusAndBudget": true,
+      "privateDetailsExcluded": true,
+      "noBusinessCalls": true,
+      "fixtureOnly": true
+    }
+  },
+  "liveZego": {
+    "newIndependentInspectionSession": true,
+    "businessToolsCalled": false,
+    "oldUncertainDeleteNotReplayed": true,
+    "report": {
+      "agent": "codex",
+      "analysisSeconds": 0.15611920799710788,
+      "cleanupDetails": {
+        "budgetSeconds": 0.25,
+        "elapsedSeconds": 0.25224858400179073,
+        "reason": "timedOut"
+      },
+      "cleanupStatus": "unconfirmed",
+      "complete": true,
+      "definitions": {
+        "bytes": 5181,
+        "characters": 3877,
+        "estimatedTokens": 1459,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 1362
+      },
+      "elapsedSeconds": 1.6362685420026537,
+      "generated": "2026-10-17T02:15:16Z",
+      "handshakeSeconds": 0.8305954579991521,
+      "instructions": {
+        "bytes": 0,
+        "characters": 0,
+        "estimatedTokens": 0,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 0,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 0
+      },
+      "listingSeconds": 0.3962995830079308,
+      "measurementNote": "Heuristic definition fields use ascii4-unicode1-v1; optional reference counts use the named ordinary-text encoding. Neither proves actual prompt framing or billed usage. Full definitions may differ from agent loading. Output schema is a definition, not returned content. No business tools were called.",
+      "message": "Handshake and complete tool listing succeeded. Business tool behavior has not been tested.",
+      "name": "zego",
+      "protocolVersion": "2025-06-18",
+      "referenceEncoding": "cl100k_base",
+      "referenceEngine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+      "state": "ready",
+      "tools": [
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 957,
+            "characters": 711,
+            "estimatedTokens": 270,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 263
+          },
+          "description": {
+            "bytes": 271,
+            "characters": 127,
+            "estimatedTokens": 86,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 4,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 83
+          },
+          "inputSchema": {
+            "bytes": 477,
+            "characters": 375,
+            "estimatedTokens": 132,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 132
+          },
+          "issues": [],
+          "name": "search_zego_docs",
+          "outputSchema": {
+            "bytes": 131,
+            "characters": 131,
+            "estimatedTokens": 33,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 30
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 896,
+            "characters": 670,
+            "estimatedTokens": 253,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 241
+          },
+          "description": {
+            "bytes": 442,
+            "characters": 234,
+            "estimatedTokens": 137,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 5,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 134
+          },
+          "inputSchema": {
+            "bytes": 232,
+            "characters": 214,
+            "estimatedTokens": 61,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 58
+          },
+          "issues": [],
+          "name": "get_token_generate_doc",
+          "outputSchema": {
+            "bytes": 137,
+            "characters": 137,
+            "estimatedTokens": 35,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 30
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 921,
+            "characters": 683,
+            "estimatedTokens": 260,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 229
+          },
+          "description": {
+            "bytes": 66,
+            "characters": 26,
+            "estimatedTokens": 22,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 18
+          },
+          "inputSchema": {
+            "bytes": 655,
+            "characters": 457,
+            "estimatedTokens": 189,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 168
+          },
+          "issues": [],
+          "name": "get_doc_links",
+          "outputSchema": {
+            "bytes": 128,
+            "characters": 128,
+            "estimatedTokens": 32,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 29
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 857,
+            "characters": 625,
+            "estimatedTokens": 244,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 228
+          },
+          "description": {
+            "bytes": 397,
+            "characters": 183,
+            "estimatedTokens": 126,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 5,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 121
+          },
+          "inputSchema": {
+            "bytes": 234,
+            "characters": 216,
+            "estimatedTokens": 61,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 58
+          },
+          "issues": [],
+          "name": "get_server_signature_doc",
+          "outputSchema": {
+            "bytes": 139,
+            "characters": 139,
+            "estimatedTokens": 35,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 30
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 808,
+            "characters": 620,
+            "estimatedTokens": 226,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 203
+          },
+          "description": {
+            "bytes": 168,
+            "characters": 92,
+            "estimatedTokens": 52,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 6,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 46
+          },
+          "inputSchema": {
+            "bytes": 413,
+            "characters": 301,
+            "estimatedTokens": 118,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 106
+          },
+          "issues": [],
+          "name": "get_platforms_by_product",
+          "outputSchema": {
+            "bytes": 139,
+            "characters": 139,
+            "estimatedTokens": 35,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 31
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 735,
+            "characters": 561,
+            "estimatedTokens": 206,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 196
+          },
+          "description": {
+            "bytes": 424,
+            "characters": 250,
+            "estimatedTokens": 128,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 10,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 124
+          },
+          "inputSchema": {
+            "bytes": 78,
+            "characters": 78,
+            "estimatedTokens": 20,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 18
+          },
+          "issues": [],
+          "name": "get_zego_product_datasets",
+          "outputSchema": {
+            "bytes": 140,
+            "characters": 140,
+            "estimatedTokens": 35,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 31
+          }
+        }
+      ],
+      "transport": "streamable-http"
+    }
+  },
+  "interpretation": "The latest ZEGO listing was complete. Its close was not confirmed within this client budget; no HTTP status was recorded. This does not prove the previous failure had the same cause, nor whether the server eventually closed the session.",
+  "limitations": [
+    "No increased timeout, no retry, and no claimed resolution of the remote cleanup outcome.",
+    "No raw error text, headers, endpoint URL or session ID added to the report.",
+    "Unknown HTTP status stays absent, not zero.",
+    "App compiles and localization checks pass; no new full-App or release-package UI acceptance for this footer detail.",
+    "Not yet included in the previously verified 1.2.0 (393) package."
+  ]
+}

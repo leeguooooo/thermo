@@ -61,6 +61,23 @@ Tests/AgentDoctorTests/Fixtures 保留由官方 tiktoken 0.14.0 生成的 734 �
 
 App 显示内容检查数量，问题详情给出来源及行号；信息条目也可展开证据。旧报告没有 quality 时显示尚未采集，不能用 0 个问题代替未知。
 
+内容汇总现在按宿主区分目录 / 已配置插件与缓存，以文件身份去重别名；独立存储的相同正文仍分别计数。缺少文件身份、未测量、缺少内容证据及观察不一致各自单列；同一文件的正文或引用检查结果不一致时，不任选一次计入合计。部分检查保留已取得的引用和发现数量，并明确列出检查不完整。逐项来源和问题记录仍保留，不因汇总去重而删除。
+
+`agents context --json` 新增可选 `qualitySummaries`；CLI 按 `--agent` 过滤后重新计算。旧报告没有该字段时仍可读取。缓存仅表示本地存在的文件，不证明它已启用或加载；这些静态发现也不构成 Skill 效果评分。历史盘点中的逐条检查数没有改写，不能把去重后的下降当成修复数量。
+
+[内容汇总验证](measurements/skill-content-summary-2026-10-17.json)包含 30 项测试、独立 CLI 夹具和完整 App 的前后对照。同一组目录文件、别名和缓存，原界面累计 3 次检查 / 3 个发现，修复后目录和缓存各 1 次 / 1 个发现。补齐文档前的本机盘点为：目录 138 个已检查独立文件、459 个引用、2 个发现；缓存 215 个文件、417 个引用、0 个发现。两处缺失目标是 `unity-mcp-orchestrator` 的 `references/probuilder-guide.md` 与 `references/resources-reference.md`。QA 已退出，没有启动业务 MCP 或执行 Skill。
+
+[Unity Skill 引用修复](measurements/unity-skill-reference-repair-2026-10-17.json)确认了来源问题：三个已安装文档与上游 `25357a0e75b97169d6bca1569df300915e182c7a` 的 `.claude/skills/unity-mcp-skill` 副本逐字匹配，而缺失的两份文档在同一快照的 `unity-mcp-skill/references` 中。同步器选择前一个目录。补齐两份文档后，入口的 4 个本地引用全部通过，既有文件哈希未变，本机目录范围已采集发现降为 0；另有 1 条未测量，不据此宣称全部健康。两份新增文件由已核对的上游 MIT 源码提供，没有自行编写替代内容。
+
+当前 `main` 的同步来源目录仍只有三个文档，后续镜像同步可能移除补齐文件。[恢复脚本](../scripts/restore-unity-skill-references.py)默认只检查，显式 `--apply` 才添加缺失文件；校验四个既有文件及新增文件的固定 SHA-256，版本变化或目标已存在但不同均拒绝替换。隔离回放通过缺失检查、恢复、重复执行和版本变化拒绝四项检查。该脚本不是通用更新器，也不会在普通体检中自动运行：
+
+```sh
+python3 scripts/restore-unity-skill-references.py --skill-dir ~/.agents/skills/unity-mcp-skill
+# 仅上述固定版本匹配且文档缺失时，显式增加 --apply。
+```
+
+本轮验证的是文档可用性，未连接 Unity、执行建模或运行 Unity 测试；不推断 Skill 的业务成功率收益，也没有修改或向上游提交同步器代码。
+
 [本机盘点与隔离验收](measurements/skill-quality-2026-10-17.json)记录了 Codex 范围的 355 个文档条目、876 次本地引用检查和 2 个当前缺失的目标；未包含 Skill 名称或路径。`scripts/verify-skill-quality.py` 用编译后的 CLI 核实引用位置、正文空缺、副本和不执行 MCP、不改 Skill 的边界。
 
 Swift Markdown 与 swift-cmark 的许可证、NOTICE / COPYING 保存在 Resources/ThirdPartyNotices。构建脚本将它们带入 App、CLI ZIP 和 GitHub Release tar 包；本轮验证的是独立目录中的 Debug ad-hoc 包和归档布局，没有公证、安装或发布。root helper 未链接 Markdown，原生离屏预览脚本也已复核可运行。
@@ -98,9 +115,25 @@ HTTP 保留配置中的请求头，支持 Codex 的 bearer_token_env_var 和 env
 
 HTTP 在初始化收到新会话 ID 后验证可见 ASCII 字符和长度，再将其与协商的协议版本带到后续请求。关闭时只对这次新建的会话尝试一次 DELETE，最多额外等待 250 ms。JSON 的 cleanupStatus 区分 closed、not_needed、server_retained 和 unconfirmed；工具清单成功不代表会话关闭已确认。会话 ID、凭据和响应正文不写入报告。
 
+后续新增的可选 `cleanupDetails` 单列原因、已取得的 HTTP 状态码、实际观察时间及预算；App 与 CLI 同时显示。没有收到状态码时保持未知，不用 0 代替。旧报告没有该字段时仍可读取；关闭预算和不重试策略保持不变。[诊断验证](measurements/mcp-cleanup-diagnostics-2026-10-17.json)覆盖 29 项测试和编译 CLI 的受控响应，其中 503、405、延迟超过预算、监听端口不可用及无会话分别核对。首轮夹具在关闭监听时提前退出，丢失最后的列表响应；原失败结果保留，修正生命周期并重新编译后全部通过。
+
+新版只对 ZEGO 新建了一次独立检查会话，未重放上次不确定的 DELETE：6 个工具仍完整返回，但这次关闭在 0.250 秒预算下观察了约 0.252 秒，结果为 `timedOut`，HTTP 状态码未知。它解释了本次客户端停止等待的原因，不能证明上次也同因，或服务端最终没有关闭。当前不据此自动增大超时或评价 ZEGO 业务工具质量。App 编译和本地化检查通过，新增页脚的完整 App / 发布包验收仍未完成。
+
 本机 CodeGraph 已完成一次真实握手和完整工具列表读取，见 [测量记录](measurements/mcp-codegraph-2026-10-17.json)。这次未调用 codegraph_explore，不代表业务调用已验收。App 当前通过编译，检查结果页已完成[中文原生离屏渲染检查](measurements/mcp-inspection-zh-2026-10-17.png)；这不是已安装 App 中点击与取消的实际验收。
 
 公开的 OpenAI 文档 MCP 已实际完成 HTTP 握手并读取 5 个工具，见 [HTTP 测量记录](measurements/mcp-http-openai-2026-10-17.json)；该服务未返回会话 ID。状态会话、完整分页、SSE 分块、认证失败、超时、取消和关闭请求另由本地 HTTP 夹具验证。没有调用文档检索等业务工具。[HTTP 中文结果页](measurements/mcp-http-inspection-zh-2026-10-17.png)为原生离屏渲染，长列表可在实际窗口中滚动；尚未完成已安装 App 的点击操作验收。
+
+[后续本机 HTTP 配置检查](measurements/mcp-http-installed-audit-2026-10-17.json)使用同一编译 CLI 和 cl100k 参考编码，读取已启用的三个 HTTP 配置。OpenAI 文档返回 5 个工具，定义数组 3,265 字节 / 781 token；ZEGO 返回 6 个工具，5,181 字节 / 1,362 token。两者的服务指令均为空，未发现当前支持的定义结构问题。成功子集合计 11 个工具、8,446 字节、2,143 token；最大单项定义为 ZEGO 的 `search_zego_docs`，263 token。其余六个已启用的 stdio 配置和其他宿主没有在本轮检查，完整配置总量仍未知。
+
+Figma 在这个独立检查会话中返回鉴权要求，不以空工具列表或 0 token 计量，也不能据此判断 Codex 宿主自身的 OAuth 连接不可用。ZEGO 工具列表完整，但本次独立会话关闭结果为 `unconfirmed`；不把列表成功写成关闭成功，也未重放不确定请求。当前结果尚不能区分关闭等待上限、网络问题和服务端返回，需要补充清理诊断证据后再决定是否调整。三个配置均只执行握手和工具列表读取，没有调用业务工具、启动登录或重试。
+
+本机 Skill 盘点中唯一未测量条目为 `~/.codex/skills/codex-primary-runtime`：实际为空目录，没有 `SKILL.md`，与报告中的结构诊断一致，不是 UTF-8、大小上限或正文读取失败。未推断该目录的管理者，也没有移除或制造一个 Skill 文件来消除提示。
+
+[stdio 配置补测](measurements/mcp-stdio-installed-audit-2026-10-17.json)仅对 CodeGraph 和 Discord 握手并读取工具清单。CodeGraph 为 1 个工具、定义数组 387 个参考 token，服务指令 345 token；Discord 为 22 个工具、定义数组 1,913 token，服务指令 25 token。均无当前规则支持的定义结构问题，未调用 `codegraph_explore` 或 Discord 业务工具。与此前 HTTP 测量合并后，成功子集为 4 个配置、34 个工具、18,642 定义字节、4,443 定义数组 token，另有 370 服务指令 token。各次生成时间保留，不宣称同一时刻快照；Figma 与其他四个配置仍不按零计。
+
+[本机 Claude Design 代理修复](measurements/claude-design-relay-sse-2026-10-17.json)来自一次启动方式审阅，而非真实 Design 服务故障复现。旧代理对 SSE 使用整段 `response.read()`，自有服务器立即发送响应但延迟 1 秒关闭时，客户端直到约 1.03 秒才返回。修复按完整 SSE 事件增量解析，在收到匹配 ID 的 result / error 后返回；保留前置进度消息，处理分块 UTF-8、LF / CRLF / CR、多行事件、JSON 批消息及未完成流，错误响应对象也及时关闭。[MCP 传输规范](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports)允许 SSE 在最终响应前携带其他协议消息，不能用第一条进度事件替代最终响应。
+
+8 项本地回归在实际配置使用的 `/usr/bin/python3` 3.9.6 和 Python 3.14 均通过；已安装源码与受测候选一致。[补丁](patches/claude-design-sse-response.patch)保留可审阅差异，[测试脚本](../scripts/test-claude-design-relay.py)将目标替换为回环服务及固定假令牌，阻止访问真实凭据。凭据读取、刷新、重定向保护、初始化器和命令分发的 AST 对比不变；没有改变实际目标地址或授权范围。现存代理实例没有重启，新代码下次启动才加载。修复后同类自有流在约 1 毫秒返回且服务端流仍打开，这只是协议控制实验，不是线上速度或业务成功率收益。该代理仍为串行请求桥接，没有新增持续服务端消息分发、断线续传、自动重试或会话关闭功能。
 
 协议实现依据：[生命周期](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle)、[stdio 传输](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)、[工具列表](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)。
 

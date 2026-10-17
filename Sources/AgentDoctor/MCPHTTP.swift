@@ -13,6 +13,7 @@ final class MCPHTTP: MCPTransport {
     var sequence = 0
     var received = 0
     var cleanupStatus: String?
+    var cleanupDetails: MCPCleanupDetails?
 
     init(server: MCPServer, env: DoctorEnvironment, deadline: Double) throws {
         guard let value = server.url, let url = URL(string: value),
@@ -141,24 +142,45 @@ final class MCPHTTP: MCPTransport {
     func send(_ message: [String: Any]) throws { _ = try exchange(message, id: nil) }
 
     func close() {
-        guard sessionID != nil else { cleanupStatus = "not_needed"; return }
+        guard sessionID != nil else {
+            if cleanupStatus == nil {
+                cleanupStatus = "not_needed"
+                cleanupDetails = MCPCleanupDetails(reason: "notNeeded", elapsedSeconds: 0, budgetSeconds: 0)
+            }
+            return
+        }
         // Best-effort termination of our own newly-created session, not the server.
+        let started = MCPInspector.clock()
+        let budget = 0.25
+        var reason = "timedOut"
+        var httpStatus: Int?
         let receiver = MCPHTTPReceiver()
         let config = URLSessionConfiguration.ephemeral
         config.httpCookieStorage = nil; config.urlCredentialStorage = nil; config.urlCache = nil
         let session = URLSession(configuration: config, delegate: receiver, delegateQueue: nil)
-        defer { session.invalidateAndCancel(); sessionID = nil }
-        let limit = MCPInspector.clock() + 0.25
-        guard let request = try? makeRequest("DELETE", message: nil, limit: limit) else { cleanupStatus = "unconfirmed"; return }
-        session.dataTask(with: request).resume()
+        defer {
+            session.invalidateAndCancel(); sessionID = nil
+            cleanupDetails = MCPCleanupDetails(reason: reason, httpStatusCode: httpStatus,
+                                              elapsedSeconds: max(0, MCPInspector.clock() - started), budgetSeconds: budget)
+        }
+        let limit = started + budget
         cleanupStatus = "unconfirmed"
-        while MCPInspector.clock() < limit {
+        guard let request = try? makeRequest("DELETE", message: nil, limit: limit) else { reason = "invalidRequest"; return }
+        session.dataTask(with: request).resume()
+        while true {
             let state = receiver.take()
             if let response = state.response {
+                httpStatus = response.statusCode
                 cleanupStatus = (200..<300).contains(response.statusCode) ? "closed" : response.statusCode == 405 ? "server_retained" : "unconfirmed"
+                reason = cleanupStatus == "closed" ? "closed" : cleanupStatus == "server_retained" ? "unsupported" : "httpError"
                 break
             }
-            if state.done { break }
+            if let failure = state.failure {
+                reason = failure.state == .timedOut ? "timedOut" : failure.state == .authenticationRequired ? "authenticationRequired" : "transportError"
+                break
+            }
+            if state.done { reason = "responseMissing"; break }
+            if MCPInspector.clock() >= limit { break }
             Thread.sleep(forTimeInterval: 0.002)
         }
     }

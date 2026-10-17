@@ -1,0 +1,754 @@
+{
+  "date": "2026-10-17",
+  "sourceCommit": "ac11494bc1911d8b6e1fa57dfe4ae7fcede28d0d",
+  "binarySHA256": "3c71424aee66b7a9baf7ed68682bb0600956e6b194ad5bbd071d8b4afc654c11",
+  "scope": {
+    "host": "codex",
+    "enabledConfigurations": 9,
+    "selectedHTTPConfigurations": 3,
+    "completeListings": 2,
+    "incompleteListings": 1,
+    "noStdioConfigurationStarted": true,
+    "businessToolsCalled": false,
+    "automaticLoginAttempted": false,
+    "requestRetries": false
+  },
+  "encoding": "cl100k_base",
+  "completeSubset": {
+    "tools": 11,
+    "definitionBytesSum": 8446,
+    "definitionArrayReferenceTokensSum": 2143,
+    "serverInstructionReferenceTokensSum": 0,
+    "fullConfiguredDefinitionTotalKnown": false
+  },
+  "reports": {
+    "openaiDeveloperDocs": {
+      "agent": "codex",
+      "analysisSeconds": 0.25618104099703487,
+      "cleanupStatus": "not_needed",
+      "complete": true,
+      "definitions": {
+        "bytes": 3265,
+        "characters": 3255,
+        "estimatedTokens": 818,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 781
+      },
+      "elapsedSeconds": 1.2422833330056164,
+      "generated": "2026-10-17T02:07:00Z",
+      "handshakeSeconds": 0.7164740419975715,
+      "instructions": {
+        "bytes": 0,
+        "characters": 0,
+        "estimatedTokens": 0,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 0,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 0
+      },
+      "listingSeconds": 0.2689779580105096,
+      "measurementNote": "Heuristic definition fields use ascii4-unicode1-v1; optional reference counts use the named ordinary-text encoding. Neither proves actual prompt framing or billed usage. Full definitions may differ from agent loading. Output schema is a definition, not returned content. No business tools were called.",
+      "message": "Handshake and complete tool listing succeeded. Business tool behavior has not been tested.",
+      "name": "openaiDeveloperDocs",
+      "protocolVersion": "2025-06-18",
+      "referenceEncoding": "cl100k_base",
+      "referenceEngine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+      "state": "ready",
+      "tools": [
+        {
+          "annotations": {
+            "bytes": 45,
+            "characters": 45,
+            "estimatedTokens": 12,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 812,
+            "characters": 810,
+            "estimatedTokens": 204,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 201
+          },
+          "description": {
+            "bytes": 454,
+            "characters": 452,
+            "estimatedTokens": 114,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 116
+          },
+          "inputSchema": {
+            "bytes": 172,
+            "characters": 172,
+            "estimatedTokens": 43,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 45
+          },
+          "issues": [],
+          "name": "fetch_openai_doc",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 45,
+            "characters": 45,
+            "estimatedTokens": 12,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 797,
+            "characters": 791,
+            "estimatedTokens": 200,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 193
+          },
+          "description": {
+            "bytes": 444,
+            "characters": 438,
+            "estimatedTokens": 112,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 109
+          },
+          "inputSchema": {
+            "bytes": 167,
+            "characters": 167,
+            "estimatedTokens": 42,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 44
+          },
+          "issues": [],
+          "name": "list_openai_docs",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 45,
+            "characters": 45,
+            "estimatedTokens": 12,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 740,
+            "characters": 738,
+            "estimatedTokens": 186,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 181
+          },
+          "description": {
+            "bytes": 321,
+            "characters": 319,
+            "estimatedTokens": 81,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 82
+          },
+          "inputSchema": {
+            "bytes": 228,
+            "characters": 228,
+            "estimatedTokens": 57,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 59
+          },
+          "issues": [],
+          "name": "search_openai_docs",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 45,
+            "characters": 45,
+            "estimatedTokens": 12,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 567,
+            "characters": 567,
+            "estimatedTokens": 142,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 129
+          },
+          "description": {
+            "bytes": 129,
+            "characters": 129,
+            "estimatedTokens": 33,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "inputSchema": {
+            "bytes": 252,
+            "characters": 252,
+            "estimatedTokens": 63,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 64
+          },
+          "issues": [],
+          "name": "get_openapi_spec",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 45,
+            "characters": 45,
+            "estimatedTokens": 12,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 343,
+            "characters": 343,
+            "estimatedTokens": 86,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 79
+          },
+          "description": {
+            "bytes": 64,
+            "characters": 64,
+            "estimatedTokens": 16,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 14
+          },
+          "inputSchema": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "issues": [],
+          "name": "list_api_endpoints",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        }
+      ],
+      "transport": "streamable-http"
+    },
+    "zego": {
+      "agent": "codex",
+      "analysisSeconds": 0.20640841699787416,
+      "cleanupStatus": "unconfirmed",
+      "complete": true,
+      "definitions": {
+        "bytes": 5181,
+        "characters": 3877,
+        "estimatedTokens": 1459,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 1362
+      },
+      "elapsedSeconds": 2.1510687910049455,
+      "generated": "2026-10-17T02:07:00Z",
+      "handshakeSeconds": 1.296597416003351,
+      "instructions": {
+        "bytes": 0,
+        "characters": 0,
+        "estimatedTokens": 0,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 0,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 0
+      },
+      "listingSeconds": 0.3975037920026807,
+      "measurementNote": "Heuristic definition fields use ascii4-unicode1-v1; optional reference counts use the named ordinary-text encoding. Neither proves actual prompt framing or billed usage. Full definitions may differ from agent loading. Output schema is a definition, not returned content. No business tools were called.",
+      "message": "Handshake and complete tool listing succeeded. Business tool behavior has not been tested.",
+      "name": "zego",
+      "protocolVersion": "2025-06-18",
+      "referenceEncoding": "cl100k_base",
+      "referenceEngine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+      "state": "ready",
+      "tools": [
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 957,
+            "characters": 711,
+            "estimatedTokens": 270,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 263
+          },
+          "description": {
+            "bytes": 271,
+            "characters": 127,
+            "estimatedTokens": 86,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 4,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 83
+          },
+          "inputSchema": {
+            "bytes": 477,
+            "characters": 375,
+            "estimatedTokens": 132,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 132
+          },
+          "issues": [],
+          "name": "search_zego_docs",
+          "outputSchema": {
+            "bytes": 131,
+            "characters": 131,
+            "estimatedTokens": 33,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 30
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 896,
+            "characters": 670,
+            "estimatedTokens": 253,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 241
+          },
+          "description": {
+            "bytes": 442,
+            "characters": 234,
+            "estimatedTokens": 137,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 5,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 134
+          },
+          "inputSchema": {
+            "bytes": 232,
+            "characters": 214,
+            "estimatedTokens": 61,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 58
+          },
+          "issues": [],
+          "name": "get_token_generate_doc",
+          "outputSchema": {
+            "bytes": 137,
+            "characters": 137,
+            "estimatedTokens": 35,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 30
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 921,
+            "characters": 683,
+            "estimatedTokens": 260,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 229
+          },
+          "description": {
+            "bytes": 66,
+            "characters": 26,
+            "estimatedTokens": 22,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 18
+          },
+          "inputSchema": {
+            "bytes": 655,
+            "characters": 457,
+            "estimatedTokens": 189,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 168
+          },
+          "issues": [],
+          "name": "get_doc_links",
+          "outputSchema": {
+            "bytes": 128,
+            "characters": 128,
+            "estimatedTokens": 32,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 29
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 857,
+            "characters": 625,
+            "estimatedTokens": 244,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 228
+          },
+          "description": {
+            "bytes": 397,
+            "characters": 183,
+            "estimatedTokens": 126,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 5,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 121
+          },
+          "inputSchema": {
+            "bytes": 234,
+            "characters": 216,
+            "estimatedTokens": 61,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 58
+          },
+          "issues": [],
+          "name": "get_server_signature_doc",
+          "outputSchema": {
+            "bytes": 139,
+            "characters": 139,
+            "estimatedTokens": 35,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 30
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 808,
+            "characters": 620,
+            "estimatedTokens": 226,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 203
+          },
+          "description": {
+            "bytes": 168,
+            "characters": 92,
+            "estimatedTokens": 52,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 6,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 46
+          },
+          "inputSchema": {
+            "bytes": 413,
+            "characters": 301,
+            "estimatedTokens": 118,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 106
+          },
+          "issues": [],
+          "name": "get_platforms_by_product",
+          "outputSchema": {
+            "bytes": 139,
+            "characters": 139,
+            "estimatedTokens": 35,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 31
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 735,
+            "characters": 561,
+            "estimatedTokens": 206,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 196
+          },
+          "description": {
+            "bytes": 424,
+            "characters": 250,
+            "estimatedTokens": 128,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 10,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 124
+          },
+          "inputSchema": {
+            "bytes": 78,
+            "characters": 78,
+            "estimatedTokens": 20,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 18
+          },
+          "issues": [],
+          "name": "get_zego_product_datasets",
+          "outputSchema": {
+            "bytes": 140,
+            "characters": 140,
+            "estimatedTokens": 35,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 31
+          }
+        }
+      ],
+      "transport": "streamable-http"
+    },
+    "figma": {
+      "agent": "codex",
+      "cleanupStatus": "not_needed",
+      "complete": false,
+      "elapsedSeconds": 0.35569395798665937,
+      "generated": "2026-10-17T02:07:00Z",
+      "measurementNote": "Heuristic definition fields use ascii4-unicode1-v1; optional reference counts use the named ordinary-text encoding. Neither proves actual prompt framing or billed usage. Full definitions may differ from agent loading. Output schema is a definition, not returned content. No business tools were called.",
+      "message": "HTTP authentication failed; no automatic login was attempted.",
+      "name": "figma",
+      "referenceEncoding": "cl100k_base",
+      "referenceEngine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+      "state": "authenticationRequired",
+      "tools": [],
+      "transport": "streamable-http"
+    }
+  },
+  "largestMeasuredDefinitions": [
+    {
+      "server": "zego",
+      "tool": "search_zego_docs",
+      "definitionBytes": 957,
+      "referenceTokens": 263,
+      "definitionFindingCount": 0
+    },
+    {
+      "server": "zego",
+      "tool": "get_token_generate_doc",
+      "definitionBytes": 896,
+      "referenceTokens": 241,
+      "definitionFindingCount": 0
+    },
+    {
+      "server": "zego",
+      "tool": "get_doc_links",
+      "definitionBytes": 921,
+      "referenceTokens": 229,
+      "definitionFindingCount": 0
+    },
+    {
+      "server": "zego",
+      "tool": "get_server_signature_doc",
+      "definitionBytes": 857,
+      "referenceTokens": 228,
+      "definitionFindingCount": 0
+    },
+    {
+      "server": "zego",
+      "tool": "get_platforms_by_product",
+      "definitionBytes": 808,
+      "referenceTokens": 203,
+      "definitionFindingCount": 0
+    },
+    {
+      "server": "openaiDeveloperDocs",
+      "tool": "fetch_openai_doc",
+      "definitionBytes": 812,
+      "referenceTokens": 201,
+      "definitionFindingCount": 0
+    },
+    {
+      "server": "zego",
+      "tool": "get_zego_product_datasets",
+      "definitionBytes": 735,
+      "referenceTokens": 196,
+      "definitionFindingCount": 0
+    },
+    {
+      "server": "openaiDeveloperDocs",
+      "tool": "list_openai_docs",
+      "definitionBytes": 797,
+      "referenceTokens": 193,
+      "definitionFindingCount": 0
+    },
+    {
+      "server": "openaiDeveloperDocs",
+      "tool": "search_openai_docs",
+      "definitionBytes": 740,
+      "referenceTokens": 181,
+      "definitionFindingCount": 0
+    },
+    {
+      "server": "openaiDeveloperDocs",
+      "tool": "get_openapi_spec",
+      "definitionBytes": 567,
+      "referenceTokens": 129,
+      "definitionFindingCount": 0
+    },
+    {
+      "server": "openaiDeveloperDocs",
+      "tool": "list_api_endpoints",
+      "definitionBytes": 343,
+      "referenceTokens": 79,
+      "definitionFindingCount": 0
+    }
+  ],
+  "unmeasuredSkillEntry": {
+    "name": "codex-primary-runtime",
+    "location": "~/.codex/skills/codex-primary-runtime",
+    "emptyDirectoryVerified": true,
+    "skillDocumentPresent": false,
+    "diagnosticReason": "directory has no SKILL.md",
+    "notAReadFailure": true,
+    "notRemoved": true,
+    "ownershipNotInferred": true
+  },
+  "limitations": [
+    "Selected HTTP configurations only; six enabled stdio configurations and other hosts were not inspected this turn.",
+    "Definition counts are ordinary-text reference counts, not effective model context or billing.",
+    "Successful handshake/list does not prove business-tool quality.",
+    "Figma authenticationRequired describes this independent inspector session, not the Codex host OAuth connection or server availability.",
+    "ZEGO returned a complete listing but own-session cleanup remains unconfirmed. No close success or server fault is inferred, and no uncertain request was replayed.",
+    "Single observed timings include local analysis; no latency percentile or performance ranking.",
+    "No Skill-provided scripts, Unity Editor operations or device controls were executed."
+  ]
+}

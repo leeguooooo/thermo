@@ -454,3 +454,41 @@ thermo clean repair-worktrees --root /path/to/repo --yes --json
 ```
 
 仅处理该仓库 `.claude/worktrees/`、`.codex/worktrees/`、`.worktrees/` 中路径已经不存在的注册。未知锁、活锁、仍被使用或审阅后重新出现的目录保留；注册信息先备份到 Thermo 的私有目录，分支和其他工作树不变。
+
+### CLI 的操作契约
+
+`thermo capabilities --json` 列出命令、参数和执行依赖；`thermo COMMAND --help` 查看对应命令的帮助。命令拒绝不适用的选项，避免接受 `--dry-run` 后仍执行操作，或接受 `--json` 后输出普通文本。`--dry-run` 只预演，`--yes` 不会覆盖预演。
+
+缺少的 App 操作现在通过当前用户专用的本地通道执行：
+
+| 操作 | CLI |
+| --- | --- |
+| 擦屏、停止、状态、快捷键 | `screen status/start/stop/duration/shortcut/clear-shortcut` |
+| 登录启动 | `app-control login status/on/off` |
+| Thermo 自动更新与交互检查 | `app-control updates status/on/off/check` |
+| App 注册的 helper | `app-control helper status/install/uninstall`；旧式安装仍用 `helper` |
+| App 持有的 AWDL 会话 | `app-control awdl status/on/off`；CLI 自己持有的限时会话仍用 `awdl` |
+| 通知授权、辅助功能和登录项设置 | `permissions status/notifications/accessibility/login` |
+| CLI 链接、Claude/Codex 插件集成 | `integration status/link/claude/codex` |
+| 隐私设置和恢复 | `privacy profiles/location/webrtc/cookies/restore-browser/environment/dns/lookup/timezone` |
+| Claude 本地数据重置与恢复 | `claude-reset list/run/batches/restore` |
+| MCP 批量握手与定义检查 | `agents inspect-all --timeout 10 --budget 120 --json` |
+| 验证重复文件、指定保留副本后移入废纸篓 | `space dupes remove PATH… --keep PATH --dry-run --json` |
+
+App 命令要求运行兼容版本的 Thermo.app。通道检查当前用户身份、内核提供的对端 audit token、配套 CLI 的签名要求、私有路径、请求 ID 和消息大小。正式 App 要求同一开发者 Team 的 `dev.thermo.cli`，开发构建的 App 固定启动时配套 CLI 的指定签名要求；无法建立要求时不提供通道。正式签名 CLI 同时核验 App 的同 Team 签名；未打包的开发测试客户端只核验服务端 UID。超时或丢失回执表示结果未确认，不自动重试。打开系统设置、开始 Sparkle 交互检查只报告对应动作，不能当作权限已获准或更新已安装。涉及 helper、权限、浏览器和真实硬件的验收须分别核对，不能从命令入口或夹具测试推定。
+
+`screen shortcut` 用 `--key-code`、`--modifiers`、`--key-label` 指定与 App 相同的 Carbon 快捷键；至少两个修饰键，其中必须含 Command、Control 或 Option。`screen status` 包含已保存的时长，`screen duration --duration` 可单独设置；`screen start` 未指定时长时采用 App 已保存的选择。`screen start --duration` 接受 `oneMinute`、`twoMinutes`、`fiveMinutes` 或 `manual`。这些修改先用 `--dry-run` 查看，再加 `--yes` 执行。
+
+**固定清理计划**避免预演和执行反复扫描整机：
+
+```sh
+thermo clean plan safe --json
+thermo clean apply PLAN_UUID --dry-run --json
+thermo clean apply PLAN_UUID --yes --json
+```
+
+计划保存审阅时的路径、身份和处理方式，有效期 15 分钟。执行前仍复查白名单、文件变化、进程和工具范围。计划在提交删除前即被认领，一次执行后不能重放；中断后查看操作记录并重新扫描，不能重复提交旧计划。`apply` 不接受覆盖范围或处理方式的参数。文件变化后使用 `clean plan ID… --rescan` 获取新计划，不能反复使用旧扫描。
+
+`clean run/apply --json` 使用 **schemaVersion 2** 对象，旧版数组位于 `results`。对象另有 `complete`、`outcome`、`scanComplete`、`skipped`、`missingSelectors`、`estimatedDeletedBytes`、`trashedBytes` 和整批 `spaceObservation`。文件估计删除量和实测磁盘变化不同，后者含其他任务的并发写入或删除。清理的部分执行、被截断的扫描和未确认结果返回退出码 **3**；无效参数或拒绝返回 **2**，执行异常返回 **1**。调用方应读取结果和退出状态，不能仅凭命令已返回判断任务完成。
+
+Agent 诊断、列举、检查和修复支持 `--root PROJECT`，与 App 的项目选择使用同一上下文；未指定项目时不带入项目配置。`agents fix/run` 的 `complete` 表示所列操作是否完成，`observedAfter` 是操作后重新读取的诊断，不代表整机或项目的全部问题已解决。

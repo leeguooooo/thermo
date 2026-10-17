@@ -273,6 +273,12 @@ public struct Whitelist: Sendable {
         }
     }
 
+    public static func previewChange(_ paths: [String], adding: Bool, home: String = NSHomeDirectory()) throws -> [String] {
+        let current = try loadForRemoval(home: home)
+        let normalized = try paths.map { FS.expand(try storedForm($0, home: home), home: home) }
+        return Array(Set(normalized.filter { adding ? !current.entries.contains($0) : current.entries.contains($0) })).sorted()
+    }
+
     public struct ProtectionReview: Sendable {
         public let value: Whitelist
         fileprivate let home: String

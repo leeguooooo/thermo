@@ -1,0 +1,155 @@
+{
+  "date": "2026-10-17",
+  "parentCommit": "7ab4aaa498276c1e052ab1dd5ea6c0b831d8c2ca",
+  "scope": "Local installed Unity MCP Skill document repair; no Unity server/tool execution, model evaluation or upstream write.",
+  "installedSkill": "unity-mcp-orchestrator",
+  "matchedUpstreamCommit": "25357a0e75b97169d6bca1569df300915e182c7a",
+  "repository": "https://github.com/CoplayDev/unity-mcp",
+  "sourceLicense": "MIT",
+  "existingFilesBefore": {
+    "SKILL.md": {
+      "sha256": "45a6fd0007eeb03b5fdfb48b88a841a1df8c7f945ad386d0dfd5071458698b2f",
+      "gitBlob": "282578d554732be8f7c0902998985bd5fa7e3f35"
+    },
+    ".unity-mcp-skill-sync": {
+      "sha256": "f2842d64d8208a81d0b29fa7138abb0acf83636eebea505d5b18524a5535824f",
+      "gitBlob": "ba2f4bf91a679d038a2e816e7bee6ae2d835e149"
+    },
+    "references/workflows.md": {
+      "sha256": "5b230791f50d781e4ca129fe71b6af48d850f3299490721972b13670fd86084b",
+      "gitBlob": "9df5ffbfcfe9ac22f913e36461a60773a25c41d5"
+    },
+    "references/tools-reference.md": {
+      "sha256": "c457f25cdb5d62f08bfe1772da42010640cd30c6e6debad96083ef21f7f98311",
+      "gitBlob": "601e533a9398d0ee5ead5fa4caf18d736d42b0c4"
+    }
+  },
+  "existingFilesUnchanged": true,
+  "restoredFiles": [
+    {
+      "file": "references/probuilder-guide.md",
+      "sha256": "2a6337a6ee9a8b5bc3aa129d0c6a967ee256f3edb54116e1c002b13a5fc1c215",
+      "bytes": 16137
+    },
+    {
+      "file": "references/resources-reference.md",
+      "sha256": "5f39dbe1bf53bde80f5c1729a0f5ad2c956eca640084241d92aed61f0d28ddce",
+      "bytes": 13708
+    }
+  ],
+  "missingDocumentSourcePaths": [
+    "unity-mcp-skill/references/probuilder-guide.md",
+    "unity-mcp-skill/references/resources-reference.md"
+  ],
+  "verifiedGitBlobs": {
+    "unity-mcp-skill/references/probuilder-guide.md": "a65ad841d91ef13908560fc13bad9caa60d43fb6",
+    "unity-mcp-skill/references/resources-reference.md": "a2aa74e3e68a765e869a352854c54dc9ea4b32af"
+  },
+  "rootCauseEvidence": {
+    "allThreeInstalledDocsMatchHistoricalSyncDirectory": true,
+    "historicalSyncDirectory": ".claude/skills/unity-mcp-skill",
+    "historicalSyncDirectoryDocumentCount": 3,
+    "canonicalDirectoryDocumentCount": 5,
+    "historicalSyncServiceSource": "https://github.com/CoplayDev/unity-mcp/blob/25357a0e75b97169d6bca1569df300915e182c7a/MCPForUnity/Editor/Setup/SkillSyncService.cs",
+    "currentMainCommitVerifiedByGitLsRemote": "aa5fc638d623f56178d50329d9ad8c541a57fe66",
+    "currentSyncSourceStillHasThreeDocs": true,
+    "causeDescription": "The reviewed upstream snapshot keeps two divergent Skill copies. The sync service selects the three-file copy while missing guides are present in the canonical five-file copy. Exact original installation commit is not inferred from file timestamps."
+  },
+  "validation": {
+    "candidateCheckBeforeApplying": true,
+    "installedSkillQuality": {
+      "checkedLocalReferences": 4,
+      "complete": true,
+      "issues": [],
+      "parser": "swift-markdown-0.9.0",
+      "skippedReferences": 0
+    },
+    "currentInventoryGenerated": "2026-10-17T02:01:49Z",
+    "currentQualitySummaries": [
+      {
+        "aliases": 0,
+        "checkedLocalReferences": 417,
+        "conflictingFiles": 0,
+        "entries": 215,
+        "findings": 0,
+        "host": "codex",
+        "incompleteInspections": 0,
+        "inspectedFiles": 215,
+        "scope": "cache",
+        "unavailableFiles": 0,
+        "uniqueFiles": 215,
+        "unmeasuredEntries": 0,
+        "unverifiedIdentityEntries": 0
+      },
+      {
+        "aliases": 2,
+        "checkedLocalReferences": 459,
+        "conflictingFiles": 0,
+        "entries": 141,
+        "findings": 0,
+        "host": "codex",
+        "incompleteInspections": 0,
+        "inspectedFiles": 138,
+        "scope": "directory",
+        "unavailableFiles": 0,
+        "uniqueFiles": 138,
+        "unmeasuredEntries": 1,
+        "unverifiedIdentityEntries": 0
+      }
+    ],
+    "restoreScriptOwnedReplay": [
+      {
+        "exitCode": 1,
+        "result": {
+          "complete": false,
+          "missing": [
+            "references/probuilder-guide.md",
+            "references/resources-reference.md"
+          ],
+          "added": [],
+          "commit": "25357a0e75b97169d6bca1569df300915e182c7a",
+          "existingFilesUnchanged": true
+        }
+      },
+      {
+        "exitCode": 0,
+        "result": {
+          "complete": true,
+          "missing": [],
+          "added": [
+            "references/probuilder-guide.md",
+            "references/resources-reference.md"
+          ],
+          "commit": "25357a0e75b97169d6bca1569df300915e182c7a",
+          "existingFilesUnchanged": true
+        }
+      },
+      {
+        "exitCode": 0,
+        "result": {
+          "complete": true,
+          "missing": [],
+          "added": [],
+          "commit": "25357a0e75b97169d6bca1569df300915e182c7a",
+          "existingFilesUnchanged": true
+        }
+      },
+      {
+        "exitCode": 2,
+        "result": {
+          "complete": false,
+          "error": "Installed version differs from reviewed snapshot: SKILL.md"
+        }
+      }
+    ],
+    "restoreScriptSHA256": "9b4dc0f06d78f3972b86cc831955a68fdf48bbe8ce8d7377f3c19b9de2d94ed9",
+    "existingReferenceConflictRefusedBeforeAnyWrite": true
+  },
+  "limitations": [
+    "Static reference availability only; no live Unity task or Skill success-rate claim.",
+    "Old matching core files retained, so this does not upgrade all instructions to current upstream tools.",
+    "The upstream sync-source gap remains. A later mirror sync may remove added guides; the helper is intentionally pinned and refuses a changed installed version.",
+    "One existing local inventory entry remains unmeasured; zero collected findings is not proof all Skills are healthy.",
+    "Original Skill files backed up in an owned private audit directory; no source text, credentials or private installation metadata exported."
+  ]
+}

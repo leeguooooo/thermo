@@ -49,6 +49,8 @@ struct CleanCommand {
         }
         switch rest.first {
         case "run": try clean(Array(rest.dropFirst()))
+        case "plan": try savePlan(Array(rest.dropFirst()))
+        case "apply": try applyPlan(Array(rest.dropFirst()))
         case "log": showLog()
         case "whitelist": try whitelist(Array(rest.dropFirst()))
         case "empty-trash": try emptyTrash(Array(rest.dropFirst()))
@@ -86,10 +88,10 @@ struct CleanCommand {
             stream?.emit(.init(event: "progress", step: step))
             if tty { FileHandle.standardError.write(Data(".".utf8)) }
         }, onEntry: { entry in stream?.emit(.init(event: "entry", entry: entry)) }, cancellation: cancellation)
-        if let stream { stream.emit(.init(event: "finished", overview: o)); o.save(); return }
+        if let stream { stream.emit(.init(event: "finished", overview: o)); o.save(); if o.cancelled == true { throw CLIError("Overview scan is incomplete.",exitCode:3) }; return }
         o.save()  // the app's Overview opens with these numbers
         if tty { FileHandle.standardError.write("\n".data(using: .utf8)!) }
-        if args.has("json") { print(Export.json(o)); return }
+        if args.has("json") { print(Export.json(o)); if o.cancelled == true { throw CLIError("Overview scan is incomplete.",exitCode:3) }; return }
         func gb(_ b: Int64) -> String { b >= 1_000_000_000 ? String(format: "%.1f GB", Double(b) / 1e9) : String(format: "%.0f MB", Double(b) / 1e6) }
         var lines = [style.bold("Disk") + style.dim(String(format: " · %@ used of %@ · %@ free", gb(o.used), gb(o.capacity), gb(o.free))
                      + (o.purgeable > 1_000_000_000 ? " (+\(gb(o.purgeable)) purgeable)" : "")), ""]
@@ -182,8 +184,10 @@ struct CleanCommand {
     func report(filter: [String]) throws {
         let cats = try categories(for: filter)
         let r = try scan(cats)
-        if args.has("stream") { return }
-        if args.has("json") { print(Export.json(r)); return }
+        if args.has("stream") {
+            if r.cancelled { throw CLIError("Scan is incomplete; completed events remain valid.", exitCode:3) }; return
+        }
+        if args.has("json") { print(Export.json(r)); if r.cancelled { throw CLIError("Scan is incomplete; inspect cancelled and denied fields.",exitCode:3) }; return }
         if args.has("csv") {
             print("id,category,safety,bytes,files,last_used,title,detail,blocked")
             let f = ISO8601DateFormatter()
@@ -243,6 +247,7 @@ struct CleanCommand {
         lines.append(style.dim("        ") + "thermo clean run ID…" + style.dim("    items by id, id prefix or category; review items go to the Trash"))
         lines.append(style.dim("        ") + "thermo clean run ID#SESSION" + style.dim("  just some sessions of an item (see --all)"))
         out(lines)
+        if r.cancelled { throw CLIError("Scan is incomplete.",exitCode:3) }
     }
 
     func badge(_ s: Safety) -> String {
@@ -346,7 +351,8 @@ struct CleanCommand {
                          onlyIDs: Self.itemIDs(in: selectors))
             picked = r.select(selectors)
         }
-        try execute(report: r, picked: picked, mode: mode)
+        let missing = selectors.filter { r.select([$0]).isEmpty }
+        try execute(report: r, picked: picked, mode: mode, missingSelectors: missing)
     }
 
     struct Preview: Encodable {
@@ -358,6 +364,20 @@ struct CleanCommand {
         let skipped: [CleanItem]
         var sessionRetentionDays: Int? = nil
         var sessionPolicyVersion: Int? = nil
+        var missingSelectors: [String] = []
+    }
+
+    struct ExecutionReport: Encodable {
+        let schemaVersion = 2
+        let outcome: String
+        let complete: Bool
+        let scanComplete: Bool
+        let results: [CleanResult]
+        let skipped: [CleanItem]
+        let missingSelectors: [String]
+        let spaceObservation: DiskSpaceObservation
+        let estimatedDeletedBytes: Int64
+        let trashedBytes: Int64
     }
     struct PreviewItem: Encodable {
         let item: CleanItem
@@ -367,7 +387,7 @@ struct CleanCommand {
     }
 
     /// The reviewed execution boundary is shared by real execution and dry-run tests.
-    func execute(report r: ScanReport, picked: [CleanItem], mode: RemovalMode,
+    func execute(report r: ScanReport, picked: [CleanItem], mode: RemovalMode, missingSelectors: [String] = [],
                  write: (String) -> Void = { print($0) }) throws {
         guard !picked.isEmpty else {
             if args.has("dry-run"), r.cancelled {
@@ -419,7 +439,7 @@ struct CleanCommand {
                 write(Export.json(Preview(scannedAt: r.started, scanCancelled: r.cancelled, removalMode: mode.rawValue,
                                           items: todo.map { PreviewItem(item: $0, action: $0.runsNativeClean(mode) ? "tool-clean" : !($0.commands ?? []).isEmpty ? "tool-removal" : mode.trashes($0.safety) ? "trash" : "delete",
                                                                        commands: $0.runsNativeClean(mode) ? $0.native?.runs.map(\.commandLine) : nil) },
-                                          skipped: skipped, sessionRetentionDays: r.sessionRetentionDays, sessionPolicyVersion: r.sessionPolicyVersion)))
+                                          skipped: skipped, sessionRetentionDays: r.sessionRetentionDays, sessionPolicyVersion: r.sessionPolicyVersion, missingSelectors: missingSelectors)))
             } else {
                 write(plan.joined(separator: "\n"))
                 write("dry run · no files removed and no cleanup commands executed")
@@ -427,10 +447,17 @@ struct CleanCommand {
             return
         }
         if args.has("json") == false { out(plan) }
-        guard !todo.isEmpty else { return }
+        guard !todo.isEmpty else {
+            if args.has("json") {
+                write(Export.json(ExecutionReport(outcome: "refused", complete: false, scanComplete: !r.cancelled,
+                    results: [], skipped: skipped, missingSelectors: missingSelectors,
+                    spaceObservation: .init(before: nil, after: nil), estimatedDeletedBytes: 0, trashedBytes: 0)))
+            }
+            throw CLIError("No selected item could be cleaned; inspect skipped items.", exitCode: 3)
+        }
 
         if !args.has("yes") {
-            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("not a terminal; add --yes to confirm") }
+            guard !args.has("json"), isatty(STDIN_FILENO) != 0 else { throw CLIError("Review --dry-run, then add --yes to confirm") }
             print("Proceed? [y/N] ", terminator: "")
             fflush(stdout)
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print("cancelled"); return }
@@ -458,9 +485,16 @@ struct CleanCommand {
             }
         }
         let observation = DiskSpaceObservation(before: spaceBefore, after: DiskSpaceSnapshot.measure())
-        if args.has("json") { print(Export.json(results)); return }
         let freed = results.filter { !$0.trashed }.reduce(Int64(0)) { $0 + $1.bytes }
         let trashed = results.filter(\.trashed).reduce(Int64(0)) { $0 + ($1.trashedAllocatedBytes ?? $1.bytes) }
+        let complete = !r.cancelled && skipped.isEmpty && missingSelectors.isEmpty && results.allSatisfy { $0.failed.isEmpty }
+        if args.has("json") {
+            write(Export.json(ExecutionReport(outcome: complete ? "succeeded" : "partial", complete: complete, scanComplete: !r.cancelled,
+                results: results, skipped: skipped, missingSelectors: missingSelectors, spaceObservation: observation,
+                estimatedDeletedBytes: freed, trashedBytes: trashed)))
+            if !complete { throw CLIError("Cleanup was partial; inspect the JSON report before another action.", exitCode: 3) }
+            return
+        }
         let estimateIncomplete = results.contains { $0.bytesIncomplete == true }
         var summary = estimateIncomplete
             ? (freed == 0 ? "removed size is unknown" : "measured removed size: \(ByteFormat.string(freed)); total size is unknown")
@@ -475,6 +509,7 @@ struct CleanCommand {
         if results.contains(where: { $0.bytesIncomplete == true }) { summary += "; some removed sizes could not be measured completely" }
         print(observation.summary)
         print(style.bold(summary) + style.dim(" · log: \(FS.tilde(Cleaner.logURL.path))"))
+        if !complete { throw CLIError("Cleanup was partial; inspect results before another action.", exitCode: 3) }
     }
 
     // MARK: whitelist
@@ -504,16 +539,17 @@ struct CleanCommand {
                 else if w.entries.isEmpty { write(style.dim("  " + tr("nothing whitelisted; add paths with thermo clean whitelist add PATH…"))) }
                 for e in w.entries { write("  " + FS.tilde(e, home: home)) }
                 for r in w.rejected { write(style.yellow("  " + tr("line %1$@ ignored: %2$@ (%3$@)", String(r.line), r.text, tr(r.reason)))) }
-            case "add":
+            case "add", "remove", "rm":
                 guard !paths.isEmpty else { throw CLIError(usage) }
-                let added = try Whitelist.add(paths, home: home)
-                for p in added { write(style.green("+ ") + FS.tilde(p, home: home)) }
-                if added.count < paths.count { write(style.dim(tr("already whitelisted: %1$@", String(paths.count - added.count)))) }
-            case "remove", "rm":
-                guard !paths.isEmpty else { throw CLIError(usage) }
-                let removed = try Whitelist.remove(paths, home: home)
-                for p in removed { write(style.red("- ") + FS.tilde(p, home: home)) }
-                if removed.count < paths.count { write(style.dim(tr("not in the whitelist: %1$@", String(paths.count - removed.count)))) }
+                let adding = rest.first == "add"
+                let changes = args.has("dry-run") ? try Whitelist.previewChange(Array(paths), adding: adding, home: home)
+                    : adding ? try Whitelist.add(Array(paths), home: home) : try Whitelist.remove(Array(paths), home: home)
+                if args.has("json") {
+                    struct Change: Encodable { let dryRun: Bool; let action: String; let changed: [String] }
+                    write(Export.json(Change(dryRun: args.has("dry-run"), action: adding ? "add" : "remove", changed: changes)))
+                } else {
+                    for p in changes { write((args.has("dry-run") ? "planned " : "") + (adding ? "+ " : "- ") + FS.tilde(p, home: home)) }
+                }
             default: throw CLIError(usage)
             }
         } catch let e as CLIError { throw e } catch { throw CLIError(error.localizedDescription) }
@@ -549,17 +585,18 @@ struct CleanCommand {
         }
         if args.has("dry-run") { return }
         if !args.has("yes") {
-            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("add --yes after reviewing the batch with --dry-run") }
+            guard !args.has("json"), isatty(STDIN_FILENO) != 0 else { throw CLIError("add --yes after reviewing the batch with --dry-run") }
             print("Permanently remove this batch? [y/N] ", terminator: ""); fflush(stdout)
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { return }
         }
         let result = try TrashBatches.empty(batch.id, home: home, reviewIdentity: try TrashBatches.reviewIdentity(batch),
             reviewedDestinations: Set(batch.entries.filter { refused[$0.destination] == nil }.map(\.destination)))
-        if args.has("json") { write(Export.json(result)); return }
+        if args.has("json") { write(Export.json(result)); if !result.failed.isEmpty { throw CLIError("Trash emptying was partial; inspect results.",exitCode:3) }; return }
         write("deleted \(ByteFormat.string(result.bytes)) (estimated); \(result.outcome ?? "unknown")")
         for (path, reason) in result.failed.sorted(by: { $0.key < $1.key }) { write("  kept \(path): \(reason)") }
         for path in result.whitelisted ?? [] { write("  kept " + path + ": " + tr(Whitelist.reason)) }
         if let observation = result.spaceObservation { write(observation.summary) }
+        if !result.failed.isEmpty { throw CLIError("Trash emptying was partial; inspect results.",exitCode:3) }
     }
 
     /// `thermo clean restore BATCH`: moves the batch's Trash items back to where they were.
@@ -583,7 +620,7 @@ struct CleanCommand {
             exit(1)
         }
         if !args.has("yes") {
-            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("add --yes after reviewing the batch with --dry-run") }
+            guard !args.has("json"), isatty(STDIN_FILENO) != 0 else { throw CLIError("add --yes after reviewing the batch with --dry-run") }
             print(tr("Restore these items? [y/N] "), terminator: ""); fflush(stdout)
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print(tr("cancelled")); return }
         }
@@ -657,7 +694,11 @@ struct CleanCommand {
     }
 
     func showLog() {
-        guard let text = try? String(contentsOf: Cleaner.logURL, encoding: .utf8) else { print(style.dim("no cleanup yet")); return }
-        out(text.split(separator: "\n").suffix(args.has("all") ? Int.max : 40).map(String.init))
+        let text = (try? String(contentsOf: Cleaner.logURL, encoding: .utf8)) ?? ""
+        let lines = text.split(separator: "\n").suffix(args.has("all") ? Int.max : 40).map(String.init)
+        if args.has("json") {
+            struct Log: Encodable { let file: String; let lines: [String] }
+            print(Export.json(Log(file: Cleaner.logURL.path, lines: lines)))
+        } else { out(lines.isEmpty ? ["no cleanup yet"] : lines) }
     }
 }

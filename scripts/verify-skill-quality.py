@@ -26,6 +26,15 @@ Read [missing][guide].
         folder.mkdir(parents=True)
         (folder / "SKILL.md").write_text(document)
         (folder / "reference(v2).md").write_text("fixture content; not executed")
+    (home / ".agents/skills/alias").symlink_to(home / ".agents/skills/one", target_is_directory=True)
+    cached = home / ".codex/plugins/cache/market/fixture/1"
+    (cached / ".codex-plugin").mkdir(parents=True)
+    (cached / ".codex-plugin/plugin.json").write_text('{"name":"fixture","skills":"./skills"}')
+    (cached / "skills/cached").mkdir(parents=True)
+    (cached / "skills/cached/SKILL.md").write_text("---\nname: cached\ndescription: fixture\n---\n[missing](missing.md)\n")
+    unrelated = home / ".claude/skills/unrelated"
+    unrelated.mkdir(parents=True)
+    (unrelated / "SKILL.md").write_text("---\nname: unrelated\ndescription: fixture\n---\nUse only for tests.\n")
     empty = home / ".agents/skills/empty"
     empty.mkdir()
     (empty / "SKILL.md").write_text("---\nname: empty\ndescription: fixture\n---\n<!-- comment only -->\n")
@@ -38,7 +47,7 @@ Read [missing][guide].
                             capture_output=True, text=True, check=True, timeout=20)
     report = json.loads(result.stdout)
     copies = [item for item in report["skills"] if item["name"] == "fixture"]
-    assert len(copies) == 2
+    assert len(copies) == 3
     for item in copies:
         footprint = item["skillFootprint"]
         assert footprint["identicalContentFiles"] == 2
@@ -49,9 +58,23 @@ Read [missing][guide].
         assert not any(action["kind"] == "fix" for action in item["actions"])
     empty_item = next(item for item in report["skills"] if item["name"] == "empty")
     assert empty_item["skillFootprint"]["quality"]["issues"][0]["code"] == "empty_body"
+    summaries = report["qualitySummaries"]
+    assert len(summaries) == 2 and all(s["host"] == "codex" for s in summaries)
+    directory = next(s for s in summaries if s["scope"] == "directory")
+    cache = next(s for s in summaries if s["scope"] == "cache")
+    assert (directory["uniqueFiles"], directory["inspectedFiles"], directory["aliases"]) == (3, 3, 1)
+    assert (directory["checkedLocalReferences"], directory["findings"]) == (4, 3)
+    assert (cache["uniqueFiles"], cache["checkedLocalReferences"], cache["findings"]) == (1, 1, 1)
+    plain = subprocess.run([str(binary), "agents", "context", "--agent", "codex", "--no-color"],
+                           env=dict(os.environ, CFFIXED_USER_HOME=str(home), THERMO_LANG="en"),
+                           capture_output=True, text=True, check=True, timeout=20).stdout
+    assert "content evidence [directory/configured plugins]: 3/3 unique files inspected · 1 alias entries excluded" in plain
+    assert "content evidence [cache inventory; loading unverified]: 1/1 unique files inspected" in plain
     assert not canary.exists()
     for name in ["one", "two"]:
         assert (home / ".agents/skills" / name / "SKILL.md").read_text() == document
     print(json.dumps({"passed": True, "missingReferences": 2, "sourceLinesVerified": True,
                       "emptyBodies": 1, "identicalIndependentCopies": 2, "examplesIgnored": True,
-                      "noMCPExecution": True, "noSkillChanges": True}))
+                      "noMCPExecution": True, "noSkillChanges": True,
+                      "aliasEvidenceDeduplicated": True, "cacheEvidenceSeparate": True,
+                      "qualitySummariesRespectAgentFilter": True}))
