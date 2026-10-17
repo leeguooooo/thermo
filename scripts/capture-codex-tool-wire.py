@@ -2,6 +2,7 @@
 No real model, authentication copy, or business MCP tool is used.
 Usage: python3 scripts/capture-codex-tool-wire.py OUTPUT_DIRECTORY CODEX_BINARY [--exercise-tools] [--persist-session]
 """
+import argparse
 import gzip
 import hashlib
 import json
@@ -13,16 +14,22 @@ import sys
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-exercise = '--exercise-tools' in sys.argv
-if exercise:sys.argv.remove('--exercise-tools')
-persist_session = '--persist-session' in sys.argv
-if persist_session:sys.argv.remove('--persist-session')
-root = Path(sys.argv[1]).resolve()
+arguments = argparse.ArgumentParser(description=__doc__)
+arguments.add_argument('output_directory', type=Path)
+arguments.add_argument('codex_binary', type=Path)
+arguments.add_argument('--exercise-tools', action='store_true')
+arguments.add_argument('--persist-session', action='store_true')
+arguments.add_argument('--mcp-outcome', choices=['success', 'application-error', 'protocol-error'], default='success')
+options = arguments.parse_args()
+exercise = options.exercise_tools
+persist_session = options.persist_session
+root = options.output_directory.resolve()
 root.mkdir(mode=0o700)
-binary = Path(sys.argv[2]).resolve()
+binary = options.codex_binary.resolve()
 MCP = r'''
 import json,sys
 mode=sys.argv[1]
+outcome=sys.argv[3]
 for line in sys.stdin:
  request=json.loads(line)
  with open(sys.argv[2],'a') as log:log.write(json.dumps({'method':request.get('method')})+'\n')
@@ -35,8 +42,10 @@ for line in sys.stdin:
   result={'tools':[tool]}
  elif method=='tools/call':
   assert request['params']['name']=='echo'
-  value='OWNED_SERVER_ECHO_ACK:'+request['params']['arguments']['value']
-  result={'content':[{'type':'text','text':value}],'structuredContent':{'value':value},'isError':False}
+  if outcome=='protocol-error':
+   print(json.dumps({'jsonrpc':'2.0','id':request['id'],'error':{'code':-32000,'message':'OWNED_PROTOCOL_ERROR'}}),flush=True);continue
+  value='OWNED_APPLICATION_ERROR' if outcome=='application-error' else 'OWNED_SERVER_ECHO_ACK:'+request['params']['arguments']['value']
+  result={'content':[{'type':'text','text':value}],'structuredContent':{'value':value},'isError':outcome=='application-error'}
  elif method=='ping':result={}
  else:
   print(json.dumps({'jsonrpc':'2.0','id':request['id'],'error':{'code':-32601,'message':'Only metadata is supported'}}),flush=True);continue
@@ -103,7 +112,7 @@ for mode in ['full', 'off']:
         'env_key = "THERMO_FAKE_PROVIDER_KEY"','requires_openai_auth = false','supports_websockets = false',
         'request_max_retries = 0','stream_max_retries = 0',
         '[mcp_servers.wirefixture]','command = "/usr/bin/python3"',
-        'args = '+json.dumps([str(script),mode,str(directory/'mcp-methods.jsonl')]),'startup_timeout_sec = 10',
+        'args = '+json.dumps([str(script),mode,str(directory/'mcp-methods.jsonl'),options.mcp_outcome]),'startup_timeout_sec = 10',
         '[projects.'+json.dumps(str(project))+']','trust_level = "trusted"',''])
     (codex_home/'config.toml').write_text(config)
     env = {'PATH':'/usr/bin:/bin:/usr/sbin:/sbin','HOME':str(home),'CODEX_HOME':str(codex_home),
@@ -145,13 +154,16 @@ for result in results:
                 if event.get('type') == 'response_item' and payload.get('type') == 'custom_tool_call':
                     wrapper_calls += 1
                 if event.get('type') == 'event_msg' and payload.get('type') == 'item_completed' and item.get('type') == 'McpToolCall':
+                    native_result = item.get('result') or {}
                     native_calls.append({'ownedEcho': item.get('server') == 'wirefixture' and item.get('tool') == 'echo',
-                                         'explicitFalseErrorFlag': item.get('result', {}).get('isError') is False,
+                                         'status': item.get('status'), 'hasResult': item.get('result') is not None,
+                                         'explicitErrorFlag': native_result.get('isError'),
+                                         'errorFieldPresent': item.get('error') is not None,
                                          'hasStartAndEndMilliseconds': isinstance(payload.get('started_at_ms'), int) and isinstance(payload.get('completed_at_ms'), int)})
         result['persistedLogObservations'] = {'files': len(logs), 'customToolCalls': wrapper_calls, 'nativeMCPCalls': native_calls}
         if exercise:
             assert len(logs) == 1 and wrapper_calls == 2 and len(native_calls) == 1
-            assert all(native_calls[0].values())
+            assert native_calls[0]['ownedEcho'] and native_calls[0]['hasStartAndEndMilliseconds']
     result['wireObservations'] = []
     for request_path in sorted(directory.glob('request-private-*.json')):
         raw = request_path.read_text()
@@ -162,6 +174,8 @@ for result in results:
             'inputDeclarationMarkerPresent': 'OWNED_INPUT_SCHEMA_MARKER' in raw,
             'outputDeclarationMarkerPresent': 'OWNED_OUTPUT_ONLY_MARKER' in raw,
             'serverAckInToolOutput': any('OWNED_SERVER_ECHO_ACK:OWNED_ECHO_REQUEST' in json.dumps(item.get('output')) for item in outputs),
+            'applicationErrorInToolOutput': any('OWNED_APPLICATION_ERROR' in json.dumps(item.get('output')) for item in outputs),
+            'protocolErrorInToolOutput': any('OWNED_PROTOCOL_ERROR' in json.dumps(item.get('output')) for item in outputs),
             'rootToolsPresent': 'tools' in request,
             'additionalToolsInputPresent': any(item.get('type') == 'additional_tools' for item in request.get('input',[]))})
     if exercise:
@@ -169,9 +183,11 @@ for result in results:
         assert len(result['wireObservations']) == 3, result
         first, discovered, invoked = result['wireObservations']
         assert not first['inputDeclarationMarkerPresent']
-        assert discovered['inputDeclarationMarkerPresent'] and invoked['serverAckInToolOutput']
+        assert discovered['inputDeclarationMarkerPresent']
+        marker = {'success':'serverAckInToolOutput','application-error':'applicationErrorInToolOutput','protocol-error':'protocolErrorInToolOutput'}[options.mcp_outcome]
+        assert invoked[marker]
         assert not any(item['outputDeclarationMarkerPresent'] for item in result['wireObservations'])
 (root/'collection.json').write_text(json.dumps({'clientVersion':subprocess.check_output([str(binary),'--version'],text=True).strip(),
                                             'binarySHA256':hashlib.sha256(binary.read_bytes()).hexdigest(),
                                             'fixtureSHA256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-                                            'exerciseTools':exercise,'persistSession':persist_session,'runs':results},indent=2)+'\n')
+                                            'exerciseTools':exercise,'persistSession':persist_session,'mcpOutcome':options.mcp_outcome,'runs':results},indent=2)+'\n')

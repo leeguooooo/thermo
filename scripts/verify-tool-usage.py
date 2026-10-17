@@ -41,6 +41,9 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
                               "status": "completed", "arguments": {"private": "fixture-private-argument"}, "result": result}}, -5)
     rows += [native("a", "read", result),
              native("nested", "nested", {"content": [{"type": "text", "text": "fixture-private-result"}]})]
+    failed = native("host-failure", "host-failure", None)
+    failed["payload"]["item"].update(status="failed", error={"message": "fixture-private-host-error"})
+    rows.append(failed)
     wrapped = [{"type": "input_text", "text": "fixture-private-wrapper"},
                {"type": "input_image", "image_url": "data:image/png;base64," + "A" * 100_000},
                {"type": "input_audio", "input_audio": {"data": "fixture-private-audio", "format": "wav"}}]
@@ -78,6 +81,10 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     assert mcp["calls"] == 2 and mcp["completed"] == 2 and mcp["nonTextBlocks"] == 2
     nested = next(row for row in report["tools"] if row["kind"] == "mcp" and row["name"] == "nested")
     assert nested["calls"] == 1 and nested["completed"] == 1 and nested["unknownErrorStatus"] == 1
+    failure = next(row for row in report["tools"] if row["name"] == "host-failure")
+    assert failure["invocationFailures"] == 1 and failure["completed"] == 0 and failure["missingResults"] == 0
+    assert failure["timingSamples"] == 1 and failure["medianSeconds"] == 5
+    assert failure["reportedErrors"] == 0 and failure["unknownErrorStatus"] == 0
     assert "p95Seconds" not in mcp
     assert skill["calls"] == 1 and skill["completed"] == 1
     tokens = {row["host"]: row for row in report["sessionTokens"]}
@@ -98,6 +105,7 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     assert "Unattributed measured text: 23 bytes / ≈6 tokens · 2 non-text blocks not tokenized" in text
     assert "Kept outside MCP/Skill totals" in text
     assert "may repeat separately logged MCP results" in text
+    assert "Host-reported invocation failures without MCP results: 1; excluded from result error proportions, included in timing." in text
     # The CLI shows 20 rows by default; the denominator must still include row 21.
     many = []
     for index in range(21):
@@ -119,4 +127,5 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
                       "requestTokensKeptSeparate": True, "privateTextExcluded": True, "imageTokensUnknown": True,
                       "knownStatusErrorProportionVerified": True, "unknownErrorProportionPreserved": True,
                       "nativeMCPEventsIncludedWithoutDoubleCounting": True,
+                      "nativeHostFailureRetainsCompletionAndTiming": True,
                       "categoryTotalsAndSharesIncludeHiddenRows": True}))

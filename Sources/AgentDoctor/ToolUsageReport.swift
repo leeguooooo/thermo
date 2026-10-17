@@ -56,12 +56,14 @@ public struct ToolUsageRow: Codable, Identifiable, Sendable {
     public var calls = 0
     public var completed = 0
     public var reportedErrors = 0
+    /// Host failure with no MCP result. Absent in older reports means unmeasured.
+    public var invocationFailures: Int? = nil
     public var unknownErrorStatus = 0
     public var missingResults = 0
     public var timingSamples = 0
     public var totalObservedSeconds: Double? = nil
     public var medianSeconds: Double?
-    /// Nearest-rank P95, only when at least 20 valid call/result pairs exist.
+    /// Nearest-rank P95, only when at least 20 valid call/completion pairs exist.
     public var p95Seconds: Double?
     public var returnedTextBytes = 0
     public var returnedTextEstimatedTokens = 0
