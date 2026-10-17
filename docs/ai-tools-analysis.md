@@ -129,6 +129,12 @@ Figma 在这个独立检查会话中返回鉴权要求，不以空工具列表�
 
 本机 Skill 盘点中唯一未测量条目为 `~/.codex/skills/codex-primary-runtime`：实际为空目录，没有 `SKILL.md`，与报告中的结构诊断一致，不是 UTF-8、大小上限或正文读取失败。未推断该目录的管理者，也没有移除或制造一个 Skill 文件来消除提示。
 
+[stdio 配置补测](measurements/mcp-stdio-installed-audit-2026-10-17.json)仅对 CodeGraph 和 Discord 握手并读取工具清单。CodeGraph 为 1 个工具、定义数组 387 个参考 token，服务指令 345 token；Discord 为 22 个工具、定义数组 1,913 token，服务指令 25 token。均无当前规则支持的定义结构问题，未调用 `codegraph_explore` 或 Discord 业务工具。与此前 HTTP 测量合并后，成功子集为 4 个配置、34 个工具、18,642 定义字节、4,443 定义数组 token，另有 370 服务指令 token。各次生成时间保留，不宣称同一时刻快照；Figma 与其他四个配置仍不按零计。
+
+[本机 Claude Design 代理修复](measurements/claude-design-relay-sse-2026-10-17.json)来自一次启动方式审阅，而非真实 Design 服务故障复现。旧代理对 SSE 使用整段 `response.read()`，自有服务器立即发送响应但延迟 1 秒关闭时，客户端直到约 1.03 秒才返回。修复按完整 SSE 事件增量解析，在收到匹配 ID 的 result / error 后返回；保留前置进度消息，处理分块 UTF-8、LF / CRLF / CR、多行事件、JSON 批消息及未完成流，错误响应对象也及时关闭。[MCP 传输规范](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports)允许 SSE 在最终响应前携带其他协议消息，不能用第一条进度事件替代最终响应。
+
+8 项本地回归在实际配置使用的 `/usr/bin/python3` 3.9.6 和 Python 3.14 均通过；已安装源码与受测候选一致。[补丁](patches/claude-design-sse-response.patch)保留可审阅差异，[测试脚本](../scripts/test-claude-design-relay.py)将目标替换为回环服务及固定假令牌，阻止访问真实凭据。凭据读取、刷新、重定向保护、初始化器和命令分发的 AST 对比不变；没有改变实际目标地址或授权范围。现存代理实例没有重启，新代码下次启动才加载。修复后同类自有流在约 1 毫秒返回且服务端流仍打开，这只是协议控制实验，不是线上速度或业务成功率收益。该代理仍为串行请求桥接，没有新增持续服务端消息分发、断线续传、自动重试或会话关闭功能。
+
 协议实现依据：[生命周期](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle)、[stdio 传输](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)、[工具列表](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)。
 
 ## 本地使用历史

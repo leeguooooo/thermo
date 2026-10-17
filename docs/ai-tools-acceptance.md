@@ -12,6 +12,10 @@
 
 [HTTP 会话关闭诊断](measurements/mcp-cleanup-diagnostics-2026-10-17.json)新增可选的 `cleanupDetails`，在 App、CLI 和 JSON 中区分关闭确认、HTTP 错误、不支持关闭、等待超时、传输失败和无需关闭。保留 250 毫秒预算，不增加重试。29 项针对性测试及独立 CLI 验证通过。新版对一个新的 ZEGO 会话观察到：列表仍完整，关闭约 252 毫秒后记为预算内未确认，未取得 HTTP 状态码；不能推断服务端最终状态或回溯上次原因。新增诊断尚未进入 393 包，也未完成这项界面细节的完整 App 验收。
 
+[后续 stdio 检查](measurements/mcp-stdio-installed-audit-2026-10-17.json)完整读取 CodeGraph 的 1 个工具与 Discord 的 22 个工具，定义数组分别为 387、1,913 个 cl100k 参考 token。结合此前 HTTP 记录，已完整测量 4 个配置、34 个工具，定义数组合计 4,443 token，独立服务指令另计 370 token；不是一次原子快照或实际加载上下文。Figma 鉴权项与其余 4 个已启用配置仍没有完整计量，未启动业务工具或发送 Discord 消息。
+
+检查启动代码时发现并[修复本机 Claude Design 代理的 SSE 等待问题](measurements/claude-design-relay-sse-2026-10-17.json)：以前收到 JSON-RPC 响应后仍等待流结束，现在按请求 ID 识别完整响应。原有鉴权、刷新、重定向保护及分发逻辑保持一致，8 项离线用例在配置所用 Python 3.9.6 和 Python 3.14 均通过。自有流延迟关闭对照由约 1.03 秒等待变为约 1 毫秒返回，不能当作真实 Design 服务提速。源码已写入本机代理，现存实例未重启，下次启动加载；未访问真实 Design 服务或钥匙串。
+
 | 原始问题 | 当前能力与证据 | 仍不能据此判断 |
 |---|---|---|
 | MCP 总体有多大、占多少 token | 汇总已完整检查配置的定义字节、定义数组计数和独立服务指令计数；支持启发式和两种离线参考编码。[汇总与取消测试](../Tests/ThermoAppTests/MCPDefinitionStoreTests.swift)、[批量原生验收](measurements/mcp-batch-inspection-2026-10-17.json) | 未检查配置不按零计；多宿主配置保留独立计量。它不是宿主当前实际加载上下文或账单 |

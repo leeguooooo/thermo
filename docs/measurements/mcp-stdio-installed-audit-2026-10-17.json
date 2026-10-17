@@ -1,0 +1,1318 @@
+{
+  "date": "2026-10-17",
+  "sourceCommit": "dec8c250f0ae5bdcb0042d845fcdfd9297d821fa",
+  "binarySHA256": "f7b22a55dcb6324a94346b19cde8a86ea0610bc6cdbea10fd246dee965ccf88d",
+  "scope": "Two additional stdio handshakes and complete tools/list calls, without business-tool calls. Composite counts include earlier HTTP observations, not one atomic snapshot.",
+  "newReports": {
+    "codegraph": {
+      "agent": "codex",
+      "analysisSeconds": 0.13999358299770392,
+      "complete": true,
+      "definitions": {
+        "bytes": 1716,
+        "characters": 1706,
+        "estimatedTokens": 431,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 387
+      },
+      "elapsedSeconds": 0.6476412500051083,
+      "generated": "2026-10-17T02:21:15Z",
+      "handshakeSeconds": 0.42175183299696073,
+      "instructions": {
+        "bytes": 1389,
+        "characters": 1377,
+        "estimatedTokens": 349,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 23,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 345
+      },
+      "listingSeconds": 0.005248124987701885,
+      "measurementNote": "Heuristic definition fields use ascii4-unicode1-v1; optional reference counts use the named ordinary-text encoding. Neither proves actual prompt framing or billed usage. Full definitions may differ from agent loading. Output schema is a definition, not returned content. No business tools were called.",
+      "message": "Handshake and complete tool listing succeeded. Business tool behavior has not been tested.",
+      "name": "codegraph",
+      "protocolVersion": "2024-11-05",
+      "referenceEncoding": "cl100k_base",
+      "referenceEngine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+      "startupSeconds": 0.0008035000064410269,
+      "state": "ready",
+      "tools": [
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1714,
+            "characters": 1704,
+            "estimatedTokens": 430,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 385
+          },
+          "description": {
+            "bytes": 588,
+            "characters": 582,
+            "estimatedTokens": 148,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 130
+          },
+          "inputSchema": {
+            "bytes": 958,
+            "characters": 954,
+            "estimatedTokens": 240,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 215
+          },
+          "issues": [],
+          "name": "codegraph_explore",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        }
+      ],
+      "transport": "stdio"
+    },
+    "discord": {
+      "agent": "codex",
+      "analysisSeconds": 0.14956204099871684,
+      "complete": true,
+      "definitions": {
+        "bytes": 8480,
+        "characters": 8480,
+        "estimatedTokens": 2120,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 1913
+      },
+      "elapsedSeconds": 0.26210429100319743,
+      "generated": "2026-10-17T02:21:15Z",
+      "handshakeSeconds": 0.017739584000082687,
+      "instructions": {
+        "bytes": 119,
+        "characters": 119,
+        "estimatedTokens": 30,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 25
+      },
+      "listingSeconds": 0.0028756249957950786,
+      "measurementNote": "Heuristic definition fields use ascii4-unicode1-v1; optional reference counts use the named ordinary-text encoding. Neither proves actual prompt framing or billed usage. Full definitions may differ from agent loading. Output schema is a definition, not returned content. No business tools were called.",
+      "message": "Handshake and complete tool listing succeeded. Business tool behavior has not been tested.",
+      "name": "discord",
+      "protocolVersion": "2025-06-18",
+      "referenceEncoding": "cl100k_base",
+      "referenceEngine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+      "startupSeconds": 0.0008028750016819686,
+      "state": "ready",
+      "tools": [
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 529,
+            "characters": 529,
+            "estimatedTokens": 133,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 125
+          },
+          "description": {
+            "bytes": 52,
+            "characters": 52,
+            "estimatedTokens": 13,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 11
+          },
+          "inputSchema": {
+            "bytes": 406,
+            "characters": 406,
+            "estimatedTokens": 102,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 100
+          },
+          "issues": [],
+          "name": "discord_send_webhook_message",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 509,
+            "characters": 509,
+            "estimatedTokens": 128,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 122
+          },
+          "description": {
+            "bytes": 47,
+            "characters": 47,
+            "estimatedTokens": 12,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 9
+          },
+          "inputSchema": {
+            "bytes": 399,
+            "characters": 399,
+            "estimatedTokens": 100,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 100
+          },
+          "issues": [],
+          "name": "discord_edit_webhook",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 475,
+            "characters": 475,
+            "estimatedTokens": 119,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 109
+          },
+          "description": {
+            "bytes": 55,
+            "characters": 55,
+            "estimatedTokens": 14,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 11
+          },
+          "inputSchema": {
+            "bytes": 356,
+            "characters": 356,
+            "estimatedTokens": 89,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 86
+          },
+          "issues": [],
+          "name": "discord_edit_category",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 452,
+            "characters": 452,
+            "estimatedTokens": 113,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 106
+          },
+          "description": {
+            "bytes": 43,
+            "characters": 43,
+            "estimatedTokens": 11,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 9
+          },
+          "inputSchema": {
+            "bytes": 343,
+            "characters": 343,
+            "estimatedTokens": 86,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 86
+          },
+          "issues": [],
+          "name": "discord_create_category",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 461,
+            "characters": 461,
+            "estimatedTokens": 116,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 104
+          },
+          "description": {
+            "bytes": 64,
+            "characters": 64,
+            "estimatedTokens": 16,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "inputSchema": {
+            "bytes": 329,
+            "characters": 329,
+            "estimatedTokens": 83,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 79
+          },
+          "issues": [],
+          "name": "discord_create_forum_post",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 420,
+            "characters": 420,
+            "estimatedTokens": 105,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 96
+          },
+          "description": {
+            "bytes": 58,
+            "characters": 58,
+            "estimatedTokens": 15,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 10
+          },
+          "inputSchema": {
+            "bytes": 289,
+            "characters": 289,
+            "estimatedTokens": 73,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 72
+          },
+          "issues": [],
+          "name": "discord_add_multiple_reactions",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 405,
+            "characters": 405,
+            "estimatedTokens": 102,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 94
+          },
+          "description": {
+            "bytes": 43,
+            "characters": 43,
+            "estimatedTokens": 11,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 8
+          },
+          "inputSchema": {
+            "bytes": 297,
+            "characters": 297,
+            "estimatedTokens": 75,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 73
+          },
+          "issues": [],
+          "name": "discord_create_webhook",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 421,
+            "characters": 421,
+            "estimatedTokens": 106,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 94
+          },
+          "description": {
+            "bytes": 56,
+            "characters": 56,
+            "estimatedTokens": 14,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 10
+          },
+          "inputSchema": {
+            "bytes": 299,
+            "characters": 299,
+            "estimatedTokens": 75,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 72
+          },
+          "issues": [],
+          "name": "discord_remove_reaction",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 400,
+            "characters": 400,
+            "estimatedTokens": 100,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 93
+          },
+          "description": {
+            "bytes": 72,
+            "characters": 72,
+            "estimatedTokens": 18,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 13
+          },
+          "inputSchema": {
+            "bytes": 264,
+            "characters": 264,
+            "estimatedTokens": 66,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 68
+          },
+          "issues": [],
+          "name": "discord_read_messages",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 406,
+            "characters": 406,
+            "estimatedTokens": 102,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 91
+          },
+          "description": {
+            "bytes": 69,
+            "characters": 69,
+            "estimatedTokens": 18,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 13
+          },
+          "inputSchema": {
+            "bytes": 267,
+            "characters": 267,
+            "estimatedTokens": 67,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 65
+          },
+          "issues": [],
+          "name": "discord_create_text_channel",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 385,
+            "characters": 385,
+            "estimatedTokens": 97,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 90
+          },
+          "description": {
+            "bytes": 49,
+            "characters": 49,
+            "estimatedTokens": 13,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 8
+          },
+          "inputSchema": {
+            "bytes": 271,
+            "characters": 271,
+            "estimatedTokens": 68,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 69
+          },
+          "issues": [],
+          "name": "discord_delete_webhook",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 383,
+            "characters": 383,
+            "estimatedTokens": 96,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 85
+          },
+          "description": {
+            "bytes": 54,
+            "characters": 54,
+            "estimatedTokens": 14,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 9
+          },
+          "inputSchema": {
+            "bytes": 264,
+            "characters": 264,
+            "estimatedTokens": 66,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 64
+          },
+          "issues": [],
+          "name": "discord_delete_message",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 368,
+            "characters": 368,
+            "estimatedTokens": 92,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 83
+          },
+          "description": {
+            "bytes": 52,
+            "characters": 52,
+            "estimatedTokens": 13,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 9
+          },
+          "inputSchema": {
+            "bytes": 253,
+            "characters": 253,
+            "estimatedTokens": 64,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 62
+          },
+          "issues": [],
+          "name": "discord_add_reaction",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 344,
+            "characters": 344,
+            "estimatedTokens": 86,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 78
+          },
+          "description": {
+            "bytes": 54,
+            "characters": 54,
+            "estimatedTokens": 14,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 10
+          },
+          "inputSchema": {
+            "bytes": 222,
+            "characters": 222,
+            "estimatedTokens": 56,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 55
+          },
+          "issues": [],
+          "name": "discord_delete_forum_post",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 327,
+            "characters": 327,
+            "estimatedTokens": 82,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 76
+          },
+          "description": {
+            "bytes": 48,
+            "characters": 48,
+            "estimatedTokens": 12,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 10
+          },
+          "inputSchema": {
+            "bytes": 214,
+            "characters": 214,
+            "estimatedTokens": 54,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 53
+          },
+          "issues": [],
+          "name": "discord_reply_to_forum",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 336,
+            "characters": 336,
+            "estimatedTokens": 84,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 74
+          },
+          "description": {
+            "bytes": 49,
+            "characters": 49,
+            "estimatedTokens": 13,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 8
+          },
+          "inputSchema": {
+            "bytes": 222,
+            "characters": 222,
+            "estimatedTokens": 56,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 54
+          },
+          "issues": [],
+          "name": "discord_delete_channel",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 330,
+            "characters": 330,
+            "estimatedTokens": 83,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 72
+          },
+          "description": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 14
+          },
+          "inputSchema": {
+            "bytes": 175,
+            "characters": 175,
+            "estimatedTokens": 44,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 45
+          },
+          "issues": [],
+          "name": "discord_get_server_info",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 314,
+            "characters": 314,
+            "estimatedTokens": 79,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 72
+          },
+          "description": {
+            "bytes": 51,
+            "characters": 51,
+            "estimatedTokens": 13,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 10
+          },
+          "inputSchema": {
+            "bytes": 208,
+            "characters": 208,
+            "estimatedTokens": 52,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 51
+          },
+          "issues": [],
+          "name": "discord_send",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 324,
+            "characters": 324,
+            "estimatedTokens": 81,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 70
+          },
+          "description": {
+            "bytes": 33,
+            "characters": 33,
+            "estimatedTokens": 9,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 7
+          },
+          "inputSchema": {
+            "bytes": 225,
+            "characters": 225,
+            "estimatedTokens": 57,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 52
+          },
+          "issues": [],
+          "name": "discord_delete_category",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 309,
+            "characters": 309,
+            "estimatedTokens": 78,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 69
+          },
+          "description": {
+            "bytes": 62,
+            "characters": 62,
+            "estimatedTokens": 16,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "inputSchema": {
+            "bytes": 178,
+            "characters": 178,
+            "estimatedTokens": 45,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 45
+          },
+          "issues": [],
+          "name": "discord_get_forum_channels",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 300,
+            "characters": 300,
+            "estimatedTokens": 75,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 69
+          },
+          "description": {
+            "bytes": 59,
+            "characters": 59,
+            "estimatedTokens": 15,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 11
+          },
+          "inputSchema": {
+            "bytes": 176,
+            "characters": 176,
+            "estimatedTokens": 44,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 45
+          },
+          "issues": [],
+          "name": "discord_get_forum_post",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          },
+          "definition": {
+            "bytes": 259,
+            "characters": 259,
+            "estimatedTokens": 65,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 60
+          },
+          "description": {
+            "bytes": 45,
+            "characters": 45,
+            "estimatedTokens": 12,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 8
+          },
+          "inputSchema": {
+            "bytes": 158,
+            "characters": 158,
+            "estimatedTokens": 40,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 41
+          },
+          "issues": [],
+          "name": "discord_login",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        }
+      ],
+      "transport": "stdio"
+    }
+  },
+  "compositeObservedSubset": {
+    "enabledCodexConfigurations": 9,
+    "inspectedConfigurations": 5,
+    "completeConfigurations": 4,
+    "authenticationRequiredConfigurations": 1,
+    "uninspectedConfigurations": [
+      "claude_design",
+      "iphone-use",
+      "node_repl",
+      "rea"
+    ],
+    "tools": 34,
+    "definitionArrayReferenceTokensSum": 4443,
+    "separateServerInstructionReferenceTokensSum": 370,
+    "definitionBytesSum": 18642,
+    "fullConfiguredTotalKnown": false,
+    "referenceEncoding": "cl100k_base",
+    "perConfiguration": [
+      {
+        "name": "codegraph",
+        "generated": "2026-10-17T02:21:15Z",
+        "tools": 1,
+        "definitionArrayReferenceTokens": 387,
+        "serverInstructionReferenceTokens": 345
+      },
+      {
+        "name": "discord",
+        "generated": "2026-10-17T02:21:15Z",
+        "tools": 22,
+        "definitionArrayReferenceTokens": 1913,
+        "serverInstructionReferenceTokens": 25
+      },
+      {
+        "name": "openaiDeveloperDocs",
+        "generated": "2026-10-17T02:07:00Z",
+        "tools": 5,
+        "definitionArrayReferenceTokens": 781,
+        "serverInstructionReferenceTokens": 0
+      },
+      {
+        "name": "zego",
+        "generated": "2026-10-17T02:15:16Z",
+        "tools": 6,
+        "definitionArrayReferenceTokens": 1362,
+        "serverInstructionReferenceTokens": 0
+      }
+    ],
+    "largestMeasuredToolDefinitions": [
+      {
+        "server": "codegraph",
+        "tool": "codegraph_explore",
+        "definitionReferenceTokens": 385
+      },
+      {
+        "server": "zego",
+        "tool": "search_zego_docs",
+        "definitionReferenceTokens": 263
+      },
+      {
+        "server": "zego",
+        "tool": "get_token_generate_doc",
+        "definitionReferenceTokens": 241
+      },
+      {
+        "server": "zego",
+        "tool": "get_doc_links",
+        "definitionReferenceTokens": 229
+      },
+      {
+        "server": "zego",
+        "tool": "get_server_signature_doc",
+        "definitionReferenceTokens": 228
+      },
+      {
+        "server": "zego",
+        "tool": "get_platforms_by_product",
+        "definitionReferenceTokens": 203
+      },
+      {
+        "server": "openaiDeveloperDocs",
+        "tool": "fetch_openai_doc",
+        "definitionReferenceTokens": 201
+      },
+      {
+        "server": "zego",
+        "tool": "get_zego_product_datasets",
+        "definitionReferenceTokens": 196
+      },
+      {
+        "server": "openaiDeveloperDocs",
+        "tool": "list_openai_docs",
+        "definitionReferenceTokens": 193
+      },
+      {
+        "server": "openaiDeveloperDocs",
+        "tool": "search_openai_docs",
+        "definitionReferenceTokens": 181
+      }
+    ]
+  },
+  "limitations": [
+    "Figma authenticationRequired remains an incomplete independent inspection, not zero definitions or host OAuth failure.",
+    "Four enabled configurations remain unmeasured: no guessed zeros and no hardware, app, or auth side effects introduced to complete the table.",
+    "Counts describe separate server/configuration measurements, not effective loaded context or billing.",
+    "Discord listing is not a messaging workflow test; no messages were sent. CodeGraph explore was not called.",
+    "No business calls, server upgrades, configuration changes, or existing-process restarts performed by these two inspections."
+  ]
+}
