@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-18",
+  "service": "system/dev.thermo.helper",
+  "version": "8/1.1.29",
+  "actualProductionService": true,
+  "sameProbeProtocolPositiveControlPassed": true,
+  "installedCLIBeforeAndAfterPassed": true,
+  "cases": {
+    "officialRole": {
+      "identifier": "dev.thermo.cli",
+      "signatureKind": "Developer ID same team",
+      "result": {
+        "outcome": "versionReceived",
+        "version": "8/1.1.29"
+      },
+      "executableSHA256": "b07503c311f03ebcf23318108e25ed3626fb42519c86fc05881e20514e18a917",
+      "processExitCode": 3
+    },
+    "adhocSameID": {
+      "identifier": "dev.thermo.cli",
+      "signatureKind": "adhoc",
+      "result": {
+        "code": "4097",
+        "domain": "NSCocoaErrorDomain",
+        "outcome": "rejected",
+        "reason": "proxyError"
+      },
+      "executableSHA256": "a943dd62349f60a1c4d99d0fc6f4759932e0625aa14299ef97c55ceb534121a5",
+      "processExitCode": 0
+    },
+    "sameTeamWrongID": {
+      "identifier": "dev.thermo.qa.untrusted",
+      "signatureKind": "Developer ID same team",
+      "result": {
+        "code": "4097",
+        "domain": "NSCocoaErrorDomain",
+        "outcome": "rejected",
+        "reason": "proxyError"
+      },
+      "executableSHA256": "8b96f664f059a4483155db4d543c0cdec5951d5703eebebca422d10f96b399d5",
+      "processExitCode": 0
+    }
+  },
+  "scope": "Version RPC only; no policy, charging, AWDL, installation or removal calls. No registration or service restart.",
+  "limitations": [
+    "Three controlled local signature identities; not all possible identity or lifecycle attacks"
+  ],
+  "probeExitConvention": "0 means rejected; 3 means not rejected. Positive control must contain the expected version, and timeout/interruption never count as rejection.",
+  "probeSourceSHA256": "903ba0bd8ac375368c73a1345377a3f398989a27e68442c9a9d734705350c675",
+  "helperPIDObservedAfter": 6352,
+  "helperPIDUnchangedFromInstalledVerification": true
+}

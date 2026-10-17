@@ -216,5 +216,6 @@
     "superseded": true,
     "finalEntitlementsMatchOriginal233AndCandidate": true,
     "normalUIQuitAcceptance": false
-  }
+  },
+  "productionPeerTrust": "helper-production-peer-trust-2026-10-18.json"
 }

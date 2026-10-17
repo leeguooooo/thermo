@@ -64,5 +64,6 @@
     "No active charging or AWDL switch was tested",
     "Legacy automatic self-update was exercised; new privileged installer rollback was not exercised as root",
     "A new signed candidate, deployment and actual post-fix control-state checks are still required"
-  ]
+  ],
+  "followUpInstalledRecord": "mole-installed-493-2026-10-18.json"
 }
