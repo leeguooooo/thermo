@@ -65,7 +65,18 @@ App 显示内容检查数量，问题详情给出来源及行号；信息条目�
 
 `agents context --json` 新增可选 `qualitySummaries`；CLI 按 `--agent` 过滤后重新计算。旧报告没有该字段时仍可读取。缓存仅表示本地存在的文件，不证明它已启用或加载；这些静态发现也不构成 Skill 效果评分。历史盘点中的逐条检查数没有改写，不能把去重后的下降当成修复数量。
 
-[内容汇总验证](measurements/skill-content-summary-2026-10-17.json)包含 30 项测试、独立 CLI 夹具和完整 App 的前后对照。同一组目录文件、别名和缓存，原界面累计 3 次检查 / 3 个发现，修复后目录和缓存各 1 次 / 1 个发现。当前本机只读刷新结果为：目录 138 个已检查独立文件、459 个引用、2 个发现；缓存 215 个文件、417 个引用、0 个发现。两处缺失目标是 `unity-mcp-orchestrator` 的 `references/probuilder-guide.md` 与 `references/resources-reference.md`。这是当前文件证据，不证明 Skill 的业务任务已失败；尚未改动该 Skill。QA 已退出，没有启动业务 MCP 或执行 Skill。
+[内容汇总验证](measurements/skill-content-summary-2026-10-17.json)包含 30 项测试、独立 CLI 夹具和完整 App 的前后对照。同一组目录文件、别名和缓存，原界面累计 3 次检查 / 3 个发现，修复后目录和缓存各 1 次 / 1 个发现。补齐文档前的本机盘点为：目录 138 个已检查独立文件、459 个引用、2 个发现；缓存 215 个文件、417 个引用、0 个发现。两处缺失目标是 `unity-mcp-orchestrator` 的 `references/probuilder-guide.md` 与 `references/resources-reference.md`。QA 已退出，没有启动业务 MCP 或执行 Skill。
+
+[Unity Skill 引用修复](measurements/unity-skill-reference-repair-2026-10-17.json)确认了来源问题：三个已安装文档与上游 `25357a0e75b97169d6bca1569df300915e182c7a` 的 `.claude/skills/unity-mcp-skill` 副本逐字匹配，而缺失的两份文档在同一快照的 `unity-mcp-skill/references` 中。同步器选择前一个目录。补齐两份文档后，入口的 4 个本地引用全部通过，既有文件哈希未变，本机目录范围已采集发现降为 0；另有 1 条未测量，不据此宣称全部健康。两份新增文件由已核对的上游 MIT 源码提供，没有自行编写替代内容。
+
+当前 `main` 的同步来源目录仍只有三个文档，后续镜像同步可能移除补齐文件。[恢复脚本](../scripts/restore-unity-skill-references.py)默认只检查，显式 `--apply` 才添加缺失文件；校验四个既有文件及新增文件的固定 SHA-256，版本变化或目标已存在但不同均拒绝替换。隔离回放通过缺失检查、恢复、重复执行和版本变化拒绝四项检查。该脚本不是通用更新器，也不会在普通体检中自动运行：
+
+```sh
+python3 scripts/restore-unity-skill-references.py --skill-dir ~/.agents/skills/unity-mcp-skill
+# 仅上述固定版本匹配且文档缺失时，显式增加 --apply。
+```
+
+本轮验证的是文档可用性，未连接 Unity、执行建模或运行 Unity 测试；不推断 Skill 的业务成功率收益，也没有修改或向上游提交同步器代码。
 
 [本机盘点与隔离验收](measurements/skill-quality-2026-10-17.json)记录了 Codex 范围的 355 个文档条目、876 次本地引用检查和 2 个当前缺失的目标；未包含 Skill 名称或路径。`scripts/verify-skill-quality.py` 用编译后的 CLI 核实引用位置、正文空缺、副本和不执行 MCP、不改 Skill 的边界。
 
