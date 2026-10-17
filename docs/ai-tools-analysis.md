@@ -119,6 +119,12 @@ HTTP 在初始化收到新会话 ID 后验证可见 ASCII 字符和长度，再�
 
 公开的 OpenAI 文档 MCP 已实际完成 HTTP 握手并读取 5 个工具，见 [HTTP 测量记录](measurements/mcp-http-openai-2026-10-17.json)；该服务未返回会话 ID。状态会话、完整分页、SSE 分块、认证失败、超时、取消和关闭请求另由本地 HTTP 夹具验证。没有调用文档检索等业务工具。[HTTP 中文结果页](measurements/mcp-http-inspection-zh-2026-10-17.png)为原生离屏渲染，长列表可在实际窗口中滚动；尚未完成已安装 App 的点击操作验收。
 
+[后续本机 HTTP 配置检查](measurements/mcp-http-installed-audit-2026-10-17.json)使用同一编译 CLI 和 cl100k 参考编码，读取已启用的三个 HTTP 配置。OpenAI 文档返回 5 个工具，定义数组 3,265 字节 / 781 token；ZEGO 返回 6 个工具，5,181 字节 / 1,362 token。两者的服务指令均为空，未发现当前支持的定义结构问题。成功子集合计 11 个工具、8,446 字节、2,143 token；最大单项定义为 ZEGO 的 `search_zego_docs`，263 token。其余六个已启用的 stdio 配置和其他宿主没有在本轮检查，完整配置总量仍未知。
+
+Figma 在这个独立检查会话中返回鉴权要求，不以空工具列表或 0 token 计量，也不能据此判断 Codex 宿主自身的 OAuth 连接不可用。ZEGO 工具列表完整，但本次独立会话关闭结果为 `unconfirmed`；不把列表成功写成关闭成功，也未重放不确定请求。当前结果尚不能区分关闭等待上限、网络问题和服务端返回，需要补充清理诊断证据后再决定是否调整。三个配置均只执行握手和工具列表读取，没有调用业务工具、启动登录或重试。
+
+本机 Skill 盘点中唯一未测量条目为 `~/.codex/skills/codex-primary-runtime`：实际为空目录，没有 `SKILL.md`，与报告中的结构诊断一致，不是 UTF-8、大小上限或正文读取失败。未推断该目录的管理者，也没有移除或制造一个 Skill 文件来消除提示。
+
 协议实现依据：[生命周期](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle)、[stdio 传输](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)、[工具列表](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)。
 
 ## 本地使用历史

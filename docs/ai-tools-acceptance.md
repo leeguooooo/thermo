@@ -8,6 +8,8 @@
 
 随后已[补齐本机 Unity Skill 的两份引用文档](measurements/unity-skill-reference-repair-2026-10-17.json)。三个既有文档与上游 `25357a0e75b9` 的同步来源逐字匹配，缺失文档来自同一快照的另一份完整 Skill 目录；已校验 Git blob 和 SHA-256。既有文件未改写，该 Skill 的 4 个本地引用全部通过，目录范围已采集发现降为 0，仍有 1 条未测量。上游同步来源仍只有三个文档，后续镜像可能再次删除补齐文件；仓库提供版本受限的检查 / 恢复脚本，不在默认诊断中自动执行。未验证 Unity 业务任务。
 
+[本机 HTTP MCP 检查](measurements/mcp-http-installed-audit-2026-10-17.json)覆盖 Codex 已启用的三个 HTTP 配置：OpenAI 文档完整返回 5 个工具、定义数组 781 个 cl100k 参考 token；ZEGO 完整返回 6 个工具、1,362 token，但本次会话关闭未确认；Figma 返回鉴权要求，定义大小未知。成功子集合计 11 个工具、8,446 字节、2,143 token，不是全部配置或宿主实际上下文。未调用业务工具，未自动登录或重试。原先唯一未测量的 Skill 条目也已核实为没有 `SKILL.md` 的空目录 `codex-primary-runtime`，不是正文读取失败；没有移除该目录。
+
 | 原始问题 | 当前能力与证据 | 仍不能据此判断 |
 |---|---|---|
 | MCP 总体有多大、占多少 token | 汇总已完整检查配置的定义字节、定义数组计数和独立服务指令计数；支持启发式和两种离线参考编码。[汇总与取消测试](../Tests/ThermoAppTests/MCPDefinitionStoreTests.swift)、[批量原生验收](measurements/mcp-batch-inspection-2026-10-17.json) | 未检查配置不按零计；多宿主配置保留独立计量。它不是宿主当前实际加载上下文或账单 |
