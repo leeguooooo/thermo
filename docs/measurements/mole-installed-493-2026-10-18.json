@@ -1,0 +1,156 @@
+{
+  "date": "2026-10-18",
+  "source": "a0491eed546758a064321a487ee2948f4bd11dc0",
+  "version": "1.1.29",
+  "build": "493",
+  "regression": {
+    "source": "a0491eed546758a064321a487ee2948f4bd11dc0",
+    "command": "swift test --skip HardwareTests",
+    "exitCode": 0,
+    "total": 1697,
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 198,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 108,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 300,
+        "failures": 0
+      },
+      "CleanKitTests.xctest": {
+        "tests": 751,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 265,
+        "failures": 0
+      },
+      "AgentCoreTests.xctest": {
+        "tests": 45,
+        "failures": 0
+      }
+    },
+    "logSHA256": "374057ec40e6050e0712895e8e2e58bfec18db31dcdf66339d62b4866248e202"
+  },
+  "package": {
+    "archive": {
+      "name": "Thermo-1.1.29-493-candidate.zip",
+      "sha256": "e9b5c1fb7e4d17b95407c32e37f6ddcb0e86145f2347cd46136e3d7cb60c8220",
+      "matchedFiles": 95,
+      "deepStrictSignaturePass": true
+    },
+    "universalDeveloperIDVerified": true,
+    "cliChecks": {
+      "native": {
+        "versionAndHelperVersionPass": true,
+        "fullAndLimit80DryRunPass": true,
+        "readonlyProbePass": true,
+        "physicalIntelAccepted": false
+      },
+      "rosetta": {
+        "versionAndHelperVersionPass": true,
+        "fullAndLimit80DryRunPass": true,
+        "readonlyProbePass": true,
+        "physicalIntelAccepted": false
+      }
+    },
+    "lifecycle": {
+      "functionalChecksPassed": true,
+      "exitCode": 0,
+      "samples": 19,
+      "opens": 6,
+      "cycles": 2,
+      "longTermMemoryAssessed": false,
+      "visibleUIAccepted": false
+    }
+  },
+  "deployment": {
+    "appSignatureAndPackagedFilesVerified": true,
+    "helperProtocolAndVersion": "8/1.1.29",
+    "helperRootPID": 6352,
+    "rootHelperMatchesInstalledEmbedded": true,
+    "updatePath": "Existing root helper self-update following the signed App source",
+    "AppControlVersion": "1.1.29 (493)",
+    "noNewPolicySubmitted": true
+  },
+  "fanRecovery": {
+    "priorRequestedRPM": 6617,
+    "requestedRPMPreserved": 6617,
+    "observationsSupported": true,
+    "currentObservation": {
+      "checkedAt": "2026-10-17T16:08:20Z",
+      "mode": "manual",
+      "target": 6617
+    },
+    "failure": null,
+    "sixConsecutiveChecksPassed": true,
+    "observationCount": 6,
+    "firstCheckedAt": "2026-10-17T15:59:44Z",
+    "lastCheckedAt": "2026-10-17T15:59:58Z",
+    "rpmMin": 6561.560546875,
+    "rpmMax": 6622.39453125,
+    "samplesSHA256": "5dbe6309e4f7f2146044efa678687ad0e9f83cd326539efb056f1bf1b698a13d",
+    "scope": "Restoration of pre-existing fixed policy during authorized update; no new speed or policy was requested. Target register confirmation is distinct from rotor-speed sampling."
+  },
+  "AWDL": {
+    "phase": "idle",
+    "interfaceUp": true,
+    "sessionStarted": false,
+    "newLockOwner": 0,
+    "newLockMode": "0o600",
+    "systemRunDirectoryModeUnchanged": "0775",
+    "recoveryRecordPresent": false
+  },
+  "charging": {
+    "phase": "off",
+    "policy": "off",
+    "ownership": "none",
+    "support": "smc",
+    "sessionStarted": false
+  },
+  "visibleUI": {
+    "appLaunchedThroughCUA": true,
+    "appControlResponds": true,
+    "accepted": false,
+    "observations": [
+      "Initial getApp timed out; inventory confirmed process live",
+      "Selecting already-running installed App returned cgWindowNotFound",
+      "Finder selection also returned cgWindowNotFound",
+      "No bound UI handle was returned; no keyboard or mouse input sent"
+    ],
+    "userAskedToOpenMainWindow": true
+  },
+  "displacedApps": [
+    {
+      "from": "/Applications/.Thermo-previous-918fbb106e71439c8e2fd702510f15fa.app",
+      "to": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-477-d97df44/displaced-233.app",
+      "allFilesPreserved": true,
+      "noOpenFilesOrProcessObserved": true
+    },
+    {
+      "from": "/Applications/.Thermo-previous-a29b4b3b63434be8850d98462f2e561c.app",
+      "to": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.29-493-a0491ee/displaced-477.app",
+      "allFilesPreserved": true,
+      "noOpenFilesOrProcessObserved": true
+    }
+  ],
+  "notarized": false,
+  "published": false,
+  "automaticUpdateFeedConfigured": false,
+  "overallMoleParityAccepted": false,
+  "limitations": [
+    "No visible installed window acceptance yet",
+    "No actual charging or AWDL activation, expiry, sleep or hardware failure injection",
+    "No real administrator installation transaction fault/rollback test; self-update is a different path",
+    "Observed fan recovery on one Mac for a short interval, not all hardware or long-duration coverage",
+    "Local review build has no auto-update feed and has not been notarized or publicly released"
+  ]
+}
