@@ -15,6 +15,11 @@ final class ConfirmationReviewTests: XCTestCase {
         for root in roots { XCTAssertTrue(lines.contains(root),"The user must see each tool-managed cache boundary") }
         XCTAssertTrue(lines.contains(program),"The reviewed executable must be visible")
         XCTAssertTrue(model.confirmationIsDestructive)
+        XCTAssertFalse(model.confirmSummary.contains(tr("Caches and build output are deleted.")))
+        XCTAssertTrue(model.confirmSummary.contains(tr("Tool cache cleanup is permanent and does not use the Trash. Required files may remain.")))
+        item.paths.append("/fixture/ordinary-cache-log")
+        let mixed=DiskModel(report:.init(items:[item],denied:[],started:Date(),duration:0));mixed.selected=[item.id]
+        XCTAssertTrue(mixed.confirmSummary.contains(tr("Caches and build output are deleted.")))
     }
     func record(_ id: String = UUID().uuidString) -> OperationRecord {
         .init(feature: "fixture", action: "remove", items: [.init(target: "/old-record", status: "done")], undo: .init(kind: "trashBatch", ref: id))

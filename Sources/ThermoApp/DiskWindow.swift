@@ -46,14 +46,19 @@ extension DiskModel {
         let trash = items.filter { $0.safety != .safe && ($0.commands ?? []).isEmpty }
         let toolItems = items.filter { !($0.commands ?? []).isEmpty }
         var parts = [trCount(items.count, "%1$@ item.", "%1$@ items.")]
-        if items.contains(where: { $0.safety == .safe && !($0.paths).isEmpty }) { parts.append(tr("Caches and build output are deleted.")) }
+        let deletesPaths=items.contains { item in
+            guard item.safety == .safe else { return false }
+            let native=item.runsNativeClean(.auto) ? item.native : nil
+            return item.paths.contains { native?.owns($0) != true }
+        }
+        if deletesPaths { parts.append(tr("Caches and build output are deleted.")) }
         if !trash.isEmpty {
             parts.append(trCount(trash.count, "%1$@ item with your data (sessions, models, worktrees) goes to the Trash.",
                                  "%1$@ items with your data (sessions, models, worktrees) go to the Trash."))
         }
         if !toolItems.isEmpty { parts.append(tr("Tool-managed items are removed permanently; they do not go to the Trash.")) }
         if items.contains(where: { $0.runsNativeClean(.auto) }) {
-            parts.append(tr("Caches with their own clean command are emptied by that tool."))
+            parts.append(tr("Tool cache cleanup is permanent and does not use the Trash. Required files may remain."))
         }
         return parts.joined(separator: " ")
     }

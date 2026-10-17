@@ -2738,6 +2738,7 @@ let zhHans: [String: String] = [
     "did not run `%1$@`; folder deleted instead": "未运行 `%1$@`，改为删除文件夹",
     "tool clean": "工具自行清理",
     "Caches with their own clean command are emptied by that tool.": "自带清理命令的缓存由该工具自行清空。",
+    "Tool cache cleanup is permanent and does not use the Trash. Required files may remain.": "工具清理会永久删除缓存，不会移到废纸篓；仍需使用的文件可能会保留。",
     "… and %1$@ more processes (%2$@ in all)": "… 另有 %1$@ 个进程（共 %2$@）",
     "also %1$@ processes in %2$@ other folders (%3$@)": "另有 %1$@ 个进程在其他 %2$@ 个文件夹（%3$@）",
     "footprint": "内存占用（footprint）",
