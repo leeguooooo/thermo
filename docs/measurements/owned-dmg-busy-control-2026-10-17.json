@@ -1,0 +1,56 @@
+{
+  "generated": "2026-10-17T00:23:33.478120+00:00",
+  "evidenceKind": "controlled live macOS disk-image occupation, synthetic owned fixture",
+  "mainCommit": "6de31858398d9aae5fb83b70fbd201b38160347b",
+  "scope": "One newly created readonly image and owned reader processes. Actual production NativeDiskImage.finishAttachment invoked from a standalone native harness linked to current Debug module objects. No installed-App, install/restore transaction, package or original-failure root-cause claim.",
+  "directHdiutilControl": {
+    "generated": "2026-10-17T00:20:41.818081+00:00",
+    "scope": "Owned synthetic readonly image and one owned process holding its cwd and a file. No forced detach, no unrelated volumes. Does not identify the original intermittent failure.",
+    "whileOccupied": {
+      "exitCode": 16,
+      "seconds": 0.06512404100794811,
+      "holderStillRunning": true,
+      "ownedAttachmentRemains": true,
+      "stderr": "hdiutil: couldn't unmount \"disk33\" - 资源忙"
+    },
+    "holderStopped": true,
+    "afterReaderStopped": {
+      "needed": true,
+      "exitCode": 0,
+      "absent": true
+    },
+    "privateDirectoryIdentityRestored": true
+  },
+  "productionFunctionControl": {
+    "afterDiagnostic": [],
+    "attachmentRemainedWhileOccupied": true,
+    "diagnostic": [
+      "normal detach did not succeed: exit=16, timedOut=false, cancelled=false"
+    ],
+    "forcedDetach": false,
+    "originalFailureCauseEstablished": false,
+    "ownedAttachmentAbsent": true,
+    "privateDirectoryIdentityRestored": true,
+    "productionCleanupAfterReaderStopped": true,
+    "productionCleanupWhileOccupied": false,
+    "productionRetryAdded": false,
+    "readerStopped": true,
+    "readerWasRunning": true
+  },
+  "sourceSHA256": {
+    "Sources/CleanKit/NativeDiskImage.swift": "08b3dd523b4ad62eca32ebc74058842d0407ce90dd3a8c8417e69fcc9548f28d",
+    "privatePythonControl": "4e42d554fed0497fee2346f5778abe1da7eb8ae0b2fc6e417e261e72461add85",
+    "privateSwiftControl": "957b6bdc7cbcbd3800207ec7cd09e8e3d03f5ca4c8639d284bbe17f9c00f3e27",
+    "linkedCleanKitDebugObject": "8af1b88a8c000fd34c4394f3583b4bd8897048ac7de3a2dacb8d7760c6d29288"
+  },
+  "ownedAttachmentsRemaining": 0,
+  "readerProcessesStopped": true,
+  "sourceMatchesCandidate": true,
+  "originalFailureCauseEstablished": false,
+  "productBehaviorChanged": false,
+  "forceDetachOrRetryAdded": false,
+  "candidatePackageChanged": false,
+  "installedAppChanged": false,
+  "publicationPerformed": false,
+  "interpretation": "A genuinely occupied image produces normal-detach failure and the new diagnostic retains its process status. After the test explicitly changes the occupation condition, normal cleanup succeeds. This validates one known failure path; repeated successful runs and similar symptoms cannot establish the cause of the earlier observation."
+}
