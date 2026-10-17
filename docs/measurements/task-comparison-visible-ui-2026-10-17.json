@@ -1,0 +1,40 @@
+{
+  "recordedAt": "2026-10-17T10:24:54.938953+00:00",
+  "sourceCommit": "b31d0499b1bd2c76205511ad1a90daabeab4d8f8",
+  "build": 474,
+  "configuration": "Debug arm64 ad-hoc isolated full App --ui-review",
+  "scope": "Owned synthetic task-comparison.json via native file picker. No task, model, credential, external upload or device execution.",
+  "fixtureSHA256": "06f601a00cabc905b1248df107689174abdc6ca9aa50336b937f939ef29af166",
+  "visiblyVerified": {
+    "nativeFileSelection": true,
+    "wrongCategoryMessage": true,
+    "skillCategoryRetainsImportedReport": true,
+    "syntheticEvidenceLabel": true,
+    "matchedTasks": 1,
+    "matchedPairs": 3,
+    "baselinePassed": 2,
+    "baselineFailed": 1,
+    "candidatePassed": 2,
+    "candidateTimeout": 1,
+    "passRateDifferencePercentagePoints": 0,
+    "secondsMedianCandidateMinusBaseline": 2,
+    "secondsPairedSamples": 3,
+    "inputTokensMedianCandidateMinusBaseline": 35,
+    "inputTokensPairedSamples": 2,
+    "outputTokensMedianCandidateMinusBaseline": -15,
+    "outputTokensPairedSamples": 2,
+    "clearRestoresEmptyState": true
+  },
+  "screenshot": {
+    "file": "task-comparison-visible-ui-2026-10-17.png",
+    "sha256": "74d2e858330a85b18b46351484730924e4203df041de5dd1902a83707f394a9b"
+  },
+  "runtimeLogBytes": 0,
+  "cleanup": {
+    "ownedAppStopped": true
+  },
+  "limitations": [
+    "Synthetic records do not establish business gains or independently verify supplied outcomes.",
+    "This is visible Debug UI acceptance, not Release installation acceptance."
+  ]
+}
