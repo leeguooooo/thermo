@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-17T02:30:49.446164+00:00",
+  "sourceCommit": "1b95e3b5363ecbbfb2210b1779eec4cafadac1cb",
+  "fullRegressionBeforePeerAuthentication": {
+    "tests": 1563,
+    "failures": 0,
+    "suiteRuns": 7
+  },
+  "affectedModulesAfterPeerAuthentication": {
+    "tests": 604,
+    "failures": 0,
+    "suiteRuns": 7
+  },
+  "peerAuthenticationAndCLIIntegration": {
+    "tests": 32,
+    "failures": 0,
+    "suiteRuns": 7
+  },
+  "compiledCLI": {
+    "cliSHA256": "0bcd9d520a188f47a7a0789355ef5f76a6eeae513738087c797bcb285a6f9f53",
+    "checks": [
+      {
+        "name": "scoped-help-and-inventory",
+        "commands": 103
+      },
+      {
+        "name": "preview-with-yes-never-applies",
+        "passed": true
+      },
+      {
+        "name": "unsupported-flags-and-extra-positionals-refused",
+        "passed": true
+      },
+      {
+        "name": "compiled-cli-private-protocol-routing",
+        "passed": true,
+        "scope": "owned protocol peer; actual App host verified by Swift socket test"
+      },
+      {
+        "name": "real-frozen-clean-plan-preview-apply-and-replay",
+        "passed": true
+      }
+    ],
+    "hardwareChanged": false,
+    "realBrowsersChanged": false,
+    "realPrivacySettingsChanged": false
+  },
+  "installedCLIObserved": "thermo 1.1.27",
+  "candidateCLI": "thermo 1.1.28",
+  "acceptanceBoundaries": [
+    "Full suite was followed by targeted regression of every module changed by peer authentication.",
+    "Signed companion CLI test uses an owned ad-hoc signed copy, real Unix sockets and the App control handler with an inert keyboard/display driver.",
+    "Production Team requirement parsing and wrong-Team rejection are tested; a Developer ID signed installed App/CLI pair was not installed or exercised.",
+    "No real browser tab, user privacy setting, fan policy, AWDL interface or root helper installation was modified by this acceptance.",
+    "No publication, notarization, installed App replacement or hardware write acceptance is claimed."
+  ]
+}
