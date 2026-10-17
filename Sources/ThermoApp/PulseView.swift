@@ -37,6 +37,16 @@ final class SystemPulse: ObservableObject {
 
     init(readSample: (@Sendable () -> MachinePulse)? = nil) { self.readSample = readSample }
 
+    #if DEBUG
+    private static let tracing = ProcessInfo.processInfo.environment["THERMO_PULSE_TRACE"] == "1" &&
+        CommandLine.arguments.contains("--verify-lifecycle")
+    private static func trace(_ event: String, _ token: UUID? = nil) {
+        guard tracing else { return }
+        print("PULSE_TRACE \(DispatchTime.now().uptimeNanoseconds) \(event) \(token?.uuidString ?? "-")")
+        fflush(stdout)
+    }
+    #endif
+
     var sampled: Bool { current != nil }
     var hogs: [Hog] { current?.hogs ?? [] }
     var verdict: String { current?.verdictText ?? "" }
@@ -54,6 +64,9 @@ final class SystemPulse: ObservableObject {
     func start() {
         guard timer == nil else { return }
         let token = lifetime.start()
+        #if DEBUG
+        Self.trace("start", token)
+        #endif
         let t = DispatchSource.makeTimerSource(queue: queue)
         t.schedule(deadline: .now(), repeating: 3, leeway: .milliseconds(500))
         t.setEventHandler { [weak self] in self?.sample(token: token) }
@@ -61,7 +74,12 @@ final class SystemPulse: ObservableObject {
         timer = t
     }
 
-    func stop() { lifetime.stop(); timer?.cancel(); timer = nil }
+    func stop() {
+        #if DEBUG
+        Self.trace("stop", lifetime.current())
+        #endif
+        lifetime.stop(); timer?.cancel(); timer = nil
+    }
 
     /// Cards showing the pulse (panel and main window): sampling runs while at least one is visible.
     private var holders = 0
@@ -74,9 +92,23 @@ final class SystemPulse: ObservableObject {
 
     private func sample(token supplied: UUID? = nil) {
         guard let token = supplied ?? lifetime.current(), lifetime.accepts(token) else { return }
+        #if DEBUG
+        Self.trace("read-start", token)
+        #endif
         let p = readSample?() ?? sampler.sample()
+        #if DEBUG
+        Self.trace("read-end", token)
+        #endif
         DispatchQueue.main.async {
-            guard self.lifetime.accepts(token) else { return }
+            guard self.lifetime.accepts(token) else {
+                #if DEBUG
+                Self.trace("discard", token)
+                #endif
+                return
+            }
+            #if DEBUG
+            Self.trace("main-start", token)
+            #endif
             var pulse = p
             for index in pulse.hogs.indices {
                 if let path = pulse.hogs[index].app,
@@ -84,6 +116,9 @@ final class SystemPulse: ObservableObject {
                     pulse.hogs[index].applicationIdentity = ProcessTable.identity(app.processIdentifier)
                 }
             }
+            #if DEBUG
+            Self.trace("publish", token)
+            #endif
             self.current = pulse
             MainActor.assumeIsolated { TimelineEvents.shared.observe(pulse) }
         }

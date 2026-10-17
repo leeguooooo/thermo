@@ -1,0 +1,425 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "3a92ba0",
+  "productionPulseSourceSHA256": "a22c9771c5745504ab4f1290811c91f9f5c6d7432dddd60fbc7186a43800eaf3",
+  "samplerSourceSHA256": "bdf8120a102db824e3261d7d375c2278d050a1f72de09886611027584b6591ea",
+  "initialPrototype": {
+    "utility": {
+      "allOwnIdentitySeconds": 0.009833875,
+      "detailSampleCount": 20,
+      "detailSampleSeconds": 0.0008765,
+      "ownProcesses": 981,
+      "processes": 1191,
+      "qos": "utility",
+      "queueStartDelay": 0.073330125,
+      "samples": [
+        {
+          "countedProcesses": 77,
+          "groups": 6,
+          "index": 0,
+          "seconds": 1.077493792
+        },
+        {
+          "countedProcesses": 77,
+          "groups": 6,
+          "index": 1,
+          "seconds": 0.073334125
+        },
+        {
+          "countedProcesses": 69,
+          "groups": 6,
+          "index": 2,
+          "seconds": 0.062232458
+        }
+      ],
+      "scope": "Original production PulseSampler and AgentCore Debug objects; no helper, writes, or process actions. Stage sweeps run after the three full samples and are warm diagnostics, not a cold-time breakdown.",
+      "usageSeconds": 0.004240042,
+      "verifiedIdentities": 977
+    },
+    "userInitiated": {
+      "allOwnIdentitySeconds": 0.007865375,
+      "detailSampleCount": 20,
+      "detailSampleSeconds": 0.000643167,
+      "ownProcesses": 983,
+      "processes": 1193,
+      "qos": "userInitiated",
+      "queueStartDelay": 9.3333e-05,
+      "samples": [
+        {
+          "countedProcesses": 76,
+          "groups": 6,
+          "index": 0,
+          "seconds": 0.475794792
+        },
+        {
+          "countedProcesses": 198,
+          "groups": 5,
+          "index": 1,
+          "seconds": 0.056396834
+        },
+        {
+          "countedProcesses": 77,
+          "groups": 6,
+          "index": 2,
+          "seconds": 0.042204083
+        }
+      ],
+      "scope": "Original production PulseSampler and AgentCore Debug objects; no helper, writes, or process actions. Stage sweeps run after the three full samples and are warm diagnostics, not a cold-time breakdown.",
+      "usageSeconds": 0.004169208,
+      "verifiedIdentities": 979
+    }
+  },
+  "balancedPrototypeSummary": {
+    "utility": {
+      "firstMedian": 0.5012473545,
+      "firstMax": 0.54322925,
+      "queueDelayMedian": 8.070850000000001e-05,
+      "subsequentMedian": 0.039338978999999996
+    },
+    "userInitiated": {
+      "firstMedian": 0.47034127049999996,
+      "firstMax": 0.478194792,
+      "queueDelayMedian": 0.0001092705,
+      "subsequentMedian": 0.0386036875
+    }
+  },
+  "reproducibleBenchmark": {
+    "root": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-pulse-bench-vd4mqb7d",
+    "source": "3a92ba05256600224391c2a41934a702771179e2",
+    "scope": "Debug microbenchmarks; workload and OS caches are not controlled. Sampler stage sweeps happen after full samples. Model benchmark omits window layout. No helper, settings changes, or process actions.",
+    "samplerRuns": [
+      {
+        "allOwnIdentitySeconds": 0.006999667,
+        "detailSampleCount": 20,
+        "detailSampleSeconds": 0.000527208,
+        "ownProcesses": 980,
+        "processes": 1200,
+        "qos": "userInitiated",
+        "queueStartDelay": 0.000131167,
+        "samples": [
+          {
+            "countedProcesses": 89,
+            "groups": 6,
+            "index": 0,
+            "seconds": 0.47858375
+          },
+          {
+            "countedProcesses": 112,
+            "groups": 6,
+            "index": 1,
+            "seconds": 0.039097709
+          },
+          {
+            "countedProcesses": 100,
+            "groups": 6,
+            "index": 2,
+            "seconds": 0.039808083
+          }
+        ],
+        "scope": "Original production PulseSampler and AgentCore Debug objects; no helper, writes, or process actions. Stage sweeps run after the three full samples and are warm diagnostics, not a cold-time breakdown.",
+        "usageSeconds": 0.00397075,
+        "verifiedIdentities": 976
+      },
+      {
+        "allOwnIdentitySeconds": 0.00640775,
+        "detailSampleCount": 20,
+        "detailSampleSeconds": 0.000425667,
+        "ownProcesses": 980,
+        "processes": 1200,
+        "qos": "utility",
+        "queueStartDelay": 8.6583e-05,
+        "samples": [
+          {
+            "countedProcesses": 119,
+            "groups": 6,
+            "index": 0,
+            "seconds": 0.49190225
+          },
+          {
+            "countedProcesses": 88,
+            "groups": 6,
+            "index": 1,
+            "seconds": 0.036826084
+          },
+          {
+            "countedProcesses": 230,
+            "groups": 5,
+            "index": 2,
+            "seconds": 0.046355
+          }
+        ],
+        "scope": "Original production PulseSampler and AgentCore Debug objects; no helper, writes, or process actions. Stage sweeps run after the three full samples and are warm diagnostics, not a cold-time breakdown.",
+        "usageSeconds": 0.003179333,
+        "verifiedIdentities": 976
+      },
+      {
+        "allOwnIdentitySeconds": 0.006181458,
+        "detailSampleCount": 20,
+        "detailSampleSeconds": 0.000427375,
+        "ownProcesses": 980,
+        "processes": 1200,
+        "qos": "utility",
+        "queueStartDelay": 7.1875e-05,
+        "samples": [
+          {
+            "countedProcesses": 88,
+            "groups": 6,
+            "index": 0,
+            "seconds": 0.523473291
+          },
+          {
+            "countedProcesses": 110,
+            "groups": 6,
+            "index": 1,
+            "seconds": 0.037374792
+          },
+          {
+            "countedProcesses": 111,
+            "groups": 6,
+            "index": 2,
+            "seconds": 0.037512083
+          }
+        ],
+        "scope": "Original production PulseSampler and AgentCore Debug objects; no helper, writes, or process actions. Stage sweeps run after the three full samples and are warm diagnostics, not a cold-time breakdown.",
+        "usageSeconds": 0.002815333,
+        "verifiedIdentities": 976
+      },
+      {
+        "allOwnIdentitySeconds": 0.006050334,
+        "detailSampleCount": 20,
+        "detailSampleSeconds": 0.000440834,
+        "ownProcesses": 980,
+        "processes": 1200,
+        "qos": "userInitiated",
+        "queueStartDelay": 7.2875e-05,
+        "samples": [
+          {
+            "countedProcesses": 111,
+            "groups": 6,
+            "index": 0,
+            "seconds": 0.464766958
+          },
+          {
+            "countedProcesses": 108,
+            "groups": 6,
+            "index": 1,
+            "seconds": 0.03742425
+          },
+          {
+            "countedProcesses": 111,
+            "groups": 6,
+            "index": 2,
+            "seconds": 0.036830583
+          }
+        ],
+        "scope": "Original production PulseSampler and AgentCore Debug objects; no helper, writes, or process actions. Stage sweeps run after the three full samples and are warm diagnostics, not a cold-time breakdown.",
+        "usageSeconds": 0.002881584,
+        "verifiedIdentities": 976
+      },
+      {
+        "allOwnIdentitySeconds": 0.006330458,
+        "detailSampleCount": 20,
+        "detailSampleSeconds": 0.000414,
+        "ownProcesses": 980,
+        "processes": 1200,
+        "qos": "utility",
+        "queueStartDelay": 7.0875e-05,
+        "samples": [
+          {
+            "countedProcesses": 119,
+            "groups": 6,
+            "index": 0,
+            "seconds": 0.47231775
+          },
+          {
+            "countedProcesses": 110,
+            "groups": 6,
+            "index": 1,
+            "seconds": 0.036686875
+          },
+          {
+            "countedProcesses": 101,
+            "groups": 6,
+            "index": 2,
+            "seconds": 0.048207125
+          }
+        ],
+        "scope": "Original production PulseSampler and AgentCore Debug objects; no helper, writes, or process actions. Stage sweeps run after the three full samples and are warm diagnostics, not a cold-time breakdown.",
+        "usageSeconds": 0.00291725,
+        "verifiedIdentities": 976
+      },
+      {
+        "allOwnIdentitySeconds": 0.006115459,
+        "detailSampleCount": 20,
+        "detailSampleSeconds": 0.000415916,
+        "ownProcesses": 980,
+        "processes": 1200,
+        "qos": "userInitiated",
+        "queueStartDelay": 7.3333e-05,
+        "samples": [
+          {
+            "countedProcesses": 119,
+            "groups": 6,
+            "index": 0,
+            "seconds": 0.464232959
+          },
+          {
+            "countedProcesses": 98,
+            "groups": 6,
+            "index": 1,
+            "seconds": 0.035313791
+          },
+          {
+            "countedProcesses": 111,
+            "groups": 6,
+            "index": 2,
+            "seconds": 0.036464584
+          }
+        ],
+        "scope": "Original production PulseSampler and AgentCore Debug objects; no helper, writes, or process actions. Stage sweeps run after the three full samples and are warm diagnostics, not a cold-time breakdown.",
+        "usageSeconds": 0.002820333,
+        "verifiedIdentities": 976
+      },
+      {
+        "allOwnIdentitySeconds": 0.006192583,
+        "detailSampleCount": 20,
+        "detailSampleSeconds": 0.0004095,
+        "ownProcesses": 980,
+        "processes": 1200,
+        "qos": "userInitiated",
+        "queueStartDelay": 0.000162959,
+        "samples": [
+          {
+            "countedProcesses": 108,
+            "groups": 6,
+            "index": 0,
+            "seconds": 0.466018791
+          },
+          {
+            "countedProcesses": 110,
+            "groups": 6,
+            "index": 1,
+            "seconds": 0.0363545
+          },
+          {
+            "countedProcesses": 101,
+            "groups": 6,
+            "index": 2,
+            "seconds": 0.035942334
+          }
+        ],
+        "scope": "Original production PulseSampler and AgentCore Debug objects; no helper, writes, or process actions. Stage sweeps run after the three full samples and are warm diagnostics, not a cold-time breakdown.",
+        "usageSeconds": 0.002965375,
+        "verifiedIdentities": 976
+      },
+      {
+        "allOwnIdentitySeconds": 0.006307375,
+        "detailSampleCount": 20,
+        "detailSampleSeconds": 0.000526,
+        "ownProcesses": 980,
+        "processes": 1200,
+        "qos": "utility",
+        "queueStartDelay": 7.0417e-05,
+        "samples": [
+          {
+            "countedProcesses": 96,
+            "groups": 6,
+            "index": 0,
+            "seconds": 0.487027416
+          },
+          {
+            "countedProcesses": 107,
+            "groups": 6,
+            "index": 1,
+            "seconds": 0.039087541
+          },
+          {
+            "countedProcesses": 86,
+            "groups": 5,
+            "index": 2,
+            "seconds": 0.035453792
+          }
+        ],
+        "scope": "Original production PulseSampler and AgentCore Debug objects; no helper, writes, or process actions. Stage sweeps run after the three full samples and are warm diagnostics, not a cold-time breakdown.",
+        "usageSeconds": 0.003166334,
+        "verifiedIdentities": 976
+      }
+    ],
+    "samplerSummary": {
+      "utility": {
+        "firstMedian": 0.489464833,
+        "firstMax": 0.523473291,
+        "warmMedian": 0.037443437499999996
+      },
+      "userInitiated": {
+        "firstMedian": 0.4653928745,
+        "firstMax": 0.47858375,
+        "warmMedian": 0.0366475835
+      }
+    },
+    "model": {
+      "samples": [
+        {
+          "publicationGap": 0.005187625000000029,
+          "published": 0.537464375,
+          "readFinished": 0.53227675,
+          "readSeconds": 0.531421584,
+          "readStarted": 0.000855166,
+          "sampled": 1792212172.11897
+        },
+        {
+          "publicationGap": 0.0031488340000001003,
+          "published": 3.540003125,
+          "readFinished": 3.536854291,
+          "readSeconds": 0.03718616600000013,
+          "readStarted": 3.499668125,
+          "sampled": 1792212175.123794
+        },
+        {
+          "publicationGap": 0.0035320409999997082,
+          "published": 6.542141416,
+          "readFinished": 6.538609375,
+          "readSeconds": 0.038983875000000445,
+          "readStarted": 6.4996255,
+          "sampled": 1792212178.1253061
+        }
+      ],
+      "scope": "Actual production SystemPulse worker and main-thread publication, no window or helper. Same production PulseSampler via the injected reader. Debug objects; no UI rendering."
+    },
+    "fixtureSourcesSHA256": {
+      "bench-pulse.py": "2203895e694040a79e782e5c84022548d5b8b9a204381d91d059f74ed2b4baf7",
+      "bench-pulse-model.swift": "faa45b399460932b49230209e35e99dd89ece78f69949a0fdf72b046949338df",
+      "bench-pulse-sampler.swift": "e6c0222b82f57c7d07b7074ced89bdaa66376f3fc900dfdb074bd0c32707a095"
+    }
+  },
+  "debugWindowTrace": {
+    "root": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-pulse-trace-7ry10o81",
+    "reportSHA256": "d4cbe1aeed5f9566b2a8183e9731f89b3fb73fb71cb9811b8e15dc07afb73a8d",
+    "firstSessionPhases": {
+      "queueDelay": 5.3833e-05,
+      "readSeconds": 0.493902625,
+      "mainQueueDelay": 2.9709e-05,
+      "mainPreparation": 0.006768833,
+      "firstStartToPublish": 0.500755
+    },
+    "discardedLateResults": 3,
+    "allLifecycleChecksPassed": true,
+    "cycles": 2,
+    "opens": 6,
+    "samples": 19,
+    "rawLocalCopy": "/Users/leo/github.com/thermo/dist/mole-study/pulse-phase-bench-20261017"
+  },
+  "diagnosticActivation": "THERMO_PULSE_TRACE=1 plus --verify-lifecycle, Debug only; monotonic timestamps and session markers to stdout. No normal UI logging or Release tracing code.",
+  "conclusions": [
+    "Repeated fresh-process sampler timings and model publication do not reproduce a fixed3-second internal pipeline delay",
+    "Warm identity/path sweep takes roughly8-10ms for about1000 current-user processes in the initial probe; this does not establish cold OS cost",
+    "No priority increase, weaker identity validation, or longer acceptance deadline was introduced",
+    "The two earlier signed429 startup failures remain unresolved; current Debug success does not retroactively pass them"
+  ],
+  "limitations": [
+    "No Mole performance benchmark or controlled OS cache/workload",
+    "Debug microbenchmark and window lifecycle are not Release/visible UI/installed runtime acceptance",
+    "Current results cannot explain all intermittent startup delays",
+    "No helper calls, settings changes or process actions were requested by the measurement fixtures"
+  ]
+}
