@@ -41,6 +41,12 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
                               "status": "completed", "arguments": {"private": "fixture-private-argument"}, "result": result}}, -5)
     rows += [native("a", "read", result),
              native("nested", "nested", {"content": [{"type": "text", "text": "fixture-private-result"}]})]
+    wrapped = [{"type": "input_text", "text": "fixture-private-wrapper"},
+               {"type": "input_image", "image_url": "data:image/png;base64," + "A" * 100_000},
+               {"type": "input_audio", "input_audio": {"data": "fixture-private-audio", "format": "wav"}}]
+    rows += [event("response_item", {"type": "custom_tool_call", "call_id": "wrapped", "name": "exec", "input": "fixture-private-script"}, -10),
+             event("response_item", {"type": "custom_tool_call_output", "call_id": "wrapped", "output": json.dumps(wrapped)}, -5),
+             event("response_item", {"type": "custom_tool_call", "call_id": "missing-wrapper", "name": "exec", "input": ""}, -10)]
     write(".codex/sessions/2026/10/17/fixture.jsonl", rows)
     write(".claude/projects/fixture/fixture.jsonl", [
         {"type": "assistant", "timestamp": stamp(-9), "message": {"id": "msg_fixture", "content": [
@@ -61,6 +67,12 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
         Path(sys.argv[2]).write_text(result.stdout)
     assert report["complete"] and report["coverage"]["filesRead"] == 2
     assert "fixture-private" not in result.stdout
+    other = report["coverage"]["unattributedResults"]
+    assert report["coverage"]["otherToolCalls"] == 2
+    assert other["completed"] == 1 and other["missingResults"] == 1 and other["unmeasuredResults"] == 0
+    assert other["returnedTextBytes"] == len("fixture-private-wrapper".encode())
+    assert other["returnedTextEstimatedTokens"] == 6 and other["nonTextBlocks"] == 2
+    assert "base64" not in result.stdout
     mcp = next(row for row in report["tools"] if row["kind"] == "mcp" and row["name"] == "read")
     skill = next(row for row in report["tools"] if row["kind"] == "skill")
     assert mcp["calls"] == 2 and mcp["completed"] == 2 and mcp["nonTextBlocks"] == 2
@@ -82,6 +94,10 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     assert "Observed skill returned text total (all rows): 22 bytes / ≈6 tokens" in text
     assert "share of observed mcp returned-text tokens: 57.1%" in text
     assert "fixture-private" not in text
+    assert "Unattributed tool results: 1 returned · 1 missing · 0 unmeasured" in text
+    assert "Unattributed measured text: 23 bytes / ≈6 tokens · 2 non-text blocks not tokenized" in text
+    assert "Kept outside MCP/Skill totals" in text
+    assert "may repeat separately logged MCP results" in text
     # The CLI shows 20 rows by default; the denominator must still include row 21.
     many = []
     for index in range(21):

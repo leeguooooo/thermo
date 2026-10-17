@@ -90,6 +90,18 @@ public struct LoggedTokenUsage: Codable, Sendable {
     public var semantics: String
 }
 
+/// Other tool results, kept separate from MCP/Skill rows and their denominators.
+public struct UnattributedToolResults: Codable, Sendable {
+    public var completed = 0
+    public var missingResults = 0
+    public var unmeasuredResults = 0
+    public var returnedTextBytes = 0
+    public var returnedTextEstimatedTokens = 0
+    public var referenceReturnedTextTokens: Int? = nil
+    public var unavailableReferenceResults = 0
+    public var nonTextBlocks = 0
+}
+
 public struct ToolUsageCoverage: Codable, Sendable {
     public var filesDiscovered = 0
     public var filesRead = 0
@@ -100,6 +112,8 @@ public struct ToolUsageCoverage: Codable, Sendable {
     public var bytesRead = 0
     public var duplicateRecords = 0
     public var otherToolCalls = 0
+    /// Absent in older reports means unmeasured, never zero.
+    public var unattributedResults: UnattributedToolResults? = nil
     public var unmatchedResults = 0
     public var missingTimestamps = 0
     public var unsupportedUsageRecords = 0
