@@ -158,6 +158,10 @@ REA_MCP_OUTPUT_SCHEMA_PROFILE = "off"
 
 当前记录已尝试 Codex 的全部 9 个启用配置，8 个完整返回 305 个工具、928,329 定义字节、217,929 个定义数组参考 token，服务指令另计 893。REA 保持上面的输出声明配置，各服务记录不是同一时刻快照；Figma 定义未知，总体仍未知。历史检查没有改分或覆盖，既有代理没有被强制重启。
 
+[后续 421 候选集成](measurements/ai-tools-integrated-421-2026-10-17.json)固定主线来源 d3bcc8c、候选源码 cd69c65，运行代码仅候选营销版本与来源不同；并行新增的后续主线改动不纳入本轮。完整 Release 回归 1,571 项通过，1.2.0 (421) ad-hoc 通用包完成全部切片签名、两架构、macOS 13.0 和两种执行架构各七组 CLI 夹具验证。构建、回归和产物源于同一固定提交；随后候选说明提交不改运行代码。没有正式签名、公证、更新源、公开发布或安装。
+
+421 的可见 AI 界面验收未完成。自有 QA 副本两架构指令段与原包相同，所有原始产物哈希不变；电脑控制返回窗口定位错误，采样只见事件循环，独立窗口对照也未取得可见窗口。后续只读会话检查确认锁屏标志为 true，没有解锁或修改产品启动代码，不把这些观察写成产品启动故障或界面通过。QA 和本地模拟服务已退出。构建后主线继续推进，421 也不代表全部最新主线、真实 Intel、helper 安装、充电、风扇或无线控制验收。
+
 协议实现依据：[生命周期](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle)、[stdio 传输](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)、[工具列表](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)。
 
 ## 本地使用历史
