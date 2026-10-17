@@ -224,7 +224,50 @@ public struct ProcessIdentity: Codable, Sendable, Equatable {
     }
 }
 
+/// Public kinfo metadata, kept separate from the ordinary process inventory so
+/// a diagnostic fallback cannot change cleanup's inventory-completeness rules.
+struct RootProcessSnapshot: Equatable {
+    var pid: Int32
+    var ppid: Int32
+    var uid: UInt32
+    var name: String
+    var started: Date
+}
+
 extension ProcessTable {
+    /// Some root processes deny PROC_PIDTBSDINFO while allowing public sysctl
+    /// metadata and their executable path. Never reads argv, cwd, FDs or memory.
+    public static func rootProcess(_ pid: Int32) -> AgentProcess? {
+        rootProcess(pid, snapshot: { rootSnapshot(pid) }, path: pidPath)
+    }
+
+    static func rootProcess(_ pid: Int32, snapshot: () -> RootProcessSnapshot?,
+                            path: (Int32) -> String?) -> AgentProcess? {
+        guard pid > 0, let before = snapshot(), before.pid == pid, before.uid == 0,
+              before.started.timeIntervalSince1970.isFinite, before.started.timeIntervalSince1970 > 0,
+              let executable = path(pid), executable.hasPrefix("/"), snapshot() == before else { return nil }
+        var row = AgentProcess(pid: pid, ppid: before.ppid, uid: 0, name: before.name, executable: executable)
+        row.sampledIdentity = .init(pid: pid, uid: 0, started: before.started, executable: executable)
+        row.memoryReading = .init(footprintKB: nil, residentKB: nil)
+        return row
+    }
+
+    private static func rootSnapshot(_ pid: Int32) -> RootProcessSnapshot? {
+        guard pid > 0 else { return nil }
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+        var value = kinfo_proc(), size = MemoryLayout<kinfo_proc>.stride
+        guard sysctl(&mib, UInt32(mib.count), &value, &size, nil, 0) == 0,
+              size == MemoryLayout<kinfo_proc>.stride, value.kp_proc.p_pid == pid,
+              value.kp_eproc.e_ucred.cr_uid == 0 else { return nil }
+        let start = value.kp_proc.p_un.__p_starttime
+        guard start.tv_sec > 0, start.tv_usec >= 0, start.tv_usec < 1_000_000 else { return nil }
+        let name = withUnsafeBytes(of: value.kp_proc.p_comm) { raw in
+            String(decoding: raw.prefix { $0 != 0 }, as: UTF8.self)
+        }
+        return .init(pid: pid, ppid: value.kp_eproc.e_ppid, uid: 0, name: name,
+                     started: Date(timeIntervalSince1970: Double(start.tv_sec) + Double(start.tv_usec) / 1e6))
+    }
+
     public static func parentPID(_ pid: pid_t) -> pid_t? {
         var info = proc_bsdinfo()
         guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, Int32(MemoryLayout<proc_bsdinfo>.size)) > 0 else { return nil }

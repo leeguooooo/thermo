@@ -17,7 +17,7 @@ public struct ProcessLaunchServices: Codable, Sendable, Equatable {
 
     public static func capture(_ pid: Int32) -> ProcessLaunchServices {
         let started = DispatchTime.now().uptimeNanoseconds
-        return capture(pid, uid:getuid(), identity:ProcessTable.identity, run:{ arguments in
+        return capture(pid, uid:getuid(), identity:{ ProcessTable.identity($0) ?? ProcessTable.rootProcess($0)?.sampledIdentity }, run:{ arguments in
             var environment=ProcessInfo.processInfo.environment;environment["LC_ALL"]="C"
             // An exhausted overall budget gives CommandRunner a zero timeout: it refuses
             // to launch another child, and the result remains incomplete.
@@ -60,8 +60,10 @@ public struct ProcessLaunchServices: Codable, Sendable, Equatable {
     }
 
     static func capture(_ pid: Int32, uid: UInt32, identity:(Int32)->ProcessIdentity?, run:([String])->CommandRunner.Result) -> ProcessLaunchServices {
-        guard pid>0,let before=identity(pid),before.pid==pid,before.uid==uid else { return unavailable }
-        let domains=["gui/\(uid)","user/\(uid)"]
+        guard pid>0,let before=identity(pid),before.pid==pid,before.uid==uid || before.uid==0 else { return unavailable }
+        // A system job may run as the current user. Root processes are checked
+        // only in the system domain; other users' private domains stay out of scope.
+        let domains=before.uid==0 ? ["system"] : ["gui/\(uid)","user/\(uid)","system"]
         var complete=true,queried:[String]=[],found=Set<Registration>()
         for domain in domains {
             let snapshot=run(["print",domain]);queried.append(domain)

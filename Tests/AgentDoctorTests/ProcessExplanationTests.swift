@@ -62,6 +62,38 @@ final class ProcessExplanationTests: XCTestCase {
         XCTAssertTrue(report.chain[0].args.isEmpty);XCTAssertNil(report.chain[0].workingDirectory);XCTAssertNil(report.observedPaths)
         XCTAssertFalse(report.pathQueriesComplete)
     }
+    func testRootRegistrationDoesNotEnablePrivateProcessReaders() throws {
+        let p = process(10,parent:0,uid:0)
+        var serviceReads = 0
+        let report = try ProcessExplanation.capture(10,table:.init(entries:[p]),identity:{ _ in p.sampledIdentity },parent:{ _ in 0 },paths:{ _ in
+            XCTFail("root descriptors remain out of scope"); return .init(paths:[],complete:true)
+        },uid:501,listeners:{ _ in XCTFail("root sockets remain out of scope"); return nil },sleepAssertions:{ _ in
+            XCTFail("root power assertions remain out of scope"); return nil
+        },launchServices:{ _ in
+            serviceReads += 1
+            return .init(state:.observed,registrations:[.init(domain:"system",label:"fixture.helper",pid:10)],queriedDomains:["system"],queryComplete:true)
+        },gitContext:{ _ in XCTFail("root cwd remains out of scope"); return .unavailable })
+        XCTAssertEqual(serviceReads,1)
+        XCTAssertEqual(report.launchServices?.registrations.first?.label,"fixture.helper")
+        XCTAssertTrue(report.chain[0].args.isEmpty); XCTAssertNil(report.chain[0].workingDirectory)
+        XCTAssertNil(report.observedPaths); XCTAssertNil(report.listeners); XCTAssertNil(report.gitContext)
+    }
+    func testRootDiagnosticRowsPreserveInventoryFlagsAndDoNotReadAnotherUsersRows() {
+        let root = process(10,parent:1,uid:0), launchd = process(1,parent:0,uid:0)
+        var reads: [Int32] = []
+        let report = ProcessExplanation.includingRootAncestors(10,in:.init(entries:[],inventoryComplete:false),readRoot:{ pid in
+            reads.append(pid); return pid == 10 ? root : launchd
+        })
+        XCTAssertEqual(reads,[10,1]); XCTAssertEqual(report.entries.map(\.pid),[10,1])
+        XCTAssertFalse(report.inventoryComplete)
+        let other = process(10,parent:0,uid:900)
+        let rejected = ProcessExplanation.includingRootAncestors(10,in:.init(entries:[]),readRoot:{ _ in other })
+        XCTAssertTrue(rejected.entries.isEmpty)
+        let unavailable = ProcessExplanation.includingRootAncestors(10,in:.init(entries:[],available:false),readRoot:{ _ in
+            XCTFail("do not turn a failed inventory into a successful one"); return root
+        })
+        XCTAssertFalse(unavailable.available)
+    }
     func testPathAndArgumentBudgetsRemainExplicitlyIncomplete() throws {
         var p = process(10,parent:0);p.argv = Array(repeating:String(repeating:"x",count:3000),count:70)
         let report = try inspect([p],paths:.init(paths:(0..<130).map { "/fixture/\($0)" },complete:true))

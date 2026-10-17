@@ -34,9 +34,28 @@ public struct ProcessExplanation: Codable, Sendable {
 
     public static func capture(_ pid: Int32, expected: ProcessIdentity? = nil) throws -> ProcessExplanation {
         guard pid > 0, expected.map({ $0.pid == pid }) ?? true else { throw Unavailable() }
-        return try capture(pid, expected: expected, table: ProcessTable.current(.init(uid: nil, cpu: false, detailsUID: getuid())),
-                    identity: ProcessTable.identity, parent: ProcessTable.parentPID, paths: { OpenFiles.observe($0) }, listeners: ProcessListeners.capture, sleepAssertions: ProcessSleepAssertions.capture, launchServices: ProcessLaunchServices.capture,
+        let table = includingRootAncestors(pid, in: ProcessTable.current(.init(uid: nil, cpu: false, detailsUID: getuid())), readRoot: ProcessTable.rootProcess)
+        return try capture(pid, expected: expected, table: table,
+                    identity: { ProcessTable.identity($0) ?? ProcessTable.rootProcess($0)?.sampledIdentity },
+                    parent: { ProcessTable.parentPID($0) ?? ProcessTable.rootProcess($0)?.ppid },
+                    paths: { OpenFiles.observe($0) }, listeners: ProcessListeners.capture, sleepAssertions: ProcessSleepAssertions.capture, launchServices: ProcessLaunchServices.capture,
                     gitContext: ProcessGitContext.capture, workingDirectory: ProcessTable.workingDirectory)
+    }
+
+    static func includingRootAncestors(_ pid: Int32, in table: ProcessTable,
+                                       readRoot: (Int32) -> AgentProcess?) -> ProcessTable {
+        guard table.available else { return table }
+        var entries = table.entries, cursor = pid, seen = Set<Int32>()
+        for _ in 0..<32 {
+            guard cursor > 0, seen.insert(cursor).inserted else { break }
+            if let row = entries.first(where: { $0.pid == cursor }) { cursor = row.ppid }
+            else {
+                guard let row = readRoot(cursor), row.pid == cursor, row.uid == 0 else { break }
+                entries.append(row); cursor = row.ppid
+            }
+        }
+        return .init(entries: entries, available: table.available,
+                     inventoryComplete: table.inventoryComplete, includesAllUsers: table.includesAllUsers)
     }
 
     struct Unavailable: LocalizedError {
@@ -78,7 +97,7 @@ public struct ProcessExplanation: Codable, Sendable {
         let observation = target.uid == uid ? paths(pid) : nil
         let listening = target.uid == uid ? listeners(pid) : nil
         let sleep = target.uid == uid ? sleepAssertions(pid) : nil
-        let services = target.uid == uid ? launchServices(pid) : nil
+        let services = target.uid == uid || target.uid == 0 ? launchServices(pid) : nil
         var git = target.uid == uid ? gitContext(target.cwd) : nil
         if target.uid == uid,let workingDirectory,workingDirectory(pid) != target.cwd { git = .unavailable }
         let descendants=ProcessDescendants.capture(initial,table:table,identity:identity,parent:parent)

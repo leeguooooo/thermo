@@ -1,0 +1,133 @@
+{
+  "root": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-system-launchd-87mektcf",
+  "helperPID": 95178,
+  "rootHelper": {
+    "queriedDomains": [
+      "system"
+    ],
+    "queryComplete": true,
+    "registrations": [
+      {
+        "domain": "system",
+        "label": "dev.thermo.helper",
+        "pid": 95178,
+        "serviceState": "running"
+      }
+    ],
+    "state": "observed"
+  },
+  "rootChainComplete": true,
+  "ownedUnmanagedProcess": {
+    "queriedDomains": [
+      "gui/501",
+      "user/501",
+      "system"
+    ],
+    "queryComplete": true,
+    "registrations": [],
+    "state": "noneObserved"
+  },
+  "elapsedSeconds": 0.66738875,
+  "executableSHA256": "acafd47ed8d0a1fbe19a5ce6f58552b9a3b2b9e73fe950f34b38a7f63821e9d8",
+  "rootPrivateFieldsSuppressed": true,
+  "ownedChildReaped": true,
+  "scope": "Read-only launchctl print and public process metadata; no helper RPC, registration, restart or hardware write.",
+  "date": "2026-10-17",
+  "baseCommit": "b52d65e",
+  "publicMetadataBoundary": {
+    "bsdInfoProbe": {
+      "pid": 95178,
+      "bsdBytes": 0,
+      "errno": 1,
+      "pathReadable": true
+    },
+    "fallback": "Public KERN_PROC_PID snapshot + executable path + a second identical snapshot; root UID only",
+    "privateReads": "No root argv, cwd, descriptors, sockets, sleep assertions or repository inspection",
+    "ordinaryProcessTableBehaviorChanged": false,
+    "inventoryCompletenessFlagsPreserved": true
+  },
+  "regression": {
+    "command": "swift test --filter AgentCoreTests|ProcessExplanation|ProcessLaunchServices|ProcessDescendants|PulseOwnerEvidence",
+    "exitCode": 0,
+    "total": 94,
+    "suites": {
+      "ThermoAppTests.xctest": {
+        "tests": 1,
+        "failures": 0
+      },
+      "CleanKitTests.xctest": {
+        "tests": 5,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 43,
+        "failures": 0
+      },
+      "AgentCoreTests.xctest": {
+        "tests": 45,
+        "failures": 0
+      }
+    },
+    "logSHA256": "5e276dd30879e4e8b631139835a6e2d0ba07f63655b2647a6683d2bc1fa12c97"
+  },
+  "userServiceRegression": {
+    "plainTextContainsRegistration": true,
+    "fixture": "own temporary RunAtLoad sleep service; no KeepAlive",
+    "directRegistration": {
+      "queriedDomains": [
+        "gui/501",
+        "user/501",
+        "system"
+      ],
+      "queryComplete": true,
+      "registrations": [
+        {
+          "domain": "gui/501",
+          "label": "com.thermo.qa.30dbe9c3a81e49b19f275b686c0a0baa",
+          "pid": 81423,
+          "serviceState": "running"
+        }
+      ],
+      "state": "observed"
+    },
+    "targetIdentityVerified": true,
+    "fullDomainOutputSaved": false,
+    "ordinaryChild": {
+      "queriedDomains": [
+        "gui/501",
+        "user/501",
+        "system"
+      ],
+      "queryComplete": true,
+      "registrations": [],
+      "state": "noneObserved"
+    },
+    "cleanup": {
+      "serviceUnregistered": true,
+      "fixtureDirectoryRemoved": true,
+      "ordinaryChildExited": true
+    }
+  },
+  "nativeUI": {
+    "productionView": "ProcessExplanationView",
+    "fixtureRoot": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-system-process-ui-0nd4pza0",
+    "verifiedViaCUA": [
+      "Root PID and parent launchd chain",
+      "system/dev.thermo.helper · PID95178 · running",
+      "launchd query scope: system",
+      "Exact PID and original-launcher limitation visible at bottom"
+    ],
+    "screenshotsInspected": 2,
+    "screenshotsSaved": false,
+    "firstRun": "CG scrolling returned noWindowsAvailable; process later confirmed terminal. Not counted as normal quit.",
+    "secondRun": "Fresh launch after confirmed exit; native AX Scroll Down worked; Command-Q followed by process absence confirmed",
+    "fixtureProcessesRemaining": false
+  },
+  "limitations": [
+    "Only direct PID registrations; service ancestry is not inferred",
+    "Public root metadata may be unavailable or change; result stays unavailable on failed identity checks",
+    "No root-helper RPC, install, restart, hardware writes or permission changes",
+    "Not packaged into signed440; installed acceptance still pending"
+  ],
+  "rawLocalRoot": "/Users/leo/github.com/thermo/dist/mole-study/system-launchd-20261017"
+}

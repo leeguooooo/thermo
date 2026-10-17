@@ -143,11 +143,12 @@ struct ProcessInspectionTarget: Identifiable {
                             ForEach(services.registrations, id: \.self) { service in
                                 Text(service.domain + "/" + service.label + " · PID " + String(service.pid) + (service.serviceState.map { " · " + $0 } ?? "")).font(.caption.monospaced()).textSelection(.enabled)
                             }
-                            if services.state == .noneObserved { Text(tr("No direct registration was observed in the current user's GUI and User domains.")).font(.caption) }
+                            if !services.queriedDomains.isEmpty { Text(tr("Launchd query scope: %1$@", services.queriedDomains.joined(separator: ", "))).font(.caption).foregroundStyle(.secondary) }
+                            if services.state == .noneObserved { Text(tr("No direct registration was observed in the queried launchd domains.")).font(.caption) }
                             if services.state == .unavailable { Text(tr("Launchd registration inspection is unavailable")).font(.caption).foregroundStyle(.orange) }
                             if !services.queryComplete { Text(tr("Launchd registration reading is incomplete")).font(.caption).foregroundStyle(.orange) }
                         } else { Text(tr("Launchd registration inspection is unavailable")).font(.caption) }
-                        Text(tr("A registration does not prove the original launcher. System services and service descendants were not inspected.")).font(.caption).foregroundStyle(.secondary)
+                        Text(tr("A registration does not prove the original launcher. Service attribution uses only the exact PID.")).font(.caption).foregroundStyle(.secondary)
                         Text(tr("Memory mappings were not inspected.")).font(.caption).foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }

@@ -16,7 +16,7 @@ final class ProcessLaunchServicesTests: XCTestCase {
             if args[1]=="gui/501/fixture" { return self.result("gui/501/fixture = {\n\tpid = 7\n\tstate = running\n\tchild = {\n\t\tpid = 8\n\t}\n}\n") }
             return self.result(self.domain(args[1]))
         })
-        XCTAssertEqual(calls,[["print","gui/501"],["print","gui/501/fixture"],["print","user/501"]])
+        XCTAssertEqual(calls,[["print","gui/501"],["print","gui/501/fixture"],["print","user/501"],["print","system"]])
         XCTAssertEqual(report.state,.observed);XCTAssertTrue(report.queryComplete)
         XCTAssertEqual(report.registrations.map(\.label),["fixture"]);XCTAssertEqual(report.registrations.first?.serviceState,"running")
         XCTAssertFalse(String(decoding:try! JSONEncoder().encode(report),as:UTF8.self).contains("another-private-label"))
@@ -58,6 +58,7 @@ final class ProcessLaunchServicesTests: XCTestCase {
     func testUserAndGUIRegistrationsStayDistinct() {
         let report=ProcessLaunchServices.capture(7,uid:501,identity:{ _ in self.identity },run:{ args in
             if args[1]=="gui/501" || args[1]=="user/501" { return self.result(self.domain(args[1],rows:"\t\t7 - fixture\n")) }
+            if args[1]=="system" { return self.result(self.domain(args[1])) }
             return self.result(args[1]+" = {\n\tpid = 7\n}\n")
         })
         XCTAssertEqual(report.registrations.map(\.domain),["gui/501","user/501"])
@@ -68,5 +69,48 @@ final class ProcessLaunchServicesTests: XCTestCase {
         XCTAssertNil(ProcessLaunchServices.labels(domain("gui/501",rows:rows),domain:"gui/501",pid:7))
         XCTAssertNil(ProcessLaunchServices.labels("gui/501 = {\n\tnested = {\n\t\tservices = {\n\t\t\t7 0 fixture\n\t\t}\n\t}\n}\n",domain:"gui/501",pid:7))
         XCTAssertEqual(ProcessLaunchServices.capture(-1).state,.unavailable)
+    }
+
+    func testRootProcessUsesOnlySystemDomainAndVerifiesSingleServicePID() {
+        let root = ProcessIdentity(pid:7,uid:0,started:identity.started,executable:"/fixture/root-helper")
+        var calls: [[String]] = []
+        let report = ProcessLaunchServices.capture(7,uid:501,identity:{ _ in root },run:{ args in
+            calls.append(args)
+            if args[1]=="system" { return self.result(self.domain("system",rows:"\t\t7 0 fixture.helper\n")) }
+            return self.result("system/fixture.helper = {\n\tpid = 7\n\tstate = running\n}\n")
+        })
+        XCTAssertEqual(calls,[["print","system"],["print","system/fixture.helper"]])
+        XCTAssertEqual(report.state,.observed); XCTAssertTrue(report.queryComplete)
+        XCTAssertEqual(report.registrations.map(\.domain),["system"])
+        XCTAssertEqual(report.registrations.map(\.label),["fixture.helper"])
+    }
+
+    func testCurrentUserJobInSystemDomainCanBeObserved() {
+        let report = ProcessLaunchServices.capture(7,uid:501,identity:{ _ in self.identity },run:{ args in
+            if args[1]=="system" { return self.result(self.domain("system",rows:"\t\t7 0 user.service\n")) }
+            if args[1]=="system/user.service" { return self.result("system/user.service = {\n\tpid = 7\n}\n") }
+            return self.result(self.domain(args[1]))
+        })
+        XCTAssertEqual(report.state,.observed); XCTAssertTrue(report.queryComplete)
+        XCTAssertEqual(report.registrations.map(\.domain),["system"])
+    }
+
+    func testDeniedSystemDomainDoesNotClaimNoRegistration() {
+        let root = ProcessIdentity(pid:7,uid:0,started:identity.started,executable:"/fixture/root-helper")
+        let report = ProcessLaunchServices.capture(7,uid:501,identity:{ _ in root },run:{ _ in self.result("",status:1) })
+        XCTAssertEqual(report.state,.unavailable); XCTAssertFalse(report.queryComplete)
+        XCTAssertEqual(report.queriedDomains,["system"]); XCTAssertTrue(report.registrations.isEmpty)
+    }
+
+    func testRootRestartDuringServiceLookupDiscardsRegistration() {
+        let root = ProcessIdentity(pid:7,uid:0,started:identity.started,executable:"/fixture/root-helper")
+        var actual = root
+        let report = ProcessLaunchServices.capture(7,uid:501,identity:{ _ in actual },run:{ args in
+            if args[1]=="system" { return self.result(self.domain("system",rows:"\t\t7 0 fixture.helper\n")) }
+            actual.started.addTimeInterval(1)
+            return self.result("system/fixture.helper = {\n\tpid = 7\n}\n")
+        })
+        XCTAssertEqual(report.state,.unavailable); XCTAssertFalse(report.queryComplete)
+        XCTAssertTrue(report.registrations.isEmpty)
     }
 }
