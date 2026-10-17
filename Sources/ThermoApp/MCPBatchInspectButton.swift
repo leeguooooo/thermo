@@ -59,7 +59,8 @@ struct MCPBatchInspectButton: View {
                     if let current = model.current { Text(tr("Checking: %1$@", current)).font(.caption).lineLimit(2).help(current) }
                 }
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 10) {
+                    // Lazy placement cycles in this sheet when it opens or reopens with results.
+                    VStack(alignment: .leading, spacing: 10) {
                         ForEach(visible) { item in
                             VStack(alignment: .leading, spacing: 3) {
                                 Toggle(isOn: Binding(get: { selected.contains(item.id) }, set: { value in
