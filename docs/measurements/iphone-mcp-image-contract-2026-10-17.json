@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "binarySHA256": "a9d9bff391071f60f5f94b48a3fb68f9022807bb01abef8495af551c3d6743d2",
+  "MCPServerVersion": "0.19.2",
+  "initializeContactedDaemon": false,
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/agent/screenshot?max_side=1200",
+      "onlyOwnedCredential": true
+    }
+  ],
+  "contentTypes": [
+    "image"
+  ],
+  "syntheticPNGExact": true,
+  "structuredContentPresent": false,
+  "realCredentialsCopied": false,
+  "realPhoneContacted": false,
+  "historicalTextWrappingExplained": false,
+  "ownedHTTPPortClosed": true,
+  "ownedProcessExited": true,
+  "recordedAt": "2026-10-17T07:10:16.779436+00:00",
+  "scope": "Installed MCP executable against an owned loopback PNG fixture, isolated HOME and whitelisted environment. Does not prove real-device behavior or explain historical nested text.",
+  "scriptSHA256": "4c888952e6fd5fc46ec9b3dc9f7add03478dcf83aafaa8a3d4898c74f441dc12",
+  "binaryUnchangedAfterProbe": true
+}

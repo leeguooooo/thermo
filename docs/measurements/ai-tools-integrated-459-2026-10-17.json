@@ -1,0 +1,379 @@
+{
+  "recordedAt": "2026-10-17T07:10:16.779436+00:00",
+  "sourceFreeze": {
+    "frozenAt": "2026-10-17T06:53:32.284799+00:00",
+    "sourceCommit": "21ca8702fec855ebafe4295ceb651e1574a1bf0a",
+    "sourceRuntimeDifferenceFromMainAtFreeze": [],
+    "sourceVersionChanged": false,
+    "priorPackageContainsLatestFixes": false,
+    "intendedScope": "Local Release regression and ad-hoc universal package, no installation, update feed, hardware control or publication."
+  },
+  "mainAtFinalAudit": "237ae11c73fe26abaad8eadd1def1b060eec9515",
+  "runtimeSourceDifferenceAtFinalAudit": [],
+  "fullReleaseRegression": {
+    "sourceCommit": "21ca8702fec855ebafe4295ceb651e1574a1bf0a",
+    "configuration": "release",
+    "command": [
+      "swift",
+      "test",
+      "-c",
+      "release",
+      "--jobs",
+      "3",
+      "--skip",
+      "HardwareTests"
+    ],
+    "excludedTestClass": "HardwareTests",
+    "tests": 1665,
+    "failures": 0,
+    "suites": [
+      {
+        "suite": "ThermoKitTests.xctest",
+        "outcome": "passed",
+        "tests": 187,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoHelperTests.xctest",
+        "outcome": "passed",
+        "tests": 30,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoCLITests.xctest",
+        "outcome": "passed",
+        "tests": 108,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoAppTests.xctest",
+        "outcome": "passed",
+        "tests": 300,
+        "failures": 0
+      },
+      {
+        "suite": "CleanKitTests.xctest",
+        "outcome": "passed",
+        "tests": 751,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests.xctest",
+        "outcome": "passed",
+        "tests": 244,
+        "failures": 0
+      },
+      {
+        "suite": "AgentCoreTests.xctest",
+        "outcome": "passed",
+        "tests": 45,
+        "failures": 0
+      }
+    ],
+    "exitCode": 0,
+    "logSHA256": "bec7a66d51df37eb51c930e76f4997015eab9e28919d627538c8daa79242def9",
+    "worktreeCleanAfterTests": true,
+    "older456IncludedOneHardwareTestAndIsNotDirectlyCountComparable": true
+  },
+  "package": {
+    "generated": "2026-10-17T07:07:50.424740+00:00",
+    "candidateCommit": "21ca8702fec855ebafe4295ceb651e1574a1bf0a",
+    "testedCodeCommit": "21ca8702fec855ebafe4295ceb651e1574a1bf0a",
+    "version": "1.1.28",
+    "build": "459",
+    "scope": "Local ad-hoc universal candidate. x86_64 execution is Rosetta, not real Intel hardware. Owned synthetic CLI fixtures only. No formal signing, notarization, installation, helper/radio action or publication.",
+    "metadataVerification": "Verified signatures, deployment target 13.0 and required architectures: arm64 x86_64",
+    "artifacts": {
+      "thermo": {
+        "sha256": "6506d780aba2abd6a95450520c08bea909e54a936c63cbb3355018350db1d2ab",
+        "bytes": 37227680,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      },
+      "thermo-helper": {
+        "sha256": "85f67ac3de7f2c2a7a0847e83f3b528ce96c78ec5cfb82d289f774ec3d9c5ea6",
+        "bytes": 3435024,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      },
+      "Thermo.app/Contents/MacOS/Thermo": {
+        "sha256": "2ba25977003f54a8c6f95c58f1998caf026f9173904a824c832d8d46af267ac5",
+        "bytes": 63702544,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      },
+      "Thermo.app/Contents/Helpers/thermo": {
+        "sha256": "6506d780aba2abd6a95450520c08bea909e54a936c63cbb3355018350db1d2ab",
+        "bytes": 37227680,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      },
+      "Thermo.app/Contents/Helpers/thermo-helper": {
+        "sha256": "85f67ac3de7f2c2a7a0847e83f3b528ce96c78ec5cfb82d289f774ec3d9c5ea6",
+        "bytes": 3435024,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      }
+    },
+    "updateFeedAbsent": true,
+    "originalCleanupObservationResolved": false
+  },
+  "CLIValidation": [
+    {
+      "mode": "native-arm64",
+      "check": "verify-skill-context.py",
+      "passed": true,
+      "resultSHA256": "171ecf872b8889d28711a8ec2420b810dc51f9e8fa671373440a3793212c6303"
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-skill-quality.py",
+      "passed": true,
+      "resultSHA256": "655666481d94e7ffb0412d2aac73e9b032d82821c39e5ac887fd131c5a338a34"
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-tool-usage.py",
+      "passed": true,
+      "resultSHA256": "a94de19af3e41983bdc19aebc79312171e105a50024566fa4b35492a3c082b02"
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-reference-encoding.py",
+      "passed": true,
+      "resultSHA256": "2adbc8e43b1078164a0bc8653f73b2eed295e63a6b1cb64cad2dd2e8f1f3d345"
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-task-comparison.py",
+      "passed": true,
+      "resultSHA256": "a06c25009044e6afd171467e413733538b500da451956b9960ae831cc5d863fd"
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-mcp-cleanup-details.py",
+      "passed": true,
+      "resultSHA256": "f188b4e1cb0f4db80a6500e8e38407c9b622151009d08aeb6585149c0e2c1824"
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-cli-completeness.py",
+      "passed": true,
+      "resultSHA256": "f524636ba27f1ee2863346baa848c1c803b9cff419813cff54d735570de64de1"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-skill-context.py",
+      "passed": true,
+      "resultSHA256": "171ecf872b8889d28711a8ec2420b810dc51f9e8fa671373440a3793212c6303"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-skill-quality.py",
+      "passed": true,
+      "resultSHA256": "655666481d94e7ffb0412d2aac73e9b032d82821c39e5ac887fd131c5a338a34"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-tool-usage.py",
+      "passed": true,
+      "resultSHA256": "a94de19af3e41983bdc19aebc79312171e105a50024566fa4b35492a3c082b02"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-reference-encoding.py",
+      "passed": true,
+      "resultSHA256": "2adbc8e43b1078164a0bc8653f73b2eed295e63a6b1cb64cad2dd2e8f1f3d345"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-task-comparison.py",
+      "passed": true,
+      "resultSHA256": "a06c25009044e6afd171467e413733538b500da451956b9960ae831cc5d863fd"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-mcp-cleanup-details.py",
+      "passed": true,
+      "resultSHA256": "c6d44359b980a566be4bb215798af508df5931a5437c5cbbea47bff51f307065"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-cli-completeness.py",
+      "passed": true,
+      "resultSHA256": "c3cf09d1e63d1af6044da6d5d5e5dff9ebab981f3eb7ad3b835ec70c62834a43"
+    }
+  ],
+  "nativeCLIEventAndClippingReplay": {
+    "recordedAt": "2026-10-17T07:07:50.570381+00:00",
+    "sourceCommit": "21ca8702fec855ebafe4295ceb651e1574a1bf0a",
+    "fixtureSHA256": "e50631383928c812dc00445712dd61c838b2cfd0f2817e74081c7dc28cc5b066",
+    "syntheticPartialFile": true,
+    "checks": [
+      {
+        "mode": "arm64",
+        "passed": true,
+        "row": {
+          "calls": 3,
+          "completed": 2,
+          "host": "codex",
+          "id": "9c2ee2b7d35eb4604e4985f9c53a4fe884b8bcf7b3666673fbb2e602848fe534",
+          "invocationFailures": 1,
+          "kind": "mcp",
+          "medianSeconds": 0.003741025924682617,
+          "missingResults": 0,
+          "name": "echo",
+          "nonTextBlocks": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 16,
+          "reportedErrors": 1,
+          "returnedTextBytes": 63,
+          "returnedTextEstimatedTokens": 16,
+          "server": "wirefixture",
+          "timingSamples": 3,
+          "totalObservedSeconds": 0.010537028312683105,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 0
+        },
+        "coverage": {
+          "bytesRead": 4194304,
+          "cancelled": false,
+          "clippedFiles": 1,
+          "duplicateRecords": 0,
+          "filesDiscovered": 1,
+          "filesRead": 1,
+          "limitReached": false,
+          "malformedLines": 0,
+          "missingTimestamps": 0,
+          "otherToolCalls": 0,
+          "oversizedLines": 0,
+          "unattributedResults": {
+            "completed": 0,
+            "missingResults": 0,
+            "nonTextBlocks": 0,
+            "referenceReturnedTextTokens": 0,
+            "returnedTextBytes": 0,
+            "returnedTextEstimatedTokens": 0,
+            "unavailableReferenceResults": 0,
+            "unmeasuredResults": 0
+          },
+          "unmatchedResults": 0,
+          "unreadableFiles": 0,
+          "unsupportedUsageRecords": 0
+        }
+      },
+      {
+        "mode": "rosetta-x86_64",
+        "passed": true,
+        "row": {
+          "calls": 3,
+          "completed": 2,
+          "host": "codex",
+          "id": "9c2ee2b7d35eb4604e4985f9c53a4fe884b8bcf7b3666673fbb2e602848fe534",
+          "invocationFailures": 1,
+          "kind": "mcp",
+          "medianSeconds": 0.003741025924682617,
+          "missingResults": 0,
+          "name": "echo",
+          "nonTextBlocks": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 16,
+          "reportedErrors": 1,
+          "returnedTextBytes": 63,
+          "returnedTextEstimatedTokens": 16,
+          "server": "wirefixture",
+          "timingSamples": 3,
+          "totalObservedSeconds": 0.010537028312683105,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 0
+        },
+        "coverage": {
+          "bytesRead": 4194304,
+          "cancelled": false,
+          "clippedFiles": 1,
+          "duplicateRecords": 0,
+          "filesDiscovered": 1,
+          "filesRead": 1,
+          "limitReached": false,
+          "malformedLines": 0,
+          "missingTimestamps": 0,
+          "otherToolCalls": 0,
+          "oversizedLines": 0,
+          "unattributedResults": {
+            "completed": 0,
+            "missingResults": 0,
+            "nonTextBlocks": 0,
+            "referenceReturnedTextTokens": 0,
+            "returnedTextBytes": 0,
+            "returnedTextEstimatedTokens": 0,
+            "unavailableReferenceResults": 0,
+            "unmeasuredResults": 0
+          },
+          "unmatchedResults": 0,
+          "unreadableFiles": 0,
+          "unsupportedUsageRecords": 0
+        }
+      }
+    ],
+    "passed": true
+  },
+  "QAIdentity": {
+    "allFileBackedSectionsEqual": true,
+    "matchedArchitectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "packageGUIBinarySHA256": "2ba25977003f54a8c6f95c58f1998caf026f9173904a824c832d8d46af267ac5",
+    "isolatedHome": true,
+    "reviewModeSuppressesAutomaticHelperAndPolicyRestore": true
+  },
+  "visibleWindowReview": {
+    "attempted": true,
+    "visibleAcceptanceCompleted": false,
+    "toolErrors": [
+      "cgWindowNotFound",
+      "cgWindowNotFound"
+    ],
+    "processVerifiedRunningBeforeRebind": true,
+    "existingBundleRebindAttemptedWithoutRestart": true,
+    "CUAInventoryConfirmedIsRunning": true,
+    "consoleLocked": true,
+    "notUnlocked": true,
+    "actualUIActionsExecuted": false,
+    "QAProcessTerminatedByVerifiedOwnedRuntimePath": true
+  },
+  "cleanup": {
+    "QAAndOwnedHTTPProcessesAbsent": true,
+    "HTTPPortClosed": true,
+    "originalPackageArtifactHashesUnchanged": true,
+    "allArchitectureStrictAppSignatureVerifiedAfterQA": true,
+    "frozenWorktreeClean": true,
+    "userConfigMatchesPriorBaseline": true
+  },
+  "localAdHocOnly": true,
+  "formallySignedOrNotarized": false,
+  "installedOrPublished": false,
+  "releaseReady": false,
+  "remaining": [
+    "Visible full-App acceptance of latest layout and log-coverage changes; console was locked.",
+    "Normal startup, formal signing/notarization/install/update acceptance.",
+    "Actual Intel hardware, older macOS and large-font acceptance.",
+    "Real business MCP quality and Skill net benefit.",
+    "Figma independent definition coverage and other hosts."
+  ]
+}
