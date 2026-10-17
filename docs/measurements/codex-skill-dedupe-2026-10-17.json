@@ -1,0 +1,230 @@
+{
+  "date": "2026-10-17",
+  "sourceBase": "095a952971d4d6cdeaa24ed8b02ff5c4fe3f353c",
+  "clientVersion": "codex-cli 0.163.0",
+  "clientBinarySHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+  "fixtureSHA256": "d7ea6f0308b4e13e12275e6610259763d01f9fcc6a2df123a96c3fb50c50f181",
+  "profiles": [
+    {
+      "case": "copy-disabled-catalog",
+      "ownedFiles": 3,
+      "configuredDisabledEntries": 2,
+      "remainingEntries": 1,
+      "remainingNameConflicts": 0,
+      "nativeRequest": {
+        "onlyFakeCredential": true,
+        "skills": [
+          {
+            "scope": "legacy",
+            "catalogMarkerPresent": false,
+            "catalogMarkerOccurrences": 0,
+            "bodyMarkerPresent": false,
+            "referenceMarkerPresent": false,
+            "skillPathPresent": false
+          },
+          {
+            "scope": "user",
+            "catalogMarkerPresent": true,
+            "catalogMarkerOccurrences": 1,
+            "bodyMarkerPresent": false,
+            "referenceMarkerPresent": false,
+            "skillPathPresent": false
+          },
+          {
+            "scope": "repo",
+            "catalogMarkerPresent": false,
+            "catalogMarkerOccurrences": 0,
+            "bodyMarkerPresent": false,
+            "referenceMarkerPresent": false,
+            "skillPathPresent": false
+          }
+        ]
+      }
+    },
+    {
+      "case": "copy-disabled-explicit",
+      "ownedFiles": 3,
+      "configuredDisabledEntries": 2,
+      "remainingEntries": 1,
+      "remainingNameConflicts": 0,
+      "nativeRequest": {
+        "onlyFakeCredential": true,
+        "skills": [
+          {
+            "scope": "legacy",
+            "catalogMarkerPresent": false,
+            "catalogMarkerOccurrences": 0,
+            "bodyMarkerPresent": false,
+            "referenceMarkerPresent": false,
+            "skillPathPresent": false
+          },
+          {
+            "scope": "user",
+            "catalogMarkerPresent": true,
+            "catalogMarkerOccurrences": 2,
+            "bodyMarkerPresent": true,
+            "referenceMarkerPresent": false,
+            "skillPathPresent": true
+          },
+          {
+            "scope": "repo",
+            "catalogMarkerPresent": false,
+            "catalogMarkerOccurrences": 0,
+            "bodyMarkerPresent": false,
+            "referenceMarkerPresent": false,
+            "skillPathPresent": false
+          }
+        ]
+      }
+    },
+    {
+      "case": "alias-disabled-catalog",
+      "ownedFiles": 3,
+      "configuredDisabledEntries": 3,
+      "remainingEntries": 0,
+      "remainingNameConflicts": 0,
+      "nativeRequest": {
+        "onlyFakeCredential": true,
+        "skills": [
+          {
+            "scope": "legacy",
+            "catalogMarkerPresent": false,
+            "catalogMarkerOccurrences": 0,
+            "bodyMarkerPresent": false,
+            "referenceMarkerPresent": false,
+            "skillPathPresent": false
+          },
+          {
+            "scope": "user",
+            "catalogMarkerPresent": false,
+            "catalogMarkerOccurrences": 0,
+            "bodyMarkerPresent": false,
+            "referenceMarkerPresent": false,
+            "skillPathPresent": false
+          },
+          {
+            "scope": "repo",
+            "catalogMarkerPresent": false,
+            "catalogMarkerOccurrences": 0,
+            "bodyMarkerPresent": false,
+            "referenceMarkerPresent": false,
+            "skillPathPresent": false
+          }
+        ]
+      }
+    },
+    {
+      "case": "alias-disabled-explicit",
+      "ownedFiles": 3,
+      "configuredDisabledEntries": 3,
+      "remainingEntries": 0,
+      "remainingNameConflicts": 0,
+      "nativeRequest": {
+        "onlyFakeCredential": true,
+        "skills": [
+          {
+            "scope": "legacy",
+            "catalogMarkerPresent": false,
+            "catalogMarkerOccurrences": 0,
+            "bodyMarkerPresent": false,
+            "referenceMarkerPresent": false,
+            "skillPathPresent": false
+          },
+          {
+            "scope": "user",
+            "catalogMarkerPresent": false,
+            "catalogMarkerOccurrences": 0,
+            "bodyMarkerPresent": false,
+            "referenceMarkerPresent": false,
+            "skillPathPresent": false
+          },
+          {
+            "scope": "repo",
+            "catalogMarkerPresent": false,
+            "catalogMarkerOccurrences": 0,
+            "bodyMarkerPresent": false,
+            "referenceMarkerPresent": false,
+            "skillPathPresent": false
+          }
+        ]
+      }
+    }
+  ],
+  "applied": true,
+  "configuration": {
+    "beforeSHA256": "56bc4ba81ed70b89a059b8ab1205cadae6fea3dbb18f220d5703a9f91f6f3449",
+    "afterSHA256": "d18def4aacafe32b9ef8da4eb8298d93430af9846157a4adae0ea2059fa5a841",
+    "originalSkillRecords": 1,
+    "finalSkillRecords": 3,
+    "allOtherParsedSettingsEqual": true,
+    "backupVerified": true,
+    "backupMode": "0600",
+    "backupPathPublished": false
+  },
+  "changes": [
+    {
+      "skill": "android-use",
+      "disabledSource": ".codex/skills/android-use/SKILL.md",
+      "retainedSource": ".agents/skills/android-use/SKILL.md",
+      "completeFolderContentsMatched": true,
+      "fileHashes": {
+        "SKILL.md": "c2fe812b78a499767c78c9ae1fd37c845b24de49b45fe17106a1df5c9bc904a6",
+        "agents/openai.yaml": "26d498edca6aaba1ac0d77aba5e1acaa313cb8398b7aab411571d4d0bd357995"
+      }
+    },
+    {
+      "skill": "ocs",
+      "disabledSource": ".codex/skills/ocs/SKILL.md",
+      "retainedSource": ".agents/skills/ocs/SKILL.md",
+      "completeFolderContentsMatched": true,
+      "fileHashes": {
+        "SKILL.md": "d0d394538aa77113e13a44f97774d6e44dd94786c6fa93500c9fa3291c34b135"
+      }
+    }
+  ],
+  "allSkillFilesUnchanged": true,
+  "before": {
+    "groups": 7,
+    "findings": 14,
+    "uniqueFiles": 138,
+    "disabledEntries": 1
+  },
+  "after": {
+    "groups": 5,
+    "findings": 10,
+    "uniqueFiles": 138,
+    "disabledEntries": 3
+  },
+  "realModelCalled": false,
+  "realBusinessToolsCalled": false,
+  "credentialsCopied": false,
+  "existingSessionsRestarted": false,
+  "packageRebuilt": false,
+  "installedAppChanged": false,
+  "limits": [
+    "The two new user config records take effect when a client reads updated settings; existing session caches were not reloaded or claimed refreshed.",
+    "Native client verification used isolated loopback profiles, not the running authenticated Desktop conversation.",
+    "Static directory/document totals retain disabled files and do not represent loaded context or billed tokens.",
+    "Only the supported absolute-path [[skills.config]] subset is interpreted. Unsupported or contradictory syntax stays unknown; all project/admin policy layering is not simulated.",
+    "Two whole Skill directories were byte-identical before and after this change. Remaining different-content duplicates were not disabled."
+  ],
+  "thermoBinarySHA256": "30eccb69fd98ec5652dc1b5150460598ec7e2a870c7e6a59ddd7f5edcfb67470",
+  "validation": {
+    "finalAgentDoctorTests": 232,
+    "failures": 0,
+    "cliSkillContextFixturePassed": true,
+    "nativeClientProfilesPassed": 4,
+    "actualConfigAndInventoryReverified": true,
+    "oldJSONKeepsUnknownState": true,
+    "unrecognizedConfigDoesNotHideFiles": true,
+    "profilesRecheckedWithFinalBinary": true
+  },
+  "sourceSHA256": {
+    "Sources/AgentDoctor/CodexSkillFlags.swift": "ee92c896c076e72db1afd6ad9e5611212f02f06582c9dc4f20b53ac7a82825cc",
+    "Sources/AgentDoctor/Config.swift": "a1420f2292607ffdd168e1b65576fb6bab15fc803a1e54c039078339f37d23f7",
+    "Sources/AgentDoctor/ContextFootprint.swift": "34ce091502b11a7de85659aec78aa21308589c04aab0aedc5c8b30e1e73ee9e8",
+    "Sources/ThermoL10n/ZhHans.swift": "649a50bfdfc2b01d7fad763eaa7b8cd6ab5b075ef78f5091bc5de19c3660c535",
+    "Tests/AgentDoctorTests/CodexSkillFlagsTests.swift": "5088680fb0932978bd9fa1fb36d13dbbfa6b2e62d8591eb6f0d6603bcf8959d4",
+    "scripts/capture-codex-skill-loading.py": "d7ea6f0308b4e13e12275e6610259763d01f9fcc6a2df123a96c3fb50c50f181"
+  }
+}

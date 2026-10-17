@@ -2585,6 +2585,8 @@ let zhHans: [String: String] = [
     "%1$@ different skills share this name (%2$@); selection depends on the agent and scope": "%1$@ 个不同 Skill 使用相同名称（%2$@）；选择规则取决于 Agent 和来源范围",
     "%1$@ different Codex skills share this name (%2$@); a name-only mention can be ambiguous. Use the intended source or path.": "%1$@ 个不同的 Codex Skill 使用相同名称（%2$@）；只按名称调用可能有歧义，请按目标来源或路径使用。",
     "Select the intended source or read its SKILL.md by path. Rename or remove only unintended duplicates.": "选择目标来源，或按路径读取对应 SKILL.md；仅对不需要的重复副本改名或移除。",
+    "Disabled in Codex configuration; file retained in inventory": "Codex 配置已停用；文件仍保留在盘点中",
+    "Skill enablement syntax is unsupported or ambiguous; configured states were not inferred.": "Skill 启停配置语法未支持或有歧义，未据此推断配置状态。",
     "%1$@ unique files · catalog ≈%2$@ tokens · documents ≈%3$@ tokens · %4$@ bytes": "%1$@ 个独立文件 · 目录描述约 %2$@ token · 完整文件约 %3$@ token · %4$@ 字节",
     "%1$@ duplicate file entries excluded · cache inventory %2$@ files / %3$@ bytes, counted separately": "已排除 %1$@ 个重复文件条目 · 缓存 %2$@ 个文件 / %3$@ 字节，单独统计",
     "These are deduplicated inventory estimates, not effective session context. Same-name selection and actual loading are not inferred.": "以上为去重后的静态清单估算，不代表会话实际上下文；未推断同名 Skill 的选择结果和实际加载量。",

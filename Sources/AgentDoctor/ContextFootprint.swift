@@ -42,12 +42,14 @@ public struct SkillFootprint: Codable, Equatable, Sendable {
     public var scope: String? = nil
     public var namespace: String? = nil
     public var pluginConfiguredEnabled: Bool? = nil
+    public var codexConfiguredEnabled: Bool? = nil
     public var quality: SkillQualityReport? = nil
     public var identicalContentFiles: Int? = nil
 
     public var summary: String {
-        tr("Catalog ≈%1$@ tokens · SKILL.md ≈%2$@ tokens · %3$@ bytes",
+        let counts = tr("Catalog ≈%1$@ tokens · SKILL.md ≈%2$@ tokens · %3$@ bytes",
            catalog.tokenLabel, document.tokenLabel, String(document.bytes))
+        return codexConfiguredEnabled == false ? counts + " · " + tr("Disabled in Codex configuration; file retained in inventory") : counts
     }
 
     public static var coverage: String {

@@ -16,12 +16,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 arguments = argparse.ArgumentParser(description=__doc__)
 arguments.add_argument('output_directory', type=Path)
 arguments.add_argument('codex_binary', type=Path)
+base_cases = ['catalog', 'explicit-user', 'duplicate-catalog', 'duplicate-explicit', 'alias-catalog', 'alias-explicit', 'copy-catalog', 'copy-explicit']
+arguments.add_argument('--cases', nargs='+', choices=base_cases+['copy-disabled-catalog', 'copy-disabled-explicit', 'alias-disabled-catalog', 'alias-disabled-explicit'])
 options = arguments.parse_args()
 root = options.output_directory.resolve()
 root.mkdir(mode=0o700)
 binary = options.codex_binary.resolve()
 runs = []
-for case in ['catalog', 'explicit-user', 'duplicate-catalog', 'duplicate-explicit', 'alias-catalog', 'alias-explicit', 'copy-catalog', 'copy-explicit']:
+for case in options.cases or base_cases:
     directory = root/case
     directory.mkdir(mode=0o700)
     home = directory/'home'
@@ -81,6 +83,9 @@ for case in ['catalog', 'explicit-user', 'duplicate-catalog', 'duplicate-explici
                                              'catalogMarkerOccurrences': model_input.count('OWNED_CATALOG_'+scope.upper()),
                                              'bodyMarkerPresent': 'OWNED_BODY_'+scope.upper() in model_input,
                                              'referenceMarkerPresent': 'OWNED_REFERENCE_'+scope.upper() in model_input} for scope in scopes]})
+            for skill in observations[-1]['skills']:
+                name = 'owned-shared' if case.startswith(('duplicate', 'alias', 'copy')) else 'owned-'+skill['scope']
+                skill['skillPathPresent'] = str(scopes[skill['scope']]/name/'SKILL.md') in model_input
             item = {'id': 'msg_owned', 'type': 'message', 'role': 'assistant', 'status': 'completed',
                     'content': [{'type': 'output_text', 'text': 'owned-client-fixture', 'annotations': []}]}
             response = {'id': 'resp_owned', 'object': 'response', 'created_at': 1, 'status': 'completed',
@@ -107,12 +112,15 @@ for case in ['catalog', 'explicit-user', 'duplicate-catalog', 'duplicate-explici
                         'supports_websockets = false', 'request_max_retries = 0', 'stream_max_retries = 0',
                         '[projects.'+json.dumps(str(project))+']', 'trust_level = "trusted"', ''])
     (codex_home/'config.toml').write_text(config)
+    if '-disabled-' in case:
+        config += ''.join('\n[[skills.config]]\npath = '+json.dumps(str(scopes[scope]/'owned-shared/SKILL.md'))+'\nenabled = false\n' for scope in ['legacy', 'repo'])
+        (codex_home/'config.toml').write_text(config)
     env = {'PATH': '/usr/bin:/bin:/usr/sbin:/sbin', 'HOME': str(home), 'CODEX_HOME': str(codex_home),
            'XDG_CONFIG_HOME': str(home/'.config'), 'LANG': 'en_US.UTF-8', 'TERM': 'dumb',
            'THERMO_FAKE_PROVIDER_KEY': 'owned-loopback-key', 'NO_PROXY': '127.0.0.1,localhost', 'no_proxy': '127.0.0.1,localhost'}
     prompt = 'Return the literal owned-client-fixture without tools.'
     if case == 'explicit-user': prompt = 'Use $owned-user. '+prompt
-    elif case in ['duplicate-explicit', 'alias-explicit', 'copy-explicit']: prompt = 'Use $owned-shared. '+prompt
+    elif case in ['duplicate-explicit', 'alias-explicit', 'copy-explicit', 'copy-disabled-explicit', 'alias-disabled-explicit']: prompt = 'Use $owned-shared. '+prompt
     proc = None
     try:
         proc = subprocess.Popen([str(binary), 'exec', '--json', '--ephemeral', '--ignore-rules', '--sandbox', 'read-only',
@@ -132,7 +140,8 @@ for case in ['catalog', 'explicit-user', 'duplicate-catalog', 'duplicate-explici
         server.shutdown(); server.server_close(); thread.join(timeout=2)
     assert proc.returncode == 0 and len(observations) == 1
     assert observations[0]['onlyFakeCredential']
-    assert any(skill['catalogMarkerPresent'] for skill in observations[0]['skills'])
+    if not case.startswith('alias-disabled'):
+        assert any(skill['catalogMarkerPresent'] for skill in observations[0]['skills'])
 collection = {'clientVersion': subprocess.check_output([str(binary), '--version'], text=True).strip(),
               'binarySHA256': hashlib.sha256(binary.read_bytes()).hexdigest(),
               'fixtureSHA256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),

@@ -506,7 +506,13 @@ struct ConfigChecks {
             (env.url(".codex/skills"), "codex", "~/.codex/skills"),
         ] + skillDirs + projectSkillRoots() + codexCacheSkillRoots()
         let fm = FileManager.default
-        var byName: [String: [(agent: String, real: String, origin: String, key: String)]] = [:]
+        let skillFlags = Self.codexSkillFlags((try? String(contentsOf: env.url(".codex/config.toml"), encoding: .utf8)) ?? "")
+        if skillFlags.incomplete {
+            currentItem = nil
+            add(Finding(.info, .skills, agent: "codex", subject: "skills.config",
+                        tr("Skill enablement syntax is unsupported or ambiguous; configured states were not inferred."), source: "~/.codex/config.toml"))
+        }
+        var byName: [String: [(agent: String, real: String, origin: String, key: String, codexDisabled: Bool)]] = [:]
         var remaining = 10_000
         for (dir, agent, origin) in roots {
             guard !env.cancelled() else { return }
@@ -549,6 +555,7 @@ struct ConfigChecks {
                                                        sourcePath: Redact.text(env.short(skill.path)),
                                                        contentHash: SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined())
                         footprint.canonicalID = Self.skillFileIdentity(skill)
+                        if agent == "codex" || agent == "shared" { footprint.codexConfiguredEnabled = skillFlags.paths[skill.standardizedFileURL.resolvingSymlinksInPath().path] }
                         footprint.scope = origin.hasPrefix("project ") ? "project" : agent == "codex-cache" ? "cache" : agent == "plugin" ? "plugin" : "user"
                         if agent == "plugin" { footprint.namespace = String(origin.dropFirst("plugin ".count)) }
                         if let info = cacheSkillSources[dir.path] {
@@ -570,7 +577,10 @@ struct ConfigChecks {
                                             tr("Local reference inspection is incomplete; only supported static Markdown targets were checked."), source: env.short(skill.path)))
                             }
                         }
-                        if let i = items.firstIndex(where: { $0.id == key }) { items[i].skillFootprint = footprint }
+                        if let i = items.firstIndex(where: { $0.id == key }) {
+                            items[i].skillFootprint = footprint
+                            if footprint.codexConfiguredEnabled == false { items[i].enabled = false }
+                        }
                         // Nested collections may resolve through a shared symlink: never offer removal of their targets.
                         if agent != "plugin", agent != "codex-cache", !origin.hasPrefix("project "), node.depth == 1 { offerSkillRemoval(u) }
                         if front == nil || front?["description"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
@@ -578,7 +588,7 @@ struct ConfigChecks {
                                         tr("SKILL.md has no front matter description, so agents can't tell when to use it"),
                                         fix: tr("start SKILL.md with ---\\nname: %1$@\\ndescription: …\\n---", name), source: origin))
                         }
-                        byName[name, default: []].append((agent, footprint.canonicalID ?? real, origin, key))
+                        byName[name, default: []].append((agent, footprint.canonicalID ?? real, origin, key, footprint.codexConfiguredEnabled == false))
                     } else {
                         item(.skills, agent: agent, id: "\(agent)|\(origin)|\(u.path)", name: u.lastPathComponent, detail: env.short(skill.path), source: origin)
                         add(Finding(.warning, .skills, agent: agent, subject: u.lastPathComponent,
@@ -620,7 +630,7 @@ struct ConfigChecks {
         for (name, copies) in byName.sorted(by: { $0.key < $1.key }) {
             guard !env.cancelled() else { return }
             for agent in ["claude", "codex"] {
-                let visible = copies.filter { $0.agent == agent || (agent == "codex" && $0.agent == "shared") }
+                let visible = copies.filter { ($0.agent == agent || (agent == "codex" && $0.agent == "shared")) && !(agent == "codex" && $0.codexDisabled) }
                 guard Set(visible.map(\.real)).count > 1 else { continue }
                 for copy in visible {
                     currentItem = copy.key
