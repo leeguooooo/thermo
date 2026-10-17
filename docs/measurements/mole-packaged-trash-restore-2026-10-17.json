@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-17",
+  "source": "3aeb21c9216db75eb6546748178992bf68965cb5",
+  "version": "1.1.28",
+  "build": "457",
+  "cliSHA256": "35e5e24ee5c18f2cea44b3669ea7e7c4ffa948ccdd62eef4eb1f5c43ad3ca223",
+  "filesystem": "64 MB owned writable APFS disk image",
+  "actualPackagedCommands": [
+    "space trash PATH --dry-run --json",
+    "space trash PATH --yes --json",
+    "clean restore BATCH --dry-run --json",
+    "clean restore BATCH --yes --json"
+  ],
+  "successfulFlow": {
+    "trashPreviewExit": 0,
+    "trashExit": 0,
+    "nativeVolumeTrash": true,
+    "actualBatchJournalGeneratedByCLI": true,
+    "restorePreviewExit": 0,
+    "previewLeftSourceInTrash": true,
+    "originalPathConflictExit": 1,
+    "originalPathConflictStatus": "conflict",
+    "bothConflictPayloadsPreserved": true,
+    "restoreAfterConflictRemovedExit": 0,
+    "payloadSHA256": "69e994efbe9f80636dbc4b705fcf8d115c8bf368b31991107e61a690466d93c6",
+    "deviceAndInodePreserved": true
+  },
+  "replacedTrashObject": {
+    "previewExit": 0,
+    "restoreExit": 1,
+    "status": "changed",
+    "replacementNotRestored": true,
+    "replacementAndRetainedOriginalPreserved": true,
+    "restoreAfterOriginalObjectReturnedExit": 0,
+    "originalObjectRestored": true
+  },
+  "cleanup": {
+    "bothDetachCommandsExitedZero": true,
+    "hdiutilInventoryConfirmsOwnedImageDetached": true,
+    "fixtureImageRetainedForEvidence": true
+  },
+  "installedAppAndHelperUnchanged": true,
+  "rawEvidenceSHA256": {
+    "stages.json": "a7b8c2e6cfa2934def324572bbeb9d6f9d1818192de6a0c76ffb461e7a4cf3cf",
+    "identity-stages.json": "c8811864d129960adae6ccb627a0659662fc078432f716f32a582369674976b5",
+    "thermo-verify-packaged-trash.py": "bb89bbb5b70bd4283cccc60d6ebacb62c485cf7ef386a0542dbda7edf0ba3cbf",
+    "thermo-verify-packaged-trash-identity.py": "d6e5941436fc388ce1591da108b88b0789a661ce5343e06973f368aee7bba841"
+  },
+  "scope": "Native APFS Trash and actual signed CLI, with only self-created payloads and an isolated CFFIXED_USER_HOME; no personal Trash access, installed replacement, helper RPC or hardware control.",
+  "limitations": [
+    "Single-file flows; recursive directory content stability is not sealed by reviewIdentity",
+    "No installed App or visible restore-sheet acceptance",
+    "Does not prove atomicity against every concurrent filesystem mutation",
+    "No physical external-disk, permission failure or network-volume acceptance"
+  ]
+}

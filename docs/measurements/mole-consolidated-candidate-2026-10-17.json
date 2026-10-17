@@ -110,5 +110,6 @@
     "Long duration and complete Mole parity acceptance"
   ],
   "verificationNote": "The package verifier initially rejected lowercase release in its own case-sensitive assertion after the App exited 0. Inspected the saved lifecycle report and corrected verifier assertion without rerunning or replacing the App result.",
-  "packagedCoreFlows": "mole-packaged-core-flows-2026-10-17.json"
+  "packagedCoreFlows": "mole-packaged-core-flows-2026-10-17.json",
+  "packagedTrashRestore": "mole-packaged-trash-restore-2026-10-17.json"
 }
