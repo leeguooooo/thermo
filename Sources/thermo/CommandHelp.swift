@@ -63,7 +63,7 @@ enum CommandHelp {
     clean|clean [CATEGORY_or_ai] [--all] [--csv] [--root DIRS] [--older-than DAYS] [--budget SEC] [--exact] [--json|--stream]|cli
     clean overview|clean overview [--budget SEC] [--json|--stream]|cli
     clean run|clean run safe_or_ID… [--budget SEC] [--exact] [--rescan] [--root DIRS] [--older-than DAYS] [--dry-run] [--yes] [--trash|--permanent] [--json]|cli
-    clean plan|clean plan safe_or_ID… [--root DIRS] [--budget SEC] [--trash|--permanent] [--json]|cli
+    clean plan|clean plan safe_or_ID… [--rescan] [--root DIRS] [--budget SEC] [--trash|--permanent] [--json]|cli
     clean apply|clean apply UUID [--dry-run] [--yes] [--json]|cli
     clean log|clean log [--all] [--json]|cli
     clean whitelist|clean whitelist [add_or_remove PATH…] [--dry-run] [--json]|cli
@@ -117,7 +117,7 @@ enum CommandHelp {
     claude-reset run|claude-reset run TARGET… [--dry-run] [--yes] [--json]|cli
     claude-reset batches|claude-reset batches [--json]|cli
     claude-reset restore|claude-reset restore UUID [--dry-run] [--yes] [--json]|cli
-    screen|screen [status|start|stop|shortcut|clear-shortcut] [--duration oneMinute_or_twoMinutes_or_fiveMinutes_or_manual] [--key-code N --modifiers N --key-label LABEL] [--dry-run] [--yes] [--json]|app
+    screen|screen [status|start|stop|duration|shortcut|clear-shortcut] [--duration oneMinute_or_twoMinutes_or_fiveMinutes_or_manual] [--key-code N --modifiers N --key-label LABEL] [--dry-run] [--yes] [--json]|app
     app-control|app-control status [--json]|app
     app-control login|app-control login [status|on|off] [--dry-run] [--yes] [--json]|app
     app-control updates|app-control updates [status|check|on|off] [--dry-run] [--yes] [--json]|app

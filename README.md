@@ -463,7 +463,7 @@ thermo clean repair-worktrees --root /path/to/repo --yes --json
 
 | 操作 | CLI |
 | --- | --- |
-| 擦屏、停止、状态、快捷键 | `screen status/start/stop/shortcut/clear-shortcut` |
+| 擦屏、停止、状态、快捷键 | `screen status/start/stop/duration/shortcut/clear-shortcut` |
 | 登录启动 | `app-control login status/on/off` |
 | Thermo 自动更新与交互检查 | `app-control updates status/on/off/check` |
 | App 注册的 helper | `app-control helper status/install/uninstall`；旧式安装仍用 `helper` |
@@ -477,7 +477,7 @@ thermo clean repair-worktrees --root /path/to/repo --yes --json
 
 App 命令要求运行兼容版本的 Thermo.app。通道检查当前用户身份、私有路径、请求 ID 和消息大小；超时或丢失回执表示结果未确认，不自动重试。打开系统设置、开始 Sparkle 交互检查只报告对应动作，不能当作权限已获准或更新已安装。涉及 helper、权限、浏览器和真实硬件的验收须分别核对，不能从命令入口或夹具测试推定。
 
-`screen shortcut` 用 `--key-code`、`--modifiers`、`--key-label` 指定与 App 相同的 Carbon 快捷键；至少两个修饰键，其中必须含 Command、Control 或 Option。`screen start --duration` 接受 `oneMinute`、`twoMinutes`、`fiveMinutes` 或 `manual`。这些修改先用 `--dry-run` 查看，再加 `--yes` 执行。
+`screen shortcut` 用 `--key-code`、`--modifiers`、`--key-label` 指定与 App 相同的 Carbon 快捷键；至少两个修饰键，其中必须含 Command、Control 或 Option。`screen status` 包含已保存的时长，`screen duration --duration` 可单独设置；`screen start` 未指定时长时采用 App 已保存的选择。`screen start --duration` 接受 `oneMinute`、`twoMinutes`、`fiveMinutes` 或 `manual`。这些修改先用 `--dry-run` 查看，再加 `--yes` 执行。
 
 **固定清理计划**避免预演和执行反复扫描整机：
 
@@ -487,6 +487,6 @@ thermo clean apply PLAN_UUID --dry-run --json
 thermo clean apply PLAN_UUID --yes --json
 ```
 
-计划保存审阅时的路径、身份和处理方式，有效期 15 分钟。执行前仍复查白名单、文件变化、进程和工具范围。计划在提交删除前即被认领，一次执行后不能重放；中断后查看操作记录并重新扫描，不能重复提交旧计划。`apply` 不接受覆盖范围或处理方式的参数。
+计划保存审阅时的路径、身份和处理方式，有效期 15 分钟。执行前仍复查白名单、文件变化、进程和工具范围。计划在提交删除前即被认领，一次执行后不能重放；中断后查看操作记录并重新扫描，不能重复提交旧计划。`apply` 不接受覆盖范围或处理方式的参数。文件变化后使用 `clean plan ID… --rescan` 获取新计划，不能反复使用旧扫描。
 
 `clean run/apply --json` 使用 **schemaVersion 2** 对象，旧版数组位于 `results`。对象另有 `complete`、`outcome`、`scanComplete`、`skipped`、`missingSelectors`、`estimatedDeletedBytes`、`trashedBytes` 和整批 `spaceObservation`。文件估计删除量和实测磁盘变化不同，后者含其他任务的并发写入或删除。清理的部分执行、被截断的扫描和未确认结果返回退出码 **3**；无效参数或拒绝返回 **2**，执行异常返回 **1**。调用方应读取结果和退出状态，不能仅凭命令已返回判断任务完成。

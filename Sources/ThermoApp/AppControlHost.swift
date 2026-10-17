@@ -7,6 +7,8 @@ import ThermoKit
 /// The socket is same-user only; requests are bounded and never interpreted as shell commands.
 @MainActor final class AppControlHost {
     static let shared = AppControlHost()
+    private let defaults: UserDefaults
+    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
     private var server: AppControlServer?
     private let integration = AgentAccess()
     private var seen = Set<UUID>()
@@ -30,14 +32,16 @@ import ThermoKit
         seen.insert(request.id)
         let action = request.action
         let reads = ["status","screen.status","login.status","updates.status","helper.status","permissions.status","integration.status","awdl.status"]
-        let writes = ["screen.start","screen.stop","screen.shortcut","screen.clear-shortcut","login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","awdl.on","awdl.off"]
+        let writes = ["screen.start","screen.stop","screen.duration","screen.shortcut","screen.clear-shortcut","login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","awdl.on","awdl.off"]
         guard reads.contains(action) || writes.contains(action) else { return result([:], "Unsupported App control operation.") }
-        guard request.arguments.keys.allSatisfy({ action == "awdl.on" ? $0 == "seconds" : action == "screen.start" ? $0 == "duration" : action == "screen.shortcut" ? ["key-code","modifiers","key-label"].contains($0) : false }) else { return result([:], "Unexpected operation arguments.") }
+        guard request.arguments.keys.allSatisfy({ action == "awdl.on" ? $0 == "seconds" : ["screen.start","screen.duration"].contains(action) ? $0 == "duration" : action == "screen.shortcut" ? ["key-code","modifiers","key-label"].contains($0) : false }) else { return result([:], "Unexpected operation arguments.") }
         let screen = CleanScreenModel.shared
         var duration: CleanScreenDuration?
         var binding: CleanScreenKeyBinding?
-        if action == "screen.start" {
-            guard let selected = CleanScreenDuration(rawValue: request.arguments["duration"] ?? "twoMinutes") else { return result([:], "Invalid screen duration.") }; duration = selected
+        if action == "screen.start" || action == "screen.duration" {
+            if action == "screen.duration", request.arguments["duration"] == nil { return result([:], "An explicit duration is required.") }
+            let saved = defaults.string(forKey:CleanScreenDuration.preferenceKey).flatMap(CleanScreenDuration.init(rawValue:)) ?? .twoMinutes
+            guard let selected = CleanScreenDuration(rawValue:request.arguments["duration"] ?? saved.rawValue) else { return result([:], "Invalid screen duration.") }; duration = selected
         }
         if action == "screen.shortcut" {
             guard let key = UInt32(request.arguments["key-code"] ?? ""), let modifiers = UInt32(request.arguments["modifiers"] ?? ""), let label = request.arguments["key-label"] else { return result([:], "Invalid shortcut fields.") }
@@ -75,9 +79,11 @@ import ThermoKit
             return result(["phase":state.phase.rawValue,"ownedByApp":String(state.ownedByCaller)], network.issue ?? (confirmed ? nil : "AWDL state did not confirm the requested change."))
         case "screen.start":
             if screen.active, screen.session?.duration != duration { return result(screenState(), "A different screen session is already active; stop it explicitly before changing duration.") }
+            if request.arguments["duration"] != nil { defaults.set(duration!.rawValue,forKey:CleanScreenDuration.preferenceKey) }
             screen.start(duration!)
             return result(screenState(), screen.active ? nil : screen.issue ?? "Clean Screen did not start.")
         case "screen.stop": screen.stop(); return result(screenState())
+        case "screen.duration": defaults.set(duration!.rawValue,forKey:CleanScreenDuration.preferenceKey); return result(screenState())
         case "screen.shortcut", "screen.clear-shortcut":
             let shortcut = CleanScreenShortcutModel.shared
             shortcut.apply(action == "screen.clear-shortcut" ? nil : binding)
@@ -148,7 +154,7 @@ import ThermoKit
     private func screenState() -> [String:String] {
         let model = CleanScreenModel.shared; model.refreshPermission()
         let shortcut = CleanScreenShortcutModel.shared
-        var state = ["active":String(model.active),"accessibility":String(model.hasAccessibility),"shortcut":shortcut.binding?.label ?? "", "shortcutUncertain":String(shortcut.uncertain)]
+        var state = ["active":String(model.active),"accessibility":String(model.hasAccessibility),"shortcut":shortcut.binding?.label ?? "", "shortcutUncertain":String(shortcut.uncertain),"savedDuration":defaults.string(forKey:CleanScreenDuration.preferenceKey).flatMap(CleanScreenDuration.init(rawValue:))?.rawValue ?? CleanScreenDuration.twoMinutes.rawValue]
         if let session = model.session { state["duration"] = session.duration.rawValue; state["remainingSeconds"] = session.remaining(ProcessInfo.processInfo.systemUptime).map(String.init(describing:)) ?? "manual" }
         if let issue = model.issue { state["issue"] = issue }
         return state

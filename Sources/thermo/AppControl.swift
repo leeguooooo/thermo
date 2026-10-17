@@ -13,10 +13,10 @@ struct AppControlCommand {
         var action: String, values: [String:String] = [:], mutates = false
         switch command {
         case "screen":
-            guard rest.count <= 1, ["status","start","stop","shortcut","clear-shortcut"].contains(sub) else { throw CLIError("Run thermo screen --help.") }
+            guard rest.count <= 1, ["status","start","stop","duration","shortcut","clear-shortcut"].contains(sub) else { throw CLIError("Run thermo screen --help.") }
             action = "screen." + sub; mutates = sub != "status"
-            if sub == "start" {
-                let duration = args.options["duration"] ?? "twoMinutes"
+            if sub == "duration", args.options["duration"] == nil { throw CLIError("screen duration requires --duration; use screen status to read the saved preference") }
+            if sub == "start" || sub == "duration", let duration = args.options["duration"] {
                 guard ["oneMinute","twoMinutes","fiveMinutes","manual"].contains(duration) else { throw CLIError("--duration must be oneMinute, twoMinutes, fiveMinutes or manual") }
                 values["duration"] = duration
             }

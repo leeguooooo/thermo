@@ -90,7 +90,7 @@ extension CleanCommand {
         guard !selectors.isEmpty else { throw CLIError("usage: thermo clean plan safe_or_ID… [--trash|--permanent] [--json]") }
         guard !(args.has("trash") && args.has("permanent")) else { throw CLIError("Choose --trash or --permanent.") }
         let report: ScanReport
-        if let cached = try reusableReport(for: selectors) { report = cached.report }
+        if !args.has("rescan"), let cached = try reusableReport(for: selectors) { report = cached.report }
         else { report = try scan(Self.cleanupCategories(for: selectors), onlyIDs: Self.itemIDs(in: selectors)) }
         let picked = report.select(selectors)
         let missing = selectors.filter { report.select([$0]).isEmpty }

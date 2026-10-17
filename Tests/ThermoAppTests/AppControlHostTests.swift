@@ -41,3 +41,20 @@ extension AppControlHostTests {
         }
     }
 }
+
+extension AppControlHostTests {
+    @MainActor func testScreenDurationPreviewDoesNotWriteAndExplicitSettingPersists() async throws {
+        let suite = "thermo.cli.duration." + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName:suite))
+        defer { defaults.removePersistentDomain(forName:suite) }
+        let host = AppControlHost(defaults:defaults)
+        let preview = await host.handle(.init(action:"screen.duration",arguments:["duration":"fiveMinutes"],dryRun:true))
+        XCTAssertTrue(preview.succeeded)
+        XCTAssertNil(defaults.string(forKey:CleanScreenDuration.preferenceKey))
+        let applied = await host.handle(.init(action:"screen.duration",arguments:["duration":"fiveMinutes"]))
+        XCTAssertTrue(applied.succeeded)
+        XCTAssertEqual(defaults.string(forKey:CleanScreenDuration.preferenceKey),"fiveMinutes")
+        XCTAssertEqual(applied.values["savedDuration"],"fiveMinutes")
+        XCTAssertFalse(CleanScreenModel.shared.active)
+    }
+}

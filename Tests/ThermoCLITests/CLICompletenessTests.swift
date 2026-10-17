@@ -157,3 +157,11 @@ extension CLICompletenessTests {
         XCTAssertFalse(FileManager.default.fileExists(atPath:store.directory.appendingPathComponent(reviewed.id.uuidString + ".used").path))
     }
 }
+
+extension CLICompletenessTests {
+    func testFreshPlanCanExplicitlyRescanWithoutWeakeningApply() throws {
+        XCTAssertNoThrow(try CommandContract.validate(Args(["clean","plan","safe","--rescan","--budget","120","--json"])))
+        let command = CleanCommand(app:App(args:try Args(["clean","apply","fixture","--rescan","--yes"])))
+        XCTAssertThrowsError(try command.applyPlan(["fixture"]))
+    }
+}
