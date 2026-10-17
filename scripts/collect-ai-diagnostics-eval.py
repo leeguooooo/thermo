@@ -44,6 +44,17 @@ def grade(text, expected):
                                               'total': len(checks), 'pass_rate': count / len(checks)}}
 
 
+def skill_content_observed(events, skill_bytes):
+    """Attest successful command output, not merely a command mentioning a path."""
+    return any(e.get('type') == 'item.completed'
+               and e.get('item', {}).get('type') == 'command_execution'
+               and e['item'].get('exit_code') == 0
+               and type(e['item'].get('exit_code')) is int
+               and 'ai-diagnostics-evidence/SKILL.md' in e['item'].get('command', '')
+               and e['item'].get('aggregated_output') == skill_bytes.decode('utf-8')
+               for e in events)
+
+
 async def run_one(case, variant, workspace, auth, settings, version, skill_bytes, collector_hash):
     label = 'with_skill' if variant == 'candidate' else 'without_skill'
     directory = workspace / 'iteration-1' / ('eval-' + str(case['id']) + '-' + case['name']) / label / 'run-1'
@@ -62,7 +73,8 @@ async def run_one(case, variant, workspace, auth, settings, version, skill_bytes
         target.write_bytes(skill_bytes)
     prompt = case['prompt']
     if variant == 'candidate':
-        prompt = 'Use $ai-diagnostics-evidence for this task.\n' + prompt
+        prompt = ('Use $ai-diagnostics-evidence for this task. Before answering, read the supplied '
+                  '.agents/skills/ai-diagnostics-evidence/SKILL.md with a shell command and apply it.\n' + prompt)
     env = {key: value for key, value in os.environ.items()
            if not key.startswith(('OPENAI_', 'CODEX_', 'ANTHROPIC_'))}
     env.update(HOME=str(home), CODEX_HOME=str(codex_home), XDG_CONFIG_HOME=str(home / '.config'))
@@ -144,6 +156,7 @@ async def run_one(case, variant, workspace, auth, settings, version, skill_bytes
                   tokenSemantics='codex-exec-0.163.0-turn-completed-native-input-v1' if inputs is not None or outputs is not None else None)
     detail = dict(taskID=case['name'], variant=variant, outcome=outcome, seconds=seconds,
                   nativeUsage=usage, skillReadCommandObserved=skill_read, commandCount=len(commands),
+                  skillContentObserved=skill_content_observed(events, skill_bytes),
                   commandReadAudit=commands, grading=grading, finalOutput=text, cliVersion=version)
     print(json.dumps({'task': case['name'], 'variant': variant, 'outcome': outcome,
                       'skillReadObserved': skill_read, 'nativeUsagePresent': bool(usage)}), flush=True)
@@ -170,7 +183,8 @@ async def main():
     (workspace / 'frozen-collector.py').write_bytes(collector_bytes)
     settings = {'environment': digest({'platform': platform.platform(), 'cli': version, 'inputKind': suite['inputKind']}),
                 'settings': digest({'model': MODEL, 'effort': EFFORT, 'sandbox': 'read-only', 'ephemeral': True,
-                                    'ignoreUserConfig': True, 'ignoreRules': True, 'freshHome': True})}
+                                    'ignoreUserConfig': True, 'ignoreRules': True, 'freshHome': True,
+                                    'candidateSkillDelivery': 'explicit-file-read-v2'})}
     for case in suite['evals']:
         path = workspace / 'iteration-1' / ('eval-' + str(case['id']) + '-' + case['name'])
         path.mkdir(parents=True)

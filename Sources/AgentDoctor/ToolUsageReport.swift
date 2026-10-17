@@ -23,6 +23,18 @@ public struct ToolUsageRow: Codable, Identifiable, Sendable {
     public var returnedTextBytes = 0
     public var returnedTextEstimatedTokens = 0
     public var nonTextBlocks = 0
+
+    /// Only completed results with a Boolean error status are a usable denominator.
+    /// These are observations, not a task success rate or an estimate for missing results.
+    public var knownStatusResults: Int? {
+        guard completed >= 0, unknownErrorStatus >= 0, unknownErrorStatus <= completed,
+              reportedErrors >= 0, reportedErrors <= completed - unknownErrorStatus else { return nil }
+        return completed - unknownErrorStatus
+    }
+    public var explicitErrorRate: Double? {
+        guard let denominator = knownStatusResults, denominator > 0 else { return nil }
+        return Double(reportedErrors) / Double(denominator)
+    }
 }
 
 public struct LoggedTokenUsage: Codable, Sendable {

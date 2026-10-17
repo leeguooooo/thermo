@@ -1,0 +1,63 @@
+{
+  "generated": "2026-10-16T23:59:17.201574+00:00",
+  "baseCommit": "4a5c08018b9e1cea2428249a2397738f7775acf4",
+  "sourceSHA256": {
+    "Sources/AgentDoctor/ToolUsageReport.swift": "8aff39fe78edb2332d88a36e8a948a832365de4b859ca403b44b0ffc77f634dd",
+    "Sources/ThermoApp/ToolUsagePanel.swift": "c7fd36f495d6ed7a8f1af3b32e19f9538228cb33e4a286f1f459fcfc742e1dcd",
+    "Sources/ThermoL10n/ZhHans.swift": "fc008019faddceff635ec18cc9918d1dd6b5bd23393f97b8feb5a6a25b5188e5",
+    "Sources/thermo/Agents.swift": "006fc739344c6a92e9dfe6151916a94a7a63418592a954e756a9495ff4ae3ab9",
+    "Tests/AgentDoctorTests/ToolUsageTests.swift": "e93945a560515b0637a470116190ec5156e048b0e72ef816c3ec5ce819d0a726",
+    "scripts/verify-tool-usage.py": "7b7b75ef4cb02ba90308f981b5ee05e700d15de018d1e3c86a7c0c67e998f677"
+  },
+  "definition": "reportedErrors / (completed - unknownErrorStatus). Only explicit Boolean statuses in completed results; missing results excluded. Zero or inconsistent denominator stays unknown.",
+  "interpretation": "Observed proportion with explicit numerator and denominator, not task success or an overall MCP/Skill quality score. Existing absolute error-count sort is unchanged.",
+  "jsonCompatibility": "Derived properties do not change the Codable report schema; raw counters remain available.",
+  "tests": {
+    "configuration": "debug",
+    "usageTests": 17,
+    "localizationTests": 3,
+    "failures": 0,
+    "logSHA256": "386b099e8b83599b5f08c1c62762d17dcb1b365c3b5e3f33ccf0534ee022cfa0"
+  },
+  "cliFixture": {
+    "passed": true,
+    "mcpCalls": 2,
+    "skillCalls": 1,
+    "requestTokensKeptSeparate": true,
+    "privateTextExcluded": true,
+    "imageTokensUnknown": true,
+    "knownStatusErrorProportionVerified": true,
+    "unknownErrorProportionPreserved": true
+  },
+  "nativeUI": {
+    "method": "cua_repl accessibility and screenshot of actual panel source linked with current objects",
+    "scope": "Standalone native QA panel, synthetic records; not packaged or installed-App acceptance.",
+    "mixedSample": {
+      "calls": 4,
+      "completed": 3,
+      "unknownErrorStatus": 1,
+      "missingResults": 1,
+      "display": "1 / 2 (50.0%)"
+    },
+    "allUnknownSample": {
+      "calls": 2,
+      "completed": 1,
+      "unknownErrorStatus": 1,
+      "missingResults": 1,
+      "display": "unknown"
+    },
+    "knownNonErrorSample": {
+      "calls": 3,
+      "completed": 2,
+      "unknownErrorStatus": 0,
+      "missingResults": 1,
+      "display": "0 / 2 (0.0%)"
+    },
+    "chineseLabelsAndExplanationVisible": true,
+    "qaWindowClosed": true,
+    "installedAppPreserved": true,
+    "realLogsRead": false
+  },
+  "candidatePackageRebuilt": false,
+  "publicationPerformed": false
+}

@@ -208,12 +208,16 @@ struct AgentsCommand {
         for row in report.tools.prefix(app.args.has("all") ? report.tools.count : 20) {
             lines.append(style.bold((row.server.map { $0 + " / " } ?? "") + row.name) + " [" + row.host + ", " + row.kind + "]")
             lines.append("  \(row.calls) calls · \(row.completed) results · \(row.reportedErrors) explicit errors · \(row.unknownErrorStatus) unknown error status · \(row.missingResults) missing results")
+            if let rate = row.explicitErrorRate, let denominator = row.knownStatusResults {
+                lines.append("  explicit errors among known-status results: \(row.reportedErrors) / \(denominator) (\(String(format: "%.1f%%", rate * 100)))")
+            } else { lines.append("  explicit error rate unknown; no usable known-status denominator") }
             let median = row.medianSeconds.map { String(format: "%.3fs", $0) } ?? "unknown"
             let p95 = row.p95Seconds.map { String(format: "%.3fs", $0) } ?? "unknown (requires 20 samples)"
             if let encoding = row.referenceEncoding { lines.append("  " + encoding + ": " + (row.referenceReturnedTextTokens.map(String.init) ?? "unknown") + " reference tokens; unavailable results: \(row.unavailableReferenceResults ?? 0)") }
             lines.append("  result text: \(row.returnedTextBytes) bytes / ≈\(row.returnedTextEstimatedTokens) tokens · median \(median) · P95 \(p95) · \(row.nonTextBlocks) non-text blocks not tokenized")
         }
         if report.tools.isEmpty { lines.append("No directly attributable MCP or explicit Skill calls were observed; this does not prove they were unused.") }
+        else { lines.append("Error proportions exclude missing results and unknown error statuses; they do not measure task success.") }
         lines += ["", "Request counters (not individual tool consumption):"]
         if report.sessionTokens.isEmpty { lines.append("  No supported request token records; usage is unknown.") }
         for tokens in report.sessionTokens {
