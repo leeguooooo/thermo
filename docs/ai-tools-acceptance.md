@@ -16,6 +16,10 @@
 
 检查启动代码时发现并[修复本机 Claude Design 代理的 SSE 等待问题](measurements/claude-design-relay-sse-2026-10-17.json)：以前收到 JSON-RPC 响应后仍等待流结束，现在按请求 ID 识别完整响应。原有鉴权、刷新、重定向保护及分发逻辑保持一致，8 项离线用例在配置所用 Python 3.9.6 和 Python 3.14 均通过。自有流延迟关闭对照由约 1.03 秒等待变为约 1 毫秒返回，不能当作真实 Design 服务提速。源码已写入本机代理，现存实例未重启，下次启动加载；未访问真实 Design 服务或钥匙串。
 
+[后续覆盖盘点](measurements/mcp-configured-coverage-2026-10-17.json)已完整读取 Codex 的 7 个配置、282 个工具，定义数组合计 211,281 个 cl100k 参考 token，独立服务指令另计 893 token；Figma 鉴权项与未探测真实授权的 Claude Design 仍不按零计，总体未知。iPhone-use 的检查子进程关闭了预热，仅取工具清单，没有设备控制调用。
+
+其中 [REA 清单优化](measurements/rea-mcp-presentation-2026-10-17.json)使用已安装 6.5.0 支持的 `REA_MCP_OUTPUT_SCHEMA_PROFILE="off"`，只从 `tools/list` 省略输出 schema。207 个工具的全部其他字段逐项一致，同一份自有 HAR 的完整结构化 Evidence 也完全相同。定义由 3,114,003 降至 823,514 字节，减少约 73.6%；保留完整输入 schema 和服务端结果校验，但客户端不再取得输出类型声明。已备份并只修改 Codex REA 的这一环境项，正常配置复查可在 10 秒预算内完成，未主动重启现有会话。收益是清单传输和计量负担减少，不能当成模型实际 token 或账单节省。原配置全量参考检查在列表返回后超时，不应写成服务没有响应。
+
 | 原始问题 | 当前能力与证据 | 仍不能据此判断 |
 |---|---|---|
 | MCP 总体有多大、占多少 token | 汇总已完整检查配置的定义字节、定义数组计数和独立服务指令计数；支持启发式和两种离线参考编码。[汇总与取消测试](../Tests/ThermoAppTests/MCPDefinitionStoreTests.swift)、[批量原生验收](measurements/mcp-batch-inspection-2026-10-17.json) | 未检查配置不按零计；多宿主配置保留独立计量。它不是宿主当前实际加载上下文或账单 |

@@ -1,0 +1,2225 @@
+{
+  "date": "2026-10-17",
+  "scope": "Codex enabled configurations only, assembled from distinct observed inspections; not an atomic snapshot. REA reflects the newly configured off output-schema presentation.",
+  "enabledConfigurations": 9,
+  "inspectedConfigurations": 8,
+  "completeConfigurations": 7,
+  "uninspectedConfigurations": [
+    "claude_design"
+  ],
+  "incomplete": [
+    {
+      "server": "figma",
+      "state": "authenticationRequired"
+    }
+  ],
+  "referenceEncoding": "cl100k_base",
+  "tools": 282,
+  "definitionArrayReferenceTokensSum": 211281,
+  "separateServerInstructionReferenceTokensSum": 893,
+  "definitionBytesSum": 897724,
+  "fullConfiguredTotalKnown": false,
+  "observations": [
+    {
+      "server": "codegraph",
+      "generated": "2026-10-17T02:21:15Z",
+      "tools": 1,
+      "definitionBytes": 1716,
+      "definitionArrayReferenceTokens": 387,
+      "serverInstructionReferenceTokens": 345
+    },
+    {
+      "server": "discord",
+      "generated": "2026-10-17T02:21:15Z",
+      "tools": 22,
+      "definitionBytes": 8480,
+      "definitionArrayReferenceTokens": 1913,
+      "serverInstructionReferenceTokens": 25
+    },
+    {
+      "server": "iphone-use",
+      "generated": "2026-10-17T02:33:31Z",
+      "tools": 37,
+      "definitionBytes": 53086,
+      "definitionArrayReferenceTokens": 11960,
+      "serverInstructionReferenceTokens": 322
+    },
+    {
+      "server": "node_repl",
+      "generated": "2026-10-17T02:33:31Z",
+      "tools": 4,
+      "definitionBytes": 2482,
+      "definitionArrayReferenceTokens": 548,
+      "serverInstructionReferenceTokens": 42
+    },
+    {
+      "server": "openaiDeveloperDocs",
+      "generated": "2026-10-17T02:07:00Z",
+      "tools": 5,
+      "definitionBytes": 3265,
+      "definitionArrayReferenceTokens": 781,
+      "serverInstructionReferenceTokens": 0
+    },
+    {
+      "server": "rea",
+      "generated": "2026-10-17T02:44:30Z",
+      "tools": 207,
+      "definitionBytes": 823514,
+      "definitionArrayReferenceTokens": 194330,
+      "serverInstructionReferenceTokens": 159
+    },
+    {
+      "server": "zego",
+      "generated": "2026-10-17T02:15:16Z",
+      "tools": 6,
+      "definitionBytes": 5181,
+      "definitionArrayReferenceTokens": 1362,
+      "serverInstructionReferenceTokens": 0
+    }
+  ],
+  "newReports": {
+    "iphone-use": {
+      "agent": "codex",
+      "analysisSeconds": 0.5218238329980522,
+      "complete": true,
+      "definitions": {
+        "bytes": 53086,
+        "characters": 52935,
+        "estimatedTokens": 13291,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 11960
+      },
+      "elapsedSeconds": 0.6541369999904418,
+      "generated": "2026-10-17T02:33:31Z",
+      "handshakeSeconds": 0.03601287500350736,
+      "instructions": {
+        "bytes": 1354,
+        "characters": 1346,
+        "estimatedTokens": 340,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 7,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 322
+      },
+      "listingSeconds": 0.023666209002840333,
+      "measurementNote": "Heuristic definition fields use ascii4-unicode1-v1; optional reference counts use the named ordinary-text encoding. Neither proves actual prompt framing or billed usage. Full definitions may differ from agent loading. Output schema is a definition, not returned content. No business tools were called.",
+      "message": "Handshake and complete tool listing succeeded. Business tool behavior has not been tested.",
+      "name": "iphone-use",
+      "protocolVersion": "2025-06-18",
+      "referenceEncoding": "cl100k_base",
+      "referenceEngine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+      "startupSeconds": 0.0008445839921478182,
+      "state": "ready",
+      "tools": [
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 10528,
+            "characters": 10498,
+            "estimatedTokens": 2636,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 2386
+          },
+          "description": {
+            "bytes": 1027,
+            "characters": 1023,
+            "estimatedTokens": 258,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 228
+          },
+          "inputSchema": {
+            "bytes": 9338,
+            "characters": 9312,
+            "estimatedTokens": 2338,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 2120
+          },
+          "issues": [],
+          "name": "phone_run_steps",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 2518,
+            "characters": 2512,
+            "estimatedTokens": 631,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 533
+          },
+          "description": {
+            "bytes": 1080,
+            "characters": 1076,
+            "estimatedTokens": 271,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 217
+          },
+          "inputSchema": {
+            "bytes": 1275,
+            "characters": 1273,
+            "estimatedTokens": 319,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 277
+          },
+          "issues": [],
+          "name": "phone_flow_run",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 90,
+            "characters": 90,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 2224,
+            "characters": 2212,
+            "estimatedTokens": 558,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 520
+          },
+          "description": {
+            "bytes": 942,
+            "characters": 942,
+            "estimatedTokens": 236,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 212
+          },
+          "inputSchema": {
+            "bytes": 1116,
+            "characters": 1104,
+            "estimatedTokens": 281,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 271
+          },
+          "issues": [],
+          "name": "phone_collect_list",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 42,
+            "characters": 42,
+            "estimatedTokens": 11,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 1908,
+            "characters": 1904,
+            "estimatedTokens": 478,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 437
+          },
+          "description": {
+            "bytes": 1070,
+            "characters": 1066,
+            "estimatedTokens": 268,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 248
+          },
+          "inputSchema": {
+            "bytes": 723,
+            "characters": 723,
+            "estimatedTokens": 181,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 165
+          },
+          "issues": [],
+          "name": "phone_elements",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 90,
+            "characters": 90,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1850,
+            "characters": 1842,
+            "estimatedTokens": 464,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 433
+          },
+          "description": {
+            "bytes": 755,
+            "characters": 749,
+            "estimatedTokens": 190,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 175
+          },
+          "inputSchema": {
+            "bytes": 930,
+            "characters": 928,
+            "estimatedTokens": 233,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 221
+          },
+          "issues": [],
+          "name": "phone_scroll_find",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1739,
+            "characters": 1739,
+            "estimatedTokens": 435,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 386
+          },
+          "description": {
+            "bytes": 811,
+            "characters": 811,
+            "estimatedTokens": 203,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 178
+          },
+          "inputSchema": {
+            "bytes": 770,
+            "characters": 770,
+            "estimatedTokens": 193,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 172
+          },
+          "issues": [],
+          "name": "phone_login",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1677,
+            "characters": 1673,
+            "estimatedTokens": 420,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 383
+          },
+          "description": {
+            "bytes": 637,
+            "characters": 637,
+            "estimatedTokens": 160,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 144
+          },
+          "inputSchema": {
+            "bytes": 873,
+            "characters": 869,
+            "estimatedTokens": 219,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 201
+          },
+          "issues": [],
+          "name": "phone_flow_publish",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 42,
+            "characters": 42,
+            "estimatedTokens": 11,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 1633,
+            "characters": 1615,
+            "estimatedTokens": 411,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 363
+          },
+          "description": {
+            "bytes": 793,
+            "characters": 791,
+            "estimatedTokens": 199,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 158
+          },
+          "inputSchema": {
+            "bytes": 729,
+            "characters": 713,
+            "estimatedTokens": 185,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 181
+          },
+          "issues": [],
+          "name": "phone_apps",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 90,
+            "characters": 90,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1513,
+            "characters": 1511,
+            "estimatedTokens": 379,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 358
+          },
+          "description": {
+            "bytes": 372,
+            "characters": 372,
+            "estimatedTokens": 93,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 88
+          },
+          "inputSchema": {
+            "bytes": 983,
+            "characters": 981,
+            "estimatedTokens": 246,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 234
+          },
+          "issues": [],
+          "name": "phone_logs",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 42,
+            "characters": 42,
+            "estimatedTokens": 11,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 1527,
+            "characters": 1525,
+            "estimatedTokens": 382,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 351
+          },
+          "description": {
+            "bytes": 1310,
+            "characters": 1308,
+            "estimatedTokens": 328,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 296
+          },
+          "inputSchema": {
+            "bytes": 33,
+            "characters": 33,
+            "estimatedTokens": 9,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 9
+          },
+          "issues": [],
+          "name": "phone_status",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 43,
+            "characters": 43,
+            "estimatedTokens": 11,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 1512,
+            "characters": 1512,
+            "estimatedTokens": 378,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 334
+          },
+          "description": {
+            "bytes": 695,
+            "characters": 695,
+            "estimatedTokens": 174,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 151
+          },
+          "inputSchema": {
+            "bytes": 700,
+            "characters": 700,
+            "estimatedTokens": 175,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 158
+          },
+          "issues": [],
+          "name": "phone_flow_list",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1394,
+            "characters": 1390,
+            "estimatedTokens": 349,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 330
+          },
+          "description": {
+            "bytes": 699,
+            "characters": 695,
+            "estimatedTokens": 176,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 157
+          },
+          "inputSchema": {
+            "bytes": 527,
+            "characters": 527,
+            "estimatedTokens": 132,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 125
+          },
+          "issues": [],
+          "name": "phone_jev_run",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1268,
+            "characters": 1251,
+            "estimatedTokens": 320,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 306
+          },
+          "description": {
+            "bytes": 341,
+            "characters": 332,
+            "estimatedTokens": 87,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 92
+          },
+          "inputSchema": {
+            "bytes": 767,
+            "characters": 759,
+            "estimatedTokens": 193,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 176
+          },
+          "issues": [],
+          "name": "phone_scroll",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 90,
+            "characters": 90,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1348,
+            "characters": 1346,
+            "estimatedTokens": 338,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 299
+          },
+          "description": {
+            "bytes": 699,
+            "characters": 699,
+            "estimatedTokens": 175,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 153
+          },
+          "inputSchema": {
+            "bytes": 491,
+            "characters": 489,
+            "estimatedTokens": 123,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 110
+          },
+          "issues": [],
+          "name": "phone_hold",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1189,
+            "characters": 1179,
+            "estimatedTokens": 299,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 288
+          },
+          "description": {
+            "bytes": 261,
+            "characters": 259,
+            "estimatedTokens": 66,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 64
+          },
+          "inputSchema": {
+            "bytes": 772,
+            "characters": 764,
+            "estimatedTokens": 194,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 187
+          },
+          "issues": [],
+          "name": "phone_tap",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 42,
+            "characters": 42,
+            "estimatedTokens": 11,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 1218,
+            "characters": 1218,
+            "estimatedTokens": 305,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 263
+          },
+          "description": {
+            "bytes": 523,
+            "characters": 523,
+            "estimatedTokens": 131,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 100
+          },
+          "inputSchema": {
+            "bytes": 578,
+            "characters": 578,
+            "estimatedTokens": 145,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 138
+          },
+          "issues": [],
+          "name": "phone_screenshot",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1132,
+            "characters": 1128,
+            "estimatedTokens": 284,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 246
+          },
+          "description": {
+            "bytes": 498,
+            "characters": 494,
+            "estimatedTokens": 125,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 107
+          },
+          "inputSchema": {
+            "bytes": 468,
+            "characters": 468,
+            "estimatedTokens": 117,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 101
+          },
+          "issues": [],
+          "name": "phone_flow_report",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1018,
+            "characters": 1018,
+            "estimatedTokens": 255,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 246
+          },
+          "description": {
+            "bytes": 326,
+            "characters": 326,
+            "estimatedTokens": 82,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 82
+          },
+          "inputSchema": {
+            "bytes": 528,
+            "characters": 528,
+            "estimatedTokens": 132,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 127
+          },
+          "issues": [],
+          "name": "phone_install_app",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 43,
+            "characters": 43,
+            "estimatedTokens": 11,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 1093,
+            "characters": 1091,
+            "estimatedTokens": 274,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 240
+          },
+          "description": {
+            "bytes": 660,
+            "characters": 658,
+            "estimatedTokens": 166,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 147
+          },
+          "inputSchema": {
+            "bytes": 315,
+            "characters": 315,
+            "estimatedTokens": 79,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 69
+          },
+          "issues": [],
+          "name": "phone_flow_draft",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1058,
+            "characters": 1056,
+            "estimatedTokens": 265,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 228
+          },
+          "description": {
+            "bytes": 219,
+            "characters": 219,
+            "estimatedTokens": 55,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 37
+          },
+          "inputSchema": {
+            "bytes": 682,
+            "characters": 680,
+            "estimatedTokens": 171,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 155
+          },
+          "issues": [],
+          "name": "phone_type",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1021,
+            "characters": 1013,
+            "estimatedTokens": 257,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 225
+          },
+          "description": {
+            "bytes": 388,
+            "characters": 388,
+            "estimatedTokens": 97,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 76
+          },
+          "inputSchema": {
+            "bytes": 469,
+            "characters": 461,
+            "estimatedTokens": 119,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 110
+          },
+          "issues": [],
+          "name": "phone_tap_label",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1041,
+            "characters": 1041,
+            "estimatedTokens": 261,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 220
+          },
+          "description": {
+            "bytes": 357,
+            "characters": 357,
+            "estimatedTokens": 90,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 72
+          },
+          "inputSchema": {
+            "bytes": 517,
+            "characters": 517,
+            "estimatedTokens": 130,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 109
+          },
+          "issues": [],
+          "name": "phone_tap_element",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 91,
+            "characters": 91,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 931,
+            "characters": 927,
+            "estimatedTokens": 234,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 215
+          },
+          "description": {
+            "bytes": 272,
+            "characters": 270,
+            "estimatedTokens": 69,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 57
+          },
+          "inputSchema": {
+            "bytes": 495,
+            "characters": 493,
+            "estimatedTokens": 124,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 121
+          },
+          "issues": [],
+          "name": "phone_run_start",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 90,
+            "characters": 90,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 1058,
+            "characters": 1058,
+            "estimatedTokens": 265,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 212
+          },
+          "description": {
+            "bytes": 855,
+            "characters": 855,
+            "estimatedTokens": 214,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 162
+          },
+          "inputSchema": {
+            "bytes": 33,
+            "characters": 33,
+            "estimatedTokens": 9,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 9
+          },
+          "issues": [],
+          "name": "phone_reconnect",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 887,
+            "characters": 887,
+            "estimatedTokens": 222,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 203
+          },
+          "description": {
+            "bytes": 236,
+            "characters": 236,
+            "estimatedTokens": 59,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 49
+          },
+          "inputSchema": {
+            "bytes": 486,
+            "characters": 486,
+            "estimatedTokens": 122,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 117
+          },
+          "issues": [],
+          "name": "phone_set_location",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 43,
+            "characters": 43,
+            "estimatedTokens": 11,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 942,
+            "characters": 940,
+            "estimatedTokens": 236,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 202
+          },
+          "description": {
+            "bytes": 789,
+            "characters": 787,
+            "estimatedTokens": 198,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 169
+          },
+          "inputSchema": {
+            "bytes": 33,
+            "characters": 33,
+            "estimatedTokens": 9,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 9
+          },
+          "issues": [],
+          "name": "phone_capabilities",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 90,
+            "characters": 90,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 862,
+            "characters": 860,
+            "estimatedTokens": 216,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 199
+          },
+          "description": {
+            "bytes": 315,
+            "characters": 313,
+            "estimatedTokens": 79,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 72
+          },
+          "inputSchema": {
+            "bytes": 384,
+            "characters": 384,
+            "estimatedTokens": 96,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 90
+          },
+          "issues": [],
+          "name": "phone_app_notes",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 42,
+            "characters": 42,
+            "estimatedTokens": 11,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 846,
+            "characters": 844,
+            "estimatedTokens": 212,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 195
+          },
+          "description": {
+            "bytes": 234,
+            "characters": 232,
+            "estimatedTokens": 59,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 56
+          },
+          "inputSchema": {
+            "bytes": 499,
+            "characters": 499,
+            "estimatedTokens": 125,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 115
+          },
+          "issues": [],
+          "name": "phone_crashes",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 790,
+            "characters": 790,
+            "estimatedTokens": 198,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 195
+          },
+          "description": {
+            "bytes": 173,
+            "characters": 173,
+            "estimatedTokens": 44,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 40
+          },
+          "inputSchema": {
+            "bytes": 459,
+            "characters": 459,
+            "estimatedTokens": 115,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 118
+          },
+          "issues": [],
+          "name": "phone_key",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 871,
+            "characters": 867,
+            "estimatedTokens": 219,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 194
+          },
+          "description": {
+            "bytes": 248,
+            "characters": 244,
+            "estimatedTokens": 63,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 51
+          },
+          "inputSchema": {
+            "bytes": 462,
+            "characters": 462,
+            "estimatedTokens": 116,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 106
+          },
+          "issues": [],
+          "name": "phone_shortcut",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 91,
+            "characters": 91,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 819,
+            "characters": 819,
+            "estimatedTokens": 205,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 186
+          },
+          "description": {
+            "bytes": 263,
+            "characters": 263,
+            "estimatedTokens": 66,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 57
+          },
+          "inputSchema": {
+            "bytes": 392,
+            "characters": 392,
+            "estimatedTokens": 98,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 91
+          },
+          "issues": [],
+          "name": "phone_run_end",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 42,
+            "characters": 42,
+            "estimatedTokens": 11,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 714,
+            "characters": 714,
+            "estimatedTokens": 179,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 164
+          },
+          "description": {
+            "bytes": 449,
+            "characters": 449,
+            "estimatedTokens": 113,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 95
+          },
+          "inputSchema": {
+            "bytes": 33,
+            "characters": 33,
+            "estimatedTokens": 9,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 9
+          },
+          "issues": [],
+          "name": "phone_screen",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 90,
+            "characters": 90,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 683,
+            "characters": 683,
+            "estimatedTokens": 171,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 161
+          },
+          "description": {
+            "bytes": 260,
+            "characters": 260,
+            "estimatedTokens": 65,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 62
+          },
+          "inputSchema": {
+            "bytes": 263,
+            "characters": 263,
+            "estimatedTokens": 66,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 62
+          },
+          "issues": [],
+          "name": "phone_record",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 42,
+            "characters": 42,
+            "estimatedTokens": 11,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 713,
+            "characters": 711,
+            "estimatedTokens": 179,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 161
+          },
+          "description": {
+            "bytes": 147,
+            "characters": 147,
+            "estimatedTokens": 37,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 31
+          },
+          "inputSchema": {
+            "bytes": 408,
+            "characters": 406,
+            "estimatedTokens": 103,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 93
+          },
+          "issues": [],
+          "name": "phone_screen_frame",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 43,
+            "characters": 43,
+            "estimatedTokens": 11,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 12
+          },
+          "definition": {
+            "bytes": 613,
+            "characters": 613,
+            "estimatedTokens": 154,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 131
+          },
+          "description": {
+            "bytes": 282,
+            "characters": 282,
+            "estimatedTokens": 71,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 59
+          },
+          "inputSchema": {
+            "bytes": 212,
+            "characters": 212,
+            "estimatedTokens": 53,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 47
+          },
+          "issues": [],
+          "name": "phone_flow_info",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 89,
+            "characters": 89,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 533,
+            "characters": 533,
+            "estimatedTokens": 134,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 120
+          },
+          "description": {
+            "bytes": 334,
+            "characters": 334,
+            "estimatedTokens": 84,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 74
+          },
+          "inputSchema": {
+            "bytes": 33,
+            "characters": 33,
+            "estimatedTokens": 9,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 9
+          },
+          "issues": [],
+          "name": "phone_flow_update",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 90,
+            "characters": 90,
+            "estimatedTokens": 23,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 25
+          },
+          "definition": {
+            "bytes": 377,
+            "characters": 377,
+            "estimatedTokens": 95,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 81
+          },
+          "description": {
+            "bytes": 177,
+            "characters": 177,
+            "estimatedTokens": 45,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 35
+          },
+          "inputSchema": {
+            "bytes": 33,
+            "characters": 33,
+            "estimatedTokens": 9,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 9
+          },
+          "issues": [],
+          "name": "phone_release_owner",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        }
+      ],
+      "transport": "stdio"
+    },
+    "node_repl": {
+      "agent": "codex",
+      "analysisSeconds": 0.2332209580054041,
+      "complete": true,
+      "definitions": {
+        "bytes": 2482,
+        "characters": 2482,
+        "estimatedTokens": 621,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 548
+      },
+      "elapsedSeconds": 0.5969052500004182,
+      "generated": "2026-10-17T02:33:31Z",
+      "handshakeSeconds": 0.2792927919945214,
+      "instructions": {
+        "bytes": 171,
+        "characters": 171,
+        "estimatedTokens": 43,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 42
+      },
+      "listingSeconds": 0.0037180000072112307,
+      "measurementNote": "Heuristic definition fields use ascii4-unicode1-v1; optional reference counts use the named ordinary-text encoding. Neither proves actual prompt framing or billed usage. Full definitions may differ from agent loading. Output schema is a definition, not returned content. No business tools were called.",
+      "message": "Handshake and complete tool listing succeeded. Business tool behavior has not been tested.",
+      "name": "node_repl",
+      "protocolVersion": "2025-06-18",
+      "referenceEncoding": "cl100k_base",
+      "referenceEngine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+      "startupSeconds": 0.002309416013304144,
+      "state": "ready",
+      "tools": [
+        {
+          "annotations": {
+            "bytes": 67,
+            "characters": 67,
+            "estimatedTokens": 17,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 18
+          },
+          "definition": {
+            "bytes": 1269,
+            "characters": 1269,
+            "estimatedTokens": 318,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 285
+          },
+          "description": {
+            "bytes": 696,
+            "characters": 696,
+            "estimatedTokens": 174,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 165
+          },
+          "inputSchema": {
+            "bytes": 444,
+            "characters": 444,
+            "estimatedTokens": 111,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 92
+          },
+          "issues": [],
+          "name": "js",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 23,
+            "characters": 23,
+            "estimatedTokens": 6,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 8
+          },
+          "definition": {
+            "bytes": 491,
+            "characters": 491,
+            "estimatedTokens": 123,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 114
+          },
+          "description": {
+            "bytes": 115,
+            "characters": 115,
+            "estimatedTokens": 29,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 22
+          },
+          "inputSchema": {
+            "bytes": 252,
+            "characters": 252,
+            "estimatedTokens": 63,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 62
+          },
+          "issues": [],
+          "name": "turn_ended",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 67,
+            "characters": 67,
+            "estimatedTokens": 17,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 18
+          },
+          "definition": {
+            "bytes": 471,
+            "characters": 471,
+            "estimatedTokens": 118,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 98
+          },
+          "description": {
+            "bytes": 111,
+            "characters": 111,
+            "estimatedTokens": 28,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 21
+          },
+          "inputSchema": {
+            "bytes": 213,
+            "characters": 213,
+            "estimatedTokens": 54,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 44
+          },
+          "issues": [],
+          "name": "js_add_node_module_dir",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        },
+        {
+          "annotations": {
+            "bytes": 67,
+            "characters": 67,
+            "estimatedTokens": 17,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 18
+          },
+          "definition": {
+            "bytes": 246,
+            "characters": 246,
+            "estimatedTokens": 62,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 52
+          },
+          "description": {
+            "bytes": 51,
+            "characters": 51,
+            "estimatedTokens": 13,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 9
+          },
+          "inputSchema": {
+            "bytes": 62,
+            "characters": 62,
+            "estimatedTokens": 16,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 1,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 14
+          },
+          "issues": [],
+          "name": "js_reset",
+          "outputSchema": {
+            "bytes": 0,
+            "characters": 0,
+            "estimatedTokens": 0,
+            "estimator": "ascii4-unicode1-v1",
+            "lines": 0,
+            "referenceEncoding": "cl100k_base",
+            "referenceTokens": 0
+          }
+        }
+      ],
+      "transport": "stdio"
+    }
+  },
+  "largestMeasuredToolDefinitions": [
+    {
+      "server": "rea",
+      "tool": "compare_web_captures",
+      "definitionReferenceTokens": 36303
+    },
+    {
+      "server": "rea",
+      "tool": "compare_application_versions",
+      "definitionReferenceTokens": 6958
+    },
+    {
+      "server": "rea",
+      "tool": "inspect_analysis_view",
+      "definitionReferenceTokens": 6393
+    },
+    {
+      "server": "rea",
+      "tool": "evaluate_reconstruction_coverage",
+      "definitionReferenceTokens": 6280
+    },
+    {
+      "server": "rea",
+      "tool": "build_reconstruction_obligation_ledger",
+      "definitionReferenceTokens": 5145
+    },
+    {
+      "server": "rea",
+      "tool": "project_managed_application_graph",
+      "definitionReferenceTokens": 5075
+    },
+    {
+      "server": "rea",
+      "tool": "capture_browser_scenario",
+      "definitionReferenceTokens": 4522
+    },
+    {
+      "server": "rea",
+      "tool": "compare_process_captures",
+      "definitionReferenceTokens": 4329
+    },
+    {
+      "server": "rea",
+      "tool": "trace_application_feature",
+      "definitionReferenceTokens": 4146
+    },
+    {
+      "server": "rea",
+      "tool": "compare_source_to_bundle",
+      "definitionReferenceTokens": 3881
+    }
+  ],
+  "limitations": [
+    "iPhone prewarm disabled only for its inspection child with IPHONE_USE_MCP_PREWARM=0; no phone control tools called.",
+    "Figma auth-required independent inspection remains unknown; claude_design real-grant metadata not probed this turn.",
+    "No actual loaded-context or invoice attribution; returned business data is a separate measure.",
+    "No unused service was disabled based on size."
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "date": "2026-10-17",
+  "sourceCommit": "d591d4241e27d2ace2760bea3526ea402b9dcd58",
+  "installedREAVersion": "6.5.0",
+  "scope": "Read-only metadata comparison plus one owned offline HAR probe per profile, followed by one scoped Codex environment setting. No provider installation, native binary execution, UI control or approval-policy changes.",
+  "configurationChange": {
+    "path": "~/.codex/config.toml",
+    "changedKey": "mcp_servers.rea.env.REA_MCP_OUTPUT_SCHEMA_PROFILE",
+    "beforeValue": null,
+    "afterValue": "off",
+    "beforeSHA256": "0cc4b30c5d0bade1f067a465f00bee47a442a4ee08d0fe69d2549c1a8048d25a",
+    "afterSHA256": "56bc4ba81ed70b89a059b8ab1205cadae6fea3dbb18f220d5703a9f91f6f3449",
+    "allOtherParsedConfigurationUnchanged": true,
+    "privateBackupCreated": true,
+    "noExplicitClientRestart": true,
+    "harProbe": {
+      "sameStructuredEvidence": true,
+      "operation": "inspect_web_network_capture",
+      "records": 1,
+      "observedStatus": 200,
+      "artifactSHA256": "182db1d0fe87a597cb863309094a24bad3b5644254e15f36cddffc373a0bc4aa",
+      "statusOrigin": "Recorded response in an owned synthetic HAR, not live HTTP availability"
+    }
+  },
+  "presentationComparison": {
+    "tools": 207,
+    "toolNamesUnchanged": true,
+    "allOtherToolFieldsUnchanged": true,
+    "fullDefinitionBytes": 3087942,
+    "offDefinitionBytes": 820344,
+    "fullServerInfo": {
+      "name": "rea",
+      "version": "6.5.0"
+    },
+    "offServerInfo": {
+      "name": "rea",
+      "version": "6.5.0"
+    },
+    "namesAndInputsSHA256": "9973281f155985e4ec4c0d95fbc244a68ce3c7e87085e32676e4c2d7be351488",
+    "noBusinessCalls": true,
+    "userConfigModified": false,
+    "rawSchemasKeptPrivate": true
+  },
+  "compiledInspector": {
+    "encoder": "Foundation JSONSerialization sorted keys",
+    "full": {
+      "state": "ready",
+      "tools": 207,
+      "definitionBytes": 3114003,
+      "heuristicTokens": 778503,
+      "handshakeSeconds": 2.711040624999441,
+      "listingSeconds": 0.32532695899135433,
+      "analysisSeconds": 0.9845563340059016
+    },
+    "fullReferenceAttempt": {
+      "state": "timedOut",
+      "complete": false,
+      "elapsedSeconds": 10.312340250005946,
+      "startupSeconds": 0.0015303330001188442,
+      "handshakeSeconds": 1.7386624999926426,
+      "listingSeconds": 0.39875683399441186,
+      "analysisSeconds": null
+    },
+    "offConfigured": {
+      "state": "ready",
+      "tools": 207,
+      "definitionBytes": 823514,
+      "heuristicTokens": 205881,
+      "referenceEncoding": "cl100k_base",
+      "referenceTokens": 194330,
+      "handshakeSeconds": 0.8812040839984547,
+      "listingSeconds": 0.24635100000887178,
+      "analysisSeconds": 2.25500520899368,
+      "elapsedSeconds": 3.4761581250058953
+    },
+    "definitionByteReductionPercent": 73.5544891896379
+  },
+  "ownedHarAcceptance": {
+    "sameCompleteStructuredEvidence": true,
+    "operation": "inspect_web_network_capture",
+    "records": 1,
+    "httpStatus": 200,
+    "protocolErrorFlags": {
+      "full": null,
+      "off": null
+    },
+    "noRecordedURLFetched": true,
+    "fixtureDigest": "182db1d0fe87a597cb863309094a24bad3b5644254e15f36cddffc373a0bc4aa"
+  },
+  "proxyProcessObservation": {
+    "instances": 36,
+    "distinctLiveParents": 2,
+    "parentExecutableNames": [
+      "codex"
+    ],
+    "launchdChildren": 0,
+    "sumRSSKiB": 65568,
+    "PIDsNotExported": true,
+    "noCleanupPerformed": true,
+    "limitations": "RSS sum can double-count shared memory. Live parents do not establish active tasks or expected instance count; no leak/orphan conclusion."
+  },
+  "sourceEvidence": {
+    "installedMCPBundleSHA256": "12a70d8ab2a57de0cc71d794e38470031bfbdde855ba4a435e0ac0613f2fe82e",
+    "outputProfileBehavior": "off omits only outputSchema from tools/list; registered canonical contracts and handlers remain.",
+    "auditScriptSHA256": "863b86449b46c3e4f32d84349915019a46f7fc057b1583339a0fdc94ab00e9f1"
+  },
+  "limitations": [
+    "Client-visible output schemas are no longer advertised for this Codex REA configuration; server-side canonical validation remains.",
+    "Tool-name and all non-outputSchema fields are identical across all 207 tools; positive task comparison covers only the owned HAR fixture, not all business workflows.",
+    "The full 3.11MB definition array exceeds the 1MiB reference-text input limit; no full-array cl100k token total is inferred. The 10s reference run stopped after listing, during local measurement.",
+    "Node audit canonical JSON byte counts use a different encoder and are not mixed with compiled-inspector byte totals.",
+    "Static catalog bytes/reference tokens are not actual loaded model context or billing savings.",
+    "No existing client explicitly restarted. New instances read the updated setting; existing sessions may still retain old catalogs.",
+    "No input schema compaction, tools disabled, providers installed, native engines run or unrelated config values changed.",
+    "Original config and raw schemas remain in a private owned audit directory; they are not exported.",
+    "The full input schema is retained. Direct benefits established here are smaller tools/list metadata and successful bounded inspection, not measured model prompt or billing savings."
+  ]
+}
