@@ -491,4 +491,4 @@ thermo clean apply PLAN_UUID --yes --json
 
 `clean run/apply --json` 使用 **schemaVersion 2** 对象，旧版数组位于 `results`。对象另有 `complete`、`outcome`、`scanComplete`、`skipped`、`missingSelectors`、`estimatedDeletedBytes`、`trashedBytes` 和整批 `spaceObservation`。文件估计删除量和实测磁盘变化不同，后者含其他任务的并发写入或删除。清理的部分执行、被截断的扫描和未确认结果返回退出码 **3**；无效参数或拒绝返回 **2**，执行异常返回 **1**。调用方应读取结果和退出状态，不能仅凭命令已返回判断任务完成。
 
-Agent 诊断、列举、检查和修复支持 `--root PROJECT`，与 App 的项目选择使用同一上下文；不指定时只检查用户配置。`agents fix/run` 的 `complete` 表示所列操作是否完成，`observedAfter` 是操作后重新读取的诊断，不代表整机或项目的全部问题已解决。
+Agent 诊断、列举、检查和修复支持 `--root PROJECT`，与 App 的项目选择使用同一上下文；未指定项目时不带入项目配置。`agents fix/run` 的 `complete` 表示所列操作是否完成，`observedAfter` 是操作后重新读取的诊断，不代表整机或项目的全部问题已解决。

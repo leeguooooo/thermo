@@ -173,12 +173,12 @@ extension CLICompletenessTests {
         try FileManager.default.createDirectory(at:project,withIntermediateDirectories:true)
         defer { try? FileManager.default.removeItem(at:project) }
         let command = AgentsCommand(app:App(args:try Args(["agents","list","hooks","--root",project.path,"--json"])))
-        XCTAssertEqual(try command.environment().project?.resolvingSymlinksInPath(),project.resolvingSymlinksInPath())
+        XCTAssertEqual(try command.environment().project?.resolvingSymlinksInPath().path,project.resolvingSymlinksInPath().path)
         XCTAssertThrowsError(try AgentsCommand(app:App(args:Args(["--root",project.appendingPathComponent("missing").path]))).environment())
         XCTAssertNoThrow(try CommandContract.validate(command.app.args))
     }
     func testAgentFixJSONContainsFreshPostStateAndPreviewDoesNotRunAction() throws {
-        let home = URL(fileURLWithPath:"/private/tmp/thermo-fix-" + UUID().uuidString)
+        let home = URL(fileURLWithPath:"/tmp/thermo-fix-" + UUID().uuidString)
         try FileManager.default.createDirectory(at:home,withIntermediateDirectories:true)
         defer { try? FileManager.default.removeItem(at:home) }
         let log = home.appendingPathComponent("fixture.log")
@@ -189,7 +189,8 @@ extension CLICompletenessTests {
         var output = ""
         try AgentsCommand(app:App(args:Args(["--json","--dry-run","--yes"]))).apply([(item,action)],env:env,write:{ output = $0 })
         XCTAssertEqual(try Data(contentsOf:log),Data("fixture".utf8))
-        try AgentsCommand(app:App(args:Args(["--json","--yes"]))).apply([(item,action)],env:env,write:{ output = $0 })
+        do { try AgentsCommand(app:App(args:Args(["--json","--yes"]))).apply([(item,action)],env:env,write:{ output = $0 }) }
+        catch { let receipt = try? JSONSerialization.jsonObject(with:Data(output.utf8)) as? [String:Any]; XCTFail(String(describing:receipt?["results"])); throw error }
         XCTAssertTrue(try Data(contentsOf:log).isEmpty)
         let receipt = try XCTUnwrap(JSONSerialization.jsonObject(with:Data(output.utf8)) as? [String:Any])
         XCTAssertEqual(receipt["complete"] as? Bool,true)
