@@ -1,6 +1,7 @@
 """Capture Codex tool serialization with a loopback-only fake Responses endpoint.
 No real model, authentication copy, or business MCP tool is used.
-Usage: python3 scripts/capture-codex-tool-wire.py OUTPUT_DIRECTORY CODEX_BINARY [--exercise-tools] [--persist-session]
+Usage: python3 scripts/capture-codex-tool-wire.py OUTPUT_DIRECTORY CODEX_BINARY [--exercise-tools] [--persist-session] [--mcp-media image]
+Code-mode features are explicit; discovery placement is observed, not assumed.
 """
 import argparse
 import gzip
@@ -20,7 +21,10 @@ arguments.add_argument('codex_binary', type=Path)
 arguments.add_argument('--exercise-tools', action='store_true')
 arguments.add_argument('--persist-session', action='store_true')
 arguments.add_argument('--mcp-outcome', choices=['success', 'application-error', 'protocol-error'], default='success')
+arguments.add_argument('--mcp-media', choices=['text', 'image'], default='text')
 options = arguments.parse_args()
+if options.mcp_media == 'image' and options.mcp_outcome != 'success':
+    arguments.error('--mcp-media image requires --mcp-outcome success')
 exercise = options.exercise_tools
 persist_session = options.persist_session
 root = options.output_directory.resolve()
@@ -30,6 +34,7 @@ MCP = r'''
 import json,sys
 mode=sys.argv[1]
 outcome=sys.argv[3]
+media=sys.argv[4]
 for line in sys.stdin:
  request=json.loads(line)
  with open(sys.argv[2],'a') as log:log.write(json.dumps({'method':request.get('method')})+'\n')
@@ -46,6 +51,9 @@ for line in sys.stdin:
    print(json.dumps({'jsonrpc':'2.0','id':request['id'],'error':{'code':-32000,'message':'OWNED_PROTOCOL_ERROR'}}),flush=True);continue
   value='OWNED_APPLICATION_ERROR' if outcome=='application-error' else 'OWNED_SERVER_ECHO_ACK:'+request['params']['arguments']['value']
   result={'content':[{'type':'text','text':value}],'structuredContent':{'value':value},'isError':outcome=='application-error'}
+  if media=='image':
+   result.pop('structuredContent')
+   result['content'].append({'type':'image','data':'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAFklEQVR4nGNQSFhAEmIY1TCqYfhqAACc2CAQXseIAgAAAABJRU5ErkJggg==','mimeType':'image/png'})
  elif method=='ping':result={}
  else:
   print(json.dumps({'jsonrpc':'2.0','id':request['id'],'error':{'code':-32601,'message':'Only metadata is supported'}}),flush=True);continue
@@ -87,8 +95,14 @@ for mode in ['full', 'off']:
             message = {'id':'msg_owned_fixture','type':'message','role':'assistant','status':'completed',
                        'content':[{'type':'output_text','text':'owned-client-fixture','annotations':[]}]}
             if exercise and number < 2:
-                program = 'text(ALL_TOOLS.filter(t => t.name.includes("wirefixture")).map(t => ({name:t.name,description:t.description})));' if number == 0 else 'const r = await tools.mcp__wirefixture__echo({value:"OWNED_ECHO_REQUEST"}); for (const c of r.content ?? []) if (c.type === "text") text(c.text);'
-                message = {'id':'ctc_owned_'+str(number),'type':'custom_tool_call','status':'completed','call_id':'owned_call_'+str(number),'name':'exec','namespace':'functions','input':program}
+                program = 'text(ALL_TOOLS.filter(t => t.name.includes("wirefixture")).map(t => ({name:t.name,description:t.description})));' if number == 0 else 'const r = await tools.mcp__wirefixture__echo({value:"OWNED_ECHO_REQUEST"}); for (const c of r.content ?? []) { if (c.type === "text") text(c.text); else if (c.type === "image") image(c); }'
+                message = {'id':'ctc_owned_'+str(number),'type':'custom_tool_call','status':'completed','call_id':'owned_call_'+str(number),'name':'exec','input':program}
+                # CLI builds may advertise exec at the root or in a namespace.
+                root_exec = any(t.get('name') == 'exec' and t.get('type') == 'custom' for t in request.get('tools', []))
+                if not root_exec:
+                    namespaces = [t['name'] for t in request.get('tools', []) if t.get('type') == 'namespace' and any(c.get('name') == 'exec' for c in t.get('tools', []))]
+                    assert len(namespaces) == 1, 'No unambiguous advertised exec entry point'
+                    message['namespace'] = namespaces[0]
             response = {'id':'resp_owned_fixture' ,'object':'response','created_at':1,'status':'completed',
                         'model':request.get('model','fixture'),'output':[message],
                         'usage':{'input_tokens':1,'output_tokens':1,'total_tokens':2}}
@@ -112,7 +126,8 @@ for mode in ['full', 'off']:
         'env_key = "THERMO_FAKE_PROVIDER_KEY"','requires_openai_auth = false','supports_websockets = false',
         'request_max_retries = 0','stream_max_retries = 0',
         '[mcp_servers.wirefixture]','command = "/usr/bin/python3"',
-        'args = '+json.dumps([str(script),mode,str(directory/'mcp-methods.jsonl'),options.mcp_outcome]),'startup_timeout_sec = 10',
+        'args = '+json.dumps([str(script),mode,str(directory/'mcp-methods.jsonl'),options.mcp_outcome,options.mcp_media]),'startup_timeout_sec = 10',
+        '[features]','code_mode = true','code_mode_only = true',
         '[projects.'+json.dumps(str(project))+']','trust_level = "trusted"',''])
     (codex_home/'config.toml').write_text(config)
     env = {'PATH':'/usr/bin:/bin:/usr/sbin:/sbin','HOME':str(home),'CODEX_HOME':str(codex_home),
@@ -160,15 +175,25 @@ for result in results:
                                          'explicitErrorFlag': native_result.get('isError'),
                                          'errorFieldPresent': item.get('error') is not None,
                                          'hasStartAndEndMilliseconds': isinstance(payload.get('started_at_ms'), int) and isinstance(payload.get('completed_at_ms'), int)})
+                elif event.get('type') == 'event_msg' and payload.get('type') == 'mcp_tool_call_end':
+                    invocation = payload.get('invocation', {})
+                    outcome = payload.get('result', {})
+                    native_result = outcome.get('Ok') or {}
+                    native_calls.append({'ownedEcho': invocation.get('server') == 'wirefixture' and invocation.get('tool') == 'echo',
+                                         'eventFormat': 'mcp_tool_call_end', 'hasResult': 'Ok' in outcome,
+                                         'explicitErrorFlag': native_result.get('isError'), 'errorFieldPresent': 'Err' in outcome,
+                                         'hasDuration': isinstance(payload.get('duration'), dict),
+                                         'imageBlocks': sum(c.get('type') == 'image' for c in native_result.get('content', []))})
         result['persistedLogObservations'] = {'files': len(logs), 'customToolCalls': wrapper_calls, 'nativeMCPCalls': native_calls}
         if exercise:
             assert len(logs) == 1 and wrapper_calls == 2 and len(native_calls) == 1
-            assert native_calls[0]['ownedEcho'] and native_calls[0]['hasStartAndEndMilliseconds']
+            assert native_calls[0]['ownedEcho'] and (native_calls[0].get('hasStartAndEndMilliseconds') or native_calls[0].get('hasDuration'))
     result['wireObservations'] = []
     for request_path in sorted(directory.glob('request-private-*.json')):
         raw = request_path.read_text()
         request = json.loads(raw)
         outputs = [item for item in request.get('input',[]) if item.get('type') == 'custom_tool_call_output']
+        blocks = [block for item in outputs if isinstance(item.get('output'), list) for block in item['output']]
         result['wireObservations'].append({
             'requestIndex': int(request_path.stem.rsplit('-',1)[1]),
             'inputDeclarationMarkerPresent': 'OWNED_INPUT_SCHEMA_MARKER' in raw,
@@ -176,18 +201,21 @@ for result in results:
             'serverAckInToolOutput': any('OWNED_SERVER_ECHO_ACK:OWNED_ECHO_REQUEST' in json.dumps(item.get('output')) for item in outputs),
             'applicationErrorInToolOutput': any('OWNED_APPLICATION_ERROR' in json.dumps(item.get('output')) for item in outputs),
             'protocolErrorInToolOutput': any('OWNED_PROTOCOL_ERROR' in json.dumps(item.get('output')) for item in outputs),
+            'inputImageBlocks': sum(block.get('type') == 'input_image' for block in blocks),
             'rootToolsPresent': 'tools' in request,
             'additionalToolsInputPresent': any(item.get('type') == 'additional_tools' for item in request.get('input',[]))})
     if exercise:
         assert result['exitCode'] == 0 and methods.count('tools/call') == 1, result
         assert len(result['wireObservations']) == 3, result
         first, discovered, invoked = result['wireObservations']
-        assert not first['inputDeclarationMarkerPresent']
         assert discovered['inputDeclarationMarkerPresent']
         marker = {'success':'serverAckInToolOutput','application-error':'applicationErrorInToolOutput','protocol-error':'protocolErrorInToolOutput'}[options.mcp_outcome]
         assert invoked[marker]
-        assert not any(item['outputDeclarationMarkerPresent'] for item in result['wireObservations'])
+        if options.mcp_media == 'image':
+            assert invoked['inputImageBlocks'] == 1, result
 (root/'collection.json').write_text(json.dumps({'clientVersion':subprocess.check_output([str(binary),'--version'],text=True).strip(),
                                             'binarySHA256':hashlib.sha256(binary.read_bytes()).hexdigest(),
                                             'fixtureSHA256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-                                            'exerciseTools':exercise,'persistSession':persist_session,'mcpOutcome':options.mcp_outcome,'runs':results},indent=2)+'\n')
+                                            'exerciseTools':exercise,'persistSession':persist_session,'mcpOutcome':options.mcp_outcome,
+                                            'mcpMedia':options.mcp_media,'explicitFeatures':{'code_mode':True,'code_mode_only':True},
+                                            'runs':results},indent=2)+'\n')

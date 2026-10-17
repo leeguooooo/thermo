@@ -12,6 +12,8 @@ struct ToolUsageParser {
         var name: String?
         var started: Date?
         var ended: Date?
+        // CLI completion-only events can be placed in the window without inventing a start.
+        var observedAt: Date?
         var startSeen = false
         var endSeen = false
         var isError: Bool?
@@ -59,6 +61,18 @@ struct ToolUsageParser {
         guard let value = value as? NSNumber, CFGetTypeID(value) != CFBooleanGetTypeID(),
               value.doubleValue.isFinite, value.doubleValue >= 0, value.doubleValue <= 253_402_300_799_000 else { return nil }
         return Date(timeIntervalSince1970: value.doubleValue / 1000)
+    }
+    static func durationSeconds(_ value: Any?) -> Double? {
+        guard let object = value as? [String: Any] else { return nil }
+        func integer(_ key: String, maximum: Double) -> Double? {
+            guard let value = object[key] as? NSNumber, CFGetTypeID(value) != CFBooleanGetTypeID(),
+                  value.doubleValue.isFinite, value.doubleValue >= 0, value.doubleValue <= maximum,
+                  value.doubleValue.rounded() == value.doubleValue else { return nil }
+            return value.doubleValue
+        }
+        guard let seconds = integer("secs", maximum: 253_402_300_799),
+              let nanos = integer("nanos", maximum: 999_999_999) else { return nil }
+        return seconds + nanos / 1_000_000_000
     }
     static func mcpName(_ name: String) -> (server: String, tool: String)? {
         let name = name.hasPrefix("functions.") ? String(name.dropFirst(10)) : name
@@ -206,6 +220,31 @@ struct ToolUsageParser {
                 } else if ["function_call_output", "custom_tool_call_output"].contains(type), let id = payload["call_id"] as? String {
                     end(host: host, session: session, id: id, value: payload["output"], error: nil, time: time)
                 }
+            } else if object["type"] as? String == "event_msg", ["mcp_tool_call_begin", "mcp_tool_call_end"].contains(type),
+                      let id = payload["call_id"] as? String,
+                      let invocation = payload["invocation"] as? [String: Any],
+                      let server = invocation["server"] as? String, !server.isEmpty,
+                      let tool = invocation["tool"] as? String, !tool.isEmpty {
+                let key = host + "|" + session + "|" + id
+                let duration = Self.durationSeconds(payload["duration"])
+                let started = type == "mcp_tool_call_begin" ? time : time.flatMap { end in
+                    duration.flatMap { seconds in seconds <= end.timeIntervalSince1970 ? end.addingTimeInterval(-seconds) : nil }
+                }
+                if calls[key]?.startSeen != true {
+                    start(host: host, session: session, id: id, name: "", input: nil,
+                          time: started, nativeMCP: (server, tool))
+                }
+                if type == "mcp_tool_call_end" {
+                    calls[key]?.observedAt = time
+                    if let result = payload["result"] as? [String: Any] {
+                        if let value = result["Ok"] as? [String: Any], result["Err"] == nil {
+                            end(host: host, session: session, id: id, value: value, error: nil, time: time)
+                        } else if result["Ok"] == nil, let message = result["Err"] as? String,
+                                  !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            end(host: host, session: session, id: id, value: nil, error: nil, time: time, invocationFailed: true)
+                        }
+                    }
+                }
             } else if object["type"] as? String == "event_msg", type == "item_completed",
                       let item = payload["item"] as? [String: Any], item["type"] as? String == "McpToolCall",
                       let id = item["id"] as? String, let server = item["server"] as? String, !server.isEmpty,
@@ -235,7 +274,7 @@ struct ToolUsageParser {
         var timings: [String: [Double]] = [:]
         for call in calls.values {
             if !call.startSeen, inWindow(call.ended) { coverage.unmatchedResults += 1; continue }
-            guard call.startSeen, inWindow(call.started) else { continue }
+            guard call.startSeen, inWindow(call.started ?? call.observedAt) else { continue }
             guard let kind = call.kind, let name = call.name else {
                 coverage.otherToolCalls += 1
                 if call.endSeen, inWindow(call.ended) {

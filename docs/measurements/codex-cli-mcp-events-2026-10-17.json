@@ -1,0 +1,866 @@
+{
+  "recordedAt": "2026-10-17T06:48:49.680167+00:00",
+  "origin": "Autonomously inspected local usage; user did not need to specify a scenario.",
+  "realUsageSample": {
+    "hosts": {
+      "claude": {
+        "complete": false,
+        "coverage": {
+          "bytesRead": 67108864,
+          "cancelled": false,
+          "clippedFiles": 8,
+          "duplicateRecords": 0,
+          "filesDiscovered": 356,
+          "filesRead": 24,
+          "limitReached": true,
+          "malformedLines": 0,
+          "missingTimestamps": 0,
+          "otherToolCalls": 2210,
+          "oversizedLines": 0,
+          "unattributedResults": {
+            "completed": 2210,
+            "missingResults": 0,
+            "nonTextBlocks": 17,
+            "returnedTextBytes": 4076421,
+            "returnedTextEstimatedTokens": 1097434,
+            "unavailableReferenceResults": 0,
+            "unmeasuredResults": 6
+          },
+          "unmatchedResults": 3,
+          "unreadableFiles": 0,
+          "unsupportedUsageRecords": 0
+        }
+      },
+      "codex": {
+        "complete": false,
+        "coverage": {
+          "bytesRead": 67108864,
+          "cancelled": false,
+          "clippedFiles": 14,
+          "duplicateRecords": 214,
+          "filesDiscovered": 412,
+          "filesRead": 27,
+          "limitReached": true,
+          "malformedLines": 0,
+          "missingTimestamps": 0,
+          "otherToolCalls": 1379,
+          "oversizedLines": 0,
+          "unattributedResults": {
+            "completed": 1379,
+            "missingResults": 0,
+            "nonTextBlocks": 4,
+            "returnedTextBytes": 4968722,
+            "returnedTextEstimatedTokens": 1265084,
+            "unavailableReferenceResults": 0,
+            "unmeasuredResults": 0
+          },
+          "unmatchedResults": 4,
+          "unreadableFiles": 0,
+          "unsupportedUsageRecords": 1517
+        }
+      }
+    },
+    "partial": true,
+    "notFleetFrequencyOrQualityRanking": true,
+    "nestedImageTextFoundInFourNativePhoneScreenshotEvents": true,
+    "nestedTextRemainsTextRatherThanRewrittenAsImage": true,
+    "currentIPhoneServiceFaultEstablished": false
+  },
+  "sourceChange": {
+    "parser": "Sources/AgentDoctor/ToolUsageParser.swift",
+    "parserSHA256": "44d288131ea6ee8b1ca29a72691451c6bdbe55a3a640c6ed467f17fdb995cf7c",
+    "newFormats": [
+      "mcp_tool_call_begin",
+      "mcp_tool_call_end"
+    ],
+    "explicitResultUnion": [
+      "Ok",
+      "Err"
+    ],
+    "durationIsHostElapsedNotBillingOrServerOnlyLatency": true,
+    "invalidDurationRetainsResultWithUnknownTiming": true,
+    "deduplication": "host + session + call_id; legacy and native completion formats share identity",
+    "eventTimeUsedForWindowOnlyWhenStartUnknown": true
+  },
+  "fixture": {
+    "path": "codex-cli-mcp-owned-event-2026-10-17.json",
+    "sha256": "021ca029da8a83d17328162bedf357bba1e35b4b8c26d25e9cd6c1bb1d04436c",
+    "onlyOwnedMarkersAndSyntheticPNG": true
+  },
+  "controlledCaptures": {
+    "image-wire-fixed": {
+      "clientVersion": "codex-cli 0.163.0",
+      "binarySHA256": "128b87d27b3346f6c08be58a06428f382e97039d3040ed57c85c2b5c0907219e",
+      "fixtureSHA256": "1210c38cdeedd26595c378b9b5f64d71779fd86d701555537cd11b234740b3cd",
+      "exerciseTools": true,
+      "persistSession": true,
+      "mcpOutcome": "success",
+      "mcpMedia": "image",
+      "explicitFeatures": {
+        "code_mode": true,
+        "code_mode_only": true
+      },
+      "runs": [
+        {
+          "mode": "full",
+          "exitCode": 0,
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 59658,
+              "onlyFakeCredential": true
+            },
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 72055,
+              "onlyFakeCredential": true
+            },
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 72757,
+              "onlyFakeCredential": true
+            }
+          ],
+          "authCopyCreated": false,
+          "realProviderCalled": false,
+          "fakeUsageIsNotBilling": true,
+          "mcpMethods": [
+            "initialize",
+            "notifications/initialized",
+            "tools/list",
+            "tools/call"
+          ],
+          "persistedLogObservations": {
+            "files": 1,
+            "customToolCalls": 2,
+            "nativeMCPCalls": [
+              {
+                "ownedEcho": true,
+                "eventFormat": "mcp_tool_call_end",
+                "hasResult": true,
+                "explicitErrorFlag": false,
+                "errorFieldPresent": false,
+                "hasDuration": true,
+                "imageBlocks": 1
+              }
+            ]
+          },
+          "wireObservations": [
+            {
+              "requestIndex": 0,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": true,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            },
+            {
+              "requestIndex": 1,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": true,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            },
+            {
+              "requestIndex": 2,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": true,
+              "serverAckInToolOutput": true,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 1,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            }
+          ]
+        },
+        {
+          "mode": "off",
+          "exitCode": 0,
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 34020,
+              "onlyFakeCredential": true
+            },
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 34691,
+              "onlyFakeCredential": true
+            },
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 35393,
+              "onlyFakeCredential": true
+            }
+          ],
+          "authCopyCreated": false,
+          "realProviderCalled": false,
+          "fakeUsageIsNotBilling": true,
+          "mcpMethods": [
+            "initialize",
+            "notifications/initialized",
+            "tools/list",
+            "tools/call"
+          ],
+          "persistedLogObservations": {
+            "files": 1,
+            "customToolCalls": 2,
+            "nativeMCPCalls": [
+              {
+                "ownedEcho": true,
+                "eventFormat": "mcp_tool_call_end",
+                "hasResult": true,
+                "explicitErrorFlag": false,
+                "errorFieldPresent": false,
+                "hasDuration": true,
+                "imageBlocks": 1
+              }
+            ]
+          },
+          "wireObservations": [
+            {
+              "requestIndex": 0,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": false,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            },
+            {
+              "requestIndex": 1,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": false,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            },
+            {
+              "requestIndex": 2,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": false,
+              "serverAckInToolOutput": true,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 1,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            }
+          ]
+        }
+      ]
+    },
+    "wire-application-error-fixed": {
+      "clientVersion": "codex-cli 0.163.0",
+      "binarySHA256": "128b87d27b3346f6c08be58a06428f382e97039d3040ed57c85c2b5c0907219e",
+      "fixtureSHA256": "1210c38cdeedd26595c378b9b5f64d71779fd86d701555537cd11b234740b3cd",
+      "exerciseTools": true,
+      "persistSession": true,
+      "mcpOutcome": "application-error",
+      "mcpMedia": "text",
+      "explicitFeatures": {
+        "code_mode": true,
+        "code_mode_only": true
+      },
+      "runs": [
+        {
+          "mode": "full",
+          "exitCode": 0,
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 59754,
+              "onlyFakeCredential": true
+            },
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 72151,
+              "onlyFakeCredential": true
+            },
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 72652,
+              "onlyFakeCredential": true
+            }
+          ],
+          "authCopyCreated": false,
+          "realProviderCalled": false,
+          "fakeUsageIsNotBilling": true,
+          "mcpMethods": [
+            "initialize",
+            "notifications/initialized",
+            "tools/list",
+            "tools/call"
+          ],
+          "persistedLogObservations": {
+            "files": 1,
+            "customToolCalls": 2,
+            "nativeMCPCalls": [
+              {
+                "ownedEcho": true,
+                "eventFormat": "mcp_tool_call_end",
+                "hasResult": true,
+                "explicitErrorFlag": true,
+                "errorFieldPresent": false,
+                "hasDuration": true,
+                "imageBlocks": 0
+              }
+            ]
+          },
+          "wireObservations": [
+            {
+              "requestIndex": 0,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": true,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            },
+            {
+              "requestIndex": 1,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": true,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            },
+            {
+              "requestIndex": 2,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": true,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": true,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            }
+          ]
+        },
+        {
+          "mode": "off",
+          "exitCode": 0,
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 34116,
+              "onlyFakeCredential": true
+            },
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 34787,
+              "onlyFakeCredential": true
+            },
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 35288,
+              "onlyFakeCredential": true
+            }
+          ],
+          "authCopyCreated": false,
+          "realProviderCalled": false,
+          "fakeUsageIsNotBilling": true,
+          "mcpMethods": [
+            "initialize",
+            "notifications/initialized",
+            "tools/list",
+            "tools/call"
+          ],
+          "persistedLogObservations": {
+            "files": 1,
+            "customToolCalls": 2,
+            "nativeMCPCalls": [
+              {
+                "ownedEcho": true,
+                "eventFormat": "mcp_tool_call_end",
+                "hasResult": true,
+                "explicitErrorFlag": true,
+                "errorFieldPresent": false,
+                "hasDuration": true,
+                "imageBlocks": 0
+              }
+            ]
+          },
+          "wireObservations": [
+            {
+              "requestIndex": 0,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": false,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            },
+            {
+              "requestIndex": 1,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": false,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            },
+            {
+              "requestIndex": 2,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": false,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": true,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            }
+          ]
+        }
+      ]
+    },
+    "wire-protocol-error-fixed": {
+      "clientVersion": "codex-cli 0.163.0",
+      "binarySHA256": "128b87d27b3346f6c08be58a06428f382e97039d3040ed57c85c2b5c0907219e",
+      "fixtureSHA256": "1210c38cdeedd26595c378b9b5f64d71779fd86d701555537cd11b234740b3cd",
+      "exerciseTools": true,
+      "persistSession": true,
+      "mcpOutcome": "protocol-error",
+      "mcpMedia": "text",
+      "explicitFeatures": {
+        "code_mode": true,
+        "code_mode_only": true
+      },
+      "runs": [
+        {
+          "mode": "full",
+          "exitCode": 0,
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 59730,
+              "onlyFakeCredential": true
+            },
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 72127,
+              "onlyFakeCredential": true
+            },
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 72720,
+              "onlyFakeCredential": true
+            }
+          ],
+          "authCopyCreated": false,
+          "realProviderCalled": false,
+          "fakeUsageIsNotBilling": true,
+          "mcpMethods": [
+            "initialize",
+            "notifications/initialized",
+            "tools/list",
+            "tools/call"
+          ],
+          "persistedLogObservations": {
+            "files": 1,
+            "customToolCalls": 2,
+            "nativeMCPCalls": [
+              {
+                "ownedEcho": true,
+                "eventFormat": "mcp_tool_call_end",
+                "hasResult": false,
+                "explicitErrorFlag": null,
+                "errorFieldPresent": true,
+                "hasDuration": true,
+                "imageBlocks": 0
+              }
+            ]
+          },
+          "wireObservations": [
+            {
+              "requestIndex": 0,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": true,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            },
+            {
+              "requestIndex": 1,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": true,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            },
+            {
+              "requestIndex": 2,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": true,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": true,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            }
+          ]
+        },
+        {
+          "mode": "off",
+          "exitCode": 0,
+          "requests": [
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 34092,
+              "onlyFakeCredential": true
+            },
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 34763,
+              "onlyFakeCredential": true
+            },
+            {
+              "method": "POST",
+              "path": "/v1/responses",
+              "requestBytes": 35356,
+              "onlyFakeCredential": true
+            }
+          ],
+          "authCopyCreated": false,
+          "realProviderCalled": false,
+          "fakeUsageIsNotBilling": true,
+          "mcpMethods": [
+            "initialize",
+            "notifications/initialized",
+            "tools/list",
+            "tools/call"
+          ],
+          "persistedLogObservations": {
+            "files": 1,
+            "customToolCalls": 2,
+            "nativeMCPCalls": [
+              {
+                "ownedEcho": true,
+                "eventFormat": "mcp_tool_call_end",
+                "hasResult": false,
+                "explicitErrorFlag": null,
+                "errorFieldPresent": true,
+                "hasDuration": true,
+                "imageBlocks": 0
+              }
+            ]
+          },
+          "wireObservations": [
+            {
+              "requestIndex": 0,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": false,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            },
+            {
+              "requestIndex": 1,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": false,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": false,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            },
+            {
+              "requestIndex": 2,
+              "inputDeclarationMarkerPresent": true,
+              "outputDeclarationMarkerPresent": false,
+              "serverAckInToolOutput": false,
+              "applicationErrorInToolOutput": false,
+              "protocolErrorInToolOutput": true,
+              "inputImageBlocks": 0,
+              "rootToolsPresent": true,
+              "additionalToolsInputPresent": false
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "cliReplay": {
+    "baseline": "Local 1.2.0 (456) ad-hoc CLI",
+    "baselineSHA256": "2d7a04684b171bb1c043ea0fe025d83a930b4b2aa2a4a9a77df0aa4f19786f7c",
+    "currentBinarySHA256": "cc80b183b423f6d205ef32ad23d9c9c79b5f08c9817aa86ead2e9ce7c02b88f4",
+    "encoding": "cl100k_base",
+    "cases": [
+      {
+        "scenario": "image-wire-fixed",
+        "mode": "full",
+        "oldMCPRows": 0,
+        "newMCPRows": 1,
+        "row": {
+          "calls": 1,
+          "completed": 1,
+          "host": "codex",
+          "id": "9c2ee2b7d35eb4604e4985f9c53a4fe884b8bcf7b3666673fbb2e602848fe534",
+          "invocationFailures": 0,
+          "kind": "mcp",
+          "medianSeconds": 0.0030541419982910156,
+          "missingResults": 0,
+          "name": "echo",
+          "nonTextBlocks": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 12,
+          "reportedErrors": 0,
+          "returnedTextBytes": 40,
+          "returnedTextEstimatedTokens": 10,
+          "server": "wirefixture",
+          "timingSamples": 1,
+          "totalObservedSeconds": 0.0030541419982910156,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 0
+        },
+        "wrapperNonTextBlocks": 1
+      },
+      {
+        "scenario": "image-wire-fixed",
+        "mode": "off",
+        "oldMCPRows": 0,
+        "newMCPRows": 1,
+        "row": {
+          "calls": 1,
+          "completed": 1,
+          "host": "codex",
+          "id": "9c2ee2b7d35eb4604e4985f9c53a4fe884b8bcf7b3666673fbb2e602848fe534",
+          "invocationFailures": 0,
+          "kind": "mcp",
+          "medianSeconds": 0.00033986568450927734,
+          "missingResults": 0,
+          "name": "echo",
+          "nonTextBlocks": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 12,
+          "reportedErrors": 0,
+          "returnedTextBytes": 40,
+          "returnedTextEstimatedTokens": 10,
+          "server": "wirefixture",
+          "timingSamples": 1,
+          "totalObservedSeconds": 0.00033986568450927734,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 0
+        },
+        "wrapperNonTextBlocks": 1
+      },
+      {
+        "scenario": "wire-application-error-fixed",
+        "mode": "full",
+        "oldMCPRows": 0,
+        "newMCPRows": 1,
+        "row": {
+          "calls": 1,
+          "completed": 1,
+          "host": "codex",
+          "id": "9c2ee2b7d35eb4604e4985f9c53a4fe884b8bcf7b3666673fbb2e602848fe534",
+          "invocationFailures": 0,
+          "kind": "mcp",
+          "medianSeconds": 0.0037418603897094727,
+          "missingResults": 0,
+          "name": "echo",
+          "nonTextBlocks": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 4,
+          "reportedErrors": 1,
+          "returnedTextBytes": 23,
+          "returnedTextEstimatedTokens": 6,
+          "server": "wirefixture",
+          "timingSamples": 1,
+          "totalObservedSeconds": 0.0037418603897094727,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 0
+        },
+        "wrapperNonTextBlocks": 0
+      },
+      {
+        "scenario": "wire-application-error-fixed",
+        "mode": "off",
+        "oldMCPRows": 0,
+        "newMCPRows": 1,
+        "row": {
+          "calls": 1,
+          "completed": 1,
+          "host": "codex",
+          "id": "9c2ee2b7d35eb4604e4985f9c53a4fe884b8bcf7b3666673fbb2e602848fe534",
+          "invocationFailures": 0,
+          "kind": "mcp",
+          "medianSeconds": 0.004594683647155762,
+          "missingResults": 0,
+          "name": "echo",
+          "nonTextBlocks": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 4,
+          "reportedErrors": 1,
+          "returnedTextBytes": 23,
+          "returnedTextEstimatedTokens": 6,
+          "server": "wirefixture",
+          "timingSamples": 1,
+          "totalObservedSeconds": 0.004594683647155762,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 0
+        },
+        "wrapperNonTextBlocks": 0
+      },
+      {
+        "scenario": "wire-protocol-error-fixed",
+        "mode": "full",
+        "oldMCPRows": 0,
+        "newMCPRows": 1,
+        "row": {
+          "calls": 1,
+          "completed": 0,
+          "host": "codex",
+          "id": "9c2ee2b7d35eb4604e4985f9c53a4fe884b8bcf7b3666673fbb2e602848fe534",
+          "invocationFailures": 1,
+          "kind": "mcp",
+          "medianSeconds": 0.003741025924682617,
+          "missingResults": 0,
+          "name": "echo",
+          "nonTextBlocks": 0,
+          "referenceEncoding": "cl100k_base",
+          "reportedErrors": 0,
+          "returnedTextBytes": 0,
+          "returnedTextEstimatedTokens": 0,
+          "server": "wirefixture",
+          "timingSamples": 1,
+          "totalObservedSeconds": 0.003741025924682617,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 0
+        },
+        "wrapperNonTextBlocks": 0
+      },
+      {
+        "scenario": "wire-protocol-error-fixed",
+        "mode": "off",
+        "oldMCPRows": 0,
+        "newMCPRows": 1,
+        "row": {
+          "calls": 1,
+          "completed": 0,
+          "host": "codex",
+          "id": "9c2ee2b7d35eb4604e4985f9c53a4fe884b8bcf7b3666673fbb2e602848fe534",
+          "invocationFailures": 1,
+          "kind": "mcp",
+          "medianSeconds": 0.004684329032897949,
+          "missingResults": 0,
+          "name": "echo",
+          "nonTextBlocks": 0,
+          "referenceEncoding": "cl100k_base",
+          "reportedErrors": 0,
+          "returnedTextBytes": 0,
+          "returnedTextEstimatedTokens": 0,
+          "server": "wirefixture",
+          "timingSamples": 1,
+          "totalObservedSeconds": 0.004684329032897949,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 0
+        },
+        "wrapperNonTextBlocks": 0
+      }
+    ],
+    "sameInputLogsBeforeAndAfter": true,
+    "allPassed": true
+  },
+  "tests": {
+    "command": "swift test --filter 'CodexCLIUsageTests|ToolUsageTests|UnattributedToolUsageTests'",
+    "executed": 41,
+    "failures": 0,
+    "exitCode": 0,
+    "logSHA256": "68444ba5c4d06fccb66dd8d7595d8416f3d335105e1d98f76c5f59828a95cd4f",
+    "CLIProductBuildExitCode": 0
+  },
+  "invalidExperimentHistory": [
+    {
+      "label": "image-wire",
+      "MCPCalls": 0,
+      "cause": "Default CLI did not advertise code-mode exec; the old harness assumed a functions namespace."
+    },
+    {
+      "label": "image-wire-code-mode",
+      "MCPCalls": 0,
+      "cause": "Exec was at the root, not in functions."
+    },
+    {
+      "label": "image-wire-root-exec",
+      "MCPCallsPerMode": 1,
+      "cause": "Old native-event assertion did not recognize CLI end events; synthetic 1px PNG was rejected by image processing."
+    },
+    {
+      "label": "image-wire-code-only",
+      "MCPCallsPerMode": 1,
+      "inputImagesPerMode": 1,
+      "cause": "Image path succeeded, but old native-event assertion still rejected CLI format."
+    }
+  ],
+  "boundaries": {
+    "realModelCalled": false,
+    "realCredentialsCopied": false,
+    "fakeUsageIsNotBilling": true,
+    "deviceConnectedOrControlled": false,
+    "iphoneRepositoryChanged": false,
+    "installedOrPublished": false,
+    "release456Rebuilt": false,
+    "visibleAppAcceptanceIncluded": false,
+    "imageTokenCostUnknown": true,
+    "historicalImageTextWrapperCauseUnknown": true,
+    "discoveryPlacementDependsOnExplicitFeaturesAndModelMetadata": true
+  },
+  "cleanup": {
+    "ownedProcessesAbsent": true,
+    "allSixFixtureHTTPPortsClosed": true,
+    "userConfigMatchesPriorBaseline": true
+  }
+}
