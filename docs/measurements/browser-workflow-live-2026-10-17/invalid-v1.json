@@ -1,0 +1,1283 @@
+{
+  "classification": "invalid_fixture",
+  "reason": "Cross-command monotonic origins differed; successful expect was followed by Saving receipt. Exclude all four runs from Skill effectiveness comparisons.",
+  "originalArtifactsSHA256": {
+    "frozen-evals.json": "bb2fe81ceb99c53f789926adacb99fd1b61c5082b0a404796de94ffc861f16f7",
+    "frozen-SKILL.md": "d0fbd3a427daec5bc94b086cd4f58066b62a4a820c817372a41624111ae79389",
+    "frozen-workflow.py": "d3a0e5912f0664003d5b602f75307c840b2a4a4fcada2b813036c162cec03890",
+    "frozen-collector.py": "a3c1977df126d12ef6586ceed46bc6eb74fb7bd1ccd188bbc080b017eac39d5a"
+  },
+  "runs": [
+    {
+      "taskID": "delayed-completion-v1",
+      "variant": "candidate",
+      "outcome": "timeout",
+      "nativeUsage": {},
+      "actions": [
+        {
+          "command": "observe",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "snapshot": "button Save [ref=e1]\nstatus: Ready",
+            "captureStatus": "complete"
+          },
+          "allowed": true
+        },
+        {
+          "command": "click",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "observed": {
+              "status": "complete",
+              "snapshot": "status: Saving"
+            }
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "observe",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "snapshot": "button Save [ref=e1]\nstatus: Saving",
+            "captureStatus": "complete"
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        }
+      ],
+      "finalOutput": "The receipt still shows \u201cSaving\u201d with one submission. I\u2019ll keep checking for completion without clicking Save again."
+    },
+    {
+      "taskID": "delayed-completion-v1",
+      "variant": "baseline",
+      "outcome": "timeout",
+      "nativeUsage": {},
+      "actions": [
+        {
+          "command": "observe",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "snapshot": "button Save [ref=e1]\nstatus: Ready",
+            "captureStatus": "complete"
+          },
+          "allowed": true
+        },
+        {
+          "command": "click",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "observed": {
+              "status": "complete",
+              "snapshot": "status: Saving"
+            }
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "observe",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "snapshot": "button Save [ref=e1]\nstatus: Saving",
+            "captureStatus": "complete"
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        }
+      ],
+      "finalOutput": "The receipt shows one submission still saving. I\u2019ll continue checking until it confirms completion.\n"
+    },
+    {
+      "taskID": "lost-reply-v1",
+      "variant": "candidate",
+      "outcome": "failed",
+      "nativeUsage": {
+        "input_tokens": 243974,
+        "cached_input_tokens": 236288,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 771,
+        "reasoning_output_tokens": 224
+      },
+      "actions": [
+        {
+          "command": "observe",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "snapshot": "button Save [ref=e1]\nstatus: Ready",
+            "captureStatus": "complete"
+          },
+          "allowed": true
+        },
+        {
+          "command": "click",
+          "noWait": false,
+          "exitCode": 2,
+          "reply": {
+            "success": false,
+            "error": {
+              "code": "action_outcome_unknown",
+              "retryable": false
+            }
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "observe",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "snapshot": "button Save [ref=e1]\nstatus: Saving",
+            "captureStatus": "complete"
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": true,
+          "exitCode": 1,
+          "reply": {
+            "success": true,
+            "pass": false,
+            "actual": "Saving",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        }
+      ],
+      "finalOutput": "{\"status\":\"Saving\",\"submissions\":1}"
+    },
+    {
+      "taskID": "lost-reply-v1",
+      "variant": "baseline",
+      "outcome": "failed",
+      "nativeUsage": {
+        "input_tokens": 137443,
+        "cached_input_tokens": 129408,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 440,
+        "reasoning_output_tokens": 146
+      },
+      "actions": [
+        {
+          "command": "observe",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "snapshot": "button Save [ref=e1]\nstatus: Ready",
+            "captureStatus": "complete"
+          },
+          "allowed": true
+        },
+        {
+          "command": "click",
+          "noWait": false,
+          "exitCode": 2,
+          "reply": {
+            "success": false,
+            "error": {
+              "code": "action_outcome_unknown",
+              "retryable": false
+            }
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "expect",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "success": true,
+            "pass": true,
+            "actual": "Saved",
+            "timedOut": false,
+            "error": null
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        },
+        {
+          "command": "observe",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "snapshot": "button Save [ref=e1]\nstatus: Saving",
+            "captureStatus": "complete"
+          },
+          "allowed": true
+        },
+        {
+          "command": "receipt",
+          "noWait": false,
+          "exitCode": 0,
+          "reply": {
+            "status": "Saving",
+            "submissions": 1
+          },
+          "allowed": true
+        }
+      ],
+      "finalOutput": "{\"status\":\"Saving\",\"submissions\":1}"
+    }
+  ]
+}

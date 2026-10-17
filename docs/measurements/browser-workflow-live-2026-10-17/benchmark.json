@@ -1,0 +1,276 @@
+{
+  "metadata": {
+    "skill_name": "browser-workflow-evidence",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-10-17T01:26:33Z",
+    "evals_run": [
+      1,
+      2
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 17.500462417010567,
+        "tokens": 94343,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "status matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"Saved\", \"observed\": \"Saved\"}"
+        },
+        {
+          "text": "submissions matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "oneSubmission",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "finalReceiptVerified",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "fixtureUnchanged",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "onlySupportedActions",
+          "passed": true,
+          "evidence": "True"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 18.603146124994964,
+        "tokens": 110506,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "status matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"Saved\", \"observed\": \"Saved\"}"
+        },
+        {
+          "text": "submissions matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "oneSubmission",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "finalReceiptVerified",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "fixtureUnchanged",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "onlySupportedActions",
+          "passed": true,
+          "evidence": "True"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 14.819181875005597,
+        "tokens": 75378,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "status matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"Saved\", \"observed\": \"Saved\"}"
+        },
+        {
+          "text": "submissions matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "oneSubmission",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "finalReceiptVerified",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "fixtureUnchanged",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "onlySupportedActions",
+          "passed": true,
+          "evidence": "True"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 14.846016790994327,
+        "tokens": 75369,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "status matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"Saved\", \"observed\": \"Saved\"}"
+        },
+        {
+          "text": "submissions matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "oneSubmission",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "finalReceiptVerified",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "fixtureUnchanged",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "onlySupportedActions",
+          "passed": true,
+          "evidence": "True"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 18.0518,
+        "stddev": 0.7797,
+        "min": 17.5005,
+        "max": 18.6031
+      },
+      "tokens": {
+        "mean": 102424.5,
+        "stddev": 11428.9669,
+        "min": 94343,
+        "max": 110506
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 14.8326,
+        "stddev": 0.019,
+        "min": 14.8192,
+        "max": 14.846
+      },
+      "tokens": {
+        "mean": 75373.5,
+        "stddev": 6.364,
+        "min": 75369,
+        "max": 75378
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.00",
+      "time_seconds": "+3.2",
+      "tokens": "+27051"
+    }
+  },
+  "notes": []
+}

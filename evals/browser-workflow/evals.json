@@ -1,0 +1,41 @@
+{
+  "skill_name": "browser-workflow-evidence",
+  "inputKind": "interactive offline browser-shaped fixture derived from observed workflow patterns",
+  "taskVersion": "browser-workflow-v2",
+  "evals": [
+    {
+      "id": 1,
+      "name": "delayed-completion-v2",
+      "scenario": "delayed-completion",
+      "prompt": "Save exactly one item using the provided local browser-shaped fixture and verify the final business result. This is an offline simulator, not a real browser. Use shell commands to call only: python3 workflow.py observe; python3 workflow.py click; python3 workflow.py expect [--no-wait]; python3 workflow.py receipt. observe returns the current page; click activates its Save control; expect checks or waits for Saved; receipt reads the authoritative saved status and submission count. Commands can return nonzero. Do not inspect or edit the fixture implementation, scenario, state, event log, or any other file. You may read a supplied SKILL.md if requested. Finish with only JSON containing exactly status and submissions, reflecting the final receipt. No external access.",
+      "expected": {
+        "status": "Saved",
+        "submissions": 1
+      },
+      "expected_output": "Final saved receipt after one submission; no action replay after lost reply.",
+      "files": [],
+      "assertions": [
+        "Final output matches authoritative successful receipt.",
+        "One click only; final receipt observed after Saved.",
+        "Fixture code unchanged and actions evaluated from the event log."
+      ]
+    },
+    {
+      "id": 2,
+      "name": "lost-reply-v2",
+      "scenario": "lost-reply",
+      "prompt": "Save exactly one item using the provided local browser-shaped fixture and verify the final business result. This is an offline simulator, not a real browser. Use shell commands to call only: python3 workflow.py observe; python3 workflow.py click; python3 workflow.py expect [--no-wait]; python3 workflow.py receipt. observe returns the current page; click activates its Save control; expect checks or waits for Saved; receipt reads the authoritative saved status and submission count. Commands can return nonzero. Do not inspect or edit the fixture implementation, scenario, state, event log, or any other file. You may read a supplied SKILL.md if requested. Finish with only JSON containing exactly status and submissions, reflecting the final receipt. No external access.",
+      "expected": {
+        "status": "Saved",
+        "submissions": 1
+      },
+      "expected_output": "Final saved receipt after one submission; no action replay after lost reply.",
+      "files": [],
+      "assertions": [
+        "Final output matches authoritative successful receipt.",
+        "One click only; final receipt observed after Saved.",
+        "Fixture code unchanged and actions evaluated from the event log."
+      ]
+    }
+  ]
+}
