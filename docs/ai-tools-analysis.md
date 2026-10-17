@@ -150,6 +150,14 @@ REA_MCP_OUTPUT_SCHEMA_PROFILE = "off"
 
 [审计脚本](../scripts/audit-rea-presentation.mjs)默认只读取工具目录，原始 schema 留在自有私有目录；显式 `--exercise-owned-har` 才生成并读取自有 HAR。代理进程的只读观察也保留在同一记录中：36 个 Design 代理都存在活的 Codex 父进程，RSS 合计约 64 MiB，未发现 launchd 接管的实例。RSS 可重复计算共享页，父进程存在也不证明会话活跃或数量合理；没有据此判断泄漏或执行清理。
 
+[后续真实授权检查与范围验证](measurements/mcp-auth-scope-and-coverage-2026-10-17.json)使用 Claude Design 已配置的授权完成了独立握手和工具列表读取：23 个工具、30,605 定义字节、6,648 个 cl100k 参考 token。它验证了已安装代理的真实元数据路径，没有创建设计或调用业务工具，也没有记录上游响应是 JSON 还是 SSE，因而不是前述 SSE 修复的线上提速对照。既有授权的刷新由原代理实现负责，本轮没有测量是否发生刷新，也没有启动手动登录或导出令牌。
+
+当前代理会话的 `mcp__figma__whoami` 返回了带有效帐号字段的资料；只保留字段存在与否、416 个返回文本 UTF-8 字节等证据，不导出身份值。工具未提供 Boolean `isError`，状态保持未知，不写成明确非错误；资料字段支持这一次读取的结果判断。独立 HTTP 检查仍返回 `authenticationRequired`，没有工具定义计量。两条通道的身份、目标和凭据没有关联比对，也没有据一次帐号读取推断全部工具或文件权限可用。
+
+鉴权未完成的 HTTP 报告现在明确说明：检查使用独立连接和配置凭据，不自动读取宿主管理的 OAuth；其鉴权结果不能代替宿主连接状态。说明写入已有 `measurementNote`，供 JSON、CLI 与 App 使用；鉴权状态和未知计数不变，不复制宿主令牌或启动登录。16 项 HTTP / 本地化测试通过，真实独立 Figma 检查也包含该说明，完整 App / 包复核尚未完成。
+
+当前记录已尝试 Codex 的全部 9 个启用配置，8 个完整返回 305 个工具、928,329 定义字节、217,929 个定义数组参考 token，服务指令另计 893。REA 保持上面的输出声明配置，各服务记录不是同一时刻快照；Figma 定义未知，总体仍未知。历史检查没有改分或覆盖，既有代理没有被强制重启。
+
 协议实现依据：[生命周期](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle)、[stdio 传输](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)、[工具列表](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)。
 
 ## 本地使用历史
