@@ -73,5 +73,42 @@
     "Existing helper --source auto-update may follow the current App again; this transaction does not roll back the App or freeze that updater",
     "Concurrent privileged installers, power loss and SIGKILL interruption are not covered",
     "Requires new signed package and installed acceptance"
-  ]
+  ],
+  "integratedRegression": {
+    "source": "d1db25d42825283b828350c9a2604f14a6977542",
+    "command": "swift test --filter 'HelperInstallationTests|HelperMaintenanceTests|HelperRemovalTests|HelperStatusTests|VerificationHelperIsolationTests'",
+    "exitCode": 0,
+    "total": 30,
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 17,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 0,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 9,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 4,
+        "failures": 0
+      },
+      "CleanKitTests.xctest": {
+        "tests": 0,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 0,
+        "failures": 0
+      },
+      "AgentCoreTests.xctest": {
+        "tests": 0,
+        "failures": 0
+      }
+    },
+    "logSHA256": "63f66a799d1e052f5272eaf7e0645f90705a4835d433e862c291e0bbd07e65d8"
+  }
 }
