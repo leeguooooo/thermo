@@ -1,0 +1,510 @@
+{
+  "date": "2026-10-17",
+  "fullRegressionCodeCommit": "f42fc55",
+  "summaryCopyCommit": "9d3eec588700fc6fc26020d54f51cf6c3325d3ee",
+  "fixtureRoot": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2",
+  "versionsActuallyExecuted": [
+    {
+      "id": "go-cache",
+      "program": "/opt/homebrew/bin/go",
+      "version": "go version go1.27.1 darwin/arm64",
+      "outcome": "success",
+      "scannedBytes": 19681280,
+      "removedBytes": 19673088,
+      "beforeFiles": 144,
+      "afterToolFiles": 2,
+      "noRawDeletionBehindTool": true,
+      "allOutsideSentinelsUnchanged": true
+    },
+    {
+      "id": "npm-cache",
+      "program": "/opt/homebrew/bin/npm",
+      "version": "11.19.1",
+      "outcome": "success",
+      "scannedBytes": 2412544,
+      "removedBytes": 2416640,
+      "beforeFiles": 2,
+      "afterToolFiles": 0,
+      "noRawDeletionBehindTool": true,
+      "allOutsideSentinelsUnchanged": true
+    },
+    {
+      "id": "pip-cache",
+      "program": "/opt/homebrew/bin/pip3",
+      "version": "pip 26.2.1 from /opt/homebrew/lib/python3.14/site-packages/pip (python 3.14)",
+      "outcome": "success",
+      "scannedBytes": 2408448,
+      "removedBytes": 2404352,
+      "beforeFiles": 2,
+      "afterToolFiles": 1,
+      "noRawDeletionBehindTool": true,
+      "allOutsideSentinelsUnchanged": true
+    },
+    {
+      "id": "uv-cache",
+      "program": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.local/bin/uv",
+      "version": "uv 0.9.26 (ee4f00362 2026-01-15)",
+      "outcome": "success",
+      "scannedBytes": 2433024,
+      "removedBytes": 2433024,
+      "beforeFiles": 12,
+      "afterToolFiles": 0,
+      "noRawDeletionBehindTool": true,
+      "allOutsideSentinelsUnchanged": true
+    }
+  ],
+  "fixturePreparationPrograms": {
+    "npm": "/opt/homebrew/bin/npm",
+    "pip3": "/usr/bin/pip3",
+    "uv": "/Users/leo/.local/bin/uv",
+    "go": "/opt/homebrew/bin/go"
+  },
+  "fixturePreparationVersions": {
+    "npm": "11.19.1",
+    "pip3": "pip 21.2.4 from /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/site-packages/pip (python 3.9)",
+    "uv": "uv 0.9.26 (ee4f00362 2026-01-15)",
+    "go": "go version go1.27.1 darwin/arm64"
+  },
+  "pipVersionNote": "Preparation listed a manually seeded local wheel with system pip 21.2.4; production fixed-location resolution executed Homebrew pip 26.2.1. These roles are separate.",
+  "inputSetup": {
+    "npm": "Real cache add of a self-created local tarball; scripts ignored",
+    "pip": "Locally generated wheel placed in private wheels cache, then listed by pip",
+    "uv": "Real installation of local wheel into disposable target, removed before cleanup to release cache links",
+    "go": "Real local build of self-created main.go with private GOCACHE/GOPATH/GOMODCACHE",
+    "executionDirectoryGoMod": "module thermo.fixture/newer\n\ngo 1.99.0\n",
+    "environment": {
+      "PATH": "/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+      "TMPDIR": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/tmp",
+      "LC_ALL": "C",
+      "XDG_CONFIG_HOME": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/config",
+      "XDG_CACHE_HOME": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/xdg-cache",
+      "XDG_DATA_HOME": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/data",
+      "XDG_STATE_HOME": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/state",
+      "NPM_CONFIG_USERCONFIG": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/empty.npmrc",
+      "NPM_CONFIG_GLOBALCONFIG": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/global.npmrc",
+      "NPM_CONFIG_UPDATE_NOTIFIER": "false",
+      "NPM_CONFIG_OFFLINE": "true",
+      "NPM_CONFIG_IGNORE_SCRIPTS": "true",
+      "PIP_CONFIG_FILE": "/dev/null",
+      "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+      "PIP_NO_INPUT": "1",
+      "UV_NO_CONFIG": "1",
+      "UV_OFFLINE": "1",
+      "UV_PYTHON_DOWNLOADS": "never",
+      "GOENV": "off",
+      "GOPROXY": "off",
+      "GOSUMDB": "off",
+      "GOTOOLCHAIN": "auto",
+      "GOMODCACHE": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/gomod",
+      "GOPATH": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/gopath",
+      "GOMAXPROCS": "2"
+    },
+    "HOMEWasNotOverridden": true
+  },
+  "beforeFix": {
+    "contextProbe": [
+      {
+        "case": "current-command",
+        "exit": 1,
+        "output": "go: downloading go1.99.0 (darwin/arm64)\ngo: download go1.99.0 for darwin/arm64: toolchain not available"
+      },
+      {
+        "case": "local-toolchain",
+        "exit": 0,
+        "output": ""
+      },
+      {
+        "case": "module-independent",
+        "exit": 0,
+        "output": ""
+      }
+    ],
+    "productionResult": {
+      "bytes": 0,
+      "failed": {
+        "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin GOCACHE=/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/go-build /opt/homebrew/bin/go clean -cache": "go: downloading go1.99.0 (darwin/arm64)\ngo: download go1.99.0 for darwin/arm64: toolchain not available"
+      },
+      "id": "go-cache",
+      "outcome": "failed",
+      "removed": [],
+      "spaceObservation": {
+        "after": {
+          "availableBytes": 3253608448,
+          "capacityBytes": 494353338368,
+          "measuredAt": 813888938.316138,
+          "uptimeNanoseconds": 78443893627458,
+          "volumeID": "16777234:26"
+        },
+        "availableChangeBytes": -20480,
+        "before": {
+          "availableBytes": 3253628928,
+          "capacityBytes": 494353338368,
+          "measuredAt": 813888937.932331,
+          "uptimeNanoseconds": 78443509824166,
+          "volumeID": "16777234:26"
+        }
+      },
+      "toolCommands": [
+        {
+          "bytesAfter": 19681280,
+          "bytesBefore": 19681280,
+          "command": "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin GOCACHE=/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/go-build /opt/homebrew/bin/go clean -cache",
+          "detail": "go: downloading go1.99.0 (darwin/arm64)\ngo: download go1.99.0 for darwin/arm64: toolchain not available",
+          "exitCode": 1,
+          "folder": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/go-build",
+          "status": "failed",
+          "tool": "go"
+        }
+      ],
+      "trashed": false
+    },
+    "cacheFileCount": 144,
+    "cacheContentsPreservedAfterFailure": true,
+    "sameFilesUsedForSuccessfulRetry": true,
+    "reviewShowedNativeFolders": false,
+    "reviewShowedExecutable": false
+  },
+  "afterFix": [
+    {
+      "summary": {
+        "id": "go-cache",
+        "program": "/opt/homebrew/bin/go",
+        "version": "go version go1.27.1 darwin/arm64",
+        "outcome": "success",
+        "scannedBytes": 19681280,
+        "removedBytes": 19673088,
+        "beforeFiles": 144,
+        "afterToolFiles": 2,
+        "noRawDeletionBehindTool": true,
+        "allOutsideSentinelsUnchanged": true
+      },
+      "commands": [
+        [
+          "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+          "GOTOOLCHAIN=local",
+          "GOCACHE=/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/go-build",
+          "/opt/homebrew/bin/go",
+          "clean",
+          "-cache"
+        ]
+      ],
+      "nativeFolders": [
+        "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/go-build"
+      ],
+      "reviewLines": [
+        "tool clean · 19.7 MB · Go build cache",
+        "    Tool-managed locations: /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/go-build",
+        "    runs `PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin GOTOOLCHAIN=local GOCACHE=/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/go-build /opt/homebrew/bin/go clean -cache`"
+      ],
+      "result": {
+        "bytes": 19673088,
+        "failed": {},
+        "id": "go-cache",
+        "outcome": "success",
+        "removed": [
+          "ran: PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin GOTOOLCHAIN=local GOCACHE=/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/go-build /opt/homebrew/bin/go clean -cache"
+        ],
+        "spaceObservation": {
+          "after": {
+            "availableBytes": 2722451456,
+            "capacityBytes": 494353338368,
+            "measuredAt": 813889386.521819,
+            "uptimeNanoseconds": 78892094929333,
+            "volumeID": "16777234:26"
+          },
+          "availableChangeBytes": 19775488,
+          "before": {
+            "availableBytes": 2702675968,
+            "capacityBytes": 494353338368,
+            "measuredAt": 813889386.134341,
+            "uptimeNanoseconds": 78891707455791,
+            "volumeID": "16777234:26"
+          }
+        },
+        "toolCommands": [
+          {
+            "bytesAfter": 8192,
+            "bytesBefore": 19681280,
+            "command": "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin GOTOOLCHAIN=local GOCACHE=/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/go-build /opt/homebrew/bin/go clean -cache",
+            "exitCode": 0,
+            "folder": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/go-build",
+            "status": "ran",
+            "tool": "go"
+          }
+        ],
+        "trashed": false
+      },
+      "rawRemovalCalls": [],
+      "retainedFileNames": [
+        "Library/Caches/go-build/README",
+        "Library/Caches/go-build/trim.txt"
+      ],
+      "rawEvidenceSHA256": "83e17028141cd8583eb5a0724a4cea0334e17c11fb8c6811a25368d0d511306f"
+    },
+    {
+      "summary": {
+        "id": "npm-cache",
+        "program": "/opt/homebrew/bin/npm",
+        "version": "11.19.1",
+        "outcome": "success",
+        "scannedBytes": 2412544,
+        "removedBytes": 2416640,
+        "beforeFiles": 2,
+        "afterToolFiles": 0,
+        "noRawDeletionBehindTool": true,
+        "allOutsideSentinelsUnchanged": true
+      },
+      "commands": [
+        [
+          "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+          "/opt/homebrew/bin/npm",
+          "cache",
+          "clean",
+          "--force",
+          "--cache",
+          "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.npm"
+        ]
+      ],
+      "nativeFolders": [
+        "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.npm/_cacache"
+      ],
+      "reviewLines": [
+        "tool clean · 2.4 MB · npm cache (1 path)",
+        "    Tool-managed locations: /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.npm/_cacache",
+        "    runs `PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin /opt/homebrew/bin/npm cache clean --force --cache /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.npm`",
+        "    /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.npm/_logs"
+      ],
+      "result": {
+        "bytes": 2416640,
+        "failed": {},
+        "id": "npm-cache",
+        "outcome": "success",
+        "removed": [
+          "ran: PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin /opt/homebrew/bin/npm cache clean --force --cache /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.npm",
+          "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.npm/_logs"
+        ],
+        "spaceObservation": {
+          "after": {
+            "availableBytes": 2724737024,
+            "capacityBytes": 494353338368,
+            "measuredAt": 813889387.200221,
+            "uptimeNanoseconds": 78892773325791,
+            "volumeID": "16777234:26"
+          },
+          "availableChangeBytes": 2342912,
+          "before": {
+            "availableBytes": 2722394112,
+            "capacityBytes": 494353338368,
+            "measuredAt": 813889386.612677,
+            "uptimeNanoseconds": 78892185786791,
+            "volumeID": "16777234:26"
+          }
+        },
+        "toolCommands": [
+          {
+            "bytesAfter": 0,
+            "bytesBefore": 2408448,
+            "command": "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin /opt/homebrew/bin/npm cache clean --force --cache /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.npm",
+            "exitCode": 0,
+            "folder": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.npm/_cacache",
+            "status": "ran",
+            "tool": "npm"
+          }
+        ],
+        "trashed": false
+      },
+      "rawRemovalCalls": [
+        "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.npm/_logs"
+      ],
+      "retainedFileNames": [],
+      "rawEvidenceSHA256": "e462d223d506acebabfb9cce4a94780edb97a17b028b43a0f7986ca5ffd2a4d8"
+    },
+    {
+      "summary": {
+        "id": "pip-cache",
+        "program": "/opt/homebrew/bin/pip3",
+        "version": "pip 26.2.1 from /opt/homebrew/lib/python3.14/site-packages/pip (python 3.14)",
+        "outcome": "success",
+        "scannedBytes": 2408448,
+        "removedBytes": 2404352,
+        "beforeFiles": 2,
+        "afterToolFiles": 1,
+        "noRawDeletionBehindTool": true,
+        "allOutsideSentinelsUnchanged": true
+      },
+      "commands": [
+        [
+          "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+          "PIP_DISABLE_PIP_VERSION_CHECK=1",
+          "PIP_NO_INPUT=1",
+          "/opt/homebrew/bin/pip3",
+          "cache",
+          "purge",
+          "--cache-dir",
+          "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/pip"
+        ]
+      ],
+      "nativeFolders": [
+        "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/pip"
+      ],
+      "reviewLines": [
+        "tool clean · 2.4 MB · pip cache",
+        "    Tool-managed locations: /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/pip",
+        "    runs `PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_INPUT=1 /opt/homebrew/bin/pip3 cache purge --cache-dir /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/pip`"
+      ],
+      "result": {
+        "bytes": 2404352,
+        "failed": {},
+        "id": "pip-cache",
+        "outcome": "success",
+        "removed": [
+          "ran: PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_INPUT=1 /opt/homebrew/bin/pip3 cache purge --cache-dir /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/pip"
+        ],
+        "spaceObservation": {
+          "after": {
+            "availableBytes": 2727022592,
+            "capacityBytes": 494353338368,
+            "measuredAt": 813889387.791848,
+            "uptimeNanoseconds": 78893364946375,
+            "volumeID": "16777234:26"
+          },
+          "availableChangeBytes": 2310144,
+          "before": {
+            "availableBytes": 2724712448,
+            "capacityBytes": 494353338368,
+            "measuredAt": 813889387.39104,
+            "uptimeNanoseconds": 78892964142875,
+            "volumeID": "16777234:26"
+          }
+        },
+        "toolCommands": [
+          {
+            "bytesAfter": 4096,
+            "bytesBefore": 2408448,
+            "command": "PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_INPUT=1 /opt/homebrew/bin/pip3 cache purge --cache-dir /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/pip",
+            "exitCode": 0,
+            "folder": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/Library/Caches/pip",
+            "status": "ran",
+            "tool": "pip3"
+          }
+        ],
+        "trashed": false
+      },
+      "rawRemovalCalls": [],
+      "retainedFileNames": [
+        "Library/Caches/pip/selfcheck/retained-note"
+      ],
+      "rawEvidenceSHA256": "502a239655760ef2166de2165af8881554e65266d6a0ac011588f53e9623dad5"
+    },
+    {
+      "summary": {
+        "id": "uv-cache",
+        "program": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.local/bin/uv",
+        "version": "uv 0.9.26 (ee4f00362 2026-01-15)",
+        "outcome": "success",
+        "scannedBytes": 2433024,
+        "removedBytes": 2433024,
+        "beforeFiles": 12,
+        "afterToolFiles": 0,
+        "noRawDeletionBehindTool": true,
+        "allOutsideSentinelsUnchanged": true
+      },
+      "commands": [
+        [
+          "PATH=/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+          "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.local/bin/uv",
+          "cache",
+          "clean",
+          "--cache-dir",
+          "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.cache/uv"
+        ]
+      ],
+      "nativeFolders": [
+        "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.cache/uv"
+      ],
+      "reviewLines": [
+        "tool clean · 2.4 MB · uv cache",
+        "    Tool-managed locations: /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.cache/uv",
+        "    runs `PATH=/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.local/bin/uv cache clean --cache-dir /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.cache/uv`"
+      ],
+      "result": {
+        "bytes": 2433024,
+        "failed": {},
+        "id": "uv-cache",
+        "outcome": "success",
+        "removed": [
+          "ran: PATH=/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.local/bin/uv cache clean --cache-dir /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.cache/uv"
+        ],
+        "spaceObservation": {
+          "after": {
+            "availableBytes": 2729369600,
+            "capacityBytes": 494353338368,
+            "measuredAt": 813889388.224991,
+            "uptimeNanoseconds": 78893798084791,
+            "volumeID": "16777234:26"
+          },
+          "availableChangeBytes": 2404352,
+          "before": {
+            "availableBytes": 2726965248,
+            "capacityBytes": 494353338368,
+            "measuredAt": 813889388.00163,
+            "uptimeNanoseconds": 78893574726500,
+            "volumeID": "16777234:26"
+          }
+        },
+        "toolCommands": [
+          {
+            "bytesAfter": 0,
+            "bytesBefore": 2433024,
+            "command": "PATH=/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.local/bin/uv cache clean --cache-dir /var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.cache/uv",
+            "exitCode": 0,
+            "folder": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-native-tools-live-xeynzls2/home/.cache/uv",
+            "status": "ran",
+            "tool": "uv"
+          }
+        ],
+        "trashed": false
+      },
+      "rawRemovalCalls": [],
+      "retainedFileNames": [],
+      "rawEvidenceSHA256": "6058a470a6f8525da89a2ea536d8e2270cc11f969ba85c0e473699c52ee4f4ce"
+    }
+  ],
+  "fullRegression": {
+    "source": "f42fc55",
+    "command": "swift test --skip HardwareTests",
+    "suites": {
+      "ThermoKitTests.xctest": 143,
+      "ThermoHelperTests.xctest": 7,
+      "ThermoCLITests.xctest": 70,
+      "ThermoAppTests.xctest": 272,
+      "CleanKitTests.xctest": 750,
+      "AgentDoctorTests.xctest": 196,
+      "AgentCoreTests.xctest": 37
+    },
+    "total": 1475,
+    "failures": 0,
+    "log": "/tmp/thermo-native-tools-full-tests.log",
+    "sha256": "ed35d9711aa314c7e8e70106da66ea7c2a09092985cac24e4a688db69fdd95ac"
+  },
+  "subsequentSummaryChecks": {
+    "total": 9,
+    "failures": 0,
+    "log": "/tmp/thermo-native-tools-summary-final-tests.log",
+    "sha256": "5de1f2d82d881388c8971847b7448fbcace7f7427fe82aba8d00eb0c061b5405",
+    "scope": "Permanence/no-Trash and retained-file wording, mixed raw-path warning, localization; not added to full-regression total"
+  },
+  "limits": [
+    "These installed tool versions and private fixtures only; not arbitrary versions or configurations.",
+    "Offline/proxy-off settings and isolated config files were used; this is not a filesystem/network syscall trace.",
+    "Operations wrappers forward to live operations and only record calls/files.",
+    "Measured private-byte changes are not a controlled startup-volume free-space benchmark. npm creates a new log, so observed deletion can exceed the previous scan estimate.",
+    "No root helper installation, AWDL switch, user cache cleanup or publication.",
+    "Frozen 362 does not include these Go-context and native-review corrections."
+  ],
+  "cleanup": {
+    "outsideSentinelsUnchanged": true,
+    "noRunningFixtureProcesses": true,
+    "fixtureRemoved": true
+  }
+}

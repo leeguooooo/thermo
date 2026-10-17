@@ -68,6 +68,7 @@ enum NativeCleanup {
              command: { (["PIP_DISABLE_PIP_VERSION_CHECK=1", "PIP_NO_INPUT=1"], ["cache", "purge", "--cache-dir", $0]) }),
         Spec(rule: "uv-cache", names: ["uv"], display: "uv cache clean", folders: ["~/.cache/uv", "~/Library/Caches/uv"],
              command: { ([], ["cache", "clean", "--cache-dir", $0]) }),
+        // A global cache cleanup must not switch/download the current project's toolchain.
         Spec(rule: "go-cache", names: ["go"], display: "go clean -cache", folders: ["~/Library/Caches/go-build"],
              command: { (["GOTOOLCHAIN=local", "GOCACHE=" + $0], ["clean", "-cache"]) }),
     ]
