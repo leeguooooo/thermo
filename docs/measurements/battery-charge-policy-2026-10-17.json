@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "8f4122f",
+  "featureStatus": "Pure policy foundation only; no helper/UI/CLI integration, persistent lease or charge write acceptance",
+  "thresholds": {
+    "inhibitAtOrAbove": 80,
+    "releaseBelow": 75,
+    "retainsHoldAt75": true,
+    "freshnessSeconds": 30,
+    "freshnessIsThermoDesign": true
+  },
+  "code": {
+    "Sources/ThermoKit/BatteryChargePolicy.swift": "bc2cf11a790b1542a49d541bc3acef868db52122b7dab2f692602de4776697c5",
+    "Tests/ThermoKitTests/BatteryChargePolicyTests.swift": "aba58061a6cebb8b22c33a39ac88b5bd299cd242026a04ed56c9144516273b25"
+  },
+  "validation": {
+    "initialPolicyTests": 6,
+    "kitBeforeFinalClockGuard": 150,
+    "kitIncludesExistingLiveHardwareTest": true,
+    "hardwareScope": "SMC telemetry and confirmed non-root refusal to write current F0Md; no charging control exercised",
+    "finalPolicyTests": 6,
+    "failures": 0,
+    "countsNotAdditive": true,
+    "logs": {
+      "/tmp/thermo-battery-charge-policy-tests.log": "2a3884ea1b6a0a905def5397776dcd55b3c2ef0bd7994a88f9c3bedbb6692559",
+      "/tmp/thermo-battery-charge-kit-final-tests.log": "ae118e2a0cee55fa38f49d2af8e822383f57482211af469613e057bced93c053",
+      "/tmp/thermo-battery-charge-policy-final-tests.log": "56f280c3728c74cce430a27c56bfe9e46b1a5ac73e3fc5f1d93f9adbfdb6fb19"
+    }
+  },
+  "sourceEvidence": {
+    "binarySHA256": "77702d3d4fc9269f74fbfd61f10fc63462a98da15ef45c7d303db8a06f718e4e",
+    "offlineRegion": "dist/mole-study/charging-app-offline/controller-region.txt",
+    "regionSHA256": "a247812ab1ae461d149432e0027f4dc28a34232b954ebab9c1148623f8bdb25d",
+    "coverage": "0x10025af00..<0x100260000",
+    "thresholdInstructions": [
+      "0x10025e998 cmp x8, #0x50",
+      "0x10025e99c b.ge 0x10025ead8",
+      "0x10025e9a0 cmp x8, #0x4b",
+      "0x10025e9a4 b.ge 0x10025ebb8",
+      "0x10025eaec cmp x8, #0x50",
+      "0x10025eaf0 cset w19, lt"
+    ],
+    "confidence": "Static derived, not runtime execution or complete lifecycle reconstruction"
+  },
+  "rea": {
+    "mainAppStartupTimedOutSeconds": 120,
+    "CUAObservedAnalysisCompleted": "3m03s",
+    "cleanupIncompleteInitially": true,
+    "closeBinaryEventuallySucceeded": true,
+    "privateRuntimeRemoved": true
+  },
+  "remaining": [
+    "helper writer and byte readback",
+    "durable ownership and crash/restart recovery",
+    "actual App policy callers and lifecycle",
+    "App and CLI controls",
+    "authorized hardware pause/resume verification"
+  ],
+  "candidate384Unchanged": true
+}
