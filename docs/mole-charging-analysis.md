@@ -6,7 +6,7 @@
 
 实际安装的 `/Applications/Mole.app/Contents/Library/LaunchServices/com.tw93.MoleApp.systemhelper`，SHA-256 `2f309f5f3d6f4ce416ea92cc78363ab97869771dd0817edf98849fbcc1a19e1d`。从它提取的 arm64 薄片 SHA-256 `daa48c19bf4ba6a1d026c93a9f2f5ecad7ef37d30ece971ebd27ee75508e20ac`。本次没有执行 helper，也没有写电池或 SMC。
 
-REA/Hopper profile `d6352905c74f3f51633175dc471fdfa201da7bb23e1fdf71778eab3a1d1810e4`。完整 23 条证据与关闭时快照保存在本地忽略目录 `dist/mole-study/charging-helper-yzv8yef0/`，文件为 `charging-evidence.json`、`charging-analysis.snapshot.json`。地址仅适用于上述薄片，伪代码不是源码；涉及位值的结论使用指令及数据交叉核对。
+REA/Hopper profile `d6352905c74f3f51633175dc471fdfa201da7bb23e1fdf71778eab3a1d1810e4`。完整 23 条证据与关闭时快照保存在本地忽略目录 `dist/mole-study/charging-helper-yzv8yef0/`，文件为 `charging-evidence.json`、`charging-analysis.snapshot.json`。证据包 SHA-256 `68525bb477c2b41b8cfb281b8372916b6bca7e1bcc3026a56dc7097f9118d7d9`，快照 SHA-256 `f599856f0a40fd286862b41317e3543c90e5a43918a62037d54896289d3a5554`。地址仅适用于上述薄片，伪代码不是源码；涉及位值的结论使用指令及数据交叉核对。
 
 ## 已确认的 helper 路径
 

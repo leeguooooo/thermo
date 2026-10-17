@@ -520,5 +520,12 @@
   "checkedInHarnessSHA256": {
     "scripts/prepare-native-cache-fixture.py": "95b6d8785fd532264291dbcbbf5b0ec731c81bc0b7c5234ae207f40e4ac6acab",
     "scripts/verify-native-cache-tools.swift": "886dc7d4d4e26a11aef6b793aff43e9c2f17e27c5181c545dbc008c8b4679f3c"
+  },
+  "replacementCandidate": {
+    "build": "384",
+    "sourceCommit": "65eafd8c257a2f3d87057b1d3c01e8466e64047b",
+    "record": "mole-cache-candidate-2026-10-17.json",
+    "includesCleanupCorrections": true,
+    "installed": false
   }
 }

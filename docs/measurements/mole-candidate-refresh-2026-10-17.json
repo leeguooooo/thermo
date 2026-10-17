@@ -261,5 +261,12 @@
       "Visible native executable and cache boundaries",
       "Permanent/no-Trash and retained-file summary"
     ]
+  },
+  "replacementCandidate": {
+    "build": "384",
+    "sourceCommit": "65eafd8c257a2f3d87057b1d3c01e8466e64047b",
+    "record": "mole-cache-candidate-2026-10-17.json",
+    "includesCleanupCorrections": true,
+    "installed": false
   }
 }
