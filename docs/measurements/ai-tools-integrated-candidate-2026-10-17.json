@@ -1,0 +1,94 @@
+{
+  "generated": "2026-10-17T00:09:52.747145+00:00",
+  "candidateCommit": "36de6d91d1afb54dcfe798fe585f252905e88ab8",
+  "branch": "codex/ai-tools-1.2.0-rc",
+  "version": "1.2.0",
+  "integratedMainCommit": "753755c",
+  "sourceComparison": "Sources, Tests and scripts match integrated main exactly except Sources/ThermoKit/Version.swift. Candidate retains 1.2.0; main is 1.1.28. This is local integration, not a release-version decision.",
+  "mergeResolutions": [
+    "Retain latest main detach diagnostics and exact multiple-App rejection assertion.",
+    "Use main localization table to avoid duplicate modified-since-scan translation key.",
+    "Retain candidate 1.2.0 version and comprehensive notes; include main fan-state note."
+  ],
+  "fullReleaseTests": {
+    "jobs": 1,
+    "tests": 1474,
+    "failures": 0,
+    "suites": [
+      {
+        "name": "ThermoKitTests.xctest",
+        "tests": 144,
+        "failures": 0
+      },
+      {
+        "name": "ThermoHelperTests.xctest",
+        "tests": 7,
+        "failures": 0
+      },
+      {
+        "name": "ThermoCLITests.xctest",
+        "tests": 70,
+        "failures": 0
+      },
+      {
+        "name": "ThermoAppTests.xctest",
+        "tests": 271,
+        "failures": 0
+      },
+      {
+        "name": "CleanKitTests.xctest",
+        "tests": 749,
+        "failures": 0
+      },
+      {
+        "name": "AgentDoctorTests.xctest",
+        "tests": 196,
+        "failures": 0
+      },
+      {
+        "name": "AgentCoreTests.xctest",
+        "tests": 37,
+        "failures": 0
+      }
+    ],
+    "logSHA256": "9a03e1b3dc0dfe9193b4dbf91e52d824ef91cd7f97bb2492f5ba4a1f7f78c98d"
+  },
+  "nativeReleaseCLI": {
+    "version": "thermo 1.2.0",
+    "sha256": "313c9e7501de6c98c31cbaf17ef06704a39e2591e914bc53845e5137987b5579",
+    "usageFixture": {
+      "passed": true,
+      "mcpCalls": 2,
+      "skillCalls": 1,
+      "requestTokensKeptSeparate": true,
+      "privateTextExcluded": true,
+      "imageTokensUnknown": true,
+      "knownStatusErrorProportionVerified": true,
+      "unknownErrorProportionPreserved": true
+    },
+    "scope": "Native arm64 Release CLI on owned fixture Home; not universal or installed-App acceptance."
+  },
+  "abortedPreCommitCompile": {
+    "exitCode": 130,
+    "reason": "Source identity assertion found duplicate translation; compile was started in error and interrupted before any test case. Not counted as acceptance.",
+    "logSHA256": "0560c24374ca05423e02e4c79c24ed0b429dab4f0639f53a13c632d62684431a"
+  },
+  "resourceCleanup": {
+    "stoppedOwnedQACopiesRemoved": 5,
+    "scope": "Generated synthetic QA copies and inactive main compiler intermediates only. No open files or active Swift compiler referring to removed intermediates. Original distribution packages, fixture Homes, source, test logs and main Products retained."
+  },
+  "originalCleanupObservationResolved": false,
+  "priorFailedFullRunsRetained": true,
+  "oldPackageCommit": "f02328d5f0bc6a9158865225e2c98b8f09e38bf7",
+  "candidatePackageRebuilt": false,
+  "latestPublicReleaseObserved": "v1.1.27",
+  "publicReleaseURL": "https://github.com/leeguooooo/thermo/releases/tag/v1.1.27",
+  "installedAppChanged": false,
+  "publicationPerformed": false,
+  "remaining": [
+    "Rebuild and verify universal package for this source snapshot.",
+    "Original intermittent image cleanup observation remains unexplained.",
+    "Formal signing, notarization and installation/update acceptance not complete.",
+    "Actual helper installation and AWDL switching not authorized or accepted."
+  ]
+}

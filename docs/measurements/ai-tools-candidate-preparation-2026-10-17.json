@@ -269,5 +269,10 @@
   "releaseReady": false,
   "scope": "Local candidate only. Ad-hoc packaging and isolated fixture UI verified; no Developer ID signing, notarization, installation or publication. Both failed full runs retained; original cleanup observation remains unexplained.",
   "packageCommit": "f02328d5f0bc6a9158865225e2c98b8f09e38bf7",
-  "localPackageValidation": "ai-tools-candidate-package-2026-10-17.json"
+  "localPackageValidation": "ai-tools-candidate-package-2026-10-17.json",
+  "latestIntegratedSource": "36de6d91d1afb54dcfe798fe585f252905e88ab8",
+  "latestIntegratedVerification": "ai-tools-integrated-candidate-2026-10-17.json",
+  "latestIntegratedPackage": "ai-tools-integrated-package-2026-10-17.json",
+  "latestIntegratedPackageCommit": "cc852d25be3efa7d613c04f133a1a5f9d67aa230",
+  "latestIntegratedPackageVersion": "1.2.0 (374)"
 }
