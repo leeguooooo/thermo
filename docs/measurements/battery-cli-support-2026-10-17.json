@@ -238,5 +238,13 @@
     ],
     "directoriesRemoved": true,
     "noActiveFixtureProcesses": true
+  },
+  "verifiedCodeCommit": "7ad2e7aa46cba1e59e2c7a240e4838abfa6e119b",
+  "mainMergeAttempt": {
+    "mainCommitObserved": "d94b473",
+    "result": "Fast-forward refused; newer committed MCP output work and active uncommitted MCP-auth/dictionary changes preserved",
+    "worktree": "/Users/leo/github.com/thermo-clean-screen-316d733d",
+    "branch": "codex/mole-charging-8f4122f",
+    "installedOrPublished": false
   }
 }
