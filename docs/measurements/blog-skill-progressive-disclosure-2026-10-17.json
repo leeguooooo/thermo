@@ -203,5 +203,11 @@
     "Ordinary publishing avoids preloading review details. Reviews require an extra read and slightly more independently counted ordinary text.",
     "Reference counts and fake-provider usage are not billed token savings.",
     "This is a local committed patch; installer lock remains historical and a later upstream update may replace it."
-  ]
+  ],
+  "followupCorrection": {
+    "evidence": "blog-skill-common-checks-2026-10-17.json",
+    "sourceCommit": "cbebf125f70cde8fa47f5d289b2ee3c13a940ba0",
+    "reason": "The original counts and lossless-reference check remain valid measurements. Later source review found shared publication checks were not all explicit in the default entry. The first split is not the current installed revision.",
+    "historicalCountsPreserved": true
+  }
 }

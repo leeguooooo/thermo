@@ -18,21 +18,19 @@ Figma 另经 Codex 0.163.0 已有 OAuth 的只读宿主目录接口取得 44 个
 
 - [REA 目录表示](measurements/rea-mcp-presentation-2026-10-17.json)：仅在 Codex 配置关闭输出声明，定义由 3,114,003 降至 823,514 字节，减少约 73.6%。其他工具字段及同一自有 HAR 的完整返回证据一致。原生客户端实验说明完整目录不等于模型请求，不能声称账单减少 73.6%。
 - [iPhone Skill 滚动参数](measurements/iphone-skill-scroll-contract-2026-10-17.json)：补齐 MCP 必填的 x/y/dx/dy，并区分 HTTP 简写。实际安装的 0.19.2 MCP 在发送 HTTP 前拒绝旧示例，新示例通过解析与批请求转换。本机受管理根 Skill 已更新；版本化插件缓存未改，没有执行手机手势。
-- [博客 CLI 说明](measurements/blog-skill-cli-contract-2026-10-17.json)：纠正 themed / raw HTML 模式说明，与代码行为对齐；本机 CLI 为 0.1.22 的本地说明修正。隔离请求契约验证没有发布文章。[博客 Skill 按需加载](measurements/blog-skill-progressive-disclosure-2026-10-17.json)另将审查专用流程移到引用文件，正文从 cl100k 7,513 降至 4,505，约少 40%；原文、发布约束和授权门槛保留。安装器复制、原生客户端预载及本机原子同步已核对。审查任务仍需读引用文件，两份正文独立计数合计为 7,652，并多一次读取；未测真实模型效果，不将预载缩减称为账单节省。
+- [博客 CLI 说明](measurements/blog-skill-cli-contract-2026-10-17.json)：纠正 themed / raw HTML 模式说明，与代码行为对齐；本机 CLI 为 0.1.22 的本地说明修正。隔离请求契约验证没有发布文章。[博客 Skill 按需拆分](measurements/blog-skill-progressive-disclosure-2026-10-17.json)将审查程序移到引用文件。[后续共用检查校正](measurements/blog-skill-common-checks-2026-10-17.json)补回默认发布入口应可见的检查，保留既有错误、警告和提示级别；原先约 40% 的数字保留为历史测量。当前正文为 cl100k 4,717，较原来的 7,513 少约 37%。原生客户端预载、引用完整性及本机原子同步已核对。审查任务需另读引用，两份正文独立计数合计 7,864；真实模型的规则遵循与任务净收益未测，不将预载缩减称为账单节省。
 - [共享 Skill 入口](measurements/shared-skill-maintenance-2026-10-17.json)：修复 message-use、paste-use、sflow 的副本漂移，使共享入口读取安装器维护的来源；[重复副本配置](measurements/codex-skill-dedupe-2026-10-17.json)只停用两组内容相同的 Codex 副本，保留不同工作流。已有会话没有重启，不推断其缓存已经更新。
 - [Unity 引用文件](measurements/unity-skill-reference-repair-2026-10-17.json)从匹配的上游快照补齐；[Design SSE 代理](measurements/claude-design-relay-sse-2026-10-17.json)按请求 ID 识别完整响应，避免响应到达后仍等待流关闭。各有隔离验证，不作为 Unity 业务效果或线上提速证据。
 
 ## 当前验证状态
 
-[外层工具返回明细](measurements/outer-tool-usage-2026-10-17.json)补上了 Bash、Read 等工具的排名，App 默认折叠、逐步展开，CLI 支持文本及 JSON。按日志工具名分组，不从脚本推断内部 CLI；明细与原合计是同一批记录，不可再次相加。三份选定日志投影的 252 次外层调用、214,531 字节在新旧二进制中一致，MCP / Skill 行也完全一致；这不是全量使用统计。673 项相关回归及后续 300 项 App 回归通过；485 / 486 的隔离 Debug 窗口核对了 8、16、22 项展开、错误分母、参考计数未知和按钮稳定标识。当前改动没有进入下述旧版 479 Release 包，也未安装发布。
+[1.1.28 (489) 本地集成记录](measurements/ai-tools-integrated-489-2026-10-17.json)固定源码 668c13b：七套件 1,693 项 Release 测试、0 失败，排除 HardwareTests；arm64 / Rosetta 各八组 CLI 验证通过。通用 App / CLI / helper 的严格签名、架构和 macOS 13.0 元数据检查通过。它是无更新源的 ad-hoc 包，未安装、发布或公证。
 
-[三条 Bash 错误复核](measurements/tool-error-triage-2026-10-17.json)进一步确认了空通配符、原生握手字段假定和历史验证脚本编译错误。空通配符和握手机制已隔离核对，当前 Go 文件的语法检查通过；这三条记录未确认 MCP 服务故障，原有错误计数保持不变。
+489 的完整 Release App 在隔离 Home 中完成可见验收：外层列表展开至全部 22 项且分母不变；MCP 与外层计量分开；Skill 正文排序及回执独立；单日志原生选择只读一份文件；参考总量不完整时保留未知、不生成占比；任务对照保留失败、超时及合成数据标识，清除后恢复空状态。QA 副本的两个架构代码节与原包匹配，实际窗口操作仅在 arm64 上进行。数据为合成记录，不能当作业务收益或普通启动、安装更新、硬件验收。
 
-[1.1.28 (479) 本地集成记录](measurements/ai-tools-integrated-479-2026-10-17.json)固定源码 b71a200：七套件 1,687 项 Release 测试、0 失败，排除 HardwareTests；arm64 / Rosetta 各八组 CLI 验证通过，覆盖两种参考编码、Skill、MCP、日志和任务对照。通用 App / CLI / helper 的严格签名、架构和 macOS 13.0 元数据检查通过。它是无更新源的 ad-hoc 包，未安装、发布或公证。
+[外层工具返回明细](measurements/outer-tool-usage-2026-10-17.json)的三份选定真实日志投影，252 次调用、214,531 字节在新旧二进制中一致，MCP / Skill 行也完全一致。只按日志工具名分组，不从脚本推断内部 CLI；明细与原合计是同一批记录，不可再次相加。这不是全量使用统计。[三条 Bash 错误复核](measurements/tool-error-triage-2026-10-17.json)确认了空通配符、原生握手字段假定和历史验证脚本编译错误，未确认 MCP 服务故障，原有错误计数保持不变。
 
-[474 完整 App 窗口](measurements/ai-tools-ui-474-2026-10-17.json)固定 b31d049，相关 AI 源码与上述 Release 冻结点一致。隔离 Debug arm64 窗口通过单日志原生选择、正文排序、元数据汇总、批量检查与关闭重开；[任务评测](measurements/task-comparison-visible-ui-2026-10-17.json)通过导入、分类提示、查看和清除。文件夹跳转输入仍未核实，本轮选择文件直接点击列表。UI 数据为合成记录，不代表真实业务收益，也不替代 Release 普通启动、安装更新或硬件验收。
-
-本机 iPhone Skill、博客 CLI、用户配置及三个共享入口已在 479 记录中复查，与已验证改动一致。早期 472 及更旧临时产物已不在原路径；历史记录仅说明其当时的验证结果。实现及历史细节见 [AI 工具分析](ai-tools-analysis.md)。
+本机 Skill、CLI、配置、共享入口、Unity 引用和 Design 代理源码已在 489 记录中最终复查。已有宿主会话和代理实例未重启，不推断缓存已更新。定义批量检查及图标 / _meta 组件的详细交互证据仍见 [474 窗口记录](measurements/ai-tools-ui-474-2026-10-17.json)；相关定义组件源码未因外层用量改动而变化。[479 历史产物](measurements/ai-tools-integrated-479-2026-10-17.json)保留并复验，旧临时路径不作为当前可用产物的依据。实现与历史细节见 [AI 工具分析](ai-tools-analysis.md)。
 
 ## 外部参考与后续证据
 

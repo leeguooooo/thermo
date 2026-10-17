@@ -1,0 +1,115 @@
+{
+  "recordedAt": "2026-10-17T12:10:37.714464+00:00",
+  "sourceRepository": "leeguooooo/blog",
+  "sourceCommit": "cbebf125f70cde8fa47f5d289b2ee3c13a940ba0",
+  "correctionTo": "blog-skill-progressive-disclosure-2026-10-17.json",
+  "finding": "Verbatim preservation in a reference did not ensure that shared content checks were visible in the default publication entry. The first split left several cross-mode checks only in the review reference.",
+  "change": "Restore concise scope/severity summaries in the entrypoint. Keep detailed review procedures, regexes and report schemas on demand. No API schema, authorization or reference content changed.",
+  "sourceRuleAudit": {
+    "basis": "Existing R1-R12 definitions; source-level review, not an autonomous model evaluation.",
+    "R1-R4": "Body-only checks explicitly cover editorial posts too; video-only URL paragraph exception retained.",
+    "R5": "Dynamic publicSourceLabel quality requirement remains distinct from optional API input.",
+    "R6-R8": "HTTP Markdown links, short dynamic bodies and three consecutive identical level-3 bullet structures remain non-blocking warnings.",
+    "R9": "Summary remains required in the unchanged common input section.",
+    "R10": "Self-referential sourcing remains informational with intended editorial cross-references allowed.",
+    "R11": "Retired blog/image domains rejected in body and frontmatter.",
+    "R12": "Existing GitHub reference existence/title verification retained in preflight."
+  },
+  "referenceEncoding": "cl100k_base",
+  "ordinaryTextFootprints": {
+    "originalMonolithicBodyTokens": 7513,
+    "firstSplitBodyTokens": 4505,
+    "correctedBodyTokens": 4717,
+    "originalMonolithicDocumentTokens": 7556,
+    "correctedDocumentTokens": 4760,
+    "correctedDocumentBytes": 19220,
+    "defaultBodyReductionPercent": 37.215493145214964,
+    "reviewReferenceTokens": 3147,
+    "reviewBodyAndReferenceIndependentSum": 7864,
+    "reviewExtraReadRequired": true,
+    "catalogUnchanged": true,
+    "candidateQuality": {
+      "checkedLocalReferences": 1,
+      "complete": true,
+      "issues": [],
+      "parser": "swift-markdown-0.9.0",
+      "skippedReferences": 0
+    }
+  },
+  "nativeLoading": {
+    "clientVersion": "codex-cli 0.163.0",
+    "binarySHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+    "realModelCalled": false,
+    "realCredentialsCopied": false,
+    "rawRequestsStored": false,
+    "syntheticUsageIgnored": true,
+    "runs": [
+      {
+        "case": "baseline-explicit",
+        "exitCode": 0,
+        "request": {
+          "fakeCredentialOnly": true,
+          "entireDocumentPresent": true,
+          "reviewReferenceEntireTextPresent": false,
+          "reviewOnlyHeadingPresent": false,
+          "catalogDescriptionPresent": true,
+          "loadedDocumentBytes": 18348
+        },
+        "serverClosed": true,
+        "clientExited": true
+      },
+      {
+        "case": "candidate-explicit",
+        "exitCode": 0,
+        "request": {
+          "fakeCredentialOnly": true,
+          "entireDocumentPresent": true,
+          "reviewReferenceEntireTextPresent": false,
+          "reviewOnlyHeadingPresent": false,
+          "catalogDescriptionPresent": true,
+          "loadedDocumentBytes": 19220
+        },
+        "serverClosed": true,
+        "clientExited": true
+      },
+      {
+        "case": "candidate-catalog",
+        "exitCode": 0,
+        "request": {
+          "fakeCredentialOnly": true,
+          "entireDocumentPresent": false,
+          "reviewReferenceEntireTextPresent": false,
+          "reviewOnlyHeadingPresent": false,
+          "catalogDescriptionPresent": true,
+          "loadedDocumentBytes": 0
+        },
+        "serverClosed": true,
+        "clientExited": true
+      }
+    ]
+  },
+  "localInstallation": {
+    "beforeEntrySHA256": "f14e430dee8e2b0be9ecab38a8227293f6c3f407a46c22e5f1c8a8d7583576c7",
+    "afterEntrySHA256": "ecea94696e6adedc7fb58ebfcdfa63343ab8ff2ecd7bd72b504582e6c4fbbccd",
+    "referenceSHA256": "d84423f22a7990e207d880807d61cf633e1db511228cdb8010a12300fdb96baa",
+    "backupMatchesBefore": true,
+    "referenceUnchanged": true,
+    "oldBackupPreserved": true,
+    "aliasUnchanged": true,
+    "installerLockUnchanged": true,
+    "currentSessionsRestarted": false
+  },
+  "cleanup": {
+    "privateEventFilesRemoved": 6,
+    "onlyFixedMessageResponses": true,
+    "ownedPortsClosed": true,
+    "noRealCredentialsCopied": true
+  },
+  "publicationOrPushPerformedByThisTask": false,
+  "limitations": [
+    "No real model task, live article, publication API or SEO route was exercised.",
+    "Initial loading is measured only for this native Codex client/configuration; autonomous rule following and overall task net benefit remain unmeasured.",
+    "Review tasks read both files and more independently counted text; reference counts are not billing savings.",
+    "The installer lock retains historical provenance; upstream updates may replace this local patch."
+  ]
+}
