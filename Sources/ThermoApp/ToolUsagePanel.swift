@@ -75,6 +75,7 @@ struct ToolUsagePanel: View {
                 let rows = report.tools.filter { $0.kind == kind }.sorted {
                     sort.value($0) == sort.value($1) ? $0.id < $1.id : sort.value($0) > sort.value($1)
                 }
+                let textSummary = report.returnedTextSummary(kind: kind)
                 Picker(tr("Sort observed usage"), selection: $sort) {
                     ForEach(UsageSort.allCases, id: \.self) { value in Text(value.title).tag(value) }
                 }.pickerStyle(.segmented)
@@ -102,6 +103,12 @@ struct ToolUsagePanel: View {
                         .font(.callout).foregroundStyle(.secondary)
                 }
                 if !rows.isEmpty {
+                    Text(tr("Returned text total in this category: %1$@ bytes / %2$@ tokens",
+                            textSummary.returnedTextBytes.map(String.init) ?? tr("Unknown"),
+                            textSummary.returnedTextTokens.map { (report.referenceEncoding == nil ? "≈" : "") + String($0) } ?? tr("Unknown")))
+                        .font(.caption.monospaced())
+                    Text(tr("Totals include all observed entries in this category, including hidden rows. Missing logs, results and non-text content are not included; this is not request usage."))
+                        .font(.caption).foregroundStyle(.secondary)
                     Text(tr("Showing %1$@ of %2$@ entries", String(min(visibleRowLimit, rows.count)), String(rows.count)))
                         .font(.caption).foregroundStyle(.secondary)
                 }
@@ -126,6 +133,10 @@ struct ToolUsagePanel: View {
                         if let encoding = row.referenceEncoding {
                             Text(tr("%1$@ reference text tokens: %2$@ · %3$@ results unavailable", encoding, row.referenceReturnedTextTokens.map(String.init) ?? tr("Unknown"), String(row.unavailableReferenceResults ?? 0))).font(.caption.monospaced())
                         }
+                        if let percentage = textSummary.percentage(of: row) {
+                            Text(tr("Share of this category's observed returned-text tokens: %1$@", String(format: "%.1f%%", percentage)))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                         if row.nonTextBlocks > 0 {
                             Text(tr("%1$@ non-text result blocks were not tokenized.", String(row.nonTextBlocks))).font(.caption).foregroundStyle(.secondary)
                         }
@@ -135,7 +146,7 @@ struct ToolUsagePanel: View {
                     Button(tr("Show more entries")) { visibleRowLimit = min(rows.count, visibleRowLimit + 8) }
                 }
                 if !rows.isEmpty {
-                    Text(tr("Error proportions exclude missing results and unknown error statuses; they do not measure task success."))
+                    Text(ToolUsageReport.errorStatusExplanation)
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 if !report.sessionTokens.isEmpty {

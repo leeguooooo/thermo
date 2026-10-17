@@ -154,7 +154,7 @@ struct AreaPage: View {
                 if area == .mcp {
                     MCPBatchInspectButton(model: scanner.mcpBatch, store: scanner.mcpDefinitions, items: scanner.report?.items ?? [], encoding: scanner.tokenEncoding, busy: scanner.busy)
                     MCPDefinitionSummaryPanel(store: scanner.mcpDefinitions, items: scanner.report?.items ?? [], encoding: scanner.tokenEncoding, busy: scanner.mcpBatchRunning)
-                    Text(tr("This configuration scan does not connect to MCP servers. Use Connect & inspect for definitions and connection timing; actual tool usage remains unmeasured."))
+                    Text(tr("Configuration scanning does not connect to MCP servers. Connect & inspect measures definitions and connection timing. Analyze local logs below reads recorded tool calls."))
                         .font(.callout).foregroundStyle(.secondary).padding(18).glass()
                 }
                 if area == .mcp || area == .skills { ToolUsagePanel(model: scanner.toolUsage, kind: area == .mcp ? "mcp" : "skill", encoding: scanner.tokenEncoding) }

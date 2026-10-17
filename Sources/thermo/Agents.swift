@@ -205,6 +205,15 @@ struct AgentsCommand {
                      "Log reading: " + (report.complete ? "complete within selected scope" : "partial"),
                      "\(coverage.filesRead)/\(coverage.filesDiscovered) eligible files · \(coverage.bytesRead) bytes · \(coverage.clippedFiles) clipped · \(coverage.malformedLines) malformed records", ""]
         if let encoding = report.referenceEncoding { lines.append("Ordinary-text reference encoding: " + encoding + "; not a model invoice or prompt framing count") }
+        let textSummaries = Dictionary(uniqueKeysWithValues: Set(report.tools.map(\.kind)).sorted().map { kind in
+            (kind, report.returnedTextSummary(kind: kind))
+        })
+        for kind in textSummaries.keys.sorted() {
+            let summary = textSummaries[kind]!
+            let tokens = summary.returnedTextTokens.map { (report.referenceEncoding == nil ? "≈" : "") + String($0) } ?? "unknown"
+            lines.append("Observed \(kind) returned text total (all rows): \(summary.returnedTextBytes.map(String.init) ?? "unknown") bytes / \(tokens) tokens")
+        }
+        if !report.tools.isEmpty { lines.append("Totals cover observed returned text only; missing logs/results and non-text content are excluded, not request usage.") }
         for row in report.tools.prefix(app.args.has("all") ? report.tools.count : 20) {
             lines.append(style.bold((row.server.map { $0 + " / " } ?? "") + row.name) + " [" + row.host + ", " + row.kind + "]")
             lines.append("  \(row.calls) calls · \(row.completed) results · \(row.reportedErrors) explicit errors · \(row.unknownErrorStatus) unknown error status · \(row.missingResults) missing results")
@@ -215,9 +224,12 @@ struct AgentsCommand {
             let p95 = row.p95Seconds.map { String(format: "%.3fs", $0) } ?? "unknown (requires 20 samples)"
             if let encoding = row.referenceEncoding { lines.append("  " + encoding + ": " + (row.referenceReturnedTextTokens.map(String.init) ?? "unknown") + " reference tokens; unavailable results: \(row.unavailableReferenceResults ?? 0)") }
             lines.append("  result text: \(row.returnedTextBytes) bytes / ≈\(row.returnedTextEstimatedTokens) tokens · median \(median) · P95 \(p95) · \(row.nonTextBlocks) non-text blocks not tokenized")
+            if let percentage = textSummaries[row.kind]?.percentage(of: row) {
+                lines.append("  share of observed \(row.kind) returned-text tokens: \(String(format: "%.1f%%", percentage))")
+            }
         }
         if report.tools.isEmpty { lines.append("No directly attributable MCP or explicit Skill calls were observed; this does not prove they were unused.") }
-        else { lines.append("Error proportions exclude missing results and unknown error statuses; they do not measure task success.") }
+        else { lines.append(ToolUsageReport.errorStatusExplanation) }
         lines += ["", "Request counters (not individual tool consumption):"]
         if report.sessionTokens.isEmpty { lines.append("  No supported request token records; usage is unknown.") }
         for tokens in report.sessionTokens {

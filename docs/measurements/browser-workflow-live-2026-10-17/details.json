@@ -1,0 +1,480 @@
+[
+  {
+    "taskID": "delayed-completion-v2",
+    "variant": "candidate",
+    "outcome": "passed",
+    "seconds": 17.500462417010567,
+    "nativeUsage": {
+      "input_tokens": 94140,
+      "cached_input_tokens": 86400,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 203,
+      "reasoning_output_tokens": 0
+    },
+    "skillReadCommandObserved": true,
+    "skillContentObserved": true,
+    "commandCount": 5,
+    "actions": [
+      {
+        "command": "observe",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "snapshot": "button Save [ref=e1]\nstatus: Ready",
+          "captureStatus": "complete"
+        },
+        "allowed": true
+      },
+      {
+        "command": "click",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "success": true,
+          "observed": {
+            "status": "complete",
+            "snapshot": "status: Saving"
+          }
+        },
+        "allowed": true
+      },
+      {
+        "command": "expect",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "success": true,
+          "pass": true,
+          "actual": "Saved",
+          "timedOut": false,
+          "error": null
+        },
+        "allowed": true
+      },
+      {
+        "command": "receipt",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "status": "Saved",
+          "submissions": 1
+        },
+        "allowed": true
+      }
+    ],
+    "behavior": {
+      "oneSubmission": true,
+      "finalReceiptVerified": true,
+      "fixtureUnchanged": true,
+      "onlySupportedActions": true
+    },
+    "grading": {
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "status matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"Saved\", \"observed\": \"Saved\"}"
+        },
+        {
+          "text": "submissions matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "oneSubmission",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "finalReceiptVerified",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "fixtureUnchanged",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "onlySupportedActions",
+          "passed": true,
+          "evidence": "True"
+        }
+      ],
+      "summary": {
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "pass_rate": 1.0
+      }
+    },
+    "finalOutput": "{\"status\":\"Saved\",\"submissions\":1}",
+    "cliVersion": "codex-cli 0.163.0"
+  },
+  {
+    "taskID": "delayed-completion-v2",
+    "variant": "baseline",
+    "outcome": "passed",
+    "seconds": 14.819181875005597,
+    "nativeUsage": {
+      "input_tokens": 75213,
+      "cached_input_tokens": 71424,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 165,
+      "reasoning_output_tokens": 0
+    },
+    "skillReadCommandObserved": false,
+    "skillContentObserved": false,
+    "commandCount": 4,
+    "actions": [
+      {
+        "command": "observe",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "snapshot": "button Save [ref=e1]\nstatus: Ready",
+          "captureStatus": "complete"
+        },
+        "allowed": true
+      },
+      {
+        "command": "click",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "success": true,
+          "observed": {
+            "status": "complete",
+            "snapshot": "status: Saving"
+          }
+        },
+        "allowed": true
+      },
+      {
+        "command": "expect",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "success": true,
+          "pass": true,
+          "actual": "Saved",
+          "timedOut": false,
+          "error": null
+        },
+        "allowed": true
+      },
+      {
+        "command": "receipt",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "status": "Saved",
+          "submissions": 1
+        },
+        "allowed": true
+      }
+    ],
+    "behavior": {
+      "oneSubmission": true,
+      "finalReceiptVerified": true,
+      "fixtureUnchanged": true,
+      "onlySupportedActions": true
+    },
+    "grading": {
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "status matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"Saved\", \"observed\": \"Saved\"}"
+        },
+        {
+          "text": "submissions matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "oneSubmission",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "finalReceiptVerified",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "fixtureUnchanged",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "onlySupportedActions",
+          "passed": true,
+          "evidence": "True"
+        }
+      ],
+      "summary": {
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "pass_rate": 1.0
+      }
+    },
+    "finalOutput": "{\"status\":\"Saved\",\"submissions\":1}",
+    "cliVersion": "codex-cli 0.163.0"
+  },
+  {
+    "taskID": "lost-reply-v2",
+    "variant": "candidate",
+    "outcome": "passed",
+    "seconds": 18.603146124994964,
+    "nativeUsage": {
+      "input_tokens": 110265,
+      "cached_input_tokens": 102016,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 241,
+      "reasoning_output_tokens": 0
+    },
+    "skillReadCommandObserved": true,
+    "skillContentObserved": true,
+    "commandCount": 6,
+    "actions": [
+      {
+        "command": "observe",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "snapshot": "button Save [ref=e1]\nstatus: Ready",
+          "captureStatus": "complete"
+        },
+        "allowed": true
+      },
+      {
+        "command": "click",
+        "noWait": false,
+        "exitCode": 2,
+        "reply": {
+          "success": false,
+          "error": {
+            "code": "action_outcome_unknown",
+            "retryable": false
+          }
+        },
+        "allowed": true
+      },
+      {
+        "command": "receipt",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "status": "Saving",
+          "submissions": 1
+        },
+        "allowed": true
+      },
+      {
+        "command": "expect",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "success": true,
+          "pass": true,
+          "actual": "Saved",
+          "timedOut": false,
+          "error": null
+        },
+        "allowed": true
+      },
+      {
+        "command": "receipt",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "status": "Saved",
+          "submissions": 1
+        },
+        "allowed": true
+      }
+    ],
+    "behavior": {
+      "oneSubmission": true,
+      "finalReceiptVerified": true,
+      "fixtureUnchanged": true,
+      "onlySupportedActions": true
+    },
+    "grading": {
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "status matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"Saved\", \"observed\": \"Saved\"}"
+        },
+        {
+          "text": "submissions matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "oneSubmission",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "finalReceiptVerified",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "fixtureUnchanged",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "onlySupportedActions",
+          "passed": true,
+          "evidence": "True"
+        }
+      ],
+      "summary": {
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "pass_rate": 1.0
+      }
+    },
+    "finalOutput": "{\"status\":\"Saved\",\"submissions\":1}",
+    "cliVersion": "codex-cli 0.163.0"
+  },
+  {
+    "taskID": "lost-reply-v2",
+    "variant": "baseline",
+    "outcome": "passed",
+    "seconds": 14.846016790994327,
+    "nativeUsage": {
+      "input_tokens": 75207,
+      "cached_input_tokens": 68864,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 162,
+      "reasoning_output_tokens": 0
+    },
+    "skillReadCommandObserved": false,
+    "skillContentObserved": false,
+    "commandCount": 4,
+    "actions": [
+      {
+        "command": "observe",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "snapshot": "button Save [ref=e1]\nstatus: Ready",
+          "captureStatus": "complete"
+        },
+        "allowed": true
+      },
+      {
+        "command": "click",
+        "noWait": false,
+        "exitCode": 2,
+        "reply": {
+          "success": false,
+          "error": {
+            "code": "action_outcome_unknown",
+            "retryable": false
+          }
+        },
+        "allowed": true
+      },
+      {
+        "command": "expect",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "success": true,
+          "pass": true,
+          "actual": "Saved",
+          "timedOut": false,
+          "error": null
+        },
+        "allowed": true
+      },
+      {
+        "command": "receipt",
+        "noWait": false,
+        "exitCode": 0,
+        "reply": {
+          "status": "Saved",
+          "submissions": 1
+        },
+        "allowed": true
+      }
+    ],
+    "behavior": {
+      "oneSubmission": true,
+      "finalReceiptVerified": true,
+      "fixtureUnchanged": true,
+      "onlySupportedActions": true
+    },
+    "grading": {
+      "expectations": [
+        {
+          "text": "Output has exactly the required fields",
+          "passed": true,
+          "evidence": "Parsed output field set checked against predefined contract"
+        },
+        {
+          "text": "status matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": \"Saved\", \"observed\": \"Saved\"}"
+        },
+        {
+          "text": "submissions matches the predefined evidence contract",
+          "passed": true,
+          "evidence": "{\"expected\": 1, \"observed\": 1}"
+        },
+        {
+          "text": "oneSubmission",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "finalReceiptVerified",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "fixtureUnchanged",
+          "passed": true,
+          "evidence": "True"
+        },
+        {
+          "text": "onlySupportedActions",
+          "passed": true,
+          "evidence": "True"
+        }
+      ],
+      "summary": {
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "pass_rate": 1.0
+      }
+    },
+    "finalOutput": "{\"status\":\"Saved\",\"submissions\":1}",
+    "cliVersion": "codex-cli 0.163.0"
+  }
+]

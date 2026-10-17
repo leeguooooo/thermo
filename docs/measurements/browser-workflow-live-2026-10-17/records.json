@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "measured",
+  "kind": "skill",
+  "baselineRevision": "none",
+  "candidateRevision": "d0fbd3a427daec5bc94b086cd4f58066b62a4a820c817372a41624111ae79389",
+  "runs": [
+    {
+      "taskID": "delayed-completion-v2",
+      "repetition": 1,
+      "variant": "candidate",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "944bcddf3289edf1f1c29d38de518176f3781a6b12dbc07e95532f8a53163477",
+        "settings": "7732f2769f452ab261c71a7ec0b833ba1ddf2704aa84f755f876baa6ed36848f",
+        "task": "f06e43eb5a75cf808590b55943589bec8d998ac90b6e74e5c752b9fe85499729",
+        "verifier": "953ad90e45c95bb66b7b66712f904299a9ccb1167b4d8ca3d3fefaec4dcd562d"
+      },
+      "outcome": "passed",
+      "seconds": 17.500462417010567,
+      "inputTokens": 94140,
+      "outputTokens": 203,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1"
+    },
+    {
+      "taskID": "delayed-completion-v2",
+      "repetition": 1,
+      "variant": "baseline",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "944bcddf3289edf1f1c29d38de518176f3781a6b12dbc07e95532f8a53163477",
+        "settings": "7732f2769f452ab261c71a7ec0b833ba1ddf2704aa84f755f876baa6ed36848f",
+        "task": "f06e43eb5a75cf808590b55943589bec8d998ac90b6e74e5c752b9fe85499729",
+        "verifier": "953ad90e45c95bb66b7b66712f904299a9ccb1167b4d8ca3d3fefaec4dcd562d"
+      },
+      "outcome": "passed",
+      "seconds": 14.819181875005597,
+      "inputTokens": 75213,
+      "outputTokens": 165,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1"
+    },
+    {
+      "taskID": "lost-reply-v2",
+      "repetition": 1,
+      "variant": "candidate",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "944bcddf3289edf1f1c29d38de518176f3781a6b12dbc07e95532f8a53163477",
+        "settings": "7732f2769f452ab261c71a7ec0b833ba1ddf2704aa84f755f876baa6ed36848f",
+        "task": "ab1001db9ec2b4c4fdbb85a3ff7f4ac69583a468f5127cfb732f1591c826c8cf",
+        "verifier": "953ad90e45c95bb66b7b66712f904299a9ccb1167b4d8ca3d3fefaec4dcd562d"
+      },
+      "outcome": "passed",
+      "seconds": 18.603146124994964,
+      "inputTokens": 110265,
+      "outputTokens": 241,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1"
+    },
+    {
+      "taskID": "lost-reply-v2",
+      "repetition": 1,
+      "variant": "baseline",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "944bcddf3289edf1f1c29d38de518176f3781a6b12dbc07e95532f8a53163477",
+        "settings": "7732f2769f452ab261c71a7ec0b833ba1ddf2704aa84f755f876baa6ed36848f",
+        "task": "ab1001db9ec2b4c4fdbb85a3ff7f4ac69583a468f5127cfb732f1591c826c8cf",
+        "verifier": "953ad90e45c95bb66b7b66712f904299a9ccb1167b4d8ca3d3fefaec4dcd562d"
+      },
+      "outcome": "passed",
+      "seconds": 14.846016790994327,
+      "inputTokens": 75207,
+      "outputTokens": 162,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1"
+    }
+  ]
+}

@@ -33,6 +33,70 @@ final class ToolUsageTests: XCTestCase {
         XCTAssertEqual(row.returnedTextBytes, "fixture-private-result".utf8.count)
         XCTAssertFalse(String(decoding: try JSONEncoder().encode(report), as: UTF8.self).contains("fixture-private"))
     }
+    func testUnmetAssertionKeepsExplicitMCPErrorDespiteSuccessfulExecutionPayload() throws {
+        var p = parser()
+        let body = #"{"success":true,"data":{"pass":false,"timedOut":false},"error":null}"#
+        p.consume(native("assertion", tool: "expect", result: ["isError": true,
+            "content": [["type": "text", "text": body]]]), host: "codex", session: "a")
+        let row = try XCTUnwrap(p.report().tools.first)
+        XCTAssertEqual(row.reportedErrors, 1)
+        XCTAssertEqual(row.unknownErrorStatus, 0)
+        XCTAssertEqual(row.explicitErrorRate, 1)
+    }
+    func testReturnedTextSharesUseAllCategoryRowsAndNeverRequestCounters() throws {
+        var p = parser()
+        p.consume(native("a", tool: "large", result: ["content": [["type": "text", "text": "abcdefghijkl"]]]), host: "codex", session: "a")
+        p.consume(native("b", tool: "small", result: ["content": [["type": "text", "text": "abcd"]]]), host: "codex", session: "a")
+        var report = p.report()
+        var skill = ToolUsageRow(id: "skill", host: "claude", kind: "skill", name: "skill")
+        skill.returnedTextBytes = 400; skill.returnedTextEstimatedTokens = 100
+        report.tools.append(skill)
+        report.sessionTokens = [LoggedTokenUsage(host: "codex", requests: 1, inputTokens: 999999, outputTokens: 1, semantics: "fixture")]
+        let summary = report.returnedTextSummary(kind: "mcp")
+        XCTAssertEqual(summary.returnedTextBytes, 16)
+        XCTAssertEqual(summary.returnedTextTokens, 4)
+        XCTAssertEqual(summary.percentage(of: try XCTUnwrap(report.tools.first { $0.name == "large" })), 75)
+        XCTAssertNil(summary.percentage(of: skill))
+        XCTAssertEqual(report.returnedTextSummary(kind: "skill").returnedTextTokens, 100)
+    }
+    func testReferenceSharesStayUnknownWhenAnyCountOrEncodingIsUnavailable() throws {
+        var report = parser().report()
+        report.referenceEncoding = "cl100k_base"
+        var row = ToolUsageRow(id: "a", host: "codex", kind: "mcp", name: "tool")
+        row.completed = 1; row.returnedTextBytes = 4; row.referenceEncoding = "cl100k_base"
+        row.referenceReturnedTextTokens = 3
+        report.tools = [row]
+        XCTAssertEqual(report.returnedTextSummary(kind: "mcp").percentage(of: row), 100)
+        var unavailable = row; unavailable.id = "b"; unavailable.referenceReturnedTextTokens = nil
+        report.tools.append(unavailable)
+        XCTAssertNil(report.returnedTextSummary(kind: "mcp").returnedTextTokens)
+        XCTAssertNil(report.returnedTextSummary(kind: "mcp").percentage(of: row))
+        report.tools[1].referenceReturnedTextTokens = 3
+        report.tools[1].unavailableReferenceResults = 1
+        XCTAssertNil(report.returnedTextSummary(kind: "mcp").returnedTextTokens)
+        report.tools[1].unavailableReferenceResults = 0
+        report.tools[1].referenceEncoding = "o200k_base"
+        XCTAssertNil(report.returnedTextSummary(kind: "mcp").returnedTextTokens)
+    }
+    func testEmptyZeroOverflowAndMissingResultsDoNotCreateFalseShares() {
+        var report = parser().report()
+        XCTAssertEqual(report.returnedTextSummary(kind: "mcp").returnedTextTokens, 0)
+        var row = ToolUsageRow(id: "a", host: "codex", kind: "mcp", name: "tool")
+        report.tools = [row]
+        XCTAssertNil(report.returnedTextSummary(kind: "mcp").percentage(of: row))
+        row.returnedTextEstimatedTokens = Int.max; row.returnedTextBytes = Int.max
+        var other = row; other.id = "b"
+        report.tools = [row, other]
+        XCTAssertNil(report.returnedTextSummary(kind: "mcp").returnedTextTokens)
+        XCTAssertNil(report.returnedTextSummary(kind: "mcp").returnedTextBytes)
+        row.returnedTextEstimatedTokens = -1
+        report.tools = [row]
+        XCTAssertNil(report.returnedTextSummary(kind: "mcp").returnedTextTokens)
+        row.returnedTextBytes = 0; row.referenceEncoding = "cl100k_base"; row.missingResults = 1
+        report.referenceEncoding = "cl100k_base"; report.tools = [row]
+        XCTAssertEqual(report.returnedTextSummary(kind: "mcp").returnedTextTokens, 0)
+        XCTAssertNil(report.returnedTextSummary(kind: "mcp").percentage(of: row))
+    }
     func testNativeAndLegacyRecordsDeduplicateInEitherOrderAndGroupOtherCallsTogether() throws {
         let result: [String: Any] = ["isError": false, "content": [["type": "text", "text": "same"]]]
         for nativeFirst in [true, false] {

@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-17",
+  "scope": "Four real isolated model runs operating an offline stateful fixture, not live browser or production MCP acceptance.",
+  "allTerminal": true,
+  "credentialCopiesRemoved": true,
+  "commandAudit": "All completed model commands reviewed: only supplied workflow operations or exact Skill file read; no reads of implementation/state/scenario/events, no edits.",
+  "skillInstalled": false,
+  "invalidV1Excluded": true,
+  "regression": "3 no-model tests passed; separate Codex sandbox commands retained Saved across three reads for both scenarios.",
+  "sourceSHA256": {
+    "frozen-collector.py": "a3c1977df126d12ef6586ceed46bc6eb74fb7bd1ccd188bbc080b017eac39d5a",
+    "frozen-workflow.py": "6d7d092c79a9833255ca42c9b5f0960bc7bd609266af10b8cebd9448006408ba",
+    "frozen-SKILL.md": "d0fbd3a427daec5bc94b086cd4f58066b62a4a820c817372a41624111ae79389",
+    "frozen-evals.json": "af8102e1562e04ef41730d3d8f563de958e302ecb3c50c211fd14b9f72607f07"
+  },
+  "limitations": [
+    "Two single-run paired tasks, no stable or statistical superiority claim.",
+    "Candidate adds explicit Skill read and model/tool round trip; input difference is not Skill document size or bill.",
+    "Native cached input is a separate counter, not added to input.",
+    "Timings include model/tool waiting and scheduling.",
+    "No proof of implicit Skill trigger or real business page performance."
+  ],
+  "decision": "Do not install or automatically inject this candidate: no measured outcome benefit, with extra round trips observed."
+}

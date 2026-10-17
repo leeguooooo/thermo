@@ -2571,6 +2571,7 @@ let zhHans: [String: String] = [
     "HTTP notification acknowledgement must have an empty body.": "HTTP 通知确认响应的正文必须为空。",
     "Starts the configured stdio server or connects to its HTTP endpoint and reads tool definitions. No business tools are called.": "启动配置中的 stdio 服务或连接 HTTP 地址并读取工具定义，不调用业务工具。",
     "This configuration scan does not connect to MCP servers. Use Connect & inspect for definitions and connection timing; actual tool usage remains unmeasured.": "配置扫描不会连接 MCP 服务。可点击“连接并检查”测量定义和连接耗时；实际工具用量仍未测量。",
+    "Configuration scanning does not connect to MCP servers. Connect & inspect measures definitions and connection timing. Analyze local logs below reads recorded tool calls.": "配置扫描不会连接 MCP 服务。“连接并检查”统计定义和连接耗时；下方“分析本地日志”读取已有的工具调用。",
     "No local process": "无需启动本地进程",
     "HTTP inspection session closed": "HTTP 检查会话已关闭",
     "No HTTP session was created": "未创建 HTTP 会话",
@@ -2806,4 +2807,8 @@ let zhHans: [String: String] = [
     "Fresh battery or power state is unavailable": "尚无可用的新电量或供电读数。",
     "Fresh battery or charging state is unavailable": "尚无可用的新电量或充电状态。",
     "Charging hold readback is unconfirmed": "尚未确认暂停充电的读回结果。",
+    "Returned text total in this category: %1$@ bytes / %2$@ tokens": "本分类返回文本合计：%1$@ 字节 / %2$@ token",
+    "Totals include all observed entries in this category, including hidden rows. Missing logs, results and non-text content are not included; this is not request usage.": "合计包含本分类全部已观察条目，包括未展开的行。不含缺失日志、缺失结果和非文本内容，不是请求用量。",
+    "Share of this category's observed returned-text tokens: %1$@": "占本分类已观察返回文本 token：%1$@",
+    "Error proportions exclude missing results and unknown error statuses; they do not measure task success. An explicit error may be an unmet assertion, not a service fault; inspect the task evidence before judging tool quality.": "错误比例不计入结果缺失和错误状态未知的调用，不代表任务成功率。明确错误也可能只是条件断言未通过，并非服务故障；判断工具质量时需查看任务证据。",
 ]
