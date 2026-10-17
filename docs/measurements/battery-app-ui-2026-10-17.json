@@ -108,5 +108,39 @@
     "Physical battery writes, sleep/wake, restart/update/uninstall and version compatibility still require authorization and actual acceptance",
     "Not a new signed universal release, notarization, deployment or publication",
     "No-internal-battery/native-system product branches and detailed error localization remain unfinished"
-  ]
+  ],
+  "testedCodeCommit": "7c48c4d028d35d7ca2565947be231863b11f8c4f",
+  "integrationCheck": {
+    "snapshot": "2e35c4c4d4d92022745626236acd4dd730aea98b",
+    "incomingCommittedMain": "5c62636",
+    "dictionaryConflict": "Retained both battery strings and incoming tool-usage strings",
+    "sourceHashChangesFromFullTestSnapshot": [
+      "Sources/ThermoL10n/ZhHans.swift"
+    ],
+    "command": "swift test --skip HardwareTests --filter 'BatteryCareModelTests|ToolUsageTests|Locale'",
+    "suites": {
+      "ThermoKitTests.xctest": 0,
+      "ThermoHelperTests.xctest": 0,
+      "ThermoCLITests.xctest": 0,
+      "ThermoAppTests.xctest": 11,
+      "CleanKitTests.xctest": 0,
+      "AgentDoctorTests.xctest": 28,
+      "AgentCoreTests.xctest": 0
+    },
+    "total": 39,
+    "failures": 0,
+    "notAddedToFullTotal": true,
+    "log": "/tmp/thermo-battery-app-integration-tests.log",
+    "sha256": "eff8672f9c2a6a70679a7b27ca082ff724139ce2fb90cd940229c65219ca4ebb",
+    "mainWorkingCopy": "Not fast-forwarded while parallel ContextFootprint/SkillQuality and dictionary edits remain uncommitted",
+    "localizationVerification": {
+      "command": "swift test --skip HardwareTests --filter LocalizationTests",
+      "passed": 3,
+      "failures": 0,
+      "covers": "All Sources tr literals and placeholder consistency; prior Locale filter did not select this class",
+      "log": "/tmp/thermo-battery-app-localization-integration-tests.log",
+      "sha256": "2c00a303c0da3ebef8f8de758c7fd1a70ad755a7ef3bc95c047f438eef54e18c",
+      "notAddedToFullTotal": true
+    }
+  }
 }
