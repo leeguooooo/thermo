@@ -3,7 +3,25 @@ import XCTest
 @testable import ThermoKit
 @testable import ThermoHelper
 
+/// Matches the protocol-7 selectors, without the new session-ID parameter.
+@objc protocol LegacyBatteryHelper {
+    func setBatteryChargePolicy(_ policy: String, reply: @escaping (String?) -> Void)
+    func batteryChargeState(reply: @escaping (Data) -> Void)
+}
+
 final class BatteryServiceTests: XCTestCase {
+    private func legacyCall<T: Sendable>(_ connection: NSXPCConnection,
+                                        send: (LegacyBatteryHelper, @escaping @Sendable (Result<T, Error>) -> Void) -> Void) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            let once = Once()
+            let done: @Sendable (Result<T, Error>) -> Void = { result in once.run { continuation.resume(with: result) } }
+            guard let proxy = connection.remoteObjectProxyWithErrorHandler({ done(.failure($0)) }) as? LegacyBatteryHelper else {
+                done(.failure(BatteryGateError("missing legacy proxy"))); return
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 3) { done(.failure(BatteryGateError("legacy XPC timed out"))) }
+            send(proxy, done)
+        }
+    }
     final class Rig: @unchecked Sendable {
         let id = UUID().uuidString
         private let lock = NSLock()
@@ -12,11 +30,12 @@ final class BatteryServiceTests: XCTestCase {
         var percent: Double? = 90, plugged: Bool? = true
         var now = 100.0, observedAt = 100.0
         var failRestore = false, failHold = false, writes = 0
+        var batteryPresence: BatteryPresence = .present, nativeAvailable = false, hasChargeKeys = true
         var changed: (@Sendable ([UInt8]) -> Void)?
         func access<T>(_ body: (Rig) throws -> T) rethrows -> T { lock.lock(); defer { lock.unlock() }; return try body(self) }
         var info: SMCKeyInfo { .init(key: "CHTE", type: "ui32", size: 4, attributes: 0xd4) }
         func controller() -> BatteryChargingGate {
-            .init(io: .init(info: { $0 == "CHTE" ? self.info : nil }, read: { _ in
+            .init(io: .init(info: { key in self.access { key == "CHTE" && $0.hasChargeKeys ? $0.info : nil } }, read: { _ in
                 self.access { .init(key: "CHTE", type: "ui32", bytes: $0.bytes) }
             }, write: { _, value in
                 let callback = try self.access { rig -> (@Sendable ([UInt8]) -> Void)? in
@@ -30,7 +49,7 @@ final class BatteryServiceTests: XCTestCase {
                             clear: { value in self.access { XCTAssertEqual($0.record, value); $0.record = nil } }), hardwareID: { self.id })
         }
         func reading() -> BatteryChargePolicy.Observation? { access { .init(percent: $0.percent, externalPower: $0.plugged, observedAt: $0.observedAt) } }
-        func coordinator() -> BatteryHelperCoordinator { .init(make: { self.controller() }, power: { self.reading() }, clock: { self.access { $0.now } }, tickInterval: 0.03) }
+        func coordinator() -> BatteryHelperCoordinator { .init(make: { self.controller() }, power: { self.reading() }, clock: { self.access { $0.now } }, presence: { self.access { $0.batteryPresence } }, nativeEligible: { self.access { $0.nativeAvailable } }, tickInterval: 0.03) }
     }
     final class Endpoint: NSObject, NSXPCListenerDelegate, @unchecked Sendable {
         let listener = NSXPCListener.anonymous(), charging: BatteryHelperCoordinator
@@ -119,7 +138,7 @@ final class BatteryServiceTests: XCTestCase {
     }
     func testClosedOwnerQueuedBehindStartupCannotActivate() async {
         let rig = Rig(), gate = DispatchSemaphore(value: 0), owner = AWDLConnectionOwner()
-        let manager = BatteryHelperCoordinator(make: { _ = gate.wait(timeout: .now() + 5); return rig.controller() }, power: { rig.reading() }, tickInterval: 0.03)
+        let manager = BatteryHelperCoordinator(make: { _ = gate.wait(timeout: .now() + 5); return rig.controller() }, power: { rig.reading() }, presence: { .present }, nativeEligible: { false }, tickInterval: 0.03)
         let rejected = expectation(description: "closed owner rejected")
         manager.setPolicy(.limit80, owner: owner) { error in XCTAssertNotNil(error); rejected.fulfill() }
         manager.disconnected(owner: owner); gate.signal()
@@ -129,7 +148,7 @@ final class BatteryServiceTests: XCTestCase {
         let rig = Rig(), entered = DispatchSemaphore(value: 0), resume = DispatchSemaphore(value: 0), owner = AWDLConnectionOwner()
         let manager = BatteryHelperCoordinator(make: { rig.controller() }, power: {
             entered.signal(); _ = resume.wait(timeout: .now() + 5); return rig.reading()
-        }, clock: { 100 }, tickInterval: 1)
+        }, clock: { 100 }, presence: { .present }, nativeEligible: { false }, tickInterval: 1)
         let rejected = expectation(description: "close before write")
         manager.setPolicy(.limit80, owner: owner) { error in XCTAssertNotNil(error); rejected.fulfill() }
         XCTAssertEqual(entered.wait(timeout: .now() + 3), .success)
@@ -182,5 +201,43 @@ final class BatteryServiceTests: XCTestCase {
         XCTAssertNil(BatteryChargeSystem.parsePower([:], now: 100).externalPower)
         XCTAssertEqual(BatteryChargeSystem.parsePower(["ExternalConnected": true], now: 100).externalPower, true)
         XCTAssertEqual(BatteryChargeSystem.parsePower(["ExternalConnected": 0], now: 100).externalPower, false)
+    }
+    func testNoInternalBatteryCannotAcquirePolicyEvenWithReadableRegisters() async throws {
+        let rig = Rig(); rig.access { $0.batteryPresence = .notObserved }
+        let endpoint = Endpoint(rig); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }
+        let state = try await client.batteryChargeState(); XCTAssertEqual(state.support, .noInternalBattery)
+        XCTAssertNil(state.percent); XCTAssertNil(state.externalPower)
+        do { try await client.setBatteryChargePolicy(.limit80); XCTFail("no internal battery") } catch {}
+        XCTAssertEqual(rig.access { $0.writes }, 0); XCTAssertNil(rig.access { $0.record })
+    }
+    func testUnsupportedSMCOffersNativeSettingsWithoutAnyWrite() async throws {
+        let rig = Rig(); rig.access { $0.hasChargeKeys = false; $0.nativeAvailable = true }
+        let endpoint = Endpoint(rig); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }
+        let state = try await client.batteryChargeState(); XCTAssertEqual(state.support, .systemSettings)
+        do { try await client.setBatteryChargePolicy(.chargeToFull); XCTFail("native settings are not a write API") } catch {}
+        XCTAssertEqual(rig.access { $0.writes }, 0)
+    }
+    func testLosingConfirmedBatteryPresenceRestoresExistingHold() async throws {
+        let rig = Rig(), endpoint = Endpoint(rig); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }
+        try await client.setBatteryChargePolicy(.limit80); rig.access { $0.batteryPresence = .notObserved }
+        _ = try await wait(client) { $0.phase == .off && $0.support == .noInternalBattery }
+        XCTAssertNil(rig.access { $0.record }); XCTAssertEqual(rig.access { $0.bytes }, [0, 0, 0, 0])
+    }
+    func testProtocol7SelectorStillWorksAndDisconnectRestoresItsPrivateOwner() async throws {
+        let rig = Rig(), endpoint = Endpoint(rig); defer { endpoint.stop() }
+        let connection = NSXPCConnection(listenerEndpoint: endpoint.listener.endpoint)
+        connection.remoteObjectInterface = NSXPCInterface(with: LegacyBatteryHelper.self); connection.resume(); defer { connection.invalidate() }
+        let _: Void = try await legacyCall(connection) { proxy, done in
+            proxy.setBatteryChargePolicy("limit80") { error in
+                if let error { done(.failure(BatteryGateError(error))) } else { done(.success(())) }
+            }
+        }
+        let data: Data = try await legacyCall(connection) { proxy, done in proxy.batteryChargeState { done(.success($0)) } }
+        let owned = try PolicyCoding.decoder().decode(BatteryChargeState.self, from: data)
+        XCTAssertTrue(owned.ownedByCaller); XCTAssertNotNil(owned.sessionID); XCTAssertEqual(owned.phase, .holding)
+        let observer = endpoint.client(); defer { observer.reset() }
+        let foreign = try await observer.batteryChargeState(); XCTAssertFalse(foreign.ownedByCaller)
+        connection.invalidate(); _ = try await wait(observer) { $0.phase == .off }
+        XCTAssertNil(rig.access { $0.record }); XCTAssertEqual(rig.access { $0.bytes }, [0, 0, 0, 0])
     }
 }

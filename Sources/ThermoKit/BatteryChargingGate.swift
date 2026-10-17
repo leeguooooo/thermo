@@ -1,14 +1,18 @@
 import Foundation
 
-public enum BatteryChargeClientError: LocalizedError {
+public enum BatteryChargeClientError: LocalizedError, CustomStringConvertible {
     case notStarted(String)
     public var errorDescription: String? { switch self { case .notStarted(let message): return message } }
+    public var description: String { errorDescription ?? "Charging request was not started" }
 }
 
-public struct BatteryGateError: LocalizedError {
+public struct BatteryGateError: LocalizedError, CustomStringConvertible {
+    public enum Category: Sendable { case failure, unsupported }
     public let message: String
-    public init(_ message: String) { self.message = message }
+    public let category: Category
+    public init(_ message: String, category: Category = .failure) { self.message = message; self.category = category }
     public var errorDescription: String? { message }
+    public var description: String { message }
 }
 
 public enum BatteryGateLayout: String, Codable, Sendable {
@@ -20,7 +24,20 @@ public enum BatteryGateLayout: String, Codable, Sendable {
         keys.contains(info.key) && info.size == enabled.count && info.attributes == 0xd4 &&
             (self == .chte ? info.type == "ui32" : [FourCC("hex_"), "ui8 "].contains(info.type))
     }
+    static func detect(_ io: BatteryGateIO) throws -> (BatteryGateLayout, [SMCKeyInfo]) {
+        let first = try io.info("CH0B"), second = try io.info("CH0C")
+        let layout: BatteryGateLayout, registers: [SMCKeyInfo]
+        if let first, let second { layout = .legacyPair; registers = [first, second] }
+        else if let chte = try io.info("CHTE") { layout = .chte; registers = [chte] }
+        else { throw BatteryGateError("Charging gate: supported charging registers not found", category: .unsupported) }
+        guard registers.map(\.key) == layout.keys, registers.allSatisfy(layout.accepts) else {
+            throw BatteryGateError("Charging gate: unsupported charging register metadata", category: .unsupported)
+        }
+        return (layout, registers)
+    }
 }
+
+public enum BatteryGateAvailability: String, Codable, Sendable { case available, unsupported, unavailable }
 
 /// The recovery payload cannot authorize arbitrary keys, types or byte writes.
 /// Acquisition starts only from all-zero registers, never an external hold.
@@ -95,16 +112,15 @@ public final class BatteryChargingGate {
     }
     private func probe() throws -> BatteryGateRecord {
         guard let id = hardwareID(), UUID(uuidString: id) != nil else { throw failure("hardware identity unavailable") }
-        let first = try io.info("CH0B"), second = try io.info("CH0C")
-        let layout: BatteryGateLayout, registers: [SMCKeyInfo]
-        if let first, let second {
-            layout = .legacyPair; registers = [first, second]
-        } else if let chte = try io.info("CHTE") {
-            layout = .chte; registers = [chte]
-        } else { throw failure("supported charging registers not found") }
+        let (layout, registers) = try BatteryGateLayout.detect(io)
         let result = BatteryGateRecord(hardwareID: id, layout: layout, registers: registers)
         guard result.valid else { throw failure("unsupported charging register metadata") }
         return result
+    }
+    public func availability() -> BatteryGateAvailability {
+        do { _ = try BatteryGateLayout.detect(io); return .available }
+        catch let error as BatteryGateError where error.category == .unsupported { return .unsupported }
+        catch { return .unavailable }
     }
     public func observation() -> (gate: BatteryChargePolicy.Gate, ownership: BatteryChargePolicy.Ownership) {
         do {

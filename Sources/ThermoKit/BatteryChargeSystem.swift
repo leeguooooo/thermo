@@ -1,9 +1,34 @@
 import Darwin
 import Foundation
 import IOKit
+import IOKit.ps
 
 /// Live wiring is used only by the installed root helper, never by mock tests.
 public enum BatteryChargeSystem {
+    public static func presence() -> BatteryPresence {
+        guard let blob = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let list = IOPSCopyPowerSourcesList(blob)?.takeRetainedValue() as? [AnyObject] else { return .unknown }
+        let types = list.map { source -> String? in
+            guard let dict = IOPSGetPowerSourceDescription(blob, source)?.takeUnretainedValue() as? [String: Any] else { return nil }
+            return dict[kIOPSTypeKey] as? String
+        }
+        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AppleSmartBattery"))
+        let registryBatteryPresent = service != 0
+        if service != 0 { IOObjectRelease(service) }
+        return presence(sourceTypes: types, registryBatteryPresent: registryBatteryPresent)
+    }
+    static func presence(sourceTypes: [String?], registryBatteryPresent: Bool = false) -> BatteryPresence {
+        if sourceTypes.contains(where: { $0 == kIOPSInternalBatteryType }) { return .present }
+        if registryBatteryPresent { return .unknown } // Conflicting observations cannot establish absence.
+        return sourceTypes.allSatisfy({ $0 == kIOPSUPSType }) ? .notObserved : .unknown
+    }
+    public static func nativeLimitEligible(major: Int, minor: Int, appleSilicon: Bool) -> Bool {
+        appleSilicon && (major > 26 || (major == 26 && minor >= 4))
+    }
+    public static var nativeLimitEligible: Bool {
+        let version = ProcessInfo.processInfo.operatingSystemVersion
+        return nativeLimitEligible(major: version.majorVersion, minor: version.minorVersion, appleSilicon: LidAwakeController.appleSilicon)
+    }
     public static func hardwareID() -> String? {
         let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPlatformExpertDevice"))
         guard service != 0 else { return nil }; defer { IOObjectRelease(service) }

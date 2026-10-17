@@ -8,6 +8,7 @@ public struct BatteryChargeState: Codable, Sendable {
     public var ownership: BatteryChargePolicy.Ownership = .none
     public var ownedByCaller = false
     public var sessionID: String?
+    public var support: BatteryChargeSupport?
     public var percent: Double?
     public var externalPower: Bool?
     public var error: String?
@@ -21,6 +22,8 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
     private let make: @Sendable () throws -> BatteryChargingGate
     private let power: @Sendable () -> BatteryChargePolicy.Observation?
     private let clock: @Sendable () -> TimeInterval
+    private let presence: @Sendable () -> BatteryPresence
+    private let nativeEligible: @Sendable () -> Bool
     private var controller: BatteryChargingGate?
     private var timer: DispatchSourceTimer?
     private var owner: AWDLConnectionOwner?
@@ -33,8 +36,10 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
     public init(make: @escaping @Sendable () throws -> BatteryChargingGate = { try BatteryChargeSystem.make() },
                 power: @escaping @Sendable () -> BatteryChargePolicy.Observation? = { BatteryChargeSystem.power() },
                 clock: @escaping @Sendable () -> TimeInterval = { AWDLSystemClock.now() },
+                presence: @escaping @Sendable () -> BatteryPresence = { BatteryChargeSystem.presence() },
+                nativeEligible: @escaping @Sendable () -> Bool = { BatteryChargeSystem.nativeLimitEligible },
                 tickInterval: TimeInterval = 2) {
-        self.make = make; self.power = power; self.clock = clock
+        self.make = make; self.power = power; self.clock = clock; self.presence = presence; self.nativeEligible = nativeEligible
         let interval = tickInterval.isFinite && tickInterval > 0 ? min(60, max(0.02, tickInterval)) : 2
         queue.async { [self] in
             initialize()
@@ -60,6 +65,7 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
     }
     private func stopPolicy() { state.policy = .off; state.sessionID = nil; owner = nil }
     private func updateObservation() {
+        state.support = BatteryChargeProbe.support(presence: presence(), availability: controller?.availability() ?? .unavailable, nativeEligible: nativeEligible())
         guard let controller else { return }
         let observed = controller.observation()
         state.gate = observed.gate; state.ownership = observed.ownership
@@ -67,14 +73,37 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
             state.phase = .blocked; state.error = controller.lastError ?? "Charging hold readback is unconfirmed"
         }
     }
-    private func evaluate() throws {
-        guard let controller else { throw BatteryGateError(state.error ?? "Charging controller is unavailable") }
-        updateObservation()
+    @discardableResult private func samplePower() -> BatteryChargePolicy.Observation? {
+        if state.support == .noInternalBattery {
+            state.percent = nil; state.externalPower = nil; powerObservedAt = nil; return nil
+        }
         let sample = power(), now = clock()
         let fresh = sample.map { now.isFinite && now >= 0 && $0.observedAt.isFinite && $0.observedAt >= 0 && now >= $0.observedAt && now - $0.observedAt <= 30 } ?? false
         state.percent = fresh ? sample?.percent.flatMap { $0.isFinite && (0...100).contains($0) ? $0 : nil } : nil
         state.externalPower = fresh ? sample?.externalPower : nil
         powerObservedAt = fresh ? sample?.observedAt : nil
+        return sample
+    }
+    private var supportReason: String {
+        switch state.support ?? .unknown {
+        case .noInternalBattery: return "No internal battery was reported by this Mac."
+        case .systemSettings: return "Manage the system charging limit in Battery settings."
+        case .unsupported: return "No supported charging control was found on this Mac."
+        case .unknown: return "Charging support has not been verified."
+        case .smc: return "Charging control is available."
+        }
+    }
+    private func evaluate() throws {
+        guard let controller else { throw BatteryGateError(state.error ?? "Charging controller is unavailable") }
+        updateObservation()
+        let sample = samplePower(), now = clock()
+        if state.support != .smc {
+            let reason = supportReason
+            if state.support != .unknown { stopPolicy() }
+            guard restore() else { throw BatteryGateError(state.error ?? "Charging restoration is unconfirmed") }
+            state.phase = state.policy == .off ? .off : .blocked; state.error = reason
+            return
+        }
         switch state.policy.decision(observation: sample, now: now, gate: state.gate, ownership: state.ownership) {
         case .inhibit:
             guard owner?.isClosed == false else { throw BatteryGateError("Charging connection closed before apply") }
@@ -120,6 +149,8 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
             guard !owner.isClosed, !self.stopping, self.removalToken == nil else { reply("Charging connection is closed or helper is preparing to stop"); return }
             guard self.owner == nil || self.owner?.id == owner.id else { reply("Another connection owns charging control"); return }
             guard self.controller != nil else { reply(self.state.error ?? "Charging controller is unavailable"); return }
+            self.updateObservation()
+            guard policy == .off || self.state.support == .smc else { reply(self.supportReason); return }
             if self.recoveryPending, !self.restore() { reply(self.state.error); return }
             if policy != .limit80 {
                 self.stopPolicy()
@@ -140,6 +171,7 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
     public func state(owner: AWDLConnectionOwner, reply: @escaping @Sendable (Data) -> Void) {
         queue.async {
             self.updateObservation()
+            self.samplePower()
             var value = self.state
             let now = self.clock()
             if self.powerObservedAt.map({ now.isFinite && now >= $0 && now - $0 <= 30 }) != true {

@@ -17,6 +17,10 @@ COMMANDS
   fans                       fan speeds, limits and mode
   power                      power (W), voltage (V) and current (A)
   battery                    battery temperature, charge, health
+  charge status [--probe]    query charging policy; --probe only reads local battery/SMC capability
+  charge limit80|full        hold a charging policy in the foreground; Ctrl-C ends and checks recovery
+                             --dry-run previews; --json emits one state per line
+  charge recover             retry orphaned recovery; never stops another connection's policy
   watch                      live full-screen view (q to quit)
   list                       raw SMC keys with type, size and value
   get KEY [KEY...]           read raw SMC keys
@@ -211,6 +215,7 @@ struct App {
         case "settings", "config": try SettingsCommand(app: self).run(rest)
         case "awake": try AwakeCommand(app: self).run(rest)
         case "awdl": try AWDLCommand(app:self).run(rest)
+        case "charge": try ChargeCommand(app: self).run(rest)
         case "history": try HistoryCommand(app: self).run(rest)
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
         }

@@ -9,11 +9,12 @@ struct BatteryCareBackend: Sendable {
     var read: @Sendable () async throws -> BatteryChargeState
     var set: @Sendable (BatteryChargePolicy, String) async throws -> Void
     var reset: @Sendable () -> Void
+    var probe: @Sendable () async -> BatteryChargeProbe? = { nil }
     var record: @Sendable (String, String, String?) -> Void = { _, _, _ in }
     var flush: @Sendable () async -> Void = {}
     static func live() -> Self {
         let client = HelperClient(), history = DispatchQueue(label: "dev.thermo.charging.history", qos: .utility)
-        return .init(read: { try await client.batteryChargeState() }, set: { try await client.setBatteryChargePolicy($0, sessionID: $1) }, reset: { client.reset() }, record: { action, status, detail in
+        return .init(read: { try await client.batteryChargeState() }, set: { try await client.setBatteryChargePolicy($0, sessionID: $1) }, reset: { client.reset() }, probe: { await Task.detached(priority: .utility) { BatteryChargeProbe.live() }.value }, record: { action, status, detail in
             let entry = OperationRecord(feature: "battery", action: action, items: [.init(target: "charging", status: status, detail: detail)])
             history.async { OperationJournal.record(entry) }
         }, flush: { await withCheckedContinuation { continuation in history.async { continuation.resume() } } })
@@ -73,6 +74,7 @@ struct BatteryCareBackend: Sendable {
 @MainActor final class BatteryCareModel: ObservableObject {
     static let shared = BatteryCareModel()
     @Published private(set) var state: BatteryChargeState?
+    @Published private(set) var probe: BatteryChargeProbe?
     @Published private(set) var busy = false
     @Published private(set) var issue: String?
     @Published private(set) var preferenceEnabled: Bool
@@ -96,7 +98,7 @@ struct BatteryCareBackend: Sendable {
     var needsQuitRecovery: Bool { sessionID != nil }
     var anotherOwner: Bool { state.map { $0.policy != .off && !$0.ownedByCaller && $0.sessionID != sessionID } ?? false }
     var lostSessionConnection: Bool { sessionID != nil && state?.sessionID == sessionID && state?.ownedByCaller == false }
-    var canEnable: Bool { !busy && !quitRequested && !anotherOwner && state?.phase != .recovering && state?.ownership != .uncertain && (state?.gate == .allowed || (state?.ownedByCaller == true && state?.gate == .inhibited)) }
+    var canEnable: Bool { !busy && !quitRequested && !anotherOwner && state?.support == .smc && state?.percent != nil && state?.externalPower != nil && state?.phase != .recovering && state?.ownership != .uncertain && (state?.gate == .allowed || (state?.ownedByCaller == true && state?.gate == .inhibited)) }
     var canStop: Bool { !busy && (needsQuitRecovery || state?.ownedByCaller == true || state?.phase == .recovering) }
     var canDisablePreference: Bool { !busy && preferenceEnabled }
     func open() { viewers += 1; refresh() }
@@ -152,13 +154,13 @@ struct BatteryCareBackend: Sendable {
     }
     private func readLatest() async {
         do {
-            let value = try await backend.read(); state = value
+            let value = try await backend.read(); state = value; probe = nil
             let previous = sessionID
             if value.ownedByCaller { sessionID = value.sessionID }
             else if value.policy == .off && value.phase == .off && value.ownership == .none { sessionID = nil }
             else if let other = value.sessionID, other != sessionID { sessionID = nil }
             if previous != nil, sessionID == nil { issue = nil; backend.record("charging-recovery", "done", nil) }
-        } catch { state = nil; issue = error.localizedDescription }
+        } catch { state = nil; issue = error.localizedDescription; probe = await backend.probe() }
     }
     private func finish(allowStop: Bool) {
         busy = false
@@ -174,7 +176,7 @@ struct BatteryCareBackend: Sendable {
         }
         updatePolling()
     }
-    private var shouldPoll: Bool { needsQuitRecovery || (viewers > 0 && state?.phase != .off) }
+    private var shouldPoll: Bool { needsQuitRecovery || (viewers > 0 && state.map { $0.phase != .off } == true) }
     private func updatePolling() {
         guard shouldPoll else { poll?.cancel(); poll = nil; return }
         guard poll == nil else { return }
@@ -210,18 +212,22 @@ struct BatteryCarePanel: View {
             Label(tr("Battery charging protection"), systemImage: "battery.75").font(.title2.weight(.semibold))
             Text(tr("Pause charging at 80% and allow it again below 75%. The Mac can continue using external power.")).font(.callout).foregroundStyle(.secondary)
             if let state = model.state {
+                if let support = supportText(state.support ?? .unknown) { Text(support).font(.callout).foregroundStyle(.secondary) }
+                if state.support == nil { Button(tr("Set up or update Thermo's helper"), action: configureHelper) }
                 Text(status(state)).font(.headline)
                 if let percent = state.percent { Text(tr("Observed battery: %1$@%%", String(format: "%.0f", percent))).monospacedDigit() }
-                Text(tr(gateText(state))).font(.caption).foregroundStyle(.secondary)
+                if state.support == .smc || model.needsQuitRecovery { Text(tr(gateText(state))).font(.caption).foregroundStyle(.secondary) }
                 if model.anotherOwner { Text(tr("Another Thermo process owns this charging policy.")).font(.caption).foregroundStyle(.orange) }
                 if model.lostSessionConnection { Text(tr("The charging connection was lost. Recovery still needs confirmation.")).font(.caption).foregroundStyle(.orange) }
                 if let error = state.error { Text(tr(error)).font(.caption).foregroundStyle(.orange) }
             } else {
                 Text(tr("Charging control has not been verified.")).foregroundStyle(.orange)
-                Button(tr("Set up or update Thermo's helper"), action: configureHelper)
+                if let support = model.probe?.support, support != .smc, support != .unknown {
+                    if let detail = supportText(support) { Text(detail).font(.callout).foregroundStyle(.secondary) }
+                } else { Button(tr("Set up or update Thermo's helper"), action: configureHelper) }
             }
-            if let issue = model.issue, issue != model.state?.error { Text(tr(issue)).font(.caption).foregroundStyle(.orange) }
-            if model.preferenceEnabled { Text(tr("Resume the 80% preference when Thermo next starts. Opening this panel does not turn it on.")).font(.caption).foregroundStyle(.secondary) }
+            if let issue = model.issue, issue != model.state?.error, fallbackSupport == nil { Text(tr(issue)).font(.caption).foregroundStyle(.orange) }
+            if model.preferenceEnabled { Text(tr("The 80% preference is saved. Thermo checks support before resuming it at startup. Opening this panel only checks status.")).font(.caption).foregroundStyle(.secondary) }
             Text(tr("Charge to 100% pauses the 80% limit until you resume it. System protection or another controller may still prevent charging.")).font(.caption).foregroundStyle(.secondary)
             if model.quitRequested { Text(tr("Waiting for charging recovery before quitting. Retry if recovery remains unconfirmed.")).foregroundStyle(.orange).font(.callout) }
             HStack {
@@ -231,13 +237,27 @@ struct BatteryCarePanel: View {
             }
             HStack {
                 Button(tr("Refresh")) { model.refresh() }.disabled(model.busy)
-                Button(tr("Open Battery settings"), action: openBatterySettings)
+                if (model.state?.support ?? model.probe?.support) != .noInternalBattery { Button(tr("Open Battery settings"), action: openBatterySettings) }
                 if model.busy { ProgressView().controlSize(.small) }
                 Spacer(); Button(tr("Close")) { dismiss() }
             }
         }.padding(24).frame(width: 600)
             .background(BatteryCareExitMarker(dismiss: { dismiss() }).frame(width: 0, height: 0))
             .onAppear { model.open() }.onDisappear { model.close() }
+    }
+    private var fallbackSupport: BatteryChargeSupport? {
+        guard model.state == nil, !model.needsQuitRecovery, let support = model.probe?.support,
+              [.systemSettings, .unsupported, .noInternalBattery].contains(support) else { return nil }
+        return support
+    }
+    private func supportText(_ support: BatteryChargeSupport) -> String? {
+        switch support {
+        case .smc: return nil
+        case .noInternalBattery: return tr("No internal battery was reported by this Mac.")
+        case .systemSettings: return tr("Manage the system charging limit in Battery settings.")
+        case .unsupported: return tr("No supported charging control was found on this Mac.")
+        case .unknown: return tr("Charging support has not been verified.")
+        }
     }
     private func status(_ state: BatteryChargeState) -> String {
         switch state.phase {

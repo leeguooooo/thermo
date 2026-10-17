@@ -12,11 +12,21 @@ final class FakeBattery: @unchecked Sendable {
     let root: URL, lock = NSLock()
     var bytes: [UInt8] = [0, 0, 0, 0]
     var allowRecovery = true, percent = 90.0
+    var batteryPresence: BatteryPresence = .present, hasChargeKey = true, nativeAvailable = false
     init(_ root: URL) { self.root = root }
     func permit(_ value: Bool) { lock.lock(); allowRecovery = value; lock.unlock() }
+    func mode(_ kind: Int) {
+        lock.lock(); defer { lock.unlock() }
+        batteryPresence = kind == 1 ? .notObserved : .present
+        hasChargeKey = kind != 2; nativeAvailable = kind == 2
+    }
+    func presence() -> BatteryPresence { lock.lock(); defer { lock.unlock() }; return batteryPresence }
+    func nativeEligible() -> Bool { lock.lock(); defer { lock.unlock() }; return nativeAvailable }
     func controller() -> BatteryChargingGate {
         let info = SMCKeyInfo(key: "CHTE", type: "ui32", size: 4, attributes: 0xd4)
-        return .init(io: .init(info: { $0 == "CHTE" ? info : nil }, read: { _ in
+        return .init(io: .init(info: { key in
+            self.lock.lock(); defer { self.lock.unlock() }; return key == "CHTE" && self.hasChargeKey ? info : nil
+        }, read: { _ in
             self.lock.lock(); defer { self.lock.unlock() }; return .init(key: "CHTE", type: "ui32", bytes: self.bytes)
         }, write: { _, value in
             self.lock.lock(); defer { self.lock.unlock() }
@@ -53,6 +63,9 @@ struct QAHost: View {
                 HStack {
                     Button("阻止模拟恢复") { fake.permit(false) }
                     Button("允许模拟恢复") { fake.permit(true) }
+                    Button("模拟无电池") { fake.mode(1) }
+                    Button("模拟系统保护") { fake.mode(2) }
+                    Button("模拟 SMC 支持") { fake.mode(0) }
                 }.padding(.top, 12)
                 BatteryCarePanel(model: model, configureHelper: { print("NO_HELPER_INSTALL"); fflush(stdout) }, openBatterySettings: { print("NO_SYSTEM_SETTINGS"); fflush(stdout) })
             }
@@ -67,7 +80,7 @@ struct QAHost: View {
         guard root.lastPathComponent.hasPrefix("thermo-battery-ui-"), FileManager.default.fileExists(atPath: root.appendingPathComponent(".thermo-battery-ui-fixture").path) else { exit(3) }
         _ = freopen(root.appendingPathComponent("trace.log").path, "a", stdout)
         let fake = FakeBattery(root), owner = AWDLConnectionOwner()
-        let manager = BatteryHelperCoordinator(make: { fake.controller() }, power: { fake.power() }, tickInterval: 0.1)
+        let manager = BatteryHelperCoordinator(make: { fake.controller() }, power: { fake.power() }, presence: { fake.presence() }, nativeEligible: { fake.nativeEligible() }, tickInterval: 0.1)
         let backend = BatteryCareBackend(read: {
             let data: Data = await withCheckedContinuation { c in manager.state(owner: owner) { c.resume(returning: $0) } }
             return try PolicyCoding.decoder().decode(BatteryChargeState.self, from: data)

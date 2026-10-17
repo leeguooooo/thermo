@@ -12,7 +12,7 @@ public enum HelperConstants {
     public static let machService = "dev.thermo.helper"
     public static let installedBinary = "/Library/PrivilegedHelperTools/dev.thermo.helper"
     public static let launchdPlist = "/Library/LaunchDaemons/dev.thermo.helper.plist"
-    public static let protocolVersion = "7"
+    public static let protocolVersion = "8"
     /// Reported by the helper: "<protocol>/<app version>".
     public static var version: String { "\(protocolVersion)/\(ThermoVersion.string)" }
     /// Plist bundled at Contents/Library/LaunchDaemons for SMAppService registration.
@@ -133,7 +133,9 @@ public enum HelperSelfUpdate {
     func beginAWDL(seconds: Int,sessionID: String,reply: @escaping (String?) -> Void)
     func endAWDL(reply: @escaping (String?) -> Void)
     func awdlState(reply: @escaping (Data) -> Void)
-    /// Protocol 7. Charging policies are held only for this XPC connection.
+    /// Protocol 7 legacy selector. New clients use protocol 8's public session ID.
+    func setBatteryChargePolicy(_ policy: String, reply: @escaping (String?) -> Void)
+    /// Protocol 8. Charging policies are held only for this XPC connection.
     func setBatteryChargePolicy(_ policy: String, sessionID: String, reply: @escaping (String?) -> Void)
     func batteryChargeState(reply: @escaping (Data) -> Void)
 }
@@ -354,7 +356,7 @@ public final class HelperClient: @unchecked Sendable {
     }
     private func requireBatteryCharge() async throws {
         let value = try await version()
-        guard let major = Int(value.split(separator: "/").first ?? ""), major >= 7 else {
+        guard let major = Int(value.split(separator: "/").first ?? ""), major >= 8 else {
             throw BatteryGateError("Update Thermo's helper before using charging control")
         }
     }

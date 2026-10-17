@@ -33,7 +33,7 @@ final class HelperXPCTests: XCTestCase {
     }
     final class Service: NSObject, ThermoHelperProtocol, @unchecked Sendable {
         struct State {
-            var version = "7/fixture"
+            var version = "8/fixture"
             var control = FanControlState(policies: [:])
             var policyData: Data?
             var controlData: Data?
@@ -96,6 +96,7 @@ final class HelperXPCTests: XCTestCase {
             let data=access { s in s.awdlCalls+=1;return s.awdlData ?? (try! PolicyCoding.encoder().encode(AWDLSessionState())) };reply(data)
         }
         func setBatteryChargePolicy(_ policy: String, sessionID: String, reply: @escaping (String?) -> Void) { access { $0.chargeCalls += 1 }; reply("fixture has no charging controller") }
+        func setBatteryChargePolicy(_ policy: String, reply: @escaping (String?) -> Void) { access { $0.chargeCalls += 1 }; reply("legacy fixture has no charging controller") }
         func batteryChargeState(reply: @escaping (Data) -> Void) { reply(access { $0.chargeCalls += 1; return $0.chargeData ?? (try! PolicyCoding.encoder().encode(BatteryChargeState())) }) }
     }
     func testLegacyRemovalCannotClaimAWDLWasRestored() async throws {
@@ -104,14 +105,23 @@ final class HelperXPCTests: XCTestCase {
         do { try await client.prepareRemoval(true,token:UUID().uuidString);XCTFail("legacy recovery excludes AWDL") } catch {}
         XCTAssertTrue(endpoint.service.access { $0.preparations.isEmpty })
     }
-    func testProtocol6CannotReceiveChargingSelectorsOrClaimChargingRemovalRecovery() async throws {
-        let endpoint = Endpoint(); defer { endpoint.stop() }; endpoint.service.access { $0.version = "6/fixture" }
-        let client = endpoint.client(); defer { client.reset() }
-        do { try await client.setBatteryChargePolicy(.limit80); XCTFail("old helper") } catch {}
-        do { _ = try await client.batteryChargeState(); XCTFail("old helper") } catch {}
-        do { try await client.prepareRemoval(true, token: UUID().uuidString); XCTFail("old recovery contract") } catch {}
-        XCTAssertEqual(endpoint.service.access { $0.chargeCalls }, 0)
+    func testOlderProtocolsCannotReceiveNewChargingSelectors() async throws {
+        for version in ["6/fixture", "7/fixture"] {
+            let endpoint = Endpoint(); defer { endpoint.stop() }; endpoint.service.access { $0.version = version }
+            let client = endpoint.client(); defer { client.reset() }
+            do { try await client.setBatteryChargePolicy(.limit80); XCTFail("old helper") } catch {}
+            do { _ = try await client.batteryChargeState(); XCTFail("old helper") } catch {}
+            XCTAssertEqual(endpoint.service.access { $0.chargeCalls }, 0)
+        }
+    }
+    func testRemovalRetainsProtocol7CompatibilityButRejectsProtocol6() async throws {
+        let endpoint = Endpoint(); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }
+        endpoint.service.access { $0.version = "6/fixture" }
+        do { try await client.prepareRemoval(true, token: UUID().uuidString); XCTFail("protocol 6 excludes charging") } catch {}
         XCTAssertTrue(endpoint.service.access { $0.preparations.isEmpty })
+        endpoint.service.access { $0.version = "7/fixture" }
+        try await client.prepareRemoval(true, token: UUID().uuidString)
+        XCTAssertEqual(endpoint.service.access { $0.preparations.count }, 1)
     }
     func testInvalidChargingSessionNeverCreatesAConnection() async {
         let endpoint = Endpoint(); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }

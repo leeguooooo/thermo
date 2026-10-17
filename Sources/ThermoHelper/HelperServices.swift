@@ -96,6 +96,7 @@ final class Service: NSObject, ThermoHelperProtocol {
     let network: AWDLHelperCoordinator
     let charging: BatteryHelperCoordinator?
     let owner=AWDLConnectionOwner()
+    private let legacyChargingSessionID = UUID().uuidString
     init(fans: FanHost,network: AWDLHelperCoordinator,charging: BatteryHelperCoordinator? = nil) { self.fans=fans;self.network=network;self.charging=charging }
     deinit { if owner.close() { network.disconnected(owner:owner);fans.disconnected(owner:owner);charging?.disconnected(owner:owner) } }
     func disconnected() {
@@ -105,6 +106,9 @@ final class Service: NSObject, ThermoHelperProtocol {
     func beginAWDL(seconds: Int,sessionID: String,reply: @escaping (String?) -> Void) { network.begin(owner:owner,seconds:seconds,sessionID:sessionID,reply:rpcReply(reply)) }
     func endAWDL(reply: @escaping (String?) -> Void) { network.end(owner:owner,reply:rpcReply(reply)) }
     func awdlState(reply: @escaping (Data) -> Void) { network.state(owner:owner,reply:rpcReply(reply)) }
+    func setBatteryChargePolicy(_ policy: String, reply: @escaping (String?) -> Void) {
+        setBatteryChargePolicy(policy, sessionID: legacyChargingSessionID, reply: reply)
+    }
     func setBatteryChargePolicy(_ policy: String, sessionID: String, reply: @escaping (String?) -> Void) {
         guard let value = BatteryChargePolicy(rawValue: policy) else { reply("Invalid charging policy"); return }
         guard let charging else { reply("Charging controller is unavailable"); return }

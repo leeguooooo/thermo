@@ -12,7 +12,7 @@ final class BatteryCareModelTests: XCTestCase {
         var value: BatteryChargeState
         var failRead = false, failEnd = false, failBeforeSend = false, failAfterSend = false
         var starts = 0, stops = 0
-        init() { var s = BatteryChargeState(); s.phase = .off; s.gate = .allowed; value = s }
+        init() { var s = BatteryChargeState(); s.phase = .off; s.gate = .allowed; s.support = .smc; s.percent = 90; s.externalPower = true; value = s }
         nonisolated var backend: BatteryCareBackend { .init(read: { try await self.read() }, set: { try await self.set($0, $1) }, reset: {}) }
         func read() throws -> BatteryChargeState { if failRead { throw BatteryGateError("fixture unavailable") }; return value }
         func set(_ policy: BatteryChargePolicy, _ id: String) throws {
@@ -29,7 +29,7 @@ final class BatteryCareModelTests: XCTestCase {
             if failAfterSend { recovering(); throw BatteryGateError("uncertain request") }
         }
         func recovering() { value.policy = .off; value.phase = .recovering; value.ownership = .uncertain; value.ownedByCaller = false; value.sessionID = nil }
-        func recover() { failRead = false; failEnd = false; value = BatteryChargeState(); value.phase = .off; value.gate = .allowed }
+        func recover() { failRead = false; failEnd = false; value = BatteryChargeState(); value.phase = .off; value.gate = .allowed; value.support = .smc; value.percent = 90; value.externalPower = true }
         func faults(end: Bool = false, before: Bool = false, after: Bool = false) { failEnd = end; failBeforeSend = before; failAfterSend = after }
         func loseOwnership(sameSession: Bool) { value.ownedByCaller = false; if !sameSession { value.sessionID = UUID().uuidString } }
         func controllerUnavailable() { value = BatteryChargeState(); value.error = "initialization failed" }
@@ -125,5 +125,16 @@ final class BatteryCareModelTests: XCTestCase {
         await rig.faults(end: true); XCTAssertTrue(model.requestQuit()); await settle(model); XCTAssertNotNil(model.issue)
         await rig.recover(); await fulfillment(of: [exited], timeout: 3)
         XCTAssertNil(model.issue); XCTAssertFalse(model.needsQuitRecovery); model.close()
+    }
+    @MainActor func testReadOnlyNativeFallbackDoesNotCertifyAnOwnedSessionHasRecovered() async {
+        let rig = Rig()
+        var backend = rig.backend
+        backend.probe = { BatteryChargeProbe.capture(io: .init(info: { _ in nil }, read: { _ in throw BatteryGateError("not present") }, write: { _, _ in XCTFail("probe cannot write") }), presence: .present, nativeEligible: true) }
+        let model = BatteryCareModel(backend: backend, preferences: Preference().io, exit: {})
+        model.open(); await settle(model); model.change(.limit80); await settle(model)
+        await rig.faults(before: true); model.change(.chargeToFull); await settle(model)
+        XCTAssertNil(model.state); XCTAssertEqual(model.probe?.support, .systemSettings)
+        XCTAssertTrue(model.needsQuitRecovery); XCTAssertFalse(model.canEnable)
+        await rig.recover(); model.refresh(); await settle(model); XCTAssertFalse(model.needsQuitRecovery); model.close()
     }
 }
