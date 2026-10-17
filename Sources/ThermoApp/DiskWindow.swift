@@ -345,6 +345,11 @@ struct DiskCategoryPage: View {
                     .font(.callout).foregroundStyle(.orange)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 28).padding(.bottom, 10)
+            } else if model.report?.resultState == .incomplete {
+                Label(tr("Scan incomplete"), systemImage: "exclamationmark.triangle")
+                    .font(.callout).foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 28).padding(.bottom, 10)
             }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 10) {
@@ -388,6 +393,13 @@ struct DiskCategoryPage: View {
                         } else if model.report?.cancelled == true {
                             VStack(alignment: .leading, spacing: 12) {
                                 Label(tr("Scan stopped. These are partial results."), systemImage: "pause.circle")
+                                Button(tr("Scan again")) { model.scan(category: category) }.buttonStyle(PillButtonStyle())
+                            }
+                            .foregroundStyle(.secondary).padding(.top, 30)
+                        } else if model.report?.resultState == .incomplete {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Label(tr("Scan incomplete"), systemImage: "exclamationmark.triangle")
+                                Text(tr("Some locations or sizes could not be checked. Review the available results or scan again."))
                                 Button(tr("Scan again")) { model.scan(category: category) }.buttonStyle(PillButtonStyle())
                             }
                             .foregroundStyle(.secondary).padding(.top, 30)

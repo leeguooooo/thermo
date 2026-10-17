@@ -184,21 +184,40 @@ struct CleanCommand {
     func report(filter: [String]) throws {
         let cats = try categories(for: filter)
         let r = try scan(cats)
-        if args.has("stream") {
-            if r.cancelled { throw CLIError("Scan is incomplete; completed events remain valid.", exitCode:3) }; return
+        try writeReport(r, categories: cats)
+    }
+
+    func writeReport(_ r: ScanReport, categories cats: Set<CleanCategory>?, write: (String) -> Void = { print($0) }) throws {
+        renderReport(r, categories: cats, write: write)
+        if r.cancelled { throw CLIError("Scan is incomplete; emitted results remain partial.", exitCode: 3) }
+    }
+
+    static func emptyScanMessage(_ r: ScanReport) -> String {
+        switch r.resultState {
+        case .empty: return "nothing to clean"
+        case .stopped: return "no findings before the scan stopped; results are partial"
+        case .incomplete: return "no verified findings; some locations, rules or sizes could not be checked"
+        case .kept: return "items were kept; review their reasons"
+        case .found, .review: return "review the available scan results"
         }
-        if args.has("json") { print(Export.json(r)); if r.cancelled { throw CLIError("Scan is incomplete; inspect cancelled and denied fields.",exitCode:3) }; return }
+    }
+
+    private func renderReport(_ r: ScanReport, categories cats: Set<CleanCategory>?, write: (String) -> Void) {
+        if args.has("stream") { return } // scan() already emitted the finished event.
+        if args.has("json") { write(Export.json(r)); return }
         if args.has("csv") {
-            print("id,category,safety,bytes,files,last_used,title,detail,blocked")
+            write("id,category,safety,bytes,files,last_used,title,detail,blocked")
             let f = ISO8601DateFormatter()
             for i in r.items {
-                print([i.id, i.category.rawValue, i.safety.rawValue, String(i.bytes), String(i.files),
+                write([i.id, i.category.rawValue, i.safety.rawValue, String(i.bytes), String(i.files),
                        i.lastUsed.map(f.string) ?? "", i.title, i.detail, i.blocked ?? ""].map(Export.csvField).joined(separator: ","))
             }
             return
         }
         let showAll = args.has("all") || cats != nil
-        var lines = [style.bold("thermo clean") + style.dim(" · ") + style.green(ByteFormat.string(r.totalBytes)) + style.dim(" in file-size estimates (not guaranteed reclaimed) · scanned in \(String(format: "%.1f", r.duration)) s · nothing was deleted")]
+        let amount = ByteFormat.string(r.totalBytes)
+        let displayedAmount = r.resultState == .empty || r.resultState == .found ? style.green(amount) : style.yellow(amount)
+        var lines = [style.bold("thermo clean") + style.dim(" · ") + displayedAmount + style.dim(" in file-size estimates (not guaranteed reclaimed) · scanned in \(String(format: "%.1f", r.duration)) s · nothing was deleted")]
         if r.sessionRetentionDays == nil { lines.append(tr("All conversations are kept. Add --older-than to review old sessions.")) }
         if let c = r.spaceContext {
             func value(_ bytes: Int64?) -> String { bytes.map(ByteFormat.string) ?? "unknown" }
@@ -228,10 +247,11 @@ struct CleanCommand {
             }
         }
         if r.cancelled { lines.append(style.yellow("scan stopped · completed findings only; results are incomplete")) }
+        else if r.resultState == .incomplete { lines.append(style.yellow("scan incomplete · some locations, rules or sizes could not be checked")) }
         if let why = r.whitelistError { lines.append(style.red(why + " · " + tr("cleanup is disabled until it is fixed"))) }
         if r.items.isEmpty {
             lines.append("")
-            lines.append(style.dim(r.cancelled ? "  no completed findings before the scan stopped" : "  nothing to clean"))
+            lines.append(style.dim("  " + Self.emptyScanMessage(r)))
         }
         if let days = r.claudeCleanupDays {
             lines.append("")
@@ -246,8 +266,7 @@ struct CleanCommand {
         lines.append(style.dim("Clean:  ") + "thermo clean run safe" + style.dim("   the \(safe.count) safe items (\(ByteFormat.string(safe.reduce(0) { $0 + $1.bytes })))"))
         lines.append(style.dim("        ") + "thermo clean run ID…" + style.dim("    items by id, id prefix or category; review items go to the Trash"))
         lines.append(style.dim("        ") + "thermo clean run ID#SESSION" + style.dim("  just some sessions of an item (see --all)"))
-        out(lines)
-        if r.cancelled { throw CLIError("Scan is incomplete.",exitCode:3) }
+        write(lines.joined(separator: "\n"))
     }
 
     func badge(_ s: Safety) -> String {

@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "582f917",
+  "corrections": [
+    "Shared ScanReport.resultState computed classification; no JSON/persistent schema change",
+    "Category empty view distinguishes incomplete coverage from confirmed empty results",
+    "CLI text highlights incomplete quality and does not claim nothing to clean for an unreadable empty scan",
+    "CLI public CSV contract now matches its existing advertised capability",
+    "CSV cancellation now emits available rows/header and returns3 like plain/JSON/stream"
+  ],
+  "compatibility": [
+    "Candidate selection, cleanup execution and confirmation boundaries unchanged",
+    "Non-cancelled read issues retain the prior exit policy; incomplete fields/messages remain visible"
+  ],
+  "reproducedContractFailure": {
+    "beforeCSVExitCode": 2,
+    "beforeCSVError": "This command supports --json, not --csv.",
+    "advertisedByHelp": true
+  },
+  "liveCLI": {
+    "scope": "Read-only scans with1ms budget and private home; no clean run or helper calls",
+    "formats": [
+      {
+        "format": "plain",
+        "exitCode": 3,
+        "outputBytes": 819,
+        "cancelled": true
+      },
+      {
+        "format": "json",
+        "exitCode": 3,
+        "outputBytes": 883,
+        "cancelled": true
+      },
+      {
+        "format": "csv",
+        "exitCode": 3,
+        "outputBytes": 62,
+        "cancelled": true
+      },
+      {
+        "format": "stream",
+        "exitCode": 3,
+        "outputBytes": 191,
+        "cancelled": true
+      }
+    ]
+  },
+  "regression": {
+    "targetedTests": 29,
+    "integrationTests": 422,
+    "integrationExitCode": 0,
+    "failures": 0,
+    "suites": {
+      "ThermoCLITests.xctest": {
+        "tests": 108,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 300,
+        "failures": 0
+      },
+      "CleanKitTests.xctest": {
+        "tests": 14,
+        "failures": 0
+      }
+    },
+    "logSHA256": "29319004793d8095b652363e4cfa5148b5d2a57107c7c8eacf4a2768d540b470"
+  },
+  "nativeCategoryUI": {
+    "fixtureRoot": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-window-ui-9q_5fnz3",
+    "fixture": "Canned browser-category report: empty items + one unreadable location, no live cleanup scan",
+    "observedTexts": [
+      "扫描未完成",
+      "部分位置或大小尚未核实，请查看已得到的结果，或重新扫描。"
+    ],
+    "cleanButtonDisabled": true,
+    "screenshotInspected": true,
+    "screenshotSaved": false,
+    "noCleanupOrSettingAction": true
+  },
+  "desktopConcurrencyIncident": {
+    "unrelatedTextAppearedInSearch": true,
+    "inputOriginNotEstablished": true,
+    "response": "Stopped desktop actions, kept AX state privately in the persistent CUA session for recovery, minimized only the owned QA window",
+    "inputTextPersistedInRepository": false,
+    "furtherGUIActionsPerformed": false,
+    "fixtureExit": "Later watchdog and QA_EXIT logged; process absence confirmed; not normal user-driven quit acceptance"
+  },
+  "limits": [
+    "No installed App, root-helper deployment or physical hardware acceptance",
+    "Synthetic category failure UI is not a real filesystem-permission test",
+    "Not packaged into440 or456"
+  ]
+}

@@ -263,6 +263,18 @@ public struct ScanReport: Codable, Sendable {
 
     public var totalBytes: Int64 { items.filter(\.cleanable).reduce(0) { $0 + $1.bytes } }
 
+    public enum ResultState: Equatable, Sendable { case stopped, incomplete, kept, found, empty, review }
+    /// Shared across presentations; an unreadable or stopped scan is never an
+    /// affirmative empty result. Does not change candidate selection or execution.
+    public var resultState: ResultState {
+        if cancelled { return .stopped }
+        if !denied.isEmpty || whitelistError != nil || items.contains(where: { $0.sizeIncomplete == true }) ||
+            (totalBytes == 0 && items.contains(where: { $0.estimatedSize == true })) { return .incomplete }
+        if totalBytes > 0 { return .found }
+        if items.isEmpty { return .empty }
+        return items.contains(where: { $0.blocked != nil }) ? .kept : .review
+    }
+
     public func bytes(in category: CleanCategory) -> Int64 {
         items.filter { $0.category == category && $0.cleanable }.reduce(0) { $0 + $1.bytes }
     }

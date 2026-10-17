@@ -4,6 +4,7 @@
 import AppKit
 import Foundation
 import ThermoL10n
+import CleanKit
 
 @_silgen_name("$s9ThermoApp20installStandardMenusyyF")
 @MainActor func fixtureStandardMenus() {}
@@ -29,8 +30,15 @@ import ThermoL10n
         submenu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.submenu = submenu; menu.addItem(item); app.mainMenu = menu
         AppModels.shared.monitor = Monitor(helperInteraction: false, arguments: ["Thermo", "--main", "--ui-review"])
-        AppModels.shared.disk = DiskModel(requestNotifications: {})
-        MainWindow.show(.overview)
+        if Bundle.main.object(forInfoDictionaryKey: "ThermoScanFixture") as? String == "denied-empty" {
+            var report = ScanReport(items: [], denied: [root.appendingPathComponent("home/unreadable-fixture").path], started: Date(), duration: 0)
+            report.categories = [.browsers]; report.language = "zh-Hans"
+            AppModels.shared.disk = DiskModel(report: report, requestNotifications: {})
+            MainWindow.show(.disk(.category(.browsers)))
+        } else {
+            AppModels.shared.disk = DiskModel(requestNotifications: {})
+            MainWindow.show(.overview)
+        }
         DispatchQueue.main.asyncAfter(deadline: .now()+300) { print("QA_WATCHDOG"); fflush(stdout); app.terminate(nil) }
         withExtendedLifetime(delegate) { app.run() }
     }
