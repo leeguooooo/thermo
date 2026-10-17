@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "71dc38b",
+  "status": "Transaction and persistent recovery foundation. Not wired into helper, App or CLI; no charging hardware acceptance.",
+  "codeSHA256": {
+    "Sources/ThermoKit/BatteryChargingGate.swift": "40c08fba578d702ae8f2b67140f5b7961ac67bf76b2a34bc9b9ed83d539e2e1a",
+    "Sources/ThermoKit/BatteryGateLeaseFile.swift": "d6bf26545ed9c8896f929500447082b8e1393f344242683452b360231a90bab9",
+    "Tests/ThermoKitTests/BatteryChargingGateTests.swift": "55fba1bd2190a823489c7e5cd0f92607e22ef4ffdfbc89c80029bd072866158a",
+    "Tests/ThermoKitTests/BatteryGateLeaseFileTests.swift": "68b7f638f1ad1675d77bff461dc96f170c5f687e78a5b2f73039d77655743dd4"
+  },
+  "fullRegression": {
+    "command": "swift test --skip HardwareTests",
+    "suites": {
+      "ThermoKitTests.xctest": 172,
+      "ThermoHelperTests.xctest": 7,
+      "ThermoCLITests.xctest": 70,
+      "ThermoAppTests.xctest": 272,
+      "CleanKitTests.xctest": 750,
+      "AgentDoctorTests.xctest": 203,
+      "AgentCoreTests.xctest": 37
+    },
+    "total": 1511,
+    "failures": 0,
+    "scope": "Before final default storage-directory and diagnostic-clear adjustments",
+    "log": "/tmp/thermo-battery-gate-full-tests.log",
+    "sha256": "74f3ef3b21fe936f47f030c5d5d44206947efe895e0de3449ddf6beacdd3e73f"
+  },
+  "finalTargetedRegression": {
+    "command": "swift test --skip HardwareTests --filter 'BatteryChargingGateTests|BatteryGateLeaseFileTests|BatteryChargePolicyTests'",
+    "total": 30,
+    "failures": 0,
+    "suites": {
+      "BatteryChargePolicyTests": 6,
+      "BatteryChargingGateTests": 15,
+      "BatteryGateLeaseFileTests": 9
+    },
+    "log": "/tmp/thermo-battery-gate-final-verified-tests.log",
+    "sha256": "75bb37549b2d703c43c53a36dce0ef13e169f928b6d8eb8517f6d250b52aaa2d",
+    "notAddedToFullTotal": true
+  },
+  "verified": [
+    "Recovery record persisted before any mocked register write",
+    "Exact full-byte readback and group verification",
+    "Write-then-throw and ignored-write injection",
+    "Partial-write recovery and retained failure record",
+    "Unknown value, metadata or hardware change refuses recovery writes",
+    "Failed acquisition never becomes a confirmed hold after later successful reads",
+    "Nonvolatile protected store, exclusive lifetime lock, no overwrite",
+    "Symlink, FIFO, hard link, corrupt/oversized/loose file rejected",
+    "Replaced lock and same-byte replacement record rejected",
+    "Controller reconstruction restores mocked CHTE from actual temporary lease file"
+  ],
+  "productionStorageDirectory": "/Library/Application Support/dev.thermo",
+  "productionDirectoryNotCreatedOrModified": true,
+  "hardwareIO": "Injected registers only; no system SMC adapter instantiated by these tests",
+  "installedPathsChangedComparedWithBaseline": [],
+  "candidate384Changed": false,
+  "limits": [
+    "Not a real daemon restart, OS reboot, power-loss or battery write test",
+    "Strict register metadata rules still need hardware compatibility validation",
+    "SMC has no atomic compare-and-swap or cross-tool ownership API; same-value external writes are ambiguous",
+    "Helper must own serialized access, startup/retry/exit/removal recovery and XPC connection policy",
+    "No App/CLI control entry, release, installation or helper deployment"
+  ]
+}
