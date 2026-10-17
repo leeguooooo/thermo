@@ -1,0 +1,112 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "04b8d74",
+  "sourceSHA256": {
+    "Sources/ThermoApp/BatteryCareView.swift": "515bcb08727a12537656e829fff054db6700e554dcabd2d0373d9afee7ee71a1",
+    "Sources/ThermoApp/AppExitGuard.swift": "6d89ec7735007f92b9fb17fea40919c46f1d4707a60b4bdcbf7e98faa5cccc1e",
+    "Sources/ThermoApp/main.swift": "ec7f5dd1c36ba4954ea06e3c44a48354775d5cd09d0734237532ca2c3c50aa99",
+    "Sources/ThermoApp/Views.swift": "74b574a0789c113bfa6c4966495d151cde1ab51f1b5e7e92aab68d58c43ba76b",
+    "Sources/ThermoKit/BatteryChargingGate.swift": "c6732a1d25f119b0741f034366799981a6e23fc2018f2b1966272a17fb20a750",
+    "Sources/ThermoKit/BatteryHelperCoordinator.swift": "e9c89ce06d48920b5d6327bc7fc08c5dcac2eff82d9181fda3c7e8f0a08fd84e",
+    "Sources/ThermoKit/Helper.swift": "2884d4bb9cd3e101ae1e3d21585a145a0dbac68a9c014e6dc7e35c0c3197f49e",
+    "Sources/ThermoHelper/HelperServices.swift": "10fdd7bb069612b52ffb2726ee5427fb6fd95f759b09779751b55e85be417d7e",
+    "Sources/ThermoL10n/ZhHans.swift": "e15e23aa9a22ca8e3f890fc234ba05b2347286548c3150db2660d5944edd0265",
+    "Tests/ThermoAppTests/BatteryCareModelTests.swift": "d6cd3645f3f12f54c6c33bdf34b2cf16ae1c529d494642f331fb27937c6fd82f",
+    "Tests/ThermoKitTests/HelperXPCTests.swift": "5a088b04987a99e2f6004dbb88e0b936030d5b75c7a3096b34e4ad48f5bab03a",
+    "scripts/verify-battery-care-ui.swift": "c22bf537a19f35155c90fa94eefcc7d4a000e12dfc9f55a280e9e6ae85cd02ce"
+  },
+  "regression": {
+    "command": "swift test --skip HardwareTests",
+    "suites": {
+      "ThermoKitTests.xctest": 176,
+      "ThermoHelperTests.xctest": 20,
+      "ThermoCLITests.xctest": 70,
+      "ThermoAppTests.xctest": 283,
+      "CleanKitTests.xctest": 750,
+      "AgentDoctorTests.xctest": 203,
+      "AgentCoreTests.xctest": 37
+    },
+    "total": 1539,
+    "failures": 0,
+    "log": "/tmp/thermo-battery-app-verified-full-tests.log",
+    "sha256": "deb57335c248c1dd030c42dc8fc1c4de747b4c12c07583525b54e5dc55b3fa00",
+    "batteryCareModelTests": 11
+  },
+  "earlierRegressionBeforeNativeCorrections": {
+    "total": 1537,
+    "log": "/tmp/thermo-battery-app-full-tests.log",
+    "notAddedToFinalTotal": true
+  },
+  "nativeUI": {
+    "root": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-battery-ui-7kvvgilf",
+    "runs": 4,
+    "productionPanelModelAndCoordinator": true,
+    "actuator": "Mock CHTE register and private lease file; no live factory or launchd",
+    "preference": "Private fixture JSON, plus a separate unit test of isolated UserDefaults suite",
+    "visibleChecked": [
+      "Chinese off/confirmed pause/full-charge states and controls fit the sheet",
+      "80% enable, full-charge release and resume80",
+      "Close/reopen sheet retains policy",
+      "Blocked recovery prevents normal menu quit and shows pending banner",
+      "After fix, allowing recovery while sheet remains open automatically exits",
+      "Saved preference resumes on next launch; explicit off remains off at following launch"
+    ],
+    "screenshotsViewed": 3,
+    "screenshotsSaved": false,
+    "traceBeforeExitFix": "FAKE_WRITE [1, 0, 0, 0]\nHISTORY charging-limit80 done\nFAKE_WRITE [0, 0, 0, 0]\nHISTORY charging-chargeToFull done\nFAKE_WRITE [1, 0, 0, 0]\nHISTORY charging-limit80 done\nQUIT_BLOCKED true\nHISTORY charging-off failed\nQUIT_BLOCKED true\nHISTORY charging-off failed\nFAKE_WRITE [0, 0, 0, 0]\nHISTORY charging-recovery done\nQUIT_BLOCKED false\n",
+    "finalTrace": "FAKE_WRITE [1, 0, 0, 0]\nHISTORY charging-limit80 done\nQUIT_BLOCKED true\nHISTORY charging-off failed\nHISTORY charging-off failed\nFAKE_WRITE [0, 0, 0, 0]\nHISTORY charging-recovery done\nQUIT_BLOCKED false\nFAKE_WRITE [1, 0, 0, 0]\nHISTORY charging-limit80 done\nFAKE_WRITE [0, 0, 0, 0]\nHISTORY charging-off done\nHISTORY charging-recovery done\nQUIT_BLOCKED false\nQUIT_BLOCKED false\n",
+    "correctedFindings": [
+      "Default preferences creation moved into main-actor initializer",
+      "Startup query cannot skip preference restore; quit cancels deferred enable",
+      "Only confirmed off or different public session clears pending ownership",
+      "Native charging sheet is dismissed/ended before post-recovery termination",
+      "Old restore error clears after confirmed autonomous recovery"
+    ],
+    "qaSetup": "LaunchServices passes no argv; fixture root moved into owned bundle metadata and bundle ad-hoc signed. Initial failed launches are not acceptance evidence.",
+    "finalRegisterBytes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "finalPreference": false,
+    "recoveryRecordRemoved": true,
+    "fixtureProcessesExited": true,
+    "fixtureDirectoryRemoved": true
+  },
+  "readOnlyHardware": {
+    "method": "Standalone non-root SMC.info/read probe, not BatteryGateIO.system or root helper",
+    "result": [
+      {
+        "error": "SMC key 'CH0B' not found",
+        "key": "CH0B"
+      },
+      {
+        "error": "SMC key 'CH0C' not found",
+        "key": "CH0C"
+      },
+      {
+        "attributes": 212,
+        "hex": "00 00 00 00",
+        "key": "CHTE",
+        "size": 4,
+        "type": "ui32"
+      }
+    ],
+    "sourceSHA256": "f1277db6d1e27fe02d6bcf0b9cc086cc84de799ca77273912a332a5dd9931887",
+    "resultSHA256": "8b0839e1ff9cdf4a2cde4276c2e0b5f93fa34fb66a09e23ae9be02d7e18888d4",
+    "writes": false,
+    "doesNotProveWritableOrSafePause": true,
+    "probeSource": "import Foundation\nimport Darwin\nimport ThermoKit\nguard getuid() != 0 else { exit(2) }\nlet smc = try SMC()\nvar rows: [[String: Any]] = []\nfor name in [\"CH0B\", \"CH0C\", \"CHTE\"] {\n    let key = FourCC(name)\n    do {\n        let info = try smc.info(key)\n        let value = try smc.read(key)\n        rows.append([\"key\": name, \"type\": info.type.description, \"size\": info.size, \"attributes\": info.attributes, \"hex\": value.hex])\n    } catch { rows.append([\"key\": name, \"error\": String(describing: error)]) }\n}\nprint(String(decoding: try JSONSerialization.data(withJSONObject: rows, options: [.prettyPrinted, .sortedKeys]), as: UTF8.self))\n"
+  },
+  "installedPathsChangedComparedWithBaseline": [],
+  "candidate384IncludesChanges": false,
+  "limits": [
+    "Visible QA uses production panel/model/coordinator with injected registers; not installed main-App or actual root-helper acceptance",
+    "CLI charging entry remains missing",
+    "Mole full-charge completion/unplug reset behavior and native-system fallback remain to be traced",
+    "Physical battery writes, sleep/wake, restart/update/uninstall and version compatibility still require authorization and actual acceptance",
+    "Not a new signed universal release, notarization, deployment or publication",
+    "No-internal-battery/native-system product branches and detailed error localization remain unfinished"
+  ]
+}

@@ -105,10 +105,10 @@ final class Service: NSObject, ThermoHelperProtocol {
     func beginAWDL(seconds: Int,sessionID: String,reply: @escaping (String?) -> Void) { network.begin(owner:owner,seconds:seconds,sessionID:sessionID,reply:rpcReply(reply)) }
     func endAWDL(reply: @escaping (String?) -> Void) { network.end(owner:owner,reply:rpcReply(reply)) }
     func awdlState(reply: @escaping (Data) -> Void) { network.state(owner:owner,reply:rpcReply(reply)) }
-    func setBatteryChargePolicy(_ policy: String, reply: @escaping (String?) -> Void) {
+    func setBatteryChargePolicy(_ policy: String, sessionID: String, reply: @escaping (String?) -> Void) {
         guard let value = BatteryChargePolicy(rawValue: policy) else { reply("Invalid charging policy"); return }
         guard let charging else { reply("Charging controller is unavailable"); return }
-        charging.setPolicy(value, owner: owner, reply: rpcReply(reply))
+        charging.setPolicy(value, owner: owner, sessionID: sessionID, reply: rpcReply(reply))
     }
     func batteryChargeState(reply: @escaping (Data) -> Void) {
         guard let charging else { var value = BatteryChargeState(); value.error = "Charging controller is unavailable"; reply((try? PolicyCoding.encoder().encode(value)) ?? Data()); return }

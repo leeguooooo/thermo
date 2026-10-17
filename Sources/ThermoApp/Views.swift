@@ -91,6 +91,7 @@ struct PopoverView: View {
             Divider()
             if !renderingPreview {
                 HStack { CleanScreenButton();AWDLButton() }
+                if monitor.snapshot?.battery != nil { BatteryCareButton() }
             }
             footer
         }
@@ -857,6 +858,7 @@ struct SettingsView: View {
                 CleanScreenButton()
             }
             section(tr("Network low latency")) { AWDLButton() }
+            section(tr("Battery charging protection")) { BatteryCareButton() }
             section(tr("General")) {
                 row(tr("Language")) {
                     Picker("", selection: $language) {

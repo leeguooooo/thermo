@@ -95,7 +95,7 @@ final class HelperXPCTests: XCTestCase {
         func awdlState(reply: @escaping (Data) -> Void) {
             let data=access { s in s.awdlCalls+=1;return s.awdlData ?? (try! PolicyCoding.encoder().encode(AWDLSessionState())) };reply(data)
         }
-        func setBatteryChargePolicy(_ policy: String, reply: @escaping (String?) -> Void) { access { $0.chargeCalls += 1 }; reply("fixture has no charging controller") }
+        func setBatteryChargePolicy(_ policy: String, sessionID: String, reply: @escaping (String?) -> Void) { access { $0.chargeCalls += 1 }; reply("fixture has no charging controller") }
         func batteryChargeState(reply: @escaping (Data) -> Void) { reply(access { $0.chargeCalls += 1; return $0.chargeData ?? (try! PolicyCoding.encoder().encode(BatteryChargeState())) }) }
     }
     func testLegacyRemovalCannotClaimAWDLWasRestored() async throws {
@@ -112,6 +112,11 @@ final class HelperXPCTests: XCTestCase {
         do { try await client.prepareRemoval(true, token: UUID().uuidString); XCTFail("old recovery contract") } catch {}
         XCTAssertEqual(endpoint.service.access { $0.chargeCalls }, 0)
         XCTAssertTrue(endpoint.service.access { $0.preparations.isEmpty })
+    }
+    func testInvalidChargingSessionNeverCreatesAConnection() async {
+        let endpoint = Endpoint(); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }
+        do { try await client.setBatteryChargePolicy(.limit80, sessionID: "invalid"); XCTFail("invalid identity") } catch {}
+        XCTAssertEqual(endpoint.connectionCount, 0)
     }
     func testChargingReplyCannotInventConfirmedHolding() async throws {
         let endpoint = Endpoint(); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }

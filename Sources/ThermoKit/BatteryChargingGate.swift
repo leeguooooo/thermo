@@ -1,5 +1,10 @@
 import Foundation
 
+public enum BatteryChargeClientError: LocalizedError {
+    case notStarted(String)
+    public var errorDescription: String? { switch self { case .notStarted(let message): return message } }
+}
+
 public struct BatteryGateError: LocalizedError {
     public let message: String
     public init(_ message: String) { self.message = message }

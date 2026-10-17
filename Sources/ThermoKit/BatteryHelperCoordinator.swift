@@ -7,6 +7,7 @@ public struct BatteryChargeState: Codable, Sendable {
     public var gate: BatteryChargePolicy.Gate = .unknown
     public var ownership: BatteryChargePolicy.Ownership = .none
     public var ownedByCaller = false
+    public var sessionID: String?
     public var percent: Double?
     public var externalPower: Bool?
     public var error: String?
@@ -57,7 +58,7 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
         state.error = recoveryPending ? controller.lastError ?? "Charging restoration is unconfirmed" : nil
         return !recoveryPending
     }
-    private func stopPolicy() { state.policy = .off; owner = nil }
+    private func stopPolicy() { state.policy = .off; state.sessionID = nil; owner = nil }
     private func updateObservation() {
         guard let controller else { return }
         let observed = controller.observation()
@@ -112,8 +113,10 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
         catch { let error = error.localizedDescription; stopPolicy(); _ = restore(); state.error = error }
     }
     public func setPolicy(_ policy: BatteryChargePolicy, owner: AWDLConnectionOwner,
+                          sessionID: String = UUID().uuidString,
                           reply: @escaping @Sendable (String?) -> Void) {
         queue.async {
+            guard UUID(uuidString: sessionID) != nil else { reply("Invalid charging session identifier"); return }
             guard !owner.isClosed, !self.stopping, self.removalToken == nil else { reply("Charging connection is closed or helper is preparing to stop"); return }
             guard self.owner == nil || self.owner?.id == owner.id else { reply("Another connection owns charging control"); return }
             guard self.controller != nil else { reply(self.state.error ?? "Charging controller is unavailable"); return }
@@ -123,6 +126,7 @@ public final class BatteryHelperCoordinator: @unchecked Sendable {
                 guard self.restore() else { reply(self.state.error); return }
             }
             self.state.policy = policy; self.owner = policy == .off ? nil : owner
+            self.state.sessionID = policy == .off ? nil : sessionID
             self.lastTick = self.clock()
             do {
                 if policy != .off { try self.evaluate() }

@@ -43,6 +43,7 @@ enum AppExitGuard {
             return .terminateCancel
         }
         guard model.working || native.installing else {
+            if BatteryCareModel.shared.requestQuit() { show(.settings); return .terminateCancel }
             if AWDLModel.shared.requestQuit() { show(.settings);return .terminateCancel }
             return .terminateNow
         }

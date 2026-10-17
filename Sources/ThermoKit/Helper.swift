@@ -134,7 +134,7 @@ public enum HelperSelfUpdate {
     func endAWDL(reply: @escaping (String?) -> Void)
     func awdlState(reply: @escaping (Data) -> Void)
     /// Protocol 7. Charging policies are held only for this XPC connection.
-    func setBatteryChargePolicy(_ policy: String, reply: @escaping (String?) -> Void)
+    func setBatteryChargePolicy(_ policy: String, sessionID: String, reply: @escaping (String?) -> Void)
     func batteryChargeState(reply: @escaping (Data) -> Void)
 }
 
@@ -358,8 +358,10 @@ public final class HelperClient: @unchecked Sendable {
             throw BatteryGateError("Update Thermo's helper before using charging control")
         }
     }
-    public func setBatteryChargePolicy(_ policy: BatteryChargePolicy) async throws {
-        try await requireBatteryCharge()
+    public func setBatteryChargePolicy(_ policy: BatteryChargePolicy, sessionID: String = UUID().uuidString) async throws {
+        guard UUID(uuidString: sessionID) != nil else { throw BatteryChargeClientError.notStarted("Invalid charging session identifier") }
+        do { try await requireBatteryCharge() }
+        catch { throw BatteryChargeClientError.notStarted(error.localizedDescription) }
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             let once = Once()
             guard let p = proxy({ error in once.run { continuation.resume(throwing: error) } }) else {
@@ -367,7 +369,7 @@ public final class HelperClient: @unchecked Sendable {
             }
             // deadline() invalidates the owning connection before reporting timeout.
             deadline(8, once) { continuation.resume(throwing: BatteryGateError("Charging request timed out; verify recovery before retrying")) }
-            p.setBatteryChargePolicy(policy.rawValue) { error in once.run {
+            p.setBatteryChargePolicy(policy.rawValue, sessionID: sessionID) { error in once.run {
                 if let error { continuation.resume(throwing: BatteryGateError(error)) } else { continuation.resume() }
             } }
         }
@@ -385,7 +387,8 @@ public final class HelperClient: @unchecked Sendable {
         let state = try PolicyCoding.decoder().decode(BatteryChargeState.self, from: data)
         guard state.percent.map({ $0.isFinite && (0...100).contains($0) }) ?? true,
               state.phase != .holding || (state.policy == .limit80 && state.gate == .inhibited && state.ownership == .owned),
-              state.policy != .off || !state.ownedByCaller else { throw BatteryGateError("Invalid charging state reply") }
+              state.policy != .off || (!state.ownedByCaller && state.sessionID == nil),
+              state.policy == .off || state.sessionID.flatMap(UUID.init(uuidString:)) != nil else { throw BatteryGateError("Invalid charging state reply") }
         return state
     }
     public func beginAWDL(seconds: Int,sessionID: String = UUID().uuidString) async throws {

@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     func applicationDidFinishLaunching(_ notification: Notification) {
         Settings.register()
         CleanScreenShortcutModel.enableLive()
+        BatteryCareModel.shared.restoreSavedPreference()
         _ = AppModels.shared.updates  // Sparkle starts checking with the app
         // Slowdown history and alerts, in the background whether or not the panel is open.
         PulseRecorder.shared.start()
@@ -341,7 +342,10 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
 /// `--fixture BEFORE.json AFTER.json` shows two saved browser samples instead of measuring.
 @MainActor func openMainOnly(_ args: [String]) {
     Settings.register()
-    if !args.contains("--offscreen"), !args.contains("--snapshot") { CleanScreenShortcutModel.enableLive() }
+    if !args.contains("--offscreen"), !args.contains("--snapshot") {
+        CleanScreenShortcutModel.enableLive()
+        BatteryCareModel.shared.restoreSavedPreference()
+    }
     installStandardMenus()
     let models = AppModels.shared
     func value(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
