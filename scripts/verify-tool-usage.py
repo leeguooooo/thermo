@@ -33,6 +33,14 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     rows += [event("response_item", {"type": "function_call", "call_id": "unknown",
                                     "name": "mcp__fixture__unknown", "arguments": ""}, -10),
              event("response_item", {"type": "function_call_output", "call_id": "unknown", "output": "no status"}, -5)]
+    def native(ident, tool, result):
+        return event("event_msg", {"type": "item_completed",
+                     "started_at_ms": (now.timestamp() - 10) * 1000,
+                     "completed_at_ms": (now.timestamp() - 5) * 1000,
+                     "item": {"type": "McpToolCall", "id": ident, "server": "fixture", "tool": tool,
+                              "status": "completed", "arguments": {"private": "fixture-private-argument"}, "result": result}}, -5)
+    rows += [native("a", "read", result),
+             native("nested", "nested", {"content": [{"type": "text", "text": "fixture-private-result"}]})]
     write(".codex/sessions/2026/10/17/fixture.jsonl", rows)
     write(".claude/projects/fixture/fixture.jsonl", [
         {"type": "assistant", "timestamp": stamp(-9), "message": {"id": "msg_fixture", "content": [
@@ -56,6 +64,8 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     mcp = next(row for row in report["tools"] if row["kind"] == "mcp" and row["name"] == "read")
     skill = next(row for row in report["tools"] if row["kind"] == "skill")
     assert mcp["calls"] == 2 and mcp["completed"] == 2 and mcp["nonTextBlocks"] == 2
+    nested = next(row for row in report["tools"] if row["kind"] == "mcp" and row["name"] == "nested")
+    assert nested["calls"] == 1 and nested["completed"] == 1 and nested["unknownErrorStatus"] == 1
     assert "p95Seconds" not in mcp
     assert skill["calls"] == 1 and skill["completed"] == 1
     tokens = {row["host"]: row for row in report["sessionTokens"]}
@@ -70,4 +80,5 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     assert "fixture-private" not in text
     print(json.dumps({"passed": True, "mcpCalls": mcp["calls"], "skillCalls": skill["calls"],
                       "requestTokensKeptSeparate": True, "privateTextExcluded": True, "imageTokensUnknown": True,
-                      "knownStatusErrorProportionVerified": True, "unknownErrorProportionPreserved": True}))
+                      "knownStatusErrorProportionVerified": True, "unknownErrorProportionPreserved": True,
+                      "nativeMCPEventsIncludedWithoutDoubleCounting": True}))

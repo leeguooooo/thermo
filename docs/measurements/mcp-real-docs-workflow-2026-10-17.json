@@ -1,0 +1,483 @@
+{
+  "generated": "2026-10-17T00:47:09.986916+00:00",
+  "evidenceKind": "one measured read-only public MCP task; offline projection and exact-event regression replay",
+  "baseCommit": "65eafd8c257a2f3d87057b1d3c01e8466e64047b",
+  "task": {
+    "contract": {
+      "topic": "Codex skills progressive disclosure",
+      "searchLimit": 3,
+      "maximumCalls": 2,
+      "criteria": [
+        "Search returns an official skills documentation result",
+        "Fetch uses an exact URL returned by search",
+        "Fetched official text establishes metadata-first and instruction-body-on-demand loading"
+      ],
+      "scope": "Two direct read-only MCP calls using a public query. Not a model experiment, production-fleet quality ranking, billing measurement or implicit-skill trigger evaluation.",
+      "automaticRetry": false
+    },
+    "calls": [
+      {
+        "tool": "search_openai_docs",
+        "elapsedSeconds": 0.609,
+        "isError": null
+      },
+      {
+        "tool": "fetch_openai_doc",
+        "elapsedSeconds": 0.369,
+        "isError": null
+      }
+    ],
+    "sourceURL": "https://learn.chatgpt.com/docs/customization/overview#skills",
+    "assertions": [
+      {
+        "criterion": "Search returns an official skills documentation result",
+        "passed": true
+      },
+      {
+        "criterion": "Fetch uses an exact URL returned by search",
+        "passed": true
+      },
+      {
+        "criterion": "Fetched official text establishes metadata-first and instruction-body-on-demand loading",
+        "passed": true
+      }
+    ],
+    "projection": {
+      "hits": [
+        {
+          "url": "https://learn.chatgpt.com/docs/glossary",
+          "title": "Documentation / Glossary",
+          "snippet": "… for Codex. CLI, IDE extension Progressive disclosure Loading skill details …"
+        },
+        {
+          "url": "https://learn.chatgpt.com/docs/build-skills",
+          "title": "Documentation / Build skills",
+          "snippet": "… skills created across your projects. Skills use progressive disclosure to …"
+        },
+        {
+          "url": "https://learn.chatgpt.com/docs/customization/overview#skills",
+          "title": "Documentation / Customization / Skills",
+          "snippet": "… skills .agents/skills in repo Codex uses progressive disclosure for …"
+        }
+      ]
+    },
+    "highlightDuplication": [
+      {
+        "url": "https://learn.chatgpt.com/docs/glossary",
+        "highlightRepeatsContent": true
+      },
+      {
+        "url": "https://learn.chatgpt.com/docs/build-skills",
+        "highlightRepeatsContent": true
+      },
+      {
+        "url": "https://learn.chatgpt.com/docs/customization/overview#skills",
+        "highlightRepeatsContent": true
+      }
+    ],
+    "projectionIsOfflineNotAnotherModelRun": true,
+    "requestTokensUnknown": true
+  },
+  "responseTextFootprints": {
+    "fetchRaw": {
+      "cl100k_base": {
+        "referenceEncoding": "cl100k_base",
+        "bytes": 3331,
+        "referenceTokens": 716,
+        "estimatedTokens": 834,
+        "estimator": "ascii4-unicode1-v1",
+        "characters": 3323,
+        "lines": 68
+      },
+      "heuristic": {
+        "bytes": 3331,
+        "lines": 68,
+        "estimator": "ascii4-unicode1-v1",
+        "characters": 3323,
+        "estimatedTokens": 834
+      },
+      "o200k_base": {
+        "referenceEncoding": "o200k_base",
+        "bytes": 3331,
+        "referenceTokens": 719,
+        "estimatedTokens": 834,
+        "estimator": "ascii4-unicode1-v1",
+        "characters": 3323,
+        "lines": 68
+      }
+    },
+    "hit1Content": {
+      "heuristic": {
+        "characters": 2424,
+        "bytes": 2446,
+        "lines": 20,
+        "estimatedTokens": 613,
+        "estimator": "ascii4-unicode1-v1"
+      },
+      "o200k_base": {
+        "referenceTokens": 508,
+        "bytes": 2446,
+        "referenceEncoding": "o200k_base",
+        "characters": 2424,
+        "lines": 20,
+        "estimatedTokens": 613,
+        "estimator": "ascii4-unicode1-v1"
+      },
+      "cl100k_base": {
+        "referenceTokens": 518,
+        "bytes": 2446,
+        "referenceEncoding": "cl100k_base",
+        "characters": 2424,
+        "lines": 20,
+        "estimatedTokens": 613,
+        "estimator": "ascii4-unicode1-v1"
+      }
+    },
+    "hit0Content": {
+      "heuristic": {
+        "characters": 13033,
+        "bytes": 13372,
+        "lines": 1,
+        "estimatedTokens": 3344,
+        "estimator": "ascii4-unicode1-v1"
+      },
+      "cl100k_base": {
+        "estimator": "ascii4-unicode1-v1",
+        "referenceTokens": 2841,
+        "bytes": 13372,
+        "referenceEncoding": "cl100k_base",
+        "lines": 1,
+        "estimatedTokens": 3344,
+        "characters": 13033
+      },
+      "o200k_base": {
+        "estimator": "ascii4-unicode1-v1",
+        "referenceTokens": 2791,
+        "bytes": 13372,
+        "referenceEncoding": "o200k_base",
+        "lines": 1,
+        "estimatedTokens": 3344,
+        "characters": 13033
+      }
+    },
+    "searchRaw": {
+      "heuristic": {
+        "characters": 49669,
+        "bytes": 49697,
+        "lines": 1,
+        "estimatedTokens": 12428,
+        "estimator": "ascii4-unicode1-v1"
+      },
+      "cl100k_base": {
+        "characters": 49669,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1,
+        "referenceEncoding": "cl100k_base",
+        "bytes": 49697,
+        "estimatedTokens": 12428,
+        "referenceTokens": 11651
+      },
+      "o200k_base": {
+        "characters": 49669,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1,
+        "referenceEncoding": "o200k_base",
+        "bytes": 49697,
+        "estimatedTokens": 12428,
+        "referenceTokens": 11533
+      }
+    },
+    "hit2Content": {
+      "heuristic": {
+        "characters": 2395,
+        "bytes": 2421,
+        "lines": 7,
+        "estimatedTokens": 606,
+        "estimator": "ascii4-unicode1-v1"
+      },
+      "cl100k_base": {
+        "characters": 2395,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 7,
+        "referenceEncoding": "cl100k_base",
+        "bytes": 2421,
+        "estimatedTokens": 606,
+        "referenceTokens": 482
+      },
+      "o200k_base": {
+        "characters": 2395,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 7,
+        "referenceEncoding": "o200k_base",
+        "bytes": 2421,
+        "estimatedTokens": 606,
+        "referenceTokens": 482
+      }
+    },
+    "hit1HighlightStripped": {
+      "o200k_base": {
+        "referenceTokens": 508,
+        "bytes": 2446,
+        "referenceEncoding": "o200k_base",
+        "characters": 2424,
+        "lines": 20,
+        "estimatedTokens": 613,
+        "estimator": "ascii4-unicode1-v1"
+      },
+      "heuristic": {
+        "characters": 2424,
+        "bytes": 2446,
+        "lines": 20,
+        "estimatedTokens": 613,
+        "estimator": "ascii4-unicode1-v1"
+      },
+      "cl100k_base": {
+        "referenceTokens": 518,
+        "bytes": 2446,
+        "referenceEncoding": "cl100k_base",
+        "characters": 2424,
+        "lines": 20,
+        "estimatedTokens": 613,
+        "estimator": "ascii4-unicode1-v1"
+      }
+    },
+    "hit2HighlightStripped": {
+      "heuristic": {
+        "characters": 2395,
+        "estimatedTokens": 606,
+        "estimator": "ascii4-unicode1-v1",
+        "bytes": 2421,
+        "lines": 7
+      },
+      "cl100k_base": {
+        "characters": 2395,
+        "lines": 7,
+        "estimatedTokens": 606,
+        "estimator": "ascii4-unicode1-v1",
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 482,
+        "bytes": 2421
+      },
+      "o200k_base": {
+        "characters": 2395,
+        "lines": 7,
+        "estimatedTokens": 606,
+        "estimator": "ascii4-unicode1-v1",
+        "referenceEncoding": "o200k_base",
+        "referenceTokens": 482,
+        "bytes": 2421
+      }
+    },
+    "searchCompact": {
+      "o200k_base": {
+        "estimator": "ascii4-unicode1-v1",
+        "referenceTokens": 125,
+        "bytes": 585,
+        "referenceEncoding": "o200k_base",
+        "lines": 1,
+        "estimatedTokens": 148,
+        "characters": 573
+      },
+      "cl100k_base": {
+        "estimator": "ascii4-unicode1-v1",
+        "referenceTokens": 124,
+        "bytes": 585,
+        "referenceEncoding": "cl100k_base",
+        "lines": 1,
+        "estimatedTokens": 148,
+        "characters": 573
+      },
+      "heuristic": {
+        "characters": 573,
+        "bytes": 585,
+        "lines": 1,
+        "estimatedTokens": 148,
+        "estimator": "ascii4-unicode1-v1"
+      }
+    },
+    "hit0HighlightStripped": {
+      "o200k_base": {
+        "characters": 13033,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1,
+        "referenceEncoding": "o200k_base",
+        "bytes": 13372,
+        "estimatedTokens": 3344,
+        "referenceTokens": 2791
+      },
+      "heuristic": {
+        "characters": 13033,
+        "bytes": 13372,
+        "lines": 1,
+        "estimatedTokens": 3344,
+        "estimator": "ascii4-unicode1-v1"
+      },
+      "cl100k_base": {
+        "referenceTokens": 2841,
+        "bytes": 13372,
+        "referenceEncoding": "cl100k_base",
+        "characters": 13033,
+        "lines": 1,
+        "estimatedTokens": 3344,
+        "estimator": "ascii4-unicode1-v1"
+      }
+    }
+  },
+  "responseTextSHA256": {
+    "searchRaw": "17f38c26c9411c8c2685d03e4e1c0dcc952952ef295cd658ec1506c346da5500",
+    "fetchRaw": "735dbb03e5a8985e135588f3edc57e64393c1cde76747a585f2359f08b1e7668",
+    "searchCompact": "d647817a6502362f938a3cce4eb393aa32dd3017a87c8a3b46a79a73552f4fdd",
+    "hit0Content": "07af762732409bc2657ee5253fb130759e3554349828732cc2c9a55181753546",
+    "hit0HighlightStripped": "07af762732409bc2657ee5253fb130759e3554349828732cc2c9a55181753546",
+    "hit1Content": "2d14bab80be793ecb050d0abc20c1fd02da05f5c57899b16a3a812027116e139",
+    "hit1HighlightStripped": "2d14bab80be793ecb050d0abc20c1fd02da05f5c57899b16a3a812027116e139",
+    "hit2Content": "9974605533fe532606184721b41e4bf6559420c0c4871bb208898c73376e225d",
+    "hit2HighlightStripped": "9974605533fe532606184721b41e4bf6559420c0c4871bb208898c73376e225d"
+  },
+  "projectionComparison": {
+    "cl100k_base": {
+      "separateRawResponseCountsSum": 12367,
+      "projectedSearchPlusFetchedSectionCountsSum": 840,
+      "representationReductionPercent": 93.2077302498585
+    },
+    "o200k_base": {
+      "separateRawResponseCountsSum": 12252,
+      "projectedSearchPlusFetchedSectionCountsSum": 844,
+      "representationReductionPercent": 93.111328762651
+    }
+  },
+  "nativeReplay": {
+    "scope": "Replay of exactly two selected native event excerpts from this real public-doc MCP task, copied temporarily into an owned Home. Not full-session coverage or synthetic tool results; event content hashes match the directly captured responses. Raw excerpts removed after analysis.",
+    "baseline374ToolRows": 0,
+    "patchedToolRows": 2,
+    "calls": 2,
+    "completed": 2,
+    "unknownErrorStatus": 2,
+    "requestTokensUnknown": true,
+    "nativeTimingSeconds": {
+      "search_openai_docs": 0.5090000629425049,
+      "fetch_openai_doc": 0.3059999942779541
+    },
+    "selectedEventSHA256": {
+      "search_openai_docs": "d1ddb0f65bc575109216393a2983efac0990588d8b681c6782c1d531b3607ebd",
+      "fetch_openai_doc": "4e70f85e036932f8a589beb31ecaf57bb3611a8a3ebe1287ae4096bcd2ac4b30"
+    },
+    "patchedReport": {
+      "complete": true,
+      "coverage": {
+        "bytesRead": 57005,
+        "cancelled": false,
+        "clippedFiles": 0,
+        "duplicateRecords": 0,
+        "filesDiscovered": 1,
+        "filesRead": 1,
+        "limitReached": false,
+        "malformedLines": 0,
+        "missingTimestamps": 0,
+        "otherToolCalls": 0,
+        "oversizedLines": 0,
+        "unmatchedResults": 0,
+        "unreadableFiles": 0,
+        "unsupportedUsageRecords": 0
+      },
+      "generated": "2026-10-17T00:46:13Z",
+      "note": "Observed local log records only. Call/result elapsed time includes host overhead; overlapping calls are not wall-clock totals. Returned-text tokens are estimates, not billed usage. Request tokens are separate and never charged to individual tools. Script-wrapped MCP calls, implicit Skill reads, images and missing logs cannot be fully attributed.",
+      "referenceEncoding": "cl100k_base",
+      "referenceEngine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+      "returnedTextEstimator": "ascii4-unicode1-v1",
+      "sessionTokens": [],
+      "since": "2026-10-16T00:46:13Z",
+      "tools": [
+        {
+          "calls": 1,
+          "completed": 1,
+          "host": "codex",
+          "id": "a10a789c4f08c584221e05e38e1b620ee47452a051efa47ddc39151bd898229e",
+          "kind": "mcp",
+          "medianSeconds": 0.5090000629425049,
+          "missingResults": 0,
+          "name": "search_openai_docs",
+          "nonTextBlocks": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 11651,
+          "reportedErrors": 0,
+          "returnedTextBytes": 49697,
+          "returnedTextEstimatedTokens": 12428,
+          "server": "openaiDeveloperDocs",
+          "timingSamples": 1,
+          "totalObservedSeconds": 0.5090000629425049,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 1
+        },
+        {
+          "calls": 1,
+          "completed": 1,
+          "host": "codex",
+          "id": "74d5a262a0aa6ebb276530cc38eab251fa9272c792e2d9370cfecd8f33bd5a03",
+          "kind": "mcp",
+          "medianSeconds": 0.3059999942779541,
+          "missingResults": 0,
+          "name": "fetch_openai_doc",
+          "nonTextBlocks": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 716,
+          "reportedErrors": 0,
+          "returnedTextBytes": 3331,
+          "returnedTextEstimatedTokens": 834,
+          "server": "openaiDeveloperDocs",
+          "timingSamples": 1,
+          "totalObservedSeconds": 0.3059999942779541,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 1
+        }
+      ],
+      "until": "2026-10-17T00:46:13Z"
+    }
+  },
+  "verification": {
+    "configuration": "debug",
+    "usageTests": 24,
+    "localizationTests": 3,
+    "failures": 0,
+    "testLogSHA256": "0be87ae5467507b35fdf4cace03f803c3c6de40a270eee2d98f33b28397ff306",
+    "cliFixture": {
+      "passed": true,
+      "mcpCalls": 2,
+      "skillCalls": 1,
+      "requestTokensKeptSeparate": true,
+      "privateTextExcluded": true,
+      "imageTokensUnknown": true,
+      "knownStatusErrorProportionVerified": true,
+      "unknownErrorProportionPreserved": true,
+      "nativeMCPEventsIncludedWithoutDoubleCounting": true
+    },
+    "priorFailureRetained": {
+      "tests": 26,
+      "failures": 1,
+      "case": "testOnlyOneDocumentedFunctionsNamespacePrefixIsRemoved",
+      "cause": "Repeated report() accumulated derived other-call counts; report generation now uses a local coverage snapshot.",
+      "logSHA256": "7adc2f814a8a22c2233b219d2fbe03634c5732669f338da06e50075412ea15a5"
+    }
+  },
+  "sourceSHA256": {
+    "Sources/AgentDoctor/ToolUsageParser.swift": "53a146bd76d49da274c130b5686105f9c0ba01476f45272325f7b81eb4b0f3a5",
+    "Tests/AgentDoctorTests/ToolUsageTests.swift": "80582da9a40cea245498a6878e4d0246667c70c7f8897416490ab59efe724ed1",
+    "scripts/verify-tool-usage.py": "108292bebebf7118f87e671a6d087df970305a031a5311dac6d752af8147ef2a",
+    "Sources/AgentDoctor/ContextFootprint.swift": "9454cef347c1dac8ea5ee25d0531403678f34d2fb8bd2d777db5d56bee5cb5c4",
+    "Sources/AgentDoctor/ReferenceTokenizer.swift": "ffcee1e69fc74aff18d91d5e4cf96a51d59f28e6bc31f24b4866d2defe8af3ae"
+  },
+  "oldPackageContainsFix": false,
+  "oldPackageVersion": "1.2.0 (374)",
+  "sourceFixIntegratedIntoCandidate": false,
+  "publicationPerformed": false,
+  "limitations": [
+    "Only one chosen public question and two calls; no MCP fleet ranking or business success-rate claim.",
+    "All footprint sizes count original text content blocks, not compressed network bytes, complete model prompt framing or billable tokens.",
+    "Native ordinary-text reference encodings are not mapped to a model. No independent new-text tokenizer cross-check was performed in this turn.",
+    "Projection is an offline transformation of already received text, not another tool execution, model A/B test or realized saving in this session.",
+    "Raw original responses remain available in the host session log, but no full response bodies, session excerpts, request arguments or private metadata are committed.",
+    "Replay contains exactly the selected public-task event excerpts; complete reading of this selected file does not establish full original-session coverage.",
+    "Lifecycle completed is not explicit isError=false; both error statuses and request-token attribution remain unknown.",
+    "The final fix has targeted tests and CLI replay; fresh full Release, universal package and App acceptance remain pending."
+  ]
+}

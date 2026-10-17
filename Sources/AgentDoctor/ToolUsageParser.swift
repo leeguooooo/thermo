@@ -53,31 +53,45 @@ struct ToolUsageParser {
         guard let number = value as? NSNumber, CFGetTypeID(number) == CFBooleanGetTypeID() else { return nil }
         return number.boolValue
     }
-    func classification(_ name: String, input: Any?) -> (String, String?, String)? {
+    func milliseconds(_ value: Any?) -> Date? {
+        guard let value = value as? NSNumber, CFGetTypeID(value) != CFBooleanGetTypeID(),
+              value.doubleValue.isFinite, value.doubleValue >= 0, value.doubleValue <= 253_402_300_799_000 else { return nil }
+        return Date(timeIntervalSince1970: value.doubleValue / 1000)
+    }
+    static func mcpName(_ name: String) -> (server: String, tool: String)? {
         let name = name.hasPrefix("functions.") ? String(name.dropFirst(10)) : name
-        if name.hasPrefix("mcp__") {
-            let parts = String(name.dropFirst(5)).components(separatedBy: "__")
-            guard parts.count >= 2, !parts[0].isEmpty, !parts.dropFirst().joined(separator: "__").isEmpty else { return nil }
-            return ("mcp", Self.label(parts[0]), Self.label(parts.dropFirst().joined(separator: "__")))
-        }
+        guard name.hasPrefix("mcp__") else { return nil }
+        let parts = String(name.dropFirst(5)).components(separatedBy: "__")
+        let tool = parts.dropFirst().joined(separator: "__")
+        guard parts.count >= 2, !parts[0].isEmpty, !tool.isEmpty else { return nil }
+        return (parts[0], tool)
+    }
+    func classification(_ name: String, input: Any?) -> (String, String?, String)? {
+        if let mcp = Self.mcpName(name) { return ("mcp", Self.label(mcp.server), Self.label(mcp.tool)) }
+        let name = name.hasPrefix("functions.") ? String(name.dropFirst(10)) : name
         if name == "Skill", let skill = (input as? [String: Any])?["skill"] as? String,
            skill.range(of: #"^[A-Za-z0-9_.:@/-]{1,200}$"#, options: .regularExpression) != nil {
             return ("skill", nil, Self.label(skill))
         }
         return nil
     }
-    mutating func start(host: String, session: String, id: String, name: String, input: Any?, time: Date?) {
+    mutating func start(host: String, session: String, id: String, name: String, input: Any?, time: Date?, nativeMCP: (server: String, tool: String)? = nil) {
         guard id.count <= 512, !id.isEmpty else { coverage.limitReached = true; return }
         let key = host + "|" + session + "|" + id
         if calls[key]?.startSeen == true { coverage.duplicateRecords += 1; return }
         guard calls.count < 100_000 || calls[key] != nil else { coverage.limitReached = true; return }
         var call = calls[key] ?? Call(host: host)
-        let classification = classification(name, input: input)
+        let mcp = nativeMCP ?? Self.mcpName(name)
+        let classification: (String, String?, String)? = mcp.map { ("mcp", Self.label($0.server), Self.label($0.tool)) } ?? classification(name, input: input)
         call.kind = classification?.0; call.server = classification?.1; call.name = classification?.2
         if let classification {
             let normalized = name.hasPrefix("functions.") ? String(name.dropFirst(10)) : name
             let skill = classification.0 == "skill" ? ((input as? [String: Any])?["skill"] as? String ?? "") : ""
-            call.groupID = Self.identity(host + "|" + classification.0 + "|" + normalized + "|" + skill)
+            if let mcp {
+                // Explicit server/tool fields may themselves contain delimiters.
+                // Length framing also gives legacy and native records the same grouping.
+                call.groupID = Self.identity(host + "|mcp|" + String(mcp.server.utf8.count) + ":" + mcp.server + String(mcp.tool.utf8.count) + ":" + mcp.tool)
+            } else { call.groupID = Self.identity(host + "|" + classification.0 + "|" + normalized + "|" + skill) }
         }
         call.started = time; call.startSeen = true
         if time == nil { coverage.missingTimestamps += 1 }
@@ -165,12 +179,24 @@ struct ToolUsageParser {
                 } else if ["function_call_output", "custom_tool_call_output"].contains(type), let id = payload["call_id"] as? String {
                     end(host: host, session: session, id: id, value: payload["output"], error: nil, time: time)
                 }
+            } else if object["type"] as? String == "event_msg", type == "item_completed",
+                      let item = payload["item"] as? [String: Any], item["type"] as? String == "McpToolCall",
+                      let id = item["id"] as? String, let server = item["server"] as? String, !server.isEmpty,
+                      let tool = item["tool"] as? String, !tool.isEmpty {
+                start(host: host, session: session, id: id, name: "", input: nil,
+                      time: milliseconds(payload["started_at_ms"]), nativeMCP: (server, tool))
+                if let result = item["result"], !(result is NSNull) {
+                    // "completed" is a lifecycle status, never Boolean isError=false.
+                    end(host: host, session: session, id: id, value: result, error: nil,
+                        time: milliseconds(payload["completed_at_ms"]))
+                }
             } else if object["type"] as? String == "token_usage_record" {
                 tokens(host: host, session: session, id: payload["response_id"] as? String, object: payload["usage"] as? [String: Any], time: time)
             } else if type == "token_count" { coverage.unsupportedUsageRecords += 1 }
         }
     }
-    mutating func report() -> ToolUsageReport {
+    func report() -> ToolUsageReport {
+        var coverage = self.coverage
         var rows: [String: ToolUsageRow] = [:]
         var timings: [String: [Double]] = [:]
         for call in calls.values {

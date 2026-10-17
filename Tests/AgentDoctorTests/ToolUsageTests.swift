@@ -14,6 +14,86 @@ final class ToolUsageTests: XCTestCase {
     func output(_ id: String, _ value: Any, _ seconds: Double) -> [String: Any] {
         event("response_item", ["type": "function_call_output", "call_id": id, "output": value], seconds)
     }
+    func native(_ id: String, server: String = "server", tool: String = "tool", result: Any = ["content": [["type": "text", "text": "fixture-private-result"]]], start seconds: Double = 1) -> [String: Any] {
+        ["type": "event_msg", "timestamp": stamp(90), "payload": ["type": "item_completed",
+            "started_at_ms": start.addingTimeInterval(seconds).timeIntervalSince1970 * 1000,
+            "completed_at_ms": start.addingTimeInterval(seconds + 2).timeIntervalSince1970 * 1000,
+            "item": ["type": "McpToolCall", "id": id, "server": server, "tool": tool, "status": "completed",
+                     "arguments": ["private": "fixture-private-argument"], "result": result]]]
+    }
+    func testNativeMCPCompletionRetainsRealFieldsWithoutInferringSuccessFromLifecycle() throws {
+        var p = parser()
+        p.consume(native("native"), host: "codex", session: "a")
+        let report = p.report(), row = try XCTUnwrap(report.tools.first)
+        XCTAssertEqual(row.server, "server"); XCTAssertEqual(row.name, "tool")
+        XCTAssertEqual(row.calls, 1); XCTAssertEqual(row.completed, 1)
+        XCTAssertEqual(row.reportedErrors, 0); XCTAssertEqual(row.unknownErrorStatus, 1)
+        XCTAssertNil(row.explicitErrorRate)
+        XCTAssertEqual(row.medianSeconds, 2)
+        XCTAssertEqual(row.returnedTextBytes, "fixture-private-result".utf8.count)
+        XCTAssertFalse(String(decoding: try JSONEncoder().encode(report), as: UTF8.self).contains("fixture-private"))
+    }
+    func testNativeAndLegacyRecordsDeduplicateInEitherOrderAndGroupOtherCallsTogether() throws {
+        let result: [String: Any] = ["isError": false, "content": [["type": "text", "text": "same"]]]
+        for nativeFirst in [true, false] {
+            var p = parser()
+            let legacy = [call("same", "mcp__server__tool", 1), output("same", result, 3)]
+            let events = nativeFirst ? [native("same", result: result)] + legacy : legacy + [native("same", result: result)]
+            for value in events { p.consume(value, host: "codex", session: "a") }
+            p.consume(native("other", result: result), host: "codex", session: "a")
+            let report = p.report(), row = try XCTUnwrap(report.tools.first)
+            XCTAssertEqual(report.tools.count, 1); XCTAssertEqual(row.calls, 2)
+            XCTAssertEqual(row.completed, 2); XCTAssertEqual(row.returnedTextBytes, 8)
+            XCTAssertEqual(report.coverage.duplicateRecords, 2)
+        }
+    }
+    func testExplicitNativeServerAndToolFieldsCannotCollideThroughNameDelimiters() {
+        var p = parser()
+        p.consume(native("a", server: "server__part", tool: "tool"), host: "codex", session: "a")
+        p.consume(native("b", server: "server", tool: "part__tool"), host: "codex", session: "a")
+        XCTAssertEqual(p.report().tools.count, 2)
+        XCTAssertEqual(Set(p.report().tools.compactMap(\.server)), ["server__part", "server"])
+    }
+    func testNativeMissingResultStaysMissingAndOnlyBooleanFlagsEstablishErrorStatus() throws {
+        var p = parser()
+        p.consume(native("missing", result: NSNull()), host: "codex", session: "a")
+        for (index, flag) in [true as Any, false as Any, "false" as Any, 0 as Any].enumerated() {
+            p.consume(native(String(index), result: ["isError": flag, "content": []]), host: "codex", session: "a")
+        }
+        let row = try XCTUnwrap(p.report().tools.first)
+        XCTAssertEqual(row.calls, 5); XCTAssertEqual(row.completed, 4); XCTAssertEqual(row.missingResults, 1)
+        XCTAssertEqual(row.reportedErrors, 1); XCTAssertEqual(row.unknownErrorStatus, 2)
+        XCTAssertEqual(row.explicitErrorRate, 0.5)
+    }
+    func testNativeTimingUsesExplicitMillisecondsAndDoesNotFallBackToOuterTimestamp() {
+        var p = parser()
+        p.consume(native("outside", start: -10), host: "codex", session: "a")
+        XCTAssertTrue(p.report().tools.isEmpty)
+        var malformed = native("malformed")
+        var payload = malformed["payload"] as! [String: Any]; payload["started_at_ms"] = true; malformed["payload"] = payload
+        p.consume(malformed, host: "codex", session: "a")
+        XCTAssertTrue(p.report().tools.isEmpty)
+        XCTAssertEqual(p.report().coverage.missingTimestamps, 1)
+        XCTAssertFalse(p.report().complete)
+    }
+    func testOnlyOneDocumentedFunctionsNamespacePrefixIsRemoved() {
+        var p = parser()
+        p.consume(call("valid", "functions.mcp__server__tool", 1), host: "codex", session: "a")
+        p.consume(call("other", "functions.functions.mcp__server__tool", 1), host: "codex", session: "a")
+        XCTAssertEqual(p.report().tools.first?.calls, 1)
+        XCTAssertEqual(p.report().coverage.otherToolCalls, 1)
+    }
+    func testRepeatedReportsDoNotAccumulateDerivedCoverageCounts() {
+        var p = parser()
+        p.consume(call("other", "exec", 1), host: "codex", session: "a")
+        p.consume(output("unmatched", "not attributable", 2), host: "codex", session: "a")
+        for _ in 0..<3 {
+            let report = p.report()
+            XCTAssertEqual(report.coverage.otherToolCalls, 1)
+            XCTAssertEqual(report.coverage.unmatchedResults, 1)
+            XCTAssertFalse(report.complete)
+        }
+    }
     func testExplicitErrorProportionUsesOnlyKnownStatusResults() throws {
         var p = parser()
         for id in ["error", "success", "unknown", "missing"] {
