@@ -246,5 +246,31 @@
     "worktree": "/Users/leo/github.com/thermo-clean-screen-316d733d",
     "branch": "codex/mole-charging-8f4122f",
     "installedOrPublished": false
+  },
+  "mainMergeResolution": {
+    "integrationSnapshot": "2e187b0cd752c50be4ba89507c375adeac5dab21",
+    "incomingMain": "d3bcc8c",
+    "preservedIncomingMCPAuthChanges": true,
+    "finalRelevantRegression": {
+      "command": "swift test --skip HardwareTests --filter 'ChargeTests|BatteryCareModelTests|HelperXPCTests|BatteryServiceTests|LocalizationTests|MCPHTTPTests|MCPInspectionTests'",
+      "suites": {
+        "ThermoKitTests.xctest": 16,
+        "ThermoHelperTests.xctest": 17,
+        "ThermoCLITests.xctest": 16,
+        "ThermoAppTests.xctest": 12,
+        "CleanKitTests.xctest": 0,
+        "AgentDoctorTests.xctest": 29,
+        "AgentCoreTests.xctest": 0
+      },
+      "total": 90,
+      "failures": 0,
+      "log": "/tmp/thermo-charge-final-main-tests.log",
+      "sha256": "b283d2d909a6c73fd88233bfb6be52f74106f5ca49dccb39312a5ce16b18cdf1",
+      "notAddedToEarlierTotals": true
+    },
+    "focusSourceChangesFrom1609TestedSnapshot": [
+      "Sources/ThermoL10n/ZhHans.swift"
+    ],
+    "dictionaryChange": "Incoming MCP-auth translation retained; charging entries unchanged"
   }
 }
