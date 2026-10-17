@@ -1,0 +1,116 @@
+{
+  "date": "2026-10-17T10:23:46.099467+00:00",
+  "source": "d97df440a3ea0e2a0ed5c5c1ca89cd65a35b2f16",
+  "build": "477",
+  "version": "1.1.28",
+  "artifacts": {
+    "thermo": {
+      "sha256": "4a3ac25b9d48f426b25948d4687daa3791c0b52b909664f33a87563bfa7753fd",
+      "bytes": 37316352
+    },
+    "thermo-helper": {
+      "sha256": "17b01fb0c38a05bd74690e6a859245806474920cde058ad50a8dc843dcdc7dac",
+      "bytes": 3448816
+    },
+    "Thermo.app/Contents/MacOS/Thermo": {
+      "sha256": "319f019fa01e65ee85e57d6690fb191b3e4eedd57bd7f0ff77ca8e6d479ec2b8",
+      "bytes": 63828848
+    },
+    "Thermo.app/Contents/Helpers/thermo": {
+      "sha256": "fcd0c3b4db37e10e34a8c8c878cb27d9d8061d5ab8331dfb812c8fb3bc178da7",
+      "bytes": 37316352
+    },
+    "Thermo.app/Contents/Helpers/thermo-helper": {
+      "sha256": "81698154698ce138d488dcb99f86699d5856c51c8dea203bf4e08bed818c2b7c",
+      "bytes": 3448816
+    }
+  },
+  "archive": {
+    "name": "Thermo-1.1.28-477-candidate.zip",
+    "sha256": "3befe5a03b37f24fff0285d1fd26bc7952d626a20e45498450c9b8975000338d",
+    "matchedFiles": 95,
+    "deepStrictSignaturePass": true
+  },
+  "cliChecks": {
+    "native": {
+      "versionAndHelperVersionPass": true,
+      "fullAndLimit80DryRunPass": true,
+      "readonlyProbePass": true,
+      "physicalIntelAccepted": false
+    },
+    "rosetta": {
+      "versionAndHelperVersionPass": true,
+      "fullAndLimit80DryRunPass": true,
+      "readonlyProbePass": true,
+      "physicalIntelAccepted": false
+    }
+  },
+  "productionClientRequirementPass": true,
+  "notarized": false,
+  "installed": false,
+  "published": false,
+  "realHardwareWritesTested": false,
+  "lifecycle": {
+    "functionalChecksPassed": true,
+    "exitCode": 0,
+    "samples": 19,
+    "opens": 6,
+    "cycles": 2,
+    "longTermMemoryAssessed": false,
+    "visibleUIAccepted": false,
+    "reportSHA256": "13b5baeda66d80a9b33fde3f481a8ae81661dfbd92dcd699a4e58f5be756faaf"
+  },
+  "installedSixFileBaselineUnchanged": true,
+  "regression": {
+    "source": "d97df440a3ea0e2a0ed5c5c1ca89cd65a35b2f16",
+    "command": "swift test --skip HardwareTests",
+    "exitCode": 0,
+    "total": 1687,
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 194,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 108,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 300,
+        "failures": 0
+      },
+      "CleanKitTests.xctest": {
+        "tests": 751,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 259,
+        "failures": 0
+      },
+      "AgentCoreTests.xctest": {
+        "tests": 45,
+        "failures": 0
+      }
+    },
+    "logSHA256": "6b784bbf6d59355aef143c884ea2ee34ed39a2feee2ad6f75f4838c8270a059c"
+  },
+  "candidateDirectory": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-477-d97df44",
+  "backup": {
+    "files": 92,
+    "signatureVerified": true,
+    "runtimeRollbackAccepted": false
+  },
+  "includesInstallationTransactionFix": true,
+  "pending": [
+    "Explicit approval to replace installed App and allow root helper update/restart",
+    "Visible installed App and production system-domain XPC acceptance",
+    "Real hardware control and recovery acceptance",
+    "Long-duration memory and physical Intel acceptance",
+    "Notarization and publication if requested"
+  ],
+  "installationRisk": "App replacement can trigger existing helper self-update/restart and control recovery. First post-install actions are status reads; no new charge or AWDL activation is authorized."
+}
