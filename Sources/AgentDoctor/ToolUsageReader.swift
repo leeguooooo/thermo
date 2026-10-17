@@ -1,13 +1,18 @@
 import Foundation
+import Darwin
 
 extension AgentDoctor {
     /// Explicit log analysis; ordinary diagnosis never reads conversation logs.
     public static func usage(since: Date? = nil, host: String? = nil, fileLimit: Int = 100,
+                             logFile: URL? = nil,
                              env: DoctorEnvironment = DoctorEnvironment()) -> ToolUsageReport {
         let since = since ?? env.now.addingTimeInterval(-7 * 86400)
         var parser = ToolUsageParser(since: since, until: env.now, encoding: env.tokenEncoding)
-        guard since <= env.now, (1...1000).contains(fileLimit), host == nil || ["claude", "codex"].contains(host!) else {
-            parser.coverage.limitReached = true; return parser.report()
+        func finish() -> ToolUsageReport {
+            var report = parser.report(); report.singleLogFile = logFile != nil; return report
+        }
+        guard since <= env.now, (1...1000).contains(fileLimit), host == nil || ["claude", "codex"].contains(host!), logFile == nil || host != nil else {
+            parser.coverage.limitReached = true; return finish()
         }
         let started = MCPInspector.clock()
         let fm = FileManager.default
@@ -15,7 +20,11 @@ extension AgentDoctor {
         var remainingEntries = 20_000
         let roots = [(env.url(".claude/projects"), "claude"), (env.url(".codex/sessions"), "codex")]
         func stopped() -> Bool { env.cancelled() || MCPInspector.clock() - started >= 20 }
-        for (root, source) in roots where host == nil || host == source {
+        if let logFile, let host {
+            guard logFile.isFileURL else { parser.coverage.unreadableFiles += 1; return finish() }
+            files = [(logFile, host, env.now)]
+        }
+        for (root, source) in roots where logFile == nil && (host == nil || host == source) {
             var stack: [(URL, Int)] = [(root, 0)]
             while let (directory, depth) = stack.popLast() {
                 if stopped() { break }
@@ -46,14 +55,22 @@ extension AgentDoctor {
             guard identities.insert(file.host + "|" + identity).inserted else { parser.coverage.duplicateRecords += 1; continue }
             guard parser.coverage.bytesRead < maxBytes else { parser.coverage.limitReached = true; break }
             do {
-                let handle = try FileHandle(forReadingFrom: file.url)
+                let fd = open(file.url.path, O_RDONLY | O_NONBLOCK | O_CLOEXEC | O_NOFOLLOW)
+                guard fd >= 0 else { parser.coverage.unreadableFiles += 1; continue }
+                let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
                 defer { try? handle.close() }
+                var metadata = stat()
+                guard fstat(fd, &metadata) == 0, metadata.st_mode & S_IFMT == S_IFREG else {
+                    parser.coverage.unreadableFiles += 1; continue
+                }
                 let length = try handle.seekToEnd()
-                let limit = min(4 * 1024 * 1024, maxBytes - parser.coverage.bytesRead)
-                let start = length > UInt64(limit) ? length - UInt64(limit) : 0
-                if start > 0 { parser.coverage.clippedFiles += 1 }
+                let limit = min(logFile == nil ? 4 * 1024 * 1024 : maxBytes, maxBytes - parser.coverage.bytesRead)
+                let start = logFile == nil && length > UInt64(limit) ? length - UInt64(limit) : 0
+                let clipped = length > UInt64(limit)
+                if clipped { parser.coverage.clippedFiles += 1 }
+                if logFile != nil && clipped { parser.coverage.limitReached = true }
                 try handle.seek(toOffset: start)
-                var remaining = Int(length - start)
+                var remaining = Int(min(length - start, UInt64(limit)))
                 var pending = Data()
                 var skipFirst = start > 0
                 var oversized = false
@@ -88,11 +105,11 @@ extension AgentDoctor {
                     }
                 }
                 // A writer may be in the middle of its final JSONL record. Do not invent an event.
-                if start == 0 && (!pending.isEmpty || oversized) { parser.coverage.clippedFiles += 1 }
+                if !clipped && (!pending.isEmpty || oversized) { parser.coverage.clippedFiles += 1 }
             } catch { parser.coverage.unreadableFiles += 1 }
         }
         parser.coverage.cancelled = env.cancelled()
         if MCPInspector.clock() - started >= 20 { parser.coverage.limitReached = true }
-        return parser.report()
+        return finish()
     }
 }

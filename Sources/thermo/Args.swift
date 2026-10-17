@@ -17,6 +17,7 @@ struct Args {
         "to", // space archive: SSH alias:/absolute/archive.tar
         "since",  // pulse history
         "limit",  // history
+        "log-file", // agents usage: one explicitly selected session
         "watch", "app", "title", "ids", "group", "name", "window", "color"]  // pulse chrome
     static let aliases: [String: String] = [
         "i": "interval", "n": "count", "s": "sensor", "a": "all", "j": "json",
@@ -61,6 +62,9 @@ struct Args {
         }
         if flags.contains("data-only"), Array(positionals.prefix(2)) != ["apps", "uninstall"] {
             throw CLIError("--data-only is only supported by apps uninstall")
+        }
+        if options["log-file"] != nil, Array(positionals.prefix(2)) != ["agents", "usage"] {
+            throw CLIError("--log-file is only supported by agents usage")
         }
         if flags.contains("authorize-background") {
             guard Array(positionals.prefix(2)) == ["apps", "startup"],

@@ -1,4 +1,5 @@
 import AgentDoctor
+import AppKit
 import SwiftUI
 import ThermoL10n
 
@@ -10,13 +11,13 @@ import ThermoL10n
 
     init(report: ToolUsageReport? = nil) { self.report = report }
 
-    func analyze(encoding: TextEncoding = .heuristic) {
+    func analyze(encoding: TextEncoding = .heuristic, logFile: URL? = nil, host: String? = nil) {
         guard !running else { return }
         let cancellation = DoctorCancellation()
         self.cancellation = cancellation
         running = true; stopping = false
         Task.detached(priority: .utility) {
-            let report = AgentDoctor.usage(env: DoctorEnvironment(tokenEncoding: encoding, cancelled: { cancellation.isCancelled }))
+            let report = AgentDoctor.usage(host: host, logFile: logFile, env: DoctorEnvironment(tokenEncoding: encoding, cancelled: { cancellation.isCancelled }))
             await MainActor.run {
                 guard self.cancellation === cancellation else { return }
                 self.report = report
@@ -69,9 +70,17 @@ struct ToolUsagePanel: View {
                 if model.running {
                     ProgressView().controlSize(.small)
                     Button(tr("Stop checking")) { model.stop() }.disabled(model.stopping)
-                } else { Button(tr("Analyze local logs")) { model.analyze(encoding: encoding) } }
+                } else {
+                    Button(tr("Analyze local logs")) { model.analyze(encoding: encoding) }
+                    Menu(tr("Analyze one log…")) {
+                        Button(tr("Claude session log…")) { chooseLog(host: "claude") }
+                        Button(tr("Codex session log…")) { chooseLog(host: "codex") }
+                    }.fixedSize()
+                }
             }
-            Text(tr("Reads local Claude/Codex logs for the last 7 days, across projects. Prompts, arguments and result text stay out of the report."))
+            Text(model.report?.singleLogFile == true
+                 ? tr("Only the selected session log is read, from its beginning within the scan budget. Event time filters still apply; the file path, prompts, arguments and result text stay out of the report.")
+                 : tr("Reads local Claude/Codex logs for the last 7 days, across projects. Prompts, arguments and result text stay out of the report."))
                 .font(.caption).foregroundStyle(.secondary)
             if let report = model.report {
                 if report.referenceEncoding != (encoding == .heuristic ? nil : encoding.rawValue) {
@@ -227,6 +236,17 @@ struct ToolUsagePanel: View {
         } else {
             Text(tr("No measured linked instruction loads in this report; total loading is unknown."))
                 .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    @MainActor private func chooseLog(host: String) {
+        let panel = NSOpenPanel()
+        panel.title = tr("Choose a %1$@ session log (JSONL)", host == "claude" ? "Claude" : "Codex")
+        panel.canChooseDirectories = false; panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false; panel.canCreateDirectories = false; panel.showsHiddenFiles = true
+        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(host == "claude" ? ".claude/projects" : ".codex/sessions")
+        panel.begin { response in
+            if response == .OK, let url = panel.url { model.analyze(encoding: encoding, logFile: url, host: host) }
         }
     }
 }

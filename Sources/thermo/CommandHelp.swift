@@ -55,7 +55,7 @@ enum CommandHelp {
     pulse chrome close|pulse chrome close [URL] [--ids IDS] [--app BROWSER] [--title TITLE] [--dry-run] [--yes] [--json]|browser
     agents|agents [--all] [--json|--csv] [--root PROJECT] [--encoding ENCODING]|cli
     agents context|agents context [--encoding ENCODING] [--agent AGENT] [--root PROJECT] [--json]|cli
-    agents usage|agents usage [--encoding ENCODING] [--all] [--since DATE] [--agent AGENT] [--limit N] [--json]|cli
+    agents usage|agents usage [--encoding ENCODING] [--all] [--since DATE] [--agent AGENT] [--log-file FILE] [--limit N] [--json]|cli
     agents compare|agents compare FILE [--json]|cli
     agents inspect-all|agents inspect-all [--agent AGENT] [--encoding ENCODING] [--timeout SEC] [--budget SEC] [--dry-run] [--json] [--root PROJECT]|mcp
     agents inspect|agents inspect NAME [--encoding ENCODING] [--agent AGENT] [--timeout SEC] [--json] [--root PROJECT]|mcp

@@ -106,6 +106,25 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     assert "Kept outside MCP/Skill totals" in text
     assert "may repeat separately logged MCP results" in text
     assert "Host-reported invocation failures without MCP results: 1; excluded from result error proportions, included in timing." in text
+    selected_path = home / '.codex/sessions/2026/10/17/fixture.jsonl'
+    selected_args = [str(binary), 'agents', 'usage', '--agent', 'codex', '--log-file', str(selected_path), '--json']
+    selected_raw = subprocess.check_output(selected_args, env=dict(os.environ, CFFIXED_USER_HOME=str(home)), text=True, timeout=10)
+    selected = json.loads(selected_raw)
+    assert selected['singleLogFile'] and selected['coverage']['filesRead'] == selected['coverage']['filesDiscovered'] == 1
+    assert selected['coverage']['bytesRead'] == selected_path.stat().st_size
+    assert all(row['host'] == 'codex' for row in selected['tools'])
+    assert str(selected_path) not in selected_raw and 'fixture-private' not in selected_raw
+    missing_host = subprocess.run([str(binary), 'agents', 'usage', '--log-file', str(selected_path), '--json'],
+                                  env=dict(os.environ, CFFIXED_USER_HOME=str(home)), capture_output=True, text=True, timeout=10)
+    assert missing_host.returncode != 0 and '--log-file requires --agent' in missing_host.stderr
+    wrong_command = subprocess.run([str(binary), 'agents', 'context', '--log-file', str(selected_path), '--json'],
+                                   env=dict(os.environ, CFFIXED_USER_HOME=str(home)), capture_output=True, text=True, timeout=10)
+    assert wrong_command.returncode != 0 and '--log-file is only supported by agents usage' in wrong_command.stderr
+    fifo = home / 'blocked.pipe'
+    os.mkfifo(fifo)
+    rejected = subprocess.check_output([str(binary), 'agents', 'usage', '--agent', 'codex', '--log-file', str(fifo), '--json'],
+                                       env=dict(os.environ, CFFIXED_USER_HOME=str(home)), text=True, timeout=5)
+    assert json.loads(rejected)['coverage']['unreadableFiles'] == 1
     # The CLI shows 20 rows by default; the denominator must still include row 21.
     many = []
     for index in range(21):
@@ -128,4 +147,5 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
                       "knownStatusErrorProportionVerified": True, "unknownErrorProportionPreserved": True,
                       "nativeMCPEventsIncludedWithoutDoubleCounting": True,
                       "nativeHostFailureRetainsCompletionAndTiming": True,
+                      "explicitSelectedFileScopeAndNonblockingGuardVerified": True,
                       "categoryTotalsAndSharesIncludeHiddenRows": True}))

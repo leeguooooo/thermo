@@ -1,0 +1,160 @@
+{
+  "recordedAt": "2026-10-17T07:52:53.752670+00:00",
+  "origin": "Autonomously traced actual MCP failures; bounded tail evidence led to a selected-session reading feature.",
+  "feature": {
+    "CLI": "thermo agents usage --agent codex|claude --log-file FILE [--since DATE] [--json]",
+    "UI": "Analyze one log menu offers Claude/Codex, then a native file picker.",
+    "defaultDiscovery": "Unchanged: recent file discovery with a 4 MiB per-file tail.",
+    "selectedReading": "Only the explicit local regular file, from beginning; 64 MiB and 20-second budgets and event time filter still apply.",
+    "guards": [
+      "Host must be explicit",
+      "Nonlocal URLs refused",
+      "Nonblocking open and regular-file fstat",
+      "Leaf symlinks refused",
+      "Path never added to report",
+      "Cancellation and partial data remain explicit"
+    ],
+    "JSON": "ToolUsageReport.singleLogFile is optional for older reports."
+  },
+  "fullSessionEvidence": {
+    "sourceBytes": 8549093,
+    "sourceSHA256": "f7bfff4b7cf8ebc8ccee5877843893639c938aff7c0456c87965ea9d154c9e61",
+    "sourceLines": 2101,
+    "independentlyCountedNativeCalls": 145,
+    "parsedPhoneCalls": 145,
+    "MCPResults": 144,
+    "explicitResultErrors": 10,
+    "hostInvocationFailuresWithoutMCPResult": 1,
+    "coverage": {
+      "bytesRead": 8549093,
+      "cancelled": false,
+      "clippedFiles": 0,
+      "duplicateRecords": 0,
+      "filesDiscovered": 1,
+      "filesRead": 1,
+      "limitReached": false,
+      "malformedLines": 0,
+      "missingTimestamps": 0,
+      "otherToolCalls": 278,
+      "oversizedLines": 0,
+      "unattributedResults": {
+        "completed": 278,
+        "missingResults": 0,
+        "nonTextBlocks": 7,
+        "returnedTextBytes": 900330,
+        "returnedTextEstimatedTokens": 249663,
+        "unavailableReferenceResults": 0,
+        "unmeasuredResults": 0
+      },
+      "unmatchedInstructionEvents": 0,
+      "unmatchedResults": 0,
+      "unreadableFiles": 0,
+      "unsupportedUsageRecords": 297
+    },
+    "selectedReadingComplete": true,
+    "scope": "One selected historical session; not fleet frequency, service quality or business task success."
+  },
+  "failureReview": {
+    "declaredOutcomesAmongTenExplicitErrors": {
+      "toolDeclaredNoActionsInBatch": 4,
+      "structuredCauseUnavailable": 2,
+      "toolDeclaredSingleNotSent": 2,
+      "toolDeclaredPartiallyAppliedBatch": 2
+    },
+    "outcomesAreToolDeclarationsNotIndependentDeviceEvidence": true,
+    "partialBatchTrap": "Two failed batches say outcome=not_sent for the failed step while batch_outcome=partially_applied, applied_actions=1, retry_safe=false. Whole-batch replay is unsafe.",
+    "partialBatchesFollowedImmediatelyByReadCalls": true,
+    "ambiguousLabelRecovery": "One ambiguous-label batch declared zero applied actions, then the caller used element+snapshot without an intervening repeated tap_label; subsequent logged calls returned without explicit errors. Not a physical/business success verification.",
+    "hostFailure": [
+      {
+        "tool": "phone_run_steps",
+        "missingPublicSchemaFields": [
+          "x"
+        ],
+        "isInvalidParams": true
+      }
+    ],
+    "hostFailureArgumentShape": [
+      {
+        "tool": "phone_run_steps",
+        "steps": [
+          {
+            "kind": "scroll",
+            "keys": [
+              "dy",
+              "kind"
+            ]
+          }
+        ]
+      }
+    ],
+    "noAutomaticErrorToQualityScoreConversion": true
+  },
+  "validation": {
+    "targetedTests": 57,
+    "targetedFailures": 0,
+    "integrationSuites": [
+      {
+        "suite": "ThermoCLITests.xctest",
+        "tests": 108,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoAppTests.xctest",
+        "tests": 300,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests.xctest",
+        "tests": 257,
+        "failures": 0
+      }
+    ],
+    "integrationTests": 665,
+    "integrationFailures": 0,
+    "integrationCommand": "swift test --filter 'AgentDoctorTests|ThermoCLITests|ThermoAppTests'",
+    "integrationLogSHA256": "5eaca502ed2b37841bbc525e3277310d6d979d92ed282b594ddd06196447a3bd",
+    "CLIRegression": {
+      "passed": true,
+      "mcpCalls": 2,
+      "skillCalls": 1,
+      "requestTokensKeptSeparate": true,
+      "privateTextExcluded": true,
+      "imageTokensUnknown": true,
+      "knownStatusErrorProportionVerified": true,
+      "unknownErrorProportionPreserved": true,
+      "nativeMCPEventsIncludedWithoutDoubleCounting": true,
+      "nativeHostFailureRetainsCompletionAndTiming": true,
+      "explicitSelectedFileScopeAndNonblockingGuardVerified": true,
+      "categoryTotalsAndSharesIncludeHiddenRows": true
+    },
+    "nativeSourceCountsMatchedCompiledCLI": true,
+    "initialCLIIntegrationFailure": "New flag was initially absent from the shared Args registry. Added it as a value option restricted to agents usage; final build, tests and CLI replay passed."
+  },
+  "render": {
+    "path": "selected-session-usage-zh-2026-10-17.png",
+    "sha256": "a8dacdb0694f8e5a7199fb9ac839d7d99c3ba729b931093734a705d4eecc0838",
+    "actualSwiftUIComponentOffscreen": true,
+    "selectedSessionScopeAndTwoAnalysisEntrypointsVisible": true,
+    "visuallyInspected": true,
+    "fullAppFilePickerInteractionVerified": false
+  },
+  "privacyAndScope": {
+    "sourcePathExported": false,
+    "promptsArgumentsOrResultBodiesExported": false,
+    "originalLogUnchanged": true,
+    "realPhoneOrBusinessMCPExecuted": false,
+    "userSkillFilesChanged": false,
+    "newReleasePackageBuilt": false,
+    "installedOrPublished": false,
+    "realBusinessQualityOrSkillNetBenefitProven": false
+  },
+  "sourceSHA256": {
+    "Sources/AgentDoctor/ToolUsageReader.swift": "3d931d670cc126991859c02f28ca905c3a30f9d583d639e41bc3899f49f1ba87",
+    "Sources/AgentDoctor/ToolUsageReport.swift": "f8faafb1bd771eae6aab57a12766b345bcf8278d9f8f700ba8e59a9d95852e6e",
+    "Sources/ThermoApp/ToolUsagePanel.swift": "37691a1f537a08720bfa52475874c1891e802c876b8bdcb4638d8d5ac2336a00",
+    "Sources/thermo/Agents.swift": "aa02550043bde73878a80ccab4408cd70297ec71ebb4da07e6ef69d84e4a0418",
+    "Sources/thermo/Args.swift": "606f5811bbcde26ceeb15e26eef1a51b89c35ae4fc12e03b646aff41b47f4ae4",
+    "scripts/verify-tool-usage.py": "f702b4eb8e797f2e66d452aec9106ea3f8a5fa90da1bca197b6b8c94474af69b"
+  }
+}

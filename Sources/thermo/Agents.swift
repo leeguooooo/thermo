@@ -30,7 +30,7 @@ struct AgentsCommand {
             guard rest.count == 2 else { throw CLIError("usage: thermo agents compare FILE [--json]") }
             return try compareTasks(try required(name, sub))
         case "usage":
-            guard rest.count == 1 else { throw CLIError("usage: thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--limit FILES] [--json]") }
+            guard rest.count == 1 else { throw CLIError("usage: thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--log-file FILE] [--limit FILES] [--json]") }
             return try usage()
         case "inspect":
             guard rest.count == 2 else { throw CLIError("usage: thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--json]") }
@@ -195,6 +195,8 @@ struct AgentsCommand {
         guard !app.args.has("csv"), app.args.options["root"] == nil else { throw CLIError("agents usage supports --json; project filtering and CSV are not supported") }
         let host = app.args.options["agent"]
         guard host == nil || ["claude", "codex"].contains(host!) else { throw CLIError("--agent must be claude or codex") }
+        let logFile = app.args.options["log-file"].map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath) }
+        guard logFile == nil || host != nil else { throw CLIError("--log-file requires --agent claude or codex") }
         let count = try app.args.int("limit") ?? 100
         guard count <= 1000 else { throw CLIError("--limit must be between 1 and 1000 files") }
         var since: Date?
@@ -211,11 +213,12 @@ struct AgentsCommand {
             }
             guard let since, since <= Date() else { throw CLIError("--since must be a past ISO date or YYYY-MM-DD (UTC)") }
         }
-        let report = AgentDoctor.usage(since: since, host: host, fileLimit: count, env: DoctorEnvironment(tokenEncoding: try encoding()))
+        let report = AgentDoctor.usage(since: since, host: host, fileLimit: count, logFile: logFile, env: DoctorEnvironment(tokenEncoding: try encoding()))
         if app.args.has("json") { print(Export.diagnosticJSON(report)); return }
         let iso = ISO8601DateFormatter()
         let coverage = report.coverage
         var lines = [style.bold("Observed local tool usage"), iso.string(from: report.since) + " → " + iso.string(from: report.until),
+                     report.singleLogFile == true ? "Single selected log file; time filter and scan limits still apply." : "Discovered local log files; per-file tail limits apply.",
                      "Log reading: " + (report.complete ? "complete within selected scope" : "partial"),
                      "\(coverage.filesRead)/\(coverage.filesDiscovered) eligible files · \(coverage.bytesRead) bytes · \(coverage.clippedFiles) clipped · \(coverage.malformedLines) malformed records", ""]
         if let encoding = report.referenceEncoding { lines.append("Ordinary-text reference encoding: " + encoding + "; not a model invoice or prompt framing count") }

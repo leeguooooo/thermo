@@ -144,6 +144,8 @@ public struct ToolUsageReport: Codable, Sendable {
     public var referenceEncoding: String? = nil
     public var referenceEngine: String? = nil
     public var returnedTextEstimator: String? = "ascii4-unicode1-v1"
+    /// Selected-file scope only. No input path is retained or exported.
+    public var singleLogFile: Bool? = nil
 
     public func returnedTextSummary(kind: String) -> ToolUsageTextSummary {
         ToolUsageTextSummary(rows: tools.filter { $0.kind == kind }, kind: kind, encoding: referenceEncoding)
