@@ -275,6 +275,7 @@ struct AgentsCommand {
             if let rows = other.byTool {
                 if !rows.isEmpty {
                     let count = app.args.has("all") ? rows.count : min(20, rows.count)
+                    let outerSummary = report.outerReturnedTextSummary
                     lines.append("Outer tools ranked by observed returned text: showing \(count)/\(rows.count)")
                     lines.append("Same observations as the outer aggregate, not additional usage. Commands and nested CLI/MCP ownership are not inferred.")
                     if other.unmeasuredResults > 0 { lines.append("Some returned content was not measured; this ranks measured text only.") }
@@ -288,7 +289,7 @@ struct AgentsCommand {
                         if let rate = row.explicitErrorRate, let denominator = row.knownStatusResults {
                             lines.append("    explicit errors among known-status results: \(row.reportedErrors) / \(denominator) (\(String(format: "%.1f%%", rate * 100)))")
                         } else { lines.append("    explicit error rate unknown; no usable known-status denominator") }
-                        if let share = report.outerReturnedTextSummary?.percentage(of: row) {
+                        if let share = outerSummary?.percentage(of: row) {
                             lines.append("    share of observed outer returned-text tokens: \(String(format: "%.1f%%", share))")
                         }
                     }
