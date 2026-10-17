@@ -516,11 +516,89 @@ public enum HelperInstaller {
 
     static func shellQuote(_ s: String) -> String { "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'" }
 
-    /// A missing daemon is expected on first install. Every subsequent step must
-    /// succeed before the next one runs; otherwise an old daemon could answer a
-    /// version request and disguise a failed binary/plist copy as installation.
-    static func installationScript(bootout: String, steps: [String]) -> String {
-        (["(\(bootout) || true)"] + steps).joined(separator: " && ")
+    /// Stage and back up before stopping the registered daemon. The EXIT handler
+    /// restores the previous files on an activation failure; failed recovery keeps
+    /// the private transaction directory for manual repair instead of deleting it.
+    static func transactionalInstallationScript(binary: String, plist: String,
+                                                installedBinary: String = HelperConstants.installedBinary,
+                                                installedPlist: String = HelperConstants.launchdPlist,
+                                                owner: String = "root", group: String = "wheel",
+                                                launchctl: String = "/bin/launchctl") -> String {
+        let bin = shellQuote(installedBinary), pl = shellQuote(installedPlist)
+        let folder = shellQuote((installedBinary as NSString).deletingLastPathComponent)
+        let plistFolder = shellQuote((installedPlist as NSString).deletingLastPathComponent)
+        let tool = shellQuote(launchctl), service = shellQuote("system/" + HelperConstants.label)
+        let template = shellQuote((installedBinary as NSString).deletingLastPathComponent + "/.dev.thermo.install.XXXXXX")
+        return """
+        set -e
+        /bin/mkdir -p \(folder) \(plistFolder)
+        transaction=$(/usr/bin/mktemp -d \(template))
+        had_binary=0
+        had_plist=0
+        registered=0
+        activating=0
+        finish_installation() {
+            result=$?
+            trap - EXIT HUP INT TERM
+            set +e
+            recovery_failed=0
+            if [ "$result" -ne 0 ] && [ "$activating" -eq 1 ]; then
+                \(tool) bootout \(service) >/dev/null 2>&1
+                if [ "$had_binary" -eq 1 ]; then
+                    /bin/cp -p "$transaction/old-helper" "$transaction/restore-helper" && /bin/mv -f "$transaction/restore-helper" \(bin) || recovery_failed=1
+                else
+                    /bin/rm -f \(bin) || recovery_failed=1
+                fi
+                if [ "$had_plist" -eq 1 ]; then
+                    /bin/cp -p "$transaction/old.plist" "$transaction/restore.plist" && /bin/mv -f "$transaction/restore.plist" \(pl) || recovery_failed=1
+                else
+                    /bin/rm -f \(pl) || recovery_failed=1
+                fi
+                if [ "$registered" -eq 1 ]; then
+                    if [ "$recovery_failed" -eq 0 ]; then
+                        \(tool) bootstrap system \(pl) || recovery_failed=1
+                    else
+                        recovery_failed=1
+                    fi
+                fi
+            fi
+            if [ "$recovery_failed" -ne 0 ]; then
+                echo "Helper installation failed; recovery is incomplete. Repair files retained at $transaction" >&2
+            else
+                /bin/rm -rf "$transaction"
+            fi
+            exit "$result"
+        }
+        trap finish_installation EXIT
+        trap 'exit 129' HUP
+        trap 'exit 130' INT
+        trap 'exit 143' TERM
+        test ! -L \(bin)
+        test ! -L \(pl)
+        if [ -e \(bin) ]; then
+            test -f \(bin)
+            /bin/cp -p \(bin) "$transaction/old-helper"
+            had_binary=1
+        fi
+        if [ -e \(pl) ]; then
+            test -f \(pl)
+            /bin/cp -p \(pl) "$transaction/old.plist"
+            had_plist=1
+        fi
+        /usr/bin/install -o \(shellQuote(owner)) -g \(shellQuote(group)) -m 755 \(shellQuote(binary)) "$transaction/new-helper"
+        /usr/bin/install -o \(shellQuote(owner)) -g \(shellQuote(group)) -m 644 \(shellQuote(plist)) "$transaction/new.plist"
+        /usr/bin/plutil -lint "$transaction/new.plist" >/dev/null
+        if \(tool) print \(service) >/dev/null 2>&1; then
+            test "$had_binary" -eq 1
+            test "$had_plist" -eq 1
+            registered=1
+            \(tool) bootout \(service)
+        fi
+        activating=1
+        /bin/mv -f "$transaction/new-helper" \(bin)
+        /bin/mv -f "$transaction/new.plist" \(pl)
+        \(tool) bootstrap system \(pl)
+        """
     }
 
     public static func install(from binary: URL) throws {
@@ -532,15 +610,7 @@ public enum HelperInstaller {
         try plist(binary: HelperConstants.installedBinary, source: source).write(to: tmp, atomically: true, encoding: .utf8)
         defer { try? FileManager.default.removeItem(at: tmp) }
 
-        let bin = shellQuote(HelperConstants.installedBinary)
-        let pl = shellQuote(HelperConstants.launchdPlist)
-        let script = installationScript(
-            bootout: "/bin/launchctl bootout system/\(HelperConstants.label) 2>/dev/null", steps: [
-            "/bin/mkdir -p /Library/PrivilegedHelperTools",
-            "/usr/bin/install -o root -g wheel -m 755 \(shellQuote(binary.path)) \(bin)",
-            "/usr/bin/install -o root -g wheel -m 644 \(shellQuote(tmp.path)) \(pl)",
-            "/bin/launchctl bootstrap system \(pl)",
-        ])
+        let script = transactionalInstallationScript(binary: binary.path, plist: tmp.path)
         try runPrivileged(script)
     }
 
@@ -555,11 +625,15 @@ public enum HelperInstaller {
         try HelperClient().withRemovalPreparation { try runPrivileged(script) }
     }
 
-    static func runPrivileged(_ shell: String) throws {
+    static func privilegedAppleScript(_ shell: String) -> String {
         let escaped = shell.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        return "do shell script \"\(escaped)\" with administrator privileges"
+    }
+
+    static func runPrivileged(_ shell: String) throws {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        p.arguments = ["-e", "do shell script \"\(escaped)\" with administrator privileges"]
+        p.arguments = ["-e", privilegedAppleScript(shell)]
         let err = Pipe()
         p.standardError = err
         try p.run()

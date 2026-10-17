@@ -1,0 +1,77 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "54c46874d4482b9e189c1a65ccd6c06f046f852d",
+  "sourceSHA256": {
+    "Sources/ThermoKit/Helper.swift": "8ade1eb3481002113be88320b55fb5e90bf9a5c857b6ab89f4b61d34ccf2dacd",
+    "Tests/ThermoKitTests/HelperInstallationTests.swift": "516a1e75b88df78636b58c116a1189933aab740f29e78114d0ef6cb1da9257ad"
+  },
+  "change": "Stage helper/plist and validate plist before stopping an existing registered daemon; preserve previous files for activation-failure recovery.",
+  "regression": {
+    "command": "swift test --skip HardwareTests",
+    "exitCode": 0,
+    "total": 1666,
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 194,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 108,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 300,
+        "failures": 0
+      },
+      "CleanKitTests.xctest": {
+        "tests": 751,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 238,
+        "failures": 0
+      },
+      "AgentCoreTests.xctest": {
+        "tests": 45,
+        "failures": 0
+      }
+    },
+    "logSHA256": "0237757e28d6714ccf78225f51ffaa8f7b89e67acb88890ffed73c96bffd3e1e"
+  },
+  "installationTests": {
+    "count": 9,
+    "launchctl": "Owned stub executable only; no system launchctl invocation",
+    "filesystem": "Actual install/cp/mv/plutil commands using current uid/gid in private fixture directories",
+    "cases": [
+      "Missing staged binary and invalid plist leave running old fixture and files untouched",
+      "Failed bootout leaves old files and registration untouched",
+      "New bootstrap failure restores old files and attempts old registration while retaining original failure exit code",
+      "Failed first install removes newly activated files without creating an old service",
+      "Failed recovery retains original backup files and reports directory",
+      "Symlinked target refused before service stop",
+      "Registered service without both backups refused before service stop",
+      "Successful first install and upgrade clean staging and set 755/644 modes",
+      "Entire multi-line privileged AppleScript compiles using osacompile without execution"
+    ]
+  },
+  "installedSixFileBaselineUnchanged": true,
+  "installedVersion": "1.1.27",
+  "installedBuild": "233",
+  "candidate457": {
+    "containsFix": false,
+    "temporaryDirectoryAndZIPPresentAtCurrentCheck": false,
+    "historicalVerificationEvidenceRetained": true,
+    "readyToInstall": false
+  },
+  "limitations": [
+    "No real privileged install, system service restart or hardware control was performed",
+    "File-level recovery does not prove runtime policy/control recovery or complete App rollback",
+    "Existing helper --source auto-update may follow the current App again; this transaction does not roll back the App or freeze that updater",
+    "Concurrent privileged installers, power loss and SIGKILL interruption are not covered",
+    "Requires new signed package and installed acceptance"
+  ]
+}
