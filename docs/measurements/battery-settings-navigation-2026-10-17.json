@@ -40,5 +40,22 @@
   "realChargingTested": false,
   "screenshotsSaved": false,
   "privateSystemAXDataPersisted": false,
-  "scope": "Navigation and presence of a native charge-limit UI on this Mac only. No slider/toggle input, actual native limit change, root service deployment or battery-write acceptance. Personal account sidebar and battery-usage history are intentionally not copied into this report."
+  "scope": "Navigation and presence of a native charge-limit UI on this Mac only. No slider/toggle input, actual native limit change, root service deployment or battery-write acceptance. Personal account sidebar and battery-usage history are intentionally not copied into this report.",
+  "integrationRegression": {
+    "source": "facb2b56cdb270440460a1e48f820bfdf0fd3d07",
+    "command": "swift test --filter BatteryCareModelTests|VerificationHelperIsolationTests|CodexSkillFlagsTests|SkillContext|ContextFootprint",
+    "exitCode": 0,
+    "total": 27,
+    "suites": {
+      "ThermoAppTests.xctest": {
+        "tests": 15,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 12,
+        "failures": 0
+      }
+    },
+    "logSHA256": "3e4c057bc2f37d426c2de0b3b2fdde9f3197f913d19e3295f1ea9edd178aa13d"
+  }
 }
