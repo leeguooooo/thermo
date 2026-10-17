@@ -61,6 +61,12 @@ Tests/AgentDoctorTests/Fixtures 保留由官方 tiktoken 0.14.0 生成的 734 �
 
 App 显示内容检查数量，问题详情给出来源及行号；信息条目也可展开证据。旧报告没有 quality 时显示尚未采集，不能用 0 个问题代替未知。
 
+内容汇总现在按宿主区分目录 / 已配置插件与缓存，以文件身份去重别名；独立存储的相同正文仍分别计数。缺少文件身份、未测量、缺少内容证据及观察不一致各自单列；同一文件的正文或引用检查结果不一致时，不任选一次计入合计。部分检查保留已取得的引用和发现数量，并明确列出检查不完整。逐项来源和问题记录仍保留，不因汇总去重而删除。
+
+`agents context --json` 新增可选 `qualitySummaries`；CLI 按 `--agent` 过滤后重新计算。旧报告没有该字段时仍可读取。缓存仅表示本地存在的文件，不证明它已启用或加载；这些静态发现也不构成 Skill 效果评分。历史盘点中的逐条检查数没有改写，不能把去重后的下降当成修复数量。
+
+[内容汇总验证](measurements/skill-content-summary-2026-10-17.json)包含 30 项测试、独立 CLI 夹具和完整 App 的前后对照。同一组目录文件、别名和缓存，原界面累计 3 次检查 / 3 个发现，修复后目录和缓存各 1 次 / 1 个发现。当前本机只读刷新结果为：目录 138 个已检查独立文件、459 个引用、2 个发现；缓存 215 个文件、417 个引用、0 个发现。两处缺失目标是 `unity-mcp-orchestrator` 的 `references/probuilder-guide.md` 与 `references/resources-reference.md`。这是当前文件证据，不证明 Skill 的业务任务已失败；尚未改动该 Skill。QA 已退出，没有启动业务 MCP 或执行 Skill。
+
 [本机盘点与隔离验收](measurements/skill-quality-2026-10-17.json)记录了 Codex 范围的 355 个文档条目、876 次本地引用检查和 2 个当前缺失的目标；未包含 Skill 名称或路径。`scripts/verify-skill-quality.py` 用编译后的 CLI 核实引用位置、正文空缺、副本和不执行 MCP、不改 Skill 的边界。
 
 Swift Markdown 与 swift-cmark 的许可证、NOTICE / COPYING 保存在 Resources/ThirdPartyNotices。构建脚本将它们带入 App、CLI ZIP 和 GitHub Release tar 包；本轮验证的是独立目录中的 Debug ad-hoc 包和归档布局，没有公证、安装或发布。root helper 未链接 Markdown，原生离屏预览脚本也已复核可运行。

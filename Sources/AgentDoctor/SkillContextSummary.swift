@@ -21,14 +21,15 @@ public struct SkillContextSummary: Codable, Equatable, Sendable {
     public var unverifiedIdentityEntries = 0
     public var inconsistentFiles = 0
 
-    public static func summarize(_ items: [AgentItem]) -> [SkillContextSummary] {
-        func host(_ item: AgentItem) -> String {
-            switch item.agent {
-            case "shared", "codex", "codex-cache": return "codex"
-            case "plugin", "claude": return "claude"
-            default: return item.agent
-            }
+    static func host(_ item: AgentItem) -> String {
+        switch item.agent {
+        case "shared", "codex", "codex-cache": return "codex"
+        case "plugin", "claude": return "claude"
+        default: return item.agent
         }
+    }
+
+    public static func summarize(_ items: [AgentItem]) -> [SkillContextSummary] {
         let groups = Dictionary(grouping: items.filter { $0.area == .skills }, by: host)
         return groups.keys.sorted().map { name in
             let entries = groups[name]!.sorted { $0.id < $1.id }

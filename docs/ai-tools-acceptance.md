@@ -4,6 +4,8 @@
 
 后续源码已补充[返回文本合计与占比](measurements/tool-usage-return-shares-2026-10-17.json)，通过 31 项针对性测试、独立 CLI 夹具和[中文面板离屏复核](measurements/tool-usage-return-shares-zh-2026-10-17.png)。[完整 App 的隔离验证](measurements/tool-usage-native-qa-2026-10-17.json)确认了 8 → 16 → 21 项展开、编码切换后的旧报告提示与重新分析，以及 MCP / Skill 分类独立的合计和占比。另修复了分析完成后仍称“实际工具用量仍未测量”的说明，并通过 3 项本地化测试及完整窗口复核。新增展示与文案尚未进入 393 包，也未完成安装包验收。
 
+[Skill 内容汇总修复](measurements/skill-content-summary-2026-10-17.json)另通过 30 项针对性测试、CLI 夹具及完整 App 的同文件前后对照：别名不重复累计，目录 / 已配置插件与缓存分别展示；证据缺失或冲突单列。当前本机目录范围为 138 个已检查独立文件、459 个引用、2 个发现，缓存为 215 个文件、417 个引用、0 个发现。两处缺失引用均来自 `unity-mcp-orchestrator`，仍需核实是否应随 Skill 打包及实际影响，不能判为业务任务失败。此修复也尚未进入 393 包。
+
 | 原始问题 | 当前能力与证据 | 仍不能据此判断 |
 |---|---|---|
 | MCP 总体有多大、占多少 token | 汇总已完整检查配置的定义字节、定义数组计数和独立服务指令计数；支持启发式和两种离线参考编码。[汇总与取消测试](../Tests/ThermoAppTests/MCPDefinitionStoreTests.swift)、[批量原生验收](measurements/mcp-batch-inspection-2026-10-17.json) | 未检查配置不按零计；多宿主配置保留独立计量。它不是宿主当前实际加载上下文或账单 |

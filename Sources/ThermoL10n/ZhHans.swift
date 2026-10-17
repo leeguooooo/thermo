@@ -2781,4 +2781,8 @@ let zhHans: [String: String] = [
     "Totals include all observed entries in this category, including hidden rows. Missing logs, results and non-text content are not included; this is not request usage.": "合计包含本分类全部已观察条目，包括未展开的行。不含缺失日志、缺失结果和非文本内容，不是请求用量。",
     "Share of this category's observed returned-text tokens: %1$@": "占本分类已观察返回文本 token：%1$@",
     "Error proportions exclude missing results and unknown error statuses; they do not measure task success. An explicit error may be an unmet assertion, not a service fault; inspect the task evidence before judging tool quality.": "错误比例不计入结果缺失和错误状态未知的调用，不代表任务成功率。明确错误也可能只是条件断言未通过，并非服务故障；判断工具质量时需查看任务证据。",
+    "Cache inventory · loading unverified": "缓存清单 · 加载状态未知",
+    "Directory and configured plugin files": "目录与已配置插件文件",
+    "Content evidence: %1$@ / %2$@ unique files inspected · %3$@ alias entries excluded": "内容证据：已检查 %1$@ / %2$@ 个独立文件 · 已排除 %3$@ 个别名条目",
+    "Excluded from content totals: %1$@ files without evidence · %2$@ conflicting files · %3$@ entries with unknown identity · %4$@ unmeasured entries": "未计入内容合计：%1$@ 个文件缺少证据 · %2$@ 个文件观察不一致 · %3$@ 个条目身份未知 · %4$@ 个条目未测量",
 ]

@@ -288,6 +288,7 @@ struct AgentsCommand {
             report.findings = report.findings.filter { $0.item.map(ids.contains) ?? visible.contains($0.agent) }
         }
         report.summaries = SkillContextSummary.summarize(report.skills)
+        report.qualitySummaries = SkillQualitySummary.summarize(report.skills)
         if app.args.has("json") { print(Export.diagnosticJSON(report)); return }
         var lines = [style.bold("Skill footprint · static estimates"), report.coverageNote, report.measurementNote, ""]
         if let encoding = report.referenceEncoding { lines.append("Ordinary-text reference encoding: " + encoding + "; not a model invoice or prompt framing count") }
@@ -300,6 +301,12 @@ struct AgentsCommand {
             lines.append("  cache inventory: \(summary.cacheEntries) entries, \(summary.cacheUniqueFiles) unique files, \(summary.cacheDocumentBytes) bytes; excluded from directory totals")
         }
         lines.append("Deduplicated inventory estimates, not effective session context. Same-name selection and actual loading are not inferred.")
+        for summary in report.qualitySummaries ?? [] {
+            let scope = summary.scope == "cache" ? "cache inventory; loading unverified" : "directory/configured plugins"
+            lines.append("\(summary.host) content evidence [\(scope)]: \(summary.inspectedFiles)/\(summary.uniqueFiles) unique files inspected · \(summary.aliases) alias entries excluded")
+            lines.append("  \(summary.checkedLocalReferences) local references checked · \(summary.findings) findings · \(summary.incompleteInspections) incomplete inspections")
+            lines.append("  excluded from content totals: \(summary.unavailableFiles) files without evidence · \(summary.conflictingFiles) conflicting files · \(summary.unverifiedIdentityEntries) entries with unknown identity · \(summary.unmeasuredEntries) unmeasured entries")
+        }
         lines.append("")
         for item in report.skills {
             lines.append(style.bold(item.name) + style.dim(" [" + item.agent + "]"))

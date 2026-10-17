@@ -49,14 +49,24 @@ struct SkillContextCard: View {
                     if let source = item.skillFootprint?.sourcePath { Text(source).font(.caption).foregroundStyle(.secondary).textSelection(.enabled) }
                 }
             }
-            let qualities = items.compactMap { $0.skillFootprint?.quality }
-            let checked = qualities.reduce(0) { $0 + $1.checkedLocalReferences }
-            let issues = qualities.reduce(0) { $0 + $1.issues.count }
-            if qualities.isEmpty {
+            let contentSummaries = SkillQualitySummary.summarize(items)
+            if contentSummaries.isEmpty {
                 Text(tr("Skill content evidence has not been collected.")).font(.caption).foregroundStyle(.secondary)
             } else {
-                Text(tr("Content checks: %1$@ local references checked · %2$@ findings · %3$@ incomplete inspections", String(checked), String(issues), String(qualities.filter { !$0.complete }.count)))
-                    .font(.caption).foregroundStyle(.secondary)
+                ForEach(Array(contentSummaries.enumerated()), id: \.offset) { _, summary in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(summary.host + " · " + (summary.scope == "cache" ? tr("Cache inventory · loading unverified") : tr("Directory and configured plugin files")))
+                            .font(.caption.weight(.semibold))
+                        Text(tr("Content evidence: %1$@ / %2$@ unique files inspected · %3$@ alias entries excluded", String(summary.inspectedFiles), String(summary.uniqueFiles), String(summary.aliases)))
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text(tr("Content checks: %1$@ local references checked · %2$@ findings · %3$@ incomplete inspections", String(summary.checkedLocalReferences), String(summary.findings), String(summary.incompleteInspections)))
+                            .font(.caption).foregroundStyle(.secondary)
+                        if summary.unavailableFiles + summary.conflictingFiles + summary.unverifiedIdentityEntries + summary.unmeasuredEntries > 0 {
+                            Text(tr("Excluded from content totals: %1$@ files without evidence · %2$@ conflicting files · %3$@ entries with unknown identity · %4$@ unmeasured entries", String(summary.unavailableFiles), String(summary.conflictingFiles), String(summary.unverifiedIdentityEntries), String(summary.unmeasuredEntries)))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
             }
             DisclosureGroup(tr("Coverage and counting method")) {
                 Text(tr("Reference checks only test current local targets; generated files and intentional copies need review. No quality score or automatic removal is inferred."))
