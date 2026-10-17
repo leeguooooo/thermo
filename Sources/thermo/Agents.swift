@@ -264,6 +264,7 @@ struct AgentsCommand {
                 for issue in tool.issues { lines.append("    ! " + issue) }
             }
             if let cleanup = report.cleanupStatus { lines.append("HTTP session cleanup: " + cleanup) }
+            if let details = report.cleanupDetails, details.reason != "notNeeded" { lines.append(details.summary) }
             lines.append(report.measurementNote)
             out(lines)
         }

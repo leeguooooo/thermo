@@ -115,6 +115,10 @@ HTTP 保留配置中的请求头，支持 Codex 的 bearer_token_env_var 和 env
 
 HTTP 在初始化收到新会话 ID 后验证可见 ASCII 字符和长度，再将其与协商的协议版本带到后续请求。关闭时只对这次新建的会话尝试一次 DELETE，最多额外等待 250 ms。JSON 的 cleanupStatus 区分 closed、not_needed、server_retained 和 unconfirmed；工具清单成功不代表会话关闭已确认。会话 ID、凭据和响应正文不写入报告。
 
+后续新增的可选 `cleanupDetails` 单列原因、已取得的 HTTP 状态码、实际观察时间及预算；App 与 CLI 同时显示。没有收到状态码时保持未知，不用 0 代替。旧报告没有该字段时仍可读取；关闭预算和不重试策略保持不变。[诊断验证](measurements/mcp-cleanup-diagnostics-2026-10-17.json)覆盖 29 项测试和编译 CLI 的受控响应，其中 503、405、延迟超过预算、监听端口不可用及无会话分别核对。首轮夹具在关闭监听时提前退出，丢失最后的列表响应；原失败结果保留，修正生命周期并重新编译后全部通过。
+
+新版只对 ZEGO 新建了一次独立检查会话，未重放上次不确定的 DELETE：6 个工具仍完整返回，但这次关闭在 0.250 秒预算下观察了约 0.252 秒，结果为 `timedOut`，HTTP 状态码未知。它解释了本次客户端停止等待的原因，不能证明上次也同因，或服务端最终没有关闭。当前不据此自动增大超时或评价 ZEGO 业务工具质量。App 编译和本地化检查通过，新增页脚的完整 App / 发布包验收仍未完成。
+
 本机 CodeGraph 已完成一次真实握手和完整工具列表读取，见 [测量记录](measurements/mcp-codegraph-2026-10-17.json)。这次未调用 codegraph_explore，不代表业务调用已验收。App 当前通过编译，检查结果页已完成[中文原生离屏渲染检查](measurements/mcp-inspection-zh-2026-10-17.png)；这不是已安装 App 中点击与取消的实际验收。
 
 公开的 OpenAI 文档 MCP 已实际完成 HTTP 握手并读取 5 个工具，见 [HTTP 测量记录](measurements/mcp-http-openai-2026-10-17.json)；该服务未返回会话 ID。状态会话、完整分页、SSE 分块、认证失败、超时、取消和关闭请求另由本地 HTTP 夹具验证。没有调用文档检索等业务工具。[HTTP 中文结果页](measurements/mcp-http-inspection-zh-2026-10-17.png)为原生离屏渲染，长列表可在实际窗口中滚动；尚未完成已安装 App 的点击操作验收。

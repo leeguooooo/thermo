@@ -121,6 +121,9 @@ struct MCPInspectionResultView: View {
                 if report.transport == "streamable-http", let cleanup = report.cleanupStatus {
                     Text(cleanup == "closed" ? tr("HTTP inspection session closed") : cleanup == "not_needed" ? tr("No HTTP session was created") : cleanup == "server_retained" ? tr("Server does not support explicit session closure") : tr("HTTP session closure was not confirmed"))
                         .font(.caption).foregroundStyle(.secondary)
+                    if let details = report.cleanupDetails, details.reason != "notNeeded" {
+                        Text(details.summary).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                    }
                 }
                 Text(report.measurementNote).font(.caption).foregroundStyle(.secondary)
             }
