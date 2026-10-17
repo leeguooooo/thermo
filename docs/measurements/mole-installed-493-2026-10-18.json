@@ -42,10 +42,9 @@
   },
   "package": {
     "archive": {
-      "name": "Thermo-1.1.29-493-candidate.zip",
-      "sha256": "e9b5c1fb7e4d17b95407c32e37f6ddcb0e86145f2347cd46136e3d7cb60c8220",
-      "matchedFiles": 95,
-      "deepStrictSignaturePass": true
+      "name": "Thermo-1.1.29-493-installed.zip",
+      "sha256": "39294d42ac5f6d50dcc60888818ddb73dde0bb1ed6f09ba7c6561b88ff11c448",
+      "matchedFiles": 95
     },
     "universalDeveloperIDVerified": true,
     "cliChecks": {
@@ -63,13 +62,17 @@
       }
     },
     "lifecycle": {
-      "functionalChecksPassed": true,
-      "exitCode": 0,
+      "passed": true,
       "samples": 19,
-      "opens": 6,
       "cycles": 2,
-      "longTermMemoryAssessed": false,
-      "visibleUIAccepted": false
+      "visibleUIAccepted": false,
+      "longTermMemoryAssessed": false
+    },
+    "noFeedCandidateArchive": {
+      "name": "Thermo-1.1.29-493-candidate.zip",
+      "sha256": "e9b5c1fb7e4d17b95407c32e37f6ddcb0e86145f2347cd46136e3d7cb60c8220",
+      "matchedFiles": 95,
+      "deepStrictSignaturePass": true
     }
   },
   "deployment": {
@@ -144,13 +147,74 @@
   ],
   "notarized": false,
   "published": false,
-  "automaticUpdateFeedConfigured": false,
+  "automaticUpdateFeedConfigured": true,
   "overallMoleParityAccepted": false,
   "limitations": [
     "No visible installed window acceptance yet",
     "No actual charging or AWDL activation, expiry, sleep or hardware failure injection",
     "No real administrator installation transaction fault/rollback test; self-update is a different path",
     "Observed fan recovery on one Mac for a short interval, not all hardware or long-duration coverage",
-    "Local review build has no auto-update feed and has not been notarized or publicly released"
-  ]
+    "Original update source and readiness restored; actual Sparkle download/install flow still unverified, and this local build is not notarized or published"
+  ],
+  "metadataPreservation": {
+    "version": "1.1.29",
+    "build": "493",
+    "source": "a0491eed546758a064321a487ee2948f4bd11dc0",
+    "restoredFeed": "https://app.leeguoo.com/thermo/appcast.xml",
+    "original233FeedPreserved": true,
+    "changedFilesFromOriginalCandidate": [
+      "Contents/Info.plist",
+      "Contents/MacOS/Thermo"
+    ],
+    "entitlementsMatchOriginalCandidate": true,
+    "entitlements": {
+      "com.apple.security.automation.apple-events": true
+    },
+    "designatedRequirementMatchesOriginal": true,
+    "identifier": "dev.thermo.app",
+    "team": "6ZPXG4KVVS",
+    "helperAndEmbeddedCLIBytesUnchanged": true,
+    "rootHelperReplacementRequired": false,
+    "archive": {
+      "name": "Thermo-1.1.29-493-installed.zip",
+      "sha256": "39294d42ac5f6d50dcc60888818ddb73dde0bb1ed6f09ba7c6561b88ff11c448",
+      "matchedFiles": 95
+    },
+    "signatureVerified": true,
+    "installed": true,
+    "notarized": false,
+    "published": false,
+    "finalLifecycle": {
+      "passed": true,
+      "samples": 19,
+      "cycles": 2
+    },
+    "installedAt": "2026-10-17T16:22:53.941427+00:00",
+    "ownedVerificationProcessStopped": 24343,
+    "normalUIQuitAcceptance": false,
+    "helperPIDBefore": 6352,
+    "helperHashUnchanged": true,
+    "noRootRestartRequested": true,
+    "supersededAppRetainedAt": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.29-493-a0491ee/displaced-493-missing-entitlement.app"
+  },
+  "automaticUpdateState": {
+    "automaticallyChecks": "true",
+    "canCheck": "true",
+    "enabled": "true",
+    "installationConfirmed": "false",
+    "outcome": "observed"
+  },
+  "appHelperStatus": {
+    "busy": "false",
+    "state": "running",
+    "version": "8/1.1.29"
+  },
+  "finalLiveStateSHA256": "3bb8c4242dda1086518345cc27d7f4f8d3e4c973b724bae1a3d9ea889f657d35",
+  "finalHelperPIDUnchangedDuringMetadataRepair": true,
+  "historicalResignIssue": {
+    "firstMetadataVariantMissedAppleEventsEntitlement": true,
+    "superseded": true,
+    "finalEntitlementsMatchOriginal233AndCandidate": true,
+    "normalUIQuitAcceptance": false
+  }
 }
