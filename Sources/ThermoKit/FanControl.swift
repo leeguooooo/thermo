@@ -215,14 +215,16 @@ public final class FanWriter {
             }
             unlocked = true
         }
-        if f.hasModeKey {
-            try retrying { try smc.write(f.modeKey, value: 1) }
-        } else if discovery.fanForceKey {
-            let bits = try forceBits(fan: id)
-            try smc.write("FS! ", value: Double(bits | (1 << id)))
+        return try retrying {
+            if f.hasModeKey {
+                try smc.write(f.modeKey, value: 1)
+            } else if discovery.fanForceKey {
+                let bits = try forceBits(fan: id)
+                try smc.write("FS! ", value: Double(bits | (1 << id)))
+            }
+            try smc.write(f.targetKey, value: target)
+            return try verifyManual(id, rpm: target)
         }
-        try smc.write(f.targetKey, value: target)
-        return try verifyManual(id, rpm: target)
     }
 
     /// Check an unchanged target without rewriting it; firmware can reclaim control
@@ -238,8 +240,9 @@ public final class FanWriter {
             }
         }
         if f.hasModeKey {
-            guard try smc.double(f.modeKey) == 1 else {
-                throw FanControlError.helper("fan \(id): manual mode readback did not match")
+            let mode = try smc.double(f.modeKey)
+            guard mode == 1 else {
+                throw FanControlError.helper("fan \(id): manual mode readback did not match (expected 1, observed \(mode))")
             }
         } else if discovery.fanForceKey {
             guard try forceBits(fan: id) & (1 << id) != 0 else {
@@ -327,14 +330,15 @@ public final class FanWriter {
         return FanAutoRecoveryReport(unconfirmed: unconfirmed, requestErrors: requests)
     }
 
-    /// Mode writes can be refused for a moment right after the Ftst unlock.
-    private func retrying(_ body: () throws -> Void) throws {
+    /// A successful write can precede its mode/target readback. Retry the bounded
+    /// transition as a whole; an unchanged-target verification never writes.
+    private func retrying<T>(_ body: () throws -> T) throws -> T {
         var last: Error?
         // Measured on an M4 Pro: the first F0Md write after Ftst=1 can be refused
         // for a little over 2 s, so allow up to 5 s before reporting failure.
         for attempt in 0..<50 {
-            do { try body(); return } catch { last = error }
-            if !discovery.fanTestKey || attempt == 49 { break }
+            do { return try body() } catch { last = error }
+            if attempt == 49 { break }
             usleep(100_000)
         }
         throw last!

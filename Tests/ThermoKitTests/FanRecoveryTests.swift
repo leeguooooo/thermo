@@ -11,6 +11,8 @@ final class FanRecoveryTests: XCTestCase {
         var writes: [(FourCC, Double)] = []
         var firmwareOnUnlockReset = false
         var quantizeTargets = false
+        var ignoredManualModeAttempts = 0
+        var ignoredTargetAttempts = 0
         func double(_ key: FourCC) throws -> Double {
             guard !failedReads.contains(key), let value = values[key] else { throw Fault.injected }
             return value
@@ -18,6 +20,8 @@ final class FanRecoveryTests: XCTestCase {
         func write(_ key: FourCC, value: Double) throws {
             writes.append((key, value))
             if failedWrites.contains(key) { throw Fault.injected }
+            if key == "F0Md", value == 1, ignoredManualModeAttempts > 0 { ignoredManualModeAttempts -= 1; return }
+            if key == "F0Tg", ignoredTargetAttempts > 0 { ignoredTargetAttempts -= 1; return }
             if !ignoredWrites.contains(key) { values[key] = value }
             if quantizeTargets, key == "F0Tg" { values[key] = value.rounded(.down) }
             if key == "Ftst", value == 0, firmwareOnUnlockReset {
@@ -139,6 +143,20 @@ final class FanRecoveryTests: XCTestCase {
         XCTAssertEqual(smc.writes.count, count)
         smc.values["F0Md"] = 0
         XCTAssertThrowsError(try writer.verifyManual(0, rpm: 6000), "firmware reclaim must not be hidden by hysteresis")
+    }
+
+    func testAcknowledgedModeAndTargetWritesMustEventuallyReadBackBeforeSuccess() throws {
+        for apple in [false, true] {
+            let smc = manualSMC(); smc.ignoredManualModeAttempts = 2; smc.ignoredTargetAttempts = 3
+            let writer = FanWriter(smc: smc, discovery: discovery(apple: apple))
+            XCTAssertEqual(try writer.setManual(0, rpm: 2500), 2500)
+            XCTAssertEqual(smc.values["F0Md"], 1); XCTAssertEqual(smc.values["F0Tg"], 2500)
+            XCTAssertGreaterThan(smc.writes.filter { $0.0 == "F0Md" && $0.1 == 1 }.count, 2)
+            let writes = smc.writes.count
+            smc.values["F0Md"] = 0
+            XCTAssertThrowsError(try writer.verifyManual(0, rpm: 2500))
+            XCTAssertEqual(smc.writes.count, writes, "firmware reclaim during monitoring must not cause a retry/write")
+        }
     }
 
     func testManualRejectsInvalidLimitsAndRequestsBeforeAnyWrite() {

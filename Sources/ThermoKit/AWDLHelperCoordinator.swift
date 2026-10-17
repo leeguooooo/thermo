@@ -21,7 +21,7 @@ public final class AWDLHelperCoordinator: @unchecked Sendable {
     private var stopping=false
     private var activeOwner: AWDLConnectionOwner?
     public init(make: @escaping @Sendable () -> AWDLSessionController = {
-        AWDLSessionController(io:.system,store:AWDLLeaseFile().io)
+        AWDLSessionController(io:.system,store:AWDLLeaseFile.systemStore())
     },tickInterval: TimeInterval = 1) {
         queue.async { [self] in
             self.controller=make()

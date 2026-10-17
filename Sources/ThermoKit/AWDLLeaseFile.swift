@@ -10,9 +10,37 @@ public final class AWDLLeaseFile {
     private let lockLeaf="dev.thermo.awdl-lock"
     private var lockFD: Int32 = -1
     private var recordIdentity: stat?
-    public init(directory: String = "/private/var/run",owner: uid_t = 0) { self.directory=directory;self.owner=owner }
+    public init(directory: String = "/Library/Application Support/dev.thermo",owner: uid_t = 0) { self.directory=directory;self.owner=owner }
     deinit { if lockFD >= 0 { close(lockFD) } }
     public var io: AWDLLeaseIO { .init(load:{ try self.load() },save:{ try self.save($0) },clear:{ try self.clear($0) }) }
+
+    /// Preserve legacy recovery evidence: an old journal blocks a new lease,
+    /// while an already-owned modern journal can still be restored and cleared.
+    public static func systemStore() -> AWDLLeaseIO {
+        systemStore(parentPath: "/Library/Application Support",
+                    legacyRecord: "/private/var/run/dev.thermo.awdl-lease", owner: 0)
+    }
+    static func systemStore(parentPath: String, legacyRecord: String, owner: uid_t) -> AWDLLeaseIO {
+        let file = AWDLLeaseFile(directory: parentPath + "/dev.thermo", owner: owner)
+        func noLegacyRecord() throws {
+            var info = stat()
+            if lstat(legacyRecord, &info) == 0 { throw AWDLError("Legacy AWDL recovery record requires review before starting a new session") }
+            guard errno == ENOENT else { throw AWDLError("Legacy AWDL recovery record could not be checked") }
+        }
+        return .init(load: {
+            try ControlRecoveryDirectory.prepare(parentPath: parentPath, owner: owner)
+            let record = try file.load()
+            if record == nil { try noLegacyRecord() }
+            return record
+        }, save: {
+            try ControlRecoveryDirectory.prepare(parentPath: parentPath, owner: owner)
+            try noLegacyRecord()
+            try file.save($0)
+        }, clear: {
+            try ControlRecoveryDirectory.prepare(parentPath: parentPath, owner: owner)
+            try file.clear($0)
+        })
+    }
 
     private func failure(_ message: String) -> AWDLError { .init("AWDL lease: "+message) }
     private func protectedFile(_ s: stat) -> Bool {

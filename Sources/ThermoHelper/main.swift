@@ -68,6 +68,7 @@ final class Controller {
         // Keep-awake-with-the-lid-closed never survives a restart (crash, update, reboot).
         lidAwake.restoreOriginal(reason: "helper started")
         log("started; \(sampler.discovery.fans.count) fan(s), \(sampler.discovery.sensors.filter(\.essential).count) control sensors")
+        log("fan capabilities: unlock=\(sampler.discovery.fanTestKey) force=\(sampler.discovery.fanForceKey) modeFans=\(sampler.discovery.fans.filter(\.hasModeKey).count)")
         // What the user chose survives restarts (updates, reboots); the next tick applies it,
         // with the over-temperature protection as always.
         let saved = PolicyStore.load()

@@ -2,7 +2,9 @@
 
 先补可靠性与核心流程，再打磨界面。参照本地 Mole 原生 App 1.16.0（324），证据见 [原生研究](mole-native-study.md)和[函数研究](mole-native-functions.md)。整体齐平仍未成立。
 
-当前整合候选为 1.1.28（477），源码冻结在 `d97df44`，包含 helper 安装事务及已合入的 AI 用量改动。1,687 项非硬件测试通过；Developer ID 通用签名、原生与 Rosetta CLI 只读/dry-run、ZIP 解包 95 个文件比对和签名复验通过。同一 Release 包完成 2 轮、6 次离屏窗口开关、19 个采样点，功能检查通过；不代表可见交互或长期内存验收。产物保存在独立工作区 `dist/mole-review-477-d97df44`，原版 App 的 92 个文件备份及签名已核对，root helper/plist 备份已校验；已安装六项文件校验值未变。尚未安装、公证或发布，文件备份不代表运行回滚验收。详见 [477 候选证据](measurements/mole-install-transaction-candidate-2026-10-17.json)。
+2026-10-18 本机已从 1.1.27（233）升级至 1.1.28（477），App 文件与签名核验通过，既有 helper 自动更新到协议 8，并接受生产 CLI 的状态查询。真实安装验收发现两项失败：固定 6617 RPM 策略读回不匹配后退回自动；AWDL 因 `/var/run` 的 0775 权限被租约检查阻止。充电保持关闭，AWDL 接口保持开启，未主动提交新控制策略。已准备 1.1.29 源码修复并通过 46 项相关测试，尚未构建和部署修复版；不能据源码测试宣布真机问题解决。见 [477 安装观察](measurements/mole-installed-477-2026-10-18.json)。
+
+历史构建验证：1.1.28（477），源码冻结在 `d97df44`，包含 helper 安装事务及已合入的 AI 用量改动。1,687 项非硬件测试通过；Developer ID 通用签名、原生与 Rosetta CLI 只读/dry-run、ZIP 解包 95 个文件比对和签名复验通过。同一 Release 包完成 2 轮、6 次离屏窗口开关、19 个采样点，功能检查通过；不代表可见交互或长期内存验收。产物保存在独立工作区 `dist/mole-review-477-d97df44`，原版 App 的 92 个文件备份及签名已核对，root helper/plist 备份已校验；已安装六项文件校验值未变。尚未安装、公证或发布，文件备份不代表运行回滚验收。详见 [477 候选证据](measurements/mole-install-transaction-candidate-2026-10-17.json)。
 
 此前整合候选为 1.1.28（457），源码冻结在 `3aeb21c`，包含此前 440 之后的系统进程归属、面板文本及扫描取消/不完整状态和 CSV 退出码修复。1,659 项非硬件测试通过；Developer ID 通用签名、原生与 Rosetta CLI 只读及 dry-run、ZIP 解包 95 个文件比对和签名复验通过。同一 Release 包完成 2 轮、6 次离屏窗口开关、19 个采样点，功能检查通过；不代表可见交互或长期内存验收。已安装 App 与 root helper 的六项文件校验值未变；尚未安装、公证或发布。详见 [整合候选证据](measurements/mole-consolidated-candidate-2026-10-17.json)。 最终签名 CLI 的 root 服务归属及四种扫描取消格式也已实测，原有 32 个测试文件字节不变；扫描历史写入隔离目录，见 [包内核心流程检查](measurements/mole-packaged-core-flows-2026-10-17.json)。
 

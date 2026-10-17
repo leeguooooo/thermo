@@ -1,0 +1,68 @@
+{
+  "date": "2026-10-18",
+  "installedApp": {
+    "version": "1.1.28",
+    "build": "477",
+    "filesAndSignatureVerified": true,
+    "replacementCompletedAt": "2026-10-17T15:37:41.903195+00:00"
+  },
+  "helper": {
+    "before": "3/1.1.27",
+    "after": "8/1.1.28",
+    "rootPIDObserved": 87278,
+    "updatePath": "Existing legacy helper followed --source after App replacement; manual privileged installer was not run",
+    "rootFileMatchesInstalledEmbeddedHelper": true
+  },
+  "actualProductionXPC": {
+    "signedCLIAdmitted": true,
+    "fanControlStateSupported": true,
+    "chargeStatusDecoded": true,
+    "awdlStatusDecoded": true
+  },
+  "fan": {
+    "beforeRequestedRPM": 6617,
+    "beforeManual": true,
+    "afterRequestedRPM": 6617,
+    "afterObservedMode": "automatic",
+    "failure": "fan 0: manual control failed: fan 0: manual mode readback did not match",
+    "existingPolicyPreserved": true,
+    "manualControlAcceptancePassed": false,
+    "noNewPolicySubmitted": true
+  },
+  "charging": {
+    "policy": "off",
+    "phase": "off",
+    "ownership": "none",
+    "support": "smc",
+    "newPolicyEnabled": false
+  },
+  "awdl": {
+    "phase": "blocked",
+    "interfaceUp": true,
+    "error": "AWDL lease: directory identity or permissions could not be verified",
+    "defaultRecoveryDirectoryObservedMode": "0775 root:daemon",
+    "noLegacyLeaseOrLockObserved": true,
+    "sessionEnabled": false
+  },
+  "sourceFix": {
+    "version": "1.1.29",
+    "installed": false,
+    "changes": [
+      "Stage manual mode and target with bounded strict readback retries; monitoring verification remains read-only",
+      "Use app-owned protected recovery directory for AWDL independently of SMC/battery initialization",
+      "Refuse unsafe directories without chmod/chown and preserve legacy AWDL evidence",
+      "Log hardware control capability flags for actual helper diagnosis"
+    ],
+    "targetedTests": 46,
+    "testExitCode": 0,
+    "testLogSHA256": "d3227406bc23dac5ba2526dbd82f0fac9235eda90e0bba5f10bc6cc0fd484273"
+  },
+  "overallInstalledAcceptancePassed": false,
+  "visibleMainAppAcceptancePassed": false,
+  "limitations": [
+    "Source-fix tests are simulated and do not prove actual firmware mode timing",
+    "No active charging or AWDL switch was tested",
+    "Legacy automatic self-update was exercised; new privileged installer rollback was not exercised as root",
+    "A new signed candidate, deployment and actual post-fix control-state checks are still required"
+  ]
+}

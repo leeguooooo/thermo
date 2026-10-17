@@ -112,5 +112,6 @@
     "Long-duration memory and physical Intel acceptance",
     "Notarization and publication if requested"
   ],
-  "installationRisk": "App replacement can trigger existing helper self-update/restart and control recovery. First post-install actions are status reads; no new charge or AWDL activation is authorized."
+  "installationRisk": "App replacement can trigger existing helper self-update/restart and control recovery. First post-install actions are status reads; no new charge or AWDL activation is authorized.",
+  "deploymentObservation": "mole-installed-477-2026-10-18.json"
 }
