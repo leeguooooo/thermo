@@ -2,7 +2,7 @@
 
 截至 2026-10-17，已实现 MCP / Skill 占用、显式连接检查、本地日志观察和任务记录对照。本地候选 1.2.0 (393) 已验证；真实工作流中的工具质量和 Skill 净收益仍未完成评测，不能宣称全面完成。 最新[真实文档查询](mcp-real-docs-workflow.md)另发现并修正了原生 MCP 事件漏计；该修复已进入 393 包，374 包的漏计结果仍作为历史对照保留。
 
-后续源码已补充[返回文本合计与占比](measurements/tool-usage-return-shares-2026-10-17.json)，通过 31 项针对性测试、独立 CLI 夹具和[中文面板离屏复核](measurements/tool-usage-return-shares-zh-2026-10-17.png)。这些新增展示尚未进入 393 包，也未完成安装包验收。
+后续源码已补充[返回文本合计与占比](measurements/tool-usage-return-shares-2026-10-17.json)，通过 31 项针对性测试、独立 CLI 夹具和[中文面板离屏复核](measurements/tool-usage-return-shares-zh-2026-10-17.png)。[完整 App 的隔离验证](measurements/tool-usage-native-qa-2026-10-17.json)确认了 8 → 16 → 21 项展开、编码切换后的旧报告提示与重新分析，以及 MCP / Skill 分类独立的合计和占比。另修复了分析完成后仍称“实际工具用量仍未测量”的说明，并通过 3 项本地化测试及完整窗口复核。新增展示与文案尚未进入 393 包，也未完成安装包验收。
 
 | 原始问题 | 当前能力与证据 | 仍不能据此判断 |
 |---|---|---|

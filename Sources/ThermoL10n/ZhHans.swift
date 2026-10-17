@@ -2571,6 +2571,7 @@ let zhHans: [String: String] = [
     "HTTP notification acknowledgement must have an empty body.": "HTTP 通知确认响应的正文必须为空。",
     "Starts the configured stdio server or connects to its HTTP endpoint and reads tool definitions. No business tools are called.": "启动配置中的 stdio 服务或连接 HTTP 地址并读取工具定义，不调用业务工具。",
     "This configuration scan does not connect to MCP servers. Use Connect & inspect for definitions and connection timing; actual tool usage remains unmeasured.": "配置扫描不会连接 MCP 服务。可点击“连接并检查”测量定义和连接耗时；实际工具用量仍未测量。",
+    "Configuration scanning does not connect to MCP servers. Connect & inspect measures definitions and connection timing. Analyze local logs below reads recorded tool calls.": "配置扫描不会连接 MCP 服务。“连接并检查”统计定义和连接耗时；下方“分析本地日志”读取已有的工具调用。",
     "No local process": "无需启动本地进程",
     "HTTP inspection session closed": "HTTP 检查会话已关闭",
     "No HTTP session was created": "未创建 HTTP 会话",

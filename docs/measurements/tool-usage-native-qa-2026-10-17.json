@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-17",
+  "scope": "Full native App UI checks using a copied owned QA bundle and current Debug runtime, not an installed or release-package acceptance.",
+  "initialUI": {
+    "sourceCommit": "2281b26",
+    "mcpHeuristicTotal": 21,
+    "mcpBytes": 84,
+    "initialVisible": 8,
+    "firstExpansion": 16,
+    "secondExpansion": 21,
+    "share": "4.8%",
+    "encodingSwitchShowsStaleReport": true,
+    "reanalyzeCl100kTotal": 21,
+    "reanalyzeResetsVisibleRowsTo": 8,
+    "skillReferenceTotal": 2,
+    "skillBytes": 8,
+    "skillShare": "100.0%",
+    "skillDoesNotShowMCPTools": true,
+    "nativeScreenshotsVisuallyReviewed": true,
+    "scrollAPITransientErrors": 2,
+    "liveProcessCheckedBeforeAlternateScroll": true,
+    "accessibleScrollActionWorked": true,
+    "obsoleteCaptionFound": true
+  },
+  "captionFix": {
+    "obsoleteCaptionRemovedFromUI": true,
+    "configurationInspectionAndLoggedUsageExplainedSeparately": true,
+    "reanalysisMCPBytes": 84,
+    "reanalysisMCPHeuristicTokens": 21,
+    "visibleRows": 8,
+    "nativeScreenshotVisuallyReviewed": true
+  },
+  "provenance": {
+    "parentCommit": "2281b26a2609a72c148d7f57b513bf56a8e7e3a0",
+    "debugBinarySHA256": "8a81268c89a520f5fb878df4ed787e03a9ede1e391038799a1b35e5db3b6a2d6",
+    "qaRuntimeSHA256": "b98622eb5a7e4e1b5fa6bfcdbd3dc6e40d872ba0b500dac9c9f69d56abcd17af",
+    "executableTextSHA256": "0491d48a7aaae2404d91dba3c92e7476f3c75c68ed07b529e6fbe099db5fa7fc",
+    "executableTextMatchesAfterRpathAndSigning": true,
+    "captionSourceSHA256": "4b986a983eaccd9bd74e1f81c9eadb1cc44e71ed03ea236b387be6ad6fb06b54",
+    "localizationSourceSHA256": "f9991aa0a4f9bee935a93576be49a2582fdb3fbc5d23ab91c492d9e19d37cee1"
+  },
+  "tests": {
+    "localizationTests": 3,
+    "failures": 0,
+    "logSHA256": "4df18dd66dc782843a68dd8fab5bc5e70910f3326387902826623e4b5cdd2498"
+  },
+  "cleanup": {
+    "bothQARuntimesExitedAfterClosingWindow": true,
+    "finalRuntimeAbsentVerified": true,
+    "installedAppNotReplacedOrRestarted": true,
+    "noBusinessMCPConfigurationLaunched": true
+  },
+  "limitations": [
+    "Synthetic owned logs, not business tool quality or Skill effectiveness.",
+    "Initial list/encoding/category checks used commit 2281b26; final runtime additionally verifies the caption fix.",
+    "Current-source arm64 Debug runtime in an ad-hoc QA bundle; no universal Release package, signing/notarization, installation or update verification.",
+    "Two native scroll API noWindowsAvailable errors were retained; runtime and window were still live and accessibility Scroll Down worked. This is not evidence of an App crash.",
+    "CUA app-changed guard after rebuilding was resolved by refreshing current state before any further action.",
+    "No new model calls, public-doc MCP calls or browser operations this turn."
+  ]
+}
