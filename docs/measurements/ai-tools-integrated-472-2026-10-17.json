@@ -1,0 +1,477 @@
+{
+  "recordedAt": "2026-10-17T08:24:18.956675+00:00",
+  "sourceFreeze": {
+    "frozenAt": "2026-10-17T08:10:16.542957+00:00",
+    "sourceCommit": "8b0b6fb854f0b05f3d3d087a183fdb05e3080185",
+    "previousCompilerCheckoutCommit": "21ca8702fec855ebafe4295ceb651e1574a1bf0a",
+    "reusedOwnedCompilerCheckoutAfterTerminalVerification": true,
+    "previous459ArtifactsVerifiedUnchanged": true,
+    "sourceVersionChanged": false,
+    "sourceRuntimeDifferenceFromMainAtFreeze": [],
+    "scope": "Local Release and universal ad-hoc verification; no installation or publication."
+  },
+  "mainAtFinalAudit": "8b0b6fb854f0b05f3d3d087a183fdb05e3080185",
+  "runtimeSourceDifferenceAtFinalAudit": [],
+  "fullReleaseRegression": {
+    "sourceCommit": "8b0b6fb854f0b05f3d3d087a183fdb05e3080185",
+    "configuration": "release",
+    "command": [
+      "swift",
+      "test",
+      "-c",
+      "release",
+      "--jobs",
+      "3",
+      "--skip",
+      "HardwareTests"
+    ],
+    "excludedTestClass": "HardwareTests",
+    "tests": 1678,
+    "failures": 0,
+    "suites": [
+      {
+        "suite": "ThermoKitTests.xctest",
+        "outcome": "passed",
+        "tests": 187,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoHelperTests.xctest",
+        "outcome": "passed",
+        "tests": 30,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoCLITests.xctest",
+        "outcome": "passed",
+        "tests": 108,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoAppTests.xctest",
+        "outcome": "passed",
+        "tests": 300,
+        "failures": 0
+      },
+      {
+        "suite": "CleanKitTests.xctest",
+        "outcome": "passed",
+        "tests": 751,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests.xctest",
+        "outcome": "passed",
+        "tests": 257,
+        "failures": 0
+      },
+      {
+        "suite": "AgentCoreTests.xctest",
+        "outcome": "passed",
+        "tests": 45,
+        "failures": 0
+      }
+    ],
+    "exitCode": 0,
+    "logSHA256": "984cffc6fc7335ad0363df79f77eefa946347bfc07f2aa9b37a2b5f12d904333",
+    "worktreeCleanAfterTests": true
+  },
+  "package": {
+    "generated": "2026-10-17T08:20:02.728494+00:00",
+    "candidateCommit": "8b0b6fb854f0b05f3d3d087a183fdb05e3080185",
+    "testedCodeCommit": "8b0b6fb854f0b05f3d3d087a183fdb05e3080185",
+    "version": "1.1.28",
+    "build": "472",
+    "scope": "Local ad-hoc universal candidate. x86_64 execution is Rosetta, not real Intel hardware. Owned synthetic CLI fixtures only. No formal signing, notarization, installation, helper/radio action or publication.",
+    "metadataVerification": "Verified signatures, deployment target 13.0 and required architectures: arm64 x86_64",
+    "artifacts": {
+      "thermo": {
+        "sha256": "0ca63557efaa253d5885f2655dab3d1c89b0af839869edba4448b284d748753c",
+        "bytes": 37355184,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      },
+      "thermo-helper": {
+        "sha256": "85f67ac3de7f2c2a7a0847e83f3b528ce96c78ec5cfb82d289f774ec3d9c5ea6",
+        "bytes": 3435024,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      },
+      "Thermo.app/Contents/MacOS/Thermo": {
+        "sha256": "7db5fb7663bad455401d491a490b7b546cfb2c48e57bb95e5b5f8be46b56a6fa",
+        "bytes": 63869408,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      },
+      "Thermo.app/Contents/Helpers/thermo": {
+        "sha256": "0ca63557efaa253d5885f2655dab3d1c89b0af839869edba4448b284d748753c",
+        "bytes": 37355184,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      },
+      "Thermo.app/Contents/Helpers/thermo-helper": {
+        "sha256": "85f67ac3de7f2c2a7a0847e83f3b528ce96c78ec5cfb82d289f774ec3d9c5ea6",
+        "bytes": 3435024,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      }
+    },
+    "updateFeedAbsent": true,
+    "originalCleanupObservationResolved": false
+  },
+  "CLIValidation": [
+    {
+      "mode": "native-arm64",
+      "check": "verify-skill-context.py",
+      "passed": true,
+      "resultSHA256": "171ecf872b8889d28711a8ec2420b810dc51f9e8fa671373440a3793212c6303"
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-skill-quality.py",
+      "passed": true,
+      "resultSHA256": "655666481d94e7ffb0412d2aac73e9b032d82821c39e5ac887fd131c5a338a34"
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-tool-usage.py",
+      "passed": true,
+      "resultSHA256": "f0bc1f6a3121b35cdb683fa5f9da31d49ede025330918f3f0dfe29795bbf84d5"
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-reference-encoding.py",
+      "passed": true,
+      "resultSHA256": "2adbc8e43b1078164a0bc8653f73b2eed295e63a6b1cb64cad2dd2e8f1f3d345"
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-task-comparison.py",
+      "passed": true,
+      "resultSHA256": "a06c25009044e6afd171467e413733538b500da451956b9960ae831cc5d863fd"
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-mcp-cleanup-details.py",
+      "passed": true,
+      "resultSHA256": "659967741c5dc62caa46503a377a5566aee293f47d067c6b0acbe54f1da39b4c"
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-cli-completeness.py",
+      "passed": true,
+      "resultSHA256": "308d9f350cddfc1c2450c5f5efc723b3b5b4ff5d4dec461fb711531e9a231b18"
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-skill-instruction-usage.py",
+      "passed": true,
+      "resultSHA256": "672b99cedbea77df92765b5691808e72e2a65f8f2a2a0d81d6a927656b5edd96"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-skill-context.py",
+      "passed": true,
+      "resultSHA256": "171ecf872b8889d28711a8ec2420b810dc51f9e8fa671373440a3793212c6303"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-skill-quality.py",
+      "passed": true,
+      "resultSHA256": "655666481d94e7ffb0412d2aac73e9b032d82821c39e5ac887fd131c5a338a34"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-tool-usage.py",
+      "passed": true,
+      "resultSHA256": "f0bc1f6a3121b35cdb683fa5f9da31d49ede025330918f3f0dfe29795bbf84d5"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-reference-encoding.py",
+      "passed": true,
+      "resultSHA256": "2adbc8e43b1078164a0bc8653f73b2eed295e63a6b1cb64cad2dd2e8f1f3d345"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-task-comparison.py",
+      "passed": true,
+      "resultSHA256": "a06c25009044e6afd171467e413733538b500da451956b9960ae831cc5d863fd"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-mcp-cleanup-details.py",
+      "passed": true,
+      "resultSHA256": "cbad0ea13cce5016633c4ceeef3c98ace31e29ff64061996ac3212c70052aaeb"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-cli-completeness.py",
+      "passed": true,
+      "resultSHA256": "64840ae546c0fccf32ecd8e7b2e1b78ff0abc74aa1fad7060f4571f269dd9eea"
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-skill-instruction-usage.py",
+      "passed": true,
+      "resultSHA256": "672b99cedbea77df92765b5691808e72e2a65f8f2a2a0d81d6a927656b5edd96"
+    }
+  ],
+  "nativeCLIEventReplay": {
+    "recordedAt": "2026-10-17T08:20:02.862977+00:00",
+    "sourceCommit": "8b0b6fb854f0b05f3d3d087a183fdb05e3080185",
+    "fixtureSHA256": "e50631383928c812dc00445712dd61c838b2cfd0f2817e74081c7dc28cc5b066",
+    "syntheticPartialFile": true,
+    "checks": [
+      {
+        "mode": "arm64",
+        "passed": true,
+        "row": {
+          "calls": 3,
+          "completed": 2,
+          "host": "codex",
+          "id": "9c2ee2b7d35eb4604e4985f9c53a4fe884b8bcf7b3666673fbb2e602848fe534",
+          "invocationFailures": 1,
+          "kind": "mcp",
+          "medianSeconds": 0.003741025924682617,
+          "missingResults": 0,
+          "name": "echo",
+          "nonTextBlocks": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 16,
+          "reportedErrors": 1,
+          "returnedTextBytes": 63,
+          "returnedTextEstimatedTokens": 16,
+          "server": "wirefixture",
+          "timingSamples": 3,
+          "totalObservedSeconds": 0.010537028312683105,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 0
+        },
+        "coverage": {
+          "bytesRead": 4194304,
+          "cancelled": false,
+          "clippedFiles": 1,
+          "duplicateRecords": 0,
+          "filesDiscovered": 1,
+          "filesRead": 1,
+          "limitReached": false,
+          "malformedLines": 0,
+          "missingTimestamps": 0,
+          "otherToolCalls": 0,
+          "oversizedLines": 0,
+          "unattributedResults": {
+            "completed": 0,
+            "missingResults": 0,
+            "nonTextBlocks": 0,
+            "referenceReturnedTextTokens": 0,
+            "returnedTextBytes": 0,
+            "returnedTextEstimatedTokens": 0,
+            "unavailableReferenceResults": 0,
+            "unmeasuredResults": 0
+          },
+          "unmatchedInstructionEvents": 0,
+          "unmatchedResults": 0,
+          "unreadableFiles": 0,
+          "unsupportedUsageRecords": 0
+        }
+      },
+      {
+        "mode": "rosetta-x86_64",
+        "passed": true,
+        "row": {
+          "calls": 3,
+          "completed": 2,
+          "host": "codex",
+          "id": "9c2ee2b7d35eb4604e4985f9c53a4fe884b8bcf7b3666673fbb2e602848fe534",
+          "invocationFailures": 1,
+          "kind": "mcp",
+          "medianSeconds": 0.003741025924682617,
+          "missingResults": 0,
+          "name": "echo",
+          "nonTextBlocks": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 16,
+          "reportedErrors": 1,
+          "returnedTextBytes": 63,
+          "returnedTextEstimatedTokens": 16,
+          "server": "wirefixture",
+          "timingSamples": 3,
+          "totalObservedSeconds": 0.010537028312683105,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 0
+        },
+        "coverage": {
+          "bytesRead": 4194304,
+          "cancelled": false,
+          "clippedFiles": 1,
+          "duplicateRecords": 0,
+          "filesDiscovered": 1,
+          "filesRead": 1,
+          "limitReached": false,
+          "malformedLines": 0,
+          "missingTimestamps": 0,
+          "otherToolCalls": 0,
+          "oversizedLines": 0,
+          "unattributedResults": {
+            "completed": 0,
+            "missingResults": 0,
+            "nonTextBlocks": 0,
+            "referenceReturnedTextTokens": 0,
+            "returnedTextBytes": 0,
+            "returnedTextEstimatedTokens": 0,
+            "unavailableReferenceResults": 0,
+            "unmeasuredResults": 0
+          },
+          "unmatchedInstructionEvents": 0,
+          "unmatchedResults": 0,
+          "unreadableFiles": 0,
+          "unsupportedUsageRecords": 0
+        }
+      }
+    ],
+    "passed": true
+  },
+  "selectedActualSessionReplay": {
+    "sourceSHA256": "f7bfff4b7cf8ebc8ccee5877843893639c938aff7c0456c87965ea9d154c9e61",
+    "cases": [
+      {
+        "mode": "arm64",
+        "passed": true,
+        "sourceBytes": 8549093,
+        "phoneCalls": 145,
+        "MCPResults": 144,
+        "explicitErrors": 10,
+        "hostInvocationFailures": 1,
+        "singleFileOnly": true,
+        "coverage": {
+          "bytesRead": 8549093,
+          "cancelled": false,
+          "clippedFiles": 0,
+          "duplicateRecords": 0,
+          "filesDiscovered": 1,
+          "filesRead": 1,
+          "limitReached": false,
+          "malformedLines": 0,
+          "missingTimestamps": 0,
+          "otherToolCalls": 278,
+          "oversizedLines": 0,
+          "unattributedResults": {
+            "completed": 278,
+            "missingResults": 0,
+            "nonTextBlocks": 7,
+            "referenceReturnedTextTokens": 295944,
+            "returnedTextBytes": 900330,
+            "returnedTextEstimatedTokens": 249663,
+            "unavailableReferenceResults": 0,
+            "unmeasuredResults": 0
+          },
+          "unmatchedInstructionEvents": 0,
+          "unmatchedResults": 0,
+          "unreadableFiles": 0,
+          "unsupportedUsageRecords": 297
+        },
+        "rowCount": 12
+      },
+      {
+        "mode": "rosetta-x86_64",
+        "passed": true,
+        "sourceBytes": 8549093,
+        "phoneCalls": 145,
+        "MCPResults": 144,
+        "explicitErrors": 10,
+        "hostInvocationFailures": 1,
+        "singleFileOnly": true,
+        "coverage": {
+          "bytesRead": 8549093,
+          "cancelled": false,
+          "clippedFiles": 0,
+          "duplicateRecords": 0,
+          "filesDiscovered": 1,
+          "filesRead": 1,
+          "limitReached": false,
+          "malformedLines": 0,
+          "missingTimestamps": 0,
+          "otherToolCalls": 278,
+          "oversizedLines": 0,
+          "unattributedResults": {
+            "completed": 278,
+            "missingResults": 0,
+            "nonTextBlocks": 7,
+            "referenceReturnedTextTokens": 295944,
+            "returnedTextBytes": 900330,
+            "returnedTextEstimatedTokens": 249663,
+            "unavailableReferenceResults": 0,
+            "unmeasuredResults": 0
+          },
+          "unmatchedInstructionEvents": 0,
+          "unmatchedResults": 0,
+          "unreadableFiles": 0,
+          "unsupportedUsageRecords": 297
+        },
+        "rowCount": 12
+      }
+    ],
+    "passed": true,
+    "billedOrBusinessQualityClaim": false
+  },
+  "QAIdentity": {
+    "prepared": true,
+    "arguments": [
+      "--main",
+      "--ui-review",
+      "--page",
+      "agents:mcp"
+    ],
+    "allFileBackedSectionsEqual": true,
+    "matchedArchitectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "packageGUIBinarySHA256": "7db5fb7663bad455401d491a490b7b546cfb2c48e57bb95e5b5f8be46b56a6fa",
+    "isolatedHomeWithSyntheticLogsSkillsAndConfiguration": true,
+    "reviewMode": true
+  },
+  "visibleWindowReview": {
+    "completed": false,
+    "consoleLocked": true,
+    "QAProcessLaunched": false,
+    "unlockRequestPending": true,
+    "filePickerAndNewInstructionPresentationNotInteractivelyVerified": true
+  },
+  "cleanup": {
+    "ownedBuildAndVerificationProcessesAbsent": true,
+    "QAProcessNeverLaunchedWhileLocked": true,
+    "ownedHTTPServerNotStarted": true,
+    "newOriginalArtifactHashesUnchanged": true,
+    "previous459ArtifactHashesUnchangedAfterCompilerReuse": true,
+    "newOriginalAppAllArchitectureStrictSignatureVerified": true,
+    "frozenCompilerWorktreeClean": true,
+    "frozenCompilerHead": "8b0b6fb854f0b05f3d3d087a183fdb05e3080185"
+  },
+  "localAdHocOnly": true,
+  "formallySignedOrNotarized": false,
+  "installedOrPublished": false,
+  "releaseReady": false,
+  "remaining": [
+    "Visible review and real file-picker interaction require an unlocked desktop.",
+    "Normal startup, formal signing/notarization/install/update and hardware acceptance are separate.",
+    "Real business MCP quality and Skill net benefit have not been established by synthetic fixtures or log analysis.",
+    "Figma independent definition coverage and other-host completeness remain unknown."
+  ]
+}
