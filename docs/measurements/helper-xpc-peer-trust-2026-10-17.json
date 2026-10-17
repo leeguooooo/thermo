@@ -1,0 +1,93 @@
+{
+  "root": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-helper-peer-r5vcl5ty",
+  "uid": 501,
+  "results": {
+    "cli": {
+      "open": {
+        "exitCode": 0,
+        "result": {
+          "service": "dev.thermo.qa.peer.c1b94c1bf2774283bf038f9b2df35b19.cli.open",
+          "status": "reply"
+        },
+        "stderr": ""
+      },
+      "gated": {
+        "exitCode": 0,
+        "result": {
+          "service": "dev.thermo.qa.peer.c1b94c1bf2774283bf038f9b2df35b19.cli.gated",
+          "status": "reply"
+        },
+        "stderr": ""
+      }
+    },
+    "app": {
+      "open": {
+        "exitCode": 0,
+        "result": {
+          "service": "dev.thermo.qa.peer.c1b94c1bf2774283bf038f9b2df35b19.app.open",
+          "status": "reply"
+        },
+        "stderr": ""
+      },
+      "gated": {
+        "exitCode": 0,
+        "result": {
+          "service": "dev.thermo.qa.peer.c1b94c1bf2774283bf038f9b2df35b19.app.gated",
+          "status": "reply"
+        },
+        "stderr": ""
+      }
+    },
+    "wrongID": {
+      "open": {
+        "exitCode": 0,
+        "result": {
+          "service": "dev.thermo.qa.peer.c1b94c1bf2774283bf038f9b2df35b19.wrongID.open",
+          "status": "reply"
+        },
+        "stderr": ""
+      },
+      "gated": {
+        "exitCode": 3,
+        "result": {
+          "detail": "Error Domain=NSCocoaErrorDomain Code=4097 \"connection to service named dev.thermo.qa.peer.c1b94c1bf2774283bf038f9b2df35b19.wrongID.gated\" UserInfo={NSDebugDescription=connection to service named dev.thermo.qa.peer.c1b94c1bf2774283bf038f9b2df35b19.wrongID.gated}",
+          "status": "error"
+        },
+        "stderr": ""
+      }
+    },
+    "adHoc": {
+      "open": {
+        "exitCode": 0,
+        "result": {
+          "service": "dev.thermo.qa.peer.c1b94c1bf2774283bf038f9b2df35b19.adHoc.open",
+          "status": "reply"
+        },
+        "stderr": ""
+      },
+      "gated": {
+        "exitCode": 3,
+        "result": {
+          "detail": "Error Domain=NSCocoaErrorDomain Code=4097 \"connection to service named dev.thermo.qa.peer.c1b94c1bf2774283bf038f9b2df35b19.adHoc.gated\" UserInfo={NSDebugDescription=connection to service named dev.thermo.qa.peer.c1b94c1bf2774283bf038f9b2df35b19.adHoc.gated}",
+          "status": "error"
+        },
+        "stderr": ""
+      }
+    }
+  },
+  "sourceSnapshot": "04de0c602bf6f46e7ec4aacd34a8764f9d10dc4b",
+  "sourceSHA256": "f577e1464a5c3b5685ba157a5db417c76aa3cc88b9d4032d275737c7bf788cdd",
+  "helperSourceSHA256": "d7024f73f988ad07ab5325407d3f41ed14931406dd4f625f4b83772a7a197a0c",
+  "fixtureProcessesStillObserved": [],
+  "scope": "Real per-app non-root XPC using the production HelperConstants.clientRequirement. Only ping is exported. Does not exercise the production helper Service, system-domain launchd registration, installed helper, hardware, or root privileges.",
+  "date": "2026-10-17",
+  "realConnectionAttempts": 8,
+  "realRootHelperTested": false,
+  "installedAppChanged": false,
+  "hardwareAccessed": false,
+  "fixtureSources": {
+    "verify-helper-peer-trust.swift": "f577e1464a5c3b5685ba157a5db417c76aa3cc88b9d4032d275737c7bf788cdd",
+    "verify-helper-peer-trust.py": "0e34ff06ac126fb593e1e220095ccdc54043cf90c5ecddcd78265061c6164724"
+  },
+  "command": "python3 scripts/verify-helper-peer-trust.py --sign-identity 'Developer ID Application: LI GUO (6ZPXG4KVVS)'"
+}

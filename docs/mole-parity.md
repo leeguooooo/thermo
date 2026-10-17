@@ -905,3 +905,6 @@ helper 安装可靠性（2026-10-17）：旧分号脚本在复制失败后仍可
 
 
 系统工具候选更新至 1.1.28（424），源码 `f73aa4c`，包含 helper 安装失败传播和 CLI 目标版本核对修复。Developer ID 通用构建、原生与 Rosetta CLI、95 个解包文件字节及签名、2 轮离屏生命周期均通过。正式 App/CLI 满足生产 helper 的静态客户端签名要求；同标识 ad-hoc 与同 Team 不同标识的副本均被拒绝。此项不是实际 XPC 准入验证。并行 AI 验收文档已保留合并，产品源码与冻结包一致。424 替代本轮 421 作为后续部署候选，仍未完成可见、安装和真实硬件验收；未公证或发布。见 [424 候选记录](measurements/mole-helper-install-candidate-2026-10-17.json)。
+
+
+XPC 动态签名准入补充（2026-10-17）：新独立夹具导入生产 `HelperConstants.clientRequirement`，通过 macOS 的真实非 root per-app XPC 服务检查连接。正式签名的 CLI/App 身份均收到受限服务响应；同 Team 错误标识及匹配标识的 ad-hoc 客户端均被拒绝。四类客户端都能连接不设限制的对照服务，排除了服务启动失败造成的假拒绝。8 次连接结果符合预期，夹具进程全部退出。服务只提供 ping，没有构造生产硬件控制器或连接安装的 helper；该证据不能替代 system-domain 服务、生产 Service 方法与 root 权限验收。生产源码与候选 424 一致，无需因此重建。脚本及证据见 [XPC 准入记录](measurements/helper-xpc-peer-trust-2026-10-17.json)。

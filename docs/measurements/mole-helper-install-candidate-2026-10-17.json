@@ -654,7 +654,7 @@
   },
   "limits": [
     "No visible UI or installed App acceptance",
-    "No live root helper or dynamic XPC peer admission acceptance",
+    "No live root helper or system-domain dynamic XPC peer admission acceptance",
     "No actual battery pause/restoration or AWDL switch",
     "No sleep/wake, update or uninstall hardware acceptance",
     "Static signature requirements do not prove dynamic peer authentication",
@@ -665,5 +665,6 @@
     "/tmp/thermo-charging-fixed-candidate-build.log": "a6c56744b2af524f37258cac07385324a302a6f90a0f361c7c189eb99ecad474",
     "/tmp/thermo-charging-fixed-candidate-verification.log": "14e9505eefd4c66d4b08c4fe1a9a58ebf54bd9b9b723fb396a75af137717538f",
     "/tmp/thermo-charging-fixed-static-peers.log": "13b594652cfe9ddb3f23a01ec42d9838a447f69b3a29b08e3789dc7ceca6093d"
-  }
+  },
+  "subsequentNonRootDynamicPeerEvidence": "helper-xpc-peer-trust-2026-10-17.json"
 }
