@@ -516,6 +516,13 @@ public enum HelperInstaller {
 
     static func shellQuote(_ s: String) -> String { "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'" }
 
+    /// A missing daemon is expected on first install. Every subsequent step must
+    /// succeed before the next one runs; otherwise an old daemon could answer a
+    /// version request and disguise a failed binary/plist copy as installation.
+    static func installationScript(bootout: String, steps: [String]) -> String {
+        (["(\(bootout) || true)"] + steps).joined(separator: " && ")
+    }
+
     public static func install(from binary: URL) throws {
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("dev.thermo.helper.\(getpid()).plist")
         // Keep a pointer to the app's helper so the installed copy can update itself (not from a
@@ -527,13 +534,13 @@ public enum HelperInstaller {
 
         let bin = shellQuote(HelperConstants.installedBinary)
         let pl = shellQuote(HelperConstants.launchdPlist)
-        let script = [
-            "/bin/launchctl bootout system/\(HelperConstants.label) 2>/dev/null",
+        let script = installationScript(
+            bootout: "/bin/launchctl bootout system/\(HelperConstants.label) 2>/dev/null", steps: [
             "/bin/mkdir -p /Library/PrivilegedHelperTools",
             "/usr/bin/install -o root -g wheel -m 755 \(shellQuote(binary.path)) \(bin)",
             "/usr/bin/install -o root -g wheel -m 644 \(shellQuote(tmp.path)) \(pl)",
             "/bin/launchctl bootstrap system \(pl)",
-        ].joined(separator: "; ")
+        ])
         try runPrivileged(script)
     }
 

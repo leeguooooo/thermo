@@ -306,8 +306,9 @@ struct App {
             if !args.has("json") { print("Installing helper from \(bin.path) (administrator password required)…") }
             try HelperInstaller.install(from: bin)
             let v = try? HelperClient().blocking(timeout: 5) { try await $0.version() }
-            receipt("helper.install", outcome: v != nil ? "succeeded" : "unconfirmed", message: v != nil ? "helper installed and running" : "helper installed; response unconfirmed")
-            if v == nil { throw CLIError("Helper response is unconfirmed.", exitCode: 3) }
+            let confirmed = v == HelperConstants.version
+            receipt("helper.install", outcome: confirmed ? "succeeded" : "unconfirmed", message: confirmed ? "helper installed and running" : "helper installation version is unconfirmed")
+            if !confirmed { throw CLIError("Expected helper \(HelperConstants.version), observed \(v ?? "no response").", exitCode: 3) }
         case "uninstall":
             guard HelperInstaller.isInstalled else {
                 throw CLIError("legacy helper installation not detected; remove an app-registered helper in Thermo settings")

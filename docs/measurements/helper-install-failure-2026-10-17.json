@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "ab95294",
+  "oldSemicolonReproduction": {
+    "exitCode": 0,
+    "continuedAfterFailure": true,
+    "scope": "non-root /bin/sh false followed by touch, owned temporary file only; fixture removed"
+  },
+  "correction": [
+    "Installation directory/copy/plist/bootstrap stages use failure-dependent chaining",
+    "Only the initial bootout remains tolerated for first installation",
+    "CLI success requires exact expected helper protocol/app version, not any response"
+  ],
+  "regression": {
+    "relatedHelperInstallationRemovalAndCLIStatus": {
+      "tests": 19,
+      "failures": 0,
+      "exitCode": 0,
+      "logSHA256": "c642cc7a2635e763996c840417b09d1a6c9c0b7c9b72a4950d2e45458f7ee968"
+    },
+    "finalExactFailureExitCodeAssertion": {
+      "tests": 2,
+      "failures": 0,
+      "exitCode": 0,
+      "logSHA256": "4f71fbc67bf95cdb60966177d0a02f5a802dd2c63ca13433fd2f56ac2ab73b0e"
+    }
+  },
+  "limits": [
+    "No administrator authorization or live installation performed",
+    "Not an atomic installation/rollback transaction",
+    "Initial bootout failure handling unchanged",
+    "Does not validate root launchd behavior or hardware restoration",
+    "Candidate421 predates this fix and requires a rebuild before deployment"
+  ]
+}
