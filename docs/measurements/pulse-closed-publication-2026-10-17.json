@@ -963,5 +963,22 @@
     "Cold-start speed remains variable and has not been established against Mole",
     "A passing Debug lifecycle run does not supersede the two earlier signed429 startup failures",
     "No installed App, root helper, or physical hardware control acceptance"
-  ]
+  ],
+  "integrationCheck": {
+    "source": "f1a725f5de379ddf8521e595fe8ab40ec40fecb1",
+    "command": "swift test --filter MCPInvocationFailureTests|UnattributedToolUsageTests|PulseSamplingLifetimeTests|HelperMaintenanceTests|VerificationHelperIsolationTests",
+    "exitCode": 0,
+    "total": 18,
+    "suites": {
+      "ThermoAppTests.xctest": {
+        "tests": 6,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 12,
+        "failures": 0
+      }
+    },
+    "logSHA256": "7b91d107e018c66fb58696684e245ce2e073976ca28d2c05363741747fbeebc3"
+  }
 }
