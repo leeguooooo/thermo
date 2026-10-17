@@ -2,7 +2,7 @@
 
 截至 2026-10-17，统计、连接检查、本地调用观察和任务对照已有可用实现；实际业务质量与 Skill 净收益仍没有完整结论。[本机最新连接记录](measurements/mcp-auth-scope-and-coverage-2026-10-17.json)已尝试 Codex 全部 9 个启用配置，其中 8 个完整返回 305 个工具，定义数组合计 217,929 个 cl100k 参考 token，服务指令另计 893 token。Figma 独立检查需要鉴权，定义大小未知；当前代理会话的 `mcp__figma__whoami` 能返回帐号资料。两个通道的凭据和身份没有关联比对，不互相替代。
 
-这些数字是不同时间、不同配置的独立计量，REA 使用下述输出声明配置；不是宿主实际加载上下文或账单。其他宿主尚未完成主动测量。[本地候选 1.2.0 (421)](measurements/ai-tools-integrated-421-2026-10-17.json)已完成 1,571 项 Release 回归和双架构各七组 CLI 验证。它固定在 d3bcc8c 主线来源、cd69c65 候选源码，不包含后续并行充电 UI 等提交；可见 GUI 验收因当前锁屏未完成，不能标为可发布。
+这些数字是不同时间、不同配置的独立计量，REA 使用下述输出声明配置；不是宿主实际加载上下文或账单。其他宿主尚未完成主动测量。[最新本地候选 1.2.0 (456)](measurements/ai-tools-integrated-456-2026-10-17.json)固定在 1d8fe29 主线来源、2253d28 候选源码，运行源码只保留候选版本号差异。1,641 项 Release 回归、arm64 / Rosetta 各七组 CLI 夹具及隔离副本的关键 MCP / Skill 可见窗口检查通过。普通启动、正式签名、公证、安装更新和硬件验收仍未完成；不能标为可发布。[421 历史记录](measurements/ai-tools-integrated-421-2026-10-17.json)保留原有范围和锁屏缺口。
 
 | 原始问题 | 当前能力与证据 | 仍不能据此判断 |
 |---|---|---|
@@ -33,15 +33,21 @@
 - [Unity Skill 引用文档](measurements/unity-skill-reference-repair-2026-10-17.json)：两个缺失文件来自与既有文档匹配的上游快照，已核对 blob / SHA-256 后补齐，原文件未改。4 个本地引用全部通过。当前上游同步来源仍不完整，后续镜像可能删除补齐文件；版本受限的恢复脚本默认只检查，不在体检中自动执行。未验证 Unity 业务任务。
 - [Design 代理 SSE 等待](measurements/claude-design-relay-sse-2026-10-17.json)：按请求 ID 识别完整响应，避免响应到达后继续等待流关闭。8 个离线用例在配置所用 Python 3.9.6 和 Python 3.14 均通过，鉴权及分发逻辑保持一致。后续真实授权检查完整返回 23 个工具，但没有记录上游 JSON / SSE 类型，不宣称线上提速或业务验收；未主动重启原有实例。
 
-本机 Skill 修复后的盘点保留 138 个已检查目录文件、459 个引用、0 个已采集发现，缓存另有 215 个文件、417 个引用、0 个发现。[修复后盘点](measurements/unity-skill-reference-repair-2026-10-17.json)中的唯一未测量条目已核实为没有 `SKILL.md` 的空目录 `codex-primary-runtime`；没有移除或制造正文来消除提示。[空目录核实](measurements/mcp-http-installed-audit-2026-10-17.json)
+Unity 引用修复当时的本机盘点保留 138 个已检查目录文件、459 个引用、0 个已采集发现，缓存另有 215 个文件、417 个引用、0 个发现。[修复后盘点](measurements/unity-skill-reference-repair-2026-10-17.json)中的唯一未测量条目已核实为没有 `SKILL.md` 的空目录 `codex-primary-runtime`；没有移除或制造正文来消除提示。[空目录核实](measurements/mcp-http-installed-audit-2026-10-17.json)
 
 ## 源码与安装包验证边界
+
+[456 集成与可见 AI 页面验收](measurements/ai-tools-integrated-456-2026-10-17.json)覆盖当前未归因返回、宿主失败计数、Skill 重名及逐文件启停等源码改动，并纳入所选主线的并行改动。完整 Release 回归 1,641 项、0 失败；双架构全部切片签名、macOS 13.0 元数据和两种执行架构各七组独立 CLI 夹具通过。新 `--ui-review` 参数抑制自动 helper 查询及启动偏好恢复，普通模式仍保留原路径；它不是禁止手动动作的沙箱。
+
+QA 副本的两个架构所有有文件数据的 Mach-O 节与分发包运行体逐字节一致，原签名 App 在验收后再次通过严格验证，五个原始二进制哈希未变。MCP / Skill 数据来自隔离 Home 和自有 loopback 服务。实际窗口核对了 8 → 16 → 22 项展开、失败排序重置八项、7,040 字节 / 启发式约 1,780 与 cl100k 1,320 的分离、P95、未知比例、部分定义合计和 Skill 停用 / 别名 / 缓存 / 重名说明。所有数字均为合成验收数据，不是本机真实使用量、服务延迟或账单。
+
+[定义范围截图](measurements/ai-tools-456-ui-2026-10-17/ui-mcp-definitions.png)、[失败分类截图](measurements/ai-tools-456-ui-2026-10-17/ui-mcp-errors.png)、[Skill 盘点截图](measurements/ai-tools-456-ui-2026-10-17/ui-skills.png)和[重名详情截图](measurements/ai-tools-456-ui-2026-10-17/ui-skill-details.png)均直接来自实际 QA 窗口。UI 工具两次返回窗口 / 截图瞬态错误，重新绑定已运行的同一应用后继续成功，没有通过重启应用恢复；运行日志另有一次 AttributeGraph cycle 提示，原因未定位。仅对列出的流程给出功能验收，不宣称截图接口、普通启动或全部布局稳定性已通过。QA 进程与自有 HTTP 服务已退出、端口已关闭，没有替换安装版或发布产物。
 
 [421 集成验收](measurements/ai-tools-integrated-421-2026-10-17.json)将下列 AI 源码改动连同所选主线的 CLI / 充电 helper 基础合入固定快照。完整 Release 回归 1,571 项、0 失败；arm64 与 Rosetta x86_64 各七组独立 CLI 夹具通过，所有切片签名、架构和 macOS 13.0 检查通过。产物为本地 ad-hoc 包，没有更新源。QA 副本的各架构指令段与原包一致，原包哈希未变；但可见窗口验收未完成，控制台锁屏标志为 true。自有 QA / 模拟服务均已退出，没有解锁或把窗口定位错误当成产品缺陷。
 
 [393 包集成验收](measurements/mcp-native-events-release-2026-10-17.json)对应 ed354ee，包含 1,483 项 Release 测试；全部切片签名、架构及最低系统版本检查通过，arm64 与 Rosetta x86_64 各通过五组 AI CLI 夹具。完整 App 的隔离副本读取两条真实公开文档事件，显示检索 49,697 字节 / cl100k 11,651、原文 3,331 字节 / 716。错误状态、P95 和请求用量保持未知。原包未变，QA 已停止，临时原始事件摘录已移除。[374 包](measurements/ai-tools-integrated-package-2026-10-17.json)保留为历史证据。
 
-393 之后的 AI 源码改动已包含在 421；以下定向与旧版界面证据保留各自的适用范围，不替代新版可见 GUI 验收：
+421 覆盖其冻结时的早期 AI 源码，之后的统计与 Skill 改动由 456 补充验证。以下定向与旧版界面证据保留各自适用范围，不替代 456 未执行的普通启动、正式安装或硬件验收：
 
 - [返回合计与占比](measurements/tool-usage-return-shares-2026-10-17.json)：31 项针对性测试、CLI 隐藏行分母检查与[中文离屏图](measurements/tool-usage-return-shares-zh-2026-10-17.png)。[完整 App](measurements/tool-usage-native-qa-2026-10-17.json)验证 8 → 16 → 21 项展开、编码旧报告提示和分类独立计量，并修正了过时的“实际用量未测量”说明。
 - [Skill 内容汇总](measurements/skill-content-summary-2026-10-17.json)：30 项针对性测试、CLI 和同文件完整 App 前后对照；别名不重复累计，缓存单列，缺失或冲突证据保留。历史逐条计数没有改写，也不把计数下降当成修复数量。
@@ -56,4 +62,4 @@
 
 [真实调用抽样](measurements/workflow-discovery-2026-10-17.json)只读取 80 份近期日志尾部，43 份截断，不能当全部使用频率。浏览器样本中 8 组完整观察后又取快照，但没有相同快照，尚不能判为浪费；一次 `expect` 的 `noWait=true`、`pass=false`、`timedOut=false` 说明不能把断言失败归为服务超时。本地浏览器及后续有状态夹具验证了等待最终状态与只提交一次的口径，没有证明生产业务或 Skill 净收益。首轮失效夹具四条记录已保留并排除。
 
-剩余工作包括 Figma 的可授权完整定义计量、真实业务质量与 Skill 净收益评测、421 可见 GUI 及正式安装更新验证。后续并行主线提交不在本次候选中，若选择纳入发布范围，需重新集成验收。硬件相关路径仍按独立授权和实际验收处理；本地通过不等于部署、安装或真实设备通过。
+剩余工作包括 Figma 的可授权完整定义计量、真实业务质量与 Skill 净收益评测、截图工具瞬态错误 / AttributeGraph 提示的原因，以及正式安装更新验证。456 只覆盖冻结的 1d8fe29 / 2253d28 来源；后续主线改动若纳入发布范围，需重新集成验收。硬件相关路径仍按独立授权和实际验收处理；本地通过不等于部署、安装或真实设备通过。
