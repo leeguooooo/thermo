@@ -1,0 +1,123 @@
+{
+  "recordedAt": "2026-10-17T11:35:06.545878+00:00",
+  "origin": "Follow-up to outer-tool-usage-2026-10-17.json. Reviewed all three explicit Bash errors in that fixed three-file replay; original source tails recovered by exact hash without replaying commands.",
+  "sourceTailsMatched": 3,
+  "cases": [
+    {
+      "id": "unmatched-zsh-glob",
+      "loggedTool": "Bash",
+      "loggedExitCode": 1,
+      "commandSHA256": "d0408aaedc7ecb09cf0921db3012d248a28df7c2139d57d50c49a15ae77e3d5f",
+      "resultSHA256": "1d96c45405c870142f0437919c63de57263ff055876ab013e90ef99658144bb3",
+      "observedFailure": "zsh rejected a wildcard with no matches during a compound metadata probe.",
+      "finding": "Caller shell expansion stopped the probe. A failure at this stage does not establish an MCP or command service fault.",
+      "verification": "Owned empty/one-file/missing/unreadable directory cases; scoped null-glob only when zero matches is valid.",
+      "durableProductCodeChangeRequiredByThisCase": false
+    },
+    {
+      "id": "native-ping-capability-assumption",
+      "loggedTool": "Bash",
+      "loggedExitCode": 1,
+      "commandSHA256": "ce55dc358e0c3f9213ad5ed62490c71ef2cff550f29d4813f4c1a4537adb0fb7",
+      "resultSHA256": "a35af3e7fc338347b46a46240f26a3d53eeb6790aae8778d95decad4349041a8",
+      "observedFailure": "Inline Python accessed pong.params.agentPanel after sending only ping and raised KeyError(params).",
+      "finding": "The probe confused transport liveness with capability advertisement. Installed chrome-use returns bare pong for ping; hello advertises the capability schema.",
+      "verification": "Installed binary in owned Home/relay directory; only ping and hello frames; no CDP client, browser operation or agent/model request.",
+      "durableProductCodeChangeRequiredByThisCase": false
+    },
+    {
+      "id": "historical-go-verifier-syntax",
+      "loggedTool": "Bash",
+      "loggedExitCode": 1,
+      "commandSHA256": "888df305da69fe80ab7c2c25e336620f38c4b205a8bf36798db6e87e905dc6a5",
+      "resultSHA256": "269986bad1b0b3002739f745e0b7fb59a090f379808afdf9f38978b8d72cf802",
+      "observedFailure": "Go compilation reported a missing parameter name in a verification script.",
+      "finding": "A caller-side build-stage failure. The examined current committed file passes syntax/format parsing; that does not establish a successful build or data verification.",
+      "currentFileCheck": {
+        "syntaxParserExitCode": 0,
+        "formatDiffBytes": 0,
+        "contentMatchesCurrentCommit": true,
+        "sourceSHA256": "7f8940dd9fcdcc8986f3f4966c468f84bdd28483f871ea800fa7a5b99e4f5ad1",
+        "codeGraphAttemptedBeforeFileInspection": true,
+        "indexDidNotContainThisFile": true
+      },
+      "durableProductCodeChangeRequiredByThisCase": false,
+      "databaseAccessPerformedByThisReview": false,
+      "otherWorktreeSourceEditedByThisReview": false,
+      "verificationProgramExecutedByThisReview": false
+    }
+  ],
+  "ownedMechanismChecks": {
+    "shellMechanism": {
+      "shell": "/bin/zsh -f",
+      "unmatchedGlobExit": 1,
+      "unmatchedGlobMessageObserved": true,
+      "scopedNullGlobEmptyDirectoryExit": 0,
+      "missingDirectoryRemainsError": true,
+      "oneFileEnumeratedWithoutOtherExtensions": true,
+      "unreadableDirectoryRemainsError": true,
+      "globalShellOptionsChanged": false,
+      "scope": "Owned fixture directories only; allow-empty is appropriate only after confirming directory availability and that zero matches is valid."
+    },
+    "nativeHostMechanism": {
+      "binaryVersion": "chrome-use 1.5.235",
+      "binarySHA256": "da0569662e7f5b228a7427b3f525d0be6a0b723cc88fb3ab1a8b1ad38cef67a0",
+      "sentMethods": [
+        "ping",
+        "hello"
+      ],
+      "observedMethods": [
+        "pong",
+        "pong"
+      ],
+      "pingHasParams": false,
+      "legacyParamsAccessRaisesKeyError": true,
+      "helloAdvertisesAgentPanelSchemaVersion": 1,
+      "exit": "clean EOF",
+      "exitCode": 0,
+      "ownedPortClosed": true,
+      "browserOrAgentPanelOperationsRequested": false,
+      "CDPClientsConnected": false,
+      "realProfileIdOrCredentialsProvided": false,
+      "ownedHomeAndRelayDirectory": true,
+      "binaryUnchanged": true,
+      "scope": "Installed native-host metadata framing only; no Chrome, browser page, agent/model task or live profile interaction."
+    }
+  },
+  "nativeHostSourceReview": {
+    "repository": "leeguooooo/chrome-use",
+    "commit": "5e24e9a49bf32d04dd12138d1ec3713f74128eba",
+    "files": [
+      {
+        "file": "cli/src/connect.rs",
+        "sha256": "3a7186610d78c248dede474e293f5c577d5ff1570067af4026eb0c6f459d464f"
+      },
+      {
+        "file": "cli/src/native/relay.rs",
+        "sha256": "36c0d444cad40befac8fa0e82ae30c9a5d3244da13be192b211e64a0df22260d"
+      },
+      {
+        "file": "cli/src/agent_panel.rs",
+        "sha256": "5fc33194f8ccb9ac7bd5de9e304fed6c47b818714ba073765e66e6704433aedb"
+      }
+    ],
+    "installedBinaryBuiltFromThisCommitNotAsserted": true
+  },
+  "originalMetricHistoryChanged": false,
+  "reportedErrorsRemain": 3,
+  "confirmedMCPServiceFaultsFromTheseCases": 0,
+  "scope": "Three selected historical error records only; not evidence that all MCPs are healthy or that a tool with errors is poor.",
+  "changes": "No product source, original logs or real browser/profile state was edited by this review. Only owned fixture files and current Thermo documentation were written. Existing error counters were preserved.",
+  "cleanup": {
+    "nativeHostExitedNormally": true,
+    "ownedNativeEndpointClosed": true,
+    "noRealCredentialCopied": true,
+    "installedBinaryUnchanged": true,
+    "noOtherNativeHostStopped": true
+  },
+  "limitations": [
+    "The original failing probe binary digest was not recorded; current installed-binary behavior is independently measured rather than assumed identical.",
+    "The current Go script received syntax/format parsing only; no build, verifier execution, database query or production acceptance.",
+    "Corrected probe mechanisms do not measure autonomous model recovery, task success rates or billed tokens."
+  ]
+}
