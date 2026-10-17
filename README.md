@@ -61,7 +61,7 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 `thermo helper status` 会显示当前二进制的签名团队。用 Developer ID 签名后：
 
-- **helper 只接受同一 Team ID 签名的客户端**（运行时从自身签名读取 Team ID，无需配置）。ad-hoc 构建只校验标识符 `dev.thermo.cli` / `dev.thermo.app`，任何本地程序都能伪造——但最坏结果也只是风扇转速被设到 min–max 范围内，超温保护仍然有效。
+- **helper 只接受同一 Team ID 签名的客户端**（运行时从自身签名读取 Team ID，无需配置）。ad-hoc 调试构建只校验标识符 `dev.thermo.cli` / `dev.thermo.app`，无法证明客户端来自同一作者。helper 管理风扇、合盖唤醒、AWDL 和充电控制，常规安装应使用 Developer ID 签名。
 - **App 通过 `SMAppService.daemon` 注册 helper**，用户在「系统设置 → 通用 → 登录项」中批准；ad-hoc 构建则弹管理员密码框安装到 `/Library/PrivilegedHelperTools`。
 
 ## 发布
@@ -70,7 +70,7 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 
 ## 卸载
 
-1. 用 Thermo → 设置 → Fan helper → Uninstall 移除 helper；旧式管理员安装也可运行 `thermo helper uninstall`。卸载先清空并保存风扇策略，确认自动控制和 Thermo 保存的休眠设置已恢复，再移除服务。helper 必须支持协议 4，旧版或无法连接时会停止并提示先更新；CLI 不负责注销 App 的后台项目。
+1. 用 Thermo → 设置 → System helper → Uninstall 移除 helper；旧式管理员安装也可运行 `thermo helper uninstall`。卸载先清空风扇策略，并确认风扇、休眠、AWDL 和本工具持有的充电控制已恢复，再移除服务。完整恢复要求 helper 至少支持协议 7，旧版或无法连接时会停止并提示先更新；CLI 不负责注销 App 的后台项目。
 2. 删除 `/Applications/Thermo.app`、`/usr/local/bin/thermo*`。
 3. 可选：`rm -rf ~/Library/Caches/dev.thermo && defaults delete dev.thermo.app`。
 
@@ -111,6 +111,11 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 | `thermo clean whitelist [add\|remove PATH…]` | 始终保留的路径或 glob（`~/Library/Application Support/Thermo/whitelist`，每行一个，`#` 注释）；所有清理、卸载和移到废纸篓都会跳过，文件不可信时拒绝清理；`--json` |
 | `thermo history [show ID]` | Thermo 做过的每项改动（清理、卸载、agent 修复、Claude 重置、隐私设置、标签、归档、退出程序），最新的在前，并写明在哪里撤销；记录在 `~/Library/Application Support/Thermo/operations.jsonl`；`--limit N`、`--json` |
 | `thermo awake [status\|on\|off]` | 笔记本合盖不休眠（经辅助程序切换 `pmset disablesleep`）；温度接近风扇安全上限、使用电池且电量降到 20%、或读不到温度时自动关闭，关闭和辅助程序重启时恢复你原来的设置；`--json` |
+| `thermo charge status [--probe] [--json]` | 读取充电会话；`--probe` 只读本机电池与固定 SMC 键，不连接 helper 或读取恢复记录 |
+| `thermo charge limit80\|full [--dry-run] [--json]` | 以前台连接持有 80% 上限或允许充满策略，Ctrl-C 结束并核对恢复；充电 API 要求 helper 协议 8。`--json` 输出逐行状态，不表示电池实际正在充电 |
+| `thermo charge recover [--json]` | 重试孤立恢复记录；拒绝停止其他连接的现行策略，恢复未确认返回非零退出码 |
+
+充电保护在电量达到 80% 时暂停，低于 75% 时恢复；允许充满也保留系统自身的充电保护。App 保存的启动偏好与 CLI 前台会话分开。未报告内置电池时不能启用；状态读取失败保持未知。SMC 控制不受支持且系统符合原生上限要求时，界面提示去电池设置管理，不代写系统上限。当前源码的功能仍需新候选构建及真实 helper/硬件验收，未部署的源码不代表已安装版本具备这些入口。
 
 Homebrew、Go 和 pnpm 的工具清理项增加 `commandScope`，表示工具可能涉及的位置，与 Thermo 直接删除的 `paths` 分开。扫描与确认清单会展示这些位置，执行前重新核对；与白名单相交时阻止整项工具操作，无关保护不影响它。旧缓存缺少范围时要求重扫。Go 固定审阅的 `GOMODCACHE` 并使用本地工具链；Homebrew 调用显式关闭自动更新和自动移除；pnpm 固定仓库、缓存、全局及状态目录并核对机器目录。范围依赖工具配置与公开语义，不是系统调用沙盒。参考 [Homebrew 自动移除策略](https://brew.sh/2024/05/14/homebrew-4.3.0/)、[Go 模块缓存](https://go.dev/ref/mod#module-cache)和[pnpm store](https://pnpm.io/cli/store)。
 

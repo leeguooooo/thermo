@@ -130,7 +130,7 @@ final class HelperXPCTests: XCTestCase {
     }
     func testChargingReplyCannotInventConfirmedHolding() async throws {
         let endpoint = Endpoint(); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }
-        var state = BatteryChargeState(); state.phase = .holding; state.policy = .limit80
+        var state = BatteryChargeState(); state.phase = .holding; state.policy = .limit80; state.sessionID = UUID().uuidString
         endpoint.service.access { $0.chargeData = try! PolicyCoding.encoder().encode(state) }
         do { _ = try await client.batteryChargeState(); XCTFail("unknown gate") } catch {}
         state.phase = .watching; state.percent = 101

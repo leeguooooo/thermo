@@ -97,4 +97,35 @@ final class ChargeTests: XCTestCase {
         XCTAssertThrowsError(try rig.run()) { XCTAssertTrue($0.localizedDescription.contains("unconfirmed")) }
         XCTAssertEqual(rig.state.phase, .holding); XCTAssertEqual(rig.resets, 1)
     }
+    func testForegroundValidationDistinguishesRefusedAndUnconfirmed() {
+        var state = BatteryChargeState(); state.phase = .off; state.gate = .allowed; state.support = .smc; state.percent = 50; state.externalPower = false
+        XCTAssertNoThrow(try ChargeCommand.validateStart(state))
+        state.phase = .recovering; state.ownership = .uncertain
+        XCTAssertThrowsError(try ChargeCommand.validateStart(state)) { XCTAssertEqual(($0 as? CLIError)?.exitCode, 3) }
+        state.phase = .off; state.ownership = .none; state.support = .noInternalBattery
+        XCTAssertThrowsError(try ChargeCommand.validateStart(state)) { XCTAssertEqual(($0 as? CLIError)?.exitCode, 2) }
+        state.support = .smc; state.percent = .nan
+        XCTAssertThrowsError(try ChargeCommand.validateStart(state))
+    }
+    func testRecoverRefusesForeignPolicyAndDoesNotSendOff() throws {
+        let rig = Rig(); rig.state.policy = .limit80; rig.state.phase = .holding; rig.state.sessionID = UUID().uuidString
+        let args = try Args(["charge", "recover", "--json"])
+        XCTAssertThrowsError(try ChargeCommand(app: App(args: args), makeBackend: { rig.backend }).run(["recover"])) { XCTAssertEqual(($0 as? CLIError)?.exitCode, 2) }
+        XCTAssertTrue(rig.actions.isEmpty); XCTAssertEqual(rig.resets, 1)
+    }
+    func testRecoveryFailureUsesUnconfirmedExitAndAlreadyEndedIsReadOnly() throws {
+        let rig = Rig(); rig.state.phase = .recovering; rig.state.ownership = .uncertain; rig.failRestore = true
+        let args = try Args(["charge", "recover", "--json"])
+        XCTAssertThrowsError(try ChargeCommand(app: App(args: args), makeBackend: { rig.backend }).run(["recover"])) { XCTAssertEqual(($0 as? CLIError)?.exitCode, 3) }
+        let idle = Rig()
+        try ChargeCommand(app: App(args: args), makeBackend: { idle.backend }).run(["recover"])
+        XCTAssertTrue(idle.actions.isEmpty)
+    }
+    func testChargeIsIncludedInScopedHelpAndCapabilityContract() throws {
+        XCTAssertTrue(CommandHelp.text(for: ["charge", "limit80"]).contains("charge limit80"))
+        XCTAssertTrue(CommandHelp.capabilities.contains { $0.command == "charge status" })
+        XCTAssertNoThrow(try CommandContract.validate(Args(["charge", "limit80", "--dry-run", "--json"])))
+        XCTAssertThrowsError(try CommandContract.validate(Args(["charge", "status", "--dry-run"])))
+        XCTAssertThrowsError(try CommandContract.validate(Args(["charge", "full", "--csv"])))
+    }
 }

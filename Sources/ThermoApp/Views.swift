@@ -591,23 +591,23 @@ struct FansView: View {
     /// Progress states are a quiet notice; states that need the person get a panel with its buttons.
     @ViewBuilder var helperBanner: some View {
         if monitor.uninstallingHelper {
-            notice(tr("Uninstalling the fan helper…"), tr("Fan controls are paused while the helper is removed. Sensor readings remain available."))
+            notice(tr("Uninstalling the system helper…"), tr("Fan, sleep, network and charging controls are being restored before removal. Read-only sensor viewing remains available."))
         } else {
         switch monitor.helperState {
         case .running:
             EmptyView()
         case .outdated:
-            notice(tr("Updating the fan helper…"), tr("It switches to the new version by itself in a few seconds."))
+            notice(tr("Updating the system helper…"), tr("Recovery and helper startup must finish before controls become available."))
         case .notRunning:
-            setupCard(icon: "exclamationmark.triangle", title: tr("Could not connect to the fan helper"),
+            setupCard(icon: "exclamationmark.triangle", title: tr("Could not connect to the system helper"),
                       body: tr("Check the connection again, or reinstall the helper. macOS may ask for an administrator password."),
                       primary: (tr("Retry"), { monitor.refreshHelper() }),
                       secondary: (tr("Reinstall…"), { monitor.beginSetup() }))
         case .unknown:
-            notice(tr("Checking the fan helper…"), tr("Reading the helper’s status. You can keep viewing sensor readings."))
+            notice(tr("Checking the system helper…"), tr("Reading the helper’s status. You can keep viewing sensor readings."))
         case .notInstalled, .needsApproval:
             setupCard(icon: "fan", title: tr("Let Thermo control the fans"),
-                      body: tr("Fan control uses a small helper with system rights. It limits requests to each fan's range and attempts automatic control when it stops or heat protection triggers. Recovery failures are reported. macOS may ask for your password."),
+                      body: tr("Thermo's system helper manages fans, lid-closed wake, network low latency and charging protection. Fan requests stay within device ranges and recovery failures are reported. macOS may ask for an administrator password."),
                       primary: (tr("Allow…"), { monitor.beginSetup() }))
         }
         }
@@ -926,8 +926,8 @@ struct SettingsView: View {
             section(tr("AI agents")) {
                 AgentAccessRow().padding(14)
             }
-            section(tr("Fan helper")) {
-                row(tr("Fan helper: %1$@", helperText), last: true, labelControl: false) {
+            section(tr("System helper")) {
+                row(tr("System helper: %1$@", helperText), last: true, labelControl: false) {
                     if [.running, .notRunning, .needsApproval, .outdated].contains(monitor.helperState) {
                         HStack(spacing: 8) {
                             if monitor.uninstallingHelper {

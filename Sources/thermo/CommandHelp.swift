@@ -27,6 +27,11 @@ enum CommandHelp {
     fans|fans [--json|--csv]|cli
     power|power [--json|--csv]|cli
     battery|battery [--json|--csv]|cli
+    charge|charge [status] [--probe] [--json]|helper8-or-read-only-probe
+    charge status|charge status [--probe] [--json]|helper8-or-read-only-probe
+    charge limit80|charge limit80 [--dry-run] [--json]|helper8-foreground-lease
+    charge full|charge full [--dry-run] [--json]|helper8-foreground-lease
+    charge recover|charge recover [--json]|helper8-orphan-recovery
     watch|watch [--count N] [--interval SEC] [--json|--csv]|cli
     list|list [--json|--csv]|cli
     get|get KEY… [--json|--csv]|cli
@@ -137,7 +142,7 @@ enum CommandHelp {
         var path = words.filter { $0 != "help" }
         if let first = path.first { path[0] = aliases[first] ?? first }
         if path.isEmpty {
-            let descriptions = ["temps":"temperature sensors", "fans":"fan readings", "power":"power and electrical readings", "battery":"battery readings", "watch":"live sensor view", "list":"raw SMC keys", "get":"read selected SMC keys", "bench":"sampling benchmark", "fan":"fan policies and observed control state", "helper":"legacy helper installation and status", "activity":"CPU/GPU activity", "memory":"program memory and project contexts", "pulse":"slowdown diagnosis, process and browser actions", "agents":"Agent/MCP/Skill diagnosis, inspection and fixes", "clean":"disk scan, frozen plans, cleanup and recovery", "apps":"applications, updates, startup and residual data", "space":"folder sizes, large files, duplicates and verified archives", "tabs":"browser groups, saved batches and restoration", "awake":"lid-closed awake control", "awdl":"bounded network session held by this CLI", "settings":"shared App preferences", "history":"operation records and recovery references", "privacy":"browser, environment, DNS and timezone controls", "claude-reset":"explicit recoverable Claude local-data reset", "screen":"App-owned screen cleaning and shortcut", "app-control":"App status, login, updates, helper and AWDL", "permissions":"App permission state and system settings", "integration":"CLI links and Agent plugin setup", "capabilities":"versioned machine-readable command contracts"]
+            let descriptions = ["temps":"temperature sensors", "fans":"fan readings", "power":"power and electrical readings", "battery":"battery readings", "charge":"foreground charging policy and read-only capability probe", "watch":"live sensor view", "list":"raw SMC keys", "get":"read selected SMC keys", "bench":"sampling benchmark", "fan":"fan policies and observed control state", "helper":"legacy helper installation and status", "activity":"CPU/GPU activity", "memory":"program memory and project contexts", "pulse":"slowdown diagnosis, process and browser actions", "agents":"Agent/MCP/Skill diagnosis, inspection and fixes", "clean":"disk scan, frozen plans, cleanup and recovery", "apps":"applications, updates, startup and residual data", "space":"folder sizes, large files, duplicates and verified archives", "tabs":"browser groups, saved batches and restoration", "awake":"lid-closed awake control", "awdl":"bounded network session held by this CLI", "settings":"shared App preferences", "history":"operation records and recovery references", "privacy":"browser, environment, DNS and timezone controls", "claude-reset":"explicit recoverable Claude local-data reset", "screen":"App-owned screen cleaning and shortcut", "app-control":"App status, login, updates, helper and AWDL", "permissions":"App permission state and system settings", "integration":"CLI links and Agent plugin setup", "capabilities":"versioned machine-readable command contracts"]
             let families = Set(capabilities.map { String($0.command.split(separator:" ").first!) }).sorted()
             let rows = families.map { "  " + $0.padding(toLength:15,withPad:" ",startingAt:0) + (descriptions[$0] ?? "Use --help for operations") }
             return (["thermo " + ThermoVersion.string + " — Mac diagnostics and controls", "", "USAGE: thermo [COMMAND] [OPTIONS]", "", "COMMANDS"] + rows + ["", "thermo COMMAND --help: scoped operations and options", "thermo capabilities --json: schema, version, formats and execution dependencies", "--dry-run previews supported operations; --yes confirms where requested.", "--json/--csv are accepted only where listed. --no-color disables ANSI output.", "No command defaults to clearing conversations or changing hardware."]).joined(separator:"\n")
@@ -189,7 +194,7 @@ enum CommandContract {
             guard unknown.isEmpty else { throw CLIError("Unsupported options for \(matching.command): " + unknown.sorted().map { "--" + $0 }.joined(separator:", ")) }
         }
         if args.has("dry-run") {
-            let families = ["clean", "apps", "app", "space", "tabs", "privacy", "claude-reset", "screen", "app-control", "permissions", "integration", "fan", "helper", "awake", "awdl", "settings", "config"]
+            let families = ["clean", "apps", "app", "space", "tabs", "privacy", "claude-reset", "screen", "app-control", "permissions", "integration", "fan", "helper", "awake", "awdl", "charge", "settings", "config"]
             let agent = ["agents","agent","doctor"].contains(root) && ["fix","disable","uninstall","remove","rm","run","inspect-all"].contains(sub)
             let pulse = ["pulse","status"].contains(root) && (["quit","restart"].contains(sub) || Array(p.prefix(3)) == [root,"chrome","close"])
             guard families.contains(root) || agent || pulse else { throw CLIError("--dry-run is not supported for this command; no action was performed.") }

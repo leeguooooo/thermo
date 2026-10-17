@@ -31,6 +31,12 @@ struct ChargeBackend {
     var reset: () -> Void
     var record: (String, String, String?) -> Void = { _, _, _ in }
 }
+struct ChargeSessionFailure: LocalizedError, CustomStringConvertible {
+    let message: String
+    let recoveryConfirmed: Bool
+    var errorDescription: String? { message }
+    var description: String { message }
+}
 
 /// Foreground ownership and recovery policy, independently testable from signal
 /// installation and launchd. A changed public session must never be stopped.
@@ -79,7 +85,7 @@ struct ChargeForegroundSession {
                 try emit(state)
             } catch {}
             backend.record("charging-recovery", confirmed ? "done" : "failed", original)
-            throw BatteryGateError(original + (confirmed ? "; this charging session has ended" : "; recovery is unconfirmed; check charge status before retrying"))
+            throw ChargeSessionFailure(message: original + (confirmed ? "; this charging session has ended" : "; recovery is unconfirmed; check charge status before retrying"), recoveryConfirmed: confirmed)
         }
     }
 }

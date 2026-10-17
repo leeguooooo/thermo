@@ -1,0 +1,242 @@
+{
+  "date": "2026-10-17",
+  "chargingCodeCommit": "e0b76f2",
+  "integrationBase": "1bb279f",
+  "incomingCommittedMain": "d591d42",
+  "sourceSHA256": {
+    "Sources/ThermoKit/BatteryChargeSystem.swift": "55a16d88139392e01d410dc5005a5a85bdd66bf2ea142a377ca54f1add9e6598",
+    "Sources/ThermoKit/BatteryChargeProbe.swift": "c27d6eddd75ce9f735e89e4d62428e6c4ebd09643357c5641fb98be4c1f03425",
+    "Sources/ThermoKit/BatteryChargingGate.swift": "3e46fde16f7a1cb15d366774450db9ae13747b7726e1f1da102dc0bc81f9c2ea",
+    "Sources/ThermoKit/BatteryHelperCoordinator.swift": "afbee8bee44f0862fca598de17d9365fb3c78d31dcee873bb172da64bbcff66e",
+    "Sources/ThermoKit/Helper.swift": "c76e3936061f462834eb6cba6a20f9ec3d241786d0d19240efd06fb2aaa53c77",
+    "Sources/ThermoHelper/HelperServices.swift": "11cb2f20639a851fdef32c535de84e68c3b0d170fc6ed95464f1e1c29147c958",
+    "Sources/ThermoApp/BatteryCareView.swift": "e9df3581d9ca6fb5d52ef0d2af7023aee854b0195e81d8356ba8cfc6d7ab2d58",
+    "Sources/ThermoApp/Views.swift": "79c72e7f30163efea49b884ceeadff570d5cc88a11231e391dee9ae097a242b3",
+    "Sources/ThermoApp/Monitor.swift": "13a15ec177fb9cd643cf6738490f63823795357e9ac55f5a872760194c268ba2",
+    "Sources/ThermoL10n/ZhHans.swift": "563928e5f1160f8e82200928228a5423253bb112aa5a80fd288b9f364c6f9d99",
+    "Sources/thermo/Charge.swift": "6c22b8d778e9d285241bf5ad183820bf2b31c14c18e55a93553fef75cef975e4",
+    "Sources/thermo/ChargeSession.swift": "8a02aa31a691b6db3a8fe36dbf246469e438b1e201585a880835d9649779a3ad",
+    "Sources/thermo/CommandHelp.swift": "7b43af73271415a232871f2e0cba5d9ad53d1faa8b94c6954c243b611500d098",
+    "Sources/thermo/main.swift": "6bb05f922abd5306603d84dec0809dec9caeaef20fb992d5748056c2c3e97ae2",
+    "Tests/ThermoCLITests/ChargeTests.swift": "a0c13cd33c2cb799a404778c4411aa245805ef4fc675923b36e5c8a470456fbb",
+    "Tests/ThermoKitTests/BatteryChargeSupportTests.swift": "e8814919b3053e5fbe263843a84b036bb2de3a01f7e443bcc0cee292ebfd337c",
+    "Tests/ThermoKitTests/HelperXPCTests.swift": "6e6a52a3d92e90c0ffb59b02f2c43e89886336d6a1cf910fa60d30458afde3a7",
+    "Tests/ThermoHelperTests/BatteryServiceTests.swift": "a35d4d181b6585dbbc43ca129425b7a2c46457e83845800fde3fe795c0fdf628",
+    "Tests/ThermoAppTests/BatteryCareModelTests.swift": "a8aec2daa4b89328bdd8590cdf6b43c73b959d3c04adcb3243e8991c70fb6221",
+    "scripts/verify-charge-cli-signals.swift": "31f3ba5ff71c9b1bfe28af271ddc429127b48681aaccfdd3cb0a4248d63cf867",
+    "scripts/verify-battery-care-ui.swift": "e37195ee7cdd8e1885ca8bd54327f3b9481ca9c21e1c73ea64d7a0580de32513"
+  },
+  "helperProtocol": 8,
+  "legacyChargingSelectorRetained": 7,
+  "minimumCompleteRemovalProtocol": 7,
+  "regression": {
+    "full": {
+      "command": "swift test --skip HardwareTests",
+      "total": 1609,
+      "suites": {
+        "ThermoKitTests.xctest": 184,
+        "ThermoHelperTests.xctest": 24,
+        "ThermoCLITests.xctest": 103,
+        "ThermoAppTests.xctest": 289,
+        "CleanKitTests.xctest": 751,
+        "AgentDoctorTests.xctest": 216,
+        "AgentCoreTests.xctest": 42
+      },
+      "scope": "Full integrated code before final helper UI wording and one test seed refinement"
+    },
+    "finalCopyAndRelevantFeatures": {
+      "total": 162,
+      "suites": {
+        "ThermoKitTests.xctest": 71,
+        "ThermoHelperTests.xctest": 24,
+        "ThermoCLITests.xctest": 45,
+        "ThermoAppTests.xctest": 17,
+        "CleanKitTests.xctest": 1,
+        "AgentDoctorTests.xctest": 3,
+        "AgentCoreTests.xctest": 1
+      }
+    },
+    "finalStateContract": {
+      "total": 16,
+      "suites": {
+        "ThermoKitTests.xctest": 16,
+        "ThermoHelperTests.xctest": 0,
+        "ThermoCLITests.xctest": 0,
+        "ThermoAppTests.xctest": 0,
+        "CleanKitTests.xctest": 0,
+        "AgentDoctorTests.xctest": 0,
+        "AgentCoreTests.xctest": 0
+      }
+    },
+    "countsNotAdditive": true,
+    "logs": {
+      "/tmp/thermo-charge-main-integration-full-tests.log": "d8725ff912cb607b1661d84913ee04a09bd153c1c3e3e0f8e25f94664584b4cc",
+      "/tmp/thermo-charge-final-copy-tests.log": "c314505189c6c5b1404af5a1ad87acb7a1f3a910b419e504fdf061660479c47d",
+      "/tmp/thermo-charge-final-state-contract-tests.log": "afb5aa7ac3eedad7e4fab73e5b6ae83a24959d5b553229677e214516f29976c7"
+    }
+  },
+  "cliSmoke": {
+    "plans": {
+      "limit80": {
+        "changesMade": false,
+        "forcesCharging": false,
+        "holdsConnection": true,
+        "minimumHelperProtocol": 8,
+        "pauseAtPercent": 80,
+        "policy": "limit80",
+        "resumeBelowPercent": 75
+      },
+      "full": {
+        "changesMade": false,
+        "forcesCharging": false,
+        "holdsConnection": true,
+        "minimumHelperProtocol": 8,
+        "policy": "chargeToFull"
+      }
+    },
+    "capabilityRows": [
+      {
+        "command": "charge",
+        "execution": "helper8-or-read-only-probe",
+        "structuredFormats": [
+          "json"
+        ],
+        "supportsDryRun": false,
+        "usage": "charge [status] [--probe] [--json]"
+      },
+      {
+        "command": "charge status",
+        "execution": "helper8-or-read-only-probe",
+        "structuredFormats": [
+          "json"
+        ],
+        "supportsDryRun": false,
+        "usage": "charge status [--probe] [--json]"
+      },
+      {
+        "command": "charge limit80",
+        "execution": "helper8-foreground-lease",
+        "structuredFormats": [
+          "json"
+        ],
+        "supportsDryRun": true,
+        "usage": "charge limit80 [--dry-run] [--json]"
+      },
+      {
+        "command": "charge full",
+        "execution": "helper8-foreground-lease",
+        "structuredFormats": [
+          "json"
+        ],
+        "supportsDryRun": true,
+        "usage": "charge full [--dry-run] [--json]"
+      },
+      {
+        "command": "charge recover",
+        "execution": "helper8-orphan-recovery",
+        "structuredFormats": [
+          "json"
+        ],
+        "supportsDryRun": false,
+        "usage": "charge recover [--json]"
+      }
+    ],
+    "scopedHelp": "thermo charge [status] [--probe] [--json]\n  execution: helper8-or-read-only-probe\n\nthermo charge status [--probe] [--json]\n  execution: helper8-or-read-only-probe\n\nthermo charge limit80 [--dry-run] [--json]\n  execution: helper8-foreground-lease\n\nthermo charge full [--dry-run] [--json]\n  execution: helper8-foreground-lease\n\nthermo charge recover [--json]\n  execution: helper8-orphan-recovery\n\n--dry-run never applies changes. Unsupported flags are rejected.\nApp commands require a running compatible Thermo.app. No request is automatically retried.\nExit 0: completed; 2: invalid/refused; 3: partial or unconfirmed result; 1: execution error.\n",
+    "readOnlyHardwareProbe": {
+      "availability": "available",
+      "changesMade": false,
+      "gate": "allowed",
+      "presence": "present",
+      "registers": [
+        {
+          "key": "CH0B"
+        },
+        {
+          "key": "CH0C"
+        },
+        {
+          "hex": "00 00 00 00",
+          "info": {
+            "attributes": 212,
+            "key": "CHTE",
+            "size": 4,
+            "type": "ui32"
+          },
+          "key": "CHTE"
+        }
+      ],
+      "sessionStateQueried": false,
+      "support": "smc"
+    },
+    "probeDidNotConnectHelperOrStore": true
+  },
+  "signals": {
+    "transport": "Fake synchronous transport; production ChargeSignals and ChargeForegroundSession",
+    "finalVerified": {
+      "int": {
+        "exit": 0,
+        "frameCount": 3,
+        "trace": "SET limit80\nSTATE {\"gate\":\"inhibited\",\"ownedByCaller\":true,\"ownership\":\"owned\",\"phase\":\"holding\",\"policy\":\"limit80\",\"sessionID\":\"792F5F0F-AD4B-45C6-BCDE-8FE621ED44F1\",\"support\":\"smc\"}\nREADY\nSTATE {\"gate\":\"inhibited\",\"ownedByCaller\":true,\"ownership\":\"owned\",\"phase\":\"holding\",\"policy\":\"limit80\",\"sessionID\":\"792F5F0F-AD4B-45C6-BCDE-8FE621ED44F1\",\"support\":\"smc\"}\nREADY\nSET off\nSTATE {\"gate\":\"allowed\",\"ownedByCaller\":false,\"ownership\":\"none\",\"phase\":\"off\",\"policy\":\"off\",\"support\":\"smc\"}\nRESET\nDONE recovery-confirmed\n",
+        "sha256": "cbeb99e7f24bf22ca087476fbf472cccc8accde278a06c827bc5ebb0961aacdd",
+        "actualSignal": "SIGINT",
+        "processPathVerifiedBeforeSignal": true
+      },
+      "term": {
+        "exit": 0,
+        "frameCount": 3,
+        "trace": "SET limit80\nSTATE {\"gate\":\"inhibited\",\"ownedByCaller\":true,\"ownership\":\"owned\",\"phase\":\"holding\",\"policy\":\"limit80\",\"sessionID\":\"9F1340D7-A35A-4C6B-8858-39FEBBBA1E10\",\"support\":\"smc\"}\nREADY\nSTATE {\"gate\":\"inhibited\",\"ownedByCaller\":true,\"ownership\":\"owned\",\"phase\":\"holding\",\"policy\":\"limit80\",\"sessionID\":\"9F1340D7-A35A-4C6B-8858-39FEBBBA1E10\",\"support\":\"smc\"}\nREADY\nSET off\nSTATE {\"gate\":\"allowed\",\"ownedByCaller\":false,\"ownership\":\"none\",\"phase\":\"off\",\"policy\":\"off\",\"support\":\"smc\"}\nRESET\nDONE recovery-confirmed\n",
+        "sha256": "192b21400d2c1cd8e4bf9fd6e89494076f7fc68f37f99b384f1200b02c6a90e1",
+        "actualSignal": "SIGTERM",
+        "processPathVerifiedBeforeSignal": true
+      }
+    },
+    "earlierPTYCtrlCAlsoExited0": true,
+    "rootHelperAndHardwareNotExercised": true
+  },
+  "nativeSupportUI": {
+    "root": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-battery-ui-kshqfxvg",
+    "productionPanelAndModel": true,
+    "injectedPresenceMetadataPowerAndRegisters": true,
+    "cases": [
+      "No internal battery reported: no battery percent, controls disabled, Battery settings action hidden",
+      "Unsupported SMC plus eligible native settings: system-management instruction, Thermo controls disabled, settings callback works",
+      "Return to SMC: enable control available with fresh known percent/power"
+    ],
+    "screenshotsViewed": 2,
+    "screenshotsSaved": false,
+    "trace": "NO_SYSTEM_SETTINGS\nQUIT_BLOCKED false\n",
+    "settingsNavigation": "Replaced with NO_SYSTEM_SETTINGS log callback; no actual system settings navigation/change tested",
+    "cleanup": {
+      "path": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-battery-ui-kshqfxvg/ThermoBatteryQA.app/Contents/MacOS/ThermoBatteryQA",
+      "reason": "Process had already exited before scoped cleanup; no signal was sent",
+      "recoveryRecordAbsent": true,
+      "normalGUIQuitAccepted": false,
+      "guiTimeoutObserved": true,
+      "terminated": true
+    },
+    "normalGUIQuitAccepted": false
+  },
+  "compatibility": {
+    "newChargingCallsRejectProtocols6And7BeforeSelectors": true,
+    "protocol7LegacySelectorActualAnonymousXPC": true,
+    "protocol7CompleteRemovalRemainsSupported": true,
+    "legacyXPCRepliesHaveDeadlines": true,
+    "invalidHoldingTestUsesValidSessionID": true
+  },
+  "installedPathsChangedComparedWithBaseline": [],
+  "candidate384ContainsChanges": false,
+  "limits": [
+    "No actual privileged launchd endpoint, code-signing authorization, battery write/pause/resume or real sleep/restart/update/removal test",
+    "No claim that system charge limit is currently enabled or managed through a public write API",
+    "Mole full-charge completion/unplug rule remains unresolved",
+    "Old frozen candidate384 is not a build of this code; new signed universal artifact and deployment remain pending"
+  ],
+  "cleanup": {
+    "ownedFixtureRoots": [
+      "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-charge-cli-qblmqood",
+      "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-battery-ui-kshqfxvg"
+    ],
+    "directoriesRemoved": true,
+    "noActiveFixtureProcesses": true
+  }
+}

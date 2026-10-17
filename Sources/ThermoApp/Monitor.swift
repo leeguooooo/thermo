@@ -342,7 +342,7 @@ final class Monitor: ObservableObject {
             guard let self else { t.invalidate(); return }
             if let start = self.setupStarted, Date().timeIntervalSince(start) > 600 {
                 self.stopSetup()
-                self.lastError = tr("The fan helper did not respond. Your settings have not been applied. Retry setup when ready.")
+                self.lastError = tr("The system helper did not respond. Your settings have not been applied. Retry setup when ready.")
                 return
             }
             self.refreshHelper()

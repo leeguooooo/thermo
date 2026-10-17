@@ -50,6 +50,14 @@ struct ChargeCommand {
     let app: App
     var makeBackend: () -> ChargeBackend = { .live() }
     var probe: () -> BatteryChargeProbe = { .live() }
+    static func validateStart(_ before: BatteryChargeState) throws {
+        guard before.policy == .off || before.ownedByCaller else { throw CLIError("Another Thermo connection owns this policy; stop it in that process") }
+        guard before.phase != .recovering, before.ownership != .uncertain else { throw CLIError("Thermo charging recovery is unconfirmed; retry recovery first", exitCode: 3) }
+        guard before.support == .smc, before.percent.map({ $0.isFinite && (0...100).contains($0) }) == true,
+              before.externalPower != nil, before.gate == .allowed || before.ownedByCaller else {
+            throw CLIError(before.error ?? "Fresh supported charging control is unavailable; use charge status --probe")
+        }
+    }
     func run(_ rest: [String]) throws {
         switch try ChargeRequest(rest, args: app.args) {
         case .status(probe: true):
@@ -67,15 +75,29 @@ struct ChargeCommand {
             let backend = makeBackend(); defer { backend.reset() }; try show(backend.read())
         case .recover:
             let backend = makeBackend(); defer { backend.reset() }
-            try backend.set(.off, UUID().uuidString)
-            let state = try backend.read(); guard ChargeForegroundSession.ended(state) else { throw BatteryGateError("Thermo charging recovery is not confirmed") }; try show(state)
+            let before = try backend.read()
+            guard before.policy == .off || before.ownedByCaller else { throw CLIError("Another Thermo connection owns this policy; stop it in that process") }
+            if ChargeForegroundSession.ended(before) { try show(before); return }
+            do {
+                try backend.set(.off, before.sessionID ?? UUID().uuidString)
+                let state = try backend.read()
+                guard ChargeForegroundSession.ended(state) else { throw CLIError("Thermo charging recovery is not confirmed", exitCode: 3) }
+                try show(state)
+            } catch let error as CLIError { throw error }
+            catch { throw CLIError(error.localizedDescription + "; recovery is unconfirmed", exitCode: 3) }
         case .hold(let policy, preview: false):
             let backend = makeBackend()
+            defer { backend.reset() }
             if !app.args.has("json") { print(tr("Keep this command open. Ctrl-C ends Thermo's charging policy and checks recovery.")); fflush(stdout) }
             try ChargeSignals.run { interrupted in
-                try ChargeForegroundSession(backend: backend).run(policy: policy, interrupted: interrupted,
-                    wait: { for _ in 0..<10 { if interrupted() { break }; usleep(100_000) } },
-                    emit: { state in try show(state); fflush(stdout) })
+                let before = try backend.read()
+                try Self.validateStart(before)
+                do {
+                    try ChargeForegroundSession(backend: backend).run(policy: policy, interrupted: interrupted,
+                        wait: { for _ in 0..<10 { if interrupted() { break }; usleep(100_000) } },
+                        emit: { state in try show(state); fflush(stdout) })
+                } catch let error as ChargeSessionFailure { throw CLIError(error.message, exitCode: error.recoveryConfirmed ? 1 : 3) }
+                catch let error as BatteryChargeClientError { throw CLIError(error.localizedDescription) }
             }
         }
     }
