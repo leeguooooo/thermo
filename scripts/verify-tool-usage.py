@@ -75,6 +75,12 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     assert other["completed"] == 1 and other["missingResults"] == 1 and other["unmeasuredResults"] == 0
     assert other["returnedTextBytes"] == len("fixture-private-wrapper".encode())
     assert other["returnedTextEstimatedTokens"] == 6 and other["nonTextBlocks"] == 2
+    outer = other["byTool"]
+    assert len(outer) == 1 and outer[0]["kind"] == "outer" and outer[0]["name"] == "exec"
+    assert outer[0]["calls"] == 2 and outer[0]["completed"] == 1 and outer[0]["missingResults"] == 1
+    assert outer[0]["returnedTextBytes"] == other["returnedTextBytes"]
+    assert outer[0]["unknownErrorStatus"] == 1 and outer[0]["reportedErrors"] == 0
+    assert outer[0]["timingSamples"] == 1 and outer[0]["medianSeconds"] == 5
     assert "base64" not in result.stdout
     mcp = next(row for row in report["tools"] if row["kind"] == "mcp" and row["name"] == "read")
     skill = next(row for row in report["tools"] if row["kind"] == "skill")
@@ -105,6 +111,9 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     assert "Unattributed measured text: 23 bytes / ≈6 tokens · 2 non-text blocks not tokenized" in text
     assert "Kept outside MCP/Skill totals" in text
     assert "may repeat separately logged MCP results" in text
+    assert "Outer tools ranked by observed returned text: showing 1/1" in text
+    assert "Same observations as the outer aggregate, not additional usage." in text
+    assert "share of observed outer returned-text tokens: 100.0%" in text
     assert "Host-reported invocation failures without MCP results: 1; excluded from result error proportions, included in timing." in text
     selected_path = home / '.codex/sessions/2026/10/17/fixture.jsonl'
     selected_args = [str(binary), 'agents', 'usage', '--agent', 'codex', '--log-file', str(selected_path), '--json']
@@ -142,6 +151,23 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
                                   capture_output=True, text=True, check=True, timeout=30).stdout
         assert "Observed mcp returned text total (all rows): 84 bytes / " + ("" if encoding else "≈") + "21 tokens" in rendered
         assert rendered.count("share of observed mcp returned-text tokens: 4.8%") == 20
+    outer_many = []
+    for index in range(21):
+        ident = "outer-" + str(index)
+        outer_many += [event("response_item", {"type": "function_call", "call_id": ident,
+                                              "name": "Read" + str(index), "arguments": "fixture-private-command"}, -10),
+                       event("response_item", {"type": "function_call_output", "call_id": ident,
+                                              "output": "abcd"}, -5)]
+    write(".codex/sessions/2026/10/17/fixture.jsonl", outer_many)
+    for encoding in [None, "cl100k_base"]:
+        args = [str(binary), "agents", "usage", "--agent", "codex", "--since", stamp(-7 * 86400)]
+        if encoding:
+            args += ["--encoding", encoding]
+        rendered = subprocess.check_output(args, env=dict(os.environ, CFFIXED_USER_HOME=str(home), THERMO_LANG="en"),
+                                           text=True, timeout=30)
+        assert "showing 20/21" in rendered
+        assert rendered.count("share of observed outer returned-text tokens: 4.8%") == 20
+        assert "fixture-private" not in rendered
     print(json.dumps({"passed": True, "mcpCalls": mcp["calls"], "skillCalls": skill["calls"],
                       "requestTokensKeptSeparate": True, "privateTextExcluded": True, "imageTokensUnknown": True,
                       "knownStatusErrorProportionVerified": True, "unknownErrorProportionPreserved": True,

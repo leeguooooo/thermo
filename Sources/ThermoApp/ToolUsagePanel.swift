@@ -122,6 +122,7 @@ struct ToolUsagePanel: View {
                         .font(.caption).foregroundStyle(.secondary)
                     Text(tr("Includes execution wrapper text and may repeat separately logged MCP results. Kept outside MCP/Skill totals; no nested attribution or image/audio token estimate."))
                         .font(.caption).foregroundStyle(.secondary)
+                    OuterToolUsageBreakdown(report: report)
                 } else if report.coverage.otherToolCalls > 0 {
                     Text(tr("Unattributed returned content was not measured in this report; analyze again."))
                         .font(.caption).foregroundStyle(.secondary)

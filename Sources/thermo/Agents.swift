@@ -272,6 +272,29 @@ struct AgentsCommand {
             lines.append("Unattributed tool results: \(other.completed) returned · \(other.missingResults) missing · \(other.unmeasuredResults) unmeasured")
             lines.append("Unattributed measured text: \(other.returnedTextBytes) bytes / \(tokens) tokens · \(other.nonTextBlocks) non-text blocks not tokenized")
             lines.append("Includes execution wrapper text and may repeat separately logged MCP results. Kept outside MCP/Skill totals; no nested attribution or image/audio token estimate.")
+            if let rows = other.byTool {
+                if !rows.isEmpty {
+                    let count = app.args.has("all") ? rows.count : min(20, rows.count)
+                    lines.append("Outer tools ranked by observed returned text: showing \(count)/\(rows.count)")
+                    lines.append("Same observations as the outer aggregate, not additional usage. Commands and nested CLI/MCP ownership are not inferred.")
+                    if other.unmeasuredResults > 0 { lines.append("Some returned content was not measured; this ranks measured text only.") }
+                    for row in rows.prefix(count) {
+                        let tokens = report.referenceEncoding == nil ? "≈\(row.returnedTextEstimatedTokens)" : row.referenceReturnedTextTokens.map(String.init) ?? "unknown"
+                        lines.append("  \(row.name) [\(row.host)]: \(row.calls) calls · \(row.completed) results · \(row.missingResults) missing · \(row.returnedTextBytes) text bytes / \(tokens) tokens")
+                        lines.append("    \(row.reportedErrors) explicit result errors · \(row.unknownErrorStatus) unknown error status · \(row.unmeasuredResults.map(String.init) ?? "unknown") results with unmeasured content · \(row.nonTextBlocks) non-text blocks")
+                        let median = row.medianSeconds.map { String(format: "%.3fs", $0) } ?? "unknown"
+                        let p95 = row.p95Seconds.map { String(format: "%.3fs", $0) } ?? "unknown (requires 20 samples)"
+                        lines.append("    median \(median) · P95 \(p95) · observed sum \(row.totalObservedSeconds.map { String(format: "%.3fs", $0) } ?? "unknown")")
+                        if let rate = row.explicitErrorRate, let denominator = row.knownStatusResults {
+                            lines.append("    explicit errors among known-status results: \(row.reportedErrors) / \(denominator) (\(String(format: "%.1f%%", rate * 100)))")
+                        } else { lines.append("    explicit error rate unknown; no usable known-status denominator") }
+                        if let share = report.outerReturnedTextSummary?.percentage(of: row) {
+                            lines.append("    share of observed outer returned-text tokens: \(String(format: "%.1f%%", share))")
+                        }
+                    }
+                    lines.append(ToolUsageReport.errorStatusExplanation)
+                }
+            } else { lines.append("Per-tool outer rankings were not measured in this report; analyze again.") }
         } else { lines.append("Unattributed returned content was not measured in this report; analyze again.") }
         lines.append(report.note)
         out(lines)
