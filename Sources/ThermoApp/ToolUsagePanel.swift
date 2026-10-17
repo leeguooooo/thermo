@@ -81,8 +81,14 @@ struct ToolUsagePanel: View {
                 }.pickerStyle(.segmented)
                 Text(report.complete ? tr("Log reading complete within the selected scope") : tr("Partial log coverage"))
                     .font(.subheadline.weight(.medium))
-                Text(tr("%1$@ files · %2$@ clipped · %3$@ malformed lines · %4$@ other tool calls", String(report.coverage.filesRead), String(report.coverage.clippedFiles), String(report.coverage.malformedLines), String(report.coverage.otherToolCalls)))
+                Text(tr("Read %1$@ / %2$@ discovered log files · %3$@ bytes", String(report.coverage.filesRead), String(report.coverage.filesDiscovered), String(report.coverage.bytesRead)))
                     .font(.caption).foregroundStyle(.secondary)
+                Text(tr("%1$@ clipped files · %2$@ malformed lines · %3$@ other tool calls", String(report.coverage.clippedFiles), String(report.coverage.malformedLines), String(report.coverage.otherToolCalls)))
+                    .font(.caption).foregroundStyle(.secondary)
+                if !report.complete {
+                    Text(tr("Rankings cover only the logs read; unread logs may change the order."))
+                        .font(.caption).foregroundStyle(.orange)
+                }
                 if let other = report.coverage.unattributedResults, report.coverage.otherToolCalls > 0 {
                     Text(tr("Unattributed tool results: %1$@ returned · %2$@ missing · %3$@ unmeasured", String(other.completed), String(other.missingResults), String(other.unmeasuredResults)))
                         .font(.caption).foregroundStyle(.secondary)

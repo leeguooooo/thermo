@@ -88,7 +88,7 @@ extension AgentDoctor {
                     }
                 }
                 // A writer may be in the middle of its final JSONL record. Do not invent an event.
-                if !pending.isEmpty || oversized { parser.coverage.clippedFiles += 1 }
+                if start == 0 && (!pending.isEmpty || oversized) { parser.coverage.clippedFiles += 1 }
             } catch { parser.coverage.unreadableFiles += 1 }
         }
         parser.coverage.cancelled = env.cancelled()

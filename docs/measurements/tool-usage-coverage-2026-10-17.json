@@ -1,0 +1,57 @@
+{
+  "recordedAt": "2026-10-17T06:52:37.725599+00:00",
+  "origin": "Review of the partial real-usage sample from codex-cli-mcp-events-2026-10-17.json; no additional real-log scan needed.",
+  "problem": {
+    "file": "Sources/AgentDoctor/ToolUsageReader.swift",
+    "trigger": "A file exceeds the 4 MiB tail-read budget and ends with an unfinished record.",
+    "beforeClippedFiles": 2,
+    "actualFiles": 1,
+    "afterClippedFiles": 1,
+    "regression": "ToolUsageTests.testReaderClippingMalformedAndPartialLinesAreNotComplete",
+    "beforeExitCode": 1,
+    "afterExitCode": 0,
+    "beforeLogSHA256": "207620e60381c36134839448023a062b41770f05b43319a8e8ad70da21ba2bc8"
+  },
+  "display": {
+    "filesReadAndDiscoveredShown": true,
+    "bytesReadShown": true,
+    "partialRankingWarningShown": true,
+    "CLIAlreadyShowedReadFileRatio": true,
+    "noBudgetOrRankingChanges": true,
+    "screenshot": "tool-usage-coverage-zh-2026-10-17.png",
+    "screenshotSHA256": "4a7fc22ec230756b9294ffb45218c33907bd94fb1e5622a0f7ea4dd3b16f447d",
+    "captureKind": "Actual SwiftUI component, offscreen rendering, synthetic coverage figures",
+    "visuallyInspected": true,
+    "fullAppOrInstalledAcceptance": false,
+    "fixtureCoverage": {
+      "filesRead": 24,
+      "filesDiscovered": 356,
+      "bytesRead": 67108864,
+      "clippedFiles": 1
+    },
+    "syntheticCoverageIsNotARealScanResult": true
+  },
+  "validation": {
+    "command": "swift test --filter 'ToolUsageTests|CodexCLIUsageTests|UnattributedToolUsageTests|LocalizationTests'",
+    "tests": 44,
+    "failures": 0,
+    "exitCode": 0,
+    "logSHA256": "f0438eea4a25e8a9f70603a70b8dc7ef56a04aa5d3b437183c2e491c3bc215d0",
+    "renderExitCode": 0,
+    "rendererWarnings": "Existing onChange deprecation warnings; minimum deployment compatibility unchanged."
+  },
+  "sourceSHA256": {
+    "Sources/AgentDoctor/ToolUsageReader.swift": "11af32b234f47a1d31a1c9a4939aa8c0eecb060d7d7f9cc181773f09672544f9",
+    "Sources/ThermoApp/ToolUsagePanel.swift": "36d3cc1ad7c6dee9917527df0b88eb16dd5646eda76c37f4ed06f99570826694",
+    "Sources/ThermoL10n/ZhHans.swift": "20c1d055c20efa5d4ac485f45e91077c8b80a45724e88acedff47f01b5b883b0",
+    "Tests/AgentDoctorTests/ToolUsageTests.swift": "4522c8b910af253d9c93347f2282fa07e753ceb63ce5e13595fffe9e08c24b10"
+  },
+  "scope": {
+    "realModelOrMCPCalled": false,
+    "realUserLogsReadAgain": false,
+    "userConfigurationChanged": false,
+    "installedOrPublished": false,
+    "release456Rebuilt": false,
+    "wholeUsageOrBusinessQualityProven": false
+  }
+}
