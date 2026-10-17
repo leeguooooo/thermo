@@ -25,6 +25,8 @@ struct OuterToolUsageBreakdown: View {
                             }
                             if visibleLimit < rows.count {
                                 Button(tr("Show more outer tools")) { visibleLimit = min(rows.count, visibleLimit + 8) }
+                                    .accessibilityLabel(tr("Show more outer tools"))
+                                    .accessibilityIdentifier("toolUsage.outer.showMore")
                             }
                             Text(ToolUsageReport.errorStatusExplanation).font(.caption).foregroundStyle(.secondary)
                         }.padding(.top, 8)
