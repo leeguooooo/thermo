@@ -365,5 +365,24 @@
     "/tmp/thermo-mole-final-candidate-build.log": "812d37003228f9c9344d330c33aa65c3a679030365e68fa86c2899e1545d6b4a",
     "/tmp/thermo-mole-final-candidate-verification.log": "f366727096a6cf6ad8182585839d10c04b75d0ed2202e18fc24364c3ad72714e",
     "/tmp/thermo-mole-final-page-renders.log": "4e17fa52a2f6d6ad439eec1f767b90fa6989a1c47e01a17b1aa176eff337feae"
+  },
+  "laterMainSnapshot": {
+    "head": "5c46f65a1a512cdccd4e75348a1ef4d6bbb5ae24",
+    "sourceAndTestDeltaNotPackaged": [
+      "Sources/AgentDoctor/ToolUsageParser.swift",
+      "Sources/AgentDoctor/ToolUsageReport.swift",
+      "Sources/ThermoApp/ToolUsagePanel.swift",
+      "Sources/ThermoL10n/ZhHans.swift",
+      "Sources/thermo/Agents.swift",
+      "Tests/AgentDoctorTests/UnattributedToolUsageTests.swift"
+    ],
+    "trackedWorktreeDirty": [
+      "Sources/AgentDoctor/ToolUsageParser.swift",
+      "Sources/AgentDoctor/ToolUsageReport.swift",
+      "Sources/ThermoApp/ToolUsagePanel.swift",
+      "Sources/ThermoL10n/ZhHans.swift",
+      "Sources/thermo/Agents.swift",
+      "scripts/capture-codex-tool-wire.py"
+    ]
   }
 }
