@@ -1,0 +1,249 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-18",
+  "evidenceKind": "real-model-offline-business-fixtures",
+  "model": "gpt-6.1-sol",
+  "reasoningEffort": "medium",
+  "cliVersion": "codex-cli 0.163.0",
+  "baselineSkillSHA256": "7c2e19de00090701ae66e93a8c8bd9018e131b6264e926d6256f8757234e6592",
+  "candidateSkillSHA256": "ecea94696e6adedc7fb58ebfcdfa63343ab8ff2ecd7bd72b504582e6c4fbbccd",
+  "inputFingerprint": "f75baff4501e97759b6db17db5ab10f51f74e51b9f5e4c52cff52899280f12b3",
+  "order": [
+    "prepare baseline",
+    "prepare candidate",
+    "review candidate",
+    "review baseline"
+  ],
+  "maximumSecondsPerRun": 120,
+  "automaticRetries": false,
+  "runs": [
+    {
+      "task": "prepare-static-html",
+      "variant": "baseline",
+      "outcome": "passed",
+      "grading": {
+        "passed": true,
+        "checks": {
+          "no_forbidden_attempts": true,
+          "production_input_contract": true,
+          "metadata": true,
+          "raw_mode_and_external_styles": true,
+          "category": true,
+          "no_active_scripts_or_handlers": true,
+          "no_public_producer": true,
+          "approved_scope": true,
+          "facts_preserved": true,
+          "retired_host_replaced": true,
+          "dry_run_completed_for_current_artifact": true,
+          "protected_inputs_unchanged": true
+        },
+        "fixtureCalls": 1
+      },
+      "nativeUsage": {
+        "input_tokens": 147470,
+        "cached_input_tokens": 123520,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1474,
+        "reasoning_output_tokens": 72
+      },
+      "elapsedSeconds": 40.75779075000173,
+      "commandExecutionCount": 5,
+      "modelRounds": null,
+      "referenceContentObservedInSuccessfulCommand": false,
+      "processTerminal": true,
+      "exitCode": 0,
+      "turnCompleted": true,
+      "loadAverageBefore": [
+        2.31494140625,
+        3.12255859375,
+        3.80078125
+      ],
+      "loadAverageAfter": [
+        2.4775390625,
+        3.05859375,
+        3.74462890625
+      ],
+      "timedOut": false,
+      "credentialCopiesMade": 0
+    },
+    {
+      "task": "prepare-static-html",
+      "variant": "candidate",
+      "outcome": "passed",
+      "grading": {
+        "passed": true,
+        "checks": {
+          "no_forbidden_attempts": true,
+          "production_input_contract": true,
+          "metadata": true,
+          "raw_mode_and_external_styles": true,
+          "category": true,
+          "no_active_scripts_or_handlers": true,
+          "no_public_producer": true,
+          "approved_scope": true,
+          "facts_preserved": true,
+          "retired_host_replaced": true,
+          "dry_run_completed_for_current_artifact": true,
+          "protected_inputs_unchanged": true
+        },
+        "fixtureCalls": 1
+      },
+      "nativeUsage": {
+        "input_tokens": 121213,
+        "cached_input_tokens": 103040,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 1626,
+        "reasoning_output_tokens": 163
+      },
+      "elapsedSeconds": 37.75916900000084,
+      "commandExecutionCount": 5,
+      "modelRounds": null,
+      "referenceContentObservedInSuccessfulCommand": false,
+      "processTerminal": true,
+      "exitCode": 0,
+      "turnCompleted": true,
+      "loadAverageBefore": [
+        2.4775390625,
+        3.05859375,
+        3.74462890625
+      ],
+      "loadAverageAfter": [
+        2.48583984375,
+        2.98681640625,
+        3.68603515625
+      ],
+      "timedOut": false,
+      "credentialCopiesMade": 0
+    },
+    {
+      "task": "review-published-content",
+      "variant": "candidate",
+      "outcome": "passed",
+      "grading": {
+        "passed": true,
+        "checks": {
+          "no_forbidden_attempts": true,
+          "report_contract": true,
+          "required_errors": true,
+          "warning_severity_preserved": true,
+          "finding_contract": true,
+          "no_contradictory_passes": true,
+          "body_producer_not_frontmatter": true,
+          "unproven_claims_flagged": true,
+          "discovered_and_downloaded": true,
+          "review_read_only": true,
+          "protected_inputs_unchanged": true
+        },
+        "fixtureCalls": 2
+      },
+      "nativeUsage": {
+        "input_tokens": 163826,
+        "cached_input_tokens": 141184,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 2500,
+        "reasoning_output_tokens": 142
+      },
+      "elapsedSeconds": 56.99777216700022,
+      "commandExecutionCount": 7,
+      "modelRounds": null,
+      "referenceContentObservedInSuccessfulCommand": true,
+      "processTerminal": true,
+      "exitCode": 0,
+      "turnCompleted": true,
+      "loadAverageBefore": [
+        2.48583984375,
+        2.98681640625,
+        3.68603515625
+      ],
+      "loadAverageAfter": [
+        2.62890625,
+        3.025390625,
+        3.65966796875
+      ],
+      "timedOut": false,
+      "credentialCopiesMade": 0
+    },
+    {
+      "task": "review-published-content",
+      "variant": "baseline",
+      "outcome": "passed",
+      "grading": {
+        "passed": true,
+        "checks": {
+          "no_forbidden_attempts": true,
+          "report_contract": true,
+          "required_errors": true,
+          "warning_severity_preserved": true,
+          "finding_contract": true,
+          "no_contradictory_passes": true,
+          "body_producer_not_frontmatter": true,
+          "unproven_claims_flagged": true,
+          "discovered_and_downloaded": true,
+          "review_read_only": true,
+          "protected_inputs_unchanged": true
+        },
+        "fixtureCalls": 2
+      },
+      "nativeUsage": {
+        "input_tokens": 277766,
+        "cached_input_tokens": 251136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3242,
+        "reasoning_output_tokens": 189
+      },
+      "elapsedSeconds": 86.98416408399862,
+      "commandExecutionCount": 9,
+      "modelRounds": null,
+      "referenceContentObservedInSuccessfulCommand": false,
+      "processTerminal": true,
+      "exitCode": 0,
+      "turnCompleted": true,
+      "loadAverageBefore": [
+        2.62890625,
+        3.025390625,
+        3.65966796875
+      ],
+      "loadAverageAfter": [
+        2.5751953125,
+        2.92529296875,
+        3.5546875
+      ],
+      "timedOut": false,
+      "credentialCopiesMade": 0
+    }
+  ],
+  "closure": {
+    "terminalRuns": 4,
+    "completedTurns": 4,
+    "plannedRuns": 4,
+    "taskArtifactsPassed": 4,
+    "driverExitCode": 1,
+    "driverCompletionWritten": false,
+    "driverFailure": "Final shared Codex configuration hash assertion failed after all four results had been written. Change origin not established.",
+    "globalContextFingerprintMatchesStart": true,
+    "frozenInputsUnchanged": true,
+    "strictEnvironmentAcceptance": false,
+    "noAutomaticRetries": true,
+    "configRestoredOrOverwritten": false,
+    "additionalModelRunsStarted": false
+  },
+  "manualArtifactReview": {
+    "html": "Both files retain the three factual cells, exact approved scope, raw rendering and external stylesheet. Script/event handlers removed and image host migrated. Candidate additionally records hardware exclusion/reference encoding.",
+    "review": "Both reports locate the seven required errors, retain two nonblocking warnings, exclude valid frontmatter producer from body leakage, and reject unsupported billing/business claims. Candidate adds a scope/provenance caution; this is not established as a quality advantage.",
+    "qualityScope": "Frozen workflow assertions and direct output review; not a production publication, physical-device test or general editorial-quality score."
+  },
+  "interpretation": {
+    "quality": "2/2 workflow artifacts pass in each arm; no success-rate improvement established.",
+    "inputTokens": "Native turn.completed cumulative input_tokens includes cached input. cached_input_tokens is a subset, not an additional amount. Not file-reference tokens or invoiced cost.",
+    "modelRounds": null,
+    "performance": "Descriptive single pairs only. Shared config hash changed during run, although user config was ignored and explicit settings plus measured global-context fingerprint remain fixed. Strict environment acceptance failed; no causal or stable saving/speed conclusion.",
+    "coverage": "Two tasks selected from owned workflow evidence and shared-policy regression. Article fixtures are isolated drafts, not observed published defects."
+  },
+  "privacy": {
+    "rawEventsPublished": false,
+    "credentialsCopied": false,
+    "liveBusinessWrites": false,
+    "browserOpened": false,
+    "userConfigurationOverwritten": false
+  }
+}
