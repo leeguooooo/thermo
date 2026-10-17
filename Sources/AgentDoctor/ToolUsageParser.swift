@@ -15,6 +15,7 @@ struct ToolUsageParser {
         var startSeen = false
         var endSeen = false
         var isError: Bool?
+        var invocationFailed = false
         var textBytes = 0
         var estimatedTokens = 0
         var nonText = 0
@@ -145,7 +146,7 @@ struct ToolUsageParser {
         let supported = value is String || (value as? [String: Any]).map { $0["content"] is [[String: Any]] || $0["structuredContent"] != nil } == true
         return (measured.0, measured.1, supported)
     }
-    mutating func end(host: String, session: String, id: String, value: Any?, error: Bool?, time: Date?) {
+    mutating func end(host: String, session: String, id: String, value: Any?, error: Bool?, time: Date?, invocationFailed: Bool = false) {
         guard id.count <= 512, !id.isEmpty else { coverage.limitReached = true; return }
         let key = host + "|" + session + "|" + id
         if calls[key]?.endSeen == true { coverage.duplicateRecords += 1; return }
@@ -154,6 +155,7 @@ struct ToolUsageParser {
         if call.kind == nil { call.unattributed = Self.unattributedResult(value, host: host, encoding: encoding) }
         let measured = call.startSeen && call.kind == nil ? (TextFootprint(""), 0, nil as Bool?) : Self.result(value, encoding: encoding)
         call.ended = time; call.endSeen = true
+        call.invocationFailed = invocationFailed
         if error == true || measured.2 == true { call.isError = true }
         else if error != nil || measured.2 != nil { call.isError = false }
         else { call.isError = nil }
@@ -214,6 +216,11 @@ struct ToolUsageParser {
                     // "completed" is a lifecycle status, never Boolean isError=false.
                     end(host: host, session: session, id: id, value: result, error: nil,
                         time: milliseconds(payload["completed_at_ms"]))
+                } else if item["status"] as? String == "failed", let error = item["error"] as? [String: Any],
+                          let message = error["message"] as? String, !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    // A typed host error closes the call, but is not an MCP result.isError.
+                    end(host: host, session: session, id: id, value: nil, error: nil,
+                        time: milliseconds(payload["completed_at_ms"]), invocationFailed: true)
                 }
             } else if object["type"] as? String == "token_usage_record" {
                 tokens(host: host, session: session, id: payload["response_id"] as? String, object: payload["usage"] as? [String: Any], time: time)
@@ -252,20 +259,25 @@ struct ToolUsageParser {
             }
             let key = call.groupID ?? Self.identity(call.host + "|" + kind + "|" + (call.server ?? "") + "|" + name)
             var row = rows[key] ?? ToolUsageRow(id: key, host: call.host, kind: kind, server: call.server, name: name)
+            if row.invocationFailures == nil { row.invocationFailures = 0 }
             row.referenceEncoding = encoding == .heuristic ? nil : encoding.rawValue
             if encoding != .heuristic, row.unavailableReferenceResults == nil { row.unavailableReferenceResults = 0 }
             row.calls += 1
             if call.endSeen, inWindow(call.ended) {
-                if encoding != .heuristic {
-                    if row.completed == 0 { row.referenceReturnedTextTokens = call.referenceTokens }
-                    else if let sum = row.referenceReturnedTextTokens, let count = call.referenceTokens { row.referenceReturnedTextTokens = sum + count }
-                    else { row.referenceReturnedTextTokens = nil }
-                    if call.referenceTokens == nil { row.unavailableReferenceResults = (row.unavailableReferenceResults ?? 0) + 1 }
+                if call.invocationFailed {
+                    row.invocationFailures = (row.invocationFailures ?? 0) + 1
+                } else {
+                    if encoding != .heuristic {
+                        if row.completed == 0 { row.referenceReturnedTextTokens = call.referenceTokens }
+                        else if let sum = row.referenceReturnedTextTokens, let count = call.referenceTokens { row.referenceReturnedTextTokens = sum + count }
+                        else { row.referenceReturnedTextTokens = nil }
+                        if call.referenceTokens == nil { row.unavailableReferenceResults = (row.unavailableReferenceResults ?? 0) + 1 }
+                    }
+                    row.completed += 1
+                    if call.isError == true { row.reportedErrors += 1 }
+                    if call.isError == nil { row.unknownErrorStatus += 1 }
+                    row.returnedTextBytes += call.textBytes; row.returnedTextEstimatedTokens += call.estimatedTokens; row.nonTextBlocks += call.nonText
                 }
-                row.completed += 1
-                if call.isError == true { row.reportedErrors += 1 }
-                if call.isError == nil { row.unknownErrorStatus += 1 }
-                row.returnedTextBytes += call.textBytes; row.returnedTextEstimatedTokens += call.estimatedTokens; row.nonTextBlocks += call.nonText
                 if let start = call.started, let end = call.ended, end >= start { timings[key, default: []].append(end.timeIntervalSince(start)) }
             } else { row.missingResults += 1 }
             rows[key] = row

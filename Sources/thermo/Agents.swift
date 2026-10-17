@@ -230,7 +230,10 @@ struct AgentsCommand {
         if !report.tools.isEmpty { lines.append("Totals cover observed returned text only; missing logs/results and non-text content are excluded, not request usage.") }
         for row in report.tools.prefix(app.args.has("all") ? report.tools.count : 20) {
             lines.append(style.bold((row.server.map { $0 + " / " } ?? "") + row.name) + " [" + row.host + ", " + row.kind + "]")
-            lines.append("  \(row.calls) calls · \(row.completed) results · \(row.reportedErrors) explicit errors · \(row.unknownErrorStatus) unknown error status · \(row.missingResults) missing results")
+            lines.append("  \(row.calls) calls · \(row.completed) results · \(row.reportedErrors) explicit result errors · \(row.unknownErrorStatus) unknown error status · \(row.missingResults) missing results")
+            if let failures = row.invocationFailures {
+                if failures > 0 { lines.append("  Host-reported invocation failures without MCP results: \(failures); excluded from result error proportions, included in timing.") }
+            } else { lines.append("  Host invocation failure counts were not measured in this report; analyze again.") }
             if let rate = row.explicitErrorRate, let denominator = row.knownStatusResults {
                 lines.append("  explicit errors among known-status results: \(row.reportedErrors) / \(denominator) (\(String(format: "%.1f%%", rate * 100)))")
             } else { lines.append("  explicit error rate unknown; no usable known-status denominator") }

@@ -46,7 +46,7 @@ struct ToolUsagePanel: View {
         func value(_ row: ToolUsageRow) -> Double {
             switch self {
             case .text: return row.referenceEncoding == nil ? Double(row.returnedTextEstimatedTokens) : row.referenceReturnedTextTokens.map(Double.init) ?? -1
-            case .errors: return Double(row.reportedErrors)
+            case .errors: return Double(row.reportedErrors) + Double(row.invocationFailures ?? 0)
             case .time: return row.totalObservedSeconds ?? -1
             case .calls: return Double(row.calls)
             }
@@ -128,9 +128,18 @@ struct ToolUsagePanel: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text((row.server.map { $0 + " / " } ?? "") + row.name + " · " + row.host)
                             .font(.subheadline.weight(.medium)).textSelection(.enabled)
-                        Text(tr("%1$@ calls · %2$@ results · %3$@ explicit errors · %4$@ unknown error status · %5$@ missing results",
+                        Text(tr("%1$@ calls · %2$@ results · %3$@ explicit result errors · %4$@ unknown error status · %5$@ missing results",
                                 String(row.calls), String(row.completed), String(row.reportedErrors), String(row.unknownErrorStatus), String(row.missingResults)))
                             .font(.caption)
+                        if let failures = row.invocationFailures {
+                            if failures > 0 {
+                                Text(tr("Host-reported invocation failures without MCP results: %1$@; excluded from result error proportions, included in timing.", String(failures)))
+                                    .font(.caption).foregroundStyle(.orange)
+                            }
+                        } else {
+                            Text(tr("Host invocation failure counts were not measured in this report; analyze again."))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                         if let rate = row.explicitErrorRate, let denominator = row.knownStatusResults {
                             Text(tr("Explicit errors among known-status results: %1$@ / %2$@ (%3$@)", String(row.reportedErrors), String(denominator), String(format: "%.1f%%", rate * 100)))
                                 .font(.caption)
