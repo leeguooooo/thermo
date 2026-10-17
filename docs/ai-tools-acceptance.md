@@ -18,7 +18,7 @@ Figma 另经 Codex 0.163.0 已有 OAuth 的只读宿主目录接口取得 44 个
 
 - [REA 目录表示](measurements/rea-mcp-presentation-2026-10-17.json)：仅在 Codex 配置关闭输出声明，定义由 3,114,003 降至 823,514 字节，减少约 73.6%。其他工具字段及同一自有 HAR 的完整返回证据一致。原生客户端实验说明完整目录不等于模型请求，不能声称账单减少 73.6%。
 - [iPhone Skill 滚动参数](measurements/iphone-skill-scroll-contract-2026-10-17.json)：补齐 MCP 必填的 x/y/dx/dy，并区分 HTTP 简写。实际安装的 0.19.2 MCP 在发送 HTTP 前拒绝旧示例，新示例通过解析与批请求转换。本机受管理根 Skill 已更新；版本化插件缓存未改，没有执行手机手势。
-- [博客 CLI 说明](measurements/blog-skill-cli-contract-2026-10-17.json)：纠正 themed / raw HTML 模式说明，与代码行为对齐；本机 CLI 为 0.1.22 的本地说明修正。隔离请求契约验证没有发布文章。
+- [博客 CLI 说明](measurements/blog-skill-cli-contract-2026-10-17.json)：纠正 themed / raw HTML 模式说明，与代码行为对齐；本机 CLI 为 0.1.22 的本地说明修正。隔离请求契约验证没有发布文章。[博客 Skill 按需加载](measurements/blog-skill-progressive-disclosure-2026-10-17.json)另将审查专用流程移到引用文件，正文从 cl100k 7,513 降至 4,505，约少 40%；原文、发布约束和授权门槛保留。安装器复制、原生客户端预载及本机原子同步已核对。审查任务仍需读引用文件，两份正文独立计数合计为 7,652，并多一次读取；未测真实模型效果，不将预载缩减称为账单节省。
 - [共享 Skill 入口](measurements/shared-skill-maintenance-2026-10-17.json)：修复 message-use、paste-use、sflow 的副本漂移，使共享入口读取安装器维护的来源；[重复副本配置](measurements/codex-skill-dedupe-2026-10-17.json)只停用两组内容相同的 Codex 副本，保留不同工作流。已有会话没有重启，不推断其缓存已经更新。
 - [Unity 引用文件](measurements/unity-skill-reference-repair-2026-10-17.json)从匹配的上游快照补齐；[Design SSE 代理](measurements/claude-design-relay-sse-2026-10-17.json)按请求 ID 识别完整响应，避免响应到达后仍等待流关闭。各有隔离验证，不作为 Unity 业务效果或线上提速证据。
 
