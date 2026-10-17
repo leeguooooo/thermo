@@ -666,5 +666,6 @@
     "/tmp/thermo-charging-fixed-candidate-verification.log": "14e9505eefd4c66d4b08c4fe1a9a58ebf54bd9b9b723fb396a75af137717538f",
     "/tmp/thermo-charging-fixed-static-peers.log": "13b594652cfe9ddb3f23a01ec42d9838a447f69b3a29b08e3789dc7ceca6093d"
   },
-  "subsequentNonRootDynamicPeerEvidence": "helper-xpc-peer-trust-2026-10-17.json"
+  "subsequentNonRootDynamicPeerEvidence": "helper-xpc-peer-trust-2026-10-17.json",
+  "rebuildRequiredBeforeFurtherAcceptance": "Monitor verification modes must disable automatic helper interaction; see verification-helper-isolation-2026-10-17.json"
 }

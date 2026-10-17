@@ -153,11 +153,16 @@ final class Monitor: ObservableObject {
     /// Background data, kept out of @Published so hidden SwiftUI views don't re-render.
     private var buffer: [HistoryPoint] = []
     private(set) var latest: Snapshot?
-    private let helper = HelperClient()
+    private let helper: HelperClient
     private let helperInteraction: Bool
 
-    init(startMonitoring: Bool = true, helperInteraction: Bool = true) {
-        self.helperInteraction = helperInteraction
+    init(startMonitoring: Bool = true, helperInteraction: Bool = true,
+         helper: HelperClient = HelperClient(), arguments: [String] = CommandLine.arguments) {
+        self.helper = helper
+        // A snapshot must not contact an old helper and thereby start its update
+        // or setup path. Apply this to every Monitor, including lazy AppModels.
+        let verification = ["--offscreen", "--snapshot", "--render-preview", "--verify-lifecycle"]
+        self.helperInteraction = helperInteraction && !arguments.contains(where: verification.contains)
         guard startMonitoring else { return }
         queue.async { [weak self] in self?.prepareSampler() }
         reschedule()

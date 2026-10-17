@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "ea0ccb1",
+  "finding": "openMainOnly disabled startup charging/shortcut actions for verification, but lazy AppModels.monitor still defaulted to helperInteraction=true. refreshHelper may restart an outdated helper. No snapshot run was performed after discovering this path.",
+  "correction": "Every Monitor disables automatic helper queries in offscreen/snapshot/render-preview/lifecycle modes, even if initialized with helperInteraction=true. Explicit false still wins.",
+  "regression": {
+    "command": "swift test --filter VerificationHelperIsolationTests|HelperMaintenanceTests|WindowLifecycle",
+    "exitCode": 0,
+    "tests": 5,
+    "failures": 0,
+    "logSHA256": "00f1fc6ff5f1b88cb6b8fcddf19c895155beff87bd7c9ed58272cd45ce1d92b2",
+    "connectionFactoryChecks": [
+      "offscreen: zero connections",
+      "snapshot: zero connections",
+      "render-preview: zero connections",
+      "verify-lifecycle: zero connections",
+      "interactive mode: connection created to nonexistent private non-privileged service",
+      "explicit disable: zero connections"
+    ]
+  },
+  "installedFilesUnchanged": {
+    "/Applications/Thermo.app/Contents/Info.plist": true,
+    "/Applications/Thermo.app/Contents/MacOS/Thermo": true,
+    "/Applications/Thermo.app/Contents/Helpers/thermo": true,
+    "/Applications/Thermo.app/Contents/Helpers/thermo-helper": true,
+    "/Library/PrivilegedHelperTools/dev.thermo.helper": true,
+    "/Library/LaunchDaemons/dev.thermo.helper.plist": true
+  },
+  "scope": "Unit tests use an injected client and no sensor sampling or real helper connection. Does not validate visible UI or installed runtime.",
+  "candidate424NeedsRebuild": true
+}

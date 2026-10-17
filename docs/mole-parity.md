@@ -908,3 +908,6 @@ helper 安装可靠性（2026-10-17）：旧分号脚本在复制失败后仍可
 
 
 XPC 动态签名准入补充（2026-10-17）：新独立夹具导入生产 `HelperConstants.clientRequirement`，通过 macOS 的真实非 root per-app XPC 服务检查连接。正式签名的 CLI/App 身份均收到受限服务响应；同 Team 错误标识及匹配标识的 ad-hoc 客户端均被拒绝。四类客户端都能连接不设限制的对照服务，排除了服务启动失败造成的假拒绝。8 次连接结果符合预期，夹具进程全部退出。服务只提供 ping，没有构造生产硬件控制器或连接安装的 helper；该证据不能替代 system-domain 服务、生产 Service 方法与 root 权限验收。生产源码与候选 424 一致，无需因此重建。脚本及证据见 [XPC 准入记录](measurements/helper-xpc-peer-trust-2026-10-17.json)。
+
+
+离屏验收的 helper 隔离（2026-10-17）：快照入口虽已停用充电偏好恢复和快捷键，却仍通过默认 Monitor 自动查询 helper；旧服务响应可能进入重启路径。现在 Monitor 对 offscreen、snapshot、render-preview 和生命周期入口统一停用自动 helper 查询，显式禁用也继续生效；普通交互模式保持查询能力。5 项相关测试通过，用注入客户端核对连接工厂是否调用，不连接真实 helper 或启动传感器采样。安装版及 root 文件仍与基线一致。旧候选 424 不含该修复，已标记后续验收前须重建；本次没有继续运行该候选的快照入口。见 [验收隔离记录](measurements/verification-helper-isolation-2026-10-17.json)。
