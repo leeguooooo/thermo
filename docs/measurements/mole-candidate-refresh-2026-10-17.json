@@ -249,5 +249,17 @@
     ],
     "helperAndAWDLActionSourcesUnchanged": true,
     "noClaimOfFullRegressionForLaterMain": true
+  },
+  "newCleanupCorrectionsNotPackaged": {
+    "codeCommit": "f42fc55",
+    "summaryCopyCommit": "9d3eec5",
+    "record": "native-cache-real-tools-2026-10-17.json",
+    "includedIn362": false,
+    "finalInstallationCandidateRequiresRebuild": true,
+    "changes": [
+      "Local Go toolchain for global cache cleanup",
+      "Visible native executable and cache boundaries",
+      "Permanent/no-Trash and retained-file summary"
+    ]
   }
 }
