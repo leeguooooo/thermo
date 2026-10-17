@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Settings.register()
+        AppControlHost.shared.start()
         CleanScreenShortcutModel.enableLive()
         _ = AppModels.shared.updates  // Sparkle starts checking with the app
         // Slowdown history and alerts, in the background whether or not the panel is open.

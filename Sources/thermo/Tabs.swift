@@ -54,9 +54,19 @@ struct TabsCommand {
         case "show": try emit(saved(rest))
         case "restore":
             let saved = try saved(rest)
-            guard !app.args.has("dry-run") else { try emit(saved); return }
+            if app.args.has("dry-run") {
+                let review = try TabWorkspace.reviewRestore(saved, destinationWindow: app.args.int("window"),
+                    tabs: ChromeInspector.tabs(app: saved.app), identity: ChromeInspector.browserIdentity(app: saved.app))
+                try emit(review)
+                if review.unresolvedEntries > 0 { throw CLIError("Some prior restore deliveries remain unconfirmed; they will not be retried.",exitCode:3) }
+                return
+            }
             try approve("Reopen \(saved.remaining) saved web pages? Unsaved input is not restored.")
-            try emit(TabWorkspace.restore(saved.id, destinationWindow: try app.args.int("window")))
+            let restored = try TabWorkspace.restore(saved.id, destinationWindow: app.args.int("window"))
+            try emit(restored)
+            if restored.entries.contains(where: { $0.restoreState == "opening" || $0.restoreState == "unconfirmed" }) || restored.remaining > 0 {
+                throw CLIError("Some tab restores are unconfirmed. Inspect the saved batch; do not retry uncertain entries.", exitCode: 3)
+            }
         case "list", "groups", "group", "archive":
             let inventory = try blocking { try await TabWorkspace.inventory(app: browser) }
             if sub == "list" || sub == "groups" { try emit(inventory); return }
@@ -70,7 +80,9 @@ struct TabsCommand {
                 try emit(try blocking { try await TabWorkspace.inventory(app: browser) })
             } else {
                 try approve("Save and close \(selected.count) background tabs? Unsaved input may be lost. Web links and Thermo groups are saved locally.")
-                try emit(try blocking { try await TabWorkspace.archive(selected, app: browser, name: app.args.options["name"] ?? app.args.options["group"] ?? "Saved tabs") })
+                let archived = try blocking { try await TabWorkspace.archive(selected, app: browser, name: app.args.options["name"] ?? app.args.options["group"] ?? "Saved tabs") }
+                try emit(archived)
+                if archived.closed != selected.count { throw CLIError("Some selected tabs were not closed. Inspect the saved batch.", exitCode: 3) }
             }
         default: throw CLIError("unknown tabs command '\(sub)' (list, groups, group, archive, saved, show, restore)")
         }

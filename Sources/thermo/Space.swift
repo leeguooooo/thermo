@@ -126,6 +126,16 @@ struct SpaceCommand {
     }
 
     func dupes(_ roots: [String]) throws {
+        if roots.first == "remove" {
+            guard let keeper = args.options["keep"], roots.count > 1 else { throw CLIError("usage: thermo space dupes remove PATH… --keep PATH [--dry-run] [--yes] [--json]") }
+            let review = try Duplicates.reviewRemoval(paths: roots.dropFirst().map(Self.expand), keeping: Self.expand(keeper))
+            if args.has("dry-run") { print(Export.json(review)); return }
+            try app.approveAction("Move verified duplicate files to the Trash, retaining \(review.keeper)?")
+            let result = Duplicates.removeReviewed(review)
+            if args.has("json") { print(Export.json(result)) } else { out(ManualRemoval.feedback(result)) }
+            if !result.failed.isEmpty || result.removed.count != review.paths.count { throw CLIError("Some duplicate files were not moved; inspect results.", exitCode: 3) }
+            return
+        }
         let home = NSHomeDirectory()
         let paths = roots.isEmpty ? Duplicates.defaultRoots(home: home)
             : roots.map(Self.expand)
@@ -172,19 +182,27 @@ struct SpaceCommand {
                 ok.append(p); lines.append("  " + AppSize.text(size.bytes, state: AppSize.measured(size, exists: FS.exists(p))) + "  " + FS.tilde(p))
             }
         }
-        out(lines)
-        guard !ok.isEmpty else { exit(1) }
-        if args.has("dry-run") { print(tr("dry run · nothing moved")); return }
+        if !args.has("json") { out(lines) }
+        struct Preview: Encodable { let dryRun = true; let paths: [String]; let sizes: [String:Int64]; let incomplete: [String]; let refused: [String] }
+        if args.has("dry-run") {
+            if args.has("json") { print(Export.json(Preview(paths: ok, sizes: sizes, incomplete: incomplete.sorted(), refused: paths.filter { !ok.contains($0) }))) }
+            else { print(tr("dry run · nothing moved")) }
+            return
+        }
+        guard !ok.isEmpty else { throw CLIError("No selected path can be moved.") }
         if !args.has("yes") {
-            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("not a terminal; add --yes to confirm") }
+            guard !args.has("json"), isatty(STDIN_FILENO) != 0 else { throw CLIError("Review --dry-run, then add --yes to confirm") }
             print(tr("Move these %1$@ items to the Trash? [y/N] ", String(ok.count)), terminator: "")
             fflush(stdout)
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print(tr("cancelled")); return }
         }
         let result = ManualRemoval.trash(ok, sizes: sizes, incompletePaths: incomplete, reviewIdentities: identities)
-        for line in ManualRemoval.feedback(result) { print(line) }
-        if let id = result.trashBatchID { print(style.dim(tr("Put back: thermo clean restore %1$@", id))) }
-        if !result.failed.isEmpty { exit(1) }
+        if args.has("json") { print(Export.json(result)) }
+        else {
+            for line in ManualRemoval.feedback(result) { print(line) }
+            if let id = result.trashBatchID { print(style.dim(tr("Put back: thermo clean restore %1$@", id))) }
+        }
+        if !result.failed.isEmpty || ok.count != Set(paths).count { throw CLIError("Some selected paths were not moved; inspect the result.", exitCode: 3) }
     }
 
     static func day(_ d: Date) -> String {

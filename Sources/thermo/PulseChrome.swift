@@ -136,14 +136,39 @@ extension PulseCommand {
 
     final class Box: @unchecked Sendable { var value: ChromeInspector.Diagnosis? }
 
-    func closeTab(_ rest: [String], browser: String) throws {
-        guard let url = rest.first else { throw CLIError("usage: thermo pulse chrome close URL [--title TITLE] [--yes]") }
+    func closeTab(_ rest: [String], browser: String,
+                  tabs: ((String) -> [ChromeInspector.Tab]?) = { ChromeInspector.tabs(app: $0) },
+                  close: (([ChromeInspector.Tab], String) -> [ChromeInspector.TabCloseResult]) = { ChromeInspector.closeTabs($0, app: $1) },
+                  write: (String) -> Void = { print($0) }) throws {
+        guard rest.count <= 1 else { throw CLIError("Use one URL or --ids ID,ID; extra arguments are not accepted.") }
+        let ids = app.args.options["ids"].map { $0.split(separator:",").map(String.init) }
+        guard (rest.count == 1 && ids == nil) || (rest.isEmpty && ids?.isEmpty == false) else { throw CLIError("Use one URL or --ids ID,ID, exclusively.") }
+        if let ids, Set(ids).count != ids.count { throw CLIError("Tab IDs must be unique.") }
         let title = app.args.options["title"]
-        let matches = (ChromeInspector.tabs(app: browser) ?? []).filter { $0.url == url && (title == nil || $0.title == title) }
-        guard matches.count == 1, let tab = matches.first else { throw CLIError("Tab is missing or ambiguous. Use thermo tabs list and an exact tab ID.") }
-        print(tr("Close the %1$@ tab %2$@?", browser, tab.title))
-        guard try app.args.has("yes") || confirm() else { print(tr("Nothing closed.")); return }
-        guard ChromeInspector.closeTabs([tab], app: browser).first?.status == .closed else { throw CLIError("The selected tab changed, became unavailable, or did not close.") }
-        print(app.style.green("✓") + " " + tr("closed"))
+        guard ids == nil || title == nil else { throw CLIError("--title applies only to a URL selection.") }
+        guard let inventory = tabs(browser) else { throw CLIError("Browser inventory is unavailable; nothing closed.") }
+        let matches: [ChromeInspector.Tab]
+        if let ids {
+            let wanted = Set(ids)
+            matches = inventory.filter { wanted.contains($0.selectionID) }
+            guard matches.count == wanted.count else { throw CLIError("Some tab IDs are stale or unknown. Refresh tabs list.") }
+        } else {
+            matches = inventory.filter { $0.url == rest[0] && (title == nil || $0.title == title) }
+            guard matches.count == 1 else { throw CLIError("Tab URL is missing or ambiguous. Use an exact --ids selection from tabs list.") }
+        }
+        struct Result: Encodable { let dryRun: Bool; let outcome: String; let browser: String; let tabs: [ChromeInspector.Tab]; let results: [ChromeInspector.TabCloseResult] }
+        if app.args.has("dry-run") {
+            write(Export.json(Result(dryRun: true, outcome: "planned", browser: browser, tabs: matches, results: []))); return
+        }
+        if !app.args.has("yes") {
+            guard !app.args.has("json") else { throw CLIError("Review --dry-run, then add --yes.") }
+            write("Close \(matches.count) selected tabs in \(browser)?")
+            guard try confirm() else { throw CLIError("Cancelled. Nothing closed.") }
+        }
+        let results = close(matches, browser)
+        let closed = results.count == matches.count && results.allSatisfy { $0.status == .closed }
+        if app.args.has("json") { write(Export.json(Result(dryRun: false, outcome: closed ? "succeeded" : "unconfirmed", browser: browser, tabs: matches, results: results))) }
+        guard closed else { throw CLIError("Some selected tabs changed, became unavailable, or did not close.", exitCode:3) }
+        if !app.args.has("json") { write(tr("closed")) }
     }
 }

@@ -5,139 +5,6 @@ import ThermoL10n
 
 let thermoVersion = ThermoVersion.string
 
-let usage = """
-thermo \(thermoVersion) — temperatures, fans and power for macOS
-
-USAGE
-  thermo [command] [options]
-
-COMMANDS
-  (none)                     overview: hottest sensors, fans, power, battery
-  temps                      every temperature sensor, grouped
-  fans                       fan speeds, limits and mode
-  power                      power (W), voltage (V) and current (A)
-  battery                    battery temperature, charge, health
-  watch                      live full-screen view (q to quit)
-  list                       raw SMC keys with type, size and value
-  get KEY [KEY...]           read raw SMC keys
-  fan status                 fan policies held by the helper
-  fan set ID|all RPM|max     fixed fan speed (needs helper)
-  fan curve ID|all CURVE     temperature curve, e.g. 50:min,70:3000,85:max
-  fan auto [ID|all]          return fans to automatic control
-  helper install|uninstall|status
-  awdl status [--probe]       query session state; --probe reads only the local interface
-  awdl on [--seconds 300]     pause AWDL while this command stays open (60–3600 s);
-                             Ctrl-C restores its original state; --dry-run previews
-  awdl recover               retry an unconfirmed recovery (cannot stop another owner)
-  bench                      measure sampling latency
-  agents                     diagnose AI agents: hooks, MCP servers, plugins,
-                             skills, launch agents and leaked processes
-                             (Claude Code, Codex, Cursor, Gemini; read-only)
-  agents fix [--dry-run]     apply every safe automatic fix (shows the plan, asks first;
-                             --yes to skip the question)
-  agents inspect NAME        connect to one MCP, measure handshake and rank definitions
-  agents usage [--json]      observed MCP/Skill activity from local logs (last 7 days)
-  agents context [--json]    static Skill footprint ranking and MCP measurement coverage
-  agents show NAME           one item: problems, suggestions and numbered actions
-  agents fix|uninstall|disable NAME
-                             that action on one item (--area/--agent to narrow,
-                             --all for every match)
-  agents run NAME --action N any action listed by `agents show`
-  agents list [AREA]         everything checked, each marked OK or not; AREA is
-                             hooks, mcp, plugins, skills, statusline, launchd
-                             or processes
-  activity [--json]          whole-machine and per-program CPU/GPU readings
-  memory                    program memory by app/tool, with project and process details (--json)
-  pulse                      why is this Mac slow: verdict, busiest programs, load,
-                             memory, thermal state, temperatures, fans (--json for agents)
-  pulse quit NAME|PID         stop a program pulse lists (apps quit like ⌘Q); asks first
-  pulse restart NAME          quit an app, wait, reopen it (frees what a long-running app piled up)
-  pulse explain PID [--json]   read-only process identity, current parent chain and observed paths
-  pulse history [--since 6h]  who slowed the Mac down lately (recorded by Thermo.app; 1h, 6h, 24h)
-  pulse chrome [--watch 60]   which Chrome page leaks or is biggest, duplicate tabs, hidden pages
-                              (memory per page needs chrome-use; --app "Microsoft Edge" for others)
-  pulse chrome close URL      close one tab showing URL (--title to pick); asks first
-  pulse inspect NAME|PID      every copy of one program in every folder: per-process memory (footprint and RSS),
-                              CPU, uptime, parent and identity-checked observed ancestor (--json)
-  tabs list|groups           tabs, Thermo groups and protection reasons (--app BROWSER)
-  tabs group NAME --ids IDS  create a Thermo group; --by-site resets grouping to websites
-  tabs archive               save and close unprotected background tabs in the front window
-                             --group NAME / --ids IDS / --window ID / --all-windows
-                             --name NAME, --dry-run to review, --yes to execute
-  tabs organize --dry-run    preview native Chrome groups; --yes applies website/custom rules
-  tabs auto [on|off]         opt-in automatic native grouping every minute while the app runs
-  tabs rule [add DOMAIN NAME|remove UUID]  grouping rules (--color COLOR)
-  tabs organized             grouping history; tabs undo-organize UUID --yes undoes a batch
-  tabs saved|show UUID       saved batches and individual close/restore results
-  tabs restore UUID          reopen a saved batch in its original window; --window ID
-                             explicitly selects a destination after a browser restart
-  awake [status|on|off]      keep a laptop awake with the lid closed (through the helper; turns itself
-                             off when hot, at 20% battery on battery power, or without temperature readings;
-                             on --no-heat-guard keeps only the battery rule)
-  history                    every change Thermo made (cleanups, uninstalls, agent fixes, Claude reset,
-                             privacy, tabs, archives, quits), newest first, and where each is undone;
-                             --limit N, --json; history show ID for every item
-  settings [KEY [VALUE]]     the app's settings: menu bar text, interval, alerts, units,
-                             language, Dock icon (KEY=VALUE also works)
-  clean [CATEGORY|ai]        what can be cleaned: AI sessions/models/caches, dev caches,
-                             Xcode, project build output, browsers (read-only)
-  clean run safe|ID…         remove items (safe: delete; review files: Trash); asks first
-                             --dry-run shows the plan without deleting or running commands
-  clean empty-trash BATCH    review this batch with --dry-run; --yes permanently removes only its Trash items
-  clean restore BATCH        move this batch's Trash items back where they were (--dry-run first;
-                             never overwrites anything now at the original path)
-  clean log                  what earlier cleanups removed
-  clean whitelist [add|remove PATH…]
-                             paths and globs every cleanup keeps (one per line in
-                             ~/Library/Application Support/Thermo/whitelist; --json)
-  clean overview             where the used space is: the big places and their
-                             biggest folders (--json)
-  apps                       installed apps and associated data (60 s discovery; --exact completes sizes)
-  apps uninstall NAME        move the app and its files to the Trash (lists every path, asks first;
-                             --dry-run only lists; refuses running, system and protected apps;
-                             browser, chat and mail data stays unless --with-data)
-                             --data-only keeps the app and reviews only associated files
-  space [PATH]               what takes the space in a folder, biggest first (one walk, kept an hour)
-  space large                files over 100 MB and when they were last opened (--older-than DAYS)
-  space dupes [PATH…]        identical files (default: Desktop, Documents, Downloads, media folders)
-  space trash PATH…          move picked files or folders to the Trash (lists them, asks first)
-  space archive PATH         verified SSH/tar archive; --to nas:/archive/name.tar
-                             --remove-local removes originals only after verification;
-                             installed development environments need --inactive-development
-  apps leftovers             data left by apps that are gone (untouched 30 days, unknown to Spotlight)
-  apps leftovers remove ID…|all
-                             move that data to the Trash; asks first
-  apps startup [list]        user/shared LaunchAgents and system services (--json)
-    --authorize-background   read modern registrations with administrator approval; no switches changed
-  apps startup enable|disable LABEL_OR_PATH
-                             change startup eligibility; --dry-run previews, --yes confirms
-  apps updates               Homebrew app updates (--json; --refresh-catalog refreshes Homebrew)
-  apps updates apply TOKEN   review then install one update (--dry-run, --yes); verifies app version
-  apps updates sources       discover app-declared update sources locally (--json)
-  apps updates check NAME    check one app's Sparkle feed; --dry-run stays offline
-  apps updates install NAME  confirm a signed ZIP update, verify and preserve the old app (--yes)
-  apps updates recovery      native recovery records; inspect/restore/trash-backup ID [--dry-run] [--yes]
-
-OPTIONS
-  -a, --all                  include sensors without a known name
-                             (agents: also show notes and config sources)
-  -j, --json                 JSON output (watch: one object per line)
-      --csv                  CSV output (watch: one row per sample)
-  -i, --interval SEC         watch interval (default 1)
-  -n, --count N              watch: stop after N samples
-  -s, --sensor cpu|gpu|max   sensor driving a fan curve (default cpu)
-      --fahrenheit           show °F
-      --no-color             disable colors (also honours NO_COLOR)
-      --no-cache             rescan SMC keys instead of using the discovery cache
-      --older-than DAYS      clean: sessions/projects idle this long are stale (default 30; 2w, 6m)
-      --budget SECONDS       clean: stop read-only scan after this budget; mark results incomplete
-      --stream               clean: incremental JSON events, one per line (read-only)
-      --root DIR[,DIR]       clean: folders searched for projects (default ~/Developer, ~/code, …)
-  -y, --yes                  clean run: do not ask for confirmation
-      --trash | --permanent  clean run: send everything to the Trash / delete everything
-  -h, --help                 this help
-  -v, --version              version
-"""
 
 func fail(_ message: String, code: Int32 = 1) -> Never {
     FileHandle.standardError.write(("thermo: " + message + "\n").data(using: .utf8)!)
@@ -186,7 +53,11 @@ struct App {
         if args.has("version") { print("thermo \(thermoVersion)"); return }
         let cmd = args.positionals.first ?? ""
         let rest = Array(args.positionals.dropFirst())
-        if args.has("help") || cmd == "help" { print(usage); return }
+        if args.has("help") || cmd == "help" { print(CommandHelp.text(for: args.positionals)); return }
+        try CommandContract.validate(args)
+        if ["temps","temp","t","fans","f","power","p","battery","b","watch","w","list","ls","bench","capabilities"].contains(cmd), !rest.isEmpty {
+            throw CLIError("This command does not take positional arguments.")
+        }
 
         switch cmd {
         case "": try snapshotCommand([.temperatures, .fans, .power, .battery], header: true) { r, s in r.summary(s) }
@@ -212,6 +83,10 @@ struct App {
         case "awake": try AwakeCommand(app: self).run(rest)
         case "awdl": try AWDLCommand(app:self).run(rest)
         case "history": try HistoryCommand(app: self).run(rest)
+        case "privacy": try PrivacyCommand(app: self).run(rest)
+        case "claude-reset": try ClaudeResetCommand(app: self).run(rest)
+        case "app-control", "screen", "permissions", "integration": try AppControlCommand(app: self).run(command: cmd, rest: rest)
+        case "capabilities": print(Export.json(CommandHelp.inventory))
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
         }
     }
@@ -324,11 +199,9 @@ struct App {
 
     func fanCommand(_ rest: [String]) throws {
         let sub = rest.first ?? "status"
-        let sm = try sampler()
-        let client = HelperClient()
-
-        switch sub {
-        case "status":
+        if sub == "status" {
+            guard rest.count <= 1 else { throw CLIError("fan status takes no arguments") }
+            let sm = try sampler(), client = HelperClient()
             let s = sm.sample()
             var policies: [Int: FanPolicy] = [:]
             var controlState: FanControlState?
@@ -355,34 +228,52 @@ struct App {
             if let helperNote { print(style.dim("  " + helperNote)) }
             if let failure = controlState?.failure { print("  control failure: " + failure) }
 
-        case "set":
-            guard rest.count == 3 else { throw CLIError("usage: thermo fan set ID|all RPM|max") }
-            let rpm = try Self.fanRPM(rest[2])
-            for id in try fanTargets(rest[1], fans: sm.fans) {
-                try client.blocking(timeout: 15) { try await $0.setPolicy(.fixed(rpm: rpm), fan: id) }
-            }
-            warnClamp(rpm, sm: sm)
-            print("fan \(rest[1]): fixed \(Self.fanRPMText(rpm)) request accepted; check fan status for hardware verification")
-
-        case "curve":
-            guard rest.count == 3 else { throw CLIError("usage: thermo fan curve ID|all 50:min,70:3000,85:max [--sensor cpu|gpu|max]") }
-            let sensor = try CurveSensor(rawValue: args.options["sensor"] ?? "cpu")
-                .orThrow(CLIError("--sensor must be cpu, gpu or max"))
-            let curve = try FanCurve(parsing: rest[2], sensor: sensor)
-            for id in try fanTargets(rest[1], fans: sm.fans) {
-                try client.blocking(timeout: 15) { try await $0.setPolicy(.curve(curve), fan: id) }
-            }
-            print("fan \(rest[1]): curve \(curve.description) request accepted; check fan status for hardware verification")
-
-        case "auto":
-            for id in try fanTargets(rest.count > 1 ? rest[1] : "all", fans: sm.fans) {
-                try client.blocking(timeout: 15) { try await $0.setPolicy(.auto, fan: id) }
-            }
-            print("fan \(rest.count > 1 ? rest[1] : "all"): auto request accepted; check fan status for hardware verification")
-
-        default:
-            throw CLIError("unknown fan command '\(sub)' (status, set, curve, auto)")
+            return
         }
+        let policy: FanPolicy, label: String, target: String
+        switch sub {
+        case "set":
+            guard rest.count == 3 else { throw CLIError("usage: thermo fan set ID_or_all RPM_or_max") }
+            let rpm = try Self.fanRPM(rest[2])
+            policy = .fixed(rpm:rpm); label = "fixed " + Self.fanRPMText(rpm); target = rest[1]
+        case "curve":
+            guard rest.count == 3 else { throw CLIError("usage: thermo fan curve ID_or_all CURVE") }
+            let sensor = try CurveSensor(rawValue:args.options["sensor"] ?? "cpu").orThrow(CLIError("--sensor must be cpu, gpu or max"))
+            let curve = try FanCurve(parsing:rest[2],sensor:sensor)
+            policy = .curve(curve); label = curve.description; target = rest[1]
+        case "auto":
+            guard rest.count <= 2 else { throw CLIError("fan auto takes one optional fan ID") }
+            policy = .auto; label = "auto"; target = rest.count == 2 ? rest[1] : "all"
+        default: throw CLIError("unknown fan operation")
+        }
+        guard target == "all" || Int(target).map({ $0 >= 0 }) == true else { throw CLIError("invalid fan ID") }
+        if args.has("dry-run") {
+            receipt("fan." + sub,dryRun:true,outcome:"planned",message:"Requested fan \(target) policy \(label); execution validates hardware and helper. No writes performed.")
+            return
+        }
+        let sm = try sampler(), client = HelperClient()
+        try applyFan(policy,label:label,ids:fanTargets(target,fans:sm.fans),client:client)
+    }
+
+    func applyFan(_ policy: FanPolicy, label: String, ids: [Int], client: HelperClient) throws {
+        struct Result: Encodable {
+            let policy: String; let acceptedFanIDs: [Int]; let failed: [String:String]
+            let observed: FanControlState?; let observationIssue: String?; let outcome: String
+        }
+        var accepted: [Int] = [], failures: [String:String] = [:]
+        for id in ids {
+            do { try client.blocking(timeout: 15) { try await $0.setPolicy(policy, fan: id) }; accepted.append(id) }
+            catch { failures[String(id)] = String(describing:error) }
+        }
+        var observed: FanControlState?, issue: String?
+        do { observed = try client.blocking(timeout:7) { try await $0.fanControlState() } }
+        catch { issue = String(describing:error) }
+        let complete = failures.isEmpty && issue == nil && observed?.failure == nil
+        let result = Result(policy:label, acceptedFanIDs:accepted, failed:failures, observed:observed,
+                            observationIssue:issue, outcome:complete ? "accepted" : "partial")
+        if args.has("json") { print(Export.json(result)) }
+        else { print("fan policy " + label + " · accepted: " + accepted.map(String.init).joined(separator:", ")); for (id, failure) in failures.sorted(by: { $0.key < $1.key }) { print(id + ": " + failure) }; if let issue { print(issue) } }
+        if !complete { throw CLIError("Fan control was partial or could not be observed; inspect fan status before another request.", exitCode:3) }
     }
 
     func warnClamp(_ rpm: Double, sm: Sampler) {
@@ -402,21 +293,26 @@ struct App {
     }
 
     func helperCommand(_ rest: [String]) throws {
+        guard rest.count <= 1 else { throw CLIError("helper takes status, install or uninstall") }
+        if args.has("dry-run"), let verb = rest.first, ["install","uninstall"].contains(verb) {
+            receipt("helper." + verb, dryRun: true, outcome: "planned", message: "Legacy helper \(verb) with administrator approval. For App background registration use app-control helper. No changes made."); return
+        }
         switch rest.first ?? "status" {
         case "install":
             guard let bin = HelperInstaller.locateHelperBinary() else {
                 throw CLIError("thermo-helper binary not found next to thermo or in /Applications/Thermo.app")
             }
-            print("Installing helper from \(bin.path) (administrator password required)…")
+            if !args.has("json") { print("Installing helper from \(bin.path) (administrator password required)…") }
             try HelperInstaller.install(from: bin)
             let v = try? HelperClient().blocking(timeout: 5) { try await $0.version() }
-            print(v != nil ? style.green("helper installed and running") : style.yellow("helper installed; not responding yet"))
+            receipt("helper.install", outcome: v != nil ? "succeeded" : "unconfirmed", message: v != nil ? "helper installed and running" : "helper installed; response unconfirmed")
+            if v == nil { throw CLIError("Helper response is unconfirmed.", exitCode: 3) }
         case "uninstall":
             guard HelperInstaller.isInstalled else {
                 throw CLIError("legacy helper installation not detected; remove an app-registered helper in Thermo settings")
             }
             try HelperInstaller.uninstall()
-            print("helper removed; automatic fan control confirmed before removal")
+            receipt("helper.uninstall", message: "helper removed; automatic fan control confirmed before removal")
         case "status":
             let installed = HelperInstaller.isInstalled
             let v = try? HelperClient().blocking(timeout: 2) { try await $0.version() }
@@ -528,7 +424,7 @@ do {
     fflush(stdout)
 } catch let e as CLIError {
     fflush(stdout)
-    fail(e.description, code: 2)
+    fail(e.description, code: e.exitCode)
 } catch {
     fflush(stdout)
     fail("\(error)")

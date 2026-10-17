@@ -70,7 +70,7 @@ struct AppsCommand {
         }
         if let why = item.blocked { throw CLIError(tr(why)) }
         if !args.has("yes") {
-            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("not a terminal; add --yes to confirm") }
+            guard !args.has("json"), isatty(STDIN_FILENO) != 0 else { throw CLIError("Review --dry-run, then add --yes to confirm") }
             out([item.name + ": " + item.installedVersions.joined(separator: ", ") + " → " + item.targetVersion] + item.appPaths
                 + [tr("Homebrew runs the installation steps and may update bundled tools. Thermo cannot automatically roll this update back. Quit the app first.")])
             print(tr("Install this update? [y/N] "), terminator: ""); fflush(stdout)
@@ -202,7 +202,7 @@ struct AppsCommand {
         }
         if item.requiresAdministrator && !args.has("json") { print(tr("Administrator approval required")) }
         if !args.has("yes") {
-            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("not a terminal; add --yes to confirm") }
+            guard !args.has("json"), isatty(STDIN_FILENO) != 0 else { throw CLIError("Review --dry-run, then add --yes to confirm") }
             print(action + " " + item.label + "? [y/N] ", terminator: ""); fflush(stdout)
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { return }
         }
@@ -298,14 +298,14 @@ struct AppsCommand {
         }
         if !args.has("json") { out(lines) }
         if !args.has("yes") {
-            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("not a terminal; add --yes to confirm") }
+            guard !args.has("json"), isatty(STDIN_FILENO) != 0 else { throw CLIError("Review --dry-run, then add --yes to confirm") }
             print(tr("Move these %1$@ items to the Trash? [y/N] ", String(plan.paths.count)), terminator: "")
             fflush(stdout)
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print(tr("cancelled")); return }
         }
         let result = AppUninstaller.uninstall(plan)
         report([result])
-        if !result.failed.isEmpty { exit(1) }
+        if !result.failed.isEmpty { throw CLIError("Application removal was partial; inspect the result.",exitCode:3) }
     }
 
     func leftovers(_ rest: [String]) throws {
@@ -360,14 +360,14 @@ struct AppsCommand {
         if let why = picked.compactMap(\.blocked).first { throw CLIError(why) }
         if !args.has("json") { out(lines) }
         if !args.has("yes") {
-            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("not a terminal; add --yes to confirm") }
+            guard !args.has("json"), isatty(STDIN_FILENO) != 0 else { throw CLIError("Review --dry-run, then add --yes to confirm") }
             print(tr("Move these %1$@ items to the Trash? [y/N] ", String(picked.reduce(0) { $0 + $1.items.count })), terminator: "")
             fflush(stdout)
             guard let answer = readLine(), ["y", "yes"].contains(answer.lowercased()) else { print(tr("cancelled")); return }
         }
         let results = AppUninstaller.removeOrphans(picked)
         report(results)
-        if results.contains(where: { !$0.failed.isEmpty }) { exit(1) }
+        if results.contains(where: { !$0.failed.isEmpty }) { throw CLIError("Residual removal was partial; inspect results.",exitCode:3) }
     }
 
     func report(_ results: [CleanResult]) {

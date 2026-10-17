@@ -320,11 +320,45 @@ public enum TabWorkspace {
     public typealias OpenPage = @Sendable (Page, String) -> String?
     /// Restore each confirmed closed page once. Persist 'opening' before sending a mutation:
     /// unknown delivery stays explicit and is never automatically retried.
+    public struct RestoreReview: Codable, Sendable {
+        public let archiveID: UUID
+        public let app: String
+        public let destinationWindow: Int?
+        public let pages: [Page]
+        public let unresolvedEntries: Int
+    }
+    /// Read-only preflight shared by CLI preview and native execution. No page is opened and no
+    /// restore-state marker is written. Browser identity and windows are observations, rechecked on apply.
+    public static func reviewRestore(_ archive: Archive, destinationWindow: Int? = nil,
+                                     tabs: [ChromeInspector.Tab]?, identity: ProcessIdentity?) throws -> RestoreReview {
+        let eligible = archive.entries.filter { $0.status == "closed" && $0.restoreState == nil }
+        let unresolved = archive.entries.filter { $0.restoreState == "opening" || $0.restoreState == "unconfirmed" }.count
+        var pages: [Page] = []
+        for entry in eligible {
+            var page = entry.page
+            guard isWeb(page.tab.url) else { throw WorkspaceError("Saved page is not a web URL.") }
+            guard let tabs, let identity else { throw WorkspaceError("Browser inventory or identity is unavailable.") }
+            let window = destinationWindow ?? page.tab.window
+            guard let destination = tabs.first(where: { $0.window == window }), destination.browserProcess == identity else {
+                throw WorkspaceError("Destination window is unavailable or its browser identity changed.")
+            }
+            if destinationWindow == nil, page.tab.browserProcess != identity {
+                throw WorkspaceError("The original browser session ended. Select an explicit --window in the correct profile.")
+            }
+            page.tab.window = window; page.tab.browserProcess = identity; pages.append(page)
+        }
+        return RestoreReview(archiveID: archive.id, app: archive.app, destinationWindow: destinationWindow, pages: pages, unresolvedEntries: unresolved)
+    }
+
     public static func restore(_ id: UUID, destinationWindow: Int? = nil, home: String = NSHomeDirectory(),
                                openPage: OpenPage? = nil) throws -> Archive {
         let lock = try Lock(home: home); defer { lock.release() }
         let url = archiveURL(id, home: home)
         var archive = try read(url)
+        if openPage == nil {
+            _ = try reviewRestore(archive, destinationWindow: destinationWindow,
+                                  tabs: ChromeInspector.tabs(app: archive.app), identity: ChromeInspector.browserIdentity(app: archive.app))
+        }
         let opener = openPage ?? { reopen($0, $1) }
         for i in archive.entries.indices where archive.entries[i].status == "closed" && archive.entries[i].restoreState == nil {
             var page = archive.entries[i].page

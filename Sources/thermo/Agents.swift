@@ -2,6 +2,8 @@ import AgentDoctor
 import Foundation
 
 /// `thermo agents`: what is wrong with the AI agents on this Mac.
+private var mcpBatchInterrupted: sig_atomic_t = 0
+
 struct AgentsCommand {
     let app: App
     var style: Style { app.style }
@@ -12,6 +14,7 @@ struct AgentsCommand {
         switch sub {
         case "": break
         case "context": return try context()
+        case "inspect-all": return try inspectAll()
         case "compare":
             guard rest.count == 2 else { throw CLIError("usage: thermo agents compare FILE [--json]") }
             return try compareTasks(try required(name, sub))
@@ -240,6 +243,48 @@ struct AgentsCommand {
         out(lines)
     }
 
+    struct BatchInspectionReport: Encodable {
+        let complete: Bool
+        let reason: String
+        let total: Int
+        let notStarted: Int
+        let results: [MCPInspection]
+    }
+    func inspectAll() throws {
+        guard app.args.positionals.count == 2 else { throw CLIError("inspect-all takes no names; use --agent to select a host") }
+        let timeout = try app.args.double("timeout") ?? 10, budget = try app.args.double("budget") ?? 120
+        guard timeout <= 120, budget <= 120 else { throw CLIError("--timeout and --budget must be at most 120 seconds") }
+        if let host = app.args.options["agent"], !["claude","codex","cursor","gemini","windsurf"].contains(host) { throw CLIError("Unknown --agent host.") }
+        let selectedEncoding = try encoding()
+        let inventory = AgentDoctor.run(DoctorEnvironment(tokenEncoding: selectedEncoding))
+        var seen = Set<String>()
+        let queue = inventory.items.filter { $0.area == .mcp && $0.enabled && (app.args.options["agent"] == nil || $0.agent == app.args.options["agent"]) && seen.insert($0.id).inserted }
+            .sorted { ($0.agent,$0.name,$0.id) < ($1.agent,$1.name,$1.id) }
+        if app.args.has("dry-run") {
+            struct Plan: Encodable { let dryRun = true; let ids: [String]; let timeout: Double; let budget: Double }
+            print(Export.json(Plan(ids:queue.map(\.id),timeout:timeout,budget:budget))); return
+        }
+        mcpBatchInterrupted = 0
+        let old = signal(SIGINT) { _ in mcpBatchInterrupted = 1 }
+        defer { signal(SIGINT,old) }
+        let deadline = ProcessInfo.processInfo.systemUptime + budget
+        var results: [MCPInspection] = [], reason = "finished"
+        for item in queue {
+            if mcpBatchInterrupted != 0 { reason = "cancelled"; break }
+            let remaining = deadline - ProcessInfo.processInfo.systemUptime
+            if remaining <= 0 { reason = "budgetExpired"; break }
+            let report = AgentDoctor.inspectMCP(item.id, timeout:min(timeout,remaining),
+                env:DoctorEnvironment(tokenEncoding:selectedEncoding,cancelled:{ mcpBatchInterrupted != 0 || ProcessInfo.processInfo.systemUptime >= deadline }))
+            results.append(report)
+            if !app.args.has("json") { print(item.agent + " / " + item.name + " · " + report.state.rawValue) }
+        }
+        if mcpBatchInterrupted != 0 { reason = "cancelled" }
+        let complete = results.count == queue.count && results.allSatisfy { $0.complete && $0.state == .ready && $0.definitions != nil && $0.instructions != nil }
+        let report = BatchInspectionReport(complete:complete,reason:reason,total:queue.count,notStarted:queue.count-results.count,results:results)
+        if app.args.has("json") { print(Export.diagnosticJSON(report)) }
+        if !complete { throw CLIError("MCP batch inspection is incomplete; inspect individual results.",exitCode:3) }
+    }
+
     func inspectMCP(_ name: String) throws {
         guard !app.args.has("csv"), !app.args.has("all"), !app.args.has("dry-run") else {
             throw CLIError("agents inspect supports one server, --agent, --timeout and --json")
@@ -441,39 +486,35 @@ struct AgentsCommand {
         let plans = report.items.filter { $0.severity == .error || $0.severity == .warning }
             .compactMap { item in item.actions.first { $0.kind == .fix && $0.bulk }.map { (item, $0) } }
         if plans.isEmpty {
-            print("nothing to fix automatically" + (report.count(.error) + report.count(.warning) > 0 ? " (see thermo agents for manual fixes)" : ""))
+            if app.args.has("json") { print(Export.json(ActionReport(dryRun: app.args.has("dry-run"), complete: true, plans: [], results: []))) }
+            else { print("nothing to fix automatically" + (report.count(.error) + report.count(.warning) > 0 ? " (see thermo agents for manual fixes)" : "")) }
             return
         }
         try apply(plans, env: env)
     }
 
     /// Shows exactly what will run, asks (unless --yes), runs, then rescans.
+    struct ActionPlan: Encodable { let name: String; let title: String; let summary: String; let destructive: Bool; let steps: [String] }
+    struct ActionResultRow: Encodable { let name: String; let succeeded: Bool; let log: [String]; let backups: [String] }
+    struct ActionReport: Encodable { let dryRun: Bool; let complete: Bool; let plans: [ActionPlan]; let results: [ActionResultRow] }
     func apply(_ plans: [(AgentItem, Action)], env: DoctorEnvironment) throws {
-        var lines = [style.bold(plans.count == 1 ? "1 action" : "\(plans.count) actions")]
+        let review = plans.map { item, action in ActionPlan(name: Redact.text(item.name), title: action.title, summary: action.summary, destructive: action.destructive, steps: action.steps.map(\.display)) }
+        if app.args.has("dry-run") {
+            if app.args.has("json") { print(Export.json(ActionReport(dryRun: true, complete: true, plans: review, results: []))) }
+            else { out(review.flatMap { [$0.name + " · " + $0.title, $0.summary] + $0.steps }) }
+            return
+        }
+        if !app.args.has("json") { out(review.flatMap { [$0.name + " · " + $0.title, $0.summary] + $0.steps }) }
+        try app.approveAction("Apply the reviewed Agent actions? Configuration files are backed up first.")
+        var results: [ActionResultRow] = []
         for (item, action) in plans {
-            lines.append("  " + style.bold(item.name) + style.dim("  " + action.title) + (action.destructive ? style.yellow("  (destructive)") : ""))
-            lines.append("    " + action.summary)
-            for s in action.steps { lines.append("    " + style.cyan("$ ") + s.display) }
+            let result = ActionRunner.perform(action, env: env)
+            results.append(.init(name: Redact.text(item.name), succeeded: result.ok, log: result.log.map(Redact.text), backups: result.backups))
         }
-        out(lines)
-        if app.args.has("dry-run") { return }
-        if !app.args.has("yes") {
-            guard isatty(STDIN_FILENO) != 0 else { throw CLIError("refusing to change anything without --yes when stdin is not a terminal") }
-            print("\nGo ahead? Config files are backed up to ~/Library/Application Support/Thermo/Backups first. [y/N] ", terminator: "")
-            fflush(stdout)
-            guard let answer = readLine(), answer.lowercased().hasPrefix("y") else { print("nothing changed"); return }
-        }
-        var failed = 0
-        for (item, action) in plans {
-            let r = ActionRunner.perform(action, env: env)
-            if !r.ok { failed += 1 }
-            print((r.ok ? style.green("✓ ") : style.red("✗ ")) + item.name + style.dim("  " + action.title))
-            for l in r.log where !r.ok { print("    " + l) }
-            if let b = r.backups.first { print(style.dim("    backup: " + b)) }
-        }
-        let after = AgentDoctor.run()
-        print("\n" + "after: " + after.headline + style.dim("  (log: ~/Library/Logs/Thermo/fix.log)"))
-        if failed > 0 { exit(1) }
+        let complete = results.allSatisfy(\.succeeded)
+        if app.args.has("json") { print(Export.json(ActionReport(dryRun: false, complete: complete, plans: review, results: results))) }
+        else { for result in results { out([result.name + (result.succeeded ? " · succeeded" : " · failed")] + result.log) } }
+        if !complete { throw CLIError("Some Agent actions failed; inspect results and backups.", exitCode: 3) }
     }
 
     func title(_ c: Area) -> String {

@@ -5,7 +5,7 @@ import CryptoKit
 import ThermoL10n
 
 /// User-level privacy controls. Never invoked by the privileged Thermo helper.
-public struct PrivacyBrowserProfile: Identifiable, Sendable {
+public struct PrivacyBrowserProfile: Identifiable, Encodable, Sendable {
     public let browser: String
     public let directory: URL
     public let firefox: Bool
@@ -14,7 +14,7 @@ public struct PrivacyBrowserProfile: Identifiable, Sendable {
 }
 
 public enum PrivacyBrowserControl: Sendable { case location, webRTC }
-public struct PrivacyExitLocation: Sendable {
+public struct PrivacyExitLocation: Encodable, Sendable {
     public let country: String
     public let timezone: String
 }

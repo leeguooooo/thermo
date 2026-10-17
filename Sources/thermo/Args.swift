@@ -2,7 +2,8 @@ import Foundation
 
 struct CLIError: Error, CustomStringConvertible {
     let description: String
-    init(_ d: String) { description = d }
+    let exitCode: Int32
+    init(_ d: String, exitCode: Int32 = 2) { description = d; self.exitCode = exitCode }
 }
 
 /// Minimal argument parser: positionals plus `--flag`, `--opt value`, `--opt=value`, `-x value`.
@@ -12,7 +13,7 @@ struct Args {
     var options: [String: String] = [:]
 
     static let valueOptions: Set<String> = ["interval", "count", "sensor", "format", "older-than", "root", "budget", "timeout",
-                                            "area", "agent", "action", "encoding", "seconds",
+                                            "area", "agent", "action", "encoding", "seconds", "duration", "timezone", "key-code", "modifiers", "key-label", "keep",
         "to", // space archive: SSH alias:/absolute/archive.tar
         "since",  // pulse history
         "limit",  // history

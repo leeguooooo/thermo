@@ -74,6 +74,10 @@ struct SettingsCommand {
                 return
             }
             guard let v = s.parse(args[1]) else { throw CLIError("\(s.key) expects \(s.help)") }
+            if app.args.has("dry-run") {
+                if !exported([(s.key, s.show(v))]) { print("planned: " + s.key + " = " + s.show(v)) }
+                return
+            }
             d.set(v, forKey: s.defaultsKey)
             d.synchronize()
             // Tell a running Thermo to re-read its settings now.

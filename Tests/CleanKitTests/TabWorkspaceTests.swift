@@ -132,3 +132,24 @@ final class TabWorkspaceTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: url), "broken")
     }
 }
+
+extension TabWorkspaceTests {
+    func testRestorePreviewChecksWindowAndBrowserWithoutMutatingArchive() throws {
+        let original = page("preview")
+        var entry = TabWorkspace.Entry(page:original,status:"closed")
+        let saved = TabWorkspace.Archive(name:"Fixture",app:"Fixture",entries:[entry])
+        let process = try XCTUnwrap(original.tab.browserProcess)
+        let valid = try TabWorkspace.reviewRestore(saved,tabs:[original.tab],identity:process)
+        XCTAssertEqual(valid.pages.count,1)
+        XCTAssertNil(saved.entries[0].restoreState)
+        XCTAssertThrowsError(try TabWorkspace.reviewRestore(saved,tabs:[],identity:process))
+        let restarted = ProcessIdentity(pid:456,uid:501,started:Date(timeIntervalSince1970:200),executable:"/Fixture")
+        var destination = original.tab; destination.window = 9; destination.browserProcess = restarted
+        XCTAssertThrowsError(try TabWorkspace.reviewRestore(saved,tabs:[destination],identity:restarted))
+        XCTAssertEqual(try TabWorkspace.reviewRestore(saved,destinationWindow:9,tabs:[destination],identity:restarted).pages[0].tab.window,9)
+        entry.restoreState = "unconfirmed"
+        let uncertain = TabWorkspace.Archive(name:"Fixture",app:"Fixture",entries:[entry])
+        let review = try TabWorkspace.reviewRestore(uncertain,tabs:nil,identity:nil)
+        XCTAssertTrue(review.pages.isEmpty); XCTAssertEqual(review.unresolvedEntries,1)
+    }
+}

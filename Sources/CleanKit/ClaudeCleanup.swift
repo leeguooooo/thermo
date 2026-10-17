@@ -21,8 +21,8 @@ public enum ClaudeResetTarget: String, CaseIterable, Codable, Sendable {
         }
     }
 }
-public struct ClaudeResetCandidate: Sendable {
-    public enum Status: String, Equatable, Sendable { case missing, available, blocked }
+public struct ClaudeResetCandidate: Encodable, Sendable {
+    public enum Status: String, Codable, Equatable, Sendable { case missing, available, blocked }
     public let target: ClaudeResetTarget
     public let path: String
     public let status: Status
@@ -41,7 +41,7 @@ public struct ClaudeResetBatch: Codable, Identifiable, Sendable {
     public let created: Date
     public var entries: [Entry]
 }
-public struct ClaudeResetResult: Sendable {
+public struct ClaudeResetResult: Encodable, Sendable {
     public var batch: ClaudeResetBatch?
     public var succeeded: [ClaudeResetTarget] = []
     public var failed: [String: String] = [:]
@@ -180,6 +180,50 @@ public final class ClaudeCleanup {
         guard (try? validate(root)) != nil,
               let names = try? fm.contentsOfDirectory(atPath: root) else { return [] }
         return names.compactMap { try? loadBatch(id: $0) }.sorted { $0.created > $1.created }
+    }
+    public struct BatchReport: Encodable, Sendable {
+        public let batches: [ClaudeResetBatch]
+        public let complete: Bool
+        public let issues: [String]
+    }
+    public func batchReport() -> BatchReport {
+        do {
+            try validate(root)
+            guard try info(root) != nil else { return .init(batches:[],complete:true,issues:[]) }
+            let names = try fm.contentsOfDirectory(atPath:root).sorted()
+            var batches: [ClaudeResetBatch] = [], issues: [String] = []
+            if names.count > min(entryLimit,1000) { issues.append("Backup listing reached its limit.") }
+            for name in names.prefix(min(entryLimit,1000)) {
+                do { batches.append(try loadBatch(id:name)) }
+                catch { issues.append(name + ": " + error.localizedDescription) }
+            }
+            return .init(batches:batches.sorted { $0.created > $1.created },complete:issues.isEmpty,issues:issues)
+        } catch { return .init(batches:[],complete:false,issues:[error.localizedDescription]) }
+    }
+    public struct RestoreReview: Encodable, Sendable {
+        public let batch: ClaudeResetBatch
+        public let ready: [ClaudeResetTarget]
+        public let blocked: [String:String]
+    }
+    public func reviewRestore(batchID: String) throws -> RestoreReview {
+        let batch = try loadBatch(id:batchID)
+        var ready: [ClaudeResetTarget] = [], blocked: [String:String] = [:]
+        let activity = activityReason()
+        for entry in batch.entries where !entry.restored {
+            do {
+                if let activity { throw fail(activity) }
+                let original = path(entry.target), backup = backupURL(batchID:batchID)!.appendingPathComponent(entry.target.rawValue).path
+                try validate(original)
+                guard try info(original) == nil else { throw fail("New data exists at the original path; it will not be overwritten") }
+                guard try snapshot(backup).0 == entry.snapshot, let source = try info(backup) else { throw fail("Backup changed or is missing") }
+                var parent = (original as NSString).deletingLastPathComponent
+                while try info(parent) == nil, parent != home { parent = (parent as NSString).deletingLastPathComponent }
+                try validate(parent)
+                guard let destination = try info(parent), source.st_dev == destination.st_dev else { throw fail("Restore requires a same-volume move") }
+                ready.append(entry.target)
+            } catch { blocked[entry.target.rawValue] = error.localizedDescription }
+        }
+        return .init(batch:batch,ready:ready,blocked:blocked)
     }
     public func loadBatch(id: String) throws -> ClaudeResetBatch {
         guard let url = backupURL(batchID: id) else { throw fail(tr("Invalid batch identifier")) }
