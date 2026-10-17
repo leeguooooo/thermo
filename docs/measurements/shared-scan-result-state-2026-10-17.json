@@ -91,5 +91,15 @@
     "No installed App, root-helper deployment or physical hardware acceptance",
     "Synthetic category failure UI is not a real filesystem-permission test",
     "Not packaged into440 or456"
-  ]
+  ],
+  "parallelMergeCheck": {
+    "source": "9aa7436c7aa1392631b14c4a779110750f38a357",
+    "incomingProductionPaths": [
+      "Sources/ThermoApp/MCPBatchInspectButton.swift"
+    ],
+    "tests": 9,
+    "failures": 0,
+    "exitCode": 0,
+    "logSHA256": "e39a59f5a79653456235e955c033b22ecf3455312aaaa5fbf0ea29c46d063a13"
+  }
 }
