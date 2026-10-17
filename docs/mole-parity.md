@@ -2,7 +2,7 @@
 
 先补可靠性与核心流程，再打磨界面。参照本地 Mole 原生 App 1.16.0（324），证据见 [原生研究](mole-native-study.md)和[函数研究](mole-native-functions.md)。整体齐平仍未成立。
 
-最新整合候选为 1.1.28（457），源码冻结在 `3aeb21c`，包含此前 440 之后的系统进程归属、面板文本及扫描取消/不完整状态和 CSV 退出码修复。1,659 项非硬件测试通过；Developer ID 通用签名、原生与 Rosetta CLI 只读及 dry-run、ZIP 解包 95 个文件比对和签名复验通过。同一 Release 包完成 2 轮、6 次离屏窗口开关、19 个采样点，功能检查通过；不代表可见交互或长期内存验收。已安装 App 与 root helper 的六项文件校验值未变；尚未安装、公证或发布。详见 [整合候选证据](measurements/mole-consolidated-candidate-2026-10-17.json)。
+最新整合候选为 1.1.28（457），源码冻结在 `3aeb21c`，包含此前 440 之后的系统进程归属、面板文本及扫描取消/不完整状态和 CSV 退出码修复。1,659 项非硬件测试通过；Developer ID 通用签名、原生与 Rosetta CLI 只读及 dry-run、ZIP 解包 95 个文件比对和签名复验通过。同一 Release 包完成 2 轮、6 次离屏窗口开关、19 个采样点，功能检查通过；不代表可见交互或长期内存验收。已安装 App 与 root helper 的六项文件校验值未变；尚未安装、公证或发布。详见 [整合候选证据](measurements/mole-consolidated-candidate-2026-10-17.json)。 最终签名 CLI 的 root 服务归属及四种扫描取消格式也已实测，原有 32 个测试文件字节不变；扫描历史写入隔离目录，见 [包内核心流程检查](measurements/mole-packaged-core-flows-2026-10-17.json)。
 
 Mole/缓存分支的冻结候选为 1.1.28（384），源码冻结在 `65eafd8`：补入 Go 固定本地工具链、原生清理范围确认、永久清理与工具保留文件提示。1,475 项非硬件测试通过；Developer ID 通用签名及 ZIP 解包复验、原生与 Rosetta CLI 检查、9 组离屏页面开关通过。已安装的 1.1.27（233）及 root helper 未变；未公证或发布，真实硬件控制验收仍缺。随后主分支的 Codex MCP 用量解析改动保留在源码中，不在此冻结包内。详见 [候选证据](measurements/mole-cache-candidate-2026-10-17.json)。
 

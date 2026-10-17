@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-17",
+  "source": "3aeb21c9216db75eb6546748178992bf68965cb5",
+  "version": "1.1.28",
+  "build": "457",
+  "cliSHA256": "35e5e24ee5c18f2cea44b3669ea7e7c4ffa948ccdd62eef4eb1f5c43ad3ca223",
+  "rootProcess": {
+    "pid": 95178,
+    "launchServices": {
+      "queriedDomains": [
+        "system"
+      ],
+      "queryComplete": true,
+      "registrations": [
+        {
+          "domain": "system",
+          "label": "dev.thermo.helper",
+          "pid": 95178,
+          "serviceState": "running"
+        }
+      ],
+      "state": "observed"
+    },
+    "chainComplete": true,
+    "privateArgumentsAndCwdSuppressed": true,
+    "descendantsState": "unavailable",
+    "allPathsKnown": false
+  },
+  "cancelledScan": {
+    "formats": {
+      "text": {
+        "exitCode": 3,
+        "stdoutBytes": 819,
+        "stdoutSHA256": "be722be40085552f591dd592fd4df774c62bf68cb534fb732e3d7f312f89ce17"
+      },
+      "json": {
+        "exitCode": 3,
+        "stdoutBytes": 912,
+        "stdoutSHA256": "22abd2617becee892b7a326700359c65803b4671ad0eb088ca66de16c87ee6db"
+      },
+      "csv": {
+        "exitCode": 3,
+        "stdoutBytes": 62,
+        "stdoutSHA256": "9ae881359db3ef822fd3e686337e79f507fd845ce7789326d86ace08500c817b"
+      },
+      "stream": {
+        "exitCode": 3,
+        "stdoutBytes": 190,
+        "stdoutSHA256": "dff9403141aed0c6942761dc934100eb0b48459e0a0e283456258abcf410225f"
+      }
+    },
+    "seededFiles": 32,
+    "allSeededFixtureBytesUnchanged": true,
+    "budgetSeconds": 0.001,
+    "scanHistoryFilesCreatedInPrivateHome": 3
+  },
+  "scope": "Actual signed CLI; read-only public process and launchctl metadata. Scan and history writes confined to an owned private home. No cleanup command, helper RPC, installation, restart or hardware writes.",
+  "verificationNote": "The initial whole-home inventory assertion also counted newly created scan-history files. Inspected added paths and verified all 32 original fixture files separately without repeating the scans.",
+  "limitations": [
+    "Budget expiry is controlled cancellation, not a permission failure or forced I/O fault",
+    "No installed App UI acceptance",
+    "CSV communicates cancellation through exit code 3; its row schema is unchanged"
+  ]
+}
