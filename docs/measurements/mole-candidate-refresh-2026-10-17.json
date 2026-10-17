@@ -225,5 +225,29 @@
       "sha256": "582896f66f21ff3c0799f6673caf26ae5736edb86b1b35d951a189a751e4999b",
       "scope": "Injected inventories/detach results, no actual image detach; not added to the frozen 1469-test total."
     }
+  },
+  "laterParallelWork": {
+    "mainCommit": "753755c",
+    "integratedCommit": "be0baf20454bd4f8f92036118fb5f8ec70eb6ab7",
+    "unpackagedProductSourceDelta": [
+      "Sources/AgentDoctor/ToolUsageReport.swift",
+      "Sources/CleanKit/NativeDiskImage.swift",
+      "Sources/ThermoApp/ToolUsagePanel.swift",
+      "Sources/ThermoL10n/ZhHans.swift",
+      "Sources/thermo/Agents.swift"
+    ],
+    "description": "Later main includes detach diagnostic details and AI tool-usage reporting/pagination changes. These are not in the frozen 362 artifact.",
+    "controlSourcePathsCompared": [
+      "Sources/ThermoKit",
+      "Sources/ThermoHelper",
+      "Sources/CSMC",
+      "Sources/ThermoApp/AWDLView.swift",
+      "Sources/ThermoApp/Monitor.swift",
+      "Sources/ThermoApp/AppExitGuard.swift",
+      "Sources/thermo/AWDL.swift",
+      "Resources"
+    ],
+    "helperAndAWDLActionSourcesUnchanged": true,
+    "noClaimOfFullRegressionForLaterMain": true
   }
 }
