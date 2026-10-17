@@ -8,7 +8,8 @@ import ThermoKit
 @MainActor final class AppControlHost {
     static let shared = AppControlHost()
     private let defaults: UserDefaults
-    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+    private let screen: CleanScreenModel
+    init(defaults: UserDefaults = .standard, screen: CleanScreenModel? = nil) { self.defaults = defaults; self.screen = screen ?? .shared }
     private var server: AppControlServer?
     private let integration = AgentAccess()
     private var seen = Set<UUID>()
@@ -17,7 +18,8 @@ import ThermoKit
     func start() {
         guard server == nil else { return }
         do {
-            server = try AppControlServer { request, reply in
+            let trust = try LocalControlPeerTrust(team:CodeSignature.teamIdentifier(),developmentExecutable:URL(fileURLWithPath:integration.cli))
+            server = try AppControlServer(authorize:{ trust.accepts(auditToken:$0) }) { request, reply in
                 Task { @MainActor in reply(await self.handle(request)) }
             }
         } catch { issue = error.localizedDescription }
@@ -35,7 +37,7 @@ import ThermoKit
         let writes = ["screen.start","screen.stop","screen.duration","screen.shortcut","screen.clear-shortcut","login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","awdl.on","awdl.off"]
         guard reads.contains(action) || writes.contains(action) else { return result([:], "Unsupported App control operation.") }
         guard request.arguments.keys.allSatisfy({ action == "awdl.on" ? $0 == "seconds" : ["screen.start","screen.duration"].contains(action) ? $0 == "duration" : action == "screen.shortcut" ? ["key-code","modifiers","key-label"].contains($0) : false }) else { return result([:], "Unexpected operation arguments.") }
-        let screen = CleanScreenModel.shared
+        let screen = self.screen
         var duration: CleanScreenDuration?
         var binding: CleanScreenKeyBinding?
         if action == "screen.start" || action == "screen.duration" {
@@ -152,7 +154,7 @@ import ThermoKit
         }
     }
     private func screenState() -> [String:String] {
-        let model = CleanScreenModel.shared; model.refreshPermission()
+        let model = screen; model.refreshPermission()
         let shortcut = CleanScreenShortcutModel.shared
         var state = ["active":String(model.active),"accessibility":String(model.hasAccessibility),"shortcut":shortcut.binding?.label ?? "", "shortcutUncertain":String(shortcut.uncertain),"savedDuration":defaults.string(forKey:CleanScreenDuration.preferenceKey).flatMap(CleanScreenDuration.init(rawValue:))?.rawValue ?? CleanScreenDuration.twoMinutes.rawValue]
         if let session = model.session { state["duration"] = session.duration.rawValue; state["remainingSeconds"] = session.remaining(ProcessInfo.processInfo.systemUptime).map(String.init(describing:)) ?? "manual" }

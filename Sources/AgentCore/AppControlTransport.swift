@@ -80,6 +80,11 @@ public enum AppControlTransport {
         _ = fcntl(fd, F_SETFD, FD_CLOEXEC)
         return fd
     }
+    public static func peerAuditToken(_ fd: Int32) throws -> Data {
+        var token = audit_token_t(), size = socklen_t(MemoryLayout<audit_token_t>.size)
+        guard getsockopt(fd,SOL_LOCAL,LOCAL_PEERTOKEN,&token,&size) == 0, size == MemoryLayout<audit_token_t>.size else { throw Failure("Cannot verify the local peer audit token.") }
+        return withUnsafeBytes(of:&token) { Data($0) }
+    }
     static func peer(_ fd: Int32) throws {
         var uid: uid_t = 0, gid: gid_t = 0
         guard getpeereid(fd, &uid, &gid) == 0, uid == getuid() else { throw Failure("App control peer is not the current user.") }
@@ -112,7 +117,7 @@ public enum AppControlTransport {
             }
         }
     }
-    public static func request(_ request: AppControlRequest, directory: URL = directory, timeout: Int = 15) throws -> AppControlResponse {
+    public static func request(_ request: AppControlRequest, directory: URL = directory, timeout: Int = 15, authorizeServer: @Sendable (Data) -> Bool = { _ in true }) throws -> AppControlResponse {
         guard (1...300).contains(timeout) else { throw Failure("Control timeout must be 1…300 seconds.") }
         try secureDirectory(directory, create: false)
         let path = path(directory); _ = try owned(path, kind: mode_t(S_IFSOCK))
@@ -120,7 +125,9 @@ public enum AppControlTransport {
         var addr = try address(path)
         let result = withUnsafePointer(to: &addr) { p in p.withMemoryRebound(to: sockaddr.self, capacity: 1) { connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) } }
         guard result == 0 else { throw Failure("No compatible Thermo.app control listener is available. Start or update the App, then query status.") }
-        try peer(fd); try send(request, fd: fd)
+        try peer(fd)
+        guard authorizeServer(try peerAuditToken(fd)) else { throw Failure("App server signature is not authorized. No request was sent.") }
+        try send(request, fd: fd)
         let reply = try receive(AppControlResponse.self, fd: fd, timeout:TimeInterval(timeout))
         guard reply.schema == 1, reply.id == request.id else { throw Failure("App control reply does not match the request; outcome is unconfirmed.") }
         return reply
@@ -134,7 +141,7 @@ public final class AppControlServer: @unchecked Sendable {
     private let identity: ino_t
     private var source: DispatchSourceRead?
     private let slots = DispatchSemaphore(value: 8)
-    public init(directory: URL = AppControlTransport.directory, handler: @escaping Handler) throws {
+    public init(directory: URL = AppControlTransport.directory, authorize: @escaping @Sendable (Data) -> Bool = { _ in true }, handler: @escaping Handler) throws {
         try AppControlTransport.secureDirectory(directory, create: true)
         socketPath = AppControlTransport.path(directory)
         var st = stat()
@@ -172,8 +179,13 @@ public final class AppControlServer: @unchecked Sendable {
                 setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &noSignal, socklen_t(MemoryLayout<Int32>.size))
                 do {
                     try AppControlTransport.peer(client)
+                    let token = try AppControlTransport.peerAuditToken(client)
                     let request = try AppControlTransport.receive(AppControlRequest.self, fd: client)
                     guard request.schema == 1 else { throw AppControlTransport.Failure("Unsupported control schema.") }
+                    guard authorize(token) else {
+                        try AppControlTransport.send(AppControlResponse(request:request,succeeded:false,issue:"Caller signature does not match the companion Thermo CLI. Use a compatible signed CLI; no action executed."),fd:client)
+                        return
+                    }
                     let done = DispatchSemaphore(value: 0)
                     let box = ReplyBox()
                     handler(request) { response in box.set(response); done.signal() }

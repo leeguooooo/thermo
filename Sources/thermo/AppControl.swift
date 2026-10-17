@@ -1,5 +1,6 @@
 import AgentCore
 import Foundation
+import ThermoKit
 
 struct AppControlCommand {
     let app: App
@@ -55,7 +56,12 @@ struct AppControlCommand {
         let operation = try Self.operation(command: command, rest: rest, args: app.args)
         if operation.mutates && !app.args.has("dry-run") { try app.approveAction("Apply \(operation.action) through Thermo.app? Permission, helper and update actions may display macOS or App dialogs.") }
         let request = AppControlRequest(action: operation.action, arguments: operation.arguments, dryRun: app.args.has("dry-run"))
-        let reply = try AppControlTransport.request(request, timeout: operation.action.hasPrefix("integration.") || operation.action.hasPrefix("helper.") ? 290 : 20)
+        let serverTrust: LocalControlPeerTrust?
+        if let team = CodeSignature.teamIdentifier() {
+            serverTrust = try LocalControlPeerTrust(team:team,developmentExecutable:URL(fileURLWithPath:"/unused-in-production"),role:.app)
+        } else { serverTrust = nil } // Unbundled development/test peers remain same-UID only on this side.
+        let reply = try AppControlTransport.request(request, timeout: operation.action.hasPrefix("integration.") || operation.action.hasPrefix("helper.") ? 290 : 20,
+            authorizeServer:{ serverTrust?.accepts(auditToken:$0) ?? true })
         if app.args.has("json") { print(Export.json(reply)) }
         else { print(reply.values.keys.sorted().map { $0 + ": " + reply.values[$0]! }.joined(separator: "\n")); if let issue = reply.issue { print(issue) } }
         guard reply.succeeded else { throw CLIError(reply.issue ?? "App operation was not confirmed.", exitCode: 3) }

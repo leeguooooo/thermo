@@ -475,7 +475,7 @@ thermo clean repair-worktrees --root /path/to/repo --yes --json
 | MCP 批量握手与定义检查 | `agents inspect-all --timeout 10 --budget 120 --json` |
 | 验证重复文件、指定保留副本后移入废纸篓 | `space dupes remove PATH… --keep PATH --dry-run --json` |
 
-App 命令要求运行兼容版本的 Thermo.app。通道检查当前用户身份、私有路径、请求 ID 和消息大小；超时或丢失回执表示结果未确认，不自动重试。打开系统设置、开始 Sparkle 交互检查只报告对应动作，不能当作权限已获准或更新已安装。涉及 helper、权限、浏览器和真实硬件的验收须分别核对，不能从命令入口或夹具测试推定。
+App 命令要求运行兼容版本的 Thermo.app。通道检查当前用户身份、内核提供的对端 audit token、配套 CLI 的签名要求、私有路径、请求 ID 和消息大小。正式 App 要求同一开发者 Team 的 `dev.thermo.cli`，开发构建的 App 固定启动时配套 CLI 的指定签名要求；无法建立要求时不提供通道。正式签名 CLI 同时核验 App 的同 Team 签名；未打包的开发测试客户端只核验服务端 UID。超时或丢失回执表示结果未确认，不自动重试。打开系统设置、开始 Sparkle 交互检查只报告对应动作，不能当作权限已获准或更新已安装。涉及 helper、权限、浏览器和真实硬件的验收须分别核对，不能从命令入口或夹具测试推定。
 
 `screen shortcut` 用 `--key-code`、`--modifiers`、`--key-label` 指定与 App 相同的 Carbon 快捷键；至少两个修饰键，其中必须含 Command、Control 或 Option。`screen status` 包含已保存的时长，`screen duration --duration` 可单独设置；`screen start` 未指定时长时采用 App 已保存的选择。`screen start --duration` 接受 `oneMinute`、`twoMinutes`、`fiveMinutes` 或 `manual`。这些修改先用 `--dry-run` 查看，再加 `--yes` 执行。
 
