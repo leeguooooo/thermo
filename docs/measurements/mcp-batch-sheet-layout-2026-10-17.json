@@ -1,0 +1,135 @@
+{
+  "recordedAt": "2026-10-17T06:40:59.270212+00:00",
+  "environment": {
+    "macOS": "26.6.2 (25G83)",
+    "executionArchitecture": "arm64",
+    "fullAppBuild": "Debug, local ad-hoc, private Home, --ui-review",
+    "notInstalledOrPublished": true
+  },
+  "sourceChange": {
+    "file": "Sources/ThermoApp/MCPBatchInspectButton.swift",
+    "before": "ScrollView + LazyVStack",
+    "after": "ScrollView + VStack",
+    "fileSHA256": "fb9574cb869d67997fbe417aa0ebe6493334346ba82757d0c801c0b0df0024ae",
+    "release456ContainsChange": false,
+    "concurrentMainCommitsNotReleaseRevalidated": true
+  },
+  "reproduction": {
+    "release456SheetOpenings": 2,
+    "release456CycleWarningsAfterOpenings": 2,
+    "reanalysisWithoutOpeningDidNotAddWarning": true,
+    "debugBaselineOpeningCycleWarnings": 1,
+    "traceFrames": [
+      "LayoutChildGeometries",
+      "ScrollViewContentFrameSize",
+      "LazySubviewPlacements<LazyVStackLayout>",
+      "ContainerBackgroundKeys.PresentationKey"
+    ],
+    "traceProvesExactFrameworkRootCause": false
+  },
+  "variants": {
+    "debug-baseline": {
+      "cycleWarningsAtTerminal": 1,
+      "logSHA256": "3c2c7ec9f68e0808b9ec256a960bcb2c93e2b3711f1603e28d12dde650d8785e"
+    },
+    "debug-fixed": {
+      "cycleWarningsAtTerminal": 1,
+      "logSHA256": "3c2c7ec9f68e0808b9ec256a960bcb2c93e2b3711f1603e28d12dde650d8785e"
+    },
+    "debug-native-list": {
+      "cycleWarningsAtTerminal": 12,
+      "logSHA256": "b79ba5b4465e0621bffed30573ce0a0458393dacb3fe4b2eeee95d2d9f686c8a"
+    },
+    "debug-eager": {
+      "cycleWarningsAtTerminal": 0,
+      "logSHA256": "1dadc5abbb270bb50f3a0eb8c0419f146b140d6b63c0e0dec691bbd86f728022"
+    },
+    "plain": {
+      "cycleWarningsAtTerminal": 0,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "focus": {
+      "cycleWarningsAtTerminal": 0,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "sizing": {
+      "cycleWarningsAtTerminal": 0,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "focus-sizing": {
+      "cycleWarningsAtTerminal": 0,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "preferred-dark": {
+      "cycleWarningsAtTerminal": 0,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "hidden-scroll": {
+      "cycleWarningsAtTerminal": 0,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "two-hidden": {
+      "cycleWarningsAtTerminal": 0,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ignore-safe-area": {
+      "cycleWarningsAtTerminal": 0,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "retainedEagerLayout": {
+    "fullAppOpeningVerified": true,
+    "twoOwnedLoopbackInspectionsAndResultUpdatesVerified": true,
+    "oneCompleteAndOneAuthenticationRequired": true,
+    "reopenWithSelectionAndResultsRetainedVerified": true,
+    "cycleWarnings": 0,
+    "largeList": {
+      "syntheticConfigurations": 500,
+      "all500Selected": true,
+      "visibleLastRow": "owned_scale_497",
+      "lastRowReachedUsingExposedAXScrollDownAction": true,
+      "no500ServiceInspectionStarted": true,
+      "approximateRSSMiBAfterOpeningSingleObservation": 168,
+      "approximateRSSMiBAfterScanSingleObservation": 70,
+      "performanceDistributionMeasured": false,
+      "AXRowChildrenReturned": false,
+      "screenshot": "mcp-batch-sheet-2026-10-17/eager-500-last-row.png",
+      "screenshotSHA256": "7f055c08c982e630fa3fc9d46f556a3a08729f98639136d3aa36880657f0f9f0"
+    }
+  },
+  "rejectedChanges": {
+    "debug-fixed": "Explicit scroll background retained a cycle; removed.",
+    "debug-native-list": "Initial open and results had no cycle, but reopening with results produced repeated cycles; removed."
+  },
+  "captureLimitations": {
+    "noWindowsAvailableObserved": true,
+    "existingAppReboundWithoutRestart": true,
+    "ScreenCaptureKit3812ObservedInSeparateZeroCycleProbe": true,
+    "captureErrorsProvenCausedByLayoutCycle": false,
+    "largeListAXRowsNotVerified": true
+  },
+  "tests": {
+    "command": "swift test --filter 'MCPBatchInspectionTests|MCPDefinitionStoreTests|VerificationHelperIsolationTests'",
+    "exitCode": 0,
+    "executed": 18,
+    "failures": 0,
+    "logSHA256": "8137cd24346dd11c47d02ee62d7445f8f3f3b4509c1086c2c6a499bcb76d7e99",
+    "includesReleaseOrOtherOSAcceptance": false
+  },
+  "cleanup": {
+    "ownQAProcessesAbsent": true,
+    "ownedHTTPServerStoppedAndPortClosed": true,
+    "original456ArtifactHashesUnchanged": true,
+    "original456AppStrictSignatureVerified": true,
+    "actualUserConfigSHA256": "b6859e2bc3e07f6c1b653d5b2827cd2052ed17c30837d30b65209e59fcf32d80",
+    "actualUserConfigMatchesPriorBaseline": true,
+    "exitMethod": "Cmd-Q left QA process alive; SIGTERM applied only after matching owned PID and exact runtime path."
+  },
+  "remaining": [
+    "Release integration of this fix and subsequent main changes",
+    "Actual Intel, older macOS and large-font testing",
+    "Large-list accessibility row exposure",
+    "Capture-tool window errors",
+    "Real business quality and Skill net benefit"
+  ]
+}
