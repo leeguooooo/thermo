@@ -1,0 +1,570 @@
+{
+  "recordedAt": "2026-10-17T05:44:39.457153+00:00",
+  "sourceIntegration": {
+    "sourceMainCommit": "1d8fe2925505f42e99aa800ed1821c01c875837d",
+    "candidateCommit": "2253d28f3ec3fde28da2ccda352fa06351dd6ddf",
+    "runtimeDifferenceFromMain": [
+      "Sources/ThermoKit/Version.swift"
+    ],
+    "priorBaselineCandidate": "integrated-c0c3ab0",
+    "priorBaselineTests": 1641,
+    "uiReviewModeIncluded": true
+  },
+  "fullReleaseRegression": {
+    "candidateCommit": "2253d28f3ec3fde28da2ccda352fa06351dd6ddf",
+    "configuration": "release",
+    "tests": 1641,
+    "failures": 0,
+    "suites": [
+      {
+        "suite": "ThermoKitTests.xctest",
+        "outcome": "passed",
+        "tests": 188,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoHelperTests.xctest",
+        "outcome": "passed",
+        "tests": 30,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoCLITests.xctest",
+        "outcome": "passed",
+        "tests": 104,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoAppTests.xctest",
+        "outcome": "passed",
+        "tests": 294,
+        "failures": 0
+      },
+      {
+        "suite": "CleanKitTests.xctest",
+        "outcome": "passed",
+        "tests": 751,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests.xctest",
+        "outcome": "passed",
+        "tests": 232,
+        "failures": 0
+      },
+      {
+        "suite": "AgentCoreTests.xctest",
+        "outcome": "passed",
+        "tests": 42,
+        "failures": 0
+      }
+    ],
+    "exitCode": 0,
+    "logSHA256": "1ccc6bd747a01a7b604b58d26071872e3a3e06f75c34efae861cbc41f383717a",
+    "worktreeCleanAfterTests": true
+  },
+  "package": {
+    "generated": "2026-10-17T05:23:19.162545+00:00",
+    "candidateCommit": "2253d28f3ec3fde28da2ccda352fa06351dd6ddf",
+    "testedCodeCommit": "2253d28f3ec3fde28da2ccda352fa06351dd6ddf",
+    "version": "1.2.0",
+    "build": "456",
+    "scope": "Local ad-hoc universal candidate. x86_64 execution is Rosetta, not real Intel hardware. Owned synthetic CLI fixtures only. No formal signing, notarization, installation, helper/radio action or publication.",
+    "metadataVerification": "Verified signatures, deployment target 13.0 and required architectures: arm64 x86_64",
+    "artifacts": {
+      "thermo": {
+        "sha256": "2d7a04684b171bb1c043ea0fe025d83a930b4b2aa2a4a9a77df0aa4f19786f7c",
+        "bytes": 37143984,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      },
+      "thermo-helper": {
+        "sha256": "56621f2f67818cfdaa30e7eaa6b35836ffaa4ce4c5b26613c9f7ffa581185bec",
+        "bytes": 3434256,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      },
+      "Thermo.app/Contents/MacOS/Thermo": {
+        "sha256": "2aec90bc50fd6d7b21864951bf1fb4ddbb3fbc3e1ca4aa8eae22d1fcdce517af",
+        "bytes": 63551728,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      },
+      "Thermo.app/Contents/Helpers/thermo": {
+        "sha256": "2d7a04684b171bb1c043ea0fe025d83a930b4b2aa2a4a9a77df0aa4f19786f7c",
+        "bytes": 37143984,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      },
+      "Thermo.app/Contents/Helpers/thermo-helper": {
+        "sha256": "56621f2f67818cfdaa30e7eaa6b35836ffaa4ce4c5b26613c9f7ffa581185bec",
+        "bytes": 3434256,
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ],
+        "signatureKind": "ad-hoc"
+      }
+    },
+    "cliChecks": [
+      {
+        "mode": "native-arm64",
+        "check": "verify-skill-context.py",
+        "passed": true,
+        "result": {
+          "passed": true,
+          "userUniqueFiles": 1,
+          "projectUniqueFiles": 2,
+          "aliasesExcluded": 1,
+          "cacheFilesCountedSeparately": 1,
+          "coverageWarningPreserved": true
+        }
+      },
+      {
+        "mode": "native-arm64",
+        "check": "verify-skill-quality.py",
+        "passed": true,
+        "result": {
+          "passed": true,
+          "missingReferences": 2,
+          "sourceLinesVerified": true,
+          "emptyBodies": 1,
+          "identicalIndependentCopies": 2,
+          "examplesIgnored": true,
+          "noMCPExecution": true,
+          "noSkillChanges": true,
+          "aliasEvidenceDeduplicated": true,
+          "cacheEvidenceSeparate": true,
+          "qualitySummariesRespectAgentFilter": true
+        }
+      },
+      {
+        "mode": "native-arm64",
+        "check": "verify-tool-usage.py",
+        "passed": true,
+        "result": {
+          "passed": true,
+          "mcpCalls": 2,
+          "skillCalls": 1,
+          "requestTokensKeptSeparate": true,
+          "privateTextExcluded": true,
+          "imageTokensUnknown": true,
+          "knownStatusErrorProportionVerified": true,
+          "unknownErrorProportionPreserved": true,
+          "nativeMCPEventsIncludedWithoutDoubleCounting": true,
+          "nativeHostFailureRetainsCompletionAndTiming": true,
+          "categoryTotalsAndSharesIncludeHiddenRows": true
+        }
+      },
+      {
+        "mode": "native-arm64",
+        "check": "verify-reference-encoding.py",
+        "passed": true,
+        "result": {
+          "passed": true,
+          "encodings": [
+            "cl100k_base",
+            "o200k_base"
+          ],
+          "standaloneBinary": true,
+          "skillMCPAndUsageCountsMatchReference": true,
+          "modelNamesNotInferred": true
+        }
+      },
+      {
+        "mode": "native-arm64",
+        "check": "verify-task-comparison.py",
+        "passed": true,
+        "result": {
+          "evidenceKind": "synthetic",
+          "checksPassed": 7,
+          "checks": [
+            "compiled JSON output retains outcomes and paired metric sample sizes",
+            "text output labels synthetic evidence and delta direction",
+            "missing metrics and unverified outcomes remain unknown in JSON and text",
+            "missing and changed-task pairs are excluded rather than compared",
+            "mixed cohorts and duplicate results fail closed",
+            "extra content is not exported or executed; unsupported options rejected",
+            "FIFO and directory inputs are rejected without waiting for data"
+          ],
+          "notVerified": [
+            "real model task effect",
+            "independent outcome authenticity",
+            "App integration",
+            "release installation"
+          ]
+        }
+      },
+      {
+        "mode": "native-arm64",
+        "check": "verify-mcp-cleanup-details.py",
+        "passed": true,
+        "result": {
+          "passed": true,
+          "reports": [
+            {
+              "path": "/cleanup-error",
+              "cleanupStatus": "unconfirmed",
+              "details": {
+                "budgetSeconds": 0.25,
+                "elapsedSeconds": 0.0025415419950149953,
+                "httpStatusCode": 503,
+                "reason": "httpError"
+              }
+            },
+            {
+              "path": "/cleanup-slow",
+              "cleanupStatus": "unconfirmed",
+              "details": {
+                "budgetSeconds": 0.25,
+                "elapsedSeconds": 0.2511136249959236,
+                "reason": "timedOut"
+              }
+            },
+            {
+              "path": "/no-session",
+              "cleanupStatus": "not_needed",
+              "details": {
+                "budgetSeconds": 0,
+                "elapsedSeconds": 0,
+                "reason": "notNeeded"
+              }
+            }
+          ],
+          "transportFailureVerified": true,
+          "textOutputShowsReasonStatusAndBudget": true,
+          "privateDetailsExcluded": true,
+          "noBusinessCalls": true,
+          "fixtureOnly": true
+        }
+      },
+      {
+        "mode": "native-arm64",
+        "check": "verify-cli-completeness.py",
+        "passed": true,
+        "result": {
+          "cliSHA256": "2d7a04684b171bb1c043ea0fe025d83a930b4b2aa2a4a9a77df0aa4f19786f7c",
+          "checks": [
+            {
+              "name": "scoped-help-and-inventory",
+              "commands": 108
+            },
+            {
+              "name": "preview-with-yes-never-applies",
+              "passed": true
+            },
+            {
+              "name": "unsupported-flags-and-extra-positionals-refused",
+              "passed": true
+            },
+            {
+              "name": "compiled-cli-private-protocol-routing",
+              "passed": true,
+              "scope": "owned protocol peer; actual App host verified by Swift socket test"
+            },
+            {
+              "name": "real-frozen-clean-plan-preview-apply-and-replay",
+              "passed": true
+            }
+          ],
+          "hardwareChanged": false,
+          "realBrowsersChanged": false,
+          "realPrivacySettingsChanged": false
+        }
+      },
+      {
+        "mode": "rosetta-x86_64",
+        "check": "verify-skill-context.py",
+        "passed": true,
+        "result": {
+          "passed": true,
+          "userUniqueFiles": 1,
+          "projectUniqueFiles": 2,
+          "aliasesExcluded": 1,
+          "cacheFilesCountedSeparately": 1,
+          "coverageWarningPreserved": true
+        }
+      },
+      {
+        "mode": "rosetta-x86_64",
+        "check": "verify-skill-quality.py",
+        "passed": true,
+        "result": {
+          "passed": true,
+          "missingReferences": 2,
+          "sourceLinesVerified": true,
+          "emptyBodies": 1,
+          "identicalIndependentCopies": 2,
+          "examplesIgnored": true,
+          "noMCPExecution": true,
+          "noSkillChanges": true,
+          "aliasEvidenceDeduplicated": true,
+          "cacheEvidenceSeparate": true,
+          "qualitySummariesRespectAgentFilter": true
+        }
+      },
+      {
+        "mode": "rosetta-x86_64",
+        "check": "verify-tool-usage.py",
+        "passed": true,
+        "result": {
+          "passed": true,
+          "mcpCalls": 2,
+          "skillCalls": 1,
+          "requestTokensKeptSeparate": true,
+          "privateTextExcluded": true,
+          "imageTokensUnknown": true,
+          "knownStatusErrorProportionVerified": true,
+          "unknownErrorProportionPreserved": true,
+          "nativeMCPEventsIncludedWithoutDoubleCounting": true,
+          "nativeHostFailureRetainsCompletionAndTiming": true,
+          "categoryTotalsAndSharesIncludeHiddenRows": true
+        }
+      },
+      {
+        "mode": "rosetta-x86_64",
+        "check": "verify-reference-encoding.py",
+        "passed": true,
+        "result": {
+          "passed": true,
+          "encodings": [
+            "cl100k_base",
+            "o200k_base"
+          ],
+          "standaloneBinary": true,
+          "skillMCPAndUsageCountsMatchReference": true,
+          "modelNamesNotInferred": true
+        }
+      },
+      {
+        "mode": "rosetta-x86_64",
+        "check": "verify-task-comparison.py",
+        "passed": true,
+        "result": {
+          "evidenceKind": "synthetic",
+          "checksPassed": 7,
+          "checks": [
+            "compiled JSON output retains outcomes and paired metric sample sizes",
+            "text output labels synthetic evidence and delta direction",
+            "missing metrics and unverified outcomes remain unknown in JSON and text",
+            "missing and changed-task pairs are excluded rather than compared",
+            "mixed cohorts and duplicate results fail closed",
+            "extra content is not exported or executed; unsupported options rejected",
+            "FIFO and directory inputs are rejected without waiting for data"
+          ],
+          "notVerified": [
+            "real model task effect",
+            "independent outcome authenticity",
+            "App integration",
+            "release installation"
+          ]
+        }
+      },
+      {
+        "mode": "rosetta-x86_64",
+        "check": "verify-mcp-cleanup-details.py",
+        "passed": true,
+        "result": {
+          "passed": true,
+          "reports": [
+            {
+              "path": "/cleanup-error",
+              "cleanupStatus": "unconfirmed",
+              "details": {
+                "budgetSeconds": 0.25,
+                "elapsedSeconds": 0.002656875003594905,
+                "httpStatusCode": 503,
+                "reason": "httpError"
+              }
+            },
+            {
+              "path": "/cleanup-slow",
+              "cleanupStatus": "unconfirmed",
+              "details": {
+                "budgetSeconds": 0.25,
+                "elapsedSeconds": 0.2510407499939902,
+                "reason": "timedOut"
+              }
+            },
+            {
+              "path": "/no-session",
+              "cleanupStatus": "not_needed",
+              "details": {
+                "budgetSeconds": 0,
+                "elapsedSeconds": 0,
+                "reason": "notNeeded"
+              }
+            }
+          ],
+          "transportFailureVerified": true,
+          "textOutputShowsReasonStatusAndBudget": true,
+          "privateDetailsExcluded": true,
+          "noBusinessCalls": true,
+          "fixtureOnly": true
+        }
+      },
+      {
+        "mode": "rosetta-x86_64",
+        "check": "verify-cli-completeness.py",
+        "passed": true,
+        "result": {
+          "cliSHA256": "cb1565678432b8910608608dc66ef24dd0fe9c55fa51bae6fff91b4c285d74a9",
+          "checks": [
+            {
+              "name": "scoped-help-and-inventory",
+              "commands": 108
+            },
+            {
+              "name": "preview-with-yes-never-applies",
+              "passed": true
+            },
+            {
+              "name": "unsupported-flags-and-extra-positionals-refused",
+              "passed": true
+            },
+            {
+              "name": "compiled-cli-private-protocol-routing",
+              "passed": true,
+              "scope": "owned protocol peer; actual App host verified by Swift socket test"
+            },
+            {
+              "name": "real-frozen-clean-plan-preview-apply-and-replay",
+              "passed": true
+            }
+          ],
+          "hardwareChanged": false,
+          "realBrowsersChanged": false,
+          "realPrivacySettingsChanged": false
+        }
+      }
+    ],
+    "updateFeedAbsent": true,
+    "originalCleanupObservationResolved": false
+  },
+  "visibleAIPageReview": {
+    "mode": "Visible full App QA copy, --main --ui-review, synthetic HOME and loopback MCP services; not a SwiftUI preview",
+    "version": "1.2.0",
+    "build": "456",
+    "qaBundleIdentifier": "dev.thermo.ai.qa.456",
+    "allFileBackedMachOSectionsMatchPackage": true,
+    "architecturesCompared": [
+      "arm64",
+      "x86_64"
+    ],
+    "startupModeUnitTests": {
+      "tests": 2,
+      "failures": 0,
+      "suppressesAutomaticMonitorHelperQueriesAndStartupPolicyRestoration": true,
+      "normalStartupStillUsesInjectedHelperClient": true
+    },
+    "checks": {
+      "mcpRows": 22,
+      "returnedTextBytes": 7040,
+      "heuristicReturnedTextTokens": 1780,
+      "cl100kReturnedTextTokens": 1320,
+      "largestHeuristicSharePercent": 93.3,
+      "twentySampleP95Seconds": 1.18,
+      "paginationObserved": [
+        8,
+        16,
+        22
+      ],
+      "lastPageMoreButtonAbsent": true,
+      "errorSortResetsVisibleRowsTo8": true,
+      "errorSortIncludesHostInvocationFailure": true,
+      "hostInvocationFailureSeparateFromResultErrorRate": true,
+      "unknownResultErrorRateNotZero": true,
+      "missingWrapperResults": 1,
+      "unattributedNonTextBlocks": 2,
+      "oldEncodingReportNoticeAppearsAndClearsAfterReanalysis": true,
+      "definitionCompleteConfigurations": 1,
+      "definitionTotalConfigurations": 2,
+      "definitionToolsFromCompletePart": 2,
+      "definitionBytesFromCompletePart": 655,
+      "definitionArrayCl100kTokensFromCompletePart": 124,
+      "serviceInstructionsCl100kTokensSeparate": 3,
+      "authenticationRequiredRetainedAndOverallUnknown": true,
+      "skillUniqueFiles": 4,
+      "skillAliasesExcluded": 1,
+      "skillCacheFilesSeparate": 1,
+      "configuredDisabledSkillsRetained": 1,
+      "sameNameSourceHintReachable": true,
+      "mcpRowsNotMixedIntoSkillUsage": true
+    },
+    "captureRecovery": {
+      "unexpectedToolErrors": 2,
+      "errors": [
+        "noWindowsAvailable",
+        "ScreenCaptureKit -3812 invalid parameter"
+      ],
+      "reboundToExistingBundleID": true,
+      "firstFailureVerifiedProcessAliveAndConsoleUnlocked": true,
+      "detailsAndReportStateRetainedAfterSecondRebind": true,
+      "appRestartNotUsedForRecovery": true,
+      "underlyingCauseUnknown": true,
+      "oneAttributeGraphCycleWarningObserved": true
+    },
+    "scopeLimits": [
+      "Synthetic source records and request counters; no model billing or real service latency measured.",
+      "Only the listed MCP/Skill flows at normal window size with zh-Hans localization.",
+      "Task-comparison import UI was not exercised; its CLI fixtures passed on both execution architectures.",
+      "UI review mode is not a sandbox and does not block explicit control actions; those actions were not exercised.",
+      "Normal startup/helper/hardware acceptance, actual Intel, older systems and large fonts remain separate."
+    ],
+    "screenshots": {
+      "ui-mcp-definitions.png": {
+        "path": "ai-tools-456-ui-2026-10-17/ui-mcp-definitions.png",
+        "sha256": "b73895dc48ddab56495febf748edc92963776038ffbe2ce7ea7ea2379762672b",
+        "originalCUAWindowCapture": true,
+        "visuallyInspected": true
+      },
+      "ui-mcp-errors.png": {
+        "path": "ai-tools-456-ui-2026-10-17/ui-mcp-errors.png",
+        "sha256": "a73ca2e8fc6969196f62669e6196a3b786e7dc106ce2533cc78b80f77a95731e",
+        "originalCUAWindowCapture": true,
+        "visuallyInspected": true
+      },
+      "ui-skills.png": {
+        "path": "ai-tools-456-ui-2026-10-17/ui-skills.png",
+        "sha256": "c3cdc87dc2c91803ac51125667b8eee56f4d371658097577211bdd80746ddd0c",
+        "originalCUAWindowCapture": true,
+        "visuallyInspected": true
+      },
+      "ui-skill-details.png": {
+        "path": "ai-tools-456-ui-2026-10-17/ui-skill-details.png",
+        "sha256": "8ccf20cc96a97d95b4da9f05cedf299a37c16dc8bfc173c0e7b6aff28816c3d4",
+        "originalCUAWindowCapture": true,
+        "visuallyInspected": true
+      }
+    },
+    "cleanup": {
+      "qaProcessExited": true,
+      "allOriginalPackageHashesUnchanged": true,
+      "ownedHTTPServerStopped": true,
+      "ownedHTTPPortClosed": true
+    }
+  },
+  "originalSignedAppReverifiedAfterQA": true,
+  "localAdHocCandidate": true,
+  "formallySignedOrNotarized": false,
+  "installedOrPublished": false,
+  "releaseReady": false,
+  "remaining": [
+    "Formal version/signing/notarization/install/update decision and acceptance.",
+    "Real business tool quality and Skill net-benefit evaluation.",
+    "Figma independent authorized definition coverage and other hosts remain incomplete.",
+    "Capture-tool transient failures and the single AttributeGraph warning have no established root cause."
+  ]
+}
