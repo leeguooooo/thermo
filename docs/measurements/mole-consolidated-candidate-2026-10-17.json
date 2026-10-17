@@ -1,0 +1,113 @@
+{
+  "date": "2026-10-17",
+  "source": "3aeb21c9216db75eb6546748178992bf68965cb5",
+  "version": "1.1.28",
+  "build": "457",
+  "regression": {
+    "source": "3aeb21c9216db75eb6546748178992bf68965cb5",
+    "exitCode": 0,
+    "excluded": [
+      "HardwareTests"
+    ],
+    "total": 1659,
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 187,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 108,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 300,
+        "failures": 0
+      },
+      "CleanKitTests.xctest": {
+        "tests": 751,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 238,
+        "failures": 0
+      },
+      "AgentCoreTests.xctest": {
+        "tests": 45,
+        "failures": 0
+      }
+    },
+    "logSHA256": "1df8ad0b11a9dff6fe46e9ff6daab1cad718dad5cfa0179ed3ab4ae09ea3bda8"
+  },
+  "archive": {
+    "archive": "Thermo-1.1.28-457-candidate.zip",
+    "sha256": "5f2fb3c30a7ccd6cef4566d41a1ab31587372b5d870a6339f3a7e7389af960b5",
+    "matchedFiles": 95,
+    "deepStrictSignature": true,
+    "productionClientRequirement": true
+  },
+  "artifacts": {
+    "thermo": {
+      "sha256": "35e5e24ee5c18f2cea44b3669ea7e7c4ffa948ccdd62eef4eb1f5c43ad3ca223",
+      "bytes": 37168464
+    },
+    "thermo-helper": {
+      "sha256": "23d84de5b9e1b53b29183aed9b698aadf4f9cbf38a936462d6be984c64d288f8",
+      "bytes": 3432368
+    },
+    "Thermo.app/Contents/MacOS/Thermo": {
+      "sha256": "bf9b6d2211561046d9a34ec4ccd39266f2d86ee7929329e15c079861323cdb9c",
+      "bytes": 63606384
+    },
+    "Thermo.app/Contents/Helpers/thermo": {
+      "sha256": "d5cf199655c5b391d8803715941f559f56e6a3cfbf1854601c2fc99784a3178b",
+      "bytes": 37168464
+    },
+    "Thermo.app/Contents/Helpers/thermo-helper": {
+      "sha256": "c45235006ea4b87179acd11fb6ac029f8eb8b581dd5bf9192f9975a806cdbb91",
+      "bytes": 3432368
+    }
+  },
+  "signature": {
+    "team": "6ZPXG4KVVS",
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "deploymentTarget": "13.0",
+    "productionClientRequirement": true
+  },
+  "cli": {
+    "nativeAndRosetta": true,
+    "fullAndLimit80DryRun": true,
+    "readonlyBatteryProbe": true,
+    "helperVersion": "1.1.28"
+  },
+  "lifecycle": {
+    "exitCode": 0,
+    "functionalChecksPassed": true,
+    "configuration": "release",
+    "cycles": 2,
+    "opens": 6,
+    "samples": 19,
+    "helperInteraction": false,
+    "visibleUIAcceptance": false,
+    "longTermMemoryAssessed": false,
+    "reportSHA256": "53be5f4443b45c7c27aed09692ec25b48c8f27ad71933005fc34aee7807c76cf"
+  },
+  "installedAppAndHelperUnchanged": true,
+  "notarized": false,
+  "published": false,
+  "installed": false,
+  "pending": [
+    "Installed App and root helper upgrade acceptance",
+    "Visible final-package input and navigation acceptance",
+    "Real charging and recovery, AWDL and other hardware acceptance",
+    "Physical Intel acceptance",
+    "Long duration and complete Mole parity acceptance"
+  ],
+  "verificationNote": "The package verifier initially rejected lowercase release in its own case-sensitive assertion after the App exited 0. Inspected the saved lifecycle report and corrected verifier assertion without rerunning or replacing the App result."
+}
