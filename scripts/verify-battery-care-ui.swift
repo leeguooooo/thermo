@@ -114,6 +114,11 @@ struct QAHost: View {
         window.contentView = NSHostingView(rootView: QAHost(model: model, fake: fake).preferredColorScheme(.dark))
         window.center(); window.makeKeyAndOrderFront(nil); app.activate(ignoringOtherApps: true)
         print("QA_WINDOW_READY"); fflush(stdout)
+        func reportWindow(_ stage: String) {
+            print("QA_WINDOW_STATE \(stage) number=\(window.windowNumber) visible=\(window.isVisible) occlusion=\(window.occlusionState.rawValue) active=\(app.isActive) frame=\(window.frame)"); fflush(stdout)
+        }
+        reportWindow("before-run")
+        DispatchQueue.main.async { reportWindow("running") }
         model.restoreSavedPreference()
         DispatchQueue.main.asyncAfter(deadline: .now() + 600) { fake.permit(true); app.terminate(nil) }
         withExtendedLifetime((window, delegate, manager, fake)) { app.run() }

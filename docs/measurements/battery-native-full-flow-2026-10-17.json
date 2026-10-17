@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "7da5f78",
+  "fixtureRoot": "/private/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-battery-ui-8vq4wrw1",
+  "originalFixtureBinarySHA256": "3e89e220087c4f80388e23ad3a050d02f25e5084ca452b11dffbacc76a2dd873",
+  "fixedFixtureBinarySHA256": "58d593d8b4ca62813c2d322bf38d49fa6acbb642eead80df622a428d82df12c6",
+  "scope": "Real CUA button/menu interaction with production panel/model/coordinator and simulated SMC/power; private preferences/recovery. Not the installed App or real root helper.",
+  "flowsObserved": [
+    "Enable80 at90 AC: held readback, full button enabled",
+    "Temporary full: gate released and full button disabled",
+    "Reported100: full override ends, prior80 hold resumes, reason shown",
+    "Unplug while full: override ends, previous80 remains, gate allowed",
+    "Replug90: original80 hold resumes",
+    "Unknown AC while full: override ends with unavailable reason; no claim of reaching100",
+    "Fresh AC returns: original80 hold resumes",
+    "Explicit off: allowed gate and saved preference false",
+    "Both runs exited through the app Quit menu"
+  ],
+  "visibleStrings": {
+    "fullyCharged": "临时充满请求已因一次 100% 电量读数而结束。",
+    "unplugged": "临时充满请求已因未连接外接电源而结束。",
+    "unavailable": "临时充满请求已因缺少新的供电状态而结束。"
+  },
+  "beforeWrapTrace": [
+    "QA_START",
+    "QA_WINDOW_READY",
+    "QA_WINDOW_STATE before-run number=18982 visible=true occlusion=8192 active=false frame=(536.0, 336.0, 680.0, 682.0)",
+    "QA_WINDOW_STATE running number=18982 visible=true occlusion=8192 active=false frame=(536.0, 877.0, 280.0, 141.0)",
+    "FAKE_WRITE [1, 0, 0, 0]",
+    "HISTORY charging-limit80 done",
+    "FAKE_WRITE [0, 0, 0, 0]",
+    "HISTORY charging-chargeToFull done",
+    "FAKE_WRITE [1, 0, 0, 0]",
+    "FAKE_WRITE [0, 0, 0, 0]",
+    "HISTORY charging-chargeToFull done",
+    "FAKE_WRITE [1, 0, 0, 0]",
+    "FAKE_WRITE [0, 0, 0, 0]",
+    "HISTORY charging-chargeToFull done",
+    "FAKE_WRITE [1, 0, 0, 0]",
+    "FAKE_WRITE [0, 0, 0, 0]",
+    "HISTORY charging-off done",
+    "HISTORY charging-recovery done",
+    "QUIT_BLOCKED false"
+  ],
+  "afterWrapTrace": [
+    "QA_START",
+    "QA_WINDOW_READY",
+    "QA_WINDOW_STATE before-run number=19022 visible=true occlusion=8192 active=false frame=(536.0, 336.0, 680.0, 682.0)",
+    "QA_WINDOW_STATE running number=19022 visible=true occlusion=8192 active=false frame=(536.0, 877.0, 280.0, 141.0)",
+    "FAKE_WRITE [1, 0, 0, 0]",
+    "HISTORY charging-limit80 done",
+    "FAKE_WRITE [0, 0, 0, 0]",
+    "HISTORY charging-chargeToFull done",
+    "FAKE_WRITE [1, 0, 0, 0]",
+    "FAKE_WRITE [0, 0, 0, 0]",
+    "HISTORY charging-off done",
+    "HISTORY charging-recovery done",
+    "QUIT_BLOCKED false"
+  ],
+  "layoutCorrection": {
+    "observed": "Long temporary-full explanation ended with ellipsis in the actual600-point panel",
+    "change": "Preserve vertical intrinsic size for explanatory/reason/error/preference text",
+    "rechecked": [
+      "Off state: complete final sentence shown on two lines",
+      "Reported100 with saved preference and end reason: full explanation and controls visible"
+    ],
+    "screenshots": "Three CUA screenshots inspected in conversation; no screenshot files saved"
+  },
+  "regression": {
+    "command": "swift test --filter BatteryCareModelTests",
+    "exitCode": 0,
+    "tests": 13,
+    "failures": 0,
+    "logSHA256": "670cade89440f1caf810038a402b929f75cdb2554b9e39d93f4d6a4d6888c8a8"
+  },
+  "cleanup": {
+    "normalMenuExitObserved": true,
+    "fixtureProcessesRemaining": false,
+    "registerBytes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "savedPreference": false,
+    "recoveryRecordAbsent": true,
+    "filesPreserved": true
+  },
+  "limitations": [
+    "No root helper, real charging or Battery-settings navigation acceptance",
+    "Native GUI source is an isolated Debug fixture; full signed440/installed navigation remains pending",
+    "Text wrapping correction is newer than signed440; policy behavior is unchanged",
+    "Prior cgWindowNotFound cause remains unproven; window became readable on this new diagnostic run"
+  ]
+}

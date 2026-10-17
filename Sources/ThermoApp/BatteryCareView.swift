@@ -211,26 +211,26 @@ struct BatteryCarePanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Label(tr("Battery charging protection"), systemImage: "battery.75").font(.title2.weight(.semibold))
-            Text(tr("Pause charging at 80% and allow it again below 75%. The Mac can continue using external power.")).font(.callout).foregroundStyle(.secondary)
+            Text(tr("Pause charging at 80% and allow it again below 75%. The Mac can continue using external power.")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if let state = model.state {
                 if let support = supportText(state.support ?? .unknown) { Text(support).font(.callout).foregroundStyle(.secondary) }
                 if state.support == nil { Button(tr("Set up or update Thermo's helper"), action: configureHelper) }
                 Text(status(state)).font(.headline)
-                if let reason = state.lastFullChargeEndReason { Text(endedText(reason)).font(.caption).foregroundStyle(.secondary) }
+                if let reason = state.lastFullChargeEndReason { Text(endedText(reason)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                 if let percent = state.percent { Text(tr("Observed battery: %1$@%%", String(format: "%.0f", percent))).monospacedDigit() }
                 if state.support == .smc || model.needsQuitRecovery { Text(tr(gateText(state))).font(.caption).foregroundStyle(.secondary) }
                 if model.anotherOwner { Text(tr("Another Thermo process owns this charging policy.")).font(.caption).foregroundStyle(.orange) }
                 if model.lostSessionConnection { Text(tr("The charging connection was lost. Recovery still needs confirmation.")).font(.caption).foregroundStyle(.orange) }
-                if let error = state.error { Text(tr(error)).font(.caption).foregroundStyle(.orange) }
+                if let error = state.error { Text(tr(error)).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true) }
             } else {
                 Text(tr("Charging control has not been verified.")).foregroundStyle(.orange)
                 if let support = model.probe?.support, support != .smc, support != .unknown {
                     if let detail = supportText(support) { Text(detail).font(.callout).foregroundStyle(.secondary) }
                 } else { Button(tr("Set up or update Thermo's helper"), action: configureHelper) }
             }
-            if let issue = model.issue, issue != model.state?.error, fallbackSupport == nil { Text(tr(issue)).font(.caption).foregroundStyle(.orange) }
-            if model.preferenceEnabled { Text(tr("The 80% preference is saved. Thermo checks support before resuming it at startup. Opening this panel only checks status.")).font(.caption).foregroundStyle(.secondary) }
-            Text(tr("Temporary full charge ends at a reported 100%, without external power, or when power state is unavailable. A previously active 80% preference is retained. System protection still applies.")).font(.caption).foregroundStyle(.secondary)
+            if let issue = model.issue, issue != model.state?.error, fallbackSupport == nil { Text(tr(issue)).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true) }
+            if model.preferenceEnabled { Text(tr("The 80% preference is saved. Thermo checks support before resuming it at startup. Opening this panel only checks status.")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+            Text(tr("Temporary full charge ends at a reported 100%, without external power, or when power state is unavailable. A previously active 80% preference is retained. System protection still applies.")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if model.quitRequested { Text(tr("Waiting for charging recovery before quitting. Retry if recovery remains unconfirmed.")).foregroundStyle(.orange).font(.callout) }
             HStack {
                 Button(tr(model.state?.policy == .chargeToFull ? "Resume 80% limit" : "Enable 80% limit")) { model.change(.limit80) }.disabled(!model.canEnable)

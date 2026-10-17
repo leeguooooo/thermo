@@ -718,5 +718,7 @@
       "Tests/ThermoAppTests/VerificationHelperIsolationTests.swift"
     ],
     "dirtyMainTrackedPathsPreserved": []
-  }
+  },
+  "subsequentIsolatedPanelEvidence": "battery-native-full-flow-2026-10-17.json",
+  "subsequentUIOnlyCorrectionNotPackaged": "BatteryCarePanel long explanatory text now wraps instead of ellipsizing; policy behavior unchanged."
 }
