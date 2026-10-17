@@ -1,0 +1,323 @@
+{
+  "generated": "2026-10-17T01:06:07.831906+00:00",
+  "candidateCommit": "ed354eea61a94a16f33d146e1434b7133aca18c4",
+  "testedCodeCommit": "ed354eea61a94a16f33d146e1434b7133aca18c4",
+  "version": "1.2.0",
+  "build": "393",
+  "scope": "Local ad-hoc universal candidate; synthetic CLI fixtures and replay of exactly two captured real public-doc MCP events in an isolated App copy. x86_64 uses Rosetta, not real Intel hardware. No formal signing, notarization, installation, helper/radio control or publication.",
+  "metadataVerification": "Verified signatures, deployment target 13.0 and required architectures: arm64 x86_64",
+  "artifacts": {
+    "thermo": {
+      "sha256": "152f2937ddd5df4eb2f5a275a1579946ed5a5d9cb2613188ebdd96e9a7d425cc",
+      "bytes": 34620032,
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "signatureKind": "ad-hoc"
+    },
+    "thermo-helper": {
+      "sha256": "b3055d83af07b0bf61f3eccf85ca1d8665cbf8206882db1189fbb4e132e21674",
+      "bytes": 2723936,
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "signatureKind": "ad-hoc"
+    },
+    "Thermo.app/Contents/MacOS/Thermo": {
+      "sha256": "fad3442e8dae13228b9acc7ff6a0d09b05f39617855b8441640a656fc012a5b7",
+      "bytes": 61471728,
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "signatureKind": "ad-hoc"
+    },
+    "Thermo.app/Contents/Helpers/thermo": {
+      "sha256": "152f2937ddd5df4eb2f5a275a1579946ed5a5d9cb2613188ebdd96e9a7d425cc",
+      "bytes": 34620032,
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "signatureKind": "ad-hoc"
+    },
+    "Thermo.app/Contents/Helpers/thermo-helper": {
+      "sha256": "b3055d83af07b0bf61f3eccf85ca1d8665cbf8206882db1189fbb4e132e21674",
+      "bytes": 2723936,
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "signatureKind": "ad-hoc"
+    }
+  },
+  "cliChecks": [
+    {
+      "mode": "native-arm64",
+      "check": "verify-skill-context.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "userUniqueFiles": 1,
+        "projectUniqueFiles": 2,
+        "aliasesExcluded": 1,
+        "cacheFilesCountedSeparately": 1,
+        "coverageWarningPreserved": true
+      }
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-skill-quality.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "missingReferences": 2,
+        "sourceLinesVerified": true,
+        "emptyBodies": 1,
+        "identicalIndependentCopies": 2,
+        "examplesIgnored": true,
+        "noMCPExecution": true,
+        "noSkillChanges": true
+      }
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-tool-usage.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "mcpCalls": 2,
+        "skillCalls": 1,
+        "requestTokensKeptSeparate": true,
+        "privateTextExcluded": true,
+        "imageTokensUnknown": true,
+        "knownStatusErrorProportionVerified": true,
+        "unknownErrorProportionPreserved": true,
+        "nativeMCPEventsIncludedWithoutDoubleCounting": true
+      }
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-reference-encoding.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "encodings": [
+          "cl100k_base",
+          "o200k_base"
+        ],
+        "standaloneBinary": true,
+        "skillMCPAndUsageCountsMatchReference": true,
+        "modelNamesNotInferred": true
+      }
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-task-comparison.py",
+      "passed": true,
+      "result": {
+        "evidenceKind": "synthetic",
+        "checksPassed": 7,
+        "checks": [
+          "compiled JSON output retains outcomes and paired metric sample sizes",
+          "text output labels synthetic evidence and delta direction",
+          "missing metrics and unverified outcomes remain unknown in JSON and text",
+          "missing and changed-task pairs are excluded rather than compared",
+          "mixed cohorts and duplicate results fail closed",
+          "extra content is not exported or executed; unsupported options rejected",
+          "FIFO and directory inputs are rejected without waiting for data"
+        ],
+        "notVerified": [
+          "real model task effect",
+          "independent outcome authenticity",
+          "App integration",
+          "release installation"
+        ]
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-skill-context.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "userUniqueFiles": 1,
+        "projectUniqueFiles": 2,
+        "aliasesExcluded": 1,
+        "cacheFilesCountedSeparately": 1,
+        "coverageWarningPreserved": true
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-skill-quality.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "missingReferences": 2,
+        "sourceLinesVerified": true,
+        "emptyBodies": 1,
+        "identicalIndependentCopies": 2,
+        "examplesIgnored": true,
+        "noMCPExecution": true,
+        "noSkillChanges": true
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-tool-usage.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "mcpCalls": 2,
+        "skillCalls": 1,
+        "requestTokensKeptSeparate": true,
+        "privateTextExcluded": true,
+        "imageTokensUnknown": true,
+        "knownStatusErrorProportionVerified": true,
+        "unknownErrorProportionPreserved": true,
+        "nativeMCPEventsIncludedWithoutDoubleCounting": true
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-reference-encoding.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "encodings": [
+          "cl100k_base",
+          "o200k_base"
+        ],
+        "standaloneBinary": true,
+        "skillMCPAndUsageCountsMatchReference": true,
+        "modelNamesNotInferred": true
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-task-comparison.py",
+      "passed": true,
+      "result": {
+        "evidenceKind": "synthetic",
+        "checksPassed": 7,
+        "checks": [
+          "compiled JSON output retains outcomes and paired metric sample sizes",
+          "text output labels synthetic evidence and delta direction",
+          "missing metrics and unverified outcomes remain unknown in JSON and text",
+          "missing and changed-task pairs are excluded rather than compared",
+          "mixed cohorts and duplicate results fail closed",
+          "extra content is not exported or executed; unsupported options rejected",
+          "FIFO and directory inputs are rejected without waiting for data"
+        ],
+        "notVerified": [
+          "real model task effect",
+          "independent outcome authenticity",
+          "App integration",
+          "release installation"
+        ]
+      }
+    }
+  ],
+  "updateFeedAbsent": true,
+  "originalCleanupObservationResolved": false,
+  "fullReleaseRegression": {
+    "generated": "2026-10-17T00:59:30.920054+00:00",
+    "candidateCommit": "ed354eea61a94a16f33d146e1434b7133aca18c4",
+    "configuration": "release",
+    "jobs": 1,
+    "tests": 1483,
+    "failures": 0,
+    "suites": [
+      {
+        "name": "ThermoKitTests.xctest",
+        "tests": 144,
+        "failures": 0
+      },
+      {
+        "name": "ThermoHelperTests.xctest",
+        "tests": 7,
+        "failures": 0
+      },
+      {
+        "name": "ThermoCLITests.xctest",
+        "tests": 70,
+        "failures": 0
+      },
+      {
+        "name": "ThermoAppTests.xctest",
+        "tests": 272,
+        "failures": 0
+      },
+      {
+        "name": "CleanKitTests.xctest",
+        "tests": 750,
+        "failures": 0
+      },
+      {
+        "name": "AgentDoctorTests.xctest",
+        "tests": 203,
+        "failures": 0
+      },
+      {
+        "name": "AgentCoreTests.xctest",
+        "tests": 37,
+        "failures": 0
+      }
+    ],
+    "logSHA256": "69fb89f0b30268fdf8e0ce30a465bec847d4fff06e210f543e440ef04b685773",
+    "originalCleanupObservationResolved": false,
+    "sourceClean": true
+  },
+  "nativeAppCheck": {
+    "scope": "Full packaged App copy with changed bundle identity and native launcher, reading exactly two captured real public-doc MCP events in a fresh owned Home. Raw excerpts removed after QA; no authentication or user config copied. Not installation or new remote tool execution.",
+    "method": "cua_repl clicks, accessibility state and screenshot",
+    "bundleID": "dev.thermo.aiqa.nativeevents12",
+    "actualRuntimePathVerified": true,
+    "instructionSectionSHA256": {
+      "arm64": "1112c4c7888250dfd834ac1a86b35a55516b5c9b42d19fbb4d0891de35d513d2",
+      "x86_64": "727d2d74a180a433cf05d807db41fed3028ff7041de0c1bba28eba0e0e1b0fba"
+    },
+    "originalPackageHashesUnchanged": true,
+    "referenceEncoding": "cl100k_base",
+    "displayedRows": [
+      {
+        "server": "openaiDeveloperDocs",
+        "tool": "search_openai_docs",
+        "calls": 1,
+        "results": 1,
+        "bytes": 49697,
+        "referenceTokens": 11651,
+        "unknownErrorStatus": 1,
+        "medianSeconds": 0.509
+      },
+      {
+        "server": "openaiDeveloperDocs",
+        "tool": "fetch_openai_doc",
+        "calls": 1,
+        "results": 1,
+        "bytes": 3331,
+        "referenceTokens": 716,
+        "unknownErrorStatus": 1,
+        "medianSeconds": 0.306
+      }
+    ],
+    "errorProportionsKeptUnknown": true,
+    "requestTokensKeptUnknown": true,
+    "qaStopped": true,
+    "rawExcerptsRemoved": true,
+    "installedAppProcessObservedAtEnd": false,
+    "priorInstalledPID94672ObservedAtEnd": false,
+    "installedAppAction": "No installed App launch, quit, restart or replacement performed by this task. Prior PID was not observed; no assumption about external cause.",
+    "newPublicDocMCPRequestsPerformed": false,
+    "selectedEventSHA256": {
+      "search_openai_docs": "d1ddb0f65bc575109216393a2983efac0990588d8b681c6782c1d531b3607ebd",
+      "fetch_openai_doc": "4e70f85e036932f8a589beb31ecaf57bb3611a8a3ebe1287ae4096bcd2ac4b30"
+    }
+  },
+  "packageLogSHA256": "db7689b5df061514f29c0916e377535f3db39ab7423372129358457e2f7d69bc",
+  "verificationDriverSHA256": "abd1440f56b18ec9b75ab950cc464efa461938cfb277860a13ac64aa776e2551",
+  "publicationPerformed": false
+}
