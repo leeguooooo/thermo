@@ -1,0 +1,388 @@
+{
+  "recordedAt": "2026-10-17T12:21:41.366508+00:00",
+  "sourceCommit": "668c13b0c40ec19b0be65705f2789e528e591d06",
+  "mainAtAudit": "668c13b0c40ec19b0be65705f2789e528e591d06",
+  "runtimeSourceDifferenceFromMain": [],
+  "sourceFreeze": {
+    "frozenAt": "2026-10-17T11:39:59.745944+00:00",
+    "sourceCommit": "668c13b0c40ec19b0be65705f2789e528e591d06",
+    "previousCompilerCommit": "b71a200e2e3f39c68e7f9c205151bfb7fdd30000",
+    "sourceCheckoutOwnedAndClean": true,
+    "openHandleInventoryExit": 0,
+    "openHandlesUnderOwnedCheckout": 0,
+    "scope": "Current AI changes; local full Release tests excluding HardwareTests, universal ad-hoc package; no install, public release or hardware control."
+  },
+  "version": "1.1.28",
+  "build": "489",
+  "fullReleaseRegression": {
+    "configuration": "Release",
+    "sourceCommit": "668c13b0c40ec19b0be65705f2789e528e591d06",
+    "command": [
+      "swift",
+      "test",
+      "-c",
+      "release",
+      "--jobs",
+      "3",
+      "--skip",
+      "HardwareTests"
+    ],
+    "suites": [
+      {
+        "suite": "ThermoKitTests.xctest",
+        "tests": 194,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoHelperTests.xctest",
+        "tests": 30,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoCLITests.xctest",
+        "tests": 108,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoAppTests.xctest",
+        "tests": 300,
+        "failures": 0
+      },
+      {
+        "suite": "CleanKitTests.xctest",
+        "tests": 751,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests.xctest",
+        "tests": 265,
+        "failures": 0
+      },
+      {
+        "suite": "AgentCoreTests.xctest",
+        "tests": 45,
+        "failures": 0
+      }
+    ],
+    "total": 1693,
+    "failures": 0,
+    "exitCode": 0,
+    "logSHA256": "8cbae9791af6b1c07bb3524c02d74ad26ad8aa45cfc6d3ff209f1b8cdf654a31"
+  },
+  "CLIValidation": [
+    {
+      "architecture": "arm64",
+      "execution": "native",
+      "check": "verify-skill-context.py",
+      "exitCode": 0,
+      "outputSHA256": "438ee7395f9c069cf2592af0daf954ea7b507ad0b82abb40734b872b11230fdb"
+    },
+    {
+      "architecture": "arm64",
+      "execution": "native",
+      "check": "verify-skill-quality.py",
+      "exitCode": 0,
+      "outputSHA256": "c856903e7d8bcdfafa832d83af64546cca73666d872dd942ff9c70b659c510df"
+    },
+    {
+      "architecture": "arm64",
+      "execution": "native",
+      "check": "verify-tool-usage.py",
+      "exitCode": 0,
+      "outputSHA256": "0678df2fcfbf82942df8aa2b209ddd58b90f44543a6dd2207e352e1680eab00e"
+    },
+    {
+      "architecture": "arm64",
+      "execution": "native",
+      "check": "verify-reference-encoding.py",
+      "exitCode": 0,
+      "outputSHA256": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d"
+    },
+    {
+      "architecture": "arm64",
+      "execution": "native",
+      "check": "verify-task-comparison.py",
+      "exitCode": 0,
+      "outputSHA256": "029edcd7a2bbbcb1e8f3f849b9298bfc55c923cf3a436636528f44f3fb15f3dc"
+    },
+    {
+      "architecture": "arm64",
+      "execution": "native",
+      "check": "verify-mcp-cleanup-details.py",
+      "exitCode": 0,
+      "outputSHA256": "2f953b5e5c19607fbe06dac4a5ef8d13aeff77d4ec9fc4fe2dcdc67efc1e3b2d"
+    },
+    {
+      "architecture": "arm64",
+      "execution": "native",
+      "check": "verify-cli-completeness.py",
+      "exitCode": 0,
+      "outputSHA256": "c00149d212fa20e48bb9d499c321de5b1cd72f7cab4fca8d705bce88f8c313f1"
+    },
+    {
+      "architecture": "arm64",
+      "execution": "native",
+      "check": "verify-skill-instruction-usage.py",
+      "exitCode": 0,
+      "outputSHA256": "327c431bb3d429ea1e5deb306146039be0156d04a14290fb8bafaf4957c443e1"
+    },
+    {
+      "architecture": "x86_64",
+      "execution": "Rosetta",
+      "check": "verify-skill-context.py",
+      "exitCode": 0,
+      "outputSHA256": "438ee7395f9c069cf2592af0daf954ea7b507ad0b82abb40734b872b11230fdb"
+    },
+    {
+      "architecture": "x86_64",
+      "execution": "Rosetta",
+      "check": "verify-skill-quality.py",
+      "exitCode": 0,
+      "outputSHA256": "c856903e7d8bcdfafa832d83af64546cca73666d872dd942ff9c70b659c510df"
+    },
+    {
+      "architecture": "x86_64",
+      "execution": "Rosetta",
+      "check": "verify-tool-usage.py",
+      "exitCode": 0,
+      "outputSHA256": "0678df2fcfbf82942df8aa2b209ddd58b90f44543a6dd2207e352e1680eab00e"
+    },
+    {
+      "architecture": "x86_64",
+      "execution": "Rosetta",
+      "check": "verify-reference-encoding.py",
+      "exitCode": 0,
+      "outputSHA256": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d"
+    },
+    {
+      "architecture": "x86_64",
+      "execution": "Rosetta",
+      "check": "verify-task-comparison.py",
+      "exitCode": 0,
+      "outputSHA256": "029edcd7a2bbbcb1e8f3f849b9298bfc55c923cf3a436636528f44f3fb15f3dc"
+    },
+    {
+      "architecture": "x86_64",
+      "execution": "Rosetta",
+      "check": "verify-mcp-cleanup-details.py",
+      "exitCode": 0,
+      "outputSHA256": "7d01031adb5ca5bc8b6b67b6a37f3824c162d1b294c71fade36713c1a68377b8"
+    },
+    {
+      "architecture": "x86_64",
+      "execution": "Rosetta",
+      "check": "verify-cli-completeness.py",
+      "exitCode": 0,
+      "outputSHA256": "0c28b6728bedea437e6f279c37c14f04e49bf9ee6fd601dead721d0b0f485ed4"
+    },
+    {
+      "architecture": "x86_64",
+      "execution": "Rosetta",
+      "check": "verify-skill-instruction-usage.py",
+      "exitCode": 0,
+      "outputSHA256": "327c431bb3d429ea1e5deb306146039be0156d04a14290fb8bafaf4957c443e1"
+    }
+  ],
+  "package": {
+    "configuration": "Release universal ad-hoc",
+    "strictSignaturesVerified": true,
+    "deploymentTarget": "13.0 metadata verified by build verifier",
+    "hasUpdateFeed": false,
+    "artifacts": [
+      {
+        "file": "thermo",
+        "bytes": 37376304,
+        "sha256": "df96e22c693db9237200245da6fd3eeda062e863f3cc3828c9c7555b917a3380",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      {
+        "file": "thermo-helper",
+        "bytes": 3449168,
+        "sha256": "c5fcd419d552e9822b0647b85d1eac18a466ca3d7b3ed732ec9890705e4c75d6",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      {
+        "file": "Thermo.app/Contents/MacOS/Thermo",
+        "bytes": 64033200,
+        "sha256": "f82ef3fd1db210a3ad680b16c71762e25e68fb35f467fdf3e72a0f53af618322",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      {
+        "file": "Thermo.app/Contents/Helpers/thermo",
+        "bytes": 37376304,
+        "sha256": "df96e22c693db9237200245da6fd3eeda062e863f3cc3828c9c7555b917a3380",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      {
+        "file": "Thermo.app/Contents/Helpers/thermo-helper",
+        "bytes": 3449168,
+        "sha256": "c5fcd419d552e9822b0647b85d1eac18a466ca3d7b3ed732ec9890705e4c75d6",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      }
+    ],
+    "buildLogSHA256": "f0e838acc8ed77dde2ef2d3daddbe5a4f7e26b2ed02e98d69c0a3ee9f5d1866b"
+  },
+  "visibleWindow": {
+    "configuration": "Full Release App in isolated Home, unique QA bundle ID, --ui-review; native arm64 interaction only",
+    "data": "Owned synthetic MCP/Skill/outer-call logs and task-comparison records; no live business actions",
+    "bothSourceRuntimeArchitecturesFileBackedSectionsMatchQA": true,
+    "outerTools": {
+      "calls": 24,
+      "results": 23,
+      "missing": 1,
+      "groups": 22,
+      "measuredTextBytes": 164,
+      "heuristicTokens": 41,
+      "expandedToAll22": true,
+      "BashShareStays48_8Percent": true,
+      "stableMoreIdentifierObserved": true,
+      "MCPRemainsSeparateBytes": 4,
+      "referenceAggregateUnknownWhenResultIncomplete": true,
+      "unknownAggregateSuppressesOuterPercentages": true,
+      "knownBashReferenceTokensRetained": 20,
+      "refreshResetsVisibleRowsToEight": true
+    },
+    "skills": {
+      "defaultSort": "loaded instructions",
+      "linkedLoads": 2,
+      "instructionBytes": 84,
+      "acknowledgmentBytes": 6,
+      "heavyBeforeShort": true
+    },
+    "singleLog": {
+      "nativeFilePicker": true,
+      "readOnlySelectedFile": true,
+      "filesRead": 1,
+      "filesDiscovered": 1,
+      "otherCalls": 1,
+      "measuredOuterBytes": 4,
+      "noOtherFileMCPRow": true
+    },
+    "taskComparison": {
+      "nativeFilePicker": true,
+      "syntheticEvidenceLabel": true,
+      "matchedPairs": 3,
+      "baselineFailureRetained": true,
+      "candidateTimeoutRetained": true,
+      "tokenSamplesRetained": 2,
+      "clearRestoresEmptyState": true
+    },
+    "attributeGraphCycleMessagesObserved": 0
+  },
+  "installedChangesRecheck": {
+    "recordedAt": "2026-10-17T12:15:17.625356+00:00",
+    "checks": [
+      {
+        "item": "iphone root Skill",
+        "sha256": "5035e047895dd54efb08cde5656930c6edb6ef872eec235d12852cf8dcad14a9",
+        "matchesValidatedChange": true
+      },
+      {
+        "item": "blog root Skill",
+        "sha256": "ecea94696e6adedc7fb58ebfcdfa63343ab8ff2ecd7bd72b504582e6c4fbbccd",
+        "matchesValidatedChange": true
+      },
+      {
+        "item": "blog review reference",
+        "sha256": "d84423f22a7990e207d880807d61cf633e1db511228cdb8010a12300fdb96baa",
+        "matchesValidatedChange": true
+      },
+      {
+        "item": "blog CLI local help patch",
+        "sha256": "8254c085db5e6bc2700ab0a8ed19ab8341822fbe43a338c82f30a6482246eee6",
+        "matchesValidatedChange": true
+      },
+      {
+        "item": "Codex user configuration",
+        "sha256": "b6859e2bc3e07f6c1b653d5b2827cd2052ed17c30837d30b65209e59fcf32d80",
+        "matchesValidatedChange": true
+      },
+      {
+        "item": "message-use",
+        "maintainedAlias": true,
+        "contentMatches": true
+      },
+      {
+        "item": "paste-use",
+        "maintainedAlias": true,
+        "contentMatches": true
+      },
+      {
+        "item": "sflow",
+        "maintainedAlias": true,
+        "contentMatches": true
+      }
+    ],
+    "additional": [
+      {
+        "item": "Unity references/probuilder-guide.md",
+        "exists": true,
+        "matchesValidatedRepair": true
+      },
+      {
+        "item": "Unity references/resources-reference.md",
+        "exists": true,
+        "matchesValidatedRepair": true
+      },
+      {
+        "item": "Design SSE relay source",
+        "exists": true,
+        "matchesValidatedRepair": true,
+        "runningInstancesRechecked": false
+      }
+    ]
+  },
+  "cleanup": {
+    "QAProcessAbsent": true,
+    "old479ArtifactsUnchanged": true,
+    "sourceAndMainTrackedFilesCleanAtBuild": true,
+    "originalAppAndCLISignaturesVerified": true,
+    "originalGUIHashUnchangedAfterQA": true
+  },
+  "installedOrPublished": false,
+  "formallySignedOrNotarized": false,
+  "screenshots": [
+    {
+      "file": "ai-tools-489-outer-all-2026-10-17.png",
+      "sha256": "e00b083705dd1e9d80b0624cf876a42abb2c0e2fbf9387d83acd93026803d611"
+    },
+    {
+      "file": "ai-tools-489-skills-2026-10-17.png",
+      "sha256": "3b961b0d40c3d2ed7332e5db5ed0891e700e08aee90094d1ac3d2609b030ccbe"
+    },
+    {
+      "file": "ai-tools-489-single-log-2026-10-17.png",
+      "sha256": "4241834fffd65d2bf4075a13b1442530630ebbe93d9c8381bbac2ad5695daae4"
+    },
+    {
+      "file": "ai-tools-489-reference-unknown-2026-10-17.png",
+      "sha256": "9d989e860395ca1539e5c3c09cace409558cf2d354d8309c19c36b198cf53661"
+    },
+    {
+      "file": "ai-tools-489-comparison-2026-10-17.png",
+      "sha256": "ac719d740db56db8ff3fe2e92109843ab16c482f53dca62bc67cf8ed901d34cc"
+    }
+  ],
+  "limitations": [
+    "HardwareTests excluded. No helper/fan/charging/AWDL controls exercised.",
+    "x86_64 CLI execution uses Rosetta; no physical Intel or macOS 13 functional acceptance.",
+    "UI data is synthetic and does not establish real task quality, autonomous Skill rule following or billed token savings.",
+    "Normal startup, installation/update and formal distribution are not accepted by these review-mode checks.",
+    "MCP definition figures remain dated independently measured snapshots; host authentication and unobserved coverage stay unknown."
+  ]
+}

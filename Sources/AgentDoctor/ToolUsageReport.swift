@@ -68,6 +68,8 @@ public struct ToolUsageRow: Codable, Identifiable, Sendable {
     public var returnedTextBytes = 0
     public var returnedTextEstimatedTokens = 0
     public var nonTextBlocks = 0
+    /// Outer results with unsupported content. Absent for older reports and other categories.
+    public var unmeasuredResults: Int? = nil
     /// Absent in older reports means unmeasured. Zero events never proves zero loading.
     public var skillInstructions: SkillInstructionUsage? = nil
     public var observedInstructionTokens: Int? {
@@ -108,6 +110,9 @@ public struct UnattributedToolResults: Codable, Sendable {
     public var referenceReturnedTextTokens: Int? = nil
     public var unavailableReferenceResults = 0
     public var nonTextBlocks = 0
+    /// Same outer observations as this aggregate, grouped only by logged tool name.
+    /// Never add these rows to the aggregate or to separately logged nested MCP results.
+    public var byTool: [ToolUsageRow]? = nil
 }
 
 public struct ToolUsageCoverage: Codable, Sendable {
@@ -149,6 +154,11 @@ public struct ToolUsageReport: Codable, Sendable {
 
     public func returnedTextSummary(kind: String) -> ToolUsageTextSummary {
         ToolUsageTextSummary(rows: tools.filter { $0.kind == kind }, kind: kind, encoding: referenceEncoding)
+    }
+
+    public var outerReturnedTextSummary: ToolUsageTextSummary? {
+        guard let rows = coverage.unattributedResults?.byTool else { return nil }
+        return ToolUsageTextSummary(rows: rows, kind: "outer", encoding: referenceEncoding)
     }
 
     public var observedSkillInstructions: SkillInstructionUsage? {

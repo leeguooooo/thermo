@@ -39,7 +39,7 @@ App 与 CLI 的调用列表增加了 MCP / Skill 各分类返回文本的合计�
 
 需要调查单次会话时，可用 `thermo agents usage --agent codex --log-file /path/session.jsonl --json`（Claude 用 `--agent claude`），或 App 的“分析单个日志…”菜单。该模式从所选文件开头读，不发现其它日志；默认发现模式的 4 MiB 尾部限制不变。单文件仍有 64 MiB / 20 秒上限，默认只计最近七天事件；CLI 可用 `--since YYYY-MM-DD` 调整时间。JSON 的可选 `singleLogFile` 只表示输入范围，不包含路径，也不保证整个文件或实际用量都已覆盖。[源码与实测](measurements/selected-session-usage-2026-10-17.json)包含非阻塞普通文件检查、预算、取消、时间筛选、旧扫描模式和完整历史会话对照。
 
-[Skill 加载日志](measurements/skill-instruction-loads-2026-10-17.json)另计明确关联的 Claude 指令消息，而非把 `Skill` 的短启动回执当作正文。JSON 新增 `ToolUsageRow.skillInstructions`，包括事件数、文本字节、启发式 / 参考计数、非文本块及未完整计量数；旧报告缺少字段时保持未测量。仅关联同一解析会话内的 `sourceToolUseID`，事件 UUID 去重，原文和路径不进入报告。`coverage.unmatchedInstructionEvents` 保留无法关联或识别的元数据数；没有正文事件不证明没有加载。252 项 AgentDoctor 测试和 scripts/verify-skill-instruction-usage.py 覆盖独立回执、重复 / 乱序、孤立记录、普通用户文本、非 Skill 元数据、时间窗口、媒体、旧报告和占比分母。已纳入 472 本地 Release 包；可见交互和安装更新仍未验收。
+[Skill 加载日志](measurements/skill-instruction-loads-2026-10-17.json)另计明确关联的 Claude 指令消息，而非把 `Skill` 的短启动回执当作正文。JSON 新增 `ToolUsageRow.skillInstructions`，包括事件数、文本字节、启发式 / 参考计数、非文本块及未完整计量数；旧报告缺少字段时保持未测量。仅关联同一解析会话内的 `sourceToolUseID`，事件 UUID 去重，原文和路径不进入报告。`coverage.unmatchedInstructionEvents` 保留无法关联或识别的元数据数；没有正文事件不证明没有加载。252 项 AgentDoctor 测试和 scripts/verify-skill-instruction-usage.py 覆盖独立回执、重复 / 乱序、孤立记录、普通用户文本、非 Skill 元数据、时间窗口、媒体、旧报告和占比分母。已纳入 472 本地 Release 包；后续 474 的完整 App 可见交互已通过，489 已补齐当前 Release / CLI 与可见交互验证。安装更新仍未验收，详见[当前验收范围](ai-tools-acceptance.md)。
 
 `context`、`inspect`、`usage` 可增加 `--encoding cl100k_base` 或 `--encoding o200k_base`；默认 heuristic 保持旧的低成本估算。App 的 MCP / Skills 分类可选择同样的编码。它们是普通文本参考编码，不自动映射模型名称，也不宣称等于 Claude、最新模型、工具包装、图片或账单用量。
 
@@ -274,6 +274,8 @@ REA_MCP_OUTPUT_SCHEMA_PROFILE = "off"
 
 
 ## 脚本返回中的文本与图片
+
+`coverage.unattributedResults.byTool` 为可选的外层工具明细，复用原合计中的观察记录，按宿主与规范化工具名分组；`kind` 为 `outer`。不保留参数，不解析命令正文，也不把嵌套 CLI / MCP 归属当作已知。旧报告没有该字段时仍为未测量。明细单列已知结果错误、未知状态、缺失、媒体和未计量内容；内部 `isError` 不作为外层状态。App 以折叠列表显示，CLI 的占比使用全部明细行作为分母，`--all` 复用一次合计计算。[当前源码、对照与可见验收](measurements/outer-tool-usage-2026-10-17.json)保留具体边界。
 
 [未归因返回计量](measurements/unattributed-tool-results-2026-10-17.json)来自主动核对的 ZEGO 配置检查与 Piggo 后台操作记录。保守筛选实际执行参数中行首为 chrome-use、且识别出的命令全部为 snapshot 的 exec 调用；不将源码或文档中提到工具名称算作执行。命令可能合并执行，筛选不覆盖全部快照，也不证明每次读取都必要。
 

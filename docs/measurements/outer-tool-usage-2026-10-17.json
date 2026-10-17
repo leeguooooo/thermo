@@ -1,0 +1,513 @@
+{
+  "recordedAt": "2026-10-17T11:15:24.021708+00:00",
+  "source": {
+    "functionalCommit": "47ed116a01ca29423958d2d0c538d6540bb7bbf1",
+    "accessibilityCommit": "078be6a51b376a27bf22ca6c6706b2d534988b1d",
+    "finalCLICommit": "9114dc096e745249200eeb40835cf5c86d1e1c9f",
+    "GUIAndParserChangedAfterAccessibilityCommit": false
+  },
+  "origin": {
+    "globalScanGenerated": "2026-10-17T10:46:09Z",
+    "complete": false,
+    "coverage": {
+      "bytesRead": 67108864,
+      "cancelled": false,
+      "clippedFiles": 10,
+      "duplicateRecords": 0,
+      "filesDiscovered": 336,
+      "filesRead": 26,
+      "limitReached": true,
+      "malformedLines": 0,
+      "missingTimestamps": 0,
+      "otherToolCalls": 2151,
+      "oversizedLines": 2,
+      "unattributedResults": {
+        "completed": 2149,
+        "missingResults": 2,
+        "nonTextBlocks": 13,
+        "returnedTextBytes": 3293531,
+        "returnedTextEstimatedTokens": 889148,
+        "unavailableReferenceResults": 0,
+        "unmeasuredResults": 8
+      },
+      "unmatchedInstructionEvents": 0,
+      "unmatchedResults": 3,
+      "unreadableFiles": 0,
+      "unsupportedUsageRecords": 0
+    },
+    "observedAttributionGap": "Only an aggregate was available for outer tools such as Bash and Read. This sample was budget-limited and cannot rank all tools."
+  },
+  "change": {
+    "JSONPath": "coverage.unattributedResults.byTool",
+    "optionalForOldReports": true,
+    "kind": "outer",
+    "scope": "Group the same outer observations by sanitized logged tool name and host; only functions. prefix is normalized. Never parse command bodies or infer nested CLI/MCP ownership. Invalid names use an unidentified bucket.",
+    "fields": [
+      "calls",
+      "completed",
+      "reportedErrors",
+      "unknownErrorStatus",
+      "missingResults",
+      "returnedTextBytes",
+      "returnedTextEstimatedTokens",
+      "referenceReturnedTextTokens",
+      "unavailableReferenceResults",
+      "unmeasuredResults",
+      "nonTextBlocks",
+      "medianSeconds",
+      "p95Seconds",
+      "totalObservedSeconds"
+    ],
+    "notAdditionalUsage": true,
+    "MCPAndSkillRowsUnchanged": true,
+    "outerErrorStatus": "Only an explicit outer Boolean status is used. Inner isError, exit-code prose and lifecycle labels do not establish outer errors.",
+    "CLISummaryComputedOnce": true
+  },
+  "validation": {
+    "focusedTests": 13,
+    "integration": [
+      {
+        "suite": "ThermoCLITests.xctest",
+        "tests": 108,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoAppTests.xctest",
+        "tests": 300,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests.xctest",
+        "tests": 265,
+        "failures": 0
+      }
+    ],
+    "postAccessibilityAppTests": [
+      {
+        "suite": "ThermoAppTests.xctest",
+        "tests": 300,
+        "failures": 0
+      }
+    ],
+    "CLI": {
+      "passed": true,
+      "mcpCalls": 2,
+      "skillCalls": 1,
+      "requestTokensKeptSeparate": true,
+      "privateTextExcluded": true,
+      "imageTokensUnknown": true,
+      "knownStatusErrorProportionVerified": true,
+      "unknownErrorProportionPreserved": true,
+      "nativeMCPEventsIncludedWithoutDoubleCounting": true,
+      "nativeHostFailureRetainsCompletionAndTiming": true,
+      "explicitSelectedFileScopeAndNonblockingGuardVerified": true,
+      "categoryTotalsAndSharesIncludeHiddenRows": true
+    },
+    "fixtureScriptSHA256": "dae8481689235eda80b29fe3c58cee26097f7d13a21affc52bf16ed93cb7365f",
+    "integrationLogSHA256": "69bd20dd78f14bcd392ee4b210d923de6a50900bfa5f0c590ef8208d17261505",
+    "postAccessibilityLogSHA256": "e47a47acc3f4d899d2e0ebf5ab58d296d539de4375eca2b0b19a1f99f0d61e29",
+    "legacyAggregateWithoutByToolRemainsUnknown": true
+  },
+  "realLogReplay": {
+    "projection": {
+      "frozenAt": "2026-10-17T10:54:36.321208+00:00",
+      "since": "2026-10-10T10:54:36.321208+00:00",
+      "eligibleFilesAtSelection": 335,
+      "selected": [
+        {
+          "sourceFilenameSHA256": "2d749d87c753ad8f96ba1aedc969833254b9bb18777072dc88713883e021f146",
+          "sourceTailSHA256": "a45dd223e8ba97d823f9ce50271e4ee0ee358232722dad2fa0d5d32269e6e5ce",
+          "sourceBytes": 59967144,
+          "sourceTailBytes": 4194304,
+          "sourceTailClipped": true,
+          "projectedBytes": 80124,
+          "projectedRecords": 176,
+          "outerCallRecordsBeforeTimeFiltering": 88
+        },
+        {
+          "sourceFilenameSHA256": "4a3f2348c53bbe645d2b301c3db515f31e0ec81bd300894ca2a1b63528ee9b93",
+          "sourceTailSHA256": "fafc104c180141690561347e9c851e9cca64da9de901b14d4b95377e682ab99e",
+          "sourceBytes": 12721856,
+          "sourceTailBytes": 4194304,
+          "sourceTailClipped": true,
+          "projectedBytes": 162783,
+          "projectedRecords": 288,
+          "outerCallRecordsBeforeTimeFiltering": 144
+        },
+        {
+          "sourceFilenameSHA256": "989d47fbd8ab5741e1e9417e0b857c08e675b25ffa93efd302f1f15561b4a361",
+          "sourceTailSHA256": "cc1730ff7412e5c5970835c8bc3ebcc9e3fc0a47932462d6dd0da69350d4ea03",
+          "sourceBytes": 915293,
+          "sourceTailBytes": 915293,
+          "sourceTailClipped": false,
+          "projectedBytes": 70814,
+          "projectedRecords": 40,
+          "outerCallRecordsBeforeTimeFiltering": 20
+        }
+      ],
+      "bytesScanned": 9303901,
+      "unstableSourcesSkipped": 0,
+      "projection": "Only tool calls/results retained. Command arguments and ordinary chat/request counters omitted; non-text payload values omitted without changing block type. Text results retained privately for equal-input before/after accounting; remove after verification. Source tails and selected files are not full history."
+    },
+    "scope": "Three selected Claude log projections. Two original sources were tail-clipped; no fleet or causal quality ranking. Tool-result text was retained privately only for this accounting comparison.",
+    "aggregateCoverageUnchanged": true,
+    "MCPAndSkillRowsUnchanged": true,
+    "outerRowSumsMatchAggregate": true,
+    "heuristicAggregate": {
+      "completed": 252,
+      "missingResults": 0,
+      "nonTextBlocks": 1,
+      "returnedTextBytes": 214531,
+      "returnedTextEstimatedTokens": 57741,
+      "unavailableReferenceResults": 0,
+      "unmeasuredResults": 0
+    },
+    "heuristicByTool": [
+      {
+        "calls": 218,
+        "completed": 218,
+        "host": "claude",
+        "id": "dd436c69a0b505d99a963413961b51dbe1863bb4d66ea9a54e744a8cdea525a4",
+        "kind": "outer",
+        "medianSeconds": 1.5120000839233398,
+        "missingResults": 0,
+        "name": "Bash",
+        "nonTextBlocks": 0,
+        "p95Seconds": 23.853999853134155,
+        "reportedErrors": 3,
+        "returnedTextBytes": 207189,
+        "returnedTextEstimatedTokens": 55865,
+        "timingSamples": 218,
+        "totalObservedSeconds": 2384.332998752594,
+        "unknownErrorStatus": 0,
+        "unmeasuredResults": 0
+      },
+      {
+        "calls": 22,
+        "completed": 22,
+        "host": "claude",
+        "id": "b51e15a719733512926485511550decfa035752997c1126af30a56417b1dfb19",
+        "kind": "outer",
+        "medianSeconds": 0.21999990940093994,
+        "missingResults": 0,
+        "name": "Write",
+        "nonTextBlocks": 0,
+        "p95Seconds": 0.564000129699707,
+        "reportedErrors": 0,
+        "returnedTextBytes": 3719,
+        "returnedTextEstimatedTokens": 942,
+        "timingSamples": 22,
+        "totalObservedSeconds": 7.014999866485596,
+        "unknownErrorStatus": 22,
+        "unmeasuredResults": 0
+      },
+      {
+        "calls": 5,
+        "completed": 5,
+        "host": "claude",
+        "id": "f18637a79c80115d6b8130538f7db2ef08e2a0c6409cadd2276a956517f8124c",
+        "kind": "outer",
+        "medianSeconds": 0.40800023078918457,
+        "missingResults": 0,
+        "name": "SendMessage",
+        "nonTextBlocks": 0,
+        "reportedErrors": 0,
+        "returnedTextBytes": 2209,
+        "returnedTextEstimatedTokens": 577,
+        "timingSamples": 5,
+        "totalObservedSeconds": 1.5510005950927734,
+        "unknownErrorStatus": 5,
+        "unmeasuredResults": 0
+      },
+      {
+        "calls": 3,
+        "completed": 3,
+        "host": "claude",
+        "id": "c81ae9f0e3b936d9a92f7088d4facc68c0a62966fe934641a9915318ed3b2bfc",
+        "kind": "outer",
+        "medianSeconds": 0.29200005531311035,
+        "missingResults": 0,
+        "name": "Agent",
+        "nonTextBlocks": 0,
+        "reportedErrors": 0,
+        "returnedTextBytes": 840,
+        "returnedTextEstimatedTokens": 212,
+        "timingSamples": 3,
+        "totalObservedSeconds": 5.709000110626221,
+        "unknownErrorStatus": 3,
+        "unmeasuredResults": 0
+      },
+      {
+        "calls": 3,
+        "completed": 3,
+        "host": "claude",
+        "id": "93bb231e325f4b3a34137249bf897e0ae05744c406cd1e228a931c27589eb9e8",
+        "kind": "outer",
+        "medianSeconds": 0.19700002670288086,
+        "missingResults": 0,
+        "name": "TaskStop",
+        "nonTextBlocks": 0,
+        "reportedErrors": 0,
+        "returnedTextBytes": 574,
+        "returnedTextEstimatedTokens": 145,
+        "timingSamples": 3,
+        "totalObservedSeconds": 499.6029999256134,
+        "unknownErrorStatus": 3,
+        "unmeasuredResults": 0
+      },
+      {
+        "calls": 1,
+        "completed": 1,
+        "host": "claude",
+        "id": "5df92ef5a0e214ce4aefbf45c4dbe00001756848bbdc60aa56de9a342b7c6e81",
+        "kind": "outer",
+        "medianSeconds": 0.11599993705749512,
+        "missingResults": 0,
+        "name": "Read",
+        "nonTextBlocks": 1,
+        "reportedErrors": 0,
+        "returnedTextBytes": 0,
+        "returnedTextEstimatedTokens": 0,
+        "timingSamples": 1,
+        "totalObservedSeconds": 0.11599993705749512,
+        "unknownErrorStatus": 1,
+        "unmeasuredResults": 0
+      }
+    ],
+    "cl100k": {
+      "encoding": "cl100k_base",
+      "aggregateUnchanged": true,
+      "MCPAndSkillRowsUnchanged": true,
+      "aggregate": {
+        "completed": 252,
+        "missingResults": 0,
+        "nonTextBlocks": 1,
+        "referenceReturnedTextTokens": 70906,
+        "returnedTextBytes": 214531,
+        "returnedTextEstimatedTokens": 57741,
+        "unavailableReferenceResults": 0,
+        "unmeasuredResults": 0
+      },
+      "byTool": [
+        {
+          "calls": 218,
+          "completed": 218,
+          "host": "claude",
+          "id": "dd436c69a0b505d99a963413961b51dbe1863bb4d66ea9a54e744a8cdea525a4",
+          "kind": "outer",
+          "medianSeconds": 1.5120000839233398,
+          "missingResults": 0,
+          "name": "Bash",
+          "nonTextBlocks": 0,
+          "p95Seconds": 23.853999853134155,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 68924,
+          "reportedErrors": 3,
+          "returnedTextBytes": 207189,
+          "returnedTextEstimatedTokens": 55865,
+          "timingSamples": 218,
+          "totalObservedSeconds": 2384.332998752594,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 0,
+          "unmeasuredResults": 0
+        },
+        {
+          "calls": 22,
+          "completed": 22,
+          "host": "claude",
+          "id": "b51e15a719733512926485511550decfa035752997c1126af30a56417b1dfb19",
+          "kind": "outer",
+          "medianSeconds": 0.21999990940093994,
+          "missingResults": 0,
+          "name": "Write",
+          "nonTextBlocks": 0,
+          "p95Seconds": 0.564000129699707,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 953,
+          "reportedErrors": 0,
+          "returnedTextBytes": 3719,
+          "returnedTextEstimatedTokens": 942,
+          "timingSamples": 22,
+          "totalObservedSeconds": 7.014999866485596,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 22,
+          "unmeasuredResults": 0
+        },
+        {
+          "calls": 5,
+          "completed": 5,
+          "host": "claude",
+          "id": "f18637a79c80115d6b8130538f7db2ef08e2a0c6409cadd2276a956517f8124c",
+          "kind": "outer",
+          "medianSeconds": 0.40800023078918457,
+          "missingResults": 0,
+          "name": "SendMessage",
+          "nonTextBlocks": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 656,
+          "reportedErrors": 0,
+          "returnedTextBytes": 2209,
+          "returnedTextEstimatedTokens": 577,
+          "timingSamples": 5,
+          "totalObservedSeconds": 1.5510005950927734,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 5,
+          "unmeasuredResults": 0
+        },
+        {
+          "calls": 3,
+          "completed": 3,
+          "host": "claude",
+          "id": "c81ae9f0e3b936d9a92f7088d4facc68c0a62966fe934641a9915318ed3b2bfc",
+          "kind": "outer",
+          "medianSeconds": 0.29200005531311035,
+          "missingResults": 0,
+          "name": "Agent",
+          "nonTextBlocks": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 206,
+          "reportedErrors": 0,
+          "returnedTextBytes": 840,
+          "returnedTextEstimatedTokens": 212,
+          "timingSamples": 3,
+          "totalObservedSeconds": 5.709000110626221,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 3,
+          "unmeasuredResults": 0
+        },
+        {
+          "calls": 3,
+          "completed": 3,
+          "host": "claude",
+          "id": "93bb231e325f4b3a34137249bf897e0ae05744c406cd1e228a931c27589eb9e8",
+          "kind": "outer",
+          "medianSeconds": 0.19700002670288086,
+          "missingResults": 0,
+          "name": "TaskStop",
+          "nonTextBlocks": 0,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 167,
+          "reportedErrors": 0,
+          "returnedTextBytes": 574,
+          "returnedTextEstimatedTokens": 145,
+          "timingSamples": 3,
+          "totalObservedSeconds": 499.6029999256134,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 3,
+          "unmeasuredResults": 0
+        },
+        {
+          "calls": 1,
+          "completed": 1,
+          "host": "claude",
+          "id": "5df92ef5a0e214ce4aefbf45c4dbe00001756848bbdc60aa56de9a342b7c6e81",
+          "kind": "outer",
+          "medianSeconds": 0.11599993705749512,
+          "missingResults": 0,
+          "name": "Read",
+          "nonTextBlocks": 1,
+          "referenceEncoding": "cl100k_base",
+          "referenceReturnedTextTokens": 0,
+          "reportedErrors": 0,
+          "returnedTextBytes": 0,
+          "returnedTextEstimatedTokens": 0,
+          "timingSamples": 1,
+          "totalObservedSeconds": 0.11599993705749512,
+          "unavailableReferenceResults": 0,
+          "unknownErrorStatus": 1,
+          "unmeasuredResults": 0
+        }
+      ]
+    },
+    "rootCausesNotEstablished": true
+  },
+  "visibleUI": {
+    "data": "Owned synthetic logs, full Debug arm64 App --ui-review, isolated Home. No business actions replayed.",
+    "functionalSourceCommit": "47ed116a01ca29423958d2d0c538d6540bb7bbf1",
+    "accessibilitySourceCommit": "078be6a51b376a27bf22ca6c6706b2d534988b1d",
+    "originalFileBackedRuntimeSectionsMatchQA": true,
+    "rows": 22,
+    "outerCalls": 24,
+    "outerResults": 23,
+    "missingOuterResults": 1,
+    "outerMeasuredTextBytes": 164,
+    "outerHeuristicTokens": 41,
+    "unmeasuredOuterResults": 1,
+    "nonTextBlocks": 2,
+    "expandedRowsObserved": [
+      8,
+      16,
+      22
+    ],
+    "BashHeuristicSharePercentAtAllExpansionSizes": 48.8,
+    "MCPBytesKeptSeparate": 4,
+    "MCPReferenceTokensKeptSeparate": 1,
+    "cl100kOuterTotalRemainsUnknown": true,
+    "cl100kOuterPercentagesSuppressed": true,
+    "reportRefreshResetsRowsToEight": true,
+    "accessibility": {
+      "initialScrollSnapshotOmittedButtonName": true,
+      "explicitLabelAndStableIdentifierAdded": true,
+      "identifier": "toolUsage.outer.showMore",
+      "identifierObservedAfterExpansion": true,
+      "allRowsReachedUsingIdentifierLocatedButton": true,
+      "localizedTextMayStillBeOmittedByClippedSnapshot": true,
+      "oneStaleIndexErrorRecoveredWithoutRestart": true
+    },
+    "attributeGraphCycleMessagesObserved": 0
+  },
+  "packageScope": {
+    "UIBuilds": [
+      "485",
+      "486"
+    ],
+    "configuration": "Debug native arm64 ad-hoc",
+    "finalSignedCLI_SHA256": "4acb90fd58f71aa3e3591d1b7125de91458a2d617cb8c9cc3e21631c7338b289",
+    "latestFullReleaseEvidence": "ai-tools-integrated-479-2026-10-17.json",
+    "newFeatureInThatOlderRelease": false,
+    "installedOrPublished": false
+  },
+  "cleanup": {
+    "privateToolResultProjectionFilesRemoved": [
+      {
+        "bytes": 80124,
+        "sha256": "385446eb9ac81fa88b3ea360fae9f615db5aa3aa377cad99d6683d60241affe2"
+      },
+      {
+        "bytes": 162783,
+        "sha256": "f00c0f402eb79a76e61ff2c7f793b4631311f551c70566a90fa856b46d1b7e35"
+      },
+      {
+        "bytes": 70814,
+        "sha256": "0cc1af380a5d42e64e8116f3a2bd1d3826b88cf74b9c195e55da5635b92aadf1"
+      }
+    ],
+    "ownedQARuntimesAbsent": true,
+    "originalAppsStrictSignaturesVerified": true,
+    "originalGuiHashesMatchBuildIdentity": true
+  },
+  "screenshots": [
+    {
+      "file": "outer-tool-usage-expanded-2026-10-17.png",
+      "sha256": "0b9a0880968fbf787657799bf21a0b8afe1a12d6eaab608b951bfb6f0716c13d",
+      "sourceCommit": "078be6a51b376a27bf22ca6c6706b2d534988b1d"
+    },
+    {
+      "file": "outer-tool-usage-reference-unknown-2026-10-17.png",
+      "sha256": "c58416399b76bd84b81c1998dff3910d48e18cf9d65c4f02beb04852762feaef",
+      "sourceCommit": "47ed116a01ca29423958d2d0c538d6540bb7bbf1"
+    },
+    {
+      "file": "outer-tool-usage-mcp-separate-2026-10-17.png",
+      "sha256": "6c709bf360fecc78acd81525ee35bbe8a46ca17982ec613c7e1a1b7d827f3faa",
+      "sourceCommit": "47ed116a01ca29423958d2d0c538d6540bb7bbf1"
+    }
+  ],
+  "limitations": [
+    "The global scan was partial; the three-file replay also includes two original tail-clipped sources.",
+    "Tool-result status and byte/token rankings do not establish business reliability or underlying CLI quality.",
+    "Outer and nested MCP outputs can overlap; the outer rows are a breakdown of their aggregate, not extra consumption.",
+    "Images/audio and unsupported content are not assigned model token estimates; native request counters remain separate.",
+    "Visible tests used synthetic data; current feature has no universal Release or installation/update acceptance."
+  ]
+}

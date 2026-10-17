@@ -17,6 +17,7 @@ struct ToolUsageParser {
         var startSeen = false
         var endSeen = false
         var isError: Bool?
+        var outerError: Bool?
         var invocationFailed = false
         var textBytes = 0
         var estimatedTokens = 0
@@ -109,6 +110,13 @@ struct ToolUsageParser {
                 // Length framing also gives legacy and native records the same grouping.
                 call.groupID = Self.identity(host + "|mcp|" + String(mcp.server.utf8.count) + ":" + mcp.server + String(mcp.tool.utf8.count) + ":" + mcp.tool)
             } else { call.groupID = Self.identity(host + "|" + classification.0 + "|" + normalized + "|" + skill) }
+        } else {
+            let normalized = name.hasPrefix("functions.") ? String(name.dropFirst(10)) : name
+            // Group only protocol tool names. Never inspect shell commands or retain arguments.
+            let safeName = normalized.range(of: #"^[A-Za-z0-9_.:-]{1,200}$"#, options: .regularExpression) != nil
+                ? Self.label(normalized) : "Unidentified outer tool"
+            call.name = safeName
+            call.groupID = Self.identity(host + "|outer|" + safeName)
         }
         call.started = time; call.startSeen = true
         if time == nil { coverage.missingTimestamps += 1 }
@@ -171,6 +179,8 @@ struct ToolUsageParser {
         let measured = call.startSeen && call.kind == nil ? (TextFootprint(""), 0, nil as Bool?) : Self.result(value, encoding: encoding)
         call.ended = time; call.endSeen = true
         call.invocationFailed = invocationFailed
+        // An inner result's isError is not the outer tool's status, including out-of-order events.
+        call.outerError = error
         if error == true || measured.2 == true { call.isError = true }
         else if error != nil || measured.2 != nil { call.isError = false }
         else { call.isError = nil }
@@ -277,6 +287,7 @@ struct ToolUsageParser {
         var unattributed = UnattributedToolResults()
         if encoding != .heuristic { unattributed.referenceReturnedTextTokens = 0 }
         var rows: [String: ToolUsageRow] = [:]
+        var outerRows: [String: ToolUsageRow] = [:]
         var timings: [String: [Double]] = [:]
         var loads: [String: SkillInstructionUsage] = [:]
         coverage.unmatchedInstructionEvents = coverage.unmatchedInstructionEvents ?? 0
@@ -297,23 +308,56 @@ struct ToolUsageParser {
             guard call.startSeen, inWindow(call.started ?? call.observedAt) else { continue }
             guard let kind = call.kind, let name = call.name else {
                 coverage.otherToolCalls += 1
+                let key = call.groupID ?? Self.identity(call.host + "|outer|Unidentified outer tool")
+                var row = outerRows[key] ?? ToolUsageRow(id: key, host: call.host, kind: "outer",
+                                                         name: call.name ?? "Unidentified outer tool")
+                row.referenceEncoding = encoding == .heuristic ? nil : encoding.rawValue
+                row.unmeasuredResults = row.unmeasuredResults ?? 0
+                if encoding != .heuristic {
+                    row.unavailableReferenceResults = row.unavailableReferenceResults ?? 0
+                    if row.calls == 0 { row.referenceReturnedTextTokens = 0 }
+                }
+                row.calls += 1
                 if call.endSeen, inWindow(call.ended) {
                     unattributed.completed += 1
+                    row.completed += 1
+                    if call.outerError == true { row.reportedErrors += 1 }
+                    if call.outerError == nil { row.unknownErrorStatus += 1 }
+                    if let start = call.started, let end = call.ended, end >= start {
+                        timings[key, default: []].append(end.timeIntervalSince(start))
+                    }
                     if let measured = call.unattributed {
                         unattributed.returnedTextBytes += measured.text.bytes
                         unattributed.returnedTextEstimatedTokens += measured.text.estimatedTokens
                         unattributed.nonTextBlocks += measured.nonText
-                        if !measured.measured { unattributed.unmeasuredResults += 1 }
+                        row.returnedTextBytes += measured.text.bytes
+                        row.returnedTextEstimatedTokens += measured.text.estimatedTokens
+                        row.nonTextBlocks += measured.nonText
+                        if !measured.measured {
+                            unattributed.unmeasuredResults += 1
+                            row.unmeasuredResults! += 1
+                        }
                         if encoding != .heuristic {
                             if measured.measured, let tokens = measured.text.referenceTokens {
                                 if let total = unattributed.referenceReturnedTextTokens { unattributed.referenceReturnedTextTokens = total + tokens }
+                                if let total = row.referenceReturnedTextTokens { row.referenceReturnedTextTokens = total + tokens }
                             } else {
                                 unattributed.unavailableReferenceResults += 1
                                 unattributed.referenceReturnedTextTokens = nil
+                                row.unavailableReferenceResults! += 1
+                                row.referenceReturnedTextTokens = nil
                             }
                         }
-                    } else { unattributed.unmeasuredResults += 1; unattributed.referenceReturnedTextTokens = nil }
-                } else { unattributed.missingResults += 1 }
+                    } else {
+                        unattributed.unmeasuredResults += 1; unattributed.referenceReturnedTextTokens = nil
+                        row.unmeasuredResults! += 1
+                        if encoding != .heuristic {
+                            row.unavailableReferenceResults! += 1
+                            row.referenceReturnedTextTokens = nil
+                        }
+                    }
+                } else { unattributed.missingResults += 1; row.missingResults += 1 }
+                outerRows[key] = row
                 continue
             }
             let key = call.groupID ?? Self.identity(call.host + "|" + kind + "|" + (call.server ?? "") + "|" + name)
@@ -345,14 +389,22 @@ struct ToolUsageParser {
             } else { row.missingResults += 1 }
             rows[key] = row
         }
-        coverage.unattributedResults = unattributed
         for (key, samples) in timings {
             let sorted = samples.sorted()
-            rows[key]?.timingSamples = sorted.count
-            rows[key]?.totalObservedSeconds = sorted.reduce(0, +)
-            rows[key]?.medianSeconds = sorted.count % 2 == 1 ? sorted[sorted.count / 2] : (sorted[sorted.count / 2 - 1] + sorted[sorted.count / 2]) / 2
-            if sorted.count >= 20 { rows[key]?.p95Seconds = sorted[Int(ceil(Double(sorted.count) * 0.95)) - 1] }
+            guard var row = rows[key] ?? outerRows[key] else { continue }
+            row.timingSamples = sorted.count
+            row.totalObservedSeconds = sorted.reduce(0, +)
+            row.medianSeconds = sorted.count % 2 == 1 ? sorted[sorted.count / 2] : (sorted[sorted.count / 2 - 1] + sorted[sorted.count / 2]) / 2
+            if sorted.count >= 20 { row.p95Seconds = sorted[Int(ceil(Double(sorted.count) * 0.95)) - 1] }
+            if rows[key] != nil { rows[key] = row } else { outerRows[key] = row }
         }
+        unattributed.byTool = outerRows.values.sorted {
+            func count(_ row: ToolUsageRow) -> Int {
+                encoding == .heuristic ? row.returnedTextEstimatedTokens : row.referenceReturnedTextTokens ?? -1
+            }
+            return count($0) == count($1) ? $0.id < $1.id : count($0) > count($1)
+        }
+        coverage.unattributedResults = unattributed
         var totals: [String: LoggedTokenUsage] = [:]
         for entry in usage.values {
             var total = totals[entry.host] ?? LoggedTokenUsage(host: entry.host, semantics: "Raw host counters; cache overlap is not normalized or added to input")

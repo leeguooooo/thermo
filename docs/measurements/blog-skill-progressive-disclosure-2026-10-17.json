@@ -1,0 +1,213 @@
+{
+  "recordedAt": "2026-10-17T10:43:16.258429+00:00",
+  "sourceRepository": "leeguooooo/blog",
+  "sourceCommit": "37e2a7e9899bb0508d0cb31fd8cb6fdc915b5205",
+  "origin": "Selected because blog-content-publish represented about 84 percent of a previously observed, selected four-load instruction sample; that historical sample is not a fleet ranking.",
+  "change": "Move only existing published-content review workflow into a required-on-review reference. Preserve shared publishing constraints, metadata and invocation defaults.",
+  "contentPreservation": {
+    "sourceCommit": "8749824b476a34c684563b7dfd98f3b17df669f6",
+    "beforeSHA256": "7c2e19de00090701ae66e93a8c8bd9018e131b6264e926d6256f8757234e6592",
+    "beforeBytes": 29729,
+    "candidateEntryBytes": 18348,
+    "movedReviewBytes": 11918,
+    "candidateReferenceBytes": 12051,
+    "allOriginalContentPreserved": true,
+    "outsideReviewUnchangedExceptRoutingLink": true
+  },
+  "referenceEncoding": "cl100k_base",
+  "footprints": {
+    "baseline": {
+      "catalog": {
+        "bytes": 177,
+        "characters": 177,
+        "estimatedTokens": 45,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 2,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 38
+      },
+      "document": {
+        "bytes": 29729,
+        "characters": 29543,
+        "estimatedTokens": 7456,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 612,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 7556
+      },
+      "body": {
+        "bytes": 29524,
+        "characters": 29338,
+        "estimatedTokens": 7405,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 608,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 7513
+      },
+      "quality": {
+        "checkedLocalReferences": 0,
+        "complete": true,
+        "issues": [],
+        "parser": "swift-markdown-0.9.0",
+        "skippedReferences": 0
+      }
+    },
+    "candidate": {
+      "catalog": {
+        "bytes": 177,
+        "characters": 177,
+        "estimatedTokens": 45,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 2,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 38
+      },
+      "document": {
+        "bytes": 18348,
+        "characters": 18270,
+        "estimatedTokens": 4597,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 288,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 4548
+      },
+      "body": {
+        "bytes": 18143,
+        "characters": 18065,
+        "estimatedTokens": 4546,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 284,
+        "referenceEncoding": "cl100k_base",
+        "referenceTokens": 4505
+      },
+      "quality": {
+        "checkedLocalReferences": 1,
+        "complete": true,
+        "issues": [],
+        "parser": "swift-markdown-0.9.0",
+        "skippedReferences": 0
+      }
+    }
+  },
+  "referenceAndTradeoff": {
+    "referenceText": {
+      "bytes": 12051,
+      "characters": 11943,
+      "estimatedTokens": 3027,
+      "estimator": "ascii4-unicode1-v1",
+      "lines": 334,
+      "referenceEncoding": "cl100k_base",
+      "referenceTokens": 3147
+    },
+    "entryBodyReferenceTokenReductionPercent": 40.037268734194065,
+    "entryDocumentReferenceTokenReductionPercent": 39.80942297511911,
+    "reviewIndependentTextReferenceTokensSum": 7652,
+    "oldBodyReferenceTokens": 7513,
+    "note": "Review sum is independently measured ordinary text, not model context or billed usage. Review also requires an extra file read."
+  },
+  "installationValidation": {
+    "skillsCLIVersion": "1.5.23",
+    "localDirectoryInstall": [
+      {
+        "variant": "baseline",
+        "installerExit": 0,
+        "validatorExit": 0,
+        "referenceCopied": false,
+        "claudeAliasReadsCanonical": true
+      },
+      {
+        "variant": "candidate",
+        "installerExit": 0,
+        "validatorExit": 0,
+        "referenceCopied": true,
+        "claudeAliasReadsCanonical": true
+      }
+    ],
+    "sourceQuickValidatePassed": true,
+    "installedQuickValidatePassed": true,
+    "referenceCopiedByActualInstaller": true
+  },
+  "nativeClientLoading": {
+    "clientVersion": "codex-cli 0.163.0",
+    "binarySHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+    "realModelCalled": false,
+    "realCredentialsCopied": false,
+    "rawRequestsStored": false,
+    "syntheticUsageIgnored": true,
+    "runs": [
+      {
+        "case": "baseline-explicit",
+        "exitCode": 0,
+        "request": {
+          "fakeCredentialOnly": true,
+          "entireDocumentPresent": true,
+          "reviewReferenceEntireTextPresent": false,
+          "reviewOnlyHeadingPresent": true,
+          "catalogDescriptionPresent": true,
+          "loadedDocumentBytes": 29729
+        },
+        "serverClosed": true,
+        "clientExited": true
+      },
+      {
+        "case": "candidate-explicit",
+        "exitCode": 0,
+        "request": {
+          "fakeCredentialOnly": true,
+          "entireDocumentPresent": true,
+          "reviewReferenceEntireTextPresent": false,
+          "reviewOnlyHeadingPresent": false,
+          "catalogDescriptionPresent": true,
+          "loadedDocumentBytes": 18348
+        },
+        "serverClosed": true,
+        "clientExited": true
+      },
+      {
+        "case": "candidate-catalog",
+        "exitCode": 0,
+        "request": {
+          "fakeCredentialOnly": true,
+          "entireDocumentPresent": false,
+          "reviewReferenceEntireTextPresent": false,
+          "reviewOnlyHeadingPresent": false,
+          "catalogDescriptionPresent": true,
+          "loadedDocumentBytes": 0
+        },
+        "serverClosed": true,
+        "clientExited": true
+      }
+    ],
+    "toolExecutionEvidence": "Fake provider returned one fixed text response per case and requested no tool calls.",
+    "allOwnedPortsClosedAtFinalCheck": true,
+    "privateClientEventFilesRemoved": 6,
+    "probeScriptSHA256": "95f1ea92ecd26c321e417204dc442ca28a063ae3fe25cb1d467a0e9687f77d2b"
+  },
+  "localInstallation": {
+    "sourceCommit": "37e2a7e9899bb0508d0cb31fd8cb6fdc915b5205",
+    "beforeEntrySHA256": "7c2e19de00090701ae66e93a8c8bd9018e131b6264e926d6256f8757234e6592",
+    "afterEntrySHA256": "f14e430dee8e2b0be9ecab38a8227293f6c3f407a46c22e5f1c8a8d7583576c7",
+    "referenceSHA256": "d84423f22a7990e207d880807d61cf633e1db511228cdb8010a12300fdb96baa",
+    "backupMatchesBefore": true,
+    "existingBackupPreserved": true,
+    "claudeAliasUnchanged": true,
+    "canonicalAndReferenceMatchSource": true,
+    "skillInstallerLockUnchanged": true,
+    "matchesPriorValidatedBlogCliBinary": true,
+    "existingSessionsRestarted": false
+  },
+  "publicDistributionUpdated": false,
+  "limitations": [
+    "No real model inference, live blog API, article update or publication was performed.",
+    "Native wire capture proves initial preload behavior for this Codex version/configuration, not autonomous reference selection or task success.",
+    "Ordinary publishing avoids preloading review details. Reviews require an extra read and slightly more independently counted ordinary text.",
+    "Reference counts and fake-provider usage are not billed token savings.",
+    "This is a local committed patch; installer lock remains historical and a later upstream update may replace it."
+  ],
+  "followupCorrection": {
+    "evidence": "blog-skill-common-checks-2026-10-17.json",
+    "sourceCommit": "cbebf125f70cde8fa47f5d289b2ee3c13a940ba0",
+    "reason": "The original counts and lossless-reference check remain valid measurements. Later source review found shared publication checks were not all explicit in the default entry. The first split is not the current installed revision.",
+    "historicalCountsPreserved": true
+  }
+}

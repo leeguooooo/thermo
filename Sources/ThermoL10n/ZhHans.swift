@@ -2907,4 +2907,12 @@ let zhHans: [String: String] = [
     "The temporary full-charge request ended because external power was not connected.": "临时充满请求已因未连接外接电源而结束。",
     "The temporary full-charge request ended because fresh power state was unavailable.": "临时充满请求已因缺少新的供电状态而结束。",
     "Charging support changed; the temporary full-charge request ended.": "充电支持状态发生变化，临时充满请求已结束。",
+    "Outer tools ranked by observed returned text": "外层工具：按已观察返回文本排名",
+    "Grouped only by logged outer tool names. These are the same observations as the outer aggregate, not additional usage. Commands and nested CLI/MCP ownership are not inferred.": "只按日志中的外层工具名分组，与外层合计是同一批记录，不是额外用量。不从命令正文猜测内部 CLI 或 MCP 归属。",
+    "Show more outer tools": "显示更多外层工具",
+    "Some returned content was not measured; this ranks measured text only.": "部分返回内容未计量，这里只对已测文本排序。",
+    "Per-tool outer rankings were not measured in this report; analyze again.": "这份报告尚未逐项计量外层工具，请重新分析。",
+    "Unidentified outer tool": "未识别名称的外层工具",
+    "Share of observed outer returned-text tokens: %1$@": "占已观察外层返回文本 token：%1$@",
+    "%1$@ results include unmeasured content; %2$@ non-text blocks were not tokenized.": "%1$@ 个结果含未计量内容；%2$@ 个非文本块未估算 token。",
 ]
