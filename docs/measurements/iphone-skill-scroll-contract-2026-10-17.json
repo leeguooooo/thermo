@@ -1,0 +1,119 @@
+{
+  "recordedAt": "2026-10-17T08:04:38.140705+00:00",
+  "origin": "An autonomously selected real session contained a phone_run_steps scroll with only kind/dy; the protocol error reported missing x. See selected-session-usage-2026-10-17.json.",
+  "source": {
+    "repository": "leeguooooo/iphone-use",
+    "localCheckout": "iphone-remote-panel",
+    "commit": "036cf2d3ed62d1218432316cbec90467e0249cdb",
+    "file": "skills/iphone-use/SKILL.md",
+    "workingTreeClean": true,
+    "change": "Clarified all four MCP scroll fields and added a center-anchor example conditional on the current intended scroll area. Existing invocation policy and permission boundaries preserved.",
+    "noSchemaDefaultsChanged": true
+  },
+  "contract": {
+    "HTTPDefaultsEvidence": "Current crates/server/src/http.rs supplies x/y=0.5, dx=0 for omitted HTTP scroll fields; not tested against a live daemon.",
+    "MCPRuntimeEvidence": "Installed 0.19.2 tools/list and tools/call, in isolated HOME and whitelisted environment, pointed only to an owned loopback refusal fixture.",
+    "beforeUserSkillUpdate": {
+      "passed": true,
+      "MCPServerVersion": "0.19.2",
+      "binarySHA256": "a9d9bff391071f60f5f94b48a3fb68f9022807bb01abef8495af551c3d6743d2",
+      "skillSHA256": "5035e047895dd54efb08cde5656930c6edb6ef872eec235d12852cf8dcad14a9",
+      "directAndBatchSchemaRequireAllFourFields": true,
+      "malformedBatchRejectedBeforeHTTP": true,
+      "malformedDirectCallRejectedBeforeHTTP": true,
+      "malformedErrorCode": -32602,
+      "documentationExampleParsedAndNormalized": true,
+      "normalizedAction": {
+        "dx": 0.0,
+        "dy": 80.0,
+        "type": "scroll",
+        "x": 0.5,
+        "y": 0.5
+      },
+      "defaultObservationPreserved": true,
+      "HTTPRequests": 1,
+      "ownedDaemonDeliberatelyRefusedAction": true,
+      "deviceGestureExecuted": false,
+      "realCredentialsCopied": false,
+      "realPhoneContacted": false,
+      "SkillNetBenefitMeasured": false,
+      "ownedHTTPPortClosed": true,
+      "ownedMCPProcessExited": true
+    },
+    "afterUserSkillUpdate": {
+      "passed": true,
+      "MCPServerVersion": "0.19.2",
+      "binarySHA256": "a9d9bff391071f60f5f94b48a3fb68f9022807bb01abef8495af551c3d6743d2",
+      "skillSHA256": "5035e047895dd54efb08cde5656930c6edb6ef872eec235d12852cf8dcad14a9",
+      "directAndBatchSchemaRequireAllFourFields": true,
+      "malformedBatchRejectedBeforeHTTP": true,
+      "malformedDirectCallRejectedBeforeHTTP": true,
+      "malformedErrorCode": -32602,
+      "documentationExampleParsedAndNormalized": true,
+      "normalizedAction": {
+        "dx": 0.0,
+        "dy": 80.0,
+        "type": "scroll",
+        "x": 0.5,
+        "y": 0.5
+      },
+      "defaultObservationPreserved": true,
+      "HTTPRequests": 1,
+      "ownedDaemonDeliberatelyRefusedAction": true,
+      "deviceGestureExecuted": false,
+      "realCredentialsCopied": false,
+      "realPhoneContacted": false,
+      "SkillNetBenefitMeasured": false,
+      "ownedHTTPPortClosed": true,
+      "ownedMCPProcessExited": true
+    },
+    "exampleIsSchemaAndNormalizationEvidenceNotDeviceSuccess": true,
+    "probeSHA256": "73535caac6d002e571d9506afbea1c38cbd24cf10b3cae830a7389249b4f8120",
+    "postInstallProbeSHA256": "7e6b84d7f08bac7ec48f08625971c42a8327b5df8e3d6b6dae62fb706a19ff24"
+  },
+  "skillValidation": {
+    "sourceQuickValidatePassed": true,
+    "installedQuickValidatePassed": true,
+    "validator": "system skill-creator/scripts/quick_validate.py",
+    "noIndependentModelOrTaskBenefitEvaluation": true
+  },
+  "localSkillInstallation": {
+    "updatedManagedUserSkill": true,
+    "beforeSHA256": "7fc03616cd187e92e8f8a6caddde6df3e8f10f8395896ba5430c2dc464c3452b",
+    "afterSHA256": "5035e047895dd54efb08cde5656930c6edb6ef872eec235d12852cf8dcad14a9",
+    "sourceCommit": "036cf2d3ed62d1218432316cbec90467e0249cdb",
+    "sourceDocumentExact": true,
+    "atomicDirectoryExchange": true,
+    "privateBackupPreserved": true,
+    "markerRefAndCommitPreserved": [
+      "local",
+      "working-tree"
+    ],
+    "markerHashMatches": true,
+    "claudeDiscoveryMatches": true,
+    "versionedPluginCacheChanged": false,
+    "SDKBinaryChanged": false,
+    "liveSessionRestarted": false,
+    "realPhoneContacted": false
+  },
+  "versionedPluginSkill": {
+    "modifiedByThisWorkflow": false,
+    "present": true,
+    "matchesUpdatedUserSkill": false,
+    "updatesRemainManagedByPluginRelease": true
+  },
+  "cleanup": {
+    "ownedMCPProcessesAbsent": true,
+    "bothOwnedHTTPPortsClosed": true,
+    "privateOriginalSkillBackupRetained": true
+  },
+  "scope": {
+    "realPhoneContacted": false,
+    "realCredentialsCopied": false,
+    "SDKBinaryChanged": false,
+    "activeSessionRestarted": false,
+    "remotePublishedOrReleased": false,
+    "thermoPackageRebuilt": false,
+    "fullUserTaskSuccessOrSkillNetBenefitClaimed": false
+  }
+}
