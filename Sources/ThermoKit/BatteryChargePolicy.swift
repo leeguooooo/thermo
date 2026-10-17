@@ -5,8 +5,8 @@ import Foundation
 public enum BatteryChargePolicy: String, Codable, Sendable {
     case off, limit80, chargeToFull
 
-    public enum Gate: Sendable { case allowed, inhibited, unknown }
-    public enum Ownership: Sendable { case none, owned, uncertain }
+    public enum Gate: String, Codable, Sendable { case allowed, inhibited, unknown }
+    public enum Ownership: String, Codable, Sendable { case none, owned, uncertain }
     public enum Decision: Equatable, Sendable {
         case leaveUnchanged
         case inhibit

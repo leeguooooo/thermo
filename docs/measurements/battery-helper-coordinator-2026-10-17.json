@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "3e1b41b",
+  "helperProtocol": 7,
+  "sourceSHA256": {
+    "Sources/ThermoKit/BatteryHelperCoordinator.swift": "5e1a38f40a897b801634e1816d304f97ab5d30143fd8e5bf24dbb7e9e9a5011e",
+    "Sources/ThermoKit/BatteryChargeSystem.swift": "0049a66db50bad67b4b49ce123c3b6520d5b0cc221c9151ceb623a7bff1a56ad",
+    "Sources/ThermoKit/BatteryChargePolicy.swift": "03f7eef566cc65f8022ad0192c8d9a777a2757003611eccfe17f202458c1b5ce",
+    "Sources/ThermoKit/Helper.swift": "84dcc70d3f9457ea10ee664457f606f40426951b5d7adb96c049b0b2a87d5210",
+    "Sources/ThermoHelper/HelperServices.swift": "ba24c45eaa1e2dd4d6a1101deed03c68d86f42cbc12620a369f9b229f6f7da12",
+    "Sources/ThermoHelper/main.swift": "df4c0848eef304e0a2aa3e03d35ff4ae35dca09dc40d82b00f1178fd628f5d07",
+    "Tests/ThermoHelperTests/BatteryServiceTests.swift": "65cc01978bc42d67fe4f1dc5631923b343b7986f539adf51d0d11dd92d03c6d9",
+    "Tests/ThermoHelperTests/AWDLServiceTests.swift": "f33566b325e01ecec6c677effcb2d892855e11f3b1ac2980cd67c87cd7a1244e",
+    "Tests/ThermoKitTests/HelperXPCTests.swift": "3ef4b1822cfb95b76ec493a442060b54df75c17da168ab85e1aa3efdd2c74d6c"
+  },
+  "regression": {
+    "command": "swift test --skip HardwareTests",
+    "suites": {
+      "ThermoKitTests.xctest": 175,
+      "ThermoHelperTests.xctest": 20,
+      "ThermoCLITests.xctest": 70,
+      "ThermoAppTests.xctest": 272,
+      "CleanKitTests.xctest": 750,
+      "AgentDoctorTests.xctest": 203,
+      "AgentCoreTests.xctest": 37
+    },
+    "total": 1527,
+    "failures": 0,
+    "log": "/tmp/thermo-charging-coordinator-full-tests.log",
+    "sha256": "9cd34c0689f00c0c7dd656af64b18f408d5ba400716aa71ee6dd84307b0e3104"
+  },
+  "relevantClasses": {
+    "BatteryChargePolicyTests": 6,
+    "BatteryChargingGateTests": 15,
+    "BatteryGateLeaseFileTests": 9,
+    "HelperXPCTests": 14,
+    "AWDLServiceTests": 7,
+    "BatteryServiceTests": 13
+  },
+  "actualTransport": "Foundation anonymous NSXPCListener, production Service and HelperClient; injected charging/register/power factory and simulated unavailable fans",
+  "verified": [
+    "80% inhibit and <75% resume through autonomous helper timer",
+    "Full-charge policy releases own hold and preserves external hold",
+    "Separate connection sees state but cannot end active policy",
+    "Disconnect restores and failed restoration retains record for timer retry",
+    "Blocked fan initialization does not block startup charging recovery",
+    "Closed owner behind initialization or power read cannot activate",
+    "Removal fanout restores charging despite fan failure and keeps requests fenced",
+    "Shutdown returns false until recovery is confirmed and rejects new policy",
+    "Unknown power and stale/sleep-gap readings release hold before later decisions",
+    "Failed manual hold is not retried automatically",
+    "Unknown external supply preserves nil rather than false/true",
+    "Protocol 6 is rejected before charge selectors and cannot certify protocol-7 removal",
+    "Malformed holding/percentage replies rejected by client"
+  ],
+  "productionWiring": {
+    "listenerUsesChargingCoordinator": true,
+    "shutdownFanoutIncludesCharging": true,
+    "rootDirectoryAndSMCFactoryAddedButNotExecuted": true,
+    "connectionScopedPolicyNotResumedAfterHelperRestart": true
+  },
+  "installedPathsChangedComparedWithBaseline": [],
+  "candidate384ContainsThisCode": false,
+  "limits": [
+    "App/CLI visible control and App quit acknowledgement remain missing",
+    "No installed launchd service/signing authorization or root deployment tested",
+    "No live SMC adapter, production directory creation, battery pause/resume, real sleep, signal/update/uninstall or OS reboot acceptance",
+    "Full-charge override is connection scoped; exact Mole App completion/unplug behavior still requires trace",
+    "Not a universal signed/notarized build or release"
+  ]
+}

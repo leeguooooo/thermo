@@ -12,7 +12,7 @@ public enum HelperConstants {
     public static let machService = "dev.thermo.helper"
     public static let installedBinary = "/Library/PrivilegedHelperTools/dev.thermo.helper"
     public static let launchdPlist = "/Library/LaunchDaemons/dev.thermo.helper.plist"
-    public static let protocolVersion = "6"
+    public static let protocolVersion = "7"
     /// Reported by the helper: "<protocol>/<app version>".
     public static var version: String { "\(protocolVersion)/\(ThermoVersion.string)" }
     /// Plist bundled at Contents/Library/LaunchDaemons for SMAppService registration.
@@ -133,6 +133,9 @@ public enum HelperSelfUpdate {
     func beginAWDL(seconds: Int,sessionID: String,reply: @escaping (String?) -> Void)
     func endAWDL(reply: @escaping (String?) -> Void)
     func awdlState(reply: @escaping (Data) -> Void)
+    /// Protocol 7. Charging policies are held only for this XPC connection.
+    func setBatteryChargePolicy(_ policy: String, reply: @escaping (String?) -> Void)
+    func batteryChargeState(reply: @escaping (Data) -> Void)
 }
 
 /// The helper's fan policies on disk, so a helper restart (update, reboot) keeps what the user
@@ -326,7 +329,7 @@ public final class HelperClient: @unchecked Sendable {
 
     public func prepareRemoval(_ prepare: Bool, token: String) async throws {
         let v = try await version()
-        guard let major = Int(v.split(separator: "/").first ?? ""), major >= 6 else {
+        guard let major = Int(v.split(separator: "/").first ?? ""), major >= 7 else {
             throw FanControlError.helper("helper cannot confirm safe removal; update the helper first")
         }
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
@@ -348,6 +351,42 @@ public final class HelperClient: @unchecked Sendable {
         guard let major=Int(value.split(separator:"/").first ?? ""),major >= 6 else {
             throw AWDLError("Update Thermo's helper before using AWDL sessions.")
         }
+    }
+    private func requireBatteryCharge() async throws {
+        let value = try await version()
+        guard let major = Int(value.split(separator: "/").first ?? ""), major >= 7 else {
+            throw BatteryGateError("Update Thermo's helper before using charging control")
+        }
+    }
+    public func setBatteryChargePolicy(_ policy: BatteryChargePolicy) async throws {
+        try await requireBatteryCharge()
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let once = Once()
+            guard let p = proxy({ error in once.run { continuation.resume(throwing: error) } }) else {
+                return once.run { continuation.resume(throwing: BatteryGateError("Charging helper is unavailable")) }
+            }
+            // deadline() invalidates the owning connection before reporting timeout.
+            deadline(8, once) { continuation.resume(throwing: BatteryGateError("Charging request timed out; verify recovery before retrying")) }
+            p.setBatteryChargePolicy(policy.rawValue) { error in once.run {
+                if let error { continuation.resume(throwing: BatteryGateError(error)) } else { continuation.resume() }
+            } }
+        }
+    }
+    public func batteryChargeState() async throws -> BatteryChargeState {
+        try await requireBatteryCharge()
+        let data: Data = try await withCheckedThrowingContinuation { continuation in
+            let once = Once()
+            guard let p = proxy({ error in once.run { continuation.resume(throwing: error) } }) else {
+                return once.run { continuation.resume(throwing: BatteryGateError("Charging helper is unavailable")) }
+            }
+            deadline(4, once) { continuation.resume(throwing: BatteryGateError("Charging state query timed out")) }
+            p.batteryChargeState { data in once.run { continuation.resume(returning: data) } }
+        }
+        let state = try PolicyCoding.decoder().decode(BatteryChargeState.self, from: data)
+        guard state.percent.map({ $0.isFinite && (0...100).contains($0) }) ?? true,
+              state.phase != .holding || (state.policy == .limit80 && state.gate == .inhibited && state.ownership == .owned),
+              state.policy != .off || !state.ownedByCaller else { throw BatteryGateError("Invalid charging state reply") }
+        return state
     }
     public func beginAWDL(seconds: Int,sessionID: String = UUID().uuidString) async throws {
         guard (60...3600).contains(seconds),UUID(uuidString:sessionID) != nil else { throw AWDLClientError.notStarted("Invalid AWDL session duration or identifier") }

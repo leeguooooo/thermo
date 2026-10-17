@@ -222,12 +222,14 @@ final class Controller {
 
 let fans=FanHost()
 let network=AWDLHelperCoordinator()
+let charging=BatteryHelperCoordinator()
 
 func shutdownAll(reason: String) -> Bool {
     let group=DispatchGroup(),result=ShutdownResult()
     group.enter();fans.shutdown(reason:reason) { ok in result.record(ok);group.leave() }
     group.enter();network.shutdown(reason:reason) { ok in result.record(ok);group.leave() }
-    guard group.wait(timeout:.now()+12) == .success else { log("shutdown recovery timed out; durable network recovery remains for restart");return false }
+    group.enter();charging.shutdown(reason:reason) { ok in result.record(ok);group.leave() }
+    guard group.wait(timeout:.now()+12) == .success else { log("shutdown recovery timed out; durable network/charging recovery remains for restart");return false }
     return result.confirmed
 }
 
@@ -290,7 +292,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--source"), i + 1 < CommandLine
     selfUpdateTimer = t
 }
 
-let delegate = ListenerDelegate(fans:fans,network:network)
+let delegate = ListenerDelegate(fans:fans,network:network,charging:charging)
 let listener = NSXPCListener(machServiceName: HelperConstants.machService)
 listener.delegate = delegate
 listener.resume()

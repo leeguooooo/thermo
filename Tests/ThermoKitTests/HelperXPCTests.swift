@@ -33,7 +33,7 @@ final class HelperXPCTests: XCTestCase {
     }
     final class Service: NSObject, ThermoHelperProtocol, @unchecked Sendable {
         struct State {
-            var version = "6/fixture"
+            var version = "7/fixture"
             var control = FanControlState(policies: [:])
             var policyData: Data?
             var controlData: Data?
@@ -44,6 +44,8 @@ final class HelperXPCTests: XCTestCase {
             var heldReplies: [(String) -> Void] = []
             var awdlCalls=0
             var awdlData: Data?
+            var chargeCalls = 0
+            var chargeData: Data?
         }
         private var state = State()
         private let lock = NSLock()
@@ -93,12 +95,32 @@ final class HelperXPCTests: XCTestCase {
         func awdlState(reply: @escaping (Data) -> Void) {
             let data=access { s in s.awdlCalls+=1;return s.awdlData ?? (try! PolicyCoding.encoder().encode(AWDLSessionState())) };reply(data)
         }
+        func setBatteryChargePolicy(_ policy: String, reply: @escaping (String?) -> Void) { access { $0.chargeCalls += 1 }; reply("fixture has no charging controller") }
+        func batteryChargeState(reply: @escaping (Data) -> Void) { reply(access { $0.chargeCalls += 1; return $0.chargeData ?? (try! PolicyCoding.encoder().encode(BatteryChargeState())) }) }
     }
     func testLegacyRemovalCannotClaimAWDLWasRestored() async throws {
         let endpoint=Endpoint();defer { endpoint.stop() };endpoint.service.access { $0.version="5/fixture" }
         let client=endpoint.client();defer { client.reset() }
         do { try await client.prepareRemoval(true,token:UUID().uuidString);XCTFail("legacy recovery excludes AWDL") } catch {}
         XCTAssertTrue(endpoint.service.access { $0.preparations.isEmpty })
+    }
+    func testProtocol6CannotReceiveChargingSelectorsOrClaimChargingRemovalRecovery() async throws {
+        let endpoint = Endpoint(); defer { endpoint.stop() }; endpoint.service.access { $0.version = "6/fixture" }
+        let client = endpoint.client(); defer { client.reset() }
+        do { try await client.setBatteryChargePolicy(.limit80); XCTFail("old helper") } catch {}
+        do { _ = try await client.batteryChargeState(); XCTFail("old helper") } catch {}
+        do { try await client.prepareRemoval(true, token: UUID().uuidString); XCTFail("old recovery contract") } catch {}
+        XCTAssertEqual(endpoint.service.access { $0.chargeCalls }, 0)
+        XCTAssertTrue(endpoint.service.access { $0.preparations.isEmpty })
+    }
+    func testChargingReplyCannotInventConfirmedHolding() async throws {
+        let endpoint = Endpoint(); defer { endpoint.stop() }; let client = endpoint.client(); defer { client.reset() }
+        var state = BatteryChargeState(); state.phase = .holding; state.policy = .limit80
+        endpoint.service.access { $0.chargeData = try! PolicyCoding.encoder().encode(state) }
+        do { _ = try await client.batteryChargeState(); XCTFail("unknown gate") } catch {}
+        state.phase = .watching; state.percent = 101
+        endpoint.service.access { $0.chargeData = try! PolicyCoding.encoder().encode(state) }
+        do { _ = try await client.batteryChargeState(); XCTFail("invalid percent") } catch {}
     }
 
     final class Endpoint: NSObject, NSXPCListenerDelegate, @unchecked Sendable {

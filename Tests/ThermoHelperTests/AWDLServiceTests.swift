@@ -59,7 +59,7 @@ final class AWDLServiceTests: XCTestCase {
     func testRealServiceXPCWorksWithoutSMCAndDoesNotInventAutomaticFans() async throws {
         let rig=Rig(),endpoint=Endpoint(rig:rig);defer { endpoint.stop() }
         let client=endpoint.client();defer { client.reset() }
-        let version=try await client.version();XCTAssertTrue(version.hasPrefix("6/"))
+        let version=try await client.version();XCTAssertTrue(version.hasPrefix("7/"))
         let id=UUID().uuidString;try await client.beginAWDL(seconds:60,sessionID:id)
         let active=try await client.awdlState();XCTAssertEqual(active.sessionID,id);XCTAssertTrue(active.ownedByCaller)
         XCTAssertFalse(active.interface!.up)
