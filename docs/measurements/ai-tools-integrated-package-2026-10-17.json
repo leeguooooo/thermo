@@ -1,0 +1,256 @@
+{
+  "generated": "2026-10-17T00:16:19.389044+00:00",
+  "candidateCommit": "cc852d25be3efa7d613c04f133a1a5f9d67aa230",
+  "testedCodeCommit": "36de6d91d1afb54dcfe798fe585f252905e88ab8",
+  "version": "1.2.0",
+  "build": "374",
+  "scope": "Local ad-hoc universal candidate. x86_64 execution is Rosetta, not real Intel hardware. Owned synthetic CLI fixtures only. No formal signing, notarization, installation, helper/radio action or publication.",
+  "metadataVerification": "Verified signatures, deployment target 13.0 and required architectures: arm64 x86_64",
+  "artifacts": {
+    "thermo": {
+      "sha256": "44d5fdfc3d2272f45151d0f096d603ceb896a65dc7b0b75d610f03c1a8ee6797",
+      "bytes": 34619344,
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "signatureKind": "ad-hoc"
+    },
+    "thermo-helper": {
+      "sha256": "b3055d83af07b0bf61f3eccf85ca1d8665cbf8206882db1189fbb4e132e21674",
+      "bytes": 2723936,
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "signatureKind": "ad-hoc"
+    },
+    "Thermo.app/Contents/MacOS/Thermo": {
+      "sha256": "77ba371d3d1be924bc1fec0c32aaef87fa53cbb5b2643243adeadb31c3b98c9b",
+      "bytes": 61471024,
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "signatureKind": "ad-hoc"
+    },
+    "Thermo.app/Contents/Helpers/thermo": {
+      "sha256": "44d5fdfc3d2272f45151d0f096d603ceb896a65dc7b0b75d610f03c1a8ee6797",
+      "bytes": 34619344,
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "signatureKind": "ad-hoc"
+    },
+    "Thermo.app/Contents/Helpers/thermo-helper": {
+      "sha256": "b3055d83af07b0bf61f3eccf85ca1d8665cbf8206882db1189fbb4e132e21674",
+      "bytes": 2723936,
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "signatureKind": "ad-hoc"
+    }
+  },
+  "cliChecks": [
+    {
+      "mode": "native-arm64",
+      "check": "verify-skill-context.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "userUniqueFiles": 1,
+        "projectUniqueFiles": 2,
+        "aliasesExcluded": 1,
+        "cacheFilesCountedSeparately": 1,
+        "coverageWarningPreserved": true
+      }
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-skill-quality.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "missingReferences": 2,
+        "sourceLinesVerified": true,
+        "emptyBodies": 1,
+        "identicalIndependentCopies": 2,
+        "examplesIgnored": true,
+        "noMCPExecution": true,
+        "noSkillChanges": true
+      }
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-tool-usage.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "mcpCalls": 2,
+        "skillCalls": 1,
+        "requestTokensKeptSeparate": true,
+        "privateTextExcluded": true,
+        "imageTokensUnknown": true,
+        "knownStatusErrorProportionVerified": true,
+        "unknownErrorProportionPreserved": true
+      }
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-reference-encoding.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "encodings": [
+          "cl100k_base",
+          "o200k_base"
+        ],
+        "standaloneBinary": true,
+        "skillMCPAndUsageCountsMatchReference": true,
+        "modelNamesNotInferred": true
+      }
+    },
+    {
+      "mode": "native-arm64",
+      "check": "verify-task-comparison.py",
+      "passed": true,
+      "result": {
+        "evidenceKind": "synthetic",
+        "checksPassed": 7,
+        "checks": [
+          "compiled JSON output retains outcomes and paired metric sample sizes",
+          "text output labels synthetic evidence and delta direction",
+          "missing metrics and unverified outcomes remain unknown in JSON and text",
+          "missing and changed-task pairs are excluded rather than compared",
+          "mixed cohorts and duplicate results fail closed",
+          "extra content is not exported or executed; unsupported options rejected",
+          "FIFO and directory inputs are rejected without waiting for data"
+        ],
+        "notVerified": [
+          "real model task effect",
+          "independent outcome authenticity",
+          "App integration",
+          "release installation"
+        ]
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-skill-context.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "userUniqueFiles": 1,
+        "projectUniqueFiles": 2,
+        "aliasesExcluded": 1,
+        "cacheFilesCountedSeparately": 1,
+        "coverageWarningPreserved": true
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-skill-quality.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "missingReferences": 2,
+        "sourceLinesVerified": true,
+        "emptyBodies": 1,
+        "identicalIndependentCopies": 2,
+        "examplesIgnored": true,
+        "noMCPExecution": true,
+        "noSkillChanges": true
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-tool-usage.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "mcpCalls": 2,
+        "skillCalls": 1,
+        "requestTokensKeptSeparate": true,
+        "privateTextExcluded": true,
+        "imageTokensUnknown": true,
+        "knownStatusErrorProportionVerified": true,
+        "unknownErrorProportionPreserved": true
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-reference-encoding.py",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "encodings": [
+          "cl100k_base",
+          "o200k_base"
+        ],
+        "standaloneBinary": true,
+        "skillMCPAndUsageCountsMatchReference": true,
+        "modelNamesNotInferred": true
+      }
+    },
+    {
+      "mode": "rosetta-x86_64",
+      "check": "verify-task-comparison.py",
+      "passed": true,
+      "result": {
+        "evidenceKind": "synthetic",
+        "checksPassed": 7,
+        "checks": [
+          "compiled JSON output retains outcomes and paired metric sample sizes",
+          "text output labels synthetic evidence and delta direction",
+          "missing metrics and unverified outcomes remain unknown in JSON and text",
+          "missing and changed-task pairs are excluded rather than compared",
+          "mixed cohorts and duplicate results fail closed",
+          "extra content is not exported or executed; unsupported options rejected",
+          "FIFO and directory inputs are rejected without waiting for data"
+        ],
+        "notVerified": [
+          "real model task effect",
+          "independent outcome authenticity",
+          "App integration",
+          "release installation"
+        ]
+      }
+    }
+  ],
+  "updateFeedAbsent": true,
+  "originalCleanupObservationResolved": false,
+  "nativeAppCheck": {
+    "scope": "Copy of local ad-hoc package with bundle identity and native launcher changed to use a fresh owned synthetic Home. Runtime instruction sections match both original slices. Not formal installation or real tool performance acceptance.",
+    "bundleID": "dev.thermo.aiqa.integrated12",
+    "runtimePathVerified": true,
+    "instructionSectionSHA256": {
+      "arm64": "2af8f33f114d47d91099881ead1d45d60b04b2273b0cd86a648af47bb05632fd",
+      "x86_64": "08f203a3186911e5c47bdbbfb7be8fd1a381f1ee167c0846e88733a627ff486d"
+    },
+    "originalArtifactHashesUnchanged": true,
+    "originalInstalledAppProcessPreserved": true,
+    "method": "cua_repl clicks, accessibility snapshots and screenshot",
+    "workflow": {
+      "analyzedFixtureFiles": 1,
+      "toolRows": 12,
+      "initiallyShown": 8,
+      "expandedShown": 12,
+      "callsPerTool": 4,
+      "resultsPerTool": 3,
+      "missingPerTool": 1,
+      "knownStatusExample": "1 / 2 (50.0%)",
+      "finalToolUnknownErrorStatuses": 3,
+      "finalToolRateKeptUnknown": true,
+      "requestTokenUsageKeptUnknown": true,
+      "skillsCategoryExcludesMCPRows": true,
+      "returningToMCPPreservesReportAndResetsShownTo8": true
+    },
+    "qaStopped": true,
+    "realLogsRead": false,
+    "realMCPServicesStarted": false
+  },
+  "packageLogSHA256": "f9b958711bcd09fe8f5c024e31b4c376715c770a51da1167a92df779de4b2957",
+  "verificationDriverSHA256": "f6dcb88f859570a2ab25ef24e2eb41a74410966680829495c5710b96c3f26634"
+}
