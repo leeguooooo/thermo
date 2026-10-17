@@ -270,10 +270,21 @@
   "scope": "Local candidate only. Ad-hoc packaging and isolated fixture UI verified; no Developer ID signing, notarization, installation or publication. Both failed full runs retained; original cleanup observation remains unexplained.",
   "packageCommit": "f02328d5f0bc6a9158865225e2c98b8f09e38bf7",
   "localPackageValidation": "ai-tools-candidate-package-2026-10-17.json",
-  "latestIntegratedSource": "ed354eea61a94a16f33d146e1434b7133aca18c4",
-  "latestIntegratedVerification": "ai-tools-integrated-candidate-2026-10-17.json",
-  "latestIntegratedPackage": "mcp-native-events-release-2026-10-17.json",
-  "latestIntegratedPackageCommit": "ed354eea61a94a16f33d146e1434b7133aca18c4",
-  "latestIntegratedPackageVersion": "1.2.0 (393)",
-  "latestFullReleaseTests": 1483
+  "latestIntegratedSource": "cd69c652b47c7b909305f030c5d738ad33572ee3",
+  "latestIntegratedVerification": "ai-tools-integrated-421-2026-10-17.json",
+  "latestIntegratedPackage": "ai-tools-integrated-421-2026-10-17.json",
+  "latestIntegratedPackageCommit": "cd69c652b47c7b909305f030c5d738ad33572ee3",
+  "latestIntegratedPackageVersion": "1.2.0 (421)",
+  "latestFullReleaseTests": 1571,
+  "latestIntegratedSourceCommit": "cd69c652b47c7b909305f030c5d738ad33572ee3",
+  "latestIntegratedSourceMainCommit": "d3bcc8c464d79584a0b740e05ac53a9769ac7d49",
+  "latestIntegratedFullReleaseTests": 1571,
+  "latestIntegratedCLIArchitectureGroups": 14,
+  "latestIntegratedGUIAcceptance": "incomplete; console screen lock observed",
+  "previousIntegratedCandidate393": {
+    "sourceCommit": "ed354eea61a94a16f33d146e1434b7133aca18c4",
+    "verification": "mcp-native-events-release-2026-10-17.json",
+    "version": "1.2.0 (393)",
+    "fullReleaseTests": 1483
+  }
 }
