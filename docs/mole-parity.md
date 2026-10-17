@@ -928,3 +928,8 @@ Pulse 关闭后发布修复（2026-10-17）：对签名 429 的独立启动采�
 Pulse 分阶段测量（2026-10-17）：保留了首次 utility 约 1.08 秒的样本；随后交错测量两种优先级，4 个 utility 新进程首次采样中位约 0.49 秒，4 个 userInitiated 约 0.47 秒，后续采样均约 0.04 秒。单独的生产 SystemPulse 模型首次发布约 0.54 秒，读取完成后的主线程间隔约 3–5 毫秒；窗口 Debug 阶段追踪首次 start→publish 约 0.50 秒，2 轮生命周期通过，并记录旧周期迟到结果被丢弃。
 
 这些非受控 Debug 测量没有复现固定三秒的内部采样阻塞，不能据此认定先前签名 429 的失败已解决，也不能推定与 Mole 等速。保留进程身份核验和原优先级，不改宽验收时限。新增 Debug 专用阶段日志只在明确启用且带生命周期参数时输出时间与周期标记，Release 不包含追踪代码。可复测入口为 `python3 scripts/bench-pulse.py --mode all --balanced`；需要既有 Debug 测试对象。数据与边界见 [阶段测量记录](measurements/pulse-phase-timings-2026-10-17.json)。
+
+
+修复后的签名候选 1.1.28（440），源码 `e7b0141`：完整非硬件回归 1,636 项通过，Developer ID 通用构建、原生/Rosetta CLI、95 个解包文件的字节及深度签名复验通过；新 App/CLI 满足生产 helper 的客户端签名要求。同一签名 Release 包单独完成 2 轮、6 次窗口开关及 19 个采样点，所有打开取得新样本，关闭后发布稳定。440 替代本轮 421/424/429 作为后续受控验收候选；原 429 失败记录保留，不能推定冷启动时限或与 Mole 的性能比较已经成立。
+
+部署预检确认旧 App 当前未运行，root helper 仍在运行，且自动更新源指向 `/Applications/Thermo.app/Contents/Helpers/thermo-helper`，所以替换 App 可能触发系统服务自更新与重启。已将旧 App、helper 和 launchd plist 复制到候选私有目录，并核对签名与关键文件字节；文件备份不等于已验证运行时回滚。尚未替换安装版、连接 root 服务、启用充电或切换 AWDL。主分支冻结后的并行源码及未提交工作不在 440 中，差异保留在记录。详见 [440 签名候选](measurements/mole-pulse-release-candidate-2026-10-17.json)。

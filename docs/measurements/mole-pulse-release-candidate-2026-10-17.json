@@ -1,0 +1,722 @@
+{
+  "date": "2026-10-17T04:56:31.915003+00:00",
+  "source": "e7b0141",
+  "version": "1.1.28",
+  "build": "440",
+  "artifacts": {
+    "thermo": {
+      "sha256": "5a53b1b1065e1ecfbaa7e10051d63b6be37951edfcaf80691a2f0fd156dd393a",
+      "bytes": 37073744
+    },
+    "thermo-helper": {
+      "sha256": "3773ff6a7e4a30753c351f6d2a5377339523b622c37247f2c036e3a1783bce51",
+      "bytes": 3432368
+    },
+    "Thermo.app/Contents/MacOS/Thermo": {
+      "sha256": "559ba4ecf59ba4418b09e3c5c44aae846118c68dbdc879f8ae0cc9713085c1bd",
+      "bytes": 63495136
+    },
+    "Thermo.app/Contents/Helpers/thermo": {
+      "sha256": "830133360036d2c08392841e8b426fb9c1b902aa7c8fe4621f119f7062b6c0c8",
+      "bytes": 37073744
+    },
+    "Thermo.app/Contents/Helpers/thermo-helper": {
+      "sha256": "1d693d7eb1ac8251f9e8483041f62e383376900bbc6748f2f210589a2065ab86",
+      "bytes": 3432368
+    }
+  },
+  "cliChecks": {
+    "native": {
+      "fullDryRun": {
+        "changesMade": false,
+        "forcesCharging": false,
+        "fullChargeEndConditions": [
+          "reported100Percent",
+          "externalPowerDisconnected",
+          "powerStateUnavailable",
+          "supportChanged"
+        ],
+        "holdsConnection": true,
+        "minimumHelperProtocol": 8,
+        "policy": "chargeToFull"
+      },
+      "limitDryRun": {
+        "changesMade": false,
+        "forcesCharging": false,
+        "holdsConnection": true,
+        "minimumHelperProtocol": 8,
+        "pauseAtPercent": 80,
+        "policy": "limit80",
+        "resumeBelowPercent": 75
+      },
+      "probe": {
+        "availability": "available",
+        "changesMade": false,
+        "gate": "allowed",
+        "presence": "present",
+        "registers": [
+          {
+            "key": "CH0B"
+          },
+          {
+            "key": "CH0C"
+          },
+          {
+            "hex": "00 00 00 00",
+            "info": {
+              "attributes": 212,
+              "key": "CHTE",
+              "size": 4,
+              "type": "ui32"
+            },
+            "key": "CHTE"
+          }
+        ],
+        "sessionStateQueried": false,
+        "support": "smc"
+      },
+      "physicalIntelAcceptance": false
+    },
+    "translatedX86": {
+      "fullDryRun": {
+        "changesMade": false,
+        "forcesCharging": false,
+        "fullChargeEndConditions": [
+          "reported100Percent",
+          "externalPowerDisconnected",
+          "powerStateUnavailable",
+          "supportChanged"
+        ],
+        "holdsConnection": true,
+        "minimumHelperProtocol": 8,
+        "policy": "chargeToFull"
+      },
+      "limitDryRun": {
+        "changesMade": false,
+        "forcesCharging": false,
+        "holdsConnection": true,
+        "minimumHelperProtocol": 8,
+        "pauseAtPercent": 80,
+        "policy": "limit80",
+        "resumeBelowPercent": 75
+      },
+      "probe": {
+        "availability": "available",
+        "changesMade": false,
+        "gate": "allowed",
+        "presence": "present",
+        "registers": [
+          {
+            "key": "CH0B"
+          },
+          {
+            "key": "CH0C"
+          },
+          {
+            "hex": "00 00 00 00",
+            "info": {
+              "attributes": 212,
+              "key": "CHTE",
+              "size": 4,
+              "type": "ui32"
+            },
+            "key": "CHTE"
+          }
+        ],
+        "sessionStateQueried": false,
+        "support": "smc"
+      },
+      "physicalIntelAcceptance": false
+    }
+  },
+  "installedAppAndHelperUnchanged": true,
+  "notarized": false,
+  "published": false,
+  "realBatteryWriteTested": false,
+  "nativeUIAccepted": false,
+  "candidateRoot": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-pjk_kj52",
+  "regression": {
+    "source": "e7b0141eca12bf828d315bf1d5d57e89b0feb8e2",
+    "exitCode": 0,
+    "excluded": [
+      "HardwareTests"
+    ],
+    "total": 1636,
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 187,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 104,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 294,
+        "failures": 0
+      },
+      "CleanKitTests.xctest": {
+        "tests": 751,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 228,
+        "failures": 0
+      },
+      "AgentCoreTests.xctest": {
+        "tests": 42,
+        "failures": 0
+      }
+    },
+    "logSHA256": "c8cafd7d9afc18db651d832163a4a4dddbf63a7a0f08b00459462b2428b19f39"
+  },
+  "archive": {
+    "archive": "Thermo-1.1.28-440-candidate.zip",
+    "sha256": "1df9cd98bd2685833f1e89ba08aa807036dcbb27f6dcddd6fa77e9835c55aacb",
+    "bytes": 36332096,
+    "fileCount": 95,
+    "allFileBytesEqual": true,
+    "deepStrictSignatureVerified": true,
+    "packagedAppAndCLIMatchProductionClientRequirement": true
+  },
+  "lifecycle": {
+    "buildConfiguration": "release",
+    "functionalChecksPassed": true,
+    "memoryGrowthAssessed": false,
+    "mode": "offscreen AppKit with explicit watched visibility; helper interaction and menu-bar recorder disabled",
+    "options": {
+      "cycles": 2,
+      "idleSeconds": 2,
+      "openSeconds": 3,
+      "output": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-pjk_kj52/lifecycle.json"
+    },
+    "pid": 64244,
+    "samples": [
+      {
+        "computeInFlight": false,
+        "computeTimer": false,
+        "contentDetached": true,
+        "controllersAlive": 0,
+        "cpuSeconds": 0.127939,
+        "cycle": 0,
+        "elapsed": 0.000107334,
+        "footprintKB": 9680,
+        "framePreserved": true,
+        "memoryInFlight": false,
+        "memoryTimer": false,
+        "monitorWindowOpen": false,
+        "page": "none",
+        "phase": "baseline",
+        "pulseHolders": 0,
+        "pulseTimer": false,
+        "residentKB": 25504,
+        "threads": 6
+      },
+      {
+        "activeSampleFresh": true,
+        "computeInFlight": false,
+        "computeTimer": false,
+        "contentDetached": false,
+        "controllersAlive": 0,
+        "cpuSeconds": 0.92157,
+        "cycle": 1,
+        "elapsed": 3.902353542,
+        "footprintKB": 112160,
+        "framePreserved": true,
+        "memoryInFlight": false,
+        "memoryTimer": false,
+        "monitorWindowOpen": true,
+        "page": "overview",
+        "phase": "open",
+        "pulseHolders": 1,
+        "pulsePublished": "2026-10-17T04:58:29Z",
+        "pulseTimer": true,
+        "residentKB": 105152,
+        "threads": 10
+      },
+      {
+        "computeInFlight": false,
+        "computeTimer": false,
+        "contentDetached": true,
+        "controllersAlive": 0,
+        "cpuSeconds": 0.960518,
+        "cycle": 1,
+        "elapsed": 4.950657542,
+        "footprintKB": 46672,
+        "framePreserved": true,
+        "memoryInFlight": false,
+        "memoryTimer": false,
+        "monitorWindowOpen": false,
+        "page": "overview",
+        "phase": "closed",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:29Z",
+        "pulseTimer": false,
+        "residentKB": 106432,
+        "threads": 10
+      },
+      {
+        "computeInFlight": false,
+        "computeTimer": false,
+        "contentDetached": true,
+        "controllersAlive": 0,
+        "cpuSeconds": 0.963351,
+        "cycle": 1,
+        "elapsed": 7.049211209,
+        "footprintKB": 46576,
+        "framePreserved": true,
+        "idlePublicationsStable": true,
+        "memoryInFlight": false,
+        "memoryTimer": false,
+        "monitorWindowOpen": false,
+        "page": "overview",
+        "phase": "idle",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:29Z",
+        "pulseTimer": false,
+        "residentKB": 105856,
+        "threads": 8
+      },
+      {
+        "activeSampleFresh": true,
+        "computeInFlight": false,
+        "computeTimer": false,
+        "contentDetached": false,
+        "controllersAlive": 0,
+        "cpuSeconds": 1.530113,
+        "cycle": 1,
+        "elapsed": 10.831846,
+        "footprintKB": 98128,
+        "framePreserved": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:35Z",
+        "memoryTimer": true,
+        "monitorWindowOpen": true,
+        "page": "memory",
+        "phase": "open",
+        "pulseHolders": 1,
+        "pulsePublished": "2026-10-17T04:58:38Z",
+        "pulseTimer": true,
+        "residentKB": 131968,
+        "threads": 8
+      },
+      {
+        "computeInFlight": false,
+        "computeTimer": false,
+        "contentDetached": true,
+        "controllersAlive": 0,
+        "cpuSeconds": 1.552711,
+        "cycle": 1,
+        "elapsed": 11.911180834,
+        "footprintKB": 93264,
+        "framePreserved": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:35Z",
+        "memoryTimer": false,
+        "monitorWindowOpen": false,
+        "page": "memory",
+        "phase": "closed",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:38Z",
+        "pulseTimer": false,
+        "residentKB": 133280,
+        "threads": 8
+      },
+      {
+        "computeInFlight": false,
+        "computeTimer": false,
+        "contentDetached": true,
+        "controllersAlive": 0,
+        "cpuSeconds": 1.55472,
+        "cycle": 1,
+        "elapsed": 14.043983625,
+        "footprintKB": 88960,
+        "framePreserved": true,
+        "idlePublicationsStable": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:35Z",
+        "memoryTimer": false,
+        "monitorWindowOpen": false,
+        "page": "memory",
+        "phase": "idle",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:38Z",
+        "pulseTimer": false,
+        "residentKB": 116160,
+        "threads": 8
+      },
+      {
+        "activeSampleFresh": true,
+        "computeInFlight": false,
+        "computePublished": "2026-10-17T04:58:44Z",
+        "computeTimer": true,
+        "contentDetached": false,
+        "controllersAlive": 0,
+        "cpuSeconds": 1.931894,
+        "cycle": 1,
+        "elapsed": 17.645024084,
+        "footprintKB": 98688,
+        "framePreserved": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:35Z",
+        "memoryTimer": false,
+        "monitorWindowOpen": true,
+        "page": "cpu",
+        "phase": "open",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:38Z",
+        "pulseTimer": false,
+        "residentKB": 164000,
+        "threads": 7
+      },
+      {
+        "computeInFlight": false,
+        "computePublished": "2026-10-17T04:58:44Z",
+        "computeTimer": false,
+        "contentDetached": true,
+        "controllersAlive": 0,
+        "cpuSeconds": 1.952881,
+        "cycle": 1,
+        "elapsed": 18.694984292,
+        "footprintKB": 94496,
+        "framePreserved": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:35Z",
+        "memoryTimer": false,
+        "monitorWindowOpen": false,
+        "page": "cpu",
+        "phase": "closed",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:38Z",
+        "pulseTimer": false,
+        "residentKB": 136048,
+        "threads": 7
+      },
+      {
+        "computeInFlight": false,
+        "computePublished": "2026-10-17T04:58:44Z",
+        "computeTimer": false,
+        "contentDetached": true,
+        "controllersAlive": 0,
+        "cpuSeconds": 1.955071,
+        "cycle": 1,
+        "elapsed": 20.794992125,
+        "footprintKB": 94496,
+        "framePreserved": true,
+        "idlePublicationsStable": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:35Z",
+        "memoryTimer": false,
+        "monitorWindowOpen": false,
+        "page": "cpu",
+        "phase": "idle",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:38Z",
+        "pulseTimer": false,
+        "residentKB": 133088,
+        "threads": 7
+      },
+      {
+        "activeSampleFresh": true,
+        "computeInFlight": false,
+        "computePublished": "2026-10-17T04:58:44Z",
+        "computeTimer": false,
+        "contentDetached": false,
+        "controllersAlive": 0,
+        "cpuSeconds": 2.329757,
+        "cycle": 2,
+        "elapsed": 24.291241459,
+        "footprintKB": 76800,
+        "framePreserved": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:35Z",
+        "memoryTimer": false,
+        "monitorWindowOpen": true,
+        "page": "overview",
+        "phase": "open",
+        "pulseHolders": 1,
+        "pulsePublished": "2026-10-17T04:58:49Z",
+        "pulseTimer": true,
+        "residentKB": 135632,
+        "threads": 10
+      },
+      {
+        "computeInFlight": false,
+        "computePublished": "2026-10-17T04:58:44Z",
+        "computeTimer": false,
+        "contentDetached": true,
+        "controllersAlive": 0,
+        "cpuSeconds": 2.368355,
+        "cycle": 2,
+        "elapsed": 25.368009209,
+        "footprintKB": 68144,
+        "framePreserved": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:35Z",
+        "memoryTimer": false,
+        "monitorWindowOpen": false,
+        "page": "overview",
+        "phase": "closed",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:49Z",
+        "pulseTimer": false,
+        "residentKB": 131120,
+        "threads": 10
+      },
+      {
+        "computeInFlight": false,
+        "computePublished": "2026-10-17T04:58:44Z",
+        "computeTimer": false,
+        "contentDetached": true,
+        "controllersAlive": 0,
+        "cpuSeconds": 2.374821,
+        "cycle": 2,
+        "elapsed": 27.498705125,
+        "footprintKB": 68064,
+        "framePreserved": true,
+        "idlePublicationsStable": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:35Z",
+        "memoryTimer": false,
+        "monitorWindowOpen": false,
+        "page": "overview",
+        "phase": "idle",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:49Z",
+        "pulseTimer": false,
+        "residentKB": 125792,
+        "threads": 9
+      },
+      {
+        "activeSampleFresh": true,
+        "computeInFlight": false,
+        "computePublished": "2026-10-17T04:58:44Z",
+        "computeTimer": false,
+        "contentDetached": false,
+        "controllersAlive": 0,
+        "cpuSeconds": 2.906918,
+        "cycle": 2,
+        "elapsed": 31.106871042,
+        "footprintKB": 109424,
+        "framePreserved": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:55Z",
+        "memoryTimer": true,
+        "monitorWindowOpen": true,
+        "page": "memory",
+        "phase": "open",
+        "pulseHolders": 1,
+        "pulsePublished": "2026-10-17T04:58:55Z",
+        "pulseTimer": true,
+        "residentKB": 128640,
+        "threads": 8
+      },
+      {
+        "computeInFlight": false,
+        "computePublished": "2026-10-17T04:58:44Z",
+        "computeTimer": false,
+        "contentDetached": true,
+        "controllersAlive": 0,
+        "cpuSeconds": 2.9556750000000003,
+        "cycle": 2,
+        "elapsed": 32.190622834,
+        "footprintKB": 105696,
+        "framePreserved": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:55Z",
+        "memoryTimer": false,
+        "monitorWindowOpen": false,
+        "page": "memory",
+        "phase": "closed",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:55Z",
+        "pulseTimer": false,
+        "residentKB": 130816,
+        "threads": 8
+      },
+      {
+        "computeInFlight": false,
+        "computePublished": "2026-10-17T04:58:44Z",
+        "computeTimer": false,
+        "contentDetached": true,
+        "controllersAlive": 0,
+        "cpuSeconds": 2.958076,
+        "cycle": 2,
+        "elapsed": 34.323777834,
+        "footprintKB": 105696,
+        "framePreserved": true,
+        "idlePublicationsStable": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:55Z",
+        "memoryTimer": false,
+        "monitorWindowOpen": false,
+        "page": "memory",
+        "phase": "idle",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:55Z",
+        "pulseTimer": false,
+        "residentKB": 104176,
+        "threads": 8
+      },
+      {
+        "activeSampleFresh": true,
+        "computeInFlight": false,
+        "computePublished": "2026-10-17T04:59:04Z",
+        "computeTimer": true,
+        "contentDetached": false,
+        "controllersAlive": 0,
+        "cpuSeconds": 3.238355,
+        "cycle": 2,
+        "elapsed": 37.717999834,
+        "footprintKB": 102832,
+        "framePreserved": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:55Z",
+        "memoryTimer": false,
+        "monitorWindowOpen": true,
+        "page": "cpu",
+        "phase": "open",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:55Z",
+        "pulseTimer": false,
+        "residentKB": 145312,
+        "threads": 7
+      },
+      {
+        "computeInFlight": false,
+        "computePublished": "2026-10-17T04:59:04Z",
+        "computeTimer": false,
+        "contentDetached": true,
+        "controllersAlive": 0,
+        "cpuSeconds": 3.258593,
+        "cycle": 2,
+        "elapsed": 38.800254792,
+        "footprintKB": 97760,
+        "framePreserved": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:55Z",
+        "memoryTimer": false,
+        "monitorWindowOpen": false,
+        "page": "cpu",
+        "phase": "closed",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:55Z",
+        "pulseTimer": false,
+        "residentKB": 124336,
+        "threads": 7
+      },
+      {
+        "computeInFlight": false,
+        "computePublished": "2026-10-17T04:59:04Z",
+        "computeTimer": false,
+        "contentDetached": true,
+        "controllersAlive": 0,
+        "cpuSeconds": 3.260653,
+        "cycle": 2,
+        "elapsed": 40.931675459,
+        "footprintKB": 91360,
+        "framePreserved": true,
+        "idlePublicationsStable": true,
+        "memoryInFlight": false,
+        "memoryPublished": "2026-10-17T04:58:55Z",
+        "memoryTimer": false,
+        "monitorWindowOpen": false,
+        "page": "cpu",
+        "phase": "idle",
+        "pulseHolders": 0,
+        "pulsePublished": "2026-10-17T04:58:55Z",
+        "pulseTimer": false,
+        "residentKB": 123872,
+        "threads": 7
+      }
+    ],
+    "schemaVersion": 1,
+    "started": "2026-10-17T04:58:28Z"
+  },
+  "lifecycleProcess": {
+    "exitCode": 0,
+    "stdout": "lifecycle 0 none baseline: RSS=25504KB footprint=9680KB controllers=0\nlifecycle 1 overview open: RSS=105152KB footprint=112160KB controllers=0\nlifecycle 1 overview closed: RSS=106432KB footprint=46672KB controllers=0\nlifecycle 1 overview idle: RSS=105856KB footprint=46576KB controllers=0\nlifecycle 1 memory open: RSS=131968KB footprint=98128KB controllers=0\nlifecycle 1 memory closed: RSS=133280KB footprint=93264KB controllers=0\nlifecycle 1 memory idle: RSS=116160KB footprint=88960KB controllers=0\nlifecycle 1 cpu open: RSS=164000KB footprint=98688KB controllers=0\nlifecycle 1 cpu closed: RSS=136048KB footprint=94496KB controllers=0\nlifecycle 1 cpu idle: RSS=133088KB footprint=94496KB controllers=0\nlifecycle 2 overview open: RSS=135632KB footprint=76800KB controllers=0\nlifecycle 2 overview closed: RSS=131120KB footprint=68144KB controllers=0\nlifecycle 2 overview idle: RSS=125792KB footprint=68064KB controllers=0\nlifecycle 2 memory open: RSS=128640KB footprint=109424KB controllers=0\nlifecycle 2 memory closed: RSS=130816KB footprint=105696KB controllers=0\nlifecycle 2 memory idle: RSS=104176KB footprint=105696KB controllers=0\nlifecycle 2 cpu open: RSS=145312KB footprint=102832KB controllers=0\nlifecycle 2 cpu closed: RSS=124336KB footprint=97760KB controllers=0\nlifecycle 2 cpu idle: RSS=123872KB footprint=91360KB controllers=0\n",
+    "stderr": ""
+  },
+  "componentPeerTrustEvidence": "helper-xpc-peer-trust-2026-10-17.json",
+  "deploymentPreflight": {
+    "launchdLabel": "dev.thermo.helper",
+    "helperAutomaticUpdateSource": "/Applications/Thermo.app/Contents/Helpers/thermo-helper",
+    "appReplacementMayTriggerHelperSelfUpdate": true,
+    "observedInstalledProcesses": [
+      {
+        "pid": 95178,
+        "uid": 0,
+        "executable": "/Library/PrivilegedHelperTools/dev.thermo.helper"
+      }
+    ],
+    "scope": "Read-only plist/process preflight. No connection to helper, service restart or file replacement."
+  },
+  "oldInstallationFileBackup": {
+    "app": {
+      "original": "/Applications/Thermo.app",
+      "backup": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-pjk_kj52/original-install-backup/Thermo.app",
+      "verifiedCodeSignature": true,
+      "criticalFileHashes": {
+        "Contents/MacOS/Thermo": "c6de14328c6d724888de63449b4aad41d12889d83f417bf0f41de08503caf4e9",
+        "Contents/Helpers/thermo": "32caa530e6bd5b29a4810901a4d54d67fa7f55f709d9127e957acc088faccc08",
+        "Contents/Helpers/thermo-helper": "9ffcd0175e388f5a99b0dfee6424991c127226bc54e4d837102018b4579c4125",
+        "Contents/Info.plist": "b1d2dea70f7c68cb8c01721eae2593e6dd60e616c36933a90ce2c6f012d65a17"
+      }
+    },
+    "rootFiles": {
+      "/Library/PrivilegedHelperTools/dev.thermo.helper": {
+        "sha256": "9ffcd0175e388f5a99b0dfee6424991c127226bc54e4d837102018b4579c4125",
+        "backup": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-pjk_kj52/original-install-backup/helper-original",
+        "uid": 0,
+        "gid": 0,
+        "mode": "0o755"
+      },
+      "/Library/LaunchDaemons/dev.thermo.helper.plist": {
+        "sha256": "60a0882267b914ab19ba81b9f69310435d048f21e13a09f618171bb2e05a6463",
+        "backup": "/var/folders/f1/y6hg4gp10513gtyxpl62hb2m0000gn/T/thermo-1-1-28-refresh-pjk_kj52/original-install-backup/launchd-original.plist",
+        "uid": 0,
+        "gid": 0,
+        "mode": "0o644"
+      }
+    },
+    "scope": "Read-only copies into private candidate directory. No installed file replacement, service interaction or control-state change. File backup does not by itself prove runtime rollback."
+  },
+  "supersedesBuilds": [
+    "421",
+    "424",
+    "429"
+  ],
+  "limits": [
+    "Visible interaction and installed App acceptance pending",
+    "Actual root/system-domain XPC and hardware control pending",
+    "Cold-start performance equivalence to Mole is not established",
+    "One passing signed440 run does not erase earlier signed429 startup failures",
+    "Not notarized or published",
+    "Rosetta is not physical Intel acceptance"
+  ],
+  "logsSHA256": {
+    "/tmp/thermo-pulse-release-regression.log": "c8cafd7d9afc18db651d832163a4a4dddbf63a7a0f08b00459462b2428b19f39",
+    "/tmp/thermo-pulse-release-candidate-build.log": "306145f46684c9d126814239fbc88ceb702ed4d4b6eb6bd3f60092c4e667a4b7",
+    "/tmp/thermo-pulse-release-candidate-verification.log": "fd8fff16851f07b163dc4908742d528996c955fbfde490447bc838b659fbd5ff"
+  },
+  "laterMainSnapshot": {
+    "head": "1d8fe2925505f42e99aa800ed1821c01c875837d",
+    "commonBase": "3a92ba05256600224391c2a41934a702771179e2",
+    "committedMainSourceAndTestChangesNotPackaged": [
+      "Sources/AgentDoctor/CodexSkillFlags.swift",
+      "Sources/AgentDoctor/Config.swift",
+      "Sources/AgentDoctor/ContextFootprint.swift",
+      "Sources/ThermoApp/Monitor.swift",
+      "Sources/ThermoApp/main.swift",
+      "Sources/ThermoL10n/ZhHans.swift",
+      "Tests/AgentDoctorTests/CodexSkillFlagsTests.swift",
+      "Tests/ThermoAppTests/VerificationHelperIsolationTests.swift"
+    ],
+    "dirtyMainTrackedPathsPreserved": []
+  }
+}
