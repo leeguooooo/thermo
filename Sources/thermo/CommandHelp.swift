@@ -48,18 +48,18 @@ enum CommandHelp {
     pulse restart|pulse restart NAME_or_PID [--dry-run] [--yes] [--json]|cli
     pulse chrome|pulse chrome [--app BROWSER] [--watch SEC] [--measure] [--json|--csv]|browser
     pulse chrome close|pulse chrome close [URL] [--ids IDS] [--app BROWSER] [--title TITLE] [--dry-run] [--yes] [--json]|browser
-    agents|agents [--all] [--json|--csv]|cli
+    agents|agents [--all] [--json|--csv] [--root PROJECT] [--encoding ENCODING]|cli
     agents context|agents context [--encoding ENCODING] [--agent AGENT] [--root PROJECT] [--json]|cli
     agents usage|agents usage [--encoding ENCODING] [--all] [--since DATE] [--agent AGENT] [--limit N] [--json]|cli
     agents compare|agents compare FILE [--json]|cli
-    agents inspect-all|agents inspect-all [--agent AGENT] [--encoding ENCODING] [--timeout SEC] [--budget SEC] [--dry-run] [--json]|mcp
-    agents inspect|agents inspect NAME [--encoding ENCODING] [--agent AGENT] [--timeout SEC] [--json]|mcp
-    agents list|agents list [AREA] [--json|--csv]|cli
-    agents show|agents show NAME [--area AREA] [--agent AGENT] [--json|--csv]|cli
-    agents fix|agents fix [NAME] [--action N] [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json]|cli
-    agents disable|agents disable NAME [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json]|cli
-    agents uninstall|agents uninstall NAME [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json]|cli
-    agents run|agents run NAME --action N [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json]|cli
+    agents inspect-all|agents inspect-all [--agent AGENT] [--encoding ENCODING] [--timeout SEC] [--budget SEC] [--dry-run] [--json] [--root PROJECT]|mcp
+    agents inspect|agents inspect NAME [--encoding ENCODING] [--agent AGENT] [--timeout SEC] [--json] [--root PROJECT]|mcp
+    agents list|agents list [AREA] [--json|--csv] [--root PROJECT] [--encoding ENCODING]|cli
+    agents show|agents show NAME [--area AREA] [--agent AGENT] [--json|--csv] [--root PROJECT] [--encoding ENCODING]|cli
+    agents fix|agents fix [NAME] [--action N] [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json] [--root PROJECT] [--encoding ENCODING]|cli
+    agents disable|agents disable NAME [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json] [--root PROJECT] [--encoding ENCODING]|cli
+    agents uninstall|agents uninstall NAME [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json] [--root PROJECT] [--encoding ENCODING]|cli
+    agents run|agents run NAME --action N [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json] [--root PROJECT] [--encoding ENCODING]|cli
     clean|clean [CATEGORY_or_ai] [--all] [--csv] [--root DIRS] [--older-than DAYS] [--budget SEC] [--exact] [--json|--stream]|cli
     clean overview|clean overview [--budget SEC] [--json|--stream]|cli
     clean run|clean run safe_or_ID… [--budget SEC] [--exact] [--rescan] [--root DIRS] [--older-than DAYS] [--dry-run] [--yes] [--trash|--permanent] [--json]|cli

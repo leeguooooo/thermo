@@ -490,3 +490,5 @@ thermo clean apply PLAN_UUID --yes --json
 计划保存审阅时的路径、身份和处理方式，有效期 15 分钟。执行前仍复查白名单、文件变化、进程和工具范围。计划在提交删除前即被认领，一次执行后不能重放；中断后查看操作记录并重新扫描，不能重复提交旧计划。`apply` 不接受覆盖范围或处理方式的参数。文件变化后使用 `clean plan ID… --rescan` 获取新计划，不能反复使用旧扫描。
 
 `clean run/apply --json` 使用 **schemaVersion 2** 对象，旧版数组位于 `results`。对象另有 `complete`、`outcome`、`scanComplete`、`skipped`、`missingSelectors`、`estimatedDeletedBytes`、`trashedBytes` 和整批 `spaceObservation`。文件估计删除量和实测磁盘变化不同，后者含其他任务的并发写入或删除。清理的部分执行、被截断的扫描和未确认结果返回退出码 **3**；无效参数或拒绝返回 **2**，执行异常返回 **1**。调用方应读取结果和退出状态，不能仅凭命令已返回判断任务完成。
+
+Agent 诊断、列举、检查和修复支持 `--root PROJECT`，与 App 的项目选择使用同一上下文；不指定时只检查用户配置。`agents fix/run` 的 `complete` 表示所列操作是否完成，`observedAfter` 是操作后重新读取的诊断，不代表整机或项目的全部问题已解决。

@@ -8,6 +8,17 @@ struct AgentsCommand {
     let app: App
     var style: Style { app.style }
 
+    func environment() throws -> DoctorEnvironment {
+        var project: URL?
+        if let path = app.args.options["root"] {
+            let value = URL(fileURLWithPath:(path as NSString).expandingTildeInPath).standardizedFileURL
+            var isDirectory: ObjCBool = false
+            guard FileManager.default.fileExists(atPath:value.path,isDirectory:&isDirectory), isDirectory.boolValue else { throw CLIError("--root must identify one existing project directory.") }
+            project = value
+        }
+        return DoctorEnvironment(project:project,tokenEncoding:try encoding())
+    }
+
     func run(_ rest: [String]) throws {
         let sub = rest.first ?? ""
         let name = rest.count > 1 ? rest[1] : nil
@@ -34,7 +45,7 @@ struct AgentsCommand {
         case "run": return try act(on: try required(name, sub), kind: nil)
         default: throw CLIError(Self.usage)
         }
-        let report = AgentDoctor.run()
+        let report = AgentDoctor.run(try environment())
         if app.args.has("json") {
             print(Export.diagnosticJSON(report))
             if report.count(.error) > 0 { exit(1) }
@@ -100,7 +111,7 @@ struct AgentsCommand {
         } else {
             areas = Area.allCases
         }
-        let report = AgentDoctor.run()
+        let report = AgentDoctor.run(try environment())
         let items = report.items.filter { areas.contains($0.area) }
         if app.args.has("json") { print(Export.diagnosticJSON(items)); return }
         if app.args.has("csv") {
@@ -256,7 +267,8 @@ struct AgentsCommand {
         guard timeout <= 120, budget <= 120 else { throw CLIError("--timeout and --budget must be at most 120 seconds") }
         if let host = app.args.options["agent"], !["claude","codex","cursor","gemini","windsurf"].contains(host) { throw CLIError("Unknown --agent host.") }
         let selectedEncoding = try encoding()
-        let inventory = AgentDoctor.run(DoctorEnvironment(tokenEncoding: selectedEncoding))
+        let selectedProject = try environment().project
+        let inventory = AgentDoctor.run(DoctorEnvironment(project:selectedProject,tokenEncoding: selectedEncoding))
         var seen = Set<String>()
         let queue = inventory.items.filter { $0.area == .mcp && $0.enabled && (app.args.options["agent"] == nil || $0.agent == app.args.options["agent"]) && seen.insert($0.id).inserted }
             .sorted { ($0.agent,$0.name,$0.id) < ($1.agent,$1.name,$1.id) }
@@ -274,7 +286,7 @@ struct AgentsCommand {
             let remaining = deadline - ProcessInfo.processInfo.systemUptime
             if remaining <= 0 { reason = "budgetExpired"; break }
             let report = AgentDoctor.inspectMCP(item.id, timeout:min(timeout,remaining),
-                env:DoctorEnvironment(tokenEncoding:selectedEncoding,cancelled:{ mcpBatchInterrupted != 0 || ProcessInfo.processInfo.systemUptime >= deadline }))
+                env:DoctorEnvironment(project:selectedProject,tokenEncoding:selectedEncoding,cancelled:{ mcpBatchInterrupted != 0 || ProcessInfo.processInfo.systemUptime >= deadline }))
             results.append(report)
             if !app.args.has("json") { print(item.agent + " / " + item.name + " · " + report.state.rawValue) }
         }
@@ -289,7 +301,7 @@ struct AgentsCommand {
         guard !app.args.has("csv"), !app.args.has("all"), !app.args.has("dry-run") else {
             throw CLIError("agents inspect supports one server, --agent, --timeout and --json")
         }
-        let report = AgentDoctor.inspectMCP(name, agent: app.args.options["agent"], timeout: try app.args.double("timeout") ?? 10, env: DoctorEnvironment(tokenEncoding: try encoding()))
+        let report = AgentDoctor.inspectMCP(name, agent: app.args.options["agent"], timeout: try app.args.double("timeout") ?? 10, env: try environment())
         if app.args.has("json") { print(Export.diagnosticJSON(report)) }
         else {
             var lines = [style.bold(report.name) + " [" + report.agent + "] · " + report.state.rawValue, report.message,
@@ -397,7 +409,7 @@ struct AgentsCommand {
 
     /// Everything about one item, with its actions numbered for `run --action N`.
     func show(_ name: String) throws {
-        let report = AgentDoctor.run()
+        let report = AgentDoctor.run(try environment())
         let items = try select(name, in: report)
         if app.args.has("json") {
             struct Shown: Encodable { let item: AgentItem; let findings: [Finding] }
@@ -442,7 +454,7 @@ struct AgentsCommand {
 
     /// One action on the item(s) called `name`: the first action of `kind`, or --action N.
     func act(on name: String, kind: ActionKind?) throws {
-        let env = DoctorEnvironment()
+        let env = try environment()
         let report = AgentDoctor.run(env)
         let items = try select(name, in: report)
         if items.count > 1 && !app.args.has("all") {
@@ -481,7 +493,7 @@ struct AgentsCommand {
 
     /// Every bulk-safe automatic fix for items with an error or warning.
     func fixAll() throws {
-        let env = DoctorEnvironment()
+        let env = try environment()
         let report = AgentDoctor.run(env)
         let plans = report.items.filter { $0.severity == .error || $0.severity == .warning }
             .compactMap { item in item.actions.first { $0.kind == .fix && $0.bulk }.map { (item, $0) } }
@@ -496,11 +508,11 @@ struct AgentsCommand {
     /// Shows exactly what will run, asks (unless --yes), runs, then rescans.
     struct ActionPlan: Encodable { let name: String; let title: String; let summary: String; let destructive: Bool; let steps: [String] }
     struct ActionResultRow: Encodable { let name: String; let succeeded: Bool; let log: [String]; let backups: [String] }
-    struct ActionReport: Encodable { let dryRun: Bool; let complete: Bool; let plans: [ActionPlan]; let results: [ActionResultRow] }
-    func apply(_ plans: [(AgentItem, Action)], env: DoctorEnvironment) throws {
+    struct ActionReport: Encodable { let dryRun: Bool; let complete: Bool; let plans: [ActionPlan]; let results: [ActionResultRow]; var observedAfter: DoctorReport? = nil }
+    func apply(_ plans: [(AgentItem, Action)], env: DoctorEnvironment, write: (String) -> Void = { print($0) }) throws {
         let review = plans.map { item, action in ActionPlan(name: Redact.text(item.name), title: action.title, summary: action.summary, destructive: action.destructive, steps: action.steps.map(\.display)) }
         if app.args.has("dry-run") {
-            if app.args.has("json") { print(Export.json(ActionReport(dryRun: true, complete: true, plans: review, results: []))) }
+            if app.args.has("json") { write(Export.json(ActionReport(dryRun: true, complete: true, plans: review, results: []))) }
             else { out(review.flatMap { [$0.name + " · " + $0.title, $0.summary] + $0.steps }) }
             return
         }
@@ -512,8 +524,10 @@ struct AgentsCommand {
             results.append(.init(name: Redact.text(item.name), succeeded: result.ok, log: result.log.map(Redact.text), backups: result.backups))
         }
         let complete = results.allSatisfy(\.succeeded)
-        if app.args.has("json") { print(Export.json(ActionReport(dryRun: false, complete: complete, plans: review, results: results))) }
-        else { for result in results { out([result.name + (result.succeeded ? " · succeeded" : " · failed")] + result.log) } }
+        var afterEnvironment = env; afterEnvironment.now = Date()
+        let after = AgentDoctor.run(afterEnvironment)
+        if app.args.has("json") { write(Export.diagnosticJSON(ActionReport(dryRun: false, complete: complete, plans: review, results: results, observedAfter:after))) }
+        else { for result in results { out([result.name + (result.succeeded ? " · succeeded" : " · failed")] + result.log) }; print("after: " + after.headline) }
         if !complete { throw CLIError("Some Agent actions failed; inspect results and backups.", exitCode: 3) }
     }
 

@@ -2,6 +2,7 @@ import XCTest
 import CleanKit
 import AgentCore
 @testable import thermo
+@testable import AgentDoctor
 
 final class CLICompletenessTests: XCTestCase {
     func testClosePreviewNeverInvokesMutationEvenWithYes() throws {
@@ -163,5 +164,35 @@ extension CLICompletenessTests {
         XCTAssertNoThrow(try CommandContract.validate(Args(["clean","plan","safe","--rescan","--budget","120","--json"])))
         let command = CleanCommand(app:App(args:try Args(["clean","apply","fixture","--rescan","--yes"])))
         XCTAssertThrowsError(try command.applyPlan(["fixture"]))
+    }
+}
+
+extension CLICompletenessTests {
+    func testAgentProjectScopeIsExplicitAndValidated() throws {
+        let project = URL(fileURLWithPath:"/private/tmp/thermo-project-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at:project,withIntermediateDirectories:true)
+        defer { try? FileManager.default.removeItem(at:project) }
+        let command = AgentsCommand(app:App(args:try Args(["agents","list","hooks","--root",project.path,"--json"])))
+        XCTAssertEqual(try command.environment().project?.resolvingSymlinksInPath(),project.resolvingSymlinksInPath())
+        XCTAssertThrowsError(try AgentsCommand(app:App(args:Args(["--root",project.appendingPathComponent("missing").path]))).environment())
+        XCTAssertNoThrow(try CommandContract.validate(command.app.args))
+    }
+    func testAgentFixJSONContainsFreshPostStateAndPreviewDoesNotRunAction() throws {
+        let home = URL(fileURLWithPath:"/private/tmp/thermo-fix-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at:home,withIntermediateDirectories:true)
+        defer { try? FileManager.default.removeItem(at:home) }
+        let log = home.appendingPathComponent("fixture.log")
+        try Data("fixture".utf8).write(to:log)
+        let env = DoctorEnvironment(home:home,path:[],run:{ _,_ in nil })
+        let action = Action(id:"fixture",kind:.fix,title:"Truncate",summary:"Fixture only",steps:[.truncate(path:log.path)],destructive:false)
+        let item = AgentItem(id:"fixture",area:.processes,agent:"fixture",name:"Fixture",detail:"",source:nil,enabled:true,severity:.warning)
+        var output = ""
+        try AgentsCommand(app:App(args:Args(["--json","--dry-run","--yes"]))).apply([(item,action)],env:env,write:{ output = $0 })
+        XCTAssertEqual(try Data(contentsOf:log),Data("fixture".utf8))
+        try AgentsCommand(app:App(args:Args(["--json","--yes"]))).apply([(item,action)],env:env,write:{ output = $0 })
+        XCTAssertTrue(try Data(contentsOf:log).isEmpty)
+        let receipt = try XCTUnwrap(JSONSerialization.jsonObject(with:Data(output.utf8)) as? [String:Any])
+        XCTAssertEqual(receipt["complete"] as? Bool,true)
+        XCTAssertNotNil(receipt["observedAfter"] as? [String:Any])
     }
 }
