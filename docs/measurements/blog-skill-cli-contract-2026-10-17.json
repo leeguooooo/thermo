@@ -1,0 +1,201 @@
+{
+  "recordedAt": "2026-10-17T07:35:51.080550+00:00",
+  "selection": "Autonomously audited blog-content-publish after it ranked highest in the bounded linked-instruction sample. Length was not treated as a defect.",
+  "finding": {
+    "skillInstruction": "Themed HTML is automatically scoped; raw HTML preserves external stylesheets.",
+    "installedCLIHelpBefore": "Incorrectly required manual CSS scoping and described external stylesheets as forbidden for all HTML.",
+    "corrected": "Help distinguishes automatic themed scoping, raw preservation, and API-side restrictions.",
+    "dryRunNote": "Dry run sends a request to the configured API; it is not offline validation."
+  },
+  "source": {
+    "repository": "leeguooooo/blog",
+    "commit": "8749824b476a34c684563b7dfd98f3b17df669f6",
+    "changed": [
+      "packages/cli/lib/core.mjs",
+      "packages/cli/README.md"
+    ],
+    "workingTreeClean": true,
+    "SkillDocumentNotTrimmedOrChanged": true,
+    "installedSkillStillMatchesRepository": true,
+    "skillSHA256": "7c2e19de00090701ae66e93a8c8bd9018e131b6264e926d6256f8757234e6592"
+  },
+  "validation": {
+    "unitTests": 22,
+    "failures": 0,
+    "testCommand": "pnpm --filter @leeguoo/blog-publish test",
+    "testLogSHA256": "5f265dce55fc88af846efacb0bb947a08f5e84da13e93ee33f538b4298b12e7e",
+    "contractCaseCategories": [
+      "Themed global selectors are automatically scoped before sending.",
+      "Raw full HTML including external stylesheets and @import is preserved.",
+      "Missing required summary is rejected without an HTTP request."
+    ],
+    "beforeInstallation": {
+      "passed": true,
+      "checks": [
+        {
+          "binary": "installed",
+          "version": "0.1.22",
+          "mode": "themed",
+          "passed": true,
+          "payloadDryRun": true,
+          "contentHtmlSHA256": "276e84d440e3c0f1757e2b94d8c56eb75b1b18b97201a55f3ab1ed2e472af7c4"
+        },
+        {
+          "binary": "installed",
+          "version": "0.1.22",
+          "mode": "raw",
+          "passed": true,
+          "payloadDryRun": true,
+          "contentHtmlSHA256": "786e82aba1c2563bd0e8f418a735f0892acd980b7aca5fb454637ec2a1c6f985"
+        },
+        {
+          "binary": "installed",
+          "case": "missing-summary",
+          "passed": true,
+          "rejectedBeforeHTTP": true
+        },
+        {
+          "binary": "candidate",
+          "version": "0.1.22",
+          "mode": "themed",
+          "passed": true,
+          "payloadDryRun": true,
+          "contentHtmlSHA256": "276e84d440e3c0f1757e2b94d8c56eb75b1b18b97201a55f3ab1ed2e472af7c4"
+        },
+        {
+          "binary": "candidate",
+          "version": "0.1.22",
+          "mode": "raw",
+          "passed": true,
+          "payloadDryRun": true,
+          "contentHtmlSHA256": "786e82aba1c2563bd0e8f418a735f0892acd980b7aca5fb454637ec2a1c6f985"
+        },
+        {
+          "binary": "candidate",
+          "case": "missing-summary",
+          "passed": true,
+          "rejectedBeforeHTTP": true
+        }
+      ],
+      "installedSHA256": "e3b37444b821f05c534d7772e6a18457e6e8850239ad2611be9bea3f47d1658b",
+      "candidateSHA256": "8254c085db5e6bc2700ab0a8ed19ab8341822fbe43a338c82f30a6482246eee6",
+      "installedHelpHasOutdatedManualScopingRequirement": true,
+      "candidateHelpMatchesTestedModes": true,
+      "testedPayloadsEqualBeforeAndAfter": true,
+      "loopbackRequests": 4,
+      "allRequestsDryRun": true,
+      "remoteAPIOrRealTokenUsed": false,
+      "realPostPublishedOrUpdated": false,
+      "serverSafetyValidationNotExercised": true,
+      "ownedServerPortClosed": true,
+      "privateHomeContainsNoImportedCredentials": true
+    },
+    "afterInstallation": {
+      "passed": true,
+      "checks": [
+        {
+          "binary": "installed",
+          "version": "0.1.22",
+          "mode": "themed",
+          "passed": true,
+          "payloadDryRun": true,
+          "contentHtmlSHA256": "276e84d440e3c0f1757e2b94d8c56eb75b1b18b97201a55f3ab1ed2e472af7c4"
+        },
+        {
+          "binary": "installed",
+          "version": "0.1.22",
+          "mode": "raw",
+          "passed": true,
+          "payloadDryRun": true,
+          "contentHtmlSHA256": "786e82aba1c2563bd0e8f418a735f0892acd980b7aca5fb454637ec2a1c6f985"
+        },
+        {
+          "binary": "installed",
+          "case": "missing-summary",
+          "passed": true,
+          "rejectedBeforeHTTP": true
+        },
+        {
+          "binary": "candidate",
+          "version": "0.1.22",
+          "mode": "themed",
+          "passed": true,
+          "payloadDryRun": true,
+          "contentHtmlSHA256": "276e84d440e3c0f1757e2b94d8c56eb75b1b18b97201a55f3ab1ed2e472af7c4"
+        },
+        {
+          "binary": "candidate",
+          "version": "0.1.22",
+          "mode": "raw",
+          "passed": true,
+          "payloadDryRun": true,
+          "contentHtmlSHA256": "786e82aba1c2563bd0e8f418a735f0892acd980b7aca5fb454637ec2a1c6f985"
+        },
+        {
+          "binary": "candidate",
+          "case": "missing-summary",
+          "passed": true,
+          "rejectedBeforeHTTP": true
+        }
+      ],
+      "installedSHA256": "8254c085db5e6bc2700ab0a8ed19ab8341822fbe43a338c82f30a6482246eee6",
+      "candidateSHA256": "8254c085db5e6bc2700ab0a8ed19ab8341822fbe43a338c82f30a6482246eee6",
+      "installedHelpHasOutdatedManualScopingRequirement": false,
+      "candidateHelpMatchesTestedModes": true,
+      "testedPayloadsEqualBeforeAndAfter": true,
+      "loopbackRequests": 4,
+      "allRequestsDryRun": true,
+      "remoteAPIOrRealTokenUsed": false,
+      "realPostPublishedOrUpdated": false,
+      "serverSafetyValidationNotExercised": true,
+      "ownedServerPortClosed": true,
+      "privateHomeContainsNoImportedCredentials": true
+    },
+    "functionalPayloadsMatchedInCoveredCases": true,
+    "probeSHA256": "58d4f0e55bae1935d0b3694d0801d248f6ad1a9a945c8387309f8dc2aebc9ae9",
+    "postInstallProbeSHA256": "db81496344a9c34f00080917b75136cc09a160eb80d613c58cdf899a307f2247",
+    "serverSideSafetyRulesReadFromSourceNotLiveVerified": true
+  },
+  "reproducibleOriginal": {
+    "installedSHA256": "e3b37444b821f05c534d7772e6a18457e6e8850239ad2611be9bea3f47d1658b",
+    "reconstructedOriginalSHA256": "e3b37444b821f05c534d7772e6a18457e6e8850239ad2611be9bea3f47d1658b",
+    "candidateSHA256": "8254c085db5e6bc2700ab0a8ed19ab8341822fbe43a338c82f30a6482246eee6",
+    "baselineExact": true,
+    "onlySourceCodeChangeIsHelpStrings": true
+  },
+  "localInstallation": {
+    "updated": true,
+    "beforeSHA256": "e3b37444b821f05c534d7772e6a18457e6e8850239ad2611be9bea3f47d1658b",
+    "afterSHA256": "8254c085db5e6bc2700ab0a8ed19ab8341822fbe43a338c82f30a6482246eee6",
+    "guardedRegularUserOwnedExecutable": true,
+    "previousModePreserved": true,
+    "privateBackupExists": true,
+    "backupSHA256": "e3b37444b821f05c534d7772e6a18457e6e8850239ad2611be9bea3f47d1658b",
+    "sourceCommit": "8749824b",
+    "versionUnchanged": "0.1.22",
+    "localHelpPatchOnly": true,
+    "publishedOrDeployed": false
+  },
+  "scope": {
+    "sameVersionLocalHelpPatch": "0.1.22",
+    "formalNewVersionReleased": false,
+    "remoteDistributionDeployed": false,
+    "remotePublicAPIContacted": false,
+    "realPublishTokenUsedOrCopied": false,
+    "realPostCreatedOrUpdated": false,
+    "newModelEvaluationPerformed": false,
+    "SkillNetBenefitOrOverallQualityEstablished": false,
+    "CLIAuthenticationAndPublishingBehaviorUnchanged": true,
+    "proofOfUnchangedCode": "An original bundle reconstructed with the prior core file exactly matches the installed-before SHA. The only changed source code is help strings."
+  },
+  "cleanup": {
+    "ownedProcessesAbsent": true,
+    "beforeAndAfterLoopbackPortsClosed": true,
+    "privateOriginalExecutableBackupRetained": true,
+    "installedCLIModePreserved": true
+  },
+  "remaining": [
+    "Public distribution does not acquire this local patch until a separately authorized version/release.",
+    "Only the three listed contract cases and existing unit tests were verified; no live publishing or task-quality acceptance."
+  ]
+}
