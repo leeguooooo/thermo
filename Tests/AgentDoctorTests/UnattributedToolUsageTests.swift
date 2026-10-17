@@ -101,4 +101,22 @@ final class UnattributedToolUsageTests: XCTestCase {
         let decoded = try JSONDecoder().decode(ToolUsageReport.self, from: JSONSerialization.data(withJSONObject: old))
         XCTAssertNil(decoded.coverage.unattributedResults)
     }
+
+    func testNestedNativeMCPAndItsEchoingWrapperStaySeparate() throws {
+        var parser = fixture.parser()
+        let ack = "owned-server-ack"
+        parser.consume(fixture.native("nested", server: "owned", tool: "echo", result: ["isError": false,
+            "content": [["type": "text", "text": ack]], "structuredContent": ["value": ack]]), host: "codex", session: "a")
+        parser.consume(fixture.event("response_item", ["type": "custom_tool_call", "call_id": "wrapper", "name": "exec", "input": "private script"], 1), host: "codex", session: "a")
+        parser.consume(fixture.event("response_item", ["type": "custom_tool_call_output", "call_id": "wrapper", "output": [
+            ["type": "input_text", "text": "Execution wrapper"], ["type": "input_text", "text": ack]
+        ]], 4), host: "codex", session: "a")
+        let report = parser.report(), row = try XCTUnwrap(report.tools.first)
+        XCTAssertEqual(report.tools.count, 1); XCTAssertEqual(row.calls, 1)
+        XCTAssertEqual(row.returnedTextBytes, ack.utf8.count)
+        XCTAssertEqual(row.knownStatusResults, 1); XCTAssertEqual(row.reportedErrors, 0)
+        XCTAssertEqual(report.coverage.unattributedResults?.completed, 1)
+        XCTAssertEqual(report.coverage.unattributedResults?.returnedTextBytes, "Execution wrapper\n\(ack)".utf8.count)
+        XCTAssertEqual(report.returnedTextSummary(kind: "mcp").returnedTextBytes, ack.utf8.count)
+    }
 }

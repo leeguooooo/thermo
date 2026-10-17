@@ -1,0 +1,118 @@
+{
+  "date": "2026-10-17",
+  "clientVersion": "codex-cli 0.163.0",
+  "clientBinarySHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+  "captureScriptSHA256": "2bb74a92532faef24299517fd21534b1d68ed541d66dd03621570718f7d38a5a",
+  "thermoBinarySHA256": "1474876defc89c22766b30ef3d165b5f598fd2a8e52d0d8150a06a37f2efa2aa",
+  "realModelCalled": false,
+  "realBusinessMCPCalled": false,
+  "credentialsCopied": false,
+  "syntheticUsageExcluded": true,
+  "rawRequestsPublished": false,
+  "runs": [
+    {
+      "mode": "full",
+      "logSHA256": "4718dc2a157c90eaa191afa36c6232f273d257654f5cf10dc8cb2aec0804f3ea",
+      "nativeMCPEventCount": 1,
+      "customToolOutputCount": 2,
+      "sameServerAckAlsoInWrapper": true,
+      "directMCP": {
+        "calls": 1,
+        "completed": 1,
+        "host": "codex",
+        "id": "9c2ee2b7d35eb4604e4985f9c53a4fe884b8bcf7b3666673fbb2e602848fe534",
+        "kind": "mcp",
+        "medianSeconds": 0.006000041961669922,
+        "missingResults": 0,
+        "name": "echo",
+        "nonTextBlocks": 0,
+        "reportedErrors": 0,
+        "returnedTextBytes": 40,
+        "returnedTextEstimatedTokens": 10,
+        "server": "wirefixture",
+        "timingSamples": 1,
+        "totalObservedSeconds": 0.006000041961669922,
+        "unknownErrorStatus": 0
+      },
+      "unattributed": {
+        "completed": 2,
+        "missingResults": 0,
+        "nonTextBlocks": 0,
+        "returnedTextBytes": 393,
+        "returnedTextEstimatedTokens": 99,
+        "unavailableReferenceResults": 0,
+        "unmeasuredResults": 0
+      },
+      "completeWithinOwnedProfile": true,
+      "publicReportContainsNoAckOrArguments": true
+    },
+    {
+      "mode": "off",
+      "logSHA256": "e61b48b03107d39d55f939af498dcc7e6bd0f67986f8652a02328c0a1fc1a48f",
+      "nativeMCPEventCount": 1,
+      "customToolOutputCount": 2,
+      "sameServerAckAlsoInWrapper": true,
+      "directMCP": {
+        "calls": 1,
+        "completed": 1,
+        "host": "codex",
+        "id": "9c2ee2b7d35eb4604e4985f9c53a4fe884b8bcf7b3666673fbb2e602848fe534",
+        "kind": "mcp",
+        "medianSeconds": 0.0019998550415039062,
+        "missingResults": 0,
+        "name": "echo",
+        "nonTextBlocks": 0,
+        "reportedErrors": 0,
+        "returnedTextBytes": 40,
+        "returnedTextEstimatedTokens": 10,
+        "server": "wirefixture",
+        "timingSamples": 1,
+        "totalObservedSeconds": 0.0019998550415039062,
+        "unknownErrorStatus": 0
+      },
+      "unattributed": {
+        "completed": 2,
+        "missingResults": 0,
+        "nonTextBlocks": 0,
+        "returnedTextBytes": 393,
+        "returnedTextEstimatedTokens": 99,
+        "unavailableReferenceResults": 0,
+        "unmeasuredResults": 0
+      },
+      "completeWithinOwnedProfile": true,
+      "publicReportContainsNoAckOrArguments": true
+    }
+  ],
+  "conclusion": "Persisted Codex native McpToolCall events identify nested MCP calls independently of code-mode wrapper outputs. Existing native parsing records one MCP row; wrapper measurement stays separate because it can repeat the same result.",
+  "limits": [
+    "Only Codex CLI 0.163.0 in an isolated loopback fixture, not all hosts.",
+    "Missing nested events still cannot be recovered from script names or wrapper text.",
+    "Server result size differs from final script output; neither is billed usage.",
+    "MCP and wrapper returned-text counts must not be summed as a unique total."
+  ],
+  "sourceBase": "79d7e3abf336e51ed5ea21dc4f321a0496372c55",
+  "validation": {
+    "targetedTests": 38,
+    "failures": 0,
+    "command": "swift test --filter 'UnattributedToolUsageTests|ToolUsageTests|LocalizationTests'",
+    "cliFixturePassed": true,
+    "twoNativeClientProfilesPassed": true,
+    "packageRebuilt": false,
+    "installedAppChanged": false,
+    "syntheticRequestCountersExcludedFromMeasurementAndDisplay": true,
+    "offscreenPanel": {
+      "image": "codex-nested-mcp-coverage-zh-2026-10-17.png",
+      "sha256": "c3ed195d3500faae2e4c231e56b950a52d078bd11712e017f7d990deed260337",
+      "language": "zh-Hans",
+      "visuallyInspected": true,
+      "visibleInstalledAppAcceptance": false
+    }
+  },
+  "sourceSHA256": {
+    "Sources/ThermoApp/ToolUsagePanel.swift": "2c510d00633344f8652e1fb2e94ef2d8804ac92e96fd6dadab1ba36b6ed08500",
+    "Sources/thermo/Agents.swift": "f4bb03c1319a02e07086d423d905e690ef6d61c954406ba89fe241dded0ef0a9",
+    "Tests/AgentDoctorTests/UnattributedToolUsageTests.swift": "b50dc11abb349bf8dc6b0a3fe2bd556af2e720478b2fdb43e4e4c74b25ca0f7b",
+    "scripts/capture-codex-tool-wire.py": "2bb74a92532faef24299517fd21534b1d68ed541d66dd03621570718f7d38a5a",
+    "scripts/verify-tool-usage.py": "facc6cab4790a342b75b618788f2b960a5d7eb142fa7750d6751ab350a099c69"
+  }
+}

@@ -254,7 +254,7 @@ struct AgentsCommand {
             let tokens = report.referenceEncoding == nil ? "≈\(other.returnedTextEstimatedTokens)" : other.referenceReturnedTextTokens.map(String.init) ?? "unknown"
             lines.append("Unattributed tool results: \(other.completed) returned · \(other.missingResults) missing · \(other.unmeasuredResults) unmeasured")
             lines.append("Unattributed measured text: \(other.returnedTextBytes) bytes / \(tokens) tokens · \(other.nonTextBlocks) non-text blocks not tokenized")
-            lines.append("Includes execution wrapper text. Kept outside MCP/Skill totals; nested tools and image/audio tokens are unknown.")
+            lines.append("Includes execution wrapper text and may repeat separately logged MCP results. Kept outside MCP/Skill totals; no nested attribution or image/audio token estimate.")
         } else { lines.append("Unattributed returned content was not measured in this report; analyze again.") }
         lines.append(report.note)
         out(lines)

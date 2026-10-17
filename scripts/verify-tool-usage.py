@@ -97,6 +97,7 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     assert "Unattributed tool results: 1 returned · 1 missing · 0 unmeasured" in text
     assert "Unattributed measured text: 23 bytes / ≈6 tokens · 2 non-text blocks not tokenized" in text
     assert "Kept outside MCP/Skill totals" in text
+    assert "may repeat separately logged MCP results" in text
     # The CLI shows 20 rows by default; the denominator must still include row 21.
     many = []
     for index in range(21):

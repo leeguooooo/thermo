@@ -1,6 +1,6 @@
 """Capture Codex tool serialization with a loopback-only fake Responses endpoint.
 No real model, authentication copy, or business MCP tool is used.
-Usage: python3 scripts/capture-codex-tool-wire.py OUTPUT_DIRECTORY CODEX_BINARY
+Usage: python3 scripts/capture-codex-tool-wire.py OUTPUT_DIRECTORY CODEX_BINARY [--exercise-tools] [--persist-session]
 """
 import gzip
 import hashlib
@@ -15,6 +15,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 exercise = '--exercise-tools' in sys.argv
 if exercise:sys.argv.remove('--exercise-tools')
+persist_session = '--persist-session' in sys.argv
+if persist_session:sys.argv.remove('--persist-session')
 root = Path(sys.argv[1]).resolve()
 root.mkdir(mode=0o700)
 binary = Path(sys.argv[2]).resolve()
@@ -109,7 +111,7 @@ for mode in ['full', 'off']:
            'THERMO_FAKE_PROVIDER_KEY':'owned-loopback-key','NO_PROXY':'127.0.0.1,localhost','no_proxy':'127.0.0.1,localhost'}
     proc = None
     try:
-        proc = subprocess.Popen([str(binary),'exec','--json','--ephemeral','--ignore-rules','--sandbox','read-only',
+        proc = subprocess.Popen([str(binary),'exec','--json',*([] if persist_session else ['--ephemeral']),'--ignore-rules','--sandbox','read-only',
                                  '--strict-config','--color','never','--cd',str(project),
                                  'Exercise the owned fixture discovery and echo tools, then return owned-client-fixture.' if exercise else 'Return the literal owned-client-fixture. Do not call tools.'],
                                 env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
@@ -131,6 +133,25 @@ for result in results:
     directory = root / result['mode']
     methods = [json.loads(line)['method'] for line in (directory/'mcp-methods.jsonl').read_text().splitlines()]
     result['mcpMethods'] = methods
+    if persist_session:
+        logs = list((directory/'home/.codex/sessions').rglob('*.jsonl'))
+        native_calls = []
+        wrapper_calls = 0
+        for log in logs:
+            for line in log.open():
+                event = json.loads(line)
+                payload = event.get('payload', {})
+                item = payload.get('item', {})
+                if event.get('type') == 'response_item' and payload.get('type') == 'custom_tool_call':
+                    wrapper_calls += 1
+                if event.get('type') == 'event_msg' and payload.get('type') == 'item_completed' and item.get('type') == 'McpToolCall':
+                    native_calls.append({'ownedEcho': item.get('server') == 'wirefixture' and item.get('tool') == 'echo',
+                                         'explicitFalseErrorFlag': item.get('result', {}).get('isError') is False,
+                                         'hasStartAndEndMilliseconds': isinstance(payload.get('started_at_ms'), int) and isinstance(payload.get('completed_at_ms'), int)})
+        result['persistedLogObservations'] = {'files': len(logs), 'customToolCalls': wrapper_calls, 'nativeMCPCalls': native_calls}
+        if exercise:
+            assert len(logs) == 1 and wrapper_calls == 2 and len(native_calls) == 1
+            assert all(native_calls[0].values())
     result['wireObservations'] = []
     for request_path in sorted(directory.glob('request-private-*.json')):
         raw = request_path.read_text()
@@ -153,4 +174,4 @@ for result in results:
 (root/'collection.json').write_text(json.dumps({'clientVersion':subprocess.check_output([str(binary),'--version'],text=True).strip(),
                                             'binarySHA256':hashlib.sha256(binary.read_bytes()).hexdigest(),
                                             'fixtureSHA256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-                                            'exerciseTools':exercise,'runs':results},indent=2)+'\n')
+                                            'exerciseTools':exercise,'persistSession':persist_session,'runs':results},indent=2)+'\n')

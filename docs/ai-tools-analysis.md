@@ -272,3 +272,12 @@ REA_MCP_OUTPUT_SCHEMA_PROFILE = "off"
 ZEGO 样本 18 组返回的序列化日志为 100,995 字节，可见文本为 91,345 字节。Piggo 样本 27 组返回的序列化日志为 1,755,891 字节，可见文本为 75,572 字节，另有 10 个图片块。文本包含执行包装和块间换行；整段 JSON 字节不能当成文本或图像 token。原始输出仅在私有临时 Home 中用于当前 CLI 隔离回放，随后删除；没有重放页面动作或公开原文。
 
 当前解析器为其他工具保留独立的返回计数、缺失、未完整计量、文本字节、参考计数和非文本块数。它识别 Codex 的 input_text / input_image / input_audio 等返回块；遇到未来未知块时保留不完整计量提示，不把已识别图片重新算作 JSON 文本。此汇总不加入 MCP / Skill 分类合计，也不根据脚本中的名称猜测内部归属。旧报告缺少字段时显示未测量，不补零。[中文面板](measurements/unattributed-tool-results-zh-2026-10-17.png)为离屏渲染；源码验证不能替代候选包或安装版验收。
+
+
+## 嵌套 MCP 的结构化证据
+
+[Codex 0.163.0 持久化日志验证](measurements/codex-nested-mcp-coverage-2026-10-17.json)沿用本机模拟 Responses 后端和自有 echo MCP，给隔离客户端启用会话持久化，不复制认证或调用真实模型。两组都出现独立 event_msg / item_completed / McpToolCall，包含明确的 server、tool、result.isError 及开始 / 结束毫秒；它与外层 response_item / custom_tool_call_output 是不同记录。CLI JSON 事件流也有内部 MCP 调用。
+
+现有原生解析器可从该结构化事件计入内部 MCP，不需要分析 JavaScript 源码。服务端确认同时被脚本输出，证明同一内容可以分别出现在 MCP 返回和外层返回里。未归因汇总保留这种呈现开销，但不计入 MCP 分类分母，也不应与其相加作为去重总量。App 和 CLI 已补上重叠说明。
+
+这项验证只覆盖上述客户端和隔离配置；不能推定所有宿主都记录内部调用，也不能把普通 CLI 命令当成 MCP。模拟 usage 字段排除在公开计量之外。脚本增加 --persist-session 以复跑日志结构检查，默认仍使用临时会话；所有原始请求和受控会话记录只存放在私有临时目录。

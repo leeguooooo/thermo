@@ -89,7 +89,7 @@ struct ToolUsagePanel: View {
                     let tokens = report.referenceEncoding == nil ? "≈\(other.returnedTextEstimatedTokens)" : other.referenceReturnedTextTokens.map(String.init) ?? tr("Unknown")
                     Text(tr("Unattributed measured text: %1$@ bytes / %2$@ tokens · %3$@ non-text blocks not tokenized", String(other.returnedTextBytes), tokens, String(other.nonTextBlocks)))
                         .font(.caption).foregroundStyle(.secondary)
-                    Text(tr("Includes execution wrapper text. Kept outside MCP/Skill totals; nested tools and image/audio tokens are unknown."))
+                    Text(tr("Includes execution wrapper text and may repeat separately logged MCP results. Kept outside MCP/Skill totals; no nested attribution or image/audio token estimate."))
                         .font(.caption).foregroundStyle(.secondary)
                 } else if report.coverage.otherToolCalls > 0 {
                     Text(tr("Unattributed returned content was not measured in this report; analyze again."))
