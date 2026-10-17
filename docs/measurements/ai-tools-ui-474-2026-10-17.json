@@ -1,0 +1,95 @@
+{
+  "recordedAt": "2026-10-17T10:17:35.467836+00:00",
+  "package": {
+    "build": "474",
+    "sourceCommit": "b31d0499b1bd2c76205511ad1a90daabeab4d8f8",
+    "configuration": "debug native",
+    "runtimeSHA256": "985db4e0e798022de673b177c8f1bae4d8df7a1df8e2a0c8b68f75178cbcbd11",
+    "allFileBackedSectionsMatch": true,
+    "reviewMode": true,
+    "isolatedHome": true
+  },
+  "mainAtReview": "d97df440a3ea0e2a0ed5c5c1ca89cd65a35b2f16",
+  "aiSourcesChangedSinceBuild": false,
+  "scope": "Local Debug arm64 ad-hoc full App in isolated UI review mode. Owned synthetic logs and loopback metadata server. No installation, publication, model inference or business tool execution.",
+  "selectedLog": {
+    "status": "passed-visible",
+    "nativeFilePicker": true,
+    "selectionMethod": "Clicked regular file in initial directory, then Open. Go-to-folder input from previous attempt remains unverified.",
+    "filesRead": 1,
+    "filesDiscovered": 1,
+    "bytesRead": 1506,
+    "clippedFiles": 0,
+    "calls": 3,
+    "results": 2,
+    "resultErrors": 1,
+    "hostFailures": 1,
+    "knownResultErrorRate": 0.5,
+    "nonTextBlocks": 1,
+    "globalScopeWouldReadOtherLogs": true
+  },
+  "skills": {
+    "status": "passed-visible",
+    "defaultSort": "loaded instructions",
+    "linkedInstructionLoads": 2,
+    "instructionBytes": 84,
+    "instructionHeuristicTokens": 21,
+    "acknowledgmentBytes": 6,
+    "first": "owned-heavy",
+    "firstInstructionBytes": 80,
+    "second": "owned-short",
+    "secondInstructionBytes": 4,
+    "globalFilesRead": 3,
+    "globalClippedFiles": 1,
+    "note": "Third discovered file is the extra owned selector fixture copied for this round. This deliberately duplicates synthetic MCP events globally; those global MCP totals are not business usage."
+  },
+  "definitions": {
+    "status": "passed-visible",
+    "configsReturned": 2,
+    "completeConfigs": 1,
+    "authRequiredConfigs": 1,
+    "tools": 2,
+    "toolArrayBytes": 385,
+    "largestTool": "metadata",
+    "largestDefinitionBytes": 282,
+    "iconsJSONBytes": 67,
+    "metadataJSONBytes": 33,
+    "fullTotalKnown": false,
+    "noAutomaticLogin": true,
+    "batchResultsRetainedAfterReopen": true
+  },
+  "runtimeWarnings": {
+    "capturedLogBytes": 0,
+    "attributeGraphCycleWarningsObserved": 0
+  },
+  "remaining": [
+    "Current-main full Release packaging and regression after later helper changes",
+    "Formal signed/notarized distribution requires separate release authorization",
+    "Synthetic UI acceptance does not establish real task success or billed token savings"
+  ],
+  "screenshots": [
+    {
+      "file": "ai-tools-ui-474-2026-10-17-selected-log.png",
+      "sha256": "66d10032ffd947e2d5efe94d2e8c5f8a4fdfa8fcb8080fbf778b4d36881a4964"
+    },
+    {
+      "file": "ai-tools-ui-474-2026-10-17-skill-instructions.png",
+      "sha256": "235e71ea939495cadb06b7ec6ba6e23a399427e1d4c825e5a4cb9dcc86f506ce"
+    },
+    {
+      "file": "ai-tools-ui-474-2026-10-17-metadata.png",
+      "sha256": "99ecef2ab9205360e3a5e35cc8c1ca56aa3cc1eb4a7ab2be0a9527db214bd24e"
+    },
+    {
+      "file": "ai-tools-ui-474-2026-10-17-batch.png",
+      "sha256": "ec785d3e357d7360fb535bdc496dddde76be8648102d852056b06fabb76270b5"
+    }
+  ],
+  "cleanup": {
+    "ownedAppAbsent": true,
+    "ownedServerAbsent": true,
+    "loopbackPortClosed": true,
+    "originalAppStrictSignatureVerified": true,
+    "originalGuiDigestMatchesBuildIdentity": true
+  }
+}
