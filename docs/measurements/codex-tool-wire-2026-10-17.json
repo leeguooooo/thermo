@@ -1,0 +1,139 @@
+{
+  "clientVersion": "codex-cli 0.163.0",
+  "binarySHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+  "fixtureSHA256": "d56a828598e902872851cff6240126410f76e3723f62268333ed747fb120f4b7",
+  "exerciseTools": true,
+  "runs": [
+    {
+      "mode": "full",
+      "exitCode": 0,
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/v1/responses",
+          "onlyFakeCredential": true
+        },
+        {
+          "method": "POST",
+          "path": "/v1/responses",
+          "onlyFakeCredential": true
+        },
+        {
+          "method": "POST",
+          "path": "/v1/responses",
+          "onlyFakeCredential": true
+        }
+      ],
+      "authCopyCreated": false,
+      "realProviderCalled": false,
+      "fakeUsageIsNotBilling": true,
+      "mcpMethods": [
+        "initialize",
+        "notifications/initialized",
+        "tools/list",
+        "tools/call"
+      ],
+      "wireObservations": [
+        {
+          "requestIndex": 0,
+          "inputDeclarationMarkerPresent": false,
+          "outputDeclarationMarkerPresent": false,
+          "serverAckInToolOutput": false,
+          "rootToolsPresent": false,
+          "additionalToolsInputPresent": true
+        },
+        {
+          "requestIndex": 1,
+          "inputDeclarationMarkerPresent": true,
+          "outputDeclarationMarkerPresent": false,
+          "serverAckInToolOutput": false,
+          "rootToolsPresent": false,
+          "additionalToolsInputPresent": true
+        },
+        {
+          "requestIndex": 2,
+          "inputDeclarationMarkerPresent": true,
+          "outputDeclarationMarkerPresent": false,
+          "serverAckInToolOutput": true,
+          "rootToolsPresent": false,
+          "additionalToolsInputPresent": true
+        }
+      ]
+    },
+    {
+      "mode": "off",
+      "exitCode": 0,
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/v1/responses",
+          "onlyFakeCredential": true
+        },
+        {
+          "method": "POST",
+          "path": "/v1/responses",
+          "onlyFakeCredential": true
+        },
+        {
+          "method": "POST",
+          "path": "/v1/responses",
+          "onlyFakeCredential": true
+        }
+      ],
+      "authCopyCreated": false,
+      "realProviderCalled": false,
+      "fakeUsageIsNotBilling": true,
+      "mcpMethods": [
+        "initialize",
+        "notifications/initialized",
+        "tools/list",
+        "tools/call"
+      ],
+      "wireObservations": [
+        {
+          "requestIndex": 0,
+          "inputDeclarationMarkerPresent": false,
+          "outputDeclarationMarkerPresent": false,
+          "serverAckInToolOutput": false,
+          "rootToolsPresent": false,
+          "additionalToolsInputPresent": true
+        },
+        {
+          "requestIndex": 1,
+          "inputDeclarationMarkerPresent": true,
+          "outputDeclarationMarkerPresent": false,
+          "serverAckInToolOutput": false,
+          "rootToolsPresent": false,
+          "additionalToolsInputPresent": true
+        },
+        {
+          "requestIndex": 2,
+          "inputDeclarationMarkerPresent": true,
+          "outputDeclarationMarkerPresent": false,
+          "serverAckInToolOutput": true,
+          "rootToolsPresent": false,
+          "additionalToolsInputPresent": true
+        }
+      ]
+    }
+  ],
+  "date": "2026-10-17",
+  "scope": "Native Codex 0.163.0, isolated read-only profile, owned stdio MCP, loopback fake Responses backend; client serialization only",
+  "modelInferencePerformed": false,
+  "billingMeasured": false,
+  "businessQualityMeasured": false,
+  "rawRequestsPublished": false,
+  "conclusions": [
+    "Both variants initialized and listed the MCP, discovered the echo declaration and executed one echo call with a distinct server acknowledgement.",
+    "Initial request contained additional_tools in input; neither owned schema marker was present.",
+    "After ALL_TOOLS discovery the owned input schema description appeared in the generated declaration.",
+    "The 1024-repeat output schema description never appeared in any of the three requests in full or off mode.",
+    "REA outputSchema removal is catalog/transport reduction; this fixture does not demonstrate model token or billing savings."
+  ],
+  "limits": [
+    "One client version and code-mode path; no conclusion about other clients or models.",
+    "Synthetic provider usage fields are not measured tokens.",
+    "No real model made discovery decisions; controlled responses exercised the native client tool loop.",
+    "Request byte sizes omitted because private path lengths differ."
+  ]
+}
