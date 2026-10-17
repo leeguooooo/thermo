@@ -135,6 +135,29 @@ Figma 在这个独立检查会话中返回鉴权要求，不以空工具列表�
 
 8 项本地回归在实际配置使用的 `/usr/bin/python3` 3.9.6 和 Python 3.14 均通过；已安装源码与受测候选一致。[补丁](patches/claude-design-sse-response.patch)保留可审阅差异，[测试脚本](../scripts/test-claude-design-relay.py)将目标替换为回环服务及固定假令牌，阻止访问真实凭据。凭据读取、刷新、重定向保护、初始化器和命令分发的 AST 对比不变；没有改变实际目标地址或授权范围。现存代理实例没有重启，新代码下次启动才加载。修复后同类自有流在约 1 毫秒返回且服务端流仍打开，这只是协议控制实验，不是线上速度或业务成功率收益。该代理仍为串行请求桥接，没有新增持续服务端消息分发、断线续传、自动重试或会话关闭功能。
 
+[后续已配置服务盘点](measurements/mcp-configured-coverage-2026-10-17.json)补上 iPhone-use、node_repl 和 REA。iPhone-use 为 37 个工具、11,960 个定义数组参考 token；node_repl 为 4 个工具、548 token。前者只在检查子进程设置 `IPHONE_USE_MCP_PREWARM=0`，没有控制设备。结合已取得的 HTTP / stdio 观察，Codex 已完整检查 7 / 9 个配置、282 个工具，定义数组合计 211,281 token，服务指令另计 893。REA 使用下面的新展示配置；各记录保留生成时间，不是同一时刻快照。Figma 鉴权未完成、Claude Design 未探测真实授权，完整配置总量仍未知。
+
+REA 原展示返回 207 个工具、3,114,003 字节定义；启发式检查可完整返回。10 秒 cl100k 检查已完成握手和列表读取，之后才超时，不能归为服务端没响应。该全量数组也超过参考编码器的 1 MiB 单文本上限，因此没有推断全量 cl100k 数。已安装 6.5.0 提供输出 schema 展示开关，代码只移除 `tools/list` 中的 `outputSchema`，保留注册的规范契约、回调和成功结果校验。
+
+[展示配置对照](measurements/rea-mcp-presentation-2026-10-17.json)使用临时环境变量分别采集完整模式和 `off` 模式，并逐项比较：207 个工具的名称、描述、输入 schema、annotations 及其他字段完全一致。两种模式各读取一次同一份自有 HAR，返回的完整 `structuredContent` Evidence 也逐字段一致；只验证了这个离线案例，没有验证全部业务操作，也没有访问 HAR 中记录的 URL。随后只在 `~/.codex/config.toml` 的 REA 环境表加入：
+
+```toml
+[mcp_servers.rea.env]
+REA_MCP_OUTPUT_SCHEMA_PROFILE = "off"
+```
+
+原配置已私下备份，并验证解析后的其他配置完全不变。未压缩输入 schema、移除工具、安装 provider 或修改审批设置，未主动重启已有会话。客户端不再获得输出类型声明，这是该模式的取舍；服务端仍校验规范输出并返回完整结构化内容。无临时环境变量的复查完整返回 207 个工具、823,514 字节、194,330 个参考 token，并在 10 秒预算内完成。相同编译器序列化下字节减少约 73.6%；另一个审计脚本使用 Node JSON 编码，数值单独保存，不混入该比例。输入声明未变，已证明的收益是更小的目录传输和计量负担，没有测得实际模型上下文或账单节省。
+
+[审计脚本](../scripts/audit-rea-presentation.mjs)默认只读取工具目录，原始 schema 留在自有私有目录；显式 `--exercise-owned-har` 才生成并读取自有 HAR。代理进程的只读观察也保留在同一记录中：36 个 Design 代理都存在活的 Codex 父进程，RSS 合计约 64 MiB，未发现 launchd 接管的实例。RSS 可重复计算共享页，父进程存在也不证明会话活跃或数量合理；没有据此判断泄漏或执行清理。
+
+[后续真实授权检查与范围验证](measurements/mcp-auth-scope-and-coverage-2026-10-17.json)使用 Claude Design 已配置的授权完成了独立握手和工具列表读取：23 个工具、30,605 定义字节、6,648 个 cl100k 参考 token。它验证了已安装代理的真实元数据路径，没有创建设计或调用业务工具，也没有记录上游响应是 JSON 还是 SSE，因而不是前述 SSE 修复的线上提速对照。既有授权的刷新由原代理实现负责，本轮没有测量是否发生刷新，也没有启动手动登录或导出令牌。
+
+当前代理会话的 `mcp__figma__whoami` 返回了带有效帐号字段的资料；只保留字段存在与否、416 个返回文本 UTF-8 字节等证据，不导出身份值。工具未提供 Boolean `isError`，状态保持未知，不写成明确非错误；资料字段支持这一次读取的结果判断。独立 HTTP 检查仍返回 `authenticationRequired`，没有工具定义计量。两条通道的身份、目标和凭据没有关联比对，也没有据一次帐号读取推断全部工具或文件权限可用。
+
+鉴权未完成的 HTTP 报告现在明确说明：检查使用独立连接和配置凭据，不自动读取宿主管理的 OAuth；其鉴权结果不能代替宿主连接状态。说明写入已有 `measurementNote`，供 JSON、CLI 与 App 使用；鉴权状态和未知计数不变，不复制宿主令牌或启动登录。16 项 HTTP / 本地化测试通过，真实独立 Figma 检查也包含该说明，完整 App / 包复核尚未完成。
+
+当前记录已尝试 Codex 的全部 9 个启用配置，8 个完整返回 305 个工具、928,329 定义字节、217,929 个定义数组参考 token，服务指令另计 893。REA 保持上面的输出声明配置，各服务记录不是同一时刻快照；Figma 定义未知，总体仍未知。历史检查没有改分或覆盖，既有代理没有被强制重启。
+
 协议实现依据：[生命周期](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle)、[stdio 传输](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)、[工具列表](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)。
 
 ## 本地使用历史

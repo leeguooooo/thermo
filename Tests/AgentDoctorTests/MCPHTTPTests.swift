@@ -167,7 +167,11 @@ threading.Event().wait()
         }
     }
     func testAuthenticationAndRedirectNeverBecomeHealthyOrFollowed() throws {
-        XCTAssertEqual(inspect("/401").state, .authenticationRequired)
+        let auth = inspect("/401")
+        XCTAssertEqual(auth.state, .authenticationRequired)
+        XCTAssertTrue(auth.measurementNote.contains("separate connection"))
+        XCTAssertTrue(auth.measurementNote.contains("does not establish the host connection state"))
+        XCTAssertTrue(auth.measurementNote.contains("No login or business tool calls"))
         let redirect = inspect("/redirect")
         XCTAssertEqual(redirect.state, .failed)
         XCTAssertFalse(redirect.complete)
@@ -221,7 +225,9 @@ threading.Event().wait()
     func testMissingAuthenticationEnvironmentAndReservedHeadersRefuseBeforeNetwork() {
         var s = server("/json")
         s.bearerTokenEnv = "THERMO_FIXTURE_MISSING_AUTH_52D44845"
-        XCTAssertEqual(MCPInspector.inspect(s, env: DoctorEnvironment(home: root), timeout: 1).state, .authenticationRequired)
+        let missing = MCPInspector.inspect(s, env: DoctorEnvironment(home: root), timeout: 1)
+        XCTAssertEqual(missing.state, .authenticationRequired)
+        XCTAssertTrue(missing.measurementNote.contains("separate connection"))
         s.bearerTokenEnv = nil
         s.headers["Mcp-Session-Id"] = "somebody-elses-session"
         XCTAssertEqual(MCPInspector.inspect(s, env: DoctorEnvironment(home: root), timeout: 1).state, .failed)

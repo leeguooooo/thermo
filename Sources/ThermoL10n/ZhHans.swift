@@ -2840,6 +2840,7 @@ let zhHans: [String: String] = [
     "Session closure requires authentication; no login attempted": "关闭会话需要鉴权，未尝试登录",
     "Session closure request could not be constructed": "无法构造会话关闭请求",
     "Session closure ended without an HTTP response": "关闭会话结束，但没有 HTTP 响应",
+    "This HTTP inspection uses a separate connection and configured credentials; it does not automatically load host-managed OAuth. Authentication here does not establish the host connection state. No login or business tool calls were attempted.": "此 HTTP 检查使用独立连接和配置中的凭据，不会自动读取宿主管理的 OAuth。这里的鉴权结果不能代表宿主连接状态。未尝试登录或调用业务工具。",
     "Cleanup: %1$@ · HTTP %2$@ · observed %3$@ s · budget %4$@ s": "会话清理：%1$@ · HTTP %2$@ · 已观察 %3$@ 秒 · 等待预算 %4$@ 秒",
     "System helper": "系统辅助服务",
     "System helper: %1$@": "系统辅助服务：%1$@",

@@ -131,6 +131,9 @@ enum MCPInspector {
         report.referenceEngine = env.tokenEncoding == .heuristic ? nil : ReferenceTokenizer.engine
         func finish() -> MCPInspection {
             report.elapsedSeconds = max(0, clock() - started)
+            if report.state == .authenticationRequired, server.command == nil {
+                report.measurementNote = tr("This HTTP inspection uses a separate connection and configured credentials; it does not automatically load host-managed OAuth. Authentication here does not establish the host connection state. No login or business tool calls were attempted.")
+            }
             return report
         }
         guard timeout.isFinite, timeout > 0, timeout <= 120 else { report.message = tr("Timeout must be between 0 and 120 seconds."); return finish() }

@@ -1,50 +1,43 @@
 # AI 工具体验验收
 
-截至 2026-10-17，已实现 MCP / Skill 占用、显式连接检查、本地日志观察和任务记录对照。本地候选 1.2.0 (393) 已验证；真实工作流中的工具质量和 Skill 净收益仍未完成评测，不能宣称全面完成。 最新[真实文档查询](mcp-real-docs-workflow.md)另发现并修正了原生 MCP 事件漏计；该修复已进入 393 包，374 包的漏计结果仍作为历史对照保留。
+截至 2026-10-17，统计、连接检查、本地调用观察和任务对照已有可用实现；实际业务质量与 Skill 净收益仍没有完整结论。[本机最新连接记录](measurements/mcp-auth-scope-and-coverage-2026-10-17.json)已尝试 Codex 全部 9 个启用配置，其中 8 个完整返回 305 个工具，定义数组合计 217,929 个 cl100k 参考 token，服务指令另计 893 token。Figma 独立检查需要鉴权，定义大小未知；当前代理会话的 `mcp__figma__whoami` 能返回帐号资料。两个通道的凭据和身份没有关联比对，不互相替代。
 
-后续源码已补充[返回文本合计与占比](measurements/tool-usage-return-shares-2026-10-17.json)，通过 31 项针对性测试、独立 CLI 夹具和[中文面板离屏复核](measurements/tool-usage-return-shares-zh-2026-10-17.png)。[完整 App 的隔离验证](measurements/tool-usage-native-qa-2026-10-17.json)确认了 8 → 16 → 21 项展开、编码切换后的旧报告提示与重新分析，以及 MCP / Skill 分类独立的合计和占比。另修复了分析完成后仍称“实际工具用量仍未测量”的说明，并通过 3 项本地化测试及完整窗口复核。新增展示与文案尚未进入 393 包，也未完成安装包验收。
-
-[Skill 内容汇总修复](measurements/skill-content-summary-2026-10-17.json)另通过 30 项针对性测试、CLI 夹具及完整 App 的同文件前后对照：别名不重复累计，目录 / 已配置插件与缓存分别展示；证据缺失或冲突单列。该次本机目录盘点为 138 个已检查独立文件、459 个引用、2 个发现，缓存为 215 个文件、417 个引用、0 个发现。两处缺失引用均来自 `unity-mcp-orchestrator`。此汇总修复也尚未进入 393 包。
-
-随后已[补齐本机 Unity Skill 的两份引用文档](measurements/unity-skill-reference-repair-2026-10-17.json)。三个既有文档与上游 `25357a0e75b9` 的同步来源逐字匹配，缺失文档来自同一快照的另一份完整 Skill 目录；已校验 Git blob 和 SHA-256。既有文件未改写，该 Skill 的 4 个本地引用全部通过，目录范围已采集发现降为 0，仍有 1 条未测量。上游同步来源仍只有三个文档，后续镜像可能再次删除补齐文件；仓库提供版本受限的检查 / 恢复脚本，不在默认诊断中自动执行。未验证 Unity 业务任务。
-
-[本机 HTTP MCP 检查](measurements/mcp-http-installed-audit-2026-10-17.json)覆盖 Codex 已启用的三个 HTTP 配置：OpenAI 文档完整返回 5 个工具、定义数组 781 个 cl100k 参考 token；ZEGO 完整返回 6 个工具、1,362 token，但本次会话关闭未确认；Figma 返回鉴权要求，定义大小未知。成功子集合计 11 个工具、8,446 字节、2,143 token，不是全部配置或宿主实际上下文。未调用业务工具，未自动登录或重试。原先唯一未测量的 Skill 条目也已核实为没有 `SKILL.md` 的空目录 `codex-primary-runtime`，不是正文读取失败；没有移除该目录。
-
-[HTTP 会话关闭诊断](measurements/mcp-cleanup-diagnostics-2026-10-17.json)新增可选的 `cleanupDetails`，在 App、CLI 和 JSON 中区分关闭确认、HTTP 错误、不支持关闭、等待超时、传输失败和无需关闭。保留 250 毫秒预算，不增加重试。29 项针对性测试及独立 CLI 验证通过。新版对一个新的 ZEGO 会话观察到：列表仍完整，关闭约 252 毫秒后记为预算内未确认，未取得 HTTP 状态码；不能推断服务端最终状态或回溯上次原因。新增诊断尚未进入 393 包，也未完成这项界面细节的完整 App 验收。
-
-[后续 stdio 检查](measurements/mcp-stdio-installed-audit-2026-10-17.json)完整读取 CodeGraph 的 1 个工具与 Discord 的 22 个工具，定义数组分别为 387、1,913 个 cl100k 参考 token。结合此前 HTTP 记录，已完整测量 4 个配置、34 个工具，定义数组合计 4,443 token，独立服务指令另计 370 token；不是一次原子快照或实际加载上下文。Figma 鉴权项与其余 4 个已启用配置仍没有完整计量，未启动业务工具或发送 Discord 消息。
-
-检查启动代码时发现并[修复本机 Claude Design 代理的 SSE 等待问题](measurements/claude-design-relay-sse-2026-10-17.json)：以前收到 JSON-RPC 响应后仍等待流结束，现在按请求 ID 识别完整响应。原有鉴权、刷新、重定向保护及分发逻辑保持一致，8 项离线用例在配置所用 Python 3.9.6 和 Python 3.14 均通过。自有流延迟关闭对照由约 1.03 秒等待变为约 1 毫秒返回，不能当作真实 Design 服务提速。源码已写入本机代理，现存实例未重启，下次启动加载；未访问真实 Design 服务或钥匙串。
+这些数字是不同时间、不同配置的独立计量，REA 使用下述输出声明配置；不是宿主实际加载上下文或账单。其他宿主尚未完成主动测量。已验证的本地候选仍是 1.2.0 (393)，不包含后续全部源码改动。
 
 | 原始问题 | 当前能力与证据 | 仍不能据此判断 |
 |---|---|---|
-| MCP 总体有多大、占多少 token | 汇总已完整检查配置的定义字节、定义数组计数和独立服务指令计数；支持启发式和两种离线参考编码。[汇总与取消测试](../Tests/ThermoAppTests/MCPDefinitionStoreTests.swift)、[批量原生验收](measurements/mcp-batch-inspection-2026-10-17.json) | 未检查配置不按零计；多宿主配置保留独立计量。它不是宿主当前实际加载上下文或账单 |
-| 哪个工具占用最多、耗时多久 | 工具定义排名、返回文本排名；源码增加分类内全部观察条目的返回文本合计及工具占比。连接阶段耗时，以及日志中的中位数 / P95 / 累计观察间隔。[新包 CLI 与原生入口](measurements/ai-tools-integrated-package-2026-10-17.json)、[合计与占比验证](measurements/tool-usage-return-shares-2026-10-17.json) | 连接耗时不是业务工具耗时；并行间隔相加不是实际总耗时。图片 token、脚本内嵌调用和缺失日志不能完整归因 |
-| 哪些 MCP 有问题 | 显示连接失败阶段、描述 / schema 问题、明确错误次数与已知状态分母、未知状态和缺失结果；列表可展开全部条目。[错误比例验证](measurements/tool-usage-error-proportions-2026-10-17.json) | 定义提示与错误比例不等于业务任务质量分。尚无覆盖实际配置的真实任务质量排行 |
-| Skill 是否臃肿或有内容问题 | 分开统计目录描述和完整文档，去重别名，单列插件缓存；给出缺失引用及行号、空正文和相同独立副本。[占用测试](../Tests/AgentDoctorTests/ContextFootprintTests.swift)、[内容测试](../Tests/AgentDoctorTests/SkillQualityTests.swift) | 静态清单不是已加载清单；长文档不直接判差，引用不存在也可能是运行时生成。未完整模拟所有宿主的覆盖优先级 |
-| Skill 有没有提高效果 | 支持相同任务 / 验收条件的配对记录，排除缺失或不兼容配对，保留失败、超时和未知。[对照测试](../Tests/AgentDoctorTests/TaskComparisonTests.swift)、[两轮模型试测](../evals/ai-diagnostics/README.md) | 第二轮三对微型题两组均全通过，没有成功率收益证据；显式读取增加模型往返，不能把输入差额当成 Skill 正文大小。隐式触发和真实工作流收益仍待测 |
-| 有哪些工具值得参考 | 已逐项借鉴 MCP Token Analyzer、MCPJam Inspector、ccusage、skill-creator 和 Agent Scan 的计量、瀑布、日志适配、对照与证据呈现方法。[参考和实现范围](ai-tools-analysis.md#外部参考) | 文档研究不等于这些工具的实测排名；没有默认加入远程内容上传 |
+| MCP 总体有多大、占多少 token | 汇总已完整检查配置的定义字节、定义数组和服务指令计数，支持启发式与两种参考编码。本机 Codex 已完整测量 8 / 9 个配置。[连接与范围](measurements/mcp-auth-scope-and-coverage-2026-10-17.json)、[批量原生验收](measurements/mcp-batch-inspection-2026-10-17.json) | Figma 定义及其他宿主未完成计量，总体未知；不把未完成项当零，不把独立配置相加称为实际会话上下文 |
+| 哪个工具占用最多、耗时多久 | 定义及返回文本排名、分类返回合计和占比；握手、列表、本地分析时间，以及日志中位数 / P95 / 累计观察间隔。[占比验证](measurements/tool-usage-return-shares-2026-10-17.json)、[完整 App 验证](measurements/tool-usage-native-qa-2026-10-17.json) | 连接时间不是业务工具时间；并行间隔相加不是总经过时间。图片、脚本包装和缺失日志无法完整归因 |
+| 哪些 MCP 有问题 | 定义结构提示、明确错误与已知状态分母、缺失 / 未知状态、独立 HTTP 关闭诊断和鉴权范围说明。[错误比例](measurements/tool-usage-error-proportions-2026-10-17.json)、[关闭诊断](measurements/mcp-cleanup-diagnostics-2026-10-17.json) | 定义长、断言未通过或独立检查需要鉴权，不等于业务质量差。尚无覆盖实际配置的真实任务质量排行 |
+| Skill 是否臃肿或有内容问题 | 目录描述与正文分开计量，别名去重，缓存单列；内容汇总按宿主 / 范围统计，缺失、冲突和未测量单列。[内容汇总](measurements/skill-content-summary-2026-10-17.json)、[占用测试](../Tests/AgentDoctorTests/ContextFootprintTests.swift) | 静态清单不是已加载清单；长度不直接判差；未完整模拟所有宿主的覆盖优先级 |
+| Skill 有没有提高效果 | 相同任务 / 验收条件的配对记录；不兼容配对排除，失败、超时和未知保留。[模型试测](../evals/ai-diagnostics/README.md)、[有状态工作流对照](../evals/browser-workflow/README.md) | 明确口径后的三对摘要题和两对有状态任务，两组均全部通过，未显示成功率收益；显式读取增加往返。隐式触发与真实业务净收益仍待测 |
+| 有哪些工具值得参考 | 已借鉴 MCP Token Analyzer、MCPJam Inspector、ccusage、skill-creator、Agent Scan 的计量、瀑布、日志适配和证据方法。[参考及实现范围](ai-tools-analysis.md#外部参考) | 文档研究不等于实测排名；没有默认上传远程内容 |
 
-## 验证范围
+## 已落地的本机改进
 
-[原生事件修复集成验收](measurements/mcp-native-events-release-2026-10-17.json)记录 ed354ee 的 1,483 项 Release 测试。该提交生成 1.2.0 (393)，通过全部切片签名、架构与最低系统版本检查；原生 arm64 与 Rosetta x86_64 各通过五组 AI CLI 夹具。完整 App 的隔离副本读取两条真实公开文档事件，显示检索 49,697 字节 / cl100k 参考 11,651、原文读取 3,331 字节 / 716，以及各自观察间隔；错误状态、P95 和请求用量保持未知。原包哈希未变，QA 已停止，临时原始事件摘录已移除。此前列表展开、分类隔离等交互的[374 包验证](measurements/ai-tools-integrated-package-2026-10-17.json)仍作为历史证据保留。
+- [REA 清单配置](measurements/rea-mcp-presentation-2026-10-17.json)：仅给 Codex 的 REA 加入 `REA_MCP_OUTPUT_SCHEMA_PROFILE="off"`。207 个工具的所有其他字段一致，同一自有 HAR 返回完整 Evidence 相同。定义由 3,114,003 降至 823,514 字节，约少 73.6%；客户端不再取得输出类型声明，服务端仍校验结果。输入契约、工具、审批和其他配置未变，原配置已备份，未主动重启现有会话。已证明的是目录传输和计量负担减少，未证明实际模型 token 或账单节省。
+- [Unity Skill 引用文档](measurements/unity-skill-reference-repair-2026-10-17.json)：两个缺失文件来自与既有文档匹配的上游快照，已核对 blob / SHA-256 后补齐，原文件未改。4 个本地引用全部通过。当前上游同步来源仍不完整，后续镜像可能删除补齐文件；版本受限的恢复脚本默认只检查，不在体检中自动执行。未验证 Unity 业务任务。
+- [Design 代理 SSE 等待](measurements/claude-design-relay-sse-2026-10-17.json)：按请求 ID 识别完整响应，避免响应到达后继续等待流关闭。8 个离线用例在配置所用 Python 3.9.6 和 Python 3.14 均通过，鉴权及分发逻辑保持一致。后续真实授权检查完整返回 23 个工具，但没有记录上游 JSON / SSE 类型，不宣称线上提速或业务验收；未主动重启原有实例。
 
-上述测试不替代真实 Intel 主机、所有系统版本、大字体、真实业务任务或正式安装更新验收。本轮也没有正式签名、公证、发布、安装 helper 或切换 AWDL。
+本机 Skill 修复后的盘点保留 138 个已检查目录文件、459 个引用、0 个已采集发现，缓存另有 215 个文件、417 个引用、0 个发现。[修复后盘点](measurements/unity-skill-reference-repair-2026-10-17.json)中的唯一未测量条目已核实为没有 `SKILL.md` 的空目录 `codex-primary-runtime`；没有移除或制造正文来消除提示。[空目录核实](measurements/mcp-http-installed-audit-2026-10-17.json)
 
-[受控镜像占用实验](measurements/owned-dmg-busy-control-2026-10-17.json)验证了真实占用时普通卸载返回 16，实际清理函数保留退出状态并拒绝确认清理；结束占用后普通清理成功。没有增加强制卸载或重试，且这不证明此前偶发清理观察的原因。
+## 源码与安装包验证边界
 
-## 接下来需要的证据
+[393 包集成验收](measurements/mcp-native-events-release-2026-10-17.json)对应 ed354ee，包含 1,483 项 Release 测试；全部切片签名、架构及最低系统版本检查通过，arm64 与 Rosetta x86_64 各通过五组 AI CLI 夹具。完整 App 的隔离副本读取两条真实公开文档事件，显示检索 49,697 字节 / cl100k 11,651、原文 3,331 字节 / 716。错误状态、P95 和请求用量保持未知。原包未变，QA 已停止，临时原始事件摘录已移除。[374 包](measurements/ai-tools-integrated-package-2026-10-17.json)保留为历史证据。
 
-评测场景由 agent 从实际使用记录、失败和返回开销中主动发现，不要求用户提供题目。选定工作流和验收标准后，固定模型、环境、工具 / Skill 版本及数据，用新的任务 ID 采集配对结果和重复样本。继续在全部通过的微型题上增加运行次数，无法区分实际收益。不要根据静态占用、一次握手或这两轮小样本，默认移除工具或扩大 Skill 注入。
+393 之后的源码改动分别已有以下验证，尚未整合进新的完整发布包：
 
-[首轮自主发现](measurements/workflow-discovery-2026-10-17.json)读取最近七天的 80 份日志尾部，43 份被截断，因此只代表局部样本。可直接归因的原生事件主要来自一份浏览器会话：30 次 snapshot 返回文本共 117,579 字节，26 次 click 共 79,328 字节。23 组十秒内 click → snapshot 中，8 组点击回复已含完整观察快照，但没有发现完全相同的快照文本；目前只能列为待核实的重复读取候选，不能报告节省比例。
+- [返回合计与占比](measurements/tool-usage-return-shares-2026-10-17.json)：31 项针对性测试、CLI 隐藏行分母检查与[中文离屏图](measurements/tool-usage-return-shares-zh-2026-10-17.png)。[完整 App](measurements/tool-usage-native-qa-2026-10-17.json)验证 8 → 16 → 21 项展开、编码旧报告提示和分类独立计量，并修正了过时的“实际用量未测量”说明。
+- [Skill 内容汇总](measurements/skill-content-summary-2026-10-17.json)：30 项针对性测试、CLI 和同文件完整 App 前后对照；别名不重复累计，缓存单列，缺失或冲突证据保留。历史逐条计数没有改写，也不把计数下降当成修复数量。
+- [关闭诊断](measurements/mcp-cleanup-diagnostics-2026-10-17.json)：29 项针对性测试与编译 CLI 夹具。ZEGO 最新一次列表完整，关闭在 250 毫秒预算下观察约 252 毫秒仍未确认；HTTP 状态未知，不推断服务端最终状态。没有增加重试或超时，新增页脚未做完整 App 验收。
+- [鉴权范围说明](measurements/mcp-auth-scope-and-coverage-2026-10-17.json)：16 项针对性测试及真实独立检查，明确配置凭据与宿主管理 OAuth 的边界。当前 Figma 通道的只读帐号调用单独保留证据，不导出身份值、不据此补造定义计数；该说明的完整 App / 包验证仍待完成。
 
-该样本唯一一次显式 MCP 错误来自 `expect`：`noWait=true`、`success=true`、`pass=false`、`timedOut=false`、`error=null`，观察间隔 0.136 秒。原始 MCP 错误标记仍应保留；评价工具质量时，需要区分业务断言失败与执行故障，不能看到错误就判为服务超时。
+上述验证不替代真实 Intel 主机、全部系统版本、大字体或正式安装更新验收。没有据此授权发布、安装 helper 或切换 AWDL。[受控镜像占用实验](measurements/owned-dmg-busy-control-2026-10-17.json)只证明真实占用时普通卸载拒绝确认清理、结束占用后可成功；此前偶发清理观察的原因仍未解释，没有加入强制卸载或重试。
 
-从这个工作流提炼的本地浏览器夹具已完成一次验证：点击后的 `observed.status=complete` 仍显示 Saving；立即断言返回 false 且未超时，随后按条件等待 Saved 成功，提交计数始终为 1。自有浏览器会话关闭并确认标签消失，HTTP 服务已停止。这验证了评测口径和候选场景，不是生产业务或 Skill 收益验收。
+## 还需要的证据
 
-[有状态操作对照](../evals/browser-workflow/README.md)随后让四个隔离模型会话实际操作离线夹具，以最终回执和操作记录评分：延迟完成、回复丢失各一对，两组均通过且没有重复提交。候选组均成功读取 Skill，但在回复丢失任务多读一次回执；候选减基线的耗时差中位数 +3.22 秒、原生输入差中位数 +26,992.5 token。显式读取增加往返，输入差不是 Skill 正文大小或账单；每题一次也不足以下稳定结论。当前不安装或默认注入这个候选。此轮不是真实浏览器业务对照，也不能评价现有 chrome-use Skill 的总体收益。首轮发现夹具跨命令计时失效，四条原始结果单独保留并全部排除，修正后使用新的任务版本运行。
+评测题目由 agent 从使用记录、失败和开销中主动发现，不要求用户出题。后续固定模型、环境、工具 / Skill 版本及验收条件，用新任务 ID 保留配对、重复样本和不成功结果。不要继续重复已两组全部通过的微型题，或根据静态占用默认移除工具、扩大 Skill 注入。
 
-正式发布另需确认版本、完成签名 / 公证和安装更新验证；硬件相关路径需要独立授权与实际验收。本地候选通过不自动授权这些操作。
+[真实调用抽样](measurements/workflow-discovery-2026-10-17.json)只读取 80 份近期日志尾部，43 份截断，不能当全部使用频率。浏览器样本中 8 组完整观察后又取快照，但没有相同快照，尚不能判为浪费；一次 `expect` 的 `noWait=true`、`pass=false`、`timedOut=false` 说明不能把断言失败归为服务超时。本地浏览器及后续有状态夹具验证了等待最终状态与只提交一次的口径，没有证明生产业务或 Skill 净收益。首轮失效夹具四条记录已保留并排除。
 
-本轮未再次查询文档服务、安装或重启用户的 App。旧安装 PID 当时未观察到，不推断外部原因。正式安装更新、硬件相关和原始偶发镜像清理原因仍未完成。
+剩余工作包括 Figma 的可授权完整定义计量、真实业务质量与 Skill 净收益评测，以及把后续源码整合进完整候选包并验证安装更新。硬件相关路径仍按独立授权和实际验收处理；本地通过不等于部署、安装或真实设备通过。
