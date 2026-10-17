@@ -1,0 +1,243 @@
+{
+  "date": "2026-10-17",
+  "sourceBase": "3841c76d915dae2b1752ac5facfb5b0fb11a4573",
+  "changes": [
+    {
+      "skill": "message-use",
+      "sharedPath": ".agents/skills/message-use",
+      "maintainedPath": ".codex/skills/message-use",
+      "beforeSHA256": "a9c3e2452fa8d9aa6016e434e42f147fe538ade6ebb855a40815758f1bf27cf7",
+      "afterSHA256": "19b41fb2bf6af35f386e294eeaa74677b028953be076c957ef571b67e93fb3ad",
+      "originalDirectoryBackedUp": true,
+      "aliasAndSourceMatch": true
+    },
+    {
+      "skill": "paste-use",
+      "sharedPath": ".agents/skills/paste-use",
+      "maintainedPath": ".codex/skills/paste-use",
+      "beforeSHA256": "fb110dd781565eb406c3eb315c5d95f1761a9570e1281b25a224e3c464e354c5",
+      "afterSHA256": "75ccd5ba12ac41db3292daa7bbe56b40f51023282d0acadb2b1d70e3f8c6dabb",
+      "originalDirectoryBackedUp": true,
+      "aliasAndSourceMatch": true
+    },
+    {
+      "skill": "sflow",
+      "sharedPath": ".agents/skills/sflow",
+      "maintainedPath": ".codex/skills/sflow",
+      "beforeSHA256": "157fb0f94ffb2279e8ea033cd1c2f49ed9325103bac356c81dbd8b148d9d30f5",
+      "afterSHA256": "067f8276cc50d98a244279a80ca954069fe0f8adeff12b3432734b99c37f63d2",
+      "originalDirectoryBackedUp": true,
+      "aliasAndSourceMatch": true
+    }
+  ],
+  "after": {
+    "remainingNameGroups": 2,
+    "visibleNameFindings": 4,
+    "uniqueFiles": 135,
+    "aliases": 5,
+    "configSHA256": "b6859e2bc3e07f6c1b653d5b2827cd2052ed17c30837d30b65209e59fcf32d80",
+    "configUnchanged": true,
+    "otherDifferentWorkflowsUnchanged": true,
+    "sflowTemplateNowValid": true
+  },
+  "backupPrivate": true,
+  "backupPermission": "0700",
+  "backupPathPublished": false,
+  "installedBinariesChanged": false,
+  "installerAtomicReplacementTests": [
+    {
+      "tool": "message-use",
+      "binarySHA256": "efbed0d7a9f92c6158e62402a86446a48c29352c25ff3e01ad0cc00bd53243d4",
+      "documentSHA256": "19b41fb2bf6af35f386e294eeaa74677b028953be076c957ef571b67e93fb3ad",
+      "sourceInodeReplaced": true,
+      "sharedAliasReadsUpdatedSource": true
+    },
+    {
+      "tool": "paste-use",
+      "binarySHA256": "feea8168e9f90484b47cd84d182cfdda72d0372180d0151555c176f13d34491b",
+      "documentSHA256": "75ccd5ba12ac41db3292daa7bbe56b40f51023282d0acadb2b1d70e3f8c6dabb",
+      "sourceInodeReplaced": true,
+      "sharedAliasReadsUpdatedSource": true
+    },
+    {
+      "tool": "sflow",
+      "binarySHA256": "468025d06032587ee20cca919e8eece3fb987853af1c6cb76945b5460bc0ec0a",
+      "documentSHA256": "067f8276cc50d98a244279a80ca954069fe0f8adeff12b3432734b99c37f63d2",
+      "sourceInodeReplaced": true,
+      "sharedAliasReadsUpdatedSource": true
+    }
+  ],
+  "nativeAliasProfiles": {
+    "clientVersion": "codex-cli 0.163.0",
+    "binarySHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+    "fixtureSHA256": "f584748e2c2568b554fcb6af98a502f8473d7f4b5267e1a4d8e2bf429824a6ec",
+    "realModelCalled": false,
+    "credentialsCopied": false,
+    "userSkillsModified": false,
+    "syntheticUsageIsNotBilling": true,
+    "rawRequestsPublished": false,
+    "runs": [
+      {
+        "case": "alias-catalog",
+        "exitCode": 0,
+        "ownedSkills": [
+          {
+            "scope": "legacy",
+            "name": "owned-shared",
+            "documentSHA256": "300e9bae7319a41b150bcfa5e50b8041cae721612de069de52b7255cae2d1173"
+          },
+          {
+            "scope": "user",
+            "name": "owned-shared",
+            "aliasOfUser": false,
+            "aliasSource": "legacy",
+            "documentSHA256": "300e9bae7319a41b150bcfa5e50b8041cae721612de069de52b7255cae2d1173"
+          },
+          {
+            "scope": "repo",
+            "name": "owned-shared",
+            "aliasOfUser": false,
+            "aliasSource": "legacy",
+            "documentSHA256": "300e9bae7319a41b150bcfa5e50b8041cae721612de069de52b7255cae2d1173"
+          }
+        ],
+        "requests": [
+          {
+            "onlyFakeCredential": true,
+            "skills": [
+              {
+                "scope": "legacy",
+                "catalogMarkerPresent": true,
+                "catalogMarkerOccurrences": 1,
+                "bodyMarkerPresent": false,
+                "referenceMarkerPresent": false,
+                "skillPathPresent": false
+              },
+              {
+                "scope": "user",
+                "catalogMarkerPresent": false,
+                "catalogMarkerOccurrences": 0,
+                "bodyMarkerPresent": false,
+                "referenceMarkerPresent": false,
+                "skillPathPresent": false
+              },
+              {
+                "scope": "repo",
+                "catalogMarkerPresent": false,
+                "catalogMarkerOccurrences": 0,
+                "bodyMarkerPresent": false,
+                "referenceMarkerPresent": false,
+                "skillPathPresent": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "case": "alias-explicit",
+        "exitCode": 0,
+        "ownedSkills": [
+          {
+            "scope": "legacy",
+            "name": "owned-shared",
+            "documentSHA256": "300e9bae7319a41b150bcfa5e50b8041cae721612de069de52b7255cae2d1173"
+          },
+          {
+            "scope": "user",
+            "name": "owned-shared",
+            "aliasOfUser": false,
+            "aliasSource": "legacy",
+            "documentSHA256": "300e9bae7319a41b150bcfa5e50b8041cae721612de069de52b7255cae2d1173"
+          },
+          {
+            "scope": "repo",
+            "name": "owned-shared",
+            "aliasOfUser": false,
+            "aliasSource": "legacy",
+            "documentSHA256": "300e9bae7319a41b150bcfa5e50b8041cae721612de069de52b7255cae2d1173"
+          }
+        ],
+        "requests": [
+          {
+            "onlyFakeCredential": true,
+            "skills": [
+              {
+                "scope": "legacy",
+                "catalogMarkerPresent": true,
+                "catalogMarkerOccurrences": 2,
+                "bodyMarkerPresent": true,
+                "referenceMarkerPresent": false,
+                "skillPathPresent": true
+              },
+              {
+                "scope": "user",
+                "catalogMarkerPresent": false,
+                "catalogMarkerOccurrences": 0,
+                "bodyMarkerPresent": false,
+                "referenceMarkerPresent": false,
+                "skillPathPresent": false
+              },
+              {
+                "scope": "repo",
+                "catalogMarkerPresent": false,
+                "catalogMarkerOccurrences": 0,
+                "bodyMarkerPresent": false,
+                "referenceMarkerPresent": false,
+                "skillPathPresent": false
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "aliasSource": "legacy"
+  },
+  "validation": {
+    "offlineFilesystemControls": 6,
+    "failures": 0,
+    "originalSflowExampleExitCode": 1,
+    "sameExampleWithCorrectAgentEnumExitCode": 0,
+    "repairedSharedExampleValid": true,
+    "codexPluginUpdateHelpExitCode": 2,
+    "claudePluginUpdateHelpExitCode": 0,
+    "checkOnlyAfterRepairIsIdempotent": true
+  },
+  "realModelCalls": false,
+  "agentsStarted": false,
+  "messagesSent": false,
+  "clipboardReadOrWritten": false,
+  "messagesDatabaseRead": false,
+  "pluginUpdatesPerformed": false,
+  "userConfigChanged": false,
+  "installedAppChanged": false,
+  "limitations": [
+    "Version-pinned source hashes match the installed binaries and committed source documents; future unlinked or customized directories require fresh review.",
+    "Current installers were tested against private HOME directories and do not refresh an independent shared mirror; aliases track their maintained Codex directory instead.",
+    "Future installer layouts are not guaranteed; the helper defaults to inspection and refuses unknown versions/content/resources.",
+    "Two generic native client profiles verify alias discovery and explicit preload, not model task benefit. Existing conversations were not restarted.",
+    "Current source hardens rollback/no-clobber guards beyond the initial successful application; actual files and backups were independently rechecked.",
+    "Remaining skill-creator and yapi workflows differ and were preserved."
+  ],
+  "sourceSHA256": {
+    "scripts/repair-shared-skill-aliases.py": "1414fb3c3d003d5de35734360d394160cbf3bbfc827096949625d813642e4545",
+    "scripts/test-shared-skill-aliases.py": "bd44ac7814c03be7f3249ff86f9a9c4386690c8f941da029281e24b8abce2390",
+    "scripts/capture-codex-skill-loading.py": "f584748e2c2568b554fcb6af98a502f8473d7f4b5267e1a4d8e2bf429824a6ec"
+  },
+  "sourceDocuments": [
+    {
+      "repository": "session-flow",
+      "revision": "4876e4d85bd941bf0f1bd3784c352a3f8ccf0517",
+      "path": "skills/sflow/SKILL.md"
+    },
+    {
+      "repository": "message-use",
+      "revision": "4ce73355ffda657c213343001e650d334d058240",
+      "path": "SKILL.md"
+    },
+    {
+      "repository": "paste-use",
+      "revision": "2b597549f9333df43225a762aa98f2eae988e6b7",
+      "path": "SKILL.md"
+    }
+  ]
+}

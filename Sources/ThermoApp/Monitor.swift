@@ -156,13 +156,18 @@ final class Monitor: ObservableObject {
     private let helper: HelperClient
     private let helperInteraction: Bool
 
+    /// UI review suppresses automatic hardware/helper work, not explicit user actions.
+    nonisolated static func suppressesAutomaticControl(arguments: [String]) -> Bool {
+        let modes = ["--offscreen", "--snapshot", "--render-preview", "--verify-lifecycle", "--ui-review"]
+        return arguments.contains(where: modes.contains)
+    }
+
     init(startMonitoring: Bool = true, helperInteraction: Bool = true,
          helper: HelperClient = HelperClient(), arguments: [String] = CommandLine.arguments) {
         self.helper = helper
         // A snapshot must not contact an old helper and thereby start its update
         // or setup path. Apply this to every Monitor, including lazy AppModels.
-        let verification = ["--offscreen", "--snapshot", "--render-preview", "--verify-lifecycle"]
-        self.helperInteraction = helperInteraction && !arguments.contains(where: verification.contains)
+        self.helperInteraction = helperInteraction && !Self.suppressesAutomaticControl(arguments: arguments)
         guard startMonitoring else { return }
         queue.async { [weak self] in self?.prepareSampler() }
         reschedule()

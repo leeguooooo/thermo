@@ -1,0 +1,573 @@
+{
+  "clientVersion": "codex-cli 0.163.0",
+  "binarySHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+  "fixtureSHA256": "aac7ab16528c47746f50315a298484d29349443ba0358dacea05ce87c101c800",
+  "realModelCalled": false,
+  "credentialsCopied": false,
+  "userSkillsModified": false,
+  "syntheticUsageIsNotBilling": true,
+  "rawRequestsPublished": false,
+  "runs": [
+    {
+      "case": "catalog",
+      "exitCode": 0,
+      "ownedSkills": [
+        {
+          "scope": "legacy",
+          "name": "owned-legacy",
+          "documentSHA256": "d941b5e3bdfb389a1a19b99739069371e30f8528ccb414c76983cf0157f184b3"
+        },
+        {
+          "scope": "user",
+          "name": "owned-user",
+          "documentSHA256": "bcb2c264caf7873cc5ccfe06319a7aa4ad5c28a04717a539106d403258833d79"
+        },
+        {
+          "scope": "repo",
+          "name": "owned-repo",
+          "documentSHA256": "e4ef7076c5502bd45d5d5e04ee48c9aab52746fc2b362d1604488fd067deacb3"
+        }
+      ],
+      "requests": [
+        {
+          "onlyFakeCredential": true,
+          "skills": [
+            {
+              "scope": "legacy",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 1,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "user",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 1,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "repo",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 1,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            }
+          ]
+        }
+      ],
+      "fullOwnedDocumentsPresentByHash": {
+        "d941b5e3bdfb389a1a19b99739069371e30f8528ccb414c76983cf0157f184b3": false,
+        "bcb2c264caf7873cc5ccfe06319a7aa4ad5c28a04717a539106d403258833d79": false,
+        "e4ef7076c5502bd45d5d5e04ee48c9aab52746fc2b362d1604488fd067deacb3": false
+      },
+      "toolCallsObserved": 0,
+      "thermoStaticComparison": {
+        "ownedVisibleEntries": 3,
+        "ownedUniqueFiles": 3,
+        "ownedAliases": 0,
+        "sameNameFindingsAttachedToEntries": 0
+      }
+    },
+    {
+      "case": "explicit-user",
+      "exitCode": 0,
+      "ownedSkills": [
+        {
+          "scope": "legacy",
+          "name": "owned-legacy",
+          "documentSHA256": "d941b5e3bdfb389a1a19b99739069371e30f8528ccb414c76983cf0157f184b3"
+        },
+        {
+          "scope": "user",
+          "name": "owned-user",
+          "documentSHA256": "bcb2c264caf7873cc5ccfe06319a7aa4ad5c28a04717a539106d403258833d79"
+        },
+        {
+          "scope": "repo",
+          "name": "owned-repo",
+          "documentSHA256": "e4ef7076c5502bd45d5d5e04ee48c9aab52746fc2b362d1604488fd067deacb3"
+        }
+      ],
+      "requests": [
+        {
+          "onlyFakeCredential": true,
+          "skills": [
+            {
+              "scope": "legacy",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 1,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "user",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 2,
+              "bodyMarkerPresent": true,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "repo",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 1,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            }
+          ]
+        }
+      ],
+      "fullOwnedDocumentsPresentByHash": {
+        "d941b5e3bdfb389a1a19b99739069371e30f8528ccb414c76983cf0157f184b3": false,
+        "bcb2c264caf7873cc5ccfe06319a7aa4ad5c28a04717a539106d403258833d79": true,
+        "e4ef7076c5502bd45d5d5e04ee48c9aab52746fc2b362d1604488fd067deacb3": false
+      },
+      "toolCallsObserved": 0,
+      "thermoStaticComparison": {
+        "ownedVisibleEntries": 3,
+        "ownedUniqueFiles": 3,
+        "ownedAliases": 0,
+        "sameNameFindingsAttachedToEntries": 0
+      }
+    },
+    {
+      "case": "duplicate-catalog",
+      "exitCode": 0,
+      "ownedSkills": [
+        {
+          "scope": "legacy",
+          "name": "owned-shared",
+          "documentSHA256": "300e9bae7319a41b150bcfa5e50b8041cae721612de069de52b7255cae2d1173"
+        },
+        {
+          "scope": "user",
+          "name": "owned-shared",
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        },
+        {
+          "scope": "repo",
+          "name": "owned-shared",
+          "documentSHA256": "745694b812f5562926680ac92de60ee7bbf9cf975fb01973b3e16f12cb15bb44"
+        }
+      ],
+      "requests": [
+        {
+          "onlyFakeCredential": true,
+          "skills": [
+            {
+              "scope": "legacy",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 1,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "user",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 1,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "repo",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 1,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            }
+          ]
+        }
+      ],
+      "fullOwnedDocumentsPresentByHash": {
+        "300e9bae7319a41b150bcfa5e50b8041cae721612de069de52b7255cae2d1173": false,
+        "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481": false,
+        "745694b812f5562926680ac92de60ee7bbf9cf975fb01973b3e16f12cb15bb44": false
+      },
+      "toolCallsObserved": 0,
+      "thermoStaticComparison": {
+        "ownedVisibleEntries": 3,
+        "ownedUniqueFiles": 3,
+        "ownedAliases": 0,
+        "sameNameFindingsAttachedToEntries": 3
+      }
+    },
+    {
+      "case": "duplicate-explicit",
+      "exitCode": 0,
+      "ownedSkills": [
+        {
+          "scope": "legacy",
+          "name": "owned-shared",
+          "documentSHA256": "300e9bae7319a41b150bcfa5e50b8041cae721612de069de52b7255cae2d1173"
+        },
+        {
+          "scope": "user",
+          "name": "owned-shared",
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        },
+        {
+          "scope": "repo",
+          "name": "owned-shared",
+          "documentSHA256": "745694b812f5562926680ac92de60ee7bbf9cf975fb01973b3e16f12cb15bb44"
+        }
+      ],
+      "requests": [
+        {
+          "onlyFakeCredential": true,
+          "skills": [
+            {
+              "scope": "legacy",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 1,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "user",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 1,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "repo",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 1,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            }
+          ]
+        }
+      ],
+      "fullOwnedDocumentsPresentByHash": {
+        "300e9bae7319a41b150bcfa5e50b8041cae721612de069de52b7255cae2d1173": false,
+        "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481": false,
+        "745694b812f5562926680ac92de60ee7bbf9cf975fb01973b3e16f12cb15bb44": false
+      },
+      "toolCallsObserved": 0,
+      "thermoStaticComparison": {
+        "ownedVisibleEntries": 3,
+        "ownedUniqueFiles": 3,
+        "ownedAliases": 0,
+        "sameNameFindingsAttachedToEntries": 3
+      }
+    },
+    {
+      "case": "alias-catalog",
+      "exitCode": 0,
+      "ownedSkills": [
+        {
+          "scope": "user",
+          "name": "owned-shared",
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        },
+        {
+          "scope": "legacy",
+          "name": "owned-shared",
+          "aliasOfUser": true,
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        },
+        {
+          "scope": "repo",
+          "name": "owned-shared",
+          "aliasOfUser": true,
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        }
+      ],
+      "requests": [
+        {
+          "onlyFakeCredential": true,
+          "skills": [
+            {
+              "scope": "legacy",
+              "catalogMarkerPresent": false,
+              "catalogMarkerOccurrences": 0,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "user",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 1,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "repo",
+              "catalogMarkerPresent": false,
+              "catalogMarkerOccurrences": 0,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            }
+          ]
+        }
+      ],
+      "fullOwnedDocumentsPresentByHash": {
+        "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481": false
+      },
+      "toolCallsObserved": 0,
+      "thermoStaticComparison": {
+        "ownedVisibleEntries": 3,
+        "ownedUniqueFiles": 1,
+        "ownedAliases": 2,
+        "sameNameFindingsAttachedToEntries": 0
+      }
+    },
+    {
+      "case": "alias-explicit",
+      "exitCode": 0,
+      "ownedSkills": [
+        {
+          "scope": "user",
+          "name": "owned-shared",
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        },
+        {
+          "scope": "legacy",
+          "name": "owned-shared",
+          "aliasOfUser": true,
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        },
+        {
+          "scope": "repo",
+          "name": "owned-shared",
+          "aliasOfUser": true,
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        }
+      ],
+      "requests": [
+        {
+          "onlyFakeCredential": true,
+          "skills": [
+            {
+              "scope": "legacy",
+              "catalogMarkerPresent": false,
+              "catalogMarkerOccurrences": 0,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "user",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 2,
+              "bodyMarkerPresent": true,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "repo",
+              "catalogMarkerPresent": false,
+              "catalogMarkerOccurrences": 0,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            }
+          ]
+        }
+      ],
+      "fullOwnedDocumentsPresentByHash": {
+        "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481": true
+      },
+      "toolCallsObserved": 0,
+      "thermoStaticComparison": {
+        "ownedVisibleEntries": 3,
+        "ownedUniqueFiles": 1,
+        "ownedAliases": 2,
+        "sameNameFindingsAttachedToEntries": 0
+      }
+    },
+    {
+      "case": "copy-catalog",
+      "exitCode": 0,
+      "ownedSkills": [
+        {
+          "scope": "user",
+          "name": "owned-shared",
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        },
+        {
+          "scope": "legacy",
+          "name": "owned-shared",
+          "identicalCopyOfUser": true,
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        },
+        {
+          "scope": "repo",
+          "name": "owned-shared",
+          "identicalCopyOfUser": true,
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        }
+      ],
+      "requests": [
+        {
+          "onlyFakeCredential": true,
+          "skills": [
+            {
+              "scope": "legacy",
+              "catalogMarkerPresent": false,
+              "catalogMarkerOccurrences": 0,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "user",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 3,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "repo",
+              "catalogMarkerPresent": false,
+              "catalogMarkerOccurrences": 0,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            }
+          ]
+        }
+      ],
+      "fullOwnedDocumentsPresentByHash": {
+        "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481": false
+      },
+      "toolCallsObserved": 0,
+      "thermoStaticComparison": {
+        "ownedVisibleEntries": 3,
+        "ownedUniqueFiles": 3,
+        "ownedAliases": 0,
+        "sameNameFindingsAttachedToEntries": 3
+      }
+    },
+    {
+      "case": "copy-explicit",
+      "exitCode": 0,
+      "ownedSkills": [
+        {
+          "scope": "user",
+          "name": "owned-shared",
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        },
+        {
+          "scope": "legacy",
+          "name": "owned-shared",
+          "identicalCopyOfUser": true,
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        },
+        {
+          "scope": "repo",
+          "name": "owned-shared",
+          "identicalCopyOfUser": true,
+          "documentSHA256": "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481"
+        }
+      ],
+      "requests": [
+        {
+          "onlyFakeCredential": true,
+          "skills": [
+            {
+              "scope": "legacy",
+              "catalogMarkerPresent": false,
+              "catalogMarkerOccurrences": 0,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "user",
+              "catalogMarkerPresent": true,
+              "catalogMarkerOccurrences": 3,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            },
+            {
+              "scope": "repo",
+              "catalogMarkerPresent": false,
+              "catalogMarkerOccurrences": 0,
+              "bodyMarkerPresent": false,
+              "referenceMarkerPresent": false
+            }
+          ]
+        }
+      ],
+      "fullOwnedDocumentsPresentByHash": {
+        "f313affca4d8ef89c6cb42a356a69fe97bd3926d2b68aa4cd7bab7ddff9f7481": false
+      },
+      "toolCallsObserved": 0,
+      "thermoStaticComparison": {
+        "ownedVisibleEntries": 3,
+        "ownedUniqueFiles": 3,
+        "ownedAliases": 0,
+        "sameNameFindingsAttachedToEntries": 3
+      }
+    }
+  ],
+  "date": "2026-10-17",
+  "thermoBinarySHA256": "c4d30bdd6d1329ba0c4caab8290859ee92ba7c3b6fe900edcf17e2d4cf379dd6",
+  "skillFormatValidation": {
+    "uniqueFixturesValidated": 20,
+    "passed": true,
+    "validatorSHA256": "ee6dba90f44d37171c5a6edb8095979c54919ff6822c1a907afca2e78c48738c"
+  },
+  "officialSource": "https://learn.chatgpt.com/docs/build-skills",
+  "currentUserInventory": {
+    "scope": "Current user-scope Codex static inventory only; no project root selected and no dynamic host/plugin precedence simulation.",
+    "sameNameVisibleEntryFindings": 14,
+    "sameNameSubjects": 7,
+    "summaries": [
+      {
+        "aliases": 2,
+        "cacheDocumentBytes": 2216491,
+        "cacheEntries": 215,
+        "cacheUniqueFiles": 215,
+        "catalogEntries": 138,
+        "catalogEstimatedTokens": 17740,
+        "documentBytes": 1615684,
+        "documentEstimatedTokens": 421851,
+        "entries": 356,
+        "host": "codex",
+        "inconsistentFiles": 0,
+        "measuredEntries": 355,
+        "uniqueFiles": 138,
+        "unverifiedIdentityEntries": 0
+      }
+    ],
+    "cancelled": false,
+    "automaticChanges": false,
+    "rawPathsDescriptionsAndBodiesPublished": false,
+    "sameContentGroups": 2,
+    "differentContentGroups": 5,
+    "bodyComparison": {
+      "groupsWithIdenticalBodies": 2,
+      "groupsWithDifferentBodies": 5,
+      "allDocumentsMatchedScannerHashes": true
+    },
+    "generated": "2026-10-17T04:35:25Z"
+  },
+  "limits": [
+    "Client serialization only: a fake model returned fixed text and made no Skill selection or task decisions.",
+    "A missing body in the first request does not prove an agent could not later read and use the skill.",
+    "Name-only duplicate mentions did not preload any of these fixture bodies; this does not establish a universal priority rule.",
+    "Alias observations cover symlinks to the same file; identical-copy cases use separate files with exactly the same content. Plugin namespaces were not tested.",
+    "Marker occurrence counts include frontmatter when an entire document is loaded; they are not generic catalog-entry counts.",
+    "No model billing, implicit matching quality, context-budget truncation or business benefit was measured.",
+    "Raw request bodies and private instructions remain outside the repository."
+  ],
+  "sourceBase": "3a92ba05256600224391c2a41934a702771179e2",
+  "validation": {
+    "fullAgentDoctorRegression": {
+      "tests": 228,
+      "failures": 0,
+      "command": "swift test --filter AgentDoctorTests"
+    },
+    "cliFixturePassed": true,
+    "nativeClientProfilesPassed": 8,
+    "skillFormatFixturesValidated": 20,
+    "initialCLIFixtureExpectationCorrected": "The mixed alias/copy fixture has three visible paths but two independent files. Each visible entry receives the same-name finding; alias-only entries do not.",
+    "installedAppChanged": false,
+    "userSkillFilesChanged": false,
+    "userConfigChanged": false,
+    "packageRebuilt": false
+  },
+  "sourceSHA256": {
+    "Sources/AgentDoctor/Config.swift": "5a8e3c0911a9a5bb75283c96b617fed7893aa63370e500d21b77499fdc3879f5",
+    "Sources/ThermoL10n/ZhHans.swift": "bf58e84322db4b92e604985c9ec8290b50b9bd2104094433b6f9470b5e76f70c",
+    "scripts/verify-skill-context.py": "b59520e3bb8854108d9f99918ad3c75542307f0e6b558b9cbded2fdb0701ec8b",
+    "scripts/capture-codex-skill-loading.py": "aac7ab16528c47746f50315a298484d29349443ba0358dacea05ce87c101c800"
+  }
+}

@@ -341,9 +341,10 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
 /// just the main window, no menu bar item; quits when closed. With `--offscreen --snapshot PATH` it
 /// draws the window into a PNG once the page has its data, and quits (verification).
 /// `--fixture BEFORE.json AFTER.json` shows two saved browser samples instead of measuring.
+/// `--ui-review` keeps a visible window while suppressing automatic helper/policy restoration.
 @MainActor func openMainOnly(_ args: [String]) {
     Settings.register()
-    if !args.contains("--offscreen"), !args.contains("--snapshot") {
+    if !Monitor.suppressesAutomaticControl(arguments: args) {
         CleanScreenShortcutModel.enableLive()
         BatteryCareModel.shared.restoreSavedPreference()
     }

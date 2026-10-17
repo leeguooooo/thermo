@@ -5,7 +5,8 @@ import XCTest
 
 final class VerificationHelperIsolationTests: XCTestCase {
     @MainActor func testVerificationModesNeverCreateAHelperConnection() async {
-        for flag in ["--offscreen", "--snapshot", "--render-preview", "--verify-lifecycle"] {
+        for flag in ["--offscreen", "--snapshot", "--render-preview", "--verify-lifecycle", "--ui-review"] {
+            XCTAssertTrue(Monitor.suppressesAutomaticControl(arguments: ["Thermo", "--main", flag]))
             let unexpected = expectation(description: "no helper connection for " + flag)
             unexpected.isInverted = true
             let client = HelperClient(makeConnection: {
@@ -21,6 +22,7 @@ final class VerificationHelperIsolationTests: XCTestCase {
 
     @MainActor func testInteractiveRefreshStillUsesInjectedClientAndExplicitDisableWins() async {
         let called = expectation(description: "interactive helper connection")
+        XCTAssertFalse(Monitor.suppressesAutomaticControl(arguments: ["Thermo", "--main", "--page", "agents:mcp"]))
         let client = HelperClient(makeConnection: {
             called.fulfill()
             return NSXPCConnection(machServiceName: "dev.thermo.qa.absent." + UUID().uuidString)

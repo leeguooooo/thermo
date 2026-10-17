@@ -41,6 +41,15 @@ with tempfile.TemporaryDirectory(prefix="thermo-skill-context-") as temporary:
     assert len([item for item in scoped["skills"] if item["skillFootprint"].get("scope") == "project"]) == 1
     assert any("cache inspection is incomplete" in finding["message"] for finding in scoped["findings"]), "host filter lost a coverage warning"
     assert all(not item["actions"] for item in scoped["skills"] if item["skillFootprint"].get("scope") in {"project", "cache"})
+    assert not any("share this name" in finding["message"] for finding in user["findings"])
+    # Separate files with the same name are ambiguous, unlike canonical aliases.
+    write(".codex/skills/separate/SKILL.md", skill.replace("fixture description", "other workflow"))
+    distinct = run()
+    collisions = [finding for finding in distinct["findings"] if "share this name" in finding["message"]]
+    # Each visible path gets a finding, including the alias of the first file.
+    assert len(collisions) == 3 and all(finding["agent"] == "codex" for finding in collisions)
+    assert all("source or path" in finding["message"] for finding in collisions)
+    assert distinct["summaries"][0]["uniqueFiles"] == 2 and distinct["summaries"][0]["aliases"] == 1
     print(json.dumps({"passed": True, "userUniqueFiles": user_summary["uniqueFiles"],
                       "projectUniqueFiles": project_summary["uniqueFiles"], "aliasesExcluded": project_summary["aliases"],
                       "cacheFilesCountedSeparately": project_summary["cacheUniqueFiles"], "coverageWarningPreserved": True}))
