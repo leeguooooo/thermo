@@ -9,7 +9,7 @@
 | MCP 总体有多大、占多少 token | 汇总已完整检查配置的定义字节、定义数组和服务指令计数，支持启发式与两种参考编码。本机 Codex 已完整测量 8 / 9 个配置。[连接与范围](measurements/mcp-auth-scope-and-coverage-2026-10-17.json)、[批量原生验收](measurements/mcp-batch-inspection-2026-10-17.json) | Figma 定义及其他宿主未完成计量，总体未知；不把未完成项当零，不把独立配置相加称为实际会话上下文 |
 | 哪个工具占用最多、耗时多久 | 定义及返回文本排名、分类返回合计和占比；握手、列表、本地分析时间，以及日志中位数 / P95 / 累计观察间隔。[占比验证](measurements/tool-usage-return-shares-2026-10-17.json)、[完整 App 验证](measurements/tool-usage-native-qa-2026-10-17.json) | 连接时间不是业务工具时间；并行间隔相加不是总经过时间。图片、脚本包装和缺失日志无法完整归因 |
 | 哪些 MCP 有问题 | 定义结构提示、明确错误与已知状态分母、缺失 / 未知状态、独立 HTTP 关闭诊断和鉴权范围说明。[错误比例](measurements/tool-usage-error-proportions-2026-10-17.json)、[关闭诊断](measurements/mcp-cleanup-diagnostics-2026-10-17.json) | 定义长、断言未通过或独立检查需要鉴权，不等于业务质量差。尚无覆盖实际配置的真实任务质量排行 |
-| Skill 是否臃肿或有内容问题 | 目录描述与正文分开计量，别名去重，缓存单列；内容汇总按宿主 / 范围统计，缺失、冲突和未测量单列。[内容汇总](measurements/skill-content-summary-2026-10-17.json)、[占用测试](../Tests/AgentDoctorTests/ContextFootprintTests.swift) | 静态清单不是已加载清单；长度不直接判差；未完整模拟所有宿主的覆盖优先级 |
+| Skill 是否臃肿或有内容问题 | 目录描述与正文分开计量，别名去重，缓存单列；新增 Claude 日志中明确关联的指令加载次数、正文计量和独立排序 / 占比。[加载观察](measurements/skill-instruction-loads-2026-10-17.json)、[内容汇总](measurements/skill-content-summary-2026-10-17.json) | 静态清单不是已加载清单；日志观察不覆盖隐式读取、引用文件或所有宿主；长度不直接判差 |
 | Skill 有没有提高效果 | 相同任务 / 验收条件的配对记录；不兼容配对排除，失败、超时和未知保留。[模型试测](../evals/ai-diagnostics/README.md)、[有状态工作流对照](../evals/browser-workflow/README.md) | 明确口径后的三对摘要题和两对有状态任务，两组均全部通过，未显示成功率收益；显式读取增加往返。隐式触发与真实业务净收益仍待测 |
 | 有哪些工具值得参考 | 已借鉴 MCP Token Analyzer、MCPJam Inspector、ccusage、skill-creator、Agent Scan 的计量、瀑布、日志适配和证据方法。[参考及实现范围](ai-tools-analysis.md#外部参考) | 文档研究不等于实测排名；没有默认上传远程内容 |
 
@@ -67,6 +67,10 @@ QA 副本的两个架构所有有文件数据的 Mach-O 节与分发包运行体
 上述验证不替代真实 Intel 主机、全部系统版本、大字体或正式安装更新验收。没有据此授权发布、安装 helper 或切换 AWDL。[受控镜像占用实验](measurements/owned-dmg-busy-control-2026-10-17.json)只证明真实占用时普通卸载拒绝确认清理、结束占用后可成功；此前偶发清理观察的原因仍未解释，没有加入强制卸载或重试。
 
 ## 还需要的证据
+
+[Skill 指令加载观察](measurements/skill-instruction-loads-2026-10-17.json)补上了短回执之外的明确关联正文：只接受 Claude `user/isMeta=true` 消息，通过 `sourceToolUseID` 关联同会话的显式 Skill 调用，用事件 UUID 去掉镜像重复；不同事件重复加载仍分别计量。正文、回执和请求计数保持独立，旧报告及没有可关联记录的加载量保持未知。Skills 页默认按加载指令排序，显示该口径下的占比；不完整计量或编码不一致时不补造百分比。252 项 AgentDoctor 回归、CLI 夹具和[中文实际组件离屏图](measurements/skill-instruction-loads-zh-2026-10-17.png)通过。这项改动尚未进入 459 包，也未完成完整 App 的可见交互验收。
+
+发现样本来自最近七天有修改的 115 份文件、53 个项目，每项目最多五份，72 份只读末尾。文件修改时间不等于加载时间：六条可关联事件跨 7 月 29 日至 10 月 13 日，历史投影合计 79,755 字节 / cl100k 21,084；旧版同一投影只显示了启动回执的 178 字节 / 34 token。对该六文件投影按默认七天窗口过滤后，剩四次正文加载、68,714 字节 / 17,917 参考 token，回执另为 126 字节 / 23 token。该窗口中 blog-content-publish 为 15,062、lark-doc 为 2,414、chrome-use 为 441 个关联指令文本 token。这些数字仅描述投影样本，不能作为整体使用频率、任务质量或账单排行。原文没有进入导出，私有回放副本已移除，没有执行这些 Skill 或改动其文件。
 
 [日志覆盖范围修正](measurements/tool-usage-coverage-2026-10-17.json)修复了同一文件同时截掉开头和未完成末行时，截断文件数被累计两次的问题。原有大文件夹具先复现 1 份文件被报为 2 份，修复后为 1 份。App 另显示已读 / 已发现日志数及读取字节，并在覆盖不完整时说明未读日志可能改变排名。44 项相关与本地化测试通过；[中文面板图](measurements/tool-usage-coverage-zh-2026-10-17.png)是合成数据的实际组件离屏渲染，不是完整 App 或安装版验收。读取预算、采样顺序、token 合计和排名算法没有改变，新增说明不能补全缺失的数据。
 

@@ -228,9 +228,19 @@ struct AgentsCommand {
             lines.append("Observed \(kind) returned text total (all rows): \(summary.returnedTextBytes.map(String.init) ?? "unknown") bytes / \(tokens) tokens")
         }
         if !report.tools.isEmpty { lines.append("Totals cover observed returned text only; missing logs/results and non-text content are excluded, not request usage.") }
+        func instructionLine(_ loaded: SkillInstructionUsage?) -> String {
+            guard let loaded, loaded.events > 0 else { return "No measured linked instruction loads in this report; total loading is unknown." }
+            let tokens = report.referenceEncoding == nil ? "≈\(loaded.estimatedTokens)" : loaded.referenceTokens.map(String.init) ?? "unknown"
+            return "Linked instruction loads: \(loaded.events) · measured text \(loaded.textBytes) bytes / \(tokens) tokens · \(loaded.nonTextBlocks) non-text blocks · \(loaded.incompleteEvents) incomplete"
+        }
+        if report.tools.contains(where: { $0.kind == "skill" }) {
+            lines.append(instructionLine(report.observedSkillInstructions))
+            lines.append("Only explicitly source-linked Claude instruction messages are measured. Kept separate from tool replies and request counters; missing loads, referenced files and billing remain unknown.")
+        }
         for row in report.tools.prefix(app.args.has("all") ? report.tools.count : 20) {
             lines.append(style.bold((row.server.map { $0 + " / " } ?? "") + row.name) + " [" + row.host + ", " + row.kind + "]")
             lines.append("  \(row.calls) calls · \(row.completed) results · \(row.reportedErrors) explicit result errors · \(row.unknownErrorStatus) unknown error status · \(row.missingResults) missing results")
+            if row.kind == "skill" { lines.append("  " + instructionLine(row.skillInstructions)) }
             if let failures = row.invocationFailures {
                 if failures > 0 { lines.append("  Host-reported invocation failures without MCP results: \(failures); excluded from result error proportions, included in timing.") }
             } else { lines.append("  Host invocation failure counts were not measured in this report; analyze again.") }
@@ -253,6 +263,7 @@ struct AgentsCommand {
             lines.append("  \(tokens.host): \(tokens.requests) requests · input \(tokens.inputTokens) · output \(tokens.outputTokens) · cached input \(tokens.cachedInputTokens.map(String.init) ?? "unknown") · cache creation \(tokens.cacheWriteInputTokens.map(String.init) ?? "unknown")")
         }
         lines.append("Other tool calls: \(coverage.otherToolCalls); unmatched results: \(coverage.unmatchedResults); unsupported usage events: \(coverage.unsupportedUsageRecords)")
+        if let unmatched = coverage.unmatchedInstructionEvents, unmatched > 0 { lines.append("\(unmatched) instruction metadata records could not be linked or identified.") }
         if let other = coverage.unattributedResults {
             let tokens = report.referenceEncoding == nil ? "≈\(other.returnedTextEstimatedTokens)" : other.referenceReturnedTextTokens.map(String.init) ?? "unknown"
             lines.append("Unattributed tool results: \(other.completed) returned · \(other.missingResults) missing · \(other.unmeasuredResults) unmeasured")

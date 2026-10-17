@@ -37,6 +37,7 @@ struct ToolUsageParser {
     var coverage = ToolUsageCoverage()
     var calls: [String: Call] = [:]
     var usage: [String: (host: String, value: Usage)] = [:]
+    var instructions: [String: InstructionObservation] = [:]
     let fractional: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter(); f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]; return f
     }()
@@ -204,6 +205,11 @@ struct ToolUsageParser {
         let time = date(object["timestamp"])
         if host == "claude", let message = object["message"] as? [String: Any] {
             guard ["assistant", "user"].contains(object["type"] as? String ?? "") else { return }
+            if object["type"] as? String == "user", Self.boolean(object["isMeta"]) == true,
+               let source = object["sourceToolUseID"] as? String {
+                instruction(host: host, session: session, sourceID: source, eventID: object["uuid"] as? String,
+                            content: message["content"], time: time)
+            }
             for block in message["content"] as? [[String: Any]] ?? [] {
                 if block["type"] as? String == "tool_use", let id = block["id"] as? String, let name = block["name"] as? String {
                     start(host: host, session: session, id: id, name: name, input: block["input"], time: time)
@@ -272,7 +278,21 @@ struct ToolUsageParser {
         if encoding != .heuristic { unattributed.referenceReturnedTextTokens = 0 }
         var rows: [String: ToolUsageRow] = [:]
         var timings: [String: [Double]] = [:]
-        for call in calls.values {
+        var loads: [String: SkillInstructionUsage] = [:]
+        coverage.unmatchedInstructionEvents = coverage.unmatchedInstructionEvents ?? 0
+        for observation in instructions.values {
+            guard let call = calls[observation.callKey] else {
+                coverage.unmatchedInstructionEvents! += 1; continue
+            }
+            guard call.kind == "skill" else { continue }
+            guard inWindow(call.started ?? call.observedAt) else {
+                coverage.unmatchedInstructionEvents! += 1; continue
+            }
+            var total = loads[observation.callKey] ?? SkillInstructionUsage(encoding: encoding)
+            total.record(observation.text, nonText: observation.nonText, complete: observation.complete)
+            loads[observation.callKey] = total
+        }
+        for (callKey, call) in calls {
             if !call.startSeen, inWindow(call.ended) { coverage.unmatchedResults += 1; continue }
             guard call.startSeen, inWindow(call.started ?? call.observedAt) else { continue }
             guard let kind = call.kind, let name = call.name else {
@@ -298,6 +318,10 @@ struct ToolUsageParser {
             }
             let key = call.groupID ?? Self.identity(call.host + "|" + kind + "|" + (call.server ?? "") + "|" + name)
             var row = rows[key] ?? ToolUsageRow(id: key, host: call.host, kind: kind, server: call.server, name: name)
+            if kind == "skill" {
+                if row.skillInstructions == nil { row.skillInstructions = SkillInstructionUsage(encoding: encoding) }
+                if let observed = loads[callKey] { row.skillInstructions?.merge(observed) }
+            }
             if row.invocationFailures == nil { row.invocationFailures = 0 }
             row.referenceEncoding = encoding == .heuristic ? nil : encoding.rawValue
             if encoding != .heuristic, row.unavailableReferenceResults == nil { row.unavailableReferenceResults = 0 }
@@ -338,7 +362,7 @@ struct ToolUsageParser {
             total.outputTokens += entry.value.output
             totals[entry.host] = total
         }
-        let complete = !coverage.cancelled && !coverage.limitReached && coverage.clippedFiles == 0 && coverage.unreadableFiles == 0 && coverage.malformedLines == 0 && coverage.oversizedLines == 0 && coverage.missingTimestamps == 0 && coverage.unmatchedResults == 0
+        let complete = !coverage.cancelled && !coverage.limitReached && coverage.clippedFiles == 0 && coverage.unreadableFiles == 0 && coverage.malformedLines == 0 && coverage.oversizedLines == 0 && coverage.missingTimestamps == 0 && coverage.unmatchedResults == 0 && coverage.unmatchedInstructionEvents == 0
         return ToolUsageReport(generated: until, since: since, until: until, complete: complete, coverage: coverage,
                                tools: rows.values.sorted { $0.returnedTextBytes == $1.returnedTextBytes ? $0.id < $1.id : $0.returnedTextBytes > $1.returnedTextBytes },
                                sessionTokens: totals.values.sorted { $0.host < $1.host }, note: ToolUsageReport.explanation, referenceEncoding: encoding == .heuristic ? nil : encoding.rawValue, referenceEngine: encoding == .heuristic ? nil : ReferenceTokenizer.engine)

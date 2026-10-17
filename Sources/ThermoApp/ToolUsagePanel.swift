@@ -31,13 +31,18 @@ struct ToolUsagePanel: View {
     @ObservedObject var model: ToolUsageModel
     let kind: String
     var encoding: TextEncoding = .heuristic
-    @State private var sort = UsageSort.text
+    @State private var sort: UsageSort
     @State private var visibleRowLimit = 8
+    init(model: ToolUsageModel, kind: String, encoding: TextEncoding = .heuristic) {
+        self.model = model; self.kind = kind; self.encoding = encoding
+        _sort = State(initialValue: kind == "skill" ? .instructions : .text)
+    }
     enum UsageSort: String, CaseIterable {
-        case text, errors, time, calls
+        case text, instructions, errors, time, calls
         var title: String {
             switch self {
             case .text: return tr("Returned text")
+            case .instructions: return tr("Loaded instructions")
             case .errors: return tr("Explicit errors")
             case .time: return tr("Observed time")
             case .calls: return tr("Call count")
@@ -46,6 +51,8 @@ struct ToolUsagePanel: View {
         func value(_ row: ToolUsageRow) -> Double {
             switch self {
             case .text: return row.referenceEncoding == nil ? Double(row.returnedTextEstimatedTokens) : row.referenceReturnedTextTokens.map(Double.init) ?? -1
+            case .instructions:
+                return row.observedInstructionTokens.map(Double.init) ?? -1
             case .errors: return Double(row.reportedErrors) + Double(row.invocationFailures ?? 0)
             case .time: return row.totalObservedSeconds ?? -1
             case .calls: return Double(row.calls)
@@ -77,8 +84,17 @@ struct ToolUsagePanel: View {
                 }
                 let textSummary = report.returnedTextSummary(kind: kind)
                 Picker(tr("Sort observed usage"), selection: $sort) {
-                    ForEach(UsageSort.allCases, id: \.self) { value in Text(value.title).tag(value) }
+                    ForEach(UsageSort.allCases.filter { kind == "skill" || $0 != .instructions }, id: \.self) { value in Text(value.title).tag(value) }
                 }.pickerStyle(.segmented)
+                if kind == "skill" {
+                    instructionUsage(report.observedSkillInstructions, encoding: report.referenceEncoding)
+                    Text(tr("Only explicitly source-linked Claude instruction messages are measured. Kept separate from tool replies and request counters; missing loads, referenced files and billing remain unknown."))
+                        .font(.caption).foregroundStyle(.secondary)
+                    if let unmatched = report.coverage.unmatchedInstructionEvents, unmatched > 0 {
+                        Text(tr("%1$@ instruction metadata records could not be linked or identified.", String(unmatched)))
+                            .font(.caption).foregroundStyle(.orange)
+                    }
+                }
                 Text(report.complete ? tr("Log reading complete within the selected scope") : tr("Partial log coverage"))
                     .font(.subheadline.weight(.medium))
                 Text(tr("Read %1$@ / %2$@ discovered log files · %3$@ bytes", String(report.coverage.filesRead), String(report.coverage.filesDiscovered), String(report.coverage.bytesRead)))
@@ -157,10 +173,16 @@ struct ToolUsagePanel: View {
                                 String(row.returnedTextBytes), String(row.returnedTextEstimatedTokens), seconds(row.medianSeconds), seconds(row.p95Seconds), seconds(row.totalObservedSeconds)))
                             .font(.caption.monospaced()).textSelection(.enabled)
                             .help(tr("P95 is shown only with at least 20 valid timing samples."))
+                        if kind == "skill" { instructionUsage(row.skillInstructions, encoding: row.referenceEncoding) }
                         if let encoding = row.referenceEncoding {
                             Text(tr("%1$@ reference text tokens: %2$@ · %3$@ results unavailable", encoding, row.referenceReturnedTextTokens.map(String.init) ?? tr("Unknown"), String(row.unavailableReferenceResults ?? 0))).font(.caption.monospaced())
                         }
-                        if let percentage = textSummary.percentage(of: row) {
+                        if kind == "skill", sort == .instructions {
+                            if let percentage = report.observedInstructionPercentage(of: row) {
+                                Text(tr("Share of observed linked instruction text tokens: %1$@", String(format: "%.1f%%", percentage)))
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        } else if let percentage = textSummary.percentage(of: row) {
                             Text(tr("Share of this category's observed returned-text tokens: %1$@", String(format: "%.1f%%", percentage)))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
@@ -192,7 +214,19 @@ struct ToolUsagePanel: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(18).glass()
         .onChange(of: sort) { _ in visibleRowLimit = 8 }
-        .onChange(of: kind) { _ in visibleRowLimit = 8 }
+        .onChange(of: kind) { _ in visibleRowLimit = 8; sort = kind == "skill" ? .instructions : .text }
         .onChange(of: model.report?.generated) { _ in visibleRowLimit = 8 }
+    }
+
+    @ViewBuilder private func instructionUsage(_ loaded: SkillInstructionUsage?, encoding: String?) -> some View {
+        if let loaded, loaded.events > 0 {
+            let tokens = encoding == nil ? "≈\(loaded.estimatedTokens)" : loaded.referenceTokens.map(String.init) ?? tr("Unknown")
+            Text(tr("Linked instruction loads: %1$@ · measured text %2$@ bytes / %3$@ tokens · %4$@ non-text blocks · %5$@ incomplete",
+                    String(loaded.events), String(loaded.textBytes), tokens, String(loaded.nonTextBlocks), String(loaded.incompleteEvents)))
+                .font(.caption).foregroundStyle(loaded.incompleteEvents > 0 ? .orange : .secondary)
+        } else {
+            Text(tr("No measured linked instruction loads in this report; total loading is unknown."))
+                .font(.caption).foregroundStyle(.secondary)
+        }
     }
 }

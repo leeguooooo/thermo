@@ -68,6 +68,12 @@ public struct ToolUsageRow: Codable, Identifiable, Sendable {
     public var returnedTextBytes = 0
     public var returnedTextEstimatedTokens = 0
     public var nonTextBlocks = 0
+    /// Absent in older reports means unmeasured. Zero events never proves zero loading.
+    public var skillInstructions: SkillInstructionUsage? = nil
+    public var observedInstructionTokens: Int? {
+        guard let loaded = skillInstructions, loaded.events > 0, loaded.incompleteEvents == 0 else { return nil }
+        return referenceEncoding == nil ? loaded.estimatedTokens : loaded.referenceTokens
+    }
 
     /// Only completed results with a Boolean error status are a usable denominator.
     /// These are observations, not a task success rate or an estimate for missing results.
@@ -119,6 +125,7 @@ public struct ToolUsageCoverage: Codable, Sendable {
     public var unmatchedResults = 0
     public var missingTimestamps = 0
     public var unsupportedUsageRecords = 0
+    public var unmatchedInstructionEvents: Int? = nil
     public var limitReached = false
     public var cancelled = false
 }
@@ -140,6 +147,23 @@ public struct ToolUsageReport: Codable, Sendable {
 
     public func returnedTextSummary(kind: String) -> ToolUsageTextSummary {
         ToolUsageTextSummary(rows: tools.filter { $0.kind == kind }, kind: kind, encoding: referenceEncoding)
+    }
+
+    public var observedSkillInstructions: SkillInstructionUsage? {
+        let skills = tools.filter { $0.kind == "skill" }
+        guard !skills.isEmpty, skills.allSatisfy({ $0.skillInstructions != nil && $0.referenceEncoding == referenceEncoding }) else { return nil }
+        var total = SkillInstructionUsage(referenceEncoding: referenceEncoding)
+        for skill in skills { total.merge(skill.skillInstructions!) }
+        return total
+    }
+
+    public func observedInstructionPercentage(of row: ToolUsageRow) -> Double? {
+        guard row.kind == "skill", tools.contains(where: { $0.id == row.id }), row.referenceEncoding == referenceEncoding,
+              let summary = observedSkillInstructions, summary.incompleteEvents == 0,
+              let count = row.observedInstructionTokens else { return nil }
+        let total = referenceEncoding == nil ? Optional(summary.estimatedTokens) : summary.referenceTokens
+        guard let total, total > 0, count >= 0, count <= total else { return nil }
+        return Double(count) / Double(total) * 100
     }
 
     public static var errorStatusExplanation: String {

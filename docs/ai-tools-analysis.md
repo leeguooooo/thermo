@@ -35,6 +35,8 @@ App 与 CLI 的调用列表增加了 MCP / Skill 各分类返回文本的合计�
 
 ## 本地参考分词
 
+[Skill 加载日志](measurements/skill-instruction-loads-2026-10-17.json)另计明确关联的 Claude 指令消息，而非把 `Skill` 的短启动回执当作正文。JSON 新增 `ToolUsageRow.skillInstructions`，包括事件数、文本字节、启发式 / 参考计数、非文本块及未完整计量数；旧报告缺少字段时保持未测量。仅关联同一解析会话内的 `sourceToolUseID`，事件 UUID 去重，原文和路径不进入报告。`coverage.unmatchedInstructionEvents` 保留无法关联或识别的元数据数；没有正文事件不证明没有加载。252 项 AgentDoctor 测试和 scripts/verify-skill-instruction-usage.py 覆盖独立回执、重复 / 乱序、孤立记录、普通用户文本、非 Skill 元数据、时间窗口、媒体、旧报告和占比分母。当前只有源码与本机 Debug 验证，未更新安装包。
+
 `context`、`inspect`、`usage` 可增加 `--encoding cl100k_base` 或 `--encoding o200k_base`；默认 heuristic 保持旧的低成本估算。App 的 MCP / Skills 分类可选择同样的编码。它们是普通文本参考编码，不自动映射模型名称，也不宣称等于 Claude、最新模型、工具包装、图片或账单用量。
 
 - 使用 OpenAI tiktoken 0.14.0 的词表和普通文本预分词规则，保留所有格与正则量词。BPE 用最小堆与相邻片段合并，按 rank、再按左侧位置选取；不实现解码器或自动下载接口。

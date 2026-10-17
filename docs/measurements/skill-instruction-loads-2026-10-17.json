@@ -1,0 +1,253 @@
+{
+  "recordedAt": "2026-10-17T07:25:45.546211+00:00",
+  "origin": "Autonomously discovered source-linked Claude Skill metadata while auditing actual log use. No user task example requested.",
+  "discovery": {
+    "eligibleFiles": 356,
+    "filesRead": 115,
+    "projectGroups": 53,
+    "projectMaximumFiles": 5,
+    "tailLimitBytes": 524288,
+    "clippedFiles": 72,
+    "readBytes": 45687313,
+    "malformed": 0,
+    "skills": {
+      "lark-doc": {
+        "calls": 2,
+        "errors": 0,
+        "knownFalse": 0,
+        "unknown": 2,
+        "missing": 0,
+        "sessions": 2
+      },
+      "blog-content-publish": {
+        "calls": 2,
+        "errors": 0,
+        "knownFalse": 0,
+        "unknown": 2,
+        "missing": 0,
+        "sessions": 2
+      },
+      "chrome-use": {
+        "calls": 2,
+        "errors": 0,
+        "knownFalse": 0,
+        "unknown": 2,
+        "missing": 0,
+        "sessions": 2
+      }
+    },
+    "skillLikeToolNames": {
+      "Skill": 6,
+      "mcp__tiller__list_skills": 1
+    }
+  },
+  "selectionLimits": [
+    "Files selected by modification time within seven days; that does not date their Skill events.",
+    "At most five recent files per project, 115 files across 53 projects, 72 clipped tails.",
+    "These are bounded samples, not total usage frequency, model context or a quality ranking."
+  ],
+  "schema": {
+    "host": "claude",
+    "eventType": "user",
+    "strictBooleanIsMeta": true,
+    "sourceLink": "sourceToolUseID matches an explicitly classified Skill tool_use id in the same parsed session",
+    "eventIdentity": "call key plus normalized event uuid; mirror duplicates excluded, distinct repeated loads retained",
+    "separateFields": "ToolUsageRow.skillInstructions; never added to returned-text or request counters",
+    "oldReportsAndNoObservedLoads": "Unknown loading, never proof of zero loading",
+    "partialOrIncompatibleReferences": "No instruction share percentage",
+    "rawInstructionsRetainedOrExportedByParser": false
+  },
+  "historicalProjection": {
+    "since": "2026-07-29T00:00:00Z",
+    "until": "2026-10-17T07:22:14Z",
+    "projectedLogFilesRead": 6,
+    "instructionEvents": 6,
+    "instructionTextBytes": 79755,
+    "instructionReferenceTokens": 21084,
+    "acknowledgmentTextBytes": 178,
+    "acknowledgmentReferenceTokens": 34,
+    "rows": [
+      {
+        "skill": "blog-content-publish",
+        "calls": 2,
+        "instructionLoads": {
+          "estimatedTokens": 14848,
+          "events": 2,
+          "incompleteEvents": 0,
+          "nonTextBlocks": 0,
+          "referenceTokens": 15062,
+          "textBytes": 59204
+        },
+        "instructionSharePercent": 71.438057294631,
+        "acknowledgmentBytes": 74
+      },
+      {
+        "skill": "lark-doc",
+        "calls": 2,
+        "instructionLoads": {
+          "estimatedTokens": 4352,
+          "events": 2,
+          "incompleteEvents": 0,
+          "nonTextBlocks": 0,
+          "referenceTokens": 4828,
+          "textBytes": 15476
+        },
+        "instructionSharePercent": 22.89888066780497,
+        "acknowledgmentBytes": 50
+      },
+      {
+        "skill": "chrome-use",
+        "calls": 2,
+        "instructionLoads": {
+          "estimatedTokens": 1282,
+          "events": 2,
+          "incompleteEvents": 0,
+          "nonTextBlocks": 0,
+          "referenceTokens": 1194,
+          "textBytes": 5075
+        },
+        "instructionSharePercent": 5.663062037564029,
+        "acknowledgmentBytes": 54
+      }
+    ]
+  },
+  "defaultSevenDayProjection": {
+    "since": "2026-10-10T07:22:14Z",
+    "until": "2026-10-17T07:22:14Z",
+    "projectedLogFilesRead": 6,
+    "instructionEvents": 4,
+    "instructionTextBytes": 68714,
+    "instructionReferenceTokens": 17917,
+    "acknowledgmentTextBytes": 126,
+    "acknowledgmentReferenceTokens": 23,
+    "rows": [
+      {
+        "skill": "blog-content-publish",
+        "calls": 2,
+        "instructionLoads": {
+          "estimatedTokens": 14848,
+          "events": 2,
+          "incompleteEvents": 0,
+          "nonTextBlocks": 0,
+          "referenceTokens": 15062,
+          "textBytes": 59204
+        },
+        "instructionSharePercent": 84.06541273650723,
+        "acknowledgmentBytes": 74
+      },
+      {
+        "skill": "lark-doc",
+        "calls": 1,
+        "instructionLoads": {
+          "estimatedTokens": 2176,
+          "events": 1,
+          "incompleteEvents": 0,
+          "nonTextBlocks": 0,
+          "referenceTokens": 2414,
+          "textBytes": 7738
+        },
+        "instructionSharePercent": 13.473237707205447,
+        "acknowledgmentBytes": 25
+      },
+      {
+        "skill": "chrome-use",
+        "calls": 1,
+        "instructionLoads": {
+          "estimatedTokens": 455,
+          "events": 1,
+          "incompleteEvents": 0,
+          "nonTextBlocks": 0,
+          "referenceTokens": 441,
+          "textBytes": 1772
+        },
+        "instructionSharePercent": 2.461349556287325,
+        "acknowledgmentBytes": 27
+      }
+    ]
+  },
+  "projectionLimits": [
+    "Selected real call, reply and instruction records were copied locally to a private fixture home; unrelated content was excluded.",
+    "The seven-day view is a time filter of that six-file projection, not all local logs.",
+    "Instruction text is logged injection text, which can include Skill wrappers; it is not a full request or billing measurement.",
+    "No real task success, implicit read coverage, reference-file loading or net Skill benefit was verified."
+  ],
+  "baseline459": {
+    "measuredInstructionFields": false,
+    "acknowledgmentTextBytes": 178,
+    "acknowledgmentReferenceTokens": 34,
+    "sameHistoricalProjectionBeforeAndAfter": true
+  },
+  "validation": {
+    "targetedTests": 52,
+    "targetedFailures": 0,
+    "targetedLogSHA256": "651231a26da7bf8bd961a9f2a71fd3e037fc7419a7ce02e204800e5506ad480a",
+    "fullAgentDoctorTests": 252,
+    "fullAgentDoctorFailures": 0,
+    "fullAgentDoctorLogSHA256": "5de9a5214f0b908b956c597728501b0e87057d4e3147bacb33542ffcfece487a",
+    "CLIProductBuildPassed": true,
+    "CLIRegressionFixtures": [
+      {
+        "passed": true,
+        "skillCalls": 3,
+        "linkedInstructionEvents": 3,
+        "linkedTextBytes": 113,
+        "acknowledgmentBytes": 9,
+        "duplicateLoadExcluded": true,
+        "unlinkedAndNonSkillMetadataExcluded": true,
+        "unknownLoadingNotZero": true,
+        "instructionTextNotExported": true,
+        "noSkillOrMCPExecution": true
+      },
+      {
+        "passed": true,
+        "mcpCalls": 2,
+        "skillCalls": 1,
+        "requestTokensKeptSeparate": true,
+        "privateTextExcluded": true,
+        "imageTokensUnknown": true,
+        "knownStatusErrorProportionVerified": true,
+        "unknownErrorProportionPreserved": true,
+        "nativeMCPEventsIncludedWithoutDoubleCounting": true,
+        "nativeHostFailureRetainsCompletionAndTiming": true,
+        "categoryTotalsAndSharesIncludeHiddenRows": true
+      }
+    ],
+    "independentRealProjectionCheck": "Raw UTF-8 byte counts and session/source/event identities matched; full real-text reference counts were not independently recomputed with Python tiktoken.",
+    "realModelOrSkillOrBusinessMCPExecuted": false
+  },
+  "render": {
+    "screenshot": "skill-instruction-loads-zh-2026-10-17.png",
+    "sha256": "c8d00b7c5952c3d482fb4fe7a0943fa7f525b644296f1f521e696edd873e00ff",
+    "kind": "Actual SwiftUI Skill panel, offscreen, seven-day projected real counts",
+    "visuallyInspected": true,
+    "defaultLoadedInstructionSortAndSharesVisible": true,
+    "fullAppInteractiveAcceptance": false,
+    "invalidPathAttempt": "An initial renderer input path was mistyped and the owned renderer trapped before loading input. Excluded from acceptance; existing-file preflight added and separately verified.",
+    "preflight": {
+      "passed": true,
+      "exitCode": 1,
+      "noOutputCreated": true,
+      "swiftCompilerNotStarted": true
+    }
+  },
+  "cleanup": {
+    "privateRawReplayProjectionRemoved": true,
+    "originalLogsNotModified": true,
+    "userSkillFilesNotWrittenByThisWorkflow": true
+  },
+  "sourceSHA256": {
+    "Sources/AgentDoctor/SkillInstructionUsage.swift": "3e45b2a05644f40900cc7905d572ef2590376f150e8917ab5d9f5d8845acb904",
+    "Sources/AgentDoctor/ToolUsageParser.swift": "1fb0ad5566b24e573a701be7df83049ec6e0f46604e21ee2bf439376083f3668",
+    "Sources/AgentDoctor/ToolUsageReport.swift": "1385b09e65488b0afdc0b4a0d26f6231cec96564077483b7f6a38f2174bd6871",
+    "Sources/ThermoApp/ToolUsagePanel.swift": "d68f9567b8961714e920ed49afb9bfac1cf02ae148aeac15bcbd78fa93cf20d5",
+    "Sources/thermo/Agents.swift": "28ee9bba73cb8f9f4b0204d6e187785e84e33c936edf308493fb13874d7228be",
+    "scripts/verify-skill-instruction-usage.py": "762c8400c47b7b5b252957970921736a618d87c9a1800dad891726584d00647b"
+  },
+  "boundaries": {
+    "packagedInto459": false,
+    "newReleasePackageBuilt": false,
+    "installedOrPublished": false,
+    "referenceEncoding": "cl100k_base ordinary text",
+    "billingOrTaskQualityClaim": false
+  }
+}
