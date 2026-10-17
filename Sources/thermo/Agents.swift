@@ -250,6 +250,12 @@ struct AgentsCommand {
             lines.append("  \(tokens.host): \(tokens.requests) requests · input \(tokens.inputTokens) · output \(tokens.outputTokens) · cached input \(tokens.cachedInputTokens.map(String.init) ?? "unknown") · cache creation \(tokens.cacheWriteInputTokens.map(String.init) ?? "unknown")")
         }
         lines.append("Other tool calls: \(coverage.otherToolCalls); unmatched results: \(coverage.unmatchedResults); unsupported usage events: \(coverage.unsupportedUsageRecords)")
+        if let other = coverage.unattributedResults {
+            let tokens = report.referenceEncoding == nil ? "≈\(other.returnedTextEstimatedTokens)" : other.referenceReturnedTextTokens.map(String.init) ?? "unknown"
+            lines.append("Unattributed tool results: \(other.completed) returned · \(other.missingResults) missing · \(other.unmeasuredResults) unmeasured")
+            lines.append("Unattributed measured text: \(other.returnedTextBytes) bytes / \(tokens) tokens · \(other.nonTextBlocks) non-text blocks not tokenized")
+            lines.append("Includes execution wrapper text. Kept outside MCP/Skill totals; nested tools and image/audio tokens are unknown.")
+        } else { lines.append("Unattributed returned content was not measured in this report; analyze again.") }
         lines.append(report.note)
         out(lines)
     }

@@ -19,6 +19,7 @@ struct ToolUsageParser {
         var estimatedTokens = 0
         var nonText = 0
         var referenceTokens: Int?
+        var unattributed: (text: TextFootprint, nonText: Int, measured: Bool)?
     }
     struct Usage {
         var date: Date
@@ -121,12 +122,36 @@ struct ToolUsageParser {
         }
         return (TextFootprint("", encoding: encoding), 0, nil)
     }
+    /// Codex code-mode outputs use model input blocks, sometimes JSON-encoded.
+    /// Never tokenize image/audio data or infer which nested tools produced it.
+    static func unattributedResult(_ value: Any?, host: String, encoding: TextEncoding) -> (text: TextFootprint, nonText: Int, measured: Bool) {
+        var blocks = value as? [[String: Any]]
+        if host == "codex", let string = value as? String, string.drop(while: { $0.isWhitespace }).first == "[",
+           let data = string.data(using: .utf8),
+           let parsed = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]], !parsed.isEmpty,
+           parsed.allSatisfy({ ($0["type"] as? String)?.hasPrefix("input_") == true }),
+           parsed.contains(where: { ["input_text", "input_image", "input_audio", "input_file", "input_video"].contains($0["type"] as? String ?? "") }) {
+            blocks = parsed
+        }
+        if let blocks {
+            let textTypes = host == "codex" ? ["text", "input_text"] : ["text"]
+            let supportedTypes = textTypes + ["image", "audio", "resource", "resource_link"] + (host == "codex" ? ["input_image", "input_audio", "input_file", "input_video"] : [])
+            let textBlocks = blocks.filter { textTypes.contains($0["type"] as? String ?? "") }
+            let texts = textBlocks.compactMap { $0["text"] as? String }
+            return (TextFootprint(texts.joined(separator: "\n"), encoding: encoding), blocks.count - textBlocks.count,
+                    texts.count == textBlocks.count && blocks.allSatisfy { supportedTypes.contains($0["type"] as? String ?? "") })
+        }
+        let measured = result(value, encoding: encoding)
+        let supported = value is String || (value as? [String: Any]).map { $0["content"] is [[String: Any]] || $0["structuredContent"] != nil } == true
+        return (measured.0, measured.1, supported)
+    }
     mutating func end(host: String, session: String, id: String, value: Any?, error: Bool?, time: Date?) {
         guard id.count <= 512, !id.isEmpty else { coverage.limitReached = true; return }
         let key = host + "|" + session + "|" + id
         if calls[key]?.endSeen == true { coverage.duplicateRecords += 1; return }
         guard calls.count < 100_000 || calls[key] != nil else { coverage.limitReached = true; return }
         var call = calls[key] ?? Call(host: host)
+        if call.kind == nil { call.unattributed = Self.unattributedResult(value, host: host, encoding: encoding) }
         let measured = call.startSeen && call.kind == nil ? (TextFootprint(""), 0, nil as Bool?) : Self.result(value, encoding: encoding)
         call.ended = time; call.endSeen = true
         if error == true || measured.2 == true { call.isError = true }
@@ -197,12 +222,34 @@ struct ToolUsageParser {
     }
     func report() -> ToolUsageReport {
         var coverage = self.coverage
+        var unattributed = UnattributedToolResults()
+        if encoding != .heuristic { unattributed.referenceReturnedTextTokens = 0 }
         var rows: [String: ToolUsageRow] = [:]
         var timings: [String: [Double]] = [:]
         for call in calls.values {
             if !call.startSeen, inWindow(call.ended) { coverage.unmatchedResults += 1; continue }
             guard call.startSeen, inWindow(call.started) else { continue }
-            guard let kind = call.kind, let name = call.name else { coverage.otherToolCalls += 1; continue }
+            guard let kind = call.kind, let name = call.name else {
+                coverage.otherToolCalls += 1
+                if call.endSeen, inWindow(call.ended) {
+                    unattributed.completed += 1
+                    if let measured = call.unattributed {
+                        unattributed.returnedTextBytes += measured.text.bytes
+                        unattributed.returnedTextEstimatedTokens += measured.text.estimatedTokens
+                        unattributed.nonTextBlocks += measured.nonText
+                        if !measured.measured { unattributed.unmeasuredResults += 1 }
+                        if encoding != .heuristic {
+                            if measured.measured, let tokens = measured.text.referenceTokens {
+                                if let total = unattributed.referenceReturnedTextTokens { unattributed.referenceReturnedTextTokens = total + tokens }
+                            } else {
+                                unattributed.unavailableReferenceResults += 1
+                                unattributed.referenceReturnedTextTokens = nil
+                            }
+                        }
+                    } else { unattributed.unmeasuredResults += 1; unattributed.referenceReturnedTextTokens = nil }
+                } else { unattributed.missingResults += 1 }
+                continue
+            }
             let key = call.groupID ?? Self.identity(call.host + "|" + kind + "|" + (call.server ?? "") + "|" + name)
             var row = rows[key] ?? ToolUsageRow(id: key, host: call.host, kind: kind, server: call.server, name: name)
             row.referenceEncoding = encoding == .heuristic ? nil : encoding.rawValue
@@ -223,6 +270,7 @@ struct ToolUsageParser {
             } else { row.missingResults += 1 }
             rows[key] = row
         }
+        coverage.unattributedResults = unattributed
         for (key, samples) in timings {
             let sorted = samples.sorted()
             rows[key]?.timingSamples = sorted.count

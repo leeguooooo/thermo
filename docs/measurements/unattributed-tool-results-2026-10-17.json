@@ -1,0 +1,98 @@
+{
+  "date": "2026-10-17",
+  "binarySHA256": "4bd763181578fe9c6f2d223c7784a1f3814277c8723456fdb829ab9ac1ac5365",
+  "source": "Current Debug CLI; no installed App replacement or package rebuild",
+  "runs": [
+    {
+      "sessionID": "01a1383d-e024-7bf2-af74-e8b2f66053c0",
+      "sourceSHA256": "d780d6b57461aaa0c8ecb37e0e9e25d76f145695056ecb4dedf6f887cda7d811",
+      "selection": "Only command-bearing exec calls with line-start chrome-use commands classified as snapshot; no other command label in that call. This is a conservative sample, not all snapshots.",
+      "expected": {
+        "completed": 18,
+        "returnedTextBytes": 91345,
+        "returnedTextEstimatedTokens": 23567,
+        "nonTextBlocks": 0,
+        "sourceSerializedResultBytes": 100995
+      },
+      "actual": {
+        "completed": 18,
+        "missingResults": 0,
+        "nonTextBlocks": 0,
+        "returnedTextBytes": 91345,
+        "returnedTextEstimatedTokens": 23567,
+        "unavailableReferenceResults": 0,
+        "unmeasuredResults": 0
+      },
+      "categoryRows": 0,
+      "requestCounters": 0,
+      "completeWithinReplay": true,
+      "privateReplayRemoved": true
+    },
+    {
+      "sessionID": "01a14596-89cd-7252-a373-17ad8815ac7d",
+      "sourceSHA256": "b03620dec178c5be65580ebaf647b8f12de6132f29a4b8f3e82cc87114732ca5",
+      "selection": "Only command-bearing exec calls with line-start chrome-use commands classified as snapshot; no other command label in that call. This is a conservative sample, not all snapshots.",
+      "expected": {
+        "completed": 27,
+        "returnedTextBytes": 75572,
+        "returnedTextEstimatedTokens": 20946,
+        "nonTextBlocks": 10,
+        "sourceSerializedResultBytes": 1755891
+      },
+      "actual": {
+        "completed": 27,
+        "missingResults": 0,
+        "nonTextBlocks": 10,
+        "returnedTextBytes": 75572,
+        "returnedTextEstimatedTokens": 20946,
+        "unavailableReferenceResults": 0,
+        "unmeasuredResults": 0
+      },
+      "categoryRows": 0,
+      "requestCounters": 0,
+      "completeWithinReplay": true,
+      "privateReplayRemoved": true
+    }
+  ],
+  "limits": [
+    "Output text includes execution wrappers and separators.",
+    "Non-text blocks are counted, not assigned text tokens or image/audio billing.",
+    "Exec may combine commands; these observations do not attribute bytes to a nested MCP or Skill.",
+    "No browser, business action, model request, configuration change or upstream message was performed.",
+    "Private raw replay files removed; report exports counts only."
+  ],
+  "sourceBase": "002532a30a4535810a227be21b9e1d0a2dd941e2",
+  "sourceSHA256": {
+    "Sources/AgentDoctor/ToolUsageParser.swift": "4d3933bf58e31c0a5d941084c6a21d2c1d0991cb271e1d98dcd7fcce4c74f6f8",
+    "Sources/AgentDoctor/ToolUsageReport.swift": "2183185630a8d0741065155af57cd283fca448b3dfb5c852263977e9f9a78ee8",
+    "Sources/ThermoApp/ToolUsagePanel.swift": "3d2b5d1a41aaf76ecac802d710a033de9ddbfaaa3496fc07f37fc52c3b6a222a",
+    "Sources/ThermoL10n/ZhHans.swift": "fd8a11aed67a2c7d3c5723cf3c8dcc17291bdce894f63bdac55eef7dc33b1821",
+    "Sources/thermo/Agents.swift": "bc0f277203578bab82e22a5770c6603ace44a0b6d33290db475aa9a731d5a48b",
+    "Tests/AgentDoctorTests/UnattributedToolUsageTests.swift": "97187f84d1024e559dbffc211e1e8529ef200a7c62054c5376e5a2a115f40226",
+    "scripts/verify-tool-usage.py": "6146f78d3fbd54b007a68ceb927b952093438822b55bd4d48a1abd35d40a761c"
+  },
+  "validation": {
+    "command": "swift test --filter AgentDoctorTests",
+    "tests": 222,
+    "failures": 0,
+    "exitCode": 0,
+    "cliFixtureCommand": "python3 scripts/verify-tool-usage.py .build/debug/thermo",
+    "cliFixturePassed": true,
+    "cliVerifies": [
+      "JSON and text output",
+      "media bytes excluded",
+      "private text absent from exports",
+      "missing results retained",
+      "MCP/Skill denominators unchanged"
+    ],
+    "offscreenPanel": {
+      "image": "unattributed-tool-results-zh-2026-10-17.png",
+      "sha256": "5d5e84ff505a26401ae9fea43ec770d4d5ebac232aa6815c79d968432ffc8a37",
+      "language": "zh-Hans",
+      "visuallyInspected": true,
+      "installedAppAcceptance": false
+    },
+    "packageRebuilt": false,
+    "installedAppChanged": false
+  }
+}

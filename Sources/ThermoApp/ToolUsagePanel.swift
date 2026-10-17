@@ -83,6 +83,18 @@ struct ToolUsagePanel: View {
                     .font(.subheadline.weight(.medium))
                 Text(tr("%1$@ files · %2$@ clipped · %3$@ malformed lines · %4$@ other tool calls", String(report.coverage.filesRead), String(report.coverage.clippedFiles), String(report.coverage.malformedLines), String(report.coverage.otherToolCalls)))
                     .font(.caption).foregroundStyle(.secondary)
+                if let other = report.coverage.unattributedResults, report.coverage.otherToolCalls > 0 {
+                    Text(tr("Unattributed tool results: %1$@ returned · %2$@ missing · %3$@ unmeasured", String(other.completed), String(other.missingResults), String(other.unmeasuredResults)))
+                        .font(.caption).foregroundStyle(.secondary)
+                    let tokens = report.referenceEncoding == nil ? "≈\(other.returnedTextEstimatedTokens)" : other.referenceReturnedTextTokens.map(String.init) ?? tr("Unknown")
+                    Text(tr("Unattributed measured text: %1$@ bytes / %2$@ tokens · %3$@ non-text blocks not tokenized", String(other.returnedTextBytes), tokens, String(other.nonTextBlocks)))
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text(tr("Includes execution wrapper text. Kept outside MCP/Skill totals; nested tools and image/audio tokens are unknown."))
+                        .font(.caption).foregroundStyle(.secondary)
+                } else if report.coverage.otherToolCalls > 0 {
+                    Text(tr("Unattributed returned content was not measured in this report; analyze again."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Text(report.generated, style: .time).font(.caption).foregroundStyle(.secondary)
                 HStack(spacing: 4) {
                     Text(report.since, style: .date); Text("–"); Text(report.until, style: .date)
