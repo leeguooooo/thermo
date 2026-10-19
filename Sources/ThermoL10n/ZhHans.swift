@@ -2661,6 +2661,8 @@ let zhHans: [String: String] = [
     "Missing timestamps %1$@ · unsupported usage records %2$@": "时间戳缺失 %1$@ · 未支持的用量记录 %2$@",
     "%1$@ non-text result blocks were not tokenized.": "%1$@ 个非文本返回块未估算 token。",
     "Returned text": "返回文本",
+    "%1$@ result texts contain serialized media. Counts describe logged text, not image/audio token cost or proof of model delivery.": "%1$@ 个结果的文本中含序列化媒体。计数只描述日志文本，不能作为图片或音频 token 成本，也不能证明模型收到的内容。",
+    "%1$@ result texts contain an explicit truncation marker; full returned size is unknown.": "%1$@ 个结果文本含明确截断标记，完整返回大小未知。",
     "Explicit errors": "明确错误",
     "Observed time": "观察耗时",
     "Call count": "调用次数",

@@ -196,6 +196,7 @@ struct ToolUsagePanel: View {
                             Text(tr("Share of this category's observed returned-text tokens: %1$@", String(format: "%.1f%%", percentage)))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
+                        ResultTextRepresentationNotice(row: row)
                         if row.nonTextBlocks > 0 {
                             Text(tr("%1$@ non-text result blocks were not tokenized.", String(row.nonTextBlocks))).font(.caption).foregroundStyle(.secondary)
                         }
@@ -248,6 +249,22 @@ struct ToolUsagePanel: View {
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(host == "claude" ? ".claude/projects" : ".codex/sessions")
         panel.begin { response in
             if response == .OK, let url = panel.url { model.analyze(encoding: encoding, logFile: url, host: host) }
+        }
+    }
+}
+
+struct ResultTextRepresentationNotice: View {
+    let row: ToolUsageRow
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let count = row.serializedMediaTextResults, count > 0 {
+                Text(tr("%1$@ result texts contain serialized media. Counts describe logged text, not image/audio token cost or proof of model delivery.", String(count)))
+                    .font(.caption).foregroundStyle(.orange)
+            }
+            if let count = row.truncationMarkerResults, count > 0 {
+                Text(tr("%1$@ result texts contain an explicit truncation marker; full returned size is unknown.", String(count)))
+                    .font(.caption).foregroundStyle(.orange)
+            }
         }
     }
 }

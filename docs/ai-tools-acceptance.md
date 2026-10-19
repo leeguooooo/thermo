@@ -30,6 +30,8 @@ Figma 另经 Codex 0.163.0 已有 OAuth 的只读宿主目录接口取得 44 个
 
 [外层工具返回明细](measurements/outer-tool-usage-2026-10-17.json)的三份选定真实日志投影，252 次调用、214,531 字节在新旧二进制中一致，MCP / Skill 行也完全一致。只按日志工具名分组，不从脚本推断内部 CLI；明细与原合计是同一批记录，不可再次相加。这不是全量使用统计。[三条 Bash 错误复核](measurements/tool-error-triage-2026-10-17.json)确认了空通配符、原生握手字段假定和历史验证脚本编译错误，未确认 MCP 服务故障，原有错误计数保持不变。
 
+[媒体文本与截断标记](measurements/tool-result-text-representation-2026-10-19.json)：从最近日志的局部扫描发现截图结果后，核对同一完整会话中的七次截图记录。七个结果都是外层文本中包含图片 JSON，且媒体数据带明确截断标记；458,255 字节只是日志保留的文本，不是完整返回或图片 token。新增按结果计数的 `serializedMediaTextResults` / `truncationMarkerResults`，App 和 CLI 据此显示提示，保留既有字节、token、状态和排序。启发式与 cl100k 的完整会话新旧对照均一致。未确定包装和截断产生在哪一层，未据此认定 iPhone MCP 服务故障。本地 Debug 与隔离窗口已验证，尚未发布。
+
 本机 Skill、CLI、配置、共享入口、Unity 引用和 Design 代理源码已在 489 记录中最终复查。已有宿主会话和代理实例未重启，不推断缓存已更新。定义批量检查及图标 / _meta 组件的详细交互证据仍见 [474 窗口记录](measurements/ai-tools-ui-474-2026-10-17.json)；相关定义组件源码未因外层用量改动而变化。[479 历史产物](measurements/ai-tools-integrated-479-2026-10-17.json)保留并复验，旧临时路径不作为当前可用产物的依据。实现与历史细节见 [AI 工具分析](ai-tools-analysis.md)。
 
 ## 外部参考与后续证据

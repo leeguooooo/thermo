@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-19",
+  "sourceBase": "750ec8a",
+  "build": "local Debug arm64",
+  "testedSourceSHA256": {
+    "Sources/AgentDoctor/ToolResultTextObservation.swift": "4ec3a3a8375c2460203ed4a9ef52abeb9ce674b9176719b8efb78c629340d840",
+    "Sources/AgentDoctor/ToolUsageParser.swift": "069fc9b5fa3b33c45f3b922305b9da2e385cb7f3d3c101c46893d235432b137d",
+    "Sources/AgentDoctor/ToolUsageReport.swift": "d92b317c4cc03d594855932f1f96218e7fd7ccac9975cc69fdf26a18ffed9c31",
+    "Sources/ThermoApp/ToolUsagePanel.swift": "af776bfeaba34627b806f6247d0c19b326288d78dc8410194140d9c2c1730364",
+    "Sources/ThermoApp/OuterToolUsageBreakdown.swift": "6b254ae9400ab34bd6b2fe2ab40c1bfb1e9c1e89993aae08f01d4f4433ff0b7d",
+    "Sources/ThermoL10n/ZhHans.swift": "dd96919fe1a198c1b17b563b46dab3b60badc91da010526280bdefd71b2c269c",
+    "Sources/thermo/Agents.swift": "63d9f7d087dca325068d8a98a76871df14215a4c0822478bfcc3eb634d050f29",
+    "Tests/AgentDoctorTests/ToolResultTextObservationTests.swift": "2e8a4c45504c73bed0790f136cce220b65e0b20bee519c0eaf12852bd1b9b1aa"
+  },
+  "discovery": {
+    "coverage": {
+      "codex": {
+        "filesRead": 41,
+        "filesDiscovered": 417,
+        "clippedFiles": 13,
+        "bytesRead": 67108864,
+        "limitReached": true,
+        "complete": false,
+        "since": "2026-10-12T01:00:58Z",
+        "until": "2026-10-19T01:00:58Z"
+      },
+      "claude": {
+        "filesRead": 27,
+        "filesDiscovered": 253,
+        "clippedFiles": 9,
+        "bytesRead": 67108864,
+        "limitReached": true,
+        "complete": false,
+        "since": "2026-10-12T01:00:58Z",
+        "until": "2026-10-19T01:00:58Z"
+      }
+    },
+    "initialTailScreenshotCalls": 4,
+    "initialTailScreenshotTextBytes": 261860,
+    "notFleetStatistics": true
+  },
+  "selectedSession": {
+    "SHA256": "f7bfff4b7cf8ebc8ccee5877843893639c938aff7c0456c87965ea9d154c9e61",
+    "bytes": 8549093,
+    "filesRead": 1,
+    "logReadingComplete": true,
+    "sinceArgument": "2026-10-12",
+    "MCPCalls": 145,
+    "screenshotCalls": 7,
+    "loggedScreenshotTextBytes": 458255,
+    "logMetadata": {
+      "cli_version": "0.163.0",
+      "originator": "codex-tui",
+      "source": "vscode"
+    },
+    "representationProof": [
+      {
+        "recordSHA256": "e3e391bd43786bdd4b8b7d29785082aecbedf4a5d9606c4fdf5992f88afe5671",
+        "textBytes": 65465,
+        "nestedType": "image",
+        "mimeType": "image/png",
+        "explicitOmittedCharacterCount": 384266,
+        "sourceImageNotDecoded": true
+      },
+      {
+        "recordSHA256": "700013fb2c818179bf9fc77b1ee8e552daf58e70e59cb755f1299fcf83f4e1c4",
+        "textBytes": 65465,
+        "nestedType": "image",
+        "mimeType": "image/png",
+        "explicitOmittedCharacterCount": 583418,
+        "sourceImageNotDecoded": true
+      },
+      {
+        "recordSHA256": "d687d74b070d16b57cd0602e27d88c59e271834bfbb49a0f481e50bce461129d",
+        "textBytes": 65465,
+        "nestedType": "image",
+        "mimeType": "image/png",
+        "explicitOmittedCharacterCount": 567758,
+        "sourceImageNotDecoded": true
+      },
+      {
+        "recordSHA256": "edd3aee5e14bd6836d8c914fee229a658ccecfca84ea740cfd3248f17aa22e3e",
+        "textBytes": 65465,
+        "nestedType": "image",
+        "mimeType": "image/png",
+        "explicitOmittedCharacterCount": 559290,
+        "sourceImageNotDecoded": true
+      },
+      {
+        "recordSHA256": "fea1f27fcb7bec342b46f4007efb6421268bccf14032ca488a6d9012f2be8232",
+        "textBytes": 65465,
+        "nestedType": "image",
+        "mimeType": "image/png",
+        "explicitOmittedCharacterCount": 358846,
+        "sourceImageNotDecoded": true
+      },
+      {
+        "recordSHA256": "92def29a145cd53f962178e80e1dbd9fd66249b5b36ba731259deeeab64ebe44",
+        "textBytes": 65465,
+        "nestedType": "image",
+        "mimeType": "image/png",
+        "explicitOmittedCharacterCount": 545182,
+        "sourceImageNotDecoded": true
+      },
+      {
+        "recordSHA256": "406fe9430025267782ac1ed7a3f5d8ca4aa4aed59da3299a8879d0460346a273",
+        "textBytes": 65465,
+        "nestedType": "image",
+        "mimeType": "image/png",
+        "explicitOmittedCharacterCount": 592230,
+        "sourceImageNotDecoded": true
+      }
+    ],
+    "mediaOrWrapperOriginEstablished": false,
+    "actualModelImageTokens": null,
+    "originalLogNotCopied": true
+  },
+  "newFields": {
+    "serializedMediaTextResults": "Optional completed-result count for media JSON observed inside measured text. No media decoding, accounting rewrite or cause inference.",
+    "truncationMarkerResults": "Optional completed-result count for the explicitly observed positive integer marker: ellipsis + N chars truncated + ellipsis. Not a detector for every truncation format.",
+    "legacyAbsence": "Unchecked, not zero. Zero in a new report means no matching observation, not proof that nothing was encoded or truncated."
+  },
+  "sameInputBeforeAfter": [
+    {
+      "encoding": "heuristic",
+      "allOriginalMCPAndSkillRowsIdentical": true,
+      "allOriginalOuterRowsIdentical": true,
+      "row": {
+        "calls": 7,
+        "completed": 7,
+        "host": "codex",
+        "id": "717a7ac00e7ad394398735ecaf65e703e911c4dc0fc56e0365c9007a0eeceb9c",
+        "invocationFailures": 0,
+        "kind": "mcp",
+        "medianSeconds": 0.312000036239624,
+        "missingResults": 0,
+        "name": "phone_screenshot",
+        "nonTextBlocks": 0,
+        "reportedErrors": 0,
+        "returnedTextBytes": 458255,
+        "returnedTextEstimatedTokens": 114569,
+        "serializedMediaTextResults": 7,
+        "server": "iphone-use",
+        "timingSamples": 7,
+        "totalObservedSeconds": 2.2059998512268066,
+        "truncationMarkerResults": 7,
+        "unknownErrorStatus": 0
+      }
+    },
+    {
+      "encoding": "cl100k_base",
+      "allOriginalMCPAndSkillRowsIdentical": true,
+      "allOriginalOuterRowsIdentical": true,
+      "row": {
+        "calls": 7,
+        "completed": 7,
+        "host": "codex",
+        "id": "717a7ac00e7ad394398735ecaf65e703e911c4dc0fc56e0365c9007a0eeceb9c",
+        "invocationFailures": 0,
+        "kind": "mcp",
+        "medianSeconds": 0.312000036239624,
+        "missingResults": 0,
+        "name": "phone_screenshot",
+        "nonTextBlocks": 0,
+        "referenceEncoding": "cl100k_base",
+        "referenceReturnedTextTokens": 319338,
+        "reportedErrors": 0,
+        "returnedTextBytes": 458255,
+        "returnedTextEstimatedTokens": 114569,
+        "serializedMediaTextResults": 7,
+        "server": "iphone-use",
+        "timingSamples": 7,
+        "totalObservedSeconds": 2.2059998512268066,
+        "truncationMarkerResults": 7,
+        "unavailableReferenceResults": 0,
+        "unknownErrorStatus": 0
+      }
+    }
+  ],
+  "tests": {
+    "focused": 53,
+    "focusedFailures": 0,
+    "moduleCounts": {
+      "AgentDoctorTests": 275,
+      "ThermoAppTests": 301,
+      "ThermoCLITests": 108
+    },
+    "total": 684,
+    "failures": 0,
+    "command": "swift test --skip-build --filter 'AgentDoctorTests|ThermoAppTests|ThermoCLITests'"
+  },
+  "visibleUI": {
+    "bundleID": "dev.thermo.usage-media.qa",
+    "controller": "cua_repl",
+    "syntheticFileSHA256": "6d1d0aa2bd6eac001c32e386d7390d985b1ef7053570db28fd3a1217a4dce3a7",
+    "isolatedHome": true,
+    "args": [
+      "--main",
+      "--ui-review",
+      "--page",
+      "agents:mcp"
+    ],
+    "checks": [
+      "native single-log picker reads exactly one owned synthetic log",
+      "two serialized-media texts and one truncation marker displayed in Chinese",
+      "original 234 bytes and approximately 60 text tokens preserved",
+      "normal native image is zero text with one untokenized non-text block",
+      "not interpreted as image cost or proof of model delivery",
+      "owned window closed; process terminal"
+    ],
+    "runtimeFileBackedSectionsMatchBuiltApp": true,
+    "runtimeSHA256": "a65e510912393c669d036c189a86bcff85511332f7cc7f81a8f364eb0ba81277"
+  },
+  "binaries": {
+    "baselineCLI": "fa44fe897ee1bd58fd72af1e30fe2bb83a8a9bf60ed7a241368f6281507339fd",
+    "candidateCLI": "2df0476d766b99fccfc4c6d2cde3f6b822e27d86fc25fb865f9690a3a4d729ef"
+  },
+  "boundaries": {
+    "deviceConnectedOrControlled": false,
+    "imageDataDecodedOrDisplayed": false,
+    "rawImagePayloadPublished": false,
+    "rawPromptsPublished": false,
+    "additionalModelRuns": 0,
+    "realCredentialsCopied": false,
+    "businessMCPToolsInvoked": false,
+    "iphoneSourceChanged": false,
+    "userConfigurationOverwritten": false,
+    "installedOrPublished": false,
+    "claimOfToolFaultOrBillingSavings": false
+  }
+}
