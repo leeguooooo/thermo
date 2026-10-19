@@ -2,6 +2,7 @@
 from pathlib import Path
 import json,subprocess,os,tempfile,sys,datetime,hashlib
 binary=Path(sys.argv[1]).resolve()
+binary_before=hashlib.sha256(binary.read_bytes()).hexdigest()
 source=Path(__file__).resolve().parent.parent
 checks=[]
 with tempfile.TemporaryDirectory(prefix='thermo-release-surfaces-') as directory:
@@ -107,5 +108,6 @@ for line in sys.stdin:
  assert len(outer)==1 and outer[0]['name']=='clock.inspect' and outer[0]['calls']==1
  for private in ['PRIVATE_NAMESPACE_ARGUMENT','PRIVATE_NAMESPACE_IMAGE','fixture-result']:assert private not in text
  checks.append('separate Codex namespaces group with legacy MCP names; native images excluded and same-name outer tools stay distinct')
-print(json.dumps({'fixtureOnly':True,'binarySHA256':hashlib.sha256(binary.read_bytes()).hexdigest(),'groupsPassed':len(checks),'checks':checks,'modelsOrDevicesUsed':False},indent=2))
+assert hashlib.sha256(binary.read_bytes()).hexdigest()==binary_before, 'input binary changed during contract checks'
+print(json.dumps({'fixtureOnly':True,'binarySHA256':binary_before,'groupsPassed':len(checks),'checks':checks,'modelsOrDevicesUsed':False},indent=2))
 # Test: python3 scripts/verify-ai-diagnostics-contract.py /path/to/thermo
