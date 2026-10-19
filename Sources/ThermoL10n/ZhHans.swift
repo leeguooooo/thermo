@@ -7,7 +7,8 @@ let zhHans: [String: String] = [
     "Ranks structured JSON reference or estimated tokens only when completed result envelopes were fully inspectable. Unknown entries follow known values; this is not model usage.": "仅在已完成结果的封装均可检查时，按结构化 JSON 的参考或估算 token 排序。未知条目排在已知值后；这不是模型用量。",
 
     "Structured result envelopes were not checked in this report; analyze again.": "此报告未检查结构化返回封装，请重新分析。",
-    "Structured result coverage: %1$@ envelopes checked · %2$@ results not inspectable · %3$@ structured fields · %4$@ invalid fields": "结构化返回覆盖：已检查 %1$@ 个封装 · %2$@ 个结果无法检查 · %3$@ 个包含结构化字段 · %4$@ 个字段无效",
+    "Structured result coverage: %1$@ envelopes checked · %2$@ results not inspectable · %3$@ structured fields · %4$@ unmeasurable fields": "结构化返回覆盖：已检查 %1$@ 个封装 · %2$@ 个结果无法检查 · %3$@ 个包含结构化字段 · %4$@ 个字段无法计量",
+    "JSON value measurement does not infer the negotiated protocol or validate an output schema.": "JSON 值的计量不能推断协商的协议版本，也不验证输出 schema。",
     "Measured structured JSON: %1$@ bytes / %2$@ tokens · %3$@ results also contain content": "已计量的结构化 JSON：%1$@ 字节 / %2$@ token · %3$@ 个结果同时含 content",
     "JSON representation may overlap returned text or include encoded media. Do not add the totals or infer model usage.": "JSON 表示可能与返回文本重复，也可能含编码后的媒体；两项不能相加，也不能推算模型用量。",
     "Uninspectable results do not establish that structured content was absent.": "结果无法检查，不代表没有结构化内容。",

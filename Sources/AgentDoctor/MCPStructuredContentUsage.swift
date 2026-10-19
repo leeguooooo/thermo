@@ -48,9 +48,12 @@ enum MCPStructuredResultObservation {
         else { self = .unobservable; return }
         guard let structured = object["structuredContent"] else { self = .absent; return }
         let alongside = object["content"] != nil
-        // MCP structuredContent must be an object. Malformed fields are not measured as empty.
-        guard let structured = structured as? [String: Any], JSONSerialization.isValidJSONObject(structured),
-              let data = try? JSONSerialization.data(withJSONObject: structured, options: [.sortedKeys, .withoutEscapingSlashes]) else {
+        // Logs do not establish the negotiated revision or output-schema validity.
+        // Measure any retained JSON value, including null, without conflating it with absence.
+        // Validate in a one-element array: Foundation's root check rejects valid scalars,
+        // while serializing an unsupported root type can raise an Objective-C exception.
+        guard JSONSerialization.isValidJSONObject([structured]),
+              let data = try? JSONSerialization.data(withJSONObject: structured, options: [.sortedKeys, .withoutEscapingSlashes, .fragmentsAllowed]) else {
             self = .present(nil, alongsideContent: alongside); return
         }
         self = .present(TextFootprint(String(decoding: data, as: UTF8.self), encoding: encoding), alongsideContent: alongside)
@@ -75,12 +78,13 @@ extension ToolUsageRow {
         guard let usage = structuredContent else {
             return [tr("Structured result envelopes were not checked in this report; analyze again.")]
         }
-        var lines = [tr("Structured result coverage: %1$@ envelopes checked · %2$@ results not inspectable · %3$@ structured fields · %4$@ invalid fields",
+        var lines = [tr("Structured result coverage: %1$@ envelopes checked · %2$@ results not inspectable · %3$@ structured fields · %4$@ unmeasurable fields",
                         String(usage.inspectedResultObjects), String(usage.unobservableResults), String(usage.structuredResults), String(usage.unavailableJSONResults))]
         if usage.structuredResults > 0 {
             let tokens = referenceEncoding == nil ? "≈" + String(usage.jsonEstimatedTokens) : usage.jsonReferenceTokens.map(String.init) ?? tr("Unknown")
             lines.append(tr("Measured structured JSON: %1$@ bytes / %2$@ tokens · %3$@ results also contain content", String(usage.jsonBytes), tokens, String(usage.alongsideContentResults)))
             lines.append(tr("JSON representation may overlap returned text or include encoded media. Do not add the totals or infer model usage."))
+            lines.append(tr("JSON value measurement does not infer the negotiated protocol or validate an output schema."))
         } else if usage.unobservableResults > 0 {
             lines.append(tr("Uninspectable results do not establish that structured content was absent."))
         }

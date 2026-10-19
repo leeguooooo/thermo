@@ -51,14 +51,54 @@ final class MCPStructuredContentUsageTests: XCTestCase {
         XCTAssertEqual(row.referenceReturnedTextTokens, usage.jsonReferenceTokens)
         XCTAssertEqual(p.report().returnedTextSummary(kind: "mcp").returnedTextBytes, 7)
     }
-    func testMalformedStructuredFieldsAreNotZeroSizedSuccesses() throws {
+    func testArraysStringsAndNullAreMeasuredAsJSONValues() throws {
         var p = parser(.cl100k)
         for (i, value) in ([NSNull(), "bad", [1, 2]] as [Any]).enumerated() {
             add(["content": [], "structuredContent":value], to: &p, id: String(i))
         }
         let usage = try XCTUnwrap(p.report().tools.first?.structuredContent)
-        XCTAssertEqual(usage.structuredResults, 3); XCTAssertEqual(usage.unavailableJSONResults, 3)
+        XCTAssertEqual(usage.structuredResults, 3); XCTAssertEqual(usage.unavailableJSONResults, 0)
+        XCTAssertEqual(usage.jsonBytes, 14); XCTAssertEqual(usage.jsonReferenceTokens, 9)
+        XCTAssertNotNil(p.report().tools.first?.observedStructuredJSONTokens)
+    }
+    func testNonJSONValuesRemainUnavailableInsteadOfZeroSizedSuccesses() throws {
+        var p = parser(.cl100k)
+        for (i, value) in ([Date(timeIntervalSince1970: 0), Double.nan] as [Any]).enumerated() {
+            add(["content": [], "structuredContent":value], to: &p, id: String(i))
+        }
+        let row = try XCTUnwrap(p.report().tools.first), usage = try XCTUnwrap(row.structuredContent)
+        XCTAssertEqual(usage.unavailableJSONResults, 2)
         XCTAssertEqual(usage.jsonBytes, 0); XCTAssertNil(usage.jsonReferenceTokens)
+        XCTAssertNil(row.observedStructuredJSONTokens)
+    }
+    func testScalarAndEncodedEnvelopeMeasurementsDoNotExportValues() throws {
+        for value: Any in [true, false, 42, "PRIVATE_VALUE https://example.invalid/x"] {
+            var p = parser(.cl100k)
+            add(["content": [["type":"text","text":"OK"]], "structuredContent":value], to: &p)
+            let row = try XCTUnwrap(p.report().tools.first), usage = try XCTUnwrap(row.structuredContent)
+            XCTAssertEqual(usage.structuredResults, 1); XCTAssertEqual(usage.unavailableJSONResults, 0)
+            XCTAssertGreaterThan(usage.jsonBytes, 0); XCTAssertGreaterThan(try XCTUnwrap(usage.jsonReferenceTokens), 0)
+            XCTAssertEqual(row.returnedTextBytes, 2)
+            XCTAssertFalse(String(decoding: try JSONEncoder().encode(p.report()), as: UTF8.self).contains("PRIVATE_VALUE"))
+        }
+        var p = parser(.cl100k)
+        add(#"{"content":[],"structuredContent":"PRIVATE_SCALAR"}"#, to: &p)
+        XCTAssertEqual(p.report().tools.first?.structuredContent?.jsonBytes, 16)
+        XCTAssertEqual(p.report().tools.first?.returnedTextBytes, 0)
+    }
+    func testArrayRankingAndNullVersusAbsentUseKnownMeasurements() throws {
+        var p = parser(.cl100k)
+        let array = Array(repeating: ["text":"owned array"], count: 100)
+        for (name, value) in [("array", ["structuredContent":array]), ("object", ["structuredContent":["n":1]]),
+                              ("null", ["structuredContent":NSNull()]), ("absent", [:])] as [(String, [String: Any])] {
+            var result = value; result["content"] = [["type":"text","text":"OK"]]
+            add(result, to: &p, id: name, name: "mcp__owned__" + name)
+        }
+        let rows = p.report().tools
+        XCTAssertEqual(ToolUsageOrdering.structured.sorted(rows).map(\.name), ["array", "object", "null", "absent"])
+        XCTAssertEqual(rows.first { $0.name == "null" }?.structuredContent?.jsonBytes, 4)
+        XCTAssertEqual(rows.first { $0.name == "absent" }?.observedStructuredJSONTokens, 0)
+        XCTAssertTrue(rows.allSatisfy { $0.returnedTextBytes == 2 })
     }
     func testMissingAndInvocationFailureDoNotAcquireResultCoverage() throws {
         var p = parser()
