@@ -1,0 +1,105 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "755db0f",
+  "validation": {
+    "buildHost": "mac190",
+    "buildConfiguration": "debug",
+    "Xcode": "27.0",
+    "Swift": "6.4",
+    "SDK": "27.0",
+    "testSuites": [
+      {
+        "suite": "ThermoAppTests",
+        "tests": 13,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests",
+        "tests": 4,
+        "failures": 0
+      }
+    ],
+    "testsPassed": 17,
+    "testsFailed": 0,
+    "changedSourceFilesMatched": 4,
+    "countsComparison": {
+      "passed": true,
+      "comparedFields": [
+        "tools",
+        "timingSummaries",
+        "mcpStructuredSummary",
+        "coverage",
+        "complete",
+        "referenceEncoding",
+        "sessionTokens"
+      ],
+      "toolRows": 4,
+      "productsSHA256": {
+        "ThermoApp": "f49e79e693ac5b54516581f56d53fc63a4107e875c7b4cfe1246d92b556ea035",
+        "thermo": "96cb49af3a83a88dea8eabf205367b3ae31196af4672160857ef7bb95e2a5a09",
+        "thermo-helper": "657eac326e3de05d65bd23e551fb2c6d75e69c79c40acb1ea9708e414d818ab5"
+      },
+      "baselineCLISHA256": "9eb612596bc8220f51978cce8f4bb4587a3c1ba58a738ebdf0eb8eae22bbdf4f"
+    },
+    "nativeAcceptanceHost": "localMac",
+    "gui": {
+      "passed": true,
+      "sourceCommit": "755db0f",
+      "firstRankAndEightSecondMetricVisibleWithoutScrolling": true,
+      "defaultDisclosureStatesCollapsed": true,
+      "allFourMCPRowsRetainTimeOrder": true,
+      "normalTimingCoverage": "10 / 11",
+      "observedIntervalSumSeconds": 13,
+      "occupiedIntervalSeconds": 5,
+      "returnedTextBytes": 190,
+      "returnedTextEstimatedTokens": 50,
+      "missingReplyKeepsStructuredJSONTotalUnknown": true,
+      "expandedDetailsRestoreCoverageAndNonAdditiveExplanation": true,
+      "expandedInspectionScopeRestoresManualScanBoundary": true,
+      "malformedFixtureLineKeepsPartialAndRankingWarningsOutsideDisclosure": true,
+      "SkillInstructionHeaderStaysUnknownWhenUnmeasured": true,
+      "SkillTextHeaderSevenTokensSeparateFromInstructionUnknown": true,
+      "privateFixtureBodiesAbsentFromAX": true,
+      "nativeScreenshotsInspected": true,
+      "testModelActuallyInvoked": false,
+      "cleanup": {
+        "QAStopped": true,
+        "QAPID": 71754,
+        "selectedFingerprintsMatched": true,
+        "originalInstalledAppPIDStillRunning": true
+      }
+    }
+  },
+  "iterations": [
+    "Collapsing only usage explanations still left ranking below the first screen.",
+    "Also collapsed the MCP definition scope notes and removed their separate card; ranking title became visible.",
+    "Added the selected time/token metric on the tool name line, so the first rank and its value are visible together."
+  ],
+  "sourceProductsSHA256": {
+    "ThermoApp": "f49e79e693ac5b54516581f56d53fc63a4107e875c7b4cfe1246d92b556ea035",
+    "thermo": "96cb49af3a83a88dea8eabf205367b3ae31196af4672160857ef7bb95e2a5a09",
+    "thermo-helper": "657eac326e3de05d65bd23e551fb2c6d75e69c79c40acb1ea9708e414d818ab5"
+  },
+  "QARuntimeSHA256": "b1abcfb11b2a760e95899d3c7b62c7fa8c26205993e57940d7f0e732ac6f218f",
+  "boundaries": {
+    "fullReleaseAcceptanceForThisCommit": false,
+    "x86_64Verified": false,
+    "distributionPackageVerified": false,
+    "modelOrBillingSavingsMeasured": false,
+    "installedOrPublished": false
+  },
+  "evidenceSHA256": {
+    "tests.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "source-hashes.json": "b355d15e7cca06e78d60c0bded71bcbb52eb8bfe25379e81bb2b18bd68133269",
+    "first-pass-tests.log": "6cf37582880a98468e9cda3d296292add8ddc3a9ac80b99e0769be3ecbb64244",
+    "counts-comparison.json": "72387dbab3627474fcaa2120fc7602f65ee386e5d2ca3e3b82c1a065252550f1",
+    "tests.log": "4e5b03fdddfefa2db14b277ee726d391313ba846e72d2fc53614839e42610856",
+    "second-pass-tests.log": "ad90d079d4c7d2d5ef29900de5bf3304a49d969b69de142fd0d6cb29b9e5c145",
+    "QA/refresh.json": "b5c183e4668fa423c1783350e2496f43cef12ca865df954596af47a8d9e9c505",
+    "QA/cleanup-result.json": "629908eb568da53986bea7195469af4b2c6abef7f7092382fbe9b948a07934f5",
+    "QA/gui-result.json": "65b71c19dca3c23153e62b6a97ada905c3a8f4aa1c1554a046ceedd611117875",
+    "QA/fixture-original.jsonl": "40b4e829904bbf9688d10366ce122723938eab01525628b2fa62f813f10b7594",
+    "QA/fixture-partial.jsonl": "09a28ca05807c73b8e3a5869c6d15722b80804bb6e4bd8583a80f864f4019c87",
+    "QA/products-retained-on-mac190.json": "620c29b5d79b934d9903ee57010a282f3b43737b6fa097a11f36b5c787dc9422"
+  }
+}
