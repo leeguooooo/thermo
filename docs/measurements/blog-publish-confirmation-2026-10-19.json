@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "task": "Exercise publish confirmation and reply-loss recovery against an isolated loopback service",
+  "sourceRepository": "leeguooooo/blog",
+  "testedInputCommit": "ff875e61c30e7eb4813d0e9a53e1bbd0d6d41072",
+  "testedInputTree": "32d511dc3234231e60724570f2b1e8d4969ba39c",
+  "integratedCommit": "67295132c073f7e4f340b6f7564d0f527d168fb3",
+  "testedSourceFilesSHA256": {
+    "packages/cli/lib/cli.mjs": "5f26fe3f61b09ed6b3d5e638518f0fbfc2e45240ba52b05014111e194b8b4d62",
+    "packages/cli/tests/cli.test.mjs": "9e3640362e4861ede03301572840efbc4ed368f0c97836658d0da3647c4d6177"
+  },
+  "problem": {
+    "before": "postPublish replaced JSON parse failures with an empty object, accepted an HTTP 2xx and printed success; transport failures lacked a structured uncertainty result",
+    "evidenceType": "Source inspection, regression tests and actual CLI subprocesses against an owned loopback HTTP service",
+    "productionIncidenceMeasured": false,
+    "baselineAutomaticResubmissionObserved": false
+  },
+  "behavior": {
+    "realReceipt": "ok true, nonempty jobId, not a dry-run receipt",
+    "validationReceipt": "ok true, dryRun true, preview object",
+    "unconfirmedCases": [
+      "transport failure",
+      "5xx response",
+      "invalid JSON on 2xx",
+      "incomplete or mismatched success receipt"
+    ],
+    "unconfirmedCode": "CLI_PUBLISH_UNCONFIRMED",
+    "exitCode": 1,
+    "successOutputSuppressedWhenUnconfirmed": true,
+    "submissionRequestedFlagSeparatesDryRun": true,
+    "explicitValidationRejectionsPreserved": true,
+    "POSTAutomaticallyRetried": false,
+    "jobReceiptDoesNotVerifyPublicPage": true
+  },
+  "validation": {
+    "remoteRunId": "41197247-d5f1-4701-be5b-b8d582bcb06e",
+    "host": "leos-MacBook-Pro.local",
+    "sourceUnchanged": true,
+    "artifactHashesVerified": 21,
+    "baselineNewCases": 14,
+    "baselineFailed": 10,
+    "baselinePassed": 4,
+    "candidateCLITests": 39,
+    "candidateFailures": 0,
+    "baselineAndCandidateBundlesBuilt": true,
+    "bundleSHA256": {
+      "bundle": "ed2de64691da7768cf229dbf4c0ae67e32b6f7f988a79dfa07be535d65bc68c5",
+      "baseline-bundle": "8dd28b76a475f8f66914716d0555e7e11e90826105261efaa3e12bfecf727033"
+    },
+    "loopback": {
+      "complete": true,
+      "productionRequests": 0,
+      "results": [
+        {
+          "route": "baseline-bundle",
+          "mode": "lost-response",
+          "received": 1,
+          "simulatedSavedEffects": 1,
+          "exitCode": 1,
+          "successPrinted": false
+        },
+        {
+          "route": "baseline-bundle",
+          "mode": "invalid-json",
+          "received": 1,
+          "simulatedSavedEffects": 1,
+          "exitCode": 0,
+          "successPrinted": true
+        },
+        {
+          "route": "bundle",
+          "mode": "lost-response",
+          "received": 1,
+          "simulatedSavedEffects": 1,
+          "exitCode": 1,
+          "code": "CLI_PUBLISH_UNCONFIRMED",
+          "reason": "transport_error",
+          "successPrinted": false
+        },
+        {
+          "route": "bundle",
+          "mode": "invalid-json",
+          "received": 1,
+          "simulatedSavedEffects": 1,
+          "exitCode": 1,
+          "code": "CLI_PUBLISH_UNCONFIRMED",
+          "reason": "invalid_json",
+          "successPrinted": false
+        }
+      ]
+    }
+  },
+  "skill": {
+    "beforeSHA256": "1b5da63d966b0a68d71a2a7d6d6f603ff69020a7ae6688ba86d45ed7c844e277",
+    "afterSHA256": "1332bfb91bae3f98f2af31a17ee086412d2da249d031fa5b280511f51e347d77",
+    "frontmatterUnchanged": true,
+    "hostReloadVerified": false,
+    "managedCacheEdited": false,
+    "canonicalFileUpdated": true,
+    "quickValidatePassed": true,
+    "publicationApprovalRulesPreserved": true,
+    "idempotencyGuidance": "One explicit stable key for the same logical input during deliberate recovery; a changed input needs a new key",
+    "oldCLICompatibility": "Exit 0 or an empty object does not confirm submission; require a job receipt and read back locale/slug",
+    "unrelatedChangedPathsPreserved": 1
+  },
+  "boundaries": {
+    "productionRequests": 0,
+    "realPostsPublished": 0,
+    "newModelRuns": 0,
+    "installedCLIReplaced": false,
+    "CLIPublished": false,
+    "serverIdempotencyImplementationChanged": false,
+    "globalConfigChanged": false,
+    "managedSkillCacheChanged": false,
+    "hostSkillReloadVerified": false,
+    "fullBlogApplicationSuiteRun": false
+  }
+}
