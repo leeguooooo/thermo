@@ -1,0 +1,108 @@
+{
+  "recordedAtUTC": "2026-10-19T19:47:22.717508+00:00",
+  "sourceCommit": "7a48774",
+  "marketplaceCommit": "bb62d98",
+  "pluginVersionPrepared": "0.2.2",
+  "actualPluginAtReadOnlyProbe": {
+    "localVersion": "0.2.1",
+    "installed": true,
+    "enabled": true
+  },
+  "actualStandaloneSkillAvailable": true,
+  "actualPluginResourceSkillCount": 0,
+  "skill": {
+    "bytes": 2737,
+    "SHA256": "81840a64112e52594bbdc525315293cf611d91ce29ae159d6e1776bfff669cb9",
+    "unchanged": true
+  },
+  "nativeDiscovery": {
+    "passed": true,
+    "clientVersion": "codex-cli 0.163.0",
+    "CLI_SHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+    "results": [
+      {
+        "case": "baseline",
+        "CLICommands": [
+          {
+            "name": "marketplace",
+            "exitCode": 0
+          },
+          {
+            "name": "add",
+            "exitCode": 0
+          },
+          {
+            "name": "list",
+            "exitCode": 0
+          }
+        ],
+        "registered": true,
+        "enabled": true,
+        "resourceSkillCount": 0,
+        "indexedSkillCount": 0,
+        "indexedSkills": [],
+        "errorCount": 0
+      },
+      {
+        "case": "candidate",
+        "CLICommands": [
+          {
+            "name": "marketplace",
+            "exitCode": 0
+          },
+          {
+            "name": "add",
+            "exitCode": 0
+          },
+          {
+            "name": "list",
+            "exitCode": 0
+          }
+        ],
+        "registered": true,
+        "enabled": true,
+        "resourceSkillCount": 1,
+        "indexedSkillCount": 1,
+        "indexedSkills": [
+          {
+            "name": "discord-use:discord-use",
+            "enabled": true,
+            "path": "/private/tmp/discord-skill-layout.ZLOSDq/probe/activation/.home-candidate/.codex/plugins/cache/owned-discord-layout/discord-use/0.2.2/skills/discord-use/SKILL.md"
+          }
+        ],
+        "errorCount": 0
+      }
+    ],
+    "temporaryHomesOnly": true,
+    "actualUserRegistrationChanged": false,
+    "modelInferenceRequested": false,
+    "published": false
+  },
+  "validation": {
+    "host": "mac190",
+    "familyShellSuitesPassed": 4,
+    "skillFrontmatterValid": true,
+    "powershellRuntimeTested": false,
+    "rustSourceChanged": false,
+    "rustBuildOrTestsRun": false
+  },
+  "selectedUserConfigAndCacheFingerprintsStable": true,
+  "boundaries": {
+    "DiscordAccountConnected": false,
+    "DiscordMessagesReadOrSent": false,
+    "realModelCalled": false,
+    "realUserPluginRegistryWritten": false,
+    "installedGlobally": false,
+    "published": false,
+    "automaticSelectionOrBusinessBenefitMeasured": false
+  },
+  "attemptNotes": [
+    "Remote Skill validator initially lacked PyYAML; reused existing local pure Python package in the isolated remote stage. No global dependency installation."
+  ],
+  "evidenceSHA256": {
+    "source-body.json": "b3e04b91b18554d13ffb2c1aeae7a275a6104324d46759cf3d6a461f2ee261f8",
+    "activation/.qa-evidence/result.json": "647e013fe80f53ee8a2e0ec14dd2faba28f28814dd12e8bbf5b9c7cdfe18a429",
+    "live/resource-audit.json": "c8adf5c58b397aaaaf2cd606bb43d2e5458d30ce69b5e51f4457c1ef2563ab07",
+    "live/appserver-meta.json": "8df5a8dfe85bb34cde53fe63ba89c96bc25e0e9cb7f0cc4b26da5a56921e21aa"
+  }
+}
