@@ -1,0 +1,231 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "d5cb986",
+  "marketplaceCommit": "635bb01",
+  "pluginVersionPrepared": "0.34.2",
+  "CLIAndSkillVersionUnchanged": "0.34.1",
+  "actualPluginAtReadOnlyProbe": {
+    "localVersion": "0.34.1",
+    "installed": true,
+    "enabled": true,
+    "resourceSkillCount": 0,
+    "standaloneSkillsAvailable": 1,
+    "wholeHostSkillAbsenceClaimed": false
+  },
+  "source": {
+    "skillBytes": 50112,
+    "skillSHA256": "a6c0e84873e0acbdc0fea6ce07a34a84202096ef154d15f1930a63ae56dfdaae",
+    "CLIBytes": 327474,
+    "CLISHA256": "c669c7bed911a74b273eb28c4814a5cfb67caf9ffa029783f5300e1e19a4be57",
+    "skillInstructionsUnchanged": true,
+    "bundledCLIByteIdenticalToCanonical": true,
+    "CLIUpgradeRoutingChanged": true
+  },
+  "nativePluginDiscoveryAndLiteralLoopbackLoading": {
+    "passed": true,
+    "clientVersion": "codex-cli 0.163.0",
+    "CLI_SHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+    "results": [
+      {
+        "case": "baseline",
+        "CLICommands": [
+          {
+            "name": "marketplace",
+            "exitCode": 0
+          },
+          {
+            "name": "add",
+            "exitCode": 0
+          },
+          {
+            "name": "list",
+            "exitCode": 0
+          }
+        ],
+        "registered": true,
+        "enabled": true,
+        "resourceSkillCount": 0,
+        "indexedSkillCount": 0,
+        "indexedSkills": [],
+        "errorCount": 0,
+        "explicitCLIExit": 0,
+        "fakeBackendRequests": [
+          {
+            "onlyFakeCredential": true,
+            "wholeSkillPresent": false,
+            "path": "/v1/responses"
+          }
+        ],
+        "realModelCalled": false
+      },
+      {
+        "case": "candidate",
+        "CLICommands": [
+          {
+            "name": "marketplace",
+            "exitCode": 0
+          },
+          {
+            "name": "add",
+            "exitCode": 0
+          },
+          {
+            "name": "list",
+            "exitCode": 0
+          }
+        ],
+        "registered": true,
+        "enabled": true,
+        "resourceSkillCount": 1,
+        "indexedSkillCount": 1,
+        "indexedSkills": [
+          {
+            "name": "image-use:image-use",
+            "enabled": true,
+            "path": "/private/tmp/image-skill-layout.qckfFU/probe/preload/.home-candidate/.codex/plugins/cache/owned-image-layout/image-use/0.34.2/skills/image-use/SKILL.md"
+          }
+        ],
+        "errorCount": 0,
+        "explicitCLIExit": 0,
+        "fakeBackendRequests": [
+          {
+            "onlyFakeCredential": true,
+            "wholeSkillPresent": true,
+            "path": "/v1/responses"
+          }
+        ],
+        "realModelCalled": false
+      }
+    ],
+    "temporaryHomesOnly": true,
+    "actualUserRegistrationChanged": false,
+    "modelInferenceRequested": false,
+    "published": false
+  },
+  "portableSkill": {
+    "passed": true,
+    "commands": [
+      {
+        "option": "--version",
+        "exitCode": 0
+      },
+      {
+        "option": "--help",
+        "exitCode": 0
+      }
+    ],
+    "copiedOnlySkillDirectory": true,
+    "CLIBytesMatchCanonical": true,
+    "copiedCLI_SHA256": "c669c7bed911a74b273eb28c4814a5cfb67caf9ffa029783f5300e1e19a4be57",
+    "actualCodexCacheRoute": "codex-plugin",
+    "realModelCalled": false,
+    "networkDeniedForExecutions": true
+  },
+  "sourceVerification": {
+    "matchedFiles": 10,
+    "canonicalAndSkillCLIByteIdentical": true
+  },
+  "validation": {
+    "host": "mac190",
+    "pythonVersion": "3.14.7",
+    "networkDeniedForUnitAndInstallerRuns": true,
+    "unitTestsPassed": 420,
+    "extraUnitTestsPassed": 2,
+    "sourceInstallerPassed": true,
+    "sourceInstallerCases": [
+      "piped install",
+      "downloaded installer",
+      "checkout install",
+      "legacy root checkout",
+      "managed root link migration",
+      "preserve real Skill directory",
+      "old-Python wrapper selection"
+    ],
+    "familyShellSuitesPassed": 4,
+    "powershellRuntimeVerified": false,
+    "genericValidator": {
+      "baselineExitCode": 1,
+      "candidateExitCode": 1,
+      "unchangedIssue": "Unexpected key(s) in SKILL.md frontmatter: version. Allowed properties are: allowed-tools, description, license, metadata, name",
+      "nativeHostAcceptedAndLoadedFullSkill": true,
+      "versionExtensionPreserved": true
+    }
+  },
+  "upgradeChecks": [
+    "Only exact skills/image-use inside an image-use repository may use its parent Git route. Unrelated repositories remain outside that route.",
+    "Codex-managed cache CLI returns a manual host-update message without running installs or Skill refreshes.",
+    "Release bump updates canonical CLI, bundled CLI and nested Skill version together in an owned text-only fixture."
+  ],
+  "userSelectedConfigAndCacheFingerprintsMatched": true,
+  "boundaries": {
+    "realImageGeneration": false,
+    "realModelCalled": false,
+    "fakeUsageCountersIncludedInMetrics": false,
+    "actualUserPluginRegistryWritten": false,
+    "versionedUserPluginCacheWritten": false,
+    "installedGlobally": false,
+    "published": false,
+    "automaticSkillSelectionOrBusinessBenefitMeasured": false
+  },
+  "evidenceSHA256": {
+    "discovery/baseline-add.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "discovery/baseline-add.stdout.json": "1475e3d0e15f3ee0ccf7e3901ac789b270fd8e378a1191c79b5bc725df9fecb8",
+    "discovery/baseline-appserver-private.json": "1d2209d500a99b5943e5e37c2eb63b5b445ece72557c54efa65527a6022ddfa2",
+    "discovery/baseline-appserver.stderr.log": "2a1d0c1b7972c04efc42dc284782ebc6124e4bb4dbb0b0db8d5d8d66b704a421",
+    "discovery/baseline-list.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "discovery/baseline-list.stdout.json": "90ea09a7561ce9096091dc6daa57e21bac4c05b204fc7619547deffbb9dbf919",
+    "discovery/baseline-marketplace.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "discovery/baseline-marketplace.stdout.json": "c54c6d3ed1032d930526ff2509a4a09c0a8e0e34bb8c9ecf8335b64ae7c429b0",
+    "discovery/candidate-add.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "discovery/candidate-add.stdout.json": "97ba3d2a86d9f7ed153f7e866ed52bb10a8272c28ebb846d7cd4112f0d58f1cb",
+    "discovery/candidate-appserver-private.json": "b64a37d1dc61c83a9c73f4086d3338a1fac866d0a01590f293684e35489f3a00",
+    "discovery/candidate-appserver.stderr.log": "736c74eff4cfff95895d509a14f818ee43c5be9600b7b9b821bc8cd55ddcd4b0",
+    "discovery/candidate-list.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "discovery/candidate-list.stdout.json": "095cdef0a7cbd0154a3e2eaf6abfc91bd67af5dc837ba1a5780a3582b1a3c658",
+    "discovery/candidate-marketplace.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "discovery/candidate-marketplace.stdout.json": "1095ea3fb478c9470c678d104588350467eaf43025f08f5981a01bc3b751b274",
+    "discovery/result.json": "fa1f7aa9ceec4d099cc99c1367d5fbdd6ecc8d77619fa63cd9d3c0d2ac42202c",
+    "extra-unit.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "extra-unit.log": "10747c3e83aeae3ff73a67c086a1a7cd2f52a4720bad51eef5a0e0007b35188e",
+    "generic-baseline.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "generic-baseline.log": "da16daa01965ee2f379fa57bb7f58f3c3b094d3574fba2beeaf68f8858db226e",
+    "generic-validator.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "generic-validator.log": "da16daa01965ee2f379fa57bb7f58f3c3b094d3574fba2beeaf68f8858db226e",
+    "installer.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "installer.log": "dbff64b9019eb7450b0378e0f9955229f5c9232bf9b4e097953051061bfd7aa2",
+    "live-appserver-meta.json": "7c9ce357104384c960b024fb1485b0c89bb004ad8bbb46e970ca72b4159e6064",
+    "live-resource-audit.json": "7acbf63aeda16b08b8951bb78bf5f735f6c24f7a3e4866f274a6abe974b335cf",
+    "portable-result.json": "de542271a7cb56241c65d05df219a5a054109c98fded97bdf80f9eaa87c22066",
+    "preload/baseline-add.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "preload/baseline-add.stdout.json": "c5efb372eb43575336d2f61330dc152fdb4470bf4a1364c79401e0008a809240",
+    "preload/baseline-appserver-private.json": "000fa269b618af30da95bd096706281b4e1df6ce05e6c5ee0b7e64a6bc2cc7a2",
+    "preload/baseline-appserver.stderr.log": "fc487ed1f3bbe7dd8ff35a22b1d66111fa285330056bf0d17d19c31c671415c7",
+    "preload/baseline-exec-private.jsonl": "2fbd75107f1d4938222aa733f0471df89ab11c9b96083a3a286070f539e38cfd",
+    "preload/baseline-exec.stderr.log": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721",
+    "preload/baseline-list.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "preload/baseline-list.stdout.json": "fa283751a246c4d97bf1a120836618f087e29bf2873fb5a067cf26e97964d8ae",
+    "preload/baseline-marketplace.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "preload/baseline-marketplace.stdout.json": "7bb345cb2eefe8d05bf30ad49d7da1d1279f159ac2553acd98ad98f3c358cf7a",
+    "preload/baseline-model-request-private.json": "8d76afbb2a743aefbe3f864640862a2e2694c380832babd1738876446b05b5a4",
+    "preload/candidate-add.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "preload/candidate-add.stdout.json": "823ae05cb97ae1af98e64a66fe0b6689d86bb1e7d14eddead22a3928e3ae189a",
+    "preload/candidate-appserver-private.json": "d3b89eb8c6894463b20f109239f55f3a43bf45eed9e1c2e90ae9da9ee087f575",
+    "preload/candidate-appserver.stderr.log": "202f57133af8a9d8d693eb6d2703f8b25151b37dee4468103c070bb0fa833888",
+    "preload/candidate-exec-private.jsonl": "1911361e5147901bd37b6feec7769228f5bd8b22d9673ee241227e33d5acaaf2",
+    "preload/candidate-exec.stderr.log": "1aa26269eb1cc57f86b235a03cda53c004edb5b1e9fc99d4da4f00843293d721",
+    "preload/candidate-list.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "preload/candidate-list.stdout.json": "d41440acdbcaab258958ca581c7caf5d71077c0ac585d55a21b0ccee54e3227d",
+    "preload/candidate-marketplace.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "preload/candidate-marketplace.stdout.json": "d4e7808d259ceb9997b302bcc8d8aebd4108c7f74e4b4fdc5fccaefe6acf18d5",
+    "preload/candidate-model-request-private.json": "468a5d224964f9a1a58776eb56aa86d6d9d575a091663a72a5d2cbe247671851",
+    "preload/result.json": "b568282df48997541ecbc1d798350ff67657ecb6ff7a503eaf1661d98e287050",
+    "source-bodies.json": "8854d0d5f05003131b48247586b24b52b645e835890a78c45aa6c466d121412c",
+    "source-hashes.json": "7ec453ff53d37926a561d10f48c96b0a1858c245d27978d26c1669598c3b0409",
+    "source-match.json": "2560319ba76dfd33ea5c1b6239a4afa5f3de9bd2a739a8f4c2c7fe1c82991b52",
+    "unit-final.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "unit-final.log": "78e0308d7a1d0d2738e31e6d56b8d39454a5b529a1027b17f6b468c006bb91c9",
+    "unit-first.log": "719de600987303e0705c37fffad525700d7eda60858d92a75bd094a742e46a99",
+    "unit.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "unit.log": "cd4c28293ed4096ca0aa17453384abe875d04a9f49129d15c2e1c8823f8d56cd"
+  }
+}
