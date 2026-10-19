@@ -22,6 +22,17 @@ final class ProjectOverviewRootsTests: XCTestCase {
         XCTAssertEqual(SpaceOverview.projectRoots(home: home), [home + "/Developer"])
     }
 
+    func testScanRootsReachEveryOrdinaryTopLevelFolder() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        for d in ["github.com/app", "Movies", "motion-use", "Library", "Pictures", "OrbStack", ".codex/artifacts", ".ssh"] {
+            try FileManager.default.createDirectory(atPath: home + "/" + d, withIntermediateDirectories: true)
+        }
+        XCTAssertEqual(Set(ScanOptions.defaultScanRoots(home: home)),
+                       [home + "/github.com", home + "/Movies", home + "/motion-use", home + "/.codex/artifacts"])
+        XCTAssertEqual(ScanOptions.defaultProjectRoots(home: home), [home + "/github.com"], "the overview keeps clone folders only")
+    }
+
     func testProjectHeadingCanBeRelocalizedFromCLIOverview() {
         L10n.override = .simplifiedChinese
         defer { L10n.override = nil }

@@ -222,7 +222,8 @@ enum Projects {
         for candidate in leftovers { onCandidate?(candidate) }
 
         for (n, isDir) in entries where isDir && !n.hasPrefix(".") && !skip.contains(n) && !claimed.contains(n) {
-            if n.hasSuffix(".app") || n.hasSuffix(".xcodeproj") || n.hasSuffix(".xcworkspace") || n.hasSuffix(".framework") { continue }
+            if [".app", ".xcodeproj", ".xcworkspace", ".framework", ".photoslibrary", ".musiclibrary", ".fcpbundle",
+                ".imovielibrary", ".tvlibrary", ".logicx", ".band"].contains(where: { n.hasSuffix($0) }) { continue }
             walk(dir + "/" + n, depth: depth + 1, ctx: ctx, visited: &visited, into: &out, onCandidate: onCandidate)
         }
     }
