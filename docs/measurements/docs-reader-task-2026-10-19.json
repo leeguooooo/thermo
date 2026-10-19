@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUTC": "2026-10-19T12:56:43.897201+00:00",
+  "task": "Retrieve official Codex MCP tool allow/deny-list and timeout definitions without changing settings",
+  "officialPage": "https://learn.chatgpt.com/docs/extend/mcp#other-configuration-options",
+  "legacyAliasFetched": "https://developers.openai.com/codex/mcp",
+  "searchTrials": [
+    {
+      "query": "Codex MCP tool timeouts allowlist",
+      "returnedHits": 3,
+      "totalHits": 4,
+      "changelogBodyChars": 14829,
+      "changelogHighlightChars": 16537,
+      "decodedHighlightEqualsBody": true,
+      "matchedCodexConfigurationPage": false
+    },
+    {
+      "query": "startup_timeout_sec tool_timeout_sec",
+      "returnedHits": 3,
+      "totalHits": 7,
+      "changelogBodyChars": 17907,
+      "changelogHighlightChars": 19310,
+      "decodedHighlightEqualsBody": true,
+      "matchedCodexConfigurationPage": true
+    }
+  ],
+  "factsRetainedByBothSectionReaders": {
+    "startup_timeout_sec": "Server startup timeout in seconds; default 10",
+    "tool_timeout_sec": "Tool execution timeout in seconds; default 60",
+    "enabled_tools": "Tool allow list",
+    "disabled_tools": "Tool deny list applied after enabled_tools"
+  },
+  "textMeasurements": {
+    "engine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+    "meterSHA256": "3dea5c90c931d5f001169db1fbcd4c3aab4c440791023362ce92bf3e217b24a3",
+    "counts": {
+      "exact-search": {
+        "UTF8Bytes": 46088,
+        "cl100kReferenceTokens": 11536,
+        "SHA256": "1db6ba420ca90ea743f505ccf94467f9c1709352be0b14c5e4760036b621a701"
+      },
+      "broad-search": {
+        "UTF8Bytes": 34796,
+        "cl100kReferenceTokens": 8679,
+        "SHA256": "48557243b4b98843d382449dca777e3d6b5c6710aa98e189b732a6a0387db797"
+      },
+      "full-page": {
+        "UTF8Bytes": 26995,
+        "cl100kReferenceTokens": 5954,
+        "SHA256": "c78df8c70b7f31f73557f77ad4208ff97656808fb423e6f4eb81151f8b009284"
+      },
+      "anchor-section": {
+        "UTF8Bytes": 1360,
+        "cl100kReferenceTokens": 321,
+        "SHA256": "024fb938705caf755e99bc7ef214b60a595440acdc81cfa8bb95ff808e39d690"
+      },
+      "reader-section": {
+        "UTF8Bytes": 1360,
+        "cl100kReferenceTokens": 321,
+        "SHA256": "024fb938705caf755e99bc7ef214b60a595440acdc81cfa8bb95ff808e39d690"
+      },
+      "projected-search": {
+        "UTF8Bytes": 824,
+        "cl100kReferenceTokens": 227,
+        "SHA256": "04300d8104caf49b5d97bcda365c80e7ba2521f18bc878ba6a468f71dd5cd4ad"
+      }
+    }
+  },
+  "comparisonLimits": {
+    "rawSearchAndProjectedView": "Projection is an offline representation of the same retained search result; it does not reduce the upstream response.",
+    "fullPageAndAnchor": "Different reading scopes on the same official documentation page, not a model quality or billing comparison.",
+    "noTimingRanking": true,
+    "sameSectionSHA256AcrossRoutes": true
+  },
+  "readerRoute": {
+    "binarySHA256": "b7216dd21bd314ad8666132a9147eb18d76a15a145ac9f8620604bbcb4a7cef8",
+    "source": "path-markdown-filtered",
+    "HTTPstatus": 200,
+    "finalURL": "https://learn.chatgpt.com/docs/extend/mcp.md",
+    "truncated": false,
+    "wasRenderedDOMComparison": false,
+    "ownedBlankTabCreated": true,
+    "ownedTabsClosed": 1,
+    "ownedTabsVerifiedAbsent": true,
+    "closeVerifiedBy": "extension-tabs",
+    "conversationAdapterHintPresentOnDocsHost": true,
+    "adapterInfoVerifiedUnrelatedToTask": true,
+    "conversationAdapterInvoked": false
+  },
+  "methodAdopted": [
+    "Use precise topic or known parameter names to find the matching page; exact query alone did not reduce this upstream result.",
+    "Preserve raw result privately; forward URLs, titles and bounded snippets rather than full duplicated content/highlights.",
+    "Fetch the selected official section with anchor and retain source citation; expand surrounding text when the section is insufficient.",
+    "Check adapter purpose before using hints; public documentation does not authorize reading a personal conversation."
+  ],
+  "boundaries": {
+    "newModelRuns": 0,
+    "CodexConfigChanged": false,
+    "accountOrCurrentRuntimeConfigValuesValidated": false,
+    "upstreamDocsMCPModified": false,
+    "requestOrBillingTokensMeasured": false,
+    "latencyBenefitMeasured": false,
+    "independentTokenizerImplementationsCompared": false,
+    "passiveTelemetryAudited": false,
+    "globalCLIReplaced": false,
+    "sitePackAutoRefreshLifecycleAudited": false,
+    "published": false,
+    "adapterSyncOrInstallExplicitlyRequested": false,
+    "APIKeyConfiguredOrReadByAgent": false
+  },
+  "privacy": {
+    "rawBrowserProfileFieldsRemoved": true,
+    "publicArtifactContainsNoDocumentFullTextOrProfileIdentity": true
+  }
+}
