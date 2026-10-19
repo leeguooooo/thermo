@@ -164,6 +164,9 @@ struct ToolUsagePanel: View {
                         Text(tr("%1$@ calls · %2$@ results · %3$@ explicit result errors · %4$@ unknown error status · %5$@ missing results",
                                 String(row.calls), String(row.completed), String(row.reportedErrors), String(row.unknownErrorStatus), String(row.missingResults)))
                             .font(.caption)
+                        if let codes = row.mcpErrorCodeSummary {
+                            Text(codes).font(.caption.monospaced()).foregroundStyle(.secondary)
+                        }
                         if let failures = row.invocationFailures {
                             if failures > 0 {
                                 Text(tr("Host-reported invocation failures without MCP results: %1$@; excluded from result error proportions, included in timing.", String(failures)))

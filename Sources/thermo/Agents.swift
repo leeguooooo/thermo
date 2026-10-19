@@ -255,6 +255,7 @@ struct AgentsCommand {
         for row in report.tools.prefix(app.args.has("all") ? report.tools.count : 20) {
             lines.append(style.bold((row.server.map { $0 + " / " } ?? "") + row.name) + " [" + row.host + ", " + row.kind + "]")
             lines.append("  \(row.calls) calls · \(row.completed) results · \(row.reportedErrors) explicit result errors · \(row.unknownErrorStatus) unknown error status · \(row.missingResults) missing results")
+            if let codes = row.mcpErrorCodeSummary { lines.append("  " + codes) }
             if row.kind == "skill" { lines.append("  " + instructionLine(row.skillInstructions)) }
             if let failures = row.invocationFailures {
                 if failures > 0 { lines.append("  Host-reported invocation failures without MCP results: \(failures); excluded from result error proportions, included in timing.") }

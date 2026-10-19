@@ -56,6 +56,9 @@ public struct ToolUsageRow: Codable, Identifiable, Sendable {
     public var calls = 0
     public var completed = 0
     public var reportedErrors = 0
+    /// Explicit MCP result labels only; absent in older reports means unmeasured.
+    public var reportedErrorCodes: [String: Int]? = nil
+    public var errorCodeCategoriesLimited: Bool? = nil
     /// Host failure with no MCP result. Absent in older reports means unmeasured.
     public var invocationFailures: Int? = nil
     public var unknownErrorStatus = 0

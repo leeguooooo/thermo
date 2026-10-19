@@ -17,6 +17,7 @@ struct ToolUsageParser {
         var startSeen = false
         var endSeen = false
         var isError: Bool?
+        var reportedErrorCode: String?
         var outerError: Bool?
         var invocationFailed = false
         var textBytes = 0
@@ -186,6 +187,7 @@ struct ToolUsageParser {
         if error == true || measured.2 == true { call.isError = true }
         else if error != nil || measured.2 != nil { call.isError = false }
         else { call.isError = nil }
+        call.reportedErrorCode = measured.2 == true ? MCPErrorCodeObservation.code(in: value) : nil
         call.textObservation = ToolResultTextObservation(value, codexInputBlocks: host == "codex" && call.kind == nil)
         call.referenceTokens = measured.0.referenceTokens
         call.textBytes = measured.0.bytes; call.estimatedTokens = measured.0.estimatedTokens; call.nonText = measured.1
@@ -372,6 +374,10 @@ struct ToolUsageParser {
             }
             let key = call.groupID ?? Self.identity(call.host + "|" + kind + "|" + (call.server ?? "") + "|" + name)
             var row = rows[key] ?? ToolUsageRow(id: key, host: call.host, kind: kind, server: call.server, name: name)
+            if kind == "mcp" {
+                row.reportedErrorCodes = row.reportedErrorCodes ?? [:]
+                row.errorCodeCategoriesLimited = row.errorCodeCategoriesLimited ?? false
+            }
             if kind == "skill" {
                 if row.skillInstructions == nil { row.skillInstructions = SkillInstructionUsage(encoding: encoding) }
                 if let observed = loads[callKey] { row.skillInstructions?.merge(observed) }
@@ -395,13 +401,28 @@ struct ToolUsageParser {
                     row.completed += 1
                     if call.textObservation.serializedMedia { row.serializedMediaTextResults! += 1 }
                     if call.textObservation.truncationMarker { row.truncationMarkerResults! += 1 }
-                    if call.isError == true { row.reportedErrors += 1 }
+                    if call.isError == true {
+                        row.reportedErrors += 1
+                        if kind == "mcp", let code = call.reportedErrorCode {
+                            row.reportedErrorCodes?[code, default: 0] += 1
+                        }
+                    }
                     if call.isError == nil { row.unknownErrorStatus += 1 }
                     row.returnedTextBytes += call.textBytes; row.returnedTextEstimatedTokens += call.estimatedTokens; row.nonTextBlocks += call.nonText
                 }
                 if let start = call.started, let end = call.ended, end >= start { timings[key, default: []].append(end.timeIntervalSince(start)) }
             } else { row.missingResults += 1 }
             rows[key] = row
+        }
+        // Keep the most frequent categories with stable ties, not whichever
+        // calls a Dictionary happened to visit first. Excluded results remain
+        // in reportedErrors and therefore in the unclassified remainder.
+        for key in rows.keys.sorted() {
+            if let counts = rows[key]?.reportedErrorCodes, counts.count > 64 {
+                let kept = counts.sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }.prefix(64)
+                rows[key]?.reportedErrorCodes = Dictionary(uniqueKeysWithValues: kept.map { ($0.key, $0.value) })
+                rows[key]?.errorCodeCategoriesLimited = true
+            }
         }
         for (key, samples) in timings {
             let sorted = samples.sorted()
