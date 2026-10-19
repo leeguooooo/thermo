@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "sourceRepository": "leeguooooo/chrome-use",
+  "testedSourceCommit": "27dc88b623a2942c14fe8f45191c60031d35c6bd",
+  "testedSourceHash": "eb0afa999d9ca2773dba5bf887fc2ba0d3b3b0c546603b906275a0ff730772f8",
+  "testedSourceTree": "a18f7f04e53791ae42741af3fff505811d59df22",
+  "upstreamBase": "78e5f9f956aee1b317fe1f8bf4313e970530d99e",
+  "integratedCommit": "0087498595968b0f998f23dd20563fe0b0616ee2",
+  "postAcceptanceWebsiteDocsOnly": [
+    "docs/core-loop.html",
+    "docs/en/core-loop.html",
+    "docs/en/mcp.html",
+    "docs/mcp.html"
+  ],
+  "problem": {
+    "installedVersionObserved": "1.5.239",
+    "fullCLIStdoutBytes": 9057,
+    "unchangedCLIStdoutBytes": 5086,
+    "unchangedRefs": 72,
+    "snapshotEmpty": true,
+    "interpretation": "An empty diff repeated the full ref metadata map. This observation is not a same-version before/after performance comparison."
+  },
+  "fix": {
+    "behavior": "For a valid incremental snapshot, return only JSON refs rendered in the delta; empty delta returns empty refs. Keep the full live session map, normal full snapshots and invalid-baseline fallback behavior.",
+    "rootDiffInsertionRefsHandled": true,
+    "MCPDiffParameterExposed": true,
+    "clickOcclusionClassificationCarriedForward": true,
+    "DocsUpdated": "CLI help, MCP schema, both READMEs, core and references, Chinese/English commands/reading/core-loop/MCP pages"
+  },
+  "remoteValidation": {
+    "host": "mac190",
+    "platform": "Darwin",
+    "architecture": "arm64",
+    "cargoVersion": "cargo 1.98.0 (797e8a9bc 2026-08-05) (Homebrew)",
+    "unit": {
+      "passed": 2376,
+      "failed": 0,
+      "ignored": 3,
+      "exitCode": 0
+    },
+    "selectedIsolatedBrowserTest": {
+      "name": "e2e_snapshot_incremental_filter_baselines_and_live_refs",
+      "passed": 1,
+      "failed": 0,
+      "exitCode": 0
+    },
+    "release": {
+      "exitCode": 0,
+      "seconds": 514.49,
+      "binarySHA256": "b7216dd21bd314ad8666132a9147eb18d76a15a145ac9f8620604bbcb4a7cef8",
+      "bytes": 38930784
+    },
+    "allReceiptsSameSourceHash": true,
+    "developerDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "perCommandEnvironmentOnly": true
+  },
+  "realMCPAcceptance": {
+    "candidateSHA256": "b7216dd21bd314ad8666132a9147eb18d76a15a145ac9f8620604bbcb4a7cef8",
+    "requestedURLConfirmed": true,
+    "MCPDiffSchemaAdvertised": true,
+    "fullRefs": 72,
+    "unchangedRefs": 0,
+    "fullSnapshotUTF8Bytes": 3828,
+    "unchangedSnapshotUTF8Bytes": 0,
+    "fullCLIStdoutBytes": 9373,
+    "unchangedCLIStdoutBytes": 529,
+    "fullMCPTextBytes": 12200,
+    "unchangedMCPTextBytes": 805,
+    "fullMCPWireBytes": 33754,
+    "unchangedMCPWireBytes": 2209,
+    "boundedDiffReads": 1,
+    "initialExpanded": true,
+    "isErrorFalseForBothSnapshots": true,
+    "bodyMutationRequested": false,
+    "passivePageTelemetryAudited": false,
+    "scope": "One warmed candidate, one owned logged-in Chrome tab, complete snapshot followed by unchanged incremental snapshot",
+    "MCPTextReductionPercent": 93.4016,
+    "oldRefOperationConfirmed": true,
+    "TOCExpandedStates": [
+      false,
+      true
+    ],
+    "observationStatuses": [
+      "complete",
+      "complete"
+    ],
+    "fourTOCLinksHiddenAndRestored": true,
+    "ownedTabsClosed": 1,
+    "ownedTabsVerifiedAbsent": true,
+    "closeVerifiedBy": "extension-tabs",
+    "MCPServersTerminal": true
+  },
+  "integration": {
+    "trackedTreeMatchedTestedCandidateAtMerge": true,
+    "afterMergeDifferenceIsWebsiteDocsOnly": true,
+    "unrelatedUntrackedFilesPreserved": 4,
+    "installedBinarySHA256Unchanged": true,
+    "oldMainLocalFixesAndUpstreamHistoryPreserved": true
+  },
+  "excludedRuns": [
+    "Initial Cargo inline-table config rejected before tests",
+    "Obsolete local 1.5.235 source run intentionally stopped after upstream version drift was found"
+  ],
+  "boundaries": {
+    "sameVersionCodeChangeCausalBenchmark": false,
+    "requestOrBillingTokenSavingsMeasured": false,
+    "wholeTaskLatencyBenefitMeasured": false,
+    "allBrowserE2ETestsRun": false,
+    "x86OrWindowsOrLinuxAcceptance": false,
+    "newModelRuns": 0,
+    "contentSubmissionRequested": false,
+    "passivePageTelemetryAudited": false,
+    "rawAuthenticatedPageAndProfileDiagnosticsDeleted": true,
+    "CLIInstalled": false,
+    "published": false
+  }
+}
