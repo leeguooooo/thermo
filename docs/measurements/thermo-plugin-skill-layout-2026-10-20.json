@@ -1,0 +1,321 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUTC": "2026-10-19T17:04:34.458149+00:00",
+  "problem": "Installed/enabled thermo-use 0.4.1 did not export an enumerable plugin Skill in Codex 0.163.0.",
+  "client": {
+    "version": "codex-cli 0.163.0",
+    "portableClientSHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31"
+  },
+  "liveReadOnlyObservation": {
+    "pluginId": "thermo-use@leeguooooo-plugins",
+    "installed": true,
+    "enabled": true,
+    "version": "0.4.1",
+    "configEnabled": true,
+    "pluginsFeatureEnabled": true,
+    "skillsListTotal": 170,
+    "pluginSkillEntries": 31,
+    "thermoIndexedSkills": 0,
+    "skillsListErrors": 0,
+    "thermoResourceSkills": 0,
+    "chromeControlResourceSkills": 1,
+    "selectedLiveConfigAndCacheFingerprintsStable": true,
+    "metadataMethodsOnly": true
+  },
+  "layoutMatrix": {
+    "cases": [
+      {
+        "case": "cache-slash",
+        "document": "cache",
+        "layout": "slash",
+        "declaration": "./",
+        "error": null,
+        "skillCount": 0
+      },
+      {
+        "case": "cache-dot",
+        "document": "cache",
+        "layout": "dot",
+        "declaration": ".",
+        "error": null,
+        "skillCount": 0
+      },
+      {
+        "case": "cache-nested",
+        "document": "cache",
+        "layout": "nested",
+        "declaration": "./skills/thermo-use",
+        "error": null,
+        "skillCount": 1
+      },
+      {
+        "case": "fixed-slash",
+        "document": "fixed",
+        "layout": "slash",
+        "declaration": "./",
+        "error": null,
+        "skillCount": 0
+      },
+      {
+        "case": "fixed-dot",
+        "document": "fixed",
+        "layout": "dot",
+        "declaration": ".",
+        "error": null,
+        "skillCount": 0
+      },
+      {
+        "case": "fixed-nested",
+        "document": "fixed",
+        "layout": "nested",
+        "declaration": "./skills/thermo-use",
+        "error": null,
+        "skillCount": 1
+      },
+      {
+        "case": "route-slash",
+        "document": "route",
+        "layout": "slash",
+        "declaration": "./",
+        "error": null,
+        "skillCount": 0
+      },
+      {
+        "case": "route-dot",
+        "document": "route",
+        "layout": "dot",
+        "declaration": ".",
+        "error": null,
+        "skillCount": 0
+      },
+      {
+        "case": "route-nested",
+        "document": "route",
+        "layout": "nested",
+        "declaration": "./skills/thermo-use",
+        "error": null,
+        "skillCount": 1
+      },
+      {
+        "case": "cache-file",
+        "document": "cache",
+        "layout": "root-file",
+        "declaration": "./SKILL.md",
+        "error": null,
+        "skillCount": 0
+      },
+      {
+        "case": "fixed-file",
+        "document": "fixed",
+        "layout": "root-file",
+        "declaration": "./SKILL.md",
+        "error": null,
+        "skillCount": 0
+      },
+      {
+        "case": "route-file",
+        "document": "route",
+        "layout": "root-file",
+        "declaration": "./SKILL.md",
+        "error": null,
+        "skillCount": 0
+      },
+      {
+        "case": "route-nested-parent",
+        "document": "route",
+        "layout": "nested-parent",
+        "declaration": "./skills",
+        "error": null,
+        "skillCount": 1
+      },
+      {
+        "case": "route-nested-root",
+        "document": "route",
+        "layout": "nested-root",
+        "declaration": "./",
+        "error": null,
+        "skillCount": 1
+      },
+      {
+        "case": "route-nested-default",
+        "document": "route",
+        "layout": "nested-default",
+        "declaration": null,
+        "error": null,
+        "skillCount": 1
+      }
+    ],
+    "scope": "Owned local marketplace fixtures before installation",
+    "rootFilesNotEnumeratedInTestedClient": true,
+    "nestedDirectoryEnumeratedWithExplicitParentRootAndDefaultPaths": true,
+    "YAMLVariantNotDistinguishingFactor": true,
+    "otherHostsGeneralized": false
+  },
+  "registeredPluginVerification": {
+    "scope": "Two temporary homes on Mac190; local source and inline metadata, without a source plugin manifest",
+    "results": [
+      {
+        "case": "baseline",
+        "registered": true,
+        "enabled": true,
+        "resourceSkillCount": 0,
+        "indexedSkillCount": 0,
+        "explicitCLIExit": 0,
+        "fakeBackendRequests": [
+          {
+            "onlyFakeCredential": true,
+            "wholeSkillPresent": false,
+            "path": "/v1/responses"
+          }
+        ],
+        "CLICommands": [
+          {
+            "name": "marketplace",
+            "exitCode": 0
+          },
+          {
+            "name": "add",
+            "exitCode": 0
+          },
+          {
+            "name": "list",
+            "exitCode": 0
+          }
+        ],
+        "allFourReferencesPresent": false
+      },
+      {
+        "case": "candidate",
+        "registered": true,
+        "enabled": true,
+        "resourceSkillCount": 1,
+        "indexedSkillCount": 1,
+        "explicitCLIExit": 0,
+        "fakeBackendRequests": [
+          {
+            "onlyFakeCredential": true,
+            "wholeSkillPresent": true,
+            "path": "/v1/responses"
+          }
+        ],
+        "CLICommands": [
+          {
+            "name": "marketplace",
+            "exitCode": 0
+          },
+          {
+            "name": "add",
+            "exitCode": 0
+          },
+          {
+            "name": "list",
+            "exitCode": 0
+          }
+        ],
+        "allFourReferencesPresent": true
+      }
+    ],
+    "candidateSkillName": "thermo-use:thermo-use",
+    "realModelCalled": false,
+    "syntheticUsageIsNotBilling": true
+  },
+  "sourceFix": {
+    "commits": {
+      "skill": "d55c3a6c3367a450234a70f00c569d61875efa4f",
+      "marketplace": "440f741a04e273f627f10b149e97ac5743342288",
+      "app": "32b036fac7eed10746439ce88a5b295626e28322"
+    },
+    "canonicalSkillDirectory": "skills/thermo-use",
+    "preparedMarketplaceVersion": "0.4.2",
+    "preparedSkillPaths": [
+      "./skills/thermo-use"
+    ],
+    "onlyThermoMarketplaceEntryChanged": true,
+    "instructionPreservation": {
+      "passed": true,
+      "instructionBytesUnchangedFrom": "020b104",
+      "filesSHA256": {
+        "SKILL.md": "c5c590ecaf778ddd501e812f7fdb297f38961e50f67450f1cd9ab0b896e710bc",
+        "references/ai-diagnostics.md": "e6d870124ab7bf9bd81fcd24e823f1ceb303988c06c416a0eeb1508a0f71177b",
+        "references/performance.md": "255b829fbcc437ae95b06653a9c69c90e4f146c976ac90932869291f1077d9fc",
+        "references/browser-tabs.md": "ad8d11601c05cb2758d5c9d5bd7049c522bb53c06b9c5fbd03025fd6897a534c",
+        "references/storage-and-apps.md": "feacb6a56821083d1884b582f708ca479d07c5db95ada2c53134ee1a5d4f015a"
+      },
+      "canonicalSkillFiles": 1,
+      "marketplaceVersion": "0.4.2",
+      "marketplaceSkillPaths": [
+        "./skills/thermo-use"
+      ],
+      "sourceEntryResolves": true,
+      "installedOrPublished": false
+    },
+    "installerManagedLinkMigrationTested": true,
+    "installerLegacyCheckoutFallbackTested": true,
+    "failedUpdateStillNonzeroAndOldSkillRetained": true,
+    "userDirtyFilesPreserved": true,
+    "setupSeparatesCLIAndCompleteSkillFolder": true,
+    "setupLoadingPromiseRemoved": true
+  },
+  "regressions": {
+    "metadataVariants": 15,
+    "shellTests": [
+      {
+        "test": "doctor.test.sh",
+        "exitCode": 0,
+        "seconds": 0.31981820904184133
+      },
+      {
+        "test": "install-clis.test.sh",
+        "exitCode": 0,
+        "seconds": 0.8791581670520827
+      },
+      {
+        "test": "install-use-family.test.sh",
+        "exitCode": 0,
+        "seconds": 3.6660325829871
+      },
+      {
+        "test": "readme-codex-list.test.sh",
+        "exitCode": 0,
+        "seconds": 0.024228041991591454
+      }
+    ],
+    "registryTestedTree": "134093a09308483ac2c8e85bf4f2c7390060098b",
+    "appSuites": {
+      "AgentAccessCommandTests": "3",
+      "AgentAccessStateTests": "4",
+      "PluginStatusTests": "5",
+      "LocalizationTests": "4"
+    },
+    "appTests": 16,
+    "appTestedTree": "34157de31cd553c71b60160465df656574835909",
+    "developerDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "GUIReaccepted": false,
+    "officialSkillFormatCheck": "passed"
+  },
+  "excludedReadQueries": [
+    {
+      "input": "remoteMarketplaceName for a Git-backed marketplace",
+      "error": "remote backend 404; not a local plugin absence verdict"
+    },
+    {
+      "input": "directory instead of marketplace manifest file",
+      "error": "Is a directory; corrected using native schema and manifest path"
+    }
+  ],
+  "cleanup": {
+    "verifiedPortableCLI_SHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+    "ownedStageRemoved": true,
+    "hostCLIReplaced": false
+  },
+  "boundaries": {
+    "actualUserRegistrationOrVersionedCacheUpdated": false,
+    "globallyInstalledCLIChanged": false,
+    "sourceReposPushedOrTagged": false,
+    "newRealModelEvalRuns": 0,
+    "automaticSkillChoiceOrBusinessOutcomeTested": false,
+    "rawUserConfigOrSkillBodiesPublished": false,
+    "temporaryFixtureInstallationsOnly": true
+  }
+}
