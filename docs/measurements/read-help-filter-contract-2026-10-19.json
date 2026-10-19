@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "sourceRepository": "leeguooooo/chrome-use",
+  "sourceCommit": "36f1351d5b1ae04c9b5d41ba66a833319c4917cf",
+  "sourceTree": "675e22cc227fbab48e28c8dd2fd08080bcdf4a8f",
+  "sourceHash": "81fd527588981588e041131829d793089c2dc67967016d487bf5aeb17a362c2a",
+  "integratedCommit": "36f1351d5b1ae04c9b5d41ba66a833319c4917cf",
+  "problem": {
+    "readHelpWasGenericFallback": true,
+    "missingReadFlagDetails": true,
+    "MCPReadFilterClaimedTextOrRegex": true,
+    "nativeReadFilterWasLiteral": true,
+    "readBehaviorChanged": false,
+    "explanation": "Fix the discoverability and contract description, preserving literal matching so existing patterns with metacharacters retain their meaning."
+  },
+  "change": {
+    "dedicatedHelpLists": [
+      "filter",
+      "outline",
+      "llms",
+      "raw",
+      "require-md",
+      "links",
+      "max-links",
+      "timeout",
+      "headers",
+      "json",
+      "session"
+    ],
+    "literalASCIIInsensitiveFilterClarified": true,
+    "snapshotFilterRegexStillSupported": true,
+    "docsUpdated": [
+      "CLI help",
+      "MCP schema",
+      "inline comment",
+      "both READMEs",
+      "core and reading/commands references",
+      "Chinese and English commands/reading/MCP website pages"
+    ]
+  },
+  "remoteValidation": {
+    "host": "mac190",
+    "architecture": "arm64",
+    "cargoVersion": "cargo 1.98.0 (797e8a9bc 2026-08-05) (Homebrew)",
+    "unitPassed": 2391,
+    "unitFailed": 0,
+    "unitIgnored": 3,
+    "literalMetacharacterRegressionPassed": true,
+    "releaseBuildExitCode": 0,
+    "releaseBuildSeconds": 426.68,
+    "sameSourceHashAcrossTestAndBuild": true,
+    "binarySHA256": "5af217756ee52bc705ae7cd05911d2a3653675f1e7af2ef5b4d6ade832dd0b4c",
+    "binaryBytes": 39063280,
+    "perCommandDeveloperDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "perCommandSDKRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk"
+  },
+  "candidateMetadata": {
+    "passed": true,
+    "binarySHA256": "5af217756ee52bc705ae7cd05911d2a3653675f1e7af2ef5b4d6ade832dd0b4c",
+    "dedicatedReadHelp": true,
+    "readOptionsPresent": true,
+    "unrelatedFallbackLinesAbsent": true,
+    "MCPFilterDescribesLiteralMatching": true,
+    "MCPMethods": [
+      "initialize",
+      "notifications/initialized",
+      "tools/list",
+      "shutdown"
+    ],
+    "businessToolCalls": 0,
+    "browserCommandsRequested": false,
+    "productInstalled": false
+  },
+  "actualMCPFixtureRead": {
+    "isError": false,
+    "filter": "ALPHA|BETA",
+    "expectedSection": "Alpha|Beta",
+    "otherAlphaAndBetaSectionsExcluded": true,
+    "source": "accept-markdown-filtered",
+    "HTTPstatus": 200,
+    "truncated": false,
+    "ownedHTTPRequests": 1,
+    "MCPReadToolCalls": 1,
+    "ownedLoopbackServerOnly": true,
+    "userChromeProfileUsedForPreparation": true,
+    "uniqueTemporaryProjectUsed": true,
+    "ownedTabsClosed": 1,
+    "done": true,
+    "keptTabs": 0,
+    "verifiedAbsent": true,
+    "verifiedBy": "extension-tabs"
+  },
+  "integration": {
+    "trackedTreeEqualsVerifiedSource": true,
+    "unrelatedFilesPreserved": 4
+  },
+  "boundaries": {
+    "allBrowserE2ETestsRun": false,
+    "otherOSOrArchitectureAccepted": false,
+    "realRemoteSiteBehaviorCompared": false,
+    "newModelRuns": 0,
+    "contentMutationRequested": false,
+    "adapterAutoRefreshDisabledForFixture": true,
+    "passiveTelemetryAudited": false,
+    "installedCLIReplacedByTask": false,
+    "published": false,
+    "rawProfileBearingFixtureResultDeleted": true
+  }
+}
