@@ -135,14 +135,27 @@ for line in sys.stdin:
                  protocol(-39+i*3,{'type':'function_call_output','call_id':'json-'+name,'output':json.dumps({'isError':False,'content':[{'type':'text','text':'OK'}],'structuredContent':value})})])
  path=root/'json-values.jsonl';path.write_text(''.join(json.dumps(x)+'\n' for x in events))
  text=run(['agents','usage','--agent','codex','--log-file',str(path),'--encoding','cl100k_base','--sort','structured','--json']).stdout
- rows=json.loads(text)['tools'];assert len(rows)==6 and rows[0]['name']=='array'
+ value_report=json.loads(text);rows=value_report['tools'];assert len(rows)==6 and rows[0]['name']=='array'
  for row in rows:
   value=dict(shapes)[row['name']];usage=row['structuredContent']
   assert usage['jsonBytes']==len(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False).encode())
   assert usage['structuredResults']==usage['inspectedResultObjects']==usage['alongsideContentResults']==1
   assert usage['unavailableJSONResults']==0 and usage['jsonReferenceTokens']>0 and row['returnedTextBytes']==2
  assert 'PRIVATE_JSON_' not in text
+ summary=value_report['mcpStructuredSummary']
+ assert summary['totalJSONBytes']==summary['knownJSONBytes']==sum(x['structuredContent']['jsonBytes'] for x in rows)
+ assert summary['totalJSONTokens']==sum(x['structuredContent']['jsonReferenceTokens'] for x in rows)
+ assert summary['completedResults']==summary['checkedEnvelopes']==6 and summary['missingResults']==0
+ human=run(['agents','usage','--agent','codex','--log-file',str(path),'--encoding','cl100k_base','--sort','structured']).stdout
+ assert 'Observed MCP structured JSON total within selected logs:' in human
+ assert human.count('JSON value measurement does not infer')==1, 'shared JSON caveats must not repeat on every row'
+ incomplete=events+[protocol(-5,{'type':'function_call','call_id':'json-missing','name':'mcp__owned_values__missing','arguments':'{}'})]
+ partial=root/'json-missing.jsonl';partial.write_text(''.join(json.dumps(x)+'\n' for x in incomplete))
+ partial_summary=json.loads(run(['agents','usage','--agent','codex','--log-file',str(partial),'--encoding','cl100k_base','--json']).stdout)['mcpStructuredSummary']
+ assert partial_summary['missingResults']==1 and partial_summary['knownJSONBytes']==summary['knownJSONBytes']
+ assert partial_summary.get('totalJSONBytes') is None and partial_summary.get('totalJSONTokens') is None
  checks.append('all JSON value shapes are measured, null differs from absence, array ranking recovers and returned-text accounting stays separate')
+ checks.append('structured JSON totals cover all MCP rows; missing replies preserve the known subset while totals stay unknown')
  ordering=[]
  values=[('ascii','a'*1000,{'n':1}),('unicode','你好'*100,{'n':2}),('wide','OK',{'body':'PRIVATE_SORT_BODY '*100}),('zero','OK',None),('unknown','OK',None)]
  for i,(name,ack,body) in enumerate(values):
