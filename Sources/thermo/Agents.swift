@@ -424,7 +424,7 @@ struct AgentsCommand {
             if let encoding = summary.referenceEncoding {
                 lines.append("\(summary.host) \(encoding): catalog \(summary.referenceCatalogTokens.map(String.init) ?? "unknown"), documents \(summary.referenceDocumentTokens.map(String.init) ?? "unknown"); unavailable files \(summary.unavailableReferenceFiles ?? 0)")
             }
-            lines.append("\(summary.host) heuristic comparison: \(summary.uniqueFiles) unique directory/plugin files · catalog ≈\(summary.catalogEstimatedTokens) tokens · documents ≈\(summary.documentEstimatedTokens) tokens · \(summary.documentBytes) bytes · \(summary.aliases) duplicate file entries excluded from document totals")
+            lines.append("\(summary.host) heuristic comparison: \(summary.uniqueFiles) unique directory/plugin files · catalog ≈\(summary.catalogEstimatedTokens.map(String.init) ?? "Unknown") tokens · documents ≈\(summary.documentEstimatedTokens) tokens · \(summary.documentBytes) bytes · \(summary.aliases) duplicate file entries excluded from document totals")
             if summary.inconsistentFiles > 0 || summary.unverifiedIdentityEntries > 0 { lines.append("  excluded: \(summary.inconsistentFiles) changing files, \(summary.unverifiedIdentityEntries) entries with unknown identity") }
             lines.append("  cache inventory: \(summary.cacheEntries) entries, \(summary.cacheUniqueFiles) unique files, \(summary.cacheDocumentBytes) bytes; excluded from directory totals")
         }
@@ -442,6 +442,7 @@ struct AgentsCommand {
                 lines.append("  cache version; loading unverified; configured enabled: " + (item.skillFootprint?.pluginConfiguredEnabled.map(String.init) ?? "unknown"))
             }
             lines.append("  " + (item.skillFootprint?.summary ?? "Content not measured"))
+            if let error = item.skillFootprint?.catalog.referenceError { lines.append("  catalog measurement unavailable: " + error) }
             if let error = item.skillFootprint?.document.referenceError { lines.append("  reference count unavailable: " + error + "; heuristic retained separately") }
             if let source = item.skillFootprint?.sourcePath ?? item.source { lines.append("  " + style.dim(source)) }
         }

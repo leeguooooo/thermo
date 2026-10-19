@@ -45,6 +45,7 @@ public struct SkillQualityReport: Codable, Equatable, Sendable {
     public var skippedReferences = 0
     public var complete = true
     public var parser: String? = "swift-markdown-0.9.0"
+    public var frontMatterParser: String? = "Yams-6.2.2"
     public var issues: [SkillQualityIssue] = []
 }
 
@@ -56,6 +57,7 @@ enum SkillQuality {
     static func inspect(_ text: String, at file: URL, cancelled: () -> Bool = { false }) -> SkillQualityReport {
         var report = SkillQualityReport()
         guard !cancelled() else { report.complete = false; return report }
+        if let issue = SkillFrontMatter.parse(text).issue { report.issues.append(issue) }
         let body = ConfigChecks.skillBody(text)
         let base = text.components(separatedBy: "\n").count - body.components(separatedBy: "\n").count
         let document = Document(parsing: body)

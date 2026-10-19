@@ -2945,4 +2945,11 @@ let zhHans: [String: String] = [
     "Unidentified outer tool": "未识别名称的外层工具",
     "Share of observed outer returned-text tokens: %1$@": "占已观察外层返回文本 token：%1$@",
     "%1$@ results include unmeasured content; %2$@ non-text blocks were not tokenized.": "%1$@ 个结果含未计量内容；%2$@ 个非文本块未估算 token。",
+    "Skill YAML front matter is unclosed or invalid; catalog measurement is unavailable. Host loading was not tested.": "Skill 的 YAML 头部未闭合或语法无效，目录计量未知；未测试宿主实际加载。",
+    "Skill YAML front matter exceeds the 64 KiB inspection limit; catalog measurement is unavailable.": "Skill 的 YAML 头部超过 64 KiB 检查上限，目录计量未知。",
+    "Skill YAML front matter must be a mapping with string name and description; catalog measurement is unavailable.": "Skill 的 YAML 头部需要映射结构，name 和 description 应为字符串；目录计量未知。",
+    "Skill YAML front matter has duplicate or unsupported keys; catalog measurement is unavailable.": "Skill 的 YAML 头部存在重复或不支持的键，目录计量未知。",
+    "Skill name or description could not be parsed; catalog measurement is unavailable.": "无法解析 Skill 的名称或描述，目录计量未知。",
+    "Catalog measurement unavailable: %1$@": "目录计量未知：%1$@",
+    "SKILL.md name or description is missing or could not be parsed; inspect the YAML front matter. Host loading was not tested.": "SKILL.md 的名称或描述缺失或无法解析，请检查 YAML 头部；未测试宿主实际加载。",
 ]

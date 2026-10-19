@@ -50,6 +50,17 @@ with tempfile.TemporaryDirectory(prefix="thermo-skill-context-") as temporary:
     assert len(collisions) == 3 and all(finding["agent"] == "codex" for finding in collisions)
     assert all("source or path" in finding["message"] for finding in collisions)
     assert distinct["summaries"][0]["uniqueFiles"] == 2 and distinct["summaries"][0]["aliases"] == 1
+    # YAML representation is not the catalog value; invalid metadata is unknown.
+    write(".agents/skills/yaml-quoted/SKILL.md", '---\nname: yaml-quoted\ndescription: "Read #channel and \\"quoted\\" text"\n---\nbody')
+    write(".agents/skills/yaml-invalid/SKILL.md", '---\nname: yaml-invalid\ndescription: Tool: run\n---\nbody')
+    yaml_report = run()
+    by_name = {item["name"]: item["skillFootprint"] for item in yaml_report["skills"] if item["skillFootprint"].get("scope") != "cache"}
+    assert by_name["yaml-quoted"]["catalog"]["bytes"] == len('yaml-quoted\nRead #channel and "quoted" text'.encode())
+    assert by_name["yaml-invalid"]["catalog"]["measurementComplete"] is False
+    assert any(issue["code"] == "invalid_front_matter" for issue in by_name["yaml-invalid"]["quality"]["issues"])
+    assert yaml_report["summaries"][0].get("catalogEstimatedTokens") is None
+    assert yaml_report["summaries"][0]["documentBytes"] > 0
     print(json.dumps({"passed": True, "userUniqueFiles": user_summary["uniqueFiles"],
                       "projectUniqueFiles": project_summary["uniqueFiles"], "aliasesExcluded": project_summary["aliases"],
-                      "cacheFilesCountedSeparately": project_summary["cacheUniqueFiles"], "coverageWarningPreserved": True}))
+                      "cacheFilesCountedSeparately": project_summary["cacheUniqueFiles"], "coverageWarningPreserved": True,
+                      "yamlCatalogValuesAndUnknownsVerified": True}))
