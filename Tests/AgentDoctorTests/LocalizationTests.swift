@@ -3,6 +3,32 @@ import Foundation
 import XCTest
 
 final class LocalizationTests: XCTestCase {
+    /// Decode the simple escapes used by ordinary Swift string literals in the source scan.
+    /// One pass keeps a literal backslash followed by n distinct from a newline escape.
+    func literalKey(_ raw: String) throws -> String {
+        var characters = raw.makeIterator(), key = ""
+        while let character = characters.next() {
+            guard character == "\\" else { key.append(character); continue }
+            let escaped = try XCTUnwrap(characters.next(), "unfinished Swift escape")
+            switch escaped {
+            case "n": key.append("\n")
+            case "r": key.append("\r")
+            case "t": key.append("\t")
+            case "0": key.append("\0")
+            case "\\", "\"", "'": key.append(escaped)
+            default: throw NSError(domain: "Unsupported Swift literal escape", code: 1)
+            }
+        }
+        return key
+    }
+
+    func testLiteralKeyDecodesEscapesWithoutTurningLiteralBackslashNIntoNewline() throws {
+        XCTAssertEqual(try literalKey(#"first\nsecond"#), "first\nsecond")
+        XCTAssertEqual(try literalKey(#"first\\nsecond"#), #"first\nsecond"#)
+        XCTAssertEqual(try literalKey(#"\"quoted\"\t\r\0"#), "\"quoted\"\t\r\0")
+        XCTAssertThrowsError(try literalKey(#"\u{41}"#))
+    }
+
     /// Every tr("…") literal in Sources/ must have a zh-Hans entry, or Chinese users see English mixed in.
     func testEveryKeyIsTranslated() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -16,7 +42,7 @@ final class LocalizationTests: XCTestCase {
             for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
                 // Undo Swift escapes so the literal matches the runtime key.
                 let raw = String(text[Range(m.range(at: 1), in: text)!])
-                let key = raw.replacingOccurrences(of: "\\\"", with: "\"").replacingOccurrences(of: "\\\\", with: "\\")
+                let key = try literalKey(raw)
                 count += 1
                 if zhHans[key] == nil { missing.append("\(url.lastPathComponent): \(key)") }
             }
