@@ -1,0 +1,362 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "d6b9e68b50ab2372e490c3a3d9a70843061b05ff",
+  "completeWithinDeclaredScope": true,
+  "scope": "Release tests, package signatures and both CLI architectures; no GUI or installation acceptance",
+  "sourceBinding": "Declared package commit, clean checkout and source hashes; not binary reproducibility proof",
+  "candidate": {
+    "version": "1.1.38",
+    "build": "631",
+    "signatureMode": "ad-hoc local test",
+    "notarized": false,
+    "automaticUpdatesConfigured": false,
+    "minimumSystemVersion": "13.0",
+    "architectures": {
+      "thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "thermo-helper": [
+        "x86_64",
+        "arm64"
+      ],
+      "Thermo.app/Contents/MacOS/Thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Thermo.app/Contents/Helpers/thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Thermo.app/Contents/Helpers/thermo-helper": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "sourceWorkingTree": "clean"
+  },
+  "releaseTests": {
+    "executionHost": "mac190",
+    "executedThisPhase": true,
+    "totalTests": 1863,
+    "failures": 0,
+    "suites": {
+      "ThermoKitTests": {
+        "tests": 207,
+        "failures": 0
+      },
+      "ThermoHelperTests": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests": {
+        "tests": 116,
+        "failures": 0
+      },
+      "ThermoAppTests": {
+        "tests": 316,
+        "failures": 0
+      },
+      "CleanKitTests": {
+        "tests": 763,
+        "failures": 0
+      },
+      "AgentDoctorTests": {
+        "tests": 379,
+        "failures": 0
+      },
+      "AgentCoreTests": {
+        "tests": 52,
+        "failures": 0
+      }
+    },
+    "sourceFilesMatched": 526,
+    "elapsedSecondsIncludingBuild": 532.1324819999281,
+    "exitCode": 0,
+    "processTerminal": true,
+    "hardwareTestsExcluded": true,
+    "SDKROOT": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "toolchain": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+  },
+  "packageBuild": {
+    "host": "mac190",
+    "jobs": 1,
+    "configuration": "release",
+    "elapsedSeconds": 344.06047366699204,
+    "sourceUnchanged": true
+  },
+  "packageAcceptance": {
+    "host": "localMac",
+    "nativeArchitecture": "arm64",
+    "x86ExecutedViaExistingRosetta": true,
+    "matchingReleaseEvidenceReusedFromMac190": true,
+    "checksPassed": 25,
+    "checks": [
+      {
+        "name": "artifacts",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.488
+      },
+      {
+        "name": "arm64-extract",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.041
+      },
+      {
+        "name": "arm64-signature",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.013
+      },
+      {
+        "name": "arm64-version",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.021
+      },
+      {
+        "name": "arm64-verify-skill-context",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.192
+      },
+      {
+        "name": "arm64-verify-skill-quality",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.085
+      },
+      {
+        "name": "arm64-verify-tool-usage",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.311
+      },
+      {
+        "name": "arm64-verify-reference-encoding",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.533
+      },
+      {
+        "name": "arm64-verify-task-comparison",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.191
+      },
+      {
+        "name": "arm64-verify-mcp-cleanup-details",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 1.18
+      },
+      {
+        "name": "arm64-verify-cli-completeness",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 1.144
+      },
+      {
+        "name": "arm64-verify-skill-instruction-usage",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.091
+      },
+      {
+        "name": "arm64-verify-ai-diagnostics-contract",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.658
+      },
+      {
+        "name": "x86_64-extract",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.025
+      },
+      {
+        "name": "x86_64-signature",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.022
+      },
+      {
+        "name": "x86_64-version",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 2.086
+      },
+      {
+        "name": "x86_64-verify-skill-context",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.315
+      },
+      {
+        "name": "x86_64-verify-skill-quality",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.136
+      },
+      {
+        "name": "x86_64-verify-tool-usage",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.482
+      },
+      {
+        "name": "x86_64-verify-reference-encoding",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 2.87
+      },
+      {
+        "name": "x86_64-verify-task-comparison",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.374
+      },
+      {
+        "name": "x86_64-verify-mcp-cleanup-details",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 1.543
+      },
+      {
+        "name": "x86_64-verify-cli-completeness",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 2.792
+      },
+      {
+        "name": "x86_64-verify-skill-instruction-usage",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 0.195
+      },
+      {
+        "name": "x86_64-verify-ai-diagnostics-contract",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false,
+        "seconds": 1.19
+      }
+    ],
+    "packageFilesUnchanged": true,
+    "sourceUnchanged": true,
+    "packageEntriesMatchedAfterTransfer": 111
+  },
+  "selectedInstalledAndConfigFingerprintsMatched": true,
+  "installedVersionAtChecks": "1.1.40",
+  "versionBoundary": "The tested source candidate is 1.1.38, below the installed 1.1.40. No replacement or release was performed.",
+  "boundaries": {
+    "IntelHardwareAcceptance": false,
+    "minimumOSHardwareAcceptance": false,
+    "nativeWindowAcceptanceInThisPhase": false,
+    "DeveloperIDOrNotarizationAcceptance": false,
+    "installedOrPublished": false,
+    "productionHelperAcceptance": false,
+    "businessQualityOrBillingImprovementClaimed": false
+  },
+  "evidenceSHA256": {
+    "acceptance/arm64-extract.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-extract.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-signature.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-signature.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-ai-diagnostics-contract.log": "41850e0f6570df41f3835eb9e0283412b5d7bded2fb99a5305607535038d076d",
+    "acceptance/arm64-verify-ai-diagnostics-contract.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-cli-completeness.log": "e5ead35cda9c0330168d46b0c3ed3251283f73fe1f22f6da6caec2c6d3408b49",
+    "acceptance/arm64-verify-cli-completeness.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-mcp-cleanup-details.log": "96abe8566e294c7751b1a0d8d46eaa38d5d8ff4a76b7ec6256b03197976422d7",
+    "acceptance/arm64-verify-mcp-cleanup-details.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-reference-encoding.log": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d",
+    "acceptance/arm64-verify-reference-encoding.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-skill-context.log": "c4a532468192eb3b68958bd532b50b260d0232af3a71b20a27c30d29d6bc8150",
+    "acceptance/arm64-verify-skill-context.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-skill-instruction-usage.log": "327c431bb3d429ea1e5deb306146039be0156d04a14290fb8bafaf4957c443e1",
+    "acceptance/arm64-verify-skill-instruction-usage.stderr.log": "3eae12a49e6558bca4cc2a23b685a7823ff51253032f6a6c0b124291253b9f4f",
+    "acceptance/arm64-verify-skill-quality.log": "c856903e7d8bcdfafa832d83af64546cca73666d872dd942ff9c70b659c510df",
+    "acceptance/arm64-verify-skill-quality.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-task-comparison.log": "dcaa5de442cf86235d202ce578d0e599feaad1954344229066ddd4a518ca8fc3",
+    "acceptance/arm64-verify-task-comparison.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-tool-usage.log": "09f7a163b6f473473edee28a310832ea000a316203c3e51808b8c7355e121639",
+    "acceptance/arm64-verify-tool-usage.stderr.log": "a0f31b9728d84060408af8d1f5facfe3ad7c3528623c7548d74dce640298185f",
+    "acceptance/arm64-version.log": "9cc7b3e40bd0a249cc31502e551c74f09d95bf686e22ac536365724da009f2e5",
+    "acceptance/arm64-version.stderr.log": "abf4aceea21fbfaca7bb1126ba6915ea1dfbaafb6cad55c7b153125ca87bd513",
+    "acceptance/artifacts.log": "2300c61b713b3c9bc56a5497192cb9e996e7944d2fc798d1114a03bef9fb48de",
+    "acceptance/artifacts.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/result.json": "b961b3a50c6cc48404f96f7f5be7098ef0ceb515151e559c917a0d903be7c9e9",
+    "acceptance/thermo-arm64": "04a567603e287204bf93c20915f9d2c3f57d0af336bb30ae77b8bd43d677a4e2",
+    "acceptance/thermo-x86_64": "c31dec7e9cab0b15496222696783e7d4ab7e9b77c672c281ad78760bb9dec8d3",
+    "acceptance/x86_64-extract.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-extract.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-signature.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-signature.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-ai-diagnostics-contract.log": "cff89097842247025571336d5839171b21664d859b4e91d5f218e48efe65f4c3",
+    "acceptance/x86_64-verify-ai-diagnostics-contract.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-cli-completeness.log": "c479b27ce7e5f12ae39034d0e442d341abb53c5534d63c514316e947f89dc0fa",
+    "acceptance/x86_64-verify-cli-completeness.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-mcp-cleanup-details.log": "e2d3a3f84e94a67cc36309b7c83d28d0522d09f965a3cb3f2fea762a4c795cd0",
+    "acceptance/x86_64-verify-mcp-cleanup-details.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-reference-encoding.log": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d",
+    "acceptance/x86_64-verify-reference-encoding.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-skill-context.log": "c4a532468192eb3b68958bd532b50b260d0232af3a71b20a27c30d29d6bc8150",
+    "acceptance/x86_64-verify-skill-context.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-skill-instruction-usage.log": "327c431bb3d429ea1e5deb306146039be0156d04a14290fb8bafaf4957c443e1",
+    "acceptance/x86_64-verify-skill-instruction-usage.stderr.log": "c6a486ac9762994c9be496b8242110686a76de65efe195e793777e5e6e84b306",
+    "acceptance/x86_64-verify-skill-quality.log": "c856903e7d8bcdfafa832d83af64546cca73666d872dd942ff9c70b659c510df",
+    "acceptance/x86_64-verify-skill-quality.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-task-comparison.log": "dcaa5de442cf86235d202ce578d0e599feaad1954344229066ddd4a518ca8fc3",
+    "acceptance/x86_64-verify-task-comparison.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-tool-usage.log": "09f7a163b6f473473edee28a310832ea000a316203c3e51808b8c7355e121639",
+    "acceptance/x86_64-verify-tool-usage.stderr.log": "94c7db8ff15adfbd6ed3c58c2c14ff43fc9f9e474cba62be5329b3883ed6a23e",
+    "acceptance/x86_64-version.log": "9cc7b3e40bd0a249cc31502e551c74f09d95bf686e22ac536365724da009f2e5",
+    "acceptance/x86_64-version.stderr.log": "a332275388de700486ac96db365e3ca4b41809352f6302463775f76c75d722f5",
+    "acceptance-driver.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance-driver.stdout": "6444577431ca72069e573f01fb80d12f564eb8b74a19e2c77f49f9e1695af27e",
+    "after-local-checks.json": "a95171e7d5d55bf1ff3476a727201103d7db7569bb8e952b94b381294deb9a08",
+    "before-local-checks.json": "88c1bb9a3708f65a0616537837c3378b7d1fce7cb13cd802bc6a6b4f3f313363",
+    "build-process.json": "26ed601bdd7f932fabc76dba4eea7ea91daed9a3b583a2821a02fd8d981db190",
+    "build-result.json": "9f872e76e2653342cc1e29b55131e5945e40e4f8321aa476c8b15c34ed96f90d",
+    "build.stderr.log": "306723af023b3c30f171d4819f1676fa6b019b9f5222ed7204de0c22353b5c0b",
+    "build.stdout.log": "6e330603565835889bb811f90d564c1e8d8220f766ee1fc9d07c115b1d79a76b",
+    "plan.json": "2e41cde7a5721f085f101c27cc9d339f5a6fe499a74f4baba32f3b27f2f47119",
+    "source-bundle-remote.json": "a57b66987d007c3b4713fa92039c571085635a2fcbd9dcf3c9cb565b7d6b4eb9",
+    "test-driver.stderr": "bbc8b176d3c74d4c5a7fd00b40280f98168e116d5272273bfe8e71407625540e",
+    "test-driver.stdout": "d9d454a1b79ba448ed1b05ba53c5a0a949d4a89839864060476f66ef205851f1",
+    "tests/freeze.json": "3d5c87ef116994d6633a7db6070ed832cdfeeaee97de2d7ea10ad6be293b966e",
+    "tests/process.json": "345126039009f54e78641f296697c048f0441f265b616c42a9e8e0368e7d221d",
+    "tests/result.json": "4458c2f8eed68a18640c5a3d5c33a9e8b260e291bdbfe6ebbe8666962b83d716",
+    "tests/tests-exit.json": "e29d33d86d2e695ce7671f07bec6414588133782c8bdb354d60c8fa8683ba251",
+    "tests/tests.log": "b1dd38168b95469340a95578ba151af4051ad9a5800aa00bc6963514c5b0dde2",
+    "tests/tests.stderr.log": "c0a2ed3d2b0c8533f362e5bf2b4825e1f535a62a07d45cd805d89bd5c921e355",
+    "tests/tests.stdout.log": "dd316cdb66a99eea4b6849a1659ba828083b71312bdea2d60251cea19666a5fd",
+    "transfer-result.json": "936c9f7c33c9b821a1cf81de2e3793adc1b8bdf608e16e99700b33c44c427a1e"
+  }
+}
