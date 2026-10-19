@@ -259,39 +259,86 @@ public final class FanWriter {
     }
 
     public func setAuto(_ id: Int) throws {
-        let f = try fan(id)
-        var failures: [String] = []
-        if f.hasModeKey {
-            // Apple Silicon: 0 hands the fan back; thermalmonitord sets its own mode
-            // once Ftst is cleared (setAllAuto / the last fan going auto).
-            let mode = discovery.fanTestKey ? 0 : (originalMode[id] ?? 0)
-            do { try smc.write(f.modeKey, value: mode) } catch { failures.append(String(describing: error)) }
+        let report = restoreAutomatic([try fan(id)], releaseAll: false)
+        guard report.confirmed else {
+            throw FanControlError.helper((report.requestErrors + report.unconfirmed).joined(separator: "; "))
         }
-        if discovery.fanForceKey {
-            do {
-                let bits = try forceBits(fan: id)
-                try smc.write("FS! ", value: Double(bits & ~(1 << id)))
-            } catch { failures.append(String(describing: error)) }
+    }
+
+    /// All fans share one settling window, so a stubborn first fan cannot prevent
+    /// the other fans from receiving their recovery request before shutdown.
+    private func restoreAutomatic(_ requested: [FanDescriptor], releaseAll: Bool) -> FanAutoRecoveryReport {
+        var requests: [String] = []
+        func record(_ error: Error) {
+            let text = String(describing: error)
+            if !requests.contains(text) { requests.append(text) }
         }
-        do { try verifyAuto(f) } catch { failures.append(String(describing: error)) }
-        if discovery.fanTestKey && unlocked && discovery.fans.allSatisfy({ fan in
-            do { try verifyAuto(fan); return true } catch { return false }
-        }) {
-            do {
-                try smc.write("Ftst", value: 0)
-                guard try smc.double("Ftst") == 0 else { throw FanControlError.helper("Ftst unlock remains active") }
-                unlocked = false
-                for fan in discovery.fans { try verifyAuto(fan) }
-            } catch { failures.append(String(describing: error)) }
+        func request(_ f: FanDescriptor, fallback: Bool) {
+            if f.hasModeKey {
+                let preferred = discovery.fanTestKey ? 0 : (originalMode[f.index] ?? 0)
+                let current = fallback ? try? smc.double(f.modeKey) : nil
+                // Preserve a confirmed automatic mode. A preferred mode of 3 can be
+                // acknowledged without taking effect on hardware that accepts only 0.
+                if !fallback || (current != 0 && current != 3) {
+                    do { try smc.write(f.modeKey, value: fallback ? 0 : preferred) } catch { record(error) }
+                }
+            }
+            if discovery.fanForceKey {
+                do {
+                    let bits = try forceBits(fan: f.index)
+                    try smc.write("FS! ", value: Double(bits & ~(1 << f.index)))
+                } catch { record(error) }
+            }
         }
-        if !failures.isEmpty { throw FanControlError.helper(failures.joined(separator: "; ")) }
+        func allKnownAutomatic() -> Bool {
+            discovery.fans.allSatisfy { (try? verifyAuto($0)) != nil }
+        }
+        func clearUnlock() {
+            do { try smc.write("Ftst", value: 0) } catch { record(error) }
+        }
+        for f in requested { request(f, fallback: false) }
+        var releasingUnlock = discovery.fanTestKey && (releaseAll || (unlocked && allKnownAutomatic()))
+        if releasingUnlock { clearUnlock() }
+        var unconfirmed: [String] = []
+        // At most 19 sleeps (950 ms), shared by every fan; SMC I/O time is additional.
+        // Re-read every flag before success, including after firmware takes ownership.
+        for attempt in 0..<20 {
+            if !releasingUnlock && discovery.fanTestKey && unlocked && allKnownAutomatic() {
+                releasingUnlock = true
+                clearUnlock()
+            }
+            unconfirmed = []
+            var pending: [FanDescriptor] = []
+            let checked = releasingUnlock ? discovery.fans : requested
+            for f in checked {
+                do { try verifyAuto(f) }
+                catch { unconfirmed.append(String(describing: error)); pending.append(f) }
+            }
+            if releasingUnlock {
+                do {
+                    guard try smc.double("Ftst") == 0 else { throw FanControlError.helper("Ftst unlock remains active") }
+                } catch { unconfirmed.append(String(describing: error)) }
+            }
+            if unconfirmed.isEmpty {
+                if releasingUnlock { unlocked = false }
+                return FanAutoRecoveryReport(unconfirmed: [], requestErrors: requests)
+            }
+            if attempt == 19 { break }
+            for f in pending where releaseAll || requested.contains(where: { $0.index == f.index }) {
+                request(f, fallback: true)
+            }
+            if releasingUnlock { clearUnlock() }
+            usleep(50_000)
+        }
+        if releaseAll { unlocked = false }
+        return FanAutoRecoveryReport(unconfirmed: unconfirmed, requestErrors: requests)
     }
 
     private func verifyAuto(_ f: FanDescriptor) throws {
         if f.hasModeKey {
             let value = try smc.double(f.modeKey)
             let valid = value == 0 || value == 3
-            guard valid else { throw FanControlError.helper("fan \(f.index): automatic mode readback did not match") }
+            guard valid else { throw FanControlError.helper("fan \(f.index): automatic mode readback did not match (expected 0 or 3, observed \(value))") }
         }
         if discovery.fanForceKey {
             guard try forceBits(fan: f.index) & (1 << f.index) == 0 else {
@@ -313,21 +360,7 @@ public final class FanWriter {
     /// write is not confirmation; a failed request may still be recovered by clearing Ftst.
     @discardableResult
     public func setAllAuto() -> FanAutoRecoveryReport {
-        var requests: [String] = [], unconfirmed: [String] = []
-        for f in discovery.fans {
-            do { try setAuto(f.index) } catch { requests.append(String(describing: error)) }
-        }
-        if discovery.fanTestKey {
-            do { try smc.write("Ftst", value: 0) } catch { requests.append(String(describing: error)) }
-            unlocked = false
-            do {
-                guard try smc.double("Ftst") == 0 else { throw FanControlError.helper("Ftst unlock remains active") }
-            } catch { unconfirmed.append(String(describing: error)) }
-        }
-        for f in discovery.fans {
-            do { try verifyAuto(f) } catch { unconfirmed.append(String(describing: error)) }
-        }
-        return FanAutoRecoveryReport(unconfirmed: unconfirmed, requestErrors: requests)
+        restoreAutomatic(discovery.fans, releaseAll: true)
     }
 
     /// A successful write can precede its mode/target readback. Retry the bounded

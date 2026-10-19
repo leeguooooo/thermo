@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-19",
+  "sourceBase": "ae8aaa3",
+  "versionPrepared": "1.1.32",
+  "sourceFilesSHA256": {
+    "Sources/ThermoKit/FanControl.swift": "1c796ae4c917125c3da2d5668547fd5117f04aab00bbce520036f5d7ddda52d9",
+    "Sources/ThermoKit/Version.swift": "1c578f6971fe7a9b3c7edefccc6adab26891807fee8fecfa9708d8642262be90",
+    "Tests/ThermoKitTests/FanRecoveryTests.swift": "1f4db0a54d052a9e001762bc2263daf31b7bde854e6c5cd69b3cb07e747fbc4a"
+  },
+  "before": {
+    "command": "swift test --jobs 4 --filter selected FanRecoveryTests automatic-mode cases",
+    "exitCode": 1,
+    "tests": 4,
+    "failedCases": 3,
+    "assertionFailures": 9,
+    "acceptedModeThreeControlPassed": true,
+    "logSHA256": "4b65283877825dcf6091514312110f456124a8d6e7f86f03527691597b1c7051"
+  },
+  "after": {
+    "command": "swift test --jobs 4 --filter ThermoKitTests|ThermoHelperTests|ThermoCLITests|ThermoAppTests --skip HardwareTests",
+    "exitCode": 0,
+    "total": 648,
+    "failures": 0,
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 204,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 108,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 306,
+        "failures": 0
+      }
+    },
+    "logSHA256": "a9a95438d9421a99f18f494847874383289e8d84183d2f0ea6d9521b43e64df5"
+  },
+  "behavior": [
+    "Issue recovery requests for all target fans before waiting",
+    "Share 20 rounds and at most 19 50ms sleeps across the complete recovery; SMC I/O time is additional",
+    "Preserve a confirmed automatic mode 3; attempt 0 only when a mode remains unconfirmed",
+    "Confirm mode 0 or 3, clear force bits and verify Ftst release where applicable",
+    "Do not rewrite an unrequested fan during a single-fan transition",
+    "Keep initial request errors in the recovery report; independently verified final state determines confirmation"
+  ],
+  "hardwareRootCauseEstablished": false,
+  "deployed": false,
+  "remaining": [
+    "Build and deploy signed 1.1.32",
+    "Validate recovery while stopping a helper actually running the new FanWriter code; the prior helper stops with its older code during the first upgrade",
+    "Confirm original 6617 RPM policy restoration afterward"
+  ]
+}

@@ -13,6 +13,9 @@ final class FanRecoveryTests: XCTestCase {
         var quantizeTargets = false
         var ignoredManualModeAttempts = 0
         var ignoredTargetAttempts = 0
+        var ignoredAutoAttempts: [FourCC: Int] = [:]
+        var ignoresModeThree = false
+        var otherFanReclaimsOnUnlockReset = false
         func double(_ key: FourCC) throws -> Double {
             guard !failedReads.contains(key), let value = values[key] else { throw Fault.injected }
             return value
@@ -20,6 +23,11 @@ final class FanRecoveryTests: XCTestCase {
         func write(_ key: FourCC, value: Double) throws {
             writes.append((key, value))
             if failedWrites.contains(key) { throw Fault.injected }
+            if value == 0, let remaining = ignoredAutoAttempts[key], remaining > 0 {
+                ignoredAutoAttempts[key] = remaining - 1
+                return
+            }
+            if key == "F0Md", value == 3, ignoresModeThree { return }
             if key == "F0Md", value == 1, ignoredManualModeAttempts > 0 { ignoredManualModeAttempts -= 1; return }
             if key == "F0Tg", ignoredTargetAttempts > 0 { ignoredTargetAttempts -= 1; return }
             if !ignoredWrites.contains(key) { values[key] = value }
@@ -27,12 +35,66 @@ final class FanRecoveryTests: XCTestCase {
             if key == "Ftst", value == 0, firmwareOnUnlockReset {
                 values["F0Md"] = 3; values["F1Md"] = 3
             }
+            if key == "Ftst", value == 0, otherFanReclaimsOnUnlockReset { values["F1Md"] = 1 }
         }
     }
     func discovery(apple: Bool = false, modes: Bool = true, force: Bool = false) -> Discovery {
         Discovery(version: Discovery.version, model: "Fixture", keyCount: 0, sensors: [],
                   fans: [FanDescriptor(index: 0, name: "Left", hasModeKey: modes), FanDescriptor(index: 1, name: "Right", hasModeKey: modes)],
                   fanForceKey: force, fanTestKey: apple, hid: false)
+    }
+
+    func testDelayedAutomaticModeWritesRequireConfirmedReadback() throws {
+        let smc = FakeSMC(); smc.ignoredAutoAttempts["F0Md"] = 2
+        let writer = FanWriter(smc: smc, discovery: discovery())
+        XCTAssertNoThrow(try writer.setAuto(0))
+        XCTAssertEqual(smc.values["F0Md"], 0)
+        XCTAssertGreaterThan(smc.writes.filter { $0.0 == "F0Md" && $0.1 == 0 }.count, 2)
+    }
+
+    func testIgnoredOriginalModeThreeFallsBackToZeroWithoutUnlockKey() throws {
+        let smc = FakeSMC(); smc.values["F0Md"] = 3
+        let writer = FanWriter(smc: smc, discovery: discovery())
+        smc.values["F0Md"] = 1; smc.ignoresModeThree = true
+        XCTAssertNoThrow(try writer.setAuto(0))
+        XCTAssertEqual(smc.values["F0Md"], 0)
+        XCTAssertTrue(smc.writes.contains { $0.0 == "F0Md" && $0.1 == 3 })
+        XCTAssertTrue(smc.writes.contains { $0.0 == "F0Md" && $0.1 == 0 })
+        XCTAssertFalse(smc.writes.contains { $0.0 == "Ftst" })
+    }
+
+    func testAllAutoRequestsEveryFanBeforeSettlingDelayedTransitions() {
+        let smc = FakeSMC(); smc.ignoredAutoAttempts = ["F0Md": 2, "F1Md": 3]
+        let report = FanWriter(smc: smc, discovery: discovery()).setAllAuto()
+        XCTAssertTrue(report.confirmed, "acknowledged but delayed writes must settle before confirmation")
+        XCTAssertEqual(smc.values["F0Md"], 0); XCTAssertEqual(smc.values["F1Md"], 0)
+        XCTAssertEqual(Array(smc.writes.filter { $0.0 == "F0Md" || $0.0 == "F1Md" }.prefix(2).map { $0.0 }), ["F0Md", "F1Md"])
+    }
+
+    func testAcceptedOriginalAutomaticModeThreeIsPreserved() throws {
+        let smc = FakeSMC(); smc.values["F0Md"] = 3
+        let writer = FanWriter(smc: smc, discovery: discovery())
+        smc.values["F0Md"] = 1
+        try writer.setAuto(0)
+        XCTAssertEqual(smc.values["F0Md"], 3)
+        XCTAssertFalse(smc.writes.contains { $0.0 == "F0Md" && $0.1 == 0 })
+    }
+
+    func testDelayedUnlockReleaseMustReadZeroBeforeAllAutoIsConfirmed() {
+        let smc = FakeSMC(); smc.ignoredAutoAttempts["Ftst"] = 2
+        let report = FanWriter(smc: smc, discovery: discovery(apple: true)).setAllAuto()
+        XCTAssertTrue(report.confirmed)
+        XCTAssertEqual(smc.values["Ftst"], 0)
+        XCTAssertGreaterThan(smc.writes.filter { $0.0 == "Ftst" && $0.1 == 0 }.count, 2)
+    }
+
+    func testSingleFanRecoveryDoesNotRewriteAnUnrequestedFanThatChangedDuringUnlockRelease() throws {
+        let smc = manualSMC(); smc.values["F1Md"] = 0
+        let writer = FanWriter(smc: smc, discovery: discovery(apple: true))
+        try writer.setManual(0, rpm: 2500)
+        smc.otherFanReclaimsOnUnlockReset = true
+        XCTAssertThrowsError(try writer.setAuto(0))
+        XCTAssertFalse(smc.writes.contains { $0.0 == "F1Md" }, "do not rewrite a fan outside this single-fan request")
     }
 
     func testFailedFirstFanStillAttemptsEveryFanAndDoesNotConfirmAuto() {
