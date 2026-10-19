@@ -1,0 +1,18 @@
+{
+  "date": "2026-10-19",
+  "issue": "Standalone --main window-close observer exited directly when four selected model flags were idle, bypassing complete application termination protection for restore/manual-removal/helper-removal and active battery/AWDL sessions",
+  "change": "After the main window finishes closing, request NSApplication termination on the next main-queue turn. MainOnlyDelegate then invokes the complete AppExitGuard; blocked operations may reopen their relevant page.",
+  "validation": {
+    "command": "swift test --jobs 4 --filter MainOnlyExitTests|HistoryRestoreTests|HelperMaintenanceTests|PulseSamplingLifetimeTests|WindowLifecycleCheckTests",
+    "tests": 11,
+    "failures": 0,
+    "newDelegateTests": 2,
+    "scope": "Direct application delegate checks plus existing restore and helper workflows; not native window-close notification end-to-end acceptance"
+  },
+  "installedBuildUpdated": false,
+  "remaining": [
+    "Native standalone close while protected operation is active",
+    "Battery and AWDL active-session quit confirmation with hardware",
+    "Final Release compile result"
+  ]
+}

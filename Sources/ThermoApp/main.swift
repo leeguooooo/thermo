@@ -413,9 +413,10 @@ if ["--main", "--disk", "--agents", "--chrome-pages"].contains(where: CommandLin
     NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { n in
         MainActor.assumeIsolated {
             guard let w = n.object as? NSWindow, w === MainWindow.window else { return }
-            if AppModels.shared.softwareUpdates.working || AppModels.shared.nativeUpdates.installing || AppModels.shared.startup.working || AppModels.shared.apps.working {
-                DispatchQueue.main.async { _ = AppExitGuard.reply() }
-            } else { exit(0) }
+            // Use the delegate's complete exit guard, including restore/manual-removal
+            // leases and active charging/AWDL sessions. A cancelled termination can reopen
+            // the relevant page after the close notification has finished retiring content.
+            DispatchQueue.main.async { app.terminate(nil) }
         }
     }
     withExtendedLifetime(mainOnlyDelegate) { app.run() }

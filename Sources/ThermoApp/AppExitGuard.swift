@@ -56,7 +56,10 @@ enum AppExitGuard {
 
 @MainActor
 final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply { AppExitGuard.reply() }
+    var showExitBlocker: @MainActor (MainPage) -> Void = { MainWindow.show($0) }
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        AppExitGuard.reply(show: showExitBlocker)
+    }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         MainWindow.show()
         return false
