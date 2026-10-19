@@ -434,7 +434,9 @@ final class Monitor: ObservableObject {
         setupStarted = setupStarted ?? Date()
         DispatchQueue.global(qos: .userInitiated).async {
             // The Login Items registration would claim the same launchd label.
-            if self.usesSMAppService, self.daemon.status != .notRegistered { try? self.daemon.unregister() }
+            if self.usesSMAppService, !HelperInstaller.isInstalled, self.daemon.status != .notRegistered {
+                try? self.daemon.unregister()
+            }
             do {
                 try HelperInstaller.install(from: bin)
                 // The old connection pointed at the job that was just replaced.
@@ -464,21 +466,25 @@ final class Monitor: ObservableObject {
         return text.contains("last exit code = 78") || text.contains("job state = spawn failed")
     }
 
-    private var restartedOutdatedHelper = false
+    private let helperUpgrade = HelperUpgradeCoordinator()
 
     /// Helpers before 1.0.2 don't restart themselves when the app is updated, so
     /// after an update they keep running the old binary until a reboot. For the
     /// SMAppService daemon, unregister + register makes launchd start the new one
     /// (the old helper returns the fans to auto on SIGTERM). Once per launch.
-    private func restartOutdatedHelper() {
-        guard usesSMAppService, daemon.status == .enabled, !restartedOutdatedHelper, !helperBusy else { return }
-        restartedOutdatedHelper = true
+    @MainActor private func restartOutdatedHelper() {
+        guard !HelperInstaller.isInstalled, usesSMAppService, daemon.status == .enabled,
+              !helperUpgrade.attempted, !helperBusy else { return }
         installingHelper = true
         policyRevision += 1
         Task { @MainActor in
             do {
-                try await daemon.unregister()
-                try daemon.register()
+                // Recheck immediately before touching the registration: a password install
+                // may have completed since refreshHelper observed the old version.
+                let restarted = try await helperUpgrade.restartManaged(legacyInstalled: HelperInstaller.isInstalled,
+                    unregister: { try await self.daemon.unregister() },
+                    register: { try self.daemon.register() })
+                if !restarted { installingHelper = false; return }
             } catch {
                 lastError = tr("Helper update: %1$@", error.localizedDescription)
             }
