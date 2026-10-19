@@ -212,7 +212,7 @@ enum NativeCleanup {
                 o.status = status; o.detail = why; outcomes.append(o)
                 result.failed[run.commandLine] = why; handled.append(run.folder)
             }
-            if mode.trashes(item.safety) { fallBack("trash", tr("the Trash was chosen, so the folder is moved there instead")); continue }
+            if mode.trashes(item) { fallBack("trash", tr("the Trash was chosen, so the folder is moved there instead")); continue }
             if let why=protectionChanged() { stop("refused",why);continue }
             if let why=g.refusal(run.folder) { stop("refused",why);continue }
             if whitelist.protects(run.folder) { stop("whitelisted",tr("The whitelist protects this cache; scan and review it again."));continue }

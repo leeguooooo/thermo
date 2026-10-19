@@ -436,7 +436,7 @@ struct CleanCommand {
         var plan = [style.bold("About to clean \(ByteFormat.string(total)) in \(todo.count) item\(todo.count == 1 ? "" : "s"):")]
         for i in todo {
             let native = i.runsNativeClean(mode) ? i.native : nil
-            let how = native != nil ? style.red("tool clean") : !(i.commands ?? []).isEmpty ? style.red("tool removal") : mode.trashes(i.safety) ? style.yellow("trash ") : style.red("delete")
+            let how = native != nil ? style.red("tool clean") : !(i.commands ?? []).isEmpty ? style.red("tool removal") : mode.trashes(i) ? style.yellow("trash ") : style.red("delete")
             // Paths a tool command takes over are not deleted; the review names the command instead.
             let deleted = i.paths.filter { native?.owns($0) != true }.count
             plan.append("  " + pad(ByteFormat.string(i.bytes), 8, right: true) + "  " + how + "  " + i.title
@@ -445,7 +445,7 @@ struct CleanCommand {
             if let native {
                 plan.append(style.dim("            " + tr("runs `%1$@`", native.display)))
                 for run in native.runs { plan.append(style.dim("              " + run.commandLine)) }
-            } else if let why = i.native?.fallback, !mode.trashes(i.safety) {
+            } else if let why = i.native?.fallback, !mode.trashes(i) {
                 plan.append(style.dim("            " + why))
             }
         }
@@ -458,7 +458,7 @@ struct CleanCommand {
         if args.has("dry-run") {
             if args.has("json") {
                 write(Export.json(Preview(scannedAt: r.started, scanCancelled: r.cancelled, removalMode: mode.rawValue,
-                                          items: todo.map { PreviewItem(item: $0, action: $0.runsNativeClean(mode) ? "tool-clean" : !($0.commands ?? []).isEmpty ? "tool-removal" : mode.trashes($0.safety) ? "trash" : "delete",
+                                          items: todo.map { PreviewItem(item: $0, action: $0.runsNativeClean(mode) ? "tool-clean" : !($0.commands ?? []).isEmpty ? "tool-removal" : mode.trashes($0) ? "trash" : "delete",
                                                                        commands: $0.runsNativeClean(mode) ? $0.native?.runs.map(\.commandLine) : nil) },
                                           skipped: skipped, sessionRetentionDays: r.sessionRetentionDays, sessionPolicyVersion: r.sessionPolicyVersion, missingSelectors: missingSelectors)))
             } else {

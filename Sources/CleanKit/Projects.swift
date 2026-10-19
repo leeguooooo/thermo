@@ -130,6 +130,7 @@ enum Projects {
                 // release binary in `dist`): never in the one-click safe set, always to the Trash.
                 safety: stale && !generic.contains(a) ? .safe : .review,
                 bytes: s.bytes, files: s.files, lastUsed: activity, paths: [p], note: note, blocked: blocked, group: dir)
+            item.regenerable = !generic.contains(a)
             item.estimatedSize = !ctx.options.exactSizes; item.sizeIncomplete = s.incomplete
             return item
         case let .worktree(wt, repo):

@@ -25,7 +25,7 @@ extension DiskModel {
         selectedItems.flatMap { i -> [String] in
             let native=i.runsNativeClean(.auto) ? i.native : nil
             let deleted=i.paths.filter { native?.owns($0) != true }
-            let how=native != nil ? tr("tool clean") : !(i.commands ?? []).isEmpty ? tr("permanent tool removal") : i.safety == .safe ? tr("delete") : tr("trash")
+            let how=native != nil ? tr("tool clean") : !(i.commands ?? []).isEmpty ? tr("permanent tool removal") : !RemovalMode.auto.trashes(i) ? tr("delete") : tr("trash")
             let paths=trCount(deleted.count,"%1$@ path","%1$@ paths")
             var lines=["\(how) · \(ByteFormat.string(i.bytes)) · \(i.title)" + (!deleted.isEmpty ? " (\(paths))" : "")]
             if let native {
@@ -43,11 +43,11 @@ extension DiskModel {
 
     var confirmSummary: String {
         let items = selectedItems
-        let trash = items.filter { $0.safety != .safe && ($0.commands ?? []).isEmpty }
+        let trash = items.filter { RemovalMode.auto.trashes($0) && ($0.commands ?? []).isEmpty }
         let toolItems = items.filter { !($0.commands ?? []).isEmpty }
         var parts = [trCount(items.count, "%1$@ item.", "%1$@ items.")]
         let deletesPaths=items.contains { item in
-            guard item.safety == .safe else { return false }
+            guard !RemovalMode.auto.trashes(item) else { return false }
             let native=item.runsNativeClean(.auto) ? item.native : nil
             return item.paths.contains { native?.owns($0) != true }
         }
@@ -64,7 +64,7 @@ extension DiskModel {
     }
 
     var confirmationIsDestructive: Bool {
-        selectedItems.contains { !($0.commands ?? []).isEmpty || ($0.safety == .safe && !$0.paths.isEmpty) }
+        selectedItems.contains { !($0.commands ?? []).isEmpty || (!RemovalMode.auto.trashes($0) && !$0.paths.isEmpty) }
     }
 
     var safeItems: [CleanItem] { (report?.items ?? []).filter(\.automaticallySelected) }

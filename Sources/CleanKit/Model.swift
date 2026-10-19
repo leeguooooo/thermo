@@ -100,6 +100,9 @@ public struct CleanItem: Codable, Identifiable, Sendable, Equatable {
     public var parts: [CleanPart]?
     /// Items with the same group belong together (build output of one project folder).
     public var group: String?
+    /// A build rebuilds it exactly (`node_modules`, `.build`, `target`): reviewed before removal,
+    /// because rebuilding costs time, but deleted rather than trashed, which would free nothing.
+    public var regenerable: Bool? = nil
     /// For commands whose effect is not known beforehand (`pnpm store prune`): folders measured before
     /// and after, so the result reports a removed-size estimate rather than the scanned upper bound.
     public var measure: [String]?
@@ -189,7 +192,7 @@ public struct NativeClean: Codable, Sendable, Equatable {
 public extension CleanItem {
     /// Whether removing this item runs a tool's own cleanup (not when the Trash is wanted).
     func runsNativeClean(_ mode: RemovalMode) -> Bool {
-        !(native?.runs ?? []).isEmpty && !mode.trashes(safety)
+        !(native?.runs ?? []).isEmpty && !mode.trashes(self)
     }
 }
 

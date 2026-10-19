@@ -824,6 +824,24 @@ final class CleanKitTests: XCTestCase {
         XCTAssertTrue(FS.exists(doc))
     }
 
+    func testRebuildableBuildOutputIsDeletedNotTrashed() throws {
+        // Recent `.build` is reviewed (rebuilding costs time) but the Trash would free nothing.
+        let build = try write("code/app/.build/debug/app.o", age: 0)
+        var item = CleanItem(id: "project/app-.build", category: .projects, title: "app · .build", safety: .review, bytes: 1,
+                             paths: [home + "/code/app/.build"])
+        item.regenerable = true
+        XCTAssertFalse(RemovalMode.auto.trashes(item))
+        XCTAssertTrue(RemovalMode.trash.trashes(item), "an explicit --trash still wins")
+        let r = Cleaner.clean(item, mode: .auto, guard: Guard(home: home))
+        XCTAssertEqual(r.removed, [home + "/code/app/.build"])
+        XCTAssertNil(r.trashBatchID)
+        XCTAssertFalse(FS.exists(build))
+        XCTAssertFalse(FS.exists(home + "/.Trash/.build"))
+        // `out` may hold a rendered video: still the Trash.
+        var out = item; out.regenerable = false
+        XCTAssertTrue(RemovalMode.auto.trashes(out))
+    }
+
     func testTrashRuleEmptiesTrash() throws {
         let junk = try write(".Trash/old.zip")
         let item = CleanItem(id: "trash", category: .system, title: "Trash", safety: .review, bytes: 1, paths: [junk])
