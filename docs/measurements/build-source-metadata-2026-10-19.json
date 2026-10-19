@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-19",
+  "implementationCommit": "24fc4c7192fc10911b691efa36a6d6327577fd9e",
+  "testedSourceSHA256": {
+    "Package.swift": "c8d07941d51bdb19f5b0b3b652c693196978877eccb3e4a734dff14252ae1387",
+    "Sources/AgentCore/AppBuildMetadata.swift": "998990f1f7ab610e5b1459264dfd826339ab5ba360d6c612039bc748d9b93fa6",
+    "Sources/thermo/main.swift": "8eba379c9e032a779c0aef23cbcc18ddff9eab5946151e5507475c4278c8e0f6",
+    "Sources/thermo/CommandHelp.swift": "50a18a1481782b519cf1011cebc22931fe8740cd5b7677a1cf50a053b737d6c3",
+    "Sources/ThermoApp/Updates.swift": "55df117c9947d05dfedda7708b431c6f024cc11a5f15be8dc08f22b10078c099",
+    "Sources/ThermoApp/Views.swift": "835412b4c542212433dc11b411bcf9b67ae3c5b7c9c9245b333a48db0e2e9222",
+    "Sources/ThermoL10n/ZhHans.swift": "913481f622a7a37628915bcc7d2914a42847f4aa5880c479330763a664ee53a6",
+    "Tests/AgentCoreTests/AppBuildMetadataTests.swift": "b9b55cad0f7c356d01c97a7d1192c2c65e2e344e7a187dd47597cd9997192a90",
+    "Tests/ThermoCLITests/VersionReportTests.swift": "16f1b7dea6dc155571140728fd9ed05b06ef4c594716f2a4bdf4b0a7f6eadd17",
+    "scripts/build.sh": "bea479a5648af9e784512326fe040b652d526a958d9548a2b9dff392e710042f",
+    "scripts/source-info.sh": "47a07fbd4d5e52a7d6fc440294f9b9b85089ba8a5e6addb64d4649cac49e0118",
+    "scripts/verify-artifacts.sh": "f107049ef3b02c2fec8fba59cf5b2f1c9d135f74673926308ed8790a718ace0b",
+    "scripts/verify-source-info.py": "b07579276f8abe7198152f8e591e9c448e2d11cdbd2b7a6ef78bee6aeb072cf7",
+    "scripts/verify-version-metadata.py": "b7c6d7d4f30b405f1a58795b4862c0cf3316a2485c4d3e317995f97f6536e7dc"
+  },
+  "motivation": "Two observed branch products shared build 508 while version/source differed; legacy installed packages had no source commit metadata. Version/build alone were insufficient to bind acceptance evidence.",
+  "runtimeContract": {
+    "CLI": "--version --json: compiled cliVersion plus appPackage metadata or explicit null outside an App",
+    "sourceScope": "Containing App packager claim, not binary source attestation; never query Git at runtime or borrow neighboring App/current directory metadata.",
+    "legacy": "Absent or malformed source fields remain unknown; numeric version/build and validated commit only.",
+    "reader": "Kernel self-executable path, symlink resolution, exact Contents/Helpers layout, nonblocking regular-file read capped at 1 MiB.",
+    "buildScope": "Exact Git root only; source commit and Git working-tree state sampled before and after compilation. HEAD/state drift aborts before replacing products. Dirty is not a full source snapshot."
+  },
+  "tests": {
+    "moduleCounts": {
+      "ThermoCLITests": 110,
+      "ThermoAppTests": 306,
+      "AgentDoctorTests": 283,
+      "AgentCoreTests": 50
+    },
+    "total": 749,
+    "failures": 0,
+    "sourceInfo": {
+      "groupsPassed": 3,
+      "checks": [
+        "exact current commit, commit count and tracked/staged/untracked dirty state",
+        "unpacked subfolder cannot borrow parent repository identity; non-Git source stays unknown",
+        "HEAD (including same-count amend), state or version drift refuses packaging and preserves existing outputs"
+      ],
+      "fixtureOnly": true,
+      "realCompilerAndSigningNotInvoked": true
+    },
+    "sameBuildCountDifferentHEADRefused": true,
+    "compiledCLI": {
+      "groupsPassed": 4,
+      "checks": [
+        "standalone source stays null; plain version unchanged; conflicting formats refused",
+        "legacy containing App version is separate from compiled CLI version; no commit guessed",
+        "actual Helpers executable and external symlink locate the same containing App",
+        "invalid claims not exported; FIFO metadata refused without blocking"
+      ],
+      "fixtureOnly": true,
+      "realAppNotModified": true
+    },
+    "package": {
+      "cleanSourceCommit": "24fc4c7192fc10911b691efa36a6d6327577fd9e",
+      "nativePackagedCLIReadsSource": true,
+      "standaloneCLIDoesNotBorrowAppMetadata": true,
+      "legacyUniversalPackageVerifiedWithUnknownSource": true,
+      "malformedMetadataRejectedBeforeSignatureCheck": true,
+      "groupsPassed": 4,
+      "debugArm64Only": true
+    },
+    "alreadyDirtyTreeVersionChangeRefused": true
+  },
+  "initialFailure": {
+    "observed": "Initial VersionReportTests process trapped with signal 5; metadata parser tests passed.",
+    "fix": "Version report and tests now read ThermoVersion.string rather than the executable-entry global initializer.",
+    "finalRelatedTestsPassed": true
+  },
+  "packagedVersionReport": {
+    "appPackage": {
+      "build": "511",
+      "sourceCommit": "24fc4c7192fc10911b691efa36a6d6327577fd9e",
+      "version": "1.1.31",
+      "workingTree": "clean"
+    },
+    "cliVersion": "1.1.31",
+    "schemaVersion": 1
+  },
+  "packageScope": {
+    "configuration": "debug",
+    "architectures": [
+      "arm64"
+    ],
+    "signature": "ad-hoc; strict signatures checked",
+    "feedAbsent": true,
+    "notarized": false,
+    "installedOrPublished": false,
+    "notAnUpgradePackage": true
+  },
+  "visibleUI": {
+    "controller": "cua_repl",
+    "isolatedHome": true,
+    "args": [
+      "--main",
+      "--ui-review",
+      "--page",
+      "settings"
+    ],
+    "stamped": "About shows complete 24fc4c7 source SHA and Chinese clean-working-tree label.",
+    "legacy": "About shows source unknown even though a Git repository is available elsewhere.",
+    "bothWindowsClosedAndProcessesTerminal": true,
+    "bothQARuntimeFileBackedSectionsMatchOriginal": true,
+    "QAUsesAdditionalOwnedLauncherAndDistinctBundleIDs": true,
+    "dirty": "About shows full 93df7ac commit SHA and Chinese dirty-working-tree label.",
+    "allThreeWindowsClosedAndProcessesTerminal": true,
+    "allThreeQARuntimeFileBackedSectionsMatchFinalPackage": true
+  },
+  "products": {
+    "CLI_SHA256": "62172191b53cb144457ff0d1fc7c706d24f06d6edd7d540671e2a2cfac6742a7",
+    "embeddedCLI_SHA256": "62172191b53cb144457ff0d1fc7c706d24f06d6edd7d540671e2a2cfac6742a7",
+    "AppRuntimeSHA256": "3285ba7ef4cbcb1180bf31fecf48b1e7da80b95adc7285cd29bebfcbedc58051"
+  },
+  "limits": {
+    "fullReleaseRetest": false,
+    "RosettaOrIntelRetest": false,
+    "independentSourceAttestation": false,
+    "dirtyWorkingTreeContentSnapshot": false,
+    "hardwareControlOrModelCalls": false,
+    "actualInstalledAppChangedByThisRun": false
+  },
+  "implementationCommits": [
+    "24fc4c7192fc10911b691efa36a6d6327577fd9e",
+    "93df7ac3c812478065c6803da06e2ac3f1df370a"
+  ],
+  "scriptFollowUp": "Capture SCM metadata before reading the marketing version; recheck version even for an already-dirty tree. Commit/state/version drift checked before output replacement.",
+  "additionalRealDirtyPackage": {
+    "appPackage": {
+      "build": "512",
+      "sourceCommit": "93df7ac3c812478065c6803da06e2ac3f1df370a",
+      "version": "1.1.31",
+      "workingTree": "dirty"
+    },
+    "cliVersion": "1.1.31",
+    "schemaVersion": 1,
+    "context": "The untracked evidence JSON, not a claimed source-code change, made Git report dirty. This validates conservative working-tree labeling."
+  },
+  "finalProducts": {
+    "embeddedCLI_SHA256": "62172191b53cb144457ff0d1fc7c706d24f06d6edd7d540671e2a2cfac6742a7",
+    "AppRuntimeSHA256": "94270c47fc658c88af582f678a75116b7f7aa590807b2701a21e5707cebf6139",
+    "sourceCommit": "93df7ac3c812478065c6803da06e2ac3f1df370a",
+    "workingTree": "dirty",
+    "build": "512",
+    "configuration": "debug",
+    "architecture": "arm64"
+  }
+}
