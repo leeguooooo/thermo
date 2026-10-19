@@ -22,6 +22,25 @@ Figma 另经 Codex 0.163.0 已有 OAuth 的只读宿主目录接口取得 44 个
 - [共享 Skill 入口](measurements/shared-skill-maintenance-2026-10-17.json)：修复 message-use、paste-use、sflow 的副本漂移，使共享入口读取安装器维护的来源；[重复副本配置](measurements/codex-skill-dedupe-2026-10-17.json)只停用两组内容相同的 Codex 副本，保留不同工作流。已有会话没有重启，不推断其缓存已经更新。
 - [Unity 引用文件](measurements/unity-skill-reference-repair-2026-10-17.json)从匹配的上游快照补齐；[Design SSE 代理](measurements/claude-design-relay-sse-2026-10-17.json)按请求 ID 识别完整响应，避免响应到达后仍等待流关闭。各有隔离验证，不作为 Unity 业务效果或线上提速证据。
 
+## 显式验收入口
+
+新增入口只验收指定的固定源码和已生成包，不安装、签名、发布，也不创建 hook 或定时任务：
+
+```sh
+python3 scripts/verify-ai-release.py \
+  --source /path/to/fixed-checkout \
+  --package /path/to/candidate-dist \
+  --output /path/to/new-evidence \
+  --release-evidence /path/to/existing-release-tests \
+  --plan
+```
+
+先用 `--plan` 查看范围，去掉它才执行检查。输出目录必须是源码、包之外的新目录。不传 `--release-evidence` 时会以一个 job 跑 Release 测试，排除 HardwareTests；复用时核对 `freeze.json`、终止状态、日志中的七套通过记录和源码哈希，记录为复用而非本次重跑。
+
+入口复用签名、最低系统版本及 CLI 检查，并对 arm64 / Rosetta 分别验证关键 AI 诊断契约、版本身份和输入包完整性。每项保留日志、退出码、超时或中断状态；失败即停，不重试，不回滚他人的修改。`result.json` 的 `complete` 只表示这些检查完成，不代表 GUI、安装版或可复现构建验收。退出码 0 为完成、1 为失败或未完成、2 为输入不合格。`--check-timeout` 设置每项包检查的秒数，默认 240，范围 1–3600；Release 测试使用单独的 1800 秒上限。
+
+维护入口的控制用例：`PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-ai-release-verifier.py`。它只使用自有临时 Git 仓库、文件和进程，不构建或安装 App。
+
 ## 当前验证状态
 
 [原生累计 token 快照](measurements/native-cumulative-token-snapshots-2026-10-19.json)：真实日志的 898 条数值投影在旧版全部列为不支持；新版保留 8 个会话各自的最新快照，与独立核对的原始计数一致。App / CLI / JSON 单列累计输入、缓存、输出与推理数值，不与请求或工具返回合并，不跨会话求和，也不把更早或继承的历史算成窗口用量。乱序记录按时间选取，同一最新时刻冲突则数值未知，缺失字段不补零；旧报告保持未测量。711 项相关模块测试及 7 项新增聚焦测试通过，最终编译 CLI 再次核对；[中文离屏图](measurements/native-cumulative-token-snapshots-zh-2026-10-19.png)使用合成展示数据，不是安装版或业务验收。尚未安装或发布。缓存计量参考[官方说明](https://developers.openai.com/api/docs/guides/prompt-caching)，本地累计快照不据此换算账单。
