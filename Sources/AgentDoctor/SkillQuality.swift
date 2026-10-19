@@ -75,7 +75,7 @@ enum SkillQuality {
                   !path.hasPrefix("/"), !path.hasPrefix("~"),
                   !path.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }),
                   !path.contains(where: { "$<>*{}[]".contains($0) || $0.isNewline || $0.asciiValue == 0 }),
-                  path.hasPrefix("./") || path.hasPrefix("../") || path.contains(".") || path.hasSuffix("/") else { report.skippedReferences += 1; return }
+                  path.hasPrefix("./") || path.hasPrefix("../") || path.contains(".") || path.contains("/") else { report.skippedReferences += 1; return }
             let url = file.resolvingSymlinksInPath().deletingLastPathComponent().appendingPathComponent(path).standardizedFileURL
             guard seen.insert(url.path).inserted else { return }
             var info = stat()

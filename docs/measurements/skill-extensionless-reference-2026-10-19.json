@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "scope": "Static Markdown reference targets in Skill quality inspection",
+  "problem": "Relative directory paths such as references/guide were skipped when they had no dot or trailing slash.",
+  "repair": "Recognize a slash anywhere in a relative static path; keep existing remote, absolute, dynamic, control-character and glob exclusions.",
+  "baselineReproduction": {
+    "tests": 14,
+    "failedAssertions": 4,
+    "reason": "New extensionless reference case was skipped by old code."
+  },
+  "candidateValidation": {
+    "AgentDoctorTests": 286,
+    "failures": 0,
+    "compiledCLIIsolatedHome": {
+      "checkedLocalReferences": 2,
+      "complete": true,
+      "issues": [
+        {
+          "code": "missing_local_reference",
+          "line": 6,
+          "message": "Local Markdown target does not exist now: references/absent. Check whether it should be packaged or generated during use.",
+          "target": "references/absent"
+        }
+      ],
+      "parser": "swift-markdown-0.9.0",
+      "skippedReferences": 2
+    },
+    "fragmentAndQueryAliasesDeduplicated": true
+  },
+  "discovery": {
+    "userSkillRootsInitiallyScanned": 2,
+    "matchingLinksObserved": 0,
+    "boundary": "Controlled valid-path counterexample, not an observed broken installed Skill or demonstrated business benefit."
+  },
+  "delivery": {
+    "sourceOnly": true,
+    "published": false,
+    "installedAppChanged": false
+  }
+}

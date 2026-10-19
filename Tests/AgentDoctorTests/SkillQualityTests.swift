@@ -44,6 +44,16 @@ final class SkillQualityTests: XCTestCase {
         XCTAssertEqual(Set(result.issues.compactMap(\.target)), ["assets/missing.png", "references/guide.md"])
         XCTAssertEqual(result.checkedLocalReferences, 2)
     }
+    func testExtensionlessFilesBelowRelativeDirectoriesAreChecked() throws {
+        try FileManager.default.createDirectory(at: root.appendingPathComponent("references"), withIntermediateDirectories: true)
+        try "fixture".write(to: root.appendingPathComponent("references/guide"), atomically: true, encoding: .utf8)
+        let result = inspect("[guide](references/guide#section)\n[missing](references/absent)\n[duplicate](references/absent?mode=read)\n[dynamic](references/${NAME})")
+        XCTAssertEqual(result.checkedLocalReferences, 2)
+        XCTAssertEqual(result.issues.map(\.target), ["references/absent"])
+        XCTAssertEqual(result.issues.first?.line, 6)
+        XCTAssertEqual(result.skippedReferences, 1)
+        XCTAssertTrue(result.complete)
+    }
     func testRemoteAbsoluteDynamicAndAnchorTargetsAreNotContacted() {
         let result = inspect("[web](https://example.invalid/missing.md)\n[absolute](/missing.md)\n[dynamic](${ROOT}/missing.md)\n[anchor](#title)\n[glob](references/*.md)")
         XCTAssertTrue(result.issues.isEmpty)

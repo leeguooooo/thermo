@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "repository": "https://github.com/leeguooooo/chrome-use",
+  "commit": "070d8f2851d534b1a60dd04d97e150efb958084c",
+  "motivation": {
+    "source": "Recent bounded real Codex log sample, 00:00–03:48 UTC",
+    "snapshotCalls": 26,
+    "callsWithCompact": 22,
+    "callsWithFilter": 15,
+    "callsWithSelector": 3,
+    "callsWithInteractiveExplicitlySet": 0,
+    "callsWithDiffExplicitlySet": 0,
+    "boundary": "MCP did not advertise or forward diff; existing callers could not request CLI incremental snapshots through this tool. Return-size observations are logged text, not model/billed tokens."
+  },
+  "changes": [
+    "Expose optional boolean diff on chrome_use_snapshot and forward it to CLI snapshot --diff",
+    "Default and false preserve full snapshot behavior",
+    "Include filter in snapshot baseline identity; absent and empty filters remain equivalent",
+    "Preserve live ref maps and existing page/options fallback behavior",
+    "Document MCP usage and remove unsupported fixed token ranges from the snapshot guide"
+  ],
+  "validation": {
+    "ordinaryTests": {
+      "passed": 2366,
+      "failed": 0,
+      "ignored": 162,
+      "e2eFeatureEnabled": true,
+      "boundary": "Default ignored browser tests were not all executed."
+    },
+    "explicitBrowserTest": {
+      "passed": 1,
+      "failed": 0,
+      "test": "e2e_snapshot_incremental_filter_baselines_and_live_refs",
+      "isolatedHeadlessChrome": true,
+      "externalBusinessPagesOrExistingUserTabs": false,
+      "checks": [
+        "No baseline returns full tree with explanation",
+        "Same page and same options with no change returns empty delta and explicit no-change note",
+        "Switching Alpha/Beta filters returns full trees with an options mismatch explanation",
+        "Previously acquired Beta ref works after incremental reread",
+        "Click produces independent page receipt clicked",
+        "Subsequent delta includes Beta changed",
+        "Isolated browser close succeeds before final assertions"
+      ]
+    },
+    "MCPContract": [
+      "Schema advertises boolean diff",
+      "True reaches the real CLI parser as diff=true",
+      "False and absent omit --diff",
+      "String true is rejected"
+    ],
+    "formatCheckPassed": true,
+    "sourceFilesSHA256": {
+      "README.md": "1b76371db9c78d60004e5839a0b9de4f92dd9a2ec3572df51b2d90b4fca37b67",
+      "README.zh.md": "c10c67f5913161cf3553fa919c62a0415f7a2317b4f992d63c16cb52a16c55b5",
+      "cli/src/mcp.rs": "0f2d51d151d9202cd9f4c6ac9e1e0ff351de4167841d4c8e03de458f89ec0f4b",
+      "cli/src/native/actions.rs": "f6c6ca8dcb82f505ce8b9879a8dc473223972e6857305e4e27a354383b3a4b76",
+      "cli/src/native/e2e_tests.rs": "5f033de28d2c6891c6206c9bdbdb57ef52981831529cd4f8b46fa30d058f1f58",
+      "cli/src/output.rs": "74235f1e09b6c418860ffe81f2ec9834af888ab192fb36a1422abdd05fb47727",
+      "docs/en/mcp.html": "523c53f18d2672a1ee5a0a37455d13f5a91e73d3782ae3e03e044b5a4fb77133",
+      "docs/mcp.html": "9c827bb22a2eabda3015c56aba6d8b0f07813e4d76117bb4b52d127bdd984c7b",
+      "skill-data/core/SKILL.md": "206143cd54b906cff9a1d1a86dceea1f3fb853c8f63577e925707f7a972a00ea",
+      "skill-data/core/references/snapshot-refs.md": "ed03cf2649675497cbc0a4b77d55bd281e6138ae9d2c4d8edd36ba20c1858ded"
+    },
+    "remoteReceipts": {
+      "full": {
+        "returncode": 0,
+        "source_hash": "2815aea402f6f394bcad1aa6a041bd10f9c0d64e4b243900d4d51bfbae11b0f9",
+        "duration_seconds": 54.84,
+        "cargo_args": [
+          "test",
+          "--bin",
+          "chrome-use",
+          "--features",
+          "e2e-tests"
+        ]
+      },
+      "browser": {
+        "returncode": 0,
+        "source_hash": "2815aea402f6f394bcad1aa6a041bd10f9c0d64e4b243900d4d51bfbae11b0f9",
+        "duration_seconds": 52.95,
+        "cargo_args": [
+          "test",
+          "--bin",
+          "chrome-use",
+          "--features",
+          "e2e-tests",
+          "e2e_snapshot_incremental_filter_baselines_and_live_refs",
+          "--",
+          "--ignored",
+          "--test-threads=1",
+          "--nocapture"
+        ]
+      },
+      "format": {
+        "returncode": 0,
+        "source_hash": "2815aea402f6f394bcad1aa6a041bd10f9c0d64e4b243900d4d51bfbae11b0f9",
+        "duration_seconds": 1.27,
+        "cargo_args": [
+          "fmt",
+          "--",
+          "--check"
+        ]
+      }
+    },
+    "mainMatchesTestedWorktreeFiles": true
+  },
+  "controlledSizeObservation": {
+    "unit": "UTF-8 bytes of serialized native daemon reply, not MCP wire payload or model prompt",
+    "firstFullFallbackReplyBytes": 3650,
+    "unchangedIncrementalReplyBytes": 2547,
+    "reductionBytes": 1103,
+    "reductionPercent": 30.22,
+    "boundary": "One self-owned fixture sequence. Metadata/ref map remain included; not a real-task or billed-token saving claim."
+  },
+  "priorOcclusionFix": {
+    "commit": "179ddb9eccef1a7e94438c7207342cbe977352c2",
+    "includedInCurrentFullTests": true,
+    "initialDiskGuardFailurePreserved": true
+  },
+  "delivery": {
+    "mainIntegrated": true,
+    "published": false,
+    "installedBinaryOrPluginCacheChanged": false,
+    "nativeHostLoadedToolAcceptance": false,
+    "modelEvaluationsStarted": 0,
+    "businessTaskBenefitEstablished": false
+  }
+}

@@ -87,6 +87,31 @@ final class SkillDiscoveryTests: XCTestCase {
         XCTAssertTrue(result.skills.isEmpty)
         XCTAssertTrue(result.findings.contains { $0.message.contains("cache inspection is incomplete") })
     }
+    func testRootDeclaredCacheSkillIsInventoriedOnceAndCannotOfferRemoval() throws {
+        let base = ".codex/plugins/cache/market/fixture/1"
+        try write(".codex/config.toml", "[plugins.\"fixture@market\"]\nenabled = true\n")
+        try write(base + "/.codex-plugin/plugin.json", #"{"name":"fixture","skills":["./","."]}"#)
+        try write(base + "/SKILL.md", document)
+        try write(base + "/references/example/SKILL.md", document.replacingOccurrences(of: "fixture", with: "not-independent"))
+        let result = scan(), item = try XCTUnwrap(result.skills.first)
+        XCTAssertEqual(result.skills.count, 1)
+        XCTAssertEqual(item.name, "fixture")
+        XCTAssertEqual(item.skillFootprint?.namespace, "fixture@market")
+        XCTAssertEqual(item.skillFootprint?.pluginConfiguredEnabled, true)
+        XCTAssertTrue(item.actions.isEmpty)
+        XCTAssertEqual(result.summaries.first?.cacheUniqueFiles, 1)
+        XCTAssertEqual(result.summaries.first?.uniqueFiles, 0)
+        XCTAssertFalse(result.findings.contains { $0.message.contains("cache inspection is incomplete") })
+    }
+    func testEmptyAbsoluteAndEscapingSymlinkDeclarationsStillFailClosed() throws {
+        let base = ".codex/plugins/cache/market/fixture/1"
+        try write(base + "/.codex-plugin/plugin.json", #"{"skills":["","/","./escape"]}"#)
+        try write("outside/SKILL.md", document)
+        try FileManager.default.createSymbolicLink(at: home.appendingPathComponent(base + "/escape"), withDestinationURL: home.appendingPathComponent("outside"))
+        let result = scan()
+        XCTAssertTrue(result.skills.isEmpty)
+        XCTAssertTrue(result.findings.contains { $0.message.contains("cache inspection is incomplete") })
+    }
     func testSummaryIsEncodedAndOldFootprintsWithUnknownIdentityAreNotInventedAsUnique() throws {
         try write(".agents/skills/one/SKILL.md", document)
         let result = scan()

@@ -24,6 +24,10 @@ Figma 另经 Codex 0.163.0 已有 OAuth 的只读宿主目录接口取得 44 个
 
 ## 当前验证状态
 
+[无扩展名相对引用](measurements/skill-extensionless-reference-2026-10-19.json)：补上 `references/guide` 这类静态路径的检查；存在文件通过，缺失文件带原始行号提示，片段和查询参数去重，远程及动态路径仍跳过。286 项 AgentDoctor 测试及隔离 HOME 的编译后 CLI 检查通过。初扫用户 Skill 未发现这种链接，问题由有效路径反例复现，不作为已安装 Skill 故障或业务收益证据；尚未发布。
+
+[插件根目录 Skill 与说明契约修复](measurements/skill-root-cache-and-contract-2026-10-19.json)：修复 `skills:["./"]` 被误判越界，恢复 12 个缓存条目、218,622 字节；原有 215 个缓存文件哈希一致。冻结的真实缓存副本在旧版漏计、新版计入，空路径、绝对路径及逃逸符号链接仍拒绝，缓存条目不提供删除操作。29 项发现测试及 701 项相关模块测试通过。既有 thermo-use 的源码另修复 YAML 描述、缩短发现文本并补齐 AI 计量用法；严格校验、原生发现及四组受控 CLI 路线通过。旧版同样能被当前 Codex 发现，不能称为加载故障。目录描述 cl100k 参考量由 478 降至 138，完整文件却由 4,238 增至 4,589；没有证明整体节省或业务收益。Skill 改动仅在其源码仓库提交，未推送，已安装版本化缓存未改，未新增副本；此修复未打包安装或发布。
+
 [1.1.31（508）固定源码验收](measurements/ai-tools-release-1.1.31-508-2026-10-19.json)绑定 0381f53，保留已提交的主窗口退出和 legacy helper 升级注册保护：七套件 1,721 项 Release 测试、0 失败，排除 HardwareTests；arm64 / Rosetta 各九组打包后 CLI 检查通过。App / CLI / helper 的双架构、严格签名与 macOS 13.0 元数据检查通过。该包为无更新源的 ad-hoc 包，未公证、安装或发布。
 
 完整 Release App 的隔离副本验证了媒体文本和截断标记、原生图片不计入文本、中文本地 schema 引用提示，以及任务对照中“结果通过、条件失败”的分离。正常合成报告替换后旧警告消失，失败和超时仍参与合适的统计；清除后报告移除。两个架构的运行时代码节均与原包匹配，窗口操作仅在 arm64 上进行。它不代表真实业务、硬件或安装更新验收。
@@ -42,12 +46,16 @@ Figma 另经 Codex 0.163.0 已有 OAuth 的只读宿主目录接口取得 44 个
 
 ## 外部参考与后续证据
 
+[近期使用与点击错误复核](measurements/recent-tool-usage-and-click-triage-2026-10-19.json)：在 00:00–03:48 UTC 的 11 份 Codex 日志局部样本中，MCP 返回文本共 505,306 字节，浏览器快照占约 73.3%；外层 exec 另有约 2.35 MB，不能归入内部 MCP。五份文件被裁剪，不是全量排名。七次明确点击错误为六次遮挡拒绝、一次过期引用，其中两组重复撞到同一遮挡；未确认服务故障。由此修复 chrome-use 的错误分类：遮挡拒绝单列 `element_occluded`，避免遮挡文字中的 timeout / connection 被当作可重试的超时或连接问题。21 项远程分类回归通过；首次完整测试因远程磁盘保护中止，失败记录保留。后续含此修复的主线已通过 [2,366 项普通回归](measurements/mcp-snapshot-incremental-2026-10-19.json)，未执行全部默认跳过的浏览器测试。改动已在 chrome-use 主线提交，未发布、未更新安装版，也未重放浏览器操作；提速及 token 收益未知。
+
 - [MCPJam Inspector](https://www.mcpjam.com/features/inspector)：工具请求 / 响应、调用瀑布和跨客户端测试。
 - [ccusage](https://github.com/ccusage/ccusage)：本地会话统计；会话 token 不应直接分摊成某个工具的独占成本。
 - [Anthropic skill-creator](https://claude.com/resources/articles/improving-skill-creator-test-measure-and-refine-agent-skills)：触发评测、Skill 对照、验收、耗时及 token。
 - 其余目录计量与风险检查参考及适用边界见 [外部参考](ai-tools-analysis.md#外部参考)。2026-10-17 的参考收集为资料研究，新增终端实测范围见下文。没有把外部工具的完整体验评成名次，也没有默认上传个人配置或日志。
 
 [2026-10-19 终端对照与静态检查补充](measurements/mcp-inspector-reference-2026-10-19.json)已实测官方 Inspector 2.11.0、MCPJam CLI 5.16.1 的正常、工具错误、协议错误、schema 与返回契约案例。对照发现的缺失本地 `$ref` 目标，已补进 Thermo 的定义提示；合法布尔 schema 保持无提示，定义计量不变。资源标识符、远程引用、锚点及超过预算者不在此项解析范围，未拉取外部 schema。692 项相关回归、四组编译后 CLI 案例和隔离原生窗口通过；尚未发布，不据此评定真实业务质量。
+
+[MCP 快照增量入口](measurements/mcp-snapshot-incremental-2026-10-19.json)：为 `chrome_use_snapshot` 暴露既有 CLI 的 `diff: true`，默认仍返回完整树；修正切换 filter 后误用旧基线的问题。2,366 项普通回归、格式检查及 1 项隔离 Chrome 用例通过：无变化提示、换过滤条件回退完整树、原 ref 点击及页面回执均核对。自有页面的首次完整回复与后续无变化回复为 3,650 / 2,547 字节，只是该序列的 daemon 返回体积，不代表任务或模型 token 节省。改动已合入 chrome-use 主线，未发布或改动安装版。
 
 ## 博客工作流的真实模型对照
 

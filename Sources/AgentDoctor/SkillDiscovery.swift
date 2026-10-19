@@ -61,11 +61,13 @@ extension ConfigChecks {
                     else if let path = object["skills"] as? String { paths = [path] }
                     else if let list = object["skills"] as? [String] { paths = list }
                     else { paths = ["./skills"] }
+                    var seenRoots = Set<String>()
                     for path in paths.prefix(64) {
                         let root = version.appendingPathComponent(path).standardizedFileURL
                         let base = version.resolvingSymlinksInPath().standardizedFileURL.path
                         let resolved = root.resolvingSymlinksInPath().standardizedFileURL.path
-                        guard !path.hasPrefix("/"), resolved.hasPrefix(base + "/") else { incomplete = true; continue }
+                        guard !path.isEmpty, !path.hasPrefix("/"), resolved == base || resolved.hasPrefix(base + "/") else { incomplete = true; continue }
+                        guard seenRoots.insert(root.path).inserted else { continue }
                         // Missing optional skill directories mean the plugin has no cached skills.
                         guard fm.fileExists(atPath: root.path) else { continue }
                         cacheSkillSources[root.path] = (namespace, enabled[namespace])
