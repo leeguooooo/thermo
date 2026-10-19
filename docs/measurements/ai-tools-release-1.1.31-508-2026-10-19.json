@@ -1,0 +1,331 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-19",
+  "sourceCommit": "0381f530facd42c6a97c195c0bc0b649ce815086",
+  "marketingVersion": "1.1.31",
+  "build": "508",
+  "scope": "Frozen source Release verification, not a production upgrade candidate.",
+  "upgradeApplicable": false,
+  "upgradeApplicabilityReason": "Installed version advanced to 1.1.32/508 during verification. This frozen 1.1.31/508 package is source-verification evidence only, not an upgrade. Change origin is not attributed by this run.",
+  "sourceFilesSHA256": {
+    "Sources/AgentDoctor/MCPInspection.swift": "25e2e70d4ee4bc035c625ec3c88d7da11c845434e9c5478a62bf08cee8a94040",
+    "Sources/AgentDoctor/MCPLocalSchemaReferences.swift": "c23ee869d03d1bd99505b5495cf2d2d547b0ae4fba57e83f4af2e9321b371cd6",
+    "Sources/AgentDoctor/ToolUsageParser.swift": "069fc9b5fa3b33c45f3b922305b9da2e385cb7f3d3c101c46893d235432b137d",
+    "Sources/AgentDoctor/ToolResultTextObservation.swift": "4ec3a3a8375c2460203ed4a9ef52abeb9ce674b9176719b8efb78c629340d840",
+    "Sources/AgentDoctor/TaskComparison.swift": "44fe2465bd6b8ecdda463090b6b835de070668a935420b9a550f3fdb079f4810",
+    "Sources/ThermoApp/TaskComparisonPanel.swift": "fdb70e9b3fef67d33d6135d308b0d6533b1bc6a2697c5c7f90dc08f02e99d002",
+    "Sources/ThermoApp/ToolUsagePanel.swift": "af776bfeaba34627b806f6247d0c19b326288d78dc8410194140d9c2c1730364",
+    "Sources/ThermoApp/AppExitGuard.swift": "5166dc8712c540deae7306814e00335faf56a3507f52b0a1dd0f24e032aa0ba0",
+    "Sources/ThermoApp/HelperUpgradeCoordinator.swift": "6c0db3e61fedc91922a0b818cb1cbdfd853ea6a6da1b85b9f4587e9656cc3c26",
+    "Sources/ThermoApp/Monitor.swift": "3a3505ce56f487f27db69bab8fc953a4d112360fce230c5fa91e2dc49b54ae8f",
+    "Sources/ThermoApp/main.swift": "1c5bff60c7a5e51950b1882f15519ddc6d6132b203cf62b6c7f4ef681902c484",
+    "Sources/ThermoKit/Version.swift": "c7c2f5882d38c62b17d56b3beeabc88110e15474f8b3890613343356aadc7f3a",
+    "scripts/build.sh": "34420d1ef4be2c9308b1188834441d79ee74d658e2930ab1a239e3d9332e24cd",
+    "scripts/verify-task-comparison.py": "13f099ddedffe385eb7efa4817c555564d73e54e0cb9c0842e3d40ced808317f"
+  },
+  "integration": {
+    "includesCommittedFixesFrom": "3ca5039",
+    "retainsMainWindowExitProtection": true,
+    "retainsLegacyHelperRegistrationProtection": true,
+    "unrelatedTabOrganizerWorkingChangesWereNotIncluded": true,
+    "baselineSource": "aaca270",
+    "baselineVersion": "1.1.29",
+    "baselineBuild": "499",
+    "baselineReleaseTests": 1716,
+    "baselineIsNotUpgrade": true
+  },
+  "releaseTests": {
+    "suites": {
+      "ThermoKitTests": 198,
+      "ThermoHelperTests": 30,
+      "ThermoCLITests": 108,
+      "ThermoAppTests": 306,
+      "CleanKitTests": 751,
+      "AgentDoctorTests": 283,
+      "AgentCoreTests": 45
+    },
+    "total": 1721,
+    "failures": 0,
+    "hardwareTestsExcluded": true
+  },
+  "testsExit": {
+    "exitCode": 0,
+    "timedOut": false,
+    "seconds": 509.04057241600003,
+    "sourceCommit": "0381f530facd42c6a97c195c0bc0b649ce815086",
+    "processTerminal": true
+  },
+  "buildExit": {
+    "exitCode": 0,
+    "timedOut": false,
+    "seconds": 478.53525241700027,
+    "sourceCommit": "0381f530facd42c6a97c195c0bc0b649ce815086",
+    "processTerminal": true
+  },
+  "CLIValidation": {
+    "groups": 18,
+    "groupsPerArchitecture": 9,
+    "newSurfaceConditionsPerArchitecture": 3,
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "x86Execution": "Rosetta on Apple Silicon, not an Intel machine",
+    "results": [
+      {
+        "architecture": "arm64",
+        "execution": "native",
+        "check": "verify-skill-context.py",
+        "exitCode": 0,
+        "outputSHA256": "438ee7395f9c069cf2592af0daf954ea7b507ad0b82abb40734b872b11230fdb"
+      },
+      {
+        "architecture": "arm64",
+        "execution": "native",
+        "check": "verify-skill-quality.py",
+        "exitCode": 0,
+        "outputSHA256": "c856903e7d8bcdfafa832d83af64546cca73666d872dd942ff9c70b659c510df"
+      },
+      {
+        "architecture": "arm64",
+        "execution": "native",
+        "check": "verify-tool-usage.py",
+        "exitCode": 0,
+        "outputSHA256": "0678df2fcfbf82942df8aa2b209ddd58b90f44543a6dd2207e352e1680eab00e"
+      },
+      {
+        "architecture": "arm64",
+        "execution": "native",
+        "check": "verify-reference-encoding.py",
+        "exitCode": 0,
+        "outputSHA256": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d"
+      },
+      {
+        "architecture": "arm64",
+        "execution": "native",
+        "check": "verify-task-comparison.py",
+        "exitCode": 0,
+        "outputSHA256": "dcaa5de442cf86235d202ce578d0e599feaad1954344229066ddd4a518ca8fc3"
+      },
+      {
+        "architecture": "arm64",
+        "execution": "native",
+        "check": "verify-mcp-cleanup-details.py",
+        "exitCode": 0,
+        "outputSHA256": "fddc31deb9af11ee32b64c9588b223a9d785336cb166720b29a339635bc1491a"
+      },
+      {
+        "architecture": "arm64",
+        "execution": "native",
+        "check": "verify-cli-completeness.py",
+        "exitCode": 0,
+        "outputSHA256": "720c3231daddc2d8028aa792836905c46101a9b21ace3502a3bc351f85329957"
+      },
+      {
+        "architecture": "arm64",
+        "execution": "native",
+        "check": "verify-skill-instruction-usage.py",
+        "exitCode": 0,
+        "outputSHA256": "327c431bb3d429ea1e5deb306146039be0156d04a14290fb8bafaf4957c443e1"
+      },
+      {
+        "architecture": "arm64",
+        "execution": "native",
+        "check": "new-surfaces.py",
+        "exitCode": 0,
+        "outputSHA256": "fb92a239ade4494ffc24d99b7fd0a596954c55f04ca157d28874bc2412531a8f"
+      },
+      {
+        "architecture": "x86_64",
+        "execution": "Rosetta",
+        "check": "verify-skill-context.py",
+        "exitCode": 0,
+        "outputSHA256": "438ee7395f9c069cf2592af0daf954ea7b507ad0b82abb40734b872b11230fdb"
+      },
+      {
+        "architecture": "x86_64",
+        "execution": "Rosetta",
+        "check": "verify-skill-quality.py",
+        "exitCode": 0,
+        "outputSHA256": "c856903e7d8bcdfafa832d83af64546cca73666d872dd942ff9c70b659c510df"
+      },
+      {
+        "architecture": "x86_64",
+        "execution": "Rosetta",
+        "check": "verify-tool-usage.py",
+        "exitCode": 0,
+        "outputSHA256": "0678df2fcfbf82942df8aa2b209ddd58b90f44543a6dd2207e352e1680eab00e"
+      },
+      {
+        "architecture": "x86_64",
+        "execution": "Rosetta",
+        "check": "verify-reference-encoding.py",
+        "exitCode": 0,
+        "outputSHA256": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d"
+      },
+      {
+        "architecture": "x86_64",
+        "execution": "Rosetta",
+        "check": "verify-task-comparison.py",
+        "exitCode": 0,
+        "outputSHA256": "dcaa5de442cf86235d202ce578d0e599feaad1954344229066ddd4a518ca8fc3"
+      },
+      {
+        "architecture": "x86_64",
+        "execution": "Rosetta",
+        "check": "verify-mcp-cleanup-details.py",
+        "exitCode": 0,
+        "outputSHA256": "3df31db96a88014137443cfe8edca9af6ec49d8a731567ddefc4ca0ee1709c79"
+      },
+      {
+        "architecture": "x86_64",
+        "execution": "Rosetta",
+        "check": "verify-cli-completeness.py",
+        "exitCode": 0,
+        "outputSHA256": "9e6a0d9adcdf375e370ba2456aead9ad5c6333fd91812d08fd56fdd446f1a6b8"
+      },
+      {
+        "architecture": "x86_64",
+        "execution": "Rosetta",
+        "check": "verify-skill-instruction-usage.py",
+        "exitCode": 0,
+        "outputSHA256": "327c431bb3d429ea1e5deb306146039be0156d04a14290fb8bafaf4957c443e1"
+      },
+      {
+        "architecture": "x86_64",
+        "execution": "Rosetta",
+        "check": "new-surfaces.py",
+        "exitCode": 0,
+        "outputSHA256": "8315f649d0df551807c0962360fc00ecde2fb0af58381fc6e6a4b613a3011a7b"
+      }
+    ]
+  },
+  "package": {
+    "signature": "ad-hoc hardened runtime; strict signatures checked",
+    "notarized": false,
+    "updateFeedPresent": false,
+    "minimumOS": "13.0",
+    "products": {
+      "thermo": {
+        "sha256": "c9ec5d68e5828768639d46e9a3d2151b6afb7a31b1cc243a3339ae4a2bcfd305",
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ]
+      },
+      "thermo-helper": {
+        "sha256": "36d45da7512b9e8a31089210921b929459916b1d76422d680c6faa5778070ad4",
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ]
+      },
+      "Thermo.app/Contents/MacOS/Thermo": {
+        "sha256": "7c83f937eb51bcb2d45a1f61de5e6179bb65a2fb5e3b0214f8e2ef72a37d962b",
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ]
+      },
+      "Thermo.app/Contents/Helpers/thermo": {
+        "sha256": "c9ec5d68e5828768639d46e9a3d2151b6afb7a31b1cc243a3339ae4a2bcfd305",
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ]
+      },
+      "Thermo.app/Contents/Helpers/thermo-helper": {
+        "sha256": "36d45da7512b9e8a31089210921b929459916b1d76422d680c6faa5778070ad4",
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ]
+      }
+    },
+    "originalStrictSignatureValidAfterQA": true
+  },
+  "visibleUI": {
+    "bundleID": "dev.thermo.ai.release.qa.508",
+    "fullReleaseRuntime": true,
+    "runtimeAllFileBackedSectionsMatchBothOriginalArchitectures": true,
+    "runtimeSHA256": "fc613606e79c7ab25b885f463895055ee987d1bddbe70de0cfb3e2a3813a0be8",
+    "UIExecutionArchitecture": "arm64",
+    "isolatedHome": true,
+    "reviewMode": true,
+    "checks": [
+      "one owned MCP definition inspected through native batch picker; 157 bytes/about 40 heuristic tokens and one schema hint",
+      "Chinese unresolved-reference finding visible in detailed inspection",
+      "synthetic encoded image: 108 logged text bytes/about 28 heuristic tokens with one serialized-media observation and truncation marker",
+      "native image: zero measured text and one non-text block, no media-token estimate",
+      "derived four real task records retain two passes per arm while two pairs excluded due failed comparison checks",
+      "excluded task reasons visible; no rate or time/token differences for invalid cohort",
+      "normal synthetic v2 file replaces warning: three matched pairs; one baseline failure and one candidate timeout retained; input tokens have two pairs",
+      "clear removes imported report",
+      "owned window closed; process terminal"
+    ],
+    "fixtureBusinessCalls": 0,
+    "fixtureMethods": [
+      {
+        "method": "initialize"
+      },
+      {
+        "method": "notifications/initialized"
+      },
+      {
+        "method": "tools/list"
+      },
+      {
+        "method": "initialize"
+      },
+      {
+        "method": "notifications/initialized"
+      },
+      {
+        "method": "tools/list"
+      }
+    ]
+  },
+  "installedObservation": {
+    "before": {
+      "version": "1.1.31",
+      "build": "506"
+    },
+    "after": {
+      "version": "1.1.32",
+      "build": "508"
+    },
+    "unchanged": false,
+    "changeOriginAttributedByThisRun": false,
+    "noInstallationOrPublicationActionPerformed": true,
+    "finalInstalledCLIProbe": {
+      "version": "1.1.32",
+      "build": "508",
+      "CLI_SHA256": "6a1c853381a84af9a6bc3ec5cbf842548be9fe491b640e9da2744eb78b65bd06",
+      "CLIStableAcrossProbes": true,
+      "schemaReferenceFindingCount": 0,
+      "comparisonChecksSupported": true,
+      "mediaFlagsSupported": true,
+      "scope": "Installed CLI only, owned fixtures, no App UI or business/devices invoked."
+    },
+    "probeFileSHA256": "f172bc093be8b2eb024ffd5e5443a2271e4cda42e6d6dd015641515ac96f091f",
+    "probeFileModifiedAtUTC": "2026-10-19T02:21:44.764641+00:00",
+    "interpretation": "Installed CLI supports post-run comparison checks and media markers; missing local schema references are not yet reported. This does not verify the installed App GUI."
+  },
+  "preservation": {
+    "old489And499ArtifactsUnchanged": true,
+    "priorDebugProductsUnchanged": true,
+    "ownedQAStopped": true,
+    "old479ArtifactsUnchanged": true
+  },
+  "limits": {
+    "HardwareTestsExcluded": true,
+    "realBusinessMCPOrPhoneOrBrowserUsed": false,
+    "newModelSessions": 0,
+    "rawUserConversationsPublished": false,
+    "credentialsCopied": false,
+    "realHelperOrFanOrChargingOrWirelessControlTested": false,
+    "installedGUIVerified": false,
+    "sourceEquivalentToLaterMainCommits": false,
+    "installedOrPublishedByThisRun": false
+  }
+}
