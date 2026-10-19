@@ -59,5 +59,7 @@
     ]
   },
   "osInternalCauseOfEarlierEIOEstablished": false,
-  "installedAppContainsFix": false
+  "installedAppContainsFix": true,
+  "packagedMaintenanceAccepted": true,
+  "packagedFollowUp": "mole-installed-509-2026-10-19.json"
 }

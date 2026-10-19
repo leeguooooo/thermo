@@ -1,0 +1,97 @@
+{
+  "date": "2026-10-19",
+  "source": "5c1b127",
+  "version": "1.1.33",
+  "build": "509",
+  "package": {
+    "developerIDTeam": "6ZPXG4KVVS",
+    "metadataAndAppleEventsEntitlementVerified": true,
+    "architectures": {
+      "Contents/MacOS/Thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo-helper": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "nativeAndRosettaCLIPassed": true,
+    "archive": {
+      "archive": "Thermo-1.1.33-509-candidate.zip",
+      "sha256": "e814c6944738fe1554414865b728b58b65de6da1268d400a241779d82d5f3d6a",
+      "regularFiles": 93,
+      "symlinks": 8,
+      "filesModesAndLinksMatch": true,
+      "unpackedDeepStrictAllArchSignaturePass": true
+    },
+    "lifecyclePassed": true,
+    "lifecycleSamples": 23,
+    "transitionChecks": {
+      "cycle-1-hidden": true,
+      "cycle-1-leave-overview": true,
+      "cycle-1-return-overview": true,
+      "cycle-1-visible-again": true,
+      "cycle-2-hidden": true,
+      "cycle-2-leave-overview": true,
+      "cycle-2-return-overview": true,
+      "cycle-2-visible-again": true
+    }
+  },
+  "deployment": {
+    "old508NormalQuitVerified": true,
+    "atomicAppExchange": true,
+    "oldAppAndRootFilesPreserved": true,
+    "appControlVersion": "1.1.33 (509)",
+    "helperVersion": "8/1.1.33",
+    "rootMatchesEmbedded": true,
+    "rootSHA256": "7236341ae03dc3db19d419c93eddec0825f96ba1232f80cd670d5b0728ccb79e",
+    "currentHelperPID": 70040
+  },
+  "automaticUpgrade": {
+    "accepted": true,
+    "samples": 16,
+    "registrationAlwaysPresent": true,
+    "recoveredManualTargetChecks": 6,
+    "stopMessage": "2026-10-19 12:00:33 thermo-helper: updated itself to 1.1.33 from /Applications/Thermo.app/Contents/Helpers/thermo-helper; automatic control confirmed"
+  },
+  "packagedHotMaintenance": {
+    "accepted": true,
+    "installer": "Installed signed App Contents/Helpers/thermo",
+    "installerExitCode": 0,
+    "oldPID": "60084",
+    "newPID": "70040",
+    "samples": 21,
+    "stopMessages": [
+      "2026-10-19 12:01:14 thermo-helper: signal 15; automatic control confirmed"
+    ],
+    "consecutiveOriginalPolicyChecks": 6,
+    "canonicalSourcePreserved": true,
+    "helperPayloadUnchanged": true,
+    "originalPolicy": {
+      "0": {
+        "fixed": {
+          "rpm": 6617
+        }
+      }
+    },
+    "observationSHA256": "39bfa1d6ae5c137f1c03d98ad177fd05b369449993cfe75cfce43c3ff35a43d5"
+  },
+  "visibleUI": {
+    "versionAndRunningHelper": true,
+    "manual6617TargetAndFixedPolicy": true,
+    "errorBannerAbsent": true
+  },
+  "scope": "Mac15,3 on macOS 26.6.2; no new charging/network session or policy requested; no physical Intel acceptance",
+  "notarized": false,
+  "published": false,
+  "remaining": [
+    "Explicit usable GUI helper repair entry",
+    "Screen permission and remaining hardware sessions",
+    "Main source integration and full parity matrix"
+  ]
+}

@@ -2,7 +2,9 @@
 
 先补可靠性与核心流程，再打磨界面。参照本地 Mole 原生 App 1.16.0（324），证据见 [原生研究](mole-native-study.md)和[函数研究](mole-native-functions.md)。整体齐平仍未成立。
 
-2026-10-19 当前本机为 1.1.32（508），源码 0cfb42c。新 FanWriter 在真实 helper 停止时记录 automatic control confirmed，服务空档的只读风扇读数也显示自动模式；自动恢复补丁在 Mac15,3 上通过。本次原安装器热替换暴露 bootstrap 5，旧文件回滚后的重载也失败，修复文件已保留；确认旧进程退出后，重新安装恢复 8/1.1.32 和原 6617 RPM 策略。新安装器的 12 项测试及签名原生 CLI 热重装验证通过：21 次观测、6 次原策略读回、停止自动恢复确认，helper 来源仍指向正式 App。新安装器尚未进入已安装 App，正在准备 1.1.33；旧 EIO 的系统内部原因未独立证明。主目录其他改动保留，未公证或发布。见 [508 分项验收](measurements/mole-installed-508-2026-10-19.json)、[退出等待保护](measurements/helper-installer-unload-wait-2026-10-19.json)。
+2026-10-19 当前本机为 1.1.33（509），源码 5c1b127。651 项相关非硬件回归、通用 Developer ID 包、原生/Rosetta CLI、ZIP 文件/权限/链接比对及 23 个生命周期观测点通过。自动升级 16 次采样保留注册，旧 helper 确认恢复自动；正式安装包自带 CLI 的热重装返回成功，21 次观测中旧进程确认自动恢复，新进程完成 6 次原 6617 RPM 策略读回。root helper 为 8/1.1.33，文件与包内一致，设置页和风扇页可见确认。安装器等待修复已随 App 交付，不再仅限临时 CLI。此结论限本机 Mac15,3；清屏权限、其他硬件会话、GUI 修复入口和整体齐平仍待继续，未公证或公开发布。见 [509 包内及实机验收](measurements/mole-installed-509-2026-10-19.json)。
+
+前一检查点（2026-10-19）本机为 1.1.32（508），源码 0cfb42c。新 FanWriter 在真实 helper 停止时记录 automatic control confirmed，服务空档的只读风扇读数也显示自动模式；自动恢复补丁在 Mac15,3 上通过。本次原安装器热替换暴露 bootstrap 5，旧文件回滚后的重载也失败，修复文件已保留；确认旧进程退出后，重新安装恢复 8/1.1.32 和原 6617 RPM 策略。新安装器的 12 项测试及签名原生 CLI 热重装验证通过：21 次观测、6 次原策略读回、停止自动恢复确认，helper 来源仍指向正式 App。新安装器尚未进入已安装 App，正在准备 1.1.33；旧 EIO 的系统内部原因未独立证明。主目录其他改动保留，未公证或发布。见 [508 分项验收](measurements/mole-installed-508-2026-10-19.json)、[退出等待保护](measurements/helper-installer-unload-wait-2026-10-19.json)。
 
 前一检查点（2026-10-19）本机为 1.1.31（506），源码 `3ca5039`。本次真实升级中，新 App 确实观察到旧 legacy helper；17 次采样均保留 launchd 注册，root helper 自主从 8/1.1.30 更新为 8/1.1.31，未调用安装器。原 6617 RPM 策略完成 6 次连续手动目标核对，设置页与风扇页可见检查通过。但旧 helper 退出日志记录“automatic control unconfirmed: fan 0: automatic mode readback did not match”；新服务已恢复既有手动策略，不能据此宣称自动模式恢复或整条升级全通过。候选签名、原生/Rosetta CLI、ZIP 一致性和 23 个生命周期观测点通过。主工作区有新提交和未提交的标签整理改动，保持原样；修复仍在隔离分支，未公证或发布。见 [506 安装与分项验收](measurements/mole-installed-506-2026-10-19.json)。
 

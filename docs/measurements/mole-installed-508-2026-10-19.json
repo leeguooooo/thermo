@@ -83,5 +83,6 @@
     "Usable explicit GUI repair action",
     "Screen permission and remaining hardware sessions",
     "Full parity matrix and main integration"
-  ]
+  ],
+  "followUp": "mole-installed-509-2026-10-19.json"
 }
