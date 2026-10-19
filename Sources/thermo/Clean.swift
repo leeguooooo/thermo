@@ -310,7 +310,8 @@ struct CleanCommand {
     /// group (all, safe, ai, a category) that has to be found by scanning.
     static func normalizedSelectors(_ selectors: [String]) -> [String] {
         let aliases = ["sessions": CleanCategory.aiSessions.rawValue, "worktrees": CleanCategory.agentWorktrees.rawValue, "models": CleanCategory.aiModels.rawValue]
-        return selectors.map { aliases[$0.lowercased()] ?? $0 }
+        // A quoted list ("a b") arrives as one argument from shells and agents; ids never hold spaces.
+        return selectors.flatMap { $0.split(whereSeparator: \.isWhitespace).map(String.init) }.map { aliases[$0.lowercased()] ?? $0 }
     }
 
     static func itemIDs(in selectors: [String]) -> Set<String>? {
@@ -416,7 +417,8 @@ struct CleanCommand {
                 } else { write("dry run · scan stopped before any matching item completed; nothing was removed") }
                 return
             }
-            throw CLIError("nothing matches; see thermo clean")
+            throw CLIError(missingSelectors.isEmpty ? "nothing matches; see thermo clean"
+                           : "nothing matches: " + missingSelectors.joined(separator: ", ") + "; see thermo clean")
         }
         // A saved scan can predate a whitelist edit; an unreadable whitelist stops the run.
         let whitelist: Whitelist
