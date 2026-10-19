@@ -1,0 +1,316 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUTC": "2026-10-19T15:31:40.666215+00:00",
+  "scope": "Codex CLI 0.162.1 loading copied thermo-use documents from isolated user-Skill directories. Not the active plugin registration or production host.",
+  "client": {
+    "version": "codex-cli 0.162.1",
+    "binarySHA256": "74c6a6d263f40d65f99c27a815275f5b4ed0bcc2baecc396b4cf3255498bdfc0",
+    "host": "mac190",
+    "realModelCalled": false,
+    "soleConfiguredProvider": "owned loopback literal backend",
+    "HTTPRequestsToFakeBackend": 8,
+    "CLIExecutions": 7,
+    "syntheticUsageIsNotBilling": true
+  },
+  "inputs": {
+    "cache": {
+      "origin": "cached thermo-use 0.4.1; copy only, host-loaded version unverified",
+      "SKILL_SHA256": "8016c6a4e837114c490d58e4a2f1d3b2a6941567f6a12772920027e619aa549f"
+    },
+    "fixed": {
+      "origin": "fixed-YAML monolithic source snapshot",
+      "SKILL_SHA256": "a5af80d2cc8098b107613777e786a937cb40f515ba0f610e8d3216aa1b8e6d21"
+    },
+    "route": {
+      "originCommit": "020b104493bbee5e8f625dc6cc1d3cd7d29941e5",
+      "files": {
+        "SKILL.md": "c5c590ecaf778ddd501e812f7fdb297f38961e50f67450f1cd9ab0b896e710bc",
+        "references/ai-diagnostics.md": "e6d870124ab7bf9bd81fcd24e823f1ceb303988c06c416a0eeb1508a0f71177b",
+        "references/storage-and-apps.md": "feacb6a56821083d1884b582f708ca479d07c5db95ada2c53134ee1a5d4f015a",
+        "references/performance.md": "255b829fbcc437ae95b06653a9c69c90e4f146c976ac90932869291f1077d9fc",
+        "references/browser-tabs.md": "ad8d11601c05cb2758d5c9d5bd7049c522bb53c06b9c5fbd03025fd6897a534c"
+      }
+    }
+  },
+  "formatValidation": {
+    "validatorSHA256": "ee6dba90f44d37171c5a6edb8095979c54919ff6822c1a907afca2e78c48738c",
+    "checks": {
+      "cache": {
+        "exitCode": 1,
+        "SKILL_SHA256": "8016c6a4e837114c490d58e4a2f1d3b2a6941567f6a12772920027e619aa549f"
+      },
+      "fixed": {
+        "exitCode": 0,
+        "SKILL_SHA256": "a5af80d2cc8098b107613777e786a937cb40f515ba0f610e8d3216aa1b8e6d21"
+      },
+      "route": {
+        "exitCode": 0,
+        "SKILL_SHA256": "c5c590ecaf778ddd501e812f7fdb297f38961e50f67450f1cd9ab0b896e710bc"
+      }
+    },
+    "hostOutcome": "All three copied user-directory Skills were cataloged and explicitly loaded by Codex CLI 0.162.1; validation failure is not a host-rejection verdict",
+    "currentPluginRegistrationTested": false
+  },
+  "discoveryAndExplicitLoading": {
+    "cases": [
+      {
+        "case": "cache",
+        "mode": "catalog",
+        "exitCode": 0,
+        "requests": 1,
+        "catalogPresent": true,
+        "catalogPathAlias": "r0",
+        "aliasRootDeclared": true,
+        "descriptionCharacters": 1024,
+        "descriptionUTF8Bytes": 1026,
+        "descriptionEndsWithEllipsis": true,
+        "inputTextUTF8Bytes": 8007,
+        "fullEntryBodyPresent": false,
+        "entryBodyOccurrences": 0,
+        "referencesAutomaticallyIncluded": false,
+        "eventTypes": [
+          "thread.started",
+          "turn.started",
+          "item.completed",
+          "turn.completed"
+        ],
+        "completedItemTypes": [
+          "agent_message"
+        ],
+        "actualUserSkillOrAuthPathsAbsent": true
+      },
+      {
+        "case": "cache",
+        "mode": "explicit",
+        "exitCode": 0,
+        "requests": 1,
+        "catalogPresent": true,
+        "catalogPathAlias": "r0",
+        "aliasRootDeclared": true,
+        "descriptionCharacters": 1024,
+        "descriptionUTF8Bytes": 1026,
+        "descriptionEndsWithEllipsis": true,
+        "inputTextUTF8Bytes": 25402,
+        "fullEntryBodyPresent": true,
+        "entryBodyOccurrences": 1,
+        "referencesAutomaticallyIncluded": false,
+        "eventTypes": [
+          "thread.started",
+          "turn.started",
+          "item.completed",
+          "turn.completed"
+        ],
+        "completedItemTypes": [
+          "agent_message"
+        ],
+        "actualUserSkillOrAuthPathsAbsent": true
+      },
+      {
+        "case": "fixed",
+        "mode": "catalog",
+        "exitCode": 0,
+        "requests": 1,
+        "catalogPresent": true,
+        "catalogPathAlias": "r0",
+        "aliasRootDeclared": true,
+        "descriptionCharacters": 404,
+        "descriptionUTF8Bytes": 474,
+        "descriptionEndsWithEllipsis": false,
+        "inputTextUTF8Bytes": 7455,
+        "fullEntryBodyPresent": false,
+        "entryBodyOccurrences": 0,
+        "referencesAutomaticallyIncluded": false,
+        "eventTypes": [
+          "thread.started",
+          "turn.started",
+          "item.completed",
+          "turn.completed"
+        ],
+        "completedItemTypes": [
+          "agent_message"
+        ],
+        "actualUserSkillOrAuthPathsAbsent": true
+      },
+      {
+        "case": "fixed",
+        "mode": "explicit",
+        "exitCode": 0,
+        "requests": 1,
+        "catalogPresent": true,
+        "catalogPathAlias": "r0",
+        "aliasRootDeclared": true,
+        "descriptionCharacters": 404,
+        "descriptionUTF8Bytes": 474,
+        "descriptionEndsWithEllipsis": false,
+        "inputTextUTF8Bytes": 26939,
+        "fullEntryBodyPresent": true,
+        "entryBodyOccurrences": 1,
+        "referencesAutomaticallyIncluded": false,
+        "eventTypes": [
+          "thread.started",
+          "turn.started",
+          "item.completed",
+          "turn.completed"
+        ],
+        "completedItemTypes": [
+          "agent_message"
+        ],
+        "actualUserSkillOrAuthPathsAbsent": true
+      },
+      {
+        "case": "route",
+        "mode": "catalog",
+        "exitCode": 0,
+        "requests": 1,
+        "catalogPresent": true,
+        "catalogPathAlias": "r0",
+        "aliasRootDeclared": true,
+        "descriptionCharacters": 404,
+        "descriptionUTF8Bytes": 474,
+        "descriptionEndsWithEllipsis": false,
+        "inputTextUTF8Bytes": 7455,
+        "fullEntryBodyPresent": false,
+        "entryBodyOccurrences": 0,
+        "referencesAutomaticallyIncluded": false,
+        "eventTypes": [
+          "thread.started",
+          "turn.started",
+          "item.completed",
+          "turn.completed"
+        ],
+        "completedItemTypes": [
+          "agent_message"
+        ],
+        "actualUserSkillOrAuthPathsAbsent": true
+      },
+      {
+        "case": "route",
+        "mode": "explicit",
+        "exitCode": 0,
+        "requests": 1,
+        "catalogPresent": true,
+        "catalogPathAlias": "r0",
+        "aliasRootDeclared": true,
+        "descriptionCharacters": 404,
+        "descriptionUTF8Bytes": 474,
+        "descriptionEndsWithEllipsis": false,
+        "inputTextUTF8Bytes": 11405,
+        "fullEntryBodyPresent": true,
+        "entryBodyOccurrences": 1,
+        "referencesAutomaticallyIncluded": false,
+        "eventTypes": [
+          "thread.started",
+          "turn.started",
+          "item.completed",
+          "turn.completed"
+        ],
+        "completedItemTypes": [
+          "agent_message"
+        ],
+        "actualUserSkillOrAuthPathsAbsent": true
+      }
+    ],
+    "allThreeVariantsCataloged": true,
+    "fullSkillOnlyInExplicitCases": true,
+    "explicitLoadCompletedItemsContainNoToolInvocation": true,
+    "cachedDescriptionObservedCharacters": 1024,
+    "cachedDescriptionEndsWithEllipsis": true,
+    "fixedAndRoutedDescriptionCharacters": 404,
+    "fixedAndRoutedDescriptionComplete": true,
+    "initialObserverCorrectedForAliasedPaths": true,
+    "rawRequestsUnmodified": true
+  },
+  "pairedRequestText": {
+    "fixedExplicitUTF8Bytes": 26939,
+    "routedExplicitUTF8Bytes": 11405,
+    "differenceUTF8Bytes": 15534,
+    "differenceEqualsSkillFileSizeDifference": true,
+    "catalogOnlyUTF8BytesBoth": 7455,
+    "metric": "UTF-8 bytes of extracted request input message text; excludes additional tool definitions and framing. Not whole-request tokens or billed usage.",
+    "wholeSkillDocumentsExactlyPresent": true
+  },
+  "readReference": {
+    "passed": true,
+    "clientVersion": "codex-cli 0.162.1",
+    "binarySHA256": "74c6a6d263f40d65f99c27a815275f5b4ed0bcc2baecc396b4cf3255498bdfc0",
+    "requests": 2,
+    "onlyFakeCredential": true,
+    "entryInitiallyPresent": true,
+    "AIReferenceInitiallyAbsent": true,
+    "oneReadOnlyCatCommandCompleted": true,
+    "loginShellDisabled": true,
+    "referenceBytesRead": 6837,
+    "referenceSHA256": "e6d870124ab7bf9bd81fcd24e823f1ceb303988c06c416a0eeb1508a0f71177b",
+    "AIReferencePresentInFollowingRequest": true,
+    "otherReferencesStillAbsent": true,
+    "modelChoseReferenceAutonomously": false,
+    "controlledToolOutputNotProviderInjection": true,
+    "syntheticUsageIsNotBilling": true,
+    "realModelCalled": false,
+    "pairedExplicitTextBytes": {
+      "fixed": 26939,
+      "routed": 11405,
+      "difference": 15534
+    },
+    "wholeSkillDocumentIncludedForExplicitInvocation": true,
+    "currentPluginActivationVerified": false,
+    "referencePathResolvableFromProvidedAliasMap": true
+  },
+  "productCorrection": {
+    "source": {
+      "source": "/Users/leo/.codex/artifacts/thermo-skill-loading-observability-source",
+      "commit": "21d73dbe5a373fb028d20351af59d2f5187befb9",
+      "tree": "7852b65f87702aa8587653013b8d4af3df602e8f"
+    },
+    "change": "Shared report explanation now includes host-preloaded Skill instructions, including explicit requests, among incomplete-attribution cases. No new attribution or usage counters.",
+    "AgentDoctorReleaseTests": 340,
+    "testsExitCode": 0,
+    "testSeconds": 314.9452723750146,
+    "developerDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "sourceTree": "7852b65f87702aa8587653013b8d4af3df602e8f",
+    "sourceUnchanged": true,
+    "CLI_SHA256": "85545a56972a93b9e6559100ed7be51db012aee2df07e0b64e384f885043bf3d",
+    "collectedHashesVerified": 5,
+    "EnglishAndChineseCLIVerified": true,
+    "diagnosticContractGroupsPassed": 8,
+    "GUIReaccepted": false
+  },
+  "transport": {
+    "primaryRunID": "5ae43b2b-9d7b-4a2d-bff5-a85a44dff739",
+    "primaryProbeExitCode": 0,
+    "controllerFinalStatus": "cancelled after collection formatting failure; not a failed client probe",
+    "originalArtifactFiles": 555,
+    "formattedResultLimitKiB": 128,
+    "necessaryFilesManuallyCollectedAndHashVerified": 19,
+    "compactArchiveSHA256": "5860577ab9c89ea89c9a226f73469b7d46f1dca54d1265439eceb3b85e638c43",
+    "probeRerun": false,
+    "referenceReadRunID": "877b7c60-c4d4-49e1-859c-dfa8b0b0a358",
+    "referenceReadController": "done / collected",
+    "referenceReadCollectedHashesVerified": 4,
+    "noteBuildRunID": "5a075b55-6f70-440e-91b9-35fe48dabc71",
+    "noteBuildController": "done / collected"
+  },
+  "officialReferences": [
+    {
+      "url": "https://learn.chatgpt.com/docs/build-skills#how-chatgpt-and-codex-use-skills",
+      "usedFor": "Distinguish explicit invocation from implicit matching; description shortening is documented."
+    },
+    {
+      "url": "https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations#responses-api-requirements",
+      "usedFor": "Namespace/additional_tools wire context; actual tool declaration was read from the captured client request."
+    }
+  ],
+  "boundaries": {
+    "modelAutonomousSkillOrReferenceChoiceEvaluated": false,
+    "businessOutcomeEvaluated": false,
+    "endToEndModelLatencyOrBillingSavingsMeasured": false,
+    "referenceReadAddsAnotherClientRoundTrip": true,
+    "currentPluginActivationOrLoadedVersionVerified": false,
+    "otherHostsGeneralized": false,
+    "currentUserSkillOrRegistrationWritesRequested": false,
+    "installed": false,
+    "published": false,
+    "rawRequestsOrSkillBodiesPublished": false
+  }
+}
