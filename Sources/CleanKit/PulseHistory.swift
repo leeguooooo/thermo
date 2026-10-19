@@ -26,6 +26,8 @@ public struct PulseRecord: Codable, Sendable, Equatable {
     /// Memory in use (app, wired, compressed) and compressed, MiB; absent in older lines.
     public var usedMB: Int? = nil
     public var compressedMB: Int? = nil
+    /// Free space on the startup disk as Finder counts it (purgeable included); absent in older lines.
+    public var diskFreeBytes: Int64? = nil
 
     public init(_ p: MachinePulse, memory breakdown: MemoryBreakdown? = MemoryBreakdown.read()) {
         t = p.sampled
@@ -44,6 +46,7 @@ public struct PulseRecord: Codable, Sendable, Equatable {
                                      processes: $0.pids.count, memoryMetric: $0.memoryMetric) }
         usedMB = breakdown.map { Int($0.used >> 20) }
         compressedMB = breakdown.map { Int($0.compressed >> 20) }
+        diskFreeBytes = p.diskAvailableBytes ?? p.diskFreeBytes
     }
 
     public init(t: Date, load1: Double, cores: Int, memory: MachinePulse.Memory, swapUsedMB: Int, swapTotalMB: Int,
@@ -160,8 +163,9 @@ public final class PulseHistory: @unchecked Sendable {
 // MARK: - Alerts
 
 /// Tells you before you notice: swap growing past 8 GB, memory pressure critical for two minutes,
-/// one program on more than 1.5 cores for ten minutes, or the Mac throttling itself. Each reason is
-/// told at most once an hour. Nothing is ever quit automatically.
+/// one program on more than 1.5 cores for ten minutes, the Mac throttling itself, or the disk
+/// running low (30, 15 and 5 GB left, or full within three hours at the current rate). Each reason
+/// is told at most once an hour; the early disk steps every twelve. Nothing is ever quit automatically.
 public struct SlowdownAlerts: Sendable {
     /// Every threshold in one place.
     public struct Limits: Sendable {
@@ -170,6 +174,13 @@ public struct SlowdownAlerts: Sendable {
         public var cpuPercent: Double = 150
         public var cpuFor: TimeInterval = 10 * 60
         public var cooldown: TimeInterval = 3600
+        /// Free space (GB, as Finder counts) that is worth a word. Agents, builds and swap fill a
+        /// disk in an afternoon, so the first step comes while there is still room to work.
+        public var diskStepsGB: [Double] = [30, 15, 5]
+        /// How often the steps above the last one repeat; the last repeats every `cooldown`.
+        public var diskReminder: TimeInterval = 12 * 3600
+        /// Told when the recent rate would fill the disk within this.
+        public var diskFullWithin: TimeInterval = 3 * 3600
         public init() {}
     }
 
@@ -180,6 +191,8 @@ public struct SlowdownAlerts: Sendable {
         public var body: String
         /// The program to point at in the Overview, if any.
         public var program: String?
+        /// Overrides `Limits.cooldown` for this reason.
+        public var repeatAfter: TimeInterval? = nil
     }
 
     public var limits = Limits()
@@ -230,9 +243,39 @@ public struct SlowdownAlerts: Sendable {
             out.append(Alert(key: "thermal", title: tr("Your Mac is too hot and is slowing itself down"),
                              body: last.top.first.map { tr("%1$@ is the busiest program.", $0.name) } ?? "", program: last.top.first?.name))
         }
+        out += diskAlerts(recent, last: last, now: now)
         // Once an hour per reason.
-        let fresh = out.filter { a in lastFired[a.key].map { now.timeIntervalSince($0) >= limits.cooldown } ?? true }
+        let fresh = out.filter { a in lastFired[a.key].map { now.timeIntervalSince($0) >= (a.repeatAfter ?? limits.cooldown) } ?? true }
         for a in fresh { lastFired[a.key] = now }
         return fresh
+    }
+
+    /// Low disk, early: by the time macOS warns, swap cannot grow and builds fail mid-write.
+    func diskAlerts(_ recent: [PulseRecord], last: PulseRecord, now: Date) -> [Alert] {
+        guard let free = last.diskFreeBytes else { return [] }
+        var out: [Alert] = []
+        let swap = last.swapUsedMB >= 4 * 1024 ? tr("Swap takes %1$@ of the disk.", MachinePulse.gb(last.swapUsedMB * 1024)) : nil
+        let hint = tr("Thermo's Clean page lists what can go.")
+        let steps = limits.diskStepsGB.sorted()
+        if let step = steps.first(where: { Double(free) < $0 * 1e9 }) {
+            out.append(Alert(key: "disk:\(Int(step))", title: tr("Only %1$@ of disk space left", MachinePulse.bytes(free)),
+                             body: [swap, hint].compactMap { $0 }.joined(separator: " "), program: nil,
+                             repeatAfter: step == steps.first ? limits.cooldown : limits.diskReminder))
+        }
+        // Filling fast: at least 1 GB gone over five minutes or more, full soon at that rate.
+        if let earlier = recent.first(where: { $0.diskFreeBytes != nil && now.timeIntervalSince($0.t) <= 15 * 60 }),
+           let before = earlier.diskFreeBytes, before - free >= 1_000_000_000 {
+            let span = last.t.timeIntervalSince(earlier.t)
+            let left = Double(free) / (Double(before - free) / span)
+            if span >= 5 * 60, left <= limits.diskFullWithin {
+                let minutes = Int(left / 60)
+                let eta = minutes < 90 ? tr("%1$@ min", String(max(1, minutes))) : tr("%1$@ h", String(minutes / 60))
+                out.append(Alert(key: "disk:filling", title: tr("The disk will be full in about %1$@", eta),
+                                 body: [tr("%1$@ was written in the last %2$@ minutes.", MachinePulse.bytes(before - free), String(Int(span / 60))),
+                                        swap, hint].compactMap { $0 }.joined(separator: " "),
+                                 program: nil))
+            }
+        }
+        return out
     }
 }

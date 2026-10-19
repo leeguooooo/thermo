@@ -782,6 +782,34 @@ final class CleanKitTests: XCTestCase {
         XCTAssertTrue(a3.evaluate([record(10, swapGB: 27), record(0, swapGB: 27)], latest: latest, now: now).isEmpty)
     }
 
+    func testDiskAlertsComeEarlyAndWhenFillingFast() {
+        func disk(_ minutesAgo: Double, _ gb: Double, swapGB: Double = 1) -> PulseRecord {
+            var r = record(minutesAgo, swapGB: swapGB); r.diskFreeBytes = Int64(gb * 1e9); return r
+        }
+        let calm = MachinePulse(load1: 2, load5: 2, cores: 8, thermal: .nominal, memory: .normal, swapUsedMB: 0, hogs: [], sampled: now)
+        var alerts = SlowdownAlerts()
+        XCTAssertTrue(alerts.evaluate([disk(0, 80)], latest: calm, now: now).isEmpty)
+        // Under 30 GB: told, then quiet for twelve hours.
+        XCTAssertEqual(alerts.evaluate([disk(0, 25)], latest: calm, now: now).map(\.key), ["disk:30"])
+        XCTAssertTrue(alerts.evaluate([disk(0, 25)], latest: calm, now: now.addingTimeInterval(3700)).isEmpty)
+        // Under 5 GB: a new step, and it repeats hourly; swap is named as part of the cause.
+        let low = alerts.evaluate([disk(0, 4, swapGB: 18)], latest: calm, now: now.addingTimeInterval(4000))
+        XCTAssertEqual(low.map(\.key), ["disk:5"])
+        XCTAssertTrue(low[0].body.contains("Swap"))
+        XCTAssertEqual(alerts.evaluate([disk(0, 4)], latest: calm, now: now.addingTimeInterval(7700)).map(\.key), ["disk:5"])
+
+        // 60 GB free but 12 GB written in ten minutes: full in under an hour.
+        var fast = SlowdownAlerts()
+        let filling = fast.evaluate([disk(10, 72), disk(0, 60)], latest: calm, now: now)
+        XCTAssertEqual(filling.map(\.key), ["disk:filling"])
+        // A slow drift is not news.
+        var slow = SlowdownAlerts()
+        XCTAssertTrue(slow.evaluate([disk(10, 61), disk(0, 60)], latest: calm, now: now).isEmpty)
+        // Older history without disk numbers stays quiet.
+        var old = SlowdownAlerts()
+        XCTAssertTrue(old.evaluate([record(0)], latest: calm, now: now).isEmpty)
+    }
+
     func testCleanerRemovesOnlyListedPaths() throws {
         let a = try write("Library/Caches/tool/a")
         let keep = try write("Library/Caches/tool/keep")
