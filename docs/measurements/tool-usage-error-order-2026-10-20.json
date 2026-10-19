@@ -1,0 +1,114 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "f918118dbe2ea3a5501edb31752bec22141c901d",
+  "sourceTree": "1531a06aea3d0838efb2a7ca6b86b5600765d12b",
+  "scope": "Shared observed error/failure count sorting for App and CLI; legacy unmeasured counts remain unknown, result errors and invocation failures remain separately reported.",
+  "validation": {
+    "complete": true,
+    "sourceCommit": "914e54730f7c15353b7231c9b4dcc270cd25dd77",
+    "sourceTree": "1531a06aea3d0838efb2a7ca6b86b5600765d12b",
+    "commands": [
+      {
+        "name": "baseline-tests.log",
+        "exitCode": 1
+      },
+      {
+        "name": "candidate-tests.log",
+        "exitCode": 0
+      },
+      {
+        "name": "candidate-build.log",
+        "exitCode": 0
+      },
+      {
+        "name": "cli-contract.log",
+        "exitCode": 0
+      }
+    ],
+    "sourceFilesMatched": 552,
+    "SDKROOT": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "host": "mac190",
+    "configuration": "debug",
+    "hardwareTestsRun": false,
+    "CLISHA256": "6b77f80c0756b95091f47f30b4029ce936c2c344016008ad72813a9071a9b6c2",
+    "realModelCalled": false
+  },
+  "testSuites": {
+    "ThermoCLITests.xctest": 18,
+    "ThermoAppTests.xctest": 5,
+    "AgentDoctorTests.xctest": 381
+  },
+  "testsPassed": 404,
+  "testsFailed": 0,
+  "oldBehaviorRegression": "Replayed the original App error-value expression under candidate sources: an unmeasured invocationFailures value was incorrectly ranked as known zero; one targeted assertion failed.",
+  "compiledCLIContractPassed": true,
+  "ownedNativeLogReplay": {
+    "sameFixedSnapshot": true,
+    "allToolRowFieldsUnchanged": true,
+    "errorOrderMatchesIndependentCountSort": true,
+    "rows": 2,
+    "calls": 118,
+    "reportedErrors": 5,
+    "invocationFailures": 0,
+    "complete": false,
+    "scope": "32 MiB fixed tail of current thread; incomplete coverage, not an overall service ranking.",
+    "rowsByCount": [
+      {
+        "kind": "mcp",
+        "calls": 115,
+        "explicitErrors": 5,
+        "invocationFailures": 0
+      },
+      {
+        "kind": "mcp",
+        "calls": 3,
+        "explicitErrors": 0,
+        "invocationFailures": 0
+      }
+    ]
+  },
+  "manualErrorTriage": {
+    "scope": "The five explicit CUA errors in this frozen historical tail, not all usage or current unresolved defects. No raw error content exported.",
+    "categories": [
+      {
+        "category": "timeoutReached",
+        "count": 2,
+        "attribution": "Not established; no service failure or latency conclusion."
+      },
+      {
+        "category": "undefined controller JavaScript binding",
+        "count": 1,
+        "attribution": "Caller expression error."
+      },
+      {
+        "category": "invalid element ID",
+        "count": 1,
+        "attribution": "Caller used an invalid UI reference; refresh the observed state."
+      },
+      {
+        "category": "ambiguous owned QA bundle identifier",
+        "count": 1,
+        "attribution": "Owned fixture identity collision; unique per-root QA identifiers were implemented in earlier accepted source."
+      }
+    ],
+    "automaticQualityScoreProduced": false
+  },
+  "successfulRunID": "048968a4-50ae-4e1d-8bb2-8210f9d778c1",
+  "evidenceSHA256": {
+    "candidate-tests.log": "b12372602265a549d5609a7d970f28ae074277a6791253b626119cb36aec2f13",
+    "result.json": "2e10f8f0498d027470fdb7ee96affd25d91b42dd47ccb3f1f60b24e966944fbe",
+    "candidate-build.log": "10cb4b5cbccf94615a4e4a874548f154aab956d7d0157bb6131030c2b275fae9",
+    "baseline-tests.log": "497c23a54c891341d860ccbec4573d8def4a90346c2c411d1023cb702def727f",
+    "cli-contract.log": "09f7a163b6f473473edee28a310832ea000a316203c3e51808b8c7355e121639",
+    "freeze.json": "9a1babc0c7b4298900b40eedd1682db72e234ef454c389a6235e0ea88465d231"
+  },
+  "boundaries": {
+    "realModelCalled": false,
+    "userAuthenticationOrConfigModified": false,
+    "nativeWindowAcceptanceRun": false,
+    "fullReleaseRegressionRun": false,
+    "installedOrPublished": false,
+    "overallServiceQualityRankingEstablished": false,
+    "tokenOrLatencySavingsMeasured": false
+  }
+}
