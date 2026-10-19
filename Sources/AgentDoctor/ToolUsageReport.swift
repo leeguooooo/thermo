@@ -164,6 +164,8 @@ public struct ToolUsageReport: Codable, Sendable {
     public var singleLogFile: Bool? = nil
     /// Absent in older reports means unchecked; row sums cannot reconstruct interval overlap.
     public var timingSummaries: [ToolUsageTimingSummary]? = nil
+    /// Explicit presentation order. Absent means no ordering was declared by this report.
+    public var toolOrdering: ToolUsageOrdering? = nil
 
     public func returnedTextSummary(kind: String) -> ToolUsageTextSummary {
         ToolUsageTextSummary(rows: tools.filter { $0.kind == kind }, kind: kind, encoding: referenceEncoding)

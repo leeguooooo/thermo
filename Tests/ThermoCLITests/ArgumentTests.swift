@@ -3,6 +3,29 @@ import ThermoL10n
 @testable import thermo
 
 final class ArgumentTests: XCTestCase {
+    func testUsageOrderingAcceptsBothFormsAndAliasesWithSelectedLogs() throws {
+        for arguments in [["agents","usage","--sort","structured"], ["agents","usage","--sort=text"],
+                          ["agent","usage","--sort","structured","--agent","codex","--log-file","/owned/log"],
+                          ["doctor","usage","--sort=text"]] {
+            let args = try Args(arguments)
+            XCTAssertNotNil(args.options["sort"])
+            XCTAssertNoThrow(try CommandContract.validate(args))
+        }
+    }
+    func testUsageOrderingRejectsUnsupportedValuesAndOtherCommandsBeforeExecution() {
+        for arguments in [["agents","usage","--sort"], ["agents","usage","--sort="],
+                          ["agents","usage","--sort","bytes"], ["agents","context","--sort","structured"],
+                          ["pulse","history","--sort","text"]] {
+            XCTAssertThrowsError(try Args(arguments))
+        }
+    }
+    func testUsageHelpAndCapabilityInventoryExposeOrderingAndJSONSemantics() throws {
+        let help = CommandHelp.text(for:["agents","usage"])
+        XCTAssertTrue(help.contains("--sort text|structured"))
+        XCTAssertTrue(help.contains("Human output and JSON use the same order"))
+        let capability = try XCTUnwrap(CommandHelp.capabilities.first { $0.command == "agents usage" })
+        XCTAssertTrue(capability.usage.contains("--sort text|structured")); XCTAssertEqual(capability.execution,"cli")
+    }
     func testBackgroundAuthorizationFlagCannotBeReusedForChangesOrDryRuns() throws {
         XCTAssertTrue(try Args(["apps", "startup", "list", "--authorize-background"]).has("authorize-background"))
         for arguments in [["apps", "startup", "enable", "fixture", "--authorize-background"], ["clean", "--authorize-background"], ["apps", "startup", "list", "--authorize-background", "--dry-run"], ["apps", "startup", "--authorize-background=false"]] {

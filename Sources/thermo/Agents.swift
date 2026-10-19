@@ -30,7 +30,7 @@ struct AgentsCommand {
             guard rest.count == 2 else { throw CLIError("usage: thermo agents compare FILE [--json]") }
             return try compareTasks(try required(name, sub))
         case "usage":
-            guard rest.count == 1 else { throw CLIError("usage: thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--log-file FILE] [--limit FILES] [--json]") }
+            guard rest.count == 1 else { throw CLIError("usage: thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--log-file FILE] [--sort text|structured] [--limit FILES] [--json]") }
             return try usage()
         case "inspect":
             guard rest.count == 2 else { throw CLIError("usage: thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--json]") }
@@ -147,7 +147,7 @@ struct AgentsCommand {
     static let usage = """
     usage: thermo agents [--all] [--json]                 what is wrong with the AI agents on this Mac
            thermo agents context [--agent AGENT] [--root PROJECT] [--json] static footprint ranking and deduplicated inventory
-           thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--limit FILES] [--json] local log metrics
+           thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--sort text|structured] [--limit FILES] [--json] local log metrics
            thermo agents compare FILE [--json]            compare declared local task evaluations; never executes tasks
            thermo agents inspect NAME [--json]            connect to one MCP; handshake, list and rank definitions
            thermo agents list [AREA] [--json]             everything checked, marked OK or not
@@ -215,7 +215,11 @@ struct AgentsCommand {
             }
             guard let since, since <= Date() else { throw CLIError("--since must be a past ISO date or YYYY-MM-DD (UTC)") }
         }
-        let report = AgentDoctor.usage(since: since, host: host, fileLimit: count, logFile: logFile, env: DoctorEnvironment(tokenEncoding: try encoding()))
+        guard let ordering = ToolUsageOrdering(rawValue: app.args.options["sort"] ?? "text") else { throw CLIError("--sort must be text or structured") }
+        var report = AgentDoctor.usage(since: since, host: host, fileLimit: count, logFile: logFile, env: DoctorEnvironment(tokenEncoding: try encoding()))
+        report.tools = ordering.sorted(report.tools)
+        report.toolOrdering = ordering
+        report.note += " " + ordering.explanation
         if app.args.has("json") { print(Export.diagnosticJSON(report)); return }
         let iso = ISO8601DateFormatter()
         let coverage = report.coverage
@@ -224,6 +228,9 @@ struct AgentsCommand {
                      "Log reading: " + (report.complete ? "complete within selected scope" : "partial"),
                      "\(coverage.filesRead)/\(coverage.filesDiscovered) eligible files · \(coverage.bytesRead) bytes · \(coverage.clippedFiles) clipped · \(coverage.malformedLines) malformed records", ""]
         if let encoding = report.referenceEncoding { lines.append("Ordinary-text reference encoding: " + encoding + "; not a model invoice or prompt framing count") }
+        lines.append("Tool ordering: " + ordering.rawValue + "; JSON uses the same order.")
+        lines.append(ordering.explanation)
+        if ordering == .structured { lines.append("Only MCP rows with known structured JSON counts are ranked; other categories remain present after known values.") }
         let textSummaries = Dictionary(uniqueKeysWithValues: Set(report.tools.map(\.kind)).sorted().map { kind in
             (kind, report.returnedTextSummary(kind: kind))
         })
@@ -274,7 +281,7 @@ struct AgentsCommand {
             lines.append("  result text: \(row.returnedTextBytes) bytes / ≈\(row.returnedTextEstimatedTokens) tokens · median \(median) · P95 \(p95) · \(row.nonTextBlocks) non-text blocks not tokenized")
             lines += row.mcpStructuredContentLines.map { "  " + $0 }
             lines += representationNotes(row).map { "  " + $0 }
-            if let percentage = textSummaries[row.kind]?.percentage(of: row) {
+            if ordering == .text, let percentage = textSummaries[row.kind]?.percentage(of: row) {
                 lines.append("  share of observed \(row.kind) returned-text tokens: \(String(format: "%.1f%%", percentage))")
             }
         }

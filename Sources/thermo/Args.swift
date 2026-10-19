@@ -1,4 +1,5 @@
 import Foundation
+import AgentDoctor
 
 struct CLIError: Error, CustomStringConvertible {
     let description: String
@@ -17,6 +18,7 @@ struct Args {
         "to", // space archive: SSH alias:/absolute/archive.tar
         "since",  // pulse history
         "limit",  // history
+        "sort", // agents usage: observed text or structured JSON token order
         "log-file", // agents usage: one explicitly selected session
         "watch", "app", "title", "ids", "group", "name", "window", "color"]  // pulse chrome
     static let aliases: [String: String] = [
@@ -63,8 +65,13 @@ struct Args {
         if flags.contains("data-only"), Array(positionals.prefix(2)) != ["apps", "uninstall"] {
             throw CLIError("--data-only is only supported by apps uninstall")
         }
-        if options["log-file"] != nil, Array(positionals.prefix(2)) != ["agents", "usage"] {
+        let isUsage = positionals.first.map { CommandHelp.aliases[$0] ?? $0 } == "agents" && positionals.dropFirst().first == "usage"
+        if options["log-file"] != nil, !isUsage {
             throw CLIError("--log-file is only supported by agents usage")
+        }
+        if let order = options["sort"] {
+            guard isUsage else { throw CLIError("--sort is only supported by agents usage") }
+            guard ToolUsageOrdering(rawValue: order) != nil else { throw CLIError("--sort must be text or structured") }
         }
         if flags.contains("authorize-background") {
             guard Array(positionals.prefix(2)) == ["apps", "startup"],

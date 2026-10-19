@@ -1,6 +1,8 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Ranks observed returned-text reference or estimated tokens. Unknown counts follow known values; this is not request usage.": "按已观察返回文本的参考或估算 token 排序。未知计数排在已知值后；这不是请求用量。",
+
     "Structured JSON": "结构化 JSON",
     "Ranks structured JSON reference or estimated tokens only when completed result envelopes were fully inspectable. Unknown entries follow known values; this is not model usage.": "仅在已完成结果的封装均可检查时，按结构化 JSON 的参考或估算 token 排序。未知条目排在已知值后；这不是模型用量。",
 

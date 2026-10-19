@@ -112,7 +112,7 @@ xcrun notarytool store-credentials thermo --key AuthKey_XXXX.p8 --key-id XXXX \
 | `thermo bench` | 采样延迟基准 |
 | `thermo agents context [--agent AGENT] [--root PROJECT] [--json]` | Skill 静态占用排名与按宿主去重汇总；可指定项目，Codex 插件缓存单独计量。目录描述和完整文件分开统计，不代表会话实际用量；另给出缺失本地引用、空正文和相同内容副本的证据。context / inspect / usage 均可加 `--encoding cl100k_base` 或 `--encoding o200k_base` 做本地普通文本参考计数 |
 | `thermo agents compare FILE [--json]` | 比较本地 MCP / Skill 任务评测记录的通过结果、耗时与原生 token；要求相同模型及环境，保留失败与未知值，不执行任务。App 的“任务评测”卡片可导入同样的记录。见[采集格式](docs/ai-task-comparison.md) |
-| `thermo agents usage [--since ISO_DATE] [--agent claude\|codex] [--limit FILES] [--json]` | 显式分析本地日志，统计可归因的 MCP / Skill 调用、观察耗时、明确错误和返回文本；请求 token 单列，覆盖不足与未知状态明确显示 |
+| `thermo agents usage [--since ISO_DATE] [--agent claude\|codex] [--sort text\|structured] [--limit FILES] [--json]` | 显式分析本地日志；默认按返回文本 token 排序，`--sort structured` 按可检查的 MCP 结构化 JSON token 排序。文本与 JSON 输出顺序一致，未知条目排后；两种表示不相加，请求 token 单列 |
 | `thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--json]` | 主动连接一个 stdio / Streamable HTTP MCP，测量握手和完整工具定义，按估算 token 排名；不调用业务工具。App 可按宿主勾选配置并串行批量检查，支持停止与 120 秒总预算，保留覆盖率、部分大小和跨配置工具排名。HTTP 支持 JSON / SSE；认证失败、超时和未完成检查分别报告 |
 | `thermo agents fix [NAME] [--dry-run] [--yes]` | 自动修复：先列出每一步要执行的命令再确认。优先调用 agent 自带的命令（`claude mcp remove`、`claude plugin uninstall`、`codex mcp remove`）；改配置前备份到 `~/Library/Application Support/Thermo/Backups`；文件移到废纸篓；结束进程前复核命令行；每步记录到 `~/Library/Logs/Thermo/fix.log` |
 | `thermo agents list [AREA]` | 列出检查过的每一项（hooks / mcp / plugins / skills / statusline / launchd / processes），逐项标 ✓ 正常、! 警告、✗ 错误、- 已关闭；App 的 Agents 标签页和「Open Report」窗口显示同一份清单 |

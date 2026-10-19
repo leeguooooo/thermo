@@ -55,7 +55,7 @@ enum CommandHelp {
     pulse chrome close|pulse chrome close [URL] [--ids IDS] [--app BROWSER] [--title TITLE] [--dry-run] [--yes] [--json]|browser
     agents|agents [--all] [--json|--csv] [--root PROJECT] [--encoding ENCODING]|cli
     agents context|agents context [--encoding ENCODING] [--agent AGENT] [--root PROJECT] [--json]|cli
-    agents usage|agents usage [--encoding ENCODING] [--all] [--since DATE] [--agent AGENT] [--log-file FILE] [--limit N] [--json]|cli
+    agents usage|agents usage [--encoding ENCODING] [--sort text|structured] [--all] [--since DATE] [--agent AGENT] [--log-file FILE] [--limit N] [--json]|cli
     agents compare|agents compare FILE [--json]|cli
     agents inspect-all|agents inspect-all [--agent AGENT] [--encoding ENCODING] [--timeout SEC] [--budget SEC] [--dry-run] [--json] [--root PROJECT]|mcp
     agents inspect|agents inspect NAME [--encoding ENCODING] [--agent AGENT] [--timeout SEC] [--json] [--root PROJECT]|mcp
@@ -156,7 +156,9 @@ enum CommandHelp {
         guard !selected.isEmpty else { return "Unknown command. Run thermo --help." }
         let charging = selected.contains { $0.command == "charge" || $0.command.hasPrefix("charge ") } ?
             "\n\nCharging controls require helper protocol 8. Full charge ends at a reported 100%, without external power, or when state is unavailable. A previous 80% policy resumes; a standalone full session ends. System charging protection still applies." : ""
-        return selected.map { "thermo " + $0.usage + "\n  execution: " + $0.execution }.joined(separator: "\n\n") + charging
+        let usageOrdering = selected.contains { $0.command == "agents usage" } ?
+            "\n\nagents usage defaults to --sort text (reference or estimated tokens). --sort structured ranks known MCP structured JSON counts first; unknown counts and other categories follow. Human output and JSON use the same order; text shares are omitted for structured order. Neither order measures request usage." : ""
+        return selected.map { "thermo " + $0.usage + "\n  execution: " + $0.execution }.joined(separator: "\n\n") + charging + usageOrdering
             + "\n\n--dry-run never applies changes. Unsupported flags are rejected.\nApp commands require a running compatible Thermo.app. No request is automatically retried.\nExit 0: completed; 2: invalid/refused; 3: partial or unconfirmed result; 1: execution error."
     }
 }

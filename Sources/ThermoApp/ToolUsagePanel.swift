@@ -53,8 +53,8 @@ struct ToolUsagePanel: View {
         }
         func value(_ row: ToolUsageRow) -> Double {
             switch self {
-            case .text: return row.referenceEncoding == nil ? Double(row.returnedTextEstimatedTokens) : row.referenceReturnedTextTokens.map(Double.init) ?? -1
-            case .structured: return row.observedStructuredJSONTokens.map(Double.init) ?? -1
+            case .text: return ToolUsageOrdering.text.count(for: row).map(Double.init) ?? -1
+            case .structured: return ToolUsageOrdering.structured.count(for: row).map(Double.init) ?? -1
             case .instructions:
                 return row.observedInstructionTokens.map(Double.init) ?? -1
             case .errors: return Double(row.reportedErrors) + Double(row.invocationFailures ?? 0)
@@ -105,7 +105,7 @@ struct ToolUsagePanel: View {
                     ForEach(UsageSort.allCases.filter { (kind == "skill" || $0 != .instructions) && (kind == "mcp" || $0 != .structured) }, id: \.self) { value in Text(value.title).tag(value) }
                 }.pickerStyle(.segmented)
                 if sort == .structured {
-                    Text(tr("Ranks structured JSON reference or estimated tokens only when completed result envelopes were fully inspectable. Unknown entries follow known values; this is not model usage."))
+                    Text(ToolUsageOrdering.structured.explanation)
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 if kind == "skill" {
