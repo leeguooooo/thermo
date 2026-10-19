@@ -127,7 +127,11 @@ struct ToolUsageParser {
         calls[key] = call
     }
     /// JSON strings are text as logged, not reinterpreted as arbitrary status prose.
-    static func result(_ value: Any?, encoding: TextEncoding = .heuristic) -> (TextFootprint, Int, Bool?) {
+    static func result(_ value: Any?, encoding: TextEncoding = .heuristic, codexInputBlocks: Bool = false) -> (TextFootprint, Int, Bool?) {
+        if codexInputBlocks, let blocks = codexInputBlockArray(value) {
+            let measured = unattributedResult(blocks, host: "codex", encoding: encoding)
+            return (measured.text, measured.nonText, nil)
+        }
         if let text = value as? String {
             if text.first == "{", let data = text.data(using: .utf8),
                let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
@@ -150,17 +154,21 @@ struct ToolUsageParser {
         }
         return (TextFootprint("", encoding: encoding), 0, nil)
     }
-    /// Codex code-mode outputs use model input blocks, sometimes JSON-encoded.
-    /// Never tokenize image/audio data or infer which nested tools produced it.
-    static func unattributedResult(_ value: Any?, host: String, encoding: TextEncoding) -> (text: TextFootprint, nonText: Int, measured: Bool) {
-        var blocks = value as? [[String: Any]]
-        if host == "codex", let string = value as? String, string.drop(while: { $0.isWhitespace }).first == "[",
+    static func codexInputBlockArray(_ value: Any?) -> [[String: Any]]? {
+        if let blocks = value as? [[String: Any]] { return blocks }
+        if let string = value as? String, string.drop(while: { $0.isWhitespace }).first == "[",
            let data = string.data(using: .utf8),
            let parsed = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]], !parsed.isEmpty,
            parsed.allSatisfy({ ($0["type"] as? String)?.hasPrefix("input_") == true }),
            parsed.contains(where: { ["input_text", "input_image", "input_audio", "input_file", "input_video"].contains($0["type"] as? String ?? "") }) {
-            blocks = parsed
+            return parsed
         }
+        return nil
+    }
+    /// Codex code-mode outputs use model input blocks, sometimes JSON-encoded.
+    /// Never tokenize image/audio data or infer which nested tools produced it.
+    static func unattributedResult(_ value: Any?, host: String, encoding: TextEncoding) -> (text: TextFootprint, nonText: Int, measured: Bool) {
+        let blocks = host == "codex" ? codexInputBlockArray(value) : value as? [[String: Any]]
         if let blocks {
             let textTypes = host == "codex" ? ["text", "input_text"] : ["text"]
             let supportedTypes = textTypes + ["image", "audio", "resource", "resource_link"] + (host == "codex" ? ["input_image", "input_audio", "input_file", "input_video"] : [])
@@ -180,10 +188,8 @@ struct ToolUsageParser {
         guard calls.count < 100_000 || calls[key] != nil else { coverage.limitReached = true; return }
         var call = calls[key] ?? Call(host: host)
         if call.kind == nil { call.unattributed = Self.unattributedResult(value, host: host, encoding: encoding) }
-        let result = Self.result(value, encoding: encoding)
-        let inputBlocks = codexInputBlocks ? Self.unattributedResult(value, host: host, encoding: encoding) : nil
         let measured = call.startSeen && call.kind == nil ? (TextFootprint(""), 0, nil as Bool?)
-            : (inputBlocks?.text ?? result.0, inputBlocks?.nonText ?? result.1, result.2)
+            : Self.result(value, encoding: encoding, codexInputBlocks: codexInputBlocks)
         call.ended = time; call.endSeen = true
         call.invocationFailed = invocationFailed
         // An inner result's isError is not the outer tool's status, including out-of-order events.
