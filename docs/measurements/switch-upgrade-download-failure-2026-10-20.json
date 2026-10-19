@@ -1,0 +1,208 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceRepository": "leeguooooo/switch-use",
+  "sourceCommit": "e8a8782470895a52ffafb7ac7ef7f8c732df8f2f",
+  "fixCommit": "17ec637",
+  "baselineCommit": "c02e157",
+  "scope": "Upgrade installer download failure and partial downloads must stop before script execution, success output/cache and Skill refresh.",
+  "validation": {
+    "complete": true,
+    "sourceCommit": "134869383cd48855c9cd1c8d64c22f23fba3fc5b",
+    "sourceTree": "3c33719523211645bf412550b4c022ca4f688287",
+    "sourceFilesSHA256": {
+      "Cargo.lock": "b779fe24bfa9f599e2a45c5c6c0be77cbe6cfdcfb880cd79bdda8eb32994e512",
+      "Cargo.toml": "9f3594fe13c7ff348f90d5156af2a8c637f86fa4e4595f98225be00ea3fb80f5",
+      "src/frame.rs": "86d10f0e3e82e28af38a1bb8636ab9a872e117a7863c7bc9e67ae46fdcb1fa61",
+      "src/main.rs": "669202d5c25073284fb28a2e7732dcc0d96a069a4ca9eae18bc0c05d40c4cf31",
+      "src/ocr.rs": "eba4a2d97152191d8da9d0ecf2c0dd4f0d015dfb2c9b9dc244be89adb19ada47",
+      "src/upgrade.rs": "fe913af74bce35139fb7cd0fea9f09820d46a7533294c3baaf0cd730da1ee9d6",
+      "tests/verify-upgrade.py": "507ae90d21a949f443654676325f67e7872980b6df438535a380525c44a97e16"
+    },
+    "baselineUpgradeSourceSHA256": "5fec9b54cb1930a8225c98ace6f5ed0e290a577ca88108b70fd8a765baf5380e",
+    "sourceRestored": true,
+    "commands": [
+      {
+        "name": "baseline-build.log",
+        "exitCode": 0
+      },
+      {
+        "name": "baseline.json",
+        "exitCode": 1
+      },
+      {
+        "name": "candidate-tests.log",
+        "exitCode": 0
+      },
+      {
+        "name": "candidate-build.log",
+        "exitCode": 0
+      },
+      {
+        "name": "candidate.json",
+        "exitCode": 0
+      }
+    ],
+    "host": "mac190",
+    "networkDeniedDuringAllChecks": true,
+    "SDKROOT": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk"
+  },
+  "baselineCLI": {
+    "passed": false,
+    "cases": [
+      {
+        "mode": "empty-download-failure",
+        "passed": false,
+        "checks": {
+          "exitCode": false,
+          "installerExecution": true,
+          "skillRefresh": false,
+          "cacheWrite": false,
+          "successMessage": false,
+          "failureMessage": false,
+          "temporaryDownloadRemoved": true,
+          "pinnedVersionAndDirectory": true
+        },
+        "exitCode": 0
+      },
+      {
+        "mode": "partial-download-failure",
+        "passed": false,
+        "checks": {
+          "exitCode": false,
+          "installerExecution": false,
+          "skillRefresh": false,
+          "cacheWrite": false,
+          "successMessage": false,
+          "failureMessage": false,
+          "temporaryDownloadRemoved": true,
+          "pinnedVersionAndDirectory": true
+        },
+        "exitCode": 0
+      },
+      {
+        "mode": "installer-failure",
+        "passed": true,
+        "checks": {
+          "exitCode": true,
+          "installerExecution": true,
+          "skillRefresh": true,
+          "cacheWrite": true,
+          "successMessage": true,
+          "failureMessage": true,
+          "temporaryDownloadRemoved": true,
+          "pinnedVersionAndDirectory": true
+        },
+        "exitCode": 2
+      },
+      {
+        "mode": "success",
+        "passed": true,
+        "checks": {
+          "exitCode": true,
+          "installerExecution": true,
+          "skillRefresh": true,
+          "cacheWrite": true,
+          "successMessage": true,
+          "failureMessage": true,
+          "temporaryDownloadRemoved": true,
+          "pinnedVersionAndDirectory": true
+        },
+        "exitCode": 0
+      }
+    ]
+  },
+  "candidateCLI": {
+    "passed": true,
+    "cases": [
+      {
+        "mode": "empty-download-failure",
+        "passed": true,
+        "checks": {
+          "exitCode": true,
+          "installerExecution": true,
+          "skillRefresh": true,
+          "cacheWrite": true,
+          "successMessage": true,
+          "failureMessage": true,
+          "temporaryDownloadRemoved": true,
+          "pinnedVersionAndDirectory": true
+        },
+        "exitCode": 2
+      },
+      {
+        "mode": "partial-download-failure",
+        "passed": true,
+        "checks": {
+          "exitCode": true,
+          "installerExecution": true,
+          "skillRefresh": true,
+          "cacheWrite": true,
+          "successMessage": true,
+          "failureMessage": true,
+          "temporaryDownloadRemoved": true,
+          "pinnedVersionAndDirectory": true
+        },
+        "exitCode": 2
+      },
+      {
+        "mode": "installer-failure",
+        "passed": true,
+        "checks": {
+          "exitCode": true,
+          "installerExecution": true,
+          "skillRefresh": true,
+          "cacheWrite": true,
+          "successMessage": true,
+          "failureMessage": true,
+          "temporaryDownloadRemoved": true,
+          "pinnedVersionAndDirectory": true
+        },
+        "exitCode": 2
+      },
+      {
+        "mode": "success",
+        "passed": true,
+        "checks": {
+          "exitCode": true,
+          "installerExecution": true,
+          "skillRefresh": true,
+          "cacheWrite": true,
+          "successMessage": true,
+          "failureMessage": true,
+          "temporaryDownloadRemoved": true,
+          "pinnedVersionAndDirectory": true
+        },
+        "exitCode": 0
+      }
+    ]
+  },
+  "contractChecksPassed": 32,
+  "RustTestsPassed": 2,
+  "successfulRunID": "c82a6964-44ee-4b8c-9ddd-cf69b16fd50f",
+  "implementationReference": {
+    "repository": "leeguooooo/discord-use",
+    "commit": "7a487743b5680aaba31c838205fb73d952cae967",
+    "file": "src/upgrade.rs",
+    "function": "run_installer",
+    "observedPattern": "Download to an owned temporary file with set -e, then execute; trap removes the download."
+  },
+  "evidenceSHA256": {
+    "candidate-tests.log": "f12526049590130d7f67297fd8829bafd176133d2bd63615d3afb26d08d6b75a",
+    "result.json": "1119159dd364f606b6dbb48d95b8182d88647b927179119c8aa948607fd872c3",
+    "candidate.json": "46289a9e03504e480ff2d6d5271c88517b0d182ceaa604ff2b9a90e8fb4df727",
+    "candidate-build.log": "278ecdf64cc4f446dba4066001b30e85f180b450d8e9b981991fa771f72fda6f",
+    "baseline-build.log": "396eb0188f69fb0060e52292c46250681a26105d43f49850887a0b69660e7873",
+    "baseline.json": "06253bd11c97272208f3e884f5c65234ac56d91ba6f244cf87fa395f817e27e1"
+  },
+  "boundaries": {
+    "originalUpgradeSourceReplayedForBaseline": true,
+    "fakeDownloadAndGitUsed": true,
+    "temporaryHomesOnly": true,
+    "realDownloadsOrInstallationPerformed": false,
+    "actualSkillOrPluginCacheWritten": false,
+    "SwitchConnectedOrControlled": false,
+    "realModelCalled": false,
+    "published": false,
+    "LinuxOrIntelRuntimeTested": false
+  }
+}
