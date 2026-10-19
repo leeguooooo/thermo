@@ -1,0 +1,176 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "bdc71ce",
+  "ordering": "time",
+  "semantics": "Sum of valid observed call intervals, with overlapping calls counted per call; separate from overlap-adjusted occupied time and task duration. Missing timing follows valid zero.",
+  "validation": {
+    "host": "mac190",
+    "Xcode": "27.0",
+    "Swift": "6.4",
+    "SDK": "27.0",
+    "passingSuites": [
+      {
+        "suite": "ThermoCLITests",
+        "tests": 18,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoAppTests",
+        "tests": 4,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests",
+        "tests": 10,
+        "failures": 0
+      }
+    ],
+    "totalTests": 32,
+    "changedSourceFilesSHA256Matched": 10,
+    "nativeWindowAcceptanceRun": false,
+    "fullReleaseAcceptanceRun": false
+  },
+  "controlledCLI": {
+    "passed": true,
+    "ranking": [
+      {
+        "name": "many",
+        "seconds": 8,
+        "samples": 8,
+        "calls": 8
+      },
+      {
+        "name": "slow",
+        "seconds": 5,
+        "samples": 1,
+        "calls": 1
+      },
+      {
+        "name": "zero",
+        "seconds": 0,
+        "samples": 1,
+        "calls": 1
+      },
+      {
+        "name": "missing",
+        "seconds": null,
+        "samples": 0,
+        "calls": 1
+      }
+    ],
+    "baselineRejectedTimeSort": true,
+    "humanAndJSONAgree": true,
+    "privateArgumentsAndResultsExcluded": true,
+    "realModelCalled": false,
+    "candidateSHA256": "093a479aa4624fb0ea1f9b3f5a59c3f210eb619b32b028ed3ddf84b700b508a8"
+  },
+  "usageContract": {
+    "passed": true,
+    "mcpCalls": 2,
+    "skillCalls": 1,
+    "requestTokensKeptSeparate": true,
+    "privateTextExcluded": true,
+    "imageTokensUnknown": true,
+    "knownStatusErrorProportionVerified": true,
+    "unknownErrorProportionPreserved": true,
+    "nativeMCPEventsIncludedWithoutDoubleCounting": true,
+    "nativeHostFailureRetainsCompletionAndTiming": true,
+    "explicitSelectedFileScopeAndNonblockingGuardVerified": true,
+    "categoryTotalsAndSharesIncludeHiddenRows": true,
+    "overlapAdjustedTimingVerified": true,
+    "timeOrderingAndJSONVerified": true
+  },
+  "ownThreadBoundedTailAcceptance": {
+    "passed": true,
+    "selectedWindow": "tail",
+    "complete": false,
+    "bytesRead": 67108864,
+    "fileBytesBefore": 196036737,
+    "fileBytesAfter": 196038255,
+    "fileChangedDuringRead": true,
+    "toolRows": 6,
+    "rowsWithTiming": 6,
+    "MCPRows": 6,
+    "SkillRows": 0,
+    "boundedObservationOnly": true,
+    "noPerToolBillingClaim": true,
+    "privatePayloadExported": false,
+    "observedRanking": [
+      {
+        "host": "codex",
+        "server": "cua_repl",
+        "name": "js",
+        "calls": 140,
+        "timingSamples": 140,
+        "totalObservedSeconds": 150.9560022354126,
+        "reportedErrors": 7,
+        "invocationFailures": 0
+      },
+      {
+        "host": "codex",
+        "server": "openaiDeveloperDocs",
+        "name": "search_openai_docs",
+        "calls": 10,
+        "timingSamples": 10,
+        "totalObservedSeconds": 4.924999475479126,
+        "reportedErrors": 0,
+        "invocationFailures": 0
+      },
+      {
+        "host": "codex",
+        "server": "openaiDeveloperDocs",
+        "name": "fetch_openai_doc",
+        "calls": 8,
+        "timingSamples": 8,
+        "totalObservedSeconds": 2.995000123977661,
+        "reportedErrors": 0,
+        "invocationFailures": 0
+      },
+      {
+        "host": "codex",
+        "server": "codex_apps",
+        "name": "github.fetch_pr",
+        "calls": 1,
+        "timingSamples": 1,
+        "totalObservedSeconds": 2.312000036239624,
+        "reportedErrors": 0,
+        "invocationFailures": 0
+      },
+      {
+        "host": "codex",
+        "server": "codex_apps",
+        "name": "github.fetch",
+        "calls": 1,
+        "timingSamples": 1,
+        "totalObservedSeconds": 0.6519999504089355,
+        "reportedErrors": 0,
+        "invocationFailures": 0
+      },
+      {
+        "host": "codex",
+        "server": "codex_apps",
+        "name": "github.get_pr_info",
+        "calls": 1,
+        "timingSamples": 1,
+        "totalObservedSeconds": 0.6059999465942383,
+        "reportedErrors": 0,
+        "invocationFailures": 0
+      }
+    ]
+  },
+  "attemptNotes": [
+    "First new CLI assertion incorrectly excluded outer-table shares, which remain a separate text table. Narrowed assertion to MCP/Skill main list; corrected contract passed."
+  ],
+  "installedOrPublished": false,
+  "businessQualityOrBillingImprovementClaimed": false,
+  "evidenceSHA256": {
+    "tests.log": "9999241264798327d1ddb87ce5dc689391ef802636c0b28f5af09654ca6b4c16",
+    "tests.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "usage-contract.json": "09f7a163b6f473473edee28a310832ea000a316203c3e51808b8c7355e121639",
+    "usage-contract-initial.stderr": "f48e1a9bd4770c62a19574bc5e855a6bbe27292e5e60f9a800257eff6a63bca6",
+    "result.json": "38c42f48932be35b2b0e2f7f4af3cb40c5331bf189f41da58faf247e59c1186e",
+    "baseline.json": "d2bb5341efddfa285cf4e5abe6651b2426bffd8478474e10d3c0f86337a56982",
+    "source-hashes.json": "dc719b550289ce09952fbf5f064ec182ba99ec744f564d5c94eb63d890596c03",
+    "own-log-result.json": "83b612ba59d4e557c9ff27e5754bb55225cec6ae8a99eb31424a2873776834f3"
+  }
+}
