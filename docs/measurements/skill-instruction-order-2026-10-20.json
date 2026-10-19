@@ -1,0 +1,123 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "8bef51af6900a92c771a30c56fdebc750a32f209",
+  "sourceTree": "6a1a0290717c42917c1ac3af7ef23d29b43f0c0c",
+  "scope": "Expose --sort instructions with shared App/CLI rules for explicitly source-linked Skill instruction text; unknown, incomplete or invalid counts remain unknown and do not fall back to acknowledgment size.",
+  "validation": {
+    "complete": true,
+    "sourceCommit": "9c4808ff39a88c9ffabb56125ba147f1fa22bc2d",
+    "sourceTree": "6a1a0290717c42917c1ac3af7ef23d29b43f0c0c",
+    "commands": [
+      {
+        "name": "tests.log",
+        "exitCode": 0
+      },
+      {
+        "name": "build.log",
+        "exitCode": 0
+      },
+      {
+        "name": "instruction-contract.json",
+        "exitCode": 0
+      },
+      {
+        "name": "usage-contract.json",
+        "exitCode": 0
+      }
+    ],
+    "sourceFilesMatched": 553,
+    "SDKROOT": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "host": "mac190",
+    "configuration": "debug",
+    "suites": {
+      "ThermoCLITests.xctest": {
+        "tests": 18,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 6,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 383,
+        "failures": 0
+      }
+    },
+    "testsPassed": 407,
+    "CLISHA256": "bb4b0791910019eaec6b24f309126d86922fa6d700e47e62af8df1e622f725fc",
+    "fullReleaseRun": false,
+    "realModelCalled": false,
+    "installedOrPublished": false
+  },
+  "baselineCLI": {
+    "exitCode": 2,
+    "stderr": "thermo: --sort must be text, structured, time or errors",
+    "olderQualifiedCLISHA256": "6b77f80c0756b95091f47f30b4029ce936c2c344016008ad72813a9071a9b6c2",
+    "unsupportedBeforeLogAnalysis": true
+  },
+  "instructionCLIContract": {
+    "passed": true,
+    "skillCalls": 3,
+    "linkedInstructionEvents": 3,
+    "linkedTextBytes": 113,
+    "acknowledgmentBytes": 9,
+    "duplicateLoadExcluded": true,
+    "unlinkedAndNonSkillMetadataExcluded": true,
+    "unknownLoadingNotZero": true,
+    "instructionTextNotExported": true,
+    "noSkillOrMCPExecution": true,
+    "instructionOrderingAndJSONVerified": true,
+    "allToolCountersUnchanged": true,
+    "heuristicCountsMarkedApproximate": true
+  },
+  "existingUsageCLIContract": {
+    "passed": true,
+    "mcpCalls": 2,
+    "skillCalls": 1,
+    "requestTokensKeptSeparate": true,
+    "privateTextExcluded": true,
+    "imageTokensUnknown": true,
+    "knownStatusErrorProportionVerified": true,
+    "unknownErrorProportionPreserved": true,
+    "nativeMCPEventsIncludedWithoutDoubleCounting": true,
+    "nativeHostFailureRetainsCompletionAndTiming": true,
+    "explicitSelectedFileScopeAndNonblockingGuardVerified": true,
+    "categoryTotalsAndSharesIncludeHiddenRows": true,
+    "overlapAdjustedTimingVerified": true,
+    "timeOrderingAndJSONVerified": true
+  },
+  "readOnlyRecentClaudeObservation": {
+    "filesRead": 5,
+    "filesDiscovered": 311,
+    "bytesRead": 20971520,
+    "complete": false,
+    "skillRows": 1,
+    "skillCalls": 1,
+    "skillRowsWithLinkedLoadingEvents": 1,
+    "linkedLoadingEvents": 1,
+    "observedInstructionTextBytes": 1539,
+    "scope": "Five discovered recent Claude logs only; not all activity, full loading or billing.",
+    "observedInstructionEstimatedTokens": 386,
+    "fullLoadingOrBilledTokensMeasured": false,
+    "observedSkillName": "chrome-use",
+    "observedSkillReturnedTextBytes": 27,
+    "actualLogBodyExported": false
+  },
+  "evidenceSHA256": {
+    "result.json": "fd5178d4b8dea39189d38987b41739fde9f39a675bd5563c745ceaf9ee478fbb",
+    "instruction-contract.json": "6320dfbee14e2b59af4aed9077d50cb81e3e04670de8047b4b23f601450f9ced",
+    "tests.log": "ef43313f7526407972b6d4b50b93e01658bdbcedcd1c7a03b90ccd157566cd8d",
+    "freeze.json": "6d182060e325c1ec9a5859ddb8b959174c4aff455dd0ceb9aace426784d1835e",
+    "usage-contract.json": "09f7a163b6f473473edee28a310832ea000a316203c3e51808b8c7355e121639",
+    "build.log": "64dab53494e0aef44d6ab0804b20aba73c3ab10acbd5510de08b2ec07782d5d5"
+  },
+  "boundaries": {
+    "realModelCalled": false,
+    "instructionsInSyntheticContractExecuted": false,
+    "actualLogsCopiedToMac190": false,
+    "fullSkillLoadingOrBillingMeasured": false,
+    "currentSessionSkillQualityRankingEstablished": false,
+    "fullReleaseOrNativeWindowRerun": false,
+    "installedOrPublished": false
+  }
+}

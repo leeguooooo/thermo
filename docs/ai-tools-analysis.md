@@ -2,6 +2,8 @@
 
 [当前验收范围与剩余缺口](ai-tools-acceptance.md)按原始问题列出能力、证据和不能推断的结论；下文保留实现与历史验证细节。
 
+Skill 加载量可用 `thermo agents usage --sort instructions` 排名，App 与 CLI 共用规则：只使用明确关联的指令文本计数，未知或不完整的加载排在已知值之后，估算值带 `≈`，不拿工具返回文本代替加载量。[验收记录](measurements/skill-instruction-order-2026-10-20.json)覆盖 407 项相关测试及编译后 CLI 契约；另一次只读实测在 5 / 311 份发现的 Claude 日志中观察到一次 chrome-use 关联加载，指令文本 1,539 字节 / 约 386 个启发式 token，返回文本仅 27 字节。覆盖不完整，不能当作全部 Skill 排名、完整上下文或账单。源码已合入；现用 CLI 未升级，本轮未做完整 Release 或原生窗口验收。
+
 ## 真实任务：核对公开发布与候选版本
 
 [2026-10-20 GitHub MCP 任务记录](measurements/github-release-mcp-business-task-2026-10-20.json)读取公开 release、标签引用和 main 引用，再用 `gh api` 独立核对必要字段。该次读取的[公开版本为 v1.1.38](https://github.com/leeguooooo/thermo/releases/tag/v1.1.38)，五个资产均包含 API 摘要；标签和远端 main 都是已验收 1.1.40 候选的祖先。此检查没有下载资产，不能替代包校验或安装验收。
