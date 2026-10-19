@@ -1,0 +1,143 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "f918118dbe2ea3a5501edb31752bec22141c901d",
+  "testedFrozenCommit": "914e54730f7c15353b7231c9b4dcc270cd25dd77",
+  "sourceTree": "1531a06aea3d0838efb2a7ca6b86b5600765d12b",
+  "releaseValidation": {
+    "complete": true,
+    "sourceCommit": "914e54730f7c15353b7231c9b4dcc270cd25dd77",
+    "sourceTree": "1531a06aea3d0838efb2a7ca6b86b5600765d12b",
+    "commands": [
+      {
+        "name": "release-tests.log",
+        "exitCode": 0,
+        "seconds": 517.5037662499817
+      },
+      {
+        "name": "release-build.log",
+        "exitCode": 0,
+        "seconds": 161.73311024997383
+      }
+    ],
+    "sourceFilesMatched": 551,
+    "SDKROOT": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "host": "mac190",
+    "architecture": "arm64",
+    "configuration": "release",
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 218,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 126,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 348,
+        "failures": 0
+      },
+      "CleanKitTests.xctest": {
+        "tests": 782,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 381,
+        "failures": 0
+      },
+      "AgentCoreTests.xctest": {
+        "tests": 70,
+        "failures": 0
+      }
+    },
+    "testsPassed": 1955,
+    "products": {
+      "ThermoApp": {
+        "bytes": 34345896,
+        "sha256": "dab26dc001807085457d9cbea904c8aa9b1ac5492ac446e534cf3f035e41a47f"
+      },
+      "thermo": {
+        "bytes": 20358248,
+        "sha256": "a4afd247c94826f29c609364f58d4c050fcc8fda3d36ce7bf7d589291e35c2c8"
+      },
+      "thermo-helper": {
+        "bytes": 1774320,
+        "sha256": "d0a5b55fa9801ca15bd2ffcf71a459f45b997428ab02eba6910d471ce87b85ba"
+      }
+    },
+    "archiveSHA256": "0947abd619d9aaa906414bdac1eab48b1499d4eec3e290b86d66a0f1c389fb8d",
+    "realModelCalled": false,
+    "hardwareTestsRun": false,
+    "signedOrInstalled": false
+  },
+  "transport": {
+    "archiveSHA256": "0947abd619d9aaa906414bdac1eab48b1499d4eec3e290b86d66a0f1c389fb8d",
+    "productsMatched": 3,
+    "sameSourcesAsPreviouslyQualifiedErrorOrdering": true
+  },
+  "nativeWindowAcceptance": {
+    "controller": "cua_repl",
+    "syntheticFixture": {
+      "synthetic": true,
+      "rows": 4,
+      "calls": 7,
+      "resultErrors": 2,
+      "hostFailures": 3,
+      "missingResults": 1,
+      "logSHA256": "5ebb2e258dfdc67e3bef13bcc0923e3525a22632f94778106d3db4a1581ff00c",
+      "identity": "unique per fixture root",
+      "productionConfigurationCopied": false
+    },
+    "bundleIdentifier": "dev.thermo.aiqa.720ccbc2c8c4",
+    "sourceCommit": "f918118",
+    "nativeAssertions": {
+      "errorSortSelected": true,
+      "threeHostFailuresBeforeTwoResultErrors": true,
+      "missingResultShownSeparately": true,
+      "knownZeroShown": true,
+      "notFailureRateOrQualityScoreTextVisible": true,
+      "detailsExpandedThenCollapsed": true,
+      "selectionAndOrderRetainedAfterCollapse": true,
+      "textShareHiddenForErrorSort": true,
+      "rawResultBodyExcluded": true
+    },
+    "runtimeSHA256": "5c1c28be1c98e15a7a6bf61ca12f6c006cbf1ad9efdd8bf1427f6fa2770b39b1",
+    "ownedProcessStopped": true,
+    "selectedProtectedFilesMatched": 3,
+    "installedOrPublished": false,
+    "proofScope": "Native arm64 window and controlled fixture only; no Intel hardware or complete distribution package acceptance."
+  },
+  "signing": {
+    "localAdHocQAOnly": true,
+    "DeveloperIDOrNotarizationPerformed": false,
+    "sourceProductsSHA256": {
+      "ThermoApp": "dab26dc001807085457d9cbea904c8aa9b1ac5492ac446e534cf3f035e41a47f",
+      "thermo": "a4afd247c94826f29c609364f58d4c050fcc8fda3d36ce7bf7d589291e35c2c8",
+      "thermo-helper": "d0a5b55fa9801ca15bd2ffcf71a459f45b997428ab02eba6910d471ce87b85ba"
+    },
+    "signedQARuntimeSHA256": "5c1c28be1c98e15a7a6bf61ca12f6c006cbf1ad9efdd8bf1427f6fa2770b39b1"
+  },
+  "evidenceSHA256": {
+    "release-tests.log": "ef85f1df7f9251c4e64f9e04ac759a641c6784f935de924e73c05c533b0b255a",
+    "release-build.log": "9db6668c12b30720ea276571cd0e5772f7fc1cee38d834d4bdad04c838278bad",
+    "freeze.json": "3e314c76e2382f69f3d8672e07a7a9b1c7933f3b565c7d0d5c4546d176555f1f",
+    "result.json": "a16c749a0c019ccb505448bcf010a4c83b25cb36c00e96b0e70ecb30ea20fdc8",
+    "qa-products.tar.gz": "0947abd619d9aaa906414bdac1eab48b1499d4eec3e290b86d66a0f1c389fb8d",
+    "qa-refresh.json": "b0f9293701e7a6bc0a4f4de41b255e93a20c10cee4068abc9eb294d9c7a38b64",
+    "native-qa-result.json": "24172e917f0245077e0aad3f6af32fde209c972107ecc1997f867f93ce589312",
+    "qa-fixture.json": "5120c71b20ddee7235fe7f05fd40c69a01ae61dd19f7e72c6962ff9fffc4e137",
+    "qa-fixture-report.json": "26f86151c4e120b33c829341b0ee92e0a6e65341901fc320222561901d8ecbb1"
+  },
+  "boundaries": {
+    "hardwareTestsRun": false,
+    "realModelCalled": false,
+    "realBusinessMCPConnectedForThisFixture": false,
+    "intelOrUniversalDistributionPackageTested": false,
+    "installedOrPublished": false,
+    "overallBusinessBenefitOrServiceQualityProved": false
+  }
+}
