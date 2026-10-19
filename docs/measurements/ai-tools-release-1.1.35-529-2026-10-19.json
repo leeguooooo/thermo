@@ -1,0 +1,305 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "sourceCommit": "d039aa98028184906b9e05f54207cc5e1119365e",
+  "marketingVersion": "1.1.35",
+  "build": "529",
+  "scope": "Fixed-source Release package, explicit verifier and isolated native UI acceptance; no installation or publication",
+  "sourceWorkingTree": "clean",
+  "productionSourcesTestsResourcesAndBuildInputsMatchMain": true,
+  "sourceFilesSHA256": {
+    "Sources/AgentDoctor/CumulativeTokenSnapshot.swift": "f55e6fdd4b20a278d2a123fb33607bf3ceda83193aba4bf6c96a37dbbe4a8dd5",
+    "Sources/AgentDoctor/SkillDiscovery.swift": "d0a60e4144677d5b4963067c7d02373acfaf179507122b0376389f6f7f51f2d0",
+    "Sources/AgentDoctor/SkillQuality.swift": "46f9f11159d880e0e1ff6a954609fa57d2150a13ce0b970b66047ea67587fd4e",
+    "Sources/AgentDoctor/ToolUsageParser.swift": "70acfe440cf2bce70606726cfdad278b617b956d15738ba0cc61963c55b66762",
+    "Sources/AgentDoctor/ToolUsageReport.swift": "5b15571ceecf1f5f44e553a3a9bd837b30365a52d0f8f0c0e5e40bad692e19d0",
+    "Sources/ThermoApp/ToolUsagePanel.swift": "842bbbad938d559be07043b5c5284a8cd1f21e4801cab3573cb8d6f0a2f358c6",
+    "Sources/ThermoKit/Version.swift": "dbdc3114345026d5c62a76622877fd7d7210cc1e6024986dbf07ed4750782e02",
+    "Sources/CleanKit/TrashBatch.swift": "0375e669a01f8d4ab63576f3a9a2a6dfee2f57e45d5b99a74d5d7e0142a52640",
+    "Sources/ThermoApp/HistoryPage.swift": "87598e195a74093097148a21dc57dea69236fe0a162a90f23e6422992370e3dd",
+    "scripts/build.sh": "bea479a5648af9e784512326fe040b652d526a958d9548a2b9dff392e710042f",
+    "scripts/source-info.sh": "47a07fbd4d5e52a7d6fc440294f9b9b85089ba8a5e6addb64d4649cac49e0118"
+  },
+  "installedRestoreFix": {
+    "originalCommit": "4d5f53a604032bf2aa25d2d5f80083f27eb5ac1e",
+    "sevenCriticalFilesMatchOriginal": true
+  },
+  "releaseTests": {
+    "suites": {
+      "ThermoKitTests": {
+        "tests": 207,
+        "failures": 0
+      },
+      "ThermoHelperTests": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests": {
+        "tests": 110,
+        "failures": 0
+      },
+      "ThermoAppTests": {
+        "tests": 310,
+        "failures": 0
+      },
+      "CleanKitTests": {
+        "tests": 755,
+        "failures": 0
+      },
+      "AgentDoctorTests": {
+        "tests": 293,
+        "failures": 0
+      },
+      "AgentCoreTests": {
+        "tests": 50,
+        "failures": 0
+      }
+    },
+    "total": 1755,
+    "failures": 0,
+    "HardwareTestsExcluded": true
+  },
+  "execution": {
+    "successfulTests": {
+      "exitCode": 0,
+      "timedOut": false,
+      "seconds": 1127.291031875,
+      "sourceCommit": "d039aa98028184906b9e05f54207cc5e1119365e",
+      "processTerminal": true
+    },
+    "successfulBuild": {
+      "exitCode": 0,
+      "timedOut": false,
+      "seconds": 1192.015937459,
+      "sourceCommit": "d039aa98028184906b9e05f54207cc5e1119365e",
+      "processTerminal": true
+    },
+    "firstAttempt": {
+      "exitCode": -15,
+      "timedOut": false,
+      "terminal": true,
+      "reason": "Observed 16 GiB RAM / about 18 GiB used swap with concurrent compilers; stopped only owned process group and resumed with one job",
+      "evidencePreserved": true,
+      "otherProcessesSignaled": false
+    }
+  },
+  "package": {
+    "signature": "ad-hoc; strict verification passed",
+    "notarized": false,
+    "updateFeedPresent": false,
+    "minimumMacOS": "13.0",
+    "components": {
+      "thermo": {
+        "SHA256": "772acabbfccdcdce8ff19e3b9b0b3f9d6264947a0ab3519771e731cd80c8e77a",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "thermo-helper": {
+        "SHA256": "428d40870577f9b6b2e910e73ba193d85bdc963394c24eb8f6b7df2eef8587e4",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "Thermo.app/Contents/MacOS/Thermo": {
+        "SHA256": "437221c87fb987e22c6d6f1f43d70d2ab8de359d6918004afdbca6d1e337f969",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "Thermo.app/Contents/Helpers/thermo": {
+        "SHA256": "772acabbfccdcdce8ff19e3b9b0b3f9d6264947a0ab3519771e731cd80c8e77a",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      },
+      "Thermo.app/Contents/Helpers/thermo-helper": {
+        "SHA256": "428d40870577f9b6b2e910e73ba193d85bdc963394c24eb8f6b7df2eef8587e4",
+        "architectures": [
+          "x86_64",
+          "arm64"
+        ]
+      }
+    }
+  },
+  "explicitVerifier": {
+    "mainCommits": [
+      "0af147f",
+      "428683b"
+    ],
+    "entry": "scripts/verify-ai-release.py",
+    "controls": {
+      "passed": 14,
+      "failed": 0,
+      "onlyOwnedFileProcessAndSyntheticRunnerFixtures": true
+    },
+    "actualPackagedRun": {
+      "complete": true,
+      "checks": 25,
+      "failed": 0,
+      "timedOut": 0,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "scriptGroupsPerArchitecture": 9,
+      "releaseTestsMode": "reused-local-evidence",
+      "packageFilesUnchanged": true,
+      "sourceUnchanged": true,
+      "resultSHA256": "bd09a8b18c71bb7630ca58ff5fc8d62adae60620ba7c301fb73022b634f82252"
+    },
+    "entrypointSHA256": "38267d3259c6f0710846d434250f9e76848cd964182fd0a4571bdc1395123100",
+    "scriptSourcesSHA256": {
+      "verify-skill-context.py": "b59520e3bb8854108d9f99918ad3c75542307f0e6b558b9cbded2fdb0701ec8b",
+      "verify-skill-quality.py": "4c4123831aea17f8545be5a1996bce1b638c1ac0cec93e4eead95280774fbbab",
+      "verify-tool-usage.py": "dae8481689235eda80b29fe3c58cee26097f7d13a21affc52bf16ed93cb7365f",
+      "verify-reference-encoding.py": "931d5ab0babf301dd94d4e31b6ad03dc65ddcf07d03753479d6d9907f7440e62",
+      "verify-task-comparison.py": "13f099ddedffe385eb7efa4817c555564d73e54e0cb9c0842e3d40ced808317f",
+      "verify-mcp-cleanup-details.py": "9b76238fbd9343cd91d99551f9e2394d5b9609a517d9c3b5935c9251972489a5",
+      "verify-cli-completeness.py": "40ca3096477573c0934f1519256f3ecf64416fb902edfc691711a3970c1456e1",
+      "verify-skill-instruction-usage.py": "762c8400c47b7b5b252957970921736a618d87c9a1800dad891726584d00647b",
+      "verify-ai-diagnostics-contract.py": "c2da75a1ccf13e9a57c08777e79412beea7f791280d88b6f307fb8de14a642f6"
+    },
+    "freshTestExecutionPath": "Control-tested with a synthetic runner; real packaged run reused matching completed Release evidence",
+    "noHooksSchedulesInstallOrPublication": true
+  },
+  "packagedRealNumericProjection": {
+    "numericProjectionRecords": 898,
+    "runs": [
+      {
+        "architecture": "arm64",
+        "snapshots": 8,
+        "originalCountersMatched": true,
+        "requestsNotInvented": true,
+        "CLI_SHA256": "32479e722ab9b6540608e67f596d3dad43f8157726aca94458510ddfea853a52"
+      },
+      {
+        "architecture": "x86_64",
+        "snapshots": 8,
+        "originalCountersMatched": true,
+        "requestsNotInvented": true,
+        "CLI_SHA256": "b0e56ab2d54c709f64bddc8a5ba5a45a3e67667c5d5a4a2786fef936c6ccc5a2"
+      }
+    ],
+    "noRawCountersExported": true
+  },
+  "nativeUI": {
+    "observedDate": "2026-10-19T05:15:33.726203+00:00",
+    "mode": "actual arm64 native window of isolated package copy; synthetic fixtures",
+    "packageSourceCommit": "d039aa98028184906b9e05f54207cc5e1119365e",
+    "independentBundleID": "dev.thermo.ai.release.qa.529.2nm84edw",
+    "reviewMode": true,
+    "checks": {
+      "logsRead": 3,
+      "unsupportedUsageRecords": 0,
+      "normalCumulativeInputDisplayed": "1,000,000,000",
+      "missingCacheWriteShownUnknown": true,
+      "conflictingLatestCounterShownUnknown": true,
+      "collapsedThenReexpandedPreservedValues": true,
+      "mediaTextMarkerDisplayed": true,
+      "truncationMarkerDisplayed": true,
+      "nativeImageExcludedFromTextTokens": true,
+      "cacheSkillCount": 1,
+      "cacheSkillBytes": 87,
+      "activeDirectorySkillCount": 0,
+      "cacheLoadStateUnverified": true,
+      "missingExtensionlessReferenceVisible": "references/absent",
+      "cacheMutationActionsAbsent": true
+    },
+    "aboutDialogNotVerified": true,
+    "originalRuntimeFileBackedSectionsMatch": true,
+    "QAProcessTerminal": true,
+    "installedAppAcceptance": false,
+    "realBusinessTasksExecuted": false,
+    "hardwareControlActions": false,
+    "sidebarMayDisplayReadOnlyHardwareTelemetry": true
+  },
+  "liveCodexInventory": {
+    "cancelled": false,
+    "summaries": [
+      {
+        "aliases": 5,
+        "cacheDocumentBytes": 2437513,
+        "cacheEntries": 227,
+        "cacheUniqueFiles": 227,
+        "catalogEntries": 135,
+        "catalogEstimatedTokens": 17396,
+        "documentBytes": 1587406,
+        "documentEstimatedTokens": 414921,
+        "entries": 368,
+        "host": "codex",
+        "inconsistentFiles": 0,
+        "measuredEntries": 367,
+        "referenceCatalogTokens": 16235,
+        "referenceDocumentTokens": 406708,
+        "referenceEncoding": "cl100k_base",
+        "unavailableReferenceFiles": 0,
+        "uniqueFiles": 135,
+        "unverifiedIdentityEntries": 0
+      }
+    ],
+    "qualitySummaries": [
+      {
+        "aliases": 0,
+        "checkedLocalReferences": 429,
+        "conflictingFiles": 0,
+        "entries": 227,
+        "findings": 0,
+        "host": "codex",
+        "incompleteInspections": 0,
+        "inspectedFiles": 227,
+        "scope": "cache",
+        "unavailableFiles": 0,
+        "uniqueFiles": 227,
+        "unmeasuredEntries": 0,
+        "unverifiedIdentityEntries": 0
+      },
+      {
+        "aliases": 5,
+        "checkedLocalReferences": 460,
+        "conflictingFiles": 0,
+        "entries": 141,
+        "findings": 0,
+        "host": "codex",
+        "incompleteInspections": 0,
+        "inspectedFiles": 135,
+        "scope": "directory",
+        "unavailableFiles": 0,
+        "uniqueFiles": 135,
+        "unmeasuredEntries": 1,
+        "unverifiedIdentityEntries": 0
+      }
+    ],
+    "scope": "read-only current Codex configuration/Skill inventory; no MCP connections or business calls"
+  },
+  "installedPreservation": {
+    "installationOrPublicationByThisRun": false,
+    "before": {
+      "version": "1.1.35",
+      "build": "522",
+      "sourceCommit": "4d5f53a604032bf2aa25d2d5f80083f27eb5ac1e",
+      "workingTree": "clean"
+    },
+    "after": {
+      "version": "1.1.35",
+      "build": "522",
+      "sourceCommit": "4d5f53a604032bf2aa25d2d5f80083f27eb5ac1e",
+      "workingTree": "clean"
+    },
+    "sampledBinariesAndMetadataUnchanged": true,
+    "comparisonScope": "Three installed core binaries plus version/build/source/working-tree fields, not a full bundle snapshot"
+  },
+  "delivery": {
+    "installedOrPublishedByThisWork": false,
+    "originalPackageUnmodified": true,
+    "QAProcessTerminal": true,
+    "installedAppAcceptance": false,
+    "realTaskQualityOrBilledTokenSavingsEstablished": false,
+    "verificationDriversTerminal": true
+  },
+  "privateEvidenceDirectoryName": "thermo-ai-review-release-2nm84edw"
+}
