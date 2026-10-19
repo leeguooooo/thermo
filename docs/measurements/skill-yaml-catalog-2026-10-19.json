@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "sourceCommit": "2868b08a62bc2b76dcd4621b5fc4ce365945e800",
+  "scope": "Static Skill front-matter parsing and catalog measurement, not host loading or task effectiveness",
+  "sourceFilesSHA256": {
+    "Package.resolved": "94e15a420495bfd5291aae8fd498aa9d1804289f433f74638bd3f0bd1af10f4e",
+    "Package.swift": "6edbe3846308cf20cc2d3eb4b484fc5e9116a4849c96dc363a221c9a1e12a1c1",
+    "Resources/ThirdPartyNotices/Yams-LICENSE.txt": "0354b0ea403d2e78059c5ae0510a2cfae9f8eb306fcef094ac9fff5b47e20bed",
+    "Resources/ThirdPartyNotices/libyaml-LICENSE.txt": "c40112449f254b9753045925248313e9270efa36d226b22d82d4cc6c43c57f29",
+    "Sources/AgentDoctor/Config.swift": "df2cd22d7051146aeff31fe61deac8e1a7b7f054f0ac26920a9a69b856fd2ba7",
+    "Sources/AgentDoctor/ContextFootprint.swift": "f337758e26d80a51c15e3ccfaa15587e2fa54289d3c44ca15d11cabc7a8276b3",
+    "Sources/AgentDoctor/SkillContextSummary.swift": "989c12dd861371a3cf1a14c209d1ca732e83bf120e5b21349ce77b73c80c05c9",
+    "Sources/AgentDoctor/SkillFrontMatter.swift": "b749c0c2ec7300116ad8c22b341c79746af07d965157b94d6ac757eac0a0ba51",
+    "Sources/AgentDoctor/SkillQuality.swift": "6bde411be1f0251e88279bffc5a6340b509499c986b03c2c48c727c43f4b433f",
+    "Sources/ThermoApp/SkillContextCard.swift": "9ed7f884a8467a278ac99b038d61b43a03f9f2994adbb6a749d0c3a27d188e43",
+    "Sources/ThermoL10n/ZhHans.swift": "8643402168eb31ad9dce943d65bf143b6b01c4ed4512c3ffa262619de2a969db",
+    "Sources/thermo/Agents.swift": "8cb4ee3f416c9590daa84150a3de5a600a03482e0cdf0e53899c07f34c5562cb",
+    "Tests/AgentDoctorTests/SkillFrontMatterTests.swift": "18616b01d72e3f8e282ed523bdb9d5faeb0e207487d8c01f550dac4a90063181",
+    "scripts/verify-skill-context.py": "1366359bf29b522acff4fcb126ac7f71016e822e0a142a99702c21e8c6ced540"
+  },
+  "parser": {
+    "name": "Yams",
+    "version": "6.2.2",
+    "revision": "a27b21e0c81c5bf42049b897a62aaf387e80f279",
+    "source": "https://github.com/jpsim/Yams/tree/6.2.2",
+    "api": "Representation-node composition; only root string name/description extracted, no arbitrary-object construction or nested metadata traversal",
+    "headerLimitBytes": 65536,
+    "licensesPackaged": [
+      "Yams-LICENSE.txt",
+      "libyaml-LICENSE.txt"
+    ]
+  },
+  "contract": {
+    "catalogSource": "Parsed YAML name plus newline plus parsed description, including scalar chomping semantics",
+    "unavailableCatalog": "measurementComplete=false and referenceTokens absent; comparisonTokens unknown; aggregate catalogEstimatedTokens/referenceCatalogTokens absent instead of a partial or zero total",
+    "fullDocument": "Original full-file bytes, content hash and token footprints retained independently",
+    "invalidDiagnostics": "Fixed messages only, no parser exception or source line exported",
+    "backwardCompatibility": "Existing numeric catalogEstimatedTokens values still decode; consumers must accept absent totals as unknown",
+    "hostBehavior": "Format diagnostics never prove actual host loading failure"
+  },
+  "validation": {
+    "agentDoctorTests": 311,
+    "failures": 0,
+    "newFrontMatterTests": 8,
+    "configuration": "Debug module tests and compiled native CLI; actual SwiftUI card compiled and offscreen Chinese rendering inspected",
+    "compiledCLIContract": {
+      "passed": true,
+      "userUniqueFiles": 1,
+      "projectUniqueFiles": 2,
+      "aliasesExcluded": 1,
+      "cacheFilesCountedSeparately": 1,
+      "coverageWarningPreserved": true,
+      "yamlCatalogValuesAndUnknownsVerified": true
+    },
+    "baselineCLIContract": {
+      "exitCode": 1,
+      "failure": "Known quoted-description catalog-byte assertion, with owned fixture input"
+    },
+    "realFrozenCorpus": {
+      "files": 118,
+      "invalidOrUnavailableCatalogs": 1,
+      "changedValidCatalogs": 10,
+      "changes": [
+        {
+          "sourceContentSHA256": "05d52e6a108b8fca9aa795d46caa1c5d4cbc6845081e2d54205f55fa63207931",
+          "baselineCatalogBytes": 572,
+          "candidateCatalogBytes": 573,
+          "baselineReferenceTokens": 136,
+          "candidateReferenceTokens": 136
+        },
+        {
+          "sourceContentSHA256": "2c1c1c04b7426ea72c4d5a720a82c2a7f2ff9cfc2e5d01947aa4d746c007027c",
+          "baselineCatalogBytes": 472,
+          "candidateCatalogBytes": 71,
+          "baselineReferenceTokens": 118,
+          "candidateReferenceTokens": 18
+        },
+        {
+          "sourceContentSHA256": "63db0d15fa60826c245602f4365208bf80d42a894bbfff73ba04b74162a105ac",
+          "baselineCatalogBytes": 378,
+          "candidateCatalogBytes": 379,
+          "baselineReferenceTokens": 83,
+          "candidateReferenceTokens": 83
+        },
+        {
+          "sourceContentSHA256": "a277e9e46b3b5b8619639a353a4af3f46f8ae4f2e622ba802d5af730d135f410",
+          "baselineCatalogBytes": 804,
+          "candidateCatalogBytes": 805,
+          "baselineReferenceTokens": 164,
+          "candidateReferenceTokens": 164
+        },
+        {
+          "sourceContentSHA256": "03007db5f0ea61f093c401f681e30d686c4a490f7462c6fd34949722e881b278",
+          "baselineCatalogBytes": 700,
+          "candidateCatalogBytes": 701,
+          "baselineReferenceTokens": 168,
+          "candidateReferenceTokens": 168
+        },
+        {
+          "sourceContentSHA256": "f722ee03ba20a3a8c6d2ba200729230e0245827a3178a02ef56e8b4b92c92a4e",
+          "baselineCatalogBytes": 592,
+          "candidateCatalogBytes": 593,
+          "baselineReferenceTokens": 135,
+          "candidateReferenceTokens": 135
+        },
+        {
+          "sourceContentSHA256": "d6484e8367ed522f2a89af9ec30ae3cd86ae243b5a23c5ab00a7a682e3d1a791",
+          "baselineCatalogBytes": 446,
+          "candidateCatalogBytes": 447,
+          "baselineReferenceTokens": 118,
+          "candidateReferenceTokens": 118
+        },
+        {
+          "sourceContentSHA256": "7449da3952155e40e7d76fc29d4415b4030ab6f7f3ff9c3b94fa1b159cad46c4",
+          "baselineCatalogBytes": 671,
+          "candidateCatalogBytes": 672,
+          "baselineReferenceTokens": 155,
+          "candidateReferenceTokens": 155
+        },
+        {
+          "sourceContentSHA256": "1c5fb00342f5316d2d1345101da7316e9035be6ba85f5d4b3a4575c391e593f2",
+          "baselineCatalogBytes": 386,
+          "candidateCatalogBytes": 387,
+          "baselineReferenceTokens": 121,
+          "candidateReferenceTokens": 122
+        },
+        {
+          "sourceContentSHA256": "a5dbd2f2f02a1b42aae14f215a94a7d2b1572c9b7da541951bfdfa1074b4e5e6",
+          "baselineCatalogBytes": 862,
+          "candidateCatalogBytes": 860,
+          "baselineReferenceTokens": 185,
+          "candidateReferenceTokens": 185
+        }
+      ],
+      "independentParser": "PyYAML 6.0.3",
+      "allValidCatalogBytesMatchIndependentYAML": true,
+      "allFullDocumentFootprintsAndHashesEqual": true,
+      "installedInputsUnchanged": true,
+      "rawCopiesRetained": false,
+      "sourceSetSHA256": "20b111bedd7ba72c79a0b2ae510ce2b1edc9cd80884a88f8e0cbf0395a991cda",
+      "baselineBinarySHA256": "8f6b6405a3f9c177f160d861b254a4278d29bbd02a3737baedc208daf6c3ccb4",
+      "candidateBinarySHA256": "d98869f12f22eaa84ef4cfadcaba67d5ce1f4963ed64cd22477fc9b895e5f9c2",
+      "boundary": "Direct local directory entries only, canonical file deduplication. No plugin-cache, recursive directory, host loading, model, business-task or billable-usage acceptance."
+    },
+    "ui": "Synthetic two-file report shows unknown catalog totals with a localized explanation while full-document counts remain measured; no installed App UI claimed"
+  },
+  "localSkillRepairs": {
+    "discord-hermes": {
+      "beforeSHA256": "2c1c1c04b7426ea72c4d5a720a82c2a7f2ff9cfc2e5d01947aa4d746c007027c",
+      "candidateSHA256": "174f4fbb283fa132c4dfa878882d8cf155b7a8c029768db30809701e617dc710",
+      "bodySHA256": "dfcfb4da02ab6055b0b275c53c986738a294aa3403a12769ed2214a22305f0c8",
+      "descriptionBytes": 457,
+      "candidateYAMLDescriptionExactlyMatchesIntendedText": true,
+      "candidateValidatorPassed": true,
+      "applied": true,
+      "liveValidatorPassed": true,
+      "bodyUnchanged": true,
+      "hostLoadingTested": false
+    },
+    "codex-statebar": {
+      "beforeSHA256": "600bb25234ebf34a6c79001a8ccbbf5bc473d5f5cb67d2059520ae8dac184d61",
+      "candidateSHA256": "ae0e18614a3dde85886646e2ca6eb7c387229eee265771b5c12f1e89ddb3427a",
+      "bodySHA256": "8a645c5b97d56131c4964dbf9f6a38d03778c705ba65d5e34f73675dbca100eb",
+      "descriptionBytes": 138,
+      "candidateYAMLDescriptionExactlyMatchesIntendedText": true,
+      "candidateValidatorPassed": true,
+      "applied": true,
+      "liveValidatorPassed": true,
+      "bodyUnchanged": true,
+      "hostLoadingTested": false
+    }
+  },
+  "liveRepairedFiles": {
+    "liveSkillFiles": 2,
+    "allCatalogBytesMatchIntendedYAMLValues": true,
+    "frontMatterIssues": 0,
+    "catalogReferenceTokens": 153,
+    "sourceFilesUnchangedDuringCheck": true,
+    "scope": "Read-only Thermo native CLI inspection through temporary symlinks to the two repaired roots; not host discovery/reload or workflow acceptance"
+  },
+  "boundaries": [
+    "The frozen 118-file comparison ran before the two local repairs; inputs remained unchanged during that comparison",
+    "Temporary corpus copies deleted; before/candidate backups of the two explicitly repaired technical Skill files retained privately",
+    "The two root Skill files were updated locally, outside Git; no versioned plugin cache or installed App changed by this work",
+    "Existing sessions were not restarted; discovery, selection, host reload and task benefit remain unverified",
+    "No model task, external messaging, hardware control, App install or publication"
+  ]
+}

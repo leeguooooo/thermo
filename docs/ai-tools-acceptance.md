@@ -1,6 +1,6 @@
 # AI 工具体验验收
 
-2026-10-19：固定源码 1.1.35（529）已通过 1,755 项 Release 测试、双架构包内 CLI 检查和隔离原生窗口验收。新增显式验收入口已在真实包上跑通。候选为无更新源的 ad-hoc 包，未安装或发布；安装版仍为 1.1.35（522），采样的核心二进制及来源字段未变。计量和诊断能力已有证据，尚不能给全部工具排真实业务质量名次，也没有证明 Skill 的整体净收益。
+固定 529 验收记录（2026-10-19）：源码 1.1.35（529）已通过 1,755 项 Release 测试、双架构包内 CLI 检查和隔离原生窗口验收。新增显式验收入口已在真实包上跑通。候选为无更新源的 ad-hoc 包，未安装或发布；当次验收时安装版采样为 1.1.35（522），核心二进制及来源字段未变；这段不追踪之后的安装状态。计量和诊断能力已有证据，尚不能给全部工具排真实业务质量名次，也没有证明 Skill 的整体净收益。
 
 ## 原始问题的当前结论
 
@@ -42,6 +42,8 @@ python3 scripts/verify-ai-release.py \
 维护入口的控制用例：`PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-ai-release-verifier.py`。它只使用自有临时 Git 仓库、文件和进程，不构建或安装 App。
 
 ## 当前验证状态
+
+[Skill YAML 目录计量与本机修正](measurements/skill-yaml-catalog-2026-10-19.json)：以固定版本 Yams 6.2.2 解析名称与描述，修正注释、引号转义和多行文本；无效头部不再产生看似完整的目录计量，App / CLI 显示未知及原因，完整文件计量仍单列。目录汇总的 `catalogEstimatedTokens` / `referenceCatalogTokens` 可缺失，消费者应按未知处理。311 项 AgentDoctor 回归、编译后 CLI 契约与中文面板离屏核对通过。修复前冻结的 118 份目录文件中，10 份合法头部的目录值得到纠正，其中 2 份参考 token 数变化，1 份无效头部的目录计量改为未知；所有完整文档字节、哈希和 token 计量一致。该范围不含递归子目录与插件缓存，不代表全量排名或账单变化。随后将本机 `codex-statebar` 和 `discord-hermes` 的描述改为 YAML 块标量，分别修正未引用冒号和 ` #` 注释截断；两份正文哈希不变，格式校验及新 CLI 直接读取均通过。只修改根 Skill 文件，未更新版本化缓存；宿主重载、选择及任务收益未验证。Thermo 部分仅完成 Debug / 模块验证，未重建、安装或发布 App。
 
 [MCP 工具自报错误码](measurements/mcp-error-code-observations-2026-10-19.json)：App / CLI / JSON 按明确的结构化错误码分类；缺码、冲突或不支持的标签保留为未分类，旧报告缺字段仍为未测量。每个工具保存频次最高的 64 类，界面显示前 6 类，超限数量仍计入明确错误。真实日志尾部的 134 次原生 MCP 调用重放中，14 次明确报错分为 `command_failed` 6 次、`element_not_found` 1 次、未分类 7 次；原有耗时、文本字节、参考 token 和状态字段全部一致。303 项 AgentDoctor 测试通过，编译后 CLI 及实际 SwiftUI 面板的中文离屏显示已核对。错误码由工具定义，[只返回错误文本也符合 SDK 用法](https://py.sdk.modelcontextprotocol.io/servers/handling-errors/)，缺码不能据此判定工具质量。仅完成 Debug / 模块验证，未重建、安装或发布 App；下面既有包的验收不包含此改动。
 
