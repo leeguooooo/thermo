@@ -1,0 +1,162 @@
+{
+  "recordedDate": "2026-10-20",
+  "codeCommit": "5f16c7e",
+  "contractCommit": "cfb20ba",
+  "baselineCommit": "c1c19d1",
+  "scope": "Measure retained structuredContent JSON values; do not infer negotiated protocol or output schema validity",
+  "sourceVerification": {
+    "sourceFilesMatched": 575,
+    "tests": [
+      {
+        "suite": "ThermoAppTests",
+        "tests": 3,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests",
+        "tests": 362,
+        "failures": 0
+      }
+    ],
+    "CLI_SHA256": "5e34a0d1c985779c3a3c64e4fc1b7347758d4f292a098cb5c482ee23bfced69a",
+    "App_SHA256": "9a3786c505e72b5c9f5799c6ac55f272a141e050f2bb8b7936fd3a57e5d90fb2",
+    "host": "leos-MacBook-Pro.local",
+    "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk"
+  },
+  "sdkProvenance": {
+    "sdkVersion": "2.3.1",
+    "calls": 6,
+    "networkDenied": true,
+    "realSDKResults": true,
+    "logEventsSynthesizedFromReplies": true,
+    "nativeCodexLogClaimed": false,
+    "realModelCalled": false,
+    "productionBusinessDataUsed": false,
+    "fixtureSHA256": "b0b9cdd62b31c7c29a0d24b8802f7c326a287d87ea889be9da7521b771911352"
+  },
+  "comparison": {
+    "passed": true,
+    "beforeUnavailableJSON": 5,
+    "afterUnavailableJSON": 0,
+    "beforeLargestStructured": "object",
+    "afterLargestStructured": "array",
+    "returnedTextBytesUnchanged": 12,
+    "objectMeasurementsUnchanged": true,
+    "fixtureUnchanged": true,
+    "allPayloadTextAbsentFromReport": true,
+    "shapes": [
+      "object",
+      "array",
+      "string",
+      "number",
+      "boolean",
+      "null"
+    ],
+    "jsonBytes": 5990,
+    "jsonReferenceTokens": 1528,
+    "arrayJSONBytes": 5891,
+    "arrayReferenceTokens": 1503,
+    "logEventsSynthesizedFromSDKReplies": true,
+    "nativeCodexLogClaimed": false,
+    "modelCalled": false
+  },
+  "nativeGUI": {
+    "nativeGUIVerified": true,
+    "encoding": "cl100k_base",
+    "selectedOwnedLogOnly": true,
+    "rankFirst": "array",
+    "arrayJSONBytes": 5891,
+    "arrayReferenceTokens": 1503,
+    "nullJSONBytes": 4,
+    "nullReferenceTokens": 1,
+    "measurableFields": 6,
+    "unmeasurableFields": 0,
+    "returnedTextBytes": 12,
+    "payloadNotDisplayed": true,
+    "protocolAndSchemaCaveatShown": true,
+    "QAProcessesAbsent": true,
+    "originalAppCurrentlyRunning": true,
+    "originalAppCurrentPIDs": [
+      45582
+    ],
+    "originalAppPIDStabilityVerified": false,
+    "pidNote": "No fresh original-App PID baseline was captured for this phase. An initial check incorrectly reused an older phase PID; no lifecycle stability claim is made.",
+    "selectedUserConfigAndAppFileHashesUnchanged": true,
+    "sourceAppSHA256": "9a3786c505e72b5c9f5799c6ac55f272a141e050f2bb8b7936fd3a57e5d90fb2",
+    "runtimeSHA256": "1939eafec7611cba8d57e784ea9a168017a837af56862137f79762bba4e810e1",
+    "fixtureSHA256": "b0b9cdd62b31c7c29a0d24b8802f7c326a287d87ea889be9da7521b771911352",
+    "installed": false,
+    "published": false
+  },
+  "contracts": {
+    "diagnostics": {
+      "fixtureOnly": true,
+      "binarySHA256": "5e34a0d1c985779c3a3c64e4fc1b7347758d4f292a098cb5c482ee23bfced69a",
+      "groupsPassed": 9,
+      "checks": [
+        "post-run checks exclude invalid/legacy pairs, retain all outcomes and reject incomplete v2 records",
+        "serialized media/truncation markers remain separate from native image blocks and text accounting in both encodings",
+        "local missing schema target diagnosed, valid/boolean/identified schemas not misreported; no tool call or reference leakage",
+        "root-declared cached Skill counted once with an informational layout hint and no mutation actions; extensionless references checked",
+        "latest cumulative counters, decreases and conflicts stay separate from requests and tools",
+        "separate Codex namespaces group with legacy MCP names; native images excluded and same-name outer tools stay distinct",
+        "structured JSON is measured separately from acknowledgment text; unavailable envelopes stay unknown and payloads are not exported",
+        "all JSON value shapes are measured, null differs from absence, array ranking recovers and returned-text accounting stays separate",
+        "CLI text and structured token order is declared in JSON, shared with human output, preserves metrics and keeps known zero before unknown"
+      ],
+      "modelsOrDevicesUsed": false
+    },
+    "negativeBaseline": {
+      "expectedFailure": true,
+      "exitCode": 1,
+      "stage": "non-object JSON value ranking"
+    },
+    "reference": {
+      "passed": true,
+      "encodings": [
+        "cl100k_base",
+        "o200k_base"
+      ],
+      "standaloneBinary": true,
+      "skillMCPAndUsageCountsMatchReference": true,
+      "modelNamesNotInferred": true
+    }
+  },
+  "officialReference": "https://modelcontextprotocol.io/specification/2026-07-28/server/tools",
+  "negativeDataRule": "Non-JSON values remain unavailable; missing fields, null and unobservable results are distinct; old saved counters are not reconstructed without source logs",
+  "attemptNotes": [
+    "Initial analyzer omitted --agent codex; preserved rejected-input outputs, corrected command and did not rerun SDK calls.",
+    "New non-JSON negative test exposed a Foundation Objective-C exception during fragment serialization. Fixed by validating the value inside an array before serialization; original failure log retained.",
+    "Existing diagnostic contract assumed every root-Skill issue had a local-reference target; updated exact expected issue codes to include the informational layout hint.",
+    "A lifecycle check incorrectly reused a prior phase original-App PID. No fresh PID baseline was captured, so no process-stability claim is made; selected configuration/App file hashes were verified instead."
+  ],
+  "limitations": [
+    "SDK replies were re-encoded as owned Codex-format events, not actual native Codex session logs",
+    "365 targeted Debug tests, not full Release or x86_64 acceptance",
+    "JSON/reference counts do not establish prompt forwarding, model usage, billing, task success or tool quality"
+  ],
+  "modelCalled": false,
+  "productionBusinessDataUsed": false,
+  "installed": false,
+  "published": false,
+  "artifactSHA256": {
+    "source-verification.json": "f69fc595f81428eaffe38e2c454fa525330cdee345daba6f197199b4b979053e",
+    "contract-before.stderr.log": "0f1ed52ec65d73ea0d2f354e414ae8d09327f6218e6dec5df0bbb792126e32e8",
+    "gui.json": "8ee18ab7ae7a85f4dcd2905a8ce05939ec74097b77d8fb3264f1ee4a085d9ad0",
+    "baseline.log": "9913ea8bdf2cdd06bb5186661fa7c14f6da6b5ffc540850aa6dbdd138c6f27cf",
+    "non-json-validation-failure.log": "918364cdc6e76876f6ddffddb3bfeeee8a4d35b86a3c783b587bd00ad3b3440e",
+    "contract-before-result.json": "3651bd44778ee5243f995d7820055c1bfd4dddab4f6c145456fea2caca8ec26b",
+    "contract-before.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "final-tests.log": "2ea3a63412e746c183090c8cfc6d523560a4ea1e63b908ee8e036fc08996d86c",
+    "contract.json": "694006316997a439c7d688898e29b643e66d8aafd0202e9a4a29f72be751422d",
+    "reference-contract.json": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d",
+    "analysis/before.json": "a76040ceb08e1297a6aa519aaad9324f795c5b0c1f5f69f498e42e116292fe3d",
+    "analysis/result.json": "453a3ef8f7948ac6091aee14fef1ba077997840deff7fd5c8e1d71e74f58503c",
+    "analysis/after.json": "32d4859f4c03122b187ffabfcff8404ad0762bb6d7473ed271b8435c94b7c223",
+    "analysis/after-receipt.json": "29022a316cf251e8e68a5c737c88f02d5ed25bd5a6ad96a2766475338e47bcc1",
+    "analysis/before-receipt.json": "77070245025127feba3d184001fe50738b70128425c472e61ae90d40207ce952",
+    "fixture/provenance.json": "58381924915b13134390743a009fe3a1348a1f9890666c1faee945fc089ad91c",
+    "fixture/methods.jsonl": "410fb4a0df7e8dde6d4fade30eef0c2f7fd474198fdb7fe3b5e8dfbd0487e42b"
+  }
+}
