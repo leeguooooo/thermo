@@ -1,0 +1,215 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "9085b08",
+  "marketplaceCommit": "d986d38",
+  "pluginVersionPrepared": "0.1.3",
+  "actualPluginAtReadOnlyProbe": {
+    "localVersion": "0.1.2",
+    "installed": true,
+    "enabled": true,
+    "resourceSkillCount": 0,
+    "standaloneCanonicalSkillMatches": 1,
+    "wholeHostSkillAbsenceClaimed": false
+  },
+  "skillBytes": 3859,
+  "skillSHA256": "19b41fb2bf6af35f386e294eeaa74677b028953be076c957ef571b67e93fb3ad",
+  "skillInstructionsByteIdentical": true,
+  "nativeDiscovery": {
+    "passed": true,
+    "clientVersion": "codex-cli 0.163.0",
+    "CLI_SHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+    "results": [
+      {
+        "case": "baseline",
+        "CLICommands": [
+          {
+            "name": "marketplace",
+            "exitCode": 0
+          },
+          {
+            "name": "add",
+            "exitCode": 0
+          },
+          {
+            "name": "list",
+            "exitCode": 0
+          }
+        ],
+        "registered": true,
+        "enabled": true,
+        "resourceSkillCount": 0,
+        "indexedSkillCount": 0,
+        "indexedSkills": [],
+        "errorCount": 0
+      },
+      {
+        "case": "candidate",
+        "CLICommands": [
+          {
+            "name": "marketplace",
+            "exitCode": 0
+          },
+          {
+            "name": "add",
+            "exitCode": 0
+          },
+          {
+            "name": "list",
+            "exitCode": 0
+          }
+        ],
+        "registered": true,
+        "enabled": true,
+        "resourceSkillCount": 1,
+        "indexedSkillCount": 1,
+        "indexedSkills": [
+          {
+            "name": "message-use:message-use",
+            "enabled": true,
+            "path": "/private/tmp/message-skill-layout.WUdsXq/probe/activation/.home-candidate/.codex/plugins/cache/owned-message-layout/message-use/0.1.3/skills/message-use/SKILL.md"
+          }
+        ],
+        "errorCount": 0
+      }
+    ],
+    "temporaryHomesOnly": true,
+    "actualUserRegistrationChanged": false,
+    "modelInferenceRequested": false,
+    "published": false
+  },
+  "explicitLoadingLoopback": {
+    "passed": true,
+    "clientVersion": "codex-cli 0.163.0",
+    "CLI_SHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+    "results": [
+      {
+        "case": "baseline",
+        "CLICommands": [
+          {
+            "name": "marketplace",
+            "exitCode": 0
+          },
+          {
+            "name": "add",
+            "exitCode": 0
+          },
+          {
+            "name": "list",
+            "exitCode": 0
+          }
+        ],
+        "registered": true,
+        "enabled": true,
+        "resourceSkillCount": 0,
+        "indexedSkillCount": 0,
+        "indexedSkills": [],
+        "errorCount": 0,
+        "explicitCLIExit": 0,
+        "fakeBackendRequests": [
+          {
+            "onlyFakeCredential": true,
+            "wholeSkillPresent": false,
+            "path": "/v1/responses"
+          }
+        ],
+        "realModelCalled": false
+      },
+      {
+        "case": "candidate",
+        "CLICommands": [
+          {
+            "name": "marketplace",
+            "exitCode": 0
+          },
+          {
+            "name": "add",
+            "exitCode": 0
+          },
+          {
+            "name": "list",
+            "exitCode": 0
+          }
+        ],
+        "registered": true,
+        "enabled": true,
+        "resourceSkillCount": 1,
+        "indexedSkillCount": 1,
+        "indexedSkills": [
+          {
+            "name": "message-use:message-use",
+            "enabled": true,
+            "path": "/private/tmp/message-skill-layout.WUdsXq/preload-v2/.home-candidate/.codex/plugins/cache/owned-message-layout/message-use/0.1.3/skills/message-use/SKILL.md"
+          }
+        ],
+        "errorCount": 0,
+        "explicitCLIExit": 0,
+        "fakeBackendRequests": [
+          {
+            "onlyFakeCredential": true,
+            "wholeSkillPresent": true,
+            "path": "/v1/responses"
+          }
+        ],
+        "realModelCalled": false
+      }
+    ],
+    "temporaryHomesOnly": true,
+    "actualUserRegistrationChanged": false,
+    "modelInferenceRequested": false,
+    "published": false
+  },
+  "sourceVerification": {
+    "sourceFilesMatched": 23,
+    "CLI_SHA256": "21c63d9b3e26e48270084ec0fb835ec2a78b0aa0909b64dc628ef5d3104c75b9",
+    "Skill_SHA256": "19b41fb2bf6af35f386e294eeaa74677b028953be076c957ef571b67e93fb3ad",
+    "embeddedInstallCopiesMatched": 2,
+    "realMessageDBRead": false,
+    "realMessagesSent": false,
+    "installedGlobally": false
+  },
+  "validation": {
+    "host": "mac190",
+    "bunVersion": "1.3.6",
+    "bunTestsPassed": 32,
+    "bunTestsFailed": 0,
+    "typescriptCheckPassed": true,
+    "compiledMacOSCLI": true,
+    "embeddedSkillInstallCopiesByteMatched": 2,
+    "familyShellSuitesPassed": 4,
+    "skillFrontmatterValid": true
+  },
+  "userSelectedConfigAndCacheFingerprintsStillMatched": true,
+  "attemptNotes": [
+    "First explicit-loading fixture had no Git repository and native exec refused before any backend request. Preserved original results; v2 used owned temporary repositories without global trust changes.",
+    "CLI help incorrectly claimed ~/.agents installation; source help now names only the two directories actually written."
+  ],
+  "boundaries": {
+    "realMessagesRead": false,
+    "realOTPsRead": false,
+    "realMessagesSent": false,
+    "realModelCalled": false,
+    "realUserPluginRegistryWritten": false,
+    "installedGlobally": false,
+    "published": false,
+    "automaticSkillSelectionOrBusinessBenefitMeasured": false,
+    "fakeUsageCountersIncludedInMetrics": false
+  },
+  "artifactSHA256": {
+    "source-verification.json": "b2d86737a3bce9e57bae6ddd3f40649c166e9ba8e2b043d89db441751230498d",
+    "discovery-result.json": "ccda3e1af34cd2857737f49aa8742ddf8f4f7d00d6f623e6005896395c8bc870",
+    "preload/baseline-exec-private.jsonl": "8c82f6ef3e1b758105e27d1be6f37de32c30a1534c3ab5227e34b5863ed66a0c",
+    "preload/result.json": "e5e220031f0a19c632d1efd381b0ff4ba1544807d9c7781b10d3c5a4d0423731",
+    "preload/baseline-model-request-private.json": "49ab2171bfc783c2956c1d903d6be415d53f13e315f6eda83cb565054c62d816",
+    "preload/candidate-exec-private.jsonl": "bba40d028bb49b41e5f10e750f39c784de349afce7eb1537b7ab6eabd8c550fb",
+    "preload/candidate-model-request-private.json": "1d18cbf14e527e6ec9f908737341ed707fe794c9783134da5db4a9a424823d82",
+    "preload/baseline-appserver-private.json": "26002e618204447796324c2506f26724e06d7c8bf48fc473ae476b64129e24c0",
+    "preload/candidate-list.stdout.json": "deaf140631bee51306331ab941fa5fcd004dfdd1fb576db99c896a43d23524d3",
+    "preload/candidate-add.stdout.json": "fadf48642931bfc35726477f0ee787753aa0bb69458a70fbbeb804c9f5fd55ba",
+    "preload/baseline-list.stdout.json": "b9a73c4cb5cbb550e6729653627384dc98f30acf5d93fe390eaa5a02b8f53b17",
+    "preload/candidate-marketplace.stdout.json": "eb4fa0f8e26acec1b3a168ed8ae7bf87b4e94cefbac2f375d31cd2983eba0f36",
+    "preload/baseline-add.stdout.json": "c0eaf7c3c656ba90ec05d5c17229e77b3e1c987e7b916f4f64d18d3e5761ed65",
+    "preload/candidate-appserver-private.json": "bdda28cbeb0776ccf1ec8a34e5a469ffd88b426f4e5b72aa03e819968422979f",
+    "preload/baseline-marketplace.stdout.json": "1a3e5456aa61072b638668a455447ff6c204adeb5b81166c418ea193d27dec0a"
+  },
+  "buildLogSHA256": "bfc0c7735ccbd4d454bc3fe2b6d6bbffd9dae2344356901e6f7e5cfa7e0c791b"
+}
