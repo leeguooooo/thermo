@@ -8,6 +8,8 @@
 
 | 问题 | 已有结果与证据 | 计量边界 |
 |---|---|---|
+| 宿主可发现目录多大 | 2026-10-19 的 `functions.ALL_TOOLS` 有 815 项；按 `mcp__` 名称归类的 802 项，描述独立 cl100k 参考计数之和为 406,375。[目录计量](measurements/host-tool-discovery-catalog-2026-10-19.json) | 只计描述及其中的可见调用声明；不含全部入口、原生 tools/list 的完整 schema 或服务器指令，不是每轮模型上下文 |
+| 这份宿主目录里哪项描述最多 | 连接器聚合目录 217,039，Figma 命名空间 82,006，REA 73,705；单项 Adobe crop/resize 为 5,607 个描述参考 token | 按名称空间统计，不代表独立服务数量、工具质量或与历史配置快照可比的趋势 |
 | MCP 总体多大、占多少 token | Codex 9 条启用配置均已尝试，8 条完整返回 305 个工具；定义数组独立计数之和为 cl100k 217,929，服务指令另计 893。[连接记录](measurements/mcp-auth-scope-and-coverage-2026-10-17.json) | 不同时点的独立计量；Figma 独立连接需要认证，其他宿主未完整主动测量，总体仍未知；不是当前提示词或账单 |
 | 什么工具占得最多 | 已测目录中 REA 最大：194,330 个 cl100k 参考 token；单项 `compare_web_captures` 为 36,303。[定义排名](measurements/mcp-configured-coverage-2026-10-17.json) | 仅对应记录中的配置和表示方式；目录长度不代表任务成本或质量 |
 | MCP 多慢、哪里失败 | 握手、列表和本地计量分开计时；日志显示中位数、P95、累计调用耗时及重叠区间去重后的占用时间，结果明确报错与宿主调用失败分开。[原生事件解析](measurements/mcp-invocation-failures-2026-10-17.json)、[窗口核对](measurements/ai-tools-ui-474-2026-10-17.json) | 并行调用的间隔合计不是经过时间；条件断言失败不一定是服务故障；缺失与未知不补零 |

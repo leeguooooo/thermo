@@ -12,6 +12,30 @@ App 与 CLI 的调用列表增加了 MCP / Skill 各分类返回文本的合计�
 
 [本机静态盘点](measurements/ai-tools-current-inventory-2026-10-17.json)在当前支持的本地配置范围内发现 36 条 MCP 配置、29 条启用，来自 Claude、Codex、Gemini 和 Cursor。Codex 范围有 138 个独立目录 / 插件 Skill 文件，cl100k_base 普通文本参考计数为目录描述 16,581、完整文件 413,671 token；两者分开计量，缓存 215 个文件另列。876 次本地引用检查发现 2 个当前缺失的目标。以上不证明实际加载状态，缺失目标也可能需要在运行时生成。未逐项连接真实配置，因此本机 MCP 定义完整总量仍未知。
 
+## 宿主可发现目录与按需展开
+
+[2026-10-19 宿主目录计量](measurements/host-tool-discovery-catalog-2026-10-19.json)覆盖当时 `functions.ALL_TOOLS` 的 815 项名称和描述，含描述中的调用声明。逐项文本都完整取得参考计数，1.1.37 固定 CLI 与安装版 1.1.39 的字节数和 cl100k 计数全部一致；这是同一计数实现的版本交叉核对，不是两个独立分词器。临时文本计量容器已删除，没有安装那些占位文件，也没有调用业务工具。占位文件的 Skill/YAML 告警不作为工具问题。
+
+这个目录不等于所有顶层工具、已配置 MCP 服务器或本轮实际加载的定义；不能与早先 tools/list 快照直接合成总量或趋势。各条描述独立 token 计数相加，也不是整个序列化目录或实际请求的分词结果。按描述长度不能判定工具质量。
+
+检查目录时，已知工具名就只读取该工具的完整声明。名称未知时，在运行时按命名空间和用途筛选；唯一匹配可在同一次调用中展开，多个匹配先返回有限的名称，并明确总数、是否截断、是否已展开声明。选定后再读取完整声明，不截掉调用条件和参数约束。例如，在提供 `ALL_TOOLS` 的函数编排器中查找 Release 读取能力：
+
+```javascript
+const hits = ALL_TOOLS.filter(t =>
+  t.name.startsWith("mcp__codex_apps__github_") &&
+  /\breleases?\b/i.test(t.description)
+);
+const expanded = hits.length === 1;
+text({
+  totalMatches: hits.length,
+  descriptionsExpanded: expanded,
+  namesTruncated: !expanded && hits.length > 10,
+  entries: expanded ? hits : hits.slice(0, 10).map(t => ({ name: t.name }))
+});
+```
+
+本次实际筛选唯一匹配 `github_fetch`，并展开了完整声明。冻结目录中整个 GitHub 组有 89 项、75,242 描述字节、17,569 个独立描述参考 token；选定项为 1,918 字节 / 394。它说明可以少带入无关元数据，不是模型选择质量、耗时或账单收益对照，也不自动授权任何业务调用。大目录的排查应先区分必要参数说明、返回负担及具体任务失败，不据此批量禁用或删减工具。
+
 ## 已实现的静态 Skill 检查
 
 `thermo agents context [--agent AGENT] [--root PROJECT] [--json]` 只读取配置与 Skill 文件，不启动 MCP，不执行工具，不读取会话正文。按完整 SKILL.md 的估算 token 排名，输出目录描述、正文和完整文档的独立测量。App 的 Skills 分类按宿主汇总占用，显示最大的五个独立文件；逐项清单保留所有来源。可在 App 选择 Skill 项目，或回到用户范围。

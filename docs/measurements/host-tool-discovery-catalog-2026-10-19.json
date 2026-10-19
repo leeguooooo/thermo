@@ -1,0 +1,282 @@
+{
+  "schemaVersion": 1,
+  "observedAtUTC": "2026-10-19T11:33:51.371Z",
+  "source": "functions.ALL_TOOLS",
+  "scope": "Name and description fields of tools discoverable inside the functions execution runtime; descriptions include visible invocation declarations. Not every top-level tool or configured MCP server.",
+  "allDiscoverableEntries": 815,
+  "allDescriptionUTF8Bytes": 1810060,
+  "allIndependentDescriptionReferenceTokenSum": 411249,
+  "MCPNamePrefixedEntries": 802,
+  "MCPNamePrefixedDescriptionBytes": 1788645,
+  "MCPNamePrefixedIndependentDescriptionReferenceTokenSum": 406375,
+  "encoding": "cl100k_base",
+  "engine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+  "groupsByNameNamespace": {
+    "codex_apps": {
+      "tools": 430,
+      "descriptionBytes": 943083,
+      "referenceDescriptionTokens": 217039
+    },
+    "runtime": {
+      "tools": 13,
+      "descriptionBytes": 21415,
+      "referenceDescriptionTokens": 4874
+    },
+    "figma": {
+      "tools": 43,
+      "descriptionBytes": 343375,
+      "referenceDescriptionTokens": 82006
+    },
+    "rea": {
+      "tools": 207,
+      "descriptionBytes": 358947,
+      "referenceDescriptionTokens": 73705
+    },
+    "iphone_use": {
+      "tools": 36,
+      "descriptionBytes": 84383,
+      "referenceDescriptionTokens": 20031
+    },
+    "codegraph": {
+      "tools": 1,
+      "descriptionBytes": 2922,
+      "referenceDescriptionTokens": 699
+    },
+    "claude_design": {
+      "tools": 23,
+      "descriptionBytes": 26995,
+      "referenceDescriptionTokens": 6121
+    },
+    "node_repl": {
+      "tools": 3,
+      "descriptionBytes": 2111,
+      "referenceDescriptionTokens": 502
+    },
+    "android_use": {
+      "tools": 9,
+      "descriptionBytes": 6220,
+      "referenceDescriptionTokens": 1297
+    },
+    "zego": {
+      "tools": 6,
+      "descriptionBytes": 3911,
+      "referenceDescriptionTokens": 1151
+    },
+    "computer_history": {
+      "tools": 5,
+      "descriptionBytes": 1910,
+      "referenceDescriptionTokens": 427
+    },
+    "codex_tui": {
+      "tools": 12,
+      "descriptionBytes": 4503,
+      "referenceDescriptionTokens": 1043
+    },
+    "openaiDeveloperDocs": {
+      "tools": 5,
+      "descriptionBytes": 2319,
+      "referenceDescriptionTokens": 576
+    },
+    "discord": {
+      "tools": 22,
+      "descriptionBytes": 7966,
+      "referenceDescriptionTokens": 1778
+    }
+  },
+  "top20ByDescriptionReferenceTokens": [
+    {
+      "name": "mcp__codex_apps__adobe_image_crop_and_resize",
+      "provider": "codex_apps",
+      "descriptionBytes": 21730,
+      "referenceDescriptionTokens": 5607,
+      "descriptorSHA256": "fbaab719eefef10675851493ea4a35459a0b4b1dd3e99583dbabf1ca1ad03c87"
+    },
+    {
+      "name": "mcp__codex_apps__chatgpt_space_edit_page",
+      "provider": "codex_apps",
+      "descriptionBytes": 14090,
+      "referenceDescriptionTokens": 3129,
+      "descriptorSHA256": "2a2f9bb19de355519949375fbedd4666df23c8da228492e572f57a6cba19c52c"
+    },
+    {
+      "name": "mcp__codex_apps__chatgpt_space_read_page",
+      "provider": "codex_apps",
+      "descriptionBytes": 12710,
+      "referenceDescriptionTokens": 2748,
+      "descriptorSHA256": "0352157fe5ab93f9a99d7396db3fdbc5294cb41b96e66b542eb6269d5f28ac60"
+    },
+    {
+      "name": "mcp__codex_apps__adobe_interactive_image_apply_adjustments_app",
+      "provider": "codex_apps",
+      "descriptionBytes": 12513,
+      "referenceDescriptionTokens": 2730,
+      "descriptorSHA256": "b0868fbbfa04097f87ae66df9b8b2b97663552b83cdd4d6fef205a0dd8e9aeed"
+    },
+    {
+      "name": "mcp__codex_apps__adobe_image_apply_effects",
+      "provider": "codex_apps",
+      "descriptionBytes": 10492,
+      "referenceDescriptionTokens": 2614,
+      "descriptorSHA256": "c70e2627b55844363f80b8550f7719ee5f43eb4234d96743ebb43d298d6d0ee9"
+    },
+    {
+      "name": "mcp__codex_apps__adobe_interactive_image_apply_effects_app",
+      "provider": "codex_apps",
+      "descriptionBytes": 11552,
+      "referenceDescriptionTokens": 2601,
+      "descriptorSHA256": "96358be83c349aad947ee7e954d14f71c4b5cc7b84ddb59ba1f29de720d89f9b"
+    },
+    {
+      "name": "web__run",
+      "provider": "runtime",
+      "descriptionBytes": 10374,
+      "referenceDescriptionTokens": 2498,
+      "descriptorSHA256": "c5ed4c580b4fa56afc598f2d820be7a76bb9100bfdcef5ce4ec4dc123d9cf7ab"
+    },
+    {
+      "name": "mcp__codex_apps__chatgpt_space_execute_artifact_code",
+      "provider": "codex_apps",
+      "descriptionBytes": 11311,
+      "referenceDescriptionTokens": 2450,
+      "descriptorSHA256": "56b39a5f1ea014956e71424ad40c3da974abeaf45e11d50ff99b24d33a73cc84"
+    },
+    {
+      "name": "mcp__figma__get_design_context",
+      "provider": "figma",
+      "descriptionBytes": 10191,
+      "referenceDescriptionTokens": 2411,
+      "descriptorSHA256": "fda10783140667865b213e02d7a533c9fcd56ccb6a832ebe6353bef0c6cea482"
+    },
+    {
+      "name": "mcp__codex_apps__adobe_image_crop_to_bounds",
+      "provider": "codex_apps",
+      "descriptionBytes": 9627,
+      "referenceDescriptionTokens": 2350,
+      "descriptorSHA256": "5c19198f58f5837e1947ea7d7e009ba8bd75b905050046490c748ae4b70e69b0"
+    },
+    {
+      "name": "mcp__figma__export_video",
+      "provider": "figma",
+      "descriptionBytes": 9553,
+      "referenceDescriptionTokens": 2318,
+      "descriptorSHA256": "f0ad7673c4fec34ef391a8874f92d929e5854ae49bd736907efe66846a23e54f"
+    },
+    {
+      "name": "mcp__figma__get_screenshot",
+      "provider": "figma",
+      "descriptionBytes": 9819,
+      "referenceDescriptionTokens": 2313,
+      "descriptorSHA256": "aee1b6c40ca20faa999c0f33e3741c1b6cd2a3a1f791776a79ca24eeec1a0145"
+    },
+    {
+      "name": "mcp__codex_apps__chatgpt_space_patch_page",
+      "provider": "codex_apps",
+      "descriptionBytes": 10414,
+      "referenceDescriptionTokens": 2247,
+      "descriptorSHA256": "b99ac9d40e8cc3d3c6a31b3ae0b8259e75c2ae47f2442921091cf3fe3a21ee00"
+    },
+    {
+      "name": "mcp__figma__use_figma",
+      "provider": "figma",
+      "descriptionBytes": 9240,
+      "referenceDescriptionTokens": 2224,
+      "descriptorSHA256": "1411232f5f4aca539a4ef4918f1a60ac50857d5714b70ede64fce321567d06d1"
+    },
+    {
+      "name": "mcp__codex_apps__adobe_image_apply_adjustments",
+      "provider": "codex_apps",
+      "descriptionBytes": 9245,
+      "referenceDescriptionTokens": 2219,
+      "descriptorSHA256": "ab7cabbaf4e0e107600cee45339a685f5ac8205e09acc81ce8a49c75de67b52a"
+    },
+    {
+      "name": "mcp__figma__generate_diagram",
+      "provider": "figma",
+      "descriptionBytes": 9430,
+      "referenceDescriptionTokens": 2215,
+      "descriptorSHA256": "db3315e71ca653bbcc7f4ec8d1650ec1a087d3d8c5aeefcce2dc559ab1717745"
+    },
+    {
+      "name": "mcp__figma__send_code_connect_mappings",
+      "provider": "figma",
+      "descriptionBytes": 8978,
+      "referenceDescriptionTokens": 2177,
+      "descriptorSHA256": "f5a99862c3743fc40afc9a964bdd7e3da40f39058e14b4a9113e77a0868dfb0b"
+    },
+    {
+      "name": "mcp__codex_apps__search_service_web_run",
+      "provider": "codex_apps",
+      "descriptionBytes": 9303,
+      "referenceDescriptionTokens": 2166,
+      "descriptorSHA256": "7496587ac2faad0eead36c3da20e9521fd33816002d4089863265ff2a0c50ecb"
+    },
+    {
+      "name": "mcp__figma__download_assets",
+      "provider": "figma",
+      "descriptionBytes": 9015,
+      "referenceDescriptionTokens": 2162,
+      "descriptorSHA256": "3545a7b846e192dfc65b7ff57c1d93142b9184192cd547953ef433a595324d17"
+    },
+    {
+      "name": "mcp__figma__upload_assets",
+      "provider": "figma",
+      "descriptionBytes": 9114,
+      "referenceDescriptionTokens": 2156,
+      "descriptorSHA256": "c81ffc174e4b00af2635825f15560bc6229d2b08509e5135eb109d894629a042"
+    }
+  ],
+  "validation": {
+    "all815InputsMatchedMeasuredUTF8Bytes": true,
+    "all815ReferenceCountsAvailable": true,
+    "cancelled": false,
+    "referenceMethods": "Ordinary-text full-file footprints in isolated temporary homes; one exact descriptor per text file. The Skill file reader was used only as a text meter; its Skill/YAML findings were excluded.",
+    "fixedMeterVersion": "1.1.37",
+    "fixedMeterSHA256": "e9ee9b675260f1aae4f8acb537100237be9fc4ce7ccd38d4ecd8aaa3fb2cc22d",
+    "installedMeterVersion": "1.1.39",
+    "installedMeterSHA256": "b059c27d7a22ce9cffc652a4698bb8676e14af4f46cc644e7e3f3874d02eb90e",
+    "all815ByteAndReferenceCountsEqual": true,
+    "independentTokenizerImplementationsCompared": false,
+    "catalogSHA256": "cb5432a7d693c5337f70e7163a88f47230ba1b70f9cb9f2effc82ac808e0088f",
+    "nameSubstitutedExactDescriptorDuplicateGroups": 0
+  },
+  "boundedLookupExample": {
+    "task": "Find the read-only GitHub tool that supports Release resources",
+    "frozenMetadataComparison": true,
+    "entireGitHubGroup": {
+      "tools": 89,
+      "descriptionBytes": 75242,
+      "independentReferenceTokenSum": 17569
+    },
+    "selectedCompleteDescriptor": {
+      "name": "mcp__codex_apps__github_fetch",
+      "provider": "codex_apps",
+      "descriptionBytes": 1918,
+      "referenceDescriptionTokens": 394,
+      "descriptorSHA256": "4b7d7565851f8e051acb3fa079044a6015b5eb36569ff82b9dcd4d5aa7fcd063"
+    },
+    "liveMetadataFilterMatchedExactlyOne": true,
+    "businessToolInvokedForThisExample": false,
+    "modelABOrLatencyBenefitMeasured": false
+  },
+  "boundaries": {
+    "perRequestModelContextMeasured": false,
+    "requestOrBillingTokenUsageMeasured": false,
+    "wholeSerializedCatalogTokenCountMeasured": false,
+    "rawToolsListInputOutputSchemasMeasured": false,
+    "serverInstructionsMeasured": false,
+    "liveConnectivityOrPermissionsValidated": false,
+    "toolBusinessQualityRanked": false,
+    "semanticDuplicateCapabilitiesRuledOut": false,
+    "comparableTrendAgainstEarlierConfiguredServerDefinitionSnapshots": false,
+    "allTopLevelToolEntrypointsIncluded": false,
+    "newBusinessToolCalls": 0,
+    "newModelRuns": 0,
+    "globalConfigChanged": false,
+    "CLIOrSkillInstalled": false
+  },
+  "cleanup": {
+    "temporaryTextMeterContainersRemoved": true,
+    "rawDescriptorSnapshotKeptPrivateForReproduction": true,
+    "publicArtifactContainsCountsNamesAndHashesOnly": true
+  }
+}
