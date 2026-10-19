@@ -309,7 +309,7 @@ public struct ScanOptions: Sendable {
     /// walk every project and app folder). Nil scans everything the categories allow.
     public var onlyIDs: Set<String>? = nil
 
-    public init(projectRoots: [String] = ScanOptions.defaultProjectRoots) { self.projectRoots = projectRoots }
+    public init(projectRoots: [String] = ScanOptions.defaultScanRoots) { self.projectRoots = projectRoots }
 
     public static var defaultProjectRoots: [String] { defaultProjectRoots(home: NSHomeDirectory()) }
 
@@ -332,6 +332,39 @@ public struct ScanOptions: Sendable {
         let resolved = distinct.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }
         return distinct.enumerated().compactMap { index, root in
             resolved.indices.contains { $0 != index && resolved[index].hasPrefix(resolved[$0] + "/") } ? nil : root
+        }
+    }
+
+    public static var defaultScanRoots: [String] { defaultScanRoots(home: NSHomeDirectory()) }
+
+    /// Where cleanup looks for build output: the clone folders above plus every other top-level
+    /// folder. Agents render films into ~/Movies or ~/motion-use and keep builds in ~/test, far
+    /// from the session's working directory; the walk only offers proven build output, so a wider
+    /// net costs time, not safety. Not system folders, media libraries, browser or Python
+    /// installs, synced folders, or other volumes (VM mounts such as ~/OrbStack).
+    public static func defaultScanRoots(home: String) -> [String] {
+        let fm = FileManager.default
+        var roots = defaultProjectRoots(home: home)
+        let excluded: Set<String> = ["Library", "Applications", "Pictures", "Music", "Public", "MyChromeDevUserData",
+                                     "miniconda3", "anaconda3", "miniforge3", "SynologyDrive", "Dropbox", "OneDrive",
+                                     "Google Drive", "Box", "OrbStack"]
+        var homeStat = stat()
+        let homeDevice = stat(home, &homeStat) == 0 ? homeStat.st_dev : nil
+        if let top = try? fm.contentsOfDirectory(atPath: home) {
+            roots += top.filter { !$0.hasPrefix(".") && !excluded.contains($0) && !$0.hasPrefix("OneDrive") }
+                .map { home + "/" + $0 }
+                .filter { path in
+                    var st = stat()
+                    return lstat(path, &st) == 0 && (st.st_mode & S_IFMT) == S_IFDIR && st.st_dev == homeDevice
+                }
+        }
+        roots += [".codex/artifacts", ".local/share"].map { home + "/" + $0 }.filter { fm.fileExists(atPath: $0) }
+        var seen = Set<String>()
+        let distinct = roots.filter { seen.insert(URL(fileURLWithPath: $0).resolvingSymlinksInPath().path).inserted }
+        let resolved = distinct.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path }
+        let resolvedHome = URL(fileURLWithPath: home).resolvingSymlinksInPath().path
+        return distinct.enumerated().compactMap { index, root in
+            resolved[index] == resolvedHome || resolved.indices.contains { $0 != index && resolved[index].hasPrefix(resolved[$0] + "/") } ? nil : root
         }
     }
 }
