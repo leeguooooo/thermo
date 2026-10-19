@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "497b1a9f36471fba54a581559309000cf09b9076",
+  "sourceTree": "ead8d4e6544fbb0b2e4c1630c4062bb8e98ec9c9",
+  "actualSnapshotCommit": "a8bf2d4a669441e16e7881352f658539755a1074",
+  "version": "1.1.37",
+  "build": "552",
+  "executionHost": "mac190",
+  "toolchain": {
+    "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0\n",
+    "developerDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk"
+  },
+  "releaseTests": {
+    "suites": {
+      "ThermoKitTests": {
+        "tests": 207,
+        "failures": 0
+      },
+      "ThermoHelperTests": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests": {
+        "tests": 110,
+        "failures": 0
+      },
+      "ThermoAppTests": {
+        "tests": 311,
+        "failures": 0
+      },
+      "CleanKitTests": {
+        "tests": 759,
+        "failures": 0
+      },
+      "AgentDoctorTests": {
+        "tests": 323,
+        "failures": 0
+      },
+      "AgentCoreTests": {
+        "tests": 52,
+        "failures": 0
+      }
+    },
+    "total": 1792,
+    "failures": 0,
+    "hardwareTestsExcluded": true,
+    "complete": true,
+    "rawCombinedLogSHA256": "a614f8c68fde693679cd39fe409cf0b766e648c31fb324ee7c477e87f9af0ec9",
+    "sourceHashesMatch": true
+  },
+  "stages": {
+    "remoteReleaseTests": "passed",
+    "remoteUniversalCompilation": "running, no success asserted",
+    "localProductRecompilation": "not performed after host handoff",
+    "localAdHocPackaging": "prepared, not executed",
+    "packageChecks": "pending",
+    "nativeGUI": "pending",
+    "installOrPublication": "not performed"
+  },
+  "packagingPlan": {
+    "sourceBuildScriptUnchanged": true,
+    "privateAdapterSubstitutions": 3,
+    "productCompileCommandsRemaining": 0,
+    "originalSigningAndArtifactChecksRetained": true
+  },
+  "boundaries": [
+    "This is a remote test-stage pass, separate from prior local 551 results",
+    "Does not establish universal binary, target package, GUI or hardware acceptance",
+    "No installed App/CLI update or publication"
+  ]
+}
