@@ -7,12 +7,18 @@
     "tests": 11,
     "failures": 0,
     "newDelegateTests": 2,
-    "scope": "Direct application delegate checks plus existing restore and helper workflows; not native window-close notification end-to-end acceptance"
+    "scope": "Direct application delegate checks plus existing restore and helper workflows; not native window-close notification end-to-end acceptance",
+    "releaseBuild": {
+      "command": "swift build -c release --jobs 4 --product ThermoApp",
+      "exitCode": 0,
+      "seconds": 149.19,
+      "sourceCommit": "fd98940",
+      "logSHA256": "caeef09826ec41a4c55fa59314efaf649536c5f9d3169417147cb8237a18bfe7"
+    }
   },
   "installedBuildUpdated": false,
   "remaining": [
     "Native standalone close while protected operation is active",
-    "Battery and AWDL active-session quit confirmation with hardware",
-    "Final Release compile result"
+    "Battery and AWDL active-session quit confirmation with hardware"
   ]
 }

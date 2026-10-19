@@ -21,5 +21,22 @@
     "count": 3,
     "failures": 0
   },
-  "scope": "Real offscreen AppKit host with real sampler, same-window sidebar transitions and explicit model visibility changes. Does not establish native OS occlusion notification delivery, sleep recovery, Release build or long-term resource behavior."
+  "scope": "Real offscreen AppKit host with real sampler, same-window sidebar transitions and explicit model visibility changes. Does not establish native OS occlusion notification delivery, sleep recovery, Release build or long-term resource behavior.",
+  "releaseFollowUp": {
+    "functionalChecksPassed": true,
+    "buildConfiguration": "release",
+    "sampleCount": 23,
+    "transitionChecks": {
+      "cycle-1-hidden": true,
+      "cycle-1-leave-overview": true,
+      "cycle-1-return-overview": true,
+      "cycle-1-visible-again": true,
+      "cycle-2-hidden": true,
+      "cycle-2-leave-overview": true,
+      "cycle-2-return-overview": true,
+      "cycle-2-visible-again": true
+    },
+    "reportSHA256": "acb34e9f19d1a4d81ab53a96d92b8fc6db6e87adc0e201d7b2ae2f59896609c0",
+    "scope": "Release offscreen executable; explicitly driven visibility model; no new installed app or native notification acceptance"
+  }
 }
