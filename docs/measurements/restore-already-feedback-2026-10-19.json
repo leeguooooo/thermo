@@ -1,0 +1,69 @@
+{
+  "date": "2026-10-19",
+  "sourceBase": "9b41298",
+  "versionPrepared": "1.1.35",
+  "before": {
+    "tests": 3,
+    "failedCases": 2,
+    "assertionFailures": 5,
+    "exitCode": 1,
+    "replacementIdentityControlPassed": true,
+    "logSHA256": "ad495325212b1c93f2c9c91ee3211b95ecdb02e7cb1fbdbd3c84c75716f7aa7b"
+  },
+  "after": {
+    "command": "swift test --jobs 4 --skip HardwareTests",
+    "exitCode": 0,
+    "total": 1745,
+    "failures": 0,
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 207,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 110,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 310,
+        "failures": 0
+      },
+      "CleanKitTests.xctest": {
+        "tests": 755,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 283,
+        "failures": 0
+      },
+      "AgentCoreTests.xctest": {
+        "tests": 50,
+        "failures": 0
+      }
+    },
+    "logSHA256": "dfc9e39dfddc1c93dc6b3bd69c78732b56efdf0fb93013f0f6d013f7eaa9f905"
+  },
+  "behavior": [
+    "Source-missing entries are alreadyRestored only when original device/inode and birth/generation match and the original is not a symlink",
+    "Refusal classification precedes the unreviewed-move fence; newly eligible unreviewed entries remain skipped and unmoved",
+    "UI and CLI separately report alreadyRestored without counting it as a new restore or failure",
+    "Missing/conflicting/replaced/unreviewed entries remain unresolved warnings",
+    "Already-restored entries do not produce new restore journal items",
+    "Repeated CLI restore succeeds without moving when every original object is already in place"
+  ],
+  "sourceFilesSHA256": {
+    "Sources/CleanKit/TrashBatch.swift": "0375e669a01f8d4ab63576f3a9a2a6dfee2f57e45d5b99a74d5d7e0142a52640",
+    "Sources/ThermoApp/HistoryPage.swift": "87598e195a74093097148a21dc57dea69236fe0a162a90f23e6422992370e3dd",
+    "Sources/thermo/Clean.swift": "3cd854c3487fd136ebb367ea4317c0d063cd4d375e0990d4562bdda2b97e3375",
+    "Sources/ThermoKit/Version.swift": "dbdc3114345026d5c62a76622877fd7d7210cc1e6024986dbf07ed4750782e02"
+  },
+  "signedDeploymentAccepted": false,
+  "remaining": [
+    "Signed 1.1.35 build and installed GUI replay",
+    "Broader parity matrix"
+  ]
+}

@@ -625,7 +625,7 @@ struct CleanCommand {
         let review = try TrashBatches.restore(id: selectors[0], home: home, dryRun: true)
         func lines(_ r: TrashRestore) -> [String] {
             r.items.map { i in
-                (i.status == "restored" ? "  " + style.green("✓") + " " : "  " + style.yellow("!") + " ") + FS.tilde(i.original)
+                (["restored", "alreadyRestored"].contains(i.status) ? "  " + style.green("✓") + " " : "  " + style.yellow("!") + " ") + FS.tilde(i.original)
                     + (i.reason.map { style.dim(" · " + Self.restoreStatus(i.status) + ": " + $0) } ?? "")
             }
         }
@@ -634,6 +634,12 @@ struct CleanCommand {
             else { write(style.bold(tr("Put this batch back where it was:"))); lines(review).forEach(write) }
         }
         if args.has("dry-run") { return }
+        if !review.items.isEmpty, review.items.allSatisfy({ $0.status == "alreadyRestored" }) {
+            var unchanged = review
+            unchanged.dryRun = false
+            write(args.has("json") ? Export.json(unchanged) : tr("All items are already at their original locations."))
+            return
+        }
         guard review.items.contains(where: { $0.status == "restored" }) else {
             write(args.has("json") ? Export.json(review) : tr("Nothing in this batch can be restored."))
             exit(1)
@@ -647,19 +653,22 @@ struct CleanCommand {
         let result = try TrashBatches.restore(id: selectors[0], home: home, reviewIdentity: identity,
             reviewedDestinations: Set(review.items.filter { $0.status == "restored" }.map(\.destination)))
         let restored = result.items.filter { $0.status == "restored" }
+        let already = result.items.filter { $0.status == "alreadyRestored" }
         if args.has("json") { write(Export.json(result)) }
         else {
             lines(result).forEach(write)
-            write(style.bold(tr("Restored %1$@ of %2$@ items", String(restored.count), String(result.items.count))))
+            write(style.bold(tr("Restored %1$@ of %2$@ items", String(restored.count), String(result.items.count - already.count))))
+            if !already.isEmpty { write(tr("%1$@ items were already at their original locations.", String(already.count))) }
             for issue in result.issues ?? [] { write(style.yellow(tr(issue))) }
         }
-        if restored.count != result.items.count { exit(1) }
+        if restored.count + already.count != result.items.count { exit(1) }
     }
 
     static func restoreStatus(_ status: String) -> String {
         switch status {
         case "conflict": return tr("conflict")
         case "missing": return tr("missing")
+        case "alreadyRestored": return tr("already restored")
         case "changed": return tr("changed")
         case "skipped": return tr("skipped")
         default: return tr("failed")

@@ -115,8 +115,10 @@ final class HistoryModel: ObservableObject {
                 let result = try restoreBatch(id, review)
                 paths = result.items.filter { $0.status == "restored" }.map(\.original)
                 let restored = result.items.filter { $0.status == "restored" }.count
-                let others = result.items.filter { $0.status != "restored" }
-                text = ([tr("%1$@ of %2$@ items put back.", String(restored), String(result.items.count))]
+                let already = result.items.filter { $0.status == "alreadyRestored" }.count
+                let others = result.items.filter { $0.status != "restored" && $0.status != "alreadyRestored" }
+                text = ([tr("%1$@ of %2$@ items put back.", String(restored), String(result.items.count - already))]
+                        + (already > 0 ? [tr("%1$@ items were already at their original locations.", String(already))] : [])
                         + others.map { FS.tilde($0.original) + ": " + ($0.reason ?? $0.status) } + (result.issues ?? [])).joined(separator: "\n")
             } catch { text = error.localizedDescription }
             let restoredPaths = paths

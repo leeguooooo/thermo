@@ -16,6 +16,44 @@ final class TrashReviewScopeTests: XCTestCase {
         let entry = TrashBatch.Entry(original: home + "/Downloads/" + name, destination: path, identity: try XCTUnwrap(FileIdentity.of(path)), bytes: 1)
         try TrashBatches.append(entry, id: id, home: home); return entry
     }
+    func testReviewedRestoreRecognizesTheSameObjectAlreadyAtItsOriginalPath() throws {
+        let a = try append("a"), b = try append("b")
+        _ = try TrashBatches.restore(id: id, home: home, reviewedDestinations: [b.destination])
+        let review = try TrashBatches.restore(id: id, home: home, dryRun: true)
+        XCTAssertEqual(review.items.first { $0.destination == b.destination }?.status, "alreadyRestored")
+        let result = try TrashBatches.restore(id: id, home: home,
+            reviewIdentity: review.reviewIdentity, reviewedDestinations: [a.destination])
+        XCTAssertEqual(result.items.first { $0.destination == b.destination }?.status, "alreadyRestored")
+        XCTAssertEqual(try String(contentsOfFile: b.original), "b")
+        XCTAssertTrue(FS.exists(a.original))
+        XCTAssertFalse(FS.exists(b.destination))
+        let journal = try XCTUnwrap(OperationJournal.read(home: home).first {
+            $0.items.contains { $0.target == a.original && $0.status == "done" }
+        })
+        XCTAssertEqual(journal.items.count, 1)
+        XCTAssertEqual(journal.outcome, "succeeded")
+    }
+
+    func testMatchingInodeWithoutRecordedBirthProofIsNotAlreadyRestored() throws {
+        let entry = try append("birth")
+        try FileManager.default.moveItem(atPath: entry.destination, toPath: entry.original)
+        var changed = try XCTUnwrap(TrashBatches.load(id, home: home).entries.first)
+        changed.birthIdentity = "0:0:0"
+        try TrashBatches.append(changed, id: id, home: home)
+        let result = try TrashBatches.restore(id: id, home: home, dryRun: true)
+        XCTAssertEqual(result.items.first?.status, "missing")
+        XCTAssertEqual(try String(contentsOfFile: entry.original), "birth")
+    }
+
+    func testAReplacementAtOriginalPathDoesNotBecomeAnAlreadyRestoredItem() throws {
+        let entry = try append("replacement")
+        try FileManager.default.removeItem(atPath: entry.destination)
+        try Data("new occupant".utf8).write(to: URL(fileURLWithPath: entry.original))
+        let result = try TrashBatches.restore(id: id, home: home, dryRun: true)
+        XCTAssertEqual(result.items.first?.status, "missing")
+        XCTAssertEqual(try String(contentsOfFile: entry.original), "new occupant")
+    }
+
     func testAppendedEntryRejectsReviewedRestoreBeforeAnyMove() throws {
         let a = try append("a"), review = try TrashBatches.restore(id: id, home: home, dryRun: true), b = try append("b")
         XCTAssertThrowsError(try TrashBatches.restore(id: id, home: home, reviewIdentity: review.reviewIdentity, reviewedDestinations: [a.destination]))

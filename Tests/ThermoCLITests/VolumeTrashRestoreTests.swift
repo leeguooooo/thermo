@@ -85,5 +85,9 @@ final class VolumeTrashRestoreTests: XCTestCase {
         XCTAssertEqual(restored.status, 0, restored.output)
         XCTAssertEqual(try Data(contentsOf: original), oldBytes)
         XCTAssertFalse(fm.fileExists(atPath: destination.path))
+        let repeated = restore(["--yes"])
+        XCTAssertEqual(repeated.status, 0, repeated.output)
+        XCTAssertTrue(repeated.output.contains("\"alreadyRestored\""))
+        XCTAssertEqual(try Data(contentsOf: original), oldBytes)
     }
 }

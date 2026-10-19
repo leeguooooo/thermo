@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-19",
+  "installedVersion": "1.1.34",
+  "build": "519",
+  "installedSource": "b1cff4d",
+  "fixtureID": "com.example.thermo.parityqa.af6cb3add6cb416aa58ea9a9b007a563",
+  "fixtureName": "Mole Parity QA af6cb3ad",
+  "fixtureOwnedFiles": 4,
+  "mode": "Installed signed App via CUA with real user home and native Trash; own disposable app/cache only",
+  "preflightCLIPathsExactlyFixture": true,
+  "staleUninstallReview": {
+    "ownedCacheIdentityChangedAfterReview": true,
+    "visibleZeroBytesMoved": true,
+    "appAndReplacementAndOriginalRetained": true
+  },
+  "validUninstall": {
+    "reviewedLocations": 2,
+    "visibleBytes": "28.7 KB",
+    "appAndCacheMoved": true,
+    "listRemovedWithoutManualScan": true
+  },
+  "restoreConflict": {
+    "visibleResult": "1/2",
+    "cacheRestored": true,
+    "newOriginalPathOccupantUnchanged": true
+  },
+  "finalRestore": {
+    "allFourFilesSHA256AndDeviceAndInodeMatch": true,
+    "appReturnedToListWithoutManualScan": true,
+    "allOwnedTrashDestinationsAbsent": true
+  },
+  "feedbackDefect": {
+    "observed": true,
+    "message": "Already-restored cache reported as not in confirmed review; result 1/2 after remaining app restored",
+    "dataLoss": false,
+    "sourceFixPendingSignedDeployment": true
+  },
+  "batch": "AFEE978D-4A7E-4C7A-94C7-C4DAB1CE3AAF",
+  "fixturesRetainedOutsideAppAndCacheDirectories": true,
+  "personalDataMoved": false,
+  "trashEmptied": false,
+  "notClaimed": [
+    "Third-party app removal",
+    "All-volume restoration",
+    "Permanent deletion",
+    "Final feedback fix UI acceptance"
+  ]
+}

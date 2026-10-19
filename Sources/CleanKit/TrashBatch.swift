@@ -249,10 +249,10 @@ public enum TrashBatches {
         var result = TrashRestore(id: batch.id, dryRun: dryRun, reviewIdentity: identity)
         for entry in batch.entries {
             var item = TrashRestore.Item(original: entry.original, destination: entry.destination, bytes: entry.bytes, status: "restored")
-            if let reviewedDestinations, !reviewedDestinations.contains(entry.destination) {
-                item.status = "skipped"; item.reason = tr("Not included in the confirmed review; review this item again.")
-            } else if let (status, reason) = restoreRefusal(entry, home: home) {
+            if let (status, reason) = restoreRefusal(entry, home: home) {
                 item.status = status; item.reason = reason
+            } else if let reviewedDestinations, !reviewedDestinations.contains(entry.destination) {
+                item.status = "skipped"; item.reason = tr("Not included in the confirmed review; review this item again.")
             } else if !dryRun {
                 do {
                     let source = try RestoreDirectory((entry.destination as NSString).deletingLastPathComponent)
@@ -282,7 +282,7 @@ public enum TrashBatches {
                 result.issues = [tr("The old space cache could not be cleared; scan again before using saved results")]
             }
         }
-        OperationJournal.record(OperationRecord(feature: "history", action: "restore", subject: batch.id, items: result.items.map {
+        OperationJournal.record(OperationRecord(feature: "history", action: "restore", subject: batch.id, items: result.items.filter { $0.status != "alreadyRestored" }.map {
             .init(target: $0.original, bytes: $0.status == "restored" && $0.bytes > 0 ? $0.bytes : nil,
                   status: $0.status == "restored" ? "done" : $0.status == "skipped" ? "skipped" : "failed", detail: $0.reason)
         } + (result.issues ?? []).map { .init(target: SpaceLens.cacheURL(home: home).path, status: "failed", detail: $0) }), home: home)
@@ -331,17 +331,25 @@ public enum TrashBatches {
     /// Why an entry stays in the Trash, as (status, reason); nil when it can move back.
     static func restoreRefusal(_ entry: TrashBatch.Entry, home: String) -> (String, String)? {
         if entry.registrationBackup != nil { return ("skipped", tr("Git worktree with its registration; restore manually")) }
-        guard FS.exists(entry.destination) else { return ("missing", tr("no longer in the Trash")) }
+        let original = entry.original
+        guard original.hasPrefix("/"), !original.split(separator: "/").contains(where: { $0 == ".." || $0 == "." }) else {
+            return ("skipped", tr("not a full path"))
+        }
+        guard FS.exists(entry.destination) else {
+            var current = stat()
+            if lstat(original, &current) == 0, (current.st_mode & S_IFMT) != S_IFLNK,
+               FileIdentity.of(original) == entry.identity, let birth = entry.birthIdentity,
+               birthIdentity(original) == birth {
+                return ("alreadyRestored", tr("already at its original location"))
+            }
+            return ("missing", tr("no longer in the Trash"))
+        }
         if let why = refusal(entry, home: home, owner: nil) {
             switch why {
             case "batch target is outside the expected Trash": return ("skipped", tr("not in your Trash folder (another volume?); put it back in Finder"))
             case "Trash item was replaced": return ("changed", tr("the item in the Trash was changed or replaced; it was kept"))
             default: return ("changed", why)
             }
-        }
-        let original = entry.original
-        guard original.hasPrefix("/"), !original.split(separator: "/").contains(where: { $0 == ".." || $0 == "." }) else {
-            return ("skipped", tr("not a full path"))
         }
         var st = stat()
         // lstat: a dangling link at the original path is still something there.
@@ -366,7 +374,7 @@ public struct TrashRestore: Codable, Sendable {
         public var original: String
         public var destination: String
         public var bytes: Int64
-        /// restored (would be restored, in a dry run) | conflict | missing | changed | skipped | failed
+        /// restored (would be restored, in a dry run) | alreadyRestored | conflict | missing | changed | skipped | failed
         public var status: String
         public var reason: String? = nil
     }

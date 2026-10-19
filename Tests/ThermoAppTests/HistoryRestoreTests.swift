@@ -1,10 +1,48 @@
 import XCTest
 import AppKit
+import ThermoL10n
 import AgentCore
 @testable import CleanKit
 @testable import ThermoApp
 
 final class HistoryRestoreTests: XCTestCase {
+    @MainActor func testRestoreFeedbackSeparatesAlreadyRestoredItemFromTheCurrentAttempt() async {
+        let entry = record()
+        let review = TrashRestore(id: entry.undo!.ref, dryRun: true, items: [
+            .init(original: "/restored", destination: "/trash/a", bytes: 1, status: "restored"),
+            .init(original: "/already", destination: "/trash/b", bytes: 1, status: "alreadyRestored", reason: "fixture already at original")
+        ], reviewIdentity: "fixture")
+        let model = HistoryModel(reader: { .init(records: []) }, restoreBatch: { id, _ in
+            .init(id: id, dryRun: false, items: [
+                .init(original: "/restored", destination: "/trash/a", bytes: 1, status: "restored"),
+                .init(original: "/already", destination: "/trash/b", bytes: 1, status: "alreadyRestored", reason: "fixture already at original")
+            ])
+        }, didRestore: { _ in })
+        model.restore(entry, review: review)
+        for _ in 0..<200 where model.busy { try? await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertTrue(model.notice?.hasPrefix(tr("%1$@ of %2$@ items put back.", "1", "1")) == true)
+        XCTAssertTrue(model.notice?.contains(tr("%1$@ items were already at their original locations.", "1")) == true)
+        XCTAssertFalse(model.notice?.contains("/already:") == true)
+    }
+
+    @MainActor func testActuallyMissingItemRemainsVisibleAndIncomplete() async {
+        let entry = record()
+        let review = TrashRestore(id: entry.undo!.ref, dryRun: true, items: [
+            .init(original: "/restored", destination: "/trash/a", bytes: 1, status: "restored"),
+            .init(original: "/missing", destination: "/trash/b", bytes: 1, status: "restored")
+        ], reviewIdentity: "fixture")
+        let model = HistoryModel(reader: { .init(records: []) }, restoreBatch: { id, _ in
+            .init(id: id, dryRun: false, items: [
+                .init(original: "/restored", destination: "/trash/a", bytes: 1, status: "restored"),
+                .init(original: "/missing", destination: "/trash/b", bytes: 1, status: "missing", reason: "fixture truly missing")
+            ])
+        }, didRestore: { _ in })
+        model.restore(entry, review: review)
+        for _ in 0..<200 where model.busy { try? await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertTrue(model.notice?.hasPrefix(tr("%1$@ of %2$@ items put back.", "1", "2")) == true)
+        XCTAssertTrue(model.notice?.contains("/missing: fixture truly missing") == true)
+    }
+
     @MainActor func testRestoreReportsCacheIssueWithoutLosingSuccessfulPaths() async throws {
         var paths: [String] = []
         let model = HistoryModel(reader: { .init(records: []) }, restoreBatch: { id, _ in
