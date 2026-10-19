@@ -1,0 +1,92 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "15c4148",
+  "marketplaceCommit": "ce42ff2",
+  "pluginVersionPrepared": "0.1.1",
+  "skillBytesUnchanged": true,
+  "skillSHA256": "75ccd5ba12ac41db3292daa7bbe56b40f51023282d0acadb2b1d70e3f8c6dabb",
+  "nativeClientVersion": "codex-cli 0.163.0",
+  "nativeClientSHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+  "host": "mac190",
+  "isolatedNativeRegistration": [
+    {
+      "case": "baseline",
+      "CLICommands": [
+        {
+          "name": "marketplace",
+          "exitCode": 0
+        },
+        {
+          "name": "add",
+          "exitCode": 0
+        },
+        {
+          "name": "list",
+          "exitCode": 0
+        }
+      ],
+      "registered": true,
+      "enabled": true,
+      "resourceSkillCount": 0,
+      "indexedSkillCount": 0,
+      "indexedSkills": [],
+      "errorCount": 0
+    },
+    {
+      "case": "candidate",
+      "CLICommands": [
+        {
+          "name": "marketplace",
+          "exitCode": 0
+        },
+        {
+          "name": "add",
+          "exitCode": 0
+        },
+        {
+          "name": "list",
+          "exitCode": 0
+        }
+      ],
+      "registered": true,
+      "enabled": true,
+      "resourceSkillCount": 1,
+      "indexedSkillCount": 1,
+      "indexedSkills": [
+        {
+          "name": "paste-use:paste-use",
+          "enabled": true,
+          "path": "/private/tmp/paste-skill-layout.Gie39M/activation/.home-candidate/.codex/plugins/cache/owned-paste-layout/paste-use/0.1.1/skills/paste-use/SKILL.md"
+        }
+      ],
+      "errorCount": 0
+    }
+  ],
+  "verification": {
+    "bunTestsPassed": 52,
+    "bunTestsFailed": 0,
+    "typescriptCheckPassed": true,
+    "macOSCompilePassed": true,
+    "windowsCrossCompilePassed": true,
+    "embeddedSkillInstallBothFilesByteIdentical": true,
+    "familyShellSuitesPassed": 4,
+    "skillFrontmatterValid": true,
+    "powershellRuntimeTested": false,
+    "windowsJunctionAcceptance": false
+  },
+  "boundaries": {
+    "realClipboardRead": false,
+    "realClipboardWritten": false,
+    "realModelCalled": false,
+    "userPluginRegistryModified": false,
+    "installedCLIReplaced": false,
+    "published": false,
+    "skillTaskBenefitMeasured": false
+  },
+  "installedCacheStillLegacy": true,
+  "notes": [
+    "Only directory layout and its consumers changed; full Skill instructions are byte-identical.",
+    "Native registration and discovery use temporary homes. They do not prove real-user activation or task benefit.",
+    "PowerShell source paths updated; no PowerShell runtime or Windows junction host available for acceptance."
+  ]
+}
