@@ -1,5 +1,7 @@
 # AI 工具体验验收
 
+[插件根目录 Skill 布局提示](measurements/skill-cache-root-layout-diagnostic-2026-10-20.json)：Thermo 对清单显式声明、位于缓存版本根目录的 `SKILL.md` 增加 `plugin_root_skill_layout` 信息提示，提醒发布者改用嵌套目录并核对宿主发现结果。文件仍计入缓存清单，当前加载状态保持未核实，不因旧版本或禁用插件产生告警、删除或自动修复操作。Mac 190 的隔离 QA 包使用生产模块与 CLI 源码，342 项 AgentDoctor 测试通过；编译后中英双语对照确认根目录收到提示，嵌套目录和普通用户 Skill 无此提示，计量不变。两项既有 CLI 契约也通过。尚未构建完整 Release、操作 App 窗口、安装或发布；这项静态检查不替代宿主实际 Skill 清单。
+
 [paste-use 插件目录验收](measurements/paste-skill-plugin-layout-2026-10-20.json)：同一 Codex 0.163.0、两个隔离 HOME 中，根目录旧版和嵌套目录候选均已注册、启用；旧版资源 / 索引均为 0，候选均为 1。指令全文逐字节未变。Mac 190 上 52 项 CLI 测试、类型检查、macOS 编译、Windows 交叉编译和四组家族安装器检查通过；候选 CLI 向临时 HOME 安装的两份内嵌 Skill 均与源码一致。源码与市场配置已合入各自主线，市场版本仅准备为 0.1.1，尚未发布；实际缓存仍为旧版。PowerShell 同步了新路径和旧布局回退，但未运行 PowerShell 或 Windows junction 验收。本次没有读取真实剪贴板、修改用户注册表或调用模型，也没有测量任务收益。
 
 `thermo-use` 的插件布局已修复：[实际状态与候选插件验证](measurements/thermo-plugin-skill-layout-2026-10-20.json)。本机 Codex 0.163.0 中，0.4.1 已安装、启用，插件资源和 Skill 清单却均为 0；同市场 Chrome 对照正常。15 组隔离路径 / 文档组合确认：插件根目录的 `SKILL.md` 未被该接口枚举，标准子目录可枚举，本例区别不在 YAML 内容。候选把入口和四份引用原样迁到 `skills/thermo-use`，市场元数据准备为 0.4.2。临时注册后资源 / 索引均为 1，显式提及后正文进入本地固定响应后端；旧布局同样退出 0 却没有正文。四组安装器回归覆盖受管链接迁移、旧 checkout 回退和更新失败保留，16 项 App 配置 / 本地化回归通过。安装提示也已区分 CLI 链接、Skill 目录和实际加载。源码尚未发布；用户配置及旧缓存指纹保持不变，自动选择与业务收益未测。

@@ -1,0 +1,103 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "e8016fe",
+  "baselineCommit": "718dc23",
+  "diagnosticCode": "plugin_root_skill_layout",
+  "trigger": "A readable SKILL.md at the cache version root, explicitly declared by the plugin manifest",
+  "severity": "info",
+  "loadingState": "unverified; no host invocation in this diagnostic",
+  "hostDiscoveryEvidence": "paste-skill-plugin-layout-2026-10-20.json",
+  "baselineRegression": {
+    "tests": 14,
+    "failedAssertions": 3,
+    "failure": "Root cache file was measured without layout evidence or an attached informational finding"
+  },
+  "candidateRegression": {
+    "agentDoctorTests": 342,
+    "failures": 0,
+    "hardwareTestsExcluded": true,
+    "buildConfiguration": "debug",
+    "scope": "Isolated QA package with production sources and AgentDoctor tests, excludes App targets; not a full product Release test"
+  },
+  "compiledCLIReplay": {
+    "passed": true,
+    "runReceipts": [
+      {
+        "variant": "baseline",
+        "language": "en",
+        "exitCode": 0,
+        "sha256": "f22ab0b381e341ada0c36262ef0ac6657e8b4b72d32c7de2dccd5bd52fbdc235"
+      },
+      {
+        "variant": "baseline",
+        "language": "zh-Hans",
+        "exitCode": 0,
+        "sha256": "0acc0c95c4850448854b6a7ba7297dad0edfe3e7a2cb220a330c32b6acbd6957"
+      },
+      {
+        "variant": "candidate",
+        "language": "en",
+        "exitCode": 0,
+        "sha256": "bcd41ebbe20fc7a1ba9fe00c5b5e434003837cb3149fb08ce0a48b3a7a6e478f"
+      },
+      {
+        "variant": "candidate",
+        "language": "zh-Hans",
+        "exitCode": 0,
+        "sha256": "4e0b14ff2c40fabb79c2642f61de89bd527a6acff4c41fffb4226b64ffaf6bd1"
+      }
+    ],
+    "skillCount": 4,
+    "rootLayoutHints": 2,
+    "nestedAndUserHints": 0,
+    "measurementsAndInventoryTotalsUnchanged": true,
+    "fixtureFilesUnchanged": true,
+    "languages": [
+      "en",
+      "zh-Hans"
+    ],
+    "packageScope": "Isolated QA package using production AgentDoctor and CLI sources; excludes App targets",
+    "realUserConfigRead": false,
+    "nativeHostInvocation": false,
+    "installed": false,
+    "published": false
+  },
+  "contextContract": {
+    "passed": true,
+    "userUniqueFiles": 1,
+    "projectUniqueFiles": 2,
+    "aliasesExcluded": 1,
+    "cacheFilesCountedSeparately": 1,
+    "coverageWarningPreserved": true,
+    "yamlCatalogValuesAndUnknownsVerified": true,
+    "invalidCacheRootOwnerVerified": true,
+    "rootPluginLayoutHintVerified": true
+  },
+  "skillQualityContractPassed": true,
+  "sourceVerification": {
+    "sourceFilesMatched": 572,
+    "cliSHA256": "280fab0074b34f3b9414e3f088f95ef75e5947e5b5c199280e7b4bc446157666",
+    "qaPackageSHA256": "f9f36660353767df2af9720da127846074fab30c84f4a5fd4b1166e32da772c5",
+    "swiftVersion": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "host": "leos-MacBook-Pro.local",
+    "realModelCalled": false
+  },
+  "artifactSHA256": {
+    "source-verification.json": "9d81462f0c7791b3082453825cf04415a38e85565f794e7f33b37c909d7d7306",
+    "fixed.log": "52a60e201a9e980cfada6df92960e744bf3f7259a79b6f7326e5a87be5e43ed0",
+    "baseline.log": "43fa391094e737d05429fa416d295638598973e59c6c42066f6567eddb66672f",
+    "context-contract.json": "c4a532468192eb3b68958bd532b50b260d0232af3a71b20a27c30d29d6bc8150",
+    "replay-result.json": "4df917240ac761eccfccaeef0ae802178c74f27cc1c529adb40cf007ed419ff0"
+  },
+  "boundaries": {
+    "appGUIVerified": false,
+    "releaseBuilt": false,
+    "installed": false,
+    "published": false,
+    "realModelCalled": false,
+    "userCacheModified": false,
+    "repairActionAdded": false,
+    "tokenSavingsMeasured": false
+  }
+}
