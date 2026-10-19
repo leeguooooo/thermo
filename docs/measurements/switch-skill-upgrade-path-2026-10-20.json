@@ -1,0 +1,81 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceRepository": "leeguooooo/switch-use",
+  "sourceCommit": "c02e157338e3ee733edf5012ae6ae199322079a7",
+  "sourceTree": "a39161973d25bd84389b12be95315903abf4a013",
+  "scope": "Skill Git refresh paths are passed as argv; printed manual commands quote shell paths.",
+  "regression": {
+    "baselineExecutionExitCode": 101,
+    "baselineFailure": "Space-containing path split into separate arguments.",
+    "candidateTestsPassed": 2,
+    "candidateTestsFailed": 0,
+    "pathCases": [
+      "spaces",
+      "single quotes, semicolon, dollar command substitution and backticks",
+      "Chinese and spaces"
+    ],
+    "executionCases": [
+      "automatic Git subprocess",
+      "copyable manual shell instruction"
+    ],
+    "stubGitExitCodePreserved": 7,
+    "shellSubstitutionSideEffectsAbsent": true
+  },
+  "remoteValidation": {
+    "sourceCommit": "ece85c5b86e1386abd62ef25bbe953eba93946f7",
+    "sourceSHA256": "5fec9b54cb1930a8225c98ace6f5ed0e290a577ca88108b70fd8a765baf5380e",
+    "host": "mac190",
+    "networkDeniedDuringTests": true,
+    "SDKROOT": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "commands": [
+      {
+        "name": "baseline",
+        "exitCode": 101
+      },
+      {
+        "name": "candidate-tests",
+        "exitCode": 0
+      },
+      {
+        "name": "candidate-build",
+        "exitCode": 0
+      },
+      {
+        "name": "candidate-help",
+        "exitCode": 0
+      },
+      {
+        "name": "candidate-version",
+        "exitCode": 0
+      }
+    ],
+    "sourceRestored": true,
+    "complete": true,
+    "cargoVersion": "cargo 1.98.0 (797e8a9bc 2026-08-05) (Homebrew)",
+    "rustVersion": "rustc 1.98.0 (88d9e12ae 2026-08-18) (Homebrew)"
+  },
+  "firstAttempt": {
+    "runID": "0783e5de-2d3d-4ee6-b19b-260e11336f9e",
+    "result": "Offline dependency resolution failed before tests: missing jpeg-decoder. Not regression evidence."
+  },
+  "successfulRunID": "dbf57f14-6454-4cce-a204-9241a19238b4",
+  "dependencyPreparation": "Fetched Cargo.lock dependencies separately; cargo test/build used --offline --locked and denied network.",
+  "evidenceSHA256": {
+    "dependency-fetch.log": "fe14c0108e9daa23d4eb9eba1edf377b87e17a63dc0eb1c6c6af2a044e3d638e",
+    "candidate-tests.log": "bf506cd32516555142db9e795b9a263c16a55db21f4e0dec6d890d9315d23712",
+    "result.json": "6b44d9da8b4032c33077b3e1a64a1ce39b6fda7e0826e2c3c19a098ed3db03f2",
+    "candidate-build.log": "ae9746137b69080747934f869265937b71ce1923d6f6a1e1a9400282ab68c477",
+    "baseline.log": "74f416964077aadc877c6a159b91d7aae64b8155658e2f1b4454b36a0b21ed5d",
+    "candidate-version.log": "939e4a85cbb3ea886b01296fc20a9822a15137fd91423d25f7c6c73f72b30e92",
+    "candidate-help.log": "b92853dc1e7f321494d84de9c5cbea4c0afc199a446cd901d253e18d4cdcc377"
+  },
+  "boundaries": {
+    "fakeGitUsedForArgumentCapture": true,
+    "realGitPullPerformed": false,
+    "SwitchConnectedOrControlled": false,
+    "realModelCalled": false,
+    "actualSkillOrPluginCacheWritten": false,
+    "installedOrPublished": false,
+    "linuxOrIntelRuntimeTested": false
+  }
+}
