@@ -2952,4 +2952,8 @@ let zhHans: [String: String] = [
     "Skill name or description could not be parsed; catalog measurement is unavailable.": "无法解析 Skill 的名称或描述，目录计量未知。",
     "Catalog measurement unavailable: %1$@": "目录计量未知：%1$@",
     "SKILL.md name or description is missing or could not be parsed; inspect the YAML front matter. Host loading was not tested.": "SKILL.md 的名称或描述缺失或无法解析，请检查 YAML 头部；未测试宿主实际加载。",
+    "Observed occupied time %1$@ · summed call intervals %2$@": "观察占用时间 %1$@ · 调用耗时合计 %2$@",
+    "%1$@ / %2$@ selected calls have valid start/end pairs · %3$@ calls without usable timing": "%1$@ / %2$@ 次入选调用有有效起止记录 · %3$@ 次无可用耗时",
+    "Overlap-adjusted timing is unavailable or inconsistent; analyze again.": "去除重叠的耗时计量未知或不一致，请重新分析。",
+    "Occupied time counts overlapping observed intervals once and excludes gaps. Only fully observed pairs within the window count; categories stay separate. Not CPU time, task duration or billing.": "占用时间对重叠区间只计一次，不含空档。仅计窗口内完整的起止记录，分类之间不相加；不代表 CPU 时间、任务总时长或账单。",
 ]

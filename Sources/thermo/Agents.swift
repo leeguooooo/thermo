@@ -233,6 +233,11 @@ struct AgentsCommand {
             lines.append("Observed \(kind) returned text total (all rows): \(summary.returnedTextBytes.map(String.init) ?? "unknown") bytes / \(tokens) tokens")
         }
         if !report.tools.isEmpty { lines.append("Totals cover observed returned text only; missing logs/results and non-text content are excluded, not request usage.") }
+        for kind in Set(report.tools.map(\.kind)).sorted() {
+            lines.append("Observed " + kind + " timing:")
+            lines += report.timingSummary(kind: kind)?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation]
+        }
+        lines.append(ToolUsageTimingSummary.explanation)
         func instructionLine(_ loaded: SkillInstructionUsage?) -> String {
             guard let loaded, loaded.events > 0 else { return "No measured linked instruction loads in this report; total loading is unknown." }
             let tokens = report.referenceEncoding == nil ? "≈\(loaded.estimatedTokens)" : loaded.referenceTokens.map(String.init) ?? "unknown"
@@ -290,6 +295,8 @@ struct AgentsCommand {
             lines.append("Unattributed tool results: \(other.completed) returned · \(other.missingResults) missing · \(other.unmeasuredResults) unmeasured")
             lines.append("Unattributed measured text: \(other.returnedTextBytes) bytes / \(tokens) tokens · \(other.nonTextBlocks) non-text blocks not tokenized")
             lines.append("Includes execution wrapper text and may repeat separately logged MCP results. Kept outside MCP/Skill totals; no nested attribution or image/audio token estimate.")
+            lines.append("Observed outer timing:")
+            lines += report.timingSummary(kind: "outer")?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation]
             if let rows = other.byTool {
                 if !rows.isEmpty {
                     let count = app.args.has("all") ? rows.count : min(20, rows.count)

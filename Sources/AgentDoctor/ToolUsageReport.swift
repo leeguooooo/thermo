@@ -160,6 +160,8 @@ public struct ToolUsageReport: Codable, Sendable {
     public var returnedTextEstimator: String? = "ascii4-unicode1-v1"
     /// Selected-file scope only. No input path is retained or exported.
     public var singleLogFile: Bool? = nil
+    /// Absent in older reports means unchecked; row sums cannot reconstruct interval overlap.
+    public var timingSummaries: [ToolUsageTimingSummary]? = nil
 
     public func returnedTextSummary(kind: String) -> ToolUsageTextSummary {
         ToolUsageTextSummary(rows: tools.filter { $0.kind == kind }, kind: kind, encoding: referenceEncoding)

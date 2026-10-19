@@ -93,6 +93,12 @@ struct ToolUsagePanel: View {
                     sort.value($0) == sort.value($1) ? $0.id < $1.id : sort.value($0) > sort.value($1)
                 }
                 let textSummary = report.returnedTextSummary(kind: kind)
+                if !rows.isEmpty {
+                    ForEach(report.timingSummary(kind: kind)?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation], id: \.self) { line in
+                        Text(line).font(.caption.monospaced()).foregroundStyle(.secondary)
+                    }
+                    Text(ToolUsageTimingSummary.explanation).font(.caption).foregroundStyle(.secondary)
+                }
                 Picker(tr("Sort observed usage"), selection: $sort) {
                     ForEach(UsageSort.allCases.filter { kind == "skill" || $0 != .instructions }, id: \.self) { value in Text(value.title).tag(value) }
                 }.pickerStyle(.segmented)

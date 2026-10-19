@@ -297,6 +297,7 @@ struct ToolUsageParser {
         var rows: [String: ToolUsageRow] = [:]
         var outerRows: [String: ToolUsageRow] = [:]
         var timings: [String: [Double]] = [:]
+        var intervalTimings: [String: ToolUsageTimingAccumulator] = [:]
         var loads: [String: SkillInstructionUsage] = [:]
         coverage.unmatchedInstructionEvents = coverage.unmatchedInstructionEvents ?? 0
         for observation in instructions.values {
@@ -314,6 +315,9 @@ struct ToolUsageParser {
         for (callKey, call) in calls {
             if !call.startSeen, inWindow(call.ended) { coverage.unmatchedResults += 1; continue }
             guard call.startSeen, inWindow(call.started ?? call.observedAt) else { continue }
+            let timingKind = call.kind != nil && call.name != nil ? call.kind! : "outer"
+            intervalTimings[timingKind, default: ToolUsageTimingAccumulator()].observe(
+                start: call.started, end: call.endSeen && inWindow(call.ended) ? call.ended : nil)
             guard let kind = call.kind, let name = call.name else {
                 coverage.otherToolCalls += 1
                 let key = call.groupID ?? Self.identity(call.host + "|outer|Unidentified outer tool")
@@ -450,8 +454,10 @@ struct ToolUsageParser {
             totals[entry.host] = total
         }
         let complete = !coverage.cancelled && !coverage.limitReached && coverage.clippedFiles == 0 && coverage.unreadableFiles == 0 && coverage.malformedLines == 0 && coverage.oversizedLines == 0 && coverage.missingTimestamps == 0 && coverage.unmatchedResults == 0 && coverage.unmatchedInstructionEvents == 0
-        return ToolUsageReport(generated: until, since: since, until: until, complete: complete, coverage: coverage,
+        var report = ToolUsageReport(generated: until, since: since, until: until, complete: complete, coverage: coverage,
                                tools: rows.values.sorted { $0.returnedTextBytes == $1.returnedTextBytes ? $0.id < $1.id : $0.returnedTextBytes > $1.returnedTextBytes },
                                sessionTokens: totals.values.sorted { $0.host < $1.host }, cumulativeTokenSnapshots: cumulativeSnapshots.values.sorted { $0.id < $1.id }, note: ToolUsageReport.explanation, referenceEncoding: encoding == .heuristic ? nil : encoding.rawValue, referenceEngine: encoding == .heuristic ? nil : ReferenceTokenizer.engine)
+        report.timingSummaries = ["mcp", "skill", "outer"].map { (intervalTimings[$0] ?? ToolUsageTimingAccumulator()).summary(kind: $0) }
+        return report
     }
 }
