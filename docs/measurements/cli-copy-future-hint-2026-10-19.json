@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "problem": "An older standalone CLI warning recommended ln -sf onto the resolved executing file, including a deliberately fixed acceptance artifact. No such replacement was executed.",
+  "sourceCommit": "367a61caf152511d69c89aa3a97ab338fb4412b9",
+  "sourceTree": "61289b74db3ce0d8abe5d830f15659df7154ec30",
+  "sourceFilesSHA256": {
+    "Sources/thermo/main.swift": "be5c673b722152d891f0f4e9a30fa1ecc7ab2700fe4c94ec117bf10d7d5f4a6a",
+    "Tests/ThermoCLITests/StaleCopyTests.swift": "313ecf2216bec81145d39adda9807e178569b03d988f7038e49ceb406938abc1",
+    "README.md": "2f9998f6d938d7aa36ba71bc8d30eb964a3ca0334350fac9b40cd361ab8e58ed"
+  },
+  "integratedCommit": "917e1f61dd20f34d6d939ccf17d73c1714ec76e6",
+  "change": "Keep the version-difference note but point to a shell-quoted App CLI path for future commands; do not recommend replacing the current file or repeating the prior action.",
+  "noticeItselfWasAlreadyNonmutatingBeforeThisChange": true,
+  "remoteValidation": {
+    "runId": "f53aa1bf-ca0d-4497-bf53-0dbe169cde12",
+    "host": "leos-MacBook-Pro.local",
+    "developerDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "baselineTests": 2,
+    "baselineFailedAssertions": 3,
+    "baselineExitCode": 1,
+    "CLITests": 111,
+    "CLITestFailures": 0,
+    "CLIExitCode": 0,
+    "CLIProductBuildExitCode": 0,
+    "sourceUnchanged": true,
+    "artifactHashesVerified": 11,
+    "receipts": [
+      {
+        "name": "baseline",
+        "exitCode": 1,
+        "seconds": 350.1850216250168,
+        "argv": [
+          "/usr/bin/swift",
+          "test",
+          "-c",
+          "release",
+          "--jobs",
+          "1",
+          "--filter",
+          "StaleCopyTests"
+        ]
+      },
+      {
+        "name": "candidate",
+        "exitCode": 0,
+        "seconds": 52.45119129202794,
+        "argv": [
+          "/usr/bin/swift",
+          "test",
+          "-c",
+          "release",
+          "--jobs",
+          "1",
+          "--filter",
+          "ThermoCLITests"
+        ]
+      },
+      {
+        "name": "cli-build",
+        "exitCode": 0,
+        "seconds": 126.57920308306348,
+        "argv": [
+          "/usr/bin/swift",
+          "build",
+          "-c",
+          "release",
+          "--jobs",
+          "1",
+          "--product",
+          "thermo"
+        ]
+      }
+    ],
+    "specialPathTest": "Execute the emitted path using an owned fake App name with apostrophe, spaces and shell substitution syntax; verify argv and pinned regular-file contents."
+  },
+  "targetRuntimeAcceptance": {
+    "complete": true,
+    "candidateSHA256": "eaf3d611e3b1dc8a8ba46f742d9b36e15ad6e6102b9222285b9e3a4f65a7a663",
+    "installedAppVersionObserved": "1.1.39",
+    "probes": [
+      {
+        "entry": "direct",
+        "exitCode": 0,
+        "CLIversion": "1.1.38",
+        "AppPackage": null,
+        "futureAppCLIShown": true,
+        "replacementCommandAbsent": true,
+        "stdoutRemainsJSON": true
+      },
+      {
+        "entry": "private-alias",
+        "exitCode": 0,
+        "CLIversion": "1.1.38",
+        "AppPackage": null,
+        "futureAppCLIShown": true,
+        "replacementCommandAbsent": true,
+        "stdoutRemainsJSON": true
+      }
+    ],
+    "privateAliasUnchanged": true,
+    "candidateUnchanged": true,
+    "fixed552Unchanged": true,
+    "installedCLIUnchanged": true,
+    "frozen552SHA256": "e9ee9b675260f1aae4f8acb537100237be9fc4ce7ccd38d4ecd8aaa3fb2cc22d",
+    "installedCLISHA256": "b059c27d7a22ce9cffc652a4698bb8676e14af4f46cc644e7e3f3874d02eb90e",
+    "globalInstall": false,
+    "published": false,
+    "futureTargetInvokedReadOnly": true,
+    "futureTargetCLIVersion": "1.1.39",
+    "futureTargetVersionProbeExitCode": 0,
+    "architecture": "arm64",
+    "entryProbes": [
+      "direct copied CLI",
+      "private acceptance symlink"
+    ],
+    "bothStandaloneAppPackageValuesNull": true,
+    "emittedAppTargetVersionQueryReadOnly": true,
+    "noOldReplacementCommandWasRun": true
+  },
+  "boundaries": {
+    "fullPackageTestSuiteRun": false,
+    "AppGUIAcceptanceRun": false,
+    "universalOrOtherPlatformBuild": false,
+    "newModelRuns": 0,
+    "hardwareControlsInvoked": false,
+    "privateAcceptanceSymlinkCreated": true,
+    "globalCLIInstall": false,
+    "AppInstalledOrPublished": false,
+    "fixed552ArtifactReplaced": false,
+    "globalConfigChanged": false
+  }
+}
