@@ -229,6 +229,9 @@ REA_MCP_OUTPUT_SCHEMA_PROFILE = "off"
 - 结果出现算 completed；只有明确布尔 is_error / isError 标记才归为已知错误状态。普通返回文本里的 ERROR 字样不会被猜成失败，缺少状态标记保持未知。结果缺失也不等于失败或成功。
 - 耗时是日志调用至结果的时间间隔，包含宿主和传输开销，不代表纯服务执行时间。异常负间隔不计入样本。中位数依有效样本计算，至少 20 个样本才给最近秩 P95；累计间隔可能互相重叠，不能当作实际经过时间。
 - 返回文本单独计量，JSON 的 returnedTextEstimator 标识启发式算法版本。标准内容块只统计 text；图片等非文本块计数但不估算 token。结构化输出仅在没有 content 时序列化计量，避免把同一结果重复加总。报告只保留工具 / Skill 名称与聚合数字，不写入提示词、其他参数或返回正文；Skill 名称须通过标识符字符校验。脱敏后同名的工具也用原始名称哈希保持独立。
+- 新源码把 MCP 的 `structuredContent` JSON 表示另列于每行的 `structuredContent` 观察对象。`inspectedResultObjects` 是可检查封装数，`unobservableResults` 是无法检查的已完成结果数；`structuredResults` / `alongsideContentResults` 记录含该字段及同时含 `content` 的结果数。`jsonBytes` / `jsonEstimatedTokens` 只累计成功序列化的紧凑、排序 JSON；指定编码时另有 `jsonReferenceTokens`。字段不是对象时计入 `unavailableJSONResults`，不把它当作空对象；参考计量失败时参考 token 保持未知。协议失败和缺失结果不进入这些已完成结果的覆盖数。旧报告没有观察对象，保持未检查。
+- 此 JSON 表示可能重复返回文本或包含编码后的媒体，不能与文本合计相加，也不能推算实际模型输入或账单。解析器只检查 MCP 返回的封装，不递归搜文本块或脚本输出来猜嵌套调用。App 和 CLI 共用这些说明；当前仍按返回文本口径排序。新增观察不改变现有文本分母、错误状态或请求 token。源码构建、CLI 验收与已安装 App 状态分别记录。
+
 - 请求 token 单独列出：Claude message.usage 与 Codex token_usage_record.payload.usage。原生 msg_ / resp_ ID 跨镜像日志去重，其他 ID 在会话内去重；渐进计数使用较新的记录。Codex 累积 token_count 不求和。缺失或不支持的记录保留计数，缓存字段缺失保持未知；不同宿主的缓存字段不归一化、不再与 input 相加。
 
 请求 token 不分摊给工具，也不根据调用所在的整条模型消息推算工具占比。这份报告不提供账单、任务成功率或“哪个版本的工具更好”的结论。按照日志名称汇总也不能证明它对应当前安装版本。

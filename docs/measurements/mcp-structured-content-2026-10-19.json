@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUTC": "2026-10-19T13:54:12.584867+00:00",
+  "source": {
+    "source": "/Users/leo/.codex/artifacts/thermo-structured-result-source",
+    "commit": "a7be25f44b74acd58fd3bd5e5434538e2117c32c",
+    "tree": "dbd005ca554875bd89c9287c22b15acae8df6713"
+  },
+  "change": {
+    "structuredContentMeasuredSeparately": true,
+    "originalTextTotalsSharesAndErrorStatusesUnchanged": true,
+    "missingOrUninspectableEnvelopesNotInferredAbsent": true,
+    "oldReportsRemainUnchecked": true,
+    "noArgumentsOrResultBodiesExported": true,
+    "MCPOnlyNoNestedScriptInference": true,
+    "serializedJSON": "Foundation compact JSON, sorted keys, without escaping slashes; not wire bytes",
+    "tokenSemantics": "Heuristic or reference tokens of that serialized JSON representation; may include encoded media and may overlap content; not model-delivery or billing tokens",
+    "keyOrderCaveat": "Reference counts differ from the earlier PR evidence because its compact representation retained insertion order; this observation sorts keys."
+  },
+  "remote": {
+    "runID": "64f0daf5-98ee-4319-b55e-6c4940fb5471",
+    "host": "leos-MacBook-Pro.local",
+    "developerDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "sourceTree": "dbd005ca554875bd89c9287c22b15acae8df6713",
+    "sourceUnchanged": true,
+    "suites": {
+      "ThermoCLITests.xctest": 111,
+      "AgentDoctorTests.xctest": 336
+    },
+    "newTests": 8,
+    "receipts": [
+      {
+        "name": "baseline",
+        "exitCode": 1,
+        "seconds": 296.517769249971,
+        "argv": [
+          "/usr/bin/swift",
+          "test",
+          "-c",
+          "release",
+          "--jobs",
+          "1",
+          "--filter",
+          "MCPStructuredContentUsageTests"
+        ]
+      },
+      {
+        "name": "candidate",
+        "exitCode": 0,
+        "seconds": 155.85432787495665,
+        "argv": [
+          "/usr/bin/swift",
+          "test",
+          "-c",
+          "release",
+          "--jobs",
+          "1",
+          "--filter",
+          "AgentDoctorTests|ThermoCLITests"
+        ]
+      },
+      {
+        "name": "cli-build",
+        "exitCode": 0,
+        "seconds": 131.32311525009573,
+        "argv": [
+          "/usr/bin/swift",
+          "build",
+          "-c",
+          "release",
+          "--jobs",
+          "1",
+          "--product",
+          "thermo"
+        ]
+      },
+      {
+        "name": "app-build",
+        "exitCode": 0,
+        "seconds": 34.944974040961824,
+        "argv": [
+          "/usr/bin/swift",
+          "build",
+          "-c",
+          "release",
+          "--jobs",
+          "1",
+          "--product",
+          "ThermoApp"
+        ]
+      }
+    ],
+    "baselineRegression": {
+      "tests": 8,
+      "failures": 6,
+      "expected": true,
+      "reason": "old parser has no per-row structured-content observation"
+    },
+    "collectedFiles": 14,
+    "allCollectedHashesVerified": true
+  },
+  "CLI": {
+    "SHA256": "574c04ece6486d9ee7417c7a6fb99bd0da811271c1ad2c30c53fe1957999a00b",
+    "realReturnValueReplay": {
+      "passed": true,
+      "method": "Replay of retained real PR return values in owned native-MCP log envelopes; not a fresh host capture or business execution",
+      "candidateSHA256": "574c04ece6486d9ee7417c7a6fb99bd0da811271c1ad2c30c53fe1957999a00b",
+      "baselineSHA256": "eaf3d611e3b1dc8a8ba46f742d9b36e15ad6e6102b9222285b9e3a4f65a7a663",
+      "measurements": {
+        "narrow": {
+          "returnedTextBytes": 17,
+          "structuredContent": {
+            "alongsideContentResults": 1,
+            "inspectedResultObjects": 1,
+            "jsonBytes": 8116,
+            "jsonEstimatedTokens": 2032,
+            "jsonReferenceTokens": 2108,
+            "structuredResults": 1,
+            "unavailableJSONResults": 0,
+            "unobservableResults": 0
+          }
+        },
+        "wide": {
+          "returnedTextBytes": 17,
+          "structuredContent": {
+            "alongsideContentResults": 1,
+            "inspectedResultObjects": 1,
+            "jsonBytes": 449445,
+            "jsonEstimatedTokens": 113082,
+            "jsonReferenceTokens": 125574,
+            "structuredResults": 1,
+            "unavailableJSONResults": 0,
+            "unobservableResults": 0
+          }
+        }
+      },
+      "unobservableResultsChecked": true,
+      "textTotalsUnchanged": true,
+      "JSONContainsNoPayloadText": true,
+      "englishAndChineseCLI": true,
+      "AppGUIAccepted": false,
+      "installed": false,
+      "published": false
+    },
+    "contractGroupsPassed": 7,
+    "contractScriptSHA256": "ce945724dcc1b5c310f45a74eddbf8de3c5a7eec12338c4401455e6f9f03e006",
+    "oldCandidateRejected": {
+      "exitCode": 1,
+      "seconds": 0.516618417,
+      "expectedFailure": "structured-content coverage was not measured",
+      "matched": true
+    },
+    "referenceEncoding": "cl100k_base",
+    "referenceEngine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary"
+  },
+  "boundaries": {
+    "newLiveBusinessCalls": 0,
+    "newModelRuns": 0,
+    "AppGUIAccepted": false,
+    "installed": false,
+    "published": false,
+    "requestOrBilledTokensMeasured": false,
+    "structuredAndTextCountsAddedTogether": false,
+    "rawPRPayloadExported": false
+  }
+}

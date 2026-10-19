@@ -108,6 +108,23 @@ for line in sys.stdin:
  assert len(outer)==1 and outer[0]['name']=='clock.inspect' and outer[0]['calls']==1
  for private in ['PRIVATE_NAMESPACE_ARGUMENT','PRIVATE_NAMESPACE_IMAGE','fixture-result']:assert private not in text
  checks.append('separate Codex namespaces group with legacy MCP names; native images excluded and same-name outer tools stay distinct')
+ # Result envelopes and text-only host blocks have different structured-content coverage.
+ coverage=row.get('structuredContent')
+ assert coverage is not None, 'structured-content coverage was not measured'
+ assert coverage['inspectedResultObjects']==coverage['unobservableResults']==1
+ assert coverage['structuredResults']==0
+ body={'value':'PRIVATE_STRUCTURED_VALUE'}
+ structured=[
+  protocol(-8,{'type':'function_call','call_id':'owned-structured','namespace':'mcp__owned_format','name':'structured','arguments':'PRIVATE_STRUCTURED_ARGUMENT'}),
+  protocol(-6,{'type':'function_call_output','call_id':'owned-structured','output':json.dumps({'isError':False,'content':[{'type':'text','text':'OK'}],'structuredContent':body})})]
+ path=root/'structured.jsonl';path.write_text(''.join(json.dumps(x)+'\n' for x in structured))
+ text=run(['agents','usage','--agent','codex','--log-file',str(path),'--encoding','cl100k_base','--json']).stdout
+ row=json.loads(text)['tools'][0];usage=row['structuredContent']
+ assert row['returnedTextBytes']==2 and usage['jsonBytes']==len(json.dumps(body,separators=(',',':'),ensure_ascii=False).encode())
+ assert usage['structuredResults']==usage['alongsideContentResults']==usage['inspectedResultObjects']==1
+ assert usage['unobservableResults']==usage['unavailableJSONResults']==0 and usage['jsonReferenceTokens']>0
+ assert 'PRIVATE_STRUCTURED_VALUE' not in text and 'PRIVATE_STRUCTURED_ARGUMENT' not in text
+ checks.append('structured JSON is measured separately from acknowledgment text; unavailable envelopes stay unknown and payloads are not exported')
 assert hashlib.sha256(binary.read_bytes()).hexdigest()==binary_before, 'input binary changed during contract checks'
 print(json.dumps({'fixtureOnly':True,'binarySHA256':binary_before,'groupsPassed':len(checks),'checks':checks,'modelsOrDevicesUsed':False},indent=2))
 # Test: python3 scripts/verify-ai-diagnostics-contract.py /path/to/thermo
