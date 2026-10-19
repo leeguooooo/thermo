@@ -61,9 +61,9 @@
     "Sources/thermo/Clean.swift": "3cd854c3487fd136ebb367ea4317c0d063cd4d375e0990d4562bdda2b97e3375",
     "Sources/ThermoKit/Version.swift": "dbdc3114345026d5c62a76622877fd7d7210cc1e6024986dbf07ed4750782e02"
   },
-  "signedDeploymentAccepted": false,
+  "signedDeploymentAccepted": true,
   "remaining": [
-    "Signed 1.1.35 build and installed GUI replay",
     "Broader parity matrix"
-  ]
+  ],
+  "followUp": "mole-installed-522-2026-10-19.json"
 }

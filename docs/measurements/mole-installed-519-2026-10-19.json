@@ -83,5 +83,6 @@
     "installedSource": "b1cff4d16b0c05b7867daf8f28a90698ac069d4e",
     "functionalSourceMatchesInstalled": true,
     "foreignUntrackedEntriesPreserved": 5
-  }
+  },
+  "followUp": "mole-installed-522-2026-10-19.json"
 }

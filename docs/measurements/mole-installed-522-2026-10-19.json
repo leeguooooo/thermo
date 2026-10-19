@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-19",
+  "source": "4d5f53a604032bf2aa25d2d5f80083f27eb5ac1e",
+  "version": "1.1.35",
+  "build": "522",
+  "package": {
+    "developerIDTeam": "6ZPXG4KVVS",
+    "sourceMetadataAndEntitlementVerified": true,
+    "nativeAndRosettaCLIPassed": true,
+    "architectures": {
+      "Contents/MacOS/Thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo-helper": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "archive": {
+      "archive": "Thermo-1.1.35-522-candidate.zip",
+      "sha256": "e0052be8f4ff4f86721908a1102660a6dbc75089d0b4fbb67e1a8634a8eda0ea",
+      "regularFiles": 93,
+      "symlinks": 8,
+      "filesModesAndLinksMatch": true,
+      "unpackedDeepStrictAllArchSignaturePass": true
+    },
+    "lifecyclePassed": true,
+    "lifecycleSamples": 23
+  },
+  "deployment": {
+    "old519NormalQuitVerified": true,
+    "atomicAppExchange": true,
+    "oldAppAndRootFilesPreserved": true,
+    "appControlVersion": "1.1.35 (522)",
+    "helperVersion": "8/1.1.35",
+    "automaticUpgradeAccepted": true,
+    "upgradeSamples": 12,
+    "registrationAlwaysPresent": true,
+    "consecutiveManualPolicyChecks": 6
+  },
+  "installedVisibleRestore": {
+    "accepted": true,
+    "fixture": "Mole Restore QA 2763b2c7",
+    "bundleID": "com.example.thermo.restoreqa.2763b2c72f234546a56b06c03ffef44e",
+    "batch": "9AE8933B-A9F5-4BB7-870A-8B95A9A10EDE",
+    "uninstallReviewExactlyOwnedAppAndCache": true,
+    "nativeTrashTwoLocations": true,
+    "conflictKnownAtReviewStillReported": "1/2 with original-path conflict reason",
+    "conflictOccupantHashAndIdentityPreserved": true,
+    "secondReviewRecognizesCache": "Original item is already at its original location",
+    "secondResult": "1/1 restored; 1 already at original location",
+    "fourFilesRestoredSHA256DeviceAndInodeMatch": true,
+    "lastJournalRestoreItems": 1,
+    "lastJournalRestoreOutcome": "succeeded",
+    "appListRefreshedWithoutManualScan": true
+  },
+  "installedCLIReplay": {
+    "exitCode": 0,
+    "statuses": [
+      "alreadyRestored",
+      "alreadyRestored"
+    ],
+    "newHistoryAppended": false,
+    "filesUnchanged": true,
+    "allOwnedTrashDestinationsAbsent": true
+  },
+  "fixturesRestoredThenRetainedOutsideHomeAppCacheDirs": true,
+  "personalDataMoved": false,
+  "trashEmptied": false,
+  "notarized": false,
+  "published": false,
+  "remaining": [
+    "Broader path/volume scenarios",
+    "Screen permission and other hardware sessions",
+    "Main integration and full parity matrix"
+  ]
+}
