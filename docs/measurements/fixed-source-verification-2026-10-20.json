@@ -1,0 +1,57 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "c7086a4803213f4fca2f5783e8096342507ccb71",
+  "problem": "The diagnostic contract was selected next to the invoking entrypoint instead of from the fixed checkout",
+  "baselineControls": {
+    "tests": 20,
+    "failures": 4
+  },
+  "fixedControls": {
+    "host": "mac190",
+    "tests": 22,
+    "failures": 0,
+    "scope": "Owned temporary repositories, files, process fixtures and mock architecture/signature tools; no actual build or signing acceptance"
+  },
+  "realCandidatePreview": {
+    "passed": true,
+    "candidateVersion": "1.1.37",
+    "candidateBuild": "552",
+    "sourceCommit": "497b1a9f36471fba54a581559309000cf09b9076",
+    "verificationFiles": 10,
+    "oldSelectionChangedWithNeighbor": true,
+    "newPlanUnchangedWithNeighbor": true,
+    "fixedContractSHA256": "c2da75a1ccf13e9a57c08777e79412beea7f791280d88b6f307fb8de14a642f6",
+    "sourceAndPackageMetadataUnchanged": true,
+    "outputDirectoriesCreated": false,
+    "previewOnly": true,
+    "releaseTestsExecuted": false,
+    "packageChecksExecuted": false,
+    "entrypointSHA256": "4264d5f9d15e8139c2a1615eeb565bceffdcf8fab62ef463f9857af6a591ce2c",
+    "host": "pwtk-leo-macbook.local",
+    "installed": false,
+    "published": false
+  },
+  "behavior": [
+    "All nine Python checks and the artifact shell check must be tracked within the fixed source; escaping or untracked targets are refused",
+    "Plan records verification file paths and hashes; result separately records artifact verifier and entrypoint hashes",
+    "Missing fixed contracts never fall back to a runner-neighbor script",
+    "Both architecture paths execute the fixed contract in an owned mock-toolchain control, while a poisoned runner-neighbor contract is untouched"
+  ],
+  "limitations": [
+    "Real candidate 1.1.37 build 552 was previewed only; no new Release tests, package checks, signatures or GUI acceptance",
+    "Script binding and hashes do not prove binary reproducibility"
+  ],
+  "installs": false,
+  "publishes": false,
+  "modelCalled": false,
+  "artifactSHA256": {
+    "real-candidate-plan-result.json": "11fe6ce2455e496b8d19f8265067731ebad0f5359e4a2200c73cd4b965917860",
+    "plan-0.json": "800cb98907d9d2a5ed42202ec46fc25e8b378f862333d9cc601dfdaa27cada0b",
+    "plan-1.json": "800cb98907d9d2a5ed42202ec46fc25e8b378f862333d9cc601dfdaa27cada0b",
+    "fixed.log": "08c0e24c86a7595c6aad4d876ba480b0677cc47cb7df6c4f6fb8f5b348dab7ed",
+    "plan-1.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "baseline.log": "9ef44ca33caaf8ab3780a6552ef154a36388380693dbf5625dee7f9f0a9e6c42",
+    "probe.py": "d772b2c00be5cc07a52f81b7f760c4c31461c98c5f9739272b20905a61a439a7",
+    "plan-0.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}
