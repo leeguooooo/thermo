@@ -10,7 +10,9 @@ struct ToolResultTextObservation {
         inspectResult(value, codexInputBlocks: codexInputBlocks, depth: 0)
     }
 
-    private static let marker = try! NSRegularExpression(pattern: "…[1-9][0-9]{0,11} chars truncated…")
+    private static let marker = try! NSRegularExpression(
+        pattern: #"…[1-9][0-9]{0,11} chars truncated…|Warning: truncated output \(original token count: [1-9][0-9]{0,11}\)"#)
+    private static let contextLimitMarker = "Output exceeded the available model context and was truncated."
 
     private static func json(_ text: String) -> Any? {
         guard let first = text.first(where: { !$0.isWhitespace }), first == "{" || first == "[",
@@ -19,7 +21,8 @@ struct ToolResultTextObservation {
     }
 
     private mutating func inspectText(_ text: String) {
-        if Self.marker.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil {
+        if Self.marker.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
+            || text.contains(Self.contextLimitMarker) {
             truncationMarker = true
         }
         if let value = Self.json(text), Self.containsMedia(value, depth: 0) { serializedMedia = true }
