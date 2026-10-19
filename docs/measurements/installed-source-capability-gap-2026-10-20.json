@@ -1,0 +1,112 @@
+{
+  "recordedAtUTC": "2026-10-19T20:55:38.583368+00:00",
+  "mainCommitAtProbe": "a8c530a4ef97f78808110bb2d3f1ddec38af3be5",
+  "installed": {
+    "version": "1.1.40",
+    "build": "611.15",
+    "declaredBaseCommit": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+    "declaredWorkingTree": "dirty",
+    "CLISHA256": "10cdd0f80530a4443e83f02a82ca8d912bed94329e94a1fc704bf45ea048c249",
+    "CLIMatchesR15Receipt": true,
+    "recordedFrozenInput": "b5a2a2ba62071297fa0367e17924864fca23af13",
+    "wholeInstalledAppSourceTreeVerified": false
+  },
+  "candidate": {
+    "sourceCommit": "d6b9e68b50ab2372e490c3a3d9a70843061b05ff",
+    "version": "1.1.38",
+    "build": "631",
+    "signature": "ad-hoc test"
+  },
+  "capabilityProbe": {
+    "installed": {
+      "CLISHA256": "10cdd0f80530a4443e83f02a82ca8d912bed94329e94a1fc704bf45ea048c249",
+      "cases": {
+        "baseline": {
+          "exitCode": 0,
+          "structuredSummaryPresent": false,
+          "singleLogWindow": null,
+          "toolRows": 1
+        },
+        "time-sort": {
+          "exitCode": 2,
+          "structuredSummaryPresent": false,
+          "singleLogWindow": null,
+          "toolRows": null
+        },
+        "tail": {
+          "exitCode": 2,
+          "structuredSummaryPresent": false,
+          "singleLogWindow": null,
+          "toolRows": null
+        }
+      }
+    },
+    "candidate": {
+      "CLISHA256": "90b211d4ae7ca2857079c3ca165895e24843685e87d91c76049b07d2cd762689",
+      "cases": {
+        "baseline": {
+          "exitCode": 0,
+          "structuredSummaryPresent": true,
+          "singleLogWindow": "head",
+          "toolRows": 1
+        },
+        "time-sort": {
+          "exitCode": 0,
+          "structuredSummaryPresent": true,
+          "singleLogWindow": "head",
+          "toolRows": 1
+        },
+        "tail": {
+          "exitCode": 0,
+          "structuredSummaryPresent": true,
+          "singleLogWindow": "tail",
+          "toolRows": 1
+        }
+      }
+    }
+  },
+  "pendingIntegrationSnapshot": {
+    "declaredBaseIsMainAncestor": true,
+    "mainChangedProductAndTestFilesSinceBase": 21,
+    "otherPendingProductAndTestFiles": 66,
+    "overlappingFiles": [
+      "Sources/ThermoL10n/ZhHans.swift",
+      "Sources/thermo/Args.swift",
+      "Sources/thermo/CommandHelp.swift"
+    ],
+    "otherPendingDiffSHA256": "b41e026064fb0c19e7af8174a9e22989a09a9df0f930fe1fcda0abf55b821a55",
+    "pendingTreeNotProvenIdenticalToInstalledTree": true,
+    "atomicSnapshot": false,
+    "observedPendingFileCountsDuringAudit": [
+      65,
+      66
+    ],
+    "observationNote": "The pending list changed during read-only inspection; it was not frozen or used as a build input."
+  },
+  "interpretation": "Marketing versions alone do not establish capability or code ancestry. Installed CLI lacks time sorting, selected-log tail mode and aggregate structured JSON reporting supported by the owned candidate. Uncommitted integration work remains separate; a version bump alone cannot establish replacement readiness.",
+  "boundaries": {
+    "uncommittedWorkMergedOrReset": false,
+    "installedAppReplaced": false,
+    "versionChanged": false,
+    "realSessionLogsRead": false,
+    "businessMCPOrModelInvoked": false,
+    "published": false,
+    "otherProductFilesWritten": false
+  },
+  "evidenceSHA256": {
+    "installed-time-sort.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "candidate-tail.stdout": "8b04fb9ea3f28f8cf7e158dae09a4fc93a57348f330994a3a737c6a37bf73229",
+    "result.json": "78c906d47c5611ffc24061f09b7ae0ee9295a24d68dcf062f21cb6ce039028e7",
+    "candidate-tail.stderr": "1f4e3c2283d378aa688bd638367d67ed9a33eaa9f9f82205ad5bf91b55814cbf",
+    "installed-time-sort.stderr": "7818be0eb7ab6100f0c77f3b1ca212b1b6fdeee41a07aaca3500b67a83a2a002",
+    "candidate-time-sort.stderr": "1f4e3c2283d378aa688bd638367d67ed9a33eaa9f9f82205ad5bf91b55814cbf",
+    "installed-baseline.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "candidate-baseline.stderr": "1f4e3c2283d378aa688bd638367d67ed9a33eaa9f9f82205ad5bf91b55814cbf",
+    "installed-tail.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "candidate-baseline.stdout": "2ef50dc9eaaf58e6d01fef83836419cf6071efb385d4ba026b46280562a98718",
+    "installed-tail.stderr": "c5aafce397a847e70521c37f8d398398672964cb2fbb544fbace30388b8e801b",
+    "installed-baseline.stdout": "da44424dc8a11bf0bd3e54f033a9e94c40517049422fb963138eef85a3bf7131",
+    "candidate-time-sort.stdout": "251b8a499a436313cc19503d6bbb4740143e8055ba233a256090576547ef61ad",
+    "r15Receipt": "2e219f53ac8c5adbe802796f524d5de0f3e91ef4d62d1c22747fedc4300fbf18"
+  }
+}
