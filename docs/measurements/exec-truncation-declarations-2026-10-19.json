@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "sourceCommit": "9a16d8bcec549e8166dbf7545db98cffe8fccac4",
+  "scope": "Known truncation-declaration text presence, never attribution to a particular execution layer",
+  "sourceFilesSHA256": {
+    "Sources/AgentDoctor/ToolResultTextObservation.swift": "524c383190ef141b378240c04c520cb7ed42f7088399ad704ef6ad2dbfc9322d",
+    "Tests/AgentDoctorTests/ToolResultTextObservationTests.swift": "b1499c4ac052e70ac9666cb7591e6d5684bf523a27661a1f8b363b2c2828df07"
+  },
+  "newKnownForms": [
+    "Warning: truncated output (original token count: positive integer)",
+    "Output exceeded the available model context and was truncated."
+  ],
+  "preservedContract": [
+    "Existing positive character-count ellipsis marker remains supported",
+    "Native image/audio payloads are not inspected or tokenized",
+    "Multiple markers/blocks count once per result",
+    "Text byte, reference/heuristic token, media, timing and error accounting remain unchanged",
+    "No arithmetic uses the original-token-count text"
+  ],
+  "validation": {
+    "baselineObservationSuite": {
+      "tests": 8,
+      "failedAssertions": 3
+    },
+    "candidateAgentDoctorSuite": {
+      "tests": 295,
+      "failures": 0
+    },
+    "configuration": "Debug target build and directly executed AgentDoctorTests XCTest bundle; no full Release or App rebuild claimed",
+    "candidateCLIBuilt": true,
+    "realReplay": {
+      "since": "2026-10-19T00:00:00+00:00",
+      "until": "2026-10-19T05:37:26.964141+00:00",
+      "scope": {
+        "sourceFilesRead": 12,
+        "sourceFilesClipped": 4,
+        "literalNewDeclarationResults": 22,
+        "newDeclarationWithoutLegacyMarker": 22
+      },
+      "pairedExecReturns": 593,
+      "inputReplaySHA256": "48b409c70806efb31fc1d8421bafbe4d800bc9494793af2fa3af47e207919b50",
+      "temporaryRawReplayRetained": false,
+      "baselineBinarySHA256": "32479e722ab9b6540608e67f596d3dad43f8157726aca94458510ddfea853a52",
+      "candidateBinarySHA256": "306488bae1c66f5e2a11aef64ebba84e392bebda571917bf9a227d51a3e7b821",
+      "baselineMarkerResults": 4,
+      "candidateMarkerResults": 26,
+      "additionalMarkerResults": 22,
+      "returnedTextBytes": 2401042,
+      "returnedTextReferenceTokens": 695740,
+      "allOtherAccountingAndStatusFieldsEqual": true,
+      "boundary": "Paired exec returns from bounded recent log tails, not complete sessions. Marker presence is not a confirmed truncation layer, full-size estimate, service failure or billed usage."
+    },
+    "privacy": "Only aggregate reports and hashes retained; temporary paired raw tool returns removed and absence checked"
+  },
+  "limits": [
+    "A declared marker can also appear in quoted examples or returned source code; it is an observation, not trusted transport metadata",
+    "No marker does not establish complete output",
+    "The 593 paired returns come from bounded tails, four source files were clipped; not a full-session or all-tool ranking",
+    "Additional declarations are not additional tool failures and do not establish billed usage"
+  ],
+  "delivery": {
+    "sourceOnly": true,
+    "notIncludedInFrozen529Package": true,
+    "installedOrPublished": false,
+    "newModelEvaluations": 0
+  }
+}

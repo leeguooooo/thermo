@@ -301,5 +301,7 @@
     "realTaskQualityOrBilledTokenSavingsEstablished": false,
     "verificationDriversTerminal": true
   },
-  "privateEvidenceDirectoryName": "thermo-ai-review-release-2nm84edw"
+  "privateEvidenceDirectoryName": "thermo-ai-review-release-2nm84edw",
+  "productionParityMainCommitAtVerification": "428683b1099f9723cde8664583df1fb067568f32",
+  "productionParityIsHistoricalNotFutureMainAcceptance": true
 }
