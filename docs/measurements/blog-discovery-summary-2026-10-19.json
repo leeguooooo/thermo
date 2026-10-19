@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "task": "Discover a public published editorial post via blog-publish and download the selected locale/slug without mutations",
+  "sourceRepository": "leeguooooo/blog",
+  "testedSourceCommit": "25d7f6573ebb13ce4670d8e3fca759188dd86b12",
+  "testedSourceTree": "bfe7bd8e517acbb89b33eba0caf0ffb78445f01d",
+  "integratedCommit": "3e7c9b8f4b6abcfb7f3ac53928b4c29f76913e5e",
+  "sourceFilesSHA256": {
+    "packages/cli/README.md": "955eb2f5f2ec311137d1e2af3cb6ae449e766f62d8d2bb0993f6496a4e56a5b6",
+    "packages/cli/lib/cli.mjs": "e63d760da95a1a87477d134bdeb3b5a1fb95758c3cc92c560339f7ff86286da7",
+    "packages/cli/lib/core.mjs": "ef8bfe707b141303b70b0d9dabd44eaeb70a9a4e03ee46a19890da9c86dea508",
+    "packages/cli/tests/cli.test.mjs": "25a50049e8323d748e6b3c2bcb47e8d763b7a3d3841576a2f0e85fd08f4892a6",
+    "skills/blog-content-publish/SKILL.md": "1b5da63d966b0a68d71a2a7d6d6f603ff69020a7ae6688ba86d45ed7c844e277"
+  },
+  "observedList": {
+    "rows": 77,
+    "stdoutBytes": 187397,
+    "privateRows": 18,
+    "passwordProtectedRows": 7,
+    "publicEligibleRows": 52,
+    "decisionMetaCompactUTF8Bytes": 75347,
+    "decisionMetaASCIIJSONBytes": 110976
+  },
+  "candidate": {
+    "mode": "post-list --summary",
+    "stdoutBytes": 38090,
+    "stdoutReductionPercent": 79.6742,
+    "same77RowsInSameOrder": true,
+    "allRetainedFieldsEqual": true,
+    "samePublicSelection": true,
+    "publicDownloadIdentityVerified": true,
+    "publicDownloadBytes": 20428,
+    "bundleVersion": "0.1.22",
+    "bundleSHA256": "8dd28b76a475f8f66914716d0555e7e11e90826105261efaa3e12bfecf727033",
+    "fields": [
+      "id",
+      "slug",
+      "locale",
+      "pairId",
+      "section",
+      "contentType",
+      "title",
+      "status",
+      "publishedAt",
+      "updatedAt",
+      "isPrivate",
+      "passwordProtected"
+    ],
+    "responseLevelMetadataPreserved": true,
+    "absentFieldsNotFilled": true,
+    "flagValuesRefusedBeforeNetwork": true
+  },
+  "validation": {
+    "remoteRunId": "1c8b13cc-1ea4-4c31-8c10-11602bdbf4f1",
+    "host": "leos-MacBook-Pro.local",
+    "baselineNewCasesPassed": 1,
+    "baselineNewCasesFailed": 2,
+    "candidateCLITests": 25,
+    "candidateFailures": 0,
+    "bundleExitCode": 0,
+    "sourceUnchanged": true,
+    "artifactHashesVerified": 12
+  },
+  "skill": {
+    "beforeSHA256": "ecea94696e6adedc7fb58ebfcdfa63343ab8ff2ecd7bd72b504582e6c4fbbccd",
+    "afterSHA256": "1b5da63d966b0a68d71a2a7d6d6f603ff69020a7ae6688ba86d45ed7c844e277",
+    "descriptionUnchanged": true,
+    "managedCacheEdited": false,
+    "hostReloadClaimed": false,
+    "beforeBytes": 19220,
+    "afterBytes": 19584,
+    "canonicalInstalledFileUpdated": true,
+    "quickValidatePassed": true,
+    "installedCLIHelpStillLacksSummary": true,
+    "compatibility": "Use summary only if help advertises it; otherwise keep full list on disk and inspect task fields",
+    "unrelatedBlogChangedPathsPreserved": 17
+  },
+  "boundaries": {
+    "newModelRuns": 0,
+    "factualArticleQualityAudit": false,
+    "requestOrBillingTokensMeasured": false,
+    "latencyBenefitMeasured": false,
+    "APIResponseShrunk": false,
+    "defaultFullOutputChanged": false,
+    "CLIInstalled": false,
+    "CLIPublished": false,
+    "contentPublishedOrUpdated": false,
+    "CLIWholeBlogSuiteRun": false,
+    "hostSkillReloadVerified": false,
+    "fullListContainsPrivateMetadata": true,
+    "rawListAndArticleFilesDeleted": true
+  },
+  "discardedRawSHA256": {
+    "post-list.json": "36e505e2c2195554c9849652a5b517aff7876da2793126728723a985542fc4bb",
+    "candidate-summary.json": "66a6911a7af7cc326e8d52835e09cd93e6e06c7d4bb2bc7e67c11c01b29c5b0f",
+    "public-review.md": "a5e137dda9f30292d4fb9afbd1f44bc5bc1b506493646f806f3937a0ef40f156"
+  }
+}
