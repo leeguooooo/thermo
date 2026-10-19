@@ -3,6 +3,15 @@ import XCTest
 @testable import ThermoApp
 
 final class StructuredUsageSortTests: XCTestCase {
+    func testAppInstructionSortUsesSharedKnownAndUnknownRules() throws {
+        var skill = try row("skill", text: 1, json: 0); skill.kind = "skill"
+        XCTAssertEqual(ToolUsagePanel.UsageSort.instructions.value(skill), -1)
+        var load = SkillInstructionUsage(encoding: .heuristic); load.events = 1
+        skill.skillInstructions = load
+        XCTAssertEqual(ToolUsagePanel.UsageSort.instructions.value(skill), 0)
+        skill.skillInstructions?.estimatedTokens = -1
+        XCTAssertEqual(ToolUsagePanel.UsageSort.instructions.value(skill), -1)
+    }
     func testAppErrorSortKeepsUnmeasuredCountsAfterKnownZero() throws {
         var zero = try row("zero", text: 0, json: 0); zero.invocationFailures = 0
         let legacy = try row("legacy", text: 0, json: 0)

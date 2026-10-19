@@ -61,8 +61,23 @@ with tempfile.TemporaryDirectory(prefix='thermo-skill-loads-') as temporary:
     text = subprocess.check_output(base, env=env, text=True, timeout=30)
     assert 'Linked instruction loads: 3' in text and 'total loading is unknown' in text
     assert 'fixture-private' not in raw + text
+    ordered = json.loads(subprocess.check_output(base + ['--sort', 'instructions', '--json'], env=env, text=True, timeout=30))
+    assert ordered['toolOrdering'] == 'instructions'
+    assert {row['id']: row for row in ordered['tools']} == {row['id']: row for row in report['tools']}
+    assert [row['name'] for row in ordered['tools'][:2]] == ['fixture-large', 'fixture-small']
+    ordered_text = subprocess.check_output(base + ['--sort', 'instructions'], env=env, text=True, timeout=30)
+    assert 'Tool ordering: instructions' in ordered_text and 'Observed instruction text tokens: unknown' in ordered_text
+    assert 'Unknown or incomplete loading follows known counts' in ordered_text
+    assert 'share of observed skill returned-text tokens' not in ordered_text
+    assert 'fixture-private' not in ordered_text
+    heuristic_text = subprocess.check_output(base[:-2] + ['--sort', 'instructions'], env=env, text=True, timeout=30)
+    assert 'Observed instruction text tokens: ≈' in heuristic_text
+    assert 'Observed instruction text tokens: unknown' in heuristic_text
+    assert 'fixture-private' not in heuristic_text
     print(json.dumps({'passed': True, 'skillCalls': 3, 'linkedInstructionEvents': 3,
                       'linkedTextBytes': sum(size for _, size in expected.values()),
                       'acknowledgmentBytes': 9, 'duplicateLoadExcluded': True,
                       'unlinkedAndNonSkillMetadataExcluded': True, 'unknownLoadingNotZero': True,
-                      'instructionTextNotExported': True, 'noSkillOrMCPExecution': True}))
+                      'instructionTextNotExported': True, 'noSkillOrMCPExecution': True,
+                      'instructionOrderingAndJSONVerified': True, 'allToolCountersUnchanged': True,
+                      'heuristicCountsMarkedApproximate': True}))

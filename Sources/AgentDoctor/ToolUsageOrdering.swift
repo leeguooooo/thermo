@@ -3,7 +3,7 @@ import ThermoL10n
 
 /// Display order for observed content or call intervals, never request or billing usage.
 public enum ToolUsageOrdering: String, Codable, Sendable {
-    case text, structured, time, errors
+    case text, structured, time, errors, instructions
 
     public func count(for row: ToolUsageRow) -> Int? {
         let value: Int?
@@ -12,6 +12,9 @@ public enum ToolUsageOrdering: String, Codable, Sendable {
             value = row.referenceEncoding == nil ? row.returnedTextEstimatedTokens : row.referenceReturnedTextTokens
         case .structured:
             value = row.observedStructuredJSONTokens
+        case .instructions:
+            guard row.kind == "skill" else { return nil }
+            value = row.observedInstructionTokens
         case .errors:
             guard row.calls > 0, row.completed >= 0, row.completed <= row.calls,
                   row.knownStatusResults != nil, let failures = row.invocationFailures,
@@ -55,6 +58,8 @@ public enum ToolUsageOrdering: String, Codable, Sendable {
             return tr("Ranks observed explicit result errors plus host-reported invocation failures. Unmeasured or invalid counts follow known values. Missing results and unknown result statuses are not counted as errors; this is not a failure rate or service quality score.")
         case .structured:
             return tr("Ranks structured JSON reference or estimated tokens only when completed result envelopes were fully inspectable. Unknown entries follow known values; this is not model usage.")
+        case .instructions:
+            return tr("Ranks observed source-linked Skill instruction text. Unknown or incomplete loading follows known counts; this is not total Skill loading, request usage or billing.")
         }
     }
 }

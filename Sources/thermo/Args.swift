@@ -84,7 +84,7 @@ struct Args {
         }
         if let order = options["sort"] {
             guard isUsage else { throw CLIError("--sort is only supported by agents usage") }
-            guard ToolUsageOrdering(rawValue: order) != nil else { throw CLIError("--sort must be text, structured, time or errors") }
+            guard ToolUsageOrdering(rawValue: order) != nil else { throw CLIError("--sort must be text, structured, time, errors or instructions") }
         }
         if flags.contains("authorize-background") {
             guard Array(positionals.prefix(2)) == ["apps", "startup"],

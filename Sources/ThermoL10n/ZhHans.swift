@@ -2685,6 +2685,7 @@ let zhHans: [String: String] = [
     "Reads local Claude/Codex logs for the last 7 days, across projects. Prompts, arguments and result text stay out of the report.": "读取最近 7 天、跨项目的本地 Claude / Codex 日志。报告不包含提示词、参数或返回正文。",
     "Log reading complete within the selected scope": "所选范围内的日志读取完成",
     "Partial log coverage": "日志覆盖不完整",
+    "Ranks observed source-linked Skill instruction text. Unknown or incomplete loading follows known counts; this is not total Skill loading, request usage or billing.": "按有明确来源关联的 Skill 指令文本计数排序。未观测或不完整的加载排在已知计数之后；这不是 Skill 总加载量、请求用量或账单。",
     "Loaded instructions": "加载指令",
     "Share of observed linked instruction text tokens: %1$@": "占已观察的关联指令文本 token：%1$@",
     "Only explicitly source-linked Claude instruction messages are measured. Kept separate from tool replies and request counters; missing loads, referenced files and billing remain unknown.": "仅计量 Claude 日志中能明确关联的指令消息，与工具回执及请求用量分开；缺失的加载、引用文件和账单用量仍未知。",

@@ -57,7 +57,7 @@ struct ToolUsagePanel: View {
             case .text: return ToolUsageOrdering.text.count(for: row).map(Double.init) ?? -1
             case .structured: return ToolUsageOrdering.structured.count(for: row).map(Double.init) ?? -1
             case .instructions:
-                return row.observedInstructionTokens.map(Double.init) ?? -1
+                return ToolUsageOrdering.instructions.count(for: row).map(Double.init) ?? -1
             case .errors: return ToolUsageOrdering.errors.count(for: row).map(Double.init) ?? -1
             case .time: return ToolUsageOrdering.observedSeconds(for: row) ?? -1
             case .calls: return Double(row.calls)
@@ -70,7 +70,7 @@ struct ToolUsagePanel: View {
         case .time: return seconds(ToolUsageOrdering.observedSeconds(for: row))
         case .text: count = ToolUsageOrdering.text.count(for: row)
         case .structured: count = ToolUsageOrdering.structured.count(for: row)
-        case .instructions: count = row.observedInstructionTokens
+        case .instructions: count = ToolUsageOrdering.instructions.count(for: row)
         case .errors: return ToolUsageOrdering.errors.count(for: row).map { tr("%1$@ errors / failures", String($0)) } ?? tr("Unknown")
         case .calls: return nil
         }
@@ -107,7 +107,7 @@ struct ToolUsagePanel: View {
                 if let encoding = report.referenceEncoding { Text(tr("Ordinary-text reference encoding: %1$@", encoding)).font(.caption).foregroundStyle(.secondary) }
                 if model.running { Text(tr("Showing the previous analysis while refreshing…")).font(.caption).foregroundStyle(.secondary) }
                 let categoryRows = report.tools.filter { $0.kind == kind }
-                let sharedOrder: ToolUsageOrdering? = sort == .time ? .time : sort == .errors ? .errors : nil
+                let sharedOrder: ToolUsageOrdering? = sort == .time ? .time : sort == .errors ? .errors : sort == .instructions ? .instructions : nil
                 let rows = sharedOrder?.sorted(categoryRows) ?? categoryRows.sorted {
                     sort.value($0) == sort.value($1) ? $0.id < $1.id : sort.value($0) > sort.value($1)
                 }
@@ -270,8 +270,8 @@ struct ToolUsagePanel: View {
                     }
                     Text(ToolUsageTimingSummary.explanation).font(.caption).foregroundStyle(.secondary)
                 }
-                if sort == .structured || sort == .time || sort == .errors {
-                    Text((sort == .time ? ToolUsageOrdering.time : sort == .errors ? .errors : .structured).explanation)
+                if sort == .structured || sort == .time || sort == .errors || sort == .instructions {
+                    Text((sort == .time ? ToolUsageOrdering.time : sort == .errors ? .errors : sort == .instructions ? .instructions : .structured).explanation)
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Text(tr("%1$@ clipped files · %2$@ malformed lines · %3$@ other tool calls", String(report.coverage.clippedFiles), String(report.coverage.malformedLines), String(report.coverage.otherToolCalls)))

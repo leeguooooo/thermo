@@ -2,6 +2,38 @@ import XCTest
 @testable import AgentDoctor
 
 final class ToolUsageOrderingTests: XCTestCase {
+    func testInstructionOrderUsesLinkedLoadsRatherThanAcknowledgmentSize() {
+        var large = row("large", estimate: 1), small = row("small", estimate: 1000)
+        large.kind = "skill"; small.kind = "skill"
+        var load = SkillInstructionUsage(encoding: .heuristic); load.events = 1; load.estimatedTokens = 500
+        large.skillInstructions = load; load.estimatedTokens = 2; small.skillInstructions = load
+        XCTAssertEqual(ToolUsageOrdering.instructions.sorted([small, large]).map(\.id), ["large", "small"])
+        XCTAssertEqual(ToolUsageOrdering.text.sorted([small, large]).map(\.id), ["small", "large"])
+        large.referenceEncoding = "cl100k_base"; large.skillInstructions?.referenceTokens = 1
+        small.referenceEncoding = "cl100k_base"; small.skillInstructions?.referenceTokens = 10
+        XCTAssertEqual(ToolUsageOrdering.instructions.sorted([large, small]).map(\.id), ["small", "large"])
+    }
+    func testInstructionOrderPreservesUnknownIncompleteAndInvalidCountsAfterKnownZero() throws {
+        var zero = row("zero"); zero.kind = "skill"
+        var load = SkillInstructionUsage(encoding: .heuristic); load.events = 1
+        zero.skillInstructions = load
+        XCTAssertEqual(ToolUsageOrdering.instructions.count(for: zero), 0)
+        var unknown = zero; unknown.id = "unknown"; unknown.skillInstructions = nil
+        XCTAssertNil(ToolUsageOrdering.instructions.count(for: unknown))
+        XCTAssertEqual(ToolUsageOrdering.instructions.sorted([unknown, zero]).first?.id, "zero")
+        var invalid = zero; invalid.kind = "mcp"
+        XCTAssertNil(ToolUsageOrdering.instructions.count(for: invalid))
+        invalid = zero; invalid.skillInstructions?.events = 0
+        XCTAssertNil(ToolUsageOrdering.instructions.count(for: invalid))
+        invalid = zero; invalid.skillInstructions?.incompleteEvents = 1
+        XCTAssertNil(ToolUsageOrdering.instructions.count(for: invalid))
+        invalid = zero; invalid.skillInstructions?.estimatedTokens = -1
+        XCTAssertNil(ToolUsageOrdering.instructions.count(for: invalid))
+        invalid = zero; invalid.referenceEncoding = "cl100k_base"
+        XCTAssertNil(ToolUsageOrdering.instructions.count(for: invalid))
+        let decoded = try JSONDecoder().decode(ToolUsageRow.self, from: JSONEncoder().encode(unknown))
+        XCTAssertNil(ToolUsageOrdering.instructions.count(for: decoded))
+    }
     func testErrorOrderCountsDisjointObservationsWithoutRankingByRate() {
         var many = row("many"), single = row("single"), mixed = row("mixed")
         many.calls = 100; many.completed = 100; many.reportedErrors = 2; many.invocationFailures = 0
