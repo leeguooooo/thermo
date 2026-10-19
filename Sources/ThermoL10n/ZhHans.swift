@@ -2647,7 +2647,7 @@ let zhHans: [String: String] = [
     "User scope": "用户范围",
     "Choose a project for Skill inspection": "选择要检查 Skill 的项目",
     // Observed local tool usage
-    "Observed local log records only. Call/result elapsed time includes host overhead; overlapping calls are not wall-clock totals. Returned-text tokens are estimates, not billed usage. Request tokens are separate and never charged to individual tools. Script-wrapped MCP calls, implicit Skill reads, images and missing logs cannot be fully attributed.": "仅统计本地日志中的已观察记录。调用至结果的间隔包含宿主开销；并行调用的耗时合计不等于实际经过时间。返回文本 token 为估算，不是计费用量。请求 token 单列，不分摊到工具。脚本中嵌套的 MCP 调用、隐式 Skill 读取、图片和缺失日志无法完整归因。",
+    "Observed local log records only. Call/result elapsed time includes host overhead; overlapping calls are not wall-clock totals. Returned-text tokens are estimates, not billed usage. Request tokens are separate and never charged to individual tools. Script-wrapped MCP calls, host-preloaded Skill instructions (including explicit requests), images and missing logs cannot be fully attributed.": "仅统计本地日志中的已观察记录。调用至结果的间隔包含宿主开销；并行调用的耗时合计不等于实际经过时间。返回文本 token 为估算，不是计费用量。请求 token 单列，不分摊到工具。脚本中嵌套的 MCP 调用、宿主预加载的 Skill 指令（含显式调用）、图片和缺失日志无法完整归因。",
     "Observed usage": "已观察用量",
     "Analyze local logs": "分析本地日志",
     "Icon and _meta counters measure serialized directory text, not image tokens. Component views are not additive and do not prove model prompt usage.": "图标及 _meta 计量的是序列化目录文本，不是图片 token。各部分为独立视图，不能相加，也不证明模型实际加载量。",

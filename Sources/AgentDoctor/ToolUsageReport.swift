@@ -198,6 +198,6 @@ public struct ToolUsageReport: Codable, Sendable {
     }
 
     public static var explanation: String {
-        tr("Observed local log records only. Call/result elapsed time includes host overhead; overlapping calls are not wall-clock totals. Returned-text tokens are estimates, not billed usage. Request tokens are separate and never charged to individual tools. Script-wrapped MCP calls, implicit Skill reads, images and missing logs cannot be fully attributed.")
+        tr("Observed local log records only. Call/result elapsed time includes host overhead; overlapping calls are not wall-clock totals. Returned-text tokens are estimates, not billed usage. Request tokens are separate and never charged to individual tools. Script-wrapped MCP calls, host-preloaded Skill instructions (including explicit requests), images and missing logs cannot be fully attributed.")
     }
 }
