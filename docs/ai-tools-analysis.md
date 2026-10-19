@@ -169,6 +169,8 @@ App 的 MCP 页保留本窗口内手动“连接并检查”的计量，显示�
 
 HTTP 保留配置中的请求头，支持 Codex 的 bearer_token_env_var 和 env_http_headers。缺失环境变量、401 / 403 或认证挑战明确报告 authenticationRequired，不调用登录流程，不使用系统凭据或自动 Cookie，不跟随重定向，也不重放失败的请求。协议保留的会话头、版本头及传输字段不能由普通配置请求头覆盖。
 
+检查请求被 HTTP 拒绝时，JSON 的 `rejectedHTTPStatusCode` 保留具体状态码，401 / 403 文字提示也带状态码，避免把访问拒绝都压成同一句认证失败。它与会话关闭的 `cleanupDetails.httpStatusCode` 分开：检查成功但关闭返回 503，不会变成检查被拒绝。没有收到拒绝码或读取旧报告时该字段缺省；不从错误文字推断状态码，也不保存响应正文。
+
 HTTP 在初始化收到新会话 ID 后验证可见 ASCII 字符和长度，再将其与协商的协议版本带到后续请求。关闭时只对这次新建的会话尝试一次 DELETE，最多额外等待 250 ms。JSON 的 cleanupStatus 区分 closed、not_needed、server_retained 和 unconfirmed；工具清单成功不代表会话关闭已确认。会话 ID、凭据和响应正文不写入报告。
 
 后续新增的可选 `cleanupDetails` 单列原因、已取得的 HTTP 状态码、实际观察时间及预算；App 与 CLI 同时显示。没有收到状态码时保持未知，不用 0 代替。旧报告没有该字段时仍可读取；关闭预算和不重试策略保持不变。[诊断验证](measurements/mcp-cleanup-diagnostics-2026-10-17.json)覆盖 29 项测试和编译 CLI 的受控响应，其中 503、405、延迟超过预算、监听端口不可用及无会话分别核对。首轮夹具在关闭监听时提前退出，丢失最后的列表响应；原失败结果保留，修正生命周期并重新编译后全部通过。

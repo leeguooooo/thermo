@@ -1,0 +1,113 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "b2af5a8",
+  "field": "rejectedHTTPStatusCode",
+  "semantics": "Optional HTTP rejection status received for an inspection request. Absent for older reports, missing credentials, successful requests, transport/decode failures without a rejection, and session cleanup failures. Cleanup status stays in cleanupDetails.httpStatusCode.",
+  "sourceVerification": {
+    "matchedChangedFiles": 5,
+    "CLISHA256": "46553d8f7696f6ebec3fd83e7fa05e4759f74a35d91e0c055275e07157f45de8"
+  },
+  "validation": {
+    "host": "mac190",
+    "Xcode": "27.0",
+    "Swift": "6.4",
+    "SDK": "27.0",
+    "testsPassed": 51,
+    "testsFailed": 0,
+    "passingSuites": [
+      {
+        "suite": "AgentDoctorTests",
+        "tests": 51
+      }
+    ],
+    "contract": {
+      "passed": true,
+      "reports": [
+        {
+          "path": "/cleanup-error",
+          "cleanupStatus": "unconfirmed",
+          "details": {
+            "budgetSeconds": 0.25,
+            "elapsedSeconds": 0.003043500008061528,
+            "httpStatusCode": 503,
+            "reason": "httpError"
+          }
+        },
+        {
+          "path": "/cleanup-slow",
+          "cleanupStatus": "unconfirmed",
+          "details": {
+            "budgetSeconds": 0.25,
+            "elapsedSeconds": 0.2510630419710651,
+            "reason": "timedOut"
+          }
+        },
+        {
+          "path": "/no-session",
+          "cleanupStatus": "not_needed",
+          "details": {
+            "budgetSeconds": 0,
+            "elapsedSeconds": 0,
+            "reason": "notNeeded"
+          }
+        }
+      ],
+      "transportFailureVerified": true,
+      "textOutputShowsReasonStatusAndBudget": true,
+      "privateDetailsExcluded": true,
+      "noBusinessCalls": true,
+      "fixtureOnly": true,
+      "rejections": [
+        {
+          "status": 401,
+          "state": "authenticationRequired",
+          "requests": 2
+        },
+        {
+          "status": 403,
+          "state": "authenticationRequired",
+          "requests": 2
+        },
+        {
+          "status": 429,
+          "state": "failed",
+          "requests": 2
+        },
+        {
+          "status": 503,
+          "state": "failed",
+          "requests": 2
+        }
+      ],
+      "inspectionAndCleanupStatusesSeparate": true
+    },
+    "baselineRejectedForMissingField": true,
+    "oldReportDecodingVerified": true,
+    "nativeWindowAcceptanceRun": false,
+    "fullReleaseAcceptanceRun": false,
+    "baselineCLISHA256": "093a479aa4624fb0ea1f9b3f5a59c3f210eb619b32b028ed3ddf84b700b508a8"
+  },
+  "attemptNotes": [
+    "First integration attempt placed new HTTP cases after an existing case that stops the fixture listener; reordered the stopping case last. Both final candidate pass and baseline missing-field failure were rechecked with the corrected contract."
+  ],
+  "boundaries": {
+    "externalMCPContacted": false,
+    "businessToolsCalled": false,
+    "automaticLoginOrRetry": false,
+    "credentialsOrResponseBodiesExported": false,
+    "hostManagedOAuthInferred": false,
+    "installedOrPublished": false,
+    "businessQualityImprovementClaimed": false
+  },
+  "evidenceSHA256": {
+    "tests.log": "5cdde9a163de19419b5e429badb0728692afa216c127f1e1e57cb4b36571bb1b",
+    "tests.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "candidate-contract.json": "401b880a6182e12234c39199cd31769e5322c6bf6c0a2e18c7705f8a62c14021",
+    "candidate-contract.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "candidate-contract-initial.stderr": "7e5e99a45a9ccadf841f1b2f29967eb6551c4a4e77982eab621e52e876ce993d",
+    "baseline-final.stderr": "f75e55f0590ce9c63b40b3f5cf807c6d56787b8f1d282184d62173165e041b4d",
+    "baseline-final.exit": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+    "source-hashes.json": "4a9b630c133e3f6ee9db8e0a30d4792d9eb52523e5fbb1801413f8f08fe1bf19",
+    "source-match.json": "67ad5a8b130f766214651fbe0f27b1ed6f5cd5c5f135f54169461b47651ef8d9"
+  }
+}
