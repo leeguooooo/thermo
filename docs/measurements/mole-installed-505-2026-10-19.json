@@ -89,5 +89,6 @@
     "Accept the next actual version upgrade without manual helper repair",
     "Screen permission and hardware-session acceptance",
     "Complete parity matrix"
-  ]
+  ],
+  "followUp": "mole-installed-506-2026-10-19.json"
 }

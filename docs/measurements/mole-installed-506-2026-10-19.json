@@ -1,0 +1,104 @@
+{
+  "date": "2026-10-19",
+  "source": "3ca5039",
+  "version": "1.1.31",
+  "build": "506",
+  "package": {
+    "developerIDTeam": "6ZPXG4KVVS",
+    "metadataVerified": true,
+    "architectures": {
+      "Contents/MacOS/Thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo-helper": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "appleEventsEntitlement": true,
+    "nativeAndRosettaCLI": true,
+    "readOnlyChargeProbe": true,
+    "archive": {
+      "archive": "Thermo-1.1.31-506-candidate.zip",
+      "sha256": "226d325fbbff22edc08d92f5320628310571f05f38d70aef41951a2c1aea5d87",
+      "regularFiles": 93,
+      "symlinks": 8,
+      "filesModesAndLinksMatch": true,
+      "unpackedDeepStrictAllArchSignaturePass": true
+    },
+    "lifecyclePassed": true,
+    "lifecycleSamples": 23,
+    "transitionChecks": {
+      "cycle-1-hidden": true,
+      "cycle-1-leave-overview": true,
+      "cycle-1-return-overview": true,
+      "cycle-1-visible-again": true,
+      "cycle-2-hidden": true,
+      "cycle-2-leave-overview": true,
+      "cycle-2-return-overview": true,
+      "cycle-2-visible-again": true
+    }
+  },
+  "deployment": {
+    "old505NormalQuitVerified": true,
+    "atomicExchange": true,
+    "oldAppAndRootFilesBackedUp": true,
+    "oldAppRetained": true,
+    "appControlVersion": "1.1.31 (506)",
+    "helperVersion": "8/1.1.31",
+    "helperPID": 34898,
+    "rootMatchesEmbedded": true,
+    "rootSHA256": "89259f18083eaa9228da073d6a69d2616fd8486e908d6c6af2e31a826bc3b32c",
+    "manualHelperInstallNeeded": false
+  },
+  "registrationUpgrade": {
+    "accepted": true,
+    "newAppObservedOutdatedLegacy": true,
+    "all17ObservedJobsPresent": true,
+    "sampleCount": 17,
+    "consecutiveRecoveredManualTargetChecks": 6,
+    "oldPID": 5490,
+    "newPID": 34898,
+    "traceSHA256": "99a7e12255a9adce66ef05aacb7c500cb246ce3aeffc312caacad6f71b8d0367"
+  },
+  "shutdownRecovery": {
+    "automaticControlConfirmed": false,
+    "oldHelperMessage": "2026-10-19 10:47:20 thermo-helper: updated itself to 1.1.31 from /Applications/Thermo.app/Contents/Helpers/thermo-helper; automatic control unconfirmed: fan 0: automatic mode readback did not match",
+    "rootCauseEstablished": false,
+    "sourceFinding": "FanWriter.setAuto writes the preferred automatic mode and immediately verifies, without the bounded transition settling used for manual mode. Original auto mode 3 is preserved on machines without Ftst; which condition caused this hardware failure is not yet established.",
+    "wholeUpgradeAccepted": false
+  },
+  "currentFan": {
+    "requestedRPM": 6617,
+    "observation": {
+      "checkedAt": "2026-10-19T01:52:18Z",
+      "mode": "manual",
+      "target": 6617
+    },
+    "suspended": false,
+    "failure": null,
+    "rotorRPM": 6708.03271484375
+  },
+  "visibleUI": {
+    "settingsVersionAndHelperRunning": true,
+    "fanExistingPolicyAndManualTargetReadable": true,
+    "helperErrorBannerAbsent": true
+  },
+  "sourceIntegration": {
+    "isolatedBranch": "codex/mole-charging-8f4122f",
+    "mainNotChanged": "Main has newer commits and uncommitted TabOrganizer work; left intact"
+  },
+  "notarized": false,
+  "published": false,
+  "remaining": [
+    "Automatic-mode recovery readback and real hardware confirmation",
+    "Usable repair action for nonresponding/outdated helper in GUI",
+    "Screen permission and hardware sessions",
+    "Full parity matrix and later source integration"
+  ]
+}

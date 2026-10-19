@@ -2,7 +2,9 @@
 
 先补可靠性与核心流程，再打磨界面。参照本地 Mole 原生 App 1.16.0（324），证据见 [原生研究](mole-native-study.md)和[函数研究](mole-native-functions.md)。整体齐平仍未成立。
 
-2026-10-19 本机已更新为 1.1.30（505），源码 `1612982`。通用 Developer ID 包、原生/Rosetta CLI、只读探测、签名后的两轮窗口生命周期与 ZIP 解包文件/权限/链接一致性通过。493 正常退出并完成原子替换，旧 App、helper 和 plist 全部保留。本次自动升级暴露注册方式混用：App 对仍采用密码安装的旧 helper 调用 SMAppService 注销后，重注册返回 Operation not permitted，root job 消失。已通过官方 CLI 安装事务恢复为 8/1.1.30，原 6617 RPM 策略恢复，6 次手动目标核对通过，设置页显示运行中。未新设硬件策略。此包不算自动升级验收通过；源码正在补禁止注销 legacy 注册的保护，尚未部署，也未公证或公开发布。见 [505 安装及故障恢复](measurements/mole-installed-505-2026-10-19.json)。
+2026-10-19 当前本机为 1.1.31（506），源码 `3ca5039`。本次真实升级中，新 App 确实观察到旧 legacy helper；17 次采样均保留 launchd 注册，root helper 自主从 8/1.1.30 更新为 8/1.1.31，未调用安装器。原 6617 RPM 策略完成 6 次连续手动目标核对，设置页与风扇页可见检查通过。但旧 helper 退出日志记录“automatic control unconfirmed: fan 0: automatic mode readback did not match”；新服务已恢复既有手动策略，不能据此宣称自动模式恢复或整条升级全通过。候选签名、原生/Rosetta CLI、ZIP 一致性和 23 个生命周期观测点通过。主工作区有新提交和未提交的标签整理改动，保持原样；修复仍在隔离分支，未公证或发布。见 [506 安装与分项验收](measurements/mole-installed-506-2026-10-19.json)。
+
+前一检查点（2026-10-19）本机更新为 1.1.30（505），源码 `1612982`。通用 Developer ID 包、原生/Rosetta CLI、只读探测、签名后的两轮窗口生命周期与 ZIP 解包文件/权限/链接一致性通过。493 正常退出并完成原子替换，旧 App、helper 和 plist 全部保留。本次自动升级暴露注册方式混用：App 对仍采用密码安装的旧 helper 调用 SMAppService 注销后，重注册返回 Operation not permitted，root job 消失。已通过官方 CLI 安装事务恢复为 8/1.1.30，原 6617 RPM 策略恢复，6 次手动目标核对通过，设置页显示运行中。未新设硬件策略。此包不算自动升级验收通过；当时源码正在补禁止注销 legacy 注册的保护，尚未部署，也未公证或公开发布。见 [505 安装及故障恢复](measurements/mole-installed-505-2026-10-19.json)。
 
 2026-10-18 已继续安装 1.1.29（493），源码 `a0491ee`。1,697 项非硬件测试、Developer ID 通用签名、原生/Rosetta CLI、ZIP 95 文件比对及 Release 离屏窗口检查通过。真实 root helper 自动更新为协议 8/1.1.29，原有 6617 RPM 策略恢复为已核对手动模式与目标，6 次连续检查通过，转速约 6562–6622 RPM；AWDL 恢复为 idle，接口保持开启，专用锁为 root/0600；充电仍关闭，未新启充电或 AWDL 会话。旧版副本经内容、签名、归属、进程和打开文件检查后移至专用备份目录，文件全部保留。此前可视窗口读取受 `cgWindowNotFound` 阻塞，2026-10-19 已恢复读取，设置、风扇及电池/AWDL/清屏面板完成局部检查；最初后台绑定窗口时总览持续等待；经“显示 → 概览”正常打开后负载、热压力、程序及当天时间轴恢复，CPU 页采样和返回总览通过，先前可见性状态原因尚未确定；清屏缺少辅助功能授权，不能认定完整可视验收通过（见 [493 可视复验](measurements/mole-visible-493-2026-10-19.json)）；已恢复原版自动更新地址并核对原有 Apple Events 自动化声明，更新状态可用；本地候选未公证或发布，完整齐平仍未成立。见 [493 安装复验](measurements/mole-installed-493-2026-10-18.json)。 真实生产 root 服务另完成 3 个签名身份的版本 RPC 对照：允许角色成功、同标识 ad-hoc 与同团队错误标识拒绝，见 [生产签名身份检查](measurements/helper-production-peer-trust-2026-10-18.json)。
 
@@ -978,3 +980,5 @@ System 域进程归属（2026-10-17）：当前用户进程查询 GUI/User/Syste
 2026-10-19 主线近期 AI 诊断改动已合入隔离分支；合并源码 `857dcdc` 的 1,711 项非硬件回归全部通过（核心 198、helper 30、CLI 108、App 304、清理 751、诊断 275、AgentCore 45）。见 [整合回归](measurements/mole-integrated-regression-2026-10-19.json)。随后仅将版本准备为 1.1.30，用于本地签名候选构建；当前安装仍为 1.1.29（493），未公开发布。
 
 2026-10-19 已补 helper 升级注册保护：自动过期重启和密码安装接管前均先检查 legacy 安装，存在时不调用 SMAppService 注销；异步重启实际执行前再次复查，托管重启至多一次，注销失败不继续注册或反复注销。1.1.31 源码的核心/helper/CLI/App 共 642 项非硬件回归通过，另有 7 项针对性检查。尚未部署此保护，需用下一次真实版本更新验证 legacy job 保留及自主更新。见 [注册方式保护](measurements/helper-upgrade-registration-2026-10-19.json)。
+
+506 之后仍需处理：`FanWriter.setAuto` 的写入/读回失败，不能将手动策略恢复视为自动恢复成功；此外风扇页过期状态仅显示更新通知，设置页无响应时只有卸载入口，“重新安装”走 beginSetup 时可能因 SMAppService 状态仍 enabled 而等待，需要补实际可用的显式修复入口。以上均未作为本次已完成项。

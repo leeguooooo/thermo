@@ -38,6 +38,7 @@
     "managedRestartOnceOnly": true,
     "failedUnregisterDoesNotRegisterOrRepeat": true
   },
-  "installedGuardAccepted": false,
-  "remaining": "Build and install signed 1.1.31, then verify real legacy helper auto-update without losing its launchd registration"
+  "installedGuardAccepted": true,
+  "remaining": "Registration preservation and autonomous update passed; old-process automatic fan recovery was unconfirmed and remains a separate gate.",
+  "installedFollowUp": "mole-installed-506-2026-10-19.json"
 }
