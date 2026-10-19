@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "sourceRepository": "leeguooooo/blog",
+  "sourceCommit": "7874b37b450d0e4a4b94ed996f3c20ee4effc1f2",
+  "integratedCommit": "d86d285d902d12ab04038b85cc16b793fa047dcc",
+  "problem": "HTML publishing and video upload/embed details were always part of the skill entrypoint, even for the previously observed discovery-only task",
+  "contentPreservation": {
+    "beforeBytes": 20410,
+    "afterBytes": 15958,
+    "htmlMovedBytes": 2066,
+    "mediaMovedBytes": 2762,
+    "htmlSHA256": "9ba5361bdbdb2d1e504a34eaa70019d7579cf8f11d4cc513a966fee1158edbfc",
+    "mediaSHA256": "23d1d8cf994982b419bf160aef21203e8ded55f22b09dddb7aa1abcffd232f37",
+    "chunksMovedVerbatim": true,
+    "frontmatterUnchanged": true,
+    "beforeSHA256": "1332bfb91bae3f98f2af31a17ee086412d2da249d031fa5b280511f51e347d77",
+    "afterSHA256": "8db2a4323419d36f333f20332790dd70c7287706706863b669a7f8cc90194676"
+  },
+  "measurement": {
+    "method": "Fixed Thermo 1.1.37 (552) context command, isolated homes with exactly one Codex skill and no MCP servers",
+    "meteringBinarySHA256": "e9ee9b675260f1aae4f8acb537100237be9fc4ce7ccd38d4ecd8aaa3fb2cc22d",
+    "encoding": "cl100k_base",
+    "engine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+    "beforeCatalog": {
+      "bytes": 177,
+      "characters": 177,
+      "estimatedTokens": 45,
+      "estimator": "ascii4-unicode1-v1",
+      "lines": 2,
+      "referenceEncoding": "cl100k_base",
+      "referenceTokens": 38
+    },
+    "afterCatalog": {
+      "bytes": 177,
+      "characters": 177,
+      "estimatedTokens": 45,
+      "estimator": "ascii4-unicode1-v1",
+      "lines": 2,
+      "referenceEncoding": "cl100k_base",
+      "referenceTokens": 38
+    },
+    "beforeDocument": {
+      "bytes": 20410,
+      "characters": 20330,
+      "estimatedTokens": 5113,
+      "estimator": "ascii4-unicode1-v1",
+      "lines": 294,
+      "referenceEncoding": "cl100k_base",
+      "referenceTokens": 5016
+    },
+    "afterDocument": {
+      "bytes": 15958,
+      "characters": 15908,
+      "estimatedTokens": 3996,
+      "estimator": "ascii4-unicode1-v1",
+      "lines": 208,
+      "referenceEncoding": "cl100k_base",
+      "referenceTokens": 3800
+    },
+    "entryReferenceTokenReduction": 1216,
+    "beforeAllMarkdownBytes": 32461,
+    "afterAllMarkdownBytes": 32837,
+    "allDocumentationBytesReduced": false
+  },
+  "referenceValidation": {
+    "before": {
+      "checkedLocalReferences": 1,
+      "complete": true,
+      "frontMatterParser": "Yams-6.2.2",
+      "issues": [],
+      "parser": "swift-markdown-0.9.0",
+      "skippedReferences": 0
+    },
+    "after": {
+      "checkedLocalReferences": 3,
+      "complete": true,
+      "frontMatterParser": "Yams-6.2.2",
+      "issues": [],
+      "parser": "swift-markdown-0.9.0",
+      "skippedReferences": 0
+    },
+    "movedChunksByteIdentical": true,
+    "sharedQualityAndRecoverySectionsRemainInEntrypoint": true
+  },
+  "routingExamplesNotModelEvals": {
+    "discovery": [
+      "SKILL.md"
+    ],
+    "publishedContentReview": [
+      "SKILL.md",
+      "references/reviewing-existing-content.md"
+    ],
+    "HTMLPublishing": [
+      "SKILL.md",
+      "references/html-inputs.md"
+    ],
+    "videoOrUpload": [
+      "SKILL.md",
+      "references/media-and-video.md"
+    ],
+    "HTMLWithMedia": [
+      "SKILL.md",
+      "references/html-inputs.md",
+      "references/media-and-video.md"
+    ]
+  },
+  "installed": {
+    "canonicalSkillUpdated": true,
+    "filesSHA256": {
+      "SKILL.md": "8db2a4323419d36f333f20332790dd70c7287706706863b669a7f8cc90194676",
+      "references/html-inputs.md": "9ba5361bdbdb2d1e504a34eaa70019d7579cf8f11d4cc513a966fee1158edbfc",
+      "references/media-and-video.md": "23d1d8cf994982b419bf160aef21203e8ded55f22b09dddb7aa1abcffd232f37"
+    },
+    "quickValidatePassed": true,
+    "frontmatterUnchanged": true,
+    "managedCacheEdited": false,
+    "unrelatedBlogDirtyPathsPreserved": 1
+  },
+  "boundaries": {
+    "newModelRuns": 0,
+    "requestOrBillingTokenSavingsMeasured": false,
+    "taskQualityBenefitMeasured": false,
+    "hostSkillReloadVerified": false,
+    "newCLIBuildOrInstall": false,
+    "contentPublished": false,
+    "instructionsRemovedRatherThanMoved": false
+  }
+}
