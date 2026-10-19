@@ -1,0 +1,47 @@
+{
+  "checkedAt": "2026-10-19T19:16:13.423072+00:00",
+  "installedVersion": "1.1.40 (611) R14",
+  "canonicalReproduced": {
+    "visibleHistoryRows": true,
+    "AXBodyOnlyEmptyScrollArea": true,
+    "voiceOverAccepted": false,
+    "CLIVerifiedHistoryRows": 238,
+    "CLIReadComplete": true
+  },
+  "visiblePositiveControlProbe": {
+    "remoteRun": "0bc80c58-4e2c-4a23-95cd-811fca41f29c",
+    "inputCommit": "4484c0338e3610a76125211e093dfca68ef4173b",
+    "normalWindowBaselineTextAndButtonExposed": true,
+    "threeRecords": {
+      "AXCharacters": 1117,
+      "rowsExposed": 3,
+      "refreshExposed": true
+    },
+    "threeHundredRecords": {
+      "AXCharacters": 596,
+      "rowsExposed": 0,
+      "refreshExposed": false
+    },
+    "threeHundredWithContainModifier": {
+      "AXCharacters": 596,
+      "rowsExposed": 0,
+      "refreshExposed": false
+    },
+    "switchBackToThreeRestoresExposure": true,
+    "privateQAAppClosed": true,
+    "recordGeneration": "synthetic in memory; 300 records span current and previous day"
+  },
+  "productionJournalUnchanged": true,
+  "rootHelperUnchanged": true,
+  "productionMainSourceUnchanged": true,
+  "interpretation": "Large fixture correlates with missing AX body. Outer contain modifier did not help. This does not identify OS accessibility vs reader-tool traversal cause and is not VoiceOver acceptance.",
+  "next": "Compare eager and per-row lazy history layout in same visible private harness",
+  "initialHarnessSetup": {
+    "run": "ecde9dcf-f5c9-4247-a0c2-30d960ce5eea",
+    "stoppedBeforeCompiler": true,
+    "reason": "Entry marker matched both observer and top-level call; changed to unique top-level sequence",
+    "evidence": "dist/remote-190/history-visible-ax-first-result.json",
+    "productionSourceChanged": false
+  },
+  "inspectorCrossCheck": "Target chooser not fully exposed by current desktop tool; no independent audit or VoiceOver result"
+}

@@ -1,0 +1,89 @@
+{
+  "checkedAt": "2026-10-19T21:12:40.093045+00:00",
+  "installed": true,
+  "version": "1.1.40",
+  "build": "611.16",
+  "reviewRevision": 16,
+  "baseCommitCount": "611",
+  "privateReviewBuildOverride": true,
+  "sourceCommit": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+  "inputCommit": "476b47f4ce1c3ee9d535167ef7f1dc3ec574ec84",
+  "workingTree": "dirty",
+  "pid": "21046",
+  "testAndBuildInputIdentical": true,
+  "remoteRun": "ff00bbfd-5c44-4ad2-8ef7-398a24cd6352",
+  "nonHardwareTests": 1931,
+  "nonHardwareFailures": 0,
+  "sourceFilesVerified": 611,
+  "negativeControl": {
+    "run": "3632ec9c-eba6-4102-9676-e655026d157e",
+    "sameInputAsPositiveRun": true,
+    "expectedBehaviorFailures": 5,
+    "compilerFailures": 0,
+    "neverInstalled": true
+  },
+  "zipSHA256": "b31f8563ca25be47ed56f7b9f2e9c6505fc834a863243bf6bda6e33d81f2ba13",
+  "manifestEntriesVerified": 103,
+  "signatureVerifiedAfterLaunch": true,
+  "nativeOverview": {
+    "observedCapacity": "1.2 GB",
+    "headlineAndContextUseSameMetricAndValue": true,
+    "capacityImpactExpressedAsPossibility": true,
+    "unsupportedLoadCauseClaimAbsent": true,
+    "unconditionalQuitCannotHelpClaimAbsent": true,
+    "swapCapacityDistinguishedFromCurrentActivity": true,
+    "visualLayoutChecked": true,
+    "otherSyntheticDiagnosticBranchesNotIndividuallyRenderedInCanonicalApp": true
+  },
+  "nativeGUI": {
+    "versionSourceAndBuildVisible": true,
+    "CPUUploadDataStackedPreferencesPreserved": true,
+    "leftRightPreferencesPreserved": true,
+    "clickHintAndCustomizationEntryVisible": true,
+    "settingsRouteDismissesPopover": true,
+    "foregroundPanelAndSystemPulseStoppedAfterRoute": true,
+    "physicalGlobalStatusBarClicksRetested": false
+  },
+  "upgradeObservation": {
+    "passed": true,
+    "samples": 40,
+    "consecutiveRecoveredChecks": 6
+  },
+  "rootHelperAndPlistUnchanged": true,
+  "fanPoliciesUnchanged": true,
+  "naturalMemoryHistoryAppend": {
+    "installedInput": "476b47f4ce1c3ee9d535167ef7f1dc3ec574ec84",
+    "unexpiredPriorRowsPreservedExactly": 270,
+    "duplicateLineCountsVerified": true,
+    "expiredPriorRowsAtAppend": 1,
+    "retentionCutoffAnchorUnixSeconds": 1792444188.525219,
+    "beforeValidRecords": 271,
+    "afterValidRecords": 271,
+    "newRecordTimesUTC": [
+      "2026-10-19T21:09:48.525219+00:00"
+    ],
+    "beforeInvalidLines": 0,
+    "afterInvalidLines": 0,
+    "programNamesAndIdentityContentsExported": false,
+    "hardwareWritesRequested": false,
+    "scope": "Natural first background memory-history append after App restart; no schedule or preference changes"
+  },
+  "offscreenLifecycle": {
+    "functionalChecksPassed": true,
+    "samples": 23,
+    "memoryGrowthAssessed": false
+  },
+  "R15Backup": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.16-diagnostics-r16-mac190/pre-upgrade-r15-backup/Thermo.app",
+  "R15DisplacedCopy": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.16-diagnostics-r16-mac190/displaced-r15.app",
+  "evidenceRoot": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.16-diagnostics-r16-mac190",
+  "sourceChangedOnlyForDiagnosticsAndTests": true,
+  "diagnosticEnumsAndActionKindsUnchanged": true,
+  "thresholdsUnchanged": true,
+  "noNewSamplerOrAutomaticStopOrCleanup": true,
+  "chargingWriteSessionStarted": false,
+  "chargingApprovalStillPending": true,
+  "overallParityEstablished": false,
+  "notarized": false,
+  "published": false,
+  "sourceMergedIntoMain": false
+}

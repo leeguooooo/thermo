@@ -1,0 +1,248 @@
+{
+  "checkedAt": "2026-10-19T18:18:11.017018+00:00",
+  "version": "1.1.40 (606)",
+  "inputCommit": "27ec7877c870d035611a2b56507a3aa47a191e81",
+  "executionHost": "Local M3 GUI target; no compilation or automated test build",
+  "measurements": [
+    {
+      "artifact": "dist/mole-review-1.1.40-606-main-integration-r12-mac190/live-cost-visible.json",
+      "sha256": "8831cf88522c11f65ddaa89dca5dd1d3b462224306496f7a7e0baf2456ff688c",
+      "phase": "visible-settings",
+      "samples": 16,
+      "summary": {
+        "wallSeconds": 15.135549916999999,
+        "cpuTimeSeconds": 0.46000000000000085,
+        "cpuPercentOfOneCore": 3.039202424243182,
+        "cpuTimeResolutionSeconds": 0.01,
+        "residentKBMin": 69200,
+        "residentKBMax": 73728,
+        "residentKBMean": 71564
+      },
+      "segments": [
+        {
+          "seconds": 15.135549916999999,
+          "cpuPercentOfOneCore": 3.039202424243182
+        }
+      ],
+      "statusBefore": {
+        "appVersion": "1.1.40 (606)",
+        "busy": "false",
+        "controlProtocol": "1",
+        "keepAwakePhase": "idle",
+        "keepAwakeRequested": "false",
+        "menuPanelOpen": "false",
+        "menuPanelSampling": "false",
+        "pulseHolders": "0",
+        "pulseSampling": "false",
+        "screenActive": "false",
+        "windowVisible": "true"
+      },
+      "statusAfter": {
+        "appVersion": "1.1.40 (606)",
+        "busy": "false",
+        "controlProtocol": "1",
+        "keepAwakePhase": "idle",
+        "keepAwakeRequested": "false",
+        "menuPanelOpen": "false",
+        "menuPanelSampling": "false",
+        "pulseHolders": "0",
+        "pulseSampling": "false",
+        "screenActive": "false",
+        "windowVisible": "true"
+      }
+    },
+    {
+      "artifact": "dist/mole-review-1.1.40-606-main-integration-r12-mac190/live-cost-closed.json",
+      "sha256": "893ec449e34ad26d90025b490870f1644e2f469f2c8d2b15373260a20d002b37",
+      "phase": "window-closed",
+      "samples": 16,
+      "summary": {
+        "wallSeconds": 15.163999666000002,
+        "cpuTimeSeconds": 0.060000000000002274,
+        "cpuPercentOfOneCore": 0.3956739733681966,
+        "cpuTimeResolutionSeconds": 0.01,
+        "residentKBMin": 39584,
+        "residentKBMax": 41952,
+        "residentKBMean": 40807
+      },
+      "segments": [
+        {
+          "seconds": 15.163999666000002,
+          "cpuPercentOfOneCore": 0.3956739733681966
+        }
+      ],
+      "statusBefore": {
+        "appVersion": "1.1.40 (606)",
+        "busy": "false",
+        "controlProtocol": "1",
+        "keepAwakePhase": "idle",
+        "keepAwakeRequested": "false",
+        "menuPanelOpen": "false",
+        "menuPanelSampling": "false",
+        "pulseHolders": "0",
+        "pulseSampling": "false",
+        "screenActive": "false",
+        "windowVisible": "false"
+      },
+      "statusAfter": {
+        "appVersion": "1.1.40 (606)",
+        "busy": "false",
+        "controlProtocol": "1",
+        "keepAwakePhase": "idle",
+        "keepAwakeRequested": "false",
+        "menuPanelOpen": "false",
+        "menuPanelSampling": "false",
+        "pulseHolders": "0",
+        "pulseSampling": "false",
+        "screenActive": "false",
+        "windowVisible": "false"
+      }
+    },
+    {
+      "artifact": "dist/mole-review-1.1.40-606-main-integration-r12-mac190/live-cost-closed-extended.json",
+      "sha256": "32e892249b94a77462c201e837424d4800a76fb00620d7e219517cca65c7a54d",
+      "phase": "window-closed",
+      "samples": 121,
+      "summary": {
+        "wallSeconds": 121.237172167,
+        "cpuTimeSeconds": 1.370000000000001,
+        "cpuPercentOfOneCore": 1.130016459071541,
+        "cpuTimeResolutionSeconds": 0.01,
+        "residentKBMin": 34496,
+        "residentKBMax": 97264,
+        "residentKBMean": 40508.03305785124
+      },
+      "segments": [
+        {
+          "seconds": 30.280824709,
+          "cpuPercentOfOneCore": 0.5614113936251912
+        },
+        {
+          "seconds": 30.301537166000003,
+          "cpuPercentOfOneCore": 2.4091187057635506
+        },
+        {
+          "seconds": 30.313010666999993,
+          "cpuPercentOfOneCore": 0.5608152943550103
+        },
+        {
+          "seconds": 30.341799625000007,
+          "cpuPercentOfOneCore": 0.9887350246450672
+        }
+      ],
+      "statusBefore": {
+        "appVersion": "1.1.40 (606)",
+        "busy": "false",
+        "controlProtocol": "1",
+        "keepAwakePhase": "idle",
+        "keepAwakeRequested": "false",
+        "menuPanelOpen": "false",
+        "menuPanelSampling": "false",
+        "pulseHolders": "0",
+        "pulseSampling": "false",
+        "screenActive": "false",
+        "windowVisible": "false"
+      },
+      "statusAfter": {
+        "appVersion": "1.1.40 (606)",
+        "busy": "false",
+        "controlProtocol": "1",
+        "keepAwakePhase": "idle",
+        "keepAwakeRequested": "false",
+        "menuPanelOpen": "false",
+        "menuPanelSampling": "false",
+        "pulseHolders": "0",
+        "pulseSampling": "false",
+        "screenActive": "false",
+        "windowVisible": "false"
+      }
+    }
+  ],
+  "assessment": {
+    "longTermMemoryGrowthAssessed": false,
+    "moleBaselineMeasured": false,
+    "overallParityEstablished": false,
+    "extendedClosedCPUPercentOfOneCore": 1.130016459071541,
+    "unattributedTransientResidentPeakMiB": 94.984375,
+    "transientCauseIdentified": false,
+    "shortSampleInsufficientForStableIdleClaim": true,
+    "menuPanelAndForegroundSystemPulseStoppedAtBoundaries": true,
+    "backgroundPulseRecorderStopped": false,
+    "backgroundPulseRecorderStatusFieldAvailable": false
+  },
+  "limitations": [
+    "Short single-process observation under current host load and memory pressure",
+    "ps RSS is resident memory, not Activity Monitor footprint or total allocations",
+    "Window/panel state checked at phase boundaries, not every instant",
+    "No wakeup counter, long-term leak assessment or measured Mole baseline",
+    "Boundary status RPC is outside CPU-counter interval; ps samples themselves add observer overhead"
+  ],
+  "backgroundTaskAudit": {
+    "journalFieldsRead": "t only; no program names or contents exported",
+    "journalRecordsDuringExtendedObservation": {
+      "pulse-history.jsonl": [
+        "2026-10-19T18:16:49.541410+00:00",
+        "2026-10-19T18:17:49.534443+00:00"
+      ],
+      "memory-history.jsonl": [
+        "2026-10-19T18:16:49.549090+00:00"
+      ]
+    },
+    "scheduledACSeconds": 60,
+    "scheduledBatterySeconds": 300,
+    "programMemoryMinimumAgeSeconds": 290,
+    "timerLeewaySeconds": 5,
+    "rssPeakAtUTC": "2026-10-19T18:16:50.786649+00:00",
+    "interpretation": "History and memory record timestamps coincide with transient growth. Correlation only; no stack or isolated causal attribution. Foreground sampling false does not imply background history inactive.",
+    "sourceSHA256": {
+      "Sources/ThermoApp/PulseRecorder.swift": "ae6e971d4348ecb55deebcf8568fa083ef2c0c25f5806730f1622a5aaaaf99e6",
+      "Sources/ThermoApp/AppControlHost.swift": "a00c485afc6d325dfcf6de6d8c1760fc871b732056cd038775d94ced5fa05b4c",
+      "Sources/ThermoApp/Monitor.swift": "3cebdac0f6ac4058c6b8588cf403fcf4f2183082a41fff07b4494fe97f072957",
+      "Sources/CleanKit/MemoryState.swift": "6af11d06e057ef7f53b33b9f257f4cad67579d902392e36869a3f2e40d2cd7ec"
+    },
+    "laterStackObservation": {
+      "rawArtifact": "dist/mole-review-1.1.40-606-main-integration-r12-mac190/closed-background-stacks.txt",
+      "symbolicationArtifact": "dist/mole-review-1.1.40-606-main-integration-r12-mac190/closed-background-symbolication.json",
+      "symbolicationSHA256": "c73c9bab01aeedeba5c0829194f87c77bf7b01214964e04312b09ff88de010b7",
+      "durationSeconds": 45,
+      "intervalMilliseconds": 5,
+      "arm64UUIDMatchesInstalledBinary": "FB9CB7DA-6D83-3992-BB28-52AB5AC9ED01",
+      "observedPaths": [
+        "PulseRecorder.reschedule → tick → PulseSampler.sample → ProcessTable identity/details/path checks",
+        "TabAutomation.tick → TabOrganizer.batches decoding"
+      ],
+      "originalMemorySpikeCaptured": false,
+      "fiveMinuteMemoryInventoryCauseProven": false,
+      "cpuCostAttributionProven": false,
+      "noPreferencesOrSchedulesChanged": true
+    },
+    "fiveMinuteObservation": {
+      "metricArtifact": "dist/mole-review-1.1.40-606-main-integration-r12-mac190/live-cost-memory-tick.json",
+      "metricSHA256": "2345919fd1d0ab8e8f77552bb4c37bc022ccee70f6debb48d97edfff0fd57fd4",
+      "summary": {
+        "wallSeconds": 81.024489208,
+        "cpuTimeSeconds": 1.0,
+        "cpuPercentOfOneCore": 1.2341947598495497,
+        "cpuTimeResolutionSeconds": 0.01,
+        "residentKBMin": 32768,
+        "residentKBMax": 95024,
+        "residentKBMean": 38640.98765432099
+      },
+      "memoryRecordTimesOnly": [
+        "2026-10-19T18:21:49.453892+00:00"
+      ],
+      "stackArtifact": "dist/mole-review-1.1.40-606-main-integration-r12-mac190/closed-memory-tick-stacks.txt",
+      "stackSHA256": "3a8c70d244b2fc12a37ec8dcd83fea170cad6cd607e04fde4690dd734629c35c",
+      "symbolicationArtifact": "dist/mole-review-1.1.40-606-main-integration-r12-mac190/closed-memory-tick-symbolication.json",
+      "arm64UUID": "FB9CB7DA-6D83-3992-BB28-52AB5AC9ED01",
+      "observedPaths": [
+        "MemoryInventory.collect → ProcessTable.current and MachinePulse.group",
+        "ProgramMemoryHistory.append → readLocked → ProgramMemoryRecord decoding",
+        "ProgramMemoryHistory.append → ProgramMemoryRecord encoding"
+      ],
+      "interpretation": "Sampled stacks show substantial history decode/encode work. Statistical wall-stack counts do not establish CPU cost percentages or uniquely attribute RSS peak. Profiling observer overhead is present.",
+      "optimizationUnderDevelopment": "Validate existing records sequentially and retain encoded lines; encode only appended record. Installed R12 is unchanged.",
+      "subsequentImplementationEvidence": "program-memory-history-ranges-release-2026-10-20.json"
+    }
+  }
+}

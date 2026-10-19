@@ -1,0 +1,272 @@
+{
+  "date": "2026-10-19",
+  "status": "R8 installed: 1859 tests and 69 lifecycle observations passed; native menu, shortcut, footer/settings, sampling stop and popover Keep Awake start/stop accepted",
+  "inputCommit": "9ff57693ec15227b42595748a0b19e78ed52e43a",
+  "inputTree": "c47b982c11a10a38625f1b415157043b993d0049",
+  "sourceHead": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+  "workingTree": "dirty",
+  "focused": {
+    "run": "fccb7423-95b0-403a-8311-9174afb8cd69-test",
+    "tests": 35,
+    "failures": 0,
+    "artifactsVerified": true
+  },
+  "negative": {
+    "run": "5a22e20d-342f-41c0-bc61-1712ccc8cef7-test",
+    "mutation": "allow inactive or late panel sample",
+    "expectedTestFailed": true,
+    "compilerFailure": false,
+    "artifactsVerified": true
+  },
+  "fullRegression": {
+    "run": "b30b8f47-dfd1-4320-aa40-9adbbdc66e89-test",
+    "tests": 1859,
+    "failures": 0,
+    "artifactsVerified": true
+  },
+  "universal": {
+    "run": "26964630-737f-4f02-9cd3-1e11a3251d8a-test",
+    "testAndBuildInputIdentical": true,
+    "currentSourceFilesVerified": 599,
+    "dSYMUUIDPairsVerified": 3
+  },
+  "changes": [
+    "Native app menu and Command+Shift+P open panel independently of click preferences",
+    "Screen-height scrolling body with pinned quick controls, click explanation and textual settings entry",
+    "Explicit popover lifetime owns its sampler and pulse lease, independent of console visibility",
+    "Current values separated from retained curves and reset on stop or invalid samples",
+    "Read-only status exposes actual window/panel/sampling ownership"
+  ],
+  "remaining": [
+    "Actual hidden-notch and multiple physical displays not covered in this batch",
+    "VoiceOver speech not enabled/tested",
+    "Physical power transitions and other Mole parity matrix items remain incomplete"
+  ],
+  "installedBaseline": "1.1.40 R6; root helper b1eabd8979855ece607f3f7f0358b56694882030792e10c40c4fa3e66b65e4e3",
+  "initialNativeAcceptance": {
+    "revision": 7,
+    "menuOpenWorked": true,
+    "visibleFooterScreenshotConfirmed": true,
+    "clickHint": "Left panel / right console",
+    "settingsButtonNavigationWorked": true,
+    "failedDismissalGate": {
+      "windowVisible": "true",
+      "menuPanelOpen": "true",
+      "menuPanelSampling": "true",
+      "pulseHolders": "1",
+      "pulseSampling": "true"
+    },
+    "interpretation": "Programmatic main-window navigation did not dismiss the native transient popover; sampler remained active because popover was still open",
+    "correctiveChange": "MainWindow.show explicitly closes AppDelegate popover; repeat Open Panel brings an existing popover to front",
+    "preferencesRestoredAfterFailure": true
+  },
+  "correctedCandidate": {
+    "source": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+    "workingTree": "dirty",
+    "version": "1.1.40",
+    "build": "566",
+    "reviewRevision": 8,
+    "testRun": "44b5c59f-094b-4c16-995d-20ce3715cfa2",
+    "remoteBuildRun": "f78c7a49-1598-48d8-9317-6c1f75260630",
+    "inputCommit": "8e5019de1772ae5895ca4bc66b465a71c4bb12ea",
+    "inputTree": "0a43e1fe2137a2ab86abe0b7eedf787bb4f1e456",
+    "sourceFilesVerified": 599,
+    "sourceManifestSHA256": "52246370df0fa26fefb91105f045a1dfc53666bb7d8ae5c9ab842e3111d6ade9",
+    "fullRegressionStatus": "passed",
+    "installed": true,
+    "published": false,
+    "nonHardwareTests": 1859,
+    "nonHardwareFailures": 0,
+    "testAndBuildInputIdentical": true
+  },
+  "correctedPackage": {
+    "version": "1.1.40",
+    "build": "566",
+    "source": "2ff2c36",
+    "archiveSHA256": "d16c79ae0752da27361caf5bafabf278ed363f634167d2c2892369ec5beddbc3",
+    "regularFiles": 95,
+    "links": 8,
+    "manifestMatch": true,
+    "signatureVerified": true,
+    "notarized": false,
+    "published": false
+  },
+  "correctedLifecycle": {
+    "allPassed": true,
+    "samples": 69,
+    "runs": [
+      {
+        "name": "baseline-first",
+        "exitCode": 0,
+        "functionalChecksPassed": true,
+        "samples": 23,
+        "foregroundActivity": false
+      },
+      {
+        "name": "foreground-control",
+        "exitCode": 0,
+        "functionalChecksPassed": true,
+        "samples": 23,
+        "foregroundActivity": true
+      },
+      {
+        "name": "baseline-after",
+        "exitCode": 0,
+        "functionalChecksPassed": true,
+        "samples": 23,
+        "foregroundActivity": false
+      }
+    ],
+    "scope": "offscreen ordinary/control/ordinary, same parameters; separate from native interaction acceptance"
+  },
+  "installedRuntime": {
+    "version": "1.1.40 (566)",
+    "reviewRevision": 8,
+    "pid": 12382,
+    "inputCommit": "8e5019de1772ae5895ca4bc66b465a71c4bb12ea",
+    "installedManifestVerified": true,
+    "signatureVerified": true,
+    "native": {
+      "appMenuOpenPanel": true,
+      "commandShiftPOpenPanel": true,
+      "bothConsolePreferencesStillAllowPanel": true,
+      "dynamicBothConsoleHintVisible": true,
+      "originalHintRestored": true,
+      "footerVisibleInNativeScreenshot": true,
+      "quickControlsOutsideScrollingContent": true,
+      "footerSettingsNavigation": true,
+      "popoverDismissesOnMainWindowNavigation": true,
+      "escapeClosesPanel": true,
+      "consoleVisibleWithPanelAndPulseSamplingStopped": true,
+      "keepAwakeEntryFromPopover": true,
+      "GUIStartAndStopFromPopover": true,
+      "activeKernelRequestCount": 2,
+      "finalKernelRequestCount": 0,
+      "fallbackCleanupUsed": false
+    },
+    "preferencesAfter": {
+      "menubar-primary": "cpuUsage",
+      "menubar-secondary": "upload",
+      "menubar-presentation": "data",
+      "menubar-layout": "stacked",
+      "menubar-left-click": "panel",
+      "menubar-right-click": "console"
+    },
+    "preferencesRestored": true,
+    "compatibleR6HelperRetained": true,
+    "rootHelperSHA256": "b1eabd8979855ece607f3f7f0358b56694882030792e10c40c4fa3e66b65e4e3",
+    "rootHelperVersion": "8/1.1.40",
+    "baselineFanPolicyRPM": 6617,
+    "controlsAfter": {
+      "app-control status": {
+        "id": "EE5C813B-F7EE-4505-ABE6-84C5B27EE928",
+        "schema": 1,
+        "succeeded": true,
+        "values": {
+          "appVersion": "1.1.40 (566)",
+          "busy": "false",
+          "controlProtocol": "1",
+          "keepAwakePhase": "idle",
+          "keepAwakeRequested": "false",
+          "menuPanelOpen": "false",
+          "menuPanelSampling": "false",
+          "pulseHolders": "0",
+          "pulseSampling": "false",
+          "screenActive": "false",
+          "windowVisible": "true"
+        }
+      },
+      "app-control helper status": {
+        "id": "0C110E44-BF66-4DBF-9C77-F46E4CE201BD",
+        "schema": 1,
+        "succeeded": true,
+        "values": {
+          "busy": "false",
+          "state": "running",
+          "version": "8/1.1.40"
+        }
+      },
+      "fan status": {
+        "controlState": {
+          "observations": {
+            "0": {
+              "checkedAt": "2026-10-19T14:27:12Z",
+              "mode": "manual",
+              "target": 6617
+            }
+          },
+          "observationsSupported": true,
+          "policies": {
+            "0": {
+              "fixed": {
+                "rpm": 6617
+              }
+            }
+          },
+          "suspended": false
+        },
+        "fans": [
+          {
+            "id": 0,
+            "manual": true,
+            "max": 6800,
+            "min": 2317,
+            "name": "Fan",
+            "rpm": 6605.26220703125,
+            "target": 6617
+          }
+        ],
+        "fansAvailable": true,
+        "policies": {
+          "0": {
+            "fixed": {
+              "rpm": 6617
+            }
+          }
+        },
+        "policiesAvailable": true
+      },
+      "charge status": {
+        "externalPower": true,
+        "gate": "allowed",
+        "ownedByCaller": false,
+        "ownership": "none",
+        "percent": 100,
+        "phase": "off",
+        "policy": "off",
+        "support": "smc"
+      },
+      "awdl status": {
+        "interface": {
+          "index": 15,
+          "up": true
+        },
+        "interfaceQueryComplete": true,
+        "ownedByCaller": false,
+        "phase": "idle"
+      },
+      "keep-awake status": {
+        "id": "5B424FAA-9D4E-438E-9911-2C78BEE10C48",
+        "schema": 1,
+        "succeeded": true,
+        "values": {
+          "lastEndReason": "stopped",
+          "observedAt": "2026-10-19T14:27:13Z",
+          "phase": "idle",
+          "powerSource": "external",
+          "requestCount": "0",
+          "requested": "false",
+          "requiresHelper": "false"
+        }
+      }
+    },
+    "upgrade": {
+      "passed": true,
+      "samples": 25,
+      "consecutiveRecoveredChecks": 6,
+      "allObservedJobsPresent": true
+    },
+    "published": false,
+    "notarized": false
+  }
+}

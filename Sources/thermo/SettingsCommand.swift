@@ -1,4 +1,5 @@
 import Foundation
+import ThermoKit
 
 /// `thermo settings [KEY [VALUE]]`: the app's settings (UserDefaults domain dev.thermo.app), so
 /// agents and scripts can do what the Settings tab does.
@@ -15,11 +16,38 @@ struct SettingsCommand {
 
     static let domain = "dev.thermo.app"
 
+    static func apply(_ setting: Setting, value: Any, to defaults: UserDefaults) {
+        MenuBarPreferences.normalize(defaults)
+        defaults.set(value, forKey: setting.defaultsKey)
+        if setting.defaultsKey == "titleMetric", let legacy = value as? String {
+            MenuBarPreferences.applyLegacy(legacy, to: defaults)
+        }
+        MenuBarPreferences.normalize(defaults)
+    }
+
     static func bool(_ s: String) -> Any? {
         switch s.lowercased() { case "on", "yes", "true", "1": return true; case "off", "no", "false", "0": return false; default: return nil }
     }
 
     static let all: [Setting] = [
+        Setting(key: "menubar-primary", defaultsKey: MenuBarPreferences.primaryKey, help: MenuMetric.allCases.map(\.rawValue).joined(separator: " | "),
+                parse: { value in MenuMetric.allCases.first { $0.rawValue.lowercased() == value.lowercased() }?.rawValue },
+                show: { MenuMetric(rawValue: $0 as? String ?? "")?.rawValue ?? "cpu" }),
+        Setting(key: "menubar-secondary", defaultsKey: MenuBarPreferences.secondaryKey, help: "none | " + MenuMetric.allCases.map(\.rawValue).joined(separator: " | "),
+                parse: { value in value.lowercased() == "none" ? "none" : MenuMetric.allCases.first { $0.rawValue.lowercased() == value.lowercased() }?.rawValue },
+                show: { MenuMetric(rawValue: $0 as? String ?? "")?.rawValue ?? "none" }),
+        Setting(key: "menubar-presentation", defaultsKey: MenuBarPreferences.presentationKey, help: "both | icon | data",
+                parse: { MenuPresentation(rawValue: $0.lowercased())?.rawValue },
+                show: { MenuPresentation(rawValue: $0 as? String ?? "")?.rawValue ?? "both" }),
+        Setting(key: "menubar-layout", defaultsKey: MenuBarPreferences.layoutKey, help: "horizontal | stacked",
+                parse: { MenuLayout(rawValue: $0.lowercased())?.rawValue },
+                show: { MenuLayout(rawValue: $0 as? String ?? "")?.rawValue ?? "horizontal" }),
+        Setting(key: "menubar-left-click", defaultsKey: MenuBarPreferences.leftKey, help: "panel | console",
+                parse: { MenuClickAction(rawValue: $0.lowercased())?.rawValue },
+                show: { MenuClickAction(rawValue: $0 as? String ?? "")?.rawValue ?? "panel" }),
+        Setting(key: "menubar-right-click", defaultsKey: MenuBarPreferences.rightKey, help: "panel | console",
+                parse: { MenuClickAction(rawValue: $0.lowercased())?.rawValue },
+                show: { MenuClickAction(rawValue: $0 as? String ?? "")?.rawValue ?? "panel" }),
         Setting(key: "menubar", defaultsKey: "titleMetric", help: "cpu | hottest | fan | cpu+fan | power | icon",
                 parse: { ["cpu": "cpu", "hottest": "hottest", "fan": "fan", "cpu+fan": "cpuAndFan", "power": "power", "icon": "iconOnly"][$0.lowercased()] },
                 show: { v in ["cpuAndFan": "cpu+fan", "iconOnly": "icon"][v as? String ?? ""] ?? (v as? String ?? "cpu") }),
@@ -50,7 +78,18 @@ struct SettingsCommand {
             args = [String(args[0][..<eq]), String(args[0][args[0].index(after: eq)...])]
         }
         guard let d = UserDefaults(suiteName: Self.domain) else { throw CLIError("cannot open settings") }
-        func current(_ s: Setting) -> Any? { d.object(forKey: s.defaultsKey) }
+        let menu = MenuBarPreferences.read(d)
+        func current(_ s: Setting) -> Any? {
+            switch s.defaultsKey {
+            case MenuBarPreferences.primaryKey: return menu.primary.rawValue
+            case MenuBarPreferences.secondaryKey: return menu.secondary?.rawValue ?? "none"
+            case MenuBarPreferences.presentationKey: return menu.presentation.rawValue
+            case MenuBarPreferences.layoutKey: return menu.layout.rawValue
+            case MenuBarPreferences.leftKey: return menu.left.rawValue
+            case MenuBarPreferences.rightKey: return menu.right.rawValue
+            default: return d.object(forKey: s.defaultsKey)
+            }
+        }
         func exported(_ values: [(key: String, value: String)]) -> Bool {
             if app.args.has("json") { print(Export.json(Dictionary(uniqueKeysWithValues: values))); return true }
             if app.args.has("csv") { print(Export.settingsCSV(values)); return true }
@@ -78,7 +117,7 @@ struct SettingsCommand {
                 if !exported([(s.key, s.show(v))]) { print("planned: " + s.key + " = " + s.show(v)) }
                 return
             }
-            d.set(v, forKey: s.defaultsKey)
+            Self.apply(s, value: v, to: d)
             d.synchronize()
             // Tell a running Thermo to re-read its settings now.
             DistributedNotificationCenter.default().postNotificationName(

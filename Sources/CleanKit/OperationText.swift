@@ -49,6 +49,10 @@ extension OperationRecord {
         case ("power", "lidAwakeOn"): return tr("Turned on staying awake with the lid closed")
         case ("power", "lidAwakeOff"): return tr("Turned off staying awake with the lid closed")
         case ("power", "lidAwakeAutoOff"): return tr("Staying awake with the lid closed turned itself off")
+        case ("power", "idleAwakeStart"): return tr("Started keeping the Mac awake")
+        case ("power", "idleAwakeStop"), ("power", "idleAwakeEnd"): return tr("Ended keeping the Mac awake")
+        case ("power", "idleAwakePause"): return tr("Paused keeping the Mac awake")
+        case ("power", "idleAwakeResume"): return tr("Resumed keeping the Mac awake")
         case ("network", "awdlBegin"): return tr("Started an AWDL low-latency session")
         case ("network", "awdlRestore"): return tr("AWDL session ended")
         default: return feature + " · " + action

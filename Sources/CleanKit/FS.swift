@@ -240,7 +240,14 @@ public enum RemovalMode: String, Sendable {
     }
 
     public func trashes(_ item: CleanItem) -> Bool {
-        self == .auto && item.regenerable == true ? false : trashes(item.safety)
+        if self == .auto, item.regenerable == true {
+            // Older cached reports did not retain the declaration. Do not promote
+            // a generic output folder to irreversible deletion without evidence.
+            return item.paths.contains { path in
+                Projects.generic.contains((path as NSString).lastPathComponent.lowercased()) && item.buildCacheEvidence?[path] == nil
+            }
+        }
+        return trashes(item.safety)
     }
 }
 
@@ -293,6 +300,13 @@ public enum Cleaner {
             if !appMessages.contains(blocked) && !projectMessages.contains(blocked) { return blocked }
         }
         if let why = ManagedToolScope.runningRefusal(item, processes: processes) { return why }
+        if !mode.trashes(item), let evidence = item.buildCacheEvidence {
+            for path in item.paths {
+                if let expected = evidence[path], BuildCacheEvidence.capture(path) != expected {
+                    return tr("Build cache evidence changed; scan and review again.")
+                }
+            }
+        }
         if mode == .trash, !(item.commands ?? []).isEmpty {
             return tr("Tool-managed removal is permanent and cannot use the Trash")
         }
@@ -469,6 +483,9 @@ public enum Cleaner {
                 guard let currentIdentity = FileIdentity.of(path), currentIdentity == originalIdentity,
                       item.identities?[path].map({ $0 == currentIdentity }) ?? true else {
                     result.failed[path] = tr("replaced since the scan"); continue
+                }
+                if !trash, let expected = item.buildCacheEvidence?[path], BuildCacheEvidence.capture(path) != expected {
+                    result.failed[path] = tr("Build cache evidence changed; scan and review again."); continue
                 }
                 if trash && !inTrash {
                     if let registration { backupName = try WorktreeCleanup.prepare(registration, now: now) }

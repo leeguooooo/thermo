@@ -1,0 +1,273 @@
+{
+  "date": "2026-10-19",
+  "status": "1858 tests, negative control, 69 lifecycle points and physical positive probes passed; R6 installed with exact new helper hash and fan policy restored",
+  "candidate": {
+    "source": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+    "workingTree": "dirty",
+    "version": "1.1.40",
+    "build": "566",
+    "reviewRevision": 6,
+    "testRun": "5b18b084-d4c8-46e2-b604-6e72d0350bed",
+    "remoteBuildRun": "0351955e-9b04-4e0f-bb13-fc5d20cfa30f",
+    "inputCommit": "d5227281ac4fe4f617b060773bafb0b8e7f06654",
+    "inputTree": "1565eaad25a76127b1564f80a72fce1443318fc0",
+    "sourceFilesVerified": 599,
+    "sourceManifestSHA256": "64c560eb41f713dc1dba473088d31f0215b25372f99b3cad97157622e5f3a6c2",
+    "fullRegressionStatus": "passed",
+    "focusedTestsPassed": 51,
+    "focusedCoverage": "prior snapshot before final known-zero no-write assertion; full regression must cover final input",
+    "negativeControlVerified": true,
+    "installed": true,
+    "published": false,
+    "nonHardwareTests": 1858,
+    "nonHardwareFailures": 0,
+    "testAndBuildInputIdentical": true
+  },
+  "changes": [
+    "Failed, non-finite, fractional, negative or above-16 FNum values remain unknown rather than zero",
+    "Unknown inventories retry without discarding sensor discovery, and cannot create or overwrite discovery cache",
+    "Cache v3 records expected fan count and complete record footer; malformed, truncated, overflow and legacy v2 caches are rejected",
+    "Snapshot/CLI exports carry fan inventory availability, filtering preserves it, and watch CSV uses stable fan columns during recovery",
+    "UI distinguishes not sampled, unavailable and confirmed zero fans",
+    "Helper refuses unknown fan discovery; unknown automatic recovery is unconfirmed with no writes; confirmed zero recovery is a no-op without unlock writes"
+  ],
+  "initialFocusedFailure": {
+    "run": "24e9d92b-29f9-4de6-bd10-10826d3dd315-test",
+    "exitCode": 1,
+    "cause": "Battery-only fixture gained a fan availability CSV row because Snapshot default implied sampled fans",
+    "fix": "Default Snapshot availability is nil/not sampled; actual sampler supplies explicit availability; original battery export assertion retained"
+  },
+  "focused": {
+    "run": "1723e8b9-b221-45b5-851b-b28c6cf81b57-test",
+    "tests": 51,
+    "failures": 0,
+    "artifactsVerified": true,
+    "scope": "prior input before final known-zero no-write guard/assertion"
+  },
+  "negative": {
+    "run": "beb9c71d-5301-4931-a461-f62fcec5ddb0-test",
+    "expectedTestFailed": true,
+    "compilerFailure": false,
+    "artifactsVerified": true,
+    "samplerSourceSHA256": "a2ad1f12a796a6f1c9cd2efd9072b1748aae411aafbb1dc6b6e83b89b3d4f33f",
+    "mutation": "FNum read failure coalesced to zero in isolated remote snapshot"
+  },
+  "fullRegression": {
+    "run": "5b18b084-d4c8-46e2-b604-6e72d0350bed-test",
+    "tests": 1858,
+    "failures": 0,
+    "testAndBuildInputIdentical": true,
+    "artifactsVerified": true
+  },
+  "sourceTransfer": {
+    "transientError": "Concurrent Git incoming pack .keep migration reported different contents",
+    "actualRuntimeHeadsVerified": [
+      "d5227281ac4fe4f617b060773bafb0b8e7f06654",
+      "d5227281ac4fe4f617b060773bafb0b8e7f06654"
+    ],
+    "current599SourceHashesVerified": true,
+    "manualRepositoryRepairPerformed": false,
+    "resolution": "Both runtime worktrees and final test/build receipts used d5227281; all 599 current source hashes matched exported build manifest"
+  },
+  "package": {
+    "version": "1.1.40",
+    "build": "566",
+    "source": "2ff2c36",
+    "archiveSHA256": "9ab4262334921ca21033f539abed9d1ea15284c5af6774d57f2ae97ba8fb71ac",
+    "regularFiles": 95,
+    "links": 8,
+    "manifestMatch": true,
+    "signatureVerified": true,
+    "notarized": false,
+    "published": false,
+    "installed": true
+  },
+  "remaining": [
+    "SMC read failure, true fanless hardware and invalid counts covered by fixtures; no induced firmware failure or physical fanless Mac acceptance",
+    "Menu panel reachability and discoverability acceptance remains incomplete",
+    "Physical low-battery and power transitions remain unverified",
+    "Other Mole parity matrix items remain incomplete"
+  ],
+  "lifecycle": {
+    "allPassed": true,
+    "observations": 69,
+    "runs": [
+      {
+        "name": "baseline-first",
+        "exitCode": 0,
+        "functionalChecksPassed": true,
+        "samples": 23,
+        "foregroundActivity": false
+      },
+      {
+        "name": "foreground-control",
+        "exitCode": 0,
+        "functionalChecksPassed": true,
+        "samples": 23,
+        "foregroundActivity": true
+      },
+      {
+        "name": "baseline-after",
+        "exitCode": 0,
+        "functionalChecksPassed": true,
+        "samples": 23,
+        "foregroundActivity": false
+      }
+    ],
+    "scope": "offscreen ordinary/control/ordinary; same two cycles/open 4 seconds/idle 2 seconds; uncontrolled external load"
+  },
+  "physicalReadOnly": {
+    "scope": "physical M3 Mac, read-only positive fan enumeration/cache/stream; no induced SMC failure or fanless hardware",
+    "changesToFanPolicy": false,
+    "results": {
+      "fresh-fans": {
+        "fansAvailable": true,
+        "fanCount": 1
+      },
+      "cached-fans": {
+        "fansAvailable": true,
+        "fanCount": 1
+      },
+      "fan-status": {
+        "fansAvailable": true,
+        "fanCount": 1
+      },
+      "stream": {
+        "samples": 2,
+        "columns": 9,
+        "consistentWidths": true,
+        "fanInventoryKnown": true
+      }
+    }
+  },
+  "installedRuntime": {
+    "appVersion": "1.1.40 (566)",
+    "pid": 3797,
+    "sourceInput": "d5227281ac4fe4f617b060773bafb0b8e7f06654",
+    "installedManifestMatchesCandidate": true,
+    "appAndRootHelperSignaturesVerified": true,
+    "rootHelperVersion": "8/1.1.40",
+    "rootHelperSHA256": "b1eabd8979855ece607f3f7f0358b56694882030792e10c40c4fa3e66b65e4e3",
+    "rootHelperExactlyMatchesCandidate": true,
+    "rootHelperOwnedByRootAndRegularFile": true,
+    "launchDaemonPlistPreserved": true,
+    "autoUpdatedExistingHelper": true,
+    "manualHelperInstallCommandIssued": false,
+    "newFanPolicyChosen": false,
+    "baselineFanPolicyRPM": 6617,
+    "nativeFanPage": {
+      "actualSpeedObservedRPM": 6589,
+      "actualRange": [
+        2317,
+        6800
+      ],
+      "selectedFixedRPM": 6617,
+      "lastRegisterTargetRPM": 6617
+    },
+    "upgrade": {
+      "observedSamples": 31,
+      "allObservedJobsPresent": true,
+      "consecutiveRecoveredChecks": 6,
+      "exactNewHelperRequired": true
+    },
+    "controlsAfter": {
+      "app-control status": {
+        "id": "AD1D7331-A404-4688-9F9A-15BA99C6B2A0",
+        "schema": 1,
+        "succeeded": true,
+        "values": {
+          "appVersion": "1.1.40 (566)",
+          "busy": "false",
+          "controlProtocol": "1",
+          "keepAwakePhase": "idle",
+          "keepAwakeRequested": "false",
+          "screenActive": "false"
+        }
+      },
+      "app-control helper status": {
+        "id": "B9C256B2-B3FF-45E4-A3C2-1E8CE87A371B",
+        "schema": 1,
+        "succeeded": true,
+        "values": {
+          "busy": "false",
+          "state": "running",
+          "version": "8/1.1.40"
+        }
+      },
+      "fan status": {
+        "controlState": {
+          "observations": {
+            "0": {
+              "checkedAt": "2026-10-19T13:21:12Z",
+              "mode": "manual",
+              "target": 6617
+            }
+          },
+          "observationsSupported": true,
+          "policies": {
+            "0": {
+              "fixed": {
+                "rpm": 6617
+              }
+            }
+          },
+          "suspended": false
+        },
+        "fans": [
+          {
+            "id": 0,
+            "manual": true,
+            "max": 6800,
+            "min": 2317,
+            "name": "Fan",
+            "rpm": 6581.95458984375,
+            "target": 6617
+          }
+        ],
+        "fansAvailable": true,
+        "policies": {
+          "0": {
+            "fixed": {
+              "rpm": 6617
+            }
+          }
+        },
+        "policiesAvailable": true
+      },
+      "charge status": {
+        "externalPower": true,
+        "gate": "allowed",
+        "ownedByCaller": false,
+        "ownership": "none",
+        "percent": 100,
+        "phase": "off",
+        "policy": "off",
+        "support": "smc"
+      },
+      "awdl status": {
+        "interface": {
+          "index": 15,
+          "up": true
+        },
+        "interfaceQueryComplete": true,
+        "ownedByCaller": false,
+        "phase": "idle"
+      },
+      "keep-awake status": {
+        "id": "28B5740F-AFC6-4ACD-9EE8-C6364CE10505",
+        "schema": 1,
+        "succeeded": true,
+        "values": {
+          "observedAt": "2026-10-19T13:21:12Z",
+          "phase": "idle",
+          "powerSource": "external",
+          "requestCount": "0",
+          "requested": "false",
+          "requiresHelper": "false"
+        }
+      }
+    },
+    "published": false,
+    "notarized": false
+  }
+}

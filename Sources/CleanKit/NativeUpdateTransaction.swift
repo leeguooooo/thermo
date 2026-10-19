@@ -296,6 +296,17 @@ public enum NativeUpdateTransaction {
             guard copied.seal == prepared.replacement.seal, parent.matches(), NativeAppUpdates.unchanged(prepared.source),
                   let originalID = parent.entry(target), let newID = parent.entry(incoming) else { throw failure("The app or prepared update changed after review") }
             if let why = targetRefusal(prepared.source.app.path, home: home, processes: processes()) { throw failure(why) }
+            // Copying and the process inventory can take time. Metadata identity does
+            // not cover resource edits below Contents; recheck both sealed trees after
+            // that work, before creating a recovery record or displacing the target.
+            guard parent.matches(), parent.entry(target) == originalID, parent.entry(incoming) == newID,
+                  NativeAppUpdates.unchanged(prepared.source),
+                  try NativeBundleValidation.treeSeal(prepared.source.app.path) == prepared.original.seal,
+                  try NativeBundleValidation.treeSeal(absolute) == copied.seal,
+                  parent.matches(), parent.entry(target) == originalID, parent.entry(incoming) == newID,
+                  NativeAppUpdates.unchanged(prepared.source) else {
+                throw failure("The app or prepared update changed after review")
+            }
             var record = NativeUpdateReceipt(id: operationID, target: prepared.source.app.path, backup: absolute, phase: "prepared",
                 original: prepared.original, replacement: copied, originalID: originalID, replacementID: newID)
             try save(record, home: home); receipt = record

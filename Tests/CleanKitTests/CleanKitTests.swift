@@ -1,4 +1,5 @@
 import XCTest
+import AgentCore
 @testable import CleanKit
 
 /// Every test runs against a throwaway home folder; nothing outside it is read for decisions or removed.
@@ -652,14 +653,16 @@ final class CleanKitTests: XCTestCase {
         XCTAssertNil(pulse.culpritText)
     }
 
-    func testPulseNamesACulpritOnlyWhenItExplainsTheLoad() {
+    func testPulseReportsSignificantCPUAndObservedMemoryContext() {
         let hog = MachinePulse.Hog(id: "a", name: "ffmpeg", cpu: 160, memoryKB: 100_000, pids: [1], app: nil, quittable: true)
         var p = MachinePulse(load1: 3, load5: 3, cores: 8, thermal: .nominal, memory: .normal, swapUsedMB: 0, hogs: [hog], sampled: now)
         XCTAssertEqual(p.verdict, .ok)
-        XCTAssertEqual(p.culpritText, "Mostly ffmpeg, using 1.6 cores")
+        XCTAssertTrue(p.culpritText?.contains("ffmpeg") == true)
+        XCTAssertTrue(p.culpritText?.contains("1.6") == true)
         p.load1 = 107; p.memory = .warning; p.swapUsedMB = 22 * 1024
         XCTAssertEqual(p.verdict, .overloaded)
-        XCTAssertTrue(p.culpritText?.hasPrefix("22.0 GiB of memory has been moved to the disk") ?? false, p.culpritText ?? "")
+        XCTAssertTrue(p.culpritText?.contains(MemoryFormat.string(mebibytes: 22 * 1024)) == true)
+        XCTAssertTrue(p.culpritText?.contains("high memory pressure") == true)
         p.thermal = .serious
         XCTAssertEqual(p.verdict, .hot, "throttling outranks load")
     }
@@ -736,9 +739,10 @@ final class CleanKitTests: XCTestCase {
         let big = MachinePulse.Hog(id: "c", name: "Google Chrome", cpu: 100, memoryKB: 19 * 1_048_576, pids: [1], app: "/Applications/Google Chrome.app", quittable: true)
         var p = MachinePulse(load1: 66, load5: 45, cores: 8, thermal: .nominal, memory: .warning, swapUsedMB: 27 * 1024,
                              swapTotalMB: 28 * 1024, hogs: [big], sampled: now)
-        XCTAssertTrue(p.culpritText?.hasPrefix("27.0 GiB of memory has been moved to the disk") ?? false, p.culpritText ?? "")
-        XCTAssertTrue(p.culpritText?.contains("Google Chrome uses the most (19.0 GiB)") ?? false)
-        XCTAssertEqual(p.swapDiskText, "Swap files take 28.0 GiB of disk space; macOS gives it back once memory frees up.")
+        XCTAssertTrue(p.culpritText?.contains(MemoryFormat.string(mebibytes: 27 * 1024)) == true)
+        XCTAssertTrue(p.culpritText?.contains("Google Chrome") == true)
+        XCTAssertTrue(p.culpritText?.contains(MemoryFormat.string(kibibytes: 19 * 1_048_576)) == true)
+        XCTAssertTrue(p.swapDiskText?.contains(MemoryFormat.string(mebibytes: 28 * 1024)) == true)
         p.swapTotalMB = 2048
         XCTAssertNil(p.swapDiskText, "small swap is not worth a word")
     }

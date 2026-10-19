@@ -1,0 +1,182 @@
+{
+  "date": "2026-10-20",
+  "status": "Signed R11 CLI cache-proof, frozen plan, Trash, conflict refusal and restore accepted on actual Mac190 APFS using owned fixtures",
+  "host": "mac190",
+  "candidateRevision": 11,
+  "sourceInputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+  "signedCLI_SHA256": "889020d7b40918982ddf133abb23561e3740b39b17cd56046cdfeb9052758ad9",
+  "currentSourceManifestFilesVerified": 600,
+  "filesystem": {
+    "DeviceIdentifier": "disk3s1",
+    "FilesystemType": "apfs",
+    "FileSystemPersonality": null,
+    "MountPoint": "/System/Volumes/Data"
+  },
+  "planID": "5FA3003D-6F48-4C90-A251-2F164680DD6F",
+  "batchID": "7FFAAE72-FA34-4BFA-9423-730FCD076F4B",
+  "fixtureRoot": "/Users/leo/.local/state/thermo-qa/r11-readonly-df2f51422595/cleanup-fixture-0c889584d29a",
+  "scanScope": {
+    "categories": [
+      "projects"
+    ],
+    "projectRoots": [
+      "/Users/leo/.local/state/thermo-qa/r11-readonly-df2f51422595/cleanup-fixture-0c889584d29a"
+    ],
+    "discoverProjectRoots": false,
+    "selectedPaths": [
+      "/Users/leo/.local/state/thermo-qa/r11-readonly-df2f51422595/cleanup-fixture-0c889584d29a/valid-project/.build"
+    ],
+    "sharedUserDataSelected": false,
+    "onlyIDScanWithoutFullSpaceContext": true
+  },
+  "acceptance": {
+    "prepare": {
+      "passed": true,
+      "negativeProofPathsRejected": 3,
+      "reviewedItems": 1,
+      "onlyOwnedFixtureSelected": true,
+      "previewAction": "trash",
+      "applyStarted": false
+    },
+    "roundtrip": {
+      "passed": true,
+      "frozenPlanSingleUse": true,
+      "trashMoveVerified": true,
+      "previewReadOnly": true,
+      "restoreConflictPreserved": true,
+      "restoredBytesAndFileIdentitiesMatch": true,
+      "restoredDirectoryIdentityMatches": true,
+      "repeatRestoreIdempotent": true,
+      "onlyOwnedFixturesSelected": true,
+      "estimatedDeletedBytes": 0,
+      "trashedBytes": 2101248,
+      "sharedUserDataSelected": false
+    },
+    "rootLinkControl": {
+      "passed": true,
+      "validTargetOffered": true,
+      "symlinkToSameValidTargetNotOffered": true,
+      "previousCombinedCaseRetained": true,
+      "noCleanupApplied": true
+    },
+    "proofLoss": {
+      "passed": true,
+      "validEvidenceInitiallyReviewed": true,
+      "proofLossRefusedBeforeDeletion": true,
+      "payloadBytesAndIdentityUnchanged": true,
+      "deletedBytes": 0,
+      "trashedBytes": 0
+    }
+  },
+  "space": {
+    "estimatedPermanentlyDeletedBytes": 0,
+    "trashedBytes": 2101248,
+    "observedVolumeAvailableChangeBytes": -53248,
+    "spaceObservation": {
+      "after": {
+        "availableBytes": 87461044224,
+        "capacityBytes": 494384795648,
+        "measuredAt": "2026-10-19T15:53:57Z",
+        "uptimeNanoseconds": 565775557627208,
+        "volumeID": "16777229:26"
+      },
+      "availableChangeBytes": -53248,
+      "before": {
+        "availableBytes": 87461097472,
+        "capacityBytes": 494384795648,
+        "measuredAt": "2026-10-19T15:53:57Z",
+        "uptimeNanoseconds": 565775456646833,
+        "volumeID": "16777229:26"
+      }
+    },
+    "interpretation": "Trash move retains data allocation; no reclaimed-space claim. Measured volume delta includes concurrent system activity and is not attributed to this fixture."
+  },
+  "negativeCaseCorrection": {
+    "originalRootLinkCase": "Root symlink pointed to an already invalid Xcode-evidence directory; retained as a combined negative case, insufficient alone for the root-link invariant",
+    "addedControl": "Same valid cache is offered by its real path and not offered through a root symlink",
+    "nativeScope": "Public CLI selection behavior; not isolation of one internal helper from all other filesystem guards"
+  },
+  "permanentModeGuard": {
+    "mode": "permanent",
+    "expected": "Refuse after reviewed CACHEDIR.TAG is moved away",
+    "result": "refused with exit 3; zero removed results; original payload bytes/device/inode unchanged",
+    "fixtureEvidenceRestored": true,
+    "successfulPermanentDeletion": false
+  },
+  "runs": {
+    "prepare": {
+      "run": "29968785-3dbe-49d3-ac01-32374e97795e-probe",
+      "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/mac190-cleanup-prepare.json",
+      "artifactSHA256": "f72eb2092cafb28d8a33edae5e37b8009a4b41872ac157fd58d5867045fb7c81",
+      "allArtifactHashesVerified": true,
+      "summary": {
+        "passed": true,
+        "negativeProofPathsRejected": 3,
+        "reviewedItems": 1,
+        "onlyOwnedFixtureSelected": true,
+        "previewAction": "trash",
+        "applyStarted": false
+      }
+    },
+    "roundtrip": {
+      "run": "6d730ed9-4572-429d-8585-f33fefe372fa-probe",
+      "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/mac190-cleanup-roundtrip.json",
+      "artifactSHA256": "0d16f5efab9663ab9eaec53644af9f929eb2bcc5e2eeef719913717bd4e0cbda",
+      "allArtifactHashesVerified": true,
+      "summary": {
+        "passed": true,
+        "frozenPlanSingleUse": true,
+        "trashMoveVerified": true,
+        "previewReadOnly": true,
+        "restoreConflictPreserved": true,
+        "restoredBytesAndFileIdentitiesMatch": true,
+        "restoredDirectoryIdentityMatches": true,
+        "repeatRestoreIdempotent": true,
+        "onlyOwnedFixturesSelected": true,
+        "estimatedDeletedBytes": 0,
+        "trashedBytes": 2101248,
+        "sharedUserDataSelected": false
+      }
+    },
+    "rootLinkControl": {
+      "run": "83c4db82-4fe7-4ef7-8691-3a5819224874-probe",
+      "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/mac190-cleanup-root-link-control.json",
+      "artifactSHA256": "c522171baef6d19439ee7f6f8ccce255c68459f6f88701a3b0af506154ea1fa9",
+      "allArtifactHashesVerified": true,
+      "summary": {
+        "passed": true,
+        "validTargetOffered": true,
+        "symlinkToSameValidTargetNotOffered": true,
+        "previousCombinedCaseRetained": true,
+        "noCleanupApplied": true
+      }
+    },
+    "proofLoss": {
+      "run": "fd115833-db58-4511-8bbe-b2fb9cb9c994-probe",
+      "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/mac190-cleanup-evidence-loss.json",
+      "artifactSHA256": "a7f3cf3c61fac229d32dbe82d0056a70d7cbc5b21b948db2a876184c853ef31c",
+      "allArtifactHashesVerified": true,
+      "summary": {
+        "passed": true,
+        "validEvidenceInitiallyReviewed": true,
+        "proofLossRefusedBeforeDeletion": true,
+        "payloadBytesAndIdentityUnchanged": true,
+        "deletedBytes": 0,
+        "trashedBytes": 0
+      }
+    }
+  },
+  "limitations": [
+    "Only synthetic owned fixture source paths were selected; each native plan/batch uses its own UUID in the test host normal product journal",
+    "No real user cache or project data selected, no Trash emptying, and no successful irreversible deletion",
+    "CLI acceptance on Mac190 APFS; GUI confirmation and restore interactions remain separate",
+    "Not an APFS snapshot, cloned/shared extent, cross-volume restore, permission-failure, concurrent source-swap or real user-data recovery acceptance",
+    "Mole parity remains incomplete"
+  ],
+  "additionalStalePlanAcceptance": {
+    "report": "docs/measurements/mac190-r11-stale-plan-identity-2026-10-20.json",
+    "samePathValidReplacementRefused": true,
+    "bothVersionsPreserved": true,
+    "simultaneousFinalSyscallRaceTested": false
+  }
+}

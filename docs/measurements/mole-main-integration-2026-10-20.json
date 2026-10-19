@@ -1,0 +1,212 @@
+{
+  "date": "2026-10-20",
+  "status": "Integrated R12 installed with verified manifest/signature; 1904 remote tests, universal package, 23 offscreen lifecycle points and selected visible menu/settings flows accepted; overall parity incomplete",
+  "ownedMoleBase": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+  "ownedMoleTree": "fc3c287db917a717b82117b01a94764e08b2e311",
+  "commonAncestor": "b3a96d61dfd1c534bcda75b97a75da0ae1b74847",
+  "mainFrozenHead": "b536e6cb229d16798a3e21ef9e9afd623e648c3d",
+  "integrationWorktree": "/Users/leo/github.com/thermo-mole-integration-af047a7e",
+  "branch": "codex/mole-integrate-af047a7e",
+  "conflictResolution": {
+    "file": "Tests/CleanKitTests/OverviewSchedulingTests.swift",
+    "resolved": "Keep immutable local capture as fixtureHome=self.home for async closures",
+    "sourceConflictFiles": 0
+  },
+  "unrelatedUpstreamPathsPreserved": 55,
+  "overlapPaths": [
+    "Sources/ThermoL10n/ZhHans.swift",
+    "Sources/thermo/Args.swift",
+    "Sources/thermo/CommandHelp.swift",
+    "Sources/thermo/main.swift",
+    "Tests/CleanKitTests/OverviewSchedulingTests.swift"
+  ],
+  "translationDuplicateKeys": 0,
+  "sourceCommitCreated": false,
+  "mainWorktreeModified": false,
+  "installedCandidateUnchanged": {
+    "reviewRevision": 11,
+    "inputCommit": "af87d82c523d80faf819e9b773175cf792293b13"
+  },
+  "historicalNativeEvidenceRoot": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist",
+  "chargingWriteApprovalPending": true,
+  "chargingWriteSessionStarted": false,
+  "next": [
+    "Verify remote compilation and full tests",
+    "Verify same-input universal output",
+    "Audit later main movement before integration delivery",
+    "Keep hardware and GUI acceptance separate from remote tests"
+  ],
+  "fullRegression": {
+    "run": "e027eadc-f4a0-40df-a0a8-4a11743c82ca-test",
+    "tests": 1904,
+    "failures": 0,
+    "targets": [
+      {
+        "target": "ThermoKitTests.xctest",
+        "tests": 218,
+        "failures": 0
+      },
+      {
+        "target": "ThermoHelperTests.xctest",
+        "tests": 30,
+        "failures": 0
+      },
+      {
+        "target": "ThermoCLITests.xctest",
+        "tests": 124,
+        "failures": 0
+      },
+      {
+        "target": "ThermoAppTests.xctest",
+        "tests": 344,
+        "failures": 0
+      },
+      {
+        "target": "CleanKitTests.xctest",
+        "tests": 772,
+        "failures": 0
+      },
+      {
+        "target": "AgentDoctorTests.xctest",
+        "tests": 346,
+        "failures": 0
+      },
+      {
+        "target": "AgentCoreTests.xctest",
+        "tests": 70,
+        "failures": 0
+      }
+    ],
+    "allArtifactHashesVerified": true,
+    "inputCommit": "27ec7877c870d035611a2b56507a3aa47a191e81",
+    "inputTree": "b7cc1c7d42e5c2554005ebf04e19df1b9c7a2976"
+  },
+  "universalBuild": {
+    "run": "199f87e1-8efd-4f1d-b16d-0d0c39211b20-test",
+    "inputCommit": "27ec7877c870d035611a2b56507a3aa47a191e81",
+    "inputTree": "b7cc1c7d42e5c2554005ebf04e19df1b9c7a2976",
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "sourceFilesVerified": 605,
+    "archiveSHA256": "947b596e9ae136f1f2ebf09d0b2edb167fc50b8a9ab3d0fa51479250c9402b8d",
+    "threeDSYMPairsVerifiedBothArchitectures": true,
+    "allArtifactHashesVerified": true,
+    "installed": false
+  },
+  "staticPreservation": {
+    "upstreamTranslationKeysPreserved": 2862,
+    "upstreamArgumentValueOptionsPreserved": 32,
+    "upstreamCommandInventoryRowsPreserved": 75,
+    "scope": "Static checks on overlapping merge paths; remote runtime tests remain separate"
+  },
+  "criticalR11SourceComparison": {
+    "scope": "Source identity only, not replacement for native integrated-binary acceptance",
+    "files": [
+      {
+        "path": "Sources/AgentCore/IdleAwake.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "3a2c81ef3a5fffd2f1e3e3725dc3989b25c230f70d7817ad048765c81dac5982"
+      },
+      {
+        "path": "Sources/CleanKit/BuildCacheEvidence.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "8cf42cf9264b0cae403e0b2bbfc77128a4825974eb3ac0534e9a5b6df00b3522"
+      },
+      {
+        "path": "Sources/CleanKit/FS.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "336fd2c82ba19001abc6ad07fcb8e73b3981f7a99ceb00959907a90ece3b6621"
+      },
+      {
+        "path": "Sources/CleanKit/Projects.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "0803eb69f2c088b43c25363e6c61a08a03f59611fca7e0d3f83d0ce90ca6167b"
+      },
+      {
+        "path": "Sources/ThermoApp/IdleAwakeView.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "0e75418c21a4f354895005050ef939f56e855f45d3c5841333d08c0ffc3091b4"
+      },
+      {
+        "path": "Sources/ThermoApp/MenuBarData.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "a1c7cce25185c6cb970ff7556df7a8ec15e34b96723f9c34921a7bb34567f6d2"
+      },
+      {
+        "path": "Sources/ThermoApp/MenuStackImage.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "af4f9943350c6a52b9ffc9ceaf4febbf156e5840d59d0ca2dfeef624cb32dade"
+      },
+      {
+        "path": "Sources/ThermoApp/MenuPanel.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "4a70f28c9de3d928e43b2926ebd3fbbdd199f82d76fa94733dbfdc2dc3c5608f"
+      },
+      {
+        "path": "Sources/ThermoApp/Monitor.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "3cebdac0f6ac4058c6b8588cf403fcf4f2183082a41fff07b4494fe97f072957"
+      },
+      {
+        "path": "Sources/ThermoApp/main.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "7b9986ed4e4f620a09eebbd53e814b37a31b6d21fc951de2606c0e03b054760a"
+      },
+      {
+        "path": "Sources/ThermoKit/FanControl.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "46011fb98efa78de5082143c5a5972ef02b9e149a74c2f60a9cd306f7ff02ca3"
+      },
+      {
+        "path": "Sources/ThermoKit/FanControlState.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "ebf7d4bba738bd028995cf6e5f31b1f566c369d7abd933e09e696d719ec6b42f"
+      },
+      {
+        "path": "Sources/ThermoKit/Sampler.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "a2ad1f12a796a6f1c9cd2efd9072b1748aae411aafbb1dc6b6e83b89b3d4f33f"
+      },
+      {
+        "path": "Sources/ThermoKit/MenuBarPreferences.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "6951cd072c44fcef1c64d85afc54efe2f34f53db1425a86d867a9428cee97f4f"
+      },
+      {
+        "path": "Sources/ThermoHelper/main.swift",
+        "sameAsInstalledR11Source": true,
+        "sha256": "34f0ec5a8541f94b183938f91db602e8e13e21e57697f98372cd3a491d1ee3a4"
+      }
+    ]
+  },
+  "mainHeadAtResult": "b536e6cb229d16798a3e21ef9e9afd623e648c3d",
+  "mainAtFinalSourceVerification": {
+    "head": "b536e6cb229d16798a3e21ef9e9afd623e648c3d",
+    "clean": true,
+    "sameAsFrozenMain": true,
+    "modifiedByThisTask": false
+  },
+  "reviewPatchSHA256": "59b168812c795c6562f94920fb94654f0031e51805dbabe40a5a99ea38fb9c95",
+  "signedReviewCandidate": {
+    "report": "docs/measurements/mole-integrated-r12-package-2026-10-20.json",
+    "version": "1.1.40",
+    "build": "606",
+    "reviewRevision": 12,
+    "archiveSHA256": "e8cbc4b952a9bf6788c4d821e0c9836c0a6b3674565145fb5f525e824104399b",
+    "packageVerified": true,
+    "nativeAndRosettaCLI": true,
+    "offscreenLifecycleChecks": 23,
+    "installed": false,
+    "notarized": false,
+    "published": false
+  },
+  "installedRuntime": {
+    "report": "docs/measurements/mole-integrated-r12-installed-2026-10-20.json",
+    "reviewRevision": 12,
+    "build": "606",
+    "pid": "45582",
+    "inputCommit": "27ec7877c870d035611a2b56507a3aa47a191e81"
+  }
+}

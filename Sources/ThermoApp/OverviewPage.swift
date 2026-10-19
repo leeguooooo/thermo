@@ -74,24 +74,27 @@ struct OverviewPage: View {
         }
     }
 
-    /// Programs started in the same project by the same agent or terminal count as one source, so
-    /// "swift-build, swift-test and node in thermo, started by Claude Code" reads as one cause.
+    /// Current directory and agent associations, not a causal attribution of system load.
     static func sourceText(_ p: MachinePulse) -> String? {
-        let groups = Dictionary(grouping: p.hogs) { h -> String in
+        // Capacity and pressure facts must not be replaced by project metadata.
+        switch p.verdict { case .hot, .disk: return nil; default: break }
+        guard !p.memory.isHigh else { return nil }
+        let observed = p.hogs.filter { $0.cpu.isFinite && $0.cpu >= 0 }
+        let groups = Dictionary(grouping: observed) { h -> String in
             guard let project = h.project, h.app == nil else { return "program|" + h.id }
             return "project|" + (h.owner ?? "") + "|" + project
         }.values
         guard let top = groups.max(by: { cpu($0) < cpu($1) }), let first = top.first, let project = first.project, first.app == nil else { return nil }
         let total = cpu(top)
-        // Same bar as the culprit sentence: a real share of the load, not one core out of many.
-        guard total >= 50, total / 100 >= p.load1 * 0.25 else { return nil }
+        // This is observed CPU work, not a fraction of the one-minute load average.
+        guard total >= 50 else { return nil }
         let folder = (project as NSString).lastPathComponent
         let names = top.sorted { $0.cpu > $1.cpu }.prefix(3).map(\.name).joined(separator: ", ")
         let cores = String(format: "%.1f", total / 100)
         if let owner = first.owner {
-            return tr("Mostly the %1$@ project, started by %2$@: %3$@, using %4$@ cores", folder, owner, names, cores)
+            return tr("Current sample: %3$@ in %1$@ (associated with %2$@), about %4$@ logical CPUs.", folder, owner, names, cores)
         }
-        return tr("Mostly the %1$@ project: %2$@, using %3$@ cores", folder, names, cores)
+        return tr("Current sample: %2$@ in %1$@, about %3$@ logical CPUs.", folder, names, cores)
     }
 
     static func cpu(_ hogs: [MachinePulse.Hog]) -> Double { hogs.reduce(0) { $0 + $1.cpu } }
@@ -152,13 +155,13 @@ struct OverviewPage: View {
     /// Hot with the fans still well below their top speed is the one link worth pointing at here.
     var fanLink: some View {
         let s = monitor.snapshot
-        let fans = s?.fans ?? []
+        let fans = monitor.sampledFans ?? []
         let top = fans.filter { $0.rpm != nil }.max { ($0.rpm ?? 0) < ($1.rpm ?? 0) }
         let hot = (s?.hottest ?? 0) >= 85
         let lagging = hot && fans.contains { $0.manual == false } && (fans.compactMap(\.load).max() ?? 1) < 0.6
-        let state: LinkState = s == nil ? .unknown : fans.isEmpty || fans.contains { $0.manual == nil || $0.rpm == nil || $0.validRange == nil } ? .unknown : lagging ? .alert : .normal
+        let state: LinkState = monitor.sampledFans == nil ? .unknown : fans.isEmpty || fans.contains { $0.manual == nil || $0.rpm == nil || $0.validRange == nil } ? .unknown : lagging ? .alert : .normal
         let mode = fans.contains { $0.manual == nil } ? tr("unknown") : fans.contains { $0.manual == true } ? tr("manual") : tr("auto")
-        let detail: String? = s == nil ? nil : fans.isEmpty ? tr("No fans")
+        let detail: String? = monitor.sampledFans == nil ? monitor.fanEmptyMessage : fans.isEmpty ? tr("No fans")
             : lagging ? tr("Hot, but the fans are not at full speed")
             : top.map { mode + " · " + tr("%1$@ of max", $0.load.map { String(format: "%.0f%%", $0 * 100) } ?? tr("unknown")) }
         return link(tr("Fans"), "fan", value: FanControlPresentation.speedSummary(fans) ?? "—", caption: nil,

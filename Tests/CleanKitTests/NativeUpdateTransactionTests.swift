@@ -160,6 +160,51 @@ final class NativeUpdateTransactionTests: XCTestCase {
         XCTAssertEqual(build(original), "100")
     }
 
+    func testOriginalResourceChangeDuringFinalProcessCheckRefusesSwap() throws {
+        let prepared = try prepared()
+        let changed = Data("concurrent original resource edit".utf8)
+        var checks = 0, wrote = false, swapped = false
+        let result = NativeUpdateTransaction.commit(prepared, home: home, processes: {
+            checks += 1
+            if checks == 2 {
+                do {
+                    try changed.write(to: URL(fileURLWithPath: self.original + "/Contents/Resources/data"))
+                    wrote = true
+                } catch { XCTFail("Could not arrange owned concurrent edit: \(error)") }
+            }
+            return ProcessTable(entries: [])
+        }, afterSwap: { swapped = true })
+        XCTAssertTrue(wrote)
+        XCTAssertFalse(swapped, "An app changed after review must not be displaced")
+        XCTAssertEqual(result.outcome, "failed")
+        XCTAssertNil(result.receipt, "Refusal before swap must not create a misleading recovery record")
+        XCTAssertEqual(build(original), "100")
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: original + "/Contents/Resources/data")), changed)
+    }
+
+    func testIncomingResourceChangeDuringFinalProcessCheckRefusesSwap() throws {
+        let prepared = try prepared()
+        let originalSeal = try NativeBundleValidation.treeSeal(original)
+        var checks = 0, wrote = false, swapped = false
+        let result = NativeUpdateTransaction.commit(prepared, home: home, processes: {
+            checks += 1
+            if checks == 2 {
+                do {
+                    let parent = (self.original as NSString).deletingLastPathComponent
+                    let leaf = try XCTUnwrap(FileManager.default.contentsOfDirectory(atPath: parent).first { $0.hasPrefix(".thermo-update-") })
+                    try Data("concurrent incoming resource edit".utf8).write(to: URL(fileURLWithPath: parent + "/" + leaf + "/previous.app/Contents/Resources/data"))
+                    wrote = true
+                } catch { XCTFail("Could not arrange owned incoming edit: \(error)") }
+            }
+            return ProcessTable(entries: [])
+        }, afterSwap: { swapped = true })
+        XCTAssertTrue(wrote)
+        XCTAssertFalse(swapped, "Changed incoming content must not become the active app, even temporarily")
+        XCTAssertEqual(result.outcome, "failed")
+        XCTAssertNil(result.receipt)
+        XCTAssertEqual(try NativeBundleValidation.treeSeal(original), originalSeal)
+    }
+
     func testConcurrentReplacementIsNeverOverwrittenByRollback() throws {
         let prepared = try prepared()
         let result = NativeUpdateTransaction.commit(prepared, home: home, processes: { ProcessTable(entries: []) }, afterSwap: {
