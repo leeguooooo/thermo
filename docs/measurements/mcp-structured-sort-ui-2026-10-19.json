@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUTC": "2026-10-19T14:14:51.106707+00:00",
+  "source": {
+    "source": "/Users/leo/.codex/artifacts/thermo-structured-sort-source",
+    "commit": "965e4d2f42013307746d2f685e659df6ce1a7729",
+    "tree": "426c917c0cac3db9d02659756d33437528141df2"
+  },
+  "change": {
+    "AppStructuredJSONSort": true,
+    "onlyFullyInspectableCompletedResultsRanked": true,
+    "unknownOrInvalidEntriesFollowKnownValues": true,
+    "verifiedAbsentStructuredFieldCanRankAsZero": true,
+    "referenceEncodingUsesReferenceRatherThanHeuristicTokens": true,
+    "returnedTextShareHiddenForStructuredSort": true,
+    "sortRestrictedToMCP": true,
+    "CLIHumanOutputStillRanksReturnedText": true
+  },
+  "remote": {
+    "runID": "822fc3c3-f511-4e0f-9cdd-72a729e72764",
+    "host": "leos-MacBook-Pro.local",
+    "sourceTree": "426c917c0cac3db9d02659756d33437528141df2",
+    "sourceUnchanged": true,
+    "developerDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "targetedTests": {
+      "ThermoAppTests": 3,
+      "AgentDoctorTests": 53,
+      "total": 56
+    },
+    "seconds": 280.63166674994864,
+    "allCollectedHashesVerified": true,
+    "verifiedCollectedFiles": 6,
+    "productScope": "Release test-build executables for owned local GUI QA; not a distribution package"
+  },
+  "firstAttempt": {
+    "runID": "89886769-7866-4112-92c5-5931437370d6",
+    "exitCode": 1,
+    "result": "test source compile failure before execution",
+    "reason": "ToolUsageRow memberwise initializer is internal; test imported AgentDoctor without @testable",
+    "fixedIn": "965e4d2",
+    "notAccepted": true,
+    "collectedHashesVerified": true
+  },
+  "localNativeUI": {
+    "ownedBundleID": "dev.thermo.structuredqa",
+    "fixtureOnly": true,
+    "rows": 12,
+    "compiledAppSHA256": "02c0709a3b5dac07fdecbd2c70c32376b9695f77944ba1b1775bbed2c242a054",
+    "qaRuntimeSHA256": "711c2c9f3be4352cf046679d7406d3ecb33bdfe15075e99e495be281781f3b08",
+    "adHocSignatureVerified": true,
+    "noUpdateFeed": true,
+    "automaticControlsSuppressedBy": "--ui-review",
+    "isolatedHome": true,
+    "method": "Actual app window controlled and observed through cua_repl; screenshots reviewed alongside accessibility state",
+    "textSortVisibleRows": 8,
+    "wideJSONAbsentFromInitialEight": true,
+    "structuredSortFirstRow": "wide_json",
+    "expandedToAllTwelve": true,
+    "knownZeroBeforeUnknown": true,
+    "lastExpandedRow": "unknown_result",
+    "unknownCoverageExplanationVisible": true,
+    "rankingCaveatVisible": true,
+    "returnedTextShareHidden": true,
+    "payloadTextNotDisplayed": true,
+    "wideJSONBytes": 48011,
+    "heuristicJSONTokens": 12003,
+    "cl100kJSONTokens": 9004,
+    "encodingChangeWarnsBeforeReanalysis": true,
+    "referenceReanalysisKeepsWideJSONFirst": true,
+    "screenshotsReviewed": 3,
+    "screenshotFilesExported": false,
+    "automationRecovery": "One stale accessibility element ID was rejected; subsequent actions used IDs from fresh states and verified postconditions.",
+    "closedThroughOwnedWindow": true,
+    "ownedRuntimeProcessesAfterClose": 0,
+    "originalThermoBundleRunningAtStartAndEnd": true
+  },
+  "CLI": {
+    "SHA256": "3a2085aff20c2f94a5ab51ee581e43f60cdc802e44caff7f51ec73ac9604cbb2",
+    "contractGroupsPassed": 7,
+    "retainedRealValueReplayPassed": true,
+    "liveBusinessExecution": false
+  },
+  "boundaries": {
+    "installed": false,
+    "published": false,
+    "newModelRuns": 0,
+    "newBusinessToolCalls": 0,
+    "requestOrBilledTokensMeasured": false,
+    "allMCPBusinessQualityRanked": false,
+    "distributionPackageAccepted": false,
+    "nativeUIOnlyForOwnedReleaseTestBuild": true
+  }
+}
