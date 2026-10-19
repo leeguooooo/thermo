@@ -54,6 +54,10 @@ text({
 
 两条结果的文本块都只有 `Action completed.` 的 17 字节。文本块、结构化值的 JSON 参考表示、实际转发给模型的字段与请求计量应分开；不能因文本块短就断言返回很小，也不能把整个运行态对象当作模型已消费的数据。计数没有相加，更没有推算账单。
 
+源码复核确认，`ToolUsageParser.result` 在有 `content` 时优先计量它，仅在没有 `content` 时序列化 `structuredContent`。当前排行适用于这项返回文本口径，不是完整 MCP 返回体排行。本会话日志末尾 20,000,000 字节的有界检查未找到原生 `mcp_tool_call_begin/end` 事件；这不证明其他日志没有事件，也不能据此恢复这两次嵌套调用的结构化返回。上述数字来自显式保留的运行态结果。以后补充结构化统计，须单列已记录样本与未知覆盖范围，不能从外层脚本文本倒推内部调用。
+
+可参考两类工具。官方 [MCP Inspector 的 CLI 验收指南](https://github.com/modelcontextprotocol/inspector/blob/main/docs/cli-smoke-testing.md)将握手、工具目录、代表性调用及结果字段断言分开，示例分别检查文本与结构化结果；这适合借鉴到显式验收入口，但不能把一次握手算作任务通过。[Langfuse MCP tracing](https://langfuse.com/docs/observability/features/mcp-tracing)通过 `_meta` 传播 trace context，关联客户端和服务端调用；对我们最有价值的是可靠关联证据，而不是从缺少原生事件的日志猜调用树。本轮只核对官方文档，没有安装、接入遥测或验证这两个工具的当前运行版本。
+
 同轮静态复查共 368 个条目：目录区 135 份独立文件、5 个别名，目录描述 / 完整文档分别为 cl100k 16,232 / 406,166；缓存 227 份文件另列。已检查的目录引用没有发现缺失目标；只有已知 thermo-use 0.4.1 缓存 YAML 问题。另一个空目录没有 SKILL.md，不计作有效 Skill，未删除，也未擅自给它补说明。静态检查不验证宿主加载或业务效果，本轮没有修改缓存、用户 Skill 或配置。
 
 ## 已实现的静态 Skill 检查
