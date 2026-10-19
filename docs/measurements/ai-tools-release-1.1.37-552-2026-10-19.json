@@ -1,0 +1,471 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "version": "1.1.37",
+  "build": "552",
+  "sourceCommit": "497b1a9f36471fba54a581559309000cf09b9076",
+  "sourceTree": "ead8d4e6544fbb0b2e4c1630c4062bb8e98ec9c9",
+  "sourceBinding": "Requested clean source tree and tracked-file hashes match the remote snapshot; actual snapshot HEAD is recorded separately, not a reproducibility claim",
+  "remote": {
+    "host": "mac190",
+    "runId": "2c628257-472c-42c2-9f4b-15f8b83756e1",
+    "actualSnapshotCommit": "a8bf2d4a669441e16e7881352f658539755a1074",
+    "toolchain": {
+      "developerDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+      "swift": "6.4",
+      "sdk": "27.0"
+    },
+    "tests": {
+      "sourceCommit": "497b1a9f36471fba54a581559309000cf09b9076",
+      "executionHost": "mac190",
+      "suites": {
+        "ThermoKitTests": {
+          "tests": 207,
+          "failures": 0
+        },
+        "ThermoHelperTests": {
+          "tests": 30,
+          "failures": 0
+        },
+        "ThermoCLITests": {
+          "tests": 110,
+          "failures": 0
+        },
+        "ThermoAppTests": {
+          "tests": 311,
+          "failures": 0
+        },
+        "CleanKitTests": {
+          "tests": 759,
+          "failures": 0
+        },
+        "AgentDoctorTests": {
+          "tests": 323,
+          "failures": 0
+        },
+        "AgentCoreTests": {
+          "tests": 52,
+          "failures": 0
+        }
+      },
+      "tests": 1792,
+      "failures": 0,
+      "hardwareTestsExcluded": true
+    },
+    "universalBuildReceipt": {
+      "exitCode": 0,
+      "seconds": 398.8931705,
+      "processTerminal": true,
+      "executionHost": "leos-MacBook-Pro.local",
+      "argv": [
+        "/usr/bin/swift",
+        "build",
+        "-c",
+        "release",
+        "--arch",
+        "arm64",
+        "--arch",
+        "x86_64",
+        "--jobs",
+        "1"
+      ],
+      "timedOut": false,
+      "interrupted": false
+    },
+    "productRawSHA256": {
+      "thermo-helper": "d406895cfdd39cbc4ba1d57c8e91ccc56029133a64b24e810f3810f948b93f7e",
+      "thermo": "56fd3b5010e997db6a7a41067babdac78bb3ea945d942791c672d3b948e74c67",
+      "ThermoApp": "7b8fd488b6d630e8999ca6a15254f8a5b0981d66399a64ee70bb55be2a17df68"
+    },
+    "commandExit": 0,
+    "sflowCollectionStatus": "blocked",
+    "collectionIssue": "Normal internal Sparkle.framework symlinks refused by the artifact collector; original blocked result retained"
+  },
+  "artifactRecovery": {
+    "regularArtifactFilesHashVerified": 101,
+    "sparkleRegularFiles": 88,
+    "sparkleOrdinaryTreeExactlyMatchesPinnedDependency": true,
+    "recoveredLinks": {
+      "PrivateHeaders": "Versions/Current/PrivateHeaders",
+      "Resources": "Versions/Current/Resources",
+      "Autoupdate": "Versions/Current/Autoupdate",
+      "Updater.app": "Versions/Current/Updater.app",
+      "Headers": "Versions/Current/Headers",
+      "XPCServices": "Versions/Current/XPCServices",
+      "Modules": "Versions/Current/Modules",
+      "Sparkle": "Versions/Current/Sparkle",
+      "Versions/Current": "B"
+    },
+    "onlyReportedMissingLinksRecovered": true,
+    "allLinksStayInsideFramework": true,
+    "frameworkSignatureVerificationExit": 0,
+    "frameworkModeSource": "Matching pinned Sparkle dependency cache",
+    "productExecutableModesNormalized": "0755",
+    "productBytesUnchanged": true,
+    "originalSflowResult": "blocked on symlink collection; retained unchanged",
+    "recompiled": false
+  },
+  "localPackaging": {
+    "configuration": "assembly/signing only, from remote products",
+    "productRecompiledLocally": false,
+    "plan": {
+      "sourceCommit": "497b1a9f36471fba54a581559309000cf09b9076",
+      "build": "552",
+      "sourceBuildScriptSHA256": "bea479a5648af9e784512326fe040b652d526a958d9548a2b9dff392e710042f",
+      "adapterSHA256": "a94839e5e7634a3c5bbd197db2fc6946b3e99c5843e78932c03e48fabf616b65",
+      "exactSubstitutions": 3,
+      "productCompilationCommandsRemaining": 0,
+      "shellSyntaxPassed": true,
+      "executed": false,
+      "scope": "Same frozen assembly/signing/artifact-check body, fed verified remote products; local product compilation removed",
+      "futureEnvironment": {
+        "SIGN_ID": "-",
+        "NOTARY_PROFILE": "",
+        "NOTARY_KEYCHAIN": "",
+        "APPCAST_URL": "",
+        "THERMO_BUILD_CONFIGURATION": "release",
+        "THERMO_DIST_DIR": "/Users/leo/.codex/artifacts/thermo-ai-current-release-pglt5jjh/compat-552/dist",
+        "ARCHS": "arm64 x86_64"
+      },
+      "localScope": "Assembly/ad-hoc signing and target-package checks only; no new product compilation, GUI launch, install or publication"
+    },
+    "adHocSigned": true,
+    "notarized": false,
+    "updatesFeed": null,
+    "versionAndCommitMatch": true,
+    "minimumMacOS": "13.0",
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ]
+  },
+  "packageAcceptance": {
+    "complete": true,
+    "checkCount": 25,
+    "checkResults": [
+      {
+        "name": "artifacts",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "arm64-extract",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "arm64-signature",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "arm64-version",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "arm64-verify-skill-context",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "arm64-verify-skill-quality",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "arm64-verify-tool-usage",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "arm64-verify-reference-encoding",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "arm64-verify-task-comparison",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "arm64-verify-mcp-cleanup-details",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "arm64-verify-cli-completeness",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "arm64-verify-skill-instruction-usage",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "arm64-verify-ai-diagnostics-contract",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "x86_64-extract",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "x86_64-signature",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "x86_64-version",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "x86_64-verify-skill-context",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "x86_64-verify-skill-quality",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "x86_64-verify-tool-usage",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "x86_64-verify-reference-encoding",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "x86_64-verify-task-comparison",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "x86_64-verify-mcp-cleanup-details",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "x86_64-verify-cli-completeness",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "x86_64-verify-skill-instruction-usage",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      },
+      {
+        "name": "x86_64-verify-ai-diagnostics-contract",
+        "exitCode": 0,
+        "timedOut": false,
+        "interrupted": false
+      }
+    ],
+    "sourceUnchanged": true,
+    "packageFilesUnchanged": true,
+    "releaseTestsMode": "reused-local-evidence",
+    "releaseTestLogSHA256": "a614f8c68fde693679cd39fe409cf0b766e648c31fb324ee7c477e87f9af0ec9",
+    "scope": "Release tests, package signatures and both CLI architectures; no GUI or installation acceptance",
+    "entrypointSHA256": "38267d3259c6f0710846d434250f9e76848cd964182fd0a4571bdc1395123100",
+    "scriptSourcesSHA256": {
+      "verify-skill-context.py": "813dcbe6b20190239a9d9ef5192958b8f8c48f4449f3e4fe51faa6d404be3018",
+      "verify-skill-quality.py": "4c4123831aea17f8545be5a1996bce1b638c1ac0cec93e4eead95280774fbbab",
+      "verify-tool-usage.py": "62a7c03d71598f2a7aebc71b5be04c28d073a450ab1c932ae0a693fb7181c195",
+      "verify-reference-encoding.py": "931d5ab0babf301dd94d4e31b6ad03dc65ddcf07d03753479d6d9907f7440e62",
+      "verify-task-comparison.py": "13f099ddedffe385eb7efa4817c555564d73e54e0cb9c0842e3d40ced808317f",
+      "verify-mcp-cleanup-details.py": "9b76238fbd9343cd91d99551f9e2394d5b9609a517d9c3b5935c9251972489a5",
+      "verify-cli-completeness.py": "40ca3096477573c0934f1519256f3ecf64416fb902edfc691711a3970c1456e1",
+      "verify-skill-instruction-usage.py": "762c8400c47b7b5b252957970921736a618d87c9a1800dad891726584d00647b",
+      "verify-ai-diagnostics-contract.py": "c2da75a1ccf13e9a57c08777e79412beea7f791280d88b6f307fb8de14a642f6"
+    }
+  },
+  "extraSurfaces": {
+    "arm64": {
+      "passed": true,
+      "binarySHA256": "943232e582df2b19a8ae50b56f24450f89de33a4a9aab974ad1865f0c545afa0",
+      "mcpSummedSeconds": 30,
+      "mcpOccupiedSeconds": 5,
+      "outerSummedSeconds": 8,
+      "outerOccupiedSeconds": 4,
+      "skillOccupiedSeconds": 2,
+      "codedMirrorsCountOnce": true,
+      "uncodedAndInvocationErrorsStaySeparate": true,
+      "outerMarkersNotNestedMCPAttribution": true,
+      "mediaAndMissingReferenceBoundariesPreserved": true,
+      "linkedInstructionLoad": true,
+      "nativeCumulativeCountersNotRequestUsage": true,
+      "YAMLUnknownAndCacheOwnerVerified": true,
+      "rawArgumentsAndResultsExcluded": true,
+      "appOpened": false,
+      "MCPServersInvoked": false,
+      "modelTurns": 0,
+      "ownedFixturesOnly": true
+    },
+    "x86_64": {
+      "passed": true,
+      "binarySHA256": "6623f9edc936b042f3d3839dd4e78dcbbc8f6504099bdcdb18cb9aa2504543a7",
+      "mcpSummedSeconds": 30,
+      "mcpOccupiedSeconds": 5,
+      "outerSummedSeconds": 8,
+      "outerOccupiedSeconds": 4,
+      "skillOccupiedSeconds": 2,
+      "codedMirrorsCountOnce": true,
+      "uncodedAndInvocationErrorsStaySeparate": true,
+      "outerMarkersNotNestedMCPAttribution": true,
+      "mediaAndMissingReferenceBoundariesPreserved": true,
+      "linkedInstructionLoad": true,
+      "nativeCumulativeCountersNotRequestUsage": true,
+      "YAMLUnknownAndCacheOwnerVerified": true,
+      "rawArgumentsAndResultsExcluded": true,
+      "appOpened": false,
+      "MCPServersInvoked": false,
+      "modelTurns": 0,
+      "ownedFixturesOnly": true
+    }
+  },
+  "helperSymbols": {
+    "arm64": {
+      "unexpectedDiagnosticSymbolMatches": 0
+    },
+    "x86_64": {
+      "unexpectedDiagnosticSymbolMatches": 0
+    }
+  },
+  "qaIdentity": {
+    "bundleID": "dev.thermo.ai.release.qa.552.mpat-552",
+    "build": "552",
+    "sourceCommit": "497b1a9f36471fba54a581559309000cf09b9076",
+    "runtimeAllFileBackedSectionsMatch": true,
+    "runtimeSHA256": "f102193803eb427a8056c0e739df4c5edd7382c535c1b3b01253a53a0262c616",
+    "isolatedHome": true,
+    "syntheticOnly": true,
+    "reviewMode": true
+  },
+  "nativeWindow": {
+    "sourceCommit": "497b1a9f36471fba54a581559309000cf09b9076",
+    "architecture": "arm64",
+    "syntheticOnly": true,
+    "reviewMode": true,
+    "observations": {
+      "occupiedVsSummedSeconds": [
+        5,
+        25
+      ],
+      "validMCPPairs": 5,
+      "codedError": "element_occluded x 1; unclassified 0",
+      "uncodedError": "explicit error 1; unclassified 1",
+      "hostFailure": "No result; excluded from result-error denominator, timing retained",
+      "serializedMediaTextResults": 1,
+      "nativeMediaNotTokenized": true,
+      "truncationMarkerResults": 1,
+      "cumulativeSnapshots": [
+        "input 1000000000; missing cache write -> unknown",
+        "latest-time conflict -> unknown"
+      ],
+      "collapseAndReopenPreserved": true,
+      "YAMLUnknownCatalogFullDocumentStillMeasured": true,
+      "cacheManifestLabel": "fixture, not version 1",
+      "cacheModificationActionsNotOffered": true,
+      "missingExtensionlessReferenceVisible": true,
+      "linkedSkillInstructions": {
+        "loads": 1,
+        "bytes": 43,
+        "cl100kTokens": 6
+      },
+      "skillAcknowledgment": {
+        "bytes": 20,
+        "cl100kTokens": 2
+      },
+      "encodingMismatchShownUntilReanalysis": true
+    },
+    "mcpInspection": {
+      "tools": 1,
+      "definitionBytes": 157,
+      "heuristicTokens": 40,
+      "missingLocalSchemaTargetHint": true,
+      "RPCMethodsObserved": [
+        "initialize",
+        "notifications/initialized",
+        "tools/list"
+      ],
+      "businessMethodsInvoked": false
+    },
+    "computerUseIncidents": [
+      {
+        "error": "noWindowsAvailable once on scroll",
+        "QAProcessStillAlive": true,
+        "reboundByBundleID": true,
+        "matchingCrashReportFound": false,
+        "interpretation": "Provider/window-binding incident, not a demonstrated App crash"
+      },
+      {
+        "observation": "A bound AX observation after closing the window reopened a fresh QA window; final close verified only by OS process observation",
+        "finalQARuntimeProcessAbsent": true
+      }
+    ],
+    "knownReviewNote": "YAML suggestion text renders literal backslash-n escapes; formatting improvement remains separate",
+    "originalPackageFingerprintUnchangedAfterGUI": true,
+    "QAProcessTerminal": true,
+    "installedAppMetadataObservedAfter": {
+      "version": "1.1.37",
+      "build": "543",
+      "sourceCommit": "3892e70e8721c1fb8ce74bd2faaf0870e38ccaf4"
+    },
+    "installedOrPublishedByThisWork": false,
+    "screenshots": "Native CUA images viewed in conversation; no offscreen render presented as native window evidence",
+    "notVerified": [
+      "x86_64 App GUI",
+      "About dialog",
+      "real-task business or Skill benefit",
+      "hardware control",
+      "installed update or publication"
+    ]
+  },
+  "installedPreservation": {
+    "sameFullFingerprintAsInitialSample": true,
+    "changedEntries": 0,
+    "installedByThisWork": false,
+    "note": "This compares observed files; any outside changes would require separate attribution"
+  },
+  "boundaries": [
+    "Fixed 552 source, not a claim about later moving main/release changes",
+    "Only arm64 native App window checked; both CLI architectures separately checked",
+    "Synthetic UI/log/definition checks do not establish business quality or Skill net benefit",
+    "No hardware-control, installed-update, notarization or publication acceptance",
+    "Existing suggestion text shows literal newline escapes; retained as a formatting follow-up",
+    "Computer-use provider had one noWindowsAvailable event; process stayed alive and rebinding recovered, no App crash inferred"
+  ]
+}
