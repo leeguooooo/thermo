@@ -84,5 +84,28 @@ for line in sys.stdin:
  assert usage['sessionTokens'][0]['inputTokens']==25 and usage['sessionTokens'][0]['requests']==1
  assert not usage['tools'] and usage['coverage']['unsupportedUsageRecords']==0
  checks.append('latest cumulative counters, decreases and conflicts stay separate from requests and tools')
+
+ def protocol(offset,payload):
+  return {'type':'response_item','timestamp':(clock+datetime.timedelta(seconds=offset)).isoformat(),'payload':payload}
+ blocks=json.dumps([{'type':'input_text','text':'fixture-result'}, {'type':'input_image','image_url':'data:image/png;base64,PRIVATE_NAMESPACE_IMAGE'}])
+ namespaced=[
+  protocol(-20,{'type':'function_call','call_id':'owned-ns','namespace':'mcp__owned_format','name':'inspect','arguments':'PRIVATE_NAMESPACE_ARGUMENT'}),
+  protocol(-17,{'type':'function_call_output','call_id':'owned-ns','output':blocks}),
+  protocol(-16,{'type':'function_call','call_id':'owned-legacy','name':'mcp__owned_format__inspect','arguments':'PRIVATE_NAMESPACE_ARGUMENT'}),
+  protocol(-15,{'type':'function_call_output','call_id':'owned-legacy','output':json.dumps({'isError':False,'content':[{'type':'text','text':'legacy'}]})}),
+  protocol(-14,{'type':'function_call','call_id':'owned-clock','namespace':'clock','name':'inspect','arguments':'PRIVATE_NAMESPACE_ARGUMENT'}),
+  protocol(-12,{'type':'function_call_output','call_id':'owned-clock','output':json.dumps([{'type':'input_text','text':'clock'}])})]
+ path=root/'namespaced.jsonl';path.write_text(''.join(json.dumps(x)+'\n' for x in namespaced))
+ text=run(['agents','usage','--agent','codex','--log-file',str(path),'--encoding','cl100k_base','--json']).stdout
+ namespaced_report=json.loads(text);rows=namespaced_report['tools']
+ assert len(rows)==1 and rows[0]['server']=='owned_format' and rows[0]['name']=='inspect'
+ row=rows[0]
+ assert row['calls']==row['completed']==row['timingSamples']==2, 'separate Codex MCP namespace must group with its legacy name'
+ assert row['returnedTextBytes']==20 and row['nonTextBlocks']==1 and row['unknownErrorStatus']==1
+ assert row['reportedErrors']==0 and row['totalObservedSeconds']==4
+ outer=namespaced_report['coverage']['unattributedResults']['byTool']
+ assert len(outer)==1 and outer[0]['name']=='clock.inspect' and outer[0]['calls']==1
+ for private in ['PRIVATE_NAMESPACE_ARGUMENT','PRIVATE_NAMESPACE_IMAGE','fixture-result']:assert private not in text
+ checks.append('separate Codex namespaces group with legacy MCP names; native images excluded and same-name outer tools stay distinct')
 print(json.dumps({'fixtureOnly':True,'binarySHA256':hashlib.sha256(binary.read_bytes()).hexdigest(),'groupsPassed':len(checks),'checks':checks,'modelsOrDevicesUsed':False},indent=2))
 # Test: python3 scripts/verify-ai-diagnostics-contract.py /path/to/thermo
