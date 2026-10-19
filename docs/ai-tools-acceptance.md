@@ -35,7 +35,7 @@ python3 scripts/verify-ai-release.py \
   --plan
 ```
 
-先用 `--plan` 查看范围，去掉它才执行检查。输出目录必须是源码、包之外的新目录。不传 `--release-evidence` 时会以一个 job 跑 Release 测试，排除 HardwareTests；复用时核对 `freeze.json`、终止状态、日志中的七套通过记录和源码哈希，记录为复用而非本次重跑。
+先用 `--plan` 查看范围，去掉它才执行检查。输出目录必须是源码、包之外的新目录。不传 `--release-evidence` 时会以一个 job 跑 Release 测试，排除 HardwareTests；复用时核对 `freeze.json`、终止状态、日志中的七套通过记录和源码哈希，记录为复用而非本次重跑。入口自己运行的测试也会生成同样的可复用证据；stdout 和 stderr 分开保留，派生的测试合并日志只用于套件核对，不作为时序记录。
 
 入口复用签名、最低系统版本及 CLI 检查，并对 arm64 / Rosetta 分别验证关键 AI 诊断契约、版本身份和输入包完整性。每项保留日志、退出码、超时或中断状态；失败即停，不重试，不回滚他人的修改。`result.json` 的 `complete` 只表示这些检查完成，不代表 GUI、安装版或可复现构建验收。退出码 0 为完成、1 为失败或未完成、2 为输入不合格。`--check-timeout` 设置每项包检查的秒数，默认 240，范围 1–3600；Release 测试使用单独的 1800 秒上限。
 

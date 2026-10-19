@@ -49,6 +49,12 @@ def source_guard(source, commit):
         raise ValueError("source commit changed or checkout is not clean")
 
 
+def source_hashes(source):
+    names = git(source, "ls-files", "-z").split("\0")
+    selected = [name for name in names if name and (name.endswith(".swift") or name in ("Package.swift", "Package.resolved"))]
+    return {name: digest(source / name) for name in selected}
+
+
 def test_summary(text):
     found = re.findall(r"Test Suite '([^']+Tests)\.xctest' passed[^\n]*\n\s*Executed (\d+) tests, with (\d+) failures", text)
     rows = {name: {"tests": int(count), "failures": int(errors)} for name, count, errors in found}
@@ -62,6 +68,8 @@ def test_summary(text):
 def reused_tests(folder, commit, source):
     freeze = json.loads((folder / "freeze.json").read_text())
     receipt = json.loads((folder / "tests-exit.json").read_text())
+    if not isinstance(freeze, dict) or not isinstance(receipt, dict):
+        raise ValueError("Release evidence records must be objects")
     if freeze.get("sourceCommit") != commit or receipt.get("sourceCommit") != commit:
         raise ValueError("Release evidence belongs to a different source commit")
     if (type(receipt.get("exitCode")) is not int or receipt["exitCode"] != 0
@@ -90,6 +98,12 @@ def package_fingerprint(package):
     return files
 
 
+def cli_identity(record, version):
+    if (not isinstance(record, dict) or record.get("cliVersion") != version
+            or "appPackage" not in record or record["appPackage"] is not None):
+        raise ValueError("thin standalone CLI version/package identity mismatch")
+
+
 def inside(path, root):
     return path == root or path.is_relative_to(root)
 
@@ -105,8 +119,10 @@ def inputs(args):
     if any(inside(output, Path(p)) for p in ["/Applications", "/System", "/Library", "/usr", "/bin", "/sbin"]):
         raise ValueError("output cannot be a system or installed-app directory")
     info = plistlib.loads((package / "Thermo.app/Contents/Info.plist").read_bytes())
+    if not isinstance(info, dict):
+        raise ValueError("package Info.plist must be a dictionary")
     commit = info.get("ThermoBuildSourceCommit", "")
-    if not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", commit) or info.get("ThermoBuildWorkingTree") != "clean":
+    if not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", commit) or info.get("ThermoBuildWorkingTree") != "clean":
         raise ValueError("package must declare a fixed clean source commit")
     if not isinstance(info.get("CFBundleVersion"), str) or not info["CFBundleVersion"].isdigit():
         raise ValueError("package build number must be a decimal string")
@@ -160,9 +176,10 @@ def main(argv=None):
         timeout = args.check_timeout if timeout is None else timeout
         source_guard(source, commit)
         start = time.monotonic(); log = output / (name + ".log")
-        with log.open("w") as stream:
+        error_log = output / (name + ".stderr.log")
+        with log.open("w") as stream, error_log.open("w") as errors:
             env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
-            proc = subprocess.Popen([str(x) for x in command], cwd=source, env=env, stdout=stream, stderr=subprocess.STDOUT, start_new_session=True)
+            proc = subprocess.Popen([str(x) for x in command], cwd=source, env=env, stdout=stream, stderr=errors, start_new_session=True)
             timed_out = False; interrupted = False
             try:
                 proc.wait(timeout=timeout)
@@ -175,7 +192,8 @@ def main(argv=None):
                 except subprocess.TimeoutExpired:
                     os.killpg(proc.pid, signal.SIGKILL); proc.wait()
         row = {"name": name, "exitCode": proc.returncode, "timedOut": timed_out, "interrupted": interrupted,
-               "seconds": round(time.monotonic()-start, 3), "log": log.name, "logSHA256": digest(log)}
+               "seconds": round(time.monotonic()-start, 3), "log": log.name, "logSHA256": digest(log),
+               "stderrLog": error_log.name, "stderrSHA256": digest(error_log)}
         report["checks"].append(row); save()
         if timed_out or interrupted or proc.returncode:
             raise ValueError("check failed: " + name)
@@ -192,8 +210,16 @@ def main(argv=None):
         if reused:
             report["releaseTests"] = reused
         else:
+            frozen_hashes = source_hashes(source)
             log = run("release-tests", ["swift", "test", "-c", "release", "--jobs", "1", "--skip", "HardwareTests"], timeout=1800)
-            report["releaseTests"] = {"mode": "executed", "logSHA256": digest(log), "suites": test_summary(log.read_text(errors="replace"))}
+            # Keep the original channels. The derived evidence log concatenates
+            # stdout then stderr for suite parsing; it is not a timing trace.
+            error_log = output / "release-tests.stderr.log"
+            combined = log.read_bytes() + b"\n" + error_log.read_bytes()
+            (output / "tests.log").write_bytes(combined)
+            (output / "freeze.json").write_text(json.dumps({"sourceCommit": commit, "sourceFilesSHA256": frozen_hashes}, indent=2) + "\n")
+            (output / "tests-exit.json").write_text(json.dumps({"sourceCommit": commit, "exitCode": 0, "timedOut": False, "processTerminal": True, "combinedLogSemantics": "stdout then stderr; not a timing trace"}, indent=2) + "\n")
+            report["releaseTests"] = {"mode": "executed", "logSHA256": hashlib.sha256(combined).hexdigest(), "suites": test_summary(combined.decode(errors="replace"))}
         run("artifacts", ["sh", source / "scripts/verify-artifacts.sh", package, "arm64 x86_64"])
         for architecture in plan["architectures"]:
             binary = output / ("thermo-" + architecture)
@@ -201,9 +227,7 @@ def main(argv=None):
             binary.chmod(0o700)
             run(architecture + "-signature", ["codesign", "--verify", "--strict", binary])
             log = run(architecture + "-version", [binary, "--version", "--json"])
-            version = json.loads(log.read_text())
-            if version.get("cliVersion") != plan["version"] or "appPackage" not in version or version["appPackage"] is not None:
-                raise ValueError("thin standalone CLI version/package identity mismatch")
+            cli_identity(json.loads(log.read_text()), plan["version"])
             for script in scripts:
                 run(architecture + "-" + script.stem, [sys.executable, script, binary])
         report["packageFilesUnchanged"] = before == package_fingerprint(package)

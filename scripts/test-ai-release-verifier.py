@@ -22,7 +22,7 @@ class ReleaseVerifierTests(unittest.TestCase):
         self.root = Path(self.temp.name); self.source = self.root / "source"; self.source.mkdir()
         scripts = self.source / "scripts"; scripts.mkdir()
         for name in module.SCRIPTS: (scripts / name).write_text("# owned placeholder; never executed by these failure/plan tests\n")
-        (scripts / "verify-artifacts.sh").write_text("exit 7\n")
+        (scripts / "verify-artifacts.sh").write_text("echo '{\"fixture\":true}'\necho 'owned warning' >&2\nexit 7\n")
         version = self.source / "Sources/ThermoKit/Version.swift"; version.parent.mkdir(parents=True)
         version.write_text('enum ThermoVersion { static let string = "1.2.3" }\n')
         self.git("init", "-q"); self.git("add", ".")
@@ -47,9 +47,12 @@ class ReleaseVerifierTests(unittest.TestCase):
 
     def write_json(self, name, data): (self.evidence / name).write_text(json.dumps(data))
 
-    def run_entry(self, *extra, code=2):
-        args = [sys.executable, str(ENTRY), "--source", str(self.source), "--package", str(self.package), "--output", str(self.output), "--release-evidence", str(self.evidence), *extra]
-        result = subprocess.run(args, capture_output=True, text=True, timeout=20, env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
+    def run_entry(self, *extra, code=2, evidence=True, env_extra=None):
+        args = [sys.executable, str(ENTRY), "--source", str(self.source), "--package", str(self.package), "--output", str(self.output)]
+        if evidence: args += ["--release-evidence", str(self.evidence)]
+        args += extra
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1"); env.update(env_extra or {})
+        result = subprocess.run(args, capture_output=True, text=True, timeout=20, env=env)
         self.assertEqual(result.returncode, code, result.stdout + result.stderr); return result
 
     def commit_artifact_script(self, body):
@@ -99,7 +102,9 @@ class ReleaseVerifierTests(unittest.TestCase):
         self.run_entry(code=1);result=json.loads((self.output/"result.json").read_text())
         self.assertFalse(result["complete"]);self.assertEqual(result["checks"][0]["exitCode"],7)
         self.assertTrue(result["packageFilesUnchanged"]);self.assertTrue(result["sourceUnchanged"])
-        self.assertTrue((self.output/"artifacts.log").is_file());self.assertEqual(len(result["checks"]),1)
+        self.assertEqual(json.loads((self.output/"artifacts.log").read_text()), {"fixture":True})
+        self.assertEqual((self.output/"artifacts.stderr.log").read_text().strip(),"owned warning")
+        self.assertEqual(len(result["checks"]),1)
 
     def test_source_mutation_stops_later_checks_without_rollback(self):
         self.commit_artifact_script('echo "owned mutation" >> Sources/ThermoKit/Version.swift\n')
@@ -113,6 +118,31 @@ class ReleaseVerifierTests(unittest.TestCase):
         self.run_entry("--check-timeout","1",code=1);result=json.loads((self.output/"result.json").read_text())
         self.assertFalse(result["complete"]);self.assertTrue(result["checks"][0]["timedOut"])
         self.assertTrue(result["sourceUnchanged"]);self.assertEqual(len(result["checks"]),1)
+
+    def test_fresh_test_output_channels_form_reusable_evidence(self):
+        tools=self.root/"bin";tools.mkdir();swift=tools/"swift"
+        # Synthetic test-runner output only; no real Swift build is started.
+        swift.write_text("#!"+sys.executable+"\nimport sys\nprint('owned build stdout')\nsys.stderr.write("+repr(self.log)+")\n")
+        swift.chmod(0o700)
+        self.run_entry(code=1,evidence=False,env_extra={"PATH":str(tools)+os.pathsep+os.environ["PATH"]})
+        result=json.loads((self.output/"result.json").read_text());self.assertFalse(result["complete"])
+        self.assertEqual(result["releaseTests"]["mode"],"executed")
+        self.assertIn("owned build stdout",(self.output/"release-tests.log").read_text())
+        self.assertIn("ThermoKitTests",(self.output/"release-tests.stderr.log").read_text())
+        reused=module.reused_tests(self.output,self.commit,self.source.resolve())
+        self.assertEqual(set(reused["suites"]),module.SUITES)
+        self.assertEqual(reused["sourceCommit"],self.commit)
+
+    def test_malformed_metadata_is_refused_without_creating_output(self):
+        path=self.package/"Thermo.app/Contents/Info.plist";original=plistlib.loads(path.read_bytes())
+        path.write_bytes(plistlib.dumps([]));self.run_entry("--plan")
+        original["ThermoBuildSourceCommit"]=123;path.write_bytes(plistlib.dumps(original));self.run_entry("--plan")
+        self.assertFalse(self.output.exists())
+
+    def test_standalone_cli_requires_explicit_identity(self):
+        module.cli_identity({"cliVersion":"1.2.3","appPackage":None},"1.2.3")
+        for record in [[], {"cliVersion":"1.2.3"}, {"cliVersion":"1.2.3","appPackage":{}}, {"cliVersion":"9.9.9","appPackage":None}]:
+            with self.assertRaises(ValueError): module.cli_identity(record,"1.2.3")
 
     def test_framework_files_and_symlinks_participate_in_integrity_check(self):
         framework=self.package/"Thermo.app/Contents/Frameworks";framework.mkdir()
