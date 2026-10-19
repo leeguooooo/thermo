@@ -1,0 +1,157 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "d1d3943",
+  "baselineCommit": "8164529",
+  "scope": "Initialization-based MCP protocol revisions through 2025-11-25; stateless 2026-07-28 not supported",
+  "supportedHandshakeRevisions": [
+    "2024-11-05",
+    "2025-03-26",
+    "2025-06-18",
+    "2025-11-25"
+  ],
+  "preferredHandshakeRevision": "2025-11-25",
+  "officialSources": [
+    "https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle",
+    "https://modelcontextprotocol.io/docs/2026-07-28/learn/versioning",
+    "https://modelcontextprotocol.io/specification/2026-07-28/server/discover"
+  ],
+  "baselineRegression": {
+    "tests": 3,
+    "failedAssertions": 13
+  },
+  "candidateRegression": {
+    "tests": 346,
+    "failures": 0,
+    "configuration": "Debug isolated QA package using production modules and CLI; App targets excluded; HardwareTests excluded"
+  },
+  "officialSDKReplay": {
+    "passed": true,
+    "officialSDKVersion": "2.3.1",
+    "networkDenied": true,
+    "rows": [
+      {
+        "variant": "baseline",
+        "revision": "2025-06-18",
+        "offeredVersion": "2025-06-18",
+        "exitCode": 0,
+        "state": "ready",
+        "complete": true,
+        "methods": [
+          "initialize",
+          "notifications/initialized",
+          "tools/list"
+        ],
+        "toolCount": 2,
+        "definitionBytes": 3860,
+        "definitionReferenceTokens": 958,
+        "largestTool": "wide_output",
+        "reportSHA256": "e065ab8f70fb84b7a4988c000464b9862cc1b2693dfe624839cfa69c18fb3b02"
+      },
+      {
+        "variant": "baseline",
+        "revision": "2025-11-25",
+        "offeredVersion": "2025-06-18",
+        "exitCode": 2,
+        "state": "unsupported",
+        "complete": false,
+        "methods": [
+          "initialize"
+        ],
+        "toolCount": 0,
+        "definitionBytes": null,
+        "definitionReferenceTokens": null,
+        "largestTool": null,
+        "reportSHA256": "9902c7f28c5f21950860264f43fc13775c15fdb93662f493033867ce2ab2a9ce"
+      },
+      {
+        "variant": "candidate",
+        "revision": "2025-06-18",
+        "offeredVersion": "2025-11-25",
+        "exitCode": 0,
+        "state": "ready",
+        "complete": true,
+        "methods": [
+          "initialize",
+          "notifications/initialized",
+          "tools/list"
+        ],
+        "toolCount": 2,
+        "definitionBytes": 3860,
+        "definitionReferenceTokens": 958,
+        "largestTool": "wide_output",
+        "reportSHA256": "f5284089d2afc4922ebc64cb3f0ca77c5d82705f6de36faf54a6ff225217ac67"
+      },
+      {
+        "variant": "candidate",
+        "revision": "2025-11-25",
+        "offeredVersion": "2025-11-25",
+        "exitCode": 0,
+        "state": "ready",
+        "complete": true,
+        "methods": [
+          "initialize",
+          "notifications/initialized",
+          "tools/list"
+        ],
+        "toolCount": 2,
+        "definitionBytes": 3860,
+        "definitionReferenceTokens": 958,
+        "largestTool": "wide_output",
+        "reportSHA256": "e6e81239fed24cbb726acc47412c896beeb328902874ad538d5d03209b169481"
+      }
+    ],
+    "legacyMeasurementsUnchanged": true,
+    "realBusinessToolsCalled": false,
+    "modernStatelessSupportTested": false,
+    "baselineResultsReusedWithoutRerun": true,
+    "originalRunnerIssue": "Expected CLI failure exit 1 but observed existing CLIError exit 2; both baseline outputs preserved and validated, candidate executions only in resumed run",
+    "installed": false,
+    "published": false
+  },
+  "referenceContract": {
+    "passed": true,
+    "encodings": [
+      "cl100k_base",
+      "o200k_base"
+    ],
+    "standaloneBinary": true,
+    "skillMCPAndUsageCountsMatchReference": true,
+    "modelNamesNotInferred": true
+  },
+  "sourceVerification": {
+    "sourceFilesMatched": 572,
+    "cliSHA256": "66055e735bc4a265f23c0b0c1a1896e561caa0c8afe40e6ca0ac979a40b5c759",
+    "qaPackageSHA256": "f9f36660353767df2af9720da127846074fab30c84f4a5fd4b1166e32da772c5",
+    "host": "leos-MacBook-Pro.local",
+    "swiftVersion": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk"
+  },
+  "artifactsSHA256": {
+    "source-verification.json": "c62677856a6c578968706a30d650a8ef52a62a3e499eeea86185881aeea70c77",
+    "candidate-2025-06-18.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "candidate-2025-06-18.requests.jsonl": "25235bd725d17b0fc97dfdd87be82a9573f346555f608a26c5c4c63e3f912ea8",
+    "fixed.log": "c3df35a2ccb00d565f17f6b4c8d54fc0e0bec5610cac7fadc6839cc1025b7023",
+    "candidate-2025-11-25.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "candidate-2025-11-25.report.json": "e6e81239fed24cbb726acc47412c896beeb328902874ad538d5d03209b169481",
+    "candidate-2025-11-25.requests.jsonl": "25235bd725d17b0fc97dfdd87be82a9573f346555f608a26c5c4c63e3f912ea8",
+    "candidate-2025-06-18.report.json": "f5284089d2afc4922ebc64cb3f0ca77c5d82705f6de36faf54a6ff225217ac67",
+    "baseline.log": "9bad86dc46ba6258cf231683d9294767235dedd556517f8ef1d10fe8f088499d",
+    "sdk-result.json": "ab7e8d45d6bb32277f3abc5aaa2311583308a7a2ad036921b7173eace41a192e",
+    "baseline-2025-11-25.requests.jsonl": "09dbfcbb231d0250046929c5c3c18d8091ac3aa62f65c970671e6e632cc9b025",
+    "baseline-2025-11-25.stderr.log": "35f388fbfd74265cb0278a15287aa206233b15eb6ded91cc05f9b809c501eda4",
+    "baseline-2025-06-18.report.json": "e065ab8f70fb84b7a4988c000464b9862cc1b2693dfe624839cfa69c18fb3b02",
+    "baseline-2025-06-18.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "baseline-2025-06-18.requests.jsonl": "1a6354027de817c2593b5d4aca5fe7400b69fc8c2320d79af14099ac753ecfcf",
+    "baseline-2025-11-25.report.json": "9902c7f28c5f21950860264f43fc13775c15fdb93662f493033867ce2ab2a9ce",
+    "reference-contract.json": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d"
+  },
+  "remaining": [
+    "2026-07-28 server/discover and per-request metadata require a separate protocol flow; not enabled by this change",
+    "No App GUI or full Release acceptance in this run"
+  ],
+  "installed": false,
+  "published": false,
+  "realBusinessToolsCalled": false,
+  "realModelCalled": false,
+  "usageOrBillingSavingsMeasured": false
+}
