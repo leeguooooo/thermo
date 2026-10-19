@@ -1,0 +1,83 @@
+{
+  "recordedDate": "2026-10-20",
+  "task": "Verify public Thermo release, asset metadata and ancestry against the fixed tested candidate; read-only GitHub MCP and gh API cross-check.",
+  "businessAcceptance": {
+    "MCPAndCLIRequiredFieldsEqual": true,
+    "releaseTag": "v1.1.38",
+    "releaseCommit": "c56b17c3259241b89d0ee8306b90a6d8ab14d58d",
+    "remoteMainCommit": "b3a96d61dfd1c534bcda75b97a75da0ae1b74847",
+    "testedCandidateCommit": "8c1c7d57f7466f735da30d401183ecc85c3bb6b9",
+    "versions": {
+      "release": "1.1.38",
+      "remoteMain": "1.1.38",
+      "testedCandidate": "1.1.40"
+    },
+    "relations": {
+      "tagAncestorOfMain": true,
+      "mainAncestorOfTag": false,
+      "tagAncestorOfTestedCandidate": true,
+      "mainAncestorOfTestedCandidate": true
+    },
+    "releaseJSONBytes": 10739,
+    "requiredFieldsProjectionBytes": 844,
+    "releaseJSONSHA256": "28d3e783a4b29d1466fd9dbc7dfe6e0751e2bb52c98cc98fb8d9733e9c6f7747",
+    "projectionSHA256": "761f88b3298a668a83d59941ff3bf8650c0258be76dd96eaafabefafe624b7a8",
+    "allFiveAssetDigestsPresent": true,
+    "RPCsUsed": [
+      "GET releases/latest",
+      "GET git/ref/tags/v1.1.38",
+      "GET git/ref/heads/main"
+    ],
+    "realModelCalled": false,
+    "writesToGitHub": false,
+    "actualPromptOrBillingTokenCountsMeasured": false
+  },
+  "observedConnectorRepresentation": {
+    "sameBusinessJSONStringOccurrences": 2,
+    "eachDecodedUTF8Bytes": 10739,
+    "structuredJSONBytes": 23332,
+    "duplicationAttribution": "Observed in connector-normalized return; responsible server, connector or host layer not established."
+  },
+  "responseDerivedCounterReplay": {
+    "returnedTextBytes": 17,
+    "referenceReturnedTextTokens": 3,
+    "structuredContent": {
+      "alongsideContentResults": 1,
+      "inspectedResultObjects": 1,
+      "jsonBytes": 23332,
+      "jsonEstimatedTokens": 6043,
+      "jsonReferenceTokens": 7248,
+      "structuredResults": 1,
+      "unavailableJSONResults": 0,
+      "unobservableResults": 0
+    },
+    "unknownErrorStatus": 0,
+    "reportedErrors": 0,
+    "responseDerivedFixture": true,
+    "notANativeSessionLog": true,
+    "CLISHA256": "fc1d0064d9e55e54797bccc0873a6566be410ee0c020470aebcb503d02143fe4"
+  },
+  "boundaries": {
+    "originalResponsePreservedPrivately": true,
+    "replayIsNativeSessionLog": false,
+    "assetDownloadsOrChecksumVerificationPerformed": false,
+    "latencyMeasured": false,
+    "MCPVsCLIModelTaskBenchmark": false,
+    "actualPromptTokenOrBillingSavingsMeasured": false,
+    "serverQualityRankingEstablished": false,
+    "sourceCodeChanged": false,
+    "installedOrPublished": false
+  },
+  "evidenceSHA256": {
+    "result.json": "2970b32ef530d6850047a6713f52d7aa8e3ec325e60d565f0723625a122ef2a1",
+    "representation-result.json": "fb43643cfb47f5fc08f1c73852ef483a33962d4bedf0dabbb940e0ab477bf4ef",
+    "release-projection.json": "761f88b3298a668a83d59941ff3bf8650c0258be76dd96eaafabefafe624b7a8",
+    "response-derived-fixture.jsonl": "e147feed877ca74ff13007861fdcc4b7541a39fd9e1b2a78fd0b2c39051df5bd"
+  },
+  "sources": [
+    "https://api.github.com/repos/leeguooooo/thermo/releases/latest",
+    "https://api.github.com/repos/leeguooooo/thermo/git/ref/tags/v1.1.38",
+    "https://api.github.com/repos/leeguooooo/thermo/git/ref/heads/main",
+    "https://github.com/leeguooooo/thermo/releases/tag/v1.1.38"
+  ]
+}
