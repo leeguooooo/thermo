@@ -116,5 +116,7 @@ extension CleanDryRunTests {
         XCTAssertEqual(CleanCommand.cleanupCategories(for:["kilo-code-tasks/code"]),[.aiSessions])
         XCTAssertNil(CleanCommand.itemIDs(in:["sessions"]))
         XCTAssertEqual(CleanCommand.normalizedSelectors(["sessions","worktrees","models"]),["ai-sessions","agent-worktrees","ai-models"])
+        XCTAssertEqual(CleanCommand.normalizedSelectors(["cargo-cache uv-cache", " npm-cache\n"]), ["cargo-cache", "uv-cache", "npm-cache"])
+        XCTAssertEqual(CleanCommand.normalizedSelectors(["claude-sessions/x#a,b"]), ["claude-sessions/x#a,b"])
     }
 }

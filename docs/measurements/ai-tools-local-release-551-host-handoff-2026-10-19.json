@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-19T08:19:25.215425+00:00",
+  "sourceCommit": "0f759e91cbcbfab2bcc6e43c1be0cef931d166a4",
+  "sourceTree": "72d758da4dbe16f75c8352fdba4f1523cd584bed",
+  "version": "1.1.37",
+  "build": "551",
+  "sourceBinding": {
+    "trackedFiles": 981,
+    "allFrozenHashesVerifiedAfterTests": true,
+    "hashManifestSHA256": "d8ac75964d584e4bfe27e64b1d401dc85ed1d7573f8f3c984d08fbb92ad4ff01"
+  },
+  "localReleaseTests": {
+    "executionHost": "local controller Mac, not mac190",
+    "architecture": "arm64",
+    "suites": {
+      "ThermoKitTests": {
+        "tests": 207,
+        "failures": 0
+      },
+      "ThermoHelperTests": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests": {
+        "tests": 110,
+        "failures": 0
+      },
+      "ThermoAppTests": {
+        "tests": 311,
+        "failures": 0
+      },
+      "CleanKitTests": {
+        "tests": 759,
+        "failures": 0
+      },
+      "AgentDoctorTests": {
+        "tests": 323,
+        "failures": 0
+      },
+      "AgentCoreTests": {
+        "tests": 52,
+        "failures": 0
+      }
+    },
+    "tests": 1792,
+    "failures": 0,
+    "hardwareTestsExcluded": true,
+    "receipt": {
+      "exitCode": 0,
+      "timedOut": false,
+      "resourceStop": null,
+      "seconds": 3326.4452927499997,
+      "sourceCommit": "0f759e91cbcbfab2bcc6e43c1be0cef931d166a4",
+      "processTerminal": true
+    },
+    "combinedLogSHA256": "bcb85360b7387a206641a749bf872eddca78fe7e77f16fb7bbfc7dea90466263"
+  },
+  "hostHandoff": {
+    "reason": "User development-host preference supplied during the running test",
+    "localTestsAllowedToFinish": true,
+    "nextLocalBuildHeld": true,
+    "localBuildDispatched": false,
+    "localDriverAndPostCheckControllerStopped": true,
+    "localControlProcessesExit": 143,
+    "localTestExit": 0,
+    "differentExitScopes": "Controller termination after handoff is not a failed test; child test receipt is terminal exit 0"
+  },
+  "remotePlan": {
+    "host": "mac190",
+    "workflow": "command-only; no model workers",
+    "runId": "da8c576f-284f-4a1c-892a-846d1407050d",
+    "inputHead": "0f759e91cbcbfab2bcc6e43c1be0cef931d166a4",
+    "snapshotCommit": "fde2e12bc0c7772fb73e66392af64065817d547d",
+    "inputTree": "72d758da4dbe16f75c8352fdba4f1523cd584bed",
+    "sourceTreeMustMatchBeforeBuild": true,
+    "concurrency": 1,
+    "compilerJobs": 1,
+    "tests": [
+      "Release suites excluding HardwareTests"
+    ],
+    "compilation": [
+      "arm64",
+      "x86_64"
+    ],
+    "artifacts": "Raw binaries, Sparkle framework, logs and source hashes; packaging/signing/GUI acceptance kept on the appropriate target",
+    "preflight": {
+      "reachable": true,
+      "cpus": 10,
+      "architecture": "arm64",
+      "swift": "6.3.3",
+      "xcode": "26.6",
+      "initialFreeGB": 0.739934208,
+      "diskBlockerLaterClearedExternally": true,
+      "laterFreeGB": 68.195774464,
+      "cleanupPerformedByThisWork": false,
+      "schedulerCapacityChecksEnforced": true
+    },
+    "executionVerifiedAtThisCheckpoint": false,
+    "checkpointScope": "Submitted and waiting for permitted capacity, not a remote build/test pass"
+  },
+  "boundaries": [
+    "Local completed test evidence does not prove mac190 execution or toolchain behavior",
+    "No new heavy local build after the host preference update",
+    "Other sessions, workspaces and their capacity reservations preserved",
+    "No universal package, installation, publication, hardware or GUI acceptance established by this record"
+  ]
+}

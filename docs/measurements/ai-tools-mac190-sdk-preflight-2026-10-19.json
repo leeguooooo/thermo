@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-19T08:28:33.648816+00:00",
+  "sourceCommit": "0f759e91cbcbfab2bcc6e43c1be0cef931d166a4",
+  "requestedTree": "72d758da4dbe16f75c8352fdba4f1523cd584bed",
+  "firstRemoteAttempt": {
+    "runId": "da8c576f-284f-4a1c-892a-846d1407050d",
+    "host": "mac190",
+    "executionHostVerified": true,
+    "architecture": "arm64",
+    "snapshotHead": "fde2e12bc0c7772fb73e66392af64065817d547d",
+    "sourceTreeMatches": true,
+    "allSourceHashesMatch": true,
+    "sourceFileCount": 981,
+    "receipt": {
+      "exitCode": 1,
+      "seconds": 7.725147958,
+      "processTerminal": true,
+      "argv": [
+        "/usr/bin/swift",
+        "test",
+        "-c",
+        "release",
+        "--jobs",
+        "1",
+        "--skip",
+        "HardwareTests"
+      ],
+      "timedOut": false,
+      "interrupted": false
+    },
+    "failureStage": "Package manifest compilation, before any tests executed",
+    "cause": "Swift 6.3.3 received a Command Line Tools SDK built with Swift 6.4",
+    "initialFailurePreserved": true
+  },
+  "correction": {
+    "scope": "Per-command environment only",
+    "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer",
+    "SDKROOT": "Resolved with xcrun --sdk macosx --show-sdk-path under that developer directory",
+    "selectedSDKVersion": "26.5",
+    "globalXcodeSelectionModified": false,
+    "globalShellConfigurationModified": false,
+    "hostToolUpgradePerformed": false,
+    "modelCalls": 0
+  },
+  "minimalProbe": {
+    "host": "mac190",
+    "package": "OwnedSDKProbe",
+    "targetCount": 0,
+    "exitCode": 0,
+    "stderrBytes": 0,
+    "manifestSHA256": "3ad0d2868410d4600446e93864eed79d387ac5ea49d91f023dac24de7d92c3e9",
+    "scope": "Empty owned package manifest only; not a Release test or application acceptance"
+  },
+  "nextAttempt": {
+    "runId": "5f73a259-fe38-4854-b25d-3cdc5b522552",
+    "host": "mac190",
+    "inputTreeMustMatch": "72d758da4dbe16f75c8352fdba4f1523cd584bed",
+    "actualPackageManifestProbeBeforeTests": true,
+    "concurrency": 1,
+    "compilerJobs": 1,
+    "checkpoint": "Queued for permitted host capacity, no local fallback"
+  },
+  "boundaries": [
+    "A terminal failed run was not resumed or reported successful; a changed environment was verified before a new run was submitted",
+    "Capacity checks and other session reservations are preserved",
+    "Local 1792-test pass remains separate from all remote outcomes",
+    "No universal package, signing, GUI, hardware, installation or publication acceptance yet"
+  ]
+}

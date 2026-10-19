@@ -238,6 +238,10 @@ public enum RemovalMode: String, Sendable {
         case .permanent: return false
         }
     }
+
+    public func trashes(_ item: CleanItem) -> Bool {
+        self == .auto && item.regenerable == true ? false : trashes(item.safety)
+    }
 }
 
 public enum Cleaner {
@@ -301,7 +305,7 @@ public enum Cleaner {
         if item.category == .agentWorktrees {
             for path in item.paths {
                 do {
-                    if try WorktreeCleanup.registration(path, processes: processes, now: now) == nil, !mode.trashes(item.safety) {
+                    if try WorktreeCleanup.registration(path, processes: processes, now: now) == nil, !mode.trashes(item) {
                         return tr("Git worktree registration is unavailable; keep this folder")
                     }
                 }
@@ -336,7 +340,7 @@ public enum Cleaner {
 
     static func perform(_ item: CleanItem, mode: RemovalMode, guard g: Guard, scannedAt: Date?, processTable: ProcessTable?,
                         batchID: String, operations: RemovalOperations, now: Date = Date()) -> CleanResult {
-        let trash = mode.trashes(item.safety) && !item.paths.isEmpty
+        let trash = mode.trashes(item) && !item.paths.isEmpty
         var result = CleanResult(id: item.id, trashed: trash)
         let whitelist: Whitelist
         do { whitelist = try Whitelist.loadForRemoval(home: g.home) } catch {
