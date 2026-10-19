@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "sourceCommit": "e2eeebf347dc751c2072bb0f06838112e4e209e9",
+  "sourceTree": "22449ee6f51b60310d48a016a429dff73a05dad7",
+  "sourceFilesSHA256": {
+    "Sources/AgentDoctor/ToolUsageParser.swift": "93a5de921f0a2c56f0421665a480f323b8ece5cec53abf3dcf877ebe44863c25",
+    "Tests/AgentDoctorTests/ToolUsageTests.swift": "7065c40b098b5f4bc5f4a2fbc11427c40bd6f61334117cd2e3fe972fcd3085db",
+    "Tests/AgentDoctorTests/LocalizationTests.swift": "da7521af46413594f60b97d5c7a1c278cd0cc6f40e6cde909c5acdea4ca2c218"
+  },
+  "problem": {
+    "format": "Codex response_item with separate payload.namespace and short payload.name",
+    "observedNamespace": "mcp__cua_repl",
+    "observedName": "js",
+    "before": "MCP namespace ignored; calls counted as outer js",
+    "after": "Explicit namespace assigns calls to MCP cua_repl / js; other namespaces remain qualified outer tools",
+    "notInferred": "Nested calls inside scripts or result prose"
+  },
+  "regressionHistory": [
+    {
+      "runId": "17dbf230-c14c-4fb8-8ac8-b29a5f228a1d",
+      "baselineCases": 4,
+      "baselineAssertionFailures": 15,
+      "baselineExitCode": 1,
+      "baselineParserSHA256": "1eeb1187bcc9d115c1bdc2f58f7894b7456e22ee63dfc27f856dd64ebb9bd17f",
+      "candidateTests": 327,
+      "candidateFailures": 1,
+      "namespaceCasesPassed": 4,
+      "remainingFailure": "Localization source scanner did not decode newline escapes; retained as failed run"
+    },
+    {
+      "runId": "83a8d6e8-2e7c-4b1e-b300-a42b75010d6d",
+      "tests": 328,
+      "failures": 0,
+      "testExitCode": 0,
+      "cliBuildExitCode": 0,
+      "localizationCorrection": "Decode simple Swift escapes in one pass; preserve literal backslash-n and reject unsupported escapes"
+    }
+  ],
+  "remote": {
+    "host": "leos-MacBook-Pro.local",
+    "developerDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "sourceUnchanged": true,
+    "receipts": [
+      {
+        "name": "candidate",
+        "exitCode": 0,
+        "seconds": 312.739296499989,
+        "argv": [
+          "/usr/bin/swift",
+          "test",
+          "-c",
+          "release",
+          "--jobs",
+          "1",
+          "--filter",
+          "AgentDoctorTests"
+        ]
+      },
+      {
+        "name": "cli-build",
+        "exitCode": 0,
+        "seconds": 117.89326129097026,
+        "argv": [
+          "/usr/bin/swift",
+          "build",
+          "-c",
+          "release",
+          "--jobs",
+          "1",
+          "--product",
+          "thermo"
+        ]
+      }
+    ],
+    "artifactHashesVerified": 8,
+    "cliSHA256": "a57336b172756c210fdc1c95c7939f57ae2a3b670e8c784f443a669adb606ee1"
+  },
+  "realLogReplay": {
+    "scope": "29 complete call/output pairs selected from bounded recent local Codex log tails; not all usage",
+    "sourceProjectionSHA256": "8d7979b8911d75c7b10d5b0ae88e072fe6c272f8be272cfa27c6760ff6d3e2ad",
+    "argumentsRetained": false,
+    "rawResultsDeleted": true,
+    "encodings": [
+      "heuristic",
+      "cl100k_base"
+    ],
+    "oldMCPCalls": 0,
+    "oldOuterJSCalls": 29,
+    "newMCPServer": "cua_repl",
+    "newMCPTool": "js",
+    "newMCPCalls": 29,
+    "completed": 29,
+    "returnedTextBytes": 78605,
+    "referenceReturnedTextTokens": 22843,
+    "referenceEncoding": "cl100k_base",
+    "nonTextBlocks": 5,
+    "unknownErrorStatus": 29,
+    "reportedErrors": 0,
+    "timingSamples": 29,
+    "summedObservedSeconds": 51.625,
+    "occupiedObservedSeconds": 51.625,
+    "independentIntervalSweepMatches": true,
+    "metricsPreserved": [
+      "calls",
+      "completed",
+      "reportedErrors",
+      "unknownErrorStatus",
+      "missingResults",
+      "timingSamples",
+      "totalObservedSeconds",
+      "medianSeconds",
+      "p95Seconds",
+      "returnedTextBytes",
+      "returnedTextEstimatedTokens",
+      "referenceReturnedTextTokens",
+      "nonTextBlocks",
+      "truncationMarkerResults",
+      "serializedMediaTextResults"
+    ],
+    "timingMovedFromOuterToMCPWithoutDuplication": true
+  },
+  "boundaries": {
+    "modelRuns": 0,
+    "MCPBusinessCalls": 0,
+    "newGUIAcceptance": false,
+    "newUniversalPackage": false,
+    "installed": false,
+    "published": false,
+    "fixed552IncludesThisChange": false,
+    "requestOrBillingTokensMeasured": false,
+    "toolBusinessQualityMeasured": false,
+    "otherHostsOrFormatsFullyCovered": false
+  }
+}
