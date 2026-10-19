@@ -45,7 +45,8 @@ struct App {
     }
 
     /// A copy of thermo outside Thermo.app (say, copied into ~/.local/bin) does not update with the
-    /// app; once the app is newer its readings can differ from the app's. Says so, changes nothing.
+    /// app; once the app is newer its readings can differ from the app's. A copy may be pinned
+    /// for review, so point to the app CLI for future commands without proposing replacement.
     static func staleCopyWarning(executable: String? = Bundle.main.executableURL?.resolvingSymlinksInPath().path,
                                  version: String = thermoVersion,
                                  apps: [String] = ["/Applications/Thermo.app", NSHomeDirectory() + "/Applications/Thermo.app"]) -> String? {
@@ -55,8 +56,9 @@ struct App {
                   let appVersion = info["CFBundleShortVersionString"] as? String else { continue }
             guard version.compare(appVersion, options: .numeric) == .orderedAscending else { return nil }
             let cli = app + "/Contents/Helpers/thermo"
+            let quotedCLI = "'" + cli.replacingOccurrences(of: "'", with: "'\\''") + "'"
             return "note: this thermo (\(version), \(executable)) is a copy older than \(app) \(appVersion) and does not update with it; "
-                + "its readings may differ from the app's. To use the app's copy: ln -sf '\(cli)' '\(executable)'"
+                + "its readings may differ from the app's. App CLI for future commands: \(quotedCLI)."
         }
         return nil
     }
