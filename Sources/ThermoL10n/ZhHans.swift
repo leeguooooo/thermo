@@ -1352,7 +1352,7 @@ let zhHans: [String: String] = [
     "Adds the thermo-use plugin": "加入 thermo-use 插件",
     "Add": "加入",
     "Any other agent": "其他 agent",
-    "Run this in its terminal; the skill is SKILL.md in leeguooooo/thermo-use": "在它的终端里运行这条命令；skill 就是 leeguooooo/thermo-use 里的 SKILL.md",
+    "Links the CLI. For other agents, copy the complete skills/thermo-use folder, including references, from leeguooooo/thermo-use.": "链接 CLI。其他 agent 请从 leeguooooo/thermo-use 复制完整的 skills/thermo-use 目录，包括 references。",
     "The whole *-use family": "整个 *-use 家族",
     "Browser, mail, messages, passwords, notes … and thermo-use, in one install": "浏览器、邮件、短信、密码、笔记……以及 thermo-use，一次装好",
     "Try asking your agent": "可以这样问你的 agent",

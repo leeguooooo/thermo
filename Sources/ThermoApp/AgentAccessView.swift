@@ -228,7 +228,7 @@ struct AgentAccessSheet: View {
                  detail: toolDetail(access.codex),
                  button: toolButton(access.codex, add: access.addToCodex),
                  copy: access.codex == .disabled ? nil : "codex plugin add \(AgentAccess.plugin)")
-            step(done: nil, title: tr("Any other agent"), detail: tr("Run this in its terminal; the skill is SKILL.md in leeguooooo/thermo-use"), button: nil, copy: AgentAccess.curl)
+            step(done: nil, title: tr("Any other agent"), detail: tr("Links the CLI. For other agents, copy the complete skills/thermo-use folder, including references, from leeguooooo/thermo-use."), button: nil, copy: AgentAccess.curl)
             step(done: nil, title: tr("The whole *-use family"), detail: tr("Browser, mail, messages, passwords, notes … and thermo-use, in one install"),
                  button: nil, copy: "/plugin install \(AgentAccess.family)")
 
