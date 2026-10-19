@@ -75,6 +75,8 @@ codesign --verify --deep --strict /tmp/thermo-verification-dist/Thermo.app
 
 这是 ad-hoc 签名的本地验证包，没有公证、在线更新或发布步骤。生产 helper 的签名认证和跨机型验收仍需用正式构建验证。
 
+已有独立 AI 窗口 QA 夹具需要更新时，使用 `python3 scripts/refresh-ai-ui-qa.py FIXTURE_ROOT BUILD_PRODUCTS --json`。根目录须为带 `.thermo-ai-ui-fixture` 标记的 `thermo-ai-ui-*`，其中已有 `Thermo AI QA.app`、固定 Sparkle 依赖及 `ThermoRuntime` 入口；构建产物需含 App、CLI 和 helper。脚本只更新已停止的自有副本，不创建、启动或安装应用。每个根目录使用独立且稳定的应用标识，回执提供 `appPath`、`bundleIdentifier` 和摘要；原生控制优先使用完整路径，退出后查询应用清单或进程状态，避免重新打开旧绑定。签名失败不产生成功回执，副本可能已部分更新，修正问题后重新刷新。控制测试为 `python3 scripts/test-ai-ui-qa-refresh.py`。
+
 双架构打包检查：
 
 ```sh

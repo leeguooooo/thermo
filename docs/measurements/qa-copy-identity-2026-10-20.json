@@ -1,0 +1,119 @@
+{
+  "recordedDate": "2026-10-20",
+  "codeCommit": "9007a65",
+  "baselineCommit": "b6fd3bd",
+  "feature": "Existing owned QA refresher now assigns a stable per-root bundle ID, verifies signing postcondition and offers a structured receipt without launching",
+  "observedCUAErrorTriage": {
+    "selectedTailBytes": 67108864,
+    "errorCategories": {
+      "other_explicit_error": 1,
+      "stale_element_id": 2,
+      "timeout": 2,
+      "undefined_repl_binding": 1,
+      "ambiguous_app_identity": 1
+    },
+    "interpretation": "Local triage of explicit error results, not a product classifier or task quality score"
+  },
+  "scopeOfTriage": "Only seven explicit errors in a bounded owned-session sample; categories are local triage, not an automatic classifier or a service quality ranking",
+  "controls": {
+    "host": "mac190",
+    "tests": 8,
+    "failures": 0,
+    "scope": "Owned mock-toolchain fixtures, not cryptographic signing evidence"
+  },
+  "nativeAcceptance": {
+    "twoNativeCopiesRanWithDistinctIdentities": true,
+    "bothBindingsSelectedByUniqueBundleID": true,
+    "independentSearchValuesVerified": true,
+    "closingSecondPreservedFirst": true,
+    "QAProcessesAbsent": true,
+    "selectedUserConfigHashUnchanged": true,
+    "selectedInstalledAppHashesUnchanged": false,
+    "installedAppChangeOrigin": "unconfirmed; no rollback or overwrite attempted",
+    "installedAppCurrentVersion": "1.1.40",
+    "installedAppCurrentBuild": "611.15",
+    "environmentUnchangedClaimed": false,
+    "identifiers": [
+      "dev.thermo.aiqa.835cd725ae03",
+      "dev.thermo.aiqa.19bed04a7045"
+    ],
+    "realSignaturesVerifiedByRefresher": true,
+    "helperLaunchesApps": false,
+    "QAAppsLaunchedSeparatelyForAcceptance": 2,
+    "modelCalled": false,
+    "installedByThisTask": false,
+    "publishedByThisTask": false
+  },
+  "receipts": [
+    {
+      "schemaVersion": 1,
+      "complete": true,
+      "appPath": "/Users/leo/.codex/artifacts/thermo-ai-ui-log-tail-71o6bu7u/Thermo AI QA.app",
+      "runtimePath": "/Users/leo/.codex/artifacts/thermo-ai-ui-log-tail-71o6bu7u/Thermo AI QA.app/Contents/MacOS/ThermoRuntime",
+      "bundleIdentifier": "dev.thermo.aiqa.835cd725ae03",
+      "legacyIdentifierMigrated": true,
+      "sourceFilesSHA256": {
+        "ThermoApp": "5f0b7eb005d632617a66e7a3bc8240e2b4d9826a4c8daa1598df612ca8455132",
+        "thermo": "1703a1b9bb6822ffb8b3044fedc91b36f37ee296e3d8582270c1739265fef06b",
+        "thermo-helper": "57cfd34181e90d9f9004f15cac0cb34797e7fb77b36588309696a3c18581df96"
+      },
+      "runtimeSHA256": "520d51d6f234133fbe0d18b0dafd4fed5c6f764cd08fb33faaa92eeebcb52479",
+      "launchesOrInstalls": false,
+      "computerUseHint": "Select this copy by appPath; do not select an older QA binding or observe it after exit."
+    },
+    {
+      "schemaVersion": 1,
+      "complete": true,
+      "appPath": "/Users/leo/.codex/artifacts/thermo-ai-ui-json-summary-drpzjp1z/Thermo AI QA.app",
+      "runtimePath": "/Users/leo/.codex/artifacts/thermo-ai-ui-json-summary-drpzjp1z/Thermo AI QA.app/Contents/MacOS/ThermoRuntime",
+      "bundleIdentifier": "dev.thermo.aiqa.19bed04a7045",
+      "legacyIdentifierMigrated": true,
+      "sourceFilesSHA256": {
+        "ThermoApp": "5f0b7eb005d632617a66e7a3bc8240e2b4d9826a4c8daa1598df612ca8455132",
+        "thermo": "1703a1b9bb6822ffb8b3044fedc91b36f37ee296e3d8582270c1739265fef06b",
+        "thermo-helper": "57cfd34181e90d9f9004f15cac0cb34797e7fb77b36588309696a3c18581df96"
+      },
+      "runtimeSHA256": "83cdc1096c9f28639f956f4c69d3b62b2124f4c06ccfc4a4e023931af88b0cb7",
+      "launchesOrInstalls": false,
+      "computerUseHint": "Select this copy by appPath; do not select an older QA binding or observe it after exit."
+    }
+  ],
+  "localSpaceRecovery": {
+    "logicalDuplicateBytesRemoved": 245044304,
+    "files": 9,
+    "retainedRemoteCopiesHashMatched": true,
+    "scope": "Stopped owned QA product copies only",
+    "netPhysicalReclamationAttributed": false
+  },
+  "attemptNotes": [
+    "Initial controls compared /var and /private/var path aliases; normalized test fixture roots and retained failed control output.",
+    "The local volume ran out of space before worktree creation; verified owned duplicate products against retained Mac190 originals before removing only those duplicates.",
+    "Installed App binary and Info.plist hashes changed during this phase; current 1.1.40 (611.15), origin unconfirmed. No rollback or overwrite; no whole-environment stability claim."
+  ],
+  "limits": [
+    "Unique application identity addresses one observed ambiguity; stale element IDs, undefined bindings, timeouts and missing windows are not all resolved by this change",
+    "An in-place QA refresh that fails signing can leave a partially refreshed stopped copy; it emits no success receipt and can be rerun",
+    "No new release, notarization, full App functionality or user-workflow benefit acceptance"
+  ],
+  "scriptSHA256": {
+    "refresh-ai-ui-qa.py": "3c8d7f6623d028a971712bef042655ad7f3c74a523ac53e6e1a6ef8cabf7eb9b",
+    "test-ai-ui-qa-refresh.py": "1537048c9c1bee696f3c30a8e5a49813f739598fab4a558494896233e9190ef4"
+  },
+  "artifactSHA256": {
+    "before.json": "fd94f0b261342b25c91195c0dbb818882d96400d5a3352c50815b460082d4763",
+    "first.json": "e221e438c1b73b4754084b89c301f79658ee56a4ba401eb3762a6f3a5a001eaf",
+    "second.json": "f86bbd2d6440e73d5fab4baad723079401053a47978facff0fb77782eb1fe530",
+    "first.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "second.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "processes.json": "393005b26ebdcd4a110648cc87431d389055b5a189a4288de59a11c19edb7bc4",
+    "native-result.json": "4c8ed6e93391e3f27b71e25b05c02aaceb1b00dea27b336331a6f3bceb6315f7",
+    "first.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "second.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "controls/controls.log": "4be68f1d7b7e60c4944ef449baeb20dc4fea6a3763dbba79efbed4bc3369966f",
+    "controls/first-path-alias-attempt.log": "46de24f12b2573e4652c49e446ac1e0511199317247cb989e9675b4160f88299"
+  },
+  "modelCalled": false,
+  "productionConfigurationWritten": false,
+  "installedByThisTask": false,
+  "publishedByThisTask": false
+}
