@@ -5,13 +5,17 @@ extension AgentDoctor {
     /// Explicit log analysis; ordinary diagnosis never reads conversation logs.
     public static func usage(since: Date? = nil, host: String? = nil, fileLimit: Int = 100,
                              logFile: URL? = nil,
+                             logWindow: ToolUsageLogWindow = .head,
                              env: DoctorEnvironment = DoctorEnvironment()) -> ToolUsageReport {
         let since = since ?? env.now.addingTimeInterval(-7 * 86400)
         var parser = ToolUsageParser(since: since, until: env.now, encoding: env.tokenEncoding)
         func finish() -> ToolUsageReport {
-            var report = parser.report(); report.singleLogFile = logFile != nil; return report
+            var report = parser.report(); report.singleLogFile = logFile != nil
+            report.singleLogWindow = logFile == nil ? nil : logWindow
+            return report
         }
-        guard since <= env.now, (1...1000).contains(fileLimit), host == nil || ["claude", "codex"].contains(host!), logFile == nil || host != nil else {
+        guard since <= env.now, (1...1000).contains(fileLimit), host == nil || ["claude", "codex"].contains(host!), logFile == nil || host != nil,
+              logWindow == .head || logFile != nil else {
             parser.coverage.limitReached = true; return finish()
         }
         let started = MCPInspector.clock()
@@ -65,14 +69,25 @@ extension AgentDoctor {
                 }
                 let length = try handle.seekToEnd()
                 let limit = min(logFile == nil ? 4 * 1024 * 1024 : maxBytes, maxBytes - parser.coverage.bytesRead)
-                let start = logFile == nil && length > UInt64(limit) ? length - UInt64(limit) : 0
+                let tail = logFile == nil || logWindow == .tail
+                // Reserve one byte of the same budget to decide whether the window
+                // starts at a record boundary, without reading more than the byte cap.
+                let start = tail && length > UInt64(limit) ? length - UInt64(limit) + 1 : 0
                 let clipped = length > UInt64(limit)
                 if clipped { parser.coverage.clippedFiles += 1 }
                 if logFile != nil && clipped { parser.coverage.limitReached = true }
+                var skipFirst = false
+                if start > 0 {
+                    try handle.seek(toOffset: start - 1)
+                    guard let preceding = try handle.read(upToCount: 1), preceding.count == 1 else {
+                        parser.coverage.unreadableFiles += 1; continue
+                    }
+                    parser.coverage.bytesRead += 1
+                    skipFirst = preceding.first != 10
+                }
                 try handle.seek(toOffset: start)
                 var remaining = Int(min(length - start, UInt64(limit)))
                 var pending = Data()
-                var skipFirst = start > 0
                 var oversized = false
                 let filename = file.url.deletingPathExtension().lastPathComponent
                 // Standard filenames contain a stable session UUID; fallback identity is local only.

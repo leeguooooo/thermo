@@ -1,6 +1,8 @@
 import Foundation
 import ThermoL10n
 
+public enum ToolUsageLogWindow: String, Codable, Sendable { case head, tail }
+
 /// Returned-text accounting within one observed category, never request/billing usage.
 public struct ToolUsageTextSummary: Sendable {
     public let kind: String
@@ -162,6 +164,22 @@ public struct ToolUsageReport: Codable, Sendable {
     public var returnedTextEstimator: String? = "ascii4-unicode1-v1"
     /// Selected-file scope only. No input path is retained or exported.
     public var singleLogFile: Bool? = nil
+    /// Only an explicitly selected file has a requested read window. Older reports leave it unknown.
+    public var singleLogWindow: ToolUsageLogWindow? = nil
+
+    public var logReadScopeExplanation: String {
+        guard singleLogFile == true else {
+            return tr("Reads local Claude/Codex logs for the last 7 days, across projects. Prompts, arguments and result text stay out of the report.")
+        }
+        switch singleLogWindow {
+        case .head?:
+            return tr("Only the selected session log is read, from its beginning within the scan budget. Event time filters still apply; the file path, prompts, arguments and result text stay out of the report.")
+        case .tail?:
+            return tr("Only a bounded tail of the selected session log is read. A partial first record is skipped; event time filters still apply. Unread parts remain unknown; paths, prompts, arguments and result text are not exported.")
+        case nil:
+            return tr("Only the selected session log was analyzed; its read window was not recorded. Paths, prompts, arguments and result text are not exported.")
+        }
+    }
     /// Absent in older reports means unchecked; row sums cannot reconstruct interval overlap.
     public var timingSummaries: [ToolUsageTimingSummary]? = nil
     /// Explicit presentation order. Absent means no ordering was declared by this report.

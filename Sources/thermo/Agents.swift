@@ -31,7 +31,7 @@ struct AgentsCommand {
             guard rest.count == 2 else { throw CLIError("usage: thermo agents compare FILE [--json]") }
             return try compareTasks(try required(name, sub))
         case "usage":
-            guard rest.count == 1 else { throw CLIError("usage: thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--log-file FILE] [--sort text|structured] [--limit FILES] [--json]") }
+            guard rest.count == 1 else { throw CLIError("usage: thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--log-file FILE] [--tail] [--sort text|structured] [--limit FILES] [--json]") }
             return try usage()
         case "inspect":
             guard rest.count == 2 else { throw CLIError("usage: thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--json]") }
@@ -217,7 +217,8 @@ struct AgentsCommand {
             guard let since, since <= Date() else { throw CLIError("--since must be a past ISO date or YYYY-MM-DD (UTC)") }
         }
         guard let ordering = ToolUsageOrdering(rawValue: app.args.options["sort"] ?? "text") else { throw CLIError("--sort must be text or structured") }
-        var report = AgentDoctor.usage(since: since, host: host, fileLimit: count, logFile: logFile, env: DoctorEnvironment(tokenEncoding: try encoding()))
+        var report = AgentDoctor.usage(since: since, host: host, fileLimit: count, logFile: logFile,
+                                      logWindow: app.args.has("tail") ? .tail : .head, env: DoctorEnvironment(tokenEncoding: try encoding()))
         report.tools = ordering.sorted(report.tools)
         report.toolOrdering = ordering
         report.note += " " + ordering.explanation
@@ -225,7 +226,7 @@ struct AgentsCommand {
         let iso = ISO8601DateFormatter()
         let coverage = report.coverage
         var lines = [style.bold("Observed local tool usage"), iso.string(from: report.since) + " → " + iso.string(from: report.until),
-                     report.singleLogFile == true ? "Single selected log file; time filter and scan limits still apply." : "Discovered local log files; per-file tail limits apply.",
+                     report.logReadScopeExplanation,
                      "Log reading: " + (report.complete ? "complete within selected scope" : "partial"),
                      "\(coverage.filesRead)/\(coverage.filesDiscovered) eligible files · \(coverage.bytesRead) bytes · \(coverage.clippedFiles) clipped · \(coverage.malformedLines) malformed records", ""]
         if let encoding = report.referenceEncoding { lines.append("Ordinary-text reference encoding: " + encoding + "; not a model invoice or prompt framing count") }

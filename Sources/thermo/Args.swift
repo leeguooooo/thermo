@@ -32,7 +32,7 @@ struct Args {
         "stream", // clean: newline-delimited incremental scan results
         "rescan",  // rescan: clean run ignores the saved scan
         "remove-local", "inactive-development",
-        "measure", "all-windows", "by-site",
+        "measure", "all-windows", "by-site", "tail",
         "no-heat-guard", "probe"]  // awake / read-only AWDL interface probe
 
     init(_ argv: [String]) throws {
@@ -67,6 +67,11 @@ struct Args {
             throw CLIError("--data-only is only supported by apps uninstall")
         }
         let isUsage = positionals.first.map { CommandHelp.aliases[$0] ?? $0 } == "agents" && positionals.dropFirst().first == "usage"
+        if flags.contains("tail") {
+            guard isUsage, options["log-file"] != nil, ["claude", "codex"].contains(options["agent"] ?? "") else {
+                throw CLIError("--tail requires agents usage --log-file and --agent claude or codex")
+            }
+        }
         if let mode = options["protocol"] {
             guard positionals.first.map({ CommandHelp.aliases[$0] ?? $0 }) == "agents",
                   ["inspect", "inspect-all"].contains(positionals.dropFirst().first ?? "") else {

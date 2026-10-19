@@ -3,6 +3,16 @@ import ThermoL10n
 @testable import thermo
 
 final class ArgumentTests: XCTestCase {
+    func testSelectedLogTailRequiresAnExplicitFileAndHost() throws {
+        for arguments in [["agents","usage","--log-file","/owned/log","--agent","codex","--tail"],
+                          ["doctor","usage","--agent","claude","--log-file","/owned/log","--tail"]] {
+            let args = try Args(arguments);XCTAssertTrue(args.has("tail"));XCTAssertNoThrow(try CommandContract.validate(args))
+        }
+        for arguments in [["agents","usage","--tail"], ["agents","usage","--log-file","/owned/log","--tail"], ["agents","context","--tail"]] {
+            XCTAssertThrowsError(try Args(arguments))
+        }
+        XCTAssertTrue(CommandHelp.text(for:["agents","usage"]).contains("--tail"))
+    }
     func testMCPProtocolSelectionIsExplicitAndLimitedToInspections() throws {
         for arguments in [["agents","inspect","owned","--protocol","2026-07-28"],
                           ["doctor","inspect-all","--protocol=handshake","--dry-run"]] {
