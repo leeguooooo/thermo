@@ -1334,10 +1334,10 @@ let zhHans: [String: String] = [
     "in use; it will have to rebuild": "还在用，删除后需要重新构建",
     // thermo-use setup
     "%1$@ already exists and is not a link; remove it first": "%1$@ 已存在且不是链接，请先删除它",
-    "Added to %1$@. New sessions can use it.": "已加入 %1$@，新开的会话就能用了。",
+    "Installed and enabled in %1$@. Open a new session and check its Skill list to confirm loading.": "已在 %1$@ 安装并启用。请在新会话中检查 Skill 清单，确认是否已加载。",
     "%1$@ could not add it; copy the command below instead.": "%1$@ 没能自动加入，请拷贝下面的命令手动安装。",
     "AI agents (thermo-use)": "AI agent（thermo-use）",
-    "Agents can check this Mac": "agent 已经可以查看这台电脑",
+    "CLI link verified; review agent setup": "CLI 链接已确认，可查看 agent 配置",
     "Let Claude Code, Codex and other agents check this Mac": "让 Claude Code、Codex 等 agent 查看这台电脑",
     "Details…": "详情…",
     "Set Up…": "设置…",

@@ -48,7 +48,7 @@ final class PluginStatusTests: XCTestCase {
         let before = L10n.override
         defer { L10n.override = before }
         L10n.override = .english
-        XCTAssertTrue(AgentAccess.installationMessage(.added, label: "Fixture").contains("New sessions"))
+        XCTAssertTrue(AgentAccess.installationMessage(.added, label: "Fixture").contains("Fixture"))
         XCTAssertTrue(AgentAccess.installationMessage(.unavailable, label: "Fixture").contains("could not be confirmed"))
         XCTAssertTrue(AgentAccess.installationMessage(.disabled, label: "Fixture").contains("disabled"))
     }

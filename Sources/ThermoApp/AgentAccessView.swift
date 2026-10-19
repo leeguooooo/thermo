@@ -119,7 +119,7 @@ final class AgentAccess: ObservableObject {
 
     static func installationMessage(_ state: Tool, label: String) -> String {
         switch state {
-        case .added: return tr("Added to %1$@. New sessions can use it.", label)
+        case .added: return tr("Installed and enabled in %1$@. Open a new session and check its Skill list to confirm loading.", label)
         case .disabled: return tr("Installed in %1$@, but disabled. Enable the plugin before using it.", label)
         default: return tr("The command finished, but installation in %1$@ could not be confirmed. Check its plugin settings.", label)
         }
@@ -191,7 +191,7 @@ struct AgentAccessRow: View {
             Image(systemName: "sparkles").foregroundStyle(Color.accentColor)
             VStack(alignment: .leading, spacing: 1) {
                 Text(tr("AI agents (thermo-use)"))
-                Text(access.checking ? tr("Checking installation…") : access.ready ? tr("Agents can check this Mac") : tr("Let Claude Code, Codex and other agents check this Mac"))
+                Text(access.checking ? tr("Checking installation…") : access.ready ? tr("CLI link verified; review agent setup") : tr("Let Claude Code, Codex and other agents check this Mac"))
                     .font(.caption).foregroundStyle(access.ready ? Color.green : .secondary)
             }
             Spacer()
