@@ -153,6 +153,8 @@ final class RuntimeDMGOwnershipTests: XCTestCase {
         for path in [cache, named] { XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: path + "/data")), payload) }
         XCTAssertEqual(ProcessTable.identity(process.processIdentifier), childIdentity)
         XCTAssertTrue(stopOwnedChild())
-        XCTAssertTrue(NativeDiskImage.detachOwned(image))
+        var detachDiagnostic = ""
+        let detached = NativeDiskImage.detachOwned(image, diagnostic: { detachDiagnostic = $0 })
+        XCTAssertTrue(detached, detachDiagnostic)
     }
 }

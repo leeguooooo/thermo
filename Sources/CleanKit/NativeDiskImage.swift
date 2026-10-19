@@ -101,20 +101,34 @@ enum NativeDiskImage {
 
     /// Re-discover devices by this exact private image path before detaching. Never force-detach
     /// another app's mount, and preserve the workspace if ownership or cleanup is uncertain.
-    static func detachOwned(_ payload: String) -> Bool {
-        guard let info = try? plist(CommandRunner.run("/usr/bin/hdiutil", arguments: ["info", "-plist"], timeout: 15, captureError: false)),
-              let images = info["images"] as? [[String: Any]] else { return false }
+    static func detachOwned(_ payload: String, diagnostic: (String) -> Void = { _ in }) -> Bool {
+        let before = CommandRunner.run("/usr/bin/hdiutil", arguments: ["info", "-plist"], timeout: 15, captureError: false)
+        guard let info = try? plist(before), let images = info["images"] as? [[String: Any]] else {
+            diagnostic("Cannot inspect owned test image before detach (status \(before.status), timedOut \(before.timedOut), truncated \(before.truncated))")
+            return false
+        }
         let matches = images.filter { image in (image["image-path"] as? String).map { canonical($0) == canonical(payload) } == true }
         if matches.isEmpty { return true }
         for image in matches {
             guard let entities = image["system-entities"] as? [[String: Any]],
-                  let device = rootDevice(entities) else { return false }
-            let detached = CommandRunner.run("/usr/bin/hdiutil", arguments: ["detach", device], timeout: 30, captureError: false)
-            if detached.status != 0 || detached.timedOut { return false }
+                  let device = rootDevice(entities) else {
+                diagnostic("Owned test image has no recognized root device")
+                return false
+            }
+            let detached = CommandRunner.run("/usr/bin/hdiutil", arguments: ["detach", device], timeout: 30, captureError: true)
+            if detached.status != 0 || detached.timedOut {
+                diagnostic("Owned test image detach failed (status \(detached.status), timedOut \(detached.timedOut)): \(detached.output.prefix(512))")
+                return false
+            }
         }
-        guard let after = try? plist(CommandRunner.run("/usr/bin/hdiutil", arguments: ["info", "-plist"], timeout: 15, captureError: false)),
-              let remaining = after["images"] as? [[String: Any]] else { return false }
-        return !remaining.contains { ($0["image-path"] as? String).map { canonical($0) == canonical(payload) } == true }
+        let check = CommandRunner.run("/usr/bin/hdiutil", arguments: ["info", "-plist"], timeout: 15, captureError: false)
+        guard let after = try? plist(check), let remaining = after["images"] as? [[String: Any]] else {
+            diagnostic("Cannot inspect owned test image after detach (status \(check.status), timedOut \(check.timedOut), truncated \(check.truncated))")
+            return false
+        }
+        let gone = !remaining.contains { ($0["image-path"] as? String).map { canonical($0) == canonical(payload) } == true }
+        if !gone { diagnostic("Owned test image remains attached after detach returned success") }
+        return gone
     }
 
     static func copyApplication(from payload: URL, workspace: String, to unpacked: String) throws {

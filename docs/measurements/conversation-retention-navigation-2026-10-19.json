@@ -36,6 +36,9 @@
     "Sources/ThermoApp/MainWindow.swift": "f55afd79b9df092f148e23eedc1b9849bb8d40db88c3b268479fc31c14741452",
     "Sources/ThermoKit/Version.swift": "8f857fc1815de55933f7b94cdc0c630c13c16e8785f73b8db2a88b951b4431a0"
   },
-  "installedNavigationAccepted": false,
-  "remaining": "Sign and install candidate; open AI conversations from the normal sidebar without changing retention or deleting conversations"
+  "installedNavigationAccepted": true,
+  "remaining": "Other retention periods and complete installed conversation maintenance flows remain unverified; this acceptance kept all chats and did not scan or delete conversations",
+  "installedAcceptanceVersion": "1.1.36 (534)",
+  "installedAcceptanceSource": "b5f46287e47992711fc08bbb14f05b15a7d15ef8",
+  "followUp": "mole-installed-534-2026-10-19.json"
 }

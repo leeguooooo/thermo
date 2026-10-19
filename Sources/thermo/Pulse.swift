@@ -274,7 +274,7 @@ struct PulseCommand {
         if let pid = Int32(target) {
             // A pid names its program; show every copy of that program.
             guard let h = all.first(where: { $0.pids.contains(pid) }) else { throw CLIError("no process \(pid) of yours is running") }
-            rows = all.filter { $0.name == h.name && ($0.app == nil) == (h.app == nil) }
+            rows = all.filter { h.isSameProgram(as: $0) }
         } else {
             rows = all.filter { $0.name.lowercased() == lower }
             if rows.isEmpty { rows = all.filter { $0.name.lowercased().contains(lower) } }

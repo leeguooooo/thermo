@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import CryptoKit
 
 /// "Why is this Mac slow?": load against cores, thermal throttling, memory pressure and the
 /// programs using the most CPU (helpers folded into their app). Shared by the app's Overview card
@@ -43,6 +44,21 @@ public struct MachinePulse: Codable, Sendable, Equatable {
         public var elsewhere: Elsewhere? = nil
         /// Processes counted in this row: every process of the program in this folder (or app).
         public var processCount: Int? = nil
+
+        /// Display names alone cannot identify different inline programs using one runtime.
+        public func isSameProgram(as other: Hog) -> Bool {
+            name == other.name && (app == nil) == (other.app == nil) && inlineInvocation == other.inlineInvocation
+        }
+
+        private var inlineInvocation: String? {
+            let prefix = "cmd:\(name)|inline:"
+            guard id.hasPrefix(prefix) else { return nil }
+            let suffix = id.dropFirst(prefix.count)
+            let digest = suffix.prefix(64)
+            guard digest.count == 64, suffix.dropFirst(64).first == "|",
+                  digest.allSatisfy({ "0123456789abcdef".contains($0) }) else { return nil }
+            return String(digest)
+        }
     }
 
     /// Other rows of the same command-line program, summed.
@@ -381,13 +397,21 @@ public struct MachinePulse: Codable, Sendable, Equatable {
             return (appPath, ((appPath as NSString).lastPathComponent as NSString).deletingPathExtension, appPath)
         }
         let name = programName(d, fallback: fallback)
+        if isInlineEvaluation(d) {
+            // The visible runtime name is shared, but different inline invocations are not
+            // the same program. Keep their rows distinct without putting source into the ID.
+            let invocation = [name] + d.argv.dropFirst()
+            let digest = SHA256.hash(data: Data(invocation.joined(separator: "\0").utf8))
+                .map { String(format: "%02x", $0) }.joined()
+            return ("cmd:\(name)|inline:\(digest)|\(d.cwd ?? "")", name, nil)
+        }
         return ("cmd:\(name)|\(d.cwd ?? "")", name, nil)
     }
 
     /// The same command-line program in other rows (other folders), summed.
     static func elsewhere<S: Sequence>(of h: Hog, in all: S) -> Elsewhere? where S.Element == Hog {
         guard h.app == nil else { return nil }
-        let others = all.filter { $0.app == nil && $0.name == h.name && $0.id != h.id }.sorted { $0.memoryKB > $1.memoryKB }
+        let others = all.filter { h.isSameProgram(as: $0) && $0.id != h.id }.sorted { $0.memoryKB > $1.memoryKB }
         guard !others.isEmpty else { return nil }
         let metrics = Set(others.compactMap(\.memoryMetric))
         return Elsewhere(processes: others.reduce(0) { $0 + $1.pids.count },
@@ -477,10 +501,63 @@ public struct MachinePulse: Codable, Sendable, Equatable {
 
     static let interpreters: Set<String> = ["node", "python", "python3", "ruby", "bun", "deno", "java", "perl", "php", "uv", "npx", "tsx", "ts-node"]
 
+    /// Interpret only runtime options before the script/module operand. A script's own
+    /// `-e` argument must not change its name, and preload/encoding options consume values.
+    private static func isInlineEvaluation(_ d: ProcessDetails) -> Bool {
+        let runtime = (d.argv.first.map { ($0 as NSString).lastPathComponent } ?? "").lowercased()
+        let flags: [String], values: Set<String>
+        if runtime.hasPrefix("python") {
+            flags = ["-c"]; values = ["-W", "-X", "--check-hash-based-pycs"]
+        } else {
+            switch runtime {
+            case "node", "bun", "tsx", "ts-node":
+                flags = ["-e", "--eval", "-p", "--print"]
+                values = ["-r", "--require", "--import", "--loader", "--experimental-loader", "--input-type", "--conditions", "--title", "--icu-data-dir", "--openssl-config", "--redirect-warnings", "--env-file", "--env-file-if-exists", "--cwd", "--tsconfig", "--project", "--compiler-options"]
+            case "ruby":
+                flags = ["-e"]
+                values = ["-I", "-r", "-C", "-F", "-K", "-E", "--encoding", "--external-encoding", "--internal-encoding"]
+            case "perl":
+                flags = ["-e", "-E"]
+                values = ["-I", "-M", "-m", "-F"]
+            case "php":
+                flags = ["-r", "-R", "-B", "-E"]
+                values = ["-d", "-c", "-z", "--define", "--php-ini", "--zend-extension"]
+            case "deno": flags = []; values = ["--config", "--import-map", "--cert", "--location"]
+            default: return false
+            }
+        }
+        let shortInline = Set(flags.filter { $0.count == 2 }.compactMap(\.last))
+        let shortValues = Set(values.filter { $0.count == 2 }.compactMap(\.last))
+        var index = 1
+        while index < d.argv.count {
+            let arg = d.argv[index]
+            if arg == "--" { return false }
+            if flags.filter({ $0.hasPrefix("--") }).contains(where: { flag in
+                arg == flag || arg.hasPrefix(flag + "=")
+            }) { return true }
+            if values.contains(arg) { index += 2; continue }
+            if arg.hasPrefix("-"), !arg.hasPrefix("--") {
+                let cluster = Array(arg.dropFirst())
+                for (offset, option) in cluster.enumerated() {
+                    if runtime.hasPrefix("python"), option == "m" { return false }
+                    if shortInline.contains(option) { return true }
+                    if shortValues.contains(option) {
+                        if offset == cluster.count - 1 { index += 1 }
+                        break
+                    }
+                }
+            }
+            if !arg.hasPrefix("-") { return runtime == "deno" && arg == "eval" }
+            index += 1
+        }
+        return false
+    }
+
     /// "vitest" rather than "node": for an interpreter, the package or script it runs.
     static func programName(_ d: ProcessDetails, fallback: String) -> String {
         let first = d.argv.first.map { ($0 as NSString).lastPathComponent } ?? (d.executable as NSString?)?.lastPathComponent ?? fallback
         guard interpreters.contains(first.lowercased()) || first.lowercased().hasPrefix("python") else { return first.isEmpty ? fallback : first }
+        if isInlineEvaluation(d) { return first }
         for arg in d.argv.dropFirst() where !arg.hasPrefix("-") {
             // …/node_modules/.pnpm/vitest@1/node_modules/vitest/dist/x.js → vitest; …/node_modules/.bin/tsc → tsc
             let parts = arg.split(separator: "/").map(String.init)

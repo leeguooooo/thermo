@@ -12,6 +12,7 @@ enum WindowLifecycleCheck {
         let cycles: Int
         let openSeconds: Double
         let idleSeconds: Double
+        let foregroundActivity: Bool
 
         init(arguments: [String]) throws {
             func value(_ flag: String) throws -> String? {
@@ -31,6 +32,7 @@ enum WindowLifecycleCheck {
                 throw failure("cycles must be 2...20, open seconds 1...15, idle seconds 2...30")
             }
             self.output = output; self.cycles = cycles; openSeconds = open; idleSeconds = idle
+            foregroundActivity = arguments.contains("--foreground-activity")
         }
     }
 
@@ -68,6 +70,7 @@ enum WindowLifecycleCheck {
     struct Report: Encodable {
         let schemaVersion = 2
         let mode = "offscreen AppKit with explicit watched visibility; helper interaction and menu-bar recorder disabled"
+        let foregroundActivityHeld: Bool
         let started: Date
         let pid: Int32
         let options: Options
@@ -90,6 +93,11 @@ enum WindowLifecycleCheck {
     private static func pause(_ seconds: Double) async throws { try await Task.sleep(nanoseconds: UInt64(seconds * 1e9)) }
 
     static func run(_ options: Options) async throws -> Report {
+        // Opt-in diagnostic control: an offscreen window has no real foreground visibility.
+        // Keep the ordinary run available for comparison and report which condition was used.
+        let activity = options.foregroundActivity ? ProcessInfo.processInfo.beginActivity(
+            options: .userInitiatedAllowingIdleSystemSleep, reason: "Thermo foreground lifecycle verification") : nil
+        defer { if let activity { ProcessInfo.processInfo.endActivity(activity) } }
         AppModels.shared.monitor = Monitor(helperInteraction: false)
         let started = Date(), clock = DispatchTime.now().uptimeNanoseconds
         let pages: [(String, MainPage)] = [("overview", .overview), ("memory", .memory), ("cpu", .compute(false))]
@@ -190,6 +198,6 @@ enum WindowLifecycleCheck {
         #else
         let build = "release"
         #endif
-        return Report(started: started, pid: getpid(), options: options, samples: samples, functionalChecksPassed: passed, transitionChecks: transitionChecks, buildConfiguration: build)
+        return Report(foregroundActivityHeld: activity != nil, started: started, pid: getpid(), options: options, samples: samples, functionalChecksPassed: passed, transitionChecks: transitionChecks, buildConfiguration: build)
     }
 }

@@ -6,6 +6,8 @@ final class WindowLifecycleCheckTests: XCTestCase {
         let base = ["ThermoApp", "--offscreen", "--verify-lifecycle", "/tmp/report.json"]
         let options = try WindowLifecycleCheck.Options(arguments: base)
         XCTAssertEqual(options.cycles, 3)
+        XCTAssertFalse(options.foregroundActivity)
+        XCTAssertTrue(try WindowLifecycleCheck.Options(arguments: base + ["--foreground-activity"]).foregroundActivity)
         for arguments in [
             ["ThermoApp", "--verify-lifecycle", "/tmp/report.json"],
             ["ThermoApp", "--offscreen", "--verify-lifecycle", "relative.json"],

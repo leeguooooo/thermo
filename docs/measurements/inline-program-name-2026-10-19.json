@@ -1,0 +1,131 @@
+{
+  "date": "2026-10-19",
+  "sourceBefore": "b5f4628",
+  "versionPrepared": "1.1.37",
+  "installedVersionKept": "1.1.36 (534)",
+  "installedAcceptance": false,
+  "changes": [
+    "Inline evaluation shows the runtime instead of source text, including short-option clusters and preload options",
+    "Opaque invocation digest retains distinct row identities; same invocation workers still group by folder",
+    "Other-folder totals and PID selection compare inline invocation identity, not the shared displayed runtime name"
+  ],
+  "oldImplementationRed": {
+    "CleanKitTests.xctest": {
+      "tests": 3,
+      "failures": 12,
+      "state": "failed"
+    }
+  },
+  "focusedGreen": {
+    "CleanKitTests.xctest": {
+      "tests": 4,
+      "failures": 0,
+      "state": "passed"
+    }
+  },
+  "firstRelatedRun": {
+    "exitCode": 1,
+    "suites": {
+      "ThermoCLITests.xctest": {
+        "tests": 110,
+        "failures": 0,
+        "state": "passed"
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 311,
+        "failures": 0,
+        "state": "passed"
+      }
+    },
+    "failedCase": "RuntimeDMGOwnershipTests.testReadOnlyDMGRunningCopyKeepsSharedDataAndInvalidatesAnEarlierPlan at final detach assertion"
+  },
+  "isolatedFailedCaseRecheck": {
+    "exitCode": 0,
+    "passed": true
+  },
+  "cleanKitRecheckAfterDiagnostic": {
+    "exitCode": 0,
+    "suites": {
+      "CleanKitTests.xctest": {
+        "tests": 759,
+        "failures": 0,
+        "state": "passed"
+      }
+    },
+    "installedAppReturnedToSettingsDuringRecheck": true
+  },
+  "finalSuccessfulScope": {
+    "tests": 1180,
+    "oneInvocation": false,
+    "suites": {
+      "CleanKitTests.xctest": {
+        "tests": 759,
+        "failures": 0,
+        "state": "passed"
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 311,
+        "failures": 0,
+        "state": "passed"
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 110,
+        "failures": 0,
+        "state": "passed"
+      }
+    }
+  },
+  "liveOwnedFixture": {
+    "passed": true,
+    "binary": "local debug CLI with pending program-name patch",
+    "scope": "Four owned node processes; no signal/quit operation through Thermo",
+    "expectedProcesses": 3,
+    "observedProcesses": 3,
+    "rows": 2,
+    "displayNames": [
+      "node"
+    ],
+    "differentInlineProgramExcluded": true,
+    "identicalInvocationAcrossFoldersIncluded": true,
+    "inlineSourceAbsentFromRowIDs": true,
+    "globalInventoryComplete": false,
+    "sourceHashes": {
+      "a": "02ea218882cdaf3c62dcf51d0a9665ff6a529318f05d776b083edd6a50c4852b",
+      "b": "14e15f5894443b18a00d8e110dda65e53a9c5b3d2512d799e95a7d0cadc4f9e0"
+    }
+  },
+  "detachFailure": {
+    "rootCauseConfirmed": false,
+    "initialHdiutilErrorUnavailable": true,
+    "matchingFixtureImagesAttachedAfterIsolatedRecheck": 0,
+    "subsequentDiagnosticsAdded": true,
+    "forceDetachAdded": false,
+    "retryAdded": false,
+    "helperUsedOnlyByTests": true
+  },
+  "foregroundActivityControl": {
+    "default": false,
+    "flag": "--foreground-activity",
+    "reportedField": "foregroundActivityHeld",
+    "pairedRunPending": true
+  },
+  "behavioralRegressionVersion": "1.1.36",
+  "versionBumpAfterBehavioralChecks": "1.1.37; final signed package version checks pending",
+  "sourceFilesSHA256": {
+    "Sources/CleanKit/Pulse.swift": "57b92a512bd9d98cf211dde4769b81f7cd2536a0a3557260146812f3dc6e405e",
+    "Sources/thermo/Pulse.swift": "8006d7ae0591f53ccb9a6f836bdc29e58feab8061260b8e8ae933f062c2f6478",
+    "Tests/CleanKitTests/InlineProgramNameTests.swift": "ae7b42fa13f1982ab7eac57564588e55f30fe10b89f90ce479711f7becce6845",
+    "Sources/ThermoApp/WindowLifecycleCheck.swift": "d2a8873e21724efae39454853f35f2403e0da8c029dd55a5a8e9ecb06638e13b",
+    "Tests/ThermoAppTests/WindowLifecycleCheckTests.swift": "ad63ff2a1027fad005dc20361e8069e7530d2f1cd0d5802366d6e68b104e27a5",
+    "Sources/CleanKit/NativeDiskImage.swift": "020e2ac21a77528c51553fd51ecc6839f60a90beaa6ee58fb566269ba965e343",
+    "Tests/CleanKitTests/RuntimeDMGOwnershipTests.swift": "e22dbfb0b0a994fdb962ac12742e1e12bb7762f1c1938d96c17478a93babc611"
+  },
+  "logSHA256": {
+    "thermo-inline-name-red.log": "0d6b5be8561836e1f219a720f9f8eaf3481e66b4d17c171270b3956f296fca63",
+    "thermo-inline-name-green.log": "4b8d0bb6a4f635dbf17dcfb7f082b0859e19bbb6bcc04bd1bc5b18c2ed68d440",
+    "thermo-inline-name-regression.log": "c5f3d2a7bc76863edeb0f42d76c9d3006d783a8e35aee12ca8a7c26273196145",
+    "thermo-inline-runtime-dmg-recheck.log": "659cc1ecb4bdbe62175b038667c6816236e14defa71cf318405187392f73a3c3",
+    "thermo-inline-clean-regression-recheck.log": "b7379529a5ebd0f391627589aa84a7a6e8ce909ca8d1673f7ec31785acd9396b"
+  },
+  "published": false
+}

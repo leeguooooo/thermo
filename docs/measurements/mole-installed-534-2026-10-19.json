@@ -1,0 +1,85 @@
+{
+  "installedVersion": "1.1.36 (534)",
+  "source": "b5f46287e47992711fc08bbb14f05b15a7d15ef8",
+  "helperVersion": "8/1.1.36",
+  "upgradeObservationCount": 34,
+  "upgradePassed": true,
+  "consecutiveOriginalFanChecks": 6,
+  "allObservedJobsPresent": true,
+  "offscreenLifecyclePassed": false,
+  "closedReadStillInFlight": 0,
+  "conversationNavigation": {
+    "normalSidebar": true,
+    "defaultKeepAllObserved": true,
+    "selectedItems": 0,
+    "cleanupDisabled": true,
+    "retentionChanged": false,
+    "deletionExecuted": false
+  },
+  "visibleMemory": {
+    "freshSampleOnFirstObservation": true,
+    "minuteLabel": "14:29",
+    "hardLatencyBenchmark": false
+  },
+  "published": false,
+  "notarized": false,
+  "date": "2026-10-19",
+  "package": {
+    "sourceCommit": "b5f46287e47992711fc08bbb14f05b15a7d15ef8",
+    "developerIDTeam": "6ZPXG4KVVS",
+    "architectures": {
+      "Contents/MacOS/Thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo-helper": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "nativeAndRosettaCLI": true,
+    "physicalIntelAccepted": false,
+    "appleEventsEntitlement": true,
+    "archiveSHA256": "90683331bf929cc927d4e3cf1e5349c1c8aca9042b8c17faf9c1a96e517719f9",
+    "archiveManifestMatch": true,
+    "archiveFiles": 93,
+    "archiveLinks": 8
+  },
+  "offscreenDetail": {
+    "samples": 23,
+    "failedTransitions": [
+      "cycle-1-return-overview",
+      "cycle-1-visible-again"
+    ],
+    "staleOpenSamples": [
+      {
+        "cycle": 1,
+        "page": "overview"
+      },
+      {
+        "cycle": 1,
+        "page": "memory"
+      }
+    ],
+    "allClosedReadsFinished": true
+  },
+  "installationDecision": "Local candidate installed for ordinary-window acceptance after package, file-protection and close/drain checks; offscreen freshness failures remain unresolved and are not counted as a pass",
+  "oldAppAndHelperBackupsRetained": true,
+  "runningRollbackTested": false,
+  "helperShutdownLogAutomaticControlConfirmed": true,
+  "chargingPolicy": "off",
+  "awdlPhase": "idle",
+  "screenActive": false,
+  "newHardwarePolicySubmitted": false,
+  "manualRemoval": {
+    "replacementAfterReviewRejected": true,
+    "openFileAfterReviewRejected": true,
+    "nativeTrashRestoreHashDeviceInodeMatched": true,
+    "scope": "Owned fixture files only"
+  },
+  "overallMoleParity": false
+}
