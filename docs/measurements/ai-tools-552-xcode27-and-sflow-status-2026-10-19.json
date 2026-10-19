@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-19T08:59:13.690768+00:00",
+  "fixedSource": {
+    "version": "1.1.37",
+    "build": "552",
+    "commit": "497b1a9f36471fba54a581559309000cf09b9076",
+    "tree": "ead8d4e6544fbb0b2e4c1630c4062bb8e98ec9c9",
+    "differenceFrom551": [
+      "Tests/CleanKitTests/OverviewSchedulingTests.swift"
+    ],
+    "productionCodeChanged": false,
+    "testChange": "Capture self.home in an immutable local before map/async closures; preserve all assertions"
+  },
+  "remoteValidation": {
+    "host": "mac190",
+    "swift63Runs": {
+      "551": "Manifest passed with SDK pair, then test source failed to compile due home shadowing",
+      "552": "Home issue fixed, then two existing SwiftUI expressions exceeded Swift 6.3 type-check time; no completed test pass"
+    },
+    "currentRunId": "2c628257-472c-42c2-9f4b-15f8b83756e1",
+    "currentDeveloperDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "currentSDK": "MacOSX27.0.sdk",
+    "currentSwift": "6.4 (swiftlang-6.4.0.34.1)",
+    "executionHostAndToolchainVerified": true,
+    "currentPhase": "Release compiling, not completed tests",
+    "globalXcodeSelectionUnchanged": true,
+    "noLocalBuildFallback": true
+  },
+  "sflowExperienceFix": {
+    "repository": "session-flow",
+    "commit": "21c50a0",
+    "problem": "Successful command placement/adoption retained a stale waiting-for-host error",
+    "behavior": "Clear stale error and wait timestamp only on positive start/adoption; preserve new uncertain/error outcomes and never resend",
+    "validatedSourceSHA256": {
+      "src/engine.ts": "1cbce4e5ec2b4ba73e0d724e77997443e9e164a927f44ff54829c8a89a2491ab",
+      "test/hosts.test.ts": "6b24d2cc36739e986da8c1cb53b8adb04a87f8b0c92e1723f3e97592d49a22b6",
+      "DESIGN.md": "19131bec844acd9f536569b99c67f0928c15c93236764c5a51dcce3fb1428678"
+    },
+    "validationHost": "mac190",
+    "baselineRegressions": {
+      "pass": 1,
+      "fail": 2
+    },
+    "candidateRegressions": {
+      "pass": 3,
+      "fail": 0
+    },
+    "fullTests": {
+      "passed": 182,
+      "failed": 0,
+      "files": 19,
+      "tmuxRequired": true
+    },
+    "typecheckExit": 0,
+    "compileExit": 0,
+    "activeBinaryUpdated": false,
+    "installed": false,
+    "published": false
+  },
+  "boundaries": [
+    "No remote Release test success or universal package completion yet",
+    "The local 1792-test pass applies only to original 551 source and remains separate",
+    "No GUI, hardware, browser-profile, signing, install or publication acceptance",
+    "Only the isolated remote command snapshots were edited for sflow validation; real workflow records were not changed"
+  ]
+}
