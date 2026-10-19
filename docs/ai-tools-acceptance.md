@@ -91,6 +91,18 @@ python3 scripts/verify-ai-release.py \
 
 [近期使用与点击错误复核](measurements/recent-tool-usage-and-click-triage-2026-10-19.json)：在 00:00–03:48 UTC 的 11 份 Codex 日志局部样本中，MCP 返回文本共 505,306 字节，浏览器快照占约 73.3%；外层 exec 另有约 2.35 MB，不能归入内部 MCP。五份文件被裁剪，不是全量排名。七次明确点击错误为六次遮挡拒绝、一次过期引用，其中两组重复撞到同一遮挡；未确认服务故障。由此修复 chrome-use 的错误分类：遮挡拒绝单列 `element_occluded`，避免遮挡文字中的 timeout / connection 被当作可重试的超时或连接问题。21 项远程分类回归通过；首次完整测试因远程磁盘保护中止，失败记录保留。后续含此修复的主线已通过 [2,366 项普通回归](measurements/mcp-snapshot-incremental-2026-10-19.json)，未执行全部默认跳过的浏览器测试。改动已在 chrome-use 主线提交，未发布、未更新安装版，也未重放浏览器操作；提速及 token 收益未知。
 
+2026-10-19 再核对三项官方资料，下一步按以下差距选工作：
+
+| 参考 | 值得借鉴的能力 | Thermo 的对应缺口与验收方向 |
+|---|---|---|
+| [官方 MCP Inspector CLI](https://github.com/modelcontextprotocol/inspector/blob/main/docs/cli-smoke-testing.md) | 列表、实际调用、返回断言分步执行，机器可读结果与错误分类 | 当前定义检查不能证明业务可用；从已观察到的重复失败中选只读任务，分别核对工具结果、后置状态与失败恢复，不把列出工具当成通过 |
+| [Langfuse MCP tracing](https://langfuse.com/docs/observability/features/mcp-tracing) | 通过 `_meta` 传播 trace context，关联客户端、服务端及外部 API | 当前本地日志只能观察宿主保留的区间；若工具没有明确关联标识，保留未知，不从脚本内容猜内部耗时；跨端关联是后续插桩方向，本轮未接入 |
+| [Braintrust experiments](https://www.braintrust.dev/docs/evaluate/run-evaluations) | 保存不可变实验快照，比较固定数据、版本及评分结果 | 已有对照导入和运行后检查；下一步应从真实失败沉淀任务，固定输入与验收条件，分别报告任务是否完成和对照是否有效，不由描述缩短推出 Skill 更好 |
+
+这些是官方文档核对，不能替代三款工具的完整实测。本轮不新增模型运行、后台采集或日志上传。
+
+552 窗口验收发现 Skill YAML 修复建议把换行显示为字面量 `\n`。后续源码已同步改正英文调用键、中文键和值，让建议使用真正换行；已静态核对键一致、三处换行及名称占位符。此项是文案修正，未重建 App，不属于固定 552 的包或 GUI 验收。
+
 - [MCPJam Inspector](https://www.mcpjam.com/features/inspector)：工具请求 / 响应、调用瀑布和跨客户端测试。
 - [ccusage](https://github.com/ccusage/ccusage)：本地会话统计；会话 token 不应直接分摊成某个工具的独占成本。
 - [Anthropic skill-creator](https://claude.com/resources/articles/improving-skill-creator-test-measure-and-refine-agent-skills)：触发评测、Skill 对照、验收、耗时及 token。

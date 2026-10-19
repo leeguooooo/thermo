@@ -598,7 +598,7 @@ struct ConfigChecks {
                             || front?["description"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
                             add(Finding(.warning, .skills, agent: agent, subject: name,
                                         tr("SKILL.md name or description is missing or could not be parsed; inspect the YAML front matter. Host loading was not tested."),
-                                        fix: tr("start SKILL.md with ---\\nname: %1$@\\ndescription: …\\n---", name), source: origin))
+                                        fix: tr("start SKILL.md with ---\nname: %1$@\ndescription: …\n---", name), source: origin))
                         }
                         byName[name, default: []].append((agent, footprint.canonicalID ?? real, origin, key, footprint.codexConfiguredEnabled == false))
                     } else {

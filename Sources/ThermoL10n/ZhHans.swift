@@ -852,7 +852,7 @@ let zhHans: [String: String] = [
     "directory has no SKILL.md, so it isn't a skill": "目录里没有 SKILL.md，不是一个 skill",
     "add SKILL.md or remove the folder": "补上 SKILL.md，或删除这个目录",
     "SKILL.md has no front matter description, so agents can't tell when to use it": "SKILL.md 没有 front matter 描述，agent 判断不了什么时候该用它",
-    "start SKILL.md with ---\\nname: %1$@\\ndescription: …\\n---": "在 SKILL.md 开头加上 ---\\nname: %1$@\\ndescription: …\\n---",
+    "start SKILL.md with ---\nname: %1$@\ndescription: …\n---": "在 SKILL.md 开头加上 ---\nname: %1$@\ndescription: …\n---",
     "%1$@ different skills share this name (%2$@); only one is used": "%1$@ 个不同的 skill 同名（%2$@），只有一个会生效",
     "rename or remove the copy you don't want": "重命名或删除不需要的那份",
     "not loaded": "未加载",
