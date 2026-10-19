@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-19",
+  "sourceCommitTested": "2ddfc720796df9da107fd9c3171faf15977b4efb",
+  "versionTested": "1.1.37",
+  "mainSnapshotIntegrated": "fec3384",
+  "mainNewBehavior": "Text observation recognizes explicit executor truncation declarations without changing byte/token accounting or error status",
+  "regression": {
+    "command": "swift test --jobs 1 --filter 'AgentDoctorTests|ThermoAppTests|ThermoCLITests'",
+    "exitCode": 0,
+    "total": 716,
+    "failures": 0,
+    "suites": {
+      "ThermoCLITests.xctest": {
+        "tests": 110,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 311,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 295,
+        "failures": 0
+      }
+    },
+    "logSHA256": "af4f4e326621d963c7912d50498a3417ed2979a75de179a511f0b6d2cafaa8d1"
+  },
+  "releaseVerifierUnitTests": {
+    "sourceSnapshot": "aea3bd6",
+    "file": "scripts/test-ai-release-verifier.py",
+    "tests": 14,
+    "exitCode": 0,
+    "scope": "Owned fixtures, not candidate AI package acceptance",
+    "logSHA256": "54a2786a60c160e237e0f15c8d0c4f13f93f085b13f331edecec70f6c50e22ca"
+  },
+  "sourceFilesSHA256": {
+    "Sources/AgentDoctor/ToolResultTextObservation.swift": "524c383190ef141b378240c04c520cb7ed42f7088399ad704ef6ad2dbfc9322d",
+    "Sources/ThermoKit/Version.swift": "1f6e91dbc4865084c0c076df1f4617de22d92bd358e41dbd17e5ef025db077d7",
+    "Sources/CleanKit/Pulse.swift": "57b92a512bd9d98cf211dde4769b81f7cd2536a0a3557260146812f3dc6e405e",
+    "Sources/thermo/Pulse.swift": "8006d7ae0591f53ccb9a6f836bdc29e58feab8061260b8e8ae933f062c2f6478",
+    "Sources/ThermoApp/WindowLifecycleCheck.swift": "d2a8873e21724efae39454853f35f2403e0da8c029dd55a5a8e9ecb06638e13b"
+  },
+  "currentInstalledVersion": "1.1.36 (534)",
+  "nextPackageBuilt": false,
+  "published": false
+}
