@@ -154,12 +154,13 @@ App 的 MCP 页保留本窗口内手动“连接并检查”的计量，显示�
 
 汇总覆盖本次清单中的所有启用 MCP 配置，不随搜索框筛选变化。[原生验收与独立 CLI 对照](measurements/mcp-definition-summary-2026-10-17.json)使用两个成功服务、一个取消的慢服务和一个停用配置：成功部分为 3 个工具、634 字节、各定义数组约 159 token，完整配置总量仍显示未知；取消、清除和重新扫描的实际窗口操作均已复核。9 项汇总测试、2 项扫描取消测试和 3 项本地化测试通过。该记录来自独立 QA 副本与合成服务，不是生产 MCP 全量或正式安装验收。
 
-普通体检仍只检查配置，不启动任何 MCP。`thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--json]` 或 App 的“连接并检查”会显式启动选定的 stdio 服务或连接配置的 Streamable HTTP 地址，执行 initialize、notifications/initialized 和完整分页 tools/list，不调用业务工具。不改写配置。stdio 使用自己启动的子进程；HTTP 建立新的检查会话，不接管其他客户端的会话。
+普通体检仍只检查配置，不启动任何 MCP。`thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--protocol handshake|2026-07-28] [--json]` 或 App 的“连接并检查”会显式启动选定的 stdio 服务或连接配置的 Streamable HTTP 地址，不调用业务工具或改写配置。默认握手模式执行 initialize、notifications/initialized 和完整分页 tools/list；stdio 使用自己启动的子进程，HTTP 建立新的检查会话，不接管其他客户端的会话。
 
-结果分别给出启动、握手、列表和总耗时，以及服务 instructions、完整工具定义数组、逐工具描述、输入 / 输出 schema 和 annotations 的静态占用。完整定义用排序键的紧凑 JSON 测量，正文不导出；工具名称脱敏，服务返回的错误正文不回显。分项估算不保证相加等于完整 JSON 的估算；未测量宿主的包装、延迟加载或缓存。
+结果分别给出启动、握手或发现、列表和总耗时，以及服务 instructions、完整工具定义数组、逐工具描述、输入 / 输出 schema 和 annotations 的静态占用。完整定义用排序键的紧凑 JSON 测量，正文不导出；工具名称脱敏，服务返回的错误正文不回显。分项估算不保证相加等于完整 JSON 的估算；未测量宿主的包装、延迟加载或缓存。
 
 - 源码检查器支持 stdio、Streamable HTTP，以及采用初始化握手的 2024-11-05、2025-03-26、2025-06-18、2025-11-25 协议版本；优先提出 2025-11-25，可接受旧版服务的协商结果。HTTP 支持 JSON 和增量 SSE 响应，SSE 包含 LF、CRLF、CR 换行及分块 UTF-8 文本；取得响应后不等待长连接自然结束。旧版独立 SSE 端点发现和 OAuth 登录未实现。
-- [当前规范 2026-07-28](https://modelcontextprotocol.io/docs/2026-07-28/learn/versioning)采用无握手发现和逐请求元数据，当前检查器尚未支持。收到未支持的日期版本时保留版本号，并说明这是检查器的兼容性限制，不能据此判断 MCP 工具故障；不会把版本号加入旧握手白名单后假装兼容。
+- [2026-07-28 元数据检查](measurements/mcp-stateless-inspection-2026-10-20.json)使用显式模式：单项和批量 CLI 加 `--protocol 2026-07-28`，App 在检查面板中选择“无会话发现”。执行 server/discover 和分页 tools/list，每次附带版本、客户端信息和空能力声明；HTTP 附带版本、方法请求头，不创建协议会话，也不发送 DELETE。拒绝、超时和未完成结果不会触发自动协议切换或服务器重启。普通握手模式默认保留。
+- 新模式单列发现耗时；客户端交互、未知扩展结果或服务端主动请求会停止检查，不自动采样、授权或继续交互。2026 的对象形式输出 schema 可声明数组等类型，不套用旧版的 `type: object` 限制；输入 schema 和非对象形式的 schema 仍按协议做静态提示。本功能是元数据检查，不是完整的通用 MCP 客户端或业务工具验收。
 - 默认总时限 10 秒，最大 120 秒。采用单调时钟，所有读写非阻塞；超时、取消、协议错误、断流和大小上限返回未完成。
 - stdio 单条待解析消息或单次 HTTP 响应最多 8 MiB，整个检查最多接收 16 MiB；最多 100 页、10,000 个工具。重复或无效游标拒绝作为完整清单。
 - 不向服务声明 sampling、elicitation 或 roots 能力；只响应 ping，其他服务发起的请求返回不支持。

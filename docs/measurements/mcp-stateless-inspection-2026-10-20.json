@@ -1,0 +1,283 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "b371fe4",
+  "baselineCommit": "b536e6c",
+  "feature": "Explicit 2026-07-28 metadata inspection for stdio and Streamable HTTP; App single/batch and CLI single/batch",
+  "commands": [
+    "thermo agents inspect NAME --protocol 2026-07-28 --encoding cl100k_base --json",
+    "thermo agents inspect-all --protocol 2026-07-28 --agent codex --json"
+  ],
+  "defaultProtocol": "handshake through 2025-11-25; no automatic discovery, fallback or restart",
+  "modernRequests": [
+    "server/discover",
+    "tools/list"
+  ],
+  "clientCapabilities": {},
+  "sourceVerification": {
+    "sourceFilesMatched": 573,
+    "CLI_SHA256": "92989b8ec2b12f718d4a7b4e51ca70abc736fc9f96cf31dff9b6805d1977e801",
+    "App_SHA256": "0690a4b8dc262eeaf6e21970ac3808e29ec0af4f770644becd219cb7d40f7ee3",
+    "packageSHA256": "6edbe3846308cf20cc2d3eb4b484fc5e9116a4849c96dc363a221c9a1e12a1c1",
+    "resolvedSHA256": "94e15a420495bfd5291aae8fd498aa9d1804289f433f74638bd3f0bd1af10f4e",
+    "testSuites": [
+      {
+        "suite": "ThermoCLITests",
+        "tests": 17,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoAppTests",
+        "tests": 17,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests",
+        "tests": 359,
+        "failures": 0
+      }
+    ],
+    "host": "leos-MacBook-Pro.local",
+    "swiftVersion": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk"
+  },
+  "officialSDKReplay": {
+    "passed": true,
+    "sdkVersion": "2.3.1",
+    "runs": [
+      {
+        "case": "baseline-stdio",
+        "exitCode": 2,
+        "stdoutSHA256": "d9247b180e4ae9a8df6c682fb73cee43a95a0a4ca61a9a11ddbb4f39710b278d"
+      },
+      {
+        "case": "candidate-stdio",
+        "exitCode": 0,
+        "stdoutSHA256": "c42097a80655465f458c1177eae3b4c4c4daad1109059daba60979240cb7df50"
+      },
+      {
+        "case": "candidate-against-legacy",
+        "exitCode": 2,
+        "stdoutSHA256": "9b37f1af1048e4d97d98192bb616f084e42033423d5ddee90f54d081eb138698"
+      },
+      {
+        "case": "candidate-http-json",
+        "exitCode": 0,
+        "stdoutSHA256": "cef2dd38bcfe8d0452534c56f2f1386fe4761d80802d7f9eae460a9ab181d161"
+      },
+      {
+        "case": "candidate-mixed-batch",
+        "exitCode": 0,
+        "stdoutSHA256": "146208cdbd74d7b64f5deca7ad8c4735febe1427ecd521047e9c88ed804fc08c"
+      },
+      {
+        "case": "candidate-http-sse",
+        "exitCode": 0,
+        "stdoutSHA256": "677b773647f9325cc1203ff6d0fd68f2bdec3a47b6b88c150a86176ff5d6e0ab"
+      }
+    ],
+    "modernTransportCases": 3,
+    "mixedBatchConfigurations": 2,
+    "toolsPerConfiguration": 2,
+    "definitionBytes": 3860,
+    "definitionReferenceTokens": 958,
+    "transportMeasurementsIdentical": true,
+    "stdioRuntimeNetworkDenied": true,
+    "httpEndpointsLoopbackOnly": true,
+    "noInitializeOrDeleteInModernRequests": true,
+    "noFallbackAfterRejectedPinnedMode": true,
+    "noBusinessToolCalls": true,
+    "modelCalled": false,
+    "installed": false,
+    "published": false
+  },
+  "schemaFalsePositiveReplay": {
+    "passed": true,
+    "officialSDKVersion": "2.3.1",
+    "toolCount": 3,
+    "falsePositiveBefore": true,
+    "falsePositiveAfter": false,
+    "allTextMeasurementsUnchanged": true,
+    "definitionBytes": 4234,
+    "referenceTokens": 1048,
+    "networkDenied": true,
+    "noBusinessCalls": true
+  },
+  "nativeGUI": {
+    "nativeGUIVerified": true,
+    "protocol": "2026-07-28",
+    "singleInspection": {
+      "complete": true,
+      "discoveryTimingShown": true,
+      "handshakeTimingShown": false,
+      "toolCount": 3,
+      "definitionBytes": 4234,
+      "heuristicTokens": 1059,
+      "ranking": [
+        "wide_output",
+        "array_output",
+        "small_read"
+      ],
+      "arrayOutputFalseWarningAbsent": true
+    },
+    "batchInspection": {
+      "selected": 1,
+      "complete": 1,
+      "incomplete": 0,
+      "notStarted": 0
+    },
+    "requestMethods": [
+      "server/discover",
+      "tools/list",
+      "initialize",
+      "server/discover",
+      "tools/list"
+    ],
+    "sourceAppSHA256": "0690a4b8dc262eeaf6e21970ac3808e29ec0af4f770644becd219cb7d40f7ee3",
+    "QARuntimeSHA256": "d354a30123a0f2a3cfa8ec87009e5c7d145372ee6c18c4cbaf72e6300098e6b0",
+    "QAProcessesAbsent": true,
+    "originalAppPIDUnchanged": 26253,
+    "originalConfigAndSelectedAppFilesUnchanged": true,
+    "modelCalled": false,
+    "businessToolCalled": false,
+    "installed": false,
+    "published": false,
+    "notes": [
+      "Source App built on Mac190. QA bundle alone contains an added app-relative Sparkle rpath and ad-hoc signatures; original downloaded App binary retained.",
+      "Observed using native CUA controls and screenshots; no App source changes for packaging."
+    ]
+  },
+  "contracts": {
+    "reference": {
+      "passed": true,
+      "encodings": [
+        "cl100k_base",
+        "o200k_base"
+      ],
+      "standaloneBinary": true,
+      "skillMCPAndUsageCountsMatchReference": true,
+      "modelNamesNotInferred": true
+    },
+    "cli": {
+      "cliSHA256": "92989b8ec2b12f718d4a7b4e51ca70abc736fc9f96cf31dff9b6805d1977e801",
+      "checks": [
+        {
+          "name": "scoped-help-and-inventory",
+          "commands": 108
+        },
+        {
+          "name": "preview-with-yes-never-applies",
+          "passed": true
+        },
+        {
+          "name": "unsupported-flags-and-extra-positionals-refused",
+          "passed": true
+        },
+        {
+          "name": "compiled-cli-private-protocol-routing",
+          "passed": true,
+          "scope": "owned protocol peer; actual App host verified by Swift socket test"
+        },
+        {
+          "name": "real-frozen-clean-plan-preview-apply-and-replay",
+          "passed": true
+        }
+      ],
+      "hardwareChanged": false,
+      "realBrowsersChanged": false,
+      "realPrivacySettingsChanged": false
+    },
+    "cleanup": {
+      "passed": true,
+      "reports": [
+        {
+          "path": "/cleanup-error",
+          "cleanupStatus": "unconfirmed",
+          "details": {
+            "budgetSeconds": 0.25,
+            "elapsedSeconds": 0.0030903330771252513,
+            "httpStatusCode": 503,
+            "reason": "httpError"
+          }
+        },
+        {
+          "path": "/cleanup-slow",
+          "cleanupStatus": "unconfirmed",
+          "details": {
+            "budgetSeconds": 0.25,
+            "elapsedSeconds": 0.2516858750022948,
+            "reason": "timedOut"
+          }
+        },
+        {
+          "path": "/no-session",
+          "cleanupStatus": "not_needed",
+          "details": {
+            "budgetSeconds": 0,
+            "elapsedSeconds": 0,
+            "reason": "notNeeded"
+          }
+        }
+      ],
+      "transportFailureVerified": true,
+      "textOutputShowsReasonStatusAndBudget": true,
+      "privateDetailsExcluded": true,
+      "noBusinessCalls": true,
+      "fixtureOnly": true
+    }
+  },
+  "officialSources": [
+    "https://modelcontextprotocol.io/specification/2026-07-28/server/discover",
+    "https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http",
+    "https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/stdio",
+    "https://modelcontextprotocol.io/specification/2026-07-28/server/tools",
+    "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/schema/2026-07-28/schema.ts"
+  ],
+  "sourceSchemaSHA256": "742750af0bb8c716e7030c4977c992b55d1adc4407e9e66997db5846baedc2cd",
+  "limitations": [
+    "Metadata inspection only, not a complete general-purpose MCP client or business tool acceptance",
+    "Explicit mode selection; no automatic era negotiation",
+    "Client interactions and extension results are rejected without follow-up",
+    "App and CLI are arm64 Debug candidates; no full Release or x86_64 acceptance",
+    "Reference-token counts and UI heuristics use different encodings; no inference or billing measurement"
+  ],
+  "attemptNotes": [
+    "Initial QA compilation failed because a CLI translation import was missing; fixed before final passing tests. Original build log retained.",
+    "Temporary native QA packaging initially lacked Sparkle/rpath. Fixed only the owned bundle using cached pinned Sparkle 2.9.6, app-relative rpath and ad-hoc signatures. Failed launch logs retained; actual final window verified after correction."
+  ],
+  "installed": false,
+  "published": false,
+  "realModelCalled": false,
+  "userConfigurationWritten": false,
+  "artifactSHA256": {
+    "source-verification.json": "520a1c5d5ec670788b03be424df1e508977a8816c619f7fd7aad56872ae40638",
+    "first-build-error.log": "104c6edaf01245be66909f5b0d4aab8e6fca88a190a42fdd56ac64789a003646",
+    "final-cleanup-contract.json": "bd19e073f075960ac5a094e01d911e47901b864cf046d576db948e8bf50edba5",
+    "gui.json": "a0af37c5c2583f7f6920833c0c60effa963dee3c4929f498b01712f31a8dd5b6",
+    "final-cli-contract.json": "7ebde9f7c0678b08b6648f02cd7bcd45883ecdeec225e3414b6440f62e6036b0",
+    "arguments.log": "e7a206baa913065efdbbe6e01287b0ff50c26161042e9137a4839bd1c5705d42",
+    "app-tests.log": "2e73365d7858af2c464ae3739fd59b033f91eacebc5ee36b7f2d8c5cdc2e992d",
+    "final-tests.log": "9c61b191135b91da1f4ff1540874a9f18a469623532c1d0a8c739926a3b86059",
+    "final-reference-contract.json": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d",
+    "schema/before.json": "483cb12433885a889faa591d3beb0cb79d5979399c2892a4f70a1252702478ab",
+    "schema/result.json": "490daffe2ac8cdbd203a74b6181d0fbfdcc0424ebf6dc62ba0ad32c39eadbde6",
+    "schema/after.json": "e2494ff6f8f9e4054f3a5d7dc0e04e902224bb2d4531fa56b843274618e699a3",
+    "schema/after-receipt.json": "77070245025127feba3d184001fe50738b70128425c472e61ae90d40207ce952",
+    "schema/before-receipt.json": "71158bd3bb0fa5bfc88860bf2375021896ea0648bae0ade862180b8e91454c49",
+    "schema/before.requests.jsonl": "6b1727826aee37ee48f6a45b4979d00d69427758cca611212c9dca31f7a99ebf",
+    "schema/after.requests.jsonl": "6b1727826aee37ee48f6a45b4979d00d69427758cca611212c9dca31f7a99ebf",
+    "sdk/batch-stdio.requests.jsonl": "6b1727826aee37ee48f6a45b4979d00d69427758cca611212c9dca31f7a99ebf",
+    "sdk/candidate-against-legacy.requests.jsonl": "25fe342451bd6046fbf8e60cbfa076406e507d4a265e33205a0b2cdb5909176c",
+    "sdk/candidate-http-json.requests.jsonl": "4ad5be162750220dada744f0f32ba47bdd44f38dc3065b60ff56b7180c6c6bbe",
+    "sdk/baseline-stdio.json": "d9247b180e4ae9a8df6c682fb73cee43a95a0a4ca61a9a11ddbb4f39710b278d",
+    "sdk/result.json": "aa55461e417950e41a1f7869764cede6fe09487d23747965c0d30b4ebeba1943",
+    "sdk/candidate-stdio.requests.jsonl": "6b1727826aee37ee48f6a45b4979d00d69427758cca611212c9dca31f7a99ebf",
+    "sdk/candidate-stdio.json": "c42097a80655465f458c1177eae3b4c4c4daad1109059daba60979240cb7df50",
+    "sdk/receipts.json": "1b83b69cbae2f3a9610dfce4703a2c44da89f6159b041ec6c7ecc4c3b6d1b7f1",
+    "sdk/candidate-http-sse.requests.jsonl": "01f1280aedceca0d7b9ca18e95fdb1df5583e681ca53d5f23cfbd7d2b1f0d196",
+    "sdk/candidate-http-json.json": "cef2dd38bcfe8d0452534c56f2f1386fe4761d80802d7f9eae460a9ab181d161",
+    "sdk/candidate-http-sse.json": "677b773647f9325cc1203ff6d0fd68f2bdec3a47b6b88c150a86176ff5d6e0ab",
+    "sdk/candidate-mixed-batch.json": "146208cdbd74d7b64f5deca7ad8c4735febe1427ecd521047e9c88ed804fc08c",
+    "sdk/candidate-against-legacy.json": "9b37f1af1048e4d97d98192bb616f084e42033423d5ddee90f54d081eb138698",
+    "sdk/baseline-stdio.requests.jsonl": "f41dc9274838d60e334a70f310e3f725d84cb5a36b9143360f836f72990ab936"
+  }
+}
