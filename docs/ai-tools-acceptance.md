@@ -46,7 +46,7 @@ Figma 另经 Codex 0.163.0 已有 OAuth 的只读宿主目录接口取得 44 个
 
 ## 外部参考与后续证据
 
-[近期使用与点击错误复核](measurements/recent-tool-usage-and-click-triage-2026-10-19.json)：在 00:00–03:48 UTC 的 11 份 Codex 日志局部样本中，MCP 返回文本共 505,306 字节，浏览器快照占约 73.3%；外层 exec 另有约 2.35 MB，不能归入内部 MCP。五份文件被裁剪，不是全量排名。七次明确点击错误为六次遮挡拒绝、一次过期引用，其中两组重复撞到同一遮挡；未确认服务故障。由此修复 chrome-use 的错误分类：遮挡拒绝单列 `element_occluded`，避免遮挡文字中的 timeout / connection 被当作可重试的超时或连接问题。21 项远程分类回归通过；完整测试在编译完成后因远程磁盘保护中止，未记为通过。改动已在 chrome-use 主线提交，未发布、未更新安装版，也未重放浏览器操作；提速及 token 收益未知。
+[近期使用与点击错误复核](measurements/recent-tool-usage-and-click-triage-2026-10-19.json)：在 00:00–03:48 UTC 的 11 份 Codex 日志局部样本中，MCP 返回文本共 505,306 字节，浏览器快照占约 73.3%；外层 exec 另有约 2.35 MB，不能归入内部 MCP。五份文件被裁剪，不是全量排名。七次明确点击错误为六次遮挡拒绝、一次过期引用，其中两组重复撞到同一遮挡；未确认服务故障。由此修复 chrome-use 的错误分类：遮挡拒绝单列 `element_occluded`，避免遮挡文字中的 timeout / connection 被当作可重试的超时或连接问题。21 项远程分类回归通过；首次完整测试因远程磁盘保护中止，失败记录保留。后续含此修复的主线已通过 [2,366 项普通回归](measurements/mcp-snapshot-incremental-2026-10-19.json)，未执行全部默认跳过的浏览器测试。改动已在 chrome-use 主线提交，未发布、未更新安装版，也未重放浏览器操作；提速及 token 收益未知。
 
 - [MCPJam Inspector](https://www.mcpjam.com/features/inspector)：工具请求 / 响应、调用瀑布和跨客户端测试。
 - [ccusage](https://github.com/ccusage/ccusage)：本地会话统计；会话 token 不应直接分摊成某个工具的独占成本。
@@ -54,6 +54,8 @@ Figma 另经 Codex 0.163.0 已有 OAuth 的只读宿主目录接口取得 44 个
 - 其余目录计量与风险检查参考及适用边界见 [外部参考](ai-tools-analysis.md#外部参考)。2026-10-17 的参考收集为资料研究，新增终端实测范围见下文。没有把外部工具的完整体验评成名次，也没有默认上传个人配置或日志。
 
 [2026-10-19 终端对照与静态检查补充](measurements/mcp-inspector-reference-2026-10-19.json)已实测官方 Inspector 2.11.0、MCPJam CLI 5.16.1 的正常、工具错误、协议错误、schema 与返回契约案例。对照发现的缺失本地 `$ref` 目标，已补进 Thermo 的定义提示；合法布尔 schema 保持无提示，定义计量不变。资源标识符、远程引用、锚点及超过预算者不在此项解析范围，未拉取外部 schema。692 项相关回归、四组编译后 CLI 案例和隔离原生窗口通过；尚未发布，不据此评定真实业务质量。
+
+[MCP 快照增量入口](measurements/mcp-snapshot-incremental-2026-10-19.json)：为 `chrome_use_snapshot` 暴露既有 CLI 的 `diff: true`，默认仍返回完整树；修正切换 filter 后误用旧基线的问题。2,366 项普通回归、格式检查及 1 项隔离 Chrome 用例通过：无变化提示、换过滤条件回退完整树、原 ref 点击及页面回执均核对。自有页面的首次完整回复与后续无变化回复为 3,650 / 2,547 字节，只是该序列的 daemon 返回体积，不代表任务或模型 token 节省。改动已合入 chrome-use 主线，未发布或改动安装版。
 
 ## 博客工作流的真实模型对照
 
