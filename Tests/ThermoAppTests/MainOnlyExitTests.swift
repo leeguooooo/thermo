@@ -8,14 +8,14 @@ final class MainOnlyExitTests: XCTestCase {
         var pages: [MainPage] = []
         delegate.showExitBlocker = { pages.append($0) }
         let restore = AppExitGuard.beginRestore()
-        let helper = AppExitGuard.beginHelperRemoval()
-        defer { AppExitGuard.endRestore(restore); AppExitGuard.endHelperRemoval(helper) }
+        let helper = AppExitGuard.beginHelperMaintenance()
+        defer { AppExitGuard.endRestore(restore); AppExitGuard.endHelperMaintenance(helper) }
         XCTAssertEqual(delegate.applicationShouldTerminate(NSApplication.shared), .terminateCancel)
         XCTAssertEqual(pages, [.history])
         AppExitGuard.endRestore(restore)
         XCTAssertEqual(delegate.applicationShouldTerminate(NSApplication.shared), .terminateCancel)
         XCTAssertEqual(pages, [.history, .settings])
-        AppExitGuard.endHelperRemoval(helper)
+        AppExitGuard.endHelperMaintenance(helper)
         XCTAssertEqual(delegate.applicationShouldTerminate(NSApplication.shared), .terminateNow)
     }
 
@@ -50,14 +50,14 @@ final class MainOnlyExitTests: XCTestCase {
             let token: UUID?
             switch kind {
             case "restore": token = AppExitGuard.beginRestore()
-            case "helper": token = AppExitGuard.beginHelperRemoval()
+            case "helper": token = AppExitGuard.beginHelperMaintenance()
             case "manual": token = AppExitGuard.beginManualRemoval { notices += 1 }
             default: token = nil
             }
             defer {
                 if let token {
                     AppExitGuard.endRestore(token)
-                    AppExitGuard.endHelperRemoval(token)
+                    AppExitGuard.endHelperMaintenance(token)
                     AppExitGuard.endManualRemoval(token)
                 }
                 window.orderOut(nil)

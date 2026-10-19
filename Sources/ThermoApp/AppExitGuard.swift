@@ -2,11 +2,11 @@ import AppKit
 
 @MainActor
 enum AppExitGuard {
-    private static var helperRemovals = Set<UUID>()
-    static func beginHelperRemoval() -> UUID {
-        let token = UUID(); helperRemovals.insert(token); return token
+    private static var helperMaintenance = Set<UUID>()
+    static func beginHelperMaintenance() -> UUID {
+        let token = UUID(); helperMaintenance.insert(token); return token
     }
-    static func endHelperRemoval(_ token: UUID) { helperRemovals.remove(token) }
+    static func endHelperMaintenance(_ token: UUID) { helperMaintenance.remove(token) }
     private static var restores = Set<UUID>()
     static func beginRestore() -> UUID { let token = UUID(); restores.insert(token); return token }
     static func endRestore(_ token: UUID) { restores.remove(token) }
@@ -21,7 +21,7 @@ enum AppExitGuard {
             show(.history)
             return .terminateCancel
         }
-        if !helperRemovals.isEmpty {
+        if !helperMaintenance.isEmpty {
             show(.settings)
             return .terminateCancel
         }

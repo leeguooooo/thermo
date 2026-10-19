@@ -340,7 +340,7 @@ final class Monitor: ObservableObject {
                 watchSetup()   // approved earlier; launchd is starting it
                 return
             }
-            installHelperWithPassword()
+            continueHelperInstallation()
         }
     }
 
@@ -421,37 +421,52 @@ final class Monitor: ObservableObject {
 
     /// The fallback that always works: one administrator prompt installs the helper as a
     /// classic launch daemon (used when Login Items approval is stuck or not available).
-    func installHelperWithPassword() {
+    /// Explicit repair bypasses cached background-registration state and version-only checks.
+    @MainActor func installHelperWithPassword() {
+        guard !helperBusy, !settingUp else { return }
+        continueHelperInstallation()
+    }
+
+    @MainActor private func continueHelperInstallation() {
         guard !helperBusy else { return }
         guard let bin = HelperInstaller.locateHelperBinary() else {
             lastError = tr("thermo-helper not found inside the app bundle")
             stopSetup()
             return
         }
+        performHelperInstallation(operation: {
+            if self.usesSMAppService, !HelperInstaller.isInstalled, self.daemon.status != .notRegistered {
+                try? self.daemon.unregister()
+            }
+            try HelperInstaller.install(from: bin)
+        })
+    }
+
+    /// An injected installer exercises busy/quit/failure behavior without admin or hardware work.
+    @MainActor func performHelperInstallation(operation: @escaping () throws -> Void,
+                                              finished: @escaping () -> Void = {}) {
+        guard !helperBusy else { return }
         settingUp = true
         installingHelper = true
         policyRevision += 1
         setupStarted = setupStarted ?? Date()
+        let exitGuard = AppExitGuard.beginHelperMaintenance()
         DispatchQueue.global(qos: .userInitiated).async {
-            // The Login Items registration would claim the same launchd label.
-            if self.usesSMAppService, !HelperInstaller.isInstalled, self.daemon.status != .notRegistered {
-                try? self.daemon.unregister()
-            }
-            do {
-                try HelperInstaller.install(from: bin)
-                // The old connection pointed at the job that was just replaced.
-                self.helper.reset()
-                DispatchQueue.main.async {
-                    self.installingHelper = false
+            var failure: String?
+            do { try operation() } catch { failure = "\(error)" }
+            let error = failure
+            DispatchQueue.main.async {
+                AppExitGuard.endHelperMaintenance(exitGuard)
+                self.installingHelper = false
+                if let error {
+                    self.lastError = error.contains("cancelled") ? nil : error
+                    self.stopSetup()
+                } else {
+                    self.helper.reset()
                     self.lastError = nil
                     self.watchSetup()
                 }
-            } catch {
-                DispatchQueue.main.async {
-                    self.installingHelper = false
-                    self.lastError = "\(error)".contains("cancelled") ? nil : "\(error)"
-                    self.stopSetup()
-                }
+                finished()
             }
         }
     }
@@ -555,7 +570,7 @@ final class Monitor: ObservableObject {
     @MainActor func uninstallHelper(operation: @escaping () throws -> Void, finished: @escaping () -> Void = {}) {
         guard !helperBusy, !settingUp else { return }
         uninstallingHelper = true
-        let exitGuard = AppExitGuard.beginHelperRemoval()
+        let exitGuard = AppExitGuard.beginHelperMaintenance()
         policyRevision += 1
         policiesAvailable = false
         fanControlState = nil
@@ -566,7 +581,7 @@ final class Monitor: ObservableObject {
             do { try operation() } catch { failure = "\(error)" }
             let error = failure
             DispatchQueue.main.async {
-                AppExitGuard.endHelperRemoval(exitGuard)
+                AppExitGuard.endHelperMaintenance(exitGuard)
                 self.uninstallingHelper = false
                 self.lastError = error
                 self.helper.reset()

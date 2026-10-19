@@ -601,6 +601,8 @@ let zhHans: [String: String] = [
     "Update…": "更新…",
     "Helper installed but not responding.": "helper 已安装，但没有响应。",
     "Reinstall…": "重新安装…",
+    "System helper update required": "辅助服务需要更新",
+    "Reinstalling keeps fan settings but ends active charging and low-latency sessions.": "重新安装会保留风扇设置，但会结束当前的充电保护和网络低延迟会话。",
     "Mode": "模式",
     "Auto": "自动",
     "Fixed": "固定转速",

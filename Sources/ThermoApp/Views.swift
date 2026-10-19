@@ -597,12 +597,17 @@ struct FansView: View {
         case .running:
             EmptyView()
         case .outdated:
-            notice(tr("Updating the system helper…"), tr("Recovery and helper startup must finish before controls become available."))
+            setupCard(icon: "arrow.triangle.2.circlepath", title: tr("System helper update required"),
+                      body: tr("Check the connection again, or reinstall the helper. macOS may ask for an administrator password.")
+                        + " " + tr("Reinstalling keeps fan settings but ends active charging and low-latency sessions."),
+                      primary: (tr("Retry"), { monitor.refreshHelper() }),
+                      secondary: (tr("Reinstall…"), { monitor.installHelperWithPassword() }))
         case .notRunning:
             setupCard(icon: "exclamationmark.triangle", title: tr("Could not connect to the system helper"),
-                      body: tr("Check the connection again, or reinstall the helper. macOS may ask for an administrator password."),
+                      body: tr("Check the connection again, or reinstall the helper. macOS may ask for an administrator password.")
+                        + " " + tr("Reinstalling keeps fan settings but ends active charging and low-latency sessions."),
                       primary: (tr("Retry"), { monitor.refreshHelper() }),
-                      secondary: (tr("Reinstall…"), { monitor.beginSetup() }))
+                      secondary: (tr("Reinstall…"), { monitor.installHelperWithPassword() }))
         case .unknown:
             notice(tr("Checking the system helper…"), tr("Reading the helper’s status. You can keep viewing sensor readings."))
         case .notInstalled, .needsApproval:
@@ -930,9 +935,14 @@ struct SettingsView: View {
                 row(tr("System helper: %1$@", helperText), last: true, labelControl: false) {
                     if [.running, .notRunning, .needsApproval, .outdated].contains(monitor.helperState) {
                         HStack(spacing: 8) {
-                            if monitor.uninstallingHelper {
+                            if monitor.uninstallingHelper || monitor.settingUp {
                                 ProgressView().controlSize(.small)
-                                Text(tr("Uninstalling…")).font(.caption)
+                                Text(tr(monitor.uninstallingHelper ? "Uninstalling…" : "Setting up…")).font(.caption)
+                            }
+                            if monitor.helperState != .needsApproval {
+                                Button(tr("Reinstall…")) { monitor.installHelperWithPassword() }
+                                    .help(tr("Reinstalling keeps fan settings but ends active charging and low-latency sessions."))
+                                    .disabled(monitor.helperBusy || monitor.settingUp)
                             }
                             Button(tr("Uninstall")) { monitor.uninstallHelper() }
                                 .disabled(monitor.helperBusy || monitor.settingUp)

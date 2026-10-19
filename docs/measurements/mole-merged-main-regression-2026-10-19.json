@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-19",
+  "source": "0a02117",
+  "command": "swift test --jobs 4 --skip HardwareTests",
+  "exitCode": 0,
+  "total": 1738,
+  "failures": 0,
+  "suites": {
+    "ThermoKitTests.xctest": {
+      "tests": 207,
+      "failures": 0
+    },
+    "ThermoHelperTests.xctest": {
+      "tests": 30,
+      "failures": 0
+    },
+    "ThermoCLITests.xctest": {
+      "tests": 110,
+      "failures": 0
+    },
+    "ThermoAppTests.xctest": {
+      "tests": 306,
+      "failures": 0
+    },
+    "CleanKitTests.xctest": {
+      "tests": 752,
+      "failures": 0
+    },
+    "AgentDoctorTests.xctest": {
+      "tests": 283,
+      "failures": 0
+    },
+    "AgentCoreTests.xctest": {
+      "tests": 50,
+      "failures": 0
+    }
+  },
+  "logSHA256": "9e5ece929adf4a6d51587ebb2f1093d0f1b346060d9fd87ec5e82f92943299bc",
+  "scope": "Merged main source metadata, MCP local schema checks and tab ownership fixes with helper lifecycle fixes. Not the already-installed 509 binary."
+}

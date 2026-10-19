@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-19",
+  "sourceBase": "0a02117",
+  "versionPrepared": "1.1.34",
+  "sourceFilesSHA256": {
+    "Sources/ThermoApp/Monitor.swift": "4c44548278f194c5b4bb68c2ac1a8d1613491ebb7e54cce7c98b83c9ec3c4242",
+    "Sources/ThermoApp/Views.swift": "ffcd2083749fe384254d569b2f9bdce6994c6adec8623006a9044d74da5e7253",
+    "Sources/ThermoApp/AppExitGuard.swift": "feb922c13a8c6362b950f64a874d017e426fae545e1fa9cf4afd131b1c2f5ec7",
+    "Sources/ThermoKit/Version.swift": "1c5c8ccc8a3e6fd288f9a36959ac92669e58ef38f8afb82b3c2048af8c6e0756"
+  },
+  "behavior": [
+    "Settings exposes explicit reinstall for running/nonresponding/outdated helper",
+    "Outdated and nonresponding fan banners call the real installer instead of version-only/setup waiting",
+    "Buttons disable during installation/setup and progress is shown",
+    "Helper installation acquires the same ordinary-exit protection as helper removal",
+    "Success and failure both release the maintenance token; duplicate installation/removal requests are refused while busy"
+  ],
+  "focusedTests": {
+    "count": 9,
+    "failures": 0
+  },
+  "relatedRegression": {
+    "command": "swift test --jobs 4 --filter ThermoAppTests|ThermoKitTests|ThermoHelperTests|ThermoCLITests --skip HardwareTests",
+    "exitCode": 0,
+    "total": 655,
+    "failures": 0,
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 207,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 110,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 308,
+        "failures": 0
+      }
+    },
+    "logSHA256": "81bd7a0203b11c2ccebc8116e9b312440f6ccd3b66f5e2c051d6f496baff67f1"
+  },
+  "deployed": false,
+  "remaining": [
+    "Signed candidate and real Settings reinstall click",
+    "Outdated/nonresponding banner visual acceptance",
+    "Main integration and remaining Mole parity gates"
+  ]
+}
