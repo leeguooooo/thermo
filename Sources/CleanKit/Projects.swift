@@ -17,7 +17,7 @@ enum Projects {
                          ".vercel/output", ".output", ".wrangler", "dist", "build", "out", "coverage", "storybook-static",
                          ".docusaurus", ".vite", ".cache"]),
         Kind(name: "Rust", markers: ["Cargo.toml"], artifacts: ["target"]),
-        Kind(name: "Swift", markers: ["Package.swift"], artifacts: [".build", ".swiftpm"]),
+        Kind(name: "Swift", markers: ["Package.swift"], artifacts: [".build", ".swiftpm", "dist", "build"]),
         Kind(name: "CocoaPods", markers: ["Podfile"], artifacts: ["Pods"]),
         Kind(name: "Python", markers: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile", "uv.lock"],
              artifacts: [".venv", "venv", ".tox", ".nox", ".mypy_cache", ".pytest_cache", ".ruff_cache", "__pycache__", "dist", "build"]),
@@ -32,7 +32,19 @@ enum Projects {
         Kind(name: "Haskell", markers: ["stack.yaml"], artifacts: [".stack-work"]),
         Kind(name: "Terraform", markers: [".terraform.lock.hcl"], artifacts: [".terraform"]),
         Kind(name: "Unity", markers: ["ProjectSettings/ProjectVersion.txt"], artifacts: ["Library", "Temp", "Obj"]),
+        // motion-use / drama-use films: `out` holds the rendered video.
+        Kind(name: "Film", markers: ["film.json"], artifacts: ["out"]),
     ]
+
+    /// Output folders checked for proof that they are a build cache, whatever the project kind
+    /// (an Xcode project has no marker file we know; a root `.build` may serve an app below it).
+    static let evidentNames = [".build", "build", "DerivedData", "target", "out", "dist"]
+
+    /// A cache by its own declaration (CACHEDIR.TAG: Cargo, SwiftPM, …) or Xcode derived data.
+    static func isEvidentCache(_ p: String) -> Bool {
+        FS.exists(p + "/CACHEDIR.TAG") || FS.isDirectory(p + "/Build/Intermediates.noindex")
+            || FS.isDirectory(p + "/ModuleCache.noindex") || FS.isDirectory(p + "/CompilationCache.noindex")
+    }
 
     /// Folders never descended into while looking for projects.
     static let skip: Set<String> = [".git", "node_modules", "Library", ".Trash", "Pods", ".build", "target", "vendor",
@@ -48,7 +60,8 @@ enum Projects {
 
     /// Something found by the walk; sized afterwards in parallel.
     enum Candidate {
-        case artifact(project: String, kind: String, name: String, activity: Date?, source: String?)
+        /// `evident`: proved a cache by its contents, so even a generic name is rebuilt exactly.
+        case artifact(project: String, kind: String, name: String, activity: Date?, source: String?, evident: Bool = false)
         case worktree(path: String, repo: String)
         case aider(project: String, paths: [String])
     }
@@ -108,7 +121,7 @@ enum Projects {
 
     static func make(_ c: Candidate, ctx: ScanContext) -> CleanItem? {
         switch c {
-        case let .artifact(dir, kind, a, activity, source):
+        case let .artifact(dir, kind, a, activity, source, evident):
             let p = dir + "/" + a
             let s = ctx.options.exactSizes ? FS.size(p) : FS.discoverySize(p)
             guard s.bytes > 1_000_000 else { return nil }
@@ -128,9 +141,9 @@ enum Projects {
                 detail: FS.tilde(dir, home: ctx.home) + " · \(kind)",
                 // Generic output folders can hold things worth keeping (a rendered video in `out`, a
                 // release binary in `dist`): never in the one-click safe set, always to the Trash.
-                safety: stale && !generic.contains(a) ? .safe : .review,
+                safety: stale && (evident || !generic.contains(a)) ? .safe : .review,
                 bytes: s.bytes, files: s.files, lastUsed: activity, paths: [p], note: note, blocked: blocked, group: dir)
-            item.regenerable = !generic.contains(a)
+            item.regenerable = evident || !generic.contains(a)
             item.estimatedSize = !ctx.options.exactSizes; item.sizeIncomplete = s.incomplete
             return item
         case let .worktree(wt, repo):
@@ -159,13 +172,31 @@ enum Projects {
         // Most packages have no installed dependencies or build output. Do not load their
         // Git index or activity history just to discover there is nothing to measure.
         let existingArtifacts = Set(matches.flatMap(\.artifacts).filter { FS.isDirectory(dir + "/" + $0) })
-        if !existingArtifacts.isEmpty {
+        // Caches that prove themselves; inside a mixed output folder (a `build` holding a DMG next
+        // to its DerivedData) only the proven parts, so finished products stay.
+        var evident: [String] = []
+        if ctx.options.categories.contains(.projects) {
+            for n in evidentNames where set.contains(n) && FS.isDirectory(dir + "/" + n) {
+                if isEvidentCache(dir + "/" + n) { evident.append(n); continue }
+                for c in FS.entries(dir + "/" + n) ?? [] where c.isDir && isEvidentCache(dir + "/" + n + "/" + c.name) {
+                    evident.append(n + "/" + c.name)
+                }
+            }
+        }
+        if !existingArtifacts.isEmpty || !evident.isEmpty {
             // Last use: the latest of agent/editor sessions in it, git activity and its own files.
             var activity = projectActivity(dir, names: names, ignoring: Set(matches.flatMap(\.artifacts)))
             var source: String?
             if let use = ctx.signals.lastUse(of: dir), use.date > (activity ?? .distantPast) { activity = use.date; source = use.source }
             if let git = ProjectSignals.gitActivity(dir), git > (activity ?? .distantPast) { activity = git; source = "git" }
-            let protected = protectedArtifacts(dir, Array(existingArtifacts))
+            let protected = protectedArtifacts(dir, Array(existingArtifacts) + evident)
+            for a in evident where !protected.contains(a) {
+                // The folder it sits in is settled either way: never offered whole as well.
+                claimed.insert(String(a.split(separator: "/").first ?? Substring(a)))
+                let candidate = Candidate.artifact(project: dir, kind: "Build cache", name: a, activity: activity, source: source, evident: true)
+                out.append(candidate)
+                onCandidate?(candidate)
+            }
             for k in matches {
                 for a in k.artifacts where existingArtifacts.contains(a) && !claimed.contains(a) {
                     let p = dir + "/" + a

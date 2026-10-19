@@ -342,6 +342,31 @@ final class CleanKitTests: XCTestCase {
         XCTAssertFalse(items.contains { $0.paths.contains { $0.contains("left-pad") } }, "does not descend into artifacts")
     }
 
+    func testBuildCachesFoundByTheirContents() throws {
+        let big = String(repeating: "x", count: 1_100_000)
+        // Xcode project: no marker we know; `build` holds a DMG next to its derived data.
+        try write("src/mac/App.xcodeproj/project.pbxproj", "")
+        try write("src/mac/build/DerivedData-release/ModuleCache.noindex/m.pcm", big)
+        try write("src/mac/build/App.dmg", big)
+        // A root `.build` serving an app below it, declared a cache by CACHEDIR.TAG.
+        try write("src/tool/apps/x/README.md", "")
+        try write("src/tool/.build/CACHEDIR.TAG", "Signature: 8a477f597d28d172789f06886806bc55")
+        try write("src/tool/.build/debug/obj.o", big)
+        // A film: `out` is the rendered video.
+        try write("src/film/film.json", "{}")
+        try write("src/film/out/final.mp4", big)
+        let items = Projects.scan(context())
+        let derived = try XCTUnwrap(items.first { $0.title == "mac · build/DerivedData-release" })
+        XCTAssertEqual(derived.regenerable, true)
+        XCTAssertFalse(RemovalMode.auto.trashes(derived))
+        XCTAssertFalse(items.contains { $0.paths.contains { $0.hasSuffix("/mac/build") } }, "the DMG beside it stays")
+        let tool = try XCTUnwrap(items.first { $0.title == "tool · .build" })
+        XCTAssertEqual(tool.regenerable, true)
+        let film = try XCTUnwrap(items.first { $0.title == "film · out" })
+        XCTAssertEqual(film.safety, .review)
+        XCTAssertTrue(RemovalMode.auto.trashes(film), "a rendered video goes to the Trash")
+    }
+
     func testNestedTrackedBuildOutputsAreProtected() throws {
         try write("src/repo/packages/web/package.json", "{}")
         try write("src/repo/packages/web/dist/release.js", "release")
