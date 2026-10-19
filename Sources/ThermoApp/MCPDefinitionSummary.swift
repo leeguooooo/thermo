@@ -7,6 +7,7 @@ struct MCPDefinitionSummaryPanel: View {
     let items: [AgentItem]
     let encoding: TextEncoding
     var busy = false
+    @State private var scopeExpanded = false
     var body: some View {
         let summary = store.summary(items: items, encoding: encoding)
         VStack(alignment: .leading, spacing: 12) {
@@ -43,8 +44,12 @@ struct MCPDefinitionSummaryPanel: View {
                 Text(tr("Overall definition size is unknown. Connect & inspect individual configurations to add measurements here."))
                     .font(.callout).foregroundStyle(.secondary)
             }
-            Text(tr("Manual inspections in this window only; rescanning clears them. Counts are sums of separate configuration measurements, not an atomic snapshot or effective prompt usage. Shared servers configured in multiple hosts remain separate. Incomplete and uninspected configurations are not zero; definition findings do not establish task quality."))
-                .font(.caption).foregroundStyle(.secondary)
+            DisclosureGroup(tr("Inspection scope and measurement"), isExpanded: $scopeExpanded) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(tr("Configuration scanning does not connect to MCP servers. Connect & inspect measures definitions and connection timing. Analyze local logs below reads recorded tool calls."))
+                    Text(tr("Manual inspections in this window only; rescanning clears them. Counts are sums of separate configuration measurements, not an atomic snapshot or effective prompt usage. Shared servers configured in multiple hosts remain separate. Incomplete and uninspected configurations are not zero; definition findings do not establish task quality."))
+                }.font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+            }.font(.caption)
         }.frame(maxWidth: .infinity, alignment: .leading).padding(18).glass()
     }
 }

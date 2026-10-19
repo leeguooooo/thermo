@@ -2997,4 +2997,7 @@ let zhHans: [String: String] = [
     "Ranks summed valid observed call intervals; overlaps count per call. Unknown timing follows known values. Missing intervals are excluded; this is not task duration.": "按有效观测调用区间的累计时长排序，重叠区间逐次计入。未知计时排在已知值之后；未观测区间不计入，这不是任务总时长。",
     "Valid timing pairs: %1$@ / %2$@ calls": "有效计时：%1$@ / %2$@ 次调用",
     "MCP endpoint returned HTTP %1$@; inspection access was rejected. No automatic login was attempted.": "MCP 端点返回 HTTP %1$@，检查访问被拒绝；未尝试自动登录。",
+    "Measurement and coverage details": "计量口径与覆盖详情",
+    "Structured JSON total: %1$@ bytes / %2$@ tokens": "结构化 JSON 合计：%1$@ 字节 / %2$@ token",
+    "Inspection scope and measurement": "检查范围与口径",
 ]

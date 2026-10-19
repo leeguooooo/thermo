@@ -35,6 +35,7 @@ struct ToolUsagePanel: View {
     @State private var sort: UsageSort
     @State private var visibleRowLimit = 8
     @State private var cumulativeExpanded = true
+    @State private var measurementDetailsExpanded = false
     init(model: ToolUsageModel, kind: String, encoding: TextEncoding = .heuristic) {
         self.model = model; self.kind = kind; self.encoding = encoding
         _sort = State(initialValue: kind == "skill" ? .instructions : .text)
@@ -62,6 +63,17 @@ struct ToolUsagePanel: View {
             case .calls: return Double(row.calls)
             }
         }
+    }
+    func rankingMetric(_ row: ToolUsageRow) -> String? {
+        let count: Int?
+        switch sort {
+        case .time: return seconds(ToolUsageOrdering.observedSeconds(for: row))
+        case .text: count = ToolUsageOrdering.text.count(for: row)
+        case .structured: count = ToolUsageOrdering.structured.count(for: row)
+        case .instructions: count = row.observedInstructionTokens
+        case .errors, .calls: return nil
+        }
+        return count.map { (row.referenceEncoding == nil ? "≈" : "") + String($0) + " token" } ?? tr("Unknown")
     }
     func seconds(_ value: Double?) -> String { value.map { String(format: "%.3f s", $0) } ?? tr("Unknown") }
 
@@ -99,89 +111,60 @@ struct ToolUsagePanel: View {
                 }
                 let textSummary = report.returnedTextSummary(kind: kind)
                 let structuredSummary = kind == "mcp" ? report.observedMCPStructuredSummary : nil
-                if !rows.isEmpty {
-                    ForEach(report.timingSummary(kind: kind)?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation], id: \.self) { line in
-                        Text(line).font(.caption.monospaced()).foregroundStyle(.secondary)
-                    }
-                    Text(ToolUsageTimingSummary.explanation).font(.caption).foregroundStyle(.secondary)
-                }
                 Picker(tr("Sort observed usage"), selection: $sort) {
                     ForEach(UsageSort.allCases.filter { (kind == "skill" || $0 != .instructions) && (kind == "mcp" || $0 != .structured) }, id: \.self) { value in Text(value.title).tag(value) }
                 }.pickerStyle(.segmented)
-                if sort == .structured || sort == .time {
-                    Text((sort == .time ? ToolUsageOrdering.time : .structured).explanation)
+                HStack(alignment: .firstTextBaseline) {
+                    Text(report.complete ? tr("Log reading complete within the selected scope") : tr("Partial log coverage"))
+                        .font(.caption.weight(.medium)).foregroundStyle(report.complete ? Color.secondary : .orange)
+                    Spacer(minLength: 8)
+                    Text(tr("Read %1$@ / %2$@ discovered log files · %3$@ bytes", String(report.coverage.filesRead), String(report.coverage.filesDiscovered), String(report.coverage.bytesRead)))
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                if kind == "skill" {
-                    instructionUsage(report.observedSkillInstructions, encoding: report.referenceEncoding)
-                    Text(tr("Only explicitly source-linked Claude instruction messages are measured. Kept separate from tool replies and request counters; missing loads, referenced files and billing remain unknown."))
-                        .font(.caption).foregroundStyle(.secondary)
-                    if let unmatched = report.coverage.unmatchedInstructionEvents, unmatched > 0 {
-                        Text(tr("%1$@ instruction metadata records could not be linked or identified.", String(unmatched)))
-                            .font(.caption).foregroundStyle(.orange)
-                    }
-                }
-                Text(report.complete ? tr("Log reading complete within the selected scope") : tr("Partial log coverage"))
-                    .font(.subheadline.weight(.medium))
-                Text(tr("Read %1$@ / %2$@ discovered log files · %3$@ bytes", String(report.coverage.filesRead), String(report.coverage.filesDiscovered), String(report.coverage.bytesRead)))
-                    .font(.caption).foregroundStyle(.secondary)
-                Text(tr("%1$@ clipped files · %2$@ malformed lines · %3$@ other tool calls", String(report.coverage.clippedFiles), String(report.coverage.malformedLines), String(report.coverage.otherToolCalls)))
-                    .font(.caption).foregroundStyle(.secondary)
                 if !report.complete {
                     Text(tr("Rankings cover only the logs read; unread logs may change the order."))
                         .font(.caption).foregroundStyle(.orange)
                 }
-                if let other = report.coverage.unattributedResults, report.coverage.otherToolCalls > 0 {
-                    Text(tr("Unattributed tool results: %1$@ returned · %2$@ missing · %3$@ unmeasured", String(other.completed), String(other.missingResults), String(other.unmeasuredResults)))
-                        .font(.caption).foregroundStyle(.secondary)
-                    let tokens = report.referenceEncoding == nil ? "≈\(other.returnedTextEstimatedTokens)" : other.referenceReturnedTextTokens.map(String.init) ?? tr("Unknown")
-                    Text(tr("Unattributed measured text: %1$@ bytes / %2$@ tokens · %3$@ non-text blocks not tokenized", String(other.returnedTextBytes), tokens, String(other.nonTextBlocks)))
-                        .font(.caption).foregroundStyle(.secondary)
-                    Text(tr("Includes execution wrapper text and may repeat separately logged MCP results. Kept outside MCP/Skill totals; no nested attribution or image/audio token estimate."))
-                        .font(.caption).foregroundStyle(.secondary)
-                    OuterToolUsageBreakdown(report: report)
-                } else if report.coverage.otherToolCalls > 0 {
-                    Text(tr("Unattributed returned content was not measured in this report; analyze again."))
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Text(report.generated, style: .time).font(.caption).foregroundStyle(.secondary)
-                HStack(spacing: 4) {
-                    Text(report.since, style: .date); Text("–"); Text(report.until, style: .date)
-                }.font(.caption).foregroundStyle(.secondary)
                 if report.coverage.cancelled { Text(tr("Analysis stopped; partial results are shown.")).font(.caption).foregroundStyle(.orange) }
-                if report.coverage.limitReached { Text(tr("A log scan limit was reached; results are partial.")).font(.caption).foregroundStyle(.orange) }
-                if report.coverage.unreadableFiles > 0 || report.coverage.unmatchedResults > 0 {
-                    Text(tr("%1$@ unreadable files · %2$@ results without a matching call", String(report.coverage.unreadableFiles), String(report.coverage.unmatchedResults)))
-                        .font(.caption).foregroundStyle(.orange)
+                if !rows.isEmpty {
+                    Text(tr("Returned text total in this category: %1$@ bytes / %2$@ tokens",
+                            textSummary.returnedTextBytes.map(String.init) ?? tr("Unknown"),
+                            textSummary.returnedTextTokens.map { (report.referenceEncoding == nil ? "≈" : "") + String($0) } ?? tr("Unknown")))
+                        .font(.caption.monospaced())
+                    if kind == "mcp" {
+                        Text(tr("Structured JSON total: %1$@ bytes / %2$@ tokens",
+                                structuredSummary?.totalJSONBytes.map(String.init) ?? tr("Unknown"),
+                                structuredSummary?.totalJSONTokens.map { (report.referenceEncoding == nil ? "≈" : "") + String($0) } ?? tr("Unknown")))
+                            .font(.caption.monospaced())
+                    }
+                    if sort == .time {
+                        ForEach(report.timingSummary(kind: kind)?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation], id: \.self) { line in
+                            Text(line).font(.caption.monospaced()).foregroundStyle(.secondary)
+                        }
+                    }
                 }
-                Text(tr("Missing timestamps %1$@ · unsupported usage records %2$@", String(report.coverage.missingTimestamps), String(report.coverage.unsupportedUsageRecords)))
-                    .font(.caption).foregroundStyle(.secondary)
-                if report.coverage.oversizedLines > 0 {
-                    Text(tr("%1$@ oversized log lines were skipped; returned text totals may be incomplete.", String(report.coverage.oversizedLines))).font(.caption).foregroundStyle(.orange)
-                }
+                if kind == "skill" { instructionUsage(report.observedSkillInstructions, encoding: report.referenceEncoding) }
+                DisclosureGroup(tr("Measurement and coverage details"), isExpanded: $measurementDetailsExpanded) {
+                    measurementDetails(report: report)
+                }.font(.caption)
                 if rows.isEmpty {
                     Text(tr("No directly attributable calls were observed. This does not prove the tool or Skill was unused."))
                         .font(.callout).foregroundStyle(.secondary)
                 }
                 if !rows.isEmpty {
-                    if kind == "mcp" {
-                        ForEach(structuredSummary?.displayLines ?? [MCPStructuredContentSummary.unavailableExplanation], id: \.self) { line in
-                            Text(line).font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    Text(tr("Returned text total in this category: %1$@ bytes / %2$@ tokens",
-                            textSummary.returnedTextBytes.map(String.init) ?? tr("Unknown"),
-                            textSummary.returnedTextTokens.map { (report.referenceEncoding == nil ? "≈" : "") + String($0) } ?? tr("Unknown")))
-                        .font(.caption.monospaced())
-                    Text(tr("Totals include all observed entries in this category, including hidden rows. Missing logs, results and non-text content are not included; this is not request usage."))
-                        .font(.caption).foregroundStyle(.secondary)
                     Text(tr("Showing %1$@ of %2$@ entries", String(min(visibleRowLimit, rows.count)), String(rows.count)))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 ForEach(Array(rows.prefix(visibleRowLimit))) { row in
                     VStack(alignment: .leading, spacing: 4) {
-                        Text((row.server.map { $0 + " / " } ?? "") + row.name + " · " + row.host)
-                            .font(.subheadline.weight(.medium)).textSelection(.enabled)
+                        HStack(alignment: .firstTextBaseline) {
+                            Text((row.server.map { $0 + " / " } ?? "") + row.name + " · " + row.host)
+                                .font(.subheadline.weight(.medium)).textSelection(.enabled)
+                            Spacer(minLength: 8)
+                            if let metric = rankingMetric(row) {
+                                Text(metric).font(.subheadline.monospaced().weight(.semibold)).textSelection(.enabled)
+                            }
+                        }
                         Text(tr("%1$@ calls · %2$@ results · %3$@ explicit result errors · %4$@ unknown error status · %5$@ missing results",
                                 String(row.calls), String(row.completed), String(row.reportedErrors), String(row.unknownErrorStatus), String(row.missingResults)))
                             .font(.caption)
@@ -221,7 +204,7 @@ struct ToolUsagePanel: View {
                                 Text(tr("Share of observed linked instruction text tokens: %1$@", String(format: "%.1f%%", percentage)))
                                     .font(.caption).foregroundStyle(.secondary)
                             }
-                        } else if sort != .structured, let percentage = textSummary.percentage(of: row) {
+                        } else if sort == .text, let percentage = textSummary.percentage(of: row) {
                             Text(tr("Share of this category's observed returned-text tokens: %1$@", String(format: "%.1f%%", percentage)))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
@@ -266,13 +249,86 @@ struct ToolUsagePanel: View {
                         }.frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-                Text(report.note).font(.caption).foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(18).glass()
         .onChange(of: sort) { _ in visibleRowLimit = 8 }
         .onChange(of: kind) { _ in visibleRowLimit = 8; sort = kind == "skill" ? .instructions : .text }
         .onChange(of: model.report?.generated) { _ in visibleRowLimit = 8 }
+    }
+
+    @ViewBuilder private func measurementDetails(report: ToolUsageReport) -> some View {
+        let rows = report.tools.filter { $0.kind == kind }
+        let textSummary = report.returnedTextSummary(kind: kind)
+        let structuredSummary = kind == "mcp" ? report.observedMCPStructuredSummary : nil
+        VStack(alignment: .leading, spacing: 8) {
+                if !rows.isEmpty {
+                    ForEach(report.timingSummary(kind: kind)?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation], id: \.self) { line in
+                        Text(line).font(.caption.monospaced()).foregroundStyle(.secondary)
+                    }
+                    Text(ToolUsageTimingSummary.explanation).font(.caption).foregroundStyle(.secondary)
+                }
+                if sort == .structured || sort == .time {
+                    Text((sort == .time ? ToolUsageOrdering.time : .structured).explanation)
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Text(tr("%1$@ clipped files · %2$@ malformed lines · %3$@ other tool calls", String(report.coverage.clippedFiles), String(report.coverage.malformedLines), String(report.coverage.otherToolCalls)))
+                    .font(.caption).foregroundStyle(.secondary)
+                if !report.complete {
+                    Text(tr("Rankings cover only the logs read; unread logs may change the order."))
+                        .font(.caption).foregroundStyle(.orange)
+                }
+                if let other = report.coverage.unattributedResults, report.coverage.otherToolCalls > 0 {
+                    Text(tr("Unattributed tool results: %1$@ returned · %2$@ missing · %3$@ unmeasured", String(other.completed), String(other.missingResults), String(other.unmeasuredResults)))
+                        .font(.caption).foregroundStyle(.secondary)
+                    let tokens = report.referenceEncoding == nil ? "≈\(other.returnedTextEstimatedTokens)" : other.referenceReturnedTextTokens.map(String.init) ?? tr("Unknown")
+                    Text(tr("Unattributed measured text: %1$@ bytes / %2$@ tokens · %3$@ non-text blocks not tokenized", String(other.returnedTextBytes), tokens, String(other.nonTextBlocks)))
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text(tr("Includes execution wrapper text and may repeat separately logged MCP results. Kept outside MCP/Skill totals; no nested attribution or image/audio token estimate."))
+                        .font(.caption).foregroundStyle(.secondary)
+                    OuterToolUsageBreakdown(report: report)
+                } else if report.coverage.otherToolCalls > 0 {
+                    Text(tr("Unattributed returned content was not measured in this report; analyze again."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Text(report.generated, style: .time).font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Text(report.since, style: .date); Text("–"); Text(report.until, style: .date)
+                }.font(.caption).foregroundStyle(.secondary)
+                if report.coverage.cancelled { Text(tr("Analysis stopped; partial results are shown.")).font(.caption).foregroundStyle(.orange) }
+                if report.coverage.limitReached { Text(tr("A log scan limit was reached; results are partial.")).font(.caption).foregroundStyle(.orange) }
+                if report.coverage.unreadableFiles > 0 || report.coverage.unmatchedResults > 0 {
+                    Text(tr("%1$@ unreadable files · %2$@ results without a matching call", String(report.coverage.unreadableFiles), String(report.coverage.unmatchedResults)))
+                        .font(.caption).foregroundStyle(.orange)
+                }
+                Text(tr("Missing timestamps %1$@ · unsupported usage records %2$@", String(report.coverage.missingTimestamps), String(report.coverage.unsupportedUsageRecords)))
+                    .font(.caption).foregroundStyle(.secondary)
+                if report.coverage.oversizedLines > 0 {
+                    Text(tr("%1$@ oversized log lines were skipped; returned text totals may be incomplete.", String(report.coverage.oversizedLines))).font(.caption).foregroundStyle(.orange)
+                }
+                if !rows.isEmpty {
+                    if kind == "mcp" {
+                        ForEach(structuredSummary?.displayLines ?? [MCPStructuredContentSummary.unavailableExplanation], id: \.self) { line in
+                            Text(line).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    Text(tr("Returned text total in this category: %1$@ bytes / %2$@ tokens",
+                            textSummary.returnedTextBytes.map(String.init) ?? tr("Unknown"),
+                            textSummary.returnedTextTokens.map { (report.referenceEncoding == nil ? "≈" : "") + String($0) } ?? tr("Unknown")))
+                        .font(.caption.monospaced())
+                    Text(tr("Totals include all observed entries in this category, including hidden rows. Missing logs, results and non-text content are not included; this is not request usage."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                if kind == "skill" {
+                    Text(tr("Only explicitly source-linked Claude instruction messages are measured. Kept separate from tool replies and request counters; missing loads, referenced files and billing remain unknown."))
+                        .font(.caption).foregroundStyle(.secondary)
+                    if let unmatched = report.coverage.unmatchedInstructionEvents, unmatched > 0 {
+                        Text(tr("%1$@ instruction metadata records could not be linked or identified.", String(unmatched)))
+                            .font(.caption).foregroundStyle(.orange)
+                    }
+                }
+            Text(report.note).font(.caption).foregroundStyle(.secondary)
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder private func instructionUsage(_ loaded: SkillInstructionUsage?, encoding: String?) -> some View {
