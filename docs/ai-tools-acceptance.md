@@ -46,6 +46,8 @@ Figma 另经 Codex 0.163.0 已有 OAuth 的只读宿主目录接口取得 44 个
 
 ## 外部参考与后续证据
 
+[近期使用与点击错误复核](measurements/recent-tool-usage-and-click-triage-2026-10-19.json)：在 00:00–03:48 UTC 的 11 份 Codex 日志局部样本中，MCP 返回文本共 505,306 字节，浏览器快照占约 73.3%；外层 exec 另有约 2.35 MB，不能归入内部 MCP。五份文件被裁剪，不是全量排名。七次明确点击错误为六次遮挡拒绝、一次过期引用，其中两组重复撞到同一遮挡；未确认服务故障。由此修复 chrome-use 的错误分类：遮挡拒绝单列 `element_occluded`，避免遮挡文字中的 timeout / connection 被当作可重试的超时或连接问题。21 项远程分类回归通过；完整测试在编译完成后因远程磁盘保护中止，未记为通过。改动已在 chrome-use 主线提交，未发布、未更新安装版，也未重放浏览器操作；提速及 token 收益未知。
+
 - [MCPJam Inspector](https://www.mcpjam.com/features/inspector)：工具请求 / 响应、调用瀑布和跨客户端测试。
 - [ccusage](https://github.com/ccusage/ccusage)：本地会话统计；会话 token 不应直接分摊成某个工具的独占成本。
 - [Anthropic skill-creator](https://claude.com/resources/articles/improving-skill-creator-test-measure-and-refine-agent-skills)：触发评测、Skill 对照、验收、耗时及 token。

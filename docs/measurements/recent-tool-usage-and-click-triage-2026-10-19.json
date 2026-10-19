@@ -1,0 +1,276 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "sourceSHA256": "bcc89cd81c824d212a718294c3a0e88283ae72fb667e0834d89157bec1852161",
+  "since": "2026-10-19T00:00:00Z",
+  "until": "2026-10-19T03:48:24Z",
+  "complete": false,
+  "coverage": {
+    "bytesRead": 27419067,
+    "cancelled": false,
+    "clippedFiles": 5,
+    "duplicateRecords": 138,
+    "filesDiscovered": 11,
+    "filesRead": 11,
+    "limitReached": false,
+    "malformedLines": 0,
+    "missingTimestamps": 0,
+    "otherToolCalls": 783,
+    "oversizedLines": 0,
+    "unmatchedInstructionEvents": 0,
+    "unmatchedResults": 0,
+    "unreadableFiles": 0,
+    "unsupportedUsageRecords": 936
+  },
+  "MCPReturnedTextBytes": 505306,
+  "MCPTopReturns": [
+    {
+      "calls": 26,
+      "completed": 26,
+      "host": "codex",
+      "id": "7f5474387ef4945390a33f15fd7223eaa39ca762957995d998947679ede62ba3",
+      "invocationFailures": 0,
+      "kind": "mcp",
+      "medianSeconds": 0.32500016689300537,
+      "missingResults": 0,
+      "name": "chrome_use_snapshot",
+      "nonTextBlocks": 0,
+      "p95Seconds": 1.066999912261963,
+      "reportedErrors": 0,
+      "returnedTextBytes": 370145,
+      "returnedTextEstimatedTokens": 92743,
+      "serializedMediaTextResults": 0,
+      "server": "chrome_use",
+      "timingSamples": 26,
+      "totalObservedSeconds": 12.28600001335144,
+      "truncationMarkerResults": 4,
+      "unknownErrorStatus": 0
+    },
+    {
+      "calls": 28,
+      "completed": 28,
+      "host": "codex",
+      "id": "b0172e3a766c9187f0b905f844f211db67789afb0b57ebb12db4587c4f7fb8cb",
+      "invocationFailures": 0,
+      "kind": "mcp",
+      "medianSeconds": 0.6190000772476196,
+      "missingResults": 0,
+      "name": "chrome_use_click",
+      "nonTextBlocks": 0,
+      "p95Seconds": 1.0160000324249268,
+      "reportedErrors": 7,
+      "returnedTextBytes": 68189,
+      "returnedTextEstimatedTokens": 17056,
+      "serializedMediaTextResults": 0,
+      "server": "chrome_use",
+      "timingSamples": 28,
+      "totalObservedSeconds": 19.28700017929077,
+      "truncationMarkerResults": 0,
+      "unknownErrorStatus": 0
+    },
+    {
+      "calls": 10,
+      "completed": 10,
+      "host": "codex",
+      "id": "737c4730f2a2b4cfabc85cb99db4e59c70e671f1d369cb09bd778ef12635b72d",
+      "invocationFailures": 0,
+      "kind": "mcp",
+      "medianSeconds": 0.15550005435943604,
+      "missingResults": 0,
+      "name": "chrome_use_eval",
+      "nonTextBlocks": 0,
+      "reportedErrors": 0,
+      "returnedTextBytes": 30104,
+      "returnedTextEstimatedTokens": 7538,
+      "serializedMediaTextResults": 0,
+      "server": "chrome_use",
+      "timingSamples": 10,
+      "totalObservedSeconds": 1.8849999904632568,
+      "truncationMarkerResults": 0,
+      "unknownErrorStatus": 0
+    },
+    {
+      "calls": 8,
+      "completed": 8,
+      "host": "codex",
+      "id": "7570f2e080ac3a677b943b27ee49eda6af6af8671cd0a1a1c6684712cf6e14f4",
+      "invocationFailures": 0,
+      "kind": "mcp",
+      "medianSeconds": 0.0840001106262207,
+      "missingResults": 0,
+      "name": "chrome_use_expect",
+      "nonTextBlocks": 0,
+      "reportedErrors": 0,
+      "returnedTextBytes": 26649,
+      "returnedTextEstimatedTokens": 6741,
+      "serializedMediaTextResults": 0,
+      "server": "chrome_use",
+      "timingSamples": 8,
+      "totalObservedSeconds": 3.1080002784729004,
+      "truncationMarkerResults": 0,
+      "unknownErrorStatus": 0
+    }
+  ],
+  "outerTopReturns": [
+    {
+      "calls": 670,
+      "completed": 669,
+      "host": "codex",
+      "id": "048bec0d1b7cbdb8a9c75c41bb51c9308ecddfa3e7bc8675faadec7ee9ac201d",
+      "kind": "outer",
+      "medianSeconds": 1.1800000667572021,
+      "missingResults": 1,
+      "name": "exec",
+      "nonTextBlocks": 1,
+      "p95Seconds": 6.427999973297119,
+      "reportedErrors": 0,
+      "returnedTextBytes": 2352761,
+      "returnedTextEstimatedTokens": 608457,
+      "serializedMediaTextResults": 0,
+      "timingSamples": 669,
+      "totalObservedSeconds": 1276.5280005931854,
+      "truncationMarkerResults": 0,
+      "unknownErrorStatus": 669,
+      "unmeasuredResults": 0
+    },
+    {
+      "calls": 51,
+      "completed": 51,
+      "host": "codex",
+      "id": "4b8b8e384046b295381874df4f9d81462e88abc249b5e0a3565324bd0167b660",
+      "kind": "outer",
+      "medianSeconds": 1.2720000743865967,
+      "missingResults": 0,
+      "name": "js",
+      "nonTextBlocks": 0,
+      "p95Seconds": 6.184000015258789,
+      "reportedErrors": 0,
+      "returnedTextBytes": 594676,
+      "returnedTextEstimatedTokens": 150845,
+      "serializedMediaTextResults": 3,
+      "timingSamples": 51,
+      "totalObservedSeconds": 102.56300163269043,
+      "truncationMarkerResults": 7,
+      "unknownErrorStatus": 51,
+      "unmeasuredResults": 0
+    }
+  ],
+  "clickErrorTriage": {
+    "explicitErrorResults": 7,
+    "hitTestRefusals": 6,
+    "expiredSnapshotReference": 1,
+    "repeatedIdenticalOcclusionPairs": 2,
+    "serviceFailureConfirmed": false,
+    "boundary": "Read-only result-message review, no browser interaction or replays. Overlay presence is observed in the tool refusal; independent page state was not checked.",
+    "windowVerified": true,
+    "sanitizedResultEvidence": {
+      "since": "2026-10-19T00:00:00Z",
+      "until": "2026-10-19T03:48:24Z",
+      "resultCount": 7,
+      "counts": {
+        "hit_test_refusal": 6,
+        "expired_ref": 1
+      },
+      "repeatedMessageMultiplicities": [
+        2,
+        2
+      ],
+      "results": [
+        {
+          "kind": "hit_test_refusal",
+          "originalCode": "command_failed",
+          "retryable": false,
+          "messageSHA256": "ffdc3cede346f88ccc64f490acf8aee194e25d0f62b6ba0ef563ed7c9caa6141"
+        },
+        {
+          "kind": "hit_test_refusal",
+          "originalCode": "command_failed",
+          "retryable": false,
+          "messageSHA256": "b3ee765a1ae80e4ad5cc8951d03a4c688cd43789a4a0686f7341c57e08f0297b"
+        },
+        {
+          "kind": "hit_test_refusal",
+          "originalCode": "command_failed",
+          "retryable": false,
+          "messageSHA256": "ffb2a9b110e3badee7238479050ea2952bc5bf2d668253aa44ebdac8d1c27b11"
+        },
+        {
+          "kind": "hit_test_refusal",
+          "originalCode": "command_failed",
+          "retryable": false,
+          "messageSHA256": "ffb2a9b110e3badee7238479050ea2952bc5bf2d668253aa44ebdac8d1c27b11"
+        },
+        {
+          "kind": "expired_ref",
+          "originalCode": "element_not_found",
+          "retryable": false,
+          "messageSHA256": "67e2864333d44416291ee775e2973c69583ff0e985586b7db40aed8d718820de"
+        },
+        {
+          "kind": "hit_test_refusal",
+          "originalCode": "command_failed",
+          "retryable": false,
+          "messageSHA256": "84f994e4add67c0bd063e546d4cf82cb52735b8e2a0a42bef8a155e3794dcdbb"
+        },
+        {
+          "kind": "hit_test_refusal",
+          "originalCode": "command_failed",
+          "retryable": false,
+          "messageSHA256": "84f994e4add67c0bd063e546d4cf82cb52735b8e2a0a42bef8a155e3794dcdbb"
+        }
+      ]
+    }
+  },
+  "nextAction": "Give the two owned hit-test refusal formats a non-retryable element_occluded code before generic timeout/connection parsing; preserve the guard and action behavior.",
+  "limits": [
+    "Eleven discovered recent files; five clipped. Not an all-session or all-host inventory.",
+    "Text bytes are logged return text, not model request or billed tokens.",
+    "Exec return text cannot be attributed to nested MCP/CLI from the outer protocol name.",
+    "936 unsupported usage records stay unknown; they do not prove zero token usage.",
+    "No service quality ranking or time/token savings established."
+  ],
+  "repair": {
+    "repository": "https://github.com/leeguooooo/chrome-use",
+    "commit": "179ddb9eccef1a7e94438c7207342cbe977352c2",
+    "behavior": "Two owned hit-test refusal formats report element_occluded with retryable false before generic timeout/connection rules. Click dispatch and hit-test guards unchanged.",
+    "focusedRemoteTests": {
+      "errorEnvelope": 12,
+      "friction": 9,
+      "failures": 0,
+      "newCases": [
+        "Both refusal formats with overlay, connection timeout, permission and unknown-ref labels",
+        "Ordinary evaluation error is not occlusion",
+        "Ordinary target timeout remains timeout",
+        "Action outcome unknown retains precedence",
+        "Friction uses the same occlusion category"
+      ]
+    },
+    "fullRemoteSuite": {
+      "complete": false,
+      "returncode": -15,
+      "reason": "Remote free space fell below the 1 GiB guard; Cargo was terminated after compilation and during tests.",
+      "durationSeconds": 82.51,
+      "sourceHash": "1f1a2b222f80d72ac2d193dd074c33c12fb11da3081b36a5437f26ba6d90c1a9"
+    },
+    "finalSource": {
+      "cli/src/error_envelope.rs": {
+        "finalSHA256": "eef9c58514b903b97fdb7bfecf080ce23fb67cf5b6bf1c914f7fe86aa10c897d",
+        "equalsRustfmtOfTestedSource": true
+      },
+      "cli/src/friction.rs": {
+        "finalSHA256": "8c2fceccdf156bfd97f478ebacfb710f7f46b97d39f3b8eab29069289bc9fca6",
+        "equalsRustfmtOfTestedSource": true
+      }
+    },
+    "docs": [
+      "CLI help",
+      "English and Chinese READMEs",
+      "Core Skill and commands reference",
+      "English and Chinese troubleshooting pages"
+    ],
+    "published": false,
+    "installedBinaryChanged": false,
+    "liveBrowserRetest": false,
+    "benefitBoundary": "Precise failure categorization verified. No causal retry, task-success, latency or token benefit established."
+  }
+}
