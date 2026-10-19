@@ -33,7 +33,10 @@ else
     set --
 fi
 VERSION="$(sed -n 's/.*static let string = "\(.*\)"/\1/p' Sources/ThermoKit/Version.swift)"
-BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
+SOURCE_INFO="$(sh scripts/source-info.sh .)"
+read -r SOURCE_COMMIT SOURCE_STATE BUILD <<EOF
+$SOURCE_INFO
+EOF
 DIST="${THERMO_DIST_DIR:-dist}"
 RELEASES=releases
 SPARKLE_BIN=.build/artifacts/sparkle/Sparkle/bin
@@ -47,6 +50,11 @@ for a in $ARCHS; do arch_flags="$arch_flags --arch $a"; done
 swift build -c "$CONFIGURATION" $arch_flags "$@"
 # shellcheck disable=SC2086
 BIN="$(swift build -c "$CONFIGURATION" $arch_flags "$@" --show-bin-path)"
+
+[ "$(sh scripts/source-info.sh .)" = "$SOURCE_INFO" ] || {
+    echo "Source metadata changed during compilation; products were not packaged." >&2
+    exit 1
+}
 
 mkdir -p "$DIST"
 # Replace only our generated products; preserve unrelated files in a custom output directory.
@@ -78,6 +86,10 @@ fi
 xcrun vtool -show-build "$C/MacOS/Thermo" >/dev/null
 
 sed -e "s/__VERSION__/$VERSION/g" -e "s/__BUILD__/$BUILD/g" Resources/Info.plist > "$C/Info.plist"
+/usr/libexec/PlistBuddy -c "Add :ThermoBuildWorkingTree string $SOURCE_STATE" "$C/Info.plist"
+if [ "$SOURCE_COMMIT" != unknown ]; then
+    /usr/libexec/PlistBuddy -c "Add :ThermoBuildSourceCommit string $SOURCE_COMMIT" "$C/Info.plist"
+fi
 if [ -n "$APPCAST_URL" ]; then
     /usr/libexec/PlistBuddy -c "Set :SUFeedURL $APPCAST_URL" "$C/Info.plist"
 else

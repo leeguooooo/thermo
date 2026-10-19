@@ -1,4 +1,5 @@
 import CleanKit
+import AgentCore
 import Foundation
 import ThermoKit
 import ThermoL10n
@@ -16,6 +17,22 @@ func out(_ lines: [String]) { print(lines.joined(separator: "\n")) }
 // MARK: - Commands
 
 struct App {
+    struct VersionReport: Encodable {
+        let schemaVersion = 1
+        let cliVersion: String
+        let appPackage: AppBuildMetadata?
+        enum CodingKeys: CodingKey { case schemaVersion, cliVersion, appPackage }
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(schemaVersion, forKey: .schemaVersion)
+            try c.encode(cliVersion, forKey: .cliVersion)
+            if let appPackage { try c.encode(appPackage, forKey: .appPackage) }
+            else { try c.encodeNil(forKey: .appPackage) }
+        }
+    }
+    static func versionReport(executable: URL? = ProcessTable.pidPath(getpid()).map { URL(fileURLWithPath: $0) }) -> VersionReport {
+        VersionReport(cliVersion: ThermoVersion.string, appPackage: AppBuildMetadata.containingCLI(executable: executable))
+    }
     let args: Args
     var style: Style
     var renderer: Renderer { Renderer(style: style, showAll: args.has("all")) }
@@ -50,7 +67,13 @@ struct App {
 
     func run() throws {
         if let warning = Self.staleCopyWarning() { FileHandle.standardError.write(Data((warning + "\n").utf8)) }
-        if args.has("version") { print("thermo \(thermoVersion)"); return }
+        if args.has("version") {
+            if args.has("json") {
+                guard !args.has("csv") else { throw CLIError("Choose --json or --csv.") }
+                print(Export.diagnosticJSON(Self.versionReport()))
+            } else { print("thermo \(thermoVersion)") }
+            return
+        }
         let cmd = args.positionals.first ?? ""
         let rest = Array(args.positionals.dropFirst())
         if args.has("help") || cmd == "help" { print(CommandHelp.text(for: args.positionals)); return }

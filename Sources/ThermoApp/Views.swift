@@ -946,7 +946,7 @@ struct SettingsView: View {
                         Toggle("", isOn: Binding(get: { updates.automaticallyChecks }, set: { updates.automaticallyChecks = $0 }))
                     }
                 }
-                row("Thermo \(AppInfo.version)", last: true, labelControl: false) {
+                row("Thermo \(AppInfo.version)", labelControl: false) {
                     HStack {
                         if updates.enabled {
                             Button(tr("Check for Updates…")) { updates.checkForUpdates() }
@@ -955,6 +955,12 @@ struct SettingsView: View {
                         }
                         Button(tr("Quit Thermo")) { NSApp.terminate(nil) }
                     }
+                }
+                row(tr("App package source"), last: true, labelControl: false) {
+                    if let commit = AppInfo.buildMetadata.sourceCommit {
+                        Text(commit + " · " + tr(AppInfo.workingTreeLabel))
+                            .font(.caption.monospaced()).textSelection(.enabled)
+                    } else { Text(tr("Unknown")).foregroundStyle(.secondary) }
                 }
             }
         }
