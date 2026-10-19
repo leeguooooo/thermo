@@ -108,6 +108,8 @@ Figma 另经 Codex 0.163.0 已有 OAuth 的只读宿主目录接口取得 44 个
 - [共享 Skill 入口](measurements/shared-skill-maintenance-2026-10-17.json)：修复 message-use、paste-use、sflow 的副本漂移，使共享入口读取安装器维护的来源；[重复副本配置](measurements/codex-skill-dedupe-2026-10-17.json)只停用两组内容相同的 Codex 副本，保留不同工作流。已有会话没有重启，不推断其缓存已经更新。
 - [Unity 引用文件](measurements/unity-skill-reference-repair-2026-10-17.json)从匹配的上游快照补齐；[Design SSE 代理](measurements/claude-design-relay-sse-2026-10-17.json)按请求 ID 识别完整响应，避免响应到达后仍等待流关闭。各有隔离验证，不作为 Unity 业务效果或线上提速证据。
 
+[sflow 命令摘要验收](measurements/sflow-command-summary-2026-10-20.json)：从实际长命令回显问题出发，源码增加 `validate FILE --summary`，默认完整 JSON、原始参数、执行与恢复元数据保持。一个自有长命令的原生 CLI 总输出由完整模式 16,190 字节降到显式摘要 557 字节；参数哈希对应完整 argv，验证未执行命令或创建运行。另修正 input:none 的计划说明，不再声称复制 Git 快照。Mac 190 按 CI 的 Bun 1.3.14 完成 185 项非 tmux 与 7 项真实 tmux 检查、类型检查和编译，本机 ad-hoc 原生候选检查通过。源码已合入 session-flow `09fa5f1`，未安装、升级主机或发布；不把原始输出缩短推算成模型 token 或账单节省。
+
 ## 显式验收入口
 
 新增入口只验收指定的固定源码和已生成包，不安装、签名、发布，也不创建 hook 或定时任务：
