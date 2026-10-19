@@ -192,6 +192,16 @@ public enum TabOrganizer {
                 guard reply.id == id, reply.results.count == pages.count, Set(reply.results.map(\.tabId)) == Set(pages.compactMap { Int($0.tab.browserID ?? "") }) else { throw TabWorkspace.WorkspaceError("Grouping reply could not be matched to the reviewed batch.") }
                 batch.replies[profile] = reply
                 if reply.results.contains(where: { $0.status == "unconfirmed" }) { batch.errors[profile] = "Some native grouping results are unconfirmed. Check Chrome before trying again." }
+                // The extension makes a new group when it cannot join the one asked for; say so instead of
+                // reporting a second same-name group as success.
+                let missed = groups.filter { group in
+                    guard let target = group.groupId else { return false }
+                    let tabs = Set(group.pages.compactMap { Int($0.tab.browserID ?? "") })
+                    return reply.results.contains { tabs.contains($0.tabId) && $0.status == "grouped" && $0.groupId != target }
+                }
+                if !missed.isEmpty, batch.errors[profile] == nil {
+                    batch.errors[profile] = "Could not join the existing group for " + missed.map(\.name).joined(separator: ", ") + "; a second group was made. Update chrome-use, then undo this batch and organize again."
+                }
             } catch { batch.errors[profile] = error.localizedDescription }
             try TabWorkspace.write(batch, to: file)
         }

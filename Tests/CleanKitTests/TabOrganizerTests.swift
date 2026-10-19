@@ -88,6 +88,15 @@ final class TabOrganizerTests: XCTestCase {
     }
     final class Box: @unchecked Sendable { var value: Int? }
 
+    func testAJoinThatLandsInANewGroupIsReportedNotCountedAsSuccess() async throws {
+        let live = [TabWorkspace.NativeGroup(profileID: "first", id: 900, window: 1, title: "example.test", color: "blue")]
+        let plan = TabOrganizer.plan(.init(app: "Google Chrome", generated: Date(), pages: [joinable(7)], nativeGroups: live), batches: [earlier()], auto: true)
+        let batch = try await TabOrganizer.organize(plan, home: try home()) { _, payload, _ in
+            .init(version: 1, id: payload["id"] as! String, phase: "complete", results: [.init(tabId: 7, groupId: 901, status: "grouped")], undoResults: nil)
+        }
+        XCTAssertTrue(batch.errors["first"]?.contains("Could not join the existing group for example.test") == true)
+    }
+
     func testSingletonAndUnsupportedPagesStayUngroupedUnlessRuleMatches() {
         var unsupported=page(3);unsupported.organizerVersion=0
         let plain=TabOrganizer.plan(inventory([page(1),unsupported]));XCTAssertEqual(plain.count,0);XCTAssertEqual(plain.unsupported,1)
