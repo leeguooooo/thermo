@@ -70,8 +70,11 @@ for line in sys.stdin:
  (plugin/'references/guide').write_text('fixture')
  context=json.loads(run(['agents','context','--agent','codex','--json']).stdout);assert len(context['skills'])==1
  item=context['skills'][0];footprint=item['skillFootprint'];assert footprint['scope']=='cache' and not item.get('actions')
- assert footprint['quality']['checkedLocalReferences']==2 and [x['target'] for x in footprint['quality']['issues']]==['references/absent']
- checks.append('root-declared cached Skill counted once without mutation actions; extensionless references checked')
+ issues=footprint['quality']['issues']
+ assert footprint['quality']['checkedLocalReferences']==2 and len(issues)==2
+ assert {(x['code'],x.get('target')) for x in issues}=={('missing_local_reference','references/absent'),('plugin_root_skill_layout',None)}
+ assert item['severity']=='info'
+ checks.append('root-declared cached Skill counted once with an informational layout hint and no mutation actions; extensionless references checked')
  logs=home/'.codex/sessions';logs.mkdir();clock=datetime.datetime.now(datetime.timezone.utc)
  def count_event(seconds,value):
   return {'type':'event_msg','timestamp':(clock+datetime.timedelta(seconds=seconds)).isoformat(),'payload':{'type':'token_count','info':{'total_token_usage':{'input_tokens':value,'output_tokens':20},'last_token_usage':{'input_tokens':99999,'output_tokens':99999}}}}
@@ -125,6 +128,21 @@ for line in sys.stdin:
  assert usage['unobservableResults']==usage['unavailableJSONResults']==0 and usage['jsonReferenceTokens']>0
  assert 'PRIVATE_STRUCTURED_VALUE' not in text and 'PRIVATE_STRUCTURED_ARGUMENT' not in text
  checks.append('structured JSON is measured separately from acknowledgment text; unavailable envelopes stay unknown and payloads are not exported')
+ shapes=[('object',{'n':1}),('array',[{'text':'PRIVATE_JSON_ARRAY'}]*20),('string','PRIVATE_JSON_STRING'),('number',42),('boolean',True),('null',None)]
+ events=[]
+ for i,(name,value) in enumerate(shapes):
+  events.extend([protocol(-40+i*3,{'type':'function_call','call_id':'json-'+name,'name':'mcp__owned_values__'+name,'arguments':'PRIVATE_JSON_ARGUMENT'}),
+                 protocol(-39+i*3,{'type':'function_call_output','call_id':'json-'+name,'output':json.dumps({'isError':False,'content':[{'type':'text','text':'OK'}],'structuredContent':value})})])
+ path=root/'json-values.jsonl';path.write_text(''.join(json.dumps(x)+'\n' for x in events))
+ text=run(['agents','usage','--agent','codex','--log-file',str(path),'--encoding','cl100k_base','--sort','structured','--json']).stdout
+ rows=json.loads(text)['tools'];assert len(rows)==6 and rows[0]['name']=='array'
+ for row in rows:
+  value=dict(shapes)[row['name']];usage=row['structuredContent']
+  assert usage['jsonBytes']==len(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False).encode())
+  assert usage['structuredResults']==usage['inspectedResultObjects']==usage['alongsideContentResults']==1
+  assert usage['unavailableJSONResults']==0 and usage['jsonReferenceTokens']>0 and row['returnedTextBytes']==2
+ assert 'PRIVATE_JSON_' not in text
+ checks.append('all JSON value shapes are measured, null differs from absence, array ranking recovers and returned-text accounting stays separate')
  ordering=[]
  values=[('ascii','a'*1000,{'n':1}),('unicode','你好'*100,{'n':2}),('wide','OK',{'body':'PRIVATE_SORT_BODY '*100}),('zero','OK',None),('unknown','OK',None)]
  for i,(name,ack,body) in enumerate(values):
