@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "sourceCommit": "4bffa491fd4c8ced583041bfbfff62b1d0d8e5ad",
+  "sourceFilesSHA256": {
+    "Sources/AgentDoctor/CumulativeTokenSnapshot.swift": "f55e6fdd4b20a278d2a123fb33607bf3ceda83193aba4bf6c96a37dbbe4a8dd5",
+    "Sources/AgentDoctor/ToolUsageParser.swift": "70acfe440cf2bce70606726cfdad278b617b956d15738ba0cc61963c55b66762",
+    "Sources/AgentDoctor/ToolUsageReport.swift": "5b15571ceecf1f5f44e553a3a9bd837b30365a52d0f8f0c0e5e40bad692e19d0",
+    "Sources/ThermoApp/ToolUsagePanel.swift": "842bbbad938d559be07043b5c5284a8cd1f21e4801cab3573cb8d6f0a2f358c6",
+    "Sources/ThermoL10n/ZhHans.swift": "d5a55909a2bdf9167fbb7d4f5470adf9fb8fbd9eb090485d675779ca7b3fa438",
+    "Sources/thermo/Agents.swift": "a8931b5659bc204318e2f094c6785894fb49e1dfb81d174ee69bbdac2ef3e677",
+    "Tests/AgentDoctorTests/CumulativeTokenSnapshotTests.swift": "dfa23536cdb258b49be364342999610105afaf4bc61dd3ee29e71ac36384a98e",
+    "scripts/render-tool-usage.py": "1bfb52bfcb0cb35ca2abc3acc000027af1fa6be5696403006632d5247641055c"
+  },
+  "scope": {
+    "records": 898,
+    "files": 8,
+    "identities": 8,
+    "since": "2026-10-19T00:00:00+00:00",
+    "until": "2026-10-19T04:07:42.871622+00:00",
+    "numericProjectionOnly": true
+  },
+  "motivation": "Real Codex event_msg/token_count records contain total_token_usage and last_token_usage; they previously counted as unsupported.",
+  "contract": {
+    "newOptionalField": "cumulativeTokenSnapshots",
+    "identity": "Hashed observed session identity; raw IDs and log paths are not exported",
+    "selection": "Latest supported timestamp inside the selected window per identity. Never sum snapshots or different sessions.",
+    "notWindowDelta": true,
+    "notRequestOrToolAllocation": true,
+    "sameTimestampConflict": "All counter values become unknown until a strictly newer supported observation",
+    "counterDecrease": "Use latest timestamp, not maximum counter",
+    "missingOptionalCounters": "Unknown, never zero",
+    "noTotalFallback": "last_token_usage alone does not invent a request or cumulative count",
+    "oldReportFieldAbsent": "Unmeasured, not zero"
+  },
+  "realNumericProjection": {
+    "records": 898,
+    "files": 8,
+    "latestIdentities": 8,
+    "baselineUnsupportedRecords": 898,
+    "candidateUnsupportedRecords": 0,
+    "allLatestCountersMatchIndependentSource": true,
+    "requestCountersRemainEmpty": true,
+    "MCPAndSkillRowsRemainEmpty": true,
+    "projectionUnchanged": true,
+    "boundary": "Only native numeric event projections of bounded real log tails. Not complete original sessions, daily usage, billing, or tool cost. Actual cumulative counter values remain in private local artifacts."
+  },
+  "validation": {
+    "moduleTests": {
+      "AgentDoctor": 293,
+      "ThermoApp": 308,
+      "ThermoCLI": 110,
+      "total": 711,
+      "failures": 0
+    },
+    "focusedNewTests": 7,
+    "finalCompiledCLI": {
+      "CLI_SHA256": "44a1d3af0c29eabec023dd0a5333394a8c910e377bac62133a5d3b409a281f93",
+      "sameSnapshotsAsValidatedCandidate": true,
+      "identities": 8,
+      "moduleTests": 711,
+      "finalFocusedTests": 7,
+      "failures": 0,
+      "groupedHumanReadableCountersVerified": true
+    },
+    "render": {
+      "file": "native-cumulative-token-snapshots-zh-2026-10-19.png",
+      "syntheticData": true,
+      "offscreenOnly": true,
+      "checked": [
+        "Large counters grouped for readability",
+        "Chinese explanation and rows align left",
+        "Conflicting latest record shows unknown",
+        "No absent counter rendered as zero"
+      ],
+      "installedAppAcceptance": false
+    },
+    "renderHelperRepair": "Include existing OuterToolUsageBreakdown source dependency when compiling the native panel.",
+    "focusedNewTestsIncludedInModuleTotal": true
+  },
+  "sources": [
+    {
+      "url": "https://developers.openai.com/api/docs/guides/prompt-caching",
+      "supports": "Cache accounting is distinct from adding cached counters to input; not authority for Codex JSONL lifetime or billing semantics."
+    },
+    {
+      "kind": "local Codex 0.163.0 generated app-server schema",
+      "supports": "ThreadTokenUsage has total and last breakdowns; native JSONL support is bounded to the observed event shape."
+    }
+  ],
+  "delivery": {
+    "sourceOnly": true,
+    "published": false,
+    "installedAppOrPluginCachesChanged": false,
+    "newModelEvaluations": 0
+  }
+}

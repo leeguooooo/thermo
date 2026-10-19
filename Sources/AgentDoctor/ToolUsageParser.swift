@@ -40,6 +40,7 @@ struct ToolUsageParser {
     var calls: [String: Call] = [:]
     var usage: [String: (host: String, value: Usage)] = [:]
     var instructions: [String: InstructionObservation] = [:]
+    var cumulativeSnapshots: [String: CumulativeTokenSnapshot] = [:]
     let fractional: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter(); f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]; return f
     }()
@@ -281,7 +282,10 @@ struct ToolUsageParser {
                 }
             } else if object["type"] as? String == "token_usage_record" {
                 tokens(host: host, session: session, id: payload["response_id"] as? String, object: payload["usage"] as? [String: Any], time: time)
-            } else if type == "token_count" { coverage.unsupportedUsageRecords += 1 }
+            } else if object["type"] as? String == "event_msg", type == "token_count" {
+                let info = payload["info"] as? [String: Any]
+                cumulativeTokens(session: session, object: info?["total_token_usage"] as? [String: Any], time: time)
+            }
         }
     }
     func report() -> ToolUsageReport {
@@ -427,6 +431,6 @@ struct ToolUsageParser {
         let complete = !coverage.cancelled && !coverage.limitReached && coverage.clippedFiles == 0 && coverage.unreadableFiles == 0 && coverage.malformedLines == 0 && coverage.oversizedLines == 0 && coverage.missingTimestamps == 0 && coverage.unmatchedResults == 0 && coverage.unmatchedInstructionEvents == 0
         return ToolUsageReport(generated: until, since: since, until: until, complete: complete, coverage: coverage,
                                tools: rows.values.sorted { $0.returnedTextBytes == $1.returnedTextBytes ? $0.id < $1.id : $0.returnedTextBytes > $1.returnedTextBytes },
-                               sessionTokens: totals.values.sorted { $0.host < $1.host }, note: ToolUsageReport.explanation, referenceEncoding: encoding == .heuristic ? nil : encoding.rawValue, referenceEngine: encoding == .heuristic ? nil : ReferenceTokenizer.engine)
+                               sessionTokens: totals.values.sorted { $0.host < $1.host }, cumulativeTokenSnapshots: cumulativeSnapshots.values.sorted { $0.id < $1.id }, note: ToolUsageReport.explanation, referenceEncoding: encoding == .heuristic ? nil : encoding.rawValue, referenceEngine: encoding == .heuristic ? nil : ReferenceTokenizer.engine)
     }
 }

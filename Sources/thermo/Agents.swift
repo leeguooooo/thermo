@@ -278,6 +278,10 @@ struct AgentsCommand {
         for tokens in report.sessionTokens {
             lines.append("  \(tokens.host): \(tokens.requests) requests · input \(tokens.inputTokens) · output \(tokens.outputTokens) · cached input \(tokens.cachedInputTokens.map(String.init) ?? "unknown") · cache creation \(tokens.cacheWriteInputTokens.map(String.init) ?? "unknown")")
         }
+        if let snapshots = report.cumulativeTokenSnapshots, !snapshots.isEmpty {
+            lines += ["", "Native cumulative snapshots (not window usage):", ToolUsageReport.cumulativeTokenExplanation]
+            for snapshot in snapshots { lines += snapshot.displayLines.map { "  " + $0 } }
+        }
         lines.append("Other tool calls: \(coverage.otherToolCalls); unmatched results: \(coverage.unmatchedResults); unsupported usage events: \(coverage.unsupportedUsageRecords)")
         if let unmatched = coverage.unmatchedInstructionEvents, unmatched > 0 { lines.append("\(unmatched) instruction metadata records could not be linked or identified.") }
         if let other = coverage.unattributedResults {
