@@ -67,6 +67,40 @@ final class ToolResultTextObservationTests: XCTestCase {
         XCTAssertEqual(row.nonTextBlocks, 1)
         XCTAssertEqual(row.returnedTextBytes, media.utf8.count)
     }
+    func testExecutionLimitDeclarationsDoNotChangeAccountingOrErrorStatus() throws {
+        for text in ["Warning: truncated output (original token count: 54321)\nretained text",
+                     "Output exceeded the available model context and was truncated."] {
+            var p = parser()
+            p.start(host: "codex", session: "s", id: "one", name: "functions.exec", input: nil, time: Date(timeIntervalSince1970: 1))
+            p.end(host: "codex", session: "s", id: "one", value: [["type":"input_text", "text":text]], error: nil, time: Date(timeIntervalSince1970: 2))
+            let report = p.report(), row = try XCTUnwrap(report.coverage.unattributedResults?.byTool?.first)
+            XCTAssertEqual(row.truncationMarkerResults, 1)
+            XCTAssertEqual(row.returnedTextBytes, text.utf8.count)
+            XCTAssertEqual(row.returnedTextEstimatedTokens, TextFootprint(text).estimatedTokens)
+            XCTAssertEqual(row.reportedErrors, 0); XCTAssertEqual(row.unknownErrorStatus, 1)
+            XCTAssertEqual(row.serializedMediaTextResults, 0)
+            XCTAssertTrue(report.tools.isEmpty)
+        }
+    }
+    func testExecutionDeclarationsCountOnceAcrossBlocksAndNeverScanNativeMedia() throws {
+        let warning = "Warning: truncated output (original token count: 9876)"
+        let context = "Output exceeded the available model context and was truncated."
+        var p = parser()
+        add([["type":"input_text", "text":warning], ["type":"input_text", "text":context],
+             ["type":"input_image", "image_url":"data:image/png;base64," + warning]], to: &p, name:"functions.exec", endFirst:true)
+        let row = try XCTUnwrap(p.report().coverage.unattributedResults?.byTool?.first)
+        XCTAssertEqual(row.truncationMarkerResults, 1)
+        XCTAssertEqual(row.nonTextBlocks, 1)
+        let native = ToolResultTextObservation(["content":[["type":"image", "data":context,"mimeType":"image/png"]]], codexInputBlocks:false)
+        XCTAssertFalse(native.truncationMarker)
+        for text in ["truncated output", "Warning: truncated output (original token count: 0)",
+                     "Warning: truncated output (original token count: N)",
+                     "Warning: truncated output (original token count: -1)",
+                     "Warning: truncated output (original token count: 12",
+                     "Output exceeded the available model context"] {
+            XCTAssertFalse(ToolResultTextObservation(text,codexInputBlocks:true).truncationMarker,text)
+        }
+    }
     func testOldRowFieldsStayUnmeasuredAndRoundTripNewObservations() throws {
         var row = ToolUsageRow(id: "one", host: "codex", kind: "mcp", name: "shot")
         let old = try JSONDecoder().decode(ToolUsageRow.self, from: JSONEncoder().encode(row))
