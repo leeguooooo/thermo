@@ -1,0 +1,200 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "fdb73d81ebfc7496af60a63aa2e673ae99ea8d6a",
+  "executionMode": "executed in this phase; no prior Release run reused",
+  "host": "mac190",
+  "architecture": "arm64",
+  "toolchain": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+  "SDKROOT": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+  "releaseTests": {
+    "command": [
+      "swift",
+      "test",
+      "-c",
+      "release",
+      "--jobs",
+      "1",
+      "--skip",
+      "HardwareTests"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "processTerminal": true,
+    "elapsedSecondsIncludingBuild": 531.6357875829563,
+    "totalTests": 1863,
+    "failures": 0,
+    "observedSkippedTestLines": 0,
+    "suites": {
+      "ThermoKitTests": {
+        "tests": 207,
+        "failures": 0
+      },
+      "ThermoHelperTests": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests": {
+        "tests": 116,
+        "failures": 0
+      },
+      "ThermoAppTests": {
+        "tests": 316,
+        "failures": 0
+      },
+      "CleanKitTests": {
+        "tests": 763,
+        "failures": 0
+      },
+      "AgentDoctorTests": {
+        "tests": 379,
+        "failures": 0
+      },
+      "AgentCoreTests": {
+        "tests": 52,
+        "failures": 0
+      }
+    },
+    "sourceFilesMatched": 526,
+    "localSwiftAndPackageFilesStillMatch": true,
+    "sourceStayedClean": true,
+    "evidenceValidatedByExistingReuseValidator": true,
+    "validatorNote": "The validator checked receipts freshly written by this run; its reused-local-evidence label does not mean an earlier run was reused."
+  },
+  "releaseCLIContracts": {
+    "sourceCommit": "fdb73d81ebfc7496af60a63aa2e673ae99ea8d6a",
+    "complete": true,
+    "host": "mac190",
+    "architecture": "arm64",
+    "CLISHA256": "9eb612596bc8220f51978cce8f4bb4587a3c1ba58a738ebdf0eb8eae22bbdf4f",
+    "CLIUnchanged": true,
+    "checks": [
+      {
+        "script": "verify-skill-context.py",
+        "scriptSHA256": "35ec665cfb5d6b2a2452abced8fd8c90c14d2455f07bbea42512debb49766d6c",
+        "exitCode": 0,
+        "timedOut": false,
+        "processTerminal": true,
+        "elapsedSeconds": 0.15005679102614522
+      },
+      {
+        "script": "verify-skill-quality.py",
+        "scriptSHA256": "4c4123831aea17f8545be5a1996bce1b638c1ac0cec93e4eead95280774fbbab",
+        "exitCode": 0,
+        "timedOut": false,
+        "processTerminal": true,
+        "elapsedSeconds": 0.09047270799055696
+      },
+      {
+        "script": "verify-tool-usage.py",
+        "scriptSHA256": "5373cbd20006494e71f98f40f4c269b4b64a3af7d3f4d4d7dcddbfed123f35c2",
+        "exitCode": 0,
+        "timedOut": false,
+        "processTerminal": true,
+        "elapsedSeconds": 0.2700860829791054
+      },
+      {
+        "script": "verify-reference-encoding.py",
+        "scriptSHA256": "931d5ab0babf301dd94d4e31b6ad03dc65ddcf07d03753479d6d9907f7440e62",
+        "exitCode": 0,
+        "timedOut": false,
+        "processTerminal": true,
+        "elapsedSeconds": 0.6161755420034751
+      },
+      {
+        "script": "verify-task-comparison.py",
+        "scriptSHA256": "13f099ddedffe385eb7efa4817c555564d73e54e0cb9c0842e3d40ced808317f",
+        "exitCode": 0,
+        "timedOut": false,
+        "processTerminal": true,
+        "elapsedSeconds": 0.20780429092701524
+      },
+      {
+        "script": "verify-mcp-cleanup-details.py",
+        "scriptSHA256": "f8cf9b9c6b9ccd7b5134046f1092dc59eebc1694c84e1548c4668a03c8b6ddec",
+        "exitCode": 0,
+        "timedOut": false,
+        "processTerminal": true,
+        "elapsedSeconds": 1.2299703750759363
+      },
+      {
+        "script": "verify-cli-completeness.py",
+        "scriptSHA256": "40ca3096477573c0934f1519256f3ecf64416fb902edfc691711a3970c1456e1",
+        "exitCode": 0,
+        "timedOut": false,
+        "processTerminal": true,
+        "elapsedSeconds": 0.9200217089382932
+      },
+      {
+        "script": "verify-skill-instruction-usage.py",
+        "scriptSHA256": "762c8400c47b7b5b252957970921736a618d87c9a1800dad891726584d00647b",
+        "exitCode": 0,
+        "timedOut": false,
+        "processTerminal": true,
+        "elapsedSeconds": 0.0901734170038253
+      },
+      {
+        "script": "verify-ai-diagnostics-contract.py",
+        "scriptSHA256": "f634c03da8ad79e0c8a7dc8e10204419ce4776a82375ac21bb44611cf0faea91",
+        "exitCode": 0,
+        "timedOut": false,
+        "processTerminal": true,
+        "elapsedSeconds": 0.5544322089990601
+      }
+    ],
+    "packageOrX86Acceptance": false,
+    "installedOrPublished": false
+  },
+  "pythonControls": {
+    "releaseVerifierTests": 22,
+    "QARefreshTests": 8,
+    "failures": 0,
+    "ownedFixturesOnly": true
+  },
+  "attemptNotes": [
+    "The first private driver import created Python bytecode inside the clean source, so source_guard refused before starting tests. Removed only that owned bytecode file and disabled bytecode writes; the subsequent Release run executed once."
+  ],
+  "boundaries": {
+    "universalPackageVerified": false,
+    "x86_64VerifiedInThisPhase": false,
+    "nativeWindowVerifiedInThisPhase": false,
+    "signatureOrNotarizationAcceptance": false,
+    "hardwareAcceptance": false,
+    "installedOrPublished": false,
+    "realModelEvaluation": false,
+    "businessQualityOrBillingImprovementClaimed": false
+  },
+  "evidenceSHA256": {
+    "bundle-retained-remotely.json": "7f169606ac8d4c6541a56b193e1d214d6e3ffb26c33591d171e2c557be14ad84",
+    "contracts/progress.json": "0481316fc851024f0cb3ccd770c547fd5aa09b5c626ed465f8681bc05f8c060b",
+    "contracts/result.json": "5486d155957af2cc4184d9a82a80f734a018b2a88f5c8e050d4549700964ded6",
+    "contracts/verify-ai-diagnostics-contract.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-ai-diagnostics-contract.py.stdout": "efb828753499ab2845c5d5d7d6cd4d6f202a5464241c56a29fdc04d086f71053",
+    "contracts/verify-cli-completeness.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-cli-completeness.py.stdout": "81f28217b2ce90d5283d5a724d298f37012189aaed82bc5657759d90b6fefcfd",
+    "contracts/verify-mcp-cleanup-details.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-mcp-cleanup-details.py.stdout": "71c3bb2d57ac135d1529a766c871a278f1b176c438b24138508199c972de2d32",
+    "contracts/verify-reference-encoding.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-reference-encoding.py.stdout": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d",
+    "contracts/verify-skill-context.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-skill-context.py.stdout": "c4a532468192eb3b68958bd532b50b260d0232af3a71b20a27c30d29d6bc8150",
+    "contracts/verify-skill-instruction-usage.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-skill-instruction-usage.py.stdout": "327c431bb3d429ea1e5deb306146039be0156d04a14290fb8bafaf4957c443e1",
+    "contracts/verify-skill-quality.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-skill-quality.py.stdout": "c856903e7d8bcdfafa832d83af64546cca73666d872dd942ff9c70b659c510df",
+    "contracts/verify-task-comparison.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-task-comparison.py.stdout": "dcaa5de442cf86235d202ce578d0e599feaad1954344229066ddd4a518ca8fc3",
+    "contracts/verify-tool-usage.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-tool-usage.py.stdout": "09f7a163b6f473473edee28a310832ea000a316203c3e51808b8c7355e121639",
+    "qa-refresh-controls.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "qa-refresh-controls.log": "a4cbe24e2cb2e7e56e46e8207a3bc406a988044cee1a63a3d0725ecc409ba157",
+    "release-verifier-controls.exit": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "release-verifier-controls.log": "5611210054e86703a5e508a3928ba1958c5f3270dc743d9b01a334103b0685b6",
+    "tests/freeze.json": "8a6576aed1c00f0ffaa5d260b8f5d3ce30eb0e84508abb6f4df12e56f5792bb9",
+    "tests/process.json": "9eddfc494a30a38330eff105371ed77b432593377ab03a1f4c2c42ba79993828",
+    "tests/result.json": "5814071fce702d0949ca99735da83941c3cace7d6bae3bde5d36d2632839e45a",
+    "tests/tests-exit.json": "0a0ca73feb2875be5544a8a9b7001b0859854a41cd9752fd76f22143e1c232e7",
+    "tests/tests.log": "9507485144cefaf27689c2a46e52b1c52d71a751bd4e7130cc32d939a7f9b7b9",
+    "tests/tests.stderr.log": "1190be14a5669509307f50b36beb0a446ab93b9203c0e060f44770ae5b10bae4",
+    "tests/tests.stdout.log": "7b0730d71d60f1bc7ebe467f3fbb2bcd66b6a19b6000f4824e68e66da41043f7"
+  }
+}
