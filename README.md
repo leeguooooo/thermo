@@ -45,6 +45,8 @@ make install    # CLI 装到 /usr/local/bin，App 拷到 /Applications
 
 运行 App 外的旧 CLI 副本时，提示会指出版本差异，并给出 App 内 CLI 的路径供后续命令使用；不会建议强制覆盖当前文件。保留的验收副本可继续用于固定版本核对。
 
+功能支持应按对应契约核对，不能只比较营销版本。AI 诊断包可运行 `python3 scripts/verify-ai-diagnostics-contract.py /path/to/thermo`：它使用自有文件和 stdio 定义夹具，检查六组结果，失败或输入文件哈希变化时退出非零；这不验证真实业务工具或安装版 GUI。对有并发更新的安装目录，应保留原包身份及稳定的 CLI 采样，不能把不同指纹的结果混用。安装采样与候选的区别见[AI 验收范围](docs/ai-tools-acceptance.md)。
+
 ### 正式签名与公证（Apple 开发者账号）
 
 本机已配置好（团队 6ZPXG4KVVS）：

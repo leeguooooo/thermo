@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "installationChangedDuringAudit": true,
+  "changeNotAttributed": true,
+  "auditDidNotRequestInstallationWrites": true,
+  "reportedVersionBuildBaseCommitAndDirtyLabelsEqualAcrossSamples": true,
+  "initialSample": {
+    "recordedAtUTC": "2026-10-19T12:14:22.744405+00:00",
+    "identity": {
+      "appPackage": {
+        "build": "566",
+        "sourceCommit": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+        "version": "1.1.39",
+        "workingTree": "dirty"
+      },
+      "cliVersion": "1.1.39",
+      "schemaVersion": 1
+    },
+    "CLISHA256": "b059c27d7a22ce9cffc652a4698bb8676e14af4f46cc644e7e3f3874d02eb90e",
+    "appInfoSHA256": "9ad5635f8667e34116f74ac8c273d5f996d1c11c0166bf00aeb867404a7bb2f3",
+    "baseContractGroupsPassed": 5,
+    "supplementalSurfacesPassed": true,
+    "namespaceFixturePassed": false,
+    "namespaceMCPRow": {
+      "calls": 1,
+      "completed": 1,
+      "nonTextBlocks": 0,
+      "returnedTextBytes": 6,
+      "totalObservedSeconds": 1,
+      "unknownErrorStatus": 0
+    },
+    "outerCallsObserved": 2,
+    "originalBinarySnapshotSaved": false
+  },
+  "stableCapturedSample": {
+    "observedAtUTC": "2026-10-19T12:29:54.897617+00:00",
+    "identity": {
+      "appPackage": {
+        "build": "566",
+        "sourceCommit": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+        "version": "1.1.39",
+        "workingTree": "dirty"
+      },
+      "cliVersion": "1.1.39",
+      "schemaVersion": 1
+    },
+    "CLISHA256": "3dea5c90c931d5f001169db1fbcd4c3aab4c440791023362ce92bf3e217b24a3",
+    "appInfoSHA256": "fd5b043d6cf9da7c772be89b50b248186dc3ea495d66e593403b811fc43cc229",
+    "captureStableBeforeAfter": true,
+    "snapshotRetainedForReproduction": true,
+    "priorFiveContractGroupsRanBeforeNamespaceFailure": true,
+    "supplementalSurfacesPassed": true,
+    "extendedContractExitCode": 1,
+    "namespaceFixturePassed": false,
+    "namespaceMCPRow": {
+      "calls": 1,
+      "completed": 1,
+      "returnedTextBytes": 6,
+      "nonTextBlocks": 0,
+      "unknownErrorStatus": 0,
+      "totalObservedSeconds": 1
+    },
+    "outerCallsObserved": 2
+  },
+  "finalLiveCheck": {
+    "observedAtUTC": "2026-10-19T12:37:04.212584+00:00",
+    "CLIAndAppInfoStillMatchCapturedSample": true
+  },
+  "candidate": {
+    "CLIversion": "1.1.38",
+    "sourceCommit": "367a61caf152511d69c89aa3a97ab338fb4412b9",
+    "binarySHA256": "eaf3d611e3b1dc8a8ba46f742d9b36e15ad6e6102b9222285b9e3a4f65a7a663",
+    "supplementalSurfacesPassed": true,
+    "namespaceFixturePassed": true,
+    "namespaceMCPRow": {
+      "calls": 2,
+      "completed": 2,
+      "nonTextBlocks": 1,
+      "returnedTextBytes": 20,
+      "totalObservedSeconds": 4,
+      "unknownErrorStatus": 1
+    },
+    "outerCallsObserved": 1,
+    "extendedContractGroupsPassed": 6,
+    "extendedContractExitCode": 0,
+    "installedAsDefault": false
+  },
+  "gateUpdate": {
+    "script": "scripts/verify-ai-diagnostics-contract.py",
+    "sourceCommit": "3f302ab0880edccc1be66b5257bf037aa9615286",
+    "scriptSHA256": "970688cde20a78375c8a76089f2cad435a25627a10513a0f7c22aea767d13a41",
+    "newCase": "Separate Codex namespace, legacy grouping, native-image exclusion and same-short-name outer separation",
+    "binaryBeforeAfterHashRequired": true,
+    "mutatingOwnedWrapperRejectedWithoutSuccessOutput": true,
+    "defaultFailFastAndNonzeroExitPreserved": true,
+    "oldFrozenSourceVerifierFilesUnchanged": true,
+    "controls": [
+      {
+        "case": "candidate-guarded",
+        "exitCode": 0,
+        "expectedExitCode": 0
+      },
+      {
+        "case": "current-snapshot-guarded",
+        "exitCode": 1,
+        "expectedExitCode": 1
+      },
+      {
+        "case": "mutating-wrapper",
+        "exitCode": 1,
+        "expectedExitCode": 1
+      }
+    ]
+  },
+  "fixtureScope": {
+    "ownedRecords": 6,
+    "calls": 3,
+    "MCPCallsExpected": 2,
+    "outerCallsExpected": 1,
+    "MCPTextBytesExpected": 20,
+    "MCPNativeImageBlocksExpected": 1,
+    "MCPUnknownStatusResultsExpected": 1,
+    "MCPObservedSecondsExpected": 4,
+    "realConversationDataUsed": false
+  },
+  "sourceBindingLimit": "Installed package metadata says dirty; the base commit cannot establish the complete source input. Passing selected CLI fixtures is not App GUI or whole-build acceptance.",
+  "boundaries": {
+    "AppGUIAccepted": false,
+    "wholeAppFingerprintTaken": false,
+    "businessToolBehaviorMeasured": false,
+    "newModelRuns": 0,
+    "hardwareControlUsed": false,
+    "realMCPBusinessMethodsCalled": false,
+    "ownedMCPDefinitionsFixtureUsed": true,
+    "newProductBuild": false,
+    "AppOrCLIInstalledOrReplaced": false,
+    "published": false
+  }
+}
