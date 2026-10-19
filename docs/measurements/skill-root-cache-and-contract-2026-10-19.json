@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "codeCommit": "faa03ae",
+  "scope": "Codex plugin-root Skill inventory and owned thermo-use source instructions",
+  "cacheInventory": {
+    "cause": "A declared ./ resolves to the version root and was incorrectly rejected by the descendant-only boundary check.",
+    "repair": "Allow the root itself, deduplicate equivalent roots, retain rejection of empty, absolute and escaping declarations.",
+    "frozenActualCacheProof": {
+      "runs": [
+        {
+          "variant": "baseline",
+          "cacheEntries": 0,
+          "incompleteCache": true
+        },
+        {
+          "variant": "candidate",
+          "cacheEntries": 1,
+          "incompleteCache": false,
+          "scope": "cache",
+          "namespace": "thermo-use@leeguooooo-plugins",
+          "actions": [],
+          "directoryDocumentBytes": 0
+        }
+      ],
+      "originalCacheSHA256": {
+        "SKILL.md": "8016c6a4e837114c490d58e4a2f1d3b2a6941567f6a12772920027e619aa549f",
+        ".codex-plugin/plugin.json": "8f2059748f3e8b92382edcdf5e221867b84f9eed107452fc3c513cceb71ed960"
+      },
+      "originalCacheUnchanged": true,
+      "fixtureCopiesOnly": true
+    },
+    "liveObservation": {
+      "baselineCacheEntries": 215,
+      "candidateCacheEntries": 227,
+      "restoredEntries": 12,
+      "restoredDocumentBytes": 218622,
+      "existingCacheContentHashesUnchanged": 215,
+      "directoryScopeDrift": "User-directory inventory changed independently during observation; global differences are not attributed to this fix."
+    },
+    "cacheIsEnabledOrLoadedTruth": false,
+    "cacheItemsOfferMutationActions": false
+  },
+  "skillSource": {
+    "repository": "https://github.com/leeguooooo/thermo-use",
+    "commits": [
+      "33d0ad5",
+      "fc510e3"
+    ],
+    "finalSHA256": "a5af80d2cc8098b107613777e786a937cb40f515ba0f610e8d3216aa1b8e6d21",
+    "descriptionCharacters": {
+      "baseline": 1431,
+      "candidate": 404
+    },
+    "strictValidation": {
+      "baseline": "Invalid YAML at an unquoted colon in description",
+      "quotedBaseline": "Description exceeds 1024 characters",
+      "candidate": "Passed skill-creator quick_validate.py"
+    },
+    "nativeDiscovery": {
+      "host": "codex-cli 0.163.0",
+      "baselineCount": 1,
+      "candidateCount": 1,
+      "errors": [],
+      "boundary": "Isolated skills/list metadata discovery only; old instructions were accepted by this permissive host too."
+    },
+    "changes": [
+      "Shorter bilingual discovery description",
+      "Separate valid CLI examples and qualify JSON support",
+      "Route passive context, local logs, definition inspection and imported task evidence separately",
+      "Check existing plugin registry before creating duplicate installations"
+    ],
+    "referenceTokens": {
+      "encoding": "cl100k_base",
+      "baseline": {
+        "catalog": {
+          "bytes": 1664,
+          "characters": 1442,
+          "estimatedTokens": 444,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 2,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 478
+        },
+        "body": {
+          "bytes": 15469,
+          "characters": 15381,
+          "estimatedTokens": 3882,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 266,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 3756
+        },
+        "document": {
+          "bytes": 17161,
+          "characters": 16851,
+          "estimatedTokens": 4332,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 270,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 4238
+        }
+      },
+      "candidate": {
+        "catalog": {
+          "bytes": 485,
+          "characters": 415,
+          "estimatedTokens": 130,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 2,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 138
+        },
+        "body": {
+          "bytes": 18722,
+          "characters": 18640,
+          "estimatedTokens": 4694,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 315,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 4436
+        },
+        "document": {
+          "bytes": 19250,
+          "characters": 19098,
+          "estimatedTokens": 4835,
+          "estimator": "ascii4-unicode1-v1",
+          "lines": 325,
+          "referenceEncoding": "cl100k_base",
+          "referenceTokens": 4589
+        }
+      },
+      "boundary": "Reference text counts only; catalog shrinks but full document grows. No net model-token, bill or business-quality benefit established."
+    },
+    "existingRulesPreserved": true,
+    "pushed": false,
+    "installedCacheUpdated": false,
+    "duplicateSkillInstalled": false
+  },
+  "validation": {
+    "focusedDiscoveryTests": 29,
+    "moduleTests": {
+      "AgentDoctor": 285,
+      "ThermoApp": 306,
+      "ThermoCLI": 110,
+      "total": 701,
+      "failures": 0
+    },
+    "controlledWorkflowGroups": [
+      "installed snapshot advertises all five documented AI diagnostic operations; current Skill is statically discoverable",
+      "broad preview does not launch the server; explicit inspection measures definitions/timing without business calls",
+      "selected log route reports return-size ranking, explicit errors and unknown request usage separately",
+      "task evidence import preserves timeout/failure and excludes invalid post-run checks without launching tasks"
+    ],
+    "controlledGroupsPassed": 4,
+    "fixtureCLIVersion": "1.1.33",
+    "fixtureCLISHA256": "c2979a3102967d65fec87ccd0e1ea965e906721ecbd55eea02f9c2ecbafc21e5",
+    "modelSessions": 0,
+    "realBusinessOrHardwareCalls": false,
+    "nativeProbeRuntimeNetworkDenied": true
+  },
+  "delivery": {
+    "sourceIntegrated": true,
+    "published": false,
+    "appInstalledByThisWork": false,
+    "installedPluginAcceptance": false,
+    "note": "Source checks do not establish installed plugin activation or real task benefit."
+  }
+}
