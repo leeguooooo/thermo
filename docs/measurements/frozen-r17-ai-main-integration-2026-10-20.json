@@ -1,0 +1,243 @@
+{
+  "recordedDate": "2026-10-20",
+  "promotedMainCommit": "28421b19ca9db42241e88cce43bef49753910503",
+  "testedSnapshotCommit": "8c1c7d57f7466f735da30d401183ecc85c3bb6b9",
+  "sharedInputTree": "f1723b9f710e26b44836b7a768aea24c8de6f312",
+  "mainTreeEqualToTestedSnapshotAtPromotion": true,
+  "frozenInstalledBaseline": {
+    "commit": "ee6ecb751bdc00d0d090bde506001303a17e13b7",
+    "tree": "b0bc629e7dad3fa0a3a6c8b1f368e3789819dbc1",
+    "verifiedSourceFiles": 611,
+    "manifestSHA256": "0a68833b56c1736330ec5fd58c6860ce13d01e9962e117d2a02a6b8512c56825",
+    "archiveSHA256": "664d6475ec56ba7cf47d097f9d4dadeebb29f1bb31da9497e2aa4c11417588c1",
+    "installedVersionAtProbe": "1.1.40",
+    "installedBuildAtProbe": "611.17",
+    "installedManifestEntriesMatched": 103,
+    "installedManifestMismatchCount": 0,
+    "sourceObjectsDissociated": true,
+    "sourceClean": true
+  },
+  "mergePreservation": {
+    "oursCommit": "afc7bd8addef2830989e225eaff34cd672beaef9",
+    "frozenR17": "ee6ecb751bdc00d0d090bde506001303a17e13b7",
+    "base": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+    "oursOnlyFilesPreserved": 18,
+    "frozenOnlyFilesPreserved": 66,
+    "overlap": [
+      "Sources/ThermoL10n/ZhHans.swift",
+      "Sources/thermo/Args.swift",
+      "Sources/thermo/CommandHelp.swift"
+    ],
+    "ourChangedTranslationsPreserved": 17,
+    "frozenChangedTranslationsPreserved": 81,
+    "liveWorkingTreeModified": false
+  },
+  "sourceVersion": "1.1.40",
+  "releaseRegression": {
+    "runId": "58063cfe-2637-4b79-bb0c-99e0aa1bce8f",
+    "host": "mac190",
+    "mode": "pure command; no model workers",
+    "tests": 1952,
+    "failures": 0,
+    "suites": {
+      "ThermoKitTests": {
+        "tests": 218,
+        "failures": 0
+      },
+      "ThermoHelperTests": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests": {
+        "tests": 126,
+        "failures": 0
+      },
+      "ThermoAppTests": {
+        "tests": 347,
+        "failures": 0
+      },
+      "CleanKitTests": {
+        "tests": 782,
+        "failures": 0
+      },
+      "AgentDoctorTests": {
+        "tests": 379,
+        "failures": 0
+      },
+      "AgentCoreTests": {
+        "tests": 70,
+        "failures": 0
+      }
+    },
+    "exitCode": 0,
+    "processTerminal": true,
+    "elapsedSecondsIncludingBuild": 535.9593982499791,
+    "sourceFilesMatchedAfterPromotion": 551,
+    "toolchain": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+    "SDKROOT": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "hardwareTestsExcluded": true
+  },
+  "CLIIntegration": {
+    "runId": "5ecc9afc-397f-43ba-9d87-97a4f8adf458",
+    "host": "mac190",
+    "sourceCommit": "8c1c7d57f7466f735da30d401183ecc85c3bb6b9",
+    "inputTree": "f1723b9f710e26b44836b7a768aea24c8de6f312",
+    "contracts": [
+      {
+        "script": "verify-skill-context.py",
+        "exitCode": 0
+      },
+      {
+        "script": "verify-skill-quality.py",
+        "exitCode": 0
+      },
+      {
+        "script": "verify-tool-usage.py",
+        "exitCode": 0
+      },
+      {
+        "script": "verify-reference-encoding.py",
+        "exitCode": 0
+      },
+      {
+        "script": "verify-task-comparison.py",
+        "exitCode": 0
+      },
+      {
+        "script": "verify-mcp-cleanup-details.py",
+        "exitCode": 0
+      },
+      {
+        "script": "verify-cli-completeness.py",
+        "exitCode": 0
+      },
+      {
+        "script": "verify-skill-instruction-usage.py",
+        "exitCode": 0
+      },
+      {
+        "script": "verify-ai-diagnostics-contract.py",
+        "exitCode": 0
+      }
+    ],
+    "baselineCommandCount": 109,
+    "candidateCommandCount": 109,
+    "removedCommands": [],
+    "newAIUsageCases": [
+      {
+        "case": "baseline",
+        "exitCode": 0,
+        "singleLogWindow": "head",
+        "structuredSummaryPresent": true
+      },
+      {
+        "case": "time",
+        "exitCode": 0,
+        "singleLogWindow": "head",
+        "structuredSummaryPresent": true
+      },
+      {
+        "case": "tail",
+        "exitCode": 0,
+        "singleLogWindow": "tail",
+        "structuredSummaryPresent": true
+      }
+    ],
+    "CLISHA256": "ec03fb2d3e1c3ddf544233806de351a1209219e18471b1717cfa47563006aaa1",
+    "CLIBytes": 20358936,
+    "baselineFeatureChecks": {
+      "baseline": {
+        "exitCode": 0,
+        "structuredSummaryPresent": false
+      },
+      "time": {
+        "exitCode": 2,
+        "structuredSummaryPresent": false
+      },
+      "tail": {
+        "exitCode": 2,
+        "structuredSummaryPresent": false
+      }
+    }
+  },
+  "recoveryNotes": [
+    "First queued r15 run 848cc9c6-ed88-4116-9312-462d140f82e3 was cancelled after a local ENOSPC state-write failure and an installed-baseline change. No cleanup was performed in this phase.",
+    "Installed builds changed from 611.15 through 611.16 to 611.17 during inspection. This integration fixed r17 as its reference; it does not import later live edits.",
+    "The regression command workspace was reclaimed after artifact collection. The CLI was not declared in that run, so a second command rebuilt only the CLI and saved it with contract evidence. The 1952-test regression was not rerun.",
+    "The initial r16 installed-manifest comparison differed after the installation had moved to r17. The r17 manifest then matched all 103 entries; no installed files were rewritten."
+  ],
+  "boundaries": {
+    "otherLiveWorktreeWritten": false,
+    "installedAppReplaced": false,
+    "published": false,
+    "realModelCalled": false,
+    "productionHelperOrHardwareAcceptance": false,
+    "nativeWindowAcceptanceAfterIntegration": false,
+    "universalPackageAcceptanceAfterIntegration": false,
+    "laterLiveMoleChangesIncluded": false,
+    "generalBusinessQualityOrBillingImprovementClaimed": false,
+    "liveSourceRootResetOrStashed": false
+  },
+  "evidenceSHA256": {
+    "baseline-capabilities.json": "4d0f51df96916ef67a3d06f832dd60660dd594b7ab074c1c29897442c8982b51",
+    "baseline-capability-receipt.json": "b64dca3d44371e1a7f044612406debff649ac75a60b50cdfdcb5731c06e64efd",
+    "baseline-feature-results.json": "ae30b5e3a403319a8be05ad5d941b2777eb3194c37379dbf28ad26935b39679a",
+    "baseline-r17-cli": "18c2dca02723736808e0147bbc136568be821d22692285f97e959bc33df2749b",
+    "contracts/baseline-usage.json": "a22038430f92dc2ce1ef55a6ac18c4aed702156d246bed86f72ac2ef2f86c5ca",
+    "contracts/build.stderr": "cf7dbdb306c38c23bcb710262fb1084d0ed69d195443553c68b6122ccdfdd8be",
+    "contracts/build.stdout": "169c6558866193aafb7a183428ca09756a63dcd6cea331bebb98dab7d510db0d",
+    "contracts/capabilities.json": "b4a800132e496ccf7b0205918f79bc4f314de8f45b242e2c6ada73073271ec52",
+    "contracts/result.json": "590689f47d195823355052653aac39df445f0e09d8548f4288d6a773275e967c",
+    "contracts/tail-usage.json": "d5a699148f1549deb6f00fb4c52fad7edc81b70bbe6674f4aa50b4458d33a8a1",
+    "contracts/thermo": "ec03fb2d3e1c3ddf544233806de351a1209219e18471b1717cfa47563006aaa1",
+    "contracts/time-usage.json": "5278915c7b957c00b92153feb8fb976ff6e56480fd689032820119fa72f3f211",
+    "contracts/verify-ai-diagnostics-contract.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-ai-diagnostics-contract.py.stdout": "278fa568e8a67c38021f68a5f0cf786364d821b0aedc9e9a752ad13d90a75c8d",
+    "contracts/verify-cli-completeness.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-cli-completeness.py.stdout": "18faf02baae14a416e5a542b4a3a267087411828ae92f2f70ea51a2e563ce7f2",
+    "contracts/verify-mcp-cleanup-details.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-mcp-cleanup-details.py.stdout": "cee51553508da9e95dbb494dca45efb15b663ab812b0c38893f29f6f98a81cfc",
+    "contracts/verify-reference-encoding.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-reference-encoding.py.stdout": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d",
+    "contracts/verify-skill-context.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-skill-context.py.stdout": "c4a532468192eb3b68958bd532b50b260d0232af3a71b20a27c30d29d6bc8150",
+    "contracts/verify-skill-instruction-usage.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-skill-instruction-usage.py.stdout": "327c431bb3d429ea1e5deb306146039be0156d04a14290fb8bafaf4957c443e1",
+    "contracts/verify-skill-quality.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-skill-quality.py.stdout": "c856903e7d8bcdfafa832d83af64546cca73666d872dd942ff9c70b659c510df",
+    "contracts/verify-task-comparison.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-task-comparison.py.stdout": "dcaa5de442cf86235d202ce578d0e599feaad1954344229066ddd4a518ca8fc3",
+    "contracts/verify-tool-usage.py.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "contracts/verify-tool-usage.py.stdout": "09f7a163b6f473473edee28a310832ea000a316203c3e51808b8c7355e121639",
+    "contracts-plan.txt": "b0cf56f326edc2c94dc107d29352b9d6286352a186d039c086dce599da2d051d",
+    "contracts-result-private.json": "05ed5d6196faccd4820b668b55bc66d17ba68528cf4e3368d9e6d8ef0e17500c",
+    "contracts-review-private.json": "45e03668207c219c88bac0d41c363f54f47ab5f2dc405746d064d9de7927bc50",
+    "contracts-run-id.json": "4dcdfe81e9c220dbbe44f9404f20b2823a0e993c8c892d85dcc63eb217c63da5",
+    "contracts-run.stderr": "f87b200e2b337845b8f1ffe9fe752ce73d1b7de508f5c08396d328fadcb6d982",
+    "contracts-run.stdout": "bced30413ff4362b497f8ada94d51d0ce3ee071af97bce0a0c1488e4b94ff567",
+    "contracts-workflow.json": "71b66aaed45aa71edaebb27632ae039fbc70d282ea99261bf75a0b2c2b95bceb",
+    "expected-tree.json": "fcb8bf086275632c48a5457dd1ac7780b0fc22307ae59c614fcc05779c8361ea",
+    "frozen-input.json": "2e21efaeadbfdbc1b6963fffa7320c12466a1bfeb596f7f1456706d6f8f72d67",
+    "merge-preservation.json": "c48af5e2d24e968fe7cd24cd13800292a91fadf9a8daa6bbf835bc96ce14f03e",
+    "probe.py": "31019201325621fe359c608ec324261463ef359cf21ac54cf4693b9a539e9be9",
+    "r17-baseline-baseline.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "r17-baseline-baseline.stdout": "a33ab5b9041ae9e3853fe0f35d03bfbeda90d72d8c5b3952cd0a9a958d9cee3b",
+    "r17-baseline-tail.stderr": "c5aafce397a847e70521c37f8d398398672964cb2fbb544fbace30388b8e801b",
+    "r17-baseline-tail.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "r17-baseline-time.stderr": "7818be0eb7ab6100f0c77f3b1ca212b1b6fdeee41a07aaca3500b67a83a2a002",
+    "r17-baseline-time.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "run-id.json": "f0db0b34f748267094004f5d2d0fea8b810824c78f185eea16bebe6f1cd8e5d4",
+    "run.stderr": "896ae6add0b2f7c100ae43e6fa8b32e76f1fc106b154963fae1271cedc4e4264",
+    "run.stdout": "2bb1670db93edfe74ed3c60f3009adf7a9146b54c5e9ff03fde641b30daebd38",
+    "sflow-result-private.json": "8fe3a64b298b10389d531d807a41276e451c80712ddca0fe0616aa66c83bb3f9",
+    "sflow-review-private.json": "5d43360ddec54ade1622349c923a63941ce2cefc5553c58f13000a3b3659d9a7",
+    "tests/freeze.json": "182a760393f252771d1a0acf6b52c75b0a3ca1a7caf1be5bae0c126f5d17c9ef",
+    "tests/result.json": "5d5c4a91cbcdbecc71f288e362ef947fdb9a939e2e5e085eb8553d8e6e7001b4",
+    "tests/tests-exit.json": "bef42da420574b7064b1b70b5e02933c1ddca4274bff9c9feef772498d3eddb9",
+    "tests/tests.log": "cd955e27996fa08cbb7df6a3d5357a50a7184f37a2e7aeb622341f9e74ce00f6",
+    "tests/tests.stderr.log": "afb44cd02af63c44388ae902ad90e718efe16e4662d479fc6d83804d129cb552",
+    "tests/tests.stdout.log": "2ffb1cc9dffcb5b462009ece687010639d47df2eb31c4226712280ca69f64d59",
+    "validated-plan.txt": "6282babadd39bbf85424850863a2460f906ac780d4396fb50e647856d0eda586",
+    "workflow.json": "1134f42dca97af4dcc1aaad1fd4e85082df7ccd0430813d582ea2b2aeb00b7d2"
+  }
+}

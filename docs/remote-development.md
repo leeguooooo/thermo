@@ -9,18 +9,20 @@
 从仓库根目录执行：
 
 ```sh
-sflow validate .sflow/mac190-regression.json
-sflow doctor .sflow/mac190-regression.json
-sflow run .sflow/mac190-regression.json
+sflow validate /path/to/workflow.json
+sflow doctor /path/to/workflow.json
+sflow run /path/to/workflow.json
 ```
 
-该流程只有命令步骤，没有模型工作者。它将当前源码的非忽略文件冻结为独立快照，在 190 用两个编译任务运行 AgentDoctor、AgentCore、ThermoApp 和 CLI 测试，并取回环境、完整日志和退出码。它不包含全部清理库、helper 或硬件验收，不代表整体功能齐平。需要全量非硬件检查时使用 `.sflow/mac190-all-tests.json`，该流程运行 `swift test --jobs 2 --skip HardwareTests`。运行前检查 `git status`，避免夹带其他会话的未提交文件。`dist`、`.build` 和本机签名材料不会随快照发送。
+这里的路径指已经准备好的命令工作流；旧记录中的 `.sflow/mac190-regression.json` 和 `.sflow/mac190-all-tests.json` 未随当前源码提交，不应当作现成入口。该类流程只有命令步骤，没有模型工作者。它将当前源码的非忽略文件冻结为独立快照，在 190 用两个编译任务运行 AgentDoctor、AgentCore、ThermoApp 和 CLI 测试，并取回环境、完整日志和退出码。它不包含全部清理库、helper 或硬件验收，不代表整体功能齐平。需要全量非硬件检查时，在工作流中明确运行 `swift test -c release --jobs 1 --skip HardwareTests`。运行前检查 `git status`，避免夹带其他会话的未提交文件。`dist`、`.build` 和本机签名材料不会随快照发送。
 
 开发和审查工作者也应明确指定 `host: mac190`；有依赖的测试使用实现步骤的 workspace。验证实际执行主机、输入源码和取回的 diff，不把工作者的 done 当作合并或验收证据。全局模板目前未配置，不替用户选择或写入模板默认值。
 
 界面、浏览器配置、签名及硬件验收在各自目标机执行，结果与 190 编译测试分别记录。远程步骤不能操作桌面。迁移前已启动的本机构建不因此变成远程构建。
 
-## 当前迁移前置
+将远端 command 工作目录视为临时目录：本次 sflow 0.7.1 在收集产物后已回收工作目录。后续要用的 CLI、日志、清单必须提前列入 `artifacts`，不要在任务结束后依赖 `jobs/.../work` 路径。若需要测试后继续验证同次 CLI，应在同一个命令步骤中完成，或明确保存二进制。不要因为本地产物缺失就重跑已完成的回归；先核对原任务终止状态和收据。
+
+## 初次迁移记录（历史）
 
 首次检查 190 为 arm64、macOS 27.0、Swift 6.3.3；sflow 为 0.7.1，本机驱动为 0.8.0，协议均为 3，现有快照命令受支持。主机升级检查因其他运行记录而拒绝；没有终止或修改这些运行。首次磁盘低于主机配置的 2 GB 下限。后续复核已回升，最近一次检查为 139.3 GB 可用；本会话没有执行缓存清理，目前已实际运行远程编译。新主机较旧编译器暴露的变量遮蔽和两处复杂字符串表达式已修正，全部 1,809 项非硬件测试已在 190 通过，退出码 0，日志及源码快照哈希已核对。本轮菜单栏远程 Codex 会话已获用户批准第 1 工作区信任并开始执行；此前 sysctl 请求已取消且未执行，当前没有待批准提示。上述状态随时会变，应以每次检查为准。运行与失败证据见 [迁移记录](measurements/mac190-migration-2026-10-19.json)。
 
