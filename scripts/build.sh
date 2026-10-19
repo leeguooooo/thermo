@@ -86,6 +86,17 @@ if ! otool -l "$C/MacOS/Thermo" | awk '$1 == "path" && $2 == "@executable_path/.
 fi
 xcrun vtool -show-build "$C/MacOS/Thermo" >/dev/null
 
+# Release products ship without symbol tables (a third of their size; the DMG has to stay under
+# the 25 MiB Pages limit). The symbols stay in $DIST/symbols as dSYMs for crash reports.
+if [ "$CONFIGURATION" = release ]; then
+    rm -rf "$DIST/symbols" && mkdir -p "$DIST/symbols"
+    dsymutil "$C/MacOS/Thermo" -o "$DIST/symbols/Thermo-app.dSYM"
+    dsymutil "$C/Helpers/thermo" -o "$DIST/symbols/thermo-cli.dSYM"
+    dsymutil "$C/Helpers/thermo-helper" -o "$DIST/symbols/thermo-helper.dSYM"
+    strip "$C/MacOS/Thermo" "$C/Helpers/thermo" "$C/Helpers/thermo-helper"
+    cp "$C/Helpers/thermo" "$C/Helpers/thermo-helper" "$DIST/"
+fi
+
 sed -e "s/__VERSION__/$VERSION/g" -e "s/__BUILD__/$BUILD/g" Resources/Info.plist > "$C/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :ThermoBuildWorkingTree string $SOURCE_STATE" "$C/Info.plist"
 if [ "$SOURCE_COMMIT" != unknown ]; then
@@ -133,7 +144,7 @@ if [ -n "$NOTARY_PROFILE" ]; then
     STAGE="$(mktemp -d)"
     ditto "$APP" "$STAGE/Thermo.app"
     ln -s /Applications "$STAGE/Applications"
-    hdiutil create -quiet -volname "Thermo $VERSION" -srcfolder "$STAGE" -fs HFS+ -format UDZO -ov "$DMG"
+    hdiutil create -quiet -volname "Thermo $VERSION" -srcfolder "$STAGE" -fs HFS+ -format ULMO -ov "$DMG"
     rm -rf "$STAGE"
     codesign --force $TS -s "$SIGN_ID" "$DMG"
     notarize "$DMG"

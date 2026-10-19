@@ -26,6 +26,20 @@ cp install.sh "$R/install.sh"
 # Public addresses live on app.leeguoo.com/thermo/ (the App Center relays to this project).
 # Here: newest-DMG redirect, cache rules, and the bare host sends people to the product page.
 printf '/download /Thermo-%s.dmg 302\n/ https://app.leeguoo.com/thermo 301\n' "$VERSION" > "$R/_redirects"
+
+# Pages refuses files over 25 MiB. Those installers are served from the GitHub Release of their
+# version (create it before publishing) and Pages only redirects to them; Sparkle follows redirects.
+STAGE="$(mktemp -d)/releases"
+cp -cR "$R" "$STAGE"
+for f in $(find "$STAGE" -type f -size +25600k); do
+    name="$(basename "$f")"
+    ver="$(printf '%s' "$name" | sed -nE 's/^Thermo-([0-9.]*[0-9])\.(dmg|zip)$/\1/p')"
+    [ -n "$ver" ] || { echo "$name is over 25 MiB and is not a Thermo installer; Pages cannot serve it" >&2; exit 1; }
+    url="https://github.com/leeguooooo/thermo/releases/download/v$ver/$name"
+    curl -sfIL -o /dev/null "$url" || { echo "$name is over 25 MiB: attach it to GitHub Release v$ver first ($url)" >&2; exit 1; }
+    rm "$f"
+    printf '/%s %s 302\n' "$name" "$url" >> "$STAGE/_redirects"
+done
 rm -f "$R/index.html"
 cat > "$R/_headers" <<'H'
 /appcast.xml
@@ -35,5 +49,5 @@ cat > "$R/_headers" <<'H'
   Cache-Control: public, max-age=31536000, immutable
 H
 
-WA_PASSTHROUGH=1 wrangler pages deploy "$R" --project-name "$PROJECT" --branch main --commit-dirty=true
+WA_PASSTHROUGH=1 wrangler pages deploy "$STAGE" --project-name "$PROJECT" --branch main --commit-dirty=true
 echo "published: https://app.leeguoo.com/thermo/appcast.xml (origin https://$PROJECT.pages.dev)"
