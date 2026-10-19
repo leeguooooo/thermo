@@ -95,7 +95,7 @@ enum Projects {
         let roots = ctx.options.projectRoots + (ctx.options.discoverProjectRoots ? ctx.signals.roots(home: ctx.home) : [])
         for root in roots where root != ctx.home {
             walk(root, depth: 0, ctx: ctx, visited: &visited, into: &found, onCandidate: enqueue)
-            if timing { FileHandle.standardError.write(Data(String(format: "projects: root done %.2fs, %d candidates\n", Date().timeIntervalSince(began), found.count).utf8)) }
+            if timing { FileHandle.standardError.write(Data(String(format: "projects: root done %.2fs, %d candidates %@\n", Date().timeIntervalSince(began), found.count, root).utf8)) }
         }
         if timing {
             FileHandle.standardError.write(Data("walk: \(visited.count) dirs, \(found.count) candidates, \(String(format: "%.2f", Date().timeIntervalSince(ctx.now)))s\n".utf8))
