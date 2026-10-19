@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-19",
+  "candidate": {
+    "version": "1.1.36",
+    "build": "533",
+    "source": "5ec47c16a67d93477bcb413392e5d93591c003cb"
+  },
+  "installed": false,
+  "installedVersionKept": "1.1.35 (522)",
+  "published": false,
+  "package": {
+    "signatureVerified": true,
+    "nativeAndRosettaCLI": true,
+    "minOSBothArchitectures": "13.0",
+    "archiveSHA256": "1ca6f9a8c049b97b5b9d8b39d9950469ca7bdd1734c0e40afd2690026d0004eb",
+    "archiveRegularFiles": 93,
+    "archiveLinks": 8,
+    "manifestMatch": true
+  },
+  "manualRemoval": {
+    "installed522AndCandidate533Passed": [
+      "replacement-after-confirmation-prompt-kept",
+      "file-opened-after-confirmation-prompt-kept",
+      "native-trash-restored-with-identical-hash-device-inode"
+    ],
+    "scope": "Owned test files only; no permanent deletion or personal data removal"
+  },
+  "lifecycle": [
+    {
+      "artifact": "lifecycle.json",
+      "sha256": "59bf5d1dc9688dc04078d2a9eb12ec36a9a6bd42c207ddde26edf68e59e36f19",
+      "functionalChecksPassed": false,
+      "samples": 23,
+      "failedTransitions": [
+        "cycle-2-return-overview",
+        "cycle-2-visible-again"
+      ],
+      "staleOpenSamples": [
+        {
+          "cycle": 1,
+          "page": "memory"
+        },
+        {
+          "cycle": 1,
+          "page": "cpu"
+        },
+        {
+          "cycle": 2,
+          "page": "overview"
+        },
+        {
+          "cycle": 2,
+          "page": "memory"
+        },
+        {
+          "cycle": 2,
+          "page": "cpu"
+        }
+      ],
+      "closedMemoryReadsStillInFlight": 4
+    },
+    {
+      "artifact": "lifecycle-diagnostic-2.json",
+      "sha256": "b74752f97c3b6f83d0f92055b034e64891f4c27d70638b458c8a2ea521ee2670",
+      "functionalChecksPassed": false,
+      "samples": 23,
+      "failedTransitions": [
+        "cycle-1-return-overview",
+        "cycle-1-visible-again"
+      ],
+      "staleOpenSamples": [
+        {
+          "cycle": 1,
+          "page": "memory"
+        },
+        {
+          "cycle": 1,
+          "page": "cpu"
+        }
+      ],
+      "closedMemoryReadsStillInFlight": 2
+    }
+  ],
+  "stackEvidence": {
+    "process": "owned offscreen candidate verification process",
+    "observedMemoryWorker": "MemoryModel.sample -> MemoryInventory.collect -> ProcessTable.current -> per-process argv/path/identity reads",
+    "deadlockProven": false,
+    "observedRepeatedReadLatency": true,
+    "cancellationMissingAtPageClose": true
+  },
+  "next": "Add cooperative cancellation between processes, discard cancelled inventories and serialize reopen sampling; test before another candidate build"
+}

@@ -58,8 +58,11 @@ public struct MemoryInventory: Codable, Sendable {
     public var unreadableCount: Int
     public var available: Bool
 
-    public static func collect() -> MemoryInventory {
-        let table = ProcessTable.current(.init(cpu: false))
+    public static func collect(cancelled: () -> Bool = { false }) -> MemoryInventory {
+        let table = ProcessTable.current(.init(cpu: false), cancelled: cancelled)
+        guard !cancelled(), table.available else {
+            return MemoryInventory(sampled: Date(), programs: [], processCount: 0, unreadableCount: 0, available: false)
+        }
         let identities = Dictionary(table.entries.compactMap { p in p.sampledIdentity.map { (p.pid, $0) } }, uniquingKeysWith: { a, _ in a })
         var contexts = MachinePulse.group(table.entries, byMemory: true, limit: nil)
         // Capture for both action validation and detecting restarted/replaced processes in history.

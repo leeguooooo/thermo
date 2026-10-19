@@ -4,6 +4,12 @@ import XCTest
 @testable import CleanKit
 
 final class MemoryInventoryTests: XCTestCase {
+    func testCancelledInventoryIsUnavailableInsteadOfAnEmptySuccessfulReading() {
+        let inventory = MemoryInventory.collect(cancelled: { true })
+        XCTAssertFalse(inventory.available)
+        XCTAssertTrue(inventory.programs.isEmpty)
+        XCTAssertEqual(inventory.processCount, 0)
+    }
     func process(_ pid: Int32, project: String, footprint: Int?, rss: Int?) -> AgentProcess {
         var p = AgentProcess(pid: pid, name: "rea", executable: "/fixture/rea", argv: ["rea"], cwd: project)
         p.memoryReading = ProcessMemoryReading(footprintKB: footprint, residentKB: rss)

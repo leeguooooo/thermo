@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-19",
+  "sourceBefore": "5ec47c1",
+  "installedVersionKept": "1.1.35 (522)",
+  "installedAcceptance": false,
+  "trigger": "Candidate 533 lifecycle checks showed slow process enumeration continuing after memory page closed",
+  "changes": [
+    "Process inventory checks cancellation between processes; cancelled prefix is discarded and unavailable",
+    "Memory page cancels its token on stop and retains the physical worker until it returns",
+    "Reopening queues one fresh reading after the old worker returns; cancelled results never publish"
+  ],
+  "limits": [
+    "Cannot interrupt a kernel or filesystem call already in progress",
+    "Does not prove first-read latency is within four seconds",
+    "Other page samplers and signed-package lifecycle remain to be rechecked"
+  ],
+  "regression": {
+    "command": "swift test --jobs 1 --filter 'AgentCoreTests|CleanKitTests|ThermoAppTests|ThermoCLITests|ThermoKitTests|ThermoHelperTests|AgentDoctorTests'",
+    "exitCode": 0,
+    "total": 1760,
+    "failures": 0,
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 208,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 110,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 311,
+        "failures": 0
+      },
+      "CleanKitTests.xctest": {
+        "tests": 756,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 293,
+        "failures": 0
+      },
+      "AgentCoreTests.xctest": {
+        "tests": 52,
+        "failures": 0
+      }
+    },
+    "logSHA256": "746e976707d2f78f7372e1767aa159f371bf3f069b65554fffcd1419ba8d8b32"
+  },
+  "sourceFilesSHA256": {
+    "Sources/AgentCore/Processes.swift": "7ea7710d6b7fe7a9c7800caf70b8bbfb255828037306bb3d4ef423928bad8102",
+    "Sources/CleanKit/MemoryInventory.swift": "e7fc61668f30ebb864fded67df2d8a2674ec51175dbc8f88136c34a7ecb7796d",
+    "Sources/ThermoApp/MemoryPage.swift": "06c91597436d0d305a934421de00268a00efb67459d699c021841cad45cb62b0",
+    "Tests/AgentCoreTests/ProcessInventoryCancellationTests.swift": "db9f55c419c5c77e6cadf5bda15caa7a9ac44411a060da2f386f6adb19ce48c8",
+    "Tests/ThermoAppTests/MemorySamplingCancellationTests.swift": "1b876b058820390c1e0d4412e6c932d0b4f73ef439dd4ef8a58678346981c8eb",
+    "Tests/CleanKitTests/MemoryInventoryTests.swift": "c47abd475a3c1a209e73acb0c5b3de359e78bb620b0f92873e2cab8b0d6bea7f"
+  },
+  "hardwarePoliciesChanged": false,
+  "published": false
+}

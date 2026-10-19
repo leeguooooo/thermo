@@ -61,7 +61,13 @@ public struct ProcessTable: Sendable {
         }
     }
 
-    public static func current(_ options: Options = Options()) -> ProcessTable {
+    /// Cancellation is checked between processes; it cannot interrupt a kernel call.
+    /// A cancelled inventory is unavailable, so callers cannot treat its prefix as complete.
+    public static func current(_ options: Options = Options(), cancelled: () -> Bool = { false }) -> ProcessTable {
+        func cancelledTable() -> ProcessTable {
+            ProcessTable(entries: [], available: false, inventoryComplete: false, includesAllUsers: options.uid == nil)
+        }
+        guard !cancelled() else { return cancelledTable() }
         var mib: [Int32] = options.uid.map { [CTL_KERN, KERN_PROC, KERN_PROC_UID, Int32(bitPattern: $0)] }
             ?? [CTL_KERN, KERN_PROC, KERN_PROC_ALL]
         var size = 0
@@ -75,6 +81,7 @@ public struct ProcessTable: Sendable {
         var inventoryComplete = true
         out.reserveCapacity(count)
         for k in procs.prefix(count) {
+            guard !cancelled() else { return cancelledTable() }
             let pid = k.kp_proc.p_pid
             guard pid > 0 else { continue }
             let name = withUnsafeBytes(of: k.kp_proc.p_comm) { raw in String(decoding: raw.prefix { $0 != 0 }, as: UTF8.self) }
@@ -101,6 +108,7 @@ public struct ProcessTable: Sendable {
             process.memoryReading = reading
             out.append(process)
         }
+        guard !cancelled() else { return cancelledTable() }
         let expectsSelf = options.uid == nil || options.uid == getuid()
         return ProcessTable(entries: out, available: !expectsSelf || out.contains { $0.pid == getpid() },
                             inventoryComplete:inventoryComplete,includesAllUsers:options.uid == nil)

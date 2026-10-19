@@ -24,6 +24,24 @@ final class MemoryModel: ObservableObject {
     private var sampling = false
     private var dayLoaded = Date.distantPast
     private var generation = UUID()
+    private var cancellation: ScanCancellation?
+    struct Reading: Sendable {
+        var breakdown: MemoryBreakdown?
+        var inventory: MemoryInventory
+        var history: [ProgramMemoryRecord]
+    }
+    private let read: @Sendable (ScanCancellation) -> Reading
+    private let readDay: @Sendable () -> [PulseRecord]
+    init(read: @escaping @Sendable (ScanCancellation) -> Reading = { MemoryModel.readLive($0) },
+         readDay: @escaping @Sendable () -> [PulseRecord] = { PulseRecorder.shared.history.records(since: Date().addingTimeInterval(-PulseHistory.keep)) }) {
+        self.read = read; self.readDay = readDay
+    }
+    nonisolated private static func readLive(_ cancellation: ScanCancellation) -> Reading {
+        let b = MemoryBreakdown.read()
+        let inventory = MemoryInventory.collect(cancelled: { cancellation.isCancelled })
+        let history = cancellation.isCancelled ? [] : PulseRecorder.shared.programHistory.records(since: Date().addingTimeInterval(-PulseHistory.keep))
+        return Reading(breakdown: b, inventory: inventory, history: history)
+    }
     var samplingActive: Bool { timer != nil }
     var sampleInFlight: Bool { sampling }
 
@@ -36,20 +54,28 @@ final class MemoryModel: ObservableObject {
         }
     }
 
-    func stop() { timer?.invalidate(); timer = nil; generation = UUID() }
+    func stop() { timer?.invalidate(); timer = nil; generation = UUID(); cancellation?.cancel() }
 
     func sample() {
         guard !sampling else { return }
         sampling = true
         let token = generation
+        let cancellation = ScanCancellation()
+        self.cancellation = cancellation
+        let read = self.read
         if Date().timeIntervalSince(dayLoaded) >= 60 { loadDay() }
         Task.detached(priority: .utility) {
-            let b = MemoryBreakdown.read()
-            let inventory = MemoryInventory.collect()
-            let history = PulseRecorder.shared.programHistory.records(since: Date().addingTimeInterval(-PulseHistory.keep))
+            let reading = read(cancellation)
+            let b = reading.breakdown, inventory = reading.inventory, history = reading.history
             await MainActor.run {
                 self.sampling = false
-                guard self.generation == token else { return }
+                self.cancellation = nil
+                guard self.generation == token, !cancellation.isCancelled else {
+                    // Reopening while a cancelled read drains must not overlap inventories or
+                    // wait for the next five-second timer before requesting a fresh reading.
+                    if self.timer != nil { self.sample() }
+                    return
+                }
                 // App action identity is captured for each original context, never for merged groups.
                 let applications = NSWorkspace.shared.runningApplications
                 let programs = inventory.programs.map { program in
@@ -83,8 +109,9 @@ final class MemoryModel: ObservableObject {
     func loadDay() {
         dayLoaded = Date()
         let token = generation
+        let readDay = self.readDay
         Task.detached(priority: .utility) {
-            let records = PulseRecorder.shared.history.records(since: Date().addingTimeInterval(-PulseHistory.keep))
+            let records = readDay()
             await MainActor.run { if self.generation == token { self.day = records } }
         }
     }
