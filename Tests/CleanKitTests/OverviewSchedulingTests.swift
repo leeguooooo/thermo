@@ -61,6 +61,7 @@ final class OverviewSchedulingTests: XCTestCase {
     }
 
     func testConcurrentMeasurementsSharePhysicalWorkerSlotsAfterCancellation() async throws {
+        let home = self.home
         let count = SpaceOverview.measurementConcurrency
         let paths = try (0..<count).map { i -> String in
             let path = home + "/held-\(i)"
@@ -75,7 +76,6 @@ final class OverviewSchedulingTests: XCTestCase {
         let finished = expectation(description: "both measurements finished"); finished.expectedFulfillmentCount = 2
         let release = DispatchSemaphore(value: 0)
         defer { first.cancel(); second.cancel(); for _ in 0..<count { release.signal() } }
-        let home = home
         DispatchQueue.global().async {
             _ = SpaceOverview.measure(home: home, spots: [spot], cancellation: first, footprint: { _, _ in
                 held.fulfill()
