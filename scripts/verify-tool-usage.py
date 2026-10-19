@@ -68,6 +68,20 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
                              env=dict(os.environ, CFFIXED_USER_HOME=str(home)), capture_output=True, text=True, timeout=10)
     assert invalid.returncode != 0 and not invalid.stdout.strip()
     report = json.loads(result.stdout)
+    time_args = [str(binary), "agents", "usage", "--sort", "time", "--since", stamp(-7 * 86400)]
+    time_env = dict(os.environ, CFFIXED_USER_HOME=str(home), THERMO_LANG="en")
+    time_report = json.loads(subprocess.check_output(time_args + ["--json"], env=time_env, text=True, timeout=30))
+    assert time_report["toolOrdering"] == "time"
+    assert {r["id"]:r for r in time_report["tools"]} == {r["id"]:r for r in report["tools"]}
+    assert time_report["tools"][0]["name"] == "read"
+    assert time_report["tools"][0]["totalObservedSeconds"] == 10
+    time_text = subprocess.check_output(time_args, env=time_env, text=True, timeout=30)
+    assert "Tool ordering: time" in time_text and "Valid timing pairs: 2 / 2 calls" in time_text
+    assert "overlaps count per call" in time_text
+    assert "share of observed mcp returned-text tokens" not in time_text
+    assert "share of observed skill returned-text tokens" not in time_text
+    assert "fixture-private" not in time_text
+
     if len(sys.argv) > 2:
         Path(sys.argv[2]).write_text(result.stdout)
     assert report["complete"] and report["coverage"]["filesRead"] == 2
@@ -185,4 +199,4 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
                       "nativeMCPEventsIncludedWithoutDoubleCounting": True,
                       "nativeHostFailureRetainsCompletionAndTiming": True,
                       "explicitSelectedFileScopeAndNonblockingGuardVerified": True,
-                      "categoryTotalsAndSharesIncludeHiddenRows": True, "overlapAdjustedTimingVerified": True}))
+                      "categoryTotalsAndSharesIncludeHiddenRows": True, "overlapAdjustedTimingVerified": True, "timeOrderingAndJSONVerified": True}))

@@ -40,4 +40,14 @@ final class StructuredUsageSortTests: XCTestCase {
         }
         XCTAssertEqual(zero.observedStructuredJSONTokens, 0)
     }
+    func testAppTimeSortRejectsUnsampledSumAndMatchesSharedRankingValues() throws {
+        var known = try row("known", text: 1, json: 0)
+        known.timingSamples = 1; known.totalObservedSeconds = 0
+        var unknown = known; unknown.timingSamples = 0; unknown.totalObservedSeconds = 100
+        XCTAssertEqual(ToolUsagePanel.UsageSort.time.value(known), 0)
+        XCTAssertEqual(ToolUsagePanel.UsageSort.time.value(unknown), -1)
+        known.totalObservedSeconds = .nan
+        XCTAssertEqual(ToolUsagePanel.UsageSort.time.value(known), -1)
+    }
+
 }

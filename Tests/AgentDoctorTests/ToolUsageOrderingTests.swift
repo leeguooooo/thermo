@@ -47,4 +47,27 @@ final class ToolUsageOrderingTests: XCTestCase {
         report.toolOrdering = .structured
         XCTAssertEqual(try JSONDecoder().decode(ToolUsageReport.self,from:JSONEncoder().encode(report)).toolOrdering,.structured)
     }
+    func testTimeOrderUsesIntervalSumRatherThanMedianOrCallCount() {
+        var many = row("many"), slow = row("slow"), partial = row("partial")
+        many.calls = 8; many.timingSamples = 8; many.totalObservedSeconds = 8; many.medianSeconds = 1
+        slow.calls = 1; slow.timingSamples = 1; slow.totalObservedSeconds = 5; slow.medianSeconds = 5
+        partial.calls = 100; partial.timingSamples = 1; partial.totalObservedSeconds = 2
+        XCTAssertEqual(ToolUsageOrdering.time.sorted([partial, slow, many]).map(\.id), ["many", "slow", "partial"])
+        XCTAssertEqual(ToolUsageOrdering.observedSeconds(for: partial), 2)
+    }
+    func testTimeOrderPreservesKnownZeroAndRejectsMissingInvalidOrUnsampledDurations() {
+        var zero = row("zero"); zero.timingSamples = 1; zero.totalObservedSeconds = 0
+        var unknown = row("unknown"); unknown.totalObservedSeconds = 100
+        XCTAssertNil(ToolUsageOrdering.observedSeconds(for: unknown))
+        XCTAssertEqual(ToolUsageOrdering.time.sorted([unknown, zero]).map(\.id), ["zero", "unknown"])
+        for value in [Double.nan, Double.infinity, -1] {
+            var invalid = zero; invalid.totalObservedSeconds = value
+            XCTAssertNil(ToolUsageOrdering.observedSeconds(for: invalid))
+        }
+        unknown.timingSamples = 2
+        XCTAssertNil(ToolUsageOrdering.observedSeconds(for: unknown))
+        var tied = zero; tied.id = "a"
+        XCTAssertEqual(ToolUsageOrdering.time.sorted([zero, tied]).map(\.id), ["a", "zero"])
+    }
+
 }

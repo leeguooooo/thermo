@@ -31,7 +31,7 @@ struct AgentsCommand {
             guard rest.count == 2 else { throw CLIError("usage: thermo agents compare FILE [--json]") }
             return try compareTasks(try required(name, sub))
         case "usage":
-            guard rest.count == 1 else { throw CLIError("usage: thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--log-file FILE] [--tail] [--sort text|structured] [--limit FILES] [--json]") }
+            guard rest.count == 1 else { throw CLIError("usage: thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--log-file FILE] [--tail] [--sort text|structured|time] [--limit FILES] [--json]") }
             return try usage()
         case "inspect":
             guard rest.count == 2 else { throw CLIError("usage: thermo agents inspect NAME [--agent AGENT] [--timeout SECONDS] [--json]") }
@@ -148,7 +148,7 @@ struct AgentsCommand {
     static let usage = """
     usage: thermo agents [--all] [--json]                 what is wrong with the AI agents on this Mac
            thermo agents context [--agent AGENT] [--root PROJECT] [--json] static footprint ranking and deduplicated inventory
-           thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--sort text|structured] [--limit FILES] [--json] local log metrics
+           thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--sort text|structured|time] [--limit FILES] [--json] local log metrics
            thermo agents compare FILE [--json]            compare declared local task evaluations; never executes tasks
            thermo agents inspect NAME [--protocol handshake|2026-07-28] [--json] connect to one MCP; discover, list and rank definitions
            thermo agents list [AREA] [--json]             everything checked, marked OK or not
@@ -216,7 +216,7 @@ struct AgentsCommand {
             }
             guard let since, since <= Date() else { throw CLIError("--since must be a past ISO date or YYYY-MM-DD (UTC)") }
         }
-        guard let ordering = ToolUsageOrdering(rawValue: app.args.options["sort"] ?? "text") else { throw CLIError("--sort must be text or structured") }
+        guard let ordering = ToolUsageOrdering(rawValue: app.args.options["sort"] ?? "text") else { throw CLIError("--sort must be text, structured or time") }
         var report = AgentDoctor.usage(since: since, host: host, fileLimit: count, logFile: logFile,
                                       logWindow: app.args.has("tail") ? .tail : .head, env: DoctorEnvironment(tokenEncoding: try encoding()))
         report.tools = ordering.sorted(report.tools)
@@ -273,6 +273,7 @@ struct AgentsCommand {
         for row in report.tools.prefix(app.args.has("all") ? report.tools.count : 20) {
             lines.append(style.bold((row.server.map { $0 + " / " } ?? "") + row.name) + " [" + row.host + ", " + row.kind + "]")
             lines.append("  \(row.calls) calls · \(row.completed) results · \(row.reportedErrors) explicit result errors · \(row.unknownErrorStatus) unknown error status · \(row.missingResults) missing results")
+            if ordering == .time { lines.append("  Valid timing pairs: \(row.timingSamples) / \(row.calls) calls") }
             if let codes = row.mcpErrorCodeSummary { lines.append("  " + codes) }
             if row.kind == "skill" { lines.append("  " + instructionLine(row.skillInstructions)) }
             if let failures = row.invocationFailures {

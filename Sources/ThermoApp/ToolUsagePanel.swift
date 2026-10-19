@@ -58,7 +58,7 @@ struct ToolUsagePanel: View {
             case .instructions:
                 return row.observedInstructionTokens.map(Double.init) ?? -1
             case .errors: return Double(row.reportedErrors) + Double(row.invocationFailures ?? 0)
-            case .time: return row.totalObservedSeconds ?? -1
+            case .time: return ToolUsageOrdering.observedSeconds(for: row) ?? -1
             case .calls: return Double(row.calls)
             }
         }
@@ -93,7 +93,8 @@ struct ToolUsagePanel: View {
                 }
                 if let encoding = report.referenceEncoding { Text(tr("Ordinary-text reference encoding: %1$@", encoding)).font(.caption).foregroundStyle(.secondary) }
                 if model.running { Text(tr("Showing the previous analysis while refreshing…")).font(.caption).foregroundStyle(.secondary) }
-                let rows = report.tools.filter { $0.kind == kind }.sorted {
+                let categoryRows = report.tools.filter { $0.kind == kind }
+                let rows = sort == .time ? ToolUsageOrdering.time.sorted(categoryRows) : categoryRows.sorted {
                     sort.value($0) == sort.value($1) ? $0.id < $1.id : sort.value($0) > sort.value($1)
                 }
                 let textSummary = report.returnedTextSummary(kind: kind)
@@ -107,8 +108,8 @@ struct ToolUsagePanel: View {
                 Picker(tr("Sort observed usage"), selection: $sort) {
                     ForEach(UsageSort.allCases.filter { (kind == "skill" || $0 != .instructions) && (kind == "mcp" || $0 != .structured) }, id: \.self) { value in Text(value.title).tag(value) }
                 }.pickerStyle(.segmented)
-                if sort == .structured {
-                    Text(ToolUsageOrdering.structured.explanation)
+                if sort == .structured || sort == .time {
+                    Text((sort == .time ? ToolUsageOrdering.time : .structured).explanation)
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 if kind == "skill" {
@@ -184,6 +185,10 @@ struct ToolUsagePanel: View {
                         Text(tr("%1$@ calls · %2$@ results · %3$@ explicit result errors · %4$@ unknown error status · %5$@ missing results",
                                 String(row.calls), String(row.completed), String(row.reportedErrors), String(row.unknownErrorStatus), String(row.missingResults)))
                             .font(.caption)
+                        if sort == .time {
+                            Text(tr("Valid timing pairs: %1$@ / %2$@ calls", String(row.timingSamples), String(row.calls)))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                         if let codes = row.mcpErrorCodeSummary {
                             Text(codes).font(.caption.monospaced()).foregroundStyle(.secondary)
                         }

@@ -18,7 +18,7 @@ struct Args {
         "to", // space archive: SSH alias:/absolute/archive.tar
         "since",  // pulse history
         "limit",  // history
-        "sort", // agents usage: observed text or structured JSON token order
+        "sort", // agents usage: observed text/structured JSON tokens or call interval order
         "protocol", // explicit MCP inspection lifecycle; never inferred from a version label
         "log-file", // agents usage: one explicitly selected session
         "watch", "app", "title", "ids", "group", "name", "window", "color"]  // pulse chrome
@@ -84,7 +84,7 @@ struct Args {
         }
         if let order = options["sort"] {
             guard isUsage else { throw CLIError("--sort is only supported by agents usage") }
-            guard ToolUsageOrdering(rawValue: order) != nil else { throw CLIError("--sort must be text or structured") }
+            guard ToolUsageOrdering(rawValue: order) != nil else { throw CLIError("--sort must be text, structured or time") }
         }
         if flags.contains("authorize-background") {
             guard Array(positionals.prefix(2)) == ["apps", "startup"],

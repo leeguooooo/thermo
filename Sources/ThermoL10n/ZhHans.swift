@@ -2994,4 +2994,6 @@ let zhHans: [String: String] = [
     "%1$@ / %2$@ selected calls have valid start/end pairs · %3$@ calls without usable timing": "%1$@ / %2$@ 次入选调用有有效起止记录 · %3$@ 次无可用耗时",
     "Overlap-adjusted timing is unavailable or inconsistent; analyze again.": "去除重叠的耗时计量未知或不一致，请重新分析。",
     "Occupied time counts overlapping observed intervals once and excludes gaps. Only fully observed pairs within the window count; categories stay separate. Not CPU time, task duration or billing.": "占用时间对重叠区间只计一次，不含空档。仅计窗口内完整的起止记录，分类之间不相加；不代表 CPU 时间、任务总时长或账单。",
+    "Ranks summed valid observed call intervals; overlaps count per call. Unknown timing follows known values. Missing intervals are excluded; this is not task duration.": "按有效观测调用区间的累计时长排序，重叠区间逐次计入。未知计时排在已知值之后；未观测区间不计入，这不是任务总时长。",
+    "Valid timing pairs: %1$@ / %2$@ calls": "有效计时：%1$@ / %2$@ 次调用",
 ]
