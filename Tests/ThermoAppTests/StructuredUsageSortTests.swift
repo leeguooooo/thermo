@@ -1,5 +1,5 @@
 import XCTest
-import AgentDoctor
+@testable import AgentDoctor
 @testable import ThermoApp
 
 final class StructuredUsageSortTests: XCTestCase {
@@ -7,7 +7,7 @@ final class StructuredUsageSortTests: XCTestCase {
         var value = ToolUsageRow(id: id, host: "codex", kind: "mcp", name: id)
         value.calls = 1; value.completed = 1; value.returnedTextEstimatedTokens = text
         value.referenceEncoding = reference == nil ? nil : "cl100k_base"
-        // Decode public report data as a host would; no internal constructor dependency.
+        // Decode the structured counters as public report data.
         let data = try JSONSerialization.data(withJSONObject: ["inspectedResultObjects":1,"unobservableResults":0,
             "structuredResults":1,"alongsideContentResults":1,"jsonBytes":json * 4,
             "jsonEstimatedTokens":json,"jsonReferenceTokens":reference ?? json,"unavailableJSONResults":0])
