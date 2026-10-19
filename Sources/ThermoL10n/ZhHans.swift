@@ -2576,7 +2576,7 @@ let zhHans: [String: String] = [
     "This inspector currently supports stdio only; HTTP definitions have not been measured.": "当前检查器仅支持 stdio，尚未测量 HTTP 服务定义。",
     "Configured executable could not be resolved.": "找不到配置的可执行文件。",
     "Invalid initialization result.": "初始化结果无效。",
-    "Server selected an unsupported protocol version.": "服务选择了检查器尚不支持的协议版本。",
+    "Server selected a protocol version this inspector does not support. This is an inspector compatibility limit, not a tool failure.": "服务选择的协议版本尚未受此检查器支持。这是检查器的兼容性限制，不能据此判断工具故障。",
     "tools/list did not return a valid tool array.": "tools/list 未返回有效的工具数组。",
     "Tool count exceeded the inspection limit; results are incomplete.": "工具数量超过检查上限，结果不完整。",
     "Invalid or repeated pagination cursor; results are incomplete.": "分页游标无效或重复，结果不完整。",

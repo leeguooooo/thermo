@@ -16,7 +16,7 @@ final class MCPInspectionTests: XCTestCase {
         try FileManager.default.removeItem(at: root)
     }
 
-    func server(_ body: String) throws -> MCPServer {
+    func server(_ body: String, version: String = "2025-06-18") throws -> MCPServer {
         let file = root.appendingPathComponent("fixture.py")
         // The canary log also proves that no tools/call, sampling or elicitation is attempted.
         let script = """
@@ -28,7 +28,8 @@ final class MCPInspectionTests: XCTestCase {
             if 'id' not in req: continue
             result={}
             if req['method']=='initialize':
-                result={'protocolVersion':'2025-06-18','capabilities':{'tools':{}},'serverInfo':{'name':'fixture','version':'1'},'instructions':'fixture instructions'}
+                with open(\(String(reflecting: root.appendingPathComponent("initialize.json").path)), 'w') as log: json.dump(req,log)
+                result={'protocolVersion':\(String(reflecting: version)),'capabilities':{'tools':{}},'serverInfo':{'name':'fixture','version':'1'},'instructions':'fixture instructions'}
             elif req['method']=='tools/list':
         \(body.split(separator: "\n", omittingEmptySubsequences: false).map { "        " + $0 }.joined(separator: "\n"))
             print(json.dumps({'jsonrpc':'2.0','id':req['id'],'result':result}),flush=True)
@@ -37,6 +38,38 @@ final class MCPInspectionTests: XCTestCase {
         return MCPServer(name: "fixture", agent: "fixture", source: "fixture", command: "/usr/bin/python3", args: [file.path])
     }
     var env: DoctorEnvironment { DoctorEnvironment(home: root, path: ["/usr/bin", "/bin"]) }
+
+    func testLegacyRevisionNegotiationOffersNovemberAndAcceptsOlderServers() throws {
+        for version in ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"] {
+            let s = try server("result={'tools':[]}", version: version)
+            let report = MCPInspector.inspect(s, env: env, timeout: 5)
+            XCTAssertEqual(report.state, .ready, report.message)
+            XCTAssertTrue(report.complete)
+            XCTAssertEqual(report.protocolVersion, version)
+            let request = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("initialize.json"))) as? [String: Any])
+            XCTAssertEqual((request["params"] as? [String: Any])?["protocolVersion"] as? String, "2025-11-25")
+        }
+    }
+
+    func testModernRevisionIsNotPretendedToSupportLegacyHandshake() throws {
+        let s = try server("result={'tools':[]}", version: "2026-07-28")
+        let report = MCPInspector.inspect(s, env: env, timeout: 5)
+        XCTAssertEqual(report.state, .unsupported)
+        XCTAssertFalse(report.complete)
+        XCTAssertEqual(report.protocolVersion, "2026-07-28")
+        XCTAssertNil(report.definitions)
+        XCTAssertTrue(report.message.contains("inspector compatibility limit"))
+        XCTAssertEqual(try String(contentsOf: root.appendingPathComponent("requests")), "initialize\n")
+    }
+
+    func testUnsupportedRevisionDoesNotExportArbitraryServerText() throws {
+        let s = try server("result={'tools':[]}", version: "PRIVATE_PROTOCOL_CANARY")
+        let report = MCPInspector.inspect(s, env: env, timeout: 5)
+        XCTAssertEqual(report.state, .unsupported)
+        XCTAssertNil(report.protocolVersion)
+        XCTAssertFalse(String(decoding: try JSONEncoder().encode(report), as: UTF8.self).contains("PRIVATE_PROTOCOL_CANARY"))
+        XCTAssertEqual(try String(contentsOf: root.appendingPathComponent("requests")), "initialize\n")
+    }
 
     func testRealChildHandshakePaginationAndRankingWithoutToolCalls() throws {
         let s = try server("""

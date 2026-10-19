@@ -40,7 +40,8 @@ class Handler(BaseHTTPRequestHandler):
             if self.path=='/bad-notification': return self.response(202,b'data: invalid')
             return self.response(202)
         if req.get('method')=='initialize':
-            result={'protocolVersion':'2025-06-18','capabilities':{'tools':{}},'serverInfo':{'name':'fixture','version':'1'}}
+            selected=self.path.removeprefix('/revision-') if self.path.startswith('/revision-') else '2025-06-18'
+            result={'protocolVersion':selected,'capabilities':{'tools':{}},'serverInfo':{'name':'fixture','version':'1'}}
         else:
             if req.get('params',{}).get('cursor')=='two':
                 result={'tools':[{'name':'large','description':'中文说明'*40,'inputSchema':{'type':'object'}}]}
@@ -101,6 +102,18 @@ threading.Event().wait()
         try String(contentsOf: root.appendingPathComponent("log")).split(separator: "\n").map {
             try JSONSerialization.jsonObject(with: Data($0.utf8)) as! [String: Any]
         }
+    }
+    func testNovemberRevisionUsesNegotiatedHTTPHeadersAndCleansItsSession() throws {
+        let report = inspect("/revision-2025-11-25")
+        XCTAssertEqual(report.state, .ready, report.message)
+        XCTAssertTrue(report.complete)
+        XCTAssertEqual(report.protocolVersion, "2025-11-25")
+        let calls = try log()
+        XCTAssertEqual(calls.compactMap { $0["method"] as? String }, ["initialize", "notifications/initialized", "tools/list", "tools/list", "DELETE"])
+        for call in calls.dropFirst().dropLast() {
+            XCTAssertEqual(call["version"] as? String, "2025-11-25")
+        }
+        XCTAssertEqual(report.cleanupDetails?.reason, "closed")
     }
     func testJSONPaginationSessionHeadersAndOwnSessionCleanup() throws {
         let report = inspect("/json")

@@ -97,6 +97,10 @@ extension AgentDoctor {
 }
 
 enum MCPInspector {
+    // These revisions share the initialize lifecycle. Stateless discovery revisions
+    // require a different transport flow and must not be added to this allowlist.
+    static let handshakeProtocolVersion = "2025-11-25"
+    static let handshakeProtocolVersions = ["2024-11-05", "2025-03-26", "2025-06-18", handshakeProtocolVersion]
     struct Failure: Error {
         var state: MCPInspection.State = .failed
         var message: String
@@ -172,7 +176,7 @@ enum MCPInspector {
             }
             let handshake = clock()
             let initialized = try transport.request("initialize", params: [
-                "protocolVersion": "2025-06-18", "capabilities": [String: Any](),
+                "protocolVersion": handshakeProtocolVersion, "capabilities": [String: Any](),
                 "clientInfo": ["name": "thermo-inspector", "version": "1"],
             ])
             guard let version = initialized["protocolVersion"] as? String,
@@ -181,8 +185,12 @@ enum MCPInspector {
                   info["name"] is String, info["version"] is String,
                   initialized["instructions"] == nil || initialized["instructions"] is String,
                   capabilities["tools"] == nil || capabilities["tools"] is [String: Any] else { throw Failure(message: tr("Invalid initialization result.")) }
-            guard ["2024-11-05", "2025-03-26", "2025-06-18"].contains(version) else {
-                throw Failure(state: .unsupported, message: tr("Server selected an unsupported protocol version."))
+            guard handshakeProtocolVersions.contains(version) else {
+                // Retain a safe revision identifier for diagnostics, never arbitrary server text.
+                if version.range(of: #"\A[0-9]{4}-[0-9]{2}-[0-9]{2}\z"#, options: .regularExpression) != nil {
+                    report.protocolVersion = version
+                }
+                throw Failure(state: .unsupported, message: tr("Server selected a protocol version this inspector does not support. This is an inspector compatibility limit, not a tool failure."))
             }
             report.protocolVersion = version
             transport.negotiated(version)
