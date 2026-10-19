@@ -75,6 +75,13 @@
   "remaining": [
     "Outdated/nonresponding banner visual acceptance",
     "Screen permission and remaining hardware sessions",
-    "Main integration and full parity matrix"
-  ]
+    "Full Mole parity matrix"
+  ],
+  "mainIntegration": {
+    "accepted": true,
+    "integrationCommit": "51b6a75eaec78cab833cadc489d3c95332e9d2e3",
+    "installedSource": "b1cff4d16b0c05b7867daf8f28a90698ac069d4e",
+    "functionalSourceMatchesInstalled": true,
+    "foreignUntrackedEntriesPreserved": 5
+  }
 }
