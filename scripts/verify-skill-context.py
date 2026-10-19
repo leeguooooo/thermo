@@ -60,7 +60,15 @@ with tempfile.TemporaryDirectory(prefix="thermo-skill-context-") as temporary:
     assert any(issue["code"] == "invalid_front_matter" for issue in by_name["yaml-invalid"]["quality"]["issues"])
     assert yaml_report["summaries"][0].get("catalogEstimatedTokens") is None
     assert yaml_report["summaries"][0]["documentBytes"] > 0
+    write(".codex/plugins/cache/market/root-owner/0.4.1/.codex-plugin/plugin.json", '{"name":"root-owner","skills":["./"]}')
+    write(".codex/plugins/cache/market/root-owner/0.4.1/SKILL.md", '---\nname: ignored\ndescription: Tool: run\n---\nbody')
+    cache_report = run()
+    rooted = [item for item in cache_report["skills"] if item.get("skillFootprint", {}).get("namespace") == "root-owner@market"]
+    assert len(rooted) == 1 and rooted[0]["name"] == "root-owner", "Invalid root Skill must be identified by its manifest owner, not its version directory"
+    assert rooted[0]["skillFootprint"]["nameSource"] == "plugin_manifest"
+    assert rooted[0]["skillFootprint"]["catalog"]["measurementComplete"] is False
+    assert not rooted[0]["actions"]
     print(json.dumps({"passed": True, "userUniqueFiles": user_summary["uniqueFiles"],
                       "projectUniqueFiles": project_summary["uniqueFiles"], "aliasesExcluded": project_summary["aliases"],
                       "cacheFilesCountedSeparately": project_summary["cacheUniqueFiles"], "coverageWarningPreserved": True,
-                      "yamlCatalogValuesAndUnknownsVerified": True}))
+                      "yamlCatalogValuesAndUnknownsVerified": True, "invalidCacheRootOwnerVerified": True}))

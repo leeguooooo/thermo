@@ -47,6 +47,8 @@ public struct SkillFootprint: Codable, Equatable, Sendable {
     public var codexConfiguredEnabled: Bool? = nil
     public var quality: SkillQualityReport? = nil
     public var identicalContentFiles: Int? = nil
+    /// Display-name provenance; a manifest/directory fallback never validates front matter.
+    public var nameSource: String? = nil
 
     public var summary: String {
         let counts = tr("Catalog ≈%1$@ tokens · SKILL.md ≈%2$@ tokens · %3$@ bytes",

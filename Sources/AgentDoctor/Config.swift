@@ -497,7 +497,7 @@ struct ConfigChecks {
     // MARK: skills
 
     var skillDirs: [(URL, String, String)] = []
-    var cacheSkillSources: [String: (namespace: String, enabled: Bool?)] = [:]
+    var cacheSkillSources: [String: (namespace: String, enabled: Bool?, rootSkillName: String?)] = [:]
 
     mutating func checkSkills() {
         let roots: [(URL, String, String)] = [
@@ -546,7 +546,11 @@ struct ConfigChecks {
                     if let text = Self.readSkill(skill) {
                         inventory.skills += 1
                         let front = Self.frontMatter(text)
-                        let name = front?["name"] ?? u.lastPathComponent
+                        let headerName = front?["name"].flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+                        // A root-declared cached Skill lives in a version directory.
+                        // Identify its owner from the manifest, without treating invalid YAML as parsed.
+                        let manifestName = node.depth == 0 ? cacheSkillSources[dir.path]?.rootSkillName : nil
+                        let name = headerName ?? manifestName ?? u.lastPathComponent
                         let key = item(.skills, agent: agent, id: "\(agent)|\(origin)|\(u.path)", name: name,
                                        detail: front?["description"] ?? env.short(u.path), source: origin)
                         let body = Self.skillBody(text)
@@ -560,6 +564,7 @@ struct ConfigChecks {
                             footprint.catalog.referenceTokens = nil
                             footprint.catalog.referenceError = tr("Skill name or description could not be parsed; catalog measurement is unavailable.")
                         }
+                        footprint.nameSource = headerName != nil ? "front_matter" : manifestName != nil ? "plugin_manifest" : "directory"
                         footprint.canonicalID = Self.skillFileIdentity(skill)
                         if agent == "codex" || agent == "shared" { footprint.codexConfiguredEnabled = skillFlags.paths[skill.standardizedFileURL.resolvingSymlinksInPath().path] }
                         footprint.scope = origin.hasPrefix("project ") ? "project" : agent == "codex-cache" ? "cache" : agent == "plugin" ? "plugin" : "user"

@@ -70,7 +70,11 @@ extension ConfigChecks {
                         guard seenRoots.insert(root.path).inserted else { continue }
                         // Missing optional skill directories mean the plugin has no cached skills.
                         guard fm.fileExists(atPath: root.path) else { continue }
-                        cacheSkillSources[root.path] = (namespace, enabled[namespace])
+                        let declaredName = object["name"] as? String
+                        let safeName = declaredName.flatMap { value in
+                            value.range(of: #"\A[A-Za-z0-9][A-Za-z0-9_.-]{0,199}\z"#, options: .regularExpression) != nil ? value : nil
+                        }
+                        cacheSkillSources[root.path] = (namespace, enabled[namespace], root == version.standardizedFileURL ? safeName : nil)
                         roots.append((root, "codex-cache", "cache " + namespace + " / " + version.lastPathComponent))
                     }
                     if paths.count > 64 { incomplete = true }
