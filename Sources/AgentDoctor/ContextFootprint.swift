@@ -11,7 +11,9 @@ public struct TextFootprint: Codable, Equatable, Sendable {
     public var referenceEncoding: String? = nil
     public var referenceTokens: Int? = nil
     public var referenceError: String? = nil
-    public var comparisonTokens: Int? { referenceEncoding == nil ? estimatedTokens : referenceTokens }
+    /// False means the source needed to construct this measurement was unavailable.
+    public var measurementComplete: Bool? = nil
+    public var comparisonTokens: Int? { measurementComplete == false ? nil : (referenceEncoding == nil ? estimatedTokens : referenceTokens) }
     public var tokenLabel: String { comparisonTokens.map(String.init) ?? tr("Unknown") }
 
     public init(_ text: String, encoding: TextEncoding = .heuristic) {
@@ -45,6 +47,8 @@ public struct SkillFootprint: Codable, Equatable, Sendable {
     public var codexConfiguredEnabled: Bool? = nil
     public var quality: SkillQualityReport? = nil
     public var identicalContentFiles: Int? = nil
+    /// Display-name provenance; a manifest/directory fallback never validates front matter.
+    public var nameSource: String? = nil
 
     public var summary: String {
         let counts = tr("Catalog ≈%1$@ tokens · SKILL.md ≈%2$@ tokens · %3$@ bytes",

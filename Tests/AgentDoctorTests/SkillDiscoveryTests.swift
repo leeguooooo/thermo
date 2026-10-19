@@ -112,6 +112,44 @@ final class SkillDiscoveryTests: XCTestCase {
         XCTAssertTrue(result.skills.isEmpty)
         XCTAssertTrue(result.findings.contains { $0.message.contains("cache inspection is incomplete") })
     }
+    func testInvalidRootSkillUsesManifestOwnerInsteadOfVersionWithoutInventingCatalogCounts() throws {
+        let base = ".codex/plugins/cache/market/owner/0.4.1"
+        try write(base + "/.codex-plugin/plugin.json", #"{"name":"declared-owner","skills":["./"]}"#)
+        try write(base + "/SKILL.md", "---\nname: ignored-invalid-header\ndescription: Tool: run\n---\nbody")
+        let report = scan(), item = try XCTUnwrap(report.skills.first), fp = try XCTUnwrap(item.skillFootprint)
+        XCTAssertEqual(item.name, "declared-owner")
+        XCTAssertEqual(fp.nameSource, "plugin_manifest")
+        XCTAssertEqual(fp.namespace, "owner@market")
+        XCTAssertEqual(fp.catalog.measurementComplete, false)
+        XCTAssertNil(fp.catalog.comparisonTokens)
+        XCTAssertEqual(fp.quality?.issues.first?.code, "invalid_front_matter")
+        XCTAssertTrue(item.actions.isEmpty)
+        XCTAssertTrue(report.findings.filter { $0.item == item.id }.allSatisfy { $0.subject == "declared-owner" })
+    }
+    func testManifestLabelNeverOverridesValidHeaderOrNamesChildSkills() throws {
+        let base = ".codex/plugins/cache/market/owner/1"
+        try write(base + "/.codex-plugin/plugin.json", #"{"name":"declared-owner","skills":["./"]}"#)
+        try write(base + "/SKILL.md", document)
+        var item = try XCTUnwrap(scan().skills.first)
+        XCTAssertEqual(item.name, "fixture"); XCTAssertEqual(item.skillFootprint?.nameSource, "front_matter")
+        try FileManager.default.removeItem(at: home.appendingPathComponent(base + "/SKILL.md"))
+        try write(base + "/.codex-plugin/plugin.json", #"{"name":"declared-owner","skills":["./skills/child"]}"#)
+        try write(base + "/skills/child/SKILL.md", "---\nname: ignored\ndescription: Tool: run\n---\nbody")
+        item = try XCTUnwrap(scan().skills.first)
+        XCTAssertEqual(item.name, "child"); XCTAssertEqual(item.skillFootprint?.nameSource, "directory")
+        XCTAssertEqual(item.skillFootprint?.catalog.measurementComplete, false)
+    }
+    func testMissingOrUnsafeManifestNamesRemainExplicitDirectoryFallbacks() throws {
+        let base = ".codex/plugins/cache/market/owner/0.4.1"
+        for name in ["", "has\nnewline", "private/path", "trailing\n"] {
+            let data = try JSONSerialization.data(withJSONObject: ["name": name, "skills": "./"])
+            try write(base + "/.codex-plugin/plugin.json", String(decoding:data, as:UTF8.self))
+            try write(base + "/SKILL.md", "---\nname: ignored\ndescription: Tool: run\n---\nbody")
+            let item = try XCTUnwrap(scan().skills.first)
+            XCTAssertEqual(item.name, "0.4.1"); XCTAssertEqual(item.skillFootprint?.nameSource, "directory")
+            XCTAssertEqual(item.skillFootprint?.catalog.measurementComplete, false)
+        }
+    }
     func testSummaryIsEncodedAndOldFootprintsWithUnknownIdentityAreNotInventedAsUnique() throws {
         try write(".agents/skills/one/SKILL.md", document)
         let result = scan()

@@ -17,6 +17,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.6"),
         .package(url: "https://github.com/swiftlang/swift-markdown", exact: "0.9.0"),
+        .package(url: "https://github.com/jpsim/Yams", exact: "6.2.2"),
     ],
     targets: [
         .target(
@@ -28,7 +29,7 @@ let package = Package(
         // Userspace-only diagnostics; kept out of ThermoKit so the root helper never links it.
         // UI strings and translations; the root helper never links it.
         .target(name: "ThermoL10n"),
-        .target(name: "AgentDoctor", dependencies: ["ThermoL10n", "AgentCore", "CTokenData", .product(name: "Markdown", package: "swift-markdown")]),
+        .target(name: "AgentDoctor", dependencies: ["ThermoL10n", "AgentCore", "CTokenData", .product(name: "Markdown", package: "swift-markdown"), .product(name: "Yams", package: "Yams")]),
         // What both agent features read: processes, live sessions, plugins, protected paths. User-level only.
         .target(name: "AgentCore"),
         // Disk cleanup runs as the user only: the root helper must never link it.

@@ -1,6 +1,7 @@
 """End-to-end CLI check in an owned fixture home, without opening real session logs."""
 import datetime
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -8,7 +9,8 @@ import sys
 import tempfile
 
 binary = Path(sys.argv[1]).resolve()
-now = datetime.datetime.now(datetime.timezone.utc)
+# Use one exact shared timestamp precision for native milliseconds and ISO events.
+now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
 def stamp(seconds):
     return (now + datetime.timedelta(seconds=seconds)).isoformat().replace("+00:00", "Z")
 
@@ -69,6 +71,14 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     if len(sys.argv) > 2:
         Path(sys.argv[2]).write_text(result.stdout)
     assert report["complete"] and report["coverage"]["filesRead"] == 2
+    assert "timingSummaries" in report, "Overlap-adjusted timing must be measured explicitly"
+    timing = {row["kind"]: row for row in report["timingSummaries"]}
+    for kind, calls, samples, summed, occupied in [("mcp", 5, 5, 25, 5), ("skill", 1, 1, 6, 6), ("outer", 2, 1, 5, 5)]:
+        row = timing[kind]
+        assert row["calls"] == calls and row["timingSamples"] == samples
+        assert row["callsWithoutUsableTiming"] == calls - samples
+        assert math.isclose(row["summedObservedSeconds"], summed, abs_tol=0.00001)
+        assert math.isclose(row["occupiedObservedSeconds"], occupied, abs_tol=0.00001)
     assert "fixture-private" not in result.stdout
     other = report["coverage"]["unattributedResults"]
     assert report["coverage"]["otherToolCalls"] == 2
@@ -105,6 +115,7 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     assert "An explicit error may be an unmet assertion" in text
     assert "Observed mcp returned text total (all rows): 75 bytes / ≈21 tokens" in text
     assert "Observed skill returned text total (all rows): 22 bytes / ≈6 tokens" in text
+    assert "Observed occupied time 5.000 s · summed call intervals 25.000 s" in text
     assert "share of observed mcp returned-text tokens: 57.1%" in text
     assert "fixture-private" not in text
     assert "Unattributed tool results: 1 returned · 1 missing · 0 unmeasured" in text
@@ -174,4 +185,4 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
                       "nativeMCPEventsIncludedWithoutDoubleCounting": True,
                       "nativeHostFailureRetainsCompletionAndTiming": True,
                       "explicitSelectedFileScopeAndNonblockingGuardVerified": True,
-                      "categoryTotalsAndSharesIncludeHiddenRows": True}))
+                      "categoryTotalsAndSharesIncludeHiddenRows": True, "overlapAdjustedTimingVerified": True}))

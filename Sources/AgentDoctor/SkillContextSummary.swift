@@ -12,7 +12,7 @@ public struct SkillContextSummary: Codable, Equatable, Sendable {
     public var uniqueFiles = 0
     public var aliases = 0
     public var catalogEntries = 0
-    public var catalogEstimatedTokens = 0
+    public var catalogEstimatedTokens: Int? = 0
     public var documentBytes = 0
     public var documentEstimatedTokens = 0
     public var cacheEntries = 0
@@ -58,9 +58,10 @@ public struct SkillContextSummary: Codable, Equatable, Sendable {
                 for version in versions {
                     if catalogs.insert(id + "|" + (version.namespace ?? "")).inserted {
                         summary.catalogEntries += 1
-                        summary.catalogEstimatedTokens += version.catalog.estimatedTokens
+                        if version.catalog.measurementComplete == false { summary.catalogEstimatedTokens = nil }
+                        else if let total = summary.catalogEstimatedTokens { summary.catalogEstimatedTokens = total + version.catalog.estimatedTokens }
                         if summary.referenceEncoding != nil {
-                            if let sum = summary.referenceCatalogTokens, let count = version.catalog.referenceTokens { summary.referenceCatalogTokens = sum + count }
+                            if version.catalog.measurementComplete != false, let sum = summary.referenceCatalogTokens, let count = version.catalog.referenceTokens { summary.referenceCatalogTokens = sum + count }
                             else { summary.referenceCatalogTokens = nil }
                         }
                     }

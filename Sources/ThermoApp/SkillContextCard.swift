@@ -28,7 +28,7 @@ struct SkillContextCard: View {
                             .font(.caption.monospaced()).textSelection(.enabled)
                     }
                     if summary.referenceEncoding != nil { Text(tr("Heuristic comparison")).font(.caption).foregroundStyle(.secondary) }
-                    Text(tr("%1$@ unique files · catalog ≈%2$@ tokens · documents ≈%3$@ tokens · %4$@ bytes", String(summary.uniqueFiles), String(summary.catalogEstimatedTokens), String(summary.documentEstimatedTokens), String(summary.documentBytes)))
+                    Text(tr("%1$@ unique files · catalog ≈%2$@ tokens · documents ≈%3$@ tokens · %4$@ bytes", String(summary.uniqueFiles), summary.catalogEstimatedTokens.map(String.init) ?? tr("Unknown"), String(summary.documentEstimatedTokens), String(summary.documentBytes)))
                         .font(.caption.monospaced()).textSelection(.enabled)
                     Text(tr("%1$@ duplicate file entries excluded · cache inventory %2$@ files / %3$@ bytes, counted separately", String(summary.aliases), String(summary.cacheUniqueFiles), String(summary.cacheDocumentBytes)))
                         .font(.caption).foregroundStyle(.secondary)
@@ -44,6 +44,7 @@ struct SkillContextCard: View {
                     Text(item.name + " · " + item.agent + (item.skillFootprint?.namespace.map { " · " + $0 } ?? "")).font(.subheadline.weight(.medium)).textSelection(.enabled)
                     if let footprint = item.skillFootprint {
                         Text(footprint.summary).font(.caption.monospaced()).textSelection(.enabled)
+                        if let error = footprint.catalog.referenceError { Text(tr(error)).font(.caption).foregroundStyle(.secondary) }
                         if let error = footprint.document.referenceError { Text(tr("Reference count unavailable: %1$@", error)).font(.caption).foregroundStyle(.secondary) }
                     }
                     if let source = item.skillFootprint?.sourcePath { Text(source).font(.caption).foregroundStyle(.secondary).textSelection(.enabled) }

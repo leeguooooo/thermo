@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "sourceCommit": "a209ae483e2d9559f62072ba1fcf9ce914aac20f",
+  "sourceFilesSHA256": {
+    "Sources/AgentDoctor/Config.swift": "65bdc0b3c11c3617e293cf55f3de0a0b8a1eaea6fa20c1d530eb9c121e85a823",
+    "Sources/AgentDoctor/ContextFootprint.swift": "0fc652cfb0308db9715c2b6c6388e79b13742ee6f6d6bc96a3326602d915aeb6",
+    "Sources/AgentDoctor/SkillDiscovery.swift": "5afd5c0ecfff5114863cf3f7158da2d0352a07f9be989dceab79f7ce58a854a5",
+    "Tests/AgentDoctorTests/SkillDiscoveryTests.swift": "ad9c959b6e1f6f44f2cd7ca90ee4968611cf2040faa033c5957825ef27776a71",
+    "scripts/verify-skill-context.py": "813dcbe6b20190239a9d9ef5192958b8f8c48f4449f3e4fe51faa6d404be3018"
+  },
+  "scope": "Native Skill metadata reload plus cache-root identification; no model inference or task-benefit claim",
+  "fullStaticInventory": {
+    "entries": 368,
+    "qualitySummaries": [
+      {
+        "aliases": 0,
+        "checkedLocalReferences": 429,
+        "conflictingFiles": 0,
+        "entries": 227,
+        "findings": 1,
+        "host": "codex",
+        "incompleteInspections": 0,
+        "inspectedFiles": 227,
+        "scope": "cache",
+        "unavailableFiles": 0,
+        "uniqueFiles": 227,
+        "unmeasuredEntries": 0,
+        "unverifiedIdentityEntries": 0
+      },
+      {
+        "aliases": 5,
+        "checkedLocalReferences": 461,
+        "conflictingFiles": 0,
+        "entries": 141,
+        "findings": 0,
+        "host": "codex",
+        "incompleteInspections": 0,
+        "inspectedFiles": 135,
+        "scope": "directory",
+        "unavailableFiles": 0,
+        "uniqueFiles": 135,
+        "unmeasuredEntries": 1,
+        "unverifiedIdentityEntries": 0
+      }
+    ],
+    "rootCacheFinding": {
+      "namespace": "thermo-use@leeguooooo-plugins",
+      "cacheVersion": "0.4.1",
+      "configuredEnabled": true,
+      "finding": "invalid_front_matter",
+      "catalogMeasurement": "unknown",
+      "loadingOrSelectedVersion": "unverified"
+    },
+    "boundary": "Measured directory/cache files and aliases separated; one directory entry remained unmeasured. No quality ranking or actual prompt total."
+  },
+  "nativeMetadata": {
+    "nativeVersion": "codex-cli 0.163.0",
+    "nativeBinarySHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+    "runtimeNetworkDenied": true,
+    "networkGuardVerifiedByEPERM": true,
+    "requests": [
+      "initialize",
+      "initialized",
+      "skills/list",
+      "skills/list",
+      "skills/list"
+    ],
+    "modelTurns": 0,
+    "liveUserConfigOrCacheModified": false,
+    "metadataErrors": 0,
+    "sameProcessBeforeAndAfter": true,
+    "processExitCode": 0,
+    "notifications": {
+      "remoteControl/status/changed": 1
+    },
+    "skills": {
+      "discord-hermes": {
+        "beforeSHA256": "2c1c1c04b7426ea72c4d5a720a82c2a7f2ff9cfc2e5d01947aa4d746c007027c",
+        "afterSHA256": "174f4fbb283fa132c4dfa878882d8cf155b7a8c029768db30809701e617dc710",
+        "beforeDescriptionBytes": 56,
+        "afterDescriptionBytes": 457,
+        "descriptionChanged": true,
+        "afterDescriptionExactlyMatchesIntendedText": true,
+        "freshForcedReloadStable": true,
+        "beforeEnabled": true,
+        "afterEnabled": true
+      },
+      "codex-statebar": {
+        "beforeSHA256": "600bb25234ebf34a6c79001a8ccbbf5bc473d5f5cb67d2059520ae8dac184d61",
+        "afterSHA256": "ae0e18614a3dde85886646e2ca6eb7c387229eee265771b5c12f1e89ddb3427a",
+        "beforeDescriptionBytes": 138,
+        "afterDescriptionBytes": 138,
+        "descriptionChanged": false,
+        "afterDescriptionExactlyMatchesIntendedText": true,
+        "freshForcedReloadStable": true,
+        "beforeEnabled": true,
+        "afterEnabled": true
+      }
+    },
+    "boundary": "Owned isolated native CLI process with copied source files. No active desktop/CLI conversation reload, prompt injection, selection or task benefit acceptance."
+  },
+  "nativeStartupWarning": "The isolated CLI declined PATH-helper alias creation under its temporary CODEX_HOME. Metadata calls completed; no tool-execution acceptance claimed.",
+  "liveRepairedRootsStillMatchMeasuredAfterHashes": {
+    "discord-hermes": true,
+    "codex-statebar": true
+  },
+  "cacheIdentification": {
+    "fallback": "Use a safe manifest name only for an explicitly root-declared cached Skill when no usable parsed Skill name exists",
+    "precedence": "Parsed name first; manifest root fallback second; directory fallback last",
+    "provenance": "SkillFootprint.nameSource: front_matter, plugin_manifest or directory; absent in older reports means unrecorded",
+    "preservedUnknown": "The fallback never turns invalid name/description into a measured catalog",
+    "validation": {
+      "agentDoctorTests": 314,
+      "failures": 0,
+      "newTests": 3,
+      "baselineCLIContractExit": 1,
+      "baselineFailure": "Owned invalid root-Skill label assertion",
+      "candidateCLIContract": {
+        "passed": true,
+        "userUniqueFiles": 1,
+        "projectUniqueFiles": 2,
+        "aliasesExcluded": 1,
+        "cacheFilesCountedSeparately": 1,
+        "coverageWarningPreserved": true,
+        "yamlCatalogValuesAndUnknownsVerified": true,
+        "invalidCacheRootOwnerVerified": true
+      },
+      "realCacheReplay": {
+        "sourceFileSHA256": {
+          "SKILL.md": "8016c6a4e837114c490d58e4a2f1d3b2a6941567f6a12772920027e619aa549f",
+          ".codex-plugin/plugin.json": "8f2059748f3e8b92382edcdf5e221867b84f9eed107452fc3c513cceb71ed960"
+        },
+        "baselineName": "0.4.1",
+        "candidateName": "thermo-use",
+        "nameSource": "plugin_manifest",
+        "namespace": "thermo-use@leeguooooo-plugins",
+        "configuredEnabled": true,
+        "sameItemIdentity": true,
+        "cacheActionsRemainEmpty": true,
+        "catalogStillUnmeasured": true,
+        "documentBodyQualityAndCacheMetadataEqual": true,
+        "summariesEqual": true,
+        "liveCacheUnchanged": true,
+        "temporaryReplayRetained": false,
+        "baselineBinarySHA256": "d98869f12f22eaa84ef4cfadcaba67d5ce1f4963ed64cd22477fc9b895e5f9c2",
+        "candidateBinarySHA256": "7a0da30d00b9d07c2ddaef615c419ce5c86f9b1d965fac9ac5d26cf2194202db",
+        "boundary": "Copied SKILL.md and manifest only, with an owned enabled flag. Configured enabled does not select a cache version or prove live activation. No real cache/config mutation."
+      }
+    }
+  },
+  "officialSources": [
+    "https://learn.chatgpt.com/docs/app-server",
+    "https://learn.chatgpt.com/docs/build-skills"
+  ],
+  "boundaries": [
+    "Native metadata experiment used copies and a fresh owned HOME, with verified runtime network denial; existing conversations were not restarted",
+    "No thread/start or turn/start, no credentials, no model/task/hardware/business calls",
+    "Live plugin cache and user configuration untouched; no App build, install, plugin publication or release",
+    "Native discovery means metadata availability; it does not prove the model selected or loaded instructions or that task quality improved"
+  ]
+}

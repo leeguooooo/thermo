@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "sourceCommit": "ad1bdd4115a56c93de72821fc44458f1c82c0cc1",
+  "sourceFilesSHA256": {
+    "Sources/AgentDoctor/ToolUsageParser.swift": "1eeb1187bcc9d115c1bdc2f58f7894b7456e22ee63dfc27f856dd64ebb9bd17f",
+    "Sources/AgentDoctor/ToolUsageReport.swift": "ec528d26f6917662f31e1ebbd0434bc9e56f6b00d2e07ebfc9e2adff0a3b7dcd",
+    "Sources/AgentDoctor/ToolUsageTimingSummary.swift": "856f61927914e3600f8293966e66f6aefb4f38eba588f38b6035e1ebee503d21",
+    "Sources/ThermoApp/OuterToolUsageBreakdown.swift": "c77daed167979e20460e96180a343a80a967db3c2df90eea2ec967239b098321",
+    "Sources/ThermoApp/ToolUsagePanel.swift": "9f82497aca14608ae72f794ac0d3a6058966f3e7d4e1c313485c990d40b3cf84",
+    "Sources/ThermoL10n/ZhHans.swift": "e0fda14ab5ec085101839b24e0021024df2a5e747b71533ead9cce7e631300b5",
+    "Sources/thermo/Agents.swift": "6262b90e99e1da68cf4d679151d94333f0febc420c0dec1399fa1a39664a76f6",
+    "Tests/AgentDoctorTests/ToolUsageTimingSummaryTests.swift": "ad5ebb1067ca1379f8059bbf7e0b0a4e6fb10d35f7394a2b09925a33a95b9591",
+    "scripts/verify-tool-usage.py": "62a7c03d71598f2a7aebc71b5be04c28d073a450ab1c932ae0a693fb7181c195"
+  },
+  "scope": "Overlap-adjusted observed occupied time, separate from summed call intervals, per MCP/Skill/outer category",
+  "contract": {
+    "fields": "Optional ToolUsageReport.timingSummaries, one aggregate per category; no interval arrays or source identifiers exported",
+    "occupiedTime": "Union of usable start/end intervals; overlapping or nested ranges count once, gaps excluded",
+    "selectedCalls": "Same start/observedAt window selection as existing rows; only endSeen pairs with start and end inside the window and finite nonnegative duration contribute timing",
+    "unknowns": "No usable pairs means unknown seconds, not zero; incomplete, reversed or out-of-window pairs remain in callsWithoutUsableTiming",
+    "boundaries": "No clipping or extrapolation of partial calls; categories not summed together; host invocation-failure pairs still included",
+    "legacyReports": "Missing aggregate fields stay unavailable; row sums cannot reconstruct overlaps",
+    "validation": "Reject duplicate, inconsistent, row-count-mismatched or out-of-window aggregates for display; preserve fractional timestamps"
+  },
+  "validation": {
+    "agentDoctorTests": 323,
+    "failures": 0,
+    "newIntervalTests": 9,
+    "configuration": "Debug module suite, compiled native CLI and actual SwiftUI panel offscreen rendering; no App/Release rebuild",
+    "ownedCLIFixture": {
+      "mcpCalls": 5,
+      "simultaneousCallSeconds": 5,
+      "summedSeconds": 25,
+      "occupiedSeconds": 5,
+      "outerCalls": 2,
+      "outerValidPairs": 1,
+      "skillValidPairs": 1,
+      "sharedTimestampPrecision": "Exact whole seconds for both ISO/native fixture representations; production fractional offsets independently tested"
+    },
+    "candidateCLIContract": {
+      "passed": true,
+      "mcpCalls": 2,
+      "skillCalls": 1,
+      "requestTokensKeptSeparate": true,
+      "privateTextExcluded": true,
+      "imageTokensUnknown": true,
+      "knownStatusErrorProportionVerified": true,
+      "unknownErrorProportionPreserved": true,
+      "nativeMCPEventsIncludedWithoutDoubleCounting": true,
+      "nativeHostFailureRetainsCompletionAndTiming": true,
+      "explicitSelectedFileScopeAndNonblockingGuardVerified": true,
+      "categoryTotalsAndSharesIncludeHiddenRows": true,
+      "overlapAdjustedTimingVerified": true
+    },
+    "baselineCLIContract": {
+      "exitCode": 1,
+      "failure": "Explicit missing timingSummaries assertion"
+    },
+    "realReplay": {
+      "since": "2026-10-19T00:00:00+00:00",
+      "until": "2026-10-19T07:00:14.555977+00:00",
+      "scope": {
+        "filesRead": 32,
+        "filesClipped": 9,
+        "bytesRead": 29908034
+      },
+      "nativeCompletedItems": 160,
+      "validPairs": 160,
+      "independentOracle": "Decimal millisecond endpoints, sweep active-call count; production merges interval ranges",
+      "summedSeconds": "266.004",
+      "occupiedSeconds": "265.073",
+      "overlapSeconds": "0.931",
+      "candidateTiming": {
+        "calls": 160,
+        "callsWithoutUsableTiming": 0,
+        "kind": "mcp",
+        "occupiedObservedSeconds": 265.0730013847351,
+        "summedObservedSeconds": 266.0040011405945,
+        "timingSamples": 160
+      },
+      "allLegacyAccountingAndStatusFieldsEqual": true,
+      "temporaryRawReplayRetained": false,
+      "replaySHA256": "505b268bc04633bcf0e8ed74d3eb4ebcbff8683aa6c0cd13d0e8cd718453a0e2",
+      "baselineBinarySHA256": "7a0da30d00b9d07c2ddaef615c419ce5c86f9b1d965fac9ac5d26cf2194202db",
+      "candidateBinarySHA256": "7f6fd8f1f05a670d92b179d1483ec8e2140c627c80fe90e2f467f32553ab9685",
+      "boundary": "Bounded completed native MCP items with start/end in the window. Not complete logs, missing-call frequency, CPU time, task duration, causal efficiency or billing."
+    },
+    "offscreenUI": "Chinese occupied time, summed time, coverage and scope note visually checked against a synthetic report"
+  },
+  "boundaries": [
+    "Only observed intervals in selected logs; source tails were clipped, so not complete activity or a missing-call rate",
+    "Time between a first start and last end is not used as occupied time; idle gaps excluded",
+    "Not service CPU time, end-to-end task duration, latency improvement, causal efficiency or billing",
+    "No existing row medians, P95s, sums, error/status, text bytes or token counters changed in the paired replay",
+    "No model/business/hardware call, active App install, package rebuild or publication"
+  ]
+}

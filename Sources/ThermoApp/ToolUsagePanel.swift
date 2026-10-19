@@ -93,6 +93,12 @@ struct ToolUsagePanel: View {
                     sort.value($0) == sort.value($1) ? $0.id < $1.id : sort.value($0) > sort.value($1)
                 }
                 let textSummary = report.returnedTextSummary(kind: kind)
+                if !rows.isEmpty {
+                    ForEach(report.timingSummary(kind: kind)?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation], id: \.self) { line in
+                        Text(line).font(.caption.monospaced()).foregroundStyle(.secondary)
+                    }
+                    Text(ToolUsageTimingSummary.explanation).font(.caption).foregroundStyle(.secondary)
+                }
                 Picker(tr("Sort observed usage"), selection: $sort) {
                     ForEach(UsageSort.allCases.filter { kind == "skill" || $0 != .instructions }, id: \.self) { value in Text(value.title).tag(value) }
                 }.pickerStyle(.segmented)
@@ -164,6 +170,9 @@ struct ToolUsagePanel: View {
                         Text(tr("%1$@ calls · %2$@ results · %3$@ explicit result errors · %4$@ unknown error status · %5$@ missing results",
                                 String(row.calls), String(row.completed), String(row.reportedErrors), String(row.unknownErrorStatus), String(row.missingResults)))
                             .font(.caption)
+                        if let codes = row.mcpErrorCodeSummary {
+                            Text(codes).font(.caption.monospaced()).foregroundStyle(.secondary)
+                        }
                         if let failures = row.invocationFailures {
                             if failures > 0 {
                                 Text(tr("Host-reported invocation failures without MCP results: %1$@; excluded from result error proportions, included in timing.", String(failures)))

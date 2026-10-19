@@ -12,6 +12,9 @@ struct OuterToolUsageBreakdown: View {
                 if !rows.isEmpty {
                     DisclosureGroup(tr("Outer tools ranked by observed returned text")) {
                         VStack(alignment: .leading, spacing: 12) {
+                            ForEach(report.timingSummary(kind: "outer")?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation], id: \.self) { line in
+                                Text(line).font(.caption.monospaced()).foregroundStyle(.secondary)
+                            }
                             Text(tr("Grouped only by logged outer tool names. These are the same observations as the outer aggregate, not additional usage. Commands and nested CLI/MCP ownership are not inferred."))
                                 .font(.caption).foregroundStyle(.secondary)
                             if (report.coverage.unattributedResults?.unmeasuredResults ?? 0) > 0 {

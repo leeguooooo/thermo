@@ -497,7 +497,7 @@ struct ConfigChecks {
     // MARK: skills
 
     var skillDirs: [(URL, String, String)] = []
-    var cacheSkillSources: [String: (namespace: String, enabled: Bool?)] = [:]
+    var cacheSkillSources: [String: (namespace: String, enabled: Bool?, rootSkillName: String?)] = [:]
 
     mutating func checkSkills() {
         let roots: [(URL, String, String)] = [
@@ -546,7 +546,11 @@ struct ConfigChecks {
                     if let text = Self.readSkill(skill) {
                         inventory.skills += 1
                         let front = Self.frontMatter(text)
-                        let name = front?["name"] ?? u.lastPathComponent
+                        let headerName = front?["name"].flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+                        // A root-declared cached Skill lives in a version directory.
+                        // Identify its owner from the manifest, without treating invalid YAML as parsed.
+                        let manifestName = node.depth == 0 ? cacheSkillSources[dir.path]?.rootSkillName : nil
+                        let name = headerName ?? manifestName ?? u.lastPathComponent
                         let key = item(.skills, agent: agent, id: "\(agent)|\(origin)|\(u.path)", name: name,
                                        detail: front?["description"] ?? env.short(u.path), source: origin)
                         let body = Self.skillBody(text)
@@ -554,6 +558,13 @@ struct ConfigChecks {
                                                        document: TextFootprint(text, encoding: env.tokenEncoding), body: TextFootprint(body, encoding: env.tokenEncoding),
                                                        sourcePath: Redact.text(env.short(skill.path)),
                                                        contentHash: SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined())
+                        if front?["name"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false
+                            || front?["description"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
+                            footprint.catalog.measurementComplete = false
+                            footprint.catalog.referenceTokens = nil
+                            footprint.catalog.referenceError = tr("Skill name or description could not be parsed; catalog measurement is unavailable.")
+                        }
+                        footprint.nameSource = headerName != nil ? "front_matter" : manifestName != nil ? "plugin_manifest" : "directory"
                         footprint.canonicalID = Self.skillFileIdentity(skill)
                         if agent == "codex" || agent == "shared" { footprint.codexConfiguredEnabled = skillFlags.paths[skill.standardizedFileURL.resolvingSymlinksInPath().path] }
                         footprint.scope = origin.hasPrefix("project ") ? "project" : agent == "codex-cache" ? "cache" : agent == "plugin" ? "plugin" : "user"
@@ -583,9 +594,10 @@ struct ConfigChecks {
                         }
                         // Nested collections may resolve through a shared symlink: never offer removal of their targets.
                         if agent != "plugin", agent != "codex-cache", !origin.hasPrefix("project "), node.depth == 1 { offerSkillRemoval(u) }
-                        if front == nil || front?["description"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
+                        if front?["name"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false
+                            || front?["description"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
                             add(Finding(.warning, .skills, agent: agent, subject: name,
-                                        tr("SKILL.md has no front matter description, so agents can't tell when to use it"),
+                                        tr("SKILL.md name or description is missing or could not be parsed; inspect the YAML front matter. Host loading was not tested."),
                                         fix: tr("start SKILL.md with ---\\nname: %1$@\\ndescription: …\\n---", name), source: origin))
                         }
                         byName[name, default: []].append((agent, footprint.canonicalID ?? real, origin, key, footprint.codexConfiguredEnabled == false))
@@ -668,34 +680,13 @@ struct ConfigChecks {
 
     static func skillBody(_ text: String) -> String {
         let lines = text.components(separatedBy: "\n")
-        guard lines.first?.trimmingCharacters(in: .whitespacesAndNewlines) == "---",
-              let end = lines.dropFirst().firstIndex(where: { $0.trimmingCharacters(in: .whitespacesAndNewlines) == "---" }) else { return text }
+        guard lines.first?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\u{feff}"))) == "---",
+              let end = lines.dropFirst().firstIndex(where: { $0.hasPrefix("---") && $0.trimmingCharacters(in: .whitespacesAndNewlines) == "---" }) else { return text }
         return lines.dropFirst(end + 1).joined(separator: "\n")
     }
 
     static func frontMatter(_ text: String) -> [String: String]? {
-        let lines = text.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .newlines) }
-        guard lines.first == "---", let end = lines.dropFirst().firstIndex(of: "---") else { return nil }
-        var out: [String: String] = [:]
-        var blockKey: String?
-        var blockLines: [String] = []
-        func flushBlock() {
-            if let key = blockKey { out[key] = blockLines.joined(separator: " ").trimmingCharacters(in: .whitespaces) }
-            blockKey = nil
-            blockLines = []
-        }
-        for raw in lines[1..<end] {
-            let l = raw.trimmingCharacters(in: .whitespaces)
-            if !raw.hasPrefix(" "), !raw.hasPrefix("\t"), let c = l.firstIndex(of: ":"), !l.hasPrefix("-"), l.range(of: "^[A-Za-z_-]+:", options: .regularExpression) != nil {
-                flushBlock()
-                let k = String(l[..<c])
-                let value = l[l.index(after: c)...].trimmingCharacters(in: CharacterSet(charactersIn: " \"'"))
-                if ["|", ">", ">-", "|-", "|+", ">+"].contains(value) { blockKey = k }
-                else { out[k] = value }
-            } else if blockKey != nil { blockLines.append(l) }
-        }
-        flushBlock()
-        return out
+        SkillFrontMatter.parse(text).fields
     }
 
     static func duration(_ s: Double) -> String {

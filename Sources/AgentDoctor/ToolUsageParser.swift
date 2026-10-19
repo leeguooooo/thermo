@@ -17,6 +17,7 @@ struct ToolUsageParser {
         var startSeen = false
         var endSeen = false
         var isError: Bool?
+        var reportedErrorCode: String?
         var outerError: Bool?
         var invocationFailed = false
         var textBytes = 0
@@ -186,6 +187,7 @@ struct ToolUsageParser {
         if error == true || measured.2 == true { call.isError = true }
         else if error != nil || measured.2 != nil { call.isError = false }
         else { call.isError = nil }
+        call.reportedErrorCode = measured.2 == true ? MCPErrorCodeObservation.code(in: value) : nil
         call.textObservation = ToolResultTextObservation(value, codexInputBlocks: host == "codex" && call.kind == nil)
         call.referenceTokens = measured.0.referenceTokens
         call.textBytes = measured.0.bytes; call.estimatedTokens = measured.0.estimatedTokens; call.nonText = measured.1
@@ -295,6 +297,7 @@ struct ToolUsageParser {
         var rows: [String: ToolUsageRow] = [:]
         var outerRows: [String: ToolUsageRow] = [:]
         var timings: [String: [Double]] = [:]
+        var intervalTimings: [String: ToolUsageTimingAccumulator] = [:]
         var loads: [String: SkillInstructionUsage] = [:]
         coverage.unmatchedInstructionEvents = coverage.unmatchedInstructionEvents ?? 0
         for observation in instructions.values {
@@ -312,6 +315,9 @@ struct ToolUsageParser {
         for (callKey, call) in calls {
             if !call.startSeen, inWindow(call.ended) { coverage.unmatchedResults += 1; continue }
             guard call.startSeen, inWindow(call.started ?? call.observedAt) else { continue }
+            let timingKind = call.kind != nil && call.name != nil ? call.kind! : "outer"
+            intervalTimings[timingKind, default: ToolUsageTimingAccumulator()].observe(
+                start: call.started, end: call.endSeen && inWindow(call.ended) ? call.ended : nil)
             guard let kind = call.kind, let name = call.name else {
                 coverage.otherToolCalls += 1
                 let key = call.groupID ?? Self.identity(call.host + "|outer|Unidentified outer tool")
@@ -372,6 +378,10 @@ struct ToolUsageParser {
             }
             let key = call.groupID ?? Self.identity(call.host + "|" + kind + "|" + (call.server ?? "") + "|" + name)
             var row = rows[key] ?? ToolUsageRow(id: key, host: call.host, kind: kind, server: call.server, name: name)
+            if kind == "mcp" {
+                row.reportedErrorCodes = row.reportedErrorCodes ?? [:]
+                row.errorCodeCategoriesLimited = row.errorCodeCategoriesLimited ?? false
+            }
             if kind == "skill" {
                 if row.skillInstructions == nil { row.skillInstructions = SkillInstructionUsage(encoding: encoding) }
                 if let observed = loads[callKey] { row.skillInstructions?.merge(observed) }
@@ -395,13 +405,28 @@ struct ToolUsageParser {
                     row.completed += 1
                     if call.textObservation.serializedMedia { row.serializedMediaTextResults! += 1 }
                     if call.textObservation.truncationMarker { row.truncationMarkerResults! += 1 }
-                    if call.isError == true { row.reportedErrors += 1 }
+                    if call.isError == true {
+                        row.reportedErrors += 1
+                        if kind == "mcp", let code = call.reportedErrorCode {
+                            row.reportedErrorCodes?[code, default: 0] += 1
+                        }
+                    }
                     if call.isError == nil { row.unknownErrorStatus += 1 }
                     row.returnedTextBytes += call.textBytes; row.returnedTextEstimatedTokens += call.estimatedTokens; row.nonTextBlocks += call.nonText
                 }
                 if let start = call.started, let end = call.ended, end >= start { timings[key, default: []].append(end.timeIntervalSince(start)) }
             } else { row.missingResults += 1 }
             rows[key] = row
+        }
+        // Keep the most frequent categories with stable ties, not whichever
+        // calls a Dictionary happened to visit first. Excluded results remain
+        // in reportedErrors and therefore in the unclassified remainder.
+        for key in rows.keys.sorted() {
+            if let counts = rows[key]?.reportedErrorCodes, counts.count > 64 {
+                let kept = counts.sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }.prefix(64)
+                rows[key]?.reportedErrorCodes = Dictionary(uniqueKeysWithValues: kept.map { ($0.key, $0.value) })
+                rows[key]?.errorCodeCategoriesLimited = true
+            }
         }
         for (key, samples) in timings {
             let sorted = samples.sorted()
@@ -429,8 +454,10 @@ struct ToolUsageParser {
             totals[entry.host] = total
         }
         let complete = !coverage.cancelled && !coverage.limitReached && coverage.clippedFiles == 0 && coverage.unreadableFiles == 0 && coverage.malformedLines == 0 && coverage.oversizedLines == 0 && coverage.missingTimestamps == 0 && coverage.unmatchedResults == 0 && coverage.unmatchedInstructionEvents == 0
-        return ToolUsageReport(generated: until, since: since, until: until, complete: complete, coverage: coverage,
+        var report = ToolUsageReport(generated: until, since: since, until: until, complete: complete, coverage: coverage,
                                tools: rows.values.sorted { $0.returnedTextBytes == $1.returnedTextBytes ? $0.id < $1.id : $0.returnedTextBytes > $1.returnedTextBytes },
                                sessionTokens: totals.values.sorted { $0.host < $1.host }, cumulativeTokenSnapshots: cumulativeSnapshots.values.sorted { $0.id < $1.id }, note: ToolUsageReport.explanation, referenceEncoding: encoding == .heuristic ? nil : encoding.rawValue, referenceEngine: encoding == .heuristic ? nil : ReferenceTokenizer.engine)
+        report.timingSummaries = ["mcp", "skill", "outer"].map { (intervalTimings[$0] ?? ToolUsageTimingAccumulator()).summary(kind: $0) }
+        return report
     }
 }

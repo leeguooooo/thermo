@@ -233,6 +233,11 @@ struct AgentsCommand {
             lines.append("Observed \(kind) returned text total (all rows): \(summary.returnedTextBytes.map(String.init) ?? "unknown") bytes / \(tokens) tokens")
         }
         if !report.tools.isEmpty { lines.append("Totals cover observed returned text only; missing logs/results and non-text content are excluded, not request usage.") }
+        for kind in Set(report.tools.map(\.kind)).sorted() {
+            lines.append("Observed " + kind + " timing:")
+            lines += report.timingSummary(kind: kind)?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation]
+        }
+        lines.append(ToolUsageTimingSummary.explanation)
         func instructionLine(_ loaded: SkillInstructionUsage?) -> String {
             guard let loaded, loaded.events > 0 else { return "No measured linked instruction loads in this report; total loading is unknown." }
             let tokens = report.referenceEncoding == nil ? "≈\(loaded.estimatedTokens)" : loaded.referenceTokens.map(String.init) ?? "unknown"
@@ -255,6 +260,7 @@ struct AgentsCommand {
         for row in report.tools.prefix(app.args.has("all") ? report.tools.count : 20) {
             lines.append(style.bold((row.server.map { $0 + " / " } ?? "") + row.name) + " [" + row.host + ", " + row.kind + "]")
             lines.append("  \(row.calls) calls · \(row.completed) results · \(row.reportedErrors) explicit result errors · \(row.unknownErrorStatus) unknown error status · \(row.missingResults) missing results")
+            if let codes = row.mcpErrorCodeSummary { lines.append("  " + codes) }
             if row.kind == "skill" { lines.append("  " + instructionLine(row.skillInstructions)) }
             if let failures = row.invocationFailures {
                 if failures > 0 { lines.append("  Host-reported invocation failures without MCP results: \(failures); excluded from result error proportions, included in timing.") }
@@ -289,6 +295,8 @@ struct AgentsCommand {
             lines.append("Unattributed tool results: \(other.completed) returned · \(other.missingResults) missing · \(other.unmeasuredResults) unmeasured")
             lines.append("Unattributed measured text: \(other.returnedTextBytes) bytes / \(tokens) tokens · \(other.nonTextBlocks) non-text blocks not tokenized")
             lines.append("Includes execution wrapper text and may repeat separately logged MCP results. Kept outside MCP/Skill totals; no nested attribution or image/audio token estimate.")
+            lines.append("Observed outer timing:")
+            lines += report.timingSummary(kind: "outer")?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation]
             if let rows = other.byTool {
                 if !rows.isEmpty {
                     let count = app.args.has("all") ? rows.count : min(20, rows.count)
@@ -423,7 +431,7 @@ struct AgentsCommand {
             if let encoding = summary.referenceEncoding {
                 lines.append("\(summary.host) \(encoding): catalog \(summary.referenceCatalogTokens.map(String.init) ?? "unknown"), documents \(summary.referenceDocumentTokens.map(String.init) ?? "unknown"); unavailable files \(summary.unavailableReferenceFiles ?? 0)")
             }
-            lines.append("\(summary.host) heuristic comparison: \(summary.uniqueFiles) unique directory/plugin files · catalog ≈\(summary.catalogEstimatedTokens) tokens · documents ≈\(summary.documentEstimatedTokens) tokens · \(summary.documentBytes) bytes · \(summary.aliases) duplicate file entries excluded from document totals")
+            lines.append("\(summary.host) heuristic comparison: \(summary.uniqueFiles) unique directory/plugin files · catalog ≈\(summary.catalogEstimatedTokens.map(String.init) ?? "Unknown") tokens · documents ≈\(summary.documentEstimatedTokens) tokens · \(summary.documentBytes) bytes · \(summary.aliases) duplicate file entries excluded from document totals")
             if summary.inconsistentFiles > 0 || summary.unverifiedIdentityEntries > 0 { lines.append("  excluded: \(summary.inconsistentFiles) changing files, \(summary.unverifiedIdentityEntries) entries with unknown identity") }
             lines.append("  cache inventory: \(summary.cacheEntries) entries, \(summary.cacheUniqueFiles) unique files, \(summary.cacheDocumentBytes) bytes; excluded from directory totals")
         }
@@ -441,6 +449,7 @@ struct AgentsCommand {
                 lines.append("  cache version; loading unverified; configured enabled: " + (item.skillFootprint?.pluginConfiguredEnabled.map(String.init) ?? "unknown"))
             }
             lines.append("  " + (item.skillFootprint?.summary ?? "Content not measured"))
+            if let error = item.skillFootprint?.catalog.referenceError { lines.append("  catalog measurement unavailable: " + error) }
             if let error = item.skillFootprint?.document.referenceError { lines.append("  reference count unavailable: " + error + "; heuristic retained separately") }
             if let source = item.skillFootprint?.sourcePath ?? item.source { lines.append("  " + style.dim(source)) }
         }
