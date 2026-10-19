@@ -24,7 +24,7 @@ import time
 SCRIPTS = ["verify-skill-context.py", "verify-skill-quality.py", "verify-tool-usage.py",
            "verify-reference-encoding.py", "verify-task-comparison.py",
            "verify-mcp-cleanup-details.py", "verify-cli-completeness.py",
-           "verify-skill-instruction-usage.py"]
+           "verify-skill-instruction-usage.py", "verify-ai-diagnostics-contract.py"]
 SUITES = {"ThermoKitTests", "ThermoHelperTests", "ThermoCLITests", "ThermoAppTests",
           "CleanKitTests", "AgentDoctorTests", "AgentCoreTests"}
 
@@ -114,6 +114,21 @@ def inside(path, root):
     return path == root or path.is_relative_to(root)
 
 
+def verification_scripts(source):
+    scripts = [source / "scripts" / name for name in SCRIPTS]
+    tracked = set(git(source, "ls-files", "-z").split("\0"))
+    for path in scripts + [source / "scripts/verify-artifacts.sh"]:
+        if not path.is_file():
+            raise ValueError("fixed-source verification script missing: " + path.name)
+        resolved = path.resolve(strict=True)
+        if not inside(resolved, source):
+            raise ValueError("verification script resolves outside fixed source: " + path.name)
+        if (str(path.relative_to(source)) not in tracked
+                or str(resolved.relative_to(source)) not in tracked):
+            raise ValueError("verification script is not tracked by fixed source: " + path.name)
+    return scripts
+
+
 def inputs(args):
     source = args.source.resolve(strict=True)
     package = args.package.resolve(strict=True)
@@ -136,10 +151,7 @@ def inputs(args):
     version = re.search(r'static let string = "([^"]+)"', (source / "Sources/ThermoKit/Version.swift").read_text())
     if not version or version[1] != info.get("CFBundleShortVersionString"):
         raise ValueError("package marketing version differs from fixed source")
-    scripts = [source / "scripts" / name for name in SCRIPTS]
-    scripts.append(Path(__file__).resolve().with_name("verify-ai-diagnostics-contract.py"))
-    if not all(p.is_file() for p in scripts) or not (source / "scripts/verify-artifacts.sh").is_file():
-        raise ValueError("required verification scripts are missing")
+    scripts = verification_scripts(source)
     return source, package, output, info, commit, scripts
 
 
@@ -161,7 +173,10 @@ def main(argv=None):
         parser.error(str(error))
     plan = {"sourceCommit": commit, "version": info["CFBundleShortVersionString"], "build": info["CFBundleVersion"],
             "architectures": ["arm64", "x86_64"], "releaseTests": "reuse verified local evidence" if reused else "run with one job; HardwareTests excluded",
-            "scripts": [p.name for p in scripts], "installsOrPublishes": False}
+            "scripts": [p.name for p in scripts],
+            "verificationFiles": [{"path": str(p.relative_to(source)), "sha256": digest(p)}
+                                  for p in scripts + [source / "scripts/verify-artifacts.sh"]],
+            "installsOrPublishes": False}
     if args.plan:
         print(json.dumps(dict(plan, execute=False), indent=2)); return 0
     output.mkdir(mode=0o700)
@@ -170,6 +185,7 @@ def main(argv=None):
               "sourceBinding": "Declared package commit, clean checkout and source hashes; not binary reproducibility proof",
               "hardwareTestsExcluded": True,
               "entrypointSHA256": digest(Path(__file__).resolve()), "scriptSourcesSHA256": {p.name: digest(p) for p in scripts},
+              "artifactVerifierSHA256": digest(source / "scripts/verify-artifacts.sh"),
               "packageFilesUnchanged": None, "sourceUnchanged": None}
     paths = [package / "thermo", package / "thermo-helper", package / "Thermo.app/Contents/Info.plist",
              package / "Thermo.app/Contents/MacOS/Thermo", package / "Thermo.app/Contents/Helpers/thermo",

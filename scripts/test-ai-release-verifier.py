@@ -9,6 +9,7 @@ import plistlib
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 
 ENTRY = Path(__file__).resolve().with_name("verify-ai-release.py")
@@ -22,6 +23,7 @@ class ReleaseVerifierTests(unittest.TestCase):
         self.root = Path(self.temp.name); self.source = self.root / "source"; self.source.mkdir()
         scripts = self.source / "scripts"; scripts.mkdir()
         for name in module.SCRIPTS: (scripts / name).write_text("# owned placeholder; never executed by these failure/plan tests\n")
+        (scripts / "verify-ai-diagnostics-contract.py").write_text("print('fixed-source contract')\n")
         (scripts / "verify-artifacts.sh").write_text("echo '{\"fixture\":true}'\necho 'owned warning' >&2\nexit 7\n")
         version = self.source / "Sources/ThermoKit/Version.swift"; version.parent.mkdir(parents=True)
         version.write_text('enum ThermoVersion { static let string = "1.2.3" }\n')
@@ -72,6 +74,61 @@ class ReleaseVerifierTests(unittest.TestCase):
     def test_existing_output_is_preserved(self):
         self.output.mkdir(); sentinel=self.output/"keep";sentinel.write_text("keep")
         self.run_entry("--plan");self.assertEqual(sentinel.read_text(),"keep")
+
+    def test_every_selected_script_belongs_to_the_fixed_checkout(self):
+        *_, scripts = module.inputs(SimpleNamespace(source=self.source, package=self.package, output=self.output))
+        self.assertEqual(next(p for p in scripts if p.name=="verify-ai-diagnostics-contract.py"), self.source.resolve()/"scripts/verify-ai-diagnostics-contract.py")
+
+    def test_missing_fixed_contract_does_not_fall_back_to_entrypoint_directory(self):
+        (self.source/"scripts/verify-ai-diagnostics-contract.py").unlink()
+        self.commit_artifact_script("exit 0\n")
+        self.run_entry("--plan")
+        self.assertFalse(self.output.exists())
+
+    def test_fixed_contract_cannot_resolve_outside_the_checkout(self):
+        outside=self.root/"outside.py";outside.write_text("print('external fixture')\n")
+        path=self.source/"scripts/verify-ai-diagnostics-contract.py";path.unlink();path.symlink_to(outside)
+        self.commit_artifact_script("exit 0\n")
+        self.run_entry("--plan")
+        self.assertFalse(self.output.exists())
+
+    def test_ignored_untracked_contract_is_not_part_of_fixed_source(self):
+        (self.source/'.gitignore').write_text('scripts/verify-ai-diagnostics-contract.py\n')
+        self.git('rm','--cached','-q','scripts/verify-ai-diagnostics-contract.py')
+        self.commit_artifact_script('exit 0\n')
+        self.run_entry('--plan')
+        self.assertFalse(self.output.exists())
+
+    def test_tracked_internal_script_alias_is_supported_and_fingerprinted(self):
+        path=self.source/'scripts/verify-ai-diagnostics-contract.py';target=path.with_name('contract-implementation.py')
+        path.rename(target);path.symlink_to(target.name)
+        self.commit_artifact_script('exit 0\n')
+        result=self.run_entry('--plan',code=0);plan=json.loads(result.stdout)
+        record=next(x for x in plan['verificationFiles'] if x['path']=='scripts/verify-ai-diagnostics-contract.py')
+        self.assertEqual(record['sha256'],module.digest(target));self.assertFalse(self.output.exists())
+
+    def test_copied_entrypoint_executes_only_fixed_source_contract_on_both_architecture_paths(self):
+        # Owned mock toolchain checks routing/receipts, never real signatures or architectures.
+        contract=self.source/"scripts/verify-ai-diagnostics-contract.py"
+        contract.write_text("from pathlib import Path\nimport sys,json\nprint(json.dumps({'fixed':True,'binary':Path(sys.argv[1]).name}))\n")
+        self.commit_artifact_script("exit 0\n")
+        host=self.root/"host-tools";host.mkdir();entry=host/ENTRY.name;entry.write_bytes(ENTRY.read_bytes())
+        canary=self.root/"outer-contract-ran"
+        (host/"verify-ai-diagnostics-contract.py").write_text("from pathlib import Path\nPath("+repr(str(canary))+").write_text('unexpected')\nraise SystemExit(17)\n")
+        tools=self.root/"bin";tools.mkdir()
+        (tools/"codesign").write_text("#!/bin/sh\nexit 0\n");(tools/"codesign").chmod(0o700)
+        identity=json.dumps({'cliVersion':'1.2.3','appPackage':None})
+        payload="#!"+sys.executable+"\nprint("+repr(identity)+")\n"
+        (tools/"lipo").write_text("#!"+sys.executable+"\nfrom pathlib import Path\nimport sys\nPath(sys.argv[sys.argv.index('-output')+1]).write_text("+repr(payload)+")\n")
+        (tools/"lipo").chmod(0o700)
+        result=subprocess.run([sys.executable,str(entry),'--source',str(self.source),'--package',str(self.package),'--output',str(self.output),'--release-evidence',str(self.evidence)],env=dict(os.environ,PYTHONDONTWRITEBYTECODE='1',PATH=str(tools)+os.pathsep+os.environ['PATH']),capture_output=True,text=True,timeout=30)
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertFalse(canary.exists())
+        report=json.loads((self.output/'result.json').read_text());self.assertTrue(report['complete'])
+        for arch in ['arm64','x86_64']:
+            self.assertEqual(json.loads((self.output/(arch+'-verify-ai-diagnostics-contract.log')).read_text()),{'fixed':True,'binary':'thermo-'+arch})
+        self.assertEqual(report['scriptSourcesSHA256'][contract.name],module.digest(contract))
+        self.assertEqual(report['artifactVerifierSHA256'],module.digest(self.source/'scripts/verify-artifacts.sh'))
 
     def test_dirty_checkout_and_output_inside_source_are_refused(self):
         self.output=self.source/"result";self.run_entry("--plan");self.assertFalse(self.output.exists())
