@@ -1,0 +1,151 @@
+{
+  "recordedDate": "2026-10-20",
+  "codeCommit": "e9a4cc8",
+  "contractCommit": "4dc4ac0",
+  "baselineCommit": "7cedec0",
+  "feature": "Explicit bounded selected-log tail reading; default beginning reading preserved",
+  "command": "thermo agents usage --agent codex --log-file FILE --tail --encoding cl100k_base --json",
+  "sourceVerification": {
+    "sourceFilesMatched": 577,
+    "tests": [
+      {
+        "suite": "ThermoCLITests",
+        "tests": 18,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoAppTests",
+        "tests": 3,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests",
+        "tests": 375,
+        "failures": 0
+      }
+    ],
+    "CLI_SHA256": "1703a1b9bb6822ffb8b3044fedc91b36f37ee296e3d8582270c1739265fef06b",
+    "App_SHA256": "5f0b7eb005d632617a66e7a3bc8240e2b4d9826a4c8daa1598df612ca8455132",
+    "host": "leos-MacBook-Pro.local",
+    "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk"
+  },
+  "controlledCLI": {
+    "passed": true,
+    "fileBytes": 68157873,
+    "fixtureSHA256": "e4f9274a1daf62a48c67a9e805e46e29d37ec8a8d1f8835956622d4f01ea3d1d",
+    "results": {
+      "head": {
+        "tool": "head_only",
+        "mode": "head",
+        "bytesRead": 67108864,
+        "complete": false,
+        "structuredJSONTotalUnknown": true
+      },
+      "tail": {
+        "tool": "tail_only",
+        "mode": "tail",
+        "bytesRead": 67108864,
+        "complete": false,
+        "structuredJSONTotalUnknown": true
+      }
+    },
+    "fixtureUnchanged": true,
+    "modelCalled": false,
+    "installed": false,
+    "published": false
+  },
+  "nativeGUI": {
+    "nativeGUIVerified": true,
+    "tailEntrySelected": true,
+    "observedTool": "tail_only",
+    "headEventAbsent": true,
+    "byteCap": 67108864,
+    "partialCoverageShown": true,
+    "fullJSONTotalUnknown": true,
+    "payloadNotDisplayed": true,
+    "QAProcessesAbsent": true,
+    "originalPIDsMatched": true,
+    "selectedUserConfigAndAppHashesUnchanged": true,
+    "sourceAppSHA256": "5f0b7eb005d632617a66e7a3bc8240e2b4d9826a4c8daa1598df612ca8455132",
+    "runtimeSHA256": "7742fba6277084eabea93658d74d8c48abf27a2edba2630540ff118df78514fb",
+    "fixtureSHA256": "e4f9274a1daf62a48c67a9e805e46e29d37ec8a8d1f8835956622d4f01ea3d1d",
+    "installed": false,
+    "published": false
+  },
+  "liveWindowObservation": {
+    "logBytesAtStart": 193234320,
+    "bytesRead": 67108864,
+    "mode": "tail",
+    "complete": false,
+    "clippedFiles": 1,
+    "toolRows": 6,
+    "completedResults": 147,
+    "inputMetadataStable": false,
+    "rawLogTransferred": false,
+    "modelCalled": false
+  },
+  "contracts": {
+    "diagnostics": {
+      "fixtureOnly": true,
+      "binarySHA256": "1703a1b9bb6822ffb8b3044fedc91b36f37ee296e3d8582270c1739265fef06b",
+      "groupsPassed": 11,
+      "checks": [
+        "post-run checks exclude invalid/legacy pairs, retain all outcomes and reject incomplete v2 records",
+        "serialized media/truncation markers remain separate from native image blocks and text accounting in both encodings",
+        "local missing schema target diagnosed, valid/boolean/identified schemas not misreported; no tool call or reference leakage",
+        "root-declared cached Skill counted once with an informational layout hint and no mutation actions; extensionless references checked",
+        "latest cumulative counters, decreases and conflicts stay separate from requests and tools",
+        "separate Codex namespaces group with legacy MCP names; native images excluded and same-name outer tools stay distinct",
+        "structured JSON is measured separately from acknowledgment text; unavailable envelopes stay unknown and payloads are not exported",
+        "all JSON value shapes are measured, null differs from absence, array ranking recovers and returned-text accounting stays separate",
+        "structured JSON totals cover all MCP rows; missing replies preserve the known subset while totals stay unknown",
+        "explicit selected-file head and tail windows are recorded; a small tail preserves complete row measurements",
+        "CLI text and structured token order is declared in JSON, shared with human output, preserves metrics and keeps known zero before unknown"
+      ],
+      "modelsOrDevicesUsed": false
+    },
+    "reference": {
+      "passed": true,
+      "encodings": [
+        "cl100k_base",
+        "o200k_base"
+      ],
+      "standaloneBinary": true,
+      "skillMCPAndUsageCountsMatchReference": true,
+      "modelNamesNotInferred": true
+    }
+  },
+  "limits": {
+    "selectedFileBytes": 67108864,
+    "boundaryProbeIncludedInByteBudget": true,
+    "readTimeSeconds": 20,
+    "firstPartialRecordSkipped": true,
+    "eventTimeFiltersUnchanged": true,
+    "defaultHeadUnchanged": true,
+    "oldReadWindowUnknown": true
+  },
+  "motivation": {
+    "fullReportBytesInInitialScopedCheck": 11905,
+    "originalSelectedLogBytes": 192778364,
+    "finding": "Report was not large; the large selected file had no explicit tail choice"
+  },
+  "limitations": [
+    "Controlled large file uses explicit event records and sparse padding, not production traffic or a performance benchmark",
+    "The local active log changed during tail analysis. It is a bounded observation, not a stable paired comparison or full coverage proof",
+    "Raw active log stayed on the original machine; public record contains only aggregate facts",
+    "396 targeted Debug tests, no full Release or x86_64 acceptance"
+  ],
+  "modelCalled": false,
+  "installed": false,
+  "published": false,
+  "artifactSHA256": {
+    "source-verification.json": "07385fefaaa04eb4f1cfd7184c196db1689006578abf13ed8c6c24b373b789bb",
+    "live-window-observation.json": "bf2564a877410db8e4b04fa293b784858bf3b6034bfe4b9f8f12870f2f8a3e8b",
+    "gui.json": "d767d55a47191dceb95125d4f67111b752c106715b4e30d848632272d67af88b",
+    "controlled-result.json": "edb22eee519be5ee0193cf3d5108500725478ab25038acdc21b6133682601a56",
+    "tests.log": "0285db8dd334f58da413d80d42bfcefb72b8c61add79ca413ba2e0d914d3444b",
+    "contract.json": "b6b51b08be5e6b69a063c4ce84cac66c9032be27ef62fd11c4ce1862c0e10393",
+    "reference-contract.json": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d"
+  }
+}
