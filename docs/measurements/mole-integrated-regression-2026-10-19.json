@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-19",
+  "source": "857dcdc33fe2659c5117f1bc7c9ed0d562c0a6c9",
+  "command": "swift test --jobs 4 --skip HardwareTests",
+  "exitCode": 0,
+  "total": 1711,
+  "failures": 0,
+  "suites": {
+    "ThermoKitTests.xctest": {
+      "tests": 198,
+      "failures": 0
+    },
+    "ThermoHelperTests.xctest": {
+      "tests": 30,
+      "failures": 0
+    },
+    "ThermoCLITests.xctest": {
+      "tests": 108,
+      "failures": 0
+    },
+    "ThermoAppTests.xctest": {
+      "tests": 304,
+      "failures": 0
+    },
+    "CleanKitTests.xctest": {
+      "tests": 751,
+      "failures": 0
+    },
+    "AgentDoctorTests.xctest": {
+      "tests": 275,
+      "failures": 0
+    },
+    "AgentCoreTests.xctest": {
+      "tests": 45,
+      "failures": 0
+    }
+  },
+  "logSHA256": "2e1666e5a4286bd292bce88b2c5a33fddfe5c6014f18b29e1445d1e28f5c1a9c",
+  "scope": "Merged parity fixes and current main AI diagnostics; non-hardware regression, not installed signed binary or live hardware acceptance"
+}
