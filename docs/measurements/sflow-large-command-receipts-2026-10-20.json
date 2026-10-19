@@ -1,0 +1,236 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUTC": "2026-10-19T16:16:27.011717+00:00",
+  "source": {
+    "repository": "leeguooooo/session-flow",
+    "testedCommit": "a3d7370d8e1f064fd59675b45af17ed267d054ea",
+    "testedTree": "c79af4b40eb4d8053d18fc1a08d679a18a2733da",
+    "deliveredCommit": "1df264ecfc02c4bc6bd43649992899b5df64b4de",
+    "codeAndTestInputsMatchTestedCommit": true
+  },
+  "problem": {
+    "observedInPriorSkillProbe": true,
+    "priorArtifactFiles": 555,
+    "priorCommandExitCode": 0,
+    "failure": "formatted result exceeds 128 KiB; controller could not persist generated command receipt",
+    "priorEvidence": "codex-thermo-skill-loading-2026-10-20.json"
+  },
+  "change": {
+    "existingContentAddressedResultFilesUsed": true,
+    "completeCommandReceiptLimitBytes": 67108864,
+    "agentFormattedResultLimitBytes": 131072,
+    "agentRawReportLimitBytes": 65536,
+    "largeReadLimitChosenFromFrozenCommandStep": true,
+    "referenceCannotSelfElevateLimit": true,
+    "hashByteCountStepAndRegularFileChecksPreserved": true,
+    "artifactSizeMismatchesBlockSuccess": true,
+    "receiptStorageErrorLeavesSameJobExited": true,
+    "errorPersistedBeforeControllerStops": true,
+    "resumeDoesNotReexecuteCommand": true,
+    "verifiedRegularArtifactReuse": true,
+    "changedUnreadableOrSymlinkArtifactsRefetched": true,
+    "whenAndExpectObjectFieldsOnlyDocumented": true,
+    "remoteProtocolChanged": false
+  },
+  "CI": {
+    "runID": "4ee8318e-4fe5-4c86-833b-5e4727bc393f",
+    "host": "leos-MacBook-Pro.local",
+    "sourceTree": "c79af4b40eb4d8053d18fc1a08d679a18a2733da",
+    "sourceUnchanged": true,
+    "BunVersion": "1.3.6",
+    "developerDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "testsPassed": 188,
+    "testsFailed": 0,
+    "tmuxRequired": true,
+    "receipts": [
+      {
+        "name": "install",
+        "exitCode": 0,
+        "seconds": 0.2526117090601474,
+        "argv": [
+          "/Users/leo/.bun/bin/bun",
+          "install",
+          "--frozen-lockfile",
+          "--ignore-scripts"
+        ]
+      },
+      {
+        "name": "baseline",
+        "exitCode": 1,
+        "seconds": 21.611674917046912,
+        "argv": [
+          "/Users/leo/.bun/bin/bun",
+          "test",
+          "test/hosts.test.ts",
+          "--test-name-pattern",
+          "large command receipts"
+        ]
+      },
+      {
+        "name": "tests",
+        "exitCode": 0,
+        "seconds": 67.01444295898546,
+        "argv": [
+          "/Users/leo/.bun/bin/bun",
+          "test"
+        ]
+      },
+      {
+        "name": "check",
+        "exitCode": 0,
+        "seconds": 0.9223673340165988,
+        "argv": [
+          "/Users/leo/.bun/bin/bun",
+          "run",
+          "check"
+        ]
+      },
+      {
+        "name": "build",
+        "exitCode": 0,
+        "seconds": 0.09068475000094622,
+        "argv": [
+          "/Users/leo/.bun/bin/bun",
+          "run",
+          "build"
+        ]
+      }
+    ],
+    "collectedHashesVerified": 17,
+    "regressionCoverage": [
+      "555 complete artifact records plus log retained",
+      "small reference to a large immutable receipt",
+      "journal reload and same-job collection without command replay",
+      "large dependency receipt and all artifact files copied to another host fixture",
+      "agent result limits and wrong-step/type rejection",
+      "byte/hash mismatch and over-limit result rejection",
+      "artifact size mismatch blocks zero-exit command",
+      "receipt-storage failure retains exited job and recovery diagnostic",
+      "verified artifact reuse; changed files and symlinks fetched again"
+    ]
+  },
+  "nativeAcceptance": {
+    "scope": "Owned synthetic two-command workflow on target Mac using Mac190; no real task records committed",
+    "result": {
+      "passed": true,
+      "runID": "d56001df-a0fc-4d32-ad25-4116e1d8550e",
+      "jobID": "d56001df-a0fc-4d32-ad25-4116e1d8550e-produce",
+      "labels": {
+        "baseline": "0.8.0",
+        "candidate": "0.8.0"
+      },
+      "baselineSHA256": "468025d06032587ee20cca919e8eece3fb987853af1c6cb76945b5460bc0ec0a",
+      "candidateSHA256": "33ca7d9f859921097b7e954d06ef8dde27cc010a6fbcf8ceb0664882f3c21909",
+      "baselineFailedDuringReceiptStorageAfterCommandExit": true,
+      "sameOriginalJobRecovered": true,
+      "oldControllerPhase": "exited / running; no stored result",
+      "finalRunStatus": "done",
+      "finalProducerPhase": "collected",
+      "artifactFiles": 555,
+      "allArtifactBytesAndHashesVerified": true,
+      "receiptBytes": 392524,
+      "referenceBytes": 685,
+      "fullResultSHA256": "4f7225d1d8f04a9ff595a895b5be2086a568ad1bfc1b004013b24690c3fdde2f",
+      "dependentGateEvaluatedVerifiedReceipt": true,
+      "dependentGateField": "details.exitCode",
+      "fullIndexCheckedIndependently": true,
+      "producerExecutions": 1,
+      "dependentExecutions": 1,
+      "originalStartedAndExitJournalsIdentical": true,
+      "remoteHelperVersionBefore": "0.7.1",
+      "remoteHelperVersionAfter": "0.7.1",
+      "noJournalMutationByTest": true,
+      "modelsCalled": false,
+      "installed": false,
+      "published": false
+    },
+    "referenceRepresentationScope": "Standalone JSON encoding of the stored result-reference object, not total journal size or model request tokens",
+    "baselineRunExit": {
+      "name": "baseline-run",
+      "exitCode": 1,
+      "seconds": 41.112414208000004
+    },
+    "candidateResumeExit": {
+      "name": "candidate-resume",
+      "exitCode": 0,
+      "seconds": 2.249318625000001
+    },
+    "noJournalEditsOrFrozenWorkflowChangesUsedForRecovery": true,
+    "all555LocalArtifactsRecheckedByAcceptance": true
+  },
+  "resumeObservations": {
+    "beforeCacheCandidateSHA256": "55477e7c0ef6e42d11f16b03f32a7e4237b2462a842bf9fe4d0923e89c35acaf",
+    "beforeCacheResumeSeconds": 41.450494834,
+    "afterCacheResumeSeconds": 2.249318625000001,
+    "artifactsBoth": 555,
+    "independentRunsSingleObservationEach": true,
+    "generalSpeedupClaim": false,
+    "verifiedArtifactRefetchAvoidanceTestedSeparately": true
+  },
+  "excludedAttempts": {
+    "initialOwnedConfigPreflight": {
+      "reason": "owned hosts config omitted required version=1",
+      "remoteCommandStarted": false,
+      "workflowRunCreated": false
+    },
+    "unsupportedArrayGate": {
+      "reason": "owned fixture used details.artifactFiles.length; field() traverses objects only",
+      "runID": "05c0916a-8756-4cfd-a0d0-7a84dd961551",
+      "finalRunStatus": "blocked",
+      "producerPhase": "collected",
+      "producerState": "blocked",
+      "receiptBytes": 385852,
+      "artifactFiles": 555,
+      "fixtureRejectedByExpect": true,
+      "includedAsFullAcceptance": false
+    },
+    "oldCodeRegression": {
+      "sourceCommit": "21c50a0",
+      "expectedFailure": true,
+      "diagnosticMatched": "formatted result exceeds 128 KiB"
+    }
+  },
+  "cleanup": [
+    {
+      "ownedCounters": {
+        "producer-runs": [
+          "once"
+        ]
+      },
+      "removed": true
+    },
+    {
+      "ownedCounters": {
+        "consumer-runs": [
+          "once"
+        ],
+        "producer-runs": [
+          "once"
+        ]
+      },
+      "removed": true
+    },
+    {
+      "ownedCounters": {
+        "consumer-runs": [
+          "once"
+        ],
+        "producer-runs": [
+          "once"
+        ]
+      },
+      "removed": true
+    }
+  ],
+  "boundaries": {
+    "installedDriverOrHostUpgraded": false,
+    "published": false,
+    "modelsCalled": false,
+    "ordinaryWorkerReportLimitsRelaxed": false,
+    "artifactIndexesTruncated": false,
+    "realWorkflowRecordsOrCredentialsCommitted": false,
+    "otherSessionsStopped": false,
+    "syntheticNativeDataOnly": true
+  }
+}
