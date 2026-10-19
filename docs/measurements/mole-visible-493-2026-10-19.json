@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-19",
+  "version": "1.1.29",
+  "build": "493",
+  "overallAccepted": false,
+  "method": "CUA native AX and screenshot; read-only process stack sample",
+  "priorWindowLookupBlockResolved": true,
+  "acceptedObservations": {
+    "settings": "Version/build and running helper visible; automatic updates enabled",
+    "fan": "Existing fixed 6617 RPM policy and manual register confirmation visible; no policy submitted",
+    "battery": "Protection off; state-dependent controls readable; Open Battery Settings reached macOS Battery pane; no charging policy submitted",
+    "awdl": "Idle sheet visible, start enabled and stop disabled; no session started",
+    "screen": "Permission missing message visible, Start disabled, accessibility navigation reached Thermo toggle off; no permission granted or session started"
+  },
+  "overview": {
+    "accepted": false,
+    "observed": "Checking headline, load and thermal pressure remain empty after CPU-page roundtrip and window-title click; sensor/memory/disk values change",
+    "stackSample": {
+      "process": 732,
+      "installedVersion": "1.1.29 (493)",
+      "sampleTime": "2026-10-19T10:04:42.580+09:00",
+      "durationSeconds": 2,
+      "mainThreadPredominantlyWaitingForEvents": true,
+      "pulseQueueExecutionCaptured": false,
+      "interpretation": "No sustained main-thread block captured. Absence of queue execution in this short sample does not prove timer inactivity or establish root cause."
+    },
+    "timeEvidence": "AX timeline descriptions retain Oct 17 intervals while screenshot axis and shell sample show Oct 19; cause unverified",
+    "nextCheck": "Observe model visibility, pulse holders and timer state in a controlled hosted-window reproduction before changing lifecycle behavior"
+  },
+  "remaining": [
+    "Overview sampling root cause and repair",
+    "Installed screen exit/expiry and hardware keys",
+    "Charging and AWDL hardware sessions",
+    "Full parity matrix gates"
+  ],
+  "privacy": "Raw system permission inventory and raw stack report retained outside tracked documentation; no personal process inventory included"
+}
