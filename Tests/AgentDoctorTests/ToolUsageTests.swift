@@ -147,6 +147,67 @@ final class ToolUsageTests: XCTestCase {
         XCTAssertEqual(p.report().tools.first?.calls, 1)
         XCTAssertEqual(p.report().coverage.otherToolCalls, 1)
     }
+    func namespacedCall(_ id: String, _ namespace: Any, _ name: String, _ seconds: Double) -> [String: Any] {
+        event("response_item", ["type": "function_call", "call_id": id, "namespace": namespace,
+                                "name": name, "arguments": "private arguments"], seconds)
+    }
+    func testSeparateMCPNamespaceMatchesLegacyGroupingAndRetainsMeasurements() throws {
+        var p = parser()
+        p.consume(namespacedCall("new", "mcp__cua_repl", "js", 1), host: "codex", session: "a")
+        p.consume(output("new", "hello", 3), host: "codex", session: "a")
+        p.consume(call("old", "mcp__cua_repl__js", 4), host: "codex", session: "a")
+        p.consume(output("old", "world", 7), host: "codex", session: "a")
+        let report = p.report(), row = try XCTUnwrap(report.tools.first)
+        XCTAssertEqual(report.tools.count, 1)
+        XCTAssertEqual(row.server, "cua_repl"); XCTAssertEqual(row.name, "js")
+        XCTAssertEqual(row.calls, 2); XCTAssertEqual(row.completed, 2)
+        XCTAssertEqual(row.returnedTextBytes, 10); XCTAssertEqual(row.timingSamples, 2)
+        XCTAssertEqual(row.totalObservedSeconds, 5)
+        XCTAssertEqual(row.unknownErrorStatus, 2)
+        XCTAssertEqual(report.coverage.otherToolCalls, 0)
+    }
+    func testSeparateNamespacesKeepSameShortNamesDistinctAndIgnoreScriptMentions() {
+        var p = parser()
+        for (id, namespace) in [("a", "mcp__cua_repl"), ("b", "mcp__other"), ("c", "clock")] {
+            p.consume(namespacedCall(id, namespace, "js", 1), host: "codex", session: "a")
+            p.consume(output(id, "mcp__fake__tool", 2), host: "codex", session: "a")
+        }
+        let report = p.report()
+        XCTAssertEqual(Set(report.tools.compactMap(\.server)), ["cua_repl", "other"])
+        XCTAssertEqual(report.coverage.otherToolCalls, 1)
+        XCTAssertEqual(report.coverage.unattributedResults?.byTool?.first?.name, "clock.js")
+    }
+    func testExplicitNamespaceDoesNotReinterpretLegacyLookingNameOrMalformedNamespace() {
+        var p = parser()
+        for (i, namespace) in (["clock", "mcp__cua_repl", "mcp__bad/path", ["mcp__server"]] as [Any]).enumerated() {
+            p.consume(namespacedCall(String(i), namespace, "mcp__server__tool", 1), host: "codex", session: "a")
+        }
+        XCTAssertEqual(p.report().tools.count, 1)
+        XCTAssertEqual(p.report().tools.first?.server, "cua_repl")
+        XCTAssertEqual(p.report().tools.first?.name, "mcp__server__tool")
+        XCTAssertEqual(p.report().coverage.otherToolCalls, 3)
+        p.consume(namespacedCall("functions", "functions", "mcp__server__tool", 1), host: "codex", session: "a")
+        XCTAssertEqual(Set(p.report().tools.compactMap(\.server)), ["cua_repl", "server"])
+    }
+    func testNamespacedMCPMeasuresCodexInputBlocksWithoutImageDataIncludingOutOfOrder() throws {
+        let blocks: [[String: Any]] = [["type": "input_text", "text": "hello"],
+                                     ["type": "input_image", "image_url": "data:image/png;base64,private-image"]]
+        let encoded = String(decoding: try JSONSerialization.data(withJSONObject: blocks), as: UTF8.self)
+        for value: Any in [blocks, encoded] {
+            for reversed in [false, true] {
+                var p = parser()
+                let events = [namespacedCall("image", "mcp__cua_repl", "js", 1), output("image", value, 3)]
+                for event in reversed ? events.reversed().map({ $0 }) : events {
+                    p.consume(event, host: "codex", session: "a")
+                }
+                let row = try XCTUnwrap(p.report().tools.first)
+                XCTAssertEqual(row.returnedTextBytes, 5)
+                XCTAssertEqual(row.nonTextBlocks, 1)
+                XCTAssertEqual(row.unknownErrorStatus, 1)
+                XCTAssertEqual(row.serializedMediaTextResults, 0)
+            }
+        }
+    }
     func testRepeatedReportsDoNotAccumulateDerivedCoverageCounts() {
         var p = parser()
         p.consume(call("other", "exec", 1), host: "codex", session: "a")

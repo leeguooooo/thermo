@@ -96,14 +96,15 @@ struct ToolUsageParser {
         }
         return nil
     }
-    mutating func start(host: String, session: String, id: String, name: String, input: Any?, time: Date?, nativeMCP: (server: String, tool: String)? = nil) {
+    mutating func start(host: String, session: String, id: String, name: String, input: Any?, time: Date?, nativeMCP: (server: String, tool: String)? = nil, allowLegacyClassification: Bool = true) {
         guard id.count <= 512, !id.isEmpty else { coverage.limitReached = true; return }
         let key = host + "|" + session + "|" + id
         if calls[key]?.startSeen == true { coverage.duplicateRecords += 1; return }
         guard calls.count < 100_000 || calls[key] != nil else { coverage.limitReached = true; return }
         var call = calls[key] ?? Call(host: host)
-        let mcp = nativeMCP ?? Self.mcpName(name)
-        let classification: (String, String?, String)? = mcp.map { ("mcp", Self.label($0.server), Self.label($0.tool)) } ?? classification(name, input: input)
+        let mcp = nativeMCP ?? (allowLegacyClassification ? Self.mcpName(name) : nil)
+        let classification: (String, String?, String)? = mcp.map { ("mcp", Self.label($0.server), Self.label($0.tool)) }
+            ?? (allowLegacyClassification ? classification(name, input: input) : nil)
         call.kind = classification?.0; call.server = classification?.1; call.name = classification?.2
         if let classification {
             let normalized = name.hasPrefix("functions.") ? String(name.dropFirst(10)) : name
@@ -172,14 +173,17 @@ struct ToolUsageParser {
         let supported = value is String || (value as? [String: Any]).map { $0["content"] is [[String: Any]] || $0["structuredContent"] != nil } == true
         return (measured.0, measured.1, supported)
     }
-    mutating func end(host: String, session: String, id: String, value: Any?, error: Bool?, time: Date?, invocationFailed: Bool = false) {
+    mutating func end(host: String, session: String, id: String, value: Any?, error: Bool?, time: Date?, invocationFailed: Bool = false, codexInputBlocks: Bool = false) {
         guard id.count <= 512, !id.isEmpty else { coverage.limitReached = true; return }
         let key = host + "|" + session + "|" + id
         if calls[key]?.endSeen == true { coverage.duplicateRecords += 1; return }
         guard calls.count < 100_000 || calls[key] != nil else { coverage.limitReached = true; return }
         var call = calls[key] ?? Call(host: host)
         if call.kind == nil { call.unattributed = Self.unattributedResult(value, host: host, encoding: encoding) }
-        let measured = call.startSeen && call.kind == nil ? (TextFootprint(""), 0, nil as Bool?) : Self.result(value, encoding: encoding)
+        let result = Self.result(value, encoding: encoding)
+        let inputBlocks = codexInputBlocks ? Self.unattributedResult(value, host: host, encoding: encoding) : nil
+        let measured = call.startSeen && call.kind == nil ? (TextFootprint(""), 0, nil as Bool?)
+            : (inputBlocks?.text ?? result.0, inputBlocks?.nonText ?? result.1, result.2)
         call.ended = time; call.endSeen = true
         call.invocationFailed = invocationFailed
         // An inner result's isError is not the outer tool's status, including out-of-order events.
@@ -188,7 +192,7 @@ struct ToolUsageParser {
         else if error != nil || measured.2 != nil { call.isError = false }
         else { call.isError = nil }
         call.reportedErrorCode = measured.2 == true ? MCPErrorCodeObservation.code(in: value) : nil
-        call.textObservation = ToolResultTextObservation(value, codexInputBlocks: host == "codex" && call.kind == nil)
+        call.textObservation = ToolResultTextObservation(value, codexInputBlocks: host == "codex" && (codexInputBlocks || call.kind == nil))
         call.referenceTokens = measured.0.referenceTokens
         call.textBytes = measured.0.bytes; call.estimatedTokens = measured.0.estimatedTokens; call.nonText = measured.1
         if time == nil { coverage.missingTimestamps += 1 }
@@ -237,9 +241,22 @@ struct ToolUsageParser {
             let type = payload["type"] as? String ?? ""
             if object["type"] as? String == "response_item" {
                 if ["function_call", "custom_tool_call"].contains(type), let id = payload["call_id"] as? String, let name = payload["name"] as? String {
-                    start(host: host, session: session, id: id, name: name, input: nil, time: time)
+                    // Current Codex response items can store namespace separately from the short name.
+                    // Trust that explicit protocol identity; never infer nested calls from arguments.
+                    let namespace = payload["namespace"] as? String
+                    let legacy = payload["namespace"] == nil || namespace == "functions"
+                    var nativeMCP: (server: String, tool: String)?
+                    if let namespace, namespace.range(of: #"^mcp__[A-Za-z0-9_-]{1,195}$"#, options: .regularExpression) != nil,
+                       name.range(of: #"^[A-Za-z0-9_-]{1,200}$"#, options: .regularExpression) != nil {
+                        nativeMCP = (String(namespace.dropFirst(5)), name)
+                    }
+                    let qualifiedName = namespace.flatMap {
+                        $0.range(of: #"^[A-Za-z0-9_-]{1,200}$"#, options: .regularExpression) != nil ? $0 + "." + name : nil
+                    } ?? "Unidentified outer tool"
+                    start(host: host, session: session, id: id, name: legacy ? name : qualifiedName,
+                          input: nil, time: time, nativeMCP: nativeMCP, allowLegacyClassification: legacy)
                 } else if ["function_call_output", "custom_tool_call_output"].contains(type), let id = payload["call_id"] as? String {
-                    end(host: host, session: session, id: id, value: payload["output"], error: nil, time: time)
+                    end(host: host, session: session, id: id, value: payload["output"], error: nil, time: time, codexInputBlocks: true)
                 }
             } else if object["type"] as? String == "event_msg", ["mcp_tool_call_begin", "mcp_tool_call_end"].contains(type),
                       let id = payload["call_id"] as? String,
