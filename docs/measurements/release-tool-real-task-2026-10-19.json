@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "observedAtUTC": "2026-10-19T10:14:38Z",
+  "task": "Read latest Thermo Release metadata and verify published checksum references",
+  "repository": "leeguooooo/thermo",
+  "releaseURL": "https://github.com/leeguooooo/thermo/releases/tag/v1.1.38",
+  "releaseId": 417056697,
+  "tag": "v1.1.38",
+  "publishedAt": "2026-10-19T08:23:43Z",
+  "toolRoutes": {
+    "connector": {
+      "name": "github_fetch",
+      "GETURL": "https://api.github.com/repos/leeguooooo/thermo/releases/latest",
+      "explicitIsError": false,
+      "elapsedSeconds": 0.746
+    },
+    "cli": {
+      "argv": [
+        "gh",
+        "api",
+        "repos/leeguooooo/thermo/releases/latest"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 2.6582862499999464
+    },
+    "parsedPayloadsEqual": true,
+    "trialCountPerRoute": 1,
+    "performanceRankingEstablished": false,
+    "authIdentityParityVerified": false
+  },
+  "responseRepresentation": {
+    "compactJSONEnvelopeBytes": 23425,
+    "releasePayloadUTF8Bytes": 10739,
+    "CLIStdoutBytes": 10739,
+    "taskFieldsCompactJSONBytes": 893,
+    "sameContentRepeatedInStructuredEnvelope": true,
+    "taskProjectionPreservesReleaseIdTagDraftPrereleasePublicationTimeAssetNameSizeDigestState": true,
+    "countsAreUTF8OrCompactJSONRepresentationsNotWireOrModelContext": true,
+    "requestOrBillingTokenSavingsMeasured": false
+  },
+  "liveChecksumCheck": {
+    "downloadedManifest": "Thermo-1.1.38-SHA256SUMS.txt",
+    "manifestBytes": 356,
+    "SHA256": "40783150fb71f9af5683acb37ee62b3edeb898d38ff13c65fce25e564832f1e0",
+    "manifestByteHashMatchesGitHubAPIDigest": true,
+    "missingListedAssets": [
+      "thermo-cli-1.1.38.zip"
+    ],
+    "existingListedAssetDigestsMatchAPI": [
+      "Thermo-1.1.38.dmg",
+      "Thermo-1.1.38.zip",
+      "thermo-cli-macos-universal.tar.gz"
+    ],
+    "releaseMetadataStableBeforeAfter": true,
+    "taskMetadataReadPassed": true,
+    "publishedManifestReferenceCheckPassed": false,
+    "classification": "Release content inconsistency; both tool routes read it correctly",
+    "originalManifestGeneratorProvenance": "Not established; repository build entry previously did not generate combined public checksum manifest"
+  },
+  "sourceFix": {
+    "sourceCommit": "55607029f931654317ebf28cd4b7690707dfd647",
+    "sourceTree": "005a96b9070ff4d8a72ebfd181469278e30c4734",
+    "buildScriptSHA256": "4e1b0811a40246030ce782e1e8b40e7b6e7db68909fc80cbdf5b27a454e58f5a",
+    "behavior": "Atomically generate combined SHA256 manifest for public DMG, App ZIP and CLI tar.gz only; clear stale owned archives and manifest during product replacement",
+    "notaryZIPRemainsIntermediate": true,
+    "requiredProductMissing": "Fail and remove temporary output; do not replace a previously committed manifest"
+  },
+  "validation": {
+    "remoteRunId": "b4d134b1-d54d-4736-947f-dae58736f58e",
+    "host": "leos-MacBook-Pro.local",
+    "controls": [
+      "exact-public-assets-and-byte-hashes",
+      "missing-product-refuses-without-partial-manifest",
+      "stale-owned-products-cleared-unrelated-file-preserved"
+    ],
+    "existingBuildArgumentTests": 3,
+    "existingBuildArgumentFailures": 0,
+    "sourceUnchanged": true,
+    "artifactHashesVerified": 3
+  },
+  "reviewCandidate": {
+    "file": "thermo-1.1.38-SHA256SUMS-candidate.txt",
+    "SHA256": "5dca9ab37c7cf485cf4e1058da4b4a82a68ccfbc66d0cfc4fa3b14695457ee24",
+    "entries": 3,
+    "origin": "Retain the three existing manifest lines whose named assets and digests match the observed GitHub API; remove only the missing notary ZIP line",
+    "uploaded": false
+  },
+  "boundaries": {
+    "largeBinaryAssetsDownloaded": false,
+    "largeBinaryBytesFullyVerified": false,
+    "newModelRuns": 0,
+    "compilation": false,
+    "signingOrNotarization": false,
+    "installation": false,
+    "externalWrites": false,
+    "GitHubReleaseChanged": false,
+    "sourceFixInPublishedBuildVerified": false
+  }
+}
