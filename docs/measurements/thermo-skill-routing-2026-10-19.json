@@ -1,0 +1,300 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUTC": "2026-10-19T14:52:00.416393+00:00",
+  "skillSource": {
+    "source": "/Users/leo/.codex/artifacts/thermo-skill-routing-source",
+    "commit": "020b104493bbee5e8f625dc6cc1d3cd7d29941e5",
+    "tree": "49406432555aa406baa64fb22873ff63d3782f55"
+  },
+  "change": {
+    "entryRoutesByUserTask": true,
+    "AIQuestionsStartWithDiagnosticRoute": true,
+    "fourReferences": [
+      "performance.md",
+      "browser-tabs.md",
+      "storage-and-apps.md",
+      "ai-diagnostics.md"
+    ],
+    "optionalCLIFlagsCheckedAgainstChosenExecutable": true,
+    "olderByteOrderNotAssumedTokenOrder": true,
+    "missingStructuredOrInstructionObservationsNotZero": true,
+    "excludedBlocksNotZeroCostCalls": true,
+    "catalogMetadataUnchanged": true,
+    "noImplicitInvocationPolicyChange": true
+  },
+  "staticFootprints": {
+    "encoding": "cl100k_base",
+    "engine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+    "baselineEntry": {
+      "bytes": 19250,
+      "referenceTokens": 4589
+    },
+    "candidateEntry": {
+      "bytes": 3716,
+      "referenceTokens": 917
+    },
+    "AIReference": {
+      "bytes": 6837,
+      "referenceTokens": 1502
+    },
+    "catalogReferenceTokensBeforeAfter": 138,
+    "entryPlusAIIndependentDocumentTokenSum": 2419,
+    "allInstructionMarkdownBytes": 23454,
+    "scope": "Counts the files as ordinary text. The entry-plus-reference sum is a sum of independent document counts, not captured host loading, a concatenated model request, or billing usage. All instructions grew due to added compatibility detail; only the task-specific read path is smaller.",
+    "sourceDocuments": {
+      "SKILL.md": {
+        "UTF8Bytes": 3716,
+        "SHA256": "c5c590ecaf778ddd501e812f7fdb297f38961e50f67450f1cd9ab0b896e710bc"
+      },
+      "references/ai-diagnostics.md": {
+        "UTF8Bytes": 6837,
+        "SHA256": "e6d870124ab7bf9bd81fcd24e823f1ceb303988c06c416a0eeb1508a0f71177b"
+      },
+      "references/browser-tabs.md": {
+        "UTF8Bytes": 3467,
+        "SHA256": "ad8d11601c05cb2758d5c9d5bd7049c522bb53c06b9c5fbd03025fd6897a534c"
+      },
+      "references/performance.md": {
+        "UTF8Bytes": 5394,
+        "SHA256": "255b829fbcc437ae95b06653a9c69c90e4f146c976ac90932869291f1077d9fc"
+      },
+      "references/storage-and-apps.md": {
+        "UTF8Bytes": 4040,
+        "SHA256": "feacb6a56821083d1884b582f708ca479d07c5db95ada2c53134ee1a5d4f015a"
+      }
+    }
+  },
+  "validation": {
+    "officialSkillCreatorFormatCheckOnTargetMac": "passed before and after edit",
+    "Mac190PythonYAMLDependency": "PyYAML unavailable; no package was installed",
+    "Mac190NativeCLIParser": "passed; four local references checked, no findings",
+    "remoteRunID": "f37d99e1-a578-43db-a143-f9dd52f3a23d",
+    "remoteHost": "leos-MacBook-Pro.local",
+    "remoteSourceTree": "49406432555aa406baa64fb22873ff63d3782f55",
+    "remoteSourceUnchanged": true,
+    "remoteCLI_SHA256": "ef8ec9e40a3633c07f7eb5c709404218425ff746d2a4316f016f0f04c9b65fa0",
+    "collectedFileHashesVerified": 4,
+    "meterCarrierIsNotInstalledSkill": true,
+    "preservation": {
+      "originalModeSectionsMovedVerbatim": [
+        "Start here",
+        "Machine",
+        "Fans",
+        "Lid closed, still awake",
+        "Browser tab groups",
+        "Disk",
+        "Apps",
+        "What Thermo changed"
+      ],
+      "entrySectionsPreserved": [
+        "Install",
+        "App settings",
+        "Rules"
+      ],
+      "AIChangesInsertionsOnly": true,
+      "frontmatterUnchanged": true
+    },
+    "remoteStageCleanup": {
+      "ownedStageRemoved": true,
+      "filesVerifiedBeforeRemoval": 2,
+      "pendingJobTerminal": "done / collected"
+    }
+  },
+  "nativeCompatibility": {
+    "passed": true,
+    "method": "Executed the documented capability and read-only log-analysis branches manually against owned native-log fixtures; no model selection or Skill-loading behavior test",
+    "results": {
+      "installed-snapshot": {
+        "CLI_SHA256": "7dd2c1d0b9323b909b3b54d3ba1c61ffe8d4eb6ea2c0054ca53067a6ade84111",
+        "label": "1.1.40",
+        "sortAdvertised": false,
+        "sortFlagUsed": false,
+        "referenceEncoding": "cl100k_base",
+        "nativeOrderDeclaration": null,
+        "rawFirstTool": "ascii",
+        "checkedTextRanking": [
+          [
+            "unicode",
+            200
+          ],
+          [
+            "ascii",
+            125
+          ],
+          [
+            "large_json",
+            1
+          ],
+          [
+            "unknown",
+            0
+          ]
+        ],
+        "checkedStructuredRanking": [],
+        "structuredUnmeasured": true,
+        "uninspectableJSONUnknown": true,
+        "uninspectableRowReturnedTextBytes": 0,
+        "uninspectableRowNonTextBlocks": 1,
+        "wholeCallCostMeasured": false,
+        "SkillAcknowledgmentBytes": 2,
+        "SkillLinkedInstructionEvents": 0,
+        "SkillInstructionCostKnown": false,
+        "payloadNotExported": true,
+        "CLIBytesUnchanged": true
+      },
+      "end-installed-snapshot": {
+        "CLI_SHA256": "bf088f6e3e1c72019e27993a3912f2c4f1290bbf16c5344c5ecb6f7b51b6ea8e",
+        "label": "1.1.40",
+        "sortAdvertised": false,
+        "sortFlagUsed": false,
+        "referenceEncoding": "cl100k_base",
+        "nativeOrderDeclaration": null,
+        "rawFirstTool": "ascii",
+        "checkedTextRanking": [
+          [
+            "unicode",
+            200
+          ],
+          [
+            "ascii",
+            125
+          ],
+          [
+            "large_json",
+            1
+          ],
+          [
+            "unknown",
+            0
+          ]
+        ],
+        "checkedStructuredRanking": [],
+        "structuredUnmeasured": true,
+        "uninspectableJSONUnknown": true,
+        "uninspectableRowReturnedTextBytes": 0,
+        "uninspectableRowNonTextBlocks": 1,
+        "wholeCallCostMeasured": false,
+        "SkillAcknowledgmentBytes": 2,
+        "SkillLinkedInstructionEvents": 0,
+        "SkillInstructionCostKnown": false,
+        "payloadNotExported": true,
+        "CLIBytesUnchanged": true
+      },
+      "source-candidate": {
+        "CLI_SHA256": "ef8ec9e40a3633c07f7eb5c709404218425ff746d2a4316f016f0f04c9b65fa0",
+        "label": "1.1.38",
+        "sortAdvertised": true,
+        "sortFlagUsed": true,
+        "referenceEncoding": "cl100k_base",
+        "nativeOrderDeclaration": "structured",
+        "rawFirstTool": "large_json",
+        "checkedTextRanking": [
+          [
+            "unicode",
+            200
+          ],
+          [
+            "ascii",
+            125
+          ],
+          [
+            "large_json",
+            1
+          ],
+          [
+            "unknown",
+            1
+          ]
+        ],
+        "checkedStructuredRanking": [
+          [
+            "large_json",
+            2004
+          ],
+          [
+            "ascii",
+            5
+          ],
+          [
+            "unicode",
+            5
+          ]
+        ],
+        "structuredUnmeasured": false,
+        "uninspectableJSONUnknown": true,
+        "uninspectableRowReturnedTextBytes": 2,
+        "uninspectableRowNonTextBlocks": 0,
+        "wholeCallCostMeasured": false,
+        "SkillAcknowledgmentBytes": 2,
+        "SkillLinkedInstructionEvents": 0,
+        "SkillInstructionCostKnown": false,
+        "payloadNotExported": true,
+        "CLIBytesUnchanged": true
+      }
+    },
+    "newModelRuns": 0,
+    "businessTasksExecuted": 0,
+    "installed": false,
+    "published": false
+  },
+  "installedAndCachedState": {
+    "initialInstalledSample": {
+      "fingerprints": {
+        "CLI": "7dd2c1d0b9323b909b3b54d3ba1c61ffe8d4eb6ea2c0054ca53067a6ade84111",
+        "Info": "ae6e195b3522c7553e9dcffeaa8213051ec6ac11e498584bc4daeeb0504f9970"
+      },
+      "label": {
+        "appPackage": {
+          "build": "566",
+          "sourceCommit": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+          "version": "1.1.40",
+          "workingTree": "dirty"
+        },
+        "cliVersion": "1.1.40",
+        "schemaVersion": 1
+      },
+      "copyVerified": true
+    },
+    "endInstalledSample": {
+      "recordedAtUTC": "2026-10-19T14:50:33.875449+00:00",
+      "fingerprints": {
+        "CLI": "bf088f6e3e1c72019e27993a3912f2c4f1290bbf16c5344c5ecb6f7b51b6ea8e",
+        "Info": "d89fc266468bff4fda0f142151ddf474b7f14bdecb8a91bc420712885aa8433c"
+      },
+      "label": {
+        "appPackage": {
+          "build": "566",
+          "sourceCommit": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+          "version": "1.1.40",
+          "workingTree": "dirty"
+        },
+        "cliVersion": "1.1.40",
+        "schemaVersion": 1
+      },
+      "sortAdvertised": false,
+      "copyMatches": true,
+      "stableDuringCapture": true,
+      "earlierSampleDifferent": true,
+      "changeAttribution": "not established; no install or App replacement performed by this work"
+    },
+    "sameVersionBuildAndSourceLabelsAtBothSamples": true,
+    "attribution": "not established; this work did not install or replace the App",
+    "cacheVersion": "0.4.1",
+    "cacheFormatCheckExit": 1,
+    "cacheSKILL_SHA256": "8016c6a4e837114c490d58e4a2f1d3b2a6941567f6a12772920027e619aa549f",
+    "cacheFingerprintsMatchAtEnd": true,
+    "hostLoadedVersionVerified": false,
+    "duplicateCanonicalSkillInstalled": false,
+    "marketplaceEntryChanged": false,
+    "installedBytesChangedDuringWork": true
+  },
+  "boundaries": {
+    "newModelRuns": 0,
+    "SkillAutoSelectionOrHostLoadingTested": false,
+    "businessEffectivenessTested": false,
+    "requestOrBilledTokensMeasured": false,
+    "nonAIModeBusinessFlowsReaccepted": false,
+    "installed": false,
+    "published": false
+  }
+}
