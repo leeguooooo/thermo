@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "sourceCommit": "77e593dadfa59db20e199406e741e4d1e3d77620",
+  "sourceFilesSHA256": {
+    "Sources/AgentDoctor/MCPErrorCodeObservation.swift": "0b35efae9c9f8d7410028400452d45d791ef46880aeacd2fd49ed3059964d6f6",
+    "Sources/AgentDoctor/ToolUsageParser.swift": "93fb96bd110b33497e0840870312f9198775b3e576baf020ede396c3cc4a8821",
+    "Sources/AgentDoctor/ToolUsageReport.swift": "086a1080f5480afd1a791a3293e8c70b34ecea724c83b164186c6f86ec48420b",
+    "Sources/ThermoApp/ToolUsagePanel.swift": "370678f006fd3a69d21b88aa3e9fa5c0e6990c4697d18207685fdd812c3315cc",
+    "Sources/ThermoL10n/ZhHans.swift": "e21358761e06b29afc833546b8b19ac9a1f90585ff696ce8acba7e8d3f031d63",
+    "Sources/thermo/Agents.swift": "97c34fd8595f492a3ae8470cc12fbc224a88711d99f722da6ce236cb7910f8f3",
+    "Tests/AgentDoctorTests/MCPErrorCodeObservationTests.swift": "e9effbbc5f79ad412fcf1793a6601f5bc527b24bbe35ac310b161d338b6a9004"
+  },
+  "scope": "Explicit tool-reported error codes on Boolean isError=true MCP results, not a task success score",
+  "supportedRepresentations": [
+    "structuredContent.code",
+    "Known CLI bridge structuredContent.response plus mirrored JSON TextContent",
+    "JSON TextContent with success=false, nonempty string error, and technical code label"
+  ],
+  "limits": {
+    "maxLabelBytes": 64,
+    "maxContentBlocks": 64,
+    "maxTextJSONBytes": 262144,
+    "maxEncodedRootBytes": 1048576,
+    "maxStoredCategoriesPerTool": 64,
+    "displayedCategoriesPerTool": 6,
+    "categorySelection": "most frequent, lexical tie-break"
+  },
+  "unclassified": [
+    "Absent, unsupported, conflicting, unsafe or redacted labels",
+    "Categories omitted by the per-tool cap"
+  ],
+  "compatibility": "Old reports without reportedErrorCodes are unmeasured, never assumed to have zero unclassified errors",
+  "validation": {
+    "configuration": "Debug module tests, compiled CLI, and offscreen actual SwiftUI panel; no full App or Release rebuild",
+    "agentDoctorTests": 303,
+    "failures": 0,
+    "newErrorCodeTests": 8,
+    "cliHumanSummaryVerified": true,
+    "offscreenChinesePanelVerified": true,
+    "realReplay": {
+      "since": "2026-10-19T00:00:00+00:00",
+      "until": "2026-10-19T06:12:02.410646+00:00",
+      "scope": {
+        "sourceFilesRead": 32,
+        "sourceFilesClipped": 8,
+        "bytesRead": 28488645
+      },
+      "nativeMCPResults": 134,
+      "explicitResultErrors": 14,
+      "recognizedCodeCounts": {
+        "command_failed": 6,
+        "element_not_found": 1
+      },
+      "unclassifiedExplicitErrors": 7,
+      "inputReplaySHA256": "f0eaf31437758509ae4ada81e1de07e9602e8ba7fa04de5465c62c4141bbd61f",
+      "baselineBinarySHA256": "306488bae1c66f5e2a11aef64ebba84e392bebda571917bf9a227d51a3e7b821",
+      "candidateBinarySHA256": "8f6b6405a3f9c177f160d861b254a4278d29bbd02a3737baedc208daf6c3ccb4",
+      "allOtherAccountingAndStatusFieldsEqual": true,
+      "temporaryRawReplayRetained": false,
+      "boundary": "Bounded recent log tails, not complete sessions or a quality ranking. App-specific code observations are not automatic diagnoses, billable usage, or retry instructions."
+    }
+  },
+  "protocolSources": [
+    "https://modelcontextprotocol.io/specification/2025-11-25/server/tools",
+    "https://py.sdk.modelcontextprotocol.io/servers/handling-errors/"
+  ],
+  "boundaries": [
+    "Error codes are application-specific and optional; uncoded errors remain explicit errors",
+    "Never classifies prose, arguments, nested business data or native media payloads",
+    "Host invocation failures without MCP results remain separate",
+    "No automatic retry, health score, tool disabling, install or publication",
+    "Source-only change; no existing packaged or installed build acceptance updated"
+  ]
+}
