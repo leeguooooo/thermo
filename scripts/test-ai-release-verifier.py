@@ -25,6 +25,7 @@ class ReleaseVerifierTests(unittest.TestCase):
         (scripts / "verify-artifacts.sh").write_text("echo '{\"fixture\":true}'\necho 'owned warning' >&2\nexit 7\n")
         version = self.source / "Sources/ThermoKit/Version.swift"; version.parent.mkdir(parents=True)
         version.write_text('enum ThermoVersion { static let string = "1.2.3" }\n')
+        (self.source / "Package.swift").write_text("// owned package fixture\n")
         self.git("init", "-q"); self.git("add", ".")
         self.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "commit", "-qm", "fixture")
         self.commit = self.git("rev-parse", "HEAD").strip()
@@ -34,7 +35,7 @@ class ReleaseVerifierTests(unittest.TestCase):
         info = {"CFBundleShortVersionString":"1.2.3", "CFBundleVersion":"1", "ThermoBuildSourceCommit":self.commit, "ThermoBuildWorkingTree":"clean"}
         (contents / "Info.plist").write_bytes(plistlib.dumps(info))
         self.evidence = self.root / "evidence"; self.evidence.mkdir()
-        self.write_json("freeze.json", {"sourceCommit":self.commit,"sourceFilesSHA256":{"Sources/ThermoKit/Version.swift":hashlib.sha256(version.read_bytes()).hexdigest()}})
+        self.write_json("freeze.json", {"sourceCommit":self.commit,"sourceFilesSHA256":module.source_hashes(self.source)})
         self.write_json("tests-exit.json", {"sourceCommit":self.commit,"exitCode":0,"timedOut":False,"processTerminal":True})
         self.log = "".join("Test Suite '"+name+".xctest' passed at fixture\n    Executed 1 tests, with 0 failures\n" for name in sorted(module.SUITES))
         (self.evidence / "tests.log").write_text(self.log)
@@ -97,6 +98,22 @@ class ReleaseVerifierTests(unittest.TestCase):
     def test_missing_source_hashes_do_not_validate_a_receipt(self):
         self.write_json("freeze.json",{"sourceCommit":self.commit,"sourceFilesSHA256":{}})
         self.run_entry("--plan");self.assertFalse(self.output.exists())
+
+    def test_nonempty_partial_source_hashes_do_not_validate_a_receipt(self):
+        freeze = json.loads((self.evidence / "freeze.json").read_text())
+        del freeze["sourceFilesSHA256"]["Package.swift"]
+        self.write_json("freeze.json", freeze)
+        result = self.run_entry("--plan")
+        self.assertIn("does not cover", result.stderr)
+        self.assertFalse(self.output.exists())
+
+    def test_complete_hashes_with_additional_tracked_files_remain_compatible(self):
+        freeze = json.loads((self.evidence / "freeze.json").read_text())
+        name = "scripts/verify-artifacts.sh"
+        freeze["sourceFilesSHA256"][name] = module.digest(self.source / name)
+        self.write_json("freeze.json", freeze)
+        self.run_entry("--plan", code=0)
+        self.assertFalse(self.output.exists())
 
     def test_failed_check_preserves_log_and_partial_manifest(self):
         self.run_entry(code=1);result=json.loads((self.output/"result.json").read_text())

@@ -78,7 +78,13 @@ def reused_tests(folder, commit, source):
     hashes = freeze.get("sourceFilesSHA256")
     if not isinstance(hashes, dict) or not hashes:
         raise ValueError("Release evidence lacks frozen source hashes")
+    required = source_hashes(source)
+    if not required.keys() <= hashes.keys():
+        raise ValueError("Release evidence does not cover all tracked Swift and package source files")
     for name, expected in hashes.items():
+        if (not isinstance(name, str) or not isinstance(expected, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", expected)):
+            raise ValueError("Release evidence has invalid source hash entries")
         path = (source / name).resolve()
         if not path.is_relative_to(source) or digest(path) != expected:
             raise ValueError("Release evidence source hash mismatch")
