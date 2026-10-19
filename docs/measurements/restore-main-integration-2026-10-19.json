@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-19",
+  "source": "4db3ed6",
+  "scope": "Latest main cumulative token snapshot and discovery changes merged with restored-item feedback fix",
+  "command": "swift test --jobs 4 --filter AgentDoctorTests|ThermoAppTests|ThermoCLITests",
+  "exitCode": 0,
+  "total": 713,
+  "failures": 0,
+  "suites": {
+    "ThermoCLITests.xctest": {
+      "tests": 110,
+      "failures": 0
+    },
+    "ThermoAppTests.xctest": {
+      "tests": 310,
+      "failures": 0
+    },
+    "AgentDoctorTests.xctest": {
+      "tests": 293,
+      "failures": 0
+    }
+  },
+  "logSHA256": "d2f17e4a7763fc53d5df28a42566b9f0429daa37c0f1792ac6f9a1c55a62f805",
+  "installedBinarySource": "4d5f53a",
+  "installedBinaryDoesNotIncludeLatestDiagnostics": true
+}

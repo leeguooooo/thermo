@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-19",
+  "installedObservationVersion": "1.1.35 (522)",
+  "sourceBefore": "4db3ed6",
+  "versionPrepared": "1.1.36",
+  "observation": {
+    "scanWasIdleOnEntry": true,
+    "readOnlyScanStartedThenStopped": true,
+    "stoppedReportClearlyPartial": true,
+    "cleanupReviewClearlySaidPermanentCacheDeletion": true,
+    "cleanupReviewCancelled": true,
+    "cleanupExecuted": false,
+    "aiConversationsEntryMissingWhenDefaultKeepAllProducedNoCandidates": true
+  },
+  "fix": "AI conversation category always appears in the disk sidebar; keep-all state does not display a misleading zero-byte estimate",
+  "defaultRetentionChanged": false,
+  "automaticConversationSelectionChanged": false,
+  "regression": {
+    "command": "swift test --jobs 4 --filter ThermoAppTests|ThermoCLITests",
+    "exitCode": 0,
+    "total": 420,
+    "failures": 0,
+    "suites": {
+      "ThermoCLITests.xctest": {
+        "tests": 110,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 310,
+        "failures": 0
+      }
+    },
+    "logSHA256": "35dca8958334c9c619495731f1dff1b94c8e8402d601271c850e9d3e1bf08c81"
+  },
+  "sourceFilesSHA256": {
+    "Sources/ThermoApp/MainWindow.swift": "f55afd79b9df092f148e23eedc1b9849bb8d40db88c3b268479fc31c14741452",
+    "Sources/ThermoKit/Version.swift": "8f857fc1815de55933f7b94cdc0c630c13c16e8785f73b8db2a88b951b4431a0"
+  },
+  "installedNavigationAccepted": false,
+  "remaining": "Sign and install candidate; open AI conversations from the normal sidebar without changing retention or deleting conversations"
+}

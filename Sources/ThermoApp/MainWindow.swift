@@ -444,8 +444,11 @@ struct MainSidebar: View {
                         row(.disk(.overview), tr("Where the space is"), "chart.pie.fill", .teal, trailing: nil, indent: true)
                         ForEach(CleanCategory.allCases, id: \.self) { c in
                             let bytes = disk.report?.bytes(in: c) ?? 0
-                            if bytes > 0 || items.contains(where: { $0.category == c }) {
-                                row(.disk(.category(c)), c.title, DiskStyle.icon(c), DiskStyle.tint(c), trailing: ByteFormat.string(bytes), indent: true)
+                            // Retention is configured here, so this entry cannot depend on
+                            // a scan having found conversations eligible for removal.
+                            if c == .aiSessions || bytes > 0 || items.contains(where: { $0.category == c }) {
+                                let size: String? = c == .aiSessions && disk.sessionRetentionDays == nil ? nil : ByteFormat.string(bytes)
+                                row(.disk(.category(c)), c.title, DiskStyle.icon(c), DiskStyle.tint(c), trailing: size, indent: true)
                             }
                         }
                     }
