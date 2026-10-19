@@ -1,6 +1,9 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Structured JSON": "结构化 JSON",
+    "Ranks structured JSON reference or estimated tokens only when completed result envelopes were fully inspectable. Unknown entries follow known values; this is not model usage.": "仅在已完成结果的封装均可检查时，按结构化 JSON 的参考或估算 token 排序。未知条目排在已知值后；这不是模型用量。",
+
     "Structured result envelopes were not checked in this report; analyze again.": "此报告未检查结构化返回封装，请重新分析。",
     "Structured result coverage: %1$@ envelopes checked · %2$@ results not inspectable · %3$@ structured fields · %4$@ invalid fields": "结构化返回覆盖：已检查 %1$@ 个封装 · %2$@ 个结果无法检查 · %3$@ 个包含结构化字段 · %4$@ 个字段无效",
     "Measured structured JSON: %1$@ bytes / %2$@ tokens · %3$@ results also contain content": "已计量的结构化 JSON：%1$@ 字节 / %2$@ token · %3$@ 个结果同时含 content",

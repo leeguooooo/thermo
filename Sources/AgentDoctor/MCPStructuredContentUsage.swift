@@ -58,6 +58,18 @@ enum MCPStructuredResultObservation {
 }
 
 extension ToolUsageRow {
+    /// Rank only fully inspectable completed results, never unknown envelopes as zero.
+    public var observedStructuredJSONTokens: Int? {
+        guard kind == "mcp", completed > 0, let usage = structuredContent,
+              usage.inspectedResultObjects == completed, usage.unobservableResults == 0,
+              usage.unavailableJSONResults == 0,
+              usage.structuredResults >= 0, usage.structuredResults <= completed,
+              usage.alongsideContentResults >= 0, usage.alongsideContentResults <= usage.structuredResults,
+              usage.jsonBytes >= 0, usage.jsonEstimatedTokens >= 0 else { return nil }
+        let tokens = referenceEncoding == nil ? Optional(usage.jsonEstimatedTokens) : usage.jsonReferenceTokens
+        return tokens.flatMap { $0 >= 0 ? $0 : nil }
+    }
+
     public var mcpStructuredContentLines: [String] {
         guard kind == "mcp" else { return [] }
         guard let usage = structuredContent else {

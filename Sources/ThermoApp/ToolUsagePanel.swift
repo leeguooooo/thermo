@@ -40,10 +40,11 @@ struct ToolUsagePanel: View {
         _sort = State(initialValue: kind == "skill" ? .instructions : .text)
     }
     enum UsageSort: String, CaseIterable {
-        case text, instructions, errors, time, calls
+        case text, structured, instructions, errors, time, calls
         var title: String {
             switch self {
             case .text: return tr("Returned text")
+            case .structured: return tr("Structured JSON")
             case .instructions: return tr("Loaded instructions")
             case .errors: return tr("Explicit errors")
             case .time: return tr("Observed time")
@@ -53,6 +54,7 @@ struct ToolUsagePanel: View {
         func value(_ row: ToolUsageRow) -> Double {
             switch self {
             case .text: return row.referenceEncoding == nil ? Double(row.returnedTextEstimatedTokens) : row.referenceReturnedTextTokens.map(Double.init) ?? -1
+            case .structured: return row.observedStructuredJSONTokens.map(Double.init) ?? -1
             case .instructions:
                 return row.observedInstructionTokens.map(Double.init) ?? -1
             case .errors: return Double(row.reportedErrors) + Double(row.invocationFailures ?? 0)
@@ -100,8 +102,12 @@ struct ToolUsagePanel: View {
                     Text(ToolUsageTimingSummary.explanation).font(.caption).foregroundStyle(.secondary)
                 }
                 Picker(tr("Sort observed usage"), selection: $sort) {
-                    ForEach(UsageSort.allCases.filter { kind == "skill" || $0 != .instructions }, id: \.self) { value in Text(value.title).tag(value) }
+                    ForEach(UsageSort.allCases.filter { (kind == "skill" || $0 != .instructions) && (kind == "mcp" || $0 != .structured) }, id: \.self) { value in Text(value.title).tag(value) }
                 }.pickerStyle(.segmented)
+                if sort == .structured {
+                    Text(tr("Ranks structured JSON reference or estimated tokens only when completed result envelopes were fully inspectable. Unknown entries follow known values; this is not model usage."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 if kind == "skill" {
                     instructionUsage(report.observedSkillInstructions, encoding: report.referenceEncoding)
                     Text(tr("Only explicitly source-linked Claude instruction messages are measured. Kept separate from tool replies and request counters; missing loads, referenced files and billing remain unknown."))
@@ -202,7 +208,7 @@ struct ToolUsagePanel: View {
                                 Text(tr("Share of observed linked instruction text tokens: %1$@", String(format: "%.1f%%", percentage)))
                                     .font(.caption).foregroundStyle(.secondary)
                             }
-                        } else if let percentage = textSummary.percentage(of: row) {
+                        } else if sort != .structured, let percentage = textSummary.percentage(of: row) {
                             Text(tr("Share of this category's observed returned-text tokens: %1$@", String(format: "%.1f%%", percentage)))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
