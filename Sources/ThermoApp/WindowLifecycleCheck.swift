@@ -66,13 +66,14 @@ enum WindowLifecycleCheck {
     }
 
     struct Report: Encodable {
-        let schemaVersion = 1
+        let schemaVersion = 2
         let mode = "offscreen AppKit with explicit watched visibility; helper interaction and menu-bar recorder disabled"
         let started: Date
         let pid: Int32
         let options: Options
         let samples: [Sample]
         let functionalChecksPassed: Bool
+        let transitionChecks: [String: Bool]
         let memoryGrowthAssessed = false
         let buildConfiguration: String
     }
@@ -95,6 +96,7 @@ enum WindowLifecycleCheck {
         var retired: [WeakController] = []
         var samples: [Sample] = []
         var openChecksPassed = true
+        var transitionChecks: [String: Bool] = [:]
         func reading(cycle: Int, page: String, phase: String, frame: NSRect?) -> Sample {
             let memory = ProcessTable.memory(getpid())
             var usage = rusage(), task = proc_taskinfo()
@@ -134,6 +136,34 @@ enum WindowLifecycleCheck {
                 opened.activeSampleFresh = published.map { $0 >= openedAt } ?? false
                 let checked = active && opened.activeSampleFresh == true
                 openChecksPassed = openChecksPassed && checked
+                if name == "overview" {
+                    // A normal sidebar change keeps the host/window alive. Closing every page
+                    // cannot catch a lost appearance lease during this transition.
+                    MainWindow.state.page = .compute(false)
+                    try await pause(options.openSeconds)
+                    transitionChecks["cycle-\(cycle)-leave-overview"] = !SystemPulse.shared.samplingActive && SystemPulse.shared.holderCount == 0
+                    let returnedAt = Date()
+                    MainWindow.state.page = .overview
+                    try await pause(options.openSeconds)
+                    transitionChecks["cycle-\(cycle)-return-overview"] = SystemPulse.shared.samplingActive &&
+                        (SystemPulse.shared.current?.sampled ?? .distantPast) >= returnedAt
+                    samples.append(reading(cycle: cycle, page: name, phase: "returned", frame: frame))
+
+                    // Drive the same model signal as the native occlusion callback without
+                    // changing the user's desktop or forcing background sampling.
+                    AppModels.shared.monitor.windowOpen = false
+                    try await pause(0.2)
+                    let hiddenPublication = SystemPulse.shared.current?.sampled
+                    try await pause(options.idleSeconds)
+                    transitionChecks["cycle-\(cycle)-hidden"] = !SystemPulse.shared.samplingActive &&
+                        SystemPulse.shared.holderCount == 0 && SystemPulse.shared.current?.sampled == hiddenPublication
+                    let visibleAt = Date()
+                    AppModels.shared.monitor.windowOpen = true
+                    try await pause(options.openSeconds)
+                    transitionChecks["cycle-\(cycle)-visible-again"] = SystemPulse.shared.samplingActive &&
+                        (SystemPulse.shared.current?.sampled ?? .distantPast) >= visibleAt
+                    samples.append(reading(cycle: cycle, page: name, phase: "visible-again", frame: frame))
+                }
                 autoreleasepool {
                     retired.append(WeakController(MainWindow.window?.contentViewController))
                     MainWindow.window?.close()
@@ -152,7 +182,7 @@ enum WindowLifecycleCheck {
                 samples += [opened, closed, idle]
             }
         }
-        let passed = openChecksPassed && samples.filter { $0.phase == "closed" || $0.phase == "idle" }.allSatisfy {
+        let passed = openChecksPassed && transitionChecks.values.allSatisfy { $0 } && samples.filter { $0.phase == "closed" || $0.phase == "idle" }.allSatisfy {
             $0.stopped && $0.idlePublicationsStable != false
         }
         #if DEBUG
@@ -160,6 +190,6 @@ enum WindowLifecycleCheck {
         #else
         let build = "release"
         #endif
-        return Report(started: started, pid: getpid(), options: options, samples: samples, functionalChecksPassed: passed, buildConfiguration: build)
+        return Report(started: started, pid: getpid(), options: options, samples: samples, functionalChecksPassed: passed, transitionChecks: transitionChecks, buildConfiguration: build)
     }
 }

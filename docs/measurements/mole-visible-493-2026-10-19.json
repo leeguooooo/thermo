@@ -25,13 +25,19 @@
       "interpretation": "No sustained main-thread block captured. Absence of queue execution in this short sample does not prove timer inactivity or establish root cause."
     },
     "timeEvidence": "AX timeline descriptions retain Oct 17 intervals while screenshot axis and shell sample show Oct 19; cause unverified",
-    "nextCheck": "Observe model visibility, pulse holders and timer state in a controlled hosted-window reproduction before changing lifecycle behavior"
+    "nextCheck": "Observe model visibility, pulse holders and timer state in a controlled hosted-window reproduction before changing lifecycle behavior",
+    "followUp": {
+      "installedNativeOpen": "Display > Overview menu immediately resumed headline, load, thermal pressure, program rows and current-date timeline",
+      "sidebarRoundTrip": "CPU page subsequently displayed live percentages and chart; returning to Overview retained populated readings",
+      "interpretation": "Earlier background-bound AX checks did not establish normal foreground opening. Visibility state is implicated; exact reason for the earlier inactive state remains unproven. No sampler behavior changed.",
+      "normalOpenAndRoundTripAccepted": true
+    }
   },
   "remaining": [
-    "Overview sampling root cause and repair",
     "Installed screen exit/expiry and hardware keys",
     "Charging and AWDL hardware sessions",
-    "Full parity matrix gates"
+    "Full parity matrix gates",
+    "Verify native occlusion, sleep and reopen paths beyond normal menu open and sidebar roundtrip"
   ],
   "privacy": "Raw system permission inventory and raw stack report retained outside tracked documentation; no personal process inventory included"
 }
