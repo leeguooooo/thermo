@@ -1,0 +1,126 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceInfo": {
+    "sourceCommit": "940cd82d38363b604ef04886d6c619323695a8e3",
+    "marketplaceCommit": "de5150f381eb4a6ea97b05c1b6df784e825ed28f",
+    "bodyBytes": 8532,
+    "bodySHA256": "40cccba205ea6f957614cb5e9b1a507e6c4789d5f1bc67fe98d8e110ce236b3d",
+    "bodyUnchanged": true,
+    "CLIOrRustSourceChanged": false,
+    "preparedPluginVersion": "0.2.4"
+  },
+  "nativeDiscoveryAndPreload": {
+    "passed": true,
+    "clientVersion": "codex-cli 0.163.0",
+    "CLI_SHA256": "8813367285524ac798dd96d1b071aea30d58708c7226fd236cd275cf1cfdee31",
+    "results": [
+      {
+        "case": "baseline",
+        "CLICommands": [
+          {
+            "name": "marketplace",
+            "exitCode": 0
+          },
+          {
+            "name": "add",
+            "exitCode": 0
+          },
+          {
+            "name": "list",
+            "exitCode": 0
+          }
+        ],
+        "registered": true,
+        "enabled": true,
+        "resourceSkillCount": 0,
+        "indexedSkillCount": 0,
+        "indexedSkills": [],
+        "errorCount": 0,
+        "explicitCLIExit": 0,
+        "fakeBackendRequests": [
+          {
+            "onlyFakeCredential": true,
+            "wholeSkillPresent": false,
+            "path": "/v1/responses"
+          }
+        ],
+        "realModelCalled": false
+      },
+      {
+        "case": "candidate",
+        "CLICommands": [
+          {
+            "name": "marketplace",
+            "exitCode": 0
+          },
+          {
+            "name": "add",
+            "exitCode": 0
+          },
+          {
+            "name": "list",
+            "exitCode": 0
+          }
+        ],
+        "registered": true,
+        "enabled": true,
+        "resourceSkillCount": 1,
+        "indexedSkillCount": 1,
+        "indexedSkills": [
+          {
+            "name": "switch-use:switch-use",
+            "enabled": true
+          }
+        ],
+        "errorCount": 0,
+        "explicitCLIExit": 0,
+        "fakeBackendRequests": [
+          {
+            "onlyFakeCredential": true,
+            "wholeSkillPresent": true,
+            "path": "/v1/responses"
+          }
+        ],
+        "realModelCalled": false
+      }
+    ],
+    "temporaryHomesOnly": true,
+    "actualUserRegistrationChanged": false,
+    "modelInferenceRequested": false,
+    "published": false
+  },
+  "validation": {
+    "host": "mac190",
+    "familyShellSuitesPassed": 4,
+    "genericSkillValidationPassed": true,
+    "baselineInstallerMigrationControlFailedAsExpected": true,
+    "skillBodyBytesUnchanged": true,
+    "nestedSkillGitRootResolvedCorrectly": true,
+    "CLIOrRustSourceChanged": false,
+    "rustBuildOrDeviceTestsRun": false,
+    "networkScope": "Only localhost permitted for fixed fake SSE responses; no real model inference.",
+    "currentStandaloneSkillFileStillReadableAndMatchesSource": true
+  },
+  "successfulRunID": "f75c135d-7245-485e-b02b-6d3ae4d7ab1f",
+  "evidenceSHA256": {
+    "install-clis.log": "c37ef5e32cd9392fb5c0e360f92105e9d67305166c725bb29c6f5bde9a4978a7",
+    "result.json": "3152ae6b03c1b65424b95dae42ad6e9cb208e28bcf014e60aa3e0e248d29fc02",
+    "readme-codex-list.log": "2b6de0a7ff3c91541eeb2e1d5d334cd4e02efbd2eccc172432dfea9406123b2f",
+    "native-probe.log": "dff1e96b64da5fe5b5f378f0f288daf6d86e184703a6ae89a4478ecfac3b2147",
+    "skill-validator.log": "db349825903d66adffea3ecf1bd8e1803043e8a71cf1a051235dabc5371f5bb0",
+    "install-use-family.log": "73507701b3d5f409c7ef3492addceaf5a389896b67b1fe080194a0d9f44bba65",
+    "doctor.log": "84b2f052b49017611fcc9c9c6884d6cc8348e9421e952f12903ac802ca8311bc",
+    "baseline-installer.log": "c0b8afc86a7f86dc24e43b5b69bdeaf936164f15ba3418ea8f6ccc4bc1026b67"
+  },
+  "boundaries": {
+    "isolatedNativeClientVersionOnly": "0.163.0",
+    "realModelCalled": false,
+    "fakeProviderUsageExcludedFromCostClaims": true,
+    "actualUserRegistrationOrCacheUpdated": false,
+    "switchDeviceConnected": false,
+    "published": false,
+    "preparedPluginVersionIsNotACLIRelease": true,
+    "actualBusinessBenefitMeasured": false,
+    "currentStandaloneHostLoadingRechecked": false
+  }
+}
