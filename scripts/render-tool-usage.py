@@ -24,6 +24,7 @@ with tempfile.TemporaryDirectory(prefix='thermo-render-usage-') as temporary:
     binary = temporary / 'render'
     subprocess.run(['swiftc', '-parse-as-library', '-I', str(root / '.build/debug'), '-L', str(root / '.build/debug'),
                     '-lAgentDoctor', '-lAgentCore', '-lThermoL10n', '-lz', str(root / 'Sources/ThermoApp/ToolUsagePanel.swift'),
+                    str(root / 'Sources/ThermoApp/OuterToolUsageBreakdown.swift'),
                     str(glass), str(root / 'scripts/render-tool-usage.swift'), '-o', str(binary)], check=True)
     subprocess.run([str(binary), str(Path(sys.argv[1]).resolve()), str(Path(sys.argv[2]).resolve()),
                     sys.argv[3] if len(sys.argv) > 3 else '620', sys.argv[4] if len(sys.argv) > 4 else 'mcp'], check=True)

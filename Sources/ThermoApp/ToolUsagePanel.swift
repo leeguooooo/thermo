@@ -34,6 +34,7 @@ struct ToolUsagePanel: View {
     var encoding: TextEncoding = .heuristic
     @State private var sort: UsageSort
     @State private var visibleRowLimit = 8
+    @State private var cumulativeExpanded = true
     init(model: ToolUsageModel, kind: String, encoding: TextEncoding = .heuristic) {
         self.model = model; self.kind = kind; self.encoding = encoding
         _sort = State(initialValue: kind == "skill" ? .instructions : .text)
@@ -219,6 +220,20 @@ struct ToolUsagePanel: View {
                     }
                 } else {
                     Text(tr("No supported request token records were found; request usage is unknown.")).font(.caption).foregroundStyle(.secondary)
+                }
+                if let snapshots = report.cumulativeTokenSnapshots, !snapshots.isEmpty {
+                    DisclosureGroup(tr("Native cumulative snapshots (not window usage)"), isExpanded: $cumulativeExpanded) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(ToolUsageReport.cumulativeTokenExplanation).font(.caption).foregroundStyle(.secondary)
+                            ForEach(snapshots) { snapshot in
+                                VStack(alignment: .leading, spacing: 3) {
+                                    ForEach(Array(snapshot.displayLines.enumerated()), id: \.offset) { _, line in
+                                        Text(line).font(.caption.monospaced())
+                                    }
+                                }.padding(.vertical, 4)
+                            }
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
                 Text(report.note).font(.caption).foregroundStyle(.secondary)
             }

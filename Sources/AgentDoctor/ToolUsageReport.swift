@@ -149,6 +149,8 @@ public struct ToolUsageReport: Codable, Sendable {
     public var tools: [ToolUsageRow]
     /// Request-level counters, deliberately never allocated to individual tools.
     public var sessionTokens: [LoggedTokenUsage]
+    /// Absent in older reports means unmeasured. Never sum these session snapshots.
+    public var cumulativeTokenSnapshots: [CumulativeTokenSnapshot]? = nil
     public var note: String
     public var referenceEncoding: String? = nil
     public var referenceEngine: String? = nil
