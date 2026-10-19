@@ -1,0 +1,97 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "fdb73d81ebfc7496af60a63aa2e673ae99ea8d6a",
+  "buildHost": "mac190",
+  "nativeAcceptanceHost": "localMac",
+  "sourceProductsSHA256": {
+    "ThermoApp": "082007cc3a8b0c3502bb612f9eceedd6c3ad269d8653215577690857898446e5",
+    "thermo": "9eb612596bc8220f51978cce8f4bb4587a3c1ba58a738ebdf0eb8eae22bbdf4f",
+    "thermo-helper": "046912f0bc51c7892c3d98328dd2607b8ffd6de9522c0a86b5c092b19d58ec7c"
+  },
+  "QARuntimeSHA256": "72e4739c2ae78971eecbf9cdfc45b2805cce1706c7851bca6cb26fffb574146b",
+  "QAPackaging": "Owned copy with distinct bundle ID, relative Sparkle rpath and ad-hoc signature; not a distribution package.",
+  "guiAcceptance": {
+    "passed": true,
+    "sourceCommit": "fdb73d81ebfc7496af60a63aa2e673ae99ea8d6a",
+    "nativeReleaseQA": true,
+    "language": "zh-Hans",
+    "orderedToolNames": [
+      "many_short",
+      "one_slow",
+      "known_zero",
+      "no_timing"
+    ],
+    "observedSeconds": [
+      8,
+      5,
+      0,
+      null
+    ],
+    "timingCoverage": {
+      "validPairs": 10,
+      "calls": 11,
+      "unknownRow": "0 / 1"
+    },
+    "intervalSummary": {
+      "sumSeconds": 13,
+      "occupiedSeconds": 5
+    },
+    "missingResultKeptJSONTotalUnknown": true,
+    "HTTP401And403DistinctInNativeSheets": true,
+    "hostOAuthBoundaryShown": true,
+    "twoRejectedConfigurationsRemainIncomplete": true,
+    "overallDefinitionsUnknown": true,
+    "privateFixtureBodiesAbsentFromAX": true,
+    "screenshotsInspected": true,
+    "AXSnapshotNote": "An initial diff-only observation had no changed text; full AX snapshots supplied ranking and coverage checks.",
+    "usabilityFinding": {
+      "rankingNeedsScrollingAtTestedWindow": true,
+      "excessiveExplanationsAheadOfRanking": true,
+      "fixedInThisPhase": false
+    },
+    "cleanup": {
+      "QAApp": {
+        "pid": 87309,
+        "stopped": true
+      },
+      "ownedHTTP": {
+        "pid": 84740,
+        "stopped": true
+      },
+      "selectedFingerprintsMatched": true,
+      "installedAppOriginalPIDStillRunning": true,
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/401",
+          "status": 401
+        },
+        {
+          "method": "POST",
+          "path": "/403",
+          "status": 403
+        }
+      ]
+    },
+    "uiCloseNote": "The Quit shortcut and window close did not terminate the QA process; after verifying its exact owned runtime path, the test process was stopped with SIGTERM."
+  },
+  "boundaries": {
+    "universalPackageVerified": false,
+    "x86_64VerifiedInThisPhase": false,
+    "formalSignatureOrNotarizationAcceptance": false,
+    "realModelEvaluation": false,
+    "installedOrPublished": false,
+    "generalPerformanceOrQualityImprovementClaimed": false,
+    "appConnectedToRealAccountOrBusinessMCP": false
+  },
+  "evidenceSHA256": {
+    "refresh.json": "e3814ce9ce15cca05f7fc06be93181ca95950ca910df707be1ac4ba86bc43921",
+    "before.json": "7939ec9a3eda160e780f24b3f6fa2230f625f1cc33279f9d2e568b0e11faf9c4",
+    "cleanup-result.json": "81233297354200dc22dac4b29201fa75b2f0fa4ea6ab0580abac36bc1b1a15ac",
+    "gui-result.json": "d9c557c7bc9f37d822fe8c738401de10a62fa090b69c234d995afbb79fe0e4b9",
+    "http-requests.jsonl": "877889e076de9640e3041c55a366c24c857024e689ae53a90d7f9897e24a0c1e",
+    "app-process.json": "6548c564439e589687ab993751a34e45bef28fb0c1ba1d8461e965f03a7dbd57",
+    "server-process.json": "633b29cffdcec8ac79d49a930b9689e081a460f78d50b3f404a1d991adfb2cd8",
+    "products-retained-on-mac190.json": "f0ab1d2dcb7f443c6bb385d62f7565ba07023d216d3058c4c0b56094dd414590"
+  }
+}

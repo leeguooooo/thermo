@@ -224,6 +224,8 @@ REA_MCP_OUTPUT_SCHEMA_PROFILE = "off"
 
 ## 本地使用历史
 
+[Release 原生交互记录](measurements/release-native-usage-http-2026-10-20.json)确认了耗时排名、计时覆盖和 401 / 403 提示。实际窗口也发现信息层级问题：分析后，共用口径说明位于逐工具排名之前，测试窗口的首屏看不到排名，必须下滚。后续应把可展开的口径说明与日常比较所需的排名分开，保留未知和覆盖提示；本记录只提出有截图依据的改进项，尚未改变面板。
+
 CLI 与 App 现在共用调用区间累计耗时排序。CLI 使用 `thermo agents usage --sort time`，也可结合 `--agent codex --log-file FILE --tail --json`；JSON 的 `toolOrdering` 为 `time`。排序依据是有效起止记录的累计时长，重叠调用逐次计入，缺失计时排在已知 0 秒之后。选择该模式时，逐行显示有效计时次数 / 调用次数。它回答“哪些工具的观测调用累计占用较多”，不代表单次延迟、任务总耗时或服务质量排名。定义发现耗时、去重叠占用时间和返回文本 / JSON token 仍分别计量。
 
 `thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--sort text|structured] [--limit FILES] [--all] [--json]` 显式读取本地会话日志。默认最近 7 天、最多 100 个文件；日期简写 YYYY-MM-DD 按 UTC 解释。App 的 MCP / Skills 分类共享一次“分析本地日志”的结果，支持按返回文本、明确错误、观察耗时或次数排序；项目选择不会改变这块跨项目统计的范围。

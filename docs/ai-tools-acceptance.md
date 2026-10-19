@@ -1,5 +1,7 @@
 # AI 工具体验验收
 
+[Release 原生用量与 HTTP 提示验收](measurements/release-native-usage-http-2026-10-20.json)：使用 `fdb73d8` 的 Mac 190 Release 产物，在本机独立标识、独立 Home 的 QA 副本中，通过窗口实际分析 11 次自有调用并选择耗时排序。累计 8 秒、单次 5 秒、已知 0 秒、无计时按顺序排列；有效计时 10 / 11、区间合计 13 秒 / 去重叠占用 5 秒均核对。401 / 403 检查单分别显示状态和宿主 OAuth 边界，各只收到一个请求；汇总保留 2 条未完成及总体未知，正文未显示。QA 和回环服务已停止，所选安装版 / Codex 配置指纹及原 App PID 匹配。这里只覆盖这些原生交互，不代表全部 App、双架构包或发布验收。截图同时确认用量面板的共用说明挤占首屏，排名需要下滚，此项尚未优化。
+
 [固定源码 Release 集成验收](measurements/release-source-integration-2026-10-20.json)：Mac 190 的干净检出 `fdb73d8` 按 Xcode 27.0 / Swift 6.4 / SDK 27.0、单 job 完成七套 Release 测试，1,863 项、零失败，排除 HardwareTests；526 份 Swift / Package 文件哈希在远端和本地均匹配。同次生成的 arm64 Release CLI 通过全部九组既有契约，验收入口 22 项和 QA 刷新器 8 项控制测试也通过。此处是本轮实际执行，现有复用校验器只用来复核新生成的证据，不是沿用旧测试。日志、终止状态和固定源码收据已保存。未做本轮 x86_64、分发包、签名 / 公证、原生窗口或硬件验收，未安装或发布；随后的文档提交不改变受测源码，但不能当成另一次提交的 Release 回归。
 
 [HTTP 检查拒绝状态验收](measurements/mcp-http-rejection-status-2026-10-20.json)：报告新增可选 `rejectedHTTPStatusCode`，401 / 403 的文字结果也保留具体状态；认证挑战通过 `failureResponse` 保留拒绝码。该字段只表示检查请求被 HTTP 拒绝，旧报告、无响应的失败和清理失败不补成 0，也不混入 `cleanupDetails.httpStatusCode`。Mac 190 的 51 项定向测试与 CLI 契约通过，401 / 403 / 429 / 503 的 JSON、文字、单次请求及隐私边界均验证；旧二进制被新契约拒绝。独立检查的访问拒绝仍不能推断宿主 OAuth 连接状态。源码已合入，未安装、发布或运行本轮原生窗口 / 完整 Release 验收。
