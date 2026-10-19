@@ -1,0 +1,188 @@
+{
+  "recordedDate": "2026-10-20",
+  "codeCommit": "a9b99b9",
+  "contractCommit": "d404260",
+  "baselineCommit": "a869019",
+  "feature": "Separate aggregate structuredContent representation and coverage, shared by App and CLI including JSON output",
+  "sourceVerification": {
+    "sourceFilesMatched": 577,
+    "tests": [
+      {
+        "suite": "ThermoAppTests",
+        "tests": 3,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests",
+        "tests": 372,
+        "failures": 0
+      }
+    ],
+    "CLI_SHA256": "9952c96a2d341ed5dedb9ec8c3d7ba63cb90039e8c989c5b9aa5b1e1ef97c77e",
+    "App_SHA256": "f961faba0df23d0d048d5265889616a90b5d724e29ac5a6f1a32f79cd2b965e1",
+    "host": "leos-MacBook-Pro.local",
+    "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk"
+  },
+  "compiledCLIReplay": {
+    "passed": true,
+    "source": "Previously captured official SDK 2.3.1 replies plus explicit partial-log mutations; not native Codex sessions",
+    "noSDKCallsRerun": true,
+    "rowsUnchanged": true,
+    "payloadNotExported": true,
+    "cases": {
+      "full": {
+        "completeLog": true,
+        "totalJSONBytes": 5990,
+        "totalJSONTokens": 1528,
+        "knownJSONBytes": 5990,
+        "knownJSONTokens": 1528,
+        "completedResults": 6,
+        "checkedEnvelopes": 6,
+        "missingResults": 0,
+        "unobservableResults": 0
+      },
+      "missing": {
+        "completeLog": true,
+        "totalJSONBytes": null,
+        "totalJSONTokens": null,
+        "knownJSONBytes": 5990,
+        "knownJSONTokens": 1528,
+        "completedResults": 6,
+        "checkedEnvelopes": 6,
+        "missingResults": 1,
+        "unobservableResults": 0
+      },
+      "opaque": {
+        "completeLog": true,
+        "totalJSONBytes": null,
+        "totalJSONTokens": null,
+        "knownJSONBytes": 5990,
+        "knownJSONTokens": 1528,
+        "completedResults": 7,
+        "checkedEnvelopes": 6,
+        "missingResults": 0,
+        "unobservableResults": 1
+      },
+      "clipped": {
+        "completeLog": false,
+        "totalJSONBytes": null,
+        "totalJSONTokens": null,
+        "knownJSONBytes": 5986,
+        "knownJSONTokens": 1527,
+        "completedResults": 5,
+        "checkedEnvelopes": 5,
+        "missingResults": 0,
+        "unobservableResults": 0
+      }
+    },
+    "modelCalled": false,
+    "installed": false,
+    "published": false
+  },
+  "nativeGUI": {
+    "nativeGUIVerified": true,
+    "encoding": "cl100k_base",
+    "completeSample": {
+      "jsonBytes": 5990,
+      "jsonTokens": 1528,
+      "checkedEnvelopes": 6,
+      "completedResults": 6,
+      "returnedTextBytes": 12,
+      "returnedTextTokens": 6
+    },
+    "missingSample": {
+      "missingReplies": 1,
+      "knownJSONBytes": 5990,
+      "knownJSONTokens": 1528,
+      "totalJSONUnknown": true
+    },
+    "sharedRepresentationNoteCount": 1,
+    "payloadNotDisplayed": true,
+    "QAProcessesAbsent": true,
+    "originalPIDsBefore": [
+      45582
+    ],
+    "originalPIDsAfter": [
+      45582
+    ],
+    "originalPIDsMatched": true,
+    "selectedUserConfigAndAppHashesUnchanged": true,
+    "sourceAppSHA256": "f961faba0df23d0d048d5265889616a90b5d724e29ac5a6f1a32f79cd2b965e1",
+    "runtimeSHA256": "f5a142d95649932ceff6cc624b8ecfc896ce144b6f35264de34f8ba164fcfcbf",
+    "fullFixtureSHA256": "b0b9cdd62b31c7c29a0d24b8802f7c326a287d87ea889be9da7521b771911352",
+    "missingFixtureSHA256": "1207d156e14a22eea7b30d409ebd238f48c1541422cdc4af1bee2c9b54a3e0ef",
+    "installed": false,
+    "published": false
+  },
+  "contracts": {
+    "diagnostics": {
+      "fixtureOnly": true,
+      "binarySHA256": "9952c96a2d341ed5dedb9ec8c3d7ba63cb90039e8c989c5b9aa5b1e1ef97c77e",
+      "groupsPassed": 10,
+      "checks": [
+        "post-run checks exclude invalid/legacy pairs, retain all outcomes and reject incomplete v2 records",
+        "serialized media/truncation markers remain separate from native image blocks and text accounting in both encodings",
+        "local missing schema target diagnosed, valid/boolean/identified schemas not misreported; no tool call or reference leakage",
+        "root-declared cached Skill counted once with an informational layout hint and no mutation actions; extensionless references checked",
+        "latest cumulative counters, decreases and conflicts stay separate from requests and tools",
+        "separate Codex namespaces group with legacy MCP names; native images excluded and same-name outer tools stay distinct",
+        "structured JSON is measured separately from acknowledgment text; unavailable envelopes stay unknown and payloads are not exported",
+        "all JSON value shapes are measured, null differs from absence, array ranking recovers and returned-text accounting stays separate",
+        "structured JSON totals cover all MCP rows; missing replies preserve the known subset while totals stay unknown",
+        "CLI text and structured token order is declared in JSON, shared with human output, preserves metrics and keeps known zero before unknown"
+      ],
+      "modelsOrDevicesUsed": false
+    },
+    "negativeBaseline": {
+      "expectedFailure": true,
+      "exitCode": 1,
+      "stage": "missing structured JSON aggregate"
+    },
+    "reference": {
+      "passed": true,
+      "encodings": [
+        "cl100k_base",
+        "o200k_base"
+      ],
+      "standaloneBinary": true,
+      "skillMCPAndUsageCountsMatchReference": true,
+      "modelNamesNotInferred": true
+    }
+  },
+  "rules": [
+    "Full observed JSON total requires complete selected-log reading, checked completed results and no missing or failed invocations or unmeasurable fields",
+    "Known measured subset remains separate when a total is unknown",
+    "Reference counts never fall back to heuristic totals; bytes can remain known when reference counts are unavailable",
+    "Optional stored summary is checked against source rows, reference encoding and log-reading state; old or stale summaries require reanalysis",
+    "Aggregation includes all directly attributed MCP rows and excludes Skill/outer categories; representation caveats are shared once in current App/CLI views"
+  ],
+  "limitations": [
+    "Only directly attributed retained MCP structuredContent, not a complete transport response or account-wide usage",
+    "SDK replies captured in the previous phase were reused; partial log cases are explicit synthetic mutations, not native Codex sessions",
+    "375 targeted Debug tests, no full Release or x86_64 acceptance",
+    "No request/model/billing attribution or task-quality conclusion"
+  ],
+  "modelCalled": false,
+  "newSDKCalls": 0,
+  "installed": false,
+  "published": false,
+  "artifactSHA256": {
+    "source-verification.json": "6c9fdb663a08722d6640b1580a45deba6771554c33965d18443be7bd01bc49a7",
+    "contract-before.stderr.log": "b8cd62df3abedf54d03078ded18923610534c19492de6586673db5ca51ab01d8",
+    "gui.json": "5b28494d0195cad4e50829b1005619a06b5124aa7eba97b1e0f49e0bc48b3035",
+    "contract-before-result.json": "eb90b13c6cdb765f0295226444663c58dc3dbba888fa2016462dc62a57fa450d",
+    "contract-before.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "final-tests.log": "094dd87c5d172e923a6a1217dfe5c6608d8d20f961d1138fc835e5b0a3ca1b80",
+    "contract.json": "d243a2c35fe0900dab326c3a7dd6321e9b3eae6feb914e23de2be7b905847367",
+    "reference-contract.json": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d",
+    "replay/after-opaque.json": "1d9a9e884c8f93439e037a1f6b723701fc53729fc9ecfebae1dc9afbb7752280",
+    "replay/after-receipts.json": "ef9eb8e77344aa75e3636a74bf799257d0d1b13b999588a9774bd1b9ac4ee65c",
+    "replay/result.json": "9b6f46588f9e2561b49e66f503ec23c4000f6b23056f11dedc77a4f4888ee4f2",
+    "replay/before-full.json": "49d93e55329d7b376d1aa8788a36cfba2ad89b78bae536e626bf97b17b5c634c",
+    "replay/before-receipts.json": "1078f497b430abfa10c14df587032cd72b91e1fc6c7d42eb0555a8d223ec2ae0",
+    "replay/after-clipped.json": "90711bcedbdb55ca906f1c2c6ecfab7f4d4780c17b0625cf118df0392ad1ffbd",
+    "replay/after-full.json": "543101795d9c7829b39979e37e154d1177c6edad9a70adae87b1b404d83c85a9",
+    "replay/after-missing.json": "da26af7f8477f4085d97f8a72c5df92fa5dadb905a95366b6128c8fe91aea5ab"
+  }
+}
