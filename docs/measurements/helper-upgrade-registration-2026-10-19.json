@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-19",
+  "sourceBase": "1612982",
+  "sourceFilesSHA256": {
+    "Sources/ThermoApp/HelperUpgradeCoordinator.swift": "6c0db3e61fedc91922a0b818cb1cbdfd853ea6a6da1b85b9f4587e9656cc3c26",
+    "Sources/ThermoApp/Monitor.swift": "3a3505ce56f487f27db69bab8fc953a4d112360fce230c5fa91e2dc49b54ae8f",
+    "Sources/ThermoKit/Version.swift": "c7c2f5882d38c62b17d56b3beeabc88110e15474f8b3890613343356aadc7f3a"
+  },
+  "versionPrepared": "1.1.31",
+  "fix": "Do not unregister a legacy password-installed helper through SMAppService, either during automatic outdated-helper restart or before the privileged installation transaction stages its backups",
+  "command": "swift test --jobs 4 --filter ThermoAppTests|ThermoKitTests|ThermoHelperTests|ThermoCLITests --skip HardwareTests",
+  "exitCode": 0,
+  "total": 642,
+  "failures": 0,
+  "suites": {
+    "ThermoKitTests.xctest": {
+      "tests": 198,
+      "failures": 0
+    },
+    "ThermoHelperTests.xctest": {
+      "tests": 30,
+      "failures": 0
+    },
+    "ThermoCLITests.xctest": {
+      "tests": 108,
+      "failures": 0
+    },
+    "ThermoAppTests.xctest": {
+      "tests": 306,
+      "failures": 0
+    }
+  },
+  "logSHA256": "abf7a579a706357c0321b36f494bf89290ad437f129942c12b6d7697a9bc6983",
+  "targetedChecks": {
+    "count": 7,
+    "failures": 0,
+    "legacyUnregisterSkipped": true,
+    "managedRestartOnceOnly": true,
+    "failedUnregisterDoesNotRegisterOrRepeat": true
+  },
+  "installedGuardAccepted": false,
+  "remaining": "Build and install signed 1.1.31, then verify real legacy helper auto-update without losing its launchd registration"
+}

@@ -129,7 +129,9 @@
       "Finder selection also returned cgWindowNotFound",
       "No bound UI handle was returned; no keyboard or mouse input sent"
     ],
-    "userAskedToOpenMainWindow": true
+    "userAskedToOpenMainWindow": true,
+    "followUp": "mole-visible-493-2026-10-19.json",
+    "priorBlockResolved": true
   },
   "displacedApps": [
     {

@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-19",
+  "source": "1612982",
+  "version": "1.1.30",
+  "build": "505",
+  "package": {
+    "developerIDTeam": "6ZPXG4KVVS",
+    "metadataVerified": true,
+    "appleEventsEntitlement": true,
+    "architectures": {
+      "Contents/MacOS/Thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo-helper": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "nativeAndRosettaCLI": {
+      "version": true,
+      "limit80AndFullDryRun": true,
+      "readOnlyChargeProbe": true,
+      "productionHelperRead": true
+    },
+    "archive": {
+      "archive": "Thermo-1.1.30-505-candidate.zip",
+      "sha256": "042e444e836f79f0cc252f85339e27b251616ea13d5779d3e176484da54ba9df",
+      "regularFiles": 93,
+      "symlinks": 8,
+      "filesModesAndLinksMatch": true,
+      "unpackedDeepStrictAllArchSignaturePass": true
+    },
+    "lifecycle": {
+      "passed": true,
+      "samples": 23,
+      "transitionChecks": {
+        "cycle-1-hidden": true,
+        "cycle-1-leave-overview": true,
+        "cycle-1-return-overview": true,
+        "cycle-1-visible-again": true,
+        "cycle-2-hidden": true,
+        "cycle-2-leave-overview": true,
+        "cycle-2-return-overview": true,
+        "cycle-2-visible-again": true
+      }
+    }
+  },
+  "deployment": {
+    "oldAppQuitThroughSettingsButton": true,
+    "oldProcessAbsenceVerified": true,
+    "oldAppAndHelperAndPlistBackedUp": true,
+    "atomicAppExchange": true,
+    "oldAppFilesPreserved": true,
+    "newAppControlVersion": "1.1.30 (505)",
+    "automaticUpgradeAccepted": false
+  },
+  "upgradeIncident": {
+    "initialHelperFileUnchanged": true,
+    "rootJobAbsentAfterAppStart": true,
+    "visibleError": "Helper update: The operation couldn’t be completed. Operation not permitted",
+    "observedSourcePath": "Monitor.restartOutdatedHelper called SMAppService unregister/register while a password-installed legacy helper existed",
+    "repair": "Official installed CLI helper install completed successfully using administrator authorization; no direct root-file edits or new policy submitted",
+    "repairReceiptSHA256": "602cddcfcab9c8662b4cdad37e181bb4eb3dbbf2af576bb1036ddb36021d0bde",
+    "sourceGuardFixedButNotYetDeployed": true
+  },
+  "postRepair": {
+    "helper": "8/1.1.30",
+    "rootPID": 5490,
+    "rootBinaryMatchesEmbedded": true,
+    "rootSHA256": "f84f89470b0bedcd72d18a46ca6de93ce0bbfebb2e14f3413f3fc26e8a6915b8",
+    "fanExistingPolicy": 6617,
+    "sixConsecutiveManualTargetChecks": true,
+    "firstCheck": "2026-10-19T01:35:03Z",
+    "lastCheck": "2026-10-19T01:35:13Z",
+    "rpmMin": 6523.39404296875,
+    "rpmMax": 6642.43408203125,
+    "settingsHelperRunningVisible": true,
+    "oldFailureBannerDismissedAfterRecovery": true
+  },
+  "notarized": false,
+  "published": false,
+  "remaining": [
+    "Build and deploy guard against legacy registration removal",
+    "Accept the next actual version upgrade without manual helper repair",
+    "Screen permission and hardware-session acceptance",
+    "Complete parity matrix"
+  ]
+}

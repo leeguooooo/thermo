@@ -410,15 +410,8 @@ if ["--main", "--disk", "--agents", "--chrome-pages"].contains(where: CommandLin
     app.setActivationPolicy(CommandLine.arguments.contains("--offscreen") ? .accessory : .regular)
     DispatchQueue.main.async { MainActor.assumeIsolated { openMainOnly(CommandLine.arguments) } }
     // Only the main window closing ends the app (not sheets, menus or alerts).
-    NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { n in
-        MainActor.assumeIsolated {
-            guard let w = n.object as? NSWindow, w === MainWindow.window else { return }
-            if AppModels.shared.softwareUpdates.working || AppModels.shared.nativeUpdates.installing || AppModels.shared.startup.working || AppModels.shared.apps.working {
-                DispatchQueue.main.async { _ = AppExitGuard.reply() }
-            } else { exit(0) }
-        }
-    }
-    withExtendedLifetime(mainOnlyDelegate) { app.run() }
+    let closeObserver = MainActor.assumeIsolated { MainOnlyDelegate.observeMainWindowClosing() }
+    withExtendedLifetime((mainOnlyDelegate, closeObserver)) { app.run() }
 }
 let delegate = MainActor.assumeIsolated { AppDelegate() }
 app.delegate = delegate
