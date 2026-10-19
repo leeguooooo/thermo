@@ -64,6 +64,9 @@ public struct MCPInspection: Codable, Sendable {
     public var agent: String
     public var state: State = .failed
     public var message = ""
+    /// HTTP rejection of an inspection request only; never session cleanup status.
+    /// Absent for older reports and failures without a received rejection status.
+    public var rejectedHTTPStatusCode: Int? = nil
     public var referenceEncoding: String?
     public var referenceEngine: String? = nil
     public var transport: String?
@@ -134,6 +137,13 @@ enum MCPInspector {
     struct Failure: Error {
         var state: MCPInspection.State = .failed
         var message: String
+        var rejectedHTTPStatusCode: Int? = nil
+    }
+    static func accessFailure(status: Int?) -> Failure {
+        let code = status.flatMap { (100...599).contains($0) ? $0 : nil }
+        let message = code.map { tr("MCP endpoint returned HTTP %1$@; inspection access was rejected. No automatic login was attempted.", String($0)) }
+            ?? tr("HTTP authentication failed; no automatic login was attempted.")
+        return Failure(state: .authenticationRequired, message: message, rejectedHTTPStatusCode: code)
     }
     static func clock() -> Double { Double(DispatchTime.now().uptimeNanoseconds) / 1e9 }
     static func json(_ object: Any) throws -> String {
@@ -289,6 +299,7 @@ enum MCPInspector {
                 : tr("Handshake and complete tool listing succeeded. Business tool behavior has not been tested.")
         } catch let error as Failure {
             report.state = error.state
+            report.rejectedHTTPStatusCode = error.rejectedHTTPStatusCode
             report.tools = []
             report.definitions = nil
             report.message = Redact.text(error.message)

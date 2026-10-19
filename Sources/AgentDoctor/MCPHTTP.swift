@@ -94,11 +94,11 @@ final class MCPHTTP: MCPTransport {
                 headerRead = true
                 responseStatus = response.statusCode
                 if response.statusCode == 401 || response.statusCode == 403 {
-                    throw MCPInspector.Failure(state: .authenticationRequired, message: tr("HTTP authentication failed; no automatic login was attempted."))
+                    throw MCPInspector.accessFailure(status: response.statusCode)
                 }
                 guard response.statusCode == (id == nil ? 202 : 200)
                         || (stateless && id != nil && [400, 404].contains(response.statusCode)) else {
-                    throw MCPInspector.Failure(message: tr("MCP endpoint returned HTTP status %1$@. No request was retried.", String(response.statusCode)))
+                    throw MCPInspector.Failure(message: tr("MCP endpoint returned HTTP status %1$@. No request was retried.", String(response.statusCode)), rejectedHTTPStatusCode: response.statusCode)
                 }
                 if message["method"] as? String == "initialize", let value = response.value(forHTTPHeaderField: "Mcp-Session-Id") {
                     guard !value.isEmpty, value.utf8.count <= 4096, value.utf8.allSatisfy({ (0x21...0x7e).contains($0) }) else {
@@ -229,7 +229,7 @@ final class MCPHTTPReceiver: NSObject, URLSessionDataDelegate, @unchecked Sendab
             completionHandler(.performDefaultHandling, nil)
         } else {
             lock.lock()
-            state.failure = MCPInspector.Failure(state: .authenticationRequired, message: tr("HTTP authentication failed; no automatic login was attempted."))
+            state.failure = MCPInspector.accessFailure(status: (challenge.failureResponse as? HTTPURLResponse)?.statusCode)
             lock.unlock()
             completionHandler(.cancelAuthenticationChallenge, nil)
         }

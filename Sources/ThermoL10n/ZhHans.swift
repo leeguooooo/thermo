@@ -2996,4 +2996,5 @@ let zhHans: [String: String] = [
     "Occupied time counts overlapping observed intervals once and excludes gaps. Only fully observed pairs within the window count; categories stay separate. Not CPU time, task duration or billing.": "占用时间对重叠区间只计一次，不含空档。仅计窗口内完整的起止记录，分类之间不相加；不代表 CPU 时间、任务总时长或账单。",
     "Ranks summed valid observed call intervals; overlaps count per call. Unknown timing follows known values. Missing intervals are excluded; this is not task duration.": "按有效观测调用区间的累计时长排序，重叠区间逐次计入。未知计时排在已知值之后；未观测区间不计入，这不是任务总时长。",
     "Valid timing pairs: %1$@ / %2$@ calls": "有效计时：%1$@ / %2$@ 次调用",
+    "MCP endpoint returned HTTP %1$@; inspection access was rejected. No automatic login was attempted.": "MCP 端点返回 HTTP %1$@，检查访问被拒绝；未尝试自动登录。",
 ]

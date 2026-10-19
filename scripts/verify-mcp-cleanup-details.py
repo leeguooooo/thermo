@@ -1,4 +1,4 @@
-"""Compiled CLI cleanup diagnostics against an owned loopback fixture; no real configs."""
+"""Compiled CLI HTTP rejection and cleanup diagnostics against an owned loopback fixture; no real configs."""
 import json
 import os
 from pathlib import Path
@@ -26,14 +26,15 @@ with tempfile.TemporaryDirectory(prefix='thermo-cleanup-cli-') as temporary:
         port = int((home / 'port').read_text())
         config = home / '.codex/config.toml'
         config.parent.mkdir()
-        def run(path, as_json=True):
+        def run(path, as_json=True, success=True):
             config.write_text('[mcp_servers.fixture]\nurl = "http://127.0.0.1:' + str(port) + path + '"\n')
             args = [str(binary), 'agents', 'inspect', 'fixture', '--agent', 'codex', '--timeout', '5']
             if as_json:
                 args.append('--json')
             result = subprocess.run(args, env=dict(os.environ, CFFIXED_USER_HOME=str(home), THERMO_LANG='en'),
-                                    capture_output=True, text=True, check=True, timeout=10)
-            assert 'fixture-private' not in result.stdout and 'fixture-session' not in result.stdout
+                                    capture_output=True, text=True, timeout=10)
+            assert (result.returncode == 0) == success, (path, result.returncode, result.stderr)
+            assert 'fixture-private' not in result.stdout + result.stderr and 'fixture-session' not in result.stdout + result.stderr
             return json.loads(result.stdout) if as_json else result.stdout
         reports = []
         for path, reason, status in [('/cleanup-error', 'httpError', 503),
@@ -41,6 +42,7 @@ with tempfile.TemporaryDirectory(prefix='thermo-cleanup-cli-') as temporary:
                                      ('/no-session', 'notNeeded', None)]:
             report = run(path)
             assert report['complete'] and report['state'] == 'ready'
+            assert 'rejectedHTTPStatusCode' not in report
             details = report['cleanupDetails']
             assert details['reason'] == reason and details.get('httpStatusCode') == status
             reports.append({'path': path, 'cleanupStatus': report['cleanupStatus'], 'details': details})
@@ -48,6 +50,20 @@ with tempfile.TemporaryDirectory(prefix='thermo-cleanup-cli-') as temporary:
         assert 'HTTP session cleanup: unconfirmed' in text
         assert 'Session closure returned an HTTP error' in text and 'HTTP 503' in text
         assert 'budget 0.250 s' in text
+        rejections = []
+        for status in [401, 403, 429, 503]:
+            path = '/' + str(status)
+            report = run(path, success=False)
+            assert report['rejectedHTTPStatusCode'] == status
+            assert not report['complete'] and report['tools'] == []
+            assert report['state'] == ('authenticationRequired' if status in [401, 403] else 'failed')
+            text = run(path, False, success=False)
+            assert re.search(r'HTTP(?: status)? ' + str(status) + r'\b', text)
+            log = [json.loads(line) for line in (home / 'log').read_text().splitlines()]
+            assert sum(row.get('path') == path for row in log) == 2  # one per CLI invocation
+            rejections.append({'status':status, 'state':report['state'], 'requests':2})
+        log = [json.loads(line) for line in (home / 'log').read_text().splitlines()]
+        # This case closes the fixture listener, so it must follow all other HTTP checks.
         refused = run('/cleanup-refused')
         assert refused['complete'] and refused['cleanupDetails']['reason'] == 'transportError'
         assert 'httpStatusCode' not in refused['cleanupDetails']
@@ -55,7 +71,7 @@ with tempfile.TemporaryDirectory(prefix='thermo-cleanup-cli-') as temporary:
         assert not any(row['method'] == 'tools/call' for row in log)
         print(json.dumps({'passed': True, 'reports': reports, 'transportFailureVerified': True,
                           'textOutputShowsReasonStatusAndBudget': True, 'privateDetailsExcluded': True,
-                          'noBusinessCalls': True, 'fixtureOnly': True}))
+                          'noBusinessCalls': True, 'fixtureOnly': True, 'rejections': rejections, 'inspectionAndCleanupStatusesSeparate': True}))
     finally:
         if server.poll() is None:
             server.terminate()

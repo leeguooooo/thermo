@@ -34,6 +34,7 @@ class Handler(BaseHTTPRequestHandler):
         with open(root+'/log','a') as f:
             f.write(json.dumps({'method':req.get('method','response'),'session':self.headers.get('Mcp-Session-Id'),'version':self.headers.get('MCP-Protocol-Version'),'auth':self.headers.get('Authorization'),'path':self.path,'methodHeader':self.headers.get('Mcp-Method'),'meta':req.get('params',{}).get('_meta')})+'\n')
         if self.path=='/401': return self.response(401,b'fixture-private-secret',{'WWW-Authenticate':'Basic realm="fixture"'})
+        if self.path in ['/403','/429','/503']: return self.response(int(self.path[1:]),b'fixture-private-secret')
         if self.path=='/redirect': return self.response(307,b'',{'Location':'/should-not-be-contacted'})
         if self.path=='/slow': time.sleep(30); return
         if 'id' not in req or 'method' not in req:
@@ -244,6 +245,8 @@ threading.Event().wait()
     func testAuthenticationAndRedirectNeverBecomeHealthyOrFollowed() throws {
         let auth = inspect("/401")
         XCTAssertEqual(auth.state, .authenticationRequired)
+        XCTAssertEqual(auth.rejectedHTTPStatusCode, 401)
+        XCTAssertTrue(auth.message.contains("HTTP 401"))
         XCTAssertTrue(auth.measurementNote.contains("separate connection"))
         XCTAssertTrue(auth.measurementNote.contains("does not establish the host connection state"))
         XCTAssertTrue(auth.measurementNote.contains("No login or business tool calls"))
@@ -251,6 +254,33 @@ threading.Event().wait()
         XCTAssertEqual(redirect.state, .failed)
         XCTAssertFalse(redirect.complete)
         XCTAssertFalse(try log().contains { $0["path"] as? String == "/should-not-be-contacted" })
+    }
+    func testRejectedHTTPStatusesStayMachineReadableWithoutResponseBodiesOrRetries() throws {
+        for status in [403, 429, 503] {
+            let report = inspect("/\(status)")
+            XCTAssertEqual(report.rejectedHTTPStatusCode, status)
+            XCTAssertEqual(report.state, status == 403 ? .authenticationRequired : .failed)
+            XCTAssertFalse(report.complete)
+            XCTAssertTrue(report.message.contains(String(status)))
+            let encoded = String(decoding: try JSONEncoder().encode(report), as: UTF8.self)
+            XCTAssertFalse(encoded.contains("fixture-private-secret"))
+            XCTAssertEqual(try log().filter { $0["path"] as? String == "/\(status)" }.count, 1)
+        }
+        XCTAssertEqual(try log().count, 3)
+    }
+    func testHTTPRejectionIsAbsentForReadyAndDecodeFailuresAndSurvivesOldReportDecoding() throws {
+        let ready = inspect("/json")
+        XCTAssertEqual(ready.state, .ready)
+        XCTAssertNil(ready.rejectedHTTPStatusCode)
+        XCTAssertNil(inspect("/bad").rejectedHTTPStatusCode)
+        let encoded = try JSONEncoder().encode(ready)
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        legacy.removeValue(forKey: "rejectedHTTPStatusCode")
+        let decoded = try JSONDecoder().decode(MCPInspection.self, from: JSONSerialization.data(withJSONObject: legacy))
+        XCTAssertNil(decoded.rejectedHTTPStatusCode)
+        let cleanup = inspect("/cleanup-error")
+        XCTAssertNil(cleanup.rejectedHTTPStatusCode)
+        XCTAssertEqual(cleanup.cleanupDetails?.httpStatusCode, 503)
     }
     func testMalformedOversizedAndTimeoutResponsesRemainIncomplete() {
         for path in ["/bad", "/oversize", "/slow"] {
