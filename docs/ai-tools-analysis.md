@@ -220,7 +220,7 @@ REA_MCP_OUTPUT_SCHEMA_PROFILE = "off"
 
 ## 本地使用历史
 
-`thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--limit FILES] [--all] [--json]` 显式读取本地会话日志。默认最近 7 天、最多 100 个文件；日期简写 YYYY-MM-DD 按 UTC 解释。App 的 MCP / Skills 分类共享一次“分析本地日志”的结果，支持按返回文本、明确错误、观察耗时或次数排序；项目选择不会改变这块跨项目统计的范围。
+`thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--sort text|structured] [--limit FILES] [--all] [--json]` 显式读取本地会话日志。默认最近 7 天、最多 100 个文件；日期简写 YYYY-MM-DD 按 UTC 解释。App 的 MCP / Skills 分类共享一次“分析本地日志”的结果，支持按返回文本、明确错误、观察耗时或次数排序；项目选择不会改变这块跨项目统计的范围。
 
 - 来源是 `~/.claude/projects` 与 `~/.codex/sessions` 中最近修改的 JSONL 文件，不包含归档目录。只处理窗口内、带有效 ISO 时间戳的记录。按文件修改时间选择意味着保留旧修改时间的导入日志可能不在范围内。
 - 最多发现 20,000 个目录条目，递归深度 6；最多读取 64 MiB，每个文件只读末尾 4 MiB，单行最多 1 MiB，扫描阶段最多 20 秒。超限、取消、截断、无法读取、无效 JSON 和缺失关联均在 coverage 或调用条目中保留。读取使用打开文件的长度快照，未结束的末行不作为完整事件。
@@ -230,7 +230,7 @@ REA_MCP_OUTPUT_SCHEMA_PROFILE = "off"
 - 耗时是日志调用至结果的时间间隔，包含宿主和传输开销，不代表纯服务执行时间。异常负间隔不计入样本。中位数依有效样本计算，至少 20 个样本才给最近秩 P95；累计间隔可能互相重叠，不能当作实际经过时间。
 - 返回文本单独计量，JSON 的 returnedTextEstimator 标识启发式算法版本。标准内容块只统计 text；图片等非文本块计数但不估算 token。结构化输出仅在没有 content 时序列化计量，避免把同一结果重复加总。报告只保留工具 / Skill 名称与聚合数字，不写入提示词、其他参数或返回正文；Skill 名称须通过标识符字符校验。脱敏后同名的工具也用原始名称哈希保持独立。
 - 新源码把 MCP 的 `structuredContent` JSON 表示另列于每行的 `structuredContent` 观察对象。`inspectedResultObjects` 是可检查封装数，`unobservableResults` 是无法检查的已完成结果数；`structuredResults` / `alongsideContentResults` 记录含该字段及同时含 `content` 的结果数。`jsonBytes` / `jsonEstimatedTokens` 只累计成功序列化的紧凑、排序 JSON；指定编码时另有 `jsonReferenceTokens`。字段不是对象时计入 `unavailableJSONResults`，不把它当作空对象；参考计量失败时参考 token 保持未知。协议失败和缺失结果不进入这些已完成结果的覆盖数。旧报告没有观察对象，保持未检查。
-- 此 JSON 表示可能重复返回文本或包含编码后的媒体，不能与文本合计相加，也不能推算实际模型输入或账单。解析器只检查 MCP 返回的封装，不递归搜文本块或脚本输出来猜嵌套调用。App 和 CLI 共用计量说明。App 可选择按结构化 JSON 的参考或估算 token 排序；只对已完成结果的封装均可检查、且计量有效的行排序，其余条目排在已知值之后。此时隐藏返回文本占比，避免混用分母；CLI 人类输出仍按返回文本排序，JSON 保留结构化观察。新增观察不改变现有文本分母、错误状态或请求 token。源码构建、CLI 验收与已安装 App 状态分别记录。
+- 此 JSON 表示可能重复返回文本或包含编码后的媒体，不能与文本合计相加，也不能推算实际模型输入或账单。解析器只检查 MCP 返回的封装，不递归搜文本块或脚本输出来猜嵌套调用。App 和 CLI 共用计量说明。App 可选择按结构化 JSON 的参考或估算 token 排序；只对已完成结果的封装均可检查、且计量有效的行排序，其余条目排在已知值之后。此时隐藏返回文本占比，避免混用分母；CLI 也支持 `--sort text|structured`，与 App 共用计数和未知值规则；默认文本排序依据 token 而非字节。CLI 的文本与 JSON 顺序一致，JSON 以 `toolOrdering` 声明选择；较旧或原生报告没有该字段时只表示未声明排序。新增观察不改变现有文本分母、错误状态或请求 token。源码构建、CLI 验收与已安装 App 状态分别记录。
 
 - 请求 token 单独列出：Claude message.usage 与 Codex token_usage_record.payload.usage。原生 msg_ / resp_ ID 跨镜像日志去重，其他 ID 在会话内去重；渐进计数使用较新的记录。Codex 累积 token_count 不求和。缺失或不支持的记录保留计数，缓存字段缺失保持未知；不同宿主的缓存字段不归一化、不再与 input 相加。
 
@@ -421,3 +421,5 @@ QA 由打包 App 的独立副本启动，两个架构所有有文件数据的 Ma
 UI 工具两次发生 noWindowsAvailable / ScreenCaptureKit -3812 错误；首次已核对进程仍在、控制台未锁定，之后按已运行的应用标识重新绑定，保留页面及报告状态并继续成功，没有重启恢复。日志有一次 AttributeGraph cycle 提示，未建立根因。该观察保留为稳定性边界，不当成 App 已崩溃或已彻底解决。测试副本和 HTTP 服务均已退出，原 App 严格签名与二进制哈希再次核对。普通启动、真实硬件、正式签名公证和安装更新仍未验收。
 
 [结构化排序与原生界面验收](measurements/mcp-structured-sort-ui-2026-10-19.json)覆盖 56 项定向测试和独立 QA App：12 个工具中，原先不在前 8 行的大 JSON 返回经排序到达首行；展开后已验证零值排在不可检查结果之前。切换 cl100k 时旧报告先提示重分析，重分析后仍由大 JSON 返回居首。界面只显示聚合计数，没有展示夹具正文。QA 为 Mac 190 的 Release 测试构建产物在目标 Mac 上组装、ad-hoc 签名的隔离副本，已通过窗口关闭并确认进程退出；原 Thermo 在起止采样时均运行。未安装或发布，不代表分发包验收或所有 MCP 业务质量评测。
+
+[CLI 排序验收](measurements/cli-tool-usage-order-2026-10-19.json)覆盖 174 项定向测试、8 组公共契约和目标 Mac 上的候选 CLI。25 个 MCP 的自有夹具验证默认 20 行 / `--all`、两种编码、文本与 JSON 同序、零值 / 未知顺序、参数拒绝和别名；与一个显式 Skill 的混合日志合并后 26 行均保留。旧 CLI 在 cl100k 下把 600 字节 / 200 token 的 Unicode 文本排第 22，排在 1,000 字节 / 125 token 的 ASCII 文本之后；候选按参考 token 将它排第 1。保留的真实 PR 返回值回放中，文本都为 17 字节，`--sort structured` 正确把 449,445 字节的结构化 JSON 排在 8,116 字节之前。这里只验证表示计量和展示顺序，不代表业务质量、模型已消费数据或账单；未安装或发布。

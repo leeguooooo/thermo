@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUTC": "2026-10-19T14:28:37.244993+00:00",
+  "source": {
+    "source": "/Users/leo/.codex/artifacts/thermo-cli-usage-order-source",
+    "commit": "b43196cbd33d09612c41f55c1994b1e86e3160c1",
+    "tree": "d659ebaea1d79bebcd018de757015cfbb0bf8266"
+  },
+  "change": {
+    "CLIOption": "agents usage --sort text|structured",
+    "default": "text token count, using selected reference encoding or heuristic",
+    "sharedAppAndCLISortRules": true,
+    "JSONAndHumanOutputSameOrder": true,
+    "JSONOrderingField": "toolOrdering",
+    "oldReportsWithoutOrderingRemainUndeclared": true,
+    "structuredOrderPreservesOtherCategoriesAfterKnownCounts": true,
+    "structuredOrderHidesTextTokenShares": true,
+    "invalidSortRejectedBeforeUsageExecution": true,
+    "aliasesSupportSortAndSelectedLog": true,
+    "helpAndCapabilitiesUpdated": true,
+    "returnedTextBytesAreNotTheDefaultRankingBasis": true
+  },
+  "remote": {
+    "runID": "77916f1c-c7d5-4353-b2ed-78f700998e98",
+    "host": "leos-MacBook-Pro.local",
+    "sourceTree": "d659ebaea1d79bebcd018de757015cfbb0bf8266",
+    "sourceUnchanged": true,
+    "developerDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "sdkRoot": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "tests": {
+      "ThermoCLITests": 114,
+      "AgentDoctorTests": 57,
+      "ThermoAppTests": 3,
+      "total": 174
+    },
+    "testSeconds": 285.1017567500239,
+    "allCollectedHashesVerified": true,
+    "collectedFiles": 5,
+    "productScope": "Release test-build CLI for owned target-machine acceptance; not a distribution package"
+  },
+  "CLI": {
+    "SHA256": "ef8ec9e40a3633c07f7eb5c709404218425ff746d2a4316f016f0f04c9b65fa0",
+    "contractGroupsPassed": 8,
+    "contractScriptSHA256": "3ae7f1bcda991a99d7e20f6d7ba6dfccff2339032590967688517b0c3a82edc8",
+    "baselineRejectedByNewGroup": {
+      "exitCode": 1,
+      "expectedFailure": "unknown option '--sort'",
+      "baselineSHA256": "3a2085aff20c2f94a5ab51ee581e43f60cdc802e44caff7f51ec73ac9604cbb2",
+      "rejectedAtNewOrderingGroup": true
+    },
+    "controlledRuntime": {
+      "passed": true,
+      "fixtureOnly": true,
+      "candidateSHA256": "ef8ec9e40a3633c07f7eb5c709404218425ff746d2a4316f016f0f04c9b65fa0",
+      "baselineSHA256": "3a2085aff20c2f94a5ab51ee581e43f60cdc802e44caff7f51ec73ac9604cbb2",
+      "measurements": {
+        "heuristic": {
+          "textNames": [
+            "ascii_5",
+            "ascii_13",
+            "ascii_19",
+            "ascii_14",
+            "ascii_18",
+            "ascii_15",
+            "ascii_1",
+            "ascii_3",
+            "ascii_2",
+            "ascii_20",
+            "ascii_11",
+            "ascii_12",
+            "ascii_6",
+            "ascii_7",
+            "ascii_16",
+            "ascii_4",
+            "ascii_8",
+            "ascii_0",
+            "ascii_9",
+            "ascii_10",
+            "ascii_17",
+            "unicode",
+            "verified_zero",
+            "wide_json",
+            "unknown"
+          ],
+          "structuredNames": [
+            "wide_json",
+            "unicode",
+            "ascii_5",
+            "ascii_13",
+            "ascii_19",
+            "ascii_14",
+            "ascii_18",
+            "ascii_15",
+            "ascii_1",
+            "ascii_3",
+            "ascii_2",
+            "ascii_20",
+            "ascii_11",
+            "ascii_12",
+            "ascii_6",
+            "ascii_7",
+            "ascii_16",
+            "ascii_4",
+            "ascii_8",
+            "ascii_0",
+            "ascii_9",
+            "ascii_10",
+            "ascii_17",
+            "verified_zero",
+            "unknown"
+          ],
+          "wideJSONBytes": 48011,
+          "wideJSONTokens": 12003,
+          "humanDefaultRows": 20,
+          "humanAllRows": 25
+        },
+        "cl100k_base": {
+          "textNames": [
+            "unicode",
+            "ascii_5",
+            "ascii_13",
+            "ascii_19",
+            "ascii_14",
+            "ascii_18",
+            "ascii_15",
+            "ascii_1",
+            "ascii_3",
+            "ascii_2",
+            "ascii_20",
+            "ascii_11",
+            "ascii_12",
+            "ascii_6",
+            "ascii_7",
+            "ascii_16",
+            "ascii_4",
+            "ascii_8",
+            "ascii_0",
+            "ascii_9",
+            "ascii_10",
+            "ascii_17",
+            "verified_zero",
+            "wide_json",
+            "unknown"
+          ],
+          "structuredNames": [
+            "wide_json",
+            "ascii_5",
+            "ascii_13",
+            "ascii_19",
+            "ascii_14",
+            "ascii_18",
+            "ascii_15",
+            "ascii_1",
+            "ascii_3",
+            "ascii_2",
+            "ascii_20",
+            "ascii_11",
+            "ascii_12",
+            "ascii_6",
+            "ascii_7",
+            "ascii_16",
+            "ascii_4",
+            "ascii_8",
+            "unicode",
+            "ascii_0",
+            "ascii_9",
+            "ascii_10",
+            "ascii_17",
+            "verified_zero",
+            "unknown"
+          ],
+          "wideJSONBytes": 48011,
+          "wideJSONTokens": 9004,
+          "humanDefaultRows": 20,
+          "humanAllRows": 25
+        },
+        "referenceDefaultRegression": {
+          "oldUnicodePosition": 22,
+          "newUnicodePosition": 1,
+          "unicodeBytes": 600,
+          "unicodeReferenceTokens": 200,
+          "ASCIIBytes": 1000,
+          "ASCIIReferenceTokens": 125
+        }
+      },
+      "mixedCategoriesPreserved": true,
+      "aliasesAccepted": true,
+      "invalidArgumentsRejectedWithoutJSONOutput": true,
+      "helpAndCapabilitiesConsistent": true,
+      "oldCLIMissingOptionConfirmed": true,
+      "metricsUnchangedAcrossSorts": true,
+      "noPayloadTextExported": true,
+      "newBusinessCalls": 0,
+      "newModelRuns": 0,
+      "installed": false,
+      "published": false
+    },
+    "retainedRealReturnOrdering": {
+      "passed": true,
+      "method": "Retained real PR return values replayed in owned native-log envelopes, not fresh host capture or business execution",
+      "order": [
+        "wide",
+        "narrow"
+      ],
+      "measurements": {
+        "wide": {
+          "textBytes": 17,
+          "JSONBytes": 449445,
+          "JSONReferenceTokens": 125574
+        },
+        "narrow": {
+          "textBytes": 17,
+          "JSONBytes": 8116,
+          "JSONReferenceTokens": 2108
+        }
+      },
+      "encoding": "cl100k_base",
+      "engine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary",
+      "requestOrBilledTokensMeasured": false,
+      "payloadNotExported": true,
+      "installed": false,
+      "published": false
+    },
+    "collectionModeRecovery": {
+      "ownedCandidateOnly": true,
+      "beforeMode": "0o600",
+      "afterMode": "0o755",
+      "SHA256Unchanged": true,
+      "initialPreflight": "execution refused because collected file lacked executable mode; no candidate code ran"
+    }
+  },
+  "boundaries": {
+    "newModelRuns": 0,
+    "newLiveBusinessCalls": 0,
+    "installed": false,
+    "published": false,
+    "AppGUIReacceptedForThisCommit": false,
+    "distributionPackageAccepted": false,
+    "requestOrBilledTokensMeasured": false,
+    "rawRealPRPayloadExported": false
+  }
+}

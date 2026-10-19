@@ -1,6 +1,6 @@
 """Controlled Release CLI checks; only owned files and a stdio fixture are used."""
 from pathlib import Path
-import json,subprocess,os,tempfile,sys,datetime,hashlib
+import json,subprocess,os,tempfile,sys,datetime,hashlib,re
 binary=Path(sys.argv[1]).resolve()
 binary_before=hashlib.sha256(binary.read_bytes()).hexdigest()
 source=Path(__file__).resolve().parent.parent
@@ -125,6 +125,25 @@ for line in sys.stdin:
  assert usage['unobservableResults']==usage['unavailableJSONResults']==0 and usage['jsonReferenceTokens']>0
  assert 'PRIVATE_STRUCTURED_VALUE' not in text and 'PRIVATE_STRUCTURED_ARGUMENT' not in text
  checks.append('structured JSON is measured separately from acknowledgment text; unavailable envelopes stay unknown and payloads are not exported')
+ ordering=[]
+ values=[('ascii','a'*1000,{'n':1}),('unicode','你好'*100,{'n':2}),('wide','OK',{'body':'PRIVATE_SORT_BODY '*100}),('zero','OK',None),('unknown','OK',None)]
+ for i,(name,ack,body) in enumerate(values):
+  result={'isError':False,'content':[{'type':'text','text':ack}]}
+  if body is not None:result['structuredContent']=body
+  output=json.dumps([{'type':'input_text','text':'OK'}]) if name=='unknown' else json.dumps(result)
+  ordering.extend([protocol(-18+i*3,{'type':'function_call','call_id':'sort-'+name,'name':'mcp__owned_sort__'+name,'arguments':'PRIVATE_SORT_ARGUMENT'}),protocol(-16+i*3,{'type':'function_call_output','call_id':'sort-'+name,'output':output})])
+ path=root/'ordering.jsonl';path.write_text(''.join(json.dumps(x)+'\n' for x in ordering))
+ args=['agents','usage','--agent','codex','--log-file',str(path),'--encoding','cl100k_base','--no-color']
+ text=json.loads(run(args+['--json']).stdout);structured=json.loads(run(args+['--sort','structured','--json']).stdout)
+ assert text['toolOrdering']=='text' and structured['toolOrdering']=='structured'
+ assert text['tools'][0]['name']=='unicode', 'default CLI order must use reference tokens rather than bytes'
+ assert [x['name'] for x in structured['tools']][0]=='wide' and [x['name'] for x in structured['tools']][-2:]==['zero','unknown']
+ assert {x['id']:x for x in text['tools']}=={x['id']:x for x in structured['tools']}
+ human=run(args+['--sort','structured','--all']).stdout
+ assert re.findall(r'^owned_sort / ([a-z_]+) \[codex, mcp\]$',human,re.M)==[x['name'] for x in structured['tools']]
+ assert 'share of observed mcp returned-text tokens' not in human
+ assert 'PRIVATE_SORT_' not in json.dumps(structured) and 'PRIVATE_SORT_' not in human
+ checks.append('CLI text and structured token order is declared in JSON, shared with human output, preserves metrics and keeps known zero before unknown')
 assert hashlib.sha256(binary.read_bytes()).hexdigest()==binary_before, 'input binary changed during contract checks'
 print(json.dumps({'fixtureOnly':True,'binarySHA256':binary_before,'groupsPassed':len(checks),'checks':checks,'modelsOrDevicesUsed':False},indent=2))
 # Test: python3 scripts/verify-ai-diagnostics-contract.py /path/to/thermo
