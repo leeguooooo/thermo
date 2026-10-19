@@ -62,6 +62,8 @@ mkdir -p "$DIST"
 rm -rf "$DIST/Thermo.app"
 rm -f "$DIST/thermo" "$DIST/thermo-helper"
 rm -f "$DIST/Thermo-$VERSION.zip" "$DIST/Thermo-$VERSION.dmg" "$DIST/thermo-cli-$VERSION.zip"
+rm -f "$DIST/thermo-cli-macos-universal.tar.gz" "$DIST/thermo-cli-macos-universal.tar.gz.sha256" \
+    "$DIST/Thermo-$VERSION-SHA256SUMS.txt"
 cp "$BIN/thermo" "$BIN/thermo-helper" "$DIST/"
 
 # --- App bundle -------------------------------------------------------------
@@ -166,6 +168,16 @@ if [ -n "$NOTARY_PROFILE" ]; then
 
     spctl -a -vv "$APP"
     spctl -a -vv -t open --context context:primary-signature "$DMG"
+
+    # Public assets only: CLI_ZIP is a notarization intermediate, not a download.
+    # Commit the manifest only after every required public product can be hashed.
+    (
+        cd "$DIST"
+        manifest_tmp="$(mktemp .thermo-checksums-XXXXXX)"
+        trap 'rm -f "$manifest_tmp"' 0
+        shasum -a 256 "Thermo-$VERSION.dmg" "Thermo-$VERSION.zip" "$CLI_ARCHIVE" > "$manifest_tmp"
+        mv "$manifest_tmp" "Thermo-$VERSION-SHA256SUMS.txt"
+    )
 
     # Sparkle appcast: keep every release in releases/ so the feed has history.
     if [ -n "$APPCAST_URL" ]; then

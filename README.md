@@ -52,9 +52,13 @@ make release
 # 等价于：
 SIGN_ID="Developer ID Application: LI GUO (6ZPXG4KVVS)" NOTARY_PROFILE=thermo \
 NOTARY_KEYCHAIN=$HOME/Library/Keychains/login.keychain-db scripts/build.sh
-# 产物：dist/Thermo.app（已 staple）、dist/Thermo-<ver>.zip、dist/thermo-cli-<ver>.zip
+# 产物：dist/Thermo.app（已 staple）、dist/Thermo-<ver>.dmg、dist/Thermo-<ver>.zip
+# CLI：dist/thermo-cli-macos-universal.tar.gz 及 .sha256
+# 公开校验清单：dist/Thermo-<ver>-SHA256SUMS.txt
 # 通用二进制：再加 ARCHS="arm64 x86_64"
 ```
+
+`thermo-cli-<ver>.zip` 只用于 CLI 公证，不作为公开下载。GitHub Release 上传 DMG、App ZIP、CLI tar.gz、其 `.sha256` 和公开校验清单；清单只列三个安装包，避免引用未上传的公证中间文件。
 
 新机器上的一次性准备：从钥匙串导入 Developer ID Application 证书（.p12），再保存公证凭据：
 
