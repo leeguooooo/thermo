@@ -98,6 +98,70 @@ final class TaskComparisonTests: XCTestCase {
         XCTAssertNil(missing.inputTokens.medianCandidateMinusBaseline)
         XCTAssertNil(missing.seconds.medianCandidateMinusBaseline)
     }
+    func testFailedPostRunCheckCannotBecomeSavingsDespiteIdenticalConditionsAndPassedTask() throws {
+        var records = try fixture()
+        records.runs[0].comparisonCheck = .failed
+        records.runs[1].outcome = .passed
+        records.runs[1].seconds = 0
+        let report = try compare(records)
+        XCTAssertEqual(report.totalRuns, 6)
+        XCTAssertEqual(report.matchedPairs, 2)
+        XCTAssertEqual(report.excluded.first?.reason, "comparison_check_failed")
+        XCTAssertEqual(report.excluded.first?.baselineOutcome, .passed)
+        XCTAssertEqual(report.excluded.first?.candidateOutcome, .passed)
+        XCTAssertEqual(report.reportedBaseline.passed, 2)
+        XCTAssertEqual(report.reportedCandidate.passed, 2)
+        XCTAssertEqual(report.baseline.passed, 1)
+        XCTAssertEqual(report.comparisonCheckFailedRuns, 1)
+        XCTAssertEqual(report.comparisonCheckUnverifiedRuns, 0)
+        XCTAssertEqual(report.seconds.samples, 2)
+        XCTAssertEqual(report.seconds.minimumCandidateMinusBaseline, 2)
+        XCTAssertEqual(report.inputTokens.samples, 1)
+        XCTAssertEqual(report.verifiedOutcomePairs, 2)
+    }
+    func testUnknownAndMissingPostRunChecksPreserveAllOutcomesWithoutAnyComparison() throws {
+        var records = try fixture()
+        for index in records.runs.indices { records.runs[index].comparisonCheck = .unverified }
+        var report = try compare(records)
+        XCTAssertEqual(report.matchedPairs, 0)
+        XCTAssertEqual(report.matchedTasks, 0)
+        XCTAssertEqual(report.reportedBaseline.failed, 1)
+        XCTAssertEqual(report.reportedCandidate.timeout, 1)
+        XCTAssertEqual(report.comparisonCheckUnverifiedRuns, 6)
+        XCTAssertTrue(report.excluded.allSatisfy { $0.reason == "comparison_check_unverified" })
+        XCTAssertNil(report.passRateDifferencePercentagePoints)
+        XCTAssertNil(report.seconds.medianCandidateMinusBaseline)
+        XCTAssertEqual(report.inputTokens.samples, 0)
+        records.schemaVersion = 1
+        for index in records.runs.indices { records.runs[index].comparisonCheck = nil }
+        report = try compare(records)
+        XCTAssertEqual(report.matchedPairs, 0)
+        XCTAssertEqual(report.comparisonCheckUnverifiedRuns, 6)
+        XCTAssertEqual(report.reportedBaseline.passed, 2)
+        XCTAssertEqual(report.reportedCandidate.timeout, 1)
+    }
+    func testVersionTwoRequiresExplicitChecksAndInvalidEnumIsNotIgnored() throws {
+        var records = try fixture()
+        records.runs[0].comparisonCheck = nil
+        XCTAssertThrowsError(try compare(records))
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(try fixture())) as? [String: Any])
+        var runs = try XCTUnwrap(object["runs"] as? [[String: Any]])
+        runs[0]["comparisonCheck"] = "PRIVATE_UNRECOGNIZED_CHECK"
+        object["runs"] = runs
+        XCTAssertThrowsError(try TaskComparison.compare(JSONSerialization.data(withJSONObject: object))) { error in
+            XCTAssertFalse(String(describing: error).contains("PRIVATE_UNRECOGNIZED_CHECK"))
+        }
+    }
+    func testMissingVariantRetainsItsReportedOutcome() throws {
+        var records = try fixture()
+        records.runs.removeLast()
+        let report = try compare(records)
+        XCTAssertEqual(report.excluded.last?.reason, "missing_variant")
+        XCTAssertEqual(report.excluded.last?.baselineOutcome, .passed)
+        XCTAssertNil(report.excluded.last?.candidateOutcome)
+        XCTAssertEqual(report.reportedBaseline.passed, 2)
+        XCTAssertEqual(report.reportedCandidate.passed, 2)
+    }
     func testInvalidLimitsAndSensitiveFreeTextAreRejectedWithoutEchoingIt() throws {
         var records = try fixture()
         records.runs[0].taskID = "private prompt / absolute path"
@@ -110,7 +174,7 @@ final class TaskComparisonTests: XCTestCase {
         XCTAssertThrowsError(try compare(records))
         records = try fixture(); records.runs[0].tokenSemantics = nil
         XCTAssertThrowsError(try compare(records))
-        records = try fixture(); records.schemaVersion = 2
+        records = try fixture(); records.schemaVersion = 3
         XCTAssertThrowsError(try compare(records))
         records = try fixture(); records.runs = []
         XCTAssertThrowsError(try compare(records))

@@ -73,6 +73,7 @@ struct OuterToolUsageBreakdown: View {
                 Text(tr("Share of observed outer returned-text tokens: %1$@", String(format: "%.1f%%", percentage)))
                     .font(.caption).foregroundStyle(.secondary)
             }
+            ResultTextRepresentationNotice(row: row)
             Text(tr("%1$@ results include unmeasured content; %2$@ non-text blocks were not tokenized.",
                     row.unmeasuredResults.map(String.init) ?? tr("Unknown"), String(row.nonTextBlocks)))
                 .font(.caption).foregroundStyle(.secondary)

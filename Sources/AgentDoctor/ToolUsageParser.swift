@@ -22,6 +22,7 @@ struct ToolUsageParser {
         var textBytes = 0
         var estimatedTokens = 0
         var nonText = 0
+        var textObservation = ToolResultTextObservation()
         var referenceTokens: Int?
         var unattributed: (text: TextFootprint, nonText: Int, measured: Bool)?
     }
@@ -184,6 +185,7 @@ struct ToolUsageParser {
         if error == true || measured.2 == true { call.isError = true }
         else if error != nil || measured.2 != nil { call.isError = false }
         else { call.isError = nil }
+        call.textObservation = ToolResultTextObservation(value, codexInputBlocks: host == "codex" && call.kind == nil)
         call.referenceTokens = measured.0.referenceTokens
         call.textBytes = measured.0.bytes; call.estimatedTokens = measured.0.estimatedTokens; call.nonText = measured.1
         if time == nil { coverage.missingTimestamps += 1 }
@@ -313,6 +315,8 @@ struct ToolUsageParser {
                                                          name: call.name ?? "Unidentified outer tool")
                 row.referenceEncoding = encoding == .heuristic ? nil : encoding.rawValue
                 row.unmeasuredResults = row.unmeasuredResults ?? 0
+                row.serializedMediaTextResults = row.serializedMediaTextResults ?? 0
+                row.truncationMarkerResults = row.truncationMarkerResults ?? 0
                 if encoding != .heuristic {
                     row.unavailableReferenceResults = row.unavailableReferenceResults ?? 0
                     if row.calls == 0 { row.referenceReturnedTextTokens = 0 }
@@ -321,6 +325,8 @@ struct ToolUsageParser {
                 if call.endSeen, inWindow(call.ended) {
                     unattributed.completed += 1
                     row.completed += 1
+                    if call.textObservation.serializedMedia { row.serializedMediaTextResults! += 1 }
+                    if call.textObservation.truncationMarker { row.truncationMarkerResults! += 1 }
                     if call.outerError == true { row.reportedErrors += 1 }
                     if call.outerError == nil { row.unknownErrorStatus += 1 }
                     if let start = call.started, let end = call.ended, end >= start {
@@ -366,6 +372,8 @@ struct ToolUsageParser {
                 if row.skillInstructions == nil { row.skillInstructions = SkillInstructionUsage(encoding: encoding) }
                 if let observed = loads[callKey] { row.skillInstructions?.merge(observed) }
             }
+            row.serializedMediaTextResults = row.serializedMediaTextResults ?? 0
+            row.truncationMarkerResults = row.truncationMarkerResults ?? 0
             if row.invocationFailures == nil { row.invocationFailures = 0 }
             row.referenceEncoding = encoding == .heuristic ? nil : encoding.rawValue
             if encoding != .heuristic, row.unavailableReferenceResults == nil { row.unavailableReferenceResults = 0 }
@@ -381,6 +389,8 @@ struct ToolUsageParser {
                         if call.referenceTokens == nil { row.unavailableReferenceResults = (row.unavailableReferenceResults ?? 0) + 1 }
                     }
                     row.completed += 1
+                    if call.textObservation.serializedMedia { row.serializedMediaTextResults! += 1 }
+                    if call.textObservation.truncationMarker { row.truncationMarkerResults! += 1 }
                     if call.isError == true { row.reportedErrors += 1 }
                     if call.isError == nil { row.unknownErrorStatus += 1 }
                     row.returnedTextBytes += call.textBytes; row.returnedTextEstimatedTokens += call.estimatedTokens; row.nonTextBlocks += call.nonText

@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-19",
+  "sourceBase": "c87c6d7",
+  "build": "local Debug arm64; not a release or installation",
+  "testedSourceSHA256": {
+    "Sources/AgentDoctor/TaskComparison.swift": "44fe2465bd6b8ecdda463090b6b835de070668a935420b9a550f3fdb079f4810",
+    "Sources/ThermoApp/TaskComparisonPanel.swift": "fdb70e9b3fef67d33d6135d308b0d6533b1bc6a2697c5c7f90dc08f02e99d002",
+    "Sources/ThermoL10n/ZhHans.swift": "9e9fbb92594b76f5fc2d34f28c65ac895720be61ec18db95822d7a2b0eaedf2f",
+    "Sources/thermo/Agents.swift": "aa7ccf344d417744dcfa23931ba017c3b6cab611aeba1e4c50f6054922f529bd",
+    "Tests/AgentDoctorTests/TaskComparisonTests.swift": "eb160e4e056610a013556011cc14fe61688ebba461d7363eac7bf344d66cbf7b",
+    "Tests/ThermoAppTests/TaskComparisonModelTests.swift": "1d66ac05411e41b7fe0b500ac2b73e9a99250216efafbd590b91e4f892e6c509",
+    "scripts/verify-task-comparison.py": "13f099ddedffe385eb7efa4817c555564d73e54e0cb9c0842e3d40ced808317f",
+    "docs/examples/task-comparison.json": "f5358e1682dc0289097b82de2ddf3b89ed1648a3b79a465de312b788afb40533",
+    "docs/measurements/blog-skill-business-comparison-guard-2026-10-18.json": "82e30df22d21381caaf617b37aa8f4783b884438f086c800aee04ec00a9351a9"
+  },
+  "tests": {
+    "moduleCounts": {
+      "AgentDoctorTests": 269,
+      "ThermoAppTests": 301,
+      "ThermoCLITests": 108
+    },
+    "total": 678,
+    "failures": 0,
+    "command": "swift test --skip-build --filter 'AgentDoctorTests|ThermoAppTests|ThermoCLITests'",
+    "finalBuildAndFocusedTests": {
+      "command": "swift test --jobs 2 --filter 'TaskComparisonTests|TaskComparisonModelTests'",
+      "tests": 15,
+      "failures": 0
+    }
+  },
+  "cliChecks": {
+    "evidenceKind": "synthetic",
+    "checksPassed": 9,
+    "checks": [
+      "compiled JSON output retains outcomes and paired metric sample sizes",
+      "text output labels synthetic evidence and delta direction",
+      "missing metrics and unverified outcomes remain unknown in JSON and text",
+      "missing and changed-task pairs are excluded rather than compared",
+      "failed comparison checks retain task outcomes but cannot produce rate or metric deltas",
+      "legacy missing checks remain unverified; version two requires an explicit check",
+      "mixed cohorts and duplicate results fail closed",
+      "extra content is not exported or executed; unsupported options rejected",
+      "FIFO and directory inputs are rejected without waiting for data"
+    ],
+    "notVerified": [
+      "real model task effect",
+      "independent outcome authenticity",
+      "App integration",
+      "release installation"
+    ]
+  },
+  "realRecordImport": {
+    "file": "blog-skill-business-comparison-guard-2026-10-18.json",
+    "reportSHA256": "36de375ae243101efeb0f6cbe32b30fc4cadf5abcdeabf2fcf22a36dfa64ee37",
+    "reportedBaselinePassed": 2,
+    "reportedCandidatePassed": 2,
+    "excludedPairs": 2,
+    "reason": "comparison_check_failed",
+    "comparablePairs": 0,
+    "inputDeltaSamples": 0,
+    "elapsedDeltaSamples": 0,
+    "passRateDifference": null
+  },
+  "visibleUI": {
+    "bundleID": "dev.thermo.comparisoncheck.qa",
+    "isolatedHome": true,
+    "args": [
+      "--main",
+      "--ui-review",
+      "--page",
+      "agents:mcp"
+    ],
+    "controller": "cua_repl",
+    "checks": [
+      "native file picker imports derived real records",
+      "MCP category identifies report as Skills and exposes failed checks",
+      "Skills card displays four failed checks and two excluded pairs",
+      "report retains baseline and candidate two passes each",
+      "final UI replaces incomparable zero outcome counters with no comparable pairs message",
+      "pass-rate and time/token differences unknown",
+      "expanded reasons identify both excluded tasks",
+      "clear removes report and warning",
+      "owned main window closed and process terminal"
+    ],
+    "runtimeFileBackedSectionsMatchBuiltApp": true,
+    "controlPolicyRestorationDisabled": true,
+    "runtimeSHA256": "81393d42ba1194e18a936bf62eda905baec52ef5a3752e55b6b34bff9d91b274"
+  },
+  "cliSHA256": "fa44fe897ee1bd58fd72af1e30fe2bb83a8a9bf60ed7a241368f6281507339fd",
+  "privacy": {
+    "rawModelEventsPublished": false,
+    "originalRecordsModified": false,
+    "additionalModelRuns": 0,
+    "configurationOverwritten": false,
+    "externalPublication": false
+  },
+  "limits": [
+    "Outcome and post-run checks are evaluator declarations; Thermo does not independently authenticate them.",
+    "Historical version-1 records without post-run checks preserve outcomes but do not produce deltas.",
+    "Historical collected evidence and frozen collectors are unchanged.",
+    "No real browser or phone operation; no new model task; no release, installation or update acceptance."
+  ]
+}

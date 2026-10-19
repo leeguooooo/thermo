@@ -17,7 +17,7 @@ thermo agents compare /path/to/measured-records.json --json
 
 `kind` 填 `skill` 或 `mcp`。`baselineRevision` 与 `candidateRevision` 填对应版本完整内容的 SHA-256；无 Skill / MCP 的基线可填 `none`。MCP 应同时固定服务版本、工具定义和相关配置；Skill 应包含实际使用的正文及依赖资源。哈希中不要遗漏会影响任务的资源，也不要收录凭据。
 
-每次运行包含：
+新采集文件使用 `schemaVersion: 2`。每次运行包含：
 
 | 字段 | 内容 |
 |---|---|
@@ -28,6 +28,7 @@ thermo agents compare /path/to/measured-records.json --json
 | `conditions.task` | 完整任务及输入的 SHA-256 |
 | `conditions.verifier` | 预先固定的验收方法及版本的 SHA-256 |
 | `outcome` | `passed`、`failed`、`timeout`、`error`、`unverified` |
+| `comparisonCheck` | 采集方在运行后检查环境、冻结输入和采集完整性：`passed`、`failed`、`unverified`。任务通过不代表此检查通过 |
 | `seconds` | 整次任务经过时间；包括重试和工具调用。未知省略或填 null |
 | `inputTokens` / `outputTokens` | 整次任务的原生请求计数；未知省略或填 null，不填估算值，不分摊给单个工具 |
 | `tokenSemantics` | 计数来源、版本和缓存处理口径的固定标识；提供 token 时必填 |
@@ -39,6 +40,12 @@ thermo agents compare /path/to/measured-records.json --json
 ## 结果解释
 
 按 `taskID + repetition` 配对。重复结果直接拒绝；缺少一方或任务 / 验收哈希不一致时列入 `excluded`，不混入可比较结果。报告保留输入总条数、匹配数量、排除原因及双方结果分布。排除过多时，应修复采集方法，而不是据剩余样本判断优劣。
+
+仅双方 `comparisonCheck` 都是 `passed` 时才参与通过率、时间和 token 比较。任一方为 `failed`，排除原因为 `comparison_check_failed`；否则检查缺失或未完成时为 `comparison_check_unverified`。任务成功但共享配置变更、冻结输入变化或采集收尾失败时，不能仅凭相同的启动条件哈希把检查填为通过；无法确定受影响的时段时，应保留整组异常。
+
+版本 1 仍可读取，但没有此字段的旧记录按检查未核实处理，只保留任务结果，不再生成收益差值。不要自动给历史记录补 `passed`，应回查运行后的证据。版本 2 缺少此字段或使用未知值时拒绝导入。原始记录应保留，补充检查结果时另存文件。
+
+报告的 `reportedBaseline` / `reportedCandidate` 保留全部导入运行的任务结果，包括缺配对、条件不符和检查失败者；`baseline` / `candidate` 只包含参与比较的配对。排除项另保留双方存在的 `baselineOutcome` / `candidateOutcome`，避免把“任务通过、对照无效”误写成任务失败。检查状态也是采集方的声明，Thermo 不替代环境验证。
 
 通过率只使用双方都已验收的配对。`failed`、`timeout`、`error` 均不算通过；`unverified` 不被猜成失败。报告列出双方都通过、仅候选通过、仅基线通过和双方都未通过的数量，以及候选减基线的通过率百分点差。
 

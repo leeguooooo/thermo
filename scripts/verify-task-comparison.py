@@ -58,6 +58,27 @@ with tempfile.TemporaryDirectory(prefix='thermo-task-comparison-') as directory:
     checks.append('missing and changed-task pairs are excluded rather than compared')
 
     altered = copy.deepcopy(fixture)
+    for row in altered['runs']:
+        row['comparisonCheck'] = 'failed'
+    rejected = json.loads(run(altered, '--json').stdout)
+    assert rejected['matchedPairs'] == rejected['inputTokens']['samples'] == rejected['seconds']['samples'] == 0
+    assert rejected['reportedBaseline']['passed'] == 2 and rejected['reportedCandidate']['timeout'] == 1
+    assert rejected['comparisonCheckFailedRuns'] == 6
+    assert {x['reason'] for x in rejected['excluded']} == {'comparison_check_failed'}
+    assert 'Pass-rate difference: unknown' in run(altered).stdout
+    checks.append('failed comparison checks retain task outcomes but cannot produce rate or metric deltas')
+
+    altered['schemaVersion'] = 1
+    for row in altered['runs']:
+        row.pop('comparisonCheck')
+    unchecked = json.loads(run(altered, '--json').stdout)
+    assert unchecked['matchedPairs'] == 0 and unchecked['comparisonCheckUnverifiedRuns'] == 6
+    assert unchecked['reportedCandidate']['timeout'] == 1
+    altered['schemaVersion'] = 2
+    run(altered, '--json', success=False)
+    checks.append('legacy missing checks remain unverified; version two requires an explicit check')
+
+    altered = copy.deepcopy(fixture)
     altered['runs'][1]['conditions']['model'] = 'different-model'
     run(altered, '--json', success=False)
     altered = copy.deepcopy(fixture)

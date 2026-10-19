@@ -184,7 +184,9 @@ struct AgentsCommand {
              "Evidence: \(report.evidenceKind) · \(report.kind) · model \(report.model)",
              "\(report.totalRuns) records · \(report.matchedPairs) matched pairs across \(report.matchedTasks) tasks · \(report.excluded.count) excluded pairs",
              "Exclusions: " + (exclusions.isEmpty ? "none" : exclusions),
-             outcomes("Baseline", report.baseline), outcomes("Candidate", report.candidate),
+             "Post-run comparison checks: \(report.comparisonCheckFailedRuns) failed · \(report.comparisonCheckUnverifiedRuns) unverified",
+             outcomes("Reported baseline (all runs)", report.reportedBaseline), outcomes("Reported candidate (all runs)", report.reportedCandidate),
+             outcomes("Comparable baseline", report.baseline), outcomes("Comparable candidate", report.candidate),
              "Verified outcomes: \(report.verifiedOutcomePairs) pairs · both passed \(report.bothPassed) · candidate only \(report.candidateOnlyPassed) · baseline only \(report.baselineOnlyPassed) · neither \(report.neitherPassed)",
              "Pass-rate difference: " + (report.passRateDifferencePercentagePoints.map { String(format: "%+.2f percentage points", $0) } ?? "unknown"),
              metric("Elapsed seconds", report.seconds), metric("Native input tokens", report.inputTokens), metric("Native output tokens", report.outputTokens),
@@ -240,6 +242,16 @@ struct AgentsCommand {
             lines.append(instructionLine(report.observedSkillInstructions))
             lines.append("Only explicitly source-linked Claude instruction messages are measured. Kept separate from tool replies and request counters; missing loads, referenced files and billing remain unknown.")
         }
+        func representationNotes(_ row: ToolUsageRow) -> [String] {
+            var notes: [String] = []
+            if let count = row.serializedMediaTextResults, count > 0 {
+                notes.append("Serialized media inside text: \(count) results; logged-text counts are not media token cost or proof of model delivery.")
+            }
+            if let count = row.truncationMarkerResults, count > 0 {
+                notes.append("Explicit truncation markers: \(count) result texts; full returned size unknown.")
+            }
+            return notes
+        }
         for row in report.tools.prefix(app.args.has("all") ? report.tools.count : 20) {
             lines.append(style.bold((row.server.map { $0 + " / " } ?? "") + row.name) + " [" + row.host + ", " + row.kind + "]")
             lines.append("  \(row.calls) calls · \(row.completed) results · \(row.reportedErrors) explicit result errors · \(row.unknownErrorStatus) unknown error status · \(row.missingResults) missing results")
@@ -254,6 +266,7 @@ struct AgentsCommand {
             let p95 = row.p95Seconds.map { String(format: "%.3fs", $0) } ?? "unknown (requires 20 samples)"
             if let encoding = row.referenceEncoding { lines.append("  " + encoding + ": " + (row.referenceReturnedTextTokens.map(String.init) ?? "unknown") + " reference tokens; unavailable results: \(row.unavailableReferenceResults ?? 0)") }
             lines.append("  result text: \(row.returnedTextBytes) bytes / ≈\(row.returnedTextEstimatedTokens) tokens · median \(median) · P95 \(p95) · \(row.nonTextBlocks) non-text blocks not tokenized")
+            lines += representationNotes(row).map { "  " + $0 }
             if let percentage = textSummaries[row.kind]?.percentage(of: row) {
                 lines.append("  share of observed \(row.kind) returned-text tokens: \(String(format: "%.1f%%", percentage))")
             }
@@ -282,6 +295,7 @@ struct AgentsCommand {
                     for row in rows.prefix(count) {
                         let tokens = report.referenceEncoding == nil ? "≈\(row.returnedTextEstimatedTokens)" : row.referenceReturnedTextTokens.map(String.init) ?? "unknown"
                         lines.append("  \(row.name) [\(row.host)]: \(row.calls) calls · \(row.completed) results · \(row.missingResults) missing · \(row.returnedTextBytes) text bytes / \(tokens) tokens")
+                        lines += representationNotes(row).map { "    " + $0 }
                         lines.append("    \(row.reportedErrors) explicit result errors · \(row.unknownErrorStatus) unknown error status · \(row.unmeasuredResults.map(String.init) ?? "unknown") results with unmeasured content · \(row.nonTextBlocks) non-text blocks")
                         let median = row.medianSeconds.map { String(format: "%.3fs", $0) } ?? "unknown"
                         let p95 = row.p95Seconds.map { String(format: "%.3fs", $0) } ?? "unknown (requires 20 samples)"

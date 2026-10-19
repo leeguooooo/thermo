@@ -51,6 +51,7 @@ struct TaskComparisonPanel: View {
             if let report = model.report {
                 Text(report.evidenceKind == "synthetic" ? tr("Synthetic data · does not prove real task performance") : tr("Measured records · supplied outcomes have not been independently verified"))
                     .font(.callout).foregroundStyle(report.evidenceKind == "synthetic" ? .orange : .secondary)
+                ComparisonCheckNotice(report: report)
                 if report.kind == kind {
                     Text(tr("%1$@ paired runs across %2$@ tasks · %3$@ excluded pairs", String(report.matchedPairs), String(report.matchedTasks), String(report.excluded.count)))
                         .font(.caption.monospaced())
@@ -93,12 +94,23 @@ struct TaskComparisonResultView: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(report.evidenceKind == "synthetic" ? tr("Synthetic data · does not prove real task performance") : tr("Measured records · supplied outcomes have not been independently verified"))
                     .font(.headline).foregroundStyle(report.evidenceKind == "synthetic" ? .orange : .secondary)
+                ComparisonCheckNotice(report: report)
+                Text(tr("Reported outcomes · all imported runs")).font(.headline)
+                outcomes(tr("Baseline"), report.reportedBaseline)
+                outcomes(tr("Candidate"), report.reportedCandidate)
+                Divider()
+                Text(tr("Comparable pairs only")).font(.headline)
                 Text(tr("Model: %1$@", report.model)).font(.callout.monospaced())
                 Text(tr("%1$@ paired runs across %2$@ tasks · %3$@ excluded pairs", String(report.matchedPairs), String(report.matchedTasks), String(report.excluded.count)))
-                Text(tr("Pairs with reported outcomes: %1$@ · unknown outcomes: %2$@", String(report.verifiedOutcomePairs), String(report.matchedPairs - report.verifiedOutcomePairs)))
-                outcomes(tr("Baseline"), report.baseline)
-                outcomes(tr("Candidate"), report.candidate)
-                Text(tr("Both passed %1$@ · candidate only %2$@ · baseline only %3$@ · neither passed %4$@", String(report.bothPassed), String(report.candidateOnlyPassed), String(report.baselineOnlyPassed), String(report.neitherPassed)))
+                if report.matchedPairs > 0 {
+                    Text(tr("Pairs with reported outcomes: %1$@ · unknown outcomes: %2$@", String(report.verifiedOutcomePairs), String(report.matchedPairs - report.verifiedOutcomePairs)))
+                    outcomes(tr("Baseline"), report.baseline)
+                    outcomes(tr("Candidate"), report.candidate)
+                    Text(tr("Both passed %1$@ · candidate only %2$@ · baseline only %3$@ · neither passed %4$@", String(report.bothPassed), String(report.candidateOnlyPassed), String(report.baselineOnlyPassed), String(report.neitherPassed)))
+                } else {
+                    Text(tr("No comparable pairs. Reported task outcomes above are retained."))
+                        .font(.callout).foregroundStyle(.secondary)
+                }
                 if let difference = report.passRateDifferencePercentagePoints {
                     Text(tr("Pass-rate difference: %1$@ percentage points", String(format: "%+.2f", difference)))
                 } else { Text(tr("Pass-rate difference: unknown")) }
@@ -112,7 +124,7 @@ struct TaskComparisonResultView: View {
                 if !report.excluded.isEmpty {
                     DisclosureGroup(tr("Excluded pairs")) {
                         ForEach(Array(report.excluded.enumerated()), id: \.offset) { _, entry in
-                            Text(tr("%1$@ · repetition %2$@ · %3$@", entry.taskID, String(entry.repetition), entry.reason == "missing_variant" ? tr("Missing baseline or candidate") : tr("Task or verifier conditions differ")))
+                            Text(tr("%1$@ · repetition %2$@ · %3$@", entry.taskID, String(entry.repetition), exclusionReason(entry.reason)))
                                 .font(.caption.monospaced())
                         }
                     }
@@ -126,6 +138,14 @@ struct TaskComparisonResultView: View {
                 Text(tr("Imported records are not automatically linked to installed tools. Thermo checks record consistency, not outcome authenticity. Repeated tasks have more weight; this descriptive comparison does not establish significance or overall quality."))
                     .font(.caption).foregroundStyle(.secondary)
             }.textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 8)
+        }
+    }
+    private func exclusionReason(_ reason: String) -> String {
+        switch reason {
+        case "missing_variant": return tr("Missing baseline or candidate")
+        case "comparison_check_failed": return tr("Post-run comparison check failed")
+        case "comparison_check_unverified": return tr("Post-run comparison check missing or unverified")
+        default: return tr("Task or verifier conditions differ")
         }
     }
     private func outcomes(_ title: String, _ value: TaskComparison.Outcomes) -> some View {
@@ -142,6 +162,16 @@ struct TaskComparisonResultView: View {
                 Text(tr("Median difference %1$@ · range %2$@ to %3$@ · %4$@ paired samples", String(format: "%+.3f", median), String(format: "%+.3f", minimum), String(format: "%+.3f", maximum), String(value.samples)))
                     .font(.caption.monospaced())
             } else { Text(tr("Unknown · no paired measurements")).font(.caption).foregroundStyle(.secondary) }
+        }
+    }
+}
+
+private struct ComparisonCheckNotice: View {
+    let report: TaskComparison.Report
+    var body: some View {
+        if report.comparisonCheckFailedRuns > 0 || report.comparisonCheckUnverifiedRuns > 0 {
+            Text(tr("Post-run comparison checks: %1$@ failed · %2$@ unverified. Affected pairs are excluded; reported task outcomes remain available.", String(report.comparisonCheckFailedRuns), String(report.comparisonCheckUnverifiedRuns)))
+                .font(.callout).foregroundStyle(.orange)
         }
     }
 }

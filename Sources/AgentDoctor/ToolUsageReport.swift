@@ -67,6 +67,10 @@ public struct ToolUsageRow: Codable, Identifiable, Sendable {
     public var p95Seconds: Double?
     public var returnedTextBytes = 0
     public var returnedTextEstimatedTokens = 0
+    /// Observations of the text representation, not proof of model delivery or media cost.
+    /// Absent in older reports means unchecked. Counts completed results, not blocks.
+    public var serializedMediaTextResults: Int? = nil
+    public var truncationMarkerResults: Int? = nil
     public var nonTextBlocks = 0
     /// Outer results with unsupported content. Absent for older reports and other categories.
     public var unmeasuredResults: Int? = nil
