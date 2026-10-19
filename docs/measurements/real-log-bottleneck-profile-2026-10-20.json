@@ -1,0 +1,266 @@
+{
+  "recordedDate": "2026-10-20",
+  "analyzerSourceCommit": "f918118",
+  "sample": {
+    "snapshotBytes": 33554432,
+    "snapshotSHA256": "416438873ad6f0fa1a7096d464004dc91efe8771835b9ac9c51727787018c7d3",
+    "capturedAtUTC": "2026-10-19T23:06:48.368853+00:00",
+    "reportSince": "2026-10-13T00:00:00Z",
+    "reportUntil": "2026-10-19T23:09:35Z",
+    "complete": false,
+    "coverage": {
+      "bytesRead": 33554432,
+      "cancelled": false,
+      "clippedFiles": 0,
+      "duplicateRecords": 230,
+      "filesDiscovered": 1,
+      "filesRead": 1,
+      "limitReached": false,
+      "malformedLines": 1,
+      "missingTimestamps": 0,
+      "otherToolCalls": 779,
+      "oversizedLines": 0,
+      "unmatchedInstructionEvents": 0,
+      "unmatchedResults": 0,
+      "unreadableFiles": 0,
+      "unsupportedUsageRecords": 0
+    },
+    "scope": "One fixed 32 MiB tail of this diagnostics thread, not all tools, all activity or ordinary business performance."
+  },
+  "directMCPRows": [
+    {
+      "name": "js",
+      "server": "cua_repl",
+      "calls": 115,
+      "completed": 115,
+      "missingResults": 0,
+      "reportedErrors": 5,
+      "invocationFailures": 0,
+      "timingSamples": 115,
+      "totalObservedSeconds": 105.29700112342834,
+      "medianSeconds": 0.7149999141693115,
+      "p95Seconds": 2.121000051498413,
+      "returnedTextBytes": 1789195,
+      "returnedTextEstimatedTokens": 453707,
+      "serializedMediaTextResults": 24,
+      "truncationMarkerResults": 24,
+      "structuredContent": {
+        "alongsideContentResults": 0,
+        "inspectedResultObjects": 115,
+        "jsonBytes": 0,
+        "jsonEstimatedTokens": 0,
+        "structuredResults": 0,
+        "unavailableJSONResults": 0,
+        "unobservableResults": 0
+      }
+    },
+    {
+      "name": "github.fetch",
+      "server": "codex_apps",
+      "calls": 3,
+      "completed": 3,
+      "missingResults": 0,
+      "reportedErrors": 0,
+      "invocationFailures": 0,
+      "timingSamples": 3,
+      "totalObservedSeconds": 2.9170002937316895,
+      "medianSeconds": 0.44900012016296387,
+      "returnedTextBytes": 51,
+      "returnedTextEstimatedTokens": 15,
+      "serializedMediaTextResults": 0,
+      "truncationMarkerResults": 0,
+      "structuredContent": {
+        "alongsideContentResults": 3,
+        "inspectedResultObjects": 3,
+        "jsonBytes": 25515,
+        "jsonEstimatedTokens": 6590,
+        "structuredResults": 3,
+        "unavailableJSONResults": 0,
+        "unobservableResults": 0
+      }
+    }
+  ],
+  "outerRows": [
+    {
+      "name": "exec",
+      "calls": 757,
+      "completed": 756,
+      "missingResults": 1,
+      "reportedErrors": 0,
+      "timingSamples": 756,
+      "totalObservedSeconds": 1255.7599997520447,
+      "medianSeconds": 0.42600011825561523,
+      "p95Seconds": 5.331000089645386,
+      "returnedTextBytes": 2246743,
+      "returnedTextEstimatedTokens": 574228,
+      "serializedMediaTextResults": 0,
+      "truncationMarkerResults": 107,
+      "unmeasuredResults": 0
+    },
+    {
+      "name": "wait",
+      "calls": 20,
+      "completed": 20,
+      "missingResults": 0,
+      "reportedErrors": 0,
+      "timingSamples": 20,
+      "totalObservedSeconds": 293.24700021743774,
+      "medianSeconds": 16.11549997329712,
+      "p95Seconds": 17.145999908447266,
+      "returnedTextBytes": 4743,
+      "returnedTextEstimatedTokens": 1194,
+      "serializedMediaTextResults": 0,
+      "truncationMarkerResults": 0,
+      "unmeasuredResults": 0
+    },
+    {
+      "name": "clock.sleep",
+      "calls": 2,
+      "completed": 2,
+      "missingResults": 0,
+      "reportedErrors": 0,
+      "timingSamples": 2,
+      "totalObservedSeconds": 60.13000011444092,
+      "medianSeconds": 30.06500005722046,
+      "returnedTextBytes": 86,
+      "returnedTextEstimatedTokens": 22,
+      "serializedMediaTextResults": 0,
+      "truncationMarkerResults": 0,
+      "unmeasuredResults": 0
+    }
+  ],
+  "timingSummaries": [
+    {
+      "calls": 118,
+      "callsWithoutUsableTiming": 0,
+      "kind": "mcp",
+      "occupiedObservedSeconds": 107.76900124549866,
+      "summedObservedSeconds": 108.21400141716003,
+      "timingSamples": 118
+    },
+    {
+      "calls": 0,
+      "callsWithoutUsableTiming": 0,
+      "kind": "skill",
+      "timingSamples": 0
+    },
+    {
+      "calls": 779,
+      "callsWithoutUsableTiming": 1,
+      "kind": "outer",
+      "occupiedObservedSeconds": 1609.1370000839233,
+      "summedObservedSeconds": 1609.1370000839233,
+      "timingSamples": 778
+    }
+  ],
+  "knownStructuredJSON": {
+    "checkedEnvelopes": 118,
+    "completedResults": 118,
+    "inconsistentRows": 0,
+    "invocationFailures": 0,
+    "knownJSONBytes": 25515,
+    "knownJSONTokens": 6590,
+    "logReadingComplete": false,
+    "missingResults": 0,
+    "structuredResults": 3,
+    "uncheckedRows": 0,
+    "unmeasurableFields": 0,
+    "unobservableResults": 0
+  },
+  "cuaRetainedTextComposition": {
+    "sampleComplete": false,
+    "cuaCompletedResults": 115,
+    "cuaLoggedTextBytes": 1789195,
+    "resultsContainingSerializedMedia": 24,
+    "allLoggedTextBytesInThoseResults": 1569736,
+    "otherResults": 91,
+    "otherLoggedTextBytes": 219459,
+    "fractionOfLoggedTextInMediaContainingResults": 0.877342044886108,
+    "semantics": "Whole retained text of results containing serialized media, including any ordinary text. Not media payload size, image tokens, full returned size or billed usage. Media was not decoded."
+  },
+  "sortConsistency": {
+    "passed": true,
+    "results": [
+      {
+        "sort": "text",
+        "first": "cua_repl/js",
+        "allToolRowFieldsUnchanged": true,
+        "partialCoverageRetained": true
+      },
+      {
+        "sort": "structured",
+        "first": "codex_apps/github.fetch",
+        "allToolRowFieldsUnchanged": true,
+        "partialCoverageRetained": true
+      },
+      {
+        "sort": "time",
+        "first": "cua_repl/js",
+        "allToolRowFieldsUnchanged": true,
+        "partialCoverageRetained": true
+      },
+      {
+        "sort": "errors",
+        "first": "cua_repl/js",
+        "allToolRowFieldsUnchanged": true,
+        "partialCoverageRetained": true
+      }
+    ]
+  },
+  "nativeInterpretationChecks": {
+    "sourceCommit": "f918118",
+    "controller": "cua_repl",
+    "scope": "AX postcondition checks on fixed real-log sample; no new source code or layout audit.",
+    "checks": {
+      "selectedBoundedTail": true,
+      "partialCoverageVisible": true,
+      "cuaRawTextRanksBeforeGithub": true,
+      "serializedMediaNotice24Visible": true,
+      "cuaTruncationMarkers24Visible": true,
+      "imageTokenCostCaveatVisible": true,
+      "outerExecBytes2246743Visible": true,
+      "outerExecEstimatedTokens574228Visible": true,
+      "outerExecTruncationMarkers107Visible": true,
+      "outerNotAddedToNestedMCPUsage": true
+    },
+    "compactObservation": {
+      "fullAXUTF16Units": 5151,
+      "emittedAssertionJSONUTF16Units": 183,
+      "allPostconditionsPassed": true,
+      "newScreenshotsTaken": 0,
+      "notModelTokensOrTaskSavings": true
+    },
+    "ownedProcessStopped": true,
+    "selectedProtectedFilesMatched": 3,
+    "fixedLogSampleUnchanged": true,
+    "installedOrPublished": false
+  },
+  "errorInterpretation": {
+    "explicitCUAErrors": 5,
+    "callerOrOwnedFixtureClues": 3,
+    "timeoutsWithoutEstablishedRootCause": 2,
+    "timeoutCallsObservedMethod": "getApp",
+    "serviceQualityScoreAssigned": false
+  },
+  "nextPrioritiesFromObservedData": [
+    "Reduce unnecessarily broad execution-wrapper output through narrower retrieval and task-specific field projection. Truncation declarations are observations, not proof of a server defect.",
+    "Use compact AX postcondition summaries for numeric checks; request screenshots when visual evidence is needed.",
+    "Preserve separate raw text, structured JSON, media-containing result and request-usage views; a short text acknowledgment does not establish a small result."
+  ],
+  "evidenceSHA256": {
+    "fixed-report": "420413ed3e4dba86a92db583f8eb8fe659fb2b99c59698f8feef594df354b641",
+    "media-composition": "6e8be9bc91f57df526f374c6439aa3c1b1b77ba3f63608b3e0c8127ab73c8c3a",
+    "sort-consistency": "54dbe532fec7547ae3a1428df36f0d7232521fad131e8c63a087d8aae5b0d911",
+    "native-qa-result": "bbd0c00339b36c3dee30a0221f1181dbf4af259c0f99dd7bddae558919dc31be"
+  },
+  "boundaries": {
+    "noMediaDecoded": true,
+    "MCPAndOuterTotalsNotAdded": true,
+    "loggedTextEstimatesNotModelOrBillingTokens": true,
+    "snapshotNotFullServiceRanking": true,
+    "newScreenshotsTaken": 0,
+    "realModelCalledForEvaluation": false,
+    "sourceCodeChanged": false,
+    "installedOrPublished": false
+  }
+}
