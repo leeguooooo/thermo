@@ -1,0 +1,87 @@
+{
+  "date": "2026-10-19",
+  "source": "0cfb42c",
+  "version": "1.1.32",
+  "build": "508",
+  "package": {
+    "developerIDTeam": "6ZPXG4KVVS",
+    "metadataAndEntitlementVerified": true,
+    "architectures": {
+      "Contents/MacOS/Thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo-helper": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "nativeAndRosettaCLIPassed": true,
+    "archive": {
+      "archive": "Thermo-1.1.32-508-candidate.zip",
+      "sha256": "9141d7251355c9ff6d06439dfa8e8735c03b8288d15122a16fde9986141f4bad",
+      "regularFiles": 93,
+      "symlinks": 8,
+      "filesModesAndLinksMatch": true,
+      "unpackedDeepStrictAllArchSignaturePass": true
+    },
+    "lifecyclePassed": true,
+    "lifecycleSamples": 23
+  },
+  "deployment": {
+    "old506NormalQuitVerified": true,
+    "atomicAppExchange": true,
+    "oldAppAndRootFilesPreserved": true,
+    "appControlVersion": "1.1.32 (508)",
+    "helperVersion": "8/1.1.32",
+    "currentHelperPID": 42835,
+    "settingsVersionAndRunningHelperVisible": true,
+    "overviewLiveReadingsVisible": true
+  },
+  "fanAutoRecoveryHardware": {
+    "accepted": true,
+    "runtimeHelperVersionBeforeStop": "8/1.1.32",
+    "runtimeHelperSHA256": "6ecbd04c3c4a0f3d158686e8d73abe75bb8c3fbdd330edc6fcd487fdb0117fee",
+    "runtimeHelperPIDBeforeStop": "63752",
+    "stopMessages": [
+      "2026-10-19 11:19:37 thermo-helper: signal 15; automatic control confirmed"
+    ],
+    "independentAutomaticFanReading": true,
+    "scope": "Signed 1.1.32 FanWriter during real helper stop on Mac15,3; not physical Intel coverage"
+  },
+  "originalInstallerHotMaintenance": {
+    "accepted": false,
+    "bootstrapError": 5,
+    "rollbackReloadAlsoFailed": true,
+    "repairFilesRetained": "/Library/PrivilegedHelperTools/.dev.thermo.install.fQ1XiC",
+    "freshInstallAfterOldProcessExitedSucceeded": true
+  },
+  "patchedInstallerProbe": {
+    "accepted": true,
+    "probeConfiguration": "debug native CLI; same-version canonical helper payload",
+    "developerIDRole": "dev.thermo.cli / 6ZPXG4KVVS",
+    "installerSourceSHA256": "a50ded68d092d02c473806e5c87d06f38d29d90f0a92b207e2f607a75eda0475",
+    "oldPID": "10797",
+    "newPID": "42835",
+    "samples": 21,
+    "consecutiveOriginalPolicyChecks": 6,
+    "stopMessages": [
+      "2026-10-19 11:43:27 thermo-helper: signal 15; automatic control confirmed"
+    ],
+    "canonicalSourcePreserved": true,
+    "helperPayloadUnchanged": true,
+    "patchedInstallerInInstalledApp": false
+  },
+  "notarized": false,
+  "published": false,
+  "remaining": [
+    "Package and install the verified installer wait fix",
+    "Usable explicit GUI repair action",
+    "Screen permission and remaining hardware sessions",
+    "Full parity matrix and main integration"
+  ]
+}

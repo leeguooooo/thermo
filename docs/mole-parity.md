@@ -2,7 +2,9 @@
 
 先补可靠性与核心流程，再打磨界面。参照本地 Mole 原生 App 1.16.0（324），证据见 [原生研究](mole-native-study.md)和[函数研究](mole-native-functions.md)。整体齐平仍未成立。
 
-2026-10-19 当前本机为 1.1.31（506），源码 `3ca5039`。本次真实升级中，新 App 确实观察到旧 legacy helper；17 次采样均保留 launchd 注册，root helper 自主从 8/1.1.30 更新为 8/1.1.31，未调用安装器。原 6617 RPM 策略完成 6 次连续手动目标核对，设置页与风扇页可见检查通过。但旧 helper 退出日志记录“automatic control unconfirmed: fan 0: automatic mode readback did not match”；新服务已恢复既有手动策略，不能据此宣称自动模式恢复或整条升级全通过。候选签名、原生/Rosetta CLI、ZIP 一致性和 23 个生命周期观测点通过。主工作区有新提交和未提交的标签整理改动，保持原样；修复仍在隔离分支，未公证或发布。见 [506 安装与分项验收](measurements/mole-installed-506-2026-10-19.json)。
+2026-10-19 当前本机为 1.1.32（508），源码 0cfb42c。新 FanWriter 在真实 helper 停止时记录 automatic control confirmed，服务空档的只读风扇读数也显示自动模式；自动恢复补丁在 Mac15,3 上通过。本次原安装器热替换暴露 bootstrap 5，旧文件回滚后的重载也失败，修复文件已保留；确认旧进程退出后，重新安装恢复 8/1.1.32 和原 6617 RPM 策略。新安装器的 12 项测试及签名原生 CLI 热重装验证通过：21 次观测、6 次原策略读回、停止自动恢复确认，helper 来源仍指向正式 App。新安装器尚未进入已安装 App，正在准备 1.1.33；旧 EIO 的系统内部原因未独立证明。主目录其他改动保留，未公证或发布。见 [508 分项验收](measurements/mole-installed-508-2026-10-19.json)、[退出等待保护](measurements/helper-installer-unload-wait-2026-10-19.json)。
+
+前一检查点（2026-10-19）本机为 1.1.31（506），源码 `3ca5039`。本次真实升级中，新 App 确实观察到旧 legacy helper；17 次采样均保留 launchd 注册，root helper 自主从 8/1.1.30 更新为 8/1.1.31，未调用安装器。原 6617 RPM 策略完成 6 次连续手动目标核对，设置页与风扇页可见检查通过。但旧 helper 退出日志记录“automatic control unconfirmed: fan 0: automatic mode readback did not match”；新服务已恢复既有手动策略，不能据此宣称自动模式恢复或整条升级全通过。候选签名、原生/Rosetta CLI、ZIP 一致性和 23 个生命周期观测点通过。主工作区有新提交和未提交的标签整理改动，保持原样；修复仍在隔离分支，未公证或发布。见 [506 安装与分项验收](measurements/mole-installed-506-2026-10-19.json)。
 
 前一检查点（2026-10-19）本机更新为 1.1.30（505），源码 `1612982`。通用 Developer ID 包、原生/Rosetta CLI、只读探测、签名后的两轮窗口生命周期与 ZIP 解包文件/权限/链接一致性通过。493 正常退出并完成原子替换，旧 App、helper 和 plist 全部保留。本次自动升级暴露注册方式混用：App 对仍采用密码安装的旧 helper 调用 SMAppService 注销后，重注册返回 Operation not permitted，root job 消失。已通过官方 CLI 安装事务恢复为 8/1.1.30，原 6617 RPM 策略恢复，6 次手动目标核对通过，设置页显示运行中。未新设硬件策略。此包不算自动升级验收通过；当时源码正在补禁止注销 legacy 注册的保护，尚未部署，也未公证或公开发布。见 [505 安装及故障恢复](measurements/mole-installed-505-2026-10-19.json)。
 
@@ -984,3 +986,5 @@ System 域进程归属（2026-10-17）：当前用户进程查询 GUI/User/Syste
 506 之后仍需处理：`FanWriter.setAuto` 的写入/读回失败，不能将手动策略恢复视为自动恢复成功；此外风扇页过期状态仅显示更新通知，设置页无响应时只有卸载入口，“重新安装”走 beginSetup 时可能因 SMAppService 状态仍 enabled 而等待，需要补实际可用的显式修复入口。以上均未作为本次已完成项。
 
 2026-10-19 自动恢复补丁已完成源码回归：旧代码在 4 个选择样本中出现 3 个失败用例（9 个断言失败），模式 3 可接受的对照通过。恢复改为先请求所有目标风扇，再共用最多 20 轮读回；未确认的模式可改试 0，已确认的 3 保留；force 位和 Ftst 仍须确认，单风扇请求不会重写其他风扇。初始请求错误保留在恢复报告，最终独立读回决定是否确认。1.1.32 的核心/helper/CLI/App 共 648 项非硬件回归通过；最多 19 次 50ms 等待不含 SMC I/O 时间。尚未部署，实际硬件原因及新代码的 helper 停止恢复仍待实测。见 [自动模式转换回归](measurements/fan-auto-transition-2026-10-19.json)。
+
+2026-10-19 安装器修复以已知缺失状态和旧进程身份作停止栅栏，加载和回滚均等待停止；未知注册查询失败不按首次安装处理，超时保留旧文件及事务。核心/helper/CLI/App 共 651 项非硬件回归通过，签名 CLI 实机热重装也通过，待打包进 App。未用 fixture 成功代替本机结果，也未将单机结果扩展为所有设备验收。

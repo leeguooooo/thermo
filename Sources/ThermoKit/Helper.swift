@@ -523,7 +523,9 @@ public enum HelperInstaller {
                                                 installedBinary: String = HelperConstants.installedBinary,
                                                 installedPlist: String = HelperConstants.launchdPlist,
                                                 owner: String = "root", group: String = "wheel",
-                                                launchctl: String = "/bin/launchctl") -> String {
+                                                launchctl: String = "/bin/launchctl",
+                                                unloadAttempts: Int = 150, unloadInterval: Double = 0.1) -> String {
+        precondition((2...300).contains(unloadAttempts) && unloadInterval.isFinite && unloadInterval > 0 && unloadInterval <= 1)
         let bin = shellQuote(installedBinary), pl = shellQuote(installedPlist)
         let folder = shellQuote((installedBinary as NSString).deletingLastPathComponent)
         let plistFolder = shellQuote((installedPlist as NSString).deletingLastPathComponent)
@@ -537,28 +539,84 @@ public enum HelperInstaller {
         had_plist=0
         registered=0
         activating=0
+        helper_stop_pending=0
+        query_service() {
+            if service_details=$(LC_ALL=C \(tool) print \(service) 2>&1); then
+                service_state=present
+                return 0
+            else
+                query_result=$?
+                case "$service_details" in
+                    *"Could not find service"*) service_state=missing; return 0;;
+                    *) echo "Could not determine helper registration: $service_details" >&2; return "$query_result";;
+                esac
+            fi
+        }
+        capture_service_process() {
+            captured_pid=$(printf '%s\\n' "$service_details" | /usr/bin/awk '/^[[:space:]]*pid = [0-9]+/ && $3 > 0 { print $3; exit }')
+            captured_start=""
+            if [ -n "$captured_pid" ]; then
+                captured_start=$(/bin/ps -p "$captured_pid" -o lstart= 2>/dev/null || true)
+            fi
+        }
+        wait_for_unload() {
+            unload_pid="$1"
+            unload_start="$2"
+            unload_poll=0
+            unload_stable=0
+            while [ "$unload_poll" -lt \(unloadAttempts) ]; do
+                if ! query_service; then return 1; fi
+                unload_alive=0
+                if [ -n "$unload_pid" ] && /bin/kill -0 "$unload_pid" 2>/dev/null; then
+                    unload_current_start=$(/bin/ps -p "$unload_pid" -o lstart= 2>/dev/null || true)
+                    if [ -z "$unload_start" ] || [ -z "$unload_current_start" ] || [ "$unload_current_start" = "$unload_start" ]; then
+                        unload_alive=1
+                    fi
+                fi
+                if [ "$service_state" = missing ] && [ "$unload_alive" -eq 0 ]; then
+                    unload_stable=$((unload_stable + 1))
+                else
+                    unload_stable=0
+                fi
+                if [ "$unload_stable" -ge 2 ]; then return 0; fi
+                unload_poll=$((unload_poll + 1))
+                if [ "$unload_poll" -lt \(unloadAttempts) ]; then /bin/sleep \(unloadInterval); fi
+            done
+            echo "The previous helper has not finished stopping; refusing to replace its files or bootstrap over it" >&2
+            return 1
+        }
         finish_installation() {
             result=$?
             trap - EXIT HUP INT TERM
             set +e
             recovery_failed=0
-            if [ "$result" -ne 0 ] && [ "$activating" -eq 1 ]; then
-                \(tool) bootout \(service) >/dev/null 2>&1
-                if [ "$had_binary" -eq 1 ]; then
-                    /bin/cp -p "$transaction/old-helper" "$transaction/restore-helper" && /bin/mv -f "$transaction/restore-helper" \(bin) || recovery_failed=1
+            if [ "$result" -ne 0 ] && [ "$helper_stop_pending" -eq 1 ]; then
+                recovery_failed=1
+            elif [ "$result" -ne 0 ] && [ "$activating" -eq 1 ]; then
+                if query_service; then
+                    capture_service_process
+                    \(tool) bootout \(service) >/dev/null 2>&1
+                    if ! wait_for_unload "$captured_pid" "$captured_start"; then recovery_failed=1; fi
                 else
-                    /bin/rm -f \(bin) || recovery_failed=1
+                    recovery_failed=1
                 fi
-                if [ "$had_plist" -eq 1 ]; then
-                    /bin/cp -p "$transaction/old.plist" "$transaction/restore.plist" && /bin/mv -f "$transaction/restore.plist" \(pl) || recovery_failed=1
-                else
-                    /bin/rm -f \(pl) || recovery_failed=1
-                fi
-                if [ "$registered" -eq 1 ]; then
-                    if [ "$recovery_failed" -eq 0 ]; then
-                        \(tool) bootstrap system \(pl) || recovery_failed=1
+                if [ "$recovery_failed" -eq 0 ]; then
+                    if [ "$had_binary" -eq 1 ]; then
+                        /bin/cp -p "$transaction/old-helper" "$transaction/restore-helper" && /bin/mv -f "$transaction/restore-helper" \(bin) || recovery_failed=1
                     else
-                        recovery_failed=1
+                        /bin/rm -f \(bin) || recovery_failed=1
+                    fi
+                    if [ "$had_plist" -eq 1 ]; then
+                        /bin/cp -p "$transaction/old.plist" "$transaction/restore.plist" && /bin/mv -f "$transaction/restore.plist" \(pl) || recovery_failed=1
+                    else
+                        /bin/rm -f \(pl) || recovery_failed=1
+                    fi
+                    if [ "$registered" -eq 1 ]; then
+                        if [ "$recovery_failed" -eq 0 ]; then
+                            \(tool) bootstrap system \(pl) || recovery_failed=1
+                        else
+                            recovery_failed=1
+                        fi
                     fi
                 fi
             fi
@@ -588,11 +646,16 @@ public enum HelperInstaller {
         /usr/bin/install -o \(shellQuote(owner)) -g \(shellQuote(group)) -m 755 \(shellQuote(binary)) "$transaction/new-helper"
         /usr/bin/install -o \(shellQuote(owner)) -g \(shellQuote(group)) -m 644 \(shellQuote(plist)) "$transaction/new.plist"
         /usr/bin/plutil -lint "$transaction/new.plist" >/dev/null
-        if \(tool) print \(service) >/dev/null 2>&1; then
+        query_service
+        if [ "$service_state" = present ]; then
             test "$had_binary" -eq 1
             test "$had_plist" -eq 1
             registered=1
+            capture_service_process
             \(tool) bootout \(service)
+            helper_stop_pending=1
+            wait_for_unload "$captured_pid" "$captured_start"
+            helper_stop_pending=0
         fi
         activating=1
         /bin/mv -f "$transaction/new-helper" \(bin)

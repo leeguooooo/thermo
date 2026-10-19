@@ -100,5 +100,6 @@
     "Usable repair action for nonresponding/outdated helper in GUI",
     "Screen permission and hardware sessions",
     "Full parity matrix and later source integration"
-  ]
+  ],
+  "followUp": "mole-installed-508-2026-10-19.json"
 }

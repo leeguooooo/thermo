@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-19",
+  "sourceBase": "0cfb42c",
+  "versionPrepared": "1.1.33",
+  "sourceFilesSHA256": {
+    "Sources/ThermoKit/Helper.swift": "a50ded68d092d02c473806e5c87d06f38d29d90f0a92b207e2f607a75eda0475",
+    "Sources/ThermoKit/Version.swift": "a9ccc13b8ae5850b47e672c56d443eeb5a5c79fe79db6b980cdaa467b4a15015",
+    "Tests/ThermoKitTests/HelperInstallationTests.swift": "984637eb0df203a19c5ba973c6d06153ae18915854cbc1bd432eff023acadf05"
+  },
+  "before": {
+    "tests": 3,
+    "assertionFailures": 9,
+    "exitCode": 1,
+    "fixtureNote": "The timeout fixture subsequently uses an explicit hold gate instead of a fixed delay to avoid load-dependent child exit; delayed-stop and unknown-registration cases are unchanged.",
+    "logSHA256": "4ac57db79fddca4816c3a276a3a862a07ce9a5b3d2372faec6302630d61e9dcc"
+  },
+  "after": {
+    "installerTests": 12,
+    "total": 651,
+    "failures": 0,
+    "exitCode": 0,
+    "suites": {
+      "ThermoKitTests.xctest": {
+        "tests": 207,
+        "failures": 0
+      },
+      "ThermoHelperTests.xctest": {
+        "tests": 30,
+        "failures": 0
+      },
+      "ThermoCLITests.xctest": {
+        "tests": 108,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 306,
+        "failures": 0
+      }
+    },
+    "logSHA256": "320c3e657c82a46617d7d7b015b18bb8aeba4a5b21dad7b3bd5a6edb1389174d"
+  },
+  "behavior": [
+    "Recognize only the known service-not-found response as absence; unknown query failures abort before changing registration or files",
+    "After bootout, wait for the captured process to exit and for two consecutive missing-service observations before replacement",
+    "Apply the same stop fence before rollback file replacement",
+    "Default bound is 150 polls with 100ms between polls, excluding system-query time",
+    "A stop deadline preserves old files and the private transaction; no bootstrap over a live process"
+  ],
+  "physicalProbe": {
+    "passed": true,
+    "configuration": "debug native CLI; same-version canonical helper payload",
+    "scope": "Native signed CLI rebuilt with the new installer; canonical helper payload remains signed 1.1.32, and the installed App still contains the older installer",
+    "samples": 21,
+    "consecutiveRecoveredChecks": 6,
+    "oldPID": "10797",
+    "newPID": "42835",
+    "stopMessages": [
+      "2026-10-19 11:43:27 thermo-helper: signal 15; automatic control confirmed"
+    ]
+  },
+  "osInternalCauseOfEarlierEIOEstablished": false,
+  "installedAppContainsFix": false
+}

@@ -50,10 +50,11 @@
     "Keep initial request errors in the recovery report; independently verified final state determines confirmation"
   ],
   "hardwareRootCauseEstablished": false,
-  "deployed": false,
+  "deployed": true,
   "remaining": [
-    "Build and deploy signed 1.1.32",
-    "Validate recovery while stopping a helper actually running the new FanWriter code; the prior helper stops with its older code during the first upgrade",
-    "Confirm original 6617 RPM policy restoration afterward"
-  ]
+    "Broader device coverage; current result is Mac15,3",
+    "Installer wait fix must be packaged into the App"
+  ],
+  "physicalFollowUp": "mole-installed-508-2026-10-19.json",
+  "newCodeStopAutomaticRecoveryAccepted": true
 }

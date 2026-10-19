@@ -7,7 +7,8 @@ final class HelperInstallationTests: XCTestCase {
     private struct Fixture {
         let root: URL, binary: URL, plist: URL, installedBinary: URL, installedPlist: URL, tool: URL
         let log: URL, registered: URL, mode: URL
-        init(existing: Bool = true, registered: Bool = true) throws {
+        let worker: Process?
+        init(existing: Bool = true, registered: Bool = true, stopDelay: Double? = nil, holdsStop: Bool = false) throws {
             root = FileManager.default.temporaryDirectory.appendingPathComponent("helper installation '" + UUID().uuidString)
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
             binary = root.appendingPathComponent("new helper")
@@ -18,6 +19,19 @@ final class HelperInstallationTests: XCTestCase {
             log = root.appendingPathComponent("calls")
             self.registered = root.appendingPathComponent("registered")
             mode = root.appendingPathComponent("failure-mode")
+            let q = HelperInstaller.shellQuote
+            if stopDelay != nil || holdsStop {
+                if let stopDelay { precondition(stopDelay > 0 && stopDelay < 5) }
+                let settling = holdsStop
+                    ? "while test ! -e \(q(root.appendingPathComponent("allow-exit").path)); do /bin/sleep 0.02; done"
+                    : "/bin/sleep \(stopDelay!)"
+                let child = Process()
+                child.executableURL = URL(fileURLWithPath: "/bin/sh")
+                child.arguments = ["-c", "while test ! -e \(q(root.appendingPathComponent("stop").path)); do /bin/sleep 0.02; done; \(settling); /bin/rm -f \(q(root.appendingPathComponent("stopping").path))"]
+                child.standardOutput = FileHandle.nullDevice; child.standardError = FileHandle.nullDevice
+                try child.run()
+                worker = child
+            } else { worker = nil }
             try Data("new helper".utf8).write(to: binary)
             try HelperInstaller.plist(binary: installedBinary.path, source: "new-source").write(to: plist, atomically: true, encoding: .utf8)
             for dir in [installedBinary.deletingLastPathComponent(), installedPlist.deletingLastPathComponent()] {
@@ -28,17 +42,28 @@ final class HelperInstallationTests: XCTestCase {
                 try HelperInstaller.plist(binary: installedBinary.path, source: "old-source").write(to: installedPlist, atomically: true, encoding: .utf8)
             }
             if registered { try Data().write(to: self.registered) }
-            let q = HelperInstaller.shellQuote
+            let stopHook = worker == nil ? ":" : "/usr/bin/touch \(q(root.appendingPathComponent("stopping").path)) \(q(root.appendingPathComponent("stop").path))"
             let script = """
             #!/bin/sh
             echo "$1" >> \(q(log.path))
             mode=$(/bin/cat \(q(mode.path)) 2>/dev/null)
             case "$1" in
-                print) test -f \(q(self.registered.path));;
+                print)
+                    if [ "$mode" = print ]; then echo "injected unknown print failure" >&2; exit 41; fi
+                    if test -f \(q(self.registered.path)); then
+                        \(worker == nil ? ":" : "echo 'pid = \(worker!.processIdentifier)'")
+                        exit 0
+                    fi
+                    echo "Could not find service" >&2
+                    exit 1;;
                 bootout)
                     if [ "$mode" = bootout ]; then exit 42; fi
+                    if test -f \(q(self.registered.path)); then
+                        \(stopHook)
+                    fi
                     /bin/rm -f \(q(self.registered.path));;
                 bootstrap)
+                    if test -f \(q(root.appendingPathComponent("stopping").path)); then exit 5; fi
                     if [ "$mode" = all-bootstrap ]; then exit 44; fi
                     if [ "$mode" = new-bootstrap ] && /usr/bin/grep -q new-source "$3"; then exit 43; fi
                     /usr/bin/touch \(q(self.registered.path));;
@@ -48,10 +73,11 @@ final class HelperInstallationTests: XCTestCase {
             try script.write(to: tool, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: tool.path)
         }
-        func execute() throws -> (Int32, String) {
+        func execute(unloadAttempts: Int = 150, unloadInterval: Double = 0.1) throws -> (Int32, String) {
             let script = HelperInstaller.transactionalInstallationScript(binary: binary.path, plist: plist.path,
                 installedBinary: installedBinary.path, installedPlist: installedPlist.path,
-                owner: String(getuid()), group: String(getgid()), launchctl: tool.path)
+                owner: String(getuid()), group: String(getgid()), launchctl: tool.path,
+                unloadAttempts: unloadAttempts, unloadInterval: unloadInterval)
             let process = Process(), pipe = Pipe()
             process.executableURL = URL(fileURLWithPath: "/bin/sh"); process.arguments = ["-c", script]
             process.standardError = pipe; process.standardOutput = FileHandle.nullDevice
@@ -65,7 +91,38 @@ final class HelperInstallationTests: XCTestCase {
         }
         var calls: [String] { ((try? String(contentsOf: log)) ?? "").split(separator: "\n").map(String.init) }
         func fail(_ value: String) throws { try value.write(to: mode, atomically: true, encoding: .utf8) }
-        func cleanup() { try? FileManager.default.removeItem(at: root) }
+        func cleanup() {
+            if let worker { if worker.isRunning { worker.terminate() }; worker.waitUntilExit() }
+            try? FileManager.default.removeItem(at: root)
+        }
+    }
+
+    func testSuccessfulBootoutMustWaitForTheOwnedWorkerToExitBeforeBootstrap() throws {
+        let f = try Fixture(stopDelay: 0.25); defer { f.cleanup() }
+        let result = try f.execute()
+        XCTAssertEqual(result.0, 0, result.1)
+        XCTAssertEqual(try String(contentsOf: f.installedBinary), "new helper")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: f.registered.path))
+        XCTAssertFalse(f.worker?.isRunning ?? true)
+    }
+
+    func testStopDeadlineKeepsOldFilesAndBackupWithoutBootstrappingOverLiveWorker() throws {
+        let f = try Fixture(holdsStop: true); defer { f.cleanup() }
+        let result = try f.execute(unloadAttempts: 2, unloadInterval: 0.01)
+        XCTAssertNotEqual(result.0, 0)
+        XCTAssertEqual(try String(contentsOf: f.installedBinary), "old helper")
+        XCTAssertFalse(f.calls.contains("bootstrap"))
+        XCTAssertTrue(f.worker?.isRunning ?? false)
+        XCTAssertEqual(f.transactions.count, 1)
+    }
+
+    func testUnknownRegistrationFailureDoesNotMeanThereIsNoService() throws {
+        let f = try Fixture(); defer { f.cleanup() }; try f.fail("print")
+        let result = try f.execute()
+        XCTAssertEqual(result.0, 41)
+        XCTAssertEqual(f.calls, ["print"])
+        XCTAssertEqual(try String(contentsOf: f.installedBinary), "old helper")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: f.registered.path))
     }
 
     func testStagingFailureDoesNotStopExistingDaemonOrChangeFiles() throws {
@@ -88,7 +145,7 @@ final class HelperInstallationTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: f.installedBinary), "old helper")
         XCTAssertTrue(try String(contentsOf: f.installedPlist).contains("old-source"))
         XCTAssertTrue(FileManager.default.fileExists(atPath: f.registered.path))
-        XCTAssertEqual(f.calls, ["print", "bootout", "bootstrap", "bootout", "bootstrap"])
+        XCTAssertEqual(f.calls.filter { $0 != "print" }, ["bootout", "bootstrap", "bootout", "bootstrap"])
         XCTAssertTrue(f.transactions.isEmpty)
     }
 
@@ -98,7 +155,7 @@ final class HelperInstallationTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: f.installedBinary.path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: f.installedPlist.path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: f.registered.path))
-        XCTAssertEqual(f.calls, ["print", "bootstrap", "bootout"])
+        XCTAssertEqual(f.calls.filter { $0 != "print" }, ["bootstrap", "bootout"])
         XCTAssertTrue(f.transactions.isEmpty)
     }
 
