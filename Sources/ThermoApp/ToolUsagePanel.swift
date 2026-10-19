@@ -206,6 +206,9 @@ struct ToolUsagePanel: View {
                             Text(tr("Share of this category's observed returned-text tokens: %1$@", String(format: "%.1f%%", percentage)))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
+                        ForEach(Array(row.mcpStructuredContentLines.enumerated()), id: \.offset) { _, line in
+                            Text(line).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                        }
                         ResultTextRepresentationNotice(row: row)
                         if row.nonTextBlocks > 0 {
                             Text(tr("%1$@ non-text result blocks were not tokenized.", String(row.nonTextBlocks))).font(.caption).foregroundStyle(.secondary)

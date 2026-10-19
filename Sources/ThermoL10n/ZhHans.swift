@@ -1,6 +1,12 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Structured result envelopes were not checked in this report; analyze again.": "此报告未检查结构化返回封装，请重新分析。",
+    "Structured result coverage: %1$@ envelopes checked · %2$@ results not inspectable · %3$@ structured fields · %4$@ invalid fields": "结构化返回覆盖：已检查 %1$@ 个封装 · %2$@ 个结果无法检查 · %3$@ 个包含结构化字段 · %4$@ 个字段无效",
+    "Measured structured JSON: %1$@ bytes / %2$@ tokens · %3$@ results also contain content": "已计量的结构化 JSON：%1$@ 字节 / %2$@ token · %3$@ 个结果同时含 content",
+    "JSON representation may overlap returned text or include encoded media. Do not add the totals or infer model usage.": "JSON 表示可能与返回文本重复，也可能含编码后的媒体；两项不能相加，也不能推算模型用量。",
+    "Uninspectable results do not establish that structured content was absent.": "结果无法检查，不代表没有结构化内容。",
+
     "Duration": "时长",
     "%1$@ minute": "%1$@ 分钟",
     "%1$@ minutes": "%1$@ 分钟",

@@ -23,6 +23,7 @@ struct ToolUsageParser {
         var textBytes = 0
         var estimatedTokens = 0
         var nonText = 0
+        var structuredObservation = MCPStructuredResultObservation.unobservable
         var textObservation = ToolResultTextObservation()
         var referenceTokens: Int?
         var unattributed: (text: TextFootprint, nonText: Int, measured: Bool)?
@@ -190,6 +191,9 @@ struct ToolUsageParser {
         if call.kind == nil { call.unattributed = Self.unattributedResult(value, host: host, encoding: encoding) }
         let measured = call.startSeen && call.kind == nil ? (TextFootprint(""), 0, nil as Bool?)
             : Self.result(value, encoding: encoding, codexInputBlocks: codexInputBlocks)
+        if call.kind == "mcp" || !call.startSeen {
+            call.structuredObservation = MCPStructuredResultObservation(value, encoding: encoding)
+        }
         call.ended = time; call.endSeen = true
         call.invocationFailed = invocationFailed
         // An inner result's isError is not the outer tool's status, including out-of-order events.
@@ -402,6 +406,7 @@ struct ToolUsageParser {
             let key = call.groupID ?? Self.identity(call.host + "|" + kind + "|" + (call.server ?? "") + "|" + name)
             var row = rows[key] ?? ToolUsageRow(id: key, host: call.host, kind: kind, server: call.server, name: name)
             if kind == "mcp" {
+                row.structuredContent = row.structuredContent ?? MCPStructuredContentUsage(encoding: encoding)
                 row.reportedErrorCodes = row.reportedErrorCodes ?? [:]
                 row.errorCodeCategoriesLimited = row.errorCodeCategoriesLimited ?? false
             }
@@ -426,6 +431,7 @@ struct ToolUsageParser {
                         if call.referenceTokens == nil { row.unavailableReferenceResults = (row.unavailableReferenceResults ?? 0) + 1 }
                     }
                     row.completed += 1
+                    if kind == "mcp" { row.structuredContent?.record(call.structuredObservation) }
                     if call.textObservation.serializedMedia { row.serializedMediaTextResults! += 1 }
                     if call.textObservation.truncationMarker { row.truncationMarkerResults! += 1 }
                     if call.isError == true {

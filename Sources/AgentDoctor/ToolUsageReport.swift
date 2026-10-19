@@ -74,6 +74,8 @@ public struct ToolUsageRow: Codable, Identifiable, Sendable {
     /// Absent in older reports means unchecked. Counts completed results, not blocks.
     public var serializedMediaTextResults: Int? = nil
     public var truncationMarkerResults: Int? = nil
+    /// Separate JSON representation and coverage. Absent in older reports means unchecked.
+    public var structuredContent: MCPStructuredContentUsage? = nil
     public var nonTextBlocks = 0
     /// Outer results with unsupported content. Absent for older reports and other categories.
     public var unmeasuredResults: Int? = nil

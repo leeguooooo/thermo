@@ -272,6 +272,7 @@ struct AgentsCommand {
             let p95 = row.p95Seconds.map { String(format: "%.3fs", $0) } ?? "unknown (requires 20 samples)"
             if let encoding = row.referenceEncoding { lines.append("  " + encoding + ": " + (row.referenceReturnedTextTokens.map(String.init) ?? "unknown") + " reference tokens; unavailable results: \(row.unavailableReferenceResults ?? 0)") }
             lines.append("  result text: \(row.returnedTextBytes) bytes / ≈\(row.returnedTextEstimatedTokens) tokens · median \(median) · P95 \(p95) · \(row.nonTextBlocks) non-text blocks not tokenized")
+            lines += row.mcpStructuredContentLines.map { "  " + $0 }
             lines += representationNotes(row).map { "  " + $0 }
             if let percentage = textSummaries[row.kind]?.percentage(of: row) {
                 lines.append("  share of observed \(row.kind) returned-text tokens: \(String(format: "%.1f%%", percentage))")
