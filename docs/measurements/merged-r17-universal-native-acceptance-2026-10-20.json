@@ -1,0 +1,373 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "8c1c7d57f7466f735da30d401183ecc85c3bb6b9",
+  "sourceTree": "f1723b9f710e26b44836b7a768aea24c8de6f312",
+  "mainIntegrationCommit": "28421b19ca9db42241e88cce43bef49753910503",
+  "candidate": {
+    "version": "1.1.40",
+    "build": "637",
+    "signature": "ad-hoc local test",
+    "notarized": false,
+    "automaticUpdatesConfigured": false,
+    "architectures": {
+      "thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "thermo-helper": [
+        "x86_64",
+        "arm64"
+      ],
+      "Thermo.app/Contents/MacOS/Thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Thermo.app/Contents/Helpers/thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Thermo.app/Contents/Helpers/thermo-helper": [
+        "x86_64",
+        "arm64"
+      ]
+    }
+  },
+  "compilationAndUnsignedAssembly": {
+    "host": "mac190",
+    "runId": "69d1ae6c-d0bb-4639-ae79-2ca393ce55a1",
+    "executedTrackedBuildScriptBeforeSigning": true,
+    "buildScriptSHA256": "4e1b0811a40246030ce782e1e8b40e7b6e7db68909fc80cbdf5b27a454e58f5a",
+    "prefixSHA256": "0cdf46bd9c381b662224cb0866200559659744dc6bcf6cec7365fac30e9228d6",
+    "remoteSigningStageExecuted": false,
+    "transfer": {
+      "entriesMatched": 110,
+      "archiveSHA256": "35ab66691407f66418978ce1a7b3a198ea002422b9407d53c6fdfd1de83d2630",
+      "sourceCommit": "8c1c7d57f7466f735da30d401183ecc85c3bb6b9"
+    },
+    "symbols": {
+      "complete": true,
+      "sourceCommit": "8c1c7d57f7466f735da30d401183ecc85c3bb6b9",
+      "retainedOutsideJobWork": "/tmp/thermo-ai-r17-symbols-69d1/symbols",
+      "filesSHA256": {
+        "thermo-helper.dSYM/Contents/Info.plist": "d4b70934bb3f09fc7669afeba2e8d8966097e3b854e3e984d6f4494804c4179a",
+        "thermo-helper.dSYM/Contents/Resources/DWARF/thermo-helper": "496a6c46db6f83861fa35f9e5a2d6918b423b292a5e312ad098638e037ecf173",
+        "thermo-helper.dSYM/Contents/Resources/Relocations/aarch64/thermo-helper.yml": "a7b43035b249d4748ca301e366cfc31d979be5ec7ad74e053aad5fcd1662f611",
+        "thermo-helper.dSYM/Contents/Resources/Relocations/x86_64/thermo-helper.yml": "8dcb51d2cd0cec23a4001e795c0e1ec0c772c2d06fc0b823a173867a7d89eacc",
+        "thermo-cli.dSYM/Contents/Info.plist": "d4b70934bb3f09fc7669afeba2e8d8966097e3b854e3e984d6f4494804c4179a",
+        "thermo-cli.dSYM/Contents/Resources/DWARF/thermo": "35047c806fd481dab2d6a0159746d0af1f93caec4d2b247ea444cd3a9f736099",
+        "thermo-cli.dSYM/Contents/Resources/Relocations/aarch64/thermo.yml": "34a7103dbbdb418c9271f70763fb24005633fa67e67fb53128cbf8fc38174a4e",
+        "thermo-cli.dSYM/Contents/Resources/Relocations/x86_64/thermo.yml": "6265bf0e0f91c0f0c98705ee8f9d7dd48d20de72572a72adb58b9ddb0b594e76",
+        "Thermo-app.dSYM/Contents/Info.plist": "d4b70934bb3f09fc7669afeba2e8d8966097e3b854e3e984d6f4494804c4179a",
+        "Thermo-app.dSYM/Contents/Resources/DWARF/Thermo": "918fd8149acec8386887ed5e2f5dfa0cd1b15ce254e49ef8fae0ca38e0a33562",
+        "Thermo-app.dSYM/Contents/Resources/Relocations/aarch64/Thermo.yml": "655facb819b2ecc02a1c8e1f81d149f8546aed53a799666c4853056c583c1e72",
+        "Thermo-app.dSYM/Contents/Resources/Relocations/x86_64/Thermo.yml": "d25f88a1a2e0977974c8e718354baeed918321d30a116d49fa3b0307dd88aac2"
+      }
+    }
+  },
+  "localPackageAcceptance": {
+    "executionHost": "localMac",
+    "noLocalProjectCompilation": true,
+    "usedTrackedSigningRemainder": true,
+    "signatureMode": "ad-hoc",
+    "checksPassed": 25,
+    "checks": [
+      {
+        "name": "artifacts",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.504
+      },
+      {
+        "name": "arm64-extract",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.075
+      },
+      {
+        "name": "arm64-signature",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.022
+      },
+      {
+        "name": "arm64-version",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.038
+      },
+      {
+        "name": "arm64-verify-skill-context",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.181
+      },
+      {
+        "name": "arm64-verify-skill-quality",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.126
+      },
+      {
+        "name": "arm64-verify-tool-usage",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.287
+      },
+      {
+        "name": "arm64-verify-reference-encoding",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.554
+      },
+      {
+        "name": "arm64-verify-task-comparison",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.233
+      },
+      {
+        "name": "arm64-verify-mcp-cleanup-details",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 1.25
+      },
+      {
+        "name": "arm64-verify-cli-completeness",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 1.405
+      },
+      {
+        "name": "arm64-verify-skill-instruction-usage",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.128
+      },
+      {
+        "name": "arm64-verify-ai-diagnostics-contract",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.669
+      },
+      {
+        "name": "x86_64-extract",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.041
+      },
+      {
+        "name": "x86_64-signature",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.021
+      },
+      {
+        "name": "x86_64-version",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 2.256
+      },
+      {
+        "name": "x86_64-verify-skill-context",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.328
+      },
+      {
+        "name": "x86_64-verify-skill-quality",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.129
+      },
+      {
+        "name": "x86_64-verify-tool-usage",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.56
+      },
+      {
+        "name": "x86_64-verify-reference-encoding",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 3.104
+      },
+      {
+        "name": "x86_64-verify-task-comparison",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.453
+      },
+      {
+        "name": "x86_64-verify-mcp-cleanup-details",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 1.661
+      },
+      {
+        "name": "x86_64-verify-cli-completeness",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 2.636
+      },
+      {
+        "name": "x86_64-verify-skill-instruction-usage",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 0.179
+      },
+      {
+        "name": "x86_64-verify-ai-diagnostics-contract",
+        "exitCode": 0,
+        "timedOut": false,
+        "seconds": 1.247
+      }
+    ],
+    "matchingMac190ReleaseEvidenceReused": true,
+    "releaseTests": 1952,
+    "packageFilesUnchanged": true,
+    "sourceUnchanged": true,
+    "x86ExecutedViaExistingRosetta": true
+  },
+  "nativeGUI": {
+    "QAAndHTTPStopped": {
+      "QA": true,
+      "HTTP": true
+    },
+    "requests": [
+      {
+        "http": "POST",
+        "rpcMethod": "initialize",
+        "path": "/401",
+        "status": 401
+      },
+      {
+        "http": "POST",
+        "rpcMethod": "initialize",
+        "path": "/403",
+        "status": 403
+      }
+    ],
+    "selectedInstalledAndConfigFingerprintsMatched": true,
+    "timeOrderVerified": [
+      8,
+      5,
+      0,
+      null
+    ],
+    "validTiming": "10 / 11",
+    "knownTextBytes": 190,
+    "estimatedTextTokens": 50,
+    "incompleteJSONTotalUnknown": true,
+    "detailsExpandWithCoverage": true,
+    "HTTP401And403VisibleWithOAuthBoundary": true,
+    "incompleteConfigurations": 2,
+    "definitionTotalUnknown": true,
+    "SkillInstructionLoadingRemainsUnknown": true,
+    "privateBodiesAbsentFromAX": true,
+    "nativeScreenshotsInspected": true
+  },
+  "QAChanges": "Copied App uses unique bundle identity and ThermoRuntime name, then ad-hoc signing; distribution input package stayed unchanged.",
+  "boundaries": {
+    "installedAppReplaced": false,
+    "published": false,
+    "DeveloperIDOrNotarizationAcceptance": false,
+    "productionHelperOrHardwareAcceptance": false,
+    "IntelHardwareAcceptance": false,
+    "realModelCalled": false,
+    "businessTaskBenefitOrBillingSavingsMeasured": false,
+    "laterLiveMoleChangesIncluded": false
+  },
+  "ownScratchCleanup": {
+    "copies": [
+      {
+        "sourceCopy": "/Users/leo/.codex/artifacts/thermo-r15-frozen-source",
+        "sourceCommit": "b5a2a2ba62071297fa0367e17924864fca23af13",
+        "retainedGitReference": "refs/heads/codex/frozen-r15-input",
+        "logicalBytes": 65584066
+      },
+      {
+        "sourceCopy": "/Users/leo/.codex/artifacts/thermo-r17-frozen-source",
+        "sourceCommit": "ee6ecb751bdc00d0d090bde506001303a17e13b7",
+        "retainedGitReference": "refs/heads/codex/frozen-r17-input",
+        "logicalBytes": 65650869
+      }
+    ],
+    "mainObjectStoreIndependent": true,
+    "noUserWorkingTreeRemoved": true,
+    "physicalReclaimNotAttributed": true
+  },
+  "evidenceSHA256": {
+    "acceptance/arm64-extract.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-extract.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-signature.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-signature.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-ai-diagnostics-contract.log": "daf52b765ac9e8c432538a62dc079e794194c028f7fa4ac345c8b7cd2711b0e8",
+    "acceptance/arm64-verify-ai-diagnostics-contract.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-cli-completeness.log": "5527c30b14a0d0b6bf6f935f68ff3ef64574d8092832cd88ea603e14dd28eba8",
+    "acceptance/arm64-verify-cli-completeness.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-mcp-cleanup-details.log": "9fa8e7b287a3a494154641c2bbccab3e544493eb9847ce12c16198d18737a401",
+    "acceptance/arm64-verify-mcp-cleanup-details.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-reference-encoding.log": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d",
+    "acceptance/arm64-verify-reference-encoding.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-skill-context.log": "c4a532468192eb3b68958bd532b50b260d0232af3a71b20a27c30d29d6bc8150",
+    "acceptance/arm64-verify-skill-context.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-skill-instruction-usage.log": "327c431bb3d429ea1e5deb306146039be0156d04a14290fb8bafaf4957c443e1",
+    "acceptance/arm64-verify-skill-instruction-usage.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-skill-quality.log": "c856903e7d8bcdfafa832d83af64546cca73666d872dd942ff9c70b659c510df",
+    "acceptance/arm64-verify-skill-quality.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-task-comparison.log": "dcaa5de442cf86235d202ce578d0e599feaad1954344229066ddd4a518ca8fc3",
+    "acceptance/arm64-verify-task-comparison.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-verify-tool-usage.log": "09f7a163b6f473473edee28a310832ea000a316203c3e51808b8c7355e121639",
+    "acceptance/arm64-verify-tool-usage.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/arm64-version.log": "7de504563d0b71f07110508251c7bf9eb503979155f0a3f028f1c96a8a0885ea",
+    "acceptance/arm64-version.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/artifacts.log": "a34fea4902bc7de698c989220950aafef1f4de456cb8be0957d13dd192d78175",
+    "acceptance/artifacts.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/result.json": "9655d254f2ccd10372b79073e550c204a4ac45315ecaaae443433332271c29c0",
+    "acceptance/thermo-arm64": "25acd0db272171f03d94d55ebde24aec6142c4e152b8a4b8612762eedcf74fde",
+    "acceptance/thermo-x86_64": "71bafd986ae7216d2dba4ce3b420c9167c96aabf79ed7ba6ee3938c4e681b208",
+    "acceptance/x86_64-extract.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-extract.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-signature.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-signature.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-ai-diagnostics-contract.log": "15a406b75bdc33282019ec978bc72cf2f8f5e3952a0bac64e1a6a27ff816960a",
+    "acceptance/x86_64-verify-ai-diagnostics-contract.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-cli-completeness.log": "8bc1b2f187ebfd8f379a4a2d4cc0c5a6ccbe8a955c014fcd6544462b475fcdbf",
+    "acceptance/x86_64-verify-cli-completeness.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-mcp-cleanup-details.log": "6e7cc691a1466fbeff9aaa436be4dca102aea1a3aa6dfcd4efc37114aaa00fd6",
+    "acceptance/x86_64-verify-mcp-cleanup-details.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-reference-encoding.log": "14a3b0ac7af97e2ec999f24751a61d1e77e6897302b406fb75719b1a6b86040d",
+    "acceptance/x86_64-verify-reference-encoding.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-skill-context.log": "c4a532468192eb3b68958bd532b50b260d0232af3a71b20a27c30d29d6bc8150",
+    "acceptance/x86_64-verify-skill-context.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-skill-instruction-usage.log": "327c431bb3d429ea1e5deb306146039be0156d04a14290fb8bafaf4957c443e1",
+    "acceptance/x86_64-verify-skill-instruction-usage.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-skill-quality.log": "c856903e7d8bcdfafa832d83af64546cca73666d872dd942ff9c70b659c510df",
+    "acceptance/x86_64-verify-skill-quality.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-task-comparison.log": "dcaa5de442cf86235d202ce578d0e599feaad1954344229066ddd4a518ca8fc3",
+    "acceptance/x86_64-verify-task-comparison.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-verify-tool-usage.log": "09f7a163b6f473473edee28a310832ea000a316203c3e51808b8c7355e121639",
+    "acceptance/x86_64-verify-tool-usage.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance/x86_64-version.log": "7de504563d0b71f07110508251c7bf9eb503979155f0a3f028f1c96a8a0885ea",
+    "acceptance/x86_64-version.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance-plan.json": "9acfaebf08d6a348eb70a6e311554d38d0755c87bb58e4403cd533f603d79925",
+    "acceptance.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "acceptance.stdout": "cd02456972b15f6105381cbcc523b3e876b7bd6264019d67c714ff98a0300b1a",
+    "gui-result.json": "c84b12db5bf09409bd1187022ac8c189aebecf2fe0835df328b90e5ac00c14e2",
+    "plan.txt": "73e85b7a6fb3d48c3d83f0153a6d4f6366a8106b5b787f627cb028d710244859",
+    "protected-before.json": "277ef89d01999eaf2030fb573ec3d2d5192930006f2785d956c17a1567955d17",
+    "qa-refresh.json": "7b14f79a9b71c7fe4a54877fa90531094a92574d60455c739aff6d9a239cae77",
+    "remote-symbols.json": "5ae778e03ff208ec678ea79f49bd2f52250d067c5d794958904c99bc1860f093",
+    "run-id.json": "0772a5be5517df51bc7180df25304904b390906575f85419553ad46afb6d5f75",
+    "run.stderr": "0c95a4b810b2e3e36d34676832ed85d6d67f89552a4c5269ed89d45724a0e41f",
+    "run.stdout": "df76854b858ac3744de4f0fc355ea9a83756ddfd0de586fbd467efa3cef007a7",
+    "sflow-result-private.json": "100c7363e8e3dda41edff3838eee2092124cf93e0da22eb9d75b877d81dd1e6f",
+    "sflow-review-private.json": "cbd13841f0bef6ec5ba217f5b5e8aea270a8a38cded760bb42933eed785a1fb9",
+    "sign-local.sh": "d3b085b280669f81d2671a497e7282154ed28c274e379a1c8602415f12d43f2d",
+    "sign.stderr": "c1c64e797505be3848b4f713790c682ce908f0557fc994a0d597dcd2ac12dcd0",
+    "sign.stdout": "c1a078fdd1d805a154d1c5620b2493e30767c8d30fdaa193e0ad69cacb9d70ae",
+    "transport-result.json": "7a13cdaa9149bdf55c0befe3d92ad82fc4702e093565a9538cd315c23287c020",
+    "unsigned-manifest.json": "585922aef948f95b8c99def946cf3b9167df42d1b04f77f25444baf231e254b4",
+    "workflow.json": "f47c94118f31a7ae8c9c92d139bdbe6e51b6da104d53f03c79f2ea40ff0d8768"
+  }
+}
