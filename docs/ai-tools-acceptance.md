@@ -8,7 +8,7 @@
 |---|---|---|
 | MCP 总体多大、占多少 token | Codex 9 条启用配置均已尝试，8 条完整返回 305 个工具；定义数组独立计数之和为 cl100k 217,929，服务指令另计 893。[连接记录](measurements/mcp-auth-scope-and-coverage-2026-10-17.json) | 不同时点的独立计量；Figma 独立连接需要认证，其他宿主未完整主动测量，总体仍未知；不是当前提示词或账单 |
 | 什么工具占得最多 | 已测目录中 REA 最大：194,330 个 cl100k 参考 token；单项 `compare_web_captures` 为 36,303。[定义排名](measurements/mcp-configured-coverage-2026-10-17.json) | 仅对应记录中的配置和表示方式；目录长度不代表任务成本或质量 |
-| MCP 多慢、哪里失败 | 握手、列表和本地计量分开计时；日志显示中位数、P95、累计观察间隔，结果明确报错与宿主调用失败分开。[原生事件解析](measurements/mcp-invocation-failures-2026-10-17.json)、[窗口核对](measurements/ai-tools-ui-474-2026-10-17.json) | 并行调用的间隔合计不是经过时间；条件断言失败不一定是服务故障；缺失与未知不补零 |
+| MCP 多慢、哪里失败 | 握手、列表和本地计量分开计时；日志显示中位数、P95、累计调用耗时及重叠区间去重后的占用时间，结果明确报错与宿主调用失败分开。[原生事件解析](measurements/mcp-invocation-failures-2026-10-17.json)、[窗口核对](measurements/ai-tools-ui-474-2026-10-17.json) | 并行调用的间隔合计不是经过时间；条件断言失败不一定是服务故障；缺失与未知不补零 |
 | Skill 占多少、是否臃肿 | 静态目录描述、完整文件、缓存和别名单列；Claude 可明确关联的指令正文与回执分开。在一组近七天已关联样本中，4 次加载为 68,714 字节 / cl100k 17,917；博客 Skill 占其中约 84%。[加载记录](measurements/skill-instruction-loads-2026-10-17.json) | 样本经过选择且有截断，不是全量排名；隐式读取、引用文件和其他宿主未完整覆盖；长不等于差 |
 | Skill 有没有帮助 | 支持按相同任务、模型、环境、验收条件导入配对记录，保留失败、超时、未知及排除项。[模型试测](../evals/ai-diagnostics/README.md)、[有状态任务对照](../evals/browser-workflow/README.md)、[文件导入验收](measurements/task-comparison-visible-ui-2026-10-17.json) | 三对摘要题和两对有状态任务两组均全部通过，未显示成功率收益；显式读取增加往返，不能据此断言所有 Skill 有用或无用 |
 
@@ -42,6 +42,8 @@ python3 scripts/verify-ai-release.py \
 维护入口的控制用例：`PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-ai-release-verifier.py`。它只使用自有临时 Git 仓库、文件和进程，不构建或安装 App。
 
 ## 当前验证状态
+
+[观察占用时间](measurements/observed-interval-union-2026-10-19.json)：App / CLI / JSON 分别显示累计调用耗时、重叠区间只计一次的占用时间，以及有效起止样本的覆盖数。MCP、Skill 和外层执行器分开，类别之间不相加；仅统计入选调用中窗口内完整的起止记录，不补算缺失或跨窗部分，也不把最早开始至最晚结束之间的空档算进去。旧报告缺字段、没有有效样本或汇总不一致时显示未知。五个同时持续五秒的调用夹具得到累计 25 秒、占用 5 秒；真实尾部样本的 160 个完整 MCP 调用得到累计 266.004 秒、占用 265.073 秒，与独立的十进制端点扫描算法在 1 ms 内一致。原有逐工具耗时、文本、token 和状态字段全部保持一致，原文临时重放已删除。323 项 AgentDoctor 回归、编译后 CLI 契约和中文面板离屏核对通过。此处是时间口径补全，不代表提速、任务总时长、完整活动或账单；仅完成 Debug / 模块验证，本轮未重建、安装或发布 App。
 
 [Skill 原生目录刷新与缓存名称](measurements/skill-native-reload-and-cache-label-2026-10-19.json)：Codex CLI 0.163.0 在隔离 HOME、运行期禁止网络的同一进程内，以 `skills/list` / `forceReload: true` 核对修复前后文件。`discord-hermes` 返回的目录描述由 56 字节恢复为预期的 457 字节，再刷新仍一致；`codex-statebar` 前后均为 138 字节，属于格式兼容性修正，不能声称补出了客户端能力。未验证已有会话自动刷新或模型选择。此轮静态清单覆盖 227 份缓存文件、135 份目录独立文件，另有 5 个别名和 1 条未测量目录条目；缓存中的 `thermo-use/0.4.1` 存在无效 YAML 头部，配置启用不等于当前已加载此版本。源码修正其诊断名称：仅在明确声明的插件根目录上使用清单名称，`nameSource` 标明来源，子 Skill 与合法头部名称不被覆盖。真实缓存文件副本的名称由 `0.4.1` 改为 `thermo-use`，目录计量仍未知，文档、正文、质量证据与汇总不变，无修改动作。314 项 AgentDoctor 回归及编译后 CLI 检查通过；真实缓存未改，未构建或更新 App。
 
