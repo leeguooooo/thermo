@@ -1,0 +1,80 @@
+{
+  "date": "2026-10-19",
+  "source": "b1cff4d16b0c05b7867daf8f28a90698ac069d4e",
+  "version": "1.1.34",
+  "build": "519",
+  "package": {
+    "developerIDTeam": "6ZPXG4KVVS",
+    "metadataAndAppleEventsEntitlementVerified": true,
+    "sourceCommitMatchesFreeze": true,
+    "workingTree": "clean",
+    "nativeAndRosettaCLIPassed": true,
+    "architectures": {
+      "Contents/MacOS/Thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo": [
+        "x86_64",
+        "arm64"
+      ],
+      "Contents/Helpers/thermo-helper": [
+        "x86_64",
+        "arm64"
+      ]
+    },
+    "archive": {
+      "archive": "Thermo-1.1.34-519-candidate.zip",
+      "sha256": "f13dcc9c13e3e5fd1fa56b6252685606ec19b7459a7c9dbbdaac871dfebe22e8",
+      "regularFiles": 93,
+      "symlinks": 8,
+      "filesModesAndLinksMatch": true,
+      "unpackedDeepStrictAllArchSignaturePass": true
+    },
+    "lifecyclePassed": true,
+    "lifecycleSamples": 23
+  },
+  "deployment": {
+    "old509NormalQuitVerified": true,
+    "atomicAppExchange": true,
+    "oldAppAndRootFilesPreserved": true,
+    "appControlVersion": "1.1.34 (519)",
+    "helperVersion": "8/1.1.34",
+    "rootMatchesEmbedded": true,
+    "currentHelperPID": 55775
+  },
+  "automaticUpgrade": {
+    "accepted": true,
+    "samples": 20,
+    "registrationAlwaysPresent": true,
+    "consecutiveRecoveredChecks": 6
+  },
+  "guiReinstall": {
+    "accepted": true,
+    "trigger": "CUA clicked Reinstall in installed Settings page; no CLI installer command issued",
+    "buttonsDisabledAndSettingUpIndicatorVisible": true,
+    "appBusyObserved": true,
+    "buttonsReenabledAfterCompletion": true,
+    "oldPID": "47787",
+    "newPID": "55775",
+    "samples": 17,
+    "consecutiveOriginalPolicyChecks": 6,
+    "stopMessages": [
+      "2026-10-19 12:32:39 thermo-helper: signal 15; automatic control confirmed"
+    ],
+    "traceSHA256": "880be79cc4105587ea0933a95a0813dac953e980cc52988fb15e684d5e50fd9f",
+    "ordinaryQuitBlocking": "Covered by held-operation App tests; no actual quit attempted during this hardware installation"
+  },
+  "visualAcceptance": {
+    "settingsVersionSourceAndRunningHelper": true,
+    "normalWindowReinstallAndUninstallLayout": true,
+    "outdatedAndNonrespondingBannerVisualAcceptance": false
+  },
+  "notarized": false,
+  "published": false,
+  "remaining": [
+    "Outdated/nonresponding banner visual acceptance",
+    "Screen permission and remaining hardware sessions",
+    "Main integration and full parity matrix"
+  ]
+}

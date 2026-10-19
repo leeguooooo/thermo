@@ -44,10 +44,11 @@
     },
     "logSHA256": "81bd7a0203b11c2ccebc8116e9b312440f6ccd3b66f5e2c051d6f496baff67f1"
   },
-  "deployed": false,
+  "deployed": true,
   "remaining": [
-    "Signed candidate and real Settings reinstall click",
     "Outdated/nonresponding banner visual acceptance",
-    "Main integration and remaining Mole parity gates"
-  ]
+    "Other Mole parity gates and main integration"
+  ],
+  "settingsPhysicalClickAccepted": true,
+  "followUp": "mole-installed-519-2026-10-19.json"
 }

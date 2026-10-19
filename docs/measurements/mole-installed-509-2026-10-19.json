@@ -93,5 +93,6 @@
     "Explicit usable GUI helper repair entry",
     "Screen permission and remaining hardware sessions",
     "Main source integration and full parity matrix"
-  ]
+  ],
+  "followUp": "mole-installed-519-2026-10-19.json"
 }
