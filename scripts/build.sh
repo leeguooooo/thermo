@@ -32,11 +32,11 @@ if [ -n "$BUILD_JOB_COUNT" ]; then
 else
     set --
 fi
-VERSION="$(sed -n 's/.*static let string = "\(.*\)"/\1/p' Sources/ThermoKit/Version.swift)"
 SOURCE_INFO="$(sh scripts/source-info.sh .)"
 read -r SOURCE_COMMIT SOURCE_STATE BUILD <<EOF
 $SOURCE_INFO
 EOF
+VERSION="$(sed -n 's/.*static let string = "\(.*\)"/\1/p' Sources/ThermoKit/Version.swift)"
 DIST="${THERMO_DIST_DIR:-dist}"
 RELEASES=releases
 SPARKLE_BIN=.build/artifacts/sparkle/Sparkle/bin
@@ -51,7 +51,8 @@ swift build -c "$CONFIGURATION" $arch_flags "$@"
 # shellcheck disable=SC2086
 BIN="$(swift build -c "$CONFIGURATION" $arch_flags "$@" --show-bin-path)"
 
-[ "$(sh scripts/source-info.sh .)" = "$SOURCE_INFO" ] || {
+[ "$(sh scripts/source-info.sh .)" = "$SOURCE_INFO" ] &&
+    [ "$(sed -n 's/.*static let string = "\(.*\)"/\1/p' Sources/ThermoKit/Version.swift)" = "$VERSION" ] || {
     echo "Source metadata changed during compilation; products were not packaged." >&2
     exit 1
 }

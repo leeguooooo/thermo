@@ -39,17 +39,20 @@ case "$*" in
     elif [ "$OWNED_DRIFT" = amend ]; then
       git -c user.name=Owned -c user.email=owned@example.invalid add tracked
       git -c user.name=Owned -c user.email=owned@example.invalid -c commit.gpgsign=false commit --quiet --amend --no-edit
+    elif [ "$OWNED_DRIFT" = version ]; then
+      printf 'public enum ThermoVersion { public static let string = "2.0.0" }\\n' > Sources/ThermoKit/Version.swift
     fi ;;
 esac
 ''');swift.chmod(0o755)
  dist=root/'dist';dist.mkdir();(dist/'keep').write_text('owned-existing-output')
- for mode in ['commit','amend','dirty']:
-  git('restore','tracked')
+ for mode in ['commit','amend','dirty','version']:
+  git('restore','tracked','Sources/ThermoKit/Version.swift')
+  if mode=='version':(repo/'tracked').write_text('already dirty before compilation')
   count_before=git('rev-list','--count','HEAD')
   extra=dict(env,PATH=str(stub)+':'+env['PATH'],OWNED_BIN=str(root/'fake-products'),OWNED_DRIFT=mode,THERMO_DIST_DIR=str(dist),SIGN_ID='-',NOTARY_PROFILE='',APPCAST_URL='')
   p=subprocess.run(['sh','scripts/build.sh'],cwd=repo,env=extra,capture_output=True,text=True,timeout=10)
   assert p.returncode!=0 and 'Source metadata changed during compilation' in p.stderr
   if mode=='amend':assert git('rev-list','--count','HEAD')==count_before
   assert (dist/'keep').read_text()=='owned-existing-output' and not (dist/'Thermo.app').exists()
- checks.append('HEAD or clean/dirty state drift refuses packaging and preserves existing outputs')
+ checks.append('HEAD (including same-count amend), state or version drift refuses packaging and preserves existing outputs')
 print(json.dumps({'groupsPassed':len(checks),'checks':checks,'fixtureOnly':True,'realCompilerAndSigningNotInvoked':True},indent=2))
