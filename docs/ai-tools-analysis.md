@@ -239,7 +239,20 @@ REA_MCP_OUTPUT_SCHEMA_PROFILE = "off"
 - [Anthropic skill-creator](https://claude.com/resources/articles/improving-skill-creator-test-measure-and-refine-agent-skills)：触发测试、有无 Skill 对照、结果验收和耗时 / token 测量。
 - [Snyk Agent Scan](https://github.com/snyk/agent-scan)：风险分类与证据展示。其远程分析会发送部分配置与 Skill 内容；不能在 thermo 中默认接入上传。
 
-外部资料于 2026-10-17 核对；本页不表示已实测这些项目的运行表现。
+其余资料仍为 2026-10-17 的资料核对。2026-10-19 已对固定发布版本的官方 Inspector 2.11.0、MCPJam CLI 5.16.1 做隔离 stdio 夹具对照；MCPJam 网页、跨模型评测和 OAuth 体验不在本次实测范围。[版本、过程与结果](measurements/mcp-inspector-reference-2026-10-19.json)保留有效记录及首轮夹具环境变量假设错误，未接入私人配置或业务 MCP。
+
+| 夹具场景 | 官方 Inspector 2.11.0 | MCPJam CLI 5.16.1 |
+|---|---|---|
+| 正常列表 / 调用 | 均退出 0 | 均退出 0，`--rpc` 有完整请求响应记录 |
+| `isError:true` | 保留返回内容，退出 5，错误分类为 `tool_is_error` | 保留返回内容，退出 1 |
+| JSON-RPC 错误 | 退出 1 | 退出 1 |
+| 布尔属性 schema | `--strict` 给出兼容性提示并退出 6 | 列表退出 0 |
+| 缺失的本地 `$ref` 目标 | 即使 `--strict` 也未提示 | 列表未提示 |
+| `structuredContent` 字段类型违反 outputSchema | 调用前读取目录，拒绝错误输出 | 直接调用退出 0；`--validate-response` 仍退出 0，该选项检查的是响应封装 |
+
+布尔 schema 本身是合法 JSON Schema；兼容性提示不能直接解释成协议无效，也不应靠删除约束来消除提示。[JSON Schema 说明](https://json-schema.org/understanding-json-schema/basics#boolean-json-schemas)。MCPJam 的 `doctor` 在输出会违反契约的夹具上报告连接就绪，但没有调用工具，这符合健康检查的范围；本次 `--quiet --format json` 的 stdout 还混入两行说明，不能直接当作单个 JSON 文档解析。以上是这些版本、选项与夹具的观察，不是跨宿主质量或性能排名。命令经过时间含 Node 和子进程启动，不作为服务调用时延。
+
+可借鉴的是把目录检查、返回契约、协议往返和任务验收分开。Thermo 继续只主动握手和读取目录，本次新增缺失本地 schema 引用提示：仅解析有界的同文档 JSON Pointer，不拉取外部引用、不改写 schema；遇到资源标识符或检查预算不足时跳过。它补上了该夹具中的静态缺口，不能代替完整 schema 验证或业务工具测试。具体实现按 [JSON Pointer](https://www.rfc-editor.org/rfc/rfc6901.html) 的转义、数组索引和字符匹配规则处理。
 
 [1.2.0 (347) 候选包验收](measurements/ai-tools-candidate-package-2026-10-17.json)已完成双架构、签名完整性与最低系统版本检查，原生 arm64 和 Rosetta x86_64 共通过十组 AI CLI 夹具。打包 App 的隔离副本通过中文 MCP 批量检查：仅选择两个合成服务，返回三个工具、634 字节、定义数组合计约 159 token，排名为 118 / 21 / 20；剩余未检查配置仍使完整总量保持未知。实际进程路径与两个架构的指令段均已核对，原分发包哈希和已安装 App 保留。该包只有 ad-hoc 签名，未公证、安装或发布；原始偶发镜像清理现象仍未解释，也没有真实 Intel 主机、helper 或无线控制验收。
 

@@ -39,7 +39,9 @@ Figma 另经 Codex 0.163.0 已有 OAuth 的只读宿主目录接口取得 44 个
 - [MCPJam Inspector](https://www.mcpjam.com/features/inspector)：工具请求 / 响应、调用瀑布和跨客户端测试。
 - [ccusage](https://github.com/ccusage/ccusage)：本地会话统计；会话 token 不应直接分摊成某个工具的独占成本。
 - [Anthropic skill-creator](https://claude.com/resources/articles/improving-skill-creator-test-measure-and-refine-agent-skills)：触发评测、Skill 对照、验收、耗时及 token。
-- 其余目录计量与风险检查参考及适用边界见 [外部参考](ai-tools-analysis.md#外部参考)。本轮为资料研究，没有把外部工具的完整体验评成名次，也没有默认上传个人配置或日志。
+- 其余目录计量与风险检查参考及适用边界见 [外部参考](ai-tools-analysis.md#外部参考)。2026-10-17 的参考收集为资料研究，新增终端实测范围见下文。没有把外部工具的完整体验评成名次，也没有默认上传个人配置或日志。
+
+[2026-10-19 终端对照与静态检查补充](measurements/mcp-inspector-reference-2026-10-19.json)已实测官方 Inspector 2.11.0、MCPJam CLI 5.16.1 的正常、工具错误、协议错误、schema 与返回契约案例。对照发现的缺失本地 `$ref` 目标，已补进 Thermo 的定义提示；合法布尔 schema 保持无提示，定义计量不变。资源标识符、远程引用、锚点及超过预算者不在此项解析范围，未拉取外部 schema。692 项相关回归、四组编译后 CLI 案例和隔离原生窗口通过；尚未发布，不据此评定真实业务质量。
 
 ## 博客工作流的真实模型对照
 

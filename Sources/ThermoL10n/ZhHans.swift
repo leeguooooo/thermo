@@ -2541,6 +2541,7 @@ let zhHans: [String: String] = [
     "Tool entry has no valid name.": "工具条目缺少有效名称。",
     "Tool description is missing or empty.": "工具描述缺失或为空。",
     "Input schema is missing.": "缺少输入 schema。",
+    "Unresolved local schema references in %1$@: %2$@.": "%1$@ 中有 %2$@ 处本地 schema 引用找不到目标。",
     "%1$@ must declare object type.": "%1$@ 必须声明 object 类型。",
     "%1$@ is not a JSON object.": "%1$@ 不是 JSON 对象。",
     "Timeout must be between 0 and 120 seconds.": "超时必须大于 0 秒且不超过 120 秒。",

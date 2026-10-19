@@ -120,6 +120,9 @@ enum MCPInspector {
             }
             if let object = value as? [String: Any] {
                 if object["type"] as? String != "object" { issues.append(tr("%1$@ must declare object type.", key)) }
+                if let unresolved = MCPLocalSchemaReferences.unresolvedCount(in: object), unresolved > 0 {
+                    issues.append(tr("Unresolved local schema references in %1$@: %2$@.", key, String(unresolved)))
+                }
             } else { issues.append(tr("%1$@ is not a JSON object.", key)) }
             return measure(try json(value))
         }
