@@ -7,6 +7,7 @@ import SwiftUI
         let id: String
         let encoding: TextEncoding
         let timeout: TimeInterval
+        let protocolMode: MCPInspectionProtocol
         let cancelled: @Sendable () -> Bool
     }
     struct Item: Sendable { let id: String; let name: String; let agent: String }
@@ -42,6 +43,7 @@ import SwiftUI
         self.store = store
         self.inspector = inspector ?? { request in
             AgentDoctor.inspectMCP(request.id, timeout: request.timeout,
+                                  protocolMode: request.protocolMode,
                                   env: DoctorEnvironment(tokenEncoding: request.encoding, cancelled: request.cancelled))
         }
         self.clock = clock
@@ -49,7 +51,7 @@ import SwiftUI
     }
 
     @discardableResult func start(items: [AgentItem], encoding: TextEncoding, timeout: TimeInterval = 10,
-                                  totalBudget: TimeInterval = 120) -> Bool {
+                                  totalBudget: TimeInterval = 120, protocolMode: MCPInspectionProtocol = .handshake) -> Bool {
         guard !running, store.pending.isEmpty, timeout.isFinite, timeout > 0, timeout <= 120,
               totalBudget.isFinite, totalBudget > 0, totalBudget <= 120 else { return false }
         var seen = Set<String>()
@@ -81,6 +83,7 @@ import SwiftUI
                     break
                 }
                 let result = inspector(Request(id: item.id, encoding: encoding, timeout: min(timeout, remaining),
+                                               protocolMode: protocolMode,
                                                cancelled: { cancellation.isCancelled || clock() >= deadline }))
                 await MainActor.run {
                     self.store.accept(result, id: item.id, encoding: encoding, ticket: ticket)

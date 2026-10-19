@@ -9,6 +9,7 @@ final class MCPInspectionModel: ObservableObject {
     private var cancellation: DoctorCancellation?
 
     func inspect(_ item: AgentItem, encoding: TextEncoding = .heuristic, timeout: TimeInterval = 10,
+                 protocolMode: MCPInspectionProtocol = .handshake,
                  completion: (@MainActor (MCPInspection) -> Void)? = nil) {
         guard !running else { return }
         let cancellation = DoctorCancellation()
@@ -17,6 +18,7 @@ final class MCPInspectionModel: ObservableObject {
         running = true
         Task.detached(priority: .userInitiated) {
             let result = AgentDoctor.inspectMCP(item.id, timeout: timeout,
+                                               protocolMode: protocolMode,
                                                env: DoctorEnvironment(tokenEncoding: encoding, cancelled: { cancellation.isCancelled }))
             await MainActor.run {
                 guard self.cancellation === cancellation else { return }
@@ -36,6 +38,7 @@ struct MCPInspectButton: View {
     var encoding: TextEncoding = .heuristic
     let store: MCPDefinitionStore
     @State private var timeout: Double = 10
+    @State private var protocolMode: MCPInspectionProtocol = .handshake
     @State private var showing = false
     @StateObject private var model = MCPInspectionModel()
 
@@ -55,6 +58,11 @@ struct MCPInspectButton: View {
                             Text(tr("%1$@ seconds", String(Int(value)))).tag(value)
                         }
                     }.disabled(model.running)
+                    Picker(tr("Inspection protocol"), selection: $protocolMode) {
+                        ForEach(MCPInspectionProtocol.allCases, id: \.self) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }.disabled(model.running)
                     if let report = model.report { MCPInspectionResultView(report: report) }
                     else if model.running { ProgressView(tr("Inspecting MCP definitions…")) }
                     HStack {
@@ -71,7 +79,7 @@ struct MCPInspectButton: View {
     @MainActor private func start() {
         guard !model.running else { return }
         let ticket = store.begin(item.id)
-        model.inspect(item, encoding: encoding, timeout: timeout) { report in
+        model.inspect(item, encoding: encoding, timeout: timeout, protocolMode: protocolMode) { report in
             store.accept(report, id: item.id, encoding: encoding, ticket: ticket)
         }
     }
@@ -91,7 +99,10 @@ struct MCPInspectionResultView: View {
                 if let encoding = report.referenceEncoding { Text(tr("Ordinary-text reference encoding: %1$@", encoding)).font(.caption).foregroundStyle(.secondary) }
                 Text(report.generated, style: .time).font(.caption).foregroundStyle(.secondary)
                 Text(tr("Total connection inspection time: %1$@", seconds(report.elapsedSeconds))).font(.caption.monospaced())
-                if report.transport == "streamable-http" {
+                if let discovery = report.discoverySeconds {
+                    Text(tr("Discovery %1$@ · list %2$@", seconds(discovery), seconds(report.listingSeconds)))
+                        .font(.caption.monospaced())
+                } else if report.transport == "streamable-http" {
                     Text(tr("HTTP handshake %1$@ · list %2$@", seconds(report.handshakeSeconds), seconds(report.listingSeconds)))
                         .font(.caption.monospaced())
                 } else {

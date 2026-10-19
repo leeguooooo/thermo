@@ -2,6 +2,15 @@ import Foundation
 import Darwin
 import ThermoL10n
 
+public enum MCPInspectionProtocol: String, Codable, CaseIterable, Hashable, Sendable {
+    case handshake
+    case stateless = "2026-07-28"
+
+    public var title: String {
+        self == .handshake ? tr("Initialization handshake (through 2025-11-25)") : tr("Stateless discovery (2026-07-28)")
+    }
+}
+
 public struct MCPToolFootprint: Codable, Sendable {
     public var name: String
     public var description: TextFootprint
@@ -61,8 +70,10 @@ public struct MCPInspection: Codable, Sendable {
     public var cleanupStatus: String?
     public var cleanupDetails: MCPCleanupDetails? = nil
     public var protocolVersion: String?
+    public var requestedProtocol: MCPInspectionProtocol? = nil
     public var startupSeconds: Double?
     public var handshakeSeconds: Double?
+    public var discoverySeconds: Double? = nil
     public var listingSeconds: Double?
     public var analysisSeconds: Double?
     public var elapsedSeconds: Double = 0
@@ -77,6 +88,7 @@ extension AgentDoctor {
     /// Explicit active inspection only. `context` and `run` never call this API.
     /// Matching by item id disambiguates agents, projects and plugin scopes.
     public static func inspectMCP(_ name: String, agent: String? = nil, timeout: TimeInterval = 10,
+                                  protocolMode: MCPInspectionProtocol = .handshake,
                                   env: DoctorEnvironment = DoctorEnvironment()) -> MCPInspection {
         var checks = ConfigChecks(env: env)
         checks.runAll(includeSkills: false)
@@ -92,7 +104,7 @@ extension AgentDoctor {
             return MCPInspection(generated: env.now, name: Redact.text(name), agent: agent ?? "",
                                  message: matches.isEmpty ? "No matching MCP configuration." : "Multiple configurations match; select an exact item id from agents list mcp.")
         }
-        return MCPInspector.inspect(server, env: env, timeout: timeout)
+        return MCPInspector.inspect(server, env: env, timeout: timeout, protocolMode: protocolMode)
     }
 }
 
@@ -101,6 +113,24 @@ enum MCPInspector {
     // require a different transport flow and must not be added to this allowlist.
     static let handshakeProtocolVersion = "2025-11-25"
     static let handshakeProtocolVersions = ["2024-11-05", "2025-03-26", "2025-06-18", handshakeProtocolVersion]
+    static func statelessParams(_ params: [String: Any]) -> [String: Any] {
+        var value = params
+        value["_meta"] = ["io.modelcontextprotocol/protocolVersion": MCPInspectionProtocol.stateless.rawValue,
+                          "io.modelcontextprotocol/clientInfo": ["name": "thermo-inspector", "version": "1"],
+                          "io.modelcontextprotocol/clientCapabilities": [String: Any]()]
+        return value
+    }
+    static func requireCompleteResult(_ result: [String: Any]) throws {
+        guard result["resultType"] == nil || result["resultType"] as? String == "complete" else {
+            throw Failure(state: .unsupported, message: tr("This inspection requires a complete metadata result; client interactions and extension results are not supported. No follow-up request was sent."))
+        }
+    }
+    static func rpcFailure(_ code: Int, method: String, stateless: Bool) -> Failure {
+        if stateless, code == -32022 || (method == "server/discover" && code == -32601) {
+            return Failure(state: .unsupported, message: tr("The endpoint rejected the selected inspection protocol. No alternate protocol was attempted."))
+        }
+        return Failure(message: tr("MCP %1$@ returned JSON-RPC error %2$@.", method, String(code)))
+    }
     struct Failure: Error {
         var state: MCPInspection.State = .failed
         var message: String
@@ -111,7 +141,8 @@ enum MCPInspector {
         return String(decoding: data, as: UTF8.self)
     }
 
-    static func footprint(_ tool: [String: Any], encoding: TextEncoding = .heuristic) throws -> MCPToolFootprint {
+    static func footprint(_ tool: [String: Any], encoding: TextEncoding = .heuristic,
+                          protocolMode: MCPInspectionProtocol = .handshake) throws -> MCPToolFootprint {
         func measure(_ text: String) -> TextFootprint { TextFootprint(text, encoding: encoding) }
         guard let name = tool["name"] as? String, !name.isEmpty else { throw Failure(message: tr("Tool entry has no valid name.")) }
         var issues: [String] = []
@@ -123,7 +154,9 @@ enum MCPInspector {
                 return measure("")
             }
             if let object = value as? [String: Any] {
-                if object["type"] as? String != "object" { issues.append(tr("%1$@ must declare object type.", key)) }
+                if (key == "inputSchema" || protocolMode == .handshake), object["type"] as? String != "object" {
+                    issues.append(tr("%1$@ must declare object type.", key))
+                }
                 if let unresolved = MCPLocalSchemaReferences.unresolvedCount(in: object), unresolved > 0 {
                     issues.append(tr("Unresolved local schema references in %1$@: %2$@.", key, String(unresolved)))
                 }
@@ -140,9 +173,11 @@ enum MCPInspector {
                                 metadata: measure(try tool["_meta"].map(json) ?? ""))
     }
 
-    static func inspect(_ server: MCPServer, env: DoctorEnvironment, timeout: TimeInterval) -> MCPInspection {
+    static func inspect(_ server: MCPServer, env: DoctorEnvironment, timeout: TimeInterval,
+                        protocolMode: MCPInspectionProtocol = .handshake) -> MCPInspection {
         let started = clock()
         var report = MCPInspection(generated: env.now, name: Redact.text(server.name), agent: server.agent)
+        report.requestedProtocol = protocolMode
         report.referenceEncoding = env.tokenEncoding == .heuristic ? nil : env.tokenEncoding.rawValue
         report.referenceEngine = env.tokenEncoding == .heuristic ? nil : ReferenceTokenizer.engine
         func finish() -> MCPInspection {
@@ -174,35 +209,57 @@ enum MCPInspector {
                 report.cleanupStatus = transport.cleanupStatus
                 report.cleanupDetails = transport.cleanupDetails
             }
+            transport.stateless = protocolMode == .stateless
             let handshake = clock()
-            let initialized = try transport.request("initialize", params: [
-                "protocolVersion": handshakeProtocolVersion, "capabilities": [String: Any](),
-                "clientInfo": ["name": "thermo-inspector", "version": "1"],
-            ])
-            guard let version = initialized["protocolVersion"] as? String,
-                  let capabilities = initialized["capabilities"] as? [String: Any],
-                  let info = initialized["serverInfo"] as? [String: Any],
-                  info["name"] is String, info["version"] is String,
-                  initialized["instructions"] == nil || initialized["instructions"] is String,
-                  capabilities["tools"] == nil || capabilities["tools"] is [String: Any] else { throw Failure(message: tr("Invalid initialization result.")) }
-            guard handshakeProtocolVersions.contains(version) else {
-                // Retain a safe revision identifier for diagnostics, never arbitrary server text.
-                if version.range(of: #"\A[0-9]{4}-[0-9]{2}-[0-9]{2}\z"#, options: .regularExpression) != nil {
-                    report.protocolVersion = version
+            let initialized: [String: Any]
+            let capabilities: [String: Any]
+            if protocolMode == .stateless {
+                transport.negotiated(protocolMode.rawValue)
+                initialized = try transport.request("server/discover", params: statelessParams([:]))
+                try requireCompleteResult(initialized)
+                guard let supported = initialized["supportedVersions"] as? [String],
+                      supported.contains(protocolMode.rawValue),
+                      let advertised = initialized["capabilities"] as? [String: Any],
+                      initialized["instructions"] == nil || initialized["instructions"] is String,
+                      advertised["tools"] == nil || advertised["tools"] is [String: Any] else {
+                    throw Failure(state: .unsupported, message: tr("Stateless discovery did not advertise the selected protocol and valid capabilities. No alternate protocol was attempted."))
                 }
-                throw Failure(state: .unsupported, message: tr("Server selected a protocol version this inspector does not support. This is an inspector compatibility limit, not a tool failure."))
+                capabilities = advertised
+                report.protocolVersion = protocolMode.rawValue
+                report.discoverySeconds = clock() - handshake
+            } else {
+                initialized = try transport.request("initialize", params: [
+                    "protocolVersion": handshakeProtocolVersion, "capabilities": [String: Any](),
+                    "clientInfo": ["name": "thermo-inspector", "version": "1"],
+                ])
+                guard let version = initialized["protocolVersion"] as? String,
+                      let advertised = initialized["capabilities"] as? [String: Any],
+                      let info = initialized["serverInfo"] as? [String: Any],
+                      info["name"] is String, info["version"] is String,
+                      initialized["instructions"] == nil || initialized["instructions"] is String,
+                      advertised["tools"] == nil || advertised["tools"] is [String: Any] else { throw Failure(message: tr("Invalid initialization result.")) }
+                capabilities = advertised
+                guard handshakeProtocolVersions.contains(version) else {
+                    // Retain a safe revision identifier for diagnostics, never arbitrary server text.
+                    if version.range(of: #"\A[0-9]{4}-[0-9]{2}-[0-9]{2}\z"#, options: .regularExpression) != nil {
+                        report.protocolVersion = version
+                    }
+                    throw Failure(state: .unsupported, message: tr("Server selected a protocol version this inspector does not support. This is an inspector compatibility limit, not a tool failure."))
+                }
+                report.protocolVersion = version
+                transport.negotiated(version)
+                try transport.send(["jsonrpc": "2.0", "method": "notifications/initialized"])
+                report.handshakeSeconds = clock() - handshake
             }
-            report.protocolVersion = version
-            transport.negotiated(version)
-            try transport.send(["jsonrpc": "2.0", "method": "notifications/initialized"])
-            report.handshakeSeconds = clock() - handshake
             let listing = clock()
             var tools: [[String: Any]] = []
             if capabilities["tools"] != nil {
                 var cursor: String?
                 var cursors = Set<String>()
                 for page in 0..<100 {
-                    let result = try transport.request("tools/list", params: cursor.map { ["cursor": $0] } ?? [:])
+                    let params: [String: Any] = cursor.map { ["cursor": $0] } ?? [:]
+                    let result = try transport.request("tools/list", params: protocolMode == .stateless ? statelessParams(params) : params)
+                    if protocolMode == .stateless { try requireCompleteResult(result) }
                     guard let entries = result["tools"] as? [[String: Any]] else { throw Failure(message: tr("tools/list did not return a valid tool array.")) }
                     tools += entries
                     guard tools.count <= 10_000 else { throw Failure(message: tr("Tool count exceeded the inspection limit; results are incomplete.")) }
@@ -218,7 +275,7 @@ enum MCPInspector {
             var names = Set<String>()
             report.tools = try tools.map { tool in
                 try transport.check()
-                var row = try footprint(tool, encoding: env.tokenEncoding)
+                var row = try footprint(tool, encoding: env.tokenEncoding, protocolMode: protocolMode)
                 if !names.insert(tool["name"] as? String ?? "").inserted { row.issues.append(tr("Duplicate tool name in the server listing.")) }
                 return row
             }.sorted { ($0.definition.comparisonTokens ?? -1) == ($1.definition.comparisonTokens ?? -1) ? $0.name < $1.name : ($0.definition.comparisonTokens ?? -1) > ($1.definition.comparisonTokens ?? -1) }
@@ -227,7 +284,9 @@ enum MCPInspector {
             try transport.check()
             report.complete = true
             report.state = .ready
-            report.message = tr("Handshake and complete tool listing succeeded. Business tool behavior has not been tested.")
+            report.message = protocolMode == .stateless
+                ? tr("Stateless discovery and complete tool listing succeeded. Business tool behavior has not been tested.")
+                : tr("Handshake and complete tool listing succeeded. Business tool behavior has not been tested.")
         } catch let error as Failure {
             report.state = error.state
             report.tools = []
@@ -239,6 +298,7 @@ enum MCPInspector {
 }
 
 protocol MCPTransport: AnyObject {
+    var stateless: Bool { get set }
     func request(_ method: String, params: [String: Any]) throws -> [String: Any]
     func send(_ message: [String: Any]) throws
     func check() throws
@@ -257,6 +317,7 @@ extension MCPTransport {
 /// Synchronous, bounded JSONL transport. All pipe operations are nonblocking.
 /// It owns only the child it starts; stderr is discarded, never mixed with protocol data.
 final class MCPStdio: MCPTransport {
+    var stateless = false
     let process = Process()
     let input = Pipe()
     let output = Pipe()
@@ -334,21 +395,32 @@ final class MCPStdio: MCPTransport {
     func request(_ method: String, params: [String: Any]) throws -> [String: Any] {
         sequence += 1
         let id = "thermo-\(sequence)"
+        var receivedFinal = false
+        defer {
+            if stateless, !receivedFinal, cancelled() || MCPInspector.clock() >= deadline,
+               let text = try? MCPInspector.json(["jsonrpc": "2.0", "method": "notifications/cancelled", "params": ["requestId": id]]) {
+                let data = Data((text + "\n").utf8)
+                // The small frame is below PIPE_BUF: write once, never extend the inspection budget.
+                _ = data.withUnsafeBytes { Darwin.write(input.fileHandleForWriting.fileDescriptor, $0.baseAddress!, data.count) }
+            }
+        }
         try send(["jsonrpc": "2.0", "id": id, "method": method, "params": params])
         while true {
             let message = try receive()
             if let serverMethod = message["method"] as? String {
                 if let serverID = message["id"] {
+                    guard !stateless else { throw MCPInspector.Failure(state: .unsupported, message: tr("Stateless inspection does not accept server-initiated requests. No client response was sent.")) }
                     if serverMethod == "ping" { try send(["jsonrpc": "2.0", "id": serverID, "result": [String: Any]()]) }
                     else { try send(["jsonrpc": "2.0", "id": serverID, "error": ["code": -32601, "message": "Inspector does not support this method."]]) }
                 }
                 continue
             }
             guard message["id"] as? String == id else { throw MCPInspector.Failure(message: tr("MCP response id does not match the pending request.")) }
+            receivedFinal = true
             if let error = message["error"] as? [String: Any] {
                 let code = error["code"] as? Int ?? 0
                 // Do not echo server-controlled error text; it can include credentials or request data.
-                throw MCPInspector.Failure(message: tr("MCP %1$@ returned JSON-RPC error %2$@.", method, String(code)))
+                throw MCPInspector.rpcFailure(code, method: method, stateless: stateless)
             }
             guard message["error"] == nil, let result = message["result"] as? [String: Any] else { throw MCPInspector.Failure(message: tr("MCP response has no valid result object.")) }
             return result

@@ -1,4 +1,5 @@
 import AgentDoctor
+import ThermoL10n
 import Foundation
 
 /// `thermo agents`: what is wrong with the AI agents on this Mac.
@@ -149,7 +150,7 @@ struct AgentsCommand {
            thermo agents context [--agent AGENT] [--root PROJECT] [--json] static footprint ranking and deduplicated inventory
            thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--sort text|structured] [--limit FILES] [--json] local log metrics
            thermo agents compare FILE [--json]            compare declared local task evaluations; never executes tasks
-           thermo agents inspect NAME [--json]            connect to one MCP; handshake, list and rank definitions
+           thermo agents inspect NAME [--protocol handshake|2026-07-28] [--json] connect to one MCP; discover, list and rank definitions
            thermo agents list [AREA] [--json]             everything checked, marked OK or not
            thermo agents show NAME [--json]               one item: problems, suggestions, numbered actions
            thermo agents fix [--dry-run] [--yes]          every safe automatic fix for problem items
@@ -348,14 +349,15 @@ struct AgentsCommand {
         guard timeout <= 120, budget <= 120 else { throw CLIError("--timeout and --budget must be at most 120 seconds") }
         if let host = app.args.options["agent"], !["claude","codex","cursor","gemini","windsurf"].contains(host) { throw CLIError("Unknown --agent host.") }
         let selectedEncoding = try encoding()
+        let protocolMode = MCPInspectionProtocol(rawValue: app.args.options["protocol"] ?? "handshake")!
         let selectedProject = try environment().project
         let inventory = AgentDoctor.run(DoctorEnvironment(project:selectedProject,tokenEncoding: selectedEncoding))
         var seen = Set<String>()
         let queue = inventory.items.filter { $0.area == .mcp && $0.enabled && (app.args.options["agent"] == nil || $0.agent == app.args.options["agent"]) && seen.insert($0.id).inserted }
             .sorted { ($0.agent,$0.name,$0.id) < ($1.agent,$1.name,$1.id) }
         if app.args.has("dry-run") {
-            struct Plan: Encodable { let dryRun = true; let ids: [String]; let timeout: Double; let budget: Double }
-            print(Export.json(Plan(ids:queue.map(\.id),timeout:timeout,budget:budget))); return
+            struct Plan: Encodable { let dryRun = true; let ids: [String]; let timeout: Double; let budget: Double; let inspectionProtocol: MCPInspectionProtocol }
+            print(Export.json(Plan(ids:queue.map(\.id),timeout:timeout,budget:budget,inspectionProtocol:protocolMode))); return
         }
         mcpBatchInterrupted = 0
         let old = signal(SIGINT) { _ in mcpBatchInterrupted = 1 }
@@ -367,6 +369,7 @@ struct AgentsCommand {
             let remaining = deadline - ProcessInfo.processInfo.systemUptime
             if remaining <= 0 { reason = "budgetExpired"; break }
             let report = AgentDoctor.inspectMCP(item.id, timeout:min(timeout,remaining),
+                protocolMode:protocolMode,
                 env:DoctorEnvironment(project:selectedProject,tokenEncoding:selectedEncoding,cancelled:{ mcpBatchInterrupted != 0 || ProcessInfo.processInfo.systemUptime >= deadline }))
             results.append(report)
             if !app.args.has("json") { print(item.agent + " / " + item.name + " · " + report.state.rawValue) }
@@ -382,13 +385,16 @@ struct AgentsCommand {
         guard !app.args.has("csv"), !app.args.has("all"), !app.args.has("dry-run") else {
             throw CLIError("agents inspect supports one server, --agent, --timeout and --json")
         }
-        let report = AgentDoctor.inspectMCP(name, agent: app.args.options["agent"], timeout: try app.args.double("timeout") ?? 10, env: try environment())
+        let protocolMode = MCPInspectionProtocol(rawValue: app.args.options["protocol"] ?? "handshake")!
+        let report = AgentDoctor.inspectMCP(name, agent: app.args.options["agent"], timeout: try app.args.double("timeout") ?? 10, protocolMode: protocolMode, env: try environment())
         if app.args.has("json") { print(Export.diagnosticJSON(report)) }
         else {
             var lines = [style.bold(report.name) + " [" + report.agent + "] · " + report.state.rawValue, report.message,
                          String(format: "Elapsed %.3fs", report.elapsedSeconds)]
             func seconds(_ value: Double?) -> String { value.map { String(format: "%.3fs", $0) } ?? "not measured" }
-            if report.transport == "streamable-http" {
+            if let discovery = report.discoverySeconds {
+                lines.append(tr("Discovery %1$@ · list %2$@", seconds(discovery), seconds(report.listingSeconds)))
+            } else if report.transport == "streamable-http" {
                 lines.append("HTTP handshake \(seconds(report.handshakeSeconds)) · list \(seconds(report.listingSeconds))")
             } else { lines.append("Start \(seconds(report.startupSeconds)) · handshake \(seconds(report.handshakeSeconds)) · list \(seconds(report.listingSeconds))") }
             if let encoding = report.referenceEncoding { lines.append("Ordinary-text reference encoding: " + encoding + "; not a model invoice or prompt framing count") }

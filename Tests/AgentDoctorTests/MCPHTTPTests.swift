@@ -32,14 +32,34 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         req=json.loads(self.rfile.read(int(self.headers['Content-Length'])))
         with open(root+'/log','a') as f:
-            f.write(json.dumps({'method':req.get('method','response'),'session':self.headers.get('Mcp-Session-Id'),'version':self.headers.get('MCP-Protocol-Version'),'auth':self.headers.get('Authorization'),'path':self.path})+'\n')
+            f.write(json.dumps({'method':req.get('method','response'),'session':self.headers.get('Mcp-Session-Id'),'version':self.headers.get('MCP-Protocol-Version'),'auth':self.headers.get('Authorization'),'path':self.path,'methodHeader':self.headers.get('Mcp-Method'),'meta':req.get('params',{}).get('_meta')})+'\n')
         if self.path=='/401': return self.response(401,b'fixture-private-secret',{'WWW-Authenticate':'Basic realm="fixture"'})
         if self.path=='/redirect': return self.response(307,b'',{'Location':'/should-not-be-contacted'})
         if self.path=='/slow': time.sleep(30); return
         if 'id' not in req or 'method' not in req:
             if self.path=='/bad-notification': return self.response(202,b'data: invalid')
             return self.response(202)
-        if req.get('method')=='initialize':
+        if self.path.startswith('/modern'):
+            meta=req['params']['_meta']
+            assert self.headers['MCP-Protocol-Version']==meta['io.modelcontextprotocol/protocolVersion']=='2026-07-28'
+            assert self.headers['Mcp-Method']==req['method']
+            assert meta['io.modelcontextprotocol/clientCapabilities']=={}
+            assert not self.headers.get('Mcp-Session-Id')
+            if self.path in ['/modern-version-error','/modern-missing-method']:
+                code=-32022 if self.path=='/modern-version-error' else -32601
+                error={'jsonrpc':'2.0','id':None,'error':{'code':code,'message':'PRIVATE_PROTOCOL_ERROR'}}
+                return self.response(400 if code==-32022 else 404,json.dumps(error).encode(),{'Content-Type':'application/json'})
+            if self.path=='/modern-error-result':
+                invalid={'jsonrpc':'2.0','id':req['id'],'result':{'resultType':'complete','supportedVersions':['2026-07-28'],'capabilities':{}}}
+                return self.response(400,json.dumps(invalid).encode(),{'Content-Type':'application/json'})
+            if req['method']=='server/discover':
+                result={'resultType':'complete','supportedVersions':['2026-07-28'],'capabilities':{'tools':{}}}
+                if self.path=='/modern-no-tools':result['capabilities']={}
+            elif req['method']=='tools/list':
+                result={'resultType':'complete','tools':[{'name':'owned','description':'fixture','inputSchema':{'type':'object'}}]}
+                if self.path=='/modern-input':result={'resultType':'input_required','inputRequests':[{'private_fixture':'not exported'}]}
+            else:raise AssertionError('unexpected metadata operation')
+        elif req.get('method')=='initialize':
             selected=self.path.removeprefix('/revision-') if self.path.startswith('/revision-') else '2025-06-18'
             result={'protocolVersion':selected,'capabilities':{'tools':{}},'serverInfo':{'name':'fixture','version':'1'}}
         else:
@@ -49,13 +69,14 @@ class Handler(BaseHTTPRequestHandler):
         body=json.dumps({'jsonrpc':'2.0','id':req['id'],'result':result},ensure_ascii=False).encode()
         headers={'Content-Type':'application/json'}
         if req.get('method')=='initialize': headers['Mcp-Session-Id']='fixture-session'
+        if self.path.startswith('/modern') and req['method']=='server/discover':headers['Mcp-Session-Id']='ignored-modern-session'
         if self.path=='/bad': body=b'not json'
         if self.path=='/oversize': body=b'x'*9000000
-        if self.path in ['/sse','/cr','/rpc','/incomplete'] and req.get('method')=='tools/list':
+        if self.path in ['/sse','/cr','/rpc','/incomplete','/modern-sse','/modern-rpc'] and req.get('method')=='tools/list':
             sep=b'\r' if self.path=='/cr' else b'\r\n'
             self.send_response(200); self.send_header('Content-Type','text/event-stream'); self.end_headers()
             payload=b': comment'+sep+sep
-            if self.path=='/rpc':
+            if self.path in ['/rpc','/modern-rpc']:
                 for method,ident in [('ping','ping'),('sampling/createMessage','sample')]:
                     payload+=b'data: '+json.dumps({'jsonrpc':'2.0','method':method,'id':ident}).encode()+sep+sep
             if self.path!='/incomplete': payload+=b'data: '+body+sep+sep
@@ -95,8 +116,8 @@ threading.Event().wait()
     func server(_ path: String) -> MCPServer {
         MCPServer(name: "fixture", agent: "fixture", source: "fixture", url: "http://127.0.0.1:\(port)\(path)", headers: ["Authorization": "Bearer fixture-token"])
     }
-    func inspect(_ path: String, timeout: Double = 5) -> MCPInspection {
-        MCPInspector.inspect(server(path), env: DoctorEnvironment(home: root), timeout: timeout)
+    func inspect(_ path: String, timeout: Double = 5, protocolMode: MCPInspectionProtocol = .handshake) -> MCPInspection {
+        MCPInspector.inspect(server(path), env: DoctorEnvironment(home: root), timeout: timeout, protocolMode: protocolMode)
     }
     func log() throws -> [[String: Any]] {
         try String(contentsOf: root.appendingPathComponent("log")).split(separator: "\n").map {
@@ -114,6 +135,47 @@ threading.Event().wait()
             XCTAssertEqual(call["version"] as? String, "2025-11-25")
         }
         XCTAssertEqual(report.cleanupDetails?.reason, "closed")
+    }
+    func testModernJSONAndSSECarryMetadataWithoutCreatingOrDeletingSessions() throws {
+        for path in ["/modern-json", "/modern-sse"] {
+            let report = inspect(path, protocolMode: .stateless)
+            XCTAssertEqual(report.state, .ready, report.message)
+            XCTAssertTrue(report.complete)
+            XCTAssertNotNil(report.discoverySeconds); XCTAssertNil(report.handshakeSeconds)
+            XCTAssertEqual(report.cleanupDetails?.reason, "notNeeded")
+            let calls = try log().filter { $0["path"] as? String == path }
+            XCTAssertEqual(calls.compactMap { $0["method"] as? String }, ["server/discover", "tools/list"])
+            for call in calls {
+                XCTAssertEqual(call["methodHeader"] as? String, call["method"] as? String)
+                XCTAssertEqual(call["version"] as? String, "2026-07-28")
+                XCTAssertTrue(call["session"] is NSNull)
+            }
+        }
+        XCTAssertFalse(try log().contains { $0["method"] as? String == "DELETE" })
+    }
+    func testModernNoToolsIsMeasuredEmptyAndInputRequiredIsIncomplete() throws {
+        let empty = inspect("/modern-no-tools", protocolMode: .stateless)
+        XCTAssertTrue(empty.complete); XCTAssertEqual(empty.tools.count, 0)
+        XCTAssertNotNil(empty.definitions)
+        let input = inspect("/modern-input", protocolMode: .stateless)
+        XCTAssertEqual(input.state, .unsupported); XCTAssertFalse(input.complete)
+        XCTAssertNil(input.definitions)
+        XCTAssertFalse(String(decoding: try JSONEncoder().encode(input), as: UTF8.self).contains("not exported"))
+        XCTAssertFalse(try log().contains { $0["method"] as? String == "DELETE" })
+    }
+    func testModernSSEServerRequestsAreNotAnsweredByPOST() throws {
+        let report = inspect("/modern-rpc", protocolMode: .stateless)
+        XCTAssertEqual(report.state, .unsupported)
+        XCTAssertEqual(try log().compactMap { $0["method"] as? String }, ["server/discover", "tools/list"])
+    }
+    func testModernHTTPCompatibilityErrorsAreSanitizedAndNeverFallBack() throws {
+        for path in ["/modern-version-error", "/modern-missing-method", "/modern-error-result"] {
+            let report = inspect(path, protocolMode: .stateless)
+            XCTAssertEqual(report.state, path == "/modern-error-result" ? .failed : .unsupported)
+            XCTAssertFalse(report.complete); XCTAssertNil(report.definitions)
+            XCTAssertFalse(String(decoding: try JSONEncoder().encode(report), as: UTF8.self).contains("PRIVATE_PROTOCOL_ERROR"))
+        }
+        XCTAssertEqual(try log().compactMap { $0["method"] as? String }, ["server/discover", "server/discover", "server/discover"])
     }
     func testJSONPaginationSessionHeadersAndOwnSessionCleanup() throws {
         let report = inspect("/json")

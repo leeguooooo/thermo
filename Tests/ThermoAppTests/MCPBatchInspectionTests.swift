@@ -53,6 +53,18 @@ final class MCPBatchInspectionTests: XCTestCase {
         XCTAssertNil(model.reason)
         XCTAssertEqual(model.total, 0)
     }
+    @MainActor func testExplicitProtocolSelectionReachesEveryBatchRequest() async throws {
+        for mode in MCPInspectionProtocol.allCases {
+            let store = MCPDefinitionStore()
+            let model = MCPBatchInspectionModel(store: store, inspector: { request in
+                XCTAssertEqual(request.protocolMode, mode)
+                return Self.report(request.id)
+            })
+            XCTAssertTrue(model.start(items: [item("a"), item("b")], encoding: .heuristic, protocolMode: mode))
+            try await waitForIdle(model)
+            XCTAssertEqual(model.rows.count, 2)
+        }
+    }
     @MainActor func testFailureIsRetainedAndDoesNotRetryOrPreventNextConfiguration() async throws {
         let control = Control(), store = MCPDefinitionStore()
         let model = MCPBatchInspectionModel(store: store, inspector: { request in

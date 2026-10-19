@@ -3,6 +3,19 @@ import ThermoL10n
 @testable import thermo
 
 final class ArgumentTests: XCTestCase {
+    func testMCPProtocolSelectionIsExplicitAndLimitedToInspections() throws {
+        for arguments in [["agents","inspect","owned","--protocol","2026-07-28"],
+                          ["doctor","inspect-all","--protocol=handshake","--dry-run"]] {
+            let args = try Args(arguments)
+            XCTAssertNoThrow(try CommandContract.validate(args))
+        }
+        for arguments in [["agents","context","--protocol","2026-07-28"],
+                          ["agents","inspect","owned","--protocol","auto"],
+                          ["agents","inspect","owned","--protocol"]] {
+            XCTAssertThrowsError(try Args(arguments))
+        }
+        XCTAssertTrue(CommandHelp.text(for:["agents","inspect"]).contains("2026-07-28"))
+    }
     func testUsageOrderingAcceptsBothFormsAndAliasesWithSelectedLogs() throws {
         for arguments in [["agents","usage","--sort","structured"], ["agents","usage","--sort=text"],
                           ["agent","usage","--sort","structured","--agent","codex","--log-file","/owned/log"],

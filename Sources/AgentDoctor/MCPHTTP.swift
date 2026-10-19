@@ -4,6 +4,7 @@ import ThermoL10n
 /// One inspection owns one new HTTP session. No redirects, cookies, keychain login,
 /// OAuth flows, legacy endpoint discovery or request retries are performed.
 final class MCPHTTP: MCPTransport {
+    var stateless = false
     let url: URL
     let headers: [String: String]
     let deadline: Double
@@ -39,7 +40,7 @@ final class MCPHTTP: MCPTransport {
         }
         if let token = headers.removeValue(forKey: "bearer_token") { headers["Authorization"] = "Bearer " + token }
         for (key, value) in headers {
-            guard !["mcp-session-id", "mcp-protocol-version", "content-length", "host", "transfer-encoding", "connection"].contains(key.lowercased()) else {
+            guard !["mcp-session-id", "mcp-protocol-version", "mcp-method", "mcp-name", "content-length", "host", "transfer-encoding", "connection"].contains(key.lowercased()) else {
                 throw MCPInspector.Failure(message: tr("Configured HTTP headers override reserved transport fields."))
             }
             guard !key.contains("\r"), !key.contains("\n"), !value.contains("\r"), !value.contains("\n") else {
@@ -63,8 +64,9 @@ final class MCPHTTP: MCPTransport {
         for (key, value) in headers { request.setValue(value, forHTTPHeaderField: key) }
         request.setValue("application/json, text/event-stream", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let sessionID { request.setValue(sessionID, forHTTPHeaderField: "Mcp-Session-Id") }
+        if !stateless, let sessionID { request.setValue(sessionID, forHTTPHeaderField: "Mcp-Session-Id") }
         if let version { request.setValue(version, forHTTPHeaderField: "MCP-Protocol-Version") }
+        if stateless, let method = message?["method"] as? String { request.setValue(method, forHTTPHeaderField: "Mcp-Method") }
         if let message { request.httpBody = Data(try MCPInspector.json(message).utf8) }
         return request
     }
@@ -82,6 +84,7 @@ final class MCPHTTP: MCPTransport {
         let task = session.dataTask(with: try makeRequest("POST", message: message, limit: deadline))
         task.resume()
         var headerRead = false
+        var responseStatus: Int?
         while true {
             try check()
             let state = receiver.take()
@@ -89,10 +92,12 @@ final class MCPHTTP: MCPTransport {
             guard received <= 16_777_216 else { throw MCPInspector.Failure(message: tr("MCP response exceeded the inspection size limit; results are incomplete.")) }
             if let response = state.response, !headerRead {
                 headerRead = true
+                responseStatus = response.statusCode
                 if response.statusCode == 401 || response.statusCode == 403 {
                     throw MCPInspector.Failure(state: .authenticationRequired, message: tr("HTTP authentication failed; no automatic login was attempted."))
                 }
-                guard response.statusCode == (id == nil ? 202 : 200) else {
+                guard response.statusCode == (id == nil ? 202 : 200)
+                        || (stateless && id != nil && [400, 404].contains(response.statusCode)) else {
                     throw MCPInspector.Failure(message: tr("MCP endpoint returned HTTP status %1$@. No request was retried.", String(response.statusCode)))
                 }
                 if message["method"] as? String == "initialize", let value = response.value(forHTTPHeaderField: "Mcp-Session-Id") {
@@ -114,15 +119,19 @@ final class MCPHTTP: MCPTransport {
                 guard incoming["jsonrpc"] as? String == "2.0" else { throw MCPInspector.Failure(message: tr("Invalid HTTP JSON-RPC response.")) }
                 if let method = incoming["method"] as? String {
                     if let serverID = incoming["id"] {
+                        guard !stateless else { throw MCPInspector.Failure(state: .unsupported, message: tr("Stateless inspection does not accept server-initiated requests. No client response was sent.")) }
                         if method == "ping" { try send(["jsonrpc": "2.0", "id": serverID, "result": [String: Any]()]) }
                         else { try send(["jsonrpc": "2.0", "id": serverID, "error": ["code": -32601, "message": "Inspector does not support this method."]]) }
                     }
                     continue
                 }
-                guard let id, incoming["id"] as? String == id else { throw MCPInspector.Failure(message: tr("MCP response id does not match the pending request.")) }
+                let modernHeaderError = stateless && [400, 404].contains(responseStatus ?? 0)
+                    && incoming["error"] is [String: Any] && (incoming["id"] == nil || incoming["id"] is NSNull)
+                guard let id, incoming["id"] as? String == id || modernHeaderError else { throw MCPInspector.Failure(message: tr("MCP response id does not match the pending request.")) }
                 if let error = incoming["error"] as? [String: Any] {
-                    throw MCPInspector.Failure(message: tr("MCP %1$@ returned JSON-RPC error %2$@.", message["method"] as? String ?? "", String(error["code"] as? Int ?? 0)))
+                    throw MCPInspector.rpcFailure(error["code"] as? Int ?? 0, method: message["method"] as? String ?? "", stateless: stateless)
                 }
+                guard responseStatus == 200 else { throw MCPInspector.Failure(message: tr("MCP endpoint returned HTTP status %1$@. No request was retried.", String(responseStatus ?? 0))) }
                 guard incoming["error"] == nil, let result = incoming["result"] as? [String: Any] else { throw MCPInspector.Failure(message: tr("MCP response has no valid result object.")) }
                 return result
             }
@@ -142,7 +151,7 @@ final class MCPHTTP: MCPTransport {
     func send(_ message: [String: Any]) throws { _ = try exchange(message, id: nil) }
 
     func close() {
-        guard sessionID != nil else {
+        guard !stateless, sessionID != nil else {
             if cleanupStatus == nil {
                 cleanupStatus = "not_needed"
                 cleanupDetails = MCPCleanupDetails(reason: "notNeeded", elapsedSeconds: 0, budgetSeconds: 0)

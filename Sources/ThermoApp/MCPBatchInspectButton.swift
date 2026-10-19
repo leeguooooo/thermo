@@ -12,6 +12,7 @@ struct MCPBatchInspectButton: View {
     @State private var host = ""
     @State private var selected = Set<String>()
     @State private var timeout: Double = 10
+    @State private var protocolMode: MCPInspectionProtocol = .handshake
     private var eligible: [AgentItem] {
         var seen = Set<String>()
         return items.filter { $0.area == .mcp && $0.enabled && seen.insert($0.id).inserted }
@@ -47,6 +48,9 @@ struct MCPBatchInspectButton: View {
                             Text(tr("%1$@ seconds", String(Int(value)))).tag(value)
                         }
                     }
+                }.disabled(model.running || busy)
+                Picker(tr("Inspection protocol"), selection: $protocolMode) {
+                    ForEach(MCPInspectionProtocol.allCases, id: \.self) { mode in Text(mode.title).tag(mode) }
                 }.disabled(model.running || busy)
                 HStack {
                     Button(tr("Select visible")) { selected = Set(visible.map(\.id)) }
@@ -87,7 +91,7 @@ struct MCPBatchInspectButton: View {
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }
                 HStack {
-                    Button(tr("Inspect selected")) { model.start(items: chosen, encoding: encoding, timeout: timeout) }
+                    Button(tr("Inspect selected")) { model.start(items: chosen, encoding: encoding, timeout: timeout, protocolMode: protocolMode) }
                         .disabled(model.running || busy || !store.pending.isEmpty || chosen.isEmpty)
                     if model.running { Button(tr("Stop checking")) { model.cancel() }.disabled(model.stopping) }
                     Spacer()

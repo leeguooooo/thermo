@@ -19,6 +19,7 @@ struct Args {
         "since",  // pulse history
         "limit",  // history
         "sort", // agents usage: observed text or structured JSON token order
+        "protocol", // explicit MCP inspection lifecycle; never inferred from a version label
         "log-file", // agents usage: one explicitly selected session
         "watch", "app", "title", "ids", "group", "name", "window", "color"]  // pulse chrome
     static let aliases: [String: String] = [
@@ -66,6 +67,13 @@ struct Args {
             throw CLIError("--data-only is only supported by apps uninstall")
         }
         let isUsage = positionals.first.map { CommandHelp.aliases[$0] ?? $0 } == "agents" && positionals.dropFirst().first == "usage"
+        if let mode = options["protocol"] {
+            guard positionals.first.map({ CommandHelp.aliases[$0] ?? $0 }) == "agents",
+                  ["inspect", "inspect-all"].contains(positionals.dropFirst().first ?? "") else {
+                throw CLIError("--protocol is only supported by agents inspect and inspect-all")
+            }
+            guard MCPInspectionProtocol(rawValue: mode) != nil else { throw CLIError("--protocol must be handshake or 2026-07-28") }
+        }
         if options["log-file"] != nil, !isUsage {
             throw CLIError("--log-file is only supported by agents usage")
         }

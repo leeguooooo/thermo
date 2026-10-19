@@ -57,8 +57,8 @@ enum CommandHelp {
     agents context|agents context [--encoding ENCODING] [--agent AGENT] [--root PROJECT] [--json]|cli
     agents usage|agents usage [--encoding ENCODING] [--sort text|structured] [--all] [--since DATE] [--agent AGENT] [--log-file FILE] [--limit N] [--json]|cli
     agents compare|agents compare FILE [--json]|cli
-    agents inspect-all|agents inspect-all [--agent AGENT] [--encoding ENCODING] [--timeout SEC] [--budget SEC] [--dry-run] [--json] [--root PROJECT]|mcp
-    agents inspect|agents inspect NAME [--encoding ENCODING] [--agent AGENT] [--timeout SEC] [--json] [--root PROJECT]|mcp
+    agents inspect-all|agents inspect-all [--protocol handshake|2026-07-28] [--agent AGENT] [--encoding ENCODING] [--timeout SEC] [--budget SEC] [--dry-run] [--json] [--root PROJECT]|mcp
+    agents inspect|agents inspect NAME [--protocol handshake|2026-07-28] [--encoding ENCODING] [--agent AGENT] [--timeout SEC] [--json] [--root PROJECT]|mcp
     agents list|agents list [AREA] [--json|--csv] [--root PROJECT] [--encoding ENCODING]|cli
     agents show|agents show NAME [--area AREA] [--agent AGENT] [--json|--csv] [--root PROJECT] [--encoding ENCODING]|cli
     agents fix|agents fix [NAME] [--action N] [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json] [--root PROJECT] [--encoding ENCODING]|cli
