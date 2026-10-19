@@ -3,6 +3,14 @@ import XCTest
 @testable import ThermoApp
 
 final class StructuredUsageSortTests: XCTestCase {
+    func testAppErrorSortKeepsUnmeasuredCountsAfterKnownZero() throws {
+        var zero = try row("zero", text: 0, json: 0); zero.invocationFailures = 0
+        let legacy = try row("legacy", text: 0, json: 0)
+        XCTAssertEqual(ToolUsagePanel.UsageSort.errors.value(zero), 0)
+        XCTAssertEqual(ToolUsagePanel.UsageSort.errors.value(legacy), -1)
+        var failure = zero; failure.completed = 0; failure.invocationFailures = 1
+        XCTAssertEqual(ToolUsagePanel.UsageSort.errors.value(failure), 1)
+    }
     func row(_ id: String, text: Int, json: Int, reference: Int? = nil) throws -> ToolUsageRow {
         var value = ToolUsageRow(id: id, host: "codex", kind: "mcp", name: id)
         value.calls = 1; value.completed = 1; value.returnedTextEstimatedTokens = text

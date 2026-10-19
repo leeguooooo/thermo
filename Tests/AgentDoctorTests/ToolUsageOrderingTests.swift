@@ -2,6 +2,39 @@ import XCTest
 @testable import AgentDoctor
 
 final class ToolUsageOrderingTests: XCTestCase {
+    func testErrorOrderCountsDisjointObservationsWithoutRankingByRate() {
+        var many = row("many"), single = row("single"), mixed = row("mixed")
+        many.calls = 100; many.completed = 100; many.reportedErrors = 2; many.invocationFailures = 0
+        single.reportedErrors = 1; single.invocationFailures = 0
+        mixed.calls = 4; mixed.completed = 2; mixed.unknownErrorStatus = 1
+        mixed.reportedErrors = 1; mixed.invocationFailures = 2
+        XCTAssertEqual(ToolUsageOrdering.errors.sorted([single, many, mixed]).map(\.id), ["mixed", "many", "single"])
+        XCTAssertEqual(ToolUsageOrdering.errors.count(for: mixed), 3)
+        XCTAssertEqual(single.explicitErrorRate, 1)
+        XCTAssertEqual(many.explicitErrorRate, 0.02)
+    }
+    func testErrorOrderPreservesLegacyUnknownAndRejectsInconsistentCounts() throws {
+        var zero = row("zero"); zero.invocationFailures = 0; zero.unknownErrorStatus = 1
+        let legacy = row("legacy")
+        XCTAssertEqual(ToolUsageOrdering.errors.count(for: zero), 0)
+        XCTAssertNil(ToolUsageOrdering.errors.count(for: legacy))
+        XCTAssertEqual(ToolUsageOrdering.errors.sorted([legacy, zero]).map(\.id), ["zero", "legacy"])
+        var invalid = zero; invalid.reportedErrors = 1
+        XCTAssertNil(ToolUsageOrdering.errors.count(for: invalid))
+        invalid = zero; invalid.invocationFailures = -1
+        XCTAssertNil(ToolUsageOrdering.errors.count(for: invalid))
+        invalid = zero; invalid.invocationFailures = 1
+        XCTAssertNil(ToolUsageOrdering.errors.count(for: invalid))
+        invalid = zero; invalid.completed = 2
+        XCTAssertNil(ToolUsageOrdering.errors.count(for: invalid))
+        var maximum = zero; maximum.calls = Int.max; maximum.completed = Int.max
+        maximum.unknownErrorStatus = 0; maximum.reportedErrors = Int.max
+        XCTAssertEqual(ToolUsageOrdering.errors.count(for: maximum), Int.max)
+        maximum.invocationFailures = 1
+        XCTAssertNil(ToolUsageOrdering.errors.count(for: maximum))
+        let decoded = try JSONDecoder().decode(ToolUsageRow.self, from: JSONEncoder().encode(legacy))
+        XCTAssertNil(ToolUsageOrdering.errors.count(for: decoded))
+    }
     func row(_ id: String, bytes: Int = 0, estimate: Int = 0, reference: Int? = nil) -> ToolUsageRow {
         var row = ToolUsageRow(id: id, host: "codex", kind: "mcp", name: id)
         row.completed = 1; row.calls = 1; row.returnedTextBytes = bytes

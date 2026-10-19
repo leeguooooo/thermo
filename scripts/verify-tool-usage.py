@@ -82,6 +82,18 @@ with tempfile.TemporaryDirectory(prefix="thermo-tool-usage-") as temporary:
     assert "share of observed skill returned-text tokens" not in time_text
     assert "fixture-private" not in time_text
 
+    error_args = [str(binary), "agents", "usage", "--sort", "errors", "--since", stamp(-7 * 86400)]
+    error_report = json.loads(subprocess.check_output(error_args + ["--json"], env=time_env, text=True, timeout=30))
+    assert error_report["toolOrdering"] == "errors"
+    assert {r["id"]:r for r in error_report["tools"]} == {r["id"]:r for r in report["tools"]}
+    expected = sorted(report["tools"], key=lambda r: (-(r["reportedErrors"] + r["invocationFailures"]), r["id"]))
+    assert [r["id"] for r in error_report["tools"]] == [r["id"] for r in expected]
+    error_text = subprocess.check_output(error_args, env=time_env, text=True, timeout=30)
+    assert "Tool ordering: errors" in error_text and "Observed errors / failures:" in error_text
+    assert "not a failure rate or service quality score" in error_text
+    assert "share of observed mcp returned-text tokens" not in error_text
+    assert "fixture-private" not in error_text
+
     if len(sys.argv) > 2:
         Path(sys.argv[2]).write_text(result.stdout)
     assert report["complete"] and report["coverage"]["filesRead"] == 2

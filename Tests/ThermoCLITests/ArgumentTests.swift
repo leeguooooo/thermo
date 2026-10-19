@@ -27,7 +27,7 @@ final class ArgumentTests: XCTestCase {
         XCTAssertTrue(CommandHelp.text(for:["agents","inspect"]).contains("2026-07-28"))
     }
     func testUsageOrderingAcceptsBothFormsAndAliasesWithSelectedLogs() throws {
-        for arguments in [["agents","usage","--sort","structured"], ["agents","usage","--sort=text"], ["agents","usage","--sort=time"],
+        for arguments in [["agents","usage","--sort","structured"], ["agents","usage","--sort=text"], ["agents","usage","--sort=time"], ["agents","usage","--sort=errors"],
                           ["agent","usage","--sort","structured","--agent","codex","--log-file","/owned/log"],
                           ["doctor","usage","--sort=text"]] {
             let args = try Args(arguments)
@@ -44,10 +44,10 @@ final class ArgumentTests: XCTestCase {
     }
     func testUsageHelpAndCapabilityInventoryExposeOrderingAndJSONSemantics() throws {
         let help = CommandHelp.text(for:["agents","usage"])
-        XCTAssertTrue(help.contains("--sort text|structured|time"))
+        XCTAssertTrue(help.contains("--sort text|structured|time|errors"))
         XCTAssertTrue(help.contains("Human output and JSON use the same order"))
         let capability = try XCTUnwrap(CommandHelp.capabilities.first { $0.command == "agents usage" })
-        XCTAssertTrue(capability.usage.contains("--sort text|structured|time")); XCTAssertEqual(capability.execution,"cli")
+        XCTAssertTrue(capability.usage.contains("--sort text|structured|time|errors")); XCTAssertEqual(capability.execution,"cli")
     }
     func testBackgroundAuthorizationFlagCannotBeReusedForChangesOrDryRuns() throws {
         XCTAssertTrue(try Args(["apps", "startup", "list", "--authorize-background"]).has("authorize-background"))

@@ -3,7 +3,7 @@ import ThermoL10n
 
 /// Display order for observed content or call intervals, never request or billing usage.
 public enum ToolUsageOrdering: String, Codable, Sendable {
-    case text, structured, time
+    case text, structured, time, errors
 
     public func count(for row: ToolUsageRow) -> Int? {
         let value: Int?
@@ -12,6 +12,13 @@ public enum ToolUsageOrdering: String, Codable, Sendable {
             value = row.referenceEncoding == nil ? row.returnedTextEstimatedTokens : row.referenceReturnedTextTokens
         case .structured:
             value = row.observedStructuredJSONTokens
+        case .errors:
+            guard row.calls > 0, row.completed >= 0, row.completed <= row.calls,
+                  row.knownStatusResults != nil, let failures = row.invocationFailures,
+                  failures >= 0, failures <= row.calls - row.completed else { return nil }
+            // Result errors and failed invocations are disjoint observations.
+            // The guards bound their sum by calls, preventing overflow.
+            value = row.reportedErrors + failures
         case .time: return nil
         }
         return value.flatMap { $0 >= 0 ? $0 : nil }
@@ -44,6 +51,8 @@ public enum ToolUsageOrdering: String, Codable, Sendable {
             return tr("Ranks observed returned-text reference or estimated tokens. Unknown counts follow known values; this is not request usage.")
         case .time:
             return tr("Ranks summed valid observed call intervals; overlaps count per call. Unknown timing follows known values. Missing intervals are excluded; this is not task duration.")
+        case .errors:
+            return tr("Ranks observed explicit result errors plus host-reported invocation failures. Unmeasured or invalid counts follow known values. Missing results and unknown result statuses are not counted as errors; this is not a failure rate or service quality score.")
         case .structured:
             return tr("Ranks structured JSON reference or estimated tokens only when completed result envelopes were fully inspectable. Unknown entries follow known values; this is not model usage.")
         }
