@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUTC": "2026-10-19T13:34:14.821412+00:00",
+  "task": {
+    "repository": "leeguooooo/chrome-use",
+    "pr": 670,
+    "required": [
+      "number",
+      "title",
+      "merged flag or merged state",
+      "base branch main",
+      "canonical PR URL"
+    ],
+    "notRequired": [
+      "diff",
+      "patches",
+      "comments"
+    ],
+    "originalCLIObserved": {
+      "title": "feat(groups): group agent tabs by project with per-session leases (1.5.243)",
+      "state": "MERGED",
+      "baseRefName": "main",
+      "headRefName": "feat/project-groups",
+      "mergedAt": "2026-10-19T12:51:43Z",
+      "mergeCommit": "4288d4e0042a32b1eb10cc2f3b17d5c8e00bb510"
+    }
+  },
+  "taskOutcome": {
+    "narrowPassed": true,
+    "widePassed": true,
+    "metadataFactsSame": true,
+    "CLIPrimaryMetadataStableBeforeAfter": true,
+    "noDeploymentOrPublicRuntimeConclusionFromPRState": true
+  },
+  "interfaces": {
+    "narrow": "github_get_pr_info",
+    "wide": "github_fetch_pr"
+  },
+  "representationMeasurements": {
+    "factsMatched": true,
+    "metadataStableAcrossCLIReads": true,
+    "diffDuplicated": true,
+    "diffUTF8Bytes": 105802,
+    "wideCommentCount": 10,
+    "narrowTextBlockBytes": 17,
+    "wideTextBlockBytes": 17,
+    "representations": {
+      "narrow-object": {
+        "UTF8Bytes": 8209,
+        "SHA256": "c788bd83d1fb365f675eed9aef50ef3e28d88f4042b182596fcb51fe19df74b8",
+        "cl100kReferenceTokens": 2130
+      },
+      "wide-object": {
+        "UTF8Bytes": 449538,
+        "SHA256": "6d6c64c9d71df3740a077bb10ef304669ef4a1bbd32f248e2cf13a2bc7688c3f",
+        "cl100kReferenceTokens": 125578
+      },
+      "narrow-structured": {
+        "UTF8Bytes": 8116,
+        "SHA256": "068b905cdc4e5ec1565c2771255123781d9d7de1505c786f090b065d0cbc7c3e",
+        "cl100kReferenceTokens": 2109
+      },
+      "wide-structured": {
+        "UTF8Bytes": 449445,
+        "SHA256": "cc4a29ca311140dc2fbf169424255df8901fd3aa508cf765c4fdc3dcaabcfdaa",
+        "cl100kReferenceTokens": 125557
+      }
+    },
+    "meterSHA256": "3dea5c90c931d5f001169db1fbcd4c3aab4c440791023362ce92bf3e217b24a3",
+    "encoding": "cl100k_base",
+    "engine": "thermo-bpe-v1/tiktoken-0.14.0/ICU/ordinary"
+  },
+  "scope": "Compact UTF-8 JSON representation of values returned to the functions runtime, plus the separate MCP text blocks. Not a wire capture or measurement of what a model request included.",
+  "duplicateData": {
+    "sameDiffInTopLevelAndNestedPR": true,
+    "sameCommentsInTopLevelAndNestedPR": true,
+    "commentCount": 10,
+    "diffSingleUTF8Bytes": 105802,
+    "narrowDiffAbsent": true,
+    "narrowCommentsAbsent": true
+  },
+  "methodAdopted": "For title/status/ref questions, prefer the metadata endpoint. Fetch patches or discussion only when the task needs them; inspect the complete chosen tool declaration before invoking.",
+  "currentSkillStaticAudit": {
+    "entries": 368,
+    "directoryUniqueFiles": 135,
+    "directoryAliases": 5,
+    "directoryCatalogReferenceTokens": 16232,
+    "directoryDocumentReferenceTokens": 406166,
+    "encoding": "cl100k_base",
+    "cachedFiles": 227,
+    "cacheDocumentBytes": 2437800,
+    "userDirectoryMissingReferenceFindings": 0,
+    "directoryReferencesChecked": 463,
+    "cacheReferencesChecked": 429,
+    "cacheIssue": {
+      "name": "thermo-use",
+      "version": "0.4.1",
+      "issue": "invalid_front_matter",
+      "hostLoadingVerified": false
+    },
+    "nonSkillDirectory": {
+      "name": "codex-primary-runtime",
+      "empty": true,
+      "SKILLmdPresent": false,
+      "removed": false,
+      "purposeNotEstablished": true
+    },
+    "cacheModified": false,
+    "rootSkillsModified": false,
+    "rawMCPConfigurationNotExported": true
+  },
+  "boundaries": {
+    "trialsPerInterface": 1,
+    "causalModelOrLatencyBenchmark": false,
+    "requestOrBillingTokensMeasured": false,
+    "allMCPQualityRanked": false,
+    "structuredAndTextCountsAddedTogether": false,
+    "rawPRPatchOrCommentsPublished": false,
+    "newModelRuns": 0,
+    "PRorIssueMutationRequested": false,
+    "globalConfigChanged": false,
+    "SkillOrCLIInstalled": false,
+    "published": false
+  }
+}
