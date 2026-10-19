@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "evidenceKind": "synthetic",
   "kind": "skill",
   "baselineRevision": "none",
@@ -20,7 +20,8 @@
       "seconds": 10,
       "inputTokens": 100,
       "outputTokens": 20,
-      "tokenSemantics": "native-input-includes-cache-v1"
+      "tokenSemantics": "native-input-includes-cache-v1",
+      "comparisonCheck": "passed"
     },
     {
       "taskID": "fixture-extract",
@@ -37,7 +38,8 @@
       "seconds": 8,
       "inputTokens": 150,
       "outputTokens": 10,
-      "tokenSemantics": "native-input-includes-cache-v1"
+      "tokenSemantics": "native-input-includes-cache-v1",
+      "comparisonCheck": "passed"
     },
     {
       "taskID": "fixture-extract",
@@ -54,7 +56,8 @@
       "seconds": 5,
       "inputTokens": 50,
       "outputTokens": 40,
-      "tokenSemantics": "native-input-includes-cache-v1"
+      "tokenSemantics": "native-input-includes-cache-v1",
+      "comparisonCheck": "passed"
     },
     {
       "taskID": "fixture-extract",
@@ -71,7 +74,8 @@
       "seconds": 7,
       "inputTokens": 70,
       "outputTokens": 20,
-      "tokenSemantics": "native-input-includes-cache-v1"
+      "tokenSemantics": "native-input-includes-cache-v1",
+      "comparisonCheck": "passed"
     },
     {
       "taskID": "fixture-extract",
@@ -88,7 +92,8 @@
       "seconds": 6,
       "inputTokens": 60,
       "outputTokens": 30,
-      "tokenSemantics": "native-input-includes-cache-v1"
+      "tokenSemantics": "native-input-includes-cache-v1",
+      "comparisonCheck": "passed"
     },
     {
       "taskID": "fixture-extract",
@@ -105,7 +110,8 @@
       "seconds": 30,
       "inputTokens": null,
       "outputTokens": null,
-      "tokenSemantics": null
+      "tokenSemantics": null,
+      "comparisonCheck": "passed"
     }
   ]
 }

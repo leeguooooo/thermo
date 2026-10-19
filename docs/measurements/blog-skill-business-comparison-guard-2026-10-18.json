@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 2,
+  "evidenceKind": "measured",
+  "kind": "skill",
+  "baselineRevision": "5e2784d75355edd479875d8e3dca41fa2b54dcf5af059b1a5147bc6967b0f809",
+  "candidateRevision": "e52b3b4c71fc02ea24815f4cc95fcfd09f3a80b005dee2c7d783e62d6350add8",
+  "runs": [
+    {
+      "taskID": "prepare-static-html",
+      "repetition": 1,
+      "variant": "baseline",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "446edc3e4b877141934a20f1d1bfa7489b8900ebc8f5b0ca0b92aeec015ce996",
+        "settings": "63c7ab6cfcd1c72067db7564b372b9ae900cea0aaff20487876ef24719b48255",
+        "task": "60797606125cf8aad0dd21e34ae1f1e00ce784240fedf597218f7e48b2869cf4",
+        "verifier": "27eaaff249de73c0ed1a49260e835d2e00f899c815b1796c58de21259ab8b5c5"
+      },
+      "outcome": "passed",
+      "seconds": 40.75779075000173,
+      "inputTokens": 147470,
+      "outputTokens": 1474,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1",
+      "comparisonCheck": "failed"
+    },
+    {
+      "taskID": "prepare-static-html",
+      "repetition": 1,
+      "variant": "candidate",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "446edc3e4b877141934a20f1d1bfa7489b8900ebc8f5b0ca0b92aeec015ce996",
+        "settings": "63c7ab6cfcd1c72067db7564b372b9ae900cea0aaff20487876ef24719b48255",
+        "task": "60797606125cf8aad0dd21e34ae1f1e00ce784240fedf597218f7e48b2869cf4",
+        "verifier": "27eaaff249de73c0ed1a49260e835d2e00f899c815b1796c58de21259ab8b5c5"
+      },
+      "outcome": "passed",
+      "seconds": 37.75916900000084,
+      "inputTokens": 121213,
+      "outputTokens": 1626,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1",
+      "comparisonCheck": "failed"
+    },
+    {
+      "taskID": "review-published-content",
+      "repetition": 1,
+      "variant": "candidate",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "446edc3e4b877141934a20f1d1bfa7489b8900ebc8f5b0ca0b92aeec015ce996",
+        "settings": "63c7ab6cfcd1c72067db7564b372b9ae900cea0aaff20487876ef24719b48255",
+        "task": "2357474941240091f35c9465f1bc293bcb09ea1bf8e5c6d638ba6769d2e6d885",
+        "verifier": "27eaaff249de73c0ed1a49260e835d2e00f899c815b1796c58de21259ab8b5c5"
+      },
+      "outcome": "passed",
+      "seconds": 56.99777216700022,
+      "inputTokens": 163826,
+      "outputTokens": 2500,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1",
+      "comparisonCheck": "failed"
+    },
+    {
+      "taskID": "review-published-content",
+      "repetition": 1,
+      "variant": "baseline",
+      "conditions": {
+        "model": "gpt-6.1-sol",
+        "environment": "446edc3e4b877141934a20f1d1bfa7489b8900ebc8f5b0ca0b92aeec015ce996",
+        "settings": "63c7ab6cfcd1c72067db7564b372b9ae900cea0aaff20487876ef24719b48255",
+        "task": "2357474941240091f35c9465f1bc293bcb09ea1bf8e5c6d638ba6769d2e6d885",
+        "verifier": "27eaaff249de73c0ed1a49260e835d2e00f899c815b1796c58de21259ab8b5c5"
+      },
+      "outcome": "passed",
+      "seconds": 86.98416408399862,
+      "inputTokens": 277766,
+      "outputTokens": 3242,
+      "tokenSemantics": "codex-exec-0.163.0-turn-completed-native-input-v1",
+      "comparisonCheck": "failed"
+    }
+  ],
+  "source": {
+    "originalRecordsSHA256": "de3c911cae240783b3406523027f233c749c90b97f616ecaab4a2726f9487683",
+    "entrySHA256": {
+      "baseline": "7c2e19de00090701ae66e93a8c8bd9018e131b6264e926d6256f8757234e6592",
+      "candidate": "ecea94696e6adedc7fb58ebfcdfa63343ab8ff2ecd7bd72b504582e6c4fbbccd"
+    },
+    "comparisonCheckScope": "cohort",
+    "comparisonCheckReason": "Shared config hash changed; final runner assertion failed. Exact affected interval and change origin unknown. All four reported task artifacts passed. No additional model run."
+  }
+}

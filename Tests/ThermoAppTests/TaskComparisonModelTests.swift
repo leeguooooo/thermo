@@ -28,6 +28,27 @@ final class TaskComparisonModelTests: XCTestCase {
         XCTAssertNil(model.error)
         XCTAssertNil(model.report)
     }
+    @MainActor func testFailedEnvironmentImportKeepsReportedPassesButSuppressesComparisons() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: fixtureURL)) as? [String: Any])
+        var runs = try XCTUnwrap(object["runs"] as? [[String: Any]])
+        for index in runs.indices { runs[index]["comparisonCheck"] = "failed" }
+        object["runs"] = runs
+        let url = directory.appendingPathComponent("failed-checks.json")
+        try JSONSerialization.data(withJSONObject: object).write(to: url)
+        let model = TaskComparisonModel()
+        model.load(url)
+        try await waitForIdle(model)
+        XCTAssertNil(model.error)
+        XCTAssertEqual(model.report?.reportedBaseline.passed, 2)
+        XCTAssertEqual(model.report?.reportedCandidate.timeout, 1)
+        XCTAssertEqual(model.report?.comparisonCheckFailedRuns, 6)
+        XCTAssertEqual(model.report?.matchedPairs, 0)
+        XCTAssertNil(model.report?.passRateDifferencePercentagePoints)
+        XCTAssertEqual(model.report?.inputTokens.samples, 0)
+    }
     @MainActor func testClearingPendingImportPreventsLateResultFromReappearing() async throws {
         let model = TaskComparisonModel()
         model.load(fixtureURL)

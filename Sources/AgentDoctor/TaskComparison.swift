@@ -5,6 +5,8 @@ import Darwin
 public enum TaskComparison {
     public enum Variant: String, Codable { case baseline, candidate }
     public enum Outcome: String, Codable { case passed, failed, timeout, error, unverified }
+    /// Evaluator-declared post-run check of environment, frozen inputs and collection integrity.
+    public enum ComparisonCheck: String, Codable { case passed, failed, unverified }
     public struct Conditions: Codable, Equatable {
         public var model: String
         public var environment: String
@@ -18,6 +20,7 @@ public enum TaskComparison {
         public var variant: Variant
         public var conditions: Conditions
         public var outcome: Outcome
+        public var comparisonCheck: ComparisonCheck?
         public var seconds: Double?
         /// Native request counters only; input semantics must be identical across a pair.
         public var inputTokens: Int?
@@ -58,9 +61,11 @@ public enum TaskComparison {
         public var taskID: String
         public var repetition: Int
         public var reason: String
+        public var baselineOutcome: Outcome?
+        public var candidateOutcome: Outcome?
     }
     public struct Report: Codable {
-        public var schemaVersion = 1
+        public var schemaVersion = 2
         public var evidenceKind: String
         public var kind: String
         public var model: String
@@ -73,6 +78,10 @@ public enum TaskComparison {
         public var matchedTasks: Int
         public var verifiedOutcomePairs: Int
         public var tokenSemanticsMismatchPairs: Int
+        public var reportedBaseline: Outcomes
+        public var reportedCandidate: Outcomes
+        public var comparisonCheckFailedRuns: Int
+        public var comparisonCheckUnverifiedRuns: Int
         public var baseline: Outcomes
         public var candidate: Outcomes
         public var bothPassed: Int
@@ -127,13 +136,14 @@ public enum TaskComparison {
         let records: Records
         do { records = try JSONDecoder().decode(Records.self, from: data) }
         catch { throw reject("Invalid evaluation JSON; see docs/ai-task-comparison.md") }
-        guard records.schemaVersion == 1, ["synthetic", "measured"].contains(records.evidenceKind), ["skill", "mcp"].contains(records.kind),
+        guard [1, 2].contains(records.schemaVersion), ["synthetic", "measured"].contains(records.evidenceKind), ["skill", "mcp"].contains(records.kind),
               records.baselineRevision == "none" || digest(records.baselineRevision), digest(records.candidateRevision),
               !records.runs.isEmpty, records.runs.count <= 10_000 else { throw reject("Invalid evaluation header or run count") }
         var pairs: [String: [Variant: Run]] = [:]
         let reference = records.runs[0].conditions
         for run in records.runs {
-            guard identifier(run.taskID), (1...1_000_000).contains(run.repetition), identifier(run.conditions.model),
+            guard (records.schemaVersion == 1 || run.comparisonCheck != nil),
+                  identifier(run.taskID), (1...1_000_000).contains(run.repetition), identifier(run.conditions.model),
                   [run.conditions.environment, run.conditions.settings, run.conditions.task, run.conditions.verifier].allSatisfy(digest),
                   run.seconds.map({ $0.isFinite && $0 >= 0 && $0 <= 31_536_000 }) ?? true,
                   run.inputTokens.map({ $0 >= 0 && $0 <= 1_000_000_000_000 }) ?? true,
@@ -151,6 +161,11 @@ public enum TaskComparison {
             pairs[key, default: [:]][run.variant] = run
         }
         var baseline = Outcomes(), candidate = Outcomes(), excluded: [Exclusion] = []
+        var reportedBaseline = Outcomes(), reportedCandidate = Outcomes()
+        for run in records.runs {
+            if run.variant == .baseline { reportedBaseline.add(run.outcome) }
+            else { reportedCandidate.add(run.outcome) }
+        }
         var matched = 0, verified = 0, both = 0, wins = 0, losses = 0, neither = 0, tokenMismatch = 0
         var seconds: [Double] = [], input: [Double] = [], output: [Double] = []
         var taskDefinitions: [String: [String]] = [:]
@@ -158,10 +173,17 @@ public enum TaskComparison {
             let pair = pairs[key]!
             let representative = pair[.baseline] ?? pair[.candidate]!
             guard let b = pair[.baseline], let c = pair[.candidate] else {
-                excluded.append(Exclusion(taskID: representative.taskID, repetition: representative.repetition, reason: "missing_variant")); continue
+                excluded.append(Exclusion(taskID: representative.taskID, repetition: representative.repetition, reason: "missing_variant", baselineOutcome: pair[.baseline]?.outcome, candidateOutcome: pair[.candidate]?.outcome)); continue
+            }
+            let exclusion: String?
+            if b.comparisonCheck == .failed || c.comparisonCheck == .failed { exclusion = "comparison_check_failed" }
+            else if b.comparisonCheck != .passed || c.comparisonCheck != .passed { exclusion = "comparison_check_unverified" }
+            else { exclusion = nil }
+            if let exclusion {
+                excluded.append(Exclusion(taskID: b.taskID, repetition: b.repetition, reason: exclusion, baselineOutcome: b.outcome, candidateOutcome: c.outcome)); continue
             }
             guard b.conditions == c.conditions else {
-                excluded.append(Exclusion(taskID: b.taskID, repetition: b.repetition, reason: "conditions_mismatch")); continue
+                excluded.append(Exclusion(taskID: b.taskID, repetition: b.repetition, reason: "conditions_mismatch", baselineOutcome: b.outcome, candidateOutcome: c.outcome)); continue
             }
             let definition = [b.conditions.task, b.conditions.verifier]
             guard taskDefinitions[b.taskID] == nil || taskDefinitions[b.taskID] == definition else {
@@ -192,10 +214,13 @@ public enum TaskComparison {
                       baselineRevision: records.baselineRevision, candidateRevision: records.candidateRevision,
                       totalRuns: records.runs.count, matchedPairs: matched, matchedTasks: taskDefinitions.count,
                       verifiedOutcomePairs: verified, tokenSemanticsMismatchPairs: tokenMismatch,
+                      reportedBaseline: reportedBaseline, reportedCandidate: reportedCandidate,
+                      comparisonCheckFailedRuns: records.runs.filter { $0.comparisonCheck == .failed }.count,
+                      comparisonCheckUnverifiedRuns: records.runs.filter { $0.comparisonCheck == nil || $0.comparisonCheck == .unverified }.count,
                       baseline: baseline, candidate: candidate, bothPassed: both, candidateOnlyPassed: wins,
                       baselineOnlyPassed: losses, neitherPassed: neither,
                       passRateDifferencePercentagePoints: verified > 0 ? Double(wins - losses) * 100 / Double(verified) : nil,
                       seconds: delta(seconds), inputTokens: delta(input), outputTokens: delta(output), excluded: excluded,
-                      note: "Declared local evaluation records only. Outcome checks and conditions are supplied by the evaluator, not verified by Thermo. Deltas are paired candidate minus baseline, include unsuccessful runs when measured, and are descriptive rather than a causal or significance claim. Missing metrics stay unknown. Request tokens are never allocated to individual tools; token semantics must match. No task, script, verifier or network request is executed.")
+                      note: "Declared local evaluation records only. All reported outcomes are retained; pairs without two passed comparison checks are excluded from rates and deltas. Outcome checks and conditions are supplied by the evaluator, not verified by Thermo. Deltas are paired candidate minus baseline, include unsuccessful runs when measured, and are descriptive rather than a causal or significance claim. Missing metrics stay unknown. Request tokens are never allocated to individual tools; token semantics must match. No task, script, verifier or network request is executed.")
     }
 }
