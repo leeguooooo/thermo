@@ -1,0 +1,726 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-19",
+  "sourceBase": "dfbef80",
+  "nodeVersion": "v26.10.0",
+  "testedPackages": {
+    "official": {
+      "package": "@modelcontextprotocol/inspector",
+      "version": "2.11.0",
+      "integrity": "sha512-gqMw2x0NCotTdjLNv3PSm/IJSeXL7O8u0SpyZXtXGhSukJ2DMoAy8RR7xKngHTCETJcG5gyPdxhOn8zf/ofSRA==",
+      "packageLockSHA256": "5cd3361f5944d7e951b5e906f1ac3b5e8d9a8a62085875bdd5df28e179746add"
+    },
+    "mcpjam": {
+      "package": "@mcpjam/cli",
+      "version": "5.16.1",
+      "integrity": "sha512-OS9ignrw2opQKJQbcr5RJWkraVluLP0JG1VxeBEwqK+aF7U7lu8G0+RTUmy5OoXFgiUmyygDPSnUQL9p8zMQGQ==",
+      "packageLockSHA256": "6ebdc1b43959392ef7dda4caf4d20a0d110891a63c07b3659da12c8c63c9a69f"
+    }
+  },
+  "runtimeNetworkPolicy": "All CLI fixture processes executed with sandbox-exec deny network*. Package downloads were separate.",
+  "originalAttempt": {
+    "invocations": 10,
+    "usableForComparison": false,
+    "cause": "Fixture incorrectly assumed custom parent environment variables would reach every stdio child. Official child failed before initialize. The valid fixture passes scenario/log scope explicitly in argv. All original artifacts retained.",
+    "officialInitializeReached": false
+  },
+  "validExternalInvocations": 16,
+  "runs": [
+    {
+      "case": "list",
+      "client": "official",
+      "exitCode": 0,
+      "elapsedSeconds": 0.6665095839998685,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        }
+      ],
+      "stdoutSHA256": "f2dd9f3cd29d4a3b6e985c4d60f85b48d496eebc08d88b449eb5f2c4ef63f938",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rpcTraceEntries": 0,
+      "durationReportedMs": null,
+      "errorCodes": []
+    },
+    {
+      "case": "list",
+      "client": "mcpjam",
+      "exitCode": 0,
+      "elapsedSeconds": 0.7735874170002717,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "server/discover",
+          "tool": null
+        },
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        }
+      ],
+      "stdoutSHA256": "b8364e96eed303f9858f40c1be7df2cc9f0b882fee9e6f2fba7e1df895512b35",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rpcTraceEntries": 7,
+      "durationReportedMs": null,
+      "errorCodes": []
+    },
+    {
+      "case": "echo",
+      "client": "official",
+      "exitCode": 0,
+      "elapsedSeconds": 0.34016820899978484,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        },
+        {
+          "method": "tools/call",
+          "tool": "echo"
+        }
+      ],
+      "stdoutSHA256": "3e7d31f130a5aed716a011b4a757b67858ed65db4e33b91075e6e48196d133aa",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rpcTraceEntries": 0,
+      "durationReportedMs": null,
+      "errorCodes": []
+    },
+    {
+      "case": "echo",
+      "client": "mcpjam",
+      "exitCode": 0,
+      "elapsedSeconds": 0.5469469580002624,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "server/discover",
+          "tool": null
+        },
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/call",
+          "tool": "echo"
+        }
+      ],
+      "stdoutSHA256": "fadbb9dd2fe6eb907a5f19987182145329d97188f0b2ec7a74851f3aeba9c768",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rpcTraceEntries": 7,
+      "durationReportedMs": 1,
+      "errorCodes": []
+    },
+    {
+      "case": "tool-error",
+      "client": "official",
+      "exitCode": 5,
+      "elapsedSeconds": 0.3291711669999131,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        },
+        {
+          "method": "tools/call",
+          "tool": "reported_error"
+        }
+      ],
+      "stdoutSHA256": "acce7625811bfe9d23b8846f12d4ff36db229d756a84e287ca5c41d7671c9cea",
+      "stderrSHA256": "67617571bfadee2d45255f5c92057db111486abd603e73f3cddeeec570bc4d70",
+      "rpcTraceEntries": 0,
+      "durationReportedMs": null,
+      "errorCodes": [
+        "tool_is_error"
+      ]
+    },
+    {
+      "case": "tool-error",
+      "client": "mcpjam",
+      "exitCode": 1,
+      "elapsedSeconds": 0.5995401249997485,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "server/discover",
+          "tool": null
+        },
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/call",
+          "tool": "reported_error"
+        }
+      ],
+      "stdoutSHA256": "e3c64bc3941ba3119441fb79eaf9bf2a987deb73f2cf6609b5aa0dbd7a99e8e2",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rpcTraceEntries": 7,
+      "durationReportedMs": 2,
+      "errorCodes": []
+    },
+    {
+      "case": "protocol-error",
+      "client": "official",
+      "exitCode": 1,
+      "elapsedSeconds": 0.3375540419997378,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        },
+        {
+          "method": "tools/call",
+          "tool": "rpc_error"
+        }
+      ],
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "c54a3e39289ebc18e03c66d07acf58f007dad12068db87840fee76f45cc2341a",
+      "rpcTraceEntries": 0,
+      "durationReportedMs": null,
+      "errorCodes": [
+        "error"
+      ]
+    },
+    {
+      "case": "protocol-error",
+      "client": "mcpjam",
+      "exitCode": 1,
+      "elapsedSeconds": 0.8153818750001847,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "server/discover",
+          "tool": null
+        },
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/call",
+          "tool": "rpc_error"
+        }
+      ],
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "0b34f3acfa1afdcb30c1726bc6c5852432938364afc917988d52f7f4bec93462",
+      "rpcTraceEntries": 0,
+      "durationReportedMs": null,
+      "errorCodes": [
+        "INTERNAL_ERROR"
+      ]
+    },
+    {
+      "case": "schema",
+      "client": "official",
+      "exitCode": 0,
+      "elapsedSeconds": 0.3407393749998846,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        }
+      ],
+      "stdoutSHA256": "6ba84603b7419d455408ebe023a54417ac714d0f9b4870d3735b8e0e39649d5d",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rpcTraceEntries": 0,
+      "durationReportedMs": null,
+      "errorCodes": []
+    },
+    {
+      "case": "schema",
+      "client": "mcpjam",
+      "exitCode": 0,
+      "elapsedSeconds": 0.6059169580003072,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "server/discover",
+          "tool": null
+        },
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        }
+      ],
+      "stdoutSHA256": "55befa8499dc46d8917c2f7c9208bce191325cfa94729f3eeb104a86ba4dcd6f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rpcTraceEntries": 7,
+      "durationReportedMs": null,
+      "errorCodes": []
+    },
+    {
+      "case": "boolean-schema",
+      "client": "official",
+      "exitCode": 6,
+      "elapsedSeconds": 0.9707362079998347,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        }
+      ],
+      "stdoutSHA256": "1d028104564c8f0088a7fc0a4cc4c1a619abe5bed8c927a90e2aca8297d45064",
+      "stderrSHA256": "08091d202bb97a0efb4e509d64adb2ac98316235b6e8921f17d1eb5cc6707e12",
+      "rpcTraceEntries": 0,
+      "durationReportedMs": null,
+      "errorCodes": [
+        "schema_unportable"
+      ]
+    },
+    {
+      "case": "boolean-schema",
+      "client": "mcpjam",
+      "exitCode": 0,
+      "elapsedSeconds": 0.763111624999965,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "server/discover",
+          "tool": null
+        },
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        }
+      ],
+      "stdoutSHA256": "94990f47dcf1111b685de7b79a64d7a59c2cab953735d19a49c4e83695bf30be",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rpcTraceEntries": 7,
+      "durationReportedMs": null,
+      "errorCodes": []
+    },
+    {
+      "case": "bad-output",
+      "client": "official",
+      "exitCode": 1,
+      "elapsedSeconds": 0.3389736669996637,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        },
+        {
+          "method": "tools/call",
+          "tool": "echo"
+        }
+      ],
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "138936a9818c5143cc9b3a4f083569613bfeff680143991f02b121b4eeb40b03",
+      "rpcTraceEntries": 0,
+      "durationReportedMs": null,
+      "errorCodes": [
+        "error"
+      ]
+    },
+    {
+      "case": "bad-output",
+      "client": "mcpjam",
+      "exitCode": 0,
+      "elapsedSeconds": 0.6039585000003171,
+      "timedOutByController": false,
+      "processTerminal": true,
+      "methods": [
+        {
+          "method": "server/discover",
+          "tool": null
+        },
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/call",
+          "tool": "echo"
+        }
+      ],
+      "stdoutSHA256": "65370b27e16e3b44a15c89ea6b93f517017c653963b53a59a5c8c346699ec1e6",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "rpcTraceEntries": 7,
+      "durationReportedMs": 2,
+      "errorCodes": []
+    }
+  ],
+  "envelopeValidationProbe": {
+    "case": "bad-output-envelope-validation",
+    "client": "mcpjam",
+    "exitCode": 0,
+    "elapsedSeconds": 1.0962765829999626,
+    "processTerminal": true,
+    "stdoutStructuredContent": {
+      "ok": "WRONG_TYPE"
+    },
+    "methods": [
+      {
+        "method": "server/discover",
+        "tool": null
+      },
+      {
+        "method": "initialize",
+        "tool": null
+      },
+      {
+        "method": "notifications/initialized",
+        "tool": null
+      },
+      {
+        "method": "tools/call",
+        "tool": "echo"
+      }
+    ]
+  },
+  "doctorProbe": {
+    "exitCode": 0,
+    "status": "ready",
+    "toolCalled": false,
+    "stdoutIsSingleJSONDocument": false,
+    "nonJSONPrefixLines": 2,
+    "methods": [
+      {
+        "method": "server/discover",
+        "tool": null
+      },
+      {
+        "method": "initialize",
+        "tool": null
+      },
+      {
+        "method": "notifications/initialized",
+        "tool": null
+      },
+      {
+        "method": "tools/list",
+        "tool": null
+      }
+    ]
+  },
+  "thermoFinalReadOnlyCases": [
+    {
+      "scenario": "normal",
+      "exitCode": 0,
+      "state": "ready",
+      "issues": [],
+      "definitions": {
+        "bytes": 607,
+        "characters": 607,
+        "estimatedTokens": 152,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1
+      },
+      "methods": [
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        }
+      ],
+      "originalFootprintsUnchanged": true
+    },
+    {
+      "scenario": "bool-schema",
+      "exitCode": 0,
+      "state": "ready",
+      "issues": [],
+      "definitions": {
+        "bytes": 595,
+        "characters": 595,
+        "estimatedTokens": 149,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1
+      },
+      "methods": [
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        }
+      ],
+      "originalFootprintsUnchanged": true
+    },
+    {
+      "scenario": "bad-schema",
+      "exitCode": 0,
+      "state": "ready",
+      "issues": [
+        "Unresolved local schema references in inputSchema: 1."
+      ],
+      "definitions": {
+        "bytes": 618,
+        "characters": 618,
+        "estimatedTokens": 155,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1
+      },
+      "methods": [
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        }
+      ],
+      "originalFootprintsUnchanged": true
+    },
+    {
+      "scenario": "bad-output",
+      "exitCode": 0,
+      "state": "ready",
+      "issues": [],
+      "definitions": {
+        "bytes": 726,
+        "characters": 726,
+        "estimatedTokens": 182,
+        "estimator": "ascii4-unicode1-v1",
+        "lines": 1
+      },
+      "methods": [
+        {
+          "method": "initialize",
+          "tool": null
+        },
+        {
+          "method": "notifications/initialized",
+          "tool": null
+        },
+        {
+          "method": "tools/list",
+          "tool": null
+        }
+      ],
+      "originalFootprintsUnchanged": true
+    }
+  ],
+  "implementation": {
+    "testedSourceSHA256": {
+      "Sources/AgentDoctor/MCPLocalSchemaReferences.swift": "c23ee869d03d1bd99505b5495cf2d2d547b0ae4fba57e83f4af2e9321b371cd6",
+      "Sources/AgentDoctor/MCPInspection.swift": "25e2e70d4ee4bc035c625ec3c88d7da11c845434e9c5478a62bf08cee8a94040",
+      "Sources/ThermoL10n/ZhHans.swift": "3635fa0d7d3fe285210494b5b54769a5fbff67385df25063016cdb7f7e0d69c7",
+      "Tests/AgentDoctorTests/MCPLocalSchemaReferencesTests.swift": "0f72aa08efb1563aeacfdee3bb5feb3979ff26bc6d7bd692f8caa72ad8d46dd7"
+    },
+    "fixtureSHA256": "cad100a0d87fa7ed63ddeb02af2927d273f66b2ab2aa76dfb0a0a938bbdbc6cf",
+    "finalCLI_SHA256": "28f56edf6ac46cde7fe96e8babc446e617b8927c1f6814f3dbdec36ae97239b2",
+    "scope": "Missing same-document JSON Pointer targets only; schema identifiers defer the entire document, and anchors/external/malformed pointers are not resolved. No network fetch, reference expansion or rewrite.",
+    "budgets": {
+      "schemaNodes": 4096,
+      "schemaDepth": 64,
+      "references": 128,
+      "referenceBytes": 4096,
+      "pointerTokens": 64
+    },
+    "failureFindingExports": "schema kind and count only; raw reference names/paths not exported"
+  },
+  "tests": {
+    "moduleCounts": {
+      "AgentDoctorTests": 283,
+      "ThermoAppTests": 301,
+      "ThermoCLITests": 108
+    },
+    "total": 692,
+    "failures": 0,
+    "newReferenceTests": 8
+  },
+  "visibleUI": {
+    "controller": "cua_repl",
+    "bundleID": "dev.thermo.schema-reference.qa",
+    "isolatedHome": true,
+    "args": [
+      "--main",
+      "--ui-review",
+      "--page",
+      "agents:mcp"
+    ],
+    "checks": [
+      "one owned configuration selected through native batch picker",
+      "complete three-tool catalog: 618 bytes and approximately 155 heuristic tokens",
+      "one definition hint in aggregate and echo detail",
+      "Chinese missing-local-reference message visible",
+      "business behavior remains unverified",
+      "owned window closed and process terminal"
+    ],
+    "runtimeFileBackedSectionsMatchBuiltApp": true,
+    "runtimeSHA256": "6d8ca936619bcae12339d9920fe3108d423b2d96e4765aaa74594d78a80523ce",
+    "fixtureMethods": [
+      {
+        "method": "initialize",
+        "tool": null
+      },
+      {
+        "method": "notifications/initialized",
+        "tool": null
+      },
+      {
+        "method": "tools/list",
+        "tool": null
+      },
+      {
+        "method": "initialize",
+        "tool": null
+      },
+      {
+        "method": "notifications/initialized",
+        "tool": null
+      },
+      {
+        "method": "tools/list",
+        "tool": null
+      }
+    ]
+  },
+  "sources": [
+    "https://github.com/modelcontextprotocol/inspector/blob/main/clients/cli/README.md",
+    "https://www.mcpjam.com/features/cli",
+    "https://json-schema.org/understanding-json-schema/basics#boolean-json-schemas",
+    "https://www.rfc-editor.org/rfc/rfc6901.html",
+    "https://json-schema.org/understanding-json-schema/structuring#ref"
+  ],
+  "boundaries": {
+    "MCPJamGUIOrModelEvalsTested": false,
+    "realProviderUsageMeasured": false,
+    "additionalModelRuns": 0,
+    "businessOrDeviceMCPConnected": false,
+    "userConfigsOrCredentialsCopied": false,
+    "globalPackageInstall": false,
+    "runtimeToolLatencyBenchmark": false,
+    "overallToolQualityRanking": false,
+    "schemaValidityProof": false,
+    "installedOrPublished": false
+  }
+}

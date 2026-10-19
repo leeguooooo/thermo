@@ -1,4 +1,5 @@
 import Foundation
+import AgentCore
 import Sparkle
 
 /// Sparkle wrapper. Disabled when the build has no SUFeedURL (APPCAST_URL unset at build time).
@@ -41,6 +42,14 @@ final class Updates: NSObject, ObservableObject, SPUStandardUserDriverDelegate {
 }
 
 enum AppInfo {
+    static var buildMetadata: AppBuildMetadata { AppBuildMetadata(info: Bundle.main.infoDictionary ?? [:]) }
+    static var workingTreeLabel: String {
+        switch buildMetadata.workingTree {
+        case .clean: return "Working tree clean"
+        case .dirty: return "Working tree dirty"
+        case .unknown: return "Working tree unknown"
+        }
+    }
     static var version: String {
         let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
         let b = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String

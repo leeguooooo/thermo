@@ -39,6 +39,10 @@ make test       # 单元测试（含一个真机 SMC 测试，无 SMC 时自动�
 make install    # CLI 装到 /usr/local/bin，App 拷到 /Applications
 ```
 
+新打包 App 的 Info.plist 记录 `ThermoBuildSourceCommit` 和 `ThermoBuildWorkingTree`；“设置 → 关于”显示包源码。`thermo --version --json` 将 CLI 自身版本与所在 App 包的版本、构建号、源码记录分开。旧包缺少提交信息时保持未知，独立 CLI 的 `appPackage` 为 null，不从当前目录或邻近安装版推测来源。
+
+源码记录由构建根目录的 Git 提供；解压目录不能借用上层仓库的提交号。编译前后提交号或工作树状态不同会停止组装，保留已有输出。`dirty` 包含 Git 报告的已修改、已暂存及未跟踪文件，不表示提交号完整描述了这些改动；这份记录也不是运行中二进制的源码证明或可复现构建证明。
+
 ### 正式签名与公证（Apple 开发者账号）
 
 本机已配置好（团队 6ZPXG4KVVS）：
