@@ -91,6 +91,7 @@ struct PopoverView: View {
             Divider()
             if !renderingPreview {
                 HStack { CleanScreenButton();AWDLButton() }
+                IdleAwakeButton()
                 if monitor.snapshot?.battery != nil { BatteryCareButton() }
             }
             footer
@@ -862,6 +863,7 @@ struct SettingsView: View {
             section(tr("Clean Screen")) {
                 CleanScreenButton()
             }
+            section(tr("Keep awake")) { IdleAwakeButton() }
             section(tr("Network low latency")) { AWDLButton() }
             section(tr("Battery charging protection")) { BatteryCareButton() }
             section(tr("General")) {

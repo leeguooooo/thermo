@@ -1,0 +1,72 @@
+{
+  "date": "2026-10-19",
+  "sourceBefore": "12b9e93",
+  "versionPrepared": "1.1.38",
+  "installedVersionStill": "1.1.37 (543)",
+  "implemented": [
+    "User-process display/tasks/both assertions, independent of lid-closed root mode",
+    "Timed and manual sessions; short OS leases renewed without extending the requested deadline",
+    "Low-battery pause at 20% or below; external-power resume with original deadline",
+    "Unknown power or ownership is not reported active or released",
+    "Creation intent retained before OS call; partial failure rollback blocks new sessions while unconfirmed",
+    "App panel, menu-bar phase marker, same-user authenticated App-control and keep-awake CLI",
+    "No persisted activation; closing the panel retains the session; exiting the process ends owned requests",
+    "Unconfirmed end records partial outcome with mode/deadline context"
+  ],
+  "regression": {
+    "command": "swift test --jobs 1 --filter 'AgentCoreTests|ThermoAppTests|ThermoCLITests'",
+    "exitCode": 0,
+    "total": 490,
+    "failures": 0,
+    "suites": {
+      "ThermoCLITests.xctest": {
+        "tests": 112,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 315,
+        "failures": 0
+      },
+      "AgentCoreTests.xctest": {
+        "tests": 63,
+        "failures": 0
+      }
+    },
+    "logSHA256": "c8c8d53ad2f4bb6cd84aa774aa7ed73a7bc6909476a1c49e2b65f96b41249815"
+  },
+  "focusedTests": 17,
+  "nativeAcceptance": {
+    "bothTypesConfirmed": [
+      "PreventUserIdleDisplaySleep",
+      "PreventUserIdleSystemSleep"
+    ],
+    "kernelExpiryWithoutTickConfirmed": true,
+    "nativeRequestsCreated": true,
+    "passed": true,
+    "pid": 89789,
+    "remainingOwnedActiveRequests": 0,
+    "renewalConfirmed": true,
+    "renewalDidNotExtendDeadline": true,
+    "scope": "Owned user-process assertions only; no helper, pmset, charging, AWDL or lid-close change"
+  },
+  "nativeScope": "Standalone owned process on external power; real assertions and kernel expiry. Not an installed App/CLI session or a physical battery transition test.",
+  "sourceFilesSHA256": {
+    "Sources/AgentCore/IdleAwake.swift": "529edafacd636e2ae0374f49e62d8f4a66ac5b8925ad6f84f259679c498d994d",
+    "Sources/ThermoApp/IdleAwakeView.swift": "219ff61da8463d74019000dcea27055c0d948574b08b55a8a869d001356c0755",
+    "Sources/ThermoApp/AppControlHost.swift": "229b9d80a6f26d685cc6a426ce55b9ec8c46cb954b00d2f01d8edbf5f77bca58",
+    "Sources/thermo/AppControl.swift": "bae4d4bb390307cdac0306a040f8d92ccc8330dea9b17f5fab2db6ef5baa3ef5",
+    "Tests/AgentCoreTests/IdleAwakeTests.swift": "1d2cdc0a08ed8fd626ef93ad6b5bb4c9cecdfb76fdd1d682a197aaf3c8e2936b",
+    "Tests/ThermoAppTests/IdleAwakeModelTests.swift": "080930ebca7bda667a2fa8f9ebd4caf4166f0af883caee1e8e9b4de3043c639e",
+    "Tests/ThermoCLITests/IdleAwakeCommandTests.swift": "11b4117fc2f52e54abb5733feb524350b344015fbbae5a347bd59ea76413f562",
+    "scripts/verify-idle-awake-native.swift": "9fbc90e351a6b50c406fea6ea14fdcb52d6da0eeb29a9ee0a829a52d6f49962e"
+  },
+  "installedFeatureAcceptance": false,
+  "remaining": [
+    "Merge latest main and verify affected code",
+    "Universal signed package and installed App/CLI session acceptance",
+    "Panel-close continuation, actual process exit, error/empty states and ordinary visible layout",
+    "Physical low-battery and plug/unplug transitions remain untested"
+  ],
+  "published": false,
+  "notarized": false
+}

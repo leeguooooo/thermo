@@ -40,6 +40,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         popover.animates = false
         popover.delegate = self
         popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor))
+        IdleAwakeModel.shared.onStateChange = { [weak self] in
+            guard let self, let snapshot = self.monitor.snapshot else { return }
+            self.updateTitle(snapshot)
+        }
         // The panel's curves keep a slow history while it is closed.
         PanelModel.shared.setActive(false)
 
@@ -205,7 +209,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         case .iconOnly: text = ""
         }
         // Redrawing the status item costs ~2 ms; skip it when nothing visible changed.
-        let title = text.isEmpty ? "" : " " + text
+        let awake = IdleAwakeModel.shared.state
+        let marker = awake.phase == .active ? "☕︎" : awake.phase == .ending ? "☕︎?" : awake.requested ? "☕︎⏸" : ""
+        let combined = [text, marker].filter { !$0.isEmpty }.joined(separator: " ")
+        let title = combined.isEmpty ? "" : " " + combined
         if title != lastTitle {
             lastTitle = title
             button.attributedTitle = NSAttributedString(string: title, attributes: [
