@@ -8,6 +8,13 @@ let zhHans: [String: String] = [
 
     "Structured result envelopes were not checked in this report; analyze again.": "此报告未检查结构化返回封装，请重新分析。",
     "Structured result coverage: %1$@ envelopes checked · %2$@ results not inspectable · %3$@ structured fields · %4$@ unmeasurable fields": "结构化返回覆盖：已检查 %1$@ 个封装 · %2$@ 个结果无法检查 · %3$@ 个包含结构化字段 · %4$@ 个字段无法计量",
+    "Observed MCP structured JSON coverage: %1$@/%2$@ completed envelopes checked · %3$@ structured fields · %4$@ uninspectable results · %5$@ unmeasurable fields": "MCP 结构化 JSON 覆盖：已检查 %1$@/%2$@ 个已完成结果封装 · %3$@ 个结构化字段 · %4$@ 个结果无法检查 · %5$@ 个字段无法计量",
+    "Missing replies %1$@ · invocation failures %2$@ · rows without coverage %3$@ · inconsistent rows %4$@": "缺失返回 %1$@ · 调用失败 %2$@ · 缺少覆盖记录 %3$@ 行 · 计数不一致 %4$@ 行",
+    "Known measured MCP structured JSON subset: %1$@ bytes / %2$@ tokens": "已知 MCP 结构化 JSON 计量部分：%1$@ 字节 / %2$@ token",
+    "Observed MCP structured JSON total within selected logs: %1$@ bytes / %2$@ tokens": "所选日志内已观察 MCP 结构化 JSON 合计：%1$@ 字节 / %2$@ token",
+    "Incomplete logs, result coverage or counts leave the full JSON total unknown; the known subset does not fill gaps.": "日志、结果覆盖或计数不完整时，JSON 总量保持未知；已知部分不补足缺失数据。",
+    "Separate JSON representation of structuredContent in directly attributed MCP results, including hidden rows. It may overlap returned text or contain encoded media; do not add totals or infer model usage.": "仅计直接归因 MCP 结果的 structuredContent JSON 表示，包含未展开的行。它可能与返回文本重复或含编码媒体；两项不相加，也不推算模型用量。",
+    "Structured JSON totals were not checked or do not match the report rows; analyze again.": "结构化 JSON 汇总未检查或与报告各行不一致，请重新分析。",
     "JSON value measurement does not infer the negotiated protocol or validate an output schema.": "JSON 值的计量不能推断协商的协议版本，也不验证输出 schema。",
     "Measured structured JSON: %1$@ bytes / %2$@ tokens · %3$@ results also contain content": "已计量的结构化 JSON：%1$@ 字节 / %2$@ token · %3$@ 个结果同时含 content",
     "JSON representation may overlap returned text or include encoded media. Do not add the totals or infer model usage.": "JSON 表示可能与返回文本重复，也可能含编码后的媒体；两项不能相加，也不能推算模型用量。",

@@ -166,6 +166,14 @@ public struct ToolUsageReport: Codable, Sendable {
     public var timingSummaries: [ToolUsageTimingSummary]? = nil
     /// Explicit presentation order. Absent means no ordering was declared by this report.
     public var toolOrdering: ToolUsageOrdering? = nil
+    /// Optional for older reports. Never mixed with returned-text or request counters.
+    public var mcpStructuredSummary: MCPStructuredContentSummary? = nil
+
+    public var observedMCPStructuredSummary: MCPStructuredContentSummary? {
+        guard let summary = mcpStructuredSummary,
+              summary == MCPStructuredContentSummary(rows: tools, encoding: referenceEncoding, logComplete: complete) else { return nil }
+        return summary
+    }
 
     public func returnedTextSummary(kind: String) -> ToolUsageTextSummary {
         ToolUsageTextSummary(rows: tools.filter { $0.kind == kind }, kind: kind, encoding: referenceEncoding)

@@ -241,6 +241,10 @@ struct AgentsCommand {
             lines.append("Observed \(kind) returned text total (all rows): \(summary.returnedTextBytes.map(String.init) ?? "unknown") bytes / \(tokens) tokens")
         }
         if !report.tools.isEmpty { lines.append("Totals cover observed returned text only; missing logs/results and non-text content are excluded, not request usage.") }
+        let structuredSummary = report.observedMCPStructuredSummary
+        if report.tools.contains(where: { $0.kind == "mcp" }) {
+            lines += structuredSummary?.displayLines ?? [MCPStructuredContentSummary.unavailableExplanation]
+        }
         for kind in Set(report.tools.map(\.kind)).sorted() {
             lines.append("Observed " + kind + " timing:")
             lines += report.timingSummary(kind: kind)?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation]
@@ -280,7 +284,7 @@ struct AgentsCommand {
             let p95 = row.p95Seconds.map { String(format: "%.3fs", $0) } ?? "unknown (requires 20 samples)"
             if let encoding = row.referenceEncoding { lines.append("  " + encoding + ": " + (row.referenceReturnedTextTokens.map(String.init) ?? "unknown") + " reference tokens; unavailable results: \(row.unavailableReferenceResults ?? 0)") }
             lines.append("  result text: \(row.returnedTextBytes) bytes / ≈\(row.returnedTextEstimatedTokens) tokens · median \(median) · P95 \(p95) · \(row.nonTextBlocks) non-text blocks not tokenized")
-            lines += row.mcpStructuredContentLines.map { "  " + $0 }
+            lines += row.mcpStructuredContentLines(includeRepresentationNotes: structuredSummary == nil).map { "  " + $0 }
             lines += representationNotes(row).map { "  " + $0 }
             if ordering == .text, let percentage = textSummaries[row.kind]?.percentage(of: row) {
                 lines.append("  share of observed \(row.kind) returned-text tokens: \(String(format: "%.1f%%", percentage))")

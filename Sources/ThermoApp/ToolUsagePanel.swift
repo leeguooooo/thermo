@@ -95,6 +95,7 @@ struct ToolUsagePanel: View {
                     sort.value($0) == sort.value($1) ? $0.id < $1.id : sort.value($0) > sort.value($1)
                 }
                 let textSummary = report.returnedTextSummary(kind: kind)
+                let structuredSummary = kind == "mcp" ? report.observedMCPStructuredSummary : nil
                 if !rows.isEmpty {
                     ForEach(report.timingSummary(kind: kind)?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation], id: \.self) { line in
                         Text(line).font(.caption.monospaced()).foregroundStyle(.secondary)
@@ -160,6 +161,11 @@ struct ToolUsagePanel: View {
                         .font(.callout).foregroundStyle(.secondary)
                 }
                 if !rows.isEmpty {
+                    if kind == "mcp" {
+                        ForEach(structuredSummary?.displayLines ?? [MCPStructuredContentSummary.unavailableExplanation], id: \.self) { line in
+                            Text(line).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
                     Text(tr("Returned text total in this category: %1$@ bytes / %2$@ tokens",
                             textSummary.returnedTextBytes.map(String.init) ?? tr("Unknown"),
                             textSummary.returnedTextTokens.map { (report.referenceEncoding == nil ? "≈" : "") + String($0) } ?? tr("Unknown")))
@@ -212,7 +218,7 @@ struct ToolUsagePanel: View {
                             Text(tr("Share of this category's observed returned-text tokens: %1$@", String(format: "%.1f%%", percentage)))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
-                        ForEach(Array(row.mcpStructuredContentLines.enumerated()), id: \.offset) { _, line in
+                        ForEach(Array(row.mcpStructuredContentLines(includeRepresentationNotes: structuredSummary == nil).enumerated()), id: \.offset) { _, line in
                             Text(line).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                         }
                         ResultTextRepresentationNotice(row: row)

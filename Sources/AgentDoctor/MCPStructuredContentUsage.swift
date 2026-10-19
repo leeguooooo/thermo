@@ -74,6 +74,10 @@ extension ToolUsageRow {
     }
 
     public var mcpStructuredContentLines: [String] {
+        mcpStructuredContentLines(includeRepresentationNotes: true)
+    }
+
+    public func mcpStructuredContentLines(includeRepresentationNotes: Bool) -> [String] {
         guard kind == "mcp" else { return [] }
         guard let usage = structuredContent else {
             return [tr("Structured result envelopes were not checked in this report; analyze again.")]
@@ -83,8 +87,10 @@ extension ToolUsageRow {
         if usage.structuredResults > 0 {
             let tokens = referenceEncoding == nil ? "≈" + String(usage.jsonEstimatedTokens) : usage.jsonReferenceTokens.map(String.init) ?? tr("Unknown")
             lines.append(tr("Measured structured JSON: %1$@ bytes / %2$@ tokens · %3$@ results also contain content", String(usage.jsonBytes), tokens, String(usage.alongsideContentResults)))
-            lines.append(tr("JSON representation may overlap returned text or include encoded media. Do not add the totals or infer model usage."))
-            lines.append(tr("JSON value measurement does not infer the negotiated protocol or validate an output schema."))
+            if includeRepresentationNotes {
+                lines.append(tr("JSON representation may overlap returned text or include encoded media. Do not add the totals or infer model usage."))
+                lines.append(tr("JSON value measurement does not infer the negotiated protocol or validate an output schema."))
+            }
         } else if usage.unobservableResults > 0 {
             lines.append(tr("Uninspectable results do not establish that structured content was absent."))
         }

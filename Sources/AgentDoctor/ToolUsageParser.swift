@@ -487,6 +487,7 @@ struct ToolUsageParser {
                                tools: rows.values.sorted { $0.returnedTextBytes == $1.returnedTextBytes ? $0.id < $1.id : $0.returnedTextBytes > $1.returnedTextBytes },
                                sessionTokens: totals.values.sorted { $0.host < $1.host }, cumulativeTokenSnapshots: cumulativeSnapshots.values.sorted { $0.id < $1.id }, note: ToolUsageReport.explanation, referenceEncoding: encoding == .heuristic ? nil : encoding.rawValue, referenceEngine: encoding == .heuristic ? nil : ReferenceTokenizer.engine)
         report.timingSummaries = ["mcp", "skill", "outer"].map { (intervalTimings[$0] ?? ToolUsageTimingAccumulator()).summary(kind: $0) }
+        report.mcpStructuredSummary = MCPStructuredContentSummary(rows: report.tools, encoding: report.referenceEncoding, logComplete: complete)
         return report
     }
 }
