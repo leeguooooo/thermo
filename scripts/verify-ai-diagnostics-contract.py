@@ -143,12 +143,16 @@ for line in sys.stdin:
   assert usage['unavailableJSONResults']==0 and usage['jsonReferenceTokens']>0 and row['returnedTextBytes']==2
  assert 'PRIVATE_JSON_' not in text
  summary=value_report['mcpStructuredSummary']
+ assert value_report['singleLogWindow']=='head'
  assert summary['totalJSONBytes']==summary['knownJSONBytes']==sum(x['structuredContent']['jsonBytes'] for x in rows)
  assert summary['totalJSONTokens']==sum(x['structuredContent']['jsonReferenceTokens'] for x in rows)
  assert summary['completedResults']==summary['checkedEnvelopes']==6 and summary['missingResults']==0
  human=run(['agents','usage','--agent','codex','--log-file',str(path),'--encoding','cl100k_base','--sort','structured']).stdout
  assert 'Observed MCP structured JSON total within selected logs:' in human
  assert human.count('JSON value measurement does not infer')==1, 'shared JSON caveats must not repeat on every row'
+ tail_report=json.loads(run(['agents','usage','--agent','codex','--log-file',str(path),'--tail','--encoding','cl100k_base','--sort','structured','--json']).stdout)
+ assert tail_report['singleLogWindow']=='tail' and tail_report['complete']
+ assert tail_report['tools']==value_report['tools'] and tail_report['mcpStructuredSummary']==summary
  incomplete=events+[protocol(-5,{'type':'function_call','call_id':'json-missing','name':'mcp__owned_values__missing','arguments':'{}'})]
  partial=root/'json-missing.jsonl';partial.write_text(''.join(json.dumps(x)+'\n' for x in incomplete))
  partial_summary=json.loads(run(['agents','usage','--agent','codex','--log-file',str(partial),'--encoding','cl100k_base','--json']).stdout)['mcpStructuredSummary']
@@ -156,6 +160,7 @@ for line in sys.stdin:
  assert partial_summary.get('totalJSONBytes') is None and partial_summary.get('totalJSONTokens') is None
  checks.append('all JSON value shapes are measured, null differs from absence, array ranking recovers and returned-text accounting stays separate')
  checks.append('structured JSON totals cover all MCP rows; missing replies preserve the known subset while totals stay unknown')
+ checks.append('explicit selected-file head and tail windows are recorded; a small tail preserves complete row measurements')
  ordering=[]
  values=[('ascii','a'*1000,{'n':1}),('unicode','你好'*100,{'n':2}),('wide','OK',{'body':'PRIVATE_SORT_BODY '*100}),('zero','OK',None),('unknown','OK',None)]
  for i,(name,ack,body) in enumerate(values):
