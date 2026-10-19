@@ -43,6 +43,8 @@ python3 scripts/verify-ai-release.py \
 
 ## 当前验证状态
 
+[Skill 原生目录刷新与缓存名称](measurements/skill-native-reload-and-cache-label-2026-10-19.json)：Codex CLI 0.163.0 在隔离 HOME、运行期禁止网络的同一进程内，以 `skills/list` / `forceReload: true` 核对修复前后文件。`discord-hermes` 返回的目录描述由 56 字节恢复为预期的 457 字节，再刷新仍一致；`codex-statebar` 前后均为 138 字节，属于格式兼容性修正，不能声称补出了客户端能力。未验证已有会话自动刷新或模型选择。此轮静态清单覆盖 227 份缓存文件、135 份目录独立文件，另有 5 个别名和 1 条未测量目录条目；缓存中的 `thermo-use/0.4.1` 存在无效 YAML 头部，配置启用不等于当前已加载此版本。源码修正其诊断名称：仅在明确声明的插件根目录上使用清单名称，`nameSource` 标明来源，子 Skill 与合法头部名称不被覆盖。真实缓存文件副本的名称由 `0.4.1` 改为 `thermo-use`，目录计量仍未知，文档、正文、质量证据与汇总不变，无修改动作。314 项 AgentDoctor 回归及编译后 CLI 检查通过；真实缓存未改，未构建或更新 App。
+
 [Skill YAML 目录计量与本机修正](measurements/skill-yaml-catalog-2026-10-19.json)：以固定版本 Yams 6.2.2 解析名称与描述，修正注释、引号转义和多行文本；无效头部不再产生看似完整的目录计量，App / CLI 显示未知及原因，完整文件计量仍单列。目录汇总的 `catalogEstimatedTokens` / `referenceCatalogTokens` 可缺失，消费者应按未知处理。311 项 AgentDoctor 回归、编译后 CLI 契约与中文面板离屏核对通过。修复前冻结的 118 份目录文件中，10 份合法头部的目录值得到纠正，其中 2 份参考 token 数变化，1 份无效头部的目录计量改为未知；所有完整文档字节、哈希和 token 计量一致。该范围不含递归子目录与插件缓存，不代表全量排名或账单变化。随后将本机 `codex-statebar` 和 `discord-hermes` 的描述改为 YAML 块标量，分别修正未引用冒号和 ` #` 注释截断；两份正文哈希不变，格式校验及新 CLI 直接读取均通过。只修改根 Skill 文件，未更新版本化缓存；宿主重载、选择及任务收益未验证。Thermo 部分仅完成 Debug / 模块验证，未重建、安装或发布 App。
 
 [MCP 工具自报错误码](measurements/mcp-error-code-observations-2026-10-19.json)：App / CLI / JSON 按明确的结构化错误码分类；缺码、冲突或不支持的标签保留为未分类，旧报告缺字段仍为未测量。每个工具保存频次最高的 64 类，界面显示前 6 类，超限数量仍计入明确错误。真实日志尾部的 134 次原生 MCP 调用重放中，14 次明确报错分为 `command_failed` 6 次、`element_not_found` 1 次、未分类 7 次；原有耗时、文本字节、参考 token 和状态字段全部一致。303 项 AgentDoctor 测试通过，编译后 CLI 及实际 SwiftUI 面板的中文离屏显示已核对。错误码由工具定义，[只返回错误文本也符合 SDK 用法](https://py.sdk.modelcontextprotocol.io/servers/handling-errors/)，缺码不能据此判定工具质量。仅完成 Debug / 模块验证，未重建、安装或发布 App；下面既有包的验收不包含此改动。
