@@ -2632,6 +2632,7 @@ let zhHans: [String: String] = [
     "Coverage: user Skill directories, enabled Claude plugins and Codex plugin cache inventories. Project directories are included only with an explicit project root. Cache presence does not prove loading; admin and remotely supplied Skills are not inspected.": "检查范围：用户 Skill 目录、已启用的 Claude 插件和 Codex 插件缓存。指定项目目录后才检查项目级 Skill。缓存存在不能证明已加载；未检查管理员目录和远程提供的 Skill。",
     "Codex plugin cache inspection is incomplete; a manifest, path or discovery limit could not be verified.": "Codex 插件缓存检查未完成：清单、路径或发现上限无法核实。",
     "Plugin cache inventory; current loaded version is unverified": "插件缓存清单，当前加载版本未经核实",
+    "This cached SKILL.md is at the plugin root, a layout Codex may omit from its Skill list. Publishers should use skills/<name>/ and verify host discovery; current loading was not tested.": "这份缓存的 SKILL.md 位于插件根目录，Codex 可能不会将它列入 Skill 清单。发布者应改用 skills/<name>/ 并核对宿主发现结果；当前加载状态未测试。",
     "%1$@ different skills share this name (%2$@); selection depends on the agent and scope": "%1$@ 个不同 Skill 使用相同名称（%2$@）；选择规则取决于 Agent 和来源范围",
     "%1$@ different Codex skills share this name (%2$@); a name-only mention can be ambiguous. Use the intended source or path.": "%1$@ 个不同的 Codex Skill 使用相同名称（%2$@）；只按名称调用可能有歧义，请按目标来源或路径使用。",
     "Select the intended source or read its SKILL.md by path. Rename or remove only unintended duplicates.": "选择目标来源，或按路径读取对应 SKILL.md；仅对不需要的重复副本改名或移除。",

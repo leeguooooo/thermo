@@ -102,6 +102,31 @@ final class SkillDiscoveryTests: XCTestCase {
         XCTAssertEqual(result.summaries.first?.cacheUniqueFiles, 1)
         XCTAssertEqual(result.summaries.first?.uniqueFiles, 0)
         XCTAssertFalse(result.findings.contains { $0.message.contains("cache inspection is incomplete") })
+        XCTAssertEqual(item.skillFootprint?.quality?.issues.map(\.code), ["plugin_root_skill_layout"])
+        XCTAssertEqual(item.severity, .info)
+        XCTAssertTrue(result.findings.contains { $0.item == item.id && $0.severity == .info && $0.message.contains("plugin root") })
+    }
+    func testNestedCacheAndUserRootSkillsDoNotReceivePluginRootLayoutHint() throws {
+        let base = ".codex/plugins/cache/market/fixture/1"
+        try write(base + "/.codex-plugin/plugin.json", #"{"skills":["./skills/fixture"]}"#)
+        try write(base + "/skills/fixture/SKILL.md", document)
+        try write(".agents/skills/fixture/SKILL.md", document)
+        let result = scan()
+        XCTAssertEqual(result.skills.count, 2)
+        XCTAssertTrue(result.skills.allSatisfy { $0.skillFootprint?.quality?.issues.isEmpty == true })
+    }
+    func testDisabledRootCacheLayoutRemainsInformationalAndDoesNotOfferRepair() throws {
+        let base = ".codex/plugins/cache/market/fixture/old"
+        try write(".codex/config.toml", "[plugins.\"fixture@market\"]\nenabled = false\n")
+        try write(base + "/.codex-plugin/plugin.json", #"{"skills":["./"]}"#)
+        try write(base + "/SKILL.md", document)
+        let result = scan(), item = try XCTUnwrap(result.skills.first)
+        XCTAssertFalse(item.enabled)
+        XCTAssertEqual(item.severity, .info)
+        XCTAssertTrue(item.actions.isEmpty)
+        XCTAssertEqual(item.skillFootprint?.document.bytes, document.utf8.count)
+        XCTAssertEqual(result.qualitySummaries?.first?.findings, 1)
+        XCTAssertTrue(result.findings.allSatisfy { $0.severity == .info })
     }
     func testEmptyAbsoluteAndEscapingSymlinkDeclarationsStillFailClosed() throws {
         let base = ".codex/plugins/cache/market/fixture/1"

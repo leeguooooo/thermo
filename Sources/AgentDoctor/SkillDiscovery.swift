@@ -74,7 +74,8 @@ extension ConfigChecks {
                         let safeName = declaredName.flatMap { value in
                             value.range(of: #"\A[A-Za-z0-9][A-Za-z0-9_.-]{0,199}\z"#, options: .regularExpression) != nil ? value : nil
                         }
-                        cacheSkillSources[root.path] = (namespace, enabled[namespace], root == version.standardizedFileURL ? safeName : nil)
+                        let rootLayout = root == version.standardizedFileURL
+                        cacheSkillSources[root.path] = (namespace, enabled[namespace], rootLayout ? safeName : nil, rootLayout)
                         roots.append((root, "codex-cache", "cache " + namespace + " / " + version.lastPathComponent))
                     }
                     if paths.count > 64 { incomplete = true }

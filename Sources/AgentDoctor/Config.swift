@@ -497,7 +497,7 @@ struct ConfigChecks {
     // MARK: skills
 
     var skillDirs: [(URL, String, String)] = []
-    var cacheSkillSources: [String: (namespace: String, enabled: Bool?, rootSkillName: String?)] = [:]
+    var cacheSkillSources: [String: (namespace: String, enabled: Bool?, rootSkillName: String?, rootLayout: Bool)] = [:]
 
     mutating func checkSkills() {
         let roots: [(URL, String, String)] = [
@@ -578,6 +578,10 @@ struct ConfigChecks {
                             }
                         }
                         footprint.quality = SkillQuality.inspect(text, at: skill, cancelled: env.cancelled)
+                        if node.depth == 0, cacheSkillSources[dir.path]?.rootLayout == true {
+                            footprint.quality?.issues.append(SkillQualityIssue(code: "plugin_root_skill_layout", line: 1, target: nil,
+                                message: tr("This cached SKILL.md is at the plugin root, a layout Codex may omit from its Skill list. Publishers should use skills/<name>/ and verify host discovery; current loading was not tested.")))
+                        }
                         if let quality = footprint.quality {
                             for issue in quality.issues {
                                 add(Finding(agent == "codex-cache" ? .info : .warning, .skills, agent: agent, subject: name, issue.message,

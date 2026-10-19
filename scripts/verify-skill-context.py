@@ -68,7 +68,11 @@ with tempfile.TemporaryDirectory(prefix="thermo-skill-context-") as temporary:
     assert rooted[0]["skillFootprint"]["nameSource"] == "plugin_manifest"
     assert rooted[0]["skillFootprint"]["catalog"]["measurementComplete"] is False
     assert not rooted[0]["actions"]
+    assert any(issue["code"] == "plugin_root_skill_layout" for issue in rooted[0]["skillFootprint"]["quality"]["issues"])
+    assert not any(issue["code"] == "plugin_root_skill_layout" for item in scoped["skills"]
+                   for issue in item.get("skillFootprint", {}).get("quality", {}).get("issues", []))
     print(json.dumps({"passed": True, "userUniqueFiles": user_summary["uniqueFiles"],
                       "projectUniqueFiles": project_summary["uniqueFiles"], "aliasesExcluded": project_summary["aliases"],
                       "cacheFilesCountedSeparately": project_summary["cacheUniqueFiles"], "coverageWarningPreserved": True,
-                      "yamlCatalogValuesAndUnknownsVerified": True, "invalidCacheRootOwnerVerified": True}))
+                      "yamlCatalogValuesAndUnknownsVerified": True, "invalidCacheRootOwnerVerified": True,
+                      "rootPluginLayoutHintVerified": True}))
