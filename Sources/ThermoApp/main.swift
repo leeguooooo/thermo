@@ -410,16 +410,8 @@ if ["--main", "--disk", "--agents", "--chrome-pages"].contains(where: CommandLin
     app.setActivationPolicy(CommandLine.arguments.contains("--offscreen") ? .accessory : .regular)
     DispatchQueue.main.async { MainActor.assumeIsolated { openMainOnly(CommandLine.arguments) } }
     // Only the main window closing ends the app (not sheets, menus or alerts).
-    NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { n in
-        MainActor.assumeIsolated {
-            guard let w = n.object as? NSWindow, w === MainWindow.window else { return }
-            // Use the delegate's complete exit guard, including restore/manual-removal
-            // leases and active charging/AWDL sessions. A cancelled termination can reopen
-            // the relevant page after the close notification has finished retiring content.
-            DispatchQueue.main.async { app.terminate(nil) }
-        }
-    }
-    withExtendedLifetime(mainOnlyDelegate) { app.run() }
+    let closeObserver = MainActor.assumeIsolated { MainOnlyDelegate.observeMainWindowClosing() }
+    withExtendedLifetime((mainOnlyDelegate, closeObserver)) { app.run() }
 }
 let delegate = MainActor.assumeIsolated { AppDelegate() }
 app.delegate = delegate

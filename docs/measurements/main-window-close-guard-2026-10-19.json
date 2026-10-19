@@ -14,11 +14,29 @@
       "seconds": 149.19,
       "sourceCommit": "fd98940",
       "logSHA256": "caeef09826ec41a4c55fa59314efaf649536c5f9d3169417147cb8237a18bfe7"
+    },
+    "nativeCloseNotificationFollowUp": {
+      "command": "swift test --jobs 4 --filter MainOnlyExitTests",
+      "tests": 3,
+      "failures": 0,
+      "realOffscreenWindowClose": true,
+      "cases": [
+        "restore guard cancels and selects history",
+        "helper removal guard cancels and selects settings",
+        "manual removal guard notifies owner and selects space",
+        "idle close allows termination",
+        "unrelated window close never requests termination",
+        "termination request occurs after window is no longer visible"
+      ],
+      "productionObserverShared": true,
+      "terminationRequestIntercepted": true,
+      "scope": "Actual NSWindow.close and production close observer, then real application delegate; injected final termination request avoids killing the test runner. Does not establish installed signed executable process exit or active hardware-session prompts.",
+      "logSHA256": "b81a78520fce5647f915d868170c8738d9da90f5dece6fa35f6b2e314f1d2b17"
     }
   },
   "installedBuildUpdated": false,
   "remaining": [
-    "Native standalone close while protected operation is active",
+    "Installed signed standalone executable close and process exit",
     "Battery and AWDL active-session quit confirmation with hardware"
   ]
 }

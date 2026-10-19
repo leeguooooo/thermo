@@ -57,6 +57,19 @@ enum AppExitGuard {
 @MainActor
 final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
     var showExitBlocker: @MainActor (MainPage) -> Void = { MainWindow.show($0) }
+    /// Shared by the standalone entry point and an offscreen AppKit acceptance test.
+    /// Termination is deferred until other close observers have retired page content.
+    static func observeMainWindowClosing(
+        window: @escaping @MainActor () -> NSWindow? = { MainWindow.window },
+        requestTermination: @escaping @MainActor () -> Void = { NSApp.terminate(nil) }
+    ) -> NSObjectProtocol {
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) { notification in
+            MainActor.assumeIsolated {
+                guard let closed = notification.object as? NSWindow, closed === window() else { return }
+                DispatchQueue.main.async { requestTermination() }
+            }
+        }
+    }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         AppExitGuard.reply(show: showExitBlocker)
     }
