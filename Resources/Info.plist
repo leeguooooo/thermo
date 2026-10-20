@@ -15,6 +15,9 @@
     <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSAppleEventsUsageDescription</key><string>Thermo lists your browser tabs to find duplicates, and closes a tab only when you confirm it.</string>
+    <key>NSLocationWhenInUseUsageDescription</key><string>macOS shows Wi-Fi network names only to apps allowed to use Location Services. Thermo uses it to name your network and nearby networks on the Connections page; it never reads where you are.</string>
+    <key>NSLocationUsageDescription</key><string>macOS shows Wi-Fi network names only to apps allowed to use Location Services. Thermo uses it to name your network and nearby networks on the Connections page; it never reads where you are.</string>
+    <key>NSBluetoothAlwaysUsageDescription</key><string>Thermo connects and disconnects your paired Bluetooth devices when you click Connect or Disconnect on the Connections page.</string>
     <key>NSHumanReadableCopyright</key><string>© 2026 LI GUO. All rights reserved.</string>
     <key>SUPublicEDKey</key><string>uJ2iyiNpULXGsm30LkjBH8ZYlIA4UyGUvPAvxvh2Osw=</string>
     <key>SUEnableAutomaticChecks</key><true/>

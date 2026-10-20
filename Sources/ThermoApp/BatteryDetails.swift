@@ -1,3 +1,4 @@
+import IOKit.ps
 import SwiftUI
 import ThermoKit
 import ThermoL10n
@@ -5,6 +6,14 @@ import ThermoL10n
 struct BatteryDetails: View {
     let battery: BatteryInfo
     let fahrenheit: Bool
+    var adapterWatts: Int? = BatteryDetails.adapterWatts()
+
+    /// The rating of the connected power adapter, as macOS reports it.
+    static func adapterWatts() -> Int? {
+        guard let details = IOPSCopyExternalPowerAdapterDetails()?.takeRetainedValue() as? [String: Any],
+              let watts = details[kIOPSPowerAdapterWattsKey] as? Int, watts > 0 else { return nil }
+        return watts
+    }
 
     static var labels: [String] { [tr("Battery"), tr("Charge"), tr("Battery health"), tr("Cycle count"), tr("Power source"), tr("Temperature"), tr("Voltage"), tr("Current"), tr("Power")] }
     static func matches(query: String) -> Bool {
@@ -17,7 +26,7 @@ struct BatteryDetails: View {
             (tr("Charge"), battery.percent.map { String(format: "%.0f%%", $0) } ?? "—"),
             (tr("Battery health"), battery.health.map { String(format: "%.0f%%", $0 * 100) } ?? "—"),
             (tr("Cycle count"), battery.cycleCount.map(String.init) ?? "—"),
-            (tr("Power source"), battery.externalPower ? tr("Power adapter") : tr("On battery")),
+            (tr("Power source"), battery.externalPower ? tr("Power adapter") + (adapterWatts.map { " · \($0) W" } ?? "") : tr("On battery")),
             (tr("Temperature"), tempText(battery.temperature, fahrenheit: fahrenheit)),
             (tr("Voltage"), battery.voltage.map { String(format: "%.2f V", $0) } ?? "—"),
             (tr("Current"), battery.amperage.map { String(format: "%+.2f A", $0) } ?? "—"),

@@ -46,9 +46,10 @@ enum MainPage: Hashable {
     case claudeCleanup, privacyTools
     case compute(Bool)
     case history
+    case connections
 
     /// `--page` values: overview, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
-    /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates, memory, cpu, gpu, claude-cleanup, history.
+    /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates, memory, cpu, gpu, claude-cleanup, history, connections.
     init?(argument: String) {
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
         guard let command = parts.first else { return nil }
@@ -63,6 +64,7 @@ enum MainPage: Hashable {
         case "apps": self = .apps(parts.count > 1 ? (parts[1] == "feeds" ? .updates : AppsTab(rawValue: parts[1]) ?? .installed) : .installed)
         case "memory": self = .memory
         case "history": self = .history
+        case "connections": self = .connections
         case "claude-cleanup": self = parts.count > 1 && parts[1] == "privacy" ? .privacyTools : .claudeCleanup
         case "cpu": self = .compute(false)
         case "gpu": self = .compute(true)
@@ -185,6 +187,7 @@ enum MainWindow {
                     SpaceLensModel.shared.stop()
                     SpaceLensModel.shared.stopDuplicates()
                     MemoryModel.shared.stop()
+                    ConnectionsModel.shared.stop()
                     ComputeModel.shared.stop()
                     retireContent(in: w)
                 }
@@ -387,6 +390,8 @@ struct MainView: View {
             ClaudeCleanupPage(model: models.claudeCleanup).transition(.page)
         case .privacyTools:
             ClaudeCleanupPage(model: models.claudeCleanup, initialTab: 1).transition(.page)
+        case .connections:
+            ConnectionsPage(model: ConnectionsModel.shared).transition(.page)
         case .history:
             HistoryPage(model: HistoryModel.shared, open: { page = $0 }).transition(.page)
         case let .space(tab):
@@ -449,6 +454,7 @@ struct MainSidebar: View {
                     row(.sensors, tr("Sensors"), "thermometer.medium", .red, trailing: nil)
                     row(.fans, tr("Fans"), "fan", .blue,
                         trailing: monitor.snapshot.flatMap { FanControlPresentation.speedSummary($0.fans) })
+                    row(.connections, tr("Connections"), "wifi", .blue, trailing: nil)
 
                     header(tr("Resources"))
                     row(.compute(false), tr("CPU usage"), "cpu", .cyan, trailing: nil)

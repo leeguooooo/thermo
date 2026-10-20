@@ -497,6 +497,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
             ? models.nativeUpdates.loaded && !models.nativeUpdates.loading
             : models.softwareUpdates.report != nil && !models.softwareUpdates.busy
         case .compute: return ComputeModel.shared.current?.cpu != nil && Date().timeIntervalSince(started) > 4
+        case .connections: return ConnectionsModel.shared.bluetooth != nil || ConnectionsModel.shared.bluetoothFailed
         case .memory: return MemoryModel.shared.breakdown != nil && Date().timeIntervalSince(started) > 4
         case .space(.duplicates): return true
         case .space: return SpaceLensModel.shared.tree != nil && !SpaceLensModel.shared.scanning

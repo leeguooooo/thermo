@@ -25,6 +25,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(page(tr("Overview"), "gauge.with.dots.needle.67percent", .overview))
         menu.addItem(page(tr("Sensors"), "thermometer.medium", .sensors))
         menu.addItem(page(tr("Fans"), "fan", .fans))
+        menu.addItem(page(tr("Connections"), "wifi", .connections))
         menu.addItem(page(tr("Memory usage"), "memorychip", .memory))
         menu.addItem(.separator())
 

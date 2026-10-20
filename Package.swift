@@ -39,7 +39,9 @@ let package = Package(
         .executableTarget(
             name: "ThermoApp",
             dependencies: ["ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", .product(name: "Sparkle", package: "Sparkle")],
-            linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts")]
+            linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"),
+                             .linkedFramework("CoreWLAN"), .linkedFramework("IOBluetooth"), .linkedFramework("CoreAudio"),
+                             .linkedFramework("AudioToolbox"), .linkedFramework("CoreLocation")]
         ),
         .testTarget(name: "ThermoCLITests", dependencies: ["thermo"]),
         .testTarget(name: "ThermoAppTests", dependencies: ["ThermoApp", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor"]),
