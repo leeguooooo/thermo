@@ -49,6 +49,26 @@
     "github-api.json": "28d3e783a4b29d1466fd9dbc7dfe6e0751e2bb52c98cc98fb8d9733e9c6f7747",
     "http-read.json": "74823fa343a16cfc0a31947b40c40b877ce59c16c15c7ebe042bd1a09b89aff5",
     "assets-snapshot.json": "e52b9bc060caa367d170ad66f8ba91beac8122e41ba6ff796a7eb93b31dae9f4",
-    "open.json": "f29eb5f64d8222b0dc0d276e61bd6c74c0dbcd9b7490440166e20f923c1af16b"
-  }
+    "open.json": "f29eb5f64d8222b0dc0d276e61bd6c74c0dbcd9b7490440166e20f923c1af16b",
+    "github-release-fields.json": "87dc5da5ef7f0fe3712913a19d058adcccc80c5593bcf69b601c1b63336bafb4"
+  },
+  "narrowReleaseCLI": {
+    "arguments": [
+      "gh",
+      "release",
+      "view",
+      "--repo",
+      "leeguooooo/thermo",
+      "--json",
+      "tagName,url,assets",
+      "--jq",
+      "{tagName,url,assets:[.assets[]|{name,url}]}"
+    ],
+    "stdoutBytes": 789,
+    "elapsedSeconds": 1.841,
+    "allFiveAssetLinksMatch": true,
+    "taskComplete": true,
+    "commands": 1
+  },
+  "nextTaskRoute": "For release metadata use the narrow gh release fields first; use a rendered page to verify the public surface."
 }

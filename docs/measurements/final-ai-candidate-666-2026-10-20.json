@@ -1,0 +1,102 @@
+{
+  "complete": true,
+  "scope": "Frozen 5966f65 product source, integrated AI diagnostics plus SpaceLens; not all future main commits.",
+  "inputCommit": "5966f657287a4aa76697891a85d541eec8297cd4",
+  "testedSnapshotCommit": "b31ffed5d3f9296334f8ff519fb58121ae3bbec7",
+  "sourceTree": "0e0ad3bc741e51dc1c8c09fb9378eb90e8647244",
+  "sourceFilesMatched": 555,
+  "runId": "05e1a51e-2b42-47c0-ad4e-e646ddf9ec9d",
+  "candidateVersion": "1.1.40",
+  "candidateBuild": "666",
+  "ReleaseTestsPassed": 1989,
+  "releaseSuites": {
+    "ThermoKitTests": {
+      "tests": 218,
+      "failures": 0
+    },
+    "ThermoHelperTests": {
+      "tests": 30,
+      "failures": 0
+    },
+    "ThermoCLITests": {
+      "tests": 126,
+      "failures": 0
+    },
+    "ThermoAppTests": {
+      "tests": 351,
+      "failures": 0
+    },
+    "CleanKitTests": {
+      "tests": 803,
+      "failures": 0
+    },
+    "AgentDoctorTests": {
+      "tests": 391,
+      "failures": 0
+    },
+    "AgentCoreTests": {
+      "tests": 70,
+      "failures": 0
+    }
+  },
+  "packageChecksPassed": 27,
+  "packageEntriesMatched": 111,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "IntelHardwareTested": false,
+  "packageArchiveSHA256": "56d2517415011befe4a6536801e8226693eb883f72b482a2997462a2d0349d43",
+  "retainedRemoteSymbolFilesMatched": 12,
+  "packagedWALCLI": {
+    "passed": true,
+    "CLIExitCode": 0,
+    "CLISHA256": "cda441e914ee0079e5c02174c12885d58f3e69fac5809f91a364ed0444d660ee",
+    "largeWALReported": true,
+    "smallWALNotReported": true,
+    "growthOrCheckpointFailureNotAsserted": true,
+    "fixtureSizeInodeMtimeUnchanged": true,
+    "fixtureRemovedOnExit": true,
+    "installedOrPublished": false,
+    "realModelCalled": false
+  },
+  "nativeQA": {
+    "passed": true,
+    "candidateBuild": "666",
+    "sourceCommit": "b31ffed5d3f9296334f8ff519fb58121ae3bbec7",
+    "page": "MCP Servers",
+    "largeWALVisible": true,
+    "uncertaintyVisible": true,
+    "safeAdviceVisible": true,
+    "definitionTotalStillUnknown": true,
+    "actionStateWarningObserved": true,
+    "followupReadConfirmedActionCompleted": true,
+    "actionRetried": false,
+    "ownedQAExited": true,
+    "ownedQAFixtureRemoved": true,
+    "syntheticWALMetadataUnchanged": true,
+    "productionFingerprintsMatched": 3,
+    "installedOrPublished": false
+  },
+  "adHocSignatureOnly": true,
+  "notarized": false,
+  "installedOrPublished": false,
+  "realModelCalled": false,
+  "cleanup": {
+    "ownedNativeQAFixtureRemoved": true,
+    "ownedCLIFixtureRemoved": true,
+    "initialSourceWorktreeRemoved": true,
+    "testedSourceWorktreeRetainedForRepeatableVerification": true,
+    "candidateAndEvidenceRetained": true,
+    "unattributedUntrackedJavaCrashLogsPreserved": true
+  },
+  "artifactDirectory": "~/.codex/artifacts/thermo-final-ai-evidence-5966f65",
+  "testedSourceDirectory": "~/.codex/artifacts/thermo-final-ai-tested-source-5966f65",
+  "evidenceHashes": {
+    "result.json": "e0e0ac311ffd20b223f1925ba15c38faa04202ff620e877cdce90145fddb481b",
+    "acceptance/result.json": "2512bbf59c14870bcb4d0223ab5c6b003e1975e65cf7013dc117b5381a4d8eb0",
+    "native-qa-result.json": "3cd4428992334dba7ad58a18dbc65a701ae02cc22ecd91baba8a2ab3c6ccda8e",
+    "wal-cli-result.json": "c00eadb3807c70bb77f03fc3794e1b7556f2179bd507aabd5b141bde0ca1f32c",
+    "remote-symbols-readback.json": "db72ee12dedc59d14ecbe6974ea1148b6a4ffcbcd94f38990106366ddb0bf406"
+  }
+}
