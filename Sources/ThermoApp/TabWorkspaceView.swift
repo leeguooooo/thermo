@@ -123,13 +123,9 @@ struct TabWorkspaceView: View {
     @State private var batchName = ""
     @State private var plan: Plan?
     @State private var categorizing = false
-    @State private var task: TabWorkspaceTask = {
-        let args = CommandLine.arguments
-        if args.contains("--offscreen"), let i = args.firstIndex(of: "--tabs-task"), i + 1 < args.count {
-            return TabWorkspaceTask(rawValue: args[i + 1]) ?? .organize
-        }
-        return .organize
-    }()
+    @State private var collapsed: Set<String> = []
+    @Binding var task: TabWorkspaceTask
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     struct Plan: Identifiable {
         let id = UUID()
         var pages: [TabWorkspace.Page] = []
@@ -137,55 +133,55 @@ struct TabWorkspaceView: View {
         var destinationWindow: Int?
         var name: String = ""
     }
-    init(app: String) { _model = StateObject(wrappedValue: TabWorkspaceModel(app: app)) }
+    init(app: String, task: Binding<TabWorkspaceTask>) {
+        _model = StateObject(wrappedValue: TabWorkspaceModel(app: app))
+        _task = task
+    }
     var groupNames: [String] { Array(Set(filtered.map(\.group))).sorted() }
     var filtered: [TabWorkspace.Page] {
         model.pages.filter { search.isEmpty || ($0.tab.title + " " + $0.tab.url + " " + $0.group).localizedCaseInsensitiveContains(search) }
     }
     var eligibleSelection: [TabWorkspace.Page] { model.chosen.filter(\.canArchive) }
+    /// What a tick can be put on: closable tabs, or any tab while sorting the list into categories.
+    func pickable(_ pages: [TabWorkspace.Page]) -> [TabWorkspace.Page] {
+        model.busy ? [] : pages.filter { $0.canArchive || categorizing }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(tr("Make your tabs easier to manage")).font(.title2.bold())
-                    Text(tr("Group tabs without closing them, or save links and close tabs you are not using."))
-                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                if task != .saved { scopePicker } else { savedToolbar }
+                if let error = model.error {
+                    NoticeBanner(text: error + (model.inventory != nil ? "\n" + tr("This is the previous list. Refresh before taking action.") : ""))
                 }
-                Spacer(minLength: 8)
-                Button { model.refresh() } label: {
-                    Label(model.busy ? tr("Reading tabs…") : tr("Refresh tabs"), systemImage: "arrow.clockwise")
-                }.disabled(model.busy).buttonStyle(PillButtonStyle())
-            }
-            Picker(tr("What would you like to do?"), selection: $task) {
-                ForEach(TabWorkspaceTask.allCases) { task in Text(task.title).tag(task) }
-            }.pickerStyle(.segmented).labelsHidden()
-            if let error = model.error {
-                Label(error, systemImage: "exclamationmark.circle").font(.callout).foregroundStyle(.orange).textSelection(.enabled)
-                if model.inventory != nil { Text(tr("This is the previous list. Refresh before taking action.")).font(.caption).foregroundStyle(.secondary) }
-            }
-            if let notice = model.notice { Label(notice, systemImage: "checkmark.circle").font(.callout).foregroundStyle(.green) }
-            if model.busy { HStack { ProgressView().controlSize(.small); Text(tr("Reading or updating tabs…")).font(.caption).foregroundStyle(.secondary) } }
-            if task == .saved { savedGroups }
-            else {
-                scopePicker
-                if let hint = model.inventory?.hint {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Label(tr("Some browser protection details are missing"), systemImage: "exclamationmark.shield").foregroundStyle(.orange)
-                        Text(tr("Refresh after connecting the browser extension. Tabs with unknown protection stay open."))
-                            .font(.caption).foregroundStyle(.secondary)
-                        DisclosureGroup(tr("Connection details")) { Text(tr(hint)).font(.caption).textSelection(.enabled) }
-                    }.padding(12).glass(radius: 12)
-                }
-                if task == .organize {
-                    ScrollView {
-                        NativeTabOrganizerView(app: model.app, pages: model.pages, nativeGroups: model.inventory?.nativeGroups ?? [],
-                                               working: $model.busy,
-                                               previewOnly: model.isPreview, refresh: model.refresh)
+                if let notice = model.notice { NoticeBanner(text: notice, dismiss: { model.notice = nil }) }
+                if task != .saved, let hint = model.inventory?.hint {
+                    HStack(spacing: Theme.Space.s) {
+                        Image(systemName: "exclamationmark.shield").foregroundStyle(Theme.caution)
+                        Text(tr("Some browser protection details are missing")).font(Theme.secondary.weight(.medium)).foregroundStyle(Theme.textPrimary)
+                        InfoButton(text: tr("Refresh after connecting the browser extension. Tabs with unknown protection stay open.") + "\n\n" + tr(hint),
+                                   title: tr("Connection details"))
+                        Spacer()
                     }
-                } else { archiveTabs }
+                    .padding(.horizontal, Theme.Space.m).padding(.vertical, Theme.Space.s)
+                    .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.caution.opacity(0.08)))
+                }
             }
-        }.padding(24)
+            .padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.m)
+            switch task {
+            case .saved: savedGroups
+            case .organize:
+                ScrollView {
+                    NativeTabOrganizerView(app: model.app, pages: model.pages, nativeGroups: model.inventory?.nativeGroups ?? [],
+                                           working: $model.busy,
+                                           previewOnly: model.isPreview, refresh: model.refresh)
+                        .padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.xl)
+                        .frame(maxWidth: Theme.pageWidth, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            case .archive: archiveTabs
+            }
+        }
         .onAppear { model.refresh() }
         .onReceive(NotificationCenter.default.publisher(for: TabQuickAction.notification)) { _ in model.refresh() }
         .onChange(of: model.busy) { busy in
@@ -212,28 +208,45 @@ struct TabWorkspaceView: View {
         }
     }
 
+    var refreshButton: some View {
+        Button { model.refresh() } label: {
+            HStack(spacing: 6) {
+                if model.busy { ProgressView().controlSize(.mini) } else { Image(systemName: "arrow.clockwise") }
+                Text(model.busy ? tr("Reading tabs…") : tr("Refresh tabs"))
+            }
+        }
+        .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.busy)
+    }
+
+    var savedToolbar: some View {
+        HStack {
+            Text(tr("%1$@ saved", String(model.saved.count))).font(Theme.secondary.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+            Spacer()
+            refreshButton
+        }
+    }
+
     var scopePicker: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 12) { scopeControls; Spacer(); scopeCount }.frame(minWidth: 600)
-            VStack(alignment: .leading, spacing: 8) { scopeControls; scopeCount }
-        }.padding(12).glass(radius: 12)
+            HStack(spacing: Theme.Space.m) { scopeControls; scopeCount; Spacer(); refreshButton }.frame(minWidth: 600)
+            VStack(alignment: .leading, spacing: Theme.Space.s) { scopeControls; HStack { scopeCount; Spacer(); refreshButton } }
+        }
     }
     var scopeControls: some View {
-        HStack {
-            Text(tr("Scope")).font(.callout.weight(.medium))
-            Picker(tr("Scope"), selection: Binding(get: { model.allWindows }, set: { model.selectAllWindows($0) })) {
-                Text(tr("One window")).tag(false); Text(tr("All Chrome windows")).tag(true)
-            }.labelsHidden().frame(width: 150)
+        HStack(spacing: Theme.Space.s) {
+            ThermoTabs(selection: Binding(get: { model.allWindows }, set: { model.selectAllWindows($0) }),
+                       options: [(false, tr("One window")), (true, tr("All Chrome windows"))], size: .small, label: tr("Scope"))
             if !model.allWindows, let inventory = model.inventory {
                 Picker(tr("Window"), selection: Binding(get: { model.window ?? inventory.pages.first?.tab.window ?? 0 }, set: { model.selectWindow($0) })) {
                     ForEach(Array(Set(inventory.pages.map { $0.tab.window })).sorted(), id: \.self) { id in Text(model.windowLabel(id)).tag(id) }
-                }.labelsHidden().frame(maxWidth: 230)
+                }.labelsHidden().controlSize(.small).frame(maxWidth: 230)
             }
         }
     }
     var scopeCount: some View {
         Text(tr("%1$@ tabs · %2$@ protected", String(model.pages.count), String(model.pages.filter { !$0.canArchive }.count)))
-            .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+            .contentTransition(.numericText())
     }
     static func archivePlan(_ selection: [TabWorkspace.Page], name: String) -> Plan? {
         let pages = selection.filter(\.canArchive)
@@ -245,59 +258,70 @@ struct TabWorkspaceView: View {
         plan = Self.archivePlan(pages, name: name ?? batchName)
     }
     var archiveTabs: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 10) {
-                Label(tr("Put unused tabs away for later"), systemImage: "archivebox").font(.headline)
-                Text(tr("Save their links on this Mac, then close the tabs. Reopen them from Saved for later when you need them."))
-                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Text(tr("Form input, scroll positions and sign-in state are not saved."))
-                    .font(.caption).foregroundStyle(.orange)
-                ViewThatFits(in: .horizontal) {
-                    HStack { archiveName; archivePrimary }.frame(minWidth: 580)
-                    VStack(alignment: .leading, spacing: 8) { archiveName; archivePrimary }
-                }
-                if model.candidates.isEmpty && !model.busy {
-                    Text(tr("No tabs can be safely closed in this scope. Protected tabs are kept."))
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }.padding(16).glass(radius: 14)
-            HStack {
-                TextField(tr("Search title, website or category"), text: $search).textFieldStyle(.roundedBorder)
-                Menu(tr("Select tabs")) {
-                    Button(tr("Select only closable tabs")) { model.selected = Set(model.candidates.map(\.id)) }
-                    Button(tr("Clear selection")) { model.selected = [] }
-                }.disabled(model.busy)
-            }
-            if !model.selected.isEmpty {
-                HStack {
-                    Text(tr("%1$@ selected · %2$@ can be saved and closed", String(model.chosen.count), String(eligibleSelection.count)))
-                        .font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Button(tr("Clear selection")) { model.selected = [] }.buttonStyle(.link)
-                }
-            }
-            DisclosureGroup(tr("Optional: organize this list with your own categories"), isExpanded: $categorizing) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(tr("These categories only change the list in Thermo. They do not change Chrome groups or close any tabs."))
-                        .font(.caption).foregroundStyle(.secondary)
-                    ViewThatFits(in: .horizontal) {
-                        HStack { categoryName; categoryActions }.frame(minWidth: 620)
-                        VStack(alignment: .leading, spacing: 8) { categoryName; categoryActions }
-                    }
-                }.padding(.top, 6)
-            }.font(.caption)
+        let all = pickable(filtered)
+        return VStack(spacing: 0) {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 12) {
-                    ForEach(groupNames, id: \.self) { group in groupRow(group) }
-                    if filtered.isEmpty {
-                        Text(search.isEmpty ? tr("No tabs in this scope. Choose another window or refresh.") : tr("No matching pages."))
-                            .font(.callout).foregroundStyle(.secondary).padding(.vertical, 20)
+                VStack(alignment: .leading, spacing: Theme.Space.m) {
+                    HStack(spacing: Theme.Space.s) {
+                        Image(systemName: "archivebox").font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.accent)
+                        Text(tr("Put unused tabs away for later")).font(Theme.heading).foregroundStyle(Theme.textPrimary)
+                        InfoButton(text: tr("Save their links on this Mac, then close the tabs. Reopen them from Saved for later when you need them.")
+                                   + "\n\n" + tr("Form input, scroll positions and sign-in state are not saved."))
+                        Spacer()
                     }
+                    HStack(spacing: Theme.Space.s) {
+                        SearchField(text: $search, prompt: tr("Search title, website or category"))
+                        archiveName.frame(maxWidth: 260)
+                    }
+                    if model.candidates.isEmpty && !model.busy {
+                        Text(tr("No tabs can be safely closed in this scope. Protected tabs are kept."))
+                            .font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                    }
+                    if model.busy && model.inventory == nil { SkeletonList(rows: 5) }
+                    ForEach(groupNames, id: \.self) { group in groupRow(group) }
+                    if filtered.isEmpty && !(model.busy && model.inventory == nil) {
+                        InspectorPanel {
+                            EmptyState(symbol: "rectangle.stack", title: search.isEmpty ? tr("No tabs in this scope. Choose another window or refresh.") : tr("No matching pages."))
+                        }
+                    }
+                    DisclosureGroup(isExpanded: $categorizing) {
+                        VStack(alignment: .leading, spacing: Theme.Space.s) {
+                            Text(tr("These categories only change the list in Thermo. They do not change Chrome groups or close any tabs."))
+                                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                            ViewThatFits(in: .horizontal) {
+                                HStack { categoryName; categoryActions }.frame(minWidth: 620)
+                                VStack(alignment: .leading, spacing: Theme.Space.s) { categoryName; categoryActions }
+                            }
+                        }.padding(.top, Theme.Space.s)
+                    } label: {
+                        Text(tr("Optional: organize this list with your own categories")).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                    }
+                    .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m).glass()
                 }
+                .padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.xl)
+                .frame(maxWidth: Theme.pageWidth, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            ActionBar {
+                SelectAllButton(available: all.count, selected: all.filter { model.selected.contains($0.id) }.count,
+                                selectAll: { model.selected.formUnion(all.map(\.id)) },
+                                clear: { model.selected.subtract(all.map(\.id)) })
+                if !model.selected.isEmpty {
+                    Text(tr("%1$@ selected · %2$@ can be saved and closed", String(model.chosen.count), String(eligibleSelection.count)))
+                        .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                        .contentTransition(.numericText())
+                }
+                Spacer()
+                archivePrimary
             }
         }
     }
-    var archiveName: some View { TextField(tr("Name this saved set (optional)"), text: $batchName).textFieldStyle(.roundedBorder) }
+    var archiveName: some View {
+        TextField(tr("Name this saved set (optional)"), text: $batchName).textFieldStyle(.plain).font(Theme.secondary)
+            .padding(.horizontal, 10).frame(height: 28)
+            .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Color.white.opacity(0.055)))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).strokeBorder(Theme.hairline))
+    }
     var archivePrimary: some View {
         Button { requestArchive(model.selected.isEmpty ? model.candidates : eligibleSelection) } label: {
             Label(tr("Review saving %1$@ tabs", String(model.selected.isEmpty ? model.candidates.count : eligibleSelection.count)), systemImage: "archivebox")
@@ -306,86 +330,132 @@ struct TabWorkspaceView: View {
     var categoryName: some View { TextField(tr("Category name for selected tabs"), text: $groupName).textFieldStyle(.roundedBorder) }
     var categoryActions: some View {
         HStack {
-            Button(tr("Apply category")) { model.group(groupName) }
+            Button(tr("Apply category")) { model.group(groupName) }.buttonStyle(PillButtonStyle()).controlSize(.small)
                 .disabled(model.chosen.isEmpty || groupName.trimmingCharacters(in: .whitespaces).isEmpty || model.busy)
-            Button(tr("Reset this list by website")) { model.group(nil) }.disabled(model.busy || model.pages.isEmpty)
+            Button(tr("Reset this list by website")) { model.group(nil) }.buttonStyle(PillButtonStyle()).controlSize(.small)
+                .disabled(model.busy || model.pages.isEmpty)
         }
     }
+    /// One website or category: a header that ticks or clears the whole group, then its tabs.
     func groupRow(_ name: String) -> some View {
         let pages = filtered.filter { $0.group == name }
         let closable = pages.filter(\.canArchive)
-        return DisclosureGroup {
-            ForEach(pages) { page in
-                HStack(alignment: .top, spacing: 10) {
-                    Toggle(isOn: Binding(get: { model.selected.contains(page.id) }, set: { if $0 { model.selected.insert(page.id) } else { model.selected.remove(page.id) } })) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(page.tab.title.isEmpty ? page.tab.url : page.tab.title).lineLimit(2)
-                            Text(TabWorkspace.site(page.tab.url)).font(.caption).foregroundStyle(.secondary)
-                        }
-                    }.toggleStyle(.checkbox).font(.callout).disabled(model.busy || (!page.canArchive && !categorizing))
-                    Spacer()
-                    if model.allWindows { Text(model.windowLabel(page.tab.window)).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
-                    if let reason = page.protectedReason { Label(tr(reason), systemImage: "lock.fill").font(.caption).foregroundStyle(.secondary).lineLimit(2) }
-                }.padding(.vertical, 5)
-            }
-        } label: {
-            HStack {
-                Label(name, systemImage: "folder").font(.callout.weight(.semibold)).foregroundStyle(.cyan).lineLimit(1)
-                Text(tr("%1$@ tabs", String(pages.count))).font(.caption).foregroundStyle(.secondary)
+        let picks = pickable(pages)
+        let open = !collapsed.contains(name)
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: Theme.Space.s) {
+                SelectAllButton(title: name, available: picks.count, selected: picks.filter { model.selected.contains($0.id) }.count,
+                                selectAll: { model.selected.formUnion(picks.map(\.id)) },
+                                clear: { model.selected.subtract(picks.map(\.id)) })
+                Text(tr("%1$@ tabs", String(pages.count))).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                 Spacer()
                 if closable.isEmpty {
-                    Label(tr("All tabs kept"), systemImage: "lock.fill").font(.caption).foregroundStyle(.secondary)
+                    Label(tr("All tabs kept"), systemImage: "lock.fill").font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 } else {
                     Button(tr("Save and close %1$@", String(closable.count))) { requestArchive(closable, name: name) }
-                        .buttonStyle(PillButtonStyle()).disabled(model.busy)
+                        .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.busy)
                 }
+                Button {
+                    withAnimation(Theme.standard.unlessReduced(reduceMotion)) {
+                        if open { collapsed.insert(name) } else { collapsed.remove(name) }
+                    }
+                } label: { DisclosureChevron(expanded: open) }
+                .buttonStyle(.plain).accessibilityLabel(name).accessibilityValue(open ? tr("Expanded") : tr("Collapsed"))
             }
-        }.padding(12).glass(radius: 12)
+            .padding(.horizontal, Theme.Space.m).padding(.vertical, 10)
+            if open {
+                ForEach(pages) { page in
+                    InspectorDivider(inset: 44)
+                    tabRow(page)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .glass()
+        .clipShape(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
+    }
+    func tabRow(_ page: TabWorkspace.Page) -> some View {
+        let on = model.selected.contains(page.id)
+        let locked = !page.canArchive && !categorizing
+        let title = page.tab.title.isEmpty ? page.tab.url : page.tab.title
+        return HStack(alignment: .center, spacing: Theme.Space.s) {
+            SelectToggle(selected: on, locked: locked, label: title) {
+                if on { model.selected.remove(page.id) } else { model.selected.insert(page.id) }
+            }
+            .disabled(model.busy)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(Theme.body).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                Text(TabWorkspace.site(page.tab.url)).font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
+            }
+            Spacer()
+            if model.allWindows { Text(model.windowLabel(page.tab.window)).font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1) }
+            if let reason = page.protectedReason { StatusTag(text: tr(reason)) }
+        }
+        .padding(.horizontal, Theme.Space.m).padding(.vertical, 6)
+        .background(on ? Theme.accent.opacity(0.07) : .clear)
+        .hoverHighlight()
     }
     var savedGroups: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 14) {
+            LazyVStack(alignment: .leading, spacing: Theme.Space.m) {
                 if model.saved.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "archivebox").font(.system(size: 32)).foregroundStyle(.cyan)
-                        Text(tr("Nothing saved for later yet")).font(.headline)
-                        Text(tr("Use Save and close to keep links here before putting unused tabs away."))
-                            .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                        Button(tr("Choose tabs to save")) { task = .archive }.buttonStyle(PillButtonStyle(prominent: true))
-                    }.frame(maxWidth: .infinity).padding(.vertical, 48)
+                    InspectorPanel {
+                        VStack(spacing: Theme.Space.m) {
+                            EmptyState(symbol: "archivebox", title: tr("Nothing saved for later yet"),
+                                       detail: tr("Use Save and close to keep links here before putting unused tabs away."))
+                                .padding(.bottom, -Theme.Space.xl)
+                            Button(tr("Choose tabs to save")) { task = .archive }.buttonStyle(PillButtonStyle(prominent: true))
+                                .padding(.bottom, Theme.Space.xl)
+                        }
+                    }
                 }
                 ForEach(model.saved) { record in
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Label(record.name, systemImage: "archivebox.fill").font(.headline).lineLimit(1)
-                            Spacer()
-                            Button(tr("Reopen %1$@ tabs", String(record.remaining))) { plan = Plan(archive: record) }
-                                .buttonStyle(PillButtonStyle(prominent: record.remaining > 0)).disabled(record.remaining == 0 || model.busy)
-                        }
-                        Text(record.saved, style: .date).font(.caption).foregroundStyle(.secondary)
-                        Text(tr("%1$@ saved · %2$@ closed · %3$@ not yet reopened", String(record.entries.count), String(record.closed), String(record.remaining)))
-                            .font(.caption).foregroundStyle(.secondary)
-                        if record.remaining == 0 { Text(tr("No confirmed closed tabs remain to reopen.")).font(.caption).foregroundStyle(.secondary) }
-                        DisclosureGroup(tr("Links, results and reopening options")) {
-                            Menu(tr("Reopen in a specific window")) {
-                                ForEach(Array(Set((model.inventory?.pages ?? []).map { $0.tab.window })).sorted(), id: \.self) { window in
-                                    Button(model.windowLabel(window)) { plan = Plan(archive: record, destinationWindow: window) }
-                                }
-                            }.disabled(record.remaining == 0 || model.busy)
-                            ForEach(record.entries) { entry in
-                                HStack(alignment: .top) {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(entry.page.tab.title).font(.callout)
-                                        Link(entry.page.tab.url, destination: URL(string: entry.page.tab.url) ?? URL(string: "about:blank")!).font(.caption).lineLimit(1)
-                                    }
-                                    Spacer()
-                                    Text(tr(entry.restoreState ?? entry.status)).font(.caption).foregroundStyle(.secondary)
-                                }.padding(.vertical, 5)
+                    VStack(alignment: .leading, spacing: Theme.Space.s) {
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(record.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                                Text(record.saved, style: .date).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                             }
-                        }.font(.caption)
-                    }.padding(16).glass(radius: 14)
+                            Spacer()
+                            Text(tr("%1$@ saved · %2$@ closed · %3$@ not yet reopened", String(record.entries.count), String(record.closed), String(record.remaining)))
+                                .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                            Button(tr("Reopen %1$@ tabs", String(record.remaining))) { plan = Plan(archive: record) }
+                                .buttonStyle(PillButtonStyle(prominent: record.remaining > 0)).controlSize(.small)
+                                .disabled(record.remaining == 0 || model.busy)
+                        }
+                        if record.remaining == 0 {
+                            Text(tr("No confirmed closed tabs remain to reopen.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                        }
+                        DisclosureGroup {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Menu(tr("Reopen in a specific window")) {
+                                    ForEach(Array(Set((model.inventory?.pages ?? []).map { $0.tab.window })).sorted(), id: \.self) { window in
+                                        Button(model.windowLabel(window)) { plan = Plan(archive: record, destinationWindow: window) }
+                                    }
+                                }.controlSize(.small).fixedSize().disabled(record.remaining == 0 || model.busy).padding(.vertical, Theme.Space.s)
+                                ForEach(record.entries) { entry in
+                                    InspectorDivider(inset: 0)
+                                    HStack(alignment: .top) {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(entry.page.tab.title).font(Theme.secondary).foregroundStyle(Theme.textPrimary)
+                                            Link(entry.page.tab.url, destination: URL(string: entry.page.tab.url) ?? URL(string: "about:blank")!)
+                                                .font(Theme.caption).lineLimit(1)
+                                        }
+                                        Spacer()
+                                        Text(tr(entry.restoreState ?? entry.status)).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                                    }.padding(.vertical, 6)
+                                }
+                            }
+                        } label: {
+                            Text(tr("Links, results and reopening options")).font(Theme.caption).foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                    .padding(Theme.Space.l).glass()
                 }
             }
+            .padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.xl)
+            .frame(maxWidth: Theme.pageWidth, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

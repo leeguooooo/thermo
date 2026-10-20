@@ -166,7 +166,6 @@ struct MemoryPage: View {
                     if !model.suspects.isEmpty { suspectsCard }
                     programsCard
                     trendCard
-                    swapExplainer(b)
                 } else {
                     SkeletonList(rows: 3)
                     SkeletonList(rows: 6)
@@ -215,7 +214,7 @@ struct MemoryPage: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "externaldrive.fill.badge.exclamationmark").foregroundStyle(Theme.danger).font(.title3)
             VStack(alignment: .leading, spacing: 4) {
-                Text(tr("Limited disk space for swap")).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.textPrimary)
+                Text(tr("Limited disk space for swap")).font(Theme.body.weight(.semibold)).foregroundStyle(Theme.textPrimary)
                 Text(tr("Only %1$@ of disk capacity is available to swap. This may restrict memory management; free space, then check again.",
                         ByteFormat.string(b.diskAvailable ?? b.diskFree ?? 0)))
                     .font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
@@ -269,7 +268,7 @@ struct MemoryPage: View {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 5) {
                             RoundedRectangle(cornerRadius: 2).fill(s.color).frame(width: 8, height: 8)
-                            Text(s.title).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
+                            Text(s.title).font(Theme.label).foregroundStyle(Theme.textTertiary)
                         }
                         Text(MemoryFormat.string(bytes: s.bytes)).font(Theme.figure(.row, weight: .medium)).foregroundStyle(Theme.textPrimary)
                             .contentTransition(.numericText())
@@ -280,7 +279,8 @@ struct MemoryPage: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 5) {
                         Image(systemName: "externaldrive").font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.caution)
-                        Text(tr("Swap on the disk")).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
+                        Text(tr("Swap on the disk")).font(Theme.label).foregroundStyle(Theme.textTertiary)
+                        InfoButton(text: swapExplanation(b), title: tr("What swap is"))
                     }
                     Text(b.swapReadable == false ? "—" : b.swapFiles > 0 ? tr("%1$@ of %2$@", MemoryFormat.string(bytes: b.swapUsed), MemoryFormat.string(bytes: b.swapFiles)) : tr("none"))
                         .font(Theme.figure(.row, weight: .medium)).foregroundStyle(b.swapUsed >= 4 << 30 ? Theme.caution : Theme.textPrimary)
@@ -314,6 +314,7 @@ struct MemoryPage: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(tr("Memory and swap")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary)
+                InfoButton(text: tr("Shaded: memory pressure was high. Dashed line: installed memory."))
                 Spacer()
                 ThermoTabs(selection: $hours, options: [(1, "1h"), (6, "6h"), (24, "24h")], size: .small, label: tr("Time span"))
             }
@@ -338,7 +339,7 @@ struct MemoryPage: View {
                         }
                     }
                     if let b = model.breakdown {
-                        RuleMark(y: .value("GiB", Double(b.total) / 1_073_741_824)).foregroundStyle(.white.opacity(0.25))
+                        RuleMark(y: .value("GiB", Double(b.total) / 1_073_741_824)).foregroundStyle(Theme.textTertiary)
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                     }
                 }
@@ -352,8 +353,6 @@ struct MemoryPage: View {
                     AxisValueLabel(format: .dateTime.hour().minute()).foregroundStyle(Theme.textTertiary)
                 } }
                 .frame(height: 160)
-                Text(tr("Shaded: memory pressure was high. Dashed line: installed memory."))
-                    .font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
             } else {
                 EmptyState(symbol: "chart.xyaxis.line", title: tr("Thermo records memory once a minute; the chart fills in as it does."))
                     .padding(.vertical, -24)
@@ -367,7 +366,7 @@ struct MemoryPage: View {
     var suspectsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label(tr("Programs growing in memory"), systemImage: "chart.line.uptrend.xyaxis")
-                .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.caution)
+                .font(Theme.sectionTitle).foregroundStyle(Theme.caution)
             ForEach(model.suspects) { s in
                 HStack(alignment: .center, spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -405,14 +404,15 @@ struct MemoryPage: View {
         let top = Double(max(1, visible.map { sortByResident ? $0.residentKB ?? 0 : ($0.memoryMetric == .mixed || $0.memoryMetric == .unavailable ? 0 : $0.memoryKB) }.max() ?? 1))
         return VStack(alignment: .leading, spacing: 10) {
             SectionHeader(title: tr("Programs by memory")) {
-                if let sampled = model.sampled {
-                    Text(sampled, style: .time).font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                HStack(spacing: Theme.Space.xs) {
+                    if let sampled = model.sampled {
+                        Text(sampled, style: .time).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                    }
+                    // The column is easy to read as RAM or swap; what it is stays one click away.
+                    InfoButton(text: tr("Memory footprint is Activity Monitor's Memory column: what a program is charged for, compressed memory included, some of which may be in swap. Adding programs up gives neither the used memory above nor the swap size; resident memory counts shared pages and cannot be subtracted from footprint to get swap."),
+                               title: tr("Memory footprint"))
                 }
             }
-            // Said before the numbers, not under them: the column is easy to read as RAM or swap.
-            Text(tr("Memory footprint is Activity Monitor's Memory column: what a program is charged for, compressed memory included, some of which may be in swap. Adding programs up gives neither the used memory above nor the swap size; resident memory counts shared pages and cannot be subtracted from footprint to get swap."))
-                .font(.system(size: 11)).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 2)
             HStack(spacing: 10) {
                 SearchField(text: $search, prompt: tr("Search programs, projects or PID"))
                 ThermoTabs(selection: $sortByResident, options: [(false, tr("Memory footprint")), (true, tr("Resident memory"))],
@@ -431,7 +431,7 @@ struct MemoryPage: View {
                     }.frame(minWidth: 640)
                     Text(tr("Memory footprint") + " · " + tr("Resident memory"))
                 }
-                .font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
+                .font(Theme.label).foregroundStyle(Theme.textTertiary)
                 .padding(.horizontal, 14).padding(.vertical, 8)
                 ForEach(list) { p in
                     InspectorDivider(inset: 14)
@@ -442,14 +442,14 @@ struct MemoryPage: View {
                     Button(showAll ? tr("Show fewer") : tr("Show all %1$@", String(visible.count))) {
                         withAnimation(Theme.standard.unlessReduced(reduceMotion)) { showAll.toggle() }
                     }
-                    .buttonStyle(.plain).font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.accent)
+                    .buttonStyle(.plain).font(Theme.secondary.weight(.medium)).foregroundStyle(Theme.accent)
                     .frame(maxWidth: .infinity).padding(.vertical, 9).contentShape(Rectangle()).hoverHighlight()
                 }
             }
             .glass()
             if model.unreadableCount > 0 {
                 Text(tr("%1$@ processes have no footprint reading; resident estimates and missing values are marked.", String(model.unreadableCount)))
-                    .font(.system(size: 11)).foregroundStyle(Theme.caution)
+                    .font(Theme.caption).foregroundStyle(Theme.caution)
             }
             ForEach([pulse.quitProblem, pulse.restartProblem, pulse.actionFeedback].compactMap { $0 }, id: \.self) { t in
                 NoticeBanner(text: t)
@@ -478,17 +478,17 @@ struct MemoryPage: View {
                 if let app = program.contexts.first?.app {
                     Image(nsImage: NSWorkspace.shared.icon(forFile: app)).resizable().frame(width: 22, height: 22)
                 } else {
-                    Image(systemName: "terminal").font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textSecondary)
+                    Image(systemName: "terminal").font(Theme.label).foregroundStyle(Theme.textSecondary)
                         .frame(width: 22, height: 22)
                         .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.white.opacity(0.07)))
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
                         Text(program.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
-                        Text("×\(program.processCount)").font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                        Text("×\(program.processCount)").font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                     }
                     Text(program.contexts.first?.app != nil ? tr("App · expand for processes") : tr("%1$@ projects · expand for processes", String(program.projects.count)))
-                        .font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 GeometryReader { g in
                     ZStack(alignment: .leading) {
@@ -509,8 +509,8 @@ struct MemoryPage: View {
                         Button { if isOpen { expanded.remove(program.id) } else { expanded.insert(program.id) } } label: {
                             Image(systemName: isOpen ? "chevron.down" : "chevron.right")
                         }.buttonStyle(.plain).accessibilityLabel(tr("Inspect %1$@", program.name))
-                        Text(program.name).font(.callout.weight(.medium)).lineLimit(1).truncationMode(.middle)
-                        Text("×\(program.processCount)").foregroundStyle(.secondary).fixedSize()
+                        Text(program.name).font(Theme.rowTitle).lineLimit(1).truncationMode(.middle)
+                        Text("×\(program.processCount)").foregroundStyle(Theme.textSecondary).fixedSize()
                         Spacer(minLength: 0)
                         Text(metric(program.memoryKB, program.memoryMetric)).fixedSize()
                     }
@@ -519,12 +519,12 @@ struct MemoryPage: View {
                             Text(program.contexts.first?.app != nil ? tr("App · expand for processes") : tr("%1$@ projects · expand for processes", String(program.projects.count)))
                                 .lineLimit(1)
                             Text(tr("Resident memory") + ": " + (program.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"))
-                        }.font(.caption2).foregroundStyle(.secondary)
+                        }.font(Theme.caption).foregroundStyle(Theme.textSecondary)
                         Spacer(minLength: 4)
                         if let target = program.actionTarget { actions(target, emphasizeRestart: false) }
                     }
                 }
-            }.font(.system(size: 12).monospacedDigit())
+            }.font(Theme.secondary.monospacedDigit())
             .contentShape(Rectangle())
             .onTapGesture { toggleProgram(program.id) }
             if isOpen {
@@ -555,11 +555,11 @@ struct MemoryPage: View {
                         AxisValueLabel { if let d = v.as(Double.self) { Text(String(format: "%.1f GiB", d)) } }
                     } }
                 Text(tr("Program totals include changing workloads; growth alone does not prove a leak."))
-                    .foregroundStyle(.secondary)
-            }.font(.caption2).padding(.leading, 32).padding(.trailing, 16)
+                    .foregroundStyle(Theme.textSecondary)
+            }.font(Theme.caption).padding(.leading, 32).padding(.trailing, 16)
         } else {
             Text(tr("Program trend appears after comparable samples are collected."))
-                .font(.caption2).foregroundStyle(.secondary).padding(.leading, 32)
+                .font(Theme.caption).foregroundStyle(Theme.textSecondary).padding(.leading, 32)
         }
     }
 
@@ -573,10 +573,10 @@ struct MemoryPage: View {
                 }.buttonStyle(.plain)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(h.project ?? h.app ?? tr("Unknown project")).lineLimit(1).truncationMode(.middle).help(h.project ?? h.app ?? "")
-                    Text(detail(h)).font(.caption2).foregroundStyle(.secondary)
+                    Text(detail(h)).font(Theme.caption).foregroundStyle(Theme.textSecondary)
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 Text(metric(h.memoryKB, h.memoryMetric)).frame(width: 84, alignment: .trailing)
-                Text(h.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").foregroundStyle(.secondary).frame(width: 84, alignment: .trailing)
+                Text(h.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").foregroundStyle(Theme.textSecondary).frame(width: 84, alignment: .trailing)
                 Group { if showActions { actions(h, emphasizeRestart: false) } else { Color.clear.frame(height: 1) } }
                     .frame(width: 190, alignment: .trailing)
             }
@@ -590,10 +590,10 @@ struct MemoryPage: View {
                         Spacer(minLength: 0)
                         Text(metric(h.memoryKB, h.memoryMetric)).fixedSize()
                     }
-                    Text(detail(h)).foregroundStyle(.secondary).lineLimit(2)
+                    Text(detail(h)).foregroundStyle(Theme.textSecondary).lineLimit(2)
                     HStack {
                         Text(tr("Resident memory") + ": " + (h.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Theme.textSecondary)
                         Spacer(minLength: 4)
                         if showActions { actions(h, emphasizeRestart: false) }
                     }
@@ -615,10 +615,10 @@ struct MemoryPage: View {
                             let detail = "\(tr("Memory footprint")): \(footprint) · \(tr("Resident memory")): \(resident)"
                             Text(detail)
                         }
-                    }.foregroundStyle(.secondary).padding(.leading, 20)
+                    }.foregroundStyle(Theme.textSecondary).padding(.leading, 20)
                 }
             }
-        }.font(.caption.monospacedDigit()).padding(.leading, 32)
+        }.font(Theme.caption.monospacedDigit()).padding(.leading, 32)
     }
 
     func detail(_ h: MachinePulse.Hog) -> String {
@@ -653,20 +653,12 @@ struct MemoryPage: View {
 
     // MARK: Swap
 
-    func swapExplainer(_ b: MemoryBreakdown) -> some View {
-        DisclosureGroup {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(tr("When programs need more memory than the Mac has, macOS first compresses memory that is not being used, then writes some of it to swap files on the disk. Reading it back from the disk is far slower than memory, which is when the Mac feels slow."))
-                Text(tr("Swap files stay until memory frees up and macOS removes them by itself; there is nothing to delete by hand. Restarting the program that holds the memory, or the Mac, gives it back."))
-                Text(tr("Swap needs free disk space. With less than about 5 GB free, macOS cannot grow it and asks you to force quit apps."))
-                Text(tr("Since startup %1$@ was written to swap and %2$@ read back.",
-                        MemoryFormat.string(bytes: b.swapOuts * UInt64(vm_kernel_page_size)), MemoryFormat.string(bytes: b.swapIns * UInt64(vm_kernel_page_size))))
-                    .foregroundStyle(.white.opacity(0.5))
-            }
-            .font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
-        } label: {
-            Text(tr("What swap is")).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.textPrimary)
-        }
-        .padding(14).glass()
+    func swapExplanation(_ b: MemoryBreakdown) -> String {
+        [tr("When programs need more memory than the Mac has, macOS first compresses memory that is not being used, then writes some of it to swap files on the disk. Reading it back from the disk is far slower than memory, which is when the Mac feels slow."),
+         tr("Swap files stay until memory frees up and macOS removes them by itself; there is nothing to delete by hand. Restarting the program that holds the memory, or the Mac, gives it back."),
+         tr("Swap needs free disk space. With less than about 5 GB free, macOS cannot grow it and asks you to force quit apps."),
+         tr("Since startup %1$@ was written to swap and %2$@ read back.",
+            MemoryFormat.string(bytes: b.swapOuts * UInt64(vm_kernel_page_size)), MemoryFormat.string(bytes: b.swapIns * UInt64(vm_kernel_page_size)))]
+            .joined(separator: "\n\n")
     }
 }

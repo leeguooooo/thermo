@@ -91,48 +91,31 @@ struct StartupItemsPage: View {
     @State private var backgroundReview = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 0) {
             PageHeader(title: tr("Software"), subtitle: tr("User and shared startup items, plus system services")) {
                 EmptyView()
             } below: {
                 SoftwareTabPicker(tab: $tab)
             }
-            Text(tr("Changes background startup eligibility; does not stop or start a running program."))
-                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
-            if let message = model.message { Text(message).font(.callout).textSelection(.enabled) }
-            if model.exitRequested { Text(tr(model.authorizing ? "Wait for the background inspection to finish or cancel authorization." : "Wait for the startup change to finish before quitting.")).font(.callout).foregroundStyle(.orange) }
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 12) {
-                    backgroundItems
-                    if let issues = model.report?.issues, !issues.isEmpty {
-                        DisclosureGroup(tr("%1$@ startup files or states need review", String(issues.count))) {
-                            ForEach(issues, id: \.self) { Text(tr($0)).font(.callout).textSelection(.enabled) }
-                        }.font(.callout).foregroundStyle(.orange)
-                    }
-                    ForEach(model.report?.items ?? []) { item in
-                        HStack(alignment: .top, spacing: 12) {
-                            Image(systemName: "power").foregroundStyle(.indigo).padding(.top, 3)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(item.label).font(.headline).textSelection(.enabled)
-                                Text(item.effectiveScope.title).font(.caption).foregroundStyle(.secondary)
-                                if item.requiresAdministrator { Text(tr("Administrator approval required")).font(.caption).foregroundStyle(.secondary) }
-                                Text(item.program ?? item.path).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
-                                Text(item.enabled.map { $0 ? tr("Enabled") : tr("Disabled") } ?? tr("Unknown"))
-                                    .font(.caption).foregroundStyle(.secondary)
-                                if let why = item.blocked { Text(tr(why)).font(.caption).foregroundStyle(.orange) }
-                            }
-                            Spacer()
-                            Button(item.enabled == true ? tr("Disable…") : tr("Enable…")) { reviewed = item }
-                                .buttonStyle(PillButtonStyle()).disabled(model.busy || item.blocked != nil || item.enabled == nil)
-                        }.padding(14).glass(radius: 14)
-                    }
-                    if let report = model.report, report.items.isEmpty {
-                        Text(tr("No launch services found. Other login items are managed in System Settings."))
-                            .font(.callout).foregroundStyle(.secondary)
-                    }
+            .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, Theme.Space.l)
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                if let message = model.message { NoticeBanner(text: message) }
+                if model.exitRequested {
+                    Text(tr(model.authorizing ? "Wait for the background inspection to finish or cancel authorization." : "Wait for the startup change to finish before quitting."))
+                        .font(Theme.secondary).foregroundStyle(Theme.caution)
                 }
             }
-            HStack {
+            .padding(.horizontal, Theme.pagePadding)
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Space.xl) {
+                    launchServices
+                    backgroundItems
+                }
+                .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.Space.s).padding(.bottom, Theme.Space.xl)
+                .frame(maxWidth: Theme.pageWidth, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            ActionBar {
                 Button(tr("Open Login Items")) {
                     NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
                 }.buttonStyle(PillButtonStyle())
@@ -141,7 +124,6 @@ struct StartupItemsPage: View {
                 Button(tr("Refresh")) { model.refresh() }.buttonStyle(PillButtonStyle()).disabled(model.busy)
             }
         }
-        .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 14)
         .onAppear { model.refresh() }.onDisappear { model.retire() }
         .sheet(item: $reviewed) { item in
             ConfirmSheet(title: item.enabled == true ? tr("Disable startup item?") : tr("Enable startup item?"),
@@ -159,31 +141,104 @@ struct StartupItemsPage: View {
         }
     }
 
+    /// Launch agents and daemons Thermo can switch on or off, one row each.
+    var launchServices: some View {
+        let items = model.report?.items ?? []
+        return VStack(alignment: .leading, spacing: Theme.Space.s) {
+            SectionHeader(title: tr("Startup items")) {
+                HStack(spacing: Theme.Space.xs) {
+                    if model.report != nil {
+                        Text(String(items.count)).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                    }
+                    InfoButton(text: tr("Changes background startup eligibility; does not stop or start a running program."))
+                }
+            }
+            if let issues = model.report?.issues, !issues.isEmpty {
+                DisclosureGroup {
+                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        ForEach(issues, id: \.self) { Text(tr($0)).font(Theme.caption).foregroundStyle(Theme.textSecondary).textSelection(.enabled) }
+                    }.padding(.top, Theme.Space.xs)
+                } label: {
+                    Label(tr("%1$@ startup files or states need review", String(issues.count)), systemImage: "exclamationmark.triangle")
+                        .font(Theme.secondary).foregroundStyle(Theme.caution)
+                }
+                .padding(.horizontal, Theme.Space.m).padding(.vertical, Theme.Space.s)
+                .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.caution.opacity(0.07)))
+            }
+            if model.report == nil {
+                SkeletonList(rows: 4)
+            } else if items.isEmpty {
+                InspectorPanel { EmptyState(symbol: "power", title: tr("No launch services found. Other login items are managed in System Settings.")) }
+            } else {
+                RowList(items: items, inset: 44) { item in
+                    HStack(alignment: .center, spacing: Theme.Space.m) {
+                        Image(systemName: "power").font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(item.enabled == true ? Theme.good : Theme.textTertiary)
+                            .frame(width: 18)
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text(item.label).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1).textSelection(.enabled)
+                                StatusTag(text: item.enabled.map { $0 ? tr("Enabled") : tr("Disabled") } ?? tr("Unknown"),
+                                          color: item.enabled == true ? Theme.good : Theme.textSecondary)
+                                if item.requiresAdministrator { StatusTag(text: tr("Administrator approval required")) }
+                            }
+                            Text(item.effectiveScope.title + " · " + (item.program ?? item.path))
+                                .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
+                                .textSelection(.enabled).help(item.program ?? item.path)
+                            if let why = item.blocked { Text(tr(why)).font(Theme.caption).foregroundStyle(Theme.caution) }
+                        }
+                        Spacer(minLength: Theme.Space.s)
+                        Button(item.enabled == true ? tr("Disable…") : tr("Enable…")) { reviewed = item }
+                            .buttonStyle(PillButtonStyle()).controlSize(.small)
+                            .disabled(model.busy || item.blocked != nil || item.enabled == nil)
+                    }
+                    .padding(.horizontal, Theme.Space.m).padding(.vertical, 10)
+                    .hoverHighlight()
+                }
+            }
+        }
+    }
+
     var backgroundItems: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(tr("Login and background registrations")).font(.headline)
-                Spacer()
-                Button(tr(model.authorizing ? "Reading…" : "Read with approval…")) { backgroundReview = true }
-                    .buttonStyle(PillButtonStyle()).disabled(model.busy)
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            SectionHeader(title: tr("Login and background registrations")) {
+                HStack(spacing: Theme.Space.s) {
+                    if let date = model.background.observedAt {
+                        Text(tr("Checked at %1$@", date.formatted(date: .numeric, time: .standard)))
+                            .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                    }
+                    InfoButton(text: tr("Registration data is not a running-process status. Use System Settings to manage these entries."))
+                    Button(tr(model.authorizing ? "Reading…" : "Read with approval…")) { backgroundReview = true }
+                        .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.busy)
+                }
             }
+            ForEach(model.background.issues, id: \.self) { Text(tr($0)).font(Theme.caption).foregroundStyle(Theme.caution) }
             if model.background.status == .requiresAuthorization {
-                Text(tr("Modern registration status needs an explicit administrator read. An unread list is not an empty list.")).font(.callout).foregroundStyle(.secondary)
+                InspectorPanel {
+                    EmptyState(symbol: "lock", title: tr("Modern registration status needs an explicit administrator read. An unread list is not an empty list."))
+                }
+            } else if model.background.status == .available && model.background.items.isEmpty {
+                InspectorPanel { EmptyState(symbol: "checkmark.circle", title: tr("No registrations found in the inspected user and system scope.")) }
+            } else if !model.background.items.isEmpty {
+                RowList(items: model.background.items, inset: Theme.Space.m) { item in
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(item.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                            StatusTag(text: item.kind ?? tr("Unknown"))
+                            Spacer()
+                            Text(tr("Requested: %1$@ · Allowed by macOS: %2$@", state(item.requested), state(item.allowed)))
+                                .font(Theme.caption).foregroundStyle(item.allowed == false ? Theme.caution : Theme.textSecondary)
+                        }
+                        Text(item.identifier ?? item.uuid).font(Theme.mono).foregroundStyle(Theme.textTertiary).lineLimit(1).textSelection(.enabled)
+                        if let path = item.executable ?? item.path {
+                            Text(path).font(Theme.mono).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
+                        }
+                    }
+                    .padding(.horizontal, Theme.Space.m).padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
-            if let date = model.background.observedAt { Text(tr("Checked at %1$@", date.formatted(date: .numeric, time: .standard))).font(.caption).foregroundStyle(.secondary) }
-            ForEach(model.background.issues, id: \.self) { Text(tr($0)).font(.caption).foregroundStyle(.orange) }
-            ForEach(model.background.items) { item in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.name).font(.headline)
-                    Text(item.identifier ?? item.uuid).font(.caption).textSelection(.enabled)
-                    if let path = item.executable ?? item.path { Text(path).font(.caption).textSelection(.enabled) }
-                    Text(tr("Requested: %1$@ · Allowed by macOS: %2$@", state(item.requested), state(item.allowed))).font(.caption)
-                    Text(item.kind ?? tr("Unknown")).font(.caption).foregroundStyle(.secondary)
-                }.padding(12).frame(maxWidth: .infinity, alignment: .leading).glass(radius: 12)
-            }
-            if model.background.status == .available && model.background.items.isEmpty { Text(tr("No registrations found in the inspected user and system scope.")).font(.callout).foregroundStyle(.secondary) }
-            Text(tr("Registration data is not a running-process status. Use System Settings to manage these entries.")).font(.caption).foregroundStyle(.secondary)
-        }.padding(14).glass(radius: 14)
+        }
     }
     func state(_ flag: Bool?) -> String { flag.map { $0 ? tr("Yes") : tr("No") } ?? tr("Unknown") }
 }

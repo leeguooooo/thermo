@@ -200,6 +200,12 @@ final class ChromePagesModel: ObservableObject {
 
 }
 
+/// The browser page's four places: the three tab-workspace tasks and the memory check.
+enum BrowserSection: Hashable {
+    case task(TabWorkspaceTask)
+    case diagnostics
+}
+
 struct ChromePagesView: View {
     @ObservedObject var model: ChromePagesModel
     /// Inside the main window: on its gradient, rows on glass, the list loads when shown.
@@ -207,37 +213,50 @@ struct ChromePagesView: View {
     @State private var confirming: ClosePlan?
     @State private var search = ""
     @State private var onlyRecommended = false
-    @State private var manageTabs = true
+    @State private var section: BrowserSection = {
+        let args = CommandLine.arguments
+        if args.contains("--offscreen"), let i = args.firstIndex(of: "--tabs-task"), i + 1 < args.count {
+            if args[i + 1] == "diagnostics" { return .diagnostics }
+            return .task(TabWorkspaceTask(rawValue: args[i + 1]) ?? .organize)
+        }
+        return .task(.organize)
+    }()
     struct ClosePlan: Identifiable { let id = UUID(); let tabs: [ChromeInspector.Tab] }
+
+    var taskBinding: Binding<TabWorkspaceTask> {
+        Binding(get: { if case let .task(t) = section { return t } else { return .organize } }, set: { section = .task($0) })
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker(tr("Browser pages"), selection: $manageTabs) {
-                Text(tr("Tab organizer")).tag(true)
-                Text(tr("Memory diagnostics")).tag(false)
-            }.pickerStyle(.segmented).padding(.horizontal, 24).padding(.top, 24)
-            if manageTabs { TabWorkspaceView(app: model.app) }
-            else { diagnosticsBody }
+            PageHeader(title: tr("Tab organizer"), subtitle: section == .diagnostics ? summary
+                       : tr("Group tabs without closing them, or save links and close tabs you are not using.")) {
+                EmptyView()
+            } below: {
+                ThermoTabs(selection: $section,
+                           options: TabWorkspaceTask.allCases.map { (BrowserSection.task($0), $0.title) } + [(.diagnostics, tr("Memory diagnostics"))],
+                           label: tr("Browser pages"))
+            }
+            .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, Theme.Space.l)
+            if section == .diagnostics { diagnosticsBody }
+            else { TabWorkspaceView(app: model.app, task: taskBinding) }
         }
     }
 
     var diagnosticsBody: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header.padding(embedded ? 32 : 14).padding(.top, embedded ? 16 : 0)
-                .frame(maxWidth: embedded ? 884 : .infinity).frame(maxWidth: .infinity)
-            if !embedded { Divider() }
+            toolbar.padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.m)
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: Theme.Space.l) {
                     if model.running { progress }
                     if let d = model.diagnosis { content(d) } else if !model.running { progress }
                 }
-                .padding(embedded ? 32 : 14).padding(.top, embedded ? -16 : 0)
-                .frame(maxWidth: embedded ? 820 : .infinity, alignment: .leading)
-                .frame(maxWidth: .infinity, alignment: embedded ? .center : .leading)
+                .padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.xl)
+                .frame(maxWidth: Theme.pageWidth, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             selectionFooter
         }
-        .background(embedded ? Color.clear : Color(nsColor: .windowBackgroundColor))
         .onAppear { if embedded && model.diagnosis == nil && !model.running { model.start() } }
         .onDisappear { if model.running { model.stop() } }
         .sheet(item: $confirming) { plan in
@@ -251,42 +270,45 @@ struct ChromePagesView: View {
         }
     }
 
+    /// Pages that can be ticked right now: identified, not stale, and among the ones shown.
+    var selectablePages: [ChromeInspector.PageChoice] {
+        model.busy || model.inventoryStale ? [] : visiblePages.filter { $0.tab.canSelect }
+    }
+
     var selectionFooter: some View {
-        HStack(spacing: 12) {
-            Text(trCount(model.selectedPages.count, "%1$@ page selected", "%1$@ pages selected")).font(.callout.monospacedDigit())
+        ActionBar {
+            SelectAllButton(available: selectablePages.count,
+                            selected: selectablePages.filter { model.selected.contains($0.id) }.count,
+                            selectAll: { model.selected.formUnion(selectablePages.map(\.id)) },
+                            clear: { model.selected.subtract(selectablePages.map(\.id)) })
+            Text(trCount(model.selectedPages.count, "%1$@ page selected", "%1$@ pages selected"))
+                .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                .contentTransition(.numericText())
             Spacer()
-            Button(tr("Clear selection")) { model.selected = [] }.disabled(model.busy || model.selected.isEmpty)
+            Button(tr("Clear selection")) { model.selected = [] }
+                .buttonStyle(PillButtonStyle()).disabled(model.busy || model.selected.isEmpty)
             Button(model.closing ?? tr("Close selected pages")) {
                 confirming = ClosePlan(tabs: model.selectedPages.map(\.tab))
             }
-            .buttonStyle(.borderedProminent).disabled(!model.canCloseSelected)
+            .buttonStyle(PillButtonStyle(prominent: true, color: Theme.danger)).disabled(!model.canCloseSelected)
         }
-        .padding(embedded ? 20 : 14)
-        .background(Color.primary.opacity(0.04))
     }
 
-    var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                if !embedded { Image(systemName: "rectangle.stack").font(.title2).foregroundStyle(.secondary) }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(embedded ? tr("Browser pages") : tr("Which %1$@ page is the problem", model.app))
-                        .font(embedded ? .system(size: 26, weight: .bold) : .headline)
-                    Text(summary).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer()
-            }
-            HStack(spacing: 10) {
-                if model.running {
-                    Button(tr("Stop")) { model.stop() }.controlSize(.small)
-                } else {
-                    Button(tr("Refresh tabs")) { model.start() }.controlSize(.small).disabled(model.busy)
-                    if model.canMeasure {
-                        Button(model.diagnosis?.mode == .devtools ? tr("Measure again") : tr("Measure memory")) { model.start(measure: true) }
-                            .controlSize(.small).buttonStyle(.borderedProminent).disabled(model.busy)
-                    }
+    /// What the check can do next, with the privacy note behind its (?).
+    var toolbar: some View {
+        HStack(spacing: Theme.Space.s) {
+            if model.running {
+                Button(tr("Stop")) { model.stop() }.buttonStyle(PillButtonStyle()).controlSize(.small)
+            } else {
+                Button { model.start() } label: { Label(tr("Refresh tabs"), systemImage: "arrow.clockwise") }
+                    .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.busy)
+                if model.canMeasure {
+                    Button(model.diagnosis?.mode == .devtools ? tr("Measure again") : tr("Measure memory")) { model.start(measure: true) }
+                        .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.busy)
                 }
             }
+            InfoButton(text: tr("Thermo reads page IDs, titles, addresses, memory and current-tab markers, never page content. Nothing closes without confirmation."))
+            Spacer()
         }
     }
 
@@ -310,90 +332,98 @@ struct ChromePagesView: View {
     }
 
     var progress: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
             switch model.phase {
             case .measuring(let round, let done, let total):
-                Text(tr("Measuring pages (%1$@/%2$@): %3$@ of %4$@", String(round), "2", String(done), String(total))).font(.callout)
-                ProgressView(value: Double(done), total: Double(max(total, 1)))
+                Text(tr("Measuring pages (%1$@/%2$@): %3$@ of %4$@", String(round), "2", String(done), String(total)))
+                    .font(Theme.secondary.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                ProgressView(value: Double(done), total: Double(max(total, 1))).tint(Theme.accent)
             case .waiting(let left):
-                Text(tr("Waiting %1$@ s to see which pages grow…", String(left))).font(.callout)
-                ProgressView(value: 60 - Double(left), total: 60)
+                Text(tr("Waiting %1$@ s to see which pages grow…", String(left)))
+                    .font(Theme.secondary.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                ProgressView(value: 60 - Double(left), total: 60).tint(Theme.accent)
             case .listingTabs:
-                Text(tr("Listing tabs…")).font(.callout)
-                ProgressView()
+                SkeletonList(rows: 5)
             case nil:
                 if model.stopped {
-                    Label(tr("Check stopped. You can start again when ready."), systemImage: "pause.circle")
-                        .font(.callout).foregroundStyle(.secondary)
-                    Button(tr("Check again")) { model.start() }
+                    EmptyState(symbol: "pause.circle", title: tr("Check stopped. You can start again when ready."))
+                    Button(tr("Check again")) { model.start() }.buttonStyle(PillButtonStyle()).frame(maxWidth: .infinity)
                 } else {
-                    ProgressView()
+                    SkeletonList(rows: 5)
                 }
             }
-            if model.measuring { Text(ChromeInspector.debuggingBarNote).font(.caption).foregroundStyle(.orange) }
-            Text(tr("Thermo reads page IDs, titles, addresses, memory and current-tab markers, never page content. Nothing closes without confirmation."))
-                .font(.caption).foregroundStyle(.secondary)
+            if model.measuring { Text(ChromeInspector.debuggingBarNote).font(Theme.caption).foregroundStyle(Theme.caution) }
         }
     }
 
     @ViewBuilder
     func content(_ d: ChromeInspector.Diagnosis) -> some View {
-        if let failed = model.closeFailed { note(failed, color: .red) }
+        if let failed = model.closeFailed { note(failed, color: Theme.danger) }
         if let review = model.closeReview {
             section(review.summary, review.detail) { EmptyView() }
         }
         if model.resultsStale {
-            note(tr("Page figures are from before closing. Measure again for fresh per-page memory."), color: .orange)
+            note(tr("Page figures are from before closing. Measure again for fresh per-page memory."), color: Theme.caution)
         }
         pageSelection
         if d.mode == .tabs && model.canMeasure && !model.measuring {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(tr("Which page leaks or uses the most memory? Measure every page twice, a minute apart.")).font(.callout)
-                Text(ChromeInspector.debuggingBarNote).font(.caption).foregroundStyle(.secondary)
-                Button(tr("Measure memory")) { model.start(measure: true) }.controlSize(.small).buttonStyle(.borderedProminent)
+            HStack(spacing: Theme.Space.m) {
+                Image(systemName: "gauge.with.dots.needle.33percent").font(.system(size: 16)).foregroundStyle(Theme.accent)
+                Text(tr("Which page leaks or uses the most memory? Measure every page twice, a minute apart."))
+                    .font(Theme.secondary).foregroundStyle(Theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                InfoButton(text: ChromeInspector.debuggingBarNote)
+                Spacer(minLength: Theme.Space.s)
+                Button(tr("Measure memory")) { model.start(measure: true) }.buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small)
             }
-            .padding(10)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(0.08)))
+            .padding(Theme.Space.m)
+            .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.accent.opacity(0.08)))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).strokeBorder(Theme.accent.opacity(0.2)))
         }
-        if let h = d.hiddenText { note(h, color: .orange) }
-        if let g = d.gap { note(g, color: .secondary) }
+        if let h = d.hiddenText { note(h, color: Theme.caution) }
+        if let g = d.gap { note(g, color: Theme.textSecondary) }
         if let r = d.report {
             if r.invalidTimestamp != true, let skipped = r.comparisonSkipped, skipped > 0 {
-                note(tr("%1$@ pages had no comparable earlier sample; their growth was not evaluated.", String(skipped)), color: .orange)
+                note(tr("%1$@ pages had no comparable earlier sample; their growth was not evaluated.", String(skipped)), color: Theme.caution)
             }
             if r.invalidTimestamp == true {
-                note(tr("Browser measurement times are invalid. Growth comparisons are unavailable; check again."), color: .orange)
+                note(tr("Browser measurement times are invalid. Growth comparisons are unavailable; check again."), color: Theme.caution)
             }
         }
         if let r = d.report, !r.workers.isEmpty {
             section(tr("Workers"), tr("Background scripts associated with a site; closing a tab may not stop all of them.")) {
-                ForEach(r.workers.prefix(5)) { w in
-                    HStack {
-                        Text(tr("%1$@ runs %2$@ workers", w.site, String(w.count))).font(.callout)
-                        Spacer()
-                        if w.heapMB >= 1 { Text(mb(w.heapMB)).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
+                InspectorPanel {
+                    ForEach(Array(r.workers.prefix(5).enumerated()), id: \.offset) { i, w in
+                        if i > 0 { InspectorDivider(inset: Theme.Space.l) }
+                        HStack {
+                            Text(tr("%1$@ runs %2$@ workers", w.site, String(w.count))).font(Theme.body).foregroundStyle(Theme.textPrimary)
+                            Spacer()
+                            if w.heapMB >= 1 { Text(mb(w.heapMB)).font(Theme.figure(.row, weight: .medium)).foregroundStyle(Theme.textSecondary) }
+                        }
+                        .padding(.horizontal, Theme.Space.l).padding(.vertical, 10)
                     }
                 }
             }
         }
         if let h = d.hint {
             VStack(alignment: .leading, spacing: 6) {
-                note(h, color: .secondary)
+                note(h, color: Theme.textSecondary)
                 if d.mode != .devtools && d.app == "Google Chrome" {
                     Button(tr("Copy install command")) {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(ChromeInspector.chromeUseInstall, forType: .string)
                     }
-                    .controlSize(.small)
+                    .buttonStyle(PillButtonStyle()).controlSize(.small)
                 }
             }
         }
     }
 
     func section<C: View>(_ title: String, _ caption: String?, @ViewBuilder _ rows: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.subheadline.weight(.semibold))
-            if let caption { Text(caption).font(.caption).foregroundStyle(.secondary) }
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            HStack(spacing: Theme.Space.xs) {
+                Text(title).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary).accessibilityAddTraits(.isHeader)
+                if let caption { InfoButton(text: caption) }
+            }
             rows()
         }
     }
@@ -406,75 +436,79 @@ struct ChromePagesView: View {
     }
 
     var pageSelection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(tr("Choose pages to close")).font(.subheadline.weight(.semibold))
-            Text(tr("Recommendations are candidates, not automatic closures. Current pages are excluded; unsaved input, pinned status and audio are not inspected."))
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 10) { selectionTools; Spacer(minLength: 0) }
-                .fixedSize(horizontal: false, vertical: true)
-            TextField(tr("Search pages"), text: $search).textFieldStyle(.roundedBorder).accessibilityLabel(tr("Search pages"))
-            if !model.pages.isEmpty && !model.pages.contains(where: { $0.tab.canSelect }) {
-                note(tr("Tab identities are unavailable. Check Thermo's Automation permission and refresh tabs. These rows stay read-only until individual tabs can be identified."), color: .orange)
+        let shown = visiblePages
+        return VStack(alignment: .leading, spacing: Theme.Space.s) {
+            HStack(spacing: Theme.Space.m) {
+                SelectAllButton(title: tr("Choose pages to close"), available: selectablePages.count,
+                                selected: selectablePages.filter { model.selected.contains($0.id) }.count,
+                                selectAll: { model.selected.formUnion(selectablePages.map(\.id)) },
+                                clear: { model.selected.subtract(selectablePages.map(\.id)) })
+                InfoButton(text: tr("Recommendations are candidates, not automatic closures. Current pages are excluded; unsaved input, pinned status and audio are not inspected."))
+                Spacer()
+                Button(tr("Select recommended (%1$@)", String(model.recommendedPages.count))) { model.selectRecommended() }
+                    .buttonStyle(PillButtonStyle()).controlSize(.small)
+                    .disabled(model.busy || model.recommendedPages.isEmpty)
             }
-            ForEach(visiblePages) { choice in selectableRow(choice) }
-            if visiblePages.isEmpty { note(tr("No matching pages."), color: .secondary) }
+            HStack(spacing: Theme.Space.s) {
+                SearchField(text: $search, prompt: tr("Search pages"))
+                ThermoTabs(selection: $onlyRecommended, options: [(false, tr("All pages")), (true, tr("Recommended"))],
+                           size: .small, label: tr("Pages"))
+            }
+            if !model.pages.isEmpty && !model.pages.contains(where: { $0.tab.canSelect }) {
+                note(tr("Tab identities are unavailable. Check Thermo's Automation permission and refresh tabs. These rows stay read-only until individual tabs can be identified."), color: Theme.caution)
+            }
+            if shown.isEmpty {
+                InspectorPanel { EmptyState(symbol: "magnifyingglass", title: tr("No matching pages.")) }
+            } else {
+                RowList(items: shown, inset: 48) { selectableRow($0) }
+            }
         }
     }
-    @ViewBuilder var selectionTools: some View {
-        Picker(tr("Pages"), selection: $onlyRecommended) {
-            Text(tr("All pages")).tag(false)
-            Text(tr("Recommended")).tag(true)
-        }.pickerStyle(.segmented).labelsHidden().frame(width: 230)
-        Button(tr("Select recommended (%1$@)", String(model.recommendedPages.count))) { model.selectRecommended() }
-            .disabled(model.busy || model.recommendedPages.isEmpty)
-    }
+
     func selectableRow(_ choice: ChromeInspector.PageChoice) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Toggle(isOn: Binding(get: { model.selected.contains(choice.id) }, set: { on in
-                if on { model.selected.insert(choice.id) } else { model.selected.remove(choice.id) }
-            })) { Text(choice.tab.title.isEmpty ? choice.tab.url : choice.tab.title) }
-            .toggleStyle(.checkbox).labelsHidden()
-            .accessibilityLabel(tr("Select page: %1$@", choice.tab.title.isEmpty ? choice.tab.url : choice.tab.title))
-            .disabled(model.busy || model.inventoryStale || !choice.tab.canSelect)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(choice.tab.title.isEmpty ? choice.tab.url : choice.tab.title).font(.callout).lineLimit(2)
-                Text([ChromeInspector.site(choice.tab.url), model.position(choice.tab)].compactMap { $0 }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).lineLimit(1).help(choice.tab.url)
-                if choice.tab.active == true { Text(tr("Current page in its window")).font(.caption2).foregroundStyle(.secondary) }
+        let title = choice.tab.title.isEmpty ? choice.tab.url : choice.tab.title
+        let on = model.selected.contains(choice.id)
+        let locked = model.inventoryStale || !choice.tab.canSelect
+        return HStack(alignment: .top, spacing: Theme.Space.m) {
+            SelectToggle(selected: on, locked: locked, label: tr("Select page: %1$@", title)) {
+                if on { model.selected.remove(choice.id) } else { model.selected.insert(choice.id) }
+            }
+            .disabled(model.busy)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(title).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                    if choice.tab.active == true { StatusTag(text: tr("Current page in its window")) }
+                    if choice.recommended { StatusTag(text: tr("Recommended"), color: Theme.caution) }
+                }
+                Text([ChromeInspector.site(choice.tab.url), model.position(choice.tab)].compactMap { $0 }.joined(separator: " · "))
+                    .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1).help(choice.tab.url)
                 if let growth = choice.measured?.growth, growth.seconds.isFinite, growth.seconds > 0 {
                     Text(tr("Growth: %1$@ MiB over %2$@ s", String(format: "%+.1f", growth.heapMB), String(format: "%.0f", growth.seconds)))
-                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                        .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textSecondary)
                 }
-                ForEach(choice.reasons, id: \.self) { Text($0).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true) }
-                if model.inventoryStale || !choice.tab.canSelect { Text(tr("Refresh tabs to enable selection.")).font(.caption).foregroundStyle(.secondary) }
+                ForEach(choice.reasons, id: \.self) {
+                    Text($0).font(Theme.caption).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
+                }
+                if locked { Text(tr("Refresh tabs to enable selection.")).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
                 if let status = model.closeResults.first(where: { $0.id == choice.id })?.status, status != .closed {
                     Text(tr("Not closed: page changed, became active, or could not be reached. Review it before retrying."))
-                        .font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                        .font(Theme.caption).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
                 }
             }.frame(maxWidth: .infinity, alignment: .leading)
             Text(choice.measured.map { mb($0.heapMB) } ?? tr("No matched reading"))
-                .font(.caption.monospacedDigit()).foregroundStyle(.secondary).fixedSize()
+                .font(choice.measured == nil ? Theme.caption : Theme.figure(.row, weight: .medium))
+                .foregroundStyle(choice.measured == nil ? Theme.textTertiary : Theme.textPrimary).fixedSize()
                 .help(choice.measured == nil ? tr("No unique memory reading matches this tab; identical titles and addresses cannot be paired reliably.") : "")
         }
-        .padding(embedded ? 12 : 8)
-        .modifier(RowBackground(embedded: embedded, warn: choice.recommended))
+        .padding(.horizontal, Theme.Space.m).padding(.vertical, 10)
+        .background(on ? Theme.accent.opacity(0.07) : .clear)
+        .hoverHighlight()
+        .animation(Theme.quick, value: on)
     }
 
     func note(_ text: String, color: Color) -> some View {
-        Text(text).font(.caption).foregroundStyle(color).fixedSize(horizontal: false, vertical: true)
+        Text(text).font(Theme.secondary).foregroundStyle(color).fixedSize(horizontal: false, vertical: true)
     }
 
     func mb(_ v: Double) -> String { MemoryFormat.string(mebibytes: v) }
-}
-
-/// A page row: glass in the main window, a light tint in the stand-alone window.
-private struct RowBackground: ViewModifier {
-    let embedded: Bool
-    let warn: Bool
-    func body(content: Content) -> some View {
-        if embedded {
-            content.glass(radius: 12, highlighted: warn)
-        } else {
-            content.background(RoundedRectangle(cornerRadius: 8).fill((warn ? Color.orange : Color.secondary).opacity(0.07)))
-        }
-    }
 }
