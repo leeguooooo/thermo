@@ -2,9 +2,8 @@ import Darwin
 import Foundation
 import ThermoL10n
 
-/// A SQLite write-ahead log an AI tool keeps next to its database. A healthy log is folded back
-/// into the database every so often and stays small; one far bigger than the database is stuck and
-/// keeps eating the disk (codegraph before 1.6.1 grew one to 64 GB).
+/// A large SQLite write-ahead log. File size is an observation, not evidence of checkpoint
+/// failure or continued growth: SQLite may retain and reuse a checkpointed WAL.
 struct StuckLog: Equatable {
     var database: String
     var databaseBytes: Int64
@@ -24,7 +23,8 @@ extension ConfigChecks {
     /// codegraph 1.6.1 checkpoints its log under load (colbymchenry/codegraph#1539, fixed by #1751).
     static let codegraphLogFix = [1, 6, 1]
 
-    /// A log at least 1 GB and bigger than its database; nil when it is fine or missing.
+    /// A log at least 1 GB and bigger than its database; nil below this reporting threshold.
+    /// This metadata-only check does not open SQLite or inspect checkpoint progress.
     static func stuckLog(_ database: String) -> StuckLog? {
         var db = stat(), log = stat()
         guard lstat(database + "-wal", &log) == 0, log.st_mode & S_IFMT == S_IFREG,
@@ -63,7 +63,7 @@ extension ConfigChecks {
         return program.contains("node") || program.contains("codegraph")
     }
 
-    /// Code indexes and agent databases whose write-ahead log has stopped being folded back, and
+    /// Code indexes and agent databases with large write-ahead logs, and
     /// codegraph background processes still running a version with that bug.
     mutating func checkAgentDatabases() {
         guard !env.cancelled() else { return }
@@ -87,10 +87,10 @@ extension ConfigChecks {
             guard let stuck = Self.stuckLog(root + "/.codegraph/codegraph.db") else { continue }
             let buggy = live.filter { $0.root == root && Self.codegraphHasLogBug($0.version) }
             let fix = buggy.isEmpty
-                ? tr("stop the codegraph background process for this project; it folds the log back as it exits. Never delete the -wal file: it holds index data not yet written back")
-                : tr("codegraph %1$@ has this bug (fixed in 1.6.1): run codegraph upgrade, then stop its background process so it folds the log back. Never delete the -wal file: it holds index data not yet written back", buggy[0].version)
+                ? tr("check whether the log keeps growing while the project is idle; size alone does not prove checkpoint failure. If needed, stop codegraph gracefully and recheck. Never delete the -wal file: it may contain uncheckpointed data")
+                : tr("codegraph %1$@ predates the WAL growth fix in 1.6.1; upgrade and restart it gracefully, then recheck the log. Never delete the -wal file: it may contain uncheckpointed data", buggy[0].version)
             findings.append(codegraphFinding(Finding(stuck.logBytes >= Self.stuckLogSevere ? .error : .warning, .mcp, agent: "shared", subject: "codegraph",
-                                     tr("the code index of %1$@ has a %2$@ write-ahead log next to a %3$@ index: the log is not being folded back and keeps growing",
+                                     tr("the code index of %1$@ has a %2$@ write-ahead log next to a %3$@ index; this snapshot cannot establish whether the log is growing or checkpointing is blocked",
                                         env.short(root), Self.bytes(stuck.logBytes), Self.bytes(stuck.databaseBytes)),
                                      fix: fix, source: env.short(stuck.database + "-wal"))))
         }
@@ -110,9 +110,9 @@ extension ConfigChecks {
         for name in names.sorted() where name.hasSuffix(".sqlite") {
             guard let stuck = Self.stuckLog(codex.appendingPathComponent(name).path) else { continue }
             findings.append(Finding(stuck.logBytes >= Self.stuckLogSevere ? .error : .warning, .processes, agent: "codex", subject: name,
-                                    tr("Codex database %1$@ has a %2$@ write-ahead log next to %3$@ of data: the log is not being folded back and keeps growing",
+                                    tr("Codex database %1$@ has a %2$@ write-ahead log next to %3$@ of data; this snapshot cannot establish whether the log is growing or checkpointing is blocked",
                                        name, Self.bytes(stuck.logBytes), Self.bytes(stuck.databaseBytes)),
-                                    fix: tr("quit every Codex session and the Codex app; the log is folded back when the last one closes. Never delete the -wal file"),
+                                    fix: tr("check whether the log keeps growing while Codex is idle; size alone does not prove checkpoint failure. If needed, quit Codex sessions and the app gracefully, then recheck. Never delete the -wal file"),
                                     source: env.short(stuck.database + "-wal")))
         }
     }

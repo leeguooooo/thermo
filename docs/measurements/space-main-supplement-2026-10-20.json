@@ -1,0 +1,42 @@
+{
+  "complete": true,
+  "sourceCommit": "442b79ae682676cbb582760094696da60dc21c9b",
+  "sourceTree": "b0f30a37933cbc670f9881a5ae0edad8fd56f339",
+  "commands": [
+    {
+      "name": "tests.log",
+      "exitCode": 0
+    },
+    {
+      "name": "build.log",
+      "exitCode": 0
+    },
+    {
+      "name": "space-cli.json",
+      "exitCode": 0
+    }
+  ],
+  "CleanKitReleaseTestsPassed": 803,
+  "sourceFilesMatched": 553,
+  "CLIReadOnlyFixture": {
+    "files": 4,
+    "topFolders": 3,
+    "allComplete": true,
+    "largestFirst": true,
+    "fileBytesUnchanged": true
+  },
+  "CLISHA256": "5d1b5d769563669d5b29629c819de599b5b09939b724f7f2b13e7d76b2b1b088",
+  "host": "mac190",
+  "SDKROOT": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+  "fullProductReleaseSuiteOrUniversalPackage": false,
+  "realModelCalled": false,
+  "installedOrPublished": false,
+  "runId": "4ea3c07f-9468-42a7-9aa1-fbce905b44f6",
+  "artifactHashes": {
+    "tests.log": "537c6544c5323f2d7735ef7f430aeafc81dd0d6dbd568c19e082b44b53407186",
+    "build.log": "0b2d4313e0028a9331bdff1756e546cd812f8a75fdd7c0737a050408266ad51a",
+    "space-cli.json": "16481ee6fcf7eee6d926a30df4a8a827425f18f0a609960e6cceb1d28b03301d",
+    "freeze.json": "54be70e808d4bb5837ddf2da1920632867b508dde1ad6598b69c64102b62ab7e"
+  },
+  "scope": "Supplementary CleanKit and read-only CLI checks; does not change candidate 660 or qualify later AgentDoctor changes."
+}

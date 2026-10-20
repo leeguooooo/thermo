@@ -82,6 +82,24 @@ final class AgentDatabaseTests: XCTestCase {
         XCTAssertEqual(c.findings.first?.severity, .warning)
     }
 
+    func testLargeWALReportsOnlyObservedSizeAndPreservesFiles() throws {
+        try file(".codex/state.sqlite", bytes: 40 << 20)
+        try file(".codex/state.sqlite-wal", bytes: 2 << 30)
+        let wal = home.appendingPathComponent(".codex/state.sqlite-wal")
+        let before = try FileManager.default.attributesOfItem(atPath: wal.path)
+        var c = checks(running: [])
+        c.checkAgentDatabases()
+        let finding = try XCTUnwrap(c.findings.first)
+        XCTAssertTrue(finding.message.contains("this snapshot cannot establish"))
+        XCTAssertFalse(finding.message.contains("keeps growing"))
+        XCTAssertTrue(finding.fix?.contains("Never delete") == true)
+        XCTAssertTrue(finding.fix?.contains("recheck") == true)
+        let after = try FileManager.default.attributesOfItem(atPath: wal.path)
+        XCTAssertEqual(before[.size] as? NSNumber, after[.size] as? NSNumber)
+        XCTAssertEqual(before[.modificationDate] as? Date, after[.modificationDate] as? Date)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: home.appendingPathComponent(".codex/state.sqlite").path))
+    }
+
     func testVersionsBeforeTheFix() {
         XCTAssertTrue(ConfigChecks.codegraphHasLogBug("1.6.0"))
         XCTAssertTrue(ConfigChecks.codegraphHasLogBug("v1.5.9"))

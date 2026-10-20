@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "scope": "Report oversized WAL metadata without inferring checkpoint failure or continued growth from one sample.",
+  "references": [
+    "https://sqlite.org/wal.html",
+    "https://github.com/colbymchenry/codegraph/pull/1751"
+  ],
+  "runId": "f5750821-1e82-42f5-af80-5f63c6e57455",
+  "sourceHashes": {
+    "Sources/AgentDoctor/AgentDatabases.swift": "494373456f17e107631edb3e340f40ec847aea77ce8facffb390701fd346e9bf",
+    "Sources/ThermoL10n/ZhHans.swift": "44854185674da157aa50ceff4b47a6c4f0871b2c9faa215e7a6679dc07b68cc1",
+    "Tests/AgentDoctorTests/AgentDatabaseTests.swift": "523f9ecff97387225e6ecae5b26b05e1d0ebc5fc60175403f68e1638d51d0d06"
+  },
+  "installedOrPublished": false,
+  "sourceCommit": "059d5deb467b168aa03b945714c44ae4c6dfdf2f",
+  "AgentDoctorReleaseTestsPassed": 391,
+  "testedSourceMatchesCurrent": true,
+  "artifactHashes": {
+    "tests.log": "20f806e4556423771808a58c0ea47b12853970b7c8847f4c48722e8150356ded",
+    "result.json": "eb7349e26682c581ce8bdafa51d710a6f36e259723062cd0dc80dc86a093731b"
+  },
+  "scopeLimit": "AgentDoctor Release regression only; not a final universal package or native UI acceptance."
+}
