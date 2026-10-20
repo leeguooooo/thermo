@@ -1,0 +1,140 @@
+{
+  "checkedAt": "2026-10-19T18:31:48.591898+00:00",
+  "runId": "1f4db9bf-994a-435c-8522-05c5a2d5c141",
+  "host": "mac190",
+  "inputCommit": "590f2e5e77be940ed03db6ef8b442365e88dbb12",
+  "inputTree": "b327161dd2f3c336fb518457514f8a5260892f82",
+  "buildConfiguration": "Debug",
+  "probes": [
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.37679700000000005,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "baseline",
+      "peakRSSBytesAfter": 63275008,
+      "peakRSSBytesBefore": 37175296,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.3794702917803079,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/1f4db9bf-994a-435c-8522-05c5a2d5c141/test/artifacts/.remote-qa/probe-1-baseline.log",
+      "sha256": "810b222fc07a444d01f4f03c9e1a1f95bb9a74b6c72b16070af43ca3bac65259"
+    },
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.22427200000000003,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "optimized",
+      "peakRSSBytesAfter": 63913984,
+      "peakRSSBytesBefore": 37175296,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.2263330416753888,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/1f4db9bf-994a-435c-8522-05c5a2d5c141/test/artifacts/.remote-qa/probe-1-optimized.log",
+      "sha256": "cd20385bbfaebf1012a402c386fd0f7876bcdedf35cb87b4593554bc523dfb8a"
+    },
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.379452,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "baseline",
+      "peakRSSBytesAfter": 63143936,
+      "peakRSSBytesBefore": 37175296,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.3810944582801312,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/1f4db9bf-994a-435c-8522-05c5a2d5c141/test/artifacts/.remote-qa/probe-2-baseline.log",
+      "sha256": "6c30b115b27c6fa674c1a57d2c87e541214c98c76239458bcdd150cd37ee279f"
+    },
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.225891,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "optimized",
+      "peakRSSBytesAfter": 63913984,
+      "peakRSSBytesBefore": 37175296,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.22769199998583645,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/1f4db9bf-994a-435c-8522-05c5a2d5c141/test/artifacts/.remote-qa/probe-2-optimized.log",
+      "sha256": "2c9ae991db201dd4d5fd1547983252e0d197251ce7ea942aa511ea46c421f993"
+    },
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.374378,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "baseline",
+      "peakRSSBytesAfter": 63143936,
+      "peakRSSBytesBefore": 37175296,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.37612716667354107,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/1f4db9bf-994a-435c-8522-05c5a2d5c141/test/artifacts/.remote-qa/probe-3-baseline.log",
+      "sha256": "a2abca2823e5ffe5155a813a3b9995519f108d18eb9fa94f1494c801c57c4fe8"
+    },
+    {
+      "allRecordsAndIdentitiesEqual": true,
+      "cpuSeconds": 0.22370100000000004,
+      "fixtureBytes": 10083168,
+      "identitiesPerProgram": 8,
+      "mode": "optimized",
+      "peakRSSBytesAfter": 63913984,
+      "peakRSSBytesBefore": 37175296,
+      "programsPerRecord": 48,
+      "readbackRecords": 289,
+      "recordsBefore": 288,
+      "wallSeconds": 0.22577591671142727,
+      "artifact": "/Users/leo/.local/state/session-flow/runs/1f4db9bf-994a-435c-8522-05c5a2d5c141/test/artifacts/.remote-qa/probe-3-optimized.log",
+      "sha256": "1c132ec1cc8663e68f0d789f869143ba772961d1526293c66d6e902f1f378bf3"
+    }
+  ],
+  "median": {
+    "baseline": {
+      "wallSeconds": 0.3794702917803079,
+      "cpuSeconds": 0.37679700000000005,
+      "peakRSSBytesBefore": 37175296,
+      "peakRSSBytesAfter": 63143936
+    },
+    "optimized": {
+      "wallSeconds": 0.2263330416753888,
+      "cpuSeconds": 0.22427200000000003,
+      "peakRSSBytesBefore": 37175296,
+      "peakRSSBytesAfter": 63913984
+    }
+  },
+  "optimizedToBaselineRatio": {
+    "wallSeconds": 0.5964446929785561,
+    "cpuSeconds": 0.5952064374185569,
+    "peakRSSBytesAfter": 1.0121951219512195
+  },
+  "regression": {
+    "tests": 775,
+    "skipped": 1,
+    "failures": 0,
+    "skippedReason": "Private benchmark requires explicit mode; six explicit benchmark invocations ran separately",
+    "artifact": "/Users/leo/.local/state/session-flow/runs/1f4db9bf-994a-435c-8522-05c5a2d5c141/test/artifacts/.remote-qa/clean-kit-regression.log"
+  },
+  "allArtifactHashesVerified": true,
+  "limitations": [
+    "Synthetic owned fixture on Mac190, not production history",
+    "Three alternating pairs, independent test processes; not randomized",
+    "Peak RSS is process lifetime high water including fixture/framework initialization, captured before readback validation",
+    "Debug code and concurrent host activity; no Release or whole-App comparison",
+    "Peak RSS did not improve",
+    "Installed R12 unchanged"
+  ],
+  "sourceSHA256VerifiedAgainstRemoteSnapshot": {
+    "Sources/CleanKit/MemoryState.swift": "3eb1aef39a55ab503822dbcbdd1f676292451261757e9829f70298ed0cf9ef58",
+    "Tests/CleanKitTests/ProgramMemoryHistoryTests.swift": "1dce33815546e4e14b4a6930052dc4fccd03d9ef301ec2062e81bce4c0c3d394",
+    "scripts/qa/ProgramMemoryHistoryBenchmarkTests.swift": "8c851e9a878a6e21b7e1f145a4ad3fa3bc2ea8f8433883ddd80923b1cbb3288d"
+  }
+}

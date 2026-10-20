@@ -12,6 +12,18 @@ struct Renderer {
         available ? policy?.description ?? "auto" : "unknown"
     }
 
+    static func statusFanIDs(_ fans: [FanReading], policies: [Int: FanPolicy], controlState: FanControlState?) -> [Int] {
+        Set(fans.map(\.id)).union(policies.keys).union(controlState?.referencedFanIDs ?? []).sorted()
+    }
+
+    func requestedFanPolicies(_ fans: [FanReading], policies: [Int: FanPolicy], controlState: FanControlState?, available: Bool) -> [String] {
+        Self.statusFanIDs(fans, policies: policies, controlState: controlState).flatMap { id in
+            let name = fans.first { $0.id == id }?.name ?? "(no current reading)"
+            return ["  " + pad("\(id) " + name, 10) + Self.policyText(policies[id], available: available),
+                    "    " + Self.controlText(controlState, fan: id)]
+        }
+    }
+
     static func controlText(_ state: FanControlState?, fan: Int) -> String {
         guard let state else { return "hardware verification unavailable" }
         let phase = state.verification(for: fan)
@@ -78,6 +90,7 @@ struct Renderer {
 
     func fans(_ s: Snapshot) -> [String] {
         var lines = [style.bold("Fans")]
+        guard s.hasFanReadings else { return lines + [style.dim("  fan readings unavailable")] }
         if s.fans.isEmpty { return lines + [style.dim("  no fans (fanless Mac)")] }
         for f in s.fans {
             let mode = f.manual == true ? style.yellow("manual") : f.manual == false ? style.green("auto") : style.dim("unknown")
@@ -208,9 +221,9 @@ enum Export {
         guard let safe = try? Redact.jsonExport(Data(raw.utf8)) else { return "{}" }
         return String(decoding: safe, as: UTF8.self)
     }
-    static func fanStatusCSV(_ fans: [FanReading], policies: [Int: FanPolicy], helperNote: String?, controlState: FanControlState? = nil) -> String {
+    static func fanStatusCSV(_ fans: [FanReading], policies: [Int: FanPolicy], helperNote: String?, controlState: FanControlState? = nil, fansAvailable: Bool = true) -> String {
         let available = helperNote == nil
-        let columns = ["id", "name", "rpm", "min_rpm", "max_rpm", "target_rpm", "manual", "policy", "verification_state", "last_observed_mode", "verified_target_rpm", "checked_at", "policies_suspended", "suspension_reason", "control_failure", "policies_available", "helper"]
+        let columns = ["id", "name", "rpm", "min_rpm", "max_rpm", "target_rpm", "manual", "policy", "verification_state", "last_observed_mode", "verified_target_rpm", "checked_at", "policies_suspended", "suspension_reason", "control_failure", "in_current_inventory", "fans_available", "policies_available", "helper"]
         func number(_ value: Double?) -> String {
             guard let value, value.isFinite else { return "" }
             return String(format: "%.3f", value)
@@ -222,13 +235,14 @@ enum Export {
                     number(observation?.target), checked ?? "",
                     controlState.map { $0.suspended ? "true" : "false" } ?? "", controlState?.suspensionReason?.rawValue ?? "", controlState?.failure ?? ""]
         }
-        var rows = fans.map { fan in
-            [String(fan.id), fan.name, number(fan.rpm), number(fan.min), number(fan.max), number(fan.target),
-             fan.manual.map { $0 ? "true" : "false" } ?? "unknown", Renderer.policyText(policies[fan.id], available: available)]
-             + verification(fan.id) + [available ? "true" : "false", helperNote ?? "running"]
+        var rows = Renderer.statusFanIDs(fans, policies: policies, controlState: controlState).map { id in
+            let fan = fans.first { $0.id == id }
+            return [String(id), fan?.name ?? "", number(fan?.rpm), number(fan?.min), number(fan?.max), number(fan?.target),
+             fan?.manual.map { $0 ? "true" : "false" } ?? "unknown", Renderer.policyText(policies[id], available: available)]
+             + verification(id) + [fan == nil ? "false" : "true", fansAvailable ? "true" : "false", available ? "true" : "false", helperNote ?? "running"]
         }
         // Preserve helper status even on fanless machines.
-        if rows.isEmpty { rows = [Array(repeating: "", count: 8) + verification(-1) + [available ? "true" : "false", helperNote ?? "running"]] }
+        if rows.isEmpty { rows = [Array(repeating: "", count: 8) + verification(-1) + ["false", fansAvailable ? "true" : "false", available ? "true" : "false", helperNote ?? "running"]] }
         return ([columns.joined(separator: ",")] + rows.map { $0.map(csvField).joined(separator: ",") }).joined(separator: "\n")
     }
 
@@ -289,7 +303,10 @@ enum Export {
         let f: (Reading) -> Bool = { all || $0.known }
         lines += csvRows(s.temperatures.filter(f), kind: "temperature")
         for fan in s.fans {
-            lines.append("fan,F\(fan.id)Ac,\(csvField(fan.name)),Fan,\(fan.rpm.map { String(format: "%.0f", $0) } ?? "")")
+            lines.append("fan,F\(String(fan.id, radix: 16, uppercase: true))Ac,\(csvField(fan.name)),Fan,\(fan.rpm.map { String(format: "%.0f", $0) } ?? "")")
+        }
+        if let available = s.fansAvailable {
+            lines.append("fan_availability,FNum,Fan inventory,Fan,\(available ? "true" : "false")")
         }
         lines += csvRows(s.power.filter(f), kind: "power")
         lines += csvRows(s.voltages.filter(f), kind: "voltage")
@@ -299,15 +316,23 @@ enum Export {
     }
 
     /// Wide one-line-per-sample format for `watch --csv`.
-    static func csvStreamHeader(_ s: Snapshot) -> String {
-        (["timestamp", "cpu_c", "gpu_c", "hottest_c"] + s.fans.map { "fan\($0.id)_rpm" } + ["system_w", "cpu_w"])
-            .joined(separator: ",")
+    static func streamFanIDs(_ s: Snapshot) -> [Int] {
+        // Reserve every representable fan slot when discovery is not known at stream start.
+        s.hasFanReadings ? s.fans.map(\.id) : Array(0..<16)
+    }
+    static func csvStreamHeader(_ s: Snapshot, fanIDs: [Int]? = nil) -> String {
+        (["timestamp", "cpu_c", "gpu_c", "hottest_c"] + (fanIDs ?? s.fans.map(\.id)).map { "fan\($0)_rpm" }
+            + ["system_w", "cpu_w", "fans_available", "fan_count"]).joined(separator: ",")
     }
 
-    static func csvStreamRow(_ s: Snapshot) -> String {
+    static func csvStreamRow(_ s: Snapshot, fanIDs: [Int]? = nil) -> String {
         func n(_ v: Double?, _ d: Int = 2) -> String { v.map { String(format: "%.\(d)f", $0) } ?? "" }
         let ts = ISO8601DateFormatter().string(from: s.timestamp)
-        return ([ts, n(s.cpu), n(s.gpu), n(s.maximumKnownTemperature)] + s.fans.map { n($0.rpm, 0) } + [n(s.systemPower), n(s.cpuPower)])
+        let readings = Dictionary(s.fans.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let availability = s.fansAvailable.map { $0 ? "true" : "false" } ?? (s.hasFanReadings ? "true" : "unknown")
+        return ([ts, n(s.cpu), n(s.gpu), n(s.maximumKnownTemperature)]
+            + (fanIDs ?? s.fans.map(\.id)).map { n(readings[$0]?.rpm, 0) }
+            + [n(s.systemPower), n(s.cpuPower), availability, s.hasFanReadings ? String(s.fans.count) : ""])
             .joined(separator: ",")
     }
 }

@@ -1,0 +1,27 @@
+{
+  "run": "2d76d95f-6195-4382-9052-271abcbefda5",
+  "base": "b536e6cb229d16798a3e21ef9e9afd623e648c3d",
+  "inputCommit": "ac50fb686b708b98d533fc4e31259f798d660627",
+  "inputTree": "37aee6231d056734a90864f0f69e8d5f68fa97dc",
+  "testAndBuildInputIdentical": true,
+  "testCounts": {
+    "ThermoKitTests.xctest": 218,
+    "ThermoHelperTests.xctest": 30,
+    "ThermoCLITests.xctest": 124,
+    "ThermoAppTests.xctest": 344,
+    "CleanKitTests.xctest": 774,
+    "AgentDoctorTests.xctest": 346,
+    "AgentCoreTests.xctest": 70
+  },
+  "totalTests": 1906,
+  "failures": 0,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "sourceManifestFiles": 607,
+  "artifactHashesVerified": true,
+  "packaged": false,
+  "installed": false,
+  "reasonNotPackaged": "New main a869019 integrated in separate worktree; next candidate will include those additions."
+}

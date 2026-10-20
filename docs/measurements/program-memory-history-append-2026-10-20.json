@@ -1,0 +1,48 @@
+{
+  "checkedAt": "2026-10-19T18:24:22.124094+00:00",
+  "problem": "Each five-minute append decoded and re-encoded every retained program-memory record, holding all decoded identity arrays simultaneously. R12 live stacks captured this path.",
+  "change": "Validate records sequentially, retain each valid encoded line, apply the same 24-hour cutoff and chronological ordering, then encode only the new record and atomically rewrite. Existing unknown fields and formatting are preserved.",
+  "unchanged": [
+    "Collection frequency",
+    "24-hour retention cutoff",
+    "Full record decoding validation",
+    "Malformed records ignored",
+    "Public record decoding and identity semantics",
+    "Per-instance lock and atomic write behavior"
+  ],
+  "limitations": [
+    "Raw input and retained output bytes still reside in memory; file is not size-bounded by this change",
+    "No cross-process lock added",
+    "No cancellation or hard syscall timeout added",
+    "Historical line serialization is now preserved rather than normalized",
+    "Debug synthetic CPU median improved approximately 40.5%, peak RSS increased approximately 1.2%; Release and installed-App effects unverified"
+  ],
+  "sourceSHA256": {
+    "Sources/CleanKit/MemoryState.swift": "3eb1aef39a55ab503822dbcbdd1f676292451261757e9829f70298ed0cf9ef58",
+    "Tests/CleanKitTests/ProgramMemoryHistoryTests.swift": "1dce33815546e4e14b4a6930052dc4fccd03d9ef301ec2062e81bce4c0c3d394"
+  },
+  "remoteRun": "b32f36d6-fd13-4141-b5d9-2a6242926c2a",
+  "remoteInput": "009f575cb13753b0fae2f5976df65961f47a3794",
+  "tests": {
+    "host": "mac190",
+    "count": 2,
+    "failures": 0,
+    "inputCommit": "009f575cb13753b0fae2f5976df65961f47a3794",
+    "inputTree": "aaa30891a07def7c81a3d7bbc27182a880bc8eef",
+    "artifactHashesVerified": true,
+    "sourceMatchesTestedSnapshot": true,
+    "resultArtifact": "dist/remote-190/memory-history-result.json",
+    "fullRegressionRunForThisChange": false,
+    "cleanKitRegression": {
+      "tests": 775,
+      "skipped": 1,
+      "failures": 0,
+      "runId": "1f4db9bf-994a-435c-8522-05c5a2d5c141"
+    }
+  },
+  "installedAppChanged": false,
+  "sourceCommitted": false,
+  "scaleComparison": "program-memory-history-scale-2026-10-20.json",
+  "supersededImplementation": "program-memory-history-ranges-release-2026-10-20.json",
+  "note": "This report preserves the first copied-line implementation and its tested source hashes; current range implementation is separately recorded."
+}

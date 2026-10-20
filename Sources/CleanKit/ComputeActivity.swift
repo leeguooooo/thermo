@@ -80,14 +80,23 @@ public final class ComputeSampler {
         return ComputeProgram.total(values)
     }
 
-    public func sample() -> ComputeActivity {
-        let usage = ProcessTable.usage(uid: nil).filter { u in
+    public func sample(cancelled: () -> Bool = { false }) -> ComputeActivity {
+        func cancelledReading() -> ComputeActivity {
+            previous = nil
+            return ComputeActivity(sampled: Date(), cpu: nil, cores: ProcessInfo.processInfo.activeProcessorCount,
+                                   devices: [], programs: [])
+        }
+        guard !cancelled() else { return cancelledReading() }
+        let usage = ProcessTable.usage(uid: nil, cancelled: cancelled).filter { u in
+            guard !cancelled() else { return false }
             // Enumeration and counters are separate kernel reads. Drop a replaced PID.
             guard let start = u.started else { return true }
             return start == ProcessTable.started(u.pid)
         }
+        guard !cancelled() else { return cancelledReading() }
         let host = Self.hostTicks()
         let (devices, clients) = Self.readGPU()
+        guard !cancelled() else { return cancelledReading() }
         let now = DispatchTime.now().uptimeNanoseconds
         let baseline = previous
         let elapsed = baseline.map { now >= $0.at ? now - $0.at : 0 } ?? 0
@@ -95,6 +104,7 @@ public final class ComputeSampler {
         let byPID = Dictionary(usage.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
         var gpuByPID: [pid_t: [Double?]] = [:]
         for c in clients {
+            guard !cancelled() else { return cancelledReading() }
             guard let current = byPID[c.pid], let old = baseline?.processes[c.pid], Self.sameProcess(current, old),
                   let before = baseline?.clients[c.id], valid else {
                 gpuByPID[c.pid, default: []].append(nil); continue
@@ -104,6 +114,7 @@ public final class ComputeSampler {
         var readings: [pid_t: ComputeProcess] = [:]
         var candidates: [MachinePulse.Candidate] = []
         for u in usage {
+            guard !cancelled() else { return cancelledReading() }
             var cpu: Double?
             if valid, u.cpuAvailable, let old = baseline?.processes[u.pid], old.cpuAvailable,
                Self.sameProcess(u, old) {
@@ -113,12 +124,15 @@ public final class ComputeSampler {
             candidates.append(.init(pid: u.pid, uid: u.uid, name: u.name, cpu: cpu ?? 0, memoryKB: u.footprintKB,
                                     details: ProcessTable.details(u.pid), uptime: u.started.map { Date().timeIntervalSince($0) }))
         }
+        guard !cancelled() else { return cancelledReading() }
         let contexts = MachinePulse.group(candidates, byMemory: false, me: getpid(), limit: nil)
+        guard !cancelled() else { return cancelledReading() }
         let programs = MemoryInventory.group(contexts).map { group in
             ComputeProgram(id: group.id, name: group.name, processes: group.contexts.flatMap(\.pids).compactMap { readings[$0] },
                            contexts: group.contexts.compactMap { $0.project ?? $0.app })
         }
         let cpu = valid ? host.flatMap { current in baseline?.host.flatMap { Self.hostRate(current, $0) } } : nil
+        guard !cancelled() else { return cancelledReading() }
         previous = Baseline(at: now, processes: byPID, host: host,
                             clients: Dictionary(clients.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a }))
         return ComputeActivity(sampled: Date(), cpu: cpu, cores: ProcessInfo.processInfo.activeProcessorCount, devices: devices, programs: programs)

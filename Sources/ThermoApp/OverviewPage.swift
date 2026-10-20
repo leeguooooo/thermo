@@ -152,13 +152,13 @@ struct OverviewPage: View {
     /// Hot with the fans still well below their top speed is the one link worth pointing at here.
     var fanLink: some View {
         let s = monitor.snapshot
-        let fans = s?.fans ?? []
+        let fans = monitor.sampledFans ?? []
         let top = fans.filter { $0.rpm != nil }.max { ($0.rpm ?? 0) < ($1.rpm ?? 0) }
         let hot = (s?.hottest ?? 0) >= 85
         let lagging = hot && fans.contains { $0.manual == false } && (fans.compactMap(\.load).max() ?? 1) < 0.6
-        let state: LinkState = s == nil ? .unknown : fans.isEmpty || fans.contains { $0.manual == nil || $0.rpm == nil || $0.validRange == nil } ? .unknown : lagging ? .alert : .normal
+        let state: LinkState = monitor.sampledFans == nil ? .unknown : fans.isEmpty || fans.contains { $0.manual == nil || $0.rpm == nil || $0.validRange == nil } ? .unknown : lagging ? .alert : .normal
         let mode = fans.contains { $0.manual == nil } ? tr("unknown") : fans.contains { $0.manual == true } ? tr("manual") : tr("auto")
-        let detail: String? = s == nil ? nil : fans.isEmpty ? tr("No fans")
+        let detail: String? = monitor.sampledFans == nil ? monitor.fanEmptyMessage : fans.isEmpty ? tr("No fans")
             : lagging ? tr("Hot, but the fans are not at full speed")
             : top.map { mode + " · " + tr("%1$@ of max", $0.load.map { String(format: "%.0f%%", $0 * 100) } ?? tr("unknown")) }
         return link(tr("Fans"), "fan", value: FanControlPresentation.speedSummary(fans) ?? "—", caption: nil,

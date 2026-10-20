@@ -28,7 +28,7 @@ public struct FanDescriptor: Codable, Hashable, Sendable {
 /// The result of scanning the SMC once. Cached on disk per machine model + key count,
 /// so subsequent launches skip the ~1000-key enumeration.
 public struct Discovery: Codable, Sendable {
-    static let version = 2
+    static let version = 3
     public let version: Int
     public let model: String
     public let keyCount: UInt32
@@ -39,6 +39,22 @@ public struct Discovery: Codable, Sendable {
     public let fanTestKey: Bool    // "Ftst" (Apple Silicon unlock)
     /// IOHID temperature services exist (Apple Silicon).
     public let hid: Bool
+    /// nil in legacy JSON; an empty legacy list does not prove the absence of fans.
+    public let fanCountKnown: Bool?
+    public var fansKnown: Bool { fanCountKnown ?? !fans.isEmpty }
+
+    init(version: Int, model: String, keyCount: UInt32, sensors: [SensorDescriptor], fans: [FanDescriptor],
+         fanForceKey: Bool, fanTestKey: Bool, hid: Bool, fanCountKnown: Bool? = true) {
+        self.version = version; self.model = model; self.keyCount = keyCount
+        self.sensors = sensors; self.fans = fans; self.fanForceKey = fanForceKey
+        self.fanTestKey = fanTestKey; self.hid = hid; self.fanCountKnown = fanCountKnown
+    }
+
+    func recoveringFans(_ read: () -> [FanDescriptor]?) -> Discovery {
+        guard !fansKnown, let recovered = read() else { return self }
+        return Discovery(version: version, model: model, keyCount: keyCount, sensors: sensors,
+                         fans: recovered, fanForceKey: fanForceKey, fanTestKey: fanTestKey, hid: hid)
+    }
 }
 
 public struct SamplerParts: OptionSet, Sendable {
@@ -67,13 +83,14 @@ public enum SamplerScope: Equatable, Sendable {
 /// Not thread-safe: use from one thread/queue.
 public final class Sampler {
     public let smc: SMC
-    public let discovery: Discovery
+    public private(set) var discovery: Discovery
     public var scope: SamplerScope
     /// What `sample()` reads; skip parts you don't display to save SMC round-trips.
     public var parts: SamplerParts = .everything
     /// Restrict temperature sensors to these groups (nil = all groups).
     public var groups: Set<SensorGroup>?
 
+    private let useCache: Bool
     private let hid: OpaquePointer?
     private var hidBuffer: [smc_hid_reading]
 
@@ -86,6 +103,7 @@ public final class Sampler {
         let smc = try smc ?? SMC()
         self.smc = smc
         self.scope = scope
+        self.useCache = useCache
         self.discovery = try Sampler.loadDiscovery(smc: smc, useCache: useCache)
         self.hid = discovery.hid ? smc_hid_open() : nil
         self.hidBuffer = Array(repeating: smc_hid_reading(), count: Int(smc_hid_count(hid)))
@@ -143,13 +161,18 @@ public final class Sampler {
             let t = temps.first { $0.key == "TB0T" }?.value ?? (try? smc.double("TB0T"))
             battery = b.with(temperature: t)
         }
-        return Snapshot(temperatures: temps, fans: fans, power: power, voltages: volts, currents: amps, battery: battery)
+        return Snapshot(temperatures: temps, fans: fans, power: power, voltages: volts, currents: amps,
+                        battery: battery, fansAvailable: parts.contains(.fans) ? discovery.fansKnown : nil)
     }
 
     public func invalidateFanLimits() { fanLimitsRead = .distantPast }
 
     private func readFans() -> [FanReading] {
-        guard !discovery.fans.isEmpty else { return [] }
+        if !discovery.fansKnown {
+            discovery = discovery.recoveringFans { Self.discoverFans(smc: smc) }
+            if useCache, discovery.fansKnown { Self.saveDiscovery(discovery) }
+        }
+        guard discovery.fansKnown, !discovery.fans.isEmpty else { return [] }
         if Date().timeIntervalSince(fanLimitsRead) > fanLimitRefresh {
             for f in discovery.fans {
                 fanLimits[f.index] = (try? smc.double(f.minKey), try? smc.double(f.maxKey))
@@ -201,17 +224,34 @@ public final class Sampler {
         let count = try smc.keyCount()
         if useCache, let data = readFile(cachePath),
            let d = Discovery(cache: data),
-           d.version == Discovery.version, d.model == model, d.keyCount == count {
+           d.version == Discovery.version, d.model == model, d.keyCount == count, d.fansKnown {
             for s in d.sensors { smc.seed(s.info) }
             return d
         }
         let d = try discover(smc: smc, model: model, count: count)
-        if useCache {
-            let data = d.cacheData
-            try? FileManager.default.createDirectory(at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? data.write(to: cacheURL, options: .atomic)
-        }
+        if useCache { saveDiscovery(d) }
         return d
+    }
+
+    static func saveDiscovery(_ discovery: Discovery, to url: URL = cacheURL) {
+        guard discovery.fansKnown else { return }
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? discovery.cacheData.write(to: url, options: .atomic)
+    }
+
+    static func discoverFans(readCount: () throws -> Double,
+                             descriptor: (Int, Int) -> FanDescriptor) -> [FanDescriptor]? {
+        guard let raw = try? readCount(), raw.isFinite, raw.rounded() == raw, (0...16).contains(raw) else { return nil }
+        let count = Int(raw)
+        return (0..<count).map { descriptor($0, count) }
+    }
+
+    private static func discoverFans(smc: SMC) -> [FanDescriptor]? {
+        discoverFans(readCount: { try smc.double("FNum") }) { i, count in
+            let c = String(i, radix: 16, uppercase: true)
+            let name = fanName(smc: smc, key: FourCC("F\(c)ID")) ?? (count > 1 ? "Fan \(i + 1)" : "Fan")
+            return FanDescriptor(index: i, name: name, hasModeKey: smc.has(FourCC("F\(c)Md")))
+        }
     }
 
     public static func discover(smc: SMC, model: String = machineModel, count: UInt32? = nil) throws -> Discovery {
@@ -250,21 +290,14 @@ public final class Sampler {
                                                 known: true, essential: true)
         }
 
-        var fans: [FanDescriptor] = []
-        let fanCount = Int((try? smc.double("FNum")) ?? 0)
-        for i in 0..<min(fanCount, 16) {
-            let c = String(i, radix: 16, uppercase: true)
-            let name = fanName(smc: smc, key: FourCC("F\(c)ID")) ?? (fanCount > 1 ? "Fan \(i + 1)" : "Fan")
-            fans.append(FanDescriptor(index: i, name: name, hasModeKey: smc.has(FourCC("F\(c)Md"))))
-        }
-
+        let discoveredFans = discoverFans(smc: smc)
         var hasHID = false
         #if arch(arm64)
         if let h = smc_hid_open() { hasHID = smc_hid_count(h) > 0; smc_hid_close(h) }
         #endif
 
-        return Discovery(version: Discovery.version, model: model, keyCount: n, sensors: sensors, fans: fans,
-                         fanForceKey: hasForce, fanTestKey: hasTest, hid: hasHID)
+        return Discovery(version: Discovery.version, model: model, keyCount: n, sensors: sensors, fans: discoveredFans ?? [],
+                         fanForceKey: hasForce, fanTestKey: hasTest, hid: hasHID, fanCountKnown: discoveredFans != nil)
     }
 
     /// `F<i>ID` is a 16-byte struct on Intel; the name starts at offset 4.
@@ -279,7 +312,7 @@ public final class Sampler {
 // MARK: - Cache format
 //
 // Line-oriented text, parsed without Foundation's JSON machinery (~10x faster cold):
-//   thermo-discovery <version> <keyCount> <forceKey> <testKey> <hid>
+//   thermo-discovery <version> <keyCount> <forceKey> <testKey> <hid> <fanCount-or-?>
 //   model <model>
 //   s <key> <type> <size> <attr> <quantity> <group> <known> <essential> <name...>
 //   f <index> <hasModeKey> <name...>
@@ -287,13 +320,14 @@ public final class Sampler {
 
 extension Discovery {
     var cacheData: Data {
-        var out = "thermo-discovery \(version) \(keyCount) \(fanForceKey ? 1 : 0) \(fanTestKey ? 1 : 0) \(hid ? 1 : 0)\n"
+        var out = "thermo-discovery \(version) \(keyCount) \(fanForceKey ? 1 : 0) \(fanTestKey ? 1 : 0) \(hid ? 1 : 0) \(fansKnown ? String(fans.count) : "?")\n"
         out += "model \(model)\n"
         for s in sensors {
             out += "s \(String(s.info.key.rawValue, radix: 16)) \(String(s.info.type.rawValue, radix: 16)) \(s.info.size) \(s.info.attributes) "
                 + "\(s.quantity.rawValue) \(s.group.rawValue) \(s.known ? 1 : 0) \(s.essential ? 1 : 0) \(s.name)\n"
         }
         for f in fans { out += "f \(f.index) \(f.hasModeKey ? 1 : 0) \(f.name)\n" }
+        out += "end \(sensors.count) \(fans.count)\n"
         return Data(out.utf8)
     }
 
@@ -312,9 +346,18 @@ extension Discovery {
                 default: return nil
                 }
                 guard d < radix else { return nil }
-                v = v &* T(radix) &+ T(d)
+                let product = v.multipliedReportingOverflow(by: T(radix))
+                let sum = product.partialValue.addingReportingOverflow(T(d))
+                guard !product.overflow, !sum.overflow else { return nil }
+                v = sum.partialValue
             }
             return v
+        }
+        func bit(_ field: ArraySlice<UInt8>) -> Bool? {
+            guard field.count == 1 else { return nil }
+            if field.first == 48 { return false }
+            if field.first == 49 { return true }
+            return nil
         }
         /// Split a line on spaces into at most `max` fields; the last keeps the remainder.
         func fields(_ line: ArraySlice<UInt8>, max: Int) -> [ArraySlice<UInt8>] {
@@ -329,37 +372,59 @@ extension Discovery {
         }
 
         var version = 0, keyCount: UInt32 = 0, force = false, test = false, hid = false
+        var expectedFans: Int?, expectedSensors: Int?, footerFans: Int?
+        var sawHeader = false, sawModel = false, sawEnd = false
         var model = ""
         var sensors: [SensorDescriptor] = []
         var fans: [FanDescriptor] = []
         sensors.reserveCapacity(256)
         for line in bytes.split(separator: 10) {
+            guard !sawEnd else { return nil }
             switch line.first {
             case UInt8(ascii: "t"):
-                let f = fields(line, max: 6)
-                guard f.count == 6, let v: Int = num(f[1]), let k: UInt32 = num(f[2]) else { return nil }
-                version = v; keyCount = k
-                force = f[3].first == 49; test = f[4].first == 49; hid = f[5].first == 49
+                let f = fields(line, max: 7)
+                guard !sawHeader, f.count == 7, str(f[0]) == "thermo-discovery",
+                      let v: Int = num(f[1]), let k: UInt32 = num(f[2]),
+                      let forceBit = bit(f[3]), let testBit = bit(f[4]), let hidBit = bit(f[5]) else { return nil }
+                if str(f[6]) != "?" {
+                    guard let count: Int = num(f[6]), (0...16).contains(count) else { return nil }
+                    expectedFans = count
+                }
+                sawHeader = true; version = v; keyCount = k
+                force = forceBit; test = testBit; hid = hidBit
             case UInt8(ascii: "m"):
-                model = str(line.dropFirst(6))
+                guard !sawModel, line.starts(with: Array("model ".utf8)) else { return nil }
+                sawModel = true; model = str(line.dropFirst(6))
             case UInt8(ascii: "s"):
                 let f = fields(line, max: 10)
-                guard f.count == 10, let key: UInt32 = num(f[1], 16), let type: UInt32 = num(f[2], 16),
+                guard f.count == 10, str(f[0]) == "s", let known = bit(f[7]), let essential = bit(f[8]),
+                      let key: UInt32 = num(f[1], 16), let type: UInt32 = num(f[2], 16),
                       let size: UInt32 = num(f[3]), let attr: UInt8 = num(f[4]),
                       let q = Quantity(rawValue: str(f[5])), let g = SensorGroup(rawValue: str(f[6])) else { return nil }
                 sensors.append(SensorDescriptor(info: SMCKeyInfo(key: FourCC(key), type: FourCC(type), size: size, attributes: attr),
                                                 quantity: q, name: str(f[9]), group: g,
-                                                known: f[7].first == 49, essential: f[8].first == 49))
+                                                known: known, essential: essential))
             case UInt8(ascii: "f"):
                 let f = fields(line, max: 4)
-                guard f.count == 4, let i: Int = num(f[1]) else { return nil }
-                fans.append(FanDescriptor(index: i, name: str(f[3]), hasModeKey: f[2].first == 49))
+                guard f.count == 4, str(f[0]) == "f", let hasMode = bit(f[2]),
+                      let i: Int = num(f[1]), (0..<16).contains(i),
+                      !fans.contains(where: { $0.index == i }) else { return nil }
+                fans.append(FanDescriptor(index: i, name: str(f[3]), hasModeKey: hasMode))
+            case UInt8(ascii: "e"):
+                let f = fields(line, max: 3)
+                guard f.count == 3, str(f[0]) == "end", let sensorCount: Int = num(f[1]),
+                      let fanCount: Int = num(f[2]) else { return nil }
+                expectedSensors = sensorCount; footerFans = fanCount; sawEnd = true
             default:
                 return nil
             }
         }
-        guard version == Discovery.version else { return nil }
+        guard version == Discovery.version, sawHeader, sawModel, sawEnd, !model.isEmpty,
+              expectedSensors == sensors.count, footerFans == fans.count else { return nil }
+        if let expectedFans {
+            guard fans.count == expectedFans, Set(fans.map(\.index)) == Set(0..<expectedFans) else { return nil }
+        } else if !fans.isEmpty { return nil }
         self.init(version: version, model: model, keyCount: keyCount, sensors: sensors, fans: fans,
-                  fanForceKey: force, fanTestKey: test, hid: hid)
+                  fanForceKey: force, fanTestKey: test, hid: hid, fanCountKnown: expectedFans != nil)
     }
 }

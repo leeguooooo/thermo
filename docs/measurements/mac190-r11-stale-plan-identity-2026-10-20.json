@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-20",
+  "status": "Signed R11 CLI frozen plan refused a valid replacement directory at the reviewed path; both original and replacement preserved",
+  "host": "mac190",
+  "candidateRevision": 11,
+  "sourceInputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+  "signedCLI_SHA256": "889020d7b40918982ddf133abb23561e3740b39b17cd56046cdfeb9052758ad9",
+  "run": "dc9e824f-6af7-489d-8908-e4a1a547a00a-probe",
+  "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/mac190-cleanup-replaced-directory.json",
+  "artifactSHA256": "0348a07642652deeeff4a3a0b266d33ba953b19af21b41942f30a59a3e8b8e40",
+  "allArtifactHashesVerified": true,
+  "reviewedDirectory": {
+    "inode": 194402355,
+    "device": 16777229
+  },
+  "replacementDirectory": {
+    "inode": 194402360,
+    "device": 16777229
+  },
+  "replacementIsValidInFreshScan": true,
+  "acceptance": {
+    "passed": true,
+    "samePathReplacementRecognizedByIdentity": true,
+    "replacementHasValidCacheDeclaration": true,
+    "oldPlanRefusedWithExit3": true,
+    "reviewedOriginalPreserved": true,
+    "replacementBytesAndIdentityUnchanged": true,
+    "deletedBytes": 0,
+    "trashedBytes": 0
+  },
+  "failureMessage": "replaced since the scan",
+  "limitations": [
+    "Controlled rename/replacement between review and apply, not a simultaneous race during the final filesystem syscall",
+    "Owned synthetic fixtures only; no user data or hardware-control policy touched",
+    "Mole parity remains incomplete"
+  ]
+}

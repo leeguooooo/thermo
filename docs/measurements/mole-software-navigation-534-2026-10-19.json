@@ -1,0 +1,45 @@
+{
+  "installedVersion": "1.1.36 (534)",
+  "source": "b5f46287e47992711fc08bbb14f05b15a7d15ef8",
+  "normalNavigation": [
+    "Software management",
+    "Updates",
+    "Other applications",
+    "Recovery records"
+  ],
+  "appMeasurement": {
+    "automaticMeasurementOnEntry": true,
+    "stopUsed": true,
+    "stoppedResultExplicitlyLowerBound": true,
+    "completeMeasurementActionAvailable": true
+  },
+  "brew": {
+    "cachedCatalogLabelVisible": true,
+    "versionRecordMismatchShown": true,
+    "conflictingUpdateDisabled": true,
+    "refreshOrInstallExecuted": false
+  },
+  "nativeSources": {
+    "localDiscoveryIncompleteWarningVisible": true,
+    "metadataIdentityProblemsShown": true,
+    "networkFeedChecksExecuted": false
+  },
+  "recovery": {
+    "ordinaryEntryAvailable": true,
+    "emptyStateVisible": true,
+    "recordContentOrCleanupAccepted": false,
+    "closedWithoutAction": true,
+    "cliList": {
+      "exitCode": 0,
+      "records": 0,
+      "issues": 0
+    }
+  },
+  "applicationUninstallExecuted": false,
+  "nativeUpdateExecuted": false,
+  "backupCleanupExecuted": false,
+  "returnedToSettings": true,
+  "scope": "Read-only navigation and cancellation of size measurement; no real application or retained backup changed",
+  "observationMethod": "Cua AX state; software/recovery layout screenshots not captured",
+  "fullVisualLayoutAccepted": false
+}

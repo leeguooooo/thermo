@@ -14,7 +14,7 @@ struct Args {
     var options: [String: String] = [:]
 
     static let valueOptions: Set<String> = ["interval", "count", "sensor", "format", "older-than", "root", "budget", "timeout",
-                                            "area", "agent", "action", "encoding", "seconds", "duration", "timezone", "key-code", "modifiers", "key-label", "keep",
+                                            "area", "agent", "action", "encoding", "seconds", "duration", "mode", "timezone", "key-code", "modifiers", "key-label", "keep",
         "to", // space archive: SSH alias:/absolute/archive.tar
         "since",  // pulse history
         "limit",  // history

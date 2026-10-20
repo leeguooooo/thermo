@@ -70,6 +70,7 @@ enum Settings {
         if TitleMetric(rawValue: defaults.string(forKey: titleMetric) ?? "") == nil {
             defaults.set(TitleMetric.cpu.rawValue, forKey: titleMetric)
         }
+        MenuBarPreferences.normalize(defaults)
         let language = defaults.string(forKey: L10n.defaultsKey) ?? "system"
         if language != "system", Language(rawValue: language) == nil {
             defaults.set("system", forKey: L10n.defaultsKey)
@@ -91,6 +92,16 @@ enum Settings {
 /// Owns the sampler on a background queue and publishes snapshots on the main thread.
 final class Monitor: ObservableObject {
     @Published private(set) var snapshot: Snapshot?
+    /// nil means fans were not sampled, rather than a confirmed fanless machine.
+    @Published private(set) var sampledFans: [FanReading]?
+    @Published private(set) var fanReadingsUnavailable = false
+    var fanEmptyMessage: String { tr(fanReadingsUnavailable ? "Fan readings unavailable" : "Checking…") }
+
+    func publishSnapshot(_ value: Snapshot, parts: SamplerParts) {
+        fanReadingsUnavailable = parts.contains(.fans) && value.fansAvailable == false
+        sampledFans = parts.contains(.fans) && value.hasFanReadings ? value.fans : nil
+        snapshot = value
+    }
     @Published private(set) var history: [HistoryPoint] = []
     @Published private(set) var helperState: HelperState = .unknown
     @Published private(set) var policies: [Int: FanPolicy] = [:]
@@ -106,9 +117,19 @@ final class Monitor: ObservableObject {
     @Published private(set) var model = ""
     /// The menu bar icon is hidden (behind the notch or pushed off by other icons).
     @Published var iconHidden = false
+    @Published var panelBodyHeightLimit: CGFloat = 640
 
     /// Called on the main thread after each sample (menu bar title).
     var onUpdate: ((Snapshot) -> Void)?
+    var onMenuUpdate: (() -> Void)?
+    private(set) var menuLive = MenuLiveValues()
+    private let menuSampler = MenuLiveSampler()
+
+    func resetMenuBaselines() {
+        menuLive = MenuLiveValues()
+        queue.async { [weak self] in self?.menuSampler.reset() }
+        onMenuUpdate?()
+    }
 
     /// Published copy of `watched` (panel or main window open) for views that must stop work when the panel closes: the popover's
     /// SwiftUI views stay alive (no onDisappear) while it is closed.
@@ -128,7 +149,7 @@ final class Monitor: ObservableObject {
         if open {
             // SwiftUI only sees data while visible; hand over what accumulated meanwhile.
             history = buffer
-            if let latest { snapshot = latest }
+            if let latest { publishSnapshot(latest, parts: latestParts) }
         }
         reschedule()
         if open { sampleNow(); refreshHelper() }
@@ -153,6 +174,7 @@ final class Monitor: ObservableObject {
     /// Background data, kept out of @Published so hidden SwiftUI views don't re-render.
     private var buffer: [HistoryPoint] = []
     private(set) var latest: Snapshot?
+    private var latestParts: SamplerParts = []
     private let helper: HelperClient
     private let helperInteraction: Bool
 
@@ -169,7 +191,6 @@ final class Monitor: ObservableObject {
         // or setup path. Apply this to every Monitor, including lazy AppModels.
         self.helperInteraction = helperInteraction && !Self.suppressesAutomaticControl(arguments: arguments)
         guard startMonitoring else { return }
-        queue.async { [weak self] in self?.prepareSampler() }
         reschedule()
         refreshHelper()
     }
@@ -191,7 +212,6 @@ final class Monitor: ObservableObject {
     func sampleNow() {
         queue.async { [weak self] in
             guard let self else { return }
-            if self.sampler == nil { self.prepareSampler() }
             self.sample()
         }
     }
@@ -210,12 +230,27 @@ final class Monitor: ObservableObject {
     }
 
     private func sample() {
-        guard let sampler else { return }
         let open = fullSampling
         let defaults = UserDefaults.standard
-        let metric = TitleMetric(rawValue: defaults.string(forKey: Settings.titleMetric) ?? "") ?? .cpu
-        let plan = SamplingPlan.make(visible: open, includeUnnamed: includeUnnamed, metric: metric,
+        let preferences = MenuBarPreferences.read(defaults)
+        let live = menuSampler.sample(metrics: preferences.metrics)
+        let plan = SamplingPlan.make(visible: open, includeUnnamed: includeUnnamed, metrics: preferences.metrics,
                                      alerts: defaults.bool(forKey: Settings.alertsEnabled))
+        if plan.parts.isEmpty {
+            DispatchQueue.main.async { [weak self] in
+                self?.menuLive = live
+                self?.onMenuUpdate?()
+            }
+            return
+        }
+        if sampler == nil { prepareSampler() }
+        guard let sampler else {
+            DispatchQueue.main.async { [weak self] in
+                self?.menuLive = live
+                self?.onMenuUpdate?()
+            }
+            return
+        }
         sampler.scope = plan.scope
         sampler.parts = plan.parts
         sampler.groups = plan.groups
@@ -225,14 +260,16 @@ final class Monitor: ObservableObject {
         let point = HistoryPoint(time: s.timestamp, cpu: s.cpu, gpu: s.gpu, fans: s.fans.map(\.rpm), power: s.systemPower, load: load)
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
+            self.menuLive = live
             self.latest = s
+            self.latestParts = plan.parts
             self.buffer.append(point)
             let cutoff = Date().addingTimeInterval(-Self.historyWindow)
             if let first = self.buffer.firstIndex(where: { $0.time >= cutoff }), first > 0 {
                 self.buffer.removeFirst(first)
             }
             if self.watched {
-                self.snapshot = s
+                self.publishSnapshot(s, parts: plan.parts)
                 self.history = self.buffer
                 if Date().timeIntervalSince(self.lastHelperRefresh) >= 10 { self.refreshHelper() }
             }

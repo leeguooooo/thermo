@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-19",
+  "runId": "e2eae7b0-388c-40de-9685-6ba776290ebe",
+  "host": "mac190",
+  "machine": "leos-MacBook-Pro.local",
+  "arch": "arm64",
+  "inputHead": "4fc650ec72d35e1efdfb3da2e56b59dbd5f0fffc",
+  "inputCommit": "336ec5218d2c4c6fb8e05b3e64b2b376ab48b0fb",
+  "inputTree": "f95840a6236639cc4c7b2280ef298a8d6b0b50d0",
+  "scope": "swift test --jobs 2 --skip HardwareTests",
+  "toolchain": "Swift 6.3.3",
+  "buildCompleted": true,
+  "tests": 1809,
+  "failures": 0,
+  "passedByTarget": {
+    "ThermoKitTests": 207,
+    "ThermoAppTests": 315,
+    "ThermoCLITests": 112,
+    "ThermoHelperTests": 30,
+    "AgentDoctorTests": 323,
+    "AgentCoreTests": 63,
+    "CleanKitTests": 759
+  },
+  "exitCode": 0,
+  "artifactHashesVerified": true,
+  "artifactFiles": [
+    {
+      "path": "/Users/leo/.local/state/session-flow/runs/e2eae7b0-388c-40de-9685-6ba776290ebe/test/artifacts/.remote-qa/test.log",
+      "sha256": "a5159257efdec3a45dc93d637f41b3f8c630e05c1963ca8efe82cf9234c5462b",
+      "bytes": 913860
+    },
+    {
+      "path": "/Users/leo/.local/state/session-flow/runs/e2eae7b0-388c-40de-9685-6ba776290ebe/test/artifacts/.remote-qa/environment.txt",
+      "sha256": "0afc81676bb56038e9e003655ac2ac4e456e371407b3c356027977f55bb89c50",
+      "bytes": 326
+    },
+    {
+      "path": "/Users/leo/.local/state/session-flow/runs/e2eae7b0-388c-40de-9685-6ba776290ebe/test/artifacts/.remote-qa/exit-code.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2
+    }
+  ],
+  "coveredFixes": [
+    "serial-worker and main-queue publication fence in lifecycle tests",
+    "OverviewSchedulingTests fixtureHome capture for Swift 6.3.3",
+    "simple string expressions in process explanation and memory views"
+  ],
+  "notProven": [
+    "native UI layout",
+    "installed 1.1.38 behavior",
+    "hardware control sessions",
+    "whole Mole parity"
+  ],
+  "negativeControl": {
+    "passed": true,
+    "runId": "a0cda3f0-0207-47ed-964f-ee4a1ae4eade",
+    "casesDetected": 2,
+    "report": "pulse-lifetime-negative-mac190-2026-10-19.json"
+  },
+  "testedSourceMatchesCurrentFiles": {
+    "files": 586,
+    "scope": [
+      "Sources",
+      "Tests",
+      "Resources",
+      "scripts",
+      "Package.swift",
+      "Package.resolved"
+    ],
+    "mismatches": []
+  },
+  "sourceVerificationScope": "Historical pre-main-integration snapshot; not evidence for the later 0b97f97 integration or 1.1.39."
+}

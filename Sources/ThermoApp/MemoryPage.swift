@@ -20,6 +20,7 @@ final class MemoryModel: ObservableObject {
     @Published private(set) var day: [PulseRecord] = []
     @Published private(set) var programReadings: [ProgramMemoryRecord] = []
     private var liveReadings: [ProgramMemoryRecord] = []
+    private var historyReadings: [ProgramMemoryRecord] = []
     private var timer: Timer?
     private var sampling = false
     private var dayLoaded = Date.distantPast
@@ -32,15 +33,18 @@ final class MemoryModel: ObservableObject {
     }
     private let read: @Sendable (ScanCancellation) -> Reading
     private let readDay: @Sendable () -> [PulseRecord]
+    private let readHistory: @Sendable (ScanCancellation) -> [ProgramMemoryRecord]
     init(read: @escaping @Sendable (ScanCancellation) -> Reading = { MemoryModel.readLive($0) },
+         readHistory: @escaping @Sendable (ScanCancellation) -> [ProgramMemoryRecord] = { token in
+             token.isCancelled ? [] : PulseRecorder.shared.programHistory.records(since: Date().addingTimeInterval(-PulseHistory.keep))
+         },
          readDay: @escaping @Sendable () -> [PulseRecord] = { PulseRecorder.shared.history.records(since: Date().addingTimeInterval(-PulseHistory.keep)) }) {
-        self.read = read; self.readDay = readDay
+        self.read = read; self.readHistory = readHistory; self.readDay = readDay
     }
     nonisolated private static func readLive(_ cancellation: ScanCancellation) -> Reading {
         let b = MemoryBreakdown.read()
         let inventory = MemoryInventory.collect(cancelled: { cancellation.isCancelled })
-        let history = cancellation.isCancelled ? [] : PulseRecorder.shared.programHistory.records(since: Date().addingTimeInterval(-PulseHistory.keep))
-        return Reading(breakdown: b, inventory: inventory, history: history)
+        return Reading(breakdown: b, inventory: inventory, history: [])
     }
     var samplingActive: Bool { timer != nil }
     var sampleInFlight: Bool { sampling }
@@ -48,34 +52,28 @@ final class MemoryModel: ObservableObject {
     func start() {
         guard timer == nil else { return }
         generation = UUID()
-        sample()
         timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.sample() }
         }
+        sample()
     }
 
     func stop() { timer?.invalidate(); timer = nil; generation = UUID(); cancellation?.cancel() }
 
     func sample() {
-        guard !sampling else { return }
+        guard timer != nil, !sampling else { return }
         sampling = true
         let token = generation
         let cancellation = ScanCancellation()
         self.cancellation = cancellation
-        let read = self.read
+        let read = self.read, readHistory = self.readHistory
         if Date().timeIntervalSince(dayLoaded) >= 60 { loadDay() }
-        Task.detached(priority: .utility) {
+        Task.detached(priority: .userInitiated) {
             let reading = read(cancellation)
-            let b = reading.breakdown, inventory = reading.inventory, history = reading.history
-            await MainActor.run {
-                self.sampling = false
-                self.cancellation = nil
-                guard self.generation == token, !cancellation.isCancelled else {
-                    // Reopening while a cancelled read drains must not overlap inventories or
-                    // wait for the next five-second timer before requesting a fresh reading.
-                    if self.timer != nil { self.sample() }
-                    return
-                }
+            let b = reading.breakdown, inventory = reading.inventory
+            // Current readings must not wait behind historical file I/O or JSON decoding.
+            let published = await MainActor.run {
+                guard self.generation == token, !cancellation.isCancelled else { return false }
                 // App action identity is captured for each original context, never for merged groups.
                 let applications = NSWorkspace.shared.runningApplications
                 let programs = inventory.programs.map { program in
@@ -98,12 +96,33 @@ final class MemoryModel: ObservableObject {
                     self.liveReadings.append(ProgramMemoryRecord(entries, at: now))
                     self.liveReadings.removeAll { now.timeIntervalSince($0.t) > 3600 }
                 }
-                self.programReadings = (history + self.liveReadings).sorted { $0.t < $1.t }
-                self.suspects = MemorySuspects.find(programs: entries, history: self.programReadings, now: now)
+                if !reading.history.isEmpty { self.historyReadings = reading.history }
+                self.updateHistory(programs: entries, now: now)
                 self.activity = b.flatMap { MemoryActivity(previous: self.breakdown, current: $0) }
                 self.breakdown = b
+                return true
+            }
+            let history = published && !cancellation.isCancelled ? readHistory(cancellation) : nil
+            await MainActor.run {
+                self.sampling = false
+                self.cancellation = nil
+                guard self.generation == token, !cancellation.isCancelled else {
+                    // Both inventory and history drain before a reopened page starts another read.
+                    if self.timer != nil { self.sample() }
+                    return
+                }
+                if let history {
+                    self.historyReadings = reading.history + history
+                    self.updateHistory(programs: self.programs.map(\.historyEntry), now: inventory.sampled)
+                }
             }
         }
+    }
+
+    private func updateHistory(programs: [MachinePulse.Hog], now: Date) {
+        historyReadings.removeAll { now.timeIntervalSince($0.t) > PulseHistory.keep }
+        programReadings = (historyReadings + liveReadings).sorted { $0.t < $1.t }
+        suspects = MemorySuspects.find(programs: programs, history: programReadings, now: now)
     }
 
     func loadDay() {
@@ -551,8 +570,10 @@ struct MemoryPage: View {
                     }.frame(minWidth: 600)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(MachinePulse.roleName(p.role)) · PID \(p.pid)")
-                            Text(tr("Memory footprint") + ": " + metric(p.memoryKB, p.memoryMetric)
-                                 + " · " + tr("Resident memory") + ": " + (p.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"))
+                            let footprint = metric(p.memoryKB, p.memoryMetric)
+                            let resident = p.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—"
+                            let detail = "\(tr("Memory footprint")): \(footprint) · \(tr("Resident memory")): \(resident)"
+                            Text(detail)
                         }
                     }.foregroundStyle(.secondary).padding(.leading, 20)
                 }
