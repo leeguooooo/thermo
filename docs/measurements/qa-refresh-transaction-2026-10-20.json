@@ -1,0 +1,77 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "a486ee75ac369ee33ed24fbf3acf32d91d4ed0e3",
+  "sourceTree": "50b46388caf8c250eced523e160c54010bccb269",
+  "sourceFilesSHA256": {
+    "refresh-ai-ui-qa.py": "e3cf8146c18fb06bc0eca2587808c3afdc6852f581279ddd0f89174b6673551d",
+    "test-ai-ui-qa-refresh.py": "53543e054776c47ffddb3b7d98cd9b5638de096ae97f8fea4ad83885542d6772"
+  },
+  "scope": "Stage and verify a stopped owned QA copy before native atomic directory exchange. Copy, rpath, signing, verification or publication errors preserve the previous bundle. A concurrent refresh is refused; observed external changes and late launches are kept.",
+  "baselineRegression": {
+    "failedControls": 3,
+    "originalScriptSHA256": "3c8d7f6623d028a971712bef042655ad7f3c74a523ac53e6e1a6ef8cabf7eb9b"
+  },
+  "candidateControls": {
+    "testsPassed": 15,
+    "testsFailed": 0,
+    "runID": "68ad2d76-5853-44f0-9a02-1d9edab8ec6f",
+    "wholeRunNotClaimedSuccessful": "The 15 controls passed; its native fixture lacked rpath header padding. This superseded run was cancelled after the source-bound native check succeeded."
+  },
+  "nativeValidation": {
+    "complete": true,
+    "sourceInfo": {
+      "sourceCommit": "a486ee75ac369ee33ed24fbf3acf32d91d4ed0e3",
+      "sourceFilesSHA256": {
+        "refresh-ai-ui-qa.py": "e3cf8146c18fb06bc0eca2587808c3afdc6852f581279ddd0f89174b6673551d",
+        "test-ai-ui-qa-refresh.py": "53543e054776c47ffddb3b7d98cd9b5638de096ae97f8fea4ad83885542d6772"
+      },
+      "baselineSHA256": "3c8d7f6623d028a971712bef042655ad7f3c74a523ac53e6e1a6ef8cabf7eb9b"
+    },
+    "verifiedControlsReusedFromRun": "68ad2d76-5853-44f0-9a02-1d9edab8ec6f",
+    "nativeSmoke": {
+      "passed": true,
+      "nativeAtomicDirectoryExchange": true,
+      "nativeAdHocSigningAndVerification": true,
+      "baselineInjectedRpathFailureDamagedOnlyOwnedRuntime": true,
+      "candidateInjectedFailurePreservedEntirePreviousBundleAndSignature": true,
+      "successfulReplacementVerifiedAtFinalPath": true,
+      "leftoverStagesOrLocks": false,
+      "fixtureUsesCompiledMinimalProgramNotThermoUI": true,
+      "appsLaunchedOrInstalled": false
+    },
+    "SDKROOT": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "host": "mac190",
+    "realModelCalled": false,
+    "appsLaunchedOrInstalled": false
+  },
+  "firstFixtureAttempt": {
+    "runID": "10bd9438-8e70-4cf2-b50a-fca889bc76e5",
+    "failure": "Copying protected flags from a system binary into the fixture was refused; only fixture construction changed."
+  },
+  "publicationSemantics": {
+    "macOSPrimitive": "renameatx_np(RENAME_SWAP)",
+    "SDKConstantsChecked": {
+      "AT_FDCWD": -2,
+      "RENAME_SWAP": 2
+    },
+    "unsupportedPlatformOrVolumeRefusesPublication": true,
+    "postPublicationCleanupFailureReportedSeparatelyAndPreviousCopyRetained": true,
+    "interruptionAroundCommitRequiresInspectionRatherThanBlindRetry": true
+  },
+  "productSwiftAndPackageFilesUnchangedFromQualifiedMediaFeature": 551,
+  "evidenceSHA256": {
+    "baseline.log": "9c90a6f585f6beb9f2325ccfda693c40c1be9d8674c2ce1ffb91887c662f2bf0",
+    "candidate.log": "f51a138be43dc4dc46ce54bb22ef1e996256330f445517711e37a943fa818a8a",
+    "native-native.log": "e54a8e7f95b68b2800d6a0c4522e817a4f398de3cbd45cf02070f3df3365df38",
+    "native-result.json": "7e9f220826fbf1b428edd9da2b6ace2a10843f9767f8a7d62e8f4e1b143f3bd6"
+  },
+  "boundaries": {
+    "nativeFixtureIsMinimalOwnedExecutableNotThermoUI": true,
+    "realModelCalled": false,
+    "actualProductionAppOrConfigTouched": false,
+    "appsLaunchedOrInstalled": false,
+    "SwiftBuildOrProductReleaseRerun": false,
+    "published": false
+  },
+  "supersededFixtureRunsCancelledAfterSuccess": true
+}
