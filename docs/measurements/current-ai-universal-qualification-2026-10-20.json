@@ -1,0 +1,188 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "7a15f836d6f68b5e10216181e6ac5bc7221532d5",
+  "testedFrozenCommit": "a311e4058756343a4a2307bb40b404bd28e95499",
+  "sourceTree": "0af310b95fafaacd639f282482894c2f08d5ea37",
+  "candidate": {
+    "version": "1.1.40",
+    "build": "657",
+    "sourceCommit": "a311e4058756343a4a2307bb40b404bd28e95499",
+    "workingTree": "clean",
+    "archiveSHA256": "4814fc90a3a4f8ea6d2a9f2aeb4a8b061633a7774e49a0e35b7bc48e8decfcfd",
+    "matchedTransportEntries": 111
+  },
+  "remoteValidation": {
+    "complete": true,
+    "sourceCommit": "a311e4058756343a4a2307bb40b404bd28e95499",
+    "sourceTree": "0af310b95fafaacd639f282482894c2f08d5ea37",
+    "sourceFilesMatched": 551,
+    "host": "mac190",
+    "SDKROOT": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "commands": [
+      {
+        "name": "test-ai-release-verifier.py.log",
+        "exitCode": 0,
+        "timedOut": false,
+        "processTerminal": true,
+        "seconds": 7.559470708016306
+      },
+      {
+        "name": "test-ai-ui-qa-refresh.py.log",
+        "exitCode": 0,
+        "timedOut": false,
+        "processTerminal": true,
+        "seconds": 4.234877625014633
+      },
+      {
+        "name": "release-tests.log",
+        "exitCode": 0,
+        "timedOut": false,
+        "processTerminal": true,
+        "seconds": 581.3541657089954
+      },
+      {
+        "name": "universal-build.log",
+        "exitCode": 0,
+        "timedOut": false,
+        "processTerminal": true,
+        "seconds": 388.5873884159373
+      }
+    ],
+    "releaseTests": {
+      "mode": "reused-local-evidence",
+      "sourceCommit": "a311e4058756343a4a2307bb40b404bd28e95499",
+      "logSHA256": "de6d2e306fddda3df710ab885b70827215231bc6070abd6741bbcb1637c70897",
+      "suites": {
+        "ThermoKitTests": {
+          "tests": 218,
+          "failures": 0
+        },
+        "ThermoHelperTests": {
+          "tests": 30,
+          "failures": 0
+        },
+        "ThermoCLITests": {
+          "tests": 126,
+          "failures": 0
+        },
+        "ThermoAppTests": {
+          "tests": 349,
+          "failures": 0
+        },
+        "CleanKitTests": {
+          "tests": 782,
+          "failures": 0
+        },
+        "AgentDoctorTests": {
+          "tests": 386,
+          "failures": 0
+        },
+        "AgentCoreTests": {
+          "tests": 70,
+          "failures": 0
+        }
+      }
+    },
+    "testsPassed": 1961,
+    "packageEntries": 111,
+    "packageArchiveSHA256": "4814fc90a3a4f8ea6d2a9f2aeb4a8b061633a7774e49a0e35b7bc48e8decfcfd",
+    "buildScriptSHA256": "4e1b0811a40246030ce782e1e8b40e7b6e7db68909fc80cbdf5b27a454e58f5a",
+    "adHocSignatureOnly": true,
+    "notarizedInstalledOrPublished": false,
+    "remoteSymbolsRetained": "/tmp/thermo-current-ai-symbols-pa5xkdl7",
+    "realModelCalled": false
+  },
+  "packageAcceptance": {
+    "complete": true,
+    "checksPassed": 27,
+    "failedChecks": 0,
+    "contractSourcesPerArchitecture": 10,
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "x86Runtime": "Existing local Rosetta, not Intel hardware",
+    "packageUnchanged": true,
+    "sourceUnchanged": true,
+    "fixedSourceScriptSHA256": {
+      "verify-skill-context.py": "35ec665cfb5d6b2a2452abced8fd8c90c14d2455f07bbea42512debb49766d6c",
+      "verify-skill-quality.py": "4c4123831aea17f8545be5a1996bce1b638c1ac0cec93e4eead95280774fbbab",
+      "verify-tool-usage.py": "3c0da4ffd5a14921af22d0324729865eb9b17aa9dcbc32461d2fdfde08f261f5",
+      "verify-reference-encoding.py": "931d5ab0babf301dd94d4e31b6ad03dc65ddcf07d03753479d6d9907f7440e62",
+      "verify-task-comparison.py": "13f099ddedffe385eb7efa4817c555564d73e54e0cb9c0842e3d40ced808317f",
+      "verify-mcp-cleanup-details.py": "f8cf9b9c6b9ccd7b5134046f1092dc59eebc1694c84e1548c4668a03c8b6ddec",
+      "verify-cli-completeness.py": "40ca3096477573c0934f1519256f3ecf64416fb902edfc691711a3970c1456e1",
+      "verify-skill-instruction-usage.py": "7d693b954c659bbc4aa955e4b963e2927d5ea4dc3afb814a0569a00a2aca35db",
+      "verify-ai-diagnostics-contract.py": "f634c03da8ad79e0c8a7dc8e10204419ce4776a82375ac21bb44611cf0faea91",
+      "verify-media-text-split.py": "bccfe472029a90821dc9bc6a74c28e3688040265856f180e71782936b3a35a5e"
+    }
+  },
+  "nativeQA": {
+    "sourceCommit": "a311e4058756343a4a2307bb40b404bd28e95499",
+    "controller": "cua_repl",
+    "candidateExecutablesBoundBySHA256": true,
+    "QAEnvelopeUsesIsolatedIdentityAndMetadata": true,
+    "skillFixtureSynthetic": true,
+    "mcpFixtureFixedRealThreadTail": true,
+    "checks": {
+      "loadedInstructionSortDefaults": true,
+      "largerLinkedLoadingBeforeSmaller": true,
+      "unknownLoadingAfterKnownAndShownUnknown": true,
+      "returnTextSortChangesOrderAsExpected": true,
+      "mediaByteCountsAnd87_7PercentVisible": true,
+      "otherText219459Visible": true,
+      "partialCoveragePreserved": true,
+      "imageTokenCostCaveatVisible": true
+    },
+    "ownedProcessStopped": true,
+    "packageAfterGUIUnchanged": true,
+    "frozenSourceAfterGUIUnchanged": true,
+    "selectedProtectedFilesMatchEarlierBaseline": 1,
+    "selectedProtectedFileCount": 3,
+    "appsInstalledOrPublished": false
+  },
+  "symbolRetention": {
+    "sourceCommit": "a311e4058756343a4a2307bb40b404bd28e95499",
+    "path": "/tmp/thermo-current-ai-symbols-pa5xkdl7",
+    "filesMatched": 12,
+    "verifiedAfterJobClosed": true
+  },
+  "installedObservation": {
+    "version": "1.1.40",
+    "build": "611.23",
+    "sourceCommit": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+    "workingTree": "dirty",
+    "observationOnly": true,
+    "originOfChangeNotEstablished": true,
+    "noRollbackOrOverwritePerformed": true
+  },
+  "executionRecovery": {
+    "initialPreflightRefusedPythonBytecodeCacheBeforeTests": true,
+    "fixedRunnerDisabledBytecodeWithoutWeakeningSourceGuard": true,
+    "localDriverENOSPCInterruptedStateWriting": true,
+    "sameRemoteJobVerifiedLiveAndResumedWithoutNewDispatch": true,
+    "noOtherWorkspaceCleanupPerformedDuringThisQualification": true
+  },
+  "runID": "a3a58e5b-5e23-4226-a95b-117a3ee740d1",
+  "evidenceSHA256": {
+    "result.json": "f4469d8951f3bdd7ef241239c422bfdb4fa76740e8f6bbacbf8f9aaab91fc327",
+    "package-manifest.json": "39bbb56ef01530a9ed8b4a36d019bc2d281ce448412c9ce84869bbb8c24838fc",
+    "candidate-package.tar.gz": "4814fc90a3a4f8ea6d2a9f2aeb4a8b061633a7774e49a0e35b7bc48e8decfcfd",
+    "release-tests/tests.log": "de6d2e306fddda3df710ab885b70827215231bc6070abd6741bbcb1637c70897",
+    "release-tests/freeze.json": "7d8efb0b449c79b9566adf32305c8208b7f949698aec1736e4ac1f61a76135b2",
+    "release-tests/tests-exit.json": "30386d179d0c06124eeb1674dba6001fe21a811526e223327927d9f7186a869a",
+    "acceptance/result.json": "fba37ea3a1faced357e780d4d10705d2259d7700deb52a20241fd6cfedba562b",
+    "qa-refresh.json": "b699460728b7125dedb187e61160868885a96297d096435ad05ba40d4821099b",
+    "native-candidate-qa.json": "6158869fde138f98c061a8f36d2b34e3898d677244f331225a0ea12b49630516",
+    "remote-symbols-verified.json": "1821bb9354be12984b74a739206f9fbf54a763e3d8bc391de479214bfa545d27",
+    "installed-observation.json": "fd59cdd6973fe434aaf3a2ba338f2d98ded6b9d4dc05c8fe7ea31033d1b6eec6"
+  },
+  "boundaries": {
+    "hardwareTestsRun": false,
+    "realModelCalled": false,
+    "DeveloperIDNotarizationOrPublication": false,
+    "installedAppOverwrittenOrRolledBack": false,
+    "latestParallelDirtyInstalledLineIntegrated": false,
+    "globalBusinessBenefitOrServiceQualityRankingEstablished": false
+  }
+}
