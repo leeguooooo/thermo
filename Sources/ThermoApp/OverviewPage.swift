@@ -18,17 +18,14 @@ struct OverviewPage: View {
     var body: some View {
         WindowPage(title: tr("Overview"), subtitle: monitor.model) {
             TimelineView(.periodic(from: .now, by: 3)) { _ in
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 12) {
                     headline
-                    chain
-                    resources
+                    vitals
                 }
             }
             VStack(alignment: .leading, spacing: 6) {
                 SectionHeader(title: tr("What is using your Mac"))
-                InspectorPanel {
-                    PulseCard(active: monitor.panelVisible, plain: true, headline: false).padding(.horizontal, 6).padding(.vertical, 4)
-                }
+                PulseCard(active: monitor.panelVisible, plain: true, headline: false)
             }
             VStack(alignment: .leading, spacing: 6) {
                 SectionHeader(title: tr("Last 15 minutes"))
@@ -46,32 +43,44 @@ struct OverviewPage: View {
 
     // MARK: Headline
 
-    /// The verdict and, when one source explains it, who that source is.
+    var severityColor: Color {
+        guard pulse.current != nil else { return Theme.textTertiary }
+        if pulse.severity == .green { return Theme.good }
+        if pulse.severity == .red { return Theme.danger }
+        return Theme.caution
+    }
+
+    /// The verdict and, when one source explains it, who that source is: one sentence in bold,
+    /// the rest quieter under it.
     var headline: some View {
         let current = pulse.current
-        return InspectorPanel {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: current == nil ? "hourglass" : pulse.severity == .green ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                    .font(.system(size: 22)).foregroundStyle(current == nil ? Color.white.opacity(0.5) : pulse.severity)
-                    .frame(width: 26).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(current == nil ? tr("Checking what your Mac is busy with…") : pulse.verdict)
-                        .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if let current, let source = Self.sourceText(current) ?? current.culpritText {
-                        Text(source).font(.system(size: 13)).foregroundStyle(.white.opacity(0.75))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    if let next = current?.nextStep {
-                        Text(next.text).font(.system(size: 12)).foregroundStyle(.white.opacity(0.55))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                Spacer(minLength: 0)
+        return HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle().fill(severityColor.opacity(0.16))
+                Image(systemName: current == nil ? "hourglass" : pulse.severity == .green ? "checkmark" : "exclamationmark")
+                    .font(.system(size: 13, weight: .bold)).foregroundStyle(severityColor)
             }
-            .padding(.horizontal, 16).padding(.vertical, 14)
-            .accessibilityElement(children: .combine)
+            .frame(width: 28, height: 28).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(current == nil ? tr("Checking what your Mac is busy with…") : pulse.verdict)
+                    .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let current, let source = Self.sourceText(current) ?? current.culpritText {
+                    Text(source).font(.system(size: 12.5)).foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let next = current?.nextStep {
+                    Label(next.text, systemImage: "arrow.turn.down.right").font(.system(size: 12)).foregroundStyle(Theme.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 0)
         }
+        .padding(.horizontal, 16).padding(.vertical, 14)
+        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(severityColor.opacity(current == nil ? 0.04 : 0.07)))
+        .overlay(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).strokeBorder(severityColor.opacity(0.22)))
+        .animation(Theme.gentle, value: pulse.severity)
+        .accessibilityElement(children: .combine)
     }
 
     /// Current directory and agent associations, not a causal attribution of system load.
@@ -104,35 +113,48 @@ struct OverviewPage: View {
     enum LinkState { case unknown, normal, watch, alert
         var color: Color {
             switch self {
-            case .unknown: return .white.opacity(0.4)
-            case .normal: return .green
-            case .watch: return .orange
-            case .alert: return .red
+            case .unknown: return Theme.textTertiary
+            case .normal: return Theme.good
+            case .watch: return Theme.caution
+            case .alert: return Theme.danger
             }
         }
+        /// The figure stays white while all is well; it takes the color only when it needs a look.
+        var valueColor: Color { self == .watch || self == .alert ? color : Theme.textPrimary }
     }
 
-    var chain: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            SectionHeader(title: tr("Heat chain"))
+    /// The heat chain (load → temperature → fans → thermal pressure) on top and the other
+    /// resources under it, in one panel: one place to read the Mac's vitals.
+    var vitals: some View {
+        InspectorPanel {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 0) {
-                    loadLink.frame(minWidth: 150); connector
-                    temperatureLink.frame(minWidth: 150); connector
-                    fanLink.frame(minWidth: 150); connector
-                    pressureLink.frame(minWidth: 150)
+                HStack(alignment: .top, spacing: 0) {
+                    loadLink; connector
+                    temperatureLink; connector
+                    fanLink; connector
+                    pressureLink
                 }
-                Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+                .frame(minWidth: 620)
+                Grid(horizontalSpacing: 0, verticalSpacing: 0) {
                     GridRow { loadLink; temperatureLink }
                     GridRow { fanLink; pressureLink }
                 }
             }
+            InspectorDivider(inset: 0)
+            resources
         }
     }
 
+    /// The step between two links of the chain: a hairline with an arrow through it.
     var connector: some View {
-        Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.3))
-            .frame(width: 18).accessibilityHidden(true)
+        ZStack {
+            Rectangle().fill(Theme.hairline).frame(width: 1)
+            Image(systemName: "chevron.right").font(.system(size: 8, weight: .heavy)).foregroundStyle(Theme.textTertiary)
+                .frame(width: 14, height: 14)
+                .background(Circle().fill(Theme.canvas))
+                .overlay(Circle().strokeBorder(Theme.hairline))
+        }
+        .frame(width: 1).accessibilityHidden(true)
     }
 
     var loadLink: some View {
@@ -191,50 +213,44 @@ struct OverviewPage: View {
             let allMax = zip(fans, policies).allSatisfy { fan, policy in
                 if case .fixed(let rpm) = policy { return fan.max.map { rpm.isInfinite || rpm >= $0 } ?? false } else { return false }
             }
-            HStack(spacing: 4) {
-                Text(tr("Requested policy")).font(.system(size: 10)).foregroundStyle(.secondary)
-                fanOption(tr("Auto"), on: allAuto) { fans.forEach { monitor.setPolicy(.auto, fan: $0.id) } }
-                fanOption(tr("Max"), on: allMax) { fans.forEach { monitor.setPolicy(.fixed(rpm: .infinity), fan: $0.id) } }.disabled(fans.contains { $0.validRange == nil })
-            }
+            let canMax = !fans.contains { $0.validRange == nil }
+            ThermoTabs(selection: Binding(get: { allAuto ? "auto" : allMax ? "max" : "" }, set: { value in
+                if value == "auto" { fans.forEach { monitor.setPolicy(.auto, fan: $0.id) } }
+                else if value == "max", canMax { fans.forEach { monitor.setPolicy(.fixed(rpm: .infinity), fan: $0.id) } }
+            }), options: [("auto", tr("Auto")), ("max", tr("Max"))], size: .small, label: tr("Requested policy"))
+            .disabled(monitor.helperBusy)
         } else {
             Button(tr("Fan settings…")) { open(.fans) }
-                .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.white.opacity(0.65))
+                .buttonStyle(.plain).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.accent)
         }
-    }
-
-    func fanOption(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).font(.system(size: 11, weight: on ? .semibold : .regular))
-                .padding(.horizontal, 9).padding(.vertical, 3)
-                .background(Capsule().fill(on ? Color.white.opacity(0.22) : Color.white.opacity(0.07)))
-                .foregroundStyle(.white.opacity(on ? 1 : 0.7))
-        }
-        .buttonStyle(.plain).disabled(monitor.helperBusy)
-        .accessibilityAddTraits(on ? .isSelected : [])
     }
 
     func link(_ title: String, _ symbol: String, value: String, caption: String?, detail: String?, state: LinkState,
               compactValue: Bool = false, accessory: AnyView? = nil, action: @escaping () -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             Button(action: action) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
-                        Image(systemName: symbol).font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).accessibilityHidden(true)
-                        Text(title).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.7))
-                        Spacer(minLength: 4)
-                        Circle().fill(state.color).frame(width: 7, height: 7).accessibilityHidden(true)
-                    }
-                    HStack(alignment: .firstTextBaseline, spacing: 5) {
-                        Text(value).font(.system(size: compactValue ? 15 : 22, weight: .semibold, design: .rounded).monospacedDigit())
-                            .foregroundStyle(.white).lineLimit(compactValue ? 2 : 1).minimumScaleFactor(0.8)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if let caption {
-                            Text(caption).font(.system(size: 11)).foregroundStyle(.white.opacity(0.5)).lineLimit(1)
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 5) {
+                        Image(systemName: symbol).font(.system(size: 10.5, weight: .medium)).accessibilityHidden(true)
+                        Text(title).font(.system(size: 11.5, weight: .medium))
+                        if state == .watch || state == .alert {
+                            Circle().fill(state.color).frame(width: 6, height: 6).accessibilityHidden(true)
                         }
                     }
-                    Text(detail ?? " ").font(.system(size: 11)).foregroundStyle(state == .alert ? Color.orange : .white.opacity(0.55))
+                    .foregroundStyle(Theme.textTertiary)
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(value).font(Theme.figure(compactValue ? 16 : 24))
+                            .foregroundStyle(state.valueColor).lineLimit(1).minimumScaleFactor(0.7)
+                            .contentTransition(.numericText())
+                        if let caption {
+                            Text(caption).font(.system(size: 11)).foregroundStyle(Theme.textTertiary).lineLimit(1)
+                        }
+                    }
+                    .frame(minHeight: 30, alignment: .bottomLeading)
+                    Text(detail ?? " ").font(.system(size: 11)).foregroundStyle(state == .alert ? Theme.caution : Theme.textSecondary)
                         .lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -242,11 +258,10 @@ struct OverviewPage: View {
             .accessibilityHint(tr("Open details"))
             if let accessory { accessory }
         }
-        .padding(12)
+        .padding(.horizontal, 16).padding(.vertical, 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.white.opacity(state == .alert ? 0.09 : 0.055)))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .strokeBorder(state == .alert || state == .watch ? state.color.opacity(0.55) : Color.white.opacity(0.09)))
+        .hoverHighlight()
+        .animation(Theme.gentle, value: state)
     }
 
     // MARK: Other resources
@@ -268,11 +283,11 @@ struct OverviewPage: View {
              .sensors),
         ]
         let items = cells.filter { !($0.0 == tr("Battery") && s?.battery == nil) }
-        return InspectorPanel {
+        return Group {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.offset) { index, cell in
-                        if index > 0 { Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1, height: 30).padding(.top, 14) }
+                        if index > 0 { Rectangle().fill(Theme.hairline).frame(width: 1, height: 26).padding(.top, 12) }
                         resource(cell.0, cell.1, cell.2, cell.3)
                     }
                 }
@@ -290,15 +305,17 @@ struct OverviewPage: View {
 
     func resource(_ title: String, _ value: String, _ note: String?, _ page: MainPage) -> some View {
         Button { open(page) } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 11)).foregroundStyle(.white.opacity(0.55))
-                Text(value).font(.system(size: 15, weight: .semibold, design: .rounded).monospacedDigit()).foregroundStyle(.white)
-                Text(note?.isEmpty == false ? note! : " ").font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
-                    .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(title).font(.system(size: 11.5)).foregroundStyle(Theme.textTertiary)
+                Text(value).font(Theme.figure(13.5)).foregroundStyle(Theme.textPrimary).contentTransition(.numericText())
+                Text(note?.isEmpty == false ? note! : "").font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14).padding(.vertical, 10)
+            .padding(.horizontal, 16).padding(.vertical, 11)
             .contentShape(Rectangle())
+            .hoverHighlight()
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)

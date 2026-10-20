@@ -309,6 +309,7 @@ struct PulseCard: View {
                     .fixedSize(horizontal: false, vertical: true).padding(.leading, indent)
             }
             }
+            if plain { table } else {
             ForEach(pulse.hogs) { h in
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     VStack(alignment: .leading, spacing: 1) {
@@ -377,6 +378,7 @@ struct PulseCard: View {
                     .padding(.leading, indent)
                 }
             }
+            }
             if let problem = pulse.quitProblem {
                 Text(problem).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true).padding(.leading, indent)
             }
@@ -402,7 +404,7 @@ struct PulseCard: View {
                 .padding(.leading, indent)
             }
         }
-        .padding(10)
+        .padding(plain ? 0 : 10)
         .background(RoundedRectangle(cornerRadius: 8).fill((pulse.sampled ? pulse.severity : .secondary).opacity(plain ? 0 : 0.08)))
         .onAppear { holding(active) }
         .onDisappear { holding(false) }  // switching pages
@@ -430,6 +432,136 @@ struct PulseCard: View {
         }
         .sheet(item: $explaining) { ProcessExplanationView(target: $0) }
     }
+
+    // MARK: Table (main window)
+
+    /// The busiest programs as a table: name and where it runs, CPU with a bar, memory, action.
+    @ViewBuilder var table: some View {
+        if !pulse.sampled && pulse.hogs.isEmpty {
+            SkeletonList(rows: 4)
+        } else if pulse.hogs.isEmpty {
+            InspectorPanel { EmptyState(symbol: "leaf", title: tr("Nothing is keeping your Mac busy")) }
+        } else {
+            InspectorPanel {
+                HStack(spacing: 10) {
+                    Text(tr("Program")).frame(maxWidth: .infinity, alignment: .leading)
+                    Text("CPU").frame(width: 96, alignment: .trailing)
+                    Text(tr("Memory")).frame(width: 70, alignment: .trailing)
+                    Color.clear.frame(width: 120, height: 1)
+                }
+                .font(.system(size: 10.5, weight: .medium)).foregroundStyle(Theme.textTertiary)
+                .padding(.horizontal, 14).padding(.vertical, 8)
+                ForEach(pulse.hogs) { h in
+                    InspectorDivider(inset: 14)
+                    tableRow(h)
+                }
+            }
+        }
+    }
+
+    func tableRow(_ h: SystemPulse.Hog) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 10) {
+                Group {
+                    if let app = h.app {
+                        Image(nsImage: NSWorkspace.shared.icon(forFile: app)).resizable()
+                    } else {
+                        Image(systemName: "terminal").font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textSecondary)
+                            .frame(width: 24, height: 24)
+                            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.white.opacity(0.07)))
+                    }
+                }
+                .frame(width: 24, height: 24).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 5) {
+                        Text(h.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                        if h.pids.count > 1 && h.app == nil {
+                            Text("×\(h.pids.count)").font(.system(size: 10.5).monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                        }
+                        if !renderingPreview, let identity = h.applicationIdentity ?? h.processIdentities?.first {
+                            Button { explaining = .init(identity: identity, candidates: h.processIdentities ?? []) } label: {
+                                Image(systemName: "questionmark.circle").font(.system(size: 11))
+                            }
+                            .buttonStyle(.plain).foregroundStyle(Theme.textTertiary).help(tr("Why is this running?"))
+                            .accessibilityLabel(tr("Why is %1$@ running?", h.name))
+                        }
+                    }
+                    if let line = subtitle(h) {
+                        Text(line).font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                            .lineLimit(1).truncationMode(.tail).help(h.project ?? line)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 8) {
+                    GeometryReader { g in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.white.opacity(0.07))
+                            Capsule().fill(cpuColor(h.cpu)).frame(width: g.size.width * CGFloat(min(1, max(0, h.cpu / max(100, pulse.hogs.map(\.cpu).max() ?? 100)))))
+                        }
+                    }
+                    .frame(width: 44, height: 4).accessibilityHidden(true)
+                    .animation(Theme.gentle, value: h.cpu)
+                    Text(String(format: "%.0f%%", h.cpu)).font(Theme.figure(12.5, weight: .medium))
+                        .foregroundStyle(h.cpu >= 50 ? cpuColor(h.cpu) : Theme.textPrimary)
+                        .contentTransition(.numericText())
+                        .frame(width: 44, alignment: .trailing)
+                }
+                .frame(width: 96, alignment: .trailing)
+                Text(memoryText(h.memoryKB)).font(Theme.figure(12.5, weight: .medium)).foregroundStyle(Theme.textSecondary)
+                    .contentTransition(.numericText())
+                    .frame(width: 70, alignment: .trailing)
+                HStack(spacing: 6) {
+                    if ChromeInspector.isBrowser(h.name) && !renderingPreview {
+                        Button(tr("Pages")) {
+                            _ = AppModels.shared.browser(h.name, memoryKB: h.memoryKB, gpuKB: h.parts?.first { $0.role == "GPU" }?.memoryKB)
+                            MainWindow.show(.browser(h.name))
+                        }
+                        .buttonStyle(PillButtonStyle()).controlSize(.small).help(tr("View pages"))
+                    }
+                    if h.quittable && !renderingPreview {
+                        Button(pulse.quitting.contains(h.id) ? tr("Stopping…") : h.app != nil ? tr("Quit") : tr("End")) { confirming = h }
+                            .buttonStyle(PillButtonStyle()).controlSize(.small)
+                            .disabled(pulse.quitting.contains(h.id) || pulse.restarting == h.name)
+                    }
+                }
+                .frame(width: 120, alignment: .trailing)
+            }
+            if let a = h.advice {
+                HStack(alignment: .center, spacing: 8) {
+                    Image(systemName: "lightbulb").font(.system(size: 11)).foregroundStyle(Theme.caution)
+                    Text(a.text).font(.system(size: 11.5)).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 4)
+                    if !renderingPreview {
+                        Button(pulse.restarting == h.name ? tr("Restarting…") : tr("Restart")) { restartTarget = h }
+                            .buttonStyle(PillButtonStyle(prominent: true, color: Theme.caution)).controlSize(.small)
+                            .disabled(pulse.restarting != nil)
+                    }
+                }
+                .padding(.leading, 34)
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 9)
+        .background(recorder.highlighted == h.name ? Theme.caution.opacity(0.10) : .clear)
+        .hoverHighlight()
+    }
+
+    /// Where it runs, or what it is made of: its processes summed by kind ("Pages ×12 4.1 GiB"),
+    /// never one entry per process.
+    func subtitle(_ h: SystemPulse.Hog) -> String? {
+        var items: [String] = []
+        if let o = origin(h) { items.append(o) }
+        if let parts = h.parts, parts.count > 1 {
+            let roles = Dictionary(grouping: parts, by: \.role)
+                .map { (role: $0.key, count: $0.value.count, kb: $0.value.reduce(0) { $0 + $1.memoryKB }) }
+                .sorted { $0.kb > $1.kb }
+            items += roles.prefix(3).map { r in
+                roleText(r.role) + (r.count > 1 ? " ×\(r.count)" : "") + " " + memoryText(r.kb)
+            }
+        }
+        return items.isEmpty ? nil : items.joined(separator: "  ·  ")
+    }
+
+    func cpuColor(_ cpu: Double) -> Color { cpu >= 100 ? Theme.danger : cpu >= 50 ? Theme.caution : Theme.accent }
 
     /// This card's share in keeping the sampler running (the panel and the main window each have one).
     func holding(_ on: Bool) {

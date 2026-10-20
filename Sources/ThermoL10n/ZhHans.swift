@@ -3136,4 +3136,6 @@ let zhHans: [String: String] = [
 
     // Redesign
     "Loading": "正在加载",
+    "Program": "程序",
+    "Nothing is keeping your Mac busy": "目前没有程序让 Mac 忙碌",
 ]
