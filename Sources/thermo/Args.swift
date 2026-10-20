@@ -28,6 +28,7 @@ struct Args {
     ]
     static let knownFlags: Set<String> = ["json", "csv", "all", "no-color", "no-cache", "help", "version", "fahrenheit", "yes", "trash", "permanent", "dry-run", "with-data",
         "refresh-catalog", "data-only", "authorize-background",
+        "check", // agents updates: ask GitHub about skills first
         "exact", // clean: full per-item size walks
         "stream", // clean: newline-delimited incremental scan results
         "rescan",  // rescan: clean run ignores the saved scan
