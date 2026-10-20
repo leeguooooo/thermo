@@ -127,6 +127,8 @@ class ReleaseVerifierTests(unittest.TestCase):
         report=json.loads((self.output/'result.json').read_text());self.assertTrue(report['complete'])
         for arch in ['arm64','x86_64']:
             self.assertEqual(json.loads((self.output/(arch+'-verify-ai-diagnostics-contract.log')).read_text()),{'fixed':True,'binary':'thermo-'+arch})
+            self.assertIn(arch+'-verify-media-text-split', [row['name'] for row in report['checks']])
+        self.assertEqual(report['scriptSourcesSHA256']['verify-media-text-split.py'], module.digest(self.source/'scripts/verify-media-text-split.py'))
         self.assertEqual(report['scriptSourcesSHA256'][contract.name],module.digest(contract))
         self.assertEqual(report['artifactVerifierSHA256'],module.digest(self.source/'scripts/verify-artifacts.sh'))
 
