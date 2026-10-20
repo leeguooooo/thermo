@@ -1,0 +1,43 @@
+{
+  "aiInput": "53be70cf78333ff718cb9de635d123eaaf2bb5de",
+  "r23Input": "b3ac82176273dc7f461ff55a667e36987e253cf9",
+  "commonBase": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+  "aiOnlyProductFilesPreserved": 29,
+  "r23OnlyProductFilesPreserved": 9,
+  "identicalSharedProductFilesPreserved": 67,
+  "r17ToR23ProductFiles": 14,
+  "r23DeltaFilesByteIdentical": [
+    "Sources/CleanKit/NativeUpdateTransaction.swift",
+    "Tests/CleanKitTests/AppUninstallerTests.swift",
+    "Tests/CleanKitTests/NativeUpdateTransactionTests.swift",
+    "Sources/CleanKit/AppRemovalTreeIdentity.swift",
+    "Tests/ThermoAppTests/PresentationTests.swift",
+    "Tests/ThermoAppTests/AppsModelTests.swift",
+    "Sources/CleanKit/Apps.swift",
+    "Sources/ThermoApp/AppsPage.swift",
+    "Sources/thermo/Apps.swift",
+    "Tests/CleanKitTests/AppDataRemovalTests.swift",
+    "Tests/CleanKitTests/AppRemovalTreeIdentityTests.swift",
+    "Sources/ThermoApp/main.swift",
+    "Tests/CleanKitTests/OrphanReviewTests.swift"
+  ],
+  "jointTranslationFile": [
+    "Sources/ThermoL10n/ZhHans.swift"
+  ],
+  "manualConflictFiles": [
+    "Sources/ThermoL10n/ZhHans.swift",
+    "docs/mole-parity.md",
+    "docs/remote-development.md"
+  ],
+  "changedTranslationsPreserved": {
+    "AI": 104,
+    "r23": 86,
+    "duplicateKeys": 0
+  },
+  "liveDirtyWorktreeUsedAsInput": false,
+  "installedAppModified": false,
+  "candidateCommit": "39ba556",
+  "sourceFilesVerified": 613,
+  "installedManifestEntriesMatched": 103,
+  "validationStatus": "pending remote full Release and universal qualification"
+}
