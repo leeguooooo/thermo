@@ -1,0 +1,54 @@
+{
+  "task": "Find the latest public Thermo release and all downloadable release assets.",
+  "observedDate": "2026-10-20",
+  "verdict": "passed_after_rendered_page_read",
+  "toolVersion": "chrome-use 1.5.242",
+  "releaseURL": "https://github.com/leeguooooo/thermo/releases/tag/v1.1.38",
+  "releaseTag": "v1.1.38",
+  "assets": [
+    "https://github.com/leeguooooo/thermo/releases/download/v1.1.38/Thermo-1.1.38-SHA256SUMS.txt",
+    "https://github.com/leeguooooo/thermo/releases/download/v1.1.38/Thermo-1.1.38.dmg",
+    "https://github.com/leeguooooo/thermo/releases/download/v1.1.38/Thermo-1.1.38.zip",
+    "https://github.com/leeguooooo/thermo/releases/download/v1.1.38/thermo-cli-macos-universal.tar.gz",
+    "https://github.com/leeguooooo/thermo/releases/download/v1.1.38/thermo-cli-macos-universal.tar.gz.sha256"
+  ],
+  "httpRead": {
+    "status": 200,
+    "success": true,
+    "source": "html-fallback",
+    "truncated": false,
+    "linksShown": 82,
+    "releaseAssetLinks": 0,
+    "stdoutBytes": 17708,
+    "taskComplete": false
+  },
+  "renderedFilteredSnapshot": {
+    "success": true,
+    "stdoutBytes": 2850,
+    "releaseAssetLinksMatchedAPI": 5,
+    "taskComplete": true
+  },
+  "cleanup": {
+    "firstDoneClosedReleaseTabAndVerifiedAbsent": true,
+    "secondDoneClosedHTTPPreparationBlankTabAndVerifiedAbsent": true,
+    "retainedTabs": 0
+  },
+  "helpVersionBoundary": {
+    "installedReadHelp": "excerpt fallback observed",
+    "sourceCommitWithDedicatedReadHelp": "36f1351d5b1ae04c9b5d41ba66a833319c4917cf",
+    "sourceStillBroken": false,
+    "installedOrUpgraded": false
+  },
+  "limits": [
+    "Byte counts are captured CLI stdout, not model or billing tokens.",
+    "HTTP-only and rendered reads use different paths; no whole-task timing or token-savings claim.",
+    "No assets were downloaded; names and URLs do not prove binary architectures or signatures.",
+    "No real model inference or private-account write."
+  ],
+  "privateEvidenceSHA256": {
+    "github-api.json": "28d3e783a4b29d1466fd9dbc7dfe6e0751e2bb52c98cc98fb8d9733e9c6f7747",
+    "http-read.json": "74823fa343a16cfc0a31947b40c40b877ce59c16c15c7ebe042bd1a09b89aff5",
+    "assets-snapshot.json": "e52b9bc060caa367d170ad66f8ba91beac8122e41ba6ff796a7eb93b31dae9f4",
+    "open.json": "f29eb5f64d8222b0dc0d276e61bd6c74c0dbcd9b7490440166e20f923c1af16b"
+  }
+}
