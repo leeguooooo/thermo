@@ -422,7 +422,7 @@ struct MainSidebar: View {
             HStack(spacing: 8) {
                 Image(systemName: "thermometer.medium").font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(LinearGradient(colors: [Theme.caution, Theme.danger], startPoint: .top, endPoint: .bottom))
-                Text("Thermo").font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Theme.textPrimary)
+                Text("Thermo").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.textPrimary)
             }
             .padding(.horizontal, 18).padding(.top, 46).padding(.bottom, 10)
             ScrollView(showsIndicators: false) {
@@ -490,7 +490,7 @@ struct MainSidebar: View {
 
     func header(_ title: String) -> some View {
         // Upper case only reads well in Latin script ("AI AGENT 诊断" does not).
-        Text(L10n.current == .english ? title.uppercased() : title).font(.system(size: 10.5, weight: .semibold))
+        Text(L10n.current == .english ? title.uppercased() : title).font(.system(size: 11, weight: .semibold))
             .tracking(L10n.current == .english ? 0.6 : 0)
             .foregroundStyle(Theme.textTertiary).padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 4)
             .accessibilityAddTraits(.isHeader)
@@ -513,7 +513,7 @@ struct MainSidebar: View {
                     .lineLimit(1)
                 Spacer(minLength: 4)
                 if badge > 0 {
-                    Text("\(badge)").font(.system(size: 10.5, weight: .bold, design: .rounded)).monospacedDigit()
+                    Text("\(badge)").font(.system(size: 11, weight: .bold, design: .rounded)).monospacedDigit()
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6).frame(minWidth: 18, minHeight: 16)
                         .background(Capsule().fill(Theme.caution.opacity(0.9)))
@@ -665,13 +665,13 @@ struct SensorsPage: View {
                 ForEach(Array(rows.enumerated()), id: \.offset) { i, r in
                     if i > 0 { InspectorDivider(inset: 14) }
                     HStack(spacing: 8) {
-                        Text(r.0).font(.system(size: 12.5)).foregroundStyle(.white.opacity(0.88)).lineLimit(1).help(r.0)
+                        Text(r.0).font(.system(size: 12)).foregroundStyle(.white.opacity(0.88)).lineLimit(1).help(r.0)
                         Spacer(minLength: 4)
                         if !r.1.hasPrefix("hid:") {
-                            Text(r.1).font(.system(size: 10.5, design: .monospaced)).foregroundStyle(.white.opacity(0.4))
+                            Text(r.1).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white.opacity(0.4))
                                 .lineLimit(1).textSelection(.enabled)
                         }
-                        Text(r.2).font(.system(size: 12.5, weight: .semibold).monospacedDigit()).foregroundStyle(r.3)
+                        Text(r.2).font(.system(size: 12, weight: .semibold).monospacedDigit()).foregroundStyle(r.3)
                             .frame(width: 60, alignment: .trailing)
                     }
                     .padding(.horizontal, 14).padding(.vertical, 6)

@@ -410,9 +410,9 @@ struct HeroStatus: View {
             // animate the first layout of the whole window, and everything would drift forever.
             .onAppear { DispatchQueue.main.async { turning = true } }
             .animation(Theme.standard.unlessReduced(reduceMotion), value: symbol)
-            Text(title).font(.system(size: 26, weight: .semibold)).foregroundStyle(Theme.textPrimary)
+            Text(title).font(Theme.pageTitle).foregroundStyle(Theme.textPrimary)
                 .multilineTextAlignment(.center).contentTransition(.numericText())
-            Text(subtitle).font(.system(size: 13.5)).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
+            Text(subtitle).font(.system(size: 13)).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
                 .frame(maxWidth: 460).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -437,7 +437,7 @@ struct CategoryCard: View {
                     IconTile(symbol: symbol, color: color, size: 32)
                     Spacer()
                     if let count, count > 0 {
-                        Text("\(count)").font(Theme.figure(22)).foregroundStyle(statusColor)
+                        Text("\(count)").font(Theme.figure(.metric)).foregroundStyle(statusColor)
                             .contentTransition(.numericText())
                     } else {
                         Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.good)
@@ -445,8 +445,8 @@ struct CategoryCard: View {
                 }
                 Spacer(minLength: 0)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title).font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Theme.textPrimary)
-                    Text(status).font(.system(size: 11.5)).foregroundStyle(Theme.textSecondary).lineLimit(2)
+                    Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.textPrimary)
+                    Text(status).font(.system(size: 11)).foregroundStyle(Theme.textSecondary).lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -500,7 +500,7 @@ struct RingGauge: View {
                     .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: value)
             }
             VStack(spacing: 0) {
-                Text(displayText).font(Theme.figure(size * 0.21)).contentTransition(.numericText())
+                Text(displayText).font(Theme.figure(points: size * 0.21)).contentTransition(.numericText())
                     .foregroundStyle(Theme.textPrimary).lineLimit(1).minimumScaleFactor(0.5)
                 if let caption {
                     Text(caption).font(.system(size: size * 0.095, weight: .medium)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)

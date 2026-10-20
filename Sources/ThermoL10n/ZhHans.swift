@@ -3138,4 +3138,19 @@ let zhHans: [String: String] = [
     "Loading": "正在加载",
     "Program": "程序",
     "Nothing is keeping your Mac busy": "目前没有程序让 Mac 忙碌",
+    "More information": "更多说明",
+    "Deselect all": "全不选",
+    "Select all": "全选",
+    "Select all in %1$@": "全选%1$@",
+    "%1$@ of %2$@ selected": "已选 %1$@ / %2$@",
+
+    // Redesign A (new strings for this group go right below this line)
+
+    // Redesign B (new strings for this group go right below this line)
+
+    // Redesign C (new strings for this group go right below this line)
+
+    // Redesign D (new strings for this group go right below this line)
+
+    // Redesign E (new strings for this group go right below this line)
 ]

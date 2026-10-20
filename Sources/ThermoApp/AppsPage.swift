@@ -503,7 +503,7 @@ struct AppsPage: View {
                 }
                 Spacer(minLength: 12)
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(a.totalSizeText).font(Theme.figure(13.5)).foregroundStyle(Theme.textPrimary)
+                    Text(a.totalSizeText).font(Theme.figure(.row)).foregroundStyle(Theme.textPrimary)
                         .contentTransition(.numericText())
                     if a.leftoverBytes > 0 {
                         Text(tr("%1$@ of files", AppSize.text(a.leftoverBytes, state: a.leftoverSizeState)))
@@ -601,7 +601,7 @@ struct AppsPage: View {
                         .font(Theme.caption).foregroundStyle(o.blocked == nil ? Theme.textTertiary : Theme.caution)
                 }
                 Spacer()
-                Text(o.sizeText).font(Theme.figure(13.5)).foregroundStyle(Theme.textPrimary)
+                Text(o.sizeText).font(Theme.figure(.row)).foregroundStyle(Theme.textPrimary)
                 Button { toggle(o.id) } label: { DisclosureChevron(expanded: expanded) }
                     .buttonStyle(.plain).accessibilityLabel(tr("Details for %1$@", o.bundleID))
                     .accessibilityValue(expanded ? tr("Expanded") : tr("Collapsed"))

@@ -66,7 +66,7 @@ struct OverviewPage: View {
                     .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let current, let source = Self.sourceText(current) ?? current.culpritText {
-                    Text(source).font(.system(size: 12.5)).foregroundStyle(Theme.textSecondary)
+                    Text(source).font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let next = current?.nextStep {
@@ -231,15 +231,15 @@ struct OverviewPage: View {
             Button(action: action) {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 5) {
-                        Image(systemName: symbol).font(.system(size: 10.5, weight: .medium)).accessibilityHidden(true)
-                        Text(title).font(.system(size: 11.5, weight: .medium))
+                        Image(systemName: symbol).font(.system(size: 11, weight: .medium)).accessibilityHidden(true)
+                        Text(title).font(.system(size: 11, weight: .medium))
                         if state == .watch || state == .alert {
                             Circle().fill(state.color).frame(width: 6, height: 6).accessibilityHidden(true)
                         }
                     }
                     .foregroundStyle(Theme.textTertiary)
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(value).font(Theme.figure(compactValue ? 16 : 24))
+                        Text(value).font(Theme.figure(compactValue ? .large : .metric))
                             .foregroundStyle(state.valueColor).lineLimit(1).minimumScaleFactor(0.7)
                             .contentTransition(.numericText())
                         if let caption {
@@ -306,8 +306,8 @@ struct OverviewPage: View {
     func resource(_ title: String, _ value: String, _ note: String?, _ page: MainPage) -> some View {
         Button { open(page) } label: {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(title).font(.system(size: 11.5)).foregroundStyle(Theme.textTertiary)
-                Text(value).font(Theme.figure(13.5)).foregroundStyle(Theme.textPrimary).contentTransition(.numericText())
+                Text(title).font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+                Text(value).font(Theme.figure(.row)).foregroundStyle(Theme.textPrimary).contentTransition(.numericText())
                 Text(note?.isEmpty == false ? note! : "").font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
                     .lineLimit(1)
                 Spacer(minLength: 0)

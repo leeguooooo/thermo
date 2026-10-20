@@ -246,7 +246,7 @@ struct MemoryPage: View {
         let pressureColor = b.pressure == .unknown ? Theme.textSecondary : b.pressure == .normal ? Theme.good : b.pressure == .warning ? Theme.caution : Theme.danger
         return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(MemoryFormat.string(bytes: b.used)).font(Theme.figure(30)).foregroundStyle(Theme.textPrimary)
+                Text(MemoryFormat.string(bytes: b.used)).font(Theme.figure(.hero)).foregroundStyle(Theme.textPrimary)
                     .contentTransition(.numericText())
                 Text(tr("used of %1$@", MemoryFormat.string(bytes: b.total))).font(Theme.body).foregroundStyle(Theme.textSecondary)
                 Spacer()
@@ -271,7 +271,7 @@ struct MemoryPage: View {
                             RoundedRectangle(cornerRadius: 2).fill(s.color).frame(width: 8, height: 8)
                             Text(s.title).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
                         }
-                        Text(MemoryFormat.string(bytes: s.bytes)).font(Theme.figure(14, weight: .medium)).foregroundStyle(Theme.textPrimary)
+                        Text(MemoryFormat.string(bytes: s.bytes)).font(Theme.figure(.row, weight: .medium)).foregroundStyle(Theme.textPrimary)
                             .contentTransition(.numericText())
                     }
                     .help(s.help)
@@ -283,7 +283,7 @@ struct MemoryPage: View {
                         Text(tr("Swap on the disk")).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
                     }
                     Text(b.swapReadable == false ? "—" : b.swapFiles > 0 ? tr("%1$@ of %2$@", MemoryFormat.string(bytes: b.swapUsed), MemoryFormat.string(bytes: b.swapFiles)) : tr("none"))
-                        .font(Theme.figure(14, weight: .medium)).foregroundStyle(b.swapUsed >= 4 << 30 ? Theme.caution : Theme.textPrimary)
+                        .font(Theme.figure(.row, weight: .medium)).foregroundStyle(b.swapUsed >= 4 << 30 ? Theme.caution : Theme.textPrimary)
                 }
                 .accessibilityElement(children: .combine)
             }
@@ -367,7 +367,7 @@ struct MemoryPage: View {
     var suspectsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label(tr("Programs growing in memory"), systemImage: "chart.line.uptrend.xyaxis")
-                .font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Theme.caution)
+                .font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.caution)
             ForEach(model.suspects) { s in
                 HStack(alignment: .center, spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -375,7 +375,7 @@ struct MemoryPage: View {
                         Text(s.text).font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer()
-                    Text(MemoryFormat.string(kibibytes: s.memoryKB)).font(Theme.figure(13)).foregroundStyle(Theme.textPrimary)
+                    Text(MemoryFormat.string(kibibytes: s.memoryKB)).font(Theme.figure(.row)).foregroundStyle(Theme.textPrimary)
                     Button(tr("Inspect")) { expanded.insert(s.id); search = s.name }.buttonStyle(PillButtonStyle()).controlSize(.small)
                 }
             }
@@ -431,7 +431,7 @@ struct MemoryPage: View {
                     }.frame(minWidth: 640)
                     Text(tr("Memory footprint") + " · " + tr("Resident memory"))
                 }
-                .font(.system(size: 10.5, weight: .medium)).foregroundStyle(Theme.textTertiary)
+                .font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
                 .padding(.horizontal, 14).padding(.vertical, 8)
                 ForEach(list) { p in
                     InspectorDivider(inset: 14)
@@ -485,7 +485,7 @@ struct MemoryPage: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
                         Text(program.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
-                        Text("×\(program.processCount)").font(.system(size: 10.5).monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                        Text("×\(program.processCount)").font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary)
                     }
                     Text(program.contexts.first?.app != nil ? tr("App · expand for processes") : tr("%1$@ projects · expand for processes", String(program.projects.count)))
                         .font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
@@ -665,7 +665,7 @@ struct MemoryPage: View {
             }
             .font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
         } label: {
-            Text(tr("What swap is")).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Theme.textPrimary)
+            Text(tr("What swap is")).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.textPrimary)
         }
         .padding(14).glass()
     }

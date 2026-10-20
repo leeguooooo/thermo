@@ -42,18 +42,43 @@ enum Theme {
     static let pageTop: CGFloat = 44
     static let pageWidth: CGFloat = 960
 
+    /// Every gap is one of these (a 4-point grid): inside a row, between rows, between a header and
+    /// its panel, between sections, page edges.
+    enum Space {
+        static let xs: CGFloat = 4
+        static let s: CGFloat = 8
+        static let m: CGFloat = 12
+        static let l: CGFloat = 16
+        static let xl: CGFloat = 24
+        static let xxl: CGFloat = 32
+    }
+
     // MARK: Type
 
+    // Five text sizes, no others: 24 page title, 15 heading (a verdict, a panel's lead line),
+    // 13 body and row titles, 12 secondary lines, 11 labels and meta. Figures use the rounded
+    // face at 32 (the page's one hero), 24 (a metric), 15 or 13 (in rows).
+
     static let pageTitle = Font.system(size: 24, weight: .semibold)
+    static let heading = Font.system(size: 15, weight: .semibold)
     static let pageSubtitle = Font.system(size: 13)
-    static let sectionTitle = Font.system(size: 12, weight: .semibold)
     static let rowTitle = Font.system(size: 13, weight: .medium)
     static let body = Font.system(size: 13)
-    static let caption = Font.system(size: 11.5)
+    static let secondary = Font.system(size: 12)
+    static let sectionTitle = Font.system(size: 12, weight: .semibold)
+    static let caption = Font.system(size: 11)
+    static let label = Font.system(size: 11, weight: .medium)
     static let mono = Font.system(size: 11, design: .monospaced)
 
-    static func figure(_ size: CGFloat, weight: Font.Weight = .semibold) -> Font {
-        .system(size: size, weight: weight, design: .rounded).monospacedDigit()
+    enum FigureSize: CGFloat { case hero = 32, metric = 24, large = 15, row = 13 }
+
+    static func figure(_ size: FigureSize, weight: Font.Weight = .semibold) -> Font {
+        .system(size: size.rawValue, weight: weight, design: .rounded).monospacedDigit()
+    }
+
+    /// Only for figures drawn to the size of a graphic (the inside of a ring gauge).
+    static func figure(points: CGFloat, weight: Font.Weight = .semibold) -> Font {
+        .system(size: points, weight: weight, design: .rounded).monospacedDigit()
     }
 
     // MARK: Motion
@@ -177,11 +202,11 @@ struct SearchField: View {
 
     var body: some View {
         HStack(spacing: 7) {
-            Image(systemName: "magnifyingglass").font(.system(size: 11.5, weight: .medium)).foregroundStyle(Theme.textTertiary)
-            TextField(prompt, text: $text).textFieldStyle(.plain).font(.system(size: 12.5)).focused($focused)
+            Image(systemName: "magnifyingglass").font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
+            TextField(prompt, text: $text).textFieldStyle(.plain).font(.system(size: 12)).focused($focused)
                 .accessibilityLabel(prompt)
             if !text.isEmpty {
-                Button { text = "" } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 11.5)) }
+                Button { text = "" } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 11)) }
                     .buttonStyle(.plain).foregroundStyle(Theme.textTertiary)
                     .help(tr("Clear search")).accessibilityLabel(tr("Clear search"))
             }
@@ -273,7 +298,7 @@ struct Metric: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary).lineLimit(1)
-            Text(value).font(Theme.figure(19)).foregroundStyle(color).lineLimit(1).minimumScaleFactor(0.7)
+            Text(value).font(Theme.figure(.metric)).foregroundStyle(color).lineLimit(1).minimumScaleFactor(0.7)
                 .contentTransition(.numericText())
             if let detail {
                 Text(detail).font(.system(size: 11)).foregroundStyle(Theme.textSecondary).lineLimit(1)
@@ -353,7 +378,7 @@ struct RequirementTag: View {
     let text: String
     var warning = false
     var body: some View {
-        Text(text).font(.system(size: 10.5, weight: .medium))
+        Text(text).font(.system(size: 11, weight: .medium))
             .foregroundStyle(warning ? Theme.caution : Theme.textSecondary)
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(warning ? Theme.caution.opacity(0.14) : Color.white.opacity(0.07)))
@@ -431,12 +456,131 @@ struct EmptyState: View {
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: symbol).font(.system(size: 26, weight: .light)).foregroundStyle(Theme.textTertiary)
-            Text(title).font(.system(size: 13.5, weight: .medium)).foregroundStyle(Theme.textSecondary)
+            Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.textSecondary)
             if let detail {
                 Text(detail).font(Theme.caption).foregroundStyle(Theme.textTertiary).multilineTextAlignment(.center)
                     .frame(maxWidth: 360)
             }
         }
         .frame(maxWidth: .infinity).padding(.vertical, 48)
+    }
+}
+
+// MARK: - Explanations on demand
+
+/// A (?) that opens the explanation in a popover. Pages keep their numbers in front and put the
+/// sentences that explain them here, so a page reads at a glance and the facts stay one click away.
+struct InfoButton: View {
+    let text: String
+    var title: String? = nil
+    @State private var shown = false
+
+    var body: some View {
+        Button { shown.toggle() } label: {
+            Image(systemName: "questionmark.circle").font(.system(size: 12, weight: .medium))
+                .foregroundStyle(shown ? Theme.accent : Theme.textTertiary)
+                .frame(width: 18, height: 18).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(title ?? tr("More information"))
+        .accessibilityLabel(title ?? tr("More information"))
+        .accessibilityHint(text)
+        .popover(isPresented: $shown, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                if let title { Text(title).font(Theme.sectionTitle) }
+                Text(text).font(Theme.secondary).fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+            }
+            .padding(Theme.Space.l)
+            .frame(width: 320, alignment: .leading)
+        }
+    }
+}
+
+// MARK: - Selection
+
+enum SelectionState { case none, some, all }
+
+/// The one checkbox of the app: empty, a dash for part of a group, a tick for all, or a lock
+/// for an item that cannot be picked.
+struct SelectionBox: View {
+    let state: SelectionState
+    var locked = false
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 4.5, style: .continuous)
+                .fill(state == .none || locked ? Color.white.opacity(0.06) : Theme.accent)
+            RoundedRectangle(cornerRadius: 4.5, style: .continuous)
+                .strokeBorder(state == .none || locked ? Color.white.opacity(0.28) : Theme.accent, lineWidth: 1)
+            if locked {
+                Image(systemName: "lock.fill").font(.system(size: 8, weight: .bold)).foregroundStyle(Theme.textTertiary)
+            } else if state == .all {
+                Image(systemName: "checkmark").font(.system(size: 9.5, weight: .heavy)).foregroundStyle(.white)
+                    .transition(.scale(scale: 0.5).combined(with: .opacity))
+            } else if state == .some {
+                RoundedRectangle(cornerRadius: 1).fill(.white).frame(width: 8, height: 2)
+                    .transition(.scale(scale: 0.5).combined(with: .opacity))
+            }
+        }
+        .frame(width: 16, height: 16)
+        .opacity(isEnabled ? 1 : 0.4)
+        .animation(Theme.quick, value: state)
+        .accessibilityHidden(true)
+    }
+}
+
+/// A checkbox for one item, tappable with room around it.
+struct SelectToggle: View {
+    let selected: Bool
+    var locked = false
+    let label: String
+    let toggle: () -> Void
+
+    var body: some View {
+        Button(action: toggle) {
+            SelectionBox(state: selected ? .all : .none, locked: locked)
+                .frame(width: 24, height: 24).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(locked)
+        .accessibilityLabel(label)
+        .accessibilityValue(selected ? tr("Selected") : tr("Not selected"))
+    }
+}
+
+/// Selects or clears a whole list or group at once: a tri-state checkbox, the group's name, and
+/// how many of its items are picked. Clicking picks every item that can be picked, or clears them
+/// when all already are. Put one in each group header and one in the action bar.
+struct SelectAllButton: View {
+    var title: String? = nil
+    /// Items that can be picked (locked ones do not count).
+    let available: Int
+    let selected: Int
+    let selectAll: () -> Void
+    let clear: () -> Void
+
+    var state: SelectionState { selected == 0 ? .none : selected >= available ? .all : .some }
+
+    var body: some View {
+        Button { state == .all ? clear() : selectAll() } label: {
+            HStack(spacing: Theme.Space.s) {
+                SelectionBox(state: available == 0 ? .none : state)
+                Text(title ?? (state == .all ? tr("Deselect all") : tr("Select all")))
+                    .font(title == nil ? Theme.secondary.weight(.medium) : Theme.sectionTitle)
+                    .foregroundStyle(title == nil ? Theme.textPrimary : Theme.textSecondary)
+                if available > 0 {
+                    Text(tr("%1$@ of %2$@", String(selected), String(available)))
+                        .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                        .contentTransition(.numericText())
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(available == 0)
+        .accessibilityLabel(title.map { tr("Select all in %1$@", $0) } ?? tr("Select all"))
+        .accessibilityValue(tr("%1$@ of %2$@ selected", String(selected), String(available)))
     }
 }

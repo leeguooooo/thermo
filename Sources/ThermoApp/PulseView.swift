@@ -449,7 +449,7 @@ struct PulseCard: View {
                     Text(tr("Memory")).frame(width: 70, alignment: .trailing)
                     Color.clear.frame(width: 120, height: 1)
                 }
-                .font(.system(size: 10.5, weight: .medium)).foregroundStyle(Theme.textTertiary)
+                .font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
                 .padding(.horizontal, 14).padding(.vertical, 8)
                 ForEach(pulse.hogs) { h in
                     InspectorDivider(inset: 14)
@@ -476,7 +476,7 @@ struct PulseCard: View {
                     HStack(spacing: 5) {
                         Text(h.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
                         if h.pids.count > 1 && h.app == nil {
-                            Text("×\(h.pids.count)").font(.system(size: 10.5).monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                            Text("×\(h.pids.count)").font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary)
                         }
                         if !renderingPreview, let identity = h.applicationIdentity ?? h.processIdentities?.first {
                             Button { explaining = .init(identity: identity, candidates: h.processIdentities ?? []) } label: {
@@ -501,13 +501,13 @@ struct PulseCard: View {
                     }
                     .frame(width: 44, height: 4).accessibilityHidden(true)
                     .animation(Theme.gentle, value: h.cpu)
-                    Text(String(format: "%.0f%%", h.cpu)).font(Theme.figure(12.5, weight: .medium))
+                    Text(String(format: "%.0f%%", h.cpu)).font(Theme.figure(.row, weight: .medium))
                         .foregroundStyle(h.cpu >= 50 ? cpuColor(h.cpu) : Theme.textPrimary)
                         .contentTransition(.numericText())
                         .frame(width: 44, alignment: .trailing)
                 }
                 .frame(width: 96, alignment: .trailing)
-                Text(memoryText(h.memoryKB)).font(Theme.figure(12.5, weight: .medium)).foregroundStyle(Theme.textSecondary)
+                Text(memoryText(h.memoryKB)).font(Theme.figure(.row, weight: .medium)).foregroundStyle(Theme.textSecondary)
                     .contentTransition(.numericText())
                     .frame(width: 70, alignment: .trailing)
                 HStack(spacing: 6) {
@@ -529,7 +529,7 @@ struct PulseCard: View {
             if let a = h.advice {
                 HStack(alignment: .center, spacing: 8) {
                     Image(systemName: "lightbulb").font(.system(size: 11)).foregroundStyle(Theme.caution)
-                    Text(a.text).font(.system(size: 11.5)).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
+                    Text(a.text).font(.system(size: 11)).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 4)
                     if !renderingPreview {
                         Button(pulse.restarting == h.name ? tr("Restarting…") : tr("Restart")) { restartTarget = h }
