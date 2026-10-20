@@ -438,11 +438,8 @@ struct SafetyTag: View {
     let safety: Safety
     var info = false
     var body: some View {
-        let (text, color): (String, Color) = info ? (tr("info"), .blue)
-            : safety == .safe ? (tr("safe"), .green) : safety == .review ? (tr("review"), .orange) : (tr("risky"), .red)
-        // Same capsule as AgentTag, tinted by safety.
-        Text(text).font(.caption2.weight(.medium)).foregroundStyle(color)
-            .padding(.horizontal, 6).padding(.vertical, 1)
-            .background(Capsule().fill(color.opacity(0.15)))
+        let (text, color): (String, Color) = info ? (tr("info"), Theme.accent)
+            : safety == .safe ? (tr("safe"), Theme.good) : safety == .review ? (tr("review"), Theme.caution) : (tr("risky"), Theme.danger)
+        StatusTag(text: text, color: color)
     }
 }

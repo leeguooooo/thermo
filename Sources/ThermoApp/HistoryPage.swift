@@ -143,36 +143,37 @@ struct HistoryPage: View {
 
     var body: some View {
         WindowPage(title: tr("History"), subtitle: tr("Every change Thermo made, and where to undo it.")) {
-            HStack(spacing: 10) {
-                Image(systemName: "doc.text").foregroundStyle(.white.opacity(0.5)).accessibilityHidden(true)
-                Text(FS.tilde(OperationJournal.url().path)).font(.system(size: 11).monospaced()).foregroundStyle(.white.opacity(0.5))
+            HStack(spacing: Theme.Space.s) {
+                Image(systemName: "doc.text").font(.system(size: 11)).foregroundStyle(Theme.textTertiary).accessibilityHidden(true)
+                Text(FS.tilde(OperationJournal.url().path)).font(Theme.mono).foregroundStyle(Theme.textTertiary)
                     .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
-                Spacer(minLength: 8)
+                Spacer(minLength: Theme.Space.s)
                 if model.busy || model.reading { ProgressView().controlSize(.small) }
-                Button { model.load() } label: { Image(systemName: "arrow.clockwise") }
-                    .buttonStyle(.plain).foregroundStyle(.white.opacity(0.7))
-                    .accessibilityLabel(tr("Refresh")).help(tr("Refresh"))
+                Button { model.load() } label: { Label(tr("Refresh"), systemImage: "arrow.clockwise") }
+                    .buttonStyle(PillButtonStyle()).controlSize(.small)
+                    .help(tr("Refresh"))
                     .disabled(model.busy || model.reading)
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 2)
             if let notice = model.notice { NoticeBanner(text: notice) { model.notice = nil } }
             if let issue = model.readIssue { NoticeBanner(text: issue) }
             if !model.loaded {
-                NoticeBanner(text: tr("Reading the history…"), busy: true)
+                SkeletonList(rows: 5)
             } else if model.records.isEmpty {
                 InspectorPanel {
-                    Text(tr(model.readIssue == nil ? "No operations recorded yet. Cleanups, uninstalls, agent fixes, Claude resets, privacy changes and tab batches will appear here." : "No verified history records are available."))
-                        .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).fixedSize(horizontal: false, vertical: true)
-                        .padding(16)
+                    EmptyState(symbol: "clock.arrow.circlepath",
+                               title: tr(model.readIssue == nil ? "No operations recorded yet. Cleanups, uninstalls, agent fixes, Claude resets, privacy changes and tab batches will appear here." : "No verified history records are available."))
                 }
             } else {
                 ForEach(days, id: \.0) { day, records in
-                    VStack(alignment: .leading, spacing: 6) {
-                        SectionHeader(title: day)
+                    VStack(alignment: .leading, spacing: Theme.Space.s) {
+                        SectionHeader(title: day) {
+                            Text(trCount(records.count, "%1$@ item", "%1$@ items")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                        }
                         InspectorPanel {
                             LazyVStack(alignment: .leading, spacing: 0) {
                                 ForEach(Array(records.enumerated()), id: \.element.id) { index, record in
-                                    if index > 0 { InspectorDivider() }
+                                    if index > 0 { InspectorDivider(inset: 42) }
                                     row(record)
                                 }
                             }
@@ -214,61 +215,65 @@ struct HistoryPage: View {
 
     func row(_ r: OperationRecord) -> some View {
         let open = expanded.contains(r.id)
+        let failed = r.outcome != "succeeded"
         return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: Self.symbol(r)).font(.system(size: 13)).foregroundStyle(.white.opacity(0.55))
-                    .frame(width: 18).padding(.top, 1).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .center, spacing: Theme.Space.m) {
+                Image(systemName: Self.symbol(r)).font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(failed ? Theme.caution : Theme.textSecondary)
+                    .frame(width: 24, height: 24)
+                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.white.opacity(0.06)))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text(r.title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
-                        if r.outcome != "succeeded" {
-                            RequirementTag(text: r.outcomeText, warning: true)
-                        }
+                        Text(r.title).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
+                        if failed { StatusTag(text: r.outcomeText, color: Theme.caution) }
                     }
                     Text(([r.time.formatted(date: .omitted, time: .shortened), r.subject, r.items.count > 1 ? tr("%1$@ items", String(r.items.count)) : nil, r.sizeText]
                         .compactMap { $0 }).joined(separator: " · "))
-                        .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).lineLimit(1).truncationMode(.middle)
-                    if let undo = r.restorableHere ? tr("Can be put back from here.") : r.undoText {
-                        Text(undo).font(.system(size: 11)).foregroundStyle(.white.opacity(0.45)).fixedSize(horizontal: false, vertical: true)
-                    }
+                        .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
                 }
-                Spacer(minLength: 8)
+                Spacer(minLength: Theme.Space.s)
                 action(r)
-                Button { withAnimation(reduceMotion ? nil : .easeOut(duration: 0.15)) { if open { expanded.remove(r.id) } else { expanded.insert(r.id) } } } label: {
-                    Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold))
-                        .rotationEffect(.degrees(open ? 90 : 0)).frame(width: 18, height: 18).contentShape(Rectangle())
+                Button { withAnimation(Theme.standard.unlessReduced(reduceMotion)) { if open { expanded.remove(r.id) } else { expanded.insert(r.id) } } } label: {
+                    DisclosureChevron(expanded: open).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).foregroundStyle(.white.opacity(0.45))
+                .buttonStyle(.plain)
                 .accessibilityLabel(open ? tr("Hide details") : tr("Show details")).accessibilityHint(r.title)
             }
             if open {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    if let undo = r.restorableHere ? tr("Can be put back from here.") : r.undoText {
+                        Label(undo, systemImage: "arrow.uturn.backward").font(Theme.caption).foregroundStyle(Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true).padding(.bottom, Theme.Space.xs)
+                    }
                     ForEach(Array(r.items.prefix(200).enumerated()), id: \.offset) { _, item in
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
                             Image(systemName: item.status == "done" ? "checkmark" : item.status == "skipped" ? "minus" : item.status == "partial" ? "circle.lefthalf.filled" : "xmark")
                                 .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(item.status == "failed" ? Color.orange : .white.opacity(0.5)).frame(width: 12)
+                                .foregroundStyle(item.status == "failed" ? Theme.caution : Theme.textTertiary).frame(width: 12)
                                 .accessibilityLabel(item.status)
-                            Text(item.target).font(.system(size: 11).monospaced()).foregroundStyle(.white.opacity(0.7))
+                            Text(item.target).font(Theme.mono).foregroundStyle(Theme.textSecondary)
                                 .lineLimit(2).truncationMode(.middle).textSelection(.enabled)
                             if let bytes = item.bytes {
-                                Text(ByteFormat.string(bytes)).font(.system(size: 11).monospacedDigit()).foregroundStyle(.white.opacity(0.45))
+                                Text(ByteFormat.string(bytes)).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                             }
                         }
                         if let detail = item.detail, !detail.isEmpty {
-                            Text(tr(detail)).font(.system(size: 11)).foregroundStyle(.white.opacity(0.45)).padding(.leading, 18)
+                            Text(tr(detail)).font(Theme.caption).foregroundStyle(Theme.textTertiary).padding(.leading, 18)
                                 .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
                         }
                     }
                     if r.items.count > 200 {
                         Text(tr("%1$@ more in thermo history show %2$@", String(r.items.count - 200), String(r.id.prefix(8))))
-                            .font(.system(size: 11)).foregroundStyle(.white.opacity(0.45))
+                            .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     }
                 }
-                .padding(.leading, 28).padding(.top, 8)
+                .padding(.leading, 36).padding(.top, Theme.Space.s)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(.horizontal, 14).padding(.vertical, 10)
+        .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.s + 2)
+        .hoverHighlight()
     }
 
     /// The one button an entry gets: put back here, or go to where it is restored.
@@ -279,27 +284,27 @@ struct HistoryPage: View {
                 AppModels.shared.softwareUpdates.channel = "native"
                 AppModels.shared.nativeUpdates.showRecovery = true
                 open(.apps(.updates))
-            }.buttonStyle(PillButtonStyle()).fixedSize()
+            }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case nil where r.feature == "apps" && r.action == "update":
-            Button(tr("Open")) { open(.apps(.updates)) }.buttonStyle(PillButtonStyle()).fixedSize()
+            Button(tr("Open")) { open(.apps(.updates)) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case "startup":
-            Button(tr("Open")) { open(.apps(.startup)) }.buttonStyle(PillButtonStyle()).fixedSize()
+            Button(tr("Open")) { open(.apps(.startup)) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case "trashBatch":
-            Button(tr("Restore…")) { restoring = r }.buttonStyle(PillButtonStyle()).disabled(model.busy).fixedSize()
+            Button(tr("Restore…")) { restoring = r }.buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.busy).fixedSize()
         case "claudeReset":
-            Button(tr("Open")) { open(.claudeCleanup) }.buttonStyle(PillButtonStyle()).fixedSize()
+            Button(tr("Open")) { open(.claudeCleanup) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case "browserBackup", "timezoneBackup":
-            Button(tr("Open")) { open(.privacyTools) }.buttonStyle(PillButtonStyle()).fixedSize()
+            Button(tr("Open")) { open(.privacyTools) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case "tabArchive", "tabBatch":
-            Button(tr("Open")) { open(.browser("Google Chrome")) }.buttonStyle(PillButtonStyle()).fixedSize()
+            Button(tr("Open")) { open(.browser("Google Chrome")) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case "trash":
             Button(tr("Open Trash")) {
                 NSWorkspace.shared.open(URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".Trash"))
-            }.buttonStyle(PillButtonStyle()).fixedSize()
+            }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case "agentBackup", "worktreeBackup":
             if let ref = r.undo?.ref {
                 Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: ref)]) } label: { Image(systemName: "folder") }
-                    .buttonStyle(.plain).foregroundStyle(.white.opacity(0.6))
+                    .buttonStyle(.plain).foregroundStyle(Theme.textSecondary)
                     .accessibilityLabel(tr("Reveal in Finder")).help(tr("Reveal in Finder"))
             }
         default: EmptyView()
@@ -308,8 +313,8 @@ struct HistoryPage: View {
 
     func restoreSheet(_ r: OperationRecord) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(tr("Put these back from the Trash?")).font(.system(size: 17, weight: .bold))
-            Text(r.title + (r.subject.map { " · " + $0 } ?? "")).font(.system(size: 12)).foregroundStyle(.secondary)
+            Text(tr("Put these back from the Trash?")).font(Theme.heading)
+            Text(r.title + (r.subject.map { " · " + $0 } ?? "")).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
             if model.reviewingRestore { NoticeBanner(text: tr("Reviewing the current Trash batch…"), busy: true) }
             if let issue = model.restoreReviewIssue { NoticeBanner(text: issue) }
             if let review = model.restoreReview {
@@ -318,9 +323,9 @@ struct HistoryPage: View {
                         LazyVStack(alignment: .leading, spacing: 8) {
                             ForEach(Array(review.items.enumerated()), id: \.offset) { _, item in
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(FS.tilde(item.original)).font(.system(size: 11).monospaced()).textSelection(.enabled)
+                                    Text(FS.tilde(item.original)).font(Theme.mono).textSelection(.enabled)
                                     if item.status != "restored" {
-                                        Text(item.reason ?? tr("This item will stay in the Trash")).font(.caption).foregroundStyle(.secondary)
+                                        Text(item.reason ?? tr("This item will stay in the Trash")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                                     }
                                 }
                             }
@@ -329,7 +334,7 @@ struct HistoryPage: View {
                 }
             }
             Text(tr("Only recorded items still in the Trash are put back when their original locations are empty; other items are skipped and listed."))
-                .font(.system(size: 12)).foregroundStyle(.white.opacity(0.8)).fixedSize(horizontal: false, vertical: true)
+                .font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
             HStack {
                 Button(tr("Cancel")) { restoring = nil }.keyboardShortcut(.cancelAction)
                 Spacer()
@@ -342,7 +347,7 @@ struct HistoryPage: View {
         .onAppear { model.prepareRestore(r) }
         .onDisappear { model.cancelRestoreReview(for: r.undo?.ref) }
         .padding(24).frame(width: 520)
-        .background(Color(red: 0.09, green: 0.10, blue: 0.18))
+        .background(Theme.canvas)
         .preferredColorScheme(.dark)
     }
 }

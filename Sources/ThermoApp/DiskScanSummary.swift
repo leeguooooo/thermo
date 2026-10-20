@@ -14,15 +14,15 @@ struct DiskScanSummary {
         case .incomplete: return "exclamationmark.triangle"
         case .kept: return "shield"
         case .empty: return "checkmark"
-        case .found, .review: return "internaldrive.fill"
+        case .found, .review: return "internaldrive"
         }
     }
     var color: Color {
         switch status {
-        case .stopped, .incomplete: return .orange
-        case .kept, .review: return .blue
-        case .empty: return .green
-        case .found: return .pink
+        case .stopped, .incomplete: return Theme.caution
+        case .kept, .review: return Theme.accent
+        case .empty: return Theme.good
+        case .found: return Theme.accent
         }
     }
     init(_ report: ScanReport, safeBytes: Int64) {

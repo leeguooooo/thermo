@@ -3147,6 +3147,7 @@ let zhHans: [String: String] = [
     // Redesign A (new strings for this group go right below this line)
 
     // Redesign B (new strings for this group go right below this line)
+    "Scan scope": "扫描范围",
 
     // Redesign C (new strings for this group go right below this line)
 

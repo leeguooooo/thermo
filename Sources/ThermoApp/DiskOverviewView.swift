@@ -173,62 +173,64 @@ struct DiskOverviewView: View {
     var openCleanup: (CleanCategory?) -> Void = { _ in }
     var cleanupDisabled = false
     @State private var open: Set<String> = []
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: Theme.Space.l) {
                 header
                 if let live = model.diskSpace {
                     capacityBar(capacity: live.capacityBytes, free: live.availableBytes)
                 } else if let o = model.overview {
                     capacityBar(capacity: o.capacity, free: o.free, purgeable: o.purgeable)
                 }
-                if model.measuring, model.overview != nil {
-                    Text(tr("Categories update as folders finish; unfinished totals are lower bounds."))
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                if let unreadable = model.overview?.unreadable, !unreadable.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(tr("%1$@ locations could not be read. Results may be incomplete.", String(unreadable.count)))
-                            .font(.callout).foregroundStyle(.orange)
-                        Button(tr("Open Full Disk Access")) { AppModels.shared.disk.openFullDiskAccess() }
-                            .buttonStyle(PillButtonStyle())
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                    if let unreadable = model.overview?.unreadable, !unreadable.isEmpty {
+                        HStack(spacing: Theme.Space.m) {
+                            Label(tr("%1$@ locations could not be read. Results may be incomplete.", String(unreadable.count)), systemImage: "lock.shield")
+                                .font(Theme.body).foregroundStyle(Theme.caution)
+                            Spacer(minLength: Theme.Space.s)
+                            Button(tr("Open Full Disk Access")) { AppModels.shared.disk.openFullDiskAccess() }
+                                .buttonStyle(PillButtonStyle()).controlSize(.small)
+                        }
+                        .padding(Theme.Space.m + 2).glass()
                     }
-                }
-                if model.entries.contains(where: { $0.effectiveSizeState != .complete }) {
-                    Text(tr("Some categories could not be fully measured. Known bytes are lower bounds; the unattributed residual is not a measured folder size."))
-                        .font(.callout).foregroundStyle(.orange)
-                }
-                if !model.measuring, let over = model.overview?.overcounted {
-                    Text(tr("The headings add up to %1$@ more than the disk uses: hard links (pnpm), APFS clones and files written while measuring count in each place.", ByteFormat.string(over)))
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                if model.stopped {
-                    Text(model.overview == nil ? tr("Measurement stopped. Only completed folders are counted; unfinished categories show a lower bound.") : tr("Measurement stopped. Unchanged categories keep previous results; updated categories count only completed folders."))
-                        .font(.callout).foregroundStyle(.orange)
+                    if model.entries.contains(where: { $0.effectiveSizeState != .complete }) {
+                        Label(tr("Some categories could not be fully measured. Known bytes are lower bounds; the unattributed residual is not a measured folder size."), systemImage: "exclamationmark.triangle")
+                            .font(Theme.secondary).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
+                    }
+                    if model.stopped {
+                        Label(model.overview == nil ? tr("Measurement stopped. Only completed folders are counted; unfinished categories show a lower bound.") : tr("Measurement stopped. Unchanged categories keep previous results; updated categories count only completed folders."), systemImage: "pause.circle")
+                            .font(Theme.secondary).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 if model.entries.isEmpty {
                     if model.stopped {
-                        Text(tr("No folders finished before stopping. Measure again to continue."))
-                            .font(.callout).foregroundStyle(.secondary).padding(.top, 12)
+                        EmptyState(symbol: "pause.circle", title: tr("No folders finished before stopping. Measure again to continue."))
                     } else {
-                        HStack(spacing: 8) {
-                            ProgressView().controlSize(.small)
-                            Text(tr("Measuring where your disk space is…")).foregroundStyle(.secondary)
-                        }
-                        .padding(.top, 20)
+                        SkeletonList(rows: 6)
                     }
                 } else {
-                    VStack(spacing: 0) {
-                        ForEach(model.entries) { e in
-                            row(e)
-                            Divider()
+                    VStack(alignment: .leading, spacing: Theme.Space.s) {
+                        SectionHeader(title: tr("Where your disk space is")) {
+                            if model.measuring, model.overview != nil {
+                                InfoButton(text: tr("Categories update as folders finish; unfinished totals are lower bounds."))
+                            }
+                            if !model.measuring, let over = model.overview?.overcounted {
+                                InfoButton(text: tr("The headings add up to %1$@ more than the disk uses: hard links (pnpm), APFS clones and files written while measuring count in each place.", ByteFormat.string(over)))
+                            }
                         }
-                    }.padding(16).glass()
+                        InspectorPanel {
+                            ForEach(Array(model.entries.enumerated()), id: \.element.id) { i, e in
+                                if i > 0 { InspectorDivider(inset: Theme.Space.m + 2) }
+                                row(e)
+                            }
+                        }
+                    }
                 }
             }
-            .frame(maxWidth: 760, alignment: .leading)
-            .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 32)
+            .frame(maxWidth: Theme.pageWidth, alignment: .leading)
+            .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, Theme.Space.xxl)
             .frame(maxWidth: .infinity)
         }
         .onAppear { model.measureIfStale() }
@@ -236,17 +238,14 @@ struct DiskOverviewView: View {
     }
 
     var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(tr("Where your disk space is")).font(.system(size: 26, weight: .bold)).foregroundStyle(.white)
-                Text(subtitle).font(.callout).foregroundStyle(.secondary)
-            }
-            Spacer()
+        PageHeader(title: tr("Where your disk space is"), subtitle: subtitle) {
             if model.measuring {
                 ProgressView().controlSize(.small)
-                Button(model.stopping ? tr("Stopping…") : tr("Stop")) { model.stop() }.disabled(model.stopping)
+                Button(model.stopping ? tr("Stopping…") : tr("Stop")) { model.stop() }
+                    .buttonStyle(PillButtonStyle()).disabled(model.stopping)
             } else {
                 Button { model.measure() } label: { Label(tr("Measure again"), systemImage: "arrow.clockwise") }
+                    .buttonStyle(PillButtonStyle())
             }
         }
     }
@@ -257,31 +256,46 @@ struct DiskOverviewView: View {
         return tr("measured %1$@", at.formatted(date: .abbreviated, time: .shortened))
     }
 
+    /// The page's hero: how full the disk is, as one figure and one bar.
     func capacityBar(capacity: Int64, free: Int64, purgeable: Int64 = 0) -> some View {
         let usedBytes = max(0, capacity - free)
-        return VStack(alignment: .leading, spacing: 6) {
+        let used = capacity > 0 ? min(1, max(0, Double(usedBytes) / Double(capacity))) : 0
+        let fill = used > 0.95 ? Theme.danger : used > 0.85 ? Theme.caution : Theme.accent
+        return VStack(alignment: .leading, spacing: Theme.Space.m) {
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+                Text(ByteFormat.string(free)).font(Theme.figure(.hero)).foregroundStyle(Theme.textPrimary)
+                    .contentTransition(.numericText())
+                Text(tr("free")).font(Theme.body).foregroundStyle(Theme.textSecondary)
+                Spacer()
+                Text(String(format: "%.0f%%", used * 100)).font(Theme.figure(.large)).foregroundStyle(fill)
+            }
             GeometryReader { g in
-                let used = capacity > 0 ? min(1, max(0, CGFloat(usedBytes) / CGFloat(capacity))) : 0
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.15))
-                    RoundedRectangle(cornerRadius: 5).fill(used > 0.95 ? Color.red : used > 0.85 ? Color.orange : Color.accentColor)
-                        .frame(width: g.size.width * used)
+                    RoundedRectangle(cornerRadius: 3, style: .continuous).fill(Color.white.opacity(0.07))
+                    RoundedRectangle(cornerRadius: 3, style: .continuous).fill(fill)
+                        .frame(width: g.size.width * CGFloat(used))
+                        .animation(Theme.gentle.unlessReduced(reduceMotion), value: used)
                 }
             }
-            .frame(height: 12)
+            .frame(height: 8)
             Text(tr("%1$@ used of %2$@ · %3$@ free", ByteFormat.string(usedBytes), ByteFormat.string(capacity), ByteFormat.string(free))
                  + (purgeable > 1_000_000_000 ? " · " + tr("%1$@ more can be freed by macOS on demand", ByteFormat.string(purgeable)) : ""))
-                .font(.callout).foregroundStyle(.secondary)
+                .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
         }
+        .padding(Theme.Space.l + 2).glass()
     }
 
     func entryHeader(_ entry: SpaceOverview.Entry, expanded: Bool) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: entry.children.isEmpty ? "circle.fill" : expanded ? "chevron.down" : "chevron.right")
-                .font(.caption2).foregroundStyle(.secondary).frame(width: 12)
-            Text(entry.title).font(.body)
+        HStack(spacing: Theme.Space.s) {
+            if entry.children.isEmpty {
+                Circle().fill(Theme.textTertiary).frame(width: 5, height: 5).frame(width: 22)
+            } else {
+                DisclosureChevron(expanded: expanded)
+            }
+            Text(entry.title).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
             Spacer()
-            Text(entry.sizeText).font(.body.monospacedDigit()).foregroundStyle(entry.effectiveSizeState == .complete ? Color.primary : .orange)
+            Text(entry.sizeText).font(Theme.figure(.row)).foregroundStyle(entry.effectiveSizeState == .complete ? Theme.textPrimary : Theme.caution)
+                .contentTransition(.numericText())
         }
         .contentShape(Rectangle())
     }
@@ -290,8 +304,8 @@ struct DiskOverviewView: View {
     func actionLine(_ action: String) -> some View {
         let command = action.hasPrefix("xcrun ") || action.hasPrefix("brew ") || action.hasPrefix("thermo ")
         return Text("→ " + action)
-            .font(command ? .caption.monospaced() : .caption)
-            .foregroundStyle(.orange)
+            .font(command ? Theme.mono : Theme.caption)
+            .foregroundStyle(Theme.caution)
             .textSelection(.enabled)
             .lineLimit(1).truncationMode(.middle)
     }
@@ -311,51 +325,57 @@ struct DiskOverviewView: View {
     func row(_ e: SpaceOverview.Entry) -> some View {
         let total = max(1, model.diskSpace.map { $0.capacityBytes - $0.availableBytes } ?? model.overview?.used ?? model.entries.reduce(0) { $0 + $1.bytes })
         let expanded = open.contains(e.id)
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: Theme.Space.s - 2) {
             if e.children.isEmpty {
                 entryHeader(e, expanded: expanded)
             } else {
                 Button {
-                    if expanded { open.remove(e.id) } else { open.insert(e.id) }
+                    withAnimation(Theme.standard.unlessReduced(reduceMotion)) { if expanded { open.remove(e.id) } else { open.insert(e.id) } }
                 } label: { entryHeader(e, expanded: expanded) }
                 .buttonStyle(.plain)
                 .accessibilityLabel(tr("Details for %1$@", e.title))
                 .accessibilityValue(expanded ? tr("Expanded") : tr("Collapsed"))
             }
             GeometryReader { g in
-                RoundedRectangle(cornerRadius: 2).fill(Color.accentColor.opacity(0.6))
-                    .frame(width: min(g.size.width, max(2, g.size.width * CGFloat(e.bytes) / CGFloat(total))))
-            }
-            .frame(height: 4).padding(.leading, 20)
-            if e.complete == false, let measured = e.measuredLocations, let total = e.totalLocations {
-                Text(tr("%1$@ of %2$@ locations measured", String(measured), String(total)))
-                    .font(.caption).foregroundStyle(.orange).padding(.leading, 20)
-            }
-            if let n = e.note { Text(n).font(.caption).foregroundStyle(.secondary).padding(.leading, 20) }
-            if let a = e.action { actionLine(a).padding(.leading, 20) }
-            if let route = Self.cleanupRoute(for: e.id) {
-                Button(route.label) { openCleanup(route.category) }
-                    .buttonStyle(PillButtonStyle()).disabled(cleanupDisabled).padding(.leading, 20).padding(.vertical, 4)
-            }
-            if expanded {
-                ForEach(e.children) { c in
-                    HStack {
-                        Text(c.title).font(.callout.monospaced()).lineLimit(1).truncationMode(.middle)
-                        Spacer()
-                        if let a = c.action { actionLine(a) }
-                        Text(c.sizeText).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
-                        if let p = c.path {
-                            Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) } label: {
-                                Image(systemName: "magnifyingglass")
-                            }
-                            .buttonStyle(.borderless).help(tr("Reveal in Finder"))
-                        }
-                    }
-                    .padding(.leading, 20)
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.06))
+                    Capsule().fill(Theme.accent.opacity(0.75))
+                        .frame(width: min(g.size.width, max(2, g.size.width * CGFloat(e.bytes) / CGFloat(total))))
                 }
             }
+            .frame(height: 4).padding(.leading, 30)
+            if e.complete == false, let measured = e.measuredLocations, let total = e.totalLocations {
+                Text(tr("%1$@ of %2$@ locations measured", String(measured), String(total)))
+                    .font(Theme.caption).foregroundStyle(Theme.caution).padding(.leading, 30)
+            }
+            if let n = e.note { Text(n).font(Theme.caption).foregroundStyle(Theme.textTertiary).padding(.leading, 30) }
+            if let a = e.action { actionLine(a).padding(.leading, 30) }
+            if let route = Self.cleanupRoute(for: e.id) {
+                Button(route.label) { openCleanup(route.category) }
+                    .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(cleanupDisabled).padding(.leading, 30).padding(.top, 2)
+            }
+            if expanded {
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    ForEach(e.children) { c in
+                        HStack(spacing: Theme.Space.s) {
+                            Text(c.title).font(Theme.mono).foregroundStyle(Theme.textSecondary).lineLimit(1).truncationMode(.middle)
+                            Spacer()
+                            if let a = c.action { actionLine(a) }
+                            Text(c.sizeText).font(Theme.secondary.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                            if let p = c.path {
+                                Button { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) } label: {
+                                    Image(systemName: "magnifyingglass")
+                                }
+                                .buttonStyle(.borderless).foregroundStyle(Theme.textTertiary).help(tr("Reveal in Finder"))
+                            }
+                        }
+                    }
+                }
+                .padding(.leading, 30).padding(.top, Theme.Space.xs)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
-        .padding(.vertical, 8)
-
+        .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.s + 2)
+        .hoverHighlight()
     }
 }
