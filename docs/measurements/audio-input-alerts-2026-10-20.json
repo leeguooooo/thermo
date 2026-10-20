@@ -1,0 +1,128 @@
+{
+  "checkedAt": "2026-10-20T01:29:37.066815+00:00",
+  "status": "R25 signed and installed; default-off native Settings entry accepted through AX; active input, rendered layout and notification interaction acceptance remain pending",
+  "defaultEnabled": false,
+  "recordingOrCaptureSessionCreated": false,
+  "sourceSHA256": {
+    "Sources/AgentCore/AudioInputActivity.swift": "7c73af369a927556241246b71a52dc301be0db54a906f67d921eb7b08d29d03f",
+    "Sources/ThermoApp/MicrophoneAlerts.swift": "a0c774992a9f9fea02c10f8a93d9bf5d154e24e211873f29aea7788f3911ed13",
+    "Sources/ThermoApp/AudioInputAlertSettings.swift": "b6708d48a340fc0faf162f0a03bf2e5d3f0415af9e905813872b636fc35b6d40",
+    "Sources/ThermoApp/main.swift": "9b621080a5f8a568620e4c86a53eb87c183a4a4aa3d4f859df5876ca46f6319a",
+    "Sources/ThermoApp/Views.swift": "ee2d31386ebdcbc1d8464c1e01f6c380a862166d509e87380c141f9f5004c8af",
+    "Sources/ThermoL10n/ZhHans.swift": "760b0b065edf84c2b631c5af882fc5002f2bb6f6c6b33238e85dbf83d8f2da70",
+    "Tests/AgentCoreTests/AudioInputActivityTests.swift": "5d929c1400d0b10a1defb046ac8fabaebf1822818066ef0c273bb1c59cbff5ed",
+    "Tests/AgentCoreTests/AudioInputWatcherTests.swift": "01219a3c33db919791d3c3d4d5f2c3398b85b22577b63f529de3476c62a89427",
+    "Tests/ThermoAppTests/MicrophoneAlertsTests.swift": "969a6fbcc9445ca53af71109f1935b740fe5fb7c02ed0b5f4251382ead2a1b97"
+  },
+  "reader": {
+    "source": "Core Audio process/input/device metadata only",
+    "processIdentityCheckedBeforeAndAfter": true,
+    "inputStateAndDevicesRechecked": true,
+    "currentAccountOnly": true,
+    "processListRechecked": true,
+    "unknownIsNotIdle": true,
+    "deduplicatesHALObjectsPerProcess": true,
+    "deviceNamesShownInsteadOfAssumingEveryInputIsAMicrophone": true,
+    "maxProcessObjects": 4096,
+    "maxDevicesPerProcess": 256,
+    "cooperativeReadBudgetSeconds": 2,
+    "deviceUIDsPersistedInPreferencesOrNotifications": false
+  },
+  "events": {
+    "processRosterAndRunningInputAndInputDevices": true,
+    "queueConfinedListenerLifetime": true,
+    "removedProcessListenersRetired": true,
+    "fallbackSeconds": 5,
+    "fallbackRetriesFailedListenerRegistration": true,
+    "failedOrIncompleteRegistrationShownAsDegraded": true,
+    "registeredListenersAreNotProofThatTheOSActuallyDeliveredAnEvent": true,
+    "singlePhysicalMetadataRead": true,
+    "changesDuringReadCoalescedIntoOneFollowup": true,
+    "stopRequestsRemovalOfEveryOwnedRegistration": true
+  },
+  "notifications": {
+    "initialEnableAndUnknownRecoveryUseQuietBaseline": true,
+    "mutingByAppOrExecutablePersists": true,
+    "knownAppsNotStoredAsActivityHistory": true,
+    "bannerMuteActionAndDefaultSettingsRoute": "source implemented; native acceptance pending",
+    "lateDisabledOrOldGenerationReadDiscarded": true,
+    "notificationPermissionRequestedOnlyFromExplicitEnable": true,
+    "backgroundSamplerOnlyWhileEnabled": true,
+    "privateQAStartupSuppressed": true
+  },
+  "initialPollingValidation": {
+    "run": "a316d68e-0762-4cb1-9e4d-652d30f8e7d6",
+    "inputCommit": "bc71a173098e2cf44f11de4e235cf9544d557af0",
+    "counts": {
+      "AudioInputActivityTests": 7,
+      "MicrophoneAlertsTests": 4,
+      "PresentationTests": 17
+    },
+    "failures": 0,
+    "logSHA256": "e8a86d460073f9a03bd73c33229d6f02bbdf1945d40c4d6885ea3f3a989d3412",
+    "scope": "Initial polling implementation only; subsequent event watcher and warning fix not part of this frozen run."
+  },
+  "eventVersionFirstCompile": {
+    "run": "938621cf-8962-4259-b8e5-ab1e4e252f00",
+    "status": "compile failed",
+    "reason": "Explicit self required inside nested closure after weak-self unwrapping; corrected before current run",
+    "testsExecuted": false
+  },
+  "fullRegression": {
+    "run": "837923a9-ffba-44f3-9d3e-9dcaa1df9a50",
+    "inputCommit": "e06613990039eceb361aec1216b4c054cc13ec39",
+    "status": "passed",
+    "currentSourceFilesVerifiedAgainstFrozenTestInput": 619,
+    "tests": 1971,
+    "failures": 0,
+    "counts": {
+      "ThermoKitTests.xctest": 218,
+      "ThermoHelperTests.xctest": 30,
+      "ThermoCLITests.xctest": 125,
+      "ThermoAppTests.xctest": 353,
+      "CleanKitTests.xctest": 803,
+      "AgentDoctorTests.xctest": 362,
+      "AgentCoreTests.xctest": 80
+    },
+    "newAudioInputTests": {
+      "AudioInputActivityTests": 7,
+      "AudioInputWatcherTests": 3,
+      "MicrophoneAlertsTests": 5
+    },
+    "logSHA256": "b7e416ac6f650c379ac5ac2a53b8ee51fcbed338888f21911d658beb1b171e70"
+  },
+  "remainingAcceptance": [
+    "Real input starts/stops, short activity, restart and device replacement on target M3; no media capture performed for this QA.",
+    "Actual notification delivery, click and mute action including restart; denied notification state and system versions without process metadata.",
+    "CLI read/configuration parity and appropriate capability declaration.",
+    "Camera use/app ownership and Bluetooth low-battery reminders remain separate unfinished requirements.",
+    "Native listener removal/service failure behavior, event delivery on supported OS versions, stale metadata display and complete keyboard/VoiceOver acceptance.",
+    "Actual installed Swift reader/watcher, complete rendered settings layout and explicit user enable/manual input acceptance."
+  ],
+  "sourceCommitted": false,
+  "overallParityEstablished": false,
+  "primaryAPISources": [
+    "https://developer.apple.com/documentation/coreaudio/kaudioprocesspropertyisrunninginput",
+    "SDK 27.0 AudioHardware.h and AudioHardwareBase.h: process state, input-scope device list, CFString ownership."
+  ],
+  "universalRun": "b6d23795-e253-46ff-9b66-2fb556a856a9",
+  "localUnderlyingAPIShape": {
+    "checkedAt": "2026-10-20T01:40:25.309862+00:00",
+    "processListAvailable": true,
+    "objectCount": 31,
+    "nonPositiveOrUnknownPIDs": 0,
+    "invalidOrUnknownRunningFlags": 0,
+    "activeInputObjectCount": 0,
+    "activeInputDeviceQueriesSucceeded": 0,
+    "allInputScopeDeviceQueriesSucceeded": 31,
+    "sameRosterAfterProbe": true,
+    "errors": {},
+    "wallSeconds": 0.194580333,
+    "recordingStarted": false,
+    "captureSessionOrTapCreated": false,
+    "processIdentitiesDeviceNamesAndUIDsStored": false,
+    "scope": "Underlying Core Audio property support/shape only. Not a run of the Swift reader, notification delivery, or controlled active-input acceptance."
+  },
+  "installedBuild": "611.25",
+  "installedEvidence": "audio-input-r25-installed-2026-10-20.json"
+}

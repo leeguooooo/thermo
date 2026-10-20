@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-19",
+  "host": {
+    "sflowName": "mac190",
+    "ssh": "leo@192.168.0.190",
+    "hostname": "leos-MacBook-Pro.local",
+    "architecture": "arm64",
+    "macOS": "27.0"
+  },
+  "artifact": {
+    "builtOnHost190": false,
+    "sha256": "e02d32ea03db02816cc0ee7596dcea42dbbbdc140560a7d1f0c9603b41701cd7",
+    "sourceFeatureCommit": "b5008aa",
+    "currentSource": "4fc650e",
+    "remoteDirectory": "/tmp/thermo-idle-awake-190.6P3cZe"
+  },
+  "exitCode": 0,
+  "nativeAcceptance": {
+    "bothTypesConfirmed": [
+      "PreventUserIdleDisplaySleep",
+      "PreventUserIdleSystemSleep"
+    ],
+    "kernelExpiryWithoutTickConfirmed": true,
+    "nativeRequestsCreated": true,
+    "passed": true,
+    "pid": 40212,
+    "remainingOwnedActiveRequests": 0,
+    "renewalConfirmed": true,
+    "renewalDidNotExtendDeadline": true,
+    "scope": "Owned user-process assertions only; no helper, pmset, charging, AWDL or lid-close change"
+  },
+  "postRun": {
+    "pid40212Absent": true,
+    "pmsetNoThermoKeepAwakeRows": true,
+    "physicalFreeMiB": 709
+  },
+  "scope": [
+    "Short userspace IOPM requests on external power only",
+    "No helper, charging, AWDL or lid-close changes"
+  ],
+  "notProven": [
+    "compiled on host 190",
+    "installed App or GUI",
+    "physical low-battery or power-unplug behavior",
+    "whole product parity"
+  ],
+  "buildBlocker": "Host free space below configured sflow minFreeGB=2; cleanup confirmation is pending."
+}

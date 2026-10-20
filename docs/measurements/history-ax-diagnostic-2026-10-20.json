@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-20",
+  "status": "Inconclusive diagnostic; hidden-window positive control also lacked AX content; no product defect attribution",
+  "run": "89d23657-8cea-440b-8a01-076199e165f3-test",
+  "jobStatus": "failed",
+  "jobExitCode": 1,
+  "additionalPrivateTestSHA256": "c037ec3df6adc602bb93bb04cbd1bf72a0466b6da80d8e70ebd6e7e4fb60e40b",
+  "allArtifactHashesVerified": true,
+  "baseline": {
+    "baselineMarkerExposed": false,
+    "longHistorySubjectExposed": false,
+    "shortHistorySubjectExposed": false
+  },
+  "hiddenWindowObjectCounts": {
+    "baseline": {
+      "window": 7,
+      "host": 1
+    },
+    "history3": {
+      "window": 7,
+      "host": 1
+    },
+    "history300": {
+      "window": 7,
+      "host": 1
+    }
+  },
+  "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/history-ax-hidden-component-probe.json",
+  "diagnosticOnlyNotR11RegressionResult": true,
+  "noRealJournalUsed": true,
+  "productionSourcesChanged": false,
+  "appleInspectorAttempt": {
+    "application": "com.apple.AccessibilityInspector",
+    "targetProcess": "Thermo (26253)",
+    "targetSelectionObserved": true,
+    "pointInspectionDidNotYieldElement": true,
+    "auditPanelProducedNoVerifiableResultOrScreenshot": true,
+    "permissionGrantActionsPerformed": false,
+    "pointInspectionStopped": true,
+    "inspectionWindowClosedAfterAttempt": true,
+    "consideredAcceptancePassed": false
+  },
+  "conclusion": "The experiment cannot distinguish a history-specific defect, broker traversal, framework exposure or hidden-window limitations. Baseline failure is not evidence to patch product UI. A valid visible/native AX baseline or user-assisted VoiceOver check is still needed."
+}

@@ -1,0 +1,42 @@
+{
+  "checkedAt": "2026-10-20T00:44:59.453518+00:00",
+  "problem": "Native View menu omitted Software, CPU, GPU, Memory, Space Lens and Claude cleanup even though sidebar destinations existed.",
+  "change": {
+    "addedMenuPages": [
+      "Software",
+      "Memory usage",
+      "CPU usage",
+      "GPU usage",
+      "Space Lens",
+      "Claude cleanup"
+    ],
+    "newCommandKeys": {
+      "7": "Software",
+      "8": "Memory usage",
+      "9": "CPU usage",
+      "0": "GPU usage"
+    },
+    "existingCommandKeysPreserved": true,
+    "settingsRemainsLast": true
+  },
+  "run": "7e0d7349-f3b6-40ad-af7d-b6a30acd1c11",
+  "status": "Signed universal R23 installed; AX menu and destination routes accepted; complete visual/VoiceOver acceptance remains pending",
+  "installed": true,
+  "currentInstalledBuild": "611.23",
+  "sourceCommitted": false,
+  "overallParityEstablished": false,
+  "sourceSHA256": {
+    "Sources/ThermoApp/main.swift": "f09f403a076e69170ebc2ff15a91b73e45530f91572be450eeea2d85438e404a",
+    "Tests/ThermoAppTests/PresentationTests.swift": "072a1ad971216716619b841dac7fe4b44af9bc7e89fd38d8730f422d3503da30"
+  },
+  "keyboardAcceptanceScope": "Installed R22 command-comma opened Settings; command-1 reached Overview after cancelling menu tracking. Tab alone did not expose a focus change; macOS keyboard-navigation preference was not changed. This does not prove full keyboard or VoiceOver acceptance.",
+  "orphanAgeFixtureLimit": "Both mtime and ctime participate in the 30-day policy, including deep directories. Newly created positive fixtures cannot qualify through backdating mtime; no policy bypass or system clock changes performed.",
+  "validation": {
+    "tests": 17,
+    "failures": 0,
+    "inputCommit": "a7e671bd8f05e95de8ac96643be4cd5542330d70",
+    "logSHA256": "138d99d549fa12af22319a0ace588dfb2993203d2ee57265b97aac54db46bae1",
+    "currentChangedSourcesMatchPreDispatchHashes": true
+  },
+  "installedEvidence": "navigation-r23-installed-2026-10-20.json"
+}

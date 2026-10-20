@@ -39,6 +39,16 @@ final class NotificationAccess: ObservableObject {
         }
     }
 
+    /// A control reply must await its own query, rather than assume refresh finished after a delay.
+    func readCurrentState() async -> State {
+        guard Bundle.main.bundleIdentifier != nil else { return .unavailable }
+        return await withCheckedContinuation { continuation in
+            UNUserNotificationCenter.current().getNotificationSettings { settings in
+                continuation.resume(returning: Self.state(status: settings.authorizationStatus, alerts: settings.alertSetting))
+            }
+        }
+    }
+
     func request() {
         guard !requesting else { return }
         guard Bundle.main.bundleIdentifier != nil else { state = .unavailable; return }

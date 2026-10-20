@@ -1,0 +1,122 @@
+{
+  "checkedAt": "2026-10-19T18:05:47.268138+00:00",
+  "installed": true,
+  "version": "1.1.40",
+  "build": "606",
+  "reviewRevision": 12,
+  "pid": "45582",
+  "inputCommit": "27ec7877c870d035611a2b56507a3aa47a191e81",
+  "sourceCommit": "b536e6cb229d16798a3e21ef9e9afd623e648c3d",
+  "workingTree": "dirty",
+  "manifestEntriesVerified": 103,
+  "signatureVerifiedAfterLaunch": true,
+  "rootHelperAndPlistUnchanged": true,
+  "upgradeObservation": {
+    "samples": 30,
+    "consecutiveRecoveredChecks": 6,
+    "passed": true
+  },
+  "nativeGUI": {
+    "overviewTemperaturesAndFanReadingsVisible": true,
+    "commandShiftPOpensMenuPanel": true,
+    "freshCPUAndNetworkValuesVisible": true,
+    "leftRightClickExplanationVisible": "左键：面板 · 右键：主控制台",
+    "menuBarCustomizationTextEntryVisible": true,
+    "settingsNavigationDismissesPanel": true,
+    "panelPulseSamplingAndHoldersStoppedAfterNavigation": true,
+    "CPUUploadTwoLinePreferencesPreserved": true,
+    "versionBuild606AndSourceB536Visible": true,
+    "physicalStatusBarRowRenderingReconfirmedByUser": false,
+    "physicalGlobalLeftRightClicksRetested": false
+  },
+  "readOnlyControlStates": {
+    "observations": {
+      "app-control status": {
+        "appVersion": "1.1.40 (606)",
+        "busy": "false",
+        "controlProtocol": "1",
+        "keepAwakePhase": "idle",
+        "keepAwakeRequested": "false",
+        "menuPanelOpen": "false",
+        "menuPanelSampling": "false",
+        "pulseHolders": "0",
+        "pulseSampling": "false",
+        "screenActive": "false",
+        "windowVisible": "true"
+      },
+      "charge status": {
+        "externalPower": true,
+        "gate": "allowed",
+        "ownedByCaller": false,
+        "ownership": "none",
+        "percent": 100,
+        "phase": "off",
+        "policy": "off",
+        "support": "smc"
+      },
+      "awdl status": {
+        "interface": {
+          "index": 15,
+          "up": true
+        },
+        "interfaceQueryComplete": true,
+        "ownedByCaller": false,
+        "phase": "idle"
+      },
+      "awake status": {
+        "armed": false,
+        "heatGuard": true,
+        "lidClosed": false,
+        "limit": 100
+      },
+      "fan status": {
+        "controlState": {
+          "observations": {
+            "0": {
+              "checkedAt": "2026-10-19T18:04:48Z",
+              "mode": "manual",
+              "target": 6617
+            }
+          },
+          "observationsSupported": true,
+          "policies": {
+            "0": {
+              "fixed": {
+                "rpm": 6617
+              }
+            }
+          },
+          "suspended": false
+        },
+        "fans": [
+          {
+            "id": 0,
+            "manual": true,
+            "max": 6800,
+            "min": 2317,
+            "name": "Fan",
+            "rpm": 6601.8701171875,
+            "target": 6617
+          }
+        ],
+        "fansAvailable": true,
+        "policies": {
+          "0": {
+            "fixed": {
+              "rpm": 6617
+            }
+          }
+        },
+        "policiesAvailable": true
+      }
+    },
+    "fanCSV": "id,name,rpm,min_rpm,max_rpm,target_rpm,manual,policy,verification_state,last_observed_mode,verified_target_rpm,checked_at,policies_suspended,suspension_reason,control_failure,in_current_inventory,fans_available,policies_available,helper\n0,Fan,6604.414,2317.000,6800.000,6617.000,true,fixed 6617 rpm,checked,manual,6617.000,2026-10-19T18:04:48Z,false,,,true,true,true,running\n",
+    "fanCSVColumns": 19,
+    "readOnlyOnly": true,
+    "policiesUnchanged": true
+  },
+  "chargingWriteSessionStarted": false,
+  "notarized": false,
+  "published": false,
+  "sourceMergedIntoMain": false
+}

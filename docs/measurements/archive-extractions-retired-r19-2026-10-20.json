@@ -1,0 +1,50 @@
+{
+  "checkedAt": "2026-10-19T22:39:58.123839+00:00",
+  "retired": [
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.17-update-guard-r17-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.17-update-guard-r17-mac190/Thermo-1.1.40-611.17-candidate.zip",
+      "ZIP_SHA256": "664d6475ec56ba7cf47d097f9d4dadeebb29f1bb31da9497e2aa4c11417588c1",
+      "manifestRetained": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.17-update-guard-r17-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.17-update-guard-r17-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.17-update-guard-r17-mac190/Thermo-1.1.40-611.17-candidate.zip",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.17-update-guard-r17-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.18-recovery-guard-r18-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.18-recovery-guard-r18-mac190/Thermo-1.1.40-611.18-candidate.zip",
+      "ZIP_SHA256": "2e7f6e5bcd29287588b1e290ebda46b3f3634e395e8318acc9ebeeecde9b94ea",
+      "manifestRetained": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.18-recovery-guard-r18-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.18-recovery-guard-r18-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.18-recovery-guard-r18-mac190/Thermo-1.1.40-611.18-candidate.zip",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.18-recovery-guard-r18-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    }
+  ],
+  "currentAppAndNamedRollbackCopiesUntouched": true,
+  "observedAvailableBytesAfter": 1157079040,
+  "notAReclaimedByteClaim": true
+}

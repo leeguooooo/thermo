@@ -9,7 +9,28 @@ import ThermoKit
     static let shared = AppControlHost()
     private let defaults: UserDefaults
     private let screen: CleanScreenModel
-    init(defaults: UserDefaults = .standard, screen: CleanScreenModel? = nil) { self.defaults = defaults; self.screen = screen ?? .shared }
+    private let idleAwake: IdleAwakeModel
+    private let audioInput: MicrophoneAlerts
+    private let camera: CameraAlerts
+    private let configureCamera: @MainActor (Bool) -> Void
+    private let configureAudioInput: @MainActor (Bool) -> Void
+    private let requestAudioNotifications: @MainActor () -> Void
+    private let audioNotificationState: @MainActor () async -> String
+    init(defaults: UserDefaults = .standard, screen: CleanScreenModel? = nil, idleAwake: IdleAwakeModel? = nil,
+         audioInput: MicrophoneAlerts? = nil, configureAudioInput: (@MainActor (Bool) -> Void)? = nil,
+         requestAudioNotifications: (@MainActor () -> Void)? = nil, audioNotificationState: (@MainActor () async -> String)? = nil,
+         camera: CameraAlerts? = nil, configureCamera: (@MainActor (Bool) -> Void)? = nil) {
+        self.defaults = defaults; self.screen = screen ?? .shared; self.idleAwake = idleAwake ?? .shared
+        let input = audioInput ?? .shared
+        self.audioInput = input
+        let video = camera ?? .shared
+        self.camera = video; self.configureCamera = configureCamera ?? { video.configure($0) }
+        self.configureAudioInput = configureAudioInput ?? { input.configure($0) }
+        self.requestAudioNotifications = requestAudioNotifications ?? { NotificationAccess.shared.request() }
+        self.audioNotificationState = audioNotificationState ?? {
+            String(describing: await NotificationAccess.shared.readCurrentState())
+        }
+    }
     private var server: AppControlServer?
     private let integration = AgentAccess()
     private var seen = Set<UUID>()
@@ -25,19 +46,41 @@ import ThermoKit
         } catch { issue = error.localizedDescription }
     }
     func handle(_ request: AppControlRequest) async -> AppControlResponse {
-        func result(_ values: [String:String] = [:], _ issue: String? = nil) -> AppControlResponse {
-            .init(request: request, succeeded: issue == nil, values: values, issue: issue)
+        func result(_ values: [String:String] = [:], _ issue: String? = nil, audioInput: AudioInputReport? = nil, camera: CameraReport? = nil) -> AppControlResponse {
+            .init(request: request, succeeded: issue == nil, values: values, issue: issue, audioInput: audioInput, camera: camera)
         }
         guard !seen.contains(request.id) else { return result([:], "This request ID was already received. Query status; mutations are never replayed.") }
         // Bounded process-lifetime replay guard. Do not evict IDs and permit later replay.
         guard seen.count < 100_000 else { return result([:], "Control request limit reached; restart Thermo when idle.") }
         seen.insert(request.id)
         let action = request.action
-        let reads = ["status","screen.status","login.status","updates.status","helper.status","permissions.status","integration.status","awdl.status"]
-        let writes = ["screen.start","screen.stop","screen.duration","screen.shortcut","screen.clear-shortcut","login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","awdl.on","awdl.off"]
+        let reads = ["camera.status","audio-input.status","status","screen.status","login.status","updates.status","helper.status","permissions.status","integration.status","awdl.status","keep-awake.status"]
+        let writes = ["camera.on","camera.off","audio-input.on","audio-input.off","audio-input.mute","audio-input.unmute","screen.start","screen.stop","screen.duration","screen.shortcut","screen.clear-shortcut","login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","awdl.on","awdl.off","keep-awake.start","keep-awake.stop"]
         guard reads.contains(action) || writes.contains(action) else { return result([:], "Unsupported App control operation.") }
-        guard request.arguments.keys.allSatisfy({ action == "awdl.on" ? $0 == "seconds" : ["screen.start","screen.duration"].contains(action) ? $0 == "duration" : action == "screen.shortcut" ? ["key-code","modifiers","key-label"].contains($0) : false }) else { return result([:], "Unexpected operation arguments.") }
+        guard request.arguments.keys.allSatisfy({ ["audio-input.mute","audio-input.unmute"].contains(action) ? $0 == "app" : action == "keep-awake.start" ? ["mode","seconds","duration"].contains($0) : action == "awdl.on" ? $0 == "seconds" : ["screen.start","screen.duration"].contains(action) ? $0 == "duration" : action == "screen.shortcut" ? ["key-code","modifiers","key-label"].contains($0) : false }) else { return result([:], "Unexpected operation arguments.") }
+        if ["audio-input.mute", "audio-input.unmute"].contains(action) {
+            guard let key = request.arguments["app"], !key.isEmpty, key.utf8.count <= 4096,
+                  !key.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else {
+                return result([:], "An explicit valid App key is required.")
+            }
+            guard audioInput.knownApps[key] != nil || audioInput.muted.contains(key) else {
+                return result([:], "Unknown App key. Use an App-observed or already muted key; do not guess a name.",
+                              audioInput: audioInput.controlReport(notificationAccess: "notQueried"))
+            }
+        }
         let screen = self.screen
+        var idleMode: IdleAwakeMode?
+        var idleSeconds: Double?
+        if action == "keep-awake.start" {
+            guard let raw = request.arguments["mode"], let mode = IdleAwakeMode(rawValue: raw) else { return result([:], "An explicit display, tasks or both mode is required.") }
+            idleMode = mode
+            if let duration = request.arguments["duration"] {
+                guard duration == "manual", request.arguments["seconds"] == nil else { return result([:], "Use a timed duration or manual, not both.") }
+            } else {
+                guard let raw = request.arguments["seconds"], let seconds = Int(raw), (1...604800).contains(seconds) else { return result([:], "An explicit duration of 1…604800 seconds or manual is required.") }
+                idleSeconds = Double(seconds)
+            }
+        }
         var duration: CleanScreenDuration?
         var binding: CleanScreenKeyBinding?
         if action == "screen.start" || action == "screen.duration" {
@@ -54,6 +97,17 @@ import ThermoKit
             guard let seconds = Int(request.arguments["seconds"] ?? "300"), (60...3600).contains(seconds) else { return result([:], "AWDL duration must be 60…3600 seconds.") }
         }
         if request.dryRun {
+            if action.hasPrefix("camera.") {
+                return result(["action":action,"dryRun":"true","changesMade":"false","recordsVideo":"false"],
+                              camera: camera.controlReport(notificationAccess: "notQueried"))
+            }
+            if action.hasPrefix("audio-input.") {
+                return result(["action":action,"dryRun":"true","changesMade":"false","requiresRunningApp":"true","recordsAudio":"false"],
+                              audioInput: audioInput.controlReport(notificationAccess: "notQueried"))
+            }
+            if action.hasPrefix("keep-awake.") {
+                return result(["action":action,"dryRun":"true","changesMade":"false","requiresRunningApp":"true","requiresHelper":"false"])
+            }
             screen.refreshPermission()
             return result(["action":action,"dryRun":"true","changesMade":"false","accessibility":String(screen.hasAccessibility),"requiresRunningApp":"true"])
         }
@@ -63,6 +117,35 @@ import ThermoKit
         }
         defer { if writes.contains(action) { mutating = false } }
         switch action {
+        case "camera.status", "camera.on", "camera.off":
+            if action != "camera.status" {
+                let on = action == "camera.on"
+                defaults.set(on, forKey: CameraAlerts.enabledKey); configureCamera(on)
+                if on { requestAudioNotifications() }
+            }
+            let access = await audioNotificationState()
+            let report = camera.controlReport(notificationAccess: access)
+            return result(["enabled":String(camera.enabled),"state":report.state,"recordsVideo":"false"], camera: report)
+        case "audio-input.status", "audio-input.on", "audio-input.off", "audio-input.mute", "audio-input.unmute":
+            if action == "audio-input.on" || action == "audio-input.off" {
+                let on = action == "audio-input.on"
+                defaults.set(on, forKey: MicrophoneAlerts.enabledKey)
+                configureAudioInput(on)
+                if on { requestAudioNotifications() }
+            } else if let key = request.arguments["app"] {
+                audioInput.setMuted(key, action == "audio-input.mute")
+            }
+            let access = await audioNotificationState()
+            let report = audioInput.controlReport(notificationAccess: access)
+            return result(["enabled":String(audioInput.enabled),"state":report.state,"recordsAudio":"false"], audioInput: report)
+        case "keep-awake.start", "keep-awake.stop", "keep-awake.status":
+            if action == "keep-awake.start", let idleMode { idleAwake.start(mode: idleMode, seconds: idleSeconds) }
+            if action == "keep-awake.stop" { idleAwake.stop() }
+            let values = idleAwake.controlValues()
+            if action == "keep-awake.start", let issue = idleAwake.issue { return result(values, issue) }
+            if action == "keep-awake.start", values["phase"] != "active" { return result(values, values["issue"] ?? "Idle awake did not become active. Query status before another action.") }
+            if values["phase"] == "ending" { return result(values, values["issue"] ?? "Idle-awake state is unconfirmed.") }
+            return result(values)
         case "awdl.on", "awdl.off", "awdl.status":
             let network = AWDLModel.shared
             guard !network.busy else { return result([:], "An AWDL operation is already in progress.") }
@@ -150,7 +233,14 @@ import ThermoKit
             try? await Task.sleep(nanoseconds: 100_000_000)
             return result(["accessibility":String(screen.hasAccessibility),"notifications":String(describing:notifications.state)])
         default:
-            return result(["appVersion":AppInfo.version,"controlProtocol":"1","busy":String(mutating),"screenActive":String(screen.active)])
+            let awake = idleAwake.inspect()
+            return result(["appVersion":AppInfo.version,"controlProtocol":"1","busy":String(mutating),"screenActive":String(screen.active),
+                           "keepAwakeRequested":String(awake.requested),"keepAwakePhase":awake.phase.rawValue,
+                           "windowVisible":String(AppModels.shared.monitor.windowOpen),
+                           "menuPanelOpen":String(AppModels.shared.monitor.popoverOpen),
+                           "menuPanelSampling":String(PanelModel.shared.samplingActive),
+                           "pulseSampling":String(SystemPulse.shared.samplingActive),
+                           "pulseHolders":String(SystemPulse.shared.holderCount)])
         }
     }
     private func screenState() -> [String:String] {

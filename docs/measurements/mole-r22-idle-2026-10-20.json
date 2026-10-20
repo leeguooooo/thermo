@@ -1,0 +1,926 @@
+{
+  "checkedAt": "2026-10-20T00:52:26.700478+00:00",
+  "durationSeconds": 120.946711333,
+  "identities": {
+    "Mole": {
+      "pid": "35634",
+      "birth": "Tue Oct 20 09:49:16 2026     /Applications/Mole.app/Contents/MacOS/Mole",
+      "version": "1.16.0",
+      "build": "324",
+      "binarySHA256": "77702d3d4fc9269f74fbfd61f10fc63462a98da15ef45c7d303db8a06f718e4e"
+    },
+    "Thermo": {
+      "pid": "97195",
+      "birth": "Tue Oct 20 09:34:08 2026     /Applications/Thermo.app/Contents/MacOS/Thermo",
+      "version": "1.1.40",
+      "build": "611.22",
+      "binarySHA256": "272dbbdab3929c97c1c5a7eec0842bcfb615cb66ca3619d1363a0a13b9b7a0c8"
+    }
+  },
+  "summary": {
+    "Mole": {
+      "cpuTimeSeconds": 0.16000000000000014,
+      "cpuPercentOfOneCore": 0.13228966561932848,
+      "residentKBMin": 26688,
+      "residentKBMax": 97312,
+      "residentKBMean": 48738.88524590164
+    },
+    "Thermo": {
+      "cpuTimeSeconds": 1.1699999999999946,
+      "cpuPercentOfOneCore": 0.967368179841334,
+      "residentKBMin": 29200,
+      "residentKBMax": 92016,
+      "residentKBMean": 42508.59016393442
+    }
+  },
+  "thermoStatusBefore": {
+    "appVersion": "1.1.40 (611.22)",
+    "busy": "false",
+    "controlProtocol": "1",
+    "keepAwakePhase": "idle",
+    "keepAwakeRequested": "false",
+    "menuPanelOpen": "false",
+    "menuPanelSampling": "false",
+    "pulseHolders": "0",
+    "pulseSampling": "false",
+    "screenActive": "false",
+    "windowVisible": "false"
+  },
+  "thermoStatusAfter": {
+    "appVersion": "1.1.40 (611.22)",
+    "busy": "false",
+    "controlProtocol": "1",
+    "keepAwakePhase": "idle",
+    "keepAwakeRequested": "false",
+    "menuPanelOpen": "false",
+    "menuPanelSampling": "false",
+    "pulseHolders": "0",
+    "pulseSampling": "false",
+    "screenActive": "false",
+    "windowVisible": "false"
+  },
+  "samples": [
+    {
+      "at": "2026-10-20T00:50:25.488066+00:00",
+      "monotonic": 0.650504375,
+      "Mole": {
+        "cpuSeconds": 10.43,
+        "residentKB": 79264,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.38,
+        "residentKB": 76176,
+        "state": "R"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:27.498921+00:00",
+      "monotonic": 2.66119475,
+      "Mole": {
+        "cpuSeconds": 10.43,
+        "residentKB": 78048,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.5,
+        "residentKB": 92016,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:29.509328+00:00",
+      "monotonic": 4.671627958,
+      "Mole": {
+        "cpuSeconds": 10.43,
+        "residentKB": 71936,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.51,
+        "residentKB": 54528,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:31.529314+00:00",
+      "monotonic": 6.691593458,
+      "Mole": {
+        "cpuSeconds": 10.43,
+        "residentKB": 66784,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.52,
+        "residentKB": 47952,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:33.546376+00:00",
+      "monotonic": 8.708620708,
+      "Mole": {
+        "cpuSeconds": 10.43,
+        "residentKB": 64304,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.53,
+        "residentKB": 47168,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:35.554497+00:00",
+      "monotonic": 10.716731916,
+      "Mole": {
+        "cpuSeconds": 10.43,
+        "residentKB": 64352,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.54,
+        "residentKB": 47040,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:37.569663+00:00",
+      "monotonic": 12.731864,
+      "Mole": {
+        "cpuSeconds": 10.43,
+        "residentKB": 64352,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.55,
+        "residentKB": 47168,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:39.577370+00:00",
+      "monotonic": 14.739561375,
+      "Mole": {
+        "cpuSeconds": 10.43,
+        "residentKB": 64352,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.56,
+        "residentKB": 47248,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:41.589161+00:00",
+      "monotonic": 16.751354916,
+      "Mole": {
+        "cpuSeconds": 10.43,
+        "residentKB": 64368,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.57,
+        "residentKB": 47584,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:43.599819+00:00",
+      "monotonic": 18.762029958,
+      "Mole": {
+        "cpuSeconds": 10.43,
+        "residentKB": 64240,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.58,
+        "residentKB": 47488,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:45.609342+00:00",
+      "monotonic": 20.771501833,
+      "Mole": {
+        "cpuSeconds": 10.43,
+        "residentKB": 56336,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.59,
+        "residentKB": 46080,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:47.625133+00:00",
+      "monotonic": 22.788742083,
+      "Mole": {
+        "cpuSeconds": 10.44,
+        "residentKB": 51936,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.6,
+        "residentKB": 37568,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:49.751849+00:00",
+      "monotonic": 24.914120416,
+      "Mole": {
+        "cpuSeconds": 10.45,
+        "residentKB": 53456,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.61,
+        "residentKB": 44000,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:51.763574+00:00",
+      "monotonic": 26.925710208,
+      "Mole": {
+        "cpuSeconds": 10.5,
+        "residentKB": 97312,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.62,
+        "residentKB": 43376,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:53.773635+00:00",
+      "monotonic": 28.935748666,
+      "Mole": {
+        "cpuSeconds": 10.5,
+        "residentKB": 95600,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.63,
+        "residentKB": 43008,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:55.783798+00:00",
+      "monotonic": 30.946007791,
+      "Mole": {
+        "cpuSeconds": 10.5,
+        "residentKB": 93312,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.64,
+        "residentKB": 42784,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:57.792771+00:00",
+      "monotonic": 32.954885791,
+      "Mole": {
+        "cpuSeconds": 10.51,
+        "residentKB": 53312,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.66,
+        "residentKB": 43776,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:50:59.805998+00:00",
+      "monotonic": 34.968103333,
+      "Mole": {
+        "cpuSeconds": 10.51,
+        "residentKB": 51872,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.67,
+        "residentKB": 43104,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:01.816561+00:00",
+      "monotonic": 36.9787045,
+      "Mole": {
+        "cpuSeconds": 10.51,
+        "residentKB": 44096,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.68,
+        "residentKB": 42032,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:03.827888+00:00",
+      "monotonic": 38.989948,
+      "Mole": {
+        "cpuSeconds": 10.52,
+        "residentKB": 49744,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.69,
+        "residentKB": 43600,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:05.839374+00:00",
+      "monotonic": 41.001443333,
+      "Mole": {
+        "cpuSeconds": 10.52,
+        "residentKB": 51200,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.7,
+        "residentKB": 42896,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:07.853589+00:00",
+      "monotonic": 43.015622666,
+      "Mole": {
+        "cpuSeconds": 10.52,
+        "residentKB": 45936,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.71,
+        "residentKB": 42448,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:09.863711+00:00",
+      "monotonic": 45.025736791,
+      "Mole": {
+        "cpuSeconds": 10.52,
+        "residentKB": 46832,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.82,
+        "residentKB": 48192,
+        "state": "R"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:11.876577+00:00",
+      "monotonic": 47.038645583,
+      "Mole": {
+        "cpuSeconds": 10.53,
+        "residentKB": 47392,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.83,
+        "residentKB": 48048,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:13.886263+00:00",
+      "monotonic": 49.048259291,
+      "Mole": {
+        "cpuSeconds": 10.53,
+        "residentKB": 47424,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.84,
+        "residentKB": 47552,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:15.898138+00:00",
+      "monotonic": 51.0602225,
+      "Mole": {
+        "cpuSeconds": 10.53,
+        "residentKB": 44832,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.85,
+        "residentKB": 37248,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:17.910552+00:00",
+      "monotonic": 53.072546083,
+      "Mole": {
+        "cpuSeconds": 10.53,
+        "residentKB": 49536,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.87,
+        "residentKB": 42912,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:19.923114+00:00",
+      "monotonic": 55.085101416,
+      "Mole": {
+        "cpuSeconds": 10.53,
+        "residentKB": 49632,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.88,
+        "residentKB": 43488,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:21.938067+00:00",
+      "monotonic": 57.100025416,
+      "Mole": {
+        "cpuSeconds": 10.53,
+        "residentKB": 49872,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.89,
+        "residentKB": 43616,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:23.949947+00:00",
+      "monotonic": 59.111911375,
+      "Mole": {
+        "cpuSeconds": 10.53,
+        "residentKB": 43328,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.9,
+        "residentKB": 41936,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:25.959522+00:00",
+      "monotonic": 61.121543666,
+      "Mole": {
+        "cpuSeconds": 10.53,
+        "residentKB": 43408,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.91,
+        "residentKB": 42256,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:27.976003+00:00",
+      "monotonic": 63.1379245,
+      "Mole": {
+        "cpuSeconds": 10.53,
+        "residentKB": 43424,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.92,
+        "residentKB": 41856,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:29.991424+00:00",
+      "monotonic": 65.153363083,
+      "Mole": {
+        "cpuSeconds": 10.53,
+        "residentKB": 48816,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.93,
+        "residentKB": 42112,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:32.004429+00:00",
+      "monotonic": 67.166317708,
+      "Mole": {
+        "cpuSeconds": 10.54,
+        "residentKB": 52288,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.94,
+        "residentKB": 42192,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:34.014058+00:00",
+      "monotonic": 69.17604775,
+      "Mole": {
+        "cpuSeconds": 10.54,
+        "residentKB": 45280,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.95,
+        "residentKB": 34816,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:36.032828+00:00",
+      "monotonic": 71.194766041,
+      "Mole": {
+        "cpuSeconds": 10.54,
+        "residentKB": 39328,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.97,
+        "residentKB": 39360,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:38.050296+00:00",
+      "monotonic": 73.2122685,
+      "Mole": {
+        "cpuSeconds": 10.54,
+        "residentKB": 39008,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.98,
+        "residentKB": 39632,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:40.070702+00:00",
+      "monotonic": 75.232597791,
+      "Mole": {
+        "cpuSeconds": 10.54,
+        "residentKB": 39408,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 54.99,
+        "residentKB": 39712,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:42.084544+00:00",
+      "monotonic": 77.24643025,
+      "Mole": {
+        "cpuSeconds": 10.55,
+        "residentKB": 41696,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.0,
+        "residentKB": 39584,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:44.098574+00:00",
+      "monotonic": 79.260415375,
+      "Mole": {
+        "cpuSeconds": 10.55,
+        "residentKB": 39792,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.01,
+        "residentKB": 36864,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:46.110521+00:00",
+      "monotonic": 81.272465875,
+      "Mole": {
+        "cpuSeconds": 10.55,
+        "residentKB": 39792,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.02,
+        "residentKB": 37168,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:48.129761+00:00",
+      "monotonic": 83.291572333,
+      "Mole": {
+        "cpuSeconds": 10.55,
+        "residentKB": 36800,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.03,
+        "residentKB": 37168,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:50.138649+00:00",
+      "monotonic": 85.300461166,
+      "Mole": {
+        "cpuSeconds": 10.55,
+        "residentKB": 37552,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.04,
+        "residentKB": 33120,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:52.151087+00:00",
+      "monotonic": 87.312944125,
+      "Mole": {
+        "cpuSeconds": 10.56,
+        "residentKB": 37552,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.05,
+        "residentKB": 36368,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:54.171741+00:00",
+      "monotonic": 89.333661666,
+      "Mole": {
+        "cpuSeconds": 10.56,
+        "residentKB": 37440,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.06,
+        "residentKB": 29200,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:56.194827+00:00",
+      "monotonic": 91.357108875,
+      "Mole": {
+        "cpuSeconds": 10.56,
+        "residentKB": 38080,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.08,
+        "residentKB": 37648,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:51:58.215814+00:00",
+      "monotonic": 93.37759025,
+      "Mole": {
+        "cpuSeconds": 10.56,
+        "residentKB": 33840,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.1,
+        "residentKB": 37056,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:00.236375+00:00",
+      "monotonic": 95.398173666,
+      "Mole": {
+        "cpuSeconds": 10.56,
+        "residentKB": 33648,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.11,
+        "residentKB": 36592,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:02.249102+00:00",
+      "monotonic": 97.410838083,
+      "Mole": {
+        "cpuSeconds": 10.56,
+        "residentKB": 33632,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.12,
+        "residentKB": 36592,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:04.257406+00:00",
+      "monotonic": 99.419163916,
+      "Mole": {
+        "cpuSeconds": 10.56,
+        "residentKB": 33632,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.13,
+        "residentKB": 32016,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:06.271033+00:00",
+      "monotonic": 101.432742458,
+      "Mole": {
+        "cpuSeconds": 10.56,
+        "residentKB": 33632,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.14,
+        "residentKB": 36560,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:08.283206+00:00",
+      "monotonic": 103.445000041,
+      "Mole": {
+        "cpuSeconds": 10.56,
+        "residentKB": 33616,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.15,
+        "residentKB": 36480,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:10.302300+00:00",
+      "monotonic": 105.464026,
+      "Mole": {
+        "cpuSeconds": 10.56,
+        "residentKB": 35840,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.43,
+        "residentKB": 43952,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:12.318043+00:00",
+      "monotonic": 107.479800208,
+      "Mole": {
+        "cpuSeconds": 10.56,
+        "residentKB": 35840,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.44,
+        "residentKB": 43984,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:14.330056+00:00",
+      "monotonic": 109.491777708,
+      "Mole": {
+        "cpuSeconds": 10.56,
+        "residentKB": 35840,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.46,
+        "residentKB": 43824,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:16.349319+00:00",
+      "monotonic": 111.511018083,
+      "Mole": {
+        "cpuSeconds": 10.56,
+        "residentKB": 36080,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.47,
+        "residentKB": 41344,
+        "state": "R"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:18.366794+00:00",
+      "monotonic": 113.528462708,
+      "Mole": {
+        "cpuSeconds": 10.57,
+        "residentKB": 40800,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.49,
+        "residentKB": 38848,
+        "state": "U"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:20.383155+00:00",
+      "monotonic": 115.5448715,
+      "Mole": {
+        "cpuSeconds": 10.59,
+        "residentKB": 35552,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.5,
+        "residentKB": 34624,
+        "state": "R"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:22.402748+00:00",
+      "monotonic": 117.564395416,
+      "Mole": {
+        "cpuSeconds": 10.59,
+        "residentKB": 31856,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.52,
+        "residentKB": 33648,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:24.416483+00:00",
+      "monotonic": 119.578096083,
+      "Mole": {
+        "cpuSeconds": 10.59,
+        "residentKB": 27952,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.53,
+        "residentKB": 33344,
+        "state": "S"
+      }
+    },
+    {
+      "at": "2026-10-20T00:52:26.435602+00:00",
+      "monotonic": 121.597215708,
+      "Mole": {
+        "cpuSeconds": 10.59,
+        "residentKB": 26688,
+        "state": "S"
+      },
+      "Thermo": {
+        "cpuSeconds": 55.55,
+        "residentKB": 33072,
+        "state": "S"
+      }
+    }
+  ],
+  "scope": "Two concurrently running main processes, windows closed by CUA before sampling; no product actions during sample. All samples reject stopped/zombie process states.",
+  "limitations": [
+    "Current host load and memory pressure, single short observation, no feature/configuration equivalence.",
+    "Thermo retains pre-existing manual fan policy; Mole controls were not enabled. Helper/resource use not included.",
+    "RSS is resident memory, not footprint or allocation count; no energy/wakeup or long-term leak conclusion.",
+    "Thermo window/panel state checked at boundaries. Mole window closure observed through CUA action before sampling; no continuous window-state assertion.",
+    "Not evidence of overall performance parity."
+  ]
+}

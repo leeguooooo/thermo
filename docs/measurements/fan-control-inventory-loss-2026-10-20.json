@@ -1,0 +1,298 @@
+{
+  "date": "2026-10-20",
+  "status": "R11 installed; 1874 current-input tests, expected negative failures, universal package and native/Rosetta healthy fan status checks passed; physical SMC failure remains unverified",
+  "installedBaseline": {
+    "revision": 10,
+    "inputCommit": "08165004d2814c4a7b6bb9cceeb9ef4f6d73b571"
+  },
+  "problem": "Current fan inventory alone drove CSV, terminal policy rows and App cards; empty or partial inventory dropped saved controls and last observations. Unsupported verification could hide a known control error.",
+  "changes": [
+    "Enumerate saved policy and observation references separately from current inventory",
+    "CSV retains reference-only rows with blank live fields and in_current_inventory=false; actual sampled rows remain distinct",
+    "Terminal preserves policy and last-register-check lines for missing IDs",
+    "App presents missing controls read-only, including pending helper policies and last check time; no synthetic hardware object or Apply control",
+    "Known failure remains visible even if legacy helper cannot verify hardware observations"
+  ],
+  "checks": [
+    "Inventory loss with desired and observation-only IDs",
+    "Partial recovery without duplicate or missing rows",
+    "Fanless metadata and helper failure remain distinct",
+    "App saved/pending/observed-only identities survive unavailable readings",
+    "Legacy verification limitations cannot hide explicit control failure"
+  ],
+  "focusedRun": "2771d926-dcc5-4e9a-bb0a-878bb1503883",
+  "sources": [
+    {
+      "path": "Sources/ThermoKit/FanControlState.swift",
+      "sha256": "ebf7d4bba738bd028995cf6e5f31b1f566c369d7abd933e09e696d719ec6b42f"
+    },
+    {
+      "path": "Sources/thermo/Render.swift",
+      "sha256": "aff475af640ab070f3c481c333dd0f09a951fc8d7404468862fce7934a5f2422"
+    },
+    {
+      "path": "Sources/thermo/main.swift",
+      "sha256": "bb5503ddfb955c4f8930c3a3b41b8cac32ab6fd1005a40e64d03fabe8e9e5f95"
+    },
+    {
+      "path": "Sources/ThermoApp/FanControlPresentation.swift",
+      "sha256": "9e9b344888e7d5dfbf42c380e226b02387ac696f953c02a77a60baeecc0f8017"
+    },
+    {
+      "path": "Sources/ThermoApp/Views.swift",
+      "sha256": "76baff524774781adff5fb5b95fcdd611f751c40bc3583f47c0dbcbbbc490947"
+    },
+    {
+      "path": "Sources/ThermoL10n/ZhHans.swift",
+      "sha256": "f31ceef312f679b5237f35498fa7edd0a74a7d9e4a70ad502cab46388f2787a2"
+    },
+    {
+      "path": "Tests/ThermoCLITests/HelperStatusTests.swift",
+      "sha256": "f79366c8fb6ddb6ef93311deac714194d45dea570e5054dcae6f294ac64dc369"
+    },
+    {
+      "path": "Tests/ThermoAppTests/FanSamplingPresentationTests.swift",
+      "sha256": "ee7c4084c53e51cb978395081f1947072a7e43781852d2b70857783c43ef2793"
+    }
+  ],
+  "remaining": [
+    "Physical SMC failure and fanless hardware remain unverified; pure rendering fixtures and healthy native runtime do not substitute for physical fault acceptance",
+    "Other Mole parity matrix items remain incomplete"
+  ],
+  "runs": {
+    "fan-missing-state-all": {
+      "run": "c700a8c2-01ad-40ca-ae01-36513bc0254f",
+      "status": "running",
+      "stepStatus": "running",
+      "inputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+      "inputTree": "f4375a377d4b0f833b0f073583a9eb0ba5fc41da"
+    },
+    "fan-missing-state-build": {
+      "run": "b448e364-4561-470c-918e-9e6ff1a865f3",
+      "status": "running",
+      "stepStatus": "launching",
+      "inputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+      "inputTree": "f4375a377d4b0f833b0f073583a9eb0ba5fc41da"
+    },
+    "fan-missing-state-negative": {
+      "run": "fb98906d-9567-41b8-b71b-ef65a03afbe6",
+      "status": "running",
+      "stepStatus": "launching",
+      "inputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+      "inputTree": "f4375a377d4b0f833b0f073583a9eb0ba5fc41da"
+    }
+  },
+  "focusedResult": {
+    "run": "2771d926-dcc5-4e9a-bb0a-878bb1503883",
+    "tests": 29,
+    "failures": 0,
+    "artifactHashesVerified": true,
+    "scope": "Initial implementation before CSV column renamed to in_current_inventory and negative-test fixture guards added; current full/build use final source"
+  },
+  "negativeControl": {
+    "swiftExitCode": 1,
+    "expectedTestsFailed": [
+      "testInventoryLossRetainsEveryPolicyAndLastObservationWithoutInventingLiveReadings",
+      "testPartialInventoryDoesNotDuplicateRecoveredFansOrDropMissingControls",
+      "testMissingReadingsKeepSavedPendingAndObservationOnlyControlsSeparateFromLiveFans",
+      "testKnownControlFailureSurvivesUnsupportedHardwareVerification"
+    ],
+    "compilerFailure": false,
+    "run": "fb98906d-9567-41b8-b71b-ef65a03afbe6-test",
+    "artifactHashesVerified": true,
+    "currentSourceUnmutated": true,
+    "inputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+    "mutationChainsVerified": true
+  },
+  "fullRegression": {
+    "run": "c700a8c2-01ad-40ca-ae01-36513bc0254f-test",
+    "inputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+    "inputTree": "f4375a377d4b0f833b0f073583a9eb0ba5fc41da",
+    "tests": 1874,
+    "failures": 0,
+    "targets": [
+      {
+        "target": "ThermoKitTests.xctest",
+        "tests": 218,
+        "failures": 0
+      },
+      {
+        "target": "ThermoHelperTests.xctest",
+        "tests": 30,
+        "failures": 0
+      },
+      {
+        "target": "ThermoCLITests.xctest",
+        "tests": 120,
+        "failures": 0
+      },
+      {
+        "target": "ThermoAppTests.xctest",
+        "tests": 341,
+        "failures": 0
+      },
+      {
+        "target": "CleanKitTests.xctest",
+        "tests": 772,
+        "failures": 0
+      },
+      {
+        "target": "AgentDoctorTests.xctest",
+        "tests": 323,
+        "failures": 0
+      },
+      {
+        "target": "AgentCoreTests.xctest",
+        "tests": 70,
+        "failures": 0
+      }
+    ],
+    "artifactHashesVerified": true
+  },
+  "candidate": {
+    "source": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+    "workingTree": "dirty",
+    "version": "1.1.40",
+    "build": "566",
+    "reviewRevision": 11,
+    "testRun": "c700a8c2-01ad-40ca-ae01-36513bc0254f",
+    "remoteBuildRun": "b448e364-4561-470c-918e-9e6ff1a865f3",
+    "inputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+    "inputTree": "f4375a377d4b0f833b0f073583a9eb0ba5fc41da",
+    "sourceFilesVerified": 600,
+    "sourceManifestSHA256": "1e69b341bf16a8357408bfca292cb30fd0a824c59f6f89fc3d473a31b399e511",
+    "fullRegressionStatus": "passed",
+    "installed": true,
+    "published": false,
+    "nonHardwareTests": 1874,
+    "nonHardwareFailures": 0,
+    "testAndBuildInputIdentical": true
+  },
+  "installedVerification": {
+    "checkedAt": "2026-10-19T15:32:55.493251+00:00",
+    "pid": "26253",
+    "inputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+    "manifestEntriesVerified": 103,
+    "signatureVerified": true,
+    "installed": true,
+    "launched": true,
+    "published": false,
+    "notarized": false,
+    "observations": {
+      "app-control status": {
+        "appVersion": "1.1.40 (566)",
+        "busy": "false",
+        "controlProtocol": "1",
+        "keepAwakePhase": "idle",
+        "keepAwakeRequested": "false",
+        "menuPanelOpen": "false",
+        "menuPanelSampling": "false",
+        "pulseHolders": "0",
+        "pulseSampling": "false",
+        "screenActive": "false",
+        "windowVisible": "true"
+      },
+      "keep-awake status": {
+        "observedAt": "2026-10-19T15:32:55Z",
+        "phase": "idle",
+        "powerSource": "external",
+        "requestCount": "0",
+        "requested": "false",
+        "requiresHelper": "false"
+      },
+      "fan status": {
+        "controlState": {
+          "observations": {
+            "0": {
+              "checkedAt": "2026-10-19T15:32:54Z",
+              "mode": "manual",
+              "target": 6617
+            }
+          },
+          "observationsSupported": true,
+          "policies": {
+            "0": {
+              "fixed": {
+                "rpm": 6617
+              }
+            }
+          },
+          "suspended": false
+        },
+        "fans": [
+          {
+            "id": 0,
+            "manual": true,
+            "max": 6800,
+            "min": 2317,
+            "name": "Fan",
+            "rpm": 6604.8984375,
+            "target": 6617
+          }
+        ],
+        "fansAvailable": true,
+        "policies": {
+          "0": {
+            "fixed": {
+              "rpm": 6617
+            }
+          }
+        },
+        "policiesAvailable": true
+      }
+    },
+    "helperAndPlistUnchanged": true,
+    "originalFanRPM": 6617,
+    "nativeUI": {
+      "healthyFanPageVisible": true,
+      "singleFanCardWithoutReferenceOnlyDuplicate": true,
+      "requested6617PolicyVisible": true,
+      "lastRegisterCheckManual6617Visible": true,
+      "checkedTimeVisible": true,
+      "noApplyOrPolicyChangeIssued": true,
+      "physicalSMCFailureUIAccepted": false
+    }
+  },
+  "archive": {
+    "version": "1.1.40",
+    "build": "566",
+    "source": "2ff2c36",
+    "archiveSHA256": "e5fdf357938e77708cb996e6e9d87e65dceefaaa1c7097f1bde84f1409fc58de",
+    "regularFiles": 95,
+    "links": 8,
+    "manifestMatch": true,
+    "signatureVerified": true,
+    "notarized": false,
+    "published": false
+  },
+  "nativeCLI": {
+    "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/cli-fan-status-verification.json",
+    "architectures": [
+      "arm64",
+      "x86_64 via Rosetta"
+    ],
+    "csvColumns": 19,
+    "healthyFanRows": 1,
+    "JSONCSVTerminalIDsAndPoliciesConsistent": true,
+    "physicalIntelAccepted": false,
+    "physicalMissingInventoryTested": false
+  },
+  "upgradeWatch": {
+    "passed": true,
+    "samples": 30,
+    "consecutiveRecoveredChecks": 6,
+    "helperAndPlistUnchanged": true,
+    "originalFanPolicyPreserved": true
+  },
+  "additionalMac190Acceptance": {
+    "report": "docs/measurements/mac190-r11-readonly-hardware-2026-10-20.json",
+    "model": "Mac16,1",
+    "chip": "Apple M4",
+    "os": "27.0",
+    "nativeCLIOnly": true,
+    "fanCount": 1,
+    "zeroRPMDoesNotBecomeFanless": true,
+    "unavailableHelperDesiredPolicyUnknown": true,
+    "physicalSMCFailureTested": false
+  }
+}

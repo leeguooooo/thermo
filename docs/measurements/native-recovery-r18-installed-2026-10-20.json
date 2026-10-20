@@ -1,0 +1,64 @@
+{
+  "checkedAt": "2026-10-19T21:59:35.778508+00:00",
+  "candidate": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.18-recovery-guard-r18-mac190",
+  "sourceFreeze": {
+    "source": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+    "workingTree": "dirty",
+    "version": "1.1.40",
+    "build": "611.18",
+    "baseCommitCount": "611",
+    "reviewRevision": 18,
+    "privateReviewBuildOverride": true,
+    "testRun": "30e5e50e-7702-4913-8121-fd3b2f9154ed",
+    "remoteBuildRun": "8ad70edc-0663-482e-8e66-7f4610ebefe5",
+    "inputCommit": "d04be6c4023cd22dbb96d183e18ab03a836c37f5",
+    "inputTree": "8c368ee0cd453e5a4314fa8223989a816568b4e1",
+    "testInputCommit": "11dc808fe1f3a40163a00bb37dc3bd260269f33b",
+    "sourceFilesVerified": 611,
+    "sourceManifestSHA256": "fa82fdbf1c918230333c9cc73eff11bb8c754dfc9a70d6566d6eaf8c9edad87c",
+    "fullRegressionStatus": "passed",
+    "nonHardwareTests": 1936,
+    "nonHardwareFailures": 0,
+    "testAndBuildInputIdentical": false,
+    "testAndBuildSourceFilesIdentical": true,
+    "testCounts": {
+      "ThermoKitTests.xctest": 218,
+      "ThermoHelperTests.xctest": 30,
+      "ThermoCLITests.xctest": 125,
+      "ThermoAppTests.xctest": 346,
+      "CleanKitTests.xctest": 785,
+      "AgentDoctorTests.xctest": 362,
+      "AgentCoreTests.xctest": 70
+    },
+    "installed": true,
+    "published": false
+  },
+  "upgradeObservation": {
+    "samples": 17,
+    "consecutiveRecoveredChecks": 6,
+    "passed": true
+  },
+  "lifecycle": {
+    "samples": 23,
+    "functionalChecksPassed": true,
+    "longTermMemoryGrowthAssessed": false
+  },
+  "installedPID": "75341",
+  "installedAcceptance": "App/signature/manifest/basic native GUI and settings; concurrent recovery mutation fixtures on mac190 only",
+  "helperAndFanPolicyPreserved": true,
+  "chargingWritesPerformed": false,
+  "sourceCommitted": false,
+  "sourceMergedIntoMain": false,
+  "notarized": false,
+  "published": false,
+  "overallParityEstablished": false,
+  "evidenceSHA256": {
+    "source-freeze.json": "2a5d7288b0bbc95e2a70fce815689f3cee1d7899353cec7d7a81d57481cfd487",
+    "package-verification.json": "09947259c7c8cae6f214d549398bf9dfda35eda8cf6a6ef7aef174ba195b65a1",
+    "archive-verification.json": "2b78cdf63dd75c608d4f5093627e585c19698c4df8c4feba950900fa89f641e3",
+    "installed-verification.json": "1699e5921e6c436fd7f0396ef28b45c0212726d042848bd1fe2c5d710d226ef2",
+    "lifecycle-ordinary.json": "08d36339da5d42e499341b369f73637fd341b82611c85bac82893b965f4c56e5",
+    "upgrade-observations.json": "9b0cbfb00155d9a1cd23b3446718564be1163e34c5a3cc07afcbd2e3366d547e",
+    "local-installation.json": "576eec5ba2ea43d50efa2dfc56bccce3d6b688c39b4dabd57348f01d55bbec0f"
+  }
+}

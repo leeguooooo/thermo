@@ -102,6 +102,8 @@ struct App {
         case "space": try SpaceCommand(app: self).run(rest)
         case "memory": try MemoryCommand(app: self).run(rest)
         case "activity": try ComputeCommand(app: self).run(rest)
+        case "camera": try CameraCommand(app: self).run(rest)
+        case "audio-input": try AudioInputCommand(app: self).run(rest)
         case "pulse", "status": try PulseCommand(app: self).run(rest)
         case "tabs": try TabsCommand(app: self).run(rest)
         case "settings", "config": try SettingsCommand(app: self).run(rest)
@@ -111,7 +113,7 @@ struct App {
         case "history": try HistoryCommand(app: self).run(rest)
         case "privacy": try PrivacyCommand(app: self).run(rest)
         case "claude-reset": try ClaudeResetCommand(app: self).run(rest)
-        case "app-control", "screen", "permissions", "integration": try AppControlCommand(app: self).run(command: cmd, rest: rest)
+        case "app-control", "screen", "permissions", "integration", "keep-awake": try AppControlCommand(app: self).run(command: cmd, rest: rest)
         case "capabilities": print(Export.json(CommandHelp.inventory))
         default: throw CLIError("unknown command '\(cmd)' (see thermo --help)")
         }
@@ -137,7 +139,7 @@ struct App {
         guard !args.has("all") else { return s }
         return Snapshot(timestamp: s.timestamp, temperatures: s.temperatures.filter(\.known), fans: s.fans,
                         power: s.power.filter(\.known), voltages: s.voltages.filter(\.known),
-                        currents: s.currents.filter(\.known), battery: s.battery)
+                        currents: s.currents.filter(\.known), battery: s.battery, fansAvailable: s.fansAvailable)
     }
 
     func batteryCommand() throws {
@@ -237,20 +239,17 @@ struct App {
                 policies = controlState?.policies ?? [:]
             } catch { helperNote = String(describing: error) }
             if args.has("json") {
-                struct Status: Encodable { let fans: [FanReading]; let policies: [String: FanPolicy]; let helper: String?; let policiesAvailable: Bool; let controlState: FanControlState? }
-                print(Export.json(Status(fans: s.fans,
+                struct Status: Encodable { let fans: [FanReading]; let fansAvailable: Bool; let policies: [String: FanPolicy]; let helper: String?; let policiesAvailable: Bool; let controlState: FanControlState? }
+                print(Export.json(Status(fans: s.fans, fansAvailable: s.hasFanReadings,
                                          policies: Dictionary(uniqueKeysWithValues: policies.map { (String($0.key), $0.value) }),
                                          helper: helperNote, policiesAvailable: helperNote == nil, controlState: controlState)))
                 return
             }
-            if args.has("csv") { print(Export.fanStatusCSV(s.fans, policies: policies, helperNote: helperNote, controlState: controlState)); return }
+            if args.has("csv") { print(Export.fanStatusCSV(s.fans, policies: policies, helperNote: helperNote, controlState: controlState, fansAvailable: s.hasFanReadings)); return }
             out(renderer.fans(s))
             print("")
             print(style.bold("Requested policies (not hardware confirmation)"))
-            for f in s.fans {
-                print("  " + pad("\(f.id) " + f.name, 10) + Renderer.policyText(policies[f.id], available: helperNote == nil))
-                print("    " + Renderer.controlText(controlState, fan: f.id))
-            }
+            out(renderer.requestedFanPolicies(s.fans, policies: policies, controlState: controlState, available: helperNote == nil))
             if let helperNote { print(style.dim("  " + helperNote)) }
             if let failure = controlState?.failure { print("  control failure: " + failure) }
 
@@ -278,6 +277,7 @@ struct App {
             return
         }
         let sm = try sampler(), client = HelperClient()
+        guard sm.discovery.fansKnown else { throw CLIError("fan discovery unavailable; retry after SMC communication recovers") }
         try applyFan(policy,label:label,ids:fanTargets(target,fans:sm.fans),client:client)
     }
 

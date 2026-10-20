@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-10-19T19:06:07.573850+00:00",
+  "ownedHistoricalProductDirectories": [
+    {
+      "receipt": "/Users/leo/github.com/thermo-mole-integration-af047a7e/dist/remote-190/retained-r2-products-on-190.json",
+      "receiptSHA256": "a6b05499e1b9f80ced745241f4710db1d5072eb6bdc7b386e40c500b63bf32e4",
+      "source": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-stack-r2-mac190/products",
+      "retainedRemotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/r2-products-fb1bf0154d9c/products",
+      "contentModesLinksVerifiedBeforeLocalRemoval": true,
+      "remoteAppSignatureVerified": true,
+      "originalZIPAndEvidenceStillLocal": true
+    },
+    {
+      "receipt": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/remote-190/retained-mole-review-1.1.39-566-discovery-r3-mac190-on-190.json",
+      "receiptSHA256": "53233ab39140ef213b4a0fdea92766bd69f3bc40aa39e240ffe4458b253a4e8e",
+      "source": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-discovery-r3-mac190/products",
+      "retainedRemotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-65cd04c894da/products",
+      "contentModesLinksVerifiedBeforeLocalRemoval": true,
+      "remoteAppSignatureVerified": true,
+      "originalZIPAndEvidenceStillLocal": true
+    },
+    {
+      "receipt": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/remote-190/retained-mole-review-1.1.39-566-reliable-sampling-r4-mac190-on-190.json",
+      "receiptSHA256": "60572a0841f2b9fb673918d7ba31038db903efdcaf960329945f97d85dbd29b8",
+      "source": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/products",
+      "retainedRemotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-dbd7429c2e1c/products",
+      "contentModesLinksVerifiedBeforeLocalRemoval": true,
+      "remoteAppSignatureVerified": true,
+      "originalZIPAndEvidenceStillLocal": true
+    },
+    {
+      "receipt": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/remote-190/retained-mole-review-1.1.39-566-visible-sampling-r5-mac190-on-190.json",
+      "receiptSHA256": "be083cfb375bd0da3bb0609ea5d04939c885d1d3897acf13dcc6addfb918d030",
+      "source": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-visible-sampling-r5-mac190/products",
+      "retainedRemotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-97c71beca940/products",
+      "contentModesLinksVerifiedBeforeLocalRemoval": true,
+      "remoteAppSignatureVerified": true,
+      "originalZIPAndEvidenceStillLocal": true
+    },
+    {
+      "receipt": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/remote-190/retained-mole-review-1.1.40-566-fan-discovery-r6-mac190-on-190.json",
+      "receiptSHA256": "20eb6269d37361cb209004b6476812bb74f3eabb7cdc864cde7ec7296ce08d51",
+      "source": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-discovery-r6-mac190/products",
+      "retainedRemotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-3a8cd5ecdf9b/products",
+      "contentModesLinksVerifiedBeforeLocalRemoval": true,
+      "remoteAppSignatureVerified": true,
+      "originalZIPAndEvidenceStillLocal": true
+    }
+  ],
+  "observedAvailableAfterBytes": 1524584448,
+  "scope": "Owned R2-R6 generated products only; original ZIP/evidence remain local; all full product copies retained on Mac190 with verified restoration receipts",
+  "currentInstalledAppAndR11R12RollbackCopiesUntouched": true,
+  "sourceWorktreesUntouched": true,
+  "notAClaimOfReclaimedBytes": true
+}

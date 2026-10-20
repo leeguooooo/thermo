@@ -1,0 +1,65 @@
+{
+  "checkedAt": "2026-10-20T00:21:17.405252+00:00",
+  "problem": "Residual directories were checked through root identity only at the final move boundary, and the native confirmation read mutable selection again at execution.",
+  "baseline": {
+    "run": "67f08313-8df4-48df-90cd-78158b611acc",
+    "inputCommit": "24ee6da3e1a817934a728fd6d39b09ac19654be0",
+    "tests": 2,
+    "assertionFailures": 8,
+    "unexpectedFailures": 0,
+    "changedOwnedDirectoriesMovedAndRestored": true,
+    "compilerFailure": false,
+    "logSHA256": "6c8035b37d8d9927578e3bda0b68933012ba1d4ea65a19c5622b0870c8d37dce",
+    "scope": "Final-process and post-first-move deep directory changes only"
+  },
+  "clockScope": "Owned unit fixtures use a future now to qualify for the existing 30-day policy; the tested writes occur after execution eligibility is rescanned. No host clock changes or claims about real 30-day-old test data.",
+  "change": {
+    "prepareSelectedBeforeConfirmation": true,
+    "noNewRecursiveTreeWalkInDiscovery": true,
+    "selectedGroupsOnlyDuringPrepareAndExecutionRescan": true,
+    "treeIdentityAndNewestActivityFromSameTwiceVerifiedWalk": true,
+    "rejectRecentActivityMissedByEarlierSizeWalk": true,
+    "legacyDirectoryPlansRequireSelectedReview": true,
+    "perPathDeepRecheckAtMoveBoundary": true,
+    "frozenPreparedValuePassedByUIAndCLI": true,
+    "cancelledPreparationCannotReopenSheetOrSpawnMorePhysicalWorkers": true,
+    "nativeConfirmationSourceSeparatesReadyAndRetained": true
+  },
+  "reviewLimits": {
+    "entriesAcrossSelectedDirectories": 250000,
+    "cooperativeSecondsForSelectedTreeCollection": 10,
+    "depth": 128,
+    "payloadReadByNewTreeWalk": false,
+    "symlinksFollowed": false
+  },
+  "validation": {
+    "run": "35e181fb-8a66-4bdb-9dd3-29f39b64e9f3",
+    "inputCommit": "b21dd2b4efda7797e6cd1750b18b3142143c4f03",
+    "tests": 1956,
+    "failures": 0,
+    "sourceFilesVerified": 613,
+    "logSHA256": "1f8b48dd610ae3ee939c2a1eeadc774963baa634c32b04648f5128fc1d3d11ec"
+  },
+  "universalRunFile": "dist/remote-190/r22-universal-run.json",
+  "status": "R22 universal build passed on mac190; signed and installed; native actual-clock confirmation/cancel and CLI dry-run accepted; execution/restore pending",
+  "sourceSHA256": {
+    "Sources/CleanKit/Apps.swift": "067cb43d1a0ab0042f1c53630901b3437e1e3f697c17bc86e87ae35e3cd008d1",
+    "Sources/CleanKit/AppRemovalTreeIdentity.swift": "433d6e1415498efd78646147ea696fdba4df5cbe61167680894dec136c55cd50",
+    "Sources/ThermoApp/AppsPage.swift": "4d6749d6bfc4ca048a6c7366fc7b9f6dda7ad5264e7a27a89c99885d2f0f3e5d",
+    "Sources/thermo/Apps.swift": "5a2d8a4e5a18798bce802636a3502c69f7382be495bf32e5ffb6f10a85a58f73",
+    "Sources/ThermoL10n/ZhHans.swift": "f5d796dbdf29462678dadbf337f5629c3caff84dd6de588d486e8efe8407cdac",
+    "Tests/CleanKitTests/OrphanReviewTests.swift": "5981ac452a440c1b525540c8b26dd0c83d6bf08f36a7d8004b7ec30f6dfa10e5",
+    "Tests/ThermoAppTests/AppsModelTests.swift": "bda764b892b9cc6b8101d957e68a6269864d13d15909ff3d8a8ed566d62602cb"
+  },
+  "limits": [
+    "No atomic exclusion of all external writers between checks and rename.",
+    "Cooperative deadline cannot interrupt a blocked filesystem syscall.",
+    "Source and model tests do not establish installed native confirmation layout or actual user-data cleanup.",
+    "Future-date fixture tests are not physical 30-day ageing acceptance.",
+    "Installed execution/restore and external vendor races remain unverified."
+  ],
+  "sourceCommitted": false,
+  "overallParityEstablished": false,
+  "mutableConfirmationEvidence": "Old source read model.pickedOrphans in both sheet rendering and removal; new model tests establish frozen prepared values after refresh.",
+  "installedEvidence": "orphan-r22-installed-2026-10-20.json"
+}

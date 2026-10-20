@@ -1,0 +1,141 @@
+{
+  "date": "2026-10-19",
+  "status": "R9 installed and signed package verified; 1866 remote tests passed; native expiry released requests but two pre-deadline unconfirmed reads remain unresolved",
+  "sourceHead": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+  "workingTree": "dirty",
+  "focused": {
+    "run": "a70b6108-2207-4667-9fc9-68ed4512f346-test",
+    "tests": 22,
+    "failures": 0,
+    "artifactHashesVerified": true
+  },
+  "fullTestRun": "30e2422d-d3e7-4971-9e8d-4f609cb08725",
+  "buildRun": "5d506698-07ef-4f8a-a4d1-ebcd80e26347",
+  "negativeRun": "6a071f1a-c15a-4e8f-9ddb-d17ff52d5d96",
+  "changes": [
+    "Empty or unrecognized provider data is unknown rather than unlimited no-battery power",
+    "Capacity must be finite, numeric/non-boolean and within 0...maximum; invalid values are not clamped to healthy battery",
+    "Contributing incomplete records cannot be skipped for healthy ones; internal battery and UPS are selected by provider/type",
+    "UPS on AC remains external; UPS on battery uses its capacity and low-power protection",
+    "Start/refresh/stop each capture one consistent power and time snapshot"
+  ],
+  "sources": [
+    {
+      "title": "Apple IOPSGetProvidingPowerSourceType",
+      "url": "https://developer.apple.com/documentation/iokit/iopowersources_h/1810316-iopsgetprovidingpowersourcetype"
+    },
+    {
+      "title": "SDK IOPowerSources.h and IOPSKeys.h",
+      "path": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/IOKit.framework/Versions/A/Headers/ps/"
+    }
+  ],
+  "physicalPowerTransitions": {
+    "requestedUserAvailability": true,
+    "userReadyConfirmationReceived": false,
+    "sessionStarted": false,
+    "notCoveredByFixtures": true
+  },
+  "remaining": [
+    "Resolve native sub-second timeout boundary without silently extending requested deadline",
+    "Physical AC/battery transitions and low-battery pause/resume remain unverified",
+    "Other Mole parity matrix items remain incomplete"
+  ],
+  "candidate": {
+    "source": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+    "workingTree": "dirty",
+    "version": "1.1.40",
+    "build": "566",
+    "reviewRevision": 9,
+    "testRun": "30e2422d-d3e7-4971-9e8d-4f609cb08725",
+    "remoteBuildRun": "5d506698-07ef-4f8a-a4d1-ebcd80e26347",
+    "inputCommit": "f82f1f13b172c3005c3e5398de268607cea0a537",
+    "inputTree": "6f955e1300cbc34aaa8204930968e358c3acfa67",
+    "sourceFilesVerified": 600,
+    "sourceManifestSHA256": "c5a64dbf9de107e3907cc343b12d38c659a6d1fada9b5dbe432f4c9cf50a1d2d",
+    "fullRegressionStatus": "passed",
+    "installed": true,
+    "published": false,
+    "nonHardwareTests": 1866,
+    "nonHardwareFailures": 0,
+    "testAndBuildInputIdentical": true
+  },
+  "fullRegression": {
+    "tests": 1866,
+    "failures": 0,
+    "targets": [
+      {
+        "target": "ThermoKitTests.xctest",
+        "tests": 218,
+        "failures": 0
+      },
+      {
+        "target": "ThermoHelperTests.xctest",
+        "tests": 30,
+        "failures": 0
+      },
+      {
+        "target": "ThermoCLITests.xctest",
+        "tests": 117,
+        "failures": 0
+      },
+      {
+        "target": "ThermoAppTests.xctest",
+        "tests": 337,
+        "failures": 0
+      },
+      {
+        "target": "CleanKitTests.xctest",
+        "tests": 772,
+        "failures": 0
+      },
+      {
+        "target": "AgentDoctorTests.xctest",
+        "tests": 323,
+        "failures": 0
+      },
+      {
+        "target": "AgentCoreTests.xctest",
+        "tests": 69,
+        "failures": 0
+      }
+    ],
+    "allArtifactHashesVerified": true
+  },
+  "negativeVerification": {
+    "expectedTestFailures": true,
+    "compilerFailure": false,
+    "currentSourceUnmutated": true,
+    "artifactHashesVerified": true
+  },
+  "installedVerification": {
+    "checkedAt": "2026-10-19T14:54:53.774484+00:00",
+    "pid": "73584",
+    "inputCommit": "f82f1f13b172c3005c3e5398de268607cea0a537",
+    "manifestEntriesVerified": 103,
+    "signatureVerified": true,
+    "installed": true,
+    "launched": true,
+    "published": false,
+    "notarized": false
+  },
+  "nativeExpiry": {
+    "evidence": "dist/mole-review-1.1.40-566-awake-power-r9-mac190/native-timed-expiry-r2.json",
+    "samples": 38,
+    "unconfirmedReads": 2,
+    "finalPhase": "idle",
+    "finalRequestCount": 0,
+    "lastEndReason": "expired",
+    "fallbackCleanupUsed": false,
+    "fullAcceptancePassed": false,
+    "observation": "Kernel requests absent within approximately one second before requested deadline; status reports ending rather than active. Exact fractional deadline is not exposed by CLI.",
+    "firstAttempt": "Observer aborted on exit 3; operation journal and subsequent status confirmed expiry; exact first-failure timing was not captured."
+  },
+  "timeoutPrecisionInvestigation": {
+    "source": "https://github.com/apple-oss-distributions/PowerManagement/blob/main/pmconfigd/PMAssertions.c",
+    "downloadSHA256": "dea45f615b571ca36e0de68ec44fc68c34ace934c4029fc132cd7a23c2a036af",
+    "sourceFindings": "Creation and property updates read CFNumber as double then cast timeout to uint64_t before adding monotonic time.",
+    "interpretation": "Consistent with sub-second early release observed locally; downloaded main source is not proof of exact installed macOS powerd implementation.",
+    "fixApplied": false,
+    "roundingUpWouldNeedSeparateDeadlineSafetyReview": true
+  }
+}

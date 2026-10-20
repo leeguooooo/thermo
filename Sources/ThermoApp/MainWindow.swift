@@ -128,6 +128,7 @@ enum MainWindow {
     }
 
     static func show(_ page: MainPage? = nil) {
+        (NSApp.delegate as? AppDelegate)?.closeMenuPanel()
         if let page { state.page = page }
         let models = AppModels.shared
         if window == nil {

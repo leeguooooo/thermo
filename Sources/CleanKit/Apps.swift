@@ -52,6 +52,8 @@ public struct OrphanData: Codable, Identifiable, Sendable, Equatable {
     public var items: [AppLeftover]
     public var blocked: String? = nil
     public var dataIdentities: [String: String]? = nil
+    /// Collected for selected directories before confirmation, not by discovery.
+    public var dataTreeIdentities: [String: AppRemovalTreeIdentity]? = nil
     public var ownership: AppOwnershipSnapshot? = nil
 
     public init(bundleID: String, items: [AppLeftover]) { self.bundleID = bundleID; self.items = items }
@@ -88,6 +90,9 @@ public struct UninstallPlan: Codable, Sendable {
     /// Captured before review; absent in older serialized plans, which must be reviewed again.
     public var identities: [String: String]? = nil
     public var appIdentity: AppReviewIdentity? = nil
+    /// A complete bounded metadata review of the bundle being removed. Old plans
+    /// without it must be reviewed again; inventory scans do not collect it.
+    public var appTreeIdentity: AppRemovalTreeIdentity? = nil
     /// Set when it cannot be uninstalled now.
     public var blocked: String?
     /// Installer packages that put files outside the home folder; Thermo leaves those.
@@ -101,6 +106,9 @@ public struct UninstallPlan: Codable, Sendable {
     public var removesApp: Bool { removeApp ?? true }
     public var ownership: AppOwnershipSnapshot? = nil
     public var dataIdentities: [String: String]? = nil
+    /// Only selected associated directories are traversed. Older directory
+    /// reviews without this field cannot authorize removal.
+    public var dataTreeIdentities: [String: AppRemovalTreeIdentity]? = nil
     public var ownershipKept: [String]? = nil
 }
 
@@ -590,7 +598,47 @@ public enum AppUninstaller {
         if !ownership.complete, !moved.isEmpty {
             plan.blocked = plan.blocked ?? tr("Could not verify installed app ownership; refresh before removing associated data")
         }
+        if plan.removesApp, plan.blocked == nil {
+            plan.appTreeIdentity = AppRemovalTreeIdentity.capture(app.path)
+            if plan.appTreeIdentity == nil {
+                plan.blocked = tr("Could not verify the complete app bundle; review again or use Finder")
+            }
+        }
+        if plan.blocked == nil {
+            var trees: [String: AppRemovalTreeIdentity] = [:]
+            var remainingEntries = 250_000
+            let began = ProcessInfo.processInfo.systemUptime
+            for path in moved.map(\.path) {
+                var info = stat()
+                guard lstat(path, &info) == 0,
+                      plan.dataIdentities?[path] == AppDataReviewIdentity.text(info) else {
+                    plan.blocked = tr("Associated data changed or could not be fully verified; review it again")
+                    break
+                }
+                guard info.st_mode & S_IFMT == S_IFDIR else { continue }
+                let remainingTime = 10 - (ProcessInfo.processInfo.systemUptime - began)
+                guard remainingEntries > 0, remainingTime > 0,
+                      let tree = AppRemovalTreeIdentity.capture(path, maxEntries: remainingEntries, timeout: remainingTime),
+                      AppDataReviewIdentity.of(path) == plan.dataIdentities?[path] else {
+                    plan.blocked = tr("Associated data changed or could not be fully verified; review it again")
+                    break
+                }
+                trees[path] = tree
+                remainingEntries -= tree.entries
+            }
+            plan.dataTreeIdentities = trees
+        }
         return plan
+    }
+
+    static func reviewedDataDirectoryUnchanged(_ path: String, trees: [String: AppRemovalTreeIdentity]?) -> Bool {
+        if let expected = trees?[path] {
+            return AppRemovalTreeIdentity.capture(path, maxEntries: min(expected.entries, 250_000)) == expected
+        }
+        var info = stat()
+        // Individual files and links retain their existing root-metadata review.
+        // Never follow a top-level link to decide whether a directory was reviewed.
+        return lstat(path, &info) == 0 && info.st_mode & S_IFMT != S_IFDIR
     }
 
     static func refusal(_ plan: UninstallPlan, home: String, processes: ProcessTable) -> String? {
@@ -641,12 +689,17 @@ public enum AppUninstaller {
             result.failed[plan.app.path] = why
         } else if plan.appIdentity == nil || AppReviewIdentity.capture(plan.app.path) != plan.appIdentity {
             result.failed[plan.app.path] = plan.removesApp ? tr("The app changed after review; review the uninstall again") : tr("The app changed after review; review the data removal again")
+        } else if plan.removesApp && (plan.appTreeIdentity == nil || AppRemovalTreeIdentity.capture(plan.app.path) != plan.appTreeIdentity) {
+            result.failed[plan.app.path] = tr("The app contents changed or could not be verified; review the uninstall again")
         } else if plan.paths.contains(where: { $0 != plan.app.path }) &&
                     (plan.ownership?.complete != true || plan.ownership != AppOwnershipSnapshot.capture(directories: directories, additionalPaths: (plan.ownership?.extraPaths ?? []) + runtime, requiredPaths: runtime)) {
             result.failed[plan.app.path] = tr("Installed apps changed or ownership could not be verified; review associated data again")
         } else if let changed = plan.paths.first(where: { $0 != plan.app.path &&
             (plan.dataIdentities?[$0] == nil || plan.dataIdentities?[$0] != AppDataReviewIdentity.of($0)) }) {
             result.failed[changed] = tr("Associated data changed after review; review it again")
+        } else if let changed = plan.paths.first(where: { $0 != plan.app.path &&
+            !reviewedDataDirectoryUnchanged($0, trees: plan.dataTreeIdentities) }) {
+            result.failed[changed] = tr("Associated data changed or could not be fully verified; review it again")
         } else {
             let ids = plan.app.bundleID.map { [$0] } ?? []
             let sizes = Dictionary(uniqueKeysWithValues: plan.app.leftovers.map { ($0.path, $0.bytes) })
@@ -654,7 +707,8 @@ public enum AppUninstaller {
                   home: home, processes: table, into: &result, identities: plan.identities ?? [:],
                   incompletePaths: Set(plan.app.leftovers.filter { $0.effectiveSizeState != .complete }.map(\.path))
                     .union(plan.app.bundleSizeState == .complete ? [] : [plan.app.path]),
-                  reviewIdentities: plan.dataIdentities ?? [:], bundlePath: plan.app.path,
+                  reviewIdentities: plan.dataIdentities ?? [:], bundlePath: plan.app.path, bundleTreeIdentity: plan.appTreeIdentity,
+                  dataTreeIdentities: plan.dataTreeIdentities,
                   ownership: plan.paths.contains(where: { $0 != plan.app.path }) ? plan.ownership : nil, move: move)
         }
         finish(result, title: plan.app.name, home: home)
@@ -667,6 +721,8 @@ public enum AppUninstaller {
                       incompletePaths: Set<String> = [],
                       reviewIdentities: [String: String]? = nil,
                       bundlePath: String? = nil,
+                      bundleTreeIdentity: AppRemovalTreeIdentity? = nil,
+                      dataTreeIdentities: [String: AppRemovalTreeIdentity]? = nil,
                       ownership: AppOwnershipSnapshot? = nil,
                       recheckOwnershipEachPath: Bool = false,
                       move: (String) throws -> URL = RemovalOperations.live.trash) {
@@ -716,6 +772,18 @@ public enum AppUninstaller {
             }
             if let reviewIdentities, path != bundlePath, reviewIdentities[path] == nil || reviewIdentities[path] != AppDataReviewIdentity.of(path) {
                 result.failed[path] = tr("Associated data changed after review; review it again")
+                continue
+            }
+            if path == bundlePath, let bundleTreeIdentity,
+               AppRemovalTreeIdentity.capture(path) != bundleTreeIdentity {
+                for remaining in paths[index...] {
+                    result.failed[remaining] = tr("The app contents changed or could not be verified; review the uninstall again")
+                }
+                break
+            }
+            if path != bundlePath, let dataTreeIdentities,
+               !reviewedDataDirectoryUnchanged(path, trees: dataTreeIdentities) {
+                result.failed[path] = tr("Associated data changed or could not be fully verified; review it again")
                 continue
             }
             do {
@@ -772,9 +840,9 @@ public enum AppUninstaller {
 
     static func reviewedOrphans(home: String, known: Set<String>, now: Date, spotlight: (String) -> Bool,
                                 minimumBytes: Int64 = 0, cancellation: ScanCancellation? = nil,
-                                processes: ProcessTable, directories: [String]) -> [OrphanData] {
+                                processes: ProcessTable, directories: [String], onlyIDs: Set<String>? = nil) -> [OrphanData] {
         reviewedOrphanReport(home: home, known: known, now: now, spotlight: { spotlight($0) ? .present : .absent },
-                             minimumBytes: minimumBytes, cancellation: cancellation, processes: processes, directories: directories).items
+                             minimumBytes: minimumBytes, cancellation: cancellation, processes: processes, directories: directories, onlyIDs: onlyIDs).items
     }
 
     public static func orphanReport(home: String = NSHomeDirectory(), known: Set<String> = [], now: Date = Date(),
@@ -787,7 +855,7 @@ public enum AppUninstaller {
 
     static func reviewedOrphanReport(home: String, known: Set<String>, now: Date, spotlight: (String) -> OrphanAppPresence,
                                      minimumBytes: Int64 = 0, cancellation: ScanCancellation? = nil,
-                                     processes: ProcessTable, directories: [String]) -> OrphanScanReport {
+                                     processes: ProcessTable, directories: [String], onlyIDs: Set<String>? = nil) -> OrphanScanReport {
         let previousCancellation = ScanCancellation.current
         ScanCancellation.current = cancellation ?? previousCancellation
         defer { ScanCancellation.current = previousCancellation }
@@ -806,7 +874,7 @@ public enum AppUninstaller {
             let directory = lib + "/" + root
             let entries = names(in: directory, onFailure: { issues.append(.init("Could not read residual data directory", path: directory)) }) ?? []
             for entry in entries {
-                guard let id = orphanID(entry, root: root) else { continue }
+                guard let id = orphanID(entry, root: root), onlyIDs?.contains(id) != false else { continue }
                 byID[id, default: []].append(lib + "/" + root + "/" + entry)
             }
         }
@@ -895,6 +963,67 @@ public enum AppUninstaller {
         return result.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .absent : .present
     }
 
+    /// Bind only the selected residual groups before asking for confirmation.
+    /// Execution never creates missing directory authorization on the caller's behalf.
+    public static func reviewOrphans(_ picked: [OrphanData], home: String = NSHomeDirectory(), now: Date = Date(),
+                                     cancellation: ScanCancellation? = nil) -> [OrphanData] {
+        reviewOrphans(picked, home: home, now: now, cancellation: cancellation,
+                      processes: ProcessTable.current(.init(cpu: false)), directories: appDirs(home: home),
+                      spotlight: spotlightPresence)
+    }
+
+    static func reviewOrphans(_ picked: [OrphanData], home: String, now: Date,
+                              cancellation: ScanCancellation? = nil, processes: ProcessTable,
+                              directories: [String], spotlight: (String) -> OrphanAppPresence) -> [OrphanData] {
+        guard !picked.isEmpty else { return [] }
+        return ScanCancellation.withCurrent(cancellation ?? ScanCancellation.current) {
+            let report = reviewedOrphanReport(home: home, known: [], now: now, spotlight: spotlight,
+                processes: processes, directories: directories, onlyIDs: Set(picked.map(\.bundleID)))
+            let current = Dictionary(report.items.map { ($0.bundleID, $0) }, uniquingKeysWith: { a, _ in a })
+            var remainingEntries = 250_000
+            let began = ProcessInfo.processInfo.systemUptime
+            let cutoff = now.timeIntervalSince1970 - orphanAge
+            return picked.map { original in
+                var reviewed = original
+                reviewed.dataTreeIdentities = nil
+                let changed = tr("Residual data changed or could not be verified; scan and review it again")
+                if ScanCancellation.current?.isCancelled == true {
+                    reviewed.blocked = tr("Review stopped; review again before removing files")
+                    return reviewed
+                }
+                guard original.blocked == nil, original.ownership?.complete == true, original.dataIdentities != nil,
+                      let fresh = current[original.bundleID], fresh.blocked == nil,
+                      original.ownership == fresh.ownership,
+                      Set(original.items.map(\.path)) == Set(fresh.items.map(\.path)),
+                      original.items.allSatisfy({ original.dataIdentities?[$0.path] == AppDataReviewIdentity.of($0.path) }) else {
+                    reviewed.blocked = original.blocked ?? changed
+                    return reviewed
+                }
+                reviewed = fresh
+                var trees: [String: AppRemovalTreeIdentity] = [:]
+                for item in fresh.items {
+                    var info = stat()
+                    guard lstat(item.path, &info) == 0,
+                          fresh.dataIdentities?[item.path] == AppDataReviewIdentity.text(info) else {
+                        reviewed.blocked = changed; break
+                    }
+                    guard info.st_mode & S_IFMT == S_IFDIR else { continue }
+                    let remainingTime = 10 - (ProcessInfo.processInfo.systemUptime - began)
+                    guard remainingEntries > 0, remainingTime > 0,
+                          let observed = AppRemovalTreeIdentity.observe(item.path, maxEntries: remainingEntries, timeout: remainingTime),
+                          observed.newestTimestamp <= cutoff,
+                          AppDataReviewIdentity.of(item.path) == fresh.dataIdentities?[item.path] else {
+                        reviewed.blocked = changed; break
+                    }
+                    trees[item.path] = observed.identity
+                    remainingEntries -= observed.identity.entries
+                }
+                reviewed.dataTreeIdentities = trees
+                return reviewed
+            }
+        }
+    }
+
     /// Moves orphaned data to the Trash after checking again that it is still orphaned.
     public static func removeOrphans(_ picked: [OrphanData], home: String = NSHomeDirectory(), installed: [InstalledApp]? = nil,
                                      processes: (() -> ProcessTable)? = nil,
@@ -911,7 +1040,7 @@ public enum AppUninstaller {
         let known = knownBundleIDs(installed: apps, processes: table())
         let wanted = Set(picked.map(\.bundleID))
         let current = reviewedOrphans(home: home, known: known, now: now, spotlight: { wanted.contains($0) ? spotlight($0) : true },
-                                      processes: table(), directories: directories)
+                                      processes: table(), directories: directories, onlyIDs: wanted)
         return picked.map { data in
             var result = CleanResult(id: "leftovers:" + data.bundleID, trashed: true)
             let still = current.first { $0.bundleID == data.bundleID }
@@ -923,13 +1052,16 @@ public enum AppUninstaller {
                 result.failed[data.bundleID] = tr("Installed apps changed or ownership could not be verified; review associated data again")
             } else if data.items.contains(where: { data.dataIdentities?[$0.path] == nil || data.dataIdentities?[$0.path] != AppDataReviewIdentity.of($0.path) }) {
                 result.failed[data.bundleID] = tr("Associated data changed after review; review it again")
+            } else if data.items.contains(where: { !reviewedDataDirectoryUnchanged($0.path, trees: data.dataTreeIdentities) }) {
+                result.failed[data.bundleID] = tr("Associated data changed or could not be fully verified; review it again")
             } else if let still {
                 let current = Set(still.items.map(\.path))
                 let paths = data.items.map(\.path).filter(current.contains)
                 let sizes = Dictionary(uniqueKeysWithValues: still.items.map { ($0.path, $0.bytes) })
                 trash(paths, bundleIDs: [data.bundleID], sizes: sizes, home: home, processes: table, into: &result,
                       incompletePaths: Set(still.items.filter { $0.effectiveSizeState != .complete }.map(\.path)),
-                      reviewIdentities: data.dataIdentities, ownership: data.ownership, recheckOwnershipEachPath: true, move: move)
+                      reviewIdentities: data.dataIdentities, dataTreeIdentities: data.dataTreeIdentities,
+                      ownership: data.ownership, recheckOwnershipEachPath: true, move: move)
             } else {
                 result.failed[data.bundleID] = tr("no longer looks left behind: an app uses it again, or it changed")
             }

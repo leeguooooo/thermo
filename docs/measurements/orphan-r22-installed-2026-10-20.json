@@ -1,0 +1,107 @@
+{
+  "checkedAt": "2026-10-20T00:41:30.766103+00:00",
+  "version": "1.1.40",
+  "build": "611.22",
+  "installedManifestExact": true,
+  "manifestEntries": 103,
+  "codesignDeepStrictAllArchitectures": true,
+  "helperSHA256": "b1eabd8979855ece607f3f7f0358b56694882030792e10c40c4fa3e66b65e4e3",
+  "helperPlistSHA256": "60a0882267b914ab19ba81b9f69310435d048f21e13a09f618171bb2e05a6463",
+  "fan": {
+    "controlState": {
+      "observations": {
+        "0": {
+          "checkedAt": "2026-10-20T00:41:30Z",
+          "mode": "manual",
+          "target": 6617
+        }
+      },
+      "observationsSupported": true,
+      "policies": {
+        "0": {
+          "fixed": {
+            "rpm": 6617
+          }
+        }
+      },
+      "suspended": false
+    },
+    "fans": [
+      {
+        "id": 0,
+        "manual": true,
+        "max": 6800,
+        "min": 2317,
+        "name": "Fan",
+        "rpm": 6668.76611328125,
+        "target": 6617
+      }
+    ],
+    "fansAvailable": true,
+    "policies": {
+      "0": {
+        "fixed": {
+          "rpm": 6617
+        }
+      }
+    },
+    "policiesAvailable": true
+  },
+  "appControl": {
+    "id": "D5C1ADAA-C58D-42F5-81B8-5FCF7C0136F5",
+    "schema": 1,
+    "succeeded": true,
+    "values": {
+      "appVersion": "1.1.40 (611.22)",
+      "busy": "false",
+      "controlProtocol": "1",
+      "keepAwakePhase": "idle",
+      "keepAwakeRequested": "false",
+      "menuPanelOpen": "false",
+      "menuPanelSampling": "false",
+      "pulseHolders": "0",
+      "pulseSampling": "false",
+      "screenActive": "false",
+      "windowVisible": "true"
+    }
+  },
+  "upgradeObservations": {
+    "passed": true,
+    "samples": 36,
+    "consecutiveRecoveredChecks": 6
+  },
+  "nativeReadonly": {
+    "build": "611.22",
+    "realSystemClock": true,
+    "candidateGroupsObservedInNativeList": 28,
+    "selectedCandidate": "com.agentparty.desktop.preview809",
+    "actualNativeConfirmation": {
+      "pathCount": 2,
+      "displayedSize": "22.7 MB",
+      "fullPathsVisible": true,
+      "cancelled": true,
+      "selectionCleared": true,
+      "mutationSubmitted": false
+    },
+    "actualCLIPreview": {
+      "exit": 0,
+      "paths": [
+        "/Users/leo/Library/Application Support/com.agentparty.desktop.preview809",
+        "/Users/leo/Library/WebKit/com.agentparty.desktop.preview809"
+      ],
+      "treeEntryCounts": {
+        "/Users/leo/Library/Application Support/com.agentparty.desktop.preview809": 171,
+        "/Users/leo/Library/WebKit/com.agentparty.desktop.preview809": 39
+      },
+      "ownershipComplete": true,
+      "previewSHA256": "c1f2fdf90dd05aab3b3642a7f8860f3fe3c2a3db613a5ea89f34d9742bc0550b"
+    },
+    "userDataMoved": false,
+    "scope": "Installed native actual-clock discovery/preparation/confirmation/cancel and CLI dry run only; execution/restore not submitted."
+  },
+  "executionRestoreAccepted": false,
+  "sourceCommitted": false,
+  "notarized": false,
+  "published": false,
+  "overallParityEstablished": false
+}

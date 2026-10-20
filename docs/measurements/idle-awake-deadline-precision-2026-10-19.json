@@ -1,0 +1,305 @@
+{
+  "date": "2026-10-19",
+  "status": "R10 installed; 1869 current-source remote tests, expected negative failures, universal package and native 20s both/1s display expiry checks passed; physical power transitions remain unverified",
+  "installedBaseline": {
+    "reviewRevision": 9,
+    "inputCommit": "f82f1f13b172c3005c3e5398de268607cea0a537"
+  },
+  "changes": [
+    "Bounded integral kernel leases account for powerd truncation of timeout and monotonic timestamp",
+    "Original requested expiresAt remains unchanged; common-mode one-shot timer reconciles precisely at that deadline",
+    "Deadline persists across power pause and panel closure; stopping or changing sessions invalidates old callbacks",
+    "An unconfirmed release never re-arms an already elapsed deadline; polling retries remain bounded at one second"
+  ],
+  "contract": {
+    "appDeadline": "Original user requested end; timer callbacks remain subject to macOS scheduling",
+    "kernelLeaseMaximumSeconds": 30,
+    "finalKernelDeadlineGraceSeconds": "less than 2 for integer quantization; only the final near-deadline lease",
+    "abnormalAppStall": "OS timeout releases assertions; precise App deadline cannot be guaranteed while App cannot execute",
+    "explicitChangeFromPriorContract": "Kernel final lease may exceed user deadline within the bounded grace; earlier no-extension kernel claim is withdrawn. User-visible deadline is unchanged.",
+    "notYetNativeAccepted": true
+  },
+  "regressionChecks": [
+    "25 fractional-duration / monotonic-phase combinations cover creation and renewal",
+    "Deadline callback expiry between 1-second polls",
+    "Paused session retains original deadline",
+    "Cancelled callback cannot affect replacement or manual session",
+    "Unconfirmed expiry does not continuously rearm an elapsed deadline"
+  ],
+  "runs": {
+    "all": "f842d55f-2415-4ec2-8364-e6d513ed63a0",
+    "build": "25f772d7-6601-4b3c-93ff-fc4c94ab77af",
+    "negative": "5d1ee511-df67-42f5-a0c7-ce1ba9c79529"
+  },
+  "sources": [
+    {
+      "path": "Sources/AgentCore/IdleAwake.swift",
+      "sha256": "3a2c81ef3a5fffd2f1e3e3725dc3989b25c230f70d7817ad048765c81dac5982"
+    },
+    {
+      "path": "Sources/ThermoApp/IdleAwakeView.swift",
+      "sha256": "0e75418c21a4f354895005050ef939f56e855f45d3c5841333d08c0ffc3091b4"
+    },
+    {
+      "path": "Tests/AgentCoreTests/IdleAwakeTests.swift",
+      "sha256": "b762c8484c8de42a5b3df8a5f29b7ea029b4010ab0a1c32c3047cd0a5af2cb87"
+    },
+    {
+      "path": "Tests/ThermoAppTests/IdleAwakeModelTests.swift",
+      "sha256": "37197b0d5c05f4db7a99f41fc749e450254c638f5deab351c3d737afb1cbd97b"
+    }
+  ],
+  "appleSource": "https://github.com/apple-oss-distributions/PowerManagement/blob/main/pmconfigd/PMAssertions.c",
+  "remaining": [
+    "Physical AC/battery transitions and low-battery pause/resume remain unverified",
+    "App-stall final kernel lease grace is bounded by the integer-quantization calculation, not accepted by a physical stalled-process test",
+    "Other Mole parity matrix items remain incomplete"
+  ],
+  "focusedResult": {
+    "run": "032998cb-8112-4483-92b7-5a8e1b1d9a70",
+    "tests": 24,
+    "failures": 0,
+    "artifactHashesVerified": true,
+    "scope": "initial deadline implementation, before unconfirmed-release rearm protection"
+  },
+  "supersededRuns": {
+    "focused": "032998cb-8112-4483-92b7-5a8e1b1d9a70",
+    "all": "fa7dffe0-9c6e-4edf-9bed-5226cea05225",
+    "build": "f69e1a46-d781-447b-b151-0a1bdf8df26b"
+  },
+  "candidateInputCommit": "08165004d2814c4a7b6bb9cceeb9ef4f6d73b571",
+  "candidateInputTree": "6dcc416f5a673ddfd6b4e06e2e2604940bdaaf7d",
+  "nativeAcceptanceScript": "dist/remote-190/verify-awake-deadline-native.py",
+  "nativeAcceptanceScriptSyntaxVerified": true,
+  "nativeAcceptanceScriptExecuted": true,
+  "supersededUniversalBuild": {
+    "run": "f69e1a46-d781-447b-b151-0a1bdf8df26b",
+    "passed": true,
+    "artifactHashesVerified": true,
+    "inputCommit": "1b4af3e45c5dd34d9faa00aa0c1b773da0ef2732",
+    "installed": false
+  },
+  "supersededFullRegression": {
+    "run": "fa7dffe0-9c6e-4edf-9bed-5226cea05225",
+    "tests": 1868,
+    "failures": 0,
+    "artifactHashesVerified": true,
+    "inputCommit": "1b4af3e45c5dd34d9faa00aa0c1b773da0ef2732",
+    "coversFinalUnconfirmedRearmProtection": false
+  },
+  "supersededNegativeControl": {
+    "run": "4b351736-a6bd-40ac-94be-3731a6d03da6",
+    "stoppedAsSuperseded": true,
+    "countsAsAcceptance": false
+  },
+  "negativeControl": {
+    "run": "5d1ee511-df67-42f5-a0c7-ce1ba9c79529-test",
+    "swiftExitCode": 1,
+    "expectedTestsFailed": [
+      "testQuantizedKernelTimeoutCoversFractionalFinalDeadlineWithLessThanTwoSecondsGrace",
+      "testDeadlineFiresBetweenPollingTicksAndStaleCallbacksCannotEndNewSession"
+    ],
+    "compilerFailure": false,
+    "artifactHashesVerified": true,
+    "currentSourceUnmutated": true,
+    "inputCommit": "08165004d2814c4a7b6bb9cceeb9ef4f6d73b571"
+  },
+  "fullRegression": {
+    "run": "f842d55f-2415-4ec2-8364-e6d513ed63a0-test",
+    "tests": 1869,
+    "failures": 0,
+    "targets": [
+      {
+        "target": "ThermoKitTests.xctest",
+        "tests": 218,
+        "failures": 0
+      },
+      {
+        "target": "ThermoHelperTests.xctest",
+        "tests": 30,
+        "failures": 0
+      },
+      {
+        "target": "ThermoCLITests.xctest",
+        "tests": 117,
+        "failures": 0
+      },
+      {
+        "target": "ThermoAppTests.xctest",
+        "tests": 339,
+        "failures": 0
+      },
+      {
+        "target": "CleanKitTests.xctest",
+        "tests": 772,
+        "failures": 0
+      },
+      {
+        "target": "AgentDoctorTests.xctest",
+        "tests": 323,
+        "failures": 0
+      },
+      {
+        "target": "AgentCoreTests.xctest",
+        "tests": 70,
+        "failures": 0
+      }
+    ],
+    "allArtifactHashesVerified": true,
+    "inputCommit": "08165004d2814c4a7b6bb9cceeb9ef4f6d73b571",
+    "inputTree": "6dcc416f5a673ddfd6b4e06e2e2604940bdaaf7d"
+  },
+  "candidate": {
+    "source": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+    "workingTree": "dirty",
+    "version": "1.1.40",
+    "build": "566",
+    "reviewRevision": 10,
+    "testRun": "f842d55f-2415-4ec2-8364-e6d513ed63a0",
+    "remoteBuildRun": "25f772d7-6601-4b3c-93ff-fc4c94ab77af",
+    "inputCommit": "08165004d2814c4a7b6bb9cceeb9ef4f6d73b571",
+    "inputTree": "6dcc416f5a673ddfd6b4e06e2e2604940bdaaf7d",
+    "sourceFilesVerified": 600,
+    "sourceManifestSHA256": "927815c36429daf067fb1474767537c5fc73d0da5f58fc6d830288dd2300f8b7",
+    "fullRegressionStatus": "passed",
+    "installed": true,
+    "published": false,
+    "nonHardwareTests": 1869,
+    "nonHardwareFailures": 0,
+    "testAndBuildInputIdentical": true
+  },
+  "installedVerification": {
+    "checkedAt": "2026-10-19T15:14:27.418574+00:00",
+    "pid": "11763",
+    "inputCommit": "08165004d2814c4a7b6bb9cceeb9ef4f6d73b571",
+    "manifestEntriesVerified": 103,
+    "signatureVerified": true,
+    "installed": true,
+    "launched": true,
+    "published": false,
+    "notarized": false,
+    "observations": {
+      "app-control status": {
+        "appVersion": "1.1.40 (566)",
+        "busy": "false",
+        "controlProtocol": "1",
+        "keepAwakePhase": "idle",
+        "keepAwakeRequested": "false",
+        "menuPanelOpen": "false",
+        "menuPanelSampling": "false",
+        "pulseHolders": "0",
+        "pulseSampling": "false",
+        "screenActive": "false",
+        "windowVisible": "true"
+      },
+      "keep-awake status": {
+        "lastEndReason": "expired",
+        "observedAt": "2026-10-19T15:14:27Z",
+        "phase": "idle",
+        "powerSource": "external",
+        "requestCount": "0",
+        "requested": "false",
+        "requiresHelper": "false"
+      },
+      "fan status": {
+        "controlState": {
+          "observations": {
+            "0": {
+              "checkedAt": "2026-10-19T15:14:26Z",
+              "mode": "manual",
+              "target": 6617
+            }
+          },
+          "observationsSupported": true,
+          "policies": {
+            "0": {
+              "fixed": {
+                "rpm": 6617
+              }
+            }
+          },
+          "suspended": false
+        },
+        "fans": [
+          {
+            "id": 0,
+            "manual": true,
+            "max": 6800,
+            "min": 2317,
+            "name": "Fan",
+            "rpm": 6607.4443359375,
+            "target": 6617
+          }
+        ],
+        "fansAvailable": true,
+        "policies": {
+          "0": {
+            "fixed": {
+              "rpm": 6617
+            }
+          }
+        },
+        "policiesAvailable": true
+      }
+    },
+    "helperAndPlistUnchanged": true,
+    "originalFanRPM": 6617,
+    "nativeUI": {
+      "keepAwakeOffAndTimerEndedVisible": true,
+      "stopDisabledWhenIdle": true,
+      "commandShiftPOpensPanel": true,
+      "leftRightHintVisible": "左键：面板 · 右键：主控制台",
+      "customizeMenuBarEntryVisible": true,
+      "settingsNavigationDismissedPopover": true,
+      "menuPreferencesPreserved": true
+    }
+  },
+  "nativeAcceptance": {
+    "native-expiry-both-20s.json": {
+      "passed": true,
+      "observations": 134,
+      "preDeadlineUnconfirmedReads": [],
+      "preDeadlineKernelMissing": [],
+      "expiredAndReleased": true,
+      "fallbackCleanupIssued": false,
+      "evidence": "dist/mole-review-1.1.40-566-awake-deadline-r10-mac190/native-expiry-both-20s.json",
+      "finalObservedSecondsAfterLatestDeadlineBound": 0.04776406288146973
+    },
+    "native-expiry-display-1s.json": {
+      "passed": true,
+      "observations": 9,
+      "preDeadlineUnconfirmedReads": [],
+      "preDeadlineKernelMissing": [],
+      "expiredAndReleased": true,
+      "fallbackCleanupIssued": false,
+      "evidence": "dist/mole-review-1.1.40-566-awake-deadline-r10-mac190/native-expiry-display-1s.json",
+      "finalObservedSecondsAfterLatestDeadlineBound": 0.1225888729095459
+    }
+  },
+  "unsupportedFractionalCLIAttempt": {
+    "duration": 1.25,
+    "result": "CLI rejects non-integer seconds before App request; subsequent status idle with zero requests",
+    "observerError": "Initial observer assumed JSON even for parser rejection; corrected to retain empty/raw output. No passing timing acceptance claimed.",
+    "evidence": "dist/mole-review-1.1.40-566-awake-deadline-r10-mac190/native-expiry-display-1.25s.json",
+    "fractionalControllerCoverage": "25 fixture combinations and injected deadline callback tests; physical fractional-duration session not available through the public integer CLI"
+  },
+  "upgradeWatch": {
+    "passed": true,
+    "samples": 48,
+    "consecutiveRecoveredChecks": 6,
+    "helperAndPlistUnchanged": true,
+    "originalFanPolicyPreserved": true
+  },
+  "archive": {
+    "version": "1.1.40",
+    "build": "566",
+    "source": "2ff2c36",
+    "archiveSHA256": "daff34243f2e4fbda0ef2dbf296f851d0e36b20a4bedff370ef80cb7f9a9b8c9",
+    "regularFiles": 95,
+    "links": 8,
+    "manifestMatch": true,
+    "signatureVerified": true,
+    "notarized": false,
+    "published": false
+  }
+}

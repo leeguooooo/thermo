@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-20",
+  "scope": "Signed R11 CLI on actual Mac190; no App/GUI/helper installation or hardware-control commands",
+  "status": "M4 native read-only hardware and naturally unavailable helper CLI accepted",
+  "candidateRevision": 11,
+  "sourceInputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+  "signedCLI_SHA256": "889020d7b40918982ddf133abb23561e3740b39b17cd56046cdfeb9052758ad9",
+  "environment": {
+    "hostname": "leos-MacBook-Pro.local",
+    "machine": "arm64",
+    "model": "Mac16,1",
+    "chip": "Apple M4",
+    "os": "27.0",
+    "osBuild": "26A5421a",
+    "developerDirectory": "/Applications/Xcode-27.0.app/Contents/Developer"
+  },
+  "hardwareSummary": {
+    "fanCount": 1,
+    "snapshotFanRPM": [
+      0
+    ],
+    "knownCPUTemperatureCount": 69,
+    "knownGPUTemperatureCount": 19,
+    "cpuMaximum": 78.28125,
+    "gpuMaximum": 52.66654968261719,
+    "streamRows": 2,
+    "streamColumns": 9,
+    "batteryPresent": true,
+    "fanInventoryMatchesIndependentRawFNumRead": true,
+    "finiteReadings": true,
+    "passed": true
+  },
+  "missingHelperSummary": {
+    "passed": true,
+    "healthyInventoryRetained": true,
+    "unknownDesiredPolicyNotAuto": true,
+    "CSVRows": 1,
+    "CSVColumns": 19,
+    "helperFailureReported": true,
+    "separateSampledMode": [
+      false
+    ]
+  },
+  "existingCachePreflight": {
+    "version": 3,
+    "model": "Mac16,1",
+    "keyCount": 2806,
+    "fanCount": 1,
+    "sensorRecords": 358,
+    "completeKnownInventory": true
+  },
+  "protectedFilesUnchanged": true,
+  "helperJobAbsentBeforeAndAfter": true,
+  "runs": {
+    "hardware": {
+      "run": "be777080-057e-4604-a2c1-8c590d018387-probe",
+      "status": "done",
+      "exitCode": 0,
+      "artifactSHA256": "a7557276a65374ab4f1edcab22c8fdd8a02115d67f7f5f01999a378de99d2bb0",
+      "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/mac190-probe.json",
+      "allArtifactHashesVerified": true
+    },
+    "missingHelperInitial": {
+      "run": "0a859393-049b-49ab-950c-44f531446948-probe",
+      "status": "failed",
+      "exitCode": 1,
+      "artifactSHA256": "3cfc0303346895ea449a1ea4ed91f39b163b513fd6facf79e66161c9a83a7256",
+      "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/mac190-missing-helper.json",
+      "allArtifactHashesVerified": true
+    },
+    "missingHelper": {
+      "run": "c4a00d6d-4317-4a5b-8286-e455e5b7ce65-probe",
+      "status": "done",
+      "exitCode": 0,
+      "artifactSHA256": "4b0de940e9124fa778baa6e258f5d17d4aa1577f3704f05f087dd6b8032e0b8f",
+      "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/mac190-missing-helper-v2.json",
+      "allArtifactHashesVerified": true
+    }
+  },
+  "initialDispatchRejection": {
+    "reason": "Host sflow0.7.1 does not support input:none; no job was created",
+    "changedTo": "Supported isolated snapshot command step; source snapshot is not the provenance of the prebuilt CLI"
+  },
+  "initialHelperCheckRejection": {
+    "reason": "fan status does not accept --no-cache; rejected before sampler/helper call",
+    "result": "Retained as failed QA attempt; corrected to supported flags with complete existing cache validation and unchanged-file checks"
+  },
+  "limitations": [
+    "Snapshot and stream sampling used --no-cache; helper-unavailable fan status used a validated pre-existing v3 cache whose contents were unchanged",
+    "Zero RPM on a discovered fan is not a fanless-hardware acceptance",
+    "No physical SMC failure, unavailable-inventory native UI, fan writes, power policy writes, GUI or physical sleep/power transition acceptance",
+    "Mole parity remains incomplete"
+  ]
+}

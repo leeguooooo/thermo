@@ -1,0 +1,97 @@
+{
+  "checkedAt": "2026-10-20T01:03:24.874264+00:00",
+  "installedBuild": "611.23",
+  "vendorVersion": "1.16.0 (324)",
+  "vendorSettingsReadOnly": {
+    "menuPresentation": "icon",
+    "menuAnimation": "dynamic",
+    "menuShown": true,
+    "cameraMicrophoneAlerts": true,
+    "bluetoothLowBatteryAlerts": true,
+    "lowDiskAlerts": true,
+    "settingsChanged": false,
+    "hardwareControlsEnabledByThisReview": false
+  },
+  "thermoCurrentConfiguration": {
+    "primary": "cpuUsage",
+    "secondary": "upload",
+    "layout": "stacked",
+    "presentation": "data",
+    "overheatAlert": true,
+    "slowdownAlerts": true,
+    "configurationEquivalentToVendor": false
+  },
+  "profile": {
+    "requestSeconds": 15,
+    "intervalMilliseconds": 5,
+    "processPID": 50476,
+    "binaryLoadAddress": "0x100794000",
+    "rawSamplePath": "dist/remote-190/r23-idle-sample.txt",
+    "rawSampleSHA256": "a66a393222814e360f583db4512dc06342ec259780eb4ec4ff991173dd74f3e7",
+    "symbolizedAgainst": "mac190 retained unsigned R23 binary with verified matching UUID",
+    "samplerStack": [
+      "Monitor.reschedule closure",
+      "Monitor.sample",
+      "Sampler.sample",
+      "smc_hid_read",
+      "IOHIDEventSystemClientCopyEventForService"
+    ],
+    "samplerThreadStackSamples": 110,
+    "HIDMachWaitStackSamples": 74,
+    "scope": "Wall stack samples include blocked calls; counts are not CPU attribution. Sampling itself perturbs the process. This is not a performance improvement or equivalent benchmark."
+  },
+  "sourceFindings": {
+    "hiddenPagesDoNotEnumerateFullProcessesEachMenuTick": true,
+    "temperatureAlertsIntentionallyUseAllCuratedGroupsAndHID": true,
+    "samplingCoverageOrFrequencyReduced": false,
+    "diskAlertsAlreadyExist": {
+      "source": "Sources/CleanKit/PulseHistory.swift",
+      "thresholdsGB": [
+        30,
+        15,
+        5
+      ],
+      "otherCase": "disk filling quickly",
+      "cooldown": "12 hours for higher steps; 1 hour for lowest step by default",
+      "existingTest": "testDiskAlertsComeEarlyAndWhenFillingFast",
+      "currentRuntimeDeliveryAcceptedThisTurn": false
+    },
+    "cameraMicrophoneAndBluetoothDedicatedAlerts": "Vendor settings observed; corresponding Thermo implementation and device acceptance remain unverified, retained as gaps."
+  },
+  "sourceChange": "Expose the existing slowdown alert scope directly in Settings: disk, memory, sustained CPU and thermal slowdown; no extra sampler or notification controller.",
+  "pendingTestRun": "8901b04b-bb0b-49f6-b438-1cd45149740c",
+  "status": "17 presentation tests passed on mac190; source changed, not packaged or installed",
+  "newSourceSHA256": {
+    "Sources/ThermoApp/Views.swift": "9f27767c898885ac60838143efdd4f6b89dbd2283e90de91af22010690cdc2c7",
+    "Sources/ThermoL10n/ZhHans.swift": "2087871dc06134aee505d6f96999210cb0af5184a47c8d8d524eca03ab5f0486"
+  },
+  "overallParityEstablished": false,
+  "researchPrimarySources": [
+    {
+      "url": "https://developer.apple.com/documentation/avfoundation/avcapturedevice/isinusebyanotherapplication",
+      "finding": "Device in-use state is KVO observable; this alone does not identify an owning app."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/coreaudio/kaudioprocesspropertyisrunninginput",
+      "finding": "Core Audio exposes a per-process input-running selector; SDK 27.0 AudioHardware.h also documents PID, bundle ID and process object list. Runtime support, unavailable reads, identity races and native acceptance remain unverified."
+    }
+  ],
+  "traceSourceSHA256": {
+    "Sources/ThermoApp/Monitor.swift": "3cebdac0f6ac4058c6b8588cf403fcf4f2183082a41fff07b4494fe97f072957",
+    "Sources/ThermoApp/SamplingPlan.swift": "f9a51a250fba03b85d4958c66ee7bcb42b707500fbe7eb3dec3a61046557f000",
+    "Sources/ThermoKit/Sampler.swift": "a2ad1f12a796a6f1c9cd2efd9072b1748aae411aafbb1dc6b6e83b89b3d4f33f",
+    "Sources/CSMC/smc.c": "99028892f35a98b8be06dbc38e8850efc8fa1ee828565506f2f71df6007ebfa6",
+    "Sources/CleanKit/PulseHistory.swift": "4b0a4e8cf70c45397ed30d6390b4658fc1ea0cf8fbbf9996057aea475ed3d505"
+  },
+  "validation": {
+    "suite": "PresentationTests",
+    "tests": 17,
+    "failures": 0,
+    "inputCommit": "53fcc5a4660b96fceea45e8e9d2ffaf8b422508c",
+    "logSHA256": "be1991574d9c0e80c84f2eba19cb4dfaab5d8ab9951fd9851ac064cdaefef84c",
+    "currentChangedSourceHashesMatchDispatch": true,
+    "scope": "Compiles Settings detail layout and existing presentation regression; native new text layout and notification delivery not accepted."
+  },
+  "reminderWordingInstalledIn": "611.25",
+  "reminderWordingInstalledEvidence": "audio-input-r25-installed-2026-10-20.json"
+}

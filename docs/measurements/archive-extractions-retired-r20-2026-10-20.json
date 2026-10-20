@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-19T22:53:35.931178+00:00",
+  "retired": [
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.19-uninstall-review-r19-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.19-uninstall-review-r19-mac190/Thermo-1.1.40-611.19-candidate.zip",
+      "ZIP_SHA256": "b207b5ba38547fa29b57b50408fdb89814299e54e3a3d090df74fbf6cfbabf67",
+      "manifestRetained": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.19-uninstall-review-r19-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.19-uninstall-review-r19-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.19-uninstall-review-r19-mac190/Thermo-1.1.40-611.19-candidate.zip",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.19-uninstall-review-r19-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    }
+  ],
+  "currentAppAndNamedRollbackCopiesUntouched": true,
+  "observedAvailableBytesAfter": 687448064,
+  "notAReclaimedByteClaim": true
+}

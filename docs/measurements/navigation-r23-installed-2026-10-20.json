@@ -1,0 +1,147 @@
+{
+  "checkedAt": "2026-10-20T00:58:07.474636+00:00",
+  "version": "1.1.40",
+  "build": "611.23",
+  "reviewRevision": 23,
+  "sourceBase": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+  "remoteInput": "b3ac82176273dc7f461ff55a667e36987e253cf9",
+  "pid": "50476",
+  "installedManifestVerified": true,
+  "manifestEntries": 103,
+  "signatureVerified": true,
+  "helperAndPlistSHA256": {
+    "/Library/PrivilegedHelperTools/dev.thermo.helper": "b1eabd8979855ece607f3f7f0358b56694882030792e10c40c4fa3e66b65e4e3",
+    "/Library/LaunchDaemons/dev.thermo.helper.plist": "60a0882267b914ab19ba81b9f69310435d048f21e13a09f618171bb2e05a6463"
+  },
+  "finalObservations": {
+    "app-control status": {
+      "appVersion": "1.1.40 (611.23)",
+      "busy": "false",
+      "controlProtocol": "1",
+      "keepAwakePhase": "idle",
+      "keepAwakeRequested": "false",
+      "menuPanelOpen": "false",
+      "menuPanelSampling": "false",
+      "pulseHolders": "0",
+      "pulseSampling": "false",
+      "screenActive": "false",
+      "windowVisible": "false"
+    },
+    "app-control helper status": {
+      "busy": "false",
+      "state": "running",
+      "version": "8/1.1.40"
+    },
+    "fan status": {
+      "controlState": {
+        "observations": {
+          "0": {
+            "checkedAt": "2026-10-20T00:58:06Z",
+            "mode": "manual",
+            "target": 6617
+          }
+        },
+        "observationsSupported": true,
+        "policies": {
+          "0": {
+            "fixed": {
+              "rpm": 6617
+            }
+          }
+        },
+        "suspended": false
+      },
+      "fans": [
+        {
+          "id": 0,
+          "manual": true,
+          "max": 6800,
+          "min": 2317,
+          "name": "Fan",
+          "rpm": 6657.29736328125,
+          "target": 6617
+        }
+      ],
+      "fansAvailable": true,
+      "policies": {
+        "0": {
+          "fixed": {
+            "rpm": 6617
+          }
+        }
+      },
+      "policiesAvailable": true
+    },
+    "charge status": {
+      "externalPower": true,
+      "gate": "allowed",
+      "ownedByCaller": false,
+      "ownership": "none",
+      "percent": 99,
+      "phase": "off",
+      "policy": "off",
+      "support": "smc"
+    },
+    "awdl status": {
+      "interface": {
+        "index": 15,
+        "up": true
+      },
+      "interfaceQueryComplete": true,
+      "ownedByCaller": false,
+      "phase": "idle"
+    },
+    "awake status": {
+      "armed": false,
+      "heatGuard": true,
+      "lidClosed": false,
+      "limit": 100
+    }
+  },
+  "upgrade": {
+    "passed": true,
+    "samples": 23,
+    "consecutiveRecoveredChecks": 6
+  },
+  "nativeAcceptance": {
+    "viewMenuAXContainsAll13Destinations": true,
+    "command7": "Software installed tab",
+    "command8": "Memory page",
+    "command9": "CPU page",
+    "command0": "GPU page",
+    "menuSpaceLens": "Opened; automatic read-only measurement stopped, no selection or removal",
+    "menuClaudeCleanup": "Opened; all reset selections empty and running-Claude protection visible",
+    "commandComma": "Settings 611.23, prior CPU/upload double-row data-only and left/right actions preserved",
+    "windowClosedSamplingRetired": true
+  },
+  "visualLimits": [
+    "Initial app binding timeout, transient ScreenCaptureKit -3811 failure, and bundle-ID ambiguity were observed; recovered by full installed path.",
+    "System menu screenshot unavailable; AX menu and actual destination transitions accepted, complete visual spacing and VoiceOver not accepted."
+  ],
+  "packagingCorrection": "First invocation omitted existing update feed; reassembled with the existing official feed and reverified before installation. No failed candidate was installed.",
+  "validation": {
+    "suite": "PresentationTests",
+    "tests": 17,
+    "failures": 0,
+    "changedSourceFiles": [
+      "Sources/ThermoApp/main.swift",
+      "Tests/ThermoAppTests/PresentationTests.swift"
+    ],
+    "testAndBuildChangedSourcesIdentical": true
+  },
+  "fullRegressionBaseline": {
+    "build": "611.22",
+    "tests": 1956,
+    "failures": 0,
+    "sourceUnchangedExcept": [
+      "Sources/ThermoApp/main.swift",
+      "Tests/ThermoAppTests/PresentationTests.swift"
+    ],
+    "rerunForR23": false
+  },
+  "sourceCommitted": false,
+  "sourceMergedIntoMain": false,
+  "notarized": false,
+  "published": false,
+  "overallParityEstablished": false
+}

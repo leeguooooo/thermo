@@ -13,6 +13,33 @@ struct AppControlCommand {
         let sub = rest.first ?? "status"
         var action: String, values: [String:String] = [:], mutates = false
         switch command {
+        case "camera":
+            guard rest.count <= 1, ["status", "on", "off"].contains(sub) else { throw CLIError("Run thermo camera --help.") }
+            action = "camera." + sub; mutates = sub != "status"
+        case "audio-input":
+            guard rest.count <= 1, ["status", "on", "off", "mute", "unmute"].contains(sub) else { throw CLIError("Run thermo audio-input --help.") }
+            action = "audio-input." + sub; mutates = sub != "status"
+            if sub == "mute" || sub == "unmute" {
+                guard let key = args.options["app"], !key.isEmpty, key.utf8.count <= 4096,
+                      !key.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else {
+                    throw CLIError("audio-input mute/unmute requires a valid --app key from status or inspect")
+                }
+                values["app"] = key
+            }
+        case "keep-awake":
+            guard rest.count <= 1, ["status", "start", "stop"].contains(sub) else { throw CLIError("Run thermo keep-awake --help.") }
+            action = "keep-awake." + sub; mutates = sub != "status"
+            if sub == "start" {
+                guard let mode = IdleAwakeMode(rawValue: args.options["mode"] ?? "both") else { throw CLIError("--mode must be display, tasks or both") }
+                values["mode"] = mode.rawValue
+                if let duration = args.options["duration"] {
+                    guard duration == "manual", args.options["seconds"] == nil else { throw CLIError("Use --duration manual or --seconds, not both") }
+                    values["duration"] = "manual"
+                } else {
+                    guard let seconds = Int(args.options["seconds"] ?? "3600"), (1...604800).contains(seconds) else { throw CLIError("--seconds must be 1…604800") }
+                    values["seconds"] = String(seconds)
+                }
+            }
         case "screen":
             guard rest.count <= 1, ["status","start","stop","duration","shortcut","clear-shortcut"].contains(sub) else { throw CLIError("Run thermo screen --help.") }
             action = "screen." + sub; mutates = sub != "status"
@@ -47,14 +74,17 @@ struct AppControlCommand {
                 }
             }
         }
-        let scoped = Set(["duration","key-code","modifiers","key-label","seconds"])
+        let scoped = Set(["duration","key-code","modifiers","key-label","seconds","mode","app","limit"])
         let unexpected = Set(args.options.keys).intersection(scoped).subtracting(values.keys)
         guard unexpected.isEmpty else { throw CLIError("Options do not apply to this operation: " + unexpected.sorted().joined(separator:", ")) }
         return Operation(action: action, arguments: values, mutates: mutates)
     }
     func run(command: String, rest: [String]) throws {
         let operation = try Self.operation(command: command, rest: rest, args: app.args)
-        if operation.mutates && !app.args.has("dry-run") { try app.approveAction("Apply \(operation.action) through Thermo.app? Permission, helper and update actions may display macOS or App dialogs.") }
+        if operation.mutates && !app.args.has("dry-run") {
+            let prompt = command == "keep-awake" ? "Apply idle-awake \(rest.first ?? "status") through Thermo.app? The session ends when its duration expires or Thermo quits." : "Apply \(operation.action) through Thermo.app? Permission, helper and update actions may display macOS or App dialogs."
+            try app.approveAction(prompt)
+        }
         let request = AppControlRequest(action: operation.action, arguments: operation.arguments, dryRun: app.args.has("dry-run"))
         let serverTrust: LocalControlPeerTrust?
         if let team = CodeSignature.teamIdentifier() {
@@ -63,6 +93,8 @@ struct AppControlCommand {
         let reply = try AppControlTransport.request(request, timeout: operation.action.hasPrefix("integration.") || operation.action.hasPrefix("helper.") ? 290 : 20,
             authorizeServer:{ serverTrust?.accepts(auditToken:$0) ?? true })
         if app.args.has("json") { print(Export.json(reply)) }
+        else if let report = reply.camera { print(CameraCommand.text(report)); if let issue = reply.issue { print(issue) } }
+        else if let report = reply.audioInput { print(AudioInputCommand.text(report)); if let issue = reply.issue { print(issue) } }
         else { print(reply.values.keys.sorted().map { $0 + ": " + reply.values[$0]! }.joined(separator: "\n")); if let issue = reply.issue { print(issue) } }
         guard reply.succeeded else { throw CLIError(reply.issue ?? "App operation was not confirmed.", exitCode: 3) }
     }

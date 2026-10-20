@@ -1,0 +1,176 @@
+{
+  "date": "2026-10-19",
+  "installedVersion": "1.1.37 (543)",
+  "sourceCommit": "3892e70e8721c1fb8ce74bd2faaf0870e38ccaf4",
+  "developerIDTeam": "6ZPXG4KVVS",
+  "architectures": {
+    "Contents/MacOS/Thermo": [
+      "x86_64",
+      "arm64"
+    ],
+    "Contents/Helpers/thermo": [
+      "x86_64",
+      "arm64"
+    ],
+    "Contents/Helpers/thermo-helper": [
+      "x86_64",
+      "arm64"
+    ]
+  },
+  "minimumOS": {
+    "Contents/MacOS/Thermo": [
+      "13.0",
+      "13.0"
+    ],
+    "Contents/Helpers/thermo": [
+      "13.0",
+      "13.0"
+    ],
+    "Contents/Helpers/thermo-helper": [
+      "13.0",
+      "13.0"
+    ]
+  },
+  "appleEventsEntitlement": true,
+  "nativeAndRosettaCLI": true,
+  "physicalIntelAccepted": false,
+  "archiveSHA256": "09e39fcfe1992cb029d1d847ecd502969f8a0294fabdade37f71bbdbe41825af",
+  "archiveManifestMatch": true,
+  "archiveRegularFiles": 93,
+  "archiveLinks": 8,
+  "localInstallation": {
+    "atomicSwap": true,
+    "oldAppAndHelperBackupsRetained": true,
+    "runningRollbackTested": false,
+    "initialCuaBindTimedOut": true,
+    "launchConfirmedByCanonicalPIDAndAppControlBeforeRebinding": true,
+    "normalQuitVerifiedByProcessAbsenceBeforeSwap": true
+  },
+  "helper": {
+    "version": "8/1.1.37",
+    "upgradePassed": true,
+    "observations": 24,
+    "allObservedJobsPresent": true,
+    "consecutiveOriginalFanChecks": 6,
+    "originalFanTargetRPM": 6617,
+    "shutdownAutomaticControlConfirmedInLog": true
+  },
+  "lifecycle": {
+    "source": "3892e70",
+    "version": "1.1.37",
+    "build": "543",
+    "runs": [
+      {
+        "mode": "baseline-first",
+        "activityRequested": false,
+        "started": "2026-10-19T06:09:31.254454+00:00",
+        "exitCode": 0,
+        "seconds": 79.044866,
+        "functionalChecksPassed": true,
+        "samples": 23,
+        "failedTransitions": [],
+        "staleOpenSamples": [],
+        "closedReadsInFlight": 0
+      },
+      {
+        "mode": "foreground-activity",
+        "activityRequested": true,
+        "started": "2026-10-19T06:10:50.306023+00:00",
+        "exitCode": 0,
+        "seconds": 79.77747704099998,
+        "functionalChecksPassed": true,
+        "samples": 23,
+        "failedTransitions": [],
+        "staleOpenSamples": [],
+        "closedReadsInFlight": 0
+      },
+      {
+        "mode": "baseline-after",
+        "activityRequested": false,
+        "started": "2026-10-19T06:12:10.102888+00:00",
+        "exitCode": 2,
+        "seconds": 86.507431833,
+        "functionalChecksPassed": false,
+        "samples": 23,
+        "failedTransitions": [],
+        "staleOpenSamples": [
+          {
+            "cycle": 1,
+            "page": "memory"
+          },
+          {
+            "cycle": 1,
+            "page": "cpu"
+          }
+        ],
+        "closedReadsInFlight": 0
+      }
+    ],
+    "ordinaryBaselinesPassed": false,
+    "allRunsPassed": false,
+    "newProcessPerRun": true,
+    "filesystemColdCacheAssessed": false,
+    "externalMachineLoadControlled": false,
+    "scope": "Run after other owned package checks finish. User-requested process activity is an explicit diagnostic condition; its result never replaces either ordinary baseline. No helper control or menu-bar recorder."
+  },
+  "inlineGrouping": {
+    "passed": true,
+    "version": "1.1.37",
+    "build": "543",
+    "source": "3892e70",
+    "nativeAndRosettaRowIdentityMatches": true,
+    "physicalIntelAccepted": false,
+    "scope": "Four owned node processes; no Thermo signal/quit operation; global inventory completeness is reported separately from this exact fixture scope",
+    "observations": [
+      {
+        "architecture": "arm64",
+        "expectedProcesses": 3,
+        "observedProcesses": 3,
+        "rows": 2,
+        "displayNames": [
+          "node"
+        ],
+        "differentInlineProgramExcluded": true,
+        "identicalInvocationAcrossFoldersIncluded": true,
+        "inlineSourceAbsentFromRowIDs": true,
+        "globalInventoryComplete": false
+      },
+      {
+        "architecture": "x86_64",
+        "expectedProcesses": 3,
+        "observedProcesses": 3,
+        "rows": 2,
+        "displayNames": [
+          "node"
+        ],
+        "differentInlineProgramExcluded": true,
+        "identicalInvocationAcrossFoldersIncluded": true,
+        "inlineSourceAbsentFromRowIDs": true,
+        "globalInventoryComplete": false
+      }
+    ],
+    "sourceHashes": {
+      "a": "f7d68a7710256e34159d631d173de211ad13320938e5a467820430eb9bdd9c03",
+      "b": "b52df2b7bed4e5a3f94569d7f0c3e1c6903e3bca0be4831ede0bb952485e5e06"
+    }
+  },
+  "visibleUI": {
+    "settingsVersionAndSourceConfirmed": true,
+    "memoryFreshMinuteObserved": "15:24",
+    "nodeRuntimeRowObserved": true,
+    "searchClearedAndReturnedToSettings": true,
+    "processActionExecuted": false,
+    "fullVisualLayoutAccepted": false
+  },
+  "postInstallControlStates": {
+    "chargePolicy": "off",
+    "awdlPhase": "idle",
+    "awdlInterfaceUp": true,
+    "lidAwakeArmed": false,
+    "newPolicySubmitted": false
+  },
+  "published": false,
+  "notarized": false,
+  "overallMoleParity": false,
+  "remaining": "Ordinary offscreen first-sample latency is unresolved; one of two ordinary runs failed the four-second freshness observation. Idle-awake modes/duration/pause-resume are a confirmed core capability gap."
+}

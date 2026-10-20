@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-10-19T19:37:50.199928+00:00",
+  "transfers": [
+    {
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-566-panel-access-r7-mac190-on-190.json",
+      "receiptSHA256": "6da9a669277a2d1435ebee04d4e4f10570c1db8432688ffab07510a21fc613c7",
+      "remotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-c2b75e7a8619/products",
+      "signatureVerified": true,
+      "localZIPAndEvidenceRetained": true
+    },
+    {
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-566-panel-dismiss-r8-mac190-on-190.json",
+      "receiptSHA256": "dde80c5f81e947bac873280cb20794f6bd2218001174863bf2813dd5aa0ac429",
+      "remotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-a98fbe3761f6/products",
+      "signatureVerified": true,
+      "localZIPAndEvidenceRetained": true
+    },
+    {
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-566-awake-power-r9-mac190-on-190.json",
+      "receiptSHA256": "551ca31557a23cce52dffe881eeea9a70fd3a9c7d81ac86d3c5845411ef28575",
+      "remotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-fa08228adf55/products",
+      "signatureVerified": true,
+      "localZIPAndEvidenceRetained": true
+    },
+    {
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-566-awake-deadline-r10-mac190-on-190.json",
+      "receiptSHA256": "530603885d6a30a820c0b1ae89e055b471337f79a9d8e66250aec71bbe18ffe5",
+      "remotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-2fd6ab656bea/products",
+      "signatureVerified": true,
+      "localZIPAndEvidenceRetained": true
+    }
+  ],
+  "currentAndRollbackAppsUntouched": true,
+  "observedAvailableBytes": 1219883008,
+  "notAClaimOfReclaimedBytes": true
+}

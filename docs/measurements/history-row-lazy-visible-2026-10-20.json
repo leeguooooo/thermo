@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-19T19:22:30.137411+00:00",
+  "remoteRun": "3f0a3f60-119a-4688-b1b3-0b79b4fd3da5",
+  "inputCommit": "8e35a957eea998db4c47c2d91b01f191be995c7f",
+  "sourceBeforeSHA256": "87598e195a74093097148a21dc57dea69236fe0a162a90f23e6422992370e3dd",
+  "sourceAfterSHA256": "63cb31b3712ec200902088aed21cfbdb5f375bb7058e9efb7b236eed0fab146d",
+  "productionSourceExactlyMatchesVisibleTestedVariant": true,
+  "sameDatasetComparison": {
+    "records": 300,
+    "eager": {
+      "AXCharacters": 601,
+      "rowsExposed": 0,
+      "refreshExposed": false
+    },
+    "lazyAtTop": {
+      "AXCharacters": 3620,
+      "rowsExposed": 19,
+      "refreshExposed": true
+    },
+    "lastRecordReachable": true,
+    "lastRecordDetailsExposed": true,
+    "sequentialTraversalSteps": 28,
+    "all300DistinctRecordsObserved": true,
+    "everyTraversalStepExposedRows": true,
+    "returnToTopAfterFullTraversal": {
+      "firstRecordExposed": true,
+      "refreshExposed": true,
+      "rowsExposed": 40
+    }
+  },
+  "dataLimitReduced": false,
+  "modelAndRestoreCodeChanged": false,
+  "canonicalJournalUnchanged": true,
+  "helperUnchanged": true,
+  "privateQAAppClosed": true,
+  "installedAppUpdatedForThisChange": false,
+  "voiceOverAcceptance": false,
+  "interpretation": "Visible same-process positive/negative controls establish improved CUA AX exposure for the row-lazy variant. No OS-versus-tool root-cause claim or VoiceOver result.",
+  "next": "Full regression/universal build and installed canonical History acceptance"
+}

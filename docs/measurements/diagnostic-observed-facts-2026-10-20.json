@@ -1,0 +1,59 @@
+{
+  "checkedAt": "2026-10-19T21:02:35.834299+00:00",
+  "problem": [
+    "Low capacity was stated as the established cause of load and stalled writes",
+    "Capacity threshold used important-usage capacity while text used raw free bytes or invented zero",
+    "Swap capacity and retained swap were treated as active swapping or promised reclaim timing",
+    "Project/current CPU context claimed a causal majority and could override capacity/pressure facts"
+  ],
+  "change": [
+    "Prefer a nonnegative important-usage capacity, fall back to valid raw free, preserve missing",
+    "Use the same capacity for threshold, headline and contextual text",
+    "State reported pressure/current CPU facts without deriving cause or throttling",
+    "Retained swap alone does not establish current activity; distinguish normal and unknown pressure",
+    "Exclude unavailable memory measurements when selecting an app to review",
+    "Keep directory and agent association as current context; do not replace pressure warnings",
+    "Overview directory/agent text is observational and cannot override capacity or pressure facts",
+    "Logical CPU equivalents are distinguished from one-minute load",
+    "Swap capacity text makes no reclaim-timing promise"
+  ],
+  "unchanged": [
+    "Capacity warning thresholds",
+    "Diagnostic enum and NextStep action kinds",
+    "No new sampler or data collection",
+    "No automated cleanup or app stop"
+  ],
+  "sourceSHA256": {
+    "Sources/CleanKit/Pulse.swift": "a70d37b6d4fb3e19a1bf510da4c623f05e669b8992e42fc0c75644a4fd7e3cd8",
+    "Sources/ThermoApp/OverviewPage.swift": "1e002a5469ee551fbfc145575fadad0e351bec468582014f680c21d2e251df78",
+    "Sources/ThermoL10n/ZhHans.swift": "eb9d149e992ce958ceb77b26a3217f2ac6261d0b68e45ac6f8ecc37361720eb7",
+    "Tests/CleanKitTests/PulseDiskTests.swift": "77923c8aa7ec45dc66f1a50d96d46bf64e915fb30f55e2ebf0bb63c05cd5e7b1",
+    "Tests/CleanKitTests/CleanKitTests.swift": "ad36d6a21ba19707227c649041f24a664291484bebc8524ecefbb8485066b8bc",
+    "Tests/ThermoAppTests/OverviewSourceTests.swift": "991f3d61e260e111aaa888c9e9372bc63f351e04cf1325ce2811642508a28a19"
+  },
+  "initialRun": "055ea4ad-62bd-46ee-9cf2-52605ef26ffa",
+  "initialRunStatus": "two tests retained outdated causal copy assertions; full logs retained",
+  "retiredRun": "5975060b-5191-4c70-a8d3-5012b3455bde",
+  "retiredReason": "Source/tests extended after frozen input; cancelled own tasks, remote exit SIGTERM verified",
+  "currentRun": "ff00bbfd-5c44-4ad2-8ef7-398a24cd6352",
+  "currentStatus": "validated and installed as R16 / 1.1.40 (611.16)",
+  "negativeControlStatus": "all five expected XCTest behavior failures verified; no compiler failures",
+  "installedAppStill": "R15 / 1.1.40 (611.15)",
+  "sourceCommitted": false,
+  "overallParityEstablished": false,
+  "negativeControlRun": "3632ec9c-eba6-4102-9676-e655026d157e",
+  "initialSourceSHA256": {
+    "Sources/CleanKit/Pulse.swift": "a70d37b6d4fb3e19a1bf510da4c623f05e669b8992e42fc0c75644a4fd7e3cd8",
+    "Sources/ThermoApp/OverviewPage.swift": "1e002a5469ee551fbfc145575fadad0e351bec468582014f680c21d2e251df78",
+    "Sources/ThermoL10n/ZhHans.swift": "eb9d149e992ce958ceb77b26a3217f2ac6261d0b68e45ac6f8ecc37361720eb7",
+    "Tests/CleanKitTests/PulseDiskTests.swift": "77923c8aa7ec45dc66f1a50d96d46bf64e915fb30f55e2ebf0bb63c05cd5e7b1",
+    "Tests/CleanKitTests/CleanKitTests.swift": "ad36d6a21ba19707227c649041f24a664291484bebc8524ecefbb8485066b8bc",
+    "Tests/ThermoAppTests/OverviewSourceTests.swift": "991f3d61e260e111aaa888c9e9372bc63f351e04cf1325ce2811642508a28a19"
+  },
+  "updatedAt": "2026-10-19T21:03:48.973555+00:00",
+  "currentInput": "476b47f4ce1c3ee9d535167ef7f1dc3ec574ec84",
+  "negativeControlInput": "476b47f4ce1c3ee9d535167ef7f1dc3ec574ec84",
+  "negativeEvidenceSHA256": "006f3d3b0ee2e686edff70105a3a5a2e7f803e48e0b26be27d3bca72dd9912aa",
+  "negativeResultArtifact": "/Users/leo/.local/state/session-flow/runs/3632ec9c-eba6-4102-9676-e655026d157e/negative/artifacts/.remote-qa/negative-result.json",
+  "installedEvidence": "diagnostic-facts-r16-installed-2026-10-20.json"
+}

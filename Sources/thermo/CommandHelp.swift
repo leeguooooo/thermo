@@ -45,6 +45,18 @@ enum CommandHelp {
     helper uninstall|helper uninstall [--dry-run] [--json]|helper
     activity|activity [--json]|cli
     memory|memory [--json]|cli
+    camera|camera [inspect|status|on|off] [--limit N] [--dry-run] [--yes] [--json]|cli-or-app
+    camera inspect|camera inspect [--limit N] [--json]|cli
+    camera status|camera status [--json]|app
+    camera on|camera on [--dry-run] [--yes] [--json]|app
+    camera off|camera off [--dry-run] [--yes] [--json]|app
+    audio-input|audio-input [inspect|status|on|off|mute|unmute] [--app KEY] [--limit N] [--dry-run] [--yes] [--json]|cli-or-app
+    audio-input inspect|audio-input inspect [--limit N] [--json]|cli
+    audio-input status|audio-input status [--json]|app
+    audio-input on|audio-input on [--dry-run] [--yes] [--json]|app
+    audio-input off|audio-input off [--dry-run] [--yes] [--json]|app
+    audio-input mute|audio-input mute --app KEY [--dry-run] [--yes] [--json]|app
+    audio-input unmute|audio-input unmute --app KEY [--dry-run] [--yes] [--json]|app
     pulse|pulse [--json|--csv]|cli
     pulse inspect|pulse inspect NAME_or_PID [--json]|cli
     pulse explain|pulse explain PID [--json]|cli
@@ -106,6 +118,7 @@ enum CommandHelp {
     tabs auto|tabs auto [on|off] [--dry-run] [--yes] [--json]|app-worker
     tabs rule|tabs rule [add DOMAIN NAME|remove UUID] [--color COLOR] [--dry-run] [--yes] [--json]|cli
     awake|awake [status|on|off] [--no-heat-guard] [--dry-run] [--yes] [--json]|helper
+    keep-awake|keep-awake [status|start|stop] [--mode display_or_tasks_or_both] [--seconds SEC] [--duration manual] [--dry-run] [--yes] [--json]|app
     awdl|awdl [status|on|recover] [--probe] [--seconds SEC] [--dry-run] [--json]|helper-connection-lease
     settings|settings [KEY [VALUE]] [--dry-run] [--json|--csv]|cli
     history|history [list|show ID] [--limit N] [--json]|cli
@@ -142,7 +155,7 @@ enum CommandHelp {
         var path = words.filter { $0 != "help" }
         if let first = path.first { path[0] = aliases[first] ?? first }
         if path.isEmpty {
-            let descriptions = ["temps":"temperature sensors", "fans":"fan readings", "power":"power and electrical readings", "battery":"battery readings", "charge":"foreground charging policy and read-only capability probe", "watch":"live sensor view", "list":"raw SMC keys", "get":"read selected SMC keys", "bench":"sampling benchmark", "fan":"fan policies and observed control state", "helper":"legacy helper installation and status", "activity":"CPU/GPU activity", "memory":"program memory and project contexts", "pulse":"slowdown diagnosis, process and browser actions", "agents":"Agent/MCP/Skill diagnosis, inspection and fixes", "clean":"disk scan, frozen plans, cleanup and recovery", "apps":"applications, updates, startup and residual data", "space":"folder sizes, large files, duplicates and verified archives", "tabs":"browser groups, saved batches and restoration", "awake":"lid-closed awake control", "awdl":"bounded network session held by this CLI", "settings":"shared App preferences", "history":"operation records and recovery references", "privacy":"browser, environment, DNS and timezone controls", "claude-reset":"explicit recoverable Claude local-data reset", "screen":"App-owned screen cleaning and shortcut", "app-control":"App status, login, updates, helper and AWDL", "permissions":"App permission state and system settings", "integration":"CLI links and Agent plugin setup", "capabilities":"versioned machine-readable command contracts"]
+            let descriptions = ["temps":"temperature sensors", "fans":"fan readings", "power":"power and electrical readings", "battery":"battery readings", "charge":"foreground charging policy and read-only capability probe", "watch":"live sensor view", "list":"raw SMC keys", "get":"read selected SMC keys", "bench":"sampling benchmark", "fan":"fan policies and observed control state", "helper":"legacy helper installation and status", "activity":"CPU/GPU activity", "camera":"read-only video-input metadata and App-owned alert preferences", "audio-input":"read-only input metadata and App-owned alert preferences", "memory":"program memory and project contexts", "pulse":"slowdown diagnosis, process and browser actions", "agents":"Agent/MCP/Skill diagnosis, inspection and fixes", "clean":"disk scan, frozen plans, cleanup and recovery", "apps":"applications, updates, startup and residual data", "space":"folder sizes, large files, duplicates and verified archives", "tabs":"browser groups, saved batches and restoration", "awake":"lid-closed awake control", "keep-awake":"display/task sleep controls through Thermo.app", "awdl":"bounded network session held by this CLI", "settings":"shared App preferences", "history":"operation records and recovery references", "privacy":"browser, environment, DNS and timezone controls", "claude-reset":"explicit recoverable Claude local-data reset", "screen":"App-owned screen cleaning and shortcut", "app-control":"App status, login, updates, helper and AWDL", "permissions":"App permission state and system settings", "integration":"CLI links and Agent plugin setup", "capabilities":"versioned machine-readable command contracts"]
             let families = Set(capabilities.map { String($0.command.split(separator:" ").first!) }).sorted()
             let rows = families.map { "  " + $0.padding(toLength:15,withPad:" ",startingAt:0) + (descriptions[$0] ?? "Use --help for operations") }
             return (["thermo " + ThermoVersion.string + " — Mac diagnostics and controls", "", "USAGE: thermo [COMMAND] [OPTIONS]", "", "COMMANDS"] + rows + ["", "thermo COMMAND --help: scoped operations and options", "thermo --version [--json]: CLI version and containing App build metadata", "thermo capabilities --json: schema, version, formats and execution dependencies", "--dry-run previews supported operations; --yes confirms where requested.", "--json/--csv are accepted only where listed. --no-color disables ANSI output.", "No command defaults to clearing conversations or changing hardware."]).joined(separator:"\n")
@@ -158,7 +171,11 @@ enum CommandHelp {
             "\n\nCharging controls require helper protocol 8. Full charge ends at a reported 100%, without external power, or when state is unavailable. A previous 80% policy resumes; a standalone full session ends. System charging protection still applies." : ""
         let usageOrdering = selected.contains { $0.command == "agents usage" } ?
             "\n\nagents usage defaults to --sort text (reference or estimated tokens). --sort structured ranks known MCP structured JSON counts first; unknown counts and other categories follow. Human output and JSON use the same order; text shares are omitted for structured order. Neither order measures request usage." : ""
-        return selected.map { "thermo " + $0.usage + "\n  execution: " + $0.execution }.joined(separator: "\n\n") + charging + usageOrdering
+        let audioInput = selected.contains { $0.command == "audio-input" || $0.command.hasPrefix("audio-input ") } ?
+            "\n\ninspect reads current-user Core Audio metadata without recording, a capture session, or Thermo.app. The default limit is 64; --limit accepts 1…4096. Unknown or partial reads preserve output and exit 3. status reads App preferences and its latest observation, including age and limited output. on may request notification authorization; enabled is not notification delivery. mute/unmute require an App-observed or already muted app key. Mutations are previewable and require confirmation or --yes; they are never retried." : ""
+        let camera = selected.contains { $0.command == "camera" || $0.command.hasPrefix("camera ") } ?
+            "\n\ninspect reads system-reported video input metadata without capturing video or identifying the application. noDevices means no input devices were reported; it does not prove that every camera is visible. Unknown or partial reads exit 3. --limit accepts 1…256. status/on/off use the running App; mutations support --dry-run and require confirmation or --yes. No request is automatically retried." : ""
+        return selected.map { "thermo " + $0.usage + "\n  execution: " + $0.execution }.joined(separator: "\n\n") + charging + usageOrdering + audioInput + camera
             + "\n\n--dry-run never applies changes. Unsupported flags are rejected.\nApp commands require a running compatible Thermo.app. No request is automatically retried.\nExit 0: completed; 2: invalid/refused; 3: partial or unconfirmed result; 1: execution error."
     }
 }
@@ -198,10 +215,11 @@ enum CommandContract {
             guard unknown.isEmpty else { throw CLIError("Unsupported options for \(matching.command): " + unknown.sorted().map { "--" + $0 }.joined(separator:", ")) }
         }
         if args.has("dry-run") {
-            let families = ["clean", "apps", "app", "space", "tabs", "privacy", "claude-reset", "screen", "app-control", "permissions", "integration", "fan", "helper", "awake", "awdl", "charge", "settings", "config"]
+            let families = ["clean", "apps", "app", "space", "tabs", "privacy", "claude-reset", "screen", "app-control", "permissions", "integration", "fan", "helper", "awake", "keep-awake", "awdl", "charge", "settings", "config"]
             let agent = ["agents","agent","doctor"].contains(root) && ["fix","disable","uninstall","remove","rm","run","inspect-all"].contains(sub)
             let pulse = ["pulse","status"].contains(root) && (["quit","restart"].contains(sub) || Array(p.prefix(3)) == [root,"chrome","close"])
-            guard families.contains(root) || agent || pulse else { throw CLIError("--dry-run is not supported for this command; no action was performed.") }
+            let audioInput = (root == "audio-input" && ["on", "off", "mute", "unmute"].contains(sub)) || (root == "camera" && ["on", "off"].contains(sub))
+            guard families.contains(root) || agent || pulse || audioInput else { throw CLIError("--dry-run is not supported for this command; no action was performed.") }
         }
         if args.has("csv") {
             guard ["temps","temp","t","fans","f","power","p","battery","b","watch","w","list","ls","get","memory","settings","config","helper","fan","pulse","status","bench","agents","agent","doctor","clean"].contains(root),

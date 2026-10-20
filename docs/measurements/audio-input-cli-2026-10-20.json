@@ -1,0 +1,164 @@
+{
+  "date": "2026-10-20",
+  "stage": "source-tested-not-installed",
+  "sourceBase": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+  "sourceDirty": true,
+  "installedApp": "1.1.40 (611.25), R25",
+  "newIncrement": "audio-input CLI and typed App-control report",
+  "implementation": [
+    "Read-only current-user Core Audio inspect with partial/unknown exit 3, bounded output and no capture session",
+    "App-owned status/on/off/mute/unmute, shared UI model and persisted explicit mutes, preview/no-replay semantics",
+    "Typed report includes freshness, incompleteness, event registration, notification permission/error and truncation; hardware UIDs excluded",
+    "Notification permission queries await their own native result instead of a fixed delay"
+  ],
+  "remote": {
+    "host": "mac190",
+    "developerDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "run": "4d573697-f456-436f-88a5-895a78a505e7",
+    "input": "9933674cc371bc8b165a524f9fafc63c0c8ad815",
+    "sourceFiles": 625,
+    "sourceContentMatchesLocal": true,
+    "tests": {
+      "AgentCore": 86,
+      "ThermoApp": 357,
+      "ThermoCLI": 130,
+      "total": 573,
+      "failures": 0
+    },
+    "fullRegressionR25": {
+      "run": "837923a9-ffba-44f3-9d3e-9dcaa1df9a50",
+      "tests": 1971,
+      "scope": "previous installed R25, not a full regression of this increment"
+    },
+    "result": "../../dist/remote-190/r26-cli-verified-result.json",
+    "sourceManifest": "../../dist/remote-190/r26-tested-source-files.json"
+  },
+  "compiledCLI": {
+    "cliSHA256": "145e5e013dcd4e3f88401c1b5ce519a71d63b02e9e57380f3a3e497954126c9f",
+    "checks": [
+      {
+        "name": "invalid-options-refused-before-control",
+        "count": 4
+      },
+      {
+        "name": "actual-core-audio-inspection",
+        "iteration": 0,
+        "elapsedSeconds": 0.03707283304538578,
+        "exit": 0,
+        "state": "idle",
+        "available": true,
+        "complete": true,
+        "fresh": true,
+        "totalClients": 0,
+        "totalIssues": 0
+      },
+      {
+        "name": "actual-core-audio-inspection",
+        "iteration": 1,
+        "elapsedSeconds": 0.04042750003281981,
+        "exit": 0,
+        "state": "idle",
+        "available": true,
+        "complete": true,
+        "fresh": true,
+        "totalClients": 0,
+        "totalIssues": 0
+      },
+      {
+        "name": "actual-core-audio-inspection",
+        "iteration": 2,
+        "elapsedSeconds": 0.04027387499809265,
+        "exit": 0,
+        "state": "idle",
+        "available": true,
+        "complete": true,
+        "fresh": true,
+        "totalClients": 0,
+        "totalIssues": 0
+      },
+      {
+        "name": "compiled-cli-private-peer-routing-and-typed-output",
+        "passed": true
+      }
+    ],
+    "limits": [
+      "control peer is a fixture, not the installed App",
+      "no real positive input transition or notification delivery exercised"
+    ]
+  },
+  "existingCLIContracts": {
+    "cliSHA256": "145e5e013dcd4e3f88401c1b5ce519a71d63b02e9e57380f3a3e497954126c9f",
+    "checks": [
+      {
+        "name": "scoped-help-and-inventory",
+        "commands": 116
+      },
+      {
+        "name": "preview-with-yes-never-applies",
+        "passed": true
+      },
+      {
+        "name": "unsupported-flags-and-extra-positionals-refused",
+        "passed": true
+      },
+      {
+        "name": "compiled-cli-private-protocol-routing",
+        "passed": true,
+        "scope": "owned protocol peer; actual App host verified by Swift socket test"
+      },
+      {
+        "name": "real-frozen-clean-plan-preview-apply-and-replay",
+        "passed": true
+      }
+    ],
+    "hardwareChanged": false,
+    "realBrowsersChanged": false,
+    "realPrivacySettingsChanged": false
+  },
+  "issuesFoundAndResolved": [
+    {
+      "kind": "product",
+      "issue": "global dry-run guard rejected the new audio-input mutation commands before routing",
+      "detectedBy": "compiled CLI private-peer probe",
+      "failedRun": "dd820eed-5aa5-4745-9bee-5da7b04ac2d1",
+      "regression": "all four mutation previews now pass the shared CommandContract plus actual mute preview"
+    },
+    {
+      "kind": "product",
+      "issue": "notification error truncation was missing from overall outputTruncated",
+      "resolved": true
+    },
+    {
+      "kind": "product",
+      "issue": "a fixed 100 ms delay could return stale notification permission",
+      "resolved": true
+    },
+    {
+      "kind": "harness",
+      "issue": "initial combined workflow exited after tests before CLI probes",
+      "cancelledOwnRun": "31147827-56c0-4618-a980-26cb327ab049",
+      "resolved": "stopped early, preserved run record and corrected workflow before rerunning"
+    }
+  ],
+  "isolation": {
+    "temporaryHomesRemoved": true,
+    "noNewLongLivedWorktree": true,
+    "installedAppReplaced": false,
+    "recordingStarted": false,
+    "productionNotificationPreferencesChanged": false,
+    "productionHelperOrFanPolicyChanged": false
+  },
+  "remaining": [
+    "Installed signed App/CLI end-to-end acceptance for this increment",
+    "Real positive audio-input transition, listener callback, delivery, click and mute interaction",
+    "Pagination for App status beyond its explicit 64-row/32KiB bound if large mute inventories require it",
+    "Camera and Bluetooth alerts",
+    "Other core, hardware, performance and accessibility parity gates"
+  ],
+  "notClaimed": [
+    "Mole parity",
+    "full current-source regression",
+    "actual notification delivery",
+    "release, notarization, commit or merge"
+  ]
+}

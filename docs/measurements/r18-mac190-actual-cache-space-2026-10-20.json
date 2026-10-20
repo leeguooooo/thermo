@@ -1,0 +1,134 @@
+{
+  "version": {
+    "appPackage": null,
+    "cliVersion": "1.1.40",
+    "schemaVersion": 1
+  },
+  "cliSHA256": "a5b5a8531c844b72bd6b594e08027ae501f062148546bdbc9ae2b93bf7d00a08",
+  "root": "/Users/leo/.local/state/thermo-qa/r18-space-9218f2833c98",
+  "planID": "A6376F78-F9A3-462E-8004-056DE57B9D91",
+  "onlySelectedPath": "/Users/leo/.local/state/thermo-qa/r18-space-9218f2833c98/Home/OwnedProject/.build",
+  "payloadLogicalBytes": 134217728,
+  "payloadAllocatedBytes": 134217728,
+  "payloadSHA256": "350d78118ae4b1228522561b4ae298cbef1a02a6715ea5135b85cb1938df923b",
+  "beforeCreation": null,
+  "afterCreation": {
+    "at": 1792448462.6970098,
+    "availableBytes": 52976160768,
+    "freeBytes": 52976160768,
+    "blockSize": 4096
+  },
+  "beforeApply": {
+    "at": 1792448463.241974,
+    "availableBytes": 52976087040,
+    "freeBytes": 52976087040,
+    "blockSize": 4096
+  },
+  "afterApplySamples": [
+    {
+      "at": 1792448463.375288,
+      "availableBytes": 53110304768,
+      "freeBytes": 53110304768,
+      "blockSize": 4096
+    },
+    {
+      "at": 1792448464.385442,
+      "availableBytes": 53110452224,
+      "freeBytes": 53110452224,
+      "blockSize": 4096
+    },
+    {
+      "at": 1792448465.393562,
+      "availableBytes": 53110403072,
+      "freeBytes": 53110403072,
+      "blockSize": 4096
+    },
+    {
+      "at": 1792448466.401933,
+      "availableBytes": 53110345728,
+      "freeBytes": 53110345728,
+      "blockSize": 4096
+    },
+    {
+      "at": 1792448467.410483,
+      "availableBytes": 53110243328,
+      "freeBytes": 53110243328,
+      "blockSize": 4096
+    },
+    {
+      "at": 1792448468.419002,
+      "availableBytes": 53110177792,
+      "freeBytes": 53110177792,
+      "blockSize": 4096
+    },
+    {
+      "at": 1792448469.426933,
+      "availableBytes": 53110304768,
+      "freeBytes": 53110304768,
+      "blockSize": 4096
+    },
+    {
+      "at": 1792448470.4343,
+      "availableBytes": 53110165504,
+      "freeBytes": 53110165504,
+      "blockSize": 4096
+    }
+  ],
+  "lastObservedAvailableDeltaBytes": 134078464,
+  "productSpaceObservation": {
+    "after": {
+      "availableBytes": 53110308864,
+      "capacityBytes": 494384795648,
+      "measuredAt": "2026-10-19T22:21:03Z",
+      "uptimeNanoseconds": 589001287089625,
+      "volumeID": "16777229:26"
+    },
+    "availableChangeBytes": 134221824,
+    "before": {
+      "availableBytes": 52976087040,
+      "capacityBytes": 494384795648,
+      "measuredAt": "2026-10-19T22:21:03Z",
+      "uptimeNanoseconds": 589001183626250,
+      "volumeID": "16777229:26"
+    }
+  },
+  "estimatedDeletedBytes": 134221824,
+  "trashedBytes": 0,
+  "scanPlanPreviewApplyPassed": true,
+  "readOnlyPreviewPreservedPayload": true,
+  "onlyOwnedCacheRemoved": true,
+  "sourceSentinelBytesAndInodePreserved": true,
+  "consumedPlanReplayExit": 2,
+  "trashEmptied": false,
+  "limits": [
+    "Observed free-space delta can include concurrent host writes and APFS allocation behavior.",
+    "Estimated deleted bytes and observed available space are separate measurements.",
+    "Owned random cache only; no personal data or existing cache selected."
+  ],
+  "runID": "7e278db9-2841-4ef9-bc08-2fa74a398bca",
+  "allArtifactHashesVerified": true,
+  "priorQAFailure": {
+    "run": "14448619-08e7-4546-bdb5-abf766416fe3",
+    "unsupportedPlanExactFlag": true,
+    "noApplyReached": true,
+    "existingFixtureReusedAfterVerifiedReadOnlyFailure": true
+  },
+  "inputNoneNotDispatched": {
+    "reason": "mac190 sflow 0.7.1 lacks input:none capability",
+    "usedIsolatedSnapshotInstead": true,
+    "hostVersionUnchanged": true
+  },
+  "overallParityEstablished": false,
+  "filesystem": {
+    "DeviceIdentifier": "disk3s1",
+    "FilesystemType": "apfs",
+    "MountPoint": "/System/Volumes/Data",
+    "VolumeName": "Macintosh HD - Data",
+    "APFSVolumeGroupID": "2FB351E2-C8C4-4514-9AC8-BE05F39B6B64"
+  },
+  "spaceCheck": {
+    "immediateAvailableIncreaseBytes": 134217728,
+    "observedAvailableIncreaseAfterAbout7SecondsBytes": 134078464,
+    "comparisonIsObservationNotExactCausalAttribution": true
+  }
+}

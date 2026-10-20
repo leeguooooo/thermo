@@ -17,8 +17,11 @@ public struct AppControlResponse: Codable, Sendable {
     public let succeeded: Bool
     public let values: [String: String]
     public let issue: String?
-    public init(request: AppControlRequest, succeeded: Bool, values: [String: String] = [:], issue: String? = nil) {
-        id = request.id; self.succeeded = succeeded; self.values = values; self.issue = issue
+    public let audioInput: AudioInputReport?
+    public let camera: CameraReport?
+    public init(request: AppControlRequest, succeeded: Bool, values: [String: String] = [:], issue: String? = nil,
+                audioInput: AudioInputReport? = nil, camera: CameraReport? = nil) {
+        id = request.id; self.succeeded = succeeded; self.values = values; self.issue = issue; self.audioInput = audioInput; self.camera = camera
     }
 }
 

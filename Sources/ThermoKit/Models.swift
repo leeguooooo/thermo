@@ -112,6 +112,9 @@ public struct BatteryInfo: Codable, Hashable, Sendable {
 }
 
 public struct Snapshot: Codable, Sendable {
+    /// true: fan inventory known; false: discovery failed; nil: not sampled or legacy unknown.
+    public let fansAvailable: Bool?
+    public var hasFanReadings: Bool { fansAvailable ?? !fans.isEmpty }
     public let timestamp: Date
     public let temperatures: [Reading]
     public let fans: [FanReading]
@@ -121,9 +124,9 @@ public struct Snapshot: Codable, Sendable {
     public let battery: BatteryInfo?
 
     public init(timestamp: Date = Date(), temperatures: [Reading], fans: [FanReading], power: [Reading],
-                voltages: [Reading], currents: [Reading], battery: BatteryInfo?) {
+                voltages: [Reading], currents: [Reading], battery: BatteryInfo?, fansAvailable: Bool? = nil) {
         self.timestamp = timestamp; self.temperatures = temperatures; self.fans = fans; self.power = power
-        self.voltages = voltages; self.currents = currents; self.battery = battery
+        self.voltages = voltages; self.currents = currents; self.battery = battery; self.fansAvailable = fansAvailable
     }
 
     public func maxTemperature(in group: SensorGroup) -> Double? {

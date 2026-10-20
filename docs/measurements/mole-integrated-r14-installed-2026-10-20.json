@@ -1,0 +1,81 @@
+{
+  "checkedAt": "2026-10-19T19:02:59.140341+00:00",
+  "installed": true,
+  "version": "1.1.40",
+  "build": "611",
+  "reviewRevision": 14,
+  "pid": "94928",
+  "inputCommit": "85a9a39e3a68b59e0b6b0ea0e0d033ddead176c9",
+  "sourceCommit": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+  "workingTree": "dirty",
+  "testAndBuildInputIdentical": true,
+  "nonHardwareTests": 1924,
+  "nonHardwareFailures": 0,
+  "sourceFilesVerified": 608,
+  "zipSHA256": "d16ab4eb4f21ad99810d8c80dfbddd22f61a424e24b1cb0b742c4f748e2b98fc",
+  "manifestEntriesVerified": 103,
+  "signatureVerifiedAfterLaunch": true,
+  "rootHelperAndPlistUnchanged": true,
+  "fanPoliciesUnchanged": true,
+  "upgradeObservation": {
+    "samples": 19,
+    "consecutiveRecoveredChecks": 6,
+    "passed": true
+  },
+  "nativeGUI": {
+    "overviewTemperaturesAndFanReadingsVisible": true,
+    "commandShiftPOpensMenuPanel": true,
+    "freshCPUPercent": 38,
+    "freshUpload": "30 KB/s",
+    "leftRightClickExplanationVisible": "左键：面板 · 右键：主控制台",
+    "menuBarCustomizationTextEntryVisible": true,
+    "settingsNavigationDismissesPanel": true,
+    "foregroundPanelAndSystemPulseStoppedAfterNavigation": true,
+    "CPUUploadDataStackedPreferencesPreserved": true,
+    "versionBuild611AndSourceA869Visible": true,
+    "physicalStatusBarRowRenderingReconfirmedByUser": false,
+    "physicalGlobalLeftRightClicksRetested": false
+  },
+  "naturalBackgroundMemoryHistoryAppend": {
+    "installedInput": "85a9a39e3a68b59e0b6b0ea0e0d033ddead176c9",
+    "unexpiredPriorRowsPreservedExactly": 269,
+    "beforeValidRecords": 270,
+    "afterValidRecords": 270,
+    "newRecordTimesUTC": [
+      "2026-10-19T18:59:24.516264+00:00"
+    ],
+    "beforeInvalidLines": 0,
+    "afterInvalidLines": 0,
+    "programNamesAndIdentityContentsExported": false,
+    "hardwareWritesRequested": false,
+    "scope": "Natural first background memory-history append after App restart; no schedule or preference changes",
+    "retentionCutoffAnchorUnixSeconds": 1792436364.516264,
+    "expiredPriorRowsAtAppend": 1,
+    "duplicateLineCountsVerified": true,
+    "retentionCutoffVerifiedAgainstNewRecordTimestamp": true
+  },
+  "historyAppendSourceMatchesMeasuredRelease": true,
+  "offscreenLifecycle": {
+    "samples": 23,
+    "functionalChecksPassed": true,
+    "memoryGrowthAssessed": false
+  },
+  "controlStateEvidence": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611-history-r14-mac190/post-qa-verification.json",
+  "readOnlyStates": {
+    "charge": "off",
+    "awdl": "idle",
+    "lidAwakeArmed": false,
+    "keepAwakeRequested": false
+  },
+  "priorR12Backup": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611-history-r14-mac190/pre-upgrade-r12-backup/Thermo.app",
+  "priorR12DisplacedCopy": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611-history-r14-mac190/displaced-r12.app",
+  "r12EvidenceRoot": "/Users/leo/github.com/thermo-mole-integration-af047a7e/dist/mole-review-1.1.40-606-main-integration-r12-mac190",
+  "historicalNativeEvidenceRoot": "/Users/leo/github.com/thermo-clean-screen-316d733d",
+  "chargingWriteSessionStarted": false,
+  "chargingWriteApprovalStillPending": true,
+  "overallParityEstablished": false,
+  "molePerformanceBaselineMeasured": false,
+  "notarized": false,
+  "published": false,
+  "sourceMergedIntoMain": false
+}

@@ -1,0 +1,211 @@
+{
+  "date": "2026-10-20",
+  "status": "Conditional app lifecycle acceptance: Mac190 unknown-owner data-only refusal and shared-copy retention; installed M3 GUI data-only remove/restore passed",
+  "candidateRevision": 11,
+  "sourceInputCommit": "af87d82c523d80faf819e9b773175cf792293b13",
+  "signedCLI_SHA256": "889020d7b40918982ddf133abb23561e3740b39b17cd56046cdfeb9052758ad9",
+  "mac190": {
+    "dataOnlyPositiveStatus": "Not executed: preview blocked because live external app paths had no verifiable declarations",
+    "unknownOwnerIssues": [
+      "/private/tmp/pa/1017161840/ChromeUse.app",
+      "/private/tmp/pa/1017165910/ChromeUse.app",
+      "/private/tmp/pa/1017170058/ChromeUse.app",
+      "/private/tmp/pa/1017170335/ChromeUse.app",
+      "/private/tmp/pa/1019152503/ChromeUse.app",
+      "/private/tmp/pa/1019171602/ChromeUse.app",
+      "/private/tmp/pa/1019174322/ChromeUse.app",
+      "/private/tmp/pa/1019203335/ChromeUse.app"
+    ],
+    "runtimeOwnerObservation": [
+      {
+        "path": "/private/tmp/pa/1017161840/ChromeUse.app",
+        "pathExists": false,
+        "matchingProcesses": [
+          {
+            "pid": 21400,
+            "ppid": 1,
+            "state": "Ss"
+          }
+        ]
+      },
+      {
+        "path": "/private/tmp/pa/1017165910/ChromeUse.app",
+        "pathExists": false,
+        "matchingProcesses": [
+          {
+            "pid": 40788,
+            "ppid": 1,
+            "state": "Ss"
+          }
+        ]
+      },
+      {
+        "path": "/private/tmp/pa/1017170058/ChromeUse.app",
+        "pathExists": false,
+        "matchingProcesses": [
+          {
+            "pid": 42277,
+            "ppid": 1,
+            "state": "Ss"
+          }
+        ]
+      },
+      {
+        "path": "/private/tmp/pa/1017170335/ChromeUse.app",
+        "pathExists": false,
+        "matchingProcesses": [
+          {
+            "pid": 43432,
+            "ppid": 1,
+            "state": "Ss"
+          }
+        ]
+      },
+      {
+        "path": "/private/tmp/pa/1019152503/ChromeUse.app",
+        "pathExists": false,
+        "matchingProcesses": [
+          {
+            "pid": 18134,
+            "ppid": 1,
+            "state": "Ss"
+          }
+        ]
+      },
+      {
+        "path": "/private/tmp/pa/1019171602/ChromeUse.app",
+        "pathExists": false,
+        "matchingProcesses": [
+          {
+            "pid": 10085,
+            "ppid": 1,
+            "state": "Ss"
+          }
+        ]
+      },
+      {
+        "path": "/private/tmp/pa/1019174322/ChromeUse.app",
+        "pathExists": false,
+        "matchingProcesses": [
+          {
+            "pid": 60639,
+            "ppid": 1,
+            "state": "Ss"
+          }
+        ]
+      },
+      {
+        "path": "/private/tmp/pa/1019203335/ChromeUse.app",
+        "pathExists": false,
+        "matchingProcesses": [
+          {
+            "pid": 25341,
+            "ppid": 1,
+            "state": "Ss"
+          }
+        ]
+      }
+    ],
+    "processesTerminatedOrProtectionBypassed": false,
+    "sharedCopyPreviewAndActualRoundtrip": {
+      "passed": true,
+      "removedOnlyRequestedCopy": true,
+      "otherSameIDCopyUnchanged": true,
+      "sharedCacheUnchanged": true,
+      "requestedCopyRestoredWithSameBytesAndIdentities": true,
+      "unknownOwnersNotBypassedForAssociatedData": true,
+      "dataOnlyPositiveStillBlockedOn190": true
+    },
+    "sharedDataAndOtherCopyBytesAndIdentitiesPreserved": true
+  },
+  "controlledM3GUI": {
+    "entry": "Expanded app details → Review data only",
+    "previewKeptApplicationAndSelectedOnlyOwnedCache": true,
+    "firstCommitRefusedAfterOwnershipSnapshotMismatch": true,
+    "firstRefusalPreservedAllFixtureData": true,
+    "specificChangedApplicationNotAttributed": true,
+    "freshReviewConfirmedWithSameOwnedScope": true,
+    "applicationStillInstalledAndBytesUnchanged": true,
+    "cacheMovedToTrash": true,
+    "historyUndoBatchID": "16ABD3EC-B481-48DE-9DDB-EDB0D9771373",
+    "restoredThroughNativeHistoryGUI": true,
+    "cacheBytesAndFileDirectoryIdentityMatch": true,
+    "softwareListRefreshedRestoredAssociatedData": true,
+    "searchClearedAndInventoryRefreshedAfterTeardown": true,
+    "QAAppNoLongerInStandardApplicationRoots": true
+  },
+  "evidence": {
+    "localPreparation": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/gui-app-data-only-preparation.json",
+    "firstRefusal": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/gui-app-data-only-first-refusal.json",
+    "movedData": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/gui-app-data-only-removed.json",
+    "restored": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/gui-app-data-only-restored.json",
+    "localFixturesRetained": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/gui-app-data-only-fixtures-retained.json"
+  },
+  "remoteEvidence": {
+    "blockedDataOnly": {
+      "run": "11a446f6-9350-4f87-88b7-37969facc1b3-probe",
+      "status": "failed",
+      "exitCode": 1,
+      "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/mac190-apps-data-prepare.json",
+      "artifactSHA256": "ec560bef545780c45e3b35c81e4bf0c0c269896f455a9b6b603556f3a72bc351",
+      "allArtifactHashesVerified": true
+    },
+    "sharedPreview": {
+      "run": "232fe290-3407-48f4-a73c-43adaf073b9d-probe",
+      "status": "done",
+      "exitCode": 0,
+      "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/mac190-apps-shared-preview.json",
+      "artifactSHA256": "e524e719e94183f90446336f0fcb33d7af668aacc3d2ff750cd7ad0eb68477d2",
+      "allArtifactHashesVerified": true
+    },
+    "sharedRoundtrip": {
+      "run": "cdfd6f19-5a1f-4b7c-bdba-b1f6bf861d93-probe",
+      "status": "done",
+      "exitCode": 0,
+      "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/mac190-apps-shared-roundtrip.json",
+      "artifactSHA256": "9b7da6f42cff4b545cf47e52281132f1bf94e85999598491e98e60cbdb4c16c8",
+      "allArtifactHashesVerified": true
+    },
+    "remoteFixturesRetained": {
+      "run": "764f5867-9906-42ad-8aaa-ebcd69124a0b-probe",
+      "status": "done",
+      "exitCode": 0,
+      "evidence": "dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/mac190-apps-fixtures-retained.json",
+      "artifactSHA256": "68839f4d8abb7356d596aa22c145a9eddd645912680bd135b2a885b19fdf9a7e",
+      "allArtifactHashesVerified": true
+    }
+  },
+  "fixtureTeardown": {
+    "localRetained": {
+      "checkedAt": "2026-10-19T17:29:18.645264+00:00",
+      "retainedApplications": "/Users/leo/.local/state/thermo-qa/retained-OwnedQA-GUI-5bcc33797b/applications",
+      "retainedCache": "/Users/leo/.local/state/thermo-qa/retained-OwnedQA-GUI-5bcc33797b/cache",
+      "originalFixtureApplicationsRoot": "/Users/leo/Applications/OwnedQA-GUI-5bcc33797b",
+      "originalFixtureCache": "/Users/leo/Library/Caches/com.ownedqa.5bcc33797b.local",
+      "onlyOwnedFixturePathsMoved": true,
+      "bytesDeleted": 0,
+      "productRemovalClaimedForTeardown": false
+    },
+    "remoteRetained": {
+      "checkedAt": "2026-10-19T17:29:19.834230+00:00",
+      "retainedFixturePaths": {
+        "/Users/leo/Applications/OwnedQA-81aaaa071e8c": "/Users/leo/.local/state/thermo-qa/r11-readonly-df2f51422595/retained-app-fixtures-81aaaa071e8c/applications",
+        "/Users/leo/Library/Caches/com.ownedqa.81aaaa071e8c.single": "/Users/leo/.local/state/thermo-qa/r11-readonly-df2f51422595/retained-app-fixtures-81aaaa071e8c/cache-single",
+        "/Users/leo/Library/Caches/com.ownedqa.81aaaa071e8c.shared": "/Users/leo/.local/state/thermo-qa/r11-readonly-df2f51422595/retained-app-fixtures-81aaaa071e8c/cache-shared"
+      },
+      "onlyOwnedFixturePathsMoved": true,
+      "bytesDeleted": 0,
+      "realApplicationsOrDataTouched": false,
+      "productUninstallClaimedForTeardown": false
+    },
+    "onlyOwnedFakeAppsAndCachesMoved": true,
+    "bytesPermanentlyDeleted": 0,
+    "fixtureMovesNotClaimedAsProductUninstall": true
+  },
+  "limitations": [
+    "Mac190 data-only positive execution remains unavailable while these live unknown-owner paths persist; no process was killed to produce a pass",
+    "Only own unsigned app shells and synthetic caches; no third-party application, real sign-in data, root-owned package, executable launch, or system extension acceptance",
+    "GUI first refusal proves snapshot mismatch handling; individual changed owner was not determined",
+    "Other Mole parity items and charging write confirmation remain incomplete"
+  ]
+}

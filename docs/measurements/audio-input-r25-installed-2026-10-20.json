@@ -1,0 +1,140 @@
+{
+  "checkedAt": "2026-10-20T01:53:06.474859+00:00",
+  "version": "1.1.40",
+  "build": "611.25",
+  "reviewRevision": 25,
+  "sourceBase": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+  "remoteInput": "9faced7f08f1f8839774c88b8caa7a7726317da8",
+  "pid": "1764",
+  "installedManifestVerified": true,
+  "manifestEntries": 103,
+  "signatureVerified": true,
+  "sourceFilesVerified": 619,
+  "testAndBuildSourceFilesIdentical": true,
+  "nonHardwareTests": 1971,
+  "failures": 0,
+  "helperAndPlistSHA256": {
+    "/Library/PrivilegedHelperTools/dev.thermo.helper": "b1eabd8979855ece607f3f7f0358b56694882030792e10c40c4fa3e66b65e4e3",
+    "/Library/LaunchDaemons/dev.thermo.helper.plist": "60a0882267b914ab19ba81b9f69310435d048f21e13a09f618171bb2e05a6463"
+  },
+  "finalObservations": {
+    "app-control status": {
+      "appVersion": "1.1.40 (611.25)",
+      "busy": "false",
+      "controlProtocol": "1",
+      "keepAwakePhase": "idle",
+      "keepAwakeRequested": "false",
+      "menuPanelOpen": "false",
+      "menuPanelSampling": "false",
+      "pulseHolders": "0",
+      "pulseSampling": "false",
+      "screenActive": "false",
+      "windowVisible": "false"
+    },
+    "app-control helper status": {
+      "busy": "false",
+      "state": "running",
+      "version": "8/1.1.40"
+    },
+    "fan status": {
+      "controlState": {
+        "observations": {
+          "0": {
+            "checkedAt": "2026-10-20T01:53:06Z",
+            "mode": "manual",
+            "target": 6617
+          }
+        },
+        "observationsSupported": true,
+        "policies": {
+          "0": {
+            "fixed": {
+              "rpm": 6617
+            }
+          }
+        },
+        "suspended": false
+      },
+      "fans": [
+        {
+          "id": 0,
+          "manual": true,
+          "max": 6800,
+          "min": 2317,
+          "name": "Fan",
+          "rpm": 6597.8779296875,
+          "target": 6617
+        }
+      ],
+      "fansAvailable": true,
+      "policies": {
+        "0": {
+          "fixed": {
+            "rpm": 6617
+          }
+        }
+      },
+      "policiesAvailable": true
+    },
+    "charge status": {
+      "externalPower": true,
+      "gate": "allowed",
+      "ownedByCaller": false,
+      "ownership": "none",
+      "percent": 100,
+      "phase": "off",
+      "policy": "off",
+      "support": "smc"
+    },
+    "awdl status": {
+      "interface": {
+        "index": 15,
+        "up": true
+      },
+      "interfaceQueryComplete": true,
+      "ownedByCaller": false,
+      "phase": "idle"
+    },
+    "awake status": {
+      "armed": false,
+      "heatGuard": true,
+      "lidClosed": false,
+      "limit": 100
+    }
+  },
+  "upgrade": {
+    "passed": true,
+    "samples": 43,
+    "consecutiveRecoveredChecks": 6
+  },
+  "nativeAcceptance": {
+    "commandCommaOpensSettings": true,
+    "visibleVersion": "1.1.40 (611.25)",
+    "reminderScopeDescriptionPresent": true,
+    "audioInputSectionAndExplanationPresent": true,
+    "audioInputPreferenceObserved": "off",
+    "audioInputPreferenceChangedByThisQA": false,
+    "notificationsAlreadyAuthorizedInSettings": true,
+    "priorMenuPreferencesPreserved": {
+      "primary": "CPU usage",
+      "secondary": "upload",
+      "presentation": "data only",
+      "layout": "stacked",
+      "left": "panel",
+      "right": "console"
+    },
+    "windowClosedSamplingRetired": true,
+    "audioInputSwiftReaderOrWatcherExercised": false,
+    "activeInputAndNotificationAccepted": false
+  },
+  "desktopObservationLimits": [
+    "Initial getApp timeout recovered through process/status verification and full-path rebinding.",
+    "Settings AX confirmed the new entry and default off. During subsequent scroll/capture the tool returned noWindowsAvailable; App stayed running with windowVisible=false. Cause was not determined, and no App crash is claimed.",
+    "Complete rendered layout, active audio input, actual notification delivery, click/mute and VoiceOver remain unaccepted."
+  ],
+  "sourceCommitted": false,
+  "sourceMergedIntoMain": false,
+  "notarized": false,
+  "published": false,
+  "overallParityEstablished": false
+}

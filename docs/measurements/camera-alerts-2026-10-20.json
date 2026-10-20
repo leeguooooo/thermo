@@ -1,0 +1,194 @@
+{
+  "date": "2026-10-20",
+  "stage": "source-and-read-only-native-checks-passed-not-installed",
+  "installedApp": "1.1.40 (611.25), R25",
+  "source": {
+    "base": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+    "dirty": true,
+    "frozenInput": "4877d76577ccc365a187a27bdc4639133fde9057",
+    "files": 635,
+    "matchesLocal": true
+  },
+  "implementation": [
+    "Core Media I/O input roster, streams and identity verification; running-somewhere state; no capture session",
+    "Owned event listeners, five-second fallback, default-off setting, quiet initial/recovery baseline, stale-result discard and coalesced reads",
+    "Distinct unknown/noDevices/stale/active/idle/notCollected; UI periodically evaluates age even if a reader blocks",
+    "Device-named notifications route clicks to Settings; no guessed app attribution",
+    "camera inspect/status/on/off; preview, no replay, bounded typed output; hardware UIDs excluded"
+  ],
+  "tests": {
+    "host": "mac190",
+    "run": "4052db68-b418-4579-be62-8afa836fc21c",
+    "developerDir": "/Applications/Xcode-27.0.app/Contents/Developer",
+    "command": "swift test --jobs 1 --skip HardwareTests",
+    "suites": {
+      "ThermoKitTests.xctest": 218,
+      "ThermoHelperTests.xctest": 30,
+      "ThermoCLITests.xctest": 133,
+      "ThermoAppTests.xctest": 360,
+      "CleanKitTests.xctest": 803,
+      "AgentDoctorTests.xctest": 362,
+      "AgentCoreTests.xctest": 96
+    },
+    "total": 2002,
+    "failures": 0,
+    "newCameraTests": 16,
+    "includesPreviousAudioCLIIncrement": true,
+    "result": "../../dist/remote-190/camera-r26-full-result.json",
+    "sourceManifest": "../../dist/remote-190/camera-r26-tested-source-files.json"
+  },
+  "compiledCameraCLI": {
+    "complete": true,
+    "cliSHA256": "fb2110a2f7a746f9d6353ee2ba46dc38b2e912554e6f355f0f451aae9da12d1f",
+    "checks": [
+      {
+        "name": "actual-camera-metadata",
+        "elapsedSeconds": 0.020792499999515712,
+        "state": "idle",
+        "complete": true,
+        "available": true,
+        "fresh": true,
+        "totalDevices": 6,
+        "totalIssues": 0
+      },
+      {
+        "name": "actual-camera-metadata",
+        "elapsedSeconds": 0.03369970805943012,
+        "state": "idle",
+        "complete": true,
+        "available": true,
+        "fresh": true,
+        "totalDevices": 6,
+        "totalIssues": 0
+      },
+      {
+        "name": "actual-camera-metadata",
+        "elapsedSeconds": 0.02154687501024455,
+        "state": "idle",
+        "complete": true,
+        "available": true,
+        "fresh": true,
+        "totalDevices": 6,
+        "totalIssues": 0
+      },
+      {
+        "name": "actual-cli-private-peer-status-and-enable-preview",
+        "passed": true
+      }
+    ],
+    "limits": [
+      "fixture control peer, not signed installed App",
+      "no video capture or real positive activation/notification exercised"
+    ]
+  },
+  "CLIContractRegression": {
+    "cliSHA256": "fb2110a2f7a746f9d6353ee2ba46dc38b2e912554e6f355f0f451aae9da12d1f",
+    "checks": [
+      {
+        "name": "scoped-help-and-inventory",
+        "commands": 121
+      },
+      {
+        "name": "preview-with-yes-never-applies",
+        "passed": true
+      },
+      {
+        "name": "unsupported-flags-and-extra-positionals-refused",
+        "passed": true
+      },
+      {
+        "name": "compiled-cli-private-protocol-routing",
+        "passed": true,
+        "scope": "owned protocol peer; actual App host verified by Swift socket test"
+      },
+      {
+        "name": "real-frozen-clean-plan-preview-apply-and-replay",
+        "passed": true
+      }
+    ],
+    "hardwareChanged": false,
+    "realBrowsersChanged": false,
+    "realPrivacySettingsChanged": false
+  },
+  "nativeProductionReader": {
+    "compileRun": "628b2a19-025d-4539-bc85-9c17d53349e5",
+    "compiledOn": "mac190",
+    "minOS": "13.0",
+    "sdk": "27.0",
+    "productionFilesMatchTestedSources": true,
+    "mac190": {
+      "totalDevices": 6,
+      "state": "idle",
+      "complete": true,
+      "fresh": true,
+      "issues": 0,
+      "registration": "true",
+      "callbacksDuringObservation": 0,
+      "recordsVideo": false,
+      "processAttribution": "unavailable"
+    },
+    "localM3": {
+      "totalDevices": 6,
+      "state": "idle",
+      "complete": true,
+      "fresh": true,
+      "issues": 0,
+      "registration": "true",
+      "callbacksDuringObservation": 0,
+      "recordsVideo": false,
+      "processAttribution": "unavailable"
+    },
+    "localM3DeviceKindsObserved": [
+      "built-in camera",
+      "Continuity Camera and Desk View",
+      "OBS virtual camera"
+    ],
+    "scope": "Production reader/watcher in a thin command probe, not an installed App. No positive activity occurred."
+  },
+  "vendorEvidence": {
+    "target": "Mole 1.16.0 (324)",
+    "executableSHA256": "77702d3d4fc9269f74fbfd61f10fc63462a98da15ef45c7d303db8a06f718e4e",
+    "observations": "Prior native settings showed camera alerts. Static strings include CameraBackend, CMIOObjectPropertyAddress, isInUseByAnotherApplication, FrontCameraActive and FrontCameraStreaming; these do not prove control flow.",
+    "newFunctionEvidence": false,
+    "REA": "Bridge timed out at 120 seconds; native analysis later completed in 3m01. No activation dialog. Owned session closed, and /tmp/rea-HpCeX3 was confirmed absent."
+  },
+  "primarySources": [
+    "https://developer.apple.com/documentation/coremediaio/kcmiodevicepropertydeviceisrunningsomewhere",
+    "https://developer.apple.com/documentation/avfoundation/avcapturedevice/isinusebyanotherapplication",
+    "Xcode 27 SDK CMIOHardwareDevice.h: running-somewhere means device IO in at least one system process; hog mode is exclusive ownership, not general process attribution"
+  ],
+  "failedAndCancelledRuns": [
+    {
+      "run": "44f78328-e48b-4604-950a-2380b716d217",
+      "reason": "CMIO constants required UInt32 conversion; fixed"
+    },
+    {
+      "run": "80b60791-4413-4fa7-9599-bd89052dd23f",
+      "reason": "Nested callback required explicit self; fixed"
+    },
+    {
+      "run": "89ab7209-6e78-47a3-adb8-36faa9f7392c",
+      "reason": "Cancelled while waiting for host to restore non-hardware test filter; command had not run"
+    }
+  ],
+  "preserved": {
+    "installedApp": "R25",
+    "productionAlertPreferencesChanged": false,
+    "newLongLivedWorktrees": 0,
+    "helperFanChargeAWDLChanged": false
+  },
+  "remaining": [
+    "Signed installed candidate, native Settings layout/keyboard/accessibility",
+    "Real camera start/stop, hotplug and native callbacks",
+    "System notification delivery/click and service failure recovery",
+    "Compare actual activity coverage and attribution against Mole",
+    "Bluetooth low-battery alerts",
+    "Remaining core, hardware and performance parity gates"
+  ],
+  "notClaimed": [
+    "Mole parity",
+    "positive camera activity or notifications",
+    "visibility of every camera/backend",
+    "commit, merge, notarization or release"
+  ]
+}

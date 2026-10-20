@@ -1,0 +1,68 @@
+{
+  "date": "2026-10-19",
+  "sourceAtStart": "4fc650e",
+  "localIntegration": {
+    "host": "local development Mac",
+    "exitCode": 1,
+    "suites": [
+      {
+        "target": "ThermoCLITests.xctest",
+        "tests": 112,
+        "failures": 0,
+        "result": "passed"
+      },
+      {
+        "target": "ThermoAppTests.xctest",
+        "tests": 315,
+        "failures": 1,
+        "result": "failed"
+      },
+      {
+        "target": "AgentDoctorTests.xctest",
+        "tests": 323,
+        "failures": 0,
+        "result": "passed"
+      },
+      {
+        "target": "AgentCoreTests.xctest",
+        "tests": 63,
+        "failures": 0,
+        "result": "passed"
+      }
+    ],
+    "totalTests": 813,
+    "failures": 1,
+    "log": "/tmp/thermo-idle-awake-main-integration.log",
+    "failure": "PulseSamplingLifetimeTests.testFinishingAfterLastReleaseCannotPublish timed out waiting 0.2 seconds for the worker-return expectation."
+  },
+  "remoteFocused": {
+    "host": "mac190",
+    "source": "4fc650e, existing prebuilt XCTest bundle",
+    "bundleSHA256": "af16272214a1b524682c642142040c7ba44b0dc647054778505058c3fbbc55ce",
+    "builtOnHost190": false,
+    "tests": 6,
+    "failures": 0,
+    "exitCode": 0,
+    "classes": [
+      "IdleAwakeModelTests",
+      "PulseSamplingLifetimeTests"
+    ],
+    "log": "dist/remote-190/focused-tests-4fc650e.log",
+    "inheritedEnvironmentCleared": true
+  },
+  "preparedFixtureFix": {
+    "files": [
+      "Sources/ThermoApp/PulseView.swift",
+      "Tests/ThermoAppTests/PulseSamplingLifetimeTests.swift"
+    ],
+    "changes": [
+      "Allow serial sampling queue injection; default production queue unchanged.",
+      "Replace 0.2-second inverted observation with an explicit worker queue then main-publication queue fence.",
+      "Block fixture until explicitly released, and stop the new session after its first accepted publication."
+    ],
+    "remoteSyntaxParseExitCode": 0,
+    "compiledAndTested": false,
+    "remaining": "Rebuild and run fixed tests, including a stale-publication negative control; full remote build awaits disk capacity."
+  },
+  "integrationPassed": false
+}
