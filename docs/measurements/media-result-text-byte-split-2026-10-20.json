@@ -1,0 +1,230 @@
+{
+  "recordedDate": "2026-10-20",
+  "sourceCommit": "9e29b98a69cf07f7f106e1e595255916b8f2c63b",
+  "sourceTree": "803d92288da51cb0df1a3dd0f9312440d6534342",
+  "scope": "Add optional serializedMediaTextBytes for retained text of whole results containing serialized media. Includes accompanying text, never decodes media, never treats it as image or billed-token usage. Existing totals and classifications remain unchanged.",
+  "validation": {
+    "complete": true,
+    "sourceCommit": "68142391707c9747895d5ebbb0dd58e7e1b613db",
+    "sourceTree": "803d92288da51cb0df1a3dd0f9312440d6534342",
+    "sourceFilesMatched": 554,
+    "commands": [
+      {
+        "name": "tests.log",
+        "exitCode": 0
+      },
+      {
+        "name": "build.log",
+        "exitCode": 0
+      },
+      {
+        "name": "verify-media-text-split.json",
+        "exitCode": 0
+      },
+      {
+        "name": "verify-tool-usage.json",
+        "exitCode": 0
+      },
+      {
+        "name": "verify-skill-instruction-usage.json",
+        "exitCode": 0
+      }
+    ],
+    "suites": {
+      "ThermoCLITests.xctest": {
+        "tests": 18,
+        "failures": 0
+      },
+      "ThermoAppTests.xctest": {
+        "tests": 6,
+        "failures": 0
+      },
+      "AgentDoctorTests.xctest": {
+        "tests": 386,
+        "failures": 0
+      }
+    },
+    "testsPassed": 410,
+    "products": {
+      "ThermoApp": {
+        "bytes": 53608464,
+        "sha256": "c3fe657daccc64f60a6e1ffbc7198bdbfde96f6272d6186d4d10e59eff63181f"
+      },
+      "thermo": {
+        "bytes": 27592640,
+        "sha256": "01b0bbaf7e7521d63e1ef6d54ad2343ab7cb19c9c6fc0927ba0100373bc7f25f"
+      },
+      "thermo-helper": {
+        "bytes": 2468336,
+        "sha256": "893d51edd3c5465aed380718a17c8d6fc9b2328e9d11e5efd60f7fa07b91044e"
+      }
+    },
+    "archiveSHA256": "60c57ba8342d7bc470c17a545025d9f24aae2de8f9a5285193faad89560f4f99",
+    "SDKROOT": "/Applications/Xcode-27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk",
+    "host": "mac190",
+    "configuration": "debug",
+    "realModelCalled": false,
+    "fullReleaseRun": false,
+    "installedOrPublished": false
+  },
+  "compiledCLIContracts": {
+    "verify-media-text-split.json": {
+      "passed": true,
+      "mediaContainingResultTextBytes": 95,
+      "otherRetainedTextBytes": 5,
+      "nativeMediaExcludedFromText": true,
+      "partialOuterByteSplitRemainsUnknown": true,
+      "rawMediaNotExported": true,
+      "mediaDecodedOrExecuted": false
+    },
+    "verify-tool-usage.json": {
+      "passed": true,
+      "mcpCalls": 2,
+      "skillCalls": 1,
+      "requestTokensKeptSeparate": true,
+      "privateTextExcluded": true,
+      "imageTokensUnknown": true,
+      "knownStatusErrorProportionVerified": true,
+      "unknownErrorProportionPreserved": true,
+      "nativeMCPEventsIncludedWithoutDoubleCounting": true,
+      "nativeHostFailureRetainsCompletionAndTiming": true,
+      "explicitSelectedFileScopeAndNonblockingGuardVerified": true,
+      "categoryTotalsAndSharesIncludeHiddenRows": true,
+      "overlapAdjustedTimingVerified": true,
+      "timeOrderingAndJSONVerified": true
+    },
+    "verify-skill-instruction-usage.json": {
+      "passed": true,
+      "skillCalls": 3,
+      "linkedInstructionEvents": 3,
+      "linkedTextBytes": 113,
+      "acknowledgmentBytes": 9,
+      "duplicateLoadExcluded": true,
+      "unlinkedAndNonSkillMetadataExcluded": true,
+      "unknownLoadingNotZero": true,
+      "instructionTextNotExported": true,
+      "noSkillOrMCPExecution": true,
+      "instructionOrderingAndJSONVerified": true,
+      "allToolCountersUnchanged": true,
+      "heuristicCountsMarkedApproximate": true
+    }
+  },
+  "realFixedLogReplay": {
+    "passed": true,
+    "newMediaTextBytes": 1569736,
+    "oldLoggedTextBytes": 1789195,
+    "otherLoggedTextBytes": 219459,
+    "percentage": "87.7%",
+    "allExistingToolRowCountersUnchanged": true,
+    "outerAggregateAndExistingRowsUnchanged": true,
+    "coverageRemainsIncomplete": true,
+    "noMediaDecoded": true
+  },
+  "nativeWindowAcceptance": {
+    "controller": "cua_repl",
+    "sourceCommit": "9e29b98",
+    "fixtureKind": "fixed actual thread-log sample",
+    "checks": {
+      "mediaTextByteCount1569736Visible": true,
+      "loggedTotal1789195Visible": true,
+      "share87_7PercentVisible": true,
+      "otherText219459Visible": true,
+      "includesAccompanyingTextNoticeVisible": true,
+      "notImageAudioTokenCostNoticeVisible": true,
+      "partialCoverageRetained": true,
+      "noticeBeforeDetailedTextMetrics": true,
+      "outerExistingCountsAndMarkersRetained": true
+    },
+    "layoutScreenshotTaken": true,
+    "ownedProcessStopped": true,
+    "selectedProtectedFilesMatched": 3,
+    "fixedInputLogUnchanged": true,
+    "QAOnlyAdHocSignature": true,
+    "fullReleaseOrUniversalAcceptance": false,
+    "installedOrPublished": false
+  },
+  "qaOnlyTransformation": {
+    "host": "mac190",
+    "signedLocallyAdHocOnly": true,
+    "products": {
+      "ThermoApp": {
+        "rawBytes": 53608464,
+        "preparedBytes": 28852896,
+        "rawSHA256": "c3fe657daccc64f60a6e1ffbc7198bdbfde96f6272d6186d4d10e59eff63181f",
+        "preparedSHA256": "1c0e66397381e78ae9703dc706e3376ef4082d02ec9c531d3d74cdfebc657eca",
+        "originalUUIDPreserved": true,
+        "allNonDebugFileBackedSectionsIdentical": true,
+        "sectionsVerified": 40
+      },
+      "thermo": {
+        "rawBytes": 27592640,
+        "preparedBytes": 18939280,
+        "rawSHA256": "01b0bbaf7e7521d63e1ef6d54ad2343ab7cb19c9c6fc0927ba0100373bc7f25f",
+        "preparedSHA256": "47cd598a77fc6a908cc7059ab47b466e46e155cd080d9e5b721c1413fc475bb9",
+        "originalUUIDPreserved": true,
+        "allNonDebugFileBackedSectionsIdentical": true,
+        "sectionsVerified": 40
+      },
+      "thermo-helper": {
+        "rawBytes": 2468336,
+        "preparedBytes": 1505008,
+        "rawSHA256": "893d51edd3c5465aed380718a17c8d6fc9b2328e9d11e5efd60f7fa07b91044e",
+        "preparedSHA256": "1152d8978b1c9f18679d800307f7ee3a5715081bc2cb900b821e81b34680af10",
+        "originalUUIDPreserved": true,
+        "allNonDebugFileBackedSectionsIdentical": true,
+        "sectionsVerified": 38
+      }
+    },
+    "runtimeSectionProof": {
+      "allNonDebugFileBackedSectionsMatchOriginalBuild": true,
+      "sectionCount": 40,
+      "originalUUIDPreserved": true,
+      "runtimeSHA256": "f875c87ca5ceb3ce1804d82b657371843274c310b9ba0c41071280e2ea6937b2"
+    },
+    "rawTestExecutablesRetained": true,
+    "DeveloperIDOrNotarizationPerformed": false
+  },
+  "preparationFailures": {
+    "localSpaceGuardRefusedInitialExpansion": true,
+    "laterLocalPreparationFailedWithENOSPC": true,
+    "failedOwnedCopyNotLaunched": true,
+    "resolvedByRemoteQAOnlyStrippingAndRpathPreparation": true,
+    "followUp": "Make owned QA refresh preserve its previous copy when preparation fails; the observed failure left the disposable runtime empty."
+  },
+  "ownedDuplicateRetention": {
+    "originalArchivesAndSourceBranchesRetained": true,
+    "onlyVerifiedOwnedDuplicatesRemoved": true,
+    "freeSpaceDeltaNotAttributedToCleanup": true
+  },
+  "runIDs": {
+    "regression": "3ef97298-80f7-4c2d-93b5-84b106bd6476",
+    "qaPreparation": "2b061b5e-3ebd-4800-a45f-c3bddcf452a5"
+  },
+  "evidenceSHA256": {
+    "qa-products.tar.gz": "60c57ba8342d7bc470c17a545025d9f24aae2de8f9a5285193faad89560f4f99",
+    "result.json": "fd3ee4b24c7350413dab6b6e8c6916a12f805d01e8e37b9e34b224d7c937ec7b",
+    "verify-tool-usage.json": "09f7a163b6f473473edee28a310832ea000a316203c3e51808b8c7355e121639",
+    "verify-skill-instruction-usage.json": "6320dfbee14e2b59af4aed9077d50cb81e3e04670de8047b4b23f601450f9ced",
+    "tests.log": "7eb05dafd6f9fe168221bf1f5fae277b0cfe23a4d8f731388ba25b87f5df8efb",
+    "verify-media-text-split.json": "f42f36bcc4e0eee198ecea3d6dba90e9e2b23672ffb3f1c9068da959d3d7e1e2",
+    "freeze.json": "ace8dc2c72353cef9b499549dc86cd03ba948383e964531e5c115a1672a86930",
+    "build.log": "930711a5e84a8e0c66ca3c54704aef5a78aadca025046cabdf71b5ea0a4d9f9a"
+  },
+  "additionalEvidenceSHA256": {
+    "real-replay-result.json": "42d411be0c26ba25e74e8e1071f638a616bd5037d46848cd671bd747cde5c67b",
+    "native-qa-result.json": "ca0f6ac419c25296499cc9683d4afae935937c0ecd49724973ee26f6080ef9d9",
+    "qa-transform-result.json": "2c253fbed2a95c4a8d5348c7e9e0e94ce84710178fe8ebaf72598e7d39adcc6a",
+    "runtime-section-proof.json": "8cbdf8daa2566e2443f0e9904693dda5760b886f14e4a495eabe3e3461f7e44b",
+    "owned-duplicate-retention.json": "e8c109536756b6e6d8d8fc7a864773f68da79a671ee9d204e50d36856cc884b5",
+    "raw-product-retention.json": "fcdfbcd2539b3c38398c64742a98634940a2d3ae5c06f93fa94e78908a280719",
+    "qa-refresh-attempt2.stderr": "44671848e0c4a0a5ddf193174bcea5448b3071d88d48f5f76dab643d400edf63"
+  },
+  "boundaries": {
+    "realModelCalled": false,
+    "actualUserLogsTransferredToMac190": false,
+    "mediaDecoded": false,
+    "originalCountersRewritten": false,
+    "fullReleaseOrUniversalPackageQualified": false,
+    "installedOrPublished": false
+  }
+}
