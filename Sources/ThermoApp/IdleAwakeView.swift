@@ -15,21 +15,33 @@ import ThermoL10n
     private let readPower: () -> IdleAwakePower
     private let now: () -> Date
     private let automaticallyMonitor: Bool
+    private let scheduleDeadline: (Date, @escaping @MainActor () -> Void) -> Timer
     private let record: (OperationRecord) -> Void
     private var viewers = 0
     private var timer: Timer?
+    private var deadlineTimer: Timer?
+    private var deadlineGeneration = UUID()
+    var scheduledDeadline: Date? { deadlineTimer?.fireDate }
     private var powerSource: CFRunLoopSource?
     private var activity: NSObjectProtocol?
 
     init(controller: IdleAwakeController? = nil, power: @escaping () -> IdleAwakePower = { .read() },
          now: @escaping () -> Date = { Date() }, automaticallyMonitor: Bool = true,
-         record: @escaping (OperationRecord) -> Void = { OperationJournal.record($0) }) {
+         record: @escaping (OperationRecord) -> Void = { OperationJournal.record($0) },
+         scheduleDeadline: @escaping (Date, @escaping @MainActor () -> Void) -> Timer = { end, callback in
+             let timer = Timer(fire: end, interval: 0, repeats: false) { _ in
+                 MainActor.assumeIsolated { callback() }
+             }
+             RunLoop.main.add(timer, forMode: .common)
+             return timer
+         }) {
         self.controller = controller ?? IdleAwakeController(); self.readPower = power; self.now = now
-        self.automaticallyMonitor = automaticallyMonitor; self.record = record
+        self.automaticallyMonitor = automaticallyMonitor; self.record = record; self.scheduleDeadline = scheduleDeadline
         state = self.controller.inspect(power: power(), now: now())
     }
     deinit {
         timer?.invalidate()
+        deadlineTimer?.invalidate()
         if let powerSource { CFRunLoopSourceInvalidate(powerSource) }
         if let activity { ProcessInfo.processInfo.endActivity(activity) }
     }
@@ -42,20 +54,21 @@ import ThermoL10n
         guard IdleAwakeController.validDuration(seconds) else {
             issue = "Duration must be 1…604800 seconds or manual."; return
         }
-        var intent = IdleAwakeState(); intent.mode = mode; intent.expiresAt = seconds.map { now().addingTimeInterval($0) }
-        do { try controller.start(mode: mode, seconds: seconds, power: readPower(), now: now()); issue = nil; log("idleAwakeStart", "done", configuration: intent) }
+        let power = readPower(), stamp = now()
+        var intent = IdleAwakeState(); intent.mode = mode; intent.expiresAt = seconds.map { stamp.addingTimeInterval($0) }
+        do { try controller.start(mode: mode, seconds: seconds, power: power, now: stamp); issue = nil; log("idleAwakeStart", "done", configuration: intent) }
         catch { issue = error.localizedDescription; log("idleAwakeStart", "failed", configuration: intent) }
-        state = controller.inspect(power: readPower(), now: now()); updateMonitoring()
+        state = controller.inspect(power: power, now: stamp); updateMonitoring()
     }
     func stop() {
-        let before = controller.state
-        controller.stop(now: now()); state = controller.inspect(power: readPower(), now: now()); issue = state.issue
+        let before = controller.state, power = readPower(), stamp = now()
+        controller.stop(now: stamp); state = controller.inspect(power: power, now: stamp); issue = state.issue
         log("idleAwakeStop", state.requested ? "unconfirmed" : "done", configuration: before); updateMonitoring()
     }
     func refresh() {
-        let before = controller.state
-        controller.tick(power: readPower(), now: now())
-        state = controller.inspect(power: readPower(), now: now()); issue = state.issue
+        let before = controller.state, power = readPower(), stamp = now()
+        controller.tick(power: power, now: stamp)
+        state = controller.inspect(power: power, now: stamp); issue = state.issue
         if before.phase != state.phase {
             let action = state.phase == .active ? "idleAwakeResume" : [IdleAwakeState.Phase.idle, .ending].contains(state.phase) ? "idleAwakeEnd" : "idleAwakePause"
             log(action, state.phase == .ending ? "unconfirmed" : "done", configuration: before)
@@ -79,6 +92,20 @@ import ThermoL10n
     private func updateMonitoring() {
         onStateChange?()
         guard automaticallyMonitor else { return }
+        // Unconfirmed release retries on the polling timer. Re-arming a past
+        // deadline here would otherwise spin continuously on the main run loop.
+        let end = state.requested && state.phase != .ending ? state.expiresAt : nil
+        if scheduledDeadline != end {
+            deadlineTimer?.invalidate(); deadlineTimer = nil; deadlineGeneration = UUID()
+            if let end {
+                let generation = deadlineGeneration
+                deadlineTimer = scheduleDeadline(end) { [weak self] in
+                    guard let self, self.deadlineGeneration == generation else { return }
+                    self.deadlineTimer = nil
+                    self.refresh()
+                }
+            }
+        }
         if state.requested {
             if activity == nil { activity = ProcessInfo.processInfo.beginActivity(options: .userInitiatedAllowingIdleSystemSleep, reason: "User-requested Thermo idle-awake session") }
             if timer == nil {

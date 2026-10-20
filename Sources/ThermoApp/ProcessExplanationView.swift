@@ -141,7 +141,9 @@ struct ProcessInspectionTarget: Identifiable {
                         Text(tr("Observed launchd service registrations")).font(.headline)
                         if let services = report.launchServices {
                             ForEach(services.registrations, id: \.self) { service in
-                                Text(service.domain + "/" + service.label + " · PID " + String(service.pid) + (service.serviceState.map { " · " + $0 } ?? "")).font(.caption.monospaced()).textSelection(.enabled)
+                                let state = service.serviceState.map { " · \($0)" } ?? ""
+                                let summary = "\(service.domain)/\(service.label) · PID \(service.pid)\(state)"
+                                Text(summary).font(.caption.monospaced()).textSelection(.enabled)
                             }
                             if !services.queriedDomains.isEmpty { Text(tr("Launchd query scope: %1$@", services.queriedDomains.joined(separator: ", "))).font(.caption).foregroundStyle(.secondary) }
                             if services.state == .noneObserved { Text(tr("No direct registration was observed in the queried launchd domains.")).font(.caption) }

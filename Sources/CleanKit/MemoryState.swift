@@ -169,6 +169,8 @@ public enum MemorySuspects {
     /// Age/size alone never generates a suspect. The legacy longRunning case remains decodable.
     public static func find(programs: [MachinePulse.Hog], history: [ProgramMemoryRecord], now: Date = Date()) -> [MemorySuspect] {
         var out: [MemorySuspect] = []
+        // Every program traverses the same timeline; sort it once, outside the per-program loop.
+        let newestFirst = history.sorted { $0.t > $1.t }
         for h in programs {
             guard h.memoryMetric == nil || h.memoryMetric == .footprint else { continue }
             // Only the uninterrupted tail with the same PID/start/executable set is comparable.
@@ -176,7 +178,7 @@ public enum MemorySuspects {
             let current = h.processIdentities?.sorted { $0.pid < $1.pid }
             var comparable: [ProgramMemoryRecord] = []
             if let current, !current.isEmpty, current.count == h.pids.count {
-                for r in history.sorted(by: { $0.t > $1.t }) where r.t <= now {
+                for r in newestFirst where r.t <= now {
                     guard r.identities?[h.id] == current, r.programs[h.id] != nil else { break }
                     comparable.append(r)
                 }

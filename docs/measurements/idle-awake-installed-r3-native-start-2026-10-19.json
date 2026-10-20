@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-19",
+  "candidate": "installed R3 1.1.39 (566)",
+  "remoteBuildInput": "9a2b9d938ad8f8d8353e17603da57c16a18f6397",
+  "pid": 79417,
+  "uiStart": true,
+  "uiStop": true,
+  "mode": "both",
+  "uiDurationSeconds": 900,
+  "activeKernelRequests": [
+    "pid 79417(Thermo): [0x0000a20700018e71] 00:00:01 PreventUserIdleSystemSleep named: \"Thermo keep-awake 40D9705B-FEE9-4424-B7C3-7C9332126706 tasks\"",
+    "pid 79417(Thermo): [0x0000a20700058e72] 00:00:01 PreventUserIdleDisplaySleep named: \"Thermo keep-awake 40D9705B-FEE9-4424-B7C3-7C9332126706 display\""
+  ],
+  "finalPhase": "idle",
+  "finalRequestCount": 0,
+  "finalKernelOwnedRequests": [],
+  "fallbackCleanupUsed": false,
+  "physicalPowerTransitionsTested": false,
+  "evidenceFiles": {
+    "native-gui-start-active.json": "24b9bcf21b98161c8f96ab552f1e210394879fb43daece46d732bcd92d558b05",
+    "native-gui-start-stopped.json": "85143a7d46ff3523a88deffb8ac6ae5c028bf382dfcdb3e79be6333582e9f182",
+    "native-gui-start-watch.json": "7ebeecdf13a7658ba7dbce65438f9a4bf2289601fe5eb5825d0fa51433099e17"
+  },
+  "cleanScreenOrLidPolicyChanged": false
+}

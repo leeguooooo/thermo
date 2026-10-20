@@ -1,0 +1,195 @@
+{
+  "date": "2026-10-19",
+  "version": "1.1.39",
+  "build": "566",
+  "sourceCommit": "2ff2c36d61d49aef135d0c3ad1d60e5ec23bae91",
+  "sourceState": "dirty",
+  "remoteBuildRun": "07ac6637-4068-44a1-bbf7-fb69730eb201",
+  "remoteInputCommit": "144e640537d4d3d8b905dd48b884834b8fe6cae7",
+  "remoteInputTree": "daad2fe1df35998382418884bbc800d8c590a643",
+  "testRun": "ee92f080-08c8-47e9-bc9b-cabefac59c74",
+  "nonHardwareTests": 1842,
+  "nonHardwareFailures": 0,
+  "testAndBuildSourceFilesMatch": true,
+  "sourceFilesVerified": 594,
+  "remoteDSYMUUIDsVerified": true,
+  "developerIDTeam": "6ZPXG4KVVS",
+  "minimumOS": {
+    "Contents/MacOS/Thermo": [
+      "13.0",
+      "13.0"
+    ],
+    "Contents/Helpers/thermo": [
+      "13.0",
+      "13.0"
+    ],
+    "Contents/Helpers/thermo-helper": [
+      "13.0",
+      "13.0"
+    ]
+  },
+  "architectures": {
+    "Contents/MacOS/Thermo": [
+      "x86_64",
+      "arm64"
+    ],
+    "Contents/Helpers/thermo": [
+      "x86_64",
+      "arm64"
+    ],
+    "Contents/Helpers/thermo-helper": [
+      "x86_64",
+      "arm64"
+    ]
+  },
+  "nativeAndRosettaCLI": true,
+  "physicalIntelAccepted": false,
+  "archive": {
+    "version": "1.1.39",
+    "build": "566",
+    "source": "2ff2c36",
+    "archiveSHA256": "c64dcb4109047233c84da5e905852b08cf5c9186e2088a6a28a5a03d20edbe3e",
+    "regularFiles": 95,
+    "links": 8,
+    "manifestMatch": true,
+    "signatureVerified": true,
+    "notarized": false,
+    "published": false
+  },
+  "ownedManualRemoval": {
+    "replacementRetained": true,
+    "openedAfterReviewRetained": true,
+    "nativeTrashRoundtripBytesAndInodeMatch": true,
+    "personalDataTouched": false
+  },
+  "ownedNodeGrouping": {
+    "nativeAndRosettaMatches": true,
+    "globalInventoryComplete": [
+      false,
+      false
+    ]
+  },
+  "lifecycle": {
+    "source": "2ff2c36",
+    "version": "1.1.39",
+    "build": "566",
+    "runs": [
+      {
+        "mode": "baseline-first",
+        "activityRequested": false,
+        "started": "2026-10-19T10:04:19.440935+00:00",
+        "exitCode": 0,
+        "seconds": 76.089419542,
+        "functionalChecksPassed": true,
+        "samples": 23,
+        "failedTransitions": [],
+        "staleOpenSamples": [],
+        "closedReadsInFlight": 0
+      },
+      {
+        "mode": "foreground-activity",
+        "activityRequested": true,
+        "started": "2026-10-19T10:05:35.536232+00:00",
+        "exitCode": 0,
+        "seconds": 76.79684679200001,
+        "functionalChecksPassed": true,
+        "samples": 23,
+        "failedTransitions": [],
+        "staleOpenSamples": [],
+        "closedReadsInFlight": 0
+      },
+      {
+        "mode": "baseline-after",
+        "activityRequested": false,
+        "started": "2026-10-19T10:06:52.346458+00:00",
+        "exitCode": 2,
+        "seconds": 81.30980004100002,
+        "functionalChecksPassed": false,
+        "samples": 23,
+        "failedTransitions": [],
+        "staleOpenSamples": [
+          {
+            "cycle": 1,
+            "page": "memory"
+          }
+        ],
+        "closedReadsInFlight": 0
+      }
+    ],
+    "ordinaryBaselinesPassed": false,
+    "allRunsPassed": false,
+    "newProcessPerRun": true,
+    "filesystemColdCacheAssessed": false,
+    "externalMachineLoadControlled": false,
+    "scope": "Run after other owned package checks finish. User-requested process activity is an explicit diagnostic condition; its result never replaces either ordinary baseline. No helper control or menu-bar recorder."
+  },
+  "installed": false,
+  "notarized": false,
+  "published": false,
+  "installedBaselineVersion": "1.1.37 (543)",
+  "baselineBackupVerified": true,
+  "evidenceHashes": {
+    "package-verification.json": "5dac02e0a40dc3c63da670180accf67eb6ece34498fa4a1bf20ff55669c6b510",
+    "archive-verification.json": "609e6ee6ddf80efcd510fd37714d76e3e9f2c35b4156052305fc3b099febf288",
+    "manual-removal-verification.json": "9bb3e4cd8b73cdf8ac52ff457a067f847144ffdc5cf8ffe1c7e3358395460afb",
+    "inline-grouping-verification.json": "b2f188d9ce23cc8685e3689b2472fa5906b400f195c7e9f625f50d589f27cfeb",
+    "source-freeze.json": "2080eb14e2ec268eae3d69a8c83693e61d19f02c776b1a434633062c65aff6a5",
+    "pre-install-observation.json": "6b340ff2e909f82221f26bd8855bb800ea8738dc9a37fdc9b002a68d41a87cbd"
+  },
+  "remaining": [
+    "Ordinary offscreen lifecycle memory first-read latency remains unresolved",
+    "Visible candidate menu settings, click actions and keep-awake acceptance",
+    "Hardware charging and AWDL acceptance remain separate",
+    "User-confirmed stacked visual clipping must pass a new native review after renderer fix"
+  ],
+  "lifecycleDiagnostic": {
+    "functionalChecksPassed": true,
+    "diagnosticOnly": true,
+    "stackSHA256": "3e48fe33a26786d234eadbd7b12cde9430e6f203c80499cadc620b9ac37c6939",
+    "symbolicatedStackSHA256": "d5321077317ab9cf2e67332d50173f9ab561cd6dd7e4200fa2c27d2f6448c747",
+    "replacesFailedBaseline": false,
+    "rootCauseConfirmed": false
+  },
+  "nativeReview": {
+    "candidateProcess": 83925,
+    "ranFromCandidateDirectory": true,
+    "installedBundleChanged": false,
+    "visibleMemoryPageObservedAfterClickMs": 2205,
+    "visibleMemoryFirstObservationHadCurrentBreakdownAndProgramList": true,
+    "memoryLatencyScope": "One live window observation including CUA settling; does not erase the failed offscreen baseline or prove a latency bound.",
+    "menuSettingsAcceptedUI": [
+      "primary cpuUsage",
+      "secondary upload",
+      "presentation data",
+      "layout stacked",
+      "right action console"
+    ],
+    "physicalStackedLayoutUserResult": "Visible but clipped or crowded",
+    "stackedVisualAccepted": false,
+    "idleAwakePanelOpened": true,
+    "idleAwakeSessionStarted": false,
+    "idleAwakeEndRequestCount": 0,
+    "settingsRestored": {
+      "legacy": "cpu",
+      "layout": "horizontal",
+      "rightClick": "panel"
+    },
+    "canonicalAppRestored": {
+      "version": "1.1.37",
+      "build": "543",
+      "pid": 71902,
+      "busy": false,
+      "screenActive": false,
+      "fanTarget": 6617,
+      "fanPolicyRPM": 6617,
+      "suspended": false
+    },
+    "helperRemains": "8/1.1.37; candidate UI correctly reported outdated helper"
+  },
+  "pendingFix": {
+    "description": "Measured CoreText rows drawn into a single status-button template image; clearer secondary-none label",
+    "runId": "ca6daffd-e6aa-404b-9a9e-ab00f83da4a7",
+    "status": "remote focused tests running",
+    "newRasterTests": 2
+  }
+}

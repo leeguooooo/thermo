@@ -5,11 +5,24 @@ import ThermoL10n
 
 /// The unchecked boundary owns a serial queue; the mutable sampler never leaves it.
 private final class ComputeWorker: @unchecked Sendable {
-    private let queue = DispatchQueue(label: "dev.thermo.compute", qos: .utility)
+    private let queue: DispatchQueue
     private let sampler = ComputeSampler()
-    func reset() { queue.async { self.sampler.reset() } }
-    func sample(_ receive: @escaping @Sendable (ComputeActivity) -> Void) {
-        queue.async { receive(self.sampler.sample()) }
+    private let readSample: (@Sendable (ScanCancellation) -> ComputeActivity)?
+    init(readSample: (@Sendable (ScanCancellation) -> ComputeActivity)?, queue: DispatchQueue?) {
+        self.readSample = readSample
+        self.queue = queue ?? DispatchQueue(label: "dev.thermo.compute", qos: .userInitiated)
+    }
+    func sample(reset: Bool, cancellation: ScanCancellation,
+                receive: @escaping @Sendable (ComputeActivity?) -> Void) {
+        queue.async {
+            guard !cancellation.isCancelled else { receive(nil); return }
+            if reset { self.sampler.reset() }
+            let previousCancellation = ScanCancellation.current
+            ScanCancellation.current = cancellation
+            defer { ScanCancellation.current = previousCancellation }
+            let reading = self.readSample?(cancellation) ?? self.sampler.sample(cancelled: { cancellation.isCancelled })
+            receive(cancellation.isCancelled ? nil : reading)
+        }
     }
 }
 
@@ -24,30 +37,50 @@ final class ComputeModel: ObservableObject {
     }
     @Published private(set) var current: ComputeActivity?
     @Published private(set) var history: [Point] = []
-    private let worker = ComputeWorker()
+    private let worker: ComputeWorker
+    private let refreshInterval: TimeInterval
     private var timer: Timer?
     private var sampling = false
     private var generation = UUID()
+    private var cancellation: ScanCancellation?
+    private var resetNextReading = true
+    init(readSample: (@Sendable (ScanCancellation) -> ComputeActivity)? = nil,
+         samplingQueue: DispatchQueue? = nil, refreshInterval: TimeInterval = 2) {
+        precondition(refreshInterval.isFinite && refreshInterval > 0)
+        self.refreshInterval = refreshInterval
+        worker = ComputeWorker(readSample: readSample, queue: samplingQueue)
+    }
     var samplingActive: Bool { timer != nil }
     var sampleInFlight: Bool { sampling }
     func start() {
         guard timer == nil else { return }
         generation = UUID()
         current = nil; history = []
-        worker.reset()
-        sample()
-        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+        resetNextReading = true
+        timer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.sample() }
         }
+        sample()
     }
-    func stop() { timer?.invalidate(); timer = nil; generation = UUID() }
+    func stop() {
+        timer?.invalidate(); timer = nil; generation = UUID(); cancellation?.cancel()
+    }
     private func sample() {
-        guard !sampling else { return }; sampling = true
-        let token = generation
-        worker.sample { reading in
+        guard timer != nil, !sampling else { return }
+        sampling = true
+        let token = generation, cancellation = ScanCancellation()
+        self.cancellation = cancellation
+        let reset = resetNextReading
+        resetNextReading = false
+        worker.sample(reset: reset, cancellation: cancellation) { reading in
             DispatchQueue.main.async {
                 self.sampling = false
-                guard self.generation == token else { return }
+                self.cancellation = nil
+                guard self.generation == token, !cancellation.isCancelled, let reading else {
+                    // A reopened page waits for physical completion, then refreshes immediately.
+                    if self.timer != nil { self.sample() }
+                    return
+                }
                 self.current = reading
                 self.history.append(Point(time: reading.sampled, cpu: reading.cpu, devices: reading.devices))
                 self.history.removeAll { reading.sampled.timeIntervalSince($0.time) > 900 }

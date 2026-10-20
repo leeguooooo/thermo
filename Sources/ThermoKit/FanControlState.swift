@@ -21,6 +21,9 @@ public struct FanControlState: Codable, Equatable, Sendable {
     public var failure: String?
     public var observationsSupported: Bool
 
+    /// References in saved control state, independent of the current SMC inventory.
+    public var referencedFanIDs: [Int] { Set(policies.keys).union(observations.keys).sorted() }
+
     public init(policies: [Int: FanPolicy], observations: [Int: FanControlObservation] = [:],
                 suspended: Bool = false, suspensionReason: FanPolicySuspension? = nil, failure: String? = nil, observationsSupported: Bool = true) {
         self.policies = policies; self.observations = observations

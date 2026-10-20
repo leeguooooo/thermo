@@ -37,7 +37,8 @@ public struct ProcessDetails: Equatable, Sendable {
 extension ProcessTable {
     /// Every process of `uid` (nil = all) with its CPU time and memory. Other users' processes
     /// come back with zeros where the kernel refuses.
-    public static func usage(uid: uid_t? = getuid()) -> [ProcessUsage] {
+    public static func usage(uid: uid_t? = getuid(), cancelled: () -> Bool = { false }) -> [ProcessUsage] {
+        guard !cancelled() else { return [] }
         var mib: [Int32] = uid.map { [CTL_KERN, KERN_PROC, KERN_PROC_UID, Int32(bitPattern: $0)] } ?? [CTL_KERN, KERN_PROC, KERN_PROC_ALL]
         var size = 0
         guard sysctl(&mib, UInt32(mib.count), nil, &size, nil, 0) == 0 else { return [] }
@@ -49,6 +50,7 @@ extension ProcessTable {
         var out: [ProcessUsage] = []
         out.reserveCapacity(count)
         for k in procs.prefix(count) {
+            guard !cancelled() else { return [] }
             let pid = k.kp_proc.p_pid
             guard pid > 0 else { continue }
             let name = withUnsafeBytes(of: k.kp_proc.p_comm) { raw in String(decoding: raw.prefix { $0 != 0 }, as: UTF8.self) }

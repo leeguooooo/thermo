@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "name": "thermo-mac190-regression",
+  "concurrency": 1,
+  "steps": [
+    {
+      "id": "test",
+      "agent": "command",
+      "host": "mac190",
+      "cwd": "..",
+      "command": [
+        "/usr/bin/env",
+        "-i",
+        "PATH=/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "DEVELOPER_DIR=/Applications/Xcode-27.0.app/Contents/Developer",
+        "/bin/sh",
+        "-c",
+        "THERMO_VERIFIED_SDK_PATH=\"$(xcrun --sdk macosx --show-sdk-path)\" || exit \"$?\"\nexport SDKROOT=\"$THERMO_VERIFIED_SDK_PATH\"\nmkdir -p .remote-qa\nuname -a > .remote-qa/environment.txt\nxcrun swift --version >> .remote-qa/environment.txt\nprintf \"%s\\n\" \"$DEVELOPER_DIR\" \"$SDKROOT\" >> .remote-qa/environment.txt\nxcrun --show-sdk-version >> .remote-qa/environment.txt\ngit rev-parse HEAD >> .remote-qa/environment.txt\nswift test --jobs 2 --filter 'AgentDoctorTests|AgentCoreTests|ThermoAppTests|ThermoCLITests' > .remote-qa/test.log 2>&1\nresult=$?\ntail -n 35 .remote-qa/test.log\nprintf '%s\\n' \"$result\" > .remote-qa/exit-code.txt\nexit \"$result\"\n"
+      ],
+      "artifacts": [
+        ".remote-qa"
+      ],
+      "timeoutSeconds": 7200
+    }
+  ]
+}

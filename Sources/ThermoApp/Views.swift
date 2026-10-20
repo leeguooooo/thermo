@@ -49,21 +49,56 @@ struct Bar: View {
 
 /// The menu bar panel: the live numbers at a glance, why the Mac is slow, a quick fan switch, and
 /// the way into the main window, where everything else lives.
+private struct PanelBodyHeight: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
 struct PopoverView: View {
+    @State private var bodyHeight: CGFloat = 640
     @ObservedObject var monitor: Monitor
     @ObservedObject private var panel = PanelModel.shared
     @ObservedObject private var pulse = SystemPulse.shared
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
     @AppStorage(L10n.defaultsKey) private var language = "system"
+    @AppStorage(MenuBarPreferences.leftKey) private var menuLeftClick = "panel"
+    @AppStorage(MenuBarPreferences.rightKey) private var menuRightClick = "panel"
 
     var body: some View {
         let _ = L10n.apply(preference: language)
         content.id(language)  // rebuild every string in the new language
-            .onAppear { panel.setActive(monitor.panelVisible || renderingPreview) }
-            .onChange(of: monitor.panelVisible) { panel.setActive($0) }
     }
 
     var content: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if renderingPreview {
+                mainSections
+            } else {
+                ScrollView(.vertical) {
+                    mainSections
+                        .background(GeometryReader { geometry in
+                            Color.clear.preference(key: PanelBodyHeight.self, value: geometry.size.height)
+                        })
+                }
+                .frame(height: min(bodyHeight, monitor.panelBodyHeightLimit))
+                .onPreferenceChange(PanelBodyHeight.self) { height in
+                    if height > 0, abs(height - bodyHeight) > 0.5 { bodyHeight = height }
+                }
+                Divider()
+                HStack { CleanScreenButton(); AWDLButton() }
+                IdleAwakeButton()
+                if monitor.snapshot?.battery != nil { BatteryCareButton() }
+            }
+            footer
+        }
+        .padding(12)
+        .frame(width: 372)
+        .background(LinearGradient(colors: [Color(red: 0.11, green: 0.10, blue: 0.20), Color(red: 0.06, green: 0.09, blue: 0.17)],
+                                   startPoint: .top, endPoint: .bottom))
+        .environment(\.colorScheme, .dark)
+    }
+
+    private var mainSections: some View {
         VStack(alignment: .leading, spacing: 8) {
             header
             if monitor.iconHidden {
@@ -88,19 +123,7 @@ struct PopoverView: View {
                 Text(err).font(.caption).foregroundStyle(.red).lineLimit(3)
                     .onTapGesture { monitor.lastError = nil }
             }
-            Divider()
-            if !renderingPreview {
-                HStack { CleanScreenButton();AWDLButton() }
-                IdleAwakeButton()
-                if monitor.snapshot?.battery != nil { BatteryCareButton() }
-            }
-            footer
         }
-        .padding(12)
-        .frame(width: 372)
-        .background(LinearGradient(colors: [Color(red: 0.11, green: 0.10, blue: 0.20), Color(red: 0.06, green: 0.09, blue: 0.17)],
-                                   startPoint: .top, endPoint: .bottom))
-        .environment(\.colorScheme, .dark)
     }
 
     // MARK: Header: how hot, why, and who
@@ -156,7 +179,7 @@ struct PopoverView: View {
         let busy = pulse.current?.busy
         return PanelCard(title: "CPU", symbol: "cpu", tint: .green, badge: s?.cpu.map { tempText($0, fahrenheit: fahrenheit) },
                          badgeTint: heatColor(s?.cpu)) {
-            BigValue(value: panel.cpu.last.map { String(format: "%.0f", $0) } ?? "—", unit: "%")
+            BigValue(value: panel.currentCPU.map { String(format: "%.0f", $0) } ?? "—", unit: "%")
             Sparkline(values: panel.cpu, top: 100, color: .green)
             Text([busy.map { tr("load %1$@× per core", String(format: "%.1f", $0)) }, s?.cpuPower.map { String(format: "%.1f W", $0) }]
                 .compactMap { $0 }.joined(separator: " · "))
@@ -168,19 +191,19 @@ struct PopoverView: View {
         let s = monitor.snapshot
         return PanelCard(title: "GPU", symbol: "square.stack.3d.up", tint: .orange, badge: s?.gpu.map { tempText($0, fahrenheit: fahrenheit) },
                          badgeTint: heatColor(s?.gpu)) {
-            BigValue(value: panel.gpu.last.map { String(format: "%.0f", $0) } ?? "—", unit: panel.gpu.isEmpty ? nil : "%")
+            BigValue(value: panel.currentGPU.map { String(format: "%.0f", $0) } ?? "—", unit: panel.currentGPU == nil ? nil : "%")
             Sparkline(values: panel.gpu, top: 100, color: .orange)
-            Text(panel.gpu.isEmpty ? tr("not reported") : (panel.gpu.last ?? 0) >= 50 ? tr("busy") : tr("light"))
+            Text(panel.currentGPU == nil ? tr("not reported") : (panel.currentGPU ?? 0) >= 50 ? tr("busy") : tr("light"))
                 .font(.system(size: 10)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
         }
     }
 
     var memoryCard: some View {
-        let m = SystemStats.memory()
+        let m = panel.memoryStats
         let pressure = pulse.current?.memory ?? .unknown
         return PanelCard(title: tr("Memory"), symbol: "memorychip", tint: .yellow, badge: MachinePulse.memoryName(pressure),
                          badgeTint: pressure == .critical ? .red : pressure == .warning ? .orange : .white.opacity(0.6)) {
-            BigValue(value: panel.memory.last.map { String(format: "%.0f", $0) } ?? "—", unit: "%")
+            BigValue(value: m.map { String(format: "%.0f", Double($0.usedBytes) / Double(max(1, $0.totalBytes)) * 100) } ?? "—", unit: "%")
             Sparkline(values: panel.memory, top: 100, color: .yellow)
             Text([m.map { PanelFormat.gb($0.usedBytes) + " / " + PanelFormat.gb($0.totalBytes) + " GB" },
                   pulse.current.flatMap { $0.swapUsedMB > 0 ? tr("swap %1$@", MemoryFormat.string(mebibytes: $0.swapUsedMB)) : nil }]
@@ -190,7 +213,7 @@ struct PopoverView: View {
     }
 
     var diskCard: some View {
-        let d = SystemStats.disk()
+        let d = panel.diskStats
         let used = d.map { 1 - Double($0.freeBytes) / Double(max(1, $0.totalBytes)) } ?? 0
         return PanelCard(title: tr("Free space"), symbol: "internaldrive", tint: .cyan,
                          badge: d.map { ByteFormat.string($0.totalBytes) }) {
@@ -202,7 +225,7 @@ struct PopoverView: View {
     }
 
     var networkCard: some View {
-        let (down, unit) = PanelFormat.rate(panel.download.last)
+        let (down, unit) = PanelFormat.rate(panel.currentDownload)
         let (up, upUnit) = PanelFormat.rate(panel.upload)
         return PanelCard(title: tr("Network"), symbol: "network", tint: .blue) {
             BigValue(value: down, unit: unit)
@@ -212,13 +235,13 @@ struct PopoverView: View {
     }
 
     var fanCard: some View {
-        let fans = monitor.snapshot?.fans ?? []
+        let fans = monitor.sampledFans ?? []
         let top = fans.filter { $0.rpm != nil }.max { $0.rpm! < $1.rpm! }
         return PanelCard(title: tr("Fans"), symbol: "fan", tint: .teal,
                          badge: top?.load.map { String(format: "%.0f%%", $0 * 100) }) {
             BigValue(value: top.map { (fans.contains { $0.rpm == nil } ? "≥ " : "") + FanControlPresentation.rpm($0.rpm) } ?? "—", unit: top == nil ? nil : "RPM")
             if fans.isEmpty {
-                Text(tr("No fans")).font(.system(size: 10)).foregroundStyle(.white.opacity(0.55))
+                Text(monitor.sampledFans == nil ? monitor.fanEmptyMessage : tr("No fans")).font(.system(size: 10)).foregroundStyle(.white.opacity(0.55))
             } else if monitor.policiesAvailable {
                 let policies = fans.map { monitor.pendingPolicies[$0.id] ?? monitor.policies[$0.id] ?? .auto }
                 let allAuto = policies.allSatisfy { $0 == .auto }
@@ -309,17 +332,26 @@ struct PopoverView: View {
     // MARK: Footer
 
     var footer: some View {
-        HStack(spacing: 6) {
-            PanelButton(title: tr("Open Console"), symbol: "macwindow", prominent: true) { MainWindow.show(.overview) }
-            Spacer()
-            shortcut("internaldrive", tr("Disk Cleanup"), .disk(.home))
-            shortcut("stethoscope", tr("AI Agent Diagnostics"), .agents(.home))
-            Button { TabQuickAction.request() } label: { Image(systemName: "archivebox").frame(width: 22) }
-                .buttonStyle(.plain).foregroundStyle(.white.opacity(0.7)).help(tr("Save and close background tabs"))
-            shortcut("clock.arrow.circlepath", tr("History"), .history)
-            shortcut("gearshape", tr("Settings"), .settings)
-            Button { NSApp.terminate(nil) } label: { Image(systemName: "power").frame(width: 22) }
-                .buttonStyle(.plain).foregroundStyle(.white.opacity(0.7)).help(tr("Quit Thermo"))
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                PanelButton(title: tr("Open Console"), symbol: "macwindow", prominent: true) { MainWindow.show(.overview) }
+                Spacer(minLength: 0)
+                shortcut("internaldrive", tr("Disk Cleanup"), .disk(.home))
+                shortcut("stethoscope", tr("AI Agent Diagnostics"), .agents(.home))
+                Button { TabQuickAction.request() } label: { Image(systemName: "archivebox").frame(width: 22) }
+                    .buttonStyle(.plain).foregroundStyle(.white.opacity(0.7)).help(tr("Save and close background tabs"))
+                shortcut("clock.arrow.circlepath", tr("History"), .history)
+                PanelButton(title: tr("Menu bar…")) { MainWindow.show(.settings) }
+                    .accessibilityLabel(tr("Customize menu bar…"))
+                    .help(tr("Choose metrics, layout and left/right click actions."))
+                Button { NSApp.terminate(nil) } label: { Image(systemName: "power").frame(width: 22) }
+                    .buttonStyle(.plain).foregroundStyle(.white.opacity(0.7)).help(tr("Quit Thermo"))
+            }
+            Text(tr("Left click: %1$@ · Right click: %2$@",
+                    (MenuClickAction(rawValue: menuLeftClick) ?? .panel).label,
+                    (MenuClickAction(rawValue: menuRightClick) ?? .panel).label))
+                .font(.system(size: 10)).foregroundStyle(.white.opacity(0.6))
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, 2)
     }
@@ -385,7 +417,7 @@ struct OverviewView: View {
                     }
                 }
                 Divider()
-                ForEach(s.fans) { f in
+                ForEach(monitor.sampledFans ?? []) { f in
                     HStack(spacing: 8) {
                         FanRow(fan: f)
                         QuickFanSwitch(monitor: monitor, fan: f)
@@ -556,25 +588,59 @@ enum CurvePreset: String, CaseIterable, Identifiable {
 struct FansView: View {
     @ObservedObject var monitor: Monitor
 
+    private var missingFanIDs: [Int] {
+        FanControlPresentation.missingFanIDs(readings: monitor.sampledFans, policies: monitor.policies,
+                                            pending: monitor.pendingPolicies, state: monitor.fanControlState)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             helperBanner
-            if let s = monitor.snapshot {
-                if s.fans.isEmpty {
+            if let fans = monitor.sampledFans {
+                if fans.isEmpty {
                     InspectorPanel {
                         Label(tr("This Mac has no fans."), systemImage: "fan")
                             .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).padding(16)
                     }
                 }
-                ForEach(s.fans) { f in
+                ForEach(fans) { f in
                     // Always usable: without a helper, Apply queues the setting and starts setup.
                     FanControlCard(fan: f, policy: monitor.pendingPolicies[f.id] ?? monitor.policies[f.id] ?? .auto,
                                    enabled: !monitor.helperBusy, pending: monitor.pendingPolicies[f.id] != nil,
                                    policyAvailable: monitor.policiesAvailable, applying: monitor.applyingPolicies,
                                    controlState: monitor.fanControlState) { monitor.setPolicy($0, fan: f.id) }
                 }
-                if s.fans.count > 1 && [.running, .outdated].contains(monitor.helperState) {
+                if fans.count > 1 && [.running, .outdated].contains(monitor.helperState) {
                     Button(tr("All fans to Auto")) { monitor.setPolicy(.auto, fan: -1) }.disabled(monitor.helperBusy)
+                }
+            }
+            if monitor.sampledFans == nil {
+                InspectorPanel {
+                    Label(monitor.fanEmptyMessage, systemImage: "hourglass")
+                        .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).padding(16)
+                }
+            }
+            ForEach(missingFanIDs, id: \.self) { id in
+                InspectorPanel {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label(tr("Fan %1$@ · saved state", String(id)), systemImage: "fan")
+                        Text(tr("No current reading for this fan. Saved settings and last checks are shown below."))
+                        let policy = FanControlPresentation.policy(monitor.pendingPolicies[id] ?? monitor.policies[id] ?? .auto)
+                        Text(monitor.pendingPolicies[id] != nil ? tr("Waiting for helper: %1$@", policy) :
+                                monitor.policiesAvailable ? tr("Requested policy: %1$@", policy) : tr("Requested policy unavailable"))
+                        Text(FanControlPresentation.observation(monitor.fanControlState, fan: id))
+                        if let checked = monitor.fanControlState?.observations[id]?.checkedAt, checked.timeIntervalSince1970.isFinite {
+                            Text(tr("Checked at %1$@", checked.formatted(date: .numeric, time: .standard)))
+                        }
+                    }
+                    .font(.system(size: 12)).foregroundStyle(.secondary).padding(16)
+                }
+            }
+            if missingFanIDs.isEmpty, (monitor.sampledFans ?? []).isEmpty,
+               let state = monitor.fanControlState, state.failure != nil || state.suspended {
+                InspectorPanel {
+                    Text(FanControlPresentation.observation(state, fan: -1))
+                        .font(.system(size: 12)).foregroundStyle(.orange).padding(16)
                 }
             }
             VStack(alignment: .leading, spacing: 6) {
@@ -774,11 +840,7 @@ struct FanControlCard: View {
     }
 
     var policyText: String {
-        switch policy {
-        case .auto: return tr("Auto")
-        case .fixed(let r): return r == .infinity ? tr("Max") : tr("%1$@ rpm", String(format: "%.0f", r))
-        case .curve(let curve): return tr("Curve") + " · " + curve.pointsText + " (" + curve.sensor.rawValue.uppercased() + ")"
-        }
+        FanControlPresentation.policy(policy)
     }
 
     func load() {
@@ -848,7 +910,12 @@ struct SettingsView: View {
     @ObservedObject var updates: Updates
     @ObservedObject private var notifications = NotificationAccess.shared
     @ObservedObject private var loginItem = LoginItemAccess.shared
-    @AppStorage(Settings.titleMetric) private var titleMetric = TitleMetric.cpu.rawValue
+    @AppStorage(MenuBarPreferences.primaryKey) private var menuPrimary = "cpu"
+    @AppStorage(MenuBarPreferences.secondaryKey) private var menuSecondary = "none"
+    @AppStorage(MenuBarPreferences.presentationKey) private var menuPresentation = "both"
+    @AppStorage(MenuBarPreferences.layoutKey) private var menuLayout = "horizontal"
+    @AppStorage(MenuBarPreferences.leftKey) private var menuLeft = "panel"
+    @AppStorage(MenuBarPreferences.rightKey) private var menuRight = "panel"
     @AppStorage(Settings.interval) private var interval = 2.0
     @AppStorage(Settings.alertsEnabled) private var alertsEnabled = false
     @AppStorage(Settings.alertThreshold) private var alertThreshold = 90.0
@@ -874,8 +941,39 @@ struct SettingsView: View {
                     }
                     .onChange(of: language) { L10n.apply(preference: $0) }
                 }
-                row(tr("Menu bar shows")) {
-                    Picker("", selection: $titleMetric) { ForEach(TitleMetric.allCases) { Text($0.label).tag($0.rawValue) } }
+                Group {
+                    row(tr("Primary metric")) {
+                        Picker(tr("Primary metric"), selection: $menuPrimary) { ForEach(MenuMetric.allCases) { Text($0.label).tag($0.rawValue) } }.labelsHidden()
+                    }
+                    row(tr("Second metric")) {
+                        Picker(tr("Second metric"), selection: $menuSecondary) {
+                            Text(tr("No second metric")).tag("none")
+                            ForEach(MenuMetric.allCases) { Text($0.label).tag($0.rawValue) }
+                        }.labelsHidden()
+                    }
+                    row(tr("Menu bar shows")) {
+                        Picker(tr("Menu bar shows"), selection: $menuPresentation) {
+                            Text(tr("Icon and live data")).tag("both")
+                            Text(tr("Icon only")).tag("icon")
+                            Text(tr("Live data only")).tag("data")
+                        }.labelsHidden()
+                    }
+                    row(tr("Menu bar layout")) {
+                        Picker(tr("Menu bar layout"), selection: $menuLayout) {
+                            Text(tr("Horizontal")).tag("horizontal")
+                            Text(tr("Two lines")).tag("stacked")
+                        }.labelsHidden()
+                    }
+                    row(tr("Left click")) {
+                        Picker(tr("Left click"), selection: $menuLeft) {
+                            Text(tr("Panel")).tag("panel"); Text(tr("Main console")).tag("console")
+                        }.labelsHidden()
+                    }
+                    row(tr("Right click")) {
+                        Picker(tr("Right click"), selection: $menuRight) {
+                            Text(tr("Panel")).tag("panel"); Text(tr("Main console")).tag("console")
+                        }.labelsHidden()
+                    }
                 }
                 row(tr("Update every")) {
                     Picker("", selection: $interval) {

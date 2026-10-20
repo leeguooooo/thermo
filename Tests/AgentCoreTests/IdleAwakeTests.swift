@@ -27,16 +27,40 @@ import XCTest
     let start = Date(timeIntervalSince1970: 1_000)
     let ac = IdleAwakePower(source: .external)
 
-    func testModesAndKernelLeaseDoNotExtendTheRequestedDeadline() throws {
+    func testModesAndBoundedKernelGraceKeepTheOriginalAppDeadline() throws {
         let f = Fake()
         let controller = IdleAwakeController(driver: f.driver)
         try controller.start(mode: .both, seconds: 120, power: ac, now: start)
         XCTAssertEqual(f.creates.map(\.0), [.tasks, .display]); XCTAssertEqual(f.creates.map(\.1), [30, 30])
         controller.tick(power: ac, now: start.addingTimeInterval(110))
-        XCTAssertEqual(f.renewals, [10, 10]); XCTAssertEqual(controller.state.expiresAt, start.addingTimeInterval(120))
+        XCTAssertEqual(f.renewals, [11, 11]); XCTAssertEqual(controller.state.expiresAt, start.addingTimeInterval(120))
         controller.tick(power: ac, now: start.addingTimeInterval(120))
         XCTAssertEqual(controller.state.phase, .idle); XCTAssertTrue(f.entries.isEmpty)
         XCTAssertEqual(controller.state.lastEndReason, "expired")
+    }
+    func testQuantizedKernelTimeoutCoversFractionalFinalDeadlineWithLessThanTwoSecondsGrace() throws {
+        for fraction in [0.0, 0.01, 0.25, 0.75, 0.99] {
+            for phase in [0.0, 0.01, 0.25, 0.75, 0.99] {
+                let f = Fake()
+                let model = IdleAwakeController(driver: f.driver)
+                let stamp = start.addingTimeInterval(phase), duration = 20 + fraction
+                try model.start(mode: .tasks, seconds: duration, power: ac, now: stamp)
+                let timeout = try XCTUnwrap(f.creates.last?.1)
+                let kernelEnd = floor(stamp.timeIntervalSince1970) + floor(timeout)
+                let end = stamp.timeIntervalSince1970 + duration
+                XCTAssertGreaterThanOrEqual(kernelEnd, end)
+                XCTAssertLessThan(kernelEnd - end, 2)
+                XCTAssertLessThanOrEqual(timeout, 30)
+                model.tick(power: ac, now: stamp.addingTimeInterval(5.1))
+                let renewed = try XCTUnwrap(f.renewals.last)
+                let renewedEnd = floor(stamp.timeIntervalSince1970 + 5.1) + floor(renewed)
+                XCTAssertGreaterThanOrEqual(renewedEnd, end)
+                XCTAssertLessThan(renewedEnd - end, 2)
+                model.tick(power: ac, now: stamp.addingTimeInterval(duration))
+                XCTAssertEqual(model.state.lastEndReason, "expired")
+                XCTAssertTrue(f.entries.isEmpty)
+            }
+        }
     }
     func testPartialCreationRollsBackAndUnconfirmedRollbackBlocksNewSession() throws {
         let f = Fake(); f.failCreate = 2

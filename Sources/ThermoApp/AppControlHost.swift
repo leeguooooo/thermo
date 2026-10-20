@@ -178,7 +178,12 @@ import ThermoKit
         default:
             let awake = idleAwake.inspect()
             return result(["appVersion":AppInfo.version,"controlProtocol":"1","busy":String(mutating),"screenActive":String(screen.active),
-                           "keepAwakeRequested":String(awake.requested),"keepAwakePhase":awake.phase.rawValue])
+                           "keepAwakeRequested":String(awake.requested),"keepAwakePhase":awake.phase.rawValue,
+                           "windowVisible":String(AppModels.shared.monitor.windowOpen),
+                           "menuPanelOpen":String(AppModels.shared.monitor.popoverOpen),
+                           "menuPanelSampling":String(PanelModel.shared.samplingActive),
+                           "pulseSampling":String(SystemPulse.shared.samplingActive),
+                           "pulseHolders":String(SystemPulse.shared.holderCount)])
         }
     }
     private func screenState() -> [String:String] {

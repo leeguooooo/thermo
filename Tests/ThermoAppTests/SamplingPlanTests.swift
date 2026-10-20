@@ -3,6 +3,26 @@ import ThermoKit
 @testable import ThermoApp
 
 final class SamplingPlanTests: XCTestCase {
+    func testSelectedMetricsUseUnionRegardlessOfPrimaryOrder() {
+        let selections: [Set<MenuMetric>] = [[.cpu, .power], [.fan, .hottest], [.fan, .power]]
+        for metrics in selections {
+            let plan = SamplingPlan.make(visible: false, includeUnnamed: false, metrics: metrics, alerts: false)
+            XCTAssertEqual(plan.scope, .known); XCTAssertNil(plan.groups)
+            XCTAssertEqual(plan.parts.contains(.power), metrics.contains(.power))
+            XCTAssertEqual(plan.parts.contains(.fans), metrics.contains(.fan))
+            XCTAssertEqual(plan.parts.contains(.temperatures), !metrics.isDisjoint(with: [.cpu, .hottest]))
+        }
+    }
+
+    func testLiveAndIconSelectionsDoNotReadSensorsUnlessVisibleOrAlerting() {
+        let selections: [Set<MenuMetric>] = [[], [.cpuUsage, .memory], [.download, .upload]]
+        for metrics in selections {
+            XCTAssertTrue(SamplingPlan.make(visible: false, includeUnnamed: false, metrics: metrics, alerts: false).parts.isEmpty)
+            XCTAssertTrue(SamplingPlan.make(visible: false, includeUnnamed: false, metrics: metrics, alerts: true).parts.contains(.temperatures))
+            XCTAssertEqual(SamplingPlan.make(visible: true, includeUnnamed: false, metrics: metrics, alerts: false).parts, .everything)
+        }
+    }
+
     func testSensorSearchMatchesKeysAndDisplayedElectricalCategories() {
         let reading = Reading(key: "PC0R", name: "CPU Package Power", group: .cpu, value: 42)
         XCTAssertTrue(SensorSearch.matches(reading, query: " pc0r "))

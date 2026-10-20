@@ -34,6 +34,7 @@ struct PulseCommand {
         let programs: [MachinePulse.Hog]
         let temperatures: [String: Double]
         let fans: [Fan]
+        let fansAvailable: Bool
         let systemPowerW: Double?
         let batteryPercent: Double?
 
@@ -136,7 +137,7 @@ struct PulseCommand {
                 memory: pulse.memory.rawValue, swapUsedMB: pulse.swapUsedMB, swapTotalMB: pulse.swapTotalMB,
                 swapNote: pulse.swapDiskText, diskFreeBytes: pulse.diskFreeBytes, diskNote: pulse.diskText, advice: pulse.hogs.compactMap { $0.advice?.text },
                 programs: pulse.hogs, temperatures: temps,
-                fans: (s?.fans ?? []).map { .init($0) },
+                fans: (s?.fans ?? []).map { .init($0) }, fansAvailable: s?.hasFanReadings ?? false,
                 systemPowerW: s?.systemPower, batteryPercent: s?.battery?.percent)
             print(app.args.has("json") ? Export.diagnosticJSON(report) : Export.pulseCSV(report))
             return
@@ -196,6 +197,7 @@ struct PulseCommand {
             if let t = s.gpu { sensors.append("GPU " + style.temp(t, width: 0)) }
             if let w = s.systemPower { sensors.append(String(format: "%.1f W", w)) }
             lines.append("  " + sensors.joined(separator: style.dim(" · ")))
+            if !s.hasFanReadings { lines.append("  " + style.dim("fan readings unavailable")) }
             for f in s.fans {
                 lines.append("  " + f.name + "  \(Renderer.fanNumber(f.rpm)) rpm" + style.dim("  [\(Renderer.fanNumber(f.min))–\(Renderer.fanNumber(f.max))] " + (tr(f.controlMode))))
             }

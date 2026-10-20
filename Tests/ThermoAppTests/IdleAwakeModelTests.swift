@@ -22,6 +22,94 @@ import AgentCore
                            record: { self.events.append($0) })
         }
     }
+    func testEachTransitionUsesOneConsistentPowerAndClockSnapshot() {
+        let b = Backend()
+        var powerReads = 0, clockReads = 0
+        let model = IdleAwakeModel(controller: IdleAwakeController(driver: b.driver),
+            power: { powerReads += 1; return b.power }, now: { clockReads += 1; return b.now },
+            automaticallyMonitor: false, record: { b.events.append($0) })
+        powerReads = 0; clockReads = 0
+        model.start(mode: .both, seconds: 120)
+        XCTAssertEqual(powerReads, 1); XCTAssertEqual(clockReads, 1)
+        XCTAssertEqual(model.state.expiresAt, b.now.addingTimeInterval(120))
+        b.power = .init(source: .battery, percent: 20); b.now.addTimeInterval(5)
+        powerReads = 0; clockReads = 0
+        model.refresh()
+        XCTAssertEqual(powerReads, 1); XCTAssertEqual(clockReads, 1)
+        XCTAssertEqual(model.state.phase, .pausedLowBattery)
+        b.power = .init(source: .external); b.now.addTimeInterval(5)
+        powerReads = 0; clockReads = 0
+        model.refresh()
+        XCTAssertEqual(powerReads, 1); XCTAssertEqual(clockReads, 1)
+        XCTAssertEqual(model.state.phase, .active)
+        powerReads = 0; clockReads = 0
+        model.stop()
+        XCTAssertEqual(powerReads, 1); XCTAssertEqual(clockReads, 1)
+        XCTAssertTrue(b.ids.isEmpty)
+    }
+
+    func testDeadlineFiresBetweenPollingTicksAndStaleCallbacksCannotEndNewSession() throws {
+        let b = Backend()
+        var callbacks: [@MainActor () -> Void] = [], timers: [Timer] = []
+        let model = IdleAwakeModel(controller: IdleAwakeController(driver: b.driver),
+            power: { b.power }, now: { b.now }, record: { b.events.append($0) },
+            scheduleDeadline: { end, callback in
+                callbacks.append(callback)
+                let timer = Timer(fire: end, interval: 0, repeats: false) { _ in }
+                timers.append(timer)
+                return timer
+            })
+        model.start(mode: .both, seconds: 20.25)
+        let end = b.now.addingTimeInterval(20.25)
+        XCTAssertEqual(model.scheduledDeadline, end)
+        let expire = try XCTUnwrap(callbacks.first)
+        b.now.addTimeInterval(5.1); model.refresh()
+        XCTAssertEqual(callbacks.count, 1)
+        b.power = .init(source: .battery, percent: 20); model.refresh()
+        XCTAssertEqual(model.state.phase, .pausedLowBattery)
+        XCTAssertEqual(model.scheduledDeadline, end)
+        b.now = end; expire()
+        XCTAssertEqual(model.state.lastEndReason, "expired")
+        XCTAssertNil(model.scheduledDeadline)
+        XCTAssertTrue(b.ids.isEmpty)
+        b.power = .init(source: .external)
+        model.start(mode: .tasks, seconds: 60)
+        XCTAssertEqual(callbacks.count, 2)
+        expire()
+        XCTAssertEqual(model.state.phase, .active)
+        XCTAssertEqual(model.scheduledDeadline, end.addingTimeInterval(60))
+        model.stop()
+        XCTAssertNil(model.scheduledDeadline)
+        XCTAssertFalse(timers[1].isValid)
+        model.start(mode: .display, seconds: nil)
+        XCTAssertNil(model.scheduledDeadline)
+        callbacks[1]()
+        XCTAssertEqual(model.state.phase, .active)
+        model.stop()
+    }
+    func testUnconfirmedDeadlineReleaseDoesNotContinuouslyRearmPastDeadline() throws {
+        let b = Backend()
+        var callbacks: [@MainActor () -> Void] = []
+        let model = IdleAwakeModel(controller: IdleAwakeController(driver: b.driver),
+            power: { b.power }, now: { b.now }, record: { b.events.append($0) },
+            scheduleDeadline: { end, callback in
+                callbacks.append(callback)
+                return Timer(fire: end, interval: 0, repeats: false) { _ in }
+            })
+        model.start(mode: .tasks, seconds: 1.25)
+        let expire = try XCTUnwrap(callbacks.first)
+        b.unknown = true; b.now.addTimeInterval(1.25); expire()
+        XCTAssertEqual(model.state.phase, .ending)
+        XCTAssertNil(model.scheduledDeadline)
+        XCTAssertEqual(callbacks.count, 1)
+        XCTAssertFalse(model.canStart)
+        b.now.addTimeInterval(1); model.refresh()
+        XCTAssertEqual(callbacks.count, 1)
+        b.unknown = false; model.refresh()
+        XCTAssertEqual(model.state.phase, .idle)
+        XCTAssertTrue(b.ids.isEmpty)
+    }
+
     func testInitializationAndClosingThePanelDoNotStartOrEndASession() {
         let b = Backend()
         let live = b.model(); live.open(); XCTAssertEqual(b.created,0)

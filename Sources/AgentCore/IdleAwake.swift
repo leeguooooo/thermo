@@ -25,21 +25,42 @@ public struct IdleAwakePower: Codable, Equatable, Sendable {
         guard let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
               let list = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef] else { return .init(source: .unknown) }
         let providing = IOPSGetProvidingPowerSourceType(info)?.takeUnretainedValue() as String?
-        if providing == kIOPSACPowerValue { return .init(source: .external) }
-        if list.isEmpty { return .init(source: .noBattery) }
+        let descriptions = list.map { source in
+            IOPSGetPowerSourceDescription(info, source)?.takeUnretainedValue() as? [String: Any]
+        }
+        return decode(providing: providing, descriptions: descriptions)
+    }
+
+    /// Decode one IOPS snapshot. Missing or contradictory records must not become unlimited power.
+    static func decode(providing: String?, descriptions: [[String: Any]?]) -> Self {
+        if providing == kIOPMACPowerKey { return .init(source: .external) }
+        guard providing == kIOPMBatteryPowerKey || providing == kIOPMUPSPowerKey,
+              !descriptions.isEmpty else { return .init(source: .unknown) }
+        let wantedType = providing == kIOPMBatteryPowerKey ? kIOPSInternalBatteryType : kIOPSUPSType
         var percentages: [Int] = []
-        for source in list {
-            guard let d = IOPSGetPowerSourceDescription(info, source)?.takeUnretainedValue() as? [String: Any],
-                  d[kIOPSPowerSourceStateKey] as? String == kIOPSBatteryPowerValue,
-                  let current = d[kIOPSCurrentCapacityKey] as? NSNumber,
+        var confirmedUPSAC = false
+        for record in descriptions {
+            guard let d = record, let type = d[kIOPSTypeKey] as? String,
+                  type == kIOPSInternalBatteryType || type == kIOPSUPSType else { return .init(source: .unknown) }
+            guard type == wantedType else { continue }
+            guard let state = d[kIOPSPowerSourceStateKey] as? String,
+                  [kIOPSACPowerValue, kIOPSBatteryPowerValue, kIOPSOffLineValue].contains(state) else {
+                return .init(source: .unknown)
+            }
+            if state == kIOPSACPowerValue, type == kIOPSUPSType { confirmedUPSAC = true }
+            guard state == kIOPSBatteryPowerValue else { continue }
+            guard let current = d[kIOPSCurrentCapacityKey] as? NSNumber,
                   let maximum = d[kIOPSMaxCapacityKey] as? NSNumber,
                   CFGetTypeID(current) != CFBooleanGetTypeID(), CFGetTypeID(maximum) != CFBooleanGetTypeID(),
                   current.doubleValue.isFinite, maximum.doubleValue.isFinite,
-                  current.doubleValue >= 0, maximum.doubleValue > 0 else { continue }
-            percentages.append(Int(min(100, current.doubleValue / maximum.doubleValue * 100)))
+                  current.doubleValue >= 0, maximum.doubleValue > 0,
+                  current.doubleValue <= maximum.doubleValue else { return .init(source: .unknown) }
+            percentages.append(Int(current.doubleValue / maximum.doubleValue * 100))
         }
-        return percentages.min().map { .init(source: .battery, percent: $0) } ?? .init(source: .unknown)
+        if let percent = percentages.min() { return .init(source: .battery, percent: percent) }
+        return confirmedUPSAC ? .init(source: .external) : .init(source: .unknown)
     }
+
 }
 
 public enum IdleAwakeObservation: Equatable { case active, inactive, absent, unknown }
@@ -152,7 +173,12 @@ public struct IdleAwakeState: Codable, Equatable, Sendable {
             throw IdleAwakeDriver.Failure(state.issue!)
         }
     }
-    private func leaseSeconds(_ now: Date) -> Double { min(30, state.expiresAt.map { max(0, $0.timeIntervalSince(now)) } ?? 30) }
+    private func leaseSeconds(_ now: Date) -> Double {
+        // powerd stores integer seconds and an integer monotonic timestamp. Leave
+        // room for both truncations; the App's deadline timer ends the session.
+        // If the App stalls, the final OS lease can outlive that deadline by <2s.
+        min(30, state.expiresAt.map { ceil(max(0, $0.timeIntervalSince(now))) + 1 } ?? 30)
+    }
     private func activate(now: Date) throws {
         guard let mode = state.mode else { return }
         for kind in mode.kinds {

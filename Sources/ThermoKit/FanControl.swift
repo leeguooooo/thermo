@@ -180,6 +180,7 @@ public final class FanWriter {
     }
 
     func fan(_ id: Int) throws -> FanDescriptor {
+        guard discovery.fansKnown else { throw FanControlError.helper("Fan discovery is unavailable") }
         guard let f = discovery.fans.first(where: { $0.index == id }) else { throw FanControlError.noSuchFan(id) }
         return f
     }
@@ -268,6 +269,10 @@ public final class FanWriter {
     /// All fans share one settling window, so a stubborn first fan cannot prevent
     /// the other fans from receiving their recovery request before shutdown.
     private func restoreAutomatic(_ requested: [FanDescriptor], releaseAll: Bool) -> FanAutoRecoveryReport {
+        guard discovery.fansKnown else {
+            return FanAutoRecoveryReport(unconfirmed: ["fan discovery unavailable"], requestErrors: [])
+        }
+        guard !discovery.fans.isEmpty else { return FanAutoRecoveryReport(unconfirmed: [], requestErrors: []) }
         var requests: [String] = []
         func record(_ error: Error) {
             let text = String(describing: error)

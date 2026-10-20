@@ -3,6 +3,15 @@ import AgentCore
 @testable import CleanKit
 
 final class ComputeActivityTests: XCTestCase {
+    func testCancelledComputationReturnsUnknownWithoutStartingHardwareReads() {
+        let sampler = ComputeSampler()
+        let result = sampler.sample(cancelled: { true })
+        XCTAssertNil(result.cpu)
+        XCTAssertTrue(result.devices.isEmpty)
+        XCTAssertTrue(result.programs.isEmpty)
+        XCTAssertTrue(ProcessTable.usage(uid: nil, cancelled: { true }).isEmpty)
+    }
+
     func testReusedPIDCannotInheritPreviousCPUOrGPUHistory() {
         var old = ProcessUsage(pid: 7, name: "Worker")
         old.started = Date(timeIntervalSince1970: 100)

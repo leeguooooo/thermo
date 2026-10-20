@@ -28,14 +28,17 @@ final class SystemPulse: ObservableObject {
     @Published private(set) var quitting: Set<String> = []
     @Published private(set) var actionFeedback: String?
     private var reviewID = UUID()
-    private let queue = DispatchQueue(label: "dev.thermo.app.pulse", qos: .utility)
+    private let queue: DispatchQueue
     private var timer: DispatchSourceTimer?
     /// Confined to `queue`. Kept across start/stop so reopening shows fresh numbers in one cheap pass.
     private let sampler = PulseSampler()
     private let lifetime = PulseSamplingLifetime()
     private let readSample: (@Sendable () -> MachinePulse)?
 
-    init(readSample: (@Sendable () -> MachinePulse)? = nil) { self.readSample = readSample }
+    init(readSample: (@Sendable () -> MachinePulse)? = nil, samplingQueue: DispatchQueue? = nil) {
+        self.readSample = readSample
+        queue = samplingQueue ?? DispatchQueue(label: "dev.thermo.app.pulse", qos: .userInitiated)
+    }
 
     #if DEBUG
     private static let tracing = ProcessInfo.processInfo.environment["THERMO_PULSE_TRACE"] == "1" &&
