@@ -3095,4 +3095,11 @@ let zhHans: [String: String] = [
     "Associated data changed or could not be fully verified; review it again": "关联数据已变化或无法完整核实，请重新审阅。",
     "Residual data changed or could not be verified; scan and review it again": "残留数据已变化或无法核实，请重新扫描并审阅。",
     "Reviewing selected residual data…": "正在审阅所选残留数据…",
+    "stop the codegraph background process for this project; it folds the log back as it exits. Never delete the -wal file: it holds index data not yet written back": "停掉这个项目的 codegraph 后台进程，它退出时会把日志合并回去。不要删除 -wal 文件，里面有还没写回索引的数据。",
+    "codegraph %1$@ has this bug (fixed in 1.6.1): run codegraph upgrade, then stop its background process so it folds the log back. Never delete the -wal file: it holds index data not yet written back": "codegraph %1$@ 有这个 bug（1.6.1 已修复）：先运行 codegraph upgrade，再停掉它的后台进程，让它把日志合并回去。不要删除 -wal 文件，里面有还没写回索引的数据。",
+    "the code index of %1$@ has a %2$@ write-ahead log next to a %3$@ index: the log is not being folded back and keeps growing": "%1$@ 的代码索引只有 %3$@，预写日志却有 %2$@：日志没有合并回去，还在一直变大",
+    "a codegraph background process for %1$@ still runs %2$@, whose index log can grow until the disk is full (fixed in 1.6.1)": "%1$@ 的 codegraph 后台进程还在跑 %2$@，这个版本的索引日志会一直涨到磁盘写满（1.6.1 已修复）",
+    "run codegraph upgrade if needed, then stop process %1$@; it starts again on the new version when next used": "需要的话先运行 codegraph upgrade，再停掉进程 %1$@；下次用到时会以新版本重新启动",
+    "Codex database %1$@ has a %2$@ write-ahead log next to %3$@ of data: the log is not being folded back and keeps growing": "Codex 数据库 %1$@ 只有 %3$@ 数据，预写日志却有 %2$@：日志没有合并回去，还在一直变大",
+    "quit every Codex session and the Codex app; the log is folded back when the last one closes. Never delete the -wal file": "退出所有 Codex 会话和 Codex 应用，最后一个关闭时日志会合并回去。不要删除 -wal 文件。",
 ]
