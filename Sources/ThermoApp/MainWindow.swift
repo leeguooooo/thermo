@@ -246,8 +246,8 @@ struct MainView: View {
                 VStack(spacing: 0) {
                     if let error = monitor.lastError {
                         HStack(alignment: .top, spacing: 10) {
-                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                            Text(error).font(.callout).textSelection(.enabled)
+                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.caution)
+                            Text(error).font(Theme.body).textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             if monitor.snapshot == nil {
                                 Button(tr("Retry")) { monitor.sampleNow() }.buttonStyle(.bordered)
@@ -260,13 +260,13 @@ struct MainView: View {
                     }
                     if page.isDisk, let error = disk.error {
                         Label(error, systemImage: "exclamationmark.triangle.fill")
-                            .font(.callout).foregroundStyle(.orange).textSelection(.enabled)
+                            .font(Theme.body).foregroundStyle(Theme.caution).textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(14).glass(radius: 12)
                             .padding(.horizontal, 32).padding(.top, 12)
                     }
                     if cleanupNoticeNeeded {
                         HStack {
-                            Text(disk.resultsNeedRefresh ? tr("Some paths could not be removed. Scan again to refresh the remaining items.") : disk.languageStale ? tr("Scan again to refresh results in the selected language.") : tr("Scan scope changed. Scan again to update these results.")).font(.callout)
+                            Text(disk.resultsNeedRefresh ? tr("Some paths could not be removed. Scan again to refresh the remaining items.") : disk.languageStale ? tr("Scan again to refresh results in the selected language.") : tr("Scan scope changed. Scan again to update these results.")).font(Theme.body)
                             Spacer()
                             Button(tr("Scan again")) { disk.scan(category: cleanupCategory) }.disabled(disk.scanning || disk.cleaning)
                         }
@@ -387,7 +387,7 @@ struct WindowPage<Content: View>: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: Theme.Space.xl) {
                 PageHeader(title: title, subtitle: subtitle)
                 content()
             }
@@ -422,7 +422,7 @@ struct MainSidebar: View {
             HStack(spacing: 8) {
                 Image(systemName: "thermometer.medium").font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(LinearGradient(colors: [Theme.caution, Theme.danger], startPoint: .top, endPoint: .bottom))
-                Text("Thermo").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.textPrimary)
+                Text("Thermo").font(Theme.rowTitle.weight(.semibold)).foregroundStyle(Theme.textPrimary)
             }
             .padding(.horizontal, 18).padding(.top, 46).padding(.bottom, 10)
             ScrollView(showsIndicators: false) {
@@ -490,7 +490,7 @@ struct MainSidebar: View {
 
     func header(_ title: String) -> some View {
         // Upper case only reads well in Latin script ("AI AGENT 诊断" does not).
-        Text(L10n.current == .english ? title.uppercased() : title).font(.system(size: 11, weight: .semibold))
+        Text(L10n.current == .english ? title.uppercased() : title).font(Theme.label.weight(.semibold))
             .tracking(L10n.current == .english ? 0.6 : 0)
             .foregroundStyle(Theme.textTertiary).padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 4)
             .accessibilityAddTraits(.isHeader)
@@ -504,22 +504,22 @@ struct MainSidebar: View {
         return Button { page = target } label: {
             HStack(spacing: 9) {
                 Image(systemName: symbol)
-                    .font(.system(size: indent ? 11.5 : 13, weight: .medium))
+                    .font(.system(size: indent ? 12 : 13, weight: .medium))
                     .symbolRenderingMode(.monochrome)
                     .foregroundStyle(on ? color : Theme.textSecondary)
                     .frame(width: 18)
-                Text(title).font(.system(size: indent ? 12 : 13, weight: on ? .semibold : .regular))
+                Text(title).font((indent ? Theme.secondary : Theme.body).weight(on ? .semibold : .regular))
                     .foregroundStyle(on ? Theme.textPrimary : Theme.textPrimary.opacity(0.78))
                     .lineLimit(1)
                 Spacer(minLength: 4)
                 if badge > 0 {
-                    Text("\(badge)").font(.system(size: 11, weight: .bold, design: .rounded)).monospacedDigit()
+                    Text("\(badge)").font(Theme.label.weight(.bold).monospacedDigit())
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6).frame(minWidth: 18, minHeight: 16)
                         .background(Capsule().fill(Theme.caution.opacity(0.9)))
                         .contentTransition(.numericText())
                 } else if let trailing {
-                    Text(trailing).font(.system(size: 11, weight: .medium).monospacedDigit())
+                    Text(trailing).font(Theme.label.monospacedDigit())
                         .foregroundStyle((trailingColor ?? Theme.textTertiary).opacity(trailingColor == nil ? 1 : 0.9))
                         .contentTransition(.numericText())
                 }
@@ -528,7 +528,7 @@ struct MainSidebar: View {
             .padding(.leading, indent ? 14 : 0)
             .background {
                 if on {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.white.opacity(0.085))
+                    RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.surfaceRaised)
                         .matchedGeometryEffect(id: "selection", in: selectionSpace)
                 }
             }
@@ -572,40 +572,17 @@ struct SensorsPage: View {
 
     @AppStorage(Settings.unnamedSensors) private var includeUnnamed = false
     @State private var search = ""
-    @FocusState private var searchFocused: Bool
 
     var body: some View {
         WindowPage(title: tr("Sensors"), subtitle: monitor.model) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass").font(.system(size: 12)).foregroundStyle(.white.opacity(0.55))
-                    TextField(tr("Search sensors by name or key"), text: $search)
-                        .textFieldStyle(.plain).font(.system(size: 13)).focused($searchFocused)
-                    if !search.isEmpty {
-                        Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }
-                            .buttonStyle(.plain).foregroundStyle(.white.opacity(0.5))
-                            .help(tr("Clear search")).accessibilityLabel(tr("Clear search"))
-                    }
-                }
-                .padding(.horizontal, 12).padding(.vertical, 9)
-                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(0.055)))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.white.opacity(0.09)))
-                .background(Button("") { searchFocused = true }.keyboardShortcut("f", modifiers: .command)
-                    .frame(width: 0, height: 0).opacity(0).accessibilityHidden(true))
-                HStack {
-                    Toggle(tr("Include unnamed sensors"), isOn: $includeUnnamed).toggleStyle(.switch).controlSize(.small)
-                        .font(.system(size: 12)).foregroundStyle(.white.opacity(0.75))
-                    Spacer()
-                    Text(tr("Refresh: %1$@ s", String(format: "%g", monitor.interval)))
-                        .font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
-                }
-                .padding(.horizontal, 4)
-            }
             if let s = monitor.snapshot {
+                hero(s)
+                controls
                 if let battery = s.battery, BatteryDetails.matches(query: search) {
                     BatteryDetails(battery: battery, fahrenheit: fahrenheit)
                 }
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: 14, alignment: .top)], alignment: .leading, spacing: 16) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 320), spacing: Theme.Space.l, alignment: .top)], alignment: .leading,
+                          spacing: Theme.Space.l) {
                     ForEach(SensorGroup.allCases, id: \.self) { g in
                         let rows = s.temperatures.filter { $0.group == g && matches($0) }
                         if !rows.isEmpty {
@@ -617,25 +594,72 @@ struct SensorsPage: View {
                     electrical(tr("Power"), s.power, "%.2f W")
                     electrical(tr("Voltage"), s.voltages, "%.3f V")
                     electrical(tr("Current"), s.currents, "%.3f A")
-                    if !s.temperatures.contains(where: matches)
-                        && !s.power.contains(where: { matches($0, category: tr("Power")) })
-                        && !s.voltages.contains(where: { matches($0, category: tr("Voltage")) })
-                        && !s.currents.contains(where: { matches($0, category: tr("Current")) })
-                        && !(s.battery != nil && BatteryDetails.matches(query: search)) {
-                        InspectorPanel {
-                            Label(tr("No matching sensors"), systemImage: "magnifyingglass")
-                                .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
-                                .padding(20).frame(maxWidth: .infinity)
-                        }
-                    }
+                }
+                if !s.temperatures.contains(where: matches)
+                    && !s.power.contains(where: { matches($0, category: tr("Power")) })
+                    && !s.voltages.contains(where: { matches($0, category: tr("Voltage")) })
+                    && !s.currents.contains(where: { matches($0, category: tr("Current")) })
+                    && !(s.battery != nil && BatteryDetails.matches(query: search)) {
+                    InspectorPanel { EmptyState(symbol: "magnifyingglass", title: tr("No matching sensors")) }
                 }
             } else {
-                ProgressView().frame(maxWidth: .infinity, minHeight: 200)
+                controls
+                SkeletonList(rows: 6)
             }
         }
         .onAppear { monitor.showUnnamedSensors(includeUnnamed) }
         .onChange(of: includeUnnamed) { monitor.showUnnamedSensors($0) }
         .onDisappear { monitor.showUnnamedSensors(false) }
+    }
+
+    /// The hottest sensor in large type, then the hottest reading of each group beside it.
+    func hero(_ s: Snapshot) -> some View {
+        let hottest = s.temperatures.filter { $0.value.isFinite }.max { $0.value < $1.value }
+        let groups: [(String, Double)] = SensorGroup.allCases.compactMap { g in
+            s.temperatures.filter { $0.group == g && $0.value.isFinite }.map(\.value).max().map { (groupName(g), $0) }
+        }
+        return InspectorPanel {
+            HStack(alignment: .center, spacing: Theme.Space.xl) {
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    Text(tr("Hottest sensor")).font(Theme.label).foregroundStyle(Theme.textTertiary)
+                    Text(tempText(hottest?.value, fahrenheit: fahrenheit)).font(Theme.figure(.hero))
+                        .foregroundStyle(hottest == nil ? Theme.textTertiary : heatColor(hottest?.value))
+                        .contentTransition(.numericText())
+                        .animation(Theme.gentle, value: hottest?.value)
+                    if let hottest {
+                        Text(hottest.name).font(Theme.secondary).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                    }
+                }
+                .frame(minWidth: 150, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                Rectangle().fill(Theme.hairline).frame(width: 1, height: 56)
+                // One row when it fits, otherwise even rows of three.
+                let columns = groups.count <= 3 ? max(1, groups.count) : groups.count <= 6 ? (groups.count + 1) / 2 : 4
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Theme.Space.l, alignment: .leading), count: columns),
+                          alignment: .leading, spacing: Theme.Space.m) {
+                    ForEach(groups, id: \.0) { name, value in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(name).font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
+                            Text(tempText(value, fahrenheit: fahrenheit)).font(Theme.figure(.large))
+                                .foregroundStyle(heatColor(value)).contentTransition(.numericText())
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(Theme.Space.l)
+        }
+    }
+
+    var controls: some View {
+        HStack(spacing: Theme.Space.m) {
+            SearchField(text: $search, prompt: tr("Search sensors by name or key"))
+            Toggle(tr("Include unnamed sensors"), isOn: $includeUnnamed).toggleStyle(.switch).controlSize(.mini)
+                .font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize()
+            Text(tr("Refresh: %1$@ s", String(format: "%g", monitor.interval)))
+                .font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize()
+        }
     }
 
     func matches(_ reading: Reading) -> Bool { matches(reading, category: nil) }
@@ -647,34 +671,34 @@ struct SensorsPage: View {
     @ViewBuilder func electrical(_ title: String, _ rows: [Reading], _ f: String) -> some View {
         let rows = rows.filter { matches($0, category: title) }
         if !rows.isEmpty {
-            section(title, headline: nil, color: .white,
-                    rows: rows.map { ($0.name, $0.key, String(format: f, $0.value), Color.white.opacity(0.85)) })
+            section(title, headline: nil, color: Theme.textPrimary,
+                    rows: rows.map { ($0.name, $0.key, String(format: f, $0.value), Theme.textPrimary) })
         }
     }
 
     func section(_ title: String, headline: String?, color: Color,
                  rows: [(String, String, String, Color)]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
             SectionHeader(title: title) {
                 if let headline {
-                    Text(headline).font(.system(size: 12, weight: .semibold).monospacedDigit()).foregroundStyle(color)
+                    Text(headline).font(Theme.sectionTitle.monospacedDigit()).foregroundStyle(color)
                         .accessibilityLabel(tr("hottest") + " " + headline)
                 }
             }
             InspectorPanel {
                 ForEach(Array(rows.enumerated()), id: \.offset) { i, r in
-                    if i > 0 { InspectorDivider(inset: 14) }
-                    HStack(spacing: 8) {
-                        Text(r.0).font(.system(size: 12)).foregroundStyle(.white.opacity(0.88)).lineLimit(1).help(r.0)
-                        Spacer(minLength: 4)
+                    if i > 0 { InspectorDivider(inset: Theme.Space.l) }
+                    HStack(spacing: Theme.Space.s) {
+                        Text(r.0).font(Theme.secondary).foregroundStyle(Theme.textPrimary).lineLimit(1).help(r.0)
+                        Spacer(minLength: Theme.Space.xs)
                         if !r.1.hasPrefix("hid:") {
-                            Text(r.1).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white.opacity(0.4))
+                            Text(r.1).font(Theme.mono).foregroundStyle(Theme.textTertiary)
                                 .lineLimit(1).textSelection(.enabled)
                         }
-                        Text(r.2).font(.system(size: 12, weight: .semibold).monospacedDigit()).foregroundStyle(r.3)
+                        Text(r.2).font(Theme.figure(.row)).foregroundStyle(r.3).contentTransition(.numericText())
                             .frame(width: 60, alignment: .trailing)
                     }
-                    .padding(.horizontal, 14).padding(.vertical, 6)
+                    .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
                     .accessibilityElement(children: .combine)
                 }
             }

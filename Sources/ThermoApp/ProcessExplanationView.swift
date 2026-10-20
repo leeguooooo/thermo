@@ -51,8 +51,8 @@ struct ProcessInspectionTarget: Identifiable {
     @State private var selectedPID: Int32?
     private var expected: ProcessIdentity { target.choices.first { $0.pid == selectedPID } ?? target.identity }
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(tr("Why is this running?")).font(.headline)
+        VStack(alignment: .leading, spacing: Theme.Space.m) {
+            Text(tr("Why is this running?")).font(Theme.heading).foregroundStyle(Theme.textPrimary)
             if target.choices.count > 1 {
                 Picker(tr("Processes from this reading"), selection: Binding(get: { expected.pid }, set: { pid in
                     selectedPID = pid; model.stop(); model.load(expected)
@@ -60,107 +60,113 @@ struct ProcessInspectionTarget: Identifiable {
                     ForEach(target.choices, id: \.pid) { value in Text("PID \(value.pid) · " + Redact.text((value.executable as NSString).lastPathComponent)).tag(value.pid) }
                 }
             }
-            Text("PID \(expected.pid) · " + String(reflecting: Redact.text(expected.executable))).font(.caption).textSelection(.enabled)
+            Text("PID \(expected.pid) · " + String(reflecting: Redact.text(expected.executable))).font(Theme.caption).textSelection(.enabled)
             if model.loading { ProgressView(tr("Reading process evidence…")) }
-            if let problem = model.problem { Text(problem).foregroundStyle(.orange) }
+            if let problem = model.problem { Text(problem).foregroundStyle(Theme.caution) }
             ScrollView {
                 if let report = model.report {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(tr("Observed at %1$@", report.sampled.formatted(date: .omitted, time: .standard))).font(.caption).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: Theme.Space.s) {
+                        Text(tr("Observed at %1$@", report.sampled.formatted(date: .omitted, time: .standard))).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                         if let application = report.application {
-                            Text(tr(report.attribution == .executableLocation ? "Executable located inside: %1$@" : "Observed ancestor application: %1$@", application)).font(.callout)
-                        } else { Text(tr("No application attribution was established")).font(.callout) }
-                        Text(tr("A current parent chain does not prove the original launcher or a publisher's identity.")).font(.caption).foregroundStyle(.secondary)
-                        ForEach(report.issues, id: \.self) { Text(tr($0)).font(.caption).foregroundStyle(.orange) }
-                        Text(tr("Observed parent chain")).font(.headline)
+                            Text(tr(report.attribution == .executableLocation ? "Executable located inside: %1$@" : "Observed ancestor application: %1$@", application)).font(Theme.body)
+                        } else { Text(tr("No application attribution was established")).font(Theme.body) }
+                        Text(tr("A current parent chain does not prove the original launcher or a publisher's identity.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                        ForEach(report.issues, id: \.self) { Text(tr($0)).font(Theme.caption).foregroundStyle(Theme.caution) }
+                        Text(tr("Observed parent chain")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary).padding(.top, Theme.Space.s)
                         ForEach(report.chain) { node in
                             VStack(alignment: .leading, spacing: 3) {
-                                Text("\(node.name) · PID \(String(node.pid)) → \(String(node.parentPID)) · UID \(String(node.uid))").font(.callout.weight(.medium))
-                                Text(node.executable).font(.caption.monospaced())
-                                Text(tr("Started at %1$@", node.started.formatted(date: .abbreviated, time: .standard))).font(.caption).foregroundStyle(.secondary)
-                                if let cwd = node.workingDirectory { Text(tr("Working directory: %1$@", cwd)).font(.caption) }
-                                if !node.args.isEmpty { Text(node.args.map { String(reflecting: $0) }.joined(separator: " ")).font(.caption.monospaced()) }
+                                Text("\(node.name) · PID \(String(node.pid)) → \(String(node.parentPID)) · UID \(String(node.uid))").font(Theme.rowTitle)
+                                Text(node.executable).font(Theme.mono)
+                                Text(tr("Started at %1$@", node.started.formatted(date: .abbreviated, time: .standard))).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                                if let cwd = node.workingDirectory { Text(tr("Working directory: %1$@", cwd)).font(Theme.caption) }
+                                if !node.args.isEmpty { Text(node.args.map { String(reflecting: $0) }.joined(separator: " ")).font(Theme.mono) }
                             }.textSelection(.enabled)
                         }
-                        Text(tr("Observed descendant processes")).font(.headline)
+                        Text(tr("Observed descendant processes")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary).padding(.top, Theme.Space.s)
                         if let descendants=report.descendants {
                             ForEach(descendants.children) { child in
                                 VStack(alignment:.leading,spacing:3) {
-                                    Text("\(child.name) · PID \(String(child.pid)) → \(String(child.parentPID)) · UID \(String(child.uid))").font(.caption.weight(.medium))
-                                    Text(child.executable).font(.caption.monospaced())
+                                    Text("\(child.name) · PID \(String(child.pid)) → \(String(child.parentPID)) · UID \(String(child.uid))").font(Theme.label)
+                                    Text(child.executable).font(Theme.mono)
                                 }.padding(.leading,CGFloat(child.depth-1)*12).textSelection(.enabled)
                             }
-                            if descendants.state == .noneObserved { Text(tr("No descendants were observed in this process reading.")).font(.caption) }
-                            if descendants.state == .unavailable { Text(tr("Descendant relationships are unavailable.")).font(.caption).foregroundStyle(.orange) }
-                            if !descendants.queryComplete { Text(tr("The descendant reading is incomplete; some relationships could not be verified.")).font(.caption).foregroundStyle(.orange) }
-                            if descendants.limited { Text(tr("The descendant reading reached an inspection limit.")).font(.caption).foregroundStyle(.orange) }
-                        } else { Text(tr("Descendant relationships are unavailable.")).font(.caption).foregroundStyle(.secondary) }
-                        Text(tr("Processes can start, exit or change parents after this reading. This tree does not prove the original launcher.")).font(.caption).foregroundStyle(.secondary)
-                        Text(tr("Git context near the process working directory")).font(.headline)
+                            if descendants.state == .noneObserved { Text(tr("No descendants were observed in this process reading.")).font(Theme.caption) }
+                            if descendants.state == .unavailable { Text(tr("Descendant relationships are unavailable.")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                            if !descendants.queryComplete { Text(tr("The descendant reading is incomplete; some relationships could not be verified.")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                            if descendants.limited { Text(tr("The descendant reading reached an inspection limit.")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                        } else { Text(tr("Descendant relationships are unavailable.")).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
+                        Text(tr("Processes can start, exit or change parents after this reading. This tree does not prove the original launcher.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                        Text(tr("Git context near the process working directory")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary).padding(.top, Theme.Space.s)
                         if let git=report.gitContext,git.state == .observed {
-                            if let root=git.root { Text(tr("Repository: %1$@",root)).font(.caption.monospaced()).textSelection(.enabled) }
-                            if let branch=git.branch { Text(tr("Branch: %1$@",branch)).font(.caption).textSelection(.enabled) }
-                            if git.detached == true { Text(tr("Detached HEAD")).font(.caption) }
-                            if let commit=git.commit { Text(tr("HEAD: %1$@",commit)).font(.caption.monospaced()).textSelection(.enabled) }
-                            if !git.queryComplete { Text(tr("The branch was observed, but its commit could not be established.")).font(.caption).foregroundStyle(.orange) }
+                            if let root=git.root { Text(tr("Repository: %1$@",root)).font(Theme.mono).textSelection(.enabled) }
+                            if let branch=git.branch { Text(tr("Branch: %1$@",branch)).font(Theme.caption).textSelection(.enabled) }
+                            if git.detached == true { Text(tr("Detached HEAD")).font(Theme.caption) }
+                            if let commit=git.commit { Text(tr("HEAD: %1$@",commit)).font(Theme.mono).textSelection(.enabled) }
+                            if !git.queryComplete { Text(tr("The branch was observed, but its commit could not be established.")).font(Theme.caption).foregroundStyle(Theme.caution) }
                         } else {
-                            Text(tr(report.gitContext?.state == .noneObserved ? "No Git marker was observed in the working directory or its inspected parents." : "Git context is unavailable or changed during inspection.")).font(.caption).foregroundStyle(.secondary)
+                            Text(tr(report.gitContext?.state == .noneObserved ? "No Git marker was observed in the working directory or its inspected parents." : "Git context is unavailable or changed during inspection.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                         }
-                        Text(tr("Working directory metadata does not prove which project the process is using. Git status, remotes and repository scripts are not inspected.")).font(.caption).foregroundStyle(.secondary)
-                        Text(tr("Observed cwd and vnode descriptor paths")).font(.headline)
+                        Text(tr("Working directory metadata does not prove which project the process is using. Git status, remotes and repository scripts are not inspected.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                        Text(tr("Observed cwd and vnode descriptor paths")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary).padding(.top, Theme.Space.s)
                         if let paths = report.observedPaths {
-                            if paths.isEmpty { Text(tr("No paths were observed; this does not prove the process has no open files.")).font(.caption) }
-                            ForEach(Array(paths.enumerated()), id: \.offset) { _, path in Text(path).font(.caption.monospaced()).textSelection(.enabled) }
-                        } else { Text(tr("Path inspection is unavailable for this process")).font(.caption) }
-                        Text(tr("Observed TCP listeners")).font(.headline)
+                            if paths.isEmpty { Text(tr("No paths were observed; this does not prove the process has no open files.")).font(Theme.caption) }
+                            ForEach(Array(paths.enumerated()), id: \.offset) { _, path in Text(path).font(Theme.mono).textSelection(.enabled) }
+                        } else { Text(tr("Path inspection is unavailable for this process")).font(Theme.caption) }
+                        Text(tr("Observed TCP listeners")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary).padding(.top, Theme.Space.s)
                         if let listeners = report.listeners {
                             ForEach(listeners.endpoints, id: \.self) { endpoint in
-                                Text(endpoint.label + " · " + endpoint.family + " · " + addressKind(endpoint.addressKind)).font(.caption.monospaced()).textSelection(.enabled)
+                                Text(endpoint.label + " · " + endpoint.family + " · " + addressKind(endpoint.addressKind)).font(Theme.mono).textSelection(.enabled)
                             }
-                            if listeners.state == .noneObserved { Text(tr("No TCP listeners were observed; this does not prove none exist.")).font(.caption) }
-                            if listeners.state == .unavailable { Text(tr("TCP listener inspection is unavailable")).font(.caption).foregroundStyle(.orange) }
-                            if !listeners.queryComplete { Text(tr("TCP listener reading is incomplete")).font(.caption).foregroundStyle(.orange) }
-                            if listeners.limited { Text(tr("TCP listener reading reached a limit")).font(.caption).foregroundStyle(.orange) }
-                        } else { Text(tr("TCP listener inspection is unavailable")).font(.caption) }
-                        Text(tr("A listening address does not prove internet reachability.")).font(.caption).foregroundStyle(.secondary)
-                        Text(tr("Observed process power assertions")).font(.headline)
+                            if listeners.state == .noneObserved { Text(tr("No TCP listeners were observed; this does not prove none exist.")).font(Theme.caption) }
+                            if listeners.state == .unavailable { Text(tr("TCP listener inspection is unavailable")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                            if !listeners.queryComplete { Text(tr("TCP listener reading is incomplete")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                            if listeners.limited { Text(tr("TCP listener reading reached a limit")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                        } else { Text(tr("TCP listener inspection is unavailable")).font(Theme.caption) }
+                        Text(tr("A listening address does not prove internet reachability.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                        Text(tr("Observed process power assertions")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary).padding(.top, Theme.Space.s)
                         if let power = report.sleepAssertions {
                             ForEach(Array(power.assertions.enumerated()), id: \.offset) { _, assertion in
                                 VStack(alignment: .leading, spacing: 3) {
-                                    Text(assertion.type + " · " + tr(assertion.active == true ? "Active request" : assertion.active == false ? "Inactive request" : "Unknown assertion level")).font(.caption.weight(.medium))
-                                    Text(sleepRequest(assertion.request)).font(.caption)
-                                    if let name = assertion.name { Text(name).font(.caption).textSelection(.enabled) }
+                                    Text(assertion.type + " · " + tr(assertion.active == true ? "Active request" : assertion.active == false ? "Inactive request" : "Unknown assertion level")).font(Theme.label)
+                                    Text(sleepRequest(assertion.request)).font(Theme.caption)
+                                    if let name = assertion.name { Text(name).font(Theme.caption).textSelection(.enabled) }
                                 }
                             }
-                            if power.state == .noneObserved { Text(tr("No process assertions were observed; other mechanisms may still prevent sleep.")).font(.caption) }
-                            if power.state == .unavailable { Text(tr("Power assertion inspection is unavailable")).font(.caption).foregroundStyle(.orange) }
-                            if !power.queryComplete { Text(tr("Power assertion reading is incomplete")).font(.caption).foregroundStyle(.orange) }
-                            if power.limited { Text(tr("Power assertion reading reached a limit")).font(.caption).foregroundStyle(.orange) }
-                        } else { Text(tr("Power assertion inspection is unavailable")).font(.caption) }
-                        Text(tr("Power requests do not guarantee prevention of lid-close, low-battery or policy-driven sleep.")).font(.caption).foregroundStyle(.secondary)
-                        Text(tr("Observed launchd service registrations")).font(.headline)
+                            if power.state == .noneObserved { Text(tr("No process assertions were observed; other mechanisms may still prevent sleep.")).font(Theme.caption) }
+                            if power.state == .unavailable { Text(tr("Power assertion inspection is unavailable")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                            if !power.queryComplete { Text(tr("Power assertion reading is incomplete")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                            if power.limited { Text(tr("Power assertion reading reached a limit")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                        } else { Text(tr("Power assertion inspection is unavailable")).font(Theme.caption) }
+                        Text(tr("Power requests do not guarantee prevention of lid-close, low-battery or policy-driven sleep.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                        Text(tr("Observed launchd service registrations")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary).padding(.top, Theme.Space.s)
                         if let services = report.launchServices {
                             ForEach(services.registrations, id: \.self) { service in
                                 let state = service.serviceState.map { " · \($0)" } ?? ""
                                 let summary = "\(service.domain)/\(service.label) · PID \(service.pid)\(state)"
-                                Text(summary).font(.caption.monospaced()).textSelection(.enabled)
+                                Text(summary).font(Theme.mono).textSelection(.enabled)
                             }
-                            if !services.queriedDomains.isEmpty { Text(tr("Launchd query scope: %1$@", services.queriedDomains.joined(separator: ", "))).font(.caption).foregroundStyle(.secondary) }
-                            if services.state == .noneObserved { Text(tr("No direct registration was observed in the queried launchd domains.")).font(.caption) }
-                            if services.state == .unavailable { Text(tr("Launchd registration inspection is unavailable")).font(.caption).foregroundStyle(.orange) }
-                            if !services.queryComplete { Text(tr("Launchd registration reading is incomplete")).font(.caption).foregroundStyle(.orange) }
-                        } else { Text(tr("Launchd registration inspection is unavailable")).font(.caption) }
-                        Text(tr("A registration does not prove the original launcher. Service attribution uses only the exact PID.")).font(.caption).foregroundStyle(.secondary)
-                        Text(tr("Memory mappings were not inspected.")).font(.caption).foregroundStyle(.secondary)
+                            if !services.queriedDomains.isEmpty { Text(tr("Launchd query scope: %1$@", services.queriedDomains.joined(separator: ", "))).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
+                            if services.state == .noneObserved { Text(tr("No direct registration was observed in the queried launchd domains.")).font(Theme.caption) }
+                            if services.state == .unavailable { Text(tr("Launchd registration inspection is unavailable")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                            if !services.queryComplete { Text(tr("Launchd registration reading is incomplete")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                        } else { Text(tr("Launchd registration inspection is unavailable")).font(Theme.caption) }
+                        Text(tr("A registration does not prove the original launcher. Service attribution uses only the exact PID.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                        Text(tr("Memory mappings were not inspected.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            Text(tr("Known credential patterns are masked. Custom arguments and assertion names may contain personal data.")).font(.caption).foregroundStyle(.secondary)
+            Text(tr("Known credential patterns are masked. Custom arguments and assertion names may contain personal data.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
             HStack {
-                Button(tr("Refresh")) { model.load(expected) }.disabled(model.loading)
-                Spacer(); Button(tr("Close")) { dismiss() }
+                Button(tr("Refresh")) { model.load(expected) }.buttonStyle(PillButtonStyle()).disabled(model.loading)
+                Spacer()
+                Button(tr("Close")) { dismiss() }.buttonStyle(PillButtonStyle(prominent: true)).keyboardShortcut(.defaultAction)
             }
-        }.padding(20).frame(width: 600, height: 520)
+        }
+        .foregroundStyle(Theme.textPrimary)
+        .padding(Theme.Space.xl).frame(width: 600, height: 520)
+        .background(Theme.canvas)
+        // The same dark look as the window it opens from, whatever the system appearance.
+        .preferredColorScheme(.dark)
             .onAppear { model.load(expected) }.onDisappear { model.stop() }
     }
     private func addressKind(_ value: ProcessListeners.Endpoint.AddressKind) -> String {

@@ -443,16 +443,16 @@ struct PulseCard: View {
             InspectorPanel { EmptyState(symbol: "leaf", title: tr("Nothing is keeping your Mac busy")) }
         } else {
             InspectorPanel {
-                HStack(spacing: 10) {
+                HStack(spacing: Theme.Space.m) {
                     Text(tr("Program")).frame(maxWidth: .infinity, alignment: .leading)
                     Text("CPU").frame(width: 96, alignment: .trailing)
                     Text(tr("Memory")).frame(width: 70, alignment: .trailing)
                     Color.clear.frame(width: 120, height: 1)
                 }
-                .font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
-                .padding(.horizontal, 14).padding(.vertical, 8)
+                .font(Theme.label).foregroundStyle(Theme.textTertiary)
+                .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
                 ForEach(pulse.hogs) { h in
-                    InspectorDivider(inset: 14)
+                    InspectorDivider(inset: Theme.Space.l)
                     tableRow(h)
                 }
             }
@@ -460,8 +460,8 @@ struct PulseCard: View {
     }
 
     func tableRow(_ h: SystemPulse.Hog) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            HStack(spacing: Theme.Space.m) {
                 Group {
                     if let app = h.app {
                         Image(nsImage: NSWorkspace.shared.icon(forFile: app)).resizable()
@@ -476,7 +476,7 @@ struct PulseCard: View {
                     HStack(spacing: 5) {
                         Text(h.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
                         if h.pids.count > 1 && h.app == nil {
-                            Text("×\(h.pids.count)").font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                            Text("×\(h.pids.count)").font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                         }
                         if !renderingPreview, let identity = h.applicationIdentity ?? h.processIdentities?.first {
                             Button { explaining = .init(identity: identity, candidates: h.processIdentities ?? []) } label: {
@@ -487,7 +487,7 @@ struct PulseCard: View {
                         }
                     }
                     if let line = subtitle(h) {
-                        Text(line).font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                        Text(line).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                             .lineLimit(1).truncationMode(.tail).help(h.project ?? line)
                     }
                 }
@@ -529,7 +529,7 @@ struct PulseCard: View {
             if let a = h.advice {
                 HStack(alignment: .center, spacing: 8) {
                     Image(systemName: "lightbulb").font(.system(size: 11)).foregroundStyle(Theme.caution)
-                    Text(a.text).font(.system(size: 11)).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
+                    Text(a.text).font(Theme.caption).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 4)
                     if !renderingPreview {
                         Button(pulse.restarting == h.name ? tr("Restarting…") : tr("Restart")) { restartTarget = h }
@@ -537,10 +537,10 @@ struct PulseCard: View {
                             .disabled(pulse.restarting != nil)
                     }
                 }
-                .padding(.leading, 34)
+                .padding(.leading, 36)
             }
         }
-        .padding(.horizontal, 14).padding(.vertical, 9)
+        .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
         .background(recorder.highlighted == h.name ? Theme.caution.opacity(0.10) : .clear)
         .hoverHighlight()
     }

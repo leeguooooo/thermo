@@ -3145,6 +3145,7 @@ let zhHans: [String: String] = [
     "%1$@ of %2$@ selected": "已选 %1$@ / %2$@",
 
     // Redesign A (new strings for this group go right below this line)
+    "%1$@ in 5 min": "5 分钟内 %1$@",
 
     // Redesign B (new strings for this group go right below this line)
 

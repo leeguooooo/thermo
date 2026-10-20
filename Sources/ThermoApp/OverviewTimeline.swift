@@ -102,16 +102,16 @@ struct HeatTimeline: View {
                 ForEach(history) { p in
                     if let c = p.cpu, c.isFinite {
                         LineMark(x: .value("Time", p.time), y: .value("°", temperature(c)), series: .value("Sensor", "CPU"))
-                            .foregroundStyle(by: .value("Sensor", "CPU"))
+                            .foregroundStyle(by: .value("Sensor", "CPU")).interpolationMethod(.monotone)
                     }
                     if let g = p.gpu, g.isFinite {
                         LineMark(x: .value("Time", p.time), y: .value("°", temperature(g)), series: .value("Sensor", "GPU"))
-                            .foregroundStyle(by: .value("Sensor", "GPU"))
+                            .foregroundStyle(by: .value("Sensor", "GPU")).interpolationMethod(.monotone)
                     }
                 }
                 ForEach(events) { e in
                     RuleMark(x: .value("Time", e.time))
-                        .foregroundStyle(Color.white.opacity(0.25)).lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                        .foregroundStyle(Theme.border).lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                         .annotation(position: .top, spacing: 2) {
                             Image(systemName: e.symbol).font(.system(size: 9)).foregroundStyle(color(e.kind))
                         }
@@ -119,14 +119,14 @@ struct HeatTimeline: View {
             }
             .chartXScale(domain: domain)
             .chartYScale(domain: temperatureDomain)
-            .chartYAxis { AxisMarks(values: .automatic(desiredCount: 4)) { v in AxisGridLine(); AxisValueLabel { axisLabel(v.as(Double.self)) } } }
+            .chartYAxis { AxisMarks(values: .automatic(desiredCount: 4)) { v in AxisGridLine().foregroundStyle(Theme.hairline); AxisValueLabel { axisLabel(v.as(Double.self)) } } }
             .chartXAxis(.hidden)
             .chartYAxisLabel(fahrenheit ? "°F" : "°C")
             .chartLegend(position: .top, alignment: .trailing)
-            .chartForegroundStyleScale(["CPU": Color.orange, "GPU": Color.pink])
+            .chartForegroundStyleScale(["CPU": Theme.caution, "GPU": Color(red: 1.0, green: 0.45, blue: 0.62)])
             .chartOverlay { _ in
                 if !history.contains(where: { $0.cpu?.isFinite == true || $0.gpu?.isFinite == true }) {
-                    Text(tr("Waiting for temperature readings…")).font(.caption).foregroundStyle(.secondary)
+                    Text(tr("Waiting for temperature readings…")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
@@ -137,61 +137,63 @@ struct HeatTimeline: View {
                 ForEach(history) { p in
                     if let l = p.load, l.isFinite {
                         AreaMark(x: .value("Time", p.time), y: .value("Load", min(l, loadTop)))
-                            .foregroundStyle(LinearGradient(colors: [Color.cyan.opacity(0.45), Color.cyan.opacity(0.08)], startPoint: .top, endPoint: .bottom))
-                        LineMark(x: .value("Time", p.time), y: .value("Load", min(l, loadTop))).foregroundStyle(Color.cyan)
+                            .foregroundStyle(LinearGradient(colors: [Theme.accent.opacity(0.35), Theme.accent.opacity(0.02)], startPoint: .top, endPoint: .bottom))
+                            .interpolationMethod(.monotone)
+                        LineMark(x: .value("Time", p.time), y: .value("Load", min(l, loadTop))).foregroundStyle(Theme.accent).interpolationMethod(.monotone)
                     }
                 }
-                RuleMark(y: .value("Load", 1)).foregroundStyle(Color.white.opacity(0.3)).lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 3]))
+                RuleMark(y: .value("Load", 1)).foregroundStyle(Theme.border).lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 3]))
                     .annotation(position: .top, alignment: .leading, spacing: 1) {
-                        Text(tr("all cores busy")).font(.system(size: 9)).foregroundStyle(.white.opacity(0.45))
+                        Text(tr("all cores busy")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     }
                 ForEach(events) { e in
                     RuleMark(x: .value("Time", e.time))
-                        .foregroundStyle(Color.white.opacity(0.25)).lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                        .foregroundStyle(Theme.border).lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                 }
             }
             .chartXScale(domain: domain)
             .chartYScale(domain: 0...loadTop)
-            .chartYAxis { AxisMarks(values: Array(Set([0, 1, max(2, (loadTop * 0.9).rounded(.down))])).sorted()) { v in AxisGridLine(); AxisValueLabel { axisLabel(v.as(Double.self)) } } }
+            .chartYAxis { AxisMarks(values: Array(Set([0, 1, max(2, (loadTop * 0.9).rounded(.down))])).sorted()) { v in AxisGridLine().foregroundStyle(Theme.hairline); AxisValueLabel { axisLabel(v.as(Double.self)) } } }
             .chartYAxisLabel(tr("load per core"))
             // Every 5 minutes back from now; "now" itself would sit on the edge and be clipped.
             .chartXAxis { AxisMarks(values: [15, 10, 5].map { now.addingTimeInterval(-Double($0) * 60) }) { _ in
-                AxisGridLine(); AxisValueLabel(format: .dateTime.hour().minute())
+                AxisGridLine().foregroundStyle(Theme.hairline)
+                AxisValueLabel(format: .dateTime.hour().minute()).font(Theme.caption).foregroundStyle(Theme.textTertiary)
             } }
             .frame(height: 80)
             .accessibilityLabel(tr("Load per core, last 15 minutes"))
 
             if events.isEmpty {
                 Text(tr("No program became busy and Thermo changed nothing in this window."))
-                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.45)).padding(.top, 6)
+                    .font(Theme.caption).foregroundStyle(Theme.textTertiary).padding(.top, Theme.Space.s)
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(events.suffix(5).reversed()) { e in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(e.time.formatted(date: .omitted, time: .shortened)).font(.system(size: 11).monospacedDigit())
-                                .foregroundStyle(.white.opacity(0.45)).frame(width: 44, alignment: .leading)
+                            Text(e.time.formatted(date: .omitted, time: .shortened)).font(Theme.caption.monospacedDigit())
+                                .foregroundStyle(Theme.textTertiary).frame(width: 44, alignment: .leading)
                             Image(systemName: e.symbol).font(.system(size: 10)).foregroundStyle(color(e.kind)).frame(width: 14)
                                 .accessibilityHidden(true)
-                            Text(e.text).font(.system(size: 12)).foregroundStyle(.white.opacity(0.8)).lineLimit(1).truncationMode(.middle)
+                            Text(e.text).font(Theme.secondary).foregroundStyle(Theme.textSecondary).lineLimit(1).truncationMode(.middle)
                         }
                     }
                 }
-                .padding(.top, 6)
+                .padding(.top, Theme.Space.s)
             }
         }
     }
 
     /// Same width on both charts, so their plot areas — and the event lines across them — line up.
     func axisLabel(_ value: Double?) -> some View {
-        Text(value.map { String(format: "%.0f", $0) } ?? "").font(.system(size: 10).monospacedDigit())
+        Text(value.map { String(format: "%.0f", $0) } ?? "").font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
             .frame(width: 28, alignment: .leading)
     }
 
     func color(_ kind: TimelineEvents.Event.Kind) -> Color {
         switch kind {
-        case .busy: return .orange
-        case .calm: return .green
-        case .operation: return .cyan
+        case .busy: return Theme.caution
+        case .calm: return Theme.good
+        case .operation: return Theme.accent
         }
     }
 }

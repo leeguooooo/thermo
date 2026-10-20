@@ -27,25 +27,25 @@ struct BatteryDetails: View {
 
     var body: some View {
         let pairs = stride(from: 0, to: rows.count, by: 2).map { Array(rows[$0..<min($0 + 2, rows.count)]) }
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: Theme.Space.s) {
             SectionHeader(title: tr("Battery")) {
                 if battery.charging {
-                    Label(tr("Charging"), systemImage: "bolt.fill").font(.system(size: 11)).foregroundStyle(.white.opacity(0.55))
+                    Label(tr("Charging"), systemImage: "bolt.fill").font(Theme.caption).foregroundStyle(Theme.good)
                 }
             }
             InspectorPanel {
                 ForEach(Array(pairs.enumerated()), id: \.offset) { i, pair in
-                    if i > 0 { InspectorDivider(inset: 14) }
+                    if i > 0 { InspectorDivider(inset: Theme.Space.l) }
                     HStack(spacing: 0) {
                         ForEach(Array(pair.enumerated()), id: \.offset) { j, row in
-                            if j > 0 { Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1).padding(.vertical, 6) }
-                            HStack(spacing: 8) {
-                                Text(row.0).font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
-                                Spacer(minLength: 4)
-                                Text(row.1).font(.system(size: 12.5, weight: .semibold).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
+                            if j > 0 { Rectangle().fill(Theme.hairline).frame(width: 1).padding(.vertical, Theme.Space.s) }
+                            HStack(spacing: Theme.Space.s) {
+                                Text(row.0).font(Theme.secondary).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                                Spacer(minLength: Theme.Space.xs)
+                                Text(row.1).font(Theme.figure(.row)).foregroundStyle(Theme.textPrimary).contentTransition(.numericText())
                                     .lineLimit(1)
                             }
-                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
                             .frame(maxWidth: .infinity)
                             .accessibilityElement(children: .combine)
                         }

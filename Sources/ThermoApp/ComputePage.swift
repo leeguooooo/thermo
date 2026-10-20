@@ -95,6 +95,7 @@ struct ComputePage: View {
     @State private var search = ""
     @State private var expanded = Set<String>()
     @State private var showAll = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var title: String { gpu ? tr("GPU usage") : tr("CPU usage") }
     func value(_ p: ComputeProgram) -> Double? { gpu ? p.observedGPU : p.cpu }
     var programs: [ComputeProgram] {
@@ -106,86 +107,190 @@ struct ComputePage: View {
         }
     }
     func percent(_ value: Double?) -> String { value.map { String(format: "%.1f%%", $0) } ?? "—" }
+    var accent: Color { gpu ? Color(red: 0.70, green: 0.52, blue: 1.0) : Theme.accent }
+
     var body: some View {
         WindowPage(title: title, subtitle: tr("Live readings every 2 seconds while this page is open.")) {
-            if gpu {
-                if let current = model.current, current.devices.isEmpty {
-                    Label(tr("This GPU driver does not expose utilization counters."), systemImage: "info.circle").foregroundStyle(.orange)
-                }
-                ForEach(model.current?.devices ?? []) { device in
-                    metric(device.name, value: device.percent, detail: tr("Whole-device utilization"))
-                }
-            } else {
-                metric(tr("Whole-machine CPU"), value: model.current?.cpu,
-                       detail: tr("%1$@ logical cores · 100%% means the whole machine is busy", String(model.current?.cores ?? ProcessInfo.processInfo.activeProcessorCount)))
+            if gpu, let current = model.current, current.devices.isEmpty {
+                NoticeBanner(text: tr("This GPU driver does not expose utilization counters."))
             }
-            if model.current == nil || (!gpu && model.current?.cpu == nil) {
-                Label(tr("Waiting for two samples…"), systemImage: "clock").font(.callout).foregroundStyle(.secondary)
-            }
-            if model.history.count > 1 {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(tr("Usage since opening this page (up to 15 minutes)")).font(.callout.weight(.semibold))
-                    Chart(model.history) { p in
-                        if gpu {
-                            ForEach(p.devices) { d in
-                                if let v = d.percent { LineMark(x: .value("Time", p.time), y: .value("Usage", v)).foregroundStyle(by: .value("Device", d.name + " · GPU " + String((model.current?.devices.firstIndex(where: { $0.id == d.id }) ?? 0) + 1))) }
-                            }
-                        } else if let v = p.cpu {
-                            LineMark(x: .value("Time", p.time), y: .value("Usage", v)).foregroundStyle(.cyan)
-                            PointMark(x: .value("Time", p.time), y: .value("Usage", v)).symbolSize(8).foregroundStyle(.cyan)
-                        }
-                    }.chartYScale(domain: 0...100).frame(height: 130)
-                }.padding(16).glass()
-            }
-            VStack(alignment: .leading, spacing: 12) {
-                Text(tr("Usage by program")).font(.headline)
-                Text(gpu ? tr("GPU time rate covers reporting clients only. Parallel GPU work can exceed 100%; it is not a share of the device gauge. Missing counters show —.")
-                     : tr("Program CPU: 100% equals one logical core, so multi-core programs can exceed 100%. Protected or unreadable processes show —."))
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                TextField(tr("Search program, project or PID"), text: $search).textFieldStyle(.roundedBorder)
-                if gpu, programs.allSatisfy({ $0.observedGPU == nil }) {
-                    Text(tr("No program GPU rates available yet. New clients need two samples; this driver may not expose program counters."))
-                        .font(.callout).foregroundStyle(.secondary)
-                }
-                ForEach(Array(showAll || !search.isEmpty ? programs : Array(programs.prefix(30)))) { program in
-                    DisclosureGroup(isExpanded: Binding(get: { expanded.contains(program.id) }, set: { if $0 { expanded.insert(program.id) } else { expanded.remove(program.id) } })) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(program.processes.sorted { ((gpu ? $0.gpu : $0.cpu) ?? -1) > ((gpu ? $1.gpu : $1.cpu) ?? -1) }) { process in
-                                HStack {
-                                    Text("PID \(process.pid) · \(process.name)").font(.caption).textSelection(.enabled)
-                                    Spacer()
-                                    Text(percent(gpu ? process.gpu : process.cpu)).font(.caption.monospacedDigit())
-                                }
-                            }
-                            ForEach(Array(Set(program.contexts)).sorted(), id: \.self) { context in
-                                Text(context).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
-                            }
-                        }.padding(.vertical, 8)
-                    } label: {
-                        HStack {
-                            Text(program.name).font(.callout.weight(.semibold)).lineLimit(1)
-                            Text("×\(program.processes.count)").font(.caption).foregroundStyle(.secondary)
-                            Spacer()
-                            if gpu { Text(tr("%1$@ reporting processes", String(program.gpuReportingProcesses))).font(.caption).foregroundStyle(.secondary) }
-                            Text(percent(value(program))).font(.callout.monospacedDigit().weight(.semibold)).frame(minWidth: 76, alignment: .trailing)
-                        }
-                    }.padding(12).glass(radius: 12)
-                }
-                if !showAll && search.isEmpty && programs.count > 30 {
-                    Button(tr("Show all programs")) { showAll = true }.buttonStyle(PillButtonStyle())
-                }
-                if let date = model.current?.sampled { Text(date, style: .time).font(.caption).foregroundStyle(.secondary) }
-            }
+            hero
+            programsSection
         }.onAppear { model.start() }.onDisappear { model.stop() }
     }
-    func metric(_ name: String, value: Double?, detail: String) -> some View {
-        HStack(spacing: 16) {
-            RingGauge(value: value.map { $0 / 100 }, text: percent(value), caption: gpu ? "GPU" : "CPU")
-            VStack(alignment: .leading, spacing: 6) {
-                Text(name).font(.headline)
-                Text(detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+
+    // MARK: Hero
+
+    /// The gauge (one per GPU) with what it measures, and the curve since the page opened.
+    var hero: some View {
+        InspectorPanel {
+            HStack(alignment: .center, spacing: Theme.Space.xl) {
+                VStack(alignment: .leading, spacing: Theme.Space.m) {
+                    if gpu {
+                        ForEach(model.current?.devices ?? []) { device in
+                            gauge(device.name, value: device.percent, detail: tr("Whole-device utilization"))
+                        }
+                        if model.current?.devices.isEmpty ?? true { gauge(tr("GPU usage"), value: nil, detail: nil) }
+                    } else {
+                        gauge(tr("Whole-machine CPU"), value: model.current?.cpu,
+                              detail: tr("%1$@ logical cores · 100%% means the whole machine is busy", String(model.current?.cores ?? ProcessInfo.processInfo.activeProcessorCount)))
+                    }
+                }
+                .frame(width: 280, alignment: .leading)
+                Rectangle().fill(Theme.hairline).frame(width: 1).padding(.vertical, Theme.Space.xs)
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                    Text(tr("Usage since opening this page (up to 15 minutes)")).font(Theme.label).foregroundStyle(Theme.textTertiary)
+                    if model.history.count > 1 { chart } else {
+                        Label(tr("Waiting for two samples…"), systemImage: "clock").font(Theme.secondary).foregroundStyle(Theme.textTertiary)
+                            .frame(maxWidth: .infinity, minHeight: 120)
+                    }
+                }
+                .frame(maxWidth: .infinity)
             }
-            Spacer()
-        }.padding(16).glass()
+            .padding(Theme.Space.l)
+        }
+    }
+
+    func gauge(_ name: String, value: Double?, detail: String?) -> some View {
+        HStack(spacing: Theme.Space.l) {
+            RingGauge(value: value.map { $0 / 100 }, text: percent(value), caption: gpu ? "GPU" : "CPU", size: 104)
+            VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                Text(name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
+                if let detail {
+                    Text(detail).font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    var chart: some View {
+        Chart(model.history) { p in
+            if gpu {
+                ForEach(p.devices) { d in
+                    if let v = d.percent {
+                        LineMark(x: .value("Time", p.time), y: .value("Usage", v))
+                            .foregroundStyle(by: .value("Device", d.name + " · GPU " + String((model.current?.devices.firstIndex(where: { $0.id == d.id }) ?? 0) + 1)))
+                            .interpolationMethod(.monotone)
+                    }
+                }
+            } else if let v = p.cpu {
+                AreaMark(x: .value("Time", p.time), y: .value("Usage", v))
+                    .foregroundStyle(LinearGradient(colors: [accent.opacity(0.30), accent.opacity(0.02)], startPoint: .top, endPoint: .bottom))
+                    .interpolationMethod(.monotone)
+                LineMark(x: .value("Time", p.time), y: .value("Usage", v)).foregroundStyle(accent).interpolationMethod(.monotone)
+            }
+        }
+        .chartYScale(domain: 0...100)
+        .chartYAxis { AxisMarks(values: [0, 50, 100]) { v in
+            AxisGridLine().foregroundStyle(Theme.hairline)
+            AxisValueLabel { if let d = v.as(Double.self) { Text("\(Int(d))%").font(Theme.caption).foregroundStyle(Theme.textTertiary) } }
+        } }
+        .chartXAxis { AxisMarks(values: .automatic(desiredCount: 3)) { _ in
+            AxisValueLabel(format: .dateTime.hour().minute().second()).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+        } }
+        .frame(height: 120)
+    }
+
+    // MARK: Programs
+
+    var programsSection: some View {
+        let list = showAll || !search.isEmpty ? programs : Array(programs.prefix(30))
+        let top = max(100, programs.compactMap(value).max() ?? 100)
+        return VStack(alignment: .leading, spacing: Theme.Space.s) {
+            SectionHeader(title: tr("Usage by program")) {
+                HStack(spacing: Theme.Space.s) {
+                    if let date = model.current?.sampled {
+                        Text(date, style: .time).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                    }
+                    InfoButton(text: gpu ? tr("GPU time rate covers reporting clients only. Parallel GPU work can exceed 100%; it is not a share of the device gauge. Missing counters show —.")
+                               : tr("Program CPU: 100% equals one logical core, so multi-core programs can exceed 100%. Protected or unreadable processes show —."))
+                }
+            }
+            SearchField(text: $search, prompt: tr("Search program, project or PID"))
+            if gpu, !programs.isEmpty, programs.allSatisfy({ $0.observedGPU == nil }) {
+                NoticeBanner(text: tr("No program GPU rates available yet. New clients need two samples; this driver may not expose program counters."))
+            }
+            if model.current == nil {
+                SkeletonList(rows: 6)
+            } else if list.isEmpty {
+                InspectorPanel { EmptyState(symbol: "magnifyingglass", title: tr("No matching items")) }
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(list.enumerated()), id: \.element.id) { i, program in
+                        if i > 0 { InspectorDivider(inset: Theme.Space.l) }
+                        programRow(program, top: top)
+                    }
+                    if !showAll && search.isEmpty && programs.count > 30 {
+                        InspectorDivider(inset: 0)
+                        Button(tr("Show all programs")) {
+                            withAnimation(Theme.standard.unlessReduced(reduceMotion)) { showAll = true }
+                        }
+                        .buttonStyle(.plain).font(Theme.secondary.weight(.medium)).foregroundStyle(Theme.accent)
+                        .frame(maxWidth: .infinity).padding(.vertical, Theme.Space.s).contentShape(Rectangle()).hoverHighlight()
+                    }
+                }
+                .glass()
+                .clipShape(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
+            }
+        }
+    }
+
+    func toggle(_ id: String) {
+        withAnimation(Theme.standard.unlessReduced(reduceMotion)) {
+            if expanded.contains(id) { expanded.remove(id) } else { expanded.insert(id) }
+        }
+    }
+
+    func programRow(_ program: ComputeProgram, top: Double) -> some View {
+        let open = expanded.contains(program.id)
+        let v = value(program)
+        return VStack(alignment: .leading, spacing: Theme.Space.s) {
+            HStack(spacing: Theme.Space.m) {
+                DisclosureChevron(expanded: open)
+                HStack(spacing: Theme.Space.xs) {
+                    Text(program.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                    Text("×\(program.processes.count)").font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if gpu {
+                    Text(tr("%1$@ reporting processes", String(program.gpuReportingProcesses)))
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                }
+                GeometryReader { g in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Theme.surfaceRaised)
+                        Capsule().fill(accent.opacity(0.85)).frame(width: g.size.width * CGFloat(min(1, max(0, (v ?? 0) / top))))
+                    }
+                }
+                .frame(width: 64, height: 4).accessibilityHidden(true)
+                .animation(Theme.gentle.unlessReduced(reduceMotion), value: v)
+                Text(percent(v)).font(Theme.figure(.row)).foregroundStyle(v == nil ? Theme.textTertiary : Theme.textPrimary)
+                    .contentTransition(.numericText())
+                    .frame(width: 64, alignment: .trailing)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { toggle(program.id) }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityValue(open ? tr("Expanded") : tr("Collapsed"))
+            if open {
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    ForEach(program.processes.sorted { ((gpu ? $0.gpu : $0.cpu) ?? -1) > ((gpu ? $1.gpu : $1.cpu) ?? -1) }) { process in
+                        HStack {
+                            Text("PID \(process.pid) · \(process.name)").font(Theme.caption).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
+                            Spacer()
+                            Text(percent(gpu ? process.gpu : process.cpu)).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                    ForEach(Array(Set(program.contexts)).sorted(), id: \.self) { context in
+                        Text(context).font(Theme.mono).foregroundStyle(Theme.textTertiary).textSelection(.enabled)
+                    }
+                }
+                .padding(.leading, 36).padding(.trailing, Theme.Space.xs)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
+        .hoverHighlight()
     }
 }

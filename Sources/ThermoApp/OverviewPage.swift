@@ -17,28 +17,90 @@ struct OverviewPage: View {
 
     var body: some View {
         WindowPage(title: tr("Overview"), subtitle: monitor.model) {
-            TimelineView(.periodic(from: .now, by: 3)) { _ in
-                VStack(alignment: .leading, spacing: 12) {
+            TimelineView(.periodic(from: .now, by: 3)) { context in
+                VStack(alignment: .leading, spacing: Theme.Space.m) {
+                    hero(now: context.date)
                     headline
                     vitals
                 }
+                .onAppear { events.refreshJournal() }
+                .onChange(of: context.date) { _ in events.refreshJournal() }
             }
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
                 SectionHeader(title: tr("What is using your Mac"))
                 PulseCard(active: monitor.panelVisible, plain: true, headline: false)
             }
-            VStack(alignment: .leading, spacing: 6) {
-                SectionHeader(title: tr("Last 15 minutes"))
-                InspectorPanel {
-                    TimelineView(.periodic(from: .now, by: 3)) { context in
-                        HeatTimeline(history: monitor.history, events: events.events, now: context.date)
-                            .onAppear { events.refreshJournal() }
-                            .onChange(of: context.date) { _ in events.refreshJournal() }
+        }
+    }
+
+    // MARK: Hero
+
+    /// What Thermo is about, first: how hot the Mac is now, and the last 15 minutes behind it.
+    func hero(now: Date) -> some View {
+        let s = monitor.snapshot
+        let hot = s?.hottest
+        return InspectorPanel {
+            HStack(alignment: .top, spacing: Theme.Space.xl) {
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    Text(tr("Hottest")).font(Theme.label).foregroundStyle(Theme.textTertiary)
+                    Text(tempText(hot, fahrenheit: fahrenheit)).font(Theme.figure(.hero))
+                        .foregroundStyle(hot == nil ? Theme.textTertiary : heatColor(hot))
+                        .contentTransition(.numericText())
+                        .animation(Theme.gentle, value: hot)
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                    if let s {
+                        Text("CPU \(tempText(s.cpu, fahrenheit: fahrenheit)) · GPU \(tempText(s.gpu, fahrenheit: fahrenheit))")
+                            .font(Theme.secondary.monospacedDigit()).foregroundStyle(Theme.textSecondary)
                     }
-                    .padding(14)
+                    if let change = trend(now: now) {
+                        Label(change.text, systemImage: change.rising ? "arrow.up.right" : "arrow.down.right")
+                            .font(Theme.caption.monospacedDigit())
+                            .foregroundStyle(change.rising ? Theme.caution : Theme.good)
+                            .padding(.top, Theme.Space.xs)
+                    }
+                    heatScale(hot).padding(.top, Theme.Space.m)
+                    Spacer(minLength: 0)
+                }
+                .frame(width: 168, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                Rectangle().fill(Theme.hairline).frame(width: 1)
+                HeatTimeline(history: monitor.history, events: events.events, now: now)
+                    .frame(maxWidth: .infinity)
+            }
+            .padding(Theme.Space.l)
+        }
+    }
+
+    /// The hottest reading now against five minutes ago; nil while there is not enough history.
+    func trend(now: Date) -> (text: String, rising: Bool)? {
+        func hottest(_ p: HistoryPoint) -> Double? { [p.cpu, p.gpu].compactMap { $0 }.filter(\.isFinite).max() }
+        let history = monitor.history
+        guard let last = history.last, let latest = hottest(last),
+              let earlier = history.last(where: { now.timeIntervalSince($0.time) >= 300 }).flatMap(hottest) else { return nil }
+        let delta = latest - earlier
+        guard abs(delta) >= 2 else { return nil }
+        let degrees = (fahrenheit ? delta * 9 / 5 : delta)
+        return (tr("%1$@ in 5 min", String(format: "%+.0f°", degrees)), delta > 0)
+    }
+
+    /// Where the reading sits on the heat scale: the same green → red every temperature uses.
+    func heatScale(_ hot: Double?) -> some View {
+        GeometryReader { g in
+            ZStack(alignment: .leading) {
+                Capsule().fill(LinearGradient(colors: [heatColor(40), heatColor(70), heatColor(85), heatColor(100)],
+                                              startPoint: .leading, endPoint: .trailing)).opacity(0.75)
+                    .frame(height: 4)
+                if let hot {
+                    Circle().fill(Theme.textPrimary).frame(width: 9, height: 9)
+                        .overlay(Circle().strokeBorder(Theme.canvas, lineWidth: 2))
+                        .offset(x: max(0, min(g.size.width - 9, g.size.width * CGFloat((hot - 30) / 80) - 4.5)))
+                        .animation(Theme.gentle, value: hot)
                 }
             }
+            .frame(height: 9)
         }
+        .frame(height: 9)
+        .accessibilityHidden(true)
     }
 
     // MARK: Headline
@@ -54,29 +116,29 @@ struct OverviewPage: View {
     /// the rest quieter under it.
     var headline: some View {
         let current = pulse.current
-        return HStack(alignment: .top, spacing: 12) {
+        return HStack(alignment: .top, spacing: Theme.Space.m) {
             ZStack {
                 Circle().fill(severityColor.opacity(0.16))
                 Image(systemName: current == nil ? "hourglass" : pulse.severity == .green ? "checkmark" : "exclamationmark")
                     .font(.system(size: 13, weight: .bold)).foregroundStyle(severityColor)
             }
             .frame(width: 28, height: 28).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Theme.Space.xs) {
                 Text(current == nil ? tr("Checking what your Mac is busy with…") : pulse.verdict)
-                    .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.textPrimary)
+                    .font(Theme.heading).foregroundStyle(Theme.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let current, let source = Self.sourceText(current) ?? current.culpritText {
-                    Text(source).font(.system(size: 12)).foregroundStyle(Theme.textSecondary)
+                    Text(source).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let next = current?.nextStep {
-                    Label(next.text, systemImage: "arrow.turn.down.right").font(.system(size: 12)).foregroundStyle(Theme.textTertiary)
+                    Label(next.text, systemImage: "arrow.turn.down.right").font(Theme.secondary).foregroundStyle(Theme.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16).padding(.vertical, 14)
+        .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
         .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(severityColor.opacity(current == nil ? 0.04 : 0.07)))
         .overlay(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).strokeBorder(severityColor.opacity(0.22)))
         .animation(Theme.gentle, value: pulse.severity)
@@ -221,18 +283,18 @@ struct OverviewPage: View {
             .disabled(monitor.helperBusy)
         } else {
             Button(tr("Fan settings…")) { open(.fans) }
-                .buttonStyle(.plain).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.accent)
+                .buttonStyle(.plain).font(Theme.label).foregroundStyle(Theme.accent)
         }
     }
 
     func link(_ title: String, _ symbol: String, value: String, caption: String?, detail: String?, state: LinkState,
               compactValue: Bool = false, accessory: AnyView? = nil, action: @escaping () -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
             Button(action: action) {
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
                     HStack(spacing: 5) {
                         Image(systemName: symbol).font(.system(size: 11, weight: .medium)).accessibilityHidden(true)
-                        Text(title).font(.system(size: 11, weight: .medium))
+                        Text(title).font(Theme.label)
                         if state == .watch || state == .alert {
                             Circle().fill(state.color).frame(width: 6, height: 6).accessibilityHidden(true)
                         }
@@ -243,11 +305,11 @@ struct OverviewPage: View {
                             .foregroundStyle(state.valueColor).lineLimit(1).minimumScaleFactor(0.7)
                             .contentTransition(.numericText())
                         if let caption {
-                            Text(caption).font(.system(size: 11)).foregroundStyle(Theme.textTertiary).lineLimit(1)
+                            Text(caption).font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
                         }
                     }
                     .frame(minHeight: 30, alignment: .bottomLeading)
-                    Text(detail ?? " ").font(.system(size: 11)).foregroundStyle(state == .alert ? Theme.caution : Theme.textSecondary)
+                    Text(detail ?? " ").font(Theme.caption).foregroundStyle(state == .alert ? Theme.caution : Theme.textSecondary)
                         .lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -258,7 +320,7 @@ struct OverviewPage: View {
             .accessibilityHint(tr("Open details"))
             if let accessory { accessory }
         }
-        .padding(.horizontal, 16).padding(.vertical, 14)
+        .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .hoverHighlight()
         .animation(Theme.gentle, value: state)
@@ -287,7 +349,7 @@ struct OverviewPage: View {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.offset) { index, cell in
-                        if index > 0 { Rectangle().fill(Theme.hairline).frame(width: 1, height: 26).padding(.top, 12) }
+                        if index > 0 { Rectangle().fill(Theme.hairline).frame(width: 1, height: 16).padding(.top, Theme.Space.m) }
                         resource(cell.0, cell.1, cell.2, cell.3)
                     }
                 }
@@ -305,15 +367,15 @@ struct OverviewPage: View {
 
     func resource(_ title: String, _ value: String, _ note: String?, _ page: MainPage) -> some View {
         Button { open(page) } label: {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(title).font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+                Text(title).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 Text(value).font(Theme.figure(.row)).foregroundStyle(Theme.textPrimary).contentTransition(.numericText())
-                Text(note?.isEmpty == false ? note! : "").font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+                Text(note?.isEmpty == false ? note! : "").font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     .lineLimit(1)
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16).padding(.vertical, 11)
+            .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
             .contentShape(Rectangle())
             .hoverHighlight()
         }
