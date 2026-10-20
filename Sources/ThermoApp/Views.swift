@@ -113,7 +113,7 @@ struct PopoverView: View {
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
     @AppStorage(L10n.defaultsKey) private var language = "system"
     @AppStorage(MenuBarPreferences.leftKey) private var menuLeftClick = "panel"
-    @AppStorage(MenuBarPreferences.rightKey) private var menuRightClick = "panel"
+    @AppStorage(MenuBarPreferences.rightKey) private var menuRightClick = "menu"
 
     var body: some View {
         let _ = L10n.apply(preference: language)
@@ -421,7 +421,7 @@ struct PopoverView: View {
             }
             Text(tr("Left click: %1$@ · Right click: %2$@",
                     (MenuClickAction(rawValue: menuLeftClick) ?? .panel).label,
-                    (MenuClickAction(rawValue: menuRightClick) ?? .panel).label))
+                    (MenuClickAction(rawValue: menuRightClick) ?? .menu).label))
                 .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -1096,7 +1096,7 @@ struct SettingsView: View {
     @AppStorage(MenuBarPreferences.presentationKey) private var menuPresentation = "both"
     @AppStorage(MenuBarPreferences.layoutKey) private var menuLayout = "horizontal"
     @AppStorage(MenuBarPreferences.leftKey) private var menuLeft = "panel"
-    @AppStorage(MenuBarPreferences.rightKey) private var menuRight = "panel"
+    @AppStorage(MenuBarPreferences.rightKey) private var menuRight = "menu"
     @AppStorage(Settings.interval) private var interval = 2.0
     @AppStorage(Settings.alertsEnabled) private var alertsEnabled = false
     @AppStorage(Settings.alertThreshold) private var alertThreshold = 90.0
@@ -1152,12 +1152,12 @@ struct SettingsView: View {
                     }
                     row(tr("Left click")) {
                         Picker(tr("Left click"), selection: $menuLeft) {
-                            Text(tr("Panel")).tag("panel"); Text(tr("Main console")).tag("console")
+                            Text(tr("Panel")).tag("panel"); Text(tr("Main console")).tag("console"); Text(tr("Menu")).tag("menu")
                         }.labelsHidden()
                     }
                     row(tr("Right click")) {
                         Picker(tr("Right click"), selection: $menuRight) {
-                            Text(tr("Panel")).tag("panel"); Text(tr("Main console")).tag("console")
+                            Text(tr("Panel")).tag("panel"); Text(tr("Main console")).tag("console"); Text(tr("Menu")).tag("menu")
                         }.labelsHidden()
                     }
                 }

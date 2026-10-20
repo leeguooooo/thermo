@@ -87,6 +87,14 @@ enum MainWindow {
 
     final class State: ObservableObject {
         @Published var page: MainPage = .overview
+        /// A tool panel asked for from outside the window (the menu bar menu); shown as a sheet.
+        @Published var tool: ToolSheet?
+    }
+
+    /// Opens the window and shows one of the menu bar tools in it.
+    static func show(tool: ToolSheet) {
+        show()
+        state.tool = tool
     }
 
     static func usableFrame(_ frame: NSRect, screens: [NSRect]) -> Bool {
@@ -218,6 +226,14 @@ enum MainWindow {
             let _ = L10n.apply(preference: language)
             MainView(page: $state.page, monitor: models.monitor, disk: models.disk, agents: models.agents, models: models)
                 .id(language)
+                .sheet(item: $state.tool) { tool in
+                    switch tool {
+                    case .keepAwake: IdleAwakePanel(model: IdleAwakeModel.shared)
+                    case .cleanScreen: CleanScreenSetupView(model: CleanScreenModel.shared)
+                    case .lowLatency: AWDLPanel(model: AWDLModel.shared)
+                    case .batteryCare: BatteryCarePanel(model: BatteryCareModel.shared)
+                    }
+                }
                 .onAppear { installStandardMenus() }
                 .onChange(of: language) { preference in
                     L10n.apply(preference: preference)

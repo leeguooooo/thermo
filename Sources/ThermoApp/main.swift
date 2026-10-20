@@ -248,6 +248,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         let p = MenuBarPreferences.read()
         let action = NSApp.currentEvent?.type == .rightMouseUp ? p.right : p.left
         if action == .console { MainWindow.show(); return }
+        if action == .menu {
+            closeMenuPanel()
+            // Shown under the item the native way, then detached so the next click toggles again.
+            statusItem.menu = StatusMenu.shared.make(battery: monitor.snapshot?.battery != nil)
+            statusItem.button?.performClick(nil)
+            statusItem.menu = nil
+            return
+        }
         if popover.isShown { popover.performClose(nil) } else { showPanel() }
     }
 

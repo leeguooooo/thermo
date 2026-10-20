@@ -14,7 +14,8 @@ public enum MenuLayout: String, CaseIterable, Identifiable, Sendable {
     public var id: String { rawValue }
 }
 public enum MenuClickAction: String, CaseIterable, Identifiable, Sendable {
-    case panel, console
+    /// panel: the live panel; console: the main window; menu: a menu of every place and tool.
+    case panel, console, menu
     public var id: String { rawValue }
 }
 
@@ -31,7 +32,7 @@ public struct MenuBarPreferences: Equatable, Sendable {
     public var presentation: MenuPresentation = .both
     public var layout: MenuLayout = .horizontal
     public var left: MenuClickAction = .panel
-    public var right: MenuClickAction = .panel
+    public var right: MenuClickAction = .menu
     public init() {}
     public var metrics: Set<MenuMetric> {
         presentation == .icon ? [] : Set([primary] + (secondary.map { [$0] } ?? []))
@@ -66,7 +67,7 @@ public struct MenuBarPreferences: Equatable, Sendable {
         p.presentation = MenuPresentation(rawValue: d.string(forKey: presentationKey) ?? "") ?? .both
         p.layout = MenuLayout(rawValue: d.string(forKey: layoutKey) ?? "") ?? .horizontal
         p.left = MenuClickAction(rawValue: d.string(forKey: leftKey) ?? "") ?? .panel
-        p.right = MenuClickAction(rawValue: d.string(forKey: rightKey) ?? "") ?? .panel
+        p.right = MenuClickAction(rawValue: d.string(forKey: rightKey) ?? "") ?? .menu
         let old = d.string(forKey: "titleMetric") ?? "cpu"
         if d.string(forKey: migratedKey) != old {
             let migrated = legacy(old)

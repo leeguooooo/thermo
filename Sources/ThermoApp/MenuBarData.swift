@@ -20,7 +20,13 @@ extension MenuMetric {
 }
 
 extension MenuClickAction {
-    var label: String { self == .panel ? tr("Panel") : tr("Main console") }
+    var label: String {
+        switch self {
+        case .panel: return tr("Panel")
+        case .console: return tr("Main console")
+        case .menu: return tr("Menu")
+        }
+    }
 }
 
 struct MenuLiveValues {

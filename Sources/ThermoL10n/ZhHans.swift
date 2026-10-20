@@ -3158,5 +3158,13 @@ let zhHans: [String: String] = [
     "%1$@ saved": "已保存 %1$@ 组",
 
     // Redesign E (new strings for this group go right below this line)
+    "Menu": "菜单",
+    "Settings…": "设置…",
+    "About Thermo": "关于 Thermo",
+    "30 minutes": "30 分钟",
+    "1 hour": "1 小时",
+    "2 hours": "2 小时",
+    "Until I turn it off": "直到手动关闭",
+    "Options…": "更多选项…",
     "On": "已开启",
 ]
