@@ -137,7 +137,9 @@ extension ConfigChecks {
                               [.run(tool: claude, args: ["plugin", "update", id, "-s", scope], cwd: project)], bulk: false)
                     }
                 }
-                if let last = usage[id]?.last, env.now.timeIntervalSince(last) > Self.unusedAfter {
+                // Status lines, language servers and hooks work without being called, and Claude
+                // Code counts only calls: a plugin never called has no use to judge by.
+                if let use = usage[id], use.count > 0, let last = use.last, env.now.timeIntervalSince(last) > Self.unusedAfter {
                     add(Finding(.info, .plugins, agent: "claude", subject: id,
                                 tr("not used in Claude Code for %1$@ days", days(env.now.timeIntervalSince(last))),
                                 fix: tr("disable or uninstall it if you no longer need it"), source: "~/.claude.json"))
