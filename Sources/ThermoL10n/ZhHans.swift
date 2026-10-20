@@ -3102,4 +3102,8 @@ let zhHans: [String: String] = [
     "run codegraph upgrade if needed, then stop process %1$@; it starts again on the new version when next used": "需要的话先运行 codegraph upgrade，再停掉进程 %1$@；下次用到时会以新版本重新启动",
     "Codex database %1$@ has a %2$@ write-ahead log next to %3$@ of data; this snapshot cannot establish whether the log is growing or checkpointing is blocked": "Codex 数据库 %1$@ 只有 %3$@ 数据，预写日志却有 %2$@；这次快照无法确认日志是否持续增长或 checkpoint 是否受阻",
     "check whether the log keeps growing while Codex is idle; size alone does not prove checkpoint failure. If needed, quit Codex sessions and the app gracefully, then recheck. Never delete the -wal file": "观察 Codex 空闲时日志是否继续增长；仅凭大小不能确认 checkpoint 失败。必要时正常退出 Codex 会话和应用，再检查日志。不要删除 -wal 文件。",
+    "Upgrade codegraph and restart it": "升级 codegraph 并重启",
+    "Restart codegraph": "重启 codegraph",
+    "Upgrades codegraph to the version with the WAL growth fix, then gracefully stops this project's old background process; the next query starts the new one.": "先把 codegraph 升级到修复了日志增长问题的版本，再正常停掉这个项目的旧后台进程；下次查询时会启动新版本。",
+    "Gracefully stops this project's codegraph background process so it can checkpoint as it exits; the next query starts it again.": "正常停掉这个项目的 codegraph 后台进程，让它退出时把日志写回；下次查询时会重新启动。",
 ]

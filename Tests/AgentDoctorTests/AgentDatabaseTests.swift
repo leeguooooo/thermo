@@ -28,9 +28,18 @@ final class AgentDatabaseTests: XCTestCase {
         try #"{"root":"\#(root)","pid":\#(pid),"version":"\#(version)"}"#.write(to: url, atomically: true, encoding: .utf8)
     }
 
-    func checks(running: Set<Int32>) -> ConfigChecks {
-        ConfigChecks(env: DoctorEnvironment(home: home, path: [], run: { _, _ in nil },
-                                            executablePath: { running.contains($0) ? "/opt/homebrew/bin/node" : nil }))
+    func checks(running: Set<Int32>, installed: String? = nil) throws -> ConfigChecks {
+        let bin = home.appendingPathComponent("bin")
+        if installed != nil {
+            try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+            FileManager.default.createFile(atPath: bin.appendingPathComponent("codegraph").path, contents: Data("#!/bin/sh\n".utf8),
+                                           attributes: [.posixPermissions: 0o755])
+        }
+        return ConfigChecks(env: DoctorEnvironment(home: home, path: [bin.path], run: { tool, args in
+            if tool == "/bin/ps" { return "node codegraph serve \(args.last ?? "")\n" }
+            if args == ["--version"] { return installed }
+            return nil
+        }, executablePath: { running.contains($0) ? "/opt/homebrew/bin/node" : nil }))
     }
 
     func testStuckCodegraphLogIsFoundAndBlamesTheOldDaemon() throws {
@@ -44,15 +53,19 @@ final class AgentDatabaseTests: XCTestCase {
         let pid = getpid()
         try daemon(root: project, pid: pid, version: "1.6.0")
 
-        var c = checks(running: [pid])
-        let item = c.item(.mcp, agent: "claude", id: "codegraph", name: "codegraph", detail: "codegraph serve", source: "~/.claude.json")
+        var c = try checks(running: [pid], installed: "1.6.0")
         c.checkAgentDatabases()
         XCTAssertEqual(c.findings.count, 1, "the small healthy log is not reported, nor the daemon twice")
         let f = try XCTUnwrap(c.findings.first)
         XCTAssertEqual(f.severity, .error)
-        XCTAssertEqual(f.item, item)
         XCTAssertTrue(f.fix?.contains("1.6.0") == true)
         XCTAssertTrue(f.source?.hasSuffix("codegraph.db-wal") == true)
+        let item = try XCTUnwrap(c.items.first { $0.id == f.item })
+        let fix = try XCTUnwrap(item.actions.first)
+        XCTAssertEqual(fix.kind, .fix)
+        XCTAssertFalse(fix.bulk, "an upgrade is never applied in bulk")
+        XCTAssertEqual(fix.steps, [.run(tool: home.appendingPathComponent("bin/codegraph").path, args: ["upgrade"], cwd: nil),
+                                   .kill(pid: pid, args: "node codegraph serve \(pid)")])
     }
 
     func testOldDaemonIsReportedBeforeItsLogGrows() throws {
@@ -60,12 +73,15 @@ final class AgentDatabaseTests: XCTestCase {
         let pid = getpid()
         try daemon(root: project, pid: pid, version: "1.6.0")
         try daemon(root: project, pid: 999_999, version: "1.5.0")
-        var c = checks(running: [pid])
+        var c = try checks(running: [pid], installed: "1.6.2")
         c.checkAgentDatabases()
         XCTAssertEqual(c.findings.map(\.severity), [.warning], "only the process that still runs")
         XCTAssertTrue(c.findings.first?.message.contains("1.6.0") == true)
+        let action = try XCTUnwrap(c.items.first?.actions.first)
+        XCTAssertTrue(action.bulk, "codegraph is already fixed: only the old process is stopped")
+        XCTAssertEqual(action.steps, [.kill(pid: pid, args: "node codegraph serve \(pid)")])
 
-        var upgraded = checks(running: [pid])
+        var upgraded = try checks(running: [pid])
         try daemon(root: project, pid: pid, version: "1.6.2")
         try? FileManager.default.removeItem(at: home.appendingPathComponent(".codegraph/daemons/999999.json"))
         upgraded.checkAgentDatabases()
@@ -77,7 +93,7 @@ final class AgentDatabaseTests: XCTestCase {
         try file(".codex/thread_history_1.sqlite-wal", bytes: 3 << 30)
         try file(".codex/state_5.sqlite", bytes: 40 << 20)
         try file(".codex/state_5.sqlite-wal", bytes: 4 << 20)
-        var c = checks(running: [])
+        var c = try checks(running: [])
         c.checkAgentDatabases()
         XCTAssertEqual(c.findings.map(\.subject), ["thread_history_1.sqlite"])
         XCTAssertEqual(c.findings.first?.severity, .warning)
@@ -88,7 +104,7 @@ final class AgentDatabaseTests: XCTestCase {
         try file(".codex/state.sqlite-wal", bytes: 2 << 30)
         let wal = home.appendingPathComponent(".codex/state.sqlite-wal")
         let before = try FileManager.default.attributesOfItem(atPath: wal.path)
-        var c = checks(running: [])
+        var c = try checks(running: [])
         c.checkAgentDatabases()
         let finding = try XCTUnwrap(c.findings.first)
         XCTAssertTrue(finding.message.contains("this snapshot cannot establish"))

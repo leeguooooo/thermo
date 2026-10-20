@@ -79,17 +79,25 @@ extension ConfigChecks {
         return program.contains("node") || program.contains("codegraph")
     }
 
-    /// Code indexes and agent databases with large write-ahead logs, and
-    /// codegraph background processes still running a version with that bug.
+    /// The codegraph on the agents' PATH and its version, when it answers.
+    private func installedCodegraph() -> (path: String, version: String)? {
+        guard let path = env.resolve("codegraph"),
+              let out = env.run(path, ["--version"])?.trimmingCharacters(in: .whitespacesAndNewlines), !out.isEmpty else { return nil }
+        return (path, out.split(separator: " ").last.map(String.init) ?? out)
+    }
+
+    /// Code indexes and agent databases with large write-ahead logs, and codegraph background
+    /// processes still running a version with the growth bug. Each affected project becomes an item
+    /// whose fix upgrades codegraph when the installed one has the bug, then gracefully stops the
+    /// project's background process so it can checkpoint as it exits; the next use starts the new version.
     mutating func checkAgentDatabases() {
         guard !env.cancelled() else { return }
         let daemons = Self.codegraphDaemons(in: env.url(".codegraph/daemons"))
         let live = daemons.filter(running)
-        let codegraphItem = items.filter { $0.area == .mcp && $0.name.lowercased() == "codegraph" }.map(\.id)
-        let codegraphFinding = { (f: Finding) -> Finding in
-            var f = f
-            if codegraphItem.count == 1 { f.item = codegraphItem[0] }
-            return f
+        var installed: (path: String, version: String)??
+        func codegraph() -> (path: String, version: String)? {
+            if installed == nil { installed = .some(installedCodegraph()) }
+            return installed!
         }
 
         // Every project codegraph runs in, or that Claude Code has opened.
@@ -100,24 +108,50 @@ extension ConfigChecks {
         var seen = Set<String>()
         for root in roots where seen.insert(root).inserted {
             guard !env.cancelled() else { return }
-            guard let stuck = Self.stuckLog(root + "/.codegraph/codegraph.db") else { continue }
-            let buggy = live.filter { $0.root == root && Self.codegraphHasLogBug($0.version) }
-            let fix = buggy.isEmpty
-                ? tr("check whether the log keeps growing while the project is idle; size alone does not prove checkpoint failure. If needed, stop codegraph gracefully and recheck. Never delete the -wal file: it may contain uncheckpointed data")
-                : tr("codegraph %1$@ predates the WAL growth fix in 1.6.1; upgrade and restart it gracefully, then recheck the log. Never delete the -wal file: it may contain uncheckpointed data", buggy[0].version)
-            findings.append(codegraphFinding(Finding(stuck.logBytes >= Self.stuckLogSevere ? .error : .warning, .mcp, agent: "shared", subject: "codegraph",
-                                     tr("the code index of %1$@ has a %2$@ write-ahead log next to a %3$@ index; this snapshot cannot establish whether the log is growing or checkpointing is blocked",
-                                        env.short(root), Self.bytes(stuck.logBytes), Self.bytes(stuck.databaseBytes)),
-                                     fix: fix, source: env.short(stuck.database + "-wal"))))
-        }
+            let stuck = Self.stuckLog(root + "/.codegraph/codegraph.db")
+            let here = live.filter { $0.root == root }
+            let buggy = here.filter { Self.codegraphHasLogBug($0.version) }
+            guard stuck != nil || !buggy.isEmpty else { continue }
 
-        // An old daemon keeps the bug after codegraph itself is upgraded.
-        for d in live where Self.codegraphHasLogBug(d.version) && Self.stuckLog(d.root + "/.codegraph/codegraph.db") == nil {
-            findings.append(codegraphFinding(Finding(.warning, .mcp, agent: "shared", subject: "codegraph",
-                                     tr("a codegraph background process for %1$@ still runs %2$@, whose index log can grow until the disk is full (fixed in 1.6.1)",
-                                        env.short(d.root), d.version),
-                                     fix: tr("run codegraph upgrade if needed, then stop process %1$@; it starts again on the new version when next used", String(d.pid)),
-                                     source: env.short(env.url(".codegraph/daemons").path))))
+            // A stuck log needs every process on it to exit; an old one only needs replacing.
+            let stopping = stuck != nil ? here : buggy
+            var steps: [Step] = []
+            if !buggy.isEmpty, let cg = codegraph(), Self.codegraphHasLogBug(cg.version) {
+                steps.append(.run(tool: cg.path, args: ["upgrade"], cwd: nil))
+            }
+            for d in stopping {
+                guard let args = env.run("/bin/ps", ["-o", "args=", "-p", String(d.pid)])?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !args.isEmpty else { continue }
+                steps.append(.kill(pid: d.pid, args: args))
+            }
+            let source = env.short(stuck.map { $0.database + "-wal" } ?? env.url(".codegraph/daemons").path)
+            item(.processes, agent: "shared", id: "codegraph|" + root, name: "codegraph · " + env.short(root),
+                 detail: here.map { "pid \($0.pid) · \($0.version)" }.joined(separator: ", "), source: source)
+            defer { currentItem = nil }
+
+            if let stuck {
+                let fix = buggy.isEmpty
+                    ? tr("check whether the log keeps growing while the project is idle; size alone does not prove checkpoint failure. If needed, stop codegraph gracefully and recheck. Never delete the -wal file: it may contain uncheckpointed data")
+                    : tr("codegraph %1$@ predates the WAL growth fix in 1.6.1; upgrade and restart it gracefully, then recheck the log. Never delete the -wal file: it may contain uncheckpointed data", buggy[0].version)
+                add(Finding(stuck.logBytes >= Self.stuckLogSevere ? .error : .warning, .processes, agent: "shared", subject: "codegraph",
+                            tr("the code index of %1$@ has a %2$@ write-ahead log next to a %3$@ index; this snapshot cannot establish whether the log is growing or checkpointing is blocked",
+                               env.short(root), Self.bytes(stuck.logBytes), Self.bytes(stuck.databaseBytes)),
+                            fix: fix, source: source))
+            } else {
+                add(Finding(.warning, .processes, agent: "shared", subject: "codegraph",
+                            tr("a codegraph background process for %1$@ still runs %2$@, whose index log can grow until the disk is full (fixed in 1.6.1)",
+                               env.short(root), buggy[0].version),
+                            fix: tr("run codegraph upgrade if needed, then stop process %1$@; it starts again on the new version when next used",
+                                    buggy.map { String($0.pid) }.joined(separator: ", ")),
+                            source: source))
+            }
+            if steps.contains(where: { if case .kill = $0 { return true }; return false }) {
+                let upgrades = steps.contains { if case .run = $0 { return true }; return false }
+                offer(.fix, upgrades ? tr("Upgrade codegraph and restart it") : tr("Restart codegraph"),
+                      upgrades ? tr("Upgrades codegraph to the version with the WAL growth fix, then gracefully stops this project's old background process; the next query starts the new one.")
+                               : tr("Gracefully stops this project's codegraph background process so it can checkpoint as it exits; the next query starts it again."),
+                      steps, bulk: !upgrades)
+            }
         }
 
         // Codex keeps its threads and state in SQLite under ~/.codex.
