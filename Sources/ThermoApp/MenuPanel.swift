@@ -135,29 +135,28 @@ final class PanelModel: ObservableObject {
 struct PanelCard<Content: View>: View {
     let title: String
     let symbol: String
-    var tint: Color = .white.opacity(0.6)
+    var tint: Color = Theme.textTertiary
     var badge: String? = nil
-    var badgeTint: Color = .white.opacity(0.6)
+    var badgeTint: Color = Theme.textSecondary
     @ViewBuilder let content: () -> Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 5) {
                 Image(systemName: symbol).font(.system(size: 10, weight: .semibold)).foregroundStyle(tint).accessibilityHidden(true)
-                Text(title).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.75))
+                Text(title).font(Theme.label).foregroundStyle(Theme.textTertiary)
                 Spacer(minLength: 4)
                 if let badge {
-                    Text(badge).font(.system(size: 10, weight: .medium).monospacedDigit()).foregroundStyle(badgeTint)
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Capsule().fill(Color.white.opacity(0.08)))
+                    Text(badge).font(Theme.label.monospacedDigit()).foregroundStyle(badgeTint)
+                        .contentTransition(.numericText())
                 }
             }
             content()
         }
-        .padding(10)
+        .padding(Theme.Space.m - 2)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color.white.opacity(0.055)))
-        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Color.white.opacity(0.08)))
+        .background(RoundedRectangle(cornerRadius: Theme.radius - 1, style: .continuous).fill(Theme.surface))
+        .overlay(RoundedRectangle(cornerRadius: Theme.radius - 1, style: .continuous).strokeBorder(Theme.hairline))
     }
 }
 
@@ -166,9 +165,10 @@ struct BigValue: View {
     var unit: String? = nil
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 2) {
-            Text(value).font(.system(size: 22, weight: .semibold, design: .rounded).monospacedDigit()).foregroundStyle(.white)
+            Text(value).font(Theme.figure(.metric)).foregroundStyle(Theme.textPrimary)
                 .lineLimit(1).minimumScaleFactor(0.7)
-            if let unit { Text(unit).font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.55)) }
+                .contentTransition(.numericText())
+            if let unit { Text(unit).font(Theme.label).foregroundStyle(Theme.textTertiary) }
         }
     }
 }
@@ -177,7 +177,7 @@ struct BigValue: View {
 struct Sparkline: View {
     let values: [Double]
     var top: Double? = nil
-    var color: Color = .green
+    var color: Color = Theme.accent
 
     var body: some View {
         GeometryReader { g in
@@ -195,7 +195,7 @@ struct Sparkline: View {
                     p.addLine(to: CGPoint(x: points.last!.x, y: g.size.height)); p.closeSubpath()
                 }.fill(LinearGradient(colors: [color.opacity(0.28), color.opacity(0.02)], startPoint: .top, endPoint: .bottom))
             } else {
-                Rectangle().fill(Color.white.opacity(0.06)).frame(height: 1).frame(maxHeight: .infinity, alignment: .bottom)
+                Rectangle().fill(Theme.hairline).frame(height: 1).frame(maxHeight: .infinity, alignment: .bottom)
             }
         }
         .frame(height: 26)
@@ -205,15 +205,15 @@ struct Sparkline: View {
 
 struct UsageBar: View {
     let fraction: Double
-    var color: Color = .blue
+    var color: Color = Theme.accent
     var body: some View {
         GeometryReader { g in
             ZStack(alignment: .leading) {
-                Capsule().fill(Color.white.opacity(0.08))
+                Capsule().fill(Color.white.opacity(0.07))
                 Capsule().fill(color).frame(width: g.size.width * CGFloat(min(1, max(0, fraction.isFinite ? fraction : 0))))
             }
         }
-        .frame(height: 6).padding(.vertical, 10)
+        .frame(height: 4).padding(.vertical, 11)
         .accessibilityHidden(true)
     }
 }
@@ -229,11 +229,13 @@ struct PanelButton: View {
         Button(action: action) {
             HStack(spacing: 5) {
                 if let symbol { Image(systemName: symbol).font(.system(size: 11, weight: .semibold)) }
-                Text(title).font(.system(size: 11, weight: on || prominent ? .semibold : .regular))
+                Text(title).font(Theme.caption.weight(on || prominent ? .semibold : .medium))
             }
-            .padding(.horizontal, 10).padding(.vertical, 5)
-            .foregroundStyle(.white.opacity(on || prominent ? 1 : 0.75))
-            .background(Capsule().fill(prominent ? Color.accentColor : Color.white.opacity(on ? 0.22 : 0.08)))
+            .padding(.horizontal, 10).frame(minHeight: 24)
+            .foregroundStyle(on || prominent ? Color.white : Theme.textPrimary)
+            .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(prominent ? Theme.accent : on ? Theme.accent.opacity(0.8) : Color.white.opacity(0.08)))
+            .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Color.white.opacity(0.08)))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])

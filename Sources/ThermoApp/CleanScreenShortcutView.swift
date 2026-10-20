@@ -6,14 +6,14 @@ struct CleanScreenShortcutControls: View {
     @ObservedObject var model: CleanScreenShortcutModel
     var body: some View {
         VStack(alignment:.leading,spacing:8) {
-            Text(tr("Global Clean Screen shortcut")).font(.callout.weight(.semibold))
+            Text(tr("Global Clean Screen shortcut")).font(Theme.rowTitle.weight(.semibold))
             HStack {
                 ShortcutRecorder(model:model).frame(height:30)
                 Button(tr("Remove shortcut")) { model.apply(nil) }.disabled(model.uncertain || (model.binding == nil && model.issue == nil))
             }
             Text(tr("Optional. The shortcut starts or ends Clean Screen from any app. Hold Esc for 3 seconds to exit even without a shortcut."))
-                .font(.caption).foregroundStyle(.secondary)
-            if let issue=model.issue { Text(issue).font(.caption).foregroundStyle(.orange) }
+                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
+            if let issue=model.issue { Text(issue).font(Theme.caption).foregroundStyle(Theme.caution) }
         }
     }
 }

@@ -119,11 +119,12 @@ struct AWDLButton: View {
     @ObservedObject private var model=AWDLModel.shared
     var body: some View {
         Button { showing=true } label: {
-            HStack {
-                Label(tr("Network low latency"),systemImage:"network")
-                if model.needsQuitRecovery { Text(tr(model.state?.phase == .active ? "On" : "Check recovery")).font(.caption).foregroundStyle(.orange) }
-            }
-        }.sheet(isPresented:$showing) { AWDLPanel(model:model) }
+            FeatureRow(title: tr("Network low latency"), symbol: "network",
+                       status: model.needsQuitRecovery ? tr(model.state?.phase == .active ? "On" : "Check recovery") : nil,
+                       statusColor: Theme.caution, active: model.state?.phase == .active)
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented:$showing) { AWDLPanel(model:model) }
     }
 }
 
@@ -134,31 +135,31 @@ struct AWDLPanel: View {
     var configureHelper: () -> Void = { AppModels.shared.monitor.installHelper() }
     var body: some View {
         VStack(alignment:.leading,spacing:14) {
-            Label(tr("Network low latency"),systemImage:"network").font(.title2.weight(.semibold))
+            Label(tr("Network low latency"),systemImage:"network").font(Theme.heading)
             Text(tr("Temporarily pauses AWDL. AirDrop and other peer-to-peer features may be unavailable until the session ends."))
-                .font(.callout).foregroundStyle(.secondary)
+                .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
             Text(tr("The previous interface state is restored when you stop, the time expires or this app disconnects. Recovery must be confirmed before normal exit."))
-                .font(.caption).foregroundStyle(.secondary)
+                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
             if let state=model.state {
-                Text(status(state)).font(.headline)
+                Text(status(state)).font(Theme.rowTitle.weight(.semibold))
                 if state.phase == .active,let remaining=state.remainingSeconds {
                     Text(tr("Exits in %1$@ seconds",String(remaining))).monospacedDigit()
                 }
                 if let interface=state.interface {
-                    Text(tr(interface.up ? "Observed AWDL interface: up" : "Observed AWDL interface: down")).font(.caption)
-                } else { Text(tr(state.interfaceQueryComplete ? "AWDL is not present on this Mac." : "The AWDL interface could not be verified.")).font(.caption).foregroundStyle(.orange) }
-                if let error=state.error { Text(tr(error)).font(.caption).foregroundStyle(.orange) }
-                if model.lostSessionConnection { Text(tr("The session connection was lost. Its recovery still needs confirmation.")).font(.caption).foregroundStyle(.orange) }
-                else if state.phase == .active,!state.ownedByCaller { Text(tr("Another Thermo process is using this mode.")).font(.caption).foregroundStyle(.secondary) }
-                if state.phase == .idle,let reason=endedReason(state.lastEndReason) { Text(reason).font(.caption).foregroundStyle(.secondary) }
+                    Text(tr(interface.up ? "Observed AWDL interface: up" : "Observed AWDL interface: down")).font(Theme.caption)
+                } else { Text(tr(state.interfaceQueryComplete ? "AWDL is not present on this Mac." : "The AWDL interface could not be verified.")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                if let error=state.error { Text(tr(error)).font(Theme.caption).foregroundStyle(Theme.caution) }
+                if model.lostSessionConnection { Text(tr("The session connection was lost. Its recovery still needs confirmation.")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                else if state.phase == .active,!state.ownedByCaller { Text(tr("Another Thermo process is using this mode.")).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
+                if state.phase == .idle,let reason=endedReason(state.lastEndReason) { Text(reason).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
             } else {
-                Text(tr("AWDL session state is unknown.")).foregroundStyle(.orange)
+                Text(tr("AWDL session state is unknown.")).foregroundStyle(Theme.caution)
                 Button(tr("Set up or update Thermo's helper"),action:configureHelper)
             }
-            if let issue=model.issue,issue != model.state?.error { Text(tr(issue)).font(.caption).foregroundStyle(.orange) }
+            if let issue=model.issue,issue != model.state?.error { Text(tr(issue)).font(Theme.caption).foregroundStyle(Theme.caution) }
             if model.quitRequested {
                 Text(tr(model.needsQuitRecovery ? "Waiting for AWDL recovery before quitting. Retry recovery if it remains unconfirmed." : "Finishing exit preparation…"))
-                    .font(.callout).foregroundStyle(.orange)
+                    .font(Theme.secondary).foregroundStyle(Theme.caution)
             }
             HStack {
                 Picker(tr("Duration"),selection:$seconds) {
