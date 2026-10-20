@@ -166,13 +166,17 @@ public enum SpaceLens {
                          sizeVersion: 1, cancelled: cancellation.isCancelled)
     }
 
-    /// A fixed pool of threads takes folders off one shared stack, at every depth. Listing a
-    /// folder is mostly waiting on the disk, so more threads than cores keep the SSD busy. A folder
-    /// is finished, and handed up to its parent, when its last subfolder is.
+    /// A fixed pool of threads takes folders off shared stacks, at every depth. Listing a folder is
+    /// mostly waiting on the disk, so more threads than cores keep the SSD busy. A folder is
+    /// finished, and handed up to its parent, when its last subfolder is.
+    ///
+    /// Each top-level folder has its own stack and the threads take from them in turn, so a scan
+    /// stopped early has looked into every top-level folder instead of finishing the first few.
     final class Walker: @unchecked Sendable {
         final class Node {
             let path: String
             let parent: Node?
+            let lane: Int
             var pending = 0
             var kids: [SpaceEntry] = []
             var total: Int64 = 0
@@ -181,8 +185,9 @@ public enum SpaceLens {
             var other: Int64 = 0
             var otherCount = 0
             var ok = true
+            var listed = false
             var finished = false
-            init(path: String, parent: Node?) { self.path = path; self.parent = parent }
+            init(path: String, parent: Node?, lane: Int) { self.path = path; self.parent = parent; self.lane = lane }
         }
 
         let root: String
@@ -191,7 +196,8 @@ public enum SpaceLens {
         let progress: ((Progress) -> Void)?
         let lock = NSLock()
         let queue = NSCondition()
-        var stack: [Node] = []
+        var lanes: [[Node]] = []
+        var nextLane = 0
         var nodes: [String: Node] = [:]
         var done = false
         var folders: [String: SpaceFolder] = [:]
@@ -208,8 +214,9 @@ public enum SpaceLens {
         }
 
         func run() {
-            stack = [Node(path: root, parent: nil)]
-            nodes = [root: stack[0]]
+            let top = Node(path: root, parent: nil, lane: 0)
+            lanes = [[top]]
+            nodes = [root: top]
             let group = DispatchGroup()
             for _ in 0..<Walker.threads {
                 let t = Thread { [self] in work(); group.leave() }
@@ -231,12 +238,23 @@ public enum SpaceLens {
         private func work() {
             while true {
                 queue.lock()
-                while stack.isEmpty && !done && !cancellation.isCancelled { queue.wait(until: Date().addingTimeInterval(0.2)) }
+                var node = take()
+                while node == nil && !done && !cancellation.isCancelled { queue.wait(until: Date().addingTimeInterval(0.2)); node = take() }
                 if done || cancellation.isCancelled { queue.unlock(); return }
-                let node = stack.removeLast()
+                guard let node else { queue.unlock(); continue }
                 queue.unlock()
                 list(node)
             }
+        }
+
+        /// The deepest waiting folder of the next top-level folder that has one. Called under `queue`.
+        private func take() -> Node? {
+            for _ in lanes.indices {
+                let lane = nextLane
+                nextLane = (nextLane + 1) % lanes.count
+                if let node = lanes[lane].popLast() { return node }
+            }
+            return nil
         }
 
         private func list(_ node: Node) {
@@ -248,6 +266,7 @@ public enum SpaceLens {
                 if e.error != 0 { failures.append(dir + "/" + e.name); return }
                 if e.isDir { subdirs.append(dir + "/" + e.name) } else { fileEntries.append(e) }
             }
+            node.listed = true
             node.ok = listed && failures.isEmpty && !cancellation.isCancelled
             var bigFiles: [LargeFile] = []
             var own: Int64 = 0
@@ -259,7 +278,10 @@ public enum SpaceLens {
                     lock.lock(); let first = linksSeen.insert(e.fileID).inserted; lock.unlock()
                     size = first ? e.allocated : 0
                 } else {
-                    size = e.allocated >= BulkWalk.privateSizeThreshold ? (BulkWalk.fileSize(path)?.privateSize ?? e.allocated) : e.allocated
+                    // Only a clone can have a private size below its allocated size, and asking
+                    // APFS for it walks the file's extents: skip the files that cannot be clones.
+                    size = e.allocated >= BulkWalk.privateSizeThreshold && e.maySharesBlocks
+                        ? (BulkWalk.fileSize(path)?.privateSize ?? e.allocated) : e.allocated
                 }
                 let changed = max(e.modified, e.changed)
                 node.newest = max(node.newest, changed)
@@ -295,8 +317,16 @@ public enum SpaceLens {
 
             if local.isEmpty { finish(node); return }
             queue.lock()
-            let children = local.reversed().map { Node(path: $0, parent: node) }
-            stack.append(contentsOf: children)
+            let children: [Node]
+            if node.parent == nil {
+                // The root's subfolders each start a stack of their own.
+                children = local.enumerated().map { Node(path: $1, parent: node, lane: $0) }
+                lanes = children.map { [$0] }
+                nextLane = 0
+            } else {
+                children = local.reversed().map { Node(path: $0, parent: node, lane: node.lane) }
+                lanes[node.lane].append(contentsOf: children)
+            }
             // Register unfinished nodes before making them runnable; finished nodes are released.
             lock.lock(); for child in children { nodes[child.path] = child }; lock.unlock()
             queue.broadcast()
@@ -318,7 +348,7 @@ public enum SpaceLens {
                 }
                 let entry = SpaceEntry(path: n.path, name: (n.path as NSString).lastPathComponent, isDir: true, bytes: n.total,
                                        files: n.count, newest: n.newest > 0 ? Date(timeIntervalSince1970: TimeInterval(n.newest)) : nil,
-                                       sizeState: n.ok ? .complete : (n.total > 0 ? .incomplete : .unavailable))
+                                       sizeState: n.ok ? .complete : (n.total > 0 ? .incomplete : (n.listed ? .unavailable : .unmeasured)))
                 lock.lock()
                 nodes[n.path] = nil
                 if n.total >= SpaceLens.floor || !n.ok || n.parent == nil {

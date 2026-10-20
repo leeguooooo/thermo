@@ -106,14 +106,14 @@ final class SpaceLensTests: XCTestCase {
         XCTAssertGreaterThan(top.entry.bytes, 0)
         XCTAssertEqual(top.entry.effectiveSizeState, .incomplete)
         XCTAssertEqual(top.children.first { $0.name == "known.bin" }?.effectiveSizeState, .complete)
-        XCTAssertEqual(top.children.first { $0.name == "queued" }?.effectiveSizeState, .unavailable)
+        XCTAssertEqual(top.children.first { $0.name == "queued" }?.effectiveSizeState, .unmeasured)
     }
 
     func testPrecancelledScanStillReturnsAnUnknownRoot() throws {
         let token = ScanCancellation(); token.cancel()
         let tree = SpaceLens.scan(dir, cancellation: token)
         XCTAssertFalse(tree.complete)
-        XCTAssertEqual(tree.folder(dir)?.entry.effectiveSizeState, .unavailable)
+        XCTAssertEqual(tree.folder(dir)?.entry.effectiveSizeState, .unmeasured)
         XCTAssertNotNil(tree.folder(dir))
     }
 
