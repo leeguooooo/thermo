@@ -8,6 +8,8 @@ public enum ActionKind: String, Codable, Sendable {
     /// Removes the item.
     case uninstall
     case disable
+    /// Installs a newer version of the item.
+    case update
 }
 
 /// One concrete operation, shown for review with credential values hidden before anything runs.

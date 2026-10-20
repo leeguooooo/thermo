@@ -231,6 +231,7 @@ extension AgentItem {
     /// Content evidence should lead to review; removal remains a separate choice.
     var primaryDiagnosticAction: Action? {
         if let fix = actions.first(where: { $0.kind == .fix }) { return fix }
+        if let update = actions.first(where: { $0.kind == .update }) { return update }
         return area == .skills ? nil : actions.first
     }
 }

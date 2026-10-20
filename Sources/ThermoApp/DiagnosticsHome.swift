@@ -97,10 +97,11 @@ struct DiagnosticsHome: View {
                 let empty = items.isEmpty && general.isEmpty
                 let worst = (bad.compactMap(\.severity) + general.map(\.severity)).min()
                 let fixable = bad.filter { i in i.actions.contains { $0.kind == .fix && $0.bulk } }.count
+                let updates = items.filter { $0.update != nil }.count
                 CategoryCard(symbol: AgentStyle.icon(a), color: AgentStyle.tint(a), title: AgentStyle.title(a),
-                             status: empty ? tr("No items to check") : problems == 0 && items.isEmpty ? tr("Notes available") : problems == 0 && a == .mcp ? tr("%1$@ configuration entries; connection unchecked", String(items.count)) : problems == 0 ? tr("%1$@ checked, all fine", String(items.count))
+                             status: empty ? tr("No items to check") : problems == 0 && updates > 0 ? tr("%1$@ updates available", String(updates)) : problems == 0 && items.isEmpty ? tr("Notes available") : problems == 0 && a == .mcp ? tr("%1$@ configuration entries; connection unchecked", String(items.count)) : problems == 0 ? tr("%1$@ checked, all fine", String(items.count))
                                  : fixable > 0 ? tr("%1$@ fixable in one click", String(fixable)) : tr("needs your decision"),
-                             statusColor: empty || (problems == 0 && (items.isEmpty || a == .mcp)) ? .secondary : problems == 0 ? .green : AgentStyle.color(worst),
+                             statusColor: empty || (problems == 0 && (items.isEmpty || a == .mcp)) ? .secondary : problems == 0 && updates > 0 ? .blue : problems == 0 ? .green : AgentStyle.color(worst),
                              count: problems) { open(a) }
             }
         }

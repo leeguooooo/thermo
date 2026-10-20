@@ -43,6 +43,12 @@ struct AgentsCommand {
             return try fixAll()
         case "uninstall", "remove", "rm": return try act(on: try required(name, sub), kind: .uninstall)
         case "disable": return try act(on: try required(name, sub), kind: .disable)
+        case "updates":
+            guard rest.count == 1 else { throw CLIError("usage: thermo agents updates [--check] [--json]") }
+            return try updates()
+        case "update":
+            if let name { return try act(on: name, kind: .update) }
+            return try updateAll()
         case "run": return try act(on: try required(name, sub), kind: nil)
         default: throw CLIError(Self.usage)
         }
@@ -156,6 +162,8 @@ struct AgentsCommand {
            thermo agents fix [--dry-run] [--yes]          every safe automatic fix for problem items
            thermo agents fix|uninstall|disable NAME       that action on one item
            thermo agents run NAME --action N              action N from `show`
+           thermo agents updates [--check] [--json]       plugins and skills with a newer version; --check asks GitHub about skills
+           thermo agents update [NAME] [--dry-run] [--yes] update one item, or every one with an update
       NAME is the item's name or id; narrow with --area AREA and --agent AGENT, or --all for every match.
       --encoding heuristic|cl100k_base|o200k_base selects ordinary-text reference counts for context/inspect/usage.
       Actions print their exact steps first and ask; --yes skips the question, --dry-run only prints.
@@ -591,6 +599,48 @@ struct AgentsCommand {
                                + (available.isEmpty ? " (it is managed by its plugin or the system)" : "; available: " + available.joined(separator: ", ")))
             }
             plans.append((item, action))
+        }
+        try apply(plans, env: env)
+    }
+
+    /// Plugins and skills with a newer version. Plugin versions come from the marketplace
+    /// catalogs Claude Code keeps; `--check` first asks GitHub about skills and caches the answer.
+    func updates() throws {
+        let env = try environment()
+        var checked: SkillUpdateCache?
+        if app.args.has("check") {
+            if !app.args.has("json") { FileHandle.standardError.write(Data("checking skills on GitHub…\n".utf8)) }
+            let cache = SkillUpdates.check(env)
+            cache.save(home: env.home)
+            checked = cache
+        }
+        let report = AgentDoctor.run(env)
+        let rows = report.items.filter { $0.update != nil }
+        struct Row: Encodable { let name: String; let area: String; let agent: String; let installed: String; let available: String; let id: String }
+        struct Output: Encodable { let updates: [Row]; let skillsChecked: Date?; let skillsUnchecked: [String: String] }
+        let cache = checked ?? SkillUpdateCache.load(home: env.home)
+        let out = Output(updates: rows.map { Row(name: $0.name, area: $0.area.rawValue, agent: $0.agent, installed: $0.update!.installed,
+                                               available: $0.update!.available, id: $0.id) },
+                         skillsChecked: cache?.checked, skillsUnchecked: cache?.failed ?? [:])
+        if app.args.has("json") { print(Export.json(out)); return }
+        if rows.isEmpty { print(tr("everything is up to date")) }
+        for r in out.updates { print("\(r.name)  [\(r.area), \(r.agent)]  \(r.installed) → \(r.available)") }
+        if let checked = cache?.checked {
+            print(tr("skills last checked %1$@; thermo agents updates --check to check again", checked.formatted(date: .abbreviated, time: .shortened)))
+        } else {
+            print(tr("skills not checked yet: thermo agents updates --check"))
+        }
+        if !rows.isEmpty { print(tr("thermo agents update NAME, or thermo agents update for all of them")) }
+    }
+
+    func updateAll() throws {
+        let env = try environment()
+        let report = AgentDoctor.run(env)
+        let plans = report.items.compactMap { item in item.actions.first { $0.kind == .update }.map { (item, $0) } }
+        if plans.isEmpty {
+            if app.args.has("json") { print(Export.json(ActionReport(dryRun: app.args.has("dry-run"), complete: true, plans: [], results: []))) }
+            else { print(tr("everything is up to date")) }
+            return
         }
         try apply(plans, env: env)
     }

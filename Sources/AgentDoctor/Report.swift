@@ -57,6 +57,8 @@ public struct AgentItem: Codable, Equatable, Identifiable, Sendable {
     public var actions: [Action] = []
     /// Static text measurements; never actual session consumption.
     public var skillFootprint: SkillFootprint? = nil
+    /// A newer version than the installed one, when known.
+    public var update: ExtensionUpdate? = nil
 }
 
 public struct Inventory: Codable, Equatable, Sendable {
