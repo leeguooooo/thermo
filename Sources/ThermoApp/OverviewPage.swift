@@ -185,21 +185,21 @@ struct OverviewPage: View {
         var valueColor: Color { self == .watch || self == .alert ? color : Theme.textPrimary }
     }
 
-    /// The heat chain (load → temperature → fans → thermal pressure) on top and the other
+    /// The heat chain (load → fans → thermal pressure; temperature is the hero above it) on top and the other
     /// resources under it, in one panel: one place to read the Mac's vitals.
     var vitals: some View {
         InspectorPanel {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 0) {
+                    // Temperature leads the page above, so the chain here starts at load and ends at pressure.
                     loadLink; connector
-                    temperatureLink; connector
                     fanLink; connector
                     pressureLink
                 }
-                .frame(minWidth: 620)
+                .frame(minWidth: 480)
                 Grid(horizontalSpacing: 0, verticalSpacing: 0) {
-                    GridRow { loadLink; temperatureLink }
-                    GridRow { fanLink; pressureLink }
+                    GridRow { loadLink; fanLink }
+                    GridRow { pressureLink }
                 }
             }
             InspectorDivider(inset: 0)

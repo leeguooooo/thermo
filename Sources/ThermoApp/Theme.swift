@@ -57,7 +57,7 @@ enum Theme {
 
     // Five text sizes, no others: 24 page title, 15 heading (a verdict, a panel's lead line),
     // 13 body and row titles, 12 secondary lines, 11 labels and meta. Figures use the rounded
-    // face at 32 (the page's one hero), 24 (a metric), 15 or 13 (in rows).
+    // face at 40 (the page's one hero), 24 (a metric), 15 or 13 (in rows).
 
     static let pageTitle = Font.system(size: 24, weight: .semibold)
     static let heading = Font.system(size: 15, weight: .semibold)
@@ -70,7 +70,7 @@ enum Theme {
     static let label = Font.system(size: 11, weight: .medium)
     static let mono = Font.system(size: 11, design: .monospaced)
 
-    enum FigureSize: CGFloat { case hero = 32, metric = 24, large = 15, row = 13 }
+    enum FigureSize: CGFloat { case hero = 40, metric = 24, large = 15, row = 13 }
 
     static func figure(_ size: FigureSize, weight: Font.Weight = .semibold) -> Font {
         .system(size: size.rawValue, weight: weight, design: .rounded).monospacedDigit()
