@@ -1,0 +1,20 @@
+{
+  "checkedAt": "2026-10-19T21:29:17.447830+00:00",
+  "retained": [
+    {
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-611-history-r14-mac190-on-190.json",
+      "receiptSHA256": "684b8a792e71d1152ee7920b036f0efd5a239a50d1458ea82f9b5791da6bd905",
+      "retainedRemotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-a5783da37da9/products",
+      "remoteSignatureVerified": true
+    },
+    {
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-611.15-history-r15-mac190-on-190.json",
+      "receiptSHA256": "5513265d2fc1a335310c8d1a08ce5d3ea497a796f05425abb90b12f5f9562aab",
+      "retainedRemotePath": "/Users/leo/.local/state/thermo-qa/retained-candidates/history-products-701d1c57fbb5/products",
+      "remoteSignatureVerified": true
+    }
+  ],
+  "currentAndRollbackAppsUntouched": true,
+  "availableBytes": 1520902144,
+  "notAReclaimedByteClaim": true
+}

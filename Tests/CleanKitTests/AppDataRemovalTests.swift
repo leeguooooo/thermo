@@ -40,6 +40,134 @@ final class AppDataRemovalTests: XCTestCase {
         AppUninstaller.uninstall(plan, home: home, processes: { processes ?? self.empty }, ownershipDirectories: [home + "/Applications"], move: move)
     }
 
+    func deepFile(_ root: String) throws -> URL {
+        let path = URL(fileURLWithPath: root + "/Nested/Deeper/resource")
+        try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("before".utf8).write(to: path)
+        return path
+    }
+
+    func changeDeepFileKeepingMtime(_ path: URL) throws {
+        var before = stat()
+        XCTAssertEqual(lstat(path.path, &before), 0)
+        try Data("after!".utf8).write(to: path)
+        var times = [before.st_atimespec, before.st_mtimespec]
+        XCTAssertEqual(utimensat(AT_FDCWD, path.path, &times, 0), 0)
+    }
+
+    func testDeepDataChangeAfterReviewRefusesAllSelectedPaths() throws {
+        let resource = try deepFile(cachePath)
+        for removeApp in [false, true] {
+            try Data("before".utf8).write(to: resource)
+            let reviewed = try plan(removeApp: removeApp)
+            XCTAssertNil(reviewed.blocked)
+            try changeDeepFileKeepingMtime(resource)
+            XCTAssertEqual(AppDataReviewIdentity.of(cachePath), reviewed.dataIdentities?[cachePath], "The root-only review stays unchanged")
+            var moves: [String] = []
+            let result = AppUninstaller.uninstall(reviewed, home: home, processes: { self.empty },
+                ownershipDirectories: [home + "/Applications"], move: { path in
+                    moves.append(path)
+                    throw NSError(domain: "owned-data-review-probe", code: 1)
+                })
+            XCTAssertTrue(moves.isEmpty, "A stale associated-directory review must be refused before any selected path moves")
+            XCTAssertTrue(result.removed.isEmpty)
+            XCTAssertEqual(try Data(contentsOf: resource), Data("after!".utf8))
+            XCTAssertTrue(FS.exists(appPath))
+        }
+    }
+
+    func testDeepDataChangeDuringLastProcessCheckRefusesMove() throws {
+        let resource = try deepFile(cachePath)
+        let reviewed = try plan()
+        XCTAssertNil(reviewed.blocked)
+        var inventories = 0
+        var moves = 0
+        let result = AppUninstaller.uninstall(reviewed, home: home, processes: {
+            inventories += 1
+            if inventories == 2 { try! self.changeDeepFileKeepingMtime(resource) }
+            return self.empty
+        }, ownershipDirectories: [home + "/Applications"], move: { _ in
+            moves += 1
+            throw NSError(domain: "owned-data-review-probe", code: 1)
+        })
+        XCTAssertGreaterThanOrEqual(inventories, 2)
+        XCTAssertEqual(moves, 0)
+        XCTAssertTrue(result.removed.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: resource), Data("after!".utf8))
+        XCTAssertTrue(FS.exists(appPath))
+    }
+
+    func testDeepDataChangeInLaterItemKeepsItAfterPartialMove() throws {
+        let logs = home + "/Library/Logs/com.example.fixture"
+        try data(logs)
+        _ = try deepFile(cachePath)
+        _ = try deepFile(logs)
+        let reviewed = try plan()
+        XCTAssertNil(reviewed.blocked)
+        XCTAssertEqual(Set(reviewed.paths), Set([cachePath, logs]))
+        let first = try XCTUnwrap(reviewed.paths.first)
+        let later = try XCTUnwrap(reviewed.paths.last)
+        let changed = URL(fileURLWithPath: later + "/Nested/Deeper/resource")
+        let result = AppUninstaller.uninstall(reviewed, home: home, processes: { self.empty },
+            ownershipDirectories: [home + "/Applications"], move: { path in
+                let destination = try self.move(path)
+                if path == first { try self.changeDeepFileKeepingMtime(changed) }
+                return destination
+            })
+        XCTAssertEqual(result.removed, [first])
+        XCTAssertNotNil(result.failed[later])
+        XCTAssertTrue(FS.exists(later), "The concurrently changed second directory must stay at its original location")
+        if FS.exists(changed.path) { XCTAssertEqual(try Data(contentsOf: changed), Data("after!".utf8)) }
+        let restored = try TrashBatches.restore(id: XCTUnwrap(result.trashBatchID), home: home)
+        XCTAssertEqual(restored.items.count, 1)
+        XCTAssertEqual(restored.items.map(\.status), ["restored"])
+        XCTAssertTrue(FS.exists(first))
+        XCTAssertTrue(FS.exists(appPath))
+    }
+
+    func testLegacyAssociatedDirectoryReviewMustBeReviewedAgain() throws {
+        let reviewed = try plan()
+        XCTAssertNotNil(reviewed.dataTreeIdentities?[cachePath])
+        var value = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(reviewed)) as? [String:Any])
+        value.removeValue(forKey: "dataTreeIdentities")
+        let legacy = try JSONDecoder().decode(UninstallPlan.self, from: JSONSerialization.data(withJSONObject: value))
+        let result = execute(legacy)
+        XCTAssertTrue(result.removed.isEmpty)
+        XCTAssertNotNil(result.failed[cachePath])
+        XCTAssertTrue(FS.exists(cachePath)); XCTAssertTrue(FS.exists(appPath))
+    }
+
+    func testUnverifiableAssociatedDirectoryCannotAuthorizeRemoval() throws {
+        let pipe = cachePath + "/owned-pipe"
+        XCTAssertEqual(mkfifo(pipe, 0o600), 0)
+        let reviewed = try plan()
+        XCTAssertNotNil(reviewed.blocked)
+        XCTAssertNil(reviewed.dataTreeIdentities?[cachePath])
+        let result = execute(reviewed)
+        XCTAssertTrue(result.removed.isEmpty)
+        XCTAssertTrue(FS.exists(pipe)); XCTAssertTrue(FS.exists(appPath))
+    }
+
+    func testLegacyFileOnlyDataReviewKeepsExistingMetadataProtection() throws {
+        try FileManager.default.removeItem(atPath: cachePath)
+        let pref = home + "/Library/Preferences/com.example.fixture.plist"
+        try FileManager.default.createDirectory(atPath: (pref as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+        let payload = Data("owned preference fixture".utf8)
+        try payload.write(to: URL(fileURLWithPath: pref))
+        let reviewed = try plan()
+        XCTAssertNil(reviewed.blocked)
+        XCTAssertEqual(reviewed.paths, [pref])
+        var value = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(reviewed)) as? [String:Any])
+        value.removeValue(forKey: "dataTreeIdentities")
+        let legacy = try JSONDecoder().decode(UninstallPlan.self, from: JSONSerialization.data(withJSONObject: value))
+        let result = execute(legacy)
+        XCTAssertEqual(result.removed, [pref]); XCTAssertTrue(result.failed.isEmpty)
+        let restored = try TrashBatches.restore(id: XCTUnwrap(result.trashBatchID), home: home)
+        XCTAssertEqual(restored.items.map(\.status), ["restored"])
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: pref)), payload)
+        XCTAssertTrue(FS.exists(appPath))
+    }
+
     func testDataOnlyMovesAndRestoresDataWithoutTouchingTheBundle() throws {
         let reviewed = try plan()
         let identity = AppReviewIdentity.capture(appPath)

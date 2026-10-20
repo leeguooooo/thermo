@@ -1,0 +1,96 @@
+{
+  "checkedAt": "2026-10-19T22:30:35.820052+00:00",
+  "problem": "Uninstall review bound root/key-file identity but not recursive bundle resources; a changed deep resource reached the move executor after review or during the final process inventory.",
+  "validBaseline": {
+    "run": "9e2ec4ca-8196-440e-90d8-a8df9064abcb",
+    "inputCommit": "dde398defdc49f949e0fe3cc59b9d0932108cd06",
+    "tests": 2,
+    "behaviorFailures": 2,
+    "bothMoveExecutorsCalledOnce": true,
+    "actualTrashMovePerformed": false,
+    "compilerFailure": false,
+    "logSHA256": "458772e033a69c4db56df5f837804a75ccf7ee18eb92fe6c3c292ba2a5a64742"
+  },
+  "invalidInitialFixture": {
+    "run": "0f4f7f8c-3f88-469b-a6cc-d0e85d929aef",
+    "blockedByExistingVersionMismatch": true,
+    "notEvidenceOfDeepReviewBug": true,
+    "correctedToUseReadInventory": true
+  },
+  "change": "Capture a bounded recursive metadata identity only for bundle removal reviews; verify before uninstall and again after the last process inventory before moving the bundle. Late failure preserves all remaining selected paths. Legacy plans without tree identity require review again.",
+  "snapshotRules": {
+    "entryLimit": 250000,
+    "depthLimit": 128,
+    "cooperativeDeadlineSeconds": 10,
+    "walksPerCapture": 2,
+    "payloadContentsRead": false,
+    "symlinksFollowed": false,
+    "sameVolumeOnly": true,
+    "directoryDescriptorsPinned": true,
+    "incompleteOrCancelledCaptureAuthorizesRemoval": false
+  },
+  "validationRun": "9fdd7f31-1367-4a11-9551-e7bec5603123",
+  "status": "1943 non-hardware tests, universal build, signed package, archive and R19 installation/native owned-fixture GUI uninstall and restore verified",
+  "sourceCommitted": false,
+  "overallParityEstablished": false,
+  "sourceSHA256": {
+    "Sources/CleanKit/AppRemovalTreeIdentity.swift": "a8fafccdacd8cbde49977cd563a0fde2768ca69c5fccee1bf56421d376003ca2",
+    "Sources/CleanKit/Apps.swift": "7b7ce0a8af1b8f3175011a11debd49edad06c87df16e2792b615b092ae3b7e1d",
+    "Sources/ThermoL10n/ZhHans.swift": "ceecc5e9fc587d49dc0bb3dfedb8058913650c8199fac9d5961988e4023970f4",
+    "Tests/CleanKitTests/AppUninstallerTests.swift": "2e5470fb68fca1499909b2b3ee7b6749f8013bba75d81e76e792fcc8903840b7",
+    "Tests/CleanKitTests/AppRemovalTreeIdentityTests.swift": "f3703669730c4567bad4ee95b595b720542fbe33a9ba3343c66ad19b9938721b"
+  },
+  "limits": [
+    "Metadata review detects ordinary writes via ctime, not a cryptographic content or code-signature seal.",
+    "No atomic guarantee against all uncooperative writers between final checks and rename.",
+    "A blocking filesystem syscall cannot be interrupted by the cooperative deadline.",
+    "Associated-data recursive content and data-only bundle changes are outside this change and remain separately unverified.",
+    "Owned fixture native GUI accepted; real vendor updater competition, all hardware and whole-product performance remain unverified."
+  ],
+  "validationInputCommit": "c5c29207cb9df8b7a4e5b903c8c04c436455f0a7",
+  "validationInputTree": "5513d85af3f4aeb8a0f26b1b504b4dd2bdb786c3",
+  "validationTests": 1943,
+  "validationFailures": 0,
+  "validationLogSHA256": "20e0e06f36f3c7f851688bb462d1ca54f0d6d697c9ae2b07c6fba29be733001b",
+  "universalRun": "97c71632-6f2c-4396-9034-11b693fdc083",
+  "validationTargets": [
+    {
+      "target": "ThermoKitTests.xctest",
+      "tests": 218,
+      "failures": 0
+    },
+    {
+      "target": "ThermoHelperTests.xctest",
+      "tests": 30,
+      "failures": 0
+    },
+    {
+      "target": "ThermoCLITests.xctest",
+      "tests": 125,
+      "failures": 0
+    },
+    {
+      "target": "ThermoAppTests.xctest",
+      "tests": 346,
+      "failures": 0
+    },
+    {
+      "target": "CleanKitTests.xctest",
+      "tests": 792,
+      "failures": 0
+    },
+    {
+      "target": "AgentDoctorTests.xctest",
+      "tests": 362,
+      "failures": 0
+    },
+    {
+      "target": "AgentCoreTests.xctest",
+      "tests": 70,
+      "failures": 0
+    }
+  ],
+  "installedBuild": "611.19",
+  "installedEvidence": "uninstall-deep-r19-installed-2026-10-20.json",
+  "reviewCostEvidence": "uninstall-review-cost-r19-2026-10-20.json"
+}

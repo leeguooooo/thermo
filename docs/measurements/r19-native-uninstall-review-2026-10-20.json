@@ -1,0 +1,59 @@
+{
+  "checkedAt": "2026-10-19T22:49:04.001414+00:00",
+  "installedBinary": "/Applications/Thermo.app/Contents/MacOS/Thermo",
+  "build": "611.19",
+  "fixture": {
+    "root": "/Users/leo/.local/state/thermo-qa/r19-uninstall-a3ea46b3ab19",
+    "fixtureHome": "/Users/leo/.local/state/thermo-qa/r19-uninstall-a3ea46b3ab19/Home",
+    "bundle": "/Users/leo/.local/state/thermo-qa/r19-uninstall-a3ea46b3ab19/Home/Applications/OwnedUninstallR19.app",
+    "asset": "/Users/leo/.local/state/thermo-qa/r19-uninstall-a3ea46b3ab19/Home/Applications/OwnedUninstallR19.app/Contents/Resources/Nested/asset.dat",
+    "bundleID": "com.example.owned-uninstall-r19-ce387f1b",
+    "resourceBeforeSHA256": "5256ec18f11624025905d057d6befb03d77b243511ac5f77ed5e0221ce6d84b5"
+  },
+  "privateMode": [
+    "--main",
+    "--ui-review",
+    "--page",
+    "apps"
+  ],
+  "privatePID": 10860,
+  "privateProcessExited": true,
+  "normalPID": 44175,
+  "nativeGUI": {
+    "oldConfirmationRefusedDeepChangedResource": true,
+    "resourceSizeAndMtimePreservedDuringMutation": true,
+    "rootInfoAndExecutableIdentityUnchangedDuringMutation": true,
+    "freshReviewCouldUninstall": true,
+    "historyRetainedFailedAndSuccessfulAttempts": true,
+    "historyRestore1of1": true,
+    "restoredAppReturnedToInventory": true
+  },
+  "roundtrip": {
+    "allBytesModesFileAndDirectoryIdentitiesMatch": true,
+    "changedResourcePreserved": true,
+    "manifestEntries": 8,
+    "trashBatch": "923792C5-23BC-4DA8-977C-849CB30F4EC6",
+    "guiRestored": "1/1",
+    "repeatPreviewAlreadyRestored": true,
+    "trashEmptied": false
+  },
+  "remainingUIIssue": {
+    "allRefusedHeadline": "generic moved 0 B title still shown with explicit failure details",
+    "fixed": false
+  },
+  "realInstalledSoftwareRemoved": false,
+  "trashEmptied": false,
+  "evidenceSHA256": {
+    "fixture.json": "fe88b79dc8dcfa61847f4ff2a30af8bb61344d92f0488e8c0d00a6b7000a5917",
+    "gui-process.log": "5ac77be63cd6aa8dff71314e940db3af410ce78052502310bc5913da9651b2da",
+    "old-confirmation-verification.json": "c16b149659d361be10c62f030af8d740f61e3d5b38b5b90f3b26047411c3b99b",
+    "preflight-plan.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "preflight-plan.json": "ee18e5db4a9e99948343f49385b6a8f3cf3773d01428e2a72d123857a776b58c",
+    "repeat-restore-preview.json": "a3ca7e8b334751ab05d3a366eeaeb174e13b69b18cae61fb131e8300b3780efa",
+    "deep-mutation.json": "06a067e9f199968c4100bc7cddf7ba09e4562dbdabf3746cb90d02644ea2f008",
+    "before-trash-manifest.json": "3a0f5f24cef6ef6f70756564d6aa3b85d836a1a795a05b7d2454afdb175163ad",
+    "roundtrip-verification.json": "1a651344d5050ce1f0b4957e1bf7fcae5db0d8d193e8724b02d1cc9f98beabde",
+    "gui-process.json": "9f2549d3e06332e757fa69a81ba48a681235f81568e2da0bfa765207da5c1ceb"
+  },
+  "overallParityEstablished": false
+}

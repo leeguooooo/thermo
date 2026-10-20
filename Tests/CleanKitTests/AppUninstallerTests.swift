@@ -53,6 +53,80 @@ final class AppUninstallerTests: XCTestCase {
 
     // MARK: guard
 
+    func testDeepResourceChangeAfterReviewRefusesBundleMove() throws {
+        let target = app("DeepReview", "com.example.deep-review")
+        try writeInfo(target, version: "1.0")
+        let directory = target.path + "/Contents/Resources/Nested"
+        try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+        let resource = URL(fileURLWithPath: directory + "/resource.dat")
+        try Data("before".utf8).write(to: resource)
+        let inventory = try XCTUnwrap(AppUninstaller.read(target.path))
+        let reviewed = fixturePlan(inventory, installed: [inventory], home: home, processes: ProcessTable(entries: []))
+        XCTAssertNil(reviewed.blocked)
+        let changed = Data("changed by an updater after confirmation".utf8)
+        try changed.write(to: resource)
+        var moves = 0
+        let result = AppUninstaller.uninstall(reviewed, home: home, processes: { .init(entries: []) },
+                                              ownershipDirectories: [home + "/Applications"], move: { _ in
+            moves += 1
+            throw NSError(domain: "owned-uninstall-probe", code: 1)
+        })
+        XCTAssertEqual(moves, 0, "A deep resource change must invalidate the reviewed bundle")
+        XCTAssertTrue(result.removed.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: resource), changed)
+    }
+
+    func testDeepResourceChangeDuringLastProcessCheckRefusesBundleMove() throws {
+        let target = app("DeepReview", "com.example.deep-review")
+        try writeInfo(target, version: "1.0")
+        let directory = target.path + "/Contents/Resources/Nested"
+        try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+        let resource = URL(fileURLWithPath: directory + "/resource.dat")
+        try Data("before".utf8).write(to: resource)
+        make("Library/Caches/com.example.deep-review")
+        let inventory = try XCTUnwrap(AppUninstaller.read(target.path))
+        let reviewed = fixturePlan(inventory, installed: [inventory], home: home, processes: ProcessTable(entries: []))
+        XCTAssertNil(reviewed.blocked)
+        XCTAssertEqual(Set(reviewed.paths), Set([target.path, home + "/Library/Caches/com.example.deep-review"]))
+        let changed = Data("changed during the final process inventory".utf8)
+        var inventories = 0
+        var moves = 0
+        let result = AppUninstaller.uninstall(reviewed, home: home, processes: {
+            inventories += 1
+            if inventories == 2 { try! changed.write(to: resource) }
+            return .init(entries: [])
+        }, ownershipDirectories: [home + "/Applications"], move: { _ in
+            moves += 1
+            throw NSError(domain: "owned-uninstall-probe", code: 1)
+        })
+        XCTAssertGreaterThanOrEqual(inventories, 2)
+        XCTAssertEqual(moves, 0, "The last process inventory must not open a stale-review gap")
+        XCTAssertTrue(result.removed.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: resource), changed)
+        XCTAssertTrue(FS.exists(home + "/Library/Caches/com.example.deep-review/data"))
+    }
+
+    func testLegacyUninstallReviewWithoutBundleTreeMustBeReviewedAgain() throws {
+        let target = app("DeepReview", "com.example.deep-review")
+        try writeInfo(target, version: "1.0")
+        let inventory = try XCTUnwrap(AppUninstaller.read(target.path))
+        let reviewed = fixturePlan(inventory, installed: [inventory], home: home, processes: .init(entries: []))
+        XCTAssertNotNil(reviewed.appTreeIdentity)
+        var value = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(reviewed)) as? [String:Any])
+        value.removeValue(forKey: "appTreeIdentity")
+        let legacy = try JSONDecoder().decode(UninstallPlan.self, from: JSONSerialization.data(withJSONObject: value))
+        XCTAssertNil(legacy.appTreeIdentity)
+        var moves = 0
+        let result = AppUninstaller.uninstall(legacy, home: home, processes: { .init(entries: []) },
+                                              ownershipDirectories: [home + "/Applications"], move: { _ in
+            moves += 1
+            throw NSError(domain: "owned-uninstall-probe", code: 1)
+        })
+        XCTAssertEqual(moves, 0)
+        XCTAssertTrue(result.removed.isEmpty)
+        XCTAssertNotNil(result.failed[target.path])
+    }
+
     func testReviewedAppReplacementRefusesBeforeMovingLeftovers() throws {
         let target = app("Review", "com.example.review")
         make("Applications/Review.app/Contents")

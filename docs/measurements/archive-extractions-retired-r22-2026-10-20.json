@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-10-20T00:23:52.581453+00:00",
+  "retired": [
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.21-data-review-r21-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.21-data-review-r21-mac190/Thermo-1.1.40-611.21-candidate.zip",
+      "ZIP_SHA256": "ddca2d3fa94e3e27535d44705906eb21ebf23ebb63a1834e618baa2293db736a",
+      "manifestRetained": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.21-data-review-r21-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.21-data-review-r21-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.21-data-review-r21-mac190/Thermo-1.1.40-611.21-candidate.zip",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.21-data-review-r21-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    }
+  ],
+  "currentAppAndNamedRollbackCopiesUntouched": true,
+  "observedAvailableBytesAfter": 396713984,
+  "notAReclaimedByteClaim": true
+}

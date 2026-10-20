@@ -336,17 +336,18 @@ struct AppsCommand {
 
         let ids = Array(rest.dropFirst())
         guard !ids.isEmpty else { throw CLIError("usage: thermo apps leftovers remove ID…|all [--dry-run] [--yes]") }
-        let picked = ids == ["all"] ? found.filter { $0.blocked == nil } : found.filter { o in ids.contains { $0.caseInsensitiveCompare(o.bundleID) == .orderedSame } }
+        let selected = ids == ["all"] ? found.filter { $0.blocked == nil } : found.filter { o in ids.contains { $0.caseInsensitiveCompare(o.bundleID) == .orderedSame } }
         let missing = ids == ["all"] ? [] : ids.filter { id in !found.contains { $0.bundleID.caseInsensitiveCompare(id) == .orderedSame } }
         if !missing.isEmpty {
             if !scan.complete { throw CLIError(tr("Residual scan incomplete; refresh before selecting missing items")) }
             throw CLIError(tr("not left behind by a deleted app: %1$@", missing.joined(separator: ", ")))
         }
-        guard !picked.isEmpty else {
+        guard !selected.isEmpty else {
             if let why = found.compactMap(\.blocked).first { throw CLIError(why) }
             if !scan.complete { throw CLIError(tr("Residual scan incomplete; no verified data selected")) }
             print(tr("Nothing to remove.")); return
         }
+        let picked = AppUninstaller.reviewOrphans(selected)
         let total = picked.reduce(Int64(0)) { $0 + $1.bytes }
         let totalText = AppSize.text(total, state: AppSize.combined(picked.map(\.sizeState), bytes: total))
         var lines = [style.bold(tr("Move %1$@ left behind by %2$@ deleted apps to the Trash:", totalText, String(picked.count)))]
@@ -379,7 +380,10 @@ struct AppsCommand {
         }
         let bytes = results.reduce(Int64(0)) { $0 + $1.bytes }
         let sizeText = AppSize.text(bytes, state: results.contains { $0.bytesIncomplete == true } ? .incomplete : .complete)
-        print(style.bold(tr("Moved %1$@ to the Trash (empty it to get the space back)", sizeText))
+        let headline = results.contains(where: { !$0.removed.isEmpty })
+            ? tr("Moved %1$@ to the Trash (empty it to get the space back)", sizeText)
+            : tr("Nothing was moved to the Trash.")
+        print(style.bold(headline)
               + style.dim(" · log: \(FS.tilde(Cleaner.logURL.path))"))
         for id in results.compactMap(\.trashBatchID) { print(style.dim(tr("Put back: thermo clean restore %1$@", id))) }
     }

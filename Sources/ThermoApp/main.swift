@@ -372,7 +372,11 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
     let pages: [(String, String, MainPage)] = [
         (tr("Overview"), "1", .overview), (tr("Sensors"), "2", .sensors), (tr("Fans"), "3", .fans),
         (tr("Browser pages"), "4", .browser("Google Chrome")), (tr("Disk Cleanup"), "5", .disk(.home)),
-        (tr("AI Agent Diagnostics"), "6", .agents(.home)), (tr("Settings"), ",", .settings),
+        (tr("AI Agent Diagnostics"), "6", .agents(.home)),
+        (tr("Software"), "7", .apps(.installed)), (tr("Memory usage"), "8", .memory),
+        (tr("CPU usage"), "9", .compute(false)), (tr("GPU usage"), "0", .compute(true)),
+        (tr("Space Lens"), "", .space(.browse)), (tr("Claude cleanup"), "", .claudeCleanup),
+        (tr("Settings"), ",", .settings),
     ]
     for (title, key, page) in pages {
         let item = viewMenu.addItem(withTitle: title, action: #selector(PageMenuTarget.open(_:)), keyEquivalent: key)

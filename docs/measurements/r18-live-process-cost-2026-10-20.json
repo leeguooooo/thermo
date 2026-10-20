@@ -1,0 +1,124 @@
+{
+  "checkedAt": "2026-10-19T22:17:15.640827+00:00",
+  "installedBuild": "611.18",
+  "inputCommit": "d04be6c4023cd22dbb96d183e18ab03a836c37f5",
+  "processIdentity": "Tue Oct 20 07:07:05 2026     /Applications/Thermo.app/Contents/MacOS/Thermo",
+  "samples": 301,
+  "summary": {
+    "wallSeconds": 302.92170120900005,
+    "cpuTimeSeconds": 2.7600000000000016,
+    "cpuPercentOfOneCore": 0.9111265350037587,
+    "cpuTimeResolutionSeconds": 0.01,
+    "residentKBMin": 23072,
+    "residentKBMax": 78320,
+    "residentKBMean": 31704.02657807309
+  },
+  "segments": [
+    {
+      "seconds": 30.256419792,
+      "cpuPercentOfOneCore": 0.8262709260336931,
+      "maxSampledRSSKiB": 43552
+    },
+    {
+      "seconds": 30.267466917,
+      "cpuPercentOfOneCore": 1.9162488938717217,
+      "maxSampledRSSKiB": 78320
+    },
+    {
+      "seconds": 30.282029499999993,
+      "cpuPercentOfOneCore": 0.8255721433730194,
+      "maxSampledRSSKiB": 35264
+    },
+    {
+      "seconds": 30.274639791000013,
+      "cpuPercentOfOneCore": 0.6936498714756939,
+      "maxSampledRSSKiB": 36384
+    },
+    {
+      "seconds": 30.357427709000007,
+      "cpuPercentOfOneCore": 0.9552851538670498,
+      "maxSampledRSSKiB": 34672
+    },
+    {
+      "seconds": 30.311150707999985,
+      "cpuPercentOfOneCore": 0.7917878219537721,
+      "maxSampledRSSKiB": 34192
+    },
+    {
+      "seconds": 30.26301033300001,
+      "cpuPercentOfOneCore": 1.0243528207832178,
+      "maxSampledRSSKiB": 36256
+    },
+    {
+      "seconds": 30.31457770899999,
+      "cpuPercentOfOneCore": 0.4948114449750874,
+      "maxSampledRSSKiB": 36256
+    },
+    {
+      "seconds": 30.298620166000006,
+      "cpuPercentOfOneCore": 1.056153706824882,
+      "maxSampledRSSKiB": 35872
+    },
+    {
+      "seconds": 30.296358584000018,
+      "cpuPercentOfOneCore": 0.5281162736319692,
+      "maxSampledRSSKiB": 35872
+    }
+  ],
+  "phase": "main window and menu panel closed",
+  "foregroundSamplingStoppedAtBothBoundaries": true,
+  "historyObservations": {
+    "pulse-history.jsonl": {
+      "recordsWithinMeasuredWallInterval": 5,
+      "timestamps": [
+        1792447933.0103168,
+        1792447992.849575,
+        1792448052.870503,
+        1792448112.8555532,
+        1792448172.8563051
+      ]
+    },
+    "memory-history.jsonl": {
+      "recordsWithinMeasuredWallInterval": 1,
+      "timestamps": [
+        1792447933.023191
+      ]
+    }
+  },
+  "moleBaseline": {
+    "checkedAt": "2026-10-19T22:15:04.849817+00:00",
+    "path": "/Applications/Mole.app",
+    "version": "1.16.0",
+    "build": "324",
+    "pid": 17242,
+    "processObservation": "17242 Tue Oct 20 07:08:04 2026     T      0:00.01     16 /Applications/Mole.app/Contents/MacOS/Mole",
+    "launchJobObservedFields": [
+      "pid = 17242",
+      "started suspended = 1",
+      "proxy started suspended = 0",
+      "properties = dataless file mode | wait for debugger | app | abandon process group | disable pointer auth"
+    ],
+    "cuaGetAppTimedOut": true,
+    "stateExcludedFromPerformanceComparison": true,
+    "noResumeRestartOrSignalIssued": true,
+    "causeOfWaitForDebuggerConfigurationUnknown": true,
+    "scope": "Launch job state is observed; no vendor performance or app-startup defect inferred."
+  },
+  "observedMoleParity": false,
+  "longTermLeakAssessment": false,
+  "limits": [
+    "Short single-process observation under current host load and memory pressure",
+    "ps RSS is resident memory, not Activity Monitor footprint or total allocations",
+    "Window/panel state checked at phase boundaries, not every instant",
+    "No wakeup counter, long-term leak assessment or measured Mole baseline",
+    "Boundary status RPC is outside CPU-counter interval; ps samples themselves add observer overhead",
+    "Concurrent user and agent workloads; no controlled whole-machine workload.",
+    "One-second RSS samples may miss shorter peaks.",
+    "History timestamps establish writes in the interval, not CPU attribution."
+  ],
+  "evidenceSHA256": {
+    "dist/mole-review-1.1.40-611.18-recovery-guard-r18-mac190/live-cost-closed-5min.json": "15db2756f05f79a74054cde8408ad8778e11cb80df746b4fae72a6d45a4dff74",
+    "dist/remote-190/observe-r18-live-cost.py": "da59553a5c5965a0537f85ab6c788a4cb90e9b8c402c736134baeafc896fea5f",
+    "dist/mole-review-1.1.40-611.18-recovery-guard-r18-mac190/mole-baseline-not-ready.json": "8c0a1d211600bc9f66f250971562baafd51602ac274f3c43ec293dfaf84b4854"
+  }
+}

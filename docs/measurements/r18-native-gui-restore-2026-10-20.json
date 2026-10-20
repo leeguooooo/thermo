@@ -1,0 +1,76 @@
+{
+  "checkedAt": "2026-10-19T22:07:43.586857+00:00",
+  "installedVersion": "1.1.40 (611.18)",
+  "installedBinaryUsed": "/Applications/Thermo.app/Contents/MacOS/Thermo",
+  "mode": [
+    "--main",
+    "--ui-review",
+    "--page",
+    "apps:feeds"
+  ],
+  "fixtureHome": "/Users/leo/.local/state/thermo-qa/.thermo-native-review-BAB43F4C-D5CF-4EAC-9536-89A278049B45/Home",
+  "fixture": {
+    "backup": "/Users/leo/.local/state/thermo-qa/.thermo-native-review-BAB43F4C-D5CF-4EAC-9536-89A278049B45/Home/Applications/.thermo-update-C7850C82-92D5-491D-A749-FD01DB66F24D/previous.app",
+    "id": "C7850C82-92D5-491D-A749-FD01DB66F24D",
+    "other": "/Users/leo/.local/state/thermo-qa/.thermo-native-review-BAB43F4C-D5CF-4EAC-9536-89A278049B45/Home/Applications/Other.app",
+    "recordFile": "/Users/leo/.local/state/thermo-qa/.thermo-native-review-BAB43F4C-D5CF-4EAC-9536-89A278049B45/Home/Library/Application Support/Thermo/app-updates/C7850C82-92D5-491D-A749-FD01DB66F24D.json",
+    "target": "/Users/leo/.local/state/thermo-qa/.thermo-native-review-BAB43F4C-D5CF-4EAC-9536-89A278049B45/Home/Applications/Fixture.app"
+  },
+  "nativeGUI": {
+    "recoveryListShowedVersionTargetBackupAndUsage": true,
+    "confirmationFullPathsWrappedAndReadable": true,
+    "changedReceiptRejectedWithRefreshReviewMessage": true,
+    "failureDidNotChangeThreeAppCopiesOrReceipt": true,
+    "freshConfirmationShowedOtherTarget": true,
+    "restoreSuccessAndRepeatedRestoreButtonDisabled": true,
+    "backupTrashConfirmationShowedBackupAndKeptTargetVersion": true,
+    "backupMovedToSystemTrash": true,
+    "historyShowedFailedAndSuccessRecords": true,
+    "historyRestoreShowed1of1": true,
+    "reopenedRecoveryRecognizedReturnedBackupUsage": true
+  },
+  "filesystem": {
+    "threeAppBytesModesAndIdentitiesVerifiedAfterRestore": true,
+    "backupTrashRoundtripPreservedBytesModesAndIdentities": true,
+    "allAppSignaturesVerified": true,
+    "statusAfter": {
+      "backupBuild": "200",
+      "otherBuild": "100",
+      "phase": "restored",
+      "recordTarget": "/Users/leo/.local/state/thermo-qa/.thermo-native-review-BAB43F4C-D5CF-4EAC-9536-89A278049B45/Home/Applications/Other.app",
+      "targetBuild": "200"
+    }
+  },
+  "normalAppRestored": {
+    "pid": "2324",
+    "privatePIDExited": true,
+    "version": "611.18",
+    "helperAndPlistHashesUnchanged": true,
+    "fanPolicyUnchanged": true,
+    "chargeOffAWDLIdleLidAwakeOff": true
+  },
+  "trashEmptied": false,
+  "vendorFeedsChecked": false,
+  "realInstalledAppsChanged": false,
+  "sourceChanged": false,
+  "overallParityEstablished": false,
+  "evidenceSHA256": {
+    "fixture.json": "b73fc3820285c56c924e430e1c77d1eb012db2d097aa25b9935409352437014b",
+    "before-manifests.json": "4582c8626e36d5ffb4f097e737e481417f2f3152c477d596e0564a83b3682084",
+    "gui-process.log": "f0d534b61b7d3361a643a1fe4ff8a5461497c4b701b8418e538b6bad0ad73d15",
+    "canonical-before.json": "b90debc9851771f421aebc56c47469574d9595ae3a9d9bebf9814027366a46ed",
+    "fixture-location.json": "d7716c8582633b9a95a80bf4e2d6c9e2b6882ba69cb9fd39ab34d33cb49e0540",
+    "after-restore-manifests.json": "f15214cb2f5419cd194903a0fa2066b05bd1662a239c155460b80ba1b1aa7af8",
+    "status-after.json": "57866b8d712b94790c532d6d7cc54f3cd4fa4557c3803905c6c2a5c6494ff419",
+    "canonical-after.json": "31269762c055b8e093166f672ec698b2389df870380ef02d3e3c5a0f2d8928df",
+    "stale-confirmation-verification.json": "6de1932f213f54f15078223f0f83b4017964f9686cbe9ca5c6a7c6a718253a9d",
+    "setup.log": "d20bcd3a91d10bc7a0f733544a4e4ebb1045c947a73231093971bef0340122eb",
+    "reviewed-record.json": "5433dca3091a04f82d9725d02b182717c981a9ec20efccb532d00609b4475298",
+    "after-restore-record.json": "a6625473ff272721a7bd2bf42665835b8112208123c97ed816036f8049da5168",
+    "trash-restore-preview.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "trash-restore-preview.json": "003b1cc2567c415507480183d6479722bcd77ad79086d349d47d3c1f24687684",
+    "gui-process.json": "d8fe871486383004154392b2b4fdc17b0b8d18754bb2f8c761c228a0e2742b39",
+    "backup-trash-roundtrip-verification.json": "939e4c0e6c18836222f8ae1439fefbb316523a7d579d273112ec8216d89cb9d7",
+    "changed-record.json": "96db05fa4c4b6ca1b75942bae4448cebb0b853558bd6c3e6c413fa55e17dbfde"
+  }
+}
