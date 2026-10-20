@@ -10,7 +10,7 @@ public enum Severity: String, Codable, Comparable, CaseIterable, Sendable {
 }
 
 public enum Area: String, Codable, CaseIterable, Sendable {
-    case hooks, mcp, plugins, skills, statusline, launchd, processes
+    case hooks, mcp, plugins, skills, statusline, launchd, processes, worktrees
 }
 
 public struct Finding: Codable, Equatable, Sendable {

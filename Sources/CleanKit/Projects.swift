@@ -229,6 +229,14 @@ enum Projects {
 
         out += leftovers
         for candidate in leftovers { onCandidate?(candidate) }
+        // A linked worktree outside its repository (`git worktree add ../x`, an agent's scratch
+        // checkout under ~/.codex): offered whole like the ones inside it. Its build output is
+        // still offered on its own, since a worktree holding ignored files is never removed.
+        if ctx.options.categories.contains(.agentWorktrees), set.contains(".git"), let repo = linkedWorktreeRepository(dir) {
+            let candidate = Candidate.worktree(path: dir, repo: repo)
+            out.append(candidate)
+            onCandidate?(candidate)
+        }
 
         for (n, isDir) in entries where isDir && !n.hasPrefix(".") && !skip.contains(n) && !claimed.contains(n) {
             if [".app", ".xcodeproj", ".xcworkspace", ".framework", ".photoslibrary", ".musiclibrary", ".fcpbundle",
@@ -283,12 +291,27 @@ enum Projects {
         return out
     }
 
+    /// The main checkout a linked worktree belongs to, from its `.git` file
+    /// (`gitdir: <repo>/.git/worktrees/<name>`); nil for anything else.
+    static func linkedWorktreeRepository(_ dir: String) -> String? {
+        var st = stat()
+        guard lstat(dir + "/.git", &st) == 0, st.st_mode & S_IFMT == S_IFREG, st.st_size < 4096,
+              let text = try? String(contentsOfFile: dir + "/.git", encoding: .utf8), text.hasPrefix("gitdir: ") else { return nil }
+        let gitdir = text.dropFirst("gitdir: ".count).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let r = gitdir.range(of: "/.git/worktrees/", options: .backwards) else { return nil }
+        let repo = String(gitdir[..<r.lowerBound])
+        return FS.isDirectory(repo + "/.git") ? repo : nil
+    }
+
     /// A worktree an agent created. Removed only through git, and only when it has nothing unsaved.
     static func worktreeItem(_ wt: String, repo: String, repoName: String, ctx: ScanContext) -> CleanItem? {
         let s = ctx.options.exactSizes ? FS.size(wt, trackNewest: true) : FS.discoverySize(wt)
         let gitFile = wt + "/.git"
         let registered = FS.exists(gitFile)
-        let name = (wt as NSString).lastPathComponent
+        // Outside its repository the folder name alone is often generic (`source`, `worktree`).
+        let inside = wt.hasPrefix(repo + "/")
+        let name = inside ? (wt as NSString).lastPathComponent
+            : ((wt as NSString).deletingLastPathComponent as NSString).lastPathComponent + "/" + (wt as NSString).lastPathComponent
         var safety = Safety.review
         var note: String?
         var blocked: String?
@@ -312,7 +335,7 @@ enum Projects {
         if !ctx.processes.available { blocked = tr("could not verify processes using this worktree; keep it") }
         if ctx.agentDirs.contains(where: { $0 == wt || $0.hasPrefix(wt + "/") }) { blocked = tr("an agent is running in it") }
         guard s.bytes > 0 else { return nil }
-        var item = CleanItem(id: "worktree/" + AISessions.slug(repoName) + "/" + AISessions.slug(name), category: .agentWorktrees,
+        var item = CleanItem(id: "worktree/" + AISessions.slug(repoName) + "/" + (inside ? AISessions.slug(name) : id(wt, ctx: ctx)), category: .agentWorktrees,
                          title: tr("Agent worktree") + " · \(repoName)/\(name)", detail: detail, safety: safety,
                          bytes: s.bytes, files: s.files, lastUsed: s.newest, paths: [wt], note: note, blocked: blocked,
                          group: repo)

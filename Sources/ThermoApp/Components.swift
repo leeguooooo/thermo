@@ -16,6 +16,7 @@ enum AgentStyle {
         case .statusline: return "menubar.rectangle"
         case .launchd: return "gearshape.2"
         case .processes: return "cpu"
+        case .worktrees: return "arrow.triangle.pull"
         }
     }
 
@@ -28,6 +29,7 @@ enum AgentStyle {
         case .statusline: return tr("Status Line")
         case .launchd: return tr("Launch Agents")
         case .processes: return tr("Agent Processes")
+        case .worktrees: return tr("Worktrees")
         }
     }
 
@@ -193,6 +195,7 @@ extension AgentStyle {
         case .statusline: return .indigo
         case .launchd: return .pink
         case .processes: return .green
+        case .worktrees: return .brown
         }
     }
 
@@ -206,6 +209,7 @@ extension AgentStyle {
         case .statusline: return tr("The line at the bottom of Claude Code that shows usage and status.")
         case .launchd: return tr("Programs macOS starts in the background for your tools.")
         case .processes: return tr("Helper programs your agents start; leftovers keep using memory.")
+        case .worktrees: return tr("Extra checkouts agents make for each task; leftovers take disk space.")
         }
     }
 }

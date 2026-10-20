@@ -3106,4 +3106,12 @@ let zhHans: [String: String] = [
     "Restart codegraph": "重启 codegraph",
     "Upgrades codegraph to the version with the WAL growth fix, then gracefully stops this project's old background process; the next query starts the new one.": "先把 codegraph 升级到修复了日志增长问题的版本，再正常停掉这个项目的旧后台进程；下次查询时会启动新版本。",
     "Gracefully stops this project's codegraph background process so it can checkpoint as it exits; the next query starts it again.": "正常停掉这个项目的 codegraph 后台进程，让它退出时把日志写回；下次查询时会重新启动。",
+    "Worktrees": "Worktree",
+    "Extra checkouts agents make for each task; leftovers take disk space.": "Agent 每做一个任务就另建一份代码副本；用完不删会一直占磁盘。",
+    "%1$@ worktrees": "%1$@ 个 worktree",
+    "%1$@ has %2$@ worktrees; agents create one per task and rarely remove them": "%1$@ 有 %2$@ 个 worktree；Agent 每个任务建一个，很少自己删",
+    "%1$@ has %2$@ worktrees; %3$@ of them point to folders that no longer exist": "%1$@ 有 %2$@ 个 worktree，其中 %3$@ 个对应的文件夹已经不存在",
+    "remove the merged, unchanged ones in Thermo → Disk → Agent worktrees; worktrees with unsaved work are kept": "在 Thermo → 磁盘 → Agent worktree 里清掉已合并、没改动的；有未保存改动的会保留",
+    "Forget missing worktrees": "清掉已不存在的 worktree 记录",
+    "Runs git worktree prune: Git forgets the worktrees whose folders are already gone. No files are deleted.": "运行 git worktree prune：让 Git 忘掉文件夹已经不在的 worktree，不会删除任何文件。",
 ]

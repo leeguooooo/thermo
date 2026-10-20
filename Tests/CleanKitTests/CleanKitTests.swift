@@ -432,6 +432,21 @@ final class CleanKitTests: XCTestCase {
         XCTAssertTrue(FS.exists(path))
     }
 
+    func testLinkedWorktreeOutsideItsRepositoryIsFound() throws {
+        try write("src/repo/.git/worktrees/w1/gitdir", home + "/src/scratch/source/.git\n")
+        try write("src/scratch/source/.git", "gitdir: " + home + "/src/repo/.git/worktrees/w1\n")
+        try write("src/scratch/source/file.txt")
+        try write("src/plain/.git", "not a worktree\n")
+        var options = context().options; options.categories = [.agentWorktrees]
+        let scoped = ScanContext(options: options, now: now, processes: ProcessTable(entries: []), agentDirs: [], liveClaudeSessions: [])
+        var visited = Set<String>(); var candidates: [Projects.Candidate] = []
+        Projects.walk(home + "/src", depth: 0, ctx: scoped, visited: &visited, into: &candidates)
+        let found = candidates.compactMap { c -> (String, String)? in if case let .worktree(p, r) = c { return (p, r) }; return nil }
+        XCTAssertEqual(found.map(\.0), [home + "/src/scratch/source"])
+        XCTAssertEqual(found.first?.1, home + "/src/repo")
+        XCTAssertNil(Projects.linkedWorktreeRepository(home + "/src/plain"))
+    }
+
     func testLeftoverWorktreeRequiresReviewAndAvoidsGlobalPrune() throws {
         try write("src/repo/package.json", "{}")
         try write("src/repo/.claude/worktrees/agent-1/file.txt", age: 10)

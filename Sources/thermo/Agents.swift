@@ -644,6 +644,7 @@ struct AgentsCommand {
         case .statusline: return "Status line"
         case .launchd: return "Launch agents"
         case .processes: return "Processes"
+        case .worktrees: return "Worktrees"
         }
     }
 }

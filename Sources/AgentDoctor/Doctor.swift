@@ -12,6 +12,7 @@ public enum AgentDoctor {
         if !env.cancelled() { c.checkLaunchAgents() }
         if !env.cancelled() { c.checkCrashes() }
         if !env.cancelled() { c.checkAgentDatabases() }
+        if !env.cancelled() { c.checkWorktrees() }
         let (groups, sessions): ([ProcessGroup], Int) = env.cancelled() ? ([], 0) : c.checkProcesses()
         if env.cancelled() {
             var stopped = DoctorReport(generated: env.now, inventory: Inventory(), findings: [], items: [], processes: [], sessions: 0)
