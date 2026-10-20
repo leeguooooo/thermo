@@ -63,6 +63,8 @@ enum CommandHelp {
     agents show|agents show NAME [--area AREA] [--agent AGENT] [--json|--csv] [--root PROJECT] [--encoding ENCODING]|cli
     agents fix|agents fix [NAME] [--action N] [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json] [--root PROJECT] [--encoding ENCODING]|cli
     agents disable|agents disable NAME [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json] [--root PROJECT] [--encoding ENCODING]|cli
+    agents updates|agents updates [--check] [--json] [--root PROJECT]|cli
+    agents update|agents update [NAME] [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json] [--root PROJECT]|cli
     agents uninstall|agents uninstall NAME [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json] [--root PROJECT] [--encoding ENCODING]|cli
     agents run|agents run NAME --action N [--area AREA] [--agent AGENT] [--all] [--dry-run] [--yes] [--json] [--root PROJECT] [--encoding ENCODING]|cli
     clean|clean [CATEGORY_or_ai] [--all] [--csv] [--root DIRS] [--older-than DAYS] [--budget SEC] [--exact] [--json|--stream]|cli
