@@ -3148,6 +3148,7 @@ let zhHans: [String: String] = [
     "%1$@ in 5 min": "5 分钟内 %1$@",
 
     // Redesign B (new strings for this group go right below this line)
+    "Scan scope": "扫描范围",
 
     // Redesign C (new strings for this group go right below this line)
     "More actions": "更多操作",

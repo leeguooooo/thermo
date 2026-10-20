@@ -394,6 +394,27 @@ final class SpaceLensModel: ObservableObject {
     }
 
     func clearBasket() { guard !working else { return }; basket = [:]; selectionIdentities = [:]; selectionRequirements = [:]; selectionSizeStates = [:] }
+
+    /// Whether `path` can be ticked by a select-all: not refused, not inside a picked folder.
+    func pickable(_ path: String) -> Bool { refusal(path) == nil && !isCovered(path) }
+
+    /// Picks every listed path that is not picked yet, each through the same checks as one tick.
+    func pick(_ files: [(path: String, bytes: Int64)]) {
+        guard !working else { return }
+        for file in files where basket[file.path] == nil && pickable(file.path) { toggle(file.path, bytes: file.bytes) }
+    }
+
+    /// Unpicks every listed path that is picked.
+    func unpick(_ paths: [String]) {
+        guard !working else { return }
+        for path in paths where basket[path] != nil { toggle(path, bytes: 0) }
+    }
+
+    /// Picks every copy but the kept one in `group`, with the same review as "Keep the oldest of each".
+    func pickAllButOldest(in group: DuplicateGroup) {
+        guard !working, let choices = duplicateChoices(in: [group]) else { return }
+        applyDuplicateChoices(choices)
+    }
 }
 
 struct SpacePage: View {
@@ -404,23 +425,18 @@ struct SpacePage: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header.padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 12)
-            if model.exitRequested && model.working {
-                Text(tr("Wait for the selected files to finish moving before quitting.")).font(.callout).foregroundStyle(.orange).padding(.horizontal, 28)
-            }
-            if let tree = model.tree, !tree.complete {
-                Text(tr("Some locations were not fully measured. Sizes and chart areas show only known data."))
-                    .font(.callout).foregroundStyle(.orange).padding(.horizontal, 28).padding(.bottom, 8)
-            }
-            if let outcome = model.outcome {
-                HStack(alignment: .top) {
-                    Label(outcome, systemImage: model.outcomeIsWarning ? "exclamationmark.triangle" : "trash").font(.callout).foregroundStyle(.white.opacity(0.85)).textSelection(.enabled)
-                    Spacer()
-                    Button { model.outcome = nil } label: { Image(systemName: "xmark") }.buttonStyle(.plain)
-                        .accessibilityLabel(tr("Dismiss")).help(tr("Dismiss"))
+            header.padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, Theme.Space.l)
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                if model.exitRequested && model.working {
+                    Text(tr("Wait for the selected files to finish moving before quitting.")).font(Theme.body).foregroundStyle(Theme.caution)
                 }
-                .padding(12).glass(radius: 12).padding(.horizontal, 28).padding(.bottom, 10)
+                if let outcome = model.outcome {
+                    NoticeBanner(text: outcome, dismiss: { model.outcome = nil })
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Theme.pagePadding)
+            .padding(.bottom, model.outcome != nil || (model.exitRequested && model.working) ? Theme.Space.m : 0)
             switch tab {
             case .browse: browse
             case .large: largeList
@@ -451,20 +467,14 @@ struct SpacePage: View {
     // MARK: Header and footer
 
     var header: some View {
-        HStack(spacing: 14) {
-            IconTile(symbol: "square.grid.3x3.topleft.filled", color: .cyan, size: 44)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(tr("Space Lens")).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
-                Text(subtitle).font(.callout).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+        PageHeader(title: tr("Space Lens"), subtitle: subtitle) {
+            if let tree = model.tree, !tree.complete {
+                Label(tr("Scan incomplete"), systemImage: "exclamationmark.triangle").font(Theme.caption).foregroundStyle(Theme.caution)
+                InfoButton(text: tr("Some locations were not fully measured. Sizes and chart areas show only known data."))
             }
-            Spacer()
-            Picker("", selection: $tab) {
-                Text(tr("Folders")).tag(SpaceTab.browse)
-                Text(tr("Large files")).tag(SpaceTab.large)
-                Text(tr("Duplicates")).tag(SpaceTab.duplicates)
-            }
-            .pickerStyle(.segmented).labelsHidden().frame(width: 250)
-            .accessibilityLabel(tr("Show"))
+        } below: {
+            ThermoTabs(selection: $tab, options: [(.browse, tr("Folders")), (.large, tr("Large files")), (.duplicates, tr("Duplicates"))],
+                       label: tr("Show"))
         }
     }
 
@@ -479,7 +489,7 @@ struct SpacePage: View {
     }
 
     var footer: some View {
-        HStack(spacing: 10) {
+        ActionBar {
             if model.scanning || model.working {
                 ProgressView().controlSize(.small)
                 if model.scanning {
@@ -493,76 +503,87 @@ struct SpacePage: View {
             }
             Spacer()
             Text(model.basket.isEmpty ? tr("Tick files or folders to remove them") : trCount(model.basket.count, "%1$@ picked", "%1$@ picked"))
-                .font(.callout).foregroundStyle(.white.opacity(0.55))
+                .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
             Button(model.basket.isEmpty ? tr("Move to Trash") : tr("Review %1$@…", model.basketSizeText)) { confirming = model.removalReview() }
-                .buttonStyle(PillButtonStyle(prominent: true, color: .cyan))
+                .buttonStyle(PillButtonStyle(prominent: true))
                 .disabled(model.basket.isEmpty || model.working || model.scanning)
         }
-        .padding(.horizontal, 28).padding(.vertical, 14)
-        .background(Color.black.opacity(0.2))
     }
 
     // MARK: Folders
 
     @ViewBuilder var browse: some View {
         if let t = model.tree, let f = model.folder {
-            VStack(alignment: .leading, spacing: 10) {
-                pathBar(t)
-                Treemap(entries: f.children, parentBytes: f.entry.bytes, picked: Set(model.basket.keys)) { e in
-                    if e.isDir { model.open(e.path) }
-                }
-                .frame(height: 190)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-            .padding(.horizontal, 28).padding(.bottom, 8)
             ScrollView {
-                LazyVStack(spacing: 2) {
-                    ForEach(f.children) { entryRow($0, of: f.entry.bytes) }
-                    if f.otherCount > 0 {
-                        HStack {
-                            Text(trCount(f.otherCount, "%1$@ smaller item", "%1$@ smaller items")).font(.caption).foregroundStyle(.white.opacity(0.45))
-                            Spacer()
-                            Text(ByteFormat.string(f.otherBytes)).font(.caption.monospacedDigit()).foregroundStyle(.white.opacity(0.45))
+                VStack(alignment: .leading, spacing: Theme.Space.m) {
+                    // The page's hero: the folder drawn to scale.
+                    VStack(alignment: .leading, spacing: Theme.Space.s) {
+                        pathBar(t)
+                        Treemap(entries: f.children, parentBytes: f.entry.bytes, picked: Set(model.basket.keys)) { e in
+                            if e.isDir { model.open(e.path) }
                         }
-                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .frame(height: 220)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusSmall + 2, style: .continuous))
                     }
-                    if f.children.isEmpty && f.otherCount == 0 && f.entry.effectiveSizeState == .complete {
-                        Text(tr("Empty")).foregroundStyle(.secondary).padding(.top, 20)
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(f.children.enumerated()), id: \.element.id) { i, e in
+                            if i > 0 { InspectorDivider(inset: 72) }
+                            entryRow(e, of: f.entry.bytes)
+                        }
+                        if f.otherCount > 0 {
+                            if !f.children.isEmpty { InspectorDivider(inset: 0) }
+                            HStack {
+                                Text(trCount(f.otherCount, "%1$@ smaller item", "%1$@ smaller items")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                                Spacer()
+                                Text(ByteFormat.string(f.otherBytes)).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                            }
+                            .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.s)
+                        }
+                        if f.children.isEmpty && f.otherCount == 0 && f.entry.effectiveSizeState == .complete {
+                            EmptyState(symbol: "folder", title: tr("Empty"))
+                        }
                     }
+                    .glass()
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
                 }
-                .padding(.horizontal, 28).padding(.bottom, 16)
+                .padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.xl)
+            }
+        } else if model.scanning {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Space.m) {
+                    RoundedRectangle(cornerRadius: Theme.radiusSmall + 2, style: .continuous).fill(Theme.surface).frame(height: 220)
+                        .overlay(Text(tr("Measuring your home folder once; after that every folder opens at once."))
+                            .font(Theme.secondary).foregroundStyle(Theme.textTertiary).multilineTextAlignment(.center).padding())
+                    SkeletonList(rows: 6)
+                }
+                .padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.xl)
             }
         } else {
-            VStack(spacing: 12) {
-                if model.scanning { ProgressView() }
-                Text(model.scanning ? tr("Measuring your home folder once; after that every folder opens at once.") : tr("This location could not be measured. Check access and scan again."))
-                    .font(.callout).foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            EmptyState(symbol: "exclamationmark.triangle", title: tr("This location could not be measured. Check access and scan again."))
+                .frame(maxHeight: .infinity)
         }
     }
 
     func pathBar(_ t: SpaceTree) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
+            HStack(spacing: Theme.Space.xs) {
                 if model.path != t.root {
                     Button { model.open((model.path as NSString).deletingLastPathComponent) } label: {
-                        Image(systemName: "chevron.left").font(.caption.weight(.semibold)).frame(width: 22, height: 22)
+                        Image(systemName: "chevron.left").font(.system(size: 11, weight: .semibold)).frame(width: 22, height: 22)
                     }
-                    .buttonStyle(.plain).foregroundStyle(.white.opacity(0.8)).accessibilityLabel(tr("Back")).help(tr("Back"))
+                    .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).accessibilityLabel(tr("Back")).help(tr("Back"))
                 }
                 let trail = t.trail(to: model.path)
                 ForEach(Array(trail.enumerated()), id: \.element.path) { i, e in
-                    if i > 0 { Image(systemName: "chevron.right").font(.system(size: 9)).foregroundStyle(.white.opacity(0.35)) }
+                    if i > 0 { Image(systemName: "chevron.right").font(.system(size: 9)).foregroundStyle(Theme.textTertiary) }
                     Button { model.open(e.path) } label: {
-                        Text(i == 0 ? "~" : e.name).font(.system(size: 12, weight: i == trail.count - 1 ? .semibold : .regular))
-                            .foregroundStyle(.white.opacity(i == trail.count - 1 ? 1 : 0.65)).lineLimit(1)
+                        Text(i == 0 ? "~" : e.name).font(i == trail.count - 1 ? Theme.sectionTitle : Theme.secondary)
+                            .foregroundStyle(i == trail.count - 1 ? Theme.textPrimary : Theme.textSecondary).lineLimit(1)
                     }
                     .buttonStyle(.plain)
                 }
-                Text(model.folder?.entry.sizeText ?? tr("Size unavailable")).font(.caption.monospacedDigit()).foregroundStyle(.white.opacity(0.45))
-                    .padding(.leading, 6)
+                Text(model.folder?.entry.sizeText ?? tr("Size unavailable")).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                    .padding(.leading, 6).contentTransition(.numericText())
             }
         }
     }
@@ -571,32 +592,33 @@ struct SpacePage: View {
         let picked = model.basket[e.path] != nil || model.isCovered(e.path)
         let refusal = model.refusal(e.path)
         let canOpen = e.isDir && model.tree?.folder(e.path) != nil
-        return HStack(spacing: 10) {
+        return HStack(spacing: Theme.Space.s + 2) {
             tick(e.path, bytes: e.bytes, picked: picked, refusal: refusal, name: e.name)
-            Image(nsImage: NSWorkspace.shared.icon(forFile: e.path)).resizable().frame(width: 20, height: 20).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(e.name).font(.system(size: 13)).foregroundStyle(.white).lineLimit(1).truncationMode(.middle)
+            Image(nsImage: NSWorkspace.shared.icon(forFile: e.path)).resizable().frame(width: 22, height: 22).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(e.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1).truncationMode(.middle)
                 Text([e.isDir ? trCount(e.files, "%1$@ file", "%1$@ files") : nil, e.newest.map { tr("changed %1$@", AgeFormat.string($0)) }]
                         .compactMap { $0 }.joined(separator: " · "))
-                    .font(.caption).foregroundStyle(.white.opacity(0.45)).lineLimit(1)
+                    .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
             }
-            Spacer(minLength: 8)
+            Spacer(minLength: Theme.Space.s)
             GeometryReader { g in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.08))
-                    Capsule().fill(Color.cyan.opacity(0.7))
+                    Capsule().fill(Color.white.opacity(0.07))
+                    Capsule().fill(Theme.accent.opacity(0.8))
                         .frame(width: max(2, g.size.width * CGFloat(Double(e.bytes) / Double(max(total, 1)))))
                 }
             }
-            .frame(width: 90, height: 5).accessibilityHidden(true)
-            Text(e.sizeText).font(.system(size: 13, weight: .medium).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
+            .frame(width: 80, height: 4).accessibilityHidden(true)
+            Text(e.sizeText).font(Theme.figure(.row, weight: .medium)).foregroundStyle(Theme.textPrimary)
                 .frame(minWidth: 76, alignment: .trailing)
-            Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(canOpen ? 0.5 : 0))
+            Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.textTertiary.opacity(canOpen ? 1 : 0))
                 .frame(width: 14).accessibilityHidden(true)
         }
-        .padding(.horizontal, 12).padding(.vertical, 6)
-        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.white.opacity(picked ? 0.1 : 0.03)))
+        .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.s)
+        .background(picked ? Theme.accent.opacity(0.07) : .clear)
         .contentShape(Rectangle())
+        .hoverHighlight()
         .onTapGesture { if canOpen { model.open(e.path) } }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(canOpen ? .isButton : [])
@@ -604,17 +626,11 @@ struct SpacePage: View {
     }
 
     func tick(_ path: String, bytes: Int64, picked: Bool, refusal: String?, name: String, action: (() -> Void)? = nil) -> some View {
-        Button { if let action { action() } else { model.toggle(path, bytes: bytes) } } label: {
-            Image(systemName: refusal != nil && !picked ? "lock.fill" : picked ? "checkmark.circle.fill" : "circle")
-                .font(refusal != nil ? .caption : .body)
-                .foregroundStyle(picked ? Color.cyan : .white.opacity(refusal != nil ? 0.3 : 0.5))
-                .frame(width: 22, height: 22).contentShape(Rectangle())
+        SelectToggle(selected: picked, locked: refusal != nil && !picked, label: tr("Select %1$@", name)) {
+            if let action { action() } else { model.toggle(path, bytes: bytes) }
         }
-        .buttonStyle(.plain)
-        .disabled((refusal != nil && !picked) || model.working || (model.isCovered(path) && model.basket[path] == nil))
+        .disabled(model.working || (model.isCovered(path) && model.basket[path] == nil))
         .help(refusal ?? (picked ? tr("Picked to move to the Trash") : tr("Pick to move to the Trash")))
-        .accessibilityLabel(tr("Select %1$@", name))
-        .accessibilityValue(picked ? tr("Selected") : tr("Not selected"))
     }
 
     @ViewBuilder func pathMenu(_ path: String) -> some View {
@@ -634,35 +650,42 @@ struct SpacePage: View {
     }
 
     @ViewBuilder var largeList: some View {
-        HStack {
-            Text(tr("Files of 100 MB or more in your home folder.")).font(.caption).foregroundStyle(.white.opacity(0.5))
-            Spacer()
-            if model.loadingLastOpened { ProgressView().controlSize(.small).accessibilityLabel(tr("Checking last opened dates")) }
-            Picker(tr("Not opened for"), selection: $olderThan) {
-                Text(tr("Any age")).tag(0)
-                Text(tr("Not opened for 3 months")).tag(90)
-                Text(tr("Not opened for a year")).tag(365)
-            }
-            .pickerStyle(.menu).labelsHidden().frame(width: 210)
-            .accessibilityLabel(tr("Not opened for"))
-        }
-        .padding(.horizontal, 28).padding(.bottom, 8)
+        let files = largeFiles
+        let pickable = files.filter { model.basket[$0.path] != nil || model.pickable($0.path) }
         ScrollView {
-            LazyVStack(spacing: 2) {
-                let files = largeFiles
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                HStack(spacing: Theme.Space.s) {
+                    SelectAllButton(title: tr("Large files"), available: pickable.count,
+                                    selected: pickable.filter { model.basket[$0.path] != nil }.count,
+                                    selectAll: { model.pick(pickable.map { ($0.path, $0.bytes) }) },
+                                    clear: { model.unpick(pickable.map(\.path)) })
+                        .disabled(model.working)
+                    InfoButton(text: tr("Files of 100 MB or more in your home folder."))
+                    Spacer()
+                    if model.loadingLastOpened { ProgressView().controlSize(.small).accessibilityLabel(tr("Checking last opened dates")) }
+                    Picker(tr("Not opened for"), selection: $olderThan) {
+                        Text(tr("Any age")).tag(0)
+                        Text(tr("Not opened for 3 months")).tag(90)
+                        Text(tr("Not opened for a year")).tag(365)
+                    }
+                    .pickerStyle(.menu).labelsHidden().fixedSize().controlSize(.small)
+                    .accessibilityLabel(tr("Not opened for"))
+                }
+                .padding(.horizontal, 2)
                 if olderThan > 0 {
                     let unknown = (model.tree?.large ?? []).filter { (model.lastOpened[$0.path] ?? nil) == nil }.count
                     if unknown > 0 {
                         Text(tr("%1$@ files have no known last opened date and are excluded from this filter.", String(unknown)))
-                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            .font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                ForEach(files) { largeRow($0) }
                 if files.isEmpty {
-                    Text(model.tree == nil ? tr("Measuring your home folder…") : tr("No matching items")).foregroundStyle(.secondary).padding(.top, 30)
+                    if model.tree == nil { SkeletonList(rows: 6) } else { EmptyState(symbol: "doc", title: tr("No matching items")) }
+                } else {
+                    RowList(items: files, inset: 76) { largeRow($0) }
                 }
             }
-            .padding(.horizontal, 28).padding(.bottom, 16)
+            .padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.xl)
         }
     }
 
@@ -670,111 +693,141 @@ struct SpacePage: View {
         let picked = model.basket[f.path] != nil || model.isCovered(f.path)
         let name = (f.path as NSString).lastPathComponent
         let opened = model.lastOpened[f.path] ?? nil
-        return HStack(spacing: 10) {
+        return HStack(spacing: Theme.Space.s + 2) {
             tick(f.path, bytes: f.bytes, picked: picked, refusal: model.refusal(f.path), name: name)
-            Image(nsImage: NSWorkspace.shared.icon(forFile: f.path)).resizable().frame(width: 20, height: 20).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(name).font(.system(size: 13)).foregroundStyle(.white).lineLimit(1).truncationMode(.middle)
-                Text(FSPath.tilde((f.path as NSString).deletingLastPathComponent)).font(.caption).foregroundStyle(.white.opacity(0.45))
+            Image(nsImage: NSWorkspace.shared.icon(forFile: f.path)).resizable().frame(width: 22, height: 22).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1).truncationMode(.middle)
+                Text(FSPath.tilde((f.path as NSString).deletingLastPathComponent)).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     .lineLimit(1).truncationMode(.middle)
             }
-            Spacer(minLength: 8)
+            Spacer(minLength: Theme.Space.s)
             Text(opened.map { tr("opened %1$@", AgeFormat.string($0)) } ?? tr("changed %1$@", AgeFormat.string(f.modified)))
-                .font(.caption).foregroundStyle(.white.opacity(0.55)).frame(width: 130, alignment: .trailing)
-            Text(ByteFormat.string(f.bytes)).font(.system(size: 13, weight: .medium).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
+                .font(Theme.caption).foregroundStyle(Theme.textSecondary).frame(width: 130, alignment: .trailing)
+            Text(ByteFormat.string(f.bytes)).font(Theme.figure(.row, weight: .medium)).foregroundStyle(Theme.textPrimary)
                 .frame(width: 76, alignment: .trailing)
         }
-        .padding(.horizontal, 12).padding(.vertical, 6)
-        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.white.opacity(picked ? 0.1 : 0.03)))
+        .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.s)
+        .background(picked ? Theme.accent.opacity(0.07) : .clear)
+        .hoverHighlight()
         .contextMenu { pathMenu(f.path) }
     }
 
     // MARK: Duplicates
 
     @ViewBuilder var duplicateList: some View {
-        HStack(spacing: 10) {
-            Text(tr("Identical files of 1 MB or more in Desktop, Documents, Downloads, Movies, Music and Pictures, compared byte for byte."))
-                .font(.caption).foregroundStyle(.white.opacity(0.5)).fixedSize(horizontal: false, vertical: true)
-            Spacer()
-            if model.findingDuplicates {
-                Button(tr(model.stoppingDuplicates ? "Stopping…" : "Stop")) { model.stopDuplicates() }.buttonStyle(PillButtonStyle()).disabled(model.stoppingDuplicates)
-            } else {
-                if let d = model.duplicates, !d.isEmpty {
-                    Button(tr("Keep the oldest of each")) { model.pickAllButOldest() }.buttonStyle(PillButtonStyle()).disabled(model.working)
-                }
-                Button(model.duplicates == nil ? tr("Find duplicates") : tr("Look again")) { model.findDuplicates() }
-                    .buttonStyle(PillButtonStyle()).disabled(model.working)
-            }
-        }
-        .padding(.horizontal, 28).padding(.bottom, 8)
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 10) {
-                if model.findingDuplicates {
-                    HStack(spacing: 8) {
-                        ProgressView().controlSize(.small)
-                        Text(model.duplicateProgress.map { p in p.total > 0 ? "\(p.stage) \(p.done)/\(p.total)" : p.stage } ?? tr("Looking…"))
-                            .font(.callout).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: Theme.Space.m) {
+                HStack(spacing: Theme.Space.s) {
+                    if let groups = model.duplicates, !groups.isEmpty, !model.findingDuplicates {
+                        let copies = groups.flatMap { $0.paths.dropFirst() }
+                        SelectAllButton(title: tr("Duplicates"), available: copies.count,
+                                        selected: copies.filter { model.basket[$0] != nil }.count,
+                                        selectAll: { model.pickAllButOldest() },
+                                        clear: { model.unpick(Array(copies)) })
+                            .disabled(model.working)
+                    } else {
+                        Text(tr("Duplicates")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary)
                     }
-                    .padding(.top, 20)
+                    InfoButton(text: tr("Identical files of 1 MB or more in Desktop, Documents, Downloads, Movies, Music and Pictures, compared byte for byte."))
+                    Spacer()
+                    if model.findingDuplicates {
+                        Button(tr(model.stoppingDuplicates ? "Stopping…" : "Stop")) { model.stopDuplicates() }
+                            .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.stoppingDuplicates)
+                    } else {
+                        if let d = model.duplicates, !d.isEmpty {
+                            Button(tr("Keep the oldest of each")) { model.pickAllButOldest() }
+                                .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.working)
+                        }
+                        Button(model.duplicates == nil ? tr("Find duplicates") : tr("Look again")) { model.findDuplicates() }
+                            .buttonStyle(PillButtonStyle(prominent: model.duplicates == nil)).controlSize(.small).disabled(model.working)
+                    }
+                }
+                .padding(.horizontal, 2)
+                if model.findingDuplicates {
+                    NoticeBanner(text: model.duplicateProgress.map { p in p.total > 0 ? "\(p.stage) \(p.done)/\(p.total)" : p.stage } ?? tr("Looking…"), busy: true)
+                    SkeletonList(rows: 4)
                 } else {
                     if model.duplicateStopped {
-                        Label(tr("Duplicate scan stopped. Displayed results may be out of date; run it again."), systemImage: "pause.circle").foregroundStyle(.secondary)
+                        Label(tr("Duplicate scan stopped. Displayed results may be out of date; run it again."), systemImage: "pause.circle")
+                            .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                     }
                     if let report = model.duplicateReport, !report.complete {
-                        Label(tr("Duplicate scan is incomplete. Some locations could not be compared."), systemImage: "exclamationmark.triangle").foregroundStyle(.secondary)
+                        Label(tr("Duplicate scan is incomplete. Some locations could not be compared."), systemImage: "exclamationmark.triangle")
+                            .font(Theme.secondary).foregroundStyle(Theme.caution)
                         DisclosureGroup(tr("Locations requiring another check")) {
                             ForEach(Array(report.issues.enumerated()), id: \.offset) { _, issue in
-                                Text(FSPath.tilde(issue.path) + ": " + issue.reason).font(.caption).textSelection(.enabled)
+                                Text(FSPath.tilde(issue.path) + ": " + issue.reason).font(Theme.caption).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
                             }
                             if report.omittedIssueCount > 0 {
-                                Text(tr("%1$@ additional scan issues were omitted.", String(report.omittedIssueCount))).font(.caption)
+                                Text(tr("%1$@ additional scan issues were omitted.", String(report.omittedIssueCount))).font(Theme.caption)
                             }
                         }
+                        .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                     }
                     if let groups = model.duplicates {
                         if groups.isEmpty {
                             if model.duplicateReport?.complete == true && !model.duplicateStopped {
-                                Label(tr("No duplicate files found."), systemImage: "checkmark.circle").foregroundStyle(.secondary).padding(.top, 30)
+                                EmptyState(symbol: "checkmark.circle", title: tr("No duplicate files found."))
                             } else {
-                                Text(tr("No confirmed duplicate groups in this incomplete scan.")).foregroundStyle(.secondary)
+                                EmptyState(symbol: "questionmark.circle", title: tr("No confirmed duplicate groups in this incomplete scan."))
                             }
                         } else {
-                            Text(tr("%1$@ could be freed by keeping one copy of each.", model.duplicateSizeText))
-                                .font(.callout).foregroundStyle(.white.opacity(0.75))
+                            HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+                                Text(model.duplicateSizeText).font(Theme.figure(.metric)).foregroundStyle(Theme.textPrimary)
+                                    .contentTransition(.numericText())
+                                Text(tr("%1$@ could be freed by keeping one copy of each.", model.duplicateSizeText))
+                                    .font(Theme.secondary).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                            }
+                            .padding(.horizontal, 2)
                             ForEach(groups) { duplicateCard($0) }
                         }
+                    } else {
+                        EmptyState(symbol: "doc.on.doc", title: tr("Find duplicates"),
+                                   detail: tr("Identical files of 1 MB or more in Desktop, Documents, Downloads, Movies, Music and Pictures, compared byte for byte."))
                     }
                 }
             }
-            .padding(.horizontal, 28).padding(.bottom, 16)
+            .padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.xl)
         }
     }
 
     func duplicateCard(_ g: DuplicateGroup) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text((g.paths.first.map { ($0 as NSString).lastPathComponent }) ?? "").font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white).lineLimit(1).truncationMode(.middle)
+        let copies = Array(g.paths.dropFirst())
+        let pickedCount = copies.filter { model.basket[$0] != nil }.count
+        return InspectorPanel {
+            HStack(spacing: Theme.Space.s) {
+                Button {
+                    if pickedCount == copies.count { model.unpick(copies) } else { model.pickAllButOldest(in: g) }
+                } label: {
+                    SelectionBox(state: pickedCount == 0 ? .none : pickedCount >= copies.count ? .all : .some)
+                        .frame(width: 24, height: 24).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).disabled(model.working)
+                .accessibilityLabel(tr("Select all in %1$@", (g.paths.first.map { ($0 as NSString).lastPathComponent }) ?? ""))
+                .accessibilityValue(tr("%1$@ of %2$@ selected", String(pickedCount), String(copies.count)))
+                Text((g.paths.first.map { ($0 as NSString).lastPathComponent }) ?? "").font(Theme.rowTitle)
+                    .foregroundStyle(Theme.textPrimary).lineLimit(1).truncationMode(.middle)
                 Spacer()
-                Text(tr("%1$@ copies of %2$@", String(g.paths.count), ByteFormat.string(g.size))).font(.caption.monospacedDigit())
-                    .foregroundStyle(.white.opacity(0.55))
+                Text(tr("%1$@ copies of %2$@", String(g.paths.count), ByteFormat.string(g.size))).font(Theme.caption.monospacedDigit())
+                    .foregroundStyle(Theme.textTertiary)
             }
+            .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.s)
             ForEach(Array(g.paths.enumerated()), id: \.element) { i, p in
                 let picked = model.basket[p] != nil || model.isCovered(p)
-                HStack(spacing: 8) {
+                InspectorDivider(inset: 46)
+                HStack(spacing: Theme.Space.s) {
                     tick(p, bytes: g.privateBytes?[p] ?? 0, picked: picked, refusal: i == 0 ? tr("This copy is kept as the comparison reference") : model.refusal(p), name: (p as NSString).lastPathComponent, action: { model.toggleDuplicate(p, group: g) })
-                    Text(FSPath.tilde(p)).font(.caption.monospaced()).foregroundStyle(.white.opacity(0.75)).lineLimit(1).truncationMode(.middle)
+                    Text(FSPath.tilde(p)).font(Theme.mono).foregroundStyle(Theme.textSecondary).lineLimit(1).truncationMode(.middle)
                         .textSelection(.enabled)
-                    if i == 0 {
-                        Text(tr("oldest")).font(.system(size: 10, weight: .semibold)).foregroundStyle(.green)
-                            .padding(.horizontal, 6).padding(.vertical, 1).background(Capsule().fill(Color.green.opacity(0.18)))
-                    }
+                    if i == 0 { StatusTag(text: tr("oldest"), color: Theme.good) }
                     Spacer()
                 }
+                .padding(.leading, Theme.Space.m + 2 + 16).padding(.trailing, Theme.Space.m + 2).padding(.vertical, 4)
+                .background(picked ? Theme.accent.opacity(0.07) : .clear)
                 .contextMenu { pathMenu(p) }
             }
         }
-        .padding(12).glass(radius: 12)
     }
 }
 
@@ -791,7 +844,7 @@ struct Treemap: View {
             let rects = Self.squarify(shown.map { Double(max($0.bytes, 1)) }, in: CGRect(origin: .zero, size: g.size),
                                       total: Double(max(parentBytes, 1)))
             ZStack(alignment: .topLeading) {
-                Rectangle().fill(Color.white.opacity(0.04))
+                Rectangle().fill(Theme.surface)
                 ForEach(shown.indices, id: \.self) { i in tile(shown[i], rects[i], index: i) }
             }
         }
@@ -802,11 +855,11 @@ struct Treemap: View {
         let color = Color(hue: hue, saturation: e.isDir ? 0.55 : 0.2, brightness: 0.55 - Double(index % 3) * 0.06)
         return ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 4, style: .continuous)
-                .fill(picked.contains(e.path) ? Color.red.opacity(0.55) : color)
+                .fill(picked.contains(e.path) ? Theme.danger.opacity(0.55) : color)
             if r.width > 54 && r.height > 28 {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(e.name).font(.system(size: 11, weight: .medium)).lineLimit(1)
-                    Text(e.sizeText).font(.system(size: 10).monospacedDigit()).opacity(0.7)
+                    Text(e.name).font(Theme.label).lineLimit(1)
+                    Text(e.sizeText).font(Theme.caption.monospacedDigit()).opacity(0.7)
                 }
                 .foregroundStyle(.white).padding(5)
             }
