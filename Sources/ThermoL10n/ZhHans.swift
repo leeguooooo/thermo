@@ -3154,4 +3154,5 @@ let zhHans: [String: String] = [
     // Redesign D (new strings for this group go right below this line)
 
     // Redesign E (new strings for this group go right below this line)
+    "On": "已开启",
 ]

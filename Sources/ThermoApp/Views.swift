@@ -26,22 +26,73 @@ func groupName(_ g: SensorGroup) -> String {
 }
 
 func heatColor(_ c: Double?) -> Color {
-    guard let c else { return .secondary }
-    return c >= 85 ? .red : c >= 65 ? .orange : .green
+    guard let c else { return Theme.textTertiary }
+    return c >= 85 ? Theme.danger : c >= 65 ? Theme.caution : Theme.good
 }
 
 /// Lightweight level bar (cheaper than ProgressView and tinted per value).
 struct Bar: View {
     let value: Double
-    var color: Color = .accentColor
+    var color: Color = Theme.accent
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         GeometryReader { g in
             ZStack(alignment: .leading) {
-                Capsule().fill(.quaternary)
+                Capsule().fill(Color.white.opacity(0.07))
                 Capsule().fill(color).frame(width: g.size.width * min(1, max(0, value.isFinite ? value : 0)))
             }
         }
-        .frame(height: 6)
+        .frame(height: 4)
+        .animation(Theme.gentle.unlessReduced(reduceMotion), value: value)
+    }
+}
+
+/// The menu bar panel lays feature rows out as small tiles; Settings shows them as full rows.
+private struct FeatureRowCompactKey: EnvironmentKey { static let defaultValue = false }
+extension EnvironmentValues {
+    var featureRowCompact: Bool {
+        get { self[FeatureRowCompactKey.self] }
+        set { self[FeatureRowCompactKey.self] = newValue }
+    }
+}
+
+/// A feature that opens its own panel (Clean Screen, Keep awake…): symbol, name, a status on the
+/// right and a chevron, like a row in System Settings. A green dot marks one that is running.
+struct FeatureRow: View {
+    let title: String
+    let symbol: String
+    var status: String? = nil
+    var statusColor: Color = Theme.textTertiary
+    var active = false
+    /// A problem to show under the row.
+    var note: String? = nil
+    @Environment(\.featureRowCompact) private var compact
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: compact ? Theme.Space.s : Theme.Space.m) {
+                Image(systemName: symbol).font(.system(size: compact ? 11 : 13, weight: .medium))
+                    .foregroundStyle(active ? Theme.good : Theme.textSecondary).frame(width: compact ? 14 : 18)
+                    .accessibilityHidden(true)
+                Text(title).font(compact ? Theme.secondary : Theme.body).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                Spacer(minLength: Theme.Space.xs)
+                if active { Circle().fill(Theme.good).frame(width: 6, height: 6).accessibilityLabel(tr("On")) }
+                if let status { Text(status).font(Theme.caption).foregroundStyle(statusColor).lineLimit(1) }
+                if !compact {
+                    Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.textTertiary)
+                        .accessibilityHidden(true)
+                }
+            }
+            if let note {
+                Text(note).font(Theme.caption).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, compact ? 22 : 30)
+            }
+        }
+        .padding(.horizontal, compact ? Theme.Space.s + 2 : Theme.Space.l)
+        .padding(.vertical, compact ? Theme.Space.s : Theme.Space.m)
+        .frame(maxWidth: .infinity, minHeight: compact ? 30 : 44, alignment: .leading)
+        .contentShape(Rectangle())
+        .hoverHighlight(radius: compact ? Theme.radiusSmall : 0)
     }
 }
 
@@ -84,17 +135,23 @@ struct PopoverView: View {
                 .onPreferenceChange(PanelBodyHeight.self) { height in
                     if height > 0, abs(height - bodyHeight) > 0.5 { bodyHeight = height }
                 }
-                Divider()
-                HStack { CleanScreenButton(); AWDLButton() }
-                IdleAwakeButton()
-                if monitor.snapshot?.battery != nil { BatteryCareButton() }
+                // Features that open their own panel, as small tiles two by two.
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: Theme.Space.s), GridItem(.flexible(), spacing: Theme.Space.s)],
+                          spacing: Theme.Space.s) {
+                    Group {
+                        CleanScreenButton(); AWDLButton(); IdleAwakeButton()
+                        if monitor.snapshot?.battery != nil { BatteryCareButton() }
+                    }
+                    .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.surface))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).strokeBorder(Theme.hairline))
+                }
+                .environment(\.featureRowCompact, true)
             }
             footer
         }
-        .padding(12)
+        .padding(Theme.Space.m)
         .frame(width: 372)
-        .background(LinearGradient(colors: [Color(red: 0.11, green: 0.10, blue: 0.20), Color(red: 0.06, green: 0.09, blue: 0.17)],
-                                   startPoint: .top, endPoint: .bottom))
+        .background(LinearGradient(colors: [Theme.canvas, Theme.canvasDeep], startPoint: .top, endPoint: .bottom))
         .environment(\.colorScheme, .dark)
     }
 
@@ -105,7 +162,7 @@ struct PopoverView: View {
                 // The menu bar icon is behind the notch; say how to get it back.
                 Label(tr("The menu bar icon is hidden behind the notch. Hold ⌘ and drag other icons out of the menu bar to make room, or open Thermo from the Dock."),
                       systemImage: "eye.slash")
-                    .font(.caption).foregroundStyle(.orange)
+                    .font(Theme.caption).foregroundStyle(Theme.caution)
                     .fixedSize(horizontal: false, vertical: true)
                     .onTapGesture { monitor.iconHidden = false }
             }
@@ -116,11 +173,12 @@ struct PopoverView: View {
             programs
             if monitor.snapshot?.battery != nil || renderingPreview {
                 LidAwakeSwitch(monitor: monitor)
-                    .padding(10)
-                    .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color.white.opacity(0.055)))
+                    .padding(Theme.Space.m - 2)
+                    .background(RoundedRectangle(cornerRadius: Theme.radius - 1, style: .continuous).fill(Theme.surface))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.radius - 1, style: .continuous).strokeBorder(Theme.hairline))
             }
             if let err = monitor.lastError {
-                Text(err).font(.caption).foregroundStyle(.red).lineLimit(3)
+                Text(err).font(Theme.caption).foregroundStyle(Theme.danger).lineLimit(3)
                     .onTapGesture { monitor.lastError = nil }
             }
         }
@@ -134,30 +192,39 @@ struct PopoverView: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(tempText(hot, fahrenheit: fahrenheit))
-                    .font(.system(size: 30, weight: .semibold, design: .rounded)).monospacedDigit()
+                    .font(Theme.figure(.hero))
                     .foregroundStyle(heatColor(hot))
+                    .contentTransition(.numericText())
+                    .animation(Theme.standard, value: hot)
                 Text(current == nil ? tr("Checking…") : verdictWord)
-                    .font(.system(size: 13, weight: .semibold)).foregroundStyle(current == nil ? .white.opacity(0.5) : pulse.severity)
+                    .font(Theme.rowTitle.weight(.semibold)).foregroundStyle(current == nil ? Theme.textTertiary : verdictColor)
                 Spacer()
                 if let w = monitor.snapshot?.systemPower {
                     VStack(alignment: .trailing, spacing: 0) {
-                        Text(String(format: "%.1f W", w)).font(.system(size: 14, weight: .semibold).monospacedDigit()).foregroundStyle(.white)
-                        Text(tr("System")).font(.system(size: 10)).foregroundStyle(.white.opacity(0.5))
+                        Text(String(format: "%.1f W", w)).font(Theme.figure(.row)).foregroundStyle(Theme.textPrimary)
+                            .contentTransition(.numericText())
+                        Text(tr("System")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     }
                 }
             }
             if let current, let why = OverviewPage.sourceText(current) ?? current.culpritText {
-                Text(why).font(.system(size: 11)).foregroundStyle(.white.opacity(0.7)).lineLimit(2)
+                Text(why).font(Theme.caption).foregroundStyle(Theme.textSecondary).lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
             HStack(spacing: 5) {
                 ForEach([panel.chip, PanelFormat.gb(panel.memoryTotal) + " GB", panel.macOS] + (PanelModel.uptime.map { [PanelFormat.uptime($0)] } ?? []), id: \.self) { fact in
-                    Text(fact).font(.system(size: 10, weight: .medium)).foregroundStyle(.white.opacity(0.6))
+                    Text(fact).font(Theme.label).foregroundStyle(Theme.textTertiary)
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Capsule().fill(Color.white.opacity(0.07)))
+                        .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Color.white.opacity(0.06)))
                 }
             }
         }
+    }
+
+    var verdictColor: Color {
+        if pulse.severity == .green { return Theme.good }
+        if pulse.severity == .red { return Theme.danger }
+        return Theme.caution
     }
 
     /// The verdict in two or three words, for the header.
@@ -177,78 +244,78 @@ struct PopoverView: View {
     var cpuCard: some View {
         let s = monitor.snapshot
         let busy = pulse.current?.busy
-        return PanelCard(title: "CPU", symbol: "cpu", tint: .green, badge: s?.cpu.map { tempText($0, fahrenheit: fahrenheit) },
+        return PanelCard(title: "CPU", symbol: "cpu", badge: s?.cpu.map { tempText($0, fahrenheit: fahrenheit) },
                          badgeTint: heatColor(s?.cpu)) {
             BigValue(value: panel.currentCPU.map { String(format: "%.0f", $0) } ?? "—", unit: "%")
-            Sparkline(values: panel.cpu, top: 100, color: .green)
+            Sparkline(values: panel.cpu, top: 100)
             Text([busy.map { tr("load %1$@× per core", String(format: "%.1f", $0)) }, s?.cpuPower.map { String(format: "%.1f W", $0) }]
                 .compactMap { $0 }.joined(separator: " · "))
-                .font(.system(size: 10)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+                .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
         }
     }
 
     var gpuCard: some View {
         let s = monitor.snapshot
-        return PanelCard(title: "GPU", symbol: "square.stack.3d.up", tint: .orange, badge: s?.gpu.map { tempText($0, fahrenheit: fahrenheit) },
+        return PanelCard(title: "GPU", symbol: "square.stack.3d.up", badge: s?.gpu.map { tempText($0, fahrenheit: fahrenheit) },
                          badgeTint: heatColor(s?.gpu)) {
             BigValue(value: panel.currentGPU.map { String(format: "%.0f", $0) } ?? "—", unit: panel.currentGPU == nil ? nil : "%")
-            Sparkline(values: panel.gpu, top: 100, color: .orange)
+            Sparkline(values: panel.gpu, top: 100)
             Text(panel.currentGPU == nil ? tr("not reported") : (panel.currentGPU ?? 0) >= 50 ? tr("busy") : tr("light"))
-                .font(.system(size: 10)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+                .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
         }
     }
 
     var memoryCard: some View {
         let m = panel.memoryStats
         let pressure = pulse.current?.memory ?? .unknown
-        return PanelCard(title: tr("Memory"), symbol: "memorychip", tint: .yellow, badge: MachinePulse.memoryName(pressure),
-                         badgeTint: pressure == .critical ? .red : pressure == .warning ? .orange : .white.opacity(0.6)) {
+        return PanelCard(title: tr("Memory"), symbol: "memorychip", badge: MachinePulse.memoryName(pressure),
+                         badgeTint: pressure == .critical ? Theme.danger : pressure == .warning ? Theme.caution : Theme.textSecondary) {
             BigValue(value: m.map { String(format: "%.0f", Double($0.usedBytes) / Double(max(1, $0.totalBytes)) * 100) } ?? "—", unit: "%")
-            Sparkline(values: panel.memory, top: 100, color: .yellow)
+            Sparkline(values: panel.memory, top: 100)
             Text([m.map { PanelFormat.gb($0.usedBytes) + " / " + PanelFormat.gb($0.totalBytes) + " GB" },
                   pulse.current.flatMap { $0.swapUsedMB > 0 ? tr("swap %1$@", MemoryFormat.string(mebibytes: $0.swapUsedMB)) : nil }]
                 .compactMap { $0 }.joined(separator: " · "))
-                .font(.system(size: 10)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+                .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
         }
     }
 
     var diskCard: some View {
         let d = panel.diskStats
         let used = d.map { 1 - Double($0.freeBytes) / Double(max(1, $0.totalBytes)) } ?? 0
-        return PanelCard(title: tr("Free space"), symbol: "internaldrive", tint: .cyan,
+        return PanelCard(title: tr("Free space"), symbol: "internaldrive",
                          badge: d.map { ByteFormat.string($0.totalBytes) }) {
             BigValue(value: d.map { ByteFormat.string($0.freeBytes) } ?? "—")
-            UsageBar(fraction: used, color: used > 0.9 ? .orange : .cyan)
+            UsageBar(fraction: used, color: used > 0.9 ? Theme.caution : Theme.accent)
             Text(d.map { tr("%1$@ used · %2$@", ByteFormat.string($0.totalBytes - $0.freeBytes), String(format: "%.0f%%", used * 100)) } ?? "")
-                .font(.system(size: 10)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+                .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
         }
     }
 
     var networkCard: some View {
         let (down, unit) = PanelFormat.rate(panel.currentDownload)
         let (up, upUnit) = PanelFormat.rate(panel.upload)
-        return PanelCard(title: tr("Network"), symbol: "network", tint: .blue) {
+        return PanelCard(title: tr("Network"), symbol: "network") {
             BigValue(value: down, unit: unit)
-            Sparkline(values: panel.download, color: .blue)
-            Text(tr("upload %1$@", up + " " + upUnit)).font(.system(size: 10)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
+            Sparkline(values: panel.download)
+            Text(tr("upload %1$@", up + " " + upUnit)).font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
         }
     }
 
     var fanCard: some View {
         let fans = monitor.sampledFans ?? []
         let top = fans.filter { $0.rpm != nil }.max { $0.rpm! < $1.rpm! }
-        return PanelCard(title: tr("Fans"), symbol: "fan", tint: .teal,
+        return PanelCard(title: tr("Fans"), symbol: "fan",
                          badge: top?.load.map { String(format: "%.0f%%", $0 * 100) }) {
             BigValue(value: top.map { (fans.contains { $0.rpm == nil } ? "≥ " : "") + FanControlPresentation.rpm($0.rpm) } ?? "—", unit: top == nil ? nil : "RPM")
             if fans.isEmpty {
-                Text(monitor.sampledFans == nil ? monitor.fanEmptyMessage : tr("No fans")).font(.system(size: 10)).foregroundStyle(.white.opacity(0.55))
+                Text(monitor.sampledFans == nil ? monitor.fanEmptyMessage : tr("No fans")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
             } else if monitor.policiesAvailable {
                 let policies = fans.map { monitor.pendingPolicies[$0.id] ?? monitor.policies[$0.id] ?? .auto }
                 let allAuto = policies.allSatisfy { $0 == .auto }
                 let allMax = zip(fans, policies).allSatisfy { fan, policy in
                     if case .fixed(let rpm) = policy, let range=fan.validRange { return rpm.isInfinite || rpm >= range.max } else { return false }
                 }
-                Text(tr("Requested policy")).font(.system(size:10)).foregroundStyle(.secondary)
+                Text(tr("Requested policy")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 HStack(spacing: 4) {
                     PanelButton(title: tr("Auto"), on: allAuto) { fans.forEach { monitor.setPolicy(.auto, fan: $0.id) } }
                     PanelButton(title: tr("Max"), on: allMax) { fans.forEach { monitor.setPolicy(.fixed(rpm: .infinity), fan: $0.id) } }
@@ -257,7 +324,7 @@ struct PopoverView: View {
                 .disabled(monitor.helperBusy).padding(.top, 4)
             } else {
                 Text(tr(fans.contains { $0.manual == true } ? "manual" : fans.contains { $0.manual == nil } ? "unknown" : "auto"))
-                    .font(.system(size: 10)).foregroundStyle(.white.opacity(0.55))
+                    .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 PanelButton(title: tr("Fan settings…")) { MainWindow.show(.fans) }
             }
         }
@@ -271,12 +338,12 @@ struct PopoverView: View {
             return [power.map { tr("drawing %1$@", String(format: "%.1f W", $0)) },
                     panel.batteryMinutesLeft.map { tr("%1$@ left", PanelFormat.duration(minutes: $0)) }].compactMap { $0 }.joined(separator: " · ")
         }()
-        return PanelCard(title: tr("Battery"), symbol: b.charging ? "battery.100.bolt" : "battery.75", tint: (b.percent ?? 100) < 20 ? .red : .green,
+        return PanelCard(title: tr("Battery"), symbol: b.charging ? "battery.100.bolt" : "battery.75", tint: (b.percent ?? 100) < 20 ? Theme.danger : Theme.textTertiary,
                          badge: b.health.map { tr("health %1$@%%", String(format: "%.0f", $0 * 100)) }) {
             HStack(alignment: .firstTextBaseline) {
                 BigValue(value: b.percent.map { String(format: "%.0f", $0) } ?? "—", unit: "%")
                 Spacer()
-                Text(detail).font(.system(size: 11)).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
+                Text(detail).font(Theme.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
             }
         }
     }
@@ -286,40 +353,45 @@ struct PopoverView: View {
         let hogs = Array((pulse.current?.hogs ?? []).sorted { $0.cpu > $1.cpu }.prefix(5))
         return VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(tr("Busiest programs")).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.75))
+                Text(tr("Busiest programs")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary)
                 Spacer()
                 Text(tr("Memory")).frame(width: 64, alignment: .trailing)
                 Text("CPU").frame(width: 46, alignment: .trailing)
             }
-            .font(.system(size: 10)).foregroundStyle(.white.opacity(0.5)).padding(.bottom, 4)
+            .font(Theme.label).foregroundStyle(Theme.textTertiary).padding(.bottom, Theme.Space.xs)
             if hogs.isEmpty {
-                Text(pulse.current == nil ? tr("Checking…") : tr("Nothing is busy."))
-                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.5)).padding(.vertical, 6)
+                if pulse.current == nil {
+                    VStack(alignment: .leading, spacing: 6) { SkeletonBar(width: 160, height: 8); SkeletonBar(width: 120, height: 8) }
+                        .padding(.vertical, 6)
+                } else {
+                    Text(tr("Nothing is busy.")).font(Theme.caption).foregroundStyle(Theme.textTertiary).padding(.vertical, 6)
+                }
             }
             ForEach(hogs) { h in
                 Button { MainWindow.show(.compute(false)) } label: {
                     HStack(spacing: 6) {
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(h.name).font(.system(size: 12, weight: .medium)).foregroundStyle(.white).lineLimit(1)
+                            Text(h.name).font(Theme.secondary.weight(.medium)).foregroundStyle(Theme.textPrimary).lineLimit(1)
                             if let origin = Self.origin(h) {
-                                Text(origin).font(.system(size: 10)).foregroundStyle(.white.opacity(0.5)).lineLimit(1)
+                                Text(origin).font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
                             }
                         }
                         Spacer(minLength: 4)
-                        Text(MemoryFormat.string(kibibytes: h.memoryKB)).font(.system(size: 11).monospacedDigit())
-                            .foregroundStyle(.white.opacity(0.7)).frame(width: 64, alignment: .trailing)
-                        Text(String(format: "%.0f", h.cpu)).font(.system(size: 11, weight: .semibold).monospacedDigit())
-                            .foregroundStyle(h.cpu >= 100 ? Color.red : h.cpu >= 50 ? .orange : .white.opacity(0.8))
+                        Text(MemoryFormat.string(kibibytes: h.memoryKB)).font(Theme.caption.monospacedDigit())
+                            .foregroundStyle(Theme.textSecondary).frame(width: 64, alignment: .trailing)
+                        Text(String(format: "%.0f", h.cpu)).font(Theme.caption.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(h.cpu >= 100 ? Theme.danger : h.cpu >= 50 ? Theme.caution : Theme.textPrimary)
+                            .contentTransition(.numericText())
                             .frame(width: 46, alignment: .trailing)
                     }
-                    .padding(.vertical, 4).contentShape(Rectangle())
+                    .padding(.vertical, Theme.Space.xs).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color.white.opacity(0.055)))
-        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Color.white.opacity(0.08)))
+        .padding(Theme.Space.m - 2)
+        .background(RoundedRectangle(cornerRadius: Theme.radius - 1, style: .continuous).fill(Theme.surface))
+        .overlay(RoundedRectangle(cornerRadius: Theme.radius - 1, style: .continuous).strokeBorder(Theme.hairline))
     }
 
     /// "thermo · Claude Code": the working folder and a currently observed ancestor.
@@ -339,18 +411,18 @@ struct PopoverView: View {
                 shortcut("internaldrive", tr("Disk Cleanup"), .disk(.home))
                 shortcut("stethoscope", tr("AI Agent Diagnostics"), .agents(.home))
                 Button { TabQuickAction.request() } label: { Image(systemName: "archivebox").frame(width: 22) }
-                    .buttonStyle(.plain).foregroundStyle(.white.opacity(0.7)).help(tr("Save and close background tabs"))
+                    .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Save and close background tabs"))
                 shortcut("clock.arrow.circlepath", tr("History"), .history)
                 PanelButton(title: tr("Menu bar…")) { MainWindow.show(.settings) }
                     .accessibilityLabel(tr("Customize menu bar…"))
                     .help(tr("Choose metrics, layout and left/right click actions."))
                 Button { NSApp.terminate(nil) } label: { Image(systemName: "power").frame(width: 22) }
-                    .buttonStyle(.plain).foregroundStyle(.white.opacity(0.7)).help(tr("Quit Thermo"))
+                    .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(tr("Quit Thermo"))
             }
             Text(tr("Left click: %1$@ · Right click: %2$@",
                     (MenuClickAction(rawValue: menuLeftClick) ?? .panel).label,
                     (MenuClickAction(rawValue: menuRightClick) ?? .panel).label))
-                .font(.system(size: 10)).foregroundStyle(.white.opacity(0.6))
+                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, 2)
@@ -358,7 +430,7 @@ struct PopoverView: View {
 
     func shortcut(_ symbol: String, _ title: String, _ page: MainPage) -> some View {
         Button { MainWindow.show(page) } label: { Image(systemName: symbol).frame(width: 22) }
-            .buttonStyle(.plain).foregroundStyle(.white.opacity(0.7)).help(title).accessibilityLabel(title)
+            .buttonStyle(.plain).foregroundStyle(Theme.textSecondary).help(title).accessibilityLabel(title)
     }
 }
 
@@ -374,7 +446,7 @@ struct QuickFanSwitch: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text(tr("Requested policy")).font(.system(size: 10)).foregroundStyle(.secondary)
+            Text(tr("Requested policy")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
             option(tr("Auto"), on: monitor.policiesAvailable && current == .auto) { monitor.setPolicy(.auto, fan: fan.id) }
             option(tr("Max"), on: monitor.policiesAvailable && isMax) { monitor.setPolicy(.fixed(rpm: .infinity), fan: fan.id) }.disabled(fan.validRange == nil)
             if monitor.policiesAvailable && isCustom {
@@ -385,10 +457,10 @@ struct QuickFanSwitch: View {
 
     func option(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).font(.caption.weight(on ? .semibold : .regular))
+            Text(title).font(Theme.caption.weight(on ? .semibold : .regular))
                 .padding(.horizontal, 8).padding(.vertical, 3)
-                .background(Capsule().fill(on ? Color.accentColor.opacity(0.85) : Color.secondary.opacity(0.15)))
-                .foregroundStyle(on ? Color.white : Color.primary)
+                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(on ? Theme.accent : Color.white.opacity(0.08)))
+                .foregroundStyle(on ? Color.white : Theme.textPrimary)
         }
         .buttonStyle(.plain).disabled(monitor.helperBusy)
     }
@@ -412,7 +484,7 @@ struct OverviewView: View {
                                 Bar(value: t / 100, color: heatColor(t))
                                 Text(tempText(t, fahrenheit: fahrenheit)).monospacedDigit().frame(width: 52, alignment: .trailing)
                             }
-                            .font(.callout)
+                            .font(Theme.body)
                         }
                     }
                 }
@@ -436,12 +508,12 @@ struct FanRow: View {
     let fan: FanReading
     var body: some View {
         HStack {
-            Image(systemName: "fan").foregroundStyle(fan.manual == true ? .orange : .secondary)
+            Image(systemName: "fan").foregroundStyle(fan.manual == true ? Theme.caution : Theme.textSecondary)
             Text(fan.name).frame(width: 52, alignment: .leading)
             FanLoadIndicator(fan: fan)
             Text(tr("%1$@ rpm", FanControlPresentation.rpm(fan.rpm))).monospacedDigit().frame(width: 76, alignment: .trailing)
         }
-        .font(.callout)
+        .font(Theme.body)
         .help(tr("%1$@–%2$@ rpm · %3$@", FanControlPresentation.rpm(fan.min), FanControlPresentation.rpm(fan.max), tr(fan.controlMode)))
     }
 }
@@ -451,15 +523,15 @@ struct BatteryRow: View {
     let fahrenheit: Bool
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: battery.charging ? "battery.100.bolt" : "battery.75").foregroundStyle(.secondary)
+            Image(systemName: battery.charging ? "battery.100.bolt" : "battery.75").foregroundStyle(Theme.textSecondary)
             if let p = battery.percent { Text(String(format: "%.0f%%", p)) }
             if let t = battery.temperature { Text(tempText(t, fahrenheit: fahrenheit)).foregroundStyle(heatColor(t)) }
             if let w = battery.power { Text(String(format: "%+.1f W", w)) }
             Spacer()
-            if let h = battery.health { Text(tr("health %1$@%%", String(format: "%.0f", h * 100))).foregroundStyle(.secondary) }
-            if let c = battery.cycleCount { Text(tr("%1$@ cycles", String(c))).foregroundStyle(.secondary) }
+            if let h = battery.health { Text(tr("health %1$@%%", String(format: "%.0f", h * 100))).foregroundStyle(Theme.textSecondary) }
+            if let c = battery.cycleCount { Text(tr("%1$@ cycles", String(c))).foregroundStyle(Theme.textSecondary) }
         }
-        .font(.caption)
+        .font(Theme.caption)
         .monospacedDigit()
     }
 }
@@ -494,7 +566,7 @@ struct TemperatureChart: View {
         .chartYAxisLabel(fahrenheit ? "°F" : "°C")
         .chartOverlay { _ in
             if !history.contains(where: { $0.cpu?.isFinite == true || $0.gpu?.isFinite == true }) {
-                Text(tr("Waiting for temperature readings…")).font(.caption).foregroundStyle(.secondary)
+                Text(tr("Waiting for temperature readings…")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
@@ -543,22 +615,22 @@ struct SensorsView: View {
     @ViewBuilder func electrical(_ title: String, _ rows: [Reading], _ f: String) -> some View {
         if !rows.isEmpty {
             section(title)
-            ForEach(rows) { r in row(r.name, key: r.key, value: String(format: f, r.value), color: .primary) }
+            ForEach(rows) { r in row(r.name, key: r.key, value: String(format: f, r.value), color: Theme.textPrimary) }
         }
     }
 
     func section(_ t: String) -> some View {
-        Text(t).font(.caption.bold()).foregroundStyle(.secondary).padding(.top, 6)
+        Text(t).font(Theme.label).foregroundStyle(Theme.textTertiary).padding(.top, 6)
     }
 
     func row(_ name: String, key: String, value: String, color: Color) -> some View {
         HStack {
             Text(name)
             Spacer()
-            if !key.hasPrefix("hid:") { Text(key).font(.caption.monospaced()).foregroundStyle(.tertiary) }
+            if !key.hasPrefix("hid:") { Text(key).font(Theme.mono).foregroundStyle(Theme.textTertiary) }
             Text(value).monospacedDigit().foregroundStyle(color).frame(width: 70, alignment: .trailing)
         }
-        .font(.callout)
+        .font(Theme.body)
     }
 }
 
@@ -584,7 +656,8 @@ enum CurvePreset: String, CaseIterable, Identifiable {
     }
 }
 
-/// The Fans page: one inspector panel per fan with its controls, then the speed history.
+/// The Fans page: the live speed of every fan with its recent curve on top (the page's one
+/// figure), then one control panel per fan, then the safety rule in a line.
 struct FansView: View {
     @ObservedObject var monitor: Monitor
 
@@ -594,65 +667,99 @@ struct FansView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Theme.Space.l) {
             helperBanner
-            if let fans = monitor.sampledFans {
-                if fans.isEmpty {
-                    InspectorPanel {
-                        Label(tr("This Mac has no fans."), systemImage: "fan")
-                            .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).padding(16)
+            hero
+            if let fans = monitor.sampledFans, !fans.isEmpty {
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                    SectionHeader(title: tr("Mode")) {
+                        if fans.count > 1 && [.running, .outdated].contains(monitor.helperState) {
+                            Button(tr("All fans to Auto")) { monitor.setPolicy(.auto, fan: -1) }
+                                .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(monitor.helperBusy)
+                        }
                     }
-                }
-                ForEach(fans) { f in
-                    // Always usable: without a helper, Apply queues the setting and starts setup.
-                    FanControlCard(fan: f, policy: monitor.pendingPolicies[f.id] ?? monitor.policies[f.id] ?? .auto,
-                                   enabled: !monitor.helperBusy, pending: monitor.pendingPolicies[f.id] != nil,
-                                   policyAvailable: monitor.policiesAvailable, applying: monitor.applyingPolicies,
-                                   controlState: monitor.fanControlState) { monitor.setPolicy($0, fan: f.id) }
-                }
-                if fans.count > 1 && [.running, .outdated].contains(monitor.helperState) {
-                    Button(tr("All fans to Auto")) { monitor.setPolicy(.auto, fan: -1) }.disabled(monitor.helperBusy)
-                }
-            }
-            if monitor.sampledFans == nil {
-                InspectorPanel {
-                    Label(monitor.fanEmptyMessage, systemImage: "hourglass")
-                        .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).padding(16)
+                    ForEach(fans) { f in
+                        // Always usable: without a helper, Apply queues the setting and starts setup.
+                        FanControlCard(fan: f, policy: monitor.pendingPolicies[f.id] ?? monitor.policies[f.id] ?? .auto,
+                                       enabled: !monitor.helperBusy, pending: monitor.pendingPolicies[f.id] != nil,
+                                       policyAvailable: monitor.policiesAvailable, applying: monitor.applyingPolicies,
+                                       controlState: monitor.fanControlState, checking: monitor.helperState == .unknown,
+                                       showName: fans.count > 1) { monitor.setPolicy($0, fan: f.id) }
+                    }
                 }
             }
             ForEach(missingFanIDs, id: \.self) { id in
-                InspectorPanel {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Label(tr("Fan %1$@ · saved state", String(id)), systemImage: "fan")
-                        Text(tr("No current reading for this fan. Saved settings and last checks are shown below."))
-                        let policy = FanControlPresentation.policy(monitor.pendingPolicies[id] ?? monitor.policies[id] ?? .auto)
-                        Text(monitor.pendingPolicies[id] != nil ? tr("Waiting for helper: %1$@", policy) :
-                                monitor.policiesAvailable ? tr("Requested policy: %1$@", policy) : tr("Requested policy unavailable"))
-                        Text(FanControlPresentation.observation(monitor.fanControlState, fan: id))
-                        if let checked = monitor.fanControlState?.observations[id]?.checkedAt, checked.timeIntervalSince1970.isFinite {
-                            Text(tr("Checked at %1$@", checked.formatted(date: .numeric, time: .standard)))
-                        }
-                    }
-                    .font(.system(size: 12)).foregroundStyle(.secondary).padding(16)
-                }
+                missingFan(id)
             }
             if missingFanIDs.isEmpty, (monitor.sampledFans ?? []).isEmpty,
                let state = monitor.fanControlState, state.failure != nil || state.suspended {
-                InspectorPanel {
-                    Text(FanControlPresentation.observation(state, fan: -1))
-                        .font(.system(size: 12)).foregroundStyle(.orange).padding(16)
-                }
+                NoticeBanner(text: FanControlPresentation.observation(state, fan: -1))
             }
-            VStack(alignment: .leading, spacing: 6) {
-                SectionHeader(title: tr("Fan speed, last 10 minutes"))
-                InspectorPanel { FanChart(history: monitor.history).padding(14) }
-            }
-            Text(tr("Safety: sustained heat above %1$@ °C (%2$@ °C on Apple Silicon) pauses policies that reduce cooling. Full-speed cooling can continue. The helper attempts Auto on stopping; recovery failures are reported.",
-                    String(Int(SafetyLimits.intel.ceiling)), String(Int(SafetyLimits.appleSilicon.ceiling))))
-                .font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
-                .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 4)
+            Label(tr("Safety: sustained heat above %1$@ °C (%2$@ °C on Apple Silicon) pauses policies that reduce cooling. Full-speed cooling can continue. The helper attempts Auto on stopping; recovery failures are reported.",
+                     String(Int(SafetyLimits.intel.ceiling)), String(Int(SafetyLimits.appleSilicon.ceiling))),
+                  systemImage: "checkmark.shield")
+                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 2)
         }
         .onAppear { monitor.refreshHelper() }
+    }
+
+    func missingFan(_ id: Int) -> some View {
+        let policy = FanControlPresentation.policy(monitor.pendingPolicies[id] ?? monitor.policies[id] ?? .auto)
+        let checked = monitor.fanControlState?.observations[id]?.checkedAt
+        let detail = [tr("No current reading for this fan. Saved settings and last checks are shown below."),
+                      FanControlPresentation.observation(monitor.fanControlState, fan: id),
+                      checked.flatMap { $0.timeIntervalSince1970.isFinite ? tr("Checked at %1$@", $0.formatted(date: .numeric, time: .standard)) : nil }]
+            .compactMap { $0 }.joined(separator: "\n")
+        return InspectorPanel {
+            HStack(spacing: Theme.Space.s) {
+                Image(systemName: "fan").foregroundStyle(Theme.textTertiary).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tr("Fan %1$@ · saved state", String(id))).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
+                    Text(monitor.pendingPolicies[id] != nil ? tr("Waiting for helper: %1$@", policy) :
+                            monitor.policiesAvailable ? tr("Requested policy: %1$@", policy) : tr("Requested policy unavailable"))
+                        .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                }
+                Spacer(minLength: 0)
+                InfoButton(text: detail)
+            }
+            .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
+        }
+    }
+
+    /// Every fan's speed in big figures over the last ten minutes of speed.
+    var hero: some View {
+        InspectorPanel {
+            if let fans = monitor.sampledFans {
+                if fans.isEmpty {
+                    EmptyState(symbol: "fan", title: tr("This Mac has no fans."))
+                } else {
+                    HStack(alignment: .top, spacing: 0) {
+                        ForEach(Array(fans.enumerated()), id: \.element.id) { i, f in
+                            if i > 0 { Rectangle().fill(Theme.hairline).frame(width: 1) }
+                            FanFigure(fan: f, checking: monitor.helperState == .unknown)
+                        }
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+            } else {
+                HStack(spacing: Theme.Space.m) {
+                    VStack(alignment: .leading, spacing: Theme.Space.s) {
+                        SkeletonBar(width: 60, height: 9)
+                        SkeletonBar(width: 150, height: 26)
+                        Text(monitor.fanEmptyMessage).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                    }
+                    Spacer()
+                }
+                .padding(Theme.Space.l)
+            }
+            InspectorDivider(inset: 0)
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                Text(tr("Fan speed, last 10 minutes")).font(Theme.label).foregroundStyle(Theme.textTertiary)
+                FanChart(history: monitor.history)
+            }
+            .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
+        }
     }
 
     /// Progress states are a quiet notice; states that need the person get a panel with its buttons.
@@ -685,9 +792,19 @@ struct FansView: View {
         }
     }
 
+    /// One line with a spinner; the longer explanation sits behind the (?).
     func notice(_ title: String, _ body: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            NoticeBanner(text: title + " " + body + (monitor.settingUp && !monitor.uninstallingHelper ? " " + tr("Setting up…") : ""), busy: true)
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            HStack(spacing: Theme.Space.s) {
+                ProgressView().controlSize(.small)
+                Text(title + (monitor.settingUp && !monitor.uninstallingHelper ? " " + tr("Setting up…") : ""))
+                    .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                InfoButton(text: body)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, Theme.Space.m).padding(.vertical, Theme.Space.s)
+            .background(RoundedRectangle(cornerRadius: Theme.radiusSmall + 2, style: .continuous).fill(Theme.surface))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radiusSmall + 2, style: .continuous).strokeBorder(Theme.hairline))
             pendingNote
         }
     }
@@ -695,45 +812,77 @@ struct FansView: View {
     @ViewBuilder var pendingNote: some View {
         if !monitor.pendingPolicies.isEmpty {
             Text(tr("Your fan setting is applied as soon as the helper is ready."))
-                .font(.system(size: 11)).foregroundStyle(.orange).padding(.horizontal, 4)
+                .font(Theme.caption).foregroundStyle(Theme.caution).padding(.horizontal, 2)
         }
     }
 
     func setupCard(icon: String, title: String, body: String, primary: (String, () -> Void)?, secondary: (String, () -> Void)? = nil) -> some View {
         InspectorPanel {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: icon).font(.system(size: 13)).foregroundStyle(.white.opacity(0.55))
-                    .frame(width: 18).padding(.top, 1).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
-                    Text(body).font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .center, spacing: Theme.Space.m) {
+                IconTile(symbol: icon, color: Theme.caution, size: 30)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: Theme.Space.xs) {
+                        Text(title).font(Theme.rowTitle.weight(.semibold)).foregroundStyle(Theme.textPrimary)
+                        InfoButton(text: body)
+                    }
                     if !monitor.pendingPolicies.isEmpty {
                         Text(tr("Your fan setting is applied as soon as the helper is ready."))
-                            .font(.system(size: 11)).foregroundStyle(.orange)
+                            .font(Theme.caption).foregroundStyle(Theme.caution)
+                    } else if monitor.settingUp || monitor.uninstallingHelper {
+                        Text(tr(monitor.uninstallingHelper ? "Uninstalling…" : "Setting up…")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     }
                 }
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 14).padding(.vertical, 11)
-            if !renderingPreview {
-                InspectorDivider(inset: 14)
-                HStack(spacing: 8) {
-                    if monitor.settingUp || monitor.uninstallingHelper {
-                        ProgressView().controlSize(.small)
-                        Text(tr(monitor.uninstallingHelper ? "Uninstalling…" : "Setting up…")).font(.system(size: 11)).foregroundStyle(.white.opacity(0.55))
-                    }
-                    Spacer()
+                Spacer(minLength: Theme.Space.s)
+                if !renderingPreview {
+                    if monitor.settingUp || monitor.uninstallingHelper { ProgressView().controlSize(.small) }
                     if let secondary {
-                        Button(secondary.0, action: secondary.1).controlSize(.small).disabled(monitor.settingUp || monitor.helperBusy)
+                        Button(secondary.0, action: secondary.1).buttonStyle(PillButtonStyle()).controlSize(.small)
+                            .disabled(monitor.settingUp || monitor.helperBusy)
                     }
                     if let primary {
-                        Button(primary.0, action: primary.1).controlSize(.small)
-                            .modifier(ActionButtonStyle(prominent: true)).disabled(monitor.settingUp || monitor.helperBusy)
+                        Button(primary.0, action: primary.1).buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small)
+                            .disabled(monitor.settingUp || monitor.helperBusy)
                     }
                 }
-                .padding(.horizontal, 14).padding(.vertical, 9)
             }
+            .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
         }
+    }
+}
+
+/// One fan in the hero: name, its speed in big figures, how far it is towards full speed.
+struct FanFigure: View {
+    let fan: FanReading
+    var checking = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            HStack(spacing: Theme.Space.xs) {
+                Image(systemName: "fan").font(.system(size: 11, weight: .medium)).accessibilityHidden(true)
+                Text(fan.name).font(Theme.label)
+                if fan.manual == true { StatusTag(text: tr("manual"), color: Theme.caution) }
+            }
+            .foregroundStyle(Theme.textTertiary)
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Space.xs) {
+                if checking && (fan.rpm ?? 0) == 0 {
+                    // A zero while the helper is still being read says nothing yet.
+                    Text("—").font(Theme.figure(.hero)).foregroundStyle(Theme.textTertiary)
+                } else {
+                    Text(FanControlPresentation.rpm(fan.rpm)).font(Theme.figure(.hero)).foregroundStyle(Theme.textPrimary)
+                        .contentTransition(.numericText())
+                        .animation(Theme.standard.unlessReduced(reduceMotion), value: fan.rpm)
+                }
+                // The unit alone, from the same localized pattern the rest of the app uses.
+                Text(tr("%1$@ rpm", "").trimmingCharacters(in: .whitespaces)).font(Theme.label).foregroundStyle(Theme.textTertiary)
+            }
+            FanLoadIndicator(fan: fan).frame(maxWidth: 220).accessibilityHidden(true)
+            Text(tr("%1$@–%2$@ rpm · %3$@", FanControlPresentation.rpm(fan.min), FanControlPresentation.rpm(fan.max), tr(fan.controlMode)))
+                .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+        }
+        .padding(Theme.Space.l)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -745,6 +894,8 @@ struct FanControlCard: View {
     var policyAvailable = true
     var applying = false
     var controlState: FanControlState?
+    var checking = false
+    var showName = true
     let apply: (FanPolicy) -> Void
 
     @State private var mode: FanMode = .auto
@@ -753,62 +904,32 @@ struct FanControlCard: View {
     @State private var customCurve = "50:min,70:3000,85:max"
     @State private var sensor: CurveSensor = .cpu
     @State private var curveError: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         InspectorPanel {
-            header
-            InspectorDivider(inset: 14)
-            VStack(alignment: .leading, spacing: 8) {
-                Picker(tr("Mode"), selection: $mode) { ForEach(FanMode.allCases) { Text($0.title).tag($0) } }
-                    .pickerStyle(.segmented)
-                    .labelsHidden().accessibilityLabel(tr("Mode"))
-                    .disabled(!enabled)
-                switch mode {
-                case .auto:
-                    EmptyView()
-                case .fixed:
-                    if let range = fan.validRange {
-                    HStack {
-                        Slider(value: $rpm, in: range.min...max(range.max, range.min + 1), step: 100).accessibilityLabel(tr("Fan speed"))
-                        Text(tr("%1$@ rpm", String(format: "%.0f", rpm))).font(.system(size: 12.5, weight: .semibold).monospacedDigit())
-                            .foregroundStyle(.white.opacity(0.9)).frame(width: 76, alignment: .trailing)
+            VStack(alignment: .leading, spacing: Theme.Space.m) {
+                HStack(spacing: Theme.Space.m) {
+                    if showName {
+                        Text(fan.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
                     }
-                    }
-                case .curve:
-                    HStack {
-                        Picker(tr("Preset"), selection: $preset) { ForEach(CurvePreset.allCases) { Text($0.title).tag($0) } }
-                        Picker(tr("Sensor"), selection: $sensor) { ForEach(CurveSensor.allCases, id: \.self) { Text($0.rawValue.uppercased()).tag($0) } }
-                            .frame(width: 130)
-                    }
-                    if preset == .custom {
-                        TextField("TEMP:RPM,…", text: $customCurve).textFieldStyle(.roundedBorder).font(.callout.monospaced())
-                            .accessibilityLabel(tr("Custom fan curve"))
-                            .onChange(of: customCurve) { _ in curveError = nil }
-                        Text(tr("Curve temperatures use °C. RPM is limited to this fan’s range."))
-                            .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55))
-                    } else if let c = preset.curve {
-                        Text(c.points.map { "\(Int($0.temperature))°C→\($0.rpm.isInfinite ? "max" : $0.rpm == 0 ? "min" : String(Int($0.rpm)))" }.joined(separator: "  "))
-                            .font(.system(size: 11).monospaced()).foregroundStyle(.white.opacity(0.55))
-                    }
-                    if let curveError { Text(curveError).font(.system(size: 11)).foregroundStyle(.red) }
+                    ThermoTabs(selection: $mode, options: FanMode.allCases.map { ($0, $0.title) }, label: tr("Mode"))
+                        .disabled(!enabled)
+                    Spacer(minLength: 0)
                 }
-                if mode != .auto && fan.validRange == nil { Text(tr("Fan range unavailable")).font(.system(size: 11)).foregroundStyle(.secondary) }
+                editor
             }
-            .padding(.horizontal, 14).padding(.vertical, 11)
-            InspectorDivider(inset: 14)
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(pending ? tr("Waiting for helper: %1$@", policyText) : policyAvailable ? tr("Requested policy: %1$@", policyText) : tr("Requested policy unavailable"))
-                    Text(FanControlPresentation.observation(controlState, fan: fan.id))
-                    if let checked = controlState?.observations[fan.id]?.checkedAt, checked.timeIntervalSince1970.isFinite {
-                        Text(tr("Checked at %1$@", checked.formatted(date: .numeric, time: .standard)))
-                    }
-                }
-                .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).fixedSize(horizontal: false, vertical: true)
-                Spacer()
-                Button(applying ? tr("Sending…") : tr("Apply")) { applyCurrent() }.controlSize(.small).disabled(!enabled || (mode != .auto && fan.validRange == nil))
+            .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
+            .animation(Theme.standard.unlessReduced(reduceMotion), value: mode)
+            InspectorDivider(inset: 0)
+            HStack(spacing: Theme.Space.s) {
+                status
+                Spacer(minLength: Theme.Space.s)
+                Button(applying ? tr("Sending…") : tr("Apply")) { applyCurrent() }
+                    .buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small)
+                    .disabled(!enabled || (mode != .auto && fan.validRange == nil))
             }
-            .padding(.horizontal, 14).padding(.vertical, 9)
+            .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
         }
         .disabled(!enabled)
         .onAppear(perform: load)
@@ -817,26 +938,67 @@ struct FanControlCard: View {
         .onChange(of: policy) { _ in load() }
     }
 
-    /// Name, live speed and range on one line, with a thin load bar under it.
-    var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Image(systemName: "fan").font(.system(size: 13)).foregroundStyle(fan.manual == true ? Color.orange : .white.opacity(0.55))
-                    .frame(width: 18).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(fan.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
-                    Text(tr("%1$@–%2$@ rpm · %3$@", FanControlPresentation.rpm(fan.min), FanControlPresentation.rpm(fan.max), tr(fan.controlMode)))
-                        .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55)).monospacedDigit()
+    @ViewBuilder var editor: some View {
+        switch mode {
+        case .auto:
+            EmptyView()
+        case .fixed:
+            if let range = fan.validRange {
+                HStack(spacing: Theme.Space.m) {
+                    Slider(value: $rpm, in: range.min...max(range.max, range.min + 1), step: 100).accessibilityLabel(tr("Fan speed"))
+                    Text(tr("%1$@ rpm", String(format: "%.0f", rpm))).font(Theme.figure(.row))
+                        .foregroundStyle(Theme.textPrimary).frame(width: 80, alignment: .trailing)
+                        .contentTransition(.numericText())
                 }
-                Spacer(minLength: 8)
-                Text(tr("%1$@ rpm", FanControlPresentation.rpm(fan.rpm)))
-                    .font(.system(size: 17, weight: .semibold, design: .rounded).monospacedDigit()).foregroundStyle(.white)
+                .transition(.opacity)
             }
-            FanLoadIndicator(fan: fan)
-                .padding(.leading, 28).accessibilityHidden(true)
+        case .curve:
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                HStack(spacing: Theme.Space.s) {
+                    Picker(tr("Preset"), selection: $preset) { ForEach(CurvePreset.allCases) { Text($0.title).tag($0) } }
+                        .fixedSize()
+                    Picker(tr("Sensor"), selection: $sensor) { ForEach(CurveSensor.allCases, id: \.self) { Text($0.rawValue.uppercased()).tag($0) } }
+                        .fixedSize()
+                    Spacer(minLength: 0)
+                }
+                .pickerStyle(.menu)
+                if preset == .custom {
+                    HStack(spacing: Theme.Space.xs) {
+                        TextField("TEMP:RPM,…", text: $customCurve).textFieldStyle(.roundedBorder).font(Theme.mono)
+                            .accessibilityLabel(tr("Custom fan curve"))
+                            .onChange(of: customCurve) { _ in curveError = nil }
+                        InfoButton(text: tr("Curve temperatures use °C. RPM is limited to this fan’s range."))
+                    }
+                } else if let c = preset.curve {
+                    Text(c.points.map { "\(Int($0.temperature))°C→\($0.rpm.isInfinite ? "max" : $0.rpm == 0 ? "min" : String(Int($0.rpm)))" }.joined(separator: "  "))
+                        .font(Theme.mono).foregroundStyle(Theme.textTertiary)
+                }
+                if let curveError { Text(curveError).font(Theme.caption).foregroundStyle(Theme.danger) }
+            }
+            .transition(.opacity)
         }
-        .padding(.horizontal, 14).padding(.vertical, 11)
-        .accessibilityElement(children: .combine)
+        if mode != .auto && fan.validRange == nil {
+            Text(tr("Fan range unavailable")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+        }
+    }
+
+    /// One line for what was asked of the fan; what the hardware check found is behind the (?).
+    @ViewBuilder var status: some View {
+        if checking {
+            SkeletonBar(width: 160, height: 8)
+        } else {
+            let checked = controlState?.observations[fan.id]?.checkedAt
+            let detail = [FanControlPresentation.observation(controlState, fan: fan.id),
+                          checked.flatMap { $0.timeIntervalSince1970.isFinite ? tr("Checked at %1$@", $0.formatted(date: .numeric, time: .standard)) : nil }]
+                .compactMap { $0 }.joined(separator: "\n")
+            HStack(spacing: Theme.Space.xs) {
+                Circle().fill(pending ? Theme.caution : policyAvailable ? Theme.good : Theme.textTertiary).frame(width: 6, height: 6)
+                    .accessibilityHidden(true)
+                Text(pending ? tr("Waiting for helper: %1$@", policyText) : policyAvailable ? tr("Requested policy: %1$@", policyText) : tr("Requested policy unavailable"))
+                    .font(Theme.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                if !detail.isEmpty { InfoButton(text: detail) }
+            }
+        }
     }
 
     var policyText: String {
@@ -877,15 +1039,34 @@ struct FanControlCard: View {
 struct FanChart: View {
     let history: [HistoryPoint]
     var body: some View {
+        let samples = FanChartSample.samples(history)
         Chart {
-            ForEach(FanChartSample.samples(history)) { p in
+            ForEach(samples) { p in
+                AreaMark(x: .value("Time", p.time), y: .value("RPM", p.rpm), series: .value("Segment", "\(p.fan):\(p.segment)"))
+                    .foregroundStyle(LinearGradient(colors: [Theme.accent.opacity(0.22), Theme.accent.opacity(0)], startPoint: .top, endPoint: .bottom))
+                    .interpolationMethod(.monotone)
                 LineMark(x: .value("Time", p.time), y: .value("RPM", p.rpm), series: .value("Segment", "\(p.fan):\(p.segment)"))
                     .foregroundStyle(by: .value("Fan", "Fan \(p.fan + 1)"))
+                    .interpolationMethod(.monotone)
             }
         }
-        .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisGridLine(); AxisValueLabel(format: .dateTime.hour().minute()) } }
-        .chartLegend(position: .top, alignment: .trailing)
-        .frame(height: 90)
+        .chartForegroundStyleScale(range: [Theme.accent, Color(red: 0.35, green: 0.80, blue: 0.78), Theme.caution])
+        .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+            AxisGridLine().foregroundStyle(Theme.hairline)
+            AxisValueLabel(format: .dateTime.hour().minute()).foregroundStyle(Theme.textTertiary)
+        } }
+        .chartYAxis { AxisMarks(values: .automatic(desiredCount: 3)) { _ in
+            AxisGridLine().foregroundStyle(Theme.hairline)
+            AxisValueLabel().foregroundStyle(Theme.textTertiary)
+        } }
+        .chartLegend(Set(samples.map(\.fan)).count > 1 ? .visible : .hidden)
+        .chartOverlay { _ in
+            if samples.isEmpty {
+                Text(tr("Checking…")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .frame(height: 120)
     }
 }
 
@@ -893,9 +1074,9 @@ struct FanLoadIndicator: View {
     let fan: FanReading
     var body: some View {
         if let load = fan.load {
-            Bar(value: load, color: fan.manual == nil ? .gray : fan.manual == true ? .orange : .blue)
+            Bar(value: load, color: fan.manual == nil ? Theme.textTertiary : fan.manual == true ? Theme.caution : Theme.accent)
         } else {
-            Color.secondary.opacity(0.1).frame(height: 3).accessibilityLabel(tr("unknown"))
+            Capsule().fill(Color.white.opacity(0.07)).frame(height: 4).accessibilityLabel(tr("unknown"))
         }
     }
 }
@@ -923,16 +1104,21 @@ struct SettingsView: View {
     @AppStorage(L10n.defaultsKey) private var language = "system"
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            section(tr("Disk Cleanup")) {
-                CleanupProtectionsButton(disk: disk)
-            }
-            section(tr("Clean Screen")) {
+        VStack(alignment: .leading, spacing: Theme.Space.xl) {
+            // Features with their own panel: one group of rows, each opening its panel.
+            section(tr("Tools")) {
                 CleanScreenButton()
+                InspectorDivider(inset: 46)
+                IdleAwakeButton()
+                InspectorDivider(inset: 46)
+                AWDLButton()
+                InspectorDivider(inset: 46)
+                BatteryCareButton()
+                InspectorDivider(inset: Theme.Space.l)
+                row(tr("Disk Cleanup"), last: true, labelControl: false) {
+                    CleanupProtectionsButton(disk: disk).controlSize(.small)
+                }
             }
-            section(tr("Keep awake")) { IdleAwakeButton() }
-            section(tr("Network low latency")) { AWDLButton() }
-            section(tr("Battery charging protection")) { BatteryCareButton() }
             section(tr("General")) {
                 row(tr("Language")) {
                     Picker("", selection: $language) {
@@ -989,19 +1175,21 @@ struct SettingsView: View {
                 }
             }
             if loginItem.state == .needsApproval || loginItem.state == .unavailable || loginItem.error != nil {
-                VStack(alignment: .leading, spacing: 10) {
+                statusPanel {
                     if loginItem.state == .needsApproval {
-                        Label(tr("Launch at login is waiting for macOS approval."), systemImage: "hourglass")
-                        Button(tr("Open Login Items settings")) { loginItem.openSettings() }
+                        HStack {
+                            Label(tr("Launch at login is waiting for macOS approval."), systemImage: "hourglass")
+                            Spacer(minLength: Theme.Space.s)
+                            Button(tr("Open Login Items settings")) { loginItem.openSettings() }
+                                .buttonStyle(PillButtonStyle()).controlSize(.small)
+                        }
                     } else if loginItem.state == .unavailable {
                         Label(tr("macOS could not find Thermo’s login item. Open the installed app and try again."), systemImage: "exclamationmark.triangle")
                     }
                     if let error = loginItem.error {
-                        Text(error).foregroundStyle(.orange).textSelection(.enabled)
+                        Text(error).foregroundStyle(Theme.caution).textSelection(.enabled)
                     }
                 }
-                .font(.callout).foregroundStyle(.white.opacity(0.8))
-                .frame(maxWidth: .infinity, alignment: .leading).padding(14).glass(radius: 12)
             }
             section(tr("Alerts")) {
                 row(tr("Warn me before my Mac gets slow")) {
@@ -1029,7 +1217,7 @@ struct SettingsView: View {
                 notificationStatus
             }
             section(tr("AI agents")) {
-                AgentAccessRow().padding(14)
+                AgentAccessRow().padding(Theme.Space.l)
             }
             section(tr("System helper")) {
                 row(tr("System helper: %1$@", helperText), last: true, labelControl: false) {
@@ -1037,14 +1225,16 @@ struct SettingsView: View {
                         HStack(spacing: 8) {
                             if monitor.uninstallingHelper || monitor.settingUp {
                                 ProgressView().controlSize(.small)
-                                Text(tr(monitor.uninstallingHelper ? "Uninstalling…" : "Setting up…")).font(.caption)
+                                Text(tr(monitor.uninstallingHelper ? "Uninstalling…" : "Setting up…")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                             }
                             if monitor.helperState != .needsApproval {
                                 Button(tr("Reinstall…")) { monitor.installHelperWithPassword() }
+                                    .buttonStyle(PillButtonStyle()).controlSize(.small)
                                     .help(tr("Reinstalling keeps fan settings but ends active charging and low-latency sessions."))
                                     .disabled(monitor.helperBusy || monitor.settingUp)
                             }
                             Button(tr("Uninstall")) { monitor.uninstallHelper() }
+                                .buttonStyle(PillButtonStyle()).controlSize(.small)
                                 .disabled(monitor.helperBusy || monitor.settingUp)
                         }
                     }
@@ -1060,17 +1250,19 @@ struct SettingsView: View {
                     HStack {
                         if updates.enabled {
                             Button(tr("Check for Updates…")) { updates.checkForUpdates() }
+                                .buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small)
                                 .disabled(!updates.canCheck)
                                 .help(updates.canCheck ? tr("Checks for a newer version of Thermo.") : tr("An update check is temporarily unavailable."))
                         }
                         Button(tr("Quit Thermo")) { NSApp.terminate(nil) }
+                            .buttonStyle(PillButtonStyle()).controlSize(.small)
                     }
                 }
                 row(tr("App package source"), last: true, labelControl: false) {
                     if let commit = AppInfo.buildMetadata.sourceCommit {
                         Text(commit + " · " + tr(AppInfo.workingTreeLabel))
-                            .font(.caption.monospaced()).textSelection(.enabled)
-                    } else { Text(tr("Unknown")).foregroundStyle(.secondary) }
+                            .font(Theme.mono).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
+                    } else { Text(tr("Unknown")).font(Theme.secondary).foregroundStyle(Theme.textTertiary) }
                 }
             }
         }
@@ -1083,7 +1275,7 @@ struct SettingsView: View {
     }
 
     @ViewBuilder var notificationStatus: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        statusPanel {
             switch notifications.state {
             case .unknown:
                 Label(tr("Checking notification permission…"), systemImage: "hourglass")
@@ -1091,45 +1283,57 @@ struct SettingsView: View {
                 Label(tr("Notifications require an app bundle."), systemImage: "bell.slash")
             case .notRequested:
                 Label(tr("Notification permission has not been requested."), systemImage: "bell.badge")
-                Button(tr("Allow notifications")) { notifications.request() }.disabled(notifications.requesting)
+                Button(tr("Allow notifications")) { notifications.request() }
+                    .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(notifications.requesting)
             case .denied:
                 Label(tr("Notifications are disabled in macOS."), systemImage: "bell.slash")
                 Button(tr("Open notification settings")) { notifications.openSettings() }
+                    .buttonStyle(PillButtonStyle()).controlSize(.small)
             case .bannersDisabled:
                 Label(tr("Notifications are authorized, but banners are disabled."), systemImage: "bell")
                 Button(tr("Open notification settings")) { notifications.openSettings() }
+                    .buttonStyle(PillButtonStyle()).controlSize(.small)
             case .allowed:
                 Label(tr("macOS has authorized notifications."), systemImage: "checkmark.circle")
             }
             if let error = notifications.error {
-                Text(error).foregroundStyle(.orange).textSelection(.enabled)
+                Text(error).foregroundStyle(Theme.caution).textSelection(.enabled)
             }
             if notifications.requesting { ProgressView().controlSize(.small) }
         }
-        .font(.callout).foregroundStyle(.white.opacity(0.8)).frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14).glass(radius: 12)
     }
 
+    /// A status note under a group: quiet text, its buttons at hand.
+    func statusPanel<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s) { content() }
+            .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
+            .glass(radius: Theme.radius)
+    }
+
+    /// One group of settings, the way System Settings draws them: a quiet title, then the rows in one panel.
     func section<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white.opacity(0.6)).padding(.leading, 4)
-            VStack(spacing: 0) { content() }.glass(radius: 14)
+        let rows = content()
+        return VStack(alignment: .leading, spacing: Theme.Space.s) {
+            SectionHeader(title: title)
+            InspectorPanel { rows }
         }
     }
 
     func row<C: View>(_ title: String, last: Bool = false, labelControl: Bool = true, @ViewBuilder _ control: () -> C) -> some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(title).font(.system(size: 13)).foregroundStyle(.white.opacity(0.9))
-                Spacer()
+            HStack(spacing: Theme.Space.m) {
+                Text(title).font(Theme.body).foregroundStyle(Theme.textPrimary)
+                Spacer(minLength: Theme.Space.s)
                 if labelControl {
                     control().labelsHidden().fixedSize().accessibilityLabel(title)
                 } else {
                     control().labelsHidden().fixedSize()
                 }
             }
-            .padding(.horizontal, 16).padding(.vertical, 11)
-            if !last { Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1).padding(.leading, 16) }
+            .padding(.horizontal, Theme.Space.l).frame(minHeight: 44)
+            if !last { InspectorDivider(inset: Theme.Space.l) }
         }
     }
 

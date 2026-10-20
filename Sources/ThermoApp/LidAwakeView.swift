@@ -24,14 +24,14 @@ struct LidAwakeSwitch: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 8) {
-                Image(systemName: on ? "laptopcomputer.and.arrow.down" : "laptopcomputer").foregroundStyle(on ? Color.orange : .secondary)
+                Image(systemName: on ? "laptopcomputer.and.arrow.down" : "laptopcomputer").foregroundStyle(on ? Theme.caution : Theme.textSecondary)
                     .frame(width: 18).accessibilityHidden(true)
-                Text(tr("Stay awake with the lid closed")).font(.callout)
+                Text(tr("Stay awake with the lid closed")).font(Theme.body).foregroundStyle(Theme.textPrimary)
                 Spacer()
                 if monitor.lidAwakeBusy || (monitor.lidAwakePending && monitor.settingUp) { ProgressView().controlSize(.small) }
                 if renderingPreview {
                     // ImageRenderer cannot draw AppKit switches; a look-alike for the preview.
-                    Capsule().fill(on ? Color.green : Color.secondary.opacity(0.3)).frame(width: 30, height: 18)
+                    Capsule().fill(on ? Theme.good : Color.white.opacity(0.18)).frame(width: 30, height: 18)
                         .overlay(Circle().fill(.white).padding(2), alignment: on ? .trailing : .leading)
                 } else {
                     Toggle(tr("Stay awake with the lid closed"), isOn: Binding(get: { on }, set: { monitor.setLidAwake($0) }))
@@ -39,7 +39,7 @@ struct LidAwakeSwitch: View {
                         .disabled(monitor.lidAwakeBusy || monitor.helperBusy)
                 }
             }
-            Text(caption).font(.caption).foregroundStyle(captionColor).fixedSize(horizontal: false, vertical: true)
+            Text(caption).font(Theme.caption).foregroundStyle(captionColor).fixedSize(horizontal: false, vertical: true)
                 .padding(.leading, 26)
             if !renderingPreview {
                 Toggle(tr("Turn off when the Mac gets hot"), isOn: Binding(get: { heatGuard }, set: { value in
@@ -47,7 +47,7 @@ struct LidAwakeSwitch: View {
                     // Already on: hand the new rule to the helper right away.
                     if monitor.lidAwake?.armed == true { monitor.setLidAwake(true) }
                 }))
-                .toggleStyle(.checkbox).controlSize(.small).font(.caption)
+                .toggleStyle(.checkbox).controlSize(.small).font(Theme.caption).foregroundStyle(Theme.textSecondary)
                 .disabled(monitor.lidAwakeBusy)
                 .padding(.leading, 26)
                 .help(tr("macOS still slows down and shuts down on its own at critical temperatures, and the fan failsafe stays on."))
@@ -75,7 +75,7 @@ struct LidAwakeSwitch: View {
     }
 
     var captionColor: Color {
-        if monitor.lidAwake?.armed != true, let off = monitor.lidAwake?.lastAutoOff, Date().timeIntervalSince(off.time) < 3600 { return .orange }
-        return .secondary
+        if monitor.lidAwake?.armed != true, let off = monitor.lidAwake?.lastAutoOff, Date().timeIntervalSince(off.time) < 3600 { return Theme.caution }
+        return Theme.textTertiary
     }
 }

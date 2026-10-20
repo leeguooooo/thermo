@@ -145,8 +145,11 @@ struct IdleAwakeButton: View {
     @State private var showing = false
     var body: some View {
         Button { showing = true } label: {
-            Label(tr(model.state.requested ? "Keep awake · session configured" : "Keep awake"), systemImage: "cup.and.saucer")
-        }.sheet(isPresented: $showing) { IdleAwakePanel(model: model) }
+            FeatureRow(title: tr(model.state.requested ? "Keep awake · session configured" : "Keep awake"), symbol: "cup.and.saucer",
+                       active: model.state.phase == .active)
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showing) { IdleAwakePanel(model: model) }
     }
 }
 struct IdleAwakePanel: View {
@@ -168,21 +171,21 @@ struct IdleAwakePanel: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label(tr("Keep awake"), systemImage: "cup.and.saucer").font(.title2.weight(.semibold))
+            Label(tr("Keep awake"), systemImage: "cup.and.saucer").font(Theme.heading)
             Text(tr("Prevents idle sleep. Lid-close and manual sleep follow macOS rules. Closing this panel keeps the session running; quitting Thermo ends it."))
-                .font(.callout).foregroundStyle(.secondary)
-            Text(status).font(.headline).foregroundStyle(model.state.phase == .active ? Color.primary : model.state.phase == .idle ? Color.secondary : Color.orange)
+                .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+            Text(status).font(Theme.rowTitle.weight(.semibold)).foregroundStyle(model.state.phase == .active ? Theme.good : model.state.phase == .idle ? Theme.textSecondary : Theme.caution)
             if !model.state.requested, !model.state.power.allowsStart {
-                Text(tr("Idle awake needs known power status and more than 20% battery, or external power.")).font(.callout).foregroundStyle(.orange)
+                Text(tr("Idle awake needs known power status and more than 20% battery, or external power.")).font(Theme.secondary).foregroundStyle(Theme.caution)
             }
             if let end = model.state.expiresAt {
                 Text(tr("Ends at %1$@", end.formatted(date: .omitted, time: .standard))).monospacedDigit()
             }
             if model.state.phase == .idle, let reason = model.state.lastEndReason {
-                Text(tr(reason == "expired" ? "The timer ended this session." : ["requestLost", "renewFailed"].contains(reason) ? "macOS ended this awake session. Start a new session if needed." : "This session has ended.")).font(.caption).foregroundStyle(.secondary)
+                Text(tr(reason == "expired" ? "The timer ended this session." : ["requestLost", "renewFailed"].contains(reason) ? "macOS ended this awake session. Start a new session if needed." : "This session has ended.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
             }
-            if model.state.requested { Text(tr("The timer continues while paused.")).font(.caption).foregroundStyle(.secondary) }
-            if let issue = model.issue ?? model.state.issue { Text(tr(issue)).font(.callout).foregroundStyle(.orange).textSelection(.enabled) }
+            if model.state.requested { Text(tr("The timer continues while paused.")).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
+            if let issue = model.issue ?? model.state.issue { Text(tr(issue)).font(Theme.secondary).foregroundStyle(Theme.caution).textSelection(.enabled) }
             if !model.state.requested {
               Picker(tr("Awake mode"), selection: $mode) {
                 ForEach(IdleAwakeMode.allCases, id: \.self) { Text(modeLabel($0)).tag($0) }
@@ -193,7 +196,7 @@ struct IdleAwakePanel: View {
               }
             } else if let selected = model.state.mode { Text(modeLabel(selected)) }
             Text(tr("At 20% battery or below, Thermo pauses until power is connected. Other apps may still keep this Mac awake."))
-                .font(.caption).foregroundStyle(.secondary)
+                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
             HStack {
                 Button(tr("Refresh")) { model.refresh() }
                 Spacer()
