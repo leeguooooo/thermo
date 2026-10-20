@@ -75,12 +75,30 @@ public struct ToolUsageRow: Codable, Identifiable, Sendable {
     /// Observations of the text representation, not proof of model delivery or media cost.
     /// Absent in older reports means unchecked. Counts completed results, not blocks.
     public var serializedMediaTextResults: Int? = nil
+    /// Retained text of whole results containing serialized media, including accompanying text.
+    /// Nil means unmeasured or unavailable; never a media payload or model-token measurement.
+    public var serializedMediaTextBytes: Int? = nil
     public var truncationMarkerResults: Int? = nil
     /// Separate JSON representation and coverage. Absent in older reports means unchecked.
     public var structuredContent: MCPStructuredContentUsage? = nil
     public var nonTextBlocks = 0
     /// Outer results with unsupported content. Absent for older reports and other categories.
     public var unmeasuredResults: Int? = nil
+    public var observedSerializedMediaTextBytes: Int? {
+        guard calls >= 0, completed >= 0, completed <= calls,
+              let count = serializedMediaTextResults, count >= 0, count <= completed,
+              let bytes = serializedMediaTextBytes, bytes >= 0, bytes <= returnedTextBytes,
+              (count == 0 ? bytes == 0 : bytes > 0) else { return nil }
+        return bytes
+    }
+    public var serializedMediaTextCompositionLine: String? {
+        guard let count = serializedMediaTextResults, count > 0 else { return nil }
+        guard let bytes = observedSerializedMediaTextBytes else {
+            return tr("The byte split for media-containing result texts is unavailable or inconsistent; analyze again.")
+        }
+        return tr("Text in those results: %1$@ / %2$@ logged bytes (%3$@); other result text: %4$@ bytes. Includes accompanying text, not just media.",
+                  String(bytes), String(returnedTextBytes), String(format: "%.1f%%", Double(bytes) / Double(returnedTextBytes) * 100), String(returnedTextBytes - bytes))
+    }
     /// Absent in older reports means unmeasured. Zero events never proves zero loading.
     public var skillInstructions: SkillInstructionUsage? = nil
     public var observedInstructionTokens: Int? {

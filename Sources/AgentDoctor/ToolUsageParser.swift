@@ -353,6 +353,7 @@ struct ToolUsageParser {
                 row.referenceEncoding = encoding == .heuristic ? nil : encoding.rawValue
                 row.unmeasuredResults = row.unmeasuredResults ?? 0
                 row.serializedMediaTextResults = row.serializedMediaTextResults ?? 0
+                if row.calls == 0 { row.serializedMediaTextBytes = 0 }
                 row.truncationMarkerResults = row.truncationMarkerResults ?? 0
                 if encoding != .heuristic {
                     row.unavailableReferenceResults = row.unavailableReferenceResults ?? 0
@@ -370,6 +371,10 @@ struct ToolUsageParser {
                         timings[key, default: []].append(end.timeIntervalSince(start))
                     }
                     if let measured = call.unattributed {
+                        if call.textObservation.serializedMedia {
+                            if measured.measured, let bytes = row.serializedMediaTextBytes { row.serializedMediaTextBytes = bytes + measured.text.bytes }
+                            else { row.serializedMediaTextBytes = nil }
+                        }
                         unattributed.returnedTextBytes += measured.text.bytes
                         unattributed.returnedTextEstimatedTokens += measured.text.estimatedTokens
                         unattributed.nonTextBlocks += measured.nonText
@@ -392,6 +397,7 @@ struct ToolUsageParser {
                             }
                         }
                     } else {
+                        if call.textObservation.serializedMedia { row.serializedMediaTextBytes = nil }
                         unattributed.unmeasuredResults += 1; unattributed.referenceReturnedTextTokens = nil
                         row.unmeasuredResults! += 1
                         if encoding != .heuristic {
@@ -415,6 +421,7 @@ struct ToolUsageParser {
                 if let observed = loads[callKey] { row.skillInstructions?.merge(observed) }
             }
             row.serializedMediaTextResults = row.serializedMediaTextResults ?? 0
+            if row.calls == 0 { row.serializedMediaTextBytes = 0 }
             row.truncationMarkerResults = row.truncationMarkerResults ?? 0
             if row.invocationFailures == nil { row.invocationFailures = 0 }
             row.referenceEncoding = encoding == .heuristic ? nil : encoding.rawValue
@@ -432,7 +439,10 @@ struct ToolUsageParser {
                     }
                     row.completed += 1
                     if kind == "mcp" { row.structuredContent?.record(call.structuredObservation) }
-                    if call.textObservation.serializedMedia { row.serializedMediaTextResults! += 1 }
+                    if call.textObservation.serializedMedia {
+                        row.serializedMediaTextResults! += 1
+                        if let bytes = row.serializedMediaTextBytes { row.serializedMediaTextBytes = bytes + call.textBytes }
+                    }
                     if call.textObservation.truncationMarker { row.truncationMarkerResults! += 1 }
                     if call.isError == true {
                         row.reportedErrors += 1

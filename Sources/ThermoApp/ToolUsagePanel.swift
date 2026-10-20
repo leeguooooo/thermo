@@ -170,6 +170,7 @@ struct ToolUsagePanel: View {
                         Text(tr("%1$@ calls · %2$@ results · %3$@ explicit result errors · %4$@ unknown error status · %5$@ missing results",
                                 String(row.calls), String(row.completed), String(row.reportedErrors), String(row.unknownErrorStatus), String(row.missingResults)))
                             .font(.caption)
+                        ResultTextRepresentationNotice(row: row)
                         if sort == .time {
                             Text(tr("Valid timing pairs: %1$@ / %2$@ calls", String(row.timingSamples), String(row.calls)))
                                 .font(.caption).foregroundStyle(.secondary)
@@ -213,7 +214,6 @@ struct ToolUsagePanel: View {
                         ForEach(Array(row.mcpStructuredContentLines(includeRepresentationNotes: structuredSummary == nil).enumerated()), id: \.offset) { _, line in
                             Text(line).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                         }
-                        ResultTextRepresentationNotice(row: row)
                         if row.nonTextBlocks > 0 {
                             Text(tr("%1$@ non-text result blocks were not tokenized.", String(row.nonTextBlocks))).font(.caption).foregroundStyle(.secondary)
                         }
@@ -364,6 +364,9 @@ struct ResultTextRepresentationNotice: View {
             if let count = row.serializedMediaTextResults, count > 0 {
                 Text(tr("%1$@ result texts contain serialized media. Counts describe logged text, not image/audio token cost or proof of model delivery.", String(count)))
                     .font(.caption).foregroundStyle(.orange)
+                if let line = row.serializedMediaTextCompositionLine {
+                    Text(line).font(.caption).foregroundStyle(.secondary)
+                }
             }
             if let count = row.truncationMarkerResults, count > 0 {
                 Text(tr("%1$@ result texts contain an explicit truncation marker; full returned size is unknown.", String(count)))

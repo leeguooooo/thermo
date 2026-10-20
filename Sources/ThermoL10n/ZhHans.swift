@@ -2725,6 +2725,8 @@ let zhHans: [String: String] = [
     "%1$@ non-text result blocks were not tokenized.": "%1$@ 个非文本返回块未估算 token。",
     "Returned text": "返回文本",
     "%1$@ result texts contain serialized media. Counts describe logged text, not image/audio token cost or proof of model delivery.": "%1$@ 个结果的文本中含序列化媒体。计数只描述日志文本，不能作为图片或音频 token 成本，也不能证明模型收到的内容。",
+    "The byte split for media-containing result texts is unavailable or inconsistent; analyze again.": "含媒体结果的文本字节分布不可用或计数不一致，请重新分析。",
+    "Text in those results: %1$@ / %2$@ logged bytes (%3$@); other result text: %4$@ bytes. Includes accompanying text, not just media.": "这些结果的文本：%1$@ / %2$@ 日志字节（%3$@）；其他结果文本：%4$@ 字节。包含附带文字，并非只有媒体。",
     "%1$@ result texts contain an explicit truncation marker; full returned size is unknown.": "%1$@ 个结果文本含明确截断标记，完整返回大小未知。",
     "Explicit errors": "明确错误",
     "Errors / failures": "错误／调用失败",

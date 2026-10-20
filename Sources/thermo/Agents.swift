@@ -264,6 +264,7 @@ struct AgentsCommand {
             var notes: [String] = []
             if let count = row.serializedMediaTextResults, count > 0 {
                 notes.append("Serialized media inside text: \(count) results; logged-text counts are not media token cost or proof of model delivery.")
+                if let line = row.serializedMediaTextCompositionLine { notes.append(line) }
             }
             if let count = row.truncationMarkerResults, count > 0 {
                 notes.append("Explicit truncation markers: \(count) result texts; full returned size unknown.")

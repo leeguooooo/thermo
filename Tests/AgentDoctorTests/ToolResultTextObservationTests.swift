@@ -8,7 +8,7 @@ final class ToolResultTextObservationTests: XCTestCase {
     }
     private func add(_ value: Any, to parser: inout ToolUsageParser, id: String = "one", name: String = "mcp__owned__shot", endFirst: Bool = false) {
         if endFirst { parser.end(host: "codex", session: "s", id: id, value: value, error: false, time: Date(timeIntervalSince1970: 2)) }
-        parser.start(host: "codex", session: "s", id: id, name: name, input: nil, time: Date(timeIntervalSince1970: 1))
+        parser.start(host: "codex", session: "s", id: id, name: name, input: name == "Skill" ? ["skill":"owned-skill"] : nil, time: Date(timeIntervalSince1970: 1))
         parser.end(host: "codex", session: "s", id: id, value: value, error: false, time: Date(timeIntervalSince1970: 2))
     }
     func testSerializedMediaStaysLiteralTextWithSeparateRepresentationObservations() throws {
@@ -16,6 +16,7 @@ final class ToolResultTextObservationTests: XCTestCase {
         add(["content": [["type": "text", "text": media]], "isError": false], to: &p)
         let r = p.report(), row = try XCTUnwrap(r.tools.first)
         XCTAssertEqual(row.serializedMediaTextResults, 1)
+        XCTAssertEqual(row.serializedMediaTextBytes, media.utf8.count)
         XCTAssertEqual(row.truncationMarkerResults, 1)
         XCTAssertEqual(row.returnedTextBytes, media.utf8.count)
         XCTAssertEqual(row.returnedTextEstimatedTokens, TextFootprint(media).estimatedTokens)
@@ -30,6 +31,7 @@ final class ToolResultTextObservationTests: XCTestCase {
             var p = parser(); add(value, to: &p)
             let row = try XCTUnwrap(p.report().tools.first)
             XCTAssertEqual(row.serializedMediaTextResults, 0)
+            XCTAssertEqual(row.serializedMediaTextBytes, 0)
             XCTAssertEqual(row.truncationMarkerResults, 0)
             XCTAssertEqual(row.returnedTextBytes, 0)
             XCTAssertEqual(row.nonTextBlocks, 1)
@@ -44,6 +46,7 @@ final class ToolResultTextObservationTests: XCTestCase {
         XCTAssertEqual(row.serializedMediaTextResults, 1)
         XCTAssertEqual(row.truncationMarkerResults, 1)
         XCTAssertEqual(row.returnedTextBytes, media.utf8.count * 2 + 1)
+        XCTAssertEqual(row.serializedMediaTextBytes, media.utf8.count * 2 + 1)
     }
     func testNormalTextAndMalformedMediaDoNotGetGuessedIntoWarnings() {
         for text in ["truncated image", "… chars truncated…", "…0 chars truncated…", "{bad json}", #"{"type":"image","data":"text"}"#, #"{"content":[{"type":"text","text":"image"}]}"#] {
@@ -66,6 +69,47 @@ final class ToolResultTextObservationTests: XCTestCase {
         XCTAssertEqual(row.truncationMarkerResults, 1)
         XCTAssertEqual(row.nonTextBlocks, 1)
         XCTAssertEqual(row.returnedTextBytes, media.utf8.count)
+        XCTAssertEqual(row.serializedMediaTextBytes, media.utf8.count)
+    }
+    func testMediaResultByteSplitIncludesAccompanyingTextAndExcludesOtherResults() throws {
+        for name in ["mcp__owned__shot", "functions.exec", "Skill"] {
+            var p = parser()
+            add(["content": [["type": "text", "text": media], ["type": "text", "text": "附带文字"]]], to: &p, id: "media", name: name)
+            add("plain", to: &p, id: "plain", name: name)
+            let report = p.report(), row = try XCTUnwrap(name == "functions.exec" ? report.coverage.unattributedResults?.byTool?.first : report.tools.first)
+            let mediaBytes = media.utf8.count + 1 + "附带文字".utf8.count
+            XCTAssertEqual(row.serializedMediaTextResults, 1)
+            XCTAssertEqual(row.serializedMediaTextBytes, mediaBytes)
+            XCTAssertEqual(row.observedSerializedMediaTextBytes, mediaBytes)
+            XCTAssertEqual(row.returnedTextBytes, mediaBytes + 5)
+            XCTAssertTrue(row.serializedMediaTextCompositionLine?.contains("other result text: 5 bytes") == true)
+        }
+    }
+    func testPartialOuterResultKeepsMediaByteSplitUnknownAcrossLaterResults() throws {
+        var p = parser()
+        add([["type":"input_text", "text":media], ["type":"unknown_block"]], to: &p, id:"partial", name:"functions.exec")
+        add([["type":"input_text", "text":media]], to: &p, id:"complete", name:"functions.exec")
+        let row = try XCTUnwrap(p.report().coverage.unattributedResults?.byTool?.first)
+        XCTAssertEqual(row.serializedMediaTextResults, 2)
+        XCTAssertNil(row.serializedMediaTextBytes)
+        XCTAssertNil(row.observedSerializedMediaTextBytes)
+        XCTAssertTrue(row.serializedMediaTextCompositionLine?.contains("unavailable or inconsistent") == true)
+        XCTAssertEqual(row.returnedTextBytes, media.utf8.count * 2)
+    }
+    func testLegacyAndInconsistentMediaByteSplitsNeverBecomeKnownZero() throws {
+        var p = parser(); add(["content": [["type":"text", "text":media]]], to: &p)
+        let known = try XCTUnwrap(p.report().tools.first)
+        var legacy = known; legacy.serializedMediaTextBytes = nil
+        let decoded = try JSONDecoder().decode(ToolUsageRow.self, from: JSONEncoder().encode(legacy))
+        XCTAssertNil(decoded.observedSerializedMediaTextBytes)
+        for bytes in [-1, 0, known.returnedTextBytes + 1] {
+            var bad = known; bad.serializedMediaTextBytes = bytes
+            XCTAssertNil(bad.observedSerializedMediaTextBytes)
+        }
+        var bad = known; bad.serializedMediaTextResults = 0
+        XCTAssertNil(bad.observedSerializedMediaTextBytes)
+        bad = known; bad.serializedMediaTextResults = known.completed + 1
+        XCTAssertNil(bad.observedSerializedMediaTextBytes)
     }
     func testExecutionLimitDeclarationsDoNotChangeAccountingOrErrorStatus() throws {
         for text in ["Warning: truncated output (original token count: 54321)\nretained text",

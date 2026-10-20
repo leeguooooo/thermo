@@ -54,6 +54,7 @@ struct OuterToolUsageBreakdown: View {
             Text(tr("%1$@ calls · %2$@ results · %3$@ explicit result errors · %4$@ unknown error status · %5$@ missing results",
                     String(row.calls), String(row.completed), String(row.reportedErrors), String(row.unknownErrorStatus), String(row.missingResults)))
                 .font(.caption)
+            ResultTextRepresentationNotice(row: row)
             Text(tr("Returned text %1$@ bytes / ≈%2$@ tokens · median %3$@ · P95 %4$@ · observed sum %5$@",
                     String(row.returnedTextBytes), String(row.returnedTextEstimatedTokens),
                     seconds(row.medianSeconds), seconds(row.p95Seconds), seconds(row.totalObservedSeconds)))
@@ -76,7 +77,6 @@ struct OuterToolUsageBreakdown: View {
                 Text(tr("Share of observed outer returned-text tokens: %1$@", String(format: "%.1f%%", percentage)))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            ResultTextRepresentationNotice(row: row)
             Text(tr("%1$@ results include unmeasured content; %2$@ non-text blocks were not tokenized.",
                     row.unmeasuredResults.map(String.init) ?? tr("Unknown"), String(row.nonTextBlocks)))
                 .font(.caption).foregroundStyle(.secondary)
