@@ -92,16 +92,13 @@ struct StartupItemsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(tr("Startup items")).font(.system(size: 22, weight: .semibold))
-                    Text(tr("User and shared startup items, plus system services")).font(.callout).foregroundStyle(.secondary)
-                }
-                Spacer()
+            PageHeader(title: tr("Software"), subtitle: tr("User and shared startup items, plus system services")) {
+                EmptyView()
+            } below: {
                 SoftwareTabPicker(tab: $tab)
             }
             Text(tr("Changes background startup eligibility; does not stop or start a running program."))
-                .font(.callout).foregroundStyle(.secondary)
+                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
             if let message = model.message { Text(message).font(.callout).textSelection(.enabled) }
             if model.exitRequested { Text(tr(model.authorizing ? "Wait for the background inspection to finish or cancel authorization." : "Wait for the startup change to finish before quitting.")).font(.callout).foregroundStyle(.orange) }
             ScrollView {
@@ -144,7 +141,7 @@ struct StartupItemsPage: View {
                 Button(tr("Refresh")) { model.refresh() }.buttonStyle(PillButtonStyle()).disabled(model.busy)
             }
         }
-        .padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
+        .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 14)
         .onAppear { model.refresh() }.onDisappear { model.retire() }
         .sheet(item: $reviewed) { item in
             ConfirmSheet(title: item.enabled == true ? tr("Disable startup item?") : tr("Enable startup item?"),

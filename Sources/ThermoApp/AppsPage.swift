@@ -19,9 +19,7 @@ enum AppsTab: String, Hashable, CaseIterable {
 struct SoftwareTabPicker: View {
     @Binding var tab: AppsTab
     var body: some View {
-        Picker(tr("Show"), selection: $tab) {
-            ForEach(AppsTab.allCases, id: \.self) { Text($0.title).tag($0) }
-        }.pickerStyle(.segmented).labelsHidden().frame(width: 340)
+        ThermoTabs(selection: $tab, options: AppsTab.allCases.map { ($0, $0.title) }, label: tr("Show"))
     }
 }
 
@@ -346,28 +344,22 @@ struct AppsPage: View {
 
     var uninstallBody: some View {
         VStack(spacing: 0) {
-            header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
-            if model.exitRequested && model.working {
-                Text(tr("Wait for the app removal operation to finish before quitting."))
-                    .font(.callout).foregroundStyle(.orange).padding(.horizontal, 28)
-            }
-            if let notice = model.sizeNotice {
-                Text(notice).font(.callout).foregroundStyle(.secondary).padding(.horizontal, 28).padding(.bottom, 10)
-            }
-            if let outcome = model.outcome {
-                HStack(alignment: .top) {
-                    Label(outcome, systemImage: "trash").font(.callout).foregroundStyle(.white.opacity(0.85)).textSelection(.enabled)
-                    Spacer()
-                    Button { model.outcome = nil } label: { Image(systemName: "xmark") }.buttonStyle(.plain)
-                        .accessibilityLabel(tr("Dismiss")).help(tr("Dismiss"))
+            header.padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 16)
+            VStack(spacing: 8) {
+                if model.exitRequested && model.working {
+                    Text(tr("Wait for the app removal operation to finish before quitting."))
+                        .font(Theme.body).foregroundStyle(Theme.caution).frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(12).glass(radius: 12).padding(.horizontal, 28).padding(.bottom, 10)
+                if let notice = model.sizeNotice { NoticeBanner(text: notice) }
+                if let outcome = model.outcome { NoticeBanner(text: outcome, dismiss: { model.outcome = nil }) }
             }
+            .padding(.horizontal, Theme.pagePadding)
+            .padding(.bottom, model.sizeNotice != nil || model.outcome != nil ? 12 : 0)
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 12) {
                     if tab == .installed { installedList } else { leftoverList }
                 }
-                .padding(.horizontal, 28).padding(.bottom, 20)
+                .padding(.horizontal, Theme.pagePadding).padding(.bottom, 24)
             }
             footer
         }
@@ -450,19 +442,9 @@ struct AppsPage: View {
     }
 
     var header: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 14) {
-                IconTile(symbol: "square.grid.2x2.fill", color: .indigo, size: 44)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(tr("Software")).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
-                    Text(subtitle).font(.callout).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
-                }
-                Spacer()
-                if tab == .installed {
-                    TextField(tr("Search"), text: $search).textFieldStyle(.roundedBorder).frame(width: 150)
-                        .accessibilityLabel(tr("Search"))
-                }
-            }
+        PageHeader(title: tr("Software"), subtitle: subtitle) {
+            if tab == .installed { SearchField(text: $search, width: 200) }
+        } below: {
             SoftwareTabPicker(tab: $tab)
         }
     }
@@ -494,9 +476,11 @@ struct AppsPage: View {
 
     @ViewBuilder var installedList: some View {
         let list = filtered
-        ForEach(list) { appCard($0) }
         if list.isEmpty {
-            Text(model.loading ? tr("Looking…") : tr("No matching items")).foregroundStyle(.secondary).padding(.top, 30)
+            if model.loading { SkeletonList(rows: 6) }
+            else { EmptyState(symbol: "magnifyingglass", title: tr("No matching items")) }
+        } else {
+            RowList(items: list, inset: 60) { appCard($0) }
         }
     }
 
@@ -505,54 +489,55 @@ struct AppsPage: View {
         let running = model.running.contains(a.path)
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
-                Image(nsImage: NSWorkspace.shared.icon(forFile: a.path)).resizable().frame(width: 36, height: 36)
+                Image(nsImage: NSWorkspace.shared.icon(forFile: a.path)).resizable().frame(width: 32, height: 32)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text(a.name).font(.system(size: 14, weight: .medium)).foregroundStyle(.white).lineLimit(1)
-                        if let v = a.version { Text(v).font(.caption).foregroundStyle(.white.opacity(0.45)).lineLimit(1) }
-                        if a.protected != nil { tag(tr("Protected"), .gray) }
-                        if running { tag(tr("Running"), .orange) }
-                        if a.cask != nil { tag("Homebrew", .yellow) }
+                        Text(a.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                        if let v = a.version { Text(v).font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary).lineLimit(1) }
+                        if a.protected != nil { StatusTag(text: tr("Protected")) }
+                        if running { StatusTag(text: tr("Running"), color: Theme.caution) }
+                        if a.cask != nil { StatusTag(text: "Homebrew", color: Color(red: 0.95, green: 0.8, blue: 0.35)) }
                     }
-                    Text(a.protected ?? detail(a)).font(.caption).foregroundStyle(.white.opacity(0.55)).lineLimit(1).truncationMode(.middle)
+                    Text(a.protected ?? detail(a)).font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
                 }
-                Spacer()
+                Spacer(minLength: 12)
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(a.totalSizeText)
-                        .font(.system(size: 15, weight: .semibold).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
+                    Text(a.totalSizeText).font(Theme.figure(13.5)).foregroundStyle(Theme.textPrimary)
+                        .contentTransition(.numericText())
                     if a.leftoverBytes > 0 {
-                        Text(tr("%1$@ of files", AppSize.text(a.leftoverBytes, state: a.leftoverSizeState))).font(.caption.monospacedDigit()).foregroundStyle(.white.opacity(0.5))
+                        Text(tr("%1$@ of files", AppSize.text(a.leftoverBytes, state: a.leftoverSizeState)))
+                            .font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary)
                     }
                 }
                 Button(model.planning == a.path ? tr("Looking…") : tr("Uninstall…")) { model.review(a) }
-                    .buttonStyle(PillButtonStyle())
+                    .buttonStyle(PillButtonStyle()).controlSize(.small)
                     .disabled(a.protected != nil || running || model.working || model.planning != nil)
                     .help(a.protected ?? (running ? tr("%1$@ is running; quit it first", a.name) : tr("Lists every file first")))
-                Button { toggle(a.path) } label: {
-                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.6))
-                        .rotationEffect(.degrees(expanded ? 90 : 0)).frame(width: 28, height: 28)
-                }
-                .buttonStyle(.plain).accessibilityLabel(tr("Details for %1$@", a.name))
-                .accessibilityValue(expanded ? tr("Expanded") : tr("Collapsed"))
+                Button { toggle(a.path) } label: { DisclosureChevron(expanded: expanded) }
+                    .buttonStyle(.plain).accessibilityLabel(tr("Details for %1$@", a.name))
+                    .accessibilityValue(expanded ? tr("Expanded") : tr("Collapsed"))
             }
             .contentShape(Rectangle())
             .onTapGesture { toggle(a.path) }
             if expanded {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 5) {
                     pathRow(a.path, a.bytes, state: a.bundleSizeState)
                     ForEach(a.leftovers, id: \.path) { pathRow($0.path, $0.bytes, state: $0.effectiveSizeState) }
                     if a.leftovers.isEmpty && a.relatedDataState == .complete {
-                        Text(tr("No files of it found in your home folder.")).font(.caption).foregroundStyle(.white.opacity(0.5))
+                        Text(tr("No files of it found in your home folder.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     }
                     Button(tr("Review data only…")) { model.review(a, removeApp: false) }
-                        .buttonStyle(PillButtonStyle())
+                        .buttonStyle(PillButtonStyle()).controlSize(.small).padding(.top, 4)
                         .disabled(a.protected != nil || running || model.working || model.planning != nil)
                 }
+                .padding(.leading, 44)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(14)
-        .glass(radius: 14)
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .hoverHighlight()
+        .animation(Theme.standard, value: expanded)
         .contextMenu {
             Button(tr("Show in Finder")) { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: a.path)]) }
             if let id = a.bundleID {
@@ -567,17 +552,12 @@ struct AppsPage: View {
 
     func toggle(_ id: String) { if open.contains(id) { open.remove(id) } else { open.insert(id) } }
 
-    func tag(_ text: String, _ color: Color) -> some View {
-        Text(text).font(.system(size: 10, weight: .semibold)).foregroundStyle(color)
-            .padding(.horizontal, 6).padding(.vertical, 1).background(Capsule().fill(color.opacity(0.18)))
-    }
-
     func pathRow(_ path: String, _ bytes: Int64, state: AppSizeState = .complete) -> some View {
         HStack {
-            Text(FSPath.tilde(path)).font(.caption.monospaced()).foregroundStyle(.white.opacity(0.75)).lineLimit(1).truncationMode(.middle)
+            Text(FSPath.tilde(path)).font(Theme.mono).foregroundStyle(Theme.textSecondary).lineLimit(1).truncationMode(.middle)
                 .textSelection(.enabled)
             Spacer()
-            Text(AppSize.text(bytes, state: state)).font(.caption.monospacedDigit()).foregroundStyle(.white.opacity(0.55))
+            Text(AppSize.text(bytes, state: state)).font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary)
         }
     }
 
@@ -585,20 +565,20 @@ struct AppsPage: View {
         if let orphans = model.orphans {
             if !model.orphanScanComplete {
                 Label(tr("Residual scan incomplete; showing known results"), systemImage: "exclamationmark.triangle")
-                    .font(.callout).foregroundStyle(.orange)
+                    .font(Theme.body).foregroundStyle(Theme.caution)
                 ForEach(model.orphanIssues, id: \.self) { issue in
                     Text(tr(issue.message) + (issue.path.map { " · " + FSPath.tilde($0) } ?? ""))
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
             }
             Text(tr("Data of apps that are no longer installed: not running, untouched for 30 days, and Spotlight knows no app with that ID."))
-                .font(.caption).foregroundStyle(.white.opacity(0.5)).fixedSize(horizontal: false, vertical: true)
-            ForEach(orphans) { orphanCard($0) }
+                .font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+            if !orphans.isEmpty { RowList(items: orphans, inset: 54) { orphanCard($0) } }
             if orphans.isEmpty && model.orphanScanComplete {
-                Label(tr("No data left behind by deleted apps."), systemImage: "checkmark.circle").foregroundStyle(.secondary).padding(.top, 30)
+                EmptyState(symbol: "checkmark.circle", title: tr("No data left behind by deleted apps."))
             }
         } else {
-            Label(tr("Looking…"), systemImage: "hourglass").foregroundStyle(.secondary).padding(.top, 30)
+            SkeletonList(rows: 5)
         }
     }
 
@@ -608,48 +588,49 @@ struct AppsPage: View {
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 Button { if ticked { model.selectedOrphans.remove(o.id) } else { model.selectedOrphans.insert(o.id) } } label: {
-                    Image(systemName: ticked ? "checkmark.circle.fill" : "circle").font(.title3)
-                        .foregroundStyle(ticked ? Color.indigo : .white.opacity(0.5)).frame(width: 28, height: 28).contentShape(Rectangle())
+                    Image(systemName: ticked ? "checkmark.circle.fill" : "circle").font(.system(size: 16))
+                        .foregroundStyle(ticked ? Theme.accent : Theme.textTertiary).frame(width: 28, height: 28).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain).disabled(model.working || model.reviewingOrphans || o.blocked != nil)
                 .accessibilityLabel(tr("Select %1$@", o.bundleID))
                 .accessibilityValue(ticked ? tr("Selected") : tr("Not selected"))
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(o.bundleID).font(.system(size: 14, weight: .medium)).foregroundStyle(.white).lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(o.bundleID).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
                     Text(o.blocked ?? [trCount(o.items.count, "%1$@ place", "%1$@ places"), o.lastUsed.map { tr("last changed %1$@", AgeFormat.string($0)) }]
                             .compactMap { $0 }.joined(separator: " · "))
-                        .font(.caption).foregroundStyle(.white.opacity(0.55))
+                        .font(Theme.caption).foregroundStyle(o.blocked == nil ? Theme.textTertiary : Theme.caution)
                 }
                 Spacer()
-                Text(o.sizeText).font(.system(size: 15, weight: .semibold).monospacedDigit()).foregroundStyle(.white.opacity(0.9))
-                Button { toggle(o.id) } label: {
-                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.6))
-                        .rotationEffect(.degrees(expanded ? 90 : 0)).frame(width: 28, height: 28)
-                }
-                .buttonStyle(.plain).accessibilityLabel(tr("Details for %1$@", o.bundleID))
-                .accessibilityValue(expanded ? tr("Expanded") : tr("Collapsed"))
+                Text(o.sizeText).font(Theme.figure(13.5)).foregroundStyle(Theme.textPrimary)
+                Button { toggle(o.id) } label: { DisclosureChevron(expanded: expanded) }
+                    .buttonStyle(.plain).accessibilityLabel(tr("Details for %1$@", o.bundleID))
+                    .accessibilityValue(expanded ? tr("Expanded") : tr("Collapsed"))
             }
             .contentShape(Rectangle())
             .onTapGesture { toggle(o.id) }
             if expanded {
-                if let why = o.blocked { Text(why).font(.caption).foregroundStyle(.orange) }
-                VStack(alignment: .leading, spacing: 4) { ForEach(o.items, id: \.path) { pathRow($0.path, $0.bytes, state: $0.effectiveSizeState) } }
+                VStack(alignment: .leading, spacing: 5) { ForEach(o.items, id: \.path) { pathRow($0.path, $0.bytes, state: $0.effectiveSizeState) } }
+                    .padding(.leading, 40)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(14)
-        .glass(radius: 14, highlighted: ticked)
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .background(ticked ? Theme.accent.opacity(0.07) : .clear)
+        .hoverHighlight()
+        .animation(Theme.standard, value: expanded)
+        .animation(Theme.quick, value: ticked)
     }
 
     var footer: some View {
-        HStack(spacing: 10) {
+        ActionBar {
             if tab == .installed {
                 if model.measuring || model.working {
                     ProgressView().controlSize(.small)
                     Text(model.working ? tr("Moving to the Trash…") : tr("measuring %1$@ of %2$@", String(model.measured), String(model.apps.count)))
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(Theme.caption).foregroundStyle(Theme.textSecondary).monospacedDigit()
                 } else {
                     Text(tr("Running apps, macOS apps, password managers, VPNs and input methods cannot be uninstalled here."))
-                        .font(.caption).foregroundStyle(.white.opacity(0.5)).lineLimit(2)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(2)
                 }
                 Spacer()
                 if model.loading {
@@ -666,11 +647,9 @@ struct AppsPage: View {
                 Button(tr("Scan again")) { model.scanOrphans() }.buttonStyle(PillButtonStyle()).disabled(model.scanningOrphans || model.working || model.reviewingOrphans)
                 Spacer()
                 Button(model.reviewingOrphans ? tr("Reviewing selected residual data…") : tr("Move %1$@ to Trash", orphanSize(model.pickedOrphans))) { model.reviewPickedOrphans() }
-                    .buttonStyle(PillButtonStyle(prominent: true, color: .indigo))
+                    .buttonStyle(PillButtonStyle(prominent: true))
                     .disabled(model.pickedOrphans.isEmpty || model.working || model.scanningOrphans || model.reviewingOrphans)
             }
         }
-        .padding(.horizontal, 28).padding(.vertical, 14)
-        .background(Color.black.opacity(0.18))
     }
 }

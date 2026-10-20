@@ -141,6 +141,7 @@ struct MemoryPage: View {
     @ObservedObject private var pulse = SystemPulse.shared
     let open: (MainPage) -> Void
     @State private var hours = 6
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var expanded: Set<String> = {
         // Offscreen review can open a named program without invoking any process action.
         let args = CommandLine.arguments
@@ -167,10 +168,13 @@ struct MemoryPage: View {
                     trendCard
                     swapExplainer(b)
                 } else {
-                    ProgressView().frame(maxWidth: .infinity).padding(.top, 60)
+                    SkeletonList(rows: 3)
+                    SkeletonList(rows: 6)
                 }
             }
-            .padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 24)
+            .frame(maxWidth: Theme.pageWidth, alignment: .leading)
+            .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 24)
+            .frame(maxWidth: .infinity)
         }
         .onAppear { model.start(); pulse.hold() }
         .onDisappear { model.stop(); pulse.release() }
@@ -204,30 +208,23 @@ struct MemoryPage: View {
     // MARK: Header
 
     var header: some View {
-        HStack(spacing: 14) {
-            IconTile(symbol: "memorychip.fill", color: .green, size: 44)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(tr("Memory")).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
-                Text(model.breakdown?.summary ?? tr("Reading memory…")).font(.callout).foregroundStyle(.white.opacity(0.65))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer()
-        }
+        PageHeader(title: tr("Memory"), subtitle: model.breakdown?.summary ?? tr("Reading memory…"))
     }
 
     func swapBlockedBanner(_ b: MemoryBreakdown) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "externaldrive.fill.badge.exclamationmark").foregroundStyle(.red).font(.title3)
+            Image(systemName: "externaldrive.fill.badge.exclamationmark").foregroundStyle(Theme.danger).font(.title3)
             VStack(alignment: .leading, spacing: 4) {
-                Text(tr("Limited disk space for swap")).font(.callout.weight(.semibold)).foregroundStyle(.white)
+                Text(tr("Limited disk space for swap")).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.textPrimary)
                 Text(tr("Only %1$@ of disk capacity is available to swap. This may restrict memory management; free space, then check again.",
                         ByteFormat.string(b.diskAvailable ?? b.diskFree ?? 0)))
-                    .font(.caption).foregroundStyle(.white.opacity(0.7)).fixedSize(horizontal: false, vertical: true)
+                    .font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
-            Button(tr("Free disk space")) { open(.disk(.home)) }.buttonStyle(PillButtonStyle(prominent: true, color: .red))
+            Button(tr("Free disk space")) { open(.disk(.home)) }.buttonStyle(PillButtonStyle(prominent: true, color: Theme.danger))
         }
-        .padding(14).glass(radius: 14).overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.red.opacity(0.5)))
+        .padding(14).glass()
+        .overlay(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).strokeBorder(Theme.danger.opacity(0.45)))
     }
 
     // MARK: Breakdown
@@ -235,72 +232,75 @@ struct MemoryPage: View {
     struct Slice: Identifiable { let id: String; let title: String; let bytes: UInt64; let color: Color; let help: String }
 
     func slices(_ b: MemoryBreakdown) -> [Slice] {
-        [Slice(id: "app", title: tr("Apps"), bytes: b.app, color: .green, help: tr("Memory programs asked for and still hold.")),
-         Slice(id: "wired", title: tr("Wired"), bytes: b.wired, color: .orange, help: tr("macOS itself and drivers; never compressed or moved to the disk.")),
-         Slice(id: "compressed", title: tr("Compressed"), bytes: b.compressed, color: .purple,
+        [Slice(id: "app", title: tr("Apps"), bytes: b.app, color: Theme.accent, help: tr("Memory programs asked for and still hold.")),
+         Slice(id: "wired", title: tr("Wired"), bytes: b.wired, color: Color(red: 1.0, green: 0.62, blue: 0.32), help: tr("macOS itself and drivers; never compressed or moved to the disk.")),
+         Slice(id: "compressed", title: tr("Compressed"), bytes: b.compressed, color: Color(red: 0.70, green: 0.52, blue: 1.0),
                help: tr("%1$@ of memory squeezed into this space, instead of going to the disk.", MemoryFormat.string(bytes: b.compressedHolds))),
-         Slice(id: "cached", title: tr("Cached files"), bytes: b.cached, color: .blue, help: tr("Copies of files kept in spare memory; handed back the moment a program needs it.")),
-         Slice(id: "free", title: tr("Free"), bytes: b.free, color: .gray, help: tr("Not used at all."))]
+         Slice(id: "cached", title: tr("Cached files"), bytes: b.cached, color: Color(red: 0.35, green: 0.80, blue: 0.78), help: tr("Copies of files kept in spare memory; handed back the moment a program needs it.")),
+         Slice(id: "free", title: tr("Free"), bytes: b.free, color: Color.white.opacity(0.28), help: tr("Not used at all."))]
     }
 
     func breakdownCard(_ b: MemoryBreakdown) -> some View {
         let parts = slices(b)
         let sum = Double(max(1, parts.reduce(0) { $0 + $1.bytes }))
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(MemoryFormat.string(bytes: b.used)).font(.system(size: 30, weight: .bold).monospacedDigit()).foregroundStyle(.white)
-                Text(tr("used of %1$@", MemoryFormat.string(bytes: b.total))).font(.callout).foregroundStyle(.white.opacity(0.6))
+        let pressureColor = b.pressure == .unknown ? Theme.textSecondary : b.pressure == .normal ? Theme.good : b.pressure == .warning ? Theme.caution : Theme.danger
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(MemoryFormat.string(bytes: b.used)).font(Theme.figure(30)).foregroundStyle(Theme.textPrimary)
+                    .contentTransition(.numericText())
+                Text(tr("used of %1$@", MemoryFormat.string(bytes: b.total))).font(Theme.body).foregroundStyle(Theme.textSecondary)
                 Spacer()
-                pill(tr("Pressure: %1$@", MachinePulse.memoryName(b.pressure)), color: b.pressure == .unknown ? .gray : b.pressure == .normal ? .green : b.pressure == .warning ? .orange : .red)
+                StatusTag(text: tr("Pressure: %1$@", MachinePulse.memoryName(b.pressure)), color: pressureColor)
             }
+            // The segments slide to their new widths as memory moves between kinds.
             GeometryReader { g in
                 HStack(spacing: 2) {
                     ForEach(parts) { s in
-                        RoundedRectangle(cornerRadius: 3).fill(s.color.opacity(0.85))
+                        RoundedRectangle(cornerRadius: 2.5, style: .continuous).fill(s.color)
                             .frame(width: max(0, (g.size.width - 8) * CGFloat(Double(s.bytes) / sum)))
                             .help("\(s.title) \(MemoryFormat.string(bytes: s.bytes)): \(s.help)")
                     }
                 }
+                .animation(Theme.gentle.unlessReduced(reduceMotion), value: parts.map(\.bytes))
             }
-            .frame(height: 14).accessibilityHidden(true)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), alignment: .leading)], alignment: .leading, spacing: 10) {
+            .frame(height: 10).clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous)).accessibilityHidden(true)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), alignment: .leading)], alignment: .leading, spacing: 12) {
                 ForEach(parts) { s in
-                    HStack(alignment: .top, spacing: 6) {
-                        Circle().fill(s.color).frame(width: 8, height: 8).padding(.top, 4)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(s.title).font(.caption).foregroundStyle(.white.opacity(0.6))
-                            Text(MemoryFormat.string(bytes: s.bytes)).font(.callout.monospacedDigit()).foregroundStyle(.white)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 5) {
+                            RoundedRectangle(cornerRadius: 2).fill(s.color).frame(width: 8, height: 8)
+                            Text(s.title).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
                         }
+                        Text(MemoryFormat.string(bytes: s.bytes)).font(Theme.figure(14, weight: .medium)).foregroundStyle(Theme.textPrimary)
+                            .contentTransition(.numericText())
                     }
                     .help(s.help)
                     .accessibilityElement(children: .combine)
                 }
-                HStack(alignment: .top, spacing: 6) {
-                    Image(systemName: "externaldrive").font(.caption).foregroundStyle(.yellow).padding(.top, 2)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(tr("Swap on the disk")).font(.caption).foregroundStyle(.white.opacity(0.6))
-                        Text(b.swapReadable == false ? "—" : b.swapFiles > 0 ? tr("%1$@ of %2$@", MemoryFormat.string(bytes: b.swapUsed), MemoryFormat.string(bytes: b.swapFiles)) : tr("none"))
-                            .font(.callout.monospacedDigit()).foregroundStyle(b.swapUsed >= 4 << 30 ? .orange : .white)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "externaldrive").font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.caution)
+                        Text(tr("Swap on the disk")).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
                     }
+                    Text(b.swapReadable == false ? "—" : b.swapFiles > 0 ? tr("%1$@ of %2$@", MemoryFormat.string(bytes: b.swapUsed), MemoryFormat.string(bytes: b.swapFiles)) : tr("none"))
+                        .font(Theme.figure(14, weight: .medium)).foregroundStyle(b.swapUsed >= 4 << 30 ? Theme.caution : Theme.textPrimary)
                 }
                 .accessibilityElement(children: .combine)
             }
-            if let activity = model.activity {
-                Text(tr("Current swap activity: read %1$@/s · write %2$@/s",
-                        MemoryFormat.string(mebibytes: activity.swapReadBytesPerSecond / 1_048_576),
-                        MemoryFormat.string(mebibytes: activity.swapWriteBytesPerSecond / 1_048_576)))
-                    .font(.caption).foregroundStyle(.white.opacity(0.6))
-            } else {
-                Text(tr("Current swap activity: waiting for comparable readings"))
-                    .font(.caption).foregroundStyle(.white.opacity(0.5))
+            Group {
+                if let activity = model.activity {
+                    Text(tr("Current swap activity: read %1$@/s · write %2$@/s",
+                            MemoryFormat.string(mebibytes: activity.swapReadBytesPerSecond / 1_048_576),
+                            MemoryFormat.string(mebibytes: activity.swapWriteBytesPerSecond / 1_048_576)))
+                } else {
+                    Text(tr("Current swap activity: waiting for comparable readings"))
+                }
             }
+            .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+            .padding(.top, 10).frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .top) { Rectangle().fill(Theme.hairline).frame(height: 1) }
         }
-        .padding(16).glass(radius: 16)
-    }
-
-    func pill(_ text: String, color: Color) -> some View {
-        Text(text).font(.caption.weight(.semibold)).foregroundStyle(color)
-            .padding(.horizontal, 8).padding(.vertical, 3).background(Capsule().fill(color.opacity(0.18)))
+        .padding(18).glass()
     }
 
     // MARK: Trend
@@ -311,24 +311,28 @@ struct MemoryPage: View {
     }
 
     var trendCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(tr("Memory and swap")).font(.callout.weight(.semibold)).foregroundStyle(.white)
+                Text(tr("Memory and swap")).font(Theme.sectionTitle).foregroundStyle(Theme.textSecondary)
                 Spacer()
-                Picker("", selection: $hours) { Text("1h").tag(1); Text("6h").tag(6); Text("24h").tag(24) }
-                    .pickerStyle(.segmented).labelsHidden().frame(width: 130)
-                    .accessibilityLabel(tr("Time span"))
+                ThermoTabs(selection: $hours, options: [(1, "1h"), (6, "6h"), (24, "24h")], size: .small, label: tr("Time span"))
             }
             let records = trendRecords
             if records.count >= 2 {
                 Chart {
                     ForEach(records, id: \.t) { r in
                         if let used = r.usedMB {
+                            AreaMark(x: .value("t", r.t), y: .value("GiB", Double(used) / 1024), series: .value("k", "used"))
+                                .foregroundStyle(LinearGradient(colors: [Theme.accent.opacity(0.28), Theme.accent.opacity(0)],
+                                                                startPoint: .top, endPoint: .bottom))
+                                .interpolationMethod(.monotone)
                             LineMark(x: .value("t", r.t), y: .value("GiB", Double(used) / 1024), series: .value("k", "used"))
                                 .foregroundStyle(by: .value("k", tr("Memory used")))
+                                .interpolationMethod(.monotone)
                         }
                         LineMark(x: .value("t", r.t), y: .value("GiB", Double(r.swapUsedMB) / 1024), series: .value("k", "swap"))
                             .foregroundStyle(by: .value("k", tr("Swap")))
+                            .interpolationMethod(.monotone)
                         if r.memory.isHigh {
                             RuleMark(x: .value("t", r.t)).foregroundStyle(r.memory == .critical ? Color.red.opacity(0.25) : Color.orange.opacity(0.18))
                         }
@@ -338,38 +342,46 @@ struct MemoryPage: View {
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
                     }
                 }
-                .chartForegroundStyleScale([tr("Memory used"): Color.green, tr("Swap"): Color.yellow])
-                .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let d = v.as(Double.self) { Text("\(Int(d)) GiB") } } } }
-                .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.hour().minute()) } }
-                .frame(height: 150)
+                .chartForegroundStyleScale([tr("Memory used"): Theme.accent, tr("Swap"): Theme.caution])
+                .chartLegend(position: .top, alignment: .trailing)
+                .chartYAxis { AxisMarks { v in
+                    AxisGridLine().foregroundStyle(Theme.hairline)
+                    AxisValueLabel { if let d = v.as(Double.self) { Text("\(Int(d)) GiB").foregroundStyle(Theme.textTertiary) } }
+                } }
+                .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                    AxisValueLabel(format: .dateTime.hour().minute()).foregroundStyle(Theme.textTertiary)
+                } }
+                .frame(height: 160)
                 Text(tr("Shaded: memory pressure was high. Dashed line: installed memory."))
-                    .font(.caption2).foregroundStyle(.white.opacity(0.45))
+                    .font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
             } else {
-                Text(tr("Thermo records memory once a minute; the chart fills in as it does."))
-                    .font(.caption).foregroundStyle(.white.opacity(0.5)).padding(.vertical, 20)
+                EmptyState(symbol: "chart.xyaxis.line", title: tr("Thermo records memory once a minute; the chart fills in as it does."))
+                    .padding(.vertical, -24)
             }
         }
-        .padding(16).glass(radius: 16)
+        .padding(16).glass()
     }
 
     // MARK: Suspects
 
     var suspectsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(tr("Programs growing in memory"), systemImage: "chart.line.uptrend.xyaxis").font(.callout.weight(.semibold)).foregroundStyle(.orange)
+            Label(tr("Programs growing in memory"), systemImage: "chart.line.uptrend.xyaxis")
+                .font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Theme.caution)
             ForEach(model.suspects) { s in
-                HStack(alignment: .top, spacing: 10) {
+                HStack(alignment: .center, spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(s.name).font(.system(size: 14, weight: .medium)).foregroundStyle(.white)
-                        Text(s.text).font(.caption).foregroundStyle(.white.opacity(0.65)).fixedSize(horizontal: false, vertical: true)
+                        Text(s.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
+                        Text(s.text).font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer()
-                    Text(MemoryFormat.string(kibibytes: s.memoryKB)).font(.callout.monospacedDigit()).foregroundStyle(.white.opacity(0.9))
-                    Button(tr("Inspect")) { expanded.insert(s.id); search = s.name }.buttonStyle(PillButtonStyle())
+                    Text(MemoryFormat.string(kibibytes: s.memoryKB)).font(Theme.figure(13)).foregroundStyle(Theme.textPrimary)
+                    Button(tr("Inspect")) { expanded.insert(s.id); search = s.name }.buttonStyle(PillButtonStyle()).controlSize(.small)
                 }
             }
         }
-        .padding(16).glass(radius: 16)
+        .padding(16).glass()
+        .overlay(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).strokeBorder(Theme.caution.opacity(0.3)))
     }
 
     // MARK: Programs
@@ -392,46 +404,57 @@ struct MemoryPage: View {
         let list = showAll ? visible : Array(visible.prefix(15))
         let top = Double(max(1, visible.map { sortByResident ? $0.residentKB ?? 0 : ($0.memoryMetric == .mixed || $0.memoryMetric == .unavailable ? 0 : $0.memoryKB) }.max() ?? 1))
         return VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(tr("Programs by memory")).font(.callout.weight(.semibold)).foregroundStyle(.white)
-                Spacer()
-                if let sampled = model.sampled { Text(sampled, style: .time).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
+            SectionHeader(title: tr("Programs by memory")) {
+                if let sampled = model.sampled {
+                    Text(sampled, style: .time).font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                }
             }
             // Said before the numbers, not under them: the column is easy to read as RAM or swap.
             Text(tr("Memory footprint is Activity Monitor's Memory column: what a program is charged for, compressed memory included, some of which may be in swap. Adding programs up gives neither the used memory above nor the swap size; resident memory counts shared pages and cannot be subtracted from footprint to get swap."))
-                .font(.caption2).foregroundStyle(.white.opacity(0.6)).fixedSize(horizontal: false, vertical: true)
-            HStack {
-                TextField(tr("Search programs, projects or PID"), text: $search).textFieldStyle(.roundedBorder)
-                Picker(tr("Sort by"), selection: $sortByResident) {
-                    Text(tr("Memory footprint")).tag(false)
-                    Text(tr("Resident memory")).tag(true)
-                }.frame(width: 180)
+                .font(.system(size: 11)).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 2)
+            HStack(spacing: 10) {
+                SearchField(text: $search, prompt: tr("Search programs, projects or PID"))
+                ThermoTabs(selection: $sortByResident, options: [(false, tr("Memory footprint")), (true, tr("Resident memory"))],
+                           size: .small, label: tr("Sort by"))
             }
-            ViewThatFits(in: .horizontal) {
-                HStack {
-                Text(tr("Program / project / process")).frame(maxWidth: .infinity, alignment: .leading)
-                Text(tr("Memory footprint")).frame(width: 84, alignment: .trailing)
-                Text(tr("Resident memory")).frame(width: 84, alignment: .trailing)
-                Spacer().frame(width: 210)
-            }.frame(minWidth: 640)
-                Text(tr("Memory footprint") + " · " + tr("Resident memory"))
-            }.font(.caption2).foregroundStyle(.white.opacity(0.5))
             if !model.inventoryAvailable {
-                Text(tr("Process readings unavailable. Try refreshing.")).font(.caption).foregroundStyle(.orange)
+                Text(tr("Process readings unavailable. Try refreshing.")).font(Theme.caption).foregroundStyle(Theme.caution)
             }
-            ForEach(list) { programRow($0, top: top) }
-            if visible.count > 15 {
-                Button(showAll ? tr("Show fewer") : tr("Show all %1$@", String(visible.count))) { showAll.toggle() }
-                    .buttonStyle(.link).font(.caption)
+            VStack(alignment: .leading, spacing: 0) {
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        Text(tr("Program / project / process")).frame(maxWidth: .infinity, alignment: .leading)
+                        Text(tr("Memory footprint")).frame(width: 84, alignment: .trailing)
+                        Text(tr("Resident memory")).frame(width: 84, alignment: .trailing)
+                        Spacer().frame(width: 190)
+                    }.frame(minWidth: 640)
+                    Text(tr("Memory footprint") + " · " + tr("Resident memory"))
+                }
+                .font(.system(size: 10.5, weight: .medium)).foregroundStyle(Theme.textTertiary)
+                .padding(.horizontal, 14).padding(.vertical, 8)
+                ForEach(list) { p in
+                    InspectorDivider(inset: 14)
+                    programRow(p, top: top)
+                }
+                if visible.count > 15 {
+                    InspectorDivider(inset: 0)
+                    Button(showAll ? tr("Show fewer") : tr("Show all %1$@", String(visible.count))) {
+                        withAnimation(Theme.standard.unlessReduced(reduceMotion)) { showAll.toggle() }
+                    }
+                    .buttonStyle(.plain).font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.accent)
+                    .frame(maxWidth: .infinity).padding(.vertical, 9).contentShape(Rectangle()).hoverHighlight()
+                }
             }
+            .glass()
             if model.unreadableCount > 0 {
                 Text(tr("%1$@ processes have no footprint reading; resident estimates and missing values are marked.", String(model.unreadableCount)))
-                    .font(.caption2).foregroundStyle(.orange)
+                    .font(.system(size: 11)).foregroundStyle(Theme.caution)
             }
             ForEach([pulse.quitProblem, pulse.restartProblem, pulse.actionFeedback].compactMap { $0 }, id: \.self) { t in
-                Text(t).font(.caption).foregroundStyle(.white.opacity(0.7)).fixedSize(horizontal: false, vertical: true)
+                NoticeBanner(text: t)
             }
-        }.padding(16).glass(radius: 16)
+        }
     }
 
     func metric(_ memory: Int, _ kind: MachinePulse.MemoryMetric?) -> String {
@@ -439,37 +462,47 @@ struct MemoryPage: View {
         return (kind == .residentEstimate ? "≈ " : "") + MemoryFormat.string(kibibytes: memory)
     }
 
+    func toggleProgram(_ id: String) {
+        withAnimation(Theme.standard.unlessReduced(reduceMotion)) {
+            if expanded.contains(id) { expanded.remove(id) } else { expanded.insert(id) }
+        }
+    }
+
     func programRow(_ program: MemoryProgram, top: Double) -> some View {
         let isOpen = expanded.contains(program.id)
         return VStack(alignment: .leading, spacing: 8) {
             ViewThatFits(in: .horizontal) {
             HStack(spacing: 10) {
-                Button { if isOpen { expanded.remove(program.id) } else { expanded.insert(program.id) } } label: {
-                    Image(systemName: isOpen ? "chevron.down" : "chevron.right").frame(width: 10)
-                }.buttonStyle(.plain).accessibilityLabel(tr("Inspect %1$@", program.name))
+                Button { toggleProgram(program.id) } label: { DisclosureChevron(expanded: isOpen) }
+                    .buttonStyle(.plain).accessibilityLabel(tr("Inspect %1$@", program.name))
                 if let app = program.contexts.first?.app {
                     Image(nsImage: NSWorkspace.shared.icon(forFile: app)).resizable().frame(width: 22, height: 22)
-                } else { Image(systemName: "terminal").frame(width: 22, height: 22).foregroundStyle(.secondary) }
+                } else {
+                    Image(systemName: "terminal").font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textSecondary)
+                        .frame(width: 22, height: 22)
+                        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.white.opacity(0.07)))
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
-                        Text(program.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
-                        Text("×\(program.processCount)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                        Text(program.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                        Text("×\(program.processCount)").font(.system(size: 10.5).monospacedDigit()).foregroundStyle(Theme.textTertiary)
                     }
                     Text(program.contexts.first?.app != nil ? tr("App · expand for processes") : tr("%1$@ projects · expand for processes", String(program.projects.count)))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 GeometryReader { g in
                     ZStack(alignment: .leading) {
-                        Capsule().fill(Color.white.opacity(0.08))
-                        Capsule().fill(Color.green.opacity(0.7)).frame(width: g.size.width * CGFloat(min(1, max(0, Double(sortByResident ? program.residentKB ?? 0 : (program.memoryMetric == .mixed || program.memoryMetric == .unavailable ? 0 : program.memoryKB)) / top))))
+                        Capsule().fill(Color.white.opacity(0.07))
+                        Capsule().fill(Theme.accent.opacity(0.8)).frame(width: g.size.width * CGFloat(min(1, max(0, Double(sortByResident ? program.residentKB ?? 0 : (program.memoryMetric == .mixed || program.memoryMetric == .unavailable ? 0 : program.memoryKB)) / top))))
                     }
-                }.frame(width: 60, height: 5).accessibilityHidden(true)
-                Text(metric(program.memoryKB, program.memoryMetric)).frame(width: 84, alignment: .trailing)
-                Text(program.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").foregroundStyle(.secondary).frame(width: 84, alignment: .trailing)
+                }.frame(width: 56, height: 4).accessibilityHidden(true)
+                    .animation(Theme.gentle.unlessReduced(reduceMotion), value: program.memoryKB)
+                Text(metric(program.memoryKB, program.memoryMetric)).foregroundStyle(Theme.textPrimary).frame(width: 84, alignment: .trailing)
+                    .contentTransition(.numericText())
+                Text(program.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").foregroundStyle(Theme.textTertiary).frame(width: 84, alignment: .trailing)
                 Group {
-                    if let target = program.actionTarget { actions(target, emphasizeRestart: false) }
-                    else { Button(tr("Inspect")) { expanded.insert(program.id) }.buttonStyle(PillButtonStyle()) }
-                }.frame(width: 210, alignment: .trailing)
+                    if let target = program.actionTarget { actions(target, emphasizeRestart: false) } else { Color.clear.frame(height: 1) }
+                }.frame(width: 190, alignment: .trailing)
             }.frame(minWidth: 640)
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
@@ -489,15 +522,21 @@ struct MemoryPage: View {
                         }.font(.caption2).foregroundStyle(.secondary)
                         Spacer(minLength: 4)
                         if let target = program.actionTarget { actions(target, emphasizeRestart: false) }
-                        else { Button(tr("Inspect")) { expanded.insert(program.id) }.buttonStyle(PillButtonStyle()) }
                     }
                 }
             }.font(.system(size: 12).monospacedDigit())
+            .contentShape(Rectangle())
+            .onTapGesture { toggleProgram(program.id) }
             if isOpen {
-                programTrend(program)
-                ForEach(program.contexts) { h in contextRow(h, showActions: program.actionTarget == nil) }
+                VStack(alignment: .leading, spacing: 8) {
+                    programTrend(program)
+                    ForEach(program.contexts) { h in contextRow(h, showActions: program.actionTarget == nil) }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
-        }.padding(.vertical, 6)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 9)
+        .hoverHighlight()
     }
 
     @ViewBuilder func programTrend(_ program: MemoryProgram) -> some View {
@@ -509,7 +548,7 @@ struct MemoryPage: View {
                         MemorySuspects.duration(last.sampled.timeIntervalSince(first.sampled))))
                 Chart(points) { p in
                     LineMark(x: .value("t", p.sampled), y: .value("GiB", Double(p.memoryKB) / 1_048_576))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Theme.accent).interpolationMethod(.monotone)
                 }.frame(height: 65).chartXAxis(.hidden)
                     .chartYAxis { AxisMarks { v in
                         AxisGridLine()
@@ -538,7 +577,8 @@ struct MemoryPage: View {
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 Text(metric(h.memoryKB, h.memoryMetric)).frame(width: 84, alignment: .trailing)
                 Text(h.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").foregroundStyle(.secondary).frame(width: 84, alignment: .trailing)
-                Group { if showActions { actions(h, emphasizeRestart: false) } }.frame(width: 210, alignment: .trailing)
+                Group { if showActions { actions(h, emphasizeRestart: false) } else { Color.clear.frame(height: 1) } }
+                    .frame(width: 190, alignment: .trailing)
             }
                 .frame(minWidth: 600)
                 VStack(alignment: .leading, spacing: 4) {
@@ -566,7 +606,7 @@ struct MemoryPage: View {
                         Text("\(MachinePulse.roleName(p.role)) · PID \(p.pid)").frame(maxWidth: .infinity, alignment: .leading)
                         Text(metric(p.memoryKB, p.memoryMetric)).frame(width: 84, alignment: .trailing)
                         Text(p.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").frame(width: 84, alignment: .trailing)
-                        Spacer().frame(width: 210)
+                        Spacer().frame(width: 190)
                     }.frame(minWidth: 600)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(MachinePulse.roleName(p.role)) · PID \(p.pid)")
@@ -596,16 +636,16 @@ struct MemoryPage: View {
                     _ = AppModels.shared.browser(h.name, memoryKB: h.memoryKB, gpuKB: h.parts?.first { $0.role == "GPU" }?.memoryKB)
                     open(.browser(h.name))
                 }
-                .buttonStyle(PillButtonStyle()).help(tr("Which of its pages use the memory"))
+                .buttonStyle(PillButtonStyle()).controlSize(.small).help(tr("Which of its pages use the memory"))
             }
             if h.quittable && h.app != nil {
                 Button(pulse.restarting == h.name ? tr("Restarting…") : tr("Restart")) { restartTarget = h }
-                    .buttonStyle(PillButtonStyle(prominent: emphasizeRestart, color: .orange))
+                    .buttonStyle(PillButtonStyle(prominent: emphasizeRestart, color: Theme.caution)).controlSize(.small)
                     .disabled(pulse.restarting != nil || pulse.quitting.contains(h.id))
             }
             if h.quittable {
                 Button(pulse.quitting.contains(h.id) ? tr("Stopping…") : h.app != nil ? tr("Quit") : tr("End")) { confirming = h }
-                    .buttonStyle(PillButtonStyle())
+                    .buttonStyle(PillButtonStyle()).controlSize(.small)
                     .disabled(pulse.quitting.contains(h.id) || pulse.restarting == h.name)
             }
         }
@@ -623,10 +663,10 @@ struct MemoryPage: View {
                         MemoryFormat.string(bytes: b.swapOuts * UInt64(vm_kernel_page_size)), MemoryFormat.string(bytes: b.swapIns * UInt64(vm_kernel_page_size))))
                     .foregroundStyle(.white.opacity(0.5))
             }
-            .font(.caption).foregroundStyle(.white.opacity(0.7)).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
+            .font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
         } label: {
-            Text(tr("What swap is")).font(.callout.weight(.semibold)).foregroundStyle(.white)
+            Text(tr("What swap is")).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Theme.textPrimary)
         }
-        .padding(16).glass(radius: 16)
+        .padding(14).glass()
     }
 }

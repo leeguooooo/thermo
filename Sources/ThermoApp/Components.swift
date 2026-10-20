@@ -214,67 +214,59 @@ extension AgentStyle {
     }
 }
 
-/// The whole window's backdrop: a deep violet-to-blue gradient with soft light, like CleanMyMac.
+/// The whole window's backdrop.
 struct GradientSidebarBackground: View {
     var body: some View { WindowBackdrop(glow: false) }
 }
 
+/// Graphite, with a faint light at the top in the color of what the page is about (on the
+/// overview, how hot the Mac is); the light eases to a new color instead of jumping.
 struct WindowBackdrop: View {
-    /// A soft light behind the hero.
     var glow = true
-    var tint: Color = Color(red: 0.42, green: 0.36, blue: 1.0)
+    var tint: Color = Theme.accent
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(red: 0.16, green: 0.10, blue: 0.30), Color(red: 0.07, green: 0.10, blue: 0.24),
-                                    Color(red: 0.04, green: 0.13, blue: 0.22)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing)
-            if glow {
-                RadialGradient(colors: [tint.opacity(0.35), .clear], center: UnitPoint(x: 0.5, y: 0.22), startRadius: 10, endRadius: 420)
-                    .blendMode(.screen)
-            }
+            LinearGradient(colors: [Theme.canvas, Theme.canvasDeep], startPoint: .top, endPoint: .bottom)
+            RadialGradient(colors: [tint.opacity(glow ? 0.16 : 0.07), .clear],
+                           center: UnitPoint(x: 0.62, y: -0.08), startRadius: 0, endRadius: 560)
+                .animation(Theme.gentle.unlessReduced(reduceMotion), value: glow)
         }
         .ignoresSafeArea()
     }
 }
 
-/// A translucent "glass" panel: what cards and rows sit on.
+/// A panel: what cards and rows sit on. One flat surface with a hairline; no shadow.
 struct GlassPanel: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var contrast
-    var radius: CGFloat = 16
+    var radius: CGFloat = Theme.radius
     var highlighted = false
 
-    private var panelFill: AnyShapeStyle {
+    private var panelFill: Color {
         if reduceTransparency || contrast == .increased {
-            return AnyShapeStyle(Color(red: highlighted ? 0.12 : 0.08, green: highlighted ? 0.14 : 0.10, blue: highlighted ? 0.20 : 0.15))
+            return highlighted ? Color(red: 0.14, green: 0.15, blue: 0.17) : Color(red: 0.11, green: 0.12, blue: 0.14)
         }
-        return AnyShapeStyle(LinearGradient(colors: [.white.opacity(highlighted ? 0.16 : 0.11), .white.opacity(highlighted ? 0.08 : 0.045)],
-                                            startPoint: .topLeading, endPoint: .bottomTrailing))
-    }
-
-    private var panelBorder: AnyShapeStyle {
-        if contrast == .increased { return AnyShapeStyle(Color.white.opacity(0.65)) }
-        return AnyShapeStyle(LinearGradient(colors: [.white.opacity(highlighted ? 0.35 : 0.18), .white.opacity(0.03)],
-                                            startPoint: .top, endPoint: .bottom))
+        return highlighted ? Theme.surfaceRaised : Theme.surface
     }
 
     func body(content: Content) -> some View {
         content
-            // Drawn, not a system material: the same frosted look on any backdrop and in snapshots.
-            .background(RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .fill(panelFill))
+            .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(panelFill))
             .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .strokeBorder(panelBorder, lineWidth: contrast == .increased ? 2 : 1))
-            .shadow(color: .black.opacity(0.25), radius: 14, y: 8)
+                .strokeBorder(contrast == .increased ? Color.white.opacity(0.6) : highlighted ? Theme.border.opacity(1.6) : Theme.hairline,
+                              lineWidth: contrast == .increased ? 2 : 1))
     }
 }
 
 extension View {
-    func glass(radius: CGFloat = 16, highlighted: Bool = false) -> some View { modifier(GlassPanel(radius: radius, highlighted: highlighted)) }
+    func glass(radius: CGFloat = Theme.radius, highlighted: Bool = false) -> some View {
+        modifier(GlassPanel(radius: radius, highlighted: highlighted))
+    }
 }
 
-/// A rounded tile with a glossy gradient and a white symbol, like an app icon.
+/// A rounded tile holding a symbol in its color: the mark of a category.
 struct IconTile: View {
     let symbol: String
     let color: Color
@@ -282,16 +274,12 @@ struct IconTile: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-                .fill(LinearGradient(colors: [color.opacity(1.0), color.opacity(0.55)], startPoint: .topLeading, endPoint: .bottomTrailing))
-            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-                .fill(LinearGradient(colors: [.white.opacity(0.35), .clear], startPoint: .top, endPoint: .center))
-            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous).strokeBorder(.white.opacity(0.25), lineWidth: 0.8)
-            Image(systemName: symbol).font(.system(size: size * 0.44, weight: .semibold)).foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.25), radius: 1, y: 1)
+            RoundedRectangle(cornerRadius: size * 0.26, style: .continuous).fill(color.opacity(0.16))
+            RoundedRectangle(cornerRadius: size * 0.26, style: .continuous).strokeBorder(color.opacity(0.22), lineWidth: 1)
+            Image(systemName: symbol).font(.system(size: size * 0.44, weight: .semibold)).foregroundStyle(color)
         }
         .frame(width: size, height: size)
-        .shadow(color: color.opacity(0.45), radius: size * 0.18, y: size * 0.08)
+        .accessibilityHidden(true)
     }
 }
 
@@ -300,16 +288,16 @@ struct PressableStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.95 : 1)
-            .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 
-/// The big round call to action ("Fix 9", "Check Again"), glowing.
+/// The main call to action on a landing page ("Fix 9", "Check Again").
 struct BigRoundButton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let title: String
-    var color: Color = Color(red: 0.25, green: 0.55, blue: 1.0)
+    var color: Color = Theme.accent
     var busy = false
     let action: () -> Void
     @State private var hover = false
@@ -317,22 +305,17 @@ struct BigRoundButton: View {
     var body: some View {
         Button(action: action) {
             ZStack {
-                Circle().fill(color.opacity(0.18)).frame(width: 150, height: 150).blur(radius: hover ? 6 : 10)
-                Circle().fill(LinearGradient(colors: [color.opacity(1), color.opacity(0.65)], startPoint: .top, endPoint: .bottom))
-                    .frame(width: 118, height: 118)
-                Circle().fill(LinearGradient(colors: [.white.opacity(0.45), .clear], startPoint: .top, endPoint: .center))
-                    .frame(width: 118, height: 118)
-                Circle().strokeBorder(.white.opacity(0.4), lineWidth: 1.5).frame(width: 118, height: 118)
                 if busy {
-                    ProgressView().controlSize(.large).tint(.white)
+                    ProgressView().controlSize(.small).tint(.white)
                 } else {
-                    Text(title).font(.system(size: 18, weight: .bold, design: .rounded)).foregroundStyle(.white)
-                        .multilineTextAlignment(.center).frame(width: 100)
+                    Text(title).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white).lineLimit(1)
                 }
             }
-            .shadow(color: color.opacity(hover ? 0.7 : 0.45), radius: hover ? 26 : 18, y: 8)
-            .scaleEffect(hover && !reduceMotion ? 1.03 : 1)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: hover)
+            .padding(.horizontal, 28).frame(minWidth: 148).frame(height: 40)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(color.opacity(hover ? 1 : 0.9)))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(.white.opacity(0.18)))
+            .shadow(color: color.opacity(hover ? 0.45 : 0.25), radius: hover ? 14 : 8, y: 4)
+            .animation(Theme.quick.unlessReduced(reduceMotion), value: hover)
         }
         .buttonStyle(PressableStyle())
         .onHover { hover = $0 }
@@ -340,28 +323,54 @@ struct BigRoundButton: View {
     }
 }
 
-/// A slim gradient pill for secondary actions on dark glass.
+/// Buttons in the window. `prominent` fills with the color, for the one thing a page asks you to do;
+/// the rest are quiet grey.
 struct PillButtonStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.controlSize) private var controlSize
     var prominent = false
-    var color: Color = Color(red: 0.25, green: 0.55, blue: 1.0)
+    var color: Color = Theme.accent
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14).padding(.vertical, 7)
-            .background(Capsule().fill(prominent ? AnyShapeStyle(LinearGradient(colors: [color, color.opacity(0.7)], startPoint: .top, endPoint: .bottom))
-                                                 : AnyShapeStyle(Color.white.opacity(0.12))))
-            .overlay(Capsule().strokeBorder(.white.opacity(prominent ? 0.35 : 0.15)))
-            .opacity(isEnabled ? 1 : 0.45)
-            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1)
-            .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
+        let small = controlSize == .small || controlSize == .mini
+        return PillBody(configuration: configuration, prominent: prominent, color: color, small: small,
+                        enabled: isEnabled, reduceMotion: reduceMotion)
+    }
+
+    private struct PillBody: View {
+        let configuration: Configuration
+        let prominent: Bool
+        let color: Color
+        let small: Bool
+        let enabled: Bool
+        let reduceMotion: Bool
+        @State private var hover = false
+
+        var fill: Color {
+            if prominent { return color.opacity(configuration.isPressed ? 0.75 : hover ? 1 : 0.88) }
+            return Color.white.opacity(configuration.isPressed ? 0.15 : hover ? 0.11 : 0.075)
+        }
+
+        var body: some View {
+            configuration.label
+                .font(.system(size: small ? 11.5 : 12.5, weight: prominent ? .semibold : .medium))
+                .foregroundStyle(prominent ? Color.white : Theme.textPrimary)
+                .lineLimit(1)
+                .padding(.horizontal, small ? 9 : 12).frame(minHeight: small ? 22 : 28)
+                .background(RoundedRectangle(cornerRadius: small ? 6 : 7, style: .continuous).fill(fill))
+                .overlay(RoundedRectangle(cornerRadius: small ? 6 : 7, style: .continuous)
+                    .strokeBorder(Color.white.opacity(prominent ? 0.16 : 0.08)))
+                .opacity(enabled ? 1 : 0.4)
+                .contentShape(Rectangle())
+                .onHover { hover = enabled && $0 }
+                .animation(reduceMotion ? nil : Theme.quick, value: hover)
+                .animation(reduceMotion ? nil : Theme.quick, value: configuration.isPressed)
+        }
     }
 }
 
-/// The landing hero: a glowing orb in rings; the outer ring turns into progress while working.
+/// The landing hero: a status mark in a ring; the ring turns into progress while working.
 struct HeroStatus: View {
     let symbol: String
     let color: Color
@@ -370,51 +379,47 @@ struct HeroStatus: View {
     /// 0…1 while scanning or fixing; nil when idle.
     var progress: Double? = nil
     var spinning = false
-    @State private var pulse = false
+    @State private var turning = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             ZStack {
-                // Animate only this halo: a repeatForever started with withAnimation in onAppear would also
-                // animate the first layout of the whole window, and everything would drift forever.
-                Circle().fill(color.opacity(0.10)).frame(width: 190, height: 190).scaleEffect(pulse ? 1.06 : 0.96)
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 2.4).repeatForever(), value: pulse)
-                Circle().stroke(color.opacity(0.25), lineWidth: 1).frame(width: 162, height: 162)
+                Circle().fill(RadialGradient(colors: [color.opacity(0.22), .clear], center: .center, startRadius: 20, endRadius: 90))
+                    .frame(width: 180, height: 180)
+                Circle().stroke(Color.white.opacity(0.07), lineWidth: 5).frame(width: 128, height: 128)
                 if let progress {
                     Circle().trim(from: 0, to: max(0.02, progress))
-                        .stroke(AngularGradient(colors: [color.opacity(0.2), color, .white], center: .center),
-                                style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                        .rotationEffect(.degrees(-90)).frame(width: 162, height: 162)
+                        .stroke(color, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                        .rotationEffect(.degrees(-90)).frame(width: 128, height: 128)
                         .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: progress)
                 } else if spinning {
-                    Circle().trim(from: 0, to: 0.28)
-                        .stroke(AngularGradient(colors: [color.opacity(0), color, .white], center: .center),
-                                style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                        .frame(width: 162, height: 162)
-                        .rotationEffect(.degrees(pulse ? 360 : 0))
-                        .animation(reduceMotion ? nil : .linear(duration: 1.2).repeatForever(autoreverses: false), value: pulse)
+                    Circle().trim(from: 0, to: 0.22)
+                        .stroke(AngularGradient(colors: [color.opacity(0), color], center: .center),
+                                style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                        .frame(width: 128, height: 128)
+                        .rotationEffect(.degrees(turning ? 360 : 0))
+                        .animation(reduceMotion ? nil : .linear(duration: 1.1).repeatForever(autoreverses: false), value: turning)
+                } else {
+                    Circle().stroke(color.opacity(0.85), lineWidth: 5).frame(width: 128, height: 128)
                 }
-                Circle().fill(LinearGradient(colors: [color, color.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 118, height: 118)
-                    .shadow(color: color.opacity(0.6), radius: 24)
-                Circle().fill(LinearGradient(colors: [.white.opacity(0.45), .clear], startPoint: .top, endPoint: .center))
-                    .frame(width: 118, height: 118)
-                Image(systemName: symbol).font(.system(size: 50, weight: .bold)).foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+                Image(systemName: symbol).font(.system(size: 40, weight: .semibold)).foregroundStyle(color)
+                    .contentTransition(.opacity)
             }
-            .onAppear { DispatchQueue.main.async { pulse = true } }
-            Text(title).font(.system(size: 30, weight: .bold, design: .rounded)).foregroundStyle(.white)
+            // Animate only the ring: a repeatForever started with withAnimation in onAppear would also
+            // animate the first layout of the whole window, and everything would drift forever.
+            .onAppear { DispatchQueue.main.async { turning = true } }
+            .animation(Theme.standard.unlessReduced(reduceMotion), value: symbol)
+            Text(title).font(.system(size: 26, weight: .semibold)).foregroundStyle(Theme.textPrimary)
                 .multilineTextAlignment(.center).contentTransition(.numericText())
-            Text(subtitle).font(.system(size: 15)).foregroundStyle(.white.opacity(0.65)).multilineTextAlignment(.center)
+            Text(subtitle).font(.system(size: 13.5)).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
                 .frame(maxWidth: 460).fixedSize(horizontal: false, vertical: true)
         }
     }
 }
 
-/// A glass card for one category on the landing page.
+/// A card for one category on a landing page.
 struct CategoryCard: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let symbol: String
     let color: Color
     let title: String
@@ -427,26 +432,32 @@ struct CategoryCard: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top) {
-                    IconTile(symbol: symbol, color: color, size: 42)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center) {
+                    IconTile(symbol: symbol, color: color, size: 32)
                     Spacer()
                     if let count, count > 0 {
-                        Text("\(count)").font(.system(size: 30, weight: .bold, design: .rounded)).foregroundStyle(statusColor)
+                        Text("\(count)").font(Theme.figure(22)).foregroundStyle(statusColor)
+                            .contentTransition(.numericText())
                     } else {
-                        Image(systemName: "checkmark.circle.fill").font(.system(size: 20)).foregroundStyle(.green.opacity(0.85))
+                        Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.good)
                     }
                 }
                 Spacer(minLength: 0)
-                Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
-                Text(status).font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Theme.textPrimary)
+                    Text(status).font(.system(size: 11.5)).foregroundStyle(Theme.textSecondary).lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
-            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 104, alignment: .topLeading)
+            .padding(14)
             .glass(highlighted: hover)
-            .scaleEffect(hover && !reduceMotion ? 1.02 : 1)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: hover)
+            .overlay(alignment: .topTrailing) {
+                Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.textTertiary)
+                    .padding(14).padding(.top, 58).opacity(hover ? 1 : 0)
+            }
+            .animation(Theme.quick, value: hover)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressableStyle())
@@ -478,7 +489,6 @@ struct RingGauge: View {
 
     var body: some View {
         ZStack {
-            Circle().fill(color.opacity(0.12)).blur(radius: 18)
             Circle().stroke(Color.white.opacity(0.08), style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
                 .rotationEffect(.degrees(135)).mask(Circle().trim(from: 0, to: 0.75).stroke(lineWidth: size * 0.1).rotationEffect(.degrees(135)))
             if let normalized = normalizedValue, !colors.isEmpty {
@@ -486,12 +496,12 @@ struct RingGauge: View {
                     .stroke(AngularGradient(colors: colors, center: .center, startAngle: .degrees(0), endAngle: .degrees(270)),
                             style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
                     .rotationEffect(.degrees(135))
-                    .shadow(color: color.opacity(0.7), radius: 8)
+                    .shadow(color: color.opacity(0.35), radius: 4)
                     .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: value)
             }
             VStack(spacing: 0) {
-                Text(displayText).font(.system(size: size * 0.22, weight: .bold, design: .rounded)).monospacedDigit()
-                    .foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.5)
+                Text(displayText).font(Theme.figure(size * 0.21)).contentTransition(.numericText())
+                    .foregroundStyle(Theme.textPrimary).lineLimit(1).minimumScaleFactor(0.5)
                 if let caption {
                     Text(caption).font(.system(size: size * 0.095, weight: .medium)).foregroundStyle(.white.opacity(0.55)).lineLimit(1)
                 }

@@ -228,7 +228,7 @@ struct DiskOverviewView: View {
                 }
             }
             .frame(maxWidth: 760, alignment: .leading)
-            .padding(.horizontal, 32).padding(.top, 48).padding(.bottom, 32)
+            .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 32)
             .frame(maxWidth: .infinity)
         }
         .onAppear { model.measureIfStale() }

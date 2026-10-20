@@ -204,7 +204,7 @@ struct AreaPage: View {
                     .padding(.top, 6)
                 }
             }
-            .padding(.horizontal, 36).padding(.top, 48).padding(.bottom, 36)
+            .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 36)
             .frame(maxWidth: 880, alignment: .leading)
             .frame(maxWidth: .infinity)
         }

@@ -404,7 +404,7 @@ struct SpacePage: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 12)
+            header.padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 12)
             if model.exitRequested && model.working {
                 Text(tr("Wait for the selected files to finish moving before quitting.")).font(.callout).foregroundStyle(.orange).padding(.horizontal, 28)
             }

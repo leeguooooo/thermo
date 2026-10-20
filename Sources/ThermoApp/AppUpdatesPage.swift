@@ -65,16 +65,16 @@ struct AppUpdatesPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(tr("App updates")).font(.system(size: 22, weight: .semibold))
-            SoftwareTabPicker(tab: $tab)
-            Picker(tr("Update source"), selection: $model.channel) {
-                Text("Homebrew").tag("homebrew")
-                Text(tr("Other apps")).tag("native")
-            }.pickerStyle(.segmented).frame(width: 240)
+            PageHeader(title: tr("Software"), subtitle: tr("App updates")) {
+                ThermoTabs(selection: $model.channel, options: [("homebrew", "Homebrew"), ("native", tr("Other apps"))],
+                           size: .small, label: tr("Update source"))
+            } below: {
+                SoftwareTabPicker(tab: $tab)
+            }
             if model.channel == "native" { NativeUpdatesPanel(model: native) }
             else { homebrewContent }
         }
-        .padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
+        .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 14)
         .onAppear { if model.channel == "homebrew" { model.refresh() } }
         .onChange(of: model.channel) { value in if value == "homebrew", model.report == nil { model.refresh() } }
         .onDisappear { model.retire(); native.retire() }

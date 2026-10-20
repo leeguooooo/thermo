@@ -241,8 +241,8 @@ struct MainView: View {
             WindowBackdrop(glow: glow, tint: tint)
             HStack(spacing: 0) {
                 MainSidebar(page: $page, monitor: monitor, disk: disk, agents: agents)
-                    .frame(width: 236).background(Color.black.opacity(0.22))
-                Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1)
+                    .frame(width: 228).background(Theme.sidebar.opacity(0.92))
+                Rectangle().fill(Theme.hairline).frame(width: 1)
                 VStack(spacing: 0) {
                     if let error = monitor.lastError {
                         HStack(alignment: .top, spacing: 10) {
@@ -272,13 +272,14 @@ struct MainView: View {
                         }
                         .padding(14).glass(radius: 12).padding(.horizontal, 32).padding(.top, 12)
                     }
+                    // Only the page swap animates; the sidebar and banners keep still.
                     ZStack { content }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .animation(Theme.standard.unlessReduced(reduceMotion), value: page)
                 }
             }
         }
         .ignoresSafeArea()
         .preferredColorScheme(.dark)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: page)
         .onChange(of: page) { p in
             if p.isAgents { agents.scan(ifOlderThan: 60) }
             if p.isDisk, disk.report == nil, !disk.scanning { disk.loadSaved(category: cleanupCategory) }
@@ -331,54 +332,54 @@ struct MainView: View {
     @ViewBuilder var content: some View {
         switch page {
         case .overview:
-            OverviewPage(monitor: monitor, open: { page = $0 }).transition(.opacity)
+            OverviewPage(monitor: monitor, open: { page = $0 }).transition(.page)
         case .sensors:
-            SensorsPage(monitor: monitor)
+            SensorsPage(monitor: monitor).transition(.page)
         case .fans:
             WindowPage(title: tr("Fans"), subtitle: tr("Choose how fast each fan runs. Settings stay when Thermo quits or updates.")) {
                 FansView(monitor: monitor)
-            }
+            }.transition(.page)
         case .settings:
             WindowPage(title: tr("Settings"), subtitle: "Thermo \(AppInfo.version)") {
                 SettingsView(disk: disk, monitor: monitor, updates: models.updates)
-            }
+            }.transition(.page)
         case let .browser(app):
-            ChromePagesView(model: models.browser(app), embedded: true).id(app).transition(.opacity)
+            ChromePagesView(model: models.browser(app), embedded: true).id(app).transition(.page)
         case .disk(.home):
-            DiskHome(model: disk, open: { page = .disk(.category($0)) }, clean: startClean).transition(.opacity)
+            DiskHome(model: disk, open: { page = .disk(.category($0)) }, clean: startClean).transition(.page)
         case .disk(.overview):
             DiskOverviewView(openCleanup: { category in
                 SpaceOverviewModel.shared.stop()
                 if !disk.scanning && !disk.cleaning { disk.scan(category: category) }
                 page = category.map { .disk(.category($0)) } ?? .disk(.home)
-            }, cleanupDisabled: disk.scanning || disk.cleaning).transition(.opacity)
+            }, cleanupDisabled: disk.scanning || disk.cleaning).transition(.page)
         case let .disk(.category(c)):
             DiskCategoryPage(model: disk, category: c, clean: startClean).id(c)
-                .transition(.opacity.combined(with: .move(edge: .trailing)))
+                .transition(.page)
         case .agents(.home):
-            DiagnosticsHome(scanner: agents, open: { a in page = .agents(.area(a)) }).transition(.opacity)
+            DiagnosticsHome(scanner: agents, open: { a in page = .agents(.area(a)) }).transition(.page)
         case let .agents(.area(a)):
-            AreaPage(scanner: agents, area: a).id(a).transition(.opacity.combined(with: .move(edge: .trailing)))
+            AreaPage(scanner: agents, area: a).id(a).transition(.page)
         case let .apps(tab):
             AppsPage(model: models.apps, startup: models.startup, updates: models.softwareUpdates, native: models.nativeUpdates,
-                     tab: Binding(get: { tab }, set: { page = .apps($0) })).transition(.opacity)
+                     tab: Binding(get: { tab }, set: { page = .apps($0) })).transition(.page)
         case let .compute(gpu):
-            ComputePage(gpu: gpu).id(gpu).transition(.opacity)
+            ComputePage(gpu: gpu).id(gpu).transition(.page)
         case .memory:
-            MemoryPage(model: MemoryModel.shared, open: { page = $0 }).transition(.opacity)
+            MemoryPage(model: MemoryModel.shared, open: { page = $0 }).transition(.page)
         case .claudeCleanup:
-            ClaudeCleanupPage(model: models.claudeCleanup).transition(.opacity)
+            ClaudeCleanupPage(model: models.claudeCleanup).transition(.page)
         case .privacyTools:
-            ClaudeCleanupPage(model: models.claudeCleanup, initialTab: 1).transition(.opacity)
+            ClaudeCleanupPage(model: models.claudeCleanup, initialTab: 1).transition(.page)
         case .history:
-            HistoryPage(model: HistoryModel.shared, open: { page = $0 }).transition(.opacity)
+            HistoryPage(model: HistoryModel.shared, open: { page = $0 }).transition(.page)
         case let .space(tab):
-            SpacePage(model: SpaceLensModel.shared, tab: Binding(get: { tab }, set: { page = .space($0) })).transition(.opacity)
+            SpacePage(model: SpaceLensModel.shared, tab: Binding(get: { tab }, set: { page = .space($0) })).transition(.page)
         }
     }
 }
 
-/// A plain page: a big title, a line under it, then its content, scrolling.
+/// A plain page: the shared header, then its content, scrolling.
 struct WindowPage<Content: View>: View {
     let title: String
     var subtitle: String? = nil
@@ -387,16 +388,11 @@ struct WindowPage<Content: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title).font(.system(size: 26, weight: .bold)).foregroundStyle(.white)
-                    if let subtitle, !subtitle.isEmpty {
-                        Text(subtitle).font(.callout).foregroundStyle(.white.opacity(0.6))
-                    }
-                }
+                PageHeader(title: title, subtitle: subtitle)
                 content()
             }
-            .frame(maxWidth: 760, alignment: .leading)
-            .padding(.horizontal, 32).padding(.top, 48).padding(.bottom, 32)
+            .frame(maxWidth: Theme.pageWidth, alignment: .leading)
+            .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 32)
             .frame(maxWidth: .infinity)
         }
     }
@@ -418,31 +414,36 @@ struct MainSidebar: View {
         return String(format: "%.0f%%", Double(m.usedBytes) / Double(max(1, m.totalBytes)) * 100)
     }
 
+    @Namespace private var selectionSpace
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Image(systemName: "thermometer.medium").foregroundStyle(.white.opacity(0.85))
-                Text("Thermo").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white.opacity(0.9))
+                Image(systemName: "thermometer.medium").font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(LinearGradient(colors: [Theme.caution, Theme.danger], startPoint: .top, endPoint: .bottom))
+                Text("Thermo").font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Theme.textPrimary)
             }
-            .padding(.horizontal, 16).padding(.top, 44).padding(.bottom, 14)
+            .padding(.horizontal, 18).padding(.top, 46).padding(.bottom, 10)
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1) {
                     row(.overview, tr("Overview"), "gauge.with.dots.needle.67percent", .orange,
-                        trailing: monitor.snapshot.map { tempText($0.maximumKnownTemperature, fahrenheit: fahrenheit) })
+                        trailing: monitor.snapshot.map { tempText($0.maximumKnownTemperature, fahrenheit: fahrenheit) },
+                        trailingColor: monitor.snapshot.map { heatColor($0.maximumKnownTemperature) })
                     row(.sensors, tr("Sensors"), "thermometer.medium", .red, trailing: nil)
-                    row(.fans, tr("Fans"), "fan.fill", .blue,
+                    row(.fans, tr("Fans"), "fan", .blue,
                         trailing: monitor.snapshot.flatMap { FanControlPresentation.speedSummary($0.fans) })
 
                     header(tr("Resources"))
                     row(.compute(false), tr("CPU usage"), "cpu", .cyan, trailing: nil)
-                    row(.compute(true), tr("GPU usage"), "cpu.fill", .purple, trailing: nil)
-                    row(.memory, tr("Memory usage"), "memorychip.fill", .green, trailing: memoryTrailing)
-                    row(.browser("Google Chrome"), tr("Tab organizer"), "rectangle.stack.fill", .teal, trailing: nil)
+                    row(.compute(true), tr("GPU usage"), "square.stack.3d.up", .purple, trailing: nil)
+                    row(.memory, tr("Memory usage"), "memorychip", .green, trailing: memoryTrailing)
+                    row(.browser("Google Chrome"), tr("Tab organizer"), "rectangle.stack", .teal, trailing: nil)
 
                     header(tr("Disk Cleanup"))
                     row(.disk(.home), tr("Smart Scan"), "sparkles", .pink, trailing: disk.report.map { ByteFormat.string($0.totalBytes) })
                     if page.isDisk {
-                        row(.disk(.overview), tr("Where the space is"), "chart.pie.fill", .teal, trailing: nil, indent: true)
+                        row(.disk(.overview), tr("Where the space is"), "chart.pie", .teal, trailing: nil, indent: true)
                         ForEach(CleanCategory.allCases, id: \.self) { c in
                             let bytes = disk.report?.bytes(in: c) ?? 0
                             // Retention is configured here, so this entry cannot depend on
@@ -456,11 +457,11 @@ struct MainSidebar: View {
 
                     row(.space(page.spaceTab ?? .browse), tr("Space Lens"), "square.grid.3x3.topleft.filled", .cyan, trailing: nil,
                         selected: page.spaceTab != nil)
-                    row(.apps(page.appsTab ?? .installed), tr("Software"), "square.grid.2x2.fill", .indigo, trailing: nil,
+                    row(.apps(page.appsTab ?? .installed), tr("Software"), "square.grid.2x2", .indigo, trailing: nil,
                         selected: page.appsTab != nil)
 
                     header(tr("AI Agent Diagnostics"))
-                    row(.claudeCleanup, tr("Claude cleanup"), "arrow.counterclockwise.circle.fill", .orange, trailing: nil,
+                    row(.claudeCleanup, tr("Claude cleanup"), "arrow.counterclockwise.circle", .orange, trailing: nil,
                         selected: page == .claudeCleanup || page == .privacyTools)
                     row(.agents(.home), tr("Smart Check"), "stethoscope", .purple, trailing: nil, badge: agents.report?.problemCount ?? 0)
                     if page.isAgents {
@@ -470,46 +471,71 @@ struct MainSidebar: View {
                         }
                     }
                 }
-                .padding(.bottom, 12)
+                .padding(.bottom, 16)
             }
-            Rectangle().fill(Color.white.opacity(0.06)).frame(height: 1).padding(.horizontal, 12)
-            VStack(spacing: 2) {
+            // Rows scrolling under the footer fade out instead of being cut in half.
+            .mask(VStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: 18)
+            })
+            Rectangle().fill(Theme.hairline).frame(height: 1).padding(.horizontal, 14)
+            VStack(spacing: 1) {
                 row(.history, tr("History"), "clock.arrow.circlepath", .brown, trailing: nil)
-                row(.settings, tr("Settings"), "gearshape.fill", .gray, trailing: nil)
-            }.padding(.vertical, 10)
+                row(.settings, tr("Settings"), "gearshape", .gray, trailing: nil)
+            }.padding(.vertical, 8)
         }
         .frame(maxHeight: .infinity, alignment: .top)
+        .animation(Theme.standard.unlessReduced(reduceMotion), value: page)
     }
 
     func header(_ title: String) -> some View {
         // Upper case only reads well in Latin script ("AI AGENT 诊断" does not).
-        Text(L10n.current == .english ? title.uppercased() : title).font(.system(size: 10, weight: .semibold)).tracking(0.8)
-            .foregroundStyle(.white.opacity(0.4)).padding(.horizontal, 16).padding(.top, 18).padding(.bottom, 6)
+        Text(L10n.current == .english ? title.uppercased() : title).font(.system(size: 10.5, weight: .semibold))
+            .tracking(L10n.current == .english ? 0.6 : 0)
+            .foregroundStyle(Theme.textTertiary).padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 4)
+            .accessibilityAddTraits(.isHeader)
     }
 
+    /// One place in the sidebar. Icons stay grey so the list reads as one column; the selected
+    /// row's icon takes its color, and the selection slides from row to row.
     func row(_ target: MainPage, _ title: String, _ symbol: String, _ color: Color, trailing: String?,
-             badge: Int = 0, indent: Bool = false, selected: Bool? = nil) -> some View {
+             trailingColor: Color? = nil, badge: Int = 0, indent: Bool = false, selected: Bool? = nil) -> some View {
         let on = selected ?? (page == target)
         return Button { page = target } label: {
-            HStack(spacing: 10) {
-                IconTile(symbol: symbol, color: color, size: indent ? 20 : 24)
-                Text(title).font(.system(size: 13, weight: on ? .semibold : .regular)).foregroundStyle(.white.opacity(on ? 1 : 0.8))
+            HStack(spacing: 9) {
+                Image(systemName: symbol)
+                    .font(.system(size: indent ? 11.5 : 13, weight: .medium))
+                    .symbolRenderingMode(.monochrome)
+                    .foregroundStyle(on ? color : Theme.textSecondary)
+                    .frame(width: 18)
+                Text(title).font(.system(size: indent ? 12 : 13, weight: on ? .semibold : .regular))
+                    .foregroundStyle(on ? Theme.textPrimary : Theme.textPrimary.opacity(0.78))
                     .lineLimit(1)
-                Spacer()
+                Spacer(minLength: 4)
                 if badge > 0 {
-                    Text("\(badge)").font(.system(size: 11, weight: .bold, design: .rounded)).foregroundStyle(.white)
-                        .padding(.horizontal, 7).padding(.vertical, 2)
-                        .background(Capsule().fill(LinearGradient(colors: [.orange, .red.opacity(0.8)], startPoint: .top, endPoint: .bottom)))
+                    Text("\(badge)").font(.system(size: 10.5, weight: .bold, design: .rounded)).monospacedDigit()
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6).frame(minWidth: 18, minHeight: 16)
+                        .background(Capsule().fill(Theme.caution.opacity(0.9)))
+                        .contentTransition(.numericText())
                 } else if let trailing {
-                    Text(trailing).font(.system(size: 11).monospacedDigit()).foregroundStyle(.white.opacity(0.5))
+                    Text(trailing).font(.system(size: 11, weight: .medium).monospacedDigit())
+                        .foregroundStyle((trailingColor ?? Theme.textTertiary).opacity(trailingColor == nil ? 1 : 0.9))
+                        .contentTransition(.numericText())
                 }
             }
-            .padding(.horizontal, 10).padding(.vertical, indent ? 5 : 7)
-            .padding(.leading, indent ? 12 : 0)
-            .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color.white.opacity(on ? 0.13 : 0)))
+            .padding(.horizontal, 10).frame(height: indent ? 26 : 30)
+            .padding(.leading, indent ? 14 : 0)
+            .background {
+                if on {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.white.opacity(0.085))
+                        .matchedGeometryEffect(id: "selection", in: selectionSpace)
+                }
+            }
+            .hoverHighlight(radius: 7)
             .contentShape(Rectangle())
         }
-        .buttonStyle(PressableStyle())
+        .buttonStyle(.plain)
         .accessibilityLabel(title)
         .accessibilityValue(on ? tr("Selected") : "")
         .help(title)

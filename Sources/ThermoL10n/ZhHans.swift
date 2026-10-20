@@ -3133,4 +3133,7 @@ let zhHans: [String: String] = [
     "enabled": "已启用",
     "disabled": "已停用",
     "%1$@ updates available": "%1$@ 个可更新",
+
+    // Redesign
+    "Loading": "正在加载",
 ]

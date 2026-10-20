@@ -311,7 +311,7 @@ struct DiskCategoryPage: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header.padding(.horizontal, 28).padding(.top, 40).padding(.bottom, 14)
+            header.padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 14)
             if category == .aiSessions {
                 HStack {
                     Text(tr("Conversation retention"))
