@@ -269,105 +269,148 @@ struct NativeUpdatesPanel: View {
         model.sources.filter { search.isEmpty || ($0.app.name + " " + ($0.app.bundleID ?? "")).localizedCaseInsensitiveContains(search) }
             .sorted { ($0.kind == "sparkle" ? 0 : $0.kind == "appStore" ? 1 : 2, $0.app.name) < ($1.kind == "sparkle" ? 0 : $1.kind == "appStore" ? 1 : 2, $1.app.name) }
     }
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(tr("Discovery stays on this Mac. Check contacts only the selected app's declared feed; no system profile or cookies are sent."))
-                .font(.callout).foregroundStyle(.secondary)
-            TextField(tr("Search"), text: $search).textFieldStyle(.roundedBorder).accessibilityLabel(tr("Search"))
-            if let message = model.message { Text(message).font(.callout).foregroundStyle(.secondary) }
-            if let issue = model.installResult?.cleanupIssue, model.installResult?.workspacePreservations.isEmpty == true { Text(tr(issue)).font(.callout).foregroundStyle(.orange) }
-            ForEach(model.installResult?.workspacePreservations ?? []) { entry in
-                Text(tr(entry.workspace.reason)).font(.caption).foregroundStyle(.orange)
-                Text(entry.workspace.path).font(.caption).textSelection(.enabled)
-                if !entry.recorded {
-                    Text(tr("The workspace recovery record could not be saved; keep this path")).font(.caption).foregroundStyle(.orange)
+    /// One app: its icon, version and where updates come from, then what can be done.
+    func sourceRow(_ source: NativeUpdateSource) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            HStack(alignment: .center, spacing: Theme.Space.m) {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: source.app.path)).resizable().frame(width: 28, height: 28)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(source.app.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                        Text((source.app.version ?? "–") + (source.installedBuild.flatMap { $0 == source.app.version ? nil : " (" + $0 + ")" } ?? ""))
+                            .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary).lineLimit(1)
+                        StatusTag(text: source.kind == "sparkle" ? "Sparkle" : source.kind == "appStore" ? "App Store" : tr("Other apps"))
+                    }
+                    Text(source.feedHost ?? (source.kind == "appStore" ? "App Store" : tr("No app-declared update feed")))
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1).textSelection(.enabled)
+                        .help(FSPath.tilde(source.app.path))
                 }
-                Button(tr("Inspect preserved update files")) { model.inspect(entry.workspace) }.disabled(model.installing)
+                Spacer(minLength: Theme.Space.s)
+                if model.checking.contains(source.id) { ProgressView().controlSize(.small) }
+                if source.canCheck {
+                    if model.checking.contains(source.id) {
+                        Button(tr("Stop")) { model.stop(source) }.buttonStyle(PillButtonStyle()).controlSize(.small)
+                    } else {
+                        Button(tr("Check")) { model.check(source) }.buttonStyle(PillButtonStyle()).controlSize(.small)
+                            .disabled(model.loading || model.installing || model.checking.count >= NativeUpdatesModel.maximumChecks)
+                    }
+                }
+                if source.app.inventoryIdentity == nil {
+                    Button(tr("Show in Finder")) { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: source.app.path)]) }
+                        .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.loading || model.installing)
+                } else {
+                    Button(source.kind == "appStore" ? tr("App Store") : tr("Open app")) { model.openUpdater(source) }
+                        .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.loading || model.installing)
+                }
             }
-            if model.exitRequested && model.installing {
-                Text(tr("Wait for installation and verification to finish before quitting Thermo.")).font(.callout).foregroundStyle(.orange)
-            }
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 10) {
-                    if let report = model.discoveryReport, !report.complete {
-                        Label(tr("Application discovery is incomplete. Listed entries may have identity or read issues; missing rows do not prove that no other updates exist."), systemImage: "exclamationmark.triangle")
-                            .font(.callout).foregroundStyle(.orange)
-                        ForEach(Array(report.issues.enumerated()), id: \.offset) { _, issue in
-                            Text(tr(issue.message) + " · " + FSPath.tilde(issue.path)).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+            if let blocked = source.blocked { Text(tr(blocked)).font(Theme.caption).foregroundStyle(Theme.caution).padding(.leading, 40) }
+            if let result = model.results[source.id] {
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    if let release = result.release {
+                        Text(tr("Feed candidate: %1$@ (build %2$@)", release.version, release.build)).font(Theme.secondary.monospacedDigit()).foregroundStyle(Theme.textPrimary)
+                    }
+                    Text(tr(result.message)).font(Theme.caption)
+                        .foregroundStyle(result.status == "failed" || result.status == "changed" ? Theme.caution : Theme.textSecondary)
+                    if result.status == "available" {
+                        if let why = NativeUpdateTransaction.installationRefusal(result) {
+                            Text(tr(why)).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                        } else {
+                            Button(tr("Install in Thermo…")) { installing = result }.buttonStyle(PillButtonStyle(prominent: true)).controlSize(.small)
+                                .disabled(model.installing || model.loading || !model.checking.isEmpty)
                         }
-                        if report.issuesTruncated { Text(tr("More discovery issues were omitted.")).font(.caption).foregroundStyle(.orange) }
                     }
-                    ForEach(visible) { source in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack(alignment: .top) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(source.app.name).font(.headline)
-                                    Text((source.app.version ?? "–") + (source.installedBuild.flatMap { $0 == source.app.version ? nil : " (" + $0 + ")" } ?? ""))
-                                        .font(.caption).foregroundStyle(.secondary)
-                                    Text(FSPath.tilde(source.app.path)).font(.caption).foregroundStyle(.secondary)
-                                        .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
-                                    Text(source.feedHost ?? (source.kind == "appStore" ? "App Store" : tr("No app-declared update feed")))
-                                        .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
-                                }
-                                Spacer()
-                                if source.canCheck {
-                                    if model.checking.contains(source.id) {
-                                        Button(tr("Stop")) { model.stop(source) }.buttonStyle(PillButtonStyle())
-                                    } else {
-                                        Button(tr("Check")) { model.check(source) }.buttonStyle(PillButtonStyle())
-                                            .disabled(model.loading || model.installing || model.checking.count >= NativeUpdatesModel.maximumChecks)
-                                    }
-                                }
-                                if source.app.inventoryIdentity == nil {
-                                    Button(tr("Show in Finder")) { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: source.app.path)]) }
-                                        .buttonStyle(PillButtonStyle()).disabled(model.loading || model.installing)
-                                } else {
-                                    Button(source.kind == "appStore" ? tr("App Store") : tr("Open app")) { model.openUpdater(source) }
-                                        .buttonStyle(PillButtonStyle()).disabled(model.loading || model.installing)
-                                }
-                            }
-                            if model.checking.contains(source.id) { ProgressView().controlSize(.small) }
-                            if let blocked = source.blocked { Text(tr(blocked)).font(.caption).foregroundStyle(.orange) }
-                            if let result = model.results[source.id] {
-                                if let release = result.release {
-                                    Text(tr("Feed candidate: %1$@ (build %2$@)", release.version, release.build)).font(.callout)
-                                }
-                                Text(tr(result.message)).font(.caption).foregroundStyle(result.status == "failed" || result.status == "changed" ? Color.orange : Color.secondary)
-                                if result.status == "available" {
-                                    if let why = NativeUpdateTransaction.installationRefusal(result) {
-                                        Text(tr(why)).font(.caption).foregroundStyle(.secondary)
-                                    } else {
-                                        Button(tr("Install in Thermo…")) { installing = result }.buttonStyle(PillButtonStyle())
-                                            .disabled(model.installing || model.loading || !model.checking.isEmpty)
-                                    }
-                                }
-                                if !result.skipped.isEmpty {
-                                    DisclosureGroup(tr("Feed entries not selected")) {
-                                        ForEach(result.skipped, id: \.self) { Text(tr($0)).font(.caption).foregroundStyle(.secondary) }
-                                    }
-                                }
-                            }
-                        }.padding(14).glass(radius: 14)
-                    }
-                    if model.loaded && !model.loading && visible.isEmpty {
-                        Text(tr(model.sources.isEmpty
-                            ? (model.discoveryReport?.complete == true ? "No app update sources were found in the inspected locations." : "No app sources could be confirmed; discovery is incomplete.")
-                            : "No matching items")).foregroundStyle(.secondary)
+                    if !result.skipped.isEmpty {
+                        DisclosureGroup {
+                            ForEach(result.skipped, id: \.self) { Text(tr($0)).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
+                        } label: {
+                            Text(tr("Feed entries not selected")).font(Theme.caption).foregroundStyle(Theme.textSecondary)
+                        }
                     }
                 }
+                .padding(.leading, 40)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
-            HStack {
-                if model.loading { ProgressView().controlSize(.small) }
-                Text(tr("Signed ZIP and DMG app updates can be installed here with recovery; other formats use the original updater."))
-                    .font(.caption).foregroundStyle(.secondary)
-                Spacer()
+        }
+        .padding(.horizontal, Theme.Space.m).padding(.vertical, 10)
+        .hoverHighlight()
+        .animation(Theme.standard, value: model.results[source.id] != nil)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                if let message = model.message { NoticeBanner(text: message) }
+                if let issue = model.installResult?.cleanupIssue, model.installResult?.workspacePreservations.isEmpty == true {
+                    Text(tr(issue)).font(Theme.secondary).foregroundStyle(Theme.caution)
+                }
+                ForEach(model.installResult?.workspacePreservations ?? []) { entry in
+                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        Text(tr(entry.workspace.reason)).font(Theme.secondary).foregroundStyle(Theme.caution)
+                        Text(entry.workspace.path).font(Theme.mono).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
+                        if !entry.recorded {
+                            Text(tr("The workspace recovery record could not be saved; keep this path")).font(Theme.caption).foregroundStyle(Theme.caution)
+                        }
+                        Button(tr("Inspect preserved update files")) { model.inspect(entry.workspace) }
+                            .buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.installing)
+                    }
+                    .padding(Theme.Space.m).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.caution.opacity(0.07)))
+                }
+                if model.exitRequested && model.installing {
+                    Text(tr("Wait for installation and verification to finish before quitting Thermo.")).font(Theme.secondary).foregroundStyle(Theme.caution)
+                }
+            }
+            .padding(.horizontal, Theme.pagePadding)
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                    HStack(spacing: Theme.Space.s) {
+                        SearchField(text: $search)
+                        InfoButton(text: tr("Discovery stays on this Mac. Check contacts only the selected app's declared feed; no system profile or cookies are sent.")
+                                   + "\n\n" + tr("Signed ZIP and DMG app updates can be installed here with recovery; other formats use the original updater."))
+                    }
+                    if let report = model.discoveryReport, !report.complete {
+                        DisclosureGroup {
+                            VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                                ForEach(Array(report.issues.enumerated()), id: \.offset) { _, issue in
+                                    Text(tr(issue.message) + " · " + FSPath.tilde(issue.path)).font(Theme.caption).foregroundStyle(Theme.textTertiary).textSelection(.enabled)
+                                }
+                                if report.issuesTruncated { Text(tr("More discovery issues were omitted.")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                            }.padding(.top, Theme.Space.xs)
+                        } label: {
+                            Label(tr("Application discovery is incomplete. Listed entries may have identity or read issues; missing rows do not prove that no other updates exist."), systemImage: "exclamationmark.triangle")
+                                .font(Theme.secondary).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.horizontal, Theme.Space.m).padding(.vertical, Theme.Space.s)
+                        .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Theme.caution.opacity(0.07)))
+                    }
+                    let rows = visible
+                    if !model.loaded && rows.isEmpty {
+                        SkeletonList(rows: 6)
+                    } else if rows.isEmpty {
+                        InspectorPanel {
+                            EmptyState(symbol: "magnifyingglass", title: tr(model.sources.isEmpty
+                                ? (model.discoveryReport?.complete == true ? "No app update sources were found in the inspected locations." : "No app sources could be confirmed; discovery is incomplete.")
+                                : "No matching items"))
+                        }
+                    } else {
+                        RowList(items: rows, inset: 56) { source in sourceRow(source) }
+                    }
+                }
+                .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.Space.s).padding(.bottom, Theme.Space.xl)
+                .frame(maxWidth: Theme.pageWidth, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            ActionBar {
                 Button(tr("Recovery")) { model.showRecovery = true }.buttonStyle(PillButtonStyle())
+                if model.loading { ProgressView().controlSize(.small) }
+                Spacer()
                 if model.installing { ProgressView().controlSize(.small) }
                 else if !model.checking.isEmpty {
                     Button(tr("Stop checks")) { model.stopAll() }.buttonStyle(PillButtonStyle())
                 } else {
                     Button(tr("Refresh")) { model.load() }.buttonStyle(PillButtonStyle()).disabled(model.loading)
-                    Button(tr("Check listed feeds…")) { confirmingAll = true }.buttonStyle(PillButtonStyle())
+                    Button(tr("Check listed feeds…")) { confirmingAll = true }.buttonStyle(PillButtonStyle(prominent: true))
                         .disabled(model.loading || !visible.contains(where: \.canCheck))
                 }
             }

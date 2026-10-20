@@ -344,7 +344,7 @@ struct AppsPage: View {
 
     var uninstallBody: some View {
         VStack(spacing: 0) {
-            header.padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 16)
+            header.padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, Theme.Space.l)
             VStack(spacing: 8) {
                 if model.exitRequested && model.working {
                     Text(tr("Wait for the app removal operation to finish before quitting."))
@@ -359,7 +359,7 @@ struct AppsPage: View {
                 VStack(alignment: .leading, spacing: 12) {
                     if tab == .installed { installedList } else { leftoverList }
                 }
-                .padding(.horizontal, Theme.pagePadding).padding(.bottom, 24)
+                .padding(.horizontal, Theme.pagePadding).padding(.bottom, Theme.Space.xl)
             }
             footer
         }
@@ -494,7 +494,7 @@ struct AppsPage: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(a.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
-                        if let v = a.version { Text(v).font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary).lineLimit(1) }
+                        if let v = a.version { Text(v).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary).lineLimit(1) }
                         if a.protected != nil { StatusTag(text: tr("Protected")) }
                         if running { StatusTag(text: tr("Running"), color: Theme.caution) }
                         if a.cask != nil { StatusTag(text: "Homebrew", color: Color(red: 0.95, green: 0.8, blue: 0.35)) }
@@ -507,7 +507,7 @@ struct AppsPage: View {
                         .contentTransition(.numericText())
                     if a.leftoverBytes > 0 {
                         Text(tr("%1$@ of files", AppSize.text(a.leftoverBytes, state: a.leftoverSizeState)))
-                            .font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                            .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
                     }
                 }
                 Button(model.planning == a.path ? tr("Looking…") : tr("Uninstall…")) { model.review(a) }
@@ -557,7 +557,7 @@ struct AppsPage: View {
             Text(FSPath.tilde(path)).font(Theme.mono).foregroundStyle(Theme.textSecondary).lineLimit(1).truncationMode(.middle)
                 .textSelection(.enabled)
             Spacer()
-            Text(AppSize.text(bytes, state: state)).font(.system(size: 11).monospacedDigit()).foregroundStyle(Theme.textTertiary)
+            Text(AppSize.text(bytes, state: state)).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
         }
     }
 
@@ -568,11 +568,19 @@ struct AppsPage: View {
                     .font(Theme.body).foregroundStyle(Theme.caution)
                 ForEach(model.orphanIssues, id: \.self) { issue in
                     Text(tr(issue.message) + (issue.path.map { " · " + FSPath.tilde($0) } ?? ""))
-                        .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary).textSelection(.enabled)
                 }
             }
-            Text(tr("Data of apps that are no longer installed: not running, untouched for 30 days, and Spotlight knows no app with that ID."))
-                .font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+            let pickable = orphanPickable
+            HStack(spacing: Theme.Space.xs) {
+                SelectAllButton(title: tr("Leftovers"), available: pickable.count,
+                                selected: pickable.filter { model.selectedOrphans.contains($0.id) }.count,
+                                selectAll: { model.selectedOrphans.formUnion(pickable.map(\.id)) },
+                                clear: { model.selectedOrphans.subtract(pickable.map(\.id)) })
+                InfoButton(text: tr("Data of apps that are no longer installed: not running, untouched for 30 days, and Spotlight knows no app with that ID."))
+                Spacer()
+            }
+            .padding(.horizontal, Theme.Space.xs)
             if !orphans.isEmpty { RowList(items: orphans, inset: 54) { orphanCard($0) } }
             if orphans.isEmpty && model.orphanScanComplete {
                 EmptyState(symbol: "checkmark.circle", title: tr("No data left behind by deleted apps."))
@@ -582,18 +590,20 @@ struct AppsPage: View {
         }
     }
 
+    /// Leftovers a tick can be put on right now.
+    var orphanPickable: [OrphanData] {
+        model.working || model.reviewingOrphans ? [] : (model.orphans ?? []).filter { $0.blocked == nil }
+    }
+
     func orphanCard(_ o: OrphanData) -> some View {
         let ticked = model.selectedOrphans.contains(o.id)
         let expanded = open.contains(o.id)
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
-                Button { if ticked { model.selectedOrphans.remove(o.id) } else { model.selectedOrphans.insert(o.id) } } label: {
-                    Image(systemName: ticked ? "checkmark.circle.fill" : "circle").font(.system(size: 16))
-                        .foregroundStyle(ticked ? Theme.accent : Theme.textTertiary).frame(width: 28, height: 28).contentShape(Rectangle())
+                SelectToggle(selected: ticked, locked: o.blocked != nil, label: tr("Select %1$@", o.bundleID)) {
+                    if ticked { model.selectedOrphans.remove(o.id) } else { model.selectedOrphans.insert(o.id) }
                 }
-                .buttonStyle(.plain).disabled(model.working || model.reviewingOrphans || o.blocked != nil)
-                .accessibilityLabel(tr("Select %1$@", o.bundleID))
-                .accessibilityValue(ticked ? tr("Selected") : tr("Not selected"))
+                .disabled(model.working || model.reviewingOrphans)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(o.bundleID).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1)
                     Text(o.blocked ?? [trCount(o.items.count, "%1$@ place", "%1$@ places"), o.lastUsed.map { tr("last changed %1$@", AgeFormat.string($0)) }]
@@ -640,12 +650,13 @@ struct AppsPage: View {
                 }
                 Button(tr("Scan again")) { model.load() }.buttonStyle(PillButtonStyle()).disabled(model.loading || model.working)
             } else {
+                let pickable = orphanPickable
+                SelectAllButton(available: pickable.count, selected: pickable.filter { model.selectedOrphans.contains($0.id) }.count,
+                                selectAll: { model.selectedOrphans.formUnion(pickable.map(\.id)) },
+                                clear: { model.selectedOrphans.subtract(pickable.map(\.id)) })
                 if model.scanningOrphans || model.working || model.reviewingOrphans { ProgressView().controlSize(.small) }
-                Button(tr("All")) { model.selectedOrphans = Set((model.orphans ?? []).filter { $0.blocked == nil }.map(\.id)) }
-                    .buttonStyle(PillButtonStyle()).disabled((model.orphans ?? []).allSatisfy { $0.blocked != nil } || model.working || model.reviewingOrphans)
-                Button(tr("None")) { model.selectedOrphans = [] }.buttonStyle(PillButtonStyle()).disabled(model.selectedOrphans.isEmpty || model.reviewingOrphans)
-                Button(tr("Scan again")) { model.scanOrphans() }.buttonStyle(PillButtonStyle()).disabled(model.scanningOrphans || model.working || model.reviewingOrphans)
                 Spacer()
+                Button(tr("Scan again")) { model.scanOrphans() }.buttonStyle(PillButtonStyle()).disabled(model.scanningOrphans || model.working || model.reviewingOrphans)
                 Button(model.reviewingOrphans ? tr("Reviewing selected residual data…") : tr("Move %1$@ to Trash", orphanSize(model.pickedOrphans))) { model.reviewPickedOrphans() }
                     .buttonStyle(PillButtonStyle(prominent: true))
                     .disabled(model.pickedOrphans.isEmpty || model.working || model.scanningOrphans || model.reviewingOrphans)

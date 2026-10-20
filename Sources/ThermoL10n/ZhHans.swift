@@ -3151,6 +3151,7 @@ let zhHans: [String: String] = [
     // Redesign C (new strings for this group go right below this line)
 
     // Redesign D (new strings for this group go right below this line)
+    "%1$@ saved": "已保存 %1$@ 组",
 
     // Redesign E (new strings for this group go right below this line)
 ]
