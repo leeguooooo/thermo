@@ -1,10 +1,12 @@
 import XCTest
 @testable import AgentDoctor
+import ThermoL10n
 
 final class WorktreeCensusTests: XCTestCase {
     var home: URL!
 
     override func setUpWithError() throws {
+        L10n.override = .english  // assertions read English messages whatever the machine's language
         home = FileManager.default.temporaryDirectory.appendingPathComponent("wt-\(UUID().uuidString)").resolvingSymlinksInPath()
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
     }

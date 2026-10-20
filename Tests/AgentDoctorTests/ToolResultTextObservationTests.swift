@@ -1,7 +1,13 @@
 import XCTest
 @testable import AgentDoctor
+import ThermoL10n
 
 final class ToolResultTextObservationTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        L10n.override = .english  // assertions read English messages whatever the machine's language
+    }
+
     private let media = #"{"content":[{"type":"image","data":"PRIVATE_MEDIA…559290 chars truncated…BBBB","mimeType":"image/png"}],"isError":true}"#
     private func parser() -> ToolUsageParser {
         ToolUsageParser(since: Date(timeIntervalSince1970: 0), until: Date(timeIntervalSince1970: 100))

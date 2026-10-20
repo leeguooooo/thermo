@@ -1,11 +1,13 @@
 import Darwin
 import XCTest
 @testable import AgentDoctor
+import ThermoL10n
 
 final class AgentDatabaseTests: XCTestCase {
     var home: URL!
 
     override func setUpWithError() throws {
+        L10n.override = .english  // assertions read English messages whatever the machine's language
         home = FileManager.default.temporaryDirectory.appendingPathComponent("dblog-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
     }
