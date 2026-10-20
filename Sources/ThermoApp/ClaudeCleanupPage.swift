@@ -190,6 +190,29 @@ extension ClaudeCleanupModel {
     var blocked: [ClaudeResetCandidate] { candidates.filter { $0.status == .blocked } }
 }
 
+extension ClaudeCleanupModel {
+    /// A file inside a folder that is picked goes with the folder, so it counts as picked.
+    func covered(_ target: ClaudeResetTarget) -> Bool {
+        !target.isFolder && selected.contains { $0.family == target.family && $0.isFolder }
+    }
+    func picked(_ target: ClaudeResetTarget) -> Bool { selected.contains(target) || covered(target) }
+
+    /// Picks every available item of `items` through `toggle`, so its folder-or-files rule still
+    /// decides: files first, then folders, which take their files' place.
+    func pickAll(_ items: [ClaudeResetCandidate]) {
+        let open = items.filter { $0.status == .available && !picked($0.target) }
+        for candidate in open.sorted(by: { !$0.target.isFolder && $1.target.isFolder }) where !picked(candidate.target) {
+            toggle(candidate)
+        }
+    }
+
+    func clear(_ items: [ClaudeResetCandidate]) {
+        guard !busy else { return }
+        let targets = Set(items.map(\.target))
+        selected.subtract(targets)
+    }
+}
+
 // MARK: - Page
 
 struct ClaudeCleanupPage: View {
@@ -209,14 +232,10 @@ struct ClaudeCleanupPage: View {
 
     var body: some View {
         WindowPage(title: tr("Claude cleanup"), subtitle: tr("Review local Claude data, browser privacy and network settings.")) {
-            Picker(tr("Tools"), selection: $tab) {
-                Text(tr("Claude reset")).tag(0)
-                Text(tr("Privacy & network")).tag(1)
-            }
-            .pickerStyle(.segmented).labelsHidden().fixedSize()
-            .padding(.bottom, 2)
-            if tab == 0 { resetContent } else { PrivacyToolsView(model: model.privacy) }
+            ThermoTabs(selection: $tab, options: [(0, tr("Claude reset")), (1, tr("Privacy & network"))], label: tr("Tools"))
+            if tab == 0 { resetContent.transition(.opacity) } else { PrivacyToolsView(model: model.privacy).transition(.opacity) }
         }
+        .animation(Theme.standard.unlessReduced(reduceMotion), value: tab)
         .safeAreaInset(edge: .bottom, spacing: 0) { if tab == 0 { actionBar } }
         .onAppear { if !model.loaded { model.scan() } }
         .sheet(isPresented: $confirming) {
@@ -236,67 +255,94 @@ struct ClaudeCleanupPage: View {
 
     // MARK: Reset tab
 
+    var available: [ClaudeResetCandidate] { model.candidates.filter { $0.status == .available } }
+
     var resetContent: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Theme.Space.l) {
             summary
-            Label(tr("Resetting local state can sign you out or remove local history. Nothing is selected automatically."), systemImage: "exclamationmark.triangle")
-                .font(.system(size: 12)).foregroundStyle(.white.opacity(0.65)).padding(.horizontal, 4)
-                .fixedSize(horizontal: false, vertical: true)
             if let outcome = model.outcome {
                 NoticeBanner(text: outcome) { model.outcome = nil }
+            }
+            if !model.loaded {
+                SkeletonList(rows: 4)
             }
             ForEach(Array(ResetGroup.allCases.enumerated()), id: \.offset) { _, group in
                 let rows = group.targets.compactMap { target in model.candidates.first { $0.target == target } }
                 if !rows.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        SectionHeader(title: group.title)
+                    let open = rows.filter { $0.status == .available }
+                    VStack(alignment: .leading, spacing: Theme.Space.s) {
+                        HStack {
+                            SelectAllButton(title: group.title, available: open.count,
+                                            selected: open.filter { model.picked($0.target) }.count,
+                                            selectAll: { model.pickAll(rows) }, clear: { model.clear(rows) })
+                                .disabled(model.busy)
+                            Spacer()
+                            Text(ByteFormat.string(groupBytes(rows))).font(Theme.caption.monospacedDigit())
+                                .foregroundStyle(Theme.textTertiary)
+                        }
+                        .padding(.leading, Theme.Space.m + 6).padding(.trailing, Theme.Space.xs).padding(.top, Theme.Space.xs)
                         InspectorPanel {
                             ForEach(Array(rows.enumerated()), id: \.element.target) { index, candidate in
-                                if index > 0 { InspectorDivider() }
+                                if index > 0 { InspectorDivider(inset: 50) }
                                 candidateRow(candidate)
                             }
                         }
                     }
                 }
             }
-            Text(tr("Known locations only; project folders are kept."))
-                .font(.system(size: 11)).foregroundStyle(.white.opacity(0.45)).padding(.horizontal, 4)
-            recovery.padding(.top, 8)
+            recovery.padding(.top, Theme.Space.s)
         }
     }
 
+    /// A folder counts once instead of adding the files inside it.
+    func groupBytes(_ rows: [ClaudeResetCandidate]) -> Int64 {
+        let present = rows.filter { $0.status != .missing }
+        return present.first { $0.target.isFolder && $0.snapshot != nil }?.bytes ?? present.reduce(0) { $0 + $1.bytes }
+    }
+
+    /// The page's one figure, how much local Claude data there is, then what can and cannot be reset.
     var summary: some View {
         InspectorPanel {
-            HStack(alignment: .center, spacing: 0) {
-                stat(model.loaded ? (model.partiallyMeasured ? "≥ " : "") + ByteFormat.string(model.localBytes) : "—",
-                     model.partiallyMeasured ? tr("Measured local data") : tr("Local data"))
-                statDivider
-                stat(model.loaded ? String(model.candidates.filter { $0.status == .available }.count) : "—", tr("Can reset"))
-                statDivider
-                stat(model.loaded ? String(model.blocked.count) : "—", tr("Locked"), warning: !model.blocked.isEmpty)
-                Spacer(minLength: 8)
-                if model.busy { ProgressView().controlSize(.small).padding(.trailing, 8) }
-                Button { model.scan() } label: {
-                    Image(systemName: "arrow.clockwise").font(.system(size: 12, weight: .semibold))
-                        .frame(width: 28, height: 28)
-                        .background(Circle().fill(Color.white.opacity(0.08)))
+            HStack(alignment: .bottom, spacing: Theme.Space.xl + 4) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(model.loaded ? (model.partiallyMeasured ? "≥ " : "") + ByteFormat.string(model.localBytes) : "—")
+                        .font(Theme.figure(.hero)).foregroundStyle(Theme.textPrimary).contentTransition(.numericText())
+                    Text(model.partiallyMeasured ? tr("Measured local data") : tr("Local data"))
+                        .font(Theme.label).foregroundStyle(Theme.textTertiary)
                 }
-                .buttonStyle(.plain).foregroundStyle(.white.opacity(0.8))
-                .disabled(model.busy)
-                .accessibilityLabel(tr("Scan again"))
-                .help(tr("Scan again"))
-            }
-            .padding(.horizontal, 16).padding(.vertical, 10)
-            if let lock = lockExplanation {
-                InspectorDivider(inset: 16)
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Image(systemName: "lock.fill").font(.system(size: 11)).foregroundStyle(.orange).accessibilityHidden(true)
-                    (Text(lock.reason).fontWeight(.semibold).foregroundColor(.white.opacity(0.9)) + Text("  ") + Text(lock.fix).foregroundColor(.white.opacity(0.6)))
-                        .font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
+                metric(model.loaded ? String(available.count) : "—", tr("Can reset"))
+                metric(model.loaded ? String(model.blocked.count) : "—", tr("Locked"), warning: !model.blocked.isEmpty)
+                Spacer(minLength: Theme.Space.s)
+                HStack(spacing: Theme.Space.s) {
+                    InfoButton(text: tr("Known locations only; project folders are kept."))
+                    if model.busy { ProgressView().controlSize(.small) }
+                    Button(tr("Scan again")) { model.scan() }
+                        .buttonStyle(PillButtonStyle()).controlSize(.small)
+                        .disabled(model.busy)
                 }
-                .accessibilityElement(children: .combine)
-                .padding(.horizontal, 16).padding(.vertical, 9)
+                .padding(.bottom, 2)
             }
+            .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m + 2)
+            InspectorDivider(inset: 0)
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                if let lock = lockExplanation {
+                    HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+                        Image(systemName: "lock.fill").font(.system(size: 10)).foregroundStyle(Theme.caution).frame(width: 14)
+                            .accessibilityHidden(true)
+                        (Text(lock.reason).fontWeight(.semibold).foregroundColor(Theme.textPrimary) + Text("  ") + Text(lock.fix).foregroundColor(Theme.textSecondary))
+                            .font(Theme.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+                    Image(systemName: "exclamationmark.triangle").font(.system(size: 10)).foregroundStyle(Theme.textTertiary).frame(width: 14)
+                        .accessibilityHidden(true)
+                    Text(tr("Resetting local state can sign you out or remove local history. Nothing is selected automatically."))
+                        .font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -310,111 +356,117 @@ struct ClaudeCleanupPage: View {
         return (tr(main.key), tr("%1$@ more items are locked for other reasons. Expand them to see why, then scan again.", String(others)))
     }
 
-    func stat(_ value: String, _ label: String, warning: Bool = false) -> some View {
+    func metric(_ value: String, _ label: String, warning: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(value).font(.system(size: 17, weight: .semibold).monospacedDigit())
-                .foregroundStyle(warning ? Color.orange : .white)
-            Text(label).font(.system(size: 11)).foregroundStyle(.white.opacity(0.55))
+            Text(value).font(Theme.figure(.metric)).foregroundStyle(warning ? Theme.caution : Theme.textPrimary)
+                .contentTransition(.numericText())
+            Text(label).font(Theme.label).foregroundStyle(Theme.textTertiary)
         }
         .accessibilityElement(children: .combine)
-        .frame(minWidth: 64, alignment: .leading)
     }
 
-    var statDivider: some View {
-        Rectangle().fill(Color.white.opacity(0.1)).frame(width: 1, height: 28).padding(.horizontal, 16)
+    func toggleOpen(_ target: ClaudeResetTarget) {
+        withAnimation(Theme.standard.unlessReduced(reduceMotion)) {
+            if expanded.contains(target) { expanded.remove(target) } else { expanded.insert(target) }
+        }
     }
 
     func candidateRow(_ candidate: ClaudeResetCandidate) -> some View {
         let target = candidate.target
         let open = expanded.contains(target)
         let missing = candidate.status == .missing
+        let covered = model.covered(target)
+        let on = model.selected.contains(target)
         return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 10) {
-                Toggle(target.title, isOn: Binding(
-                    get: { model.selected.contains(target) },
-                    set: { _ in model.toggle(candidate) }
-                )).labelsHidden().toggleStyle(.checkbox)
-                    .disabled(model.busy || candidate.status != .available)
-                    .accessibilityLabel(target.title)
-                    .accessibilityHint(target.impact)
-                    .padding(.top, 1)
-                Image(systemName: target.symbol).font(.system(size: 12)).foregroundStyle(.white.opacity(0.5))
-                    .frame(width: 16).padding(.top, 2).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(target.shortTitle).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
-                    Text(target.brief).font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
-                        .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .center, spacing: Theme.Space.m) {
+                Button { model.toggle(candidate) } label: {
+                    // A file inside a picked folder shows a dash: it goes with the folder.
+                    SelectionBox(state: on ? .all : covered ? .some : .none, locked: candidate.status == .blocked)
+                        .frame(width: 24, height: 24).contentShape(Rectangle())
                 }
-                Spacer(minLength: 8)
-                HStack(spacing: 8) {
-                    if candidate.status == .blocked {
-                        Image(systemName: "lock.fill").font(.system(size: 11)).foregroundStyle(.orange)
-                            .accessibilityLabel(tr("Locked"))
-                            .accessibilityHint(candidate.reason.map { tr($0) } ?? "")
-                            .help(candidate.reason.map { tr($0) } ?? tr("Locked"))
-                    }
-                    Text(missing ? tr("Not found") : candidate.snapshot == nil ? "—" : ByteFormat.string(candidate.bytes))
-                        .font(.system(size: 12).monospacedDigit()).foregroundStyle(.white.opacity(missing ? 0.4 : 0.7))
-                        .fixedSize()
-                    Button { withAnimation(reduceMotion ? nil : .easeOut(duration: 0.15)) { if open { expanded.remove(target) } else { expanded.insert(target) } } } label: {
-                        Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold))
-                            .rotationEffect(.degrees(open ? 90 : 0)).frame(width: 18, height: 18).contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain).foregroundStyle(.white.opacity(0.45))
+                .buttonStyle(.plain)
+                .disabled(model.busy || candidate.status != .available)
+                .opacity(missing ? 0.35 : 1)
+                .accessibilityLabel(target.title)
+                .accessibilityValue(on || covered ? tr("Selected") : tr("Not selected"))
+                .accessibilityHint(target.impact)
+                Image(systemName: target.symbol).font(.system(size: 12)).foregroundStyle(Theme.textTertiary)
+                    .frame(width: 16).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(target.shortTitle).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
+                    Text(target.brief).font(Theme.secondary).foregroundStyle(Theme.textTertiary)
+                        .lineLimit(1).truncationMode(.tail)
+                }
+                Spacer(minLength: Theme.Space.s)
+                if candidate.status == .blocked {
+                    StatusTag(text: tr("Locked"), color: Theme.caution)
+                        .help(candidate.reason.map { tr($0) } ?? tr("Locked"))
+                        .accessibilityHint(candidate.reason.map { tr($0) } ?? "")
+                }
+                Text(missing ? tr("Not found") : candidate.snapshot == nil ? "—" : ByteFormat.string(candidate.bytes))
+                    .font(Theme.figure(.row, weight: .medium)).foregroundStyle(missing ? Theme.textTertiary : Theme.textSecondary)
+                    .fixedSize()
+                Button { toggleOpen(target) } label: { DisclosureChevron(expanded: open) }
+                    .buttonStyle(.plain)
                     .accessibilityLabel(open ? tr("Hide details") : tr("Show details"))
                     .accessibilityHint(target.title)
-                }.padding(.top, 1)
             }
+            .contentShape(Rectangle())
+            .onTapGesture { toggleOpen(target) }
             if open {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(target.impact).font(.system(size: 12)).foregroundStyle(.white.opacity(0.75))
+                VStack(alignment: .leading, spacing: Theme.Space.xs + 2) {
+                    Text(target.impact).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     if let note = target.alternativeNote {
-                        Text(note).font(.system(size: 11)).foregroundStyle(.white.opacity(0.55))
+                        Text(note).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    Text(FS.tilde(candidate.path)).font(.system(size: 11).monospaced()).foregroundStyle(.white.opacity(0.6))
+                    Text(FS.tilde(candidate.path)).font(Theme.mono).foregroundStyle(Theme.textTertiary)
                         .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
                     if let reason = candidate.reason {
-                        Label(tr(reason), systemImage: "lock.fill").font(.system(size: 11)).foregroundStyle(.orange)
+                        Label(tr(reason), systemImage: "lock.fill").font(Theme.caption).foregroundStyle(Theme.caution)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                }.padding(.leading, 52).padding(.top, 8)
+                }
+                .padding(.leading, 64).padding(.top, Theme.Space.s)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(.horizontal, 14).padding(.vertical, 9)
+        .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.s + 2)
         .opacity(missing ? 0.6 : 1)
+        .hoverHighlight()
     }
 
     // MARK: Recovery
 
     var recovery: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
             SectionHeader(title: tr("Recovery records")) {
-                if !model.batches.isEmpty {
-                    Button(tr("Open recovery folder")) { revealRecovery(nil) }
-                        .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.white.opacity(0.6))
+                HStack(spacing: Theme.Space.s) {
+                    InfoButton(text: tr("Reset data stays in a private recovery folder and still uses disk space. Restore it here before removing any recovery files manually."))
+                    if !model.batches.isEmpty {
+                        Button(tr("Open recovery folder")) { revealRecovery(nil) }
+                            .buttonStyle(.plain).font(Theme.caption.weight(.medium)).foregroundStyle(Theme.accent)
+                    }
                 }
             }
             InspectorPanel {
                 if model.batches.isEmpty {
-                    HStack(spacing: 10) {
-                        Image(systemName: "clock.arrow.circlepath").foregroundStyle(.white.opacity(0.4)).frame(width: 18)
+                    HStack(spacing: Theme.Space.m) {
+                        Image(systemName: "clock.arrow.circlepath").foregroundStyle(Theme.textTertiary).frame(width: 18)
                             .accessibilityHidden(true)
                         Text(tr("No recovery records. Reset data is moved here, not deleted, and can be restored."))
-                            .font(.system(size: 12)).foregroundStyle(.white.opacity(0.55))
+                            .font(Theme.secondary).foregroundStyle(Theme.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
-                    }.padding(.horizontal, 14).padding(.vertical, 14)
+                    }
+                    .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.m + 2)
                 } else {
                     ForEach(Array(model.batches.enumerated()), id: \.element.id) { index, batch in
-                        if index > 0 { InspectorDivider() }
+                        if index > 0 { InspectorDivider(inset: 44) }
                         batchRow(batch)
                     }
                 }
             }
-            Text(tr("Reset data stays in a private recovery folder and still uses disk space. Restore it here before removing any recovery files manually."))
-                .font(.system(size: 11)).foregroundStyle(.white.opacity(0.45)).padding(.horizontal, 4)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -423,28 +475,31 @@ struct ClaudeCleanupPage: View {
         let total = batch.entries.count
         let done = total > 0 && restored == total
         let bytes = batch.entries.reduce(Int64(0)) { $0 + $1.bytes }
-        return HStack(alignment: .center, spacing: 10) {
+        return HStack(alignment: .center, spacing: Theme.Space.m) {
             Image(systemName: done ? "checkmark.circle" : "archivebox").font(.system(size: 13))
-                .foregroundStyle(.white.opacity(0.5)).frame(width: 18).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(batch.created.formatted(date: .abbreviated, time: .shortened))
-                    .font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
-                Text(batchStatus(restored: restored, total: total, bytes: bytes))
-                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(done ? Theme.good : Theme.textTertiary).frame(width: 18).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: Theme.Space.s) {
+                    Text(batch.created.formatted(date: .abbreviated, time: .shortened))
+                        .font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
+                    Text(batchStatus(restored: restored, total: total, bytes: bytes))
+                        .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                }
                 Text(batch.entries.map(\.target.title).joined(separator: ", "))
-                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.4)).lineLimit(2)
+                    .font(Theme.secondary).foregroundStyle(Theme.textTertiary).lineLimit(1)
                     .help(batch.id)
             }
-            Spacer(minLength: 8)
-            Button { revealRecovery(batch) } label: { Image(systemName: "folder") }
-                .buttonStyle(.plain).foregroundStyle(.white.opacity(0.6))
+            Spacer(minLength: Theme.Space.s)
+            Button { revealRecovery(batch) } label: { Image(systemName: "folder").font(.system(size: 12)) }
+                .buttonStyle(.plain).foregroundStyle(Theme.textSecondary)
                 .accessibilityLabel(tr("Reveal in Finder")).help(tr("Reveal in Finder"))
             Button(tr("Restore…")) { restoring = batch }
-                .buttonStyle(PillButtonStyle())
+                .buttonStyle(PillButtonStyle()).controlSize(.small)
                 .disabled(model.busy || done)
                 .help(done ? tr("Everything in this record has been restored") : tr("Restore"))
         }
-        .padding(.horizontal, 14).padding(.vertical, 11)
+        .padding(.horizontal, Theme.Space.m + 2).padding(.vertical, Theme.Space.s + 2)
+        .hoverHighlight()
     }
 
     func batchStatus(restored: Int, total: Int, bytes: Int64) -> String {
@@ -464,15 +519,20 @@ struct ClaudeCleanupPage: View {
 
     var actionBar: some View {
         let count = model.picked.count
-        return HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
+        let open = available
+        return ActionBar {
+            SelectAllButton(available: open.count, selected: open.filter { model.picked($0.target) }.count,
+                            selectAll: { model.pickAll(model.candidates) }, clear: { model.clear(model.candidates) })
+                .disabled(model.busy || !model.loaded)
+            Rectangle().fill(Theme.hairline).frame(width: 1, height: 22).padding(.horizontal, Theme.Space.xs)
+            VStack(alignment: .leading, spacing: 1) {
                 Text(count == 0 ? tr("Nothing selected") : tr("%1$@ selected · %2$@", String(count), ByteFormat.string(model.pickedBytes)))
-                    .font(.system(size: 13, weight: .semibold).monospacedDigit()).foregroundStyle(.white)
+                    .font(Theme.rowTitle.monospacedDigit()).foregroundStyle(Theme.textPrimary)
+                    .contentTransition(.numericText())
                 Text(tr("Moved to a private recovery folder; disk space is not freed."))
-                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.55))
-                    .fixedSize(horizontal: false, vertical: true)
+                    .font(Theme.caption).foregroundStyle(Theme.textTertiary).lineLimit(1)
             }
-            Spacer(minLength: 8)
+            Spacer(minLength: Theme.Space.s)
             Button(tr("Review reset…")) {
                 review = model.picked
                 confirmation = ""
@@ -482,14 +542,7 @@ struct ClaudeCleanupPage: View {
             .disabled(model.busy || model.picked.isEmpty)
             .fixedSize()
         }
-        .frame(maxWidth: 760)
-        .padding(.horizontal, 32).padding(.vertical, 12)
-        .frame(maxWidth: .infinity)
-        .background(
-            Color(red: 0.07, green: 0.09, blue: 0.18)
-                .overlay(alignment: .top) { Rectangle().fill(Color.white.opacity(0.1)).frame(height: 1) }
-                .ignoresSafeArea()
-        )
+        .animation(Theme.quick, value: count)
     }
 }
 

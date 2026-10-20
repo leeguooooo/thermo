@@ -79,33 +79,33 @@ struct ToolUsagePanel: View {
     func seconds(_ value: Double?) -> String { value.map { String(format: "%.3f s", $0) } ?? tr("Unknown") }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label(tr("Observed usage"), systemImage: "chart.bar.xaxis").font(.headline)
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            HStack(spacing: Theme.Space.s) {
+                Image(systemName: "chart.bar.xaxis").font(.system(size: 12)).foregroundStyle(Theme.textTertiary)
+                Text(tr("Observed usage")).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
+                InfoButton(text: model.report?.logReadScopeExplanation
+                           ?? tr("Reads local Claude/Codex logs for the last 7 days, across projects. Prompts, arguments and result text stay out of the report."))
                 Spacer()
                 if model.running {
                     ProgressView().controlSize(.small)
-                    Button(tr("Stop checking")) { model.stop() }.disabled(model.stopping)
+                    Button(tr("Stop checking")) { model.stop() }.buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.stopping)
                 } else {
-                    Button(tr("Analyze local logs")) { model.analyze(encoding: encoding) }
+                    Button(tr("Analyze local logs")) { model.analyze(encoding: encoding) }.buttonStyle(PillButtonStyle()).controlSize(.small)
                     Menu(tr("Analyze one log…")) {
                         Button(tr("Claude session log…")) { chooseLog(host: "claude") }
                         Button(tr("Codex session log…")) { chooseLog(host: "codex") }
                         Divider()
                         Button(tr("Claude session log tail…")) { chooseLog(host: "claude", logWindow: .tail) }
                         Button(tr("Codex session log tail…")) { chooseLog(host: "codex", logWindow: .tail) }
-                    }.fixedSize()
+                    }.menuStyle(.borderlessButton).fixedSize().font(Theme.secondary)
                 }
             }
-            Text(model.report?.logReadScopeExplanation
-                 ?? tr("Reads local Claude/Codex logs for the last 7 days, across projects. Prompts, arguments and result text stay out of the report."))
-                .font(.caption).foregroundStyle(.secondary)
             if let report = model.report {
                 if report.referenceEncoding != (encoding == .heuristic ? nil : encoding.rawValue) {
-                    Text(tr("The selected encoding differs from this report; analyze again to update counts.")).font(.caption).foregroundStyle(.orange)
+                    Text(tr("The selected encoding differs from this report; analyze again to update counts.")).font(Theme.caption).foregroundStyle(Theme.caution)
                 }
-                if let encoding = report.referenceEncoding { Text(tr("Ordinary-text reference encoding: %1$@", encoding)).font(.caption).foregroundStyle(.secondary) }
-                if model.running { Text(tr("Showing the previous analysis while refreshing…")).font(.caption).foregroundStyle(.secondary) }
+                if let encoding = report.referenceEncoding { Text(tr("Ordinary-text reference encoding: %1$@", encoding)).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
+                if model.running { Text(tr("Showing the previous analysis while refreshing…")).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
                 let categoryRows = report.tools.filter { $0.kind == kind }
                 let sharedOrder: ToolUsageOrdering? = sort == .time ? .time : sort == .errors ? .errors : sort == .instructions ? .instructions : nil
                 let rows = sharedOrder?.sorted(categoryRows) ?? categoryRows.sorted {
@@ -113,109 +113,111 @@ struct ToolUsagePanel: View {
                 }
                 let textSummary = report.returnedTextSummary(kind: kind)
                 let structuredSummary = kind == "mcp" ? report.observedMCPStructuredSummary : nil
-                Picker(tr("Sort observed usage"), selection: $sort) {
-                    ForEach(UsageSort.allCases.filter { (kind == "skill" || $0 != .instructions) && (kind == "mcp" || $0 != .structured) }, id: \.self) { value in Text(value.title).tag(value) }
-                }.pickerStyle(.segmented)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    ThermoTabs(selection: $sort,
+                               options: UsageSort.allCases.filter { (kind == "skill" || $0 != .instructions) && (kind == "mcp" || $0 != .structured) }.map { ($0, $0.title) },
+                               size: .small, label: tr("Sort observed usage"))
+                }
                 HStack(alignment: .firstTextBaseline) {
                     Text(report.complete ? tr("Log reading complete within the selected scope") : tr("Partial log coverage"))
-                        .font(.caption.weight(.medium)).foregroundStyle(report.complete ? Color.secondary : .orange)
+                        .font(Theme.label).foregroundStyle(report.complete ? Theme.textTertiary : Theme.caution)
                     Spacer(minLength: 8)
                     Text(tr("Read %1$@ / %2$@ discovered log files · %3$@ bytes", String(report.coverage.filesRead), String(report.coverage.filesDiscovered), String(report.coverage.bytesRead)))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 }
                 if !report.complete {
                     Text(tr("Rankings cover only the logs read; unread logs may change the order."))
-                        .font(.caption).foregroundStyle(.orange)
+                        .font(Theme.caption).foregroundStyle(Theme.caution)
                 }
-                if report.coverage.cancelled { Text(tr("Analysis stopped; partial results are shown.")).font(.caption).foregroundStyle(.orange) }
+                if report.coverage.cancelled { Text(tr("Analysis stopped; partial results are shown.")).font(Theme.caption).foregroundStyle(Theme.caution) }
                 if !rows.isEmpty {
                     Text(tr("Returned text total in this category: %1$@ bytes / %2$@ tokens",
                             textSummary.returnedTextBytes.map(String.init) ?? tr("Unknown"),
                             textSummary.returnedTextTokens.map { (report.referenceEncoding == nil ? "≈" : "") + String($0) } ?? tr("Unknown")))
-                        .font(.caption.monospaced())
+                        .font(Theme.mono)
                     if kind == "mcp" {
                         Text(tr("Structured JSON total: %1$@ bytes / %2$@ tokens",
                                 structuredSummary?.totalJSONBytes.map(String.init) ?? tr("Unknown"),
                                 structuredSummary?.totalJSONTokens.map { (report.referenceEncoding == nil ? "≈" : "") + String($0) } ?? tr("Unknown")))
-                            .font(.caption.monospaced())
+                            .font(Theme.mono)
                     }
                     if sort == .time {
                         ForEach(report.timingSummary(kind: kind)?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation], id: \.self) { line in
-                            Text(line).font(.caption.monospaced()).foregroundStyle(.secondary)
+                            Text(line).font(Theme.mono).foregroundStyle(Theme.textTertiary)
                         }
                     }
                 }
                 if kind == "skill" { instructionUsage(report.observedSkillInstructions, encoding: report.referenceEncoding) }
                 DisclosureGroup(tr("Measurement and coverage details"), isExpanded: $measurementDetailsExpanded) {
                     measurementDetails(report: report)
-                }.font(.caption)
+                }.font(Theme.caption)
                 if rows.isEmpty {
                     Text(tr("No directly attributable calls were observed. This does not prove the tool or Skill was unused."))
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(Theme.secondary).foregroundStyle(Theme.textTertiary)
                 }
                 if !rows.isEmpty {
                     Text(tr("Showing %1$@ of %2$@ entries", String(min(visibleRowLimit, rows.count)), String(rows.count)))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 }
                 ForEach(Array(rows.prefix(visibleRowLimit))) { row in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .firstTextBaseline) {
                             Text((row.server.map { $0 + " / " } ?? "") + row.name + " · " + row.host)
-                                .font(.subheadline.weight(.medium)).textSelection(.enabled)
+                                .font(Theme.rowTitle).textSelection(.enabled)
                             Spacer(minLength: 8)
                             if let metric = rankingMetric(row) {
-                                Text(metric).font(.subheadline.monospaced().weight(.semibold)).textSelection(.enabled)
+                                Text(metric).font(Theme.figure(.row)).textSelection(.enabled)
                             }
                         }
                         Text(tr("%1$@ calls · %2$@ results · %3$@ explicit result errors · %4$@ unknown error status · %5$@ missing results",
                                 String(row.calls), String(row.completed), String(row.reportedErrors), String(row.unknownErrorStatus), String(row.missingResults)))
-                            .font(.caption)
+                            .font(Theme.caption)
                         ResultTextRepresentationNotice(row: row)
                         if sort == .time {
                             Text(tr("Valid timing pairs: %1$@ / %2$@ calls", String(row.timingSamples), String(row.calls)))
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                         }
                         if let codes = row.mcpErrorCodeSummary {
-                            Text(codes).font(.caption.monospaced()).foregroundStyle(.secondary)
+                            Text(codes).font(Theme.mono).foregroundStyle(Theme.textTertiary)
                         }
                         if let failures = row.invocationFailures {
                             if failures > 0 {
                                 Text(tr("Host-reported invocation failures without MCP results: %1$@; excluded from result error proportions, included in timing.", String(failures)))
-                                    .font(.caption).foregroundStyle(.orange)
+                                    .font(Theme.caption).foregroundStyle(Theme.caution)
                             }
                         } else {
                             Text(tr("Host invocation failure counts were not measured in this report; analyze again."))
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                         }
                         if let rate = row.explicitErrorRate, let denominator = row.knownStatusResults {
                             Text(tr("Explicit errors among known-status results: %1$@ / %2$@ (%3$@)", String(row.reportedErrors), String(denominator), String(format: "%.1f%%", rate * 100)))
-                                .font(.caption)
+                                .font(Theme.caption)
                         } else {
                             Text(tr("Explicit error rate unknown; no usable known-status denominator."))
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                         }
                         Text(tr("Returned text %1$@ bytes / ≈%2$@ tokens · median %3$@ · P95 %4$@ · observed sum %5$@",
                                 String(row.returnedTextBytes), String(row.returnedTextEstimatedTokens), seconds(row.medianSeconds), seconds(row.p95Seconds), seconds(row.totalObservedSeconds)))
-                            .font(.caption.monospaced()).textSelection(.enabled)
+                            .font(Theme.mono).textSelection(.enabled)
                             .help(tr("P95 is shown only with at least 20 valid timing samples."))
                         if kind == "skill" { instructionUsage(row.skillInstructions, encoding: row.referenceEncoding) }
                         if let encoding = row.referenceEncoding {
-                            Text(tr("%1$@ reference text tokens: %2$@ · %3$@ results unavailable", encoding, row.referenceReturnedTextTokens.map(String.init) ?? tr("Unknown"), String(row.unavailableReferenceResults ?? 0))).font(.caption.monospaced())
+                            Text(tr("%1$@ reference text tokens: %2$@ · %3$@ results unavailable", encoding, row.referenceReturnedTextTokens.map(String.init) ?? tr("Unknown"), String(row.unavailableReferenceResults ?? 0))).font(Theme.mono)
                         }
                         if kind == "skill", sort == .instructions {
                             if let percentage = report.observedInstructionPercentage(of: row) {
                                 Text(tr("Share of observed linked instruction text tokens: %1$@", String(format: "%.1f%%", percentage)))
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                             }
                         } else if sort == .text, let percentage = textSummary.percentage(of: row) {
                             Text(tr("Share of this category's observed returned-text tokens: %1$@", String(format: "%.1f%%", percentage)))
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                         }
                         ForEach(Array(row.mcpStructuredContentLines(includeRepresentationNotes: structuredSummary == nil).enumerated()), id: \.offset) { _, line in
-                            Text(line).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                            Text(line).font(Theme.caption).foregroundStyle(Theme.textTertiary).textSelection(.enabled)
                         }
                         if row.nonTextBlocks > 0 {
-                            Text(tr("%1$@ non-text result blocks were not tokenized.", String(row.nonTextBlocks))).font(.caption).foregroundStyle(.secondary)
+                            Text(tr("%1$@ non-text result blocks were not tokenized.", String(row.nonTextBlocks))).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                         }
                     }
                 }
@@ -224,27 +226,27 @@ struct ToolUsagePanel: View {
                 }
                 if !rows.isEmpty {
                     Text(ToolUsageReport.errorStatusExplanation)
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 }
                 if !report.sessionTokens.isEmpty {
-                    Text(tr("Request counters, not individual tool consumption")).font(.subheadline.weight(.medium))
+                    Text(tr("Request counters, not individual tool consumption")).font(Theme.rowTitle)
                     ForEach(report.sessionTokens, id: \.host) { usage in
                         Text(tr("%1$@: %2$@ requests · input %3$@ · output %4$@ tokens", usage.host, String(usage.requests), String(usage.inputTokens), String(usage.outputTokens)))
-                            .font(.caption.monospaced())
+                            .font(Theme.mono)
                         Text(tr("Cached input %1$@ · cache creation %2$@; raw counters are not added to input.", usage.cachedInputTokens.map(String.init) ?? tr("Unknown"), usage.cacheWriteInputTokens.map(String.init) ?? tr("Unknown")))
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     }
                 } else {
-                    Text(tr("No supported request token records were found; request usage is unknown.")).font(.caption).foregroundStyle(.secondary)
+                    Text(tr("No supported request token records were found; request usage is unknown.")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 }
                 if let snapshots = report.cumulativeTokenSnapshots, !snapshots.isEmpty {
                     DisclosureGroup(tr("Native cumulative snapshots (not window usage)"), isExpanded: $cumulativeExpanded) {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(ToolUsageReport.cumulativeTokenExplanation).font(.caption).foregroundStyle(.secondary)
+                            Text(ToolUsageReport.cumulativeTokenExplanation).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                             ForEach(snapshots) { snapshot in
                                 VStack(alignment: .leading, spacing: 3) {
                                     ForEach(Array(snapshot.displayLines.enumerated()), id: \.offset) { _, line in
-                                        Text(line).font(.caption.monospaced())
+                                        Text(line).font(Theme.mono)
                                     }
                                 }.padding(.vertical, 4)
                             }
@@ -253,7 +255,7 @@ struct ToolUsagePanel: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading).padding(18).glass()
+        .frame(maxWidth: .infinity, alignment: .leading).padding(Theme.Space.l).glass()
         .onChange(of: sort) { _ in visibleRowLimit = 8 }
         .onChange(of: kind) { _ in visibleRowLimit = 8; sort = kind == "skill" ? .instructions : .text }
         .onChange(of: model.report?.generated) { _ in visibleRowLimit = 8 }
@@ -266,70 +268,70 @@ struct ToolUsagePanel: View {
         VStack(alignment: .leading, spacing: 8) {
                 if !rows.isEmpty {
                     ForEach(report.timingSummary(kind: kind)?.displayLines ?? [ToolUsageTimingSummary.unavailableExplanation], id: \.self) { line in
-                        Text(line).font(.caption.monospaced()).foregroundStyle(.secondary)
+                        Text(line).font(Theme.mono).foregroundStyle(Theme.textTertiary)
                     }
-                    Text(ToolUsageTimingSummary.explanation).font(.caption).foregroundStyle(.secondary)
+                    Text(ToolUsageTimingSummary.explanation).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 }
                 if sort == .structured || sort == .time || sort == .errors || sort == .instructions {
                     Text((sort == .time ? ToolUsageOrdering.time : sort == .errors ? .errors : sort == .instructions ? .instructions : .structured).explanation)
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 }
                 Text(tr("%1$@ clipped files · %2$@ malformed lines · %3$@ other tool calls", String(report.coverage.clippedFiles), String(report.coverage.malformedLines), String(report.coverage.otherToolCalls)))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 if !report.complete {
                     Text(tr("Rankings cover only the logs read; unread logs may change the order."))
-                        .font(.caption).foregroundStyle(.orange)
+                        .font(Theme.caption).foregroundStyle(Theme.caution)
                 }
                 if let other = report.coverage.unattributedResults, report.coverage.otherToolCalls > 0 {
                     Text(tr("Unattributed tool results: %1$@ returned · %2$@ missing · %3$@ unmeasured", String(other.completed), String(other.missingResults), String(other.unmeasuredResults)))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     let tokens = report.referenceEncoding == nil ? "≈\(other.returnedTextEstimatedTokens)" : other.referenceReturnedTextTokens.map(String.init) ?? tr("Unknown")
                     Text(tr("Unattributed measured text: %1$@ bytes / %2$@ tokens · %3$@ non-text blocks not tokenized", String(other.returnedTextBytes), tokens, String(other.nonTextBlocks)))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     Text(tr("Includes execution wrapper text and may repeat separately logged MCP results. Kept outside MCP/Skill totals; no nested attribution or image/audio token estimate."))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     OuterToolUsageBreakdown(report: report)
                 } else if report.coverage.otherToolCalls > 0 {
                     Text(tr("Unattributed returned content was not measured in this report; analyze again."))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 }
-                Text(report.generated, style: .time).font(.caption).foregroundStyle(.secondary)
+                Text(report.generated, style: .time).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 HStack(spacing: 4) {
                     Text(report.since, style: .date); Text("–"); Text(report.until, style: .date)
-                }.font(.caption).foregroundStyle(.secondary)
-                if report.coverage.cancelled { Text(tr("Analysis stopped; partial results are shown.")).font(.caption).foregroundStyle(.orange) }
-                if report.coverage.limitReached { Text(tr("A log scan limit was reached; results are partial.")).font(.caption).foregroundStyle(.orange) }
+                }.font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                if report.coverage.cancelled { Text(tr("Analysis stopped; partial results are shown.")).font(Theme.caption).foregroundStyle(Theme.caution) }
+                if report.coverage.limitReached { Text(tr("A log scan limit was reached; results are partial.")).font(Theme.caption).foregroundStyle(Theme.caution) }
                 if report.coverage.unreadableFiles > 0 || report.coverage.unmatchedResults > 0 {
                     Text(tr("%1$@ unreadable files · %2$@ results without a matching call", String(report.coverage.unreadableFiles), String(report.coverage.unmatchedResults)))
-                        .font(.caption).foregroundStyle(.orange)
+                        .font(Theme.caption).foregroundStyle(Theme.caution)
                 }
                 Text(tr("Missing timestamps %1$@ · unsupported usage records %2$@", String(report.coverage.missingTimestamps), String(report.coverage.unsupportedUsageRecords)))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 if report.coverage.oversizedLines > 0 {
-                    Text(tr("%1$@ oversized log lines were skipped; returned text totals may be incomplete.", String(report.coverage.oversizedLines))).font(.caption).foregroundStyle(.orange)
+                    Text(tr("%1$@ oversized log lines were skipped; returned text totals may be incomplete.", String(report.coverage.oversizedLines))).font(Theme.caption).foregroundStyle(Theme.caution)
                 }
                 if !rows.isEmpty {
                     if kind == "mcp" {
                         ForEach(structuredSummary?.displayLines ?? [MCPStructuredContentSummary.unavailableExplanation], id: \.self) { line in
-                            Text(line).font(.caption).foregroundStyle(.secondary)
+                            Text(line).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                         }
                     }
                     Text(tr("Returned text total in this category: %1$@ bytes / %2$@ tokens",
                             textSummary.returnedTextBytes.map(String.init) ?? tr("Unknown"),
                             textSummary.returnedTextTokens.map { (report.referenceEncoding == nil ? "≈" : "") + String($0) } ?? tr("Unknown")))
-                        .font(.caption.monospaced())
+                        .font(Theme.mono)
                     Text(tr("Totals include all observed entries in this category, including hidden rows. Missing logs, results and non-text content are not included; this is not request usage."))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 }
                 if kind == "skill" {
                     Text(tr("Only explicitly source-linked Claude instruction messages are measured. Kept separate from tool replies and request counters; missing loads, referenced files and billing remain unknown."))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                     if let unmatched = report.coverage.unmatchedInstructionEvents, unmatched > 0 {
                         Text(tr("%1$@ instruction metadata records could not be linked or identified.", String(unmatched)))
-                            .font(.caption).foregroundStyle(.orange)
+                            .font(Theme.caption).foregroundStyle(Theme.caution)
                     }
                 }
-            Text(report.note).font(.caption).foregroundStyle(.secondary)
+            Text(report.note).font(Theme.caption).foregroundStyle(Theme.textTertiary)
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -338,10 +340,10 @@ struct ToolUsagePanel: View {
             let tokens = encoding == nil ? "≈\(loaded.estimatedTokens)" : loaded.referenceTokens.map(String.init) ?? tr("Unknown")
             Text(tr("Linked instruction loads: %1$@ · measured text %2$@ bytes / %3$@ tokens · %4$@ non-text blocks · %5$@ incomplete",
                     String(loaded.events), String(loaded.textBytes), tokens, String(loaded.nonTextBlocks), String(loaded.incompleteEvents)))
-                .font(.caption).foregroundStyle(loaded.incompleteEvents > 0 ? .orange : .secondary)
+                .font(Theme.caption).foregroundStyle(loaded.incompleteEvents > 0 ? .orange : .secondary)
         } else {
             Text(tr("No measured linked instruction loads in this report; total loading is unknown."))
-                .font(.caption).foregroundStyle(.secondary)
+                .font(Theme.caption).foregroundStyle(Theme.textTertiary)
         }
     }
 
@@ -363,14 +365,14 @@ struct ResultTextRepresentationNotice: View {
         VStack(alignment: .leading, spacing: 4) {
             if let count = row.serializedMediaTextResults, count > 0 {
                 Text(tr("%1$@ result texts contain serialized media. Counts describe logged text, not image/audio token cost or proof of model delivery.", String(count)))
-                    .font(.caption).foregroundStyle(.orange)
+                    .font(Theme.caption).foregroundStyle(Theme.caution)
                 if let line = row.serializedMediaTextCompositionLine {
-                    Text(line).font(.caption).foregroundStyle(.secondary)
+                    Text(line).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 }
             }
             if let count = row.truncationMarkerResults, count > 0 {
                 Text(tr("%1$@ result texts contain an explicit truncation marker; full returned size is unknown.", String(count)))
-                    .font(.caption).foregroundStyle(.orange)
+                    .font(Theme.caption).foregroundStyle(Theme.caution)
             }
         }
     }

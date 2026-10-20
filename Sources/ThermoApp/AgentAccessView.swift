@@ -192,7 +192,7 @@ struct AgentAccessRow: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(tr("AI agents (thermo-use)"))
                 Text(access.checking ? tr("Checking installation…") : access.ready ? tr("CLI link verified; review agent setup") : tr("Let Claude Code, Codex and other agents check this Mac"))
-                    .font(.caption).foregroundStyle(access.ready ? Color.green : .secondary)
+                    .font(Theme.caption).foregroundStyle(access.ready ? Color.green : .secondary)
             }
             Spacer()
             Button(access.ready ? tr("Details…") : tr("Set Up…")) { open = true }
@@ -211,9 +211,9 @@ struct AgentAccessSheet: View {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "sparkles").font(.title2).foregroundStyle(Color.accentColor)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(tr("Let AI agents check this Mac")).font(.headline)
+                    Text(tr("Let AI agents check this Mac")).font(Theme.secondary.weight(.semibold))
                     Text(tr("thermo-use gives Claude Code, Codex and other agents the thermo command: why the Mac is slow, temperatures and fans, disk cleanup that knows AI tools, and AI agent diagnostics. It is part of the *-use family. Agents look freely; they only clean, change fans or quit programs when you ask."))
-                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        .font(Theme.secondary).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                 }
             }
 
@@ -233,17 +233,17 @@ struct AgentAccessSheet: View {
                  button: nil, copy: "/plugin install \(AgentAccess.family)")
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(tr("Try asking your agent")).font(.subheadline.weight(.semibold))
+                Text(tr("Try asking your agent")).font(Theme.rowTitle)
                 ForEach([tr("“Why is my Mac so slow right now?”"), tr("“Which old AI sessions take the most space?”"),
                          tr("“Is anything wrong with my MCP servers or hooks?”"), tr("“Turn the fans to max.”")], id: \.self) {
-                    Text($0).font(.callout).foregroundStyle(.secondary)
+                    Text($0).font(Theme.secondary).foregroundStyle(Theme.textTertiary)
                 }
             }
 
-            if let m = access.message { Text(m).font(.caption).foregroundStyle(.secondary) }
+            if let m = access.message { Text(m).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
             HStack {
-                if let b = access.busy { ProgressView().controlSize(.small); Text(tr("Adding to %1$@…", b)).font(.caption) }
-                else if access.checking { ProgressView().controlSize(.small); Text(tr("Checking installation…")).font(.caption) }
+                if let b = access.busy { ProgressView().controlSize(.small); Text(tr("Adding to %1$@…", b)).font(Theme.caption) }
+                else if access.checking { ProgressView().controlSize(.small); Text(tr("Checking installation…")).font(Theme.caption) }
                 Spacer()
                 Button(tr("Done"), action: close).keyboardShortcut(.defaultAction)
             }
@@ -279,10 +279,10 @@ struct AgentAccessSheet: View {
                 .foregroundStyle(done == true ? Color.green : .secondary).frame(width: 18)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.callout.weight(.medium))
-                Text(detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(detail).font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                 if let copy {
                     HStack(spacing: 6) {
-                        Text(copy).font(.caption.monospaced()).textSelection(.enabled).lineLimit(1).truncationMode(.middle)
+                        Text(copy).font(Theme.mono).textSelection(.enabled).lineLimit(1).truncationMode(.middle)
                         Button {
                             NSPasteboard.general.clearContents(); NSPasteboard.general.setString(copy, forType: .string)
                         } label: { Image(systemName: "doc.on.doc") }.buttonStyle(.borderless).help(tr("Copy"))

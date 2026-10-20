@@ -130,33 +130,32 @@ struct PrivacyToolsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "hand.raised").foregroundStyle(.white.opacity(0.55)).frame(width: 18).accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: Theme.Space.l) {
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+                Image(systemName: "hand.raised").font(.system(size: 11)).foregroundStyle(Theme.textTertiary).accessibilityHidden(true)
                 Text(tr("Explicit controls for local settings. Review each action before applying it. No account restriction or anonymity guarantees."))
-                    .font(.system(size: 12)).foregroundStyle(.white.opacity(0.65)).fixedSize(horizontal: false, vertical: true)
-            }.padding(.horizontal, 4)
+                    .font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+            }.padding(.horizontal, 2)
             if model.busy || model.result != nil {
                 NoticeBanner(text: model.busy ? tr("Working…") : model.result ?? "", busy: model.busy,
                              dismiss: model.busy ? nil : { model.result = nil })
             }
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
                 SectionHeader(title: tr("Browser profiles")) {
-                    Button(tr("Scan profiles")) { model.inspect() }.buttonStyle(PillButtonStyle())
+                    HStack(spacing: Theme.Space.s) {
+                        InfoButton(text: tr("Chrome, Edge, Brave and Firefox standard profiles only. Browsers must be fully closed before changes; Thermo never closes them."))
+                        Button(tr("Scan profiles")) { model.inspect() }.buttonStyle(PillButtonStyle()).controlSize(.small)
+                    }
                 }
                 InspectorPanel {
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: "globe").font(.system(size: 13)).foregroundStyle(.white.opacity(0.55))
-                            .frame(width: 18).padding(.top, 1).accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(tr("Chrome, Edge, Brave and Firefox standard profiles only. Browsers must be fully closed before changes; Thermo never closes them."))
-                                .font(.system(size: 12)).foregroundStyle(.white.opacity(0.65)).fixedSize(horizontal: false, vertical: true)
-                            if !model.profiles.isEmpty {
-                                FlowChips(items: model.profiles.map(\.name))
-                            }
-                        }
-                    }.padding(.horizontal, 14).padding(.vertical, 11)
-                    InspectorDivider()
+                    if !model.profiles.isEmpty {
+                        HStack(alignment: .top, spacing: Theme.Space.m) {
+                            Image(systemName: "globe").font(.system(size: 13)).foregroundStyle(Theme.textTertiary)
+                                .frame(width: 18).padding(.top, 1).accessibilityHidden(true)
+                            FlowChips(items: model.profiles.map(\.name))
+                        }.padding(.horizontal, 14).padding(.vertical, Theme.Space.m)
+                        InspectorDivider()
+                    }
                     row(.location); InspectorDivider()
                     row(.webRTC); InspectorDivider()
                     row(.cookies); InspectorDivider()
@@ -167,8 +166,10 @@ struct PrivacyToolsView: View {
                     }
                 }
             }
-            VStack(alignment: .leading, spacing: 6) {
-                SectionHeader(title: tr("System settings"))
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                SectionHeader(title: tr("System settings")) {
+                    InfoButton(text: tr("System Location Services remain under your control in macOS Settings. DNS proxy enforcement and forced extension installation are not provided."))
+                }
                 InspectorPanel {
                     row(.environment); InspectorDivider()
                     row(.dns); InspectorDivider()
@@ -176,10 +177,11 @@ struct PrivacyToolsView: View {
                         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices") { NSWorkspace.shared.open(url) }
                     }
                 }
-                footnote(tr("System Location Services remain under your control in macOS Settings. DNS proxy enforcement and forced extension installation are not provided."))
             }
-            VStack(alignment: .leading, spacing: 6) {
-                SectionHeader(title: tr("System timezone"))
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                SectionHeader(title: tr("System timezone")) {
+                    InfoButton(text: tr("Timezone changes do not change country, language or browser locale. Automatic timezone can override manual changes."))
+                }
                 InspectorPanel {
                     row(.lookup)
                     if let location = model.location {
@@ -193,7 +195,6 @@ struct PrivacyToolsView: View {
                         if let url = URL(string: "x-apple.systempreferences:com.apple.Localization-Settings.extension") { NSWorkspace.shared.open(url) }
                     }
                 }
-                footnote(tr("Timezone changes do not change country, language or browser locale. Automatic timezone can override manual changes."))
             }
         }
         .disabled(model.busy)
@@ -203,47 +204,47 @@ struct PrivacyToolsView: View {
     }
 
     private func row(_ action: Action, detected: String? = nil) -> some View {
-        HStack(alignment: .center, spacing: 10) {
-            Image(systemName: action.symbol).font(.system(size: 13)).foregroundStyle(.white.opacity(0.55))
+        HStack(alignment: .center, spacing: Theme.Space.m) {
+            Image(systemName: action.symbol).font(.system(size: 13)).foregroundStyle(Theme.textTertiary)
                 .frame(width: 18).frame(maxHeight: .infinity, alignment: .top).padding(.top, 2).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(action.title).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+            VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                HStack(spacing: Theme.Space.s) {
+                    Text(action.title).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
+                    ForEach(action.tags, id: \.0) { tag in RequirementTag(text: tag.0, warning: tag.1) }
+                }
                 if let detected {
-                    Text(detected).font(.system(size: 12, weight: .medium).monospaced()).foregroundStyle(.white.opacity(0.85))
+                    Text(detected).font(Theme.mono).foregroundStyle(Theme.textPrimary)
                         .textSelection(.enabled)
                 }
-                Text(action.summary).font(.system(size: 12)).foregroundStyle(.white.opacity(0.62))
+                Text(action.summary).font(Theme.secondary).foregroundStyle(Theme.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
-                FlowChips(items: action.tags.map(\.0), warnings: Set(action.tags.filter(\.1).map(\.0)))
             }
-            Spacer(minLength: 8)
+            Spacer(minLength: Theme.Space.s)
             Button(action.verb) { pending = action }
-                .buttonStyle(PillButtonStyle())
+                .buttonStyle(PillButtonStyle()).controlSize(.small)
                 .fixedSize()
                 .accessibilityLabel(action.title)
                 .accessibilityHint(action.summary)
         }
-        .padding(.horizontal, 14).padding(.vertical, 11)
+        .padding(.horizontal, 14).padding(.vertical, Theme.Space.m)
+        .hoverHighlight()
     }
 
     private func linkRow(_ symbol: String, _ title: String, _ open: @escaping () -> Void) -> some View {
         Button(action: open) {
-            HStack(spacing: 10) {
-                Image(systemName: symbol).font(.system(size: 13)).foregroundStyle(.white.opacity(0.55)).frame(width: 18)
+            HStack(spacing: Theme.Space.m) {
+                Image(systemName: symbol).font(.system(size: 13)).foregroundStyle(Theme.textTertiary).frame(width: 18)
                     .accessibilityHidden(true)
-                Text(title).font(.system(size: 13)).foregroundStyle(.white.opacity(0.85))
+                Text(title).font(Theme.body).foregroundStyle(Theme.accent)
                 Spacer()
-                Image(systemName: "arrow.up.forward").font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.4))
+                Image(systemName: "arrow.up.forward").font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.textTertiary)
                     .accessibilityHidden(true)
             }
-            .padding(.horizontal, 14).padding(.vertical, 10).contentShape(Rectangle())
+            .padding(.horizontal, 14).padding(.vertical, Theme.Space.s + 2).contentShape(Rectangle())
+            .hoverHighlight()
         }.buttonStyle(.plain)
     }
 
-    private func footnote(_ text: String) -> some View {
-        Text(text).font(.system(size: 11)).foregroundStyle(.white.opacity(0.45)).padding(.horizontal, 4)
-            .fixedSize(horizontal: false, vertical: true)
-    }
     private func execute(_ action: Action) {
         switch action {
         case .location: model.perform { try $0.applyBrowser(.location) }

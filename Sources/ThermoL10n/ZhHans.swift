@@ -3150,6 +3150,8 @@ let zhHans: [String: String] = [
     // Redesign B (new strings for this group go right below this line)
 
     // Redesign C (new strings for this group go right below this line)
+    "More actions": "更多操作",
+    "Analysis": "分析",
 
     // Redesign D (new strings for this group go right below this line)
 
