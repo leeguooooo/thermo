@@ -18,14 +18,16 @@ struct DiagnosticsHome: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 34) {
-                hero.padding(.top, 54)
+            VStack(alignment: .leading, spacing: Theme.Space.xl) {
+                PageHeader(title: tr("Smart Check"),
+                           subtitle: tr("Claude Code, Codex, Cursor and Gemini: hooks, tools, plugins, skills and what runs in the background."))
+                hero
                 DiagnosticScanControl(scanner: scanner)
-                if !scanner.history.isEmpty { AgentActivity(scanner: scanner) }
                 if let r = scanner.report, scanner.batch.map({ $0.finished }) ?? true { cards(r) }
+                if !scanner.history.isEmpty { AgentActivity(scanner: scanner) }
             }
-            .padding(.horizontal, 40).padding(.bottom, 40)
-            .frame(maxWidth: 920)
+            .frame(maxWidth: Theme.pageWidth, alignment: .leading)
+            .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, Theme.Space.xxl)
             .frame(maxWidth: .infinity)
         }
         .scrollContentBackground(.hidden)
@@ -41,54 +43,58 @@ struct DiagnosticsHome: View {
         }
     }
 
+    /// The page's one focal point: a status ring, the verdict, and the action it calls for.
     @ViewBuilder var hero: some View {
         let problems = scanner.report?.problemCount ?? 0
         let fixable = scanner.bulkFixes.count
         if let b = scanner.batch, !b.finished {
-            HeroStatus(symbol: b.verifying ? "stethoscope" : "wrench.and.screwdriver.fill", color: .blue,
-                       title: b.verifying ? tr("Checking repair results…") : tr("Fixing %1$@ of %2$@", String(min(b.done + 1, b.total)), String(b.total)),
-                       subtitle: b.verifying ? tr("Reading the current configuration again.") : b.current,
-                       progress: b.verifying ? nil : Double(b.done) / Double(max(1, b.total)), spinning: b.verifying)
+            DiagnosticsHero(symbol: b.verifying ? "stethoscope" : "wrench.and.screwdriver", color: Theme.accent,
+                            title: b.verifying ? tr("Checking repair results…") : tr("Fixing %1$@ of %2$@", String(min(b.done + 1, b.total)), String(b.total)),
+                            subtitle: b.verifying ? tr("Reading the current configuration again.") : b.current,
+                            progress: b.verifying ? nil : Double(b.done) / Double(max(1, b.total)), spinning: b.verifying) { EmptyView() }
         } else if scanner.stopped {
-            HeroStatus(symbol: "pause.circle", color: .purple, title: tr("Check stopped"),
-                       subtitle: tr("Restart the read-only check when ready."))
+            DiagnosticsHero(symbol: "pause", color: Theme.textSecondary, title: tr("Check stopped"),
+                            subtitle: tr("Restart the read-only check when ready.")) { EmptyView() }
         } else if scanner.report == nil {
-            HeroStatus(symbol: "stethoscope", color: Color(red: 0.45, green: 0.4, blue: 1.0), title: tr("Checking your AI agents…"),
-                       subtitle: tr("Claude Code, Codex, Cursor and Gemini: hooks, tools, plugins, skills and what runs in the background."),
-                       spinning: true)
+            DiagnosticsHero(symbol: "stethoscope", color: Theme.accent, title: tr("Checking your AI agents…"),
+                            subtitle: nil, spinning: true) { EmptyView() }
         } else if scanner.report?.hasResults == false {
-            VStack(spacing: 26) {
-                HeroStatus(symbol: "magnifyingglass", color: .purple, title: tr("No agent items found"),
-                           subtitle: tr("Nothing to inspect yet. Configure your AI agent, then check again."),
-                           spinning: scanner.scanning)
-                BigRoundButton(title: tr("Check Again"), color: .purple, busy: scanner.scanning) { scanner.scan() }
+            DiagnosticsHero(symbol: "magnifyingglass", color: Theme.textSecondary, title: tr("No agent items found"),
+                            subtitle: tr("Nothing to inspect yet. Configure your AI agent, then check again."),
+                            spinning: scanner.scanning) {
+                checkAgain(prominent: true)
             }
         } else if problems == 0 {
-            VStack(spacing: 26) {
-                HeroStatus(symbol: "checkmark", color: .green, title: tr("No configuration or process problems found"),
-                           subtitle: tr("No problems in %1$@ items your AI agents use.", String(scanner.report?.items.count ?? 0)),
-                           spinning: scanner.scanning)
-                BigRoundButton(title: tr("Check Again"), color: .green, busy: scanner.scanning) { scanner.scan() }
+            DiagnosticsHero(symbol: "checkmark", color: Theme.good, title: tr("No configuration or process problems found"),
+                            subtitle: tr("No problems in %1$@ items your AI agents use.", String(scanner.report?.items.count ?? 0)),
+                            spinning: scanner.scanning) {
+                checkAgain(prominent: false)
             }
         } else {
-            VStack(spacing: 26) {
-                HeroStatus(symbol: "exclamationmark", color: scanner.report!.count(.error) > 0 ? .red : .orange,
-                           title: problems == 1 ? tr("1 problem found") : tr("%1$@ problems found", String(problems)),
-                           subtitle: fixable == 0 ? tr("Each one needs a decision from you; open its category to see why and what to do.")
-                               : fixable == problems ? tr("All of them can be fixed with one click.")
-                               : tr("%1$@ can be fixed with one click; the others need a decision from you.", String(fixable)),
-                           spinning: scanner.scanning)
-                HStack(spacing: 30) {
-                    if fixable > 0 { BigRoundButton(title: tr("Fix %1$@", String(fixable)), busy: scanner.busy) { confirming = true } }
-                    Button { scanner.scan() } label: { Label(tr("Check Again"), systemImage: "arrow.clockwise") }
-                        .buttonStyle(PillButtonStyle()).disabled(scanner.busy)
+            DiagnosticsHero(symbol: "exclamationmark", color: scanner.report!.count(.error) > 0 ? Theme.danger : Theme.caution,
+                            title: problems == 1 ? tr("1 problem found") : tr("%1$@ problems found", String(problems)),
+                            subtitle: fixable == 0 ? tr("Each one needs a decision from you; open its category to see why and what to do.")
+                                : fixable == problems ? tr("All of them can be fixed with one click.")
+                                : tr("%1$@ can be fixed with one click; the others need a decision from you.", String(fixable)),
+                            spinning: scanner.scanning) {
+                HStack(spacing: Theme.Space.s) {
+                    checkAgain(prominent: false)
+                    if fixable > 0 {
+                        Button(tr("Fix %1$@", String(fixable))) { confirming = true }
+                            .buttonStyle(PillButtonStyle(prominent: true)).disabled(scanner.busy)
+                    }
                 }
             }
         }
     }
 
+    func checkAgain(prominent: Bool) -> some View {
+        Button { scanner.scan() } label: { Label(tr("Check Again"), systemImage: "arrow.clockwise") }
+            .buttonStyle(PillButtonStyle(prominent: prominent)).disabled(scanner.busy)
+    }
+
     func cards(_ r: DoctorReport) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 16)], spacing: 16) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 172), spacing: Theme.Space.m)], spacing: Theme.Space.m) {
             ForEach(Area.allCases, id: \.self) { a in
                 let items = r.items.filter { $0.area == a }
                 let bad = items.filter(\.isProblem)
@@ -101,10 +107,64 @@ struct DiagnosticsHome: View {
                 CategoryCard(symbol: AgentStyle.icon(a), color: AgentStyle.tint(a), title: AgentStyle.title(a),
                              status: empty ? tr("No items to check") : problems == 0 && updates > 0 ? tr("%1$@ updates available", String(updates)) : problems == 0 && items.isEmpty ? tr("Notes available") : problems == 0 && a == .mcp ? tr("%1$@ configuration entries; connection unchecked", String(items.count)) : problems == 0 ? tr("%1$@ checked, all fine", String(items.count))
                                  : fixable > 0 ? tr("%1$@ fixable in one click", String(fixable)) : tr("needs your decision"),
-                             statusColor: empty || (problems == 0 && (items.isEmpty || a == .mcp)) ? .secondary : problems == 0 && updates > 0 ? .blue : problems == 0 ? .green : AgentStyle.color(worst),
+                             statusColor: empty || (problems == 0 && (items.isEmpty || a == .mcp)) ? Theme.textSecondary : problems == 0 && updates > 0 ? Theme.accent : problems == 0 ? Theme.good : (worst == .error ? Theme.danger : Theme.caution),
                              count: problems) { open(a) }
             }
         }
+    }
+}
+
+/// A status ring with a symbol, the verdict beside it and the page's actions on the right: one
+/// panel instead of a centered poster, so the cards below stay in view.
+private struct DiagnosticsHero<Actions: View>: View {
+    let symbol: String
+    let color: Color
+    let title: String
+    let subtitle: String?
+    var progress: Double? = nil
+    var spinning = false
+    @ViewBuilder let actions: () -> Actions
+    @State private var turning = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(alignment: .center, spacing: Theme.Space.l) {
+            ZStack {
+                Circle().fill(color.opacity(0.12))
+                Circle().stroke(Color.white.opacity(0.07), lineWidth: 3)
+                if let progress {
+                    Circle().trim(from: 0, to: max(0.02, progress))
+                        .stroke(color, style: StrokeStyle(lineWidth: 3, lineCap: .round)).rotationEffect(.degrees(-90))
+                        .animation(Theme.standard.unlessReduced(reduceMotion), value: progress)
+                } else if spinning {
+                    Circle().trim(from: 0, to: 0.25)
+                        .stroke(AngularGradient(colors: [color.opacity(0), color], center: .center), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(turning ? 360 : 0))
+                        .animation(reduceMotion ? nil : .linear(duration: 1.1).repeatForever(autoreverses: false), value: turning)
+                } else {
+                    Circle().stroke(color.opacity(0.8), lineWidth: 3)
+                }
+                Image(systemName: symbol).font(.system(size: 22, weight: .semibold)).foregroundStyle(color)
+            }
+            .frame(width: 60, height: 60)
+            .onAppear { DispatchQueue.main.async { turning = true } }
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                Text(title).font(Theme.pageTitle).foregroundStyle(Theme.textPrimary)
+                    .contentTransition(.numericText()).fixedSize(horizontal: false, vertical: true)
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: Theme.Space.m)
+            actions()
+        }
+        .padding(Theme.Space.l + 4)
+        .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(color.opacity(0.06)))
+        .overlay(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).strokeBorder(color.opacity(0.2)))
+        .animation(Theme.gentle.unlessReduced(reduceMotion), value: title)
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -117,7 +177,6 @@ struct AreaPage: View {
     @State private var confirmingFixes: [(AgentItem, Action)]?
     @State private var showHealthy = false
     @State private var search = ""
-    @FocusState private var searchFocused: Bool
 
     var items: [AgentItem] {
         let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -133,79 +192,58 @@ struct AreaPage: View {
             query.isEmpty || [$0.subject, $0.message, $0.fix ?? "", $0.source ?? "", $0.agent].joined(separator: " ").localizedCaseInsensitiveContains(query)
         }
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Theme.Space.l) {
                 header(problems)
-                if area == .skills || area == .mcp {
-                    Picker(tr("Text encoding"), selection: Binding(get: { scanner.tokenEncoding }, set: { scanner.selectEncoding($0) })) {
-                        Text(tr("Heuristic")).tag(TextEncoding.heuristic)
-                        Text("cl100k_base").tag(TextEncoding.cl100k)
-                        Text("o200k_base").tag(TextEncoding.o200k)
-                    }.disabled(scanner.busy)
-                    Text(tr("Reference encodings count ordinary text locally, not a model’s full prompt or invoice. No model name is inferred.")).font(.caption).foregroundStyle(.secondary)
-                }
-                if area == .skills {
-                    HStack {
-                        Text(scanner.project?.path ?? tr("User Skill context only")).font(.caption).textSelection(.enabled)
-                        Spacer()
-                        Button(tr("Choose Skill project…")) { chooseProject() }.disabled(scanner.busy)
-                        if scanner.project != nil { Button(tr("User scope")) { scanner.selectProject(nil) }.disabled(scanner.busy) }
-                    }
-                    if let report = scanner.report { SkillContextCard(items: report.items.filter { $0.area == .skills }) }
-                }
-                if area == .mcp {
-                    MCPBatchInspectButton(model: scanner.mcpBatch, store: scanner.mcpDefinitions, items: scanner.report?.items ?? [], encoding: scanner.tokenEncoding, busy: scanner.busy)
-                    MCPDefinitionSummaryPanel(store: scanner.mcpDefinitions, items: scanner.report?.items ?? [], encoding: scanner.tokenEncoding, busy: scanner.mcpBatchRunning)
-                }
-                if area == .mcp || area == .skills { ToolUsagePanel(model: scanner.toolUsage, kind: area == .mcp ? "mcp" : "skill", encoding: scanner.tokenEncoding) }
-                if area == .mcp || area == .skills { TaskComparisonPanel(model: scanner.taskComparison, kind: area == .mcp ? "mcp" : "skill") }
                 DiagnosticScanControl(scanner: scanner)
-                if !scanner.history.isEmpty { AgentActivity(scanner: scanner) }
                 if problems.isEmpty && !notes.contains(where: { $0.severity == .error || $0.severity == .warning }) {
-                    HStack(spacing: 10) {
-                        let checking = scanner.scanning && scanner.report == nil
-                        let empty = items.isEmpty
-                        Image(systemName: checking ? "hourglass" : empty ? "magnifyingglass" : area == .mcp ? "info.circle" : "checkmark.seal.fill")
-                            .font(.title2).foregroundStyle(checking || empty || area == .mcp ? Color.secondary : Color.green)
-                        Text(checking ? tr(scanner.stopRequested ? "Stopping check…" : "Checking your AI agents…") : scanner.stopped && scanner.report == nil ? tr("Check stopped") : empty && !query.isEmpty ? tr("No matching items") : empty ? tr("No items to check") : area == .mcp ? tr("No configuration problems detected. Connection and tool behavior are not verified by this scan.") : tr("Nothing to fix here.")).font(.system(size: 15, weight: .medium)).foregroundStyle(.white.opacity(0.85))
+                    let checking = scanner.scanning && scanner.report == nil
+                    let empty = items.isEmpty
+                    if checking {
+                        SkeletonList(rows: 4)
+                    } else {
+                        HStack(spacing: Theme.Space.m) {
+                            Image(systemName: empty ? "magnifyingglass" : area == .mcp ? "info.circle" : "checkmark.seal.fill")
+                                .font(.system(size: 18)).foregroundStyle(empty || area == .mcp ? Theme.textTertiary : Theme.good)
+                            Text(scanner.stopped && scanner.report == nil ? tr("Check stopped") : empty && !query.isEmpty ? tr("No matching items") : empty ? tr("No items to check") : area == .mcp ? tr("No configuration problems detected. Connection and tool behavior are not verified by this scan.") : tr("Nothing to fix here."))
+                                .font(Theme.rowTitle).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(Theme.Space.l).frame(maxWidth: .infinity, alignment: .leading).glass()
                     }
-                    .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass()
                 }
                 ForEach(Array(notes.enumerated()), id: \.offset) { _, finding in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label(finding.subject, systemImage: finding.severity == .error ? "xmark.octagon" : finding.severity == .warning ? "exclamationmark.triangle" : "info.circle")
-                            .font(.headline).foregroundStyle(AgentStyle.color(finding.severity))
-                        Text(finding.message).textSelection(.enabled)
-                        if let fix = finding.fix { Text(fix).font(.callout).foregroundStyle(.secondary).textSelection(.enabled) }
-                        if let source = finding.source { Text(source).font(.caption).foregroundStyle(.secondary).textSelection(.enabled) }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(18).glass()
-                }
-                ForEach(problems) { ProblemCard(scanner: scanner, item: $0) }
-                if !rest.isEmpty {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showHealthy.toggle() } } label: {
-                            HStack {
-                                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                                Text(area == .mcp ? tr("%1$@ configuration entries", String(rest.count)) : tr("%1$@ without detected problems", String(rest.count))).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
-                                Spacer()
-                                Image(systemName: "chevron.down").rotationEffect(.degrees(showHealthy ? 180 : 0)).foregroundStyle(.white.opacity(0.5))
-                            }
-                            .padding(16).contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        if showHealthy || !search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            ForEach(rest) { i in
-                                Rectangle().fill(Color.white.opacity(0.06)).frame(height: 1)
-                                HealthyRow(scanner: scanner, item: i).padding(.horizontal, 16)
-                            }
+                    HStack(alignment: .top, spacing: Theme.Space.m) {
+                        Image(systemName: finding.severity == .error ? "xmark.octagon" : finding.severity == .warning ? "exclamationmark.triangle" : "info.circle")
+                            .font(.system(size: 14)).foregroundStyle(severityColor(finding.severity)).frame(width: 18)
+                        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                            Text(finding.subject).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
+                            Text(finding.message).font(Theme.secondary).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                            if let fix = finding.fix { Text(fix).font(Theme.secondary).foregroundStyle(Theme.textTertiary).textSelection(.enabled) }
+                            if let source = finding.source { Text(source).font(Theme.mono).foregroundStyle(Theme.textTertiary).textSelection(.enabled) }
                         }
                     }
-                    .glass()
-                    .padding(.top, 6)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(Theme.Space.l).glass()
                 }
+                if !problems.isEmpty {
+                    SectionHeader(title: problems.count == 1 ? tr("1 problem found") : tr("%1$@ problems", String(problems.count)))
+                    VStack(spacing: Theme.Space.s) { ForEach(problems) { ProblemCard(scanner: scanner, item: $0) } }
+                }
+                if !rest.isEmpty { healthy(rest) }
+                if area == .skills || area == .mcp {
+                    // Measurements come after what needs fixing: they explain, they do not ask for action.
+                    SectionHeader(title: tr("Analysis")).padding(.top, Theme.Space.s)
+                    if area == .skills || area == .mcp { tools }
+                    if area == .skills, let report = scanner.report { SkillContextCard(items: report.items.filter { $0.area == .skills }) }
+                    if area == .mcp {
+                        MCPDefinitionSummaryPanel(store: scanner.mcpDefinitions, items: scanner.report?.items ?? [], encoding: scanner.tokenEncoding, busy: scanner.mcpBatchRunning)
+                    }
+                    if area == .mcp || area == .skills { ToolUsagePanel(model: scanner.toolUsage, kind: area == .mcp ? "mcp" : "skill", encoding: scanner.tokenEncoding) }
+                    if area == .mcp || area == .skills { TaskComparisonPanel(model: scanner.taskComparison, kind: area == .mcp ? "mcp" : "skill") }
+                }
+                if !scanner.history.isEmpty { AgentActivity(scanner: scanner) }
             }
-            .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 36)
-            .frame(maxWidth: 880, alignment: .leading)
+            .frame(maxWidth: Theme.pageWidth, alignment: .leading)
+            .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, Theme.Space.xxl)
             .frame(maxWidth: .infinity)
         }
         .scrollContentBackground(.hidden)
@@ -219,6 +257,70 @@ struct AreaPage: View {
                          confirmTitle: tr("Fix"), confirm: { confirmingFixes = nil; scanner.performAll(plans) },
                          cancel: { confirmingFixes = nil })
         }
+    }
+
+    /// Token encoding, the Skill project and the MCP batch check: one toolbar panel.
+    var tools: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: Theme.Space.s) {
+                Text(tr("Text encoding")).font(Theme.label).foregroundStyle(Theme.textTertiary)
+                ThermoTabs(selection: Binding(get: { scanner.tokenEncoding }, set: { scanner.selectEncoding($0) }),
+                           options: [(TextEncoding.heuristic, tr("Heuristic")), (.cl100k, "cl100k_base"), (.o200k, "o200k_base")],
+                           size: .small, label: tr("Text encoding"))
+                    .disabled(scanner.busy)
+                InfoButton(text: tr("Reference encodings count ordinary text locally, not a model’s full prompt or invoice. No model name is inferred."))
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
+            if area == .skills {
+                InspectorDivider(inset: 0)
+                HStack(spacing: Theme.Space.s) {
+                    Image(systemName: "folder").font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+                    Text(scanner.project?.path ?? tr("User Skill context only")).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
+                    Spacer()
+                    if scanner.project != nil {
+                        Button(tr("User scope")) { scanner.selectProject(nil) }.buttonStyle(PillButtonStyle()).controlSize(.small).disabled(scanner.busy)
+                    }
+                    Button(tr("Choose Skill project…")) { chooseProject() }.buttonStyle(PillButtonStyle()).controlSize(.small).disabled(scanner.busy)
+                }
+                .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
+            }
+            if area == .mcp {
+                InspectorDivider(inset: 0)
+                MCPBatchInspectButton(model: scanner.mcpBatch, store: scanner.mcpDefinitions, items: scanner.report?.items ?? [], encoding: scanner.tokenEncoding, busy: scanner.busy)
+                    .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
+            }
+        }
+        .glass()
+    }
+
+    func healthy(_ rest: [AgentItem]) -> some View {
+        let open = showHealthy || !search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return VStack(alignment: .leading, spacing: 0) {
+            Button { withAnimation(Theme.standard.unlessReduced(reduceMotion)) { showHealthy.toggle() } } label: {
+                HStack(spacing: Theme.Space.s) {
+                    Image(systemName: area == .mcp ? "list.bullet" : "checkmark.circle.fill")
+                        .foregroundStyle(area == .mcp ? Theme.textTertiary : Theme.good)
+                    Text(area == .mcp ? tr("%1$@ configuration entries", String(rest.count)) : tr("%1$@ without detected problems", String(rest.count)))
+                        .font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
+                    Spacer()
+                    DisclosureChevron(expanded: open)
+                }
+                .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m).contentShape(Rectangle())
+                .hoverHighlight()
+            }
+            .buttonStyle(.plain)
+            if open {
+                ForEach(rest) { i in
+                    InspectorDivider(inset: 44)
+                    HealthyRow(scanner: scanner, item: i).padding(.horizontal, Theme.Space.l)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .glass()
+        .clipShape(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
     }
 
     @MainActor
@@ -236,37 +338,24 @@ struct AreaPage: View {
     }
 
     func header(_ problems: [AgentItem]) -> some View {
-        HStack(alignment: .center, spacing: 18) {
-            IconTile(symbol: AgentStyle.icon(area), color: AgentStyle.tint(area), size: 72)
-            VStack(alignment: .leading, spacing: 6) {
-                Text(AgentStyle.title(area)).font(.system(size: 28, weight: .bold, design: .rounded)).foregroundStyle(.white)
-                Text(AgentStyle.explanation(area)).font(.system(size: 14)).foregroundStyle(.white.opacity(0.6))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 10) {
-                let fixes = problems.compactMap { i in i.actions.first { $0.kind == .fix && $0.bulk }.map { (i, $0) } }
+        let fixes = problems.compactMap { i in i.actions.first { $0.kind == .fix && $0.bulk }.map { (i, $0) } }
+        return PageHeader(title: AgentStyle.title(area), subtitle: AgentStyle.explanation(area)) {
+            HStack(spacing: Theme.Space.s) {
+                SearchField(text: $search, width: 180)
                 if fixes.count > 1 {
-                    Button(tr("Fix %1$@", String(fixes.count))) { confirmingFixes = fixes }.buttonStyle(PillButtonStyle(prominent: true)).disabled(scanner.busy)
+                    Button(tr("Fix %1$@", String(fixes.count))) { confirmingFixes = fixes }
+                        .buttonStyle(PillButtonStyle(prominent: true)).disabled(scanner.busy)
                 }
-                HStack(spacing: 6) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(.white.opacity(0.5))
-                    TextField(tr("Search"), text: $search).textFieldStyle(.plain).foregroundStyle(.white)
-                        .focused($searchFocused).accessibilityLabel(tr("Search"))
-                    if !search.isEmpty {
-                        Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }
-                            .buttonStyle(.plain).accessibilityLabel(tr("Clear search")).help(tr("Clear search"))
-                    }
-                }
-                .padding(.horizontal, 10).padding(.vertical, 6).frame(width: 170)
-                .background(Capsule().fill(Color.white.opacity(0.08)))
-                .background(Button("") {
-                    guard MainWindow.window?.attachedSheet == nil else { return }
-                    searchFocused = true
-                }.keyboardShortcut("f", modifiers: .command).frame(width: 0, height: 0).opacity(0).accessibilityHidden(true))
             }
         }
-        .padding(.bottom, 8)
+    }
+}
+
+func severityColor(_ s: Severity?) -> Color {
+    switch s {
+    case .error?: return Theme.danger
+    case .warning?: return Theme.caution
+    default: return Theme.textSecondary
     }
 }
 
@@ -274,16 +363,20 @@ struct DiagnosticScanControl: View {
     @ObservedObject var scanner: AgentScanner
     var body: some View {
         if scanner.scanning {
-            HStack {
-                if scanner.stopRequested { Text(tr("Stopping check…")) }
+            HStack(spacing: Theme.Space.s) {
+                ProgressView().controlSize(.small)
+                Text(scanner.stopRequested ? tr("Stopping check…") : tr("Checking your AI agents…"))
+                    .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                 Spacer()
-                Button(tr("Stop checking")) { scanner.stopScan() }.disabled(scanner.stopRequested)
+                Button(tr("Stop checking")) { scanner.stopScan() }.buttonStyle(PillButtonStyle()).controlSize(.small)
+                    .disabled(scanner.stopRequested)
             }
         } else if scanner.stopped {
-            HStack {
-                Text(tr(scanner.report == nil ? "No complete results were produced. Check again when ready." : "Previous complete results are kept. Check again to refresh them.")).font(.callout).foregroundStyle(.secondary)
+            HStack(spacing: Theme.Space.s) {
+                Text(tr(scanner.report == nil ? "No complete results were produced. Check again when ready." : "Previous complete results are kept. Check again to refresh them."))
+                    .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                 Spacer()
-                Button(tr("Check Again")) { scanner.scan() }.disabled(scanner.busy)
+                Button(tr("Check Again")) { scanner.scan() }.buttonStyle(PillButtonStyle()).controlSize(.small).disabled(scanner.busy)
             }
         }
     }
@@ -296,84 +389,81 @@ private struct ProblemCard: View {
     let item: AgentItem
     @State private var details = false
     @State private var confirming: Action?
-    @State private var hover = false
 
     var findings: [Finding] { scanner.report?.findings(for: item) ?? [] }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 14) {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            HStack(alignment: .top, spacing: Theme.Space.m) {
                 ZStack {
-                    Circle().fill(AgentStyle.color(item.severity).opacity(0.18)).frame(width: 34, height: 34)
+                    Circle().fill(severityColor(item.severity).opacity(0.16)).frame(width: 26, height: 26)
                     Image(systemName: item.severity == .error ? "xmark" : "exclamationmark")
-                        .font(.system(size: 14, weight: .bold)).foregroundStyle(AgentStyle.color(item.severity))
+                        .font(.system(size: 11, weight: .bold)).foregroundStyle(severityColor(item.severity))
                 }
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Text(item.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white).lineLimit(1).truncationMode(.middle)
-                        if item.agent != "system" {
-                            Text(item.agent).font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.7))
-                                .padding(.horizontal, 6).padding(.vertical, 1).background(Capsule().fill(Color.white.opacity(0.1)))
-                        }
+                .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    HStack(spacing: Theme.Space.s) {
+                        Text(item.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary).lineLimit(1).truncationMode(.middle)
+                        if item.agent != "system" { StatusTag(text: item.agent) }
                     }
                     if let f = findings.first {
-                        Text(f.message).font(.system(size: 13)).foregroundStyle(.white.opacity(0.72)).fixedSize(horizontal: false, vertical: true)
+                        Text(f.message).font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                Spacer(minLength: 10)
+                Spacer(minLength: Theme.Space.s)
                 actions
             }
             if let last = scanner.lastResult, last.item == item.id {
                 Label(last.result.ok ? tr("%1$@: done", last.action) : tr("%1$@: failed", last.action),
                       systemImage: last.result.ok ? "checkmark.circle.fill" : "xmark.octagon.fill")
-                    .font(.system(size: 12, weight: .medium)).foregroundStyle(last.result.ok ? .green : .red).padding(.leading, 48)
+                    .font(Theme.caption.weight(.medium)).foregroundStyle(last.result.ok ? Theme.good : Theme.danger).padding(.leading, 38)
             }
-            if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy, encoding: scanner.tokenEncoding, store: scanner.mcpDefinitions).padding(.leading, 48) }
-            Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { details.toggle() } } label: {
-                HStack(spacing: 4) {
-                    Text(tr("Details")).font(.system(size: 12, weight: .medium))
-                    Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold)).rotationEffect(.degrees(details ? 180 : 0))
+            Button { withAnimation(Theme.standard.unlessReduced(reduceMotion)) { details.toggle() } } label: {
+                HStack(spacing: 2) {
+                    Text(tr("Details")).font(Theme.caption.weight(.medium))
+                    DisclosureChevron(expanded: details).scaleEffect(0.85)
                 }
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(Theme.textTertiary)
             }
-            .buttonStyle(.plain).padding(.leading, 48)
+            .buttonStyle(.plain).padding(.leading, 38)
             if details {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
                     ForEach(Array(findings.enumerated()), id: \.offset) { i, f in
-                        if i > 0 { Text(f.message).font(.system(size: 12)).foregroundStyle(.white.opacity(0.75)).fixedSize(horizontal: false, vertical: true) }
+                        if i > 0 { Text(f.message).font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true) }
                         if let fix = f.fix {
-                            Text(tr("Suggestion: %1$@", fix)).font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).fixedSize(horizontal: false, vertical: true)
+                            Text(tr("Suggestion: %1$@", fix)).font(Theme.secondary).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                         }
                         if let source = f.source, source != item.source {
-                            Text(source).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                            Text(source).font(Theme.mono).foregroundStyle(Theme.textTertiary).textSelection(.enabled)
                         }
                     }
-                    Text(item.detail).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white.opacity(0.55)).textSelection(.enabled)
-                        .padding(8).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.black.opacity(0.25)))
+                    Text(item.detail).font(Theme.mono).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
+                        .padding(Theme.Space.s).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: Theme.radiusSmall, style: .continuous).fill(Color.black.opacity(0.25)))
                     if let footprint = item.skillFootprint {
-                        Text(footprint.summary).font(.caption.monospaced()).textSelection(.enabled)
+                        Text(footprint.summary).font(Theme.mono).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
                     }
                     if let src = item.source {
                         HStack {
-                            Text(src).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white.opacity(0.4)).lineLimit(1).truncationMode(.middle)
+                            Text(src).font(Theme.mono).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
                             Spacer()
                             let path = (src as NSString).expandingTildeInPath
                             if FileManager.default.fileExists(atPath: path) {
                                 Button(tr("Reveal in Finder")) { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) }
-                                    .buttonStyle(.link).font(.system(size: 11))
+                                    .buttonStyle(.plain).font(Theme.caption.weight(.medium)).foregroundStyle(Theme.accent)
                             }
                         }
                     }
                 }
-                .padding(.leading, 48)
-                .transition(.opacity)
+                .padding(.leading, 38)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(18)
-        .glass(highlighted: hover)
-        .onHover { hover = $0 }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: hover)
+        .padding(Theme.Space.l)
+        .glass()
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 1.5).fill(severityColor(item.severity).opacity(0.8)).frame(width: 3).padding(.vertical, Theme.Space.m)
+        }
         .sheet(item: $confirming) { a in
             ConfirmAction(action: a, item: item) { confirming = nil; scanner.perform(a, on: item) } cancel: { confirming = nil }
         }
@@ -382,25 +472,37 @@ private struct ProblemCard: View {
     @ViewBuilder var actions: some View {
         let primary = item.primaryDiagnosticAction
         let others = item.actions.filter { $0.id != primary?.id }
-        HStack(spacing: 8) {
+        HStack(spacing: Theme.Space.s) {
+            if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy, encoding: scanner.tokenEncoding, store: scanner.mcpDefinitions) }
             if let p = primary {
                 Button { confirming = p } label: {
                     HStack(spacing: 5) {
-                        if scanner.running == p.id { ProgressView().controlSize(.small).tint(.white) }
+                        if scanner.running == p.id { ProgressView().controlSize(.mini).tint(.white) }
                         Text(p.title)
                     }
                 }
-                .buttonStyle(PillButtonStyle(prominent: p.kind == .fix && p.bulk))
+                .buttonStyle(PillButtonStyle(prominent: p.kind == .fix && p.bulk)).controlSize(.small)
                 .disabled(scanner.busy)
             }
-            if !others.isEmpty {
-                Menu {
-                    ForEach(others) { a in Button(a.title, role: a.kind == .uninstall ? .destructive : nil) { confirming = a } }
-                } label: { Image(systemName: "ellipsis").foregroundStyle(.white.opacity(0.7)) }
-                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                    .padding(6).background(Circle().fill(Color.white.opacity(0.1))).disabled(scanner.busy)
-            }
+            if !others.isEmpty { MoreMenu(actions: others, disabled: scanner.busy) { confirming = $0 } }
         }
+    }
+}
+
+/// The "…" next to a row's main action, for the rest of its actions.
+private struct MoreMenu: View {
+    let actions: [Action]
+    let disabled: Bool
+    let pick: (Action) -> Void
+    var body: some View {
+        Menu {
+            ForEach(actions) { a in Button(a.title, role: a.kind == .uninstall ? .destructive : nil) { pick(a) } }
+        } label: { Image(systemName: "ellipsis").foregroundStyle(Theme.textSecondary) }
+            .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+            .frame(width: 26, height: 22)
+            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.white.opacity(0.075)))
+            .disabled(disabled)
+            .accessibilityLabel(tr("More actions"))
     }
 }
 
@@ -411,42 +513,36 @@ private struct HealthyRow: View {
     @State private var confirming: Action?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: Theme.Space.m) {
             Image(systemName: !item.enabled ? "minus.circle" : item.area == .mcp ? "questionmark.circle" : item.severity == .info ? "info.circle" : "checkmark.circle.fill")
-                .foregroundStyle(item.area == .mcp ? Color.secondary : item.enabled ? Color.green.opacity(0.85) : Color.white.opacity(0.35))
+                .font(.system(size: 13))
+                .foregroundStyle(item.area == .mcp ? Theme.textTertiary : item.enabled ? Theme.good.opacity(0.85) : Theme.textTertiary)
+                .frame(width: 16).padding(.top, 1)
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(item.name).font(.system(size: 13)).foregroundStyle(.white.opacity(item.enabled ? 0.92 : 0.5)).lineLimit(1).truncationMode(.middle)
-                    if item.agent != "system" {
-                        Text(item.agent).font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.55))
-                            .padding(.horizontal, 6).padding(.vertical, 1).background(Capsule().fill(Color.white.opacity(0.08)))
-                    }
-                    if !item.enabled { Text(tr("off")).font(.system(size: 10)).foregroundStyle(.white.opacity(0.4)) }
+                HStack(spacing: Theme.Space.s) {
+                    Text(item.name).font(Theme.body).foregroundStyle(item.enabled ? Theme.textPrimary : Theme.textTertiary).lineLimit(1).truncationMode(.middle)
+                    if item.agent != "system" { StatusTag(text: item.agent) }
+                    if !item.enabled { Text(tr("off")).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
                 }
-                Text(item.detail).font(.system(size: 11, design: .monospaced)).foregroundStyle(.white.opacity(0.4)).lineLimit(1).truncationMode(.middle)
+                Text(item.detail).font(Theme.mono).foregroundStyle(Theme.textTertiary).lineLimit(1).truncationMode(.middle)
                 if let footprint = item.skillFootprint {
-                    Text(footprint.summary).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                    Text(footprint.summary).font(Theme.mono).foregroundStyle(Theme.textTertiary).textSelection(.enabled)
                 }
                 let evidence = scanner.report?.findings(for: item) ?? []
                 if !evidence.isEmpty {
                     DisclosureGroup(tr("Details")) {
                         ForEach(Array(evidence.enumerated()), id: \.offset) { _, finding in
-                            Text(finding.message).font(.caption).textSelection(.enabled)
-                            if let source = finding.source { Text(source).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled) }
+                            Text(finding.message).font(Theme.caption).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
+                            if let source = finding.source { Text(source).font(Theme.mono).foregroundStyle(Theme.textTertiary).textSelection(.enabled) }
                         }
-                    }.font(.caption)
+                    }.font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 }
             }
             Spacer()
             if item.area == .mcp { MCPInspectButton(item: item, busy: scanner.busy, encoding: scanner.tokenEncoding, store: scanner.mcpDefinitions) }
-            if !item.actions.isEmpty {
-                Menu {
-                    ForEach(item.actions) { a in Button(a.title, role: a.kind == .uninstall ? .destructive : nil) { confirming = a } }
-                } label: { Image(systemName: "ellipsis").foregroundStyle(.white.opacity(0.6)) }
-                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().disabled(scanner.busy)
-            }
+            if !item.actions.isEmpty { MoreMenu(actions: item.actions, disabled: scanner.busy) { confirming = $0 } }
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, Theme.Space.s + 2)
         .sheet(item: $confirming) { a in
             ConfirmAction(action: a, item: item) { confirming = nil; scanner.perform(a, on: item) } cancel: { confirming = nil }
         }
@@ -457,11 +553,13 @@ private struct HealthyRow: View {
 struct AgentActivity: View {
     @ObservedObject var scanner: AgentScanner
     var body: some View {
-        DisclosureGroup(tr("Recent actions (this session)")) {
-            VStack(spacing: 10) { ForEach(scanner.history) { AgentOutcomeRow(entry: $0) } }
-                .padding(.top, 10)
+        DisclosureGroup {
+            VStack(spacing: Theme.Space.s) { ForEach(scanner.history) { AgentOutcomeRow(entry: $0) } }
+                .padding(.top, Theme.Space.s)
+        } label: {
+            Text(tr("Recent actions (this session)")).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
         }
-        .padding(16).glass().frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Theme.Space.l).glass().frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -471,25 +569,25 @@ struct AgentOutcomeRow: View {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(Array(entry.result.log.enumerated()), id: \.offset) { _, line in
-                    Text(line).font(.caption.monospaced()).textSelection(.enabled)
+                    Text(line).font(Theme.mono).foregroundStyle(Theme.textSecondary).textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 ForEach(entry.result.backups, id: \.self) { path in
-                    Text(tr("Backup: %1$@", path)).font(.caption.monospaced()).textSelection(.enabled)
+                    Text(tr("Backup: %1$@", path)).font(Theme.mono).foregroundStyle(Theme.textTertiary).textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }.padding(.top, 8)
         } label: {
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: entry.result.ok ? "checkmark.circle.fill" : "xmark.octagon.fill")
-                    .foregroundStyle(entry.result.ok ? .green : .orange)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(entry.name).font(.callout.weight(.semibold))
+                    .foregroundStyle(entry.result.ok ? Theme.good : Theme.caution)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(entry.name).font(Theme.rowTitle).foregroundStyle(Theme.textPrimary)
                     Text(entry.action + " · " + (entry.result.ok ? tr("Action completed") : tr("Action failed")))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 }
                 Spacer()
-                Text(entry.time, style: .time).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                Text(entry.time, style: .time).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
             }
         }
     }
