@@ -1,0 +1,302 @@
+{
+  "checkedAt": "2026-10-19T21:26:26.056466+00:00",
+  "retired": [
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-stack-r2-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-stack-r2-mac190/Thermo-1.1.39-566-candidate.zip",
+      "ZIP_SHA256": "aecdc8fec8195af3cc9eee7b80e9944e1768f5ff9e6c9e58cd63f5adc74b7272",
+      "manifestRetained": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-stack-r2-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-stack-r2-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-stack-r2-mac190/Thermo-1.1.39-566-candidate.zip",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-stack-r2-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-discovery-r3-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-discovery-r3-mac190/Thermo-1.1.39-566-candidate.zip",
+      "ZIP_SHA256": "87553e418bf5248cae51ded0401e2005d88080460688e81e05bb719971773074",
+      "manifestRetained": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-discovery-r3-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-discovery-r3-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-discovery-r3-mac190/Thermo-1.1.39-566-candidate.zip",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-discovery-r3-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/Thermo-1.1.39-566-candidate.zip",
+      "ZIP_SHA256": "96f22fbed9dc7eff37de75fa336a4476d44263cf9b9deb127781b18bd26f36d3",
+      "manifestRetained": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/Thermo-1.1.39-566-candidate.zip",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-reliable-sampling-r4-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-visible-sampling-r5-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-visible-sampling-r5-mac190/Thermo-1.1.39-566-candidate.zip",
+      "ZIP_SHA256": "77381b77d47a1717acbb1cdf4fb11408b25302acd621f36cad2405e409727280",
+      "manifestRetained": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-visible-sampling-r5-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-visible-sampling-r5-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-visible-sampling-r5-mac190/Thermo-1.1.39-566-candidate.zip",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.39-566-visible-sampling-r5-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-discovery-r6-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-discovery-r6-mac190/Thermo-1.1.40-566-candidate.zip",
+      "ZIP_SHA256": "9ab4262334921ca21033f539abed9d1ea15284c5af6774d57f2ae97ba8fb71ac",
+      "manifestRetained": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-discovery-r6-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-discovery-r6-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-discovery-r6-mac190/Thermo-1.1.40-566-candidate.zip",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-discovery-r6-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-panel-access-r7-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-panel-access-r7-mac190/Thermo-1.1.40-566-candidate.zip",
+      "ZIP_SHA256": "cfeb386dda3288f41ea072ce9019aeb2c7a4e3b531cc95d8ad2164380a636529",
+      "manifestRetained": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-panel-access-r7-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-panel-access-r7-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-panel-access-r7-mac190/Thermo-1.1.40-566-candidate.zip",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-panel-access-r7-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-panel-dismiss-r8-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-panel-dismiss-r8-mac190/Thermo-1.1.40-566-candidate.zip",
+      "ZIP_SHA256": "d16c79ae0752da27361caf5bafabf278ed363f634167d2c2892369ec5beddbc3",
+      "manifestRetained": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-panel-dismiss-r8-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-panel-dismiss-r8-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-panel-dismiss-r8-mac190/Thermo-1.1.40-566-candidate.zip",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-panel-dismiss-r8-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-awake-power-r9-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-awake-power-r9-mac190/Thermo-1.1.40-566-candidate.zip",
+      "ZIP_SHA256": "075692e5531a4fdff2a34d01ce6d620333448f4283b1a15083b0a3759607dbcc",
+      "manifestRetained": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-awake-power-r9-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-awake-power-r9-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-awake-power-r9-mac190/Thermo-1.1.40-566-candidate.zip",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-awake-power-r9-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-awake-deadline-r10-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-awake-deadline-r10-mac190/Thermo-1.1.40-566-candidate.zip",
+      "ZIP_SHA256": "daff34243f2e4fbda0ef2dbf296f851d0e36b20a4bedff370ef80cb7f9a9b8c9",
+      "manifestRetained": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-awake-deadline-r10-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-awake-deadline-r10-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-awake-deadline-r10-mac190/Thermo-1.1.40-566-candidate.zip",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-awake-deadline-r10-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/Thermo-1.1.40-566-candidate.zip",
+      "ZIP_SHA256": "e5fdf357938e77708cb996e6e9d87e65dceefaaa1c7097f1bde84f1409fc58de",
+      "manifestRetained": "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/Thermo-1.1.40-566-candidate.zip",
+          "/Users/leo/github.com/thermo-clean-screen-316d733d/dist/mole-review-1.1.40-566-fan-control-state-r11-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-mole-integration-af047a7e/dist/mole-review-1.1.40-606-main-integration-r12-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-mole-integration-af047a7e/dist/mole-review-1.1.40-606-main-integration-r12-mac190/Thermo-1.1.40-606-candidate.zip",
+      "ZIP_SHA256": "e8cbc4b952a9bf6788c4d821e0c9836c0a6b3674565145fb5f525e824104399b",
+      "manifestRetained": "/Users/leo/github.com/thermo-mole-integration-af047a7e/dist/mole-review-1.1.40-606-main-integration-r12-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-mole-integration-af047a7e/dist/mole-review-1.1.40-606-main-integration-r12-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-mole-integration-af047a7e/dist/mole-review-1.1.40-606-main-integration-r12-mac190/Thermo-1.1.40-606-candidate.zip",
+          "/Users/leo/github.com/thermo-mole-integration-af047a7e/dist/mole-review-1.1.40-606-main-integration-r12-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611-history-r14-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611-history-r14-mac190/Thermo-1.1.40-611-candidate.zip",
+      "ZIP_SHA256": "d16ab4eb4f21ad99810d8c80dfbddd22f61a424e24b1cb0b742c4f748e2b98fc",
+      "manifestRetained": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611-history-r14-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611-history-r14-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611-history-r14-mac190/Thermo-1.1.40-611-candidate.zip",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611-history-r14-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.15-history-r15-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.15-history-r15-mac190/Thermo-1.1.40-611.15-candidate.zip",
+      "ZIP_SHA256": "e34c570308debc130a05978591ea53d57405cbd71ed1e865f6f3a4426c782736",
+      "manifestRetained": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.15-history-r15-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.15-history-r15-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.15-history-r15-mac190/Thermo-1.1.40-611.15-candidate.zip",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.15-history-r15-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    },
+    {
+      "removedDuplicateExtraction": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.16-diagnostics-r16-mac190/archive-verification",
+      "restorationZIP": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.16-diagnostics-r16-mac190/Thermo-1.1.40-611.16-candidate.zip",
+      "ZIP_SHA256": "b31f8563ca25be47ed56f7b9f2e9c6505fc834a863243bf6bda6e33d81f2ba13",
+      "manifestRetained": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.16-diagnostics-r16-mac190/app-manifest.json",
+      "contentModesLinksAndSignatureVerified": true,
+      "restoreCommands": [
+        [
+          "mkdir",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.16-diagnostics-r16-mac190/archive-verification"
+        ],
+        [
+          "ditto",
+          "-x",
+          "-k",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.16-diagnostics-r16-mac190/Thermo-1.1.40-611.16-candidate.zip",
+          "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.16-diagnostics-r16-mac190/archive-verification"
+        ]
+      ],
+      "originalZIPAndOtherArtifactsRetained": true
+    }
+  ],
+  "currentAppAndNamedRollbackCopiesUntouched": true,
+  "observedAvailableBytesAfter": 2468970496,
+  "notAReclaimedByteClaim": true
+}

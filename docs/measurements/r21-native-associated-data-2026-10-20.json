@@ -1,0 +1,144 @@
+{
+  "checkedAt": "2026-10-19T23:54:04.496678+00:00",
+  "build": "611.21",
+  "installedBinary": "/Applications/Thermo.app/Contents/MacOS/Thermo",
+  "fixture": {
+    "root": "/Users/leo/.local/state/thermo-qa/r21-data-d1bb317d42da",
+    "fixtureHome": "/Users/leo/.local/state/thermo-qa/r21-data-d1bb317d42da/Home",
+    "app": "/Users/leo/.local/state/thermo-qa/r21-data-d1bb317d42da/Home/Applications/OwnedDataR21.app",
+    "bundleID": "com.example.owned-data-r21-8ccb7e75",
+    "cache": "/Users/leo/.local/state/thermo-qa/r21-data-d1bb317d42da/Home/Library/Caches/com.example.owned-data-r21-8ccb7e75",
+    "logs": "/Users/leo/.local/state/thermo-qa/r21-data-d1bb317d42da/Home/Library/Logs/com.example.owned-data-r21-8ccb7e75"
+  },
+  "nativeCLI": {
+    "build": "611.21",
+    "CLIExit": 3,
+    "newDirectoryReviewKeys": [
+      "/Users/leo/.local/state/thermo-qa/r21-data-d1bb317d42da/Home/Library/Caches/com.example.owned-data-r21-8ccb7e75",
+      "/Users/leo/.local/state/thermo-qa/r21-data-d1bb317d42da/Home/Library/Logs/com.example.owned-data-r21-8ccb7e75"
+    ],
+    "appTreeNotTraversedInDataOnlyMode": true,
+    "appBytesAndIdentitiesUnchanged": true,
+    "unmodifiedLogsBytesAndIdentitiesUnchanged": true,
+    "changedCacheRootMetadataUnchanged": true,
+    "changedCachePayloadPreserved": true,
+    "deepChangeReasonAndNothingMovedTitleVisible": true,
+    "onlyOwnedDirectoriesSelected": true,
+    "transcriptSHA256": "def509e87fb4d63d863fb5ba4015eca06f16c19750c7ef7b81c526ee1f25fb39"
+  },
+  "nativePartial": {
+    "firstCacheMoved": true,
+    "changedLogsKeptAtOriginal": true,
+    "appUnchanged": true,
+    "watcherWindowConfirmed": true,
+    "logsRootMetadataUnchangedDuringMutation": true,
+    "guiPartialMoveAndReasonVisible": true
+  },
+  "partialRestore": {
+    "appBytesModesAndIdentitiesUnchanged": true,
+    "cacheBytesModesAndIdentitiesRestored": true,
+    "modifiedLogsBytesModesAndIdentitiesKept": true,
+    "restoredCount": "1/1",
+    "batch": "BC5E1C09-E267-4DF2-A67F-501A856C10BB"
+  },
+  "freshFullRestore": {
+    "bothDataDirectoriesMovedAfterFreshReview": true,
+    "GUIRestore": "2/2",
+    "allAppCacheLogsBytesModesAndIdentitiesPreserved": true,
+    "repeatPreviewAlreadyRestored": true,
+    "trashBatch": "3491E5FF-FD26-445F-AE60-A54FA0AE7A9A",
+    "trashEmptied": false
+  },
+  "watcher": {
+    "pid": 55421,
+    "registered": true,
+    "first": "/Users/leo/.local/state/thermo-qa/r21-data-d1bb317d42da/Home/Library/Caches/com.example.owned-data-r21-8ccb7e75",
+    "later": "/Users/leo/.local/state/thermo-qa/r21-data-d1bb317d42da/Home/Library/Logs/com.example.owned-data-r21-8ccb7e75",
+    "firstIdentity": [
+      16777233,
+      901909947
+    ],
+    "laterRootBefore": [
+      16777233,
+      901909952,
+      16877,
+      96,
+      1792452517420470317,
+      1792452517420470317
+    ],
+    "atReady": 1792453670.227336,
+    "eventAt": 1792453675.9056482,
+    "events": [
+      {
+        "ident": 3,
+        "flags": 17,
+        "fflags": 32
+      }
+    ],
+    "firstOriginalMissing": true,
+    "laterStillPresentBeforeWrite": true,
+    "writeCompletedAt": 1792453675.9064488,
+    "laterRootAfter": [
+      16777233,
+      901909952,
+      16877,
+      96,
+      1792452517420470317,
+      1792452517420470317
+    ],
+    "laterPayloadSHA256": "c5a3e27d1ed0f894843bca3a5473c4bf0f76a19b6830a2e491292591613a12bf",
+    "samePayloadInode": true,
+    "samePayloadSize": true,
+    "payloadMtimePreserved": true,
+    "passed": true
+  },
+  "watcherSetupFailure": {
+    "missingPythonO_EVTONLY": true,
+    "noCleanupSubmittedBeforeFix": true,
+    "correctedToReadOnlyDirectoryFD": true,
+    "initialLogRetained": true
+  },
+  "nativeGUI": {
+    "dataOnlyConfirmationKeptApp": true,
+    "cacheAndLogsOnly": true,
+    "partialTitleAndChangedLogsReasonVisible": true,
+    "partialHistoryBadge": true,
+    "partialRestoreCount": "1/1",
+    "freshSuccessRemovedTwoDirectories": true,
+    "fullRestoreCount": "2/2"
+  },
+  "privatePID": 33160,
+  "privateProcessExited": true,
+  "normalPID": 12883,
+  "normalAppRestored": true,
+  "realUserDataSelected": false,
+  "trashEmptied": false,
+  "codeOrProductionHooksAddedForNativeAcceptance": false,
+  "limits": [
+    "Owned synthetic App/Cache/Logs, not actual vendor concurrent writer.",
+    "File event watcher modifies owned later data after confirmed first rename; normal product UI submits the cleanup.",
+    "New recursive data protection does not yet cover orphan-data entry point."
+  ],
+  "evidenceSHA256": {
+    "fixture.json": "979a40a67b7b1df61dd3f61bde5f6312da621044e2bc57f87af3111ebb33fe02",
+    "native-partial-check.json": "80087068e1193e668518946448ef38da2358578d525dba2cd79bfe2a208ef5f7",
+    "gui-process.log": "784dea73f4c51768e57474ae13422b2ea39f2f1b7ac2d1a8ee3058e86f60be04",
+    "r21-cli-verification.json": "bfc4f002f57714d56229b18f30e2da7c1f02dbcadfd2645d50e370486f659956",
+    "partial-watcher-ready.json": "14f6f031a3e1dc94e7775d7e5577fbd98aef681ffe4f7e4b9867abf9c60fbb11",
+    "partial-restore-verification.json": "debc6aea1fbbec9c82866d2dfb39265183a29dbe11ecb336b37c0ae3ced2d281",
+    "full-repeat-restore-preview.json": "399ec681b6873dfe508108b320fe9e23caefac012cc887ef6d5f7396692caee7",
+    "r21-plan.json": "abbb054d3d87a43af4e17c28927d3eb6f36c928f5bddea88388bcea01ffb8d56",
+    "before-fresh-full-data-manifests.json": "5c0056fca913ced58d2a1836e8da18c919b6a46bb61c5adf745a3e83fbe75905",
+    "cli-stale-confirmation.log": "def509e87fb4d63d863fb5ba4015eca06f16c19750c7ef7b81c526ee1f25fb39",
+    "partial-watcher-result.json": "627ed3221d1b6b0e8fbfa79bea4f80306804d0d8e284ee5a1a02256e87bd2099",
+    "r20-preflight.stdout": "89754c6d113c32d965d4017f38914ee7a457b707b1b9134902e80f0beebcc920",
+    "partial-watcher-initialization-failed.log": "8cae3154d2c2e1fcdcd853b5466a08c7b3c5abe60c5920efe93f80b0c2f72b81",
+    "logs-after-partial-manifest.json": "22612958be854ba3636db2c96cb30a32d7b91cdcb223052edec341c40e16230e",
+    "partial-watcher.log": "a9f328debc9afae142fb9f5bfaeb7a1d8214a53866713f71b9c59fb729c86045",
+    "r20-preflight.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "full-data-restore-verification.json": "e4b26e0c143b07b1577fd146d20dbc6959aa478b52bd54066e07f0ca9a021279",
+    "gui-process.json": "fb7d96eccac7b03f2ba7268f56384c88a429ed5a556e5904a961903ea0f7f8fa",
+    "before-native-partial-manifests.json": "feaba6bdd6d0769375f758585e292ab1bc9e0aaefb64762c2e4b698ae3645cc2"
+  },
+  "overallParityEstablished": false
+}

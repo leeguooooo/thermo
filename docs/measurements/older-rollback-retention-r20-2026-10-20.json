@@ -1,0 +1,121 @@
+{
+  "checkedAt": "2026-10-19T23:13:30.550094+00:00",
+  "rows": [
+    {
+      "source": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.15-history-r15-mac190/pre-upgrade-r14-backup",
+      "retainedHost": "leo@192.168.0.190",
+      "retainedPath": "/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-1cd8401c8731/pre-upgrade-r14-backup",
+      "restoreCommand": [
+        "rsync",
+        "-a",
+        "leo@192.168.0.190:/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-1cd8401c8731/pre-upgrade-r14-backup",
+        "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.15-history-r15-mac190/"
+      ],
+      "manifestEntries": 165,
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-611.15-history-r15-mac190-pre-upgrade-r14-backup-on-190.json",
+      "receiptSHA256": "6e38e99764c44ebfd8931c4be4ef62644836ed0cf122337dd6f9df1de504b8f1"
+    },
+    {
+      "source": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.15-history-r15-mac190/displaced-r14.app",
+      "retainedHost": "leo@192.168.0.190",
+      "retainedPath": "/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-4fa903e3ba18/displaced-r14.app",
+      "restoreCommand": [
+        "rsync",
+        "-a",
+        "leo@192.168.0.190:/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-4fa903e3ba18/displaced-r14.app",
+        "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.15-history-r15-mac190/"
+      ],
+      "manifestEntries": 163,
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-611.15-history-r15-mac190-displaced-r14.app-on-190.json",
+      "receiptSHA256": "298c08b153d208f56b8241e10b656f78dc280e259323f1604300d9c9d37c0ce9"
+    },
+    {
+      "source": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.16-diagnostics-r16-mac190/pre-upgrade-r15-backup",
+      "retainedHost": "leo@192.168.0.190",
+      "retainedPath": "/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-a93b7d7e5618/pre-upgrade-r15-backup",
+      "restoreCommand": [
+        "rsync",
+        "-a",
+        "leo@192.168.0.190:/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-a93b7d7e5618/pre-upgrade-r15-backup",
+        "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.16-diagnostics-r16-mac190/"
+      ],
+      "manifestEntries": 165,
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-611.16-diagnostics-r16-mac190-pre-upgrade-r15-backup-on-190.json",
+      "receiptSHA256": "5ad9ed3f7834825cd186acf8545cc558ec424ac5cff7dd01f60ab8e3693257ff"
+    },
+    {
+      "source": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.16-diagnostics-r16-mac190/displaced-r15.app",
+      "retainedHost": "leo@192.168.0.190",
+      "retainedPath": "/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-aa8b475fee8c/displaced-r15.app",
+      "restoreCommand": [
+        "rsync",
+        "-a",
+        "leo@192.168.0.190:/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-aa8b475fee8c/displaced-r15.app",
+        "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.16-diagnostics-r16-mac190/"
+      ],
+      "manifestEntries": 163,
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-611.16-diagnostics-r16-mac190-displaced-r15.app-on-190.json",
+      "receiptSHA256": "2eb883b970142df4ec2f4d10b7ef508d978208969346a1ea01c1d5e9b9bfddba"
+    },
+    {
+      "source": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.17-update-guard-r17-mac190/pre-upgrade-r16-backup",
+      "retainedHost": "leo@192.168.0.190",
+      "retainedPath": "/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-38483ad1d408/pre-upgrade-r16-backup",
+      "restoreCommand": [
+        "rsync",
+        "-a",
+        "leo@192.168.0.190:/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-38483ad1d408/pre-upgrade-r16-backup",
+        "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.17-update-guard-r17-mac190/"
+      ],
+      "manifestEntries": 165,
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-611.17-update-guard-r17-mac190-pre-upgrade-r16-backup-on-190.json",
+      "receiptSHA256": "e71f8f222991ce6eceff50157a425d21d37a80f7494d4efe8ce53c36d794e39d"
+    },
+    {
+      "source": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.17-update-guard-r17-mac190/displaced-r16.app",
+      "retainedHost": "leo@192.168.0.190",
+      "retainedPath": "/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-eadcc0a0a6b0/displaced-r16.app",
+      "restoreCommand": [
+        "rsync",
+        "-a",
+        "leo@192.168.0.190:/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-eadcc0a0a6b0/displaced-r16.app",
+        "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.17-update-guard-r17-mac190/"
+      ],
+      "manifestEntries": 163,
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-611.17-update-guard-r17-mac190-displaced-r16.app-on-190.json",
+      "receiptSHA256": "36bf719fa568dff00b118e0349d1faf923207864c7a8e6a110adbc25befa5fa1"
+    },
+    {
+      "source": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.18-recovery-guard-r18-mac190/pre-upgrade-r17-backup",
+      "retainedHost": "leo@192.168.0.190",
+      "retainedPath": "/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-c7fb6ee5eafa/pre-upgrade-r17-backup",
+      "restoreCommand": [
+        "rsync",
+        "-a",
+        "leo@192.168.0.190:/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-c7fb6ee5eafa/pre-upgrade-r17-backup",
+        "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.18-recovery-guard-r18-mac190/"
+      ],
+      "manifestEntries": 165,
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-611.18-recovery-guard-r18-mac190-pre-upgrade-r17-backup-on-190.json",
+      "receiptSHA256": "0851d8871805314e998a197e41c05bc88032e46bcac618966d13d8def9c853d6"
+    },
+    {
+      "source": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.18-recovery-guard-r18-mac190/displaced-r17.app",
+      "retainedHost": "leo@192.168.0.190",
+      "retainedPath": "/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-82802e1de446/displaced-r17.app",
+      "restoreCommand": [
+        "rsync",
+        "-a",
+        "leo@192.168.0.190:/Users/leo/.local/state/thermo-qa/retained-candidates/rollback-82802e1de446/displaced-r17.app",
+        "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.18-recovery-guard-r18-mac190/"
+      ],
+      "manifestEntries": 163,
+      "receipt": "dist/remote-190/retained-mole-review-1.1.40-611.18-recovery-guard-r18-mac190-displaced-r17.app-on-190.json",
+      "receiptSHA256": "2eaebf9e44235bfe1a66c9d3ab4d7332756386f1e14b3a899ff9d127aca111c7"
+    }
+  ],
+  "currentInstalledAndImmediateRollbackUntouched": true,
+  "availableBytesObserved": 542642176,
+  "notAReclaimedByteClaim": true,
+  "scope": "Generated historical R14-R17 App rollback copies only; original ZIP/manifests retained and recorded restoration required before historical scripts reuse."
+}

@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-19T22:55:18.056859+00:00",
+  "problem": "App and CLI always displayed a moved-bytes headline even when no confirmed paths were moved.",
+  "baselineNativeGUI": "r19-native-uninstall-review-2026-10-20.json",
+  "baselineNativeCLI": {
+    "build": "611.19",
+    "cliExit": 3,
+    "nothingMovedHeadline": false,
+    "genericMovedZeroHeadline": true,
+    "bundleAndChangedResourcePreserved": true,
+    "transcriptSHA256": "c0a0f3f164d30b5e26500f42f3ff7b5deb98dfeab9ac7baa8abaf71d840bd59e",
+    "scope": "Actual CLI PTY review on owned app; resource changed while waiting, no move executed."
+  },
+  "change": "Choose the existing localized nothing-moved title when every removed list is empty. Preserve moved-byte title for any actual move, and preserve failure details, incomplete-size reporting, exit status and recovery handling.",
+  "newTestsAdded": false,
+  "validation": "1943 existing non-hardware tests, universal build with identical input, signed package/ZIP, installed GUI and CLI none-moved/success/restore accepted",
+  "runID": "4d609c2e-c217-4f0a-bbd9-75327d29b217",
+  "inputCommit": "d457aada212ac5d4ac9078a8e9abb662b21c809c",
+  "sourceSHA256": {
+    "Sources/ThermoApp/AppsPage.swift": "401557197fc44d1eb99470fdff6466281645bb54977447da3c2034141fe16da0",
+    "Sources/thermo/Apps.swift": "15342f51ceb7c117157630e4cfb51dee1d487b8ea7a98483d02c1e123690e060"
+  },
+  "sourceCommitted": false,
+  "overallParityEstablished": false,
+  "installedBuild": "611.20",
+  "installedEvidence": "app-outcome-r20-installed-2026-10-20.json",
+  "nativeEvidence": "r20-native-removal-outcome-2026-10-20.json"
+}

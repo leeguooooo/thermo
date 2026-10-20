@@ -394,7 +394,8 @@ public enum NativeUpdateTransaction {
         recover(id, home: home, review: review, processes: { ProcessTable.current(.init(cpu: false)) })
     }
 
-    static func recover(_ id: String, home: String, review: NativeUpdateReceipt? = nil, processes: () -> ProcessTable) -> NativeInstallResult {
+    static func recover(_ id: String, home: String, review: NativeUpdateReceipt? = nil, processes: () -> ProcessTable,
+                        afterSwap: () throws -> Void = {}) -> NativeInstallResult {
         var result = NativeInstallResult(outcome: "failed", message: "The previous app was not restored")
         defer {
             OperationJournal.record(OperationRecord(feature: "apps", action: "nativeRestore", subject: result.receipt?.target,
@@ -435,7 +436,18 @@ public enum NativeUpdateTransaction {
             record.phase = "restoring"; try save(record, home: home)
             try parent.swap(backup, name)
             do {
-                guard parent.entry(name) == record.originalID, try NativeBundleValidation.facts(record.target).seal == record.original.seal else { throw failure("Recovery verification failed") }
+                try afterSwap()
+                // A restored target alone does not prove that the newer app was
+                // preserved. Check both trees and their pinned directory identities
+                // before confirming recovery; leave concurrent changes intact.
+                guard parent.matches(),
+                      parent.entry(name) == record.originalID,
+                      parent.entry(backup) == record.replacementID,
+                      try NativeBundleValidation.facts(record.target).seal == record.original.seal,
+                      try NativeBundleValidation.facts(record.backup).seal == record.replacement.seal,
+                      parent.matches(),
+                      parent.entry(name) == record.originalID,
+                      parent.entry(backup) == record.replacementID else { throw failure("Recovery verification failed") }
                 record.phase = "restored"; try save(record, home: home)
                 result.outcome = "succeeded"; result.message = "The previous app was restored and verified; the newer copy was preserved"
             } catch {

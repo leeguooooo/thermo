@@ -3090,4 +3090,9 @@ let zhHans: [String: String] = [
     "macOS reports high thermal pressure. This sample does not measure CPU throttling or identify a heat source.": "系统报告热压力偏高。当前采样未测量 CPU 降频程度，也未确认热源。",
     "Current sample: %3$@ in %1$@ (associated with %2$@), about %4$@ logical CPUs.": "当前采样：目录 %1$@（关联 %2$@）中的 %3$@，CPU 用量约合 %4$@ 个逻辑 CPU。",
     "Current sample: %2$@ in %1$@, about %3$@ logical CPUs.": "当前采样：目录 %1$@ 中的 %2$@，CPU 用量约合 %3$@ 个逻辑 CPU。",
+    "Could not verify the complete app bundle; review again or use Finder": "无法完整核实应用目录，请重新审阅，或在 Finder 中处理。",
+    "The app contents changed or could not be verified; review the uninstall again": "应用内容已变化或无法核实，请重新审阅卸载。",
+    "Associated data changed or could not be fully verified; review it again": "关联数据已变化或无法完整核实，请重新审阅。",
+    "Residual data changed or could not be verified; scan and review it again": "残留数据已变化或无法核实，请重新扫描并审阅。",
+    "Reviewing selected residual data…": "正在审阅所选残留数据…",
 ]

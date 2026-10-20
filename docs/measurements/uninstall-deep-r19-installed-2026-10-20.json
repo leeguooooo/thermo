@@ -1,0 +1,65 @@
+{
+  "checkedAt": "2026-10-19T22:49:41.205071+00:00",
+  "candidate": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.19-uninstall-review-r19-mac190",
+  "sourceFreeze": {
+    "source": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+    "workingTree": "dirty",
+    "version": "1.1.40",
+    "build": "611.19",
+    "baseCommitCount": "611",
+    "reviewRevision": 19,
+    "privateReviewBuildOverride": true,
+    "testRun": "9fdd7f31-1367-4a11-9551-e7bec5603123",
+    "remoteBuildRun": "97c71632-6f2c-4396-9034-11b693fdc083",
+    "inputCommit": "5e793ff0f258a0fc951f7edc436e90050eb212d1",
+    "inputTree": "89264e4a1aa3d36196dbf78eb011b723b1a1f617",
+    "testInputCommit": "c5c29207cb9df8b7a4e5b903c8c04c436455f0a7",
+    "sourceFilesVerified": 613,
+    "sourceManifestSHA256": "0930dd33c1eac18a5ea3fdf2effcf3684da0bfc83bd46b7501a5319bfe5ba494",
+    "fullRegressionStatus": "passed",
+    "nonHardwareTests": 1943,
+    "nonHardwareFailures": 0,
+    "testAndBuildInputIdentical": false,
+    "testAndBuildSourceFilesIdentical": true,
+    "testCounts": {
+      "ThermoKitTests.xctest": 218,
+      "ThermoHelperTests.xctest": 30,
+      "ThermoCLITests.xctest": 125,
+      "ThermoAppTests.xctest": 346,
+      "CleanKitTests.xctest": 792,
+      "AgentDoctorTests.xctest": 362,
+      "AgentCoreTests.xctest": 70
+    },
+    "installed": true,
+    "published": false
+  },
+  "upgradeObservation": {
+    "samples": 22,
+    "consecutiveRecoveredChecks": 6,
+    "passed": true
+  },
+  "lifecycle": {
+    "samples": 23,
+    "functionalChecksPassed": true,
+    "longTermMemoryGrowthAssessed": false
+  },
+  "installedPID": "44175",
+  "nativeUninstallEvidence": "r19-native-uninstall-review-2026-10-20.json",
+  "reviewCostEvidence": "uninstall-review-cost-r19-2026-10-20.json",
+  "helperAndFanPolicyPreserved": true,
+  "chargingWritesPerformed": false,
+  "sourceCommitted": false,
+  "sourceMergedIntoMain": false,
+  "notarized": false,
+  "published": false,
+  "overallParityEstablished": false,
+  "evidenceSHA256": {
+    "source-freeze.json": "d3fca599f39b45bb89e1c8e532d4c710cd783df8e996f6a74e60a4d1ac4529ad",
+    "package-verification.json": "209b856209a66ae574412c14d2a65016b8f11b0e9abacfa36537000c1e1d0880",
+    "archive-verification.json": "1f7e8e0175966e0f709e2708d2bca150fed1bdedd13d99cf00ff410a80978a13",
+    "installed-verification.json": "4992589cf1c3723f5ea8c2944be2aa676b424bc86aa5a447b78323b06476607a",
+    "lifecycle-ordinary.json": "233de4d2cd0c78484d476f7687211878e68d87554ee84180bf993fad514b3078",
+    "upgrade-observations.json": "c96f4e75f009408ae2cf2c1b45e4371a88a44de5b2324bdb5ed243a6649326ef",
+    "local-installation.json": "4a00877149d29cbc60d72dfb7e6c582e8926bbc8720f5ba92376493dab8d43db"
+  }
+}

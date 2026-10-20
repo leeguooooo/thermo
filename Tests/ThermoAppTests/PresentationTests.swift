@@ -41,7 +41,10 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(panel.title, "Open Menu Panel")
         XCTAssertTrue(panel.target === target)
         let items = view?.submenu?.items ?? []
-        XCTAssertEqual(items.map(\.keyEquivalent), ["1", "2", "3", "4", "5", "6", ","])
+        XCTAssertEqual(items.map(\.keyEquivalent), ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "", "", ","])
+        for page in [MainPage.apps(.installed), .memory, .compute(false), .compute(true), .space(.browse), .claudeCleanup] {
+            XCTAssertEqual(items.filter { ($0.representedObject as? MainPage) == page }.count, 1)
+        }
         XCTAssertEqual(items.first?.representedObject as? MainPage, .overview)
         XCTAssertEqual(items.last?.representedObject as? MainPage, .settings)
         L10n.override = .simplifiedChinese

@@ -25,6 +25,11 @@ struct SoftwareTabPicker: View {
     }
 }
 
+struct OrphanRemovalReview: Identifiable, Sendable {
+    let id = UUID()
+    let items: [OrphanData]
+}
+
 /// Installed apps with their files, and data left behind by apps that are gone. Everything removed
 /// goes to the Trash after a confirmation that lists every path.
 @MainActor
@@ -39,6 +44,8 @@ final class AppsModel: ObservableObject {
     @Published private(set) var orphanScanComplete = false
     @Published private(set) var scanningOrphans = false
     @Published var selectedOrphans: Set<String> = []
+    @Published var orphanReview: OrphanRemovalReview?
+    @Published private(set) var reviewingOrphans = false
     @Published var plan: UninstallPlan?
     @Published private(set) var planning: String?
     @Published private(set) var working = false
@@ -50,6 +57,8 @@ final class AppsModel: ObservableObject {
     private let remove: @Sendable (UninstallPlan) -> CleanResult
     private let readOrphans: @Sendable (ScanCancellation) -> OrphanScanReport
     private let removeOrphanData: @Sendable ([OrphanData]) -> [CleanResult]
+    private let prepareOrphanData: @Sendable ([OrphanData], ScanCancellation) -> [OrphanData]
+    private var orphanReviewCancellation: ScanCancellation?
     private var orphanCancellation: ScanCancellation?
     private var orphanInFlight = false
     private var restartOrphans = false
@@ -60,10 +69,12 @@ final class AppsModel: ObservableObject {
     }, remove: @escaping @Sendable (UninstallPlan) -> CleanResult = { AppUninstaller.uninstall($0) },
        readOrphans: (@Sendable (ScanCancellation) -> [OrphanData])? = nil,
        readOrphanReport: @escaping @Sendable (ScanCancellation) -> OrphanScanReport = { AppUninstaller.orphanReport(minimumBytes: 1 << 20, cancellation: $0) },
+       prepareOrphanData: @escaping @Sendable ([OrphanData], ScanCancellation) -> [OrphanData] = { AppUninstaller.reviewOrphans($0, cancellation: $1) },
        removeOrphanData: @escaping @Sendable ([OrphanData]) -> [CleanResult] = { AppUninstaller.removeOrphans($0) }) {
         self.reviewPlan = reviewPlan; self.remove = remove
         self.readOrphans = { token in readOrphans.map { OrphanScanReport(items: $0(token)) } ?? readOrphanReport(token) }
         self.removeOrphanData = removeOrphanData
+        self.prepareOrphanData = prepareOrphanData
     }
 
     var measuring: Bool { loading }
@@ -125,6 +136,18 @@ final class AppsModel: ObservableObject {
         orphanCancellation?.cancel()
         restartOrphans = false
         // Keep planning occupied until the physical read returns; reopening cannot add a worker.
+        orphanReviewCancellation?.cancel()
+        orphanReview = nil
+    }
+
+    func cancelAppReview() {
+        reviewCancellation?.cancel()
+        plan = nil
+    }
+
+    func cancelOrphanReview() {
+        orphanReviewCancellation?.cancel()
+        orphanReview = nil
     }
 
     /// A successful restore changes both installed bundles and their related data.
@@ -146,7 +169,7 @@ final class AppsModel: ObservableObject {
 
     /// Looks the app's files up again and opens the confirmation.
     func review(_ app: InstalledApp, removeApp: Bool = true) {
-        guard planning == nil, !working else { return }
+        guard planning == nil, !working, !reviewingOrphans else { return }
         planning = app.path
         let all = apps
         let token = ScanCancellation()
@@ -164,7 +187,7 @@ final class AppsModel: ObservableObject {
     }
 
     func uninstall(_ plan: UninstallPlan) {
-        guard !working else { return }
+        guard !working, !reviewingOrphans else { return }
         stopMeasuring()
         orphanCancellation?.cancel()
         restartOrphans = false
@@ -185,6 +208,7 @@ final class AppsModel: ObservableObject {
 
     func scanOrphans() {
         guard !working else { return }
+        if reviewingOrphans { restartOrphans = true; return }
         if orphanInFlight { restartOrphans = true; return }
         orphanInFlight = true
         scanningOrphans = true
@@ -221,14 +245,39 @@ final class AppsModel: ObservableObject {
             var item = item
             item.blocked = tr("This scan was incomplete; scan again before removing this data")
             item.dataIdentities = nil
+            item.dataTreeIdentities = nil
             return item
         }
         return (report.items + retained).sorted { $0.bytes > $1.bytes }
     }
 
-    func removeOrphans() {
+    func reviewPickedOrphans() {
         let picked = pickedOrphans
-        guard !working, !orphanInFlight, planning == nil, !picked.isEmpty else { return }
+        guard !working, !orphanInFlight, !reviewingOrphans, planning == nil, orphanReview == nil, !picked.isEmpty else { return }
+        stopMeasuring()
+        let token = ScanCancellation()
+        orphanReviewCancellation = token
+        reviewingOrphans = true
+        let prepare = prepareOrphanData
+        Task.detached(priority: .userInitiated) {
+            let ready = prepare(picked, token)
+            await MainActor.run {
+                self.reviewingOrphans = false
+                guard self.orphanReviewCancellation === token else { return }
+                self.orphanReviewCancellation = nil
+                if self.restartOrphans {
+                    self.restartOrphans = false
+                    self.scanOrphans()
+                    return
+                }
+                if !token.isCancelled { self.orphanReview = OrphanRemovalReview(items: ready) }
+            }
+        }
+    }
+
+    func removeOrphans(_ picked: [OrphanData]) {
+        guard !working, !orphanInFlight, !reviewingOrphans, planning == nil, !picked.isEmpty else { return }
+        orphanReview = nil
         stopMeasuring()
         working = true
         exitRequested = false
@@ -270,7 +319,9 @@ final class AppsModel: ObservableObject {
     nonisolated static func summary(_ results: [CleanResult]) -> String {
         let bytes = results.reduce(Int64(0)) { $0 + $1.bytes }
         let failed = results.flatMap { $0.failed.map { FSPath.tilde($0.key) + ": " + $0.value } }
-        var text = tr("Moved %1$@ to the Trash (empty it to get the space back)", AppSize.text(bytes, state: results.contains { $0.bytesIncomplete == true } ? .incomplete : .complete))
+        var text = results.contains(where: { !$0.removed.isEmpty })
+            ? tr("Moved %1$@ to the Trash (empty it to get the space back)", AppSize.text(bytes, state: results.contains { $0.bytesIncomplete == true } ? .incomplete : .complete))
+            : tr("Nothing was moved to the Trash.")
         if !failed.isEmpty { text += "\n" + tr("Not moved:") + "\n" + failed.prefix(6).joined(separator: "\n") }
         return text
     }
@@ -284,7 +335,6 @@ struct AppsPage: View {
     @Binding var tab: AppsTab
     @State private var search = ""
     @State private var open: Set<String> = []
-    @State private var confirmingOrphans = false
 
     var body: some View {
         Group {
@@ -325,7 +375,11 @@ struct AppsPage: View {
             model.load(ifEmpty: true)
             if tab == .leftovers, model.orphans == nil { model.scanOrphans() }
         }
-        .onChange(of: tab) { t in if t == .leftovers, model.orphans == nil { model.scanOrphans() } }
+        .onChange(of: tab) { t in
+            if t != .installed { model.cancelAppReview() }
+            if t != .leftovers { model.cancelOrphanReview() }
+            if t == .leftovers, model.orphans == nil { model.scanOrphans() }
+        }
         .sheet(item: Binding(get: { model.plan.map(PlanBox.init) }, set: { if $0 == nil { model.plan = nil } })) { box in
             let p = box.plan
             ConfirmSheet(title: p.removesApp ? tr("Uninstall %1$@?", p.app.name) : tr("Remove associated data for %1$@?", p.app.name),
@@ -339,16 +393,20 @@ struct AppsPage: View {
                          confirmEnabled: p.blocked == nil,
                          confirm: { model.uninstall(p) }, cancel: { model.plan = nil })
         }
-        .sheet(isPresented: $confirmingOrphans) {
-            let picked = model.pickedOrphans
-            ConfirmSheet(title: tr("Remove data of %1$@ deleted apps?", String(picked.count)),
+        .sheet(item: $model.orphanReview) { review in
+            let picked = review.items
+            let ready = picked.filter { $0.blocked == nil }
+            let kept = picked.filter { $0.blocked != nil }
+            ConfirmSheet(title: tr("Remove data of %1$@ deleted apps?", String(ready.count)),
                          summary: tr("%1$@ goes to the Trash. Each one is checked again first: still not installed, not running, untouched for 30 days.",
-                                     orphanSize(picked)),
+                                     orphanSize(ready)),
                          destructive: false, heading: tr("What will be moved to the Trash"),
-                         lines: picked.flatMap { o in o.items.map { $0.sizeText + "  " + FSPath.tilde($0.path) } },
+                         lines: ready.flatMap { o in o.items.map { $0.sizeText + "  " + FSPath.tilde($0.path) } },
+                         retainedLines: kept.flatMap { o in [o.bundleID + ": " + (o.blocked ?? "")] + o.items.map { FSPath.tilde($0.path) } },
                          footnote: tr("You can put them back from the Trash. Moves are listed in ~/Library/Logs/Thermo/clean.log."),
                          confirmTitle: tr("Move to Trash"),
-                         confirm: { confirmingOrphans = false; model.removeOrphans() }, cancel: { confirmingOrphans = false })
+                         confirmEnabled: !ready.isEmpty && !model.working && !model.scanningOrphans,
+                         confirm: { model.removeOrphans(picked) }, cancel: { model.orphanReview = nil })
         }
     }
 
@@ -553,7 +611,7 @@ struct AppsPage: View {
                     Image(systemName: ticked ? "checkmark.circle.fill" : "circle").font(.title3)
                         .foregroundStyle(ticked ? Color.indigo : .white.opacity(0.5)).frame(width: 28, height: 28).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).disabled(model.working || o.blocked != nil)
+                .buttonStyle(.plain).disabled(model.working || model.reviewingOrphans || o.blocked != nil)
                 .accessibilityLabel(tr("Select %1$@", o.bundleID))
                 .accessibilityValue(ticked ? tr("Selected") : tr("Not selected"))
                 VStack(alignment: .leading, spacing: 3) {
@@ -601,15 +659,15 @@ struct AppsPage: View {
                 }
                 Button(tr("Scan again")) { model.load() }.buttonStyle(PillButtonStyle()).disabled(model.loading || model.working)
             } else {
-                if model.scanningOrphans || model.working { ProgressView().controlSize(.small) }
+                if model.scanningOrphans || model.working || model.reviewingOrphans { ProgressView().controlSize(.small) }
                 Button(tr("All")) { model.selectedOrphans = Set((model.orphans ?? []).filter { $0.blocked == nil }.map(\.id)) }
-                    .buttonStyle(PillButtonStyle()).disabled((model.orphans ?? []).allSatisfy { $0.blocked != nil } || model.working)
-                Button(tr("None")) { model.selectedOrphans = [] }.buttonStyle(PillButtonStyle()).disabled(model.selectedOrphans.isEmpty)
-                Button(tr("Scan again")) { model.scanOrphans() }.buttonStyle(PillButtonStyle()).disabled(model.scanningOrphans || model.working)
+                    .buttonStyle(PillButtonStyle()).disabled((model.orphans ?? []).allSatisfy { $0.blocked != nil } || model.working || model.reviewingOrphans)
+                Button(tr("None")) { model.selectedOrphans = [] }.buttonStyle(PillButtonStyle()).disabled(model.selectedOrphans.isEmpty || model.reviewingOrphans)
+                Button(tr("Scan again")) { model.scanOrphans() }.buttonStyle(PillButtonStyle()).disabled(model.scanningOrphans || model.working || model.reviewingOrphans)
                 Spacer()
-                Button(tr("Move %1$@ to Trash", orphanSize(model.pickedOrphans))) { confirmingOrphans = true }
+                Button(model.reviewingOrphans ? tr("Reviewing selected residual data…") : tr("Move %1$@ to Trash", orphanSize(model.pickedOrphans))) { model.reviewPickedOrphans() }
                     .buttonStyle(PillButtonStyle(prominent: true, color: .indigo))
-                    .disabled(model.pickedOrphans.isEmpty || model.working || model.scanningOrphans)
+                    .disabled(model.pickedOrphans.isEmpty || model.working || model.scanningOrphans || model.reviewingOrphans)
             }
         }
         .padding(.horizontal, 28).padding(.vertical, 14)

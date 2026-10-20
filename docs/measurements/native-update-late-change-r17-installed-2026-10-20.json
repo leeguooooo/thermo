@@ -1,0 +1,93 @@
+{
+  "checkedAt": "2026-10-19T21:33:51.055690+00:00",
+  "installed": true,
+  "version": "1.1.40",
+  "build": "611.17",
+  "reviewRevision": 17,
+  "privateReviewBuildOverride": true,
+  "baseCommitCount": "611",
+  "sourceCommit": "a86901962fe38bcd169ac82ccdfbe91306c46e83",
+  "inputCommit": "ee6ecb751bdc00d0d090bde506001303a17e13b7",
+  "workingTree": "dirty",
+  "pid": "51515",
+  "remoteRun": "230ec8c6-2e9d-4cad-82a3-f3fdda603ba7",
+  "testAndBuildInputIdentical": true,
+  "nonHardwareTests": 1933,
+  "nonHardwareFailures": 0,
+  "sourceFilesVerified": 611,
+  "baselineRepro": {
+    "run": "b3997ee9-c4f7-42dd-b479-4f262046cba0",
+    "twoBehaviorFailures": true,
+    "compilerFailure": false,
+    "originalResourceCase": "displaced original and returned unconfirmed",
+    "incomingResourceCase": "swapped before verification rollback"
+  },
+  "fixedRegression": {
+    "originalResourceChangeRefusedBeforeSwap": true,
+    "incomingResourceChangeRefusedBeforeSwap": true,
+    "noReceiptCreatedForTheseRefusals": true,
+    "originalPathsAndContentsRetained": true,
+    "existingProcessProviderInterleavingOnly": true,
+    "realFilesystemAndSignatureValidation": true,
+    "ownedSyntheticApplicationsOnly": true
+  },
+  "newProductionTestHooksAdded": false,
+  "canonicalSoftwareUpdatePerformedOnRealVendorApp": false,
+  "zipSHA256": "664d6475ec56ba7cf47d097f9d4dadeebb29f1bb31da9497e2aa4c11417588c1",
+  "manifestEntriesVerified": 103,
+  "signatureVerifiedAfterLaunch": true,
+  "helperAndPlistUnchanged": true,
+  "fanPoliciesUnchanged": true,
+  "upgradeObservation": {
+    "passed": true,
+    "samples": 37,
+    "consecutiveRecoveredChecks": 6
+  },
+  "nativeGUI": {
+    "overviewReadingsAndNeutralDiagnosticsVisible": true,
+    "buildSourceVisible": true,
+    "CPUUploadDataStackedAndClickPreferencesPreserved": true,
+    "menuClickHintAndCustomizationVisible": true,
+    "settingsRouteClosesPanel": true,
+    "foregroundPanelAndPulseStopped": true,
+    "physicalStatusBarClicksRetested": false
+  },
+  "offscreenLifecycle": {
+    "functionalChecksPassed": true,
+    "samples": 23,
+    "memoryGrowthAssessed": false
+  },
+  "naturalMemoryHistoryAppend": {
+    "installedInput": "ee6ecb751bdc00d0d090bde506001303a17e13b7",
+    "unexpiredPriorRowsPreservedExactly": 271,
+    "duplicateLineCountsVerified": true,
+    "expiredPriorRowsAtAppend": 0,
+    "retentionCutoffAnchorUnixSeconds": 1792445491.177026,
+    "beforeValidRecords": 271,
+    "afterValidRecords": 272,
+    "newRecordTimesUTC": [
+      "2026-10-19T21:31:31.177026+00:00"
+    ],
+    "beforeInvalidLines": 0,
+    "afterInvalidLines": 0,
+    "programNamesAndIdentityContentsExported": false,
+    "hardwareWritesRequested": false,
+    "scope": "Natural first background memory-history append after App restart; no schedule or preference changes"
+  },
+  "R16Backup": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.17-update-guard-r17-mac190/pre-upgrade-r16-backup/Thermo.app",
+  "R16DisplacedCopy": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.17-update-guard-r17-mac190/displaced-r16.app",
+  "evidenceRoot": "/Users/leo/github.com/thermo-mole-integration-a869019/dist/mole-review-1.1.40-611.17-update-guard-r17-mac190",
+  "localDriverENOSPCRecoveredBySameRunResume": true,
+  "remoteCommandsResubmitted": false,
+  "chargingWriteSessionStarted": false,
+  "chargingApprovalStillPending": true,
+  "overallParityEstablished": false,
+  "notarized": false,
+  "published": false,
+  "sourceMergedIntoMain": false,
+  "limits": [
+    "Does not eliminate all mutation windows between content checks and atomic rename",
+    "Real vendor concurrent updater behavior and complete native update GUI flow remain unaccepted",
+    "Test callbacks provide deterministic real-filesystem interleavings; not an independently running vendor updater"
+  ]
+}
