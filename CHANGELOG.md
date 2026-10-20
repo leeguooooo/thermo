@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.1.40（开发中）
+## 1.1.41
+
+- 空间页扫描大幅提速：整个个人目录从几十分钟缩短到约一分钟；各顶层目录轮流扫描，中途停止也不会漏掉大目录；没扫到的目录显示「未测量」，不再当成 0 排到最后。
+- AI 检查新增「Worktree」：发现遗留 worktree 过多的项目，文件夹已不存在的记录可一键 `git worktree prune`（不删文件）。磁盘清理现在也能找到仓库外的 worktree（如 `~/.codex/artifacts`），有未保存改动、在用或最近改过的一律保留。
+- AI 检查发现过大的数据库预写日志（codegraph、Codex），并提示仍在运行旧版 codegraph 的后台进程；一键升级 codegraph 并正常重启旧进程，不删除 -wal 文件。
+- 插件和 Skill 可以检查更新、一键更新：Claude Code 插件按本地市场目录比较版本，Skill 用 `thermo agents updates --check` 到 GitHub 核对；更新和卸载都调用各工具自己的命令。长期没用或装了从没用过的 Skill、插件会提示；Codex 插件也列出并可卸载。
+- 新命令：`thermo agents updates [--check]`、`thermo agents update [名称]`。
 
 - 应用菜单与 ⌘⇧P 可直接打开菜单小面板，即使左右键都设为主控制台；正文按屏幕高度滚动，底部操作说明、设置与快捷工具固定显示。进入控制台时显式关闭小面板，隐藏面板不再保留采样；当前读数与历史曲线分开，等待新样本时显示未知。
 
