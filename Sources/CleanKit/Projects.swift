@@ -81,7 +81,11 @@ enum Projects {
         var items: [CleanItem] = []
         let cancellation = ScanCancellation.current
         // Start measuring as projects are discovered; large roots must not delay every result.
+        // A worktree is reached both from its repository and, when an agent worked in it, as a
+        // project root of its own: offer it once.
+        var worktrees = Set<String>()
         func enqueue(_ candidate: Candidate) {
+            if case let .worktree(path, _) = candidate, !worktrees.insert(path).inserted { return }
             queue.addOperation {
                 ScanCancellation.withCurrent(cancellation) {
                     guard ScanCancellation.current?.isCancelled != true else { return }

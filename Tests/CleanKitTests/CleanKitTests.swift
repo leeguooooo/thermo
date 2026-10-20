@@ -445,6 +445,12 @@ final class CleanKitTests: XCTestCase {
         XCTAssertEqual(found.map(\.0), [home + "/src/scratch/source"])
         XCTAssertEqual(found.first?.1, home + "/src/repo")
         XCTAssertNil(Projects.linkedWorktreeRepository(home + "/src/plain"))
+
+        // Reached from the repository and again as a project root of its own: offered once.
+        var both = context().options
+        both.categories = [.agentWorktrees]; both.projectRoots = [home + "/src", home + "/src/scratch/source"]
+        let items = Projects.scan(ScanContext(options: both, now: now, processes: ProcessTable(entries: []), agentDirs: [], liveClaudeSessions: []))
+        XCTAssertEqual(items.filter { $0.paths == [home + "/src/scratch/source"] }.count, 1)
     }
 
     func testLeftoverWorktreeRequiresReviewAndAvoidsGlobalPrune() throws {
