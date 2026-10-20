@@ -37,11 +37,27 @@ extension ConfigChecks {
     static func codegraphDaemons(in dir: URL) -> [CodegraphDaemon] {
         guard let files = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { return [] }
         return files.filter { $0.pathExtension == "json" }.sorted { $0.path < $1.path }.compactMap { url in
-            guard let data = try? Data(contentsOf: url), data.count <= 64 * 1024,
+            guard let data = codegraphDaemonData(url),
                   let o = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
                   let root = o["root"] as? String, let pid = (o["pid"] as? NSNumber)?.int32Value, pid > 0 else { return nil }
             return CodegraphDaemon(root: root, pid: pid, version: o["version"] as? String ?? "")
         }
+    }
+
+    /// Bound I/O before parsing. Check the opened descriptor so links to ordinary records keep
+    /// working, while non-regular targets are skipped without waiting for a writer.
+    private static func codegraphDaemonData(_ url: URL) -> Data? {
+        let fd = open(url.path, O_RDONLY | O_NONBLOCK | O_CLOEXEC)
+        guard fd >= 0 else { return nil }
+        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        defer { try? handle.close() }
+        let limit = 64 * 1024
+        var metadata = stat()
+        guard fstat(fd, &metadata) == 0, metadata.st_mode & S_IFMT == S_IFREG,
+              metadata.st_size <= Int64(limit) else { return nil }
+        // The extra byte also detects a file growing beyond the cap after fstat.
+        guard let data = try? handle.read(upToCount: limit + 1), data.count <= limit else { return nil }
+        return data
     }
 
     /// Versions before the one that fixed the growing log; unknown versions are not blamed.

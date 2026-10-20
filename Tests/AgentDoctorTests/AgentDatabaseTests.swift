@@ -1,3 +1,4 @@
+import Darwin
 import XCTest
 @testable import AgentDoctor
 
@@ -106,5 +107,25 @@ final class AgentDatabaseTests: XCTestCase {
         XCTAssertFalse(ConfigChecks.codegraphHasLogBug("1.6.1"))
         XCTAssertFalse(ConfigChecks.codegraphHasLogBug("2.0.0"))
         XCTAssertFalse(ConfigChecks.codegraphHasLogBug(""))
+    }
+
+    func testDaemonRecordsRespectReadLimitAndSkipSpecialFiles() throws {
+        let directory = home.appendingPathComponent(".codegraph/daemons")
+        try daemon(root: "/valid", pid: 123, version: "1.6.2")
+        let valid = directory.appendingPathComponent("123.json")
+        let body = try Data(contentsOf: valid)
+        var exact = body
+        exact.append(Data(repeating: 0x20, count: 64 * 1024 - body.count))
+        try exact.write(to: directory.appendingPathComponent("exact.json"))
+        exact.append(0x20)
+        try exact.write(to: directory.appendingPathComponent("oversized.json"))
+        try FileManager.default.createSymbolicLink(at: directory.appendingPathComponent("linked.json"), withDestinationURL: valid)
+        try FileManager.default.createDirectory(at: directory.appendingPathComponent("directory.json"), withIntermediateDirectories: false)
+        let pipe = directory.appendingPathComponent("pipe.json")
+        XCTAssertEqual(mkfifo(pipe.path, 0o600), 0)
+
+        let records = ConfigChecks.codegraphDaemons(in: directory)
+        XCTAssertEqual(records.count, 3, "valid, linked and exactly-at-limit records remain readable; no pipe writer is needed")
+        XCTAssertTrue(records.allSatisfy { $0.root == "/valid" && $0.pid == 123 && $0.version == "1.6.2" })
     }
 }

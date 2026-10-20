@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "scope": "Source-only Codegraph daemon-record read budget; not included in candidate 666.",
+  "sourceCommit": "53a01d82888220e71e19ee6378d92da60062bc4e",
+  "sourceFilesSHA256": {
+    "Sources/AgentDoctor/AgentDatabases.swift": "27d8c78e0cc53b02821f0f37ce7895a8bdb3fda6620c8c495baa48c069cbcfc1",
+    "Tests/AgentDoctorTests/AgentDatabaseTests.swift": "417b172bed034f5e26edabcf03fbeb407ef37421f5469729dc0d08bd2723e9b0"
+  },
+  "runId": "079324cd-0062-4c1a-a7c7-ff6f045672dd",
+  "host": "mac190",
+  "AgentDoctorReleaseTestsPassed": 392,
+  "readBudgetBytes": 65536,
+  "maximumReadRequestBytes": 65537,
+  "regularFileSymlinksPreserved": true,
+  "boundaryAndSpecialFileTestPassed": true,
+  "unattributedCrashLogsExcludedFromFinalSnapshot": true,
+  "oldCandidateFIFOObservation": "Candidate 666 returned normally with an unwritten FIFO; no hang was reproduced.",
+  "CLISHA256": "d975d41ccb49db298c375f81cfc45a9bdc9eaf37b99ab1ecedc84c38fbe33df4",
+  "universalPackageRebuilt": false,
+  "installedOrPublished": false,
+  "realModelCalled": false,
+  "evidenceHashes": {
+    "tests.log": "ec8f8e7d2c6a929323cecca7cd0d8be96736b4f06473a7cd9198835d43a60516",
+    "result.json": "31e28da3d7f0fa78e35f533f46bfdab06ac1c983d90c6b636378429c21315699"
+  }
+}
