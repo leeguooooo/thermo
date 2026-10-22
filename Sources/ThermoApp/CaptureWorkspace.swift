@@ -10,7 +10,8 @@ import UniformTypeIdentifiers
     @Published var issue: String?
     @Published var capturing = false
     @Published var pinCount = 0
-    private var windows: [UUID: CaptureEditor] = [:]
+    let pinSession=CapturePinSession()
+    init() { pinSession.onCountChange={ [weak self] in self?.pinCount=$0 } }
     private var process: Process?
     private var captureDirectory: URL?
     private var regionSelector: CaptureRegionSelector?
@@ -20,6 +21,7 @@ import UniformTypeIdentifiers
     private var leases: [CleanScreenHotkeyLease] = []
     func activate() {
         guard leases.isEmpty else { return }
+        pinSession.restoreWindows()
         // Deliberately different from macOS screenshot shortcuts and PixPin's shortcuts.
         for (code, action) in [(UInt32(20), { self.capture() }), (UInt32(21), { self.pinClipboard() })] {
             do {
@@ -101,7 +103,9 @@ import UniformTypeIdentifiers
     }
     var recordingActive: Bool { recordingWindow?.model.active == true || recordingWindow?.model.exporting == true }
     func terminationReply(_ previous:NSApplication.TerminateReply) -> NSApplication.TerminateReply {
-        guard previous == .terminateNow, recordingActive else { return previous }
+        guard previous == .terminateNow else { return previous }
+        do { try pinSession.flush() } catch { report(error);return .terminateCancel }
+        guard recordingActive else { return previous }
         Task { NSApp.reply(toApplicationShouldTerminate:await finishRecordingForQuit()) }
         return .terminateLater
     }
@@ -137,14 +141,13 @@ import UniformTypeIdentifiers
         if let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) { open(cg) }
     }
     func open(_ image: CGImage) {
-        let id = UUID()
-        let editor = CaptureEditor(image: image) { [weak self] in self?.windows.removeValue(forKey: id); self?.pinCount = self?.windows.count ?? 0 }
-        windows[id] = editor; pinCount = windows.count; editor.showWindow(nil)
-        NSApp.activate(ignoringOtherApps: true); editor.window?.makeKeyAndOrderFront(nil)
+        do { try pinSession.open(image) } catch { report(error) }
     }
-    func showAll() { for editor in windows.values { editor.showWindow(nil) } }
-    func hideAll() { for editor in windows.values { editor.window?.orderOut(nil) } }
-    func closeAll() { for editor in Array(windows.values) { editor.close() } }
+    func showPinLibrary() { pinSession.showLibrary() }
+    func restoreLastPin() { do { try pinSession.restore() } catch { report(error) } }
+    func showAll() { do { try pinSession.setAllHidden(false) } catch { report(error) } }
+    func hideAll() { do { try pinSession.setAllHidden(true) } catch { report(error) } }
+    func closeAll() { pinSession.closeAll() }
     func report(_ error: Error) { issue = tr(error.localizedDescription); showIssue() }
     private func showIssue() {
         let alert = NSAlert(); alert.messageText = tr("Screenshots and pins"); alert.informativeText = issue ?? ""; alert.runModal()
@@ -153,7 +156,7 @@ import UniformTypeIdentifiers
 
 @MainActor final class CaptureEditorModel: ObservableObject {
     @Published var document: CaptureDocument { didSet {
-        revision += 1; recognition = ""
+        revision += 1; recognition = "";onMutation?(true)
         if let selectedAnnotation,!document.annotations.indices.contains(selectedAnnotation) { self.selectedAnnotation=nil }
     } }
     private var revision = 0
@@ -165,10 +168,16 @@ import UniformTypeIdentifiers
     @Published var text = ""
     @Published var recognition = ""
     @Published var recognizing = false
-    @Published var opacity: Double = 1
-    @Published var pinned = true
+    var onMutation:((Bool)->Void)?
+    var showPinLibrary:(() -> Void)?
+    @Published var pinTitle="" { didSet { changeWindow?();onMutation?(false) } }
+    @Published var locked=false { didSet { changeWindow?();onMutation?(false) } }
+    @Published var shadow=true { didSet { changeWindow?();onMutation?(false) } }
+    @Published var pan=CGPoint.zero { didSet { onMutation?(false) } }
+    @Published var opacity: Double = 1 { didSet { onMutation?(false) } }
+    @Published var pinned = true { didSet { onMutation?(false) } }
     @Published var error: String?
-    @Published var zoom: Double = 1
+    @Published var zoom: Double = 1 { didSet { onMutation?(false) } }
     var changeWindow: (() -> Void)?
     init(image: CGImage) { document = CaptureDocument(image: image) }
     func selectAnnotation(_ index:Int?) {
@@ -229,8 +238,10 @@ import UniformTypeIdentifiers
 @MainActor final class CaptureEditor: NSWindowController, NSWindowDelegate {
     let model: CaptureEditorModel
     private let onClose: () -> Void
-    init(image: CGImage, onClose: @escaping () -> Void) {
-        model = CaptureEditorModel(image: image); self.onClose = onClose
+    private let shouldClose:(() -> Bool)?
+    var onWindowChange:(() -> Void)?
+    init(image: CGImage, onClose: @escaping () -> Void,shouldClose:(() -> Bool)? = nil) {
+        model = CaptureEditorModel(image: image); self.onClose = onClose;self.shouldClose=shouldClose
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 880, height: 650), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.title = tr("Screenshots and pins"); window.isReleasedWhenClosed = false
         window.level = .floating; window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -239,11 +250,17 @@ import UniformTypeIdentifiers
         model.changeWindow = { [weak self] in
             guard let self, let window = self.window else { return }
             window.alphaValue = self.model.opacity; window.level = self.model.pinned ? .floating : .normal
+            window.title=self.model.pinTitle.isEmpty ? tr("Screenshots and pins") : self.model.pinTitle
+            window.hasShadow=self.model.shadow;window.isMovable = !self.model.locked
+            window.styleMask=self.model.locked ? [.titled,.closable,.miniaturizable] : [.titled,.closable,.miniaturizable,.resizable]
         }
         window.contentView = NSHostingView(rootView: CaptureEditorView(model: model))
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+    func windowShouldClose(_ sender:NSWindow) -> Bool { shouldClose?() ?? true }
     func windowWillClose(_ notification: Notification) { onClose() }
+    func windowDidMove(_ notification:Notification) { onWindowChange?() }
+    func windowDidResize(_ notification:Notification) { onWindowChange?() }
 }
 
 private struct CaptureEditorView: View {
@@ -271,6 +288,12 @@ private struct CaptureEditorView: View {
                     } label: { Image(systemName: "arrow.left.and.right.righttriangle.left.righttriangle.right") }.help(tr("Flip horizontally"))
                 }.padding(8)
             }
+            HStack {
+                TextField(tr("Pin title"),text:$model.pinTitle).textFieldStyle(.roundedBorder)
+                Toggle(tr("Lock pin"),isOn:$model.locked)
+                Toggle(tr("Pin shadow"),isOn:$model.shadow)
+                if let show=model.showPinLibrary { Button(tr("Pin groups and history"),action:show) }
+            }.padding(.horizontal,10)
             CaptureAnnotationControls(model:model)
             if model.tool == .text || model.tool == .watermark {
                 TextField(tr("Annotation text"), text: $model.text).textFieldStyle(.roundedBorder).padding(8)
@@ -284,8 +307,8 @@ private struct CaptureEditorView: View {
             if model.recognizing { HStack { ProgressView().controlSize(.small); Text(tr("Recognizing text and barcodes…")) }.padding(6) }
             HStack {
                 Toggle(tr("Keep on top"), isOn: $model.pinned).onChange(of: model.pinned) { _ in model.changeWindow?() }
-                Slider(value: $model.opacity, in: 0.2...1).frame(width: 80).help(tr("Pin opacity")).onChange(of: model.opacity) { _ in model.changeWindow?() }
-                Slider(value: $model.zoom, in: 0.25...4).frame(width: 70).help(tr("Zoom"))
+                Slider(value: $model.opacity, in: 0.2...1).disabled(model.locked).frame(width: 80).help(tr("Pin opacity")).onChange(of: model.opacity) { _ in model.changeWindow?() }
+                Slider(value: $model.zoom, in: 0.25...4).disabled(model.locked).frame(width: 70).help(tr("Zoom"))
                 Text("\(model.document.image.width) × \(model.document.image.height)").font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button(tr("Text / QR")) { model.recognize() }.disabled(model.recognizing)
@@ -322,7 +345,7 @@ struct CaptureCanvas: NSViewRepresentable {
     final class Canvas: NSView {
         var model: CaptureEditorModel
         var draft: CaptureAnnotation?
-        var pan: CGPoint = .zero
+        var pan:CGPoint { get { model.pan } set { model.pan=newValue } }
         var lastDrag: CGPoint?
         var selectionStart:CGPoint?
         var selectionOriginal:CaptureAnnotation?
@@ -367,6 +390,7 @@ struct CaptureCanvas: NSViewRepresentable {
         }
         override func mouseDown(with event: NSEvent) {
             window?.makeFirstResponder(self)
+            if model.locked { return }
             if model.tool == .select {
                 let p=point(event)
                 if let selected=model.selectedAnnotation,model.document.annotations.indices.contains(selected) {
@@ -421,6 +445,7 @@ struct CaptureCanvas: NSViewRepresentable {
             else { super.keyDown(with:event) }
         }
         override func scrollWheel(with event: NSEvent) {
+            guard !model.locked else { return }
             model.zoom = min(4, max(0.25, model.zoom*exp(event.scrollingDeltaY*0.015)))
         }
     }

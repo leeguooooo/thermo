@@ -18,6 +18,7 @@ def main():
     parser.add_argument('--av-layer-review', action='store_true')
     parser.add_argument('--keyboard-review', action='store_true')
     parser.add_argument('--annotation-review', action='store_true')
+    parser.add_argument('--pin-groups-review', action='store_true')
     args = parser.parse_args()
     root = Path(__file__).resolve().parent.parent
     os.chdir(root)
@@ -36,7 +37,8 @@ def main():
     command = ['xcrun', 'swiftc', '-parse-as-library', str(root/'scripts/verify-capture-ui.swift'), '-o', str(binary),
                '-I', str(root/'Sources/CSQLite'), '-lsqlite3', '-lz', '-framework', 'AVKit']
     if (base/'ExecutableModules').is_dir():
-        command += ['-I', str(base), '-F', str(base), '-framework', 'Sparkle', '-Xlinker', '-rpath', '-Xlinker', str(base)]
+        framework = base/'Sparkle.framework'
+        command += ['-I', str(base), '-F', str(base), '-framework', 'Sparkle', '-Xlinker', '-rpath', '-Xlinker', '@executable_path/../Frameworks']
         for name in sorted(clang_targets):
             for path in (root/'.build/out/Intermediates.noindex/GeneratedModuleMaps').glob(name+'.modulemap'):
                 command += ['-Xcc', '-fmodule-map-file='+str(path)]
@@ -46,17 +48,21 @@ def main():
         command += [str(path) for path in base.glob('*.o')] + [str(modules[0])]
     else:
         sparkle = root/'.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64'
+        framework = sparkle/'Sparkle.framework'
         command += ['-I', str(base/'Modules'), '-I', str(base/'CSMC.build'),
                     '-I', str(base/'CWebPEncoder.build'), '-I', str(base/'libwebp.build'),
-                    '-F', str(sparkle), '-framework', 'Sparkle', '-Xlinker', '-rpath', '-Xlinker', str(sparkle)]
+                    '-F', str(sparkle), '-framework', 'Sparkle', '-Xlinker', '-rpath', '-Xlinker', '@executable_path/../Frameworks']
         for name in sorted(clang_targets):
             command += ['-I', str(base/(name+'.build'))]
         command += (base/'ThermoApp.product/Objects.LinkFileList').read_text().splitlines()
     subprocess.run(command, check=True)
+    frameworks = app/'Contents/Frameworks'
+    frameworks.mkdir(parents=True)
+    subprocess.run(['ditto', str(framework), str(frameworks/'Sparkle.framework')], check=True)
     (app/'Contents/Info.plist').write_bytes(plistlib.dumps({
         'CFBundleIdentifier': 'dev.thermo.capture-qa.'+hashlib.sha256(str(output).encode()).hexdigest()[:12], 'CFBundleExecutable': binary.name,
         'CFBundleName': binary.name, 'CFBundlePackageType': 'APPL', 'NSHighResolutionCapable': True,
-        'ThermoAnnotationReview': args.annotation_review, 'ThermoRecordingReview': args.recording_review or args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoOrdinaryReview': args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoKeyboardReview': args.keyboard_review, 'ThermoAVLayerReview': args.av_layer_review, 'ThermoCaptureFixtureRoot': str(output),
+        'ThermoPinGroupsReview': args.pin_groups_review, 'ThermoAnnotationReview': args.annotation_review, 'ThermoRecordingReview': args.recording_review or args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoOrdinaryReview': args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoKeyboardReview': args.keyboard_review, 'ThermoAVLayerReview': args.av_layer_review, 'ThermoCaptureFixtureRoot': str(output),
     }))
     subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True)
     print(app)

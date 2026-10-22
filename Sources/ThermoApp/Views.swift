@@ -416,6 +416,8 @@ struct PopoverView: View {
                     Button(tr("Record screen…")) { CaptureWorkspace.shared.recordScreen() }
                     Button(tr("Recording drafts…")) { CaptureWorkspace.shared.recordScreen(draftsOnly:true) }
                     Divider()
+                    Button(tr("Pin groups and history")) { CaptureWorkspace.shared.showPinLibrary() }
+                    Button(tr("Restore last closed pin")) { CaptureWorkspace.shared.restoreLastPin() }
                     Button(tr("Show all pins")) { CaptureWorkspace.shared.showAll() }
                     Button(tr("Hide all pins")) { CaptureWorkspace.shared.hideAll() }
                     Button(tr("Close all pins")) { CaptureWorkspace.shared.closeAll() }

@@ -38,7 +38,7 @@ public struct CaptureDocument {
     private struct State { let image: CGImage; let annotations: [CaptureAnnotation] }
     private var history: [State] = []
     private var undone: [State] = []
-    public init(image: CGImage) { self.image = image }
+    public init(image: CGImage,annotations:[CaptureAnnotation] = []) { self.image = image;self.annotations=annotations }
     public var size: CGSize { CGSize(width: image.width, height: image.height) }
     public var canUndo: Bool { !history.isEmpty }
     public var canRedo: Bool { !undone.isEmpty }

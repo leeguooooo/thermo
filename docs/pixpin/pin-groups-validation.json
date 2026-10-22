@@ -1,0 +1,53 @@
+{
+  "status": "partial",
+  "recordedAt": "2026-10-22T08:09:02.100116+00:00",
+  "baseCommit": "8b2fcdf10d1102dd3dd7356844404199a90b7e6c",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureDocument.swift": "09b132a076e3b3857ba57c5ea09cd9568728391d15ba1bb571d2afd377cae7cf",
+    "Sources/CaptureCore/CapturePinLibrary.swift": "efb99749ecb22d0c4ff082bf1fd4a14387eb65017dba84e065ddf6fdb54b691c",
+    "Sources/ThermoApp/CapturePinLibraryView.swift": "45d06a3c3ac5ff865179c2e7e9ee45c11d948df4bf9974402a1a0b27e78d0721",
+    "Sources/ThermoApp/CapturePinSession.swift": "5db26e60011250923cd1eaa155a4f16f8179f96e197bbdd70e0cb917e4e82024",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "220707eeed297b5731869fbd970b32b148f2c0daa793d4b029d8967e043c8bee",
+    "Sources/ThermoApp/StatusMenu.swift": "bade5be177b9b98668937654e0add3b67796803214453e662d3305f706e6160e",
+    "Sources/ThermoApp/Views.swift": "c93fadedc959a0ceeb0230aef6243ee9ee04aa7a6dc36a9f1d940ed85d049712",
+    "Sources/ThermoL10n/ZhHans.swift": "1569459f6b566299f5ab6751fccc565c09a23f62a12b45b1944253d839764bef",
+    "Tests/CaptureCoreTests/CapturePinLibraryTests.swift": "4e39999cbc06cfb7dd5603d79c16965e20cb0090c2a0ccdb6ae8e290e21cbe7b",
+    "Tests/ThermoAppTests/CapturePinSessionTests.swift": "f98b75e21a4dc825371a10c903071e8fd109abe7b87414d7b7590de4f7a576b7",
+    "scripts/verify-capture-ui.py": "57b584faeb2ead4261880804cf0b00e283bce83edec042136e16032016a96e4e",
+    "scripts/verify-capture-ui.swift": "dc320c5a4583c9fc7c26dd8977d5da86413c807a7e3ff5fb1d8309e070341a5b"
+  },
+  "tests": {
+    "CaptureCore": 74,
+    "ThermoApp": 34,
+    "failures": 0,
+    "logSHA256": "1fbb2f94e361dba42bcd187584fe97a15eb13b0ae32e00af3bd2e1d2be655772",
+    "context": "isolated local workspace; final UI also compiled by QA builder"
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-pin-groups-qa-final-01a/ThermoCaptureQA.app",
+    "binarySHA256": "17f59ea81a36c4454becd4c47fa076d67d2d22a3e9481e9edaf65698bbc5d79a",
+    "bundledSparkleFramework": true,
+    "syntheticOnly": true,
+    "verified": [
+      "Switch to independent group and restore closed pin",
+      "Edit title, opacity to 0.7 and lock; locked controls disabled",
+      "Quit and restart restores group, title, opacity and lock",
+      "Close all in active group changes count to 0/1 and retains history",
+      "Create group with hex color label",
+      "Final self-contained QA package loads prior saved library and restores same pin"
+    ],
+    "unverified": [
+      "Physical mouse movement and resize",
+      "Display disconnect layout migration",
+      "Native permanent-delete confirmation flow"
+    ]
+  },
+  "remaining": [
+    "Group-tinted window shadows",
+    "Drag ordering and configurable group-switch shortcut",
+    "Pin internal version history and cross-restart undo stack",
+    "Mouse pass-through, thumbnails and batch save",
+    "Rich text/file semantics preserved beyond raster snapshot",
+    "Other incomplete features in docs/pixpin/README.md"
+  ]
+}

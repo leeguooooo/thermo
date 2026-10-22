@@ -27,7 +27,29 @@ import ThermoL10n
         let image = ctx.makeImage()!
         var recordingWindow: CaptureRecordingWindow?
         var annotationWindow:CaptureEditor?
-        if Bundle.main.object(forInfoDictionaryKey: "ThermoRecordingReview") as? Bool == true,
+        var pinSession:CapturePinSession?
+        if Bundle.main.object(forInfoDictionaryKey:"ThermoPinGroupsReview") as? Bool == true,
+           let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
+            let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins")))
+            pinSession=session
+            do {
+                if session.library.pins.isEmpty {
+                    let first=try session.open(image)
+                    session.windows[first]?.model.pinTitle="QA reference"
+                    session.windows[first]?.model.document.append(.init(tool:.rectangle,points:[CGPoint(x:40,y:250),CGPoint(x:750,y:470)],color:.systemBlue))
+                    try session.flush();let original=session.library.currentGroupID
+                    _=try session.createGroup(name:"QA archive",color:"#FF8800")
+                    let second=try session.open(image);session.windows[second]?.model.pinTitle="QA closed pin";session.closeAll()
+                    try session.switchGroup(original)
+                } else { session.restoreWindows() }
+            } catch { session.issue=error.localizedDescription }
+            session.showLibrary()
+            let probe=Timer(timeInterval:0.3,repeats:true) { [weak session] _ in
+                MainActor.assumeIsolated {
+                    if let session,let data=try? JSONEncoder().encode(session.library) { try? data.write(to:root.appendingPathComponent("pins-probe.json"),options:.atomic) }
+                }
+            };RunLoop.main.add(probe,forMode:.common)
+        } else if Bundle.main.object(forInfoDictionaryKey: "ThermoRecordingReview") as? Bool == true,
            let path = Bundle.main.object(forInfoDictionaryKey: "ThermoCaptureFixtureRoot") as? String {
             let root = URL(fileURLWithPath:path,isDirectory:true)
             let window = CaptureRecordingWindow(region:nil,store:CaptureRecordingDraftStore(root:root.appendingPathComponent("drafts")))
@@ -104,9 +126,9 @@ import ThermoL10n
             window.model.document.append(lens)
             window.model.tool = .select;window.model.selectAnnotation(0)
             annotationWindow=window;window.showWindow(nil)
-        } else { CaptureWorkspace.shared.open(image) }
+        } else { let window=CaptureEditor(image:image,onClose:{});annotationWindow=window;window.showWindow(nil) }
         DispatchQueue.main.asyncAfter(deadline: .now()+600) { app.terminate(nil) }
-        withExtendedLifetime((recordingWindow,annotationWindow)) { app.run() }
+        withExtendedLifetime((recordingWindow,annotationWindow,pinSession)) { app.run() }
     }
 }
 
