@@ -248,7 +248,7 @@ private struct LocalSearchSettings: View {
                         }
                     }
                 }
-            }.frame(maxHeight: 130)
+            }.frame(height: min(130, max(56, CGFloat(model.preferences.roots.count) * 60)))
             HStack { Button(tr("Add folders…")) { model.chooseFolder() }; Button(tr("Refresh index")) { model.refresh() }; Spacer() }
             Toggle(tr("Include hidden files"), isOn: $hidden)
             Toggle(tr("Respect .gitignore, .ignore and .thermoignore"), isOn: $ignores)
