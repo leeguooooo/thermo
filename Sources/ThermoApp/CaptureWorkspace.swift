@@ -116,29 +116,11 @@ import UniformTypeIdentifiers
         if model.phase == .failed { recordingWindow?.showWindow(nil); return false }
         return !model.active
     }
-    func pinClipboard() {
-        let board = NSPasteboard.general
-        if let image = NSImage(pasteboard: board), let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) { open(cg); return }
-        if let urls = board.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {
-            for url in urls {
-                if let image = try? CaptureDocument.load(url) { open(image) }
-                else { openText(url.path) }
-            }
-            return
-        }
-        if let text = board.string(forType: .string), !text.isEmpty { openText(text); return }
-        report(CaptureFailure.unsupportedClipboard)
-    }
-    private func openText(_ text: String) {
-        // Plain text pins never execute HTML, URLs or LaTeX from the clipboard.
-        let content = String(text.prefix(20000))
-        let attributes: [NSAttributedString.Key: Any] = [.font: NSFont.monospacedSystemFont(ofSize: 18, weight: .regular), .foregroundColor: NSColor.black]
-        let size = (content as NSString).boundingRect(with: CGSize(width: 640, height: 4000), options: [.usesLineFragmentOrigin], attributes: attributes).size
-        let image = NSImage(size: CGSize(width: max(160, size.width+32), height: max(64, size.height+32)))
-        image.lockFocus(); NSColor.white.setFill(); CGRect(origin: .zero, size: image.size).fill()
-        (content as NSString).draw(in: CGRect(x: 16, y: 16, width: image.size.width-32, height: image.size.height-32), withAttributes: attributes)
-        image.unlockFocus()
-        if let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) { open(cg) }
+    func pinClipboard(asText:Bool=false) {
+        do { switch try CapturePinClipboard.read(.general,asText:asText) {
+            case .image(let image):try pinSession.open(image)
+            case .content(let content):try pinSession.open(content)
+        } } catch { report(error) }
     }
     func open(_ image: CGImage) {
         do { try pinSession.open(image) } catch { report(error) }
@@ -168,6 +150,18 @@ import UniformTypeIdentifiers
     @Published var text = ""
     @Published var recognition = ""
     @Published var recognizing = false
+    @Published var pinContent:CapturePinContent?
+    var makeImageCopy:((CGImage)->Void)?
+    var snapshotPinContent:(() async throws -> CGImage)?
+    @Published var pinContentSaveError:String?
+    @Published var pinTextReloadID=UUID()
+    func revertUnsavedPinText() { pinContentSaveError=nil;error=nil;pinTextReloadID=UUID() }
+    func updatePinContent(_ content:CapturePinContent) throws {
+        do {
+            let image=try content.previewImage()
+            pinContentSaveError=nil;pinContent=content;document=CaptureDocument(image:image)
+        } catch { pinContentSaveError=tr(error.localizedDescription);throw error }
+    }
     var onMutation:((Bool)->Void)?
     var showPinLibrary:(() -> Void)?
     @Published var pinTitle="" { didSet { changeWindow?();onMutation?(false) } }
@@ -254,13 +248,18 @@ import UniformTypeIdentifiers
             window.hasShadow=self.model.shadow;window.isMovable = !self.model.locked
             window.styleMask=self.model.locked ? [.titled,.closable,.miniaturizable] : [.titled,.closable,.miniaturizable,.resizable]
         }
-        window.contentView = NSHostingView(rootView: CaptureEditorView(model: model))
+        window.contentView = NSHostingView(rootView: CaptureEditorRoot(model:model))
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
     func windowShouldClose(_ sender:NSWindow) -> Bool { shouldClose?() ?? true }
     func windowWillClose(_ notification: Notification) { onClose() }
     func windowDidMove(_ notification:Notification) { onWindowChange?() }
     func windowDidResize(_ notification:Notification) { onWindowChange?() }
+}
+
+private struct CaptureEditorRoot:View {
+    @ObservedObject var model:CaptureEditorModel
+    var body:some View { Group { if model.pinContent != nil { CaptureTypedPinView(model:model) } else { CaptureEditorView(model:model) } } }
 }
 
 private struct CaptureEditorView: View {

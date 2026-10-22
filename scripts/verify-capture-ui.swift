@@ -28,7 +28,26 @@ import ThermoL10n
         var recordingWindow: CaptureRecordingWindow?
         var annotationWindow:CaptureEditor?
         var pinSession:CapturePinSession?
-        if Bundle.main.object(forInfoDictionaryKey:"ThermoPinGroupsReview") as? Bool == true,
+        if Bundle.main.object(forInfoDictionaryKey:"ThermoTypedPinsReview") as? Bool == true,
+           let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
+            let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins")));pinSession=session
+            do {
+                if session.library.pins.isEmpty {
+                    let rich=NSAttributedString(string:"RTF rich text QA\n中文可选文字",attributes:[.font:NSFont.boldSystemFont(ofSize:28),.foregroundColor:NSColor.systemRed])
+                    let rtf=try rich.data(from:NSRange(location:0,length:rich.length),documentAttributes:[.documentType:NSAttributedString.DocumentType.rtf])
+                    let text=try session.open(.text(.init(plain:rich.string,rtf:rtf)));session.windows[text]?.model.pinTitle="QA rich text"
+                    let endpoint=Bundle.main.object(forInfoDictionaryKey:"ThermoHTMLProbeURL") as? String ?? "http://127.0.0.1:49379/probe"
+                    let html="<h1 style='color:#CC0000'>HTML formatting QA</h1><p>HTML selectable 中文</p><script>document.body.innerHTML='SCRIPT RAN';fetch('"+endpoint+"/script')</script><img src='"+endpoint+"/image'><link rel='stylesheet' href='"+endpoint+"/style'><iframe src='"+endpoint+"/frame'></iframe>"
+                    let web=try session.open(.text(.init(plain:"",html:html)));session.windows[web]?.model.pinTitle="QA HTML"
+                    let file=root.appendingPathComponent("fixture.txt");try Data("Local file preview QA\n中文文件内容".utf8).write(to:file)
+                    let folder=root.appendingPathComponent("fixture-folder");try FileManager.default.createDirectory(at:folder,withIntermediateDirectories:true)
+                    let files=try session.open(.files([try .init(url:file),try .init(url:folder)]));session.windows[files]?.model.pinTitle="QA files"
+                    let color=try session.open(.color(.init(red:41,green:184,blue:219)));session.windows[color]?.model.pinTitle="QA color"
+                    try session.flush()
+                } else { session.restoreWindows() }
+                session.showLibrary()
+            } catch { session.issue=error.localizedDescription;session.showLibrary() }
+        } else if Bundle.main.object(forInfoDictionaryKey:"ThermoPinGroupsReview") as? Bool == true,
            let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
             let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins")))
             pinSession=session

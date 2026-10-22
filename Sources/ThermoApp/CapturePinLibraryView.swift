@@ -71,7 +71,7 @@ struct CapturePinLibraryView:View {
                                     Spacer()
                                     if pin.closedAt != nil {
                                         Button(tr("Restore pin")) { run { if groupID != session.library.currentGroupID { try session.switchGroup(groupID) };try session.restore(pin.id) } }
-                                    }
+                                    } else { Button(tr("Show pin")) { run { try session.showPin(pin.id) } } }
                                     Menu(tr("Move to group")) {
                                         ForEach(session.library.groups.filter { $0.id != pin.groupID }) { target in
                                             Button(target.name) { run { try session.movePin(pin.id,to:target.id) } }

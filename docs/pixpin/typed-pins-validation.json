@@ -1,0 +1,81 @@
+{
+  "status": "partial",
+  "recordedAt": "2026-10-22T08:40:35.650971+00:00",
+  "baseCommit": "aa83c59944e9c0a448c2f215947651473fb21e17",
+  "sourceSHA256": {
+    "Package.swift": "481b266cbec2acb46beb312e78c9651813d132c8b37783ed2490a8a8959b2677",
+    "Sources/CaptureCore/CapturePinColorNames.swift": "4fcb52b64b9696730e69e213ac0087480f1d69a5be372f34a49231467bf756d9",
+    "Sources/CaptureCore/CapturePinContent.swift": "8a26a68bb5e50bf5db896243bd40253c1b48c21105d2e7106aa47e99e29ce8cc",
+    "Sources/CaptureCore/CapturePinLibrary.swift": "bf163a783abe2f9955dfdd9e2fc7e3abba1858cc115e692c312d22470599e918",
+    "Sources/ThermoApp/CaptureFileList.swift": "4f674d7b741e2fd04b39bf4b1dd541a4351aa0f0c3ed94f1cbfe6a9407a98c15",
+    "Sources/ThermoApp/CaptureHTMLPinView.swift": "9b69040b17206693e1832c7ebcebe20834bd905f39b59d88fb2773d32bef2e08",
+    "Sources/ThermoApp/CaptureNativeTextPin.swift": "af3d66fd3704366e9e5955a15eb64dfd0591e833251530342ee1c7d5924fe431",
+    "Sources/ThermoApp/CapturePinClipboard.swift": "6ab939703b10365f47a1a90b36859b0c5d18a25c3caceae06dd6e21e53a25897",
+    "Sources/ThermoApp/CapturePinLibraryView.swift": "c86315b646b213693e63dd46018291e39ab85d8cc870864a27c6c30945067bf5",
+    "Sources/ThermoApp/CapturePinSession.swift": "219cab4293c457a210cfe611c9ff7cdfdd979e86e9cdcc2e297fa5716b738f8b",
+    "Sources/ThermoApp/CaptureTypedPinView.swift": "8c3596663305c3f3025e3fca17322428ac5bb1b419e0e1a00f07dc502add2bc4",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "84fa823f7e57b179ab2b2932d7f0aa5f760496520c067b6a01e075172d9c3fc5",
+    "Sources/ThermoApp/StatusMenu.swift": "2953b39ff68c8c55425e08eabc3121d9234ff3f1a3bafd1c91e53316edd26943",
+    "Sources/ThermoApp/Views.swift": "81e63cd6500288f1b527ab38912a7ef50f7dd9a6b7e4fd06a78255525fb39f65",
+    "Sources/ThermoL10n/ZhHans.swift": "a75ee1c8db723601ba2acf170efdfe9e8e0e00a837eb9242f3d6995530e49526",
+    "Tests/CaptureCoreTests/CaptureTypedPinTests.swift": "41c7988b92fe9000b1f8eda9aadf4677e3eb3fa885716452c80eb7b1df045fe5",
+    "Tests/ThermoAppTests/CapturePinClipboardTests.swift": "51ac2b0bf6730cb5f9db9f353a3247e64c95b50a61cf4684e968db43a66f405f",
+    "scripts/verify-capture-ui.py": "ff08698c16afd1550b29677a7a0d553df3f5ab69b765acb2eef70d1baed37940",
+    "scripts/verify-capture-ui.swift": "55423693d1e9b8f44b23c01dda0c236b850e98ec06fbde92e1cae370d99ff739"
+  },
+  "tests": {
+    "CaptureCore": 79,
+    "ThermoApp": 39,
+    "failures": 0,
+    "logSHA256": "e7bdbab0646aeecee3f34dad30db0742d39833d3e43f7edc1c4e3c157d3f6461",
+    "context": "isolated workspace; final Core rerun and native restore focus verification followed"
+  },
+  "finalCoreLogSHA256": "3873a5d9e1e0f2212902e7930e58c6d11742594c49203845bccdf4fe34eff9ff",
+  "nativeQA": {
+    "app": "/tmp/thermo-typed-pins-qa-final-01a/ThermoCaptureQA.app",
+    "binarySHA256": "2a3381c64055b2f0c5c697494d0d0ae971c2c98e6fdf6fa7db7e340cefa062ef",
+    "bundledSparkleFramework": true,
+    "syntheticOnly": true,
+    "savedManifestSHA256": "39f030257f46fa13a15bfe7a2ecb6a17685d2ff71990e9544b384501e28e8695",
+    "verified": [
+      "RTF bold red font and Chinese characters rendered",
+      "Select Chinese substring in native text view",
+      "Edit text and restart retains payload and zoom 1.2",
+      "Restore closed typed pin directly brings requested window to front",
+      "Native file and folder icons; Quick Look reads real fixture text",
+      "Color HEX switches to RGB; separate image copy retains original type",
+      "HTML red heading and Chinese content rendered with zoom 1.3",
+      "HTML visible-area snapshot contains rendered heading pixels"
+    ],
+    "unverified": [
+      "Real clipboard variations from browsers and office apps",
+      "Cross-application multi-file and text drag/drop",
+      "File relocation, permission changes and missing file UI",
+      "External default-app open and Finder navigation",
+      "Native pinch/scroll position persistence"
+    ]
+  },
+  "htmlProbe": {
+    "pageScriptDidNotReplaceHeading": true,
+    "controlRequests": [
+      "/control-before",
+      "/control-after-html",
+      "/control-final"
+    ],
+    "fixtureResourceRequests": 0,
+    "requestLogSHA256": "eb6639528d58eda4b7cec63844cc39c096791f4340a0116d6bccf397f772064e",
+    "resourceTypes": [
+      "image",
+      "stylesheet",
+      "iframe",
+      "script fetch"
+    ],
+    "serverStoppedAfterVerification": true
+  },
+  "remaining": [
+    "Direct HTML rich-text editing",
+    "Advanced CSS color spaces",
+    "Whole-document HTML image export beyond visible area",
+    "Other incomplete features in docs/pixpin/README.md"
+  ]
+}

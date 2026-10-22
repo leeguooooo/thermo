@@ -411,6 +411,7 @@ struct PopoverView: View {
                 Menu {
                     Button(tr("Capture screen…") + "  ⌥⌘3") { CaptureWorkspace.shared.capture() }
                     Button(tr("Pin clipboard") + "  ⌥⌘4") { CaptureWorkspace.shared.pinClipboard() }
+                    Button(tr("Pin clipboard as text")) { CaptureWorkspace.shared.pinClipboard(asText:true) }
                     Button(tr("Open image…")) { CaptureWorkspace.shared.importImage() }
                     Button(tr("Scrolling capture…")) { CaptureWorkspace.shared.captureScrolling() }
                     Button(tr("Record screen…")) { CaptureWorkspace.shared.recordScreen() }

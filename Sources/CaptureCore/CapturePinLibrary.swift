@@ -14,6 +14,7 @@ public struct CaptureSavedPin:Codable,Identifiable,Sendable {
     public var groupID:UUID
     public var snapshotID=UUID()
     public var title=""
+    public var contentKind:String?
     public var closedAt:Date?
     public var hidden=false
     public var frame=CGRect.zero
@@ -25,7 +26,7 @@ public struct CaptureSavedPin:Codable,Identifiable,Sendable {
     public var shadow=true
     public init(groupID:UUID) { self.groupID=groupID }
     var valid:Bool {
-        (closedAt?.timeIntervalSince1970.isFinite ?? true) && title.count <= 2000 && [frame.minX,frame.minY,frame.width,frame.height,pan.x,pan.y].allSatisfy(\.isFinite) && frame.width >= 0 && frame.height >= 0 &&
+        (contentKind.map { ["text","files","color"].contains($0) } ?? true) && (closedAt?.timeIntervalSince1970.isFinite ?? true) && title.count <= 2000 && [frame.minX,frame.minY,frame.width,frame.height,pan.x,pan.y].allSatisfy(\.isFinite) && frame.width >= 0 && frame.height >= 0 &&
         opacity.isFinite && (0.15...1).contains(opacity) && zoom.isFinite && (0.25...4).contains(zoom)
     }
 }
@@ -53,9 +54,11 @@ public struct CapturePinLibrary:Codable,Sendable {
     }
 }
 public enum CapturePinFailure:LocalizedError {
-    case invalidLibrary,missingPin,invalidName
+    case invalidLibrary,missingPin,invalidName,invalidContent,missingSourceFile
     public var errorDescription:String? {
         switch self {
+        case .invalidContent:return "The pin content is unsupported or exceeds its size limit."
+        case .missingSourceFile:return "The source file no longer exists."
         case .invalidLibrary:return "The saved pin library is invalid or could not be read."
         case .missingPin:return "The saved pin could not be found."
         case .invalidName:return "Use a unique group name of 1 to 100 characters."
@@ -65,6 +68,11 @@ public enum CapturePinFailure:LocalizedError {
 
 /// Snapshot directories are immutable. The atomic manifest is the only commit point.
 /// Failed saves keep the previous manifest and all its referenced snapshots intact.
+public struct CapturePinSnapshot {
+    public let document:CaptureDocument
+    public let content:CapturePinContent?
+}
+
 public final class CapturePinLibraryStore {
     public let root:URL
     private var expectedRevision:UUID?
@@ -98,7 +106,8 @@ public final class CapturePinLibraryStore {
         let value=try JSONDecoder().decode(CapturePinLibrary.self,from:regular(manifest,limit:4*1024*1024))
         guard value.valid else { throw CapturePinFailure.invalidLibrary };expectedRevision=value.revision;return value
     }
-    public func document(for pin:CaptureSavedPin) throws -> CaptureDocument {
+    public func document(for pin:CaptureSavedPin) throws -> CaptureDocument { try snapshot(for:pin).document }
+    public func snapshot(for pin:CaptureSavedPin) throws -> CapturePinSnapshot {
         try directory(root);try directory(snapshots)
         let folder=snapshots.appendingPathComponent(pin.snapshotID.uuidString,isDirectory:true);try directory(folder)
         let annotations=try JSONDecoder().decode([CaptureVectorAnnotation].self,from:regular(folder.appendingPathComponent("annotations.json"),limit:4*1024*1024))
@@ -107,10 +116,18 @@ public final class CapturePinLibraryStore {
         guard let source=CGImageSourceCreateWithData(data as CFData,nil),let props=CGImageSourceCopyPropertiesAtIndex(source,0,nil) as? [CFString:Any],
               let width=props[kCGImagePropertyPixelWidth] as? Int,let height=props[kCGImagePropertyPixelHeight] as? Int,
               width > 0,height > 0,width <= 80000000/height,let image=CGImageSourceCreateImageAtIndex(source,0,nil) else { throw CapturePinFailure.invalidLibrary }
-        return CaptureDocument(image:image,annotations:annotations.compactMap(\.annotation))
+        let contentURL=folder.appendingPathComponent("content.json")
+        var content:CapturePinContent?
+        if pin.contentKind != nil || FileManager.default.fileExists(atPath:contentURL.path) || (try? contentURL.resourceValues(forKeys:[.isSymbolicLinkKey]).isSymbolicLink) == true {
+            content=try JSONDecoder().decode(CapturePinContent.self,from:regular(contentURL,limit:12*1024*1024))
+            guard content?.valid == true,content?.kind == pin.contentKind else { throw CapturePinFailure.invalidLibrary }
+            if case .text(let text)=content,text.rtf != nil { _=try text.attributed() }
+        }
+        return CapturePinSnapshot(document:CaptureDocument(image:image,annotations:annotations.compactMap(\.annotation)),content:content)
     }
-    @discardableResult public func save(_ library:CapturePinLibrary,documents:[UUID:CaptureDocument]=[:]) throws -> CapturePinLibrary {
+    @discardableResult public func save(_ library:CapturePinLibrary,documents:[UUID:CaptureDocument]=[:],contents:[UUID:CapturePinContent]=[:]) throws -> CapturePinLibrary {
         guard library.valid,documents.keys.allSatisfy({ id in library.pins.contains { $0.id == id } }) else { throw CapturePinFailure.invalidLibrary }
+        guard contents.allSatisfy({ documents[$0.key] != nil && $0.value.valid }),library.pins.filter({ documents[$0.id] != nil }).allSatisfy({ contents[$0.id]?.kind == $0.contentKind }) else { throw CapturePinFailure.invalidLibrary }
         try prepare()
         let fd=Darwin.open(root.appendingPathComponent(".lock").path,O_CREAT|O_RDWR|O_NOFOLLOW,0o600)
         guard fd >= 0 else { throw CapturePinFailure.invalidLibrary }
@@ -133,6 +150,10 @@ public final class CapturePinLibraryStore {
                 try FileManager.default.createDirectory(at:folder,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);created.append(folder)
                 try png.write(to:folder.appendingPathComponent("image.png"),options:.atomic)
                 try metadata.write(to:folder.appendingPathComponent("annotations.json"),options:.atomic)
+                if let content=contents[id] {
+                    let data=try JSONEncoder().encode(content);guard data.count <= 12*1024*1024 else { throw CapturePinFailure.invalidLibrary }
+                    try data.write(to:folder.appendingPathComponent("content.json"),options:.atomic)
+                }
             }
             // Do not commit a reference to an absent or symlinked snapshot.
             for pin in library.pins {

@@ -30,27 +30,28 @@ import ThermoL10n
             saving?.cancel();saving=nil
             let saved=try store.load(defaultName:tr("Default pin group"))
             let pins=saved.pins.filter { $0.groupID == saved.currentGroupID && $0.closedAt == nil }
-            let documents=try pins.map { ($0,try store.document(for:$0)) }
+            let documents=try pins.map { ($0,try store.snapshot(for:$0)) }
             for editor in Array(windows.values) { editor.close() }
             windows.removeAll();dirty.removeAll();library=saved;loadFailed=false;issue=nil
-            for (pin,document) in documents { makeEditor(pin,document:document) };displayCurrent()
+            for (pin,document) in documents { makeEditor(pin,document:document.document,content:document.content) };displayCurrent()
         } catch { loadFailed=true;issue=tr(error.localizedDescription) }
     }
-    private func commit(_ next:CapturePinLibrary,documents:[UUID:CaptureDocument]=[:]) throws {
-        try checkLoaded();let saved=try store.save(next,documents:documents);library=saved;onCountChange?(count)
+    private func commit(_ next:CapturePinLibrary,documents:[UUID:CaptureDocument]=[:],contents:[UUID:CapturePinContent]=[:]) throws {
+        try checkLoaded();let saved=try store.save(next,documents:documents,contents:contents);library=saved;onCountChange?(count)
     }
     func flush() throws {
         saving?.cancel();saving=nil;try checkLoaded()
-        var next=library,documents:[UUID:CaptureDocument]=[:]
+        var next=library,documents:[UUID:CaptureDocument]=[:],contents:[UUID:CapturePinContent]=[:]
         for (id,editor) in windows {
             guard let index=next.pins.firstIndex(where: { $0.id == id }) else { continue }
             let model=editor.model
+            guard model.pinContentSaveError == nil else { throw CapturePinFailure.invalidContent }
             next.pins[index].frame=editor.window?.frame ?? .zero
             next.pins[index].opacity=model.opacity;next.pins[index].zoom=model.zoom;next.pins[index].pan=model.pan
             next.pins[index].pinned=model.pinned;next.pins[index].locked=model.locked;next.pins[index].shadow=model.shadow;next.pins[index].title=model.pinTitle
-            if dirty.contains(id) { next.pins[index].snapshotID=UUID();documents[id]=model.document }
+            if dirty.contains(id) { next.pins[index].snapshotID=UUID();documents[id]=model.document;contents[id]=model.pinContent;next.pins[index].contentKind=model.pinContent?.kind }
         }
-        try commit(next,documents:documents);dirty.removeAll();issue=nil
+        try commit(next,documents:documents,contents:contents);dirty.removeAll();issue=nil
     }
     private func changed(_ id:UUID,document:Bool) {
         if document { dirty.insert(id) }
@@ -60,16 +61,18 @@ import ThermoL10n
             catch is CancellationError {} catch { self?.issue=tr(error.localizedDescription) }
         }
     }
-    @discardableResult func open(_ image:CGImage) throws -> UUID {
+    @discardableResult func open(_ image:CGImage,content:CapturePinContent? = nil) throws -> UUID {
         try flush()
         var next=library
         for index in next.pins.indices where next.pins[index].groupID == next.currentGroupID { next.pins[index].hidden=false }
-        let pin=CaptureSavedPin(groupID:next.currentGroupID);next.pins.append(pin)
-        let doc=CaptureDocument(image:image);try commit(next,documents:[pin.id:doc]);makeEditor(pin,document:doc);displayCurrent();return pin.id
+        var pin=CaptureSavedPin(groupID:next.currentGroupID);pin.contentKind=content?.kind;next.pins.append(pin)
+        let doc=CaptureDocument(image:image);try commit(next,documents:[pin.id:doc],contents:content.map { [pin.id:$0] } ?? [:]);makeEditor(pin,document:doc,content:content);displayCurrent();return pin.id
     }
-    private func makeEditor(_ pin:CaptureSavedPin,document:CaptureDocument) {
+    @discardableResult func open(_ content:CapturePinContent) throws -> UUID { try open(content.previewImage(),content:content) }
+    private func makeEditor(_ pin:CaptureSavedPin,document:CaptureDocument,content:CapturePinContent? = nil) {
         let editor=CaptureEditor(image:document.image,onClose:{ [weak self] in self?.windows.removeValue(forKey:pin.id) },shouldClose:{ [weak self] in self?.willClose(pin.id) ?? true })
-        let model=editor.model;model.document=document;model.opacity=pin.opacity;model.zoom=pin.zoom;model.pan=pin.pan;model.pinned=pin.pinned;model.locked=pin.locked;model.shadow=pin.shadow;model.pinTitle=pin.title
+        let model=editor.model;model.document=document;model.pinContent=content;model.opacity=pin.opacity;model.zoom=pin.zoom;model.pan=pin.pan;model.pinned=pin.pinned;model.locked=pin.locked;model.shadow=pin.shadow;model.pinTitle=pin.title
+        model.makeImageCopy={ [weak self] image in do { try self?.open(image) } catch { self?.issue=tr(error.localizedDescription);self?.showLibrary() } }
         model.showPinLibrary={ [weak self] in self?.showLibrary() }
         model.onMutation={ [weak self] document in self?.changed(pin.id,document:document) }
         editor.onWindowChange={ [weak self] in self?.changed(pin.id,document:false) }
@@ -82,8 +85,8 @@ import ThermoL10n
     private func prepareWindows(for group:UUID,in value:CapturePinLibrary? = nil) throws {
         // Decode all missing documents first; a damaged member cannot cause a partial switch.
         let missing=(value ?? library).pins.filter { $0.groupID == group && $0.closedAt == nil && windows[$0.id] == nil }
-        let docs=try missing.map { ($0,try store.document(for:$0)) }
-        for (pin,doc) in docs { makeEditor(pin,document:doc) }
+        let docs=try missing.map { ($0,try store.snapshot(for:$0)) }
+        for (pin,doc) in docs { makeEditor(pin,document:doc.document,content:doc.content) }
     }
     private func displayCurrent() {
         for pin in library.pins {
@@ -100,12 +103,21 @@ import ThermoL10n
             next.pins[index].closedAt=Date();next.pruneHistory();try commit(next);return true
         } catch { issue=tr(error.localizedDescription);showLibrary();return false }
     }
+    func showPin(_ id:UUID) throws {
+        guard let pin=library.pins.first(where:{ $0.id == id }) else { throw CapturePinFailure.missingPin }
+        try switchGroup(pin.groupID)
+        if pin.closedAt != nil { try restore(id) }
+        else {
+            var next=library;next.pins[next.pins.firstIndex { $0.id == id }!].hidden=false;try commit(next);displayCurrent()
+        }
+        windows[id]?.window?.makeKeyAndOrderFront(nil)
+    }
     func restore(_ id:UUID? = nil) throws {
         try flush()
         let pin=library.pins.filter { $0.groupID == library.currentGroupID && $0.closedAt != nil && (id == nil || $0.id == id) }.sorted { $0.closedAt! > $1.closedAt! }.first
         guard var pin else { return }
-        let doc=try store.document(for:pin);pin.closedAt=nil;pin.hidden=false
-        var next=library;next.pins[next.pins.firstIndex { $0.id == pin.id }!]=pin;try commit(next);makeEditor(pin,document:doc);displayCurrent()
+        let doc=try store.snapshot(for:pin);pin.closedAt=nil;pin.hidden=false
+        var next=library;next.pins[next.pins.firstIndex { $0.id == pin.id }!]=pin;try commit(next);makeEditor(pin,document:doc.document,content:doc.content);displayCurrent();windows[pin.id]?.window?.makeKeyAndOrderFront(nil)
     }
     func switchGroup(_ id:UUID) throws {
         guard library.groups.contains(where:{ $0.id == id }) else { throw CapturePinFailure.invalidLibrary }

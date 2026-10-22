@@ -19,6 +19,8 @@ def main():
     parser.add_argument('--keyboard-review', action='store_true')
     parser.add_argument('--annotation-review', action='store_true')
     parser.add_argument('--pin-groups-review', action='store_true')
+    parser.add_argument('--typed-pins-review', action='store_true')
+    parser.add_argument('--html-probe-url', default='http://127.0.0.1:49379/probe')
     args = parser.parse_args()
     root = Path(__file__).resolve().parent.parent
     os.chdir(root)
@@ -35,7 +37,7 @@ def main():
     binary = app / 'Contents/MacOS/ThermoCaptureQA'
     binary.parent.mkdir(parents=True)
     command = ['xcrun', 'swiftc', '-parse-as-library', str(root/'scripts/verify-capture-ui.swift'), '-o', str(binary),
-               '-I', str(root/'Sources/CSQLite'), '-lsqlite3', '-lz', '-framework', 'AVKit']
+               '-I', str(root/'Sources/CSQLite'), '-lsqlite3', '-lz', '-framework', 'AVKit', '-framework', 'WebKit', '-framework', 'Quartz']
     if (base/'ExecutableModules').is_dir():
         framework = base/'Sparkle.framework'
         command += ['-I', str(base), '-F', str(base), '-framework', 'Sparkle', '-Xlinker', '-rpath', '-Xlinker', '@executable_path/../Frameworks']
@@ -62,7 +64,7 @@ def main():
     (app/'Contents/Info.plist').write_bytes(plistlib.dumps({
         'CFBundleIdentifier': 'dev.thermo.capture-qa.'+hashlib.sha256(str(output).encode()).hexdigest()[:12], 'CFBundleExecutable': binary.name,
         'CFBundleName': binary.name, 'CFBundlePackageType': 'APPL', 'NSHighResolutionCapable': True,
-        'ThermoPinGroupsReview': args.pin_groups_review, 'ThermoAnnotationReview': args.annotation_review, 'ThermoRecordingReview': args.recording_review or args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoOrdinaryReview': args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoKeyboardReview': args.keyboard_review, 'ThermoAVLayerReview': args.av_layer_review, 'ThermoCaptureFixtureRoot': str(output),
+        'ThermoTypedPinsReview': args.typed_pins_review, 'ThermoHTMLProbeURL': args.html_probe_url, 'ThermoPinGroupsReview': args.pin_groups_review, 'ThermoAnnotationReview': args.annotation_review, 'ThermoRecordingReview': args.recording_review or args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoOrdinaryReview': args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoKeyboardReview': args.keyboard_review, 'ThermoAVLayerReview': args.av_layer_review, 'ThermoCaptureFixtureRoot': str(output),
     }))
     subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True)
     print(app)
