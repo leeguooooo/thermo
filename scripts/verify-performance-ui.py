@@ -4,8 +4,16 @@ from pathlib import Path
 import hashlib,json,plistlib,subprocess
 root=Path(__file__).resolve().parent.parent
 base=root/'.build/out/Products/Release'
-output=Path('/private/tmp/thermo-perf-review-01a1612a');output.mkdir(mode=0o700,exist_ok=True)
-(output/'.thermo-performance-fixture').touch()
+output=Path('/private/tmp/thermo-perf-review-01a1612a')
+executable=output/'ThermoPerformanceQA.app/Contents/MacOS/ThermoPerformanceQA'
+running=subprocess.check_output(['ps','-axo','comm='],text=True).splitlines()
+if any(line.strip()==str(executable) for line in running):
+ raise SystemExit('Performance QA is still running; quit that owned app before refreshing it.')
+marker=output/'.thermo-performance-fixture'
+if output.is_symlink() or (output.exists() and any(output.iterdir()) and not marker.is_file()):
+ raise SystemExit('Refusing to replace an unmarked performance fixture.')
+output.mkdir(mode=0o700,exist_ok=True)
+marker.touch()
 app=output/'ThermoPerformanceQA.app';mac=app/'Contents/MacOS';mac.mkdir(parents=True,exist_ok=True)
 frameworks=app/'Contents/Frameworks';frameworks.mkdir(exist_ok=True)
 subprocess.run(['ditto',str(base/'Sparkle.framework'),str(frameworks/'Sparkle.framework')],check=True)
