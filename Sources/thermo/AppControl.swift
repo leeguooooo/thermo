@@ -14,8 +14,10 @@ struct AppControlCommand {
         var action: String, values: [String:String] = [:], mutates = false
         switch command {
         case "search":
-            guard rest.count == 1, ["open", "settings"].contains(sub) else { throw CLIError("Use search open or search settings.") }
-            action = sub == "open" ? "search.show" : "search.settings"
+            let actions = ["open": "search.show", "settings": "search.settings",
+                           "use-command-space": "search.useCommandSpace", "give-back-command-space": "search.giveBackCommandSpace"]
+            guard rest.count == 1, let mapped = actions[sub] else { throw CLIError("Use search open, settings, use-command-space or give-back-command-space.") }
+            action = mapped; mutates = sub.hasSuffix("command-space")
         case "keep-awake":
             guard rest.count <= 1, ["status", "start", "stop"].contains(sub) else { throw CLIError("Run thermo keep-awake --help.") }
             action = "keep-awake." + sub; mutates = sub != "status"

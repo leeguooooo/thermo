@@ -1,5 +1,4 @@
 import AppKit
-import Carbon
 import ThermoL10n
 
 /// Spotlight's ⌘Space lives in the per-user symbolic hotkey table (entry 64). Thermo turns that entry off so
@@ -9,13 +8,13 @@ import ThermoL10n
     var release: () throws -> Void
     var restore: () throws -> Void
     var released: () -> Bool
-    /// Another app holding ⌘Space. Raycast is named from its own setting; any other holder is only found by a
-    /// trial registration, which is meaningful once Spotlight's entry is off (`probe`).
-    var otherHolder: (_ probe: Bool) -> Holder?
+    /// A launcher whose own setting claims ⌘Space. Carbon cannot name or even detect other holders: an exclusive
+    /// trial registration of ⌘Space fails whenever it is in the system table, enabled or not.
+    var otherHolder: () -> Holder?
 
     struct Holder: Equatable {
         var name: String
-        var app: URL?
+        var app: URL
     }
 
     struct Failure: LocalizedError {
@@ -50,16 +49,11 @@ import ThermoL10n
             UserDefaults.standard.removeObject(forKey: backupKey)
         },
         released: { UserDefaults.standard.data(forKey: backupKey) != nil },
-        otherHolder: { probe in
-            if let raycast = NSRunningApplication.runningApplications(withBundleIdentifier: "com.raycast.macos").first,
-               UserDefaults(suiteName: "com.raycast.macos")?.string(forKey: "raycastGlobalHotkey") == "Command-49" {
-                return Holder(name: raycast.localizedName ?? "Raycast", app: raycast.bundleURL)
-            }
-            guard probe else { return nil }
-            var ref: EventHotKeyRef?
-            let status = RegisterEventHotKey(49, UInt32(cmdKey), EventHotKeyID(signature: 0x54485052, id: 1), GetApplicationEventTarget(), UInt32(kEventHotKeyExclusive), &ref)
-            if let ref { UnregisterEventHotKey(ref) }
-            return status == OSStatus(eventHotKeyExistsErr) ? Holder(name: tr("another app")) : nil
+        otherHolder: {
+            guard let raycast = NSRunningApplication.runningApplications(withBundleIdentifier: "com.raycast.macos").first,
+                  let app = raycast.bundleURL,
+                  UserDefaults(suiteName: "com.raycast.macos")?.string(forKey: "raycastGlobalHotkey") == "Command-49" else { return nil }
+            return Holder(name: raycast.localizedName ?? "Raycast", app: app)
         })
 
     private static let backupKey = "dev.thermo.search.spotlightBackup"

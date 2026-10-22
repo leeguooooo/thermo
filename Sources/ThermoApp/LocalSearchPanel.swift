@@ -268,7 +268,7 @@ private struct LocalSearchSettings: View {
                 if let holder = shortcut.commandSpaceHolder, !shortcut.spotlightReleased {
                     Text(LocalSearchShortcut.heldMessage(holder)).font(Theme.caption).foregroundStyle(Theme.textSecondary)
                     Spacer()
-                    if let app = holder.app { Button(tr("Open %@", holder.name)) { NSWorkspace.shared.open(app) } }
+                    Button(tr("Open %@", holder.name)) { NSWorkspace.shared.open(holder.app) }
                 } else {
                     Text(shortcut.spotlightReleased ? tr("Spotlight's ⌘Space is turned off so Thermo search can use it.") : tr("⌘Space is Spotlight's shortcut. Thermo can turn it off and use it for search."))
                         .font(Theme.caption).foregroundStyle(Theme.textSecondary)

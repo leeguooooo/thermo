@@ -58,7 +58,7 @@ import SearchCore
         let spotlight = SpotlightShortcut(commandSpaceTaken: { spotlightOn },
                                           release: { backup = true; spotlightOn = false },
                                           restore: { if backup { spotlightOn = true; backup = false } },
-                                          released: { backup }, otherHolder: { _ in holder })
+                                          released: { backup }, otherHolder: { holder })
         let model = LocalSearchShortcut(backend: backend, spotlight: spotlight, action: {}, record: { _ in })
         model.apply(LocalSearchShortcut.optionSpace, persist: false)
         model.takeOverSpotlight()
