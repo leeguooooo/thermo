@@ -1,0 +1,2805 @@
+{
+  "evidence_id": "ev_dad2c19a87dc9811501dfe472588f5743931dcb7709f59b1cf9782599f61aed2",
+  "subject": {
+    "name": "PixPin",
+    "digest": {
+      "sha256": "b5b4ef78383677004719e1b532171c45c1dc07d3cd233b87f2ea2eb3491f43d2"
+    },
+    "local_path": "/Applications/PixPin.app/Contents/MacOS/PixPin",
+    "format": "mach-o-universal",
+    "architecture": "arm64"
+  },
+  "provider": {
+    "id": "hopper",
+    "name": "Hopper Disassembler",
+    "version": "launcher-sha256:dad6f886261fad0d4cdd01aee6fcf57439c60d7b5c54e62fc97f0180116690e0"
+  },
+  "analysis_profile": {
+    "provider": {
+      "id": "hopper",
+      "name": "Hopper Disassembler",
+      "version": "launcher-sha256:dad6f886261fad0d4cdd01aee6fcf57439c60d7b5c54e62fc97f0180116690e0"
+    },
+    "parameters": {
+      "target_kind": "executable",
+      "target_format": "mach-o-universal",
+      "function_dossier_coverage": "observed-facets-and-call-relationships-v1",
+      "architecture": "arm64",
+      "available_architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "macho_container": "fat32",
+      "prepared_image": {
+        "method": "fat32_thin_slice",
+        "architecture_count": 2,
+        "container_table_sha256": "2c412e24039627e7b0592a5c6561cbad3cc329c6f0bc6a077d4b760d04ff0c28",
+        "source_offset": 22347776,
+        "byte_length": 17898656,
+        "cpu_type": 16777228,
+        "cpu_subtype": 0
+      },
+      "loader": {
+        "source": "derived",
+        "arguments": [
+          "-l",
+          "Mach-O",
+          "--aarch64"
+        ]
+      }
+    },
+    "digest": "d6d378758c008edf0342c8747d0af690516187f996cd0f9f3c6c7382c63e70b8"
+  },
+  "predicate_type": "rea.analysis",
+  "operation": "search_strings",
+  "parameters": {
+    "pattern": "ScreenShot",
+    "mode": "literal",
+    "case_sensitive": false
+  },
+  "raw_result": null,
+  "normalized_result": [
+    {
+      "address": "0x100c2c1b7",
+      "value": "NSt3__110__function6__funcIZ18InitScreenshotConfvE3$_0NS_9allocatorIS2_EEF7QStringvEEE",
+      "provider_value": "NSt3__110__function6__funcIZ18InitScreenshotConfvE3$_0NS_9allocatorIS2_EEF7QStringvEEE",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 87
+      }
+    },
+    {
+      "address": "0x100c2c237",
+      "value": "Z18InitScreenshotConfvE3$_0",
+      "provider_value": "Z18InitScreenshotConfvE3$_0",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 28
+      }
+    },
+    {
+      "address": "0x100c30d40",
+      "value": "16ScreenShotDirect",
+      "provider_value": "16ScreenShotDirect",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 19
+      }
+    },
+    {
+      "address": "0x100c30df0",
+      "value": "NSt3__16__bindIM16ScreenShotDirectF7QStringS2_PbEJPS1_RKNS_12placeholders4__phILi1EEERKNS8_ILi2EEEEEE",
+      "provider_value": "NSt3__16__bindIM16ScreenShotDirectF7QStringS2_PbEJPS1_RKNS_12placeholders4__phILi1EEERKNS8_ILi2EEEEEE",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 102
+      }
+    },
+    {
+      "address": "0x100c30f0b",
+      "value": "NSt3__110__function6__funcIZN14ScreenShotViewC1EP17ScreenShotBgLayerP7QWidgetE3$_0NS_9allocatorIS7_EEFb12QKeySequencebEEE",
+      "provider_value": "NSt3__110__function6__funcIZN14ScreenShotViewC1EP17ScreenShotBgLayerP7QWidgetE3$_0NS_9allocatorIS7_EEFb12QKeySequencebEEE",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 122
+      }
+    },
+    {
+      "address": "0x100c30f85",
+      "value": "ZN14ScreenShotViewC1EP17ScreenShotBgLayerP7QWidgetE3$_0",
+      "provider_value": "ZN14ScreenShotViewC1EP17ScreenShotBgLayerP7QWidgetE3$_0",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 56
+      }
+    },
+    {
+      "address": "0x100c30fbd",
+      "value": "NSt3__110__function6__funcIZN14ScreenShotView12getRawPixmapEbE3$_0NS_9allocatorIS3_EEFvP8QPainterRK6QRectFRK5QRectN2Qt15AspectRatioModeEEEE",
+      "provider_value": "NSt3__110__function6__funcIZN14ScreenShotView12getRawPixmapEbE3$_0NS_9allocatorIS3_EEFvP8QPainterRK6QRectFRK5QRectN2Qt15AspectRatioModeEEEE",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 140
+      }
+    },
+    {
+      "address": "0x100c31049",
+      "value": "ZN14ScreenShotView12getRawPixmapEbE3$_0",
+      "provider_value": "ZN14ScreenShotView12getRawPixmapEbE3$_0",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 40
+      }
+    },
+    {
+      "address": "0x100c31117",
+      "value": "NSt3__110__function6__funcIZN27TrigerGraphicRectSelectItemC1EP14ScreenShotViewE3$_0NS_9allocatorIS5_EEFvvEEE",
+      "provider_value": "NSt3__110__function6__funcIZN27TrigerGraphicRectSelectItemC1EP14ScreenShotViewE3$_0NS_9allocatorIS5_EEFvvEEE",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 109
+      }
+    },
+    {
+      "address": "0x100c31184",
+      "value": "ZN27TrigerGraphicRectSelectItemC1EP14ScreenShotViewE3$_0",
+      "provider_value": "ZN27TrigerGraphicRectSelectItemC1EP14ScreenShotViewE3$_0",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 57
+      }
+    },
+    {
+      "address": "0x100c311d0",
+      "value": "NSt3__110__function6__funcIZN14ScreenShotEdit12initEditItemEvE3$_1NS_9allocatorIS3_EEF6QRectF7QPointFEEE",
+      "provider_value": "NSt3__110__function6__funcIZN14ScreenShotEdit12initEditItemEvE3$_1NS_9allocatorIS3_EEF6QRectF7QPointFEEE",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 105
+      }
+    },
+    {
+      "address": "0x100c31239",
+      "value": "ZN14ScreenShotEdit12initEditItemEvE3$_1",
+      "provider_value": "ZN14ScreenShotEdit12initEditItemEvE3$_1",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 40
+      }
+    },
+    {
+      "address": "0x100c3126c",
+      "value": "22ScreenShotQRCodeAction",
+      "provider_value": "22ScreenShotQRCodeAction",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 25
+      }
+    },
+    {
+      "address": "0x100c33ba4",
+      "value": "16ScreenShotWindow",
+      "provider_value": "16ScreenShotWindow",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 19
+      }
+    },
+    {
+      "address": "0x100c35098",
+      "value": "23CustomScreenshotContent",
+      "provider_value": "23CustomScreenshotContent",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 26
+      }
+    },
+    {
+      "address": "0x100c351c4",
+      "value": "20ScreenshotPresetForm",
+      "provider_value": "20ScreenshotPresetForm",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 23
+      }
+    },
+    {
+      "address": "0x100c35288",
+      "value": "22ScreenshotPresetSelect",
+      "provider_value": "22ScreenshotPresetSelect",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 25
+      }
+    },
+    {
+      "address": "0x100c35310",
+      "value": "16CustomScreenshot",
+      "provider_value": "16CustomScreenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 19
+      }
+    },
+    {
+      "address": "0x100c35494",
+      "value": "20ScreenshotParameters",
+      "provider_value": "20ScreenshotParameters",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 23
+      }
+    },
+    {
+      "address": "0x100c38cb0",
+      "value": "14ScreenShotView",
+      "provider_value": "14ScreenShotView",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 17
+      }
+    },
+    {
+      "address": "0x100c38fdc",
+      "value": "20ScreenShotModeButton",
+      "provider_value": "20ScreenShotModeButton",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 23
+      }
+    },
+    {
+      "address": "0x100c39048",
+      "value": "14ScreenShotEdit",
+      "provider_value": "14ScreenShotEdit",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 17
+      }
+    },
+    {
+      "address": "0x100dd2d8f",
+      "value": "_ScreenshotRecord",
+      "provider_value": "_ScreenshotRecord",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 18
+      }
+    },
+    {
+      "address": "0x100dd2f2b",
+      "value": "Clear screenshot history",
+      "provider_value": "Clear screenshot history",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 25
+      }
+    },
+    {
+      "address": "0x100dd2f44",
+      "value": "Clear screenshot range history",
+      "provider_value": "Clear screenshot range history",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 31
+      }
+    },
+    {
+      "address": "0x100dd5ba0",
+      "value": "Dynamic Screenshot",
+      "provider_value": "Dynamic Screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 19
+      }
+    },
+    {
+      "address": "0x100dd5bb3",
+      "value": "Screenshot",
+      "provider_value": "Screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 11
+      }
+    },
+    {
+      "address": "0x100dd5bbe",
+      "value": "Long Screenshot",
+      "provider_value": "Long Screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 16
+      }
+    },
+    {
+      "address": "0x100dd5bce",
+      "value": "Polygon screenshot",
+      "provider_value": "Polygon screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 19
+      }
+    },
+    {
+      "address": "0x100dd5be1",
+      "value": "Screenshot.enableRoundRect",
+      "provider_value": "Screenshot.enableRoundRect",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 27
+      }
+    },
+    {
+      "address": "0x100dd5bfc",
+      "value": "Screenshot.roundRectRatio",
+      "provider_value": "Screenshot.roundRectRatio",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 26
+      }
+    },
+    {
+      "address": "0x100dd5c16",
+      "value": "Screenshot.SizeUnit",
+      "provider_value": "Screenshot.SizeUnit",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 20
+      }
+    },
+    {
+      "address": "0x100dd5c2a",
+      "value": "Screenshot.SizeDisplayItems",
+      "provider_value": "Screenshot.SizeDisplayItems",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 28
+      }
+    },
+    {
+      "address": "0x100dd5eef",
+      "value": "Screenshot Border",
+      "provider_value": "Screenshot Border",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 18
+      }
+    },
+    {
+      "address": "0x100dd5f01",
+      "value": "Screenshot control point",
+      "provider_value": "Screenshot control point",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 25
+      }
+    },
+    {
+      "address": "0x100dd60d7",
+      "value": "Number of historical screenshot",
+      "provider_value": "Number of historical screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 32
+      }
+    },
+    {
+      "address": "0x100dd60f7",
+      "value": "MaxHistoryScreenshotCount",
+      "provider_value": "MaxHistoryScreenshotCount",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 26
+      }
+    },
+    {
+      "address": "0x100dd6111",
+      "value": "Number of historical screenshot areas",
+      "provider_value": "Number of historical screenshot areas",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 38
+      }
+    },
+    {
+      "address": "0x100dd6137",
+      "value": "MaxHistoryScreenshotAreasCount",
+      "provider_value": "MaxHistoryScreenshotAreasCount",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 31
+      }
+    },
+    {
+      "address": "0x100dd617c",
+      "value": "Paste screenshot to input focus after copying",
+      "provider_value": "Paste screenshot to input focus after copying",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 46
+      }
+    },
+    {
+      "address": "0x100dd61d6",
+      "value": "Start screenshot time",
+      "provider_value": "Start screenshot time",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 22
+      }
+    },
+    {
+      "address": "0x100dd61ec",
+      "value": "Pin screenshot",
+      "provider_value": "Pin screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 15
+      }
+    },
+    {
+      "address": "0x100dd61fb",
+      "value": "Copy screenshot",
+      "provider_value": "Copy screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 16
+      }
+    },
+    {
+      "address": "0x100dd6229",
+      "value": "ScreenShotSoundTiming",
+      "provider_value": "ScreenShotSoundTiming",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 22
+      }
+    },
+    {
+      "address": "0x100dd627b",
+      "value": "ScreenshotLeftDoubleClickAction",
+      "provider_value": "ScreenshotLeftDoubleClickAction",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 32
+      }
+    },
+    {
+      "address": "0x100dd62af",
+      "value": "ScreenshotMidClickAction",
+      "provider_value": "ScreenshotMidClickAction",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 25
+      }
+    },
+    {
+      "address": "0x100dd630c",
+      "value": "ScreenshotWheelFunction",
+      "provider_value": "ScreenshotWheelFunction",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 24
+      }
+    },
+    {
+      "address": "0x100dd6324",
+      "value": "After entering the long screenshot",
+      "provider_value": "After entering the long screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 35
+      }
+    },
+    {
+      "address": "0x100dd6347",
+      "value": "Do Not Start Screenshot Automatically",
+      "provider_value": "Do Not Start Screenshot Automatically",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 38
+      }
+    },
+    {
+      "address": "0x100dd6384",
+      "value": "Vertical Screenshot",
+      "provider_value": "Vertical Screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 20
+      }
+    },
+    {
+      "address": "0x100dd6398",
+      "value": "Horizontal Screenshot",
+      "provider_value": "Horizontal Screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 22
+      }
+    },
+    {
+      "address": "0x100dd6bea",
+      "value": "Screenshot location",
+      "provider_value": "Screenshot location",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 20
+      }
+    },
+    {
+      "address": "0x100dd76d8",
+      "value": "Remember the last used annotation tool in screenshots",
+      "provider_value": "Remember the last used annotation tool in screenshots",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 54
+      }
+    },
+    {
+      "address": "0x100dd770e",
+      "value": "rememberLastToolInScreenShot",
+      "provider_value": "rememberLastToolInScreenShot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 29
+      }
+    },
+    {
+      "address": "0x100dd7cb3",
+      "value": "Automatically add watermark when taking screenshot",
+      "provider_value": "Automatically add watermark when taking screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 51
+      }
+    },
+    {
+      "address": "0x100dd7ce6",
+      "value": "autoAddWatermarkInScreenShot",
+      "provider_value": "autoAddWatermarkInScreenShot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 29
+      }
+    },
+    {
+      "address": "0x100dd7e24",
+      "value": "Screenshot and pin",
+      "provider_value": "Screenshot and pin",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 19
+      }
+    },
+    {
+      "address": "0x100dd7e42",
+      "value": "Screenshot and copy",
+      "provider_value": "Screenshot and copy",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 20
+      }
+    },
+    {
+      "address": "0x100dd7e62",
+      "value": "Screenshot and copy text",
+      "provider_value": "Screenshot and copy text",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 25
+      }
+    },
+    {
+      "address": "0x100dd7e8a",
+      "value": "Screenshot and quick save",
+      "provider_value": "Screenshot and quick save",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 26
+      }
+    },
+    {
+      "address": "0x100dd7eb5",
+      "value": "Screenshot and translate",
+      "provider_value": "Screenshot and translate",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 25
+      }
+    },
+    {
+      "address": "0x100dd7edf",
+      "value": "Screenshot and edit",
+      "provider_value": "Screenshot and edit",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 20
+      }
+    },
+    {
+      "address": "0x100dd7eff",
+      "value": "Screenshot and save",
+      "provider_value": "Screenshot and save",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 20
+      }
+    },
+    {
+      "address": "0x100dd7f51",
+      "value": "Show Mask when using Global Mouse Screenshot",
+      "provider_value": "Show Mask when using Global Mouse Screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 45
+      }
+    },
+    {
+      "address": "0x100dd8314",
+      "value": "Auto cleanup screenshots older than",
+      "provider_value": "Auto cleanup screenshots older than",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 36
+      }
+    },
+    {
+      "address": "0x100dd9016",
+      "value": "Unselected Area Color When Screenshot",
+      "provider_value": "Unselected Area Color When Screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 38
+      }
+    },
+    {
+      "address": "0x100dd969c",
+      "value": "Screenshot and",
+      "provider_value": "Screenshot and",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 15
+      }
+    },
+    {
+      "address": "0x100dd96ab",
+      "value": "Screenshot and...",
+      "provider_value": "Screenshot and...",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 18
+      }
+    },
+    {
+      "address": "0x100dda028",
+      "value": "ScreenShot And Pin",
+      "provider_value": "ScreenShot And Pin",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 19
+      }
+    },
+    {
+      "address": "0x100dda03b",
+      "value": "ScreenShot",
+      "provider_value": "ScreenShot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 11
+      }
+    },
+    {
+      "address": "0x100dda192",
+      "value": "Custom screenshot settings",
+      "provider_value": "Custom screenshot settings",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 27
+      }
+    },
+    {
+      "address": "0x100dda1ad",
+      "value": "Cancel custom screenshot",
+      "provider_value": "Cancel custom screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 25
+      }
+    },
+    {
+      "address": "0x100dda1c6",
+      "value": "Start custom screenshot",
+      "provider_value": "Start custom screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 24
+      }
+    },
+    {
+      "address": "0x100dda1ec",
+      "value": "Screenshot parameters",
+      "provider_value": "Screenshot parameters",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 22
+      }
+    },
+    {
+      "address": "0x100dda218",
+      "value": "Use fixed screenshot size",
+      "provider_value": "Use fixed screenshot size",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 26
+      }
+    },
+    {
+      "address": "0x100dda244",
+      "value": "Use fixed screenshot position",
+      "provider_value": "Use fixed screenshot position",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 30
+      }
+    },
+    {
+      "address": "0x100dda262",
+      "value": "Screenshot delay",
+      "provider_value": "Screenshot delay",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 17
+      }
+    },
+    {
+      "address": "0x100dda273",
+      "value": "Screenshot size (px)",
+      "provider_value": "Screenshot size (px)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 21
+      }
+    },
+    {
+      "address": "0x100dda297",
+      "value": "Screenshot position",
+      "provider_value": "Screenshot position",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 20
+      }
+    },
+    {
+      "address": "0x100dda363",
+      "value": "Screenshot preset",
+      "provider_value": "Screenshot preset",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 18
+      }
+    },
+    {
+      "address": "0x100dda380",
+      "value": "Last Screenshot Area",
+      "provider_value": "Last Screenshot Area",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 21
+      }
+    },
+    {
+      "address": "0x100dda455",
+      "value": "application/x-pixpin-screenshot-preset-row",
+      "provider_value": "application/x-pixpin-screenshot-preset-row",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 43
+      }
+    },
+    {
+      "address": "0x100dda480",
+      "value": "Custom Screenshot",
+      "provider_value": "Custom Screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 18
+      }
+    },
+    {
+      "address": "0x100ddc0e0",
+      "value": "[PixPin::initScreenShotWindow] Screenshot background prepared",
+      "provider_value": "[PixPin::initScreenShotWindow] Screenshot background prepared",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 62
+      }
+    },
+    {
+      "address": "0x100ddc11e",
+      "value": "[PixPin::initScreenShotWindow] Screenshot window constructed",
+      "provider_value": "[PixPin::initScreenShotWindow] Screenshot window constructed",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 61
+      }
+    },
+    {
+      "address": "0x100ddc15b",
+      "value": "[PixPin::initScreenShotWindow] Screenshot window initialization finished",
+      "provider_value": "[PixPin::initScreenShotWindow] Screenshot window initialization finished",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 73
+      }
+    },
+    {
+      "address": "0x100ddc502",
+      "value": "ScreenShotWindow is already exist",
+      "provider_value": "ScreenShotWindow is already exist",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 34
+      }
+    },
+    {
+      "address": "0x100ddc524",
+      "value": "Recording.ScreenshotNoAskAgain",
+      "provider_value": "Recording.ScreenshotNoAskAgain",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 31
+      }
+    },
+    {
+      "address": "0x100ddc543",
+      "value": "Do you want to stop recording? This will end the current recording session.\n\n(Screenshots are not supported during recording)",
+      "provider_value": "Do you want to stop recording? This will end the current recording session.\\n\\n(Screenshots are not supported during recording)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 126
+      }
+    },
+    {
+      "address": "0x100ddc5f4",
+      "value": "Do you want to start recording?\n\n(Screenshots are not supported during recording)",
+      "provider_value": "Do you want to start recording?\\n\\n(Screenshots are not supported during recording)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 82
+      }
+    },
+    {
+      "address": "0x100ddc693",
+      "value": "[PixPin::screenShot] ScreenShotWindow was destroyed before refresh",
+      "provider_value": "[PixPin::screenShot] ScreenShotWindow was destroyed before refresh",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 67
+      }
+    },
+    {
+      "address": "0x100ddc6d6",
+      "value": "screenShotViewRefreshed",
+      "provider_value": "screenShotViewRefreshed",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 24
+      }
+    },
+    {
+      "address": "0x100ddc6ee",
+      "value": "[PixPin::screenShot] ScreenShotWindow was destroyed while refreshing",
+      "provider_value": "[PixPin::screenShot] ScreenShotWindow was destroyed while refreshing",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 69
+      }
+    },
+    {
+      "address": "0x100ddc733",
+      "value": "[PixPin::screenShot] Failed to move screenshot windows to desktop:",
+      "provider_value": "[PixPin::screenShot] Failed to move screenshot windows to desktop:",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 67
+      }
+    },
+    {
+      "address": "0x100ddc776",
+      "value": "screenShotWindowDisplayed",
+      "provider_value": "screenShotWindowDisplayed",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 26
+      }
+    },
+    {
+      "address": "0x100ddc9bd",
+      "value": "Screenshot in %1s",
+      "provider_value": "Screenshot in %1s",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 18
+      }
+    },
+    {
+      "address": "0x100ddceb1",
+      "value": "Continue Screenshots",
+      "provider_value": "Continue Screenshots",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 21
+      }
+    },
+    {
+      "address": "0x100dde4ea",
+      "value": ":/sound/Screenshot",
+      "provider_value": ":/sound/Screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 19
+      }
+    },
+    {
+      "address": "0x100dded38",
+      "value": "ScreenShotWindow",
+      "provider_value": "ScreenShotWindow",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 17
+      }
+    },
+    {
+      "address": "0x100de072e",
+      "value": "About to enter super long screenshot mode",
+      "provider_value": "About to enter super long screenshot mode",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 42
+      }
+    },
+    {
+      "address": "0x100de0758",
+      "value": "The screenshot is about to enter super long screenshot mode (over 29000 pixels).\n\nLimitations:\n1. Only saving is available.\n2. PNG supports up to 2 million pixels, JPG supports up to 65000 pixels.\n3. Some software may not open or process super long images ",
+      "provider_value": "The screenshot is about to enter super long screenshot mode (over 29000 pixels).\\n\\nLimitations:\\n1. Only saving is available.\\n2. PNG supports up to 2 million pixels, JPG supports up to 65000 pixels.\\n3. Some software may not open or process super long images …",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "missing",
+        "byte_length": 256
+      }
+    },
+    {
+      "address": "0x100de0858",
+      "value": "correctly.\n\nIf you do not need a super long screenshot, stop now and finish the current screenshot.",
+      "provider_value": "correctly.\\n\\nIf you do not need a super long screenshot, stop now and finish the current screenshot.",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 100
+      }
+    },
+    {
+      "address": "0x100de08e0",
+      "value": "The current screenshot has reached the maximum stitching range and cannot continue stitching.\nIf the green frame is not visible in the current preview window, it means the current screenshot area has exceeded the maximum stitching size (the current window ",
+      "provider_value": "The current screenshot has reached the maximum stitching range and cannot continue stitching.\\nIf the green frame is not visible in the current preview window, it means the current screenshot area has exceeded the maximum stitching size (the current window …",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "missing",
+        "byte_length": 256
+      }
+    },
+    {
+      "address": "0x100de09e0",
+      "value": "content is not fully within the stitched image). Please scroll back a short distance and use the screenshot position where the green frame reappears as the reference.",
+      "provider_value": "content is not fully within the stitched image). Please scroll back a short distance and use the screenshot position where the green frame reappears as the reference.",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 167
+      }
+    },
+    {
+      "address": "0x100de0ab3",
+      "value": "Image matching failed. Possible reasons:\n1. The scrolling speed is too fast.\n2. You switched to another window during capture.\n3. The capture background is a dynamic image.\n\nTry returning to the last successfully matched frame and continue the screenshot.",
+      "provider_value": "Image matching failed. Possible reasons:\\n1. The scrolling speed is too fast.\\n2. You switched to another window during capture.\\n3. The capture background is a dynamic image.\\n\\nTry returning to the last successfully matched frame and continue the screenshot.",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 256
+      }
+    },
+    {
+      "address": "0x100de0ddf",
+      "value": "Auto Scroll Screenshot",
+      "provider_value": "Auto Scroll Screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 23
+      }
+    },
+    {
+      "address": "0x100de100f",
+      "value": "Screenshot.Long Screenshot.AutoCrop",
+      "provider_value": "Screenshot.Long Screenshot.AutoCrop",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 36
+      }
+    },
+    {
+      "address": "0x100de112e",
+      "value": "Clear current screenshot",
+      "provider_value": "Clear current screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 25
+      }
+    },
+    {
+      "address": "0x100de1147",
+      "value": "Do you want to clear the current screenshot?\nTip: To start a new screenshot, please click this button again.",
+      "provider_value": "Do you want to clear the current screenshot?\\nTip: To start a new screenshot, please click this button again.",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 109
+      }
+    },
+    {
+      "address": "0x100de18f1",
+      "value": "Previous screenshot area",
+      "provider_value": "Previous screenshot area",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 25
+      }
+    },
+    {
+      "address": "0x100de190a",
+      "value": "Next screenshot area",
+      "provider_value": "Next screenshot area",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 21
+      }
+    },
+    {
+      "address": "0x100de191f",
+      "value": "Previous screenshot",
+      "provider_value": "Previous screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 20
+      }
+    },
+    {
+      "address": "0x100de1933",
+      "value": "Next screenshot",
+      "provider_value": "Next screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 16
+      }
+    },
+    {
+      "address": "0x100de1a83",
+      "value": "Switch screenshot mode",
+      "provider_value": "Switch screenshot mode",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 23
+      }
+    },
+    {
+      "address": "0x100de1a9a",
+      "value": "Switch to previous screenshot mode",
+      "provider_value": "Switch to previous screenshot mode",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 35
+      }
+    },
+    {
+      "address": "0x100de1c51",
+      "value": "onScreenShotShortCut error",
+      "provider_value": "onScreenShotShortCut error",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 27
+      }
+    },
+    {
+      "address": "0x100de1f7c",
+      "value": "[ScreenShotView::refreshScreenShot] Screenshot view refresh started",
+      "provider_value": "[ScreenShotView::refreshScreenShot] Screenshot view refresh started",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 68
+      }
+    },
+    {
+      "address": "0x100de2024",
+      "value": "[ScreenShotView::refreshScreenShot] Selection item is unavailable",
+      "provider_value": "[ScreenShotView::refreshScreenShot] Selection item is unavailable",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 66
+      }
+    },
+    {
+      "address": "0x100de2066",
+      "value": "[ScreenShotView::refreshScreenShot] View or selection item was destroyed while resetting selection",
+      "provider_value": "[ScreenShotView::refreshScreenShot] View or selection item was destroyed while resetting selection",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 99
+      }
+    },
+    {
+      "address": "0x100de20c9",
+      "value": "[ScreenShotView::refreshScreenShot] Selection reset was superseded",
+      "provider_value": "[ScreenShotView::refreshScreenShot] Selection reset was superseded",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 67
+      }
+    },
+    {
+      "address": "0x100de210c",
+      "value": "[ScreenShotView::refreshScreenShot] Viewport is null after resetting selection",
+      "provider_value": "[ScreenShotView::refreshScreenShot] Viewport is null after resetting selection",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 79
+      }
+    },
+    {
+      "address": "0x100de2176",
+      "value": "screenshotSoundHandled",
+      "provider_value": "screenshotSoundHandled",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 23
+      }
+    },
+    {
+      "address": "0x100de21a0",
+      "value": "[ScreenShotView::refreshScreenShot] Screenshot view refresh finished",
+      "provider_value": "[ScreenShotView::refreshScreenShot] Screenshot view refresh finished",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 69
+      }
+    },
+    {
+      "address": "0x100de21e5",
+      "value": "[ScreenShotView::prepareScreenShotBgLayer] Screenshot background layer created",
+      "provider_value": "[ScreenShotView::prepareScreenShotBgLayer] Screenshot background layer created",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 79
+      }
+    },
+    {
+      "address": "0x100de2234",
+      "value": "[ScreenShotView::prepareScreenShotBgLayer] Screenshot background capture finished",
+      "provider_value": "[ScreenShotView::prepareScreenShotBgLayer] Screenshot background capture finished",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 82
+      }
+    },
+    {
+      "address": "0x100de22ea",
+      "value": "[ScreenShotView::showModeButtons] Screen under cursor is unavailable",
+      "provider_value": "[ScreenShotView::showModeButtons] Screen under cursor is unavailable",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 69
+      }
+    },
+    {
+      "address": "0x100de232f",
+      "value": "[ScreenShotView::commitPendingSelectMode] View or selection item was destroyed while applying select mode",
+      "provider_value": "[ScreenShotView::commitPendingSelectMode] View or selection item was destroyed while applying select mode",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 106
+      }
+    },
+    {
+      "address": "0x100de2399",
+      "value": "[ScreenShotView::commitPendingSelectMode] Select-mode operation was superseded",
+      "provider_value": "[ScreenShotView::commitPendingSelectMode] Select-mode operation was superseded",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 79
+      }
+    },
+    {
+      "address": "0x100de23e8",
+      "value": "[ScreenShotView::commitPendingSelectMode] View or selection item was destroyed while resuming UI detection",
+      "provider_value": "[ScreenShotView::commitPendingSelectMode] View or selection item was destroyed while resuming UI detection",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 107
+      }
+    },
+    {
+      "address": "0x100de2453",
+      "value": "[ScreenShotView::setHistoryShotRect] Failed to load screenshot area",
+      "provider_value": "[ScreenShotView::setHistoryShotRect] Failed to load screenshot area",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 68
+      }
+    },
+    {
+      "address": "0x100de249e",
+      "value": "[ScreenShotView::setShotRect] View or selection item was destroyed while setting selection rect",
+      "provider_value": "[ScreenShotView::setShotRect] View or selection item was destroyed while setting selection rect",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 96
+      }
+    },
+    {
+      "address": "0x100de24fe",
+      "value": "[ScreenShotView::setShotRect] View or selection item was destroyed while setting selection status",
+      "provider_value": "[ScreenShotView::setShotRect] View or selection item was destroyed while setting selection status",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 98
+      }
+    },
+    {
+      "address": "0x100de2560",
+      "value": "[ScreenShotView::setShotRect] View or selection item was destroyed while updating selection shape",
+      "provider_value": "[ScreenShotView::setShotRect] View or selection item was destroyed while updating selection shape",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 98
+      }
+    },
+    {
+      "address": "0x100de25c2",
+      "value": "[ScreenShotView::setShotRect] View or selection item was destroyed while updating screenshot status",
+      "provider_value": "[ScreenShotView::setShotRect] View or selection item was destroyed while updating screenshot status",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 100
+      }
+    },
+    {
+      "address": "0x100de2626",
+      "value": "[ScreenShotView::longShot] View was destroyed while hiding the screenshot window",
+      "provider_value": "[ScreenShotView::longShot] View was destroyed while hiding the screenshot window",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 81
+      }
+    },
+    {
+      "address": "0x100de2677",
+      "value": "[ScreenShotView::longShot] View was destroyed while preparing shot metadata",
+      "provider_value": "[ScreenShotView::longShot] View was destroyed while preparing shot metadata",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 76
+      }
+    },
+    {
+      "address": "0x100de26c3",
+      "value": "[ScreenShotView::longShot] View was destroyed while emitting long-shot signal",
+      "provider_value": "[ScreenShotView::longShot] View was destroyed while emitting long-shot signal",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 78
+      }
+    },
+    {
+      "address": "0x100de2711",
+      "value": "[ScreenShotView::gifShot] View was destroyed while preparing shot metadata",
+      "provider_value": "[ScreenShotView::gifShot] View was destroyed while preparing shot metadata",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 75
+      }
+    },
+    {
+      "address": "0x100de275c",
+      "value": "[ScreenShotView::gifShot] View was destroyed while emitting GIF-shot signal",
+      "provider_value": "[ScreenShotView::gifShot] View was destroyed while emitting GIF-shot signal",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 76
+      }
+    },
+    {
+      "address": "0x100de27c7",
+      "value": "[ScreenShotView::runAction] Export image is null for image edit",
+      "provider_value": "[ScreenShotView::runAction] Export image is null for image edit",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 64
+      }
+    },
+    {
+      "address": "0x100de284b",
+      "value": "[ScreenShotView::onSectionChangeEnd] View was destroyed while selecting section;",
+      "provider_value": "[ScreenShotView::onSectionChangeEnd] View was destroyed while selecting section;",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 81
+      }
+    },
+    {
+      "address": "0x100de28e2",
+      "value": "[ScreenShotView::beginCaptureAreaEdit] View or selection item was destroyed while beginning region edit",
+      "provider_value": "[ScreenShotView::beginCaptureAreaEdit] View or selection item was destroyed while beginning region edit",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 104
+      }
+    },
+    {
+      "address": "0x100de294a",
+      "value": "[ScreenShotView::beginCaptureAreaEdit] Region-edit operation was superseded",
+      "provider_value": "[ScreenShotView::beginCaptureAreaEdit] Region-edit operation was superseded",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 76
+      }
+    },
+    {
+      "address": "0x100de2996",
+      "value": "[ScreenShotView::beginCaptureAreaEdit] View, selection item, or editor was destroyed while hiding the mark bar",
+      "provider_value": "[ScreenShotView::beginCaptureAreaEdit] View, selection item, or editor was destroyed while hiding the mark bar",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 111
+      }
+    },
+    {
+      "address": "0x100de2a05",
+      "value": "Free screenshot",
+      "provider_value": "Free screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 16
+      }
+    },
+    {
+      "address": "0x100de2a15",
+      "value": "Multi-window screenshot",
+      "provider_value": "Multi-window screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 24
+      }
+    },
+    {
+      "address": "0x100de2a2d",
+      "value": "Rectangle screenshot",
+      "provider_value": "Rectangle screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 21
+      }
+    },
+    {
+      "address": "0x100de2a4f",
+      "value": "[ScreenShotView::resetStatus] Selection item is unavailable",
+      "provider_value": "[ScreenShotView::resetStatus] Selection item is unavailable",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 60
+      }
+    },
+    {
+      "address": "0x100de2a8b",
+      "value": "[ScreenShotView::resetStatus] View or selection item was destroyed while resetting selection",
+      "provider_value": "[ScreenShotView::resetStatus] View or selection item was destroyed while resetting selection",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 93
+      }
+    },
+    {
+      "address": "0x100de2ae8",
+      "value": "[ScreenShotView::resetStatus] Selection reset was superseded",
+      "provider_value": "[ScreenShotView::resetStatus] Selection reset was superseded",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 61
+      }
+    },
+    {
+      "address": "0x100de2b63",
+      "value": "[ScreenShotView::loadFromHistory] Failed to load screenshot area",
+      "provider_value": "[ScreenShotView::loadFromHistory] Failed to load screenshot area",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 65
+      }
+    },
+    {
+      "address": "0x100de2ba4",
+      "value": "[ScreenShotView::runAction] View was destroyed during",
+      "provider_value": "[ScreenShotView::runAction] View was destroyed during",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 54
+      }
+    },
+    {
+      "address": "0x100de2be5",
+      "value": "Screenshot.SelectModePreference.DontRemind",
+      "provider_value": "Screenshot.SelectModePreference.DontRemind",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 43
+      }
+    },
+    {
+      "address": "0x100de2c10",
+      "value": "Screenshot.SelectModePreference.KeepMode",
+      "provider_value": "Screenshot.SelectModePreference.KeepMode",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 41
+      }
+    },
+    {
+      "address": "0x100de2c39",
+      "value": "ScreenShotView",
+      "provider_value": "ScreenShotView",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 15
+      }
+    },
+    {
+      "address": "0x100de2c48",
+      "value": "Keep Screenshot Mode",
+      "provider_value": "Keep Screenshot Mode",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 21
+      }
+    },
+    {
+      "address": "0x100de2c5d",
+      "value": "Use the current screenshot mode the next time you take a screenshot?",
+      "provider_value": "Use the current screenshot mode the next time you take a screenshot?",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 69
+      }
+    },
+    {
+      "address": "0x100de41b2",
+      "value": "Screenshot.SelectMode",
+      "provider_value": "Screenshot.SelectMode",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 22
+      }
+    },
+    {
+      "address": "0x100de41c8",
+      "value": "Screenshot.FreeSelectMode",
+      "provider_value": "Screenshot.FreeSelectMode",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 26
+      }
+    },
+    {
+      "address": "0x100de432f",
+      "value": "View screenshot history",
+      "provider_value": "View screenshot history",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 24
+      }
+    },
+    {
+      "address": "0x100de4347",
+      "value": "Use the history screenshot area",
+      "provider_value": "Use the history screenshot area",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 32
+      }
+    },
+    {
+      "address": "0x100de43a2",
+      "value": "Long screenshot/Record video",
+      "provider_value": "Long screenshot/Record video",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 29
+      }
+    },
+    {
+      "address": "0x100de4437",
+      "value": "[ScreenShotEdit::initEditItem] Screenshot selection is unavailable for auto rectangle query",
+      "provider_value": "[ScreenShotEdit::initEditItem] Screenshot selection is unavailable for auto rectangle query",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 92
+      }
+    },
+    {
+      "address": "0x100de4493",
+      "value": "[ScreenShotEdit::initEditItem] Screenshot selection was destroyed during auto rectangle query",
+      "provider_value": "[ScreenShotEdit::initEditItem] Screenshot selection was destroyed during auto rectangle query",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 94
+      }
+    },
+    {
+      "address": "0x100de4504",
+      "value": "ScreenShot.ActBarFlag.LongShot",
+      "provider_value": "ScreenShot.ActBarFlag.LongShot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 31
+      }
+    },
+    {
+      "address": "0x100de4523",
+      "value": "Long screenshot",
+      "provider_value": "Long screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 16
+      }
+    },
+    {
+      "address": "0x100de4533",
+      "value": "ScreenShot.ActBarFlag.GifShot",
+      "provider_value": "ScreenShot.ActBarFlag.GifShot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 30
+      }
+    },
+    {
+      "address": "0x100de4562",
+      "value": "ScreenShot.ActBarFlag.CopyOcr",
+      "provider_value": "ScreenShot.ActBarFlag.CopyOcr",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 30
+      }
+    },
+    {
+      "address": "0x100de4580",
+      "value": "ScreenShot.ActBarFlag.Translate",
+      "provider_value": "ScreenShot.ActBarFlag.Translate",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 32
+      }
+    },
+    {
+      "address": "0x100de45a0",
+      "value": "ScreenShot.ActBarFlag.Pin",
+      "provider_value": "ScreenShot.ActBarFlag.Pin",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 26
+      }
+    },
+    {
+      "address": "0x100de45ba",
+      "value": "ScreenShot.ActBarFlag.Save",
+      "provider_value": "ScreenShot.ActBarFlag.Save",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 27
+      }
+    },
+    {
+      "address": "0x100de45e0",
+      "value": "ScreenShot.ActBarFlag.Close",
+      "provider_value": "ScreenShot.ActBarFlag.Close",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 28
+      }
+    },
+    {
+      "address": "0x100de45fc",
+      "value": "ScreenShot.ActBarFlag.Copy",
+      "provider_value": "ScreenShot.ActBarFlag.Copy",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 27
+      }
+    },
+    {
+      "address": "0x100de4617",
+      "value": "ScreenShot.ActBarFlag.OcrTable",
+      "provider_value": "ScreenShot.ActBarFlag.OcrTable",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 31
+      }
+    },
+    {
+      "address": "0x100de4648",
+      "value": "ScreenShot.ActBarFlag.QuickSave",
+      "provider_value": "ScreenShot.ActBarFlag.QuickSave",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 32
+      }
+    },
+    {
+      "address": "0x100de4668",
+      "value": "ScreenShot.ActBarFlag.LatexRecognition",
+      "provider_value": "ScreenShot.ActBarFlag.LatexRecognition",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 39
+      }
+    },
+    {
+      "address": "0x100de46a1",
+      "value": "ScreenShot.ActBarFlag.AirDrop",
+      "provider_value": "ScreenShot.ActBarFlag.AirDrop",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 30
+      }
+    },
+    {
+      "address": "0x100de46bf",
+      "value": "ScreenShot.ActBarFlag.Print",
+      "provider_value": "ScreenShot.ActBarFlag.Print",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 28
+      }
+    },
+    {
+      "address": "0x100de46db",
+      "value": "ScreenShot.ActBarFlag.ImageEdit",
+      "provider_value": "ScreenShot.ActBarFlag.ImageEdit",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 32
+      }
+    },
+    {
+      "address": "0x100de47db",
+      "value": "Enable every screenshot",
+      "provider_value": "Enable every screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 24
+      }
+    },
+    {
+      "address": "0x100de4838",
+      "value": "Rounded corner screenshot",
+      "provider_value": "Rounded corner screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 26
+      }
+    },
+    {
+      "address": "0x100de4864",
+      "value": "Refresh screenshot (hold to refresh continuously)",
+      "provider_value": "Refresh screenshot (hold to refresh continuously)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 50
+      }
+    },
+    {
+      "address": "0x100de48f2",
+      "value": "Current screenshot area, click to set manually",
+      "provider_value": "Current screenshot area, click to set manually",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 47
+      }
+    },
+    {
+      "address": "0x100de493b",
+      "value": "<b>Multi-window screenshot</b>",
+      "provider_value": "<b>Multi-window screenshot</b>",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 31
+      }
+    },
+    {
+      "address": "0x100de495a",
+      "value": "Add or remove windows here, or fine-tune the screenshot by adding or removing any area.",
+      "provider_value": "Add or remove windows here, or fine-tune the screenshot by adding or removing any area.",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 88
+      }
+    },
+    {
+      "address": "0x100de49b2",
+      "value": "screenshot sound",
+      "provider_value": "screenshot sound",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 17
+      }
+    },
+    {
+      "address": "0x100de4a60",
+      "value": "Print ScreenShot",
+      "provider_value": "Print ScreenShot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 17
+      }
+    },
+    {
+      "address": "0x100de4b70",
+      "value": "; skip remaining screenshot cleanup",
+      "provider_value": "; skip remaining screenshot cleanup",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 36
+      }
+    },
+    {
+      "address": "0x100de5b83",
+      "value": "[EditItemAutoMosaic::confirmCopyAndCloseOnBlankDoubleClick] ScreenShotView is null",
+      "provider_value": "[EditItemAutoMosaic::confirmCopyAndCloseOnBlankDoubleClick] ScreenShotView is null",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 83
+      }
+    },
+    {
+      "address": "0x100de5bf0",
+      "value": "Do you want to copy the current screenshot and close it?",
+      "provider_value": "Do you want to copy the current screenshot and close it?",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 57
+      }
+    },
+    {
+      "address": "0x100de898b",
+      "value": "screenshot,pin,delayScreenshot",
+      "provider_value": "screenshot,pin,delayScreenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 31
+      }
+    },
+    {
+      "address": "0x100de89aa",
+      "value": "ocr,longScreenshot,gif,translate,tableRecognition,formulaRecognition",
+      "provider_value": "ocr,longScreenshot,gif,translate,tableRecognition,formulaRecognition",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 69
+      }
+    },
+    {
+      "address": "0x100de8a80",
+      "value": "DesktopToolBall.HideOnScreenshot",
+      "provider_value": "DesktopToolBall.HideOnScreenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 33
+      }
+    },
+    {
+      "address": "0x100de8ab7",
+      "value": "screenshot",
+      "provider_value": "screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 11
+      }
+    },
+    {
+      "address": "0x100de8ad3",
+      "value": "pixpin.screenShotAndEdit()",
+      "provider_value": "pixpin.screenShotAndEdit()",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 27
+      }
+    },
+    {
+      "address": "0x100de8aee",
+      "value": "Take a screenshot",
+      "provider_value": "Take a screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 18
+      }
+    },
+    {
+      "address": "0x100de8b31",
+      "value": "delayScreenshot",
+      "provider_value": "delayScreenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 16
+      }
+    },
+    {
+      "address": "0x100de8b41",
+      "value": "Delayed Screenshot",
+      "provider_value": "Delayed Screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 19
+      }
+    },
+    {
+      "address": "0x100de8b54",
+      "value": "pixpin.delayScreenShot(3, false, 0, 0, 0, 0, 0, 0, 0)",
+      "provider_value": "pixpin.delayScreenShot(3, false, 0, 0, 0, 0, 0, 0, 0)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 54
+      }
+    },
+    {
+      "address": "0x100de8b8a",
+      "value": "Take a delayed screenshot",
+      "provider_value": "Take a delayed screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 26
+      }
+    },
+    {
+      "address": "0x100de8ba8",
+      "value": "pixpin.screenShot(ShotAction.CopyOcrText)",
+      "provider_value": "pixpin.screenShot(ShotAction.CopyOcrText)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 42
+      }
+    },
+    {
+      "address": "0x100de8be3",
+      "value": "longScreenshot",
+      "provider_value": "longScreenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 15
+      }
+    },
+    {
+      "address": "0x100de8bf2",
+      "value": "pixpin.screenShot(ShotAction.LongShot)",
+      "provider_value": "pixpin.screenShot(ShotAction.LongShot)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 39
+      }
+    },
+    {
+      "address": "0x100de8c19",
+      "value": "Scrolling screenshot",
+      "provider_value": "Scrolling screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 21
+      }
+    },
+    {
+      "address": "0x100de8c3c",
+      "value": "pixpin.screenShot(ShotAction.GifShot)",
+      "provider_value": "pixpin.screenShot(ShotAction.GifShot)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 38
+      }
+    },
+    {
+      "address": "0x100de8c70",
+      "value": "pixpin.screenShot(ShotAction.Translate)",
+      "provider_value": "pixpin.screenShot(ShotAction.Translate)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 40
+      }
+    },
+    {
+      "address": "0x100de8cca",
+      "value": "pixpin.screenShot(ShotAction.OcrTable)",
+      "provider_value": "pixpin.screenShot(ShotAction.OcrTable)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 39
+      }
+    },
+    {
+      "address": "0x100de8d14",
+      "value": "pixpin.screenShot(ShotAction.LatexRecognition)",
+      "provider_value": "pixpin.screenShot(ShotAction.LatexRecognition)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 47
+      }
+    },
+    {
+      "address": "0x100de8ef6",
+      "value": "Custom screenshot",
+      "provider_value": "Custom screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 18
+      }
+    },
+    {
+      "address": "0x100de8f08",
+      "value": "pixpin.openCustomScreenShot()",
+      "provider_value": "pixpin.openCustomScreenShot()",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 30
+      }
+    },
+    {
+      "address": "0x100de8f26",
+      "value": "pixpin.screenShot(ShotAction.Copy)",
+      "provider_value": "pixpin.screenShot(ShotAction.Copy)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 35
+      }
+    },
+    {
+      "address": "0x100de8f49",
+      "value": "pixpin.screenShot(ShotAction.Pin)",
+      "provider_value": "pixpin.screenShot(ShotAction.Pin)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 34
+      }
+    },
+    {
+      "address": "0x100de8f6b",
+      "value": "Screenshot and copy OCR",
+      "provider_value": "Screenshot and copy OCR",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 24
+      }
+    },
+    {
+      "address": "0x100de8f83",
+      "value": "pixpin.screenShot(ShotAction.Save)",
+      "provider_value": "pixpin.screenShot(ShotAction.Save)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 35
+      }
+    },
+    {
+      "address": "0x100de8fa6",
+      "value": "pixpin.screenShot(ShotAction.QuickSave)",
+      "provider_value": "pixpin.screenShot(ShotAction.QuickSave)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 40
+      }
+    },
+    {
+      "address": "0x100de8fce",
+      "value": "Screenshot and long shot",
+      "provider_value": "Screenshot and long shot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 25
+      }
+    },
+    {
+      "address": "0x100de8fe7",
+      "value": "Screenshot and GIF",
+      "provider_value": "Screenshot and GIF",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 19
+      }
+    },
+    {
+      "address": "0x100de8ffa",
+      "value": "Screenshot and close",
+      "provider_value": "Screenshot and close",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 21
+      }
+    },
+    {
+      "address": "0x100de900f",
+      "value": "pixpin.screenShot(ShotAction.Close)",
+      "provider_value": "pixpin.screenShot(ShotAction.Close)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 36
+      }
+    },
+    {
+      "address": "0x100de9033",
+      "value": "Screenshot and OCR table",
+      "provider_value": "Screenshot and OCR table",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 25
+      }
+    },
+    {
+      "address": "0x100de91e0",
+      "value": "Screenshot of preset area",
+      "provider_value": "Screenshot of preset area",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 26
+      }
+    },
+    {
+      "address": "0x100de91fa",
+      "value": "pixpin.screenShotAndEdit()\npixpin.setScreenShotRect(500, 500, 100, 100)",
+      "provider_value": "pixpin.screenShotAndEdit()\\npixpin.setScreenShotRect(500, 500, 100, 100)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 72
+      }
+    },
+    {
+      "address": "0x100de9242",
+      "value": "shotRect=pixpin.genRectUnderCursor(640,480)\npixpin.longScreenShot(shotRect)",
+      "provider_value": "shotRect=pixpin.genRectUnderCursor(640,480)\\npixpin.longScreenShot(shotRect)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 76
+      }
+    },
+    {
+      "address": "0x100de928e",
+      "value": "Gif screenshot",
+      "provider_value": "Gif screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 15
+      }
+    },
+    {
+      "address": "0x100de929d",
+      "value": "shotRect=pixpin.genRectUnderCursor(640,480)\npixpin.gifScreenShot(shotRect)",
+      "provider_value": "shotRect=pixpin.genRectUnderCursor(640,480)\\npixpin.gifScreenShot(shotRect)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 75
+      }
+    },
+    {
+      "address": "0x100de92e8",
+      "value": "Pause Gif screenshot",
+      "provider_value": "Pause Gif screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 21
+      }
+    },
+    {
+      "address": "0x100de933c",
+      "value": "pixpin.switchScreenshotMode()",
+      "provider_value": "pixpin.switchScreenshotMode()",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 30
+      }
+    },
+    {
+      "address": "0x100de93af",
+      "value": "pixpin.directScreenShotSpRect(PixConst.SpRectScreenUnderMouse, ShotAction.Copy)",
+      "provider_value": "pixpin.directScreenShotSpRect(PixConst.SpRectScreenUnderMouse, ShotAction.Copy)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 80
+      }
+    },
+    {
+      "address": "0x100de93ff",
+      "value": "Screenshot active window and copy",
+      "provider_value": "Screenshot active window and copy",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 34
+      }
+    },
+    {
+      "address": "0x100de9421",
+      "value": "pixpin.directScreenShotSpRect(PixConst.SpRectActiveWindow, ShotAction.Copy)",
+      "provider_value": "pixpin.directScreenShotSpRect(PixConst.SpRectActiveWindow, ShotAction.Copy)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 76
+      }
+    },
+    {
+      "address": "0x100de946d",
+      "value": "Screenshot last area and copy",
+      "provider_value": "Screenshot last area and copy",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 30
+      }
+    },
+    {
+      "address": "0x100de948b",
+      "value": "shotRect=pixpin.getSpRect(PixConst.SpRectLastShotRect)\npixpin.directScreenShot(shotRect, ShotAction.Copy)",
+      "provider_value": "shotRect=pixpin.getSpRect(PixConst.SpRectLastShotRect)\\npixpin.directScreenShot(shotRect, ShotAction.Copy)",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 106
+      }
+    },
+    {
+      "address": "0x100de94f5",
+      "value": "Screenshot last area and save to",
+      "provider_value": "Screenshot last area and save to",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 33
+      }
+    },
+    {
+      "address": "0x100deacf1",
+      "value": "[ScreenShotWindowMac] Ignored duplicate left mouse down event",
+      "provider_value": "[ScreenShotWindowMac] Ignored duplicate left mouse down event",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 62
+      }
+    },
+    {
+      "address": "0x100dead2f",
+      "value": "[ScreenShotWindowMac] Blocked synthetic event in protection period, keyCode:",
+      "provider_value": "[ScreenShotWindowMac] Blocked synthetic event in protection period, keyCode:",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 77
+      }
+    },
+    {
+      "address": "0x100dead7c",
+      "value": "[ScreenShotWindowMac] Detected synthetic event from PID:",
+      "provider_value": "[ScreenShotWindowMac] Detected synthetic event from PID:",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 57
+      }
+    },
+    {
+      "address": "0x100deb1ea",
+      "value": "[AuxiliaryGraphicsView::getMainView] Main screenshot view is no longer available.",
+      "provider_value": "[AuxiliaryGraphicsView::getMainView] Main screenshot view is no longer available.",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 82
+      }
+    },
+    {
+      "address": "0x100deef6b",
+      "value": "Hide on Screenshot",
+      "provider_value": "Hide on Screenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 19
+      }
+    },
+    {
+      "address": "0x100def1ea",
+      "value": "PixPin's new floating ball enables quick screenshots and lets you drag images and text onto it for instant pinning. Would you like to keep it?",
+      "provider_value": "PixPin's new floating ball enables quick screenshots and lets you drag images and text onto it for instant pinning. Would you like to keep it?",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 143
+      }
+    },
+    {
+      "address": "0x100ef7300",
+      "value": "ScreenShotWindow",
+      "provider_value": "ScreenShotWindow",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 17
+      }
+    },
+    {
+      "address": "0x100ef8a18",
+      "value": "CustomScreenshotContent",
+      "provider_value": "CustomScreenshotContent",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 24
+      }
+    },
+    {
+      "address": "0x100ef8c40",
+      "value": "ScreenshotPresetForm",
+      "provider_value": "ScreenshotPresetForm",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 21
+      }
+    },
+    {
+      "address": "0x100ef8da0",
+      "value": "ScreenshotPresetSelect",
+      "provider_value": "ScreenshotPresetSelect",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 23
+      }
+    },
+    {
+      "address": "0x100ef8ea8",
+      "value": "CustomScreenshot",
+      "provider_value": "CustomScreenshot",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 17
+      }
+    },
+    {
+      "address": "0x100ef9040",
+      "value": "ScreenshotParameters",
+      "provider_value": "ScreenshotParameters",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 21
+      }
+    },
+    {
+      "address": "0x100efdf78",
+      "value": "ScreenShotView",
+      "provider_value": "ScreenShotView",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 15
+      }
+    },
+    {
+      "address": "0x100efe980",
+      "value": "ScreenShotModeButton",
+      "provider_value": "ScreenShotModeButton",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 21
+      }
+    },
+    {
+      "address": "0x100efe9f0",
+      "value": "ScreenShotEdit",
+      "provider_value": "ScreenShotEdit",
+      "string": {
+        "encoding": "utf-8",
+        "encoding_status": "inferred",
+        "termination": "present_or_not_required",
+        "byte_length": 15
+      }
+    }
+  ],
+  "confidence": "observed",
+  "authority": "shipped-artifact",
+  "environment": null,
+  "limitations": [
+    "REA loaded a verified thin Mach-O slice from the original FAT source. Identity and file offsets refer to the original file. The owned temporary image and its Hopper document close together, including on MCP shutdown.",
+    "Results depend on Hopper's completed static analysis.",
+    "Regex mode uses ECMAScript Unicode semantics in a cancellable worker with a 5-second matching deadline; matching failure leaves the service available. Literal mode retains native casefold semantics.",
+    "String values cover native typed objects. Hopper may split long literals into adjacent unterminated fragments; string searches match each object independently.",
+    "Undecodable typed objects retain native display text with an explicit decoding unknown; these values do not establish decoded source literals.",
+    "Reported string encodings are inferred from typed bytes and native display; the original source's intended encoding is unknown."
+  ],
+  "relationship_coverage": null,
+  "locations": [],
+  "evidence_links": []
+}

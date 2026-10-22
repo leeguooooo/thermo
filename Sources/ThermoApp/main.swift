@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         AppControlHost.shared.start()
         CleanScreenShortcutModel.enableLive()
         LocalSearchShortcut.shared.activate()
+        CaptureWorkspace.shared.activate()
         LocalSearchModel.shared.start()
         if CommandLine.arguments.contains("--search") { DispatchQueue.main.async { LocalSearchPanel.shared.show() } }
         BatteryCareModel.shared.restoreSavedPreference()
@@ -152,6 +153,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: tr("Open Console"), action: #selector(openFromMenu), keyEquivalent: "o").target = self
         appMenu.addItem(withTitle: tr("Search apps and files"), action: #selector(openSearchFromMenu), keyEquivalent: "").target = self
+        appMenu.addItem(withTitle: tr("Capture screen…"), action: #selector(captureFromMenu), keyEquivalent: "").target = self
+        appMenu.addItem(withTitle: tr("Pin clipboard"), action: #selector(pinFromMenu), keyEquivalent: "").target = self
+        appMenu.addItem(withTitle: tr("Open image…"), action: #selector(openImageFromMenu), keyEquivalent: "").target = self
+        appMenu.addItem(withTitle: tr("Scrolling capture…"), action: #selector(scrollCaptureFromMenu), keyEquivalent: "").target = self
         let panelItem = appMenu.addItem(withTitle: tr("Open Menu Panel"), action: #selector(openPanelFromMenu), keyEquivalent: "p")
         panelItem.target = self
         panelItem.keyEquivalentModifierMask = [.command, .shift]
@@ -166,6 +171,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 
     @objc private func openSearchFromMenu() { LocalSearchPanel.shared.show() }
+    @objc private func captureFromMenu() { CaptureWorkspace.shared.capture() }
+    @objc private func pinFromMenu() { CaptureWorkspace.shared.pinClipboard() }
+    @objc private func openImageFromMenu() { CaptureWorkspace.shared.importImage() }
+    @objc private func scrollCaptureFromMenu() { CaptureWorkspace.shared.captureScrolling() }
 
     @objc fileprivate func archiveTabsFromMenu() { TabQuickAction.request() }
 
@@ -248,6 +257,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     func applicationWillTerminate(_ notification: Notification) {
         LocalSearchShortcut.shared.shutdown()
+        CaptureWorkspace.shared.shutdown()
         LocalSearchModel.shared.stop()
         // Fan policies live in the helper and intentionally survive the app quitting.
     }

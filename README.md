@@ -31,6 +31,12 @@ curl -fsSL https://thermo-updates.pages.dev/install.sh | sh
 
 默认安装到 `~/.local/bin`，同时提供 `thermo-use` 别名，不会自动安装或重启 root 风扇 helper。App 请下载[正式 DMG](https://app.leeguoo.com/thermo/download)，已有 App 可通过自动更新升级。
 
+## 截图与贴图（开发中）
+
+从 Thermo 菜单或菜单面板的取景器菜单进入。`⌥⌘3` 截图，`⌥⌘4` 贴出剪贴板图片、纯文本或文件路径。图片支持标注、裁剪、撤销重做、置顶、透明度、缩放、旋转、镜像、本地文字与条码识别，以及 PNG/JPEG/TIFF 导出。macOS 14+ 可选择区域后手动滚动截取长图。
+
+此模块尚未发布，原生截图与长截图仍需完整验收。PixPin 的录屏、翻译、公式、脚本与其他未完成项见[功能对照表](docs/pixpin/README.md)。
+
 ## 应用和本地文件搜索
 
 按 Option+Space，或从 Thermo 菜单选择「搜索应用和文件」。应用可直接搜索；本地文件须在搜索设置中添加目录。支持中文、拼音、缩写、轻微拼写错误、收藏和自定义别名。名称与路径索引保存在本机，不读取文件内容，也不依赖 Spotlight。

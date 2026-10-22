@@ -20,6 +20,10 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.autoenablesItems = false
         menu.addItem(item(tr("Open Thermo"), "macwindow", key: "o") { MainWindow.show() })
         menu.addItem(item(tr("Search apps and files"), "magnifyingglass") { LocalSearchPanel.shared.show() })
+        menu.addItem(item(tr("Capture screen…") + "  ⌥⌘3", "viewfinder") { CaptureWorkspace.shared.capture() })
+        menu.addItem(item(tr("Pin clipboard") + "  ⌥⌘4", "pin") { CaptureWorkspace.shared.pinClipboard() })
+        menu.addItem(item(tr("Open image…"), "photo") { CaptureWorkspace.shared.importImage() })
+        menu.addItem(item(tr("Scrolling capture…"), "arrow.down.right.and.arrow.up.left") { CaptureWorkspace.shared.captureScrolling() })
         menu.addItem(item(tr("Settings…"), "gearshape", key: ",") { MainWindow.show(.settings) })
         menu.addItem(.separator())
 

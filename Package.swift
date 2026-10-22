@@ -14,6 +14,7 @@ let package = Package(
         .library(name: "CleanKit", targets: ["CleanKit"]),
         .library(name: "AgentCore", targets: ["AgentCore"]),
         .library(name: "SearchCore", targets: ["SearchCore"]),
+        .library(name: "CaptureCore", targets: ["CaptureCore"]),
     ],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.6"),
@@ -36,13 +37,14 @@ let package = Package(
         .systemLibrary(name: "CSQLite"),
         // Local search runs as the user; never linked into the privileged helper.
         .target(name: "SearchCore", dependencies: ["CSQLite"], linkerSettings: [.linkedFramework("CoreServices")]),
+        .target(name: "CaptureCore", linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("Vision")]),
         // Disk cleanup runs as the user only: the root helper must never link it.
         .target(name: "CleanKit", dependencies: ["AgentCore", "ThermoL10n"]),
         .executableTarget(name: "thermo", dependencies: ["ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore"]),
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
             name: "ThermoApp",
-            dependencies: ["ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", .product(name: "Sparkle", package: "Sparkle")],
+            dependencies: ["ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "CaptureCore", .product(name: "Sparkle", package: "Sparkle")],
             linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"),
                              .linkedFramework("CoreWLAN"), .linkedFramework("IOBluetooth"), .linkedFramework("CoreAudio"),
                              .linkedFramework("AudioToolbox"), .linkedFramework("CoreLocation")]
@@ -55,6 +57,7 @@ let package = Package(
         .testTarget(name: "CleanKitTests", dependencies: ["CleanKit"]),
         .testTarget(name: "AgentCoreTests", dependencies: ["AgentCore"]),
         .testTarget(name: "SearchCoreTests", dependencies: ["SearchCore"]),
+        .testTarget(name: "CaptureCoreTests", dependencies: ["CaptureCore"]),
     ],
     swiftLanguageVersions: [.v5]
 )

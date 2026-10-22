@@ -1,0 +1,46 @@
+{
+  "status": "partial",
+  "recordedAt": "2026-10-22T04:58:39.625849+00:00",
+  "sourceSHA256": {
+    "Package.swift": "07aee1230137943f8f127e9b816ed43afab2d340e9559f0c34fbb0714ea5a484",
+    "Sources/CaptureCore/CaptureDocument.swift": "5a95fff498e0516cd97818b2c4899fba28265ddb98cc883687708c236ed6f20c",
+    "Sources/CaptureCore/CaptureStitcher.swift": "e0d309493122759107cb794e56d163c50086feccda0728244f21c81418e66c29",
+    "Sources/ThermoApp/CaptureRegionSelector.swift": "a4a031a861b33dd490b01d9502cd235dc132fa1b3faffb8b32392841bdfbc0ea",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "ac4a3a8eb0ee5d931c7dc4fbe326d5030cf79ce4710f4b4d1a833fdcfc1dba71",
+    "Sources/ThermoApp/StatusMenu.swift": "2efa1a8debf0012b49225a5a17c3b991b72175fdaa269f5c0013fb88bd5dd115",
+    "Sources/ThermoApp/Views.swift": "38eadd96df07b8f68012649c49e655b2637a7a4985c0b911938bad4187fc30f5",
+    "Sources/ThermoApp/main.swift": "6e05a4dbdc0e213c72be031247cb2d761e82114ad5c2fea469bffb64c409e28a",
+    "Sources/ThermoL10n/ZhHans.swift": "bd740936b5112488d74547f41cedc0f941f1c83aaada734cb653ef5e9f237f43",
+    "Tests/CaptureCoreTests/CaptureDocumentTests.swift": "e464b25d39d6ad9e3c5fdbd2adc95981a37821e4fd4f899591ee9370f39c8efd",
+    "Tests/CaptureCoreTests/CaptureStitcherTests.swift": "d39eca8814773b54e0183647cbb560ea6d7a412cfa8d2ce831aa0c4ca6f02888",
+    "scripts/verify-capture-ui.py": "b18179cf4f177c02a95291b9343a28f0d87986e2bc578e0d189382ae9573371d",
+    "scripts/verify-capture-ui.swift": "e493f2b92be8beb67f7163539a7491e3ad2bfc91935c62b355b67d353917ad5b"
+  },
+  "tests": {
+    "command": "swift test -j 4 --filter 'CaptureCoreTests|PresentationTests'",
+    "CaptureCoreTests": 14,
+    "ThermoAppTests": 24,
+    "failures": 0
+  },
+  "nativeQA": {
+    "bundleID": "dev.thermo.capture-qa",
+    "binarySHA256": "dc498195f1b27f66180a397363899c4755d0a13d8520ef1dc5bdc578b994e30b",
+    "verified": [
+      "Chinese labels",
+      "rectangle selection state",
+      "rotate 900x600 to 600x900",
+      "undo back to 900x600",
+      "complete Chinese and English OCR fixture"
+    ],
+    "unverified": [
+      "interactive screenshot",
+      "mouse drawing",
+      "clipboard pins",
+      "save dialog",
+      "QR fixture",
+      "live scrolling",
+      "multi-display",
+      "permission rejection"
+    ]
+  }
+}

@@ -408,6 +408,17 @@ struct PopoverView: View {
             HStack(spacing: 6) {
                 PanelButton(title: tr("Open Console"), symbol: "macwindow", prominent: true) { MainWindow.show(.overview) }
                 Spacer(minLength: 0)
+                Menu {
+                    Button(tr("Capture screen…") + "  ⌥⌘3") { CaptureWorkspace.shared.capture() }
+                    Button(tr("Pin clipboard") + "  ⌥⌘4") { CaptureWorkspace.shared.pinClipboard() }
+                    Button(tr("Open image…")) { CaptureWorkspace.shared.importImage() }
+                    Button(tr("Scrolling capture…")) { CaptureWorkspace.shared.captureScrolling() }
+                    Divider()
+                    Button(tr("Show all pins")) { CaptureWorkspace.shared.showAll() }
+                    Button(tr("Hide all pins")) { CaptureWorkspace.shared.hideAll() }
+                    Button(tr("Close all pins")) { CaptureWorkspace.shared.closeAll() }
+                } label: { Image(systemName: "viewfinder").frame(width: 22) }
+                .menuStyle(.borderlessButton).fixedSize().help(tr("Screenshots and pins"))
                 shortcut("internaldrive", tr("Disk Cleanup"), .disk(.home))
                 shortcut("stethoscope", tr("AI Agent Diagnostics"), .agents(.home))
                 Button { TabQuickAction.request() } label: { Image(systemName: "archivebox").frame(width: 22) }
