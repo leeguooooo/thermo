@@ -58,12 +58,12 @@ public struct CaptureDocument {
         guard let state = undone.popLast() else { return }
         history.append(State(image: image, annotations: annotations)); image = state.image; annotations = state.annotations
     }
-    public func rendered(adding draft:CaptureAnnotation? = nil,replacing index:Int? = nil) throws -> CGImage {
+    public func rendered(adding draft:CaptureAnnotation? = nil,replacing index:Int? = nil,replacements:[Int:CaptureAnnotation] = [:]) throws -> CGImage {
         guard let ctx = CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
                                   bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { throw CaptureFailure.invalidImage }
         ctx.draw(image, in: CGRect(origin: .zero, size: size))
-        for (i,item) in annotations.enumerated() { try Self.draw(index == i ? draft ?? item : item,in:ctx,base:image) }
+        for (i,item) in annotations.enumerated() { try Self.draw(replacements[i] ?? (index == i ? draft ?? item : item),in:ctx,base:image) }
         if index == nil,let draft { try Self.draw(draft,in:ctx,base:image) }
         guard let output = ctx.makeImage() else { throw CaptureFailure.invalidImage }
         return output
@@ -177,6 +177,16 @@ extension CaptureDocument {
     public mutating func replaceAnnotation(at index:Int,with annotation:CaptureAnnotation) {
         guard annotations.indices.contains(index),!annotation.points.isEmpty else { return }
         checkpoint();annotations[index]=annotation
+    }
+    public mutating func replaceAnnotations(_ replacements:[Int:CaptureAnnotation]) {
+        guard !replacements.isEmpty,replacements.allSatisfy({annotations.indices.contains($0.key) && !$0.value.points.isEmpty}) else {return}
+        checkpoint()
+        for (index,item) in replacements {annotations[index]=item}
+    }
+    public mutating func removeAnnotations(at indices:Set<Int>) {
+        guard !indices.isEmpty,indices.allSatisfy({annotations.indices.contains($0)}) else {return}
+        checkpoint()
+        for index in indices.sorted(by:>) {annotations.remove(at:index)}
     }
     public mutating func removeAnnotation(at index:Int) {
         guard annotations.indices.contains(index) else { return };checkpoint();annotations.remove(at:index)

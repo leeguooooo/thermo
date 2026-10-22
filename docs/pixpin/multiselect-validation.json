@@ -1,0 +1,434 @@
+{
+  "status": "implemented-and-partially-native-verified",
+  "recordedAt": "2026-10-22T13:16:29.996873+00:00",
+  "baseCommit": "2e3e464",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureAnnotationEditing.swift": "cd46e07964a863153571b09f3cf935e0cf2755579907a3c0c4268824914936b7",
+    "Sources/CaptureCore/CaptureDocument.swift": "e5325d1f4050b6b5a7f49202d26046222ac31292060c4c2bc9ed19945602be53",
+    "Sources/ThermoApp/CaptureAnnotationControls.swift": "dd47610985bd4f85237f39d944727c56978b1b204a80b59fe179a31dc60929fc",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "46d9b8f11f099f8f32db30c3e012c8c7b0f9cceb8b28405e756fbe0ac6fb08d2",
+    "Sources/ThermoL10n/ZhHans.swift": "61287589879bbb3be61136ae8f3753d989400f75ead24345023a64db8e7e837d",
+    "scripts/verify-capture-ui.swift": "dfbf52abfde9bae0ce2d2138af5922ca9f3c91773ee254480e82e82513830f97",
+    "Tests/CaptureCoreTests/CaptureAnnotationBatchTests.swift": "76483b89251cdaa22cfc39137a29d75641af7ef330df5c698dc68314f4990da7",
+    "Tests/ThermoAppTests/CaptureMultiSelectionTests.swift": "d6e370d331c6905a16bba65b18fdf7f1ef42d192f6038726f0b4a8154883914d"
+  },
+  "regression": {
+    "counts": {
+      "ThermoCLITests.xctest": 3,
+      "ThermoAppTests.xctest": 51,
+      "CaptureScriptCoreTests.xctest": 10,
+      "CaptureCoreTests.xctest": 104,
+      "AgentDoctorTests.xctest": 4,
+      "AgentCoreTests.xctest": 1
+    },
+    "total": 173,
+    "failures": 0,
+    "log": "/tmp/thermo-multiselect-regression-01a.log",
+    "logSHA256": "551d81b2314ab06cfe12eec321cbedfb70412b221b042ab0799a8dda3d24e452"
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-multiselect-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "26814dbbb4ca6a3c356e21d047611ccae247465b1886aa7ca7d34347b617f78a",
+    "verified": [
+      "Select all button",
+      "Group drag moves mosaic and magnifier by equal delta",
+      "Single undo restores both objects",
+      "Shared-corner resize changes both objects",
+      "Single delete removes both; single undo restores resized objects",
+      "Marquee selects both objects",
+      "Shift-click removes and adds a group member",
+      "Escape clears selection",
+      "Canvas Command-A selects all"
+    ],
+    "movementDelta": [
+      30.54989816700609,
+      -18.329938900203672
+    ],
+    "records": {
+      "before": {
+        "canRedo": false,
+        "canUndo": true,
+        "objects": [
+          {
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "selected": [
+          0,
+          1
+        ]
+      },
+      "moved": {
+        "canRedo": false,
+        "canUndo": true,
+        "objects": [
+          {
+            "points": [
+              [
+                80.54989816700609,
+                271.6700610997963
+              ],
+              [
+                680.5498981670061,
+                451.6700610997963
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                680.5498981670061,
+                41.67006109979633
+              ],
+              [
+                880.5498981670061,
+                241.67006109979633
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "selected": [
+          0,
+          1
+        ]
+      },
+      "undone": {
+        "canRedo": true,
+        "canUndo": true,
+        "objects": [
+          {
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "selected": [
+          0,
+          1
+        ]
+      },
+      "resized": {
+        "canRedo": false,
+        "canUndo": true,
+        "objects": [
+          {
+            "points": [
+              [
+                49.923957938601106,
+                279.73789394099845
+              ],
+              [
+                627.1113395189325,
+                451.75871860354584
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                627.1113395189325,
+                59.9335068721879
+              ],
+              [
+                819.5071333790429,
+                251.06775649724057
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "selected": [
+          0,
+          1
+        ]
+      },
+      "deleted": {
+        "canRedo": false,
+        "canUndo": true,
+        "objects": [],
+        "selected": []
+      },
+      "delete-undone": {
+        "canRedo": true,
+        "canUndo": true,
+        "objects": [
+          {
+            "points": [
+              [
+                49.923957938601106,
+                279.73789394099845
+              ],
+              [
+                627.1113395189325,
+                451.75871860354584
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                627.1113395189325,
+                59.9335068721879
+              ],
+              [
+                819.5071333790429,
+                251.06775649724057
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "selected": []
+      },
+      "marquee": {
+        "canRedo": true,
+        "canUndo": true,
+        "objects": [
+          {
+            "points": [
+              [
+                49.923957938601106,
+                279.73789394099845
+              ],
+              [
+                627.1113395189325,
+                451.75871860354584
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                627.1113395189325,
+                59.9335068721879
+              ],
+              [
+                819.5071333790429,
+                251.06775649724057
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "selected": [
+          0,
+          1
+        ]
+      },
+      "shift-removed": {
+        "canRedo": true,
+        "canUndo": true,
+        "objects": [
+          {
+            "points": [
+              [
+                49.923957938601106,
+                279.73789394099845
+              ],
+              [
+                627.1113395189325,
+                451.75871860354584
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                627.1113395189325,
+                59.9335068721879
+              ],
+              [
+                819.5071333790429,
+                251.06775649724057
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "selected": [
+          0
+        ]
+      },
+      "shift-added": {
+        "canRedo": true,
+        "canUndo": true,
+        "objects": [
+          {
+            "points": [
+              [
+                49.923957938601106,
+                279.73789394099845
+              ],
+              [
+                627.1113395189325,
+                451.75871860354584
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                627.1113395189325,
+                59.9335068721879
+              ],
+              [
+                819.5071333790429,
+                251.06775649724057
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "selected": [
+          0,
+          1
+        ]
+      },
+      "escape": {
+        "canRedo": true,
+        "canUndo": true,
+        "objects": [
+          {
+            "points": [
+              [
+                49.923957938601106,
+                279.73789394099845
+              ],
+              [
+                627.1113395189325,
+                451.75871860354584
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                627.1113395189325,
+                59.9335068721879
+              ],
+              [
+                819.5071333790429,
+                251.06775649724057
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "selected": []
+      },
+      "command-a": {
+        "canRedo": true,
+        "canUndo": true,
+        "objects": [
+          {
+            "points": [
+              [
+                49.923957938601106,
+                279.73789394099845
+              ],
+              [
+                627.1113395189325,
+                451.75871860354584
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                627.1113395189325,
+                59.9335068721879
+              ],
+              [
+                819.5071333790429,
+                251.06775649724057
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "selected": [
+          0,
+          1
+        ]
+      }
+    },
+    "limitations": [
+      "Synthetic two-effect fixture; not all annotation types individually exercised by native pointer input",
+      "Multi-selection changes position and size; style inspector continues to edit individual objects",
+      "Installed Thermo and public release unchanged"
+    ]
+  }
+}

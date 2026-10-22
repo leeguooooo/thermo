@@ -24,4 +24,13 @@ extension CaptureAnnotation {
         if tool == .text || tool == .number { result.width=width*max(new.width/old.width,new.height/old.height) }
         return result
     }
+    /// Rescale all selected objects around the same bounds, keeping their relative positions.
+    public func resized(from old:CGRect,to new:CGRect) -> CaptureAnnotation {
+        guard old.width > 0,old.height > 0,new.width >= 1,new.height >= 1,
+              [old.minX,old.minY,old.width,old.height,new.minX,new.minY,new.width,new.height].allSatisfy(\.isFinite) else {return self}
+        var result=self
+        result.points=points.map {CGPoint(x:new.minX+($0.x-old.minX)*new.width/old.width,y:new.minY+($0.y-old.minY)*new.height/old.height)}
+        if tool == .text || tool == .number {result.width=max(1,width*max(new.width/old.width,new.height/old.height))}
+        return result
+    }
 }

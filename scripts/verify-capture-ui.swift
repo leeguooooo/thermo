@@ -227,6 +227,17 @@ import SwiftUI
             window.model.document.append(lens)
             window.model.tool = .select;window.model.selectAnnotation(0)
             annotationWindow=window;window.showWindow(nil)
+            if let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
+                let probe=Timer(timeInterval:0.25,repeats:true) { [weak model=window.model] _ in
+                    MainActor.assumeIsolated {
+                        guard let model else{return}
+                        let record:[String:Any] = ["selected":model.selectedAnnotations.sorted(),"objects":model.document.annotations.map {item in
+                            ["tool":item.tool.rawValue,"points":item.points.map{[Double($0.x),Double($0.y)]},"width":Double(item.width)] as [String:Any]
+                        },"canUndo":model.document.canUndo,"canRedo":model.document.canRedo]
+                        if let data=try? JSONSerialization.data(withJSONObject:record,options:.sortedKeys) {try? data.write(to:URL(fileURLWithPath:path).appendingPathComponent("annotation-probe.json"),options:.atomic)}
+                    }
+                };RunLoop.main.add(probe,forMode:.common)
+            }
         } else { let window=CaptureEditor(image:image,onClose:{});annotationWindow=window;window.showWindow(nil) }
         DispatchQueue.main.asyncAfter(deadline: .now()+600) { app.terminate(nil) }
         withExtendedLifetime((recordingWindow,annotationWindow,pinSession,captureWorkspace,shortcutModel,cliHost,cliServer)) { app.run() }

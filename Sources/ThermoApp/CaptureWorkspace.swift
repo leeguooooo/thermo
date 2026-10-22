@@ -269,11 +269,22 @@ func captureFailureMessage(_ error:Error) -> String {
 @MainActor final class CaptureEditorModel: ObservableObject {
     @Published var document: CaptureDocument { didSet {
         revision += 1; recognition = "";onMutation?(true)
-        if let selectedAnnotation,!document.annotations.indices.contains(selectedAnnotation) { self.selectedAnnotation=nil }
+        selectedAnnotations=selectedAnnotations.filter {document.annotations.indices.contains($0)}
     } }
-    private var revision = 0
+    private(set) var revision = 0
     @Published var tool: CaptureTool = .move
-    @Published var selectedAnnotation:Int?
+    @Published private(set) var selectedAnnotations:Set<Int> = []
+    var selectedAnnotation:Int? {
+        get {selectedAnnotations.count == 1 ? selectedAnnotations.first : nil}
+        set {selectAnnotations(newValue.map{[$0]} ?? [])}
+    }
+    func selectAnnotations(_ indices:Set<Int>) {
+        selectedAnnotations=indices.filter{document.annotations.indices.contains($0)}
+        if let index=selectedAnnotation {
+            let item=document.annotations[index];color=Color(nsColor:item.color);lineWidth=item.width;text=item.text;annotationOptions=item.options
+        }
+    }
+    func selectAllAnnotations() {guard !locked else{return};tool = .select;selectAnnotations(Set(document.annotations.indices))}
     @Published var annotationOptions=CaptureAnnotationOptions()
     @Published var color = Color.red
     @Published var lineWidth: Double = 4
@@ -306,9 +317,6 @@ func captureFailureMessage(_ error:Error) -> String {
     init(image: CGImage) { document = CaptureDocument(image: image) }
     func selectAnnotation(_ index:Int?) {
         selectedAnnotation=index
-        if let index,document.annotations.indices.contains(index) {
-            let item=document.annotations[index];color=Color(nsColor:item.color);lineWidth=item.width;text=item.text;annotationOptions=item.options
-        }
     }
     func applySelectedStyle() {
         guard let index=selectedAnnotation,document.annotations.indices.contains(index) else { return }
@@ -318,10 +326,11 @@ func captureFailureMessage(_ error:Error) -> String {
         item.color=nextColor;item.width=lineWidth;item.text=text;item.options=annotationOptions
         document.replaceAnnotation(at:index,with:item)
     }
-    func undoAnnotation() { document.undo();selectAnnotation(selectedAnnotation) }
-    func redoAnnotation() { document.redo();selectAnnotation(selectedAnnotation) }
+    func undoAnnotation() { document.undo();if let selectedAnnotation {selectAnnotation(selectedAnnotation)} }
+    func redoAnnotation() { document.redo();if let selectedAnnotation {selectAnnotation(selectedAnnotation)} }
     func deleteSelected() {
-        if let selectedAnnotation { document.removeAnnotation(at:selectedAnnotation) };selectedAnnotation=nil
+        guard !locked else{return}
+        document.removeAnnotations(at:selectedAnnotations);selectedAnnotations=[]
     }
     func copy() {
         do {
@@ -501,7 +510,14 @@ struct CaptureCanvas: NSViewRepresentable {
         var pan:CGPoint { get { model.pan } set { model.pan=newValue } }
         var lastDrag: CGPoint?
         var selectionStart:CGPoint?
-        var selectionOriginal:CaptureAnnotation?
+        var selectionOriginal:[Int:CaptureAnnotation]=[:]
+        var selectionPreview:[Int:CaptureAnnotation]=[:]
+        var selectionBounds:CGRect?
+        var selectionRevision:Int?
+        var selectionMoved=false
+        var marqueeStart:CGPoint?
+        var marqueeRect:CGRect?
+        var marqueeBaseline:Set<Int>=[]
         var resizing=false
         init(model: CaptureEditorModel) { self.model = model; super.init(frame: .zero) }
         required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
@@ -518,21 +534,26 @@ struct CaptureCanvas: NSViewRepresentable {
             NSColor.windowBackgroundColor.setFill(); bounds.fill()
             guard scale > 0, let ctx = NSGraphicsContext.current?.cgContext else { return }
             ctx.saveGState(); ctx.translateBy(x: imageRect.minX, y: imageRect.minY); ctx.scaleBy(x: scale, y: scale)
-            let replacement=model.tool == .select ? model.selectedAnnotation : nil
             let preview=draft?.tool == .crop ? nil : draft
             do {
-                let image=try model.document.rendered(adding:preview,replacing:replacement)
+                let image=try model.document.rendered(adding:preview,replacements:model.tool == .select && selectionRevision == model.revision ? selectionPreview : [:])
                 ctx.draw(image,in:CGRect(origin:.zero,size:model.document.size))
             } catch {
                 ctx.setFillColor(NSColor.black.cgColor);ctx.fill(CGRect(origin:.zero,size:model.document.size))
                 let message=tr(error.localizedDescription)
                 DispatchQueue.main.async { [weak model] in if model?.error != message { model?.error=message } }
             }
-            if let selected=model.selectedAnnotation,model.document.annotations.indices.contains(selected) {
-                let rect=(model.tool == .select ? draft : nil)?.bounds ?? model.document.annotations[selected].bounds
+            let selected=model.selectedAnnotations.sorted().compactMap { index -> CaptureAnnotation? in
+                guard model.document.annotations.indices.contains(index) else{return nil}
+                return selectionRevision == model.revision ? selectionPreview[index] ?? model.document.annotations[index] : model.document.annotations[index]
+            }
+            if let first=selected.first {
+                let rect=selected.dropFirst().reduce(first.bounds){$0.union($1.bounds)}
                 ctx.setStrokeColor(NSColor.systemBlue.cgColor);ctx.setLineWidth(1/scale);ctx.setLineDash(phase:0,lengths:[4/scale,3/scale]);ctx.stroke(rect);ctx.setLineDash(phase:0,lengths:[])
+                if selected.count > 1 {for item in selected {ctx.stroke(item.bounds)}}
                 ctx.setFillColor(NSColor.systemBlue.cgColor);ctx.fill(CGRect(x:rect.maxX-4/scale,y:rect.maxY-4/scale,width:8/scale,height:8/scale))
             }
+            if let rect=marqueeRect {ctx.setFillColor(NSColor.systemBlue.withAlphaComponent(0.12).cgColor);ctx.fill(rect);ctx.setStrokeColor(NSColor.systemBlue.cgColor);ctx.setLineWidth(1/scale);ctx.stroke(rect)}
             if let draft {
                 if draft.tool == .crop, let start = draft.points.first, let end = draft.points.last {
                     ctx.setStrokeColor(NSColor.systemBlue.cgColor); ctx.setLineWidth(2/scale)
@@ -543,15 +564,33 @@ struct CaptureCanvas: NSViewRepresentable {
         }
         override func mouseDown(with event: NSEvent) {
             window?.makeFirstResponder(self)
-            if model.locked { return }
+            cancelSelectionGesture();draft=nil
+            if model.locked || scale <= 0 { return }
             if model.tool == .select {
+                guard imageRect.contains(convert(event.locationInWindow,from:nil)) else{return}
                 let p=point(event)
-                if let selected=model.selectedAnnotation,model.document.annotations.indices.contains(selected) {
-                    let bounds=model.document.annotations[selected].bounds
+                let additive=event.modifierFlags.contains(.shift)
+                let items=model.selectedAnnotations.sorted().map{model.document.annotations[$0]}
+                if let first=items.first,!additive {
+                    let bounds=items.dropFirst().reduce(first.bounds){$0.union($1.bounds)}
                     resizing=hypot(p.x-bounds.maxX,p.y-bounds.maxY) < 10/scale
                 }
-                if !resizing { model.selectAnnotation(model.document.hitTest(p,tolerance:5/scale)) }
-                if let selected=model.selectedAnnotation,model.document.annotations.indices.contains(selected) { selectionStart=p;selectionOriginal=model.document.annotations[selected];draft=selectionOriginal }
+                if !resizing {
+                    if let hit=model.document.hitTest(p,tolerance:5/scale) {
+                        if additive {
+                            var indices=model.selectedAnnotations
+                            if indices.contains(hit) {indices.remove(hit)} else {indices.insert(hit)}
+                            model.selectAnnotations(indices)
+                            if !indices.contains(hit) {needsDisplay=true;return}
+                        } else if !model.selectedAnnotations.contains(hit) {model.selectAnnotation(hit)}
+                    } else {
+                        marqueeStart=p;marqueeBaseline=additive ? model.selectedAnnotations : []
+                        model.selectAnnotations(marqueeBaseline);needsDisplay=true;return
+                    }
+                }
+                selectionStart=p;selectionRevision=model.revision
+                selectionOriginal=Dictionary(uniqueKeysWithValues:model.selectedAnnotations.map{($0,model.document.annotations[$0])})
+                if let first=selectionOriginal.values.first {selectionBounds=selectionOriginal.values.dropFirst().reduce(first.bounds){$0.union($1.bounds)}}
                 needsDisplay=true;return
             }
             model.selectedAnnotation=nil
@@ -566,9 +605,18 @@ struct CaptureCanvas: NSViewRepresentable {
             needsDisplay = true
         }
         override func mouseDragged(with event: NSEvent) {
-            if model.tool == .select,let start=selectionStart,let original=selectionOriginal {
+            guard !model.locked else{return}
+            if model.tool == .select,let start=marqueeStart {
+                let p=point(event),rect=CGRect(x:min(start.x,p.x),y:min(start.y,p.y),width:abs(p.x-start.x),height:abs(p.y-start.y))
+                marqueeRect=rect
+                model.selectAnnotations(marqueeBaseline.union(model.document.annotations.indices.filter{rect.intersects(model.document.annotations[$0].bounds)}))
+                needsDisplay=true;return
+            }
+            if model.tool == .select,let start=selectionStart,let bounds=selectionBounds,selectionRevision == model.revision,Set(selectionOriginal.keys) == model.selectedAnnotations {
                 let p=point(event)
-                draft=resizing ? original.resized(to:CGRect(x:original.bounds.minX,y:original.bounds.minY,width:max(1,p.x-original.bounds.minX),height:max(1,p.y-original.bounds.minY))) : original.moved(dx:p.x-start.x,dy:p.y-start.y)
+                selectionMoved=selectionMoved || hypot(p.x-start.x,p.y-start.y) > 0.5/scale
+                let target=CGRect(x:bounds.minX,y:bounds.minY,width:max(1,bounds.width+p.x-start.x),height:max(1,bounds.height+p.y-start.y))
+                selectionPreview=selectionOriginal.mapValues {resizing ? $0.resized(from:bounds,to:target) : $0.moved(dx:p.x-start.x,dy:p.y-start.y)}
                 needsDisplay=true;return
             }
             if model.tool == .move, let lastDrag {
@@ -582,11 +630,15 @@ struct CaptureCanvas: NSViewRepresentable {
         }
         override func mouseUp(with event: NSEvent) {
             lastDrag = nil
+            if selectionStart != nil || marqueeStart != nil {
+                if !model.locked,model.tool == .select,selectionMoved,selectionRevision == model.revision,Set(selectionOriginal.keys) == model.selectedAnnotations {
+                    model.document.replaceAnnotations(selectionPreview)
+                }
+                cancelSelectionGesture();needsDisplay=true;return
+            }
+            guard !model.locked else {draft=nil;needsDisplay=true;return}
             guard let item = draft else { return }; draft = nil
             if item.tool == .select { return }
-            if model.tool == .select,let selected=model.selectedAnnotation {
-                model.document.replaceAnnotation(at:selected,with:item);selectionStart=nil;selectionOriginal=nil;resizing=false;needsDisplay=true;return
-            }
             if item.tool == .crop, let a = item.points.first, let b = item.points.last {
                 do { try model.document.crop(to: CGRect(x: min(a.x,b.x), y: min(a.y,b.y), width: abs(a.x-b.x), height: abs(a.y-b.y))) }
                 catch { model.error = tr(error.localizedDescription) }
@@ -594,8 +646,14 @@ struct CaptureCanvas: NSViewRepresentable {
             needsDisplay = true
         }
         override func keyDown(with event:NSEvent) {
-            if event.keyCode == 51 || event.keyCode == 117 { model.deleteSelected();needsDisplay=true }
+            if event.keyCode == 53 {cancelSelectionGesture();draft=nil;model.selectAnnotations([]);needsDisplay=true}
+            else if event.keyCode == 0,event.modifierFlags.contains(.command) {model.selectAllAnnotations();needsDisplay=true}
+            else if event.keyCode == 51 || event.keyCode == 117 {cancelSelectionGesture();model.deleteSelected();needsDisplay=true}
             else { super.keyDown(with:event) }
+        }
+        func cancelSelectionGesture() {
+            selectionStart=nil;selectionOriginal=[:];selectionPreview=[:];selectionBounds=nil;selectionRevision=nil
+            selectionMoved=false;resizing=false;marqueeStart=nil;marqueeRect=nil;marqueeBaseline=[]
         }
         override func scrollWheel(with event: NSEvent) {
             guard !model.locked else { return }
