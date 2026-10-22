@@ -21,6 +21,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(item(tr("Open Thermo"), "macwindow", key: "o") { MainWindow.show() })
         menu.addItem(item(tr("Search apps and files"), "magnifyingglass") { LocalSearchPanel.shared.show() })
         menu.addItem(item(tr("Manage menu bar…"), "menubar.rectangle") { MenuBarManagerPanel.shared.show() })
+        for control in MenuBarQuickControls.items(model: .shared) { menu.addItem(control) }
         menu.addItem(item(tr("Capture screen…") + "  ⌥⌘3", "viewfinder") { CaptureWorkspace.shared.capture() })
         menu.addItem(item(tr("Pin clipboard") + "  ⌥⌘4", "pin") { CaptureWorkspace.shared.pinClipboard() })
         menu.addItem(item(tr("Open image…"), "photo") { CaptureWorkspace.shared.importImage() })

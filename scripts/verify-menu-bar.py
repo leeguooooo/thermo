@@ -41,7 +41,7 @@ def main():
                 if source.is_file():
                     copy(source, work / source.relative_to(root))
         preview = work / 'Sources/MenuBarPreview'
-        for name in ['MenuBarManager.swift', 'MenuBarManagerPanel.swift']:
+        for name in ['MenuBarManager.swift', 'MenuBarManagerPanel.swift', 'MenuBarQuickControls.swift']:
             copy(root / 'Sources/ThermoApp' / name, preview / name)
         # The preview uses actual Theme tokens; unrelated shared view components
         # depend on the rest of Thermo, and are outside this isolated build.

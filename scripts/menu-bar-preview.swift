@@ -6,7 +6,7 @@ import CMenuBar
 import MenuBarCore
 import ThermoL10n
 
-@MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
+@MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var item: NSStatusItem?
     private var session: TMMenuBarSession?
     private var checks: [String: Any] = [:]
@@ -64,6 +64,7 @@ import ThermoL10n
             let main = NSMenu()
             let application = NSMenuItem()
             let submenu = NSMenu()
+            submenu.delegate = self
             for (title, selector, key) in [(tr("Manage menu bar…"), #selector(openManager), "m")] {
                 let entry = submenu.addItem(withTitle: title, action: selector, keyEquivalent: key)
                 entry.target = self
@@ -75,6 +76,14 @@ import ThermoL10n
         }
     }
     @objc private func openManager() { MenuBarManagerPanel.shared.show() }
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        // Keep the first Manage entry and the Quit separator/entry. Rebuild the
+        // same controls shipped in Thermo whenever this preview menu opens.
+        while menu.items.count > 3 { menu.removeItem(at: 1) }
+        for control in MenuBarQuickControls.items(model: .shared).reversed() {
+            menu.insertItem(control, at: 1)
+        }
+    }
     func applicationWillTerminate(_ notification: Notification) {
         visualCheck?.restore()
         if let dragModel {
@@ -173,6 +182,40 @@ import ThermoL10n
 let menuBarFixtureMode = CommandLine.arguments.contains("--fixture") ||
     Bundle.main.bundleIdentifier?.hasPrefix("org.example.mbfx.") == true
 let application = NSApplication.shared
+if CommandLine.arguments.contains("--check-quick-controls") {
+    // Exercise the actual native menu actions with absent identities. There is
+    // no visibility assertion to apply and no installed preference is touched.
+    let passed = MainActor.assumeIsolated { () -> Bool in
+        let suite = "MenuBarQuickControlsQA." + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = MenuBarManager(defaults: defaults)
+        defer { model.shutdown() }
+        guard MenuBarQuickControls.items(model: model).isEmpty else { return false }
+        let absent = "org.example.menubar-absent." + UUID().uuidString
+        model.assign(absent, to: .hidden)
+        let original = defaults.data(forKey: MenuBarSectionStore.key)
+        defaults.set(true, forKey: MenuBarManager.enabledKey)
+        model.start()
+        guard model.enabled else { return false }
+        @MainActor func invoke(_ index: Int) -> Bool {
+            let menu = NSMenu(); menu.autoenablesItems = false
+            for entry in MenuBarQuickControls.items(model: model) { menu.addItem(entry) }
+            guard menu.items.indices.contains(index) else { return false }
+            menu.performActionForItem(at: index)
+            return true
+        }
+        guard invoke(0), model.reveal == .collapsed,
+              invoke(0), model.reveal == .hidden,
+              invoke(1), model.reveal == .all,
+              model.enabled, model.state == .visible,
+              defaults.data(forKey: MenuBarSectionStore.key) == original else { return false }
+        model.setEnabled(false)
+        return MenuBarQuickControls.items(model: model).isEmpty
+    }
+    print("{\"quickControlsPassed\":\(passed),\"nativeVisibilityAsserted\":false}")
+    exit(passed ? 0 : 1)
+}
 if CommandLine.arguments.contains("--probe") {
     let result: [String: Any] = ["available": TMMenuBarSession.isAvailable(), "accessibilityTrusted": AXIsProcessTrusted(),
                                "os": ProcessInfo.processInfo.operatingSystemVersionString,
