@@ -28,7 +28,19 @@ import ThermoL10n
         var recordingWindow: CaptureRecordingWindow?
         var annotationWindow:CaptureEditor?
         var pinSession:CapturePinSession?
-        if Bundle.main.object(forInfoDictionaryKey:"ThermoTypedPinsReview") as? Bool == true,
+        if Bundle.main.object(forInfoDictionaryKey:"ThermoLaTeXReview") as? Bool == true,
+           let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
+            let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins")));pinSession=session
+            do {
+                if session.library.pins.isEmpty {
+                    let source="$$\\begin{aligned}E&=mc^2\\\\\\int_0^1 x^2\\,dx&=\\frac{1}{3}\\end{aligned}$$"
+                    let first=try session.open(.latex(.init(source:source)));session.windows[first]?.model.pinTitle="QA formula"
+                    var matrix=CaptureLaTeX(source:"\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}");matrix.foreground="#2244AA";matrix.transparentBackground=false
+                    let second=try session.open(.latex(matrix));session.windows[second]?.model.pinTitle="QA matrix";try session.flush()
+                } else { session.restoreWindows() }
+                session.showLibrary()
+            } catch { session.issue=error.localizedDescription;session.showLibrary() }
+        } else if Bundle.main.object(forInfoDictionaryKey:"ThermoTypedPinsReview") as? Bool == true,
            let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
             let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins")));pinSession=session
             do {

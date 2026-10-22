@@ -115,15 +115,16 @@ public struct CapturePinColor:Codable,Sendable,Equatable {
 }
 
 public enum CapturePinContent:Codable,Sendable,Equatable {
-    case text(CapturePinText),files([CapturePinFile]),color(CapturePinColor)
+    case text(CapturePinText),files([CapturePinFile]),color(CapturePinColor),latex(CaptureLaTeX)
     public var valid:Bool {
-        switch self { case .text(let value):return value.valid;case .files(let values):return !values.isEmpty && values.count <= 100 && values.allSatisfy(\.valid);case .color(let value):return value.valid }
+        switch self { case .text(let value):return value.valid;case .files(let values):return !values.isEmpty && values.count <= 100 && values.allSatisfy(\.valid);case .color(let value):return value.valid;case .latex(let value):return value.valid }
     }
-    public var kind:String { switch self { case .text:return "text";case .files:return "files";case .color:return "color" } }
+    public var kind:String { switch self { case .text:return "text";case .files:return "files";case .color:return "color";case .latex:return "latex" } }
     public func previewImage() throws -> CGImage {
         guard valid else { throw CapturePinFailure.invalidLibrary }
         let text:NSAttributedString,background:NSColor,swatch:NSColor?
         switch self {
+        case .latex(let formula):return try formula.render().image
         case .text(let value):text=try value.attributed();background=CapturePinText.color(value.background);swatch=nil
         case .files(let files):text=NSAttributedString(string:files.map(\.path).joined(separator:"\n\n"),attributes:[.font:NSFont.systemFont(ofSize:18),.foregroundColor:NSColor.black]);background = .white;swatch=nil
         case .color(let color):text=NSAttributedString(string:CapturePinColor.Format.allCases.map { color.formatted($0) }.joined(separator:"\n"),attributes:[.font:NSFont.monospacedSystemFont(ofSize:20,weight:.regular),.foregroundColor:NSColor.black]);background = .white;swatch=color.nsColor

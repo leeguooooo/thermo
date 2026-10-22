@@ -160,3 +160,20 @@ python3 scripts/verify-capture-ui.py --av-layer-review
 HTML 夹具包含图片、样式、iframe 与页面脚本的环回请求，服务端在前后控制请求中确认存活，未收到任何夹具资源请求；页面标题没有被脚本替换。此记录验证该夹具的运行效果。真实浏览器/办公软件的剪贴板差异、跨应用拖放、文件移动和权限变化、外部默认程序打开/定位仍待验收。
 
 主线 `f918371` 的独立干净检出重新编译并通过 118 项测试。最终包重启后，编辑后的“Persisted typed text 中文”和 1.2 倍缩放仍保留；关闭后从历史恢复也直接显示目标文本窗口。最终 QA 保留在 `/tmp/thermo-typed-pins-qa-final-01a/ThermoCaptureQA.app`，附带独立合成文件和贴图库；临时实现/复查工作区、旧 QA 和备份包已清理，探针服务已停止。未替换安装版。
+
+
+## LaTeX 数学贴图
+
+按 [PixPin 公式贴图](https://pixpin.cn/docs/pin/latex)的行为，加入公式类型、自动识别分隔符/常见起始命令、显式按 LaTeX 贴图、编辑、独立/行内样式、字号、前景/背景、透明背景、源码/MathML/SVG 复制、SVG 另存及渲染图像拖出/副本。Word 可编辑数学对象和公式 OCR 仍未实现，不能用图像副本计作完成。
+
+渲染采用 [MathJax 4.1.3](https://github.com/mathjax/MathJax-src/releases/tag/4.1.3) 的直接模块及 LiteDOM，在 JavaScriptCore 中执行；没有 Node、文件、网络或宿主调用接口。MathJax、SVG 字体数据和 mhchemparser 按 Apache 2.0 分发，许可证在 ThirdPartyNotices/MathJax 中。应用和独立 QA 的打包步骤复制本地资源并检查摘要。
+
+使用独立解析器处理每个公式，宏不跨贴图共享；宏展开限制 1000 次，缓冲 32768 字符，输入限 16 KiB UTF-8。未启用 require、autoload、HTML 和 setoptions 扩展。输出 SVG 禁止活动元素、外部链接、DOCTYPE 和外部资源属性，保留数学路径及文字。输出单边不超过 8192 逻辑像素、总计不超过 1600 万逻辑像素，原生 PNG 为固定 2 倍。错误或超限会报错，不输出源代码冒充公式。
+
+未应用的编辑和解析错误保留在编辑器中，并禁用导出和关闭。应用成功后才替换已保存的源码、样式及预览；可主动还原未保存修改。新建、显示、恢复贴图或打开管理窗口时会激活目标窗口，便于键盘编辑与保存。
+
+本次新增 9 项测试：分隔符和普通路径区分；分式、根号、矩阵、化学式、cases、aligned、bbox、cancel 等的真实图像及 MathML 结构；颜色/透明度/背景/字号对原生像素的影响；宏上限与跨公式隔离；非法命令与过大图像拒绝；源码和样式落盘；私有剪贴板中的 SVG/MathML 表示；错误时保留原剪贴板和已保存公式。总回归为 CaptureCore 85、App 42，共 127 项。
+
+原生 QA：`python3 scripts/verify-capture-ui.py --latex-review`。已观察到积分/分式和蓝色矩阵；缺失括号时显示解析错误、导出被禁用，修正后像素更新；字号修改写入快照。通过系统保存面板实际写入 `exported-formula.svg`，XML 根节点为 SVG，包含 3 个 path，没有嵌入位图。
+
+构建依赖采用固定版本和锁文件，在物理临时目录中执行干净 npm ci，重新生成的 2.9 MB 渲染器与提交版本摘要一致。Node/npm 仅用于更新资源；正常运行仅加载 App 内的 JavaScriptCore 资源。旧系统、发布签名包、跨应用拖放、复杂公式兼容以及 Word 数学对象仍待后续验收。

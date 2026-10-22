@@ -41,7 +41,7 @@ let package = Package(
         // Local search runs as the user; never linked into the privileged helper.
         .target(name: "SearchCore", dependencies: ["CSQLite"], linkerSettings: [.linkedFramework("CoreServices")]),
         .target(name: "CWebPEncoder", dependencies: [.product(name: "libwebp", package: "libwebp-Xcode")]),
-        .target(name: "CaptureCore", dependencies: ["CWebPEncoder"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("Vision"), .linkedFramework("AVFoundation")]),
+        .target(name: "CaptureCore", dependencies: ["CWebPEncoder"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("Vision"), .linkedFramework("AVFoundation"), .linkedFramework("JavaScriptCore")]),
         // Disk cleanup runs as the user only: the root helper must never link it.
         .target(name: "CleanKit", dependencies: ["AgentCore", "ThermoL10n"]),
         .executableTarget(name: "thermo", dependencies: ["ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore"]),

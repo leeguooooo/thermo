@@ -1,0 +1,49 @@
+{
+  "mathjax": "4.1.3",
+  "font": "mathjax-tex",
+  "entrySHA256": "532fe3163b5ec82e7364f5f03da7500e19805402e29573f9e34cf0e4871ae995",
+  "lockSHA256": "44abb914dbfe32e0d3224d062d9ea6115ba532eba6cd21671141ecd189a55b54",
+  "sha256": "bfee693ca3cfb4fa42b49303cc53991747ee6080c9f219af8f5f35653c215a98",
+  "bytes": 2901051,
+  "dependencies": {
+    "@mathjax/mathjax-newcm-font": {
+      "version": "4.1.3",
+      "license": "Apache-2.0"
+    },
+    "@mathjax/mathjax-tex-font": {
+      "version": "4.1.3",
+      "license": "Apache-2.0"
+    },
+    "@mathjax/src": {
+      "version": "4.1.3",
+      "license": "Apache-2.0"
+    },
+    "mhchemparser": {
+      "version": "4.2.1",
+      "license": "Apache-2.0"
+    }
+  },
+  "packages": [
+    "base",
+    "ams",
+    "newcommand",
+    "amscd",
+    "bbox",
+    "boldsymbol",
+    "braket",
+    "cancel",
+    "cases",
+    "color",
+    "enclose",
+    "extpfeil",
+    "mathtools",
+    "mhchem",
+    "physics",
+    "textcomp",
+    "textmacros",
+    "unicode",
+    "units",
+    "upgreek",
+    "verb"
+  ]
+}

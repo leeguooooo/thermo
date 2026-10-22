@@ -20,12 +20,13 @@ struct CaptureTypedPinView:View {
                 Toggle(tr("Always on top"),isOn:$model.pinned).onChange(of:model.pinned) { _ in model.changeWindow?() }
                 Toggle(tr("Pin shadow"),isOn:$model.shadow)
             }.padding([.top,.horizontal],10)
-            if let error=model.error { HStack { Text(error).foregroundStyle(.red);if model.pinContentSaveError != nil { Button(tr("Revert unsaved text")) { model.revertUnsavedPinText() } } }.padding(.horizontal) }
+            if let error=model.error { HStack { Text(error).foregroundStyle(.red);if model.pinContentSaveError != nil { Button(tr("Revert unsaved edits")) { model.revertUnsavedPinText() } } }.padding(.horizontal) }
             if let content=model.pinContent {
                 switch content {
                 case .text(let text):textBody(text)
                 case .files(let files):filesBody(files)
                 case .color(let color):colorBody(color)
+                case .latex(let formula):CaptureLaTeXPinView(model:model,formula:formula).id(model.pinTextReloadID)
                 }
             }
             HStack {
@@ -39,7 +40,7 @@ struct CaptureTypedPinView:View {
                         else { throw CaptureFailure.invalidImage }
                         model.makeImageCopy?(image)
                     } catch { model.error=tr(error.localizedDescription) } }
-                }.help(tr("Text image copies contain only the visible area."))
+                }.help(tr("Text image copies contain only the visible area.")).disabled(model.pinContentSaveError != nil)
                 Spacer()
                 if let show=model.showPinLibrary { Button(tr("Pin groups and history"),action:show) }
             }.padding([.horizontal,.bottom],10)

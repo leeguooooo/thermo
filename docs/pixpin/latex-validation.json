@@ -1,0 +1,83 @@
+{
+  "status": "partial",
+  "recordedAt": "2026-10-22T09:16:23.378726+00:00",
+  "baseCommit": "1889ac00a41954b75f868684b51e0cbdba57e895",
+  "sourceSHA256": {
+    "Package.swift": "c454099ce43de6f4db3bf5e79bdf037fe3947a8a366b8718a78ca12b6d47392b",
+    "Resources/CaptureMath/mathjax-4.1.3.bundle.js": "bfee693ca3cfb4fa42b49303cc53991747ee6080c9f219af8f5f35653c215a98",
+    "Resources/CaptureMath/provenance.json": "dbc7f10a2a0a069aa4eb7fd20e6f4eb1cf58288ab3ca954b429070d12930c525",
+    "Resources/ThirdPartyNotices/MathJax/LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "Resources/ThirdPartyNotices/MathJax/MHCHEM-LICENSE": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1",
+    "Resources/ThirdPartyNotices/MathJax/README.txt": "62ad90fd2987044e729627a782d6e76ff90736fc0b29cdd95b72a6f018e55a70",
+    "Sources/CaptureCore/CaptureLaTeX.swift": "51be73a4d2d916879a87193aea30dfd12e60b34e9bcd4152eb09cfa8c60cd47f",
+    "Sources/CaptureCore/CapturePinContent.swift": "d3a49788c861ce2af8a1b4e2c3b3492c3e9a505af01ca11cbfbef8bcb41d0ea7",
+    "Sources/CaptureCore/CapturePinLibrary.swift": "c1b3cffe928c957503a3efb11353798343537c99727f4bf096e61e0a6b240b83",
+    "Sources/ThermoApp/CaptureLaTeXPinView.swift": "98622cf857014cea3c99eb0c238858e2f82469ca4c71e07e686040eb07262693",
+    "Sources/ThermoApp/CapturePinClipboard.swift": "32ae67ba1d664e4d3696c05021cd0150b904e1e7bb415c4ede2add61d51a5e35",
+    "Sources/ThermoApp/CapturePinSession.swift": "a63d9ba9d252461251cac8289f627f9fc82578b57744669eb07e841333e80fd6",
+    "Sources/ThermoApp/CaptureTypedPinView.swift": "cef762f907d41bcc1c854fb77afa53f1775a9f0726ca96e8caeebb655ca76eba",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "94e5875713a723a4885de77976a8fb8af57ecebfb582c4d43bacd7d5c74179b1",
+    "Sources/ThermoApp/StatusMenu.swift": "0276e5baf38681f356bcab7c60454924755c57e50f0de23dacd2cd466975ff79",
+    "Sources/ThermoApp/Views.swift": "e4d5e264ea0d1380b6d0e0d315fa38eb6ab88ed961d22879ec4972c961783fff",
+    "Sources/ThermoL10n/ZhHans.swift": "13073f22457e9b9e657140805cf650dc7582bc728f7770840595fdfd6f73b4ea",
+    "Tests/CaptureCoreTests/CaptureLaTeXTests.swift": "56dda24154e55ba4e736cc16139ee2f7926b85294bfeeee39279d74bea759fcb",
+    "Tests/ThermoAppTests/CaptureLaTeXPinTests.swift": "fe8dca5b690736a7f9506c54b4613864681ed4fca5b60a8da2011e39534acb3b",
+    "scripts/build.sh": "ffa93d565076dcf2c8094f0cc32f73fe7f3f932fc7121d203de9f72bd7978a95",
+    "scripts/math-renderer/README.md": "ca42c57aeea99b3fedba2ea532f5b17365b7e6fa49509f910d9eb6fb73e67d61",
+    "scripts/math-renderer/build.mjs": "ee683db7bb0cb56233d4dfa84a5b6cb9b8adec07ea8d33069a4bfe33d068466e",
+    "scripts/math-renderer/entry.js": "532fe3163b5ec82e7364f5f03da7500e19805402e29573f9e34cf0e4871ae995",
+    "scripts/math-renderer/package-lock.json": "44abb914dbfe32e0d3224d062d9ea6115ba532eba6cd21671141ecd189a55b54",
+    "scripts/math-renderer/package.json": "60b3358968dd34e1ce3fbab93b4f9ac35469cd907651010938b17b369e894246",
+    "scripts/math-renderer/verify.py": "5c40d8d1bdb5b3813356297a9d27c1d20b43ca8823999d3d3c6419d2082a6c99",
+    "scripts/verify-capture-ui.py": "25dc08eaa3ff78470410bdf505c0a7af5df756c6f2805168bfab6e281ae8c6ce",
+    "scripts/verify-capture-ui.swift": "a77e2984499616a095d1818a766b585f877b386a6ac618434714629142b84cab"
+  },
+  "tests": {
+    "CaptureCore": 85,
+    "ThermoApp": 42,
+    "failures": 0,
+    "logSHA256": "1a6e28f1d296d68371c2c93e7a96a18f43879b6f1ad18a83355713969e98e676",
+    "context": "isolated local workspace"
+  },
+  "renderer": {
+    "mathjax": "4.1.3",
+    "font": "mathjax-tex",
+    "bytes": 2901051,
+    "bundleSHA256": "bfee693ca3cfb4fa42b49303cc53991747ee6080c9f219af8f5f35653c215a98",
+    "reproducedByCleanNpmCi": true,
+    "runtime": "JavaScriptCore with no host/network/file interfaces",
+    "requiresNodeAtRuntime": false,
+    "dynamicLoadingEnabled": false
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-latex-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "a0bf7c804feda388778bbde2e6946c078a225630a1f0664257ed3e03193856cf",
+    "syntheticOnly": true,
+    "bundledSparkleFramework": true,
+    "bundledMathRenderer": true,
+    "verified": [
+      "Integral, fraction and blue matrix visible",
+      "Invalid draft blocks output; parse error shown",
+      "Corrected source updates rendered pixels",
+      "Font size changed to 33 and persisted",
+      "SVG file saved through native NSSavePanel"
+    ],
+    "svgExport": {
+      "file": "/tmp/thermo-latex-qa-01a/exported-formula.svg",
+      "SHA256": "db57976be83486a626e47838930389aa7b22a28c6c18f61f90b527d19c1656ca",
+      "bytes": 2387,
+      "pathCount": 3,
+      "embeddedImages": 0
+    },
+    "unverified": [
+      "Cross-app rendered image drag/drop",
+      "Signed installed release and older macOS runtime"
+    ]
+  },
+  "remaining": [
+    "Editable Word mathematics objects",
+    "Formula OCR",
+    "Additional complex formula compatibility",
+    "Other incomplete features in docs/pixpin/README.md"
+  ]
+}

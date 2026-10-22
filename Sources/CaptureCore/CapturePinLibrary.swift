@@ -26,7 +26,7 @@ public struct CaptureSavedPin:Codable,Identifiable,Sendable {
     public var shadow=true
     public init(groupID:UUID) { self.groupID=groupID }
     var valid:Bool {
-        (contentKind.map { ["text","files","color"].contains($0) } ?? true) && (closedAt?.timeIntervalSince1970.isFinite ?? true) && title.count <= 2000 && [frame.minX,frame.minY,frame.width,frame.height,pan.x,pan.y].allSatisfy(\.isFinite) && frame.width >= 0 && frame.height >= 0 &&
+        (contentKind.map { ["text","files","color","latex"].contains($0) } ?? true) && (closedAt?.timeIntervalSince1970.isFinite ?? true) && title.count <= 2000 && [frame.minX,frame.minY,frame.width,frame.height,pan.x,pan.y].allSatisfy(\.isFinite) && frame.width >= 0 && frame.height >= 0 &&
         opacity.isFinite && (0.15...1).contains(opacity) && zoom.isFinite && (0.25...4).contains(zoom)
     }
 }
@@ -122,6 +122,7 @@ public final class CapturePinLibraryStore {
             content=try JSONDecoder().decode(CapturePinContent.self,from:regular(contentURL,limit:12*1024*1024))
             guard content?.valid == true,content?.kind == pin.contentKind else { throw CapturePinFailure.invalidLibrary }
             if case .text(let text)=content,text.rtf != nil { _=try text.attributed() }
+            if case .latex(let formula)=content { _=try formula.render() }
         }
         return CapturePinSnapshot(document:CaptureDocument(image:image,annotations:annotations.compactMap(\.annotation)),content:content)
     }

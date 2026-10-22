@@ -5,6 +5,11 @@ import SwiftUI
 import ThermoL10n
 import UniformTypeIdentifiers
 
+func captureFailureMessage(_ error:Error) -> String {
+    if case CaptureMathFailure.invalidFormula(let reason)=error { return String(format:tr("Formula could not be rendered: %@"),reason) }
+    return tr(error.localizedDescription)
+}
+
 @MainActor final class CaptureWorkspace: ObservableObject {
     static let shared = CaptureWorkspace()
     @Published var issue: String?
@@ -116,8 +121,8 @@ import UniformTypeIdentifiers
         if model.phase == .failed { recordingWindow?.showWindow(nil); return false }
         return !model.active
     }
-    func pinClipboard(asText:Bool=false) {
-        do { switch try CapturePinClipboard.read(.general,asText:asText) {
+    func pinClipboard(asText:Bool=false,asLaTeX:Bool=false) {
+        do { switch try CapturePinClipboard.read(.general,asText:asText,asLaTeX:asLaTeX) {
             case .image(let image):try pinSession.open(image)
             case .content(let content):try pinSession.open(content)
         } } catch { report(error) }
@@ -130,7 +135,7 @@ import UniformTypeIdentifiers
     func showAll() { do { try pinSession.setAllHidden(false) } catch { report(error) } }
     func hideAll() { do { try pinSession.setAllHidden(true) } catch { report(error) } }
     func closeAll() { pinSession.closeAll() }
-    func report(_ error: Error) { issue = tr(error.localizedDescription); showIssue() }
+    func report(_ error: Error) { issue = captureFailureMessage(error); showIssue() }
     private func showIssue() {
         let alert = NSAlert(); alert.messageText = tr("Screenshots and pins"); alert.informativeText = issue ?? ""; alert.runModal()
     }
@@ -160,7 +165,7 @@ import UniformTypeIdentifiers
         do {
             let image=try content.previewImage()
             pinContentSaveError=nil;pinContent=content;document=CaptureDocument(image:image)
-        } catch { pinContentSaveError=tr(error.localizedDescription);throw error }
+        } catch { pinContentSaveError=captureFailureMessage(error);throw error }
     }
     var onMutation:((Bool)->Void)?
     var showPinLibrary:(() -> Void)?

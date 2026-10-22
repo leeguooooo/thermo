@@ -18,11 +18,11 @@ import ThermoL10n
     init(store:CapturePinLibraryStore = .init()) {
         self.store=store
         do { library=try store.load(defaultName:tr("Default pin group")) }
-        catch { library = .init(defaultName:tr("Default pin group"));issue=tr(error.localizedDescription);loadFailed=true }
+        catch { library = .init(defaultName:tr("Default pin group"));issue=captureFailureMessage(error);loadFailed=true }
     }
     func restoreWindows() {
         do { try checkLoaded();try prepareWindows(for:library.currentGroupID);displayCurrent() }
-        catch { issue=tr(error.localizedDescription) }
+        catch { issue=captureFailureMessage(error) }
     }
     private func checkLoaded() throws { if loadFailed { throw CapturePinFailure.invalidLibrary } }
     func retryLoad() {
@@ -34,7 +34,7 @@ import ThermoL10n
             for editor in Array(windows.values) { editor.close() }
             windows.removeAll();dirty.removeAll();library=saved;loadFailed=false;issue=nil
             for (pin,document) in documents { makeEditor(pin,document:document.document,content:document.content) };displayCurrent()
-        } catch { loadFailed=true;issue=tr(error.localizedDescription) }
+        } catch { loadFailed=true;issue=captureFailureMessage(error) }
     }
     private func commit(_ next:CapturePinLibrary,documents:[UUID:CaptureDocument]=[:],contents:[UUID:CapturePinContent]=[:]) throws {
         try checkLoaded();let saved=try store.save(next,documents:documents,contents:contents);library=saved;onCountChange?(count)
@@ -58,7 +58,7 @@ import ThermoL10n
         saving?.cancel()
         saving=Task { [weak self] in
             do { try await Task.sleep(nanoseconds:350_000_000);try Task.checkCancellation();try self?.flush() }
-            catch is CancellationError {} catch { self?.issue=tr(error.localizedDescription) }
+            catch is CancellationError {} catch { self?.issue=captureFailureMessage(error) }
         }
     }
     @discardableResult func open(_ image:CGImage,content:CapturePinContent? = nil) throws -> UUID {
@@ -66,13 +66,13 @@ import ThermoL10n
         var next=library
         for index in next.pins.indices where next.pins[index].groupID == next.currentGroupID { next.pins[index].hidden=false }
         var pin=CaptureSavedPin(groupID:next.currentGroupID);pin.contentKind=content?.kind;next.pins.append(pin)
-        let doc=CaptureDocument(image:image);try commit(next,documents:[pin.id:doc],contents:content.map { [pin.id:$0] } ?? [:]);makeEditor(pin,document:doc,content:content);displayCurrent();return pin.id
+        let doc=CaptureDocument(image:image);try commit(next,documents:[pin.id:doc],contents:content.map { [pin.id:$0] } ?? [:]);makeEditor(pin,document:doc,content:content);displayCurrent();NSApp.activate(ignoringOtherApps:true);windows[pin.id]?.window?.makeKeyAndOrderFront(nil);return pin.id
     }
     @discardableResult func open(_ content:CapturePinContent) throws -> UUID { try open(content.previewImage(),content:content) }
     private func makeEditor(_ pin:CaptureSavedPin,document:CaptureDocument,content:CapturePinContent? = nil) {
         let editor=CaptureEditor(image:document.image,onClose:{ [weak self] in self?.windows.removeValue(forKey:pin.id) },shouldClose:{ [weak self] in self?.willClose(pin.id) ?? true })
         let model=editor.model;model.document=document;model.pinContent=content;model.opacity=pin.opacity;model.zoom=pin.zoom;model.pan=pin.pan;model.pinned=pin.pinned;model.locked=pin.locked;model.shadow=pin.shadow;model.pinTitle=pin.title
-        model.makeImageCopy={ [weak self] image in do { try self?.open(image) } catch { self?.issue=tr(error.localizedDescription);self?.showLibrary() } }
+        model.makeImageCopy={ [weak self] image in do { try self?.open(image) } catch { self?.issue=captureFailureMessage(error);self?.showLibrary() } }
         model.showPinLibrary={ [weak self] in self?.showLibrary() }
         model.onMutation={ [weak self] document in self?.changed(pin.id,document:document) }
         editor.onWindowChange={ [weak self] in self?.changed(pin.id,document:false) }
@@ -101,7 +101,7 @@ import ThermoL10n
             try flush();var next=library
             guard let index=next.pins.firstIndex(where:{ $0.id == id }) else { return true }
             next.pins[index].closedAt=Date();next.pruneHistory();try commit(next);return true
-        } catch { issue=tr(error.localizedDescription);showLibrary();return false }
+        } catch { issue=captureFailureMessage(error);showLibrary();return false }
     }
     func showPin(_ id:UUID) throws {
         guard let pin=library.pins.first(where:{ $0.id == id }) else { throw CapturePinFailure.missingPin }
@@ -110,14 +110,14 @@ import ThermoL10n
         else {
             var next=library;next.pins[next.pins.firstIndex { $0.id == id }!].hidden=false;try commit(next);displayCurrent()
         }
-        windows[id]?.window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps:true);windows[id]?.window?.makeKeyAndOrderFront(nil)
     }
     func restore(_ id:UUID? = nil) throws {
         try flush()
         let pin=library.pins.filter { $0.groupID == library.currentGroupID && $0.closedAt != nil && (id == nil || $0.id == id) }.sorted { $0.closedAt! > $1.closedAt! }.first
         guard var pin else { return }
         let doc=try store.snapshot(for:pin);pin.closedAt=nil;pin.hidden=false
-        var next=library;next.pins[next.pins.firstIndex { $0.id == pin.id }!]=pin;try commit(next);makeEditor(pin,document:doc.document,content:doc.content);displayCurrent();windows[pin.id]?.window?.makeKeyAndOrderFront(nil)
+        var next=library;next.pins[next.pins.firstIndex { $0.id == pin.id }!]=pin;try commit(next);makeEditor(pin,document:doc.document,content:doc.content);displayCurrent();NSApp.activate(ignoringOtherApps:true);windows[pin.id]?.window?.makeKeyAndOrderFront(nil)
     }
     func switchGroup(_ id:UUID) throws {
         guard library.groups.contains(where:{ $0.id == id }) else { throw CapturePinFailure.invalidLibrary }
@@ -172,7 +172,7 @@ import ThermoL10n
     }
     func closeAll() { for pin in library.pins where pin.groupID == library.currentGroupID && pin.closedAt == nil { windows[pin.id]?.window?.performClose(nil) } }
     func setHistoryLimit(_ value:Int) throws { try flush();var next=library;next.historyLimit=value;next.pruneHistory();try commit(next);discardRemovedWindows() }
-    func ensureAllVisible() { for editor in windows.values { if let window=editor.window { ensureVisible(window) } };do { try flush() } catch { issue=tr(error.localizedDescription) } }
+    func ensureAllVisible() { for editor in windows.values { if let window=editor.window { ensureVisible(window) } };do { try flush() } catch { issue=captureFailureMessage(error) } }
     private func ensureVisible(_ window:NSWindow) {
         let screens=NSScreen.screens.map(\.visibleFrame)
         guard !screens.contains(where:{ $0.intersection(window.frame).width >= 100 && $0.intersection(window.frame).height >= 40 }),let screen=NSScreen.main else { return }
@@ -184,6 +184,6 @@ import ThermoL10n
             window.title=tr("Pin groups and history");window.isReleasedWhenClosed=false;window.minSize=NSSize(width:720,height:440)
             window.contentView=NSHostingView(rootView:CapturePinLibraryView(session:self));window.center();libraryWindow=NSWindowController(window:window)
         }
-        libraryWindow?.showWindow(nil)
+        libraryWindow?.showWindow(nil);NSApp.activate(ignoringOtherApps:true);libraryWindow?.window?.makeKeyAndOrderFront(nil)
     }
 }
