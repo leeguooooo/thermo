@@ -340,14 +340,11 @@ func captureFailureMessage(_ error:Error) -> String {
     func save() {
         let options:CaptureSaveSettings
         do { options=try saveOptions?() ?? CaptureSaveSettings() } catch {self.error=captureFailureMessage(error);return}
-        let panel = NSSavePanel(); panel.allowedContentTypes = [.png, .jpeg, .tiff]
-        panel.nameFieldStringValue = "Thermo-" + ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-") + ".png"
+        let panel = NSSavePanel(),manual=CaptureManualImageSave()
+        manual.configure(panel,name:"Thermo-" + ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-"))
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
-            let ext = url.pathExtension.lowercased()
-            let type: NSBitmapImageRep.FileType = ["jpg", "jpeg"].contains(ext) ? .jpeg : (ext == "tiff" || ext == "tif" ? .tiff : .png)
-            let format:CaptureSaveFormat=type == .jpeg ? .jpeg : (type == .tiff ? .tiff : .png)
-            try CaptureImageSave.encode(document,format:format,quality:options.quality).write(to:url,options:.atomic)
+            try manual.save(document,to:url,quality:options.quality)
             savedImagePath=url.path;error=nil
             if options.copyAfterManualSave {copy()}
         } catch { self.error = tr(error.localizedDescription) }
