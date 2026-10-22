@@ -49,6 +49,16 @@ public struct CaptureFrameArchiveSource: Sendable {
         let url=root.appendingPathComponent("system-audio.caf")
         return (try? Self.regular(url)) == true ? url : nil
     }
+    public var microphoneURL:URL? {
+        let url=root.appendingPathComponent("microphone.caf")
+        return (try? Self.regular(url)) == true ? url : nil
+    }
+    public var cameraSource:CaptureFrameArchiveSource? {
+        get throws {
+            let url=root.appendingPathComponent("camera",isDirectory:true)
+            return FileManager.default.fileExists(atPath:url.path) ? try Self.load(url) : nil
+        }
+    }
     public func frameURL(_ index:Int) -> URL { root.appendingPathComponent(String(format:"%08d",index)+(header.codec == .png ? ".png" : ".jpg")) }
     public static func load(_ root:URL) throws -> CaptureFrameArchiveSource {
         let attributes=try root.resourceValues(forKeys:[.isDirectoryKey,.isSymbolicLinkKey])
@@ -100,7 +110,7 @@ public struct CaptureFrameArchiveSource: Sendable {
 public final class CaptureFrameArchive: @unchecked Sendable {
     public let root:URL
     public let header:CaptureFrameArchiveHeader
-    private let lock=NSLock(), audioLock=NSLock()
+    private let lock=NSLock(), audioLock=NSLock(), cameraLock=NSLock()
     private let queue=DispatchQueue(label:"dev.thermo.recording.archive",qos:.userInitiated)
     private let context=CIContext(options:[.cacheIntermediates:false])
     private let video:FileHandle, pointer:FileHandle
@@ -112,12 +122,13 @@ public final class CaptureFrameArchive: @unchecked Sendable {
     private var error:Error?
     private var lastPointer:CaptureArchivedPointer?
     private var pointerPending=0
-    private var audio:AVAudioFile?
-    private var audioFormat:AVAudioFormat?
-    private var audioFrames:AVAudioFramePosition=0
-    public init(root:URL,header:CaptureFrameArchiveHeader,jpegQuality:Double = 0.9) throws {
+    private var audio:CaptureAudioLane?
+    private var microphone:CaptureAudioLane?
+    private var camera:CaptureFrameArchive?
+    public init(root:URL,header:CaptureFrameArchiveHeader,jpegQuality:Double = 0.9,timeOrigin:CMTime? = nil) throws {
         guard header.valid, (0.1...1).contains(jpegQuality) else { throw CaptureMovieFailure.invalidConfiguration }
         self.root=root; self.header=header; self.jpegQuality=jpegQuality
+        if let timeOrigin { timeline.start(at:timeOrigin) }
         try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
         do {
             try JSONEncoder().encode(header).write(to:root.appendingPathComponent("header.json"),options:.atomic)
@@ -174,41 +185,36 @@ public final class CaptureFrameArchive: @unchecked Sendable {
         }
         lock.unlock()
     }
-    public func appendAudio(_ sample:CMSampleBuffer) throws {
-        audioLock.lock(); defer { audioLock.unlock() }
+    public func appendAudio(_ sample:CMSampleBuffer) throws { try appendAudio(sample,at:CMSampleBufferGetPresentationTimeStamp(sample),microphone:false) }
+    public func appendMicrophone(_ sample:CMSampleBuffer,at time:CMTime) throws { try appendAudio(sample,at:time,microphone:true) }
+    private func appendAudio(_ sample:CMSampleBuffer,at time:CMTime,microphone isMicrophone:Bool) throws {
+        audioLock.lock();defer { audioLock.unlock() }
         lock.lock()
-        guard accepting, !timeline.paused, let time=timeline.presentationTime(at:CMSampleBufferGetPresentationTimeStamp(sample)) else { lock.unlock(); return }
+        guard accepting,!timeline.paused,let output=timeline.presentationTime(at:time) else { lock.unlock();return }
         lock.unlock()
-        guard let description=sample.formatDescription else { throw CaptureMovieFailure.invalidConfiguration }
-        let format=AVAudioFormat(cmAudioFormatDescription:description)
-        guard format.sampleRate == 48000, format.channelCount == 2 else { throw CaptureMovieFailure.invalidConfiguration }
-        if audio == nil {
-            audio=try AVAudioFile(forWriting:root.appendingPathComponent("system-audio.caf"),settings:format.settings,commonFormat:format.commonFormat,interleaved:format.isInterleaved)
-            audioFormat=format
+        if isMicrophone {
+            if microphone == nil { microphone=CaptureAudioLane(url:root.appendingPathComponent("microphone.caf")) }
+            try microphone?.append(sample,at:output.seconds)
+        } else {
+            if audio == nil { audio=CaptureAudioLane(url:root.appendingPathComponent("system-audio.caf")) }
+            try audio?.append(sample,at:output.seconds)
         }
-        guard let audio, let audioFormat, audioFormat == format else { throw CaptureMovieFailure.invalidConfiguration }
-        let count=CMSampleBufferGetNumSamples(sample)
-        let target=AVAudioFramePosition((time.seconds*format.sampleRate).rounded())
-        let skip=max(0,Int(audioFrames-target))
-        guard count > 0, count <= 48000 else { throw CaptureMovieFailure.invalidConfiguration }
-        if skip >= count { return }
-        guard let pcm=AVAudioPCMBuffer(pcmFormat:format,frameCapacity:AVAudioFrameCount(count-skip)) else { throw CaptureMovieFailure.invalidConfiguration }
-        pcm.frameLength=AVAudioFrameCount(count-skip)
-        guard CMSampleBufferCopyPCMDataIntoAudioBufferList(sample,at:Int32(skip),frameCount:Int32(count-skip),into:pcm.mutableAudioBufferList) == noErr else { throw CaptureMovieFailure.encoding("Unable to read audio samples") }
-        while target > audioFrames {
-            let length=AVAudioFrameCount(min(target-audioFrames,4800))
-            guard let silence=AVAudioPCMBuffer(pcmFormat:format,frameCapacity:length) else { throw CaptureFailure.exportFailed }
-            silence.frameLength=length
-            for buffer in UnsafeMutableAudioBufferListPointer(silence.mutableAudioBufferList) {
-                if let data=buffer.mData { memset(data,0,Int(buffer.mDataByteSize)) }
-            }
-            try audio.write(from:silence); audioFrames += AVAudioFramePosition(length)
-        }
-        try audio.write(from:pcm); audioFrames += AVAudioFramePosition(count-skip)
     }
+    @discardableResult public func appendCamera(_ buffer:CVPixelBuffer,at time:CMTime) throws -> Bool {
+        cameraLock.lock();defer { cameraLock.unlock() }
+        lock.lock()
+        guard accepting,!timeline.paused,let output=timeline.presentationTime(at:time) else { lock.unlock();return false }
+        lock.unlock()
+        if camera == nil {
+            camera=try CaptureFrameArchive(root:root.appendingPathComponent("camera",isDirectory:true),header:.init(width:CVPixelBufferGetWidth(buffer),height:CVPixelBufferGetHeight(buffer),fps:header.fps == 60 ? 30 : header.fps,codec:header.codec),jpegQuality:jpegQuality,timeOrigin:.zero)
+        }
+        return try camera?.appendVideo(buffer,at:output) ?? false
+    }
+    private func cameraSnapshot() -> CaptureFrameArchive? { cameraLock.lock();defer { cameraLock.unlock() };return camera }
     public func statistics(at time:CMTime) -> CaptureMovieWriter.Statistics {
-        lock.lock(); defer { lock.unlock() }
-        return .init(frames:frames,droppedFrames:dropped,seconds:timeline.presentationTime(at:time)?.seconds ?? 0)
+        lock.lock();let count=frames,drops=dropped,seconds=timeline.presentationTime(at:time)?.seconds ?? 0;lock.unlock()
+        let cameraDrops=cameraSnapshot()?.statistics(at:CMTime(seconds:seconds,preferredTimescale:60000)).droppedFrames ?? 0
+        return .init(frames:count,droppedFrames:drops+cameraDrops,seconds:seconds)
     }
     private func beginFinish(at time:CMTime) throws -> Double {
         lock.lock(); defer { lock.unlock() }
@@ -217,10 +223,11 @@ public final class CaptureFrameArchive: @unchecked Sendable {
     }
     public func finish(at time:CMTime) async throws -> URL {
         let duration=try beginFinish(at:time)
+        if let camera=cameraSnapshot() { _=try await camera.finish(at:CMTime(seconds:duration,preferredTimescale:60000)) }
         return try await withCheckedThrowingContinuation { continuation in
             queue.async { [self] in
                 do {
-                    audioLock.lock(); audio=nil; audioLock.unlock()
+                    audioLock.lock();audio?.close();microphone?.close();audio=nil;microphone=nil;audioLock.unlock()
                     lock.lock(); let storedError=error; let count=frames; let end=max(duration,lastEncoded+1/60000); lock.unlock()
                     if let storedError { throw storedError }; guard count > 0 else { throw CaptureMovieFailure.noFrames }
                     try video.synchronize(); try pointer.synchronize()
@@ -233,9 +240,10 @@ public final class CaptureFrameArchive: @unchecked Sendable {
     public func cancel() { lock.lock(); accepting=false; lock.unlock() }
     public func cancelAndWait() async {
         cancel()
+        if let camera=cameraSnapshot() { await camera.cancelAndWait() }
         await withCheckedContinuation { (continuation:CheckedContinuation<Void,Never>) in
             queue.async { [self] in
-                audioLock.lock();audio=nil;audioLock.unlock()
+                audioLock.lock();audio?.close();microphone?.close();audio=nil;microphone=nil;audioLock.unlock()
                 try? video.synchronize();try? pointer.synchronize();continuation.resume()
             }
         }

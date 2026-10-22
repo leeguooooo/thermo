@@ -36,12 +36,14 @@ public struct CaptureNormalEdits: Codable, Sendable {
     public var crop=CGRect(x:0,y:0,width:1,height:1)
     public var annotations:[CaptureVectorAnnotation]=[]
     public var systemVolume=1.0
+    public var microphoneVolume:Double?
+    public var camera:CaptureCameraEdits?
     public init() {}
     public var valid:Bool {
         cursorScale.isFinite && (0.25...4).contains(cursorScale) && watermark.count <= 2000 &&
         crop.minX.isFinite && crop.minY.isFinite && crop.width.isFinite && crop.height.isFinite && crop.minX >= 0 && crop.minY >= 0 &&
         crop.maxX <= 1.000001 && crop.maxY <= 1.000001 && crop.width > 0 && crop.height > 0 &&
-        annotations.count <= 1000 && annotations.allSatisfy(\.valid) && systemVolume.isFinite && (0...1).contains(systemVolume)
+        annotations.count <= 1000 && annotations.allSatisfy(\.valid) && systemVolume.isFinite && (0...1).contains(systemVolume) && (microphoneVolume.map { $0.isFinite && (0...1).contains($0) } ?? true) && (camera?.valid ?? true)
     }
     public func save(to archive:URL) throws {
         guard valid else { throw CaptureMovieFailure.invalidConfiguration }

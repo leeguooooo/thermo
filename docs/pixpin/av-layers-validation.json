@@ -1,0 +1,64 @@
+{
+  "status": "partial",
+  "recordedAt": "2026-10-22T07:05:58.019453+00:00",
+  "baseCommit": "0328ffeca19e2432105ce62ab27faf837f80f234",
+  "sourceSHA256": {
+    "Resources/Info.plist": "442a3167e1b8025e8df78b5e6119a4fbae77da7860b7a0192ffd2537342e3150",
+    "Resources/Thermo.entitlements": "7808d46722e9df3b21843f404a7806712b750d865b308c53a133c4a5c971f8fa",
+    "Sources/CaptureCore/CaptureAudioLane.swift": "fd390f580e656e2b924bd10ee82613fe57d1c294e6ef7ad00e895125b7e7ee62",
+    "Sources/CaptureCore/CaptureCameraEdits.swift": "1844abaa34e8b2f8be6b9c8e66aef5ada4bbc74b673d11891c0fcd7544b9b6c9",
+    "Sources/CaptureCore/CaptureFrameArchive.swift": "90a432ef461ef9cd8a9f435d870762f50e480b02a43485915d275c47fca9cd25",
+    "Sources/CaptureCore/CaptureNormalEdits.swift": "9334eb3e4d0f3ad1db0f55231634723e517ca492e53861b795d2a820fdeffe70",
+    "Sources/CaptureCore/CaptureNormalRenderer.swift": "f395a100f69ad570b10aff4e83fad92418fdea0f82142a202491f5a8df093296",
+    "Sources/ThermoApp/CaptureAVDevices.swift": "6bcc6f0238cf73309a0b681a49f42a35d131135058655b366ce1013517f5f127",
+    "Sources/ThermoApp/CaptureNormalOverlay.swift": "28d4a41d5304d4bfb53053cf32d4a560866fcfc2c1a647560e114b437468ca01",
+    "Sources/ThermoApp/CaptureRecording.swift": "67c40bead7dad76688c41d3ae235b0a623665e3b216344f419b8b88681ee06e6",
+    "Sources/ThermoL10n/ZhHans.swift": "ff8b29716763af19564a9cc6444114873d09f86042de2b98ef9dac33461c123d",
+    "Tests/CaptureCoreTests/CaptureAVLayersTests.swift": "2a7c633ac7b9528d3bb6275ce54343bc82767d10ac8d3395b2597def64ae94e5",
+    "scripts/verify-capture-ui.py": "cc869932243af73bcbe8741c94e2379e3bec5ada25407ed4dbb8ba66e0dc3955",
+    "scripts/verify-capture-ui.swift": "57f3882ab882e888b1d243955583b2a50357e2567c42104587fc37a6bded178b"
+  },
+  "tests": {
+    "command": "swift test -j 4 --filter 'CaptureCoreTests|PresentationTests|MainOnlyExitTests'",
+    "CaptureCore": 53,
+    "ThermoApp": 27,
+    "failures": 0,
+    "isolatedWorkspace": true,
+    "logSHA256": "1ce62fca28bab09f84b06562fcdbf8d9410e1e43e96405f7cc542e5624d4d045"
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-av-qa-final-01a/ThermoCaptureQA.app",
+    "binarySHA256": "a29ff2261ed671f78ed761fd14b4f10465227bc761bf700cd63f171d5b446aa8",
+    "syntheticOnly": true,
+    "savedEdits": [
+      {
+        "camera": {
+          "margin": 0.03,
+          "enabled": true,
+          "width": 0.25,
+          "corner": "bottomRight",
+          "mirrored": false,
+          "shape": "rectangle"
+        },
+        "microphoneVolume": 0.25
+      }
+    ],
+    "verified": [
+      "Camera picture-in-picture visible",
+      "Mirror toggle reverses red/green source image",
+      "Independent microphone gain persists"
+    ],
+    "unverified": [
+      "Actual devices",
+      "Permission refusal",
+      "Device disconnect and interruption",
+      "Physical audio/video synchronization",
+      "Native foreground save"
+    ]
+  },
+  "remaining": [
+    "Keyboard recording layer",
+    "Live device acceptance",
+    "Other incomplete features in docs/pixpin/README.md"
+  ]
+}

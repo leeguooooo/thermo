@@ -12,6 +12,7 @@ public final class CaptureNormalRenderer {
     public let height:Int
     private var cacheIndex = -1
     private var cached:CGImage?
+    private var camera:CaptureNormalRenderer?
     public init(source:CaptureFrameArchiveSource,edits:CaptureNormalEdits,maxDimension:Int = 4096) throws {
         guard edits.valid, (32...4096).contains(maxDimension) else { throw CaptureMovieFailure.invalidConfiguration }
         self.source=source; self.edits=edits
@@ -21,6 +22,11 @@ public final class CaptureNormalRenderer {
         crop=rect
         let scale=min(1,Double(maxDimension)/max(rect.width,rect.height))
         width=max(2,Int(rect.width*scale)/2*2); height=max(2,Int(rect.height*scale)/2*2)
+        if (edits.camera ?? CaptureCameraEdits()).enabled,let camera=try source.cameraSource {
+            var plain=CaptureNormalEdits();plain.showCursor=false;plain.showClicks=false
+            var hidden=CaptureCameraEdits();hidden.enabled=false;plain.camera=hidden
+            self.camera=try CaptureNormalRenderer(source:camera,edits:plain)
+        }
     }
     private func index(at time:Double) -> Int {
         var low=0,high=source.frames.count
@@ -52,6 +58,7 @@ public final class CaptureNormalRenderer {
         context.scaleBy(x:Double(width)/crop.width,y:Double(height)/crop.height)
         context.translateBy(x:-crop.minX,y:-crop.minY)
         context.draw(image,in:canvas)
+        try drawCamera(at:time,in:context)
         for annotation in edits.annotations where time >= annotation.start && time < annotation.end {
             if let item=annotation.annotation { CaptureDocument.draw(item,in:context) }
         }
@@ -78,6 +85,25 @@ public final class CaptureNormalRenderer {
             context.fill(CGRect(x:crop.minX,y:crop.minY,width:crop.width*min(1,max(0,progress)),height:max(2,source.header.pixelScale*2)))
             drawText(text,at:CGPoint(x:crop.minX+12,y:crop.minY+fontSize*0.3),size:fontSize,in:context)
         }
+    }
+    private func drawCamera(at time:Double,in context:CGContext) throws {
+        guard let camera,time >= camera.source.frames.first!.time else { return }
+        let settings=edits.camera ?? CaptureCameraEdits(),image=try camera.image(at:min(time,camera.source.duration))
+        var w=crop.width*settings.width,h=crop.width*settings.width*Double(image.height)/Double(image.width)
+        if settings.shape == .circle { h=w }
+        if h > crop.height*0.5 { w *= crop.height*0.5/h;h=crop.height*0.5 }
+        let margin=min(crop.width,crop.height)*settings.margin
+        let right=settings.corner == .topRight || settings.corner == .bottomRight
+        let top=settings.corner == .topRight || settings.corner == .topLeft
+        let target=CGRect(x:right ? crop.maxX-margin-w : crop.minX+margin,y:top ? crop.maxY-margin-h : crop.minY+margin,width:w,height:h)
+        context.saveGState();defer { context.restoreGState() }
+        if settings.shape == .circle { context.addEllipse(in:target) }
+        else { context.addPath(CGPath(roundedRect:target,cornerWidth:w*0.06,cornerHeight:w*0.06,transform:nil)) }
+        context.clip()
+        let scale=max(w/Double(image.width),h/Double(image.height))
+        let rect=CGRect(x:target.midX-Double(image.width)*scale/2,y:target.midY-Double(image.height)*scale/2,width:Double(image.width)*scale,height:Double(image.height)*scale)
+        if settings.mirrored { context.translateBy(x:2*target.midX,y:0);context.scaleBy(x:-1,y:1) }
+        context.draw(image,in:rect)
     }
     private func drawText(_ text:String,at point:CGPoint,size:Double,in context:CGContext) {
         NSGraphicsContext.saveGraphicsState();defer { NSGraphicsContext.restoreGraphicsState() }
@@ -113,12 +139,10 @@ public enum CaptureNormalExport {
             let video=stage.appendingPathComponent("video.mp4")
             let task=Task.detached(priority:.userInitiated) { try await renderMovie(source:source,to:video,edits:edits,options:options,end:end,progress:progress) }
             try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
-            if let audio=source.audioURL,edits.systemVolume > 0 {
-                let aac=stage.appendingPathComponent("audio.m4a")
-                let available=try await exportAudio(source:audio,to:aac,options:options,end:end,volume:edits.systemVolume)
-                if available { try await mux(video:video,audio:aac,to:result,duration:seconds) }
-                else { try FileManager.default.moveItem(at:video,to:result) }
-            } else { try FileManager.default.moveItem(at:video,to:result) }
+            let lanes=[(source.audioURL,edits.systemVolume),(source.microphoneURL,edits.microphoneVolume ?? 1)]
+            let audio=stage.appendingPathComponent("audio.m4a")
+            if try await exportAudio(lanes:lanes,to:audio,options:options,end:end) { try await mux(video:video,audio:audio,to:result,duration:seconds) }
+            else { try FileManager.default.moveItem(at:video,to:result) }
         } else {
             let task=Task.detached(priority:.userInitiated) {
                 let renderer=try CaptureNormalRenderer(source:source,edits:edits,maxDimension:options.maxDimension)
@@ -164,16 +188,21 @@ public enum CaptureNormalExport {
             _=try await writer.finish(at:CMTime(seconds:seconds,preferredTimescale:60000))
         } catch { writer.cancel();throw error }
     }
-    private static func exportAudio(source:URL,to output:URL,options:CaptureMovieExport.Options,end:Double,volume:Double) async throws -> Bool {
-        let asset=AVURLAsset(url:source),composition=AVMutableComposition()
-        guard let input=try await asset.loadTracks(withMediaType:.audio).first else { return false }
-        let requested=CMTimeRange(start:CMTime(seconds:options.start,preferredTimescale:60000),duration:CMTime(seconds:end-options.start,preferredTimescale:60000))
-        let range=CMTimeRangeGetIntersection(requested,otherRange:try await input.load(.timeRange))
-        guard !range.isEmpty,let track=composition.addMutableTrack(withMediaType:.audio,preferredTrackID:kCMPersistentTrackID_Invalid) else { return false }
-        try track.insertTimeRange(range,of:input,at:range.start-requested.start)
+    private static func exportAudio(lanes:[(URL?,Double)],to output:URL,options:CaptureMovieExport.Options,end:Double) async throws -> Bool {
+        let composition=AVMutableComposition(),requested=CMTimeRange(start:CMTime(seconds:options.start,preferredTimescale:60000),duration:CMTime(seconds:end-options.start,preferredTimescale:60000))
+        var parameters:[AVMutableAudioMixInputParameters]=[]
+        for (url,volume) in lanes where volume > 0 {
+            guard let url else { continue }
+            let asset=AVURLAsset(url:url)
+            guard let input=try await asset.loadTracks(withMediaType:.audio).first else { continue }
+            let range=CMTimeRangeGetIntersection(requested,otherRange:try await input.load(.timeRange))
+            guard !range.isEmpty,let track=composition.addMutableTrack(withMediaType:.audio,preferredTrackID:kCMPersistentTrackID_Invalid) else { continue }
+            try track.insertTimeRange(range,of:input,at:range.start-requested.start)
+            let item=AVMutableAudioMixInputParameters(track:track);item.setVolume(Float(volume),at:.zero);item.audioTimePitchAlgorithm = .timeDomain;parameters.append(item)
+        }
+        guard !parameters.isEmpty else { return false }
         composition.scaleTimeRange(CMTimeRange(start:.zero,duration:requested.duration),toDuration:CMTimeMultiplyByFloat64(requested.duration,multiplier:1/options.speed))
-        let parameters=AVMutableAudioMixInputParameters(track:track);parameters.setVolume(Float(volume),at:.zero);parameters.audioTimePitchAlgorithm = .timeDomain
-        let mix=AVMutableAudioMix();mix.inputParameters=[parameters]
+        let mix=AVMutableAudioMix();mix.inputParameters=parameters
         guard let session=AVAssetExportSession(asset:composition,presetName:AVAssetExportPresetAppleM4A) else { throw CaptureFailure.exportFailed }
         session.audioMix=mix;session.outputURL=output;session.outputFileType = .m4a
         try await finish(session);return true

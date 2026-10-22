@@ -77,3 +77,18 @@ python3 scripts/verify-recording-recovery.py --mode normal --report /tmp/ordinar
 原生 QA 构建：`python3 scripts/verify-capture-ui.py --ordinary-review`。合成素材与草稿目录独立，不启动 helper 或录入真实鼠标、键盘、摄像头、麦克风。前台保存面板验收仍未通过，键盘/摄像头/麦克风图层也没有完成。
 
 `855a61c` 在独立干净检出中重新编译并通过相同的 73 项测试；该检出不包含并行的菜单栏或 Spotlight 未提交改动。[普通模式验证记录](ordinary-validation.json) 同时保留集成工作区与干净检出的结果摘要。
+
+
+## 摄像头和麦克风图层
+
+独立工作区添加了独立摄像头帧、麦克风 PCM、画中画形状/镜像/位置及两路混音。采集选项默认关闭，用户点击开始后才通过 AVFoundation 申请访问；打包资源已加入摄像头/麦克风用途说明和相应 entitlement。设备授权、屏幕源枚举先于倒计时。
+
+本次回归 80 项（CaptureCore 53、App 表现层与退出保护 27）：摄像头延迟加入及暂停对齐；隐藏、镜像、四角定位、圆形与裁剪；MP4/GIF/APNG/WebP 中的画中画像素；44.1 kHz 单声道到 48 kHz 双声道转换；48 kHz 单声道；独立两路增益、静音、剪辑与可解码音频；原始 PCM 和摄像头帧不被后期修改覆盖；旧编辑文件缺少新字段时仍可打开；损坏/符号链接摄像头可拒绝或显式隐藏后恢复主画面。
+
+原生 QA 使用红/绿合成摄像头和合成正弦波，不启动实际摄像头或麦克风。已观察到画中画从绿左红右变为红左绿右，麦克风增益 0.25 写入 edits.json。设备权限、拒绝授权、热插拔、实际声画同步、实时摄像头预览仍待真人设备验收。合成音频可解码不代表已经录到真实麦克风。
+
+```sh
+python3 scripts/verify-capture-ui.py --av-layer-review
+```
+
+采集权限和时钟实现参照 Apple 的[媒体授权说明](https://developer.apple.com/documentation/bundleresources/requesting-authorization-for-media-capture-on-macos)及[采集同步时钟](https://developer.apple.com/documentation/avfoundation/avcapturesession/synchronizationclock)。重采样使用[带输入回调的 AVAudioConverter](https://developer.apple.com/documentation/technotes/tn3136-avaudioconverter-performing-sample-rate-conversions)，同采样率仅做 PCM 格式转换，以免给源音轨附加尾部样本。

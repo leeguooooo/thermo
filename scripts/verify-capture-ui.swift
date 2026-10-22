@@ -58,11 +58,24 @@ import ThermoL10n
                         if let archive {
                             while try !archive.appendVideo(buffer,at:time) { try await Task.sleep(nanoseconds:1_000_000) }
                             archive.recordPointer(.init(x:0.1+Double(index)/60,y:0.75,buttons:(12...16).contains(index) ? 1 : 0),at:time)
+                            if Bundle.main.object(forInfoDictionaryKey:"ThermoAVLayerReview") as? Bool == true {
+                                var pixel:CVPixelBuffer?
+                                CVPixelBufferCreate(kCFAllocatorDefault,160,120,kCVPixelFormatType_32BGRA,[kCVPixelBufferCGImageCompatibilityKey:true,kCVPixelBufferCGBitmapContextCompatibilityKey:true] as CFDictionary,&pixel)
+                                let camera=pixel!;CVPixelBufferLockBaseAddress(camera,[])
+                                let ctx=CGContext(data:CVPixelBufferGetBaseAddress(camera),width:160,height:120,bitsPerComponent:8,bytesPerRow:CVPixelBufferGetBytesPerRow(camera),space:CGColorSpaceCreateDeviceRGB(),bitmapInfo:CGImageAlphaInfo.premultipliedFirst.rawValue|CGBitmapInfo.byteOrder32Little.rawValue)!
+                                ctx.setFillColor(NSColor.red.cgColor);ctx.fill(CGRect(x:0,y:0,width:160,height:120))
+                                ctx.setFillColor(NSColor.green.cgColor);ctx.fill(CGRect(x:80,y:0,width:80,height:120))
+                                CVPixelBufferUnlockBaseAddress(camera,[])
+                                while try !archive.appendCamera(camera,at:time) { try await Task.sleep(nanoseconds:1_000_000) }
+                            }
                         } else if let writer {
                             while try !writer.appendVideo(buffer,at:time) { try await Task.sleep(nanoseconds:1_000_000) }
                         }
                     }
                     if let archive,var draft {
+                        if Bundle.main.object(forInfoDictionaryKey:"ThermoAVLayerReview") as? Bool == true {
+                            for packet in 0..<30 { try archive.appendMicrophone(qaMicrophone(at:100+Double(packet)/10),at:CMTime(seconds:100+Double(packet)/10,preferredTimescale:60000)) }
+                        }
                         _=try await archive.finish(at:CMTime(seconds:103,preferredTimescale:60000))
                         draft.status = .ready;try window.model.store.update(draft);window.model.reopen(draft)
                     } else if let writer {
@@ -75,4 +88,15 @@ import ThermoL10n
         DispatchQueue.main.asyncAfter(deadline: .now()+600) { app.terminate(nil) }
         withExtendedLifetime(recordingWindow) { app.run() }
     }
+}
+
+private func qaMicrophone(at seconds:Double) throws -> CMSampleBuffer {
+    var description=AudioStreamBasicDescription(mSampleRate:44100,mFormatID:kAudioFormatLinearPCM,mFormatFlags:kAudioFormatFlagIsFloat|kAudioFormatFlagIsPacked,mBytesPerPacket:4,mFramesPerPacket:1,mBytesPerFrame:4,mChannelsPerFrame:1,mBitsPerChannel:32,mReserved:0)
+    var format:CMAudioFormatDescription?;CMAudioFormatDescriptionCreate(allocator:kCFAllocatorDefault,asbd:&description,layoutSize:0,layout:nil,magicCookieSize:0,magicCookie:nil,extensions:nil,formatDescriptionOut:&format)
+    let values=(0..<4410).map { Float(sin(Double($0)*2*Double.pi*440/44100))*0.1 }
+    var block:CMBlockBuffer?;CMBlockBufferCreateWithMemoryBlock(allocator:kCFAllocatorDefault,memoryBlock:nil,blockLength:values.count*4,blockAllocator:kCFAllocatorDefault,customBlockSource:nil,offsetToData:0,dataLength:values.count*4,flags:0,blockBufferOut:&block)
+    values.withUnsafeBytes { _=CMBlockBufferReplaceDataBytes(with:$0.baseAddress!,blockBuffer:block!,offsetIntoDestination:0,dataLength:$0.count) }
+    var timing=CMSampleTimingInfo(duration:CMTime(value:1,timescale:44100),presentationTimeStamp:CMTime(seconds:seconds,preferredTimescale:60000),decodeTimeStamp:.invalid),sample:CMSampleBuffer?
+    CMSampleBufferCreateReady(allocator:kCFAllocatorDefault,dataBuffer:block!,formatDescription:format!,sampleCount:4410,sampleTimingEntryCount:1,sampleTimingArray:&timing,sampleSizeEntryCount:0,sampleSizeArray:nil,sampleBufferOut:&sample)
+    guard let sample else { throw CaptureMovieFailure.noFrames };return sample
 }

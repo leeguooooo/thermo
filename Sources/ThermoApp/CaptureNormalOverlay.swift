@@ -69,6 +69,7 @@ struct CaptureNormalSettings:View {
     @ObservedObject var model:CaptureRecordingModel
     var body:some View {
         VStack(alignment:.leading,spacing:8) {
+            CaptureAVLayerSettings(model:model)
             HStack {
                 Toggle(tr("Show cursor"),isOn:$model.normalEdits.showCursor)
                 Toggle(tr("Show mouse actions"),isOn:$model.normalEdits.showClicks)
@@ -103,5 +104,40 @@ struct CaptureNormalSettings:View {
     }
     private func cropField(_ label:String,get:@escaping()->Double,set:@escaping(Double)->Void) -> some View {
         HStack(spacing:3) { Text(label).font(.caption);TextField("",value:Binding(get:get,set:set),format:.number).frame(width:42).textFieldStyle(.roundedBorder) }
+    }
+}
+
+struct CaptureAVLayerSettings:View {
+    @ObservedObject var model:CaptureRecordingModel
+    private func camera<T>(_ path:WritableKeyPath<CaptureCameraEdits,T>) -> Binding<T> {
+        Binding(get:{ (model.normalEdits.camera ?? CaptureCameraEdits())[keyPath:path] },set:{ value in
+            var settings=model.normalEdits.camera ?? CaptureCameraEdits();settings[keyPath:path]=value;model.normalEdits.camera=settings
+        })
+    }
+    var body:some View {
+        VStack(alignment:.leading,spacing:8) {
+            if let source=model.normalSource,FileManager.default.fileExists(atPath:source.root.appendingPathComponent("camera").path) {
+                HStack {
+                    Toggle(tr("Show camera layer"),isOn:camera(\.enabled))
+                    Toggle(tr("Mirror camera"),isOn:camera(\.mirrored))
+                    Slider(value:camera(\.width),in:0.05...0.5).frame(width:90).help(tr("Camera layer size"))
+                }
+                HStack {
+                    Picker(tr("Camera position"),selection:camera(\.corner)) {
+                        Text(tr("Top left")).tag(CaptureCameraEdits.Corner.topLeft);Text(tr("Top right")).tag(CaptureCameraEdits.Corner.topRight)
+                        Text(tr("Bottom left")).tag(CaptureCameraEdits.Corner.bottomLeft);Text(tr("Bottom right")).tag(CaptureCameraEdits.Corner.bottomRight)
+                    }
+                    Picker(tr("Camera shape"),selection:camera(\.shape)) {
+                        Text(tr("Rounded rectangle")).tag(CaptureCameraEdits.Shape.rectangle);Text(tr("Circle")).tag(CaptureCameraEdits.Shape.circle)
+                    }
+                }
+            }
+            if model.normalSource?.microphoneURL != nil {
+                HStack {
+                    Text(tr("Microphone volume"))
+                    Slider(value:Binding(get:{ model.normalEdits.microphoneVolume ?? 1 },set:{ model.normalEdits.microphoneVolume=$0 }),in:0...1)
+                }
+            }
+        }
     }
 }

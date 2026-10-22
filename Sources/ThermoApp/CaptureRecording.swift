@@ -58,6 +58,14 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
     @Published var fps = 30
     @Published var quality: Quality = .standard
     @Published var systemAudio = false
+    @Published var captureCamera=false
+    @Published var captureMicrophone=false
+    @Published var cameraID=""
+    @Published var microphoneID=""
+    @Published private(set) var cameraDevices:[CaptureDeviceChoice]=[]
+    @Published private(set) var microphoneDevices:[CaptureDeviceChoice]=[]
+    @Published private(set) var devicePreview:AVCaptureSession?
+    private var devices:CaptureAVDevices?
     @Published var showsCursor = true
     @Published var delay = 3
     @Published private(set) var seconds = 0.0
@@ -106,17 +114,20 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
         guard let region, !active, !exporting else { return }
         issue = nil; phase = .starting; player?.pause(); player = nil; source = nil; draft = nil; normalSource = nil; archive = nil; normalEdits=CaptureNormalEdits()
         let chosenFPS = fps, quality = quality, audio = systemAudio, cursor = showsCursor, delay = delay,mode=mode
+        let camera=mode == .normal && captureCamera,microphone=mode == .normal && captureMicrophone
+        let cameraID=cameraID,microphoneID=microphoneID
         startTask = Task { [weak self] in
             guard let self else { return }
             do {
-                for remaining in (0..<delay).reversed() {
-                    self.seconds = Double(remaining+1)
-                    try await Task.sleep(nanoseconds:1_000_000_000)
-                }
+                try await CaptureAVDevices.authorize(camera:camera,microphone:microphone)
                 let content = try await SCShareableContent.excludingDesktopWindows(false,onScreenWindowsOnly:true)
                 try Task.checkCancellation()
                 guard let display = content.displays.first(where: { $0.displayID == region.displayID }) else { throw CaptureFailure.captureFailed }
                 let filter = SCContentFilter(display:display,excludingApplications:content.applications.filter { $0.processID == ProcessInfo.processInfo.processIdentifier },exceptingWindows:[])
+                for remaining in (0..<delay).reversed() {
+                    self.seconds = Double(remaining+1)
+                    try await Task.sleep(nanoseconds:1_000_000_000)
+                }
                 let scale = min(region.scale,4096/max(region.rect.width,region.rect.height))
                 let width = max(2,Int(region.rect.width*scale)/2*2), height = max(2,Int(region.rect.height*scale)/2*2)
                 let draft = try self.store.create(mode:mode); self.draft = draft
@@ -145,6 +156,18 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
                 if audio { try stream.addStreamOutput(output,type:.audio,sampleHandlerQueue:DispatchQueue(label:"dev.thermo.recording.audio")) }
                 self.stream = stream; self.output = output
                 try await stream.startCapture(); try Task.checkCancellation()
+                if (camera || microphone),let archive=self.archive {
+                    let devices=CaptureAVDevices(archive:archive) { [weak self] error in
+                        Task { @MainActor in
+                            guard let self,self.active,self.draft?.id == draft.id else { return }
+                            self.issue=tr(error.localizedDescription);await self.stop()
+                        }
+                    }
+                    self.devices=devices
+                    try await devices.start(camera:camera,microphone:microphone,cameraID:cameraID,microphoneID:microphoneID)
+                    try Task.checkCancellation()
+                    if camera { self.devicePreview=devices.session }
+                }
                 self.seconds = 0; self.dropped = 0; self.phase = .recording
                 if mode == .normal { self.beginPointerTracking(region:region) }
                 self.timer = Timer.scheduledTimer(withTimeInterval:0.25,repeats:true) { [weak self] _ in
@@ -155,6 +178,7 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
                 }
             } catch {
                 if let stream = self.stream { try? await stream.stopCapture() }
+                if let devices=self.devices { await devices.stop() };self.devices=nil;self.devicePreview=nil
                 self.writer?.cancel();if let archive=self.archive { await archive.cancelAndWait() }
                 self.writer = nil; self.archive=nil; self.stream = nil; self.output = nil
                 if let draft = self.draft, draft.effectiveMode == .quick, !FileManager.default.fileExists(atPath:self.store.movie(draft.id).path) {
@@ -165,6 +189,10 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
             }
             self.startTask = nil
         }
+    }
+    func refreshCaptureDevices() {
+        if captureCamera { cameraDevices=CaptureAVDevices.choices(for:.video) }
+        if captureMicrophone { microphoneDevices=CaptureAVDevices.choices(for:.audio) }
     }
     func togglePause() {
         if phase == .recording { writer?.pause(at:recordingClock()); phase = .paused }
@@ -186,6 +214,7 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
             if let stream = self.stream {
                 do { try await stream.stopCapture() } catch { if self.issue == nil { self.issue = tr(error.localizedDescription) } }
             }
+            if let devices=self.devices { await devices.stop() };self.devices=nil;self.devicePreview=nil
             do {
                 let source = try await writer.finish(at:stopTime)
                 if var draft = self.draft { draft.status = .ready; try self.store.update(draft); self.draft = draft }
@@ -359,7 +388,7 @@ private struct CaptureRecordingView: View {
     let hasRegion:Bool
     var body:some View {
         VStack(alignment:.leading,spacing:12) {
-            if !hasRegion && model.player == nil && model.drafts.isEmpty { Text(tr("No recording drafts yet.")).foregroundStyle(.secondary); Spacer() }
+            if !hasRegion && model.player == nil && model.drafts.isEmpty && model.normalSource == nil { Text(tr("No recording drafts yet.")).foregroundStyle(.secondary); Spacer() }
             if model.phase == .rendering {
                 ProgressView(value:model.renderProgress)
                 HStack { Text(tr("Rendering preview…"));Spacer();Button(tr("Cancel rendering")) { model.cancelRendering() } }
@@ -367,13 +396,13 @@ private struct CaptureRecordingView: View {
             if model.normalSource != nil,model.player == nil,!model.active {
                 Button(tr("Generate preview from saved source")) { Task { await model.renderNormalPreview() } }
             }
+            if model.normalSource != nil { CaptureNormalSettings(model:model) }
             if let player = model.player {
                 RecordingPlayer(player:player).frame(minHeight:160,maxHeight:.infinity)
                 HStack {
                     Button(tr("Play from trim start")) { model.playPreview() }
                     Button(tr("Pause")) { model.player?.pause() }
                 }
-                if model.normalSource != nil { CaptureNormalSettings(model:model) }
                 HStack {
                     Text(tr("Trim start")); TextField("",value:$model.trimStart,format:.number).frame(width:70)
                     Text(tr("Trim end")); TextField("",value:$model.trimEnd,format:.number).frame(width:70)
@@ -410,6 +439,19 @@ private struct CaptureRecordingView: View {
                     Toggle(tr("Show cursor"),isOn:$model.showsCursor)
                     Picker(tr("Start delay"),selection:$model.delay) { ForEach([0,3,5],id:\.self) { Text("\($0) s").tag($0) } }.frame(width:150)
                 }.disabled(model.active)
+                if model.mode == .normal {
+                    HStack {
+                        Toggle(tr("Camera layer"),isOn:$model.captureCamera).onChange(of:model.captureCamera) { _ in model.refreshCaptureDevices() }
+                        Toggle(tr("Microphone track"),isOn:$model.captureMicrophone).onChange(of:model.captureMicrophone) { _ in model.refreshCaptureDevices() }
+                    }.disabled(model.active)
+                    if model.captureCamera {
+                        Picker(tr("Camera"),selection:$model.cameraID) { Text(tr("System default")).tag("");ForEach(model.cameraDevices) { Text($0.name).tag($0.id) } }.disabled(model.active)
+                    }
+                    if model.captureMicrophone {
+                        Picker(tr("Microphone"),selection:$model.microphoneID) { Text(tr("System default")).tag("");ForEach(model.microphoneDevices) { Text($0.name).tag($0.id) } }.disabled(model.active)
+                    }
+                }
+                if let session=model.devicePreview { CaptureDevicePreview(session:session).frame(width:180,height:120) }
                 Text(tr("Thermo windows are excluded. The recording is saved as a local draft.")).font(.callout).foregroundStyle(.secondary)
                 Spacer()
                 Text(String(format:"%02d:%05.2f",Int(model.seconds)/60,model.seconds.truncatingRemainder(dividingBy:60))).font(.system(size:38,design:.monospaced)).frame(maxWidth:.infinity)
