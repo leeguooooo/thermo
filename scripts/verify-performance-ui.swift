@@ -44,6 +44,8 @@ import SwiftUI
     }
     @objc func showConsole() {
         MainWindow.show()
+        MainWindow.window?.title = "Thermo Performance QA"
+        MainWindow.window?.level = .floating
 
     }
     @objc func showPanel() {
