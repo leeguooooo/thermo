@@ -1,0 +1,27 @@
+{
+  "generator": "docx",
+  "version": "9.13.0",
+  "templateSHA256": {
+    "TemplateParts/[Content_Types].xml": "7052d2df1dd93d4e297d715d56bf08fbc5b2072cc6a75e7a5b73c4406ab1e52c",
+    "TemplateParts/_rels/.rels": "641d22a23aa9eb550103a7a01471eaeda5e84c69413e6e03e7fd290b4811a756",
+    "TemplateParts/docProps/app.xml": "579eba9a8d602575736c3880cf5b529aabbadee0e8cc0e4df8573db0ceadbd4b",
+    "TemplateParts/docProps/core.xml": "77e7a796fd38ccce8ea162186c7888784824bbe6651ff2638fdc267136a17b8e",
+    "TemplateParts/docProps/custom.xml": "8ec73cc7ce297e42cc652a1d1884d4ffb18ffa0ba7a6502a36f8da90d1be61a1",
+    "TemplateParts/word/_rels/document.xml.rels": "e721c4894c4be106f6a1805824f5ec4ef98759fd42bb27c397b0145e96303fde",
+    "TemplateParts/word/_rels/endnotes.xml.rels": "bf64631f0bc7bd46712fef822bcfb22e069fa5779e133980ca0c9d81f00efc09",
+    "TemplateParts/word/_rels/fontTable.xml.rels": "bf64631f0bc7bd46712fef822bcfb22e069fa5779e133980ca0c9d81f00efc09",
+    "TemplateParts/word/_rels/footnotes.xml.rels": "bf64631f0bc7bd46712fef822bcfb22e069fa5779e133980ca0c9d81f00efc09",
+    "TemplateParts/word/document.xml": "58f42702b3a929dd5b294a357554244244cb855ae8a35bddf3486a6673874b78",
+    "TemplateParts/word/endnotes.xml": "52f6c33e62c233e0d9f9c41ec259ffd943ea9cdc413293d43e6ffb213682a5cf",
+    "TemplateParts/word/fontTable.xml": "a746dbb577ec5d68983d659707c0750ca89d40b9d3316e31af331d5e1c736bad",
+    "TemplateParts/word/footnotes.xml": "774ce254f01cde1079d43e81a0db30ac82b3b2bae875b07c4fe28403ba30b6a9",
+    "TemplateParts/word/numbering.xml": "805a1aa1e744da8e1f3c9ec8d38fba424865f9b3a9c0eb104578ed74f7f8637b",
+    "TemplateParts/word/settings.xml": "36b68f012adfd6d2f8faaebc8d101632d3529e9d9fd57d6ef92198841e96f09e",
+    "TemplateParts/word/styles.xml": "f31b292f25dd17d4ed4f3fe3f73b2ffa3940109b39d89ad7ad8c9270d304926e",
+    "TemplateParts/word/theme/theme1.xml": "14d6fc4b249d866d8ab97f1ee68e6601c3feedc56857db791418573bf378f6de",
+    "math-slot.xml": "127a430ca292e4d5b3bcd61401f750287878c31a56b4f8597cf140625ab92211"
+  },
+  "createSHA256": "fc44ff382717d69ed384ef5d7dcad479041c3a0468d8f32e2c6924abcd70c5d2",
+  "normalizerSHA256": "d164ecfacba5417eab77f77bd422593917acf5551d2e54dd436f07b13d5b420d",
+  "lockSHA256": "93153c0aa64f12ef8e5e1797f32e569441df9651f0775a6f143dce932df1f457"
+}

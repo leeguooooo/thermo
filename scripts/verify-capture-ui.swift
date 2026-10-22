@@ -38,6 +38,11 @@ import ThermoL10n
                     var matrix=CaptureLaTeX(source:"\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}");matrix.foreground="#2244AA";matrix.transparentBackground=false
                     let second=try session.open(.latex(matrix));session.windows[second]?.model.pinTitle="QA matrix";try session.flush()
                 } else { session.restoreWindows() }
+                if Bundle.main.object(forInfoDictionaryKey:"ThermoWordMathReview") as? Bool == true {
+                    let fixtures=[("fraction","\\frac{1}{\\sqrt{x}}"),("integral","\\int_0^1 x^2\\,dx"),("matrix","\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}"),("aligned","\\begin{aligned}a&=b+c\\\\d&=e\\end{aligned}"),("scripts","x_1^2+\\sqrt[3]{y}"),("accents","\\hat{x}+\\overline{y}"),("chemistry","\\ce{H2O}"),("isotope","\\ce{^{14}_{6}C}"),("binomial","\\binom{n}{k}"),("enclosures","\\cancel{x}+\\boxed{y}"),("functions","\\sin x+\\lim_{n\\to\\infty} x_n"),("braces","\\overbrace{a+b}^{n}"),("cases","\\begin{cases}x&x>0\\\\0&x=0\\end{cases}")]
+                    let directory=root.appendingPathComponent("word-fixtures");try FileManager.default.createDirectory(at:directory,withIntermediateDirectories:true)
+                    for (name,source) in fixtures { try CaptureWordDocument.save(.init(source:source),to:directory.appendingPathComponent(name+".docx")) }
+                }
                 session.showLibrary()
             } catch { session.issue=error.localizedDescription;session.showLibrary() }
         } else if Bundle.main.object(forInfoDictionaryKey:"ThermoTypedPinsReview") as? Bool == true,

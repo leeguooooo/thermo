@@ -1,0 +1,245 @@
+{
+  "status": "partial",
+  "recordedAt": "2026-10-22T10:07:18.664600+00:00",
+  "baseCommit": "70b40ff1b0ca11f206007e58a765263e00ab21a9",
+  "sourceSHA256": {
+    "Resources/CaptureWord/TemplateParts/[Content_Types].xml": "7052d2df1dd93d4e297d715d56bf08fbc5b2072cc6a75e7a5b73c4406ab1e52c",
+    "Resources/CaptureWord/TemplateParts/_rels/.rels": "641d22a23aa9eb550103a7a01471eaeda5e84c69413e6e03e7fd290b4811a756",
+    "Resources/CaptureWord/TemplateParts/docProps/app.xml": "579eba9a8d602575736c3880cf5b529aabbadee0e8cc0e4df8573db0ceadbd4b",
+    "Resources/CaptureWord/TemplateParts/docProps/core.xml": "77e7a796fd38ccce8ea162186c7888784824bbe6651ff2638fdc267136a17b8e",
+    "Resources/CaptureWord/TemplateParts/docProps/custom.xml": "8ec73cc7ce297e42cc652a1d1884d4ffb18ffa0ba7a6502a36f8da90d1be61a1",
+    "Resources/CaptureWord/TemplateParts/word/_rels/document.xml.rels": "e721c4894c4be106f6a1805824f5ec4ef98759fd42bb27c397b0145e96303fde",
+    "Resources/CaptureWord/TemplateParts/word/_rels/endnotes.xml.rels": "bf64631f0bc7bd46712fef822bcfb22e069fa5779e133980ca0c9d81f00efc09",
+    "Resources/CaptureWord/TemplateParts/word/_rels/fontTable.xml.rels": "bf64631f0bc7bd46712fef822bcfb22e069fa5779e133980ca0c9d81f00efc09",
+    "Resources/CaptureWord/TemplateParts/word/_rels/footnotes.xml.rels": "bf64631f0bc7bd46712fef822bcfb22e069fa5779e133980ca0c9d81f00efc09",
+    "Resources/CaptureWord/TemplateParts/word/document.xml": "58f42702b3a929dd5b294a357554244244cb855ae8a35bddf3486a6673874b78",
+    "Resources/CaptureWord/TemplateParts/word/endnotes.xml": "52f6c33e62c233e0d9f9c41ec259ffd943ea9cdc413293d43e6ffb213682a5cf",
+    "Resources/CaptureWord/TemplateParts/word/fontTable.xml": "a746dbb577ec5d68983d659707c0750ca89d40b9d3316e31af331d5e1c736bad",
+    "Resources/CaptureWord/TemplateParts/word/footnotes.xml": "774ce254f01cde1079d43e81a0db30ac82b3b2bae875b07c4fe28403ba30b6a9",
+    "Resources/CaptureWord/TemplateParts/word/numbering.xml": "805a1aa1e744da8e1f3c9ec8d38fba424865f9b3a9c0eb104578ed74f7f8637b",
+    "Resources/CaptureWord/TemplateParts/word/settings.xml": "36b68f012adfd6d2f8faaebc8d101632d3529e9d9fd57d6ef92198841e96f09e",
+    "Resources/CaptureWord/TemplateParts/word/styles.xml": "f31b292f25dd17d4ed4f3fe3f73b2ffa3940109b39d89ad7ad8c9270d304926e",
+    "Resources/CaptureWord/TemplateParts/word/theme/theme1.xml": "14d6fc4b249d866d8ab97f1ee68e6601c3feedc56857db791418573bf378f6de",
+    "Resources/CaptureWord/math-slot.xml": "127a430ca292e4d5b3bcd61401f750287878c31a56b4f8597cf140625ab92211",
+    "Resources/CaptureWord/provenance.json": "b0bf56e4100337be6d8a5434d42634a53d829d13e69a8d57725962c37517bc7d",
+    "Resources/ThirdPartyNotices/WordTemplate/LICENSE": "b5b2364c0c95a26b2a2399d7e706a61acac680be1d5b180b00592ee85830bffb",
+    "Resources/ThirdPartyNotices/WordTemplate/README.txt": "fe5ec8ddf304e2249b751f3709718199bdf686182755339d4cdc44a69f8c912e",
+    "Sources/CaptureCore/CaptureOfficeMath.swift": "6465684ba9b2548de888ded514acc3ede2e5a568ae24c4d8d8de5c3a5f35e0ae",
+    "Sources/CaptureCore/CaptureWordDocument.swift": "df7ea6761cef31ce685b5dc38cbb9222cd4963e76974f1b5d0ed5ebcc60c3884",
+    "Sources/ThermoApp/CaptureLaTeXPinView.swift": "b89c51711b067b539e462ea31ee213016fd734d9dc182a2bfc590274d583e88b",
+    "Sources/ThermoApp/CaptureWordMathActions.swift": "d1dd4b64e821ec4c669aaca58edaa4861b8cef32ac8357f46681268726dde2f8",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "98491b8c9e9436324aa1c5cfa36d3b1e9522a588fa2bfd9ec413fea0e7454122",
+    "Sources/ThermoL10n/ZhHans.swift": "497f0b8f1745eef8aa2ea525cef8650ec140cfa96b3bcf763dce7e3c9433ef05",
+    "Tests/CaptureCoreTests/CaptureOfficeMathTests.swift": "fed1c1ce0612d2aa2ea126aee3de505ed468d6f1619b3fca974b4def56733318",
+    "scripts/build.sh": "6698d011cc1940d028dde930766dd82f633d7478f59af68bc1b5fb31fab6683e",
+    "scripts/verify-capture-ui.py": "a29bb8e6161a1f9d722f87d6f975c36da806de8a256e943c565556b11dc0aa53",
+    "scripts/verify-capture-ui.swift": "cfa72d6f62550b83fc3872abbe5e2cebf882172adc4acc8ebfe2f79d2b903c16",
+    "scripts/verify-word-interop.py": "467b0fc8b161ff16eb59297db1cccc1c17fd1ef6c3b41f5a7e6aea7542f5c728",
+    "scripts/word-template/README.md": "23b9677e805cdf3a4a181465272a32c7afdf3f943bf1ef95b04381ea621fbd2c",
+    "scripts/word-template/build.py": "d164ecfacba5417eab77f77bd422593917acf5551d2e54dd436f07b13d5b420d",
+    "scripts/word-template/create.cjs": "fc44ff382717d69ed384ef5d7dcad479041c3a0468d8f32e2c6924abcd70c5d2",
+    "scripts/word-template/package-lock.json": "93153c0aa64f12ef8e5e1797f32e569441df9651f0775a6f143dce932df1f457",
+    "scripts/word-template/package.json": "57dd07976b94adf9751a6e8b6fdb905b770ab93ac09a8d208c089e8daa052ab1",
+    "scripts/word-template/verify.py": "41e781e8eaf34011fc8c2d15b1aca23a284a908480b500e8b350ef09e9a0b464"
+  },
+  "tests": {
+    "CaptureCore": 93,
+    "ThermoApp": 42,
+    "failures": 0,
+    "logSHA256": "04842fd221509ed28632ee445d176d7372fd525b2fb03185d05b91158729bc41",
+    "context": "isolated local workspace"
+  },
+  "interop": {
+    "fixtures": 13,
+    "results": {
+      "accents": {
+        "schemaExit": 0,
+        "pandocMath": [
+          "\\hat{\\mathit{x}} + \\overline{\\mathit{y}}"
+        ],
+        "pandocWarnings": "",
+        "nativeMathObjects": 1,
+        "images": 0,
+        "resavedNativeMathObjects": 1,
+        "resavedImages": 0
+      },
+      "aligned": {
+        "schemaExit": 0,
+        "pandocMath": [
+          "\\begin{array}{r}\n\\mathit{a} = \\mathit{b} + \\mathit{c} \\\\\n\\mathit{d} = \\mathit{e}\n\\end{array}"
+        ],
+        "pandocWarnings": "",
+        "nativeMathObjects": 1,
+        "images": 0,
+        "resavedNativeMathObjects": 1,
+        "resavedImages": 0
+      },
+      "binomial": {
+        "schemaExit": 0,
+        "pandocMath": [
+          "(\\binom{\\mathit{n}}{\\mathit{k}})"
+        ],
+        "pandocWarnings": "",
+        "nativeMathObjects": 1,
+        "images": 0,
+        "resavedNativeMathObjects": 1,
+        "resavedImages": 0
+      },
+      "braces": {
+        "schemaExit": 0,
+        "pandocMath": [
+          "\\overset{\\mathit{n}}{\\overbrace{\\mathit{a} + \\mathit{b}}}"
+        ],
+        "pandocWarnings": "",
+        "nativeMathObjects": 1,
+        "images": 0,
+        "resavedNativeMathObjects": 1,
+        "resavedImages": 0
+      },
+      "cases": {
+        "schemaExit": 0,
+        "pandocMath": [
+          "\\{\\begin{matrix}\n\\mathit{x} & \\mathit{x} > 0 \\\\\n0 & \\mathit{x} = 0\n\\end{matrix}"
+        ],
+        "pandocWarnings": "",
+        "nativeMathObjects": 1,
+        "images": 0,
+        "resavedNativeMathObjects": 1,
+        "resavedImages": 0
+      },
+      "chemistry": {
+        "schemaExit": 0,
+        "pandocMath": [
+          "H_{2}O"
+        ],
+        "pandocWarnings": "",
+        "nativeMathObjects": 1,
+        "images": 0,
+        "resavedNativeMathObjects": 1,
+        "resavedImages": 0
+      },
+      "enclosures": {
+        "schemaExit": 0,
+        "pandocMath": [
+          "\\cancel{\\mathit{x}} + \\boxed{\\mathit{y}}"
+        ],
+        "pandocWarnings": "",
+        "nativeMathObjects": 1,
+        "images": 0,
+        "resavedNativeMathObjects": 1,
+        "resavedImages": 0
+      },
+      "fraction": {
+        "schemaExit": 0,
+        "pandocMath": [
+          "\\frac{1}{\\sqrt{\\mathit{x}}}"
+        ],
+        "pandocWarnings": "",
+        "nativeMathObjects": 1,
+        "images": 0,
+        "resavedNativeMathObjects": 1,
+        "resavedImages": 0
+      },
+      "functions": {
+        "schemaExit": 0,
+        "pandocMath": [
+          "\\sin\\mathit{x} + \\lim_{\\mathit{n} \\rightarrow \\infty}\\mathit{x}_{\\mathit{n}}"
+        ],
+        "pandocWarnings": "",
+        "nativeMathObjects": 1,
+        "images": 0,
+        "resavedNativeMathObjects": 1,
+        "resavedImages": 0
+      },
+      "integral": {
+        "schemaExit": 0,
+        "pandocMath": [
+          "\\int_{0}^{1}\\mathit{x}^{2}\\,\\mathit{dx}"
+        ],
+        "pandocWarnings": "",
+        "nativeMathObjects": 1,
+        "images": 0,
+        "resavedNativeMathObjects": 1,
+        "resavedImages": 0
+      },
+      "isotope": {
+        "schemaExit": 0,
+        "pandocMath": [
+          "_{6}^{14}C"
+        ],
+        "pandocWarnings": "",
+        "nativeMathObjects": 1,
+        "images": 0,
+        "resavedNativeMathObjects": 1,
+        "resavedImages": 0
+      },
+      "matrix": {
+        "schemaExit": 0,
+        "pandocMath": [
+          "\\begin{pmatrix}\n\\mathit{a} & \\mathit{b} \\\\\n\\mathit{c} & \\mathit{d}\n\\end{pmatrix}"
+        ],
+        "pandocWarnings": "",
+        "nativeMathObjects": 1,
+        "images": 0,
+        "resavedNativeMathObjects": 1,
+        "resavedImages": 0
+      },
+      "scripts": {
+        "schemaExit": 0,
+        "pandocMath": [
+          "\\mathit{x}_{1}^{2} + \\sqrt[3]{\\mathit{y}}"
+        ],
+        "pandocWarnings": "",
+        "nativeMathObjects": 1,
+        "images": 0,
+        "resavedNativeMathObjects": 1,
+        "resavedImages": 0
+      }
+    },
+    "fixtureDocumentXMLSHA256": {
+      "isotope": "1b6d606a8fa35bb193f6b3decf8f51ed4ad07167b8f9e551e5874c5ab9b0e4a7",
+      "binomial": "4a8fb36ab7872263903b7015f224dbb3b0f52e307c549cee4ded20562f346fde",
+      "accents": "05547963399ac44081ed9ecee043d4ffbcd8821a19920441a013b4e7285a9b4e",
+      "chemistry": "f73f15902ac597c73cddda0c75de59d24d1bb3b19bf18a634e858c68f691b2a9",
+      "enclosures": "f57bf4434fb5c2de982aa9665feaef148a3b5602377ae29f8453634f2c5d7217",
+      "braces": "e997d31a7a7b5d9826a9a088fbf9115920b100827b271a5ae55288f6a11b7aa9",
+      "fraction": "519956cb2c0be58b15d916cd940fb383fe069396a6ad20e852b206c9e489eec1",
+      "functions": "7921ed37d98995ed7c45f2e43558dd041c65807eaed093adc9db95584962001c",
+      "cases": "8bcacd4cd9a35424ef43a0e097aab08c71277e6dcc4cf1cd5f9846e70445724c",
+      "matrix": "2340ac67e104d642f41b4e6fa4d285509e164a8fdefd335ac946c743a4e0f159",
+      "aligned": "09ddcedfe022fc3250fc24473aea9f0b12c3633a80224de89584c2f9f30070e2",
+      "integral": "029402a414fe8be429127872e34f35b93757f82f2823c41f7152313caacfd828",
+      "scripts": "dfc590293ef6fada6c1d77016f2a050637c9ab3426fac030bd6efce8b80ae78a"
+    },
+    "summarySHA256": "b83ff0fd24331ee2c9d270a4d58228c8097d1280807a377733e0dda30c4548d4",
+    "overviewPNG_SHA256": "98c51fdf84750f3b522185f8c957602152d56a51da8e4a7f6ac6dd113071c764",
+    "visuallyInspected": true,
+    "LibreOffice": "26.8.1.1",
+    "officialDMGSHA256": "ca074e0b13571efb30a31fc531c5f95e997030637325e5d5de92d67aefdf0dfc",
+    "signatureVerified": true,
+    "independentPandocBorderBoxReferenceShowsSameLibreOfficeLimitation": true
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-word-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "6b08ca6e313df49d8750afcd5e833f22f368eed545a94877888701e3284960f8",
+    "syntheticOnly": true,
+    "bundledTemplate": true,
+    "verified": [
+      "Export action enabled without Word; Word-specific open disabled with explicit explanation",
+      "Native save panel produced editable DOCX",
+      "Saved DOCX has native equation array, n-ary operator and fraction, without media images",
+      "Native saved DOCX passes XSD validation"
+    ],
+    "exportFile": "/tmp/thermo-word-qa-01a/exported-editable-formula.docx",
+    "exportSHA256": "4888a5a509c6208619fd00382ecf3dec844dad6307505199026dcb87e016eabb"
+  },
+  "templateReproducible": true,
+  "requiresNodeAtRuntime": false,
+  "remaining": [
+    "Microsoft Word actual open/edit/re-save acceptance",
+    "Insertion into an existing Word document",
+    "Word-specific alignment/font/box compatibility",
+    "Advanced MathML layouts and labeled tables",
+    "Other incomplete PixPin features"
+  ]
+}

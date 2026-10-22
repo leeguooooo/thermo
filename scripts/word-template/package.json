@@ -1,0 +1,8 @@
+{
+  "name": "thermo-word-math-template-build",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "docx": "9.13.0"
+  }
+}

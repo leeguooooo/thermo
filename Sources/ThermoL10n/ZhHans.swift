@@ -96,6 +96,13 @@ let zhHans: [String: String] = [
     "The local math renderer is missing from this app.": "应用内缺少本地公式渲染器。",
     "The formula renderer produced an invalid image.": "公式渲染器未生成有效图像。",
     "Formula could not be rendered: %@": "公式无法渲染：%@",
+    "Export editable Word document…": "导出可编辑 Word 文档…",
+    "Open editable copy in Word": "在 Word 中打开可编辑副本",
+    "Microsoft Word is not installed on this Mac.": "本机未安装 Microsoft Word。",
+    "The formula could not be converted to editable Word math.": "无法将公式转换为可编辑的 Word 数学对象。",
+    "Word math export does not support: %@": "Word 公式导出暂不支持：%@",
+    "The editable Word template is missing from this app.": "应用内缺少可编辑 Word 文档模板。",
+    "The editable Word document could not be created.": "无法生成可编辑的 Word 文档。",
     // Annotation editing
     "Select annotation": "选择标注",
     "Mosaic": "马赛克",

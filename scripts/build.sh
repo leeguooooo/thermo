@@ -80,6 +80,8 @@ cp Resources/dev.thermo.helper.plist "$C/Library/LaunchDaemons/"
 cp Resources/AppIcon.icns "$C/Resources/"
 python3 scripts/math-renderer/verify.py
 ditto Resources/CaptureMath "$C/Resources/CaptureMath"
+python3 scripts/word-template/verify.py
+ditto Resources/CaptureWord "$C/Resources/CaptureWord"
 ditto Resources/ThirdPartyNotices "$C/Resources/ThirdPartyNotices"
 ditto Resources/ThirdPartyNotices "$DIST/ThirdPartyNotices"
 ditto "$BIN/Sparkle.framework" "$C/Frameworks/Sparkle.framework"

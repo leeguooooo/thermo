@@ -46,6 +46,11 @@ struct CaptureLaTeXPinView:View {
                 Button(tr("Export SVG…")) { exportSVG() }.disabled(model.pinContentSaveError != nil)
                 Slider(value:$model.zoom,in:0.25...4).frame(width:85).disabled(model.locked).help(tr("Zoom"))
             }
+            HStack {
+                Button(tr("Export editable Word document…")) { do { try CaptureWordMathActions.export(formula) } catch { model.error=captureFailureMessage(error) } }.disabled(model.pinContentSaveError != nil)
+                Button(tr("Open editable copy in Word")) { do { try CaptureWordMathActions.openCopy(formula) { model.error=$0 } } catch { model.error=captureFailureMessage(error) } }.disabled(model.pinContentSaveError != nil || CaptureWordMathActions.wordApplication == nil)
+                if CaptureWordMathActions.wordApplication == nil { Text(tr("Microsoft Word is not installed on this Mac.")).font(.caption).foregroundStyle(.secondary) }
+            }
         }.padding(.horizontal,10).onAppear { draft=formula.source }
     }
     private func hex(_ value:Color) -> String {

@@ -6,6 +6,7 @@ import ThermoL10n
 import UniformTypeIdentifiers
 
 func captureFailureMessage(_ error:Error) -> String {
+    if case CaptureWordFailure.unsupported(let item)=error { return String(format:tr("Word math export does not support: %@"),item) }
     if case CaptureMathFailure.invalidFormula(let reason)=error { return String(format:tr("Formula could not be rendered: %@"),reason) }
     return tr(error.localizedDescription)
 }
