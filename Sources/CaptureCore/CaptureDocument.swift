@@ -139,7 +139,10 @@ public struct CaptureDocument {
         checkpoint(); self.image = image; annotations.removeAll()
     }
     public static func load(_ url: URL) throws -> CGImage {
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil), let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { throw CaptureFailure.invalidImage }
+        // Screenshot files are removed before asynchronous after-actions run. Decode now,
+        // otherwise a lazy provider can attempt to read an already removed temporary file.
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, [kCGImageSourceShouldCacheImmediately:true] as CFDictionary) else { throw CaptureFailure.invalidImage }
         return image
     }
 }

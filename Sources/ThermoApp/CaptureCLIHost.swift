@@ -57,7 +57,7 @@ import Foundation
         if seen.contains(request.id){return failure("Capture request ID was already received. Query status instead of replaying it.")}
         guard seen.count<100_000 else{return failure("Capture request limit reached; restart Thermo when idle.")}
         seen.insert(request.id)
-        guard active == nil,!workspace.scriptRunning,!workspace.capturing else{return failure("Another capture operation is in progress. No action started.")}
+        guard active == nil,!workspace.scriptRunning,!workspace.captureBusy else{return failure("Another capture operation is in progress. No action started.")}
         reports[request.id] = .init(id:request.id,phase:.running);order.append(request.id)
         while order.count>32 {reports.removeValue(forKey:order.removeFirst())}
         active=request.id

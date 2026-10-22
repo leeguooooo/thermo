@@ -16,7 +16,7 @@ extension CaptureWorkspace {
     }
     func performScriptAction(_ raw:String) async throws -> CaptureScriptValue {
         try Task.checkCancellation()
-        if raw == "status" {return .object(["pins":.number(Double(pinSession.count)),"capturing":.bool(capturing),"group":.string(pinSession.library.currentGroupID.uuidString)])}
+        if raw == "status" {return .object(["pins":.number(Double(pinSession.count)),"capturing":.bool(captureBusy),"group":.string(pinSession.library.currentGroupID.uuidString)])}
         guard let action=CaptureAction(rawValue:raw) else {throw CaptureScriptFailure.execution("Unknown capture action: "+raw)}
         switch action {
         case .script,.scrolling,.recording,.recordingDrafts,.openImage,.saveImage:

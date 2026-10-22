@@ -18,7 +18,17 @@ func captureFailureMessage(_ error:Error) -> String {
     @Published var capturing = false
     @Published var pinCount = 0
     let pinSession:CapturePinSession
-    init(pinSession:CapturePinSession? = nil) {
+    private let screenCaptureAccess:()->Bool
+    private let makeCaptureProcess:(URL)->Process
+    init(pinSession:CapturePinSession? = nil,
+         screenCaptureAccess:@escaping()->Bool={CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess()},
+         makeCaptureProcess:@escaping(URL)->Process={output in
+             let task=Process();task.executableURL=URL(fileURLWithPath:"/usr/sbin/screencapture")
+             task.arguments=["-i","-x","-t","png",output.path]
+             task.standardOutput=FileHandle.nullDevice;task.standardError=FileHandle.nullDevice
+             return task
+         }) {
+        self.screenCaptureAccess=screenCaptureAccess;self.makeCaptureProcess=makeCaptureProcess
         self.pinSession=pinSession ?? CapturePinSession();self.pinSession.onCountChange={ [weak self] in self?.pinCount=$0 }
         self.pinSession.configureEditor={ [weak self] model in
             model.saveOptions={ [weak self] in try self?.saving.snapshot() ?? CaptureSaveSettings() }
@@ -36,6 +46,7 @@ func captureFailureMessage(_ error:Error) -> String {
     private var process: Process?
     private var captureDirectory: URL?
     private var captureID:UUID?
+    var captureBusy:Bool {capturing || process != nil || afterTask != nil || saving.running}
     private var captureCompletion:((Result<Bool,Error>)->Void)?
     @Published var scriptRunning=false
     var scriptWorker:URL?
@@ -67,18 +78,18 @@ func captureFailureMessage(_ error:Error) -> String {
     }
     func shutdown() {
         shuttingDown=true;if let id=captureID{cancelCapture(id:id)};afterTask?.cancel();afterTask=nil
-        process?.terminate()
+        if process?.isRunning == true {process?.terminate()}
         if let captureDirectory { try? FileManager.default.removeItem(at:captureDirectory) }; captureDirectory = nil
         regionSelector?.cancel(); regionSelector = nil
         scrollWindow?.close()
         shortcuts.shutdown();activated=false
     }
     func capture(after override:[CaptureAfterStep]?=nil,id:UUID=UUID(),completion:((Result<Bool,Error>)->Void)?=nil) {
-        guard !capturing else {completion?(.failure(CaptureSaveFailure.busy));return}
+        guard !captureBusy else {completion?(.failure(CaptureSaveFailure.busy));return}
         var options:CaptureSaveSettings
         do { options=try saving.snapshot();if let override {options.after=override};guard options.valid else {throw CaptureSaveFailure.invalidSettings} }
         catch { if let completion{completion(.failure(error))} else {saving.issue=captureFailureMessage(error);showSavingSettings()};return }
-        guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() else {if let completion{completion(.failure(CaptureFailure.captureFailed))} else {report(CaptureFailure.captureFailed)};return}
+        guard screenCaptureAccess() else {if let completion{completion(.failure(CaptureFailure.captureFailed))} else {report(CaptureFailure.captureFailed)};return}
         issue = nil; capturing = true;captureID=id;captureCompletion=completion
         // The native selector supports region, Space for window, and Escape to cancel.
         // A unique private directory prevents cancelled captures from reusing old pixels.
@@ -87,14 +98,16 @@ func captureFailureMessage(_ error:Error) -> String {
         catch { failCapture(error);return }
         let output = directory.appendingPathComponent("capture.png")
         captureDirectory = directory
-        let task = Process(); task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-        task.arguments = ["-i", "-x", "-t", "png", output.path]
-        task.standardOutput = FileHandle.nullDevice; task.standardError = FileHandle.nullDevice
+        let task=makeCaptureProcess(output)
         let pipelineOptions=options
         task.terminationHandler = { [weak self] task in
             Task { @MainActor in
                 defer { try? FileManager.default.removeItem(at: directory) }
-                guard let self,self.captureID == id else {return}
+                guard let self else{return}
+                // Cancellation completes promptly, but the selector still owns its slot until it exits.
+                if self.process === task {self.process=nil}
+                if self.captureDirectory == directory {self.captureDirectory=nil}
+                guard self.captureID == id else {return}
                 guard !self.shuttingDown else {self.finishCapture(.failure(CaptureScriptFailure.cancelled));return}
                 self.process = nil
                 self.captureDirectory = nil
@@ -133,7 +146,10 @@ func captureFailureMessage(_ error:Error) -> String {
         },onCancel:{Task{@MainActor in self.cancelCapture(id:id)}})
     }
     private func cancelCapture(id:UUID) {
-        guard captureID == id else{return};if process?.isRunning == true{process?.terminate()};process=nil;captureDirectory=nil;afterTask?.cancel();afterTask=nil;finishCapture(.failure(CaptureScriptFailure.cancelled))
+        guard captureID == id else{return}
+        if process?.isRunning == true{process?.terminate()}
+        afterTask?.cancel()
+        finishCapture(.failure(CaptureScriptFailure.cancelled))
     }
     @discardableResult func processCaptured(_ image:CGImage,options:CaptureSaveSettings,pasteboard:NSPasteboard = .general) async -> Bool {
         await saving.run(image,settings:options,pin:{ [weak self] in guard let self else {throw CaptureFailure.captureFailed};try self.pinSession.open($0) },copyImage:{ data in

@@ -3,6 +3,18 @@ import XCTest
 @testable import CaptureCore
 
 final class CaptureDocumentTests: XCTestCase {
+    func testLoadedPixelsRemainReadableAfterTemporarySourceIsRemoved() throws {
+        let url=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString+".png")
+        defer {try? FileManager.default.removeItem(at:url)}
+        try CaptureDocument(image:image()).data().write(to:url)
+        let loaded=try CaptureDocument.load(url)
+        try FileManager.default.removeItem(at:url)
+        XCTAssertEqual(pixel(loaded,x:50,y:10),[255,255,255,255])
+        XCTAssertEqual(pixel(loaded,x:50,y:60),[255,0,0,255])
+        let data=try CaptureDocument(image:loaded).data()
+        let exported=try XCTUnwrap(NSBitmapImageRep(data:data)?.cgImage)
+        XCTAssertEqual(pixel(exported,x:50,y:60),[255,0,0,255])
+    }
     private func image() -> CGImage {
         let ctx = CGContext(data: nil, width: 100, height: 80, bitsPerComponent: 8, bytesPerRow: 0,
                             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!

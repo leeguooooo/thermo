@@ -1,0 +1,49 @@
+{
+  "recordedAt": "2026-10-22T13:23:57.405140+00:00",
+  "baseCommit": "bfcc431",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureDocument.swift": "8fd817007d188db8131765545e5260fa66ac8c7e1d9c3a124a102379a038f941",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "f8a0bd665ec24b2f56e4d9fb9b47cd1481f2456cea991317827de3055312a977",
+    "Sources/ThermoApp/CaptureCLIHost.swift": "628383685b6a3c6ac153f929bd6729ac9c7f90b93d67edf9eeaaa559a3b06f68",
+    "Sources/ThermoApp/CaptureScriptActions.swift": "166787f3720364fac92868617692db20d4c69424c0c24fd322c388f0e08079a0",
+    "Tests/CaptureCoreTests/CaptureDocumentTests.swift": "65e612d66f1cd9e347320785763369acde79ff577b85d9ca89d77ec5af1f2684",
+    "Tests/ThermoAppTests/CaptureLifecycleTests.swift": "62fb888c01196cc153da37c5f21bfb431aa12a9a32378af1f2a2b941b9bdf35b"
+  },
+  "regression": {
+    "total": 179,
+    "counts": {
+      "ThermoCLITests.xctest": 3,
+      "ThermoAppTests.xctest": 56,
+      "CaptureScriptCoreTests.xctest": 10,
+      "CaptureCoreTests.xctest": 105,
+      "AgentDoctorTests.xctest": 4,
+      "AgentCoreTests.xctest": 1
+    },
+    "failures": 0,
+    "log": "/tmp/thermo-capture-lifecycle-regression-01a.log",
+    "sha256": "196b8d15599e2e37ff4cbd3c098f4033d6b405e2108a4225935a5dcbd3459eaf",
+    "toolchain": "Local Apple Swift 6.4, Xcode.app macOS 27.0 SDK; per-command DEVELOPER_DIR and SDKROOT"
+  },
+  "verified": [
+    "Denied injected permission returns failure without launching a selector or opening a pin",
+    "Cancel completes its caller while an actual SIGTERM-ignoring child remains alive; a second capture is rejected until that child exits",
+    "Each capture uses a unique private output directory, removed after completion",
+    "An empty capture does not reuse pixels; the next valid subprocess output opens a pin",
+    "Missing executable cleans its private directory and releases the slot",
+    "A cancelled but incomplete after-action blocks another selector and CLI execution; status still reports busy",
+    "Loaded image remains readable and re-encodable after deleting its source PNG"
+  ],
+  "fixes": [
+    "Keep selector process reference until its termination callback",
+    "Wait for outstanding after-actions and save chain before accepting a new capture",
+    "Force ImageIO decoding before temporary screenshot cleanup"
+  ],
+  "scope": "Real Foundation child processes and synthetic local images; injected permission decision, no OS capture permission changes",
+  "unverified": [
+    "Actual macOS selector region/window interaction and cancellation",
+    "OS permission denial or revocation UI",
+    "Retina, multiple displays and Spaces",
+    "Distinguishing all system selector failures that produce no output"
+  ],
+  "installedAppChanged": false
+}
