@@ -24,6 +24,15 @@ extension CleanScreenKeyBinding {
     @Published private(set) var spotlightReleased = false
     /// Another app already using ⌘Space, shown before the user tries to take it over.
     @Published private(set) var commandSpaceHolder: SpotlightShortcut.Holder?
+    @Published private(set) var commandSpaceOfferDismissed = UserDefaults.standard.bool(forKey: offerDismissedKey)
+    private static let offerDismissedKey = "dev.thermo.search.commandSpaceOfferDismissed"
+    /// The one-time ⌘Space offer at the top of the search panel; settings keep the same choice afterwards.
+    var offersCommandSpace: Bool {
+        !commandSpaceOfferDismissed && !spotlightReleased && binding?.sameGesture(Self.commandSpace) != true
+    }
+    func dismissCommandSpaceOffer() {
+        commandSpaceOfferDismissed = true; UserDefaults.standard.set(true, forKey: Self.offerDismissedKey)
+    }
     private let backend: CleanScreenHotkeyBackend
     private let spotlight: SpotlightShortcut
     private let record: (OperationRecord) -> Void
