@@ -27,12 +27,15 @@ enum SingleInstance {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let candidate = try SingleInstanceLock(url: directory.appendingPathComponent("app.lock"))
         guard candidate.acquire() else {
-            DistributedNotificationCenter.default().postNotificationName(showWindow, object: nil, userInfo: nil, deliverImmediately: true)
+            DistributedNotificationCenter.default().postNotificationName(showWindow, object: nil, userInfo: ["search": CommandLine.arguments.contains("--search")], deliverImmediately: true)
             return false
         }
         lock = candidate
-        observer = DistributedNotificationCenter.default().addObserver(forName: showWindow, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { MainWindow.show() }
+        observer = DistributedNotificationCenter.default().addObserver(forName: showWindow, object: nil, queue: .main) { notification in
+            MainActor.assumeIsolated {
+                if notification.userInfo?["search"] as? Bool == true { LocalSearchPanel.shared.show() }
+                else { MainWindow.show() }
+            }
         }
         return true
     }

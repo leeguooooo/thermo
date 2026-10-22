@@ -37,7 +37,7 @@ import ThermoKit
         seen.insert(request.id)
         let action = request.action
         let reads = ["status","screen.status","login.status","updates.status","helper.status","permissions.status","integration.status","awdl.status","keep-awake.status"]
-        let writes = ["screen.start","screen.stop","screen.duration","screen.shortcut","screen.clear-shortcut","login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","awdl.on","awdl.off","keep-awake.start","keep-awake.stop"]
+        let writes = ["screen.start","screen.stop","screen.duration","screen.shortcut","screen.clear-shortcut","login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","awdl.on","awdl.off","keep-awake.start","keep-awake.stop","search.show","search.settings"]
         guard reads.contains(action) || writes.contains(action) else { return result([:], "Unsupported App control operation.") }
         guard request.arguments.keys.allSatisfy({ action == "keep-awake.start" ? ["mode","seconds","duration"].contains($0) : action == "awdl.on" ? $0 == "seconds" : ["screen.start","screen.duration"].contains(action) ? $0 == "duration" : action == "screen.shortcut" ? ["key-code","modifiers","key-label"].contains($0) : false }) else { return result([:], "Unexpected operation arguments.") }
         let screen = self.screen
@@ -81,6 +81,9 @@ import ThermoKit
         }
         defer { if writes.contains(action) { mutating = false } }
         switch action {
+        case "search.show", "search.settings":
+            LocalSearchPanel.shared.show(settings: action == "search.settings")
+            return result(["action": action, "windowVisible": "true"])
         case "keep-awake.start", "keep-awake.stop", "keep-awake.status":
             if action == "keep-awake.start", let idleMode { idleAwake.start(mode: idleMode, seconds: idleSeconds) }
             if action == "keep-awake.stop" { idleAwake.stop() }

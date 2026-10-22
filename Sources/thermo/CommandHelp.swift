@@ -23,6 +23,11 @@ enum CommandHelp {
     }
     static var inventory: Inventory { Inventory(commands:capabilities) }
     static let specification = """
+    search|search [query] [TEXT…] [--limit N] [--json]|local-search-index
+    search status|search status [--json]|local-search-index
+    search index|search index [--root DIR] [--json]|local-search-index
+    search open|search open [--json]|app
+    search settings|search settings [--json]|app
     temps|temps [--json|--csv]|cli
     fans|fans [--json|--csv]|cli
     power|power [--json|--csv]|cli

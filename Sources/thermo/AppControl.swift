@@ -13,6 +13,9 @@ struct AppControlCommand {
         let sub = rest.first ?? "status"
         var action: String, values: [String:String] = [:], mutates = false
         switch command {
+        case "search":
+            guard rest.count == 1, ["open", "settings"].contains(sub) else { throw CLIError("Use search open or search settings.") }
+            action = sub == "open" ? "search.show" : "search.settings"
         case "keep-awake":
             guard rest.count <= 1, ["status", "start", "stop"].contains(sub) else { throw CLIError("Run thermo keep-awake --help.") }
             action = "keep-awake." + sub; mutates = sub != "status"

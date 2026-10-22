@@ -1,0 +1,289 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-22",
+  "application": {
+    "bundleId": "com.raycast.macos",
+    "version": "2.8.2.0",
+    "build": "0",
+    "architecture": "arm64",
+    "minimumOS": "26.0",
+    "signatureTeam": "SY64MV22J9",
+    "signatureVerified": true
+  },
+  "scope": "Static artifact identity, AST slice provenance and binary marker observations. Not runtime or source-equivalence proof.",
+  "ranges": "Zero-based half-open UTF-8 byte offsets; original index.mjs is ASCII. Slice analysis appends one LF.",
+  "rea": {
+    "version": "6.7.0",
+    "workerEvidence": "ev_700aa945042d9de8dd0561dfefb8dad19e3bc54a12179718e08b09be51e5a3af",
+    "sliceEvidence": "ev_6a6b6d6416db3c7319926fffe65b8832162248eb037824131eea63d60b38c957",
+    "queryModuleView": "ev_8e495f985cf0957038b067e656ab8f7a3597545bc755155f065157b3bcd13599",
+    "mainMachO": "ev_cb50bde74d6c16b51ee8c916a22b6e2e04f17dd1810905589d4c1ebf7c7f2528",
+    "nativeRustMetadata": "ev_cb75d98bbcac273af48d292a6c6686ed3c87b8532e55e40ebec034021790c96b",
+    "fullBackendAnalysis": "MCP client timed out after 300 seconds; no complete application analysis claimed.",
+    "nativeFunctions": {
+      "strings": "ev_9bccb16b4d92eb0980bc07d0a5b9f6d0d5d6ef411d13b6c7cb6a060309aad402",
+      "scoringHelper": "ev_8a2e6784d10e9d923fca1d31436c4f8c83c1c1f23d681f29d07af769eb77efe8",
+      "positionBoundarySuffixScoring": "ev_8c1d339b15717684d04a400d3d1d3ee075d2dd2a5b2569288cbf03affe265824",
+      "matchingProcedureLocation": "ev_173ccc51c548724151db1f52231e6269330ed89f8bd05946a2f82b15efa5865e",
+      "limitation": "Partial decompiler reconstruction; Rust location metadata can refer to inlined panic checks. No complete function names, ABI, exact scoring formula or runtime proof."
+    },
+    "nativeRecovery": "Independent stdio REA client with per-process startup timeout 600000 ms; identical binary copied to a distinct task path after the initial task document was manually closed.",
+    "nativeLargeFunction": "procedure_pseudo_code 0x434d00 did not return and Hopper UI timed out. Task-created Hopper process was terminated; no native full matching reconstruction claimed. Independent client exported 20 successful records and close_binary returned null."
+  },
+  "publicMinidex": {
+    "repository": "https://github.com/PitNikola/minidex",
+    "examinedCommit": "c595f59a6f554527939cc27960c7b2d267ac111b",
+    "crateVersion": "0.39.0",
+    "embeddedCheckoutPrefix": "53c8dec",
+    "matchesEmbeddedCheckout": false,
+    "limitation": "Both queried public repositories returned HTTP 422 for 53c8dec. Public source is design comparison only, not Raycast exact source."
+  },
+  "artifacts": [
+    {
+      "path": "Contents/MacOS/Raycast",
+      "bytes": 16208512,
+      "sha256": "9d823200b6fc4803c9a669d295035654598b7c0655434bc86f27f71493af3076"
+    },
+    {
+      "path": "Contents/Resources/macos-app_RaycastDesktopApp.bundle/Contents/Resources/backend/index.mjs",
+      "bytes": 7435729,
+      "sha256": "953aaa95df410fbb3b02fcac411457e508a9c1794173aa10092d208a51e81b27",
+      "ranges": [
+        {
+          "symbol": "rf",
+          "start": 611575,
+          "end": 611769,
+          "sha256": "151787215c490458bd0972ce339d565dd1bac5c56acaa44bddfa657ccc3eb55f"
+        },
+        {
+          "symbol": "af",
+          "start": 611769,
+          "end": 612793,
+          "sha256": "8c7849477c12fa0943577f7b29853adae993abe807a0572ef2a3bc45e26f5d2c"
+        },
+        {
+          "symbol": "ATt",
+          "start": 923579,
+          "end": 923640,
+          "sha256": "2dc88901e8c872d2182eb56f3777ac92441f84a3a8a326f12123517abe892ecb"
+        },
+        {
+          "symbol": "jTt",
+          "start": 923640,
+          "end": 924006,
+          "sha256": "9ad78b3df09cdd837ac6199771bdd7b567177402779ba96746e3529859e3c936"
+        },
+        {
+          "symbol": "Kln",
+          "start": 1840879,
+          "end": 1840983,
+          "sha256": "1f64aff5b69a70e3d8f5deca7ab22e5c7f8787912ccc36b96692c783f08299a6"
+        },
+        {
+          "symbol": "Dun",
+          "start": 1848280,
+          "end": 1849233,
+          "sha256": "0e21a7630e1cf4b387a19b1936b8f97786c100fa2c9be3c77b47df49c6921a0e"
+        },
+        {
+          "symbol": "Wun",
+          "start": 1852202,
+          "end": 1852717,
+          "sha256": "adedb7b362893b58b78f9c48e609d0a3f9da7d4ff822bdd4169206b107211b9b"
+        },
+        {
+          "symbol": "Cdn",
+          "start": 1857142,
+          "end": 1857271,
+          "sha256": "425087417120e3513db0f0623d26c04708ff1690e1b02e815d5c3a1d730761bf"
+        },
+        {
+          "symbol": "$E",
+          "start": 1858979,
+          "end": 1859824,
+          "sha256": "c2eb13ce176c45efdca75f8a9b8f7c2662d9d4099845189cb328ef49486e470e"
+        },
+        {
+          "symbol": "qdn",
+          "start": 1861701,
+          "end": 1862736,
+          "sha256": "0ef0711be570a40c41f0578b732eda916feeb26f2c64f49bcf9f30e7708ecb20"
+        },
+        {
+          "symbol": "Xdn",
+          "start": 1863634,
+          "end": 1864133,
+          "sha256": "9392dc29803b3e004a2f9169751945540f806152964fffe9a37200682ea5ceeb"
+        },
+        {
+          "symbol": "iD",
+          "start": 1868781,
+          "end": 1868938,
+          "sha256": "4f221b435348afb3cd09f1277718343d75764fbeb41a7cbf4055a9a126ae0465"
+        },
+        {
+          "symbol": "J$r",
+          "start": 4793631,
+          "end": 4794327,
+          "sha256": "275cd9be5664beb5389484689f749bb94ce8d482b6f56a409e3ce80b3795d943"
+        },
+        {
+          "symbol": "PJi",
+          "start": 6093402,
+          "end": 6094261,
+          "sha256": "e31cd4bf47d74de58ece34558ed554d39bb98111a6f622ffb97095f298318405"
+        },
+        {
+          "symbol": "qJi",
+          "start": 6098562,
+          "end": 6099371,
+          "sha256": "2bcbfe183159dddecc7ada207c9c6ff95b1a3e60533ec7a65734b2871cd52771"
+        },
+        {
+          "symbol": "ZJi",
+          "start": 6099531,
+          "end": 6100292,
+          "sha256": "e32ac151dac2d062f79f6daa751c932c04eff3d47ed528461f49440fe473b287"
+        },
+        {
+          "symbol": "sXi",
+          "start": 6116856,
+          "end": 6119703,
+          "sha256": "44ab39790745b91c13fc1c7347fc3e61db5ee9db21ed137c3b6ea6c9871955f2"
+        },
+        {
+          "symbol": "cXi",
+          "start": 6119703,
+          "end": 6121162,
+          "sha256": "38f0e3f5f1da01833ea63931c6b14fca86f176398581bd4f703cc58d676094af"
+        },
+        {
+          "symbol": "FXi",
+          "start": 6125992,
+          "end": 6126154,
+          "sha256": "6030d0e707edb48eac4ac154ff298f5d4963717f401f03660f967089cc9bec27"
+        },
+        {
+          "symbol": "tZi",
+          "start": 6129929,
+          "end": 6141817,
+          "sha256": "99f5c74c0e8808a51e2270811317b23f54f7074592406b31575cbfe9db56bde1"
+        },
+        {
+          "symbol": "iZi",
+          "start": 6141911,
+          "end": 6151424,
+          "sha256": "63e9b74bc36a9e85430fc5653d1686b8db2a49c10b368f50024dea88217f9049"
+        },
+        {
+          "symbol": "cZi",
+          "start": 6152226,
+          "end": 6154713,
+          "sha256": "0e9730f8a6bcd7dfe4ef39cdaeeed25289e31544a3e85c7074340b6f2ec8a1a0"
+        },
+        {
+          "symbol": "file-result-definition",
+          "start": 929071,
+          "end": 933106,
+          "sha256": "76964c237e19806dc601c654da5c56660dcf93af33132778007c725734f87d68"
+        },
+        {
+          "symbol": "root-file-result-merge",
+          "start": 4865039,
+          "end": 4865476,
+          "sha256": "1f13cfdd96745f6410bf3bb803aed867bd1e216d6facae95c570162811e60977"
+        },
+        {
+          "symbol": "root-file-provider-I6r",
+          "start": 4865554,
+          "end": 4869992,
+          "sha256": "413a40b96c6fc9ec4c02f3d529d3cef87a9e20bc4f0275fbfa6503e026f10f23"
+        },
+        {
+          "symbol": "dedicated-file-search-forwarder",
+          "start": 6921027,
+          "end": 6921054,
+          "sha256": "e464c8fd574106d1397fe153e603eb8bb15a9308afa1140448c109a9cb7d74f5"
+        },
+        {
+          "symbol": "content-query-threshold-constants",
+          "start": 1840983,
+          "end": 1841157,
+          "sha256": "736df62dffd04ec91e3f6122bd815bb9ca8b0ddb1d01611f0a80bdef86bfbe27"
+        }
+      ]
+    },
+    {
+      "path": "Contents/Resources/macos-app_RaycastDesktopApp.bundle/Contents/Resources/backend/indexer-worker.mjs",
+      "bytes": 4169,
+      "sha256": "4dfb379c1cf4a3c5b70b005686c06748cb5faf645e5b7d220cf20b4cb9430274"
+    },
+    {
+      "path": "Contents/Resources/macos-app_RaycastDesktopApp.bundle/Contents/Resources/backend/indexer.darwin-arm64.node",
+      "bytes": 14033456,
+      "sha256": "4f9fb110e4df807e1bf4c4eb85b93b977563d13684d29006cba75283e100362d",
+      "markers": [
+        {
+          "text": "indexer/core/src/rpc/handlers/search.rs",
+          "offset": 10758562
+        },
+        {
+          "text": "indexer/core/src/actors/watch.rs:1034",
+          "offset": 10757443
+        },
+        {
+          "text": "indexer/core/src/native_search/macos.rs:140",
+          "offset": 10790527
+        },
+        {
+          "text": "/Users/runner/.cargo/git/checkouts/minidex-17c333fe7363231a/53c8dec/minidex/src/search/matching.rs",
+          "offset": 12265312
+        },
+        {
+          "text": "/Users/runner/.cargo/git/checkouts/minidex-17c333fe7363231a/53c8dec/minidex/src/search/scoring.rs",
+          "offset": 12266310
+        },
+        {
+          "text": "/Users/runner/.cargo/git/checkouts/minidex-17c333fe7363231a/53c8dec/minidex/src/segmented_index.rs",
+          "offset": 12264582
+        },
+        {
+          "text": "/Users/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fst-0.4.7/src/automaton/levenshtein.rs",
+          "offset": 12267390
+        }
+      ]
+    }
+  ],
+  "localEvidenceBundles": [
+    {
+      "path": "dist/raycast-study/rea-evidence.json.gz",
+      "uncompressedBytes": 2507215,
+      "uncompressedSha256": "051402d93cdcdd9938e513193ea4c6fd84ac89ee2dbde47cc77d152e4279cb81",
+      "compressedBytes": 333841,
+      "compressedSha256": "1d0be3cb1e4761b07746888e169ca9933a864d339844e3041a671d1b76665ffb",
+      "records": 5
+    },
+    {
+      "path": "dist/raycast-study/rea-search-evidence-final.json.gz",
+      "uncompressedBytes": 8637504,
+      "uncompressedSha256": "a99e19f66a17ad308725dd5500848e914ea3d4412c56fe87602a70db0213a577",
+      "compressedBytes": 1582866,
+      "compressedSha256": "b3573b9711afe5473b1f8fe6333be1f11a216c49ecfb24e52d0a5e71f9ab5b84",
+      "records": 5
+    },
+    {
+      "path": "dist/raycast-study/rea-native-evidence.json.gz",
+      "uncompressedBytes": 69486,
+      "uncompressedSha256": "3bd18daae2e99bf41791a50f61cd500c72ab7e53a56eefdfa81d17f4d9ab82c8",
+      "compressedBytes": 7846,
+      "compressedSha256": "d76b11211fe45bfced126661730a2703bcdbb10f873a2cd1dcaf80e69cf255f8",
+      "records": 20
+    }
+  ],
+  "cleanup": {
+    "taskCreatedHopperExited": true,
+    "independentReaSessionClosed": true,
+    "originalMcpCleanup": "Still reports cleanup_incomplete for /tmp/rea-Qhh92P despite task document manually closed and task-created Hopper process exited; runtime retained, original MCP connection needs reconnect.",
+    "userRaycastProcess": "Not operated; no user databases accessed."
+  }
+}

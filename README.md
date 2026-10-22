@@ -31,6 +31,22 @@ curl -fsSL https://thermo-updates.pages.dev/install.sh | sh
 
 默认安装到 `~/.local/bin`，同时提供 `thermo-use` 别名，不会自动安装或重启 root 风扇 helper。App 请下载[正式 DMG](https://app.leeguoo.com/thermo/download)，已有 App 可通过自动更新升级。
 
+## 应用和本地文件搜索
+
+按 Option+Space，或从 Thermo 菜单选择「搜索应用和文件」。应用可直接搜索；本地文件须在搜索设置中添加目录。支持中文、拼音、缩写、轻微拼写错误、收藏和自定义别名。名称与路径索引保存在本机，不读取文件内容，也不依赖 Spotlight。
+
+↑↓ 选择，回车打开，⌘回车在 Finder 中显示，⌘Y 预览，⌘⇧C 复制路径；Esc 先清空查询，再关闭窗口。默认快捷键若冲突，可在搜索设置中重新录制。排除规则支持 `.gitignore`、`.ignore`、`.thermoignore`，隐藏文件默认不索引。
+
+```sh
+thermo search query 说明 --json
+thermo search index --root ~/Documents --json
+thermo search status --json
+thermo search open
+thermo search settings
+```
+
+`query/status/index` 可独立运行，`open/settings` 需要 App 正在运行。目录不可读、扫描未完成或候选达到上限时，JSON 明确返回 `complete=false`，CLI 退出码为 3。验收范围见[搜索验收](docs/local-search-acceptance.md)。
+
 ## 构建
 
 ```sh

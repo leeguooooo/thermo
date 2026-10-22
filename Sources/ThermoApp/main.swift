@@ -22,6 +22,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         Settings.register()
         AppControlHost.shared.start()
         CleanScreenShortcutModel.enableLive()
+        LocalSearchShortcut.shared.activate()
+        LocalSearchModel.shared.start()
+        if CommandLine.arguments.contains("--search") { DispatchQueue.main.async { LocalSearchPanel.shared.show() } }
         BatteryCareModel.shared.restoreSavedPreference()
         _ = AppModels.shared.updates  // Sparkle starts checking with the app
         // Slowdown history and alerts, in the background whether or not the panel is open.
@@ -148,6 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         main.addItem(appItem)
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: tr("Open Console"), action: #selector(openFromMenu), keyEquivalent: "o").target = self
+        appMenu.addItem(withTitle: tr("Search apps and files"), action: #selector(openSearchFromMenu), keyEquivalent: "").target = self
         let panelItem = appMenu.addItem(withTitle: tr("Open Menu Panel"), action: #selector(openPanelFromMenu), keyEquivalent: "p")
         panelItem.target = self
         panelItem.keyEquivalentModifierMask = [.command, .shift]
@@ -160,6 +164,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         NSApp.mainMenu = main
         installStandardMenus()
     }
+
+    @objc private func openSearchFromMenu() { LocalSearchPanel.shared.show() }
 
     @objc fileprivate func archiveTabsFromMenu() { TabQuickAction.request() }
 
@@ -241,6 +247,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        LocalSearchShortcut.shared.shutdown()
+        LocalSearchModel.shared.stop()
         // Fan policies live in the helper and intentionally survive the app quitting.
     }
 

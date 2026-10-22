@@ -145,6 +145,8 @@ struct CleanScreenKeyBinding: Codable, Equatable {
 }
 
 @MainActor final class CarbonCleanScreenHotkeys: CleanScreenHotkeyBackend {
+    private let validate: (CleanScreenKeyBinding) -> Bool
+    init(validate: @escaping (CleanScreenKeyBinding) -> Bool = { $0.valid }) { self.validate = validate }
     private struct Entry { var binding: CleanScreenKeyBinding; var ref: EventHotKeyRef; var event: (Bool)->Void }
     private var entries: [UInt32:Entry] = [:]
     private static var nextID: UInt32 = 0
@@ -163,7 +165,7 @@ struct CleanScreenKeyBinding: Codable, Equatable {
         }
     }
     func register(_ binding: CleanScreenKeyBinding, event: @escaping (Bool) -> Void) throws -> CleanScreenHotkeyLease {
-        guard binding.valid, Self.nextID < UInt32.max else { throw Failure(status:OSStatus(paramErr)) }
+        guard validate(binding), Self.nextID < UInt32.max else { throw Failure(status:OSStatus(paramErr)) }
         try prepare()
         Self.nextID += 1
         let id=Self.nextID
