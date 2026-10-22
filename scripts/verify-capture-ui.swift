@@ -28,7 +28,32 @@ import ThermoL10n
         var recordingWindow: CaptureRecordingWindow?
         var annotationWindow:CaptureEditor?
         var pinSession:CapturePinSession?
-        if Bundle.main.object(forInfoDictionaryKey:"ThermoLaTeXReview") as? Bool == true,
+        var captureWorkspace:CaptureWorkspace?
+        var shortcutModel:CaptureShortcutModel?
+        if Bundle.main.object(forInfoDictionaryKey:"ThermoShortcutsReview") as? Bool == true,
+           let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
+            let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)
+            let settingsFile=root.appendingPathComponent("shortcuts.json")
+            let initial=CaptureActionSettings(entries:[
+                .init(title:"QA pin lock",action:.toggleLock,scope:.pin,shortcut:.init(keyCode:37,modifiers:0,keyLabel:"L")),
+                .init(title:"QA hide/show",action:.togglePins),
+                .init(title:"QA show pin",action:.showPin),
+                .init(title:"QA settings",action:.shortcutSettings,scope:.pin,shortcut:.init(keyCode:40,modifiers:0,keyLabel:"K"))])
+            let model=CaptureShortcutModel(backend:CaptureShortcutModel.backend(),read:{ (try? Data(contentsOf:settingsFile)) ?? (try? initial.data()) },write:{ try $0.write(to:settingsFile,options:.atomic) },pinFocused:{ [weak workspace] in workspace?.pinSession.focusedEditor() != nil },execute:{ [weak workspace] action in
+                guard let workspace else { throw CaptureActionFailure.noPin }
+                let before:[String:Any] = ["action":action.rawValue,"windows":workspace.pinSession.windows.count,"target":workspace.pinSession.activeEditor()?.model.pinTitle ?? "none","sessionIssue":workspace.pinSession.issue ?? "none"]
+                if let data=try? JSONSerialization.data(withJSONObject:before) { try? data.write(to:root.appendingPathComponent("action-probe.json"),options:.atomic) }
+                try workspace.perform(action)
+            })
+            workspace.shortcuts=model;captureWorkspace=workspace;shortcutModel=model;pinSession=session
+            do {
+                if session.library.pins.isEmpty { let id=try session.open(.text(.init(plain:"Shortcut action QA")));session.windows[id]?.model.pinTitle="QA shortcut pin";try session.flush() }
+                else { session.restoreWindows();if session.windows.isEmpty { try session.restore() } }
+                workspace.showActionSettings()
+                let initialProbe:[String:Any] = ["windows":session.windows.count,"sessionIssue":session.issue ?? "none","target":session.activeEditor()?.model.pinTitle ?? "none"]
+                if let data=try? JSONSerialization.data(withJSONObject:initialProbe) { try? data.write(to:root.appendingPathComponent("startup-probe.json"),options:.atomic) }
+            } catch { session.issue=error.localizedDescription;session.showLibrary() }
+        } else if Bundle.main.object(forInfoDictionaryKey:"ThermoLaTeXReview") as? Bool == true,
            let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
             let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins")));pinSession=session
             do {
@@ -164,7 +189,7 @@ import ThermoL10n
             annotationWindow=window;window.showWindow(nil)
         } else { let window=CaptureEditor(image:image,onClose:{});annotationWindow=window;window.showWindow(nil) }
         DispatchQueue.main.asyncAfter(deadline: .now()+600) { app.terminate(nil) }
-        withExtendedLifetime((recordingWindow,annotationWindow,pinSession)) { app.run() }
+        withExtendedLifetime((recordingWindow,annotationWindow,pinSession,captureWorkspace,shortcutModel)) { app.run() }
     }
 }
 

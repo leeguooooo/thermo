@@ -12,6 +12,7 @@ import ThermoL10n
     private var saving:Task<Void,Never>?
     private var removing:Set<UUID>=[]
     private var loadFailed=false
+    private var lastActiveID:UUID?
     var onCountChange:((Int)->Void)?
     private var libraryWindow:NSWindowController?
     var count:Int { library.pins.filter { $0.groupID == library.currentGroupID && $0.closedAt == nil }.count }
@@ -75,6 +76,7 @@ import ThermoL10n
         model.makeImageCopy={ [weak self] image in do { try self?.open(image) } catch { self?.issue=captureFailureMessage(error);self?.showLibrary() } }
         model.showPinLibrary={ [weak self] in self?.showLibrary() }
         model.onMutation={ [weak self] document in self?.changed(pin.id,document:document) }
+        editor.onActivate={ [weak self] in self?.lastActiveID=pin.id }
         editor.onWindowChange={ [weak self] in self?.changed(pin.id,document:false) }
         if let window=editor.window {
             if pin.frame.width >= 600,pin.frame.height >= 360 { window.setFrame(pin.frame,display:false) }
@@ -177,6 +179,14 @@ import ThermoL10n
         let screens=NSScreen.screens.map(\.visibleFrame)
         guard !screens.contains(where:{ $0.intersection(window.frame).width >= 100 && $0.intersection(window.frame).height >= 40 }),let screen=NSScreen.main else { return }
         var frame=window.frame;frame.origin=CGPoint(x:screen.visibleFrame.midX-frame.width/2,y:screen.visibleFrame.midY-frame.height/2);window.setFrame(frame,display:false)
+    }
+    func focusedEditor() -> CaptureEditor? { windows.values.first { $0.window === NSApp.keyWindow } }
+    func activeEditor(includeHidden:Bool=false) -> CaptureEditor? {
+        if let focused=focusedEditor() { return focused }
+        if let lastActiveID,library.pins.contains(where:{ $0.id == lastActiveID && $0.groupID == library.currentGroupID && $0.closedAt == nil && (includeHidden || !$0.hidden) }) { return windows[lastActiveID] }
+        for window in NSApp.orderedWindows { if let editor=windows.values.first(where:{ $0.window === window }),library.pins.contains(where:{ windows[$0.id] === editor && $0.groupID == library.currentGroupID && $0.closedAt == nil && (includeHidden || !$0.hidden) }) { return editor } }
+        for pin in library.pins.reversed() where pin.groupID == library.currentGroupID && pin.closedAt == nil && (includeHidden || !pin.hidden) { if let editor=windows[pin.id] { return editor } }
+        return nil
     }
     func showLibrary() {
         if libraryWindow == nil {

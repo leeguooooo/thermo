@@ -16,32 +16,38 @@ func captureFailureMessage(_ error:Error) -> String {
     @Published var issue: String?
     @Published var capturing = false
     @Published var pinCount = 0
-    let pinSession=CapturePinSession()
-    init() { pinSession.onCountChange={ [weak self] in self?.pinCount=$0 } }
+    let pinSession:CapturePinSession
+    init(pinSession:CapturePinSession? = nil) {
+        self.pinSession=pinSession ?? CapturePinSession();self.pinSession.onCountChange={ [weak self] in self?.pinCount=$0 }
+    }
+    lazy var shortcuts=CaptureShortcutModel(backend:CaptureShortcutModel.backend(),read:{ UserDefaults.standard.data(forKey:CaptureShortcutModel.preferenceKey) },write:{ data in UserDefaults.standard.set(data,forKey:CaptureShortcutModel.preferenceKey) },pinFocused:{ [weak self] in self?.pinSession.focusedEditor() != nil },execute:{ [weak self] action in try self?.perform(action) })
+    private var actionsWindow:NSWindowController?
+    private var activated=false
     private var process: Process?
     private var captureDirectory: URL?
     private var regionSelector: CaptureRegionSelector?
     private var scrollWindow: NSWindowController?
     private var recordingWindow: CaptureRecordingWindow?
-    private let hotkeys = CarbonCleanScreenHotkeys()
-    private var leases: [CleanScreenHotkeyLease] = []
     func activate() {
-        guard leases.isEmpty else { return }
-        pinSession.restoreWindows()
-        // Deliberately different from macOS screenshot shortcuts and PixPin's shortcuts.
-        for (code, action) in [(UInt32(20), { self.capture() }), (UInt32(21), { self.pinClipboard() })] {
-            do {
-                let binding = CleanScreenKeyBinding(keyCode: code, modifiers: UInt32(cmdKey | optionKey), keyLabel: code == 20 ? "3" : "4")
-                leases.append(try hotkeys.register(binding) { down in if down { action() } })
-            } catch { issue = tr("Capture shortcut unavailable. Use the Thermo menu.") }
+        guard !activated else { return };activated=true
+        pinSession.restoreWindows();shortcuts.activate()
+    }
+    func shortcutSuffix(for action:CaptureAction) -> String { let value=shortcuts.label(for:action);return value.isEmpty ? "" : "  "+value }
+    func showActionSettings(model:CaptureShortcutModel? = nil) {
+        let selectedModel=model ?? shortcuts;selectedModel.activate()
+        if actionsWindow == nil {
+            let window=NSWindow(contentRect:NSRect(x:0,y:0,width:940,height:620),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
+            window.title=tr("Capture shortcuts and actions");window.isReleasedWhenClosed=false;window.minSize=NSSize(width:780,height:520)
+            window.contentView=NSHostingView(rootView:CaptureActionSettingsView(model:selectedModel));window.center();actionsWindow=NSWindowController(window:window)
         }
+        actionsWindow?.showWindow(nil);NSApp.activate(ignoringOtherApps:true);actionsWindow?.window?.makeKeyAndOrderFront(nil)
     }
     func shutdown() {
         process?.terminate()
         if let captureDirectory { try? FileManager.default.removeItem(at:captureDirectory) }; captureDirectory = nil
         regionSelector?.cancel(); regionSelector = nil
         scrollWindow?.close()
-        for lease in leases { try? lease.release() }; leases.removeAll()
+        shortcuts.shutdown();activated=false
     }
     func capture() {
         guard !capturing else { return }
@@ -136,6 +142,51 @@ func captureFailureMessage(_ error:Error) -> String {
     func showAll() { do { try pinSession.setAllHidden(false) } catch { report(error) } }
     func hideAll() { do { try pinSession.setAllHidden(true) } catch { report(error) } }
     func closeAll() { pinSession.closeAll() }
+    func perform(_ action:CaptureAction) throws {
+        switch action {
+        case .screenshot:capture()
+        case .pinClipboard:pinClipboard()
+        case .pinText:pinClipboard(asText:true)
+        case .pinLaTeX:pinClipboard(asLaTeX:true)
+        case .openImage:importImage()
+        case .scrolling:captureScrolling()
+        case .recording:recordScreen()
+        case .recordingDrafts:recordScreen(draftsOnly:true)
+        case .pinGroups:showPinLibrary()
+        case .shortcutSettings:showActionSettings()
+        case .nextGroup,.previousGroup:
+            guard let index=pinSession.library.groups.firstIndex(where:{ $0.id == pinSession.library.currentGroupID }) else { throw CapturePinFailure.invalidLibrary }
+            let groups=pinSession.library.groups,next=(index+(action == .nextGroup ? 1 : groups.count-1))%groups.count
+            try pinSession.switchGroup(groups[next].id)
+        case .restorePin:try pinSession.restore()
+        case .showPins:try pinSession.setAllHidden(false)
+        case .hidePins:try pinSession.setAllHidden(true)
+        case .togglePins:
+            let visible=pinSession.library.pins.contains { $0.groupID == pinSession.library.currentGroupID && $0.closedAt == nil && !$0.hidden }
+            try pinSession.setAllHidden(visible)
+        case .closePins:pinSession.closeAll()
+        default:
+            guard let editor=pinSession.activeEditor(includeHidden:action == .showPin) else { throw CaptureActionFailure.noPin }
+            let model=editor.model
+            guard !action.imageOnly || model.pinContent == nil else { throw CaptureActionFailure.imageRequired }
+            switch action {
+            case .showPin:if let id=pinSession.windows.first(where:{ $0.value === editor })?.key { try pinSession.showPin(id) }
+            case .closePin:editor.window?.performClose(nil)
+            case .copyImage:model.copy()
+            case .copyContent:if let content=model.pinContent { try CapturePinClipboard.copy(content,to:.general) } else { model.copy() }
+            case .saveImage:model.save()
+            case .recognize:model.recognize();editor.showWindow(nil)
+            case .toggleTop:model.pinned.toggle();model.changeWindow?()
+            case .toggleLock:model.locked.toggle();model.changeWindow?()
+            case .resetZoom:model.zoom=1;model.pan = .zero
+            case .rotate:try model.document.transform(rotateClockwise:true)
+            case .flip:try model.document.transform(flipHorizontal:true)
+            case .undo:model.undoAnnotation()
+            case .redo:model.redoAnnotation()
+            default:break
+            }
+        }
+    }
     func report(_ error: Error) { issue = captureFailureMessage(error); showIssue() }
     private func showIssue() {
         let alert = NSAlert(); alert.messageText = tr("Screenshots and pins"); alert.informativeText = issue ?? ""; alert.runModal()
@@ -240,6 +291,7 @@ func captureFailureMessage(_ error:Error) -> String {
     private let onClose: () -> Void
     private let shouldClose:(() -> Bool)?
     var onWindowChange:(() -> Void)?
+    var onActivate:(() -> Void)?
     init(image: CGImage, onClose: @escaping () -> Void,shouldClose:(() -> Bool)? = nil) {
         model = CaptureEditorModel(image: image); self.onClose = onClose;self.shouldClose=shouldClose
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 880, height: 650), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
@@ -259,6 +311,7 @@ func captureFailureMessage(_ error:Error) -> String {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
     func windowShouldClose(_ sender:NSWindow) -> Bool { shouldClose?() ?? true }
     func windowWillClose(_ notification: Notification) { onClose() }
+    func windowDidBecomeKey(_ notification:Notification) { onActivate?() }
     func windowDidMove(_ notification:Notification) { onWindowChange?() }
     func windowDidResize(_ notification:Notification) { onWindowChange?() }
 }

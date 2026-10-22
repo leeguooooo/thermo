@@ -409,10 +409,12 @@ struct PopoverView: View {
                 PanelButton(title: tr("Open Console"), symbol: "macwindow", prominent: true) { MainWindow.show(.overview) }
                 Spacer(minLength: 0)
                 Menu {
-                    Button(tr("Capture screen…") + "  ⌥⌘3") { CaptureWorkspace.shared.capture() }
-                    Button(tr("Pin clipboard") + "  ⌥⌘4") { CaptureWorkspace.shared.pinClipboard() }
+                    Button(tr("Capture screen…") + CaptureWorkspace.shared.shortcutSuffix(for:.screenshot)) { CaptureWorkspace.shared.capture() }
+                    Button(tr("Pin clipboard") + CaptureWorkspace.shared.shortcutSuffix(for:.pinClipboard)) { CaptureWorkspace.shared.pinClipboard() }
                     Button(tr("Pin clipboard as text")) { CaptureWorkspace.shared.pinClipboard(asText:true) }
                     Button(tr("Pin clipboard as LaTeX")) { CaptureWorkspace.shared.pinClipboard(asLaTeX:true) }
+                    Button(tr("Capture shortcuts and actions")) { CaptureWorkspace.shared.showActionSettings() }
+                    CaptureConfiguredActionsMenu(model:CaptureWorkspace.shared.shortcuts)
                     Button(tr("Open image…")) { CaptureWorkspace.shared.importImage() }
                     Button(tr("Scrolling capture…")) { CaptureWorkspace.shared.captureScrolling() }
                     Button(tr("Record screen…")) { CaptureWorkspace.shared.recordScreen() }
