@@ -14,21 +14,20 @@ struct OverviewPage: View {
     @ObservedObject private var pulse = SystemPulse.shared
     @ObservedObject private var events = TimelineEvents.shared
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
+    @Environment(\.windowSamplingActive) private var visible
 
     var body: some View {
         WindowPage(title: tr("Overview"), subtitle: monitor.model) {
-            TimelineView(.periodic(from: .now, by: 3)) { context in
-                VStack(alignment: .leading, spacing: Theme.Space.m) {
-                    hero(now: context.date)
-                    headline
-                    vitals
-                }
-                .onAppear { events.refreshJournal() }
-                .onChange(of: context.date) { _ in events.refreshJournal() }
+            VStack(alignment: .leading, spacing: Theme.Space.m) {
+                hero(now: monitor.snapshot?.timestamp ?? Date())
+                headline
+                vitals
             }
+            .onAppear { if visible { events.refreshJournal() } }
+            .onChange(of: monitor.snapshot?.timestamp) { _ in if visible { events.refreshJournal() } }
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 SectionHeader(title: tr("What is using your Mac"))
-                PulseCard(active: monitor.panelVisible, plain: true, headline: false)
+                PulseCard(active: visible, plain: true, headline: false)
             }
         }
     }
@@ -46,7 +45,6 @@ struct OverviewPage: View {
                     Text(tempText(hot, fahrenheit: fahrenheit)).font(Theme.figure(.hero))
                         .foregroundStyle(hot == nil ? Theme.textTertiary : heatColor(hot))
                         .contentTransition(.numericText())
-                        .animation(Theme.gentle, value: hot)
                         .lineLimit(1).minimumScaleFactor(0.6)
                     if let s {
                         Text("CPU \(tempText(s.cpu, fahrenheit: fahrenheit)) · GPU \(tempText(s.gpu, fahrenheit: fahrenheit))")
@@ -94,7 +92,6 @@ struct OverviewPage: View {
                     Circle().fill(Theme.textPrimary).frame(width: 9, height: 9)
                         .overlay(Circle().strokeBorder(Theme.canvas, lineWidth: 2))
                         .offset(x: max(0, min(g.size.width - 9, g.size.width * CGFloat((hot - 30) / 80) - 4.5)))
-                        .animation(Theme.gentle, value: hot)
                 }
             }
             .frame(height: 9)
@@ -331,8 +328,8 @@ struct OverviewPage: View {
     /// Memory, disk, power and battery: worth a glance, not the story, so one compact strip.
     var resources: some View {
         let s = monitor.snapshot
-        let mem = SystemStats.memory()
-        let disk = SystemStats.disk()
+        let mem = monitor.systemMemory
+        let disk = monitor.systemDisk
         let cells: [(String, String, String?, MainPage)] = [
             (tr("Memory"), mem.map { String(format: "%.0f%%", Double($0.usedBytes) / Double(max(1, $0.totalBytes)) * 100) } ?? "—",
              [pulse.current.map { MachinePulse.memoryName($0.memory) },

@@ -473,7 +473,6 @@ struct RingGauge: View {
     var caption: String? = nil
     var size: CGFloat = 112
     var colors: [Color] = [.green, .yellow, .orange, .red]
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var normalizedValue: Double? {
         guard let value, value.isFinite else { return nil }
@@ -497,7 +496,6 @@ struct RingGauge: View {
                             style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
                     .rotationEffect(.degrees(135))
                     .shadow(color: color.opacity(0.35), radius: 4)
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.6), value: value)
             }
             VStack(spacing: 0) {
                 Text(displayText).font(Theme.figure(points: size * 0.21)).contentTransition(.numericText())

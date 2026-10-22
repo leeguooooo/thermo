@@ -4,8 +4,8 @@ import Foundation
 /// Memory in use and free disk space, for the Overview gauges. Cheap: one host_statistics64 call
 /// and one volume lookup.
 enum SystemStats {
-    struct Memory { var usedBytes: UInt64; var totalBytes: UInt64 }
-    struct Disk { var freeBytes: Int64; var totalBytes: Int64 }
+    struct Memory: Equatable, Sendable { var usedBytes: UInt64; var totalBytes: UInt64 }
+    struct Disk: Equatable, Sendable { var freeBytes: Int64; var totalBytes: Int64 }
 
     /// "Used" as Activity Monitor counts it: app memory, wired and compressed.
     static func memory() -> Memory? {

@@ -390,6 +390,13 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
     private var ticks = 0
     private var readingBluetooth = false
     private var location: CLLocationManager?
+    private var visibility = SamplingLeases()
+    var samplingActive: Bool { timer != nil }
+
+    func setVisible(_ active: Bool, owner: UUID) {
+        visibility.set(owner, active: active)
+        if visibility.active { start() } else { stop() }
+    }
 
     func start() {
         guard timer == nil else { return }
@@ -400,8 +407,8 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
         }
         updateAccess()
         tick(force: true)
-        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
-            MainActor.assumeIsolated { ConnectionsModel.shared.tick(force: false) }
+        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.tick(force: false) }
         }
     }
 

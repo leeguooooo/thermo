@@ -26,6 +26,7 @@ final class MemoryModel: ObservableObject {
     private var dayLoaded = Date.distantPast
     private var generation = UUID()
     private var cancellation: ScanCancellation?
+    private var visibility = SamplingLeases()
     struct Reading: Sendable {
         var breakdown: MemoryBreakdown?
         var inventory: MemoryInventory
@@ -48,6 +49,10 @@ final class MemoryModel: ObservableObject {
     }
     var samplingActive: Bool { timer != nil }
     var sampleInFlight: Bool { sampling }
+    func setVisible(_ active: Bool, owner: UUID) {
+        visibility.set(owner, active: active)
+        if visibility.active { start() } else { stop() }
+    }
 
     func start() {
         guard timer == nil else { return }
@@ -175,8 +180,10 @@ struct MemoryPage: View {
             .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 24)
             .frame(maxWidth: .infinity)
         }
-        .onAppear { model.start(); pulse.hold() }
-        .onDisappear { model.stop(); pulse.release() }
+        .samplingWhileVisible { owner, active in
+            model.setVisible(active, owner: owner)
+            if active { pulse.hold() } else { pulse.release() }
+        }
         .sheet(item: $confirming) { h in
             ConfirmSheet(title: h.app != nil ? tr("Quit %1$@?", h.name) : tr("End %1$@?", h.name),
                          summary: h.app != nil ? tr("The app is asked to quit, the same as ⌘Q; it can save your work first.")
@@ -251,7 +258,6 @@ struct MemoryPage: View {
                 Spacer()
                 StatusTag(text: tr("Pressure: %1$@", MachinePulse.memoryName(b.pressure)), color: pressureColor)
             }
-            // The segments slide to their new widths as memory moves between kinds.
             GeometryReader { g in
                 HStack(spacing: 2) {
                     ForEach(parts) { s in
@@ -260,7 +266,6 @@ struct MemoryPage: View {
                             .help("\(s.title) \(MemoryFormat.string(bytes: s.bytes)): \(s.help)")
                     }
                 }
-                .animation(Theme.gentle.unlessReduced(reduceMotion), value: parts.map(\.bytes))
             }
             .frame(height: 10).clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous)).accessibilityHidden(true)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), alignment: .leading)], alignment: .leading, spacing: 12) {
@@ -496,7 +501,6 @@ struct MemoryPage: View {
                         Capsule().fill(Theme.accent.opacity(0.8)).frame(width: g.size.width * CGFloat(min(1, max(0, Double(sortByResident ? program.residentKB ?? 0 : (program.memoryMetric == .mixed || program.memoryMetric == .unavailable ? 0 : program.memoryKB)) / top))))
                     }
                 }.frame(width: 56, height: 4).accessibilityHidden(true)
-                    .animation(Theme.gentle.unlessReduced(reduceMotion), value: program.memoryKB)
                 Text(metric(program.memoryKB, program.memoryMetric)).foregroundStyle(Theme.textPrimary).frame(width: 84, alignment: .trailing)
                     .contentTransition(.numericText())
                 Text(program.residentKB.map { MemoryFormat.string(kibibytes: $0) } ?? "—").foregroundStyle(Theme.textTertiary).frame(width: 84, alignment: .trailing)

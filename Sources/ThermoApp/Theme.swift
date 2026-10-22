@@ -236,14 +236,21 @@ struct SkeletonBar: View {
     var height: CGFloat = 10
     @State private var bright = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.windowSamplingActive) private var visible
 
     var body: some View {
         RoundedRectangle(cornerRadius: height / 2, style: .continuous)
             .fill(Color.white.opacity(bright ? 0.11 : 0.06))
             .frame(width: width, height: height)
             .frame(maxWidth: width == nil ? .infinity : nil, alignment: .leading)
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.9).repeatForever(), value: bright)
-            .onAppear { DispatchQueue.main.async { bright = true } }
+            .animation(reduceMotion || !visible ? nil : .easeInOut(duration: 0.9).repeatForever(), value: bright)
+            .onAppear { bright = visible }
+            .onChange(of: visible) { bright = $0 }
+            .onDisappear {
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { bright = false }
+            }
             .accessibilityHidden(true)
     }
 }

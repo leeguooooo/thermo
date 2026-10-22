@@ -3,6 +3,7 @@
 import AppKit
 import SwiftUI
 import ThermoL10n
+import ThermoKit
 
 @MainActor final class ToolModalReview: NSObject, NSApplicationDelegate {
     let popover = NSPopover()
@@ -14,8 +15,30 @@ import ThermoL10n
         controls.makeKeyAndOrderFront(nil)
     }
     @objc func showTools() {
+        popover.contentViewController = NSHostingController(rootView: ReviewTools())
         popover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .maxY)
         popover.contentViewController?.view.window?.makeKey()
+    }
+    @objc func showPanel() {
+        let monitor = AppModels.shared.monitor
+        popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor))
+        popover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .maxY)
+        popover.contentViewController?.view.window?.makeKey()
+        var initial: NSSize?
+        for step in 0..<7 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(step + 1)) { [weak self] in
+                guard let self, self.popover.isShown,
+                      let window = self.popover.contentViewController?.view.window else { return }
+                let size = window.frame.size
+                if initial == nil { initial = size }
+                let unchanged = size == initial
+                print("QA_PANEL_SIZE step=\(step) width=\(size.width) height=\(size.height) stable=\(unchanged)"); fflush(stdout)
+                precondition(unchanged, "Live content resized the popover")
+                monitor.lastError = step.isMultiple(of: 2) ? String(repeating: "Test readback unavailable. ", count: 30) : nil
+                monitor.iconHidden = step.isMultiple(of: 2)
+                monitor.publishSnapshot(Snapshot(temperatures: [], fans: step.isMultiple(of: 2) ? [] : [FanReading(id: 0, name: "QA", rpm: 2500, min: 2300, max: 6500, target: nil, manual: nil)], power: [], voltages: [], currents: [], battery: nil), parts: .everything)
+            }
+        }
     }
     @objc func showSettings() { MainWindow.show(.settings) }
     func applicationWillTerminate(_ notification: Notification) {
@@ -56,6 +79,7 @@ private struct ReviewTools: View {
         let stack = NSStackView(); stack.orientation = .vertical; stack.spacing = 12
         delegate.anchor = NSButton(title: "Show menu tools", target: delegate, action: #selector(ToolModalReview.showTools))
         stack.addArrangedSubview(delegate.anchor)
+        stack.addArrangedSubview(NSButton(title: "Show live panel size test", target: delegate, action: #selector(ToolModalReview.showPanel)))
         stack.addArrangedSubview(NSButton(title: "Show settings", target: delegate, action: #selector(ToolModalReview.showSettings)))
         delegate.controls.contentView = stack
         delegate.popover.behavior = .transient; delegate.popover.animates = false

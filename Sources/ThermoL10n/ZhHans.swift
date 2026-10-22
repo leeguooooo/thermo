@@ -1,6 +1,9 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Space": "空格",
+    "Delete": "删除",
+    "Discard": "丢弃",
     "The capture script worker stopped before returning a result.": "截图脚本进程在返回结果前已停止。",
     // Capture JavaScript scripts
     "JavaScript capture script": "JavaScript 截图脚本",
@@ -383,6 +386,7 @@ let zhHans: [String: String] = [
     "No reliable overlap found. Use frames with more shared static content.": "未找到可靠的重叠区域，请减慢滚动并保留更多静态内容。",
     "The stitched image exceeds the 80 megapixel memory limit.": "拼接图片超过 8000 万像素上限。",
     "The shared area is too uniform to align reliably.": "重叠区域过于单一，无法可靠匹配。",
+    "Fan control could not be verified on this Mac. Open fan settings for details.": "无法核对这台 Mac 的风扇控制状态，请打开风扇设置查看详情。",
     // Claude local diagnostics
     "Sentry gpu_3 context": "Sentry gpu_3 上下文",
     "Sentry gpu_2 context": "Sentry gpu_2 上下文",

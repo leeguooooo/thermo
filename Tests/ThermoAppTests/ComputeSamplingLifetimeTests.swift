@@ -4,6 +4,27 @@ import XCTest
 @testable import ThermoApp
 
 final class ComputeSamplingLifetimeTests: XCTestCase {
+    @MainActor func testReplacementVisibilityLeaseSurvivesOldPageDisappearing() async {
+        let reader = Reader()
+        defer { reader.release.signal() }
+        let model = ComputeModel(readSample: { reader.read($0) }, refreshInterval: 60)
+        defer { model.stop() }
+        let old = UUID(), replacement = UUID()
+        model.setVisible(true, owner: old)
+        await fulfillment(of: [reader.began], timeout: 3)
+        model.setVisible(true, owner: replacement)
+        model.setVisible(false, owner: old)
+        XCTAssertTrue(model.samplingActive)
+        XCTAssertFalse(reader.cancelled)
+        model.setVisible(false, owner: replacement)
+        XCTAssertFalse(model.samplingActive)
+        XCTAssertTrue(reader.cancelled)
+        reader.release.signal()
+        for _ in 0..<100 where model.sampleInFlight { try? await Task.sleep(nanoseconds: 10_000_000) }
+        XCTAssertNil(model.current)
+        XCTAssertEqual(reader.count, 1)
+    }
+
     private final class Reader: @unchecked Sendable {
         let began = XCTestExpectation(description: "old computation blocked")
         let release = DispatchSemaphore(value: 0)

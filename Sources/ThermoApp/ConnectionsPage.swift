@@ -20,8 +20,7 @@ struct ConnectionsPage: View {
             bluetoothSection
             soundSection
         }
-        .onAppear { model.start() }
-        .onDisappear { model.stop() }
+        .samplingWhileVisible { owner, active in model.setVisible(active, owner: owner) }
         .confirmationDialog(tr("Disconnect %1$@?", confirmDisconnect?.name ?? ""), isPresented: Binding(
             get: { confirmDisconnect != nil }, set: { if !$0 { confirmDisconnect = nil } }), presenting: confirmDisconnect) { device in
             Button(tr("Disconnect"), role: .destructive) { model.setConnected(false, device) }

@@ -17,18 +17,32 @@ public struct FanDescriptor: Codable, Hashable, Sendable {
     public let name: String
     public let hasModeKey: Bool
 
+    public let lowercaseModeKey: Bool?
+
+    init(index: Int, name: String, hasModeKey: Bool, lowercaseModeKey: Bool = false) {
+        self.index = index; self.name = name; self.hasModeKey = hasModeKey
+        self.lowercaseModeKey = hasModeKey && lowercaseModeKey ? true : nil
+    }
+
+    static func discover(index: Int, name: String, hasKey: (FourCC) -> Bool) -> FanDescriptor {
+        let c = String(index, radix: 16, uppercase: true)
+        let upper = hasKey(FourCC("F\(c)Md"))
+        let lower = !upper && hasKey(FourCC("F\(c)md"))
+        return FanDescriptor(index: index, name: name, hasModeKey: upper || lower, lowercaseModeKey: lower)
+    }
+
     var c: String { String(index, radix: 16, uppercase: true) }
     public var actualKey: FourCC { FourCC("F\(c)Ac") }
     public var minKey: FourCC { FourCC("F\(c)Mn") }
     public var maxKey: FourCC { FourCC("F\(c)Mx") }
     public var targetKey: FourCC { FourCC("F\(c)Tg") }
-    public var modeKey: FourCC { FourCC("F\(c)Md") }
+    public var modeKey: FourCC { FourCC("F\(c)\(lowercaseModeKey == true ? "md" : "Md")") }
 }
 
 /// The result of scanning the SMC once. Cached on disk per machine model + key count,
 /// so subsequent launches skip the ~1000-key enumeration.
 public struct Discovery: Codable, Sendable {
-    static let version = 3
+    static let version = 4
     public let version: Int
     public let model: String
     public let keyCount: UInt32
@@ -250,7 +264,7 @@ public final class Sampler {
         discoverFans(readCount: { try smc.double("FNum") }) { i, count in
             let c = String(i, radix: 16, uppercase: true)
             let name = fanName(smc: smc, key: FourCC("F\(c)ID")) ?? (count > 1 ? "Fan \(i + 1)" : "Fan")
-            return FanDescriptor(index: i, name: name, hasModeKey: smc.has(FourCC("F\(c)Md")))
+            return FanDescriptor.discover(index: i, name: name, hasKey: smc.has)
         }
     }
 
@@ -315,7 +329,7 @@ public final class Sampler {
 //   thermo-discovery <version> <keyCount> <forceKey> <testKey> <hid> <fanCount-or-?>
 //   model <model>
 //   s <key> <type> <size> <attr> <quantity> <group> <known> <essential> <name...>
-//   f <index> <hasModeKey> <name...>
+//   f <index> <mode: 0 absent, 1 Md, 2 md> <name...>
 // Keys and types are hex-encoded FourCCs because they may contain spaces.
 
 extension Discovery {
@@ -326,7 +340,7 @@ extension Discovery {
             out += "s \(String(s.info.key.rawValue, radix: 16)) \(String(s.info.type.rawValue, radix: 16)) \(s.info.size) \(s.info.attributes) "
                 + "\(s.quantity.rawValue) \(s.group.rawValue) \(s.known ? 1 : 0) \(s.essential ? 1 : 0) \(s.name)\n"
         }
-        for f in fans { out += "f \(f.index) \(f.hasModeKey ? 1 : 0) \(f.name)\n" }
+        for f in fans { out += "f \(f.index) \(f.hasModeKey ? (f.lowercaseModeKey == true ? 2 : 1) : 0) \(f.name)\n" }
         out += "end \(sensors.count) \(fans.count)\n"
         return Data(out.utf8)
     }
@@ -406,10 +420,10 @@ extension Discovery {
                                                 known: known, essential: essential))
             case UInt8(ascii: "f"):
                 let f = fields(line, max: 4)
-                guard f.count == 4, str(f[0]) == "f", let hasMode = bit(f[2]),
+                guard f.count == 4, str(f[0]) == "f", let mode: Int = num(f[2]), (0...2).contains(mode),
                       let i: Int = num(f[1]), (0..<16).contains(i),
                       !fans.contains(where: { $0.index == i }) else { return nil }
-                fans.append(FanDescriptor(index: i, name: str(f[3]), hasModeKey: hasMode))
+                fans.append(FanDescriptor(index: i, name: str(f[3]), hasModeKey: mode != 0, lowercaseModeKey: mode == 2))
             case UInt8(ascii: "e"):
                 let f = fields(line, max: 3)
                 guard f.count == 3, str(f[0]) == "end", let sensorCount: Int = num(f[1]),

@@ -5,6 +5,34 @@ import SwiftUI
 import ThermoKit
 import ThermoL10n
 
+private final class PanelReadingWorker: @unchecked Sendable {
+    private let queue: DispatchQueue
+    private let liveSampler = MenuLiveSampler()
+    private let read: (@Sendable () -> PanelModel.Reading)?
+
+    init(queue: DispatchQueue?, read: (@Sendable () -> PanelModel.Reading)?) {
+        self.queue = queue ?? DispatchQueue(label: "dev.thermo.panel.readings", qos: .utility)
+        self.read = read
+    }
+
+    func reset() { queue.async { self.liveSampler.reset() } }
+
+    func sample(cancellation: ScanCancellation, receive: @escaping @Sendable (PanelModel.Reading?) -> Void) {
+        queue.async {
+            guard !cancellation.isCancelled else { receive(nil); return }
+            let reading: PanelModel.Reading
+            if let read = self.read { reading = read() }
+            else {
+                let live = self.liveSampler.sample(metrics: [.cpuUsage, .download, .upload])
+                reading = .init(cpu: live.cpu, gpu: QuickLoad.gpuPercent(), memory: SystemStats.memory(),
+                                disk: SystemStats.disk(), download: live.download, upload: live.upload,
+                                batteryMinutes: PanelModel.batteryMinutes())
+            }
+            receive(cancellation.isCancelled ? nil : reading)
+        }
+    }
+}
+
 /// What the menu bar panel shows besides the sensor snapshot: CPU, GPU, memory and network over the
 /// last two minutes, battery time left, and a few facts about the machine. Samples every 2 s, and
 /// only while the panel is open.
@@ -13,7 +41,7 @@ final class PanelModel: ObservableObject {
     static let shared = PanelModel()
     static let length = 60
 
-    struct Reading {
+    struct Reading: Sendable {
         var cpu: Double? = nil
         var gpu: Double? = nil
         var memory: SystemStats.Memory? = nil
@@ -39,16 +67,21 @@ final class PanelModel: ObservableObject {
     let memoryTotal = ProcessInfo.processInfo.physicalMemory
 
     private var timer: Timer?
-    private let liveSampler = MenuLiveSampler()
+    private let worker: PanelReadingWorker
+    private var generation = UUID()
+    private var cancellation: ScanCancellation?
+    private(set) var sampleInFlight = false
     private var holding = false
     private let readSample: (@MainActor () -> Reading)?
     private let holdPulse: @MainActor () -> Void
     private let releasePulse: @MainActor () -> Void
 
     init(readSample: (@MainActor () -> Reading)? = nil,
+         readBackground: (@Sendable () -> Reading)? = nil, samplingQueue: DispatchQueue? = nil,
          holdPulse: @escaping @MainActor () -> Void = { SystemPulse.shared.hold() },
          releasePulse: @escaping @MainActor () -> Void = { SystemPulse.shared.release() }) {
         self.readSample = readSample; self.holdPulse = holdPulse; self.releasePulse = releasePulse
+        worker = PanelReadingWorker(queue: samplingQueue, read: readBackground)
     }
     var samplingActive: Bool { timer != nil }
 
@@ -61,6 +94,8 @@ final class PanelModel: ObservableObject {
         if !on, holding { releasePulse(); holding = false }
         guard wanted != interval else { return }
         interval = wanted
+        generation = UUID()
+        cancellation?.cancel()
         timer?.invalidate()
         timer = nil
         resetBaselines()
@@ -71,15 +106,27 @@ final class PanelModel: ObservableObject {
 
     func sample() {
         guard interval > 0 else { return }
-        let reading: Reading
         if let readSample {
-            reading = readSample()
-        } else {
-            let live = liveSampler.sample(metrics: [.cpuUsage, .download, .upload])
-            reading = Reading(cpu: live.cpu, gpu: QuickLoad.gpuPercent(), memory: SystemStats.memory(),
-                              disk: SystemStats.disk(), download: live.download, upload: live.upload,
-                              batteryMinutes: Self.batteryMinutes())
+            publish(readSample())
+            return
         }
+        guard !sampleInFlight else { return }
+        sampleInFlight = true
+        let token = generation, cancellation = ScanCancellation()
+        self.cancellation = cancellation
+        worker.sample(cancellation: cancellation) { [weak self] reading in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.sampleInFlight = false
+                self.cancellation = nil
+                guard self.interval > 0 else { return }
+                guard self.generation == token, let reading else { self.sample(); return }
+                self.publish(reading)
+            }
+        }
+    }
+
+    private func publish(_ reading: Reading) {
         func finite(_ value: Double?) -> Double? { value.flatMap { $0.isFinite ? $0 : nil } }
         currentCPU = finite(reading.cpu); currentGPU = finite(reading.gpu)
         currentDownload = finite(reading.download); upload = finite(reading.upload)
@@ -91,7 +138,7 @@ final class PanelModel: ObservableObject {
     }
 
     func resetBaselines() {
-        liveSampler.reset()
+        worker.reset()
         currentCPU = nil; currentGPU = nil; currentDownload = nil; upload = nil
         memoryStats = nil; diskStats = nil; batteryMinutesLeft = nil
     }
@@ -103,7 +150,7 @@ final class PanelModel: ObservableObject {
     }
 
     /// macOS's own estimate while on battery; nil while charging or still estimating.
-    static func batteryMinutes() -> Int? {
+    nonisolated static func batteryMinutes() -> Int? {
         let seconds = IOPSGetTimeRemainingEstimate()
         guard seconds > 0, seconds != kIOPSTimeRemainingUnlimited, seconds != kIOPSTimeRemainingUnknown else { return nil }
         return Int(seconds / 60)

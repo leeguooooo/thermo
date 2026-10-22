@@ -44,6 +44,25 @@ final class FanRecoveryTests: XCTestCase {
                   fanForceKey: force, fanTestKey: apple, hid: false)
     }
 
+    func testLowercaseModeMaxAndAutomaticRecoveryUseOnlyDiscoveredKeys() throws {
+        let smc = FakeSMC()
+        smc.values = ["F0md": 0, "F0Mn": 2300, "F0Mx": 6500, "F0Tg": 2300]
+        let d = Discovery(version: Discovery.version, model: "M5", keyCount: 0, sensors: [],
+            fans: [FanDescriptor(index: 0, name: "Fan", hasModeKey: true, lowercaseModeKey: true)],
+            fanForceKey: false, fanTestKey: false, hid: false)
+        let writer = FanWriter(smc: smc, discovery: d)
+        XCTAssertEqual(try writer.setManual(0, rpm: .infinity), 6500)
+        XCTAssertEqual(smc.values["F0md"], 1)
+        XCTAssertEqual(smc.values["F0Tg"], 6500)
+        try writer.setAuto(0)
+        XCTAssertEqual(smc.values["F0md"], 0)
+        XCTAssertTrue(writer.setAllAuto().confirmed)
+        XCTAssertTrue(smc.writes.allSatisfy { [FourCC("F0md"), FourCC("F0Tg")].contains($0.0) })
+        smc.values["F0md"] = 1
+        smc.failedReads = ["F0md"]
+        XCTAssertFalse(writer.setAllAuto().confirmed)
+    }
+
     func testDelayedAutomaticModeWritesRequireConfirmedReadback() throws {
         let smc = FakeSMC(); smc.ignoredAutoAttempts["F0Md"] = 2
         let writer = FanWriter(smc: smc, discovery: discovery())
