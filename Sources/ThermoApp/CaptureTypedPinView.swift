@@ -59,6 +59,7 @@ struct CaptureTypedPinView:View {
                     if text.usesHTML {
                         Button(tr("Edit as plain text")) { var value=text;value.html=nil;value.rtf=nil;value.ignoreFormatting=true;update(value);editing=true }.disabled(text.plain.isEmpty)
                     } else { Toggle(tr("Edit text"),isOn:$editing) }
+                    Button(tr("Translate…")){model.translatePin?()}
                     Button(tr("Copy text")) { NSPasteboard.general.clearContents();NSPasteboard.general.setString(text.plain,forType:.string) }.disabled(text.plain.isEmpty)
                     Button(tr("Copy with formatting")) { run { try CapturePinClipboard.copy(.text(text),to:.general) } }.disabled(text.rtf == nil && text.html == nil)
                 }.padding(.horizontal,10)
