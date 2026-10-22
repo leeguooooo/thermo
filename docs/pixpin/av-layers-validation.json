@@ -28,7 +28,7 @@
   },
   "nativeQA": {
     "app": "/tmp/thermo-av-qa-final-01a/ThermoCaptureQA.app",
-    "binarySHA256": "a29ff2261ed671f78ed761fd14b4f10465227bc761bf700cd63f171d5b446aa8",
+    "binarySHA256": "2b37d4fc1359009761e9d00038f35a147be9be6cc1f43879a9533d6306738413",
     "syntheticOnly": true,
     "savedEdits": [
       {
@@ -54,11 +54,20 @@
       "Device disconnect and interruption",
       "Physical audio/video synchronization",
       "Native foreground save"
-    ]
+    ],
+    "bundledSparkleFramework": true
   },
   "remaining": [
     "Keyboard recording layer",
     "Live device acceptance",
     "Other incomplete features in docs/pixpin/README.md"
-  ]
+  ],
+  "integratedCommit": "7689b65",
+  "mainIntegrationTests": {
+    "CaptureCore": 53,
+    "ThermoApp": 27,
+    "failures": 0,
+    "logSHA256": "1aa55eb9a459ddea1c5b2a2249c3dce4e3ab69a09fadfd4dace842bc5fd319c0",
+    "recordedAt": "2026-10-22T07:08:24.066327+00:00"
+  }
 }

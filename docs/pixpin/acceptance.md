@@ -92,3 +92,5 @@ python3 scripts/verify-capture-ui.py --av-layer-review
 ```
 
 采集权限和时钟实现参照 Apple 的[媒体授权说明](https://developer.apple.com/documentation/bundleresources/requesting-authorization-for-media-capture-on-macos)及[采集同步时钟](https://developer.apple.com/documentation/avfoundation/avcapturesession/synchronizationclock)。重采样使用[带输入回调的 AVAudioConverter](https://developer.apple.com/documentation/technotes/tn3136-avaudioconverter-performing-sample-rate-conversions)，同采样率仅做 PCM 格式转换，以免给源音轨附加尾部样本。
+
+主线 `7689b65` 合入后，同组 80 项测试再次通过。最终 QA 使用包内 Sparkle.framework，不依赖临时工作区；未替换安装版，也未启动真实摄像头或麦克风。
