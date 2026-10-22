@@ -23,7 +23,7 @@ import ThermoL10n
         panel.level = .floating; panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.becomesKeyOnlyIfNeeded = false; panel.hidesOnDeactivate = false
         super.init(window: panel); panel.delegate = self
-        panel.contentView = NSHostingView(rootView: LocalSearchView(model: model).preferredColorScheme(.dark))
+        panel.contentView = NSHostingView(rootView: LocalSearchView(model: model).ignoresSafeArea().preferredColorScheme(.dark))
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
     func toggle() { window?.isVisible == true ? hide() : show() }
@@ -228,6 +228,7 @@ private struct LocalSearchSettings: View {
     @State private var hidden = false
     @State private var ignores = true
     @State private var patterns = ""
+    @State private var confirmingSpotlight = false
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack { Text(tr("Search settings")).font(Theme.heading); Spacer(); Button(tr("Done")) { model.showSettings = false } }
@@ -263,8 +264,29 @@ private struct LocalSearchSettings: View {
             Divider()
             HStack { Text(tr("Global search shortcut")).font(Theme.rowTitle); Spacer(); SearchShortcutRecorder(model: shortcut).frame(width: 220, height: 28); Button(tr("Remove")) { shortcut.apply(nil) } }
             if let issue = shortcut.issue { Text(issue).font(Theme.caption).foregroundStyle(Theme.caution) }
+            if shortcut.spotlightReleased || shortcut.binding?.sameGesture(LocalSearchShortcut.commandSpace) != true { HStack {
+                if let holder = shortcut.commandSpaceHolder, !shortcut.spotlightReleased {
+                    Text(LocalSearchShortcut.heldMessage(holder)).font(Theme.caption).foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                    if let app = holder.app { Button(tr("Open %@", holder.name)) { NSWorkspace.shared.open(app) } }
+                } else {
+                    Text(shortcut.spotlightReleased ? tr("Spotlight's ⌘Space is turned off so Thermo search can use it.") : tr("⌘Space is Spotlight's shortcut. Thermo can turn it off and use it for search."))
+                        .font(Theme.caption).foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                    if shortcut.spotlightReleased { Button(tr("Give ⌘Space back to Spotlight")) { shortcut.giveBackToSpotlight() } }
+                    else { Button(tr("Use ⌘Space…")) { confirmingSpotlight = true } }
+                }
+            } }
             HStack { Text(tr("History, aliases and file names stay on this Mac.")).font(Theme.caption).foregroundStyle(Theme.textSecondary); Spacer(); Button(tr("Clear search history")) { model.clearHistory() } }
         }.padding(24).frame(width: 610).foregroundStyle(Theme.textPrimary).background(Theme.canvas)
-            .onAppear { hidden = model.preferences.includeHiddenFiles; ignores = model.preferences.respectIgnoreFiles; patterns = model.preferences.excludedPatterns.joined(separator: "\n") }
+            .alert(tr("Use ⌘Space for Thermo search?"), isPresented: $confirmingSpotlight) {
+                Button(tr("Cancel"), role: .cancel) {}
+                Button(tr("Use ⌘Space")) { shortcut.takeOverSpotlight() }
+            } message: {
+                Text(tr("Thermo turns off Spotlight's ⌘Space in Keyboard Shortcuts. Spotlight still opens from the menu bar. Give it back here, or by choosing another search shortcut."))
+            }
+            // Re-checked on return from another app, where the user may have just changed its shortcut.
+            .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didActivateApplicationNotification)) { _ in shortcut.refreshCommandSpaceHolder() }
+            .onAppear { shortcut.refreshCommandSpaceHolder(); hidden = model.preferences.includeHiddenFiles; ignores = model.preferences.respectIgnoreFiles; patterns = model.preferences.excludedPatterns.joined(separator: "\n") }
     }
 }

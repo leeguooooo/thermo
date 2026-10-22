@@ -52,6 +52,28 @@ import SearchCore
         XCTAssertEqual(model.binding, first); XCTAssertNotNil(model.issue); XCTAssertFalse(backend.lease.released)
         model.shutdown(); XCTAssertTrue(backend.lease.released)
     }
+    func testSpotlightTakeoverRestoresWhenLeavingCommandSpace() throws {
+        let backend = Backend(); var spotlightOn = true, backup = false
+        var holder: SpotlightShortcut.Holder?
+        let spotlight = SpotlightShortcut(commandSpaceTaken: { spotlightOn },
+                                          release: { backup = true; spotlightOn = false },
+                                          restore: { if backup { spotlightOn = true; backup = false } },
+                                          released: { backup }, otherHolder: { _ in holder })
+        let model = LocalSearchShortcut(backend: backend, spotlight: spotlight, action: {}, record: { _ in })
+        model.apply(LocalSearchShortcut.optionSpace, persist: false)
+        model.takeOverSpotlight()
+        XCTAssertEqual(model.binding, LocalSearchShortcut.commandSpace); XCTAssertFalse(spotlightOn); XCTAssertTrue(model.spotlightReleased)
+        model.apply(.init(keyCode: 3, modifiers: UInt32(cmdKey), keyLabel: "F"), persist: false)
+        XCTAssertTrue(spotlightOn); XCTAssertFalse(model.spotlightReleased)
+        model.takeOverSpotlight(); model.giveBackToSpotlight()
+        XCTAssertTrue(spotlightOn); XCTAssertEqual(model.binding, LocalSearchShortcut.optionSpace)
+        backend.fail = true; model.takeOverSpotlight()
+        XCTAssertTrue(spotlightOn); XCTAssertFalse(backup); XCTAssertEqual(model.binding, LocalSearchShortcut.optionSpace); XCTAssertNotNil(model.issue)
+        // A known holder is reported before Spotlight is touched.
+        backend.fail = false; holder = .init(name: "Raycast", app: URL(fileURLWithPath: "/Applications/Raycast.app"))
+        model.takeOverSpotlight()
+        XCTAssertTrue(spotlightOn); XCTAssertEqual(model.commandSpaceHolder, holder); XCTAssertEqual(model.binding, LocalSearchShortcut.optionSpace)
+    }
     private final class Lease: CleanScreenHotkeyLease {
         var released = false
         func release() throws { released = true }
