@@ -18,29 +18,10 @@ import ThermoL10n
     func applicationDidFinishLaunching(_ notification: Notification) {
         if menuBarFixtureMode {
             guard Bundle.main.bundleIdentifier?.hasPrefix("org.example.mbfx.") == true else { exit(2) }
-            item = NSStatusBar.system.statusItem(withLength: 48)
-            let label = Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarFixtureLabel") as? String ?? "MBFX"
-            let previousImagePosition = (item?.button?.imagePosition.rawValue).map { Int($0) } ?? -1
-            let marker = NSImage(size: NSSize(width: 44, height: 18), flipped: false) { rect in
-                (label as NSString).draw(in: rect.insetBy(dx: 1, dy: 1), withAttributes: [
-                    .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .bold), .foregroundColor: NSColor.black
-                ])
-                return true
-            }
-            marker.isTemplate = true
-            item?.button?.image = marker
-            item?.button?.imagePosition = .imageOnly
-            item?.button?.setAccessibilityLabel(label)
-            let rendering: [String: Any] = ["label": label, "defaultImagePosition": previousImagePosition,
-                                            "configuredImagePosition": (item?.button?.imagePosition.rawValue).map { Int($0) } ?? -1,
-                                            "statusLength": item?.length ?? 0, "usesTemplateRasterMarker": true]
-            if let data = try? JSONSerialization.data(withJSONObject: rendering, options: [.prettyPrinted, .sortedKeys]) {
-                try? data.write(to: Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent(label + "-rendering.json"), options: .atomic)
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 120) { [self] in
-                if let item { NSStatusBar.system.removeStatusItem(item) }
-                NSApp.terminate(nil)
-            }
+            let delay = (Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarFixtureDelaySeconds") as? NSNumber)?.doubleValue ?? 0
+            if delay > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + min(delay, 5)) { [self] in createFixture() }
+            } else { createFixture() }
         }
         else if ["visual-check", "real-check"].contains(Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarQARole") as? String ?? "") {
             visualCheck = MenuBarVisualCheck(realApps: Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarQARole") as? String == "real-check"); visualCheck?.show()
@@ -74,6 +55,31 @@ import ThermoL10n
             application.submenu = submenu; main.addItem(application); NSApp.mainMenu = main
             openManager()
         }
+    }
+    private func createFixture() {
+            item = NSStatusBar.system.statusItem(withLength: 48)
+            let label = Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarFixtureLabel") as? String ?? "MBFX"
+            let previousImagePosition = (item?.button?.imagePosition.rawValue).map { Int($0) } ?? -1
+            let marker = NSImage(size: NSSize(width: 44, height: 18), flipped: false) { rect in
+                (label as NSString).draw(in: rect.insetBy(dx: 1, dy: 1), withAttributes: [
+                    .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .bold), .foregroundColor: NSColor.black
+                ])
+                return true
+            }
+            marker.isTemplate = true
+            item?.button?.image = marker
+            item?.button?.imagePosition = .imageOnly
+            item?.button?.setAccessibilityLabel(label)
+            let rendering: [String: Any] = ["label": label, "defaultImagePosition": previousImagePosition,
+                                            "configuredImagePosition": (item?.button?.imagePosition.rawValue).map { Int($0) } ?? -1,
+                                            "statusLength": item?.length ?? 0, "usesTemplateRasterMarker": true]
+            if let data = try? JSONSerialization.data(withJSONObject: rendering, options: [.prettyPrinted, .sortedKeys]) {
+                try? data.write(to: Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent(label + "-rendering.json"), options: .atomic)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 120) { [self] in
+                if let item { NSStatusBar.system.removeStatusItem(item) }
+                NSApp.terminate(nil)
+            }
     }
     @objc private func openManager() { MenuBarManagerPanel.shared.show() }
     func menuNeedsUpdate(_ menu: NSMenu) {

@@ -85,6 +85,21 @@ AX 应用代理节点在请求期间仍可能存在，原有“节点消失”�
 
 对照阅读了 [Ice 2 的集成记录](https://github.com/teddychan/ice-2/blob/main/docs/testing/macos27-integration.md)及 [Dimble 的运行时桥接](https://github.com/fif7y/dimble/blob/main/Packages/PelmetEngine/Sources/PelmetEngineObjC/MBAssessmentShim.m)。调用形态与当前桥接一致；上游记录不能代替本机 macOS 27.0.1 的兼容性证明。下一步需查明白名单匹配身份与临时/改包应用的差异。
 
+本机静态分析进一步定位到 AppKit 的 `NSStatusItemHost`：创建宿主时，从 scene 客户端的 audit token 构造 `BSProcessHandle`，读取并保存其 `bundleIdentifier`。MenuBarAgent 的另一个窗口身份路径会查询 LaunchServices。它们与 `NSRunningApplication` 是不同读取路径，但只读实测中，微信工具版、Bitwarden 和 Thermo 的公开 bundle ID、LaunchServices 记录、BSProcessHandle 记录、audit-token handle 记录及签名标识均一致，不能据此加入别名映射，也不能断言 ad hoc 应用都不支持。
+
+可复现的只读检查如下；它只查指定的运行中应用，不创建状态项、不激活隐藏、不请求权限。输出的 `terminatedDuringRead` 为真时，该行不能用于判断实时身份差异。
+
+```sh
+identity_work=$(mktemp -d /tmp/thermo-menu-identity.XXXXXX)
+clang -Werror -Wno-deprecated-declarations -fobjc-arc \
+  -framework AppKit -framework ApplicationServices \
+  scripts/menu-bar-identity-probe.m -o "$identity_work/probe"
+"$identity_work/probe" com.tencent.xinWeChat419WechatUse com.bitwarden.desktop dev.thermo.app
+rm -r "$identity_work"
+```
+
+探针读取新建的进程 handle，不是读取 MenuBarAgent 已缓存的宿主对象。缓存值与创建时序仍未排除。隔离构建支持 `--fixture-delay 2`，只延迟 MBH 状态项，MBV、MBA 保持立即创建。R23 已构建并通过同一组 19 项核心测试，确认三个状态项都创建；当前时序对照缺少可归属于该阶段的主屏画面，仍为未验收，不能把延迟当成修复。记录及静态 Evidence ID 见 [身份排查收据](measurements/menu-bar-identity-2026-10-22.json)。
+
 本机为 macOS 27.0.1（26A434），编译使用 Swift 6.4／macOS 27 SDK，已获用户允许本地验证。没有改全局工具链、替换安装版、改品牌标识或发布。临时会话均已恢复；系统设置只查看了菜单栏页面并返回原页面。
 
 剩余范围：普通权限会话中真实应用的三组切换与系统图标副作用；退出、睡眠唤醒、权限撤销、多屏及刘海；旧系统后端，以及快捷键和自动收起。目标继续保持未完成。插件扩展不属于此次拖拽需求。

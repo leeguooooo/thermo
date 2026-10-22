@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-22",
+  "sourceBase": "1889ac00a41954b75f868684b51e0cbdba57e895",
+  "sourceSHA256": {
+    "scripts/menu-bar-identity-probe.m": "c79bc744f5fbf6047868653a3703dba4369c9b6fd8a755dfb5f2516e05fda716",
+    "scripts/menu-bar-preview.swift": "179f9aa14b30162660abcb338d9d42a7c3198e5e01269de8072132afe1082639",
+    "scripts/verify-menu-bar.py": "b572d46fe9817f2c2117a0e4b112baeb00f89b8e9aa6bf9b9e19de970cf667db"
+  },
+  "system": "macOS 27.0.1 (26A434)",
+  "readOnlyIdentityProbe": {
+    "warningsAsErrorsCompile": true,
+    "invalidArgumentChecks": 3,
+    "matchedRows": 3,
+    "allFiveIdentitiesMatch": true,
+    "dataSHA256": "ec168dd50cf9374a4971a36a66c1d99c32a51439ff70dfd6d02713532c0e5f49",
+    "scope": "Fresh process records only; not a readback of MenuBarAgent's cached NSStatusItemHost objects or of rendered visibility.",
+    "notEstablished": [
+      "Cached NSStatusItemHost identity at item creation",
+      "A cause for the unexpected hidden icons",
+      "Signature or install location as a general compatibility rule"
+    ]
+  },
+  "staticAnalysis": {
+    "engine": "REA Hopper, plus ipsw focused AppKit disassembly and own-process runtime selector resolution",
+    "menuBarAgentSHA256": "7bb3f595fa3fba81fa62518dcb5cbc0d3faf67e63885a9f3b5903184b4141007",
+    "frameworkExtractSHA256": "fd5c361a9cd3d3668b348e38053648224629079380227ed1aeaa0878fd14acb9",
+    "evidence": [
+      {
+        "id": "ev_f1f8d7c438bb49fd8c4ccf9c69bc42d34e6b1ebb33aeacd2c2c4a407f400d398",
+        "observation": "VisibilityRestrictionAllowList constructor stores supplied system/bundle arrays; static pseudocode only."
+      },
+      {
+        "id": "ev_d95b4f8cc01071c59a3a548fc584f55b398f1f64c7a9cdf7740c7a6691b0f891",
+        "observation": "MenuBarAgent has an identity path using _LSCopyApplicationInformationItem with kCFBundleIdentifierKey."
+      },
+      {
+        "id": "ev_26d95dcaeb0aa0e2b87c75b2bf88a917ba5184cfad483ed832d9b98ff72dc038",
+        "observation": "MenuBarCore StatusItemHost getter forwards to sourceHost.bundleIdentifier."
+      }
+    ],
+    "appKit": {
+      "initializer": "0x185e6855c",
+      "cachedBundleStore": "0x185e68a58..0x185e68af4",
+      "selectorResolution": "dist/menubar-identity-20261022/resolve-host-refs.txt",
+      "observation": "Static initializer uses BSAuditToken.tokenFromAuditToken:, BSProcessHandle.processHandleForAuditToken:, bundleIdentifier and stores a Swift String; no live system process was attached or injected."
+    },
+    "reaSessionsClosed": true,
+    "agentEvidence": "dist/menubar-identity-20261022/agent-evidence.json",
+    "agentEvidenceSHA256": "45f03c5b0bdb67cfd9794196b19031b9b3d61a9dce40b65e92068289b8624add"
+  },
+  "startupComparison": {
+    "fixtureDelaySeconds": 2,
+    "delayedLabel": "MBH",
+    "immediateLabels": [
+      "MBV",
+      "MBA"
+    ],
+    "isolatedCoreTests": 19,
+    "failures": 0,
+    "overlapsPriorTests": true,
+    "renderingReportsPresent": true,
+    "pixelResult": "inconclusive: no primary-display capture attributable to the active comparison; secondary full-screen terminal screenshot cannot establish icon visibility."
+  },
+  "recovery": {
+    "visualSessionEnded": true,
+    "testWindowsClosed": true,
+    "temporaryFinderWindowClosed": true,
+    "unhandledURLPromptCancelled": true,
+    "realAppAssignmentsWritten": false,
+    "productionBackendLogicChanged": false
+  },
+  "goalComplete": false,
+  "published": false,
+  "cleanup": {
+    "dyldSymbolCacheRemovedBytes": 1692097007,
+    "reproducibleScratchArtifactsRemoved": [
+      "dist/menubar-identity-20261022/ls-identity",
+      "dist/menubar-identity-20261022/host-methods",
+      "dist/menubar-identity-20261022/resolve-host-refs",
+      "dist/menubar-identity-20261022/bs-identity",
+      "dist/menubar-identity-20261022/bs-methods",
+      "dist/menubar-identity-20261022/identity-probe",
+      "dist/menubar-framework-20261022/MenuBarClientCore",
+      "dist/menubar-qa-20261022-r18/Thermo Menu Bar Drag Check.app",
+      "dist/menubar-qa-20261022-r18/Thermo Menu Bar Visual Check.app",
+      "dist/menubar-qa-20261022-r18/Thermo Menu Bar Visible Fixture.app",
+      "dist/menubar-qa-20261022-r18/Thermo Menu Bar Preview.app",
+      "dist/menubar-qa-20261022-r18/Thermo Menu Bar Always Fixture.app",
+      "dist/menubar-qa-20261022-r18/Thermo Menu Bar Fixture.app"
+    ],
+    "preserved": "Static evidence, probe source/output, R15 drag review, R22 production preview, R23 pending timing comparison; unrelated crash logs untouched."
+  }
+}
