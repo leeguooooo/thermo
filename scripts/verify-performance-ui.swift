@@ -70,7 +70,8 @@ import SwiftUI
             "windowVisible": monitor.windowOpen, "windowIsVisible": MainWindow.window?.isVisible ?? false,
             "windowMinimized": MainWindow.window?.isMiniaturized ?? false, "panelOpen": monitor.popoverOpen,
             "cpuSampling": ComputeModel.cpu.samplingActive, "gpuSampling": ComputeModel.shared.samplingActive,
-            "memorySampling": MemoryModel.shared.samplingActive, "panelSampling": PanelModel.shared.samplingActive,
+            "memorySampling": MemoryModel.shared.samplingActive, "connectionsSampling": ConnectionsModel.shared.samplingActive,
+            "panelSampling": PanelModel.shared.samplingActive,
             "pulseSampling": SystemPulse.shared.samplingActive, "pulseHolders": SystemPulse.shared.holderCount,
             "controllerAlive": MainWindow.window?.contentViewController != nil,
             "historyPoints": monitor.history.count]
