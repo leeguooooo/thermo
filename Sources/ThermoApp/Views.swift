@@ -196,7 +196,7 @@ struct PopoverView: View {
                     }
                 }
             }
-            Text(current.flatMap { OverviewPage.sourceText($0) ?? $0.culpritText } ?? tr("Checking…"))
+            Text(current.flatMap { OverviewPage.sourceText($0) ?? $0.culpritText } ?? (current == nil ? tr("Checking…") : ""))
                 .font(Theme.caption).foregroundStyle(Theme.textSecondary).lineLimit(2)
                 .frame(maxWidth: .infinity, minHeight: 30, maxHeight: 30, alignment: .topLeading)
             HStack(spacing: 5) {
