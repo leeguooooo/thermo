@@ -391,6 +391,7 @@ final class ConnectionsModel: NSObject, ObservableObject, CLLocationManagerDeleg
     private var readingBluetooth = false
     private var location: CLLocationManager?
     private var visibility = SamplingLeases()
+    var samplingActive: Bool { timer != nil }
 
     func setVisible(_ active: Bool, owner: UUID) {
         visibility.set(owner, active: active)
