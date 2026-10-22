@@ -46,20 +46,82 @@
     ],
     "startupMainSHA256": "0719afa1b2de3866680fbaa629a2df64f76781754a42982576299ac676feef93"
   },
-  "fullAppRegression": null,
+  "fullAppRegression": {
+    "exitCode": 0,
+    "sourceCommit": "7624f31173ebdc8176a2d27549455af42b90ee95",
+    "elapsedSeconds": 120.17539191700052,
+    "filter": "MenuBar|MenuDisplay|CleanScreenShortcut|ThermoAppTests.LocalSearchTests|CaptureShortcutModel",
+    "installedAppLaunched": false,
+    "selectedTests": 76,
+    "failures": 0,
+    "fullAppBinaryProduced": true,
+    "fullAppBinarySHA256": "55c1509b948a7f05914ab6321493ab9c4f9b9f5297bd6276b0a28208e267061c",
+    "workspaceRemoved": true,
+    "includesIsolatedTests": true
+  },
   "evidenceSHA256": {
     "input.json": "d48262c24b17fa073629d9a113c0a8dc1bac912b07b272d63ddff16bb60bea06",
     "test.log": "e3a9f65b104158105582f62ae3a4be7682428af792c34a06f91d3c9f3262e3fd",
     "system-shortcuts.json": "f1b83293f9635d8c96bf20c91d1013f2ca0b90a88e0283c4d4896a50cf5cc9cf",
     "system-shortcuts-module-off.json": "f1b83293f9635d8c96bf20c91d1013f2ca0b90a88e0283c4d4896a50cf5cc9cf",
     "lifecycle-check.json": "21f256227ec07157106aaa5b2ae7c0635fb76dfab4551eebaee23635e314378b",
-    "auto-collapse-policy.json": "18b4d84eba8cdb18dfc00ce00ec345068c480d7e331458e0761c2ee0b2f5969e"
+    "auto-collapse-policy.json": "18b4d84eba8cdb18dfc00ce00ec345068c480d7e331458e0761c2ee0b2f5969e",
+    "fullApp/input.json": "2671d151aedb7020098dd92fde48a7390f7264805d18ac22f53743f6a48f55fd",
+    "fullApp/result.json": "630c0432a2f3b23b0649ff75f605be0e56cfa355ff097e687c287b084c1e7dd5",
+    "fullApp/test.log": "eedbac07a4442f6b47772844655c9276d70df087d27b81a1a3938ab2c8a070e5",
+    "nativeRegression/live-auto-collapse.json": "ead040e7fc8d31a3b624bd9849fa596f3f6f766265cae5242bd0e52ae6cc8197",
+    "nativeRegression/phase-captures.json": "7bc918aea3a6e6b5176d5e7567236ebdee16539a3ffdb8e7f06b90537369199d",
+    "nativeRegression/live-auto-collapse-result.json": "be31eacf5ae7d91e6d2e1fd04eb6e6cfb542be5c27f67e018998b089bb042770",
+    "nativeRegression/phase-restored.png": "0d25086e7fd03a2c3849ddc5d943dea43ffd214dd4be6c16b35d8000349b8329",
+    "nativeRegression/phase-baseline.png": "bf89407f69efa1e9b8cedc9aa3b02acf11cdd6728ea1c677d7a587d86d59be93",
+    "nativeRegression/phase-auto-collapsed.png": "c6c9dfd494658b789592bba1dd8c94414a0a83c5792800475e1cebebd6fb3ff1",
+    "nativeRegression/phase-hidden-revealed.png": "b71743f7d3f501197f2982ab1558ff86f240403fed58b75f4d7577757e23c71a",
+    "drag-check-result.json": "c5358960c080eb9a5bdd5dd43910e509464aafd65a5c0b830c8f577317ce02cd"
   },
   "boundaries": {
     "physicalGlobalKeyDeliveryTested": false,
-    "nativeVisibilityActivatedByTheseChecks": false,
     "productionPreferencesChanged": false,
-    "published": false
+    "published": false,
+    "nativeVisibilityActivatedByKeyboardChecks": false,
+    "nativeVisibilityActivatedByLiveRegression": true
   },
-  "goalComplete": false
+  "goalComplete": false,
+  "nativeManagerRegression": {
+    "protocolPassed": true,
+    "watchdogFired": false,
+    "hidden": "com.depthpicture.PixPin",
+    "alwaysHidden": "com.bitwarden.desktop",
+    "humanReviewedFourPhases": true,
+    "outcome": "P visible alone on reveal, P and shield absent after auto-collapse, both returned on restore",
+    "keyboardInputSent": false
+  },
+  "dragRetest": {
+    "accepted": false,
+    "beforeAndAfterGroupCounts": [
+      3,
+      0,
+      0
+    ],
+    "assignmentsAfterClose": {},
+    "tools": [
+      "cua_repl",
+      "Computer-Use cmux connector foreground drag"
+    ],
+    "connectorReceipt": {
+      "path": "cgevent_fg",
+      "effect": "unverifiable",
+      "verified": false,
+      "coordinateSpace": "logical window points; origin is screenshot top-left"
+    },
+    "cause": "not established; emitted input alone is not proof of dragging",
+    "nativeManagementStayedOff": true
+  },
+  "cleanup": {
+    "ownedTestProcessesExited": true,
+    "privatePreviewAndDragDomainsCleared": true,
+    "frozenBuildWorkspacesRemoved": true,
+    "supersededR33R34AppsRemoved": true,
+    "unusedVisualMaskAppRemoved": true,
+    "retained": "R35 current preview, real comparisons, drag check and required fixture apps for unresolved drag investigation; test logs and phase captures preserved"
+  }
 }
