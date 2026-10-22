@@ -21,6 +21,8 @@ NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 # Some setups only find the profile when the keychain is named explicitly.
 NOTARY_KEYCHAIN="${NOTARY_KEYCHAIN:-}"
 APPCAST_URL="${APPCAST_URL:-}"
+# Optional Sparkle key path, or '-' for a secret supplied over stdin. Default remains Keychain.
+SPARKLE_ED_KEY_FILE="${SPARKLE_ED_KEY_FILE:-}"
 ARCHS="${ARCHS:-}"
 CONFIGURATION="${THERMO_BUILD_CONFIGURATION:-release}"
 case "$CONFIGURATION" in release|debug) ;; *) echo "invalid build configuration: $CONFIGURATION" >&2; exit 2 ;; esac
@@ -185,8 +187,13 @@ if [ -n "$NOTARY_PROFILE" ]; then
         cp "$DMG" "$DIST/$CLI_ARCHIVE" "$DIST/$CLI_ARCHIVE.sha256" "$RELEASES/"
         cp install.sh "$RELEASES/install.sh"
         scripts/release-notes.sh "$VERSION" > "$RELEASES/Thermo-$VERSION.html"
-        "$SPARKLE_BIN/generate_appcast" --account dev.thermo \
-            --download-url-prefix "${APPCAST_URL%/*}/" -o "$RELEASES/appcast.xml" "$RELEASES"
+        if [ -n "$SPARKLE_ED_KEY_FILE" ]; then
+            "$SPARKLE_BIN/generate_appcast" --ed-key-file "$SPARKLE_ED_KEY_FILE" \
+                --download-url-prefix "${APPCAST_URL%/*}/" -o "$RELEASES/appcast.xml" "$RELEASES"
+        else
+            "$SPARKLE_BIN/generate_appcast" --account dev.thermo \
+                --download-url-prefix "${APPCAST_URL%/*}/" -o "$RELEASES/appcast.xml" "$RELEASES"
+        fi
         echo "appcast: upload the contents of $RELEASES/ to ${APPCAST_URL%/*}/"
     fi
 fi

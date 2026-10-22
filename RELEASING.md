@@ -35,6 +35,14 @@
 
 完整的凭据说明和恢复步骤记在 personal-memory `tools/thermo-release.md`。
 
+Sparkle 工具若无法交互读取钥匙串，可将已授权读取的原密钥通过标准输入传入，避免导出私钥文件或把私钥放进命令参数；未设置时仍使用原有钥匙串流程：
+
+```sh
+security find-generic-password -s https://sparkle-project.org -a dev.thermo -w | SPARKLE_ED_KEY_FILE=- make release
+```
+
+生成更新源后，须用已发版本的 `SUPublicEDKey` 校验安装包的 Ed25519 签名；不能为了绕过钥匙串问题重新生成密钥。
+
 换机器：导入 .p12、`xcrun notarytool store-credentials thermo …`（见 README）、`generate_keys --account dev.thermo -f <备份文件>`。
 
 ## 发布前检查
