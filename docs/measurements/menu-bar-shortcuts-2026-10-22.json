@@ -36,7 +36,15 @@
       "preferenceSurvivesRelaunch": true,
       "restoredOffBeforeClose": true,
       "nativeManagementRemainedOff": true
-    }
+    },
+    "startupRegistrationOrder": [
+      "CleanScreenShortcutModel.enableLive()",
+      "LocalSearchShortcut.shared.activate()",
+      "CaptureWorkspace.shared.activate()",
+      "installMainMenu()",
+      "MenuBarManager.shared.start()"
+    ],
+    "startupMainSHA256": "0719afa1b2de3866680fbaa629a2df64f76781754a42982576299ac676feef93"
   },
   "fullAppRegression": null,
   "evidenceSHA256": {
