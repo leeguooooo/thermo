@@ -16,6 +16,9 @@ import MenuBarCore
     private var events: [[String: Any]] = []
     private let status = NSTextField(wrappingLabelWithString: "尚未收起。请检查菜单栏中的 TV、TH、TA。")
     private let root = Bundle.main.bundleURL.deletingLastPathComponent()
+    // Diagnostic control: keep spacer hosts registered and visible instead of
+    // repeatedly hiding them. This does not change any real application's item.
+    private let persistentSpacers = Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarPersistentSpacers") as? Bool ?? false
 
     init() {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 700, height: 340),
@@ -88,9 +91,9 @@ import MenuBarCore
     }
     private func fillers(_ group: String) -> [NSStatusItem] {
         (0..<MenuBarOverflowPlan.maximumFillers).map { index in
-            let filler = item("", name: group + ".filler.\(index)", length: 0)
+            let filler = item("", name: group + ".filler.\(index)", length: persistentSpacers ? 1 : 0)
             filler.button?.setAccessibilityElement(false)
-            filler.isVisible = false
+            filler.isVisible = persistentSpacers
             return filler
         }
     }
@@ -103,8 +106,8 @@ import MenuBarCore
         boundary?.length = folded ? CGFloat(plan!.itemLength) : 6
         for (index, filler) in fillers.enumerated() {
             let active = folded && index < plan!.fillerCount
-            filler.length = active ? CGFloat(plan!.itemLength) : 0
-            filler.isVisible = active
+            filler.length = active ? CGFloat(plan!.itemLength) : (persistentSpacers ? 1 : 0)
+            filler.isVisible = active || persistentSpacers
         }
     }
     private func apply(_ requested: Reveal) {
@@ -139,7 +142,8 @@ import MenuBarCore
         writeReport()
     }
     private func writeReport() {
-        let report: [String: Any] = ["events": events, "pixelAcceptance": "not automatically asserted", "privateVisibilityAPIUsed": false]
+        let report: [String: Any] = ["events": events, "pixelAcceptance": "not automatically asserted", "privateVisibilityAPIUsed": false,
+                                   "persistentSpacers": persistentSpacers]
         if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
             try? data.write(to: root.appendingPathComponent("fold-check-requests.json"), options: .atomic)
         }

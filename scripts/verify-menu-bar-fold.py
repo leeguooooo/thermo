@@ -17,6 +17,7 @@ import uuid
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', required=True, type=Path, help='New directory for the isolated app and logs')
+    parser.add_argument('--persistent-spacers', action='store_true', help='Keep inactive spacer items visible at one point for layout comparison')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     output = args.output.resolve()
@@ -44,7 +45,7 @@ let package = Package(name: "MenuBarFoldQA", platforms: [.macOS(.v13)], targets:
  .testTarget(name: "MenuBarCoreTests", dependencies: ["MenuBarCore"])
 ], swiftLanguageVersions: [.v5])
 ''')
-        (output / 'input.json').write_text(json.dumps({'files': manifest}, indent=2))
+        (output / 'input.json').write_text(json.dumps({'files': manifest, 'persistentSpacers': args.persistent_spacers}, indent=2))
         with (output / 'test.log').open('w') as log:
             result = subprocess.run(['swift', 'test', '--jobs', '2'], cwd=work, stdout=log, stderr=subprocess.STDOUT)
         if result.returncode:
@@ -59,6 +60,7 @@ let package = Package(name: "MenuBarFoldQA", platforms: [.macOS(.v13)], targets:
             'CFBundleIdentifier': identifier, 'CFBundleExecutable': binary.name,
             'CFBundleName': 'Thermo Menu Bar Fold Check', 'CFBundlePackageType': 'APPL',
             'CFBundleVersion': '1', 'LSMinimumSystemVersion': '27.0', 'NSHighResolutionCapable': True,
+            'ThermoMenuBarPersistentSpacers': args.persistent_spacers,
         }))
         subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True, capture_output=True)
         print(json.dumps({'app': str(app), 'bundle': identifier, 'tests': str(output / 'test.log'),

@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-22",
+  "directActivation": {
+    "initialState": "new Real Check without active visibility session",
+    "request": "hidden group revealed; always-hidden group excluded",
+    "wechatInAllowlist": true,
+    "pixelResult": "WeChat tool and Bitwarden both absent; both returned after restore",
+    "productionSessionControllerChanged": false,
+    "conclusion": "failure also occurs without replacing an existing assertion"
+  },
+  "persistentSpacers": {
+    "inactiveLength": 1,
+    "inactiveIsVisible": true,
+    "coreTests": 23,
+    "failures": 0,
+    "sourceMatchesBuildInputs": true,
+    "initialPixelResult": "Only TV visible; TH and TA not accepted as visible",
+    "threeGroupTransitionsAccepted": false
+  },
+  "localEvidenceSHA256": {
+    "restored.png": "0bc5637bef92e75bed1ae58b79c0a78304f5820d3b87f599399cfebc8d1d14b1",
+    "fold-all.png": "67c9718d00b12b35f98f1d27f90aefbfed40742939e3e401d1f78e87c42a067b",
+    "baseline.png": "90c369d5e5815ad42be5abfda2d1e4a368bc5af06e7c9995dd83965dd4faa0c4",
+    "direct-hidden.png": "44abc513ef1efec8a958b9ba1e02b8b5522d76f4ffe50b6119cbae1ff0f46d71",
+    "persistent-all.png": "a93e1a1b7fcfe6ffc6424cdfa43cfe91c4a42279d1e9425112820288db8d0025",
+    "direct-hidden-requests.json": "97a1b9bbbdcc1b8da4a4ad446a39a1d21fcfabd6c019a9ea7b9c0f99ac770782",
+    "cleaned.png": "cff457140e78cc4377663e8d652095e64185bb019fdec1b8e72460881914194a"
+  },
+  "cleanup": {
+    "qaProcessesAbsent": true,
+    "testMarkersAbsentInFinalCapture": true,
+    "realVisibilitySessionRestored": true,
+    "productionPreferencesChanged": false,
+    "retained": "R4 isolated review app and local evidence; R3 superseded build removed"
+  },
+  "commandDrag": "Not executed; input authorization pending",
+  "published": false,
+  "goalComplete": false
+}
