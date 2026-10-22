@@ -38,12 +38,22 @@
     "unverified": [
       "Native drawing, object drag and resize gestures",
       "Foreground save panel"
-    ]
+    ],
+    "restartedWithBundledFramework": true
   },
   "remaining": [
     "Offline smart erase model",
     "Automatic matching and synchronized annotations",
     "Multiple object selection",
     "Other incomplete features in docs/pixpin/README.md"
-  ]
+  ],
+  "integratedCommit": "cedb792",
+  "mainCleanCheckoutTests": {
+    "commit": "cedb792",
+    "CaptureCore": 69,
+    "ThermoApp": 29,
+    "failures": 0,
+    "logSHA256": "16d7f0109b534804bf372756c3ffd76e84c20f700e81bde32faa891dc5a9390b",
+    "recordedAt": "2026-10-22T07:53:30.705488+00:00"
+  }
 }

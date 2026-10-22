@@ -120,3 +120,5 @@ python3 scripts/verify-capture-ui.py --av-layer-review
 原生合成 QA：`python3 scripts/verify-capture-ui.py --annotation-review`。已观察到马赛克强度 18→36，撤销回 18、重做回 36；删除所选对象后撤销恢复图像；椭圆放大镜中条纹实际变宽。对象拖动/缩放手势和前台保存仍待验收。未使用真实屏幕、摄像头、麦克风或键盘监听。
 
 行为参照 PixPin 官方的[马赛克](https://pixpin.cn/docs/mark/mosaic)、[橡皮擦](https://pixpin.cn/docs/mark/erase)、[聚光灯](https://pixpin.cn/docs/mark/highlight)、[放大镜](https://pixpin.cn/docs/mark/magnifier)及[水印](https://pixpin.cn/docs/mark/watermark)说明。智能擦除的离线模型、相似区域自动匹配/同步、多选仍未实现。
+
+主线 `cedb792` 的独立干净检出重新编译并通过上述 98 项测试。临时实现与复查工作区已清理，最终合成 QA 包保留在 `/tmp/thermo-annotations-qa-final-01a/ThermoCaptureQA.app`，框架已放入包内；未替换安装版。
