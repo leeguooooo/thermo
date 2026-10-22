@@ -1,6 +1,6 @@
 {
   "status": "partial",
-  "recordedAt": "2026-10-22T10:51:11.652496+00:00",
+  "recordedAt": "2026-10-22T10:55:38.848581+00:00",
   "baseCommit": "7a1a998f29c432755496231e1f318250da26700d",
   "sourceSHA256": {
     "Sources/CaptureCore/CaptureActions.swift": "e8feb5453d2f30838611b62b0b5d9b73270b8f949c1e32492baec27f5cd84dfb",
@@ -19,14 +19,14 @@
   },
   "tests": {
     "CaptureCore": 96,
-    "ThermoAppIncludingCleanScreen": 62,
+    "ThermoAppIncludingCleanScreen": 63,
     "failures": 0,
-    "logSHA256": "31df7c9a870a4de311d5e0dabe748c99801b07c212bba8a6047323f2e73ebb2b",
-    "context": "isolated local workspace; final active-pin fallback also compiled and exercised by QA"
+    "logSHA256": "471c76207a881f8f9d614ed5a8ae1e33a3268e081704009d24ae0cfb84acd7b9",
+    "context": "clean detached main checkout at qualifiedMainCommit, local Xcode; CaptureCore 96 plus ThermoApp 63"
   },
   "nativeQA": {
     "app": "/tmp/thermo-shortcuts-qa-01a/ThermoCaptureQA.app",
-    "binarySHA256": "38d6010ba38791358d6d57436c9bbfbecd6abcaef387425f4a3417ca8526422b",
+    "binarySHA256": "bc5647a24a501668924ad77daa8e674248fe137abe06583370796d95be2005f9",
     "syntheticOnly": true,
     "verified": [
       "Record Control-Option-F18 and observe registered status",
@@ -38,7 +38,8 @@
       "Import restores a draft before Apply",
       "Disable/re-enable and restart restore registration state",
       "Configured menu displays names and gestures",
-      "Configured lock action resolves restored fixture pin and persists lock"
+      "Configured lock action resolves restored fixture pin and persists lock",
+      "Final package restarts after source worktrees removed and restores global registered/local enabled states"
     ],
     "profileSHA256": "c4a0b38cbb952f8c3a4724fcc75cffc3214e3e789fbadd4a1e3953cabd32f456",
     "exportedProfileSHA256": "c4a0b38cbb952f8c3a4724fcc75cffc3214e3e789fbadd4a1e3953cabd32f456",
@@ -52,7 +53,8 @@
       "target": "QA shortcut pin",
       "windows": 1,
       "sessionIssue": "none"
-    }
+    },
+    "packageBuildLogSHA256": "0aa4a66aa26a52b940dc3b829d2a6b50df405cf213a9236d388a9d286b6f1c52"
   },
   "crossApplicationKey": {
     "status": "unverified",
@@ -66,5 +68,27 @@
     "CLI, sequential workflows and post-capture action chain",
     "Additional keyboard layouts and hardware flows",
     "Other incomplete PixPin features"
-  ]
+  ],
+  "qualifiedMainCommit": "1b3dc27e34ae6f5e659b0f33e66647592bbbd50b",
+  "integratedSourceSHA256": {
+    "Sources/CaptureCore/CaptureActions.swift": "e8feb5453d2f30838611b62b0b5d9b73270b8f949c1e32492baec27f5cd84dfb",
+    "Sources/ThermoApp/CaptureActionSettingsView.swift": "e59c8b11541a6640e509cecea0da3ed22c61c1852a785d0107b394cffdb3fa50",
+    "Sources/ThermoApp/CaptureConfiguredActionsMenu.swift": "bc8054c0068107ddc7e677b85595ec4494be570412e0048ff53cdd80cdf9c789",
+    "Sources/ThermoApp/CapturePinSession.swift": "5f7e6b9e2902c2fcadff89b2b5b2ce16bea575b993fb0c5b0d4d814a0df45fc1",
+    "Sources/ThermoApp/CaptureShortcutModel.swift": "1802fb314c2d2798f7d19962f334b518832714282814eb19d5a59c166ef7c4f5",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "4eacd67a6aced5f9f3016a3346b3308349d75bb486495885c93aba73e4fb40ff",
+    "Sources/ThermoApp/StatusMenu.swift": "2160a32f4252eebd912be193e3c31898f0bd85053b4bfd1a94b48dcc4732ace9",
+    "Sources/ThermoApp/Views.swift": "fc3b623a948d3728c4b5a3bd502e5a0190ec2723ab6a08c35b949fa4ffb5f5c6",
+    "Sources/ThermoL10n/ZhHans.swift": "b5408fe62e0e73330963020c71fbc7ad6f36e9a4f17c67b9157096ebd3cced5d",
+    "Tests/CaptureCoreTests/CaptureActionSettingsTests.swift": "19bb92f4285ad85ac53b4dccad8552308c6c232c32794ebb747632325672a87c",
+    "Tests/ThermoAppTests/CaptureShortcutModelTests.swift": "3f743554c844f2ff5d3b8b5615989bbceb384d77800f6e6ee5629c9fce30ec6e",
+    "scripts/verify-capture-ui.py": "6b7d8ac0edb1bd25a7c3d52a447577a03310ecd2b830af550f1f4c8e1c34f6cf",
+    "scripts/verify-capture-ui.swift": "3c72649aa4c272ea409a9acac00e9790188954efea5cf1fe18fa960f3cafe948"
+  },
+  "cleanup": {
+    "implementationAndMaincheckWorktreesRemoved": true,
+    "obsoleteQAPackageAndSyntheticTargetRemoved": true,
+    "finalQAAndFixtureProfilesRetained": true,
+    "installedThermoChanged": false
+  }
 }
