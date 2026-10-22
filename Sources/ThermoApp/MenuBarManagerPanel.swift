@@ -52,6 +52,8 @@ struct MenuBarManagerView: View {
                     .disabled(!model.canEdit).accessibilityIdentifier("menubar.enabled")
                 Text(tr("On macOS 27 this uses a private system interface. Some system icons, including Focus, may disappear while items are hidden. Restore all icons ends the session."))
                     .font(Theme.secondary).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                Text(tr("Some apps may stay hidden even when assigned to Visible. Restore all icons if an app is missing."))
+                    .font(Theme.secondary).foregroundStyle(Theme.caution).fixedSize(horizontal: false, vertical: true)
             }.padding(12).background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.radiusSmall))
             if !model.available {
                 Label(tr("Menu bar management currently requires macOS 27 and its native visibility interface."), systemImage: "info.circle")

@@ -97,6 +97,22 @@ let package = Package(name: "ThermoMenuBarQA", platforms: [.macOS(.v13)], target
         info['ThermoMenuBarQARole'] = 'visual-check'
         visual_info.write_bytes(plistlib.dumps(info))
         subprocess.run(['codesign', '--force', '--sign', '-', str(visual)], check=True, capture_output=True)
+        real = output / 'Thermo Menu Bar Real Check.app'
+        shutil.copytree(visual, real)
+        real_info = real / 'Contents/Info.plist'
+        info['CFBundleIdentifier'] = 'dev.thermo.menubarqa.real.' + uuid.uuid4().hex
+        info['CFBundleName'] = 'Thermo Menu Bar Real Check'
+        info['ThermoMenuBarQARole'] = 'real-check'
+        real_info.write_bytes(plistlib.dumps(info))
+        subprocess.run(['codesign', '--force', '--sign', '-', str(real)], check=True, capture_output=True)
+        swap = output / 'Thermo Menu Bar Swapped Check.app'
+        shutil.copytree(real, swap)
+        info['CFBundleIdentifier'] = 'dev.thermo.menubarqa.real.' + uuid.uuid4().hex
+        info['CFBundleName'] = 'Thermo Menu Bar Swapped Check'
+        info['ThermoMenuBarRealHiddenBundle'] = 'com.bitwarden.desktop'
+        info['ThermoMenuBarRealAlwaysBundle'] = 'com.tencent.xinWeChat419WechatUse'
+        (swap / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
+        subprocess.run(['codesign', '--force', '--sign', '-', str(swap)], check=True, capture_output=True)
         drag = output / 'Thermo Menu Bar Drag Check.app'
         shutil.copytree(app, drag)
         drag_info = drag / 'Contents/Info.plist'
@@ -104,11 +120,13 @@ let package = Package(name: "ThermoMenuBarQA", platforms: [.macOS(.v13)], target
         info['CFBundleIdentifier'] = 'dev.thermo.menubarqa.drag.' + uuid.uuid4().hex
         info['CFBundleName'] = 'Thermo Menu Bar Drag Check'
         info['ThermoMenuBarQARole'] = 'drag-check'
+        info.pop('ThermoMenuBarRealHiddenBundle', None)
+        info.pop('ThermoMenuBarRealAlwaysBundle', None)
         drag_info.write_bytes(plistlib.dumps(info))
         subprocess.run(['codesign', '--force', '--sign', '-', str(drag)], check=True, capture_output=True)
         probe = subprocess.check_output([str(binary), '--probe'], text=True)
         (output / 'capabilities.json').write_text(probe)
-        print(json.dumps({'app': str(app), 'fixtures': fixtures, 'visualCheck': str(visual), 'dragCheck': str(drag), 'input': str(output / 'input.json'),
+        print(json.dumps({'app': str(app), 'fixtures': fixtures, 'visualCheck': str(visual), 'realCheck': str(real), 'swappedCheck': str(swap), 'dragCheck': str(drag), 'input': str(output / 'input.json'),
                           'tests': str(output / 'test.log'), 'capabilities': json.loads(probe)}, indent=2))
     finally:
         shutil.rmtree(work)

@@ -1,0 +1,97 @@
+{
+  "date": "2026-10-22",
+  "base": "aa83c59944e9c0a448c2f215947651473fb21e17",
+  "source": {
+    "Sources/ThermoApp/MenuBarManagerPanel.swift": "98568904c4c110e2f2e512b8f95e8ae309f1c47cc4eddba3459a0de5fff91522",
+    "Sources/ThermoL10n/MenuBarZhHans.swift": "c627bf1e08b2850e6473cacc733b8277e9703ec16802238ee2211e7991b22052",
+    "scripts/menu-bar-preview.swift": "d950d07591a5aaf03274a8e600468ec2c55ff4475dc8679cad5031ba538f9d36",
+    "scripts/menu-bar-visual-check.swift": "b996fa0d1fd1e0185a5ea0098ceaebb99699ed7c3b6f6f408d58dc8da4405a9a",
+    "scripts/verify-menu-bar.py": "896cd0c01bb3e74e4f4a195ba95d89142a1b8e878d2eb298cd195313bf03970b"
+  },
+  "system": "macOS 27.0.1 (26A434), two displays; secondary full-screen terminal has no visible menu bar",
+  "screenCapture": "macOS Screenshot app operated via cua_repl; stored PNGs inspected with view_image. Capture controls sometimes failed or selected only one display; only images with actual primary menu bar support visibility conclusions.",
+  "primaryDisplayResults": {
+    "wechatHiddenBitwardenAlwaysHidden": {
+      "collapsed": "both absent",
+      "showHidden": "WeChat still absent; fails expected reveal",
+      "restoreAll": "both visible again"
+    },
+    "bitwardenHiddenWechatAlwaysHidden": {
+      "showHidden": "Bitwarden shield visible, WeChat absent",
+      "loggedAllowlist": {
+        "com.bitwarden.desktop": true,
+        "com.tencent.xinWeChat419WechatUse": false,
+        "dev.thermo.app": true,
+        "dev.thermo.perfreview.01a1612a": true
+      },
+      "unassignedPerformanceQAIcon": "absent during assertion despite being allowed"
+    },
+    "larkHiddenBitwardenAlwaysHidden": {
+      "collapsed": "both absent",
+      "showHidden": "inconclusive; only full-screen secondary display captured"
+    }
+  },
+  "identityEvidence": {
+    "wechatBundleAndCodeIdentifier": "com.tencent.xinWeChat419WechatUse",
+    "wechatSignature": "ad hoc",
+    "bitwardenSignature": "Apple Mac OS Application Signing",
+    "rootCause": "unproven; signature and install/registration hypotheses need controlled investigation"
+  },
+  "verification": {
+    "isolatedCoreTests": 19,
+    "failures": 0,
+    "scope": "R22 actual panel, manager, bridge, L10n and QA harness compiled; core tests overlap previous suite.",
+    "testLogSHA256": "25a4a77ed5d773c70e2cd8455d192a2b7b76baf4389ae2e1d81169f1aa042c34",
+    "warningGUI": "Actual R22 window shows missing-visible-app warning and recovery button; all three columns fit.",
+    "ordinaryPreviewAXTrusted": false
+  },
+  "localEvidenceSHA256": {
+    "dist/menubar-qa-20261022-r20/hidden-secondary.png": "7ba99830151798983d97c7ddec312bcdad8f2480388a73e9d7a3d071db4cfdf6",
+    "dist/menubar-qa-20261022-r20/collapsed-primary.png": "522fa3cb2c1bba8a9e28fff7e34340c69cd4d89002385889e50bed7145cad71e",
+    "dist/menubar-qa-20261022-r20/baseline-primary.png": "4708aea42866c41ea83a9e2e5662ea7c6311dd2ed81399ca91b5e19800dd3da0",
+    "dist/menubar-qa-20261022-r20/restored-secondary.png": "3d1741f507edd5fdde159c31a86da31eb11ac0645a65d4fdf97f55fda846e87e",
+    "dist/menubar-qa-20261022-r20/hidden-primary.png": "8904622e5b3c3e77091a6efb63b81e002fee97dbf6403095dc3ff001949df8c4",
+    "dist/menubar-qa-20261022-r20/restored-primary.png": "2a47f08e0f7052e685b31f1184893f85f8f0c26e178773595802d649b81c6a7e",
+    "dist/menubar-qa-20261022-r20/baseline-secondary.png": "ab9a2299fea1fb4c44a1576d4f8ee6ef3a12e32f29b9d8dfb25fb392b42a759b",
+    "dist/menubar-qa-20261022-r20/visual-check-requests.json": "4bba70998c1a526bfedef1c6627c56892d5c037c55ab20bea35625faf03010a6",
+    "dist/menubar-qa-20261022-r21/signed-collapsed-primary.png": "ae9dd050184e4098e1b61f4ed568b1587214bfccd5bc9f660ba03dc325c1e029",
+    "dist/menubar-qa-20261022-r21/swapped-hidden-primary.png": "83c6fa1eadebd210ea1844d09e5a7e974b1bff5d88039f48fc29f753787e7da6",
+    "dist/menubar-qa-20261022-r21/swapped-hidden-secondary.png": "91067d385b08b35aab59e45e9771ff018c9638468a963010fcba2383ace3039b",
+    "dist/menubar-qa-20261022-r21/signed-hidden-secondary-only.png": "61c1a4b1b865c55b5d284e8ed45f015f8ee03db5d7065ecb4bcef722e768f872",
+    "dist/menubar-qa-20261022-r21/swapped-requests.json": "9c708e8783228ed134612229a57ae7dcd8a2a41dd039765723fc0978eec21306",
+    "dist/menubar-qa-20261022-r21/visual-check-requests.json": "7809fa4eb295a8633c3a079b32691a018cb45312bedd1d8f93102fa39da68f58"
+  },
+  "productionNativeLogicChanged": false,
+  "persistentRealAssignmentsWritten": false,
+  "realApplicationsQuitByThisWork": false,
+  "installedAppReplacedByThisWork": false,
+  "published": false,
+  "goalComplete": false,
+  "cleanup": {
+    "obsoleteAppBundlesRemoved": [
+      "dist/menubar-qa-20261022-r19/Thermo Menu Bar Real Check.app",
+      "dist/menubar-qa-20261022-r19/Thermo Menu Bar Drag Check.app",
+      "dist/menubar-qa-20261022-r19/Thermo Menu Bar Visual Check.app",
+      "dist/menubar-qa-20261022-r19/Thermo Menu Bar Visible Fixture.app",
+      "dist/menubar-qa-20261022-r19/Thermo Menu Bar Preview.app",
+      "dist/menubar-qa-20261022-r19/Thermo Menu Bar Always Fixture.app",
+      "dist/menubar-qa-20261022-r19/Thermo Menu Bar Fixture.app",
+      "dist/menubar-qa-20261022-r20/Thermo Menu Bar Real Check.app",
+      "dist/menubar-qa-20261022-r20/Thermo Menu Bar Drag Check.app",
+      "dist/menubar-qa-20261022-r20/Thermo Menu Bar Visual Check.app",
+      "dist/menubar-qa-20261022-r20/Thermo Menu Bar Visible Fixture.app",
+      "dist/menubar-qa-20261022-r20/Thermo Menu Bar Preview.app",
+      "dist/menubar-qa-20261022-r20/Thermo Menu Bar Always Fixture.app",
+      "dist/menubar-qa-20261022-r20/Thermo Menu Bar Fixture.app",
+      "dist/menubar-qa-20261022-r21/Thermo Menu Bar Real Check.app",
+      "dist/menubar-qa-20261022-r21/Thermo Menu Bar Drag Check.app",
+      "dist/menubar-qa-20261022-r21/Thermo Menu Bar Swapped Check.app",
+      "dist/menubar-qa-20261022-r21/Thermo Menu Bar Visual Check.app",
+      "dist/menubar-qa-20261022-r21/Thermo Menu Bar Visible Fixture.app",
+      "dist/menubar-qa-20261022-r21/Thermo Menu Bar Preview.app",
+      "dist/menubar-qa-20261022-r21/Thermo Menu Bar Always Fixture.app",
+      "dist/menubar-qa-20261022-r21/Thermo Menu Bar Fixture.app"
+    ],
+    "preserved": "Current R22 preview and existing R15/R18 review artifacts, all measurement logs/screenshots/manifests; unrelated crash logs preserved."
+  }
+}

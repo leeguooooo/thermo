@@ -42,8 +42,8 @@ import ThermoL10n
                 NSApp.terminate(nil)
             }
         }
-        else if Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarQARole") as? String == "visual-check" {
-            visualCheck = MenuBarVisualCheck(); visualCheck?.show()
+        else if ["visual-check", "real-check"].contains(Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarQARole") as? String ?? "") {
+            visualCheck = MenuBarVisualCheck(realApps: Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarQARole") as? String == "real-check"); visualCheck?.show()
         }
         else if Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarQARole") as? String == "drag-check" {
             let root = Bundle.main.bundleURL.deletingLastPathComponent()

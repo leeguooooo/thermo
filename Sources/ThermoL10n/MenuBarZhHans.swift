@@ -13,6 +13,7 @@ let zhHansWithMenuBar = zhHans.merging([
     "Always hidden": "始终隐藏",
     "Restore all icons": "恢复全部图标",
     "Enable menu bar management (experimental)": "启用菜单栏管理（实验功能）",
+    "Some apps may stay hidden even when assigned to Visible. Restore all icons if an app is missing.": "部分应用即使在显示组也可能被隐藏。若图标缺失，请点“恢复全部图标”。",
     "Drag apps into Visible, Hidden or Always hidden. All menu bar icons from one app move together; use ⌘-drag in the menu bar to change their physical order.": "将应用拖到显示、隐藏或始终隐藏组。同一应用的多个菜单栏图标一起显示或隐藏；按住 ⌘ 拖动菜单栏图标可调整实际顺序。",
     "On macOS 27 this uses a private system interface. Some system icons, including Focus, may disappear while items are hidden. Restore all icons ends the session.": "macOS 27 上使用私有系统接口。隐藏期间，专注模式等系统图标也可能消失。点“恢复全部图标”可结束本次隐藏。",
     "Menu bar management currently requires macOS 27 and its native visibility interface.": "菜单栏管理目前需要 macOS 27 及其原生显示控制接口。",
