@@ -146,7 +146,12 @@ struct CleanScreenKeyBinding: Codable, Equatable {
 
 @MainActor final class CarbonCleanScreenHotkeys: CleanScreenHotkeyBackend {
     private let validate: (CleanScreenKeyBinding) -> Bool
-    init(validate: @escaping (CleanScreenKeyBinding) -> Bool = { $0.valid }) { self.validate = validate }
+    private let shared: (CleanScreenKeyBinding) -> Bool
+    /// `shared` gestures register without the exclusive flag: macOS refuses an exclusive claim on any combo in the
+    /// system shortcut table, even after that system shortcut is turned off.
+    init(validate: @escaping (CleanScreenKeyBinding) -> Bool = { $0.valid }, shared: @escaping (CleanScreenKeyBinding) -> Bool = { _ in false }) {
+        self.validate = validate; self.shared = shared
+    }
     private struct Entry { var binding: CleanScreenKeyBinding; var ref: EventHotKeyRef; var event: (Bool)->Void }
     private var entries: [UInt32:Entry] = [:]
     private static var nextID: UInt32 = 0
@@ -170,7 +175,7 @@ struct CleanScreenKeyBinding: Codable, Equatable {
         Self.nextID += 1
         let id=Self.nextID
         var ref: EventHotKeyRef?
-        let status=RegisterEventHotKey(binding.keyCode,binding.modifiers,.init(signature:Self.signature,id:id),GetApplicationEventTarget(),UInt32(kEventHotKeyExclusive),&ref)
+        let status=RegisterEventHotKey(binding.keyCode,binding.modifiers,.init(signature:Self.signature,id:id),GetApplicationEventTarget(),shared(binding) ? 0 : UInt32(kEventHotKeyExclusive),&ref)
         guard status == noErr, let ref else { clearIfEmpty();throw Failure(status:status) }
         entries[id] = .init(binding:binding,ref:ref,event:event)
         return Lease(self,id)

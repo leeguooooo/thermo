@@ -3540,9 +3540,7 @@ let zhHans: [String: String] = [
     "Took ⌘Space over from Spotlight": "从聚焦搜索接管了 ⌘Space",
     "Gave ⌘Space back to Spotlight": "把 ⌘Space 还给了聚焦搜索",
     "Undo in Search settings → Give ⌘Space back to Spotlight.": "在搜索设置 → 把 ⌘Space 还给聚焦搜索 中撤销。",
-    "Another app is already using ⌘Space, such as Alfred. Change its shortcut, then try again.": "⌘Space 已被其他 App 占用（比如 Alfred）。先改掉它的快捷键再试。",
     "%1$@ is using ⌘Space. Change its shortcut in %1$@, then try again.": "⌘Space 正被 %1$@ 使用。先在 %1$@ 里改掉它的快捷键，再回来接管。",
     "Spotlight's shortcut was left on.": "聚焦搜索的快捷键保持开启。",
-    "another app": "其他 App",
     "Open %@": "打开 %@",
 ]

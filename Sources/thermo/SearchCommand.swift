@@ -13,7 +13,7 @@ struct SearchCommand {
     }
     func run(_ arguments: [String]) throws {
         let sub = arguments.first ?? "query"
-        if sub == "open" || sub == "settings" { try AppControlCommand(app: app).run(command: "search", rest: arguments); return }
+        if ["open", "settings", "use-command-space", "give-back-command-space"].contains(sub) { try AppControlCommand(app: app).run(command: "search", rest: arguments); return }
         let store = try SearchStore()
         if sub == "status" {
             guard arguments.count == 1 else { throw CLIError("search status takes no arguments") }
