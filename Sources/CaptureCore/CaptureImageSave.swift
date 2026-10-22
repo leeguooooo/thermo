@@ -53,7 +53,7 @@ public enum CaptureImageSave {
         let name=parts.last!,stem=(name as NSString).deletingPathExtension,ext=(name as NSString).pathExtension
         for number in 1...10000 {
             let candidate=number == 1 ? name : "\(stem)-\(number).\(ext)"
-            if linkat(parent,temporary,parent,candidate,0) == 0 {
+            if renameatx_np(parent,temporary,parent,candidate,UInt32(RENAME_EXCL)) == 0 {
                 var result=directory;for part in parts.dropLast() { result.appendPathComponent(part,isDirectory:true) };return result.appendingPathComponent(candidate)
             }
             guard errno == EEXIST else { throw posix() }
