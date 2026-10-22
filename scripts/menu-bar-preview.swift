@@ -188,6 +188,15 @@ import ThermoL10n
 let menuBarFixtureMode = CommandLine.arguments.contains("--fixture") ||
     Bundle.main.bundleIdentifier?.hasPrefix("org.example.mbfx.") == true
 let application = NSApplication.shared
+if CommandLine.arguments.contains("--check-live-auto-collapse") {
+    Task { @MainActor in
+        let passed = await MenuBarLiveManagerCheck.run()
+        print("{\"liveAutoCollapseProtocolPassed\":\(passed),\"pixelAcceptance\":\"not automatically asserted\"}")
+        exit(passed ? 0 : 1)
+    }
+    RunLoop.main.run()
+    exit(1)
+}
 if CommandLine.arguments.contains("--check-auto-collapse-expiry") {
     guard TMMenuBarSession.isAvailable() else {
         print("{\"autoCollapseExpirySkipped\":true,\"nativeVisibilityAsserted\":false}")

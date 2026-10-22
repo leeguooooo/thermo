@@ -1,0 +1,97 @@
+{
+  "date": "2026-10-22",
+  "scope": "Isolated production MenuBarManager, real macOS visibility sessions, private preference suites, existing system authorization; current primary display only",
+  "runs": [
+    {
+      "hidden": "com.depthpicture.PixPin",
+      "alwaysHidden": "com.bitwarden.desktop",
+      "autoCollapseAfterRevealSeconds": 9.982743749998917,
+      "restorationStayedExpandedSeconds": 11.198497416669852,
+      "watchdogFired": false,
+      "completedNormally": true,
+      "humanReviewedPixels": {
+        "baseline": "P and shield visible",
+        "hiddenRevealed": "Only assigned Hidden icon visible; Always Hidden icon absent",
+        "autoCollapsed": "P and shield both absent",
+        "restored": "P and shield both visible",
+        "thermoRecoveryItem": "remained visible"
+      }
+    },
+    {
+      "hidden": "com.bitwarden.desktop",
+      "alwaysHidden": "com.depthpicture.PixPin",
+      "autoCollapseAfterRevealSeconds": 10.085238291670976,
+      "restorationStayedExpandedSeconds": 11.200460874999408,
+      "watchdogFired": false,
+      "completedNormally": true,
+      "humanReviewedPixels": {
+        "baseline": "P and shield visible",
+        "hiddenRevealed": "Only assigned Hidden icon visible; Always Hidden icon absent",
+        "autoCollapsed": "P and shield both absent",
+        "restored": "P and shield both visible",
+        "thermoRecoveryItem": "remained visible"
+      }
+    }
+  ],
+  "verification": {
+    "isolatedCoreTests": 27,
+    "fullApp": {
+      "exitCode": 0,
+      "sourceCommit": "a8f1ab547b84c21df95a66e04f817ed01c8232f1",
+      "elapsedSeconds": 77.50268570899789,
+      "filter": "MenuBar|MenuDisplay",
+      "installedAppLaunched": false,
+      "selectedTests": 44,
+      "failures": 0,
+      "fullAppBinaryProduced": true,
+      "fullAppBinarySHA256": "6ffa3a6e6505f6c3a030aba09b7910540ad8405a62d15a5f4260e09c0a28ec9f",
+      "workspaceRemoved": true
+    },
+    "coreTestsOverlapWithFullAppSelectedTests": true,
+    "currentMenuBarAndMainLifecycleSourcesMatchFrozenFullAppInputs": true,
+    "previewSourceDrift": {
+      "file": "Sources/ThermoL10n/ZhHans.swift",
+      "review": "capture JavaScript strings added; menu bar strings unchanged"
+    },
+    "collectorSendsInput": false,
+    "reverseFinalPixelsReviewedAfterProcessExit": true
+  },
+  "limitations": [
+    "Additional non-target menu bar icons disappeared during assessment and returned after restoration; their identities were not independently bound.",
+    "These two applications do not establish compatibility with every app.",
+    "Installed App GUI, physical sleep/wake, actual permission revocation, other displays and older OS backends are not accepted by this check."
+  ],
+  "evidenceSHA256": {
+    "forward/live-auto-collapse.json": "d919cafe6d5df480f2d1f40c61e3bc4c8c220b318dbed1e0bcd9b42609cf32e1",
+    "forward/live-auto-collapse-result.json": "be31eacf5ae7d91e6d2e1fd04eb6e6cfb542be5c27f67e018998b089bb042770",
+    "forward/phase-captures.json": "e55f7483d2b7426bd5be3fd93b65aad8e11bd370c5982f8182bb036363841c6e",
+    "forward/phase-restored.png": "9427352340586c5865a85f8e6e9da4256190901f99c496ca6965bff3e2fb891c",
+    "forward/phase-baseline.png": "aa21ec97ac33cdadc84b95b359890b5cfbecd8d8128970fa319477f7eab7d054",
+    "forward/phase-auto-collapsed.png": "b7451a7d370c3130e6be6386d97fe87be853b74ac5f954b4d8b9e7c322ac3b14",
+    "forward/phase-hidden-revealed.png": "0f158fee522f349e150002b4f1580009703705b8777fd07cf5977df3cacff7ee",
+    "reverse/live-auto-collapse.json": "aa138429a7ebaef0e52972448f3228feffc22a001586cd8f74334342688e2bd4",
+    "reverse/live-auto-collapse-result.json": "be31eacf5ae7d91e6d2e1fd04eb6e6cfb542be5c27f67e018998b089bb042770",
+    "reverse/phase-captures.json": "4fa796e26571633c1b9235844975adb31d95d8f1e935aca6093e9053e12b8ed3",
+    "reverse/phase-restored.png": "50279a5bd7bb56934a50d9f46f3c693abf360b0bb77a60b6e23fb2c27f996fd0",
+    "reverse/phase-baseline.png": "de48b597cf22edaca742676b6b906f2dba66dfa1fc6177034f35545e54aa7d93",
+    "reverse/phase-auto-collapsed.png": "2432a4ce9b11e5054c7ef2b72ffbc69df7974c8d34e9113794b4127875dea3f9",
+    "reverse/phase-hidden-revealed.png": "6e9e3e2240bd06810fb04d3a56b952fea08344288b7e54466fd221b482448a54",
+    "reverse/final-restored.png": "2f717d055a564f77bda19000efda6dc46d5518c48930c33dc66265bff5938a44",
+    "fullApp/input.json": "8afe6c658460546698b5f3516a530b06c1bae74ac86d982c2cb334bba71c96af",
+    "fullApp/result.json": "431f0cbc51ee9269126639a014ca13ef0b3ebc9ae04be2f062b8d0738458fa09",
+    "fullApp/test.log": "f499ecbbdff5a80ace921b422a45fa27087f1226825c9ea3460c5b2b278f7408"
+  },
+  "cleanup": {
+    "ownedTestProcessesExited": true,
+    "privatePreferenceCleanupCalled": true,
+    "fullAppBuildWorkspacesRemoved": true,
+    "supersededR32AppsRemoved": true,
+    "unusedR33FixturesAndDependentPreviewsRemoved": true,
+    "duplicateReverseAppRemoved": true,
+    "retained": "R33 current preview and real comparison apps, build logs and source manifests, local-only phase captures and earlier evidence"
+  },
+  "productionPreferencesChanged": false,
+  "installedAppReplacedByThisWork": false,
+  "published": false,
+  "goalComplete": false
+}

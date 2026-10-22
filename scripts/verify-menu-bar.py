@@ -60,6 +60,7 @@ def main():
              lambda data: data.split(b'\nextension Animation {')[0])
         copy(root / 'scripts/menu-bar-preview.swift', preview / 'main.swift')
         copy(root / 'scripts/menu-bar-visual-check.swift', preview / 'MenuBarVisualCheck.swift')
+        copy(root / 'scripts/menu-bar-live-manager-check.swift', preview / 'MenuBarLiveManagerCheck.swift')
         (work / 'Package.swift').write_text('''// swift-tools-version: 5.9
 import PackageDescription
 let package = Package(name: "ThermoMenuBarQA", platforms: [.macOS(.v13)], targets: [
