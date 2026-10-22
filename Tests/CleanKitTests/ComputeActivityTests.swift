@@ -3,6 +3,20 @@ import AgentCore
 @testable import CleanKit
 
 final class ComputeActivityTests: XCTestCase {
+    func testCPUOnlySamplingDoesNotReadGPUAndFirstGPUReadHasNoClientBaseline() {
+        var calls = 0
+        let sampler = ComputeSampler(gpuReader: {
+            calls += 1
+            return ([GPUDeviceActivity(id: 1, name: "Fixture", percent: 40)], [])
+        })
+        let cpu = sampler.sample(includeGPU: false)
+        XCTAssertEqual(calls, 0)
+        XCTAssertTrue(cpu.devices.isEmpty)
+        XCTAssertTrue(cpu.programs.allSatisfy { $0.observedGPU == nil })
+        XCTAssertEqual(sampler.sample().devices.first?.percent, 40)
+        XCTAssertEqual(calls, 1)
+    }
+
     func testCancelledComputationReturnsUnknownWithoutStartingHardwareReads() {
         let sampler = ComputeSampler()
         let result = sampler.sample(cancelled: { true })

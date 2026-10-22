@@ -26,6 +26,7 @@ final class MemoryModel: ObservableObject {
     private var dayLoaded = Date.distantPast
     private var generation = UUID()
     private var cancellation: ScanCancellation?
+    private var visibility = SamplingLeases()
     struct Reading: Sendable {
         var breakdown: MemoryBreakdown?
         var inventory: MemoryInventory
@@ -48,6 +49,10 @@ final class MemoryModel: ObservableObject {
     }
     var samplingActive: Bool { timer != nil }
     var sampleInFlight: Bool { sampling }
+    func setVisible(_ active: Bool, owner: UUID) {
+        visibility.set(owner, active: active)
+        if visibility.active { start() } else { stop() }
+    }
 
     func start() {
         guard timer == nil else { return }
@@ -175,8 +180,10 @@ struct MemoryPage: View {
             .padding(.horizontal, Theme.pagePadding).padding(.top, Theme.pageTop).padding(.bottom, 24)
             .frame(maxWidth: .infinity)
         }
-        .onAppear { model.start(); pulse.hold() }
-        .onDisappear { model.stop(); pulse.release() }
+        .samplingWhileVisible { owner, active in
+            model.setVisible(active, owner: owner)
+            if active { pulse.hold() } else { pulse.release() }
+        }
         .sheet(item: $confirming) { h in
             ConfirmSheet(title: h.app != nil ? tr("Quit %1$@?", h.name) : tr("End %1$@?", h.name),
                          summary: h.app != nil ? tr("The app is asked to quit, the same as ⌘Q; it can save your work first.")

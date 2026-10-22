@@ -7,8 +7,10 @@ import ThermoL10n
 private final class ComputeWorker: @unchecked Sendable {
     private let queue: DispatchQueue
     private let sampler = ComputeSampler()
+    private let includeGPU: Bool
     private let readSample: (@Sendable (ScanCancellation) -> ComputeActivity)?
-    init(readSample: (@Sendable (ScanCancellation) -> ComputeActivity)?, queue: DispatchQueue?) {
+    init(includeGPU: Bool, readSample: (@Sendable (ScanCancellation) -> ComputeActivity)?, queue: DispatchQueue?) {
+        self.includeGPU = includeGPU
         self.readSample = readSample
         self.queue = queue ?? DispatchQueue(label: "dev.thermo.compute", qos: .userInitiated)
     }
@@ -20,7 +22,7 @@ private final class ComputeWorker: @unchecked Sendable {
             let previousCancellation = ScanCancellation.current
             ScanCancellation.current = cancellation
             defer { ScanCancellation.current = previousCancellation }
-            let reading = self.readSample?(cancellation) ?? self.sampler.sample(cancelled: { cancellation.isCancelled })
+            let reading = self.readSample?(cancellation) ?? self.sampler.sample(includeGPU: self.includeGPU, cancelled: { cancellation.isCancelled })
             receive(cancellation.isCancelled ? nil : reading)
         }
     }
@@ -29,6 +31,7 @@ private final class ComputeWorker: @unchecked Sendable {
 @MainActor
 final class ComputeModel: ObservableObject {
     static let shared = ComputeModel()
+    static let cpu = ComputeModel(includeGPU: false)
     struct Point: Identifiable {
         let id = UUID()
         let time: Date
@@ -44,14 +47,24 @@ final class ComputeModel: ObservableObject {
     private var generation = UUID()
     private var cancellation: ScanCancellation?
     private var resetNextReading = true
-    init(readSample: (@Sendable (ScanCancellation) -> ComputeActivity)? = nil,
+    private var visibility = SamplingLeases()
+    init(includeGPU: Bool = true, readSample: (@Sendable (ScanCancellation) -> ComputeActivity)? = nil,
          samplingQueue: DispatchQueue? = nil, refreshInterval: TimeInterval = 2) {
         precondition(refreshInterval.isFinite && refreshInterval > 0)
         self.refreshInterval = refreshInterval
-        worker = ComputeWorker(readSample: readSample, queue: samplingQueue)
+        worker = ComputeWorker(includeGPU: includeGPU, readSample: readSample, queue: samplingQueue)
     }
     var samplingActive: Bool { timer != nil }
     var sampleInFlight: Bool { sampling }
+    func setVisible(_ active: Bool, owner: UUID) {
+        visibility.set(owner, active: active)
+        if visibility.active { start() } else { stop() }
+    }
+    func releaseReadingsIfIdle() {
+        guard timer == nil else { return }
+        if current != nil { current = nil }
+        if !history.isEmpty { history = [] }
+    }
     func start() {
         guard timer == nil else { return }
         generation = UUID()
@@ -82,6 +95,7 @@ final class ComputeModel: ObservableObject {
                     return
                 }
                 self.current = reading
+                guard self.generation == token, self.timer != nil else { return }
                 self.history.append(Point(time: reading.sampled, cpu: reading.cpu, devices: reading.devices))
                 self.history.removeAll { reading.sampled.timeIntervalSince($0.time) > 900 }
             }
@@ -91,7 +105,11 @@ final class ComputeModel: ObservableObject {
 
 struct ComputePage: View {
     let gpu: Bool
-    @ObservedObject private var model = ComputeModel.shared
+    @ObservedObject private var model: ComputeModel
+    init(gpu: Bool) {
+        self.gpu = gpu
+        _model = ObservedObject(wrappedValue: gpu ? .shared : .cpu)
+    }
     @State private var search = ""
     @State private var expanded = Set<String>()
     @State private var showAll = false
@@ -116,7 +134,9 @@ struct ComputePage: View {
             }
             hero
             programsSection
-        }.onAppear { model.start() }.onDisappear { model.stop() }
+        }
+        .samplingWhileVisible { owner, active in model.setVisible(active, owner: owner) }
+        .onDisappear { DispatchQueue.main.async { model.releaseReadingsIfIdle() } }
     }
 
     // MARK: Hero
@@ -263,9 +283,7 @@ struct ComputePage: View {
                     }
                 }
                 .frame(width: 64, height: 4).accessibilityHidden(true)
-                .animation(Theme.gentle.unlessReduced(reduceMotion), value: v)
                 Text(percent(v)).font(Theme.figure(.row)).foregroundStyle(v == nil ? Theme.textTertiary : Theme.textPrimary)
-                    .contentTransition(.numericText())
                     .frame(width: 64, alignment: .trailing)
             }
             .contentShape(Rectangle())

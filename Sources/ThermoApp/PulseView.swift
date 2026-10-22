@@ -500,7 +500,6 @@ struct PulseCard: View {
                         }
                     }
                     .frame(width: 44, height: 4).accessibilityHidden(true)
-                    .animation(Theme.gentle, value: h.cpu)
                     Text(String(format: "%.0f%%", h.cpu)).font(Theme.figure(.row, weight: .medium))
                         .foregroundStyle(h.cpu >= 50 ? cpuColor(h.cpu) : Theme.textPrimary)
                         .contentTransition(.numericText())

@@ -68,7 +68,7 @@ enum WindowLifecycleCheck {
     }
 
     struct Report: Encodable {
-        let schemaVersion = 2
+        let schemaVersion = 3
         let mode = "offscreen AppKit with explicit watched visibility; helper interaction and menu-bar recorder disabled"
         let foregroundActivityHeld: Bool
         let started: Date
@@ -106,6 +106,7 @@ enum WindowLifecycleCheck {
         var openChecksPassed = true
         var transitionChecks: [String: Bool] = [:]
         func reading(cycle: Int, page: String, phase: String, frame: NSRect?) -> Sample {
+            let compute = page == "cpu" ? ComputeModel.cpu : ComputeModel.shared
             let memory = ProcessTable.memory(getpid())
             var usage = rusage(), task = proc_taskinfo()
             let gotCPU = getrusage(RUSAGE_SELF, &usage) == 0
@@ -118,9 +119,10 @@ enum WindowLifecycleCheck {
                 contentDetached: MainWindow.window?.contentViewController == nil,
                 monitorWindowOpen: AppModels.shared.monitor.windowOpen,
                 memoryTimer: MemoryModel.shared.samplingActive, memoryInFlight: MemoryModel.shared.sampleInFlight,
-                computeTimer: ComputeModel.shared.samplingActive, computeInFlight: ComputeModel.shared.sampleInFlight,
+                computeTimer: ComputeModel.shared.samplingActive || ComputeModel.cpu.samplingActive,
+                computeInFlight: ComputeModel.shared.sampleInFlight || ComputeModel.cpu.sampleInFlight,
                 pulseTimer: SystemPulse.shared.samplingActive, pulseHolders: SystemPulse.shared.holderCount,
-                memoryPublished: MemoryModel.shared.sampled, computePublished: ComputeModel.shared.current?.sampled,
+                memoryPublished: MemoryModel.shared.sampled, computePublished: compute.current?.sampled,
                 pulsePublished: SystemPulse.shared.current?.sampled,
                 framePreserved: frame.map { MainWindow.window?.frame == $0 } ?? true)
             print("lifecycle \(cycle) \(page) \(phase): RSS=\(sample.residentKB ?? -1)KB footprint=\(sample.footprintKB ?? -1)KB controllers=\(sample.controllersAlive)")
@@ -135,7 +137,7 @@ enum WindowLifecycleCheck {
                 // Offscreen windows are occluded by macOS. Exercise the same watched model state
                 // as a visible window after that initial notification has been delivered.
                 try await pause(0.1)
-                AppModels.shared.monitor.windowOpen = true
+                MainWindow.setSamplingVisibility(true)
                 try await pause(options.openSeconds)
                 let frame = MainWindow.window?.frame
                 var opened = reading(cycle: cycle, page: name, phase: "open", frame: frame)
@@ -157,21 +159,28 @@ enum WindowLifecycleCheck {
                         (SystemPulse.shared.current?.sampled ?? .distantPast) >= returnedAt
                     samples.append(reading(cycle: cycle, page: name, phase: "returned", frame: frame))
 
-                    // Drive the same model signal as the native occlusion callback without
-                    // changing the user's desktop or forcing background sampling.
-                    AppModels.shared.monitor.windowOpen = false
-                    try await pause(0.2)
-                    let hiddenPublication = SystemPulse.shared.current?.sampled
-                    try await pause(options.idleSeconds)
-                    transitionChecks["cycle-\(cycle)-hidden"] = !SystemPulse.shared.samplingActive &&
-                        SystemPulse.shared.holderCount == 0 && SystemPulse.shared.current?.sampled == hiddenPublication
-                    let visibleAt = Date()
-                    AppModels.shared.monitor.windowOpen = true
-                    try await pause(options.openSeconds)
-                    transitionChecks["cycle-\(cycle)-visible-again"] = SystemPulse.shared.samplingActive &&
-                        (SystemPulse.shared.current?.sampled ?? .distantPast) >= visibleAt
-                    samples.append(reading(cycle: cycle, page: name, phase: "visible-again", frame: frame))
                 }
+                // Pausing only Overview misses the detail-page timers that used to survive occlusion.
+                MainWindow.setSamplingVisibility(false)
+                try await pause(0.2)
+                let untilHidden = DispatchTime.now().uptimeNanoseconds + 5_000_000_000
+                while (MemoryModel.shared.sampleInFlight || ComputeModel.cpu.sampleInFlight || ComputeModel.shared.sampleInFlight)
+                    && DispatchTime.now().uptimeNanoseconds < untilHidden { try await pause(0.1) }
+                let hiddenStart = reading(cycle: cycle, page: name, phase: "hidden-start", frame: frame)
+                try await pause(options.idleSeconds)
+                let hidden = reading(cycle: cycle, page: name, phase: "hidden", frame: frame)
+                transitionChecks["cycle-\(cycle)-\(name)-hidden"] = !hidden.memoryTimer && !hidden.computeTimer &&
+                    !hidden.pulseTimer && hidden.pulseHolders == 0 &&
+                    hidden.memoryPublished == hiddenStart.memoryPublished && hidden.computePublished == hiddenStart.computePublished &&
+                    hidden.pulsePublished == hiddenStart.pulsePublished
+                samples += [hiddenStart, hidden]
+                let visibleAt = Date()
+                MainWindow.setSamplingVisibility(true)
+                try await pause(options.openSeconds)
+                let shown = reading(cycle: cycle, page: name, phase: "visible-again", frame: frame)
+                let fresh = name == "overview" ? shown.pulsePublished : name == "memory" ? shown.memoryPublished : shown.computePublished
+                transitionChecks["cycle-\(cycle)-\(name)-visible-again"] = fresh.map { $0 >= visibleAt } ?? false
+                samples.append(shown)
                 autoreleasepool {
                     retired.append(WeakController(MainWindow.window?.contentViewController))
                     MainWindow.window?.close()
@@ -179,7 +188,7 @@ enum WindowLifecycleCheck {
                 // Let appearance callbacks and already-running reads finish before testing idle.
                 try await pause(1)
                 let until = DispatchTime.now().uptimeNanoseconds + 5_000_000_000
-                while (MemoryModel.shared.sampleInFlight || ComputeModel.shared.sampleInFlight) && DispatchTime.now().uptimeNanoseconds < until {
+                while (MemoryModel.shared.sampleInFlight || ComputeModel.cpu.sampleInFlight || ComputeModel.shared.sampleInFlight) && DispatchTime.now().uptimeNanoseconds < until {
                     try await pause(0.1)
                 }
                 let closed = reading(cycle: cycle, page: name, phase: "closed", frame: frame)
