@@ -29,12 +29,14 @@ def main():
     env = dict(os.environ, THERMO_SEARCH_DATA_DIR=str(index), THERMO_LANG="en")
     checks, timings = [], []
 
-    def run(*arguments):
+    def run(*arguments, expected_exit=None):
         started = time.perf_counter()
         result = subprocess.run([str(cli), "search", *arguments, "--json"],
                                 env=env, text=True, capture_output=True, timeout=180)
         elapsed = (time.perf_counter() - started) * 1000
         assert result.returncode in (0, 3), (arguments, result.returncode, result.stderr)
+        if expected_exit is not None:
+            assert result.returncode == expected_exit, (arguments, result.returncode, result.stderr)
         return json.loads(result.stdout), elapsed
 
     try:
@@ -46,7 +48,7 @@ def main():
         for i in range(args.files):
             (files / f"report_{i:06d}.txt").touch()
         before = hashlib.sha256(special.read_bytes()).hexdigest()
-        status, _ = run("status")
+        status, _ = run("status", expected_exit=3)
         assert not status["complete"] and not status["roots"], status
         checks.append("fresh index reports incomplete")
         indexed, index_ms = run("index", "--root", str(files))

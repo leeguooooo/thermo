@@ -23,6 +23,7 @@ struct SearchCommand {
             else {
                 print(report.roots.isEmpty ? "Applications only. Add folders in thermo search settings, or run thermo search index --root DIR." : report.roots.map { "\($0.path)  \($0.count) items  \($0.issue ?? ($0.indexedAt > 0 ? "indexed" : "waiting"))" }.joined(separator: "\n"))
             }
+            if !report.complete { throw CLIError("Search coverage is incomplete; inspect search status --json.", exitCode: 3) }
             return
         }
         if sub == "index" {
