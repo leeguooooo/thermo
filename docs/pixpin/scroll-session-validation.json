@@ -1,0 +1,65 @@
+{
+  "recordedAt": "2026-10-22T13:45:56.909924+00:00",
+  "baseCommit": "e7a36fd979fbe6f61d5b4ab35b6bba368846cfb5",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureScrollStitcher.swift": "4b5080896ccca7cd1ce8428c81f5b6c64b4c3b785c4ff6fc9a5171b4da77b870",
+    "Sources/CaptureCore/CaptureStitcher.swift": "5da6ef21378e29729acf5a6530725aa9f1cc8a9c8a655478ac2a3482d0c2f2cb",
+    "Sources/ThermoApp/CaptureRegionSelector.swift": "66ed2c1ada511d54cc3b24afaa172d4c2007123b6f0931d63ec91466be4b1ffb",
+    "Sources/ThermoL10n/ZhHans.swift": "3231fa88dc3924f61795656faafe71f872843ef86da33a6fa07febee6696e9ae",
+    "Tests/CaptureCoreTests/CaptureScrollStitcherTests.swift": "41afebe3ad35ab254fc5e792febb95278727efcdede0a7d7dec5c72d7a595291"
+  },
+  "regression": {
+    "total": 188,
+    "counts": {
+      "ThermoCLITests.xctest": 3,
+      "ThermoAppTests.xctest": 56,
+      "CaptureScriptCoreTests.xctest": 10,
+      "CaptureCoreTests.xctest": 114,
+      "AgentDoctorTests.xctest": 4,
+      "AgentCoreTests.xctest": 1
+    },
+    "failures": 0,
+    "log": "/tmp/thermo-scroll-session-regression-01a.log",
+    "logSHA256": "54ffd9797c382929f416c3b58eb452f67e62baac60e81be5a8217404199f45e5"
+  },
+  "scrollSessionCases": [
+    "testAutomaticHeaderAndFooterAppearOnceWithEveryDocumentPixelPreserved",
+    "testHorizontalFixedEdgesUseSameMatchingAndPixelOrder",
+    "testInvalidFixedInsetsAndAmbiguousRepeatedContentAreRejected",
+    "testManualFixedBarsCanChangeTheirPixelsWithoutCorruptingBody",
+    "testMostlyWhiteTextListWithFixedBarsPreservesEveryPixel",
+    "testProjectionCollisionCannotSilentlyClassifyChangedPixelsAsDuplicate",
+    "testRejectedFrameDoesNotChangeSessionAndNoFixedEdgesStillWork",
+    "testReverseIntoPreviouslyCapturedContentDoesNotGrowThenForwardCanContinue",
+    "testReversePastStartingViewportPrependsWithoutLosingOriginalPixels"
+  ],
+  "verified": [
+    "Static header/footer automatically detected and retained once, with exact output pixels",
+    "Manual fixed edges support changing bar pixels",
+    "Horizontal fixed edges preserve pixel order",
+    "Reverse into already captured content does not grow output",
+    "Reverse past the initial viewport prepends newly revealed pixels",
+    "Rejected or changed-size frame does not replace accepted session state",
+    "Mostly white text list with different row numbers aligns with exact expected pixels",
+    "Projection collisions and sampled-out pixel changes cannot become false duplicate frames",
+    "Ambiguous cyclic content remains rejected"
+  ],
+  "implementation": [
+    "Bounded row projections and KMP locate candidate contained viewports; full pixels verify them",
+    "Exact overlap verification precedes existing tolerant static matching",
+    "Repeated-frame detection requires full normalized pixel equality",
+    "Growing body crops share the composed image; no-edge outputs reuse the joined image",
+    "Stop/resume retains the accepted scroll session; cancelled detached work is not committed"
+  ],
+  "limits": [
+    "Auto edge detection considers at most one third of viewport length per side; use manual values for larger or initially changing bars",
+    "At least 32 scrollable pixels must remain after fixed edges",
+    "Viewport dimensions and fixed edge heights stay constant within a session",
+    "Controls lock after the first captured image; choose a new region to change them",
+    "Repeated/ambiguous content may be rejected rather than guessed",
+    "Output remains limited to 80 million pixels; no block export or automatic scrolling",
+    "Native ScreenCaptureKit scrolling acceptance is pending screen-access authorization"
+  ],
+  "nativeAcceptance": "not performed in this batch",
+  "installedAppChanged": false
+}

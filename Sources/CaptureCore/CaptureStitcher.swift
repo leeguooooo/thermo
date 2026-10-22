@@ -1,13 +1,15 @@
 import AppKit
 
 public enum StitchFailure: LocalizedError {
-    case dimensions, noOverlap, tooLarge, blankOverlap
+    case dimensions, noOverlap, tooLarge, blankOverlap, fixedEdges, viewportChanged
     public var errorDescription: String? {
         switch self {
         case .dimensions: return "Frames must have the same width for vertical stitching or the same height for horizontal stitching."
         case .noOverlap: return "No reliable overlap found. Use frames with more shared static content."
         case .tooLarge: return "The stitched image exceeds the 80 megapixel memory limit."
         case .blankOverlap: return "The shared area is too uniform to align reliably."
+        case .fixedEdges:return "Fixed edges must leave at least 32 pixels of scrollable content."
+        case .viewportChanged:return "Keep the same capture region throughout a scrolling session."
         }
     }
 }
@@ -45,11 +47,56 @@ public enum CaptureStitcher {
         }
         if next.height <= previous.height {
             let (error, variance) = score(limit)
-            if error < 0.5 {
+            if error < 0.5,a.elementsEqual(b) {
                 guard variance > 20 else { throw StitchFailure.blankOverlap }
                 return Result(image: previous, overlap: limit, duplicate: true)
             }
         }
+        func compose(_ overlap:Int) throws -> Result {
+            let height=previous.height+next.height-overlap
+            guard width <= maxPixels/height else {throw StitchFailure.tooLarge}
+            let ctx=try context(width:width,height:height)
+            ctx.draw(previous,in:CGRect(x:0,y:height-previous.height,width:width,height:previous.height))
+            guard let tail=next.cropping(to:CGRect(x:0,y:overlap,width:width,height:next.height-overlap)) else {throw CaptureFailure.invalidImage}
+            ctx.draw(tail,in:CGRect(x:0,y:0,width:width,height:next.height-overlap))
+            guard let image=ctx.makeImage() else {throw CaptureFailure.invalidImage}
+            return Result(image:image,overlap:overlap,duplicate:false)
+        }
+        // Sparse average-error samples can miss the few differing digits in a white text list.
+        // Row hashes propose exact alignments; full pixel equality proves them before tolerances.
+        func rows(_ bytes:[UInt8]) -> [UInt64] {
+            (0..<limit).map {y in
+                var hash:UInt64=14695981039346656037
+                for x in stride(from:0,to:width,by:max(1,width/64)) {for c in 0..<4 {
+                    hash=(hash ^ UInt64(bytes[(y*width+x)*4+c])) &* 1099511628211
+                }}
+                return hash
+            }
+        }
+        let pattern=rows(b),haystack=rows(a)
+        var prefix=[Int](repeating:0,count:limit),length=0
+        for i in 1..<limit {
+            while length > 0,pattern[i] != pattern[length] {length=prefix[length-1]}
+            if pattern[i] == pattern[length] {length+=1};prefix[i]=length
+        }
+        length=0
+        for row in haystack {
+            if length == limit {length=prefix[length-1]}
+            while length > 0,row != pattern[length] {length=prefix[length-1]}
+            if row == pattern[length] {length+=1}
+        }
+        var exact:Int?,exactChecks=0
+        while length >= 16 {
+            exactChecks+=1;guard exactChecks <= 128 else {throw StitchFailure.noOverlap}
+            let start=(limit-length)*width*4,count=length*width*4
+            let suffix=a[start..<a.count],prefixPixels=b[0..<count]
+            if score(length).1 > 20,suffix.elementsEqual(prefixPixels) {
+                if let exact,abs(exact-length)>2 {throw StitchFailure.noOverlap}
+                if exact == nil {exact=length}
+            }
+            length=prefix[length-1]
+        }
+        if let exact {return try compose(exact)}
         var best: (length: Int, error: Double, variance: Double)?
         var candidates: [(Int, Double)] = []
         for overlap in 16..<limit {
@@ -60,29 +107,21 @@ public enum CaptureStitcher {
         guard let best, best.error < 6 else { throw StitchFailure.noOverlap }
         guard best.variance > 20 else { throw StitchFailure.blankOverlap }
         guard !candidates.contains(where: { abs($0.0-best.length) > 2 && $0.1 <= best.error+0.5 }) else { throw StitchFailure.noOverlap }
-        let height = previous.height+next.height-best.length
-        guard width <= maxPixels/height else { throw StitchFailure.tooLarge }
-        let ctx = try context(width: width, height: height)
-        ctx.draw(previous, in: CGRect(x: 0, y: height-previous.height, width: width, height: previous.height))
-        // Keep the original overlap; append only newly revealed pixels.
-        guard let tail = next.cropping(to: CGRect(x: 0,y: best.length,width: width,height: next.height-best.length)) else { throw CaptureFailure.invalidImage }
-        ctx.draw(tail, in: CGRect(x: 0,y: 0,width: width,height: next.height-best.length))
-        guard let image = ctx.makeImage() else { throw CaptureFailure.invalidImage }
-        return Result(image: image, overlap: best.length, duplicate: false)
+        return try compose(best.length)
     }
-    private static func context(width: Int, height: Int) throws -> CGContext {
+    static func context(width: Int, height: Int) throws -> CGContext {
         guard width > 0, height > 0, width <= maxPixels/height else { throw StitchFailure.tooLarge }
         guard let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width*4,
                                   space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { throw CaptureFailure.invalidImage }
         return ctx
     }
-    private static func pixels(_ image: CGImage) throws -> [UInt8] {
+    static func pixels(_ image: CGImage) throws -> [UInt8] {
         let ctx = try context(width: image.width, height: image.height)
         ctx.draw(image, in: CGRect(x: 0,y: 0,width: image.width,height: image.height))
         guard let data = ctx.data else { throw CaptureFailure.invalidImage }
         return Array(UnsafeBufferPointer(start: data.assumingMemoryBound(to: UInt8.self), count: image.width*image.height*4))
     }
-    private static func transposed(_ image: CGImage) throws -> CGImage {
+    static func transposed(_ image: CGImage) throws -> CGImage {
         let source = try pixels(image), width = image.height, height = image.width
         var output = [UInt8](repeating: 0, count: source.count)
         for y in 0..<image.height { for x in 0..<image.width {

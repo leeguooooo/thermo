@@ -64,13 +64,20 @@ import ThermoL10n
     @Published var issue: String?
     @Published var frames = 0
     @Published var horizontal = false
+    @Published var detectFixedEdges=true
+    @Published var leadingInset=0
+    @Published var trailingInset=0
+    @Published private(set) var fixedLeading=0
+    @Published private(set) var fixedTrailing=0
     private var captureTask: Task<Void, Never>?
+    private var stitcher:CaptureScrollStitcher?
     private let region: CaptureRegionSelector.Region
     init(region: CaptureRegionSelector.Region) { self.region = region }
     func start() {
         guard captureTask == nil else { return }
         running = true; issue = nil
         let direction: CaptureStitcher.Direction = horizontal ? .horizontal : .vertical
+        let initial=stitcher ?? CaptureScrollStitcher(direction:direction,detectFixedEdges:detectFixedEdges,leadingInset:leadingInset,trailingInset:trailingInset)
         captureTask = Task { [weak self] in
             guard let self else { return }
             do {
@@ -81,17 +88,19 @@ import ThermoL10n
                 let config = SCStreamConfiguration(); config.sourceRect = self.region.rect
                 config.width = Int(self.region.rect.width*self.region.scale); config.height = Int(self.region.rect.height*self.region.scale)
                 config.showsCursor = false
+                var session=initial
                 while !Task.isCancelled {
                     let frame = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
                     guard !Task.isCancelled else { break }
-                    if let previous = self.image {
-                        do {
-                            let result = try await Task.detached(priority: .userInitiated) { try CaptureStitcher.append(frame, to: previous, direction: direction) }.value
-                            guard !Task.isCancelled else { break }
-                            if !result.duplicate { self.image = result.image; self.frames += 1 }
-                            self.issue = nil
-                        } catch { self.issue = tr(error.localizedDescription) }
-                    } else { self.image = frame; self.frames = 1 }
+                    do {
+                        let snapshot=session
+                        let (next,result)=try await Task.detached(priority:.userInitiated) {var next=snapshot;let result=try next.append(frame);return (next,result)}.value
+                        guard !Task.isCancelled else {break}
+                        session=next;self.stitcher=next;self.image=result.image
+                        self.fixedLeading=result.fixedLeading;self.fixedTrailing=result.fixedTrailing
+                        if !result.duplicate {self.frames+=1}
+                        self.issue=nil
+                    } catch {self.issue=tr(error.localizedDescription)}
                     try await Task.sleep(nanoseconds: 700_000_000)
                 }
             } catch is CancellationError { }
@@ -107,7 +116,7 @@ import ThermoL10n
     private let model: ScrollCaptureModel
     init(region: CaptureRegionSelector.Region) {
         model = ScrollCaptureModel(region: region)
-        let panel = NSPanel(contentRect: NSRect(x: 0,y: 0,width: 300,height: 390), styleMask: [.titled,.closable,.resizable], backing: .buffered, defer: false)
+        let panel = NSPanel(contentRect: NSRect(x: 0,y: 0,width: 340,height: 480), styleMask: [.titled,.closable,.resizable], backing: .buffered, defer: false)
         panel.title = tr("Scrolling capture"); panel.level = .floating; panel.isReleasedWhenClosed = false; panel.center()
         super.init(window: panel); panel.delegate = self
         panel.contentView = NSHostingView(rootView: ScrollCaptureView(model: model))
@@ -123,9 +132,21 @@ private struct ScrollCaptureView: View {
         VStack(spacing: 12) {
             Text(tr("Scroll the selected content slowly. Thermo windows are excluded.")).font(.callout)
             Toggle(tr("Horizontal scrolling"), isOn: $model.horizontal).disabled(model.running || model.image != nil)
+            Toggle(tr("Detect fixed edges"),isOn:$model.detectFixedEdges).disabled(model.running || model.image != nil)
+                .help(tr("Use manual edge pixels for changing headers or footers."))
+            if !model.detectFixedEdges {
+                HStack {
+                    Text(tr("Leading edge")).font(.caption)
+                    TextField(tr("Leading edge"),value:$model.leadingInset,format:.number).frame(width:65)
+                    Text(tr("Trailing edge")).font(.caption)
+                    TextField(tr("Trailing edge"),value:$model.trailingInset,format:.number).frame(width:65)
+                }.disabled(model.running || model.image != nil)
+                Text(tr("Top / bottom for vertical scrolling; left / right for horizontal scrolling.")).font(.caption)
+            }
             if let image = model.image {
                 Image(nsImage: NSImage(cgImage: image,size: .zero)).resizable().scaledToFit().frame(maxHeight: .infinity)
                 Text("\(image.width) × \(image.height) · \(model.frames)").font(.caption)
+                Text(String(format:tr("Fixed edges: %1$@ / %2$@ px"),String(model.fixedLeading),String(model.fixedTrailing))).font(.caption)
             } else { Spacer() }
             if let issue = model.issue { Text(issue).font(.caption).foregroundStyle(.orange) }
             HStack {
