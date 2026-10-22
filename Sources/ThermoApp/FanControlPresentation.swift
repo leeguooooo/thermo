@@ -3,6 +3,15 @@ import ThermoKit
 import ThermoL10n
 
 enum FanControlPresentation {
+    static func selectedPolicy(fan: Int, available: Bool, policies: [Int: FanPolicy], pending: [Int: FanPolicy], state: FanControlState?) -> FanPolicy? {
+        if let requested = pending[fan] { return requested }
+        guard available else { return nil }
+        if let requested = policies[fan] { return requested }
+        guard let state, state.verification(for: fan) == .checked,
+              state.observations[fan]?.mode == .automatic else { return nil }
+        return .auto
+    }
+
     static func missingFanIDs(readings: [FanReading]?, policies: [Int: FanPolicy], pending: [Int: FanPolicy], state: FanControlState?) -> [Int] {
         Set(policies.keys).union(pending.keys).union(state?.referencedFanIDs ?? [])
             .subtracting((readings ?? []).map(\.id)).sorted()
@@ -21,9 +30,15 @@ enum FanControlPresentation {
         let prefix = speed != nil && fans.contains { $0.rpm == nil } ? "≥ " : ""
         return prefix + tr("%1$@ rpm", rpm(speed))
     }
+    static func errorText(_ error: String) -> String {
+        if error.contains("no automatic-control readback key") || error.contains("no manual-control readback key") {
+            return tr("Fan control could not be verified on this Mac. Open fan settings for details.")
+        }
+        return error
+    }
     static func observation(_ state: FanControlState?, fan: Int) -> String {
         guard let state else { return tr("Hardware verification unavailable") }
-        if let failure = state.failure { return tr("Control error: %1$@", failure) }
+        if let failure = state.failure { return tr("Control error: %1$@", errorText(failure)) }
         guard state.observationsSupported, state.verification(for: fan) != .unavailable else { return tr("Hardware verification unavailable") }
         if state.verification(for: fan) == .suspended {
             return state.suspensionReason == .temperatureUnavailable ? tr("Temperature readings were lost; waiting for stable safe readings") : tr("Manual policies suspended for thermal safety")

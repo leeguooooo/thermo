@@ -1,6 +1,7 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "Fan control could not be verified on this Mac. Open fan settings for details.": "无法核对这台 Mac 的风扇控制状态，请打开风扇设置查看详情。",
     // Claude local diagnostics
     "Sentry gpu_3 context": "Sentry gpu_3 上下文",
     "Sentry gpu_2 context": "Sentry gpu_2 上下文",

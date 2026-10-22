@@ -268,7 +268,7 @@ struct MainView: View {
                     if let error = monitor.lastError {
                         HStack(alignment: .top, spacing: 10) {
                             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.caution)
-                            Text(error).font(Theme.body).textSelection(.enabled)
+                            Text(FanControlPresentation.errorText(error)).help(error).font(Theme.body).textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             if monitor.snapshot == nil {
                                 Button(tr("Retry")) { monitor.sampleNow() }.buttonStyle(.bordered)

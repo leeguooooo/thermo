@@ -100,13 +100,7 @@ struct FeatureRow: View {
 
 /// The menu bar panel: the live numbers at a glance, why the Mac is slow, a quick fan switch, and
 /// the way into the main window, where everything else lives.
-private struct PanelBodyHeight: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
-}
-
 struct PopoverView: View {
-    @State private var bodyHeight: CGFloat = 640
     @ObservedObject var monitor: Monitor
     @ObservedObject private var panel = PanelModel.shared
     @ObservedObject private var pulse = SystemPulse.shared
@@ -127,14 +121,9 @@ struct PopoverView: View {
             } else {
                 ScrollView(.vertical) {
                     mainSections
-                        .background(GeometryReader { geometry in
-                            Color.clear.preference(key: PanelBodyHeight.self, value: geometry.size.height)
-                        })
                 }
-                .frame(height: min(bodyHeight, monitor.panelBodyHeightLimit))
-                .onPreferenceChange(PanelBodyHeight.self) { height in
-                    if height > 0, abs(height - bodyHeight) > 0.5 { bodyHeight = height }
-                }
+                // Live samples and errors scroll inside a stable viewport.
+                .frame(height: min(640, monitor.panelBodyHeightLimit))
                 // Features that open their own panel, as small tiles two by two.
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: Theme.Space.s), GridItem(.flexible(), spacing: Theme.Space.s)],
                           spacing: Theme.Space.s) {
@@ -152,7 +141,7 @@ struct PopoverView: View {
         .padding(Theme.Space.m)
         .frame(width: 372)
         .background(LinearGradient(colors: [Theme.canvas, Theme.canvasDeep], startPoint: .top, endPoint: .bottom))
-        .environment(\.colorScheme, .dark)
+        .preferredColorScheme(.dark)
     }
 
     private var mainSections: some View {
@@ -178,7 +167,7 @@ struct PopoverView: View {
                     .overlay(RoundedRectangle(cornerRadius: Theme.radius - 1, style: .continuous).strokeBorder(Theme.hairline))
             }
             if let err = monitor.lastError {
-                Text(err).font(Theme.caption).foregroundStyle(Theme.danger).lineLimit(3)
+                Text(FanControlPresentation.errorText(err)).help(err).font(Theme.caption).foregroundStyle(Theme.danger).lineLimit(3)
                     .onTapGesture { monitor.lastError = nil }
             }
         }
@@ -207,10 +196,9 @@ struct PopoverView: View {
                     }
                 }
             }
-            if let current, let why = OverviewPage.sourceText(current) ?? current.culpritText {
-                Text(why).font(Theme.caption).foregroundStyle(Theme.textSecondary).lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(current.flatMap { OverviewPage.sourceText($0) ?? $0.culpritText } ?? tr("Checking…"))
+                .font(Theme.caption).foregroundStyle(Theme.textSecondary).lineLimit(2)
+                .frame(maxWidth: .infinity, minHeight: 30, maxHeight: 30, alignment: .topLeading)
             HStack(spacing: 5) {
                 ForEach([panel.chip, PanelFormat.gb(panel.memoryTotal) + " GB", panel.macOS] + (PanelModel.uptime.map { [PanelFormat.uptime($0)] } ?? []), id: \.self) { fact in
                     Text(fact).font(Theme.label).foregroundStyle(Theme.textTertiary)
@@ -310,15 +298,15 @@ struct PopoverView: View {
             if fans.isEmpty {
                 Text(monitor.sampledFans == nil ? monitor.fanEmptyMessage : tr("No fans")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
             } else if monitor.policiesAvailable {
-                let policies = fans.map { monitor.pendingPolicies[$0.id] ?? monitor.policies[$0.id] ?? .auto }
+                let policies = fans.map { FanControlPresentation.selectedPolicy(fan: $0.id, available: monitor.policiesAvailable, policies: monitor.policies, pending: monitor.pendingPolicies, state: monitor.fanControlState) }
                 let allAuto = policies.allSatisfy { $0 == .auto }
                 let allMax = zip(fans, policies).allSatisfy { fan, policy in
-                    if case .fixed(let rpm) = policy, let range=fan.validRange { return rpm.isInfinite || rpm >= range.max } else { return false }
+                    if case .fixed(let rpm)? = policy, let range=fan.validRange { return rpm.isInfinite || rpm >= range.max } else { return false }
                 }
                 Text(tr("Requested policy")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
                 HStack(spacing: 4) {
-                    PanelButton(title: tr("Auto"), on: allAuto) { fans.forEach { monitor.setPolicy(.auto, fan: $0.id) } }
-                    PanelButton(title: tr("Max"), on: allMax) { fans.forEach { monitor.setPolicy(.fixed(rpm: .infinity), fan: $0.id) } }
+                    PanelButton(title: tr("Auto"), on: allAuto) { monitor.setPolicy(.auto, fans: fans.map(\.id)) }
+                    PanelButton(title: tr("Max"), on: allMax) { monitor.setPolicy(.fixed(rpm: .infinity), fans: fans.map(\.id)) }
                         .disabled(fans.contains { $0.validRange == nil })
                 }
                 .disabled(monitor.helperBusy).padding(.top, 4)
@@ -440,9 +428,9 @@ struct QuickFanSwitch: View {
     let fan: FanReading
 
     /// These buttons select desired policies; register observations are separate.
-    var current: FanPolicy { monitor.pendingPolicies[fan.id] ?? monitor.policies[fan.id] ?? .auto }
-    var isMax: Bool { if case .fixed(let r) = current, let max = fan.max { return r.isInfinite || r >= max } else { return false } }
-    var isCustom: Bool { current != .auto && !isMax }
+    var current: FanPolicy? { FanControlPresentation.selectedPolicy(fan: fan.id, available: monitor.policiesAvailable, policies: monitor.policies, pending: monitor.pendingPolicies, state: monitor.fanControlState) }
+    var isMax: Bool { if case .fixed(let r)? = current, let max = fan.max { return r.isInfinite || r >= max } else { return false } }
+    var isCustom: Bool { current != nil && current != .auto && !isMax }
 
     var body: some View {
         HStack(spacing: 4) {

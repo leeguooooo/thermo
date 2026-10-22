@@ -548,14 +548,19 @@ final class Monitor: ObservableObject {
     }
 
     func setPolicy(_ policy: FanPolicy, fan: Int) {
-        guard !helperBusy else { return }
+        setPolicy(policy, fans: [fan])
+    }
+
+    func setPolicy(_ policy: FanPolicy, fans: [Int]) {
+        guard !helperBusy, !fans.isEmpty else { return }
         do { try policy.validate() } catch { lastError = "\(error)"; return }
+        let changes = Set(fans).sorted().map { ($0, policy) }
         guard [.running, .outdated].contains(helperState) else {
-            pendingPolicies[fan] = policy
+            for (fan, policy) in changes { pendingPolicies[fan] = policy }
             if !settingUp { beginSetup() }
             return
         }
-        applyPolicies([(fan, policy)])
+        applyPolicies(changes)
     }
 
     private func applyPolicies(_ changes: [(Int, FanPolicy)]) {

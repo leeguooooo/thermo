@@ -2,6 +2,22 @@ import XCTest
 @testable import ThermoKit
 
 final class FanDiscoveryTests: XCTestCase {
+    func testModeDiscoverySupportsLowercaseWithoutChangingUppercasePreference() throws {
+        let lower = FanDescriptor.discover(index: 0, name: "M5") { $0 == "F0md" }
+        XCTAssertTrue(lower.hasModeKey)
+        XCTAssertEqual(lower.modeKey, "F0md")
+        let both = FanDescriptor.discover(index: 10, name: "Both") { [FourCC("FAMd"), FourCC("FAmd")].contains($0) }
+        XCTAssertEqual(both.modeKey, "FAMd")
+        XCTAssertFalse(FanDescriptor.discover(index: 0, name: "None") { _ in false }.hasModeKey)
+        let roundTrip = try XCTUnwrap(Discovery(cache: discovery(known: true, fans: [lower]).cacheData))
+        XCTAssertEqual(roundTrip.fans.first, lower)
+        let oldCache = String(decoding: discovery(known: true, fans: [lower]).cacheData, as: UTF8.self)
+            .replacingOccurrences(of: "thermo-discovery \(Discovery.version)", with: "thermo-discovery 3")
+        XCTAssertNil(Discovery(cache: Data(oldCache.utf8)))
+        let legacy = try JSONDecoder().decode(FanDescriptor.self, from: Data(#"{"index":0,"name":"Old","hasModeKey":true}"#.utf8))
+        XCTAssertEqual(legacy.modeKey, "F0Md")
+    }
+
     private enum Fault: Error { case unreadable }
     private func descriptor(_ index: Int, _ count: Int) -> FanDescriptor {
         FanDescriptor(index: index, name: "Fan \(index)", hasModeKey: true)
