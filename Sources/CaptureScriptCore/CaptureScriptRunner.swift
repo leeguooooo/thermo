@@ -1,7 +1,7 @@
 import Foundation
 import Darwin
 
-public struct CaptureScriptResult:Sendable,Equatable {
+public struct CaptureScriptResult:Codable,Sendable,Equatable {
     public var value:CaptureScriptValue
     public var logs:[String]
     public init(value:CaptureScriptValue,logs:[String]){self.value=value;self.logs=logs}

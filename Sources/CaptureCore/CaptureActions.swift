@@ -21,6 +21,7 @@ public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
         case .resetZoom:return "Reset current pin view";case .rotate:return "Rotate current image";case .flip:return "Flip current image";case .undo:return "Undo image annotation";case .redo:return "Redo image annotation"
         }
     }
+    public var supportsScript:Bool { ![.script,.scrolling,.recording,.recordingDrafts,.openImage,.saveImage].contains(self) }
     public var needsPin:Bool { [.quickSaveImage,.showPin,.closePin,.copyImage,.copyContent,.saveImage,.recognize,.toggleTop,.toggleLock,.resetZoom,.rotate,.flip,.undo,.redo].contains(self) }
     public var imageOnly:Bool { [.quickSaveImage,.copyImage,.saveImage,.recognize,.rotate,.flip,.undo,.redo].contains(self) }
 }

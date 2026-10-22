@@ -105,6 +105,7 @@ struct App {
         case "activity": try ComputeCommand(app: self).run(rest)
         case "pulse", "status": try PulseCommand(app: self).run(rest)
         case "tabs": try TabsCommand(app: self).run(rest)
+        case "capture":try CaptureCommand(app:self).run(rest)
         case "search": try SearchCommand(app: self).run(rest)
         case "settings", "config": try SettingsCommand(app: self).run(rest)
         case "awake": try AwakeCommand(app: self).run(rest)

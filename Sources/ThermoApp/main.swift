@@ -277,6 +277,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     func applicationWillTerminate(_ notification: Notification) {
         MenuBarManager.shared.shutdown()
         LocalSearchShortcut.shared.shutdown()
+        CaptureCLIHost.shared.cancelActive()
         CaptureWorkspace.shared.shutdown()
         LocalSearchModel.shared.stop()
         // Fan policies live in the helper and intentionally survive the app quitting.

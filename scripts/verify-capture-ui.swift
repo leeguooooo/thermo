@@ -3,6 +3,8 @@
 import AppKit
 import AVFoundation
 import CaptureCore
+import AgentCore
+import ThermoKit
 import CaptureScriptCore
 import ThermoL10n
 import SwiftUI
@@ -32,6 +34,8 @@ import SwiftUI
         var pinSession:CapturePinSession?
         var captureWorkspace:CaptureWorkspace?
         var shortcutModel:CaptureShortcutModel?
+        var cliHost:CaptureCLIHost?
+        var cliServer:AppControlServer?
         if Bundle.main.object(forInfoDictionaryKey:"ThermoSavingReview") as? Bool == true,
            let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
             let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)
@@ -71,6 +75,15 @@ import SwiftUI
                 struct Record:Codable {let value:CaptureScriptValue;let logs:[String]}
                 try JSONEncoder().encode(Record(value:result.value,logs:result.logs)).write(to:root.appendingPathComponent("script-result.json"),options:.atomic)
                 return result
+            }
+            if Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureCLIReview") as? Bool == true {
+                do {
+                    let host=CaptureCLIHost(workspace:workspace),directory=root.appendingPathComponent("control"),cli=Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/thermo")
+                    let trust=try LocalControlPeerTrust(team:CodeSignature.teamIdentifier(),developmentExecutable:cli)
+                    cliHost=host;cliServer=try AppControlServer(directory:directory,authorize:{trust.accepts(auditToken:$0)}) {request,reply in Task{@MainActor in reply(await host.handle(request))}}
+                    let info=["directory":directory.path,"cli":cli.path]
+                    try JSONSerialization.data(withJSONObject:info).write(to:root.appendingPathComponent("control-info.json"),options:.atomic)
+                } catch {workspace.saving.issue=error.localizedDescription}
             }
             workspace.shortcuts=model;captureWorkspace=workspace;shortcutModel=model;pinSession=session
             do {
@@ -216,7 +229,7 @@ import SwiftUI
             annotationWindow=window;window.showWindow(nil)
         } else { let window=CaptureEditor(image:image,onClose:{});annotationWindow=window;window.showWindow(nil) }
         DispatchQueue.main.asyncAfter(deadline: .now()+600) { app.terminate(nil) }
-        withExtendedLifetime((recordingWindow,annotationWindow,pinSession,captureWorkspace,shortcutModel)) { app.run() }
+        withExtendedLifetime((recordingWindow,annotationWindow,pinSession,captureWorkspace,shortcutModel,cliHost,cliServer)) { app.run() }
     }
 }
 

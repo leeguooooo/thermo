@@ -3,11 +3,12 @@ import CaptureCore
 import CaptureScriptCore
 
 extension CaptureWorkspace {
-    func executeScript(_ source:String) async throws -> CaptureScriptResult {
+    func executeScript(_ source:String,timeout:TimeInterval=300) async throws -> CaptureScriptResult {
+        guard !scriptRunning else{throw CaptureSaveFailure.busy};scriptRunning=true;defer{scriptRunning=false}
         let worker=scriptWorker ?? Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/thermo-capture-script")
         guard FileManager.default.isExecutableFile(atPath:worker.path) else {throw CaptureScriptFailure.unavailable}
         do {
-            let result=try await CaptureScriptRunner.run(source:source,worker:worker) { [weak self] action in
+            let result=try await CaptureScriptRunner.run(source:source,worker:worker,timeout:timeout) { [weak self] action in
                 guard let self else {throw CaptureScriptFailure.unavailable};return try await self.performScriptAction(action)
             }
             try pinSession.flush();return result

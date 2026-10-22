@@ -49,3 +49,32 @@ if (thermo.perform('screenshot')) {
 “取消截图脚本”会终止脚本进程，并取消正在等待的截图或 OCR 请求。OCR 的底层计算和已经开始的同步写入可能继续收尾，但取消后不会执行后续脚本动作。已经完成的复制、保存和贴图修改不会回滚。脚本成功返回前会刷新贴图库；错误路径也尝试保留已完成的修改。
 
 完整 PixPin 脚本 API、预设/直接区域截图、文件列表/选择文件、系统命令、翻译、CLI 及更多录屏控制仍待接入。真实截图权限、系统选择器取消、不同键盘布局与跨应用物理热键仍需实机验收。
+
+## 命令行
+
+使用包含 Capture 控制的 Thermo 应用与配套 CLI。应用须已运行；命令通过现有同用户、签名校验的应用控制通道执行，不启动 root helper。
+
+```sh
+thermo capture actions --json
+thermo capture action status --json
+thermo capture run --code "console.log('ready'); return thermo.perform('status');" --json
+thermo capture run --file ./capture.js --json
+thermo capture action screenshotCopy --json
+```
+
+`capture actions` 列出动作 ID 和 `scriptSupported`。`capture action` 调用一个同步脚本动作；`capture run` 接受 `--code` 或 `--file`，两者只能选一个。文件须是普通 UTF-8 文件，源码上限 16 KiB。调用即执行；`--dry-run` 只核对字段、动作支持及源码大小，不运行代码、不检查 JavaScript 语法，也不请求截图权限。
+
+CLI 默认等到操作返回，脚本的应用端墙钟上限为 280 秒，客户端默认等待 290 秒；可用 `--timeout 1…300` 调整客户端等待时间。客户端超时不会自动取消或重发原操作。错误会给出原请求 ID，使用它查询状态：
+
+```sh
+thermo capture status REQUEST_UUID --json
+thermo capture cancel REQUEST_UUID --json
+```
+
+`status` 不带 ID 时读取最近一次 CLI 运行记录，没有记录时为 `idle`。`cancel` 必须指定 ID，只取消对应的活动 CLI 请求。取消回复中的 `cancelRequested` 表示已发出取消请求；用 `status` 确认最终阶段。应用保留最近 32 次已启动运行的结果；更旧的记录或重启前的记录会变成 `unknown`，不能据此认定操作没有执行。进程存续期间，已收过的运行请求 ID 即使结果已被移出缓存，也不能重放。
+
+JSON 报告使用 `schema: 1`，包含 `id`、`phase`、`cancelRequested`，以及可选的 `result: {value, logs}` 和 `issue`。阶段为 `idle`、`validated`、`running`、`succeeded`、`failed`、`cancelled` 或 `unknown`。`succeeded` 表示 JavaScript 已完成；截图选择被用户取消时，截图动作的返回值仍为 `false`，不能仅凭脚本阶段认定已有截图。运行失败退出码为 3，取消为 130；正常的状态查询可返回一条 `failed` 运行记录并以 0 退出，需读取报告阶段。
+
+请求仍受原有 64 KiB 帧上限约束。只有这五个截图控制接口的响应上限为 4 MiB，用于保留有界日志和结果；其他控制接口保持原上限。`--control-directory DIR` 可明确选择一个独立应用实例的私有控制目录，沿用所有权、路径和签名检查；正常使用不需提供。
+
+本批没有加入 PixPin 的 `-r/-f` 兼容别名，也没有补齐文件、系统命令、直接区域、翻译及录屏生命周期 API。旧版应用收到新 CLI 请求会明确拒绝，不会把请求改为其他操作。

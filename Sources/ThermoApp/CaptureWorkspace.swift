@@ -37,6 +37,7 @@ func captureFailureMessage(_ error:Error) -> String {
     private var captureDirectory: URL?
     private var captureID:UUID?
     private var captureCompletion:((Result<Bool,Error>)->Void)?
+    @Published var scriptRunning=false
     var scriptWorker:URL?
     var scriptPasteboard:NSPasteboard?
     private var regionSelector: CaptureRegionSelector?
