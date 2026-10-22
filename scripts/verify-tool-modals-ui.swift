@@ -21,7 +21,6 @@ import ThermoKit
     }
     @objc func showPanel() {
         let monitor = AppModels.shared.monitor
-        monitor.panelBodyHeightLimit = 640
         popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor))
         popover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .maxY)
         popover.contentViewController?.view.window?.makeKey()

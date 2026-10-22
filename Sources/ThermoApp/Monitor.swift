@@ -117,7 +117,6 @@ final class Monitor: ObservableObject {
     @Published private(set) var model = ""
     /// The menu bar icon is hidden (behind the notch or pushed off by other icons).
     @Published var iconHidden = false
-    @Published var panelBodyHeightLimit: CGFloat = 640
 
     /// Called on the main thread after each sample (menu bar title).
     var onUpdate: ((Snapshot) -> Void)?

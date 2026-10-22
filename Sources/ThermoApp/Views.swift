@@ -122,8 +122,8 @@ struct PopoverView: View {
                 ScrollView(.vertical) {
                     mainSections
                 }
-                // Live samples and errors scroll inside a stable viewport.
-                .frame(height: min(640, monitor.panelBodyHeightLimit))
+                // Live samples and errors scroll inside a stable viewport that shrinks on short screens.
+                .frame(minHeight: 120, idealHeight: 640, maxHeight: 640)
                 // Features that open their own panel, as small tiles two by two.
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: Theme.Space.s), GridItem(.flexible(), spacing: Theme.Space.s)],
                           spacing: Theme.Space.s) {
