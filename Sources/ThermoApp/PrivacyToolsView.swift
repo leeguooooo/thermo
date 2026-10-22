@@ -131,6 +131,7 @@ struct PrivacyToolsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.l) {
+            ClaudeLocalDiagnosticsView()
             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                 Image(systemName: "hand.raised").font(.system(size: 11)).foregroundStyle(Theme.textTertiary).accessibilityHidden(true)
                 Text(tr("Explicit controls for local settings. Review each action before applying it. No account restriction or anonymity guarantees."))
