@@ -1,0 +1,84 @@
+{
+  "status": "partial",
+  "recordedAt": "2026-10-22T06:37:18.914047+00:00",
+  "baseCommit": "3e12ec8181e0f7ee540635ced8b5774aebfc7953",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureDocument.swift": "f4af5dedcc4c795e8d0a8a9aac7eaa3ed4fb6df87821a5cc947861997b035993",
+    "Sources/CaptureCore/CaptureMovieExport.swift": "5876537d39909a5c738e965a3cbd69bdb448260b5a108c8dacde7c9697a83b06",
+    "Sources/CaptureCore/CaptureRecordingDrafts.swift": "2c110953d478a9e1c2e03c0e99a8a1eb81a630df84d0d458b3d956b51639ad2c",
+    "Sources/CaptureCore/CaptureAnimationWriter.swift": "8acec1a35423cd60750ad8fc27903ecaa9b93426b5463f350e3fa5d24bbc04b0",
+    "Sources/CaptureCore/CaptureFrameArchive.swift": "9e56e208e7e87bc3f79762f1909e0209d737792098eee8bcd79f4459a2c84f2f",
+    "Sources/CaptureCore/CaptureNormalEdits.swift": "ee36fd8aec1f329e4c910b89719bf2f6ac20f616915706a104b56d0eec00e4c8",
+    "Sources/CaptureCore/CaptureNormalRenderer.swift": "613896d8a9bda1af94d98d4ffc9ed15d8413f65149c75f947ae9f3801a2bead8",
+    "Sources/ThermoApp/CaptureRecording.swift": "fa28b0a6fd2d6e16ed463e78ef9d9217e189009f34421112a2d78a0dd4e92180",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "023ec53d1e129802af85391d00da6e9f85df5c422d75a9e6da36b6ffb35c58c0",
+    "Sources/ThermoApp/CaptureNormalOverlay.swift": "cf432dd45be13af2229606c12fc17777db069ee535821b921701eaa74112bcb6",
+    "Sources/ThermoL10n/ZhHans.swift": "29834c24c4819e6dfb1b757e607205e3f50d047bea6734c3a5d4253de7cdfad2",
+    "Tests/CaptureCoreTests/CaptureFrameArchiveTests.swift": "628ac366be52ace467dc2b1071d35c2ed0a213e4f2daaec50e2d21062a7a1b53",
+    "Tests/CaptureCoreTests/CaptureNormalExportTests.swift": "7fe45d8f5a80198910e5e4d2cb95e1d84c1e1465fe740544eb3d000741c021e3",
+    "scripts/verify-capture-ui.py": "9fab9b3cf5d7a6869070c755322ff5d3e95eeef89b561355e4facc1af9569755",
+    "scripts/verify-capture-ui.swift": "a886268849d1991206aa996a5a3f2376ed5713f38e0099dfa35f1c6d5d49001d",
+    "scripts/verify-recording-recovery.py": "51a21ee202380f73a98853b31bca63fca9d1f431f24da628914041bf4adc22fb",
+    "scripts/verify-recording-recovery.swift": "c2ea04e8bbbccbffdd67b52d2c5946bd22c98c47ca0a27e107e31fcb31249380"
+  },
+  "integrationTests": {
+    "command": "swift test -j 4 --filter 'CaptureCoreTests|PresentationTests|MainOnlyExitTests'",
+    "CaptureCore": 46,
+    "ThermoApp": 27,
+    "failures": 0,
+    "logSHA256": "4ba574c226b587a9d8e8f5a3dd5d6b7c6157acb9ce1ca647b0acffde3fca0b6a",
+    "context": "Working tree contains unrelated menu bar and Spotlight development. Those changes, including separate translation entries, are excluded from this task commit."
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-ordinary-qa-delivery-01a/ThermoCaptureQA.app",
+    "binarySHA256": "61961666cf7c1085910467b8f7146177e2499a1f796a4d8eea42897a7b7ea924",
+    "verified": [
+      "Ordinary archive generates playable preview",
+      "Cursor hidden after recording",
+      "Watermark rendered after recording",
+      "Width cropped to 50 percent",
+      "0.5 to 2.5 second trim retained after preview refresh",
+      "Edits persisted to independent JSON",
+      "Annotation editor and visibility interval open"
+    ],
+    "unverified": [
+      "Live screen and mouse capture",
+      "Actual system audio capture",
+      "Canvas mouse drawing",
+      "Native foreground save completion",
+      "Permissions and multiple displays"
+    ]
+  },
+  "recovery": {
+    "recordedAt": "2026-10-22T06:32:21.629244+00:00",
+    "termination": "SIGKILL",
+    "workerExitCode": -9,
+    "decoded": {
+      "draftStatus": "recording",
+      "duration": 9.2,
+      "height": 120,
+      "playable": true,
+      "sourceFrames": 46,
+      "sourceMode": "normal",
+      "width": 160
+    },
+    "sourceSHA256": "c2ea04e8bbbccbffdd67b52d2c5946bd22c98c47ca0a27e107e31fcb31249380",
+    "productionSourceSHA256": {
+      "Sources/CaptureCore/CaptureAnimationWriter.swift": "8acec1a35423cd60750ad8fc27903ecaa9b93426b5463f350e3fa5d24bbc04b0",
+      "Sources/CaptureCore/CaptureDocument.swift": "f4af5dedcc4c795e8d0a8a9aac7eaa3ed4fb6df87821a5cc947861997b035993",
+      "Sources/CaptureCore/CaptureFrameArchive.swift": "9e56e208e7e87bc3f79762f1909e0209d737792098eee8bcd79f4459a2c84f2f",
+      "Sources/CaptureCore/CaptureMovieExport.swift": "5876537d39909a5c738e965a3cbd69bdb448260b5a108c8dacde7c9697a83b06",
+      "Sources/CaptureCore/CaptureMovieWriter.swift": "ecebf73a94215ba1648fe721fbec98dc043cf3b641c17c23f88424aa72c09ebd",
+      "Sources/CaptureCore/CaptureNormalEdits.swift": "ee36fd8aec1f329e4c910b89719bf2f6ac20f616915706a104b56d0eec00e4c8",
+      "Sources/CaptureCore/CaptureNormalRenderer.swift": "613896d8a9bda1af94d98d4ffc9ed15d8413f65149c75f947ae9f3801a2bead8",
+      "Sources/CaptureCore/CaptureRecordingDrafts.swift": "2c110953d478a9e1c2e03c0e99a8a1eb81a630df84d0d458b3d956b51639ad2c",
+      "Sources/CaptureCore/CaptureStitcher.swift": "e0d309493122759107cb794e56d163c50086feccda0728244f21c81418e66c29"
+    },
+    "baseCommit": "3e12ec8181e0f7ee540635ced8b5774aebfc7953"
+  },
+  "remainingOrdinaryFeatures": [
+    "Keyboard layer",
+    "Camera layer",
+    "Microphone layer"
+  ]
+}

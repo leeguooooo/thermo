@@ -271,7 +271,7 @@ private struct CaptureEditorView: View {
     }
 }
 
-private extension CaptureTool {
+extension CaptureTool {
     var label: String {
         switch self {
         case .move: return "Move / view"; case .rectangle: return "Rectangle"; case .ellipse: return "Ellipse"
@@ -290,7 +290,7 @@ private extension CaptureTool {
     }
 }
 
-private struct CaptureCanvas: NSViewRepresentable {
+struct CaptureCanvas: NSViewRepresentable {
     @ObservedObject var model: CaptureEditorModel
     func makeNSView(context: Context) -> Canvas { Canvas(model: model) }
     func updateNSView(_ view: Canvas, context: Context) { view.model = model; view.needsDisplay = true }

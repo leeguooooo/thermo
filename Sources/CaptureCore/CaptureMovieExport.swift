@@ -1,8 +1,5 @@
 import AVFoundation
-import CWebPEncoder
 import Foundation
-import ImageIO
-import UniformTypeIdentifiers
 
 public enum CaptureMovieFormat: String, CaseIterable, Sendable {
     case mp4, gif, webp, apng
@@ -64,49 +61,11 @@ public enum CaptureMovieExport {
         guard session.status == .completed else { throw session.error ?? CaptureMovieFailure.encoding("MP4 export failed") }
     }
     private static func exportAnimation(asset: AVAsset, to output: URL, range: CMTimeRange, options: Options) throws {
-        let seconds = range.duration.seconds/options.speed
-        let countDouble = ceil(seconds*Double(options.fps))
-        guard countDouble.isFinite, countDouble >= 1, countDouble <= 10000, seconds*1000 <= Double(Int32.max) else { throw CaptureMovieFailure.encoding("Animation export is limited to 10,000 frames. Trim the clip or lower the frame rate.") }
-        let count = Int(countDouble)
-        let generator = AVAssetImageGenerator(asset:asset); generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width:options.maxDimension,height:options.maxDimension)
+        let generator=AVAssetImageGenerator(asset:asset); generator.appliesPreferredTrackTransform=true
+        generator.maximumSize=CGSize(width:options.maxDimension,height:options.maxDimension)
         generator.requestedTimeToleranceBefore = .zero; generator.requestedTimeToleranceAfter = .zero
-        var destination: CGImageDestination?
-        if options.format != .webp {
-            let type = options.format == .gif ? UTType.gif.identifier : UTType.png.identifier
-            guard let dest = CGImageDestinationCreateWithURL(output as CFURL,type as CFString,count,nil) else { throw CaptureFailure.exportFailed }
-            destination = dest
-            if options.format == .gif { CGImageDestinationSetProperties(dest,[kCGImagePropertyGIFDictionary:[kCGImagePropertyGIFLoopCount:0]] as CFDictionary) }
-            else { CGImageDestinationSetProperties(dest,[kCGImagePropertyPNGDictionary:[kCGImagePropertyAPNGLoopCount:0]] as CFDictionary) }
+        try CaptureAnimationWriter.write(to:output,format:options.format,seconds:range.duration.seconds/options.speed,fps:options.fps) { time in
+            try generator.copyCGImage(at:CMTime(seconds:range.start.seconds+time*options.speed,preferredTimescale:60000),actualTime:nil)
         }
-        var webp: OpaquePointer?
-        defer { if let webp { ThermoWebPEncoderDelete(webp) } }
-        for index in 0..<count {
-            try Task.checkCancellation()
-            try autoreleasepool {
-                let sourceSeconds = range.start.seconds+Double(index)/Double(options.fps)*options.speed
-                let image = try generator.copyCGImage(at:CMTime(seconds:sourceSeconds,preferredTimescale:60_000),actualTime:nil)
-                let delay = min(1/Double(options.fps),seconds-Double(index)/Double(options.fps))
-                if options.format == .webp {
-                    if webp == nil { webp = ThermoWebPEncoderCreate(Int32(image.width),Int32(image.height),85) }
-                    guard let webp, let ctx = CGContext(data:nil,width:image.width,height:image.height,bitsPerComponent:8,bytesPerRow:image.width*4,
-                        space:CGColorSpaceCreateDeviceRGB(),bitmapInfo:CGImageAlphaInfo.premultipliedLast.rawValue), let data = ctx.data else { throw CaptureFailure.exportFailed }
-                    ctx.setFillColor(CGColor(gray:1,alpha:1)); ctx.fill(CGRect(x:0,y:0,width:image.width,height:image.height))
-                    ctx.draw(image,in:CGRect(x:0,y:0,width:image.width,height:image.height))
-                    guard ThermoWebPEncoderAdd(webp,data.assumingMemoryBound(to:UInt8.self),Int32(image.width*4),Int32((Double(index)*1000/Double(options.fps)).rounded())) != 0 else { throw CaptureFailure.exportFailed }
-                } else if let destination {
-                    let properties: CFDictionary
-                    if options.format == .gif { properties = [kCGImagePropertyGIFDictionary:[kCGImagePropertyGIFDelayTime:delay,kCGImagePropertyGIFUnclampedDelayTime:delay]] as CFDictionary }
-                    else { properties = [kCGImagePropertyPNGDictionary:[kCGImagePropertyAPNGDelayTime:delay,kCGImagePropertyAPNGUnclampedDelayTime:delay]] as CFDictionary }
-                    CGImageDestinationAddImage(destination,image,properties)
-                }
-            }
-        }
-        if let webp {
-            var data: UnsafeMutablePointer<UInt8>?, size: Int = 0
-            guard ThermoWebPEncoderFinish(webp,Int32((seconds*1000).rounded()),&data,&size) != 0, let data else { throw CaptureFailure.exportFailed }
-            defer { ThermoWebPReleaseData(data) }
-            try Data(bytes:data,count:size).write(to:output,options:.atomic)
-        } else if let destination { guard CGImageDestinationFinalize(destination) else { throw CaptureFailure.exportFailed } }
     }
 }

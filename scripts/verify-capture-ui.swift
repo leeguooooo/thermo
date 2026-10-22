@@ -41,7 +41,10 @@ import ThermoL10n
             Task {
                 do {
                     let source = root.appendingPathComponent("fixture-"+UUID().uuidString+".mp4")
-                    let writer = try CaptureMovieWriter(url:source,width:320,height:240,fps:16)
+                    let ordinary=Bundle.main.object(forInfoDictionaryKey:"ThermoOrdinaryReview") as? Bool == true
+                    let draft=ordinary ? try window.model.store.create(mode:.normal) : nil
+                    let archive=try draft.map { try CaptureFrameArchive(root:window.model.store.archive($0.id),header:.init(width:320,height:240,fps:16)) }
+                    let writer=ordinary ? nil : try CaptureMovieWriter(url:source,width:320,height:240,fps:16)
                     for index in 0..<48 {
                         var result:CVPixelBuffer?
                         CVPixelBufferCreate(kCFAllocatorDefault,320,240,kCVPixelFormatType_32BGRA,[kCVPixelBufferCGImageCompatibilityKey:true,kCVPixelBufferCGBitmapContextCompatibilityKey:true] as CFDictionary,&result)
@@ -51,10 +54,20 @@ import ThermoL10n
                         ctx.setFillColor(NSColor.systemBlue.cgColor); ctx.fill(CGRect(x:0,y:0,width:320,height:240))
                         ctx.setFillColor(NSColor.white.cgColor); ctx.fillEllipse(in:CGRect(x:index*5,y:100,width:50,height:50))
                         CVPixelBufferUnlockBaseAddress(buffer,[])
-                        while try !writer.appendVideo(buffer,at:CMTime(seconds:100+Double(index)/16,preferredTimescale:60000)) { try await Task.sleep(nanoseconds:1_000_000) }
+                        let time=CMTime(seconds:100+Double(index)/16,preferredTimescale:60000)
+                        if let archive {
+                            while try !archive.appendVideo(buffer,at:time) { try await Task.sleep(nanoseconds:1_000_000) }
+                            archive.recordPointer(.init(x:0.1+Double(index)/60,y:0.75,buttons:(12...16).contains(index) ? 1 : 0),at:time)
+                        } else if let writer {
+                            while try !writer.appendVideo(buffer,at:time) { try await Task.sleep(nanoseconds:1_000_000) }
+                        }
                     }
-                    _ = try await writer.finish(at:CMTime(seconds:103,preferredTimescale:60000))
-                    await window.model.preview(source)
+                    if let archive,var draft {
+                        _=try await archive.finish(at:CMTime(seconds:103,preferredTimescale:60000))
+                        draft.status = .ready;try window.model.store.update(draft);window.model.reopen(draft)
+                    } else if let writer {
+                        _=try await writer.finish(at:CMTime(seconds:103,preferredTimescale:60000));await window.model.preview(source)
+                    }
                     window.showWindow(nil)
                 } catch { window.model.issue = error.localizedDescription }
             }

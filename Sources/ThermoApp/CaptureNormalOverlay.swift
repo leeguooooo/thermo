@@ -1,0 +1,107 @@
+import AppKit
+import CaptureCore
+import SwiftUI
+import ThermoL10n
+
+@MainActor final class CaptureNormalOverlayWindow:NSWindowController {
+    private let model:CaptureNormalOverlayModel
+    init(image:CGImage,annotations:[CaptureVectorAnnotation],duration:Double,apply:@escaping([CaptureVectorAnnotation])->Void) {
+        model=CaptureNormalOverlayModel(image:image,annotations:annotations,duration:duration,apply:apply)
+        let window=NSWindow(contentRect:NSRect(x:0,y:0,width:880,height:680),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
+        window.title=tr("Recording annotations");window.isReleasedWhenClosed=false;window.level = .floating;window.center()
+        super.init(window:window)
+        model.close={ [weak self] in self?.close() }
+        window.contentView=NSHostingView(rootView:CaptureNormalOverlayView(model:model))
+    }
+    required init?(coder:NSCoder) { fatalError("init(coder:) is not used") }
+}
+
+@MainActor private final class CaptureNormalOverlayModel:ObservableObject {
+    let canvas:CaptureEditorModel
+    @Published var start:Double
+    @Published var end:Double
+    let duration:Double
+    let apply:([CaptureVectorAnnotation])->Void
+    var close:(()->Void)?
+    init(image:CGImage,annotations:[CaptureVectorAnnotation],duration:Double,apply:@escaping([CaptureVectorAnnotation])->Void) {
+        canvas=CaptureEditorModel(image:image);self.duration=duration;self.apply=apply
+        start=annotations.first?.start ?? 0;end=annotations.first?.end ?? duration
+        for item in annotations { if let annotation=item.annotation { canvas.document.append(annotation) } }
+    }
+    func commit() {
+        guard start >= 0,end > start,end <= duration else { return }
+        apply(canvas.document.annotations.map { CaptureVectorAnnotation($0,start:start,end:end) });close?()
+    }
+}
+private struct CaptureNormalOverlayView:View {
+    @ObservedObject var model:CaptureNormalOverlayModel
+    var body:some View {
+        VStack(spacing:10) {
+            NormalOverlayTools(model:model.canvas)
+            CaptureCanvas(model:model.canvas).frame(maxWidth:.infinity,maxHeight:.infinity)
+            HStack {
+                Text(tr("Visible from (s)"));TextField("",value:$model.start,format:.number).frame(width:70)
+                Text(tr("Visible until (s)"));TextField("",value:$model.end,format:.number).frame(width:70)
+                Spacer()
+                Button(tr("Apply annotations")) { model.commit() }.disabled(model.start < 0 || model.end <= model.start || model.end > model.duration)
+            }.textFieldStyle(.roundedBorder)
+        }.padding(12)
+    }
+}
+private struct NormalOverlayTools:View {
+    @ObservedObject var model:CaptureEditorModel
+    var body:some View {
+        HStack {
+            ForEach(CaptureTool.allCases.filter { $0 != .crop }) { tool in
+                Button { model.tool=tool } label: { Image(systemName:tool.symbol).frame(width:20,height:24) }
+                    .help(tr(tool.label)).accessibilityLabel(tr(tool.label)).background(model.tool == tool ? Color.accentColor.opacity(0.25) : Color.clear).cornerRadius(4)
+            }
+            ColorPicker(tr("Annotation color"),selection:$model.color).labelsHidden()
+            Slider(value:$model.lineWidth,in:1...12).frame(width:60).help(tr("Line width"))
+            Button { model.document.undo() } label: { Image(systemName:"arrow.uturn.backward") }.disabled(!model.document.canUndo).help(tr("Undo"))
+            Button { model.document.redo() } label: { Image(systemName:"arrow.uturn.forward") }.disabled(!model.document.canRedo).help(tr("Redo"))
+        }
+        if model.tool == .text { TextField(tr("Annotation text"),text:$model.text).textFieldStyle(.roundedBorder) }
+    }
+}
+
+struct CaptureNormalSettings:View {
+    @ObservedObject var model:CaptureRecordingModel
+    var body:some View {
+        VStack(alignment:.leading,spacing:8) {
+            HStack {
+                Toggle(tr("Show cursor"),isOn:$model.normalEdits.showCursor)
+                Toggle(tr("Show mouse actions"),isOn:$model.normalEdits.showClicks)
+                Slider(value:$model.normalEdits.cursorScale,in:0.25...4).frame(width:80).help(tr("Cursor size"))
+                Picker(tr("Progress display"),selection:$model.normalEdits.progress) {
+                    Text(tr("No progress overlay")).tag(CaptureNormalEdits.Progress.none)
+                    Text(tr("Elapsed time")).tag(CaptureNormalEdits.Progress.elapsed)
+                    Text(tr("Countdown")).tag(CaptureNormalEdits.Progress.remaining)
+                }
+            }
+            HStack {
+                TextField(tr("Watermark"),text:$model.normalEdits.watermark).textFieldStyle(.roundedBorder)
+                Text(tr("System volume"))
+                Slider(value:$model.normalEdits.systemVolume,in:0...1).frame(width:90).disabled(model.normalSource?.audioURL == nil)
+            }
+            HStack {
+                cropField(tr("Left (%)"),get:{ Double(model.normalEdits.crop.minX)*100 },set:{ model.normalEdits.crop.origin.x=$0/100 })
+                cropField(tr("Top (%)"),get:{ (1-Double(model.normalEdits.crop.maxY))*100 },set:{ model.normalEdits.crop.origin.y=1-$0/100-model.normalEdits.crop.height })
+                cropField(tr("Width (%)"),get:{ Double(model.normalEdits.crop.width)*100 },set:{ model.normalEdits.crop.size.width=$0/100 })
+                cropField(tr("Height (%)"),get:{ Double(model.normalEdits.crop.height)*100 },set:{ value in
+                    let top=1-model.normalEdits.crop.maxY
+                    model.normalEdits.crop.size.height=value/100;model.normalEdits.crop.origin.y=1-top-value/100
+                })
+                Button(tr("Reset crop")) { model.normalEdits.crop=CGRect(x:0,y:0,width:1,height:1) }
+            }
+            HStack {
+                Button(tr("Edit annotations…")) { model.editNormalAnnotations() }
+                Button(tr("Apply edits / refresh preview")) { model.applyNormalEdits() }.disabled(!model.normalEdits.valid)
+                Text(tr("Original frames stay editable.")).font(.caption).foregroundStyle(.secondary)
+            }
+        }.disabled(model.active || model.exporting)
+    }
+    private func cropField(_ label:String,get:@escaping()->Double,set:@escaping(Double)->Void) -> some View {
+        HStack(spacing:3) { Text(label).font(.caption);TextField("",value:Binding(get:get,set:set),format:.number).frame(width:42).textFieldStyle(.roundedBorder) }
+    }
+}

@@ -54,3 +54,24 @@ python3 scripts/verify-recording-recovery.py
 当前回归为 CaptureCore 28 项、App 表现层与退出保护 27 项，共 55 项。原生 QA 已观察到蓝底移动图形视频播放、中文起止字段、倍速和格式选项。播放器显式链接 AVKit，使用 AVPlayerView。
 
 保存面板的前台交互仍待验证。探针记录显示应用 active=false、面板 key=false；目录可写，public.mpeg-4 或 WebP 类型和目标 URL 均有效，但保存按钮不可用。已切换为异步 sheet，并保留一个独立 QA 等待前台验收，没有将此流程记作通过。
+
+
+## 普通录制素材与后期处理
+
+当前普通模式保存独立 PNG/JPEG 帧、鼠标轨迹/按钮/滚轮数据和 PCM 音频。预览用 MP4 是可重建的缓存；普通模式导出 GIF/APNG/WebP 直接读取图片帧，MP4 从图片帧编码，PCM 音轨单独编码 AAC 后合并。
+
+新增验证覆盖：暂停剔除、取消与并发收尾时保留所有已接收帧、部分写入的日志尾部恢复、拒绝损坏日志和符号链接、没有 MP4 缓存时仍可打开普通素材、裁剪方向、标注的显示时段、指针移动和隐藏、水印与进度、透明帧复用画布时无上一帧残留、WebP 半透明数据、两种 PCM 排列与左右声道、剪辑及音量、取消导出保留已有文件、10 毫秒短片不被延长到一个完整帧周期。
+
+GIF 时间单位由 [GIF89a 规格](https://www.w3.org/Graphics/GIF/spec-gif89a.txt) 定义，WebP 使用[毫秒帧间隔](https://developers.google.com/speed/webp/docs/riff_container)。编码器按累计时间量化；本机 ImageIO 的 APNG 输出使用毫秒精度。两种来源分别导出 16 FPS、1.8 秒剪辑的 GIF/APNG/WebP，解码后总时长误差不超过 2 毫秒，首尾颜色也符合源画面。
+
+当前回归为 CaptureCore 46 项、App 表现层与退出保护 27 项，共 73 项。原生普通录制 QA 已观察到：从独立帧生成预览，隐藏指针、加入水印、宽度裁成 50% 后实际画面更新，修改写入 edits.json，剪辑区间 0.5–2.5 秒在刷新预览后保留；标注窗口与显示时段控件可打开。鼠标拖绘和真实屏幕输入尚未验收。
+
+普通模式的崩溃验证：
+
+```sh
+python3 scripts/verify-recording-recovery.py --mode normal --report /tmp/ordinary-recovery.json
+```
+
+验证先确认自己创建的合成录制进程已接收帧且仍存活，再发送 SIGKILL；随后读取完整日志前缀、重建 MP4 并解码。[最近记录](ordinary-recovery-validation.json) 绑定生产 CaptureCore 源码摘要。该结果不等于真实 ScreenCaptureKit 输入、音频或全部尾部都可恢复。
+
+原生 QA 构建：`python3 scripts/verify-capture-ui.py --ordinary-review`。合成素材与草稿目录独立，不启动 helper 或录入真实鼠标、键盘、摄像头、麦克风。前台保存面板验收仍未通过，键盘/摄像头/麦克风图层也没有完成。

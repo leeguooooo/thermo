@@ -1,7 +1,7 @@
 import AppKit
 import Vision
 
-public enum CaptureTool: String, CaseIterable, Identifiable {
+public enum CaptureTool: String, CaseIterable, Identifiable, Codable, Sendable {
     case move, rectangle, ellipse, line, arrow, pencil, highlight, redact, text, number, crop
     public var id: String { rawValue }
 }
