@@ -117,7 +117,6 @@ final class Monitor: ObservableObject {
     @Published private(set) var model = ""
     /// The menu bar icon is hidden (behind the notch or pushed off by other icons).
     @Published var iconHidden = false
-    @Published var panelBodyHeightLimit: CGFloat = 640
     @Published private(set) var systemMemory: SystemStats.Memory?
     @Published private(set) var systemDisk: SystemStats.Disk?
     private var windowSurface: SamplingSurface = .overview

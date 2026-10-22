@@ -1,10 +1,28 @@
 import AppKit
+import os
 import UserNotifications
 import SwiftUI
 import AgentDoctor
 import CleanKit
 import ThermoKit
 import ThermoL10n
+
+/// The menu bar panel is sized once per show for the screen it opens on. SwiftUI changes while it is open
+/// must not resize it, or AppKit shifts it across the menu bar and onto the neighbouring display.
+@MainActor enum PanelPopover {
+    static func host(_ monitor: Monitor) -> NSHostingController<PopoverView> {
+        let host = NSHostingController(rootView: PopoverView(monitor: monitor))
+        host.sizingOptions = []
+        return host
+    }
+    static func size(_ popover: NSPopover, visibleHeight: CGFloat) {
+        // Asked of SwiftUI directly: with sizing options off the hosting view no longer reports a fitting size.
+        guard let host = popover.contentViewController as? NSHostingController<PopoverView> else { return }
+        let ideal = host.sizeThatFits(in: NSSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude))
+        // Leave room for the arrow and a margin; the panel's scroll area takes up the rest.
+        popover.contentSize = NSSize(width: ideal.width, height: min(ideal.height, visibleHeight - 24))
+    }
+}
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotificationCenterDelegate, NSMenuItemValidation {
@@ -46,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         popover.behavior = .transient
         popover.animates = false
         popover.delegate = self
-        popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor))
+        popover.contentViewController = PanelPopover.host(monitor)
         IdleAwakeModel.shared.onStateChange = { [weak self] in
             guard let self else { return }
             self.updateTitle(self.monitor.latest)
@@ -68,10 +86,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         monitor.onMenuUpdate = { [weak self] in
             guard let self else { return }
             self.updateTitle(self.monitor.latest)
-        }
-        NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
-                                               object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.updatePanelHeightLimit() }
         }
         menuPreferences = MenuBarPreferences.read()
         updateTitle(nil)
@@ -183,14 +197,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         item.action != #selector(openPanelFromMenu) || panelNavigationAllowed
     }
 
-    private func updatePanelHeightLimit() {
+    /// The screen the panel opens on: the one holding the menu bar icon, or the one under the pointer
+    /// when the icon is hidden. Never `NSScreen.main`, which follows the key window to another display.
+    private func panelScreen(hidden: Bool) -> NSScreen {
         let iconWindow = statusItem?.button?.window
-        let iconScreen = iconWindow?.screen ?? NSScreen.screens.first { screen in
-            iconWindow.map { screen.frame.intersects($0.frame) } ?? false
-        }
-        let screen = statusItemHidden() ? NSScreen.main : (iconScreen ?? NSScreen.main)
-        // Reserve the popover arrow, padding and the always-visible action area.
-        monitor.panelBodyHeightLimit = max(120, (screen?.visibleFrame.height ?? 800) - 220)
+        let icon = hidden ? nil : iconWindow?.screen ?? NSScreen.screens.first { screen in iconWindow.map { screen.frame.intersects($0.frame) } ?? false }
+        return icon ?? NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main ?? NSScreen.screens[0]
     }
 
     /// True when the status item sits in the notch gap or off every screen.
@@ -211,7 +223,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     /// icon cannot be seen.
     private func showPanel() {
         NSApp.activate(ignoringOtherApps: true)
-        updatePanelHeightLimit()
         let hidden = statusItemHidden()
         monitor.iconHidden = hidden
         if popover.isShown {
@@ -220,10 +231,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         }
         monitor.popoverOpen = true
         PanelModel.shared.setActive(true)
+        let screen = panelScreen(hidden: hidden)
+        PanelPopover.size(popover, visibleHeight: screen.visibleFrame.height)
         if let button = statusItem.button, !hidden {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         } else {
-            let anchor = panelAnchor()
+            let anchor = panelAnchor(on: screen)
             popover.show(relativeTo: anchor.contentView!.bounds, of: anchor.contentView!, preferredEdge: .minY)
         }
         popover.contentViewController?.view.window?.makeKey()
@@ -232,8 +245,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     private var anchorWindow: NSWindow?
 
     /// An invisible 1×1 window just below the menu bar, centred, for the popover to hang from.
-    private func panelAnchor() -> NSWindow {
-        let screen = NSScreen.main ?? NSScreen.screens[0]
+    private func panelAnchor(on screen: NSScreen) -> NSWindow {
         let top = screen.visibleFrame.maxY
         let w = anchorWindow ?? NSWindow(contentRect: .zero, styleMask: .borderless, backing: .buffered, defer: false)
         w.setFrame(NSRect(x: screen.frame.midX, y: top - 1, width: 1, height: 1), display: false)
@@ -269,6 +281,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     func closeMenuPanel() {
         if popover.isShown { popover.performClose(nil) }
+    }
+
+    /// Leaves a trace when the panel lands outside one screen, the case reported as a clipped, shifted panel.
+    func popoverDidShow(_ notification: Notification) {
+        guard let window = popover.contentViewController?.view.window else { return }
+        let frame = window.frame
+        if !NSScreen.screens.contains(where: { $0.visibleFrame.insetBy(dx: -1, dy: -1).contains(frame) }) {
+            Logger(subsystem: "dev.thermo", category: "panel").error(
+                "panel outside one screen: frame \(NSStringFromRect(frame), privacy: .public) screens \(NSScreen.screens.map { NSStringFromRect($0.frame) + "@" + String(describing: $0.backingScaleFactor) }.joined(separator: ", "), privacy: .public) iconHidden \(self.monitor.iconHidden, privacy: .public)")
+        }
     }
 
     func popoverDidClose(_ notification: Notification) {
