@@ -13,6 +13,7 @@ struct CleanScreenShortcutControls: View {
             }
             Text(tr("Optional. The shortcut starts or ends Clean Screen from any app. Hold Esc for 3 seconds to exit even without a shortcut."))
                 .font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
             if let issue=model.issue { Text(issue).font(Theme.caption).foregroundStyle(Theme.caution) }
         }
     }

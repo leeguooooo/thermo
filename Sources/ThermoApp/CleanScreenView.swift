@@ -3,13 +3,11 @@ import ThermoL10n
 
 struct CleanScreenButton: View {
     @ObservedObject private var model = CleanScreenModel.shared
-    @State private var showing = false
     var body: some View {
-        Button { showing = true } label: {
+        Button { MainWindow.show(tool: .cleanScreen) } label: {
             FeatureRow(title: tr("Clean Screen"), symbol: "sparkles.tv", note: model.issue)
         }
         .buttonStyle(.plain)
-        .sheet(isPresented:$showing) { CleanScreenSetupView(model:model) }
     }
 }
 

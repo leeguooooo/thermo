@@ -192,14 +192,11 @@ struct BatteryCareBackend: Sendable {
 }
 
 struct BatteryCareButton: View {
-    @State private var showing = false
-    @ObservedObject private var model = BatteryCareModel.shared
     var body: some View {
-        Button { showing = true } label: {
+        Button { MainWindow.show(tool: .batteryCare) } label: {
             FeatureRow(title: tr("Battery charging protection"), symbol: "battery.75")
         }
         .buttonStyle(.plain)
-        .sheet(isPresented: $showing) { BatteryCarePanel(model: model) }
     }
 }
 
