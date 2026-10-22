@@ -1,0 +1,37 @@
+{
+  "recordedAt": "2026-10-22T13:27:13.424129+00:00",
+  "sourceBase": "4443b60",
+  "status": "awaiting-explicit-screen-access-authorization",
+  "app": "/tmp/thermo-screenshot-native-qa-01a/ThermoCaptureQA.app",
+  "bundleID": "dev.thermo.capture-qa.21e04efb23bf",
+  "binarySHA256": "160b78029f8957736a8f3ca3e56d826f0d69910292131983f416a68ae17d9858",
+  "sourceSHA256": {
+    "scripts/verify-capture-ui.py": "f40f6760d2011be1ae5cb9a7133df7d72718ae1a01bec1aa62445cdb293409ad",
+    "scripts/verify-capture-ui.swift": "51002933b3ee13e74bb8f91c3d13d272b376f60d7c8862de6ad992b572b5e87a"
+  },
+  "probeBeforePermissionRequest": {
+    "attempts": 0,
+    "busy": false,
+    "capturing": false,
+    "permissionGranted": false,
+    "pins": 0,
+    "result": "Not started",
+    "savedSnapshots": []
+  },
+  "verified": [
+    "Standalone QA builds with production screenshot workspace",
+    "Ad-hoc bundle passes codesign --verify --deep --strict",
+    "QA native window visible with synthetic text and RGB target",
+    "105 CaptureCore tests pass during packaging"
+  ],
+  "pending": [
+    "Real region capture",
+    "Space window selection",
+    "Escape cancellation",
+    "Actual saved pixels and pin handoff"
+  ],
+  "permissionChanged": false,
+  "installedAppChanged": false,
+  "packageLog": "/tmp/thermo-screenshot-native-package-01a.log",
+  "packageLogSHA256": "a9c04ec4ee5b6644b7aeeeae57ecc57c5c51912e894ef5a9dc4b9056bbda2606"
+}

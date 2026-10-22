@@ -36,7 +36,17 @@ import SwiftUI
         var shortcutModel:CaptureShortcutModel?
         var cliHost:CaptureCLIHost?
         var cliServer:AppControlServer?
-        if Bundle.main.object(forInfoDictionaryKey:"ThermoSavingReview") as? Bool == true,
+        var screenshotReviewWindow:NSWindowController?
+        if Bundle.main.object(forInfoDictionaryKey:"ThermoScreenshotReview") as? Bool == true,
+           let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
+            let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)
+            workspace.saving=CaptureSaveModel(read:{nil},write:{_ in})
+            captureWorkspace=workspace;pinSession=session
+            let window=NSWindow(contentRect:NSRect(x:0,y:0,width:720,height:500),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
+            window.title="QA screenshot target";window.isReleasedWhenClosed=false
+            window.contentView=NSHostingView(rootView:CaptureScreenshotQA(workspace:workspace,root:root))
+            screenshotReviewWindow=NSWindowController(window:window);window.center();window.makeKeyAndOrderFront(nil)
+        } else if Bundle.main.object(forInfoDictionaryKey:"ThermoSavingReview") as? Bool == true,
            let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
             let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)
             let file=root.appendingPathComponent("saving.json")
@@ -240,7 +250,43 @@ import SwiftUI
             }
         } else { let window=CaptureEditor(image:image,onClose:{});annotationWindow=window;window.showWindow(nil) }
         DispatchQueue.main.asyncAfter(deadline: .now()+600) { app.terminate(nil) }
-        withExtendedLifetime((recordingWindow,annotationWindow,pinSession,captureWorkspace,shortcutModel,cliHost,cliServer)) { app.run() }
+        withExtendedLifetime((recordingWindow,annotationWindow,pinSession,captureWorkspace,shortcutModel,cliHost,cliServer,screenshotReviewWindow)) { app.run() }
+    }
+}
+
+private struct CaptureScreenshotQA:View {
+    @ObservedObject var workspace:CaptureWorkspace
+    let root:URL
+    @State private var task:Task<Void,Never>?
+    @State private var result="Not started"
+    @State private var attempts=0
+    private let clock=Timer.publish(every:0.25,on:.main,in:.common).autoconnect()
+    var body:some View {
+        VStack(spacing:18) {
+            Text("THERMO SCREENSHOT QA 12345").font(.system(size:28,weight:.bold))
+            Text("合成截图测试窗口 · Region / Space for window / Esc to cancel")
+            HStack(spacing:0) {Color.red;Color.green;Color.blue}.frame(height:140)
+            Text(CGPreflightScreenCaptureAccess() ? "Screen capture permission: granted" : "Screen capture permission: required")
+            HStack {
+                Button("Capture target / select region") {
+                    guard task == nil else{return};attempts+=1;result="Waiting for selection"
+                    task=Task { @MainActor in
+                        defer{task=nil;writeProbe()}
+                        do {result=try await workspace.captureAndWait(after:[.pin]) ? "Captured" : "Cancelled without image"}
+                        catch {result=error.localizedDescription}
+                    }
+                }.disabled(task != nil || workspace.captureBusy)
+                Button("Cancel pending capture"){task?.cancel()}.disabled(task == nil)
+            }
+            Text(result).textSelection(.enabled)
+            Text("Pins: \(workspace.pinSession.count)")
+        }.padding(24)
+            .onReceive(clock){_ in writeProbe()}
+            .onDisappear{task?.cancel();workspace.shutdown()}
+    }
+    private func writeProbe() {
+        let record:[String:Any] = ["permissionGranted":CGPreflightScreenCaptureAccess(),"busy":workspace.captureBusy,"capturing":workspace.capturing,"result":result,"attempts":attempts,"pins":workspace.pinSession.count,"savedSnapshots":workspace.pinSession.library.pins.map(\.snapshotID.uuidString)]
+        if let data=try? JSONSerialization.data(withJSONObject:record,options:[.prettyPrinted,.sortedKeys]) {try? data.write(to:root.appendingPathComponent("screenshot-probe.json"),options:.atomic)}
     }
 }
 
