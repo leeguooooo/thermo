@@ -21,9 +21,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True, help='New directory for app, logs and manifest')
     parser.add_argument('--fixture-delay', type=float, default=0, help='Delay MBH creation 0 to 5 seconds for startup identity comparison; other fixtures stay immediate')
+    parser.add_argument('--real-hidden-bundle', default='com.depthpicture.PixPin', help='Running app with an identifiable status icon to place in Hidden for manual visual review')
+    parser.add_argument('--real-always-bundle', default='com.bitwarden.desktop', help='Running app with an identifiable status icon to place in Always Hidden for manual visual review')
     args = parser.parse_args()
     if not 0 <= args.fixture_delay <= 5:
         parser.error('--fixture-delay must be between 0 and 5 seconds')
+    if args.real_hidden_bundle == args.real_always_bundle:
+        parser.error('Real-app comparison requires two different bundle identifiers')
+    for bundle in [args.real_hidden_bundle, args.real_always_bundle]:
+        if not bundle or len(bundle.encode('utf-8')) > 255 or bundle.startswith(('com.apple.', 'dev.thermo.')):
+            parser.error('Real-app comparison requires non-protected bundle identifiers of at most 255 bytes')
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     root = Path(__file__).resolve().parents[1]
@@ -61,7 +68,8 @@ let package = Package(name: "ThermoMenuBarQA", platforms: [.macOS(.v13)], target
  .testTarget(name: "MenuBarCoreTests", dependencies: ["MenuBarCore"])
 ], swiftLanguageVersions: [.v5])
 ''')
-        (output / 'input.json').write_text(json.dumps({'files': manifest, 'themeScope': 'tokens before extension Animation', 'fixtureDelaySeconds': args.fixture_delay}, indent=2))
+        (output / 'input.json').write_text(json.dumps({'files': manifest, 'themeScope': 'tokens before extension Animation', 'fixtureDelaySeconds': args.fixture_delay,
+                                                    'realHiddenBundle': args.real_hidden_bundle, 'realAlwaysHiddenBundle': args.real_always_bundle}, indent=2))
         with (output / 'test.log').open('w') as log:
             result = subprocess.run(['swift', 'test', '--jobs', '2'], cwd=work, stdout=log, stderr=subprocess.STDOUT)
         if result.returncode:
@@ -107,14 +115,16 @@ let package = Package(name: "ThermoMenuBarQA", platforms: [.macOS(.v13)], target
         info['CFBundleIdentifier'] = 'dev.thermo.menubarqa.real.' + uuid.uuid4().hex
         info['CFBundleName'] = 'Thermo Menu Bar Real Check'
         info['ThermoMenuBarQARole'] = 'real-check'
+        info['ThermoMenuBarRealHiddenBundle'] = args.real_hidden_bundle
+        info['ThermoMenuBarRealAlwaysBundle'] = args.real_always_bundle
         real_info.write_bytes(plistlib.dumps(info))
         subprocess.run(['codesign', '--force', '--sign', '-', str(real)], check=True, capture_output=True)
         swap = output / 'Thermo Menu Bar Swapped Check.app'
         shutil.copytree(real, swap)
         info['CFBundleIdentifier'] = 'dev.thermo.menubarqa.real.' + uuid.uuid4().hex
         info['CFBundleName'] = 'Thermo Menu Bar Swapped Check'
-        info['ThermoMenuBarRealHiddenBundle'] = 'com.bitwarden.desktop'
-        info['ThermoMenuBarRealAlwaysBundle'] = 'com.tencent.xinWeChat419WechatUse'
+        info['ThermoMenuBarRealHiddenBundle'] = args.real_always_bundle
+        info['ThermoMenuBarRealAlwaysBundle'] = args.real_hidden_bundle
         (swap / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
         subprocess.run(['codesign', '--force', '--sign', '-', str(swap)], check=True, capture_output=True)
         drag = output / 'Thermo Menu Bar Drag Check.app'

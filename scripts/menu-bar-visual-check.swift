@@ -34,7 +34,7 @@ import MenuBarCore
     private var phase = "idle"
     private var trace: [[String: Any]] = []
     private var lastAllowedBundles: [String] = []
-    private let hiddenBundle = Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarRealHiddenBundle") as? String ?? "com.tencent.xinWeChat419WechatUse"
+    private let hiddenBundle = Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarRealHiddenBundle") as? String ?? "com.depthpicture.PixPin"
     private let alwaysBundle = Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarRealAlwaysBundle") as? String ?? "com.bitwarden.desktop"
     private let own = Bundle.main.bundleIdentifier ?? ""
     private let root = Bundle.main.bundleURL.deletingLastPathComponent().resolvingSymlinksInPath()
@@ -180,6 +180,7 @@ import MenuBarCore
         trace.append(["time": Date().timeIntervalSince1970, "phase": phase, "result": result, "allowedBundles": lastAllowedBundles])
         let report: [String: Any] = ["events": trace, "pixelAcceptance": "not automatically asserted",
                                    "fixtureLabels": fixtures.map(\.label), "realApps": realApps, "watchdogSeconds": 45,
+                                   "hiddenBundle": hiddenBundle, "alwaysHiddenBundle": alwaysBundle,
                                    "persistentAssignmentsChanged": false]
         if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
             try? data.write(to: root.appendingPathComponent("visual-check-requests.json"), options: .atomic)

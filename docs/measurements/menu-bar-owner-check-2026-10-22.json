@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-22",
+  "control": "Computer-Use via cua_repl operated isolated window buttons; Peekaboo only captured menu-bar pixels",
+  "verifiedPair": [
+    "com.depthpicture.PixPin",
+    "com.bitwarden.desktop"
+  ],
+  "visualResults": {
+    "collapsed": "PixPin P and Bitwarden shield absent",
+    "forwardShowHidden": "P visible; shield absent",
+    "reverseShowHidden": "Shield visible; P absent",
+    "closingEitherSession": "Both icons returned",
+    "thermoRecoveryItem": "Visible throughout"
+  },
+  "sessions": [
+    {
+      "hidden": "com.depthpicture.PixPin",
+      "alwaysHidden": "com.bitwarden.desktop",
+      "closeWhileHiddenRestoredBoth": true,
+      "closeSecondsAfterFirstRequest": 26.103461980819702,
+      "traceSHA256": "b4c7728d25edaa8f05123c80b228b5312825eb76d18f8eae88a23fdfb621e45d"
+    },
+    {
+      "hidden": "com.bitwarden.desktop",
+      "alwaysHidden": "com.depthpicture.PixPin",
+      "closeWhileHiddenRestoredBoth": true,
+      "closeSecondsAfterFirstRequest": 24.836777210235596,
+      "traceSHA256": "5342beeda6403933dd41bbda0a834acbe01057b7a2f10019e00d652e39acbc1b"
+    }
+  ],
+  "scope": {
+    "productionPreferencesChanged": false,
+    "realApplicationsExited": false,
+    "physicalOrderingChanged": false,
+    "allBundlesCompatibilityProven": false,
+    "systemSideEffectsResolved": false,
+    "earlierWeChatAttribution": "not established",
+    "earlierPixPinVPNPairClaim": "withdrawn after reverse comparison; extra disappearing icon was not independently bound to VPN"
+  },
+  "currentSourceVerification": {
+    "isolatedCoreTests": 23,
+    "failures": 0,
+    "sourceMatchesR25Manifest": true,
+    "themeScope": "tokens before extension Animation, as defined by builder",
+    "defaultAndSwappedBundleMetadataVerified": true,
+    "protectedAndDuplicateComparisonRejected": true
+  },
+  "evidenceSHA256": {
+    "shield-closed.png": "9920b594855023ee900ab937684630e6b1be71110dc3dfe2deda18a535320428",
+    "shield-hidden.png": "e8262ac74f4a303d26729a461b8d6f3eaaa4c4635f42a8ffbb1cb37bbcfaf6f5",
+    "shield-collapsed.png": "dca9121f293145a40779ebcce815f3c4d109b9c1aee9e16126e114e0d372f07a",
+    "shield-swapped-collapsed.png": "1bf49278b4b84b28bf0965a16789e00f48336a5644d1a807bf662409aee22731",
+    "shield-swapped-closed.png": "09139f93495913241046d61f772fd7239077ef8519a56c42e56c2aa63a434549",
+    "shield-swapped-hidden.png": "03ad67a75b17afc9d1f76939d7b15ec5ad2030e9ed7c2da29069e32494caa553",
+    "shield-forward-requests.json": "b4c7728d25edaa8f05123c80b228b5312825eb76d18f8eae88a23fdfb621e45d",
+    "shield-swapped-requests.json": "5342beeda6403933dd41bbda0a834acbe01057b7a2f10019e00d652e39acbc1b"
+  },
+  "cleanup": {
+    "visibilityRestored": true,
+    "allOwnedQAProcessesClosed": true,
+    "unusedPeekabooCheckoutRemoved": true,
+    "retained": "R24 two shield comparison apps and evidence, R25 current review apps and logs"
+  },
+  "published": false,
+  "goalComplete": false
+}
