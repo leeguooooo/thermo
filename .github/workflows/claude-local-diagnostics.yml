@@ -6,8 +6,6 @@ on:
       - 'Tests/**'
       - 'Package.*'
       - '.github/workflows/claude-local-diagnostics.yml'
-  push:
-    branches: ['feat/claude-local-diagnostics']
   workflow_dispatch:
 permissions:
   contents: read
