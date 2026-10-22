@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-22",
+  "base": "2d34f1532721dce9f8f440ef37bcc1e3919f4b55",
+  "sourceSHA256": {
+    "scripts/menu-bar-fold-check.swift": "c02639a23e7b06a0b6ee1356d00165963feac56872dd4543a12c4da05be28cc8"
+  },
+  "changes": {
+    "testFixtureLength": 14,
+    "separatorLength": 6,
+    "visibleFixtureAlsoToggles": true,
+    "separateToggleRemoved": true
+  },
+  "verification": {
+    "isolatedCoreTests": 23,
+    "failures": 0,
+    "overlapsPriorCoreTests": true,
+    "logSHA256": "4d24a0a5724d97951948a8d79096adcb1ce276c27192f2cccd3d6a8957d9a96d",
+    "sourceMatchesBuiltInputs": true,
+    "primaryCaptureSHA256": "376f70c60700fce36c4adcc5435ecb3d8c2ce3d3986bd5747967e9d030baf5b1",
+    "primaryExpandedState": "TV visible; TH and TA still overflow. Compact sizing does not solve initial placement.",
+    "threeSectionTransitions": "not accepted; initial layout has not been configured",
+    "commandDragInput": "Not executed. Peekaboo authorization currently covers read-only capture; additional test-item input authorization is pending."
+  },
+  "cleanup": {
+    "allTestItemsRemoved": true,
+    "testWindowClosed": true,
+    "builderWorkspaceRemoved": true,
+    "preserved": "R2 review app and logs for pending Command-drag configuration; unrelated crash logs untouched."
+  },
+  "privateVisibilityAPIUsed": false,
+  "productionPreferencesChanged": false,
+  "installedAppReplacedByThisWork": false,
+  "published": false,
+  "goalComplete": false
+}

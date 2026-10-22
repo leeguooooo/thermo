@@ -52,15 +52,17 @@ import MenuBarCore
         // On a fresh macOS 27 namespace new items enter from right to left.
         // All three fixture icons belong to this one process; the experiment
         // therefore also checks per-item folding independent of a bundle API.
-        _ = item("TV", name: "visible", length: 40)
-        toggle = item("▾", name: "toggle", length: 24)
+        // Compact diagnostic markers let an already crowded notched bar show
+        // all three fixtures before any user rearrangement. TV doubles as the
+        // recovery toggle, avoiding a sixth visible item in this experiment.
+        toggle = item("TV", name: "visible", length: 14)
         toggle?.button?.target = self; toggle?.button?.action = #selector(toggleHidden)
         hiddenFillers = fillers("hidden")
-        hiddenBoundary = item("│", name: "hidden.boundary", length: 12)
-        _ = item("TH", name: "hidden.fixture", length: 40)
+        hiddenBoundary = item("│", name: "hidden.boundary", length: 6)
+        _ = item("TH", name: "hidden.fixture", length: 14)
         alwaysFillers = fillers("always")
-        alwaysBoundary = item("┃", name: "always.boundary", length: 12)
-        _ = item("TA", name: "always.fixture", length: 40)
+        alwaysBoundary = item("┃", name: "always.boundary", length: 6)
+        _ = item("TA", name: "always.fixture", length: 14)
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
         ) { [weak self] _ in MainActor.assumeIsolated { if let self { self.apply(self.reveal) } } }
@@ -79,7 +81,7 @@ import MenuBarCore
         let item = NSStatusBar.system.statusItem(withLength: length)
         item.autosaveName = "thermo.foldcheck.v27." + name
         item.button?.title = title
-        item.button?.font = .monospacedSystemFont(ofSize: 13, weight: .semibold)
+        item.button?.font = .monospacedSystemFont(ofSize: 9, weight: .semibold)
         item.button?.setAccessibilityLabel("Thermo Fold Check " + name)
         owned.append(item)
         return item
@@ -98,7 +100,7 @@ import MenuBarCore
     private func setBlock(_ boundary: NSStatusItem?, fillers: [NSStatusItem], folded: Bool, plan: MenuBarOverflowPlan?) {
         let folded = folded && plan != nil
         boundary?.button?.title = folded ? "" : (boundary === hiddenBoundary ? "│" : "┃")
-        boundary?.length = folded ? CGFloat(plan!.itemLength) : 12
+        boundary?.length = folded ? CGFloat(plan!.itemLength) : 6
         for (index, filler) in fillers.enumerated() {
             let active = folded && index < plan!.fillerCount
             filler.length = active ? CGFloat(plan!.itemLength) : 0
@@ -112,7 +114,7 @@ import MenuBarCore
         reveal = unavailable ? .all : requested
         setBlock(hiddenBoundary, fillers: hiddenFillers, folded: reveal == .collapsed, plan: plan)
         setBlock(alwaysBoundary, fillers: alwaysFillers, folded: reveal != .all, plan: plan)
-        toggle?.button?.title = reveal == .collapsed ? "▸" : "▾"
+        toggle?.button?.toolTip = reveal == .collapsed ? "展开隐藏组" : "收起两组"
         if reveal == .all { deadline?.cancel(); deadline = nil }
         else if deadline == nil {
             deadline = Task { [weak self] in
