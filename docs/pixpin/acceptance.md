@@ -107,3 +107,5 @@ python3 scripts/verify-capture-ui.py --av-layer-review
 事件监听依据 Apple 的[只读 tap](https://developer.apple.com/documentation/coregraphics/cgeventtapoptions/listenonly)及[事件 tap 创建接口](https://developer.apple.com/documentation/coregraphics/cgevent/tapcreate%28tap%3Aplace%3Aoptions%3Aeventsofinterest%3Acallback%3Auserinfo%3A%29)。实际输入监控授权、拒绝、安全输入、暂停/退出后监听移除仍待真人设备验收。
 
 键盘图层加入后，独立工作区回归为 CaptureCore 59 项、App 表现层与退出保护 27 项，共 86 项。原生合成 QA 已观察到预设 ⌘C 出现在顶部；编辑文件保存 top=true，刷新后 0.6–2.4 秒剪辑区间保留。编辑器改为滚动布局，以免设置被窗口顶部裁切。
+
+主线 `2d37b3c` 的干净检出重新编译并通过 86 项测试。共享缓存曾引用一个已不存在的扩展测试源文件，该次构建失败且未清理共享缓存；通过的是独立检出结果。最终合成 QA 包使用包内框架，不依赖已清理的工作区。

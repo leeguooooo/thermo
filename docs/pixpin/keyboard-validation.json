@@ -24,7 +24,7 @@
   },
   "nativeQA": {
     "app": "/tmp/thermo-keyboard-qa-layout-01a/ThermoCaptureQA.app",
-    "binarySHA256": "ed1b0bbf9b40e11d9ccbad54bb01c262d28a3ab55e16aa066af07889d7ede75f",
+    "binarySHA256": "a55a15aa3a2689023973accb94d4d167d03e45e83b157a64b2456d16d6aea18e",
     "syntheticOnly": true,
     "verified": [
       "Synthetic command-C visible in preview",
@@ -45,7 +45,8 @@
       "Real secure input exclusion",
       "Actual global listener start/stop/pause/quit lifecycle",
       "Native foreground save"
-    ]
+    ],
+    "bundledSparkleFramework": true
   },
   "privacyDefaults": {
     "captureEnabled": false,
@@ -57,5 +58,18 @@
   "remaining": [
     "Real device acceptance",
     "Other incomplete features in docs/pixpin/README.md"
-  ]
+  ],
+  "integratedCommit": "2d37b3c",
+  "mainCleanCheckoutTests": {
+    "commit": "2d37b3c",
+    "CaptureCore": 59,
+    "ThermoApp": 27,
+    "failures": 0,
+    "logSHA256": "691dbb43e8aecfe7f7a02f57151f4fef4d21bb2c75e1bb663506ca2a6762460c",
+    "recordedAt": "2026-10-22T07:29:41.580947+00:00"
+  },
+  "sharedWorkspaceBuild": {
+    "status": "failed",
+    "reason": "The shared cache referenced a missing unrelated ToolExtensionCoreTests source file. It was left untouched."
+  }
 }
