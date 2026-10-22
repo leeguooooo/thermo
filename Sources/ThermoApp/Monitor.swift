@@ -117,6 +117,21 @@ final class Monitor: ObservableObject {
     @Published private(set) var model = ""
     /// The menu bar icon is hidden (behind the notch or pushed off by other icons).
     @Published var iconHidden = false
+    @Published private(set) var systemMemory: SystemStats.Memory?
+    @Published private(set) var systemDisk: SystemStats.Disk?
+    private var windowSurface: SamplingSurface = .overview
+
+    func setWindowSurface(_ surface: SamplingSurface) {
+        guard windowSurface != surface else { return }
+        windowSurface = surface
+        refreshSamplingDemand()
+        if watched { sampleNow() }
+    }
+
+    private func refreshSamplingDemand() {
+        let open = watched, surface = popoverOpen ? SamplingSurface.overview : windowSurface
+        queue.async { self.fullSampling = open; self.samplingSurface = surface }
+    }
 
     /// Called on the main thread after each sample (menu bar title).
     var onUpdate: ((Snapshot) -> Void)?
@@ -142,9 +157,9 @@ final class Monitor: ObservableObject {
 
     private func visibilityChanged() {
         let open = watched
+        refreshSamplingDemand()
         guard open != panelVisible else { return }
         panelVisible = open
-        queue.async { self.fullSampling = open }
         if open {
             // SwiftUI only sees data while visible; hand over what accumulated meanwhile.
             history = buffer
@@ -160,6 +175,7 @@ final class Monitor: ObservableObject {
     private var sampler: Sampler?
     /// Mirror of `popoverOpen`, confined to `queue`.
     private var fullSampling = false
+    private var samplingSurface: SamplingSurface = .overview
     private var includeUnnamed = false
 
     func showUnnamedSensors(_ enabled: Bool) {
@@ -234,7 +250,7 @@ final class Monitor: ObservableObject {
         let preferences = MenuBarPreferences.read(defaults)
         let live = menuSampler.sample(metrics: preferences.metrics)
         let plan = SamplingPlan.make(visible: open, includeUnnamed: includeUnnamed, metrics: preferences.metrics,
-                                     alerts: defaults.bool(forKey: Settings.alertsEnabled))
+                                     alerts: defaults.bool(forKey: Settings.alertsEnabled), surface: samplingSurface)
         if plan.parts.isEmpty {
             DispatchQueue.main.async { [weak self] in
                 self?.menuLive = live
@@ -254,6 +270,10 @@ final class Monitor: ObservableObject {
         sampler.parts = plan.parts
         sampler.groups = plan.groups
         let s = sampler.sample()
+        // Filesystem/kernel reads happen once per sample, never during SwiftUI layout.
+        let resources = open && samplingSurface == .overview
+        let memory = resources ? SystemStats.memory() : nil
+        let disk = resources ? SystemStats.disk() : nil
         var averages = [Double](repeating: 0, count: 3)
         let load = getloadavg(&averages, 3) > 0 ? averages[0] / Double(max(1, ProcessInfo.processInfo.activeProcessorCount)) : nil
         let point = HistoryPoint(time: s.timestamp, cpu: s.cpu, gpu: s.gpu, fans: s.fans.map(\.rpm), power: s.systemPower, load: load)
@@ -268,6 +288,10 @@ final class Monitor: ObservableObject {
                 self.buffer.removeFirst(first)
             }
             if self.watched {
+                if resources {
+                    if self.systemMemory != memory { self.systemMemory = memory }
+                    if self.systemDisk != disk { self.systemDisk = disk }
+                }
                 self.publishSnapshot(s, parts: plan.parts)
                 self.history = self.buffer
                 if Date().timeIntervalSince(self.lastHelperRefresh) >= 10 { self.refreshHelper() }

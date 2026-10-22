@@ -74,6 +74,13 @@ enum MainPage: Hashable {
     }
 
     var isDisk: Bool { if case .disk = self { return true } else { return false } }
+    var samplingSurface: SamplingSurface {
+        switch self {
+        case .overview: return .overview
+        case .sensors: return .sensors
+        default: return .compact
+        }
+    }
     var isAgents: Bool { if case .agents = self { return true } else { return false } }
     var appsTab: AppsTab? { if case let .apps(t) = self { return t } else { return nil } }
     var spaceTab: SpaceTab? { if case let .space(t) = self { return t } else { return nil } }
@@ -91,6 +98,7 @@ enum MainWindow {
         @Published var page: MainPage = .overview
         /// A tool panel asked for from outside the window (the menu bar menu); shown as a sheet.
         @Published var tool: ToolSheet?
+        @Published var visible = false
     }
 
     /// Tool sheets need a stable NSWindow. A sheet attached to an NSPopover can
@@ -116,6 +124,12 @@ enum MainWindow {
     }
 
     static var offscreen: Bool { CommandLine.arguments.contains("--offscreen") }
+
+    /// Native occlusion and lifecycle verification use the same visibility signal.
+    static func setSamplingVisibility(_ visible: Bool) {
+        if state.visible != visible { state.visible = visible }
+        AppModels.shared.monitor.windowOpen = visible
+    }
 
     /// Keep the window placement, but release page-local state and appearance-owned tasks.
     static func retireContent(in window: NSWindow) {
@@ -143,6 +157,7 @@ enum MainWindow {
         (NSApp.delegate as? AppDelegate)?.closeMenuPanel()
         if let page { state.page = page }
         let models = AppModels.shared
+        models.monitor.setWindowSurface(state.page.samplingSurface)
         if window == nil {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 740),
                              styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
@@ -175,11 +190,14 @@ enum MainWindow {
             // Live numbers only while the window can be seen.
             let center = NotificationCenter.default
             center.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: w, queue: .main) { _ in
-                MainActor.assumeIsolated { models.monitor.windowOpen = w.isVisible && w.occlusionState.contains(.visible) }
+                MainActor.assumeIsolated {
+                    let visible = w.isVisible && (offscreen || w.occlusionState.contains(.visible))
+                    setSamplingVisibility(visible)
+                }
             }
             center.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
                 MainActor.assumeIsolated {
-                    models.monitor.windowOpen = false
+                    setSamplingVisibility(false)
                     models.stopBrowserChecks()
                     models.apps.retire()
                     models.startup.retire()
@@ -191,6 +209,9 @@ enum MainWindow {
                     MemoryModel.shared.stop()
                     ConnectionsModel.shared.stop()
                     ComputeModel.shared.stop()
+                    ComputeModel.cpu.stop()
+                    ComputeModel.shared.releaseReadingsIfIdle()
+                    ComputeModel.cpu.releaseReadingsIfIdle()
                     retireContent(in: w)
                 }
             }
@@ -204,6 +225,9 @@ enum MainWindow {
         } else {
             NSApp.activate(ignoringOtherApps: true)
             window?.makeKeyAndOrderFront(nil)
+        }
+        if let window {
+            setSamplingVisibility(window.isVisible && (offscreen || window.occlusionState.contains(.visible)))
         }
     }
 
@@ -230,6 +254,8 @@ enum MainWindow {
         var body: some View {
             let _ = L10n.apply(preference: language)
             MainView(page: $state.page, monitor: models.monitor, disk: models.disk, agents: models.agents, models: models)
+                .environment(\.windowSamplingActive, state.visible)
+                .onChange(of: state.page) { models.monitor.setWindowSurface($0.samplingSurface) }
                 .id(language)
                 .sheet(item: $state.tool) { tool in
                     switch tool {
@@ -250,7 +276,7 @@ enum MainWindow {
 
 struct MainView: View {
     @Binding var page: MainPage
-    @ObservedObject var monitor: Monitor
+    let monitor: Monitor
     @ObservedObject var disk: DiskModel
     @ObservedObject var agents: AgentScanner
     let models: AppModels
@@ -259,26 +285,13 @@ struct MainView: View {
 
     var body: some View {
         ZStack {
-            WindowBackdrop(glow: glow, tint: tint)
+            MainBackdrop(glow: glow, overrideTint: tint, monitor: monitor)
             HStack(spacing: 0) {
                 MainSidebar(page: $page, monitor: monitor, disk: disk, agents: agents)
                     .frame(width: 228).background(Theme.sidebar.opacity(0.92))
                 Rectangle().fill(Theme.hairline).frame(width: 1)
                 VStack(spacing: 0) {
-                    if let error = monitor.lastError {
-                        HStack(alignment: .top, spacing: 10) {
-                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.caution)
-                            Text(FanControlPresentation.errorText(error)).help(error).font(Theme.body).textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            if monitor.snapshot == nil {
-                                Button(tr("Retry")) { monitor.sampleNow() }.buttonStyle(.bordered)
-                            }
-                            Button { monitor.lastError = nil } label: { Image(systemName: "xmark") }
-                                .buttonStyle(.plain).help(tr("Dismiss"))
-                                .accessibilityLabel(tr("Dismiss"))
-                        }
-                        .padding(14).glass(radius: 12).padding(.horizontal, 32).padding(.top, 40)
-                    }
+                    MonitorErrorBanner(monitor: monitor)
                     if page.isDisk, let error = disk.error {
                         Label(error, systemImage: "exclamationmark.triangle.fill")
                             .font(Theme.body).foregroundStyle(Theme.caution).textSelection(.enabled)
@@ -325,13 +338,13 @@ struct MainView: View {
         }
     }
 
-    var tint: Color {
+    var tint: Color? {
         switch page {
         case .agents:
             guard let r = agents.report else { return Color(red: 0.42, green: 0.36, blue: 1.0) }
             return r.count(.error) > 0 ? .red : r.count(.warning) > 0 ? .orange : .green
         case .disk: return Color(red: 0.36, green: 0.42, blue: 1.0)
-        default: return heatColor(monitor.snapshot?.maximumKnownTemperature).opacity(0.8)
+        default: return nil
         }
     }
 
@@ -398,6 +411,34 @@ struct MainView: View {
             HistoryPage(model: HistoryModel.shared, open: { page = $0 }).transition(.page)
         case let .space(tab):
             SpacePage(model: SpaceLensModel.shared, tab: Binding(get: { tab }, set: { page = .space($0) })).transition(.page)
+        }
+    }
+}
+
+private struct MainBackdrop: View {
+    let glow: Bool
+    let overrideTint: Color?
+    @ObservedObject var monitor: Monitor
+    var body: some View {
+        WindowBackdrop(glow: glow, tint: overrideTint ?? heatColor(monitor.snapshot?.maximumKnownTemperature).opacity(0.8))
+    }
+}
+
+private struct MonitorErrorBanner: View {
+    @ObservedObject var monitor: Monitor
+    var body: some View {
+        if let error = monitor.lastError {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.caution)
+                Text(FanControlPresentation.errorText(error)).help(error).font(Theme.body).textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if monitor.snapshot == nil {
+                    Button(tr("Retry")) { monitor.sampleNow() }.buttonStyle(.bordered)
+                }
+                Button { monitor.lastError = nil } label: { Image(systemName: "xmark") }
+                    .buttonStyle(.plain).help(tr("Dismiss")).accessibilityLabel(tr("Dismiss"))
+            }
+            .padding(14).glass(radius: 12).padding(.horizontal, 32).padding(.top, 40)
         }
     }
 }

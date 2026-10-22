@@ -3,6 +3,20 @@ import ThermoKit
 @testable import ThermoApp
 
 final class SamplingPlanTests: XCTestCase {
+    func testVisibleSurfacesKeepSidebarReadingsWithoutUnrelatedHardwareWork() {
+        let compact = SamplingPlan.make(visible: true, includeUnnamed: false, metrics: [.cpu], alerts: false, surface: .compact)
+        XCTAssertEqual(compact.parts, [.temperatures, .fans])
+        XCTAssertNil(compact.groups, "keep the hottest known temperature truthful in the sidebar")
+        let power = SamplingPlan.make(visible: true, includeUnnamed: false, metrics: [.power], alerts: false, surface: .compact)
+        XCTAssertTrue(power.parts.contains(.power), "selected menu metrics still run on compact pages")
+        let overview = SamplingPlan.make(visible: true, includeUnnamed: false, metrics: [], alerts: false, surface: .overview)
+        XCTAssertEqual(overview.parts, [.temperatures, .fans, .power, .battery])
+        XCTAssertFalse(overview.parts.contains(.electrical))
+        let sensors = SamplingPlan.make(visible: true, includeUnnamed: true, metrics: [], alerts: false, surface: .sensors)
+        XCTAssertEqual(sensors.parts, .everything)
+        XCTAssertEqual(sensors.scope, .all)
+    }
+
     func testSelectedMetricsUseUnionRegardlessOfPrimaryOrder() {
         let selections: [Set<MenuMetric>] = [[.cpu, .power], [.fan, .hottest], [.fan, .power]]
         for metrics in selections {

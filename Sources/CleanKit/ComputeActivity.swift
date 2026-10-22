@@ -56,7 +56,9 @@ public struct ComputeActivity: Codable, Sendable {
 public final class ComputeSampler {
     struct Baseline { var at: UInt64; var processes: [pid_t: ProcessUsage]; var host: [UInt32]?; var clients: [UInt64: GPUClientCounter] }
     private var previous: Baseline?
-    public init() {}
+    private let gpuReader: () -> ([GPUDeviceActivity], [GPUClientCounter])
+    public init() { gpuReader = Self.readGPU }
+    init(gpuReader: @escaping () -> ([GPUDeviceActivity], [GPUClientCounter])) { self.gpuReader = gpuReader }
     public func reset() { previous = nil }
 
     static func sameProcess(_ current: ProcessUsage, _ previous: ProcessUsage) -> Bool {
@@ -80,7 +82,7 @@ public final class ComputeSampler {
         return ComputeProgram.total(values)
     }
 
-    public func sample(cancelled: () -> Bool = { false }) -> ComputeActivity {
+    public func sample(includeGPU: Bool = true, cancelled: () -> Bool = { false }) -> ComputeActivity {
         func cancelledReading() -> ComputeActivity {
             previous = nil
             return ComputeActivity(sampled: Date(), cpu: nil, cores: ProcessInfo.processInfo.activeProcessorCount,
@@ -95,7 +97,7 @@ public final class ComputeSampler {
         }
         guard !cancelled() else { return cancelledReading() }
         let host = Self.hostTicks()
-        let (devices, clients) = Self.readGPU()
+        let (devices, clients) = includeGPU ? gpuReader() : ([], [])
         guard !cancelled() else { return cancelledReading() }
         let now = DispatchTime.now().uptimeNanoseconds
         let baseline = previous

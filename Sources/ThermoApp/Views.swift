@@ -142,6 +142,7 @@ struct PopoverView: View {
         .frame(width: 372)
         .background(LinearGradient(colors: [Theme.canvas, Theme.canvasDeep], startPoint: .top, endPoint: .bottom))
         .preferredColorScheme(.dark)
+        .environment(\.windowSamplingActive, monitor.popoverOpen)
     }
 
     private var mainSections: some View {
