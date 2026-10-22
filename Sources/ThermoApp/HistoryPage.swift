@@ -295,6 +295,8 @@ struct HistoryPage: View {
             Button(tr("Open")) { open(.claudeCleanup) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case "browserBackup", "timezoneBackup":
             Button(tr("Open")) { open(.privacyTools) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
+        case "spotlightShortcut":
+            Button(tr("Open")) { LocalSearchPanel.shared.show(settings: true) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case "tabArchive", "tabBatch":
             Button(tr("Open")) { open(.browser("Google Chrome")) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case "trash":

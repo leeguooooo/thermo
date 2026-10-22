@@ -55,6 +55,8 @@ extension OperationRecord {
         case ("power", "idleAwakeResume"): return tr("Resumed keeping the Mac awake")
         case ("network", "awdlBegin"): return tr("Started an AWDL low-latency session")
         case ("network", "awdlRestore"): return tr("AWDL session ended")
+        case ("search", "takeOverSpotlight"): return tr("Took ⌘Space over from Spotlight")
+        case ("search", "restoreSpotlight"): return tr("Gave ⌘Space back to Spotlight")
         default: return feature + " · " + action
         }
     }
@@ -100,6 +102,7 @@ extension OperationRecord {
             ? tr("Cookie backups are kept privately; restoring them is manual with browsers closed.")
             : tr("Undo with Privacy & network → Restore last browser change.")
         case "timezoneBackup": return tr("Undo with Privacy & network → Restore previous timezone.")
+        case "spotlightShortcut": return tr("Undo in Search settings → Give ⌘Space back to Spotlight.")
         case "tabArchive": return tr("Reopen from Tab organizer → Saved (thermo tabs restore %1$@).", undo.ref)
         case "tabBatch": return tr("Undo with thermo tabs undo-organize %1$@.", undo.ref)
         case "agentBackup": return tr("Copies of the changed files are in %1$@.", FS.tilde(undo.ref))

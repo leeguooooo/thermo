@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.3
+
+- 搜索可以用 ⌘Space 打开：搜索面板顶部和搜索设置里点「使用 ⌘Space」，Thermo 关掉聚焦搜索的 ⌘Space 并接管；随时可在设置里还给聚焦搜索，改用其他快捷键时也会自动还原。接管和还原都记入操作记录。
+- ⌘Space 被 Raycast 占用时会提前提示，并可直接打开 Raycast 去改快捷键。
+- 修复搜索框上方的大块空白。
+- 新增 `thermo search use-command-space` / `give-back-command-space`。
+
 ## 1.2.2
 
 - 修复菜单浮窗在采样完成且没有异常原因时仍显示「检查中…」的问题，说明区继续保留固定高度。

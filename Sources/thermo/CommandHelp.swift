@@ -28,6 +28,8 @@ enum CommandHelp {
     search index|search index [--root DIR] [--json]|local-search-index
     search open|search open [--json]|app
     search settings|search settings [--json]|app
+    search use-command-space|search use-command-space [--yes] [--dry-run] [--json]|app
+    search give-back-command-space|search give-back-command-space [--yes] [--dry-run] [--json]|app
     temps|temps [--json|--csv]|cli
     fans|fans [--json|--csv]|cli
     power|power [--json|--csv]|cli
