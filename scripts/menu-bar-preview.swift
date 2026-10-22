@@ -188,6 +188,49 @@ import ThermoL10n
 let menuBarFixtureMode = CommandLine.arguments.contains("--fixture") ||
     Bundle.main.bundleIdentifier?.hasPrefix("org.example.mbfx.") == true
 let application = NSApplication.shared
+if CommandLine.arguments.contains("--check-menu-shortcuts") {
+    guard Bundle.main.bundleIdentifier?.hasPrefix("dev.thermo.menubarqa.") == true else { exit(2) }
+    let passed = MainActor.assumeIsolated { () -> Bool in
+        let suite = "MenuBarShortcutSystemQA." + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let owner = CarbonCleanScreenHotkeys()
+        var held: [any CleanScreenHotkeyLease] = []
+        defer { for lease in held { try? lease.release() } }
+        do {
+            for binding in [MenuBarShortcuts.toggleBinding, MenuBarShortcuts.restoreBinding] {
+                let lease = try owner.register(binding) { _ in }; try lease.release()
+            }
+            let holder = try owner.register(MenuBarShortcuts.restoreBinding) { _ in }
+            held.append(holder)
+            let model = MenuBarShortcuts(defaults: defaults, toggle: {}, restore: {})
+            defer { model.shutdown() }
+            model.setRequested(true); model.setEligible(true)
+            guard !model.active, model.issue != nil, !model.uncertain else { return false }
+            let rolledBack = try owner.register(MenuBarShortcuts.toggleBinding) { _ in }
+            try rolledBack.release()
+            var holderPreserved = false
+            do {
+                let unexpected = try CarbonCleanScreenHotkeys().register(MenuBarShortcuts.restoreBinding) { _ in }
+                try unexpected.release()
+            } catch { holderPreserved = true }
+            guard holderPreserved else { return false }
+            try holder.release()
+            model.retry()
+            guard model.active else { return false }
+            model.shutdown()
+            for binding in [MenuBarShortcuts.toggleBinding, MenuBarShortcuts.restoreBinding] {
+                let lease = try owner.register(binding) { _ in }; try lease.release()
+            }
+            return true
+        } catch {
+            fputs("System shortcut probe could not complete: \(error)\n", stderr)
+            return false
+        }
+    }
+    print("{\"systemShortcutRegistryPassed\":\(passed),\"physicalKeyDeliveryTested\":false,\"nativeVisibilityAsserted\":false}")
+    exit(passed ? 0 : 1)
+}
 if CommandLine.arguments.contains("--check-live-auto-collapse") {
     Task { @MainActor in
         let passed = await MenuBarLiveManagerCheck.run()

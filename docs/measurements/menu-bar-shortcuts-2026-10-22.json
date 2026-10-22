@@ -1,0 +1,57 @@
+{
+  "date": "2026-10-22",
+  "feature": {
+    "default": "off",
+    "toggle": "Control-Option-H",
+    "restore": "Control-Option-Shift-H",
+    "moduleOff": "preference kept, registrations inactive",
+    "normalDisableOrQuit": "registrations released",
+    "unresolvedVisibilityRecovery": "recovery shortcut retained",
+    "conflict": "partial registration rolled back; existing holder preserved",
+    "uncertainRelease": "actions disabled, restart required"
+  },
+  "verification": {
+    "coreTests": 27,
+    "shortcutTests": 7,
+    "failures": 0,
+    "skips": 0,
+    "sourceMatchesBuiltInputs": true,
+    "testImportsRemappedForPreview": true,
+    "sharedRegistrarAndCleanScreenModelBodiesUnchangedAfterExtraction": true,
+    "registryProbe": {
+      "systemShortcutRegistryPassed": true,
+      "physicalKeyDeliveryTested": false,
+      "nativeVisibilityAsserted": false
+    },
+    "registryProbeWhileUIRequestedButManagementOff": {
+      "systemShortcutRegistryPassed": true,
+      "physicalKeyDeliveryTested": false,
+      "nativeVisibilityAsserted": false
+    },
+    "ui": {
+      "tool": "Computer-Use via cua_repl",
+      "defaultOff": true,
+      "inactiveManagementHintVisible": true,
+      "threeColumnsVisible": true,
+      "preferenceSurvivesRelaunch": true,
+      "restoredOffBeforeClose": true,
+      "nativeManagementRemainedOff": true
+    }
+  },
+  "fullAppRegression": null,
+  "evidenceSHA256": {
+    "input.json": "d48262c24b17fa073629d9a113c0a8dc1bac912b07b272d63ddff16bb60bea06",
+    "test.log": "e3a9f65b104158105582f62ae3a4be7682428af792c34a06f91d3c9f3262e3fd",
+    "system-shortcuts.json": "f1b83293f9635d8c96bf20c91d1013f2ca0b90a88e0283c4d4896a50cf5cc9cf",
+    "system-shortcuts-module-off.json": "f1b83293f9635d8c96bf20c91d1013f2ca0b90a88e0283c4d4896a50cf5cc9cf",
+    "lifecycle-check.json": "21f256227ec07157106aaa5b2ae7c0635fb76dfab4551eebaee23635e314378b",
+    "auto-collapse-policy.json": "18b4d84eba8cdb18dfc00ce00ec345068c480d7e331458e0761c2ee0b2f5969e"
+  },
+  "boundaries": {
+    "physicalGlobalKeyDeliveryTested": false,
+    "nativeVisibilityActivatedByTheseChecks": false,
+    "productionPreferencesChanged": false,
+    "published": false
+  },
+  "goalComplete": false
+}

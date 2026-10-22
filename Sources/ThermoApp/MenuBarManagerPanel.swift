@@ -9,10 +9,10 @@ import UniformTypeIdentifiers
     private let model: MenuBarManager
     init(model: MenuBarManager) {
         self.model = model
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 700),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 740),
                               styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         window.title = tr("Manage menu bar")
-        window.minSize = NSSize(width: 840, height: 660)
+        window.minSize = NSSize(width: 840, height: 700)
         window.isReleasedWhenClosed = false
         let content = NSHostingView(rootView: MenuBarManagerView(model: model).preferredColorScheme(.dark))
         content.sizingOptions = []
@@ -95,6 +95,7 @@ struct MenuBarManagerView: View {
                 Text(tr("Auto-collapse pauses while managing groups. Restoring all icons cancels it."))
                     .font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
             }
+            MenuBarShortcutControls(shortcuts: model.shortcuts, available: model.canEdit)
             HStack {
                 TextField(tr("Search menu bar apps"), text: $query).textFieldStyle(.roundedBorder)
                 if model.loading { ProgressView().controlSize(.small) }
@@ -118,6 +119,32 @@ struct MenuBarManagerView: View {
         case .applying: return tr("Applying visibility…")
         case .applied: return tr("Visibility request accepted by macOS")
         case .failed: return tr("Visibility needs recovery")
+        }
+    }
+}
+
+private struct MenuBarShortcutControls: View {
+    @ObservedObject var shortcuts: MenuBarShortcuts
+    let available: Bool
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Toggle(tr("Global menu bar shortcuts"), isOn: Binding(get: { shortcuts.requested }, set: shortcuts.setRequested))
+                    .disabled(!available || shortcuts.uncertain)
+                    .accessibilityIdentifier("menubar.globalShortcuts")
+                Spacer()
+                Text(tr("Show/hide: %1$@ · Restore all: %2$@", MenuBarShortcuts.toggleBinding.label, MenuBarShortcuts.restoreBinding.label))
+                    .font(Theme.caption).foregroundStyle(Theme.textSecondary)
+            }
+            if let issue = shortcuts.issue {
+                HStack {
+                    Text(issue).font(Theme.caption).foregroundStyle(Theme.caution)
+                    if !shortcuts.uncertain { Button(tr("Retry shortcuts")) { shortcuts.retry() }.controlSize(.small) }
+                }
+            } else if shortcuts.requested && !shortcuts.active {
+                Text(tr("Enable menu bar management to activate these shortcuts."))
+                    .font(Theme.caption).foregroundStyle(Theme.textSecondary)
+            }
         }
     }
 }

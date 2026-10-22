@@ -52,7 +52,7 @@ def main():
                 if source.is_file():
                     copy(source, work / source.relative_to(root))
         preview = work / 'Sources/MenuBarPreview'
-        for name in ['MenuBarManager.swift', 'MenuBarManagerPanel.swift', 'MenuBarQuickControls.swift']:
+        for name in ['MenuBarManager.swift', 'MenuBarManagerPanel.swift', 'MenuBarQuickControls.swift', 'MenuBarShortcuts.swift', 'GlobalHotkey.swift']:
             copy(root / 'Sources/ThermoApp' / name, preview / name)
         # The preview uses actual Theme tokens; unrelated shared view components
         # depend on the rest of Thermo, and are outside this isolated build.
@@ -61,13 +61,17 @@ def main():
         copy(root / 'scripts/menu-bar-preview.swift', preview / 'main.swift')
         copy(root / 'scripts/menu-bar-visual-check.swift', preview / 'MenuBarVisualCheck.swift')
         copy(root / 'scripts/menu-bar-live-manager-check.swift', preview / 'MenuBarLiveManagerCheck.swift')
+        for name in ['MenuBarShortcutTests.swift', 'MenuBarManagerShortcutTests.swift']:
+            copy(root / 'Tests/ThermoAppTests' / name, work / 'Tests/MenuBarPreviewTests' / name,
+                 lambda data: data.replace(b'@testable import ThermoApp', b'@testable import MenuBarPreview'))
         (work / 'Package.swift').write_text('''// swift-tools-version: 5.9
 import PackageDescription
 let package = Package(name: "ThermoMenuBarQA", platforms: [.macOS(.v13)], targets: [
  .target(name: "MenuBarCore"), .target(name: "ThermoL10n"),
  .target(name: "CMenuBar", cSettings: [.unsafeFlags(["-fobjc-arc"])], linkerSettings: [.linkedFramework("Foundation")]),
  .executableTarget(name: "MenuBarPreview", dependencies: ["MenuBarCore", "ThermoL10n", "CMenuBar"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("ApplicationServices")]),
- .testTarget(name: "MenuBarCoreTests", dependencies: ["MenuBarCore"])
+ .testTarget(name: "MenuBarCoreTests", dependencies: ["MenuBarCore"]),
+ .testTarget(name: "MenuBarPreviewTests", dependencies: ["MenuBarPreview", "MenuBarCore"])
 ], swiftLanguageVersions: [.v5])
 ''')
         (output / 'input.json').write_text(json.dumps({'files': manifest, 'themeScope': 'tokens before extension Animation', 'fixtureDelaySeconds': args.fixture_delay,

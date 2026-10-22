@@ -76,29 +76,24 @@ enum MenuBarAppDiscovery {
     private let autoCollapse = MenuBarAutoCollapse()
     private let defaults: UserDefaults
     private let accessibilityTrusted: @MainActor () -> Bool
+    private let shortcutBackend: (any CleanScreenHotkeyBackend)?
     private let store: MenuBarSectionStore
     private var observers: [(NotificationCenter, NSObjectProtocol)] = []
     private var permissionTimer: Timer?
     private var scanGeneration: UInt64 = 0
     private var panelOpen = false
     private(set) var sleeping = false
+    private var terminating = false
+    private(set) lazy var shortcuts = MenuBarShortcuts(defaults: defaults, backend: shortcutBackend, toggle: { [weak self] in
+        guard let self, self.enabled, !self.sleeping, self.hasHiddenAssignments else { return }
+        self.setReveal(self.reveal == .collapsed ? .hidden : .collapsed)
+    }, restore: { [weak self] in self?.restoreAll() })
     private var known: [String: ManagedMenuBarApp] = [:]
     private let ownBundle: String
     private lazy var controller: MenuBarSessionController = {
         let controller = MenuBarSessionController { try NativeMenuBarSession(configuration: $0) }
         controller.didChange = { [weak self] state in
-            guard let self else { return }
-            let previous = self.state
-            self.state = state
-            if case let .failed(message) = state {
-                self.autoCollapse.cancel()
-                self.error = message
-                self.enabled = false
-                self.defaults.set(false, forKey: Self.enabledKey)
-                self.stopObserving()
-            } else if previous != state {
-                self.updateAutoCollapse()
-            }
+            self?.handleVisibilityState(state)
         }
         return controller
     }()
@@ -108,9 +103,11 @@ enum MenuBarAppDiscovery {
     var canEdit: Bool { settingsReadable && available }
 
     init(defaults: UserDefaults = .standard, initialApps: [ManagedMenuBarApp] = [],
-         accessibilityTrusted: @escaping @MainActor () -> Bool = { AXIsProcessTrusted() }) {
+         accessibilityTrusted: @escaping @MainActor () -> Bool = { AXIsProcessTrusted() },
+         shortcutBackend: (any CleanScreenHotkeyBackend)? = nil) {
         self.defaults = defaults
         self.accessibilityTrusted = accessibilityTrusted
+        self.shortcutBackend = shortcutBackend
         self.store = MenuBarSectionStore(defaults: defaults)
         self.ownBundle = Bundle.main.bundleIdentifier ?? "dev.thermo.app"
         if let seconds = defaults.object(forKey: Self.autoCollapseKey) as? Int {
@@ -128,9 +125,11 @@ enum MenuBarAppDiscovery {
     /// Normal app startup only. Start fully visible after relaunch so login-time
     /// apps can register before a user explicitly collapses the sections.
     func start() {
+        terminating = false
         if defaults.bool(forKey: Self.enabledKey), settingsReadable, available, accessibilityTrusted() {
             enabled = true; trusted = true; observe()
         }
+        updateShortcutEligibility()
     }
 
     func setPanelOpen(_ open: Bool) {
@@ -145,6 +144,7 @@ enum MenuBarAppDiscovery {
             autoCollapse.cancel()
             enabled = false; defaults.set(false, forKey: Self.enabledKey)
             reveal = .all; controller.restore(); stopObserving()
+            updateShortcutEligibility()
             return
         }
         guard canEdit else { return }
@@ -155,9 +155,10 @@ enum MenuBarAppDiscovery {
             return
         }
         autoCollapse.cancel()
+        terminating = false
         error = nil; enabled = true; reveal = .all
         defaults.set(true, forKey: Self.enabledKey)
-        observe(); refresh()
+        observe(); refresh(); updateShortcutEligibility()
     }
 
     func assign(_ bundle: String, to section: MenuBarSection) {
@@ -221,6 +222,26 @@ enum MenuBarAppDiscovery {
         }
     }
 
+    private func updateShortcutEligibility() {
+        // An unresolved restoration keeps the recovery shortcut available.
+        shortcuts.setEligible(!terminating && (enabled || state != .visible))
+    }
+
+    func handleVisibilityState(_ state: MenuBarSessionController.State) {
+        let previous = self.state
+        self.state = state
+        if case let .failed(message) = state {
+            autoCollapse.cancel()
+            error = message
+            enabled = false
+            defaults.set(false, forKey: Self.enabledKey)
+            stopObserving()
+        } else if previous != state {
+            updateAutoCollapse()
+        }
+        updateShortcutEligibility()
+    }
+
     func resetUnreadableSettings() {
         guard !settingsReadable else { return }
         if let original = defaults.object(forKey: MenuBarSectionStore.key) {
@@ -255,6 +276,8 @@ enum MenuBarAppDiscovery {
     func isAssignable(_ bundle: String) -> Bool { bundle != ownBundle && MenuBarSections.isAssignable(bundle) }
 
     func shutdown() {
+        terminating = true
+        shortcuts.shutdown()
         autoCollapse.cancel()
         enabled = false; reveal = .all
         scanGeneration &+= 1
