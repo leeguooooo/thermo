@@ -2,7 +2,7 @@ import AppKit
 import Vision
 
 public enum CaptureTool: String, CaseIterable, Identifiable, Codable, Sendable {
-    case move, rectangle, ellipse, line, arrow, pencil, highlight, redact, text, number, crop
+    case move, select, rectangle, ellipse, line, arrow, pencil, highlight, redact, mosaic, blur, eraser, eraserRect, spotlight, magnifier, watermark, text, number, crop
     public var id: String { rawValue }
 }
 
@@ -13,8 +13,9 @@ public struct CaptureAnnotation {
     public var color: NSColor
     public var width: CGFloat
     public var text: String
-    public init(tool: CaptureTool, points: [CGPoint], color: NSColor = .systemRed, width: CGFloat = 4, text: String = "") {
-        self.tool = tool; self.points = points; self.color = color; self.width = width; self.text = text
+    public var options:CaptureAnnotationOptions
+    public init(tool: CaptureTool, points: [CGPoint], color: NSColor = .systemRed, width: CGFloat = 4, text: String = "",options:CaptureAnnotationOptions = .init()) {
+        self.tool = tool; self.points = points; self.color = color; self.width = width; self.text = text;self.options=options
     }
 }
 
@@ -57,16 +58,18 @@ public struct CaptureDocument {
         guard let state = undone.popLast() else { return }
         history.append(State(image: image, annotations: annotations)); image = state.image; annotations = state.annotations
     }
-    public func rendered() throws -> CGImage {
+    public func rendered(adding draft:CaptureAnnotation? = nil,replacing index:Int? = nil) throws -> CGImage {
         guard let ctx = CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
                                   bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { throw CaptureFailure.invalidImage }
         ctx.draw(image, in: CGRect(origin: .zero, size: size))
-        for item in annotations { Self.draw(item, in: ctx) }
+        for (i,item) in annotations.enumerated() { try Self.draw(index == i ? draft ?? item : item,in:ctx,base:image) }
+        if index == nil,let draft { try Self.draw(draft,in:ctx,base:image) }
         guard let output = ctx.makeImage() else { throw CaptureFailure.invalidImage }
         return output
     }
-    public static func draw(_ item: CaptureAnnotation, in ctx: CGContext) {
+    public static func draw(_ item: CaptureAnnotation, in ctx: CGContext,base:CGImage? = nil) throws {
+        guard item.options.valid,item.width.isFinite,item.width >= 1,item.points.allSatisfy({ $0.x.isFinite && $0.y.isFinite }) else { throw CaptureFailure.invalidImage }
         guard let first = item.points.first, let last = item.points.last else { return }
         ctx.saveGState(); defer { ctx.restoreGState() }
         let color = item.color.usingColorSpace(.deviceRGB) ?? .red
@@ -74,6 +77,7 @@ public struct CaptureDocument {
         ctx.setLineWidth(max(1, item.width)); ctx.setLineCap(.round); ctx.setLineJoin(.round)
         let rect = CGRect(x: min(first.x, last.x), y: min(first.y, last.y), width: abs(last.x-first.x), height: abs(last.y-first.y))
         switch item.tool {
+        case .mosaic,.blur,.eraser,.eraserRect,.spotlight,.magnifier,.watermark: try effect(item,in:ctx,base:base)
         case .rectangle: ctx.stroke(rect)
         case .ellipse: ctx.strokeEllipse(in: rect)
         case .redact:
@@ -106,7 +110,7 @@ public struct CaptureDocument {
                 (item.text as NSString).draw(at: first, withAttributes: [.font: NSFont.systemFont(ofSize: fontSize), .foregroundColor: color])
             }
             NSGraphicsContext.restoreGraphicsState()
-        case .move, .crop: break
+        case .move,.select, .crop: break
         }
     }
     public mutating func crop(to requested: CGRect) throws {
@@ -151,5 +155,33 @@ public struct CaptureRecognition: Sendable {
         try VNImageRequestHandler(cgImage: image).perform([text, codes])
         return CaptureRecognition(text: (text.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n"),
                                   codes: (codes.results ?? []).compactMap(\.payloadStringValue))
+    }
+}
+
+extension CaptureDocument {
+    public func hitTest(_ point:CGPoint,tolerance:CGFloat = 4) -> Int? {
+        annotations.indices.reversed().first { index in
+            let item=annotations[index]
+            guard item.bounds.insetBy(dx:-tolerance,dy:-tolerance).contains(point) else { return false }
+            if [.line,.arrow,.pencil,.eraser].contains(item.tool),item.points.count >= 2 {
+                for (a,b) in zip(item.points,item.points.dropFirst()) {
+                    let dx=b.x-a.x,dy=b.y-a.y,length=dx*dx+dy*dy
+                    let t=length > 0 ? min(1,max(0,((point.x-a.x)*dx+(point.y-a.y)*dy)/length)) : 0
+                    if hypot(point.x-a.x-t*dx,point.y-a.y-t*dy) <= tolerance+item.width*(item.tool == .eraser ? 2 : 0.5) { return true }
+                }
+                return false
+            }
+            return true
+        }
+    }
+    public mutating func replaceAnnotation(at index:Int,with annotation:CaptureAnnotation) {
+        guard annotations.indices.contains(index),!annotation.points.isEmpty else { return }
+        checkpoint();annotations[index]=annotation
+    }
+    public mutating func removeAnnotation(at index:Int) {
+        guard annotations.indices.contains(index) else { return };checkpoint();annotations.remove(at:index)
+    }
+    public mutating func clearAnnotations() {
+        guard !annotations.isEmpty else { return };checkpoint();annotations.removeAll()
     }
 }

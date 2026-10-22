@@ -13,6 +13,12 @@ import ThermoL10n
         ctx.setFillColor(NSColor.white.cgColor); ctx.fill(CGRect(x: 0,y: 0,width: 900,height: 600))
         NSGraphicsContext.saveGraphicsState(); NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx,flipped: false)
         ("Thermo capture QA\n截图、标注、贴图\nOCR local recognition 12345" as NSString).draw(at: CGPoint(x: 60,y: 300), withAttributes: [.font: NSFont.systemFont(ofSize: 36), .foregroundColor: NSColor.black])
+        if Bundle.main.object(forInfoDictionaryKey:"ThermoAnnotationReview") as? Bool == true {
+            for x in 650..<850 {
+                ctx.setFillColor((x%8 < 4 ? NSColor.systemBlue : NSColor.systemOrange).cgColor)
+                ctx.fill(CGRect(x:x,y:60,width:1,height:200))
+            }
+        }
         NSGraphicsContext.restoreGraphicsState()
         let menu = NSMenu(), top = NSMenuItem(), items = NSMenu()
         items.addItem(withTitle: "Quit QA",action: #selector(NSApplication.terminate(_:)),keyEquivalent: "q")
@@ -20,6 +26,7 @@ import ThermoL10n
         installStandardMenus()
         let image = ctx.makeImage()!
         var recordingWindow: CaptureRecordingWindow?
+        var annotationWindow:CaptureEditor?
         if Bundle.main.object(forInfoDictionaryKey: "ThermoRecordingReview") as? Bool == true,
            let path = Bundle.main.object(forInfoDictionaryKey: "ThermoCaptureFixtureRoot") as? String {
             let root = URL(fileURLWithPath:path,isDirectory:true)
@@ -89,9 +96,17 @@ import ThermoL10n
                     window.showWindow(nil)
                 } catch { window.model.issue = error.localizedDescription }
             }
+        } else if Bundle.main.object(forInfoDictionaryKey:"ThermoAnnotationReview") as? Bool == true {
+            let window=CaptureEditor(image:image,onClose:{})
+            var mosaic=CaptureAnnotation(tool:.mosaic,points:[CGPoint(x:50,y:290),CGPoint(x:650,y:470)],width:4);mosaic.options.strength=18
+            window.model.document.append(mosaic)
+            var lens=CaptureAnnotation(tool:.magnifier,points:[CGPoint(x:650,y:60),CGPoint(x:850,y:260)],color:.systemBlue,width:3);lens.options.zoom=2;lens.options.ellipse=true
+            window.model.document.append(lens)
+            window.model.tool = .select;window.model.selectAnnotation(0)
+            annotationWindow=window;window.showWindow(nil)
         } else { CaptureWorkspace.shared.open(image) }
         DispatchQueue.main.asyncAfter(deadline: .now()+600) { app.terminate(nil) }
-        withExtendedLifetime(recordingWindow) { app.run() }
+        withExtendedLifetime((recordingWindow,annotationWindow)) { app.run() }
     }
 }
 

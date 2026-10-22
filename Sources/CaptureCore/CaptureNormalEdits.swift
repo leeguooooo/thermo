@@ -9,19 +9,20 @@ public struct CaptureVectorAnnotation: Codable, Sendable {
     public var text:String
     public var start:Double
     public var end:Double
+    public var options:CaptureAnnotationOptions?
     public init(_ annotation:CaptureAnnotation,start:Double,end:Double) {
-        tool=annotation.tool; points=annotation.points; width=annotation.width; text=annotation.text; self.start=start; self.end=end
+        tool=annotation.tool; points=annotation.points; width=annotation.width; text=annotation.text; self.start=start; self.end=end;options=annotation.options
         let color=annotation.color.usingColorSpace(.deviceRGB) ?? .red
         rgba=[color.redComponent,color.greenComponent,color.blueComponent,color.alphaComponent]
     }
     public var annotation:CaptureAnnotation? {
         guard valid else { return nil }
-        return .init(tool:tool,points:points,color:NSColor(deviceRed:rgba[0],green:rgba[1],blue:rgba[2],alpha:rgba[3]),width:width,text:text)
+        return .init(tool:tool,points:points,color:NSColor(deviceRed:rgba[0],green:rgba[1],blue:rgba[2],alpha:rgba[3]),width:width,text:text,options:options ?? .init())
     }
     var valid:Bool {
-        tool != .move && tool != .crop && !points.isEmpty && points.count <= 100000 && points.allSatisfy { $0.x.isFinite && $0.y.isFinite } &&
+        tool != .move && tool != .select && tool != .crop && !points.isEmpty && points.count <= 100000 && points.allSatisfy { $0.x.isFinite && $0.y.isFinite } &&
         rgba.count == 4 && rgba.allSatisfy { $0.isFinite && (0...1).contains($0) } && width.isFinite && (1...1000).contains(width) &&
-        text.count <= 20000 && start.isFinite && end.isFinite && start >= 0 && end > start
+        text.count <= 20000 && start.isFinite && end.isFinite && start >= 0 && end > start && (options?.valid ?? true)
     }
 }
 

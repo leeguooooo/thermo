@@ -152,9 +152,14 @@ import UniformTypeIdentifiers
 }
 
 @MainActor final class CaptureEditorModel: ObservableObject {
-    @Published var document: CaptureDocument { didSet { revision += 1; recognition = "" } }
+    @Published var document: CaptureDocument { didSet {
+        revision += 1; recognition = ""
+        if let selectedAnnotation,!document.annotations.indices.contains(selectedAnnotation) { self.selectedAnnotation=nil }
+    } }
     private var revision = 0
     @Published var tool: CaptureTool = .move
+    @Published var selectedAnnotation:Int?
+    @Published var annotationOptions=CaptureAnnotationOptions()
     @Published var color = Color.red
     @Published var lineWidth: Double = 4
     @Published var text = ""
@@ -166,6 +171,25 @@ import UniformTypeIdentifiers
     @Published var zoom: Double = 1
     var changeWindow: (() -> Void)?
     init(image: CGImage) { document = CaptureDocument(image: image) }
+    func selectAnnotation(_ index:Int?) {
+        selectedAnnotation=index
+        if let index,document.annotations.indices.contains(index) {
+            let item=document.annotations[index];color=Color(nsColor:item.color);lineWidth=item.width;text=item.text;annotationOptions=item.options
+        }
+    }
+    func applySelectedStyle() {
+        guard let index=selectedAnnotation,document.annotations.indices.contains(index) else { return }
+        var item=document.annotations[index]
+        let nextColor=NSColor(color)
+        guard item.color != nextColor || item.width != lineWidth || item.text != text || item.options != annotationOptions else { return }
+        item.color=nextColor;item.width=lineWidth;item.text=text;item.options=annotationOptions
+        document.replaceAnnotation(at:index,with:item)
+    }
+    func undoAnnotation() { document.undo();selectAnnotation(selectedAnnotation) }
+    func redoAnnotation() { document.redo();selectAnnotation(selectedAnnotation) }
+    func deleteSelected() {
+        if let selectedAnnotation { document.removeAnnotation(at:selectedAnnotation) };selectedAnnotation=nil
+    }
     func copy() {
         do {
             let data = try document.data()
@@ -237,8 +261,8 @@ private struct CaptureEditorView: View {
                     }
                     ColorPicker(tr("Annotation color"), selection: $model.color).labelsHidden()
                     Slider(value: $model.lineWidth, in: 1...12).frame(width: 65).help(tr("Line width"))
-                    Button { model.document.undo() } label: { Image(systemName: "arrow.uturn.backward") }.disabled(!model.document.canUndo).help(tr("Undo"))
-                    Button { model.document.redo() } label: { Image(systemName: "arrow.uturn.forward") }.disabled(!model.document.canRedo).help(tr("Redo"))
+                    Button { model.undoAnnotation() } label: { Image(systemName: "arrow.uturn.backward") }.disabled(!model.document.canUndo).help(tr("Undo"))
+                    Button { model.redoAnnotation() } label: { Image(systemName: "arrow.uturn.forward") }.disabled(!model.document.canRedo).help(tr("Redo"))
                     Button {
                         do { try model.document.transform(rotateClockwise: true) } catch { model.error = tr(error.localizedDescription) }
                     } label: { Image(systemName: "rotate.right") }.help(tr("Rotate clockwise"))
@@ -247,7 +271,8 @@ private struct CaptureEditorView: View {
                     } label: { Image(systemName: "arrow.left.and.right.righttriangle.left.righttriangle.right") }.help(tr("Flip horizontally"))
                 }.padding(8)
             }
-            if model.tool == .text {
+            CaptureAnnotationControls(model:model)
+            if model.tool == .text || model.tool == .watermark {
                 TextField(tr("Annotation text"), text: $model.text).textFieldStyle(.roundedBorder).padding(8)
             }
             CaptureCanvas(model: model).frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -274,18 +299,18 @@ private struct CaptureEditorView: View {
 extension CaptureTool {
     var label: String {
         switch self {
-        case .move: return "Move / view"; case .rectangle: return "Rectangle"; case .ellipse: return "Ellipse"
+        case .move: return "Move / view";case .select:return "Select annotation"; case .rectangle: return "Rectangle"; case .ellipse: return "Ellipse"
         case .line: return "Line"; case .arrow: return "Arrow"; case .pencil: return "Pencil"
         case .highlight: return "Highlighter"; case .redact: return "Opaque redaction"; case .text: return "Text"
-        case .number: return "Sequence number"; case .crop: return "Crop (flattens annotations)"
+        case .mosaic:return "Mosaic";case .blur:return "Blur";case .eraser:return "Brush eraser";case .eraserRect:return "Rectangle eraser";case .spotlight:return "Spotlight";case .magnifier:return "Magnifier";case .watermark:return "Tiled watermark";case .number: return "Sequence number"; case .crop: return "Crop (flattens annotations)"
         }
     }
     var symbol: String {
         switch self {
-        case .move: return "hand.draw"; case .rectangle: return "rectangle"; case .ellipse: return "circle"
+        case .move: return "hand.draw";case .select:return "cursorarrow"; case .rectangle: return "rectangle"; case .ellipse: return "circle"
         case .line: return "line.diagonal"; case .arrow: return "arrow.up.right"; case .pencil: return "pencil.tip"
         case .highlight: return "highlighter"; case .redact: return "square.fill"; case .text: return "textformat"
-        case .number: return "1.circle"; case .crop: return "crop"
+        case .mosaic:return "square.grid.3x3.fill";case .blur:return "drop.halffull";case .eraser:return "eraser";case .eraserRect:return "eraser.fill";case .spotlight:return "light.beacon.max";case .magnifier:return "plus.magnifyingglass";case .watermark:return "text.badge.checkmark";case .number: return "1.circle"; case .crop: return "crop"
         }
     }
 }
@@ -299,6 +324,9 @@ struct CaptureCanvas: NSViewRepresentable {
         var draft: CaptureAnnotation?
         var pan: CGPoint = .zero
         var lastDrag: CGPoint?
+        var selectionStart:CGPoint?
+        var selectionOriginal:CaptureAnnotation?
+        var resizing=false
         init(model: CaptureEditorModel) { self.model = model; super.init(frame: .zero) }
         required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
         override var acceptsFirstResponder: Bool { true }
@@ -314,17 +342,42 @@ struct CaptureCanvas: NSViewRepresentable {
             NSColor.windowBackgroundColor.setFill(); bounds.fill()
             guard scale > 0, let ctx = NSGraphicsContext.current?.cgContext else { return }
             ctx.saveGState(); ctx.translateBy(x: imageRect.minX, y: imageRect.minY); ctx.scaleBy(x: scale, y: scale)
-            ctx.draw(model.document.image, in: CGRect(origin: .zero, size: model.document.size))
-            for item in model.document.annotations { CaptureDocument.draw(item, in: ctx) }
+            let replacement=model.tool == .select ? model.selectedAnnotation : nil
+            let preview=draft?.tool == .crop ? nil : draft
+            do {
+                let image=try model.document.rendered(adding:preview,replacing:replacement)
+                ctx.draw(image,in:CGRect(origin:.zero,size:model.document.size))
+            } catch {
+                ctx.setFillColor(NSColor.black.cgColor);ctx.fill(CGRect(origin:.zero,size:model.document.size))
+                let message=tr(error.localizedDescription)
+                DispatchQueue.main.async { [weak model] in if model?.error != message { model?.error=message } }
+            }
+            if let selected=model.selectedAnnotation,model.document.annotations.indices.contains(selected) {
+                let rect=(model.tool == .select ? draft : nil)?.bounds ?? model.document.annotations[selected].bounds
+                ctx.setStrokeColor(NSColor.systemBlue.cgColor);ctx.setLineWidth(1/scale);ctx.setLineDash(phase:0,lengths:[4/scale,3/scale]);ctx.stroke(rect);ctx.setLineDash(phase:0,lengths:[])
+                ctx.setFillColor(NSColor.systemBlue.cgColor);ctx.fill(CGRect(x:rect.maxX-4/scale,y:rect.maxY-4/scale,width:8/scale,height:8/scale))
+            }
             if let draft {
                 if draft.tool == .crop, let start = draft.points.first, let end = draft.points.last {
                     ctx.setStrokeColor(NSColor.systemBlue.cgColor); ctx.setLineWidth(2/scale)
                     ctx.stroke(CGRect(x: min(start.x,end.x), y: min(start.y,end.y), width: abs(end.x-start.x), height: abs(end.y-start.y)))
-                } else { CaptureDocument.draw(draft, in: ctx) }
+                }
             }
             ctx.restoreGState()
         }
         override func mouseDown(with event: NSEvent) {
+            window?.makeFirstResponder(self)
+            if model.tool == .select {
+                let p=point(event)
+                if let selected=model.selectedAnnotation,model.document.annotations.indices.contains(selected) {
+                    let bounds=model.document.annotations[selected].bounds
+                    resizing=hypot(p.x-bounds.maxX,p.y-bounds.maxY) < 10/scale
+                }
+                if !resizing { model.selectAnnotation(model.document.hitTest(p,tolerance:5/scale)) }
+                if let selected=model.selectedAnnotation,model.document.annotations.indices.contains(selected) { selectionStart=p;selectionOriginal=model.document.annotations[selected];draft=selectionOriginal }
+                needsDisplay=true;return
+            }
+            model.selectedAnnotation=nil
             if model.tool == .move {
                 if event.clickCount == 2 { model.zoom = 1; pan = .zero; needsDisplay = true }
                 lastDrag = convert(event.locationInWindow, from: nil); return
@@ -332,27 +385,40 @@ struct CaptureCanvas: NSViewRepresentable {
             guard imageRect.contains(convert(event.locationInWindow, from: nil)) else { return }
             let p = point(event)
             let text = model.tool == .number ? String(model.document.annotations.filter { $0.tool == .number }.count+1) : model.text
-            draft = CaptureAnnotation(tool: model.tool, points: [p,p], color: NSColor(model.color), width: model.lineWidth, text: text)
+            draft = CaptureAnnotation(tool: model.tool, points: [p,p], color: NSColor(model.color), width: model.lineWidth, text: text,options:model.annotationOptions)
             needsDisplay = true
         }
         override func mouseDragged(with event: NSEvent) {
+            if model.tool == .select,let start=selectionStart,let original=selectionOriginal {
+                let p=point(event)
+                draft=resizing ? original.resized(to:CGRect(x:original.bounds.minX,y:original.bounds.minY,width:max(1,p.x-original.bounds.minX),height:max(1,p.y-original.bounds.minY))) : original.moved(dx:p.x-start.x,dy:p.y-start.y)
+                needsDisplay=true;return
+            }
             if model.tool == .move, let lastDrag {
                 let next = convert(event.locationInWindow, from: nil)
                 pan.x += next.x-lastDrag.x; pan.y += next.y-lastDrag.y; self.lastDrag = next
                 needsDisplay = true; return
             }
             guard draft != nil else { return }
-            if model.tool == .pencil { draft?.points.append(point(event)) } else { draft?.points[1] = point(event) }
+            if model.tool == .pencil || model.tool == .eraser { draft?.points.append(point(event)) } else { draft?.points[1] = point(event) }
             needsDisplay = true
         }
         override func mouseUp(with event: NSEvent) {
             lastDrag = nil
             guard let item = draft else { return }; draft = nil
+            if item.tool == .select { return }
+            if model.tool == .select,let selected=model.selectedAnnotation {
+                model.document.replaceAnnotation(at:selected,with:item);selectionStart=nil;selectionOriginal=nil;resizing=false;needsDisplay=true;return
+            }
             if item.tool == .crop, let a = item.points.first, let b = item.points.last {
                 do { try model.document.crop(to: CGRect(x: min(a.x,b.x), y: min(a.y,b.y), width: abs(a.x-b.x), height: abs(a.y-b.y))) }
                 catch { model.error = tr(error.localizedDescription) }
-            } else if item.tool != .text || !item.text.isEmpty { model.document.append(item) }
+            } else if ![CaptureTool.text,.watermark].contains(item.tool) || !item.text.isEmpty { model.document.append(item) }
             needsDisplay = true
+        }
+        override func keyDown(with event:NSEvent) {
+            if event.keyCode == 51 || event.keyCode == 117 { model.deleteSelected();needsDisplay=true }
+            else { super.keyDown(with:event) }
         }
         override func scrollWheel(with event: NSEvent) {
             model.zoom = min(4, max(0.25, model.zoom*exp(event.scrollingDeltaY*0.015)))

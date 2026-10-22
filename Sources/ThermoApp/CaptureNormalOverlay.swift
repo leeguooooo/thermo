@@ -37,7 +37,8 @@ private struct CaptureNormalOverlayView:View {
     @ObservedObject var model:CaptureNormalOverlayModel
     var body:some View {
         VStack(spacing:10) {
-            NormalOverlayTools(model:model.canvas)
+            ScrollView(.horizontal,showsIndicators:false) { NormalOverlayTools(model:model.canvas) }
+            CaptureAnnotationControls(model:model.canvas)
             CaptureCanvas(model:model.canvas).frame(maxWidth:.infinity,maxHeight:.infinity)
             HStack {
                 Text(tr("Visible from (s)"));TextField("",value:$model.start,format:.number).frame(width:70)
@@ -58,10 +59,10 @@ private struct NormalOverlayTools:View {
             }
             ColorPicker(tr("Annotation color"),selection:$model.color).labelsHidden()
             Slider(value:$model.lineWidth,in:1...12).frame(width:60).help(tr("Line width"))
-            Button { model.document.undo() } label: { Image(systemName:"arrow.uturn.backward") }.disabled(!model.document.canUndo).help(tr("Undo"))
-            Button { model.document.redo() } label: { Image(systemName:"arrow.uturn.forward") }.disabled(!model.document.canRedo).help(tr("Redo"))
+            Button { model.undoAnnotation() } label: { Image(systemName:"arrow.uturn.backward") }.disabled(!model.document.canUndo).help(tr("Undo"))
+            Button { model.redoAnnotation() } label: { Image(systemName:"arrow.uturn.forward") }.disabled(!model.document.canRedo).help(tr("Redo"))
         }
-        if model.tool == .text { TextField(tr("Annotation text"),text:$model.text).textFieldStyle(.roundedBorder) }
+        if model.tool == .text || model.tool == .watermark { TextField(tr("Annotation text"),text:$model.text).textFieldStyle(.roundedBorder) }
     }
 }
 

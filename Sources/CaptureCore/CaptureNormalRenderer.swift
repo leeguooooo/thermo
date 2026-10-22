@@ -59,8 +59,9 @@ public final class CaptureNormalRenderer {
         context.translateBy(x:-crop.minX,y:-crop.minY)
         context.draw(image,in:canvas)
         try drawCamera(at:time,in:context)
+        let annotationBase=context.makeImage()
         for annotation in edits.annotations where time >= annotation.start && time < annotation.end {
-            if let item=annotation.annotation { CaptureDocument.draw(item,in:context) }
+            if let item=annotation.annotation { try CaptureDocument.draw(item,in:context,base:annotationBase) }
         }
         if let record=pointer(at:time),let x=record.sample.x,let y=record.sample.y {
             let p=CGPoint(x:x*canvas.width,y:y*canvas.height),size=20*source.header.pixelScale*edits.cursorScale
