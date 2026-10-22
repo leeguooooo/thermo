@@ -1,0 +1,68 @@
+{
+  "date": "2026-10-22",
+  "sourceBase": "70b40ff1b0ca11f206007e58a765263e00ab21a9",
+  "sourceSHA256": {
+    "Sources/MenuBarCore/MenuBarOverflowPlan.swift": "b1b4271ec5297383415c1bd82cf60aa75bdae1a874e7774010b567d59b1a1a14",
+    "Tests/MenuBarCoreTests/MenuBarOverflowPlanTests.swift": "b167c281387e2848487ba1fd8f094b9aafabf7edaf06223da99a07719fabaef5",
+    "scripts/menu-bar-fold-check.swift": "a03bd03d9de6874672bac4573572ad3d29f253b816660a5e9cba277926df3410",
+    "scripts/verify-menu-bar-fold.py": "dd3d5bf0216f28106743e00b067c895df70f82d409ad05d3bdc8802c17267959"
+  },
+  "scope": "Isolated public-NSStatusItem three-section prototype; not wired into ThermoApp or the installed application.",
+  "tests": {
+    "passed": 23,
+    "failures": 0,
+    "skips": 0,
+    "newOverflowGeometryTests": 4,
+    "overlappingExistingCoreTests": 19,
+    "command": "python3 scripts/verify-menu-bar-fold.py --output dist/menubar-fold-qa-20261022-r1",
+    "logSHA256": "79b07794927ec5cf6023182d5fc181757e4397ec62a9409da2b07f4df282d557"
+  },
+  "geometry": {
+    "displays": [
+      {
+        "width": 1800,
+        "statusWidth": 790
+      },
+      {
+        "width": 1920,
+        "statusWidth": 1920
+      }
+    ],
+    "itemLength": 528,
+    "activeFillersPerFoldedBlock": 3,
+    "maximumFillersPerBlock": 6,
+    "unsupportedDisplayCombination": "Keep all expanded; no unsafe single-item width.",
+    "thresholds": "Empirical macOS 27 limits from the MenubarHide public source, not an Apple API contract."
+  },
+  "pixelAcceptance": {
+    "capture": "User-authorized Peekaboo read-only screen/area screenshots, caller-local --no-remote, no elements.",
+    "initialExpanded": "Only TV visibly fits in primary menu bar; other new test items are in native overflow.",
+    "threeSectionTransitions": "not accepted; initial placement must be configured with Command-drag before testing",
+    "commandDrag": "not executed; current cua_repl drag API has no modifier argument; additional Peekaboo test-item input authorization requested and pending",
+    "nativeBackendRetest": "Primary-area captures reconfirm WeChat logo is absent under show-hidden request and visible after restore; unidentified circular icon is present in some frames. No identity-alias fix inferred."
+  },
+  "screenshotsSHA256": {
+    "native-collapsed.png": "c8fe9f75d7160fbc33dd96601986d67604295b709c45cdcd2aed7e16dfdcad70",
+    "native-hidden.png": "30c593eb34876e6e90bf19cfb4e66ef7dcab8af15777a202ff1b07fa2eb01622",
+    "native-hidden-sequence-4.png": "0cc68b54d2df82780535ae5a970b802be5c5432360b0e05e4ed2769b3a84d38d",
+    "native-restored.png": "4e7b6ae05b1f5c391c88580376c02aaf5bc240ed3924eb84fe0bb51095c5b19c",
+    "native-hidden-sequence-2.png": "bccee170750d4821f92d6cb5098be934214250a7580348ed5cdb8f8af13e8d37",
+    "native-hidden-sequence-3.png": "97fabc95658dbd0075d9380a842818ef3ae829687004d2ef4d5434d7129671eb",
+    "native-hidden-sequence-1.png": "afbbfcc10e4c253c8144c53d84bda9d1321217289605018258a89ab582f40bd5",
+    "native-hidden-sequence-0.png": "7eaf85309d1fd562788c39d8a45407115d3131e66e713ad5a85437a375caca60",
+    "native-baseline.png": "47e54ad1507f9287e27ca8661c3674371b37a742b6959cef88c0962fc7834ec1",
+    "expanded-screen0.png": "2fff10374ce8f6e1ba13db8252ee87bd3ff78869a0f4a424cf5b9e127908337a"
+  },
+  "cleanup": {
+    "allPrototypeItemsRemoved": true,
+    "prototypeWindowClosed": true,
+    "nativeRetestEnded": true,
+    "temporaryBuilderWorkspaceRemoved": true,
+    "retained": "Compiled isolated app and bounded capture/test records for pending drag acceptance; unrelated crash logs preserved."
+  },
+  "productionPreferencesChanged": false,
+  "installedAppReplacedByThisWork": false,
+  "privateVisibilityUsedByFoldPrototype": false,
+  "published": false,
+  "goalComplete": false
+}
