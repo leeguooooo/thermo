@@ -35,7 +35,7 @@ struct CaptureActionSettingsView:View {
                     }
                 }.frame(minWidth:330)
                 if let index {
-                    CaptureActionEntryEditor(model:model,entry:$draft.entries[index]).id(draft.entries[index].id).frame(width:380)
+                    ScrollView {CaptureActionEntryEditor(model:model,entry:$draft.entries[index]).id(draft.entries[index].id)}.frame(width:380)
                 } else { Text(tr("Select an action to configure.")).foregroundStyle(.secondary).frame(width:380) }
             }
             HStack {
@@ -62,6 +62,7 @@ private struct CaptureActionEntryEditor:View {
         VStack(alignment:.leading,spacing:14) {
             TextField(tr("Action name (optional)"),text:$entry.title).textFieldStyle(.roundedBorder)
             Picker(tr("Action"),selection:$entry.action) { ForEach(CaptureAction.allCases) { Text(tr($0.title)).tag($0) } }
+            .onChange(of:entry.action) { value in if value == .script,entry.script == nil {entry.script="thermo.perform(\"showPins\");"} }
             Picker(tr("Shortcut scope"),selection:$entry.scope) { Text(tr("Global")).tag(CaptureShortcutEntry.Scope.global);Text(tr("Pin window only")).tag(CaptureShortcutEntry.Scope.pin) }
             Toggle(tr("Action enabled"),isOn:$entry.enabled)
             Toggle(tr("Show in capture actions menu"),isOn:Binding(get:{ entry.showInMenu ?? true },set:{ entry.showInMenu=$0 }))
@@ -71,7 +72,13 @@ private struct CaptureActionEntryEditor:View {
                 if entry.scope == .pin { Menu(tr("Key presets")) { Button("Esc") { entry.shortcut = .init(keyCode:53,modifiers:0,keyLabel:"Esc") };Button(tr("Space")) { entry.shortcut = .init(keyCode:49,modifiers:0,keyLabel:"Space") };Button(tr("Delete")) { entry.shortcut = .init(keyCode:51,modifiers:0,keyLabel:"⌫") } } }
             }
             Text(tr("Global shortcuts need Command, Control, Option or a function key. Pin-window shortcuts can use ordinary keys.")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
-            Button(tr("Run selected action")) { model.run(entry.action) }
+            if entry.action == .script {
+                TextEditor(text:Binding(get:{entry.script ?? ""},set:{entry.script=$0})).font(.system(.body,design:.monospaced)).frame(height:180).border(Color.secondary.opacity(0.3))
+                Text(tr("Use thermo.perform('actionID'). Calls run in order. Scripts run only when invoked.")).font(.caption).foregroundStyle(.secondary)
+            }
+            Button(tr("Run selected action")) { model.run(entry) }
+            if model.scriptRunning {Button(tr("Cancel capture script")){model.cancelScript()}}
+            if !model.scriptOutput.isEmpty {ScrollView {Text(model.scriptOutput).font(.system(.caption,design:.monospaced)).textSelection(.enabled)}.frame(maxHeight:80)}
             CaptureConfiguredActionsMenu(model:model,onIssue:{})
             Text(tr("Changes take effect only after Apply.")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal:false,vertical:true)
             Spacer()

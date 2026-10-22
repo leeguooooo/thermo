@@ -1,6 +1,18 @@
 // 简体中文. Keys are the English format strings passed to tr(); keep positional arguments (%1$@) intact.
 // Add new sections at the end (e.g. `// Disk`) so parallel work doesn't collide.
 let zhHans: [String: String] = [
+    "The capture script worker stopped before returning a result.": "截图脚本进程在返回结果前已停止。",
+    // Capture JavaScript scripts
+    "JavaScript capture script": "JavaScript 截图脚本",
+    "Use thermo.perform('actionID'). Calls run in order. Scripts run only when invoked.": "用 thermo.perform('动作ID') 调用动作，按顺序执行。脚本仅在主动调用时运行。",
+    "Cancel capture script": "取消截图脚本",
+    "Capture scripts must contain 1–16384 UTF-8 bytes.": "截图脚本须包含 1–16384 字节的 UTF-8 内容。",
+    "The capture script worker returned an invalid response.": "截图脚本进程返回了无效响应。",
+    "The capture script worker is unavailable. Rebuild or reinstall Thermo.": "截图脚本进程不可用，请重新构建或安装 Thermo。",
+    "The capture script exceeded its time limit. Completed actions are kept.": "截图脚本已超时，已完成的动作仍保留。",
+    "The capture script exceeded its memory limit. Completed actions are kept.": "截图脚本已超过内存限制，已完成的动作仍保留。",
+    "The capture script was cancelled. Completed actions are kept.": "截图脚本已取消，已完成的动作仍保留。",
+
     "Wait for the capture action chain to finish before quitting.": "请等截图后续动作执行完毕再退出。",
     // Capture saving and after-actions
     "Capture saving and after-actions": "截图保存与后续动作",

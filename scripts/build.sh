@@ -75,7 +75,7 @@ APP="$DIST/Thermo.app"
 C="$APP/Contents"
 mkdir -p "$C/MacOS" "$C/Helpers" "$C/Resources" "$C/Frameworks" "$C/Library/LaunchDaemons"
 cp "$BIN/ThermoApp" "$C/MacOS/Thermo"
-cp "$BIN/thermo-helper" "$BIN/thermo" "$C/Helpers/"
+cp "$BIN/thermo-helper" "$BIN/thermo" "$BIN/thermo-capture-script" "$C/Helpers/"
 cp Resources/dev.thermo.helper.plist "$C/Library/LaunchDaemons/"
 cp Resources/AppIcon.icns "$C/Resources/"
 python3 scripts/math-renderer/verify.py
@@ -101,7 +101,8 @@ if [ "$CONFIGURATION" = release ]; then
     dsymutil "$C/MacOS/Thermo" -o "$DIST/symbols/Thermo-app.dSYM"
     dsymutil "$C/Helpers/thermo" -o "$DIST/symbols/thermo-cli.dSYM"
     dsymutil "$C/Helpers/thermo-helper" -o "$DIST/symbols/thermo-helper.dSYM"
-    strip "$C/MacOS/Thermo" "$C/Helpers/thermo" "$C/Helpers/thermo-helper"
+    dsymutil "$C/Helpers/thermo-capture-script" -o "$DIST/symbols/thermo-capture-script.dSYM"
+    strip "$C/MacOS/Thermo" "$C/Helpers/thermo" "$C/Helpers/thermo-helper" "$C/Helpers/thermo-capture-script"
     cp "$C/Helpers/thermo" "$C/Helpers/thermo-helper" "$DIST/"
 fi
 
@@ -130,6 +131,7 @@ sign -i dev.thermo.cli    "$DIST/thermo"
 sign -i dev.thermo.helper "$DIST/thermo-helper"
 sign -i dev.thermo.cli    "$C/Helpers/thermo"
 sign -i dev.thermo.helper "$C/Helpers/thermo-helper"
+sign -i dev.thermo.capture-script "$C/Helpers/thermo-capture-script"
 sign -i dev.thermo.app --entitlements Resources/Thermo.entitlements "$APP"
 scripts/verify-artifacts.sh "$DIST" "$ARCHS"
 

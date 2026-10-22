@@ -3,6 +3,7 @@
 import AppKit
 import AVFoundation
 import CaptureCore
+import CaptureScriptCore
 import ThermoL10n
 import SwiftUI
 
@@ -50,17 +51,27 @@ import SwiftUI
            let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
             let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)
             let settingsFile=root.appendingPathComponent("shortcuts.json")
-            let initial=CaptureActionSettings(entries:[
+            var initial=CaptureActionSettings(entries:[
                 .init(title:"QA pin lock",action:.toggleLock,scope:.pin,shortcut:.init(keyCode:37,modifiers:0,keyLabel:"L")),
                 .init(title:"QA hide/show",action:.togglePins),
                 .init(title:"QA show pin",action:.showPin),
                 .init(title:"QA settings",action:.shortcutSettings,scope:.pin,shortcut:.init(keyCode:40,modifiers:0,keyLabel:"K"))])
+            if Bundle.main.object(forInfoDictionaryKey:"ThermoScriptReview") as? Bool == true {
+                initial = .init(entries:[.init(title:"QA script sequence",action:.script,script:"const before=thermo.perform('status');for(let i=0;i<3;i++)thermo.perform('toggleLock');thermo.perform('hidePins');thermo.perform('showPins');console.log('pins',before.pins);return thermo.perform('status');")])
+            }
             let model=CaptureShortcutModel(backend:CaptureShortcutModel.backend(),read:{ (try? Data(contentsOf:settingsFile)) ?? (try? initial.data()) },write:{ try $0.write(to:settingsFile,options:.atomic) },pinFocused:{ [weak workspace] in workspace?.pinSession.focusedEditor() != nil },execute:{ [weak workspace] action in
                 guard let workspace else { throw CaptureActionFailure.noPin }
                 let before:[String:Any] = ["action":action.rawValue,"windows":workspace.pinSession.windows.count,"target":workspace.pinSession.activeEditor()?.model.pinTitle ?? "none","sessionIssue":workspace.pinSession.issue ?? "none"]
                 if let data=try? JSONSerialization.data(withJSONObject:before) { try? data.write(to:root.appendingPathComponent("action-probe.json"),options:.atomic) }
                 try workspace.perform(action)
             })
+            model.executeScript={ [weak workspace] source in
+                guard let workspace else{throw CaptureScriptFailure.unavailable}
+                let result=try await workspace.executeScript(source)
+                struct Record:Codable {let value:CaptureScriptValue;let logs:[String]}
+                try JSONEncoder().encode(Record(value:result.value,logs:result.logs)).write(to:root.appendingPathComponent("script-result.json"),options:.atomic)
+                return result
+            }
             workspace.shortcuts=model;captureWorkspace=workspace;shortcutModel=model;pinSession=session
             do {
                 if session.library.pins.isEmpty { let id=try session.open(.text(.init(plain:"Shortcut action QA")));session.windows[id]?.model.pinTitle="QA shortcut pin";try session.flush() }

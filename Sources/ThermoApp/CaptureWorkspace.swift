@@ -1,5 +1,6 @@
 import AppKit
 import CaptureCore
+import CaptureScriptCore
 import Carbon
 import SwiftUI
 import ThermoL10n
@@ -25,7 +26,7 @@ func captureFailureMessage(_ error:Error) -> String {
             model.showSaveSettings={ [weak self] in self?.showSavingSettings() }
         }
     }
-    lazy var shortcuts=CaptureShortcutModel(backend:CaptureShortcutModel.backend(),read:{ UserDefaults.standard.data(forKey:CaptureShortcutModel.preferenceKey) },write:{ data in UserDefaults.standard.set(data,forKey:CaptureShortcutModel.preferenceKey) },pinFocused:{ [weak self] in self?.pinSession.focusedEditor() != nil },execute:{ [weak self] action in try self?.perform(action) })
+    lazy var shortcuts=CaptureShortcutModel(backend:CaptureShortcutModel.backend(),read:{ UserDefaults.standard.data(forKey:CaptureShortcutModel.preferenceKey) },write:{ data in UserDefaults.standard.set(data,forKey:CaptureShortcutModel.preferenceKey) },pinFocused:{ [weak self] in self?.pinSession.focusedEditor() != nil },execute:{ [weak self] action in try self?.perform(action) }).withScriptExecutor(onIssue:{ [weak self] in self?.showActionSettings() }) { [weak self] source in guard let self else {throw CaptureScriptFailure.unavailable};return try await self.executeScript(source) }
     lazy var saving=CaptureSaveModel()
     private var savingWindow:NSWindowController?
     private var afterTask:Task<Void,Never>?
@@ -34,6 +35,10 @@ func captureFailureMessage(_ error:Error) -> String {
     private var shuttingDown=false
     private var process: Process?
     private var captureDirectory: URL?
+    private var captureID:UUID?
+    private var captureCompletion:((Result<Bool,Error>)->Void)?
+    var scriptWorker:URL?
+    var scriptPasteboard:NSPasteboard?
     private var regionSelector: CaptureRegionSelector?
     private var scrollWindow: NSWindowController?
     private var recordingWindow: CaptureRecordingWindow?
@@ -60,25 +65,25 @@ func captureFailureMessage(_ error:Error) -> String {
         savingWindow?.showWindow(nil);NSApp.activate(ignoringOtherApps:true);savingWindow?.window?.makeKeyAndOrderFront(nil)
     }
     func shutdown() {
-        shuttingDown=true;afterTask?.cancel();afterTask=nil
+        shuttingDown=true;if let id=captureID{cancelCapture(id:id)};afterTask?.cancel();afterTask=nil
         process?.terminate()
         if let captureDirectory { try? FileManager.default.removeItem(at:captureDirectory) }; captureDirectory = nil
         regionSelector?.cancel(); regionSelector = nil
         scrollWindow?.close()
         shortcuts.shutdown();activated=false
     }
-    func capture(after override:[CaptureAfterStep]?=nil) {
-        guard !capturing else { return }
+    func capture(after override:[CaptureAfterStep]?=nil,id:UUID=UUID(),completion:((Result<Bool,Error>)->Void)?=nil) {
+        guard !capturing else {completion?(.failure(CaptureSaveFailure.busy));return}
         var options:CaptureSaveSettings
         do { options=try saving.snapshot();if let override {options.after=override};guard options.valid else {throw CaptureSaveFailure.invalidSettings} }
-        catch { saving.issue=captureFailureMessage(error);showSavingSettings();return }
-        guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() else { report(CaptureFailure.captureFailed); return }
-        issue = nil; capturing = true
+        catch { if let completion{completion(.failure(error))} else {saving.issue=captureFailureMessage(error);showSavingSettings()};return }
+        guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() else {if let completion{completion(.failure(CaptureFailure.captureFailed))} else {report(CaptureFailure.captureFailed)};return}
+        issue = nil; capturing = true;captureID=id;captureCompletion=completion
         // The native selector supports region, Space for window, and Escape to cancel.
         // A unique private directory prevents cancelled captures from reusing old pixels.
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("thermo-capture-" + UUID().uuidString, isDirectory: true)
         do { try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700]) }
-        catch { capturing = false; report(error); return }
+        catch { failCapture(error);return }
         let output = directory.appendingPathComponent("capture.png")
         captureDirectory = directory
         let task = Process(); task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
@@ -88,24 +93,46 @@ func captureFailureMessage(_ error:Error) -> String {
         task.terminationHandler = { [weak self] task in
             Task { @MainActor in
                 defer { try? FileManager.default.removeItem(at: directory) }
-                guard let self,!self.shuttingDown else { return }
+                guard let self,self.captureID == id else {return}
+                guard !self.shuttingDown else {self.finishCapture(.failure(CaptureScriptFailure.cancelled));return}
                 self.process = nil
                 self.captureDirectory = nil
                 // Escape produces no file; leave clipboard and existing pins alone.
-                guard FileManager.default.fileExists(atPath: output.path) else { self.capturing=false;return }
-                guard task.terminationStatus == 0 else { self.capturing=false;self.report(CaptureFailure.captureFailed); return }
+                guard FileManager.default.fileExists(atPath: output.path) else { self.finishCapture(.success(false));return }
+                guard task.terminationStatus == 0 else { self.failCapture(CaptureFailure.captureFailed);return }
                 do {
                     let image=try CaptureDocument.load(output)
                     self.afterTask=Task { @MainActor [weak self] in
-                        guard let self else{return};defer{self.capturing=false;self.afterTask=nil}
+                        guard let self else{return};defer{if self.captureID == nil || self.captureID == id{self.afterTask=nil}}
                         let success=await self.processCaptured(image,options:pipelineOptions)
-                        if !success && !Task.isCancelled {self.showSavingSettings()}
+                        guard self.captureID == id else{return}
+                        let scripted=self.captureCompletion != nil
+                        if Task.isCancelled {self.finishCapture(.failure(CaptureScriptFailure.cancelled))}
+                        else if success {self.finishCapture(.success(true))}
+                        else {self.finishCapture(.failure(CaptureScriptFailure.execution(self.saving.issue ?? "Capture failed.")));if !scripted{self.showSavingSettings()}}
                     }
-                } catch { self.capturing=false;self.report(error) }
+                } catch {self.failCapture(error)}
             }
         }
         do { process = task; try task.run() }
-        catch { process = nil; capturing = false; captureDirectory = nil; try? FileManager.default.removeItem(at: directory); report(error) }
+        catch {process=nil;captureDirectory=nil;try? FileManager.default.removeItem(at:directory);failCapture(error)}
+    }
+    private func finishCapture(_ result:Result<Bool,Error>) {
+        let completion=captureCompletion;captureCompletion=nil;captureID=nil;capturing=false;completion?(result)
+    }
+    private func failCapture(_ error:Error) {let scripted=captureCompletion != nil;finishCapture(.failure(error));if !scripted{report(error)}}
+    func captureAndWait(after steps:[CaptureAfterStep]?=nil) async throws -> Bool {
+        let id=UUID();try Task.checkCancellation()
+        return try await withTaskCancellationHandler(operation:{
+            try await withCheckedThrowingContinuation {continuation in
+                if Task.isCancelled{continuation.resume(throwing:CancellationError());return}
+                capture(after:steps,id:id,completion:{continuation.resume(with:$0)})
+                if Task.isCancelled {cancelCapture(id:id)}
+            }
+        },onCancel:{Task{@MainActor in self.cancelCapture(id:id)}})
+    }
+    private func cancelCapture(id:UUID) {
+        guard captureID == id else{return};if process?.isRunning == true{process?.terminate()};process=nil;captureDirectory=nil;afterTask?.cancel();afterTask=nil;finishCapture(.failure(CaptureScriptFailure.cancelled))
     }
     @discardableResult func processCaptured(_ image:CGImage,options:CaptureSaveSettings,pasteboard:NSPasteboard = .general) async -> Bool {
         await saving.run(image,settings:options,pin:{ [weak self] in guard let self else {throw CaptureFailure.captureFailed};try self.pinSession.open($0) },copyImage:{ data in
@@ -183,6 +210,7 @@ func captureFailureMessage(_ error:Error) -> String {
     func closeAll() { pinSession.closeAll() }
     func perform(_ action:CaptureAction) throws {
         switch action {
+        case .script:throw CaptureScriptFailure.execution("Run a configured script entry with its source.")
         case .screenshot:capture()
         case .screenshotCopy:capture(after:[.copyImage])
         case .screenshotOCR:capture(after:[.copyText])
@@ -322,6 +350,13 @@ func captureFailureMessage(_ error:Error) -> String {
             savedImagePath=url.path;error=nil
             if options.copyAfterManualSave {copy()}
         } catch { self.error = tr(error.localizedDescription) }
+    }
+    func recognizeForScript() async throws -> String {
+        guard !recognizing else {throw CaptureSaveFailure.busy}
+        let image=try document.rendered(),initial=revision;recognizing=true;defer{recognizing=false}
+        let result=try await Task.detached(priority:.userInitiated){try CaptureRecognition.recognize(image)}.value
+        try Task.checkCancellation();guard initial == revision else {throw CaptureScriptFailure.execution("The image changed. Run recognition again.")}
+        let value=([result.text]+result.codes).filter{!$0.isEmpty}.joined(separator:"\n");guard !value.isEmpty else {throw CaptureSaveFailure.noText};recognition=value;error=nil;return value
     }
     func recognize() {
         guard !recognizing else { return }

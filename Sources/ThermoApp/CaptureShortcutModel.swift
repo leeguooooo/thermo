@@ -1,6 +1,7 @@
 import AppKit
 import CaptureCore
 import Combine
+import CaptureScriptCore
 import ThermoL10n
 
 @MainActor final class CaptureShortcutModel:ObservableObject {
@@ -10,6 +11,11 @@ import ThermoL10n
     @Published private(set) var uncertain=false
     @Published private(set) var registrationIssues:[String:String]=[:]
     @Published private(set) var recordingOwner:UUID?
+    @Published private(set) var scriptRunning=false
+    @Published private(set) var scriptOutput=""
+    private var scriptTask:Task<Void,Never>?
+    private var scriptFailureHandler:(()->Void)?
+    var executeScript:((String)async throws->CaptureScriptResult)?
     private let backend:CleanScreenHotkeyBackend
     private let read:()->Data?
     private let write:(Data)throws->Void
@@ -25,6 +31,7 @@ import ThermoL10n
     init(backend:CleanScreenHotkeyBackend,read:@escaping()->Data?,write:@escaping(Data)throws->Void,pinFocused:@escaping()->Bool,execute:@escaping(CaptureAction)throws->Void) {
         self.backend=backend;self.read=read;self.write=write;self.pinFocused=pinFocused;self.execute=execute
     }
+    func withScriptExecutor(onIssue:@escaping()->Void={},_ value:@escaping(String)async throws->CaptureScriptResult) -> Self {executeScript=value;scriptFailureHandler=onIssue;return self}
     static func backend() -> CarbonCleanScreenHotkeys { CarbonCleanScreenHotkeys(validate:{ CaptureShortcut(keyCode:$0.keyCode,modifiers:$0.modifiers,keyLabel:$0.keyLabel).validGlobal }) }
     func activate() {
         guard !activated else { return };activated=true
@@ -93,10 +100,26 @@ import ThermoL10n
         if let owner=recordingOwner { record(key,owner:owner);return }
         let matching=settings.entries.filter { $0.enabled && $0.shortcut?.gesture == key.gesture }
         let entry=pinFocused() ? matching.first(where:{ $0.scope == .pin }) ?? matching.first(where:{ $0.scope == .global }) : matching.first(where:{ $0.scope == .global })
-        guard let entry else { return };run(entry.action)
+        guard let entry else { return };run(entry)
     }
+    func run(_ entry:CaptureShortcutEntry) {
+        guard entry.action == .script else {run(entry.action);return}
+        guard !dispatching,!scriptRunning else {issue=tr("Another capture action is in progress.");return}
+        guard entry.valid,let source=entry.script else {issue=tr(CaptureScriptFailure.invalidSource.localizedDescription);return}
+        guard let executeScript else {issue=tr(CaptureScriptFailure.unavailable.localizedDescription);return}
+        scriptRunning=true;scriptOutput="";issue=nil
+        scriptTask=Task { [weak self] in
+            guard let self else{return};defer{self.scriptRunning=false;self.scriptTask=nil}
+            do {
+                let result=try await executeScript(source)
+                self.scriptOutput=result.logs.joined(separator:"\n")
+                if let data=try? JSONEncoder().encode(result.value) {self.scriptOutput += "\n"+String(decoding:data,as:UTF8.self)}
+            } catch {self.issue=captureFailureMessage(error);if !Task.isCancelled{self.scriptFailureHandler?()}}
+        }
+    }
+    func cancelScript() {scriptTask?.cancel()}
     func run(_ action:CaptureAction) {
-        guard !dispatching else { issue=tr("Another capture action is in progress.");return }
+        guard !dispatching,!scriptRunning else { issue=tr("Another capture action is in progress.");return }
         dispatching=true;defer { dispatching=false }
         do { try execute(action);issue=nil } catch { issue=captureFailureMessage(error) }
     }
@@ -124,6 +147,7 @@ import ThermoL10n
         return leases[key.gesture] != nil ? tr("Registered") : registrationIssues[key.gesture] ?? tr("Not registered")
     }
     func shutdown() {
+        cancelScript()
         recordingOwner=nil;recordingReceiver=nil;held.removeAll()
         for lease in Array(leases.values)+retained { try? lease.release() };leases=[:];retained=[]
         if let localMonitor { NSEvent.removeMonitor(localMonitor) };localMonitor=nil;activated=false

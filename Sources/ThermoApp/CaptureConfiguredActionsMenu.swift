@@ -11,7 +11,7 @@ struct CaptureConfiguredActionsMenu:View {
                 ForEach(model.settings.entries.filter(\.appearsInMenu)) { entry in
                     let label=model.label(for:entry)
                     Button((entry.title.isEmpty ? tr(entry.action.title) : entry.title)+(label.isEmpty ? "" : "  "+label)) {
-                        model.run(entry.action)
+                        model.run(entry)
                         if model.issue != nil { onIssue() }
                     }
                 }

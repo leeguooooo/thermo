@@ -17,7 +17,7 @@ if [ -n "$SOURCE$TREE" ]; then
     fi
 fi
 codesign --verify --deep --strict "$APP"
-for BIN in "$DIST/thermo" "$DIST/thermo-helper" "$APP/Contents/MacOS/Thermo" "$APP/Contents/Helpers/thermo" "$APP/Contents/Helpers/thermo-helper"; do
+for BIN in "$DIST/thermo" "$DIST/thermo-helper" "$APP/Contents/MacOS/Thermo" "$APP/Contents/Helpers/thermo" "$APP/Contents/Helpers/thermo-helper" "$APP/Contents/Helpers/thermo-capture-script"; do
     test -f "$BIN" || { echo "missing binary: $BIN" >&2; exit 1; }
     codesign --verify --strict "$BIN"
     for ARCH in $ARCHS; do lipo -verify_arch "$ARCH" "$BIN"; done

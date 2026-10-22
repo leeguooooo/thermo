@@ -11,6 +11,11 @@ final class CaptureActionSettingsTests:XCTestCase {
         var old=try JSONSerialization.jsonObject(with:settings.data()) as! [String:Any];var entries=old["entries"] as! [[String:Any]];entries[0].removeValue(forKey:"showInMenu");old["entries"]=entries
         XCTAssertTrue(try CaptureActionSettings.decode(JSONSerialization.data(withJSONObject:old)).entries[0].appearsInMenu)
     }
+    func testScriptSourceRoundTripsWithoutExecutingAndRejectsEmptyOrLargeSource() throws {
+        let script=CaptureShortcutEntry(title:"QA script",action:.script,script:"for(let i=0;i<2;i++)thermo.perform(\"togglePins\");")
+        let settings=CaptureActionSettings(entries:[script]);XCTAssertEqual(try CaptureActionSettings.decode(settings.data()),settings)
+        var invalid=script;invalid.script=nil;XCTAssertFalse(invalid.valid);invalid.script=" ";XCTAssertFalse(invalid.valid);invalid.script=String(repeating:"a",count:16385);XCTAssertFalse(invalid.valid)
+    }
     func testGlobalAndPinScopesValidateTheirOwnGestures() {
         let letter=CaptureShortcut(keyCode:0,modifiers:0,keyLabel:"A"),escape=CaptureShortcut(keyCode:53,modifiers:0,keyLabel:"Esc"),function=CaptureShortcut(keyCode:79,modifiers:0,keyLabel:"F18")
         XCTAssertTrue(letter.valid);XCTAssertFalse(letter.validGlobal);XCTAssertTrue(escape.valid);XCTAssertFalse(escape.validGlobal);XCTAssertTrue(function.validGlobal)

@@ -32,7 +32,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         for entry in CaptureWorkspace.shared.shortcuts.settings.entries where entry.appearsInMenu {
             let label=CaptureWorkspace.shared.shortcuts.label(for:entry)
             configured.addItem(item((entry.title.isEmpty ? tr(entry.action.title) : entry.title)+(label.isEmpty ? "" : "  "+label),nil) {
-                let workspace=CaptureWorkspace.shared;workspace.shortcuts.run(entry.action);if workspace.shortcuts.issue != nil { workspace.showActionSettings() }
+                let workspace=CaptureWorkspace.shared;workspace.shortcuts.run(entry);if workspace.shortcuts.issue != nil { workspace.showActionSettings() }
             })
         }
         if !configured.items.isEmpty { let entry=NSMenuItem(title:tr("Configured capture actions"),action:nil,keyEquivalent:"");entry.submenu=configured;menu.addItem(entry) }

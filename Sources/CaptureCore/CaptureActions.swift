@@ -1,6 +1,7 @@
 import Foundation
 
 public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
+    case script
     case screenshotCopy,screenshotOCR,screenshotQuickSave,saveSettings,quickSaveImage
     case screenshot, pinClipboard, pinText, pinLaTeX, openImage, scrolling, recording, recordingDrafts
     case pinGroups, shortcutSettings, nextGroup, previousGroup, restorePin, showPins, hidePins, togglePins, closePins
@@ -8,6 +9,7 @@ public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
     public var id:String { rawValue }
     public var title:String {
         switch self {
+        case .script:return "JavaScript capture script"
         case .screenshotCopy:return "Capture and copy image…";case .screenshotOCR:return "Capture and copy OCR text…";case .screenshotQuickSave:return "Capture and quick save…"
         case .saveSettings:return "Capture saving and after-actions";case .quickSaveImage:return "Quick save current pin image"
         case .screenshot:return "Capture screen…";case .pinClipboard:return "Pin clipboard";case .pinText:return "Pin clipboard as text";case .pinLaTeX:return "Pin clipboard as LaTeX"
@@ -45,10 +47,11 @@ public struct CaptureShortcutEntry:Codable,Sendable,Equatable,Identifiable {
     public var scope:Scope
     public var shortcut:CaptureShortcut?
     public var enabled:Bool
+    public var script:String?
     public var showInMenu:Bool?
     public var appearsInMenu:Bool { enabled && (showInMenu ?? true) }
-    public init(id:UUID=UUID(),title:String="",action:CaptureAction,scope:Scope = .global,shortcut:CaptureShortcut? = nil,enabled:Bool=true,showInMenu:Bool=true) { self.showInMenu=showInMenu;self.id=id;self.title=title;self.action=action;self.scope=scope;self.shortcut=shortcut;self.enabled=enabled }
-    public var valid:Bool { title.count <= 100 && (shortcut.map { scope == .global ? $0.validGlobal : $0.valid } ?? true) }
+    public init(id:UUID=UUID(),title:String="",action:CaptureAction,scope:Scope = .global,shortcut:CaptureShortcut? = nil,enabled:Bool=true,showInMenu:Bool=true,script:String?=nil) { self.script=script;self.showInMenu=showInMenu;self.id=id;self.title=title;self.action=action;self.scope=scope;self.shortcut=shortcut;self.enabled=enabled }
+    public var valid:Bool { title.count <= 100 && (action != .script || (script.map { !$0.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty && $0.utf8.count<=16384 } ?? false)) && (script?.utf8.count ?? 0)<=16384 && (shortcut.map { scope == .global ? $0.validGlobal : $0.valid } ?? true) }
 }
 public struct CaptureActionSettings:Codable,Sendable,Equatable {
     public var version=1
