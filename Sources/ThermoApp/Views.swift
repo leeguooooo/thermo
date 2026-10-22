@@ -413,6 +413,7 @@ struct PopoverView: View {
                     Button(tr("Pin clipboard") + CaptureWorkspace.shared.shortcutSuffix(for:.pinClipboard)) { CaptureWorkspace.shared.pinClipboard() }
                     Button(tr("Pin clipboard as text")) { CaptureWorkspace.shared.pinClipboard(asText:true) }
                     Button(tr("Pin clipboard as LaTeX")) { CaptureWorkspace.shared.pinClipboard(asLaTeX:true) }
+                    Button(tr("Capture saving and after-actions")) { CaptureWorkspace.shared.showSavingSettings() }
                     Button(tr("Capture shortcuts and actions")) { CaptureWorkspace.shared.showActionSettings() }
                     CaptureConfiguredActionsMenu(model:CaptureWorkspace.shared.shortcuts)
                     Button(tr("Open image…")) { CaptureWorkspace.shared.importImage() }

@@ -1,12 +1,15 @@
 import Foundation
 
 public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
+    case screenshotCopy,screenshotOCR,screenshotQuickSave,saveSettings,quickSaveImage
     case screenshot, pinClipboard, pinText, pinLaTeX, openImage, scrolling, recording, recordingDrafts
     case pinGroups, shortcutSettings, nextGroup, previousGroup, restorePin, showPins, hidePins, togglePins, closePins
     case showPin, closePin, copyImage, copyContent, saveImage, recognize, toggleTop, toggleLock, resetZoom, rotate, flip, undo, redo
     public var id:String { rawValue }
     public var title:String {
         switch self {
+        case .screenshotCopy:return "Capture and copy image…";case .screenshotOCR:return "Capture and copy OCR text…";case .screenshotQuickSave:return "Capture and quick save…"
+        case .saveSettings:return "Capture saving and after-actions";case .quickSaveImage:return "Quick save current pin image"
         case .screenshot:return "Capture screen…";case .pinClipboard:return "Pin clipboard";case .pinText:return "Pin clipboard as text";case .pinLaTeX:return "Pin clipboard as LaTeX"
         case .openImage:return "Open image…";case .scrolling:return "Scrolling capture…";case .recording:return "Record screen…";case .recordingDrafts:return "Recording drafts…"
         case .pinGroups:return "Pin groups and history";case .shortcutSettings:return "Capture shortcuts and actions";case .nextGroup:return "Next pin group";case .previousGroup:return "Previous pin group"
@@ -16,8 +19,8 @@ public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
         case .resetZoom:return "Reset current pin view";case .rotate:return "Rotate current image";case .flip:return "Flip current image";case .undo:return "Undo image annotation";case .redo:return "Redo image annotation"
         }
     }
-    public var needsPin:Bool { [.showPin,.closePin,.copyImage,.copyContent,.saveImage,.recognize,.toggleTop,.toggleLock,.resetZoom,.rotate,.flip,.undo,.redo].contains(self) }
-    public var imageOnly:Bool { [.copyImage,.saveImage,.recognize,.rotate,.flip,.undo,.redo].contains(self) }
+    public var needsPin:Bool { [.quickSaveImage,.showPin,.closePin,.copyImage,.copyContent,.saveImage,.recognize,.toggleTop,.toggleLock,.resetZoom,.rotate,.flip,.undo,.redo].contains(self) }
+    public var imageOnly:Bool { [.quickSaveImage,.copyImage,.saveImage,.recognize,.rotate,.flip,.undo,.redo].contains(self) }
 }
 public struct CaptureShortcut:Codable,Sendable,Equatable,Hashable {
     public var keyCode:UInt32

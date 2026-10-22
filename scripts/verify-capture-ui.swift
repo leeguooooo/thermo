@@ -4,6 +4,7 @@ import AppKit
 import AVFoundation
 import CaptureCore
 import ThermoL10n
+import SwiftUI
 
 @main struct CaptureReview {
     @MainActor static func main() {
@@ -30,7 +31,22 @@ import ThermoL10n
         var pinSession:CapturePinSession?
         var captureWorkspace:CaptureWorkspace?
         var shortcutModel:CaptureShortcutModel?
-        if Bundle.main.object(forInfoDictionaryKey:"ThermoShortcutsReview") as? Bool == true,
+        if Bundle.main.object(forInfoDictionaryKey:"ThermoSavingReview") as? Bool == true,
+           let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
+            let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)
+            let file=root.appendingPathComponent("saving.json")
+            workspace.saving=CaptureSaveModel(read:{try? Data(contentsOf:file)},write:{try $0.write(to:file,options:.atomic)})
+            if !FileManager.default.fileExists(atPath:file.path) {
+                var options=CaptureSaveSettings();options.quick.directory=root.appendingPathComponent("quick").path;options.automatic.directory=root.appendingPathComponent("automatic").path
+                try? FileManager.default.createDirectory(atPath:options.quick.directory,withIntermediateDirectories:true)
+                try? FileManager.default.createDirectory(atPath:options.automatic.directory,withIntermediateDirectories:true)
+                _=workspace.saving.apply(options)
+            }
+            session.restoreWindows();pinSession=session;captureWorkspace=workspace
+            let window=NSWindow(contentRect:NSRect(x:0,y:0,width:900,height:850),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
+            window.title="QA saving and after-actions";window.isReleasedWhenClosed=false
+            window.contentView=NSHostingView(rootView:CaptureSavingQA(workspace:workspace,image:image,root:root));window.center();window.makeKeyAndOrderFront(nil)
+        } else if Bundle.main.object(forInfoDictionaryKey:"ThermoShortcutsReview") as? Bool == true,
            let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
             let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)
             let settingsFile=root.appendingPathComponent("shortcuts.json")
@@ -202,4 +218,32 @@ private func qaMicrophone(at seconds:Double) throws -> CMSampleBuffer {
     var timing=CMSampleTimingInfo(duration:CMTime(value:1,timescale:44100),presentationTimeStamp:CMTime(seconds:seconds,preferredTimescale:60000),decodeTimeStamp:.invalid),sample:CMSampleBuffer?
     CMSampleBufferCreateReady(allocator:kCFAllocatorDefault,dataBuffer:block!,formatDescription:format!,sampleCount:4410,sampleTimingEntryCount:1,sampleTimingArray:&timing,sampleSizeEntryCount:0,sampleSizeArray:nil,sampleBufferOut:&sample)
     guard let sample else { throw CaptureMovieFailure.noFrames };return sample
+}
+
+private struct CaptureSavingQA:View {
+    let workspace:CaptureWorkspace
+    let image:CGImage
+    let root:URL
+    @State private var running=false
+    @State private var result=""
+    var body:some View {
+        VStack {
+            CaptureSaveSettingsView(model:workspace.saving)
+            HStack {
+                Button("Run synthetic screenshot chain") {
+                    running=true
+                    Task { @MainActor in
+                        let board=NSPasteboard.withUniqueName();defer{board.releaseGlobally();running=false}
+                        do {
+                            let success=await workspace.processCaptured(image,options:try workspace.saving.snapshot(),pasteboard:board)
+                            let record:[String:Any]=["success":success,"completed":workspace.saving.completed,"saved":workspace.saving.saved.map(\.path),"pins":workspace.pinSession.count,"clipboardText":board.string(forType:.string) ?? "","clipboardPNGBytes":board.data(forType:.png)?.count ?? 0,"issue":workspace.saving.issue ?? "none"]
+                            try JSONSerialization.data(withJSONObject:record,options:[.prettyPrinted,.sortedKeys]).write(to:root.appendingPathComponent("chain-result.json"),options:.atomic)
+                            result=success ? "Chain succeeded" : "Chain failed"
+                        } catch {result=error.localizedDescription}
+                    }
+                }.disabled(running)
+                Text(result)
+            }.padding(8)
+        }
+    }
 }

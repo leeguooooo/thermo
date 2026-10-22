@@ -13,6 +13,7 @@ import ThermoL10n
     private var removing:Set<UUID>=[]
     private var loadFailed=false
     private var lastActiveID:UUID?
+    var configureEditor:((CaptureEditorModel)->Void)?
     var onCountChange:((Int)->Void)?
     private var libraryWindow:NSWindowController?
     var count:Int { library.pins.filter { $0.groupID == library.currentGroupID && $0.closedAt == nil }.count }
@@ -82,6 +83,7 @@ import ThermoL10n
             if pin.frame.width >= 600,pin.frame.height >= 360 { window.setFrame(pin.frame,display:false) }
             ensureVisible(window);model.changeWindow?()
         }
+        configureEditor?(model)
         windows[pin.id]=editor
     }
     private func prepareWindows(for group:UUID,in value:CapturePinLibrary? = nil) throws {

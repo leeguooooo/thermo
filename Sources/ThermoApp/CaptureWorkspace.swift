@@ -19,17 +19,26 @@ func captureFailureMessage(_ error:Error) -> String {
     let pinSession:CapturePinSession
     init(pinSession:CapturePinSession? = nil) {
         self.pinSession=pinSession ?? CapturePinSession();self.pinSession.onCountChange={ [weak self] in self?.pinCount=$0 }
+        self.pinSession.configureEditor={ [weak self] model in
+            model.saveOptions={ [weak self] in try self?.saving.snapshot() ?? CaptureSaveSettings() }
+            model.quickSaveImage={ [weak self] document in guard let self else {throw CaptureSaveFailure.invalidSettings};return try self.saving.quickSave(document) }
+            model.showSaveSettings={ [weak self] in self?.showSavingSettings() }
+        }
     }
     lazy var shortcuts=CaptureShortcutModel(backend:CaptureShortcutModel.backend(),read:{ UserDefaults.standard.data(forKey:CaptureShortcutModel.preferenceKey) },write:{ data in UserDefaults.standard.set(data,forKey:CaptureShortcutModel.preferenceKey) },pinFocused:{ [weak self] in self?.pinSession.focusedEditor() != nil },execute:{ [weak self] action in try self?.perform(action) })
+    lazy var saving=CaptureSaveModel()
+    private var savingWindow:NSWindowController?
+    private var afterTask:Task<Void,Never>?
     private var actionsWindow:NSWindowController?
     private var activated=false
+    private var shuttingDown=false
     private var process: Process?
     private var captureDirectory: URL?
     private var regionSelector: CaptureRegionSelector?
     private var scrollWindow: NSWindowController?
     private var recordingWindow: CaptureRecordingWindow?
     func activate() {
-        guard !activated else { return };activated=true
+        guard !activated else { return };activated=true;shuttingDown=false
         pinSession.restoreWindows();shortcuts.activate()
     }
     func shortcutSuffix(for action:CaptureAction) -> String { let value=shortcuts.label(for:action);return value.isEmpty ? "" : "  "+value }
@@ -42,15 +51,27 @@ func captureFailureMessage(_ error:Error) -> String {
         }
         actionsWindow?.showWindow(nil);NSApp.activate(ignoringOtherApps:true);actionsWindow?.window?.makeKeyAndOrderFront(nil)
     }
+    func showSavingSettings() {
+        if savingWindow == nil {
+            let window=NSWindow(contentRect:NSRect(x:0,y:0,width:820,height:760),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
+            window.title=tr("Capture saving and after-actions");window.isReleasedWhenClosed=false
+            window.contentView=NSHostingView(rootView:CaptureSaveSettingsView(model:saving));window.center();savingWindow=NSWindowController(window:window)
+        }
+        savingWindow?.showWindow(nil);NSApp.activate(ignoringOtherApps:true);savingWindow?.window?.makeKeyAndOrderFront(nil)
+    }
     func shutdown() {
+        shuttingDown=true;afterTask?.cancel();afterTask=nil
         process?.terminate()
         if let captureDirectory { try? FileManager.default.removeItem(at:captureDirectory) }; captureDirectory = nil
         regionSelector?.cancel(); regionSelector = nil
         scrollWindow?.close()
         shortcuts.shutdown();activated=false
     }
-    func capture() {
+    func capture(after override:[CaptureAfterStep]?=nil) {
         guard !capturing else { return }
+        var options:CaptureSaveSettings
+        do { options=try saving.snapshot();if let override {options.after=override};guard options.valid else {throw CaptureSaveFailure.invalidSettings} }
+        catch { saving.issue=captureFailureMessage(error);showSavingSettings();return }
         guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() else { report(CaptureFailure.captureFailed); return }
         issue = nil; capturing = true
         // The native selector supports region, Space for window, and Escape to cancel.
@@ -63,20 +84,35 @@ func captureFailureMessage(_ error:Error) -> String {
         let task = Process(); task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
         task.arguments = ["-i", "-x", "-t", "png", output.path]
         task.standardOutput = FileHandle.nullDevice; task.standardError = FileHandle.nullDevice
+        let pipelineOptions=options
         task.terminationHandler = { [weak self] task in
             Task { @MainActor in
                 defer { try? FileManager.default.removeItem(at: directory) }
-                guard let self else { return }
-                self.process = nil; self.capturing = false
+                guard let self,!self.shuttingDown else { return }
+                self.process = nil
                 self.captureDirectory = nil
                 // Escape produces no file; leave clipboard and existing pins alone.
-                guard FileManager.default.fileExists(atPath: output.path) else { return }
-                guard task.terminationStatus == 0 else { self.report(CaptureFailure.captureFailed); return }
-                do { self.open(try CaptureDocument.load(output)) } catch { self.report(error) }
+                guard FileManager.default.fileExists(atPath: output.path) else { self.capturing=false;return }
+                guard task.terminationStatus == 0 else { self.capturing=false;self.report(CaptureFailure.captureFailed); return }
+                do {
+                    let image=try CaptureDocument.load(output)
+                    self.afterTask=Task { @MainActor [weak self] in
+                        guard let self else{return};defer{self.capturing=false;self.afterTask=nil}
+                        let success=await self.processCaptured(image,options:pipelineOptions)
+                        if !success && !Task.isCancelled {self.showSavingSettings()}
+                    }
+                } catch { self.capturing=false;self.report(error) }
             }
         }
         do { process = task; try task.run() }
         catch { process = nil; capturing = false; captureDirectory = nil; try? FileManager.default.removeItem(at: directory); report(error) }
+    }
+    @discardableResult func processCaptured(_ image:CGImage,options:CaptureSaveSettings,pasteboard:NSPasteboard = .general) async -> Bool {
+        await saving.run(image,settings:options,pin:{ [weak self] in guard let self else {throw CaptureFailure.captureFailed};try self.pinSession.open($0) },copyImage:{ data in
+            pasteboard.clearContents();guard pasteboard.setData(data,forType:.png) else {throw CaptureFailure.exportFailed}
+        },copyText:{ text in
+            pasteboard.clearContents();guard pasteboard.setString(text,forType:.string) else {throw CaptureFailure.exportFailed}
+        })
     }
     func importImage() {
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.image]; panel.allowsMultipleSelection = true
@@ -116,6 +152,9 @@ func captureFailureMessage(_ error:Error) -> String {
     var recordingActive: Bool { recordingWindow?.model.active == true || recordingWindow?.model.exporting == true }
     func terminationReply(_ previous:NSApplication.TerminateReply) -> NSApplication.TerminateReply {
         guard previous == .terminateNow else { return previous }
+        if afterTask != nil || saving.running {
+            saving.issue=tr("Wait for the capture action chain to finish before quitting.");showSavingSettings();return .terminateCancel
+        }
         do { try pinSession.flush() } catch { report(error);return .terminateCancel }
         guard recordingActive else { return previous }
         Task { NSApp.reply(toApplicationShouldTerminate:await finishRecordingForQuit()) }
@@ -145,6 +184,10 @@ func captureFailureMessage(_ error:Error) -> String {
     func perform(_ action:CaptureAction) throws {
         switch action {
         case .screenshot:capture()
+        case .screenshotCopy:capture(after:[.copyImage])
+        case .screenshotOCR:capture(after:[.copyText])
+        case .screenshotQuickSave:capture(after:[.quickSave])
+        case .saveSettings:showSavingSettings()
         case .pinClipboard:pinClipboard()
         case .pinText:pinClipboard(asText:true)
         case .pinLaTeX:pinClipboard(asLaTeX:true)
@@ -175,6 +218,7 @@ func captureFailureMessage(_ error:Error) -> String {
             case .copyImage:model.copy()
             case .copyContent:if let content=model.pinContent { try CapturePinClipboard.copy(content,to:.general) } else { model.copy() }
             case .saveImage:model.save()
+            case .quickSaveImage:try model.quickSave()
             case .recognize:model.recognize();editor.showWindow(nil)
             case .toggleTop:model.pinned.toggle();model.changeWindow?()
             case .toggleLock:model.locked.toggle();model.changeWindow?()
@@ -256,14 +300,27 @@ func captureFailureMessage(_ error:Error) -> String {
             NSPasteboard.general.clearContents(); NSPasteboard.general.setData(data, forType: .png)
         } catch { self.error = tr(error.localizedDescription) }
     }
+    var saveOptions:(()throws->CaptureSaveSettings)?
+    var quickSaveImage:((CaptureDocument)throws->URL)?
+    var showSaveSettings:(()->Void)?
+    @Published var savedImagePath:String?
+    func quickSave() throws {
+        guard let quickSaveImage else {throw CaptureSaveFailure.missingDirectory}
+        savedImagePath=try quickSaveImage(document).path;error=nil
+    }
     func save() {
+        let options:CaptureSaveSettings
+        do { options=try saveOptions?() ?? CaptureSaveSettings() } catch {self.error=captureFailureMessage(error);return}
         let panel = NSSavePanel(); panel.allowedContentTypes = [.png, .jpeg, .tiff]
         panel.nameFieldStringValue = "Thermo-" + ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-") + ".png"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let ext = url.pathExtension.lowercased()
             let type: NSBitmapImageRep.FileType = ["jpg", "jpeg"].contains(ext) ? .jpeg : (ext == "tiff" || ext == "tif" ? .tiff : .png)
-            try document.data(format: type).write(to: url, options: .atomic)
+            let format:CaptureSaveFormat=type == .jpeg ? .jpeg : (type == .tiff ? .tiff : .png)
+            try CaptureImageSave.encode(document,format:format,quality:options.quality).write(to:url,options:.atomic)
+            savedImagePath=url.path;error=nil
+            if options.copyAfterManualSave {copy()}
         } catch { self.error = tr(error.localizedDescription) }
     }
     func recognize() {
@@ -361,6 +418,7 @@ private struct CaptureEditorView: View {
                 TextEditor(text: $model.recognition).font(.system(.body, design: .monospaced)).frame(height: 120)
                 Button(tr("Copy recognized text")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(model.recognition, forType: .string) }.padding(4)
             }
+            if let path=model.savedImagePath { Text(String(format:tr("Saved to %@"),path)).font(.caption).textSelection(.enabled) }
             if let error = model.error { Text(error).foregroundStyle(.red).textSelection(.enabled).padding(6) }
             if model.recognizing { HStack { ProgressView().controlSize(.small); Text(tr("Recognizing text and barcodes…")) }.padding(6) }
             HStack {
@@ -371,6 +429,10 @@ private struct CaptureEditorView: View {
                 Spacer()
                 Button(tr("Text / QR")) { model.recognize() }.disabled(model.recognizing)
                 Button(tr("Copy image")) { model.copy() }.keyboardShortcut("c", modifiers: .command)
+                Menu(tr("Saving options")) {
+                    Button(tr("Quick save")) {do {try model.quickSave()} catch {model.error=captureFailureMessage(error)}}.keyboardShortcut("s",modifiers:[.command,.shift])
+                    Button(tr("Capture saving and after-actions")){model.showSaveSettings?()}
+                }
                 Button(tr("Save image…")) { model.save() }.keyboardShortcut("s", modifiers: .command)
             }.padding(10)
         }

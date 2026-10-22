@@ -26,6 +26,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(item(tr("Pin clipboard") + CaptureWorkspace.shared.shortcutSuffix(for:.pinClipboard), "pin") { CaptureWorkspace.shared.pinClipboard() })
         menu.addItem(item(tr("Pin clipboard as text"), "text.quote") { CaptureWorkspace.shared.pinClipboard(asText:true) })
         menu.addItem(item(tr("Pin clipboard as LaTeX"), "function") { CaptureWorkspace.shared.pinClipboard(asLaTeX:true) })
+        menu.addItem(item(tr("Capture saving and after-actions"), "square.and.arrow.down") { CaptureWorkspace.shared.showSavingSettings() })
         menu.addItem(item(tr("Capture shortcuts and actions"), "keyboard") { CaptureWorkspace.shared.showActionSettings() })
         let configured=NSMenu();configured.autoenablesItems=false
         for entry in CaptureWorkspace.shared.shortcuts.settings.entries where entry.appearsInMenu {
