@@ -24,6 +24,8 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(item(tr("Pin clipboard") + "  ⌥⌘4", "pin") { CaptureWorkspace.shared.pinClipboard() })
         menu.addItem(item(tr("Open image…"), "photo") { CaptureWorkspace.shared.importImage() })
         menu.addItem(item(tr("Scrolling capture…"), "arrow.down.right.and.arrow.up.left") { CaptureWorkspace.shared.captureScrolling() })
+        menu.addItem(item(tr("Record screen…"), "record.circle") { CaptureWorkspace.shared.recordScreen() })
+        menu.addItem(item(tr("Recording drafts…"), "film.stack") { CaptureWorkspace.shared.recordScreen(draftsOnly:true) })
         menu.addItem(item(tr("Settings…"), "gearshape", key: ",") { MainWindow.show(.settings) })
         menu.addItem(.separator())
 

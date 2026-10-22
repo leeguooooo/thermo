@@ -31,6 +31,7 @@ import ThermoL10n
         for panel in panels { panel.orderOut(nil); panel.close() }; panels.removeAll()
         let callback = completion; completion = nil; callback?(region)
     }
+    func cancel() { finish(nil) }
     private final class SelectionView: NSView {
         var done: ((CGRect?) -> Void)?
         var start: CGPoint?, current: CGPoint?

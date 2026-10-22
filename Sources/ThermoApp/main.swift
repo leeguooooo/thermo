@@ -16,7 +16,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     private var menuPreferences = MenuBarPreferences()
     private var menuValidAfter = Date.distantPast
 
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply { AppExitGuard.reply() }
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        CaptureWorkspace.shared.terminationReply(AppExitGuard.reply())
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Settings.register()
@@ -157,6 +159,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         appMenu.addItem(withTitle: tr("Pin clipboard"), action: #selector(pinFromMenu), keyEquivalent: "").target = self
         appMenu.addItem(withTitle: tr("Open image…"), action: #selector(openImageFromMenu), keyEquivalent: "").target = self
         appMenu.addItem(withTitle: tr("Scrolling capture…"), action: #selector(scrollCaptureFromMenu), keyEquivalent: "").target = self
+        appMenu.addItem(withTitle: tr("Record screen…"), action: #selector(recordScreenFromMenu), keyEquivalent: "").target = self
+        appMenu.addItem(withTitle: tr("Recording drafts…"), action: #selector(recordingDraftsFromMenu), keyEquivalent: "").target = self
         let panelItem = appMenu.addItem(withTitle: tr("Open Menu Panel"), action: #selector(openPanelFromMenu), keyEquivalent: "p")
         panelItem.target = self
         panelItem.keyEquivalentModifierMask = [.command, .shift]
@@ -175,6 +179,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     @objc private func pinFromMenu() { CaptureWorkspace.shared.pinClipboard() }
     @objc private func openImageFromMenu() { CaptureWorkspace.shared.importImage() }
     @objc private func scrollCaptureFromMenu() { CaptureWorkspace.shared.captureScrolling() }
+    @objc private func recordScreenFromMenu() { CaptureWorkspace.shared.recordScreen() }
+    @objc private func recordingDraftsFromMenu() { CaptureWorkspace.shared.recordScreen(draftsOnly:true) }
 
     @objc fileprivate func archiveTabsFromMenu() { TabQuickAction.request() }
 

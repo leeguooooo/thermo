@@ -20,6 +20,7 @@ let package = Package(
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.6"),
         .package(url: "https://github.com/swiftlang/swift-markdown", exact: "0.9.0"),
         .package(url: "https://github.com/jpsim/Yams", exact: "6.2.2"),
+        .package(url: "https://github.com/SDWebImage/libwebp-Xcode", exact: "1.6.0"),
     ],
     targets: [
         .target(
@@ -37,7 +38,8 @@ let package = Package(
         .systemLibrary(name: "CSQLite"),
         // Local search runs as the user; never linked into the privileged helper.
         .target(name: "SearchCore", dependencies: ["CSQLite"], linkerSettings: [.linkedFramework("CoreServices")]),
-        .target(name: "CaptureCore", linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("Vision")]),
+        .target(name: "CWebPEncoder", dependencies: [.product(name: "libwebp", package: "libwebp-Xcode")]),
+        .target(name: "CaptureCore", dependencies: ["CWebPEncoder"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("Vision"), .linkedFramework("AVFoundation")]),
         // Disk cleanup runs as the user only: the root helper must never link it.
         .target(name: "CleanKit", dependencies: ["AgentCore", "ThermoL10n"]),
         .executableTarget(name: "thermo", dependencies: ["ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore"]),
@@ -45,7 +47,7 @@ let package = Package(
         .executableTarget(
             name: "ThermoApp",
             dependencies: ["ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "CaptureCore", .product(name: "Sparkle", package: "Sparkle")],
-            linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"),
+            linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"), .linkedFramework("AVKit"),
                              .linkedFramework("CoreWLAN"), .linkedFramework("IOBluetooth"), .linkedFramework("CoreAudio"),
                              .linkedFramework("AudioToolbox"), .linkedFramework("CoreLocation")]
         ),

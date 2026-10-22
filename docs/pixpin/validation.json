@@ -1,46 +1,94 @@
 {
   "status": "partial",
-  "recordedAt": "2026-10-22T04:58:39.625849+00:00",
+  "recordedAt": "2026-10-22T05:34:57.209076+00:00",
   "sourceSHA256": {
-    "Package.swift": "07aee1230137943f8f127e9b816ed43afab2d340e9559f0c34fbb0714ea5a484",
+    "Package.resolved": "b5f6d52a7cbbd47494510fb24d6421c0ef6cddf27c0dd99eb0a0ea3f488cf4a7",
+    "Package.swift": "b12ed178af1b5b4db0a9ad0f42a08f86e25478534618f9c5464a4cefc8537e86",
+    "Resources/ThirdPartyNotices/libwebp-AUTHORS.txt": "f251be89fd442bd9d701360730aea163cc8e2076ff03528f59267dc2c4f8b60a",
+    "Resources/ThirdPartyNotices/libwebp-LICENSE.txt": "e293d1dddc9785200b1f58a4f5293543cf8566d9e0b8a3c02fad955035b19f42",
+    "Resources/ThirdPartyNotices/libwebp-PATENTS.txt": "cc3273e0694ea5896145e0677699b53471b03ea43021ddc50e7923fbb9f5023c",
+    "Sources/CWebPEncoder/encoder.c": "e637e3f1914340c71ce5e8a51b9aba0e541eadc2d354a764d30ee4e2c6fbccce",
+    "Sources/CWebPEncoder/include/CWebPEncoder.h": "28954f04a9c7b9377a82d438231de616e20ad267e28337b133ba5fec20b4018b",
     "Sources/CaptureCore/CaptureDocument.swift": "5a95fff498e0516cd97818b2c4899fba28265ddb98cc883687708c236ed6f20c",
+    "Sources/CaptureCore/CaptureMovieExport.swift": "3d65b1e4dc5cf46aa8cfd9799df05c5068fd51b2a724b98aa91f99da0a1cfadd",
+    "Sources/CaptureCore/CaptureMovieWriter.swift": "ecebf73a94215ba1648fe721fbec98dc043cf3b641c17c23f88424aa72c09ebd",
+    "Sources/CaptureCore/CaptureRecordingDrafts.swift": "bcdeedafaffe5532445471e8fa1097705e732b76aad2da683d74af93efc5eea8",
     "Sources/CaptureCore/CaptureStitcher.swift": "e0d309493122759107cb794e56d163c50086feccda0728244f21c81418e66c29",
-    "Sources/ThermoApp/CaptureRegionSelector.swift": "a4a031a861b33dd490b01d9502cd235dc132fa1b3faffb8b32392841bdfbc0ea",
-    "Sources/ThermoApp/CaptureWorkspace.swift": "ac4a3a8eb0ee5d931c7dc4fbe326d5030cf79ce4710f4b4d1a833fdcfc1dba71",
-    "Sources/ThermoApp/StatusMenu.swift": "2efa1a8debf0012b49225a5a17c3b991b72175fdaa269f5c0013fb88bd5dd115",
-    "Sources/ThermoApp/Views.swift": "38eadd96df07b8f68012649c49e655b2637a7a4985c0b911938bad4187fc30f5",
-    "Sources/ThermoApp/main.swift": "6e05a4dbdc0e213c72be031247cb2d761e82114ad5c2fea469bffb64c409e28a",
-    "Sources/ThermoL10n/ZhHans.swift": "bd740936b5112488d74547f41cedc0f941f1c83aaada734cb653ef5e9f237f43",
+    "Sources/ThermoApp/AppExitGuard.swift": "ab35ae383472e126415a0044d8a1bae39c5755cde6716b24d2cd1e383bb5eb35",
+    "Sources/ThermoApp/CaptureRecording.swift": "5941ac230d78f04ea964c531d8ae5dd6cf417056148dd6baf77298674d820c07",
+    "Sources/ThermoApp/CaptureRegionSelector.swift": "4e9246f4d5df58d4f904751d63deba96fe9fc9223a9f68e07ff770531c62baa2",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "5d0d4063569b9da89cc9e8cae2bff24bd647d6c3271dc50e1ac0e0b79d846586",
+    "Sources/ThermoApp/StatusMenu.swift": "bf255d69bfe4e259f185bd43a96f820458ebdc98338f92af383e7064db895321",
+    "Sources/ThermoApp/Views.swift": "0a66242a31530f87e3823693c7d09bf27fabd523d354ccaafecaf573600c22d5",
+    "Sources/ThermoApp/main.swift": "3f9be174200cea2fe45b26fb47cfc64d44f7a2294fb1c5a5286ae8f04976c54f",
+    "Sources/ThermoL10n/ZhHans.swift": "107654a32c8a4621a97ce282515468ac1e3d9905901a82208bcf47a6fc83cb5d",
     "Tests/CaptureCoreTests/CaptureDocumentTests.swift": "e464b25d39d6ad9e3c5fdbd2adc95981a37821e4fd4f899591ee9370f39c8efd",
+    "Tests/CaptureCoreTests/CaptureMovieExportTests.swift": "94092e5f5c86e79feb0fd2f01860c515312b05ac71e4b01af2824f2d34fd7317",
+    "Tests/CaptureCoreTests/CaptureMovieWriterTests.swift": "b546c5efeff45ac1eed901a14544c72d1182605de744439a6865a8766d6d456b",
+    "Tests/CaptureCoreTests/CaptureRecordingDraftTests.swift": "cff285d279ff2ca3bef41021859968bde5394c3ffa006a4f848ac133ec280b25",
     "Tests/CaptureCoreTests/CaptureStitcherTests.swift": "d39eca8814773b54e0183647cbb560ea6d7a412cfa8d2ce831aa0c4ca6f02888",
-    "scripts/verify-capture-ui.py": "b18179cf4f177c02a95291b9343a28f0d87986e2bc578e0d189382ae9573371d",
-    "scripts/verify-capture-ui.swift": "e493f2b92be8beb67f7163539a7491e3ad2bfc91935c62b355b67d353917ad5b"
+    "scripts/verify-capture-ui.py": "037f40ac9b63f771312bb4b19b2acc56a4d3396921b2c9a771022e03398b8131",
+    "scripts/verify-capture-ui.swift": "34be6cf52aa0d985d5795a24199e3b11f8c52f42dbf41b05eacc0cbc170e5826",
+    "scripts/verify-recording-recovery.py": "e9d95c68c276508810b9054bfe0a3a17a3d7e58f06ca45e7c2d1bc208bbde981",
+    "scripts/verify-recording-recovery.swift": "08927d75e2c2bdb287f89fca62677f5efab417dc0a66b3157721c5f0bfc0139b"
   },
-  "tests": {
-    "command": "swift test -j 4 --filter 'CaptureCoreTests|PresentationTests'",
-    "CaptureCoreTests": 14,
-    "ThermoAppTests": 24,
-    "failures": 0
+  "currentTests": {
+    "command": "swift test -j 4 --filter 'CaptureCoreTests|PresentationTests|MainOnlyExitTests'",
+    "CaptureCoreTests": 28,
+    "ThermoAppTests": 27,
+    "failures": 0,
+    "logSHA256": "2f30c4a8ecf1178e9eb13f67c5aa087b0d095d2bfac0690f54afbcc513fe77cb"
   },
-  "nativeQA": {
-    "bundleID": "dev.thermo.capture-qa",
-    "binarySHA256": "dc498195f1b27f66180a397363899c4755d0a13d8520ef1dc5bdc578b994e30b",
+  "previousImageQA": {
+    "sourceCommit": "d306691",
     "verified": [
+      "Chinese and English OCR fixture",
+      "rotate and undo",
       "Chinese labels",
-      "rectangle selection state",
-      "rotate 900x600 to 600x900",
-      "undo back to 900x600",
-      "complete Chinese and English OCR fixture"
+      "annotation selection state"
+    ]
+  },
+  "nativeRecordingQA": {
+    "bundleID": "dev.thermo.capture-qa.543242c1b433",
+    "retainedApp": "/tmp/thermo-recording-qa-named-01a/ThermoCaptureQA.app",
+    "binarySHA256": "bfc0b708b1b06bd5e0cd5bcb9211deddf30be8ced3d0946bf8811a0b309df770",
+    "verified": [
+      "Synthetic three-second video renders in AVPlayerView",
+      "Play button advances visible moving shape",
+      "Chinese trim endpoints editable",
+      "2x speed selectable",
+      "WebP format enables animation frame rate and dimension settings"
     ],
     "unverified": [
-      "interactive screenshot",
-      "mouse drawing",
-      "clipboard pins",
-      "save dialog",
-      "QR fixture",
-      "live scrolling",
-      "multi-display",
-      "permission rejection"
-    ]
-  }
+      "Native save panel completion",
+      "Live ScreenCaptureKit area recording",
+      "Actual system audio capture",
+      "Permission rejection",
+      "Multiple displays",
+      "Live-screen and audio crash recovery"
+    ],
+    "savePanelObservation": {
+      "active": false,
+      "key": false,
+      "directoryWritable": true,
+      "validTargetURL": true,
+      "saveButtonEnabled": false,
+      "coordinateActionError": "noWindowsAvailable"
+    },
+    "sourceBaseCommit": "23e6d4ec5691116af6e26b3c6d3a4126c2b33cb9"
+  },
+  "fragmentRecovery": {
+    "recordedAt": "2026-10-22T05:28:23.195197+00:00",
+    "termination": "SIGKILL",
+    "workerExitCode": -9,
+    "decoded": {
+      "draftStatus": "recording",
+      "duration": 8,
+      "height": 120,
+      "playable": true,
+      "width": 160
+    },
+    "sourceSHA256": "08927d75e2c2bdb287f89fca62677f5efab417dc0a66b3157721c5f0bfc0139b"
+  },
+  "baseCommit": "23e6d4ec5691116af6e26b3c6d3a4126c2b33cb9"
 }

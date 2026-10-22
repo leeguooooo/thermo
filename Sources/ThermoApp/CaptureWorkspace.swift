@@ -12,8 +12,10 @@ import UniformTypeIdentifiers
     @Published var pinCount = 0
     private var windows: [UUID: CaptureEditor] = [:]
     private var process: Process?
+    private var captureDirectory: URL?
     private var regionSelector: CaptureRegionSelector?
     private var scrollWindow: NSWindowController?
+    private var recordingWindow: CaptureRecordingWindow?
     private let hotkeys = CarbonCleanScreenHotkeys()
     private var leases: [CleanScreenHotkeyLease] = []
     func activate() {
@@ -28,6 +30,9 @@ import UniformTypeIdentifiers
     }
     func shutdown() {
         process?.terminate()
+        if let captureDirectory { try? FileManager.default.removeItem(at:captureDirectory) }; captureDirectory = nil
+        regionSelector?.cancel(); regionSelector = nil
+        scrollWindow?.close()
         for lease in leases { try? lease.release() }; leases.removeAll()
     }
     func capture() {
@@ -40,6 +45,7 @@ import UniformTypeIdentifiers
         do { try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700]) }
         catch { capturing = false; report(error); return }
         let output = directory.appendingPathComponent("capture.png")
+        captureDirectory = directory
         let task = Process(); task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
         task.arguments = ["-i", "-x", "-t", "png", output.path]
         task.standardOutput = FileHandle.nullDevice; task.standardError = FileHandle.nullDevice
@@ -48,6 +54,7 @@ import UniformTypeIdentifiers
                 defer { try? FileManager.default.removeItem(at: directory) }
                 guard let self else { return }
                 self.process = nil; self.capturing = false
+                self.captureDirectory = nil
                 // Escape produces no file; leave clipboard and existing pins alone.
                 guard FileManager.default.fileExists(atPath: output.path) else { return }
                 guard task.terminationStatus == 0 else { self.report(CaptureFailure.captureFailed); return }
@@ -55,7 +62,7 @@ import UniformTypeIdentifiers
             }
         }
         do { process = task; try task.run() }
-        catch { process = nil; capturing = false; try? FileManager.default.removeItem(at: directory); report(error) }
+        catch { process = nil; capturing = false; captureDirectory = nil; try? FileManager.default.removeItem(at: directory); report(error) }
     }
     func importImage() {
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.image]; panel.allowsMultipleSelection = true
@@ -75,6 +82,35 @@ import UniformTypeIdentifiers
                 let window = ScrollCaptureWindow(region: region); self.scrollWindow = window; window.showWindow(nil)
             }
         } else { issue = tr("Scrolling capture requires macOS 14 or later."); showIssue() }
+    }
+    func recordScreen(draftsOnly: Bool = false) {
+        if let recordingWindow, recordingWindow.model.active || recordingWindow.model.exporting {
+            recordingWindow.showWindow(nil); return
+        }
+        recordingWindow?.close()
+        if draftsOnly {
+            let window = CaptureRecordingWindow(region:nil); recordingWindow = window; window.showWindow(nil); return
+        }
+        guard regionSelector == nil else { return }
+        let selector = CaptureRegionSelector(); regionSelector = selector
+        selector.select { [weak self] region in
+            guard let self else { return }; self.regionSelector = nil
+            guard let region else { return }
+            let window = CaptureRecordingWindow(region:region); self.recordingWindow = window; window.showWindow(nil)
+        }
+    }
+    var recordingActive: Bool { recordingWindow?.model.active == true || recordingWindow?.model.exporting == true }
+    func terminationReply(_ previous:NSApplication.TerminateReply) -> NSApplication.TerminateReply {
+        guard previous == .terminateNow, recordingActive else { return previous }
+        Task { NSApp.reply(toApplicationShouldTerminate:await finishRecordingForQuit()) }
+        return .terminateLater
+    }
+    func finishRecordingForQuit() async -> Bool {
+        guard let model = recordingWindow?.model else { return true }
+        if model.exporting { recordingWindow?.showWindow(nil); return false }
+        await model.stop()
+        if model.phase == .failed { recordingWindow?.showWindow(nil); return false }
+        return !model.active
     }
     func pinClipboard() {
         let board = NSPasteboard.general

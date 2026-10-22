@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build an isolated app using production capture UI. Does not launch it or touch the installed Thermo."""
 import argparse
+import hashlib
 import os
 from pathlib import Path
 import plistlib
@@ -11,6 +12,7 @@ import tempfile
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output-dir', type=Path)
+    parser.add_argument('--recording-review', action='store_true')
     args = parser.parse_args()
     root = Path(__file__).resolve().parent.parent
     os.chdir(root)
@@ -25,12 +27,11 @@ def main():
     binary = app / 'Contents/MacOS/ThermoCaptureQA'
     binary.parent.mkdir(parents=True)
     command = ['xcrun', 'swiftc', '-parse-as-library', str(root/'scripts/verify-capture-ui.swift'), '-o', str(binary),
-               '-I', str(root/'Sources/CSQLite'), '-lsqlite3', '-lz']
+               '-I', str(root/'Sources/CSQLite'), '-lsqlite3', '-lz', '-framework', 'AVKit']
     if (base/'ExecutableModules').is_dir():
         command += ['-I', str(base), '-F', str(base), '-framework', 'Sparkle', '-Xlinker', '-rpath', '-Xlinker', str(base)]
-        intermediate = root/'.build/out/Intermediates.noindex/thermo.build/Debug'
-        for name in ['CSMC', 'CTokenData']:
-            for path in intermediate.glob(name+'-t.build/*.modulemap'):
+        for name in ['CSMC', 'CTokenData', 'CWebPEncoder', 'libwebp']:
+            for path in (root/'.build/out/Intermediates.noindex/GeneratedModuleMaps').glob(name+'.modulemap'):
                 command += ['-Xcc', '-fmodule-map-file='+str(path)]
         modules = list((base/'ExecutableModules').glob('ThermoApp-*-testable.o'))
         if len(modules) != 1:
@@ -39,12 +40,14 @@ def main():
     else:
         sparkle = root/'.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64'
         command += ['-I', str(base/'Modules'), '-I', str(base/'CSMC.build'),
+                    '-I', str(base/'CWebPEncoder.build'), '-I', str(base/'libwebp.build'),
                     '-F', str(sparkle), '-framework', 'Sparkle', '-Xlinker', '-rpath', '-Xlinker', str(sparkle)]
         command += (base/'ThermoApp.product/Objects.LinkFileList').read_text().splitlines()
     subprocess.run(command, check=True)
     (app/'Contents/Info.plist').write_bytes(plistlib.dumps({
-        'CFBundleIdentifier': 'dev.thermo.capture-qa', 'CFBundleExecutable': binary.name,
-        'CFBundleName': 'Thermo Capture QA', 'CFBundlePackageType': 'APPL', 'NSHighResolutionCapable': True,
+        'CFBundleIdentifier': 'dev.thermo.capture-qa.'+hashlib.sha256(str(output).encode()).hexdigest()[:12], 'CFBundleExecutable': binary.name,
+        'CFBundleName': binary.name, 'CFBundlePackageType': 'APPL', 'NSHighResolutionCapable': True,
+        'ThermoRecordingReview': args.recording_review, 'ThermoCaptureFixtureRoot': str(output),
     }))
     subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True)
     print(app)

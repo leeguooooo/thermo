@@ -1,0 +1,13 @@
+{
+  "recordedAt": "2026-10-22T05:28:23.195197+00:00",
+  "termination": "SIGKILL",
+  "workerExitCode": -9,
+  "decoded": {
+    "draftStatus": "recording",
+    "duration": 8,
+    "height": 120,
+    "playable": true,
+    "width": 160
+  },
+  "sourceSHA256": "08927d75e2c2bdb287f89fca62677f5efab417dc0a66b3157721c5f0bfc0139b"
+}

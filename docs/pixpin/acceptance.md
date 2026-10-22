@@ -23,3 +23,34 @@ python3 scripts/verify-capture-ui.py
 ```
 
 脚本输出独立应用路径，不自动启动或安装。打开后可检查图像工具与本地 OCR。程序 10 分钟后自动退出。
+
+## 快速录屏与动图导出
+
+录制后端以 ScreenCaptureKit 提供的同一单调时钟处理视频、系统音频、暂停和停止。当前素材为实时编码的 H.264/AAC MP4；这属于快速录制，不包含普通录制所需的可编辑鼠标/键盘事件或摄像头图层。
+
+新增编码测试直接生成真实视频与音频样本，验证：
+
+- MP4 的静止画面延续至停止时刻；暂停中停止不计入等待时长，继续后的样本不会保留暂停空白。
+- 首尾剪辑和倍速后的 MP4 可解码且时长符合预期；系统音轨在剪辑后仍存在，且可解码为 1.6 秒、非静音的 PCM 样本。
+- GIF、APNG、WebP 能读出多帧、交替的红蓝内容和 0.2 秒帧间延时。
+- 导出失败保留已有目标文件；成功导出可替换目标文件。
+- 草稿目录权限为 0700，正常和中断标记可重新读取；无效 JSON、缺失视频和符号链接不作为草稿打开，丢弃草稿不删除符号链接指向的外部文件。
+
+`python3 scripts/verify-capture-ui.py --recording-review` 构建录屏预览 QA：它使用生成的移动图形视频和独立草稿目录，不捕获真实屏幕，不申请麦克风或屏幕权限。QA 应用标识按输出目录生成，避免已删除临时应用的 Launch Services 缓存影响下次启动。
+
+真实区域录制、系统声音采集、权限拒绝、多屏仍需原生验收。测试样本的系统音轨证明编码与导出链路，不证明已从系统捕获到声音。
+
+
+独立恢复验证命令：
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+SDKROOT=$(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun --sdk macosx --show-sdk-path) \
+python3 scripts/verify-recording-recovery.py
+```
+
+脚本只杀死自己刚创建且确认存活的合成编码进程，不捕获屏幕或系统声音。最后一次验证在 SIGKILL 后，从原状态为 recording 的草稿解码出 160 × 120、8 秒的视频；编码器已经接收了 10 秒合成时间轴，尾部没有全部落盘。[记录](recording-recovery-validation.json) 仅证明已落盘碎片的恢复，不保证所有时长、画质和音轨组合的尾部恢复。
+
+当前回归为 CaptureCore 28 项、App 表现层与退出保护 27 项，共 55 项。原生 QA 已观察到蓝底移动图形视频播放、中文起止字段、倍速和格式选项。播放器显式链接 AVKit，使用 AVPlayerView。
+
+保存面板的前台交互仍待验证。探针记录显示应用 active=false、面板 key=false；目录可写，public.mpeg-4 或 WebP 类型和目标 URL 均有效，但保存按钮不可用。已切换为异步 sheet，并保留一个独立 QA 等待前台验收，没有将此流程记作通过。

@@ -413,6 +413,8 @@ struct PopoverView: View {
                     Button(tr("Pin clipboard") + "  ⌥⌘4") { CaptureWorkspace.shared.pinClipboard() }
                     Button(tr("Open image…")) { CaptureWorkspace.shared.importImage() }
                     Button(tr("Scrolling capture…")) { CaptureWorkspace.shared.captureScrolling() }
+                    Button(tr("Record screen…")) { CaptureWorkspace.shared.recordScreen() }
+                    Button(tr("Recording drafts…")) { CaptureWorkspace.shared.recordScreen(draftsOnly:true) }
                     Divider()
                     Button(tr("Show all pins")) { CaptureWorkspace.shared.showAll() }
                     Button(tr("Hide all pins")) { CaptureWorkspace.shared.hideAll() }

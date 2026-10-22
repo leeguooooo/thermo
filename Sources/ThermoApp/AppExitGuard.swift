@@ -71,7 +71,7 @@ final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
         }
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        AppExitGuard.reply(show: showExitBlocker)
+        CaptureWorkspace.shared.terminationReply(AppExitGuard.reply(show: showExitBlocker))
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         MainWindow.show()
