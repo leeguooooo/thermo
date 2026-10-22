@@ -16,6 +16,7 @@ def main():
     parser.add_argument('--recording-review', action='store_true')
     parser.add_argument('--ordinary-review', action='store_true')
     parser.add_argument('--av-layer-review', action='store_true')
+    parser.add_argument('--keyboard-review', action='store_true')
     args = parser.parse_args()
     root = Path(__file__).resolve().parent.parent
     os.chdir(root)
@@ -54,7 +55,7 @@ def main():
     (app/'Contents/Info.plist').write_bytes(plistlib.dumps({
         'CFBundleIdentifier': 'dev.thermo.capture-qa.'+hashlib.sha256(str(output).encode()).hexdigest()[:12], 'CFBundleExecutable': binary.name,
         'CFBundleName': binary.name, 'CFBundlePackageType': 'APPL', 'NSHighResolutionCapable': True,
-        'ThermoRecordingReview': args.recording_review or args.ordinary_review or args.av_layer_review, 'ThermoOrdinaryReview': args.ordinary_review or args.av_layer_review, 'ThermoAVLayerReview': args.av_layer_review, 'ThermoCaptureFixtureRoot': str(output),
+        'ThermoRecordingReview': args.recording_review or args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoOrdinaryReview': args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoKeyboardReview': args.keyboard_review, 'ThermoAVLayerReview': args.av_layer_review, 'ThermoCaptureFixtureRoot': str(output),
     }))
     subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True)
     print(app)

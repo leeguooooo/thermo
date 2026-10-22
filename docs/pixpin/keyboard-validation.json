@@ -1,0 +1,61 @@
+{
+  "status": "partial",
+  "recordedAt": "2026-10-22T07:25:20.347862+00:00",
+  "baseCommit": "bbc1f174260c910a6d27feed2578f22a228a80aa",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureKeyboard.swift": "d5089432f3f3d947b75faad08175ed281c364ac38c1d71af013e089fecfcb5ed",
+    "Sources/CaptureCore/CaptureFrameArchive.swift": "3745d305a705a200adaf50768cf1c75db97043d78b6f819ef5902a1bda9216a6",
+    "Sources/CaptureCore/CaptureNormalEdits.swift": "407eb00a1fee22005cb17ad227bee021b8c7ecccc477d2250880c6868d6c2c64",
+    "Sources/CaptureCore/CaptureNormalRenderer.swift": "244ce8f4c657a66952e9779a03f7ac0fbf8653bdb4001c539691ae1c73ef2c6f",
+    "Sources/ThermoApp/CaptureKeyboardMonitor.swift": "50b193c4f48b45be48222b14d3a03c361eab040b855649362e964598a78a4ac4",
+    "Sources/ThermoApp/CaptureNormalOverlay.swift": "72e3a3b131b755bd5baa374def913ab54589972bc0b940efc5c13e2dec2bfd4d",
+    "Sources/ThermoApp/CaptureRecording.swift": "d19f24f822db6bbf035d7d7167f40ba105c58607e6fec716982a30d004571c9e",
+    "Sources/ThermoL10n/ZhHans.swift": "5bf782c847e26cd89a686e2985619cacbedb4b936d2f20b1dd33480c20f72a20",
+    "Tests/CaptureCoreTests/CaptureKeyboardTests.swift": "fd3340e864b4d5cba332f1fba764aee17f895cbd36ab1b83dcdd84995c5ee59b",
+    "scripts/verify-capture-ui.py": "8021e96565ae0c7c0143f44a3934b181e0e8644cb37e158b74d1273b50848200",
+    "scripts/verify-capture-ui.swift": "441e9ba8e2f6556e55b2ce3eb650c12f8cc4adc9d3224835f621f74d13964d62"
+  },
+  "tests": {
+    "CaptureCore": 59,
+    "ThermoApp": 27,
+    "failures": 0,
+    "logSHA256": "46f78f9928560d04c0401e4fe18ab5de1572cdfa5b9591fbaea57a530c2fd3d8",
+    "context": "isolated task workspace"
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-keyboard-qa-layout-01a/ThermoCaptureQA.app",
+    "binarySHA256": "ed1b0bbf9b40e11d9ccbad54bb01c262d28a3ab55e16aa066af07889d7ede75f",
+    "syntheticOnly": true,
+    "verified": [
+      "Synthetic command-C visible in preview",
+      "Keyboard top-position edit persists",
+      "0.6 to 2.4 second trim survives preview refresh",
+      "Keyboard controls are visible in scrollable layout"
+    ],
+    "savedKeyboardEdits": [
+      {
+        "scale": 1,
+        "top": true,
+        "hold": 1.2,
+        "mode": "shortcuts"
+      }
+    ],
+    "unverified": [
+      "Input Monitoring grant/refusal",
+      "Real secure input exclusion",
+      "Actual global listener start/stop/pause/quit lifecycle",
+      "Native foreground save"
+    ]
+  },
+  "privacyDefaults": {
+    "captureEnabled": false,
+    "captureMode": "shortcuts",
+    "eventTap": "session listenOnly",
+    "secureInputCheckedBeforeKeyLookup": true,
+    "postsOrModifiesEvents": false
+  },
+  "remaining": [
+    "Real device acceptance",
+    "Other incomplete features in docs/pixpin/README.md"
+  ]
+}

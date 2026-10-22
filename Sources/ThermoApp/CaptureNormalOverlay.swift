@@ -70,6 +70,7 @@ struct CaptureNormalSettings:View {
     var body:some View {
         VStack(alignment:.leading,spacing:8) {
             CaptureAVLayerSettings(model:model)
+            CaptureKeyboardSettings(model:model)
             HStack {
                 Toggle(tr("Show cursor"),isOn:$model.normalEdits.showCursor)
                 Toggle(tr("Show mouse actions"),isOn:$model.normalEdits.showClicks)
@@ -137,6 +138,28 @@ struct CaptureAVLayerSettings:View {
                     Text(tr("Microphone volume"))
                     Slider(value:Binding(get:{ model.normalEdits.microphoneVolume ?? 1 },set:{ model.normalEdits.microphoneVolume=$0 }),in:0...1)
                 }
+            }
+        }
+    }
+}
+
+struct CaptureKeyboardSettings:View {
+    @ObservedObject var model:CaptureRecordingModel
+    private func setting<T>(_ key:WritableKeyPath<CaptureKeyboardEdits,T>) -> Binding<T> {
+        Binding(get:{ (model.normalEdits.keyboard ?? CaptureKeyboardEdits())[keyPath:key] },set:{ value in
+            var settings=model.normalEdits.keyboard ?? CaptureKeyboardEdits();settings[keyPath:key]=value;model.normalEdits.keyboard=settings
+        })
+    }
+    var body:some View {
+        if let source=model.normalSource,!source.keys.isEmpty {
+            HStack {
+                Picker(tr("Keyboard overlay"),selection:setting(\.mode)) {
+                    Text(tr("Hidden")).tag(CaptureKeyMode.hidden);Text(tr("Shortcuts only")).tag(CaptureKeyMode.shortcuts)
+                    Text(tr("All recorded keys")).tag(CaptureKeyMode.all)
+                }
+                Slider(value:setting(\.hold),in:0.2...5).frame(width:80).help(tr("Key display duration"))
+                Slider(value:setting(\.scale),in:0.5...3).frame(width:70).help(tr("Key display size"))
+                Toggle(tr("Keys at top"),isOn:setting(\.top))
             }
         }
     }

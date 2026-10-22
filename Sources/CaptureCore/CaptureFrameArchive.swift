@@ -33,8 +33,9 @@ public struct CaptureFrameArchiveHeader: Codable, Sendable {
     public let fps:Int
     public let codec:Codec
     public let pixelScale:Double
-    public init(width:Int,height:Int,fps:Int,codec:Codec = .png,pixelScale:Double = 1) {
-        version=1; self.width=width; self.height=height; self.fps=fps; self.codec=codec; self.pixelScale=pixelScale
+    public let keyboardCapture:CaptureKeyMode?
+    public init(width:Int,height:Int,fps:Int,codec:Codec = .png,pixelScale:Double = 1,keyboardCapture:CaptureKeyMode? = nil) {
+        version=1; self.width=width; self.height=height; self.fps=fps; self.codec=codec; self.pixelScale=pixelScale;self.keyboardCapture=keyboardCapture
     }
     var valid:Bool { version == 1 && (2...4096).contains(width) && (2...4096).contains(height) && width%2 == 0 && height%2 == 0 && [5,16,24,30,60].contains(fps) && pixelScale.isFinite && pixelScale > 0 && pixelScale <= 8 }
 }
@@ -44,6 +45,7 @@ public struct CaptureFrameArchiveSource: Sendable {
     public let header:CaptureFrameArchiveHeader
     public let frames:[CaptureArchivedFrame]
     public let pointers:[CaptureArchivedPointer]
+    public let keys:[CaptureKeyEvent]
     public let duration:Double
     public var audioURL:URL? {
         let url=root.appendingPathComponent("system-audio.caf")
@@ -78,7 +80,11 @@ public struct CaptureFrameArchiveSource: Sendable {
         let rawPointers:[CaptureArchivedPointer]=try journal(root.appendingPathComponent("pointer.jsonl"))
         guard rawPointers.allSatisfy({ $0.time.isFinite && $0.time >= 0 && $0.sample.valid }) else { throw CaptureMovieFailure.invalidTime }
         let pointers=rawPointers.sorted { $0.time < $1.time }
-        let minimum=max(frames.last!.time,pointers.last?.time ?? 0)+1/Double(header.fps)
+        let keyURL=root.appendingPathComponent("keyboard.jsonl")
+        let keys:[CaptureKeyEvent]=FileManager.default.fileExists(atPath:keyURL.path) ? try journal(keyURL) : []
+        guard keys.allSatisfy(\.valid) else { throw CaptureMovieFailure.invalidTime }
+        let orderedKeys=keys.sorted { $0.time < $1.time }
+        let minimum=max(frames.last!.time,max(pointers.last?.time ?? 0,orderedKeys.last?.time ?? 0))+1/Double(header.fps)
         var duration=minimum
         let end=root.appendingPathComponent("end.json")
         if FileManager.default.fileExists(atPath:end.path) {
@@ -87,7 +93,7 @@ public struct CaptureFrameArchiveSource: Sendable {
             guard let seconds=stored["duration"], seconds.isFinite, seconds > 0, seconds+0.001 >= frames.last!.time else { throw CaptureMovieFailure.invalidTime }
             duration=seconds
         }
-        return CaptureFrameArchiveSource(root:root,header:header,frames:frames,pointers:pointers,duration:duration)
+        return CaptureFrameArchiveSource(root:root,header:header,frames:frames,pointers:pointers,keys:orderedKeys,duration:duration)
     }
     static func regular(_ url:URL) throws -> Bool {
         let attributes=try url.resourceValues(forKeys:[.isRegularFileKey,.isSymbolicLinkKey])
@@ -113,7 +119,7 @@ public final class CaptureFrameArchive: @unchecked Sendable {
     private let lock=NSLock(), audioLock=NSLock(), cameraLock=NSLock()
     private let queue=DispatchQueue(label:"dev.thermo.recording.archive",qos:.userInitiated)
     private let context=CIContext(options:[.cacheIntermediates:false])
-    private let video:FileHandle, pointer:FileHandle
+    private let video:FileHandle, pointer:FileHandle, keyboard:FileHandle
     private let jpegQuality:Double
     private var timeline=CaptureMovieTimeline()
     private var accepting=true, pending=0, frames=0, dropped=0
@@ -122,6 +128,7 @@ public final class CaptureFrameArchive: @unchecked Sendable {
     private var error:Error?
     private var lastPointer:CaptureArchivedPointer?
     private var pointerPending=0
+    private var keyPending=0
     private var audio:CaptureAudioLane?
     private var microphone:CaptureAudioLane?
     private var camera:CaptureFrameArchive?
@@ -135,7 +142,9 @@ public final class CaptureFrameArchive: @unchecked Sendable {
             let frames=root.appendingPathComponent("frames.jsonl"), pointers=root.appendingPathComponent("pointer.jsonl")
             guard FileManager.default.createFile(atPath:frames.path,contents:nil,attributes:[.posixPermissions:0o600]),
                   FileManager.default.createFile(atPath:pointers.path,contents:nil,attributes:[.posixPermissions:0o600]) else { throw CaptureFailure.exportFailed }
-            video=try FileHandle(forWritingTo:frames); pointer=try FileHandle(forWritingTo:pointers)
+            let keys=root.appendingPathComponent("keyboard.jsonl")
+            guard FileManager.default.createFile(atPath:keys.path,contents:nil,attributes:[.posixPermissions:0o600]) else { throw CaptureFailure.exportFailed }
+            video=try FileHandle(forWritingTo:frames); pointer=try FileHandle(forWritingTo:pointers);keyboard=try FileHandle(forWritingTo:keys)
         } catch { try? FileManager.default.removeItem(at:root); throw error }
     }
     public func pause(at time:CMTime) { lock.lock(); defer { lock.unlock() }; if accepting { timeline.pause(at:time) } }
@@ -185,6 +194,21 @@ public final class CaptureFrameArchive: @unchecked Sendable {
         }
         lock.unlock()
     }
+    @discardableResult public func recordKey(label:String,shortcut:Bool,repeated:Bool = false,at time:CMTime) throws -> Bool {
+        guard let mode=header.keyboardCapture,mode != .hidden,mode == .all || shortcut else { return false }
+        lock.lock();defer { lock.unlock() }
+        guard accepting,!timeline.paused,let output=timeline.presentationTime(at:time) else { return false }
+        let event=CaptureKeyEvent(time:output.seconds,label:label,shortcut:shortcut,repeated:repeated)
+        guard event.valid else { throw CaptureMovieFailure.invalidConfiguration }
+        guard keyPending < 256 else { throw CaptureMovieFailure.encoding("Keyboard metadata queue is full.") }
+        keyPending += 1
+        queue.async { [self] in
+            defer { lock.lock();keyPending -= 1;lock.unlock() }
+            do { var data=try JSONEncoder().encode(event);data.append(10);try keyboard.write(contentsOf:data) }
+            catch { lock.lock();if self.error == nil { self.error=error };lock.unlock() }
+        }
+        return true
+    }
     public func appendAudio(_ sample:CMSampleBuffer) throws { try appendAudio(sample,at:CMSampleBufferGetPresentationTimeStamp(sample),microphone:false) }
     public func appendMicrophone(_ sample:CMSampleBuffer,at time:CMTime) throws { try appendAudio(sample,at:time,microphone:true) }
     private func appendAudio(_ sample:CMSampleBuffer,at time:CMTime,microphone isMicrophone:Bool) throws {
@@ -230,7 +254,7 @@ public final class CaptureFrameArchive: @unchecked Sendable {
                     audioLock.lock();audio?.close();microphone?.close();audio=nil;microphone=nil;audioLock.unlock()
                     lock.lock(); let storedError=error; let count=frames; let end=max(duration,lastEncoded+1/60000); lock.unlock()
                     if let storedError { throw storedError }; guard count > 0 else { throw CaptureMovieFailure.noFrames }
-                    try video.synchronize(); try pointer.synchronize()
+                    try video.synchronize(); try pointer.synchronize();try keyboard.synchronize()
                     try JSONEncoder().encode(["duration":end]).write(to:root.appendingPathComponent("end.json"),options:.atomic)
                     continuation.resume(returning:root)
                 } catch { continuation.resume(throwing:error) }
@@ -244,9 +268,9 @@ public final class CaptureFrameArchive: @unchecked Sendable {
         await withCheckedContinuation { (continuation:CheckedContinuation<Void,Never>) in
             queue.async { [self] in
                 audioLock.lock();audio?.close();microphone?.close();audio=nil;microphone=nil;audioLock.unlock()
-                try? video.synchronize();try? pointer.synchronize();continuation.resume()
+                try? video.synchronize();try? pointer.synchronize();try? keyboard.synchronize();continuation.resume()
             }
         }
     }
-    deinit { try? video.close(); try? pointer.close() }
+    deinit { try? video.close(); try? pointer.close();try? keyboard.close() }
 }

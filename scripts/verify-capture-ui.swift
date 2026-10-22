@@ -43,7 +43,7 @@ import ThermoL10n
                     let source = root.appendingPathComponent("fixture-"+UUID().uuidString+".mp4")
                     let ordinary=Bundle.main.object(forInfoDictionaryKey:"ThermoOrdinaryReview") as? Bool == true
                     let draft=ordinary ? try window.model.store.create(mode:.normal) : nil
-                    let archive=try draft.map { try CaptureFrameArchive(root:window.model.store.archive($0.id),header:.init(width:320,height:240,fps:16)) }
+                    let archive=try draft.map { try CaptureFrameArchive(root:window.model.store.archive($0.id),header:.init(width:320,height:240,fps:16,keyboardCapture:Bundle.main.object(forInfoDictionaryKey:"ThermoKeyboardReview") as? Bool == true ? .all : nil)) }
                     let writer=ordinary ? nil : try CaptureMovieWriter(url:source,width:320,height:240,fps:16)
                     for index in 0..<48 {
                         var result:CVPixelBuffer?
@@ -58,6 +58,11 @@ import ThermoL10n
                         if let archive {
                             while try !archive.appendVideo(buffer,at:time) { try await Task.sleep(nanoseconds:1_000_000) }
                             archive.recordPointer(.init(x:0.1+Double(index)/60,y:0.75,buttons:(12...16).contains(index) ? 1 : 0),at:time)
+                            if Bundle.main.object(forInfoDictionaryKey:"ThermoKeyboardReview") as? Bool == true {
+                                if index == 8 { _=try archive.recordKey(label:"⌘C",shortcut:true,at:time) }
+                                if index == 24 { _=try archive.recordKey(label:"A",shortcut:false,at:time) }
+                                if index == 32 { _=try archive.recordKey(label:"⌥⇧↑",shortcut:true,at:time) }
+                            }
                             if Bundle.main.object(forInfoDictionaryKey:"ThermoAVLayerReview") as? Bool == true {
                                 var pixel:CVPixelBuffer?
                                 CVPixelBufferCreate(kCFAllocatorDefault,160,120,kCVPixelFormatType_32BGRA,[kCVPixelBufferCGImageCompatibilityKey:true,kCVPixelBufferCGBitmapContextCompatibilityKey:true] as CFDictionary,&pixel)

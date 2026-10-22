@@ -58,6 +58,9 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
     @Published var fps = 30
     @Published var quality: Quality = .standard
     @Published var systemAudio = false
+    @Published var recordKeyboard=false
+    @Published var keyboardMode:CaptureKeyMode = .shortcuts
+    private var keyboardMonitor:CaptureKeyboardMonitor?
     @Published var captureCamera=false
     @Published var captureMicrophone=false
     @Published var cameraID=""
@@ -115,11 +118,12 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
         issue = nil; phase = .starting; player?.pause(); player = nil; source = nil; draft = nil; normalSource = nil; archive = nil; normalEdits=CaptureNormalEdits()
         let chosenFPS = fps, quality = quality, audio = systemAudio, cursor = showsCursor, delay = delay,mode=mode
         let camera=mode == .normal && captureCamera,microphone=mode == .normal && captureMicrophone
-        let cameraID=cameraID,microphoneID=microphoneID
+        let cameraID=cameraID,microphoneID=microphoneID,keys=mode == .normal && recordKeyboard,keyMode=keyboardMode
         startTask = Task { [weak self] in
             guard let self else { return }
             do {
                 try await CaptureAVDevices.authorize(camera:camera,microphone:microphone)
+                if keys { try CaptureKeyboardMonitor.authorize() }
                 let content = try await SCShareableContent.excludingDesktopWindows(false,onScreenWindowsOnly:true)
                 try Task.checkCancellation()
                 guard let display = content.displays.first(where: { $0.displayID == region.displayID }) else { throw CaptureFailure.captureFailed }
@@ -134,8 +138,9 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
                 let rate = quality == .compact ? 0.07 : (quality == .high ? 0.3 : 0.15)
                 let writer:any RecordingDestination
                 if mode == .normal {
-                    let archive=try CaptureFrameArchive(root:self.store.archive(draft.id),header:.init(width:width,height:height,fps:chosenFPS,codec:quality == .high ? .png : .jpeg,pixelScale:Double(width)/region.rect.width),jpegQuality:quality == .compact ? 0.65 : 0.9)
+                    let archive=try CaptureFrameArchive(root:self.store.archive(draft.id),header:.init(width:width,height:height,fps:chosenFPS,codec:quality == .high ? .png : .jpeg,pixelScale:Double(width)/region.rect.width,keyboardCapture:keys ? keyMode : nil),jpegQuality:quality == .compact ? 0.65 : 0.9)
                     self.archive=archive; writer=archive; self.normalEdits.showCursor=cursor
+                    if keys { var settings=CaptureKeyboardEdits();settings.mode=keyMode;self.normalEdits.keyboard=settings }
                     try self.normalEdits.save(to:archive.root)
                 } else {
                     writer=try CaptureMovieWriter(url:self.store.movie(draft.id),width:width,height:height,fps:chosenFPS,bitRate:min(100_000_000,max(100_000,Int(Double(width*height*chosenFPS)*rate))),systemAudio:audio)
@@ -170,6 +175,12 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
                 }
                 self.seconds = 0; self.dropped = 0; self.phase = .recording
                 if mode == .normal { self.beginPointerTracking(region:region) }
+                if keys,let archive=self.archive {
+                    let monitor=CaptureKeyboardMonitor(mode:keyMode,archive:archive,active:{ [weak self] in self?.phase == .recording }) { [weak self] error in
+                        Task { @MainActor in self?.issue=tr(error.localizedDescription);await self?.stop() }
+                    }
+                    self.keyboardMonitor=monitor;try monitor.start()
+                }
                 self.timer = Timer.scheduledTimer(withTimeInterval:0.25,repeats:true) { [weak self] _ in
                     MainActor.assumeIsolated {
                         guard let self, let writer = self.writer else { return }
@@ -177,6 +188,7 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
                     }
                 }
             } catch {
+                self.keyboardMonitor?.stop();self.keyboardMonitor=nil;self.endPointerTracking();self.timer?.invalidate();self.timer=nil
                 if let stream = self.stream { try? await stream.stopCapture() }
                 if let devices=self.devices { await devices.stop() };self.devices=nil;self.devicePreview=nil
                 self.writer?.cancel();if let archive=self.archive { await archive.cancelAndWait() }
@@ -207,7 +219,7 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
         if phase == .starting { startTask?.cancel(); await startTask?.value; return }
         if let stopTask { await stopTask.value; return }
         guard phase == .recording || phase == .paused, let writer else { return }
-        phase = .stopping; timer?.invalidate(); timer = nil; endPointerTracking()
+        phase = .stopping; timer?.invalidate(); timer = nil; endPointerTracking();keyboardMonitor?.stop();keyboardMonitor=nil
         let stopTime = recordingClock()
         stopTask = Task { [weak self] in
             guard let self else { return }
@@ -387,6 +399,7 @@ private struct CaptureRecordingView: View {
     @ObservedObject var model: CaptureRecordingModel
     let hasRegion:Bool
     var body:some View {
+        ScrollView {
         VStack(alignment:.leading,spacing:12) {
             if !hasRegion && model.player == nil && model.drafts.isEmpty && model.normalSource == nil { Text(tr("No recording drafts yet.")).foregroundStyle(.secondary); Spacer() }
             if model.phase == .rendering {
@@ -398,7 +411,7 @@ private struct CaptureRecordingView: View {
             }
             if model.normalSource != nil { CaptureNormalSettings(model:model) }
             if let player = model.player {
-                RecordingPlayer(player:player).frame(minHeight:160,maxHeight:.infinity)
+                RecordingPlayer(player:player).frame(height:240)
                 HStack {
                     Button(tr("Play from trim start")) { model.playPreview() }
                     Button(tr("Pause")) { model.player?.pause() }
@@ -440,6 +453,14 @@ private struct CaptureRecordingView: View {
                     Picker(tr("Start delay"),selection:$model.delay) { ForEach([0,3,5],id:\.self) { Text("\($0) s").tag($0) } }.frame(width:150)
                 }.disabled(model.active)
                 if model.mode == .normal {
+                    Toggle(tr("Record keyboard overlay"),isOn:$model.recordKeyboard).disabled(model.active)
+                    if model.recordKeyboard {
+                        Picker(tr("Keys to record"),selection:$model.keyboardMode) {
+                            Text(tr("Shortcuts only")).tag(CaptureKeyMode.shortcuts)
+                            Text(tr("All keys (includes typed characters)")).tag(CaptureKeyMode.all)
+                        }.disabled(model.active)
+                        Text(tr("Input Monitoring is requested when recording starts. Secure Input is excluded.")).font(.caption).foregroundStyle(.secondary)
+                    }
                     HStack {
                         Toggle(tr("Camera layer"),isOn:$model.captureCamera).onChange(of:model.captureCamera) { _ in model.refreshCaptureDevices() }
                         Toggle(tr("Microphone track"),isOn:$model.captureMicrophone).onChange(of:model.captureMicrophone) { _ in model.refreshCaptureDevices() }
@@ -485,6 +506,7 @@ private struct CaptureRecordingView: View {
             if let url = model.savedURL { Text(tr("Saved to %@",url.path)).font(.caption).textSelection(.enabled) }
             Text(tr("Drafts stay on this Mac until you discard them. Exported files are separate.")).font(.caption).foregroundStyle(.secondary)
         }.padding(18).frame(minWidth:600,minHeight:400)
+        }.frame(minWidth:600,minHeight:400)
     }
 }
 

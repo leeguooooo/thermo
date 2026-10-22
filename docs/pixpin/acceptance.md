@@ -94,3 +94,16 @@ python3 scripts/verify-capture-ui.py --av-layer-review
 采集权限和时钟实现参照 Apple 的[媒体授权说明](https://developer.apple.com/documentation/bundleresources/requesting-authorization-for-media-capture-on-macos)及[采集同步时钟](https://developer.apple.com/documentation/avfoundation/avcapturesession/synchronizationclock)。重采样使用[带输入回调的 AVAudioConverter](https://developer.apple.com/documentation/technotes/tn3136-avaudioconverter-performing-sample-rate-conversions)，同采样率仅做 PCM 格式转换，以免给源音轨附加尾部样本。
 
 主线 `7689b65` 合入后，同组 80 项测试再次通过。最终 QA 使用包内 Sparkle.framework，不依赖临时工作区；未替换安装版，也未启动真实摄像头或麦克风。
+
+
+## 键盘图层
+
+采集和显示模式分别保存。采集默认关闭，开启后默认仅快捷键；普通键需显式选择“全部按键”。读键前检查安全输入，跳过 Thermo 自身窗口，使用只读 session event tap，不使用 root/HID 或按键投递 API。
+
+6 项专项验证覆盖：未启用时不落盘、快捷键模式不保存普通输入、暂停时间剔除、取消后日志可恢复、显示过滤/位置/过期、旧数据兼容、损坏日志处理，以及 MP4/GIF/APNG/WebP 的剪辑和倍速时点。MP4 验证使用零时间容差取帧，实际检查键名框在指定帧出现和消失；不会用默认的附近关键帧替代时点验证。
+
+合成 QA 命令：`python3 scripts/verify-capture-ui.py --keyboard-review`。该模式仅写入预设的 ⌘C、A、⌥⇧↑，不创建系统键盘监听。
+
+事件监听依据 Apple 的[只读 tap](https://developer.apple.com/documentation/coregraphics/cgeventtapoptions/listenonly)及[事件 tap 创建接口](https://developer.apple.com/documentation/coregraphics/cgevent/tapcreate%28tap%3Aplace%3Aoptions%3Aeventsofinterest%3Acallback%3Auserinfo%3A%29)。实际输入监控授权、拒绝、安全输入、暂停/退出后监听移除仍待真人设备验收。
+
+键盘图层加入后，独立工作区回归为 CaptureCore 59 项、App 表现层与退出保护 27 项，共 86 项。原生合成 QA 已观察到预设 ⌘C 出现在顶部；编辑文件保存 top=true，刷新后 0.6–2.4 秒剪辑区间保留。编辑器改为滚动布局，以免设置被窗口顶部裁切。

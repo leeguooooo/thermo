@@ -74,6 +74,7 @@ public final class CaptureNormalRenderer {
                 context.setFillColor(NSColor.white.cgColor);context.setStrokeColor(NSColor.black.cgColor);context.setLineWidth(max(1,source.header.pixelScale));context.drawPath(using:.fillStroke)
             }
         }
+        drawKeys(at:time,in:context)
         let fontSize=max(12,20*source.header.pixelScale)
         if !edits.watermark.isEmpty { drawText(edits.watermark,at:CGPoint(x:crop.minX+12,y:crop.maxY-fontSize*1.8),size:fontSize,in:context) }
         if edits.progress != .none {
@@ -104,6 +105,32 @@ public final class CaptureNormalRenderer {
         let rect=CGRect(x:target.midX-Double(image.width)*scale/2,y:target.midY-Double(image.height)*scale/2,width:Double(image.width)*scale,height:Double(image.height)*scale)
         if settings.mirrored { context.translateBy(x:2*target.midX,y:0);context.scaleBy(x:-1,y:1) }
         context.draw(image,in:rect)
+    }
+    private func drawKeys(at time:Double,in context:CGContext) {
+        let settings=edits.keyboard ?? CaptureKeyboardEdits()
+        guard settings.mode != .hidden,!source.keys.isEmpty else { return }
+        var low=0,high=source.keys.count
+        while low < high { let mid=(low+high)/2;if source.keys[mid].time <= time { low=mid+1 } else { high=mid } }
+        var labels:[String]=[],index=low-1
+        while index >= 0,time-source.keys[index].time < settings.hold,labels.count < 3 {
+            let event=source.keys[index]
+            if settings.mode == .all || event.shortcut {
+                if labels.last != event.label { labels.append(event.label) }
+            }
+            index -= 1
+        }
+        guard !labels.isEmpty else { return }
+        let size=max(12,22*source.header.pixelScale*settings.scale),text=labels.reversed().joined(separator:"  ·  ")
+        let font=NSFont.monospacedSystemFont(ofSize:size,weight:.semibold)
+        let measured=(text as NSString).size(withAttributes:[.font:font])
+        let w=min(crop.width-8,measured.width+24),h=size*1.8
+        let rect=CGRect(x:crop.midX-w/2,y:settings.top ? crop.maxY-h-8 : crop.minY+8,width:w,height:h)
+        context.saveGState();defer { context.restoreGState() };context.clip(to:rect)
+        context.setFillColor(NSColor.black.withAlphaComponent(0.75).cgColor)
+        context.addPath(CGPath(roundedRect:rect,cornerWidth:6,cornerHeight:6,transform:nil));context.fillPath()
+        NSGraphicsContext.saveGraphicsState();defer { NSGraphicsContext.restoreGraphicsState() }
+        NSGraphicsContext.current=NSGraphicsContext(cgContext:context,flipped:false)
+        (text as NSString).draw(at:CGPoint(x:rect.midX-measured.width/2,y:rect.midY-measured.height/2),withAttributes:[.font:font,.foregroundColor:NSColor.white])
     }
     private func drawText(_ text:String,at point:CGPoint,size:Double,in context:CGContext) {
         NSGraphicsContext.saveGraphicsState();defer { NSGraphicsContext.restoreGraphicsState() }

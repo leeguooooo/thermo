@@ -38,12 +38,13 @@ public struct CaptureNormalEdits: Codable, Sendable {
     public var systemVolume=1.0
     public var microphoneVolume:Double?
     public var camera:CaptureCameraEdits?
+    public var keyboard:CaptureKeyboardEdits?
     public init() {}
     public var valid:Bool {
         cursorScale.isFinite && (0.25...4).contains(cursorScale) && watermark.count <= 2000 &&
         crop.minX.isFinite && crop.minY.isFinite && crop.width.isFinite && crop.height.isFinite && crop.minX >= 0 && crop.minY >= 0 &&
         crop.maxX <= 1.000001 && crop.maxY <= 1.000001 && crop.width > 0 && crop.height > 0 &&
-        annotations.count <= 1000 && annotations.allSatisfy(\.valid) && systemVolume.isFinite && (0...1).contains(systemVolume) && (microphoneVolume.map { $0.isFinite && (0...1).contains($0) } ?? true) && (camera?.valid ?? true)
+        annotations.count <= 1000 && annotations.allSatisfy(\.valid) && systemVolume.isFinite && (0...1).contains(systemVolume) && (microphoneVolume.map { $0.isFinite && (0...1).contains($0) } ?? true) && (camera?.valid ?? true) && (keyboard?.valid ?? true)
     }
     public func save(to archive:URL) throws {
         guard valid else { throw CaptureMovieFailure.invalidConfiguration }
