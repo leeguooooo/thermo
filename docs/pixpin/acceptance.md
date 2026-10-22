@@ -196,3 +196,5 @@ HTML 夹具包含图片、样式、iframe 与页面脚本的环回请求，服�
 原生 QA 使用 `--word-math-review`；已通过系统保存面板写出 `exported-editable-formula.docx`，其中含原生方程数组、积分和分式，没有 media 图像，并再次通过 XSD 校验。本机未安装 Word，也没有连接的 Word 会话，未执行 Word 打开/编辑验收。插入现有 Word 文档、Word 自身的对齐/字号/边框表现、更多复杂公式仍待验收。临时 LibreOffice 使用独立配置目录，没有安装到 Applications。
 
 复核脚本：`scripts/verify-word-interop.py` 接受合成文档目录、Office CLI、独立校验器和 Python 路径，生成结构/回读/重保存记录及供视觉检查的 PDF/PNG。其结果不等同于 Microsoft Word 的运行验收。
+
+主线 `d8f30f6` 的独立干净检出重新编译并通过 135 项测试。移除源码工作区、Node 依赖、临时 Office 和校验环境后，独立 QA 包仍重新生成全部 13 份文档，document.xml 摘要与验收版本一致。最终包、实际保存的 DOCX、13 组结构/渲染/重保存记录位于 `/tmp/thermo-word-qa-01a`；未替换安装版。临时实现/复查工作区、旧包和 Office 镜像均已清理，并行菜单栏改动保持原样。
