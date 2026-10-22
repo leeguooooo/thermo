@@ -2,7 +2,7 @@
 
 在“截图快捷键与动作”中添加动作，选择“JavaScript 截图脚本”，填写源码后应用。脚本可绑定全局/贴图局部快捷键，也可显示在命名菜单中。导入、应用和启动 Thermo 都不会自动执行脚本；点击执行或调用该快捷键/菜单才运行。
 
-使用 Thermo 自己的 `thermo` 对象，不能原样运行 PixPin 的 `pixpin` API。当前支持同步 JavaScript 的变量、函数、条件、循环、异常、数组和对象。原生动作在应用中完成后，脚本才继续。没有 Node、浏览器、通用文件系统/网络或系统命令接口。翻译动作可调用用户已启用、已配置凭据的翻译服务，只发送文字；其余 PixPin 能力仍需继续实现。
+使用 Thermo 自己的 `thermo` 对象，不能原样运行 PixPin 的 `pixpin` API。当前支持同步 JavaScript 的变量、函数、条件、循环、异常、数组和对象。原生动作在应用中完成后，脚本才继续。没有 Node、浏览器、文件系统、网络或系统命令接口；这些 PixPin 能力仍需继续实现。
 
 ```js
 const before = thermo.perform('status');
@@ -29,7 +29,6 @@ if (thermo.perform('screenshot')) {
 |---|---|
 | `thermo.perform('status')` | 返回 `{pins, capturing, group}`；贴图数量属于当前分组 |
 | `screenshot`、`screenshotCopy`、`screenshotOCR`、`screenshotQuickSave` | 选择及处理完成返回 `true`，用户取消返回 `false`，失败抛异常；后三个分别使用复制图像、复制 OCR、快速保存的后续动作 |
-| `translatePin`、`translateClipboard` | 使用已配置服务返回译文字符串；图像先在本机 OCR，文字贴图使用选区/全文；不自动创建贴图 |
 | `recognize` | 当前图像的本地 OCR/条码文本；等识别完成才继续；没有结果或图像被修改时抛异常 |
 | `pinClipboard`、`pinText`、`pinLaTeX` | 从当前剪贴板打开贴图；不支持的内容抛异常 |
 | `copyImage`、`copyContent` | 复制当前图像或原类型内容；类型不符或失败时抛异常 |
@@ -49,7 +48,7 @@ if (thermo.perform('screenshot')) {
 
 “取消截图脚本”会终止脚本进程，并取消正在等待的截图或 OCR 请求。OCR 的底层计算和已经开始的同步写入可能继续收尾，但取消后不会执行后续脚本动作。已经完成的复制、保存和贴图修改不会回滚。脚本成功返回前会刷新贴图库；错误路径也尝试保留已完成的修改。
 
-完整 PixPin 脚本 API、预设/直接区域截图、文件列表/选择文件、系统命令及更多录屏控制仍待接入。真实截图权限、系统选择器取消、不同键盘布局与跨应用物理热键仍需实机验收。
+完整 PixPin 脚本 API、预设/直接区域截图、文件列表/选择文件、系统命令、翻译、CLI 及更多录屏控制仍待接入。真实截图权限、系统选择器取消、不同键盘布局与跨应用物理热键仍需实机验收。
 
 ## 命令行
 

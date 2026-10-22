@@ -7,15 +7,6 @@ import ThermoL10n
 import UniformTypeIdentifiers
 
 func captureFailureMessage(_ error:Error) -> String {
-    if let translation=error as? CaptureTranslationFailure {
-        switch translation {
-        case .http(let code):return String(format:tr("Translation HTTP status: %d."),code)
-        case .provider(let code):return String(format:tr("Translation service error: %@."),code)
-        case .network(let code):return String(format:tr("Translation network error: %d."),code)
-        case .keychain(let code):return String(format:tr("Translation credentials could not be accessed in Keychain (%d)."),code)
-        default:break
-        }
-    }
     if case CaptureWordFailure.unsupported(let item)=error { return String(format:tr("Word math export does not support: %@"),item) }
     if case CaptureMathFailure.invalidFormula(let reason)=error { return String(format:tr("Formula could not be rendered: %@"),reason) }
     return tr(error.localizedDescription)
@@ -33,13 +24,9 @@ func captureFailureMessage(_ error:Error) -> String {
             model.saveOptions={ [weak self] in try self?.saving.snapshot() ?? CaptureSaveSettings() }
             model.quickSaveImage={ [weak self] document in guard let self else {throw CaptureSaveFailure.invalidSettings};return try self.saving.quickSave(document) }
             model.showSaveSettings={ [weak self] in self?.showSavingSettings() }
-            model.translatePin={ [weak self,weak model] in guard let self,let model else{return};self.showTranslation(model:model) }
         }
     }
     lazy var shortcuts=CaptureShortcutModel(backend:CaptureShortcutModel.backend(),read:{ UserDefaults.standard.data(forKey:CaptureShortcutModel.preferenceKey) },write:{ data in UserDefaults.standard.set(data,forKey:CaptureShortcutModel.preferenceKey) },pinFocused:{ [weak self] in self?.pinSession.focusedEditor() != nil },execute:{ [weak self] action in try self?.perform(action) }).withScriptExecutor(onIssue:{ [weak self] in self?.showActionSettings() }) { [weak self] source in guard let self else {throw CaptureScriptFailure.unavailable};return try await self.executeScript(source) }
-    lazy var translationService=CaptureTranslationService()
-    private var translationWindow:CaptureTranslationWindow?
-    private var translationSettingsWindow:NSWindowController?
     lazy var saving=CaptureSaveModel()
     private var savingWindow:NSWindowController?
     private var afterTask:Task<Void,Never>?
@@ -78,32 +65,7 @@ func captureFailureMessage(_ error:Error) -> String {
         }
         savingWindow?.showWindow(nil);NSApp.activate(ignoringOtherApps:true);savingWindow?.window?.makeKeyAndOrderFront(nil)
     }
-    func showTranslationSettings() {
-        if translationSettingsWindow == nil {
-            let window=NSWindow(contentRect:NSRect(x:0,y:0,width:700,height:560),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
-            window.title=tr("Translation service");window.isReleasedWhenClosed=false;window.level = .floating;window.collectionBehavior=[.canJoinAllSpaces,.fullScreenAuxiliary];window.contentView=NSHostingView(rootView:CaptureTranslationSettingsView(service:translationService));window.center();translationSettingsWindow=NSWindowController(window:window)
-        }
-        translationSettingsWindow?.showWindow(nil);NSApp.activate(ignoringOtherApps:true);translationSettingsWindow?.window?.makeKeyAndOrderFront(nil)
-    }
-    func showTranslation(model editor:CaptureEditorModel?=nil,clipboard:Bool=false) {
-        do {
-            let model=CaptureTranslationModel(service:translationService)
-            model.showSettings={ [weak self] in self?.showTranslationSettings() }
-            model.openText={ [weak self] text in guard let self else{throw CaptureActionFailure.noPin};_ = try self.pinSession.open(.text(.init(plain:text))) }
-            model.openImage={ [weak self] image in guard let self else{throw CaptureActionFailure.noPin};_ = try self.pinSession.open(image) }
-            if clipboard {
-                guard let text=NSPasteboard.general.string(forType:.string),!text.isEmpty else{throw CaptureTranslationFailure.invalidInput};model.setText(text)
-            }else{
-                guard let editor=editor ?? pinSession.activeEditor()?.model else{throw CaptureActionFailure.noPin}
-                guard editor.pinContentSaveError == nil else{throw CapturePinFailure.invalidContent}
-                if case .text(let text)?=editor.pinContent{model.setText(editor.translationSelection?() ?? text.plain)}
-                else{guard editor.pinContent == nil else{throw CaptureActionFailure.imageRequired};model.setImage(try editor.document.rendered())}
-            }
-            translationWindow?.close();let window=CaptureTranslationWindow(model:model);translationWindow=window;window.showWindow(nil);NSApp.activate(ignoringOtherApps:true);window.window?.makeKeyAndOrderFront(nil)
-        }catch{report(error)}
-    }
     func shutdown() {
-        translationWindow?.model.cancel()
         shuttingDown=true;if let id=captureID{cancelCapture(id:id)};afterTask?.cancel();afterTask=nil
         process?.terminate()
         if let captureDirectory { try? FileManager.default.removeItem(at:captureDirectory) }; captureDirectory = nil
@@ -249,9 +211,6 @@ func captureFailureMessage(_ error:Error) -> String {
     func closeAll() { pinSession.closeAll() }
     func perform(_ action:CaptureAction) throws {
         switch action {
-        case .translationSettings:showTranslationSettings()
-        case .translatePin:showTranslation()
-        case .translateClipboard:showTranslation(clipboard:true)
         case .script:throw CaptureScriptFailure.execution("Run a configured script entry with its source.")
         case .screenshot:capture()
         case .screenshotCopy:capture(after:[.copyImage])
@@ -370,8 +329,6 @@ func captureFailureMessage(_ error:Error) -> String {
             NSPasteboard.general.clearContents(); NSPasteboard.general.setData(data, forType: .png)
         } catch { self.error = tr(error.localizedDescription) }
     }
-    var translatePin:(()->Void)?
-    var translationSelection:(()->String?)?
     var saveOptions:(()throws->CaptureSaveSettings)?
     var quickSaveImage:((CaptureDocument)throws->URL)?
     var showSaveSettings:(()->Void)?
@@ -506,7 +463,6 @@ private struct CaptureEditorView: View {
                 Slider(value: $model.zoom, in: 0.25...4).disabled(model.locked).frame(width: 70).help(tr("Zoom"))
                 Text("\(model.document.image.width) × \(model.document.image.height)").font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button(tr("Translate…")){model.translatePin?()}
                 Button(tr("Text / QR")) { model.recognize() }.disabled(model.recognizing)
                 Button(tr("Copy image")) { model.copy() }.keyboardShortcut("c", modifiers: .command)
                 Menu(tr("Saving options")) {

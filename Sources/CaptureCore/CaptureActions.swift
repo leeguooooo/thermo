@@ -1,7 +1,6 @@
 import Foundation
 
 public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
-    case translatePin,translateClipboard,translationSettings
     case script
     case screenshotCopy,screenshotOCR,screenshotQuickSave,saveSettings,quickSaveImage
     case screenshot, pinClipboard, pinText, pinLaTeX, openImage, scrolling, recording, recordingDrafts
@@ -10,7 +9,6 @@ public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
     public var id:String { rawValue }
     public var title:String {
         switch self {
-        case .translatePin:return "Translate current pin…";case .translateClipboard:return "Translate clipboard text…";case .translationSettings:return "Translation settings…"
         case .script:return "JavaScript capture script"
         case .screenshotCopy:return "Capture and copy image…";case .screenshotOCR:return "Capture and copy OCR text…";case .screenshotQuickSave:return "Capture and quick save…"
         case .saveSettings:return "Capture saving and after-actions";case .quickSaveImage:return "Quick save current pin image"

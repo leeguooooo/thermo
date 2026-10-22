@@ -33,19 +33,6 @@ extension CaptureWorkspace {
         case .recognize:
             guard let editor=pinSession.activeEditor(),editor.model.pinContent == nil else {throw CaptureActionFailure.imageRequired}
             return .string(try await editor.model.recognizeForScript())
-        case .translatePin,.translateClipboard:
-            let profile=translationService.settings,text:String
-            guard profile.enabled else{throw CaptureTranslationFailure.disabled}
-            if action == .translateClipboard {
-                guard let value=(scriptPasteboard ?? .general).string(forType:.string) else{throw CaptureTranslationFailure.invalidInput};text=value
-            }else{
-                guard let editor=pinSession.activeEditor() else{throw CaptureActionFailure.noPin}
-                guard editor.model.pinContentSaveError == nil else{throw CapturePinFailure.invalidContent}
-                if case .text(let value)?=editor.model.pinContent{text=editor.model.translationSelection?() ?? value.plain}
-                else{guard editor.model.pinContent == nil else{throw CaptureActionFailure.imageRequired};let image=try editor.model.document.rendered();text=try await Task.detached(priority:.userInitiated){try CaptureTranslationImage.recognize(image).map(\.text).joined(separator:"\n")}.value}
-            }
-            try Task.checkCancellation();guard translationService.settings == profile else{throw CaptureTranslationFailure.invalidSettings}
-            let result=try await translationService.translate([text]);return .string(result.joined(separator:"\n"))
         case .copyImage,.copyContent:
             guard let editor=pinSession.activeEditor() else {throw CaptureActionFailure.noPin}
             let board=scriptPasteboard ?? .general

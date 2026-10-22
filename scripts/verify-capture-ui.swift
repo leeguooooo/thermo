@@ -36,28 +36,7 @@ import SwiftUI
         var shortcutModel:CaptureShortcutModel?
         var cliHost:CaptureCLIHost?
         var cliServer:AppControlServer?
-        var translationBoard:NSPasteboard?
-        if Bundle.main.object(forInfoDictionaryKey:"ThermoTranslationReview") as? Bool == true,
-           let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String,
-           let endpoint=Bundle.main.object(forInfoDictionaryKey:"ThermoTranslationEndpoint") as? String {
-            let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session),file=root.appendingPathComponent("translation-settings.json")
-            let secrets=QATranslationSecrets(file:root.appendingPathComponent("fixture-credentials.json"))
-            workspace.translationService=CaptureTranslationService(read:{try? Data(contentsOf:file)},save:{try $0.write(to:file,options:.atomic)},secrets:secrets)
-            if !FileManager.default.fileExists(atPath:file.path){var profile=CaptureTranslationSettings();profile.provider = .chatCompletions;profile.endpoint=endpoint;profile.model="fixture";_ = workspace.translationService.apply(profile,newCredential:nil)}
-            captureWorkspace=workspace;pinSession=session
-            if Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureCLIReview") as? Bool == true {
-                do {
-                    let board=NSPasteboard.withUniqueName();board.setString("Hello",forType:.string);translationBoard=board;workspace.scriptPasteboard=board
-                    let host=CaptureCLIHost(workspace:workspace),directory=root.appendingPathComponent("control"),cli=Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/thermo"),trust=try LocalControlPeerTrust(team:CodeSignature.teamIdentifier(),developmentExecutable:cli)
-                    cliHost=host;cliServer=try AppControlServer(directory:directory,authorize:{trust.accepts(auditToken:$0)}) {request,reply in Task{@MainActor in reply(await host.handle(request))}}
-                    try JSONSerialization.data(withJSONObject:["directory":directory.path,"cli":cli.path]).write(to:root.appendingPathComponent("control-info.json"),options:.atomic)
-                }catch{workspace.translationService.issue=error.localizedDescription}
-            }
-            do {
-                if session.library.pins.isEmpty{let id=try session.open(image);session.windows[id]?.model.pinTitle="QA original translation";try session.flush()}else{session.restoreWindows()}
-                workspace.showTranslation(model:session.activeEditor()?.model)
-            }catch{workspace.report(error)}
-        } else if Bundle.main.object(forInfoDictionaryKey:"ThermoSavingReview") as? Bool == true,
+        if Bundle.main.object(forInfoDictionaryKey:"ThermoSavingReview") as? Bool == true,
            let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
             let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)
             let file=root.appendingPathComponent("saving.json")
@@ -249,9 +228,8 @@ import SwiftUI
             window.model.tool = .select;window.model.selectAnnotation(0)
             annotationWindow=window;window.showWindow(nil)
         } else { let window=CaptureEditor(image:image,onClose:{});annotationWindow=window;window.showWindow(nil) }
-        _=NotificationCenter.default.addObserver(forName:NSApplication.willTerminateNotification,object:app,queue:.main){_ in MainActor.assumeIsolated{translationBoard?.releaseGlobally();cliHost?.cancelActive();captureWorkspace?.shutdown()}}
         DispatchQueue.main.asyncAfter(deadline: .now()+600) { app.terminate(nil) }
-        withExtendedLifetime((recordingWindow,annotationWindow,pinSession,captureWorkspace,shortcutModel,cliHost,cliServer,translationBoard)) { app.run() }
+        withExtendedLifetime((recordingWindow,annotationWindow,pinSession,captureWorkspace,shortcutModel,cliHost,cliServer)) { app.run() }
     }
 }
 
@@ -292,12 +270,4 @@ private struct CaptureSavingQA:View {
             }.padding(8)
         }
     }
-}
-
-@MainActor private final class QATranslationSecrets:CaptureTranslationSecrets {
-    let file:URL
-    var values:[String:CaptureTranslationCredential]
-    init(file:URL){self.file=file;values=(try? JSONDecoder().decode([String:CaptureTranslationCredential].self,from:Data(contentsOf:file))) ?? [:]}
-    func read(_ account:String)throws->CaptureTranslationCredential?{values[account]}
-    func write(_ credential:CaptureTranslationCredential?,account:String)throws{values[account]=credential;try JSONEncoder().encode(values).write(to:file,options:.atomic);try FileManager.default.setAttributes([.posixPermissions:0o600],ofItemAtPath:file.path)}
 }

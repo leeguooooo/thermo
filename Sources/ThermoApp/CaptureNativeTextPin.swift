@@ -13,9 +13,6 @@ struct CaptureNativeTextPin:NSViewRepresentable {
         let view=NSTextView(frame:scroll.bounds);view.isVerticallyResizable=true;view.isHorizontallyResizable=false;view.autoresizingMask=[.width];view.textContainer?.widthTracksTextView=true
         view.textContainer?.containerSize=CGSize(width:0,height:CGFloat.greatestFiniteMagnitude);view.textContainerInset=CGSize(width:16,height:16)
         view.isSelectable=true;view.allowsUndo=true;view.isAutomaticLinkDetectionEnabled=false;view.delegate=context.coordinator;scroll.documentView=view
-        model.translationSelection={ [weak view] in
-            guard let view,view.selectedRange().length>0 else{return nil};let string=view.string as NSString,range=view.selectedRange();guard NSMaxRange(range)<=string.length else{return nil};return string.substring(with:range)
-        }
         model.snapshotPinContent={ [weak view] in
             guard let view,view.visibleRect.width > 0,view.visibleRect.height > 0,let rep=view.bitmapImageRepForCachingDisplay(in:view.visibleRect) else { throw CaptureFailure.invalidImage }
             view.cacheDisplay(in:view.visibleRect,to:rep);guard let image=rep.cgImage else { throw CaptureFailure.invalidImage };return image
