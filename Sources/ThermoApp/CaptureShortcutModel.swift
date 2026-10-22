@@ -108,7 +108,7 @@ import ThermoL10n
         let receive=recordingReceiver;recordingOwner=nil;recordingReceiver=nil;held.insert(key.gesture);receive?(key)
     }
     func label(for action:CaptureAction) -> String {
-        settings.entries.filter { $0.action == action }.compactMap { entry in let value=label(for:entry);return value.isEmpty ? nil : value }.first ?? ""
+        settings.entries.filter { $0.action == action && $0.scope == .global }.compactMap { entry in let value=label(for:entry);return value.isEmpty ? nil : value }.first ?? ""
     }
     func label(for entry:CaptureShortcutEntry) -> String {
         guard settings.shortcutsEnabled,!uncertain,entry.enabled,let key=entry.shortcut else { return "" }

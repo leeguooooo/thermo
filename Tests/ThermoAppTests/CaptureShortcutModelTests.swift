@@ -51,6 +51,11 @@ import XCTest
         model.beginRecording(owner) { recorded=$0 };backend.events[0](true);XCTAssertNotNil(recorded);XCTAssertTrue(store.actions.isEmpty);XCTAssertNil(model.recordingOwner)
         let bad=CaptureShortcutModel(backend:Backend(),read:{ Data("broken".utf8) },write:{ _ in XCTFail("Do not overwrite invalid preferences") },pinFocused:{false},execute:{ _ in XCTFail() });bad.activate();defer { bad.shutdown() };XCTAssertFalse(bad.settings.shortcutsEnabled);XCTAssertNotNil(bad.issue)
     }
+    func testMainMenuSuffixDoesNotAdvertisePinLocalKeysAsGlobal() throws {
+        let entry=CaptureShortcutEntry(action:.screenshot,scope:.pin,shortcut:.init(keyCode:0,modifiers:0,keyLabel:"A"))
+        let (model,_,_)=try setup(.init(entries:[entry]));defer { model.shutdown() }
+        XCTAssertEqual(model.label(for:.screenshot),"");XCTAssertEqual(model.label(for:entry),"A")
+    }
     func testRuntimePinActionTargetsPinnedContentAndPreservesGroupOwnership() throws {
         let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString);defer { try? FileManager.default.removeItem(at:root) }
         let session=CapturePinSession(store:.init(root:root)),workspace=CaptureWorkspace(pinSession:session)
