@@ -1,0 +1,69 @@
+{
+  "date": "2026-10-22",
+  "authorization": "User explicitly allowed Peekaboo Command-drag of temporary TV/TH/TA and test separators only",
+  "app": "isolated Fold Check R2",
+  "attempts": [
+    {
+      "source": "TV",
+      "from": [
+        1095,
+        21
+      ],
+      "to": [
+        1400,
+        21
+      ],
+      "durationMilliseconds": 1500,
+      "focus": "no-auto-focus"
+    },
+    {
+      "source": "TV",
+      "from": [
+        1095,
+        21
+      ],
+      "to": [
+        1400,
+        21
+      ],
+      "durationMilliseconds": 2000,
+      "focus": "isolated app foreground"
+    },
+    {
+      "source": "hidden boundary",
+      "from": [
+        1070,
+        21
+      ],
+      "to": [
+        1380,
+        21
+      ],
+      "durationMilliseconds": 2000,
+      "inputStrategy": "synthOnly",
+      "steps": 60
+    }
+  ],
+  "dispatch": "Peekaboo reported dispatched_unverified for each attempt",
+  "observedResult": "No physical reordering observed; TV actions triggered collapsed and hidden requests instead",
+  "rootCause": "not established; upstream source reviewed but installed event flags and system handling not instrumented",
+  "realApplicationItemsDragged": false,
+  "physicalThreeSectionAcceptance": false,
+  "cleanup": {
+    "normalCloseRecordedAllItemsRemoved": true,
+    "ownedProcessAbsent": true,
+    "testMarkersAbsentInFinalCapture": true
+  },
+  "evidenceSHA256": {
+    "tv-location.png": "8fdc9a858c6e9125030fd758cc9fe916d33faf855632096136cc3ccd1c5c0e22",
+    "after-tv-drag.png": "c51a4eb51a92656c9574bc481f5152f79f1c7494bea2e493be5ce08495745366",
+    "after-focused-drag.png": "4f06af65e47d87de1842d6bd748be48d82af86c254bbea663005280e9767fcf8",
+    "before-boundary-drag.png": "47a60e2cde79caca23bc0c4697de0bf03d891b8308769a918801bdc17b687149",
+    "after-boundary-drag.png": "4afac9f01698f1c0fe36dd9966f884f9b1d606515d46cd3847a44a7b413eef4f",
+    "authorized-drag-requests.json": "4e590595042bee98b912a7aba2a917dc7f0d5a18651b2c7c915a825cb1f1889c",
+    "after-authorized-cleanup.png": "c2af589ba9ab0297ad003fa22fdf5b60d731544fa853050f98732a31d3c53ddc"
+  },
+  "productionBackendChanged": false,
+  "published": false,
+  "goalComplete": false
+}
