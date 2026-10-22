@@ -9,10 +9,10 @@ import UniformTypeIdentifiers
     private let model: MenuBarManager
     init(model: MenuBarManager) {
         self.model = model
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 660),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 700),
                               styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         window.title = tr("Manage menu bar")
-        window.minSize = NSSize(width: 840, height: 620)
+        window.minSize = NSSize(width: 840, height: 660)
         window.isReleasedWhenClosed = false
         let content = NSHostingView(rootView: MenuBarManagerView(model: model).preferredColorScheme(.dark))
         content.sizingOptions = []
@@ -83,6 +83,17 @@ struct MenuBarManagerView: View {
                     .disabled(!model.enabled).accessibilityIdentifier("menubar.showHidden")
                 Spacer()
                 Text(status).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+            }
+            HStack(spacing: 16) {
+                Picker(tr("Auto-collapse hidden group"), selection: Binding(get: { model.autoCollapseDelay }, set: model.setAutoCollapseDelay)) {
+                    ForEach(MenuBarAutoCollapseDelay.allCases, id: \.self) { delay in
+                        Text(delay == .disabled ? tr("Off") : tr("After %@ seconds", String(delay.rawValue))).tag(delay)
+                    }
+                }
+                .frame(width: 300).disabled(!model.canEdit)
+                .accessibilityIdentifier("menubar.autoCollapse")
+                Text(tr("Auto-collapse pauses while managing groups. Restoring all icons cancels it."))
+                    .font(Theme.caption).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
             }
             HStack {
                 TextField(tr("Search menu bar apps"), text: $query).textFieldStyle(.roundedBorder)

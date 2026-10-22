@@ -148,8 +148,14 @@ let package = Package(name: "ThermoMenuBarQA", platforms: [.macOS(.v13)], target
         subprocess.run(['codesign', '--force', '--sign', '-', str(drag)], check=True, capture_output=True)
         probe = subprocess.check_output([str(binary), '--probe'], text=True)
         (output / 'capabilities.json').write_text(probe)
+        with (output / 'auto-collapse-policy.json').open('w') as log:
+            policy = subprocess.run([str(binary), '--check-auto-collapse-policy'], timeout=20,
+                                    stdout=log, stderr=subprocess.STDOUT)
+        if policy.returncode:
+            raise RuntimeError(f'Auto-collapse policy check failed; see {output / "auto-collapse-policy.json"}')
         print(json.dumps({'app': str(app), 'fixtures': fixtures, 'visualCheck': str(visual), 'realCheck': str(real), 'swappedCheck': str(swap), 'dragCheck': str(drag), 'input': str(output / 'input.json'),
                           'tests': str(output / 'test.log'), 'lifecycle': str(output / 'lifecycle-check.json'),
+                          'autoCollapsePolicy': str(output / 'auto-collapse-policy.json'),
                           'capabilities': json.loads(probe)}, indent=2))
     finally:
         shutil.rmtree(work)

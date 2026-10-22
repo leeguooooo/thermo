@@ -61,6 +61,7 @@ enum MenuBarAppDiscovery {
 @MainActor final class MenuBarManager: ObservableObject {
     static let shared = MenuBarManager()
     static let enabledKey = "menuBarManagementEnabled"
+    static let autoCollapseKey = "menuBarAutoCollapseSeconds"
     @Published private(set) var enabled = false
     @Published private(set) var sections = MenuBarSections()
     @Published private(set) var reveal: MenuBarReveal = .all
@@ -70,7 +71,11 @@ enum MenuBarAppDiscovery {
     @Published private(set) var state: MenuBarSessionController.State = .visible
     @Published private(set) var error: String?
     @Published private(set) var settingsReadable = true
+    @Published private(set) var autoCollapseDelay: MenuBarAutoCollapseDelay = .disabled
+    var autoCollapsePending: Bool { autoCollapse.isScheduled }
+    private let autoCollapse = MenuBarAutoCollapse()
     private let defaults: UserDefaults
+    private let accessibilityTrusted: @MainActor () -> Bool
     private let store: MenuBarSectionStore
     private var observers: [(NotificationCenter, NSObjectProtocol)] = []
     private var permissionTimer: Timer?
@@ -83,12 +88,16 @@ enum MenuBarAppDiscovery {
         let controller = MenuBarSessionController { try NativeMenuBarSession(configuration: $0) }
         controller.didChange = { [weak self] state in
             guard let self else { return }
+            let previous = self.state
             self.state = state
             if case let .failed(message) = state {
+                self.autoCollapse.cancel()
                 self.error = message
                 self.enabled = false
                 self.defaults.set(false, forKey: Self.enabledKey)
                 self.stopObserving()
+            } else if previous != state {
+                self.updateAutoCollapse()
             }
         }
         return controller
@@ -98,10 +107,15 @@ enum MenuBarAppDiscovery {
     var hasHiddenAssignments: Bool { !sections.assignments.isEmpty }
     var canEdit: Bool { settingsReadable && available }
 
-    init(defaults: UserDefaults = .standard, initialApps: [ManagedMenuBarApp] = []) {
+    init(defaults: UserDefaults = .standard, initialApps: [ManagedMenuBarApp] = [],
+         accessibilityTrusted: @escaping @MainActor () -> Bool = { AXIsProcessTrusted() }) {
         self.defaults = defaults
+        self.accessibilityTrusted = accessibilityTrusted
         self.store = MenuBarSectionStore(defaults: defaults)
         self.ownBundle = Bundle.main.bundleIdentifier ?? "dev.thermo.app"
+        if let seconds = defaults.object(forKey: Self.autoCollapseKey) as? Int {
+            autoCollapseDelay = MenuBarAutoCollapseDelay(rawValue: seconds) ?? .disabled
+        }
         self.known = Dictionary(initialApps.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
         do { sections = try store.read() }
         catch {
@@ -114,30 +128,33 @@ enum MenuBarAppDiscovery {
     /// Normal app startup only. Start fully visible after relaunch so login-time
     /// apps can register before a user explicitly collapses the sections.
     func start() {
-        if defaults.bool(forKey: Self.enabledKey), settingsReadable, available, AXIsProcessTrusted() {
+        if defaults.bool(forKey: Self.enabledKey), settingsReadable, available, accessibilityTrusted() {
             enabled = true; trusted = true; observe()
         }
     }
 
     func setPanelOpen(_ open: Bool) {
         panelOpen = open
+        updateAutoCollapse()
         if open { refresh() }
         else { scanGeneration &+= 1; loading = false }
     }
 
     func setEnabled(_ value: Bool) {
         guard value else {
+            autoCollapse.cancel()
             enabled = false; defaults.set(false, forKey: Self.enabledKey)
             reveal = .all; controller.restore(); stopObserving()
             return
         }
         guard canEdit else { return }
-        trusted = AXIsProcessTrusted()
+        trusted = accessibilityTrusted()
         guard trusted else {
             _ = AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary)
             error = tr("Allow Accessibility access, then enable menu bar management again.")
             return
         }
+        autoCollapse.cancel()
         error = nil; enabled = true; reveal = .all
         defaults.set(true, forKey: Self.enabledKey)
         observe(); refresh()
@@ -147,7 +164,7 @@ enum MenuBarAppDiscovery {
         guard canEdit, bundle != ownBundle, MenuBarSections.isAssignable(bundle) else { return }
         var next = sections
         next.assign(bundle, to: section)
-        do { try store.write(next); sections = next; apply() }
+        do { try store.write(next); sections = next; apply(); updateAutoCollapse() }
         catch { self.error = error.localizedDescription }
     }
 
@@ -173,6 +190,7 @@ enum MenuBarAppDiscovery {
         self.reveal = reveal
         error = nil
         apply()
+        updateAutoCollapse()
         if panelOpen { refresh() }
     }
 
@@ -180,8 +198,27 @@ enum MenuBarAppDiscovery {
         // Emergency recovery also works with disabled management or lost trust.
         error = settingsReadable ? nil : error
         reveal = .all
+        autoCollapse.cancel()
         controller.restore()
         if panelOpen { refresh() }
+    }
+
+    func setAutoCollapseDelay(_ delay: MenuBarAutoCollapseDelay) {
+        autoCollapseDelay = delay
+        defaults.set(delay.rawValue, forKey: Self.autoCollapseKey)
+        updateAutoCollapse()
+    }
+
+    private func updateAutoCollapse() {
+        autoCollapse.cancel()
+        guard enabled, trusted, !sleeping, !panelOpen, hasHiddenAssignments,
+              reveal == .hidden, state == .visible || state == .applied,
+              let delay = autoCollapseDelay.nanoseconds else { return }
+        autoCollapse.schedule(after: delay) { [weak self] in
+            guard let self, self.enabled, !self.sleeping, !self.panelOpen, self.hasHiddenAssignments,
+                  self.reveal == .hidden, self.autoCollapseDelay != .disabled else { return }
+            self.setReveal(.collapsed)
+        }
     }
 
     func resetUnreadableSettings() {
@@ -196,7 +233,7 @@ enum MenuBarAppDiscovery {
     }
 
     func refresh() {
-        trusted = AXIsProcessTrusted()
+        trusted = accessibilityTrusted()
         guard !loading else { return }
         rebuildApps()
         guard available, trusted, !sleeping else { return }
@@ -218,14 +255,16 @@ enum MenuBarAppDiscovery {
     func isAssignable(_ bundle: String) -> Bool { bundle != ownBundle && MenuBarSections.isAssignable(bundle) }
 
     func shutdown() {
+        autoCollapse.cancel()
         enabled = false; reveal = .all
         scanGeneration &+= 1
         controller.restore(); stopObserving()
     }
 
     private func apply() {
-        trusted = AXIsProcessTrusted()
+        trusted = accessibilityTrusted()
         guard enabled, !sleeping, trusted, available else {
+            autoCollapse.cancel()
             controller.restore()
             if enabled && !trusted {
                 enabled = false; defaults.set(false, forKey: Self.enabledKey); stopObserving()
@@ -261,7 +300,7 @@ enum MenuBarAppDiscovery {
         }
         permissionTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                guard let self, self.enabled, !AXIsProcessTrusted() else { return }
+                guard let self, self.enabled, !self.accessibilityTrusted() else { return }
                 self.apply()
             }
         }
@@ -273,6 +312,7 @@ enum MenuBarAppDiscovery {
     func handleWorkspaceNotification(_ name: Notification.Name) {
         if name == NSWorkspace.willSleepNotification {
             sleeping = true
+            autoCollapse.cancel()
             scanGeneration &+= 1; loading = false
             controller.restore()
             return
@@ -280,6 +320,7 @@ enum MenuBarAppDiscovery {
         if name == NSWorkspace.didWakeNotification { sleeping = false }
         guard !sleeping else { return }
         apply()
+        if name == NSWorkspace.didWakeNotification { updateAutoCollapse() }
         if panelOpen { refresh() }
     }
 
