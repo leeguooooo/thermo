@@ -1,0 +1,32 @@
+name: Claude local diagnostics
+on:
+  pull_request:
+    paths:
+      - 'Sources/**'
+      - 'Tests/**'
+      - 'Package.*'
+      - '.github/workflows/claude-local-diagnostics.yml'
+  push:
+    branches: ['feat/claude-local-diagnostics']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: claude-local-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  diagnostics:
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Record toolchain and SDK
+        run: |
+          xcrun swift --version
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
+      - name: Test local diagnostics, CLI contracts and existing privacy behavior
+        run: swift test --jobs 3 --filter 'ClaudeLocalDiagnosticsTests|ClaudeLocalCommandTests|CLICompletenessTests|PrivacyToolsTests'
+      - name: Build App
+        run: swift build --jobs 3 --product ThermoApp

@@ -24,6 +24,19 @@ struct AgentsCommand {
         let sub = rest.first ?? ""
         let name = rest.count > 1 ? rest[1] : nil
         switch sub {
+        case "claude-local":
+            guard rest.count == 1 else { throw CLIError("usage: thermo agents claude-local [--json]") }
+            let report = ClaudeLocalDiagnostics().scan()
+            if app.args.has("json") { print(report.json) }
+            else {
+                print(tr("Claude local diagnostics"))
+                print(report.generatedAt)
+                for check in report.checks {
+                    print("[\(tr(check.status.displayName))] \(tr(check.title)): \(tr(check.value)) · \(check.source)")
+                }
+                print(tr("Some results remain unknown. This report cannot predict account suspension or establish what Claude sends."))
+            }
+            return
         case "": break
         case "context": return try context()
         case "inspect-all": return try inspectAll()
@@ -153,6 +166,7 @@ struct AgentsCommand {
 
     static let usage = """
     usage: thermo agents [--all] [--json]                 what is wrong with the AI agents on this Mac
+           thermo agents claude-local [--json]             read-only local Claude identity, telemetry and routing checks
            thermo agents context [--agent AGENT] [--root PROJECT] [--json] static footprint ranking and deduplicated inventory
            thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--sort text|structured|time|errors|instructions] [--limit FILES] [--json] local log metrics
            thermo agents compare FILE [--json]            compare declared local task evaluations; never executes tasks
