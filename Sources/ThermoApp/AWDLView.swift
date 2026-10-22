@@ -115,16 +115,14 @@ struct AWDLBackend: Sendable {
 }
 
 struct AWDLButton: View {
-    @State private var showing=false
     @ObservedObject private var model=AWDLModel.shared
     var body: some View {
-        Button { showing=true } label: {
+        Button { MainWindow.show(tool: .lowLatency) } label: {
             FeatureRow(title: tr("Network low latency"), symbol: "network",
                        status: model.needsQuitRecovery ? tr(model.state?.phase == .active ? "On" : "Check recovery") : nil,
                        statusColor: Theme.caution, active: model.state?.phase == .active)
         }
         .buttonStyle(.plain)
-        .sheet(isPresented:$showing) { AWDLPanel(model:model) }
     }
 }
 

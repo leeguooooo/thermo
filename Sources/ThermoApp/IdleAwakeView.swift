@@ -142,14 +142,12 @@ import ThermoL10n
 
 struct IdleAwakeButton: View {
     @ObservedObject private var model = IdleAwakeModel.shared
-    @State private var showing = false
     var body: some View {
-        Button { showing = true } label: {
+        Button { MainWindow.show(tool: .keepAwake) } label: {
             FeatureRow(title: tr(model.state.requested ? "Keep awake · session configured" : "Keep awake"), symbol: "cup.and.saucer",
                        active: model.state.phase == .active)
         }
         .buttonStyle(.plain)
-        .sheet(isPresented: $showing) { IdleAwakePanel(model: model) }
     }
 }
 struct IdleAwakePanel: View {

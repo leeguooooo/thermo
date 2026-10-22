@@ -93,7 +93,9 @@ enum MainWindow {
         @Published var tool: ToolSheet?
     }
 
-    /// Opens the window and shows one of the menu bar tools in it.
+    /// Tool sheets need a stable NSWindow. A sheet attached to an NSPopover can
+    /// expose its accessibility tree while drawing a completely blank surface.
+    /// Close the menu panel in show() before presenting through this shared host.
     static func show(tool: ToolSheet) {
         show()
         state.tool = tool
