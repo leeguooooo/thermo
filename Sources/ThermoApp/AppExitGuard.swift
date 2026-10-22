@@ -56,6 +56,10 @@ enum AppExitGuard {
 
 @MainActor
 final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillTerminate(_ notification: Notification) {
+        ToolExtensionHost.shared.shutdown()
+        MenuBarManager.shared.shutdown()
+    }
     var showExitBlocker: @MainActor (MainPage) -> Void = { MainWindow.show($0) }
     /// Shared by the standalone entry point and an offscreen AppKit acceptance test.
     /// Termination is deferred until other close observers have retired page content.

@@ -28,6 +28,9 @@ let package = Package(
             linkerSettings: [.linkedFramework("IOKit"), .linkedFramework("CoreFoundation")]
         ),
         .target(name: "ThermoKit", dependencies: ["CSMC"]),
+        .target(name: "MenuBarCore"),
+        .target(name: "ToolExtensionCore"),
+        .target(name: "CMenuBar", cSettings: [.unsafeFlags(["-fobjc-arc"])], linkerSettings: [.linkedFramework("Foundation")]),
         .target(name: "CTokenData", linkerSettings: [.linkedLibrary("z")]),
         // Userspace-only diagnostics; kept out of ThermoKit so the root helper never links it.
         // UI strings and translations; the root helper never links it.
@@ -46,13 +49,13 @@ let package = Package(
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
             name: "ThermoApp",
-            dependencies: ["ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "CaptureCore", .product(name: "Sparkle", package: "Sparkle")],
+            dependencies: ["ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "CaptureCore", "MenuBarCore", "CMenuBar", "ToolExtensionCore", .product(name: "Sparkle", package: "Sparkle")],
             linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"), .linkedFramework("AVKit"),
                              .linkedFramework("CoreWLAN"), .linkedFramework("IOBluetooth"), .linkedFramework("CoreAudio"),
                              .linkedFramework("AudioToolbox"), .linkedFramework("CoreLocation")]
         ),
         .testTarget(name: "ThermoCLITests", dependencies: ["thermo"]),
-        .testTarget(name: "ThermoAppTests", dependencies: ["ThermoApp", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor", "SearchCore"]),
+        .testTarget(name: "ThermoAppTests", dependencies: ["ThermoApp", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor", "SearchCore", "ToolExtensionCore"]),
         .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC"]),
         .testTarget(name: "ThermoHelperTests", dependencies: ["ThermoHelper", "ThermoKit"]),
         .testTarget(name: "AgentDoctorTests", dependencies: ["AgentDoctor", "ThermoL10n", "AgentCore"], exclude: ["Fixtures"]),
@@ -60,6 +63,8 @@ let package = Package(
         .testTarget(name: "AgentCoreTests", dependencies: ["AgentCore"]),
         .testTarget(name: "SearchCoreTests", dependencies: ["SearchCore"]),
         .testTarget(name: "CaptureCoreTests", dependencies: ["CaptureCore"]),
+        .testTarget(name: "MenuBarCoreTests", dependencies: ["MenuBarCore"]),
+        .testTarget(name: "ToolExtensionCoreTests", dependencies: ["ToolExtensionCore"]),
     ],
     swiftLanguageVersions: [.v5]
 )

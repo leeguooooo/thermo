@@ -1,0 +1,142 @@
+{
+  "date": "2026-10-22",
+  "sourceBase": "0328ffeca19e2432105ce62ab27faf837f80f234",
+  "sourceOverlay": {
+    "Package.swift": "31866caba90c968b6c487088b94a36e8740ef33ebe2dab8aba628e64dff156df",
+    "Sources/ThermoApp/StatusMenu.swift": "748dd8ff7d659a93df81a92805978228b7d80677b5b93f2003b14424851ccf77",
+    "Sources/ThermoApp/Views.swift": "da9f6ef8473d8c2ee1fc3f8b156703b946a5b2d596a186bbdcad51aedbecfb9e",
+    "Sources/ThermoApp/main.swift": "1e3d58a3cf3fc2070c68b75913f7394fff151a2b04893289938d3f6f83116223",
+    "Sources/ThermoApp/AppExitGuard.swift": "2aba49d826c2f02da3a410f1ae43a37ac10e95e0c9cf2c57e2e1c4b4e347988b",
+    "Sources/ThermoApp/MenuBarManager.swift": "ececaa7633e6c34901ea5e92a299e56fb2216dbb48ea7012a1d89583e4fe41f6",
+    "Sources/ThermoApp/MenuBarManagerPanel.swift": "07eaa9928a768d69c5f1b33009f93206d03d0bdd948919e9181ccc64c3eda380",
+    "Sources/ThermoApp/ToolExtensionHost.swift": "40bae28d9d5213b9d4f4d7cdf0dabd0abdfe365df526acb2e74e68119920fd47",
+    "Sources/ThermoL10n/L10n.swift": "394282bebadfebdfb68de46bfaec9d5d98acc31c131c7ce139d88ea1a8a4b834",
+    "Sources/ThermoL10n/MenuBarZhHans.swift": "61ae79f8d7a467144949b4acc701dee385f1f28f5b03e12c8d1156bb33707cf8",
+    "Tests/ThermoAppTests/ToolExtensionHostTests.swift": "356f7561e9629bad63be36370c4a0b4fc804ee5b6e0abd8b586570780d6d852e",
+    "Sources/MenuBarCore/MenuBarSections.swift": "baf7f8e688346a7e6edf5ac2eeba8bdf6bcb356de096c4af0233ae32ff309967",
+    "Sources/MenuBarCore/MenuBarSessionController.swift": "a431e6fc95fe890e46dc307ed52e27b5b6dad9a42fbcd4227a1cdcd27a51a10a",
+    "Sources/CMenuBar/TMMenuBarSession.m": "82af3ea40166a86b5b2effe043794e97d518316b15c6fcf2a3137c80d76484bf",
+    "Sources/CMenuBar/include/TMMenuBarSession.h": "f5416071cd353b133d7f5fd3d112e681cc01e350ddde3b3c158a3350a778311c",
+    "Tests/MenuBarCoreTests/MenuBarSessionControllerTests.swift": "1befe5ee25f3228141bcd6063e1b6cacc78bfbb14d7b5db85a4b4c1747710cd9",
+    "Tests/MenuBarCoreTests/MenuBarSectionsTests.swift": "945c886d08acfd15d9e51704abd3e9928ac7a0f5f2fcd0385d8f30d04a4b98f3",
+    "Sources/ToolExtensionCore/ToolExtensionConfiguration.swift": "b3878fc7dd8132dc3c1369e409ee6b0a5a193b8724603bd30a675d7f5d5e32c1",
+    "Tests/ToolExtensionCoreTests/ToolExtensionConfigurationTests.swift": "89b9f65a914e8d09f8902e1577956cc0a83a6752edb6c75f237101df48f5b496"
+  },
+  "sourceOverlayMatchesWorkingTree": true,
+  "host": {
+    "buildAndTests": "local, explicitly authorized by user",
+    "os": "27.0.1 (26A434)",
+    "swift": "6.4",
+    "sdk": "macOS 27.0",
+    "globalToolchainChanged": false
+  },
+  "integratedValidation": {
+    "command": "swift test --build-system native --jobs 2 --filter 'MenuBar|MenuDisplay|ToolExtension|MainOnlyDelegate|L10n'",
+    "exitCode": 0,
+    "tests": 36,
+    "failures": 0,
+    "scope": "Committed baseline plus this task overlay, excluding unrelated dirty work; actual ThermoApp compiled and linked by tests."
+  },
+  "isolatedValidation": {
+    "command": "python3 scripts/verify-menu-bar.py --output dist/menubar-qa-20261022-r8",
+    "exitCode": 0,
+    "coreTests": 20,
+    "overlapWithIntegratedTests": true,
+    "preview": "dist/menubar-qa-20261022-r8/Thermo Menu Bar Preview.app"
+  },
+  "gui": {
+    "method": "cua_repl",
+    "normalLaunchAccessibilityTrusted": false,
+    "shellProbeAccessibilityTrusted": true,
+    "menuManagerChineseLayoutReviewed": true,
+    "extensionEnableToggleAndOpenButtonReviewed": true,
+    "menuVisibilityAndOrderSavedAndReloaded": true,
+    "configurationReadback": {
+      "builtin.menubar": {
+        "enabled": true,
+        "showInMenu": false,
+        "order": 1
+      }
+    },
+    "configurationReturnedToDefault": true,
+    "oversizedWindowFoundAndFixed": true,
+    "finalExtensionWindowPointsIncludingTitleBar": [
+      660,
+      468
+    ],
+    "qaProcessesExited": true
+  },
+  "nativeVisibility": {
+    "status": "not accepted",
+    "activationCallbackSucceeded": true,
+    "restorationRequestSucceeded": true,
+    "axNodeAbsenceCheckPassed": false,
+    "separateFixtureChecked": true,
+    "overflowEntranceChangedDuringRequest": true,
+    "targetPixelVisibilityConfirmed": false,
+    "systemModuleSideEffectsAccepted": false,
+    "reports": [
+      "dist/menubar-qa-20261022-r2/native-self-test.json",
+      "dist/menubar-qa-20261022-r3/native-self-test.json",
+      "dist/menubar-qa-20261022-r5/native-self-test.json"
+    ],
+    "limitation": "Fixture was in system overflow. App AX nodes remained; callback and AX membership do not establish actual icon visibility."
+  },
+  "extensions": {
+    "providerInterface": "NativeToolExtension",
+    "registeredModules": [
+      "builtin.menubar"
+    ],
+    "configuration": [
+      "enabled",
+      "showInMenu",
+      "order"
+    ],
+    "unknownIDsPreserved": true,
+    "thirdPartyScriptsImplemented": false,
+    "sharedShortcutsImplemented": false,
+    "otherExistingModulesMigrated": false
+  },
+  "installedAppReplaced": false,
+  "renamed": false,
+  "published": false,
+  "goalComplete": false,
+  "remaining": [
+    "Actual target visibility and three-group transitions",
+    "System icon side effects",
+    "Sleep/wake, quit, permission revocation and multiple displays",
+    "Legacy macOS backend",
+    "Hotkeys, rehide and command search",
+    "Third-party script adapter and other module migration"
+  ],
+  "artifacts": {
+    "menubar-current-head-tests.log": {
+      "sha256": "4adace2a814d505bc73a241515fbf3b925f206eecdb8774fbe86700a510b1f0e",
+      "bytes": 503050
+    },
+    "capabilities.json": {
+      "sha256": "21d277b5f33a12991c79c391a597b89f08bfe44444a27c2b6e39a7f7ced5d7f5",
+      "bytes": 170
+    },
+    "test.log": {
+      "sha256": "3e101e145860c183bde7e86adcabd0c90f32deb2b776726aa719c93978241a2a",
+      "bytes": 13249
+    },
+    "input.json": {
+      "sha256": "8e389dade4c1014c0366c6cd89b1e258d433ba0a93a1861372f3702665177185",
+      "bytes": 1967
+    },
+    "menubar-build.log": {
+      "sha256": "5605e11605406fb309e76dd0452c83c6411de90b8bf6a811b619542191441089",
+      "bytes": 334537
+    },
+    "menubar-current-head-input.json": {
+      "sha256": "ad884a705eaa83a53d89826898e6cec6a3ec13028cdd6ebe89550dbe6183aef6",
+      "bytes": 2297
+    },
+    "menubar-extension-final-tests.log": {
+      "sha256": "1070ea6e924e6f3e22ffcae57f026af2b080ce71d387e7bfa15778db9901eaf2",
+      "bytes": 11715
+    }
+  }
+}

@@ -1120,6 +1120,9 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: Theme.Space.xl) {
             // Features with their own panel: one group of rows, each opening its panel.
             section(tr("Tools")) {
+                row(tr("Extensions"), labelControl: false) {
+                    Button(tr("Extensions…")) { ToolExtensionPanel.shared.show() }.controlSize(.small)
+                }
                 row(tr("Search apps and files"), labelControl: false) {
                     Button(tr("Search settings…")) { LocalSearchPanel.shared.show(settings: true) }.controlSize(.small)
                 }
