@@ -1,0 +1,141 @@
+{
+  "date": "2026-10-22",
+  "userClarification": "Drag-and-drop configuration was requested; extension/plugin wording was a typo.",
+  "sourceBase": "170b58c4f93e48481e5204fe5d584dd49ea6969f",
+  "sourceOverlay": {
+    "Package.swift": "120328c6589095df0a3279fe8f2dae4b108eb554cb85e12b546b56230975f2b7",
+    "Resources/Info.plist": "e8850e461c21ef79d754fc3a7e9cd22f13d87c5ecc793b7a861f8e107f90387a",
+    "Sources/ThermoApp/main.swift": "93ccd9f59dc0864a5e0de1b2ffd635e9b3388a45a965397937754fc7ee0de3e9",
+    "Sources/ThermoApp/AppExitGuard.swift": "fa9b0102cc7a3b08e31ccf4565987c77ae93e9fa42f5091c06278577e8d18e4c",
+    "Sources/ThermoApp/StatusMenu.swift": "e081f358bf2fd5e9c395e6adb52b4826bd500393673cca7de0f446fb085dfd9a",
+    "Sources/ThermoApp/Views.swift": "f4af64353fcf1cb6f0ed25cd0f0e55f5b73532756a97d80b66d10be29dfc8948",
+    "Sources/ThermoApp/MenuBarManager.swift": "829d69fec3e369b4f008cddbedb29be84ec3e52b14c5782c737b049d233fc419",
+    "Sources/ThermoApp/MenuBarManagerPanel.swift": "fcdc5c2c840d1bddef7d877b769fcff6ed08ece67586359cf1aaf4852c5a8d34",
+    "Sources/ThermoL10n/MenuBarZhHans.swift": "1e9ea7a8e4e2d728e19c6bdc2844b11ffd8fe53b0b5a4558ba08d040d7c54943",
+    "Tests/ThermoAppTests/MenuBarDropTests.swift": "20511d1764afb7254bb49987e632a5f52085d951736546940d3dbf0b99e0daf5",
+    "Sources/MenuBarCore/MenuBarSections.swift": "baf7f8e688346a7e6edf5ac2eeba8bdf6bcb356de096c4af0233ae32ff309967",
+    "Sources/MenuBarCore/MenuBarDragPayload.swift": "0cf9cfb317fcbec10c845438cd3d1d1b8d5a9a9b9403516b6028201862638c19",
+    "Sources/MenuBarCore/MenuBarSessionController.swift": "a431e6fc95fe890e46dc307ed52e27b5b6dad9a42fbcd4227a1cdcd27a51a10a",
+    "Tests/MenuBarCoreTests/MenuBarDragPayloadTests.swift": "69a7e2281cd9f5a7664a4e3b6b4f734d97302bd2942d749a21afa9b8b5a519f7",
+    "Tests/MenuBarCoreTests/MenuBarSessionControllerTests.swift": "1befe5ee25f3228141bcd6063e1b6cacc78bfbb14d7b5db85a4b4c1747710cd9",
+    "Tests/MenuBarCoreTests/MenuBarSectionsTests.swift": "945c886d08acfd15d9e51704abd3e9928ac7a0f5f2fcd0385d8f30d04a4b98f3"
+  },
+  "deletedUnrequestedCode": [
+    "Sources/ThermoApp/ToolExtensionHost.swift",
+    "Sources/ToolExtensionCore/ToolExtensionConfiguration.swift",
+    "Tests/ThermoAppTests/ToolExtensionHostTests.swift",
+    "Tests/ToolExtensionCoreTests/ToolExtensionConfigurationTests.swift"
+  ],
+  "sourceOverlayMatchesWorkingTreeAtVerification": true,
+  "environment": "User-authorized local verification; macOS 27.0.1 (26A434), Swift 6.4, macOS 27 SDK.",
+  "integratedTests": {
+    "command": "swift test --build-system native --jobs 2 --filter 'MenuBar|MenuDisplay'",
+    "exitCode": 0,
+    "passed": 36,
+    "failures": 0,
+    "skips": 0,
+    "cases": [
+      "-[MenuBarCoreTests.MenuBarDragPayloadTests testKnownAppRoundTrips]",
+      "-[MenuBarCoreTests.MenuBarDragPayloadTests testMalformedFutureAndOversizedPayloadsAreRejected]",
+      "-[MenuBarCoreTests.MenuBarDragPayloadTests testSystemAndHostCannotBeMovedEvenWhenPresentInCatalog]",
+      "-[MenuBarCoreTests.MenuBarDragPayloadTests testUnknownOrRemovedSourceCannotChangeAssignments]",
+      "-[ThermoAppTests.MenuBarDropTests testDragAcrossGroupsPersistsAndDoesNotEnableNativeHiding]",
+      "-[ThermoAppTests.MenuBarDropTests testInvalidDropPreservesExistingGroups]",
+      "-[ThermoAppTests.MenuBarDropTests testUnreadablePreferencesCannotBeOverwrittenByDrop]",
+      "-[ThermoKitTests.MenuBarPreferencesTests testAllLegacyChoicesMigrateAndRemainStable]",
+      "-[ThermoKitTests.MenuBarPreferencesTests testIconOnlyNeedsNoMetricResourcesButKeepsSelections]",
+      "-[ThermoKitTests.MenuBarPreferencesTests testIndependentSelectionsAndActionsSurviveNormalization]",
+      "-[ThermoKitTests.MenuBarPreferencesTests testInvalidPreferencesRepairWithoutCrossMetricFallback]",
+      "-[ThermoKitTests.MenuBarPreferencesTests testRepeatedLegacyWriteOverridesNewSelections]",
+      "-[MenuBarCoreTests.MenuBarSectionsTests testAbsentAppsDoNotActivateAndRejoinSavedSectionOnLaunch]",
+      "-[MenuBarCoreTests.MenuBarSectionsTests testConfigurationPreservesNewAppsSystemItemsAndOwnIdentity]",
+      "-[MenuBarCoreTests.MenuBarSectionsTests testCorruptOrFuturePreferencesAreReportedAndNeverOverwrittenByRead]",
+      "-[MenuBarCoreTests.MenuBarSectionsTests testOwnIdentityIsProtectedEvenIfFutureBrandUsesAnotherNamespace]",
+      "-[MenuBarCoreTests.MenuBarSectionsTests testProtectedAndInvalidIDsCannotHideRecoveryOrSystemControls]",
+      "-[MenuBarCoreTests.MenuBarSectionsTests testRevealStatesKeepAssignmentsAndAlwaysHiddenSeparate]",
+      "-[MenuBarCoreTests.MenuBarSectionsTests testVisibleAssignmentRemovesOverrideAndPersistenceRoundTrips]",
+      "-[MenuBarCoreTests.MenuBarSessionControllerTests testFailureReleasesBothActiveAndPendingSessions]",
+      "-[MenuBarCoreTests.MenuBarSessionControllerTests testLateSuccessAfterRestoreIsInvalidatedAgain]",
+      "-[MenuBarCoreTests.MenuBarSessionControllerTests testReplacementActivatesBeforePreviousHandleIsReleased]",
+      "-[MenuBarCoreTests.MenuBarSessionControllerTests testRestorationFailureIsRetainedForExplicitRecovery]",
+      "-[MenuBarCoreTests.MenuBarSessionControllerTests testSameConfigurationDoesNotRestartPendingOrAppliedWork]",
+      "-[MenuBarCoreTests.MenuBarSessionControllerTests testSupersededCallbackCannotReleaseNewActiveSession]",
+      "-[MenuBarCoreTests.MenuBarSessionControllerTests testSynchronousCallbackDoesNotLeaveApplyingStateOrScheduleTimeout]",
+      "-[MenuBarCoreTests.MenuBarSessionControllerTests testTimeoutRestoresAndLateSuccessCannotHideAgain]",
+      "-[ThermoCLITests.MenuBarSettingsTests testLegacyMenubarSpellingsRemainAccepted]",
+      "-[ThermoCLITests.MenuBarSettingsTests testNewAndRepeatedLegacyWritesApplyToSamePreferences]",
+      "-[ThermoCLITests.MenuBarSettingsTests testNewCLIChoicesAreCanonicalAndInvalidValuesRejected]",
+      "-[ThermoAppTests.MenuDisplayTests testLateSensorCompletionDoesNotRefreshOldObservations]",
+      "-[ThermoAppTests.MenuDisplayTests testMissingCPUAndPowerNeverDisplayAnotherSensorsTemperature]",
+      "-[ThermoAppTests.MenuDisplayTests testPartialFanReadingIsExplicitlyALowerBound]",
+      "-[ThermoAppTests.MenuDisplayTests testStaleValuesBecomeUnknownAndKeepUnits]",
+      "-[ThermoAppTests.MenuDisplayTests testTwoLinesIconOptionsAndAwakeMarker]",
+      "-[ThermoAppTests.MenuDisplayTests testWakeOrSettingsBoundaryRejectsReadsStartedBeforeIt]"
+    ],
+    "rawLogSHA256": "07f480546f7f8b5cc813de0a99f10e7988d22d5afe260e85f5da2b97fdcb443f",
+    "parserNote": "One SwiftPM deprecation warning was interleaved inside a passing case name. It was removed only for parsing; the raw log is preserved.",
+    "scope": "Frozen committed baseline plus task overlay/deletions; unrelated dirty work excluded."
+  },
+  "isolatedTests": {
+    "command": "python3 scripts/verify-menu-bar.py --output dist/menubar-qa-20261022-r15",
+    "exitCode": 0,
+    "passed": 19,
+    "overlapsIntegratedTests": true
+  },
+  "dragUI": {
+    "method": "cua_repl mouse drag, screenshots and AX readback",
+    "R14Transitions": [
+      "visible -> hidden",
+      "hidden -> alwaysHidden",
+      "alwaysHidden -> visible"
+    ],
+    "R14CloseReopenPreservedAlwaysHidden": true,
+    "R15LatestBuildVisibleToHidden": true,
+    "R15CloseReopenCounts": [
+      2,
+      1,
+      0
+    ],
+    "R15SavedAssignments": {
+      "org.example.mbfx.3237a69775e94a6fb652d8e582f74079": "hidden"
+    },
+    "nativeHidingAutomaticallyEnabled": false,
+    "inventory": "Three packaged test fixture bundle identities; actual AX discovery is not asserted.",
+    "scope": "Section membership; physical menu bar order still uses macOS Command-drag.",
+    "temporaryFullscreenMisclickRecovered": true
+  },
+  "extensionRemoval": {
+    "hostAndEntryRemoved": true,
+    "packageDependencyRemoved": true,
+    "existingPluginPreferenceFilesNotDeleted": true
+  },
+  "nativeVisibility": {
+    "status": "partial; complete by-app grouping not accepted",
+    "thirdPartyIconsActuallyHiddenAndRestored": true,
+    "installedThermoAllowlistControlObserved": true,
+    "syntheticFixtureWhitelistVisibilityVerified": false,
+    "systemMenuBarAllowTogglesObservedOn": true,
+    "systemSettingsReturnedToOriginalPage": true,
+    "realPersistentAssignmentsChanged": false,
+    "sessionsRestored": true,
+    "ordinaryPreviewAccessibilityGranted": false,
+    "experiments": [
+      "R10 ad-hoc/developer signatures and configuration input readback",
+      "R11 shorter IDs and installed Thermo control",
+      "R13 fixed raster markers"
+    ],
+    "remaining": [
+      "Real three-group transitions",
+      "System icon side effects",
+      "Normal permission session, sleep/wake, quit and multiple displays"
+    ]
+  },
+  "artifacts": {
+    "preview": "dist/menubar-qa-20261022-r15/Thermo Menu Bar Drag Check.app",
+    "input": "dist/menubar-qa-20261022-r15/input.json",
+    "testLog": "dist/menubar-qa-20261022-r15/drag-tests.log"
+  },
+  "installedAppReplaced": false,
+  "published": false,
+  "goalComplete": false
+}

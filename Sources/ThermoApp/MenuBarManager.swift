@@ -96,23 +96,24 @@ enum MenuBarAppDiscovery {
 
     var available: Bool { TMMenuBarSession.isAvailable() }
     var hasHiddenAssignments: Bool { !sections.assignments.isEmpty }
-    var canEdit: Bool { settingsReadable && available && ToolExtensionHost.shared.isEnabled("builtin.menubar") }
+    var canEdit: Bool { settingsReadable && available }
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, initialApps: [ManagedMenuBarApp] = []) {
         self.defaults = defaults
         self.store = MenuBarSectionStore(defaults: defaults)
         self.ownBundle = Bundle.main.bundleIdentifier ?? "dev.thermo.app"
+        self.known = Dictionary(initialApps.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
         do { sections = try store.read() }
         catch {
             settingsReadable = false
             self.error = tr("Saved menu bar sections could not be read. Nothing has been hidden.")
         }
+        rebuildApps()
     }
 
     /// Normal app startup only. Start fully visible after relaunch so login-time
     /// apps can register before a user explicitly collapses the sections.
     func start() {
-        guard ToolExtensionHost.shared.isEnabled("builtin.menubar") else { return }
         if defaults.bool(forKey: Self.enabledKey), settingsReadable, available, AXIsProcessTrusted() {
             enabled = true; trusted = true; observe()
         }
@@ -148,6 +149,23 @@ enum MenuBarAppDiscovery {
         next.assign(bundle, to: section)
         do { try store.write(next); sections = next; apply() }
         catch { self.error = error.localizedDescription }
+    }
+
+    func dragData(for bundle: String) -> Data? {
+        guard canEdit, isAssignable(bundle), apps.contains(where: { $0.id == bundle }) else { return nil }
+        return try? JSONEncoder().encode(MenuBarDragPayload(bundle: bundle))
+    }
+
+    @discardableResult func acceptDrop(_ data: Data, into section: MenuBarSection) -> Bool {
+        guard canEdit else { return false }
+        do {
+            let payload = try MenuBarDragPayload.read(data, knownBundles: Set(apps.map(\.id)), ownBundle: ownBundle)
+            assign(payload.bundle, to: section)
+            return true
+        } catch {
+            self.error = tr("This drag is no longer valid. Refresh the list and try again.")
+            return false
+        }
     }
 
     func setReveal(_ reveal: MenuBarReveal) {

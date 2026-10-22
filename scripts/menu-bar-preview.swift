@@ -3,6 +3,7 @@
 import AppKit
 import ApplicationServices
 import CMenuBar
+import MenuBarCore
 import ThermoL10n
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -10,37 +11,84 @@ import ThermoL10n
     private var session: TMMenuBarSession?
     private var checks: [String: Any] = [:]
     private var finished = false
+    private var visualCheck: MenuBarVisualCheck?
+    private var dragCheck: MenuBarManagerPanel?
+    private var dragModel: MenuBarManager?
     func closeMenuPanel() {}
     func applicationDidFinishLaunching(_ notification: Notification) {
         if menuBarFixtureMode {
-            guard Bundle.main.bundleIdentifier?.hasPrefix("org.example.thermo-menubar-fixture.") == true else { exit(2) }
-            item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-            item?.button?.title = "MBFX"
+            guard Bundle.main.bundleIdentifier?.hasPrefix("org.example.mbfx.") == true else { exit(2) }
+            item = NSStatusBar.system.statusItem(withLength: 48)
+            let label = Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarFixtureLabel") as? String ?? "MBFX"
+            let previousImagePosition = (item?.button?.imagePosition.rawValue).map { Int($0) } ?? -1
+            let marker = NSImage(size: NSSize(width: 44, height: 18), flipped: false) { rect in
+                (label as NSString).draw(in: rect.insetBy(dx: 1, dy: 1), withAttributes: [
+                    .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .bold), .foregroundColor: NSColor.black
+                ])
+                return true
+            }
+            marker.isTemplate = true
+            item?.button?.image = marker
+            item?.button?.imagePosition = .imageOnly
+            item?.button?.setAccessibilityLabel(label)
+            let rendering: [String: Any] = ["label": label, "defaultImagePosition": previousImagePosition,
+                                            "configuredImagePosition": (item?.button?.imagePosition.rawValue).map { Int($0) } ?? -1,
+                                            "statusLength": item?.length ?? 0, "usesTemplateRasterMarker": true]
+            if let data = try? JSONSerialization.data(withJSONObject: rendering, options: [.prettyPrinted, .sortedKeys]) {
+                try? data.write(to: Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent(label + "-rendering.json"), options: .atomic)
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 120) { [self] in
                 if let item { NSStatusBar.system.removeStatusItem(item) }
                 NSApp.terminate(nil)
             }
+        }
+        else if Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarQARole") as? String == "visual-check" {
+            visualCheck = MenuBarVisualCheck(); visualCheck?.show()
+        }
+        else if Bundle.main.object(forInfoDictionaryKey: "ThermoMenuBarQARole") as? String == "drag-check" {
+            let root = Bundle.main.bundleURL.deletingLastPathComponent()
+            let names = ["Thermo Menu Bar Visible Fixture", "Thermo Menu Bar Fixture", "Thermo Menu Bar Always Fixture"]
+            let apps = names.compactMap { name -> ManagedMenuBarApp? in
+                guard let bundle = Bundle(url: root.appendingPathComponent(name + ".app"))?.bundleIdentifier,
+                      bundle.hasPrefix("org.example.mbfx.") else { return nil }
+                return ManagedMenuBarApp(id: bundle, name: name.replacingOccurrences(of: "Thermo Menu Bar ", with: ""))
+            }
+            let model = MenuBarManager(initialApps: apps)
+            dragModel = model
+            dragCheck = MenuBarManagerPanel(model: model)
+            dragCheck?.window?.title = "拖拽分组验收（测试应用）"
+            dragCheck?.show()
         }
         else if CommandLine.arguments.contains("--self-test") { runSelfTest() }
         else {
             let main = NSMenu()
             let application = NSMenuItem()
             let submenu = NSMenu()
-            for (title, selector, key) in [(tr("Manage menu bar…"), #selector(openManager), "m"), (tr("Extensions…"), #selector(openExtensions), ",")] {
+            for (title, selector, key) in [(tr("Manage menu bar…"), #selector(openManager), "m")] {
                 let entry = submenu.addItem(withTitle: title, action: selector, keyEquivalent: key)
                 entry.target = self
             }
             submenu.addItem(.separator())
             submenu.addItem(withTitle: "Quit Preview", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
             application.submenu = submenu; main.addItem(application); NSApp.mainMenu = main
-            if CommandLine.arguments.contains("--extensions") { openExtensions() } else { openManager() }
+            openManager()
         }
     }
-    @objc private func openManager() { ToolExtensionHost.shared.open("builtin.menubar") }
-    @objc private func openExtensions() { ToolExtensionPanel.shared.show() }
+    @objc private func openManager() { MenuBarManagerPanel.shared.show() }
     func applicationWillTerminate(_ notification: Notification) {
-        ToolExtensionHost.shared.shutdown()
-        MenuBarManager.shared.shutdown()
+        visualCheck?.restore()
+        if let dragModel {
+            let result: [String: Any] = ["assignments": dragModel.sections.assignments.mapValues(\.rawValue),
+                                       "nativeHidingEnabled": dragModel.enabled,
+                                       "bundle": Bundle.main.bundleIdentifier ?? ""]
+            if let data = try? JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]) {
+                try? data.write(to: Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("drag-check-result.json"), options: .atomic)
+            }
+            dragModel.shutdown()
+        }
+        if !menuBarFixtureMode {
+            MenuBarManager.shared.shutdown()
+        }
         try? session?.invalidate()
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -57,7 +105,7 @@ import ThermoL10n
             finish(error: "Pass the separately running disposable fixture bundle ID."); return
         }
         let target = CommandLine.arguments[index + 1]
-        guard target.hasPrefix("org.example.thermo-menubar-fixture."),
+        guard target.hasPrefix("org.example.mbfx."),
               let fixture = NSRunningApplication.runningApplications(withBundleIdentifier: target).first,
               fixture.bundleURL?.lastPathComponent == "Thermo Menu Bar Fixture.app",
               fixture.bundleURL?.deletingLastPathComponent() == Bundle.main.bundleURL.deletingLastPathComponent() else {
@@ -75,12 +123,12 @@ import ThermoL10n
                 DispatchQueue.main.asyncAfter(deadline: .now() + (observe ? 20 : 5)) { [self] in
                     if !finished { finish(error: "Native callback or visibility check timed out.") }
                 }
-                session?.activate { error in
+                session?.activate { [self] error in
                     let message = error?.localizedDescription
                     Task { @MainActor [self] in
-                        guard !finished else { try? session?.invalidate(); return }
-                        if let message { finish(error: message); return }
-                        checks["activationCallbackSucceeded"] = true
+                        guard !self.finished else { try? self.session?.invalidate(); return }
+                        if let message { self.finish(error: message); return }
+                        self.checks["activationCallbackSucceeded"] = true
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [self] in
                             let during = Set(MenuBarAppDiscovery.snapshot().map(\.id))
                             checks["fixtureAbsentWhileHidden"] = !during.contains(target)
@@ -123,7 +171,7 @@ import ThermoL10n
 }
 
 let menuBarFixtureMode = CommandLine.arguments.contains("--fixture") ||
-    Bundle.main.bundleIdentifier?.hasPrefix("org.example.thermo-menubar-fixture.") == true
+    Bundle.main.bundleIdentifier?.hasPrefix("org.example.mbfx.") == true
 let application = NSApplication.shared
 if CommandLine.arguments.contains("--probe") {
     let result: [String: Any] = ["available": TMMenuBarSession.isAvailable(), "accessibilityTrusted": AXIsProcessTrusted(),

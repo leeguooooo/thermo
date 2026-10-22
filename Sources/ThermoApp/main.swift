@@ -22,7 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Settings.register()
-        ToolExtensionHost.shared.start()
+        MenuBarManager.shared.start()
         AppControlHost.shared.start()
         CleanScreenShortcutModel.enableLive()
         LocalSearchShortcut.shared.activate()
@@ -263,7 +263,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        ToolExtensionHost.shared.shutdown()
         MenuBarManager.shared.shutdown()
         LocalSearchShortcut.shared.shutdown()
         CaptureWorkspace.shared.shutdown()

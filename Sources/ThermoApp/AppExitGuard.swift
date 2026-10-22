@@ -57,7 +57,6 @@ enum AppExitGuard {
 @MainActor
 final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
-        ToolExtensionHost.shared.shutdown()
         MenuBarManager.shared.shutdown()
     }
     var showExitBlocker: @MainActor (MainPage) -> Void = { MainWindow.show($0) }

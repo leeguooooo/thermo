@@ -36,26 +36,26 @@ def main():
         manifest[str(source.relative_to(root))] = hashlib.sha256(data).hexdigest()
 
     try:
-        for folder in ['Sources/MenuBarCore', 'Sources/ToolExtensionCore', 'Sources/CMenuBar', 'Sources/ThermoL10n', 'Tests/MenuBarCoreTests', 'Tests/ToolExtensionCoreTests']:
+        for folder in ['Sources/MenuBarCore', 'Sources/CMenuBar', 'Sources/ThermoL10n', 'Tests/MenuBarCoreTests']:
             for source in (root / folder).rglob('*'):
                 if source.is_file():
                     copy(source, work / source.relative_to(root))
         preview = work / 'Sources/MenuBarPreview'
-        for name in ['MenuBarManager.swift', 'MenuBarManagerPanel.swift', 'ToolExtensionHost.swift']:
+        for name in ['MenuBarManager.swift', 'MenuBarManagerPanel.swift']:
             copy(root / 'Sources/ThermoApp' / name, preview / name)
         # The preview uses actual Theme tokens; unrelated shared view components
         # depend on the rest of Thermo, and are outside this isolated build.
         copy(root / 'Sources/ThermoApp/Theme.swift', preview / 'Theme.swift',
              lambda data: data.split(b'\nextension Animation {')[0])
         copy(root / 'scripts/menu-bar-preview.swift', preview / 'main.swift')
+        copy(root / 'scripts/menu-bar-visual-check.swift', preview / 'MenuBarVisualCheck.swift')
         (work / 'Package.swift').write_text('''// swift-tools-version: 5.9
 import PackageDescription
 let package = Package(name: "ThermoMenuBarQA", platforms: [.macOS(.v13)], targets: [
- .target(name: "MenuBarCore"), .target(name: "ToolExtensionCore"), .target(name: "ThermoL10n"),
+ .target(name: "MenuBarCore"), .target(name: "ThermoL10n"),
  .target(name: "CMenuBar", cSettings: [.unsafeFlags(["-fobjc-arc"])], linkerSettings: [.linkedFramework("Foundation")]),
- .executableTarget(name: "MenuBarPreview", dependencies: ["MenuBarCore", "ToolExtensionCore", "ThermoL10n", "CMenuBar"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("ApplicationServices")]),
- .testTarget(name: "MenuBarCoreTests", dependencies: ["MenuBarCore"]),
- .testTarget(name: "ToolExtensionCoreTests", dependencies: ["ToolExtensionCore"])
+ .executableTarget(name: "MenuBarPreview", dependencies: ["MenuBarCore", "ThermoL10n", "CMenuBar"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("ApplicationServices")]),
+ .testTarget(name: "MenuBarCoreTests", dependencies: ["MenuBarCore"])
 ], swiftLanguageVersions: [.v5])
 ''')
         (output / 'input.json').write_text(json.dumps({'files': manifest, 'themeScope': 'tokens before extension Animation'}, indent=2))
@@ -73,19 +73,42 @@ let package = Package(name: "ThermoMenuBarQA", platforms: [.macOS(.v13)], target
             'CFBundleIdentifier': identifier, 'CFBundleExecutable': binary.name,
             'CFBundleName': 'Thermo Menu Bar Preview', 'CFBundlePackageType': 'APPL',
             'CFBundleVersion': '1', 'LSMinimumSystemVersion': '13.0', 'NSHighResolutionCapable': True,
+            'UTExportedTypeDeclarations': [{'UTTypeIdentifier': 'dev.thermo.menubar-app', 'UTTypeDescription': 'Thermo menu bar app', 'UTTypeConformsTo': ['public.data']}],
         }))
         subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True, capture_output=True)
-        fixture = output / 'Thermo Menu Bar Fixture.app'
-        shutil.copytree(app, fixture)
-        fixture_info = fixture / 'Contents/Info.plist'
-        info = plistlib.loads(fixture_info.read_bytes())
-        info['CFBundleIdentifier'] = 'org.example.thermo-menubar-fixture.' + uuid.uuid4().hex
-        info['CFBundleName'] = 'Thermo Menu Bar Fixture'
-        fixture_info.write_bytes(plistlib.dumps(info))
-        subprocess.run(['codesign', '--force', '--sign', '-', str(fixture)], check=True, capture_output=True)
+        fixtures = []
+        for name, label in [('Thermo Menu Bar Fixture', 'MBH'), ('Thermo Menu Bar Visible Fixture', 'MBV'), ('Thermo Menu Bar Always Fixture', 'MBA')]:
+            fixture = output / (name + '.app')
+            shutil.copytree(app, fixture)
+            fixture_info = fixture / 'Contents/Info.plist'
+            info = plistlib.loads(fixture_info.read_bytes())
+            info['CFBundleIdentifier'] = 'org.example.mbfx.' + uuid.uuid4().hex
+            info['CFBundleName'] = name
+            info['ThermoMenuBarFixtureLabel'] = label
+            fixture_info.write_bytes(plistlib.dumps(info))
+            subprocess.run(['codesign', '--force', '--sign', '-', str(fixture)], check=True, capture_output=True)
+            fixtures.append({'app': str(fixture), 'bundle': info['CFBundleIdentifier'], 'label': label})
+        visual = output / 'Thermo Menu Bar Visual Check.app'
+        shutil.copytree(app, visual)
+        visual_info = visual / 'Contents/Info.plist'
+        info = plistlib.loads(visual_info.read_bytes())
+        info['CFBundleIdentifier'] = 'dev.thermo.menubarqa.visual.' + uuid.uuid4().hex
+        info['CFBundleName'] = 'Thermo Menu Bar Visual Check'
+        info['ThermoMenuBarQARole'] = 'visual-check'
+        visual_info.write_bytes(plistlib.dumps(info))
+        subprocess.run(['codesign', '--force', '--sign', '-', str(visual)], check=True, capture_output=True)
+        drag = output / 'Thermo Menu Bar Drag Check.app'
+        shutil.copytree(app, drag)
+        drag_info = drag / 'Contents/Info.plist'
+        info = plistlib.loads(drag_info.read_bytes())
+        info['CFBundleIdentifier'] = 'dev.thermo.menubarqa.drag.' + uuid.uuid4().hex
+        info['CFBundleName'] = 'Thermo Menu Bar Drag Check'
+        info['ThermoMenuBarQARole'] = 'drag-check'
+        drag_info.write_bytes(plistlib.dumps(info))
+        subprocess.run(['codesign', '--force', '--sign', '-', str(drag)], check=True, capture_output=True)
         probe = subprocess.check_output([str(binary), '--probe'], text=True)
         (output / 'capabilities.json').write_text(probe)
-        print(json.dumps({'app': str(app), 'fixture': str(fixture), 'fixtureBundle': info['CFBundleIdentifier'], 'input': str(output / 'input.json'),
+        print(json.dumps({'app': str(app), 'fixtures': fixtures, 'visualCheck': str(visual), 'dragCheck': str(drag), 'input': str(output / 'input.json'),
                           'tests': str(output / 'test.log'), 'capabilities': json.loads(probe)}, indent=2))
     finally:
         shutil.rmtree(work)

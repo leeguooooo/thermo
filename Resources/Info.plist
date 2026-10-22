@@ -14,6 +14,12 @@
     <key>LSUIElement</key><true/>
     <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
     <key>NSHighResolutionCapable</key><true/>
+    <key>UTExportedTypeDeclarations</key>
+    <array><dict>
+        <key>UTTypeIdentifier</key><string>dev.thermo.menubar-app</string>
+        <key>UTTypeDescription</key><string>Thermo menu bar app</string>
+        <key>UTTypeConformsTo</key><array><string>public.data</string></array>
+    </dict></array>
     <key>NSAppleEventsUsageDescription</key><string>Thermo lists your browser tabs to find duplicates, and closes a tab only when you confirm it.</string>
     <key>NSLocationWhenInUseUsageDescription</key><string>macOS shows Wi-Fi network names only to apps allowed to use Location Services. Thermo uses it to name your network and nearby networks on the Connections page; it never reads where you are.</string>
     <key>NSLocationUsageDescription</key><string>macOS shows Wi-Fi network names only to apps allowed to use Location Services. Thermo uses it to name your network and nearby networks on the Connections page; it never reads where you are.</string>
