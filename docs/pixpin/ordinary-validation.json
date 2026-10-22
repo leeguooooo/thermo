@@ -80,5 +80,16 @@
     "Keyboard layer",
     "Camera layer",
     "Microphone layer"
-  ]
+  ],
+  "codeCommit": "855a61c07035c4140b1414228d26a4fbc3fccb37",
+  "cleanCheckoutTests": {
+    "commit": "855a61c07035c4140b1414228d26a4fbc3fccb37",
+    "command": "swift test -j 4 --filter 'CaptureCoreTests|PresentationTests|MainOnlyExitTests'",
+    "CaptureCore": 46,
+    "ThermoApp": 27,
+    "failures": 0,
+    "sourceStatus": "clean",
+    "logSHA256": "8204386e13cddccc89b8883ecb6e4eebacc99aee06bd586bc490f76150e3019d",
+    "recordedAt": "2026-10-22T06:41:04.264470+00:00"
+  }
 }

@@ -75,3 +75,5 @@ python3 scripts/verify-recording-recovery.py --mode normal --report /tmp/ordinar
 验证先确认自己创建的合成录制进程已接收帧且仍存活，再发送 SIGKILL；随后读取完整日志前缀、重建 MP4 并解码。[最近记录](ordinary-recovery-validation.json) 绑定生产 CaptureCore 源码摘要。该结果不等于真实 ScreenCaptureKit 输入、音频或全部尾部都可恢复。
 
 原生 QA 构建：`python3 scripts/verify-capture-ui.py --ordinary-review`。合成素材与草稿目录独立，不启动 helper 或录入真实鼠标、键盘、摄像头、麦克风。前台保存面板验收仍未通过，键盘/摄像头/麦克风图层也没有完成。
+
+`855a61c` 在独立干净检出中重新编译并通过相同的 73 项测试；该检出不包含并行的菜单栏或 Spotlight 未提交改动。[普通模式验证记录](ordinary-validation.json) 同时保留集成工作区与干净检出的结果摘要。
