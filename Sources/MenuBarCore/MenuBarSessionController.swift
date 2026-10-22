@@ -28,6 +28,12 @@ import Foundation
 
     public func apply(_ configuration: MenuBarConfiguration?) {
         guard let configuration else { restore(); return }
+        // A failed restoration retains handles for recovery. They must not be
+        // mistaken for an already-applied configuration, or overlap a new one.
+        if case .failed = state {
+            restore()
+            guard state == .visible else { return }
+        }
         if pending?.0 == configuration || (pending == nil && active?.0 == configuration) { return }
         generation &+= 1
         let request = generation

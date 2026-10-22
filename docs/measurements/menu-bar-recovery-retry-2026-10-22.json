@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-22",
+  "fix": "Failed restoration handles are recovered before deduplication or activation of another visibility request. Unresolved recovery blocks new assertions.",
+  "verifiedRetryConfigurations": [
+    "same as retained active session",
+    "different from retained active session"
+  ],
+  "regressionAssertions": [
+    "Failed recovery retains the original handle",
+    "No new assertion while restoration remains unresolved",
+    "The same configuration cannot bypass recovery",
+    "Successful recovery releases the retained handle before a fresh assertion",
+    "The new assertion can activate and restore normally"
+  ],
+  "verification": {
+    "isolatedCoreTests": 24,
+    "failures": 0,
+    "sourceMatchesBuiltInputs": true,
+    "themeScope": "tokens before extension Animation",
+    "lifecycle": {
+      "lifecycleNotificationOrderPassed": true,
+      "nativeVisibilityAsserted": false,
+      "physicalSleepTested": false
+    },
+    "quickControls": {
+      "quickControlsPassed": true,
+      "nativeVisibilityAsserted": false
+    }
+  },
+  "evidenceSHA256": {
+    "input.json": "6bac0eaf4c184140585ed8fd8bcff0e2e5380212a270f965c8fad4985933b834",
+    "test.log": "1ff0c58cd645bbc5777ebc128d66082b87f20b2e15e09e0539fd69a4c89f2658",
+    "lifecycle-check.json": "21f256227ec07157106aaa5b2ae7c0635fb76dfab4551eebaee23635e314378b",
+    "quick-controls-check.json": "c5c80943b0da1ff1ebf57dbbc4142dbb543025b3f38efd987dcb64f1617b9a44"
+  },
+  "boundaries": {
+    "failureInjection": "Fake backend; no system failure injected",
+    "nativeVisibilityActivatedByTheseChecks": false,
+    "productionPreferencesChanged": false,
+    "published": false,
+    "fullAppAcceptance": false
+  },
+  "cleanup": {
+    "temporaryBuildWorkspaceRemoved": true,
+    "supersededR27AppsRemoved": true,
+    "unusedR28FixturesRemoved": true,
+    "retained": "R28 current review apps and logs; earlier real-icon evidence preserved"
+  },
+  "goalComplete": false
+}

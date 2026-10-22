@@ -101,6 +101,34 @@ import XCTest
         XCTAssertEqual(session.invalidations, 2)
     }
 
+    func testRetryMustRecoverRetainedHandleBeforeApplyingSameOrDifferentConfiguration() {
+        for configuration in [a, b] {
+            var sessions: [FakeSession] = []
+            let controller = MenuBarSessionController { _ in
+                let session = FakeSession(); sessions.append(session); return session
+            }
+            controller.apply(a); sessions[0].finish()
+            sessions[0].restorationError = "restore failed"
+            controller.restore()
+            controller.apply(configuration)
+            XCTAssertEqual(sessions.count, 1, "No new assertion while restoration is unresolved")
+            XCTAssertEqual(sessions[0].invalidations, 2, "Same configuration must not skip recovery")
+            XCTAssertEqual(controller.state, .failed("restore failed"))
+
+            sessions[0].restorationError = nil
+            controller.apply(configuration)
+            XCTAssertEqual(sessions[0].invalidations, 3)
+            XCTAssertEqual(sessions.count, 2)
+            guard sessions.count == 2 else { controller.restore(); continue }
+            XCTAssertEqual(controller.state, .applying)
+            sessions[1].finish()
+            XCTAssertEqual(controller.state, .applied)
+            controller.restore()
+            XCTAssertEqual(sessions[1].invalidations, 1)
+            XCTAssertEqual(controller.state, .visible)
+        }
+    }
+
     func testSynchronousCallbackDoesNotLeaveApplyingStateOrScheduleTimeout() async throws {
         let session = FakeSession(); session.synchronouslyComplete = true
         let controller = MenuBarSessionController(timeoutNanoseconds: 1_000_000) { _ in session }
