@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Build an isolated menu-bar preview and run policy/lifecycle tests.
 
-No Thermo installation, production preferences or helper is changed. This only
-builds; run the resulting app normally for UI review. Its explicit --self-test
+No Thermo installation, production preferences or helper is changed. This builds
+and checks lifecycle notification routing without opening UI; run the resulting
+app normally for UI review. Its explicit --self-test
 briefly hides a separate disposable fixture using the private interface. It can
 affect system extras, so it is never run automatically by this builder.
 """
@@ -87,6 +88,13 @@ let package = Package(name: "ThermoMenuBarQA", platforms: [.macOS(.v13)], target
             'UTExportedTypeDeclarations': [{'UTTypeIdentifier': 'dev.thermo.menubar-app', 'UTTypeDescription': 'Thermo menu bar app', 'UTTypeConformsTo': ['public.data']}],
         }))
         subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True, capture_output=True)
+        # Disabled private model only: no global sleep notification or native
+        # visibility assertion. Keep the sleep/wake routing regression a gate.
+        with (output / 'lifecycle-check.json').open('w') as log:
+            lifecycle = subprocess.run([str(binary), '--check-lifecycle'], timeout=20,
+                                       stdout=log, stderr=subprocess.STDOUT)
+        if lifecycle.returncode:
+            raise RuntimeError(f'Lifecycle routing check failed; see {output / "lifecycle-check.json"}')
         fixtures = []
         for name, label in [('Thermo Menu Bar Fixture', 'MBH'), ('Thermo Menu Bar Visible Fixture', 'MBV'), ('Thermo Menu Bar Always Fixture', 'MBA')]:
             fixture = output / (name + '.app')
@@ -141,7 +149,8 @@ let package = Package(name: "ThermoMenuBarQA", platforms: [.macOS(.v13)], target
         probe = subprocess.check_output([str(binary), '--probe'], text=True)
         (output / 'capabilities.json').write_text(probe)
         print(json.dumps({'app': str(app), 'fixtures': fixtures, 'visualCheck': str(visual), 'realCheck': str(real), 'swappedCheck': str(swap), 'dragCheck': str(drag), 'input': str(output / 'input.json'),
-                          'tests': str(output / 'test.log'), 'capabilities': json.loads(probe)}, indent=2))
+                          'tests': str(output / 'test.log'), 'lifecycle': str(output / 'lifecycle-check.json'),
+                          'capabilities': json.loads(probe)}, indent=2))
     finally:
         shutil.rmtree(work)
 

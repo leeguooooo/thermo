@@ -76,7 +76,7 @@ enum MenuBarAppDiscovery {
     private var permissionTimer: Timer?
     private var scanGeneration: UInt64 = 0
     private var panelOpen = false
-    private var sleeping = false
+    private(set) var sleeping = false
     private var known: [String: ManagedMenuBarApp] = [:]
     private let ownBundle: String
     private lazy var controller: MenuBarSessionController = {
@@ -199,7 +199,7 @@ enum MenuBarAppDiscovery {
         trusted = AXIsProcessTrusted()
         guard !loading else { return }
         rebuildApps()
-        guard available, trusted else { return }
+        guard available, trusted, !sleeping else { return }
         loading = true
         scanGeneration &+= 1
         let generation = scanGeneration
@@ -250,26 +250,37 @@ enum MenuBarAppDiscovery {
         guard observers.isEmpty else { return }
         let workspace = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification,
-                     NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.didWakeNotification] {
+                     NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.didWakeNotification,
+                     NSWorkspace.willSleepNotification] {
             let token = workspace.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated {
-                    guard let self else { return }
-                    self.sleeping = false; self.apply()
-                    if self.panelOpen { self.refresh() }
+                    self?.handleWorkspaceNotification(name)
                 }
             }
             observers.append((workspace, token))
         }
-        let sleep = workspace.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.sleeping = true; self?.controller.restore() }
-        }
-        observers.append((workspace, sleep))
         permissionTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, self.enabled, !AXIsProcessTrusted() else { return }
                 self.apply()
             }
         }
+    }
+
+    /// Other workspace notifications can arrive after willSleep. Only didWake
+    /// releases the suspension; a launch, quit or Space change must not re-hide
+    /// icons or restart discovery during that interval.
+    func handleWorkspaceNotification(_ name: Notification.Name) {
+        if name == NSWorkspace.willSleepNotification {
+            sleeping = true
+            scanGeneration &+= 1; loading = false
+            controller.restore()
+            return
+        }
+        if name == NSWorkspace.didWakeNotification { sleeping = false }
+        guard !sleeping else { return }
+        apply()
+        if panelOpen { refresh() }
     }
 
     private func stopObserving() {

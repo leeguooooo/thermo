@@ -188,6 +188,33 @@ import ThermoL10n
 let menuBarFixtureMode = CommandLine.arguments.contains("--fixture") ||
     Bundle.main.bundleIdentifier?.hasPrefix("org.example.mbfx.") == true
 let application = NSApplication.shared
+if CommandLine.arguments.contains("--check-lifecycle") {
+    // Invoke the same handler used by workspace observers on a disabled model.
+    // This does not put the Mac to sleep, post global notifications, request
+    // permission, create visibility assertions or write installed preferences.
+    let passed = MainActor.assumeIsolated { () -> Bool in
+        let suite = "MenuBarLifecycleQA." + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let model = MenuBarManager(defaults: defaults)
+        defer { model.shutdown() }
+        guard !model.enabled, !model.sleeping else { return false }
+        model.handleWorkspaceNotification(NSWorkspace.willSleepNotification)
+        guard model.sleeping, model.state == .visible else { return false }
+        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification,
+                     NSWorkspace.activeSpaceDidChangeNotification] {
+            model.handleWorkspaceNotification(name)
+            guard model.sleeping, !model.loading, !model.enabled, model.state == .visible else { return false }
+        }
+        model.refresh()
+        guard model.sleeping, !model.loading else { return false }
+        model.handleWorkspaceNotification(NSWorkspace.didWakeNotification)
+        return !model.sleeping && !model.enabled && model.state == .visible &&
+            defaults.object(forKey: MenuBarSectionStore.key) == nil
+    }
+    print("{\"lifecycleNotificationOrderPassed\":\(passed),\"nativeVisibilityAsserted\":false,\"physicalSleepTested\":false}")
+    exit(passed ? 0 : 1)
+}
 if CommandLine.arguments.contains("--check-quick-controls") {
     // Exercise the actual native menu actions with absent identities. There is
     // no visibility assertion to apply and no installed preference is touched.

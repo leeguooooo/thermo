@@ -103,6 +103,12 @@ AX 应用代理节点在请求期间仍可能存在，原有“节点消失”�
 
 `verify-menu-bar.py` 现在可通过 `--real-hidden-bundle` 与 `--real-always-bundle` 明确指定两组真实对照对象，并在构建清单和运行请求中写出标识；默认采用 PixPin／Bitwarden。始终隐藏与隐藏组互换的独立 App 自动使用相反配置。详见 [双向真实图标记录](measurements/menu-bar-owner-check-2026-10-22.json)。
 
+### 睡眠期间的通知顺序
+
+修正了一个重新隐藏风险：原先应用启动、退出、Space 变化和唤醒共用的观察者都会清除睡眠标志。现在只有 `didWake` 能解除暂停；`willSleep` 会恢复图标、作废在途发现结果并取消加载状态，在唤醒前不再扫描或重建隐藏会话。应用启动、退出、Space 变化使用同一个可直接验证的通知处理入口。
+
+`MenuBarPreview --check-lifecycle` 用独立偏好域和关闭管理的模型执行睡眠→应用启动→退出→Space 变化→刷新→唤醒序列，核对中间通知不解除暂停，唤醒也不擅自启用管理。该检查已加入隔离构建的必过步骤，不发送全局通知、不创建隐藏会话，也不让本机进入睡眠；物理睡眠唤醒验收仍未完成。原生菜单快捷动作检查同时通过。见 [睡眠通知回归记录](measurements/menu-bar-lifecycle-2026-10-22.json)。
+
 管理窗口已直接提示显示组应用也可能被隐藏，并保留恢复全部入口；默认关闭不变。R22 从实际源码构建，19 项核心测试通过，提示在实际窗口中可见且三列完整。实际应用验收使用独立 App 和本地分组值，不写真实分组、不退出真实应用，均已结束。收据见 [真实图标对照记录](measurements/menu-bar-native-2026-10-22.json)。
 
 对照阅读了 [Ice 2 的集成记录](https://github.com/teddychan/ice-2/blob/main/docs/testing/macos27-integration.md)及 [Dimble 的运行时桥接](https://github.com/fif7y/dimble/blob/main/Packages/PelmetEngine/Sources/PelmetEngineObjC/MBAssessmentShim.m)。调用形态与当前桥接一致；上游记录不能代替本机 macOS 27.0.1 的兼容性证明。下一步需查明白名单匹配身份与临时/改包应用的差异。

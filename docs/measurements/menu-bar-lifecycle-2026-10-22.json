@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-22",
+  "fix": "Only didWake releases the sleep suspension. Application launch, termination and Space notifications cannot resume hiding; sleep also invalidates in-flight discovery.",
+  "verification": {
+    "isolatedCoreTests": 23,
+    "coreFailures": 0,
+    "menuBarSourcesMatchBuiltInputs": true,
+    "themeScope": "tokens before extension Animation",
+    "concurrentSourceDrift": {
+      "file": "Sources/ThermoL10n/ZhHans.swift",
+      "commit": "27ca7cb",
+      "reviewedChange": "Added capture action strings only; menu bar strings unchanged",
+      "preserved": true
+    },
+    "lifecycleRouting": {
+      "lifecycleNotificationOrderPassed": true,
+      "nativeVisibilityAsserted": false,
+      "physicalSleepTested": false
+    },
+    "quickControls": {
+      "quickControlsPassed": true,
+      "nativeVisibilityAsserted": false
+    },
+    "lifecycleRequiredByBuilder": true
+  },
+  "boundaries": {
+    "physicalSleepWakeTested": false,
+    "globalWorkspaceNotificationsPosted": false,
+    "productionPreferencesChanged": false,
+    "nativeVisibilityActivatedByChecks": false,
+    "fullInstalledAppAcceptance": false
+  },
+  "evidenceSHA256": {
+    "input.json": "4dbd57f21448b7a8062179fb0a0dfa0da5c25baf4a730c9a67e491cfbe13ad37",
+    "test.log": "dd2c7abcff312fdfbb24c27e26661e19a36b0852c91a6205056aae90ae41cb8f",
+    "lifecycle-check.json": "21f256227ec07157106aaa5b2ae7c0635fb76dfab4551eebaee23635e314378b",
+    "quick-controls-check.json": "c5c80943b0da1ff1ebf57dbbc4142dbb543025b3f38efd987dcb64f1617b9a44"
+  },
+  "cleanup": {
+    "builderTemporaryWorkspaceRemoved": true,
+    "supersededR25R26AppsRemoved": true,
+    "unusedR27FixturesRemoved": true,
+    "preserved": "R27 current review apps and logs, earlier native visibility comparison evidence, unrelated user state"
+  },
+  "published": false,
+  "goalComplete": false
+}
