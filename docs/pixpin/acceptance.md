@@ -158,3 +158,5 @@ python3 scripts/verify-capture-ui.py --av-layer-review
 原生合成 QA：`python3 scripts/verify-capture-ui.py --typed-pins-review`。已观察到红色粗体与中文文本、原生局部选择“中文”、编辑写入类型快照、文件/文件夹图标和真实文件内容预览、HEX 切换 RGB、颜色图像副本；修复后的 HTML 显示红色标题与中文，可缩放，并生成包含这些像素的图像副本。
 
 HTML 夹具包含图片、样式、iframe 与页面脚本的环回请求，服务端在前后控制请求中确认存活，未收到任何夹具资源请求；页面标题没有被脚本替换。此记录验证该夹具的运行效果。真实浏览器/办公软件的剪贴板差异、跨应用拖放、文件移动和权限变化、外部默认程序打开/定位仍待验收。
+
+主线 `f918371` 的独立干净检出重新编译并通过 118 项测试。最终包重启后，编辑后的“Persisted typed text 中文”和 1.2 倍缩放仍保留；关闭后从历史恢复也直接显示目标文本窗口。最终 QA 保留在 `/tmp/thermo-typed-pins-qa-final-01a/ThermoCaptureQA.app`，附带独立合成文件和贴图库；临时实现/复查工作区、旧 QA 和备份包已清理，探针服务已停止。未替换安装版。

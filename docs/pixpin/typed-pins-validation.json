@@ -77,5 +77,35 @@
     "Advanced CSS color spaces",
     "Whole-document HTML image export beyond visible area",
     "Other incomplete features in docs/pixpin/README.md"
-  ]
+  ],
+  "integratedCommit": "f918371",
+  "integratedSourceSHA256": {
+    "Package.swift": "481b266cbec2acb46beb312e78c9651813d132c8b37783ed2490a8a8959b2677",
+    "Sources/CaptureCore/CapturePinColorNames.swift": "4fcb52b64b9696730e69e213ac0087480f1d69a5be372f34a49231467bf756d9",
+    "Sources/CaptureCore/CapturePinContent.swift": "8a26a68bb5e50bf5db896243bd40253c1b48c21105d2e7106aa47e99e29ce8cc",
+    "Sources/CaptureCore/CapturePinLibrary.swift": "bf163a783abe2f9955dfdd9e2fc7e3abba1858cc115e692c312d22470599e918",
+    "Sources/ThermoApp/CaptureFileList.swift": "4f674d7b741e2fd04b39bf4b1dd541a4351aa0f0c3ed94f1cbfe6a9407a98c15",
+    "Sources/ThermoApp/CaptureHTMLPinView.swift": "9b69040b17206693e1832c7ebcebe20834bd905f39b59d88fb2773d32bef2e08",
+    "Sources/ThermoApp/CaptureNativeTextPin.swift": "af3d66fd3704366e9e5955a15eb64dfd0591e833251530342ee1c7d5924fe431",
+    "Sources/ThermoApp/CapturePinClipboard.swift": "6ab939703b10365f47a1a90b36859b0c5d18a25c3caceae06dd6e21e53a25897",
+    "Sources/ThermoApp/CapturePinLibraryView.swift": "c86315b646b213693e63dd46018291e39ab85d8cc870864a27c6c30945067bf5",
+    "Sources/ThermoApp/CapturePinSession.swift": "219cab4293c457a210cfe611c9ff7cdfdd979e86e9cdcc2e297fa5716b738f8b",
+    "Sources/ThermoApp/CaptureTypedPinView.swift": "8c3596663305c3f3025e3fca17322428ac5bb1b419e0e1a00f07dc502add2bc4",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "84fa823f7e57b179ab2b2932d7f0aa5f760496520c067b6a01e075172d9c3fc5",
+    "Sources/ThermoApp/StatusMenu.swift": "2953b39ff68c8c55425e08eabc3121d9234ff3f1a3bafd1c91e53316edd26943",
+    "Sources/ThermoApp/Views.swift": "81e63cd6500288f1b527ab38912a7ef50f7dd9a6b7e4fd06a78255525fb39f65",
+    "Sources/ThermoL10n/ZhHans.swift": "a75ee1c8db723601ba2acf170efdfe9e8e0e00a837eb9242f3d6995530e49526",
+    "Tests/CaptureCoreTests/CaptureTypedPinTests.swift": "41c7988b92fe9000b1f8eda9aadf4677e3eb3fa885716452c80eb7b1df045fe5",
+    "Tests/ThermoAppTests/CapturePinClipboardTests.swift": "51ac2b0bf6730cb5f9db9f353a3247e64c95b50a61cf4684e968db43a66f405f",
+    "scripts/verify-capture-ui.py": "ff08698c16afd1550b29677a7a0d553df3f5ab69b765acb2eef70d1baed37940",
+    "scripts/verify-capture-ui.swift": "55423693d1e9b8f44b23c01dda0c236b850e98ec06fbde92e1cae370d99ff739"
+  },
+  "mainCleanCheckoutTests": {
+    "commit": "f918371",
+    "CaptureCore": 79,
+    "ThermoApp": 39,
+    "failures": 0,
+    "logSHA256": "a5adf0da202f808e1fb66214bde39db489351eb04fb75c7b12897aef1d322c22",
+    "recordedAt": "2026-10-22T08:43:46.195109+00:00"
+  }
 }
