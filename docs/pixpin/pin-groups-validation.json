@@ -40,7 +40,8 @@
       "Physical mouse movement and resize",
       "Display disconnect layout migration",
       "Native permanent-delete confirmation flow"
-    ]
+    ],
+    "savedManifestSHA256": "32413b6a69ab2536b34ddc5cd56d56ed571da5457ff9dd6d4b2960991cdbae1f"
   },
   "remaining": [
     "Group-tinted window shadows",
@@ -49,5 +50,28 @@
     "Mouse pass-through, thumbnails and batch save",
     "Rich text/file semantics preserved beyond raster snapshot",
     "Other incomplete features in docs/pixpin/README.md"
-  ]
+  ],
+  "integratedCommit": "6efa6cd",
+  "integratedSourceSHA256": {
+    "Sources/CaptureCore/CaptureDocument.swift": "09b132a076e3b3857ba57c5ea09cd9568728391d15ba1bb571d2afd377cae7cf",
+    "Sources/CaptureCore/CapturePinLibrary.swift": "efb99749ecb22d0c4ff082bf1fd4a14387eb65017dba84e065ddf6fdb54b691c",
+    "Sources/ThermoApp/CapturePinLibraryView.swift": "45d06a3c3ac5ff865179c2e7e9ee45c11d948df4bf9974402a1a0b27e78d0721",
+    "Sources/ThermoApp/CapturePinSession.swift": "5db26e60011250923cd1eaa155a4f16f8179f96e197bbdd70e0cb917e4e82024",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "220707eeed297b5731869fbd970b32b148f2c0daa793d4b029d8967e043c8bee",
+    "Sources/ThermoApp/StatusMenu.swift": "5d2f9079d0d049dbd54cb6eef7c9312f0e11106363b17e763d25259763c4827a",
+    "Sources/ThermoApp/Views.swift": "190cc8e7b781a7fe56a28bf75806384ecbd2d0ec7742e3e918150c2a7cbe5593",
+    "Sources/ThermoL10n/ZhHans.swift": "1569459f6b566299f5ab6751fccc565c09a23f62a12b45b1944253d839764bef",
+    "Tests/CaptureCoreTests/CapturePinLibraryTests.swift": "4e39999cbc06cfb7dd5603d79c16965e20cb0090c2a0ccdb6ae8e290e21cbe7b",
+    "Tests/ThermoAppTests/CapturePinSessionTests.swift": "f98b75e21a4dc825371a10c903071e8fd109abe7b87414d7b7590de4f7a576b7",
+    "scripts/verify-capture-ui.py": "57b584faeb2ead4261880804cf0b00e283bce83edec042136e16032016a96e4e",
+    "scripts/verify-capture-ui.swift": "dc320c5a4583c9fc7c26dd8977d5da86413c807a7e3ff5fb1d8309e070341a5b"
+  },
+  "mainCleanCheckoutTests": {
+    "commit": "6efa6cd",
+    "CaptureCore": 74,
+    "ThermoApp": 34,
+    "failures": 0,
+    "logSHA256": "b7794343b563ba535104cd395598e07707c65994d5846c5b4f76d2403e933c62",
+    "recordedAt": "2026-10-22T08:12:09.450167+00:00"
+  }
 }

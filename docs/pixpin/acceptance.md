@@ -137,3 +137,5 @@ python3 scripts/verify-capture-ui.py --av-layer-review
 原生合成 QA：`python3 scripts/verify-capture-ui.py --pin-groups-review`。已通过管理窗口恢复关闭贴图、修改标题/透明度/锁定、退出重启后恢复同一分组与状态、关闭全部后计数变为 0/1 并保留历史，以及创建带颜色标签的新分组。只读写 QA 输出目录中的独立贴图库；不启动真实截图、录制或设备监听。
 
 窗口拖动/缩放的真实鼠标手势、屏幕断开后的布局迁移、永久销毁的原生确认流程仍待验收。分组阴影颜色、拖动排序/分组切换快捷键、贴图内部版本历史、穿透、缩略图、批量保存、类型完整的文本/文件保存仍未完成。
+
+主线 `6efa6cd` 的独立干净检出重新编译并通过 108 项测试。最终 QA 包保留在 `/tmp/thermo-pin-groups-qa-final-01a/ThermoCaptureQA.app`，包含包内 Sparkle.framework 和独立合成贴图库；临时实现/复查工作区与旧 QA 包已清理。未替换安装版。
