@@ -262,6 +262,9 @@ import SwiftUI
             window.model.document.append(lens)
             window.model.tool = .select;window.model.selectAnnotation(0)
             }
+            if Bundle.main.object(forInfoDictionaryKey:"ThermoCropReview") as? Bool == true {
+                window.model.tool = .crop;window.model.setCropSelection(CGRect(x:50,y:60,width:400,height:300))
+            }
             annotationWindow=window;window.showWindow(nil)
             if board != nil {DispatchQueue.main.async {app.activate(ignoringOtherApps:true);window.window?.makeKeyAndOrderFront(nil)}}
             if let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
@@ -271,7 +274,7 @@ import SwiftUI
                         var record:[String:Any] = ["selected":model.selectedAnnotations.sorted(),"objects":model.document.annotations.map {item in
                             ["tool":item.tool.rawValue,"points":item.points.map{[Double($0.x),Double($0.y)]},"width":Double(item.width)] as [String:Any]
                         },"canUndo":model.document.canUndo,"canRedo":model.document.canRedo,"pan":[Double(model.pan.x),Double(model.pan.y)],"zoom":model.zoom,"revision":model.revision,"renderCacheBytes":CaptureRenderCache.shared.cachedBytes,"windowVisible":panel?.isVisible ?? false,"windowKey":panel?.isKeyWindow ?? false,"appActive":NSApp.isActive]
-                        record["locked"]=model.locked;record["windowMovable"]=panel?.isMovable ?? false
+                        record["cropSelection"]=model.cropSelection.map{[Double($0.minX),Double($0.minY),Double($0.width),Double($0.height)]} ?? [];record["locked"]=model.locked;record["windowMovable"]=panel?.isMovable ?? false
                         record["imageSize"]=[model.document.image.width,model.document.image.height]
                         if model.copyPasteboard != nil {
                             record["recognized"]=model.recognition;record["selectingOCRText"]=model.selectingOCRText

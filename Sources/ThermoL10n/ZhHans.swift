@@ -3784,4 +3784,9 @@ let zhHans: [String: String] = [
     "Open %@": "打开 %@",
     "Open Thermo search with ⌘Space instead of Spotlight?": "想用 ⌘Space 打开 Thermo 搜索，代替聚焦搜索吗？",
     "Not now": "不用了",
+    "Crop width": "裁剪宽度",
+    "Crop height": "裁剪高度",
+    "Apply crop": "确认裁剪",
+    "Cancel crop": "取消裁剪",
+    "Drag to select. Move inside or resize the corner. Arrows move 1 px; Shift moves 10. Return applies; Esc cancels.": "拖出选区，拖动内部可移动，拖动角点可缩放。方向键移动 1 像素，Shift 移动 10 像素；回车确认，Esc 取消。",
 ]

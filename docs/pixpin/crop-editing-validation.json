@@ -1,0 +1,438 @@
+{
+  "recordedAt": "2026-10-23T03:59:58.834011+00:00",
+  "sourceBase": "979a036e5bef129fddc8e2c317a10a6211fc241f",
+  "sourceSHA256": {
+    "Sources/ThermoApp/CaptureCropControls.swift": "eab2c17e63aa522379c524636de65779241f1a44a33c4b72b7b9d0c4a5b553de",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "426a69c9e6b26e7bc261a1f4003771535471008725535e17efb479f59d821774",
+    "Sources/ThermoL10n/ZhHans.swift": "6f898ff268b7d1245f738a75c80ab9ba7b27740752c33609ec060d699ee46088",
+    "Tests/ThermoAppTests/CaptureCropEditingTests.swift": "3711033299ebd3353ce47518b721b1961219725628ba1f09c4847af1f19f9870",
+    "scripts/verify-capture-ui.py": "528dbb02f03e153e880e59891a403353c5281f57e887c106092ff94d00865550",
+    "scripts/verify-capture-ui.swift": "51eda6581c51503f4d3481b0ab23471520cd82468465ddb376cebee8457dca9c"
+  },
+  "regression": {
+    "total": 211,
+    "failures": 0,
+    "log": "/tmp/thermo-crop-regression-01a.log",
+    "newCropTests": 4
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-crop-qa-01a/ThermoCaptureQA.app",
+    "records": {
+      "resized": {
+        "appActive": false,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [
+          50,
+          60,
+          256,
+          128
+        ],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 2,
+        "segments": [],
+        "selected": [
+          0
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "applied": {
+        "appActive": false,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          256,
+          128
+        ],
+        "locked": false,
+        "objects": [],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 131072,
+        "revision": 3,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "undone": {
+        "appActive": false,
+        "canRedo": true,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 4,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "dragged": {
+        "appActive": false,
+        "canRedo": true,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [
+          25,
+          296,
+          251,
+          188
+        ],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 4,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "key-adjusted": {
+        "appActive": true,
+        "canRedo": true,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [
+          26,
+          306,
+          251,
+          188
+        ],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 4,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "cancelled": {
+        "appActive": true,
+        "canRedo": true,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 4,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "return-applied": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          251,
+          188
+        ],
+        "locked": false,
+        "objects": [],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 192512,
+        "revision": 5,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      }
+    },
+    "closed": {
+      "appActive": true,
+      "canRedo": false,
+      "canUndo": true,
+      "cropSelection": [],
+      "imageSize": [
+        251,
+        188
+      ],
+      "locked": false,
+      "objects": [],
+      "pan": [
+        0,
+        0
+      ],
+      "renderCacheBytes": 0,
+      "revision": 5,
+      "selected": [],
+      "windowKey": false,
+      "windowMovable": true,
+      "windowVisible": false,
+      "zoom": 1
+    },
+    "signatureVerified": true,
+    "verified": [
+      "Exact dimension inputs and apply button",
+      "Single undo restores image dimensions and editable annotations",
+      "Physical pointer drag creates a pending selection",
+      "Physical Right and Shift+Up move 1 and 10 image pixels",
+      "Physical Escape cancels without image mutation",
+      "Physical Return commits the crop"
+    ],
+    "unverified": [
+      "Physical corner resize and inside drag movement (covered with production Canvas synthetic events)",
+      "Multi-display and different display scale interaction",
+      "Installed Thermo integration"
+    ],
+    "processStopped": true
+  },
+  "limits": [
+    "Only upper-right handle resizes the selection",
+    "Selection is temporary and cleared on tool, image or lock changes; no cross-image selection memory"
+  ],
+  "installedAppChanged": false
+}

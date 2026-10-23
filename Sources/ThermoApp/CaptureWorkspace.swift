@@ -289,11 +289,12 @@ func captureFailureMessage(_ error:Error) -> String {
 
 @MainActor final class CaptureEditorModel: ObservableObject {
     @Published var document: CaptureDocument { didSet {
-        revision += 1; recognition = "";onMutation?(true)
+        revision += 1; cropSelection=nil; recognition = "";onMutation?(true)
         selectedAnnotations=selectedAnnotations.filter {document.annotations.indices.contains($0)}
     } }
     private(set) var revision = 0
-    @Published var tool: CaptureTool = .move
+    @Published var tool: CaptureTool = .move {didSet {if tool != .crop {cropSelection=nil}}}
+    @Published var cropSelection:CGRect?
     @Published private(set) var selectedAnnotations:Set<Int> = []
     var selectedAnnotation:Int? {
         get {selectedAnnotations.count == 1 ? selectedAnnotations.first : nil}
@@ -315,7 +316,7 @@ func captureFailureMessage(_ error:Error) -> String {
     @Published var ocrSegments:[CaptureTextSegment]=[]
     var copyPasteboard:NSPasteboard?
     @Published var selectedOCRSegments:Set<Int>=[]
-    @Published var selectingOCRText=false {didSet {selectedOCRSegments=[];if selectingOCRText {selectAnnotations([])}}}
+    @Published var selectingOCRText=false {didSet {selectedOCRSegments=[];if selectingOCRText {cropSelection=nil;selectAnnotations([])}}}
     @Published var recognizing = false
     @Published var pinContent:CapturePinContent?
     var makeImageCopy:((CGImage)->Void)?
@@ -340,7 +341,7 @@ func captureFailureMessage(_ error:Error) -> String {
     var onMutation:((Bool)->Void)?
     var showPinLibrary:(() -> Void)?
     @Published var pinTitle="" { didSet { changeWindow?();onMutation?(false) } }
-    @Published var locked=false { didSet { changeWindow?();onMutation?(false) } }
+    @Published var locked=false { didSet { if locked {cropSelection=nil};changeWindow?();onMutation?(false) } }
     /// Interaction is temporary, never stored in a pin snapshot or restored after reopening.
     @Published var mousePassthrough=false {didSet {interactionWindow?();onInteractionChange?()}}
     var interactionWindow:(()->Void)?
@@ -507,6 +508,7 @@ private struct CaptureEditorView: View {
                 if let show=model.showPinLibrary { Button(tr("Pin groups and history"),action:show) }
             }.padding(.horizontal,10)
             CaptureAnnotationControls(model:model).disabled(model.locked)
+            if model.tool == .crop {CaptureCropControls(model:model).disabled(model.locked)}
             if model.tool == .text || model.tool == .watermark {
                 TextField(tr("Annotation text"), text: $model.text).textFieldStyle(.roundedBorder).padding(8).disabled(model.locked)
             }
@@ -570,6 +572,10 @@ struct CaptureCanvas: NSViewRepresentable {
         private let render:(CaptureDocument,CaptureAnnotation?,[Int:CaptureAnnotation])throws->CGImage
         private var windowObservers:[NSObjectProtocol]=[]
         var draft: CaptureAnnotation?
+        var cropDragStart:CGPoint?
+        var cropDragOriginal:CGRect?
+        var cropResizing=false
+        var cropGestureRevision:Int?
         var pan:CGPoint { get { model.pan } set { model.pan=newValue } }
         var lastDrag: CGPoint?
         var selectionStart:CGPoint?
@@ -683,6 +689,10 @@ struct CaptureCanvas: NSViewRepresentable {
                 ctx.setFillColor(NSColor.systemBlue.cgColor);ctx.fill(CGRect(x:rect.maxX-4/scale,y:rect.maxY-4/scale,width:8/scale,height:8/scale))
             }
             if let rect=marqueeRect {ctx.setFillColor(NSColor.systemBlue.withAlphaComponent(0.12).cgColor);ctx.fill(rect);ctx.setStrokeColor(NSColor.systemBlue.cgColor);ctx.setLineWidth(1/scale);ctx.stroke(rect)}
+            if model.tool == .crop,let rect=model.cropSelection {
+                ctx.setStrokeColor(NSColor.systemBlue.cgColor);ctx.setLineWidth(2/scale);ctx.stroke(rect)
+                ctx.setFillColor(NSColor.systemBlue.cgColor);ctx.fill(CGRect(x:rect.maxX-4/scale,y:rect.maxY-4/scale,width:8/scale,height:8/scale))
+            }
             if let draft {
                 if draft.tool == .crop, let start = draft.points.first, let end = draft.points.last {
                     ctx.setStrokeColor(NSColor.systemBlue.cgColor); ctx.setLineWidth(2/scale)
@@ -693,7 +703,7 @@ struct CaptureCanvas: NSViewRepresentable {
         }
         override func mouseDown(with event: NSEvent) {
             window?.makeFirstResponder(self)
-            cancelSelectionGesture();draft=nil
+            cancelSelectionGesture();draft=nil;cropDragStart=nil;cropDragOriginal=nil;cropGestureRevision=model.revision
             ocrDragStart=nil;ocrBaseline=[]
             if model.selectingOCRText,scale > 0 {
                 let p=point(event);ocrDragStart=p;ocrBaseline=event.modifierFlags.contains(.shift) ? model.selectedOCRSegments : []
@@ -702,6 +712,14 @@ struct CaptureCanvas: NSViewRepresentable {
                 needsDisplay=true;return
             }
             if model.locked || scale <= 0 { return }
+            if model.tool == .crop,let rect=model.cropSelection {
+                let p=point(event)
+                cropResizing=hypot(p.x-rect.maxX,p.y-rect.maxY) <= 10/scale
+                if cropResizing || rect.contains(p) {
+                    cropDragStart=p;cropDragOriginal=rect;return
+                }
+                model.cropSelection=nil
+            }
             if model.tool == .select {
                 guard imageRect.contains(convert(event.locationInWindow,from:nil)) else{return}
                 let p=point(event)
@@ -747,6 +765,12 @@ struct CaptureCanvas: NSViewRepresentable {
                 needsDisplay=true;return
             }
             guard !model.locked else{return}
+            if model.tool == .crop,cropGestureRevision == model.revision,let start=cropDragStart,let original=cropDragOriginal {
+                let p=point(event)
+                if cropResizing {model.setCropSelection(CGRect(x:original.minX,y:original.minY,width:max(1,original.width+p.x-start.x),height:max(1,original.height+p.y-start.y)))}
+                else {model.moveCrop(from:original,dx:p.x-start.x,dy:p.y-start.y)}
+                needsDisplay=true;return
+            }
             if model.tool == .select,let start=marqueeStart {
                 let p=point(event),rect=CGRect(x:min(start.x,p.x),y:min(start.y,p.y),width:abs(p.x-start.x),height:abs(p.y-start.y))
                 marqueeRect=rect
@@ -771,6 +795,7 @@ struct CaptureCanvas: NSViewRepresentable {
         }
         override func mouseUp(with event: NSEvent) {
             lastDrag = nil
+            if cropDragStart != nil {cropDragStart=nil;cropDragOriginal=nil;needsDisplay=true;return}
             if ocrDragStart != nil {ocrDragStart=nil;ocrBaseline=[];needsDisplay=true;return}
             if selectionStart != nil || marqueeStart != nil {
                 if !model.locked,model.tool == .select,selectionMoved,selectionRevision == model.revision,Set(selectionOriginal.keys) == model.selectedAnnotations {
@@ -782,12 +807,22 @@ struct CaptureCanvas: NSViewRepresentable {
             guard let item = draft else { return }; draft = nil
             if item.tool == .select { return }
             if item.tool == .crop, let a = item.points.first, let b = item.points.last {
-                do { try model.document.crop(to: CGRect(x: min(a.x,b.x), y: min(a.y,b.y), width: abs(a.x-b.x), height: abs(a.y-b.y))) }
-                catch { model.error = tr(error.localizedDescription) }
+                if model.tool == .crop,cropGestureRevision == model.revision {model.setCropSelection(CGRect(x:min(a.x,b.x),y:min(a.y,b.y),width:abs(a.x-b.x),height:abs(a.y-b.y)))}
             } else if ![CaptureTool.text,.watermark].contains(item.tool) || !item.text.isEmpty { model.document.append(item) }
             needsDisplay = true
         }
         override func keyDown(with event:NSEvent) {
+            if model.tool == .crop {
+                if event.keyCode == 53 {model.cropSelection=nil;draft=nil;cropDragStart=nil;cropDragOriginal=nil;needsDisplay=true;return}
+                if !model.locked,let rect=model.cropSelection {
+                    if event.keyCode == 36 || event.keyCode == 76 {model.commitCrop();needsDisplay=true;return}
+                    if [123,124,125,126].contains(event.keyCode),event.modifierFlags.intersection([.command,.control,.option]).isEmpty {
+                        let step:CGFloat=event.modifierFlags.contains(.shift) ? 10 : 1
+                        model.moveCrop(from:rect,dx:event.keyCode == 123 ? -step : event.keyCode == 124 ? step : 0,dy:event.keyCode == 125 ? -step : event.keyCode == 126 ? step : 0)
+                        needsDisplay=true;return
+                    }
+                }
+            }
             if model.selectingOCRText {
                 if event.keyCode == 53 {model.selectingOCRText=false;ocrDragStart=nil;ocrBaseline=[];needsDisplay=true;return}
                 if event.modifierFlags.contains(.command),event.keyCode == 0 {model.selectedOCRSegments=Set(model.ocrSegments.indices);needsDisplay=true;return}
