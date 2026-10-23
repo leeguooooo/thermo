@@ -22,6 +22,43 @@ static NSString *StringValue(id object, NSString *name) {
     return [value isKindOfClass:NSString.class] ? value : nil;
 }
 
+// macOS can track an app by bundle while tracking its menu item by executable.
+// Return only the location kind, never executable paths or unrelated entries.
+static NSDictionary<NSString *, NSArray<NSString *> *> *TrackedMenuItemKinds(BOOL *readable) {
+    // The suite API can return no data for a caller outside Apple's group.
+    // Read the existing on-disk snapshot without requesting group entitlement.
+    NSString *path = [NSHomeDirectory() stringByAppendingPathComponent:
+        @"Library/Group Containers/group.com.apple.controlcenter/Library/Preferences/group.com.apple.controlcenter.plist"];
+    NSData *file = [NSData dataWithContentsOfFile:path];
+    if (!file) return @{};
+    id root = [NSPropertyListSerialization propertyListWithData:file options:NSPropertyListImmutable format:NULL error:NULL];
+    if (![root isKindOfClass:NSDictionary.class]) return @{};
+    id data = root[@"trackedApplications"];
+    if (![data isKindOfClass:NSData.class]) return @{};
+    id decoded = [NSPropertyListSerialization propertyListWithData:data options:NSPropertyListImmutable format:NULL error:NULL];
+    if (![decoded isKindOfClass:NSArray.class] || [decoded count] % 2 != 0) return @{};
+    *readable = YES;
+    NSArray *entries = decoded;
+    NSMutableDictionary *result = [NSMutableDictionary new];
+    for (NSUInteger index = 0; index < entries.count; index += 2) {
+        id key = entries[index], value = entries[index + 1];
+        if (![key isKindOfClass:NSDictionary.class] || ![value isKindOfClass:NSDictionary.class]) continue;
+        id bundleCase = key[@"bundle"];
+        if (![bundleCase isKindOfClass:NSDictionary.class]) continue;
+        id bundle = bundleCase[@"_0"], locations = value[@"menuItemLocations"];
+        if (![bundle isKindOfClass:NSString.class] || ![locations isKindOfClass:NSArray.class]) continue;
+        NSMutableSet<NSString *> *kinds = [NSMutableSet new];
+        for (id location in locations) {
+            if (![location isKindOfClass:NSDictionary.class]) continue;
+            for (id kind in [location allKeys]) {
+                if ([kind isKindOfClass:NSString.class]) [kinds addObject:kind];
+            }
+        }
+        result[bundle] = [kinds.allObjects sortedArrayUsingSelector:@selector(compare:)];
+    }
+    return result;
+}
+
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
         if (argc < 2) {
@@ -51,6 +88,8 @@ int main(int argc, const char *argv[]) {
         BOOL auditAvailable = auditSignature.numberOfArguments == 3 && auditSignature.methodReturnType[0] == '@' &&
             [auditSignature getArgumentTypeAtIndex:2][0] == '@';
         NSMutableArray<NSDictionary *> *rows = [NSMutableArray new];
+        BOOL trackedPreferencesReadable = NO;
+        NSDictionary *trackedKinds = TrackedMenuItemKinds(&trackedPreferencesReadable);
         for (NSRunningApplication *app in NSWorkspace.sharedWorkspace.runningApplications) {
             NSString *bundle = app.bundleIdentifier;
             if (!bundle || ![requested containsObject:bundle] || app.terminated) continue;
@@ -70,6 +109,7 @@ int main(int argc, const char *argv[]) {
                 @"nativeHostBundle": StringValue(handle, @"bundleIdentifier") ?: NSNull.null,
                 @"auditBundle": StringValue(auditHandle, @"bundleIdentifier") ?: NSNull.null,
                 @"auditSigningIdentifier": StringValue(token, @"signingIdentifier") ?: NSNull.null,
+                @"trackedMenuItemLocationKinds": trackedKinds[bundle] ?: NSNull.null,
                 // A process may exit while the reads are in flight. Such a row
                 // cannot establish an identity mismatch for a live application.
                 @"terminatedDuringRead": @(app.terminated)
@@ -83,6 +123,8 @@ int main(int argc, const char *argv[]) {
             @"requestedBundles": [requested.allObjects sortedArrayUsingSelector:@selector(compare:)],
             @"launchServicesQueryAvailable": @((BOOL)(makeASN && readItem)),
             @"nativeHostQueryAvailable": @((BOOL)(pidAvailable && auditAvailable)),
+            @"trackedPreferencesReadable": @(trackedPreferencesReadable),
+            @"trackedPreferencesSource": @"On-disk property list snapshot; may lag the live preferences service.",
             @"rows": rows,
             @"scope": @"Fresh process records only; not a readback of MenuBarAgent's cached NSStatusItemHost objects or of rendered visibility."
         };
