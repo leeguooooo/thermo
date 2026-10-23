@@ -3855,4 +3855,9 @@ let zhHans: [String: String] = [
     "Flip vertically": "垂直翻转",
     "Rotate current image counterclockwise": "逆时针旋转当前图像",
     "Flip current image vertically": "垂直翻转当前图像",
+    "Pick image color": "贴图取色",
+    "Pixel color format": "像素颜色格式",
+    "Copy pixel color": "复制像素颜色",
+    "Choose a pixel inside the image.": "请选择图像内的像素。",
+    "Hover or click to sample. C copies; Shift changes format; Option temporarily picks; Esc exits.": "悬停或点击取色；C 复制，Shift 切换格式，Option 临时取色，Esc 退出。",
 ]

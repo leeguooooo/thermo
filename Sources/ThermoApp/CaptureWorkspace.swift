@@ -296,7 +296,7 @@ func captureFailureMessage(_ error:Error) -> String {
 
 @MainActor final class CaptureEditorModel: ObservableObject {
     @Published var document: CaptureDocument { didSet {
-        revision += 1; cropSelection=nil; recognition = "";onMutation?(true)
+        revision += 1; pickedImagePixel=nil;cropSelection=nil; recognition = "";onMutation?(true)
         selectedAnnotations=selectedAnnotations.filter {document.annotations.indices.contains($0)}
     } }
     private(set) var revision = 0
@@ -314,10 +314,13 @@ func captureFailureMessage(_ error:Error) -> String {
         }
     }
     func selectAllAnnotations() {guard !locked else{return};selectingOCRText=false;tool = .select;selectAnnotations(Set(document.annotations.indices))}
+    @Published var pickingImageColor=false {didSet {if pickingImageColor {selectingOCRText=false;cropSelection=nil;selectAnnotations([])}}}
+    @Published var pickedImagePixel:CaptureImagePixel?
+    @Published var pixelColorFormat:CapturePinColor.Format = .rgb
     @Published var connectedLine=false
     @Published var nextSequenceNumber=1
     func chooseTool(_ tool:CaptureTool) {
-        selectingOCRText=false;selectAnnotations([])
+        pickingImageColor=false;pickedImagePixel=nil;selectingOCRText=false;selectAnnotations([])
         if tool == .number,self.tool != .number {
             annotationOptions.numberLeader=true
             nextSequenceNumber=max(nextSequenceNumber,(document.annotations.filter{$0.tool == .number}.compactMap{$0.options.numberValue ?? Int($0.text)}.filter{(1...3999).contains($0)}.max() ?? 0)+1)
@@ -333,7 +336,7 @@ func captureFailureMessage(_ error:Error) -> String {
     @Published var ocrSegments:[CaptureTextSegment]=[]
     var copyPasteboard:NSPasteboard?
     @Published var selectedOCRSegments:Set<Int>=[]
-    @Published var selectingOCRText=false {didSet {selectedOCRSegments=[];if selectingOCRText {cropSelection=nil;selectAnnotations([])}}}
+    @Published var selectingOCRText=false {didSet {selectedOCRSegments=[];if selectingOCRText {pickingImageColor=false;pickedImagePixel=nil;cropSelection=nil;selectAnnotations([])}}}
     @Published var recognizing = false
     @Published var pinContent:CapturePinContent?
     var makeImageCopy:((CGImage)->Void)?
@@ -546,6 +549,7 @@ private struct CaptureEditorView: View {
                 Toggle(tr("Pin shadow"),isOn:$model.shadow)
                 if let show=model.showPinLibrary { Button(tr("Pin groups and history"),action:show) }
             }.padding(.horizontal,10)
+            CaptureImageColorProbeControls(model:model)
             CaptureImageAdjustmentControls(model:model).disabled(model.locked)
             CaptureAnnotationControls(model:model).disabled(model.locked)
             if model.tool == .crop {CaptureCropControls(model:model).disabled(model.locked)}
@@ -609,13 +613,19 @@ extension CaptureTool {
 struct CaptureCanvas: NSViewRepresentable {
     @ObservedObject var model: CaptureEditorModel
     func makeNSView(context: Context) -> Canvas { Canvas(model: model) }
-    func updateNSView(_ view: Canvas, context: Context) { view.model = model;view.reconcileConnectedLine();view.updateOCRAccessibility();view.needsDisplay = true }
+    func updateNSView(_ view: Canvas, context: Context) { view.model = model;view.reconcileConnectedLine();view.reconcileColorProbe();view.updateOCRAccessibility();view.needsDisplay = true }
     final class Canvas: NSView {
         var model: CaptureEditorModel {didSet {if oldValue !== model {renderCache.remove(owner:cacheOwner);bindExportGeometry()}}}
         private let renderCache:CaptureRenderCache
         private let cacheOwner=UUID()
         private let render:(CaptureDocument,CaptureAnnotation?,[Int:CaptureAnnotation])throws->CGImage
         private var windowObservers:[NSObjectProtocol]=[]
+        var colorOptionHeld=false
+        var colorShiftHeld=false
+        var colorProbeWasActive=false
+        var colorProbeImage:CGImage?
+        var colorProbeRevision:Int?
+        var colorProbeSource:ObjectIdentifier?
         var draft: CaptureAnnotation?
         var connectedLineVertices:[CGPoint]=[]
         var connectedLineRevision:Int?
@@ -627,7 +637,12 @@ struct CaptureCanvas: NSViewRepresentable {
             let area=NSTrackingArea(rect:.zero,options:[.mouseMoved,.activeInKeyWindow,.inVisibleRect,.enabledDuringMouseDrag],owner:self,userInfo:nil)
             addTrackingArea(area);connectedLineTracking=area
         }
-        override func mouseMoved(with event:NSEvent) {if !updateConnectedLinePreview(event) {super.mouseMoved(with:event)}}
+        override func mouseMoved(with event:NSEvent) {if handleColorProbePointer(event) {return};if !updateConnectedLinePreview(event) {super.mouseMoved(with:event)}}
+        override func flagsChanged(with event:NSEvent) {
+            updateColorProbeModifiers(event,cycleShift:true)
+            if colorProbeActive,let window {_=sampleImageColor(at:convert(window.mouseLocationOutsideOfEventStream,from:nil))}
+            super.flagsChanged(with:event)
+        }
         override func rightMouseDown(with event:NSEvent) {
             reconcileConnectedLine()
             if !connectedLineVertices.isEmpty {finishConnectedLine();return}
@@ -687,25 +702,33 @@ struct CaptureCanvas: NSViewRepresentable {
             renderCache.remove(owner:cacheOwner)
         }
         override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow();renderCache.remove(owner:cacheOwner)
+            super.viewDidMoveToWindow();renderCache.remove(owner:cacheOwner);clearColorProbeImage();colorOptionHeld=false;colorShiftHeld=false;colorProbeWasActive=model.pickingImageColor
             for observer in windowObservers {NotificationCenter.default.removeObserver(observer)};windowObservers=[]
             guard let window else {return}
             window.acceptsMouseMovedEvents=true
-            for name in [NSWindow.didChangeOcclusionStateNotification,NSWindow.willCloseNotification] {
+            for name in [NSWindow.didChangeOcclusionStateNotification,NSWindow.willCloseNotification,NSWindow.didResignKeyNotification] {
                 windowObservers.append(NotificationCenter.default.addObserver(forName:name,object:window,queue:.main) { [weak self] note in
                     MainActor.assumeIsolated {
                         guard let self else{return}
+                        if note.name == NSWindow.didResignKeyNotification {
+                            self.clearColorProbeImage();self.colorOptionHeld=false;self.colorShiftHeld=false;self.colorProbeWasActive=self.colorProbeActive;return
+                        }
                         if note.name == NSWindow.willCloseNotification || self.window?.isVisible != true || self.window?.occlusionState.contains(.visible) != true {
-                            self.renderCache.remove(owner:self.cacheOwner)
+                            self.renderCache.remove(owner:self.cacheOwner);self.clearColorProbeImage()
                         }
                     }
                 })
             }
         }
         override func viewDidChangeEffectiveAppearance() {
-            super.viewDidChangeEffectiveAppearance();renderCache.remove(owner:cacheOwner);needsDisplay=true
+            super.viewDidChangeEffectiveAppearance();renderCache.remove(owner:cacheOwner);clearColorProbeImage();if model.pickedImagePixel != nil {model.pickedImagePixel=nil};needsDisplay=true
+        }
+        func confirmedImage() throws -> CGImage {
+            try renderCache.image(owner:cacheOwner,source:ObjectIdentifier(model),revision:model.revision) {try render(model.document,nil,[:])}
         }
         func renderedImage() throws -> CGImage {
+            reconcileColorProbe()
+            if colorProbeActive,let colorProbeImage {return colorProbeImage}
             reconcileConnectedLine()
             let preview=draft?.tool == .crop ? nil : draft
             let replacements=model.tool == .select && !model.locked && selectionRevision == model.revision ? selectionPreview : [:]
@@ -772,10 +795,11 @@ struct CaptureCanvas: NSViewRepresentable {
                     ctx.stroke(CGRect(x: min(start.x,end.x), y: min(start.y,end.y), width: abs(end.x-start.x), height: abs(end.y-start.y)))
                 }
             }
-            ctx.restoreGState()
+            ctx.restoreGState();drawColorProbe(in:ctx)
         }
         override func mouseDown(with event: NSEvent) {
             window?.makeFirstResponder(self)
+            if handleColorProbePointer(event) {return}
             if handleConnectedLineClick(event) {return}
             cancelSelectionGesture();draft=nil;cropDragStart=nil;cropDragOriginal=nil;cropGestureRevision=model.revision
             ocrDragStart=nil;ocrBaseline=[]
@@ -847,6 +871,7 @@ struct CaptureCanvas: NSViewRepresentable {
             needsDisplay = true
         }
         override func mouseDragged(with event: NSEvent) {
+            if handleColorProbePointer(event) {return}
             if updateConnectedLinePreview(event) {return}
             if model.selectingOCRText,let start=ocrDragStart {
                 let p=point(event),rect=CGRect(x:min(start.x,p.x),y:min(start.y,p.y),width:max(1,abs(p.x-start.x)),height:max(1,abs(p.y-start.y)))
@@ -897,6 +922,7 @@ struct CaptureCanvas: NSViewRepresentable {
             needsDisplay = true
         }
         override func mouseUp(with event: NSEvent) {
+            if handleColorProbePointer(event) {return}
             reconcileConnectedLine()
             if model.tool == .line,model.connectedLine {return}
             lastDrag = nil
@@ -920,6 +946,7 @@ struct CaptureCanvas: NSViewRepresentable {
             needsDisplay = true
         }
         override func keyDown(with event:NSEvent) {
+            if handleColorProbeKey(event) {return}
             if handleConnectedLineKey(event) {return}
             if model.tool == .crop {
                 if event.keyCode == 53 {model.cropSelection=nil;draft=nil;cropDragStart=nil;cropDragOriginal=nil;needsDisplay=true;return}
