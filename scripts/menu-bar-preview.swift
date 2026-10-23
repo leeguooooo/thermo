@@ -14,6 +14,9 @@ import ThermoL10n
     private var visualCheck: MenuBarVisualCheck?
     private var dragCheck: MenuBarManagerPanel?
     private var dragModel: MenuBarManager?
+    private var dragInputMonitor: Any?
+    private var dragActivityObservers: [NSObjectProtocol] = []
+    private var dragInputEvents: [[String: Any]] = []
     func closeMenuPanel() {}
     func applicationDidFinishLaunching(_ notification: Notification) {
         if menuBarFixtureMode {
@@ -39,6 +42,7 @@ import ThermoL10n
             dragCheck = MenuBarManagerPanel(model: model)
             dragCheck?.window?.title = "拖拽分组验收（测试应用）"
             dragCheck?.show()
+            installDragInputDiagnostics()
         }
         else if CommandLine.arguments.contains("--self-test") { runSelfTest() }
         else {
@@ -54,6 +58,39 @@ import ThermoL10n
             submenu.addItem(withTitle: "Quit Preview", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
             application.submenu = submenu; main.addItem(application); NSApp.mainMenu = main
             openManager()
+        }
+    }
+    private func installDragInputDiagnostics() {
+        // Observe only this disposable window. No global event tap, keys,
+        // text, other windows or application contents are collected.
+        recordDragInput("started")
+        dragInputMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp]) { [weak self] event in
+            MainActor.assumeIsolated {
+                guard let self, event.window === self.dragCheck?.window else { return event }
+                self.recordDragInput(String(describing: event.type), event: event)
+                return event
+            }
+        }
+        for name in [NSApplication.didBecomeActiveNotification, NSApplication.didResignActiveNotification] {
+            dragActivityObservers.append(NotificationCenter.default.addObserver(forName: name, object: NSApp, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.recordDragInput(name.rawValue) }
+            })
+        }
+    }
+    private func recordDragInput(_ kind: String, event: NSEvent? = nil) {
+        guard dragInputEvents.count < 256 else { return }
+        var row: [String: Any] = ["kind": kind, "time": Date().timeIntervalSince1970,
+            "appActive": NSApp.isActive, "windowKey": dragCheck?.window?.isKeyWindow ?? false,
+            "isFrontmost": NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier]
+        if let event {
+            row["windowPoint"] = [event.locationInWindow.x, event.locationInWindow.y]
+            row["modifiers"] = event.modifierFlags.rawValue
+        }
+        dragInputEvents.append(row)
+        let report: [String: Any] = ["events": dragInputEvents, "scope": "own temporary drag-check window only",
+                                   "globalEventTap": false, "keyOrTextDataCollected": false]
+        if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("drag-input-events.json"), options: .atomic)
         }
     }
     private func createFixture() {
@@ -91,6 +128,10 @@ import ThermoL10n
         }
     }
     func applicationWillTerminate(_ notification: Notification) {
+        if let dragInputMonitor { NSEvent.removeMonitor(dragInputMonitor); self.dragInputMonitor = nil }
+        for observer in dragActivityObservers { NotificationCenter.default.removeObserver(observer) }
+        dragActivityObservers.removeAll()
+        if dragModel != nil { recordDragInput("terminating") }
         visualCheck?.restore()
         if let dragModel {
             let result: [String: Any] = ["assignments": dragModel.sections.assignments.mapValues(\.rawValue),

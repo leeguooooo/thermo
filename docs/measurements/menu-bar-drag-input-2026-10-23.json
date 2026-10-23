@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-23",
+  "scope": "isolated QA window; production drag implementation unchanged",
+  "artifactDirectory": "dist/menubar-qa-20261022-r36",
+  "gui": {
+    "fixtureBundle": "org.example.mbfx.502c767328e74b7bb146361fa8c3eadc",
+    "countsVisibleHiddenAlwaysHidden": [
+      [
+        3,
+        0,
+        0
+      ],
+      [
+        2,
+        1,
+        0
+      ],
+      [
+        2,
+        0,
+        1
+      ],
+      [
+        2,
+        0,
+        1
+      ]
+    ],
+    "acceptedTransitions": [
+      "visible -> hidden",
+      "hidden -> alwaysHidden"
+    ],
+    "assignmentSurvivesProcessRestart": true,
+    "returnToVisibleAccepted": false,
+    "nativeHidingEnabled": false,
+    "realApplicationAssignmentsModified": false
+  },
+  "inputDiagnostics": {
+    "scope": "own temporary drag-check window only",
+    "globalEventTap": false,
+    "keyOrTextDataCollected": false,
+    "successfulMouseDownEvents": 2,
+    "successfulMouseDraggedEvents": 2,
+    "returnGestureObservedByOwnWindow": false
+  },
+  "blocker": {
+    "returnDispatchVerified": false,
+    "returnScreenCoordinates": [
+      [
+        1150,
+        -477
+      ],
+      [
+        598,
+        -300
+      ]
+    ],
+    "returnAXInitiallyEmpty": true,
+    "coordinateMappingCauseKnown": false,
+    "computerUseReconnectFailures": 2,
+    "error": "Sky Computer Use native pipe startup failed"
+  },
+  "verification": {
+    "previousR36BuildCoreTests": 27,
+    "previousR36BuildShortcutTests": 7,
+    "failures": 0,
+    "overlapsPrior76TestSuite": true,
+    "criticalInputHashesMatch": {
+      "scripts/menu-bar-preview.swift": "cfd3b7f978af9c37a1b85d5f37fb3274bcffbdca1d166ad9bbdfac57f4531146",
+      "Sources/ThermoApp/MenuBarManagerPanel.swift": "828f9229a04b768f6c8350e6f98c97617b2fc4d5f613f96f8eef400349664f54",
+      "Sources/ThermoApp/MenuBarManager.swift": "f7a4d3025934ce21ffee5724a5b85e1ca69c22bdb82c77eeeb117efa184a6358"
+    },
+    "lifecycleNotificationOrderPassed": true,
+    "autoCollapsePolicyPassed": true,
+    "thisResumeReranBuild": false,
+    "evidenceAssertionsPassed": true
+  },
+  "cleanup": {
+    "exactQAProcessTerminated": 73332,
+    "nativeVisibilityWasOff": true,
+    "retainedApps": "R36 fixtures and preview retained for unfinished GUI acceptance"
+  },
+  "localEvidenceSha256": {
+    "test.log": "6f55967ea29859d4ad24aee81022b01d59ae88a811c1d957de85fdb263b33fd3",
+    "input.json": "315cc0c81fdfc3ef29babc189a8785f56042a67f0314cbfd89ec6c8cbba56f97",
+    "drag-ui-states.json": "fb1a1f042fc334dd5d39179e0819ec3ab8329a4865c5cd73a7b5d665d9e42112",
+    "drag-input-before-relaunch.json": "67ae312c7bec1f165c1e833d654e68f97d878b9e7beec56c75f7512bb52cc3df",
+    "drag-before-relaunch.json": "14293bb0c91a8ea9bd0953279d664456434d85e331b261000e7a51593f9fbece",
+    "drag-input-events.json": "400a46997ead328fa7fc16590fa15276b92802ebf45d800ec50ae8a9261f9eae",
+    "drag-check-result.json": "14293bb0c91a8ea9bd0953279d664456434d85e331b261000e7a51593f9fbece"
+  },
+  "goalComplete": false,
+  "published": false
+}
