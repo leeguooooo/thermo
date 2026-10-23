@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-22",
+  "base": "bea75937c4acf62be1251c9b7e37820b35bdab40",
+  "files": {
+    "Sources/ThermoApp/MenuBarQuickControls.swift": "8238e4ea6cff72903a59130bd14e90c18af50f5ddc78302a1fc6a39dec0e705e",
+    "Sources/ThermoApp/StatusMenu.swift": "8b5cba43e9b9fa68876a391cb66d4914cda28d6f44551235622df2b7d91e97f8",
+    "scripts/menu-bar-preview.swift": "175b30c9c31cafad1552ac1fd2e8b3c228971c7fd2b3445d72cc7408bf471a99",
+    "scripts/verify-menu-bar.py": "f51011f1d66dbd3e1a87840bdad4d540af6bb9eac953128719925f7927ea79f8"
+  },
+  "integratedTests": {
+    "command": "swift test --build-system native --jobs 2 --filter 'MenuBar|MenuDisplay'",
+    "passed": 36,
+    "failures": 0,
+    "skips": 0,
+    "logSHA256": "c88f3fd0b8f7209effc6ac3c8d7ce12b27f6e2dc1b31a299ff38d7e8eb2dc95d",
+    "scope": "Frozen baseline plus MenuBarQuickControls.swift and StatusMenu.swift; full ThermoApp compiled and linked."
+  },
+  "isolatedTests": {
+    "passed": 19,
+    "overlapsIntegrated": true,
+    "logSHA256": "a7dfde5ae4b8cfcd171e8b235a4ac11e5df6976b58afbae2a5dbd4bbd1b70cd6"
+  },
+  "quickControls": {
+    "passed": true,
+    "command": "MenuBarPreview --check-quick-controls",
+    "transitions": [
+      "all -> collapsed",
+      "collapsed -> hidden",
+      "hidden -> all"
+    ],
+    "persistedAssignmentsUnchanged": true,
+    "disabledControlsAbsent": true,
+    "identities": "Unique absent test bundle in isolated temporary UserDefaults suite; suite removed on exit.",
+    "nativeVisibilityAsserted": false
+  },
+  "nativePixelAcceptance": {
+    "status": "incomplete",
+    "observation": "Current CUA app screenshots do not capture the composed menu bar. MenuBarAgent window screenshot is blank; AX proxies persist independently of visibility.",
+    "newSessionActivated": false
+  },
+  "artifacts": {
+    "preview": "dist/menubar-qa-20261022-r18/Thermo Menu Bar Preview.app",
+    "integratedLog": "dist/menubar-qa-20261022-r18/integrated-tests.log",
+    "quickControls": "dist/menubar-qa-20261022-r18/quick-controls.json"
+  },
+  "installedAppReplaced": false,
+  "published": false,
+  "goalComplete": false,
+  "cleanup": {
+    "scratchRemoved": "/var/folders/6q/d9jv4cjx39zd38m0fp6lv50c0000gn/T/thermo-menubar-quick-vqz1mwoq",
+    "obsoleteAppBundlesRemoved": [
+      "dist/menubar-qa-20261022-r16/Thermo Menu Bar Drag Check.app",
+      "dist/menubar-qa-20261022-r16/Thermo Menu Bar Visual Check.app",
+      "dist/menubar-qa-20261022-r16/Thermo Menu Bar Visible Fixture.app",
+      "dist/menubar-qa-20261022-r16/Thermo Menu Bar Preview.app",
+      "dist/menubar-qa-20261022-r16/Thermo Menu Bar Always Fixture.app",
+      "dist/menubar-qa-20261022-r16/Thermo Menu Bar Fixture.app"
+    ],
+    "preserved": "R15 actual drag UI preview and R18 current quick-control preview, logs, manifests; unrelated crash logs untouched."
+  }
+}

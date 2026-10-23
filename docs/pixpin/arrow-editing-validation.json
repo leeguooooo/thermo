@@ -1,0 +1,832 @@
+{
+  "recordedAt": "2026-10-23T04:19:10.833077+00:00",
+  "sourceBase": "656413d1e76a629fc67d4c0c7e4aa5a924578125",
+  "behaviorReference": "https://pixpin.cn/docs/mark/arrow",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureAnnotationEditing.swift": "1b5515ebc57820c50d5ded35f63fb010f911f5c9fca9ab44c28a60d5fd8121b3",
+    "Sources/CaptureCore/CaptureAnnotationEffects.swift": "e591749cab0a8de13f16b9f19bf48dd62df4de7822662b8d6e4518564c87805e",
+    "Sources/CaptureCore/CaptureAnnotationStyles.swift": "902e632da460164ad16d23143f716e2e6bdb0831f66b93ca55b771331f1059d2",
+    "Sources/CaptureCore/CaptureDocument.swift": "994a491fa941eb4cae1f45b1e506573fabd332b8f17c3e1503d791ed1546a474",
+    "Sources/ThermoApp/CaptureAnnotationControls.swift": "d27dac673d03798d0f5ae87b512684b3f4d926b979dc2b6d7adf391496e18219",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "ad1aa1a4dde99e0b4935b1a4936545ae35efdf8c9a19ccce09b967b2ffc7d06c",
+    "Sources/ThermoL10n/ZhHans.swift": "86d4fcb4d1e66d56a82d4e1e657b0fc42880d9b3d9b23bdb7a3189744ff36e42",
+    "Tests/CaptureCoreTests/CaptureArrowCommentTests.swift": "a6978b82e9b211f6d09fa011780edf6f78ca7643d131f5d420da62b6e38937ac",
+    "Tests/ThermoAppTests/CaptureArrowEditingTests.swift": "87943764cbb0125b2b80a89741749e7301e960353d8f6aae440e49caf48f2682",
+    "scripts/verify-capture-ui.swift": "b844ff3de20d039a6b361e0e71d6d4ae86148c6fd346ecc9304ba5d02dda2339"
+  },
+  "regression": {
+    "total": 230,
+    "failures": 0,
+    "newCoreTests": 3,
+    "newEditorTests": 5,
+    "log": "/tmp/thermo-arrow-edit-regression-01a.log",
+    "logSHA256": "4865a41cd9a418e28e5939ac9b5609e203f0bcf9028e652262b0bfdb459e3563"
+  },
+  "verifiedInTests": [
+    "Moving either endpoint preserves the other point and commits one undo step",
+    "Body movement, zoom/pan image coordinates and Shift snap",
+    "Locked, stale document and Escape gestures cannot commit; lock also hides draft pixels",
+    "Double click requests comment focus without changing document revision",
+    "Comment style edit undo/redo, lock rejection and no comment carryover to new arrows",
+    "Comment pixels, bounds, hit testing, movement, old-field compatibility and size limit",
+    "Fresh store reopen preserves editable comment and exact PNG bytes"
+  ],
+  "nativeQA": {
+    "app": "/tmp/thermo-arrow-edit-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "ec332944de7ee8fe788ad23821cc28fbaa662d273e87da1746129ce0f844d719",
+    "signatureVerified": true,
+    "records": {
+      "endpoint": {
+        "appActive": false,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                535.1063829787234,
+                302.1276595744681
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 4,
+        "segments": [],
+        "selected": [
+          2
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "endpoint-undone": {
+        "appActive": false,
+        "canRedo": true,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 5,
+        "segments": [],
+        "selected": [
+          2
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "comment": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "Check this button",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 7,
+        "segments": [],
+        "selected": [
+          2
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "startpoint": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "Check this button",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                215.95744680851064,
+                181.56028368794327
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 8,
+        "segments": [],
+        "selected": [
+          2
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "body-moved": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "Check this button",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                244.32624113475177,
+                209.9290780141844
+              ],
+              [
+                628.3687943262412,
+                248.36879432624113
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 9,
+        "segments": [],
+        "selected": [
+          2
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "copied": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 25744,
+        "copiedPNGHash": "2b244ab7121e1cc9f67c1cbc1cf9acc7985f64039dd18f95917b42740f9bd7f1",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "Check this button",
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                244.32624113475177,
+                209.9290780141844
+              ],
+              [
+                628.3687943262412,
+                248.36879432624113
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 9,
+        "segments": [],
+        "selected": [
+          2
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      }
+    },
+    "closed": {
+      "appActive": true,
+      "canRedo": false,
+      "canUndo": true,
+      "cropSelection": [],
+      "imageSize": [
+        900,
+        600
+      ],
+      "locked": false,
+      "objects": [
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              50,
+              290
+            ],
+            [
+              650,
+              470
+            ]
+          ],
+          "tool": "mosaic",
+          "width": 4
+        },
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              650,
+              60
+            ],
+            [
+              850,
+              260
+            ]
+          ],
+          "tool": "magnifier",
+          "width": 3
+        },
+        {
+          "label": "",
+          "options": {
+            "comment": "Check this button",
+            "end": "open",
+            "line": "solid",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              244.32624113475177,
+              209.9290780141844
+            ],
+            [
+              628.3687943262412,
+              248.36879432624113
+            ]
+          ],
+          "tool": "arrow",
+          "width": 4
+        }
+      ],
+      "pan": [
+        0,
+        0
+      ],
+      "renderCacheBytes": 0,
+      "revision": 9,
+      "selected": [
+        2
+      ],
+      "windowKey": false,
+      "windowMovable": true,
+      "windowVisible": false,
+      "zoom": 1
+    },
+    "verified": [
+      "Physical end-handle drag changes only endpoint; one undo restores original",
+      "Physical double click focuses Arrow comment field; typing renders text beside arrow",
+      "Physical start-handle drag preserves endpoint and comment",
+      "Physical body drag translates both endpoints equally",
+      "Copy exports PNG to private pasteboard; close releases pasteboard and rendering cache"
+    ],
+    "unverified": [
+      "Physical Shift snap and multi-display/Retina changes during dragging",
+      "Comment editing for a previously unselected arrow on first double click",
+      "Real screenshot/recording inputs and installed Thermo integration"
+    ],
+    "processStopped": true,
+    "reproducibleAppRemoved": true
+  },
+  "limits": [
+    "Comments limited to 2000 characters and 360-pixel wrap width",
+    "Comment position and font size are automatic; no independent comment layout controls",
+    "Endpoint handles apply to one selected arrow or line; groups retain shared transforms",
+    "Double-click comment behavior is not configurable yet"
+  ],
+  "installedAppChanged": false
+}

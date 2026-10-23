@@ -1,0 +1,55 @@
+{
+  "recordedAt": "2026-10-22T13:07:48.587289+00:00",
+  "baseCommit": "79068e9",
+  "sourceSHA256": {
+    "Sources/ThermoApp/CaptureManualImageSave.swift": "999691d5584555371d53240384f10f9ea33f4f6a9edd1956006ede1d16f4b8cf",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "daf2f8093de0ebfae10ffb965965f10bf09da1fa1512c1e5ea5305ee2e86cb24",
+    "Tests/ThermoAppTests/CaptureManualImageSaveTests.swift": "6fab8f3483e23d3dfee64f192be251bf8e97eb4706b44ef992a2c689b794e2f0"
+  },
+  "tests": {
+    "manualSave": 4,
+    "saveModel": 7,
+    "localization": 4,
+    "captureCore": 102,
+    "failures": 0,
+    "logs": [
+      {
+        "path": "/tmp/thermo-manual-save-tests-01a.log",
+        "sha256": "1052fb7078e93d46534c7738353bbe126d8506e9edc02f44202b7884948b6af4"
+      },
+      {
+        "path": "/tmp/thermo-manual-save-package-01a.log",
+        "sha256": "2550e996120b7362fbab582175bb369cb1fbb035e5dafa97cf558636b7e4f6a6"
+      }
+    ]
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-manual-save-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "1468387ee47bbf119e1de1fe14012c1f81a09ce4b12330e05908a788d90b3579",
+    "verified": [
+      "Format accessory shows PNG/JPEG/TIFF",
+      "Native Save writes selected JPEG to the chosen QA folder",
+      "Next save opens with JPEG and chosen directory",
+      "Restarted QA still opens with JPEG and chosen directory",
+      "Select TIFF then Cancel; next save retains JPEG"
+    ],
+    "output": {
+      "path": "/tmp/thermo-manual-save-qa-01a/native-manual-save.jpg",
+      "format": "jpeg",
+      "width": 900,
+      "height": 600,
+      "sha256": "3254b13c84c924a76424e2a15928567fce8556543ccbee9eb7f0dd905340eb55"
+    },
+    "scope": "Synthetic image in standalone ad-hoc signed QA application; installed Thermo unchanged",
+    "unverified": [
+      "Native PNG/TIFF Save button paths (actual encoder files covered by tests)",
+      "Recording export save panel",
+      "Sandboxed folder bookmarks"
+    ]
+  },
+  "deferredTranslation": {
+    "branch": "codex/pixpin-translation",
+    "mainRevert": "79068e9",
+    "reason": "User prioritizes core capture workflows"
+  }
+}

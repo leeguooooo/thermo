@@ -1,0 +1,160 @@
+{
+  "recordedAt": "2026-10-23T03:51:41.024158+00:00",
+  "sourceBase": "fa8a1b4325175a43e016c0e096a4c02afbea783b",
+  "behaviorReference": [
+    "https://pixpin.cn/docs/pin/base-use",
+    "https://pixpin.cn/docs/configuration/actions"
+  ],
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureActions.swift": "a9fdef8bbcf034a6587941d32af57dda322862216da747a55f4c933d0ca00380",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "3ea3f960c34003e61022fcb39d54d1795c255b4712128fe314d27ec2bb84b4ed",
+    "Sources/ThermoApp/CaptureTypedPinView.swift": "db4ae9c747436a5b0b0ebbf0740421154dbc0a3f8a81fb2e8454ca8d18d9a49d",
+    "Sources/ThermoApp/CapturePinSession.swift": "ebcf52ffed188c0dba28acb71737c5ef25593110bd58bd3a6cb7057538f9f921",
+    "Sources/ThermoApp/CapturePinLibraryView.swift": "24017dee3a8b1765e994f786b2b55a3bae0d4269232e9c12038afe3ed272b1b9",
+    "Sources/ThermoApp/StatusMenu.swift": "b4c663350a699af7ebb4855ebf9e6cde929a476b4acea77fa3072c56810ad693",
+    "Sources/ThermoApp/Views.swift": "39d1765d537583e2e31e1b556c9b4a1d63e22e0a78193ed1aa06fc862fccb625",
+    "Sources/ThermoL10n/ZhHans.swift": "26baa46ca90e2b42526fce9ca26a3c0c61b2bb2b13f262f870778309b6026a4b",
+    "Tests/ThermoAppTests/CapturePassthroughTests.swift": "9e493c112e940b52950dd562f2737d4de3d73df95057ca3a88ba503875739787",
+    "scripts/verify-capture-ui.py": "9e342db5c2c5dfe99d15d94cb16a1ba95344e916623427c167bdf6b75fe3a200",
+    "scripts/verify-capture-ui.swift": "2c70768c138813d67dc45bdbc90b8ecd0b30a0ea89f5298b5f3e9a974635844a"
+  },
+  "regression": {
+    "counts": {
+      "ThermoCLITests.xctest": 3,
+      "ThermoAppTests.xctest": 73,
+      "CaptureScriptCoreTests.xctest": 10,
+      "CaptureCoreTests.xctest": 117,
+      "AgentDoctorTests.xctest": 4,
+      "AgentCoreTests.xctest": 1
+    },
+    "total": 208,
+    "failures": 0,
+    "log": "/tmp/thermo-passthrough-regression-01a.log",
+    "sha256": "f27c9267ccf8ba474305b8979965b9524215874244c79b2bc36eeb54d4ad5344"
+  },
+  "verifiedInTests": [
+    "Native window flag and title follow temporary model state without changing pixels or document revision",
+    "Transient mode is absent from manifest; title marker is not saved",
+    "Recovery covers loaded hidden groups while pin saving is blocked",
+    "Show pin and closed history restore recover interaction; persisted lock remains",
+    "Toggle and recovery actions are available through existing script routing; recovery needs no active pin",
+    "Pointer lookup checks this app own ordered pin windows, including ignored windows"
+  ],
+  "nativeQA": {
+    "app": "/tmp/thermo-passthrough-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "4de1b4db2d2090196c2b9229e9a42e5f715b9d7327162fd7f8872a8669a112e1",
+    "signatureVerified": true,
+    "verified": [
+      "Enable checkbox sets native ignoresMouseEvents and title marker",
+      "Independent Window menu reaches Pin groups and history",
+      "Management recovery resets native window flag with unchanged image revision",
+      "Closing while passthrough is enabled and restoring yields interactive window",
+      "Both test pin and management window closed"
+    ],
+    "records": {
+      "interactive": {
+        "issue": "",
+        "libraryVisible": true,
+        "pins": [
+          {
+            "id": "DCC15F8D-4F2A-4F2D-A66D-1A9ED8F60C02",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              900,
+              600
+            ],
+            "mousePassthrough": false,
+            "revision": 1,
+            "title": "QA passthrough pin",
+            "visible": true
+          }
+        ],
+        "savedPins": 1
+      },
+      "passthrough": {
+        "issue": "",
+        "libraryVisible": true,
+        "pins": [
+          {
+            "id": "DCC15F8D-4F2A-4F2D-A66D-1A9ED8F60C02",
+            "ignoresMouseEvents": true,
+            "imageSize": [
+              900,
+              600
+            ],
+            "mousePassthrough": true,
+            "revision": 1,
+            "title": "QA passthrough pin · 鼠标穿透",
+            "visible": true
+          }
+        ],
+        "savedPins": 1
+      },
+      "recovered": {
+        "issue": "",
+        "libraryVisible": true,
+        "pins": [
+          {
+            "id": "DCC15F8D-4F2A-4F2D-A66D-1A9ED8F60C02",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              900,
+              600
+            ],
+            "mousePassthrough": false,
+            "revision": 1,
+            "title": "QA passthrough pin",
+            "visible": true
+          }
+        ],
+        "savedPins": 1
+      },
+      "closed-pin": {
+        "issue": "",
+        "libraryVisible": true,
+        "pins": [],
+        "savedPins": 1
+      },
+      "restored": {
+        "issue": "",
+        "libraryVisible": true,
+        "pins": [
+          {
+            "id": "DCC15F8D-4F2A-4F2D-A66D-1A9ED8F60C02",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              900,
+              600
+            ],
+            "mousePassthrough": false,
+            "revision": 1,
+            "title": "QA passthrough pin",
+            "visible": true
+          }
+        ],
+        "savedPins": 1
+      },
+      "cleaned": {
+        "issue": "",
+        "libraryVisible": false,
+        "pins": [],
+        "savedPins": 1
+      }
+    },
+    "manifestSHA256": "bcd8a5019d67496006de78a4942c28b8a85bd15bc27b7afc464b04bf04b43651",
+    "processStopped": true,
+    "unverified": [
+      "Actual mouse event receipt by another application below the pin",
+      "Physical global/local hotkey and hover targeting",
+      "Occlusion by other applications and multi-display pointer targeting",
+      "Installed Thermo integration"
+    ]
+  },
+  "behaviorChoices": [
+    "Temporary state is not saved or restored",
+    "Menu and management recovery act directly on memory and do not require a successful library save",
+    "Global toggle chooses an own pin under pointer, then the current pin; no new shortcut is registered by default",
+    "No new event monitor, screen-access permission or input-monitoring permission is requested"
+  ],
+  "installedAppChanged": false
+}

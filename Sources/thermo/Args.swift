@@ -20,6 +20,7 @@ struct Args {
         "limit",  // history
         "sort", // agents usage: observed text/structured JSON tokens or call interval order
         "protocol", // explicit MCP inspection lifecycle; never inferred from a version label
+        "code", "file", "control-directory",
         "log-file", // agents usage: one explicitly selected session
         "watch", "app", "title", "ids", "group", "name", "window", "color"]  // pulse chrome
     static let aliases: [String: String] = [

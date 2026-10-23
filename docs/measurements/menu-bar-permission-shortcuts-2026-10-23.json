@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-23",
+  "change": "Release menu bar shortcut registrations when Accessibility trust is revoked and restoration succeeds; retain recovery shortcut on failed restoration",
+  "reproduction": {
+    "redLog": "dist/menubar-qa-20261023-permission-red/test.log",
+    "failedAssertions": 2,
+    "observedReleaseCounts": [
+      0,
+      0
+    ],
+    "expectedReleaseCounts": [
+      1,
+      1
+    ]
+  },
+  "verification": {
+    "greenLog": "dist/menubar-qa-20261023-permission-green/test.log",
+    "coreTests": 27,
+    "shortcutAndManagerTests": 8,
+    "failures": 0,
+    "test": "testPermissionRevocationReleasesShortcutsAfterRestoringVisibility",
+    "sourceSha256": "a67a101f73737dd69b67ec2d6ad259e61a6c530f7fc81865ac752c92a49cb368",
+    "greenLogSha256": "74b4ffb16fdb7dc82014eb5ba0188db2b107d50cc14e5a22f44405cac0448e0d",
+    "existingFailedRecoveryShortcutTestPassed": true,
+    "trustInjected": true,
+    "actualTCCPermissionRevoked": false,
+    "nativeVisibilityAsserted": false,
+    "fullApplicationRebuiltForThisChange": false
+  },
+  "published": false
+}

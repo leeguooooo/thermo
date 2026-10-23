@@ -1,0 +1,117 @@
+{
+  "recordedAt": "2026-10-23T03:04:21.954713+00:00",
+  "sourceBase": "795b74184a866ca2489e2fbdb033142aea0133f8",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureDocument.swift": "139350cafab43d82572b6084392fcfda388a4489cb8ae362e0ca99726c9e4060",
+    "Sources/CaptureCore/CaptureTextSelection.swift": "134a1ee3c45344886120aaaaa7faf9cd241caa0aaf7c996ff727faf350c8c608",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "92b506baab4f21e6b75b6ce08ca3a4c015e11fdd2777fa494ffff0c870949602",
+    "Sources/ThermoApp/CaptureOCRSelection.swift": "6280ecfadbf988f7e53642c4cf337c8c59f7971ddfee925d80a1a89c397f1486",
+    "Sources/ThermoApp/CaptureOCRAccessibility.swift": "f78fbc5913e02ba24e7f3d60d3177061716947fe6831a873cdfd7f04c0e16c50",
+    "Sources/ThermoL10n/ZhHans.swift": "e6b651d9cea066b3a2c39d020ed14d64b3ac83f0213ac3625c018d02b9f7aa70",
+    "Tests/CaptureCoreTests/CaptureTextSelectionTests.swift": "4ad8d26e6e11c2a6659df53e5663c0e20d11640d223f41b3ba7e733c016f20d3",
+    "Tests/ThermoAppTests/CaptureOCRSelectionTests.swift": "2471c6983afd269c9e24eed12210d17953d8466782637f3140c045c23bd10391",
+    "scripts/verify-capture-ui.py": "854a25e0f8f122b91a6d774a32a2146fb8366412c0fb0aabb29175d16ffc0038",
+    "scripts/verify-capture-ui.swift": "f1c0c5f3aa819bd04a3ad8d6f006bca0affe7c5b9ec82db923483680eb1a2ca1"
+  },
+  "regression": {
+    "counts": {
+      "ThermoCLITests.xctest": 3,
+      "ThermoAppTests.xctest": 65,
+      "CaptureScriptCoreTests.xctest": 10,
+      "CaptureCoreTests.xctest": 117,
+      "AgentDoctorTests.xctest": 4,
+      "AgentCoreTests.xctest": 1
+    },
+    "total": 200,
+    "failures": 0,
+    "log": "/tmp/thermo-ocr-selection-final-regression-01a.log",
+    "logSHA256": "26184b5e3fdc77a9d296de55719a8a4ba62f2c94f26da76027c0d7d3882539db"
+  },
+  "verifiedInTests": [
+    "Real Vision bilingual image recognition and normalized image coordinates",
+    "Unicode combining marks, emoji and CJK selection; whitespace and disjoint runs",
+    "Invalid ranges/indices and overlapping segments",
+    "Pointer drag, Shift selection, zoom/pan and locked-pin coordinates using production Canvas events",
+    "Text or image edits invalidate geometry; empty copy preserves clipboard",
+    "OCR and image copy routes use injected private clipboard",
+    "Accessible region selection rejects stale geometry; selecting annotation tool exits text mode"
+  ],
+  "nativeQA": {
+    "app": "/tmp/thermo-ocr-accessible-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "e57d9e7a5005789d5c3c61b67a5a4cb6d023d6fb01b53453cde1c175af6774b8",
+    "signatureVerified": true,
+    "verified": [
+      "Synthetic bilingual image recognized in production editor",
+      "Native accessible region selection and copy produced Thermo",
+      "Cross-line selection and copy produced Thermo followed by Chinese 标注",
+      "Editing text removed old regions and selection; copy produced edited text",
+      "Image revision remained zero and annotation list stayed empty",
+      "Window closed; cache zero and private clipboard released"
+    ],
+    "privateClipboardOnly": true,
+    "regionCount": 15,
+    "snapshots": {
+      "word-copy": {
+        "recognized": "Thermo capture QA\n截图、标注、贴图\nOCR local recognition 12345",
+        "selectedOCRText": "Thermo",
+        "copiedOCRText": "Thermo",
+        "selectingOCRText": true,
+        "revision": 0,
+        "windowVisible": true,
+        "renderCacheBytes": 2169600
+      },
+      "bilingual-copy": {
+        "recognized": "Thermo capture QA\n截图、标注、贴图\nOCR local recognition 12345",
+        "selectedOCRText": "Thermo\n标注",
+        "copiedOCRText": "Thermo\n标注",
+        "selectingOCRText": true,
+        "revision": 0,
+        "windowVisible": true,
+        "renderCacheBytes": 2169600
+      },
+      "edited": {
+        "recognized": "Edited QA text",
+        "selectedOCRText": "",
+        "copiedOCRText": "Thermo\n标注",
+        "selectingOCRText": false,
+        "revision": 0,
+        "windowVisible": true,
+        "renderCacheBytes": 2169600
+      },
+      "edited-copy": {
+        "recognized": "Edited QA text",
+        "selectedOCRText": "",
+        "copiedOCRText": "Edited QA text",
+        "selectingOCRText": false,
+        "revision": 0,
+        "windowVisible": true,
+        "renderCacheBytes": 2169600
+      },
+      "closed": {
+        "revision": 0,
+        "windowVisible": false,
+        "renderCacheBytes": 0
+      }
+    },
+    "snapshotSHA256": {
+      "word-copy": "ced5307e09d0dd89783fae105d89a1226a6dccda1b74c830979c3403126327c4",
+      "bilingual-copy": "3a069a7f74dc5b888a489dc7969887fb16ec26a00653b7d4c660dd2f4baaf2cb",
+      "edited": "b85ceb18d60c620df27c3cd8d4d3697966034bed58612d8e71dee20c8508f11f",
+      "edited-copy": "ba878f12c53b52be46aa7cdf1727e09baebcf1644de5fe84cf16ca5b790615e4",
+      "closed": "274b9ecec04251b28015d97cc396efb022c8b8ceefa822cf0696333da97ffe0c"
+    },
+    "unverified": [
+      "Physical pointer/keyboard delivery in this desktop session: coordinate input repeatedly returned noWindowsAvailable despite visible QA window",
+      "Real screen capture, multi-display and complex document layout"
+    ],
+    "processStopped": true
+  },
+  "limits": [
+    "Vision may return word rather than character boxes; identical boxes are merged, not subdivided by estimation",
+    "When character geometry is unavailable, a full-line region is used",
+    "Image selection geometry is bounded to 4096 regions; complete text remains editable",
+    "Geometry is temporary and invalidates when image or recognized text changes",
+    "Tables, formula recognition, complex/rotated layouts are not covered"
+  ],
+  "installedAppChanged": false
+}

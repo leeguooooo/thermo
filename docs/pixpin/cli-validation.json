@@ -1,0 +1,298 @@
+{
+  "status": "partial",
+  "recordedAt": "2026-10-22T12:06:08.404516+00:00",
+  "performanceIntegrationCommit": "a8f1ab547b84c21df95a66e04f817ed01c8232f1",
+  "integratedRemoteMain": "85127771de74b5ba0bb3a60ae4b2cc00e702c191",
+  "qualifiedMainCommit": "c8c43b8c8fa56de8ea8e90e409ef57f4d3077fae",
+  "qualifiedTree": "368fd623bfe8d2770187f07b3be1a54f28c8977f",
+  "sourceSHA256": {
+    "Package.swift": "c19660f4b31a2f32a2ca31a7502c36880ab8acf0d13a558cd105bd508600bcb6",
+    "Sources/AgentCore/AppControlTransport.swift": "847b44449970ed5c280284df6a71f07d40c2ff30f673c708947ddb5173c2cabe",
+    "Sources/CaptureCore/CaptureActions.swift": "d5babb1c95df106ff3ac84ba569e5540681f5ace2adc12f77ec611ec77b1c5f5",
+    "Sources/CaptureScriptCore/CaptureCLIReport.swift": "0874eecbe94520ecb68261e57df2ff35295a23b7a885d4733ae7dffdf6cffffa",
+    "Sources/CaptureScriptCore/CaptureScriptRunner.swift": "0a9eefd0d328122e27a2558435540530dd89c34ffc286a73e66ae4376aec5784",
+    "Sources/ThermoApp/AppControlHost.swift": "f6a3814a15a549dbb3e519c2ccd375cc704e93a4436a968b04a9e75e46dbc32d",
+    "Sources/ThermoApp/CaptureCLIHost.swift": "1dae3b10549058c114db6d84beec81bcaadb293f13c4b1575cb22dc2a8c31fcc",
+    "Sources/ThermoApp/CaptureScriptActions.swift": "783dd7c77001dc602dc3e7fb94a1f5c99e26a1173606f4f4866f098b67295505",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "2547dea6f17e2a9fa9f6f0307ad92efd06a1da3917df4ebc4845961f07aa40c9",
+    "Sources/ThermoApp/main.swift": "bac76cd15fcfd5faa9400c883a0f2d74b90b21c2519ee2732c8bf05548a4554c",
+    "Sources/thermo/Args.swift": "8804743c0c465f8025c348c336a6010d4c9588cfc709f1a70ef51d6b92501220",
+    "Sources/thermo/Capture.swift": "424d85c9bb51adcdeb9642516b26eba0f7836472ce7419c3ffc46cbde6cbf904",
+    "Sources/thermo/CommandHelp.swift": "a04999978c2199e1edcb39d80db45a940dcc6992aefb34787bb19dcc2be846ba",
+    "Sources/thermo/main.swift": "0ee0b3dac5c476f547d5e58fae8dc5678828e6eac8516ebdf8c1e687626f147a",
+    "Tests/AgentCoreTests/AppControlTransportTests.swift": "b43861b7f6aacdd15d8e9e0aeefce5ac492f10595c9e92944c9cb6b052581180",
+    "Tests/ThermoAppTests/CaptureCLIHostTests.swift": "8be7778468b02e8672c560613ed5896ea4c410281dc4065ba9206477dcf0f9b7",
+    "Tests/ThermoCLITests/CaptureCommandTests.swift": "3e489e2c02c3ff377459556f7a30db3d7967f6181576e953918bc7a21acd3304",
+    "scripts/verify-capture-ui.py": "d7850d03364234ec6d922fa441c6494598a61615e5d67aa415da054757bbc1d9",
+    "scripts/verify-capture-ui.swift": "f7ab0438e2616abd789645a4d26049c2e44c5405069c3a869ed2c1b8fed20f77"
+  },
+  "tests": {
+    "initialIntegration": {
+      "targets": [
+        {
+          "target": "ThermoKitTests.xctest",
+          "state": "passed",
+          "tests": 221,
+          "failures": 0
+        },
+        {
+          "target": "ThermoHelperTests.xctest",
+          "state": "passed",
+          "tests": 30,
+          "failures": 0
+        },
+        {
+          "target": "ThermoCLITests.xctest",
+          "state": "passed",
+          "tests": 127,
+          "failures": 0
+        },
+        {
+          "target": "ThermoAppTests.xctest",
+          "state": "passed",
+          "tests": 406,
+          "failures": 0
+        },
+        {
+          "target": "SearchCoreTests.xctest",
+          "state": "passed",
+          "tests": 11,
+          "failures": 0
+        },
+        {
+          "target": "MenuBarCoreTests.xctest",
+          "state": "passed",
+          "tests": 27,
+          "failures": 0
+        },
+        {
+          "target": "CleanKitTests.xctest",
+          "state": "passed",
+          "tests": 805,
+          "failures": 0
+        },
+        {
+          "target": "CaptureScriptCoreTests.xctest",
+          "state": "passed",
+          "tests": 10,
+          "failures": 0
+        },
+        {
+          "target": "CaptureCoreTests.xctest",
+          "state": "passed",
+          "tests": 102,
+          "failures": 0
+        },
+        {
+          "target": "AgentDoctorTests.xctest",
+          "state": "failed",
+          "tests": 404,
+          "failures": 1
+        },
+        {
+          "target": "AgentCoreTests.xctest",
+          "state": "passed",
+          "tests": 70,
+          "failures": 0
+        }
+      ],
+      "total": 2213,
+      "failures": 1,
+      "logSHA256": "c4e4045b190eefd30a996831ce05353224284f6f845b62ece82b22e9404594cf"
+    },
+    "initialFailure": "Localization scan used base dictionary instead of the runtime merged table, plus missing Space/Delete/Discard translations; fixed before final full regression",
+    "finalFull": {
+      "targets": [
+        {
+          "target": "ThermoKitTests.xctest",
+          "state": "passed",
+          "tests": 221,
+          "failures": 0
+        },
+        {
+          "target": "ThermoHelperTests.xctest",
+          "state": "passed",
+          "tests": 30,
+          "failures": 0
+        },
+        {
+          "target": "ThermoCLITests.xctest",
+          "state": "passed",
+          "tests": 130,
+          "failures": 0
+        },
+        {
+          "target": "ThermoAppTests.xctest",
+          "state": "passed",
+          "tests": 411,
+          "failures": 0
+        },
+        {
+          "target": "SearchCoreTests.xctest",
+          "state": "passed",
+          "tests": 11,
+          "failures": 0
+        },
+        {
+          "target": "MenuBarCoreTests.xctest",
+          "state": "passed",
+          "tests": 27,
+          "failures": 0
+        },
+        {
+          "target": "CleanKitTests.xctest",
+          "state": "passed",
+          "tests": 805,
+          "failures": 0
+        },
+        {
+          "target": "CaptureScriptCoreTests.xctest",
+          "state": "passed",
+          "tests": 10,
+          "failures": 0
+        },
+        {
+          "target": "CaptureCoreTests.xctest",
+          "state": "passed",
+          "tests": 102,
+          "failures": 0
+        },
+        {
+          "target": "AgentDoctorTests.xctest",
+          "state": "passed",
+          "tests": 404,
+          "failures": 0
+        },
+        {
+          "target": "AgentCoreTests.xctest",
+          "state": "passed",
+          "tests": 71,
+          "failures": 0
+        }
+      ],
+      "total": 2222,
+      "failures": 0,
+      "logSHA256": "6a989aa8d942b587fa58d045eaf91130ec74a738a0c9470af0c866a9af584eee"
+    },
+    "latestMainRelated": {
+      "targets": [
+        {
+          "target": "ThermoKitTests.xctest",
+          "state": "passed",
+          "tests": 0,
+          "failures": 0
+        },
+        {
+          "target": "ThermoHelperTests.xctest",
+          "state": "passed",
+          "tests": 0,
+          "failures": 0
+        },
+        {
+          "target": "ThermoCLITests.xctest",
+          "state": "passed",
+          "tests": 3,
+          "failures": 0
+        },
+        {
+          "target": "ThermoAppTests.xctest",
+          "state": "passed",
+          "tests": 10,
+          "failures": 0
+        },
+        {
+          "target": "SearchCoreTests.xctest",
+          "state": "passed",
+          "tests": 0,
+          "failures": 0
+        },
+        {
+          "target": "MenuBarCoreTests.xctest",
+          "state": "passed",
+          "tests": 0,
+          "failures": 0
+        },
+        {
+          "target": "CleanKitTests.xctest",
+          "state": "passed",
+          "tests": 0,
+          "failures": 0
+        },
+        {
+          "target": "CaptureScriptCoreTests.xctest",
+          "state": "passed",
+          "tests": 0,
+          "failures": 0
+        },
+        {
+          "target": "CaptureCoreTests.xctest",
+          "state": "passed",
+          "tests": 0,
+          "failures": 0
+        },
+        {
+          "target": "AgentDoctorTests.xctest",
+          "state": "passed",
+          "tests": 4,
+          "failures": 0
+        },
+        {
+          "target": "AgentCoreTests.xctest",
+          "state": "passed",
+          "tests": 6,
+          "failures": 0
+        }
+      ],
+      "total": 23,
+      "failures": 0,
+      "logSHA256": "04c82508c370124d8e24088daa51277053f181eece3c401612c35328403074b1"
+    }
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-cli-qa-01a/ThermoCaptureQA.app",
+    "appBinarySHA256": "07cc57cdfa3a1cabbcb696cb0f2fa78d8b61a45985e48cd9793d472f2fafb287",
+    "cliSHA256": "a82fda9683aeb2df86d5dcf603c6a48815f1af185adaeec0721dd70233ec51dc",
+    "workerSHA256": "d68c5c6187fea7961db40231458a1f4abef073b753a547628af490002bf6f777",
+    "buildLogSHA256": "05d29b2fb00d6a2ec8996e4dcc4ff6e60941c07dc6ee12d20cef3e9ea20505ee",
+    "bundleSignaturesVerified": true,
+    "syntheticOnly": true,
+    "results": {
+      "cli-e2e-initial.json": "61eb30d4929b83d8e358a3d617280514c656ce961f22965f82efe26b7087f1ff",
+      "cli-e2e-recovery.json": "032f2d1e80eb8c3620b86c8fc61a8cb468f9c0379c524e64954a6144923d7e18",
+      "cli-e2e-rejected-peer.json": "a39e601620a7ba1c2e89f1def63afa7c8e448232ee677fdcdafed573ba54b44b",
+      "cli-e2e-standalone.json": "412543bb59483a3bf8926694c4263e9579cd298426794767b39d4eb44ca67992"
+    },
+    "verified": [
+      "Actual bundled CLI and private signed-peer listener",
+      "Script mutation persisted into pin library",
+      "Dry run does not execute",
+      "Client timeout then original-ID query and cancellation without resubmission",
+      "100000 log bytes and 24000 result bytes retained",
+      "Script file and single-action entry",
+      "Wrong signing identity rejected without pin mutation",
+      "Restart after deleting source workspace, 37-entry catalog, saved fixture and working CLI/worker",
+      "Old request IDs unknown after App restart, no replay"
+    ],
+    "exited": true
+  },
+  "cleanup": {
+    "ownedWorktreeAndBranchesRemoved": true,
+    "oldQAPackageRemoved": true,
+    "finalQAAndEvidenceRetained": true,
+    "unknownRootCrashLogsPreserved": true
+  },
+  "releaseBoundary": {
+    "publishedPerformanceArchive": "dist/perf-release-1.2.5-01a1612a/release-summary.json",
+    "version": "1.2.5",
+    "build": "717",
+    "captureIncludedInThatRelease": false,
+    "publishedAssetsChangedByThisTask": false,
+    "installedAppChangedByThisTask": false
+  },
+  "scopeExclusions": [
+    "Uncommitted parallel CleanScreenShortcut/MenuBarManager/GlobalHotkey/MenuBarShortcuts work is not covered by this snapshot",
+    "Real screen selection/cancellation/permissions, multiple displays and physical hotkeys",
+    "Full PixPin script API, direct regions, files/system commands, translation and recording lifecycle",
+    "Other incomplete PixPin features"
+  ]
+}

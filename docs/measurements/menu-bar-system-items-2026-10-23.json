@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-23",
+  "issueResolved": false,
+  "productionBackendChanged": false,
+  "findings": {
+    "nativeSystemEnumRawValues": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "allNineAlreadyAllowedByBridge": true,
+    "focusEnumCaseFound": false,
+    "invalidValuesDroppedByNativeActivate": true,
+    "liveSystemIconsRetained": [
+      "battery",
+      "wifi",
+      "controlcenter",
+      "clock"
+    ],
+    "nonTargetSlashedShieldStillDisappears": true,
+    "slashedShieldOwnerPixelBindingEstablished": false,
+    "liveRestorePassed": true,
+    "watchdogFired": false,
+    "locationKinds": {
+      "com.bitwarden.desktop": [
+        "bundle"
+      ],
+      "com.leeguoo.vpn-menubar": [
+        "adhocBinary"
+      ],
+      "com.depthpicture.PixPin": [
+        "bundle"
+      ],
+      "dev.thermo.app": [
+        "bundle"
+      ]
+    },
+    "allFiveProcessIdentitiesStillMatch": true,
+    "locationSnapshotCanLagLivePreferences": true,
+    "locationDifferenceProvenRootCause": false,
+    "suiteReadReturnedNoDataOutsideAppleGroup": true,
+    "systemPreferencesModified": false,
+    "permissionsChanged": false,
+    "publicFoldReplacementAccepted": false,
+    "publicFoldItemsRemoved": true,
+    "reasonPublicFoldNotAccepted": "Fixture items overflowed before configuration; cannot prove three-section control",
+    "objcMenuItemManagerExposesPerAppAllowedSetter": false,
+    "swiftPreferenceClassesExposeObjCMethods": false
+  },
+  "verification": {
+    "probeWarningsAsErrorsCompilePassed": true,
+    "probeSourceSHA256": "fe6eb369ae33421ca163c7fc374585ac8ae5705fad03cdff18a1ab0fb4d81186",
+    "liveJournalSHA256": "98528e16f9e091b5813f803e1fd601115cfb7e6b5f3e5a012e11afb8aaac75b7",
+    "phaseCapturesSHA256": "4e8494ea45f826d216a2aba785fd254236c3a2226100b67d06924c2783428ba2",
+    "identitySHA256": "fb9733ec93b937594b8d8c3c01cdadb1ef85a080864e86f06c725d81b1755a10",
+    "filteredSystemAXSHA256": "8a70261536e158337ac6907ae9dbc46f7b34ae760b3364f2efab92131c2e04b2",
+    "invalidArgumentChecks": 3,
+    "runtimeMethodInventorySHA256": "a4662876e31b50956b38a3edcce821a9542adfc6edcc06961f90ed4792a95762"
+  },
+  "staticEvidence": {
+    "clientBundle": "dist/menubar-system-items-20261023/client-evidence.json",
+    "preferencesBundle": "dist/menubar-system-items-20261023/preferences-evidence.json",
+    "agentBundle": "dist/menubar-system-items-20261023/agent-evidence.json",
+    "enumValidation": "ev_a9650b65085c3b21cf86cb26482df98bb26f01bc39a6340cba1255bcb98d4f9d",
+    "enumStringValues": "ev_e335271e800c2c08ea69c6dd6ccffe986fca1f45ab548f91a1e812e391950a13",
+    "activationDropsValuesAbove8": "ev_aec3715d2eb65cb6d0b464ca6485641fab9feb160b76631ccda3ad84fa16ad4d",
+    "trackedLocationDescription": "ev_7a6cadd2bc2a7a3c2e26338a1dd3adbc1b809f6b0b029eac82af397981525c07",
+    "trackedPreferencesInitializer": "ev_2eee46c5a4bd2a9203c9673e7b98ad15c7819cca8aec51a06228beb3c7c17db3"
+  },
+  "cleanup": {
+    "nativeCheckFinishedAndRestored": true,
+    "publicFoldProcessExited": true,
+    "publicFoldAllTestItemsRemoved": true,
+    "reaSessionsClosed": true,
+    "unrelatedAXContentAndHoverCaptureRemoved": true,
+    "retained": "Scoped menu bar screenshots, evidence bundles, latest QA build and extracted analysis framework for follow-up"
+  },
+  "published": false
+}

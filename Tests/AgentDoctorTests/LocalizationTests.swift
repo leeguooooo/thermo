@@ -33,6 +33,7 @@ final class LocalizationTests: XCTestCase {
     func testEveryKeyIsTranslated() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let sources = root.appendingPathComponent("Sources")
+        let table=try XCTUnwrap(Language.simplifiedChinese.table)
         let re = try NSRegularExpression(pattern: #"\btr\("((?:[^"\\]|\\.)*)""#)
         var missing: [String] = []
         var count = 0
@@ -44,11 +45,11 @@ final class LocalizationTests: XCTestCase {
                 let raw = String(text[Range(m.range(at: 1), in: text)!])
                 let key = try literalKey(raw)
                 count += 1
-                if zhHans[key] == nil { missing.append("\(url.lastPathComponent): \(key)") }
+                if table[key] == nil { missing.append("\(url.lastPathComponent): \(key)") }
             }
         }
         XCTAssertGreaterThan(count, 100)
-        XCTAssertEqual(missing, [], "add these to Sources/ThermoL10n/ZhHans.swift")
+        XCTAssertEqual(missing, [], "add these to the runtime simplified Chinese table")
     }
 
     /// Translations keep the same placeholders, so String(format:) never reads a missing argument.
@@ -57,7 +58,7 @@ final class LocalizationTests: XCTestCase {
         func placeholders(_ s: String) -> [String] {
             re.matches(in: s, range: NSRange(s.startIndex..., in: s)).map { String(s[Range($0.range, in: s)!]) }.sorted()
         }
-        for (en, zh) in zhHans {
+        for (en, zh) in try XCTUnwrap(Language.simplifiedChinese.table) {
             XCTAssertEqual(placeholders(en), placeholders(zh), "placeholders differ for: \(en)")
         }
     }
@@ -69,6 +70,7 @@ final class LocalizationTests: XCTestCase {
         XCTAssertNil(L10n.parse("fr"))
         L10n.override = .simplifiedChinese
         XCTAssertEqual(tr("%1$@ errors", "3"), "3 个错误")
+        XCTAssertEqual(tr("Manage menu bar"), "菜单栏管理")
         L10n.override = .english
         XCTAssertEqual(tr("%1$@ errors", "3"), "3 errors")
         L10n.override = nil

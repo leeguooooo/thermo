@@ -1,0 +1,225 @@
+import AppKit
+import Vision
+
+public enum CaptureTool: String, CaseIterable, Identifiable, Codable, Sendable {
+    case move, select, rectangle, ellipse, line, arrow, pencil, highlight, redact, mosaic, blur, eraser, eraserRect, spotlight, magnifier, watermark, text, number, crop
+    public var id: String { rawValue }
+}
+
+/// Points use the original image's pixel coordinates, with the origin at bottom left.
+public struct CaptureAnnotation {
+    public let tool: CaptureTool
+    public var points: [CGPoint]
+    public var color: NSColor
+    public var width: CGFloat
+    public var text: String
+    public var options:CaptureAnnotationOptions
+    public init(tool: CaptureTool, points: [CGPoint], color: NSColor = .systemRed, width: CGFloat = 4, text: String = "",options:CaptureAnnotationOptions = .init()) {
+        self.tool = tool; self.points = points; self.color = color; self.width = width; self.text = text;self.options=options
+    }
+}
+
+public enum CaptureFailure: LocalizedError {
+    case invalidImage, invalidCrop, exportFailed, unsupportedClipboard, captureFailed
+    public var errorDescription: String? {
+        switch self {
+        case .invalidImage: return "The image could not be read."
+        case .invalidCrop: return "Select an area inside the image."
+        case .exportFailed: return "The image could not be exported."
+        case .unsupportedClipboard: return "Copy an image, text, or file before pinning."
+        case .captureFailed: return "Screen capture failed. Check Screen Recording permission in System Settings."
+        }
+    }
+}
+
+public struct CaptureDocument {
+    public private(set) var image: CGImage
+    public private(set) var annotations: [CaptureAnnotation] = []
+    public private(set) var imageAdjustments=CaptureImageAdjustments()
+    private struct State { let image: CGImage; let annotations: [CaptureAnnotation];let adjustments:CaptureImageAdjustments }
+    private var history: [State] = []
+    private var undone: [State] = []
+    public init(image: CGImage,annotations:[CaptureAnnotation] = [],imageAdjustments:CaptureImageAdjustments = .init()) { self.image = image;self.annotations=annotations;self.imageAdjustments=imageAdjustments }
+    public var size: CGSize { CGSize(width: image.width, height: image.height) }
+    public mutating func applyImageAdjustments(_ next:CaptureImageAdjustments) throws {
+        guard next.valid else {throw CaptureFailure.invalidImage}
+        guard next != imageAdjustments else{return}
+        checkpoint();imageAdjustments=next
+    }
+    public var canUndo: Bool { !history.isEmpty }
+    public var canRedo: Bool { !undone.isEmpty }
+    public mutating func append(_ item: CaptureAnnotation) {
+        guard !item.points.isEmpty else { return }
+        checkpoint(); annotations.append(item)
+    }
+    private mutating func checkpoint() {
+        history.append(State(image: image, annotations: annotations,adjustments:imageAdjustments)); undone.removeAll()
+        if history.count > 100 { history.removeFirst() }
+    }
+    public mutating func undo() {
+        guard let state = history.popLast() else { return }
+        undone.append(State(image: image, annotations: annotations,adjustments:imageAdjustments)); image = state.image; annotations = state.annotations;imageAdjustments=state.adjustments
+    }
+    public mutating func redo() {
+        guard let state = undone.popLast() else { return }
+        history.append(State(image: image, annotations: annotations,adjustments:imageAdjustments)); image = state.image; annotations = state.annotations;imageAdjustments=state.adjustments
+    }
+    public func rendered(adding draft:CaptureAnnotation? = nil,replacing index:Int? = nil,replacements:[Int:CaptureAnnotation] = [:]) throws -> CGImage {
+        guard let ctx = CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
+                                  bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { throw CaptureFailure.invalidImage }
+        let adjusted=try imageAdjustments.rendered(image)
+        ctx.draw(adjusted, in: CGRect(origin: .zero, size: size))
+        for (i,item) in annotations.enumerated() { try Self.draw(replacements[i] ?? (index == i ? draft ?? item : item),in:ctx,base:adjusted) }
+        if index == nil,let draft { try Self.draw(draft,in:ctx,base:adjusted) }
+        guard let output = ctx.makeImage() else { throw CaptureFailure.invalidImage }
+        return output
+    }
+    public static func draw(_ item: CaptureAnnotation, in ctx: CGContext,base:CGImage? = nil) throws {
+        guard item.options.valid,item.width.isFinite,item.width >= 1,item.points.allSatisfy({ $0.x.isFinite && $0.y.isFinite }) else { throw CaptureFailure.invalidImage }
+        guard let first = item.points.first, let last = item.points.last else { return }
+        ctx.saveGState(); defer { ctx.restoreGState() }
+        let color = item.color.usingColorSpace(.deviceRGB) ?? .red
+        ctx.setStrokeColor(color.cgColor); ctx.setFillColor(color.cgColor)
+        ctx.setLineWidth(max(1, item.width)); ctx.setLineCap(.round); ctx.setLineJoin(.round)
+        let rect = CGRect(x: min(first.x, last.x), y: min(first.y, last.y), width: abs(last.x-first.x), height: abs(last.y-first.y))
+        switch item.tool {
+        case .mosaic,.blur,.eraser,.eraserRect,.spotlight,.magnifier,.watermark: try effect(item,in:ctx,base:base)
+        case .rectangle: ctx.stroke(rect)
+        case .ellipse: ctx.strokeEllipse(in: rect)
+        case .redact:
+            // Opaque fill intentionally removes source pixels from exported output.
+            ctx.setFillColor(NSColor.black.cgColor); ctx.fill(rect)
+        case .highlight:
+            ctx.setBlendMode(.multiply); ctx.setAlpha(0.35); ctx.fill(rect)
+        case .line,.arrow:
+            styledLine(from:first,to:last,item:item,in:ctx,startHead:item.tool == .arrow ? item.options.arrowStart : item.options.lineStart,endHead:item.tool == .arrow ? item.options.arrowEnd : item.options.lineEnd,points:item.points)
+            if item.tool == .arrow {drawArrowComment(item,in:ctx)}
+        case .pencil:
+            ctx.beginPath();ctx.move(to:first)
+            for point in item.points.dropFirst() {ctx.addLine(to:point)};ctx.strokePath()
+        case .number:drawNumber(item,in:ctx)
+        case .text:
+            let fontSize=max(18,item.width*6)
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current=NSGraphicsContext(cgContext:ctx,flipped:false)
+            (item.text as NSString).draw(at:first,withAttributes:[.font:NSFont.systemFont(ofSize:fontSize),.foregroundColor:color])
+            NSGraphicsContext.restoreGraphicsState()
+        case .move,.select, .crop: break
+        }
+    }
+    public mutating func crop(to requested: CGRect) throws {
+        let rect = requested.standardized.intersection(CGRect(origin: .zero, size: size)).integral
+        guard !rect.isNull, rect.width >= 1, rect.height >= 1 else { throw CaptureFailure.invalidCrop }
+        // CGImage cropping uses top-left coordinates; the editing canvas uses bottom-left.
+        let topRect = CGRect(x: rect.minX, y: size.height-rect.maxY, width: rect.width, height: rect.height)
+        guard let result = try rendered().cropping(to: topRect) else { throw CaptureFailure.invalidCrop }
+        checkpoint(); image = result; annotations.removeAll();imageAdjustments = .init()
+    }
+    public func data(format: NSBitmapImageRep.FileType = .png) throws -> Data {
+        let rep = NSBitmapImageRep(cgImage: try rendered())
+        guard let data = rep.representation(using: format, properties: [:]) else { throw CaptureFailure.exportFailed }
+        return data
+    }
+    public mutating func transform(_ operation:CaptureImageTransform) throws {
+        try applyTransforms([operation])
+    }
+    public mutating func transform(rotateClockwise: Bool = false, flipHorizontal: Bool = false) throws {
+        // Preserve the old combined operation order: mirror source X, then rotate right.
+        var operations:[CaptureImageTransform]=[]
+        if flipHorizontal {operations.append(.flipHorizontal)}
+        if rotateClockwise {operations.append(.rotateClockwise)}
+        try applyTransforms(operations)
+    }
+    private mutating func applyTransforms(_ operations:[CaptureImageTransform]) throws {
+        var output=try rendered()
+        for operation in operations {output=try operation.applying(to:output)}
+        checkpoint();image=output;annotations.removeAll();imageAdjustments = .init()
+    }
+    public static func load(_ url: URL) throws -> CGImage {
+        // Screenshot files are removed before asynchronous after-actions run. Decode now,
+        // otherwise a lazy provider can attempt to read an already removed temporary file.
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, [kCGImageSourceShouldCacheImmediately:true] as CFDictionary) else { throw CaptureFailure.invalidImage }
+        return image
+    }
+}
+
+public struct CaptureRecognition: Sendable {
+    public let text: String
+    public let codes: [String]
+    public let segments:[CaptureTextSegment]
+    public init(text:String,codes:[String],segments:[CaptureTextSegment]=[]) {self.text=text;self.codes=codes;self.segments=segments}
+    /// Entirely on-device. Network translation and formula recognition are separate features.
+    public static func recognize(_ image: CGImage,includeGeometry:Bool=false) throws -> CaptureRecognition {
+        let text = VNRecognizeTextRequest(); text.recognitionLevel = .accurate
+        text.usesLanguageCorrection = true; text.automaticallyDetectsLanguage = true
+        let codes = VNDetectBarcodesRequest()
+        try VNImageRequestHandler(cgImage: image).perform([text, codes])
+        let observations=text.results ?? [],candidates=observations.compactMap{$0.topCandidates(1).first}
+        var segments:[CaptureTextSegment]=[],offset=0
+        if includeGeometry {
+            for observation in observations {
+                guard let candidate=observation.topCandidates(1).first else {continue}
+                let value=candidate.string
+                defer {offset+=value.utf16.count+1}
+                guard segments.count < 4096 else {continue}
+                var line:[CaptureTextSegment]=[],fallback=value.count > 4096-segments.count
+                if !fallback {
+                    value.enumerateSubstrings(in:value.startIndex..<value.endIndex,options:.byComposedCharacterSequences) {substring,range,_,stop in
+                        guard substring?.allSatisfy(\.isWhitespace) != true else {return}
+                        guard let box=try? candidate.boundingBox(for:range)?.boundingBox,!box.isNull,!box.isEmpty else {fallback=true;stop=true;return}
+                        let local=NSRange(range,in:value)
+                        let global=NSRange(location:offset+local.location,length:local.length)
+                        if let last=line.last,last.bounds == box {
+                            line[line.count-1] = .init(range:NSRange(location:last.range.location,length:NSMaxRange(global)-last.range.location),bounds:box)
+                        } else {line.append(.init(range:global,bounds:box))}
+                    }
+                }
+                if fallback {line=[.init(range:NSRange(location:offset,length:value.utf16.count),bounds:observation.boundingBox)]}
+                segments+=line
+            }
+        }
+        return CaptureRecognition(text:candidates.map(\.string).joined(separator:"\n"),codes:(codes.results ?? []).compactMap(\.payloadStringValue),segments:segments)
+    }
+}
+
+extension CaptureDocument {
+    public func hitTest(_ point:CGPoint,tolerance:CGFloat = 4) -> Int? {
+        annotations.indices.reversed().first { index in
+            let item=annotations[index]
+            guard item.bounds.insetBy(dx:-tolerance,dy:-tolerance).contains(point) else { return false }
+            if let rect=item.arrowCommentRect,rect.insetBy(dx:-4-tolerance,dy:-3-tolerance).contains(point) {return true}
+            if item.arrowMarkersContain(point,tolerance:tolerance) {return true}
+            if [.line,.arrow,.pencil,.eraser].contains(item.tool),item.points.count >= 2 {
+                for (a,b) in zip(item.points,item.points.dropFirst()) {
+                    let dx=b.x-a.x,dy=b.y-a.y,length=dx*dx+dy*dy
+                    let t=length > 0 ? min(1,max(0,((point.x-a.x)*dx+(point.y-a.y)*dy)/length)) : 0
+                    if hypot(point.x-a.x-t*dx,point.y-a.y-t*dy) <= tolerance+item.width*(item.tool == .eraser ? 2 : 0.5) { return true }
+                }
+                return false
+            }
+            return true
+        }
+    }
+    public mutating func replaceAnnotation(at index:Int,with annotation:CaptureAnnotation) {
+        guard annotations.indices.contains(index),!annotation.points.isEmpty else { return }
+        checkpoint();annotations[index]=annotation
+    }
+    public mutating func replaceAnnotations(_ replacements:[Int:CaptureAnnotation]) {
+        guard !replacements.isEmpty,replacements.allSatisfy({annotations.indices.contains($0.key) && !$0.value.points.isEmpty}) else {return}
+        checkpoint()
+        for (index,item) in replacements {annotations[index]=item}
+    }
+    public mutating func removeAnnotations(at indices:Set<Int>) {
+        guard !indices.isEmpty,indices.allSatisfy({annotations.indices.contains($0)}) else {return}
+        checkpoint()
+        for index in indices.sorted(by:>) {annotations.remove(at:index)}
+    }
+    public mutating func removeAnnotation(at index:Int) {
+        guard annotations.indices.contains(index) else { return };checkpoint();annotations.remove(at:index)
+    }
+    public mutating func clearAnnotations() {
+        guard !annotations.isEmpty else { return };checkpoint();annotations.removeAll()
+    }
+}

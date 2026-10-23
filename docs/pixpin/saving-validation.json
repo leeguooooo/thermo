@@ -1,0 +1,59 @@
+{
+  "status": "partial",
+  "recordedAt": "2026-10-22T11:08:25.699559+00:00",
+  "featureMainCommit": "038a147",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureActions.swift": "1d37dd488c5992e27bfab9f946a9f32824c846cbe2c7ff22d86e79019d50f803",
+    "Sources/CaptureCore/CaptureImageSave.swift": "7d3b99453b32f2da26594afb065b6d461ac48b4fed8cea6866eb99ddd3ae574f",
+    "Sources/CaptureCore/CaptureSaveSettings.swift": "b812e9dd5d20a52296624c84bc6167e26be2c69f4393c53d013b71d1ecc68b7b",
+    "Sources/ThermoApp/CapturePinSession.swift": "4d4c4ad3b6933fecf0cf512e0c481898abea6de5173a40173a768cf15a8a261d",
+    "Sources/ThermoApp/CaptureSaveModel.swift": "9ed2beb10b45cd7ab49f8bf8b0269ca4295a447dc193c644c83c9ee703ed71eb",
+    "Sources/ThermoApp/CaptureSaveSettingsView.swift": "076f46d1180d5f99d442d62012d9d1701da59b55694233174fea0fe9cbc0c78b",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "1f952a2e44376756097206aa6f65fd089bc4c21bb484aebafb1f87735bc34726",
+    "Sources/ThermoApp/StatusMenu.swift": "69f9da2e336ed7917e45566931174879c6862e64cdd66f6961cdab9e8f433456",
+    "Sources/ThermoApp/Views.swift": "32179a36ab54f29a4db0937c99e6f12a21ea14770f21daead60dcd231a6ae14b",
+    "Sources/ThermoL10n/ZhHans.swift": "e82034113411f99258f47faef4d9b8c1e5193ca6b34d7a49e30f140aaf971938",
+    "Tests/CaptureCoreTests/CaptureSaveTests.swift": "09910600ad21ce78628137b0f10d6bb15c86555c21e58da6970df7e3d4bafefb",
+    "Tests/ThermoAppTests/CaptureSaveModelTests.swift": "3a6e947d1c5421b8618414f68c8b34047e97bae5f940be32e73b8db79095c3b1",
+    "scripts/verify-capture-ui.py": "f90013c8119f8b166dbba14ada679ac47a462ee0286082ac7962a597a9158256",
+    "scripts/verify-capture-ui.swift": "df6e025d9b0fdfcfc5275bd1fa29549a1ad88213c42e1082d5ed70e0dd7ae7d1"
+  },
+  "tests": {
+    "CaptureCore": 101,
+    "ThermoAppIncludingCleanScreen": 70,
+    "failures": 0,
+    "isolatedSourceLogSHA256": "eeeb46030b0d1ccf7cb1503c39d5bd92c291cd187aa8eddd44b503986f10c0e5",
+    "exclusiveRenameCoreTests": 5,
+    "exclusiveRenameLogSHA256": "8a912e4c2c119abeec31e31409037405fc66e9f0a4189f359d5792e942d62a8f",
+    "mainLogSHA256": "ba32131a4a532c743bf90c9a10bc77139de9e380640fac347776e5df913c9e64",
+    "mainContext": "clean detached local checkout; macOS 27 SDK, Swift 6.4; 101 Core plus 70 App tests; exit 0"
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-save-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "585937c7ef014a73ff0fdc73ac8ef9b99b82e41a57d05706950e2ba95ef23b65",
+    "buildLogSHA256": "6580fe9c92114370dfb12f3097cec9e7b971b325e85f50504d3752aaee878431",
+    "syntheticOnly": true,
+    "uiInteractionAccepted": false,
+    "observed": "Initial QA app launched and stayed live; control service crashed while reading window; no UI interactions or final-package runtime acceptance claimed",
+    "controlServiceCrashReportSHA256": "5776f1e454604fb59374cd4564d462600d5c73370f838406cc53859e5fbdc1b6",
+    "fault": "SkyComputerUseService: Array.remove(at:) assertion",
+    "privateClipboard": true
+  },
+  "remaining": [
+    "Native settings controls, directory authorization, import/export panels and restart recovery",
+    "Physical screen selection, permission denial and cross-application shortcuts",
+    "Other automatic-save triggers and retention",
+    "Manual save folder and last-format memory",
+    "Window/process/environment filename variables and additional image formats",
+    "JavaScript execution, CLI and other incomplete PixPin features"
+  ],
+  "installedThermoChanged": false,
+  "qualifiedMainCommit": "96e8eb2aa9797a4efe9f90153ab0044356f7f784",
+  "cleanup": {
+    "implementationAndMaincheckWorktreesRemoved": true,
+    "temporaryBranchRemovedAfterMatchingPatchIDs": true,
+    "obsoleteQAPackagesRemoved": true,
+    "finalQAPackageAndSyntheticProfileRetained": true,
+    "unrelatedMenuBarChangesPreserved": true
+  }
+}

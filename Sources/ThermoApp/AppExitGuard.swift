@@ -56,6 +56,9 @@ enum AppExitGuard {
 
 @MainActor
 final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillTerminate(_ notification: Notification) {
+        MenuBarManager.shared.shutdown()
+    }
     var showExitBlocker: @MainActor (MainPage) -> Void = { MainWindow.show($0) }
     /// Shared by the standalone entry point and an offscreen AppKit acceptance test.
     /// Termination is deferred until other close observers have retired page content.
@@ -71,7 +74,7 @@ final class MainOnlyDelegate: NSObject, NSApplicationDelegate {
         }
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        AppExitGuard.reply(show: showExitBlocker)
+        CaptureWorkspace.shared.terminationReply(AppExitGuard.reply(show: showExitBlocker))
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         MainWindow.show()

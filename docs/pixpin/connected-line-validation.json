@@ -1,0 +1,1629 @@
+{
+  "recordedAt": "2026-10-23T04:29:27.850696+00:00",
+  "sourceBase": "edb428810a2102a489a737736cf1f498af4de407",
+  "behaviorReference": "https://pixpin.cn/docs/mark/line",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureAnnotationEditing.swift": "1693b95057969326e160670707f5a48e56002b5580302459d4766832ff5e76ae",
+    "Sources/CaptureCore/CaptureAnnotationEffects.swift": "aa38f58fc5c1eafabcabc2e44146731313c6a1e6d2438fbecff987fb92b0fd00",
+    "Sources/CaptureCore/CaptureAnnotationStyles.swift": "f0965e88872b636386f6955ca8941277abd68df2f04e3620fb9e9747c400e591",
+    "Sources/CaptureCore/CaptureDocument.swift": "b0982f15c34d1d72bf390ec3c888bec81158b967b6534ebc1e1131b27cd4cf3e",
+    "Sources/ThermoApp/CaptureConnectedLine.swift": "0d685ba6e360d7ed99b7b21268e5622563c37717459b70724022f214a5c4c533",
+    "Sources/ThermoApp/CaptureAnnotationControls.swift": "854eced1b74ae9ed492a0dae010c1642485c87608199177ba09ddcfb7c4d8bb3",
+    "Sources/ThermoApp/CaptureAnnotationStyleControls.swift": "ae56539e4a94816e0b5927f294bbdb8aebd62f49e9729e99d80e36f39fde93ef",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "610f3734aa1be2ad21b2c171bf853feb151b3295daedd7964df0e1e0933008d2",
+    "Sources/ThermoL10n/ZhHans.swift": "8da1d4fe0b85328401e5690b2293e082cddf1c6ce8c7ee497d470e0a358ae095",
+    "Tests/CaptureCoreTests/CaptureConnectedLineStyleTests.swift": "3eadd16f71776bd0a281f70c7d35fcbbc979a04f219e3d772669293752f149e7",
+    "Tests/ThermoAppTests/CaptureConnectedLineTests.swift": "1a5dc73a37da53510cbd25282b7a7129afb87928140b8565886a822acc228112",
+    "scripts/verify-capture-ui.swift": "03d02afde4a331bcfce7c10d3857b89147513d5e4223bbdda0ed141c5f44dc7f"
+  },
+  "regression": {
+    "total": 241,
+    "failures": 0,
+    "newCoreTests": 4,
+    "newEditorTests": 6,
+    "counts": {
+      "ThermoKitTests.xctest": 0,
+      "ThermoHelperTests.xctest": 0,
+      "ThermoCLITests.xctest": 3,
+      "ThermoAppTests.xctest": 92,
+      "SearchCoreTests.xctest": 0,
+      "MenuBarCoreTests.xctest": 0,
+      "CleanKitTests.xctest": 0,
+      "CaptureScriptCoreTests.xctest": 10,
+      "CaptureCoreTests.xctest": 131,
+      "AgentDoctorTests.xctest": 4,
+      "AgentCoreTests.xctest": 1
+    },
+    "log": "/tmp/thermo-connected-line-regression-final-01a.log",
+    "logSHA256": "934124b1bff672a7da97bb684898b91f54e7a77b714131d97e9e3d66ab392702"
+  },
+  "verifiedInTests": [
+    "Click and hover retain a draft until confirm; one undo removes whole shape",
+    "Double click avoids duplicate endpoint; Return and right click confirm clicked vertices",
+    "Backspace edits only draft; Escape preserves existing document",
+    "Tool, mode, lock, source revision and model identity changes discard drafts",
+    "Single interior vertex editing and Shift snapping preserve other vertices",
+    "Legacy lines keep no endpoint markers and round caps/joins",
+    "Join/cap appearance and endpoint markers affect pixels; closed lines still draw markers",
+    "Fresh snapshot restores all vertices/styles with byte-identical PNG"
+  ],
+  "nativeQA": {
+    "app": "/tmp/thermo-connected-line-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "f48b5a899ee29bc85b00ec2988df5c306dc073e58060c8e984f5a3cb4d15171e",
+    "signatureVerified": true,
+    "records": {
+      "pending": {
+        "appActive": false,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 3,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "committed": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "filled",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                132.11920529801324,
+                513.9072847682119
+              ],
+              [
+                330.79470198675494,
+                480.79470198675494
+              ],
+              [
+                529.4701986754967,
+                547.0198675496689
+              ]
+            ],
+            "tool": "line",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 4,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "undone": {
+        "appActive": true,
+        "canRedo": true,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 5,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "vertex-moved": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "filled",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                132.11920529801324,
+                513.9072847682119
+              ],
+              [
+                330.79470198675494,
+                414.56953642384104
+              ],
+              [
+                529.4701986754967,
+                547.0198675496689
+              ]
+            ],
+            "tool": "line",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 7,
+        "segments": [],
+        "selected": [
+          3
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "cancelled": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "filled",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                132.11920529801324,
+                513.9072847682119
+              ],
+              [
+                330.79470198675494,
+                414.56953642384104
+              ],
+              [
+                529.4701986754967,
+                547.0198675496689
+              ]
+            ],
+            "tool": "line",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 7,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "double-click": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "filled",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                132.11920529801324,
+                513.9072847682119
+              ],
+              [
+                330.79470198675494,
+                414.56953642384104
+              ],
+              [
+                529.4701986754967,
+                547.0198675496689
+              ]
+            ],
+            "tool": "line",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "filled",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                595.6953642384105,
+                513.9072847682119
+              ],
+              [
+                728.1456953642383,
+                480.79470198675494
+              ],
+              [
+                794.3708609271523,
+                547.0198675496689
+              ]
+            ],
+            "tool": "line",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 8,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "right-click": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "filled",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                132.11920529801324,
+                513.9072847682119
+              ],
+              [
+                330.79470198675494,
+                414.56953642384104
+              ],
+              [
+                529.4701986754967,
+                547.0198675496689
+              ]
+            ],
+            "tool": "line",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "filled",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                595.6953642384105,
+                513.9072847682119
+              ],
+              [
+                728.1456953642383,
+                480.79470198675494
+              ],
+              [
+                794.3708609271523,
+                547.0198675496689
+              ]
+            ],
+            "tool": "line",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "filled",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                595.6953642384105,
+                381.4569536423841
+              ],
+              [
+                728.1456953642383,
+                348.34437086092714
+              ]
+            ],
+            "tool": "line",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 9,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "copied": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 26640,
+        "copiedPNGHash": "f31c86c78b804666e8ee3ef81d7065f6fb548f06163d8825b2ff3e5b1596c763",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "filled",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                132.11920529801324,
+                513.9072847682119
+              ],
+              [
+                330.79470198675494,
+                414.56953642384104
+              ],
+              [
+                529.4701986754967,
+                547.0198675496689
+              ]
+            ],
+            "tool": "line",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "filled",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                595.6953642384105,
+                513.9072847682119
+              ],
+              [
+                728.1456953642383,
+                480.79470198675494
+              ],
+              [
+                794.3708609271523,
+                547.0198675496689
+              ]
+            ],
+            "tool": "line",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "filled",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                595.6953642384105,
+                381.4569536423841
+              ],
+              [
+                728.1456953642383,
+                348.34437086092714
+              ]
+            ],
+            "tool": "line",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 9,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      }
+    },
+    "closed": {
+      "appActive": true,
+      "canRedo": false,
+      "canUndo": true,
+      "cropSelection": [],
+      "imageSize": [
+        900,
+        600
+      ],
+      "locked": false,
+      "objects": [
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "lineCap": "round",
+            "lineEnd": "none",
+            "lineJoin": "round",
+            "lineStart": "none",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              50,
+              290
+            ],
+            [
+              650,
+              470
+            ]
+          ],
+          "tool": "mosaic",
+          "width": 4
+        },
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "lineCap": "round",
+            "lineEnd": "none",
+            "lineJoin": "round",
+            "lineStart": "none",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              650,
+              60
+            ],
+            [
+              850,
+              260
+            ]
+          ],
+          "tool": "magnifier",
+          "width": 3
+        },
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "lineCap": "round",
+            "lineEnd": "none",
+            "lineJoin": "round",
+            "lineStart": "none",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              150,
+              220
+            ],
+            [
+              600,
+              220
+            ]
+          ],
+          "tool": "arrow",
+          "width": 4
+        },
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "lineCap": "round",
+            "lineEnd": "filled",
+            "lineJoin": "round",
+            "lineStart": "none",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              132.11920529801324,
+              513.9072847682119
+            ],
+            [
+              330.79470198675494,
+              414.56953642384104
+            ],
+            [
+              529.4701986754967,
+              547.0198675496689
+            ]
+          ],
+          "tool": "line",
+          "width": 4
+        },
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "lineCap": "round",
+            "lineEnd": "filled",
+            "lineJoin": "round",
+            "lineStart": "none",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              595.6953642384105,
+              513.9072847682119
+            ],
+            [
+              728.1456953642383,
+              480.79470198675494
+            ],
+            [
+              794.3708609271523,
+              547.0198675496689
+            ]
+          ],
+          "tool": "line",
+          "width": 4
+        },
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "lineCap": "round",
+            "lineEnd": "filled",
+            "lineJoin": "round",
+            "lineStart": "none",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              595.6953642384105,
+              381.4569536423841
+            ],
+            [
+              728.1456953642383,
+              348.34437086092714
+            ]
+          ],
+          "tool": "line",
+          "width": 4
+        }
+      ],
+      "pan": [
+        0,
+        0
+      ],
+      "renderCacheBytes": 0,
+      "revision": 9,
+      "selected": [],
+      "windowKey": false,
+      "windowMovable": true,
+      "windowVisible": false,
+      "zoom": 1
+    },
+    "verified": [
+      "Three physical clicks keep document at three original objects; Return creates one three-point line",
+      "One undo removes full line and redo restores it",
+      "Dragging interior control changes only that vertex",
+      "Backspace followed by Return and Escape does not commit a one-point draft",
+      "Double click creates three-point line without duplicate endpoint",
+      "Right click ends line with two previously confirmed vertices",
+      "Copy produces PNG on private pasteboard; close releases board and cache"
+    ],
+    "unverified": [
+      "Physical hover-only preview and Shift modifier constraints",
+      "Native join/cap changes and imported extremely large lines",
+      "Multi-display and real screenshot/recording inputs",
+      "Installed Thermo integration"
+    ],
+    "processStopped": true,
+    "reproducibleAppRemoved": true
+  },
+  "limits": [
+    "New connected lines have at most 4096 vertices",
+    "Right click and Return finalize confirmed left-click vertices, not the temporary cursor endpoint",
+    "Drawing mode is per editor and not stored; completed vertices and styles are persisted",
+    "No independent corner insertion/deletion on already committed lines"
+  ],
+  "installedAppChanged": false
+}

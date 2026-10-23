@@ -62,3 +62,16 @@ extension AppControlTransportTests {
         }
     }
 }
+
+extension AppControlTransportTests {
+    func testCaptureRepliesAllowBoundedLargeLogsWithoutIncreasingRequestOrOtherReplyLimits() throws {
+        let directory=URL(fileURLWithPath:"/private/tmp/tcc-"+String(UUID().uuidString.prefix(8)));defer{try? FileManager.default.removeItem(at:directory)}
+        let server=try AppControlServer(directory:directory){request,reply in reply(.init(request:request,succeeded:true,values:["payload":String(repeating:"x",count:100_000)]))}
+        try withExtendedLifetime(server){
+            let reply=try AppControlTransport.request(.init(action:"capture.status"),directory:directory);XCTAssertEqual(reply.values["payload"]?.count,100_000)
+            XCTAssertThrowsError(try AppControlTransport.request(.init(action:"status"),directory:directory))
+            XCTAssertThrowsError(try AppControlTransport.request(.init(action:"capture.run",arguments:["source":String(repeating:"x",count:70_000)]),directory:directory)){error in XCTAssertTrue(error.localizedDescription.contains("frame exceeds"))}
+        }
+        XCTAssertEqual(AppControlTransport.limit,65_536);XCTAssertEqual(AppControlTransport.responseLimit("status"),65_536)
+    }
+}

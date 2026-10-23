@@ -1,0 +1,276 @@
+{
+  "recordedAt": "2026-10-23T05:26:39.926733+00:00",
+  "productionSourceCommit": "03cb26f33ad28a8aa0aae2f1a6e60afdd906946c",
+  "sourceSHA256": {
+    "scripts/verify-capture-ui.py": "bc645cc187fdb1265207af94108ee4cf0f5a1c0adf11c8731e4ca07b3e0dbf75",
+    "scripts/verify-capture-ui.swift": "6dd56a76fe44f3d5a9ad9d1241587015b74ceed2a37c11d57ba40547e0c3249e",
+    "Sources/CaptureCore/CaptureBatchImageExport.swift": "f8e6d6273e30c7d73733225e100955723ed7aad8c1a97f2378994410d373df0b",
+    "Sources/ThermoApp/CaptureBatchImageExportModel.swift": "60e331c419268a0dd22f59b4ad1d36807c3c857e6e5a7c248086331fbff11e01",
+    "Sources/ThermoApp/CapturePinSession.swift": "fa72c3b9c9dfb01e5a32c619a78b8804aa41b75ec75bfb64a740a3d32c5208da",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "bee3fdd3571b7e1ed7146e1212b8d91842f06b42d9984d6e9c37eb495ec62160",
+    "Package.swift": "c19660f4b31a2f32a2ca31a7502c36880ab8acf0d13a558cd105bd508600bcb6"
+  },
+  "integrationRegression": {
+    "command": "DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer SDKROOT=<macOS SDK from that Xcode> swift test --skip HardwareTests",
+    "passed": 2332,
+    "failures": 0,
+    "executedCaseSkips": 0,
+    "excluded": "HardwareTests (real AppleSMC sampling and privilege-write check)",
+    "testBundles": {
+      "ThermoKitTests.xctest": 220,
+      "ThermoHelperTests.xctest": 30,
+      "ThermoCLITests.xctest": 130,
+      "ThermoAppTests.xctest": 478,
+      "SearchCoreTests.xctest": 11,
+      "MenuBarCoreTests.xctest": 27,
+      "CleanKitTests.xctest": 805,
+      "CaptureScriptCoreTests.xctest": 10,
+      "CaptureCoreTests.xctest": 146,
+      "AgentDoctorTests.xctest": 404,
+      "AgentCoreTests.xctest": 71
+    },
+    "log": "/tmp/thermo-capture-integration-full-01a.log",
+    "logSHA256": "bb516704d54a5d4979eb0c9b8eeff64760630d2c61ba958c799a8b54a54b07a4"
+  },
+  "helperBoundary": {
+    "path": "/Users/leo/github.com/thermo/.build/out/Products/Debug/thermo-helper",
+    "sha256": "902135219703344c2d907eb87deab2e2ddba7183304d1e4ef4a8673d2025c0cc",
+    "nmExit": 0,
+    "globalSymbolLines": 3104,
+    "captureSymbolMatches": [],
+    "dynamicLibraries": [
+      "\t/System/Library/Frameworks/IOKit.framework/Versions/A/IOKit (compatibility version 1.0.0, current version 275.0.0)",
+      "\t/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 5027.0.69)",
+      "\t/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 5027.0.69)",
+      "\t/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)",
+      "\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1359.0.0)",
+      "\t/System/Library/Frameworks/Security.framework/Versions/A/Security (compatibility version 1.0.0, current version 62460.1.2)",
+      "\t/usr/lib/swift/libswiftCore.dylib (compatibility version 0.0.0, current version 0.0.0)",
+      "\t/usr/lib/swift/libswiftCoreFoundation.dylib (compatibility version 1.0.0, current version 120.100.0, weak)",
+      "\t/usr/lib/swift/libswiftDarwin.dylib (compatibility version 1.0.0, current version 428.0.10)",
+      "\t/usr/lib/swift/libswiftDispatch.dylib (compatibility version 1.0.0, current version 1605.0.2)",
+      "\t/usr/lib/swift/libswiftIOKit.dylib (compatibility version 1.0.0, current version 1.0.0, weak)",
+      "\t/usr/lib/swift/libswiftObjectiveC.dylib (compatibility version 1.0.0, current version 973.1.0)",
+      "\t/usr/lib/swift/libswiftXPC.dylib (compatibility version 1.0.0, current version 167.0.2, weak)",
+      "\t/usr/lib/swift/libswift_Concurrency.dylib (compatibility version 0.0.0, current version 0.0.0)"
+    ]
+  },
+  "nativeCancellation": {
+    "app": "/tmp/thermo-batch-cancel-native-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "49f57ee0f38184b3618754dcc1b460030755307cbae81cb37300a7e5a09aaba1",
+    "signatureVerified": true,
+    "fixture": {
+      "artificialDelay": false,
+      "height": 1536,
+      "images": 80,
+      "sharedSnapshot": "E5BF3D4E-4609-4860-AA47-16456BF86EB2",
+      "width": 2048
+    },
+    "sourcePNG": {
+      "bytes": 11011998,
+      "sha256": "52b4fad21f0d6bef60f1f493056d51a6346c721dce2c480bed8e34c410724226"
+    },
+    "records": {
+      "running": {
+        "batchExport": {
+          "allGroups": false,
+          "cancelling": false,
+          "completed": 28,
+          "folder": "",
+          "format": "png",
+          "issue": "",
+          "running": true,
+          "selectedGroupID": "2E169508-D44B-444D-B0C6-442590C1616D",
+          "total": 80
+        },
+        "issue": "",
+        "libraryVisible": true,
+        "pins": [],
+        "savedPins": 80,
+        "observedStageFiles": [
+          {
+            "name": ".thermo-batch-d10ddd4c-b6fa-4206-862f-826d7c2c6495",
+            "files": [
+              {
+                "name": "0006-Batch image 006-388c60e1.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0003-Batch image 003-b0ecd338.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0005-Batch image 005-b554a489.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0015-Batch image 015-22d237a1.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0018-Batch image 018-a211361e.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0013-Batch image 013-880c81d1.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0023-Batch image 023-7745b051.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0011-Batch image 011-02981334.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0020-Batch image 020-d752a8e1.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0024-Batch image 024-da7e8436.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0009-Batch image 009-3aafa9d4.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0016-Batch image 016-c4f22569.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0012-Batch image 012-1211f738.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0014-Batch image 014-773cd343.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0022-Batch image 022-1192f7da.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0007-Batch image 007-ad5a728a.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0029-Batch image 029-e309146f.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0019-Batch image 019-24418713.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0028-Batch image 028-50d26749.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0021-Batch image 021-339a862d.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0027-Batch image 027-ae45d7c3.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0017-Batch image 017-6e73649b.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0025-Batch image 025-20efe8bf.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0001-Batch image 001-41a3e8fb.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0002-Batch image 002-5162223f.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0010-Batch image 010-0a18699e.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0008-Batch image 008-1d9338d4.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0026-Batch image 026-a03dc311.png",
+                "bytes": 11011998
+              },
+              {
+                "name": "0004-Batch image 004-656b01e1.png",
+                "bytes": 11011998
+              }
+            ]
+          }
+        ],
+        "observedAt": 1792732977.729162
+      },
+      "cancelled": {
+        "batchExport": {
+          "allGroups": false,
+          "cancelling": false,
+          "completed": 55,
+          "folder": "",
+          "format": "png",
+          "issue": "批量图像导出已取消。",
+          "running": false,
+          "selectedGroupID": "2E169508-D44B-444D-B0C6-442590C1616D",
+          "total": 80
+        },
+        "issue": "",
+        "libraryVisible": true,
+        "pins": [],
+        "savedPins": 80,
+        "observedAt": 1792732991.501001
+      },
+      "final": {
+        "batchExport": {
+          "allGroups": false,
+          "cancelling": false,
+          "completed": 55,
+          "folder": "",
+          "format": "png",
+          "issue": "批量图像导出已取消。",
+          "running": false,
+          "selectedGroupID": "2E169508-D44B-444D-B0C6-442590C1616D",
+          "total": 80
+        },
+        "issue": "",
+        "libraryVisible": false,
+        "pins": [],
+        "savedPins": 80
+      }
+    },
+    "verified": [
+      "80 hidden unloaded image pins share one high-entropy synthetic PNG",
+      "Production exporter performs real decoding and PNG encoding without injected sleeps",
+      "Native progress and Cancel button observed while running",
+      "Positive progress and staged output files recorded before native Cancel click",
+      "Cancellation becomes terminal with count 55/80 and no published result",
+      "Own staged files removed; existing keep.txt unchanged; scope/format/export controls reenabled"
+    ],
+    "unverified": [
+      "Cancellation during a single 80MP encode and latency bound",
+      "Native JPEG/TIFF long-job cancellation",
+      "Process crash or power loss recovery",
+      "Real screen capture permission and installed Thermo acceptance"
+    ],
+    "cleanupReadback": "Final AX tree reads timed out twice; rechecked the same process and fresh own probe. The probe was live and the job terminal; management-window visibility was false. No duplicate app was launched.",
+    "processStopped": true,
+    "reproducibleAppAndFixtureRemoved": true
+  },
+  "installedAppChanged": false,
+  "productionCodeChangedThisTurn": false,
+  "installedVersionReadback": {
+    "version": "1.2.5",
+    "build": "717",
+    "newCaptureAcceptance": false
+  }
+}

@@ -20,6 +20,29 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.autoenablesItems = false
         menu.addItem(item(tr("Open Thermo"), "macwindow", key: "o") { MainWindow.show() })
         menu.addItem(item(tr("Search apps and files"), "magnifyingglass") { LocalSearchPanel.shared.show() })
+        menu.addItem(item(tr("Manage menu bar…"), "menubar.rectangle") { MenuBarManagerPanel.shared.show() })
+        for control in MenuBarQuickControls.items(model: .shared) { menu.addItem(control) }
+        menu.addItem(item(tr("Capture screen…") + CaptureWorkspace.shared.shortcutSuffix(for:.screenshot), "viewfinder") { CaptureWorkspace.shared.capture() })
+        menu.addItem(item(tr("Pin clipboard") + CaptureWorkspace.shared.shortcutSuffix(for:.pinClipboard), "pin") { CaptureWorkspace.shared.pinClipboard() })
+        menu.addItem(item(tr("Pin clipboard as text"), "text.quote") { CaptureWorkspace.shared.pinClipboard(asText:true) })
+        menu.addItem(item(tr("Pin clipboard as LaTeX"), "function") { CaptureWorkspace.shared.pinClipboard(asLaTeX:true) })
+        menu.addItem(item(tr("Capture saving and after-actions"), "square.and.arrow.down") { CaptureWorkspace.shared.showSavingSettings() })
+        menu.addItem(item(tr("Capture shortcuts and actions"), "keyboard") { CaptureWorkspace.shared.showActionSettings() })
+        let configured=NSMenu();configured.autoenablesItems=false
+        for entry in CaptureWorkspace.shared.shortcuts.settings.entries where entry.appearsInMenu {
+            let label=CaptureWorkspace.shared.shortcuts.label(for:entry)
+            configured.addItem(item((entry.title.isEmpty ? tr(entry.action.title) : entry.title)+(label.isEmpty ? "" : "  "+label),nil) {
+                let workspace=CaptureWorkspace.shared;workspace.shortcuts.run(entry);if workspace.shortcuts.issue != nil { workspace.showActionSettings() }
+            })
+        }
+        if !configured.items.isEmpty { let entry=NSMenuItem(title:tr("Configured capture actions"),action:nil,keyEquivalent:"");entry.submenu=configured;menu.addItem(entry) }
+        menu.addItem(item(tr("Open image…"), "photo") { CaptureWorkspace.shared.importImage() })
+        menu.addItem(item(tr("Scrolling capture…"), "arrow.down.right.and.arrow.up.left") { CaptureWorkspace.shared.captureScrolling() })
+        menu.addItem(item(tr("Record screen…"), "record.circle") { CaptureWorkspace.shared.recordScreen() })
+        menu.addItem(item(tr("Recording drafts…"), "film.stack") { CaptureWorkspace.shared.recordScreen(draftsOnly:true) })
+        menu.addItem(item(tr("Pin groups and history"), "square.stack") { CaptureWorkspace.shared.showPinLibrary() })
+        menu.addItem(item(tr("Restore pin mouse interaction"),"cursorarrow") {CaptureWorkspace.shared.pinSession.restoreMouseInteraction()})
+        menu.addItem(item(tr("Restore last closed pin"), "arrow.uturn.backward") { CaptureWorkspace.shared.restoreLastPin() })
         menu.addItem(item(tr("Settings…"), "gearshape", key: ",") { MainWindow.show(.settings) })
         menu.addItem(.separator())
 

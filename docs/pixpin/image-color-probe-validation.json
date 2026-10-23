@@ -1,0 +1,102 @@
+{
+  "date": "2026-10-23",
+  "scope": "image-local pixel color picking; not global screen sampling",
+  "sourceParent": "c6417cc",
+  "tests": {
+    "command": "swift test --filter Capture|Localization",
+    "passed": 280,
+    "failures": 0,
+    "suites": [
+      {
+        "suite": "ThermoKitTests.xctest",
+        "tests": 0,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoHelperTests.xctest",
+        "tests": 0,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoCLITests.xctest",
+        "tests": 3,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoAppTests.xctest",
+        "tests": 108,
+        "failures": 0
+      },
+      {
+        "suite": "SearchCoreTests.xctest",
+        "tests": 0,
+        "failures": 0
+      },
+      {
+        "suite": "MenuBarCoreTests.xctest",
+        "tests": 0,
+        "failures": 0
+      },
+      {
+        "suite": "CleanKitTests.xctest",
+        "tests": 0,
+        "failures": 0
+      },
+      {
+        "suite": "CaptureScriptCoreTests.xctest",
+        "tests": 10,
+        "failures": 0
+      },
+      {
+        "suite": "CaptureCoreTests.xctest",
+        "tests": 154,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests.xctest",
+        "tests": 4,
+        "failures": 0
+      },
+      {
+        "suite": "AgentCoreTests.xctest",
+        "tests": 1,
+        "failures": 0
+      }
+    ]
+  },
+  "native": {
+    "verified": [
+      "Picker remains available when pin is locked",
+      "Native format menu changes RGB to HEX while locked",
+      "Toggle exits picker without document revision or annotation change",
+      "Before/after image copy has identical PNG SHA-256",
+      "Window closes, render cache empties and private pasteboard releases"
+    ],
+    "baselinePNGHash": "66c5e39b2b37eb9e260e6f0198b98f1be7d3f0b0a363901e25915845ec1fb8b3",
+    "revisionBefore": 3,
+    "revisionAfter": 3,
+    "objectsBefore": 3,
+    "objectsAfter": 3,
+    "unverified": [
+      "Pointer sampling and magnifier: CUA coordinate click returned noWindowsAvailable twice",
+      "Physical Canvas C/Shift/Option/Esc: event behavior covered in AppKit tests, not physical native acceptance",
+      "HDR/wide-gamut and 80MP responsiveness",
+      "Installed full Thermo integration"
+    ],
+    "lockedFormat": "HEX",
+    "closed": {
+      "windowVisible": false,
+      "renderCacheBytes": 0
+    },
+    "processStopped": true,
+    "reproducibleAppsRemoved": true
+  },
+  "behavior": [
+    "Confirmed image including annotations and adjustments; view opacity and editor overlays excluded",
+    "Top-left pixel coordinates; straight alpha 8-bit sRGB",
+    "Single live composite reused and cleared on exit/resign/hide/close; separate from static 128MiB cache",
+    "Unconfirmed gestures cancelled on entry; document and undo history unchanged",
+    "No new OS permissions, global monitors or persistent picker preferences"
+  ],
+  "installedAppChanged": false
+}

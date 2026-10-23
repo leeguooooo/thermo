@@ -14,11 +14,14 @@ let package = Package(
         .library(name: "CleanKit", targets: ["CleanKit"]),
         .library(name: "AgentCore", targets: ["AgentCore"]),
         .library(name: "SearchCore", targets: ["SearchCore"]),
+        .library(name: "CaptureCore", targets: ["CaptureCore"]),
+        .executable(name: "thermo-capture-script", targets: ["CaptureScriptWorker"]),
     ],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.6"),
         .package(url: "https://github.com/swiftlang/swift-markdown", exact: "0.9.0"),
         .package(url: "https://github.com/jpsim/Yams", exact: "6.2.2"),
+        .package(url: "https://github.com/SDWebImage/libwebp-Xcode", exact: "1.6.0"),
     ],
     targets: [
         .target(
@@ -26,6 +29,8 @@ let package = Package(
             linkerSettings: [.linkedFramework("IOKit"), .linkedFramework("CoreFoundation")]
         ),
         .target(name: "ThermoKit", dependencies: ["CSMC"]),
+        .target(name: "MenuBarCore"),
+        .target(name: "CMenuBar", cSettings: [.unsafeFlags(["-fobjc-arc"])], linkerSettings: [.linkedFramework("Foundation")]),
         .target(name: "CTokenData", linkerSettings: [.linkedLibrary("z")]),
         // Userspace-only diagnostics; kept out of ThermoKit so the root helper never links it.
         // UI strings and translations; the root helper never links it.
@@ -36,25 +41,32 @@ let package = Package(
         .systemLibrary(name: "CSQLite"),
         // Local search runs as the user; never linked into the privileged helper.
         .target(name: "SearchCore", dependencies: ["CSQLite"], linkerSettings: [.linkedFramework("CoreServices")]),
+        .target(name: "CWebPEncoder", dependencies: [.product(name: "libwebp", package: "libwebp-Xcode")]),
+        .target(name:"CaptureScriptCore"),
+        .executableTarget(name:"CaptureScriptWorker",dependencies:["CaptureScriptCore"],linkerSettings:[.linkedFramework("JavaScriptCore")]),
+        .target(name: "CaptureCore", dependencies: ["CWebPEncoder"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("Vision"), .linkedFramework("AVFoundation"), .linkedFramework("JavaScriptCore")]),
         // Disk cleanup runs as the user only: the root helper must never link it.
         .target(name: "CleanKit", dependencies: ["AgentCore", "ThermoL10n"]),
-        .executableTarget(name: "thermo", dependencies: ["ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore"]),
+        .executableTarget(name: "thermo", dependencies: ["CaptureScriptCore", "ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore"]),
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
             name: "ThermoApp",
-            dependencies: ["ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", .product(name: "Sparkle", package: "Sparkle")],
-            linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"),
+            dependencies: ["ThermoKit", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore", "CaptureCore", "CaptureScriptCore", "MenuBarCore", "CMenuBar", .product(name: "Sparkle", package: "Sparkle")],
+            linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("SwiftUI"), .linkedFramework("Charts"), .linkedFramework("AVKit"), .linkedFramework("WebKit"), .linkedFramework("Quartz"),
                              .linkedFramework("CoreWLAN"), .linkedFramework("IOBluetooth"), .linkedFramework("CoreAudio"),
                              .linkedFramework("AudioToolbox"), .linkedFramework("CoreLocation")]
         ),
         .testTarget(name: "ThermoCLITests", dependencies: ["thermo"]),
-        .testTarget(name: "ThermoAppTests", dependencies: ["ThermoApp", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor", "SearchCore"]),
+        .testTarget(name: "ThermoAppTests", dependencies: ["ThermoApp", "ThermoKit", "CleanKit", "AgentCore", "AgentDoctor", "SearchCore", "MenuBarCore"]),
         .testTarget(name: "ThermoKitTests", dependencies: ["ThermoKit", "CSMC"]),
         .testTarget(name: "ThermoHelperTests", dependencies: ["ThermoHelper", "ThermoKit"]),
         .testTarget(name: "AgentDoctorTests", dependencies: ["AgentDoctor", "ThermoL10n", "AgentCore"], exclude: ["Fixtures"]),
         .testTarget(name: "CleanKitTests", dependencies: ["CleanKit"]),
         .testTarget(name: "AgentCoreTests", dependencies: ["AgentCore"]),
         .testTarget(name: "SearchCoreTests", dependencies: ["SearchCore"]),
+        .testTarget(name:"CaptureScriptCoreTests",dependencies:["CaptureScriptCore"]),
+        .testTarget(name: "CaptureCoreTests", dependencies: ["CaptureCore"]),
+        .testTarget(name: "MenuBarCoreTests", dependencies: ["MenuBarCore"]),
     ],
     swiftLanguageVersions: [.v5]
 )

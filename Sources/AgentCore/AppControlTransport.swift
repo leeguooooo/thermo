@@ -39,6 +39,8 @@ public enum AppControlTransport {
         return URL(fileURLWithPath:String(cString:pointer) + "/Library/Application Support/Thermo/Control")
     }
     static let limit = 65_536
+    // Capture results can contain bounded script logs; requests and all other operations retain 64 KiB.
+    static func responseLimit(_ action:String)->Int { ["capture.run","capture.action","capture.status","capture.cancel","capture.actions"].contains(action) ? 4*1024*1024 : limit }
     static func path(_ directory: URL) -> String { directory.appendingPathComponent("app.sock").path }
     static func address(_ path: String) throws -> sockaddr_un {
         var address = sockaddr_un(); address.sun_family = sa_family_t(AF_UNIX)
@@ -89,10 +91,10 @@ public enum AppControlTransport {
         var uid: uid_t = 0, gid: gid_t = 0
         guard getpeereid(fd, &uid, &gid) == 0, uid == getuid() else { throw Failure("App control peer is not the current user.") }
     }
-    static func receive<T: Decodable>(_ type: T.Type, fd: Int32, timeout: TimeInterval = 3) throws -> T {
+    static func receive<T: Decodable>(_ type: T.Type, fd: Int32, timeout: TimeInterval = 3, maximum:Int = limit) throws -> T {
         var data = Data(), bytes = [UInt8](repeating: 0, count: 4096)
         let deadline = ProcessInfo.processInfo.systemUptime + timeout
-        while data.count <= limit {
+        while data.count <= maximum {
             let remaining = deadline - ProcessInfo.processInfo.systemUptime
             var readiness = pollfd(fd:fd,events:Int16(POLLIN),revents:0)
             guard remaining > 0, poll(&readiness,1,Int32(min(300_000,max(1,remaining * 1000)))) > 0 else { throw Failure("Control frame timed out; delivery is unconfirmed. Query status before another action.") }
@@ -100,15 +102,15 @@ public enum AppControlTransport {
             guard n > 0 else { throw Failure("App control response is unavailable or timed out. Delivery may be unconfirmed; query status before another action.") }
             data.append(contentsOf: bytes.prefix(n))
             if let newline = data.firstIndex(of: 10) {
-                guard newline == data.count - 1, data.count <= limit else { throw Failure("Invalid control frame.") }
+                guard newline == data.count - 1, data.count <= maximum else { throw Failure("Invalid control frame.") }
                 return try JSONDecoder().decode(type, from: data.prefix(newline))
             }
         }
         throw Failure("Control frame exceeds its limit.")
     }
-    static func send<T: Encodable>(_ value: T, fd: Int32) throws {
+    static func send<T: Encodable>(_ value: T, fd: Int32, maximum:Int = limit) throws {
         var data = try JSONEncoder().encode(value); data.append(10)
-        guard data.count <= limit else { throw Failure("Control frame exceeds its limit.") }
+        guard data.count <= maximum else { throw Failure("Control frame exceeds its limit.") }
         try data.withUnsafeBytes { raw in
             var offset = 0
             while offset < raw.count {
@@ -128,7 +130,7 @@ public enum AppControlTransport {
         try peer(fd)
         guard authorizeServer(try peerAuditToken(fd)) else { throw Failure("App server signature is not authorized. No request was sent.") }
         try send(request, fd: fd)
-        let reply = try receive(AppControlResponse.self, fd: fd, timeout:TimeInterval(timeout))
+        let reply = try receive(AppControlResponse.self, fd: fd, timeout:TimeInterval(timeout),maximum:responseLimit(request.action))
         guard reply.schema == 1, reply.id == request.id else { throw Failure("App control reply does not match the request; outcome is unconfirmed.") }
         return reply
     }
@@ -190,7 +192,7 @@ public final class AppControlServer: @unchecked Sendable {
                     let box = ReplyBox()
                     handler(request) { response in box.set(response); done.signal() }
                     guard done.wait(timeout: .now() + 295) == .success, let reply = box.get() else { return }
-                    try AppControlTransport.send(reply, fd: client)
+                    try AppControlTransport.send(reply, fd: client,maximum:AppControlTransport.responseLimit(request.action))
                 } catch { /* no mutation is retried after invalid or lost delivery */ }
             }
         }

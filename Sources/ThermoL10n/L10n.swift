@@ -20,7 +20,7 @@ public enum Language: String, CaseIterable, Identifiable, Sendable {
     var table: [String: String]? {
         switch self {
         case .english: return nil
-        case .simplifiedChinese: return zhHans
+        case .simplifiedChinese: return zhHansWithMenuBar
         }
     }
 }

@@ -1,0 +1,85 @@
+{
+  "status": "partial",
+  "recordedAt": "2026-10-22T11:31:49.425939+00:00",
+  "qualifiedMainCommit": "e78f907c24e43d4d62ba369978d63ff5fc07a15e",
+  "sourceSHA256": {
+    "Package.swift": "7627c251937a4ae73a3e1058d3f8158ee4b79df9cce6735ebe83f0eb71483ae9",
+    "Sources/CaptureCore/CaptureActions.swift": "b4e035dd782bc364ad6e258cd7d11e960d5c7a83b967c7e2b0793d6f69a022e9",
+    "Sources/CaptureScriptCore/CaptureScriptRunner.swift": "826d8c499fa835e686b303a9ba37b5726a56b42e2284812c41069955f96bbfbc",
+    "Sources/CaptureScriptCore/ScriptWire.swift": "d8561c5e2472e4cf7efe5a314caed74cb6fc5189d4cb930266d852c9203728ef",
+    "Sources/CaptureScriptWorker/main.swift": "4c961a0819e9b256c8521ae68172ff899b028872307ed3be67bdb75de830dfce",
+    "Sources/ThermoApp/CaptureActionSettingsView.swift": "1153a95ea1d030eb85d3d85d1997bf55e4ade7fb6186e9a277d3c28ba3ff7a32",
+    "Sources/ThermoApp/CaptureConfiguredActionsMenu.swift": "5d2488bc02317895fce1fe0cce51336c37d8ff9f2773677e7fb12719de4f97da",
+    "Sources/ThermoApp/CaptureScriptActions.swift": "8e23332f6ef3dbb777bd287609d25eaccd62daada92e128101d963f6ff94502a",
+    "Sources/ThermoApp/CaptureShortcutModel.swift": "d08cd2da7c0f4a17dd887b208d953d3510f19f13438ca1d87a10d53634dc7b57",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "dcd57b7921cac2b57a507399ddb15b99ab97e0ac61779dbc047d9b32ed9e9c4b",
+    "Sources/ThermoApp/StatusMenu.swift": "c58d127355195b929f3e245c9eb2f04bfe7bb4d6c78f533b7c56ec3a872f6869",
+    "Sources/ThermoL10n/ZhHans.swift": "942f06751b951874cc0a9681671db64cba0ab6774a8c573c68a0d9c9f58718c2",
+    "Tests/CaptureCoreTests/CaptureActionSettingsTests.swift": "0dd3b85114e110ac52b2df3772a794e79c3b146a0e24b3b603a763bd69931953",
+    "Tests/CaptureScriptCoreTests/CaptureScriptRunnerTests.swift": "5fbc51fe8e39f1692d0e64a3eade0aeff25f8ae6cc46536522e427efa433c6d8",
+    "Tests/ThermoAppTests/CaptureScriptActionTests.swift": "e9ed3aa116236845b6a642588db8dcdd09c239058b4f2502452387749e689f06",
+    "scripts/build.sh": "9f2ea28cd16d24fb23845f06c3e2b81a0d0752cf5bb0a7f5d7e10ea925f6a39a",
+    "scripts/verify-artifacts.sh": "18e88f1c1910e6a2380c835381a7d2c10c98a3b8adba337234f849a8fa9751ce",
+    "scripts/verify-capture-ui.py": "0ad90fd644bc3aef0c4fbd0c328a1b80450718d37e2bd427c4bc13e9d1de4e53",
+    "scripts/verify-capture-ui.swift": "774673c91b37b58840936ccf11585bbc31f856cafac4282868149428753bbf70"
+  },
+  "tests": {
+    "CaptureCore": 102,
+    "ThermoAppIncludingCleanScreen": 75,
+    "CaptureScriptCore": 10,
+    "total": 187,
+    "failures": 0,
+    "mainLogSHA256": "0d27db8a2612ac685e347628875f1ea841c91649130a66e38f4cba6a9269f9ef",
+    "isolatedLogSHA256": "32272c4dfb26aeb342906fac9384e2bb7e8c4260829a229d38fc9b40fc6eea3e",
+    "context": "clean detached local main checkout; Swift 6.4 and macOS 27 SDK; exit 0",
+    "kernelCPUStopSecondsObserved": 10.1
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-script-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "76bbf4f3b8488aab821c1c129f23d75d9c9be682190c19d99dd80a6b59c96e71",
+    "workerSHA256": "280a33bb41dba9fc3bc639ff9f77c607c4ea5b34f7752878eaa406b616729fc3",
+    "buildLogSHA256": "ed98ab89f837ec09debb0816d243110126f336d4aa23773a8d912e7176812da5",
+    "observations": {
+      "profileSHA256": "2cbd296cb3ff2a6024aa90e8698c91baac05d9b547530417b4da2056e37e1faa",
+      "resultSHA256": "6c4e3e4d2be996f3ae09e74a3abfd66cff0f74f29c0d63bd3c482b9eb0d487e3",
+      "resultMtimeNS": 1792668177793918903,
+      "firstSequencePinLocked": true,
+      "firstSequencePinHidden": false,
+      "syntaxErrorDisplayed": true,
+      "infiniteLoopCancelledFromUI": true,
+      "configuredMenuExecutedSavedSource": true,
+      "restartRestoredSource": true,
+      "restartDidNotRunScript": true,
+      "voidResultVerified": true,
+      "voidResult": {
+        "value": null,
+        "logs": [
+          "void result"
+        ]
+      },
+      "finalProfileSHA256": "da387c0798eecca0ddef3a6658e964c133dcf84107639291376c9b25779eb9ff",
+      "transientControlIssue": "CUA reported user change then repeated AX timeouts; process sampling showed normal AppKit event loop; exact owned QA PID stopped for cleanup",
+      "afterSourceCleanupRestarted": true,
+      "afterSourceCleanupExecutedSavedSource": true,
+      "finalQuitConfirmed": true
+    },
+    "syntheticOnly": true,
+    "adHocBundleAndWorkerSignaturesVerified": true,
+    "installedThermoChanged": false
+  },
+  "cleanup": {
+    "implementationAndMaincheckWorktreesRemoved": true,
+    "temporaryBranchRemovedAfterMatchingPatchIDs": true,
+    "oldQAPackageAndEditScriptsRemoved": true,
+    "finalQAProfileLibraryLogsRetained": true,
+    "unrelatedMenuBarWorkPreserved": true
+  },
+  "remaining": [
+    "Full PixPin script API and compatibility layer",
+    "CLI and running-App command delivery",
+    "Direct preset regions, files, shell commands, translation and recording script lifecycle",
+    "Real screen selection, permissions, cancellation and physical global hotkeys",
+    "Signed release package, older macOS and x86_64 runtime acceptance",
+    "Other incomplete PixPin features"
+  ]
+}

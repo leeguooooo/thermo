@@ -1,0 +1,59 @@
+{
+  "status": "partial",
+  "recordedAt": "2026-10-22T07:51:34.275083+00:00",
+  "baseCommit": "6b674c26a9345dd156b191717591eabc64a0d4ae",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureAnnotationEditing.swift": "658909554009dc2eee57d4e6eb98fbbfc113d4b6f5b747997d3b0ed17cef2d99",
+    "Sources/CaptureCore/CaptureAnnotationEffects.swift": "383186f983394e078386d4448e0c878c945a1b49a5127f55aaf8d14c380c35be",
+    "Sources/CaptureCore/CaptureDocument.swift": "95e5d38d9ecaab137466618acbfd4156d33ff07b9455fc32676cfaf21fe96856",
+    "Sources/CaptureCore/CaptureNormalEdits.swift": "1091af677979ec873b3d66aa48c5dcfb86ccc2ee0837ecc5e7e81af0438c00ed",
+    "Sources/CaptureCore/CaptureNormalRenderer.swift": "0b8b07e8a5c0a092ae497100d721136d31990bb56f71424d92bff5f1d9ff4112",
+    "Sources/ThermoApp/CaptureAnnotationControls.swift": "915477ccfc2b7ac3b1972390a9346f522ad76ac79c190001619f53574e1e23d4",
+    "Sources/ThermoApp/CaptureNormalOverlay.swift": "1e6c6e30c1005d10dd8e807b0b505be53d6a16a095300bc4fd352990a7599e3f",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "09de74f5e1f4376fd21f52ad70cc10413eedc8c92a87b4e15d6174b81046579f",
+    "Sources/ThermoL10n/ZhHans.swift": "3e26dc0664e1dbbd590d86dcb4773dd3a276611c89bb0d165ac8727f07d60fbb",
+    "Tests/CaptureCoreTests/CaptureAnnotationEffectsTests.swift": "2643c8e736a0ff819acfd246a36453f38cce362137cd857e229fb0fc257fc650",
+    "Tests/CaptureCoreTests/CaptureAnnotationMovieTests.swift": "b1d6bdef2a051ba8c89f21201f08bc529b4011f80a29069b0c43b623769bf73c",
+    "Tests/ThermoAppTests/CaptureAnnotationInspectorTests.swift": "4c903f74b22a7a58635db1cd014bc2a5f7d649ac2a623384dafe8dd38ad2ad8e",
+    "scripts/verify-capture-ui.py": "4a6d7f70eb7c3af9f13afea15ad4de8bef6a23987805f79a3bffcba99454d0cb",
+    "scripts/verify-capture-ui.swift": "b80fdecaeada001419da8b39333bebceef8c62a5d67e4f77f1acae1e276854d3"
+  },
+  "tests": {
+    "CaptureCore": 69,
+    "ThermoApp": 29,
+    "failures": 0,
+    "logSHA256": "359ac20fe0bbb22d88db819ab26ab56542a756db26394fdab552a1af23cc8bb4",
+    "context": "isolated local workspace"
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-annotations-qa-final-01a/ThermoCaptureQA.app",
+    "binarySHA256": "9fd7404dedaa0875a331578d6754e6a47ed95074998ff2d3c6fe270fb3d664a4",
+    "bundledSparkleFramework": true,
+    "syntheticOnly": true,
+    "verified": [
+      "Mosaic strength 18 to 36, undo to 18, redo to 36",
+      "Delete selected annotation and undo restores mosaic image",
+      "Ellipse magnifier visibly enlarges stripe fixture"
+    ],
+    "unverified": [
+      "Native drawing, object drag and resize gestures",
+      "Foreground save panel"
+    ],
+    "restartedWithBundledFramework": true
+  },
+  "remaining": [
+    "Offline smart erase model",
+    "Automatic matching and synchronized annotations",
+    "Multiple object selection",
+    "Other incomplete features in docs/pixpin/README.md"
+  ],
+  "integratedCommit": "cedb792",
+  "mainCleanCheckoutTests": {
+    "commit": "cedb792",
+    "CaptureCore": 69,
+    "ThermoApp": 29,
+    "failures": 0,
+    "logSHA256": "16d7f0109b534804bf372756c3ffd76e84c20f700e81bde32faa891dc5a9390b",
+    "recordedAt": "2026-10-22T07:53:30.705488+00:00"
+  }
+}

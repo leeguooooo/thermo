@@ -10,8 +10,9 @@ import ThermoKit
     private let defaults: UserDefaults
     private let screen: CleanScreenModel
     private let idleAwake: IdleAwakeModel
-    init(defaults: UserDefaults = .standard, screen: CleanScreenModel? = nil, idleAwake: IdleAwakeModel? = nil) {
-        self.defaults = defaults; self.screen = screen ?? .shared; self.idleAwake = idleAwake ?? .shared
+    private let captureHost:CaptureCLIHost?
+    init(defaults: UserDefaults = .standard, screen: CleanScreenModel? = nil, idleAwake: IdleAwakeModel? = nil,capture:CaptureCLIHost?=nil) {
+        self.captureHost=capture;self.defaults = defaults; self.screen = screen ?? .shared; self.idleAwake = idleAwake ?? .shared
     }
     private var server: AppControlServer?
     private let integration = AgentAccess()
@@ -36,6 +37,7 @@ import ThermoKit
         guard seen.count < 100_000 else { return result([:], "Control request limit reached; restart Thermo when idle.") }
         seen.insert(request.id)
         let action = request.action
+        if action.hasPrefix("capture."){return await (captureHost ?? .shared).handle(request)}
         let reads = ["status","screen.status","login.status","updates.status","helper.status","permissions.status","integration.status","awdl.status","keep-awake.status"]
         let writes = ["screen.start","screen.stop","screen.duration","screen.shortcut","screen.clear-shortcut","login.on","login.off","updates.on","updates.off","updates.check","helper.install","helper.uninstall","permissions.notifications","permissions.accessibility","permissions.login","integration.link","integration.claude","integration.codex","awdl.on","awdl.off","keep-awake.start","keep-awake.stop","search.show","search.settings","search.useCommandSpace","search.giveBackCommandSpace"]
         guard reads.contains(action) || writes.contains(action) else { return result([:], "Unsupported App control operation.") }
