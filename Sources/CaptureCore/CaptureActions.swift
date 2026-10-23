@@ -2,6 +2,7 @@ import Foundation
 
 public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
     case script
+    case togglePassthrough,restoreMouseInteraction
     case screenshotCopy,screenshotOCR,screenshotQuickSave,saveSettings,quickSaveImage
     case screenshot, pinClipboard, pinText, pinLaTeX, openImage, scrolling, recording, recordingDrafts
     case pinGroups, shortcutSettings, nextGroup, previousGroup, restorePin, showPins, hidePins, togglePins, closePins
@@ -10,6 +11,8 @@ public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
     public var title:String {
         switch self {
         case .script:return "JavaScript capture script"
+        case .togglePassthrough:return "Toggle pin mouse passthrough"
+        case .restoreMouseInteraction:return "Restore pin mouse interaction"
         case .screenshotCopy:return "Capture and copy image…";case .screenshotOCR:return "Capture and copy OCR text…";case .screenshotQuickSave:return "Capture and quick save…"
         case .saveSettings:return "Capture saving and after-actions";case .quickSaveImage:return "Quick save current pin image"
         case .screenshot:return "Capture screen…";case .pinClipboard:return "Pin clipboard";case .pinText:return "Pin clipboard as text";case .pinLaTeX:return "Pin clipboard as LaTeX"
@@ -22,7 +25,7 @@ public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
         }
     }
     public var supportsScript:Bool { ![.script,.scrolling,.recording,.recordingDrafts,.openImage,.saveImage].contains(self) }
-    public var needsPin:Bool { [.quickSaveImage,.showPin,.closePin,.copyImage,.copyContent,.saveImage,.recognize,.toggleTop,.toggleLock,.resetZoom,.rotate,.flip,.undo,.redo].contains(self) }
+    public var needsPin:Bool { [.togglePassthrough,.quickSaveImage,.showPin,.closePin,.copyImage,.copyContent,.saveImage,.recognize,.toggleTop,.toggleLock,.resetZoom,.rotate,.flip,.undo,.redo].contains(self) }
     public var imageOnly:Bool { [.quickSaveImage,.copyImage,.saveImage,.recognize,.rotate,.flip,.undo,.redo].contains(self) }
     public var requiresUnlockedPin:Bool {[.resetZoom,.rotate,.flip,.undo,.redo].contains(self)}
 }

@@ -17,6 +17,8 @@ struct CaptureTypedPinView:View {
             HStack {
                 TextField(tr("Pin title"),text:$model.pinTitle).textFieldStyle(.roundedBorder)
                 Toggle(tr("Lock pin"),isOn:$model.locked)
+                Toggle(tr("Mouse passthrough"),isOn:$model.mousePassthrough)
+                    .help(tr("Temporary mode. Restore interaction from the capture menu or Pin groups and history."))
                 Toggle(tr("Always on top"),isOn:$model.pinned).onChange(of:model.pinned) { _ in model.changeWindow?() }
                 Toggle(tr("Pin shadow"),isOn:$model.shadow)
             }.padding([.top,.horizontal],10)

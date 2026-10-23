@@ -77,6 +77,7 @@ import ThermoL10n
         model.makeImageCopy={ [weak self] image in do { try self?.open(image) } catch { self?.issue=captureFailureMessage(error);self?.showLibrary() } }
         model.showPinLibrary={ [weak self] in self?.showLibrary() }
         model.onMutation={ [weak self] document in self?.changed(pin.id,document:document) }
+        model.onInteractionChange={ [weak self] in self?.objectWillChange.send() }
         editor.onActivate={ [weak self] in self?.lastActiveID=pin.id }
         editor.onWindowChange={ [weak self] in self?.changed(pin.id,document:false) }
         if let window=editor.window {
@@ -114,7 +115,19 @@ import ThermoL10n
         else {
             var next=library;next.pins[next.pins.firstIndex { $0.id == id }!].hidden=false;try commit(next);displayCurrent()
         }
+        windows[id]?.model.mousePassthrough=false
         NSApp.activate(ignoringOtherApps:true);windows[id]?.window?.makeKeyAndOrderFront(nil)
+    }
+    /// This recovery is independent of manifest validity, disk space and the active group.
+    func restoreMouseInteraction() {
+        for editor in windows.values where editor.model.mousePassthrough || editor.window?.ignoresMouseEvents == true {editor.model.mousePassthrough=false}
+    }
+    func editorUnderMouse(at point:CGPoint?=nil) -> CaptureEditor? {
+        let location=point ?? NSEvent.mouseLocation
+        for window in NSApp.orderedWindows where window.isVisible && window.frame.contains(location) {
+            if let editor=windows.values.first(where:{$0.window === window}) {return editor}
+        }
+        return nil
     }
     func restore(_ id:UUID? = nil) throws {
         try flush()
@@ -193,7 +206,7 @@ import ThermoL10n
     func showLibrary() {
         if libraryWindow == nil {
             let window=NSWindow(contentRect:NSRect(x:0,y:0,width:800,height:560),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
-            window.title=tr("Pin groups and history");window.isReleasedWhenClosed=false;window.minSize=NSSize(width:720,height:440)
+            window.title=tr("Pin groups and history");window.level = .floating;window.isReleasedWhenClosed=false;window.minSize=NSSize(width:720,height:440)
             window.contentView=NSHostingView(rootView:CapturePinLibraryView(session:self));window.center();libraryWindow=NSWindowController(window:window)
         }
         libraryWindow?.showWindow(nil);NSApp.activate(ignoringOtherApps:true);libraryWindow?.window?.makeKeyAndOrderFront(nil)

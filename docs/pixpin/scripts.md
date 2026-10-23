@@ -2,7 +2,7 @@
 
 在“截图快捷键与动作”中添加动作，选择“JavaScript 截图脚本”，填写源码后应用。脚本可绑定全局/贴图局部快捷键，也可显示在命名菜单中。导入、应用和启动 Thermo 都不会自动执行脚本；点击执行或调用该快捷键/菜单才运行。
 
-使用 Thermo 自己的 `thermo` 对象，不能原样运行 PixPin 的 `pixpin` API。当前支持同步 JavaScript 的变量、函数、条件、循环、异常、数组和对象。原生动作在应用中完成后，脚本才继续。没有 Node、浏览器、文件系统、网络或系统命令接口；这些 PixPin 能力仍需继续实现。
+使用 Thermo 自己的 `thermo` 对象，不能原样运行 PixPin 的 `pixpin` API。当前支持同步 JavaScript 的变量、函数、条件、循环、异常、数组和对象。原生动作在应用中完成后，脚本才继续。没有 Node、浏览器、文件系统、网络或系统命令接口；这类非核心扩展保留差异，不在当前截图稳定性工作中继续实现。
 
 ```js
 const before = thermo.perform('status');
@@ -37,6 +37,8 @@ if (thermo.perform('screenshot')) {
 | `showPin`、`restorePin`、`showPins`、`hidePins`、`togglePins` | 当前贴图/分组的显示、隐藏及恢复 |
 | `nextGroup`、`previousGroup` | 切换分组 |
 | `toggleTop`、`toggleLock`、`resetZoom`、`rotate`、`flip`、`undo`、`redo` | 当前贴图的状态及图像编辑；不适用时抛异常；空撤销/重做栈不修改图像 |
+| `togglePassthrough` | 切换本应用中鼠标位置的贴图窗口；未找到时使用当前贴图。只改变临时交互状态 |
+| `restoreMouseInteraction` | 恢复全部已加载贴图的鼠标交互，包括隐藏组，不要求当前贴图；先恢复内存状态，脚本末尾的其他保存错误仍可能被报告 |
 | `pinGroups`、`shortcutSettings`、`saveSettings` | 打开相应管理窗口，打开后返回；不等用户关闭窗口 |
 | `console.log(...)` | 输出到设置窗口中的脚本结果区 |
 

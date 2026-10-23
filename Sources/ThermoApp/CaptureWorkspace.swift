@@ -228,6 +228,10 @@ func captureFailureMessage(_ error:Error) -> String {
     func perform(_ action:CaptureAction) throws {
         switch action {
         case .script:throw CaptureScriptFailure.execution("Run a configured script entry with its source.")
+        case .restoreMouseInteraction:pinSession.restoreMouseInteraction()
+        case .togglePassthrough:
+            guard let editor=pinSession.editorUnderMouse() ?? pinSession.activeEditor() else {throw CaptureActionFailure.noPin}
+            editor.model.mousePassthrough.toggle()
         case .screenshot:capture()
         case .screenshotCopy:capture(after:[.copyImage])
         case .screenshotOCR:capture(after:[.copyText])
@@ -337,6 +341,10 @@ func captureFailureMessage(_ error:Error) -> String {
     var showPinLibrary:(() -> Void)?
     @Published var pinTitle="" { didSet { changeWindow?();onMutation?(false) } }
     @Published var locked=false { didSet { changeWindow?();onMutation?(false) } }
+    /// Interaction is temporary, never stored in a pin snapshot or restored after reopening.
+    @Published var mousePassthrough=false {didSet {interactionWindow?();onInteractionChange?()}}
+    var interactionWindow:(()->Void)?
+    var onInteractionChange:(()->Void)?
     @Published var shadow=true { didSet { changeWindow?();onMutation?(false) } }
     @Published var pan=CGPoint.zero { didSet { onMutation?(false) } }
     @Published var opacity: Double = 1 { didSet { onMutation?(false) } }
@@ -438,11 +446,19 @@ func captureFailureMessage(_ error:Error) -> String {
         model.changeWindow = { [weak self] in
             guard let self, let window = self.window else { return }
             window.alphaValue = self.model.opacity; window.level = self.model.pinned ? .floating : .normal
-            window.title=self.model.pinTitle.isEmpty ? tr("Screenshots and pins") : self.model.pinTitle
+            self.applyMouseInteraction()
             window.hasShadow=self.model.shadow;window.isMovable = !self.model.locked
             window.styleMask=self.model.locked ? [.titled,.closable,.miniaturizable] : [.titled,.closable,.miniaturizable,.resizable]
         }
+        model.interactionWindow={ [weak self] in self?.applyMouseInteraction() }
         window.contentView = NSHostingView(rootView: CaptureEditorRoot(model:model))
+    }
+    private func applyMouseInteraction() {
+        guard let window else {return}
+        window.ignoresMouseEvents=model.mousePassthrough
+        if model.mousePassthrough {window.makeFirstResponder(nil)}
+        let title=model.pinTitle.isEmpty ? tr("Screenshots and pins") : model.pinTitle
+        window.title=title+(model.mousePassthrough ? " · "+tr("Mouse passthrough") : "")
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
     func windowShouldClose(_ sender:NSWindow) -> Bool { shouldClose?() ?? true }
@@ -485,6 +501,8 @@ private struct CaptureEditorView: View {
             HStack {
                 TextField(tr("Pin title"),text:$model.pinTitle).textFieldStyle(.roundedBorder)
                 Toggle(tr("Lock pin"),isOn:$model.locked)
+                Toggle(tr("Mouse passthrough"),isOn:$model.mousePassthrough)
+                    .help(tr("Temporary mode. Restore interaction from the capture menu or Pin groups and history."))
                 Toggle(tr("Pin shadow"),isOn:$model.shadow)
                 if let show=model.showPinLibrary { Button(tr("Pin groups and history"),action:show) }
             }.padding(.horizontal,10)

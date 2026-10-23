@@ -67,6 +67,7 @@ struct CapturePinLibraryView:View {
                                     VStack(alignment:.leading) {
                                         Text(pin.title.isEmpty ? String(pin.id.uuidString.prefix(8)) : pin.title).lineLimit(2)
                                         Text(tr(pin.closedAt == nil ? "Open pin" : "Closed pin")).foregroundStyle(.secondary).font(.caption)
+                                        if session.windows[pin.id]?.model.mousePassthrough == true {Text(tr("Mouse passthrough")).font(.caption).foregroundStyle(.green)}
                                     }
                                     Spacer()
                                     if pin.closedAt != nil {
@@ -100,6 +101,7 @@ struct CapturePinLibraryView:View {
             }
             Text(tr("Active pin group")+": "+(session.library.groups.first { $0.id == session.library.currentGroupID }?.name ?? "")).font(.caption).foregroundStyle(.secondary).frame(maxWidth:.infinity,alignment:.leading)
             HStack {
+                Button(tr("Restore pin mouse interaction")) {session.restoreMouseInteraction()}
                 Button(tr("Show all pins")) { run { try session.setAllHidden(false) } }
                 Button(tr("Hide all pins")) { run { try session.setAllHidden(true) } }
                 Button(tr("Close all pins")) { session.closeAll() }

@@ -47,6 +47,25 @@ import SwiftUI
             window.title="QA screenshot target";window.isReleasedWhenClosed=false
             window.contentView=NSHostingView(rootView:CaptureScreenshotQA(workspace:workspace,root:root))
             screenshotReviewWindow=NSWindowController(window:window);window.center();window.makeKeyAndOrderFront(nil)
+        } else if Bundle.main.object(forInfoDictionaryKey:"ThermoPassthroughReview") as? Bool == true,
+                  let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
+            let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)
+            workspace.saving=CaptureSaveModel(read:{nil},write:{_ in});pinSession=session;captureWorkspace=workspace
+            do {
+                if session.library.pins.isEmpty {let id=try session.open(image);session.windows[id]?.model.pinTitle="QA passthrough pin";try session.flush()}
+                else {session.restoreWindows()}
+            } catch {session.issue=error.localizedDescription}
+            session.showLibrary()
+            let probe=Timer(timeInterval:0.25,repeats:true) { [weak session] _ in
+                MainActor.assumeIsolated {
+                    guard let session else{return}
+                    let values:[[String:Any]]=session.windows.map {id,editor in
+                        ["id":id.uuidString,"mousePassthrough":editor.model.mousePassthrough,"ignoresMouseEvents":editor.window?.ignoresMouseEvents ?? false,"title":editor.window?.title ?? "","visible":editor.window?.isVisible ?? false,"revision":editor.model.revision,"imageSize":[editor.model.document.image.width,editor.model.document.image.height]]
+                    }
+                    let record:[String:Any]=["pins":values,"savedPins":session.library.pins.count,"issue":session.issue ?? "","libraryVisible":NSApp.windows.contains{$0.title == tr("Pin groups and history") && $0.isVisible}]
+                    if let data=try? JSONSerialization.data(withJSONObject:record,options:[.prettyPrinted,.sortedKeys]) {try? data.write(to:root.appendingPathComponent("passthrough-probe.json"),options:.atomic)}
+                }
+            };RunLoop.main.add(probe,forMode:.common)
         } else if Bundle.main.object(forInfoDictionaryKey:"ThermoSavingReview") as? Bool == true,
            let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
             let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)

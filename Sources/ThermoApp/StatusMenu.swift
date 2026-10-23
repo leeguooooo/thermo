@@ -41,6 +41,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(item(tr("Record screen…"), "record.circle") { CaptureWorkspace.shared.recordScreen() })
         menu.addItem(item(tr("Recording drafts…"), "film.stack") { CaptureWorkspace.shared.recordScreen(draftsOnly:true) })
         menu.addItem(item(tr("Pin groups and history"), "square.stack") { CaptureWorkspace.shared.showPinLibrary() })
+        menu.addItem(item(tr("Restore pin mouse interaction"),"cursorarrow") {CaptureWorkspace.shared.pinSession.restoreMouseInteraction()})
         menu.addItem(item(tr("Restore last closed pin"), "arrow.uturn.backward") { CaptureWorkspace.shared.restoreLastPin() })
         menu.addItem(item(tr("Settings…"), "gearshape", key: ",") { MainWindow.show(.settings) })
         menu.addItem(.separator())
