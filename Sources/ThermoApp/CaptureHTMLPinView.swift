@@ -50,7 +50,7 @@ struct CaptureHTMLPinView:NSViewRepresentable {
             webView.evaluateJavaScript("document.body.innerText") { [weak self] result,error in
                 guard let self,let plain=result as? String,plain.utf8.count <= 1024*1024,case .text(var current)=self.model.pinContent,current.plain.isEmpty,current.html == value.html,current.usesHTML else { return }
                 current.plain=plain
-                do { try self.model.updatePinContent(.text(current)) } catch { self.model.error=error.localizedDescription }
+                do { try self.model.updatePinContent(.text(current),derivedHTMLText:true) } catch { self.model.error=error.localizedDescription }
             }
         }
         func webView(_ webView:WKWebView,didFail navigation:WKNavigation!,withError error:Error) { model.error=error.localizedDescription }

@@ -1,0 +1,336 @@
+{
+  "recordedAt": "2026-10-23T03:29:09.507467+00:00",
+  "sourceBase": "a5043263ce6bf8434fa483d90a0ff0f33816bad2",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureActions.swift": "01d13e18e7771309ca238525a9dd089cc3fe92b3f8dee3a20e4c8d046742c7d0",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "e602be55807428c6e6967f7936f6e421f25f0745b339a6990aa96adb4fcc7f6a",
+    "Sources/ThermoApp/CaptureHTMLPinView.swift": "f43b935e38a7383b49471e4ebed9eeba42cd8d2c9241a051172f315cfc4ed8ba",
+    "Sources/ThermoL10n/ZhHans.swift": "2b8946f9d84148635b174ce6983c4bb1dd4f9b671bedbdb0c0353d78bb6de986",
+    "Tests/ThermoAppTests/CapturePinLockTests.swift": "50ca1a1c3bb4b123f81a7de3e1469009f90670c27d74d0c794a60c064c538b4b",
+    "scripts/verify-capture-ui.py": "6c4eb2d89409c7f4f7370c5c76d793262a453dceaedb08da5f4749c5faea81d3",
+    "scripts/verify-capture-ui.swift": "d3d0c7ec45d9910ac4a88c63433ae66a82118c3a86b9ff393f7369d4ccf479ad"
+  },
+  "fullRegression": {
+    "total": 2272,
+    "counts": {
+      "ThermoKitTests.xctest": 221,
+      "ThermoHelperTests.xctest": 30,
+      "ThermoCLITests.xctest": 130,
+      "ThermoAppTests.xctest": 446,
+      "SearchCoreTests.xctest": 11,
+      "MenuBarCoreTests.xctest": 27,
+      "CleanKitTests.xctest": 805,
+      "CaptureScriptCoreTests.xctest": 10,
+      "CaptureCoreTests.xctest": 117,
+      "AgentDoctorTests.xctest": 404,
+      "AgentCoreTests.xctest": 71
+    },
+    "failures": 0,
+    "log": "/tmp/thermo-pin-lock-full-regression-01a.log",
+    "sha256": "d20b0dd5ac3c24a182cd0a67e1a7298a2ca50a3617f87c7bb2282c8a4ec6a487",
+    "scope": "Image lock fix before final derived-HTML-text compatibility follow-up"
+  },
+  "finalCaptureRegression": {
+    "total": 204,
+    "counts": {
+      "ThermoCLITests.xctest": 3,
+      "ThermoAppTests.xctest": 69,
+      "CaptureScriptCoreTests.xctest": 10,
+      "CaptureCoreTests.xctest": 117,
+      "AgentDoctorTests.xctest": 4,
+      "AgentCoreTests.xctest": 1
+    },
+    "failures": 0,
+    "log": "/tmp/thermo-pin-lock-final-capture-regression-01a.log",
+    "sha256": "011c1672728a0527d492bc4a635c4b97cf3970d29a7d260c55616b67bf38eeb1",
+    "scope": "Final source including the restricted HTML derived-text follow-up"
+  },
+  "verified": [
+    "Model style, undo/redo, delete and transforms do not change a locked image",
+    "Menu and synchronous script actions reject rotate/flip/undo/redo/resetZoom with pinLocked",
+    "Actual JavaScript worker receives the lock rejection",
+    "Copy, quick save, hide/show and history restore work with lock retained",
+    "Typed content updates use the same check",
+    "Unchanged HTML may fill only initially empty derived plain text; changed HTML/source/style is rejected"
+  ],
+  "nativeQA": {
+    "app": "/tmp/thermo-pin-lock-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "d415ebb97e432e90b621c016a792c987bb73e094b9e194c1c57959ece6969b6c",
+    "signatureVerified": true,
+    "verified": [
+      "Lock disables drawing tools, style controls, undo, rotate and flip",
+      "Copy remains enabled and matches pre-lock PNG hash",
+      "Unlock re-enables edits; rotation changes dimensions to 600x900",
+      "Undo restores 900x600 and the original PNG hash",
+      "Closed window is not visible and render cache is empty"
+    ],
+    "records": {
+      "before": {
+        "appActive": false,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 20574,
+        "copiedPNGHash": "d68338ef9d6a8778331c6de9410c5e03ea47f02b8e36571d2816637bd12033ef",
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 2,
+        "segments": [],
+        "selected": [
+          0
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "locked-copy": {
+        "appActive": false,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 20574,
+        "copiedPNGHash": "d68338ef9d6a8778331c6de9410c5e03ea47f02b8e36571d2816637bd12033ef",
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": true,
+        "objects": [
+          {
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 2,
+        "segments": [],
+        "selected": [
+          0
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": false,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "unlocked-rotated": {
+        "appActive": false,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 20574,
+        "copiedPNGHash": "d68338ef9d6a8778331c6de9410c5e03ea47f02b8e36571d2816637bd12033ef",
+        "imageSize": [
+          600,
+          900
+        ],
+        "locked": false,
+        "objects": [],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2160000,
+        "revision": 3,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "unlocked-undone-copy": {
+        "appActive": false,
+        "canRedo": true,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 20574,
+        "copiedPNGHash": "d68338ef9d6a8778331c6de9410c5e03ea47f02b8e36571d2816637bd12033ef",
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 4,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "closed": {
+        "appActive": false,
+        "canRedo": true,
+        "canUndo": true,
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "renderCacheBytes": 0,
+        "revision": 4,
+        "selected": [],
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": false,
+        "zoom": 1
+      }
+    },
+    "privateClipboardOnly": true,
+    "processStopped": true,
+    "unverified": [
+      "Physical global/local shortcut delivery",
+      "Complete UI lock behavior of every non-image pin type",
+      "Real screen capture permission and multi-display acceptance"
+    ]
+  },
+  "installedAppChanged": false
+}

@@ -28,8 +28,12 @@ def main():
     parser.add_argument('--saving-review', action='store_true')
     parser.add_argument('--screenshot-review', action='store_true')
     parser.add_argument('--ocr-review', action='store_true')
+    parser.add_argument('--pin-lock-review', action='store_true')
     parser.add_argument('--html-probe-url', default='http://127.0.0.1:49379/probe')
     args = parser.parse_args()
+    if args.pin_lock_review:
+        args.annotation_review = True
+        args.ocr_review = True
     root = Path(__file__).resolve().parent.parent
     os.chdir(root)
     output = args.output_dir.resolve() if args.output_dir else Path(tempfile.mkdtemp(prefix='thermo-capture-qa-'))

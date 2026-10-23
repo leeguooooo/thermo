@@ -257,6 +257,7 @@ func captureFailureMessage(_ error:Error) -> String {
             guard let editor=pinSession.activeEditor(includeHidden:action == .showPin) else { throw CaptureActionFailure.noPin }
             let model=editor.model
             guard !action.imageOnly || model.pinContent == nil else { throw CaptureActionFailure.imageRequired }
+            if action.requiresUnlockedPin {try model.requireEditable()}
             switch action {
             case .showPin:if let id=pinSession.windows.first(where:{ $0.value === editor })?.key { try pinSession.showPin(id) }
             case .closePin:editor.window?.performClose(nil)
@@ -268,8 +269,8 @@ func captureFailureMessage(_ error:Error) -> String {
             case .toggleTop:model.pinned.toggle();model.changeWindow?()
             case .toggleLock:model.locked.toggle();model.changeWindow?()
             case .resetZoom:model.zoom=1;model.pan = .zero
-            case .rotate:try model.document.transform(rotateClockwise:true)
-            case .flip:try model.document.transform(flipHorizontal:true)
+            case .rotate:try model.transformImage(rotateClockwise:true)
+            case .flip:try model.transformImage(flipHorizontal:true)
             case .undo:model.undoAnnotation()
             case .redo:model.redoAnnotation()
             default:break
@@ -318,7 +319,15 @@ func captureFailureMessage(_ error:Error) -> String {
     @Published var pinContentSaveError:String?
     @Published var pinTextReloadID=UUID()
     func revertUnsavedPinText() { pinContentSaveError=nil;error=nil;pinTextReloadID=UUID() }
-    func updatePinContent(_ content:CapturePinContent) throws {
+    func updatePinContent(_ content:CapturePinContent,derivedHTMLText:Bool=false) throws {
+        if locked {
+            // Loading an unchanged HTML pin may fill its initially empty, derived plain text.
+            // No source, formatting or other content change is allowed through this path.
+            guard derivedHTMLText,case .text(let previous)=pinContent,case .text(let next)=content,
+                  previous.usesHTML,previous.plain.isEmpty,!next.plain.isEmpty,next.plain.utf8.count<=1024*1024 else {throw CaptureActionFailure.pinLocked}
+            var expected=previous;expected.plain=next.plain
+            guard expected == next else {throw CaptureActionFailure.pinLocked}
+        }
         do {
             let image=try content.previewImage()
             pinContentSaveError=nil;pinContent=content;document=CaptureDocument(image:image)
@@ -341,15 +350,19 @@ func captureFailureMessage(_ error:Error) -> String {
         selectedAnnotation=index
     }
     func applySelectedStyle() {
-        guard let index=selectedAnnotation,document.annotations.indices.contains(index) else { return }
+        guard !locked,let index=selectedAnnotation,document.annotations.indices.contains(index) else { return }
         var item=document.annotations[index]
         let nextColor=NSColor(color)
         guard item.color != nextColor || item.width != lineWidth || item.text != text || item.options != annotationOptions else { return }
         item.color=nextColor;item.width=lineWidth;item.text=text;item.options=annotationOptions
         document.replaceAnnotation(at:index,with:item)
     }
-    func undoAnnotation() { document.undo();if let selectedAnnotation {selectAnnotation(selectedAnnotation)} }
-    func redoAnnotation() { document.redo();if let selectedAnnotation {selectAnnotation(selectedAnnotation)} }
+    func requireEditable() throws {guard !locked else {throw CaptureActionFailure.pinLocked}}
+    func transformImage(rotateClockwise:Bool=false,flipHorizontal:Bool=false) throws {
+        try requireEditable();try document.transform(rotateClockwise:rotateClockwise,flipHorizontal:flipHorizontal)
+    }
+    func undoAnnotation() { guard !locked else{return};document.undo();if let selectedAnnotation {selectAnnotation(selectedAnnotation)} }
+    func redoAnnotation() { guard !locked else{return};document.redo();if let selectedAnnotation {selectAnnotation(selectedAnnotation)} }
     func deleteSelected() {
         guard !locked else{return}
         document.removeAnnotations(at:selectedAnnotations);selectedAnnotations=[]
@@ -462,12 +475,12 @@ private struct CaptureEditorView: View {
                     Button { model.undoAnnotation() } label: { Image(systemName: "arrow.uturn.backward") }.disabled(!model.document.canUndo).help(tr("Undo"))
                     Button { model.redoAnnotation() } label: { Image(systemName: "arrow.uturn.forward") }.disabled(!model.document.canRedo).help(tr("Redo"))
                     Button {
-                        do { try model.document.transform(rotateClockwise: true) } catch { model.error = tr(error.localizedDescription) }
+                        do { try model.transformImage(rotateClockwise:true) } catch { model.error = tr(error.localizedDescription) }
                     } label: { Image(systemName: "rotate.right") }.help(tr("Rotate clockwise"))
                     Button {
-                        do { try model.document.transform(flipHorizontal: true) } catch { model.error = tr(error.localizedDescription) }
+                        do { try model.transformImage(flipHorizontal:true) } catch { model.error = tr(error.localizedDescription) }
                     } label: { Image(systemName: "arrow.left.and.right.righttriangle.left.righttriangle.right") }.help(tr("Flip horizontally"))
-                }.padding(8)
+                }.padding(8).disabled(model.locked)
             }
             HStack {
                 TextField(tr("Pin title"),text:$model.pinTitle).textFieldStyle(.roundedBorder)
@@ -475,9 +488,9 @@ private struct CaptureEditorView: View {
                 Toggle(tr("Pin shadow"),isOn:$model.shadow)
                 if let show=model.showPinLibrary { Button(tr("Pin groups and history"),action:show) }
             }.padding(.horizontal,10)
-            CaptureAnnotationControls(model:model)
+            CaptureAnnotationControls(model:model).disabled(model.locked)
             if model.tool == .text || model.tool == .watermark {
-                TextField(tr("Annotation text"), text: $model.text).textFieldStyle(.roundedBorder).padding(8)
+                TextField(tr("Annotation text"), text: $model.text).textFieldStyle(.roundedBorder).padding(8).disabled(model.locked)
             }
             CaptureCanvas(model: model).frame(maxWidth: .infinity, maxHeight: .infinity)
             if !model.recognition.isEmpty {

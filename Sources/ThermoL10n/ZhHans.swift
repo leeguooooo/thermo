@@ -52,6 +52,7 @@ let zhHans: [String: String] = [
     "Image format": "图像格式",
     "Invalid filename template": "文件名模板无效",
     "Saving options": "保存选项",
+    "Unlock the pin before editing it.": "请先解锁贴图，再进行编辑。",
     "Select text in image": "在图中选字",
     "Recognized text regions": "识别出的文字区域",
     "Copy selected text": "复制所选文字",

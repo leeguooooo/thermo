@@ -3,6 +3,7 @@
 import AppKit
 import AVFoundation
 import CaptureCore
+import CryptoKit
 import AgentCore
 import ThermoKit
 import CaptureScriptCore
@@ -235,7 +236,7 @@ import SwiftUI
             let window=CaptureEditor(image:image,onClose:{reviewModel?.copyPasteboard=nil;board?.releaseGlobally()})
             reviewModel=window.model
             window.model.copyPasteboard=board
-            if board == nil {
+            if Bundle.main.object(forInfoDictionaryKey:"ThermoAnnotationReview") as? Bool == true {
             var mosaic=CaptureAnnotation(tool:.mosaic,points:[CGPoint(x:50,y:290),CGPoint(x:650,y:470)],width:4);mosaic.options.strength=18
             window.model.document.append(mosaic)
             var lens=CaptureAnnotation(tool:.magnifier,points:[CGPoint(x:650,y:60),CGPoint(x:850,y:260)],color:.systemBlue,width:3);lens.options.zoom=2;lens.options.ellipse=true
@@ -251,9 +252,14 @@ import SwiftUI
                         var record:[String:Any] = ["selected":model.selectedAnnotations.sorted(),"objects":model.document.annotations.map {item in
                             ["tool":item.tool.rawValue,"points":item.points.map{[Double($0.x),Double($0.y)]},"width":Double(item.width)] as [String:Any]
                         },"canUndo":model.document.canUndo,"canRedo":model.document.canRedo,"pan":[Double(model.pan.x),Double(model.pan.y)],"zoom":model.zoom,"revision":model.revision,"renderCacheBytes":CaptureRenderCache.shared.cachedBytes,"windowVisible":panel?.isVisible ?? false,"windowKey":panel?.isKeyWindow ?? false,"appActive":NSApp.isActive]
+                        record["locked"]=model.locked;record["windowMovable"]=panel?.isMovable ?? false
+                        record["imageSize"]=[model.document.image.width,model.document.image.height]
                         if model.copyPasteboard != nil {
                             record["recognized"]=model.recognition;record["selectingOCRText"]=model.selectingOCRText
                             record["selectedOCRText"]=model.selectedOCRText;record["copiedOCRText"]=model.copyPasteboard?.string(forType:.string) ?? ""
+                            let png=model.copyPasteboard?.data(forType:.png)
+                            record["copiedPNGBytes"]=png?.count ?? 0
+                            record["copiedPNGHash"]=png.map{SHA256.hash(data:$0).map{String(format:"%02x",$0)}.joined()} ?? ""
                             record["segments"]=model.ocrSegments.map {segment in ["range":[segment.range.location,segment.range.length],"box":[Double(segment.bounds.minX),Double(segment.bounds.minY),Double(segment.bounds.width),Double(segment.bounds.height)]] as [String:Any]}
                         }
                         if let data=try? JSONSerialization.data(withJSONObject:record,options:.sortedKeys) {try? data.write(to:URL(fileURLWithPath:path).appendingPathComponent("annotation-probe.json"),options:.atomic)}

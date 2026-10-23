@@ -24,6 +24,7 @@ public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
     public var supportsScript:Bool { ![.script,.scrolling,.recording,.recordingDrafts,.openImage,.saveImage].contains(self) }
     public var needsPin:Bool { [.quickSaveImage,.showPin,.closePin,.copyImage,.copyContent,.saveImage,.recognize,.toggleTop,.toggleLock,.resetZoom,.rotate,.flip,.undo,.redo].contains(self) }
     public var imageOnly:Bool { [.quickSaveImage,.copyImage,.saveImage,.recognize,.rotate,.flip,.undo,.redo].contains(self) }
+    public var requiresUnlockedPin:Bool {[.resetZoom,.rotate,.flip,.undo,.redo].contains(self)}
 }
 public struct CaptureShortcut:Codable,Sendable,Equatable,Hashable {
     public var keyCode:UInt32
@@ -73,12 +74,13 @@ public struct CaptureActionSettings:Codable,Sendable,Equatable {
     public static func decode(_ data:Data) throws -> Self { guard data.count <= 65536 else { throw CaptureActionFailure.invalidSettings };let result=try JSONDecoder().decode(Self.self,from:data);guard result.valid else { throw CaptureActionFailure.invalidSettings };return result }
 }
 public enum CaptureActionFailure:LocalizedError {
-    case invalidSettings,noPin,imageRequired
+    case invalidSettings,noPin,imageRequired,pinLocked
     public var errorDescription:String? {
         switch self {
         case .invalidSettings:return "Capture action settings are invalid or contain duplicate shortcuts."
         case .noPin:return "Show or select a pin before running this action."
         case .imageRequired:return "This action requires an image pin."
+        case .pinLocked:return "Unlock the pin before editing it."
         }
     }
 }
