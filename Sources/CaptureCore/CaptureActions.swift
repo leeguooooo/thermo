@@ -3,6 +3,7 @@ import Foundation
 public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
     case script
     case grayscale,invert,brightnessUp,brightnessDown,resetImageAdjustments
+    case rotateLeft,flipVertical
     case togglePassthrough,restoreMouseInteraction
     case screenshotCopy,screenshotOCR,screenshotQuickSave,saveSettings,quickSaveImage
     case screenshot, pinClipboard, pinText, pinLaTeX, openImage, scrolling, recording, recordingDrafts
@@ -11,6 +12,8 @@ public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
     public var id:String { rawValue }
     public var title:String {
         switch self {
+        case .rotateLeft:return "Rotate current image counterclockwise"
+        case .flipVertical:return "Flip current image vertically"
         case .grayscale:return "Toggle image grayscale"
         case .invert:return "Toggle image inversion"
         case .brightnessUp:return "Increase image brightness"
@@ -31,9 +34,9 @@ public enum CaptureAction:String,Codable,CaseIterable,Sendable,Identifiable {
         }
     }
     public var supportsScript:Bool { ![.script,.scrolling,.recording,.recordingDrafts,.openImage,.saveImage].contains(self) }
-    public var needsPin:Bool { [.grayscale,.invert,.brightnessUp,.brightnessDown,.resetImageAdjustments,.togglePassthrough,.quickSaveImage,.showPin,.closePin,.copyImage,.copyContent,.saveImage,.recognize,.toggleTop,.toggleLock,.resetZoom,.rotate,.flip,.undo,.redo].contains(self) }
-    public var imageOnly:Bool { [.grayscale,.invert,.brightnessUp,.brightnessDown,.resetImageAdjustments,.quickSaveImage,.copyImage,.saveImage,.recognize,.rotate,.flip,.undo,.redo].contains(self) }
-    public var requiresUnlockedPin:Bool {[.grayscale,.invert,.brightnessUp,.brightnessDown,.resetImageAdjustments,.resetZoom,.rotate,.flip,.undo,.redo].contains(self)}
+    public var needsPin:Bool { [.rotateLeft,.flipVertical,.grayscale,.invert,.brightnessUp,.brightnessDown,.resetImageAdjustments,.togglePassthrough,.quickSaveImage,.showPin,.closePin,.copyImage,.copyContent,.saveImage,.recognize,.toggleTop,.toggleLock,.resetZoom,.rotate,.flip,.undo,.redo].contains(self) }
+    public var imageOnly:Bool { [.rotateLeft,.flipVertical,.grayscale,.invert,.brightnessUp,.brightnessDown,.resetImageAdjustments,.quickSaveImage,.copyImage,.saveImage,.recognize,.rotate,.flip,.undo,.redo].contains(self) }
+    public var requiresUnlockedPin:Bool {[.rotateLeft,.flipVertical,.grayscale,.invert,.brightnessUp,.brightnessDown,.resetImageAdjustments,.resetZoom,.rotate,.flip,.undo,.redo].contains(self)}
 }
 public struct CaptureShortcut:Codable,Sendable,Equatable,Hashable {
     public var keyCode:UInt32

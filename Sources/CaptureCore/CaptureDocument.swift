@@ -121,17 +121,20 @@ public struct CaptureDocument {
         guard let data = rep.representation(using: format, properties: [:]) else { throw CaptureFailure.exportFailed }
         return data
     }
+    public mutating func transform(_ operation:CaptureImageTransform) throws {
+        try applyTransforms([operation])
+    }
     public mutating func transform(rotateClockwise: Bool = false, flipHorizontal: Bool = false) throws {
-        let original = try rendered()
-        let width = rotateClockwise ? original.height : original.width
-        let height = rotateClockwise ? original.width : original.height
-        guard let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-                                  space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { throw CaptureFailure.invalidImage }
-        if rotateClockwise { ctx.translateBy(x: 0, y: CGFloat(height)); ctx.rotate(by: -.pi/2) }
-        if flipHorizontal { ctx.translateBy(x: CGFloat(original.width), y: 0); ctx.scaleBy(x: -1, y: 1) }
-        ctx.draw(original, in: CGRect(origin: .zero, size: size))
-        guard let image = ctx.makeImage() else { throw CaptureFailure.invalidImage }
-        checkpoint(); self.image = image; annotations.removeAll();imageAdjustments = .init()
+        // Preserve the old combined operation order: mirror source X, then rotate right.
+        var operations:[CaptureImageTransform]=[]
+        if flipHorizontal {operations.append(.flipHorizontal)}
+        if rotateClockwise {operations.append(.rotateClockwise)}
+        try applyTransforms(operations)
+    }
+    private mutating func applyTransforms(_ operations:[CaptureImageTransform]) throws {
+        var output=try rendered()
+        for operation in operations {output=try operation.applying(to:output)}
+        checkpoint();image=output;annotations.removeAll();imageAdjustments = .init()
     }
     public static func load(_ url: URL) throws -> CGImage {
         // Screenshot files are removed before asynchronous after-actions run. Decode now,

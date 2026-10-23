@@ -1,0 +1,679 @@
+{
+  "recordedAt": "2026-10-23T05:39:08.694693+00:00",
+  "sourceBase": "c4a692cfe6fa60ab7901838f510bb618e3882192",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureImageTransform.swift": "837a745cf912bfde07086ad0e51fedc5a74f4fe8c8538494de543ab19a5db3a5",
+    "Sources/CaptureCore/CaptureDocument.swift": "d589d6e6388a4a379f7b1fbcd22076cad04899145423f89a14015eca827034a6",
+    "Sources/CaptureCore/CaptureActions.swift": "7017b615a96a0c2938e6f723d448b629fcdc8b25c8858e3c7151642de592631b",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "a9e4b9a46976e2531cebd19f0b57c1e04ea72df14f6d429972850194f941f5cd",
+    "Sources/ThermoL10n/ZhHans.swift": "68fa1657b9787051a20222b7478979305ae521936454d0bc102e2015f120c285",
+    "Tests/CaptureCoreTests/CaptureImageTransformTests.swift": "539663fc287ede6bab11a6acd8501352c3c26a98b77c4610b3c73ae35481d100",
+    "Tests/ThermoAppTests/CaptureGeometryActionTests.swift": "3c1a9cdef24b1a5d9b1a42559229bf2639f1a0256b2c558063d473c70fc3ab0b"
+  },
+  "regression": {
+    "passed": 270,
+    "failures": 0,
+    "newCoreTests": 4,
+    "newAppTests": 1,
+    "testBundles": {
+      "ThermoKitTests.xctest": 0,
+      "ThermoHelperTests.xctest": 0,
+      "ThermoCLITests.xctest": 3,
+      "ThermoAppTests.xctest": 102,
+      "SearchCoreTests.xctest": 0,
+      "MenuBarCoreTests.xctest": 0,
+      "CleanKitTests.xctest": 0,
+      "CaptureScriptCoreTests.xctest": 10,
+      "CaptureCoreTests.xctest": 150,
+      "AgentDoctorTests.xctest": 4,
+      "AgentCoreTests.xctest": 1
+    },
+    "log": "/tmp/thermo-geometry-directions-regression-01a.log",
+    "logSHA256": "8461bfa8cbb5176748e811d17e97cf2460cd78c2ab97517e11b8efac2990e6e6"
+  },
+  "verifiedInTests": [
+    "Every pixel of an asymmetric 6x4 alpha fixture maps correctly for four directions",
+    "Opposite rotations and double mirrors restore byte-identical PNG",
+    "One undo restores editable annotations and color adjustments; redo restores transformed result",
+    "Legacy boolean API keeps horizontal-mirror-before-clockwise order and single undo",
+    "Actual JavaScript worker routes rotateLeft and flipVertical, copies expected PNG and persists result",
+    "Locked and typed model edits rejected through shared guards"
+  ],
+  "nativeQA": {
+    "app": "/tmp/thermo-geometry-directions-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "6d4555af01d7237fe2e3ee75d330f1f79d34e99a4bf3fa0d707706d592bca623",
+    "signatureVerified": true,
+    "records": {
+      "base": {
+        "appActive": false,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 21213,
+        "copiedPNGCornerAlpha": 1,
+        "copiedPNGHash": "66c5e39b2b37eb9e260e6f0198b98f1be7d3f0b0a363901e25915845ec1fb8b3",
+        "copiedPNGSize": [
+          900,
+          600
+        ],
+        "cropSelection": [],
+        "imageAdjustments": {
+          "brightness": 1,
+          "grayscale": false,
+          "inverted": false
+        },
+        "imageDisplayScale": 0.6516666666666666,
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "opacity": 1,
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 3,
+        "segments": [],
+        "selected": [
+          2
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "rotate-left": {
+        "appActive": false,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 23986,
+        "copiedPNGCornerAlpha": 1,
+        "copiedPNGHash": "635abfc6ceb06b44ae219d63dd1a650caa51ffd6f7c175fd1aa7ea836f636020",
+        "copiedPNGSize": [
+          600,
+          900
+        ],
+        "cropSelection": [],
+        "imageAdjustments": {
+          "brightness": 1,
+          "grayscale": false,
+          "inverted": false
+        },
+        "imageDisplayScale": 0.51,
+        "imageSize": [
+          600,
+          900
+        ],
+        "locked": false,
+        "objects": [],
+        "opacity": 1,
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2160000,
+        "revision": 4,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "rotate-undone": {
+        "appActive": false,
+        "canRedo": true,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 21213,
+        "copiedPNGCornerAlpha": 1,
+        "copiedPNGHash": "66c5e39b2b37eb9e260e6f0198b98f1be7d3f0b0a363901e25915845ec1fb8b3",
+        "copiedPNGSize": [
+          900,
+          600
+        ],
+        "cropSelection": [],
+        "imageAdjustments": {
+          "brightness": 1,
+          "grayscale": false,
+          "inverted": false
+        },
+        "imageDisplayScale": 0.765,
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "opacity": 1,
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 5,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "vertical-flip": {
+        "appActive": false,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 21654,
+        "copiedPNGCornerAlpha": 1,
+        "copiedPNGHash": "184520567cd3ab03e451fcb54bb58c873cfc1301528ecad72e3318dc7b955058",
+        "copiedPNGSize": [
+          900,
+          600
+        ],
+        "cropSelection": [],
+        "imageAdjustments": {
+          "brightness": 1,
+          "grayscale": false,
+          "inverted": false
+        },
+        "imageDisplayScale": 0.765,
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [],
+        "opacity": 1,
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 6,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "vertical-undone-locked": {
+        "appActive": false,
+        "canRedo": true,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 21213,
+        "copiedPNGCornerAlpha": 1,
+        "copiedPNGHash": "66c5e39b2b37eb9e260e6f0198b98f1be7d3f0b0a363901e25915845ec1fb8b3",
+        "copiedPNGSize": [
+          900,
+          600
+        ],
+        "cropSelection": [],
+        "imageAdjustments": {
+          "brightness": 1,
+          "grayscale": false,
+          "inverted": false
+        },
+        "imageDisplayScale": 0.765,
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": true,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "opacity": 1,
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 7,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": false,
+        "windowVisible": true,
+        "zoom": 1
+      }
+    },
+    "closed": {
+      "appActive": false,
+      "canRedo": true,
+      "canUndo": true,
+      "cropSelection": [],
+      "imageAdjustments": {
+        "brightness": 1,
+        "grayscale": false,
+        "inverted": false
+      },
+      "imageDisplayScale": 0.765,
+      "imageSize": [
+        900,
+        600
+      ],
+      "locked": true,
+      "objects": [
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "lineCap": "round",
+            "lineEnd": "none",
+            "lineJoin": "round",
+            "lineStart": "none",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              50,
+              290
+            ],
+            [
+              650,
+              470
+            ]
+          ],
+          "tool": "mosaic",
+          "width": 4
+        },
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "lineCap": "round",
+            "lineEnd": "none",
+            "lineJoin": "round",
+            "lineStart": "none",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              650,
+              60
+            ],
+            [
+              850,
+              260
+            ]
+          ],
+          "tool": "magnifier",
+          "width": 3
+        },
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "lineCap": "round",
+            "lineEnd": "none",
+            "lineJoin": "round",
+            "lineStart": "none",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              150,
+              220
+            ],
+            [
+              600,
+              220
+            ]
+          ],
+          "tool": "arrow",
+          "width": 4
+        }
+      ],
+      "opacity": 1,
+      "pan": [
+        0,
+        0
+      ],
+      "renderCacheBytes": 0,
+      "revision": 7,
+      "selected": [],
+      "windowKey": false,
+      "windowMovable": false,
+      "windowVisible": false,
+      "zoom": 1
+    },
+    "verified": [
+      "Counterclockwise button produces 600x900 image from 900x600; visible right-pointing arrow turns upward",
+      "Undo counterclockwise restores exact PNG and three editable annotation objects",
+      "Vertical-flip button keeps 900x600 size while changing pixels",
+      "Undo vertical flip restores exact PNG and editable objects",
+      "Both new buttons disabled when locked; copy remains available",
+      "Window closed; private pasteboard released and render cache empty"
+    ],
+    "unverified": [
+      "Assigned physical shortcuts across applications",
+      "Native final operation followed by full app restart (store persistence tested in script integration)",
+      "Large/HDR image and multi-display acceptance",
+      "Installed Thermo integration"
+    ],
+    "processStopped": true,
+    "reproducibleAppRemoved": true
+  },
+  "behaviorChoices": [
+    "New actions rotateLeft and flipVertical extend existing clockwise rotate and horizontal flip",
+    "No additional default global shortcuts",
+    "Geometry operations flatten current confirmed annotation/color appearance with one checkpoint",
+    "Orthogonal transforms use integer dimensions and no interpolation",
+    "Legacy boolean operation API remains available"
+  ],
+  "installedAppChanged": false
+}

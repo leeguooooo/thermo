@@ -278,6 +278,8 @@ func captureFailureMessage(_ error:Error) -> String {
             case .toggleLock:model.locked.toggle();model.changeWindow?()
             case .resetZoom:model.zoom=1;model.pan = .zero
             case .grayscale,.invert,.brightnessUp,.brightnessDown,.resetImageAdjustments:try model.applyColorAction(action)
+            case .rotateLeft:try model.transformImage(.rotateCounterclockwise)
+            case .flipVertical:try model.transformImage(.flipVertical)
             case .rotate:try model.transformImage(rotateClockwise:true)
             case .flip:try model.transformImage(flipHorizontal:true)
             case .undo:model.undoAnnotation()
@@ -382,8 +384,12 @@ func captureFailureMessage(_ error:Error) -> String {
         document.replaceAnnotation(at:index,with:item)
     }
     func requireEditable() throws {guard !locked else {throw CaptureActionFailure.pinLocked}}
+    func transformImage(_ operation:CaptureImageTransform) throws {
+        try requireEditable();guard pinContent==nil else {throw CaptureActionFailure.imageRequired}
+        try document.transform(operation)
+    }
     func transformImage(rotateClockwise:Bool=false,flipHorizontal:Bool=false) throws {
-        try requireEditable();try document.transform(rotateClockwise:rotateClockwise,flipHorizontal:flipHorizontal)
+        try requireEditable();guard pinContent==nil else {throw CaptureActionFailure.imageRequired};try document.transform(rotateClockwise:rotateClockwise,flipHorizontal:flipHorizontal)
     }
     func undoAnnotation() { guard !locked else{return};document.undo();if let selectedAnnotation {selectAnnotation(selectedAnnotation)} }
     func redoAnnotation() { guard !locked else{return};document.redo();if let selectedAnnotation {selectAnnotation(selectedAnnotation)} }
@@ -520,10 +526,16 @@ private struct CaptureEditorView: View {
                     Button { model.redoAnnotation() } label: { Image(systemName: "arrow.uturn.forward") }.disabled(!model.document.canRedo).help(tr("Redo"))
                     Button {
                         do { try model.transformImage(rotateClockwise:true) } catch { model.error = tr(error.localizedDescription) }
-                    } label: { Image(systemName: "rotate.right") }.help(tr("Rotate clockwise"))
+                    } label: { Image(systemName: "rotate.right") }.help(tr("Rotate clockwise")).accessibilityLabel(tr("Rotate clockwise"))
+                    Button {
+                        do {try model.transformImage(.rotateCounterclockwise)} catch {model.error=tr(error.localizedDescription)}
+                    } label:{Image(systemName:"rotate.left")}.help(tr("Rotate counterclockwise")).accessibilityLabel(tr("Rotate counterclockwise"))
                     Button {
                         do { try model.transformImage(flipHorizontal:true) } catch { model.error = tr(error.localizedDescription) }
-                    } label: { Image(systemName: "arrow.left.and.right.righttriangle.left.righttriangle.right") }.help(tr("Flip horizontally"))
+                    } label: { Image(systemName: "arrow.left.and.right.righttriangle.left.righttriangle.right") }.help(tr("Flip horizontally")).accessibilityLabel(tr("Flip horizontally"))
+                    Button {
+                        do {try model.transformImage(.flipVertical)} catch {model.error=tr(error.localizedDescription)}
+                    } label:{Image(systemName:"arrow.up.and.down.righttriangle.up.righttriangle.down")}.help(tr("Flip vertically")).accessibilityLabel(tr("Flip vertically"))
                 }.padding(8).disabled(model.locked)
             }
             HStack {

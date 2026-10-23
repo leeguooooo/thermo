@@ -3851,4 +3851,8 @@ let zhHans: [String: String] = [
     "Saving images: %d / %d": "正在保存图像：%d / %d",
     "Show exported folder": "显示导出文件夹",
     "Wait for the batch image export to finish, or cancel it before quitting.": "请等待批量图像导出完成，或先取消导出再退出。",
+    "Rotate counterclockwise": "逆时针旋转",
+    "Flip vertically": "垂直翻转",
+    "Rotate current image counterclockwise": "逆时针旋转当前图像",
+    "Flip current image vertically": "垂直翻转当前图像",
 ]
