@@ -288,11 +288,15 @@ enum MenuBarAppDiscovery {
         trusted = accessibilityTrusted()
         guard enabled, !sleeping, trusted, available else {
             autoCollapse.cancel()
-            controller.restore()
             if enabled && !trusted {
                 enabled = false; defaults.set(false, forKey: Self.enabledKey); stopObserving()
                 error = tr("Accessibility access was removed. Menu bar management has stopped.")
             }
+            // Restoration can synchronously notify us. Disable management first
+            // so that callback cannot retain shortcuts after permission loss.
+            // A failed restoration still keeps the recovery shortcut eligible.
+            controller.restore()
+            updateShortcutEligibility()
             return
         }
         let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))

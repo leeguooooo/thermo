@@ -3,11 +3,11 @@ import MenuBarCore
 @testable import ThermoApp
 
 @MainActor final class MenuBarManagerShortcutTests: XCTestCase {
-    private func model() throws -> (String, UserDefaults, MenuBarShortcutTests.Backend, MenuBarManager) {
+    private func model(accessibilityTrusted: @escaping @MainActor () -> Bool = { true }) throws -> (String, UserDefaults, MenuBarShortcutTests.Backend, MenuBarManager) {
         let suite = "MenuBarManagerShortcutTest." + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
         let backend = MenuBarShortcutTests.Backend()
-        let model = MenuBarManager(defaults: defaults, accessibilityTrusted: { true }, shortcutBackend: backend)
+        let model = MenuBarManager(defaults: defaults, accessibilityTrusted: accessibilityTrusted, shortcutBackend: backend)
         guard model.available else {
             defaults.removePersistentDomain(forName: suite)
             throw XCTSkip("Native menu management requires macOS 27")
@@ -37,6 +37,28 @@ import MenuBarCore
         XCTAssertEqual(backend.leases.map(\.releases), [1, 1])
         backend.callbacks[0](false); backend.callbacks[0](true)
         XCTAssertEqual(model.reveal, .all)
+    }
+
+    func testPermissionRevocationReleasesShortcutsAfterRestoringVisibility() throws {
+        var trusted = true
+        let (suite, defaults, backend, model) = try model(accessibilityTrusted: { trusted })
+        defer { model.shutdown(); defaults.removePersistentDomain(forName: suite) }
+        model.start()
+        XCTAssertTrue(model.shortcuts.active)
+        model.assign("org.example.menubar-absent." + UUID().uuidString, to: .hidden)
+        let saved = defaults.data(forKey: MenuBarSectionStore.key)
+
+        trusted = false
+        model.setReveal(.collapsed)
+
+        XCTAssertFalse(model.enabled)
+        XCTAssertFalse(defaults.bool(forKey: MenuBarManager.enabledKey))
+        XCTAssertEqual(model.state, .visible)
+        XCTAssertFalse(model.shortcuts.active)
+        XCTAssertEqual(backend.leases.map(\.releases), [1, 1])
+        XCTAssertEqual(defaults.data(forKey: MenuBarSectionStore.key), saved)
+        backend.callbacks[0](true)
+        XCTAssertEqual(model.state, .visible)
     }
 
     func testFailedVisibilityKeepsRecoveryKeyUntilRestored() throws {

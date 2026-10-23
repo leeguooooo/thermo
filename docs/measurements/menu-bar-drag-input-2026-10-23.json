@@ -28,12 +28,14 @@
     ],
     "acceptedTransitions": [
       "visible -> hidden",
-      "hidden -> alwaysHidden"
+      "hidden -> alwaysHidden",
+      "alwaysHidden -> visible"
     ],
     "assignmentSurvivesProcessRestart": true,
-    "returnToVisibleAccepted": false,
+    "returnToVisibleAccepted": true,
     "nativeHidingEnabled": false,
-    "realApplicationAssignmentsModified": false
+    "realApplicationAssignmentsModified": false,
+    "returnToVisiblePersistsAfterRestart": true
   },
   "inputDiagnostics": {
     "scope": "own temporary drag-check window only",
@@ -58,7 +60,8 @@
     "returnAXInitiallyEmpty": true,
     "coordinateMappingCauseKnown": false,
     "computerUseReconnectFailures": 2,
-    "error": "Sky Computer Use native pipe startup failed"
+    "error": "Sky Computer Use native pipe startup failed",
+    "resolvedForDragAcceptanceBy": "Peekaboo authorized by user; element-based source and target from fresh exact-window snapshot"
   },
   "verification": {
     "previousR36BuildCoreTests": 27,
@@ -78,7 +81,7 @@
   "cleanup": {
     "exactQAProcessTerminated": 73332,
     "nativeVisibilityWasOff": true,
-    "retainedApps": "R36 fixtures and preview retained for unfinished GUI acceptance"
+    "retainedApps": "Superseded R35/R36 apps removed; latest green QA build retained"
   },
   "localEvidenceSha256": {
     "test.log": "6f55967ea29859d4ad24aee81022b01d59ae88a811c1d957de85fdb263b33fd3",
@@ -90,5 +93,35 @@
     "drag-check-result.json": "14293bb0c91a8ea9bd0953279d664456434d85e331b261000e7a51593f9fbece"
   },
   "goalComplete": false,
-  "published": false
+  "published": false,
+  "followup": {
+    "tool": "Peekaboo 4.5.0",
+    "returnCounts": [
+      3,
+      0,
+      0
+    ],
+    "relaunchedCounts": [
+      3,
+      0,
+      0
+    ],
+    "oldPid": 7445,
+    "newPid": 10789,
+    "savedOverridesAfterReturn": {},
+    "ownWindowMouseDownAndDragObserved": true,
+    "nativeHidingEnabled": false,
+    "closeReceiptInitiallyUnverified": true,
+    "bothProcessesConfirmedExited": true,
+    "cleanup": "Removed superseded R35/R36 apps and R36 disposable preferences; kept logs, screenshots and latest green build",
+    "evidenceSha256": {
+      "peekaboo-before-return.json": "6b2fd7aca539149ba6fbd6c8be9a3f49b55c831be3b2490b54544133f0cc3dd7",
+      "peekaboo-after-return.json": "0cf113495e342d8404e0120cc72101a036ee413c211b45b62dfb6007eb6eefc1",
+      "peekaboo-return-dispatch.json": "11cc828b6b53876c9c92fedaf01c4a20551cdbd641e07c85260afe27a20f53d6",
+      "peekaboo-return-input-events.json": "dd61b84818548f67e2d75535d8df7e9a3f5ef3ed33ae9f032449b12e71da21f0",
+      "peekaboo-return-result.json": "4497faaaa44551a1d3f3ecb66e2bf4e2e384e97aef598c00acef90b04576504c",
+      "peekaboo-relaunch.json": "6fd2d7e2e5d6a57a6ff9eae606468ff4c52a9834a9fb54060c945ad4ea0dd088",
+      "peekaboo-relaunched-state.json": "5c5f35885d0bac031094ad54fc99011c733e3aa63d765c53c0dff7a391d9b0b4"
+    }
+  }
 }
