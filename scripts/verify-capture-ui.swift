@@ -49,7 +49,10 @@ import SwiftUI
             screenshotReviewWindow=NSWindowController(window:window);window.center();window.makeKeyAndOrderFront(nil)
         } else if Bundle.main.object(forInfoDictionaryKey:"ThermoPassthroughReview") as? Bool == true,
                   let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
-            let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)
+            let root=URL(fileURLWithPath:path)
+            let stress=Bundle.main.object(forInfoDictionaryKey:"ThermoBatchExportStressReview") as? Bool == true
+            if stress {do {try prepareBatchStressFixture(root:root)} catch {fatalError("Batch fixture failed: \(error)")}}
+            let session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)
             workspace.saving=CaptureSaveModel(read:{nil},write:{_ in});pinSession=session;captureWorkspace=workspace
             do {
                 if session.library.pins.isEmpty {
@@ -64,7 +67,7 @@ import SwiftUI
                         try session.switchGroup(first);try session.setAllHidden(true);try session.flush()
                     } else {let id=try session.open(image);session.windows[id]?.model.pinTitle="QA passthrough pin";try session.flush()}
                 }
-                else {session.restoreWindows()}
+                else if !stress {session.restoreWindows()}
             } catch {session.issue=error.localizedDescription}
             session.showLibrary()
             let probe=Timer(timeInterval:0.25,repeats:true) { [weak session] _ in
@@ -73,7 +76,7 @@ import SwiftUI
                     let values:[[String:Any]]=session.windows.map {id,editor in
                         ["id":id.uuidString,"mousePassthrough":editor.model.mousePassthrough,"ignoresMouseEvents":editor.window?.ignoresMouseEvents ?? false,"title":editor.window?.title ?? "","visible":editor.window?.isVisible ?? false,"revision":editor.model.revision,"imageSize":[editor.model.document.image.width,editor.model.document.image.height]]
                     }
-                    let record:[String:Any]=["batchExport":["allGroups":session.batchExport.allGroups,"selectedGroupID":session.batchExport.selectedGroupID?.uuidString ?? "","format":session.batchExport.format.rawValue,"running":session.batchExport.running,"completed":session.batchExport.completed,"total":session.batchExport.total,"folder":session.batchExport.result?.folder.path ?? "","issue":session.batchExport.issue ?? ""],"pins":values,"savedPins":session.library.pins.count,"issue":session.issue ?? "","libraryVisible":NSApp.windows.contains{$0.title == tr("Pin groups and history") && $0.isVisible}]
+                    let record:[String:Any]=["batchExport":["allGroups":session.batchExport.allGroups,"selectedGroupID":session.batchExport.selectedGroupID?.uuidString ?? "","format":session.batchExport.format.rawValue,"running":session.batchExport.running,"cancelling":session.batchExport.cancelling,"completed":session.batchExport.completed,"total":session.batchExport.total,"folder":session.batchExport.result?.folder.path ?? "","issue":session.batchExport.issue ?? ""],"pins":values,"savedPins":session.library.pins.count,"issue":session.issue ?? "","libraryVisible":NSApp.windows.contains{$0.title == tr("Pin groups and history") && $0.isVisible}]
                     if let data=try? JSONSerialization.data(withJSONObject:record,options:[.prettyPrinted,.sortedKeys]) {try? data.write(to:root.appendingPathComponent("passthrough-probe.json"),options:.atomic)}
                 }
             };RunLoop.main.add(probe,forMode:.common)
@@ -308,6 +311,30 @@ import SwiftUI
         DispatchQueue.main.asyncAfter(deadline: .now()+600) { app.terminate(nil) }
         withExtendedLifetime((recordingWindow,annotationWindow,pinSession,captureWorkspace,shortcutModel,cliHost,cliServer,screenshotReviewWindow)) { app.run() }
     }
+}
+
+/// Real PNG encoding workload, stored once and referenced by 80 hidden image pins.
+/// This does not capture the screen or inject delays into the production exporter.
+@MainActor private func prepareBatchStressFixture(root:URL) throws {
+    let pinRoot=root.appendingPathComponent("pins")
+    if FileManager.default.fileExists(atPath:pinRoot.appendingPathComponent("library.json").path) {return}
+    let width=2048,height=1536
+    guard let context=CGContext(data:nil,width:width,height:height,bitsPerComponent:8,bytesPerRow:width*4,space:CGColorSpaceCreateDeviceRGB(),bitmapInfo:CGImageAlphaInfo.premultipliedLast.rawValue),let data=context.data?.assumingMemoryBound(to:UInt8.self) else {throw CaptureFailure.invalidImage}
+    var state:UInt32=0x13579bdf
+    for i in 0..<(width*height) {
+        state ^= state << 13;state ^= state >> 17;state ^= state << 5
+        data[i*4]=UInt8(truncatingIfNeeded:state);data[i*4+1]=UInt8(truncatingIfNeeded:state >> 8);data[i*4+2]=UInt8(truncatingIfNeeded:state >> 16);data[i*4+3]=255
+    }
+    guard let image=context.makeImage() else {throw CaptureFailure.invalidImage}
+    let store=CapturePinLibraryStore(root:pinRoot);var library=try store.load(defaultName:"Batch cancellation QA")
+    var seed=CaptureSavedPin(groupID:library.currentGroupID);seed.title="Batch image 001";seed.hidden=true;library.pins=[seed]
+    library=try store.save(library,documents:[seed.id:CaptureDocument(image:image)])
+    for i in 2...80 {
+        var pin=CaptureSavedPin(groupID:library.currentGroupID);pin.snapshotID=seed.snapshotID;pin.hidden=true;pin.title=String(format:"Batch image %03d",i);library.pins.append(pin)
+    }
+    try store.save(library)
+    let record:[String:Any]=["width":width,"height":height,"images":80,"sharedSnapshot":seed.snapshotID.uuidString,"artificialDelay":false]
+    try JSONSerialization.data(withJSONObject:record,options:[.prettyPrinted,.sortedKeys]).write(to:root.appendingPathComponent("stress-fixture.json"),options:.atomic)
 }
 
 private struct CaptureScreenshotQA:View {
