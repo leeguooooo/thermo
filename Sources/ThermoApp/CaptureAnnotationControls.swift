@@ -5,6 +5,7 @@ import ThermoL10n
 
 struct CaptureAnnotationControls:View {
     @ObservedObject var model:CaptureEditorModel
+    @FocusState private var arrowCommentFocused:Bool
     private var tool:CaptureTool {
         if let index=model.selectedAnnotation,model.document.annotations.indices.contains(index) { return model.document.annotations[index].tool }
         return model.tool
@@ -37,7 +38,14 @@ struct CaptureAnnotationControls:View {
                 Button(tr("Clear annotations")) { model.document.clearAnnotations();model.selectedAnnotation=nil }.disabled(model.locked || model.document.annotations.isEmpty)
             }
             if [.line,.arrow,.number].contains(tool) {CaptureAnnotationStyleControls(model:model,tool:tool)}
-            if model.tool == .select {Text(tr("Shift-click or drag a box to select multiple annotations. Drag to move; drag the corner to resize.")).font(.caption).foregroundStyle(.secondary)}
+            if model.selectedAnnotation != nil,tool == .arrow {
+                TextField(tr("Arrow comment"),text:Binding(get:{model.annotationOptions.arrowComment},set:{model.annotationOptions.arrowComment=String($0.prefix(2000))}))
+                    .textFieldStyle(.roundedBorder).focused($arrowCommentFocused)
+                    .onChange(of:model.arrowCommentEditingID) {_ in arrowCommentFocused=true}
+            }
+            if model.tool == .select {
+                Text(tr(model.selectedAnnotation != nil && [CaptureTool.line,.arrow].contains(tool) ? "Drag an endpoint to adjust direction; Shift snaps to 45°. Drag the body to move. Double-click an arrow to edit its comment." : "Shift-click or drag a box to select multiple annotations. Drag to move; drag the corner to resize.")).font(.caption).foregroundStyle(.secondary)
+            }
             if model.selectedAnnotation != nil,([CaptureTool.text,.watermark].contains(tool) || (tool == .number && model.annotationOptions.numberValue == nil)) { TextField(tr("Annotation text"),text:$model.text).textFieldStyle(.roundedBorder) }
         }.padding(.horizontal,10)
             .onChange(of:model.color) { _ in model.applySelectedStyle() }

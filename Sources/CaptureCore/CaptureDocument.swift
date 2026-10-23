@@ -87,6 +87,7 @@ public struct CaptureDocument {
             ctx.setBlendMode(.multiply); ctx.setAlpha(0.35); ctx.fill(rect)
         case .line,.arrow:
             styledLine(from:first,to:last,item:item,in:ctx,startHead:item.tool == .arrow ? item.options.arrowStart : .none,endHead:item.tool == .arrow ? item.options.arrowEnd : .none,points:item.points)
+            if item.tool == .arrow {drawArrowComment(item,in:ctx)}
         case .pencil:
             ctx.beginPath();ctx.move(to:first)
             for point in item.points.dropFirst() {ctx.addLine(to:point)};ctx.strokePath()
@@ -178,6 +179,7 @@ extension CaptureDocument {
         annotations.indices.reversed().first { index in
             let item=annotations[index]
             guard item.bounds.insetBy(dx:-tolerance,dy:-tolerance).contains(point) else { return false }
+            if let rect=item.arrowCommentRect,rect.insetBy(dx:-4-tolerance,dy:-3-tolerance).contains(point) {return true}
             if item.arrowMarkersContain(point,tolerance:tolerance) {return true}
             if [.line,.arrow,.pencil,.eraser].contains(item.tool),item.points.count >= 2 {
                 for (a,b) in zip(item.points,item.points.dropFirst()) {

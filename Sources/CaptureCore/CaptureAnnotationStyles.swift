@@ -56,6 +56,16 @@ extension CaptureAnnotation {
         if abs(dy)>0.000001 {length=min(length,(dy>0 ? size.height-start.y : start.y)/abs(dy))}
         return CGPoint(x:start.x+dx*length,y:start.y+dy*length)
     }
+    var arrowCommentFont:NSFont {NSFont.systemFont(ofSize:max(14,width*4))}
+    public var arrowCommentRect:CGRect? {
+        guard tool == .arrow,!options.arrowComment.isEmpty,let a=points.first,let b=points.last else{return nil}
+        let size=(options.arrowComment as NSString).boundingRect(with:CGSize(width:360,height:100000),options:[.usesLineFragmentOrigin,.usesFontLeading],attributes:[.font:arrowCommentFont]).size
+        let w=ceil(size.width),h=ceil(size.height),distance=hypot(b.x-a.x,b.y-a.y)
+        var nx:CGFloat=0,ny:CGFloat=1
+        if distance > 0.01 {nx = -(b.y-a.y)/distance;ny=(b.x-a.x)/distance;if ny<0 {nx = -nx;ny = -ny}}
+        let offset=h/2+max(8,width*2)
+        return CGRect(x:(a.x+b.x)/2+nx*offset-w/2,y:(a.y+b.y)/2+ny*offset-h/2,width:w,height:h)
+    }
     public var numberLabel:String {options.numberValue.map{options.numberFormat.label($0)} ?? text}
     var numberRadius:CGFloat {
         let fontSize=max(18,width*6)
@@ -83,6 +93,16 @@ extension CaptureDocument {
         let pathPoints=points ?? [start,end]
         head(startHead,at:start,awayFrom:pathPoints.dropFirst().first ?? end)
         head(endHead,at:end,awayFrom:pathPoints.dropLast().last ?? start)
+    }
+    static func drawArrowComment(_ item:CaptureAnnotation,in ctx:CGContext) {
+        guard let rect=item.arrowCommentRect else{return}
+        let color=item.color.usingColorSpace(.deviceRGB) ?? .red
+        let luminance=0.2126*color.redComponent+0.7152*color.greenComponent+0.0722*color.blueComponent
+        ctx.setFillColor((luminance>0.65 ? NSColor.black.withAlphaComponent(0.85) : NSColor.white.withAlphaComponent(0.92)).cgColor)
+        ctx.fill(rect.insetBy(dx:-4,dy:-3))
+        NSGraphicsContext.saveGraphicsState();defer{NSGraphicsContext.restoreGraphicsState()}
+        NSGraphicsContext.current=NSGraphicsContext(cgContext:ctx,flipped:false)
+        (item.options.arrowComment as NSString).draw(with:rect,options:[.usesLineFragmentOrigin,.usesFontLeading],attributes:[.font:item.arrowCommentFont,.foregroundColor:color])
     }
     static func drawNumber(_ item:CaptureAnnotation,in ctx:CGContext) {
         guard let first=item.points.first,let last=item.points.last else{return}

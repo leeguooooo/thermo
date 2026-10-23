@@ -3813,4 +3813,6 @@ let zhHans: [String: String] = [
     "Dotted line": "点线",
     "Use a sequence number from 1 to 3999.": "请输入 1 至 3999 的序号数值。",
     "Sequence leader": "序号引线",
+    "Arrow comment": "箭头评论",
+    "Drag an endpoint to adjust direction; Shift snaps to 45°. Drag the body to move. Double-click an arrow to edit its comment.": "拖动端点调整方向，按 Shift 吸附 45°。拖动线身移动；双击箭头编辑评论。",
 ]

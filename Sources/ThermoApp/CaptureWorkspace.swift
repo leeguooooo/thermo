@@ -316,6 +316,7 @@ func captureFailureMessage(_ error:Error) -> String {
         }
         self.tool=tool
     }
+    @Published var arrowCommentEditingID=UUID()
     @Published var annotationOptions=CaptureAnnotationOptions()
     @Published var color = Color.red
     @Published var lineWidth: Double = 4
@@ -596,6 +597,7 @@ struct CaptureCanvas: NSViewRepresentable {
         var marqueeRect:CGRect?
         var marqueeBaseline:Set<Int>=[]
         var resizing=false
+        var endpointIndex:Int?
         var ocrDragStart:CGPoint?
         var ocrBaseline:Set<Int>=[]
         var ocrAccessibilityElements:[CaptureOCRAccessibilityElement]=[]
@@ -652,7 +654,7 @@ struct CaptureCanvas: NSViewRepresentable {
         }
         func renderedImage() throws -> CGImage {
             let preview=draft?.tool == .crop ? nil : draft
-            let replacements=model.tool == .select && selectionRevision == model.revision ? selectionPreview : [:]
+            let replacements=model.tool == .select && !model.locked && selectionRevision == model.revision ? selectionPreview : [:]
             if preview != nil || !replacements.isEmpty {return try render(model.document,preview,replacements)}
             return try renderCache.image(owner:cacheOwner,source:ObjectIdentifier(model),revision:model.revision) {try render(model.document,nil,[:])}
         }
@@ -681,7 +683,7 @@ struct CaptureCanvas: NSViewRepresentable {
             }
             let selected=model.selectedAnnotations.sorted().compactMap { index -> CaptureAnnotation? in
                 guard model.document.annotations.indices.contains(index) else{return nil}
-                return selectionRevision == model.revision ? selectionPreview[index] ?? model.document.annotations[index] : model.document.annotations[index]
+                return !model.locked && selectionRevision == model.revision ? selectionPreview[index] ?? model.document.annotations[index] : model.document.annotations[index]
             }
             if model.selectingOCRText {
                 for index in model.ocrSegments.indices {
@@ -694,7 +696,10 @@ struct CaptureCanvas: NSViewRepresentable {
                 let rect=selected.dropFirst().reduce(first.bounds){$0.union($1.bounds)}
                 ctx.setStrokeColor(NSColor.systemBlue.cgColor);ctx.setLineWidth(1/scale);ctx.setLineDash(phase:0,lengths:[4/scale,3/scale]);ctx.stroke(rect);ctx.setLineDash(phase:0,lengths:[])
                 if selected.count > 1 {for item in selected {ctx.stroke(item.bounds)}}
-                ctx.setFillColor(NSColor.systemBlue.cgColor);ctx.fill(CGRect(x:rect.maxX-4/scale,y:rect.maxY-4/scale,width:8/scale,height:8/scale))
+                ctx.setFillColor(NSColor.systemBlue.cgColor)
+                if selected.count == 1,[CaptureTool.line,.arrow].contains(first.tool),let a=first.points.first,let b=first.points.last {
+                    for p in [a,b] {ctx.fillEllipse(in:CGRect(x:p.x-5/scale,y:p.y-5/scale,width:10/scale,height:10/scale))}
+                } else {ctx.fill(CGRect(x:rect.maxX-4/scale,y:rect.maxY-4/scale,width:8/scale,height:8/scale))}
             }
             if let rect=marqueeRect {ctx.setFillColor(NSColor.systemBlue.withAlphaComponent(0.12).cgColor);ctx.fill(rect);ctx.setStrokeColor(NSColor.systemBlue.cgColor);ctx.setLineWidth(1/scale);ctx.stroke(rect)}
             if model.tool == .crop,let rect=model.cropSelection {
@@ -733,11 +738,20 @@ struct CaptureCanvas: NSViewRepresentable {
                 let p=point(event)
                 let additive=event.modifierFlags.contains(.shift)
                 let items=model.selectedAnnotations.sorted().map{model.document.annotations[$0]}
-                if let first=items.first,!additive {
-                    let bounds=items.dropFirst().reduce(first.bounds){$0.union($1.bounds)}
-                    resizing=hypot(p.x-bounds.maxX,p.y-bounds.maxY) < 10/scale
+                if !additive,event.clickCount == 2,let hit=model.document.hitTest(p,tolerance:5/scale),model.document.annotations[hit].tool == .arrow {
+                    model.selectAnnotation(hit);model.arrowCommentEditingID=UUID();needsDisplay=true;return
                 }
-                if !resizing {
+                if let first=items.first,!additive {
+                    if items.count == 1,[CaptureTool.line,.arrow].contains(first.tool),first.points.count >= 2 {
+                        let indices=[0,first.points.count-1]
+                        endpointIndex=indices.min{hypot(p.x-first.points[$0].x,p.y-first.points[$0].y)<hypot(p.x-first.points[$1].x,p.y-first.points[$1].y)}
+                        if let index=endpointIndex,hypot(p.x-first.points[index].x,p.y-first.points[index].y)>10/scale {endpointIndex=nil}
+                    } else {
+                        let bounds=items.dropFirst().reduce(first.bounds){$0.union($1.bounds)}
+                        resizing=hypot(p.x-bounds.maxX,p.y-bounds.maxY) < 10/scale
+                    }
+                }
+                if !resizing && endpointIndex == nil {
                     if let hit=model.document.hitTest(p,tolerance:5/scale) {
                         if additive {
                             var indices=model.selectedAnnotations
@@ -762,7 +776,7 @@ struct CaptureCanvas: NSViewRepresentable {
             }
             guard imageRect.contains(convert(event.locationInWindow, from: nil)) else { return }
             let p = point(event)
-            var options=model.annotationOptions
+            var options=model.annotationOptions;options.arrowComment=""
             if model.tool == .number {
                 guard (1...3999).contains(model.nextSequenceNumber) else {model.error=tr("Use a sequence number from 1 to 3999.");return}
                 options.numberValue=model.nextSequenceNumber
@@ -794,7 +808,14 @@ struct CaptureCanvas: NSViewRepresentable {
                 let p=point(event)
                 selectionMoved=selectionMoved || hypot(p.x-start.x,p.y-start.y) > 0.5/scale
                 let target=CGRect(x:bounds.minX,y:bounds.minY,width:max(1,bounds.width+p.x-start.x),height:max(1,bounds.height+p.y-start.y))
-                selectionPreview=selectionOriginal.mapValues {resizing ? $0.resized(from:bounds,to:target) : $0.moved(dx:p.x-start.x,dy:p.y-start.y)}
+                if let endpointIndex {
+                    selectionPreview=selectionOriginal.mapValues {original in
+                        var result=original
+                        let fixed=original.points[endpointIndex == 0 ? 1 : original.points.count-2]
+                        result.points[endpointIndex]=event.modifierFlags.contains(.shift) ? CaptureAnnotation.snappedEndpoint(from:fixed,to:p,inside:model.document.size) : p
+                        return result
+                    }
+                } else {selectionPreview=selectionOriginal.mapValues {resizing ? $0.resized(from:bounds,to:target) : $0.moved(dx:p.x-start.x,dy:p.y-start.y)}}
                 needsDisplay=true;return
             }
             if model.tool == .move, let lastDrag {
@@ -859,7 +880,7 @@ struct CaptureCanvas: NSViewRepresentable {
         }
         func cancelSelectionGesture() {
             selectionStart=nil;selectionOriginal=[:];selectionPreview=[:];selectionBounds=nil;selectionRevision=nil
-            selectionMoved=false;resizing=false;marqueeStart=nil;marqueeRect=nil;marqueeBaseline=[]
+            selectionMoved=false;resizing=false;endpointIndex=nil;marqueeStart=nil;marqueeRect=nil;marqueeBaseline=[]
         }
         override func scrollWheel(with event: NSEvent) {
             guard !model.locked else { return }

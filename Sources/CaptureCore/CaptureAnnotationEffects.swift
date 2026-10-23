@@ -8,6 +8,7 @@ public struct CaptureAnnotationOptions:Codable,Sendable,Equatable {
     public var opacity=0.6
     public var angle = -30.0
     public var ellipse=false
+    public var arrowComment=""
     public var arrowStart:CaptureArrowHead = .none
     public var arrowEnd:CaptureArrowHead = .open
     public var linePattern:CaptureLinePattern = .solid
@@ -17,7 +18,7 @@ public struct CaptureAnnotationOptions:Codable,Sendable,Equatable {
     public var numberFormat:CaptureNumberFormat = .decimal
     public var numberValue:Int?
     public init() {}
-    private enum CodingKeys:String,CodingKey {case strength,zoom,opacity,angle,ellipse,arrowStart,arrowEnd,linePattern,numberShape,numberFilled,numberLeader,numberFormat,numberValue}
+    private enum CodingKeys:String,CodingKey {case strength,zoom,opacity,angle,ellipse,arrowComment,arrowStart,arrowEnd,linePattern,numberShape,numberFilled,numberLeader,numberFormat,numberValue}
     public init(from decoder:Decoder) throws {
         let c=try decoder.container(keyedBy:CodingKeys.self)
         strength=try c.decodeIfPresent(Double.self,forKey:.strength) ?? 12
@@ -25,6 +26,7 @@ public struct CaptureAnnotationOptions:Codable,Sendable,Equatable {
         opacity=try c.decodeIfPresent(Double.self,forKey:.opacity) ?? 0.6
         angle=try c.decodeIfPresent(Double.self,forKey:.angle) ?? -30
         ellipse=try c.decodeIfPresent(Bool.self,forKey:.ellipse) ?? false
+        arrowComment=try c.decodeIfPresent(String.self,forKey:.arrowComment) ?? ""
         arrowStart=try c.decodeIfPresent(CaptureArrowHead.self,forKey:.arrowStart) ?? .none
         arrowEnd=try c.decodeIfPresent(CaptureArrowHead.self,forKey:.arrowEnd) ?? .open
         linePattern=try c.decodeIfPresent(CaptureLinePattern.self,forKey:.linePattern) ?? .solid
@@ -34,7 +36,7 @@ public struct CaptureAnnotationOptions:Codable,Sendable,Equatable {
         numberFormat=try c.decodeIfPresent(CaptureNumberFormat.self,forKey:.numberFormat) ?? .decimal
         numberValue=try c.decodeIfPresent(Int.self,forKey:.numberValue)
     }
-    public var valid:Bool { strength.isFinite && (1...128).contains(strength) && zoom.isFinite && (1...8).contains(zoom) && opacity.isFinite && (0...1).contains(opacity) && angle.isFinite && (-180...180).contains(angle) && (numberValue == nil || (1...3999).contains(numberValue!)) }
+    public var valid:Bool { arrowComment.count <= 2000 && strength.isFinite && (1...128).contains(strength) && zoom.isFinite && (1...8).contains(zoom) && opacity.isFinite && (0...1).contains(opacity) && angle.isFinite && (-180...180).contains(angle) && (numberValue == nil || (1...3999).contains(numberValue!)) }
 
 }
 
