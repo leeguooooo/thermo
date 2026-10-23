@@ -85,30 +85,17 @@ public struct CaptureDocument {
             ctx.setFillColor(NSColor.black.cgColor); ctx.fill(rect)
         case .highlight:
             ctx.setBlendMode(.multiply); ctx.setAlpha(0.35); ctx.fill(rect)
-        case .line, .arrow, .pencil:
-            ctx.beginPath(); ctx.move(to: first)
-            for point in item.points.dropFirst() { ctx.addLine(to: point) }; ctx.strokePath()
-            if item.tool == .arrow {
-                let angle = atan2(last.y-first.y, last.x-first.x), length = max(12, item.width*4)
-                ctx.move(to: CGPoint(x: last.x-length*cos(angle-0.5), y: last.y-length*sin(angle-0.5)))
-                ctx.addLine(to: last)
-                ctx.addLine(to: CGPoint(x: last.x-length*cos(angle+0.5), y: last.y-length*sin(angle+0.5)))
-                ctx.strokePath()
-            }
-        case .text, .number:
-            let fontSize = max(18, item.width*6)
+        case .line,.arrow:
+            styledLine(from:first,to:last,item:item,in:ctx,startHead:item.tool == .arrow ? item.options.arrowStart : .none,endHead:item.tool == .arrow ? item.options.arrowEnd : .none,points:item.points)
+        case .pencil:
+            ctx.beginPath();ctx.move(to:first)
+            for point in item.points.dropFirst() {ctx.addLine(to:point)};ctx.strokePath()
+        case .number:drawNumber(item,in:ctx)
+        case .text:
+            let fontSize=max(18,item.width*6)
             NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current = NSGraphicsContext(cgContext: ctx, flipped: false)
-            if item.tool == .number {
-                let circle = CGRect(x: first.x-fontSize, y: first.y-fontSize, width: fontSize*2, height: fontSize*2)
-                ctx.fillEllipse(in: circle)
-                let text = item.text as NSString
-                let attributes: [NSAttributedString.Key: Any] = [.font: NSFont.boldSystemFont(ofSize: fontSize), .foregroundColor: NSColor.white]
-                let s = text.size(withAttributes: attributes)
-                text.draw(at: CGPoint(x: first.x-s.width/2, y: first.y-s.height/2), withAttributes: attributes)
-            } else {
-                (item.text as NSString).draw(at: first, withAttributes: [.font: NSFont.systemFont(ofSize: fontSize), .foregroundColor: color])
-            }
+            NSGraphicsContext.current=NSGraphicsContext(cgContext:ctx,flipped:false)
+            (item.text as NSString).draw(at:first,withAttributes:[.font:NSFont.systemFont(ofSize:fontSize),.foregroundColor:color])
             NSGraphicsContext.restoreGraphicsState()
         case .move,.select, .crop: break
         }
@@ -191,6 +178,7 @@ extension CaptureDocument {
         annotations.indices.reversed().first { index in
             let item=annotations[index]
             guard item.bounds.insetBy(dx:-tolerance,dy:-tolerance).contains(point) else { return false }
+            if item.arrowMarkersContain(point,tolerance:tolerance) {return true}
             if [.line,.arrow,.pencil,.eraser].contains(item.tool),item.points.count >= 2 {
                 for (a,b) in zip(item.points,item.points.dropFirst()) {
                     let dx=b.x-a.x,dy=b.y-a.y,length=dx*dx+dy*dy

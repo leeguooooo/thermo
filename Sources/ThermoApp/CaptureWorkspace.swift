@@ -307,7 +307,15 @@ func captureFailureMessage(_ error:Error) -> String {
         }
     }
     func selectAllAnnotations() {guard !locked else{return};selectingOCRText=false;tool = .select;selectAnnotations(Set(document.annotations.indices))}
-    func chooseTool(_ tool:CaptureTool) {selectingOCRText=false;self.tool=tool}
+    @Published var nextSequenceNumber=1
+    func chooseTool(_ tool:CaptureTool) {
+        selectingOCRText=false;selectAnnotations([])
+        if tool == .number,self.tool != .number {
+            annotationOptions.numberLeader=true
+            nextSequenceNumber=max(nextSequenceNumber,(document.annotations.filter{$0.tool == .number}.compactMap{$0.options.numberValue ?? Int($0.text)}.filter{(1...3999).contains($0)}.max() ?? 0)+1)
+        }
+        self.tool=tool
+    }
     @Published var annotationOptions=CaptureAnnotationOptions()
     @Published var color = Color.red
     @Published var lineWidth: Double = 4
@@ -754,8 +762,13 @@ struct CaptureCanvas: NSViewRepresentable {
             }
             guard imageRect.contains(convert(event.locationInWindow, from: nil)) else { return }
             let p = point(event)
-            let text = model.tool == .number ? String(model.document.annotations.filter { $0.tool == .number }.count+1) : model.text
-            draft = CaptureAnnotation(tool: model.tool, points: [p,p], color: NSColor(model.color), width: model.lineWidth, text: text,options:model.annotationOptions)
+            var options=model.annotationOptions
+            if model.tool == .number {
+                guard (1...3999).contains(model.nextSequenceNumber) else {model.error=tr("Use a sequence number from 1 to 3999.");return}
+                options.numberValue=model.nextSequenceNumber
+            }
+            let text=model.tool == .number ? options.numberFormat.label(model.nextSequenceNumber) : model.text
+            draft = CaptureAnnotation(tool: model.tool, points: [p,p], color: NSColor(model.color), width: model.lineWidth, text: text,options:options)
             needsDisplay = true
         }
         override func mouseDragged(with event: NSEvent) {
@@ -790,7 +803,14 @@ struct CaptureCanvas: NSViewRepresentable {
                 needsDisplay = true; return
             }
             guard draft != nil else { return }
-            if model.tool == .pencil || model.tool == .eraser { draft?.points.append(point(event)) } else { draft?.points[1] = point(event) }
+            if model.tool == .pencil || model.tool == .eraser { draft?.points.append(point(event)) }
+            else {
+                var p=point(event)
+                if event.modifierFlags.contains(.shift),[CaptureTool.line,.arrow,.number].contains(model.tool),let start=draft?.points.first {
+                    p=CaptureAnnotation.snappedEndpoint(from:start,to:p,inside:model.document.size)
+                }
+                draft?.points[1]=p
+            }
             needsDisplay = true
         }
         override func mouseUp(with event: NSEvent) {
@@ -808,7 +828,10 @@ struct CaptureCanvas: NSViewRepresentable {
             if item.tool == .select { return }
             if item.tool == .crop, let a = item.points.first, let b = item.points.last {
                 if model.tool == .crop,cropGestureRevision == model.revision {model.setCropSelection(CGRect(x:min(a.x,b.x),y:min(a.y,b.y),width:abs(a.x-b.x),height:abs(a.y-b.y)))}
-            } else if ![CaptureTool.text,.watermark].contains(item.tool) || !item.text.isEmpty { model.document.append(item) }
+            } else if ![CaptureTool.text,.watermark].contains(item.tool) || !item.text.isEmpty {
+                model.document.append(item)
+                if item.tool == .number {model.nextSequenceNumber=(item.options.numberValue ?? model.nextSequenceNumber)+1}
+            }
             needsDisplay = true
         }
         override func keyDown(with event:NSEvent) {

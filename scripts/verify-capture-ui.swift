@@ -265,6 +265,10 @@ import SwiftUI
             if Bundle.main.object(forInfoDictionaryKey:"ThermoCropReview") as? Bool == true {
                 window.model.tool = .crop;window.model.setCropSelection(CGRect(x:50,y:60,width:400,height:300))
             }
+            if Bundle.main.object(forInfoDictionaryKey:"ThermoAnnotationStylesReview") as? Bool == true {
+                window.model.document.append(CaptureAnnotation(tool:.arrow,points:[CGPoint(x:150,y:220),CGPoint(x:600,y:220)],width:4))
+                window.model.tool = .select;window.model.selectAnnotation(2)
+            }
             annotationWindow=window;window.showWindow(nil)
             if board != nil {DispatchQueue.main.async {app.activate(ignoringOtherApps:true);window.window?.makeKeyAndOrderFront(nil)}}
             if let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
@@ -272,7 +276,7 @@ import SwiftUI
                     MainActor.assumeIsolated {
                         guard let model else{return}
                         var record:[String:Any] = ["selected":model.selectedAnnotations.sorted(),"objects":model.document.annotations.map {item in
-                            ["tool":item.tool.rawValue,"points":item.points.map{[Double($0.x),Double($0.y)]},"width":Double(item.width)] as [String:Any]
+                            ["tool":item.tool.rawValue,"points":item.points.map{[Double($0.x),Double($0.y)]},"width":Double(item.width),"label":item.numberLabel,"options":["start":item.options.arrowStart.rawValue,"end":item.options.arrowEnd.rawValue,"line":item.options.linePattern.rawValue,"numberShape":item.options.numberShape.rawValue,"numberFormat":item.options.numberFormat.rawValue,"numberFilled":item.options.numberFilled,"numberLeader":item.options.numberLeader,"numberValue":item.options.numberValue ?? -1]] as [String:Any]
                         },"canUndo":model.document.canUndo,"canRedo":model.document.canRedo,"pan":[Double(model.pan.x),Double(model.pan.y)],"zoom":model.zoom,"revision":model.revision,"renderCacheBytes":CaptureRenderCache.shared.cachedBytes,"windowVisible":panel?.isVisible ?? false,"windowKey":panel?.isKeyWindow ?? false,"appActive":NSApp.isActive]
                         record["cropSelection"]=model.cropSelection.map{[Double($0.minX),Double($0.minY),Double($0.width),Double($0.height)]} ?? [];record["locked"]=model.locked;record["windowMovable"]=panel?.isMovable ?? false
                         record["imageSize"]=[model.document.image.width,model.document.image.height]

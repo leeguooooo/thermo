@@ -8,10 +8,15 @@ extension CaptureAnnotation {
             let size=(text as NSString).size(withAttributes:[.font:NSFont.systemFont(ofSize:max(18,width*6))])
             return CGRect(origin:first,size:size)
         }
-        if tool == .number { let radius=max(18,width*6);return CGRect(x:first.x-radius,y:first.y-radius,width:radius*2,height:radius*2) }
+        if tool == .number {
+            let radius=numberRadius,badge=CGRect(x:first.x-radius-width/2,y:first.y-radius-width/2,width:radius*2+width,height:radius*2+width)
+            guard options.numberLeader,let last=points.last,hypot(last.x-first.x,last.y-first.y) > radius+4 else{return badge}
+            return badge.union(CGRect(x:min(first.x,last.x),y:min(first.y,last.y),width:abs(last.x-first.x),height:abs(last.y-first.y)).insetBy(dx:-max(12,width*4),dy:-max(12,width*4)))
+        }
         let xs=points.map(\.x),ys=points.map(\.y)
         let rect=CGRect(x:xs.min()!,y:ys.min()!,width:xs.max()!-xs.min()!,height:ys.max()!-ys.min()!)
-        return rect.insetBy(dx:-(tool == .eraser ? width*2 : width/2),dy:-(tool == .eraser ? width*2 : width/2))
+        let padding=tool == .arrow ? max(12,width*8) : tool == .eraser ? width*2 : width/2
+        return rect.insetBy(dx:-padding,dy:-padding)
     }
     public func moved(dx:CGFloat,dy:CGFloat) -> CaptureAnnotation {
         var result=self;result.points=points.map { CGPoint(x:$0.x+dx,y:$0.y+dy) };return result

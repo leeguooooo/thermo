@@ -1,0 +1,809 @@
+{
+  "recordedAt": "2026-10-23T04:11:23.001903+00:00",
+  "sourceBase": "4a773bce92c1ca0eb5a9d2d2a60a02e2b1d95e1a",
+  "behaviorReferences": [
+    "https://pixpin.cn/docs/mark/arrow",
+    "https://pixpin.cn/docs/mark/serial"
+  ],
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureAnnotationStyles.swift": "8eafc82ddb311ac8cc122c243ecea1fe61da606f3387da48a2055830fa0c4095",
+    "Sources/CaptureCore/CaptureAnnotationEffects.swift": "59f34d7ddba30115b1077ce1d26fb2d27bed51fbb00da8e965994474db4bd654",
+    "Sources/CaptureCore/CaptureAnnotationEditing.swift": "dc3770e32824dfbed67ecb73a59a0f87babb856e3781ed4417b0d9e7a6415cf7",
+    "Sources/CaptureCore/CaptureDocument.swift": "caa2992799841727ec9692d037f0dd74f9a9455394a27c03529ce86685ccf062",
+    "Sources/ThermoApp/CaptureAnnotationStyleControls.swift": "71d4926022a752fbd95b8040e00e06714fbe50d09aba3e36cc9aacc49348e1d9",
+    "Sources/ThermoApp/CaptureAnnotationControls.swift": "6033d7622b76907adf48755151f8e215d59805dd7bbc31e6931039c9b891e2aa",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "604798c9ecfb29e45172a9ce59001312c9446de861396a47b958af8d9e2af650",
+    "Sources/ThermoL10n/ZhHans.swift": "6ff8dc6322e1b34f5f9a732acae5b6d0ff581657c33e12614574e1036dfff4be",
+    "Tests/CaptureCoreTests/CaptureAnnotationStylesTests.swift": "ce17142b9d4ac6285ea85c331ed1900c005b64547652b019f70b269b53023d40",
+    "Tests/ThermoAppTests/CaptureSequenceEditingTests.swift": "e3622f221bedb349dad1f11ec7dc4572205d1c80d7d3d4e8c6ff986934d1d3bc",
+    "scripts/verify-capture-ui.py": "ce44b9ccebd72d8c75c20e6132e3bd391e04f35080365bc654d69786c3f65d9a",
+    "scripts/verify-capture-ui.swift": "6e4aae316c83070f1b78288b54500ecb03ec50b51d36adcff969f9be1cfb6d43"
+  },
+  "regression": {
+    "total": 222,
+    "failures": 0,
+    "newCoreTests": 7,
+    "newEditorTests": 4,
+    "log": "/tmp/thermo-annotation-styles-final-01a.log",
+    "logSHA256": "ebefba97aad87a2daf69aefab715b4ffcdfe44fa70533aba4120a4cb5f21c924"
+  },
+  "verifiedInTests": [
+    "Legacy options keep default arrow and badge behavior; legacy sequence leader remains off",
+    "Five marker styles change pixels; markers outside the shaft are selectable",
+    "Dashed and dotted shafts contain gaps; existing polyline bends remain",
+    "Alphabetic carry, Roman boundaries and invalid values",
+    "Number fill/shape/leader affect pixels; badge bounds accommodate wide labels",
+    "Fresh pin store restores options and byte-identical rendered PNG",
+    "Next sequence does not reuse numbers after deletion or undo; maximum integer legacy text cannot overflow",
+    "Shift snap preserves 45 degree increments and stays in bounds",
+    "Selected number edit undo/redo and locked edit rejection"
+  ],
+  "nativeQA": {
+    "app": "/tmp/thermo-annotation-styles-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "f1e200943fb2b560d69db83d499450cb2c866cc88500aa98d15058c17ac49a9e",
+    "signatureVerified": true,
+    "records": {
+      "arrow-styled": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "end": "filled",
+              "line": "dashed",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 5,
+        "segments": [],
+        "selected": [
+          2
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "arrow-undone": {
+        "appActive": true,
+        "canRedo": true,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "end": "filled",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 6,
+        "segments": [],
+        "selected": [
+          2
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "sequence-created": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "end": "filled",
+              "line": "dashed",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          },
+          {
+            "label": "AA",
+            "options": {
+              "end": "filled",
+              "line": "dashed",
+              "numberFilled": false,
+              "numberFormat": "alphabetic",
+              "numberLeader": true,
+              "numberShape": "square",
+              "numberValue": 27,
+              "start": "none"
+            },
+            "points": [
+              [
+                176.6949152542373,
+                525
+              ],
+              [
+                430.93220338983053,
+                480.5084745762712
+              ]
+            ],
+            "tool": "number",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 8,
+        "segments": [],
+        "selected": [],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "sequence-edited": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 0,
+        "copiedPNGHash": "",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "end": "filled",
+              "line": "dashed",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          },
+          {
+            "label": "XLIX",
+            "options": {
+              "end": "filled",
+              "line": "dashed",
+              "numberFilled": false,
+              "numberFormat": "roman",
+              "numberLeader": true,
+              "numberShape": "square",
+              "numberValue": 49,
+              "start": "none"
+            },
+            "points": [
+              [
+                176.6949152542373,
+                525
+              ],
+              [
+                430.93220338983053,
+                480.5084745762712
+              ]
+            ],
+            "tool": "number",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 10,
+        "segments": [],
+        "selected": [
+          3
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      },
+      "copied": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 24552,
+        "copiedPNGHash": "66637727e6184674b2c6b54401b6b5fd4c7718b8452f7006772dbe0c4f3584ff",
+        "cropSelection": [],
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "end": "open",
+              "line": "solid",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "end": "filled",
+              "line": "dashed",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          },
+          {
+            "label": "XLIX",
+            "options": {
+              "end": "filled",
+              "line": "dashed",
+              "numberFilled": false,
+              "numberFormat": "roman",
+              "numberLeader": true,
+              "numberShape": "square",
+              "numberValue": 49,
+              "start": "none"
+            },
+            "points": [
+              [
+                176.6949152542373,
+                525
+              ],
+              [
+                430.93220338983053,
+                480.5084745762712
+              ]
+            ],
+            "tool": "number",
+            "width": 4
+          }
+        ],
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 10,
+        "segments": [],
+        "selected": [
+          3
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 1
+      }
+    },
+    "closed": {
+      "appActive": true,
+      "canRedo": false,
+      "canUndo": true,
+      "cropSelection": [],
+      "imageSize": [
+        900,
+        600
+      ],
+      "locked": false,
+      "objects": [
+        {
+          "label": "",
+          "options": {
+            "end": "open",
+            "line": "solid",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              50,
+              290
+            ],
+            [
+              650,
+              470
+            ]
+          ],
+          "tool": "mosaic",
+          "width": 4
+        },
+        {
+          "label": "",
+          "options": {
+            "end": "open",
+            "line": "solid",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              650,
+              60
+            ],
+            [
+              850,
+              260
+            ]
+          ],
+          "tool": "magnifier",
+          "width": 3
+        },
+        {
+          "label": "",
+          "options": {
+            "end": "filled",
+            "line": "dashed",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              150,
+              220
+            ],
+            [
+              600,
+              220
+            ]
+          ],
+          "tool": "arrow",
+          "width": 4
+        },
+        {
+          "label": "XLIX",
+          "options": {
+            "end": "filled",
+            "line": "dashed",
+            "numberFilled": false,
+            "numberFormat": "roman",
+            "numberLeader": true,
+            "numberShape": "square",
+            "numberValue": 49,
+            "start": "none"
+          },
+          "points": [
+            [
+              176.6949152542373,
+              525
+            ],
+            [
+              430.93220338983053,
+              480.5084745762712
+            ]
+          ],
+          "tool": "number",
+          "width": 4
+        }
+      ],
+      "pan": [
+        0,
+        0
+      ],
+      "renderCacheBytes": 0,
+      "revision": 10,
+      "selected": [
+        3
+      ],
+      "windowKey": false,
+      "windowMovable": true,
+      "windowVisible": false,
+      "zoom": 1
+    },
+    "verified": [
+      "Existing arrow changed to filled end and dashed shaft",
+      "Undo restores solid shaft; redo retained when drawing the next object",
+      "Physical drag creates square outlined AA with leader; next-number field reads 28",
+      "Native value and format controls change AA to XLIX at value 49",
+      "Copy produces PNG on private pasteboard; board released and cache empty after close"
+    ],
+    "unverified": [
+      "Physical Shift snap and arrow marker pointer hit (covered by production Canvas and core tests)",
+      "Real screenshot input and multi-display interaction",
+      "New style recording export via a real screen session",
+      "Installed Thermo integration"
+    ],
+    "processStopped": true,
+    "reproducibleAppRemoved": true
+  },
+  "limits": [
+    "Independent shape implementations; full-body solid arrow and comment UI are not implemented",
+    "Arrow endpoint handles and sequence text comments/font options remain absent",
+    "Sequence values are bounded to 1..3999",
+    "Next sequence counter is per editor session; restore derives the next value when number tool is chosen"
+  ],
+  "installedAppChanged": false
+}
