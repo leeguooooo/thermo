@@ -27,6 +27,7 @@ def main():
     parser.add_argument('--capture-cli-review', action='store_true')
     parser.add_argument('--saving-review', action='store_true')
     parser.add_argument('--screenshot-review', action='store_true')
+    parser.add_argument('--live-capture-review', action='store_true')
     parser.add_argument('--ocr-review', action='store_true')
     parser.add_argument('--pin-lock-review', action='store_true')
     parser.add_argument('--passthrough-review', action='store_true')
@@ -63,7 +64,7 @@ def main():
     clang_targets = {target['name'] for target in package['targets'] if target.get('module_type') == 'ClangTarget'} | {'libwebp'}
     binary = app / 'Contents/MacOS/ThermoCaptureQA'
     binary.parent.mkdir(parents=True)
-    command = ['xcrun', 'swiftc', '-parse-as-library', str(root/'scripts/verify-capture-ui.swift'), '-o', str(binary),
+    command = ['xcrun', 'swiftc', '-parse-as-library', str(root/'scripts/verify-capture-ui.swift'), str(root/'scripts/verify-capture-live.swift'), '-o', str(binary),
                '-I', str(root/'Sources/CSQLite'), '-lsqlite3', '-lz', '-framework', 'AVKit', '-framework', 'WebKit', '-framework', 'Quartz', '-framework', 'JavaScriptCore']
     if (base/'ExecutableModules').is_dir():
         framework = base/'Sparkle.framework'
@@ -102,10 +103,27 @@ def main():
     subprocess.run(['ditto', str(root/'Resources/ThirdPartyNotices'), str(app/'Contents/Resources/ThirdPartyNotices')], check=True)
     (app/'Contents/Info.plist').write_bytes(plistlib.dumps({
         'CFBundleIdentifier': 'dev.thermo.capture-qa.'+hashlib.sha256(str(output).encode()).hexdigest()[:12], 'CFBundleExecutable': binary.name,
-        'CFBundleName': binary.name, 'CFBundlePackageType': 'APPL', 'NSHighResolutionCapable': True,
+        'CFBundleName': binary.name, 'CFBundlePackageType': 'APPL', 'NSHighResolutionCapable': True, 'ThermoLiveCaptureReview':args.live_capture_review,
         'ThermoPassthroughReview': args.passthrough_review, 'ThermoBatchExportReview': args.batch_export_review, 'ThermoBatchExportStressReview': args.batch_export_stress_review, 'ThermoCropReview': args.crop_review, 'ThermoAnnotationStylesReview': args.annotation_styles_review, 'ThermoOCRReview': args.ocr_review, 'ThermoScreenshotReview': args.screenshot_review, 'ThermoSavingReview': args.saving_review, 'ThermoCaptureCLIReview': args.capture_cli_review, 'ThermoScriptReview': args.script_review or args.capture_cli_review, 'ThermoShortcutsReview': args.shortcuts_review or args.script_review or args.capture_cli_review, 'ThermoWordMathReview': args.word_math_review, 'ThermoLaTeXReview': args.latex_review or args.word_math_review, 'ThermoTypedPinsReview': args.typed_pins_review, 'ThermoHTMLProbeURL': args.html_probe_url, 'ThermoPinGroupsReview': args.pin_groups_review, 'ThermoAnnotationReview': args.annotation_review, 'ThermoRecordingReview': args.recording_review or args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoOrdinaryReview': args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoKeyboardReview': args.keyboard_review, 'ThermoAVLayerReview': args.av_layer_review, 'ThermoCaptureFixtureRoot': str(output),
     }))
     subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True)
+    if args.live_capture_review:
+        import math, struct, wave
+        pattern = output/'ThermoCapturePattern.app'
+        executable = pattern/'Contents/MacOS/ThermoCapturePattern'
+        executable.parent.mkdir(parents=True)
+        resources = pattern/'Contents/Resources'
+        resources.mkdir()
+        with wave.open(str(resources/'test-tone.wav'), 'wb') as tone:
+            tone.setparams((1, 2, 48000, 0, 'NONE', 'not compressed'))
+            tone.writeframes(b''.join(struct.pack('<h', int(12000*math.sin(2*math.pi*440*i/48000))) for i in range(48000)))
+        (pattern/'Contents/Info.plist').write_bytes(plistlib.dumps({
+            'CFBundleIdentifier':'dev.thermo.capture-pattern.'+hashlib.sha256(str(output).encode()).hexdigest()[:12],
+            'CFBundleExecutable':executable.name, 'CFBundleName':executable.name, 'CFBundlePackageType':'APPL', 'NSHighResolutionCapable':True,
+        }))
+        subprocess.run(['xcrun','swiftc','-parse-as-library',str(root/'scripts/verify-capture-pattern.swift'),'-o',str(executable)],check=True)
+        subprocess.run(['codesign','--force','--sign','-',str(pattern)],check=True)
+        print(pattern)
     print(app)
 
 

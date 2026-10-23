@@ -38,7 +38,15 @@ import SwiftUI
         var cliHost:CaptureCLIHost?
         var cliServer:AppControlServer?
         var screenshotReviewWindow:NSWindowController?
-        if Bundle.main.object(forInfoDictionaryKey:"ThermoScreenshotReview") as? Bool == true,
+        var liveCaptureReview:LiveCaptureReview?
+        if Bundle.main.object(forInfoDictionaryKey:"ThermoLiveCaptureReview") as? Bool == true,
+           let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
+            let review=LiveCaptureReview(root:URL(fileURLWithPath:path));liveCaptureReview=review
+            let window=NSWindow(contentRect:NSRect(x:0,y:0,width:760,height:720),styleMask:[.titled,.closable,.resizable],backing:.buffered,defer:false)
+            window.title="Live multi-display capture QA";window.isReleasedWhenClosed=false
+            window.contentView=NSHostingView(rootView:LiveCaptureReviewView(model:review))
+            screenshotReviewWindow=NSWindowController(window:window);window.center();window.makeKeyAndOrderFront(nil)
+        } else if Bundle.main.object(forInfoDictionaryKey:"ThermoScreenshotReview") as? Bool == true,
            let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
             let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)
             workspace.saving=CaptureSaveModel(read:{nil},write:{_ in})
@@ -309,7 +317,7 @@ import SwiftUI
             }
         } else { let window=CaptureEditor(image:image,onClose:{});annotationWindow=window;window.showWindow(nil) }
         DispatchQueue.main.asyncAfter(deadline: .now()+600) { app.terminate(nil) }
-        withExtendedLifetime((recordingWindow,annotationWindow,pinSession,captureWorkspace,shortcutModel,cliHost,cliServer,screenshotReviewWindow)) { app.run() }
+        withExtendedLifetime((recordingWindow,annotationWindow,pinSession,captureWorkspace,shortcutModel,cliHost,cliServer,screenshotReviewWindow,liveCaptureReview)) { app.run() }
     }
 }
 
@@ -337,7 +345,7 @@ import SwiftUI
     try JSONSerialization.data(withJSONObject:record,options:[.prettyPrinted,.sortedKeys]).write(to:root.appendingPathComponent("stress-fixture.json"),options:.atomic)
 }
 
-private struct CaptureScreenshotQA:View {
+struct CaptureScreenshotQA:View {
     @ObservedObject var workspace:CaptureWorkspace
     let root:URL
     @State private var task:Task<Void,Never>?

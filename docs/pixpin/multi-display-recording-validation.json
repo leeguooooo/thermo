@@ -1,0 +1,127 @@
+{
+  "date": "2026-10-23",
+  "sourceParent": "20194daa3d48e772d99a131f85499ad54d2b6d45",
+  "tests": {
+    "command": "swift test --filter 'Capture|Localization'",
+    "passed": 288,
+    "failures": 0,
+    "suites": [
+      {
+        "suite": "ThermoKitTests.xctest",
+        "tests": 0,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoHelperTests.xctest",
+        "tests": 0,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoCLITests.xctest",
+        "tests": 3,
+        "failures": 0
+      },
+      {
+        "suite": "ThermoAppTests.xctest",
+        "tests": 116,
+        "failures": 0
+      },
+      {
+        "suite": "SearchCoreTests.xctest",
+        "tests": 0,
+        "failures": 0
+      },
+      {
+        "suite": "MenuBarCoreTests.xctest",
+        "tests": 0,
+        "failures": 0
+      },
+      {
+        "suite": "CleanKitTests.xctest",
+        "tests": 0,
+        "failures": 0
+      },
+      {
+        "suite": "CaptureScriptCoreTests.xctest",
+        "tests": 10,
+        "failures": 0
+      },
+      {
+        "suite": "CaptureCoreTests.xctest",
+        "tests": 154,
+        "failures": 0
+      },
+      {
+        "suite": "AgentDoctorTests.xctest",
+        "tests": 4,
+        "failures": 0
+      },
+      {
+        "suite": "AgentCoreTests.xctest",
+        "tests": 1,
+        "failures": 0
+      }
+    ]
+  },
+  "native": {
+    "displays": [
+      {
+        "frame": "{{0, 0}, {1800, 1169}}",
+        "id": 1,
+        "name": "Built-in Retina Display",
+        "quartzFrame": "{{0, 0}, {1800, 1169}}",
+        "scale": 2
+      },
+      {
+        "frame": "{{0, 1169}, {1920, 1080}}",
+        "id": 3,
+        "name": "DELL S2721HN",
+        "quartzFrame": "{{0, -1080}, {1920, 1080}}",
+        "scale": 1
+      }
+    ],
+    "selectedExternal": {
+      "displayID": 3,
+      "rect": "{{0, 0}, {1920, 1080}}",
+      "scale": 1
+    },
+    "selectedRetina": {
+      "displayID": 1,
+      "rect": "{{0, 0}, {1800, 1169}}",
+      "scale": 2
+    },
+    "verified": [
+      "Accessible next-display button moves from built-in to Dell",
+      "Accessible entire-display button produces Dell 1920x1080 region at 1x",
+      "Physical Tab switches Dell to built-in Retina; Return selects 1800x1169 points at 2x",
+      "Both selections open the production recording window in ready state without creating a draft",
+      "Camera, microphone, keyboard and system audio remain disabled before opt-in"
+    ],
+    "permission": {
+      "userApprovedScreenAndSystemAudio": true,
+      "qaGranted": false,
+      "pending": "System Settings Touch ID authentication before adding the QA app"
+    },
+    "unverified": [
+      "Actual screen pixels and resulting video dimensions on both displays",
+      "Quick and ordinary capture pause/resume/stop/export with real ScreenCaptureKit",
+      "System audio capture and decode",
+      "Physical disconnection, resolution change, mirrored displays and Space transitions"
+    ],
+    "qaRetainedForPermissionCompletion": true,
+    "qaExecutableSHA256": "3a46ac32051f4ba20cc35eec8e769c499055d381030738572017f832d535eab6"
+  },
+  "behavior": [
+    "Region remains restricted to one display; no cross-display compositing",
+    "Selection snapshots display size and backing scale; changed screen topology cancels active selection",
+    "Validate before permissions, after countdown, after shareable-content lookup and on screen-change notifications",
+    "Display size/scale/disconnection stops active or paused recording and retains normal stop/draft behavior",
+    "Pointer mapping remains in display-local logical points with top-left Quartz origin; no Retina multiplication"
+  ],
+  "references": [
+    "https://developer.apple.com/documentation/screencapturekit/scdisplay",
+    "https://developer.apple.com/documentation/screencapturekit/scstreamconfiguration/sourcerect"
+  ],
+  "installedAppChanged": false,
+  "installedVersion": "1.3.0 (794)"
+}

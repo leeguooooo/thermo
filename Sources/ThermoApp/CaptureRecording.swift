@@ -85,6 +85,7 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
     @Published private(set) var exporting = false
     @Published private(set) var drafts: [CaptureRecordingDraft] = []
     private let region: CaptureRegionSelector.Region?
+    private let validateDisplay:(CaptureRegionSelector.Region)throws->Void
     let store: CaptureRecordingDraftStore
     private var draft: CaptureRecordingDraft?
     private(set) var source: URL?
@@ -103,10 +104,11 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
     private var stopTask: Task<Void,Never>?
     private var exportTask:Task<Void,Never>?
     private var timer: Timer?
+    private var displayObserver:NSObjectProtocol?
     weak var window: NSWindow?
     weak var pendingSavePanel: NSSavePanel?
-    init(region: CaptureRegionSelector.Region?, store: CaptureRecordingDraftStore? = nil) {
-        self.region = region; self.store = store ?? Self.defaultStore; refreshDrafts()
+    init(region: CaptureRegionSelector.Region?, store: CaptureRecordingDraftStore? = nil,validateDisplay:@escaping(CaptureRegionSelector.Region)throws->Void = {try $0.validateCurrentDisplay()}) {
+        self.region = region; self.store = store ?? Self.defaultStore; self.validateDisplay=validateDisplay;refreshDrafts()
     }
     var active: Bool { [.starting,.recording,.paused,.stopping,.rendering].contains(phase) }
     var currentDraft: CaptureRecordingDraft? { draft }
@@ -119,21 +121,24 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
         let chosenFPS = fps, quality = quality, audio = systemAudio, cursor = showsCursor, delay = delay,mode=mode
         let camera=mode == .normal && captureCamera,microphone=mode == .normal && captureMicrophone
         let cameraID=cameraID,microphoneID=microphoneID,keys=mode == .normal && recordKeyboard,keyMode=keyboardMode
+        observeSelectedDisplay(region)
         startTask = Task { [weak self] in
             guard let self else { return }
             do {
+                try self.validateDisplay(region)
                 try await CaptureAVDevices.authorize(camera:camera,microphone:microphone)
                 if keys { try CaptureKeyboardMonitor.authorize() }
-                let content = try await SCShareableContent.excludingDesktopWindows(false,onScreenWindowsOnly:true)
-                try Task.checkCancellation()
-                guard let display = content.displays.first(where: { $0.displayID == region.displayID }) else { throw CaptureFailure.captureFailed }
-                let filter = SCContentFilter(display:display,excludingApplications:content.applications.filter { $0.processID == ProcessInfo.processInfo.processIdentifier },exceptingWindows:[])
                 for remaining in (0..<delay).reversed() {
                     self.seconds = Double(remaining+1)
                     try await Task.sleep(nanoseconds:1_000_000_000)
                 }
-                let scale = min(region.scale,4096/max(region.rect.width,region.rect.height))
-                let width = max(2,Int(region.rect.width*scale)/2*2), height = max(2,Int(region.rect.height*scale)/2*2)
+                try Task.checkCancellation();try self.validateDisplay(region)
+                let content = try await SCShareableContent.excludingDesktopWindows(false,onScreenWindowsOnly:true)
+                try Task.checkCancellation();try self.validateDisplay(region)
+                guard let display = content.displays.first(where: { $0.displayID == region.displayID }) else { throw CaptureDisplayFailure.unavailable }
+                try region.validate(displaySize:display.frame.size,scale:region.scale)
+                let filter = SCContentFilter(display:display,excludingApplications:content.applications.filter { $0.processID == ProcessInfo.processInfo.processIdentifier },exceptingWindows:[])
+                let (width,height)=try region.recordingPixelSize()
                 let draft = try self.store.create(mode:mode); self.draft = draft
                 let rate = quality == .compact ? 0.07 : (quality == .high ? 0.3 : 0.15)
                 let writer:any RecordingDestination
@@ -188,6 +193,7 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
                     }
                 }
             } catch {
+                self.stopObservingDisplay()
                 self.keyboardMonitor?.stop();self.keyboardMonitor=nil;self.endPointerTracking();self.timer?.invalidate();self.timer=nil
                 if let stream = self.stream { try? await stream.stopCapture() }
                 if let devices=self.devices { await devices.stop() };self.devices=nil;self.devicePreview=nil
@@ -220,6 +226,7 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
         if let stopTask { await stopTask.value; return }
         guard phase == .recording || phase == .paused, let writer else { return }
         phase = .stopping; timer?.invalidate(); timer = nil; endPointerTracking();keyboardMonitor?.stop();keyboardMonitor=nil
+        stopObservingDisplay()
         let stopTime = recordingClock()
         stopTask = Task { [weak self] in
             guard let self else { return }
@@ -287,19 +294,30 @@ private final class RecordingOutput: NSObject, SCStreamOutput, SCStreamDelegate,
         let location=event?.cgEvent?.location ?? CGEvent(source:nil)?.location
         guard let location else { return }
         let display=CGDisplayBounds(region.displayID)
-        let x=(location.x-display.minX-region.rect.minX)/region.rect.width
-        let y=1-(location.y-display.minY-region.rect.minY)/region.rect.height
         var sample=CapturePointerSample()
-        if (0...1).contains(x),(0...1).contains(y) {
+        if let point=region.normalizedPointer(location,displayFrame:display) {
             let left=event?.type == .leftMouseDown || CGEventSource.buttonState(.combinedSessionState,button:.left)
             let right=event?.type == .rightMouseDown || CGEventSource.buttonState(.combinedSessionState,button:.right)
-            sample=CapturePointerSample(x:x,y:y,buttons:(left ? 1 : 0)|(right ? 2 : 0),scroll:event?.type == .scrollWheel ? event?.scrollingDeltaY ?? 0 : 0)
+            sample=CapturePointerSample(x:point.x,y:point.y,buttons:(left ? 1 : 0)|(right ? 2 : 0),scroll:event?.type == .scrollWheel ? event?.scrollingDeltaY ?? 0 : 0)
         }
         archive.recordPointer(sample,at:recordingClock())
     }
     private func endPointerTracking() {
         pointerTimer?.invalidate();pointerTimer=nil
         if let pointerMonitor { NSEvent.removeMonitor(pointerMonitor) };pointerMonitor=nil
+    }
+    private func stopObservingDisplay() {
+        if let displayObserver {NotificationCenter.default.removeObserver(displayObserver)};displayObserver=nil
+    }
+    private func observeSelectedDisplay(_ region:CaptureRegionSelector.Region) {
+        stopObservingDisplay()
+        displayObserver=NotificationCenter.default.addObserver(forName:NSApplication.didChangeScreenParametersNotification,object:nil,queue:.main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self,self.phase == .starting || self.phase == .recording || self.phase == .paused else{return}
+                do {try self.validateDisplay(region)}
+                catch {self.issue=tr(error.localizedDescription);Task {await self.stop()}}
+            }
+        }
     }
     func cancelRendering() { renderTask?.cancel() }
     func renderNormalPreview(preserveTrim:Bool = false) async {
