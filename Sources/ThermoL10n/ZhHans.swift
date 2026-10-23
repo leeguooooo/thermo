@@ -3831,4 +3831,13 @@ let zhHans: [String: String] = [
     "The image view is not ready. Open the pin and try again.": "图像视图尚未就绪，请打开贴图后重试。",
     "The displayed image size is invalid.": "显示尺寸无效。",
     "The displayed image exceeds 80 million pixels. Reduce zoom and try again.": "显示尺寸图像超过 8000 万像素，请缩小后重试。",
+    "Grayscale image": "图像灰度",
+    "Invert image colors": "图像反色",
+    "Image brightness": "图像亮度",
+    "Reset color adjustments": "重置颜色调整",
+    "Toggle image grayscale": "切换图像灰度",
+    "Toggle image inversion": "切换图像反色",
+    "Increase image brightness": "增加图像亮度",
+    "Decrease image brightness": "降低图像亮度",
+    "Reset image color adjustments": "重置图像颜色调整",
 ]

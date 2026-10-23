@@ -273,6 +273,7 @@ func captureFailureMessage(_ error:Error) -> String {
             case .toggleTop:model.pinned.toggle();model.changeWindow?()
             case .toggleLock:model.locked.toggle();model.changeWindow?()
             case .resetZoom:model.zoom=1;model.pan = .zero
+            case .grayscale,.invert,.brightnessUp,.brightnessDown,.resetImageAdjustments:try model.applyColorAction(action)
             case .rotate:try model.transformImage(rotateClockwise:true)
             case .flip:try model.transformImage(flipHorizontal:true)
             case .undo:model.undoAnnotation()
@@ -529,6 +530,7 @@ private struct CaptureEditorView: View {
                 Toggle(tr("Pin shadow"),isOn:$model.shadow)
                 if let show=model.showPinLibrary { Button(tr("Pin groups and history"),action:show) }
             }.padding(.horizontal,10)
+            CaptureImageAdjustmentControls(model:model).disabled(model.locked)
             CaptureAnnotationControls(model:model).disabled(model.locked)
             if model.tool == .crop {CaptureCropControls(model:model).disabled(model.locked)}
             if model.tool == .text || model.tool == .watermark {

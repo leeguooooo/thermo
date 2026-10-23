@@ -35,11 +35,17 @@ public enum CaptureFailure: LocalizedError {
 public struct CaptureDocument {
     public private(set) var image: CGImage
     public private(set) var annotations: [CaptureAnnotation] = []
-    private struct State { let image: CGImage; let annotations: [CaptureAnnotation] }
+    public private(set) var imageAdjustments=CaptureImageAdjustments()
+    private struct State { let image: CGImage; let annotations: [CaptureAnnotation];let adjustments:CaptureImageAdjustments }
     private var history: [State] = []
     private var undone: [State] = []
-    public init(image: CGImage,annotations:[CaptureAnnotation] = []) { self.image = image;self.annotations=annotations }
+    public init(image: CGImage,annotations:[CaptureAnnotation] = [],imageAdjustments:CaptureImageAdjustments = .init()) { self.image = image;self.annotations=annotations;self.imageAdjustments=imageAdjustments }
     public var size: CGSize { CGSize(width: image.width, height: image.height) }
+    public mutating func applyImageAdjustments(_ next:CaptureImageAdjustments) throws {
+        guard next.valid else {throw CaptureFailure.invalidImage}
+        guard next != imageAdjustments else{return}
+        checkpoint();imageAdjustments=next
+    }
     public var canUndo: Bool { !history.isEmpty }
     public var canRedo: Bool { !undone.isEmpty }
     public mutating func append(_ item: CaptureAnnotation) {
@@ -47,24 +53,25 @@ public struct CaptureDocument {
         checkpoint(); annotations.append(item)
     }
     private mutating func checkpoint() {
-        history.append(State(image: image, annotations: annotations)); undone.removeAll()
+        history.append(State(image: image, annotations: annotations,adjustments:imageAdjustments)); undone.removeAll()
         if history.count > 100 { history.removeFirst() }
     }
     public mutating func undo() {
         guard let state = history.popLast() else { return }
-        undone.append(State(image: image, annotations: annotations)); image = state.image; annotations = state.annotations
+        undone.append(State(image: image, annotations: annotations,adjustments:imageAdjustments)); image = state.image; annotations = state.annotations;imageAdjustments=state.adjustments
     }
     public mutating func redo() {
         guard let state = undone.popLast() else { return }
-        history.append(State(image: image, annotations: annotations)); image = state.image; annotations = state.annotations
+        history.append(State(image: image, annotations: annotations,adjustments:imageAdjustments)); image = state.image; annotations = state.annotations;imageAdjustments=state.adjustments
     }
     public func rendered(adding draft:CaptureAnnotation? = nil,replacing index:Int? = nil,replacements:[Int:CaptureAnnotation] = [:]) throws -> CGImage {
         guard let ctx = CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
                                   bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { throw CaptureFailure.invalidImage }
-        ctx.draw(image, in: CGRect(origin: .zero, size: size))
-        for (i,item) in annotations.enumerated() { try Self.draw(replacements[i] ?? (index == i ? draft ?? item : item),in:ctx,base:image) }
-        if index == nil,let draft { try Self.draw(draft,in:ctx,base:image) }
+        let adjusted=try imageAdjustments.rendered(image)
+        ctx.draw(adjusted, in: CGRect(origin: .zero, size: size))
+        for (i,item) in annotations.enumerated() { try Self.draw(replacements[i] ?? (index == i ? draft ?? item : item),in:ctx,base:adjusted) }
+        if index == nil,let draft { try Self.draw(draft,in:ctx,base:adjusted) }
         guard let output = ctx.makeImage() else { throw CaptureFailure.invalidImage }
         return output
     }
@@ -107,7 +114,7 @@ public struct CaptureDocument {
         // CGImage cropping uses top-left coordinates; the editing canvas uses bottom-left.
         let topRect = CGRect(x: rect.minX, y: size.height-rect.maxY, width: rect.width, height: rect.height)
         guard let result = try rendered().cropping(to: topRect) else { throw CaptureFailure.invalidCrop }
-        checkpoint(); image = result; annotations.removeAll()
+        checkpoint(); image = result; annotations.removeAll();imageAdjustments = .init()
     }
     public func data(format: NSBitmapImageRep.FileType = .png) throws -> Data {
         let rep = NSBitmapImageRep(cgImage: try rendered())
@@ -124,7 +131,7 @@ public struct CaptureDocument {
         if flipHorizontal { ctx.translateBy(x: CGFloat(original.width), y: 0); ctx.scaleBy(x: -1, y: 1) }
         ctx.draw(original, in: CGRect(origin: .zero, size: size))
         guard let image = ctx.makeImage() else { throw CaptureFailure.invalidImage }
-        checkpoint(); self.image = image; annotations.removeAll()
+        checkpoint(); self.image = image; annotations.removeAll();imageAdjustments = .init()
     }
     public static func load(_ url: URL) throws -> CGImage {
         // Screenshot files are removed before asynchronous after-actions run. Decode now,

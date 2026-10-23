@@ -31,6 +31,7 @@ if (thermo.perform('screenshot')) {
 | `screenshot`、`screenshotCopy`、`screenshotOCR`、`screenshotQuickSave` | 选择及处理完成返回 `true`，用户取消返回 `false`，失败抛异常；后三个分别使用复制图像、复制 OCR、快速保存的后续动作 |
 | `recognize` | 当前图像的本地 OCR/条码文本；等识别完成才继续；没有结果或图像被修改时抛异常 |
 | `pinClipboard`、`pinText`、`pinLaTeX` | 从当前剪贴板打开贴图；不支持的内容抛异常 |
+| `grayscale`、`invert`、`brightnessUp`、`brightnessDown`、`resetImageAdjustments` | 调整当前图像底图颜色；仅图像贴图，锁定时抛异常；亮度每次增减 10%，限制为 0–200%；重置只清除颜色参数，不撤销已合并的裁剪/旋转 |
 | `copyImage`、`copyContent` | 复制当前图像或原类型内容；类型不符或失败时抛异常 |
 | `quickSaveImage` | 保存当前贴图的合成图像，包含当前标注 |
 | `closePin`、`closePins` | 分别关闭当前贴图、当前分组贴图，返回是否已关闭 |

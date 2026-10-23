@@ -15,6 +15,7 @@ public struct CaptureSavedPin:Codable,Identifiable,Sendable {
     public var snapshotID=UUID()
     public var title=""
     public var contentKind:String?
+    public var imageAdjustments:CaptureImageAdjustments?
     public var closedAt:Date?
     public var hidden=false
     public var frame=CGRect.zero
@@ -26,7 +27,7 @@ public struct CaptureSavedPin:Codable,Identifiable,Sendable {
     public var shadow=true
     public init(groupID:UUID) { self.groupID=groupID }
     var valid:Bool {
-        (contentKind.map { ["text","files","color","latex"].contains($0) } ?? true) && (closedAt?.timeIntervalSince1970.isFinite ?? true) && title.count <= 2000 && [frame.minX,frame.minY,frame.width,frame.height,pan.x,pan.y].allSatisfy(\.isFinite) && frame.width >= 0 && frame.height >= 0 &&
+        (imageAdjustments?.valid ?? true) && (contentKind.map { ["text","files","color","latex"].contains($0) } ?? true) && (closedAt?.timeIntervalSince1970.isFinite ?? true) && title.count <= 2000 && [frame.minX,frame.minY,frame.width,frame.height,pan.x,pan.y].allSatisfy(\.isFinite) && frame.width >= 0 && frame.height >= 0 &&
         opacity.isFinite && (0.15...1).contains(opacity) && zoom.isFinite && (0.25...4).contains(zoom)
     }
 }
@@ -124,7 +125,7 @@ public final class CapturePinLibraryStore {
             if case .text(let text)=content,text.rtf != nil { _=try text.attributed() }
             if case .latex(let formula)=content { _=try formula.render() }
         }
-        return CapturePinSnapshot(document:CaptureDocument(image:image,annotations:annotations.compactMap(\.annotation)),content:content)
+        return CapturePinSnapshot(document:CaptureDocument(image:image,annotations:annotations.compactMap(\.annotation),imageAdjustments:pin.imageAdjustments ?? .init()),content:content)
     }
     @discardableResult public func save(_ library:CapturePinLibrary,documents:[UUID:CaptureDocument]=[:],contents:[UUID:CapturePinContent]=[:]) throws -> CapturePinLibrary {
         guard library.valid,documents.keys.allSatisfy({ id in library.pins.contains { $0.id == id } }) else { throw CapturePinFailure.invalidLibrary }
@@ -139,6 +140,12 @@ public final class CapturePinLibraryStore {
             guard current.valid,current.revision == expectedRevision else { throw CapturePinFailure.invalidLibrary }
         } else if expectedRevision != nil { throw CapturePinFailure.invalidLibrary }
         var committed=library;committed.revision=UUID()
+        for index in committed.pins.indices {
+            if let doc=documents[committed.pins[index].id] {
+                guard doc.imageAdjustments.valid else {throw CapturePinFailure.invalidLibrary}
+                committed.pins[index].imageAdjustments=doc.imageAdjustments.isDefault ? nil : doc.imageAdjustments
+            }
+        }
         var created:[URL]=[]
         do {
             for (id,doc) in documents {
