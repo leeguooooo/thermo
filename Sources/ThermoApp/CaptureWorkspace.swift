@@ -386,9 +386,18 @@ func captureFailureMessage(_ error:Error) -> String {
         guard !locked else{return}
         document.removeAnnotations(at:selectedAnnotations);selectedAnnotations=[]
     }
-    func copy() {
+    var imageDisplayScale:(()->CGFloat?)?
+    func displayedDocument() throws -> CaptureDocument {
+        guard let scale=imageDisplayScale?() else {throw CaptureImageExportFailure.viewUnavailable}
+        return try CaptureImageExport.displayed(document,scale:scale,opacity:opacity)
+    }
+    func copyDisplayedImage() {
+        do {copyDocument(try displayedDocument())} catch {self.error=tr(error.localizedDescription)}
+    }
+    func copy() {copyDocument(document)}
+    func copyDocument(_ output:CaptureDocument) {
         do {
-            let data = try document.data()
+            let data = try output.data()
             let board=copyPasteboard ?? .general
             board.clearContents();board.setData(data,forType:.png)
         } catch { self.error = tr(error.localizedDescription) }
@@ -401,16 +410,19 @@ func captureFailureMessage(_ error:Error) -> String {
         guard let quickSaveImage else {throw CaptureSaveFailure.missingDirectory}
         savedImagePath=try quickSaveImage(document).path;error=nil
     }
-    func save() {
-        let options:CaptureSaveSettings
-        do { options=try saveOptions?() ?? CaptureSaveSettings() } catch {self.error=captureFailureMessage(error);return}
+    func save(displayed:Bool=false) {
+        let options:CaptureSaveSettings,output:CaptureDocument
+        do {
+            options=try saveOptions?() ?? CaptureSaveSettings()
+            output=displayed ? try displayedDocument() : document
+        } catch {self.error=captureFailureMessage(error);return}
         let panel = NSSavePanel(),manual=CaptureManualImageSave()
-        manual.configure(panel,name:"Thermo-" + ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-"))
+        manual.configure(panel,name:(displayed ? "Thermo-display-" : "Thermo-") + ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-"))
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
-            try manual.save(document,to:url,quality:options.quality)
+            try manual.save(output,to:url,quality:options.quality)
             savedImagePath=url.path;error=nil
-            if options.copyAfterManualSave {copy()}
+            if options.copyAfterManualSave {copyDocument(output)}
         } catch { self.error = tr(error.localizedDescription) }
     }
     func recognizeForScript() async throws -> String {
@@ -543,6 +555,11 @@ private struct CaptureEditorView: View {
                 Button(tr("Text / QR")) { model.recognize() }.disabled(model.recognizing)
                 Button(tr("Copy image")) { model.copy() }.keyboardShortcut(model.selectingOCRText ? nil : KeyboardShortcut("c",modifiers:.command))
                 Menu(tr("Saving options")) {
+                    Button(tr("Copy full-resolution image")){model.copy()}
+                    Button(tr("Copy displayed-size image")){model.copyDisplayedImage()}
+                    Button(tr("Save full-resolution image…")){model.save()}
+                    Button(tr("Save displayed-size image…")){model.save(displayed:true)}
+                    Divider()
                     Button(tr("Quick save")) {do {try model.quickSave()} catch {model.error=captureFailureMessage(error)}}.keyboardShortcut("s",modifiers:[.command,.shift])
                     Button(tr("Capture saving and after-actions")){model.showSaveSettings?()}
                 }
@@ -576,7 +593,7 @@ struct CaptureCanvas: NSViewRepresentable {
     func makeNSView(context: Context) -> Canvas { Canvas(model: model) }
     func updateNSView(_ view: Canvas, context: Context) { view.model = model;view.reconcileConnectedLine();view.updateOCRAccessibility();view.needsDisplay = true }
     final class Canvas: NSView {
-        var model: CaptureEditorModel {didSet {if oldValue !== model {renderCache.remove(owner:cacheOwner)}}}
+        var model: CaptureEditorModel {didSet {if oldValue !== model {renderCache.remove(owner:cacheOwner);bindExportGeometry()}}}
         private let renderCache:CaptureRenderCache
         private let cacheOwner=UUID()
         private let render:(CaptureDocument,CaptureAnnotation?,[Int:CaptureAnnotation])throws->CGImage
@@ -645,7 +662,7 @@ struct CaptureCanvas: NSViewRepresentable {
         }
         init(model:CaptureEditorModel,cache:CaptureRenderCache = .shared,
              render:@escaping(CaptureDocument,CaptureAnnotation?,[Int:CaptureAnnotation])throws->CGImage={try $0.rendered(adding:$1,replacements:$2)}) {
-            self.model=model;self.renderCache=cache;self.render=render;super.init(frame:.zero)
+            self.model=model;self.renderCache=cache;self.render=render;super.init(frame:.zero);bindExportGeometry()
         }
         deinit {
             for observer in windowObservers {NotificationCenter.default.removeObserver(observer)}
@@ -676,6 +693,12 @@ struct CaptureCanvas: NSViewRepresentable {
             let replacements=model.tool == .select && !model.locked && selectionRevision == model.revision ? selectionPreview : [:]
             if preview != nil || !replacements.isEmpty {return try render(model.document,preview,replacements)}
             return try renderCache.image(owner:cacheOwner,source:ObjectIdentifier(model),revision:model.revision) {try render(model.document,nil,[:])}
+        }
+        func bindExportGeometry() {
+            model.imageDisplayScale={ [weak self,weak source=model] in
+                guard let self,let source,self.model === source,self.scale.isFinite,self.scale>0 else{return nil}
+                return self.scale
+            }
         }
         required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
         override var acceptsFirstResponder: Bool { true }

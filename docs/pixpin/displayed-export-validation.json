@@ -1,0 +1,596 @@
+{
+  "recordedAt": "2026-10-23T04:38:05.651954+00:00",
+  "sourceBase": "48bf8c185e47e09a167f3996115e4cb9ae11127e",
+  "behaviorReferences": [
+    "https://pixpin.cn/docs/pin/base-use",
+    "https://pixpin.cn/docs/pin/image"
+  ],
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureImageExport.swift": "ebe2b87781eb7f93bf298840991bbd12ea4e0a81f9cf911813ba2a756ed6f74a",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "e7cabb09536b5001f86f69285b9220637ccd79914888a2128d319ab2748450a8",
+    "Sources/ThermoL10n/ZhHans.swift": "6597f9dc3ee07fd033f8b13ee5fc3e4c62f8a7497e6e254c846219fcbab6a7e4",
+    "Tests/CaptureCoreTests/CaptureImageExportTests.swift": "24f1672c0573831796c54f9a8217ef569cf95614f40877cc6e469f4103740e89",
+    "Tests/ThermoAppTests/CaptureDisplayedImageTests.swift": "0cdc038aa41ea34344d3c8606767a8cf0bafc4f763bc487df50c862adbc5ccef",
+    "scripts/verify-capture-ui.swift": "a5f4fb909553d302ce4ab2f6b36b4aaea73309e2247cf8532992bf6c8a397378"
+  },
+  "regression": {
+    "total": 249,
+    "failures": 0,
+    "newCoreTests": 4,
+    "newEditorTests": 4,
+    "counts": {
+      "ThermoKitTests.xctest": 0,
+      "ThermoHelperTests.xctest": 0,
+      "ThermoCLITests.xctest": 3,
+      "ThermoAppTests.xctest": 96,
+      "SearchCoreTests.xctest": 0,
+      "MenuBarCoreTests.xctest": 0,
+      "CleanKitTests.xctest": 0,
+      "CaptureScriptCoreTests.xctest": 10,
+      "CaptureCoreTests.xctest": 135,
+      "AgentDoctorTests.xctest": 4,
+      "AgentCoreTests.xctest": 1
+    },
+    "log": "/tmp/thermo-display-export-regression-final-01a.log",
+    "logSHA256": "29616af6709d88807a6dec3e7f0330dd1a7058ff43a1b76fbc12705824bbe5ed"
+  },
+  "verifiedInTests": [
+    "Displayed pixel size includes live view fit and zoom, rounds to integers and applies opacity",
+    "Confirmed annotations, crop and rotation appear in exported pixels",
+    "Full-resolution copy retains current document resolution and existing opacity behavior",
+    "Export does not mutate pixels, revision or undo history; locked copy remains available",
+    "Weak geometry bindings reject stale model or destroyed view; failed copy preserves clipboard",
+    "Non-finite geometry and 80MP limit rejected before allocation; tiny output clamps to 1x1",
+    "PNG/TIFF retain alpha; shared JPEG encoder flattens to white",
+    "Displayed document saves and decodes at the selected size"
+  ],
+  "nativeQA": {
+    "app": "/tmp/thermo-display-export-qa-01a/ThermoCaptureQA.app",
+    "binarySHA256": "25d9fa0b4f17f1364915f570a3db653c2d517b35396198c7d499f1f12fab78a2",
+    "signatureVerified": true,
+    "records": {
+      "full-resolution": {
+        "appActive": false,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 21213,
+        "copiedPNGCornerAlpha": 1,
+        "copiedPNGHash": "66c5e39b2b37eb9e260e6f0198b98f1be7d3f0b0a363901e25915845ec1fb8b3",
+        "copiedPNGSize": [
+          900,
+          600
+        ],
+        "cropSelection": [],
+        "imageDisplayScale": 0.3525,
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "opacity": 0.5,
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 3,
+        "segments": [],
+        "selected": [
+          2
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 0.5
+      },
+      "displayed-size": {
+        "appActive": false,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 8770,
+        "copiedPNGCornerAlpha": 0.5019607843137255,
+        "copiedPNGHash": "a252203b7db2d31db5c5f51035479c633b37516c94fff802fd07c2e3cf52fc20",
+        "copiedPNGSize": [
+          317,
+          212
+        ],
+        "cropSelection": [],
+        "imageDisplayScale": 0.3525,
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "opacity": 0.5,
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 3,
+        "segments": [],
+        "selected": [
+          2
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": false,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 0.5
+      },
+      "saved": {
+        "appActive": true,
+        "canRedo": false,
+        "canUndo": true,
+        "copiedOCRText": "",
+        "copiedPNGBytes": 8770,
+        "copiedPNGCornerAlpha": 0.5019607843137255,
+        "copiedPNGHash": "a252203b7db2d31db5c5f51035479c633b37516c94fff802fd07c2e3cf52fc20",
+        "copiedPNGSize": [
+          317,
+          212
+        ],
+        "cropSelection": [],
+        "imageDisplayScale": 0.3416666666666667,
+        "imageSize": [
+          900,
+          600
+        ],
+        "locked": false,
+        "objects": [
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                50,
+                290
+              ],
+              [
+                650,
+                470
+              ]
+            ],
+            "tool": "mosaic",
+            "width": 4
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                650,
+                60
+              ],
+              [
+                850,
+                260
+              ]
+            ],
+            "tool": "magnifier",
+            "width": 3
+          },
+          {
+            "label": "",
+            "options": {
+              "comment": "",
+              "end": "open",
+              "line": "solid",
+              "lineCap": "round",
+              "lineEnd": "none",
+              "lineJoin": "round",
+              "lineStart": "none",
+              "numberFilled": true,
+              "numberFormat": "decimal",
+              "numberLeader": false,
+              "numberShape": "circle",
+              "numberValue": -1,
+              "start": "none"
+            },
+            "points": [
+              [
+                150,
+                220
+              ],
+              [
+                600,
+                220
+              ]
+            ],
+            "tool": "arrow",
+            "width": 4
+          }
+        ],
+        "opacity": 0.5,
+        "pan": [
+          0,
+          0
+        ],
+        "recognized": "",
+        "renderCacheBytes": 2169600,
+        "revision": 3,
+        "segments": [],
+        "selected": [
+          2
+        ],
+        "selectedOCRText": "",
+        "selectingOCRText": false,
+        "windowKey": true,
+        "windowMovable": true,
+        "windowVisible": true,
+        "zoom": 0.5
+      }
+    },
+    "savedPNG": {
+      "path": "/tmp/thermo-display-export-qa-01a/displayed.png",
+      "size": [
+        317,
+        212
+      ],
+      "bytes": 8770,
+      "sha256": "a252203b7db2d31db5c5f51035479c633b37516c94fff802fd07c2e3cf52fc20",
+      "equalsCopiedDisplayedPNG": true
+    },
+    "closed": {
+      "appActive": true,
+      "canRedo": false,
+      "canUndo": true,
+      "cropSelection": [],
+      "imageDisplayScale": 0.3416666666666667,
+      "imageSize": [
+        900,
+        600
+      ],
+      "locked": false,
+      "objects": [
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "lineCap": "round",
+            "lineEnd": "none",
+            "lineJoin": "round",
+            "lineStart": "none",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              50,
+              290
+            ],
+            [
+              650,
+              470
+            ]
+          ],
+          "tool": "mosaic",
+          "width": 4
+        },
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "lineCap": "round",
+            "lineEnd": "none",
+            "lineJoin": "round",
+            "lineStart": "none",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              650,
+              60
+            ],
+            [
+              850,
+              260
+            ]
+          ],
+          "tool": "magnifier",
+          "width": 3
+        },
+        {
+          "label": "",
+          "options": {
+            "comment": "",
+            "end": "open",
+            "line": "solid",
+            "lineCap": "round",
+            "lineEnd": "none",
+            "lineJoin": "round",
+            "lineStart": "none",
+            "numberFilled": true,
+            "numberFormat": "decimal",
+            "numberLeader": false,
+            "numberShape": "circle",
+            "numberValue": -1,
+            "start": "none"
+          },
+          "points": [
+            [
+              150,
+              220
+            ],
+            [
+              600,
+              220
+            ]
+          ],
+          "tool": "arrow",
+          "width": 4
+        }
+      ],
+      "opacity": 0.5,
+      "pan": [
+        0,
+        0
+      ],
+      "renderCacheBytes": 0,
+      "revision": 3,
+      "selected": [
+        2
+      ],
+      "windowKey": false,
+      "windowMovable": true,
+      "windowVisible": false,
+      "zoom": 0.5
+    },
+    "verified": [
+      "Native zoom and opacity set to 0.5",
+      "Full-resolution copy is 900x600 with alpha 1",
+      "Displayed copy is 317x212 at scale 0.3525 with alpha 0.50196",
+      "Native PNG Save panel writes the exact displayed copy bytes",
+      "All copy/save actions keep original document revision and annotation objects",
+      "Close releases private clipboard and render cache"
+    ],
+    "unverified": [
+      "Retina backing-scale equivalence with PixPin and multi-display changes",
+      "Thumbnail/viewport-clipped export (not implemented)",
+      "Native displayed JPEG/TIFF and copy-after-save option",
+      "Installed Thermo integration"
+    ],
+    "processStopped": true,
+    "reproducibleAppRemoved": true
+  },
+  "behaviorChoices": [
+    "Full resolution means current edited document at source pixel dimensions, not an immutable pre-edit source",
+    "Existing copy/save/actions remain full resolution and do not apply window opacity",
+    "Displayed-size mode applies actual view fit times zoom and pin opacity, one pixel per AppKit logical point",
+    "Displayed export includes full scaled image and excludes editor chrome, pan clipping and window shadow",
+    "Saved output is captured before showing Save panel; copy-after-save uses that same output"
+  ],
+  "installedAppChanged": false
+}

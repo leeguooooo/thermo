@@ -279,12 +279,13 @@ import SwiftUI
                             ["tool":item.tool.rawValue,"points":item.points.map{[Double($0.x),Double($0.y)]},"width":Double(item.width),"label":item.numberLabel,"options":["lineStart":item.options.lineStart.rawValue,"lineEnd":item.options.lineEnd.rawValue,"lineJoin":item.options.lineJoin.rawValue,"lineCap":item.options.lineCap.rawValue,"comment":item.options.arrowComment,"start":item.options.arrowStart.rawValue,"end":item.options.arrowEnd.rawValue,"line":item.options.linePattern.rawValue,"numberShape":item.options.numberShape.rawValue,"numberFormat":item.options.numberFormat.rawValue,"numberFilled":item.options.numberFilled,"numberLeader":item.options.numberLeader,"numberValue":item.options.numberValue ?? -1]] as [String:Any]
                         },"canUndo":model.document.canUndo,"canRedo":model.document.canRedo,"pan":[Double(model.pan.x),Double(model.pan.y)],"zoom":model.zoom,"revision":model.revision,"renderCacheBytes":CaptureRenderCache.shared.cachedBytes,"windowVisible":panel?.isVisible ?? false,"windowKey":panel?.isKeyWindow ?? false,"appActive":NSApp.isActive]
                         record["cropSelection"]=model.cropSelection.map{[Double($0.minX),Double($0.minY),Double($0.width),Double($0.height)]} ?? [];record["locked"]=model.locked;record["windowMovable"]=panel?.isMovable ?? false
-                        record["imageSize"]=[model.document.image.width,model.document.image.height]
+                        record["imageSize"]=[model.document.image.width,model.document.image.height];record["imageDisplayScale"]=model.imageDisplayScale?() ?? -1;record["opacity"]=model.opacity
                         if model.copyPasteboard != nil {
                             record["recognized"]=model.recognition;record["selectingOCRText"]=model.selectingOCRText
                             record["selectedOCRText"]=model.selectedOCRText;record["copiedOCRText"]=model.copyPasteboard?.string(forType:.string) ?? ""
                             let png=model.copyPasteboard?.data(forType:.png)
                             record["copiedPNGBytes"]=png?.count ?? 0
+                            if let png,let rep=NSBitmapImageRep(data:png) {record["copiedPNGSize"]=[rep.pixelsWide,rep.pixelsHigh];record["copiedPNGCornerAlpha"]=rep.colorAt(x:0,y:0)?.alphaComponent ?? -1}
                             record["copiedPNGHash"]=png.map{SHA256.hash(data:$0).map{String(format:"%02x",$0)}.joined()} ?? ""
                             record["segments"]=model.ocrSegments.map {segment in ["range":[segment.range.location,segment.range.length],"box":[Double(segment.bounds.minX),Double(segment.bounds.minY),Double(segment.bounds.width),Double(segment.bounds.height)]] as [String:Any]}
                         }

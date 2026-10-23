@@ -3824,4 +3824,11 @@ let zhHans: [String: String] = [
     "Square cap": "方形端点",
     "A connected line can contain up to 4096 points.": "一条折线最多可包含 4096 个点。",
     "Click to add vertices. Double-click, right-click or Return finishes; Backspace removes a vertex; Esc cancels. Hold Shift for 45° directions.": "逐次点击添加拐点；双击、右键或回车完成，退格删除上一点，Esc 取消；按 Shift 吸附 45°。",
+    "Copy full-resolution image": "复制完整分辨率图像",
+    "Copy displayed-size image": "复制显示尺寸图像",
+    "Save full-resolution image…": "完整分辨率图像另存为…",
+    "Save displayed-size image…": "显示尺寸图像另存为…",
+    "The image view is not ready. Open the pin and try again.": "图像视图尚未就绪，请打开贴图后重试。",
+    "The displayed image size is invalid.": "显示尺寸无效。",
+    "The displayed image exceeds 80 million pixels. Reduce zoom and try again.": "显示尺寸图像超过 8000 万像素，请缩小后重试。",
 ]
