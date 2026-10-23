@@ -13,6 +13,19 @@ struct CaptureAnnotationStyleControls:View {
     }
     var body:some View {
         ScrollView(.horizontal,showsIndicators:true) { HStack {
+            if model.tool == .line,model.selectedAnnotation == nil {Toggle(tr("Connected line"),isOn:$model.connectedLine)}
+            if tool == .line {
+                headPicker("Start marker",value:$model.annotationOptions.lineStart)
+                headPicker("End marker",value:$model.annotationOptions.lineEnd)
+                Picker(tr("Line join"),selection:$model.annotationOptions.lineJoin) {
+                    Text(tr("Round join")).tag(CaptureLineJoin.round)
+                    Text(tr("Sharp join")).tag(CaptureLineJoin.miter)
+                }.frame(width:150)
+                Picker(tr("Line cap"),selection:$model.annotationOptions.lineCap) {
+                    Text(tr("Round cap")).tag(CaptureLineCap.round)
+                    Text(tr("Square cap")).tag(CaptureLineCap.square)
+                }.frame(width:150)
+            }
             if tool == .number {
                 Picker(tr("Sequence format"),selection:Binding(get:{model.annotationOptions.numberFormat},set:{value in
                     if model.selectedAnnotation != nil,model.annotationOptions.numberValue == nil {model.annotationOptions.numberValue=min(3999,max(1,Int(model.text) ?? 1))}

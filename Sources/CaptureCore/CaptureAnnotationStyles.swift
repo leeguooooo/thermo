@@ -2,6 +2,8 @@ import AppKit
 
 public enum CaptureArrowHead:String,Codable,CaseIterable,Sendable {case none,open,filled,diamond,circle}
 public enum CaptureLinePattern:String,Codable,CaseIterable,Sendable {case solid,dashed,dotted}
+public enum CaptureLineJoin:String,Codable,CaseIterable,Sendable {case round,miter}
+public enum CaptureLineCap:String,Codable,CaseIterable,Sendable {case round,square}
 public enum CaptureNumberShape:String,Codable,CaseIterable,Sendable {case circle,square}
 public enum CaptureNumberFormat:String,Codable,CaseIterable,Sendable {
     case decimal,alphabetic,roman
@@ -39,8 +41,8 @@ extension CaptureAnnotation {
         return path
     }
     func arrowMarkersContain(_ point:CGPoint,tolerance:CGFloat) -> Bool {
-        guard tool == .arrow,points.count>=2 else{return false}
-        for (style,tip,other) in [(options.arrowStart,points[0],points[1]),(options.arrowEnd,points[points.count-1],points[points.count-2])] {
+        guard [CaptureTool.arrow,.line].contains(tool),points.count>=2 else{return false}
+        for (style,tip,other) in [(tool == .arrow ? options.arrowStart : options.lineStart,points[0],points[1]),(tool == .arrow ? options.arrowEnd : options.lineEnd,points[points.count-1],points[points.count-2])] {
             guard let path=Self.arrowHeadPath(style,tip:tip,awayFrom:other,width:width) else{continue}
             if style != .open,path.contains(point) {return true}
             if path.copy(strokingWithWidth:width+2*tolerance,lineCap:.round,lineJoin:.round,miterLimit:10).contains(point) {return true}
@@ -78,13 +80,16 @@ extension CaptureDocument {
     static func styledLine(from start:CGPoint,to end:CGPoint,item:CaptureAnnotation,in ctx:CGContext,startHead:CaptureArrowHead = .none,endHead:CaptureArrowHead = .none,points:[CGPoint]?=nil) {
         let width=max(1,item.width)
         ctx.saveGState();defer{ctx.restoreGState()}
+        if item.tool == .line {
+            ctx.setLineCap(item.options.lineCap == .round ? .round : .square)
+            ctx.setLineJoin(item.options.lineJoin == .round ? .round : .miter);ctx.setMiterLimit(10)
+        }
         switch item.options.linePattern {
         case .solid:break
         case .dashed:ctx.setLineDash(phase:0,lengths:[width*3,width*2])
         case .dotted:ctx.setLineDash(phase:0,lengths:[0.1,width*2])
         }
         ctx.move(to:start);for point in (points ?? [start,end]).dropFirst() {ctx.addLine(to:point)};ctx.strokePath();ctx.setLineDash(phase:0,lengths:[])
-        guard hypot(end.x-start.x,end.y-start.y) > 0.01 else{return}
         func head(_ style:CaptureArrowHead,at tip:CGPoint,awayFrom other:CGPoint) {
             guard let path=CaptureAnnotation.arrowHeadPath(style,tip:tip,awayFrom:other,width:width) else{return}
             ctx.addPath(path)

@@ -38,6 +38,9 @@ struct CaptureAnnotationControls:View {
                 Button(tr("Clear annotations")) { model.document.clearAnnotations();model.selectedAnnotation=nil }.disabled(model.locked || model.document.annotations.isEmpty)
             }
             if [.line,.arrow,.number].contains(tool) {CaptureAnnotationStyleControls(model:model,tool:tool)}
+            if model.tool == .line,model.connectedLine {
+                Text(tr("Click to add vertices. Double-click, right-click or Return finishes; Backspace removes a vertex; Esc cancels. Hold Shift for 45° directions.")).font(.caption).foregroundStyle(.secondary)
+            }
             if model.selectedAnnotation != nil,tool == .arrow {
                 TextField(tr("Arrow comment"),text:Binding(get:{model.annotationOptions.arrowComment},set:{model.annotationOptions.arrowComment=String($0.prefix(2000))}))
                     .textFieldStyle(.roundedBorder).focused($arrowCommentFocused)

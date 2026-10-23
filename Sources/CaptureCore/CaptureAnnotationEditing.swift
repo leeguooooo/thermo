@@ -15,7 +15,8 @@ extension CaptureAnnotation {
         }
         let xs=points.map(\.x),ys=points.map(\.y)
         let rect=CGRect(x:xs.min()!,y:ys.min()!,width:xs.max()!-xs.min()!,height:ys.max()!-ys.min()!)
-        let padding=tool == .arrow ? max(12,width*8) : tool == .eraser ? width*2 : width/2
+        let lineMarkers=tool == .line && (options.lineStart != .none || options.lineEnd != .none)
+        let padding=tool == .arrow || lineMarkers ? max(12,width*8) : tool == .line && options.lineJoin == .miter ? width*5 : tool == .eraser ? width*2 : width/2
         let shape=rect.insetBy(dx:-padding,dy:-padding)
         return arrowCommentRect.map{shape.union($0.insetBy(dx:-4,dy:-3))} ?? shape
     }

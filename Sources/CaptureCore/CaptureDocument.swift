@@ -86,7 +86,7 @@ public struct CaptureDocument {
         case .highlight:
             ctx.setBlendMode(.multiply); ctx.setAlpha(0.35); ctx.fill(rect)
         case .line,.arrow:
-            styledLine(from:first,to:last,item:item,in:ctx,startHead:item.tool == .arrow ? item.options.arrowStart : .none,endHead:item.tool == .arrow ? item.options.arrowEnd : .none,points:item.points)
+            styledLine(from:first,to:last,item:item,in:ctx,startHead:item.tool == .arrow ? item.options.arrowStart : item.options.lineStart,endHead:item.tool == .arrow ? item.options.arrowEnd : item.options.lineEnd,points:item.points)
             if item.tool == .arrow {drawArrowComment(item,in:ctx)}
         case .pencil:
             ctx.beginPath();ctx.move(to:first)

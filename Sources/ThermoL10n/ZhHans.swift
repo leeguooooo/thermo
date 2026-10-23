@@ -3815,4 +3815,13 @@ let zhHans: [String: String] = [
     "Sequence leader": "序号引线",
     "Arrow comment": "箭头评论",
     "Drag an endpoint to adjust direction; Shift snaps to 45°. Drag the body to move. Double-click an arrow to edit its comment.": "拖动端点调整方向，按 Shift 吸附 45°。拖动线身移动；双击箭头编辑评论。",
+    "Connected line": "折线",
+    "Line join": "拐角样式",
+    "Round join": "圆角",
+    "Sharp join": "尖角",
+    "Line cap": "端点外观",
+    "Round cap": "圆形端点",
+    "Square cap": "方形端点",
+    "A connected line can contain up to 4096 points.": "一条折线最多可包含 4096 个点。",
+    "Click to add vertices. Double-click, right-click or Return finishes; Backspace removes a vertex; Esc cancels. Hold Shift for 45° directions.": "逐次点击添加拐点；双击、右键或回车完成，退格删除上一点，Esc 取消；按 Shift 吸附 45°。",
 ]

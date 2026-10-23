@@ -11,6 +11,10 @@ public struct CaptureAnnotationOptions:Codable,Sendable,Equatable {
     public var arrowComment=""
     public var arrowStart:CaptureArrowHead = .none
     public var arrowEnd:CaptureArrowHead = .open
+    public var lineStart:CaptureArrowHead = .none
+    public var lineEnd:CaptureArrowHead = .none
+    public var lineJoin:CaptureLineJoin = .round
+    public var lineCap:CaptureLineCap = .round
     public var linePattern:CaptureLinePattern = .solid
     public var numberShape:CaptureNumberShape = .circle
     public var numberFilled=true
@@ -18,7 +22,7 @@ public struct CaptureAnnotationOptions:Codable,Sendable,Equatable {
     public var numberFormat:CaptureNumberFormat = .decimal
     public var numberValue:Int?
     public init() {}
-    private enum CodingKeys:String,CodingKey {case strength,zoom,opacity,angle,ellipse,arrowComment,arrowStart,arrowEnd,linePattern,numberShape,numberFilled,numberLeader,numberFormat,numberValue}
+    private enum CodingKeys:String,CodingKey {case strength,zoom,opacity,angle,ellipse,arrowComment,arrowStart,arrowEnd,lineStart,lineEnd,lineJoin,lineCap,linePattern,numberShape,numberFilled,numberLeader,numberFormat,numberValue}
     public init(from decoder:Decoder) throws {
         let c=try decoder.container(keyedBy:CodingKeys.self)
         strength=try c.decodeIfPresent(Double.self,forKey:.strength) ?? 12
@@ -29,6 +33,10 @@ public struct CaptureAnnotationOptions:Codable,Sendable,Equatable {
         arrowComment=try c.decodeIfPresent(String.self,forKey:.arrowComment) ?? ""
         arrowStart=try c.decodeIfPresent(CaptureArrowHead.self,forKey:.arrowStart) ?? .none
         arrowEnd=try c.decodeIfPresent(CaptureArrowHead.self,forKey:.arrowEnd) ?? .open
+        lineStart=try c.decodeIfPresent(CaptureArrowHead.self,forKey:.lineStart) ?? .none
+        lineEnd=try c.decodeIfPresent(CaptureArrowHead.self,forKey:.lineEnd) ?? .none
+        lineJoin=try c.decodeIfPresent(CaptureLineJoin.self,forKey:.lineJoin) ?? .round
+        lineCap=try c.decodeIfPresent(CaptureLineCap.self,forKey:.lineCap) ?? .round
         linePattern=try c.decodeIfPresent(CaptureLinePattern.self,forKey:.linePattern) ?? .solid
         numberShape=try c.decodeIfPresent(CaptureNumberShape.self,forKey:.numberShape) ?? .circle
         numberFilled=try c.decodeIfPresent(Bool.self,forKey:.numberFilled) ?? true

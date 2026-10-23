@@ -307,6 +307,7 @@ func captureFailureMessage(_ error:Error) -> String {
         }
     }
     func selectAllAnnotations() {guard !locked else{return};selectingOCRText=false;tool = .select;selectAnnotations(Set(document.annotations.indices))}
+    @Published var connectedLine=false
     @Published var nextSequenceNumber=1
     func chooseTool(_ tool:CaptureTool) {
         selectingOCRText=false;selectAnnotations([])
@@ -573,7 +574,7 @@ extension CaptureTool {
 struct CaptureCanvas: NSViewRepresentable {
     @ObservedObject var model: CaptureEditorModel
     func makeNSView(context: Context) -> Canvas { Canvas(model: model) }
-    func updateNSView(_ view: Canvas, context: Context) { view.model = model;view.updateOCRAccessibility();view.needsDisplay = true }
+    func updateNSView(_ view: Canvas, context: Context) { view.model = model;view.reconcileConnectedLine();view.updateOCRAccessibility();view.needsDisplay = true }
     final class Canvas: NSView {
         var model: CaptureEditorModel {didSet {if oldValue !== model {renderCache.remove(owner:cacheOwner)}}}
         private let renderCache:CaptureRenderCache
@@ -581,6 +582,22 @@ struct CaptureCanvas: NSViewRepresentable {
         private let render:(CaptureDocument,CaptureAnnotation?,[Int:CaptureAnnotation])throws->CGImage
         private var windowObservers:[NSObjectProtocol]=[]
         var draft: CaptureAnnotation?
+        var connectedLineVertices:[CGPoint]=[]
+        var connectedLineRevision:Int?
+        var connectedLineOwner:ObjectIdentifier?
+        var connectedLineTracking:NSTrackingArea?
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            if let connectedLineTracking {removeTrackingArea(connectedLineTracking)}
+            let area=NSTrackingArea(rect:.zero,options:[.mouseMoved,.activeInKeyWindow,.inVisibleRect,.enabledDuringMouseDrag],owner:self,userInfo:nil)
+            addTrackingArea(area);connectedLineTracking=area
+        }
+        override func mouseMoved(with event:NSEvent) {if !updateConnectedLinePreview(event) {super.mouseMoved(with:event)}}
+        override func rightMouseDown(with event:NSEvent) {
+            reconcileConnectedLine()
+            if !connectedLineVertices.isEmpty {finishConnectedLine();return}
+            super.rightMouseDown(with:event)
+        }
         var cropDragStart:CGPoint?
         var cropDragOriginal:CGRect?
         var cropResizing=false
@@ -638,6 +655,7 @@ struct CaptureCanvas: NSViewRepresentable {
             super.viewDidMoveToWindow();renderCache.remove(owner:cacheOwner)
             for observer in windowObservers {NotificationCenter.default.removeObserver(observer)};windowObservers=[]
             guard let window else {return}
+            window.acceptsMouseMovedEvents=true
             for name in [NSWindow.didChangeOcclusionStateNotification,NSWindow.willCloseNotification] {
                 windowObservers.append(NotificationCenter.default.addObserver(forName:name,object:window,queue:.main) { [weak self] note in
                     MainActor.assumeIsolated {
@@ -653,6 +671,7 @@ struct CaptureCanvas: NSViewRepresentable {
             super.viewDidChangeEffectiveAppearance();renderCache.remove(owner:cacheOwner);needsDisplay=true
         }
         func renderedImage() throws -> CGImage {
+            reconcileConnectedLine()
             let preview=draft?.tool == .crop ? nil : draft
             let replacements=model.tool == .select && !model.locked && selectionRevision == model.revision ? selectionPreview : [:]
             if preview != nil || !replacements.isEmpty {return try render(model.document,preview,replacements)}
@@ -698,7 +717,7 @@ struct CaptureCanvas: NSViewRepresentable {
                 if selected.count > 1 {for item in selected {ctx.stroke(item.bounds)}}
                 ctx.setFillColor(NSColor.systemBlue.cgColor)
                 if selected.count == 1,[CaptureTool.line,.arrow].contains(first.tool),let a=first.points.first,let b=first.points.last {
-                    for p in [a,b] {ctx.fillEllipse(in:CGRect(x:p.x-5/scale,y:p.y-5/scale,width:10/scale,height:10/scale))}
+                    for p in (first.tool == .line ? first.points : [a,b]) {ctx.fillEllipse(in:CGRect(x:p.x-5/scale,y:p.y-5/scale,width:10/scale,height:10/scale))}
                 } else {ctx.fill(CGRect(x:rect.maxX-4/scale,y:rect.maxY-4/scale,width:8/scale,height:8/scale))}
             }
             if let rect=marqueeRect {ctx.setFillColor(NSColor.systemBlue.withAlphaComponent(0.12).cgColor);ctx.fill(rect);ctx.setStrokeColor(NSColor.systemBlue.cgColor);ctx.setLineWidth(1/scale);ctx.stroke(rect)}
@@ -716,6 +735,7 @@ struct CaptureCanvas: NSViewRepresentable {
         }
         override func mouseDown(with event: NSEvent) {
             window?.makeFirstResponder(self)
+            if handleConnectedLineClick(event) {return}
             cancelSelectionGesture();draft=nil;cropDragStart=nil;cropDragOriginal=nil;cropGestureRevision=model.revision
             ocrDragStart=nil;ocrBaseline=[]
             if model.selectingOCRText,scale > 0 {
@@ -743,7 +763,7 @@ struct CaptureCanvas: NSViewRepresentable {
                 }
                 if let first=items.first,!additive {
                     if items.count == 1,[CaptureTool.line,.arrow].contains(first.tool),first.points.count >= 2 {
-                        let indices=[0,first.points.count-1]
+                        let indices=first.tool == .line ? Array(first.points.indices) : [0,first.points.count-1]
                         endpointIndex=indices.min{hypot(p.x-first.points[$0].x,p.y-first.points[$0].y)<hypot(p.x-first.points[$1].x,p.y-first.points[$1].y)}
                         if let index=endpointIndex,hypot(p.x-first.points[index].x,p.y-first.points[index].y)>10/scale {endpointIndex=nil}
                     } else {
@@ -786,6 +806,7 @@ struct CaptureCanvas: NSViewRepresentable {
             needsDisplay = true
         }
         override func mouseDragged(with event: NSEvent) {
+            if updateConnectedLinePreview(event) {return}
             if model.selectingOCRText,let start=ocrDragStart {
                 let p=point(event),rect=CGRect(x:min(start.x,p.x),y:min(start.y,p.y),width:max(1,abs(p.x-start.x)),height:max(1,abs(p.y-start.y)))
                 model.selectedOCRSegments=ocrBaseline.union(model.ocrSegments.indices.filter{rect.intersects(model.ocrRect($0))})
@@ -811,7 +832,7 @@ struct CaptureCanvas: NSViewRepresentable {
                 if let endpointIndex {
                     selectionPreview=selectionOriginal.mapValues {original in
                         var result=original
-                        let fixed=original.points[endpointIndex == 0 ? 1 : original.points.count-2]
+                        let fixed=original.points[endpointIndex == 0 ? 1 : endpointIndex-1]
                         result.points[endpointIndex]=event.modifierFlags.contains(.shift) ? CaptureAnnotation.snappedEndpoint(from:fixed,to:p,inside:model.document.size) : p
                         return result
                     }
@@ -835,6 +856,8 @@ struct CaptureCanvas: NSViewRepresentable {
             needsDisplay = true
         }
         override func mouseUp(with event: NSEvent) {
+            reconcileConnectedLine()
+            if model.tool == .line,model.connectedLine {return}
             lastDrag = nil
             if cropDragStart != nil {cropDragStart=nil;cropDragOriginal=nil;needsDisplay=true;return}
             if ocrDragStart != nil {ocrDragStart=nil;ocrBaseline=[];needsDisplay=true;return}
@@ -856,6 +879,7 @@ struct CaptureCanvas: NSViewRepresentable {
             needsDisplay = true
         }
         override func keyDown(with event:NSEvent) {
+            if handleConnectedLineKey(event) {return}
             if model.tool == .crop {
                 if event.keyCode == 53 {model.cropSelection=nil;draft=nil;cropDragStart=nil;cropDragOriginal=nil;needsDisplay=true;return}
                 if !model.locked,let rect=model.cropSelection {
