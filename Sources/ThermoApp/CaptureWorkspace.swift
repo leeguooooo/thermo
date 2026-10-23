@@ -300,12 +300,17 @@ func captureFailureMessage(_ error:Error) -> String {
             let item=document.annotations[index];color=Color(nsColor:item.color);lineWidth=item.width;text=item.text;annotationOptions=item.options
         }
     }
-    func selectAllAnnotations() {guard !locked else{return};tool = .select;selectAnnotations(Set(document.annotations.indices))}
+    func selectAllAnnotations() {guard !locked else{return};selectingOCRText=false;tool = .select;selectAnnotations(Set(document.annotations.indices))}
+    func chooseTool(_ tool:CaptureTool) {selectingOCRText=false;self.tool=tool}
     @Published var annotationOptions=CaptureAnnotationOptions()
     @Published var color = Color.red
     @Published var lineWidth: Double = 4
     @Published var text = ""
-    @Published var recognition = ""
+    @Published var recognition = "" {didSet {if oldValue != recognition {ocrSegments=[];selectedOCRSegments=[];selectingOCRText=false}}}
+    @Published var ocrSegments:[CaptureTextSegment]=[]
+    var copyPasteboard:NSPasteboard?
+    @Published var selectedOCRSegments:Set<Int>=[]
+    @Published var selectingOCRText=false {didSet {selectedOCRSegments=[];if selectingOCRText {selectAnnotations([])}}}
     @Published var recognizing = false
     @Published var pinContent:CapturePinContent?
     var makeImageCopy:((CGImage)->Void)?
@@ -332,6 +337,7 @@ func captureFailureMessage(_ error:Error) -> String {
     var changeWindow: (() -> Void)?
     init(image: CGImage) { document = CaptureDocument(image: image) }
     func selectAnnotation(_ index:Int?) {
+        if index != nil {selectingOCRText=false}
         selectedAnnotation=index
     }
     func applySelectedStyle() {
@@ -351,7 +357,8 @@ func captureFailureMessage(_ error:Error) -> String {
     func copy() {
         do {
             let data = try document.data()
-            NSPasteboard.general.clearContents(); NSPasteboard.general.setData(data, forType: .png)
+            let board=copyPasteboard ?? .general
+            board.clearContents();board.setData(data,forType:.png)
         } catch { self.error = tr(error.localizedDescription) }
     }
     var saveOptions:(()throws->CaptureSaveSettings)?
@@ -389,9 +396,10 @@ func captureFailureMessage(_ error:Error) -> String {
             recognizing = true; error = nil
             Task {
                 do {
-                    let result = try await Task.detached(priority: .userInitiated) { try CaptureRecognition.recognize(image) }.value
+                    let result = try await Task.detached(priority: .userInitiated) { try CaptureRecognition.recognize(image,includeGeometry:true) }.value
                     if self.revision == revision {
                         recognition = ([result.text] + result.codes).filter { !$0.isEmpty }.joined(separator: "\n")
+                        ocrSegments=result.segments;selectedOCRSegments=[];selectingOCRText=false
                         if recognition.isEmpty { error = tr("No text or barcode found.") }
                     } else { error = tr("The image changed. Run recognition again.") }
                 } catch { self.error = tr(error.localizedDescription) }
@@ -443,7 +451,7 @@ private struct CaptureEditorView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(CaptureTool.allCases) { tool in
-                        Button { model.tool = tool } label: { Image(systemName: tool.symbol).frame(width: 22, height: 24) }
+                        Button { model.chooseTool(tool) } label: { Image(systemName: tool.symbol).frame(width: 22, height: 24) }
                             .help(tr(tool.label)).accessibilityLabel(tr(tool.label))
                             .tint(model.tool == tool ? .accentColor : .secondary)
                             .background(model.tool == tool ? Color.accentColor.opacity(0.25) : Color.clear)
@@ -473,8 +481,12 @@ private struct CaptureEditorView: View {
             }
             CaptureCanvas(model: model).frame(maxWidth: .infinity, maxHeight: .infinity)
             if !model.recognition.isEmpty {
-                TextEditor(text: $model.recognition).font(.system(.body, design: .monospaced)).frame(height: 120)
-                Button(tr("Copy recognized text")) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(model.recognition, forType: .string) }.padding(4)
+                TextEditor(text: $model.recognition).font(.system(.body, design: .monospaced)).frame(height: 120).disabled(model.recognizing)
+                HStack {
+                    if !model.ocrSegments.isEmpty {Toggle(tr("Select text in image"),isOn:$model.selectingOCRText)}
+                    Button(tr(model.selectedOCRSegments.isEmpty ? "Copy recognized text" : "Copy selected text")) {model.copyOCRText()}
+                        .keyboardShortcut(model.selectingOCRText ? KeyboardShortcut("c",modifiers:.command) : nil)
+                }.padding(4)
             }
             if let path=model.savedImagePath { Text(String(format:tr("Saved to %@"),path)).font(.caption).textSelection(.enabled) }
             if let error = model.error { Text(error).foregroundStyle(.red).textSelection(.enabled).padding(6) }
@@ -486,7 +498,7 @@ private struct CaptureEditorView: View {
                 Text("\(model.document.image.width) × \(model.document.image.height)").font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button(tr("Text / QR")) { model.recognize() }.disabled(model.recognizing)
-                Button(tr("Copy image")) { model.copy() }.keyboardShortcut("c", modifiers: .command)
+                Button(tr("Copy image")) { model.copy() }.keyboardShortcut(model.selectingOCRText ? nil : KeyboardShortcut("c",modifiers:.command))
                 Menu(tr("Saving options")) {
                     Button(tr("Quick save")) {do {try model.quickSave()} catch {model.error=captureFailureMessage(error)}}.keyboardShortcut("s",modifiers:[.command,.shift])
                     Button(tr("Capture saving and after-actions")){model.showSaveSettings?()}
@@ -519,7 +531,7 @@ extension CaptureTool {
 struct CaptureCanvas: NSViewRepresentable {
     @ObservedObject var model: CaptureEditorModel
     func makeNSView(context: Context) -> Canvas { Canvas(model: model) }
-    func updateNSView(_ view: Canvas, context: Context) { view.model = model; view.needsDisplay = true }
+    func updateNSView(_ view: Canvas, context: Context) { view.model = model;view.updateOCRAccessibility();view.needsDisplay = true }
     final class Canvas: NSView {
         var model: CaptureEditorModel {didSet {if oldValue !== model {renderCache.remove(owner:cacheOwner)}}}
         private let renderCache:CaptureRenderCache
@@ -539,6 +551,34 @@ struct CaptureCanvas: NSViewRepresentable {
         var marqueeRect:CGRect?
         var marqueeBaseline:Set<Int>=[]
         var resizing=false
+        var ocrDragStart:CGPoint?
+        var ocrBaseline:Set<Int>=[]
+        var ocrAccessibilityElements:[CaptureOCRAccessibilityElement]=[]
+        var ocrAccessibilitySnapshot:[CaptureTextSegment]=[]
+        var ocrAccessibilityText=""
+        override func isAccessibilityElement() -> Bool {model.selectingOCRText}
+        override func accessibilityRole() -> NSAccessibility.Role? {.group}
+        override func accessibilityLabel() -> String? {tr("Recognized text regions")}
+        override func accessibilityChildren() -> [Any]? {
+            updateOCRAccessibility();return ocrAccessibilityElements
+        }
+        func updateOCRAccessibility() {
+            guard model.selectingOCRText else {ocrAccessibilityElements=[];ocrAccessibilitySnapshot=[];ocrAccessibilityText="";return}
+            if ocrAccessibilitySnapshot != model.ocrSegments || ocrAccessibilityText != model.recognition {
+                ocrAccessibilitySnapshot=model.ocrSegments;ocrAccessibilityText=model.recognition
+                ocrAccessibilityElements=model.ocrSegments.indices.compactMap {index in
+                    let item=model.ocrSegments[index]
+                    guard let range=Range(item.range,in:model.recognition) else {return nil}
+                    return CaptureOCRAccessibilityElement(canvas:self,index:index,segment:item,label:String(model.recognition[range]))
+                }
+            }
+            for item in ocrAccessibilityElements {
+                let rect=model.ocrRect(item.index),s=scale
+                let local=CGRect(x:imageRect.minX+rect.minX*s,y:imageRect.minY+rect.minY*s,width:rect.width*s,height:rect.height*s).intersection(bounds)
+                item.setAccessibilityFrame(NSAccessibility.screenRect(fromView:self,rect:local.isNull ? .zero : local))
+                item.setAccessibilityValue(NSNumber(value:model.selectedOCRSegments.contains(item.index)))
+            }
+        }
         init(model:CaptureEditorModel,cache:CaptureRenderCache = .shared,
              render:@escaping(CaptureDocument,CaptureAnnotation?,[Int:CaptureAnnotation])throws->CGImage={try $0.rendered(adding:$1,replacements:$2)}) {
             self.model=model;self.renderCache=cache;self.render=render;super.init(frame:.zero)
@@ -598,6 +638,13 @@ struct CaptureCanvas: NSViewRepresentable {
                 guard model.document.annotations.indices.contains(index) else{return nil}
                 return selectionRevision == model.revision ? selectionPreview[index] ?? model.document.annotations[index] : model.document.annotations[index]
             }
+            if model.selectingOCRText {
+                for index in model.ocrSegments.indices {
+                    let rect=model.ocrRect(index)
+                    if model.selectedOCRSegments.contains(index) {ctx.setFillColor(NSColor.selectedTextBackgroundColor.withAlphaComponent(0.35).cgColor);ctx.fill(rect)}
+                    ctx.setStrokeColor(NSColor.systemBlue.withAlphaComponent(0.35).cgColor);ctx.setLineWidth(0.5/scale);ctx.stroke(rect)
+                }
+            }
             if let first=selected.first {
                 let rect=selected.dropFirst().reduce(first.bounds){$0.union($1.bounds)}
                 ctx.setStrokeColor(NSColor.systemBlue.cgColor);ctx.setLineWidth(1/scale);ctx.setLineDash(phase:0,lengths:[4/scale,3/scale]);ctx.stroke(rect);ctx.setLineDash(phase:0,lengths:[])
@@ -616,6 +663,13 @@ struct CaptureCanvas: NSViewRepresentable {
         override func mouseDown(with event: NSEvent) {
             window?.makeFirstResponder(self)
             cancelSelectionGesture();draft=nil
+            ocrDragStart=nil;ocrBaseline=[]
+            if model.selectingOCRText,scale > 0 {
+                let p=point(event);ocrDragStart=p;ocrBaseline=event.modifierFlags.contains(.shift) ? model.selectedOCRSegments : []
+                let hits=Set(model.ocrSegments.indices.filter{model.ocrRect($0).contains(p)})
+                model.selectedOCRSegments=event.modifierFlags.contains(.shift) ? ocrBaseline.symmetricDifference(hits) : hits
+                needsDisplay=true;return
+            }
             if model.locked || scale <= 0 { return }
             if model.tool == .select {
                 guard imageRect.contains(convert(event.locationInWindow,from:nil)) else{return}
@@ -656,6 +710,11 @@ struct CaptureCanvas: NSViewRepresentable {
             needsDisplay = true
         }
         override func mouseDragged(with event: NSEvent) {
+            if model.selectingOCRText,let start=ocrDragStart {
+                let p=point(event),rect=CGRect(x:min(start.x,p.x),y:min(start.y,p.y),width:max(1,abs(p.x-start.x)),height:max(1,abs(p.y-start.y)))
+                model.selectedOCRSegments=ocrBaseline.union(model.ocrSegments.indices.filter{rect.intersects(model.ocrRect($0))})
+                needsDisplay=true;return
+            }
             guard !model.locked else{return}
             if model.tool == .select,let start=marqueeStart {
                 let p=point(event),rect=CGRect(x:min(start.x,p.x),y:min(start.y,p.y),width:abs(p.x-start.x),height:abs(p.y-start.y))
@@ -681,6 +740,7 @@ struct CaptureCanvas: NSViewRepresentable {
         }
         override func mouseUp(with event: NSEvent) {
             lastDrag = nil
+            if ocrDragStart != nil {ocrDragStart=nil;ocrBaseline=[];needsDisplay=true;return}
             if selectionStart != nil || marqueeStart != nil {
                 if !model.locked,model.tool == .select,selectionMoved,selectionRevision == model.revision,Set(selectionOriginal.keys) == model.selectedAnnotations {
                     model.document.replaceAnnotations(selectionPreview)
@@ -697,6 +757,12 @@ struct CaptureCanvas: NSViewRepresentable {
             needsDisplay = true
         }
         override func keyDown(with event:NSEvent) {
+            if model.selectingOCRText {
+                if event.keyCode == 53 {model.selectingOCRText=false;ocrDragStart=nil;ocrBaseline=[];needsDisplay=true;return}
+                if event.modifierFlags.contains(.command),event.keyCode == 0 {model.selectedOCRSegments=Set(model.ocrSegments.indices);needsDisplay=true;return}
+                if event.modifierFlags.contains(.command),event.keyCode == 8 {model.copyOCRText();return}
+                if event.keyCode == 51 || event.keyCode == 117 {return}
+            }
             if event.keyCode == 53 {cancelSelectionGesture();draft=nil;model.selectAnnotations([]);needsDisplay=true}
             else if event.keyCode == 0,event.modifierFlags.contains(.command) {model.selectAllAnnotations();needsDisplay=true}
             else if event.keyCode == 51 || event.keyCode == 117 {cancelSelectionGesture();model.deleteSelected();needsDisplay=true}

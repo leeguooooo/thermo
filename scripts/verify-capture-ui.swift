@@ -229,21 +229,33 @@ import SwiftUI
                     window.showWindow(nil)
                 } catch { window.model.issue = error.localizedDescription }
             }
-        } else if Bundle.main.object(forInfoDictionaryKey:"ThermoAnnotationReview") as? Bool == true {
-            let window=CaptureEditor(image:image,onClose:{})
+        } else if Bundle.main.object(forInfoDictionaryKey:"ThermoAnnotationReview") as? Bool == true || Bundle.main.object(forInfoDictionaryKey:"ThermoOCRReview") as? Bool == true {
+            let board=Bundle.main.object(forInfoDictionaryKey:"ThermoOCRReview") as? Bool == true ? NSPasteboard.withUniqueName() : nil
+            weak var reviewModel:CaptureEditorModel?
+            let window=CaptureEditor(image:image,onClose:{reviewModel?.copyPasteboard=nil;board?.releaseGlobally()})
+            reviewModel=window.model
+            window.model.copyPasteboard=board
+            if board == nil {
             var mosaic=CaptureAnnotation(tool:.mosaic,points:[CGPoint(x:50,y:290),CGPoint(x:650,y:470)],width:4);mosaic.options.strength=18
             window.model.document.append(mosaic)
             var lens=CaptureAnnotation(tool:.magnifier,points:[CGPoint(x:650,y:60),CGPoint(x:850,y:260)],color:.systemBlue,width:3);lens.options.zoom=2;lens.options.ellipse=true
             window.model.document.append(lens)
             window.model.tool = .select;window.model.selectAnnotation(0)
+            }
             annotationWindow=window;window.showWindow(nil)
+            if board != nil {DispatchQueue.main.async {app.activate(ignoringOtherApps:true);window.window?.makeKeyAndOrderFront(nil)}}
             if let path=Bundle.main.object(forInfoDictionaryKey:"ThermoCaptureFixtureRoot") as? String {
-                let probe=Timer(timeInterval:0.25,repeats:true) { [weak model=window.model] _ in
+                let probe=Timer(timeInterval:0.25,repeats:true) { [weak model=window.model,weak panel=window.window] _ in
                     MainActor.assumeIsolated {
                         guard let model else{return}
-                        let record:[String:Any] = ["selected":model.selectedAnnotations.sorted(),"objects":model.document.annotations.map {item in
+                        var record:[String:Any] = ["selected":model.selectedAnnotations.sorted(),"objects":model.document.annotations.map {item in
                             ["tool":item.tool.rawValue,"points":item.points.map{[Double($0.x),Double($0.y)]},"width":Double(item.width)] as [String:Any]
-                        },"canUndo":model.document.canUndo,"canRedo":model.document.canRedo,"pan":[Double(model.pan.x),Double(model.pan.y)],"zoom":model.zoom,"revision":model.revision,"renderCacheBytes":CaptureRenderCache.shared.cachedBytes]
+                        },"canUndo":model.document.canUndo,"canRedo":model.document.canRedo,"pan":[Double(model.pan.x),Double(model.pan.y)],"zoom":model.zoom,"revision":model.revision,"renderCacheBytes":CaptureRenderCache.shared.cachedBytes,"windowVisible":panel?.isVisible ?? false,"windowKey":panel?.isKeyWindow ?? false,"appActive":NSApp.isActive]
+                        if model.copyPasteboard != nil {
+                            record["recognized"]=model.recognition;record["selectingOCRText"]=model.selectingOCRText
+                            record["selectedOCRText"]=model.selectedOCRText;record["copiedOCRText"]=model.copyPasteboard?.string(forType:.string) ?? ""
+                            record["segments"]=model.ocrSegments.map {segment in ["range":[segment.range.location,segment.range.length],"box":[Double(segment.bounds.minX),Double(segment.bounds.minY),Double(segment.bounds.width),Double(segment.bounds.height)]] as [String:Any]}
+                        }
                         if let data=try? JSONSerialization.data(withJSONObject:record,options:.sortedKeys) {try? data.write(to:URL(fileURLWithPath:path).appendingPathComponent("annotation-probe.json"),options:.atomic)}
                     }
                 };RunLoop.main.add(probe,forMode:.common)

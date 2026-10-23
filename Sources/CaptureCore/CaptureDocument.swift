@@ -150,14 +150,39 @@ public struct CaptureDocument {
 public struct CaptureRecognition: Sendable {
     public let text: String
     public let codes: [String]
+    public let segments:[CaptureTextSegment]
+    public init(text:String,codes:[String],segments:[CaptureTextSegment]=[]) {self.text=text;self.codes=codes;self.segments=segments}
     /// Entirely on-device. Network translation and formula recognition are separate features.
-    public static func recognize(_ image: CGImage) throws -> CaptureRecognition {
+    public static func recognize(_ image: CGImage,includeGeometry:Bool=false) throws -> CaptureRecognition {
         let text = VNRecognizeTextRequest(); text.recognitionLevel = .accurate
         text.usesLanguageCorrection = true; text.automaticallyDetectsLanguage = true
         let codes = VNDetectBarcodesRequest()
         try VNImageRequestHandler(cgImage: image).perform([text, codes])
-        return CaptureRecognition(text: (text.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n"),
-                                  codes: (codes.results ?? []).compactMap(\.payloadStringValue))
+        let observations=text.results ?? [],candidates=observations.compactMap{$0.topCandidates(1).first}
+        var segments:[CaptureTextSegment]=[],offset=0
+        if includeGeometry {
+            for observation in observations {
+                guard let candidate=observation.topCandidates(1).first else {continue}
+                let value=candidate.string
+                defer {offset+=value.utf16.count+1}
+                guard segments.count < 4096 else {continue}
+                var line:[CaptureTextSegment]=[],fallback=value.count > 4096-segments.count
+                if !fallback {
+                    value.enumerateSubstrings(in:value.startIndex..<value.endIndex,options:.byComposedCharacterSequences) {substring,range,_,stop in
+                        guard substring?.allSatisfy(\.isWhitespace) != true else {return}
+                        guard let box=try? candidate.boundingBox(for:range)?.boundingBox,!box.isNull,!box.isEmpty else {fallback=true;stop=true;return}
+                        let local=NSRange(range,in:value)
+                        let global=NSRange(location:offset+local.location,length:local.length)
+                        if let last=line.last,last.bounds == box {
+                            line[line.count-1] = .init(range:NSRange(location:last.range.location,length:NSMaxRange(global)-last.range.location),bounds:box)
+                        } else {line.append(.init(range:global,bounds:box))}
+                    }
+                }
+                if fallback {line=[.init(range:NSRange(location:offset,length:value.utf16.count),bounds:observation.boundingBox)]}
+                segments+=line
+            }
+        }
+        return CaptureRecognition(text:candidates.map(\.string).joined(separator:"\n"),codes:(codes.results ?? []).compactMap(\.payloadStringValue),segments:segments)
     }
 }
 

@@ -27,6 +27,7 @@ def main():
     parser.add_argument('--capture-cli-review', action='store_true')
     parser.add_argument('--saving-review', action='store_true')
     parser.add_argument('--screenshot-review', action='store_true')
+    parser.add_argument('--ocr-review', action='store_true')
     parser.add_argument('--html-probe-url', default='http://127.0.0.1:49379/probe')
     args = parser.parse_args()
     root = Path(__file__).resolve().parent.parent
@@ -83,7 +84,7 @@ def main():
     (app/'Contents/Info.plist').write_bytes(plistlib.dumps({
         'CFBundleIdentifier': 'dev.thermo.capture-qa.'+hashlib.sha256(str(output).encode()).hexdigest()[:12], 'CFBundleExecutable': binary.name,
         'CFBundleName': binary.name, 'CFBundlePackageType': 'APPL', 'NSHighResolutionCapable': True,
-        'ThermoScreenshotReview': args.screenshot_review, 'ThermoSavingReview': args.saving_review, 'ThermoCaptureCLIReview': args.capture_cli_review, 'ThermoScriptReview': args.script_review or args.capture_cli_review, 'ThermoShortcutsReview': args.shortcuts_review or args.script_review or args.capture_cli_review, 'ThermoWordMathReview': args.word_math_review, 'ThermoLaTeXReview': args.latex_review or args.word_math_review, 'ThermoTypedPinsReview': args.typed_pins_review, 'ThermoHTMLProbeURL': args.html_probe_url, 'ThermoPinGroupsReview': args.pin_groups_review, 'ThermoAnnotationReview': args.annotation_review, 'ThermoRecordingReview': args.recording_review or args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoOrdinaryReview': args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoKeyboardReview': args.keyboard_review, 'ThermoAVLayerReview': args.av_layer_review, 'ThermoCaptureFixtureRoot': str(output),
+        'ThermoOCRReview': args.ocr_review, 'ThermoScreenshotReview': args.screenshot_review, 'ThermoSavingReview': args.saving_review, 'ThermoCaptureCLIReview': args.capture_cli_review, 'ThermoScriptReview': args.script_review or args.capture_cli_review, 'ThermoShortcutsReview': args.shortcuts_review or args.script_review or args.capture_cli_review, 'ThermoWordMathReview': args.word_math_review, 'ThermoLaTeXReview': args.latex_review or args.word_math_review, 'ThermoTypedPinsReview': args.typed_pins_review, 'ThermoHTMLProbeURL': args.html_probe_url, 'ThermoPinGroupsReview': args.pin_groups_review, 'ThermoAnnotationReview': args.annotation_review, 'ThermoRecordingReview': args.recording_review or args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoOrdinaryReview': args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoKeyboardReview': args.keyboard_review, 'ThermoAVLayerReview': args.av_layer_review, 'ThermoCaptureFixtureRoot': str(output),
     }))
     subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True)
     print(app)
