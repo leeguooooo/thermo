@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-23",
+  "productionRecovery": {
+    "normalQuitAndRelaunch": true,
+    "forceQuit": false,
+    "manualRestoreButtonClicked": false,
+    "sectionsSHA256Before": "8cf05263f61f3e3173ad13bfcd625e6cab393f3118fa8d37f9bae2a6c85ef831",
+    "sectionsSHA256After": "8cf05263f61f3e3173ad13bfcd625e6cab393f3118fa8d37f9bae2a6c85ef831",
+    "nativePixelAcceptance": false
+  },
+  "inputCalibration": {
+    "tool": "Peekaboo 4.5.0",
+    "requestedModifier": "cmd",
+    "eventCount": 22,
+    "eventsWithCommand": 0,
+    "coordinatesMatchedOwnWindow": true,
+    "ownWindowOnly": true,
+    "globalEventTap": false,
+    "keyOrTextCollected": false,
+    "conclusion": "Dispatch receipt does not prove Command-drag; menu item reorder remains unverified",
+    "rawSHA256": "aa070ae47710f6ea341b01d6790eaa7e3bc3f1d185ab6d403d8e285f689828fd"
+  },
+  "privateOrderingProbe": {
+    "acceptedAsFix": false,
+    "removedFromMaintainedScripts": true
+  },
+  "manualFoldAppNormallyClosed": true,
+  "publishedByThisWork": false,
+  "productionCollateralHidingResolved": false,
+  "localVerification": {
+    "host": "m5",
+    "coreTests": 27,
+    "failures": 0,
+    "automaticPhases": [
+      "baseline",
+      "collapsed",
+      "hidden",
+      "restored"
+    ],
+    "capturedDisplayCountPerPhase": [
+      2,
+      2,
+      2,
+      2
+    ],
+    "normalFinished": true,
+    "captureProtocolComplete": true,
+    "pixelAcceptance": "not automatically asserted",
+    "processExited": true,
+    "testLogSHA256": "8181e5cc369e9541f809f633157cf803092fcd1fae78128bdac4445564462c05",
+    "inputManifestSHA256": "90678e76bc8c15ceb7050baa6c79bdbee4f562b9c9c1197e4d55043bc6e83237"
+  }
+}

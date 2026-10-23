@@ -12,6 +12,8 @@ import MenuBarCore
     private var alwaysFillers: [NSStatusItem] = []
     private var toggle: NSStatusItem?
     private var deadline: Task<Void, Never>?
+    private var automation: Task<Void, Never>?
+    private var automationPhase = "manual"
     private var screenObserver: NSObjectProtocol?
     private var events: [[String: Any]] = []
     private let status = NSTextField(wrappingLabelWithString: "尚未收起。请检查菜单栏中的 TV、TH、TA。")
@@ -25,6 +27,12 @@ import MenuBarCore
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.title = "菜单栏公开接口折叠验收"
         window.isReleasedWhenClosed = false
+        if CommandLine.arguments.contains("--automatic-phases") {
+            // This disposable QA window stays observable while the user works
+            // in another Space. The shipped App never receives these settings.
+            window.level = .floating
+            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        }
         super.init(window: window)
         window.delegate = self
         let stack = NSStackView(); stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 14
@@ -73,6 +81,23 @@ import MenuBarCore
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
     func show() { window?.center(); window?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true) }
+    func runAutomaticPhases() {
+        guard CommandLine.arguments.contains("--automatic-phases"), automation == nil else { return }
+        automation = Task { [weak self] in
+            guard let self else { return }
+            for (phase, reveal) in [("baseline", Reveal.all), ("collapsed", .collapsed),
+                                    ("hidden", .hidden), ("restored", .all)] {
+                guard !Task.isCancelled else { return }
+                self.automationPhase = phase
+                self.apply(reveal)
+                do { try await Task.sleep(nanoseconds: 8_000_000_000) }
+                catch { return }
+            }
+            self.automationPhase = "finished"
+            self.shutdown()
+            NSApp.terminate(nil)
+        }
+    }
     func windowWillClose(_ notification: Notification) { shutdown(); NSApp.terminate(nil) }
     @objc private func collapse() { apply(.collapsed) }
     @objc private func showHidden() { apply(.hidden) }
@@ -134,6 +159,7 @@ import MenuBarCore
     }
     func shutdown() {
         guard !owned.isEmpty else { return }
+        automation?.cancel(); automation = nil
         apply(.all)
         if let screenObserver { NotificationCenter.default.removeObserver(screenObserver); self.screenObserver = nil }
         for item in owned.reversed() { NSStatusBar.system.removeStatusItem(item) }
@@ -142,7 +168,9 @@ import MenuBarCore
         writeReport()
     }
     private func writeReport() {
-        let report: [String: Any] = ["events": events, "pixelAcceptance": "not automatically asserted", "privateVisibilityAPIUsed": false,
+        let report: [String: Any] = ["events": events, "phase": automationPhase,
+                                   "automaticPhases": CommandLine.arguments.contains("--automatic-phases"),
+                                   "pixelAcceptance": "not automatically asserted", "privateVisibilityAPIUsed": false,
                                    "persistentSpacers": persistentSpacers]
         if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
             try? data.write(to: root.appendingPathComponent("fold-check-requests.json"), options: .atomic)
@@ -152,7 +180,9 @@ import MenuBarCore
 
 @MainActor final class FoldCheckDelegate: NSObject, NSApplicationDelegate {
     private var check: FoldCheck?
-    func applicationDidFinishLaunching(_ notification: Notification) { check = FoldCheck(); check?.show() }
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        check = FoldCheck(); check?.show(); check?.runAutomaticPhases()
+    }
     func applicationWillTerminate(_ notification: Notification) { check?.shutdown() }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }
