@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import plistlib
+import re
 import subprocess
 import tempfile
 
@@ -13,6 +14,9 @@ import tempfile
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output-dir', type=Path)
+    parser.add_argument('--app-path', type=Path, help='Optional persistent QA app location, for example ~/Applications/ThermoCaptureQA.app')
+    parser.add_argument('--bundle-id', help='Stable identity for an explicitly authorized live-capture QA profile')
+    parser.add_argument('--sign-id', default='-', help='Signing identity; ad-hoc by default, Developer ID recommended for live permission tests')
     parser.add_argument('--recording-review', action='store_true')
     parser.add_argument('--ordinary-review', action='store_true')
     parser.add_argument('--av-layer-review', action='store_true')
@@ -53,7 +57,9 @@ def main():
     root = Path(__file__).resolve().parent.parent
     os.chdir(root)
     output = args.output_dir.resolve() if args.output_dir else Path(tempfile.mkdtemp(prefix='thermo-capture-qa-'))
-    app = output / 'ThermoCaptureQA.app'
+    app = args.app_path.expanduser().resolve() if args.app_path else output / 'ThermoCaptureQA.app'
+    if args.bundle_id and not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9.-]+', args.bundle_id):
+        parser.error('Invalid QA bundle identifier.')
     if app.exists():
         parser.error('Output app already exists; choose a fresh output directory.')
     output.mkdir(parents=True, exist_ok=True)
@@ -102,11 +108,12 @@ def main():
     subprocess.run(['ditto', str(root/'Resources/CaptureMath'), str(app/'Contents/Resources/CaptureMath')], check=True)
     subprocess.run(['ditto', str(root/'Resources/ThirdPartyNotices'), str(app/'Contents/Resources/ThirdPartyNotices')], check=True)
     (app/'Contents/Info.plist').write_bytes(plistlib.dumps({
-        'CFBundleIdentifier': 'dev.thermo.capture-qa.'+hashlib.sha256(str(output).encode()).hexdigest()[:12], 'CFBundleExecutable': binary.name,
-        'CFBundleName': binary.name, 'CFBundlePackageType': 'APPL', 'NSHighResolutionCapable': True, 'ThermoLiveCaptureReview':args.live_capture_review,
+        'CFBundleIdentifier': args.bundle_id or 'dev.thermo.capture-qa.'+hashlib.sha256(str(output).encode()).hexdigest()[:12], 'CFBundleExecutable': binary.name,
+        'CFBundleName': app.stem, 'CFBundleShortVersionString':'0.0.1', 'CFBundleVersion':'1',
+        'CFBundlePackageType': 'APPL', 'NSHighResolutionCapable': True, 'ThermoLiveCaptureReview':args.live_capture_review,
         'ThermoPassthroughReview': args.passthrough_review, 'ThermoBatchExportReview': args.batch_export_review, 'ThermoBatchExportStressReview': args.batch_export_stress_review, 'ThermoCropReview': args.crop_review, 'ThermoAnnotationStylesReview': args.annotation_styles_review, 'ThermoOCRReview': args.ocr_review, 'ThermoScreenshotReview': args.screenshot_review, 'ThermoSavingReview': args.saving_review, 'ThermoCaptureCLIReview': args.capture_cli_review, 'ThermoScriptReview': args.script_review or args.capture_cli_review, 'ThermoShortcutsReview': args.shortcuts_review or args.script_review or args.capture_cli_review, 'ThermoWordMathReview': args.word_math_review, 'ThermoLaTeXReview': args.latex_review or args.word_math_review, 'ThermoTypedPinsReview': args.typed_pins_review, 'ThermoHTMLProbeURL': args.html_probe_url, 'ThermoPinGroupsReview': args.pin_groups_review, 'ThermoAnnotationReview': args.annotation_review, 'ThermoRecordingReview': args.recording_review or args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoOrdinaryReview': args.ordinary_review or args.av_layer_review or args.keyboard_review, 'ThermoKeyboardReview': args.keyboard_review, 'ThermoAVLayerReview': args.av_layer_review, 'ThermoCaptureFixtureRoot': str(output),
     }))
-    subprocess.run(['codesign', '--force', '--sign', '-', str(app)], check=True)
+    subprocess.run(['codesign', '--force', '--sign', args.sign_id]+(['--timestamp'] if args.sign_id != '-' else [])+[str(app)], check=True)
     if args.live_capture_review:
         import math, struct, wave
         pattern = output/'ThermoCapturePattern.app'

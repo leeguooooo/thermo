@@ -2,6 +2,11 @@
 import AppKit
 import AVFoundation
 
+@MainActor final class CapturePatternWindow:NSPanel {
+    override var canBecomeKey:Bool {true}
+    override var canBecomeMain:Bool {true}
+}
+
 @MainActor final class CapturePatternDelegate:NSObject,NSApplicationDelegate {
     var windows:[NSWindow]=[]
     var timer:Timer?
@@ -13,14 +18,21 @@ import AVFoundation
         }
         item.submenu=commands;menu.addItem(item);NSApp.mainMenu=menu
         for screen in NSScreen.screens {
-            let window=NSWindow(contentRect:screen.frame,styleMask:[.borderless],backing:.buffered,defer:false)
+            let window=CapturePatternWindow(contentRect:screen.frame,styleMask:[.borderless,.nonactivatingPanel],backing:.buffered,defer:false,screen:screen)
             window.isReleasedWhenClosed=false;window.isOpaque=true;window.backgroundColor = .black
+            window.hidesOnDeactivate=false;window.becomesKeyOnlyIfNeeded=false
+            window.collectionBehavior=[.canJoinAllSpaces,.fullScreenAuxiliary,.canJoinAllApplications];window.level = .floating
+            window.setFrame(screen.frame,display:true)
             window.title="Capture test pattern · "+screen.localizedName
             let view=CapturePatternView(frame:CGRect(origin:.zero,size:screen.frame.size));view.displayID=(screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32) ?? 0
             window.contentView=view;window.orderFrontRegardless();windows.append(window)
         }
-        timer=Timer.scheduledTimer(withTimeInterval:0.1,repeats:true) { [weak self] _ in MainActor.assumeIsolated {self?.windows.forEach{$0.contentView?.needsDisplay=true}} }
-        NSApp.activate(ignoringOtherApps:true)
+        timer=Timer.scheduledTimer(withTimeInterval:0.1,repeats:true) { [weak self] _ in MainActor.assumeIsolated {
+            guard let self else{return};self.windows.forEach{$0.contentView?.needsDisplay=true}
+            let values=self.windows.map {window -> [String:Any] in ["title":window.title,"frame":NSStringFromRect(window.frame),"screen":window.screen?.localizedName ?? "","visible":window.isVisible,"activeSpace":window.isOnActiveSpace,"occlusionVisible":window.occlusionState.contains(.visible),"level":window.level.rawValue]}
+            if let data=try? JSONSerialization.data(withJSONObject:values,options:[.prettyPrinted,.sortedKeys]) {try? data.write(to:Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("pattern-probe.json"),options:.atomic)}
+        } }
+        windows.first?.makeKeyAndOrderFront(nil);NSApp.activate(ignoringOtherApps:true)
     }
     @objc func playTone() {
         guard let url=Bundle.main.url(forResource:"test-tone",withExtension:"wav") else{return}

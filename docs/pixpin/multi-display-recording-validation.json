@@ -95,21 +95,78 @@
       "Accessible entire-display button produces Dell 1920x1080 region at 1x",
       "Physical Tab switches Dell to built-in Retina; Return selects 1800x1169 points at 2x",
       "Both selections open the production recording window in ready state without creating a draft",
-      "Camera, microphone, keyboard and system audio remain disabled before opt-in"
+      "Camera, microphone, keyboard and system audio remain disabled before opt-in",
+      "Real ScreenCaptureKit quick capture on Dell decodes to 1920x1080, 8.62 seconds, 93 frames",
+      "Four encoded quadrants match the Dell-specific test pattern identity; color exactness is not claimed",
+      "Pause freezes elapsed recording time across two probes separated by 1.5 seconds; resume advances again"
     ],
     "permission": {
       "userApprovedScreenAndSystemAudio": true,
-      "qaGranted": false,
-      "pending": "System Settings Touch ID authentication before adding the QA app"
+      "qaGranted": true,
+      "bundleIdentifier": "dev.thermo.live-capture-qa01a",
+      "application": "/Users/leo/Applications/ThermoLiveCaptureQA-01a.app",
+      "identityRecovery": "Old temporary ad-hoc signature record did not match the replaced binary; final QA uses stable Developer ID identity with complete metadata"
     },
     "unverified": [
-      "Actual screen pixels and resulting video dimensions on both displays",
-      "Quick and ordinary capture pause/resume/stop/export with real ScreenCaptureKit",
+      "Controlled Retina full-display capture and encoded pixel identity",
+      "Ordinary recording with real frames, pointers and preview/export",
       "System audio capture and decode",
-      "Physical disconnection, resolution change, mirrored displays and Space transitions"
+      "Physical disconnection, resolution change, mirrored displays and Space transitions",
+      "Quick-recording interruption/restart with real ScreenCaptureKit"
     ],
-    "qaRetainedForPermissionCompletion": true,
-    "qaExecutableSHA256": "3a46ac32051f4ba20cc35eec8e769c499055d381030738572017f832d535eab6"
+    "qaRetainedForPermissionCompletion": false,
+    "qaExecutableSHA256": "bb4429a84522e9f2ce81edd28e5fa5a783dbbbf4ade3d0c9072e9ec86a4a22bf",
+    "externalQuickRecording": {
+      "source": "/private/tmp/thermo-multidisplay-live-01a/drafts/BDAA2D3B-79F0-4AB1-84B5-F7EF8777077D/recording.mp4",
+      "width": 1920,
+      "height": 1080,
+      "duration": 8.62,
+      "frames": "93",
+      "colors": [
+        [
+          251,
+          255,
+          62
+        ],
+        [
+          230,
+          0,
+          17
+        ],
+        [
+          19,
+          255,
+          56
+        ],
+        [
+          2,
+          8,
+          238
+        ]
+      ],
+      "quadrantIdentityMatched": true,
+      "pixelExactColorNotClaimed": true,
+      "sha256": "48476cf9c81eb6a6b1f19471084ad4a85a59f14108d2aff2910ac143004c25be"
+    },
+    "patternSpaceFix": "Separate nonactivating floating NSPanel test windows join active full-screen Spaces; visible and active-space probes checked before accepted capture",
+    "concurrentInput": "Foreground changes, pattern process exit and an unexpected manual Retina selection observed; GUI acceptance paused while requesting an exclusive test interval",
+    "observedRetinaOutput": {
+      "points": [
+        497.09765625,
+        525.109375
+      ],
+      "scale": 2,
+      "pixels": [
+        994,
+        1050
+      ],
+      "controlledAcceptance": false,
+      "preserved": true
+    },
+    "qaRetainedForExclusiveUITesting": true,
+    "invalidFixtureMoviesRemoved": 2,
+    "intermediateApplicationRemoved": true,
+    "manualRegionMoviePreserved": true
   },
   "behavior": [
     "Region remains restricted to one display; no cross-display compositing",
@@ -123,5 +180,6 @@
     "https://developer.apple.com/documentation/screencapturekit/scstreamconfiguration/sourcerect"
   ],
   "installedAppChanged": false,
-  "installedVersion": "1.3.0 (794)"
+  "installedVersion": "1.3.0 (794)",
+  "implementationCommit": "2f9baba"
 }

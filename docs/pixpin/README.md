@@ -28,7 +28,7 @@
 | 橡皮擦、聚光灯、水印、放大镜 | 画笔/矩形橡皮擦恢复标注前画面；矩形/椭圆聚光灯与放大镜；可调角度和透明度的平铺水印 | 原生拖绘与前台保存验收 |
 | 本地 OCR、条码/二维码 | Vision 识别，结果可编辑；图中点选/框选/Shift 多选复制，支持原生可访问文字区域 | 物理输入与真实截图验收、复杂排版、表格与公式识别 |
 | 长截图 | macOS 14+ 单屏选区，手动滚动，纵横向重叠匹配、固定边缘自动识别/手动像素、已有内容去重、反向补齐、预览及编辑导出 | 自动滚动、动态/重复内容、超长分块保存、原生验收 |
-| 快速录屏 | ScreenCaptureKit 区域录制、MP4 实时编码、系统音频、鼠标显示、帧率与画质、延迟、暂停/继续、播放、首尾剪辑、倍速、MP4/GIF/WebP/APNG 导出、本地草稿 | 实际屏幕/系统声音/权限/多屏原生验收；已验证合成视频 SIGKILL 后碎片可回放；实际屏幕与音频的中断恢复待验收 |
+| 快速录屏 | ScreenCaptureKit 区域录制、MP4 实时编码、系统音频、鼠标显示、帧率与画质、延迟、暂停/继续、播放、首尾剪辑、倍速、MP4/GIF/WebP/APNG 导出、本地草稿 | 已验证 Dell 副屏真实快速录制、解码和暂停/继续计时；受控 Retina 整屏、系统声音、权限变化及断屏恢复待验收；合成视频 SIGKILL 后碎片可回放，真实采集的中断恢复仍待验收 |
 | 普通录屏 | 独立 PNG/JPEG 帧、鼠标位置/按钮/滚轮数据、独立 PCM 音频；录后可改指针显示/大小、鼠标提示、时段标注、水印、进度、裁剪、音量，直接从素材导出四种格式 | 摄像头独立帧、麦克风独立 PCM、画中画位置/形状/镜像和两路音量已接入；键盘事件独立保存，可隐藏或过滤快捷键；真实设备/键盘监听、权限拒绝、安全输入、热插拔、同步、原生拖绘、前台保存仍待验收 |
 | 翻译 | 非核心，按用户要求暂缓 | 实验代码留在 `codex/pixpin-translation` 分支，不纳入当前核心功能验收 |
 | 快捷键与动作 | 45 个动作类型（含 JavaScript 脚本）、命名菜单入口、全局/贴图窗口作用域、录制/启停/冲突状态、JSON 导入导出 | 跨应用物理按键验收、更多动作与上下文选项 |
@@ -116,4 +116,6 @@ OCR 完成后可开启“在图中选字”，点选或拖框选择文字，Shif
 
 选区期间显示器配置变化会取消选择。录制开始前及倒计时后重新核对所选显示器的尺寸和缩放；录制或暂停时，所选显示器断开、尺寸或缩放改变会停止并按原有流程保留草稿，提示重新选区。只改变屏幕排列而未改变尺寸与缩放时，局部选区仍有效，鼠标坐标按新的屏幕位置计算。长截图在每轮采集前复查所选显示器，不再继续使用过期选区。
 
-尺寸和区域定义参见 [Apple SCDisplay](https://developer.apple.com/documentation/screencapturekit/scdisplay) 与 [sourceRect](https://developer.apple.com/documentation/screencapturekit/scstreamconfiguration/sourcerect)。本轮结果见 [多屏与录屏验证](multi-display-recording-validation.json)：已完成两块物理屏幕的选择器交互，真实采集仍等待系统身份验证，不能据此认定视频和系统音频已验收。
+尺寸和区域定义参见 [Apple SCDisplay](https://developer.apple.com/documentation/screencapturekit/scdisplay) 与 [sourceRect](https://developer.apple.com/documentation/screencapturekit/scstreamconfiguration/sourcerect)。本轮结果见 [多屏与录屏验证](multi-display-recording-validation.json)：已完成两块物理屏幕的选择器交互，以及 Dell 副屏 1920×1080 的真实快速录制、解码和图案来源核对。受控 Retina 录制、普通录制与系统音轨仍待验收，不能把权限开关开启当作采集通过。
+
+真实采集 QA 可用 `scripts/verify-capture-ui.py --live-capture-review --output-dir /tmp/thermo-live-review --app-path ~/Applications/ThermoLiveCaptureQA.app --bundle-id dev.thermo.live-capture-review --sign-id "Developer ID Application: LI GUO (6ZPXG4KVVS)"` 构建。目标应用必须尚不存在；路径、bundle ID 和签名身份应在首次授权前固定。确认用户同意后，才从系统设置为该 QA 应用开启屏幕与系统音频录制；不修改 TCC 数据库。夹具使用单独进程的非激活浮动面板，先核对两屏窗口处于活动 Space 且可见，再把它们作为像素来源。
