@@ -1,0 +1,126 @@
+{
+  "recordedAt": "2026-10-23T01:37:38.473694+00:00",
+  "sourceBase": "9f86056d9a43b1382ef0e488dd680cea14afbc83",
+  "sourceSHA256": {
+    "Sources/ThermoApp/CaptureRenderCache.swift": "8a7cfa826f2b8924bd6f1ab8e94e1dbce2db2efe3d00929deae568efab67665d",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "2fbcf54e7a27a32a8384b8389f9410c32ce5d74255b57bd574d0e910ec0e044d",
+    "Tests/ThermoAppTests/CaptureRenderCacheTests.swift": "352f77f50a596fcf0a53b05f6532f18b99b180c2b603f323d41b367cf82a58bc",
+    "scripts/verify-capture-ui.swift": "7616ac1a0042a0f079de3369b043ebb66221b90db3714eeeb4abb2b63249acc8"
+  },
+  "regression": {
+    "counts": {
+      "ThermoCLITests.xctest": 3,
+      "ThermoAppTests.xctest": 61,
+      "CaptureScriptCoreTests.xctest": 10,
+      "CaptureCoreTests.xctest": 114,
+      "AgentDoctorTests.xctest": 4,
+      "AgentCoreTests.xctest": 1
+    },
+    "total": 193,
+    "failures": 0,
+    "log": "/tmp/thermo-render-cache-final-regression-01a.log",
+    "logSHA256": "d03bdc8bd0222ab57e214da5b8bbe5a01ae5d8e8c8b43ebd447d1e3e42fbed0f"
+  },
+  "controlledRedrawScenario": {
+    "redraws": 12,
+    "compositesWithoutCache": 12,
+    "compositesWithCache": 1,
+    "windowPixelsIdentical": true,
+    "scope": "Offscreen production Canvas drawing; not a hardware FPS or latency benchmark"
+  },
+  "cache": {
+    "byteLimit": 134217728,
+    "entryLimit": 32,
+    "fullResolution": true,
+    "oversizedImages": "Rendered normally without retention",
+    "invalidation": [
+      "Document revision",
+      "Model identity",
+      "Effective appearance",
+      "Hidden or closing window",
+      "View detachment and deallocation"
+    ],
+    "liveDrafts": "Render directly; never enter static cache"
+  },
+  "nativeQA": {
+    "app": "/tmp/thermo-render-cache-qa-final-01a/ThermoCaptureQA.app",
+    "binarySHA256": "315d6d85c4fdde77d60418b5fd3c6145ee3e211fc57484c5ebb55034f41323f5",
+    "signatureVerified": true,
+    "verified": [
+      "Zoom 1 to 1.5 leaves controls visible after clipping fix",
+      "Pan changes without document revision or annotation geometry changes",
+      "Mosaic strength 18 to 36 visibly refreshes image; undo returns 18",
+      "Cache bytes fall to zero after close request"
+    ],
+    "records": {
+      "initial": {
+        "zoom": 1,
+        "pan": [
+          0,
+          0
+        ],
+        "revision": 2,
+        "renderCacheBytes": 2169600
+      },
+      "zoomed": {
+        "zoom": 1.5,
+        "pan": [
+          0,
+          0
+        ],
+        "revision": 2,
+        "renderCacheBytes": 2169600
+      },
+      "panned": {
+        "zoom": 1.5,
+        "pan": [
+          30,
+          -20
+        ],
+        "revision": 2,
+        "renderCacheBytes": 2169600
+      },
+      "mutated": {
+        "zoom": 1.5,
+        "pan": [
+          30,
+          -20
+        ],
+        "revision": 3,
+        "renderCacheBytes": 2169600
+      },
+      "undone": {
+        "zoom": 1.5,
+        "pan": [
+          30,
+          -20
+        ],
+        "revision": 4,
+        "renderCacheBytes": 2169600
+      },
+      "after-close-request": {
+        "zoom": 1.5,
+        "pan": [
+          30,
+          -20
+        ],
+        "revision": 4,
+        "renderCacheBytes": 0
+      }
+    },
+    "probeSHA256": {
+      "initial": "abadb9af1870e8d801538ca39dde792c90b6c513f72c0cefcdf8f8ef6727e9ec",
+      "zoomed": "d40721386e69cc90345a0b6439f654b5a0b5ed4dfe4debfe1ae7729ad47f2a51",
+      "panned": "372368206ee1df040df4e7ec22e617d201dee3bf688db31cdcc74f641f722af4",
+      "mutated": "1b86d29389796fddc0da6eceabfb0d406b537c5ea50215a47d501b479e1eb5e1",
+      "undone": "8b7963f33fa71fc98557d1cd00257cfc2b72e92fa6d231508c6d9673f8b3738f",
+      "after-close-request": "3362dd10eb93393fdb3bcfac24871be590c25bdad92a8af12c77745a8bb3cd6c"
+    },
+    "limitations": [
+      "Close action state read and subsequent screenshot timed out; final window visibility not independently confirmed",
+      "No real screen-capture, multiple-monitor or hardware FPS acceptance in this batch"
+    ],
+    "processStopped": true
+  },
+  "installedAppChanged": false
+}

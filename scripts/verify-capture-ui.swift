@@ -243,7 +243,7 @@ import SwiftUI
                         guard let model else{return}
                         let record:[String:Any] = ["selected":model.selectedAnnotations.sorted(),"objects":model.document.annotations.map {item in
                             ["tool":item.tool.rawValue,"points":item.points.map{[Double($0.x),Double($0.y)]},"width":Double(item.width)] as [String:Any]
-                        },"canUndo":model.document.canUndo,"canRedo":model.document.canRedo]
+                        },"canUndo":model.document.canUndo,"canRedo":model.document.canRedo,"pan":[Double(model.pan.x),Double(model.pan.y)],"zoom":model.zoom,"revision":model.revision,"renderCacheBytes":CaptureRenderCache.shared.cachedBytes]
                         if let data=try? JSONSerialization.data(withJSONObject:record,options:.sortedKeys) {try? data.write(to:URL(fileURLWithPath:path).appendingPathComponent("annotation-probe.json"),options:.atomic)}
                     }
                 };RunLoop.main.add(probe,forMode:.common)

@@ -521,7 +521,11 @@ struct CaptureCanvas: NSViewRepresentable {
     func makeNSView(context: Context) -> Canvas { Canvas(model: model) }
     func updateNSView(_ view: Canvas, context: Context) { view.model = model; view.needsDisplay = true }
     final class Canvas: NSView {
-        var model: CaptureEditorModel
+        var model: CaptureEditorModel {didSet {if oldValue !== model {renderCache.remove(owner:cacheOwner)}}}
+        private let renderCache:CaptureRenderCache
+        private let cacheOwner=UUID()
+        private let render:(CaptureDocument,CaptureAnnotation?,[Int:CaptureAnnotation])throws->CGImage
+        private var windowObservers:[NSObjectProtocol]=[]
         var draft: CaptureAnnotation?
         var pan:CGPoint { get { model.pan } set { model.pan=newValue } }
         var lastDrag: CGPoint?
@@ -535,7 +539,38 @@ struct CaptureCanvas: NSViewRepresentable {
         var marqueeRect:CGRect?
         var marqueeBaseline:Set<Int>=[]
         var resizing=false
-        init(model: CaptureEditorModel) { self.model = model; super.init(frame: .zero) }
+        init(model:CaptureEditorModel,cache:CaptureRenderCache = .shared,
+             render:@escaping(CaptureDocument,CaptureAnnotation?,[Int:CaptureAnnotation])throws->CGImage={try $0.rendered(adding:$1,replacements:$2)}) {
+            self.model=model;self.renderCache=cache;self.render=render;super.init(frame:.zero)
+        }
+        deinit {
+            for observer in windowObservers {NotificationCenter.default.removeObserver(observer)}
+            renderCache.remove(owner:cacheOwner)
+        }
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow();renderCache.remove(owner:cacheOwner)
+            for observer in windowObservers {NotificationCenter.default.removeObserver(observer)};windowObservers=[]
+            guard let window else {return}
+            for name in [NSWindow.didChangeOcclusionStateNotification,NSWindow.willCloseNotification] {
+                windowObservers.append(NotificationCenter.default.addObserver(forName:name,object:window,queue:.main) { [weak self] note in
+                    MainActor.assumeIsolated {
+                        guard let self else{return}
+                        if note.name == NSWindow.willCloseNotification || self.window?.isVisible != true || self.window?.occlusionState.contains(.visible) != true {
+                            self.renderCache.remove(owner:self.cacheOwner)
+                        }
+                    }
+                })
+            }
+        }
+        override func viewDidChangeEffectiveAppearance() {
+            super.viewDidChangeEffectiveAppearance();renderCache.remove(owner:cacheOwner);needsDisplay=true
+        }
+        func renderedImage() throws -> CGImage {
+            let preview=draft?.tool == .crop ? nil : draft
+            let replacements=model.tool == .select && selectionRevision == model.revision ? selectionPreview : [:]
+            if preview != nil || !replacements.isEmpty {return try render(model.document,preview,replacements)}
+            return try renderCache.image(owner:cacheOwner,source:ObjectIdentifier(model),revision:model.revision) {try render(model.document,nil,[:])}
+        }
         required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
         override var acceptsFirstResponder: Bool { true }
         var scale: CGFloat { min(bounds.width/model.document.size.width, bounds.height/model.document.size.height)*model.zoom }
@@ -549,10 +584,10 @@ struct CaptureCanvas: NSViewRepresentable {
         override func draw(_ dirtyRect: NSRect) {
             NSColor.windowBackgroundColor.setFill(); bounds.fill()
             guard scale > 0, let ctx = NSGraphicsContext.current?.cgContext else { return }
-            ctx.saveGState(); ctx.translateBy(x: imageRect.minX, y: imageRect.minY); ctx.scaleBy(x: scale, y: scale)
-            let preview=draft?.tool == .crop ? nil : draft
+            ctx.saveGState();ctx.clip(to:bounds)
+            ctx.translateBy(x: imageRect.minX, y: imageRect.minY); ctx.scaleBy(x: scale, y: scale)
             do {
-                let image=try model.document.rendered(adding:preview,replacements:model.tool == .select && selectionRevision == model.revision ? selectionPreview : [:])
+                let image=try renderedImage()
                 ctx.draw(image,in:CGRect(origin:.zero,size:model.document.size))
             } catch {
                 ctx.setFillColor(NSColor.black.cgColor);ctx.fill(CGRect(origin:.zero,size:model.document.size))
