@@ -1,0 +1,133 @@
+{
+  "version": "1.3.1",
+  "build": "799",
+  "channel": "GitHub prerelease; manual installation only",
+  "sourceCommit": "32ee5e9d8ccf1ca6366abfbaa23c20b1b2aa0920",
+  "packagedWorkingTree": "clean",
+  "release": {
+    "releaseId": 421712356,
+    "url": "https://github.com/leeguooooo/thermo/releases/tag/v1.3.1",
+    "publishedAt": "2026-10-23T10:29:55Z",
+    "isPrerelease": true,
+    "isDraft": false,
+    "stableLatest": "v1.3.0",
+    "riskWarningPresent": true,
+    "assets": [
+      {
+        "name": "Thermo-1.3.1-SHA256SUMS.txt",
+        "size": 266,
+        "digest": "sha256:7da10d91fcf09528b1664619a3a21c2b45ba5389715e937fe8ba1cbbb30668b8"
+      },
+      {
+        "name": "Thermo-1.3.1.dmg",
+        "size": 30819859,
+        "digest": "sha256:45bd06876746aeb07944d71aaab870044473559f3e7f64db90aad1b472240aa0"
+      },
+      {
+        "name": "Thermo-1.3.1.zip",
+        "size": 36844418,
+        "digest": "sha256:0ee52bfe2ab64f73120df90de68558ff7b9105f3b8a2032fd95abff16fb74004"
+      },
+      {
+        "name": "thermo-cli-macos-universal.tar.gz",
+        "size": 14030227,
+        "digest": "sha256:3fc223c1baa5447bb1b1ec7979c6cf9b823a22ba3ec95b204724e7dc86903757"
+      },
+      {
+        "name": "thermo-cli-macos-universal.tar.gz.sha256",
+        "size": 100,
+        "digest": "sha256:c6853e5568bdfb6e1ad9605cb8524a5bfdbd3a91146ebd169cf0005e60b6601b"
+      }
+    ]
+  },
+  "tests": {
+    "count": 2356,
+    "failures": 0,
+    "skips": 0,
+    "suiteCount": 11,
+    "host": "m5",
+    "command": "DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test --jobs 2",
+    "logSHA256": "f40a02aae006857bad93f6497e2b87349b388667f16560c7aa6526c7ae1aa0d9"
+  },
+  "artifacts": [
+    {
+      "name": "Thermo-1.3.1-SHA256SUMS.txt",
+      "size": 266,
+      "sha256": "7da10d91fcf09528b1664619a3a21c2b45ba5389715e937fe8ba1cbbb30668b8",
+      "githubDigestMatched": true
+    },
+    {
+      "name": "Thermo-1.3.1.dmg",
+      "size": 30819859,
+      "sha256": "45bd06876746aeb07944d71aaab870044473559f3e7f64db90aad1b472240aa0",
+      "githubDigestMatched": true
+    },
+    {
+      "name": "Thermo-1.3.1.zip",
+      "size": 36844418,
+      "sha256": "0ee52bfe2ab64f73120df90de68558ff7b9105f3b8a2032fd95abff16fb74004",
+      "githubDigestMatched": true
+    },
+    {
+      "name": "thermo-cli-macos-universal.tar.gz",
+      "size": 14030227,
+      "sha256": "3fc223c1baa5447bb1b1ec7979c6cf9b823a22ba3ec95b204724e7dc86903757",
+      "githubDigestMatched": true
+    },
+    {
+      "name": "thermo-cli-macos-universal.tar.gz.sha256",
+      "size": 100,
+      "sha256": "c6853e5568bdfb6e1ad9605cb8524a5bfdbd3a91146ebd169cf0005e60b6601b",
+      "githubDigestMatched": true
+    }
+  ],
+  "notarization": {
+    "appDMGAndCLIAllAccepted": true,
+    "submissionIDs": [
+      "f598e793-9720-4c78-bedb-5d2df7109b8b",
+      "5b66e1f3-ae3b-42f8-84b3-3b7fb479aef4",
+      "edfd2b77-afd1-4f3e-baaa-3d8de5e6715a"
+    ],
+    "appAndDMGTicketsStapled": true,
+    "gatekeeper": "accepted; Notarized Developer ID"
+  },
+  "downloadVerification": {
+    "unauthenticatedPublicAssetsMatched": 5,
+    "runtimeChecksPassed": 17,
+    "nativeArchitecture": "arm64",
+    "cliVersionFansAndOneShotWatchPassed": true,
+    "mountedAppSourceAndVersionMatched": true,
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "signaturesVerified": true
+  },
+  "stableChannel": {
+    "latestRemains": "v1.3.0",
+    "feedOriginSHA256Unchanged": "49cee0bcb211d7f27aca3144429e5cb55b547320f77ff9e972485926afe720f7",
+    "localAppcastUnchanged": true,
+    "pagesOrHomebrewNotPublished": true,
+    "candidateSUFeedURLAbsent": true
+  },
+  "menuBar": {
+    "experimental": true,
+    "defaultEnabledForNewUsers": false,
+    "existingPreferencesPreserved": true,
+    "collateralHidingResolved": false,
+    "riskWarningInReleaseBody": true
+  },
+  "acceptanceLimits": [
+    "Physical Intel runtime not verified; local x86_64 launch returned Bad CPU type in executable",
+    "No new App GUI acceptance or replacement of the installed App in this release task",
+    "Primary-display notch, multiple-display changes, physical sleep/wake and real TCC revocation remain unverified",
+    "Menu bar hiding can hide apps assigned to Visible and Focus or other system icons"
+  ],
+  "cleanup": {
+    "isolatedBuildWorktreeRemoved": true,
+    "readOnlyDMGsDetached": true,
+    "duplicateDownloadedFilesAndExtractedCLIRemoved": true,
+    "signedArtifactsAndVerificationLogsRetained": true,
+    "unrelatedMainTreeCrashLogsPreserved": true
+  }
+}
