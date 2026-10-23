@@ -28,7 +28,7 @@ struct CapturePinLibraryView:View {
             HStack(alignment:.top,spacing:14) {
                 VStack(alignment:.leading,spacing:8) {
                     HStack { Text(tr("Pin groups")).font(.headline);Spacer();Text(tr("Open / total")).font(.caption).foregroundStyle(.secondary) }
-                    List(session.library.groups,selection:Binding(get:{ Optional(groupID) },set:{ selected=$0;loadFields() })) { item in
+                    List(session.library.groups,selection:Binding(get:{ Optional(groupID) },set:{ selectGroup($0) })) { item in
                         HStack {
                             Circle().fill(groupColor(item.color)).frame(width:9,height:9)
                             Text(item.name);Spacer()
@@ -46,12 +46,12 @@ struct CapturePinLibraryView:View {
                     TextField(tr("Color label (#RRGGBB, optional)"),text:$color)
                     Toggle(tr("Switch to new group"),isOn:$switchNew)
                     HStack {
-                        Button(tr("Create group")) { run { let id=try session.createGroup(name:name,color:color.isEmpty ? nil : color,switchTo:switchNew);selected=id;loadFields() } }
+                        Button(tr("Create group")) { run { let id=try session.createGroup(name:name,color:color.isEmpty ? nil : color,switchTo:switchNew);selectGroup(id) } }
                         Button(tr("Apply group changes")) { run { try session.updateGroup(groupID,name:name,color:color.isEmpty ? nil : color) } }
                     }
                     Menu(tr("Delete group")) {
                         ForEach(session.library.groups.filter { $0.id != groupID }) { destination in
-                            Button(tr("Move pins to")+" "+destination.name) { run { try session.removeGroup(groupID,movingTo:destination.id);selected=nil;loadFields() } }
+                            Button(tr("Move pins to")+" "+destination.name) { run { try session.removeGroup(groupID,movingTo:destination.id);selectGroup(nil) } }
                         }
                         Button(tr("Delete group and its pins"),role:.destructive) { deletion = .group(groupID) }
                     }.disabled(session.library.groups.count <= 1)
@@ -99,6 +99,7 @@ struct CapturePinLibraryView:View {
                     }
                 }.frame(maxWidth:.infinity)
             }
+            CapturePinBatchExportView(session:session)
             Text(tr("Active pin group")+": "+(session.library.groups.first { $0.id == session.library.currentGroupID }?.name ?? "")).font(.caption).foregroundStyle(.secondary).frame(maxWidth:.infinity,alignment:.leading)
             HStack {
                 Button(tr("Restore pin mouse interaction")) {session.restoreMouseInteraction()}
@@ -108,19 +109,22 @@ struct CapturePinLibraryView:View {
                 Spacer()
                 Button(tr("Save pin session")) { run { try session.flush() } }
             }
-        }.textFieldStyle(.roundedBorder).padding(16).onAppear { loadFields() }
+        }.textFieldStyle(.roundedBorder).padding(16).onAppear { selectGroup(selected) }
             .alert(tr(deletion?.title ?? "Delete"),isPresented:Binding(get:{ deletion != nil },set:{ if !$0 { deletion=nil } })) {
                 Button(tr("Cancel"),role:.cancel) { deletion=nil }
                 Button(tr("Delete"),role:.destructive) {
                     if let deletion { run {
                         switch deletion {
-                        case .group(let id):try session.removeGroup(id,movingTo:nil);selected=nil;loadFields()
+                        case .group(let id):try session.removeGroup(id,movingTo:nil);selectGroup(nil)
                         case .contents(let id):try session.clearGroup(id)
                         case .pin(let id):try session.destroyPin(id)
                         }
                     } };deletion=nil
                 }
             } message:{ Text(tr("Deleted pins cannot be restored from history.")) }
+    }
+    private func selectGroup(_ id:UUID?) {
+        selected=id;session.batchExport.selectedGroupID=id ?? session.library.currentGroupID;loadFields()
     }
     private func loadFields() { name=group?.name ?? "";color=group?.color ?? "" }
     private func groupColor(_ value:String?) -> Color {

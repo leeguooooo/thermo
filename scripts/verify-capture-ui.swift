@@ -52,7 +52,18 @@ import SwiftUI
             let root=URL(fileURLWithPath:path),session=CapturePinSession(store:.init(root:root.appendingPathComponent("pins"))),workspace=CaptureWorkspace(pinSession:session)
             workspace.saving=CaptureSaveModel(read:{nil},write:{_ in});pinSession=session;captureWorkspace=workspace
             do {
-                if session.library.pins.isEmpty {let id=try session.open(image);session.windows[id]?.model.pinTitle="QA passthrough pin";try session.flush()}
+                if session.library.pins.isEmpty {
+                    if Bundle.main.object(forInfoDictionaryKey:"ThermoBatchExportReview") as? Bool == true {
+                        let first=session.library.currentGroupID
+                        let a=try session.open(image);session.windows[a]?.model.pinTitle="../same / title";try session.windows[a]?.model.applyColorAction(.grayscale)
+                        let b=try session.open(image);session.windows[b]?.model.pinTitle="../same / title"
+                        _=try session.open(CapturePinContent.text(.init(plain:"Excluded typed QA pin")))
+                        let closed=try session.open(image);session.windows[closed]?.window?.performClose(nil)
+                        _=try session.createGroup(name:"Other QA group",color:nil,switchTo:true)
+                        let other=try session.open(image);session.windows[other]?.model.pinTitle="Other image";session.windows[other]?.model.locked=true
+                        try session.switchGroup(first);try session.setAllHidden(true);try session.flush()
+                    } else {let id=try session.open(image);session.windows[id]?.model.pinTitle="QA passthrough pin";try session.flush()}
+                }
                 else {session.restoreWindows()}
             } catch {session.issue=error.localizedDescription}
             session.showLibrary()
@@ -62,7 +73,7 @@ import SwiftUI
                     let values:[[String:Any]]=session.windows.map {id,editor in
                         ["id":id.uuidString,"mousePassthrough":editor.model.mousePassthrough,"ignoresMouseEvents":editor.window?.ignoresMouseEvents ?? false,"title":editor.window?.title ?? "","visible":editor.window?.isVisible ?? false,"revision":editor.model.revision,"imageSize":[editor.model.document.image.width,editor.model.document.image.height]]
                     }
-                    let record:[String:Any]=["pins":values,"savedPins":session.library.pins.count,"issue":session.issue ?? "","libraryVisible":NSApp.windows.contains{$0.title == tr("Pin groups and history") && $0.isVisible}]
+                    let record:[String:Any]=["batchExport":["allGroups":session.batchExport.allGroups,"selectedGroupID":session.batchExport.selectedGroupID?.uuidString ?? "","format":session.batchExport.format.rawValue,"running":session.batchExport.running,"completed":session.batchExport.completed,"total":session.batchExport.total,"folder":session.batchExport.result?.folder.path ?? "","issue":session.batchExport.issue ?? ""],"pins":values,"savedPins":session.library.pins.count,"issue":session.issue ?? "","libraryVisible":NSApp.windows.contains{$0.title == tr("Pin groups and history") && $0.isVisible}]
                     if let data=try? JSONSerialization.data(withJSONObject:record,options:[.prettyPrinted,.sortedKeys]) {try? data.write(to:root.appendingPathComponent("passthrough-probe.json"),options:.atomic)}
                 }
             };RunLoop.main.add(probe,forMode:.common)

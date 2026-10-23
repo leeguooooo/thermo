@@ -1,0 +1,427 @@
+{
+  "recordedAt": "2026-10-23T05:13:57.689688+00:00",
+  "sourceBase": "8da10728278858c3215ad9f72802dd7cf55df623",
+  "sourceSHA256": {
+    "Sources/CaptureCore/CaptureBatchImageExport.swift": "f8e6d6273e30c7d73733225e100955723ed7aad8c1a97f2378994410d373df0b",
+    "Sources/ThermoApp/CaptureBatchImageExportModel.swift": "60e331c419268a0dd22f59b4ad1d36807c3c857e6e5a7c248086331fbff11e01",
+    "Sources/ThermoApp/CapturePinSession.swift": "fa72c3b9c9dfb01e5a32c619a78b8804aa41b75ec75bfb64a740a3d32c5208da",
+    "Sources/ThermoApp/CapturePinLibraryView.swift": "6933df892010efe8df93563457e4383b67a40ad7ef451a6e664104cd6cae0e85",
+    "Sources/ThermoApp/CaptureWorkspace.swift": "bee3fdd3571b7e1ed7146e1212b8d91842f06b42d9984d6e9c37eb495ec62160",
+    "Sources/ThermoL10n/ZhHans.swift": "858a9d4505735c5f777527432fb787a4073f0b0d1915822bcdd69631913b3f5f",
+    "Tests/CaptureCoreTests/CaptureBatchImageExportTests.swift": "fd0344c22366a392649b8d714265e9c4136ee01bfb039a7958f6d745233d33ab",
+    "Tests/ThermoAppTests/CaptureBatchImageExportTests.swift": "14d665016112f6fe8f1717d0b7df4785df258fdde8f13c6a83f12a6f50ce1ed9",
+    "scripts/verify-capture-ui.py": "64e031270d0bed4e7e9feabdfb10e4cb78a03973a4f3e1b32b4ef180ef5011f4",
+    "scripts/verify-capture-ui.swift": "9120a6a6d14ab9e7db8e1fbcf0f10a901479fa7fc5c25167d62f3444e4bee2c7"
+  },
+  "regression": {
+    "total": 265,
+    "failures": 0,
+    "newCoreTests": 5,
+    "newAppTests": 3,
+    "counts": {
+      "ThermoKitTests.xctest": 0,
+      "ThermoHelperTests.xctest": 0,
+      "ThermoCLITests.xctest": 3,
+      "ThermoAppTests.xctest": 101,
+      "SearchCoreTests.xctest": 0,
+      "MenuBarCoreTests.xctest": 0,
+      "CleanKitTests.xctest": 0,
+      "CaptureScriptCoreTests.xctest": 10,
+      "CaptureCoreTests.xctest": 146,
+      "AgentDoctorTests.xctest": 4,
+      "AgentCoreTests.xctest": 1
+    },
+    "log": "/tmp/thermo-batch-export-regression-fixed-01a.log",
+    "logSHA256": "834992a559f4230f68deb6ed22f2d310860efda0453aa0dea4b80b102103cec9"
+  },
+  "verifiedInTests": [
+    "Atomic publication of image files and manifest with unique path-safe names",
+    "Encoder failure and cancellation remove own staged files and preserve existing files",
+    "Reject destination symlink, empty/duplicate/invalid plans before writing",
+    "PNG/JPEG/TIFF decode with correct extension and dimensions",
+    "Saved snapshot color adjustments preserved; missing snapshots do not publish a partial batch",
+    "Selected/all groups include hidden and locked images, excluding typed and closed pins",
+    "Loaded snapshot captures unsaved edits without undo history; resolves dynamic colors on main actor",
+    "Immediate scope changes are read synchronously by the shared options model",
+    "Async worker renders text identically; duplicate starts ignored; quit blocked without marking capture busy",
+    "Immediate model cancellation reaches a complete-or-empty terminal state without hidden staging files"
+  ],
+  "nativeQA": {
+    "app": "/tmp/thermo-batch-export-qa-final-01a/ThermoCaptureQA.app",
+    "binarySHA256": "8869a2e1220a908aff5876ef1d4542ed75a8df107156ee0259f8c7c761e8b27b",
+    "signatureVerified": true,
+    "records": {
+      "before": {
+        "batchExport": {
+          "allGroups": false,
+          "completed": 0,
+          "folder": "",
+          "format": "png",
+          "issue": "",
+          "running": false,
+          "selectedGroupID": "CC9C39C5-1D26-43C9-9DC3-4CE28C271545",
+          "total": 0
+        },
+        "issue": "",
+        "libraryVisible": true,
+        "pins": [
+          {
+            "id": "5347FDB4-8AFA-49B9-B39C-CFD8EB116A86",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              260,
+              80
+            ],
+            "mousePassthrough": false,
+            "revision": 1,
+            "title": "截图与贴图",
+            "visible": false
+          },
+          {
+            "id": "F0F81E05-F488-4A79-BE97-3CFAC7D2314B",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              900,
+              600
+            ],
+            "mousePassthrough": false,
+            "revision": 1,
+            "title": "../same / title",
+            "visible": false
+          },
+          {
+            "id": "AE31CE50-6A40-4FC1-9947-64A0A4DCDCE0",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              900,
+              600
+            ],
+            "mousePassthrough": false,
+            "revision": 1,
+            "title": "Other image",
+            "visible": false
+          },
+          {
+            "id": "734E524B-C032-479A-A003-0058471B692B",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              900,
+              600
+            ],
+            "mousePassthrough": false,
+            "revision": 2,
+            "title": "../same / title",
+            "visible": false
+          }
+        ],
+        "savedPins": 5
+      },
+      "all-groups": {
+        "batchExport": {
+          "allGroups": true,
+          "completed": 3,
+          "folder": "/private/tmp/thermo-batch-export-qa-final-01a/Thermo-pins-eb690907-167b-4d37-ac0f-3d2178eb357d",
+          "format": "png",
+          "issue": "",
+          "running": false,
+          "selectedGroupID": "CC9C39C5-1D26-43C9-9DC3-4CE28C271545",
+          "total": 3
+        },
+        "issue": "",
+        "libraryVisible": true,
+        "pins": [
+          {
+            "id": "5347FDB4-8AFA-49B9-B39C-CFD8EB116A86",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              260,
+              80
+            ],
+            "mousePassthrough": false,
+            "revision": 1,
+            "title": "截图与贴图",
+            "visible": false
+          },
+          {
+            "id": "F0F81E05-F488-4A79-BE97-3CFAC7D2314B",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              900,
+              600
+            ],
+            "mousePassthrough": false,
+            "revision": 1,
+            "title": "../same / title",
+            "visible": false
+          },
+          {
+            "id": "AE31CE50-6A40-4FC1-9947-64A0A4DCDCE0",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              900,
+              600
+            ],
+            "mousePassthrough": false,
+            "revision": 1,
+            "title": "Other image",
+            "visible": false
+          },
+          {
+            "id": "734E524B-C032-479A-A003-0058471B692B",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              900,
+              600
+            ],
+            "mousePassthrough": false,
+            "revision": 2,
+            "title": "../same / title",
+            "visible": false
+          }
+        ],
+        "savedPins": 5
+      },
+      "selected-group": {
+        "batchExport": {
+          "allGroups": false,
+          "completed": 1,
+          "folder": "/private/tmp/thermo-batch-export-qa-final-01a/Thermo-pins-d42aa35a-c22f-4cb7-874c-e1ed79b5c734",
+          "format": "png",
+          "issue": "",
+          "running": false,
+          "selectedGroupID": "13E77027-18E0-49FE-AC22-9D2026BA2C2C",
+          "total": 1
+        },
+        "issue": "",
+        "libraryVisible": true,
+        "pins": [
+          {
+            "id": "5347FDB4-8AFA-49B9-B39C-CFD8EB116A86",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              260,
+              80
+            ],
+            "mousePassthrough": false,
+            "revision": 1,
+            "title": "截图与贴图",
+            "visible": false
+          },
+          {
+            "id": "F0F81E05-F488-4A79-BE97-3CFAC7D2314B",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              900,
+              600
+            ],
+            "mousePassthrough": false,
+            "revision": 1,
+            "title": "../same / title",
+            "visible": false
+          },
+          {
+            "id": "AE31CE50-6A40-4FC1-9947-64A0A4DCDCE0",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              900,
+              600
+            ],
+            "mousePassthrough": false,
+            "revision": 1,
+            "title": "Other image",
+            "visible": false
+          },
+          {
+            "id": "734E524B-C032-479A-A003-0058471B692B",
+            "ignoresMouseEvents": false,
+            "imageSize": [
+              900,
+              600
+            ],
+            "mousePassthrough": false,
+            "revision": 2,
+            "title": "../same / title",
+            "visible": false
+          }
+        ],
+        "savedPins": 5
+      }
+    },
+    "outputs": {
+      "all-groups": {
+        "folder": "/private/tmp/thermo-batch-export-qa-final-01a/Thermo-pins-eb690907-167b-4d37-ac0f-3d2178eb357d",
+        "manifest": {
+          "format": "png",
+          "images": [
+            {
+              "file": "0001-___same _ title-734e524b.png",
+              "groupID": "CC9C39C5-1D26-43C9-9DC3-4CE28C271545",
+              "groupName": "默认贴图组",
+              "height": 600,
+              "id": "734E524B-C032-479A-A003-0058471B692B",
+              "title": "../same / title",
+              "width": 900
+            },
+            {
+              "file": "0002-___same _ title-f0f81e05.png",
+              "groupID": "CC9C39C5-1D26-43C9-9DC3-4CE28C271545",
+              "groupName": "默认贴图组",
+              "height": 600,
+              "id": "F0F81E05-F488-4A79-BE97-3CFAC7D2314B",
+              "title": "../same / title",
+              "width": 900
+            },
+            {
+              "file": "0003-Other image-ae31ce50.png",
+              "groupID": "13E77027-18E0-49FE-AC22-9D2026BA2C2C",
+              "groupName": "Other QA group",
+              "height": 600,
+              "id": "AE31CE50-6A40-4FC1-9947-64A0A4DCDCE0",
+              "title": "Other image",
+              "width": 900
+            }
+          ],
+          "version": 1
+        },
+        "artifacts": [
+          {
+            "file": "0001-___same _ title-734e524b.png",
+            "bytes": 31612,
+            "sha256": "6e6ba3a94e9e8c488fe62b8c5f8501b1f18a4eb88adb875d38433f6bc537ac38"
+          },
+          {
+            "file": "0002-___same _ title-f0f81e05.png",
+            "bytes": 31612,
+            "sha256": "6e6ba3a94e9e8c488fe62b8c5f8501b1f18a4eb88adb875d38433f6bc537ac38"
+          },
+          {
+            "file": "0003-Other image-ae31ce50.png",
+            "bytes": 31612,
+            "sha256": "6e6ba3a94e9e8c488fe62b8c5f8501b1f18a4eb88adb875d38433f6bc537ac38"
+          }
+        ]
+      },
+      "selected-group": {
+        "folder": "/private/tmp/thermo-batch-export-qa-final-01a/Thermo-pins-d42aa35a-c22f-4cb7-874c-e1ed79b5c734",
+        "manifest": {
+          "format": "png",
+          "images": [
+            {
+              "file": "0001-Other image-ae31ce50.png",
+              "groupID": "13E77027-18E0-49FE-AC22-9D2026BA2C2C",
+              "groupName": "Other QA group",
+              "height": 600,
+              "id": "AE31CE50-6A40-4FC1-9947-64A0A4DCDCE0",
+              "title": "Other image",
+              "width": 900
+            }
+          ],
+          "version": 1
+        },
+        "artifacts": [
+          {
+            "file": "0001-Other image-ae31ce50.png",
+            "bytes": 31612,
+            "sha256": "6e6ba3a94e9e8c488fe62b8c5f8501b1f18a4eb88adb875d38433f6bc537ac38"
+          }
+        ]
+      }
+    },
+    "closed": {
+      "batchExport": {
+        "allGroups": false,
+        "completed": 1,
+        "folder": "/private/tmp/thermo-batch-export-qa-final-01a/Thermo-pins-d42aa35a-c22f-4cb7-874c-e1ed79b5c734",
+        "format": "png",
+        "issue": "",
+        "running": false,
+        "selectedGroupID": "13E77027-18E0-49FE-AC22-9D2026BA2C2C",
+        "total": 1
+      },
+      "issue": "",
+      "libraryVisible": false,
+      "pins": [
+        {
+          "id": "5347FDB4-8AFA-49B9-B39C-CFD8EB116A86",
+          "ignoresMouseEvents": false,
+          "imageSize": [
+            260,
+            80
+          ],
+          "mousePassthrough": false,
+          "revision": 1,
+          "title": "截图与贴图",
+          "visible": false
+        },
+        {
+          "id": "F0F81E05-F488-4A79-BE97-3CFAC7D2314B",
+          "ignoresMouseEvents": false,
+          "imageSize": [
+            900,
+            600
+          ],
+          "mousePassthrough": false,
+          "revision": 1,
+          "title": "../same / title",
+          "visible": false
+        },
+        {
+          "id": "AE31CE50-6A40-4FC1-9947-64A0A4DCDCE0",
+          "ignoresMouseEvents": false,
+          "imageSize": [
+            900,
+            600
+          ],
+          "mousePassthrough": false,
+          "revision": 1,
+          "title": "Other image",
+          "visible": false
+        },
+        {
+          "id": "734E524B-C032-479A-A003-0058471B692B",
+          "ignoresMouseEvents": false,
+          "imageSize": [
+            900,
+            600
+          ],
+          "mousePassthrough": false,
+          "revision": 2,
+          "title": "../same / title",
+          "visible": false
+        }
+      ],
+      "savedPins": 5
+    },
+    "verified": [
+      "Native all-groups selection exports exactly three open images from five mixed pins",
+      "Hidden and locked images included; text and closed-history image excluded",
+      "Selected inactive group exports exactly one matching image without switching active group",
+      "Both runs leave pins hidden and create separate folders",
+      "Existing keep.txt preserved; no staging folders remain; exported PNGs decode as 900x600"
+    ],
+    "unverified": [
+      "Native progress/cancel during a sufficiently long job",
+      "Native JPEG/TIFF quality controls",
+      "Stress with many large pins and concurrent garbage collection of unloaded snapshots",
+      "Installed Thermo integration"
+    ],
+    "processStopped": true,
+    "reproducibleAppRemoved": true
+  },
+  "limits": [
+    "Images only; typed pins and closed history excluded",
+    "Full resolution only; display opacity/zoom/clipping not applied",
+    "Unloaded source snapshot disappearance causes whole-batch failure, allowing retry",
+    "Cancellation is cooperative around image encoding; completed publication wins a late cancel",
+    "Forced termination may leave a hidden staging folder; no crash recovery",
+    "At most 1000 images and 80MP per image"
+  ],
+  "installedAppChanged": false,
+  "scopeRegression": {
+    "observation": "Native scope read Selected group, but selecting then immediately pressing Export captured the old all-groups option. A later attempt used the new value.",
+    "beforeFixRecordedTotal": 3,
+    "fix": "Scope, selected group, format and quality now live in one synchronous observable model; export reads that reference directly.",
+    "regressionTest": "CaptureBatchImageExportModelTests.testScopeIncludesHiddenAndLockedImagesButNotClosedOrTypedAndCapturesUnsavedStateWithoutHistory",
+    "nativeRetest": "Selected inactive group metadata and final one-image manifest agree."
+  }
+}

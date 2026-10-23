@@ -6,6 +6,7 @@ import ThermoL10n
 @MainActor final class CapturePinSession:ObservableObject {
     @Published private(set) var library:CapturePinLibrary
     @Published var issue:String?
+    let batchExport=CaptureBatchImageExportModel()
     private(set) var windows:[UUID:CaptureEditor]=[:]
     let store:CapturePinLibraryStore
     private var dirty:Set<UUID>=[]
@@ -202,6 +203,24 @@ import ThermoL10n
         for window in NSApp.orderedWindows { if let editor=windows.values.first(where:{ $0.window === window }),library.pins.contains(where:{ windows[$0.id] === editor && $0.groupID == library.currentGroupID && $0.closedAt == nil && (includeHidden || !$0.hidden) }) { return editor } }
         for pin in library.pins.reversed() where pin.groupID == library.currentGroupID && pin.closedAt == nil && (includeHidden || !pin.hidden) { if let editor=windows[pin.id] { return editor } }
         return nil
+    }
+    func batchImageItems(group:UUID?) throws -> [CaptureBatchImageItem] {
+        try checkLoaded()
+        if let group,!library.groups.contains(where:{$0.id==group}) {throw CaptureBatchExportFailure.invalidPlan}
+        return library.pins.compactMap {pin in
+            guard pin.closedAt==nil,(group==nil || pin.groupID==group),let groupName=library.groups.first(where:{$0.id==pin.groupID})?.name else{return nil}
+            let source:CaptureBatchImageItem.Source
+            if let model=windows[pin.id]?.model {
+                guard model.pinContent==nil else{return nil}
+                let annotations=model.document.annotations.map {item -> CaptureAnnotation in
+                    var frozen=item;frozen.color=item.color.usingColorSpace(.deviceRGB) ?? .red;return frozen
+                }
+                source = .document(CaptureDocument(image:model.document.image,annotations:annotations,imageAdjustments:model.document.imageAdjustments))
+            } else {
+                guard pin.contentKind==nil else{return nil};source = .saved(root:store.root,pin:pin)
+            }
+            return .init(id:pin.id,groupID:pin.groupID,groupName:groupName,title:windows[pin.id]?.model.pinTitle ?? pin.title,source:source)
+        }
     }
     func showLibrary() {
         if libraryWindow == nil {

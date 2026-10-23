@@ -77,6 +77,7 @@ func captureFailureMessage(_ error:Error) -> String {
         savingWindow?.showWindow(nil);NSApp.activate(ignoringOtherApps:true);savingWindow?.window?.makeKeyAndOrderFront(nil)
     }
     func shutdown() {
+        pinSession.batchExport.cancel()
         shuttingDown=true;if let id=captureID{cancelCapture(id:id)};afterTask?.cancel();afterTask=nil
         if process?.isRunning == true {process?.terminate()}
         if let captureDirectory { try? FileManager.default.removeItem(at:captureDirectory) }; captureDirectory = nil
@@ -196,6 +197,9 @@ func captureFailureMessage(_ error:Error) -> String {
     var recordingActive: Bool { recordingWindow?.model.active == true || recordingWindow?.model.exporting == true }
     func terminationReply(_ previous:NSApplication.TerminateReply) -> NSApplication.TerminateReply {
         guard previous == .terminateNow else { return previous }
+        if pinSession.batchExport.running {
+            pinSession.batchExport.noteQuitBlocked();pinSession.showLibrary();return .terminateCancel
+        }
         if afterTask != nil || saving.running {
             saving.issue=tr("Wait for the capture action chain to finish before quitting.");showSavingSettings();return .terminateCancel
         }
