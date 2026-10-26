@@ -7,7 +7,7 @@ public enum ApplicationCatalog {
         public var complete: Bool { issues.isEmpty }
     }
     public static var defaultRoots: [URL] {
-        ["/Applications", "/System/Applications", "/System/Library/CoreServices/Applications",
+        ["/Applications", "/System/Applications", "/System/Library/CoreServices",
          NSHomeDirectory() + "/Applications"].map { URL(fileURLWithPath: $0, isDirectory: true) }
     }
     static func item(at url: URL) -> SearchItem? {
@@ -30,20 +30,27 @@ public enum ApplicationCatalog {
                 return []
             }
         }
-        for root in roots {
-            if cancellation?.isCancelled == true { issues.append("Application scan cancelled."); break }
-            for child in list(root) {
-                var candidates = [child]
-                if child.pathExtension != "app", (try? child.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])).map({ $0.isDirectory == true && $0.isSymbolicLink != true }) == true {
-                    candidates = list(child).filter { $0.pathExtension == "app" }
-                }
-                for url in candidates where url.pathExtension == "app" && seen.insert(url.path).inserted {
-                    if cancellation?.isCancelled == true { issues.append("Application scan cancelled."); return Report(items: items, issues: issues) }
-                    guard let item = item(at: url) else { issues.append("Could not read application metadata: " + url.path); continue }
-                    items.append(item)
-                }
+        // Walk ordinary grouping folders at any depth, but never application/package
+        // internals or directory symlinks (which may point outside the catalog or loop).
+        var visited = Set<String>()
+        func visit(_ url: URL) {
+            guard cancellation?.isCancelled != true else { return }
+            let path = SearchPaths.entry(url.path)
+            guard visited.insert(path).inserted else { return }
+            if url.pathExtension.lowercased() == "app" {
+                guard seen.insert(path).inserted else { return }
+                guard let item = item(at: url) else { issues.append("Could not read application metadata: " + url.path); return }
+                items.append(item)
+                return
             }
+            guard let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .isPackageKey]),
+                  values.isDirectory == true, values.isSymbolicLink != true, values.isPackage != true else { return }
+            for child in list(url) { visit(child) }
         }
+        for root in roots {
+            for child in list(root) { visit(child) }
+        }
+        if cancellation?.isCancelled == true { issues.append("Application scan cancelled.") }
         return Report(items: items, issues: issues)
     }
 }

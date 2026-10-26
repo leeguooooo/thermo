@@ -80,6 +80,45 @@ final class SearchCoreTests: XCTestCase {
         XCTAssertEqual(SearchRanking.sorted(report.items, query: "toolbox").first?.path, bundle.path)
         XCTAssertEqual(SearchRanking.sorted(report.items, query: "工具").count, 1)
     }
+    func testApplicationCatalogFindsDeepGroupsWithoutIndexingPackageInternalsOrDirectoryLinks() throws {
+        let root = try directory(), outside = try directory()
+        func app(_ relative: String, in base: URL) throws -> URL {
+            let url = base.appendingPathComponent(relative)
+            try FileManager.default.createDirectory(at: url.appendingPathComponent("Contents"), withIntermediateDirectories: true)
+            let info = ["CFBundleIdentifier": "test." + url.lastPathComponent, "CFBundleName": url.deletingPathExtension().lastPathComponent]
+            try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(to: url.appendingPathComponent("Contents/Info.plist"))
+            return url
+        }
+        let nested = try app("Vendor/Tools/Utilities/Deep.app", in: root)
+        let outer = try app("Outer.app", in: root)
+        _ = try app("Outer.app/Contents/Helpers/Private.app", in: root)
+        _ = try app("Archive.bundle/Contents/Private.app", in: root)
+        _ = try app("Outside.app", in: outside)
+        try FileManager.default.createSymbolicLink(at: root.appendingPathComponent("linked-folder"), withDestinationURL: outside)
+        try FileManager.default.createSymbolicLink(at: root.appendingPathComponent("Vendor/loop"), withDestinationURL: root)
+        let report = ApplicationCatalog.scan(roots: [root, root.appendingPathComponent("Vendor")])
+        XCTAssertTrue(report.complete, report.issues.joined(separator: "; "))
+        XCTAssertEqual(Set(report.items.map(\.path)), Set([nested.path, outer.path]))
+        XCTAssertEqual(report.items.count, 2)
+        let store = try SearchStore(directory: root.appendingPathComponent("index"))
+        try store.replaceApplications(report.items, complete: report.complete)
+        XCTAssertEqual(try store.query("Deep").items.first?.path, nested.path)
+        let token = SearchCancellation(); token.cancel()
+        XCTAssertFalse(ApplicationCatalog.scan(roots: [root], cancellation: token).complete)
+    }
+    func testDefaultApplicationCatalogFindsFinderAndSystemUtilities() throws {
+        let report = ApplicationCatalog.scan()
+        let store = try SearchStore(directory: directory())
+        try store.replaceApplications(report.items, complete: report.complete)
+        for (query, path) in [
+            ("finder", "/System/Library/CoreServices/Finder.app"),
+            ("Screen Sharing", "/System/Library/CoreServices/Applications/Screen Sharing.app"),
+            ("Terminal", "/System/Applications/Utilities/Terminal.app"),
+            ("Activity Monitor", "/System/Applications/Utilities/Activity Monitor.app")
+        ] where FileManager.default.fileExists(atPath: path) {
+            XCTAssertEqual(try store.query(query).items.first?.path, path, query)
+        }
+    }
     func testCancelledQueryAndOverlappingRootsAreRejected() throws {
         let dir = try directory(), store = try SearchStore(directory: dir.appendingPathComponent("db"))
         var prefs = SearchPreferences(); prefs.roots = [dir.path, dir.appendingPathComponent("nested").path]
