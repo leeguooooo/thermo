@@ -1,0 +1,253 @@
+{
+  "version": "1.3.2",
+  "build": "801",
+  "releaseSourceCommit": "537c61caaa9d5e6fbeb7d5f7ded0f2359a8533e1",
+  "packagedWorkingTree": "clean",
+  "releaseURL": "https://github.com/leeguooooo/thermo/releases/tag/v1.3.2",
+  "isDraft": false,
+  "isPrerelease": false,
+  "tests": {
+    "count": 2358,
+    "failures": 0,
+    "suites": 11,
+    "logSHA256": "01b75e27096c0d780db601b32c1b3e8fe914a2c1db79db3d51e55d75b7d13f82"
+  },
+  "searchAcceptance": {
+    "cliSHA256": "edab796f7f19cc5187d791bff6358aa1b2992b58a73d1dde9c01fb50fcadb6f8",
+    "scope": "CLI process startup, index open and retrieval; actual app catalog read but never mutated",
+    "corpusFiles": 10002,
+    "indexMilliseconds": 1317.6021250000001,
+    "indexBytes": 16793600,
+    "queryP50Milliseconds": 106.68364600000001,
+    "queryP95Milliseconds": 336.6540000000002,
+    "queries": [
+      {
+        "query": "Budegt",
+        "milliseconds": 51.57945899999983
+      },
+      {
+        "query": "说明",
+        "milliseconds": 45.22158300000001
+      },
+      {
+        "query": "shuoming",
+        "milliseconds": 52.759
+      },
+      {
+        "query": "Budget",
+        "milliseconds": 51.6627500000002,
+        "limited": false
+      },
+      {
+        "query": "说明",
+        "milliseconds": 48.17579200000033,
+        "limited": false
+      },
+      {
+        "query": "report_000099",
+        "milliseconds": 254.87466700000016,
+        "limited": false
+      },
+      {
+        "query": "rpt000099",
+        "milliseconds": 236.9295830000002,
+        "limited": false
+      },
+      {
+        "query": "report",
+        "milliseconds": 102.99670800000004,
+        "limited": false
+      },
+      {
+        "query": "Budget",
+        "milliseconds": 49.71487500000027,
+        "limited": false
+      },
+      {
+        "query": "说明",
+        "milliseconds": 44.324416000000255,
+        "limited": false
+      },
+      {
+        "query": "report_000099",
+        "milliseconds": 252.75458300000065,
+        "limited": false
+      },
+      {
+        "query": "rpt000099",
+        "milliseconds": 238.7310420000004,
+        "limited": false
+      },
+      {
+        "query": "report",
+        "milliseconds": 110.370584,
+        "limited": false
+      },
+      {
+        "query": "Budget",
+        "milliseconds": 52.30337500000015,
+        "limited": false
+      },
+      {
+        "query": "说明",
+        "milliseconds": 43.84312500000043,
+        "limited": false
+      },
+      {
+        "query": "report_000099",
+        "milliseconds": 245.45083300000047,
+        "limited": false
+      },
+      {
+        "query": "rpt000099",
+        "milliseconds": 241.27508400000065,
+        "limited": false
+      },
+      {
+        "query": "report",
+        "milliseconds": 168.3833340000005,
+        "limited": false
+      },
+      {
+        "query": "Budget",
+        "milliseconds": 60.82662500000069,
+        "limited": false
+      },
+      {
+        "query": "说明",
+        "milliseconds": 89.47729199999976,
+        "limited": false
+      },
+      {
+        "query": "report_000099",
+        "milliseconds": 561.2008749999999,
+        "limited": false
+      },
+      {
+        "query": "rpt000099",
+        "milliseconds": 302.78329100000076,
+        "limited": false
+      },
+      {
+        "query": "report",
+        "milliseconds": 131.333916,
+        "limited": false
+      },
+      {
+        "query": "Budget",
+        "milliseconds": 66.57491599999955,
+        "limited": false
+      },
+      {
+        "query": "说明",
+        "milliseconds": 87.85562500000043,
+        "limited": false
+      },
+      {
+        "query": "report_000099",
+        "milliseconds": 330.1089170000005,
+        "limited": false
+      },
+      {
+        "query": "rpt000099",
+        "milliseconds": 336.6540000000002,
+        "limited": false
+      },
+      {
+        "query": "report",
+        "milliseconds": 133.04508299999983,
+        "limited": false
+      }
+    ],
+    "applicationCatalogComplete": true,
+    "applicationCatalogIssues": [],
+    "checks": [
+      "fresh index reports incomplete",
+      "owned corpus indexed; hidden file excluded",
+      "filename typo and Chinese/pinyin retrieval",
+      "file contents are not a search source",
+      "rename and deletion reconcile across CLI restarts",
+      "source content unchanged"
+    ],
+    "userIndexChanged": false
+  },
+  "assets": [
+    {
+      "name": "Thermo-1.3.2-SHA256SUMS.txt",
+      "size": 266,
+      "sha256": "bfe921687eb25ca594d384ed7bf59cfbb39bbd78c473d2c377607f477c43efc0",
+      "githubDigestMatched": true
+    },
+    {
+      "name": "Thermo-1.3.2.dmg",
+      "size": 30821091,
+      "sha256": "1bd2f15cdb1f58e5517cb8b9ee578622df06c682d32b6cc8f6c095931b06d4ab",
+      "githubDigestMatched": true
+    },
+    {
+      "name": "Thermo-1.3.2.zip",
+      "size": 36841648,
+      "sha256": "68bfe21b11799fbbc64fba3a634821734549d323ebf424ee8d6e75abd40b2634",
+      "githubDigestMatched": true
+    },
+    {
+      "name": "thermo-cli-macos-universal.tar.gz",
+      "size": 14028962,
+      "sha256": "0da7a1347ce0fb445bf5e78609e4556f2a423d63881ccd97ff3fa0b8048c8330",
+      "githubDigestMatched": true
+    },
+    {
+      "name": "thermo-cli-macos-universal.tar.gz.sha256",
+      "size": 100,
+      "sha256": "2cc8024b03aaa688e0124ad601f460ebacc54e8fbd251221ba1a755e6c4aca62",
+      "githubDigestMatched": true
+    }
+  ],
+  "notarization": {
+    "acceptedSubmissionIDs": [
+      "ab65bd33-bfc5-4e85-b27a-779eb28d3edc",
+      "cbc8b307-808c-4f6e-9a85-eda61f31a763",
+      "be6f47b5-dbb4-46f1-8e27-c369e30a58af"
+    ],
+    "gatekeeperAppAndDMGAccepted": true
+  },
+  "publicAppcast": {
+    "version": "1.3.2",
+    "build": "801",
+    "signatureVerifiedWithInstalled130Key": true
+  },
+  "installed": {
+    "path": "/Applications/Thermo.app",
+    "version": "1.3.2",
+    "build": "801",
+    "sourceCommit": "537c61caaa9d5e6fbeb7d5f7ded0f2359a8533e1",
+    "downloadedArtifact": true,
+    "queries": {
+      "finder": {
+        "complete": true,
+        "first": "/System/Library/CoreServices/Finder.app"
+      },
+      "Terminal": {
+        "complete": true,
+        "first": "/System/Applications/Utilities/Terminal.app"
+      },
+      "Activity Monitor": {
+        "complete": true,
+        "first": "/System/Applications/Utilities/Activity Monitor.app"
+      },
+      "Screen Sharing": {
+        "complete": true,
+        "first": "/System/Applications/Utilities/Screen Sharing.app"
+      }
+    },
+    "nativeUIFinderFirstResult": true,
+    "pinDataBackupVerifiedBeforeUserAuthorizedForceQuit": true
+  },
+  "homebrewTapUpdated": true,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "intelRuntimeAcceptance": "not performed; local x86_64 invocation returned Bad CPU type in executable",
+  "existingPinLibraryReadFailure": "observed in old 1.3.0; data preserved and backed up; not repaired in this search fix"
+}
