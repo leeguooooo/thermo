@@ -13,7 +13,8 @@ struct SlowdownCulpritsCard: View {
     @State private var feedback: String?
 
     var body: some View {
-        content.onAppear { if recorder.diagnosis == nil { recorder.diagnoseNow() } }
+        // An empty view never appears, so the trigger hangs off a container that always exists.
+        VStack(spacing: 0) { content }.onAppear { if recorder.diagnosis == nil { recorder.diagnoseNow() } }
     }
 
     @ViewBuilder var content: some View {

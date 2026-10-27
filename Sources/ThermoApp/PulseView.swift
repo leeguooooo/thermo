@@ -309,7 +309,8 @@ struct PulseCard: View {
                     .fixedSize(horizontal: false, vertical: true).padding(.leading, indent)
             }
             }
-            SlowdownCulpritsCard().padding(.leading, indent)
+            // The main window shows it on the Overview itself, above the vitals.
+            if !plain { SlowdownCulpritsCard().padding(.leading, indent) }
             if plain { table } else {
             ForEach(pulse.hogs) { h in
                 HStack(alignment: .firstTextBaseline, spacing: 6) {

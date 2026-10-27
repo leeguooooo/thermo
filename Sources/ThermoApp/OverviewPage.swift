@@ -21,6 +21,7 @@ struct OverviewPage: View {
             VStack(alignment: .leading, spacing: Theme.Space.m) {
                 hero(now: monitor.snapshot?.timestamp ?? Date())
                 headline
+                SlowdownCulpritsCard()
                 vitals
             }
             .onAppear { if visible { events.refreshJournal() } }

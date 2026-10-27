@@ -68,6 +68,7 @@ enum CommandHelp {
     pulse chrome|pulse chrome [--app BROWSER] [--watch SEC] [--measure] [--json|--csv]|browser
     pulse chrome close|pulse chrome close [URL] [--ids IDS] [--app BROWSER] [--title TITLE] [--dry-run] [--yes] [--json]|browser
     agents|agents [--all] [--json|--csv] [--root PROJECT] [--encoding ENCODING]|cli
+    agents sessions|agents sessions [--json]|cli
     agents context|agents context [--encoding ENCODING] [--agent AGENT] [--root PROJECT] [--json]|cli
     agents claude-local|agents claude-local [--json]|read-only-local-diagnostics
     agents usage|agents usage [--encoding ENCODING] [--sort text|structured|time|errors|instructions] [--all] [--since DATE] [--agent AGENT] [--log-file FILE] [--tail] [--limit N] [--json]|cli

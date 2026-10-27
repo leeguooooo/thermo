@@ -235,7 +235,8 @@ public struct SlowdownDiagnosis: Codable, Sendable {
     public static func diagnose(_ processes: [SlowdownProcess], system: SlowdownSystem, me: Int32 = getpid(),
                                 uid: uid_t = getuid(), sampled: Date = Date(),
                                 launchdLabel: (String) -> String? = LaunchAgentLabels.label(forExecutable:),
-                                packageVersion: (SlowdownProcess) -> PackageVersion? = PackageVersion.installed) -> SlowdownDiagnosis {
+                                packageVersion: (SlowdownProcess) -> PackageVersion? = PackageVersion.installed,
+                                lastActivity: (String) -> Date? = SessionActivity.current.last(cwd:)) -> SlowdownDiagnosis {
         let byPID = Dictionary(processes.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
         var children: [Int32: [SlowdownProcess]] = [:]
         for p in processes where p.pid != p.ppid { children[p.ppid, default: []].append(p) }
@@ -366,6 +367,19 @@ public struct SlowdownDiagnosis: Codable, Sendable {
                 let stale = members.filter(leaked), live = members.filter { !leaked($0) }
                 let staleKB = stale.reduce(0) { $0 + $1.footprintKB }
                 let orphans = stale.filter { $0.ppid == 1 }
+                // Which session each copy serves, and whether anyone has used it lately (its transcript was written).
+                func sessionDir(_ p: SlowdownProcess) -> String? {
+                    if let parent = byPID[p.ppid], isAgentSession(parent) { return parent.cwd ?? p.cwd }
+                    return p.cwd
+                }
+                func idleSession(_ p: SlowdownProcess) -> Bool {
+                    // Unknown activity (a plugin's own folder, say) is not idleness: the copy may serve an active session.
+                    guard let dir = sessionDir(p), let last = lastActivity(dir) else { return false }
+                    return sampled.timeIntervalSince(last) >= 2 * 3600
+                }
+                let endable = members.filter { $0.ppid == 1 || idleSession($0) }
+                let endableKB = endable.reduce(0) { $0 + $1.footprintKB }
+                let activeDirs = Set(members.filter { !endable.contains($0) }.compactMap { sessionDir($0).flatMap(tilde) }).sorted()
                 let hosts = Set(stale.compactMap { byPID[$0.ppid] }.filter(isAppServer).map(\.pid))
                 let each = total / members.count
                 var guidance: [String] = []
@@ -376,8 +390,10 @@ public struct SlowdownDiagnosis: Codable, Sendable {
                     guidance.append(session.map { tr("%1$@ copies are held by %2$@ (PID %3$@) from sessions that already ended: quit and reopen %4$@; its current task is interrupted, the conversation can be resumed.", String(n), friendlyName(host), String(h), $0) }
                         ?? tr("%1$@ copies are held by %2$@ (PID %3$@) from sessions that already ended: restart it; its current tasks are interrupted.", String(n), friendlyName(host), String(h)))
                 }
-                if !orphans.isEmpty {
-                    guidance.append(tr("%1$@ copies lost their session and can be ended safely.", String(orphans.count)))
+                if !endable.isEmpty {
+                    guidance.insert(tr("Without stopping your work: end the %1$@ copies whose session lost it or has been idle for over 2 hours (frees %2$@); a session whose copy was ended loses that tool until it is restarted.",
+                                       String(endable.count), MemoryFormat.string(kibibytes: endableKB))
+                                    + (activeDirs.isEmpty ? "" : " " + tr("Copies in active sessions are kept: %1$@.", activeDirs.prefix(5).joined(separator: ", "))), at: 0)
                 }
                 var cost = tr("%1$@ costs about %2$@ per session × %3$@ copies. Consider turning it off globally and enabling it only in the projects that use it.",
                               name, MemoryFormat.string(kibibytes: each), String(members.count))
@@ -385,19 +401,19 @@ public struct SlowdownDiagnosis: Codable, Sendable {
                     cost = MachinePulse.sentences(cost, tr("Installed: %1$@ %2$@; check whether a newer version uses less.", v.name, v.version))
                 }
                 guidance.append(cost)
-                let frees = staleKB > 0 ? staleKB : total
+                let frees = endableKB > 0 ? endableKB : staleKB > 0 ? staleKB : total
                 found.append(SlowdownCulprit(
-                    kind: .idleMCP, action: orphans.isEmpty ? .review : .end, name: name, launcher: nil, project: nil,
-                    pids: (orphans + stale + live).map(\.pid).reduce(into: [Int32]()) { if !$0.contains($1) { $0.append($1) } },
-                    identities: orphans.compactMap(identity), app: nil, cpu: members.reduce(0) { $0 + $1.cpu }, memoryKB: total, freesKB: frees,
+                    kind: .idleMCP, action: endable.isEmpty ? .review : .end, name: name, launcher: nil, project: nil,
+                    pids: (endable + stale + live).map(\.pid).reduce(into: [Int32]()) { if !$0.contains($1) { $0.append($1) } },
+                    identities: endable.compactMap(identity), app: nil, cpu: members.reduce(0) { $0 + $1.cpu }, memoryKB: total, freesKB: frees,
                     children: members.count, elapsed: nil,
                     evidence: tr("%1$@ idle copies of %2$@ use %3$@ (about %4$@ each); %5$@ of them belong to sessions that already ended (%6$@), %7$@ to open sessions.",
                                  String(members.count), name, MemoryFormat.string(kibibytes: total), MemoryFormat.string(kibibytes: each),
                                  String(stale.count), MemoryFormat.string(kibibytes: staleKB), String(live.count)),
                     guidance: guidance.joined(separator: " "),
-                    command: orphans.isEmpty ? nil : endCommand(orphans.map(\.pid)), sessions: nil,
-                    score: score(cpu: 0, freesKB: staleKB + live.reduce(0) { $0 + $1.footprintKB } / 4, certain: !orphans.isEmpty),
-                    covered: stale.map(\.pid)))
+                    command: endable.isEmpty ? nil : endCommand(endable.map(\.pid)), sessions: nil,
+                    score: score(cpu: 0, freesKB: max(staleKB, endableKB) + live.reduce(0) { $0 + $1.footprintKB } / 4, certain: !endable.isEmpty),
+                    covered: endable.isEmpty ? stale.map(\.pid) : endable.map(\.pid)))
             }
         }
 
@@ -635,6 +651,61 @@ public final class SlowdownSampler {
     }
 }
 
+/// When each project's agent sessions last wrote their transcript: Claude Code's
+/// ~/.claude/projects/<cwd with / and . as ->/*.jsonl and Codex's ~/.codex/sessions (cwd from session_meta).
+/// Read once per process for the last three days; a transcript nobody writes means nobody is using that session.
+public final class SessionActivity: @unchecked Sendable {
+    public static let current = SessionActivity()
+    private let lock = NSLock()
+    private var loaded: (at: Date, byCwd: [String: Date])?
+    let home: String
+    public init(home: String = NSHomeDirectory()) { self.home = home }
+
+    public func last(cwd: String) -> Date? {
+        lock.lock(); defer { lock.unlock() }
+        if loaded == nil || Date().timeIntervalSince(loaded!.at) > 300 { loaded = (Date(), read()) }
+        let byCwd = loaded!.byCwd
+        return [byCwd[cwd], byCwd[Self.claudeKey(cwd)]].compactMap { $0 }.max()
+    }
+
+    func read(now: Date = Date()) -> [String: Date] {
+        var out: [String: Date] = [:]
+        func note(_ cwd: String, _ date: Date) { if date > (out[cwd] ?? .distantPast) { out[cwd] = date } }
+        let fm = FileManager.default
+        // Claude: the folder name is the cwd with / and . turned into -, so map back through live cwds only.
+        let claude = home + "/.claude/projects"
+        var claudeLatest: [String: Date] = [:]
+        for dir in (try? fm.contentsOfDirectory(atPath: claude)) ?? [] {
+            for f in (try? fm.contentsOfDirectory(atPath: claude + "/" + dir)) ?? [] where f.hasSuffix(".jsonl") {
+                if let m = FS.mtime(claude + "/" + dir + "/" + f), m > (claudeLatest[dir] ?? .distantPast) { claudeLatest[dir] = m }
+            }
+        }
+        for (dir, date) in claudeLatest { out["claude:" + dir] = date }
+        let codex = home + "/.codex/sessions"
+        let cal = Calendar(identifier: .gregorian)
+        for back in 0..<3 {
+            guard let day = cal.date(byAdding: .day, value: -back, to: now) else { continue }
+            let c = cal.dateComponents([.year, .month, .day], from: day)
+            let folder = String(format: "%@/%04d/%02d/%02d", codex, c.year ?? 0, c.month ?? 0, c.day ?? 0)
+            for f in (try? fm.contentsOfDirectory(atPath: folder)) ?? [] where f.hasSuffix(".jsonl") {
+                let path = folder + "/" + f
+                guard let m = FS.mtime(path), let h = FileHandle(forReadingAtPath: path) else { continue }
+                let head = h.readData(ofLength: 16_384); try? h.close()
+                guard let line = head.split(separator: 0x0A).first,
+                      let json = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any],
+                      let cwd = (json["payload"] as? [String: Any])?["cwd"] as? String else { continue }
+                note(cwd, m)
+            }
+        }
+        return out
+    }
+
+    /// Claude's folder name for a cwd.
+    public static func claudeKey(_ cwd: String) -> String {
+        "claude:" + String(cwd.map { $0 == "/" || $0 == "." ? "-" : $0 })
+    }
+}
+
 /// The npm package a node-run tool comes from, read from its package.json (no network).
 public struct PackageVersion: Codable, Sendable, Equatable {
     public var name: String
@@ -754,5 +825,63 @@ public enum SlowdownFix {
                                                                   status: status, detail: r.outcome.rawValue)]))
         }
         return r
+    }
+}
+
+/// Agent sessions with the MCP servers each one runs. App-server children are split by their working
+/// directory (one row per project they serve); MCP servers whose session is gone get a row of their own.
+public struct AgentSessionGroup: Codable, Sendable, Equatable {
+    public struct Server: Codable, Sendable, Equatable {
+        public var name: String
+        public var pids: [Int32]
+        public var memoryKB: Int
+    }
+    public var title: String
+    public var pid: Int32?
+    public var cwd: String?
+    public var memoryKB: Int
+    public var lastActivity: Date?
+    /// Nobody wrote its transcript for two hours, or its session is gone. Unknown activity is not idle.
+    public var idle: Bool
+    public var servers: [Server]
+    public var mcpMemoryKB: Int { servers.reduce(0) { $0 + $1.memoryKB } }
+
+    public static func group(_ processes: [SlowdownProcess], now: Date = Date(),
+                             lastActivity: (String) -> Date? = SessionActivity.current.last(cwd:)) -> [AgentSessionGroup] {
+        typealias D = SlowdownDiagnosis
+        let byPID = Dictionary(processes.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
+        func servers(_ list: [SlowdownProcess]) -> [Server] {
+            Dictionary(grouping: list, by: { D.friendlyName($0) }).map { name, ps in
+                Server(name: name, pids: ps.map(\.pid).sorted(), memoryKB: ps.reduce(0) { $0 + $1.footprintKB })
+            }.sorted { $0.memoryKB > $1.memoryKB }
+        }
+        func isIdle(_ cwd: String?, gone: Bool) -> (Date?, Bool) {
+            let last = cwd.flatMap(lastActivity)
+            return (last, gone || last.map { now.timeIntervalSince($0) >= 2 * 3600 } ?? false)
+        }
+        let mcp = processes.filter { D.isMCP($0) && !D.isSystem($0) }
+        var out: [AgentSessionGroup] = []
+        for s in processes where D.isAgentSession(s) {
+            let mine = mcp.filter { $0.ppid == s.pid }
+            let (last, idle) = isIdle(s.cwd, gone: false)
+            out.append(AgentSessionGroup(title: D.friendlyName(s), pid: s.pid, cwd: D.tilde(s.cwd),
+                                         memoryKB: s.footprintKB + mine.reduce(0) { $0 + $1.footprintKB },
+                                         lastActivity: last, idle: idle, servers: servers(mine)))
+        }
+        for host in processes where D.isAppServer(host) {
+            let kids = mcp.filter { $0.ppid == host.pid }
+            for (cwd, list) in Dictionary(grouping: kids, by: { $0.cwd ?? "" }) {
+                let (last, idle) = isIdle(cwd.isEmpty ? nil : cwd, gone: false)
+                out.append(AgentSessionGroup(title: tr("%1$@ (PID %2$@) for a project", D.friendlyName(host), String(host.pid)), pid: nil,
+                                             cwd: D.tilde(cwd.isEmpty ? nil : cwd), memoryKB: list.reduce(0) { $0 + $1.footprintKB },
+                                             lastActivity: last, idle: idle, servers: servers(list)))
+            }
+        }
+        let orphans = mcp.filter { $0.ppid == 1 || byPID[$0.ppid] == nil }
+        if !orphans.isEmpty {
+            out.append(AgentSessionGroup(title: tr("MCP servers without a session"), pid: nil, cwd: nil,
+                                         memoryKB: orphans.reduce(0) { $0 + $1.footprintKB }, lastActivity: nil, idle: true, servers: servers(orphans)))
+        }
+        return out.sorted { $0.idle == $1.idle ? $0.memoryKB > $1.memoryKB : $0.idle && !$1.idle }
     }
 }

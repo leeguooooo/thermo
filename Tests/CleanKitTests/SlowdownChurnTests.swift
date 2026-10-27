@@ -134,4 +134,49 @@ final class SlowdownChurnTests: XCTestCase {
         let expected = MemoryFormat.string(kibibytes: leak + idleSessions)
         XCTAssertTrue(d.headline.contains(expected), "\(d.headline) should free \(expected), not count the rea copies twice")
     }
+
+    /// What the user did by hand: end the copies of idle sessions, keep the ones of active projects.
+    func testIdleSessionCopiesAreEndableAndActiveOnesKept() {
+        var ps = idleMCP()
+        // Six app-server copies work for camera-use (active now), the other twelve for projects idle since this morning.
+        var n = 0
+        for i in ps.indices where ps[i].ppid == 39971 {
+            ps[i].cwd = n < 6 ? "\(home)/github.com/camera-use" : "\(home)/old\(n)"
+            ps[i].started = Date(timeIntervalSinceNow: -80_000); n += 1
+        }
+        // Two Claude sessions have not written their transcript for 5 hours.
+        let now = Date()
+        let activity: (String) -> Date? = { cwd in
+            if cwd.hasSuffix("/camera-use") { return now.addingTimeInterval(-60) }
+            if cwd.hasSuffix("/p0") || cwd.hasSuffix("/p1") { return now.addingTimeInterval(-5 * 3600) }
+            if cwd.contains("/p") { return now.addingTimeInterval(-300) }
+            return now.addingTimeInterval(-6 * 3600)
+        }
+        for i in ps.indices where ps[i].ppid >= 5000 { ps[i].started = Date(timeIntervalSinceNow: -20_000) }
+        let d = SlowdownDiagnosis.diagnose(ps, system: system(), me: 1, sampled: now, launchdLabel: { _ in nil },
+                                           packageVersion: { _ in nil }, lastActivity: activity)
+        guard let c = (d.culprits + d.also).first(where: { $0.kind == .idleMCP }) else { return XCTFail("no idle MCP culprit") }
+        XCTAssertEqual(c.action, .end)
+        XCTAssertEqual(c.identities?.count, 14, "12 idle app-server copies + 2 idle Claude sessions")
+        XCTAssertEqual(c.freesKB, 14 * 230 * mb)
+        XCTAssertTrue(c.guidance.contains("~/github.com/camera-use"), c.guidance)
+        let ended = Set(c.identities!.map(\.pid))
+        XCTAssertFalse(ps.contains { ended.contains($0.pid) && $0.cwd?.hasSuffix("/camera-use") == true })
+    }
+
+    func testSessionsGroupTheirMCPServers() {
+        var ps = idleMCP()
+        var n = 0
+        for i in ps.indices where ps[i].ppid == 39971 { ps[i].cwd = n < 6 ? "/w/active" : "/w/old"; n += 1 }
+        ps.append(.init(pid: 9999, ppid: 1, name: "node", executable: "/opt/homebrew/bin/node", argv: ["node", "/opt/homebrew/bin/rea", "mcp"], footprintKB: 230 * mb))
+        let now = Date()
+        let groups = AgentSessionGroup.group(ps, now: now, lastActivity: { $0 == "/w/active" ? now : $0 == "/w/old" ? now.addingTimeInterval(-9000) : nil })
+        let old = groups.first { $0.cwd == "/w/old" }
+        XCTAssertEqual(old?.idle, true)
+        XCTAssertEqual(old?.servers.first?.pids.count, 12)
+        XCTAssertEqual(groups.first { $0.cwd == "/w/active" }?.idle, false)
+        XCTAssertEqual(groups.first { $0.pid == 5000 }?.servers.first?.name, "rea MCP server")
+        XCTAssertEqual(groups.first { $0.pid == 5000 }?.idle, false, "unknown activity is not idle")
+        XCTAssertEqual(groups.first { $0.title == "MCP servers without a session" }?.servers.first?.pids, [9999])
+    }
 }

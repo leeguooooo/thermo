@@ -551,7 +551,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         case .memory: return MemoryModel.shared.breakdown != nil && Date().timeIntervalSince(started) > 4
         case .space(.duplicates): return true
         case .space: return SpaceLensModel.shared.tree != nil && !SpaceLensModel.shared.scanning
-        case .overview: return models.monitor.snapshot != nil && SystemPulse.shared.sampled && Date().timeIntervalSince(started) > 4
+        case .overview: return models.monitor.snapshot != nil && SystemPulse.shared.sampled && PulseRecorder.shared.diagnosis != nil && Date().timeIntervalSince(started) > 4
         default: return models.monitor.snapshot != nil
         }
     }
