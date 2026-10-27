@@ -6,15 +6,28 @@ struct MemoryCommand {
     let app: App
     struct Report: Encodable {
         let system: MemoryBreakdown?
+        /// Who to act on first and how, from the slowdown diagnosis.
+        let verdict: String
+        let culprits: [SlowdownCulprit]
         let inventory: MemoryInventory
     }
     func run(_ rest: [String]) throws {
         guard rest.isEmpty else { throw CLIError("usage: thermo memory [--json]") }
-        let report = Report(system: MemoryBreakdown.read(), inventory: MemoryInventory.collect())
+        let diagnosis = SlowdownDiagnosis.diagnose(SlowdownSampler().sample(window: 1), system: .read())
+        let report = Report(system: MemoryBreakdown.read(), verdict: diagnosis.headline, culprits: diagnosis.culprits.filter { $0.freesKB >= 64 * 1024 },
+                            inventory: MemoryInventory.collect())
         if app.args.has("json") {
             print(Export.json(report))
             return
         }
+        // The answer first: who to act on and how; the table is the evidence.
+        print(app.style.bold(report.verdict))
+        for c in report.culprits {
+            print("  " + app.style.bold(c.name) + (c.freesKB >= 64 * 1024 ? app.style.dim("  " + tr("frees ~%1$@", MemoryFormat.string(kibibytes: c.freesKB))) : ""))
+            print("    " + app.style.yellow(c.guidance))
+            if let cmd = c.command { print("    " + app.style.cyan("→ " + cmd)) }
+        }
+        print("")
         print(report.system?.summary ?? tr("Memory pressure could not be read. Refresh before taking action."))
         print(tr("Memory footprint") + " / " + tr("Resident memory"))
         for program in report.inventory.programs.prefix(20) {

@@ -3915,4 +3915,18 @@ let zhHans: [String: String] = [
     "%1$@ is stuck at high CPU": "%1$@ 卡在高 CPU",
     "%1$@ looks stuck and holds memory": "%1$@ 疑似卡死且占着内存",
     "%1$@ keeps piling up helper processes": "%1$@ 的子进程在不断堆积",
+    // Slowdown diagnosis: respawn churn, idle MCP servers
+    "%1$@ keeps restarting helper processes": "%1$@ 在反复启动子进程",
+    "%1$@ is idle in %2$@ sessions": "%1$@ 在 %2$@ 个会话里闲置",
+    "Stop or restart %1$@ the way it was started: launchctl kickstart -k gui/%2$@/%3$@ restarts it, launchctl bootout gui/%2$@/%3$@ stops it.": "按它的启动方式停止或重启 %1$@：launchctl kickstart -k gui/%2$@/%3$@ 重启，launchctl bootout gui/%2$@/%3$@ 停止。",
+    "Stop or restart %1$@ with its own command (for example `%2$@ stop`) or quit the tool that started it; ending only the worker does not help, the next one starts seconds later.": "用它自己的命令停止或重启 %1$@（例如 `%2$@ stop`），或退出启动它的工具；只结束子进程没用，几秒后又会起一个新的。",
+    "This polling looks like a bug or an aggressive default: worth reporting to the author of %1$@.": "这种轮询像是 bug 或过于激进的默认设置，建议反馈给 %1$@ 的作者。",
+    "%1$@ keeps starting short-lived %2$@ processes (%3$@ seen just now); together they use about %4$@ of a core, averaged over %5$@. A single reading only shows a seconds-old %2$@.": "%1$@ 不断启动短命的 %2$@ 进程（刚才看到 %3$@ 个），按 %5$@ 平均累计占约 %4$@ CPU。单看一次只会看到一个刚启动几秒的 %2$@。",
+    "%1$@ copies are held by %2$@ (PID %3$@) from sessions that already ended: quit and reopen %4$@; its current task is interrupted, the conversation can be resumed.": "其中 %1$@ 份由 %2$@（PID %3$@）替已结束的会话留着：退出 %4$@ 再重新打开；当前任务会中断，对话可以恢复。",
+    "%1$@ copies are held by %2$@ (PID %3$@) from sessions that already ended: restart it; its current tasks are interrupted.": "其中 %1$@ 份由 %2$@（PID %3$@）替已结束的会话留着：重启它，当前任务会中断。",
+    "%1$@ copies lost their session and can be ended safely.": "%1$@ 份已经没有所属会话，可以放心结束。",
+    "%1$@ costs about %2$@ per session × %3$@ copies. Consider turning it off globally and enabling it only in the projects that use it.": "%1$@ 每个会话约占 %2$@ × %3$@ 份。可以考虑全局关闭，只在用得到的项目里开启。",
+    "Installed: %1$@ %2$@; check whether a newer version uses less.": "已安装 %1$@ %2$@，可以看看新版本是否更省内存。",
+    "%1$@ idle copies of %2$@ use %3$@ (about %4$@ each); %5$@ of them belong to sessions that already ended (%6$@), %7$@ to open sessions.": "%2$@ 有 %1$@ 份闲置，共占 %3$@（每份约 %4$@）；其中 %5$@ 份属于已结束的会话（%6$@），%7$@ 份属于还开着的会话。",
+    "Ended %1$@ of %2$@ processes; about %3$@ freed.": "已结束 %2$@ 个进程中的 %1$@ 个，约释放 %3$@。",
 ]
