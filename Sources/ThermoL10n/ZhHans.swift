@@ -3949,4 +3949,8 @@ let zhHans: [String: String] = [
     "idle": "闲置",
     "active": "活跃",
     "MCP servers of idle sessions use %1$@. thermo pulse why lists the ones that are safe to end.": "闲置会话的 MCP 服务共占 %1$@。thermo pulse why 会列出可以放心结束的。",
+    // Active-session attribution
+    "It was started by %1$@ and is shared by the Codex sessions of %2$@ projects; quitting that codex and starting it again restarts it, interrupting their current tasks (conversations can be resumed). Its %3$@ leftover helpers go away with it.": "它由 %1$@ 启动，%2$@ 个项目的 Codex 会话共用它；退出这个 codex 再打开会重启它，这些会话的当前任务会中断（对话可以恢复）。它残留的 %3$@ 个子进程会一并退出。",
+    "In use right now: %1$@ — best done when you finish there.": "正在使用：%1$@——最好等那边忙完再做。",
+    "It belongs to the %1$@ session that is in use right now (active %2$@ ago); close it there when you are done.": "它属于正在进行的 %1$@ 会话（%2$@前还有活动），用完再在那边关掉。",
 ]

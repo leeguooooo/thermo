@@ -10,8 +10,8 @@ final class SlowdownChurnTests: XCTestCase {
     let gb = 1_048_576
     let home = NSHomeDirectory()
 
-    override func setUp() { L10n.override = .english }
-    override func tearDown() { L10n.override = nil }
+    override func setUp() { L10n.override = .english; SessionActivity.current = SessionActivity(home: "/nonexistent-thermo-test") }
+    override func tearDown() { L10n.override = nil; SessionActivity.current = SessionActivity() }
 
     func system(swapUsed: Double = 15.5, swapTotal: Double = 16, pressure: MachinePulse.Memory = .warning, load: Double = 6) -> SlowdownSystem {
         SlowdownSystem(memoryBytes: 16 << 30, swapUsed: UInt64(swapUsed * Double(1 << 30)), swapTotal: UInt64(swapTotal * Double(1 << 30)),
@@ -178,5 +178,66 @@ final class SlowdownChurnTests: XCTestCase {
         XCTAssertEqual(groups.first { $0.pid == 5000 }?.servers.first?.name, "rea MCP server")
         XCTAssertEqual(groups.first { $0.pid == 5000 }?.idle, false, "unknown activity is not idle")
         XCTAssertEqual(groups.first { $0.title == "MCP servers without a session" }?.servers.first?.pids, [9999])
+    }
+
+    /// The emulator a dice Codex session started under the shared app-server, while that session is in use.
+    func emulator(activeAgo: TimeInterval) -> SlowdownDiagnosis {
+        var ps = idleMCP()
+        for i in ps.indices where ps[i].ppid == 39971 { ps[i].cwd = "\(home)/github.com/camera-use" }
+        ps.append(.init(pid: 61574, ppid: 39971, name: "qemu-system-aarch64-headless", executable: "/opt/android/emulator/qemu-system-aarch64-headless",
+                        argv: ["qemu-system-aarch64-headless", "-avd", "DiceRivals_Play_Timing"], cwd: "\(home)/tk.com/dice",
+                        cpu: 92, cpuLifetime: 85, busyFor: 3600, footprintKB: 6 * gb, elapsed: 3700, started: Date(timeIntervalSinceNow: -3700)))
+        let now = Date()
+        return SlowdownDiagnosis.diagnose(ps, system: system(), me: 1, sampled: now, launchdLabel: { _ in nil }, packageVersion: { _ in nil },
+                                          lastActivity: { $0.hasSuffix("/tk.com/dice") ? now.addingTimeInterval(-activeAgo) : $0.hasSuffix("/camera-use") ? now.addingTimeInterval(-60) : nil })
+    }
+
+    func testAppServerChildIsAttributedToItsOwnProjectAndActiveOnesHaveNoEndButton() {
+        let d = emulator(activeAgo: 180)
+        guard let qemu = (d.culprits + d.also).first(where: { $0.pids.first == 61574 }) else { return XCTFail("emulator not listed") }
+        XCTAssertTrue(qemu.launcher?.contains("~/tk.com/dice") == true, qemu.launcher ?? "")
+        XCTAssertFalse(qemu.launcher?.contains("camera-use") == true, "not the app-server's own folder")
+        XCTAssertEqual(qemu.action, .review)
+        XCTAssertNil(qemu.command)
+        XCTAssertTrue(qemu.guidance.contains("~/tk.com/dice") && qemu.guidance.contains("in use"), qemu.guidance)
+    }
+
+    func testIdleProjectEmulatorCanBeEnded() {
+        let d = emulator(activeAgo: 5 * 3600)
+        let qemu = (d.culprits + d.also).first { $0.pids.first == 61574 }
+        XCTAssertEqual(qemu?.action, .end)
+        XCTAssertEqual(qemu?.command, "thermo pulse end 61574")
+    }
+
+    func testSharedAppServerGuidanceNamesTheProjectsItInterrupts() {
+        var ps = idleMCP()
+        for (n, i) in ps.indices.filter({ ps[$0].ppid == 39971 }).enumerated() { ps[i].cwd = n < 9 ? "\(home)/github.com/camera-use" : "\(home)/tk.com/dice" }
+        for i in 0..<30 {
+            ps.append(.init(pid: Int32(8000 + i), ppid: 39971, name: "node_repl", executable: "/opt/tools/node_repl", argv: ["node_repl"], cwd: "\(home)/old", footprintKB: 10 * mb))
+        }
+        let now = Date()
+        let d = SlowdownDiagnosis.diagnose(ps, system: system(), me: 1, sampled: now, launchdLabel: { _ in nil }, packageVersion: { _ in nil },
+                                           lastActivity: { $0.hasSuffix("/dice") ? now : nil })
+        let leak = d.culprits.first { $0.kind == .leakyParent }
+        XCTAssertTrue(leak?.guidance.contains("3 projects") == true, leak?.guidance ?? "")
+        XCTAssertTrue(leak?.guidance.contains("~/tk.com/dice") == true, leak?.guidance ?? "")
+        XCTAssertTrue(leak?.guidance.contains("PID 39123") == true)
+    }
+
+    func testSessionActivityReadsLongRunningCodexAndClaudeTranscripts() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("activity-" + UUID().uuidString).path
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        // Started five days ago, still written now; its first line embeds long instructions.
+        let day = home + "/.codex/sessions/2026/10/22"
+        try FileManager.default.createDirectory(atPath: day, withIntermediateDirectories: true)
+        let meta = "{\"type\":\"session_meta\",\"payload\":{\"id\":\"x\",\"cwd\":\"/Users/u/tk.com/dice\",\"base_instructions\":{\"text\":\"" + String(repeating: "a", count: 40_000) + "\"}}}\n"
+        FileManager.default.createFile(atPath: day + "/rollout.jsonl", contents: Data(meta.utf8))
+        let claude = home + "/.claude/projects/-Users-u-github-com-camera-use"
+        try FileManager.default.createDirectory(atPath: claude, withIntermediateDirectories: true)
+        FileManager.default.createFile(atPath: claude + "/s.jsonl", contents: Data("{}\n".utf8))
+        let activity = SessionActivity(home: home)
+        XCTAssertNotNil(activity.last(cwd: "/Users/u/tk.com/dice"))
+        XCTAssertNotNil(activity.last(cwd: "/Users/u/github.com/camera-use"))
+        XCTAssertNil(activity.last(cwd: "/Users/u/elsewhere"))
     }
 }

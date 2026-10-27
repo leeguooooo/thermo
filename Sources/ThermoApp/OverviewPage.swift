@@ -13,6 +13,7 @@ struct OverviewPage: View {
     let open: (MainPage) -> Void
     @ObservedObject private var pulse = SystemPulse.shared
     @ObservedObject private var events = TimelineEvents.shared
+    @ObservedObject private var recorder = PulseRecorder.shared
     @AppStorage(Settings.fahrenheit) private var fahrenheit = false
     @Environment(\.windowSamplingActive) private var visible
 
@@ -20,7 +21,8 @@ struct OverviewPage: View {
         WindowPage(title: tr("Overview"), subtitle: monitor.model) {
             VStack(alignment: .leading, spacing: Theme.Space.m) {
                 hero(now: monitor.snapshot?.timestamp ?? Date())
-                headline
+                // One answer: when the diagnosis names culprits, its card replaces the older one-line verdict.
+                if recorder.diagnosis?.culprits.isEmpty ?? true { headline }
                 SlowdownCulpritsCard()
                 vitals
             }
