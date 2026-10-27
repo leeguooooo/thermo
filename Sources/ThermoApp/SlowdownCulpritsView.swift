@@ -19,13 +19,21 @@ struct SlowdownCulpritsCard: View {
 
     @ViewBuilder var content: some View {
         if let d = recorder.diagnosis, !d.culprits.isEmpty, d.memoryStrain != .none || d.cpuStrain != .none || d.isReal {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(d.headline).font(.callout.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
-                ForEach(d.culprits) { c in row(c) }
-                if let feedback { Text(feedback).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+            VStack(alignment: .leading, spacing: 0) {
+                header(d)
+                ForEach(Array(d.culprits.enumerated()), id: \.element.id) { i, c in
+                    InspectorDivider(inset: Theme.Space.l)
+                    row(c, rank: i + 1)
+                }
+                if let feedback {
+                    InspectorDivider(inset: Theme.Space.l)
+                    Label(feedback, systemImage: "checkmark.circle").font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.s)
+                }
             }
-            .padding(10)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.orange.opacity(0.08)))
+            .background(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).fill(Theme.caution.opacity(0.07)))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous).strokeBorder(Theme.caution.opacity(0.22)))
             .sheet(item: $confirming) { c in
                 ConfirmSheet(title: c.action == .quitApp ? tr("Quit %1$@?", c.name) : tr("End %1$@?", c.name),
                              summary: c.action == .quitApp ? tr("The app is asked to quit, the same as ⌘Q; it can save your work first.")
@@ -40,30 +48,73 @@ struct SlowdownCulpritsCard: View {
         }
     }
 
-    func row(_ c: SlowdownCulprit) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(c.name).font(.callout).lineLimit(1)
-                if c.freesKB >= 64 * 1024 {
-                    Text(tr("frees ~%1$@", MemoryFormat.string(kibibytes: c.freesKB))).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 4)
-                if c.action == .end || c.action == .quitApp {
-                    Button(working.contains(c.id) ? tr("Stopping…") : c.action == .quitApp ? tr("Quit") : tr("End")) { confirming = c }
-                        .controlSize(.small).modifier(ActionButtonStyle(prominent: c.action == .end))
-                        .disabled(working.contains(c.id))
-                } else if let command = c.command {
-                    Button(tr("Copy command")) {
-                        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(command, forType: .string)
-                    }.controlSize(.small).modifier(ActionButtonStyle(prominent: false))
+    /// The headline's first sentence is the state ("memory is tight (swap …)"); the culprit names
+    /// that follow it are already the rows below, so only the state and the total are shown here.
+    func header(_ d: SlowdownDiagnosis) -> some View {
+        // Sentence ends only: "。" or ". " — a bare "." is the decimal point in "16.7 GB".
+        let state = d.headline.components(separatedBy: "。").first.flatMap { $0.components(separatedBy: ". ").first } ?? d.headline
+        let total = d.culprits.reduce(0) { $0 + $1.freesKB }
+        return HStack(alignment: .top, spacing: Theme.Space.m) {
+            ZStack {
+                Circle().fill(Theme.caution.opacity(0.16))
+                Image(systemName: "exclamationmark").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.caution)
+            }
+            .frame(width: 28, height: 28).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                Text(state).font(Theme.heading).foregroundStyle(Theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                if total >= 64 * 1024 {
+                    Text(tr("Handling the %1$@ items below frees about %2$@.", String(d.culprits.count), MemoryFormat.string(kibibytes: total)))
+                        .font(Theme.secondary).foregroundStyle(Theme.textSecondary)
                 }
             }
-            if let l = c.launcher { Text(l).font(.caption2).foregroundStyle(.secondary).lineLimit(1) }
-            Text(c.evidence).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Text(c.guidance).font(.caption).fixedSize(horizontal: false, vertical: true)
-            if let sessions = c.sessions, !sessions.isEmpty {
-                Text(sessions.prefix(8).joined(separator: "\n")).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
+    }
+
+    func row(_ c: SlowdownCulprit, rank: Int) -> some View {
+        HStack(alignment: .top, spacing: Theme.Space.m) {
+            Text("\(rank)").font(Theme.label.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                .frame(width: 28, alignment: .center).padding(.top, 1)
+            VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+                    Text(c.name).font(Theme.body.weight(.semibold)).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                    if c.freesKB >= 64 * 1024 {
+                        Text(tr("frees ~%1$@", MemoryFormat.string(kibibytes: c.freesKB)))
+                            .font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.caution)
+                    }
+                    Spacer(minLength: Theme.Space.s)
+                    action(c)
+                }
+                Text(c.guidance).font(Theme.secondary).foregroundStyle(Theme.textSecondary)
+                    .lineLimit(3).fixedSize(horizontal: false, vertical: true)
+                DisclosureGroup {
+                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        if let l = c.launcher { Text(l).font(Theme.caption).foregroundStyle(Theme.textTertiary) }
+                        Text(c.evidence).font(Theme.caption).foregroundStyle(Theme.textTertiary).fixedSize(horizontal: false, vertical: true)
+                        if let sessions = c.sessions, !sessions.isEmpty {
+                            Text(sessions.prefix(8).joined(separator: "\n")).font(Theme.caption.monospacedDigit()).foregroundStyle(Theme.textTertiary)
+                                .textSelection(.enabled)
+                        }
+                    }
+                    .padding(.top, Theme.Space.xs)
+                } label: {
+                    Text(tr("Details")).font(Theme.caption).foregroundStyle(Theme.textTertiary)
+                }
             }
+        }
+        .padding(.horizontal, Theme.Space.l).padding(.vertical, Theme.Space.m)
+    }
+
+    @ViewBuilder func action(_ c: SlowdownCulprit) -> some View {
+        if c.action == .end || c.action == .quitApp {
+            Button(working.contains(c.id) ? tr("Stopping…") : c.action == .quitApp ? tr("Quit") : tr("End")) { confirming = c }
+                .controlSize(.small).modifier(ActionButtonStyle(prominent: c.action == .end))
+                .disabled(working.contains(c.id))
+        } else if let command = c.command {
+            Button(tr("Copy command")) {
+                NSPasteboard.general.clearContents(); NSPasteboard.general.setString(command, forType: .string)
+            }.controlSize(.small).modifier(ActionButtonStyle(prominent: false))
         }
     }
 

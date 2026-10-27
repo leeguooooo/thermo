@@ -87,7 +87,11 @@ final class PulseRecorder: ObservableObject {
 
     /// Runs on `queue`.
     @discardableResult private func diagnose() -> SlowdownDiagnosis {
-        let found = SlowdownDiagnosis.diagnose(slowdown.sample(), system: .read())
+        // Snapshots of the Overview card need a diagnosis with culprits even on a calm Mac.
+        let fixture = ProcessInfo.processInfo.environment["THERMO_DIAGNOSIS_FIXTURE"]
+            .flatMap { FileManager.default.contents(atPath: $0) }
+            .flatMap { try? JSONDecoder().decode(SlowdownDiagnosis.self, from: $0) }
+        let found = fixture ?? SlowdownDiagnosis.diagnose(slowdown.sample(), system: .read())
         DispatchQueue.main.async { self.diagnosis = found }
         return found
     }
