@@ -141,6 +141,8 @@ public struct SlowdownCulprit: Codable, Sendable, Equatable, Identifiable {
     /// For agent sessions: one line each.
     public var sessions: [String]?
     var score: Double
+    /// The row name the pulse list uses for it ("codegraph", "Douyin AR"), for highlighting.
+    public var program: String? = nil
 }
 
 public struct SlowdownDiagnosis: Codable, Sendable {
@@ -251,7 +253,7 @@ public struct SlowdownDiagnosis: Codable, Sendable {
 
         for p in mine where !claimed.contains(p.pid) && !isAgentSession(p) && !isAppServer(p) {
             let isGUI = p.app != nil && p.executable?.contains(".app/Contents/MacOS/") == true
-            let (launchedBy, _) = launcher(p)
+            let (launchedBy, root) = launcher(p)
             let tree = isGUI ? [] : descendants(p.pid)
             let treeKB = p.footprintKB + tree.reduce(0) { $0 + $1.footprintKB }
             let pids = [p.pid] + tree.map(\.pid)
@@ -275,7 +277,10 @@ public struct SlowdownDiagnosis: Codable, Sendable {
                     score: score(cpu: p.cpu, freesKB: treeKB, certain: orphan)))
                 claimed.insert(p.pid); continue
             }
-            if !isGUI, p.footprintKB >= 1_048_576, p.elapsed >= 6 * 3600, p.cpu < 5, (p.busyFor ?? 0) == 0 {
+            // Only tools an agent started (or that lost their parent): an idle dev server, database or VM
+            // a person started is big and quiet on purpose.
+            let agentTool = orphan || root.map { isAgentSession($0) || isAppServer($0) } == true
+            if !isGUI, agentTool, p.footprintKB >= 1_048_576, p.elapsed >= 6 * 3600, p.cpu < 5, (p.busyFor ?? 0) == 0 {
                 found.append(SlowdownCulprit(
                     kind: orphan ? .orphan : .stuck, action: .end, name: name, launcher: launchedBy, project: tilde(p.cwd),
                     pids: pids, identities: identity(p).map { [$0] }, app: nil, cpu: p.cpu, memoryKB: treeKB, freesKB: treeKB,
@@ -381,6 +386,11 @@ public struct SlowdownDiagnosis: Codable, Sendable {
             }
         }
 
+        for i in found.indices where found[i].kind != .agentSessions {
+            guard let p = found[i].pids.first.flatMap({ byPID[$0] }) else { continue }
+            found[i].program = p.app.map { (($0 as NSString).lastPathComponent as NSString).deletingPathExtension }
+                ?? MachinePulse.programName(ProcessDetails(executable: p.executable, argv: p.argv, cwd: p.cwd), fallback: p.name)
+        }
         let ranked = found.sorted { $0.score == $1.score ? $0.memoryKB > $1.memoryKB : $0.score > $1.score }
         // A culprit must matter: the top three that would make a difference.
         let main = Array(ranked.filter { $0.score >= 1 || $0.kind == .runaway || $0.kind == .orphan || $0.kind == .stuck }.prefix(3))

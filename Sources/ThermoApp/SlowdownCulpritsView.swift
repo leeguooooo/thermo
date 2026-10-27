@@ -13,6 +13,10 @@ struct SlowdownCulpritsCard: View {
     @State private var feedback: String?
 
     var body: some View {
+        content.onAppear { if recorder.diagnosis == nil { recorder.diagnoseNow() } }
+    }
+
+    @ViewBuilder var content: some View {
         if let d = recorder.diagnosis, !d.culprits.isEmpty, d.memoryStrain != .none || d.cpuStrain != .none || d.isReal {
             VStack(alignment: .leading, spacing: 6) {
                 Text(d.headline).font(.callout.weight(.semibold)).fixedSize(horizontal: false, vertical: true)

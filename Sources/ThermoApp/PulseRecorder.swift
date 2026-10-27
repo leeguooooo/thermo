@@ -76,8 +76,10 @@ final class PulseRecorder: ObservableObject {
         }
 
         let enabled = UserDefaults.standard.object(forKey: Self.alertsKey) as? Bool ?? true
-        var fired = alerts.evaluate(memory.filter { now.timeIntervalSince($0.t) <= 15 * 60 }, latest: pulse, now: now)
         let found = diagnose()
+        var fired = alerts.evaluate(memory.filter { now.timeIntervalSince($0.t) <= 15 * 60 }, latest: pulse, now: now)
+        // One memory notification: the diagnosis names the culprit, the older rules only the biggest program.
+        if found.memoryStrain == .exhausted { fired.removeAll { $0.key == "swap" || $0.key == "memory" } }
         fired += alerts.evaluate(found, now: now)
         if enabled { for a in fired { notify(a) } }
         reschedule()

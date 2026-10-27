@@ -226,5 +226,22 @@ final class SlowdownDiagnosisTests: XCTestCase {
         let sys = SlowdownSystem(memoryBytes: 16 << 30, swapUsed: 0, swapTotal: 0, pressure: .normal, load1: 1, cores: 10)
         var alerts = SlowdownAlerts()
         XCTAssertTrue(alerts.evaluate(SlowdownDiagnosis.diagnose([], system: sys, me: 1)).isEmpty)
+        // A stuck agent tool is still listed, but with memory to spare it is not worth a notification.
+        let d = SlowdownDiagnosis.diagnose(incident().filter { $0.pid != 6217 }, system: sys, me: 99_999)
+        XCTAssertTrue(d.culprits.contains { $0.kind == .stuck })
+        XCTAssertFalse(alerts.evaluate(d).contains { $0.key.hasPrefix("stuck:") })
+    }
+
+    func testIdleServicesPeopleStartedAreNotStuck() {
+        // An idle VM inside an app bundle, and a dev database started from a terminal: big and quiet on purpose.
+        let vm = SlowdownProcess(pid: 800, ppid: 1, name: "qemu-system-aarch64", executable: "/Applications/OrbStack.app/Contents/Frameworks/OrbStack Helper.app/Contents/MacOS/qemu-system-aarch64",
+                                 cpu: 0.5, footprintKB: 6 * gb, elapsed: 40 * 3600)
+        let shell = SlowdownProcess(pid: 801, ppid: 2085, name: "zsh", executable: "/bin/zsh", elapsed: 90_000)
+        let postgres = SlowdownProcess(pid: 802, ppid: 801, name: "postgres", executable: "/opt/homebrew/bin/postgres",
+                                       cpu: 0.2, footprintKB: 2 * gb, elapsed: 30 * 3600)
+        let d = SlowdownDiagnosis.diagnose([vm, shell, postgres], system: incidentSystem, me: 1)
+        XCTAssertFalse((d.culprits + d.also).contains { $0.kind == .stuck || $0.kind == .orphan }, d.culprits.map(\.name).joined(separator: ","))
+        XCTAssertFalse(SlowdownFix.endable(vm, me: 1))
+        XCTAssertEqual(SlowdownDiagnosis.diagnose(incident(), system: incidentSystem, me: 99_999).culprits.first { $0.kind == .orphan }?.program, "codegraph")
     }
 }

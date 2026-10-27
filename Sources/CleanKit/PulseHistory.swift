@@ -267,11 +267,11 @@ public struct SlowdownAlerts: Sendable {
         for c in d.culprits {
             switch c.kind {
             case .runaway, .orphan where c.cpu >= SlowdownDiagnosis.busyCPU:
-                out.append(Alert(key: "runaway:\(c.name)", title: tr("%1$@ is stuck at high CPU", c.name), body: line(c), program: c.name))
-            case .stuck, .orphan where d.memoryStrain != .none:
-                out.append(Alert(key: "stuck:\(c.name)", title: tr("%1$@ looks stuck and holds memory", c.name), body: line(c), program: c.name))
+                out.append(Alert(key: "runaway:\(c.name)", title: tr("%1$@ is stuck at high CPU", c.name), body: line(c), program: c.program))
+            case .stuck where d.memoryStrain != .none, .orphan where d.memoryStrain != .none:
+                out.append(Alert(key: "stuck:\(c.name)", title: tr("%1$@ looks stuck and holds memory", c.name), body: line(c), program: c.program))
             case .leakyParent where d.memoryStrain != .none:
-                out.append(Alert(key: "leak:\(c.name)", title: tr("%1$@ keeps piling up helper processes", c.name), body: line(c), program: c.name))
+                out.append(Alert(key: "leak:\(c.name)", title: tr("%1$@ keeps piling up helper processes", c.name), body: line(c), program: c.program))
             default: break
             }
         }
