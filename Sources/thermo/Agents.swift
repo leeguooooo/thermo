@@ -38,6 +38,7 @@ struct AgentsCommand {
             }
             return
         case "": break
+        case "sessions": return try sessions(rest)
         case "context": return try context()
         case "inspect-all": return try inspectAll()
         case "compare":

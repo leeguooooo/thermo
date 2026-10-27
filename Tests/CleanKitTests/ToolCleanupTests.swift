@@ -48,9 +48,14 @@ final class CodeSignCloneTests: XCTestCase {
             FileManager.default.createFile(atPath: root + "/com.example.App.code_sign_clone/code_sign_clone.\(c)/App.app/bin", contents: Data(repeating: 1, count: 8192))
         }
         let ctx = ScanContext(options: ScanOptions(), now: Date(), processes: ProcessTable(entries: []), agentDirs: [], liveClaudeSessions: [])
-        let item = try XCTUnwrap(ToolCleanup.codeSignClones(ctx, root: root))
+        let item = try XCTUnwrap(ToolCleanup.codeSignClones(ctx, root: root, inUse: { _ in [] }))
         XCTAssertEqual(item.paths.count, 2, "the app is not running, so no clone is in use")
         XCTAssertEqual(item.id, "code-sign-clones")
+
+        // Running: keep the clone it has open even when it is not the newest (lsof decides, not mtime).
+        let group = root + "/com.example.App.code_sign_clone"
+        let kept = try XCTUnwrap(ToolCleanup.codeSignClones(ctx, root: root, inUse: { _ in [group + "/code_sign_clone.a"] }))
+        XCTAssertEqual(kept.paths, [group + "/code_sign_clone.b"])
 
         let x = (NSTemporaryDirectory() as NSString).deletingLastPathComponent + "/X"
         let g = Guard()
