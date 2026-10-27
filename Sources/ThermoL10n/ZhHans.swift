@@ -3907,6 +3907,7 @@ let zhHans: [String: String] = [
     "The process is asked to stop (SIGTERM); if it is still running after 5 seconds it is forced to quit (SIGKILL). Unsaved work in it may be lost.": "先请进程退出（SIGTERM），5 秒后仍在运行就强制结束（SIGKILL）。其中未保存的内容可能丢失。",
     "kill -KILL %1$@ if it does not stop": "不退出则 kill -KILL %1$@",
     "Copy command": "拷贝命令",
+    "Handling the %1$@ items below frees about %2$@.": "处理下面 %1$@ 项约释放 %2$@。",
     "Asked %1$@ to quit.": "已请求 %1$@ 退出。",
     "%1$@ did not accept the request to quit.": "%1$@ 没有接受退出请求。",
     "Swap used: %1$@ → %2$@.": "swap 已用：%1$@ → %2$@。",

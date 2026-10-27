@@ -244,4 +244,12 @@ final class SlowdownDiagnosisTests: XCTestCase {
         XCTAssertFalse(SlowdownFix.endable(vm, me: 1))
         XCTAssertEqual(SlowdownDiagnosis.diagnose(incident(), system: incidentSystem, me: 99_999).culprits.first { $0.kind == .orphan }?.program, "codegraph")
     }
+
+    /// Writes the incident's diagnosis for `THERMO_DIAGNOSIS_FIXTURE` snapshots when asked to.
+    func testDumpIncidentFixture() throws {
+        guard let path = ProcessInfo.processInfo.environment["THERMO_DUMP_DIAGNOSIS"] else { return }
+        L10n.override = .simplifiedChinese
+        let d = SlowdownDiagnosis.diagnose(incident(), system: incidentSystem, me: 99_999)
+        try JSONEncoder().encode(d).write(to: URL(fileURLWithPath: path))
+    }
 }
