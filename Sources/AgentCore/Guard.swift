@@ -14,6 +14,8 @@ public struct Guard: Sendable {
     /// The per-user X folder where macOS keeps apps' code-sign clones; only
     /// `<X>/<bundle id>.code_sign_clone/<clone>` may go.
     let cloneRoots: [String]
+    /// `/tmp` and the per-user temporary folder: only a top-level folder the user owns may go.
+    let tempRoots: [String]
     let canonicalHome: String
     let canonicalProtected: [String]
     let canonicalSealed: [String]
@@ -25,6 +27,9 @@ public struct Guard: Sendable {
         let x = (NSTemporaryDirectory() as NSString).deletingLastPathComponent + "/X"
         let resolvedX = URL(fileURLWithPath: x).resolvingSymlinksInPath().path
         cloneRoots = Array(Set([x, resolvedX, resolvedX.hasPrefix("/private/") ? String(resolvedX.dropFirst("/private".count)) : resolvedX]))
+        let t = (NSTemporaryDirectory() as NSString).standardizingPath
+        let resolvedT = URL(fileURLWithPath: t).resolvingSymlinksInPath().path
+        tempRoots = Array(Set(["/private/tmp", "/tmp", t, resolvedT, resolvedT.hasPrefix("/private/") ? String(resolvedT.dropFirst("/private".count)) : resolvedT]))
         let rel = [
             "", "Library", "Library/Caches", "Library/Logs", "Library/Application Support", "Library/Containers",
             "Library/Group Containers", "Library/Keychains", "Library/Preferences", "Library/Mail", "Library/Messages",
@@ -71,6 +76,13 @@ public struct Guard: Sendable {
         if let root = scratchRoots.first(where: { p.hasPrefix($0 + "/") }) {
             // <root>/<project>/<session>[/…]
             return p.dropFirst(root.count + 1).split(separator: "/").count >= 2 ? nil : "agent scratch root"
+        }
+        if !p.hasPrefix(home + "/"), p != home, !home.hasPrefix(p + "/"), let root = tempRoots.first(where: { p.hasPrefix($0 + "/") }) {
+            let parts = p.dropFirst(root.count + 1).split(separator: "/")
+            var st = stat()
+            guard parts.count == 1, let name = parts.first, !name.hasPrefix("."), !name.hasPrefix("com.apple"), !name.hasPrefix("claude-") else { return "inside a temporary folder" }
+            guard lstat(p, &st) == 0 else { return "not found" }
+            return st.st_mode & S_IFMT == S_IFDIR && st.st_uid == getuid() ? nil : "not your folder"
         }
         guard p.hasPrefix(home + "/") else { return "outside your home folder" }
         for x in sealed where p == x || p.hasPrefix(x + "/") {

@@ -1,3 +1,4 @@
+import AgentCore
 import Foundation
 
 /// Space only a tool may give back itself (Homebrew's old versions, Go's read-only module cache),
@@ -243,7 +244,8 @@ enum ToolCleanup {
     /// almost nothing while those blocks remain shared. Allocated totals include sharing between
     /// the clones themselves and are not a prediction of how much a later update will consume.
     /// The newest clone of a running app is kept: that is the one it runs from.
-    static func codeSignClones(_ ctx: ScanContext, root: String = (NSTemporaryDirectory() as NSString).deletingLastPathComponent + "/X") -> CleanItem? {
+    static func codeSignClones(_ ctx: ScanContext, root: String = (NSTemporaryDirectory() as NSString).deletingLastPathComponent + "/X",
+                               inUse: (String) -> Set<String>? = openClones) -> CleanItem? {
         let running = Set(ctx.processes.entries.compactMap { e -> String? in
             guard let exe = e.executable, let r = exe.range(of: ".app/Contents/") else { return nil }
             return Bundle(path: String(exe[..<r.lowerBound]) + ".app")?.bundleIdentifier
@@ -258,7 +260,10 @@ enum ToolCleanup {
                 var st = stat()
                 return (path, lstat(path, &st) == 0 ? Date(timeIntervalSince1970: TimeInterval(st.st_mtimespec.tv_sec)) : .distantPast)
             }.sorted { $0.1 > $1.1 }
-            if running.contains(bundle) { clones = Array(clones.dropFirst()) }
+            // A running app maps its binary from a clone (lsof shows it as txt): keep exactly the ones open.
+            // Without that reading, keep a running app's newest as before.
+            if let open = inUse(group), !open.isEmpty { clones.removeAll { open.contains($0.0) } }
+            else if running.contains(bundle) { clones = Array(clones.dropFirst()) }
             guard !clones.isEmpty else { continue }
             for (clone, _) in clones {
                 guard ScanCancellation.current?.isCancelled != true else { return nil }
@@ -271,6 +276,22 @@ enum ToolCleanup {
         return CleanItem(id: "code-sign-clones", category: .system, title: tr("Leftover app code-sign clones"),
                          detail: trCount(paths.count, "%1$@ clone", "%1$@ clones") + " · " + apps.sorted().joined(separator: ", "),
                          safety: .safe, bytes: size.bytes, files: size.files, lastUsed: size.newest, paths: paths,
-                         note: tr("Code-sign copies share APFS blocks. Their allocated size is %1$@; the cleanup estimate counts private blocks. Neither predicts the free-space change exactly.", ByteFormat.string(size.bytes + shared)))
+                         note: tr("The clone the running app uses is kept.") + " " + tr("Code-sign copies share APFS blocks. Their allocated size is %1$@; the cleanup estimate counts private blocks. Neither predicts the free-space change exactly.", ByteFormat.string(size.bytes + shared)))
+    }
+
+    /// Clone folders (`…/code_sign_clone.XXXX`) some process has open or mapped, from lsof; nil when lsof fails.
+    static func openClones(_ group: String) -> Set<String>? {
+        let r = CommandRunner.run("/usr/sbin/lsof", arguments: ["-Fn", "+D", group], timeout: 10, captureError: false)
+        guard !r.timedOut, r.status == 0 || !r.output.isEmpty else { return nil }
+        var out = Set<String>()
+        for line in r.output.split(separator: "\n") where line.hasPrefix("n") {
+            var path = String(line.dropFirst())
+            if path.hasPrefix("/private/var/") { path = String(path.dropFirst("/private".count)) }
+            for g in [group, "/private" + group] where path.hasPrefix(g + "/") {
+                let rest = path.dropFirst(g.count + 1)
+                if let clone = rest.split(separator: "/").first { out.insert(group + "/" + clone) }
+            }
+        }
+        return out
     }
 }
