@@ -26,7 +26,7 @@ extension PulseCommand {
 
     private func printCulprit(_ c: SlowdownCulprit, index: Int) {
         let style = app.style
-        let effect = c.freesKB > 0 ? tr("frees ~%1$@", MemoryFormat.string(kibibytes: c.freesKB)) : ""
+        let effect = c.freesKB >= 64 * 1024 ? tr("frees ~%1$@", MemoryFormat.string(kibibytes: c.freesKB)) : ""
         let cpu = c.cpu >= 5 ? String(format: " · %.0f%% CPU", c.cpu) : ""
         print("")
         print(style.bold("\(index). \(c.name)") + style.dim("  " + [effect, cpu.trimmingCharacters(in: .whitespaces).trimmingCharacters(in: CharacterSet(charactersIn: "· "))].filter { !$0.isEmpty }.joined(separator: " · ")))

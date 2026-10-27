@@ -250,6 +250,36 @@ public struct SlowdownAlerts: Sendable {
         return fresh
     }
 
+    /// From a slowdown diagnosis: memory actually exhausted (swap nearly out of room, not just big
+    /// and no longer growing), a runaway or orphaned process, or a stuck one holding memory while
+    /// memory is tight. Same once-an-hour rule per reason; the body names the culprit and the fix.
+    public mutating func evaluate(_ d: SlowdownDiagnosis, now: Date = Date()) -> [Alert] {
+        var out: [Alert] = []
+        let top = d.culprits.first
+        func line(_ c: SlowdownCulprit) -> String {
+            let frees = c.freesKB > 0 ? " " + tr("Frees about %1$@.", MemoryFormat.string(kibibytes: c.freesKB)) : ""
+            return c.evidence + frees
+        }
+        if d.memoryStrain == .exhausted {
+            out.append(Alert(key: "swap-exhausted", title: tr("Your Mac has run out of memory"),
+                             body: top.map(line) ?? d.headline, program: top?.name))
+        }
+        for c in d.culprits {
+            switch c.kind {
+            case .runaway, .orphan where c.cpu >= SlowdownDiagnosis.busyCPU:
+                out.append(Alert(key: "runaway:\(c.name)", title: tr("%1$@ is stuck at high CPU", c.name), body: line(c), program: c.name))
+            case .stuck, .orphan where d.memoryStrain != .none:
+                out.append(Alert(key: "stuck:\(c.name)", title: tr("%1$@ looks stuck and holds memory", c.name), body: line(c), program: c.name))
+            case .leakyParent where d.memoryStrain != .none:
+                out.append(Alert(key: "leak:\(c.name)", title: tr("%1$@ keeps piling up helper processes", c.name), body: line(c), program: c.name))
+            default: break
+            }
+        }
+        let fresh = out.filter { a in lastFired[a.key].map { now.timeIntervalSince($0) >= (a.repeatAfter ?? limits.cooldown) } ?? true }
+        for a in fresh { lastFired[a.key] = now }
+        return fresh
+    }
+
     /// Low disk, early: by the time macOS warns, swap cannot grow and builds fail mid-write.
     func diskAlerts(_ recent: [PulseRecord], last: PulseRecord, now: Date) -> [Alert] {
         guard let free = last.diskFreeBytes else { return [] }

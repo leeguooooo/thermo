@@ -259,7 +259,7 @@ public struct SlowdownDiagnosis: Codable, Sendable {
             let orphan = p.ppid == 1 && p.app == nil
             let name = friendlyName(p)
             if !isGUI, p.cpu >= busyCPU, sustained {
-                let since = p.busyFor.map { MemorySuspects.duration($0) } ?? MemorySuspects.duration(p.elapsed)
+                let since = MemorySuspects.duration((p.busyFor ?? 0) >= busyFor ? p.busyFor! : p.elapsed)
                 var evidence = tr("%1$@ has used %2$@ of a core for %3$@.", name, String(format: "%.0f%%", p.cpu), since)
                 if orphan { evidence = MachinePulse.sentences(evidence, tr("Its parent has exited, so nothing is waiting for it.")) }
                 if let w = p.writeBytesPerSecond, w >= 5_000_000 {
@@ -303,7 +303,8 @@ public struct SlowdownDiagnosis: Codable, Sendable {
             let tree = ownTree(p.pid)
             let mcpServers = tree.filter(isMCP)
             // A session normally runs a handful of MCP servers; dozens means they were never reaped.
-            guard tree.count >= 40 || mcpServers.count >= 20 else { continue }
+            // Shells and builds under a session are its work, not a leak: only an app-server's sheer count counts.
+            guard mcpServers.count >= 20 || (isAppServer(p) && tree.count >= 40) else { continue }
             let total = p.footprintKB + tree.reduce(0) { $0 + $1.footprintKB }
             var tally: [String: Int] = [:]
             for c in tree { tally[friendlyName(c), default: 0] += 1 }
@@ -439,9 +440,11 @@ public final class SlowdownSampler {
                 return Double(w - ow) / (elapsed / 1e9)
             }
             let age = u.started.map { now.timeIntervalSince($0) } ?? 0
-            if cpu >= SlowdownDiagnosis.busyCPU {
-                if busySince[u.pid]?.started != u.started { busySince[u.pid] = (u.started, now.addingTimeInterval(-elapsed / 1e9)) }
-            } else { busySince[u.pid] = nil }
+            // Starts at the busy threshold, ends only below half of it: a spinning process dips between samples.
+            let streak = busySince[u.pid].flatMap { $0.started == u.started ? $0 : nil }
+            if cpu >= SlowdownDiagnosis.busyCPU, streak == nil {
+                busySince[u.pid] = (u.started, now.addingTimeInterval(-elapsed / 1e9))
+            } else if streak == nil || cpu < SlowdownDiagnosis.busyCPU / 2 { busySince[u.pid] = nil }
             // Details only for this user's processes; others give nothing useful anyway.
             let details = u.uid == me ? ProcessTable.details(u.pid) : ProcessDetails(executable: ProcessTable.pidPath(u.pid))
             out.append(SlowdownProcess(pid: u.pid, ppid: u.ppid, uid: u.uid, name: u.name, executable: details.executable,

@@ -23,9 +23,13 @@ final class PulseRecorder: ObservableObject {
     @Published private(set) var recent: [PulseRecord] = []
     /// A program to point at in the Overview after a notification was clicked.
     @Published var highlighted: String?
+    /// The latest "why is it slow" answer, refreshed every tick (and on request).
+    @Published private(set) var diagnosis: SlowdownDiagnosis?
 
     private let queue = DispatchQueue(label: "dev.thermo.app.pulse-history", qos: .utility)
     private let sampler = PulseSampler()
+    /// Confined to `queue`; its previous pass turns CPU and disk counters into rates and busy streaks.
+    private let slowdown = SlowdownSampler()
     private var alerts = SlowdownAlerts()
     private var timer: DispatchSourceTimer?
     private var interval: TimeInterval = 0
@@ -72,10 +76,22 @@ final class PulseRecorder: ObservableObject {
         }
 
         let enabled = UserDefaults.standard.object(forKey: Self.alertsKey) as? Bool ?? true
-        let fired = alerts.evaluate(memory.filter { now.timeIntervalSince($0.t) <= 15 * 60 }, latest: pulse, now: now)
+        var fired = alerts.evaluate(memory.filter { now.timeIntervalSince($0.t) <= 15 * 60 }, latest: pulse, now: now)
+        let found = diagnose()
+        fired += alerts.evaluate(found, now: now)
         if enabled { for a in fired { notify(a) } }
         reschedule()
     }
+
+    /// Runs on `queue`.
+    @discardableResult private func diagnose() -> SlowdownDiagnosis {
+        let found = SlowdownDiagnosis.diagnose(slowdown.sample(), system: .read())
+        DispatchQueue.main.async { self.diagnosis = found }
+        return found
+    }
+
+    /// A fresh answer now, e.g. after ending a culprit.
+    func diagnoseNow() { queue.async { self.diagnose() } }
 
     private func notify(_ a: SlowdownAlerts.Alert) {
         // UserNotifications throws outside an app bundle (bare dev builds).

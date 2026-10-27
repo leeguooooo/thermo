@@ -1,5 +1,6 @@
 @testable import CleanKit
 import AgentCore
+import ThermoL10n
 import XCTest
 
 /// Replays the 2026-10-27 incident behind issues #10 and #11 (16 GB Mac, swap 16.7 of 17.4 GB,
@@ -9,6 +10,9 @@ final class SlowdownDiagnosisTests: XCTestCase {
     let gb = 1_048_576
     let mb = 1024
     let home = NSHomeDirectory()
+
+    override func setUp() { L10n.override = .english }
+    override func tearDown() { L10n.override = nil }
 
     var incidentSystem: SlowdownSystem {
         SlowdownSystem(memoryBytes: 16 << 30, swapUsed: UInt64(16.7 * Double(1 << 30)), swapTotal: UInt64(17.4 * Double(1 << 30)),
@@ -201,5 +205,26 @@ final class SlowdownDiagnosisTests: XCTestCase {
         XCTAssertEqual(SlowdownSystem(memoryBytes: 16 << 30, swapUsed: 9 << 30, swapTotal: 20 << 30, pressure: .normal, load1: 1, cores: 10).memoryStrain, .tight)
         XCTAssertEqual(SlowdownSystem(memoryBytes: 16 << 30, swapUsed: 2 << 30, swapTotal: 3 << 30, pressure: .normal, load1: 1, cores: 10).memoryStrain, .none)
         XCTAssertEqual(incidentSystem.cpuStrain, .exhausted, "load 30 on 10 cores")
+    }
+
+    func testIncidentNotifiesOncePerReason() {
+        let d = SlowdownDiagnosis.diagnose(incident(), system: incidentSystem, me: 99_999)
+        var alerts = SlowdownAlerts()
+        let now = Date()
+        let first = alerts.evaluate(d, now: now)
+        let keys = Set(first.map(\.key))
+        XCTAssertTrue(keys.contains("swap-exhausted"), "swap nearly full alerts even when it is no longer growing")
+        XCTAssertTrue(keys.contains("runaway:codegraph MCP server"))
+        XCTAssertTrue(keys.contains { $0.hasPrefix("stuck:") })
+        XCTAssertTrue(keys.contains("leak:codex app-server"))
+        XCTAssertTrue(first.first { $0.key == "swap-exhausted" }?.body.contains("Frees about") == true)
+        XCTAssertTrue(alerts.evaluate(d, now: now.addingTimeInterval(600)).isEmpty, "throttled")
+        XCTAssertEqual(alerts.evaluate(d, now: now.addingTimeInterval(3700)).count, first.count)
+    }
+
+    func testQuietMacDoesNotNotify() {
+        let sys = SlowdownSystem(memoryBytes: 16 << 30, swapUsed: 0, swapTotal: 0, pressure: .normal, load1: 1, cores: 10)
+        var alerts = SlowdownAlerts()
+        XCTAssertTrue(alerts.evaluate(SlowdownDiagnosis.diagnose([], system: sys, me: 1)).isEmpty)
     }
 }
