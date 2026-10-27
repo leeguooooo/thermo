@@ -309,6 +309,7 @@ struct PulseCard: View {
                     .fixedSize(horizontal: false, vertical: true).padding(.leading, indent)
             }
             }
+            SlowdownCulpritsCard().padding(.leading, indent)
             if plain { table } else {
             ForEach(pulse.hogs) { h in
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
