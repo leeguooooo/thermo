@@ -11,8 +11,8 @@ final class SlowdownDiagnosisTests: XCTestCase {
     let mb = 1024
     let home = NSHomeDirectory()
 
-    override func setUp() { L10n.override = .english }
-    override func tearDown() { L10n.override = nil }
+    override func setUp() { L10n.override = .english; SessionActivity.current = SessionActivity(home: "/nonexistent-thermo-test") }
+    override func tearDown() { L10n.override = nil; SessionActivity.current = SessionActivity() }
 
     var incidentSystem: SlowdownSystem {
         SlowdownSystem(memoryBytes: 16 << 30, swapUsed: UInt64(16.7 * Double(1 << 30)), swapTotal: UInt64(17.4 * Double(1 << 30)),

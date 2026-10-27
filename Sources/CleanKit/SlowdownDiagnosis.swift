@@ -236,7 +236,7 @@ public struct SlowdownDiagnosis: Codable, Sendable {
                                 uid: uid_t = getuid(), sampled: Date = Date(),
                                 launchdLabel: (String) -> String? = LaunchAgentLabels.label(forExecutable:),
                                 packageVersion: (SlowdownProcess) -> PackageVersion? = PackageVersion.installed,
-                                lastActivity: (String) -> Date? = SessionActivity.current.last(cwd:)) -> SlowdownDiagnosis {
+                                lastActivity: (String) -> Date? = { SessionActivity.current.last(cwd: $0) }) -> SlowdownDiagnosis {
         let byPID = Dictionary(processes.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
         var children: [Int32: [SlowdownProcess]] = [:]
         for p in processes where p.pid != p.ppid { children[p.ppid, default: []].append(p) }
@@ -253,7 +253,11 @@ public struct SlowdownDiagnosis: Codable, Sendable {
             if p.ppid == 1 { return (tr("parent exited (adopted by launchd)"), nil) }
             var current = byPID[p.ppid], hops = 0
             while let c = current, hops < 32 {
-                if isAgentSession(c) || isAppServer(c) {
+                // An app-server serves every project's sessions: the child's own folder says which one it works for.
+                if isAppServer(c) {
+                    return ("\(friendlyName(c)) · PID \(c.pid)" + (tilde(p.cwd).map { " · " + $0 } ?? ""), c)
+                }
+                if isAgentSession(c) {
                     return ("\(friendlyName(c)) · PID \(c.pid)" + (tilde(c.cwd).map { " · " + $0 } ?? ""), c)
                 }
                 if let app = c.app { return (((app as NSString).lastPathComponent as NSString).deletingPathExtension, c) }
@@ -444,9 +448,16 @@ public struct SlowdownDiagnosis: Codable, Sendable {
             let app = p.app
             let appName = app.map { ((($0 as NSString).lastPathComponent) as NSString).deletingPathExtension }
             let session = root.map { "\(friendlyName($0)) (PID \($0.pid)" + (tilde($0.cwd).map { ", " + $0 } ?? "") + ")" }
-            let guidance: String
+            var guidance: String
             if let appName {
                 guidance = tr("Restart %1$@: tasks running in it are interrupted; conversations are kept and reopen. Its %2$@ leftover helpers go away with it.", appName, String(tree.count))
+            } else if let session, isAppServer(p) {
+                // The app-server is shared: name every project it serves and which of them are in use now.
+                let projects = Set(tree.compactMap(\.cwd)).filter { !$0.contains("/.codex/") }.sorted()
+                let active = projects.filter { lastActivity($0).map { sampled.timeIntervalSince($0) < 2 * 3600 } ?? false }.compactMap(tilde)
+                guidance = tr("It was started by %1$@ and is shared by the Codex sessions of %2$@ projects; quitting that codex and starting it again restarts it, interrupting their current tasks (conversations can be resumed). Its %3$@ leftover helpers go away with it.",
+                              session, String(projects.count), String(tree.count))
+                if !active.isEmpty { guidance = MachinePulse.sentences(guidance, tr("In use right now: %1$@ — best done when you finish there.", active.prefix(4).joined(separator: ", "))) }
             } else if let session {
                 guidance = tr("Quit the %1$@ session and start it again: its current task is interrupted, the conversation can be resumed. Its %2$@ leftover helpers go away with it.", session, String(tree.count))
             } else {
@@ -510,6 +521,15 @@ public struct SlowdownDiagnosis: Codable, Sendable {
             }
         }
 
+        // A tool an agent session is using right now is that session's business: no one-click end.
+        for i in found.indices where found[i].action == .end && [.runaway, .stuck].contains(found[i].kind) {
+            guard let p = found[i].pids.first.flatMap({ byPID[$0] }), p.ppid != 1, let dir = p.cwd,
+                  let last = lastActivity(dir), sampled.timeIntervalSince(last) < 2 * 3600 else { continue }
+            found[i].action = .review
+            found[i].command = nil
+            found[i].guidance = tr("It belongs to the %1$@ session that is in use right now (active %2$@ ago); close it there when you are done.",
+                                   tilde(dir) ?? dir, MemorySuspects.duration(sampled.timeIntervalSince(last)))
+        }
         for i in found.indices where found[i].covered == nil && [.runaway, .orphan, .stuck, .heavyApp].contains(found[i].kind) {
             found[i].covered = found[i].pids
         }
@@ -655,7 +675,8 @@ public final class SlowdownSampler {
 /// ~/.claude/projects/<cwd with / and . as ->/*.jsonl and Codex's ~/.codex/sessions (cwd from session_meta).
 /// Read once per process for the last three days; a transcript nobody writes means nobody is using that session.
 public final class SessionActivity: @unchecked Sendable {
-    public static let current = SessionActivity()
+    /// Replaceable so tests never read the machine's real transcripts.
+    nonisolated(unsafe) public static var current = SessionActivity()
     private let lock = NSLock()
     private var loaded: (at: Date, byCwd: [String: Date])?
     let home: String
@@ -681,21 +702,18 @@ public final class SessionActivity: @unchecked Sendable {
             }
         }
         for (dir, date) in claudeLatest { out["claude:" + dir] = date }
+        // A long session keeps writing the file of the day it started, so look at every file's time, not recent folders.
         let codex = home + "/.codex/sessions"
-        let cal = Calendar(identifier: .gregorian)
-        for back in 0..<3 {
-            guard let day = cal.date(byAdding: .day, value: -back, to: now) else { continue }
-            let c = cal.dateComponents([.year, .month, .day], from: day)
-            let folder = String(format: "%@/%04d/%02d/%02d", codex, c.year ?? 0, c.month ?? 0, c.day ?? 0)
-            for f in (try? fm.contentsOfDirectory(atPath: folder)) ?? [] where f.hasSuffix(".jsonl") {
-                let path = folder + "/" + f
-                guard let m = FS.mtime(path), let h = FileHandle(forReadingAtPath: path) else { continue }
-                let head = h.readData(ofLength: 16_384); try? h.close()
-                guard let line = head.split(separator: 0x0A).first,
-                      let json = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any],
-                      let cwd = (json["payload"] as? [String: Any])?["cwd"] as? String else { continue }
-                note(cwd, m)
-            }
+        let since = now.addingTimeInterval(-3 * 86400)
+        let walker = fm.enumerator(at: URL(fileURLWithPath: codex), includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles])
+        while let url = walker?.nextObject() as? URL {
+            guard url.pathExtension == "jsonl",
+                  let m = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate, m >= since,
+                  let h = try? FileHandle(forReadingFrom: url) else { continue }
+            // session_meta can be far longer than what is read (it embeds the instructions): find "cwd" in the head.
+            let head = String(decoding: h.readData(ofLength: 8192), as: UTF8.self); try? h.close()
+            guard let key = head.range(of: "\"cwd\":\""), let end = head[key.upperBound...].firstIndex(of: "\"") else { continue }
+            note(String(head[key.upperBound..<end]).replacingOccurrences(of: "\\/", with: "/"), m)
         }
         return out
     }
@@ -847,7 +865,7 @@ public struct AgentSessionGroup: Codable, Sendable, Equatable {
     public var mcpMemoryKB: Int { servers.reduce(0) { $0 + $1.memoryKB } }
 
     public static func group(_ processes: [SlowdownProcess], now: Date = Date(),
-                             lastActivity: (String) -> Date? = SessionActivity.current.last(cwd:)) -> [AgentSessionGroup] {
+                             lastActivity: (String) -> Date? = { SessionActivity.current.last(cwd: $0) }) -> [AgentSessionGroup] {
         typealias D = SlowdownDiagnosis
         let byPID = Dictionary(processes.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
         func servers(_ list: [SlowdownProcess]) -> [Server] {
