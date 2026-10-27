@@ -30,7 +30,7 @@ struct SlowdownCulpritsCard: View {
                              summary: c.action == .quitApp ? tr("The app is asked to quit, the same as ⌘Q; it can save your work first.")
                                 : tr("The process is asked to stop (SIGTERM); if it is still running after 5 seconds it is forced to quit (SIGKILL). Unsaved work in it may be lost."),
                              destructive: c.action == .end, heading: tr("What will run"),
-                             lines: c.action == .quitApp ? [tr("quit %1$@", c.app ?? c.name)] : ["kill -TERM \(c.pids[0])", tr("kill -KILL %1$@ if it does not stop", String(c.pids[0]))],
+                             lines: c.action == .quitApp ? [tr("quit %1$@", c.app ?? c.name)] : (c.identities ?? []).flatMap { ["kill -TERM \($0.pid)", tr("kill -KILL %1$@ if it does not stop", String($0.pid))] },
                              detailLines: [c.evidence] + (c.launcher.map { [tr("started by %1$@", $0)] } ?? []),
                              footnote: tr("Thermo never stops system processes, AI agent sessions or itself."),
                              confirmTitle: c.action == .quitApp ? tr("Quit") : tr("End"),
@@ -75,15 +75,20 @@ struct SlowdownCulpritsCard: View {
                 let asked = c.pids.compactMap { NSRunningApplication(processIdentifier: $0) }.first?.terminate() ?? false
                 text = asked ? tr("Asked %1$@ to quit.", c.name) : tr("%1$@ did not accept the request to quit.", c.name)
             } else {
-                let current = SlowdownSampler().sample(window: 0.5).first { $0.pid == c.pids[0] }
-                if let p = current, let identity = c.identities?.first {
-                    let r = SlowdownFix.end(p, identity: identity)
-                    text = r.summary
-                    if let before = r.swapBefore, let after = r.swapAfter {
-                        text = MachinePulse.sentences(text, tr("Swap used: %1$@ → %2$@.", ByteFormat.string(Int64(before)), ByteFormat.string(Int64(after))))
+                let live = Dictionary(SlowdownSampler().sample(window: 0.5).map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
+                // Every checked process the culprit names (idle MCP copies can be several), each rechecked.
+                let results = (c.identities ?? []).map { identity -> SlowdownFix.Result in
+                    guard let p = live[identity.pid] else {
+                        return SlowdownFix.Result(pid: identity.pid, name: c.name, outcome: .changed, freedKB: 0, swapBefore: nil, swapAfter: nil, loadBefore: 0, loadAfter: nil)
                     }
-                } else {
-                    text = tr("PID %1$@ is no longer the process that was checked; nothing was sent.", String(c.pids[0]))
+                    return SlowdownFix.end(p, identity: identity)
+                }
+                text = results.count == 1 ? results[0].summary : results.isEmpty
+                    ? tr("PID %1$@ is no longer the process that was checked; nothing was sent.", String(c.pids[0]))
+                    : tr("Ended %1$@ of %2$@ processes; about %3$@ freed.", String(results.filter { $0.outcome == .stopped || $0.outcome == .killed }.count),
+                         String(results.count), MemoryFormat.string(kibibytes: results.reduce(0) { $0 + $1.freedKB }))
+                if let before = results.first?.swapBefore, let after = results.last?.swapAfter {
+                    text = MachinePulse.sentences(text, tr("Swap used: %1$@ → %2$@.", ByteFormat.string(Int64(before)), ByteFormat.string(Int64(after))))
                 }
             }
             DispatchQueue.main.async {

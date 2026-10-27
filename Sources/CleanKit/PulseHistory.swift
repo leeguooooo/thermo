@@ -270,6 +270,10 @@ public struct SlowdownAlerts: Sendable {
                 out.append(Alert(key: "runaway:\(c.name)", title: tr("%1$@ is stuck at high CPU", c.name), body: line(c), program: c.program))
             case .stuck where d.memoryStrain != .none, .orphan where d.memoryStrain != .none:
                 out.append(Alert(key: "stuck:\(c.name)", title: tr("%1$@ looks stuck and holds memory", c.name), body: line(c), program: c.program))
+            case .respawnChurn where c.cpu >= 30:
+                out.append(Alert(key: "churn:\(c.name)", title: tr("%1$@ keeps restarting helper processes", c.name), body: line(c), program: c.program))
+            case .idleMCP where d.memoryStrain != .none:
+                out.append(Alert(key: "mcp:\(c.name)", title: tr("%1$@ is idle in %2$@ sessions", c.name, String(c.children ?? 0)), body: line(c), program: c.program))
             case .leakyParent where d.memoryStrain != .none:
                 out.append(Alert(key: "leak:\(c.name)", title: tr("%1$@ keeps piling up helper processes", c.name), body: line(c), program: c.program))
             default: break
