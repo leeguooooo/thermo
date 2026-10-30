@@ -34,6 +34,11 @@ final class AppModels {
     }
 }
 
+/// The pages under Claude tools in the sidebar.
+enum ClaudeTab: String, Hashable, CaseIterable {
+    case accounts, reset, privacy
+}
+
 /// Where the main window is.
 enum MainPage: Hashable {
     case overview, sensors, fans, settings
@@ -43,13 +48,13 @@ enum MainPage: Hashable {
     case apps(AppsTab)
     case space(SpaceTab)
     case memory
-    case claudeCleanup, privacyTools
+    case claude(ClaudeTab)
     case compute(Bool)
     case history
     case connections
 
     /// `--page` values: overview, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
-    /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates, memory, cpu, gpu, claude-cleanup, history, connections.
+    /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates, memory, cpu, gpu, claude, claude:<accounts|reset|privacy>, claude-cleanup, history, connections.
     init?(argument: String) {
         let parts = argument.split(separator: ":", maxSplits: 1).map(String.init)
         guard let command = parts.first else { return nil }
@@ -65,7 +70,8 @@ enum MainPage: Hashable {
         case "memory": self = .memory
         case "history": self = .history
         case "connections": self = .connections
-        case "claude-cleanup": self = parts.count > 1 && parts[1] == "privacy" ? .privacyTools : .claudeCleanup
+        case "claude": self = .claude(parts.count > 1 ? (ClaudeTab(rawValue: parts[1]) ?? .accounts) : .accounts)
+        case "claude-cleanup": self = .claude(parts.count > 1 && parts[1] == "privacy" ? .privacy : .reset)
         case "cpu": self = .compute(false)
         case "gpu": self = .compute(true)
         case "space": self = .space(parts.count > 1 ? (SpaceTab(rawValue: parts[1]) ?? .browse) : .browse)
@@ -82,6 +88,7 @@ enum MainPage: Hashable {
         }
     }
     var isAgents: Bool { if case .agents = self { return true } else { return false } }
+    var claudeTab: ClaudeTab? { if case let .claude(t) = self { return t } else { return nil } }
     var appsTab: AppsTab? { if case let .apps(t) = self { return t } else { return nil } }
     var spaceTab: SpaceTab? { if case let .space(t) = self { return t } else { return nil } }
 }
@@ -401,10 +408,10 @@ struct MainView: View {
             ComputePage(gpu: gpu).id(gpu).transition(.page)
         case .memory:
             MemoryPage(model: MemoryModel.shared, open: { page = $0 }).transition(.page)
-        case .claudeCleanup:
-            ClaudeCleanupPage(model: models.claudeCleanup).transition(.page)
-        case .privacyTools:
-            ClaudeCleanupPage(model: models.claudeCleanup, initialTab: 1).transition(.page)
+        case .claude(.accounts):
+            ClaudeAccountsPage(model: ClaudeAccountsModel.shared).transition(.page)
+        case let .claude(tab):
+            ClaudeCleanupPage(model: models.claudeCleanup, tab: tab).id(tab).transition(.page)
         case .connections:
             ConnectionsPage(model: ConnectionsModel.shared).transition(.page)
         case .history:
@@ -526,8 +533,13 @@ struct MainSidebar: View {
                         selected: page.appsTab != nil)
 
                     header(tr("AI Agent Diagnostics"))
-                    row(.claudeCleanup, tr("Claude cleanup"), "arrow.counterclockwise.circle", .orange, trailing: nil,
-                        selected: page == .claudeCleanup || page == .privacyTools)
+                    row(.claude(page.claudeTab ?? .accounts), tr("Claude tools"), "person.2", .orange, trailing: nil,
+                        selected: page.claudeTab != nil)
+                    if page.claudeTab != nil {
+                        row(.claude(.accounts), tr("Accounts"), "person.crop.circle", .orange, trailing: nil, indent: true)
+                        row(.claude(.reset), tr("Reset"), "arrow.counterclockwise.circle", .orange, trailing: nil, indent: true)
+                        row(.claude(.privacy), tr("Privacy & network"), "hand.raised", .orange, trailing: nil, indent: true)
+                    }
                     row(.agents(.home), tr("Smart Check"), "stethoscope", .purple, trailing: nil, badge: agents.report?.problemCount ?? 0)
                     if page.isAgents {
                         ForEach(Area.allCases, id: \.self) { a in

@@ -59,7 +59,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(page(tr("Tab organizer"), "rectangle.stack", .browser("Google Chrome")))
         menu.addItem(.separator())
 
-        menu.addItem(page(tr("Claude cleanup"), "arrow.counterclockwise.circle", .claudeCleanup))
+        menu.addItem(page(tr("Claude tools"), "person.2", .claude(.accounts)))
         menu.addItem(page(tr("Smart Check"), "stethoscope", .agents(.home)))
         menu.addItem(.separator())
 

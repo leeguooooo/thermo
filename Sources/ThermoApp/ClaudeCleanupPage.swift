@@ -217,7 +217,7 @@ extension ClaudeCleanupModel {
 
 struct ClaudeCleanupPage: View {
     @ObservedObject var model: ClaudeCleanupModel
-    @State private var tab = 0
+    let tab: ClaudeTab
     @State private var review: [ClaudeResetCandidate] = []
     @State private var confirming = false
     @State private var confirmation = ""
@@ -225,18 +225,12 @@ struct ClaudeCleanupPage: View {
     @State private var expanded: Set<ClaudeResetTarget> = []
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(model: ClaudeCleanupModel, initialTab: Int = 0) {
-        self.model = model
-        self._tab = State(initialValue: initialTab)
-    }
-
     var body: some View {
-        WindowPage(title: tr("Claude cleanup"), subtitle: tr("Review local Claude data, browser privacy and network settings.")) {
-            ThermoTabs(selection: $tab, options: [(0, tr("Claude reset")), (1, tr("Privacy & network"))], label: tr("Tools"))
-            if tab == 0 { resetContent.transition(.opacity) } else { PrivacyToolsView(model: model.privacy).transition(.opacity) }
+        WindowPage(title: tab == .privacy ? tr("Privacy & network") : tr("Claude reset"),
+                   subtitle: tr("Review local Claude data, browser privacy and network settings.")) {
+            if tab == .privacy { PrivacyToolsView(model: model.privacy) } else { resetContent }
         }
-        .animation(Theme.standard.unlessReduced(reduceMotion), value: tab)
-        .safeAreaInset(edge: .bottom, spacing: 0) { if tab == 0 { actionBar } }
+        .safeAreaInset(edge: .bottom, spacing: 0) { if tab != .privacy { actionBar } }
         .onAppear { if !model.loaded { model.scan() } }
         .sheet(isPresented: $confirming) {
             ClaudeResetConfirmation(items: review.map { .init(target: $0.target, path: $0.path, bytes: $0.bytes) },

@@ -410,7 +410,7 @@ Sources/ThermoApp/   菜单栏 App（AppKit + SwiftUI + Swift Charts）
 
 App 侧栏的“Claude 清理”提供本地状态重置和隐私/网络工具。重置前逐项展示登录、设置及历史记录的影响；默认不选，保留私有恢复副本，并阻止运行中的 Claude 数据被重置。隐私页支持浏览器定位/WebRTC 设置、mail.com Cookie 清理、用户 launchd 变量清理、DNS 缓存刷新及系统时区操作，每项单独确认。
 
-浏览器设置可恢复；Cookie 备份需手动恢复，launchd 变量清理不可撤销。重置副本仍占磁盘空间。支持范围、原包 REA 证据和限制见[分析记录](docs/kelaude-analysis.md)。本地构建可用 `Thermo --main --page claude-cleanup` 或 `--page claude-cleanup:privacy` 打开。
+浏览器设置可恢复；Cookie 备份需手动恢复，launchd 变量清理不可撤销。重置副本仍占磁盘空间。支持范围、原包 REA 证据和限制见[分析记录](docs/kelaude-analysis.md)。本地构建可用 `Thermo --main --page claude`（账号）、`--page claude:reset` 或 `--page claude:privacy` 打开。
 
 ### 保留开发环境与 NAS 归档
 

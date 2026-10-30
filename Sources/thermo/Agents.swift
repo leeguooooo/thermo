@@ -37,6 +37,21 @@ struct AgentsCommand {
                 print(tr("Some results remain unknown. This report cannot predict account suspension or establish what Claude sends."))
             }
             return
+        case "claude-profiles":
+            guard rest.count == 1 else { throw CLIError("usage: thermo agents claude-profiles [--json]") }
+            // Names and states only: emails and folders stay out of anything an agent or a log can read.
+            let rows = ClaudeProfiles().list()
+            if app.args.has("json") {
+                let list: [[String: Any]] = rows.map { ["name": $0.name, "default": $0.isDefault, "signedIn": $0.signedIn as Any, "liveSessions": $0.liveSessions] }
+                let data = try JSONSerialization.data(withJSONObject: ["profiles": list], options: [.prettyPrinted, .sortedKeys])
+                print(String(decoding: data, as: UTF8.self))
+            } else {
+                for row in rows {
+                    let state = row.signedIn.map { $0 ? "signed in" : "not signed in" } ?? "unknown"
+                    print("\(row.name)\t\(state)\t\(row.liveSessions) running")
+                }
+            }
+            return
         case "": break
         case "sessions": return try sessions(rest)
         case "context": return try context()

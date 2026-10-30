@@ -292,9 +292,9 @@ struct HistoryPage: View {
         case "trashBatch":
             Button(tr("Restore…")) { restoring = r }.buttonStyle(PillButtonStyle()).controlSize(.small).disabled(model.busy).fixedSize()
         case "claudeReset":
-            Button(tr("Open")) { open(.claudeCleanup) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
+            Button(tr("Open")) { open(.claude(.reset)) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case "browserBackup", "timezoneBackup":
-            Button(tr("Open")) { open(.privacyTools) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
+            Button(tr("Open")) { open(.claude(.privacy)) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case "spotlightShortcut":
             Button(tr("Open")) { LocalSearchPanel.shared.show(settings: true) }.buttonStyle(PillButtonStyle()).controlSize(.small).fixedSize()
         case "tabArchive", "tabBatch":

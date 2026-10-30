@@ -71,6 +71,7 @@ enum CommandHelp {
     agents sessions|agents sessions [--json]|cli
     agents context|agents context [--encoding ENCODING] [--agent AGENT] [--root PROJECT] [--json]|cli
     agents claude-local|agents claude-local [--json]|read-only-local-diagnostics
+    agents claude-profiles|agents claude-profiles [--json]|read-only-local-diagnostics
     agents usage|agents usage [--encoding ENCODING] [--sort text|structured|time|errors|instructions] [--all] [--since DATE] [--agent AGENT] [--log-file FILE] [--tail] [--limit N] [--json]|cli
     agents compare|agents compare FILE [--json]|cli
     agents inspect-all|agents inspect-all [--protocol handshake|2026-07-28] [--agent AGENT] [--encoding ENCODING] [--timeout SEC] [--budget SEC] [--dry-run] [--json] [--root PROJECT]|mcp

@@ -433,7 +433,7 @@ private final class PageMenuTarget: NSObject, NSMenuItemValidation {
         (tr("AI Agent Diagnostics"), "6", .agents(.home)),
         (tr("Software"), "7", .apps(.installed)), (tr("Memory usage"), "8", .memory),
         (tr("CPU usage"), "9", .compute(false)), (tr("GPU usage"), "0", .compute(true)),
-        (tr("Space Lens"), "", .space(.browse)), (tr("Claude cleanup"), "", .claudeCleanup),
+        (tr("Space Lens"), "", .space(.browse)), (tr("Claude tools"), "", .claude(.accounts)),
         (tr("Settings"), ",", .settings),
     ]
     for (title, key, page) in pages {
@@ -537,7 +537,8 @@ if let i = CommandLine.arguments.firstIndex(of: "--render-preview"), i + 1 < Com
         switch page {
         case .disk: return !models.disk.loadingSaved && (args.contains("--no-scan") ? !models.disk.scanning : models.disk.report != nil && !models.disk.scanning)
         case .agents: return models.agents.report != nil && !models.agents.scanning
-        case .claudeCleanup, .privacyTools: return models.claudeCleanup.loaded && !models.claudeCleanup.busy
+        case .claude(.accounts): return ClaudeAccountsModel.shared.loaded
+        case .claude: return models.claudeCleanup.loaded && !models.claudeCleanup.busy
         case .history: return HistoryModel.shared.loaded
         case let .browser(app): return TabWorkspaceModel.loadedApps.contains(app)
         case .apps(.installed): return !models.apps.loading && !models.apps.apps.isEmpty
