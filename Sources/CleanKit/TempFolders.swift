@@ -18,20 +18,24 @@ enum TempFolders {
 
     /// "iphone-use-3f9a2c-build" → "iphone-use-*-build": a part with a digit, or a long hex run, becomes `*`.
     static func pattern(_ name: String) -> String {
-        var out = "", token = ""
-        func flush() {
-            let hex = token.count >= 6 && token.allSatisfy(\.isHexDigit)
-            out += token.contains(where: \.isNumber) || hex ? "*" : token
-            token = ""
+        // A plain loop on purpose: `flush` as a nested function captured these strings, and that
+        // dynamic exclusivity check is where 1.3.4 crashed on macOS 15 (EXC_BAD_ACCESS in swift_beginAccess).
+        var out = "", start = name.startIndex
+        for index in name.indices where "-_.".contains(name[index]) {
+            out += masked(name[start..<index])
+            out.append(name[index])
+            start = name.index(after: index)
         }
-        for ch in name {
-            if "-_.".contains(ch) { flush(); out.append(ch) } else { token.append(ch) }
-        }
-        flush()
+        out += masked(name[start...])
         while out.contains("*-*") || out.contains("*_*") || out.contains("*.*") {
             out = out.replacingOccurrences(of: "*-*", with: "*").replacingOccurrences(of: "*_*", with: "*").replacingOccurrences(of: "*.*", with: "*")
         }
         return out
+    }
+
+    private static func masked(_ token: Substring) -> String {
+        let hex = token.count >= 6 && token.allSatisfy(\.isHexDigit)
+        return token.contains(where: \.isNumber) || hex ? "*" : String(token)
     }
 
     /// Which tool left it: "iphone-use" for iphone-use-…, else the first word ("thermo", "mu", "XcodeDistPipeline").
