@@ -302,6 +302,6 @@ final class ILanzouProviderTests: XCTestCase {
         XCTAssertEqual(response.header("Location"), "x")
         let url = URL(string: "https://a.example/x")!
         let http = HTTPURLResponse(url: url, statusCode: 302, httpVersion: nil, headerFields: ["Location": "/y", "Set-Cookie": "a=SECRET"])!
-        XCTAssertEqual(URLSessionTransport.headers(from: http), ["Location": "/y"])
+        XCTAssertEqual(URLSessionTransport.headers(from: http), ["location": "/y"])
     }
 }

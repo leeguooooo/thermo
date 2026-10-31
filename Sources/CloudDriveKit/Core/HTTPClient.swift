@@ -25,7 +25,7 @@ public struct HTTPResponse: Sendable, Equatable {
     public var body: Data
     /// `name=value; Path=...` entries, for providers that need the path. Empty when the transport has none.
     public var cookiesWithPath: [String]
-    /// Response headers with lowercased names; Set-Cookie is in `setCookies` instead.
+    /// Response headers with lowercased names, except Set-Cookie; `header(_:)` ignores case.
     public var headers: [String: String]
     public init(statusCode: Int = 200, setCookies: [String] = [], body: Data = Data(), cookiesWithPath: [String] = [], headers: [String: String] = [:]) {
         self.statusCode = statusCode
