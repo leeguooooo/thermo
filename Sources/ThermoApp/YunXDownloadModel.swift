@@ -584,6 +584,10 @@ final class YunXDownloadModel: ObservableObject {
         videoLink = detected
     }
 
+    #if DEBUG
+    func loadVideoForTesting(_ result: VideoParseResult) { video = result }
+    #endif
+
     func selectQuality(_ qn: Int) async {
         guard let videoLink else { return }
         await working { try await openVideo(videoLink, qn: qn) }
@@ -663,7 +667,8 @@ final class YunXDownloadModel: ObservableObject {
                     job.received = progress.receivedBytes
                     job.total = progress.totalBytes
                     job.speed = progress.bytesPerSecond
-                    job.state = progress.phase == .paused ? .paused : .running
+                    // A last buffered event can arrive after the job finished.
+                    if job.state.isActive { job.state = progress.phase == .paused ? .paused : .running }
                 }
             }
         }

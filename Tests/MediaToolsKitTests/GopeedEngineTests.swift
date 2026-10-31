@@ -16,6 +16,24 @@ final class GopeedEngineTests: XCTestCase {
         try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(request?.body)) as? [String: Any])
     }
 
+    func testResolveListsFilesAndSelectionTravelsWithTheRequestNotAResolveID() async throws {
+        let (engine, transport, _, _) = try make()
+        _ = try await engine.start()
+        transport.on("POST /api/v1/resolve", json: ["code": 0, "data": ["id": "r1", "res": [
+            "name": "pack", "files": [["name": "a.mkv", "path": "", "size": 5], ["name": "b.mkv", "path": "sub", "size": 7]],
+        ]]])
+        transport.on("POST /api/v1/tasks", json: ["code": 0, "data": "t1"])
+        let resolved = try await engine.resolve(url: "magnet:?xt=urn:btih:0")
+        XCTAssertEqual(resolved.files.map(\.displayPath), ["a.mkv", "sub/b.mkv"])
+        XCTAssertEqual(resolved.files.last?.size, 7)
+        XCTAssertEqual((try body(transport.requests("POST", "/api/v1/resolve").first))["req"] as? [String: String], ["url": "magnet:?xt=urn:btih:0"])
+        _ = try await engine.createTask(url: "magnet:?xt=urn:btih:0", saveDir: "/d", fileName: "", selectFiles: [1])
+        let sent = try body(transport.requests("POST", "/api/v1/tasks").first)
+        XCTAssertNil(sent["rid"])
+        XCTAssertEqual((sent["opts"] as? [String: Any])?["selectFiles"] as? [Int], [1])
+        await engine.stop()
+    }
+
     func testStartPassesOnlySupportedFlagsAndIsIdempotent() async throws {
         let (engine, _, launcher, root) = try make()
         let port = try await engine.start()
