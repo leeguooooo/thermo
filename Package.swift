@@ -17,6 +17,7 @@ let package = Package(
         .library(name: "CaptureCore", targets: ["CaptureCore"]),
         .library(name: "CloudDriveKit", targets: ["CloudDriveKit"]),
         .library(name: "DownloadKit", targets: ["DownloadKit"]),
+        .library(name: "VideoKit", targets: ["VideoKit"]),
         .executable(name: "thermo-capture-script", targets: ["CaptureScriptWorker"]),
     ],
     dependencies: [
@@ -53,6 +54,8 @@ let package = Package(
         .target(name: "CloudDriveKit"),
         // HTTP(S) segmented downloads run as the user; never linked into the privileged helper.
         .target(name: "DownloadKit"),
+        // Video link parsing, ported from YunX. Runs as the user; never linked into the privileged helper.
+        .target(name: "VideoKit", linkerSettings: [.linkedFramework("WebKit")]),
         .executableTarget(name: "thermo", dependencies: ["CaptureScriptCore", "ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore"]),
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
@@ -75,6 +78,7 @@ let package = Package(
         .testTarget(name: "MenuBarCoreTests", dependencies: ["MenuBarCore"]),
         .testTarget(name: "CloudDriveKitTests", dependencies: ["CloudDriveKit"]),
         .testTarget(name: "DownloadKitTests", dependencies: ["DownloadKit"]),
+        .testTarget(name: "VideoKitTests", dependencies: ["VideoKit"]),
     ],
     swiftLanguageVersions: [.v5]
 )
