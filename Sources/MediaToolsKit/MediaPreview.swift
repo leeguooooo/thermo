@@ -13,9 +13,14 @@ public enum MediaPreview {
         }
     }
 
+    /// Signed CDN links often have no extension, so the file's own name decides then.
+    public static func kind(of url: URL, fileName: String) -> Kind? {
+        kind(of: url) ?? kind(of: URL(fileURLWithPath: fileName))
+    }
+
     /// `headers` usually carry a cookie or referer: they stay on this asset and are never stored.
-    public static func makePlayer(url: URL, headers: [String: String] = [:]) -> AVPlayer? {
-        guard kind(of: url) != nil else { return nil }
+    public static func makePlayer(url: URL, headers: [String: String] = [:], fileName: String = "") -> AVPlayer? {
+        guard kind(of: url, fileName: fileName) != nil else { return nil }
         let options: [String: Any] = headers.isEmpty ? [:] : ["AVURLAssetHTTPHeaderFieldsKey": headers]
         return AVPlayer(playerItem: AVPlayerItem(asset: AVURLAsset(url: url, options: options)))
     }

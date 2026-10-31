@@ -1,3 +1,4 @@
+import AVFoundation
 import AppKit
 import CloudDriveKit
 import DownloadKit
@@ -137,16 +138,56 @@ enum YunXNames {
 
 struct YunXJob: Identifiable, Equatable {
     enum State: Equatable {
-        case running, paused, finished(URL), failed(String), cancelled
-        var isActive: Bool { self == .running || self == .paused }
+        case queued, running, paused, finished(URL), failed(String), cancelled
+        var isActive: Bool { self == .queued || self == .running || self == .paused }
     }
     let id: UUID
     var name: String
+    /// `name` with its folders, such as `Folder/Sub/file.mp4`, which groups the list.
+    var relativeName = ""
+    var saveDirectory = ""
+    var savedPath = ""
+    /// Counts against the limit on simultaneous HTTP transfers.
+    var usesSlot = true
     var received: Int64 = 0
     var total: Int64?
     var speed: Double = 0
     var state: State = .running
     var canPause = false
+}
+
+/// A code was sent; holds what the second step needs. Lives only as long as the login sheet.
+enum YunXSmsChallenge: Equatable {
+    case xunlei(creditKey: String, token: String, device: XunleiDevice)
+    case guangya(GuangYaSmsChallenge, GuangYaDevice)
+}
+
+struct YunXPreview: Identifiable {
+    let id = UUID()
+    let title: String
+    let player: AVPlayer
+}
+
+/// Choosing a folder in the account for "Save to drive".
+struct YunXSavePicker: Equatable {
+    var items: [DriveFile]
+    var trail: [(id: String, name: String)]
+    var folders: [DriveFile] = []
+
+    static func == (a: YunXSavePicker, b: YunXSavePicker) -> Bool {
+        a.items == b.items && a.folders == b.folders && a.trail.map(\.id) == b.trail.map(\.id)
+    }
+}
+
+/// Files of one torrent, all ticked until the user says otherwise.
+struct YunXTorrentPick: Equatable {
+    let url: String
+    let name: String
+    let files: [GopeedResolvedFile]
+    var selected: Set<Int>
+
+    /// Empty means everything to Gopeed.
+    var selection: [Int] { selected.count == files.count ? [] : selected.sorted() }
 }
 
 /// Directories resolved as temporary transfers, emptied when the download ends.
@@ -189,21 +230,66 @@ final class YunXDownloadModel: ObservableObject {
     @Published var login: YunXLoginTarget?
     @Published var pendingP2P: String?
     @Published private(set) var installingP2P = false
+    @Published var notice: String?
+    @Published var settings: YunXSettings { didSet { settingsChanged(from: oldValue) } }
+    @Published private(set) var preview: YunXPreview?
+    @Published var savePicker: YunXSavePicker?
+    @Published var torrentPick: YunXTorrentPick?
+    @Published var pendingFfmpeg: VideoMedia?
+    @Published private(set) var installingFfmpeg = false
+
+    static let maxTransfers = 4
+    /// How often accounts are checked; each drive's own interval decides whether one is due.
+    static let refreshTick: Duration = .seconds(15 * 60)
+    static let refreshRetry: TimeInterval = 3600
 
     let vault: YunXVault
+    private let settingsStore: YunXSettingsStore
+    private let jobStore: YunXJobStore
+    private let downloadStore: DownloadStore?
+    private let toolsRoot: () throws -> MediaToolsRoot
+    private let makeEngine: (DownloadConfiguration) throws -> DownloadEngine
+    private let xunlei: XunleiAPI
+    private let limit: YunXLimitBox
+    private var drivesOverride: CloudDriveRegistry?
     private lazy var drives: CloudDriveRegistry = {
+        if let drivesOverride { return drivesOverride }
         let vault = self.vault
         return CloudDriveRegistry(credentialUpdated: { updated, previous in try? vault.rotate(previous: previous, updated: updated) })
     }()
     private lazy var parsers = VideoParsers()
     private var source: Source?
     private var videoLink: DetectedVideoLink?
+    private var shareLink: (link: ParsedShareLink, passcode: String)?
     private var tasks: [UUID: DownloadTask] = [:]
     private var runners: [UUID: Task<Void, Never>] = [:]
     private var engine: DownloadEngine?
     private var gopeed: GopeedEngine?
+    private var p2pTasks: [UUID: String] = [:]
+    private var refresher: Task<Void, Never>?
+    private var retryAfter: [String: Date] = [:]
+    private var restored = false
+    private var skipFfmpeg = false
+    private var previewCleanup: (() async -> Void)?
 
-    init(vault: YunXVault = YunXVault()) { self.vault = vault }
+    init(vault: YunXVault = YunXVault(), settingsStore: YunXSettingsStore = YunXSettingsStore(), jobStore: YunXJobStore = YunXJobStore(),
+         drives: CloudDriveRegistry? = nil, downloadStore: DownloadStore? = nil, xunlei: XunleiAPI = XunleiAPI(),
+         toolsRoot: @escaping () throws -> MediaToolsRoot = { try MediaToolsRoot.applicationSupport() },
+         gopeed: GopeedEngine? = nil,
+         makeEngine: ((DownloadConfiguration) throws -> DownloadEngine)? = nil) {
+        self.vault = vault
+        self.settingsStore = settingsStore
+        self.jobStore = jobStore
+        self.drivesOverride = drives
+        self.downloadStore = downloadStore
+        self.xunlei = xunlei
+        self.toolsRoot = toolsRoot
+        self.gopeed = gopeed
+        self.makeEngine = makeEngine ?? { try DownloadEngine(configuration: $0) }
+        let loaded = settingsStore.load()
+        settings = loaded
+        limit = YunXLimitBox(loaded.speedLimitBytes)
+    }
 
     func provider(_ platform: DrivePlatform) -> (any CloudDriveProvider)? { drives.provider(platform) }
 
@@ -230,24 +316,87 @@ final class YunXDownloadModel: ObservableObject {
             guard let provider = provider(platform) else { throw DriveError.providerUnavailable(platform) }
             var value = secret.trimmingCharacters(in: .whitespacesAndNewlines)
             if platform == .pan115 { value = Pan115Constants.filterLoginCookies(value) }
-            if platform == .xunlei, value.contains("{"), let parsed = XunleiCredential.parseWebLogin(value) { value = parsed.driveCredential.value }
-            let credential = DriveCredential(value)
-            guard provider.isWellFormed(credential: credential) else { throw YunXLoginError.rejected }
-            var nickname = ""
-            switch await provider.accountState(credential: credential) {
-            case .signedOut: throw YunXLoginError.rejected
-            case .unverified: break
-            case let .signedIn(name): nickname = name
+            if platform == .xunlei {
+                // Anything captured or pasted came from the web client, which refreshes differently.
+                guard let parsed = XunleiCredential.parseWebLogin(value) else { throw YunXLoginError.rejected }
+                value = parsed.driveCredential.value
             }
-            var fields = YunXCredentialCodec.fields(platform, credential: credential, base: extra)
-            fields["nickname"] = nickname
-            try vault.add(platform: platform.rawValue, fields: fields, key: YunXBackupStore.key(platform.rawValue))
+            try await save(DriveCredential(value), platform: platform, provider: provider, extra: extra)
         case let .video(platform):
             guard let parser = parsers.of(platform) else { throw YunXLoginError.rejected }
             let cookie = secret.trimmingCharacters(in: .whitespacesAndNewlines)
             guard let nickname = try await parser.validateCookie(cookie) else { throw YunXLoginError.rejected }
             try vault.add(platform: target.platform, fields: ["cookie": cookie, "nickname": nickname, "remark": ""], key: "cookie")
         }
+        reloadAccounts()
+    }
+
+    private func save(_ credential: DriveCredential, platform: DrivePlatform, provider: any CloudDriveProvider, extra: [String: String]) async throws {
+        guard provider.isWellFormed(credential: credential) else { throw YunXLoginError.rejected }
+        var nickname = extra["nickname"] ?? ""
+        switch await provider.accountState(credential: credential) {
+        case .signedOut: throw YunXLoginError.rejected
+        case .unverified: break
+        case let .signedIn(name): nickname = name
+        }
+        var fields = YunXCredentialCodec.fields(platform, credential: credential, base: extra)
+        fields["nickname"] = nickname
+        try vault.add(platform: platform.rawValue, fields: fields, key: YunXBackupStore.key(platform.rawValue))
+    }
+
+    /// Xunlei password login. Returns a challenge when the account must also confirm by SMS, which
+    /// a new device always does. The password is sent once and never stored.
+    func xunleiPasswordLogin(account: String, password: String) async throws -> YunXSmsChallenge? {
+        let device = XunleiDevice.generate()
+        let step = try await xunlei.loginWithPassword(username: account, password: password, device: device)
+        if step.needSMS { return try await sendSms(.xunlei, phone: account, device: device) }
+        try await finishXunlei(step, username: account, device: device)
+        return nil
+    }
+
+    func sendSms(_ platform: DrivePlatform, phone: String) async throws -> YunXSmsChallenge {
+        try await sendSms(platform, phone: phone, device: .generate())
+    }
+
+    private func sendSms(_ platform: DrivePlatform, phone: String, device: XunleiDevice) async throws -> YunXSmsChallenge {
+        switch platform {
+        case .xunlei:
+            let step = try await xunlei.sendSMS(mobile: phone, device: device)
+            guard !step.smsCreditKey.isEmpty else { throw DriveError.api(message: step.message) }
+            return .xunlei(creditKey: step.smsCreditKey, token: step.smsToken, device: device)
+        case .guangya:
+            guard let provider = provider(.guangya) as? GuangYaProvider else { throw DriveError.providerUnavailable(.guangya) }
+            let device = GuangYaDevice.make()
+            return .guangya(try await provider.sendSmsCode(phoneNumber: phone, device: device), device)
+        default: throw YunXLoginError.rejected
+        }
+    }
+
+    func smsLogin(phone: String, code: String, challenge: YunXSmsChallenge) async throws {
+        switch challenge {
+        case let .xunlei(creditKey, token, device):
+            let step = try await xunlei.smsLogin(mobile: phone, smsCode: code, creditKey: creditKey, smsToken: token, device: device)
+            try await finishXunlei(step, username: phone, device: device)
+        case let .guangya(sent, device):
+            guard let provider = provider(.guangya) as? GuangYaProvider else { throw DriveError.providerUnavailable(.guangya) }
+            let credential = try await provider.smsLogin(phoneNumber: phone, verificationId: sent.verificationId, code: code,
+                                                         isUser: sent.isUser, device: device)
+            try await save(credential, platform: .guangya, provider: provider, extra: ["account": phone])
+            reloadAccounts()
+        }
+    }
+
+    /// Same order as YunX: login, captcha init, token.
+    private func finishXunlei(_ step: XunleiLoginStep, username: String, device: XunleiDevice) async throws {
+        guard !step.sessionId.isEmpty else { throw step.message.isEmpty ? YunXLoginError.rejected : DriveError.api(message: step.message) }
+        guard let provider = provider(.xunlei) else { throw DriveError.providerUnavailable(.xunlei) }
+        let captcha = await xunlei.initCaptcha(device: device, username: username) ?? ""
+        guard let tokens = await xunlei.exchangeToken(sessionId: step.sessionId, device: device, captchaToken: captcha) else {
+            throw YunXLoginError.rejected
+        }
+        let credential = XunleiCredential(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, deviceId: device.deviceId,
+                                          captchaToken: captcha, userId: step.userId, nickname: step.nickname, authType: "")
+        try await save(credential.driveCredential, platform: .xunlei, provider: provider, extra: ["account": username, "nickname": step.nickname])
         reloadAccounts()
     }
 
@@ -278,6 +427,59 @@ final class YunXDownloadModel: ObservableObject {
         return fresh
     }
 
+    // MARK: Background refresh
+
+    /// Starts with the page rather than the app, so the Keychain is not touched until it is wanted.
+    func startBackgroundRefresh() {
+        guard refresher == nil else { return }
+        refresher = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.refreshAccounts()
+                try? await Task.sleep(for: Self.refreshTick)
+            }
+        }
+    }
+
+    /// Rotates sessions that are due on every account, not only the active one, and fills in missing
+    /// names. A failure leaves the old credential and waits before asking that drive again.
+    func refreshAccounts(now: Date = Date()) async {
+        guard let all = try? vault.accounts() else { return }
+        var changed = false
+        for account in all {
+            guard let platform = account.drivePlatform, let provider = provider(platform) else { continue }
+            if let wait = retryAfter[account.id], wait > now { continue }
+            let credential = YunXCredentialCodec.credential(platform, fields: account.fields)
+            var failed = false
+            if let interval = provider.credentialRefreshInterval, now.timeIntervalSince1970 * 1000 - Double(account.updatedAt) > interval * 1000 {
+                if let fresh = await provider.refreshCredential(credential) {
+                    try? vault.rotate(previous: credential, updated: fresh)
+                    changed = true
+                } else { failed = true }
+            }
+            if account.nickname.isEmpty {
+                if case let .signedIn(name) = await provider.accountState(credential: credential), !name.isEmpty {
+                    try? vault.setNickname(id: account.id, name)
+                    changed = true
+                } else { failed = true }
+            }
+            retryAfter[account.id] = failed ? now.addingTimeInterval(Self.refreshRetry) : nil
+        }
+        if changed { reloadAccounts() }
+    }
+
+    // MARK: Settings
+
+    private func settingsChanged(from old: YunXSettings) {
+        guard settings != old else { return }
+        limit.value = settings.speedLimitBytes
+        do { try settingsStore.save(settings, previous: old) } catch { self.error = error.localizedDescription }
+        guard settings.gopeed != old.gopeed || settings.p2pMaxRunning != old.p2pMaxRunning, let gopeed else { return }
+        let current = settings
+        Task { _ = try? await gopeed.applyRuntimeConfig(maxRunning: current.p2pMaxRunning, settings: current.gopeed) }
+    }
+
+    var saveDirectoryLabel: String { saveDirectory().path }
+
     // MARK: Backup
 
     func exportBackup(password: String, to url: URL) async {
@@ -298,7 +500,7 @@ final class YunXDownloadModel: ObservableObject {
     // MARK: Opening links
 
     private func clearResults() {
-        source = nil; files = []; path = []; browsing = false; selected = []; video = nil; videoLink = nil; error = nil
+        source = nil; files = []; path = []; browsing = false; selected = []; video = nil; videoLink = nil; error = nil; notice = nil; savePicker = nil; shareLink = nil
     }
 
     private func working(_ body: () async throws -> Void) async {
@@ -328,6 +530,7 @@ final class YunXDownloadModel: ObservableObject {
         let code = passcode.trimmingCharacters(in: .whitespaces)
         let session = try await provider.openShare(link, passcode: code.isEmpty ? link.passcode : code, credential: credential)
         source = .share(provider, session, credential)
+        shareLink = (link, code.isEmpty ? (link.passcode ?? "") : code)
         path = [("", session.title.isEmpty ? YunXNames.drive(parsed.platform) : session.title)]
         browsing = true
         try await list(nil)
@@ -388,11 +591,12 @@ final class YunXDownloadModel: ObservableObject {
 
     // MARK: Downloads
 
-    private func saveDirectory() -> URL { DownloadSaver.resolveSaveDirectory(custom: nil) }
+    private func saveDirectory() -> URL { DownloadSaver.resolveSaveDirectory(custom: settings.saveDirectory) }
 
     private func downloadEngine() throws -> DownloadEngine {
         if let engine { return engine }
-        let made = try DownloadEngine()
+        let box = limit
+        let made = try makeEngine(DownloadConfiguration(speedLimiter: DownloadSpeedLimiter(limit: { box.value })))
         engine = made
         return made
     }
@@ -402,29 +606,56 @@ final class YunXDownloadModel: ObservableObject {
         change(&jobs[index])
     }
 
-    private func launch(name: String, body: @escaping @MainActor (UUID) async throws -> URL) {
-        let id = UUID()
-        jobs.insert(YunXJob(id: id, name: name), at: 0)
+    var jobGroups: [YunXJobGroup] { YunXJobGroup.make(jobs, globalRoot: saveDirectory().path) }
+
+    private func leafName(_ relative: String) -> String { relative.split(separator: "/").last.map(String.init) ?? relative }
+
+    /// Adds the job, or takes over one restored after a restart, and runs `body`. HTTP jobs wait for a free slot.
+    private func launch(id: UUID = UUID(), name: String, directory: URL, usesSlot: Bool = true, body: @escaping @MainActor (UUID) async throws -> URL) {
+        if jobs.contains(where: { $0.id == id }) {
+            update(id) { $0.state = .queued }
+        } else {
+            jobs.insert(YunXJob(id: id, name: leafName(name), relativeName: name, saveDirectory: directory.path, usesSlot: usesSlot, state: .queued), at: 0)
+        }
         runners[id] = Task { [weak self] in
             do {
+                while let self, usesSlot, self.jobs.filter({ $0.usesSlot && $0.state == .running }).count >= Self.maxTransfers {
+                    try await Task.sleep(for: .milliseconds(100))
+                }
+                self?.update(id) { $0.state = .running }
                 let url = try await body(id)
-                self?.update(id) { $0.state = .finished(url) }
+                self?.update(id) { $0.state = .finished(url); $0.savedPath = url.path }
+                self?.jobStore.remove(id)
             } catch is CancellationError {
-                self?.update(id) { $0.state = .cancelled }
+                self?.cancelled(id)
             } catch DownloadError.cancelled {
-                self?.update(id) { $0.state = .cancelled }
+                self?.cancelled(id)
             } catch {
+                // The record stays, so the partial file can be picked up after a restart.
                 self?.update(id) { $0.state = .failed(error.localizedDescription) }
             }
             self?.tasks[id] = nil
             self?.runners[id] = nil
+            self?.p2pTasks[id] = nil
         }
     }
 
-    /// Runs one transfer under a job and returns where it landed.
-    private func fetch(_ id: UUID, url: URL, headers: [String: String], to destination: URL, refresh: LinkRefresher? = nil) async throws -> URL {
-        let task = try downloadEngine().makeTask(DownloadRequest(url: url, destination: destination, headers: headers, refreshLink: refresh))
+    private func cancelled(_ id: UUID) {
+        update(id) { $0.state = .cancelled }
+        jobStore.remove(id)
+    }
+
+    /// Runs one transfer under a job and returns where it landed. `restoring` continues a saved task.
+    private func fetch(_ id: UUID, url: URL, headers: [String: String], to destination: URL, refresh: LinkRefresher? = nil, restoring: UUID? = nil) async throws -> URL {
+        let engine = try downloadEngine()
+        let task: DownloadTask
+        if let restoring, let saved = try? engine.restore(id: restoring, url: url, headers: headers, refreshLink: refresh) {
+            task = saved
+        } else {
+            task = try engine.makeTask(DownloadRequest(url: url, destination: destination, headers: headers, refreshLink: refresh))
+        }
         tasks[id] = task
+        jobStore.update(id) { $0.taskId = task.id }
         update(id) { $0.canPause = true }
         let watcher = Task { [weak self] in
             for await progress in task.progress {
@@ -445,92 +676,322 @@ final class YunXDownloadModel: ObservableObject {
         }
     }
 
+    /// HLS goes through its own downloader, so the speed limit is applied in the byte callback.
     private func fetchHLS(_ id: UUID, url: String, headers: [String: String], to destination: URL) async throws -> URL {
         let box = YunXCounter()
+        let bytesLimit = limit
+        let limiter = DownloadSpeedLimiter(limit: { bytesLimit.value })
         return try await HlsDownloader().download(url: url, headers: headers, destination: destination) { [weak self] bytes in
+            try? await limiter.acquire(bytes)
             let total = box.add(bytes)
             await self?.update(id) { $0.received = total }
         }
     }
 
-    /// Downloads the ticked files, or just `only`.
+    /// Downloads the ticked items, or just `only`. Folders are walked first, then each file is one job.
     func downloadSelected(only: DriveFile? = nil) {
         guard let source else { return }
-        let picked = only.map { [$0] } ?? files.filter { selected.contains($0.id) && !$0.isDirectory }
+        let picked = only.map { [$0] } ?? files.filter { selected.contains($0.id) }
         selected = []
-        for file in picked { download(file, source: source) }
+        let share = shareLink
+        for file in picked where !file.isDirectory { download(file, name: file.name, source: source, share: share) }
+        let folders = picked.filter(\.isDirectory)
+        guard !folders.isEmpty else { return }
+        Task {
+            await working {
+                for folder in folders {
+                    let found = try await YunXFolderWalker.walk(folder) { id in try await Self.list(source, directory: id) }
+                    for item in found { download(item.file, name: item.name, source: source, share: share) }
+                }
+            }
+        }
     }
 
-    private func download(_ file: DriveFile, source: Source) {
+    private nonisolated static func list(_ source: Source, directory: String?) async throws -> [DriveFile] {
+        switch source {
+        case let .share(provider, session, credential):
+            return try await provider.listShareFiles(session: session, directoryId: directory, credential: credential)
+        case let .drive(provider, credential):
+            return try await provider.listFiles(directoryId: directory, credential: credential)
+        }
+    }
+
+    private func download(_ file: DriveFile, name: String, source: Source, share: (link: ParsedShareLink, passcode: String)?) {
         let directory = saveDirectory()
-        let cleanups = YunXCleanups()
-        launch(name: file.name) { [weak self] id in
+        let id = UUID()
+        var record = YunXJobRecord(id: id, kind: .drive, name: name, saveDirectory: directory.path, fileId: file.id, fileName: file.name,
+                                   fileSize: file.size, parentId: file.parentId, fileToken: file.fileToken)
+        switch source {
+        case let .share(provider, _, _):
+            record.kind = .share
+            record.platform = provider.platform.rawValue
+            record.shareId = share?.link.shareId ?? ""
+            record.passcode = share?.passcode ?? ""
+        case let .drive(provider, _): record.platform = provider.platform.rawValue
+        }
+        jobStore.put(record)
+        launch(id: id, name: name, directory: directory) { [weak self] id in
             guard let self else { throw CancellationError() }
-            let resolve: @Sendable () async throws -> ResolvedLink = {
-                let link: ResolvedLink
-                switch source {
-                case let .share(provider, session, credential):
-                    link = try await provider.resolveShareFile(session: session, file: file, credential: credential, options: ShareResolveOptions())
-                case let .drive(provider, credential):
-                    link = try await provider.resolveFile(file, credential: credential)
-                }
-                cleanups.add(link.cleanupDirectoryId)
-                return link
+            return try await self.transfer(id, file: file, name: name, source: source, directory: directory, restoring: nil)
+        }
+    }
+
+    private func transfer(_ id: UUID, file: DriveFile, name: String, source: Source, directory: URL, restoring: UUID?) async throws -> URL {
+        let cleanups = YunXCleanups()
+        let resolve: @Sendable () async throws -> ResolvedLink = {
+            let link = try await Self.resolve(file, source: source)
+            cleanups.add(link.cleanupDirectoryId)
+            return link
+        }
+        func finish() async {
+            let (provider, credential): ((any CloudDriveProvider), DriveCredential?)
+            switch source {
+            case let .share(p, _, c): (provider, credential) = (p, c)
+            case let .drive(p, c): (provider, credential) = (p, c)
             }
-            func finish() async {
-                let (provider, credential): ((any CloudDriveProvider), DriveCredential?)
-                switch source {
-                case let .share(p, _, c): (provider, credential) = (p, c)
-                case let .drive(p, c): (provider, credential) = (p, c)
-                }
-                guard let credential else { return }
-                for directory in cleanups.take() { await provider.cleanup(directoryId: directory, credential: credential) }
+            guard let credential else { return }
+            for directory in cleanups.take() { await provider.cleanup(directoryId: directory, credential: credential) }
+        }
+        do {
+            let link = try await resolve()
+            let folders = name.split(separator: "/").dropLast().joined(separator: "/")
+            let leaf = DownloadPathPolicy.sanitizeName(link.filename.isEmpty ? file.name : link.filename)
+            let destination = try DownloadSaver.destination(for: folders.isEmpty ? leaf : "\(folders)/\(leaf)", in: directory)
+            let saved: URL
+            if link.isHLS {
+                saved = try await fetchHLS(id, url: link.url.absoluteString, headers: link.headers, to: destination)
+            } else {
+                saved = try await fetch(id, url: link.url, headers: link.headers, to: destination, refresh: { _ in
+                    let fresh = try await resolve()
+                    return RefreshedLink(url: fresh.url, headers: fresh.headers)
+                }, restoring: restoring)
             }
-            do {
-                let link = try await resolve()
-                let destination = try DownloadSaver.destination(for: DownloadPathPolicy.sanitizeName(link.filename.isEmpty ? file.name : link.filename), in: directory)
-                let saved: URL
-                if link.isHLS {
-                    saved = try await fetchHLS(id, url: link.url.absoluteString, headers: link.headers, to: destination)
-                } else {
-                    saved = try await fetch(id, url: link.url, headers: link.headers, to: destination) { _ in
-                        let fresh = try await resolve()
-                        return RefreshedLink(url: fresh.url, headers: fresh.headers)
-                    }
-                }
-                await finish()
-                return saved
-            } catch {
-                await finish()
-                throw error
-            }
+            await finish()
+            return saved
+        } catch {
+            await finish()
+            throw error
+        }
+    }
+
+    private nonisolated static func resolve(_ file: DriveFile, source: Source) async throws -> ResolvedLink {
+        switch source {
+        case let .share(provider, session, credential):
+            return try await provider.resolveShareFile(session: session, file: file, credential: credential, options: ShareResolveOptions())
+        case let .drive(provider, credential):
+            return try await provider.resolveFile(file, credential: credential)
         }
     }
 
     func download(_ media: VideoMedia) {
         guard let title = video?.title else { return }
+        let separate = !media.isHls && !media.audioUrl.isEmpty
+        if separate, !skipFfmpeg, let root = try? toolsRoot(), !FfmpegProvisioner(root: root).isInstalled {
+            pendingFfmpeg = media
+            return
+        }
         let name = Self.fileName(media, title: title)
         let directory = saveDirectory()
-        launch(name: name) { [weak self] id in
+        let refreshVideo = refresher(for: media)
+        launch(name: name, directory: directory) { [weak self] id in
             guard let self else { throw CancellationError() }
             let destination = try DownloadSaver.destination(for: name, in: directory)
             if media.isHls { return try await fetchHLS(id, url: media.url, headers: media.headers, to: destination) }
             guard let url = URL(string: media.url) else { throw VideoParseException(.unknown, "") }
             guard !media.audioUrl.isEmpty, let audio = URL(string: media.audioUrl) else {
-                return try await fetch(id, url: url, headers: media.headers, to: destination)
+                return try await fetch(id, url: url, headers: media.headers, to: destination, refresh: refreshVideo(false))
             }
             // Separate tracks: fetch both into a private folder, mux, then publish.
-            let root = try MediaToolsRoot.applicationSupport()
+            let root = try toolsRoot()
             let work = try root.makeTemporaryDirectory()
             defer { try? FileManager.default.removeItem(at: work) }
-            let videoFile = try await fetch(id, url: url, headers: media.headers, to: work.appendingPathComponent("video.m4s"))
-            let audioFile = try await fetch(id, url: audio, headers: media.audioHeaders, to: work.appendingPathComponent("audio.m4s"))
+            let videoFile = try await fetch(id, url: url, headers: media.headers, to: work.appendingPathComponent("video.m4s"), refresh: refreshVideo(false))
+            let audioFile = try await fetch(id, url: audio, headers: media.audioHeaders, to: work.appendingPathComponent("audio.m4s"), refresh: refreshVideo(true))
             let muxed = work.appendingPathComponent("muxed.mp4")
             guard await MediaMuxer(ffmpeg: FfmpegMuxer(root: root)).mux(video: videoFile, audio: audioFile, out: muxed) else {
                 throw YunXLoginError.muxFailed
             }
             return try DownloadSaver.save(muxed, as: name, in: directory)
         }
+    }
+
+    /// Parses the page again and takes the media at the same position, as video links expire quickly.
+    private func refresher(for media: VideoMedia) -> (Bool) -> LinkRefresher? {
+        guard let detected = videoLink, let index = video?.medias.firstIndex(where: { $0.url == media.url }) else { return { _ in nil } }
+        let qn = video?.selectedQn
+        return { audio in
+            { [weak self] _ in try await self?.freshLink(detected, qn: qn, index: index, audio: audio) }
+        }
+    }
+
+    private func freshLink(_ detected: DetectedVideoLink, qn: Int?, index: Int, audio: Bool) async throws -> RefreshedLink? {
+        guard let parser = parsers.of(detected.platform) else { return nil }
+        let cookie = (try? vault.active(YunXAccount.videoPrefix + detected.platform.rawValue))?.fields["cookie"] ?? ""
+        let parsed: VideoParseResult
+        if let qn, let selectable = parser as? any QualitySelectableParser {
+            parsed = try await selectable.parseWithQuality(detected, cookie: cookie, qn: qn)
+        } else {
+            parsed = try await parser.parse(detected, cookie: cookie)
+        }
+        guard parsed.medias.indices.contains(index) else { return nil }
+        let media = parsed.medias[index]
+        guard let url = URL(string: audio ? media.audioUrl : media.url) else { return nil }
+        return RefreshedLink(url: url, headers: audio ? media.audioHeaders : media.headers)
+    }
+
+    /// Fetches FFmpeg after the page has asked, then starts the download that was waiting for it.
+    func installFfmpeg() async {
+        guard let media = pendingFfmpeg else { return }
+        pendingFfmpeg = nil
+        installingFfmpeg = true
+        defer { installingFfmpeg = false }
+        do {
+            _ = try await FfmpegProvisioner(root: try toolsRoot()).provision()
+            download(media)
+        } catch { self.error = error.localizedDescription }
+    }
+
+    /// Declined: the built-in muxer handles fragmented MP4 for the rest of this run.
+    func declineFfmpeg() {
+        guard let media = pendingFfmpeg else { return }
+        pendingFfmpeg = nil
+        skipFfmpeg = true
+        download(media)
+    }
+
+    // MARK: Save to drive
+
+    var canSaveToDrive: Bool {
+        guard case let .share(provider, _, credential)? = source else { return false }
+        return credential != nil && provider.capabilities.contains(.saveToDrive)
+    }
+
+    func beginSave(only: DriveFile? = nil) async {
+        guard canSaveToDrive, case let .share(provider, _, _)? = source else { return }
+        let items = only.map { [$0] } ?? files.filter { selected.contains($0.id) }
+        guard !items.isEmpty else { return }
+        savePicker = YunXSavePicker(items: items, trail: [("", YunXNames.drive(provider.platform))])
+        await listPicker(nil)
+    }
+
+    /// A drive that cannot list its folders can still save to the root.
+    private func listPicker(_ directory: String?) async {
+        guard case let .share(provider, _, credential?)? = source else { return }
+        let found = (try? await provider.listFiles(directoryId: directory, credential: credential)) ?? []
+        savePicker?.folders = found.filter(\.isDirectory)
+    }
+
+    func pickerEnter(_ folder: DriveFile) async {
+        savePicker?.trail.append((folder.id, folder.name))
+        await listPicker(folder.id)
+    }
+
+    func pickerUp(to index: Int) async {
+        guard let trail = savePicker?.trail, trail.indices.contains(index) else { return }
+        savePicker?.trail = Array(trail.prefix(index + 1))
+        await listPicker(index == 0 ? nil : trail[index].id)
+    }
+
+    func confirmSave() async {
+        guard let picker = savePicker, case let .share(provider, session, credential?)? = source else { return }
+        savePicker = nil
+        selected = []
+        let target = picker.trail.count > 1 ? picker.trail.last?.id : nil
+        await working {
+            for item in picker.items {
+                _ = try await provider.saveToDrive(session: session, file: item, directoryId: target, credential: credential, skipSpaceCheck: false)
+            }
+            notice = tr("Saved %1$@ items to the drive.", String(picker.items.count))
+        }
+    }
+
+    // MARK: Preview
+
+    func previewable(_ file: DriveFile) -> Bool { !file.isDirectory && MediaPreview.kind(of: URL(fileURLWithPath: file.name)) != nil }
+    /// A video-only DASH track would play silently, so only combined media are offered.
+    func previewable(_ media: VideoMedia) -> Bool { media.kind == .video && media.audioUrl.isEmpty }
+
+    func preview(_ file: DriveFile) async {
+        guard let source else { return }
+        await working {
+            let link = try await Self.resolve(file, source: source)
+            if let directory = link.cleanupDirectoryId {
+                previewCleanup = {
+                    if case let .share(provider, _, credential?) = source { await provider.cleanup(directoryId: directory, credential: credential) }
+                    if case let .drive(provider, credential) = source { await provider.cleanup(directoryId: directory, credential: credential) }
+                }
+            }
+            try show(link.url, headers: link.headers, name: link.isHLS ? "\(file.name).m3u8" : file.name, title: file.name)
+        }
+    }
+
+    func preview(_ media: VideoMedia) async {
+        await working {
+            guard let url = URL(string: media.url) else { throw VideoParseException(.unknown, "") }
+            let title = Self.fileName(media, title: video?.title ?? "")
+            try show(url, headers: media.headers, name: media.isHls ? "\(title).m3u8" : title, title: title)
+        }
+    }
+
+    private func show(_ url: URL, headers: [String: String], name: String, title: String) throws {
+        guard let player = MediaPreview.makePlayer(url: url, headers: headers, fileName: name) else { throw YunXLoginError.noPreview }
+        preview = YunXPreview(title: title, player: player)
+    }
+
+    func closePreview() {
+        preview?.player.pause()
+        preview = nil
+        if let cleanup = previewCleanup {
+            previewCleanup = nil
+            Task { await cleanup() }
+        }
+    }
+
+    // MARK: Restoring
+
+    /// Lists what the last run left unfinished, paused. Nothing restarts or touches the network
+    /// until Resume, when the current account resolves a new link.
+    func restoreJobs() {
+        guard !restored else { return }
+        restored = true
+        let saved = (try? (downloadStore ?? DownloadStore(root: DownloadStore.defaultRoot())).list()) ?? []
+        for record in jobStore.load() where !jobs.contains(where: { $0.id == record.id }) {
+            let state = saved.first { $0.id == record.taskId }
+            var job = YunXJob(id: record.id, name: leafName(record.name), relativeName: record.name, saveDirectory: record.saveDirectory,
+                              usesSlot: record.kind != .p2p, state: .paused)
+            job.received = state?.segments.reduce(0) { $0 + $1.written } ?? 0
+            job.total = state?.size ?? (record.fileSize > 0 ? record.fileSize : nil)
+            jobs.append(job)
+        }
+    }
+
+    private func continueRecord(_ record: YunXJobRecord) {
+        let directory = URL(fileURLWithPath: record.saveDirectory, isDirectory: true)
+        if record.kind == .p2p {
+            guard let engine = try? p2pEngine() else { return }
+            runP2P(id: record.id, url: record.p2pURL, name: record.name, engine: engine, directory: directory,
+                   select: record.selectFiles, existing: record.gopeedTask)
+            return
+        }
+        launch(id: record.id, name: record.name, directory: directory) { [weak self] id in
+            guard let self else { throw CancellationError() }
+            let source = try await self.source(for: record)
+            return try await self.transfer(id, file: record.file, name: record.name, source: source, directory: directory, restoring: record.taskId)
+        }
+    }
+
+    private func source(for record: YunXJobRecord) async throws -> Source {
+        guard let platform = DrivePlatform(rawValue: record.platform), let provider = provider(platform) else { throw YunXLoginError.rejected }
+        let credential = await credential(platform, provider: provider)
+        guard record.kind == .share else {
+            guard let credential else { throw DriveError.loginRequired }
+            return .drive(provider, credential)
+        }
+        if credential == nil, !provider.capabilities.contains(.guestShareAccess) { throw DriveError.loginRequired }
+        let passcode = record.passcode.isEmpty ? nil : record.passcode
+        let session = try await provider.openShare(ParsedShareLink(shareId: record.shareId, passcode: passcode, platform: platform),
+                                                   passcode: passcode, credential: credential)
+        return .share(provider, session, credential)
     }
 
     nonisolated static func fileName(_ media: VideoMedia, title: String) -> String {
@@ -544,26 +1005,63 @@ final class YunXDownloadModel: ObservableObject {
         return DownloadPathPolicy.sanitizeName("\(title.isEmpty ? "video" : title).\(ext)")
     }
 
-    func pause(_ job: YunXJob) { Task { await tasks[job.id]?.pause(); update(job.id) { $0.state = .paused } } }
-    func resume(_ job: YunXJob) { Task { await tasks[job.id]?.start(); update(job.id) { $0.state = .running } } }
-    func cancel(_ job: YunXJob) { runners[job.id]?.cancel() }
-    func clearFinished() { jobs.removeAll { !$0.state.isActive } }
+    func pause(_ job: YunXJob) {
+        Task {
+            if let task = p2pTasks[job.id], let gopeed { try? await gopeed.pauseTask(task) } else { await tasks[job.id]?.pause() }
+            update(job.id) { $0.state = .paused }
+        }
+    }
+
+    func resume(_ job: YunXJob) {
+        if runners[job.id] == nil, let record = jobStore.load().first(where: { $0.id == job.id }) {
+            continueRecord(record)
+            return
+        }
+        Task {
+            if let task = p2pTasks[job.id], let gopeed { try? await gopeed.continueTask(task) } else { await tasks[job.id]?.start() }
+            update(job.id) { $0.state = .running }
+        }
+    }
+
+    func cancel(_ job: YunXJob) {
+        if let runner = runners[job.id] { runner.cancel(); return }
+        // A job restored from the last run has nothing running yet.
+        forget(job)
+        update(job.id) { $0.state = .cancelled }
+    }
+
+    private func forget(_ job: YunXJob) {
+        if let task = jobStore.load().first(where: { $0.id == job.id })?.taskId,
+           let store = downloadStore ?? (try? DownloadStore(root: DownloadStore.defaultRoot())) { store.remove(id: task) }
+        jobStore.remove(job.id)
+    }
+
+    func clearFinished() {
+        for job in jobs where !job.state.isActive { forget(job) }
+        jobs.removeAll { !$0.state.isActive }
+    }
+
     func reveal(_ url: URL) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
 
     // MARK: P2P through Gopeed
 
     private func p2pEngine() throws -> GopeedEngine {
         if let gopeed { return gopeed }
-        let made = GopeedEngine(root: try MediaToolsRoot.applicationSupport())
+        let made = GopeedEngine(root: try toolsRoot())
         gopeed = made
         return made
+    }
+
+    /// A local `.torrent`; Gopeed opens the path itself.
+    func openTorrent(_ url: URL) async {
+        await working { await addP2P(url.path) }
     }
 
     private func addP2P(_ url: String) async {
         do {
             let engine = try p2pEngine()
             guard await engine.isInstalled else { pendingP2P = url; return }
-            startP2P(url, engine: engine)
+            await prepareP2P(url, engine: engine)
         } catch { self.error = error.localizedDescription }
     }
 
@@ -575,17 +1073,57 @@ final class YunXDownloadModel: ObservableObject {
         defer { installingP2P = false }
         do {
             let engine = try p2pEngine()
-            _ = try await GopeedKernelProvisioner(root: try MediaToolsRoot.applicationSupport()).provision(engine: engine)
-            startP2P(url, engine: engine)
+            _ = try await GopeedKernelProvisioner(root: try toolsRoot()).provision(engine: engine)
+            await prepareP2P(url, engine: engine)
         } catch { self.error = error.localizedDescription }
     }
 
-    private func startP2P(_ url: String, engine: GopeedEngine) {
+    private func applyP2PSettings(_ engine: GopeedEngine) async throws {
+        _ = try await engine.start()
+        _ = try await engine.applyRuntimeConfig(maxRunning: settings.p2pMaxRunning, settings: settings.gopeed)
+    }
+
+    /// Offers the file list when there is one. A magnet with no peers yet cannot list, so a failed
+    /// resolve starts the whole torrent, which is what happened before picking existed.
+    private func prepareP2P(_ url: String, engine: GopeedEngine) async {
+        do {
+            try await applyP2PSettings(engine)
+            if let resolved = try? await engine.resolve(url: url), resolved.files.count > 1 {
+                torrentPick = YunXTorrentPick(url: url, name: resolved.name, files: resolved.files, selected: Set(resolved.files.indices))
+                return
+            }
+            startP2P(url, engine: engine, select: [])
+        } catch { self.error = error.localizedDescription }
+    }
+
+    func confirmTorrent() {
+        guard let pick = torrentPick, !pick.selected.isEmpty, let gopeed else { return }
+        torrentPick = nil
+        startP2P(pick.url, engine: gopeed, select: pick.selection)
+    }
+
+    private func startP2P(_ url: String, engine: GopeedEngine, select: [Int]) {
         let directory = saveDirectory()
+        let id = UUID()
         let name = P2PLink.displayName(url)
-        launch(name: name) { [weak self] id in
-            _ = try await engine.start()
-            let task = try await engine.createTask(url: url, saveDir: directory.path, fileName: "")
+        jobStore.put(YunXJobRecord(id: id, kind: .p2p, name: name, saveDirectory: directory.path, p2pURL: url, selectFiles: select))
+        runP2P(id: id, url: url, name: name, engine: engine, directory: directory, select: select, existing: "")
+    }
+
+    /// `existing` is the Gopeed task from an earlier run; its store outlives the app, so it continues there.
+    private func runP2P(id: UUID, url: String, name: String, engine: GopeedEngine, directory: URL, select: [Int], existing: String) {
+        launch(id: id, name: name, directory: directory, usesSlot: false) { [weak self] id in
+            try await self?.applyP2PSettings(engine)
+            let task: String
+            if !existing.isEmpty, (try? await engine.taskStatus(existing)) != nil {
+                task = existing
+                try await engine.continueTask(existing)
+            } else {
+                task = try await engine.createTask(url: url, saveDir: directory.path, fileName: "", selectFiles: select)
+            }
+            self?.p2pTasks[id] = task
+            self?.jobStore.update(id) { $0.gopeedTask = task }
+            self?.update(id) { $0.canPause = true }
             do {
                 while true {
                     try await Task.sleep(nanoseconds: 1_000_000_000)
@@ -594,6 +1132,7 @@ final class YunXDownloadModel: ObservableObject {
                         $0.received = view.downloaded
                         $0.total = view.total > 0 ? view.total : nil
                         $0.speed = Double(view.speed)
+                        $0.state = view.status == GopeedEngine.TaskStatus.pause ? .paused : .running
                     }
                     if view.status == GopeedEngine.TaskStatus.done { break }
                     if view.status == GopeedEngine.TaskStatus.error {
@@ -621,6 +1160,7 @@ final class YunXDownloadModel: ObservableObject {
     /// Called on app termination, which cannot wait for async work, so this blocks for at most a
     /// moment longer than the engine's own stop escalation.
     func shutdown() {
+        refresher?.cancel()
         guard let gopeed else { return }
         let stopped = DispatchSemaphore(value: 0)
         Task.detached {
@@ -642,11 +1182,13 @@ private final class YunXCounter: @unchecked Sendable {
 }
 
 enum YunXLoginError: LocalizedError {
-    case rejected, muxFailed
+    case rejected, muxFailed, folderTooLarge, noPreview
     var errorDescription: String? {
         switch self {
         case .rejected: return tr("That login was not accepted. Sign in again.")
         case .muxFailed: return tr("Could not merge the video and audio tracks.")
+        case .folderTooLarge: return tr("This folder is too large or too deep to download at once.")
+        case .noPreview: return tr("This format cannot be previewed.")
         }
     }
 }

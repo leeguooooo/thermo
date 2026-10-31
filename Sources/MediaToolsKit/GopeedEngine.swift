@@ -61,6 +61,20 @@ public struct GopeedTaskDetail: Sendable, Equatable {
     public var folder: Bool
 }
 
+/// One entry of a resolved torrent. Its index in `GopeedResolved.files` is what `selectFiles` takes.
+public struct GopeedResolvedFile: Sendable, Equatable {
+    public var name: String
+    public var path: String
+    public var size: Int64
+
+    public var displayPath: String { path.isEmpty ? name : "\(path)/\(name)" }
+}
+
+public struct GopeedResolved: Sendable, Equatable {
+    public var name: String
+    public var files: [GopeedResolvedFile]
+}
+
 public struct GopeedPeerInfo: Sendable, Equatable {
     /// -1 means the engine did not report it.
     public var seeds: Int
@@ -276,7 +290,7 @@ public actor GopeedEngine {
     /// `url`, `headers` and `trackers` may hold secrets: they go to the engine and nowhere else.
     public func createTask(
         url: String, saveDir: String, fileName: String, headers: [String: String] = [:], connections: Int = 0,
-        label: String = "", trackers: [String] = []
+        label: String = "", trackers: [String] = [], selectFiles: [Int] = []
     ) async throws -> String {
         var request: [String: Any] = ["url": url]
         var extra: [String: Any] = [:]
@@ -287,6 +301,8 @@ public actor GopeedEngine {
         var options: [String: Any] = ["path": saveDir]
         if !fileName.isEmpty { options["name"] = fileName }
         if connections > 0 { options["extra"] = ["connections": connections] }
+        // Sent with `req`, not a resolve `rid`: gopeed v1.9.3's `Create(rid)` ignores `opts`.
+        if !selectFiles.isEmpty { options["selectFiles"] = selectFiles }
         let body = try JSONSerialization.data(withJSONObject: ["req": request, "opts": options])
         // Unlike the query endpoints, `data` here is the task id string.
         let envelope = try await send("POST", "/api/v1/tasks", body: body)
@@ -294,6 +310,17 @@ public actor GopeedEngine {
             throw GopeedError.missingTaskID
         }
         return id
+    }
+
+    /// Lists what a magnet or torrent holds without starting it. A magnet has to find peers first.
+    public func resolve(url: String) async throws -> GopeedResolved {
+        let body = try JSONSerialization.data(withJSONObject: ["req": ["url": url]])
+        let envelope = try await send("POST", "/api/v1/resolve", body: body)
+        guard let resource = (envelope["data"] as? [String: Any])?["res"] as? [String: Any] else { throw GopeedError.invalidResponse }
+        let files = (resource["files"] as? [[String: Any]] ?? []).map {
+            GopeedResolvedFile(name: $0["name"] as? String ?? "", path: $0["path"] as? String ?? "", size: Self.int64($0["size"]))
+        }
+        return GopeedResolved(name: resource["name"] as? String ?? "", files: files)
     }
 
     /// Reads the task itself: `/tasks/{id}/status` does not exist on the server.

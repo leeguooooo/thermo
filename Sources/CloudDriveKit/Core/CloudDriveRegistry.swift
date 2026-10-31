@@ -23,6 +23,12 @@ public struct CloudDriveRegistry: Sendable {
         router = ShareLinkRouter(providers: providers)
     }
 
+    /// A fixed set of providers, for hosts that test against their own.
+    public init(providers: [any CloudDriveProvider]) {
+        self.providers = providers
+        router = ShareLinkRouter(providers: providers)
+    }
+
     public func provider(_ platform: DrivePlatform) -> (any CloudDriveProvider)? {
         providers.first { $0.platform == platform }
     }

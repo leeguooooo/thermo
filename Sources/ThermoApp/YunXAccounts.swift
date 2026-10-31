@@ -41,10 +41,13 @@ enum YunXKeychainError: LocalizedError {
 
 /// All accounts as one generic-password item, so a change is atomic and macOS asks at most once.
 struct YunXKeychainBackend: YunXSecretBackend {
+    /// One item each: `vault`, plus the download list and tracker list, which can hold passcodes and passkeys.
+    var account = "vault"
+
     private var query: [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: "dev.thermo.yunx.accounts",
-         kSecAttrAccount as String: "vault"]
+         kSecAttrAccount as String: account]
     }
 
     func read() throws -> Data? {
@@ -213,6 +216,14 @@ final class YunXVault: @unchecked Sendable {
                 accounts[index].updatedAt = now()
                 return
             }
+        }
+    }
+
+    /// Fills in a name the first login could not fetch. Changes nothing else, including `updatedAt`.
+    func setNickname(id: String, _ nickname: String) throws {
+        try mutate { accounts in
+            guard let index = accounts.firstIndex(where: { $0.id == id }) else { return }
+            accounts[index].fields["nickname"] = nickname
         }
     }
 
