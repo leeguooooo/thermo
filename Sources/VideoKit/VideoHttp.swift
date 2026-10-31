@@ -251,12 +251,30 @@ private final class RedirectPolicy: NSObject, URLSessionTaskDelegate, @unchecked
         completionHandler: @escaping (URLRequest?) -> Void
     ) {
         guard follow else { return completionHandler(nil) }
-        var next = request
-        // A login Cookie must not follow a redirect to another host.
-        if task.originalRequest?.url?.host?.lowercased() != request.url?.host?.lowercased() {
-            next.setValue(nil, forHTTPHeaderField: "Cookie")
-            next.setValue(nil, forHTTPHeaderField: "Authorization")
+        completionHandler(VideoRedirect.next(request, from: response.url))
+    }
+}
+
+enum VideoRedirect {
+    /// Non-credential headers parsers rely on: short links resolve differently without their UA.
+    private static let crossOriginHeaders: Set<String> = ["accept", "accept-encoding", "accept-language", "range", "user-agent"]
+
+    /// Refuses https to http, and carries only the allowlisted headers to another origin.
+    static func next(_ request: URLRequest, from previous: URL?) -> URLRequest? {
+        guard let previous, let target = request.url else { return nil }
+        if previous.scheme?.lowercased() == "https", target.scheme?.lowercased() != "https" { return nil }
+        if sameOrigin(previous, target) { return request }
+        var stripped = request
+        for name in (request.allHTTPHeaderFields ?? [:]).keys where !crossOriginHeaders.contains(name.lowercased()) {
+            stripped.setValue(nil, forHTTPHeaderField: name)
         }
-        completionHandler(next)
+        return stripped
+    }
+
+    private static func sameOrigin(_ left: URL, _ right: URL) -> Bool {
+        func port(_ url: URL) -> Int? { url.port ?? ["https": 443, "http": 80][url.scheme?.lowercased() ?? ""] }
+        return left.scheme?.lowercased() == right.scheme?.lowercased()
+            && left.host?.lowercased() == right.host?.lowercased()
+            && port(left) == port(right)
     }
 }

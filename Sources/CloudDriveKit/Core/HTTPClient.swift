@@ -109,15 +109,24 @@ public final class URLSessionTransport: HTTPTransport {
         return HTTPCookie.cookies(withResponseHeaderFields: fields, for: url).map { "\($0.name)=\($0.value); Path=\($0.path)" }
     }
 
-    /// Credentials must not follow a redirect to another origin.
+    /// Only these headers follow a redirect to another origin, since providers put tokens in
+    /// headers of their own naming.
+    private static let crossOriginHeaders: Set<String> = ["accept", "accept-encoding", "accept-language", "range", "user-agent"]
+
     static func redirected(_ request: URLRequest, from original: URL?) -> URLRequest {
-        guard original?.host?.lowercased() != request.url?.host?.lowercased() || original?.scheme != request.url?.scheme else {
-            return request
-        }
+        if let original, let target = request.url, sameOrigin(original, target) { return request }
         var stripped = request
-        stripped.setValue(nil, forHTTPHeaderField: "Cookie")
-        stripped.setValue(nil, forHTTPHeaderField: "Authorization")
+        for name in (request.allHTTPHeaderFields ?? [:]).keys where !crossOriginHeaders.contains(name.lowercased()) {
+            stripped.setValue(nil, forHTTPHeaderField: name)
+        }
         return stripped
+    }
+
+    private static func sameOrigin(_ left: URL, _ right: URL) -> Bool {
+        func port(_ url: URL) -> Int? { url.port ?? ["https": 443, "http": 80][url.scheme?.lowercased() ?? ""] }
+        return left.scheme?.lowercased() == right.scheme?.lowercased()
+            && left.host?.lowercased() == right.host?.lowercased()
+            && port(left) == port(right)
     }
 }
 

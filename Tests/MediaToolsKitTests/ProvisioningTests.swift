@@ -48,13 +48,36 @@ final class MediaToolsRootTests: XCTestCase {
     }
 }
 
+final class PinnedToolsTests: XCTestCase {
+    func testEveryShippedPinIsWellFormedAndSpecific() {
+        let pins = [PinnedTools.gopeed] + FfmpegTool.allCases.map(PinnedTools.ffmpeg)
+        for pin in pins {
+            XCTAssertEqual(pin.url.scheme, "https")
+            XCTAssertFalse(pin.url.absoluteString.contains("latest"))
+            XCTAssertNotNil(ToolInstaller.expectedSHA256(pin.sha256))
+            XCTAssertGreaterThan(pin.size, 0)
+        }
+    }
+
+    func testVerifyRejectsWrongAndMissingDigests() throws {
+        let file = try makeRoot().url.appendingPathComponent("f")
+        try Data([1, 2]).write(to: file)
+        XCTAssertNoThrow(try ToolInstaller.verify(file, expected: sha(Data([1, 2]))))
+        for bad in ["", "sha512:abc", String(repeating: "0", count: 64)] {
+            XCTAssertThrowsError(try ToolInstaller.verify(file, expected: bad)) { XCTAssertEqual($0 as? MediaToolsError, .checksumMismatch) }
+        }
+    }
+}
+
 final class GopeedProvisionerTests: XCTestCase {
     private let directURL = "https://github.com/GopeedLab/gopeed/releases/download/v1.9.3/gopeed-web-v1.9.3-macos-arm64.zip"
 
-    private func release(digest: String?, size: Int) -> [String: Any] {
-        var asset: [String: Any] = ["name": "gopeed-web-v1.9.3-macos-arm64.zip", "browser_download_url": directURL, "size": size]
-        if let digest { asset["digest"] = digest }
-        return ["tag_name": "v1.9.3", "assets": [["name": "gopeed-web-v1.9.3-macos-amd64.zip"], asset]]
+    private func pin(digest: String, size: Int) -> PinnedTool {
+        PinnedTool(url: URL(string: directURL)!, size: Int64(size), sha256: digest)
+    }
+
+    private func provisioner(_ root: MediaToolsRoot, _ transport: FakeTransport, digest: String, size: Int) -> GopeedKernelProvisioner {
+        GopeedKernelProvisioner(root: root, transport: transport, pin: pin(digest: digest, size: size), version: "v1.9.3")
     }
 
     private func fixture() throws -> (Data, URL) {
@@ -68,85 +91,111 @@ final class GopeedProvisionerTests: XCTestCase {
         GopeedEngine(root: root, transport: FakeTransport(), launcher: FakeLauncher(), runner: ProcessToolRunner())
     }
 
-    func testPicksArm64AssetAndMirror() async throws {
+    func testPlanUsesThePinWithoutTheNetwork() throws {
         let transport = FakeTransport()
-        transport.on("GET \(GopeedKernelProvisioner.latestRelease.absoluteString)", json: release(digest: "sha256:\(String(repeating: "a", count: 64))", size: 9))
-        let plan = try await GopeedKernelProvisioner(root: makeRoot(), transport: transport).resolvePlan(mirrorPrefix: "https://mirror.test/")
-        XCTAssertEqual(plan.url.absoluteString, "https://mirror.test/\(directURL)")
-        XCTAssertEqual(plan.fallbackURL?.absoluteString, directURL)
-        XCTAssertEqual(plan.size, 9)
+        let plan = GopeedKernelProvisioner(root: try makeRoot(), transport: transport).resolvePlan(mirrorPrefix: "https://mirror.test/")
+        XCTAssertEqual(plan.version, PinnedTools.gopeedVersion)
+        XCTAssertEqual(plan.url.absoluteString, "https://mirror.test/\(PinnedTools.gopeed.url.absoluteString)")
+        XCTAssertEqual(plan.fallbackURL, PinnedTools.gopeed.url)
+        XCTAssertEqual(plan.digest, PinnedTools.gopeed.sha256)
+        XCTAssertTrue(transport.sent.isEmpty)
     }
 
-    func testMirrorIgnoredWithoutDigestOrTLS() async throws {
-        let transport = FakeTransport()
-        transport.on("GET \(GopeedKernelProvisioner.latestRelease.absoluteString)", json: release(digest: nil, size: 9))
-        var plan = try await GopeedKernelProvisioner(root: makeRoot(), transport: transport).resolvePlan(mirrorPrefix: "https://mirror.test/")
-        XCTAssertEqual(plan.url.absoluteString, directURL)
-        let second = FakeTransport()
-        second.on("GET \(GopeedKernelProvisioner.latestRelease.absoluteString)", json: release(digest: "sha256:\(String(repeating: "a", count: 64))", size: 9))
-        plan = try await GopeedKernelProvisioner(root: makeRoot(), transport: second).resolvePlan(mirrorPrefix: "http://mirror.test/")
-        XCTAssertEqual(plan.url.absoluteString, directURL)
+    func testPlainHTTPMirrorIgnored() throws {
+        let plan = GopeedKernelProvisioner(root: try makeRoot(), transport: FakeTransport()).resolvePlan(mirrorPrefix: "http://mirror.test/")
+        XCTAssertEqual(plan.url, PinnedTools.gopeed.url)
+        XCTAssertNil(plan.fallbackURL)
     }
 
     func testProvisionVerifiesAndInstallsExecutable() async throws {
         let (bytes, _) = try fixture()
         let root = try makeRoot()
         let transport = FakeTransport()
-        transport.on("GET \(GopeedKernelProvisioner.latestRelease.absoluteString)", json: release(digest: "sha256:\(sha(bytes))", size: bytes.count))
         transport.on("GET \(directURL)", .init(body: bytes))
         let engine = engine(root)
-        _ = try await GopeedKernelProvisioner(root: root, transport: transport).provision(engine: engine)
+        _ = try await provisioner(root, transport, digest: sha(bytes), size: bytes.count).provision(engine: engine)
         XCTAssertNoThrow(try root.validatedExecutable(root.gopeedExecutable))
         let state = await engine.state
         XCTAssertEqual(state, .installed)
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: root.temporaryDir.path), [])
     }
 
-    func testChecksumMismatchInstallsNothing() async throws {
+    func testMismatchOrMissingDigestInstallsNothing() async throws {
         let (bytes, _) = try fixture()
-        let root = try makeRoot()
-        let transport = FakeTransport()
-        transport.on("GET \(GopeedKernelProvisioner.latestRelease.absoluteString)", json: release(digest: "sha256:\(String(repeating: "0", count: 64))", size: bytes.count))
-        transport.on("GET \(directURL)", .init(body: bytes))
-        do {
-            _ = try await GopeedKernelProvisioner(root: root, transport: transport).provision(engine: engine(root))
-            XCTFail("expected mismatch")
-        } catch {
-            XCTAssertEqual(error as? MediaToolsError, .checksumMismatch)
+        for digest in [String(repeating: "0", count: 64), ""] {
+            let root = try makeRoot()
+            let transport = FakeTransport()
+            transport.on("GET \(directURL)", .init(body: bytes))
+            do {
+                _ = try await provisioner(root, transport, digest: digest, size: bytes.count).provision(engine: engine(root))
+                XCTFail("expected mismatch")
+            } catch {
+                XCTAssertEqual(error as? MediaToolsError, .checksumMismatch)
+            }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: root.gopeedExecutable.path))
         }
-        XCTAssertFalse(FileManager.default.fileExists(atPath: root.gopeedExecutable.path))
     }
 
     func testFailedMirrorFallsBackAndTruncationFails() async throws {
         let (bytes, _) = try fixture()
         let root = try makeRoot()
         let transport = FakeTransport()
-        transport.on("GET \(GopeedKernelProvisioner.latestRelease.absoluteString)", json: release(digest: "sha256:\(sha(bytes))", size: bytes.count))
         transport.on("GET https://mirror.test/\(directURL)", .init(body: Data(bytes.prefix(4))))
         transport.on("GET \(directURL)", .init(body: bytes))
-        _ = try await GopeedKernelProvisioner(root: root, transport: transport).provision(engine: engine(root), mirrorPrefix: "https://mirror.test/")
-        XCTAssertEqual(transport.sent.count, 3)
+        _ = try await provisioner(root, transport, digest: sha(bytes), size: bytes.count).provision(engine: engine(root), mirrorPrefix: "https://mirror.test/")
+        XCTAssertEqual(transport.sent.count, 2)
         XCTAssertNoThrow(try root.validatedExecutable(root.gopeedExecutable))
+    }
+
+    func testOversizedDownloadIsCutOff() async throws {
+        let (bytes, _) = try fixture()
+        let root = try makeRoot()
+        let transport = FakeTransport()
+        transport.on("GET \(directURL)", .init(body: bytes))
+        do {
+            _ = try await provisioner(root, transport, digest: sha(bytes), size: 4).provision(engine: engine(root))
+            XCTFail("expected failure")
+        } catch {
+            XCTAssertEqual(error as? MediaToolsError, .incompleteDownload(expected: 4, actual: Int64(bytes.count)))
+        }
     }
 
     func testArchiveWithoutKernelFails() async throws {
         let other = try makeRoot().url.appendingPathComponent("readme")
         try writeFakeBinary(other)
         let root = try makeRoot()
+        let zip = try makeZip(containing: other, at: "readme")
         do {
-            try await engine(root).installFromArchive(try makeZip(containing: other, at: "readme"))
+            try await engine(root).installFromArchive(zip, expectedSHA256: sha(try Data(contentsOf: zip)))
             XCTFail("expected failure")
         } catch {
             XCTAssertEqual(error as? MediaToolsError, .missingInArchive("gopeed"))
         }
     }
+
+    func testBareBinaryKeepsQuarantineUnlessDigestMatches() async throws {
+        let binary = try makeRoot().url.appendingPathComponent("kernel")
+        try writeFakeBinary(binary)
+        XCTAssertEqual(setxattr(binary.path, "com.apple.quarantine", "0081;0;Thermo;", 14, 0, 0), 0)
+
+        let root = try makeRoot()
+        do {
+            try await engine(root).installFromArchive(binary, expectedSHA256: String(repeating: "0", count: 64))
+            XCTFail("expected failure")
+        } catch {
+            XCTAssertEqual(error as? MediaToolsError, .checksumMismatch)
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: root.gopeedExecutable.path))
+        XCTAssertGreaterThan(getxattr(binary.path, "com.apple.quarantine", nil, 0, 0, 0), 0)
+
+        try await engine(root).installFromArchive(binary, expectedSHA256: sha(try Data(contentsOf: binary)))
+        XCTAssertLessThan(getxattr(root.gopeedExecutable.path, "com.apple.quarantine", nil, 0, 0, 0), 0)
+    }
 }
 
 final class FfmpegProvisionerTests: XCTestCase {
-    private func wire(_ tool: FfmpegTool, _ transport: FakeTransport, zip: Data, sidecar: FakeTransport.Reply?) {
-        let build = URL(string: "https://ffmpeg.martin-riedl.de/download/macos/arm64/1_9.0/\(tool.rawValue).zip")!
-        transport.on("GET \(FfmpegProvisioner.releaseURL(tool).absoluteString)", .init(body: zip, finalURL: build))
-        if let sidecar { transport.on("GET \(build.absoluteString).sha256", sidecar) }
+    private func url(_ tool: FfmpegTool) -> URL {
+        URL(string: "https://ffmpeg.martin-riedl.de/download/macos/arm64/1_9.0/\(tool.rawValue).zip")!
     }
 
     private func zip(_ name: String) throws -> Data {
@@ -155,39 +204,38 @@ final class FfmpegProvisionerTests: XCTestCase {
         return try Data(contentsOf: makeZip(containing: binary, at: name))
     }
 
-    func testVerifiesAgainstSidecarOfResolvedBuild() async throws {
+    func testInstallsPinnedBuilds() async throws {
         let root = try makeRoot()
         let transport = FakeTransport()
+        var pins: [FfmpegTool: PinnedTool] = [:]
         for tool in FfmpegTool.allCases {
             let bytes = try zip(tool.rawValue)
-            wire(tool, transport, zip: bytes, sidecar: .init(body: Data("\(sha(bytes))  \(tool.rawValue).zip\n".utf8)))
+            transport.on("GET \(url(tool).absoluteString)", .init(body: bytes))
+            pins[tool] = PinnedTool(url: url(tool), size: Int64(bytes.count), sha256: sha(bytes))
         }
-        let provisioner = FfmpegProvisioner(root: root, transport: transport)
+        let chosen = pins
+        let provisioner = FfmpegProvisioner(root: root, transport: transport, runner: ProcessToolRunner(), pins: { chosen[$0]! })
         let receipts = try await provisioner.provision()
-        XCTAssertEqual(receipts.map(\.checksumVerified), [true, true])
+        XCTAssertEqual(receipts.map(\.tool), FfmpegTool.allCases)
         XCTAssertTrue(provisioner.isInstalled)
         XCTAssertNoThrow(try root.validatedExecutable(root.ffprobeExecutable))
         XCTAssertTrue(provisioner.uninstall())
         XCTAssertFalse(provisioner.isInstalled)
     }
 
-    func testMissingSidecarIsReportedUnverified() async throws {
-        let transport = FakeTransport()
-        wire(.ffmpeg, transport, zip: try zip("ffmpeg"), sidecar: nil)
-        let receipts = try await FfmpegProvisioner(root: makeRoot(), transport: transport).provision(tools: [.ffmpeg])
-        XCTAssertEqual(receipts, [FfmpegInstallReceipt(tool: .ffmpeg, checksumVerified: false)])
-    }
-
-    func testMismatchAndSidecarOutageInstallNothing() async throws {
-        let bad: [FakeTransport.Reply] = [.init(body: Data("\(String(repeating: "0", count: 64))  x\n".utf8)), .init(status: 503), .init(body: Data("<html>".utf8))]
-        for reply in bad {
+    func testMismatchOrMissingDigestInstallsNothing() async throws {
+        let bytes = try zip("ffmpeg")
+        for digest in [String(repeating: "0", count: 64), ""] {
             let root = try makeRoot()
             let transport = FakeTransport()
-            wire(.ffmpeg, transport, zip: try zip("ffmpeg"), sidecar: reply)
+            transport.on("GET \(url(.ffmpeg).absoluteString)", .init(body: bytes))
+            let pin = PinnedTool(url: url(.ffmpeg), size: Int64(bytes.count), sha256: digest)
             do {
-                _ = try await FfmpegProvisioner(root: root, transport: transport).provision(tools: [.ffmpeg])
+                _ = try await FfmpegProvisioner(root: root, transport: transport, runner: ProcessToolRunner(), pins: { _ in pin }).provision(tools: [.ffmpeg])
                 XCTFail("expected failure")
-            } catch {}
+            } catch {
+                XCTAssertEqual(error as? MediaToolsError, .checksumMismatch)
+            }
             XCTAssertFalse(FileManager.default.fileExists(atPath: root.ffmpegExecutable.path))
         }
     }

@@ -77,7 +77,7 @@ public protocol GopeedProcess: AnyObject, Sendable {
 }
 
 public protocol GopeedLauncher: Sendable {
-    func launch(executable: URL, arguments: [String], workingDirectory: URL) throws -> GopeedProcess
+    func launch(executable: URL, arguments: [String], environment: [String: String], workingDirectory: URL) throws -> GopeedProcess
     func executablePath(pid: Int32) -> String?
     func forceKill(pid: Int32)
     func freePort() throws -> Int
@@ -88,6 +88,11 @@ public protocol GopeedLauncher: Sendable {
 /// The child's output is discarded rather than logged to a file as YunX does, because a kernel
 /// we do not control could print a signed URL. Applications must call `stop()` on termination;
 /// an orphan left by a crash is cleaned up by the next `start`.
+///
+/// Each start gets a fresh API token, because the REST API allows any browser origin and any
+/// local process could otherwise read task URLs and headers. Gopeed answers 401 to a request
+/// without `X-Api-Token`. The token reaches it through `GOPEED_APITOKEN`, the same field as `-T`
+/// (gopeed v1.9.3 `cmd/web/flags.go`), so it never shows in the process's argv.
 public actor GopeedEngine {
     public enum State: Sendable, Equatable { case notInstalled, installed, running }
 
@@ -99,6 +104,9 @@ public actor GopeedEngine {
         public static let error = "error"
         public static let done = "done"
     }
+
+    static let apiTokenVariable = "GOPEED_APITOKEN"
+    static let apiTokenHeader = "X-Api-Token"
 
     /// Without a UA, CDNs throttle pasted links.
     private static let defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
@@ -114,6 +122,8 @@ public actor GopeedEngine {
     private let readyTimeout: TimeInterval
     private let stopTimeout: TimeInterval
     private var process: GopeedProcess?
+    /// Memory only, and replaced on every start.
+    private var apiToken = ""
 
     public init(root: MediaToolsRoot, transport: MediaHTTPTransport = URLSessionMediaTransport.loopback, launcher: GopeedLauncher = SystemGopeedLauncher(), runner: ToolRunner = ProcessToolRunner()) {
         self.init(root: root, transport: transport, launcher: launcher, runner: runner, readyTimeout: 20, stopTimeout: 3)
@@ -137,14 +147,16 @@ public actor GopeedEngine {
         state = isInstalled ? .installed : .notInstalled
     }
 
-    /// Accepts the official zip or a bare kernel binary.
-    public func installFromArchive(_ archive: URL) async throws {
+    /// Accepts the official zip or a bare kernel binary, only when it hashes to `expectedSHA256`.
+    public func installFromArchive(_ archive: URL, expectedSHA256: String) async throws {
+        try ToolInstaller.verify(archive, expected: expectedSHA256)
         if state == .running { await stop() }
         let target = root.gopeedExecutable
         if archive.pathExtension.lowercased() == "zip" {
-            try await ToolInstaller.install(archive: archive, entryName: "gopeed", to: target, root: root, runner: runner)
+            try await ToolInstaller.install(
+                archive: archive, expectedSHA256: expectedSHA256, entryName: "gopeed", to: target, root: root, runner: runner)
         } else {
-            try ToolInstaller.installBinary(from: archive, to: target)
+            try ToolInstaller.installBinary(from: archive, expectedSHA256: expectedSHA256, to: target)
         }
         lastError = nil
         state = .installed
@@ -183,9 +195,12 @@ public actor GopeedEngine {
 
         let localPort = try launcher.freePort()
         let arguments = ["-A", "127.0.0.1", "-P", String(localPort), "-d", root.gopeedStorage.path]
-        let child = try launcher.launch(executable: executable, arguments: arguments, workingDirectory: root.gopeedDir)
+        let token = Self.makeAPIToken()
+        let child = try launcher.launch(
+            executable: executable, arguments: arguments, environment: [Self.apiTokenVariable: token], workingDirectory: root.gopeedDir)
         process = child
         port = localPort
+        apiToken = token
 
         guard await awaitReady(child) else {
             let exitCode = child.isRunning ? nil : child.exitCode
@@ -193,6 +208,7 @@ public actor GopeedEngine {
             if process === child {
                 process = nil
                 port = 0
+                apiToken = ""
             }
             lastError = exitCode.map { "Gopeed exited with code \($0)" } ?? "Gopeed did not answer in time"
             throw GopeedError.startFailed(exitCode: exitCode)
@@ -206,6 +222,7 @@ public actor GopeedEngine {
         let child = process
         process = nil
         port = 0
+        apiToken = ""
         try? FileManager.default.removeItem(at: root.gopeedPIDFile)
         if let child {
             child.terminate()
@@ -225,6 +242,11 @@ public actor GopeedEngine {
     }
 
     /// An orphan from a killed app still holds the bolt lock. Matched by path so a Gopeed the user runs is left alone.
+    private static func makeAPIToken() -> String {
+        var generator = SystemRandomNumberGenerator()
+        return (0..<32).map { _ in String(format: "%02x", UInt8.random(in: .min ... .max, using: &generator)) }.joined()
+    }
+
     private func killStaleProcess(_ executable: URL) {
         guard let text = try? String(contentsOf: root.gopeedPIDFile, encoding: .utf8),
               let pid = Int32(text.trimmingCharacters(in: .whitespacesAndNewlines)) else { return }
@@ -410,8 +432,9 @@ public actor GopeedEngine {
         guard port > 0, let url = URL(string: "http://127.0.0.1:\(port)\(path)") else { throw GopeedError.notRunning }
         var payload = body
         if payload == nil, method == "POST" || method == "PUT" { payload = Data("{}".utf8) }
-        let request = MediaRequest(
-            method: method, url: url, headers: payload == nil ? [:] : ["Content-Type": "application/json; charset=utf-8"], body: payload)
+        var headers = [Self.apiTokenHeader: apiToken]
+        if payload != nil { headers["Content-Type"] = "application/json; charset=utf-8" }
+        let request = MediaRequest(method: method, url: url, headers: headers, body: payload)
         let response = try await transport.send(request)
         let data = try await response.collect(limit: 32 << 20)
         if data.isEmpty {
@@ -431,10 +454,11 @@ public actor GopeedEngine {
 public struct SystemGopeedLauncher: GopeedLauncher {
     public init() {}
 
-    public func launch(executable: URL, arguments: [String], workingDirectory: URL) throws -> GopeedProcess {
+    public func launch(executable: URL, arguments: [String], environment: [String: String], workingDirectory: URL) throws -> GopeedProcess {
         let process = Process()
         process.executableURL = executable
         process.arguments = arguments
+        process.environment = ProcessInfo.processInfo.environment.merging(environment) { _, new in new }
         process.currentDirectoryURL = workingDirectory
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice

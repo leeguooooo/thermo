@@ -7,6 +7,7 @@ public struct ToolDownloadProgress: Sendable, Equatable {
 }
 
 /// Shared download, checksum and install steps for the Gopeed and FFmpeg archives.
+/// Installing always takes the expected digest, so no path can place an unchecked executable.
 enum ToolInstaller {
     private static let chunkReportInterval: TimeInterval = 0.3
 
@@ -28,6 +29,9 @@ enum ToolInstaller {
         var lastReport = Date.distantPast
         for try await chunk in response.body {
             try Task.checkCancellation()
+            if declaredSize > 0, written + Int64(chunk.count) > declaredSize {
+                throw MediaToolsError.incompleteDownload(expected: declaredSize, actual: written + Int64(chunk.count))
+            }
             try handle.write(contentsOf: chunk)
             hasher.update(data: chunk)
             written += Int64(chunk.count)
@@ -51,11 +55,24 @@ enum ToolInstaller {
         return hex
     }
 
+    /// Throws unless `file` hashes to `expected`. A digest that cannot be parsed fails too.
+    static func verify(_ file: URL, expected: String) throws {
+        guard let expected = expectedSHA256(expected) else { throw MediaToolsError.checksumMismatch }
+        let handle = try FileHandle(forReadingFrom: file)
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while let block = try handle.read(upToCount: 1 << 20), !block.isEmpty { hasher.update(data: block) }
+        guard hasher.finalize().map({ String(format: "%02x", $0) }).joined() == expected else {
+            throw MediaToolsError.checksumMismatch
+        }
+    }
+
     /// Extracts with ditto into an empty directory so entry names never choose a path of ours,
     /// then installs the one regular file called `name`.
     static func install(
-        archive: URL, entryName name: String, to target: URL, root: MediaToolsRoot, runner: ToolRunner
+        archive: URL, expectedSHA256: String, entryName name: String, to target: URL, root: MediaToolsRoot, runner: ToolRunner
     ) async throws {
+        try verify(archive, expected: expectedSHA256)
         let workspace = try root.makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: workspace) }
         let result = try await runner.run(
@@ -74,11 +91,17 @@ enum ToolInstaller {
             break
         }
         guard let found else { throw MediaToolsError.missingInArchive(name) }
-        try installBinary(from: found, to: target)
+        try place(found, at: target)
     }
 
-    /// Atomic, so a failed install leaves any working tool in place.
-    static func installBinary(from source: URL, to target: URL) throws {
+    static func installBinary(from source: URL, expectedSHA256: String, to target: URL) throws {
+        try verify(source, expected: expectedSHA256)
+        try place(source, at: target)
+    }
+
+    /// Atomic, so a failed install leaves any working tool in place. Callers have verified the
+    /// digest, which is the only thing that justifies dropping quarantine here.
+    private static func place(_ source: URL, at target: URL) throws {
         guard MediaToolsRoot.isMachO(source) else { throw MediaToolsError.executableRejected("not Mach-O") }
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)

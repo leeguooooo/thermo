@@ -388,3 +388,25 @@ final class QuarkProviderTests: XCTestCase {
         XCTAssertNil(Stub().parseShareLink("https://pan.quark.cn/s/abc"))
     }
 }
+
+final class HTTPRedirectTests: XCTestCase {
+    private func proposal(_ url: String) -> URLRequest {
+        var request = URLRequest(url: URL(string: url)!)
+        for (name, value) in ["Cookie": "c", "Authorization": "a", "X-Auth-Token": "t", "User-Agent": "ua"] {
+            request.setValue(value, forHTTPHeaderField: name)
+        }
+        return request
+    }
+
+    func testCrossOriginKeepsOnlyAllowlist() {
+        for target in ["https://b.test/x", "http://a.test/x", "https://a.test:8443/x"] {
+            let next = URLSessionTransport.redirected(proposal(target), from: URL(string: "https://a.test/y"))
+            XCTAssertEqual(Set(next.allHTTPHeaderFields?.keys.map { $0.lowercased() } ?? []), ["user-agent"], target)
+        }
+    }
+
+    func testSameOriginKeepsHeaders() {
+        let next = URLSessionTransport.redirected(proposal("https://a.test:443/x"), from: URL(string: "https://a.test/y"))
+        XCTAssertEqual(next.value(forHTTPHeaderField: "X-Auth-Token"), "t")
+    }
+}

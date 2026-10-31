@@ -31,6 +31,20 @@ final class GopeedEngineTests: XCTestCase {
         XCTAssertEqual(mode, 0o700)
     }
 
+    func testEveryRequestCarriesAFreshTokenThatStaysOutOfArgv() async throws {
+        let (engine, transport, launcher, _) = try make()
+        try await engine.start()
+        let first = try XCTUnwrap(launcher.environments.last?[GopeedEngine.apiTokenVariable])
+        XCTAssertEqual(first.count, 64)
+        XCTAssertFalse(launcher.launches[0].1.contains(first))
+        XCTAssertFalse(transport.sent.isEmpty)
+        XCTAssertTrue(transport.sent.allSatisfy { $0.headers[GopeedEngine.apiTokenHeader] == first })
+
+        let (other, _, otherLauncher, _) = try make()
+        try await other.start()
+        XCTAssertNotEqual(otherLauncher.environments.last?[GopeedEngine.apiTokenVariable], first)
+    }
+
     func testStartWithoutKernelNeverLaunches() async throws {
         let (engine, _, launcher, _) = try make(installed: false)
         do {

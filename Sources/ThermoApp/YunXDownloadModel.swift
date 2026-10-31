@@ -447,11 +447,10 @@ final class YunXDownloadModel: ObservableObject {
 
     private func fetchHLS(_ id: UUID, url: String, headers: [String: String], to destination: URL) async throws -> URL {
         let box = YunXCounter()
-        try await HlsDownloader().download(url: url, headers: headers, destination: destination) { [weak self] bytes in
+        return try await HlsDownloader().download(url: url, headers: headers, destination: destination) { [weak self] bytes in
             let total = box.add(bytes)
             await self?.update(id) { $0.received = total }
         }
-        return destination
     }
 
     /// Downloads the ticked files, or just `only`.
@@ -602,13 +601,33 @@ final class YunXDownloadModel: ObservableObject {
                     }
                 }
             } catch {
-                try? await engine.deleteTask(task)
-                if !(await engine.hasActiveTasks()) { await engine.stop() }
+                await Self.retire(task, engine: engine)
                 throw error
             }
-            if !(await engine.hasActiveTasks()) { await engine.stop() }
+            await Self.retire(task, engine: engine)
             return directory
         }
+    }
+
+    /// Removes the task, which keeps its files, so its URL leaves Gopeed's store. Runs in its own
+    /// task because a cancelled caller would cancel these requests too.
+    private nonisolated static func retire(_ task: String, engine: GopeedEngine) async {
+        await Task {
+            try? await engine.deleteTask(task)
+            if !(await engine.hasActiveTasks()) { await engine.stop() }
+        }.value
+    }
+
+    /// Called on app termination, which cannot wait for async work, so this blocks for at most a
+    /// moment longer than the engine's own stop escalation.
+    func shutdown() {
+        guard let gopeed else { return }
+        let stopped = DispatchSemaphore(value: 0)
+        Task.detached {
+            await gopeed.stop()
+            stopped.signal()
+        }
+        _ = stopped.wait(timeout: .now() + 4)
     }
 }
 

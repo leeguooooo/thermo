@@ -281,6 +281,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNU
         CaptureCLIHost.shared.cancelActive()
         CaptureWorkspace.shared.shutdown()
         LocalSearchModel.shared.stop()
+        YunXDownloadModel.shared.shutdown()
         // Fan policies live in the helper and intentionally survive the app quitting.
     }
 

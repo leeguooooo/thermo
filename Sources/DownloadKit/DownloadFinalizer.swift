@@ -61,7 +61,9 @@ enum DownloadFinalizer {
     }
 
     /// `RENAME_EXCL` makes "does it exist" and "move" one step, so nothing can be overwritten.
+    /// Every saved download comes through here, and is quarantined before it gets its visible name.
     static func publish(_ source: URL, to destination: URL) throws -> URL {
+        DownloadQuarantine.mark(source)
         for index in 0..<10_000 {
             let candidate = uniqueName(for: destination, index: index)
             if renamex_np(source.path, candidate.path, UInt32(RENAME_EXCL)) == 0 { return candidate }
@@ -89,5 +91,16 @@ enum DownloadFinalizer {
         let suffix = destination.pathExtension
         let name = suffix.isEmpty ? "\(base) (\(index))" : "\(base) (\(index)).\(suffix)"
         return destination.deletingLastPathComponent().appendingPathComponent(name)
+    }
+}
+
+/// Makes Gatekeeper treat a saved file as coming from the internet, as a browser would.
+enum DownloadQuarantine {
+    /// No origin URL is recorded: drive links are signed, and this attribute outlives the download.
+    /// Best effort, because volumes without extended attributes (exFAT, some shares) refuse it,
+    /// and that should not cost the user a finished download.
+    static func mark(_ file: URL) {
+        let properties: [String: Any] = ["LSQuarantineAgentName": "Thermo", "LSQuarantineType": "LSQuarantineTypeWebDownload"]
+        try? (file as NSURL).setResourceValue(properties, forKey: .quarantinePropertiesKey)
     }
 }

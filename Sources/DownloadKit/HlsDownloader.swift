@@ -81,47 +81,49 @@ public struct HlsDownloader: Sendable {
         self.maxTotalSize = maxTotalSize
     }
 
-    /// Writes the init map and segments, in order, to `destination`. Deletes it on failure.
+    /// Writes the init map and segments, in order, to a temp file beside `destination`, then
+    /// publishes under a free name, so an existing file is never touched. Returns where it landed.
+    @discardableResult
     public func download(
         url: String, headers: [String: String] = [:], destination: URL,
         onBytes: @escaping @Sendable (Int64) async -> Void = { _ in }
-    ) async throws {
+    ) async throws -> URL {
         guard let origin = HlsRequestPolicy.initialURL(url) else { throw HlsError.insecureURL }
-        do {
-            let master = try await fetchText(origin, origin: origin, headers: headers)
-            let mediaURL = try Self.resolveMediaPlaylist(base: master.finalURL, text: master.text)
-            let media = mediaURL == master.finalURL ? master : try await fetchText(mediaURL, origin: origin, headers: headers)
-            if media.text.contains("#EXT-X-KEY") || media.text.contains("#EXT-X-BYTERANGE") {
-                throw HlsError.unsupportedPlaylist
-            }
-            var targets: [URL] = []
-            if let map = Self.parseMapURI(media.text) {
-                // As in YunX, a map that cannot be resolved is left out; the segments still play.
-                if let resolved = HlsRequestPolicy.resolve(base: media.finalURL, candidate: map) { targets.append(resolved) }
-            }
-            let segments = try Self.parseSegments(media.text)
-            guard !segments.isEmpty else { throw HlsError.emptyPlaylist }
-            for segment in segments {
-                guard let resolved = HlsRequestPolicy.resolve(base: media.finalURL, candidate: segment) else {
-                    throw HlsError.insecureURL
-                }
-                targets.append(resolved)
-            }
-            try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-            guard FileManager.default.createFile(atPath: destination.path, contents: nil) else {
-                throw DownloadError.io("cannot create \(destination.lastPathComponent)")
-            }
-            let output = try FileHandle(forWritingTo: destination)
-            defer { try? output.close() }
-            var total: Int64 = 0
-            for target in targets {
-                let wrote = try await fetch(target, origin: origin, headers: headers, output: output, total: &total, onBytes: onBytes)
-                if wrote <= 0 { throw HlsError.emptySegment }
-            }
-        } catch {
-            try? FileManager.default.removeItem(at: destination)
-            throw error
+        let temp = destination.deletingLastPathComponent()
+            .appendingPathComponent(".\(destination.lastPathComponent).\(UUID().uuidString).download")
+        defer { try? FileManager.default.removeItem(at: temp) }
+        let master = try await fetchText(origin, origin: origin, headers: headers)
+        let mediaURL = try Self.resolveMediaPlaylist(base: master.finalURL, text: master.text)
+        let media = mediaURL == master.finalURL ? master : try await fetchText(mediaURL, origin: origin, headers: headers)
+        if media.text.contains("#EXT-X-KEY") || media.text.contains("#EXT-X-BYTERANGE") {
+            throw HlsError.unsupportedPlaylist
         }
+        var targets: [URL] = []
+        if let map = Self.parseMapURI(media.text) {
+            // As in YunX, a map that cannot be resolved is left out; the segments still play.
+            if let resolved = HlsRequestPolicy.resolve(base: media.finalURL, candidate: map) { targets.append(resolved) }
+        }
+        let segments = try Self.parseSegments(media.text)
+        guard !segments.isEmpty else { throw HlsError.emptyPlaylist }
+        for segment in segments {
+            guard let resolved = HlsRequestPolicy.resolve(base: media.finalURL, candidate: segment) else {
+                throw HlsError.insecureURL
+            }
+            targets.append(resolved)
+        }
+        try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+        guard FileManager.default.createFile(atPath: temp.path, contents: nil) else {
+            throw DownloadError.io("cannot create \(destination.lastPathComponent)")
+        }
+        let output = try FileHandle(forWritingTo: temp)
+        defer { try? output.close() }
+        var total: Int64 = 0
+        for target in targets {
+            let wrote = try await fetch(target, origin: origin, headers: headers, output: output, total: &total, onBytes: onBytes)
+            if wrote <= 0 { throw HlsError.emptySegment }
+        }
+        try output.synchronize()
+        return try DownloadFinalizer.publish(temp, to: destination)
     }
 
     struct FetchedText {

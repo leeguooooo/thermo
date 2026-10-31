@@ -701,3 +701,29 @@ final class HeadlessWebViewTests: XCTestCase {
         XCTAssertEqual(result, #"{"hook":"early","text":"hi"}"#)
     }
 }
+
+final class VideoRedirectTests: XCTestCase {
+    private func proposal(_ url: String) -> URLRequest {
+        var request = URLRequest(url: URL(string: url)!)
+        for (name, value) in ["Cookie": "c", "Authorization": "a", "X-Token": "t", "Referer": "r", "User-Agent": "ua", "Range": "bytes=0-"] {
+            request.setValue(value, forHTTPHeaderField: name)
+        }
+        return request
+    }
+
+    func testRefusesHttpsToHttp() {
+        XCTAssertNil(VideoRedirect.next(proposal("http://a.test/x"), from: URL(string: "https://a.test/y")))
+    }
+
+    func testCrossOriginKeepsOnlyAllowlist() throws {
+        for target in ["https://b.test/x", "https://a.test:8443/x"] {
+            let next = try XCTUnwrap(VideoRedirect.next(proposal(target), from: URL(string: "https://a.test/y")))
+            XCTAssertEqual(Set(next.allHTTPHeaderFields?.keys.map { $0.lowercased() } ?? []), ["user-agent", "range"])
+        }
+    }
+
+    func testSameOriginKeepsHeaders() throws {
+        let next = try XCTUnwrap(VideoRedirect.next(proposal("https://A.test:443/x"), from: URL(string: "https://a.test/y")))
+        XCTAssertEqual(next.value(forHTTPHeaderField: "X-Token"), "t")
+    }
+}

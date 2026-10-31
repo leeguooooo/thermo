@@ -107,6 +107,37 @@ final class PortedHelpersTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: out.path))
     }
 
+    func testHlsKeepsExistingFilesAndQuarantinesOutput() async throws {
+        let fake = HlsFake(["https://a.test/m": text("a.ts\n"), "https://a.test/a.ts": text("A")])
+        let out = directory.appendingPathComponent("v.ts")
+        try Data("old".utf8).write(to: out)
+        let saved = try await HlsDownloader(transport: fake).download(url: "https://a.test/m", destination: out)
+        XCTAssertEqual(saved.lastPathComponent, "v (1).ts")
+        XCTAssertEqual(try Data(contentsOf: out), Data("old".utf8))
+        XCTAssertEqual(try Data(contentsOf: saved), Data("A".utf8))
+        XCTAssertGreaterThan(getxattr(saved.path, "com.apple.quarantine", nil, 0, 0, 0), 0)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path).sorted(), ["v (1).ts", "v.ts"])
+    }
+
+    func testHlsFailureLeavesExistingFileAlone() async throws {
+        let fake = HlsFake(["https://a.test/m": text("a.ts\nb.ts\n"), "https://a.test/a.ts": text("A")])
+        let out = directory.appendingPathComponent("v.ts")
+        try Data("old".utf8).write(to: out)
+        _ = try? await HlsDownloader(transport: fake).download(url: "https://a.test/m", destination: out)
+        XCTAssertEqual(try Data(contentsOf: out), Data("old".utf8))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path), ["v.ts"])
+    }
+
+    func testSavedFileIsQuarantinedWithoutItsURL() throws {
+        let source = directory.appendingPathComponent("muxed.mp4")
+        try Data([1]).write(to: source)
+        let saved = try DownloadSaver.save(source, as: "clip.mp4", in: directory)
+        var buffer = [CChar](repeating: 0, count: 512)
+        let length = getxattr(saved.path, "com.apple.quarantine", &buffer, 511, 0, 0)
+        XCTAssertGreaterThan(length, 0)
+        XCTAssertFalse(String(cString: buffer).contains("http"))
+    }
+
     func testHlsSizeLimits() async {
         let big = HlsFake([
             "https://a.test/m": text("a.ts\n"),

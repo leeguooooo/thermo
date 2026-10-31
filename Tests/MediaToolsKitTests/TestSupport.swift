@@ -113,11 +113,13 @@ final class FakeProcess: GopeedProcess, @unchecked Sendable {
 final class FakeLauncher: GopeedLauncher, @unchecked Sendable {
     let process = FakeProcess()
     private(set) var launches: [(URL, [String])] = []
+    private(set) var environments: [[String: String]] = []
     var paths: [Int32: String] = [:]
     private(set) var killed: [Int32] = []
 
-    func launch(executable: URL, arguments: [String], workingDirectory: URL) throws -> GopeedProcess {
+    func launch(executable: URL, arguments: [String], environment: [String: String], workingDirectory: URL) throws -> GopeedProcess {
         launches.append((executable, arguments))
+        environments.append(environment)
         return process
     }
     func executablePath(pid: Int32) -> String? { paths[pid] }

@@ -10,8 +10,6 @@ public enum MediaToolsError: Error, Equatable, Sendable {
     case extractionFailed
     case executableOutsideRoot
     case executableRejected(String)
-    case releaseMalformed(String)
-    case assetNotFound(String)
 }
 
 /// Every downloaded tool lives here. It is the only place a tool may be launched from, which is why

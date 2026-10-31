@@ -7,52 +7,43 @@ public struct GopeedKernelPlan: Sendable, Equatable {
     public var url: URL
     public var fallbackURL: URL?
     public var size: Int64
-    /// `sha256:<hex>` from the GitHub asset; empty when none was published.
+    /// The pinned SHA-256. Always present: there is no unverified install.
     public var digest: String
 }
 
-/// Fetches the official `gopeed-web-<tag>-macos-arm64.zip` and hands it to `GopeedEngine`.
+/// Fetches the pinned `gopeed-web-<tag>-macos-arm64.zip` and hands it to `GopeedEngine`.
 public struct GopeedKernelProvisioner: Sendable {
     public enum Stage: Sendable, Equatable { case resolving, downloading, verifying, installing, done }
 
-    static let latestRelease = URL(string: "https://api.github.com/repos/GopeedLab/gopeed/releases/latest")!
     private static let userAgent = "Thermo"
 
     private let transport: MediaHTTPTransport
     private let root: MediaToolsRoot
+    private let pin: PinnedTool
+    private let version: String
 
     public init(root: MediaToolsRoot, transport: MediaHTTPTransport = URLSessionMediaTransport.internet) {
-        self.root = root
-        self.transport = transport
+        self.init(root: root, transport: transport, pin: PinnedTools.gopeed, version: PinnedTools.gopeedVersion)
     }
 
-    public func resolvePlan(mirrorPrefix: String? = nil) async throws -> GopeedKernelPlan {
-        let response = try await transport.send(MediaRequest(
-            url: Self.latestRelease, headers: ["Accept": "application/vnd.github+json", "User-Agent": Self.userAgent]))
-        guard response.isSuccess else { throw MediaToolsError.httpStatus(response.statusCode) }
-        let data = try await response.collect(limit: 8 << 20)
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw MediaToolsError.releaseMalformed("not JSON")
-        }
-        guard let tag = json["tag_name"] as? String, !tag.isEmpty else { throw MediaToolsError.releaseMalformed("no tag") }
-        let wanted = "gopeed-web-\(tag)-macos-arm64.zip"
-        let assets = json["assets"] as? [[String: Any]] ?? []
-        guard let asset = assets.first(where: { ($0["name"] as? String)?.caseInsensitiveCompare(wanted) == .orderedSame }) else {
-            throw MediaToolsError.assetNotFound(wanted)
-        }
-        guard let direct = (asset["browser_download_url"] as? String).flatMap(URL.init(string:)),
-              direct.scheme?.lowercased() == "https" else { throw MediaToolsError.insecureURL }
-        let digest = asset["digest"] as? String ?? ""
-        var primary = direct
-        // A mirror is only trusted when the GitHub digest can catch what it serves.
-        if let prefix = mirrorPrefix?.trimmingCharacters(in: .whitespaces), !prefix.isEmpty,
-           ToolInstaller.expectedSHA256(digest) != nil, prefix.lowercased().hasPrefix("https://"),
-           let mirrored = URL(string: prefix + direct.absoluteString) {
+    init(root: MediaToolsRoot, transport: MediaHTTPTransport, pin: PinnedTool, version: String) {
+        self.root = root
+        self.transport = transport
+        self.pin = pin
+        self.version = version
+    }
+
+    /// No network: the release is fixed in source, so GitHub's "latest" cannot change what is installed.
+    /// A mirror is safe because the pinned digest catches whatever it serves.
+    public func resolvePlan(mirrorPrefix: String? = nil) -> GopeedKernelPlan {
+        var primary = pin.url
+        if let prefix = mirrorPrefix?.trimmingCharacters(in: .whitespaces), prefix.lowercased().hasPrefix("https://"),
+           let mirrored = URL(string: prefix + pin.url.absoluteString) {
             primary = mirrored
         }
         return GopeedKernelPlan(
-            version: tag, assetName: wanted, url: primary, fallbackURL: primary == direct ? nil : direct,
-            size: (asset["size"] as? NSNumber)?.int64Value ?? 0, digest: digest)
+            version: version, assetName: pin.url.lastPathComponent, url: primary,
+            fallbackURL: primary == pin.url ? nil : pin.url, size: pin.size, digest: pin.sha256)
     }
 
     /// Resolve, download with mirror fallback, verify, install.
@@ -62,19 +53,17 @@ public struct GopeedKernelProvisioner: Sendable {
         onProgress: @escaping @Sendable (ToolDownloadProgress) -> Void = { _ in }
     ) async throws -> GopeedKernelPlan {
         onStage(.resolving)
-        let plan = try await resolvePlan(mirrorPrefix: mirrorPrefix)
+        let plan = resolvePlan(mirrorPrefix: mirrorPrefix)
         let workspace = try root.makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: workspace) }
         let archive = workspace.appendingPathComponent("gopeed.zip")
 
         onStage(.downloading)
         let digest = try await download(plan: plan, to: archive, onProgress: onProgress)
-        if let expected = ToolInstaller.expectedSHA256(plan.digest) {
-            onStage(.verifying)
-            guard digest == expected else { throw MediaToolsError.checksumMismatch }
-        }
+        onStage(.verifying)
+        guard digest == ToolInstaller.expectedSHA256(plan.digest) else { throw MediaToolsError.checksumMismatch }
         onStage(.installing)
-        try await engine.installFromArchive(archive)
+        try await engine.installFromArchive(archive, expectedSHA256: plan.digest)
         onStage(.done)
         return plan
     }
