@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/LanzouCrypto.kt.
+// Ported from YunX-Desktop (MIT): data/network/LanzouCrypto.kt.
 import Foundation
 
 /// The acw_sc__v2 cookie. Lanzou answers some pages with a script page holding a 40 hex digit `arg1`;

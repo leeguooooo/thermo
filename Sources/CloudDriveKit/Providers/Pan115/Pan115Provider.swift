@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/repository/Pan115ResolveRepository.kt,
+// Ported from YunX-Desktop (MIT): data/repository/Pan115ResolveRepository.kt,
 // Pan115AccountRepository.kt and the 115 header branch of ResolveViewModel.enqueueDownload.
 //
 // Differences from the protocol's defaults, all 115 specific:

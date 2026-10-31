@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/repository/GuangYaResolveRepository.kt and
+// Ported from YunX-Desktop (MIT): data/repository/GuangYaResolveRepository.kt and
 // GuangYaAccountRepository.kt, plus the GuangYa download headers of ResolveViewModel / GuangYaCloudViewModel.
 import Foundation
 

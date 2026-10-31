@@ -84,6 +84,7 @@ python3 scripts/word-template/verify.py
 ditto Resources/CaptureWord "$C/Resources/CaptureWord"
 ditto Resources/ThirdPartyNotices "$C/Resources/ThirdPartyNotices"
 ditto Resources/ThirdPartyNotices "$DIST/ThirdPartyNotices"
+cp THIRD_PARTY_LICENSES "$C/Resources/THIRD_PARTY_LICENSES"
 ditto "$BIN/Sparkle.framework" "$C/Frameworks/Sparkle.framework"
 # Not sandboxed, so Sparkle's XPC services are unnecessary.
 rm -rf "$C/Frameworks/Sparkle.framework/Versions/B/XPCServices" "$C/Frameworks/Sparkle.framework/XPCServices"

@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/XunleiWebCredential.kt (the parsing half) and the
+// Ported from YunX-Desktop (MIT): data/network/XunleiWebCredential.kt (the parsing half) and the
 // account fields of db/XunleiAccountEntity. The browser bridge scripts and the headless-session
 // fallback are not ported.
 import Foundation

@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): Pan123Api.makeSign and crc32Hex.
+// Ported from YunX-Desktop (MIT): Pan123Api.makeSign and crc32Hex.
 import Foundation
 
 enum Pan123Sign {

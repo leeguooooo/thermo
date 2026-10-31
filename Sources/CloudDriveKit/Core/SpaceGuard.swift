@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/repository/TransferSpaceGuard.kt.
+// Ported from YunX-Desktop (MIT): data/repository/TransferSpaceGuard.kt.
 import Foundation
 
 /// Fails a save early when it cannot fit, so a stuck task is not misreported as a timeout.

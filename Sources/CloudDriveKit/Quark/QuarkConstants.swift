@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/QuarkConstants.kt and QuarkCookieUtil in QuarkApi.kt.
+// Ported from YunX-Desktop (MIT): data/network/QuarkConstants.kt and QuarkCookieUtil in QuarkApi.kt.
 import Foundation
 
 public enum QuarkConstants {

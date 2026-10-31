@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/repository/QuarkResolveRepository.kt,
+// Ported from YunX-Desktop (MIT): data/repository/QuarkResolveRepository.kt,
 // QuarkAccountRepository.kt, and the Quark header branch of ResolveViewModel.enqueueDownload.
 import Foundation
 

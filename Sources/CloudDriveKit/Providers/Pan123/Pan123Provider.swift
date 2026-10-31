@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/repository/Pan123ResolveRepository.kt,
+// Ported from YunX-Desktop (MIT): data/repository/Pan123ResolveRepository.kt,
 // Pan123AccountRepository.kt, and the Pan123 header branch of ResolveViewModel.enqueueDownload.
 import Foundation
 

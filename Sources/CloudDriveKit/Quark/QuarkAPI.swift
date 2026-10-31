@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/QuarkApi.kt.
+// Ported from YunX-Desktop (MIT): data/network/QuarkApi.kt.
 // Endpoints, parameters and error handling follow that file. Failed lookups that returned null there return nil here.
 import Foundation
 

@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/XunleiApi.kt, with the account flow from
+// Ported from YunX-Desktop (MIT): data/network/XunleiApi.kt, with the account flow from
 // repository/XunleiAccountRepository.kt and the resolve flow from repository/XunleiResolveRepository.kt.
 // Endpoints, parameters, signing and error handling follow those files.
 //

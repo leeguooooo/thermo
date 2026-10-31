@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/LanzouApi.kt.
+// Ported from YunX-Desktop (MIT): data/network/LanzouApi.kt.
 // Endpoints, form fields, page parsing and error messages follow that file. Where the Kotlin
 // control flow could not do what its comments say, the intended behaviour is implemented and
 // the spot is marked "differs from source".

@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/repository/ILanzouResolveRepository.kt,
+// Ported from YunX-Desktop (MIT): data/repository/ILanzouResolveRepository.kt,
 // ILanzouAccountRepository.kt and the iLanzou branches of ILanzouCloudViewModel / ResolveViewModel.
 import Foundation
 

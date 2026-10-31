@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/C139Constants.kt.
+// Ported from YunX-Desktop (MIT): data/network/C139Constants.kt.
 // Endpoints, header values and cookie rules follow that file. The headers were captured from a
 // working session there; they are not documented by the service.
 import Foundation

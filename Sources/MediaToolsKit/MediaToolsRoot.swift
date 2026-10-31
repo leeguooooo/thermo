@@ -38,7 +38,7 @@ public struct MediaToolsRoot: Sendable {
     var ffprobeExecutable: URL { ffmpegBin.appendingPathComponent("ffprobe") }
     var temporaryDir: URL { url.appendingPathComponent("tmp", isDirectory: true) }
 
-    func makeTemporaryDirectory() throws -> URL {
+    public func makeTemporaryDirectory() throws -> URL {
         let dir = temporaryDir.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         return dir

@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/XunleiConstants.kt, XunleiDeviceFingerprint.kt,
+// Ported from YunX-Desktop (MIT): data/network/XunleiConstants.kt, XunleiDeviceFingerprint.kt,
 // XunleiKouling.kt and the captcha_sign helpers in XunleiApi.kt / XunleiWebCredential.kt.
 import CryptoKit
 import Foundation

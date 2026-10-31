@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/repository/UCResolveRepository.kt, UCAccountRepository.kt,
+// Ported from YunX-Desktop (MIT): data/repository/UCResolveRepository.kt, UCAccountRepository.kt,
 // and the UC header branch of ResolveViewModel.enqueueDownload.
 import Foundation
 

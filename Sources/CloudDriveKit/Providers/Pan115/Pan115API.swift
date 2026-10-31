@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/Pan115Api.kt.
+// Ported from YunX-Desktop (MIT): data/network/Pan115Api.kt.
 // Endpoints, parameters, signing (Pan115Crypto) and error handling follow that file.
 // Lookups that were `runCatching { ... }.getOrNull()` there return nil here.
 import Foundation

@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/UCApi.kt.
+// Ported from YunX-Desktop (MIT): data/network/UCApi.kt.
 // Endpoints, parameters and error handling follow that file. Lookups that returned null there and
 // swallow their errors return nil here; the others throw `DriveError`.
 import Foundation

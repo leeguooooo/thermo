@@ -1,4 +1,4 @@
-// The shared shape of YunX-Desktop's drive APIs (AGPL-3.0): QuarkApi.kt, UCApi.kt, Pan115Api.kt,
+// The shared shape of YunX-Desktop's drive APIs (MIT): QuarkApi.kt, UCApi.kt, Pan115Api.kt,
 // LanzouApi.kt and repository/ShareResolveRepository.kt.
 import Foundation
 

@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/Pan115Crypto.kt.
+// Ported from YunX-Desktop (MIT): data/network/Pan115Crypto.kt.
 // The request and response wrapping of 115's desktop download endpoint (proapi.115.com/app/chrome/downurl).
 import Foundation
 

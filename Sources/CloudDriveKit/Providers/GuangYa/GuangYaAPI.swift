@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/GuangYaApi.kt.
+// Ported from YunX-Desktop (MIT): data/network/GuangYaApi.kt.
 // Endpoints, bodies, headers, polling and error mapping follow that file. Kotlin IllegalStateException
 // messages become DriveError.api; lookups that returned null there return nil here.
 import Foundation

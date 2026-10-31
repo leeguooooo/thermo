@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/Pan115Constants.kt.
+// Ported from YunX-Desktop (MIT): data/network/Pan115Constants.kt.
 //
 // Pitfalls kept from the source notes: business APIs all live on webapi.115.com and POST as forms; write calls
 // take `file_id` for files and `cate_id` (the list's `cid`) for folders; CDN links need the 900 second cookie

@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): the signing and share-body encryption in data/network/C139Api.kt.
+// Ported from YunX-Desktop (MIT): the signing and share-body encryption in data/network/C139Api.kt.
 import CommonCrypto
 import CryptoKit
 import Foundation

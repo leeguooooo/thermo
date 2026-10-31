@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/C139Api.kt.
+// Ported from YunX-Desktop (MIT): data/network/C139Api.kt.
 // Endpoints, parameters, signing and error handling follow that file. Lookups that returned null there and
 // swallow their errors return nil here; the others throw `DriveError`.
 //

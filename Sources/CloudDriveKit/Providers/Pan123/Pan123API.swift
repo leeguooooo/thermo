@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/Pan123Api.kt.
+// Ported from YunX-Desktop (MIT): data/network/Pan123Api.kt.
 // Endpoints, parameters, signing and error handling follow that file. Lookups that returned null there return nil here.
 import Foundation
 

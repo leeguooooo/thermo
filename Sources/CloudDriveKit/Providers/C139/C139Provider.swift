@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/repository/C139ResolveRepository.kt, C139AccountRepository.kt,
+// Ported from YunX-Desktop (MIT): data/repository/C139ResolveRepository.kt, C139AccountRepository.kt,
 // and the 139 header branch of ResolveViewModel.enqueueDownload.
 import Foundation
 

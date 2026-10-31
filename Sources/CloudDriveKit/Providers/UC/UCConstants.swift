@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/UCConstants.kt and UCCookieUtil in UCApi.kt.
+// Ported from YunX-Desktop (MIT): data/network/UCConstants.kt and UCCookieUtil in UCApi.kt.
 import Foundation
 
 public enum UCConstants {

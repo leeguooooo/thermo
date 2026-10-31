@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/ShareLinkParser.kt. Baidu and GitHub are left out.
+// Ported from YunX-Desktop (MIT): data/network/ShareLinkParser.kt. Baidu and GitHub are left out.
 import Foundation
 
 /// Finds the share link in pasted text and hands it to the provider for its drive.

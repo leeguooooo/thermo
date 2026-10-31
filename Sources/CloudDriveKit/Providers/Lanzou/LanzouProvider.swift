@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/repository/LanzouResolveRepository.kt and
+// Ported from YunX-Desktop (MIT): data/repository/LanzouResolveRepository.kt and
 // LanzouAccountRepository.kt, plus the Lanzou header branch of ResolveViewModel.enqueueDownload.
 import CryptoKit
 import Foundation

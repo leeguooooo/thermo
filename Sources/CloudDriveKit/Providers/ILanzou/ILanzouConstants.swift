@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/ILanzouConstants.kt.
+// Ported from YunX-Desktop (MIT): data/network/ILanzouConstants.kt.
 import Foundation
 
 public enum ILanzouConstants {

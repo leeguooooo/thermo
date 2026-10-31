@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/Pan123Constants.kt, Pan123LoginSupport.kt.
+// Ported from YunX-Desktop (MIT): data/network/Pan123Constants.kt, Pan123LoginSupport.kt.
 import Foundation
 
 public enum Pan123Constants {

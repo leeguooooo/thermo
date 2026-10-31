@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/repository/XunleiResolveRepository.kt and
+// Ported from YunX-Desktop (MIT): data/repository/XunleiResolveRepository.kt and
 // XunleiAccountRepository.kt, and the Xunlei header branch of ResolveViewModel.enqueueDownload.
 import Foundation
 

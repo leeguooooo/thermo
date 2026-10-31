@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): data/network/model/ShareModels.kt.
+// Ported from YunX-Desktop (MIT): data/network/model/ShareModels.kt.
 import Foundation
 
 /// Drives a share link can belong to. Baidu is deliberately absent.

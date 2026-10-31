@@ -1,4 +1,4 @@
-// Ported from YunX-Desktop (AGPL-3.0): ILanzouApi.aesHex.
+// Ported from YunX-Desktop (MIT): ILanzouApi.aesHex.
 import CommonCrypto
 import Foundation
 

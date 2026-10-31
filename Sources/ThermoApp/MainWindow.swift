@@ -52,6 +52,7 @@ enum MainPage: Hashable {
     case compute(Bool)
     case history
     case connections
+    case yunx
 
     /// `--page` values: overview, sensors, fans, settings, pages, disk, disk:overview, disk:<category>,
     /// agents, agents:<area>, apps, apps:leftovers, space, space:large, space:duplicates, memory, cpu, gpu, claude, claude:<accounts|reset|privacy>, claude-cleanup, history, connections.
@@ -70,6 +71,7 @@ enum MainPage: Hashable {
         case "memory": self = .memory
         case "history": self = .history
         case "connections": self = .connections
+        case "yunx": self = .yunx
         case "claude": self = .claude(parts.count > 1 ? (ClaudeTab(rawValue: parts[1]) ?? .accounts) : .accounts)
         case "claude-cleanup": self = .claude(parts.count > 1 && parts[1] == "privacy" ? .privacy : .reset)
         case "cpu": self = .compute(false)
@@ -414,6 +416,8 @@ struct MainView: View {
             ClaudeCleanupPage(model: models.claudeCleanup, tab: tab).id(tab).transition(.page)
         case .connections:
             ConnectionsPage(model: ConnectionsModel.shared).transition(.page)
+        case .yunx:
+            YunXDownloadPage(model: YunXDownloadModel.shared).transition(.page)
         case .history:
             HistoryPage(model: HistoryModel.shared, open: { page = $0 }).transition(.page)
         case let .space(tab):
@@ -531,6 +535,7 @@ struct MainSidebar: View {
                         selected: page.spaceTab != nil)
                     row(.apps(page.appsTab ?? .installed), tr("Software"), "square.grid.2x2", .indigo, trailing: nil,
                         selected: page.appsTab != nil)
+                    row(.yunx, tr("YunX Download"), "arrow.down.circle", .blue, trailing: nil)
 
                     header(tr("AI Agent Diagnostics"))
                     row(.claude(page.claudeTab ?? .accounts), tr("Claude tools"), "person.2", .orange, trailing: nil,
