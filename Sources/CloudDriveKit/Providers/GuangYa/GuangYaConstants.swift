@@ -52,8 +52,8 @@ public enum GuangYaConstants {
     /// Task polling waits this long before every poll, at most `taskMaxPolls` times.
     static let taskDelayNanoseconds: UInt64 = 750_000_000
     static let taskMaxPolls = 80
-    /// Folder name used for restricted shares. Kept from the source so leftovers are recognisable.
-    static let tempDirectoryPrefix = "AsterLink临时转存_"
+    /// Folder name used for restricted shares.
+    static let tempDirectoryPrefix = "\(DriveTempDirectory.name)_"
 
     private static func hex(_ count: Int) -> String {
         let digits = Array("0123456789abcdef")

@@ -337,7 +337,7 @@ final class GuangYaProviderTests: XCTestCase {
         let create = try transport.body(1)
         XCTAssertEqual(create["parentId"] as? String, "")
         XCTAssertEqual(create["failIfNameExist"] as? Bool, true)
-        XCTAssertTrue((create["dirName"] as? String)?.hasPrefix("AsterLink临时转存_") == true)
+        XCTAssertTrue((create["dirName"] as? String)?.hasPrefix("Thermo临时转存_") == true)
         let restore = try transport.body(2)
         XCTAssertEqual(restore["accessToken"] as? String, "share-token")
         XCTAssertEqual(restore["fileIds"] as? [String], ["f1"])

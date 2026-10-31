@@ -51,7 +51,7 @@ final class C139ProviderTests: XCTestCase {
         XCTAssertEqual(C139Provider().parseShareLink("https://yun.139.com/shareweb/#/w/i/abc")?.shareId, "abc")
         XCTAssertNil(C139Provider().parseShareLink("https://pan.quark.cn/s/abc"))
         XCTAssertNil(C139Provider().credentialRefreshInterval)
-        XCTAssertEqual(C139Provider().capabilities, [.shareListing, .ownFiles, .saveToDrive])
+        XCTAssertEqual(C139Provider().capabilities, [.shareListing, .guestShareAccess, .ownFiles, .saveToDrive])
 
         XCTAssertTrue(C139Constants.isValidCookie("a=1; authorization=Basic xyz"))
         XCTAssertTrue(C139Constants.isValidCookie("Os_SSo_Sid=1; RMKEY=2"))

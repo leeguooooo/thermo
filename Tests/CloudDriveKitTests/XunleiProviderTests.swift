@@ -47,7 +47,7 @@ final class XunleiProviderTests: XCTestCase {
         XCTAssertEqual(XunleiProvider().parseShareLink("https://pan.xunlei.com/s/VO_abc-12")?.shareId, "VO_abc-12")
         XCTAssertNil(XunleiProvider().parseShareLink("https://pan.quark.cn/s/abc"))
         XCTAssertNil(XunleiProvider().credentialRefreshInterval)
-        XCTAssertEqual(XunleiProvider().capabilities, [.shareListing, .ownFiles, .saveToDrive])
+        XCTAssertEqual(XunleiProvider().capabilities, [.shareListing, .guestShareAccess, .ownFiles, .saveToDrive])
         let router = ShareLinkRouter(providers: [.xunlei()])
         XCTAssertEqual(try router.route("https://pan.xunlei.com/s/abc").provider.platform, .xunlei)
     }
@@ -246,7 +246,7 @@ final class XunleiProviderTests: XCTestCase {
     }
 
     func testResolveShareFileSavesReadsLinkAndTrashesTheCopy() async throws {
-        let folders = #"{"files":[{"id":"x","name":"other","kind":"drive#folder"},{"id":"tmp1","name":"YunX临时转存","kind":"drive#folder"}]}"#
+        let folders = #"{"files":[{"id":"x","name":"other","kind":"drive#folder"},{"id":"tmp1","name":"Thermo临时转存","kind":"drive#folder"}]}"#
         let transport = FakeTransport([("files?parent_id=", json(folders)),
                                        ("share/restore", json(#"{"params":{"trace_file_ids":"{\"f1\":\"new1\"}"}}"#)),
                                        ("files/new1?", json(detailBody)),
@@ -274,7 +274,7 @@ final class XunleiProviderTests: XCTestCase {
         XCTAssertEqual(link.url.absoluteString, "https://dl.example/w")
         let folder = try transport.body(1)
         XCTAssertEqual(folder["kind"] as? String, "drive#folder")
-        XCTAssertEqual(folder["name"] as? String, "YunX临时转存")
+        XCTAssertEqual(folder["name"] as? String, "Thermo临时转存")
         XCTAssertEqual(folder["space"] as? String, "")
         XCTAssertEqual(try transport.body(2)["parent_id"] as? String, "tmp9")
     }

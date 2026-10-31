@@ -3,11 +3,11 @@
 import Foundation
 
 /// 139 Cloud (China Mobile). Listing a share is anonymous, so `openShare` and `listShareFiles` work without an account,
-/// but every download and save needs one; that is why `.guestShareAccess` is absent from `capabilities`.
+/// but every download and save needs one.
 /// 139 shares resolve straight to a link and never need saving, so there is no temporary directory to clean up.
 public struct C139Provider: CloudDriveProvider {
     public let platform = DrivePlatform.c139
-    public let capabilities: DriveCapabilities = [.shareListing, .ownFiles, .saveToDrive]
+    public let capabilities: DriveCapabilities = [.shareListing, .guestShareAccess, .ownFiles, .saveToDrive]
     /// The full 139 surface: folders, rename, move, delete and share creation.
     public let api: C139API
     private let sleep: DriveSleeper

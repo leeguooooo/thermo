@@ -7,9 +7,7 @@ import Foundation
 /// resolving need one.
 public struct XunleiProvider: CloudDriveProvider {
     public let platform = DrivePlatform.xunlei
-    // Not .guestShareAccess: a guest can open and list a share, but a download link needs the share saved
-    // to an account first.
-    public let capabilities: DriveCapabilities = [.shareListing, .ownFiles, .saveToDrive]
+    public let capabilities: DriveCapabilities = [.shareListing, .guestShareAccess, .ownFiles, .saveToDrive]
     /// The full Xunlei surface: folders, move, trash, share creation and share passwords.
     public let api: XunleiAPI
 

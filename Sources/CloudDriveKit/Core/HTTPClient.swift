@@ -1,6 +1,6 @@
 import Foundation
 
-public enum HTTPMethod: String, Sendable { case get = "GET", post = "POST", head = "HEAD" }
+public enum HTTPMethod: String, Sendable { case get = "GET", post = "POST", head = "HEAD", patch = "PATCH" }
 
 public struct HTTPRequest: Sendable, Equatable {
     public var method: HTTPMethod
@@ -151,6 +151,15 @@ public struct HTTPClient: Sendable {
             merged["Content-Type"] = "application/json"
         }
         return try await send(.post, url, headers: merged, body: body)
+    }
+
+    public func patchJSON(_ url: String, json: [String: Any], headers: [String: String] = [:]) async throws -> HTTPResponse {
+        let body = try JSONSerialization.data(withJSONObject: json, options: [.sortedKeys, .withoutEscapingSlashes])
+        var merged = headers
+        if !merged.keys.contains(where: { $0.caseInsensitiveCompare("Content-Type") == .orderedSame }) {
+            merged["Content-Type"] = "application/json"
+        }
+        return try await send(.patch, url, headers: merged, body: body)
     }
 
     /// Sends a prepared request with the default headers merged under its own.

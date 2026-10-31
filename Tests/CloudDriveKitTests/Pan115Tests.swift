@@ -298,7 +298,7 @@ final class Pan115ProviderTests: XCTestCase {
         let transport = FakeTransport([
             ("appversion", json("{}")),
             ("share/downurl", json(#"{"state":false,"errno":50029}"#)),
-            ("webapi.115.com/files?aid=1&cid=0&", json(#"{"state":true,"count":1,"data":[{"cid":"T1","pid":"0","n":"YunX临时转存"}]}"#)),
+            ("webapi.115.com/files?aid=1&cid=0&", json(#"{"state":true,"count":1,"data":[{"cid":"T1","pid":"0","n":"Thermo临时转存"}]}"#)),
             ("files/add", ok(#","cid":"SUB1""#)),
             ("share/receive", ok()),
             ("files?aid=1&cid=SUB1&", json(#"{"state":true,"count":1,"data":[{"fid":"F9","cid":"SUB1","n":"big.bin","s":5000,"pc":"PC9"}]}"#)),
@@ -327,7 +327,7 @@ final class Pan115ProviderTests: XCTestCase {
 
     func testCleanupDeletesTheTemporaryDirectoryThroughTheRoot() async throws {
         let transport = FakeTransport([
-            ("webapi.115.com/files?aid=1&cid=0&", json(#"{"state":true,"data":[{"cid":"T1","pid":"0","n":"YunX临时转存"}]}"#)),
+            ("webapi.115.com/files?aid=1&cid=0&", json(#"{"state":true,"data":[{"cid":"T1","pid":"0","n":"Thermo临时转存"}]}"#)),
             ("rb/delete", json(#"{"state":false,"errno":800007}"#)),
             ("rb/delete", ok()),
         ])
@@ -339,7 +339,7 @@ final class Pan115ProviderTests: XCTestCase {
 
     func testFailedDesktopLinkRemovesTheSavedCopy() async {
         let big = DriveFile(id: "F1", name: "big.bin", size: 0, isDirectory: false, parentId: "P1")
-        let root = #"{"state":true,"data":[{"cid":"T1","pid":"0","n":"YunX临时转存"}]}"#
+        let root = #"{"state":true,"data":[{"cid":"T1","pid":"0","n":"Thermo临时转存"}]}"#
         let transport = FakeTransport([
             ("appversion", json("{}")),
             ("share/downurl", json(#"{"state":false,"errno":50029}"#)),

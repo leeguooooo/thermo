@@ -4,10 +4,10 @@ import Foundation
 
 /// 123 Pan. The credential is the sign-in JWT (`data.token`); there is no refresh endpoint,
 /// so an expired token means signing in again with `api.passwordLogin`.
-/// Share listing is anonymous. Getting a link or saving needs an account, so there is no guest access.
+/// Share listing is anonymous. Getting a link or saving needs an account.
 public struct Pan123Provider: CloudDriveProvider {
     public let platform = DrivePlatform.pan123
-    public let capabilities: DriveCapabilities = [.shareListing, .ownFiles, .saveToDrive]
+    public let capabilities: DriveCapabilities = [.shareListing, .guestShareAccess, .ownFiles, .saveToDrive]
     /// The full 123 surface: sign-in, folders, rename, move, delete and share creation.
     public let api: Pan123API
 

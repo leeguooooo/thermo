@@ -40,7 +40,7 @@ public enum UCConstants {
     static let quotaURL = "\(apiBase)/1/clouddrive/member?pr=UCBrowser&fr=pc&fetch_subscribe=true&_ch=home"
 
     public static let rootDirectoryId = "0"
-    public static let tempDirectoryName = "YunX临时转存"
+    public static let tempDirectoryName = DriveTempDirectory.name
     /// __puus lasts about 3 hours; refresh at 90 minutes.
     public static let puusRefreshInterval: TimeInterval = 90 * 60
 

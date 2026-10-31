@@ -302,14 +302,14 @@ final class UCProviderTests: XCTestCase {
     }
 
     func testTempDirectoryReusedOrCreated() async throws {
-        let existing = FakeTransport([("clouddrive/file?", json(#"{"status":200,"data":{"list":[{"fid":"t9","file_name":"YunX临时转存","dir":true}]}}"#))])
+        let existing = FakeTransport([("clouddrive/file?", json(#"{"status":200,"data":{"list":[{"fid":"t9","file_name":"Thermo临时转存","dir":true}]}}"#))])
         let reused = try await ucProvider(existing).ensureTempDirectory(credential: ucCookie)
         XCTAssertEqual(reused, "t9")
         let none = FakeTransport([("pdir_fid=0&page", json(#"{"status":200,"data":{"list":[]}}"#)),
                                   ("clouddrive/file?pr=UCBrowser&fr=pc", json(#"{"status":200,"data":{"fid":"new1"}}"#))])
         let created = try await ucProvider(none).ensureTempDirectory(credential: ucCookie)
         XCTAssertEqual(created, "new1")
-        XCTAssertEqual(try none.body(1)["file_name"] as? String, "YunX临时转存")
+        XCTAssertEqual(try none.body(1)["file_name"] as? String, "Thermo临时转存")
         XCTAssertEqual(try none.body(1)["dir_init_lock"] as? Bool, false)
     }
 

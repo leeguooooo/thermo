@@ -108,11 +108,17 @@ public struct ResolvedLink: Sendable, Equatable, CustomStringConvertible, Custom
     public var customMirror: Mirror { Mirror(self, children: ["fileId": fileId, "filename": filename, "size": size]) }
 }
 
+/// The folder saved shares pass through in the account, on every drive that needs one.
+public enum DriveTempDirectory {
+    public static let name = "Thermo临时转存"
+}
+
 public struct DriveCapabilities: OptionSet, Sendable {
     public let rawValue: Int
     public init(rawValue: Int) { self.rawValue = rawValue }
     public static let shareListing = DriveCapabilities(rawValue: 1 << 0)
-    /// Shares can be opened and resolved without an account.
+    /// Shares can be opened and listed without an account. Resolving a file may still throw
+    /// `DriveError.loginRequired` on drives that only hand out links to accounts.
     public static let guestShareAccess = DriveCapabilities(rawValue: 1 << 1)
     public static let ownFiles = DriveCapabilities(rawValue: 1 << 2)
     public static let saveToDrive = DriveCapabilities(rawValue: 1 << 3)

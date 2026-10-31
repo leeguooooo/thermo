@@ -191,16 +191,10 @@ final class YunXDownloadModel: ObservableObject {
     @Published private(set) var installingP2P = false
 
     let vault: YunXVault
-    private lazy var providers: [any CloudDriveProvider] = {
+    private lazy var drives: CloudDriveRegistry = {
         let vault = self.vault
-        let rotated: CredentialUpdateHandler = { updated, previous in try? vault.rotate(previous: previous, updated: updated) }
-        return [
-            QuarkProvider(api: QuarkAPI(credentialUpdated: rotated)), UCProvider(api: UCAPI(credentialUpdated: rotated)),
-            XunleiProvider(api: XunleiAPI(credentialUpdated: rotated)), C139Provider(), Pan123Provider(), Pan115Provider(),
-            GuangYaProvider(api: GuangYaAPI(credentialUpdated: rotated)), ILanzouProvider(), LanzouProvider(),
-        ]
+        return CloudDriveRegistry(credentialUpdated: { updated, previous in try? vault.rotate(previous: previous, updated: updated) })
     }()
-    private lazy var router = ShareLinkRouter(providers: providers)
     private lazy var parsers = VideoParsers()
     private var source: Source?
     private var videoLink: DetectedVideoLink?
@@ -211,7 +205,7 @@ final class YunXDownloadModel: ObservableObject {
 
     init(vault: YunXVault = YunXVault()) { self.vault = vault }
 
-    func provider(_ platform: DrivePlatform) -> (any CloudDriveProvider)? { providers.first { $0.platform == platform } }
+    func provider(_ platform: DrivePlatform) -> (any CloudDriveProvider)? { drives.provider(platform) }
 
     // MARK: Accounts
 
@@ -328,7 +322,7 @@ final class YunXDownloadModel: ObservableObject {
     }
 
     private func openShare(_ parsed: ParsedShareLink) async throws {
-        let (link, provider) = try router.route(self.link)
+        let (link, provider) = try drives.router.route(self.link)
         let credential = await credential(parsed.platform, provider: provider)
         if credential == nil, !provider.capabilities.contains(.guestShareAccess) { throw DriveError.loginRequired }
         let code = passcode.trimmingCharacters(in: .whitespaces)

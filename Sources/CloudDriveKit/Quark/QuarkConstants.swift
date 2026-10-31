@@ -29,7 +29,7 @@ public enum QuarkConstants {
     static let configURL = "\(apiBase)/1/clouddrive/config?pr=ucpro&fr=pc"
 
     public static let rootDirectoryId = "0"
-    public static let tempDirectoryName = "YunX临时转存"
+    public static let tempDirectoryName = DriveTempDirectory.name
     public static let tempSubdirectoryPrefix = "tr_"
     public static let downloadReferer = "https://pan.quark.cn/"
     /// __puus lasts about 3 hours; refresh at 90 minutes.

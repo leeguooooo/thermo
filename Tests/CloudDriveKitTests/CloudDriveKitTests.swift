@@ -271,7 +271,7 @@ final class QuarkProviderTests: XCTestCase {
     func saveFlowRules() -> [FakeTransport.Rule] {
         [("file/download", json(#"{"code":31001,"message":"denied"}"#)),
          ("clouddrive/member", json(#"{"data":{"use_capacity":10,"total_capacity":1000}}"#)),
-         ("file?pr=ucpro&fr=pc&pdir_fid=0&page=1&size=100", json(#"{"status":200,"data":{"list":[{"fid":"tmp","file_name":"YunX临时转存","dir":true}]}}"#)),
+         ("file?pr=ucpro&fr=pc&pdir_fid=0&page=1&size=100", json(#"{"status":200,"data":{"list":[{"fid":"tmp","file_name":"Thermo临时转存","dir":true}]}}"#)),
          ("file?pr=ucpro&fr=pc", json(#"{"status":200,"data":{"fid":"sub"}}"#)),
          ("sharepage/save", json(#"{"status":200,"data":{"task_id":"t+1"}}"#)),
          ("clouddrive/task", json(#"{"status":200,"data":{"status":0}}"#)),

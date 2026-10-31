@@ -6,8 +6,7 @@
 // - there is no process-wide current token or user id; the user id comes from the JWT of the credential
 //   in use, and a refreshed token is used for the retry and reported through `credentialUpdated`;
 // - the headless-browser fallback for a rejected web signature is not available, so that case fails
-//   with a re-login message;
-// - rename (PATCH) is not ported, because the shared HTTP core has no PATCH method.
+//   with a re-login message.
 import Foundation
 
 public struct XunleiShareResult: Sendable, Equatable {
@@ -275,6 +274,13 @@ public actor XunleiAPI {
         }
     }
 
+    /// True when the server returned the renamed file.
+    @discardableResult
+    public func renameFile(fileId: String, name: String, credential: XunleiCredential) async throws -> Bool {
+        let url = "\(XunleiConstants.filesURL)/\(fileId)"
+        return try await panCall(credential, action: "PATCH:/drive/v1/files/\(fileId)", request: { .patch(url, $0, ["name": name]) }) { !$0.string("id").isEmpty }
+    }
+
     /// Moves files; returns the task id.
     public func moveFiles(fileIds: [String], toParentId: String, credential: XunleiCredential) async throws -> String? {
         let body: [String: Any] = ["ids": fileIds, "to": ["parent_id": toParentId, "space": ""], "space": ""]
@@ -394,6 +400,7 @@ public actor XunleiAPI {
     enum PanRequest {
         case get(String, [String: String])
         case post(String, [String: String], [String: Any])
+        case patch(String, [String: String], [String: Any])
     }
 
     private func panHeaders(token: String?, deviceId: String, captcha: String) -> [String: String] {
@@ -447,6 +454,7 @@ public actor XunleiAPI {
             switch build(headers) {
             case .get(let url, let headers): response = try await send(.get, url, headers: headers, body: nil)
             case .post(let url, let headers, let body): response = try await send(.post, url, headers: headers, body: Self.jsonData(body))
+            case .patch(let url, let headers, let body): response = try await send(.patch, url, headers: headers, body: Self.jsonData(body))
             }
             guard let json = LenientJSON(data: response.body) else {
                 throw DriveError.api(message: "响应解析失败（HTTP \(response.statusCode)）")

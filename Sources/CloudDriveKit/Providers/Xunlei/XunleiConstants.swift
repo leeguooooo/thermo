@@ -53,7 +53,7 @@ public enum XunleiConstants {
 
     /// Root of the account. The share root is addressed by an empty id or "0".
     public static let rootDirectoryId = ""
-    public static let tempDirectoryName = "YunX临时转存"
+    public static let tempDirectoryName = DriveTempDirectory.name
 
     static let sdkLoginUserAgent = "android-ok-http-client/xl-acc-sdk/version-5.1.3.513006"
     static let sdkSMSUserAgent = "android-ok-http-client/xl-acc-sdk/version-5.0.12.512000"

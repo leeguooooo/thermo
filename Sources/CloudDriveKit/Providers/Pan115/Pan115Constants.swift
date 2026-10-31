@@ -40,7 +40,7 @@ public enum Pan115Constants {
     static let movePollIntervalNanoseconds: UInt64 = 400_000_000
 
     /// Temporary save root, shared in name with the other drives.
-    public static let tempDirectoryName = "YunX临时转存"
+    public static let tempDirectoryName = DriveTempDirectory.name
     public static let tempSubdirectoryPrefix = "tr_"
 
     /// Desktop Chrome UA. 115 risk-checks non-browser UAs, so web calls look like the web page.
