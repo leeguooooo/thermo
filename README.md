@@ -513,6 +513,7 @@ thermo clean repair-worktrees --root /path/to/repo --yes --json
 | CLI 链接、Claude/Codex 插件集成 | `integration status/link/claude/codex` |
 | 隐私设置和恢复 | `privacy profiles/location/webrtc/cookies/restore-browser/environment/dns/lookup/timezone` |
 | Claude 本地数据重置与恢复 | `claude-reset list/run/batches/restore` |
+| MCP 启动失败（读 Codex 桌面端日志，不连接） | `agents health --json` |
 | MCP 批量握手与定义检查 | `agents inspect-all --timeout 10 --budget 120 --json` |
 | 验证重复文件、指定保留副本后移入废纸篓 | `space dupes remove PATH… --keep PATH --dry-run --json` |
 

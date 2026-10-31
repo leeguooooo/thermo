@@ -37,6 +37,9 @@ struct AgentsCommand {
                 print(tr("Some results remain unknown. This report cannot predict account suspension or establish what Claude sends."))
             }
             return
+        case "health":
+            guard rest.count == 1 else { throw CLIError("usage: thermo agents health [--agent codex] [--since DATE] [--json]") }
+            return try health()
         case "claude-profiles":
             guard rest.count == 1 else { throw CLIError("usage: thermo agents claude-profiles [--json]") }
             // Names and states only: emails and folders stay out of anything an agent or a log can read.
@@ -183,6 +186,7 @@ struct AgentsCommand {
     static let usage = """
     usage: thermo agents [--all] [--json]                 what is wrong with the AI agents on this Mac
            thermo agents claude-local [--json]             read-only local Claude identity, telemetry and routing checks
+           thermo agents health [--agent codex] [--since DATE] [--json] MCP startup failures from Codex Desktop logs; connects to nothing
            thermo agents context [--agent AGENT] [--root PROJECT] [--json] static footprint ranking and deduplicated inventory
            thermo agents usage [--since ISO_DATE] [--agent claude|codex] [--sort text|structured|time|errors|instructions] [--limit FILES] [--json] local log metrics
            thermo agents compare FILE [--json]            compare declared local task evaluations; never executes tasks
@@ -230,6 +234,27 @@ struct AgentsCommand {
              "Pass-rate difference: " + (report.passRateDifferencePercentagePoints.map { String(format: "%+.2f percentage points", $0) } ?? "unknown"),
              metric("Elapsed seconds", report.seconds), metric("Native input tokens", report.inputTokens), metric("Native output tokens", report.outputTokens),
              "Token accounting mismatches: \(report.tokenSemanticsMismatchPairs) pairs", report.note])
+    }
+
+    func health() throws {
+        guard (app.args.options["agent"] ?? "codex") == "codex" else { throw CLIError("agents health currently reads Codex Desktop logs only: --agent must be codex") }
+        let now = Date()
+        var since = now.addingTimeInterval(-7 * 86400)
+        if let text = app.args.options["since"] {
+            let iso = ISO8601DateFormatter()
+            iso.formatOptions = [.withFullDate]
+            guard let date = ISO8601DateFormatter().date(from: text) ?? iso.date(from: text) else { throw CLIError("--since must be an ISO date") }
+            since = date
+        }
+        let report = MCPStartupHealth(now: now).scan(since: since)
+        if app.args.has("json") { print(report.json); return }
+        print(tr("MCP startup health (Codex Desktop, since %1$@)", report.since))
+        for server in report.unhealthy {
+            print("\u{2717} \(server.name): \(server.reason) · " + tr("%1$@ consecutive failures", String(server.consecutiveFailures)) + (server.lastFailureAt.map { " · \($0)" } ?? ""))
+        }
+        if report.logStatus != "observed" { print(tr("Codex Desktop logs unavailable: %1$@. This is not a healthy result.", report.logStatus)) }
+        else if report.unhealthy.isEmpty { print(tr("no failed MCP startups in %1$@ log files; %2$@ servers ready", String(report.logFilesRead), String(report.healthyServers))) }
+        if !report.complete { print(tr("Coverage limited: part of the window was not read.")) }
     }
 
     func usage() throws {

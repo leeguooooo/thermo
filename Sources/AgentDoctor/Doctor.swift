@@ -9,6 +9,7 @@ public enum AgentDoctor {
         let language = L10n.current.rawValue
         var c = ConfigChecks(env: env)
         if !env.cancelled() { c.runAll() }
+        if !env.cancelled() { c.checkMCPStartup() }
         if !env.cancelled() { c.checkLaunchAgents() }
         if !env.cancelled() { c.checkCrashes() }
         if !env.cancelled() { c.checkAgentDatabases() }

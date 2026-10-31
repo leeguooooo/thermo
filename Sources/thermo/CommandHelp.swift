@@ -70,6 +70,7 @@ enum CommandHelp {
     agents|agents [--all] [--json|--csv] [--root PROJECT] [--encoding ENCODING]|cli
     agents sessions|agents sessions [--json]|cli
     agents context|agents context [--encoding ENCODING] [--agent AGENT] [--root PROJECT] [--json]|cli
+    agents health|agents health [--agent AGENT] [--since DATE] [--json]|read-only-local-diagnostics
     agents claude-local|agents claude-local [--json]|read-only-local-diagnostics
     agents claude-profiles|agents claude-profiles [--json]|read-only-local-diagnostics
     agents usage|agents usage [--encoding ENCODING] [--sort text|structured|time|errors|instructions] [--all] [--since DATE] [--agent AGENT] [--log-file FILE] [--tail] [--limit N] [--json]|cli

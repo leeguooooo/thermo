@@ -14,3 +14,14 @@ final class ClaudeLocalCommandTests: XCTestCase {
         XCTAssertEqual(capability.structuredFormats, ["json"])
     }
 }
+
+final class AgentsHealthCommandTests: XCTestCase {
+    func testHealthIsScopedReadOnlyDiagnostics() throws {
+        XCTAssertNoThrow(try CommandContract.validate(Args(["agents", "health", "--agent", "codex", "--since", "2026-10-01", "--json"])))
+        for flag in ["--yes", "--dry-run", "--csv", "--probe"] {
+            XCTAssertThrowsError(try CommandContract.validate(Args(["agents", "health", flag])), flag)
+        }
+        let capability = try XCTUnwrap(CommandHelp.capabilities.first { $0.command == "agents health" })
+        XCTAssertEqual(capability.execution, "read-only-local-diagnostics")
+    }
+}
