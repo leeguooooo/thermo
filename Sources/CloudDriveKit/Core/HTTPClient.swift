@@ -1,17 +1,20 @@
 import Foundation
 
-public enum HTTPMethod: String, Sendable { case get = "GET", post = "POST" }
+public enum HTTPMethod: String, Sendable { case get = "GET", post = "POST", head = "HEAD" }
 
 public struct HTTPRequest: Sendable, Equatable {
     public var method: HTTPMethod
     public var url: URL
     public var headers: [String: String]
     public var body: Data?
-    public init(method: HTTPMethod, url: URL, headers: [String: String] = [:], body: Data? = nil) {
+    /// False hands 3xx responses back to the caller, for drives that must inspect each hop.
+    public var followRedirects: Bool
+    public init(method: HTTPMethod, url: URL, headers: [String: String] = [:], body: Data? = nil, followRedirects: Bool = true) {
         self.method = method
         self.url = url
         self.headers = headers
         self.body = body
+        self.followRedirects = followRedirects
     }
 }
 
@@ -27,6 +30,15 @@ public struct HTTPResponse: Sendable, Equatable {
         self.setCookies = setCookies
         self.body = body
         self.cookiesWithPath = cookiesWithPath
+    }
+
+    /// Response headers with lowercased names; Set-Cookie is in `setCookies` instead.
+    public var headers: [String: String]
+    public init(statusCode: Int = 200, setCookies: [String] = [], body: Data = Data(), headers: [String: String] = [:]) {
+        self.statusCode = statusCode
+        self.setCookies = setCookies
+        self.body = body
+        self.headers = headers
     }
 }
 
@@ -64,10 +76,13 @@ public final class URLSessionTransport: HTTPTransport {
         urlRequest.httpShouldHandleCookies = false
         for (name, value) in request.headers { urlRequest.setValue(value, forHTTPHeaderField: name) }
         do {
-            let (data, response) = try await session.data(for: urlRequest, delegate: RedirectGuard())
+            let (data, response) = try await session.data(for: urlRequest, delegate: RedirectGuard(follow: request.followRedirects))
             guard let http = response as? HTTPURLResponse else { throw DriveError.transport(code: 0) }
             return HTTPResponse(statusCode: http.statusCode, setCookies: Self.setCookies(from: http), body: data,
                                 cookiesWithPath: Self.cookiesWithPath(from: http))
+    }
+
+            return HTTPResponse(statusCode: http.statusCode, setCookies: Self.setCookies(from: http), body: data, headers: Self.headers(from: http))
         } catch let error as URLError {
             // URLError carries the URL, which can hold share tokens; keep only the code.
             if error.code == .cancelled { throw CancellationError() }
@@ -92,6 +107,13 @@ public final class URLSessionTransport: HTTPTransport {
         return HTTPCookie.cookies(withResponseHeaderFields: fields, for: url).map { "\($0.name)=\($0.value); Path=\($0.path)" }
     }
 
+    static func headers(from response: HTTPURLResponse) -> [String: String] {
+        response.allHeaderFields.reduce(into: [String: String]()) { result, field in
+            guard let name = (field.key as? String)?.lowercased(), name != "set-cookie" else { return }
+            if let value = field.value as? String { result[name] = value }
+        }
+    }
+
     /// Credentials must not follow a redirect to another origin.
     static func redirected(_ request: URLRequest, from original: URL?) -> URLRequest {
         guard original?.host?.lowercased() != request.url?.host?.lowercased() || original?.scheme != request.url?.scheme else {
@@ -105,8 +127,11 @@ public final class URLSessionTransport: HTTPTransport {
 }
 
 private final class RedirectGuard: NSObject, URLSessionTaskDelegate {
+    private let follow: Bool
+    init(follow: Bool) { self.follow = follow }
+
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
-        completionHandler(URLSessionTransport.redirected(request, from: response.url))
+        completionHandler(follow ? URLSessionTransport.redirected(request, from: response.url) : nil)
     }
 }
 
@@ -129,6 +154,13 @@ public struct HTTPClient: Sendable {
         var merged = headers
         merged["Content-Type"] = "application/json"
         return try await send(.post, url, headers: merged, body: body)
+    }
+
+    /// Sends a prepared request with the default headers merged under its own.
+    public func execute(_ request: HTTPRequest) async throws -> HTTPResponse {
+        var merged = request
+        merged.headers = defaultHeaders.merging(request.headers) { _, new in new }
+        return try await transport.send(merged)
     }
 
     private func send(_ method: HTTPMethod, _ url: String, headers: [String: String], body: Data?) async throws -> HTTPResponse {
