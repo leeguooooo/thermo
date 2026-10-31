@@ -33,6 +33,19 @@ final class CapturePinSessionTests:XCTestCase {
         try reopened.flush();XCTAssertThrowsError(try session.flush())
         for editor in session.windows.values { editor.close() };reopened.closeAll()
     }
+    @MainActor func testQuitIsNotBlockedByAnotherProcessOrABrokenLibrary() throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString);defer { try? FileManager.default.removeItem(at:root) }
+        let stale=CapturePinSession(store:.init(root:root));let writer=CapturePinSession(store:.init(root:root))
+        _=try writer.createGroup(name:"Other")
+        XCTAssertNoThrow(try stale.flushForQuit());XCTAssertEqual(stale.library.groups.count,2)
+        let open=CapturePinSession(store:.init(root:root));let id=try open.open(image());let other=CapturePinSession(store:.init(root:root))
+        _=try other.createGroup(name:"Third");XCTAssertNoThrow(try open.flushForQuit());XCTAssertNotNil(open.issue)
+        open.windows[id]?.model.document.append(.init(tool:.rectangle,points:[.zero,CGPoint(x:20,y:20)]))
+        XCTAssertThrowsError(try open.flushForQuit(),"unsaved pin edits must still stop the quit")
+        for editor in open.windows.values { editor.close() }
+        try Data("broken".utf8).write(to:root.appendingPathComponent("library.json"))
+        let broken=CapturePinSession(store:.init(root:root));XCTAssertNotNil(broken.issue);XCTAssertNoThrow(try broken.flushForQuit())
+    }
     @MainActor func testSaveFailureRefusesWindowCloseAndRetainsPixels() throws {
         let root=FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString);defer { try? FileManager.default.removeItem(at:root) }
         let session=CapturePinSession(store:.init(root:root));let id=try session.open(image());let window=try XCTUnwrap(session.windows[id]?.window)

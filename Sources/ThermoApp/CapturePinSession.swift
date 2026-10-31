@@ -43,7 +43,13 @@ import ThermoL10n
         try checkLoaded();let saved=try store.save(next,documents:documents,contents:contents);library=saved;onCountChange?(count)
     }
     func flush() throws {
-        saving?.cancel();saving=nil;try checkLoaded()
+        saving?.cancel();saving=nil
+        // Nothing open means nothing to persist; adopt the newest manifest instead of writing over it.
+        if windows.isEmpty && dirty.isEmpty {
+            if !loadFailed,FileManager.default.fileExists(atPath:store.root.appendingPathComponent("library.json").path),let current=try? store.load(defaultName:tr("Default pin group")) { library=current }
+            return
+        }
+        try checkLoaded()
         var next=library,documents:[UUID:CaptureDocument]=[:],contents:[UUID:CapturePinContent]=[:]
         for (id,editor) in windows {
             guard let index=next.pins.firstIndex(where: { $0.id == id }) else { continue }
@@ -55,6 +61,11 @@ import ThermoL10n
             if dirty.contains(id) { next.pins[index].snapshotID=UUID();documents[id]=model.document;contents[id]=model.pinContent;next.pins[index].contentKind=model.pinContent?.kind }
         }
         try commit(next,documents:documents,contents:contents);dirty.removeAll();issue=nil
+    }
+    /// Quitting is refused only when pin edits would be lost; window placement alone is not worth blocking it.
+    func flushForQuit() throws {
+        do { try flush() }
+        catch CapturePinFailure.invalidLibrary where dirty.isEmpty { issue=captureFailureMessage(CapturePinFailure.invalidLibrary) }
     }
     private func changed(_ id:UUID,document:Bool) {
         if document { dirty.insert(id) }

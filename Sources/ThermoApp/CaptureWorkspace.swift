@@ -203,7 +203,7 @@ func captureFailureMessage(_ error:Error) -> String {
         if afterTask != nil || saving.running {
             saving.issue=tr("Wait for the capture action chain to finish before quitting.");showSavingSettings();return .terminateCancel
         }
-        do { try pinSession.flush() } catch { report(error);return .terminateCancel }
+        do { try pinSession.flushForQuit() } catch { report(error);return .terminateCancel }
         guard recordingActive else { return previous }
         Task { NSApp.reply(toApplicationShouldTerminate:await finishRecordingForQuit()) }
         return .terminateLater
