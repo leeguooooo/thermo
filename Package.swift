@@ -18,6 +18,7 @@ let package = Package(
         .library(name: "CloudDriveKit", targets: ["CloudDriveKit"]),
         .library(name: "DownloadKit", targets: ["DownloadKit"]),
         .library(name: "MediaToolsKit", targets: ["MediaToolsKit"]),
+        .library(name: "VideoKit", targets: ["VideoKit"]),
         .executable(name: "thermo-capture-script", targets: ["CaptureScriptWorker"]),
     ],
     dependencies: [
@@ -56,6 +57,8 @@ let package = Package(
         .target(name: "DownloadKit"),
         // Gopeed/FFmpeg tooling and credential backups run as the user; never linked into the privileged helper.
         .target(name: "MediaToolsKit", linkerSettings: [.linkedFramework("AVFoundation")]),
+        // Video link parsing, ported from YunX. Runs as the user; never linked into the privileged helper.
+        .target(name: "VideoKit", linkerSettings: [.linkedFramework("WebKit")]),
         .executableTarget(name: "thermo", dependencies: ["CaptureScriptCore", "ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore"]),
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
@@ -79,6 +82,7 @@ let package = Package(
         .testTarget(name: "CloudDriveKitTests", dependencies: ["CloudDriveKit"]),
         .testTarget(name: "DownloadKitTests", dependencies: ["DownloadKit"]),
         .testTarget(name: "MediaToolsKitTests", dependencies: ["MediaToolsKit"]),
+        .testTarget(name: "VideoKitTests", dependencies: ["VideoKit"]),
     ],
     swiftLanguageVersions: [.v5]
 )
