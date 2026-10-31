@@ -20,10 +20,13 @@ public struct HTTPResponse: Sendable, Equatable {
     /// One `name=value; attributes` entry per cookie, never comma-joined.
     public var setCookies: [String]
     public var body: Data
-    public init(statusCode: Int = 200, setCookies: [String] = [], body: Data = Data()) {
+    /// `name=value; Path=...` entries, for providers that need the path. Empty when the transport has none.
+    public var cookiesWithPath: [String]
+    public init(statusCode: Int = 200, setCookies: [String] = [], body: Data = Data(), cookiesWithPath: [String] = []) {
         self.statusCode = statusCode
         self.setCookies = setCookies
         self.body = body
+        self.cookiesWithPath = cookiesWithPath
     }
 }
 
@@ -63,7 +66,8 @@ public final class URLSessionTransport: HTTPTransport {
         do {
             let (data, response) = try await session.data(for: urlRequest, delegate: RedirectGuard())
             guard let http = response as? HTTPURLResponse else { throw DriveError.transport(code: 0) }
-            return HTTPResponse(statusCode: http.statusCode, setCookies: Self.setCookies(from: http), body: data)
+            return HTTPResponse(statusCode: http.statusCode, setCookies: Self.setCookies(from: http), body: data,
+                                cookiesWithPath: Self.cookiesWithPath(from: http))
         } catch let error as URLError {
             // URLError carries the URL, which can hold share tokens; keep only the code.
             if error.code == .cancelled { throw CancellationError() }
@@ -78,6 +82,14 @@ public final class URLSessionTransport: HTTPTransport {
             if let name = field.key as? String, let value = field.value as? String { result[name] = value }
         }
         return HTTPCookie.cookies(withResponseHeaderFields: fields, for: url).map { "\($0.name)=\($0.value)" }
+    }
+
+    static func cookiesWithPath(from response: HTTPURLResponse) -> [String] {
+        guard let url = response.url else { return [] }
+        let fields = response.allHeaderFields.reduce(into: [String: String]()) { result, field in
+            if let name = field.key as? String, let value = field.value as? String { result[name] = value }
+        }
+        return HTTPCookie.cookies(withResponseHeaderFields: fields, for: url).map { "\($0.name)=\($0.value); Path=\($0.path)" }
     }
 
     /// Credentials must not follow a redirect to another origin.
