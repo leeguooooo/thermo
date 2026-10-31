@@ -30,6 +30,9 @@ public protocol CloudDriveProvider: Sendable {
 
     /// Resolves a file in the account.
     func resolveFile(id: String, credential: DriveCredential) async throws -> ResolvedLink
+    /// Resolves a file taken from `listFiles`. Drives whose links need more than the id (Pan123 needs
+    /// the hash and size) override this; the default resolves by id.
+    func resolveFile(_ file: DriveFile, credential: DriveCredential) async throws -> ResolvedLink
     /// Resolves a shared file; a nil credential uses the guest path.
     func resolveShareFile(session: ShareSession, file: DriveFile, credential: DriveCredential?, options: ShareResolveOptions) async throws -> ResolvedLink
     /// Removes `ResolvedLink.cleanupDirectoryId` after the download ends. Best effort.
@@ -57,6 +60,10 @@ public extension CloudDriveProvider {
 
     func resolveFile(id: String, credential: DriveCredential) async throws -> ResolvedLink {
         throw DriveError.unsupported(platform: platform, feature: "获取网盘文件直链")
+    }
+
+    func resolveFile(_ file: DriveFile, credential: DriveCredential) async throws -> ResolvedLink {
+        try await resolveFile(id: file.id, credential: credential)
     }
 
     func cleanup(directoryId: String, credential: DriveCredential) async {}
