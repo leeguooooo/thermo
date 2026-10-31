@@ -16,6 +16,7 @@ let package = Package(
         .library(name: "SearchCore", targets: ["SearchCore"]),
         .library(name: "CaptureCore", targets: ["CaptureCore"]),
         .library(name: "CloudDriveKit", targets: ["CloudDriveKit"]),
+        .library(name: "DownloadKit", targets: ["DownloadKit"]),
         .executable(name: "thermo-capture-script", targets: ["CaptureScriptWorker"]),
     ],
     dependencies: [
@@ -50,6 +51,8 @@ let package = Package(
         .target(name: "CleanKit", dependencies: ["AgentCore", "ThermoL10n"]),
         // Cloud drive protocols and providers, ported from YunX. Runs as the user; the root helper must never link it.
         .target(name: "CloudDriveKit"),
+        // HTTP(S) segmented downloads run as the user; never linked into the privileged helper.
+        .target(name: "DownloadKit"),
         .executableTarget(name: "thermo", dependencies: ["CaptureScriptCore", "ThermoKit", "AgentCore", "AgentDoctor", "CleanKit", "ThermoL10n", "SearchCore"]),
         .executableTarget(name: "ThermoHelper", dependencies: ["ThermoKit"]),
         .executableTarget(
@@ -71,6 +74,7 @@ let package = Package(
         .testTarget(name: "CaptureCoreTests", dependencies: ["CaptureCore"]),
         .testTarget(name: "MenuBarCoreTests", dependencies: ["MenuBarCore"]),
         .testTarget(name: "CloudDriveKitTests", dependencies: ["CloudDriveKit"]),
+        .testTarget(name: "DownloadKitTests", dependencies: ["DownloadKit"]),
     ],
     swiftLanguageVersions: [.v5]
 )
