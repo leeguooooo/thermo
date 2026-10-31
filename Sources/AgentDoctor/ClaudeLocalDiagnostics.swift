@@ -198,7 +198,8 @@ public struct ClaudeLocalDiagnostics {
         switch read(desktopRoot.appendingPathComponent("sentry/scope_v3.json")) {
         case .success(let data):
             if let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
-                if let contexts = object["contexts"] as? [String: Any] {
+                // Desktop 4.29 nests these under `event`; earlier snapshots kept them at the top level.
+                if let contexts = (object["event"] as? [String: Any])?["contexts"] as? [String: Any] ?? object["contexts"] as? [String: Any] {
                     for name in ["device", "os", "gpu", "gpu_1", "gpu_2", "gpu_3"] {
                         add("sentry.\(name)", "Sentry \(name) context", contexts[name] == nil ? .missing : .observed,
                             contexts[name] == nil ? "Not present in snapshot" : "Present; values omitted", "desktop-sentry-snapshot", "A local snapshot does not establish what was sent. Unknown fields are not interpreted.")
