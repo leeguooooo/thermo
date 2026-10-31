@@ -11,19 +11,23 @@ public struct DownloadEngine: Sendable {
     let store: DownloadStore
     let sleep: Sleep
     let clock: Clock
+    /// Paces the slow-connection watchdog, apart from `sleep` so it never counts as a retry delay.
+    let watchdogSleep: Sleep
 
     public init(
         configuration: DownloadConfiguration = DownloadConfiguration(),
         transport: any DownloadTransport = URLSessionTransport(),
         store: DownloadStore,
         sleep: @escaping Sleep = { try await Task.sleep(for: $0) },
-        clock: @escaping Clock = { ProcessInfo.processInfo.systemUptime }
+        clock: @escaping Clock = { ProcessInfo.processInfo.systemUptime },
+        watchdogSleep: @escaping Sleep = { try await Task.sleep(for: $0) }
     ) {
         self.configuration = configuration
         self.transport = transport
         self.store = store
         self.sleep = sleep
         self.clock = clock
+        self.watchdogSleep = watchdogSleep
     }
 
     /// Uses `Application Support/Thermo/Downloads`.
@@ -32,28 +36,44 @@ public struct DownloadEngine: Sendable {
     }
 
     public func makeTask(_ request: DownloadRequest) throws -> DownloadTask {
-        guard let scheme = request.url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
-            throw DownloadError.unsupportedURL("only http and https are supported")
-        }
-        guard request.url.user == nil, request.url.password == nil else {
-            // The URL is persisted, so credentials have to travel in headers instead.
-            throw DownloadError.unsupportedURL("credentials in the url; pass them as headers")
-        }
+        try Self.checkLink(request.url)
         let state = DownloadState(
             id: UUID(), url: request.url, destination: request.destination,
             size: nil, acceptsRanges: false, validator: nil, segments: []
         )
-        return DownloadTask(engine: self, state: state, isRestored: false, headers: try Self.requestHeaders(request.headers, request.cookies))
+        return DownloadTask(
+            engine: self, state: state, link: request.url, needsNewLink: false, isRestored: false,
+            headers: try Self.requestHeaders(request.headers, request.cookies), refreshLink: request.refreshLink
+        )
     }
 
-    /// Rebuilds a task from its state file. Credentials were never saved, so pass them again.
-    public func restore(id: UUID, headers: [String: String] = [:], cookies: [DownloadCookie] = []) throws -> DownloadTask {
+    /// Rebuilds a task from its state file. Credentials and URL queries were never saved, so
+    /// pass them again: give `url` for a link with a query, or `refreshLink` to fetch a new one.
+    public func restore(
+        id: UUID, url: URL? = nil, headers: [String: String] = [:], cookies: [DownloadCookie] = [],
+        refreshLink: LinkRefresher? = nil
+    ) throws -> DownloadTask {
         let state = try store.load(id: id)
-        return DownloadTask(engine: self, state: state, isRestored: true, headers: try Self.requestHeaders(headers, cookies))
+        if let url { try Self.checkLink(url) }
+        let needsNewLink = url == nil && state.linkIsRedacted == true
+        if needsNewLink, refreshLink == nil { throw DownloadError.linkRequired }
+        return DownloadTask(
+            engine: self, state: state, link: url ?? state.url, needsNewLink: needsNewLink, isRestored: true,
+            headers: try Self.requestHeaders(headers, cookies), refreshLink: refreshLink
+        )
     }
 
     public func savedDownloads() -> [DownloadState] {
         store.list()
+    }
+
+    static func checkLink(_ url: URL) throws {
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            throw DownloadError.unsupportedURL("only http and https are supported")
+        }
+        guard url.user == nil, url.password == nil else {
+            throw DownloadError.unsupportedURL("credentials in the url; pass them as headers")
+        }
     }
 
     static func requestHeaders(_ headers: [String: String], _ cookies: [DownloadCookie]) throws -> [String: String] {
@@ -79,6 +99,29 @@ public struct DownloadEngine: Sendable {
     }
 }
 
+/// Sampling for one running segment; survives reconnects so the limits apply per segment.
+private struct InflightSegment {
+    let startedAt: TimeInterval
+    var bytes: Int64
+    var lastAt: TimeInterval
+    var lastActivity: TimeInterval
+    var lastRate: Int64 = 0
+    var preemptions = 0
+    var lastPreemptAt: TimeInterval = -.infinity
+
+    init(startedAt: TimeInterval, bytes: Int64) {
+        self.startedAt = startedAt
+        self.bytes = bytes
+        self.lastAt = startedAt
+        self.lastActivity = startedAt
+    }
+}
+
+/// Lets a connection task write to the part. Only one connection per segment runs at a time.
+private struct PartOutput: @unchecked Sendable {
+    let handle: FileHandle
+}
+
 /// One download. All state lives on the actor; workers run off it and only hop back to record.
 ///
 /// The state file carries the plan (segment boundaries). Part-file lengths are the truth for
@@ -93,8 +136,14 @@ public actor DownloadTask {
     public nonisolated let progress: AsyncStream<DownloadProgress>
 
     private nonisolated let engine: DownloadEngine
-    private nonisolated let url: URL
-    private nonisolated let headers: [String: String]
+    private nonisolated let refreshLink: LinkRefresher?
+    /// The live link. May carry a signed query, so it stays out of `state`.
+    private var url: URL
+    private var headers: [String: String]
+    private var linkGeneration = 0
+    private var needsNewLink: Bool
+    private var refreshTask: Task<Void, Error>?
+    private var refreshesSinceProgress = 0
     private let continuation: AsyncStream<DownloadProgress>.Continuation
     private var state: DownloadState
     private var hasPlan: Bool
@@ -106,13 +155,23 @@ public actor DownloadTask {
     private var phase = DownloadPhase.probing
     private var samples: [(time: TimeInterval, bytes: Int64)] = []
     private var lastEmit: TimeInterval = -.infinity
+    private var inflight: [Int: InflightSegment] = [:]
+    private var connections: [Int: Task<Void, Error>] = [:]
+    private var preempting = Set<Int>()
+    private var runStartedAt: TimeInterval = 0
+    private var runStartBytes: Int64 = 0
 
-    init(engine: DownloadEngine, state: DownloadState, isRestored: Bool, headers: [String: String]) {
+    init(
+        engine: DownloadEngine, state: DownloadState, link: URL, needsNewLink: Bool, isRestored: Bool,
+        headers: [String: String], refreshLink: LinkRefresher?
+    ) {
         self.engine = engine
         self.state = state
         self.hasPlan = isRestored
-        self.url = state.url
+        self.url = link
+        self.needsNewLink = needsNewLink
         self.headers = headers
+        self.refreshLink = refreshLink
         self.id = state.id
         let (stream, continuation) = AsyncStream<DownloadProgress>.makeStream(bufferingPolicy: .bufferingNewest(1))
         self.progress = stream
@@ -166,18 +225,29 @@ public actor DownloadTask {
     private func run() async {
         do {
             try await prepare()
+            var repairs = 0
+            var finished: URL
             while true {
+                while true {
+                    do {
+                        try await downloadSegments()
+                        break
+                    } catch DownloadError.rangeNotHonored where state.acceptsRanges {
+                        // The probe promised ranges but a real request ignored them.
+                        try plan(size: state.size, acceptsRanges: false, validator: state.validator)
+                    }
+                }
+                try Task.checkCancellation()
+                setPhase(.merging)
                 do {
-                    try await downloadSegments()
+                    finished = try await merge()
                     break
-                } catch DownloadError.rangeNotHonored where state.acceptsRanges {
-                    // The probe promised ranges but a real request ignored them.
-                    try plan(size: state.size, acceptsRanges: false, validator: state.validator)
+                } catch DownloadError.corruptPart(let segment) where repairs < 2 {
+                    // Parts are only read by a merge, so everything else is still good.
+                    repairs += 1
+                    try resetSegment(segment)
                 }
             }
-            try Task.checkCancellation()
-            setPhase(.merging)
-            let finished = try await merge()
             engine.store.remove(id: id)
             phase = .completed(finished)
             conclude(.success(finished))
@@ -229,6 +299,10 @@ public actor DownloadTask {
 
     private func prepare() async throws {
         setPhase(.probing)
+        if needsNewLink {
+            try await refreshedLink(seen: linkGeneration, statusCode: nil, cause: .linkRequired)
+            needsNewLink = false
+        }
         let probe = try await probeRemote()
         if hasPlan, !state.segments.isEmpty, state.acceptsRanges, probe.acceptsRanges, probe.size == state.size,
            state.validator == nil || probe.validator == nil || state.validator == probe.validator {
@@ -242,11 +316,13 @@ public actor DownloadTask {
     private func probeRemote() async throws -> (size: Int64?, acceptsRanges: Bool, validator: String?) {
         var failures = 0
         while true {
+            let generation = linkGeneration
             do {
                 let info = try await engine.transport.fetch(FetchRequest(url: url, headers: headers, range: 0..<1)).info
+                if Self.looksLikeErrorPage(info) { throw DownloadError.htmlResponse }
                 switch info.statusCode {
                 case 206:
-                    guard let range = info.contentRange, range.start == 0, !info.isEncoded else {
+                    guard let range = info.contentRange, range.start == 0, range.end == 0, !info.isEncoded else {
                         return (nil, false, info.validator)
                     }
                     return (range.total, range.total != nil, info.validator)
@@ -258,9 +334,80 @@ public actor DownloadTask {
                     throw DownloadError.httpStatus(info.statusCode)
                 }
             } catch {
-                try await backoff(after: error, failures: &failures)
+                if let expiry = Self.expiry(of: error), refreshLink != nil {
+                    try await refreshedLink(seen: generation, statusCode: expiry.statusCode, cause: expiry.cause)
+                } else {
+                    try await backoff(after: error, failures: &failures)
+                }
             }
         }
+    }
+
+    /// YunX reads an HTML reply as an anti-hotlink or expiry page and refuses to save it.
+    /// Server errors keep their status so they stay retryable.
+    private nonisolated static func looksLikeErrorPage(_ info: HTTPResponseInfo) -> Bool {
+        info.isHTML && info.statusCode < 500 && info.statusCode != 429
+    }
+
+    /// 403/404 are what YunX treats as a dead link; 401 and 410 mean the same for signed URLs.
+    private nonisolated static func expiry(of error: Error) -> (statusCode: Int?, cause: DownloadError)? {
+        switch error as? DownloadError {
+        case .httpStatus(let code) where [401, 403, 404, 410].contains(code):
+            return (code, .linkExpired)
+        case .htmlResponse:
+            return (nil, .linkExpired)
+        default:
+            return nil
+        }
+    }
+
+    // MARK: Link refresh
+
+    private func currentLink() -> (url: URL, headers: [String: String], generation: Int) {
+        (url, headers, linkGeneration)
+    }
+
+    /// Single flight: workers that hit the same dead link share one refresh, and one that
+    /// failed on an older link just picks up the newer one.
+    private func refreshedLink(seen: Int, statusCode: Int?, cause: DownloadError) async throws {
+        if linkGeneration > seen { return }
+        let task: Task<Void, Error>
+        if let refreshTask {
+            task = refreshTask
+        } else {
+            guard let refreshLink else { throw cause }
+            guard refreshesSinceProgress < engine.configuration.maxLinkRefreshes else { throw cause }
+            refreshesSinceProgress += 1
+            let expiry = LinkExpiry(taskID: id, url: state.url, statusCode: statusCode)
+            task = Task {
+                do {
+                    guard let fresh = try await refreshLink(expiry) else { throw cause }
+                    try DownloadEngine.checkLink(fresh.url)
+                    let freshHeaders = try fresh.headers.map { try DownloadEngine.requestHeaders($0, []) }
+                    self.adoptLink(fresh.url, headers: freshHeaders)
+                } catch {
+                    self.refreshFailed()
+                    throw error
+                }
+            }
+            refreshTask = task
+        }
+        try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
+        }
+    }
+
+    private func adoptLink(_ link: URL, headers fresh: [String: String]?) {
+        url = link
+        if let fresh { headers = fresh }
+        linkGeneration += 1
+        refreshTask = nil
+    }
+
+    private func refreshFailed() {
+        refreshTask = nil
     }
 
     private func plan(size: Int64?, acceptsRanges: Bool, validator: String?) throws {
@@ -296,10 +443,36 @@ public actor DownloadTask {
                 try createPart(segment.id)
                 continue
             }
-            let usable = min(onDisk, max(0, (segment.end ?? 0) - segment.start))
-            state.segments[index].written = usable
-            if usable < onDisk { try truncate(part, to: usable) }
+            let length = max(0, (segment.end ?? 0) - segment.start)
+            if let hash = segment.sha256 {
+                // Finished parts must prove themselves; the rest resume from their length.
+                if onDisk < length || (try? PartHash.hash(of: part, length: length)) != hash {
+                    try resetPart(index, part)
+                } else {
+                    state.segments[index].written = length
+                    if onDisk > length { try truncate(part, to: length) }
+                }
+                continue
+            }
+            if onDisk >= length, length > 0 {
+                // Fully written but never recorded: a crash beat the hash, so nothing vouches for it.
+                try resetPart(index, part)
+                continue
+            }
+            state.segments[index].written = onDisk
         }
+        try engine.store.save(state)
+    }
+
+    private func resetPart(_ index: Int, _ part: URL) throws {
+        try truncate(part, to: 0)
+        state.segments[index].written = 0
+        state.segments[index].sha256 = nil
+    }
+
+    private func resetSegment(_ id: Int) throws {
+        guard let index = state.segments.firstIndex(where: { $0.id == id }) else { return }
+        try resetPart(index, engine.store.partURL(id: self.id, segment: id))
         try engine.store.save(state)
     }
 
@@ -325,12 +498,17 @@ public actor DownloadTask {
     private func downloadSegments() async throws {
         setPhase(.downloading)
         samples = []
+        runStartedAt = engine.clock()
+        runStartBytes = state.segments.reduce(0) { $0 + $1.covered }
+        let watchdog = startWatchdog()
+        defer { watchdog?.cancel() }
         let limit = engine.configuration.concurrency
         try await withThrowingTaskGroup(of: Void.self) { group in
             var running = 0
             while true {
                 while running < limit, let segment = try nextSegment() {
                     active.insert(segment.id)
+                    inflight[segment.id] = InflightSegment(startedAt: engine.clock(), bytes: segment.written)
                     running += 1
                     group.addTask {
                         do {
@@ -387,21 +565,31 @@ public actor DownloadTask {
             throw DownloadError.io(error.localizedDescription)
         }
         defer { try? handle.close() }
+        let output = PartOutput(handle: handle)
 
         var offset = initial.written
         var failures = 0
         while true {
             let before = offset
+            let link = await currentLink()
             do {
                 try Task.checkCancellation()
-                try await transfer(segmentID: initial.id, to: handle, offset: &offset)
+                try await connect(segmentID: initial.id, output: output, offset: offset, link: link)
+                try await sealSegment(initial.id, handle: handle, part: part)
                 return
             } catch {
+                offset = await writtenBytes(initial.id)
+                if Task.isCancelled { throw CancellationError() }
+                if await takePreemption(initial.id) { continue } // a new connection, not a failure
                 // Without ranges a new attempt restarts at zero, so its bytes are not progress:
                 // counting them would let a body that always ends short retry forever.
                 let restarts = await restartsFromZero()
                 if offset > before, !restarts { failures = 0 }
-                try await backoff(after: error, failures: &failures)
+                if let expiry = Self.expiry(of: error), refreshLink != nil {
+                    try await refreshedLink(seen: link.generation, statusCode: expiry.statusCode, cause: expiry.cause)
+                } else {
+                    try await backoff(after: error, failures: &failures)
+                }
                 if restarts {
                     offset = 0
                     do {
@@ -416,9 +604,58 @@ public actor DownloadTask {
         }
     }
 
+    /// One connection in a task of its own: cancelling it wakes a read the server is holding
+    /// open, which a flag checked between chunks could not do.
+    private nonisolated func connect(
+        segmentID: Int, output: PartOutput, offset: Int64, link: (url: URL, headers: [String: String], generation: Int)
+    ) async throws {
+        let connection = Task {
+            try await self.transfer(segmentID: segmentID, output: output, offset: offset, link: link)
+        }
+        await registerConnection(segmentID, connection)
+        let result = await withTaskCancellationHandler {
+            await connection.result
+        } onCancel: {
+            connection.cancel()
+        }
+        await unregisterConnection(segmentID)
+        try result.get()
+    }
+
+    /// Flushes before recording, so a hash on disk always describes bytes on disk.
+    private nonisolated func sealSegment(_ id: Int, handle: FileHandle, part: URL) async throws {
+        guard let length = await sealableLength(id) else { return }
+        do {
+            try handle.synchronize()
+            await recordHash(id, try PartHash.hash(of: part, length: length))
+        } catch {
+            throw DownloadError.io(error.localizedDescription)
+        }
+    }
+
     private func restartsFromZero() -> Bool { !state.acceptsRanges }
 
-    private nonisolated func transfer(segmentID: Int, to handle: FileHandle, offset: inout Int64) async throws {
+    private func writtenBytes(_ id: Int) -> Int64 {
+        state.segments.first { $0.id == id }?.written ?? 0
+    }
+
+    private func sealableLength(_ id: Int) -> Int64? {
+        guard state.acceptsRanges, let segment = state.segments.first(where: { $0.id == id }), segment.isComplete else {
+            return nil
+        }
+        return segment.covered
+    }
+
+    private func recordHash(_ id: Int, _ hash: String) {
+        guard let index = state.segments.firstIndex(where: { $0.id == id }) else { return }
+        state.segments[index].sha256 = hash
+        try? engine.store.save(state)
+    }
+
+    private nonisolated func transfer(
+        segmentID: Int, output: PartOutput, offset start: Int64, link: (url: URL, headers: [String: String], generation: Int)
+    ) async throws {
+        var offset = start
         let (segment, ranged, size, validator) = await workerView(segmentID)
         var range: Range<Int64>?
         if ranged, let end = segment.end {
@@ -426,7 +663,7 @@ public actor DownloadTask {
             guard from < end else { return }
             range = from..<end
         }
-        let response = try await engine.transport.fetch(FetchRequest(url: url, headers: headers, range: range))
+        let response = try await engine.transport.fetch(FetchRequest(url: link.url, headers: link.headers, range: range))
         try check(response.info, range: range, size: size, validator: validator)
         if !ranged, size == nil, !response.info.isEncoded, let length = response.info.contentLength {
             await adoptLength(length, segmentID: segmentID)
@@ -441,12 +678,14 @@ public actor DownloadTask {
                 data = data.prefix(Int(min(budget, Int64(data.count))))
             }
             do {
-                try handle.write(contentsOf: data)
+                try output.handle.write(contentsOf: data)
             } catch {
                 throw DownloadError.io(error.localizedDescription)
             }
             offset += Int64(data.count)
             await record(segmentID, written: offset)
+            // Waiting here stops reading, which is what slows the server down.
+            try await engine.configuration.speedLimiter?.acquire(Int64(data.count))
             if let budget, budget <= Int64(data.count) { return }
         }
         // An AsyncThrowingStream ends quietly on cancellation, which is not an EOF.
@@ -458,13 +697,16 @@ public actor DownloadTask {
     }
 
     private nonisolated func check(_ info: HTTPResponseInfo, range: Range<Int64>?, size: Int64?, validator: String?) throws {
+        if Self.looksLikeErrorPage(info) { throw DownloadError.htmlResponse }
         if let range {
             if (200..<300).contains(info.statusCode), info.statusCode != 206 { throw DownloadError.rangeNotHonored }
             guard info.statusCode == 206 else { throw DownloadError.httpStatus(info.statusCode) }
-            guard let contentRange = info.contentRange, contentRange.start == range.lowerBound,
-                  contentRange.total == nil || contentRange.total == size, !info.isEncoded else {
-                throw DownloadError.rangeNotHonored
+            guard !info.isEncoded else { throw DownloadError.rangeNotHonored }
+            let requested = (range.lowerBound, range.upperBound - 1)
+            guard HTTPRangePolicy.matches(info.headers["content-range"], start: requested.0, end: requested.1) else {
+                throw DownloadError.contentRangeMismatch
             }
+            if let total = info.contentRange?.total, let size, total != size { throw DownloadError.remoteChanged }
         } else if !(200..<300).contains(info.statusCode) {
             throw DownloadError.httpStatus(info.statusCode)
         }
@@ -515,11 +757,85 @@ public actor DownloadTask {
         if let index = state.segments.firstIndex(where: { $0.id == id }) {
             state.segments[index].written = written
         }
+        if written > 0 { refreshesSinceProgress = 0 }
+        inflight[id]?.lastActivity = engine.clock()
         emitIfDue()
     }
 
     private func segmentStopped(_ id: Int) {
         active.remove(id)
+        inflight[id] = nil
+        preempting.remove(id)
+    }
+
+    private func registerConnection(_ id: Int, _ connection: Task<Void, Error>) {
+        connections[id] = connection
+    }
+
+    private func unregisterConnection(_ id: Int) {
+        connections[id] = nil
+    }
+
+    private func takePreemption(_ id: Int) -> Bool {
+        preempting.remove(id) != nil
+    }
+
+    // MARK: Slow connections
+
+    private func startWatchdog() -> Task<Void, Never>? {
+        let policy = engine.configuration.preemption
+        guard policy.isEnabled, state.acceptsRanges else { return nil }
+        return Task { [engine] in
+            while !Task.isCancelled {
+                do {
+                    try await engine.watchdogSleep(.seconds(policy.tick))
+                } catch {
+                    return
+                }
+                self.preemptSlowSegments()
+            }
+        }
+    }
+
+    /// Replaces connections well behind their peers: CDNs cap per connection and the odd one
+    /// lands on a bad node, which ruins the tail of a download. Keeps every written byte.
+    func preemptSlowSegments() {
+        let policy = engine.configuration.preemption
+        let now = engine.clock()
+        for id in Array(inflight.keys) {
+            guard var sample = inflight[id] else { continue }
+            let bytes = writtenBytes(id)
+            let span = now - sample.lastAt
+            if span > 0 { sample.lastRate = Int64(Double(bytes - sample.bytes) / span) }
+            sample.bytes = bytes
+            sample.lastAt = now
+            inflight[id] = sample
+        }
+        guard policy.isEnabled, state.acceptsRanges, !inflight.isEmpty else { return }
+        let received = state.segments.reduce(Int64(0)) { $0 + $1.covered } - runStartBytes
+        let elapsed = now - runStartedAt
+        let workers = Int64(engine.configuration.concurrency)
+        let average = elapsed > 0 ? Int64(Double(received) / elapsed) / workers : 0
+        let floor = policy.floorBytesPerSecond(averagePerConnection: average)
+        let endgame = inflight.count <= policy.endgameInflight
+        var taken = 0
+        for (id, sample) in inflight.sorted(by: { $0.value.lastRate < $1.value.lastRate }) {
+            guard taken < policy.maxPerTick else { break }
+            guard let connection = connections[id], sample.preemptions < policy.maxPerSegment,
+                  now - sample.lastPreemptAt >= policy.cooldown, sample.lastRate < floor else { continue }
+            let age = now - sample.startedAt
+            if endgame {
+                guard age >= policy.endgameMinAge else { continue }
+            } else {
+                let left = state.segments.first { $0.id == id }?.remaining ?? 0
+                guard age >= policy.minAge, left >= policy.minRemaining else { continue }
+            }
+            inflight[id]?.preemptions += 1
+            inflight[id]?.lastPreemptAt = now
+            preempting.insert(id)
+            connection.cancel()
+            taken += 1
+        }
     }
 
     // MARK: Progress

@@ -6,6 +6,8 @@ public struct Segment: Codable, Sendable, Equatable {
     /// Exclusive end; nil while the resource size is unknown.
     public var end: Int64?
     public var written: Int64
+    /// SHA-256 of the finished part; a part without one is still in progress.
+    public var sha256: String?
 
     public init(id: Int, start: Int64, end: Int64?, written: Int64 = 0) {
         self.id = id

@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 enum DownloadFinalizer {
@@ -20,7 +21,11 @@ enum DownloadFinalizer {
             let output = try FileHandle(forWritingTo: temp)
             defer { try? output.close() }
             for link in chain {
-                try copy(link, from: partURL(link.segmentID), to: output)
+                let segment = segments.first { $0.id == link.segmentID }
+                // A link that skips a prefix or stops short covers different bytes than the hash.
+                let whole = link.skip == 0 && link.length == segment?.covered
+                let expected = whole ? segment?.sha256 : nil
+                try copy(link, from: partURL(link.segmentID), to: output, expectedHash: expected)
             }
             try output.synchronize()
             let actual = (try manager.attributesOfItem(atPath: temp.path)[.size] as? NSNumber)?.int64Value ?? -1
@@ -37,16 +42,21 @@ enum DownloadFinalizer {
         }
     }
 
-    private static func copy(_ link: ChainLink, from part: URL, to output: FileHandle) throws {
+    private static func copy(_ link: ChainLink, from part: URL, to output: FileHandle, expectedHash: String?) throws {
         let input = try FileHandle(forReadingFrom: part)
         defer { try? input.close() }
         try input.seek(toOffset: UInt64(link.skip))
         var left = link.length
+        var digest = SHA256()
         while left > 0 {
             try Task.checkCancellation()
             guard let data = try input.read(upToCount: Int(min(left, Int64(bufferSize)))), !data.isEmpty else { return }
             try output.write(contentsOf: data)
+            if expectedHash != nil { digest.update(data: data) }
             left -= Int64(data.count)
+        }
+        if let expectedHash, PartHash.hex(digest.finalize()) != expectedHash {
+            throw DownloadError.corruptPart(segment: link.segmentID)
         }
     }
 

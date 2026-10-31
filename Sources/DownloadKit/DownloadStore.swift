@@ -1,9 +1,10 @@
 import Foundation
 
-/// What survives an app restart. Headers and cookies are deliberately absent:
-/// callers pass them again to `DownloadEngine.restore`.
+/// What survives an app restart. Headers, cookies and URL queries are deliberately absent:
+/// signed links carry their token in the query, so callers pass the link again to
+/// `DownloadEngine.restore` or supply a refresher.
 public struct DownloadState: Codable, Sendable, Equatable {
-    public var version = 1
+    public var version = 2
     public var id: UUID
     public var url: URL
     public var destination: URL
@@ -11,15 +12,39 @@ public struct DownloadState: Codable, Sendable, Equatable {
     public var acceptsRanges: Bool
     public var validator: String?
     public var segments: [Segment]
+    /// True when `url` lost a query or fragment and cannot be fetched as it stands.
+    public var linkIsRedacted: Bool?
 
     public init(id: UUID, url: URL, destination: URL, size: Int64?, acceptsRanges: Bool, validator: String?, segments: [Segment]) {
         self.id = id
-        self.url = url
+        let safe = Self.redact(url)
+        self.url = safe.url
+        self.linkIsRedacted = safe.changed ? true : nil
         self.destination = destination
         self.size = size
         self.acceptsRanges = acceptsRanges
         self.validator = validator
         self.segments = segments
+    }
+
+    static func redact(_ url: URL) -> (url: URL, changed: Bool) {
+        guard var parts = URLComponents(url: url, resolvingAgainstBaseURL: true) else { return (url, false) }
+        let changed = parts.query != nil || parts.fragment != nil || parts.user != nil || parts.password != nil
+        guard changed else { return (url, false) }
+        parts.query = nil
+        parts.fragment = nil
+        parts.user = nil
+        parts.password = nil
+        return (parts.url ?? url, true)
+    }
+
+    /// Also clears a version 1 file written before queries were removed.
+    func redacted() -> DownloadState {
+        var copy = self
+        let safe = Self.redact(url)
+        copy.url = safe.url
+        if safe.changed { copy.linkIsRedacted = true }
+        return copy
     }
 
     func validate() throws {
@@ -82,7 +107,7 @@ public struct DownloadStore: Sendable {
         do {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.sortedKeys]
-            let data = try encoder.encode(state)
+            let data = try encoder.encode(state.redacted())
             guard FileManager.default.createFile(atPath: temp.path, contents: nil, attributes: [.posixPermissions: 0o600]) else {
                 throw DownloadError.io("cannot create \(temp.lastPathComponent)")
             }
@@ -110,7 +135,7 @@ public struct DownloadStore: Sendable {
             let state = try JSONDecoder().decode(DownloadState.self, from: data)
             guard state.id == id else { throw DownloadError.stateCorrupt("id mismatch") }
             try state.validate()
-            return state
+            return state.redacted()
         } catch let error as DownloadError {
             throw error
         } catch {

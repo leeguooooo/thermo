@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import XCTest
 @testable import DownloadKit
@@ -78,6 +79,10 @@ final class FakeTransport: DownloadTransport, @unchecked Sendable {
         }
         return FetchResponse(info: HTTPResponseInfo(statusCode: status, headers: headers), body: stream)
     }
+}
+
+func sha256(_ data: Data) -> String {
+    PartHash.hex(SHA256.hash(data: data))
 }
 
 final class DownloadKitTests: XCTestCase {
@@ -271,7 +276,10 @@ final class DownloadKitTests: XCTestCase {
         try store.save(DownloadState(
             id: id, url: source, destination: destination, size: 1000, acceptsRanges: true, validator: "\"v1\"",
             // `written` is stale on purpose: as after a crash, the part files are the truth.
-            segments: [Segment(id: 0, start: 0, end: 500, written: 0), Segment(id: 1, start: 500, end: 1000, written: 0)]
+            segments: [
+                Segment(id: 0, start: 0, end: 500, written: 0),
+                Segment(id: 1, start: 500, end: 1000, written: 0, sha256: sha256(content.subdata(in: 500..<1000))),
+            ]
         ))
         try content.prefix(300).write(to: store.partURL(id: id, segment: 0))
         try content.subdata(in: 500..<1000).write(to: store.partURL(id: id, segment: 1))
